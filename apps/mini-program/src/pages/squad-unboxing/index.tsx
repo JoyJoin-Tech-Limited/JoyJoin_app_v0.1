@@ -9,16 +9,11 @@ import { usePageTTI } from '../../hooks/usePageTTI'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
-import ChemistryBadge from '../../components/mascot/ChemistryBadge'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import Card from '../../components/ui/Card'
-import ConnectionPointPill from '../../components/ConnectionPointPill'
-import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import Button from '../../components/ui/Button'
 import AIGCLabel from '../../components/ai-content/AIGCLabel'
-import AIContentReportButton from '../../components/ai-content/AIContentReportButton'
-import { useAIGCLabelsEnabled } from '../../hooks/useAIGCLabelsEnabled'
 import TypewriterText from '../../components/ui/TypewriterText'
 import { haptics } from '../../lib/utils/haptics'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
@@ -35,13 +30,11 @@ import {
   getChemistryWord,
   getEventTypeLabel,
   getMemberName,
-  getPairChemistryWord,
   getVibeLabel,
   resolveCardFocusInteraction,
   SQUAD_BURST_COMPLETION_BUBBLE_TEXT,
   SQUAD_SELF_CARD_BUBBLE_TEXT,
   SQUAD_TEASE_BUBBLE_TEXT,
-  stripConnectionPointParens,
 } from './squadUnboxingViewModels'
 import { scheduleFlipSettleNarration } from './squadFlipState'
 import { getOracleCardCornerAsset } from '../../components/discover/oracleCardAssets'
@@ -98,18 +91,9 @@ export default function SquadUnboxingPage() {
     members,
     currentUserId,
     groupAnalysis,
-    isLoadingAnalysis,
-    analysisError,
-    chemistryTokens,
-    sortedPairExplanations,
-    pairKeyMemberMap,
-    viewerPairs,
     viewerPairByMemberId,
     groupThemeHighlights,
-    analysisThemeTags,
     flowState,
-    isAnalysisExpanded,
-    setIsAnalysisExpanded,
     actionDockState,
     rootClassName,
     shouldReduceMotion,
@@ -132,14 +116,12 @@ export default function SquadUnboxingPage() {
     handleSharePosterTap,
     handleSkip,
     refetch,
-    refetchAnalysis,
   } = useSquadUnboxingController({ groupId, routerParams: router.params })
 
   const { isDegradation } = useDeviceTier()
   // B5: TTI instrumentation — ready once the auth gate and group fetch settle.
   usePageTTI({ pageName: 'squad-unboxing', ready: !authLoading && !isLoading })
   const { user: currentUser } = useAuthGuard()
-  const aigcEnabled = useAIGCLabelsEnabled()
   const dragRevealEnabled = currentUser?.features?.squadUnboxingDragRevealEnabled ?? true
   const composedHeroEnabled = currentUser?.features?.socialSquadComposedHeroEnabled ?? false
   const storyName = router.params['__story']
@@ -419,26 +401,6 @@ export default function SquadUnboxingPage() {
     flipAll,
     cancelNarrationTimer,
   ])
-
-  const handleAnalysisRetry = useCallback(() => {
-    squadUnboxingAnalytics.track('squad_unboxing_analysis_retry_tap', {
-      groupId,
-      screen: 'squad-unboxing',
-    })
-    void refetchAnalysis()
-  }, [groupId, refetchAnalysis])
-
-  const toggleAnalysis = useCallback(() => {
-    setIsAnalysisExpanded((prev) => {
-      const next = !prev
-      squadUnboxingAnalytics.track(
-        next ? 'squad_unboxing_connection_story_expand' : 'squad_unboxing_connection_story_collapse',
-        { groupId, screen: 'squad-unboxing' },
-      )
-      return next
-    })
-    haptics('light')
-  }, [groupId, setIsAnalysisExpanded])
 
   const focusedMember = members[focusedCardIndex] ?? null
   const focusedViewerPair = focusedMember
@@ -828,249 +790,6 @@ export default function SquadUnboxingPage() {
               ) : null}
             </View>
 
-            {groupAnalysis && false ? <View className='squad-unboxing__chapter squad-unboxing__chapter--analysis'>
-              <View
-                className='squad-unboxing__expand-header'
-                onClick={toggleAnalysis}
-                hoverClass='squad-unboxing__expand-header--pressed'
-                role='button'
-                aria-expanded={isAnalysisExpanded}
-                aria-label={isAnalysisExpanded ? '收起连接解读' : '展开连接解读'}
-              >
-                <View className='squad-unboxing__expand-title-group'>
-                  <Text className='squad-unboxing__chapter-title'>连接解读</Text>
-                  <Text className='squad-unboxing__expand-subtitle'>悦仔怎么看这桌的化学反应</Text>
-                </View>
-                <View
-                  className={[
-                    'squad-unboxing__expand-chevron',
-                    isAnalysisExpanded ? 'squad-unboxing__expand-chevron--open' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  aria-hidden='true'
-                />
-              </View>
-
-              {isAnalysisExpanded ? (
-                <View className={[
-                  'squad-unboxing__expand-body',
-                  isAnalysisExpanded ? 'squad-unboxing__expand-body--open' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                >
-                  <View className='squad-unboxing__analysis-section squad-unboxing__analysis-section--chemistry'>
-                    <Text className='squad-unboxing__analysis-section-title'>这桌的火花</Text>
-                    {isLoadingAnalysis ? (
-                      <View className='squad-unboxing__skeleton squad-unboxing__skeleton--banner' />
-                    ) : (
-                      <>
-                        <View className={`squad-unboxing__chemistry-chip ${chemistryTokens.chipClassName}`}>
-                          <ChemistryBadge
-                            chemistry={chemistryTokens.iconRef}
-                            size={28}
-                            className='squad-unboxing__chemistry-emoji'
-                          />
-                          <Text className='squad-unboxing__chemistry-title'>{chemistryTokens.title}</Text>
-                        </View>
-                        <Text className='squad-unboxing__analysis-text'>{chemistryTokens.description}</Text>
-                      </>
-                    )}
-                  </View>
-
-                  <View className='squad-unboxing__analysis-section'>
-                    <Text className='squad-unboxing__analysis-section-title'>整体氛围</Text>
-                    {isLoadingAnalysis ? (
-                      <View className='squad-unboxing__skeleton-list'>
-                        <View className='squad-unboxing__skeleton squad-unboxing__skeleton--line' />
-                        <View className='squad-unboxing__skeleton squad-unboxing__skeleton--line squad-unboxing__skeleton--line-short' />
-                      </View>
-                    ) : analysisError ? (
-                      <View className='squad-unboxing__analysis-retry'>
-                        <Text className='squad-unboxing__analysis-retry-text'>
-                          连接解读加载失败了，重试一下让悦仔再帮你分析
-                        </Text>
-                        <Button
-                          variant='secondary'
-                          className='squad-unboxing__analysis-retry-btn'
-                          onClick={handleAnalysisRetry}
-                        >
-                          重试
-                        </Button>
-                      </View>
-                    ) : groupAnalysis ? (
-                      <>
-                        {analysisThemeTags.length > 0 ? (
-                          <View className='squad-unboxing__tag-row'>
-                            {analysisThemeTags.map((tag) => (
-                              <View key={tag} className='squad-unboxing__tag-chip'>
-                                <Text className='squad-unboxing__tag-chip-text'>{tag}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        ) : null}
-                        {groupAnalysis!.groupThemeCompanion ? (
-                          <Text className='squad-unboxing__analysis-text'>
-                            {groupAnalysis!.groupThemeCompanion}
-                          </Text>
-                        ) : null}
-                        <Text className='squad-unboxing__analysis-text'>{groupAnalysis!.groupDynamics}</Text>
-                        <GroupAnalysisSourceHint analysis={groupAnalysis!} />
-                        <AIGCLabel
-                          meta={groupAnalysis!.meta?.aigc}
-                          className='squad-unboxing__analysis-aigc-label'
-                          reduceMotion={shouldReduceMotion}
-                        />
-                      </>
-                    ) : (
-                      <Text className='squad-unboxing__analysis-text'>{matchExplanationCopy}</Text>
-                    )}
-                  </View>
-
-                  <View className='squad-unboxing__analysis-section'>
-                    <Text className='squad-unboxing__analysis-section-title'>你最容易从哪里聊开？</Text>
-                    <AIGCLabel
-                      meta={groupAnalysis?.meta?.aigc}
-                      className='squad-unboxing__analysis-aigc-label'
-                      reduceMotion={shouldReduceMotion}
-                    />
-                    {isLoadingAnalysis ? (
-                      <View className='squad-unboxing__skeleton-list'>
-                        {[0, 1].map((item) => (
-                          <View key={item} className='squad-unboxing__skeleton squad-unboxing__skeleton--pair' />
-                        ))}
-                      </View>
-                    ) : viewerPairs.length > 0 ? (
-                      <View className='squad-unboxing__pair-list'>
-                        {viewerPairs.slice(0, 2).map((pair, pairIndex) => {
-                          const pairMembers = pairKeyMemberMap.get(pair.pairKey)
-                          const otherMember = pairMembers?.find((member) => member.userId !== currentUserId)
-                          const pairLabel = otherMember
-                            ? `你 × ${getMemberName(otherMember)}`
-                            : pairMembers
-                              ? `${getMemberName(pairMembers[0])} × ${getMemberName(pairMembers[1])}`
-                              : pair.pairKey
-
-                          return (
-                            <View
-                              key={pair.pairKey}
-                              className={[
-                                'squad-unboxing__pair-card',
-                                headerReady ? 'squad-unboxing__pair-card--ready' : '',
-                              ].filter(Boolean).join(' ')}
-                              style={{
-                                transitionDelay: headerReady ? `${pairIndex * 80}ms` : '0ms',
-                              }}
-                            >
-                              <View className='squad-unboxing__pair-top'>
-                                <Text className='squad-unboxing__pair-label'>{pairLabel}</Text>
-                                <Text className='squad-unboxing__pair-score'>{getPairChemistryWord(pair.chemistryScore)}</Text>
-                              </View>
-                              {(pair.connectionPointsWithRarity?.length ?? pair.connectionPoints.length) > 0 ? (
-                                <View className='squad-unboxing__pair-pill-row'>
-                                  {(pair.connectionPointsWithRarity ?? pair.connectionPoints.slice(0, 3).map((text) => ({ text, rarity: 'common' as const }))).slice(0, 3).map((point) => (
-                                    <ConnectionPointPill key={point.text} text={stripConnectionPointParens(point.text)} rarity={point.rarity} />
-                                  ))}
-                                </View>
-                              ) : null}
-                              <Text className='squad-unboxing__pair-copy'>{normalizeMatchingCopy(pair.explanation)}</Text>
-                              {pair.introAngle ? (
-                                <Text className='squad-unboxing__pair-intro'>开场：{pair.introAngle}</Text>
-                              ) : null}
-                            </View>
-                          )
-                        })}
-                      </View>
-                    ) : sortedPairExplanations.length > 0 ? (
-                      <View className='squad-unboxing__pair-list'>
-                        {sortedPairExplanations.slice(0, 2).map((pair, pairIndex) => {
-                          const pairMembers = pairKeyMemberMap.get(pair.pairKey)
-                          const pairLabel = pairMembers
-                            ? `${getMemberName(pairMembers[0])} × ${getMemberName(pairMembers[1])}`
-                            : pair.pairKey
-
-                          return (
-                            <View
-                              key={pair.pairKey}
-                              className={[
-                                'squad-unboxing__pair-card',
-                                headerReady ? 'squad-unboxing__pair-card--ready' : '',
-                              ].filter(Boolean).join(' ')}
-                              style={{
-                                transitionDelay: headerReady ? `${pairIndex * 80}ms` : '0ms',
-                              }}
-                            >
-                              <View className='squad-unboxing__pair-top'>
-                                <Text className='squad-unboxing__pair-label'>{pairLabel}</Text>
-                                <Text className='squad-unboxing__pair-score'>{getPairChemistryWord(pair.chemistryScore)}</Text>
-                              </View>
-                              <Text className='squad-unboxing__pair-copy'>{normalizeMatchingCopy(pair.explanation)}</Text>
-                              {pair.introAngle ? (
-                                <Text className='squad-unboxing__pair-intro'>开场：{pair.introAngle}</Text>
-                              ) : null}
-                            </View>
-                          )
-                        })}
-                      </View>
-                    ) : (
-                      <Text className='squad-unboxing__analysis-text'>
-                        {matchExplanationCopy || '这桌有不少潜在共同点，见面后会更快找到节奏。'}
-                      </Text>
-                    )}
-                  </View>
-
-                  <View className='squad-unboxing__analysis-section squad-unboxing__analysis-section--last'>
-                    <Text className='squad-unboxing__analysis-section-title'>今晚聊什么？</Text>
-                    <AIGCLabel
-                      meta={groupAnalysis?.meta?.aigc}
-                      className='squad-unboxing__analysis-aigc-label'
-                      reduceMotion={shouldReduceMotion}
-                    />
-                    {isLoadingAnalysis ? (
-                      <View className='squad-unboxing__topic-row'>
-                        {[0, 1, 2].map((item) => (
-                          <View key={item} className='squad-unboxing__skeleton squad-unboxing__skeleton--topic' />
-                        ))}
-                      </View>
-                    ) : groupAnalysis?.iceBreakers && groupAnalysis!.iceBreakers.length > 0 ? (
-                      <View className='squad-unboxing__topic-row'>
-                        {groupAnalysis!.iceBreakers.map((topic, index) => (
-                          <View
-                            key={`${topic}-${index}`}
-                            className={[
-                              'squad-unboxing__topic-chip',
-                              headerReady ? 'squad-unboxing__topic-chip--ready' : '',
-                            ].filter(Boolean).join(' ')}
-                            style={{
-                              transitionDelay: headerReady ? `${index * 60}ms` : '0ms',
-                            }}
-                          >
-                            <Text className='squad-unboxing__topic-chip-text'>{topic}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : (
-                      <Text className='squad-unboxing__analysis-text'>
-                        先从彼此最近最上头的一件事聊起，通常都能很快破冰。
-                      </Text>
-                    )}
-                  </View>
-
-                  {aigcEnabled && groupAnalysis?.meta?.aigc?.aiGenerated ? (
-                    <View className='squad-unboxing__analysis-report-wrap'>
-                      <AIContentReportButton
-                        options={{
-                          reason: '举报 AI 生成的连接解读内容',
-                          relatedEventId: groupId,
-                        }}
-                        label='举报此内容'
-                      />
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
-            </View> : null}
             <View className='squad-unboxing__spacer' />
           </>
         ) : null}
