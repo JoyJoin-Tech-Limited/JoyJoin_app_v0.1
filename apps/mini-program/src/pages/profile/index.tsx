@@ -244,6 +244,7 @@ export default function ProfilePage() {
     : '成长进度'
   const visibleGrowthProgress = gamificationQuery.data ? growth.progress : 0
   const storyCount = storyArchivesQuery.data?.length ?? 0
+  const latestStory = storyArchivesQuery.data?.[0]
   const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
 
   const handleOpenPersonalityType = () => {
@@ -281,19 +282,23 @@ export default function ProfilePage() {
 
   return renderGate(
     <View className='profile-page tab-page-enter'>
+      <View className='profile-page__nav' data-testid='profile-top-navigation'>
+        <Text className='profile-page__nav-title'>我的</Text>
+        <View
+          className='profile-page__nav-settings'
+          hoverClass='profile-page__nav-settings--pressed'
+          onClick={handleOpenSettings}
+          role='button'
+          aria-label='打开个人设置'
+          data-testid='profile-top-settings'
+        >
+          <JoyJoinIcon emoji='⚙️' tier='ui' size={40} />
+        </View>
+      </View>
       <ScrollView className='profile-page__scroll' scrollY enhanced showScrollbar={false}>
         {profileV17Enabled ? (
-          <View className='profile-page__identity-stage profile-page__identity-stage--entered'>
+          <View className='profile-page__identity-stage profile-page__identity-stage--entered' data-testid='profile-v4'>
           <View className='profile-page__identity-glow' aria-hidden='true' />
-          <View
-            className='profile-page__settings'
-            hoverClass='profile-page__settings--pressed'
-            onClick={handleOpenSettings}
-            role='button'
-            aria-label='打开个人设置'
-          >
-            <Text className='profile-page__settings-icon' aria-hidden='true'>⚙</Text>
-          </View>
 
           <View className='profile-page__identity-copy'>
             <View className='profile-page__identity-avatar'>
@@ -364,24 +369,24 @@ export default function ProfilePage() {
           <View
             className='profile-page__partner-entry'
             hoverClass='profile-page__partner-entry--pressed'
-            onClick={handleOpenPersonalityType}
+            onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile }) }}
             role='button'
-            aria-label={archetype
-              ? '查看我的社交原型；伙伴装备功能筹备中'
-              : '完成测试，解锁我的伙伴'}
+            aria-label='进入我的伙伴与装备'
+            data-testid='profile-partner-equipment-entry'
           >
-            <View className='profile-page__partner-entry-copy'>
-              <ArchetypeHead archetype={archetype} size={56} fallbackText={displayName} />
-              <View>
-                <Text className='profile-page__partner-entry-label'>当前伙伴</Text>
-                <Text className='profile-page__partner-entry-name'>
-                  {archetypeName ?? '等待解锁'}
-                </Text>
+            <View className='profile-page__equipment-preview' aria-label='当前装备，0 件，4 个空槽'>
+              <Text className='profile-page__equipment-label'>当前装备</Text>
+              <View className='profile-page__equipment-slots'>
+                {[0, 1, 2, 3].map((slot) => (
+                  <View key={slot} className='profile-page__equipment-slot' aria-label={`空装备槽 ${slot + 1}`}>
+                    <View className='profile-page__equipment-slot-mark' />
+                  </View>
+                ))}
               </View>
             </View>
-            <Text className='profile-page__partner-entry-lock'>装备筹备中</Text>
             <View className='profile-page__partner-entry-action'>
-              <Text className='profile-page__partner-entry-action-text'>查看形象</Text>
+              <Text className='profile-page__partner-entry-count'>0 件</Text>
+              <Text className='profile-page__partner-entry-action-text'>我的伙伴与装备</Text>
               <View className='profile-page__partner-entry-chevron' />
             </View>
           </View>
@@ -417,15 +422,6 @@ export default function ProfilePage() {
                 </Text>
                 <View className='profile-page__fallback-personality-chevron' aria-hidden='true' />
               </View>
-            </View>
-            <View
-              className='profile-page__fallback-settings'
-              hoverClass='profile-page__fallback-settings--pressed'
-              onClick={handleOpenSettings}
-              role='button'
-              aria-label='打开个人设置'
-            >
-              <Text className='profile-page__fallback-settings-text'>设置</Text>
             </View>
           </View>
         )}
@@ -481,8 +477,8 @@ export default function ProfilePage() {
           </Card>
         </View>
 
-        {showAlangStoryEntry && (
-          <View className='profile-page__archive'>
+        {profileV17Enabled && (
+          <View className='profile-page__archive' data-testid='profile-growth-archive'>
             <View className='profile-page__archive-heading'>
               <View className='profile-page__archive-title-wrap'>
                 <Text className='profile-page__archive-spark'>✦</Text>
@@ -510,6 +506,7 @@ export default function ProfilePage() {
                 void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangEvent}?view=stories` })
               }}
               role='button'
+              data-testid='profile-story-entry'
               aria-label={storyArchivesQuery.isLoading
                 ? '我的故事正在加载'
                 : `我的故事，共 ${storyCount} 段已收录故事`}
@@ -523,9 +520,17 @@ export default function ProfilePage() {
                     : storyArchivesQuery.isError
                       ? '故事档案稍后会自动刷新'
                       : storyCount > 0
-                        ? `${storyCount} 段故事收藏 · 继续写下城市相遇`
-                        : '第一章还在等你出发'}
+                        ? `${storyCount} 段故事收藏 · 最近：${latestStory?.title ?? '城市相遇'}`
+                        : '0 段故事收藏 · 第一章还在等你出发'}
                 </Text>
+                <Text className='profile-page__story-status'>
+                  {storyArchivesQuery.isError
+                    ? '局部加载失败 · 点按仍可进入'
+                    : storyCount > 0
+                      ? '继续中的故事：等待下一次相遇'
+                      : '继续中的故事：暂时没有'}
+                </Text>
+                <Text className='profile-page__story-cta'>进入我的故事</Text>
                 <View className='profile-page__story-action'>
                   <View className='profile-page__story-action-chevron' />
                 </View>
@@ -576,7 +581,7 @@ export default function ProfilePage() {
           </View>
         )}
 
-        <View className='profile-page__menu-section profile-page__menu-section--entered'>
+        <View className='profile-page__menu-section profile-page__menu-section--entered' data-testid='profile-more-services'>
           <Text className='profile-page__menu-title'>更多服务</Text>
           <View className='profile-page__service-grid'>
             <View

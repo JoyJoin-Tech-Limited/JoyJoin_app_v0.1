@@ -107,6 +107,7 @@ export const FLAG_ENV_MAP: Record<string, string> = {
  */
 export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   matchingOperatorReviewEnabled: true,
+  profileRedesignEnabled: true,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();
