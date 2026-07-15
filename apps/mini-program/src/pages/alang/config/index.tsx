@@ -11,10 +11,18 @@ import {
   suggestGeoPlaces,
 } from '@shared/api'
 import {
-  ALANG_ARRIVAL_RADIUS_METERS,
   ALANG_DEFAULT_SEARCH_RADIUS_METERS,
 } from '@shared/alang/constants'
-import { useAlangMissionDetail } from '../../../lib/alang/useAlangMission'
+import {
+  ALANG_TEST_RECOMMENDED_MAX_DISTANCE_METERS,
+  ALANG_TEST_RECOMMENDED_MIN_DISTANCE_METERS,
+  validateAlangTestPointConfiguration,
+} from '@shared/alang/testPointValidation'
+import {
+  useAlangMissionDetail,
+  useStartMission,
+  useSyncAlangMissionProgress,
+} from '../../../lib/alang/useAlangMission'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
 import { haversine, callReportProgress } from '../../../lib/alang/api'
@@ -36,14 +44,33 @@ const SHENZHEN_FALLBACK: AlangCoordinate = {
   longitude: 114.0579,
 }
 
+export function getTestPointValidationError(
+  target: AlangCoordinate | null,
+  endPoint: AlangCoordinate | null,
+): string | null {
+  const validation = validateAlangTestPointConfiguration(target, endPoint)
+  if (validation.valid) return null
+  if (validation.reason === 'invalid_coordinate' || validation.reason === 'outside_gcj02_bounds') {
+    return '测试点位无效，请重新选择出现点和陪伴终点'
+  }
+  return '出现点与陪伴终点需相距 10–2000 米'
+}
+
 export default function AlangConfigPage() {
   const { user, isLoading: isAuthLoading } = useAuth()
   const slug = Taro.getCurrentInstance().router?.params?.slug ?? ''
   const canUseDebugTools = shouldShowAlangDebugTools(user)
-  const { data: mission } = useAlangMissionDetail(
+  const {
+    data: mission,
+    isLoading: isMissionLoading,
+    isError: isMissionError,
+    refetch,
+  } = useAlangMissionDetail(
     slug,
     !!slug && canUseDebugTools,
   )
+  const startMutation = useStartMission()
+  const syncMissionProgress = useSyncAlangMissionProgress()
   const { position, request, loading } = useAlangGpsOnce()
 
   const content = mission?.content as any
@@ -213,6 +240,16 @@ export default function AlangConfigPage() {
         endPoint.longitude,
       )
     : 0
+  const pointValidation = target && endPoint
+    ? validateAlangTestPointConfiguration(target, endPoint)
+    : null
+  const pointValidationError = target && endPoint
+    ? getTestPointValidationError(target, endPoint)
+    : null
+  const shouldRecommendShorterRoute = !pointValidationError
+    && pointValidation?.valid
+    && (pointValidation.distanceMeters < ALANG_TEST_RECOMMENDED_MIN_DISTANCE_METERS
+      || pointValidation.distanceMeters > ALANG_TEST_RECOMMENDED_MAX_DISTANCE_METERS)
 
   const handleEstimateRoute = useCallback(async () => {
     if (!target || !endPoint) return
@@ -235,7 +272,12 @@ export default function AlangConfigPage() {
   }, [endPoint, target])
 
   const handleConfirm = async () => {
-    if (!target || !endPoint || !mission?.myProgress || isSubmitting) return
+    if (!target || !endPoint || !mission || isSubmitting || startMutation.isPending) return
+    const validationError = getTestPointValidationError(target, endPoint)
+    if (validationError) {
+      Taro.showToast({ title: validationError, icon: 'none' })
+      return
+    }
     const searchNode = nodes.find((node) => node.type === 'search_gate')
     if (!searchNode) {
       Taro.showToast({ title: '故事配置暂时不可用', icon: 'none' })
@@ -244,24 +286,26 @@ export default function AlangConfigPage() {
 
     setIsSubmitting(true)
     try {
-      let currentNode = nodes.find((node) => node.id === mission.myProgress?.currentNodeId)
+      const started = await startMutation.mutateAsync({
+        slug,
+        targetLocation: target,
+        companionEndLocation: endPoint,
+        coordinateSystem: 'gcj02',
+      })
+      let currentNode = nodes.find((node) => node.id === started.currentNodeId)
       let safety = 0
       while (currentNode && currentNode.id !== searchNode.id && safety < nodes.length) {
         if (!currentNode.nextNodeId) throw new Error('NO_PATH_TO_SEARCH')
         const nextNode = nodes.find((node) => node.id === currentNode.nextNodeId)
         if (!nextNode) throw new Error('INVALID_SEARCH_PATH')
-        await callReportProgress(slug, nextNode.id)
+        const updated = await callReportProgress(slug, nextNode.id)
+        syncMissionProgress(slug, updated)
         currentNode = nextNode
         safety += 1
       }
       if (currentNode?.id !== searchNode.id) throw new Error('SEARCH_NODE_NOT_REACHED')
 
-      Taro.setStorageSync(`jj_alang_config_${slug}`, {
-        target,
-        endPoint,
-        radius: ALANG_ARRIVAL_RADIUS_METERS,
-      })
-      Taro.redirectTo({
+      await Taro.redirectTo({
         url: `${MINI_PROGRAM_ROUTES.alangSearch}?slug=${encodeURIComponent(slug)}&nodeId=${encodeURIComponent(searchNode.id)}`,
       })
     } catch {
@@ -310,6 +354,23 @@ export default function AlangConfigPage() {
           title='这个页面只在单人测试中开放'
           description='正式故事会直接进入寻找阶段，不需要设置内部点位。'
           action={{ label: '返回故事', onClick: () => Taro.navigateBack() }}
+        />
+      </View>
+    )
+  }
+
+  if (isMissionLoading) {
+    return <View className='alang-config__gate'><Text>正在读取阿浪测试配置…</Text></View>
+  }
+
+  if (isMissionError || !mission) {
+    return (
+      <View className='alang-config__gate'>
+        <StatusCard
+          tone='error'
+          title='测试配置暂时没有打开'
+          description='网络恢复后重新读取，不会使用默认点位代替。'
+          action={{ label: '重新读取', onClick: () => { void refetch() } }}
         />
       </View>
     )
@@ -449,6 +510,14 @@ export default function AlangConfigPage() {
               {routeUnavailable && (
                 <Text className='alang-config__route-note'>路线服务暂时不可用，不影响点位测试</Text>
               )}
+              {pointValidationError && (
+                <Text className='alang-config__route-note alang-config__route-note--error'>
+                  {pointValidationError}
+                </Text>
+              )}
+              {shouldRecommendShorterRoute && (
+                <Text className='alang-config__route-note'>建议将陪伴路程设为 100–300 米，真机复测会更顺畅</Text>
+              )}
             </View>
             <View
               className='alang-config__route-btn'
@@ -464,11 +533,11 @@ export default function AlangConfigPage() {
 
       <View className='alang-config__actions'>
         <View
-          className={`alang-config__confirm ${!target || !endPoint || isSubmitting ? 'alang-config__confirm--disabled' : ''}`}
+          className={`alang-config__confirm ${!target || !endPoint || !!pointValidationError || isSubmitting || startMutation.isPending ? 'alang-config__confirm--disabled' : ''}`}
           onClick={() => { void handleConfirm() }}
           role='button'
           aria-label={isSubmitting ? '正在准备测试' : '开始测试'}
-          aria-disabled={!target || !endPoint || isSubmitting}
+          aria-disabled={!target || !endPoint || !!pointValidationError || isSubmitting || startMutation.isPending}
         >
           <Text className='alang-config__confirm-text'>{isSubmitting ? '正在准备…' : '开始测试'}</Text>
         </View>

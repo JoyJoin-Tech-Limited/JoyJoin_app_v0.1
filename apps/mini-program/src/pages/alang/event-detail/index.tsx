@@ -2,7 +2,12 @@ import Taro from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import type { MissionContent } from '@shared/alang/contentSchema'
-import { useAlangMissionDetail, useStartMission, useRecoverMission } from '../../../lib/alang/useAlangMission'
+import {
+  useAlangMissionDetail,
+  useStartMission,
+  useRecoverMission,
+  useSyncAlangMissionProgress,
+} from '../../../lib/alang/useAlangMission'
 import { callReportProgress } from '../../../lib/alang/api'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { alangEvents } from '../../../lib/alang/alangAnalytics'
@@ -25,7 +30,9 @@ function getCtaText(
   canUseDebugTools: boolean,
 ): string {
   if (status === 'completed') return '查看这段故事'
-  if (status !== 'in_progress') return `出发去找${npcName}`
+  if (status !== 'in_progress') {
+    return canUseDebugTools ? '设置测试地点' : `出发去找${npcName}`
+  }
 
   switch (stage) {
     case 'not_started':
@@ -77,6 +84,7 @@ export default function AlangEventDetailPage() {
   )
   const startMutation = useStartMission()
   const recoverMutation = useRecoverMission()
+  const syncMissionProgress = useSyncAlangMissionProgress()
   const canUseDebugTools = shouldShowAlangDebugTools(user)
   const [isAdvancing, setIsAdvancing] = useState(false)
   const hero = useAlangAssetSource('eventHero')
@@ -145,6 +153,7 @@ export default function AlangEventDetailPage() {
       // The public route accepts only currentNode.nextNodeId. Advance one edge
       // at a time so the server remains the authority for every transition.
       const advanced = await callReportProgress(slug, currentNode.nextNodeId)
+      syncMissionProgress(slug, advanced)
       nextProgress = {
         stage: advanced.stage,
         currentNodeId: advanced.currentNodeId,
@@ -168,6 +177,18 @@ export default function AlangEventDetailPage() {
       }
 
       setIsAdvancing(true)
+
+      // Internal runs need their own appearance point and companion endpoint.
+      // Route to configuration before creating progress so the start request can
+      // persist both points as one server-authoritative snapshot.
+      if (canUseDebugTools && progress?.status !== 'in_progress') {
+        alangEvents.startSearchTap(slug)
+        await Taro.redirectTo({
+          url: `${MINI_PROGRAM_ROUTES.alangConfig}?slug=${encodeURIComponent(slug)}`,
+        })
+        return
+      }
+
       const snapshot = progress?.status === 'in_progress'
         ? await recoverMutation.mutateAsync(slug)
         : await startMutation.mutateAsync(slug)

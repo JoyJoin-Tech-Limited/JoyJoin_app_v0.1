@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   useAlangMissionDetail: vi.fn(),
   useStartMission: vi.fn(),
   useRecoverMission: vi.fn(),
+  syncMissionProgress: vi.fn(),
   startMission: vi.fn(),
   recoverMission: vi.fn(),
   callReportProgress: vi.fn(),
@@ -41,6 +42,7 @@ vi.mock('../../../lib/alang/useAlangMission', () => ({
   useAlangMissionDetail: mocks.useAlangMissionDetail,
   useStartMission: mocks.useStartMission,
   useRecoverMission: mocks.useRecoverMission,
+  useSyncAlangMissionProgress: () => mocks.syncMissionProgress,
 }))
 
 vi.mock('../../../lib/alang/api', () => ({
@@ -146,6 +148,15 @@ describe('AlangEventDetailPage', () => {
     await waitFor(() => {
       expect(mocks.callReportProgress).toHaveBeenCalledWith('meet-alang', 'search-gate')
     })
+    expect(mocks.startMission).toHaveBeenCalledWith('meet-alang')
+    expect(mocks.syncMissionProgress).toHaveBeenCalledWith('meet-alang', {
+      ok: true,
+      stage: 'searching',
+      currentNodeId: 'search-gate',
+    })
+    expect(mocks.syncMissionProgress.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.redirectTo.mock.invocationCallOrder[0],
+    )
     expect(mocks.redirectTo).toHaveBeenCalledWith({
       url: '/pages/alang/search/index?slug=meet-alang&nodeId=search-gate',
     })
@@ -192,13 +203,14 @@ describe('AlangEventDetailPage', () => {
     })
 
     render(<AlangEventDetailPage />)
-    fireEvent.click(screen.getByRole('button', { name: '出发去找阿浪' }))
+    fireEvent.click(screen.getByRole('button', { name: '设置测试地点' }))
 
     await waitFor(() => {
       expect(mocks.redirectTo).toHaveBeenCalledWith({
         url: '/pages/alang/config/index?slug=meet-alang',
       })
     })
+    expect(mocks.startMission).not.toHaveBeenCalled()
     expect(mocks.callReportProgress).not.toHaveBeenCalled()
   })
 

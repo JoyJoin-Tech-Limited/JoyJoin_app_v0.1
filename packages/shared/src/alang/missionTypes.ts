@@ -94,11 +94,21 @@ export interface AlangChoiceRequest {
 
 export interface AlangArrivalResponse {
   arrived: boolean;
+  configurationInvalid?: boolean;
   distanceMeters: number;
   radiusMeters: number;
   stableCount: number;
   nodeId?: string;
+  stage: string;
   debug?: boolean;
+}
+
+export interface AlangChoiceResponse {
+  nextNodeId: string;
+  response: string;
+  moodShift?: string;
+  stage: string;
+  replayed?: boolean;
 }
 
 export interface AlangStoryArchiveSummary {

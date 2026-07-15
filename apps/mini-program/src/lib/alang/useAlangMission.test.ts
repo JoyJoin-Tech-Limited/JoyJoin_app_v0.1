@@ -1,6 +1,9 @@
 import { QueryClient } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearAlangRetestClientState } from './useAlangMission'
+import {
+  clearAlangRetestClientState,
+  syncAlangMissionProgress,
+} from './useAlangMission'
 
 const mocks = vi.hoisted(() => ({
   removeStorageSync: vi.fn(),
@@ -45,6 +48,35 @@ describe('clearAlangRetestClientState', () => {
     expect(queryClient.getQueryData(['unrelated', 'profile'])).toEqual({ keep: true })
     expect(mocks.removeStorageSync).toHaveBeenCalledWith('jj_alang_config_meet-alang')
 
+    queryClient.clear()
+  })
+
+  it('synchronously advances a cached stage before the next page mounts', () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(['alang', 'mission', 'meet-alang'], {
+      slug: 'meet-alang',
+      myProgress: {
+        progressId: 'progress-1',
+        stage: 'searching',
+        currentNodeId: 'search-gate',
+        nodeHistory: ['search-gate'],
+        choicesMade: [],
+        status: 'in_progress',
+        isDebugSession: false,
+      },
+    })
+
+    syncAlangMissionProgress(queryClient, 'meet-alang', {
+      stage: 'found',
+      currentNodeId: 'found-scene',
+    })
+
+    const cached = queryClient.getQueryData<any>(['alang', 'mission', 'meet-alang'])
+    expect(cached.myProgress).toMatchObject({
+      stage: 'found',
+      currentNodeId: 'found-scene',
+      nodeHistory: ['search-gate', 'found-scene'],
+    })
     queryClient.clear()
   })
 })

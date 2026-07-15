@@ -62,7 +62,7 @@ Discover 卡 / 我的故事
 | 内容解析/缓存 | `apps/server/src/services/alangContentService.ts` |
 | 持久化 | `apps/server/src/repositories/alangRepo.ts` |
 | 腾讯地图代理 | `apps/server/src/routes/domains/geo.ts` |
-| Alang DTO/坐标 | `packages/shared/src/api/alang.ts`、`packages/shared/src/alang/missionTypes.ts` |
+| Alang DTO/坐标与测试点位校验 | `packages/shared/src/api/alang.ts`、`packages/shared/src/alang/missionTypes.ts`、`packages/shared/src/alang/testPointValidation.ts` |
 | Geo DTO | `packages/shared/src/api/geo.ts` |
 | 剧情 Schema | `packages/shared/src/alang/contentSchema.ts` |
 
@@ -101,8 +101,9 @@ Discover 卡 / 我的故事
 - 到达判定：JoyJoin 服务端 Haversine + 固定 5 米半径 + 连续 3 个合格读数。
 - 客户端距离只做展示层 EMA 平滑与 1 米迟滞；服务端原始距离和到达真值不受客户端平滑影响。
 - 内容 JSON、数据库字段或 debug payload 中的 `radiusMeters` 都不能扩大固定 5 米半径。
-- 路线终点和 GPS 到达判定共用 `resolveAlangArrivalTarget()`；持久化任务坐标优先，内容节点仅作旧数据兼容回退。
+- 路线终点和 GPS 到达判定共用 `resolveAlangArrivalTarget()`；内部复测必须优先使用当前 progress 的本轮点位且禁止回退 demo，非测试流程才保留任务/内容节点兼容回退。
 - GPS 历史只保留稳定窗口，不保存完整行走轨迹。
+- 内部复测的出现点到陪伴终点必须在 10–2,000 米内，推荐 100–300 米；当前定位到陪伴终点超过 2,000 米时返回配置异常，不展示超大距离，也不写入 GPS history。
 - 腾讯路线：只在陪伴页面用户点击“查看步行路线”后请求。
 - 路线距离/ETA 是展示信息，不可替换 geofence 真值。
 - 地图/路线/逆解析失败时，任务进度、GPS 上报和结果收录继续按各自状态运行。
@@ -110,15 +111,18 @@ Discover 卡 / 我的故事
 
 ## 7. 持久化兼容与数据库
 
-本轮没有数据库 DDL 变化，也没有新增 migration。`target_location`、`companion_end_location`、`gps_history` 和 `content_json` 本来就是 JSONB；仅应用层把坐标字段统一为 `latitude/longitude`。
+`0067_add_alang_progress_test_points.sql` 给 `alang_mission_progress` 增加本轮 `target_location` 与 `companion_end_location` JSONB 字段。任务级 `alang_missions` 坐标仍是运营/非测试兼容值，内部复测配置不得写回全局任务。
+
+迁移故意不回填旧 progress：旧 staging 行无法证明使用的是哪一轮配置，若从 demo mission 回填会再次制造跨城市终点。旧行因此被识别为配置异常，测试人员必须重置并重新设置两个点。新一轮 start 请求同时提交两个标准 `latitude/longitude` GCJ-02 坐标，recover、路线终点、5 米判定和 Mock 到达都读取同一条 progress。
 
 `missionContentSchema`、`normalizeAlangCoordinate()` 和 GPS history parser 会在读取边界兼容旧 `{ lat, lng }` 数据，再向运行时输出标准字段。因此无需一次性数据回填。
 
 ### 回滚
 
 1. 关闭 DB-backed `alangEnabled`（或 `ALANG_ENABLED=false`）可立即隐藏入口并使 Alang API fail closed。
-2. Geo 新接口是现有 `/api/geo` 的增量扩展；回滚应用版本不需要回滚数据库。
-3. 旧 JSON 兼容读取必须保留到确认生产数据完成自然更新后，不能先删除。
+2. 新增 progress 点位列允许为空，回滚应用版本不要求删列；不得用 demo 坐标批量回填旧测试 progress。
+3. Geo 新接口是现有 `/api/geo` 的增量扩展；回滚应用版本不需要回滚数据库。
+4. 旧 JSON 兼容读取必须保留到确认生产数据完成自然更新后，不能先删除。
 
 ## 8. 内部重复测试（P0）
 
@@ -135,7 +139,7 @@ Discover 卡 / 我的故事
 
 `deleteMissionProgress()` 在单个数据库事务内先锁定并确认当前用户与指定 mission 的唯一 progress，再删除同时匹配 `progressId + userId + missionId` 的 archive，最后删除 progress。Archive 外键不级联，因此删除顺序不可交换；任一步失败都会整体回滚。没有 progress 时返回 `0/0`，不会扫描或删除孤儿 archive。
 
-删除范围仅包含当前 progress 的 `nodeHistory`、`choicesMade`、`gpsHistory`、阶段/状态/debugMarkers 及其对应 archive。其他用户、其他 mission、Blind Box、连接、足迹、正式活动和其他故事不在事务谓词内。不能仅按 `isDebugSession=true` 过滤，因为未使用 Mock GPS/Force Node 的正常内部复测也会生成需要清理的 archive。
+删除范围仅包含当前 progress 的本轮出现点/陪伴终点、`nodeHistory`、`choicesMade`、`gpsHistory`、阶段/状态/debugMarkers 及其对应 archive。其他用户、其他 mission、Blind Box、连接、足迹、正式活动和其他故事不在事务谓词内。不能仅按 `isDebugSession=true` 过滤，因为未使用 Mock GPS/Force Node 的正常内部复测也会生成需要清理的 archive。
 
 ### 客户端恢复为初始态
 
@@ -155,15 +159,24 @@ Discover 卡 / 我的故事
 | `RETEST-04` | 事务删除、归属限制、幂等和回滚 | `repositories/alangRepo.ts` | reset repository tests | PASS |
 | `RETEST-05` | Query/mutation/local config 缓存清理 | `lib/alang/useAlangMission.ts` | cache helper tests | PASS |
 | `RETEST-06` | 重置后重新配置并可再次 start/complete | Reset route + config reLaunch | route/result/debug tests | PASS |
-| `RETEST-07` | 自动化测试覆盖 P0 安全与交互清单 | server/mini Alang test suites | 最终定向套件 Server Alang/Geo 60 + Mini Alang/Profile 74；Shared/Server/Mini typecheck；Taro 868 modules | PASS |
+| `RETEST-07` | 自动化测试覆盖 P0 安全与交互清单 | server/mini Alang test suites | Server Alang 66 + Mini Alang 64；Shared/Server/Mini typecheck；H5 1,381 modules；Weapp 869 modules | **功能/编译 PASS；既有主包体积门禁 BLOCK** |
+
+### 陪伴页防卡死（2026-07-15）
+
+- 根因：配置页曾只把点位写到 `jj_alang_config_*`，start API 与 progress 均不保存本轮终点；陪伴页又优先读取服务端任务级 `routeDestination`，于是恢复到 demo-story 的深圳默认终点并显示约 242 公里的真实 Haversine 距离。
+- 修复：内部测试 start 必须携带本轮出现点和陪伴终点；服务端严格校验并保存到当前用户 + 当前 mission 的 progress。recover 和 companion 披露只使用这两个字段，缺失时 fail closed。
+- 恢复态：点位缺失、非数值、0/0、越界、疑似经纬度颠倒、点位间小于 10 米或大于 2,000 米，以及当前定位距终点大于 2,000 米，均不进入正常距离 UI；显示“陪伴终点配置异常，请重新设置测试点位”。
+- 跨页一致性：GPS、对话、companion 自动推进、Mock 到达和结果推进的成功响应都携带 `stage/currentNodeId`；客户端在导航前同步 mission Query Cache，避免目标页读旧阶段后回跳。陪伴阶段首次披露终点时，旧缓存只显示“正在恢复本轮陪伴终点”；网络失败提供重试，只有服务端成功复核后仍无终点才进入配置异常态。
+- 测试工具：仅 `alangEnabled + single-test + 非 production` 时显示。重新配置会调用事务 reset、清除 Query/local cache 并 `reLaunch` 配置页；“模拟到达终点”复用 `POST /api/alang/debug/missions/:slug/mock-gps` 的 `{ mode: "arrive" }`，由服务端在已保存终点 3 米内生成连续 3 个稳定读数并写入 debug marker。
+- 安全：请求不接受 `userId`，只能读写登录用户的当前 mission；普通模式隐藏入口，服务端也拒绝 debug API。
 
 ## 9. 验证基线
 
 ```bash
 npm run typecheck -w @joyjoin/shared
 npm run typecheck -w @joyjoin/server
-npm run test -w @joyjoin/server -- --run src/__tests__/geoRoutes.test.ts src/__tests__/alangContent.test.ts src/__tests__/alangGeoFence.test.ts src/__tests__/alangDisclosure.test.ts src/__tests__/alangTargetResolver.test.ts src/__tests__/alangDebugRoutesGate.test.ts src/__tests__/alangResetRepo.test.ts src/__tests__/alangResetRoute.test.ts src/__tests__/buildAuthUserResponseAlang.test.ts
-npm run test -w mini-program -- --run src/pages/alang
+npm run test -w @joyjoin/server -- --run src/__tests__/geoRoutes.test.ts src/__tests__/alangContent.test.ts src/__tests__/alangGeoFence.test.ts src/__tests__/alangDisclosure.test.ts src/__tests__/alangTargetResolver.test.ts src/__tests__/alangTestPointRoutes.test.ts src/__tests__/alangDebugRoutesGate.test.ts src/__tests__/alangResetRepo.test.ts src/__tests__/alangResetRoute.test.ts src/__tests__/buildAuthUserResponseAlang.test.ts
+npm run test -w mini-program -- --run src/pages/alang src/lib/alang src/components/alang/AlangDiscoverCard.test.tsx
 ```
 
 必须额外在微信开发者工具/真机检查：定位首次授权、拒绝后设置恢复、iOS swipe-back、前后台恢复、polyline、弱网/超时、短屏安全区和 reduced motion。
@@ -184,5 +197,5 @@ npm run test -w mini-program -- --run src/pages/alang
 | `V17-ARRIVE-01` | 服务端固定 5 米并要求稳定读数 | `alangGeoFence.ts`、`constants.ts` | geofence/content tests | PASS |
 | `V17-STATE-01` | 页面断点由服务端 `stage/currentNodeId` 恢复 | Alang 各阶段页、`useAlangMission.ts` | mini-program Alang tests | PASS |
 | `V17-ARCHIVE-01` | 先展示结果，再由用户主动收录 | `result/index.tsx`、`POST .../complete` | result/server tests | PASS |
-| `V17-PERF-01` | 阿浪子包保持轻量，不拖累主包 | `pages/alang` subpackage | 微信生产编译 + package-size | **ALANG PASS / MAIN BLOCK**：Alang 158.7KiB；实际主包 raw 3.268MiB，检查器选取 raw 3.215MiB，本地 Deflate 估算 1.928MiB，尚无官方上传预检结论 |
+| `V17-PERF-01` | 阿浪子包保持轻量，不拖累主包 | `pages/alang` subpackage | 微信生产编译 + package-size | **ALANG PASS / MAIN BLOCK**：Alang 172.9KiB；主包 raw/zip 3.22MB，超过 2.00MB；总包 5.38MB，未在本轮处理范围外主包问题 |
 | `V17-QA-01` | 真机定位/地图/弱网与 ACTIVE 截图验收 | 外部验收清单 | H5 统一视口截图不能替代真机 | **BLOCKED EXTERNAL** |

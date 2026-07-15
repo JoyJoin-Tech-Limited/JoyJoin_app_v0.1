@@ -145,6 +145,11 @@ function createApp() {
 const withServer = createWithServer(createApp);
 const originalAppMode = process.env.APP_MODE;
 const originalSingleTestMode = process.env.ENABLE_SINGLE_TEST_MODE;
+const configuredPoints = {
+  targetLocation: { latitude: 23.1291, longitude: 113.2644 },
+  companionEndLocation: { latitude: 23.1303, longitude: 113.2644 },
+  coordinateSystem: "gcj02",
+};
 
 function restoreEnv(name: string, value: string | undefined): void {
   if (value === undefined) delete process.env[name];
@@ -322,7 +327,7 @@ describe("Alang internal retest route", () => {
     seedProgress();
     expect((await post("/api/alang/debug/missions/alang-demo/reset")).status).toBe(200);
 
-    const startResponse = await post("/api/alang/missions/alang-demo/start");
+    const startResponse = await post("/api/alang/missions/alang-demo/start", configuredPoints);
     const startBody = await startResponse.json() as any;
 
     expect(startResponse.status).toBe(200);
@@ -338,7 +343,7 @@ describe("Alang internal retest route", () => {
   it("can complete again and create a new archive after reset", async () => {
     const oldProgress = seedProgress();
     expect((await post("/api/alang/debug/missions/alang-demo/reset")).status).toBe(200);
-    const startResponse = await post("/api/alang/missions/alang-demo/start");
+    const startResponse = await post("/api/alang/missions/alang-demo/start", configuredPoints);
     const { progressId } = await startResponse.json() as any;
 
     const completeResponse = await post("/api/alang/missions/alang-demo/complete");

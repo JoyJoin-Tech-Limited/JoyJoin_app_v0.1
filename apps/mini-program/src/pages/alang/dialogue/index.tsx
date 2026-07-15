@@ -2,7 +2,10 @@ import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import type { MissionContent, StoryNode } from '@shared/alang/contentSchema'
-import { useAlangMissionDetail } from '../../../lib/alang/useAlangMission'
+import {
+  useAlangMissionDetail,
+  useSyncAlangMissionProgress,
+} from '../../../lib/alang/useAlangMission'
 import { useAuth } from '../../../hooks/useAuth'
 import { callReportProgress, callSubmitChoice } from '../../../lib/alang/api'
 import { alangEvents } from '../../../lib/alang/alangAnalytics'
@@ -45,6 +48,7 @@ export default function AlangDialoguePage() {
     slug,
     !!slug && !!user?.features?.alangEnabled
   )
+  const syncMissionProgress = useSyncAlangMissionProgress()
 
   const [currentNodeId, setCurrentNodeId] = useState(initialNodeId)
   const [history, setHistory] = useState<StoryHistoryItem[]>([])
@@ -190,13 +194,17 @@ export default function AlangDialoguePage() {
         { type: 'choice', text: choice.label },
         { type: 'response', text: response.response },
       ])
+      syncMissionProgress(slug, {
+        stage: response.stage,
+        currentNodeId: response.nextNodeId,
+      })
       setCurrentNodeId(response.nextNodeId)
     } catch {
       Taro.showToast({ title: '这次没送达，再选一次就好', icon: 'none' })
     } finally {
       setIsProcessing(false)
     }
-  }, [currentNode, isProcessing, slug])
+  }, [currentNode, isProcessing, slug, syncMissionProgress])
 
   const handleContinueFromFoundScene = useCallback(async () => {
     if (!currentNode || currentNode.type !== 'found_scene' || !currentNode.nextNodeId || isProcessing) return
@@ -204,13 +212,17 @@ export default function AlangDialoguePage() {
     try {
       const updated = await callReportProgress(slug, currentNode.nextNodeId)
       haptics('light')
+      syncMissionProgress(slug, {
+        stage: updated.stage,
+        currentNodeId: updated.currentNodeId,
+      })
       setCurrentNodeId(updated.currentNodeId)
     } catch {
       Taro.showToast({ title: '故事同步遇到小状况，再试一次即可', icon: 'none' })
     } finally {
       setIsProcessing(false)
     }
-  }, [currentNode, isProcessing, slug])
+  }, [currentNode, isProcessing, slug, syncMissionProgress])
 
   const dialogueRounds = useMemo(() => buildDialogueRounds(history), [history])
   const isUsingPlaceholder = foundSceneArtwork.usingFallback

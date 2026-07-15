@@ -11,6 +11,12 @@
     min-height: 100%;
     box-sizing: border-box;
     padding: 28rpx 28rpx calc(48rpx + env(safe-area-inset-bottom));
+
+    &--recovery {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   }
 
   &__loading,
@@ -158,6 +164,112 @@
     color: $color-text-white;
     font-size: $font-size-sm;
     font-weight: 600;
+  }
+
+  &__config-error {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 40rpx 32rpx;
+    border: 2rpx solid rgba($color-warning, 0.2);
+    border-radius: 32rpx;
+    background: $color-surface;
+    box-shadow: 0 20rpx 56rpx rgba($color-text-primary, 0.08);
+  }
+
+  &__config-error-kicker,
+  &__config-error-title,
+  &__config-error-copy,
+  &__debug-title,
+  &__debug-copy,
+  &__debug-coordinates Text {
+    display: block;
+  }
+
+  &__config-error-kicker {
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: 600;
+  }
+
+  &__config-error-title {
+    margin-top: 12rpx;
+    color: $color-text-primary;
+    font-size: $font-size-xl;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  &__config-error-copy {
+    margin-top: 16rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-base;
+    line-height: 1.65;
+  }
+
+  &__config-error-actions,
+  &__debug-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14rpx;
+    margin-top: 28rpx;
+  }
+
+  &__debug-tools {
+    margin-top: 24rpx;
+    padding: 24rpx;
+    border: 2rpx dashed rgba($color-primary, 0.25);
+    border-radius: 24rpx;
+    background: rgba($color-primary, 0.05);
+  }
+
+  &__debug-title {
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    font-weight: 700;
+  }
+
+  &__debug-copy {
+    margin-top: 6rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+  }
+
+  &__debug-btn {
+    display: flex;
+    min-height: $cta-min-tap;
+    box-sizing: border-box;
+    flex: 1 1 190rpx;
+    padding: 14rpx 18rpx;
+    align-items: center;
+    justify-content: center;
+    border: 2rpx solid rgba($color-primary-dark, 0.28);
+    border-radius: 18rpx;
+    background: $color-surface;
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: 600;
+
+    &--primary {
+      border-color: $color-primary-dark;
+      background: $color-primary-dark;
+      color: $color-text-white;
+    }
+
+    &--disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  &__debug-coordinates {
+    margin-top: 18rpx;
+    padding: 18rpx;
+    border-radius: 16rpx;
+    background: rgba($color-surface, 0.82);
+    color: $color-text-secondary;
+    font-family: monospace;
+    font-size: $font-size-xs;
+    line-height: 1.65;
   }
 
   &__actions {

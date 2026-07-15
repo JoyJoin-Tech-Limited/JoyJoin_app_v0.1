@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AlangCompanionPage from './index'
 
@@ -10,12 +10,20 @@ const mocks = vi.hoisted(() => ({
   getStorageSync: vi.fn(),
   getWalkingRoute: vi.fn(),
   mapProps: vi.fn(),
+  navigateTo: vi.fn(),
   openSetting: vi.fn(),
+  reLaunch: vi.fn(),
   redirectTo: vi.fn(),
   refetch: vi.fn(),
+  resetMission: vi.fn(),
+  showModal: vi.fn(),
   showToast: vi.fn(),
+  callDebugMockArrival: vi.fn(),
+  authUser: { current: { appMode: 'production', features: { alangEnabled: true } } as any },
   useAlangGps: vi.fn(),
   useAlangMissionDetail: vi.fn(),
+  useResetAlangMission: vi.fn(),
+  syncMissionProgress: vi.fn(),
 }))
 
 vi.mock('@tarojs/taro', () => {
@@ -25,8 +33,11 @@ vi.mock('@tarojs/taro', () => {
     }),
     getSetting: mocks.getSetting,
     getStorageSync: mocks.getStorageSync,
+    navigateTo: mocks.navigateTo,
     openSetting: mocks.openSetting,
+    reLaunch: mocks.reLaunch,
     redirectTo: mocks.redirectTo,
+    showModal: mocks.showModal,
     showToast: mocks.showToast,
   }
 
@@ -56,6 +67,7 @@ vi.mock('../../../lib/api/api', () => ({
 }))
 
 vi.mock('../../../lib/alang/api', () => ({
+  callDebugMockArrival: mocks.callDebugMockArrival,
   callReportProgress: mocks.callReportProgress,
   getCurrentPosition: mocks.getCurrentPosition,
 }))
@@ -66,10 +78,12 @@ vi.mock('../../../lib/alang/useAlangGps', () => ({
 
 vi.mock('../../../lib/alang/useAlangMission', () => ({
   useAlangMissionDetail: mocks.useAlangMissionDetail,
+  useResetAlangMission: mocks.useResetAlangMission,
+  useSyncAlangMissionProgress: () => mocks.syncMissionProgress,
 }))
 
 vi.mock('../../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: { features: { alangEnabled: true } } }),
+  useAuth: () => ({ user: mocks.authUser.current }),
 }))
 
 vi.mock('../../../lib/alang/alangAssets', () => ({
@@ -86,6 +100,10 @@ vi.mock('../../../lib/alang/alangAnalytics', () => ({
     confirmArrivalTap: vi.fn(),
     mapViewTap: vi.fn(),
   },
+}))
+
+vi.mock('../../../lib/utils/haptics', () => ({
+  haptics: vi.fn(),
 }))
 
 vi.mock('../../../components/ui/StatusCard', () => ({
@@ -146,7 +164,25 @@ describe('AlangCompanionPage walking route', () => {
     })
     mocks.getSetting.mockResolvedValue({ authSetting: { 'scope.userLocation': true } })
     mocks.openSetting.mockResolvedValue({ authSetting: { 'scope.userLocation': true } })
+    mocks.showModal.mockResolvedValue({ confirm: true, cancel: false })
     mocks.redirectTo.mockResolvedValue({})
+    mocks.navigateTo.mockResolvedValue({})
+    mocks.reLaunch.mockResolvedValue({})
+    mocks.resetMission.mockResolvedValue({
+      reset: true,
+      deletedProgressCount: 1,
+      deletedArchiveCount: 0,
+    })
+    mocks.callDebugMockArrival.mockResolvedValue({
+      arrived: true,
+      distanceMeters: 0,
+      radiusMeters: 5,
+      stableCount: 3,
+      nodeId: 'arrival-gate',
+      stage: 'arrived',
+      debug: true,
+    })
+    mocks.authUser.current = { appMode: 'production', features: { alangEnabled: true } }
     mocks.refetch.mockResolvedValue({ data: mission })
     mocks.useAlangMissionDetail.mockReturnValue({
       data: mission,
@@ -154,11 +190,16 @@ describe('AlangCompanionPage walking route', () => {
       isError: false,
       refetch: mocks.refetch,
     })
+    mocks.useResetAlangMission.mockReturnValue({
+      isPending: false,
+      mutateAsync: mocks.resetMission,
+    })
     mocks.useAlangGps.mockReturnValue({
       distance: 280,
       accuracy: 12,
       nodeId: 'companion-walk',
       position: userPosition,
+      configurationInvalid: false,
     })
   })
 
@@ -233,6 +274,7 @@ describe('AlangCompanionPage walking route', () => {
 
     expect(mocks.callReportProgress).not.toHaveBeenCalled()
     expect(mocks.redirectTo).not.toHaveBeenCalled()
+    expect(document.querySelector('.alang-companion__debug-tools')).not.toBeInTheDocument()
 
     fireEvent.click(container.querySelector('.alang-companion__map-back')!)
     expect(container.querySelector('.alang-companion__atmosphere')).toBeInTheDocument()
@@ -240,5 +282,153 @@ describe('AlangCompanionPage walking route', () => {
       target: serverDestination,
       enabled: true,
     }))
+  })
+
+  it('blocks an abnormal distance instead of rendering a hundreds-of-kilometres companion state', () => {
+    mocks.useAlangGps.mockReturnValue({
+      distance: 242_037,
+      accuracy: 12,
+      nodeId: 'companion-walk',
+      position: userPosition,
+      configurationInvalid: false,
+    })
+
+    const { container } = render(<AlangCompanionPage />)
+
+    expect(container.textContent).toContain('陪伴终点配置异常，请重新设置测试点位')
+    expect(container.textContent).not.toContain('242037')
+    expect(container.querySelector('.alang-companion__distance')).not.toBeInTheDocument()
+    expect(container.querySelector('.alang-companion__map-btn')).not.toBeInTheDocument()
+  })
+
+  it('treats a cache without the newly disclosed endpoint as restoring, not invalid', () => {
+    mocks.refetch.mockReturnValue(new Promise(() => undefined))
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: { ...mission, routeDestination: undefined },
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    const { container } = render(<AlangCompanionPage />)
+
+    expect(container.textContent).toContain('正在恢复本轮陪伴终点')
+    expect(container.textContent).not.toContain('陪伴终点配置异常')
+    expect(container.querySelector('[aria-label="重新配置点位"]')).not.toBeInTheDocument()
+  })
+
+  it('shows a retry state instead of reset when endpoint recovery fails', async () => {
+    mocks.refetch.mockResolvedValue({ isError: true, data: undefined })
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: { ...mission, routeDestination: undefined },
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    const { container } = render(<AlangCompanionPage />)
+
+    await waitFor(() => expect(container.textContent).toContain('陪伴终点暂时没有恢复'))
+    expect(container.textContent).not.toContain('陪伴终点配置异常')
+    expect(container.querySelector('[aria-label="重新配置点位"]')).not.toBeInTheDocument()
+  })
+
+  it('shows configuration recovery only after a successful authoritative response still has no endpoint', async () => {
+    mocks.authUser.current = { appMode: 'test', features: { alangEnabled: true } }
+    const missingDestinationMission = { ...mission, routeDestination: undefined }
+    mocks.refetch.mockResolvedValue({ isError: false, data: missingDestinationMission })
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: missingDestinationMission,
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    const { container } = render(<AlangCompanionPage />)
+
+    await waitFor(() => expect(container.textContent).toContain('陪伴终点配置异常，请重新设置测试点位'))
+    expect(container.querySelector('[aria-label="重新配置点位"]')).toBeInTheDocument()
+  })
+
+  it('uses the server GPS validation signal when an invalid distance is withheld', () => {
+    mocks.useAlangGps.mockReturnValue({
+      distance: null,
+      accuracy: 12,
+      nodeId: 'companion-walk',
+      position: userPosition,
+      configurationInvalid: true,
+    })
+
+    const { container } = render(<AlangCompanionPage />)
+
+    expect(container.textContent).toContain('陪伴终点配置异常，请重新设置测试点位')
+    expect(container.querySelector('.alang-companion__distance')).not.toBeInTheDocument()
+    expect(container.querySelector('.alang-companion__map-btn')).not.toBeInTheDocument()
+  })
+
+  it('shows coordinates and internal actions only in strict single-test mode', () => {
+    mocks.authUser.current = { appMode: 'test', features: { alangEnabled: true } }
+
+    const { container } = render(<AlangCompanionPage />)
+
+    expect(container.textContent).toContain('内部测试工具')
+    fireEvent.click(container.querySelector('[aria-label="查看测试坐标"]')!)
+    expect(container.textContent).toContain('22.541110, 114.055550')
+    expect(container.textContent).toContain('22.543210, 114.057890')
+    expect(container.textContent).toContain('计算距离：280 米')
+  })
+
+  it('uses the debug arrival API and immediately exposes the normal arrival continuation', async () => {
+    mocks.authUser.current = { appMode: 'test', features: { alangEnabled: true } }
+    mocks.callReportProgress.mockResolvedValue({
+      stage: 'result',
+      currentNodeId: 'result-card',
+    })
+
+    const { container } = render(<AlangCompanionPage />)
+    fireEvent.click(container.querySelector('[aria-label="模拟到达终点"]')!)
+
+    await waitFor(() => expect(mocks.callDebugMockArrival).toHaveBeenCalledWith('meet-alang'))
+    await waitFor(() => expect(container.textContent).toContain('我们到了'))
+    expect(mocks.syncMissionProgress).toHaveBeenCalledWith('meet-alang', {
+      stage: 'arrived',
+      currentNodeId: 'arrival-gate',
+    })
+    expect(mocks.refetch).toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: '确认到达' }))
+    await waitFor(() => expect(mocks.callReportProgress).toHaveBeenCalledWith('meet-alang', 'result-card'))
+    expect(mocks.syncMissionProgress).toHaveBeenLastCalledWith('meet-alang', {
+      stage: 'result',
+      currentNodeId: 'result-card',
+    })
+    expect(mocks.redirectTo).toHaveBeenCalledWith({
+      url: '/pages/alang/result/index?slug=meet-alang&nodeId=result-card',
+    })
+  })
+
+  it('resets server progress before relaunching the point configuration page', async () => {
+    mocks.authUser.current = { appMode: 'test', features: { alangEnabled: true } }
+    mocks.useAlangGps.mockReturnValue({
+      distance: 242_037,
+      accuracy: 12,
+      nodeId: 'companion-walk',
+      position: userPosition,
+      configurationInvalid: false,
+    })
+
+    const { container } = render(<AlangCompanionPage />)
+    fireEvent.click(container.querySelector('[aria-label="查看测试坐标"]')!)
+    expect(container.textContent).toContain('计算距离：242037 米')
+    fireEvent.click(container.querySelector('[aria-label="打开测试工具"]')!)
+    expect(mocks.navigateTo).toHaveBeenCalledWith({
+      url: '/pages/alang/debug/index?slug=meet-alang',
+    })
+    fireEvent.click(container.querySelector('[aria-label="重新配置点位"]')!)
+
+    await waitFor(() => expect(mocks.resetMission).toHaveBeenCalledWith('meet-alang'))
+    expect(mocks.reLaunch).toHaveBeenCalledWith({
+      url: '/pages/alang/config/index?slug=meet-alang',
+    })
   })
 })

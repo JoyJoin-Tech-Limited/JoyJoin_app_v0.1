@@ -12,6 +12,35 @@ const content = missionContentSchema.parse(
 );
 
 describe("Alang arrival target resolver", () => {
+  it("uses the current progress endpoint ahead of the demo mission endpoint", () => {
+    const currentRun = { latitude: 23.1303, longitude: 113.2644 };
+    const target = resolveAlangArrivalTarget({
+      mission: {
+        companionEndLocation: { latitude: 22.519, longitude: 113.945 },
+      },
+      progress: { companionEndLocation: currentRun },
+      content,
+      kind: "companion",
+      requireProgressCoordinates: true,
+    });
+
+    expect(target).toEqual(currentRun);
+  });
+
+  it("does not fall back to demo coordinates when a test run has no saved point", () => {
+    const target = resolveAlangArrivalTarget({
+      mission: {
+        companionEndLocation: { latitude: 22.519, longitude: 113.945 },
+      },
+      progress: {},
+      content,
+      kind: "companion",
+      requireProgressCoordinates: true,
+    });
+
+    expect(target).toBeNull();
+  });
+
   it("uses the persisted companion endpoint for both route and GPS contexts", () => {
     const persisted = { latitude: 22.52, longitude: 113.95, radiusMeters: 500 };
     const mission = {

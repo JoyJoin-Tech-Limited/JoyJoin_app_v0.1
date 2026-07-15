@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   callReportProgress: vi.fn(),
   callSubmitChoice: vi.fn(),
   refetch: vi.fn(),
+  syncMissionProgress: vi.fn(),
 }))
 
 vi.mock('@tarojs/taro', () => {
@@ -40,6 +41,7 @@ vi.mock('../../../hooks/useAuth', () => ({
 
 vi.mock('../../../lib/alang/useAlangMission', () => ({
   useAlangMissionDetail: mocks.useAlangMissionDetail,
+  useSyncAlangMissionProgress: () => mocks.syncMissionProgress,
 }))
 
 vi.mock('../../../lib/alang/api', () => ({
@@ -133,6 +135,7 @@ describe('AlangDialoguePage', () => {
     mocks.callSubmitChoice.mockResolvedValue({
       nextNodeId: 'companion',
       response: '“那就一起吧。”',
+      stage: 'companion',
     })
   })
 
@@ -161,12 +164,19 @@ describe('AlangDialoguePage', () => {
         choiceIndex: 0,
       })
     })
+    expect(mocks.syncMissionProgress).toHaveBeenCalledWith('meet-alang', {
+      stage: 'companion',
+      currentNodeId: 'companion',
+    })
     expect(await screen.findByText('阿浪站起身了')).toBeInTheDocument()
     await waitFor(() => {
       expect(mocks.redirectTo).toHaveBeenCalledWith({
         url: '/pages/alang/companion/index?slug=meet-alang&nodeId=companion',
       })
     }, { timeout: 1600 })
+    expect(mocks.syncMissionProgress.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.redirectTo.mock.invocationCallOrder[0],
+    )
   })
 
   it('uses the server stage to leave a stale dialogue page after the story reached its result', async () => {

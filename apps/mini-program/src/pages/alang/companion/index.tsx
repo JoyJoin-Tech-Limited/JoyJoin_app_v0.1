@@ -7,12 +7,17 @@ import {
   normalizeAlangCoordinate,
   type AlangCoordinate,
 } from '@shared/alang/missionTypes'
+import { isAbnormalAlangTestDistance } from '@shared/alang/testPointValidation'
 import { getWalkingRoute, type WalkingRouteSuccessResponse } from '@shared/api'
-import { useAlangMissionDetail } from '../../../lib/alang/useAlangMission'
+import {
+  useAlangMissionDetail,
+  useResetAlangMission,
+  useSyncAlangMissionProgress,
+} from '../../../lib/alang/useAlangMission'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
 import { useAlangGps } from '../../../lib/alang/useAlangGps'
-import { callReportProgress, getCurrentPosition } from '../../../lib/alang/api'
+import { callDebugMockArrival, callReportProgress, getCurrentPosition } from '../../../lib/alang/api'
 import { apiRequest } from '../../../lib/api/api'
 import { useAlangAssetSource } from '../../../lib/alang/alangAssets'
 import { alangEvents } from '../../../lib/alang/alangAnalytics'
@@ -22,18 +27,16 @@ import { haptics } from '../../../lib/utils/haptics'
 import { BRAND_COLORS } from '../../../styles/colors'
 import './index.scss'
 
-type DebugCompanionConfig = {
-  endPoint?: unknown
-}
-
-function destinationFromStoredConfig(slug: string): AlangCoordinate | null {
-  if (!slug) return null
-  try {
-    const stored = Taro.getStorageSync(`jj_alang_config_${slug}`) as DebugCompanionConfig | undefined
-    return normalizeAlangCoordinate(stored?.endPoint)
-  } catch {
-    return null
-  }
+export function isUsableCompanionDestination(
+  coordinate: AlangCoordinate | null,
+): coordinate is AlangCoordinate {
+  return !!coordinate
+    && Number.isFinite(coordinate.latitude)
+    && Number.isFinite(coordinate.longitude)
+    && coordinate.latitude >= 0.8293
+    && coordinate.latitude <= 55.8271
+    && coordinate.longitude >= 72.004
+    && coordinate.longitude <= 137.8347
 }
 
 export default function AlangCompanionPage() {
@@ -45,6 +48,8 @@ export default function AlangCompanionPage() {
     slug,
     !!slug && !!user?.features?.alangEnabled,
   )
+  const resetMutation = useResetAlangMission()
+  const syncMissionProgress = useSyncAlangMissionProgress()
   const atmosphere = useAlangAssetSource('companionAtmosphere')
 
   const [showMap, setShowMap] = useState(false)
@@ -58,8 +63,17 @@ export default function AlangCompanionPage() {
   const [routeLoading, setRouteLoading] = useState(false)
   const [route, setRoute] = useState<WalkingRouteSuccessResponse | null>(null)
   const [routeUnavailable, setRouteUnavailable] = useState(false)
+  const [clientConfigurationInvalid, setClientConfigurationInvalid] = useState(false)
+  const [showTestCoordinates, setShowTestCoordinates] = useState(false)
+  const [isMockingArrival, setIsMockingArrival] = useState(false)
+  const [destinationRefreshStatus, setDestinationRefreshStatus] = useState<
+    'idle' | 'loading' | 'settled' | 'failed'
+  >('idle')
   const navigationKeyRef = useRef('')
   const arrivalFeedbackRef = useRef(false)
+  const reconfigureActionRef = useRef(false)
+  const mockArrivalActionRef = useRef(false)
+  const destinationRefreshInFlightRef = useRef(false)
 
   const content = mission?.content as MissionContent | undefined
   const nodes = useMemo<StoryNode[]>(() => content?.nodes ?? [], [content?.nodes])
@@ -72,11 +86,31 @@ export default function AlangCompanionPage() {
       .map((id) => nodes.find((node) => node.id === id))
       .find((node) => node?.type === 'companion_move')
   const companionLines = companionNode?.content.companionLines ?? []
-  const routeDestination = normalizeAlangCoordinate(mission?.routeDestination)
-    ?? (canUseDebugTools ? destinationFromStoredConfig(slug) : null)
+  const normalizedRouteDestination = normalizeAlangCoordinate(mission?.routeDestination)
+  const routeDestination = isUsableCompanionDestination(normalizedRouteDestination)
+    ? normalizedRouteDestination
+    : null
+
+  const refreshCompanionMission = useCallback(async () => {
+    if (!slug || destinationRefreshInFlightRef.current) return
+    destinationRefreshInFlightRef.current = true
+    setDestinationRefreshStatus('loading')
+    try {
+      const result = await refetch()
+      setDestinationRefreshStatus(result.isError ? 'failed' : 'settled')
+    } catch {
+      setDestinationRefreshStatus('failed')
+    } finally {
+      destinationRefreshInFlightRef.current = false
+    }
+  }, [refetch, slug])
+
+  useEffect(() => {
+    void refreshCompanionMission()
+  }, [refreshCompanionMission])
 
   useDidShow(() => {
-    if (slug) void refetch()
+    void refreshCompanionMission()
   })
 
   useEffect(() => {
@@ -117,6 +151,10 @@ export default function AlangCompanionPage() {
     callReportProgress(slug, currentNode.nextNodeId)
       .then(async (updated) => {
         if (!active) return
+        syncMissionProgress(slug, {
+          stage: updated.stage,
+          currentNodeId: updated.currentNodeId,
+        })
         setCurrentNodeId(updated.currentNodeId)
         await refetch()
       })
@@ -124,7 +162,7 @@ export default function AlangCompanionPage() {
         if (active) Taro.showToast({ title: '陪伴片段没有接上，再试一次即可', icon: 'none' })
       })
     return () => { active = false }
-  }, [currentNode, refetch, slug])
+  }, [currentNode, refetch, slug, syncMissionProgress])
 
   useEffect(() => {
     if (companionLines.length === 0) return
@@ -159,17 +197,59 @@ export default function AlangCompanionPage() {
       .catch(() => undefined)
   }, [])
 
+  const handleProgress = useCallback((snapshot: { stage: string; currentNodeId: string }) => {
+    syncMissionProgress(slug, snapshot)
+  }, [slug, syncMissionProgress])
+
   const {
     distance,
     nodeId: gpsNodeId,
     position,
+    configurationInvalid: gpsConfigurationInvalid,
   } = useAlangGps({
     slug,
     target: routeDestination ?? undefined,
-    enabled: !!slug && currentNode?.type === 'companion_move' && !arrived,
+    enabled: !!slug
+      && !!routeDestination
+      && currentNode?.type === 'companion_move'
+      && !arrived
+      && !clientConfigurationInvalid,
     onArrival: handleArrival,
+    onProgress: handleProgress,
     onError: handleGpsError,
   })
+
+  const hasAbnormalDistance = distance !== null && isAbnormalAlangTestDistance(distance)
+  const hasInvalidCompanionConfiguration = !routeDestination
+    || !!mission?.testConfigurationInvalid
+    || clientConfigurationInvalid
+    || gpsConfigurationInvalid
+    || hasAbnormalDistance
+  const needsAuthoritativeDestination = !!progress
+    && ['companion', 'arrived'].includes(progress.stage)
+    && !routeDestination
+    && !mission?.testConfigurationInvalid
+  const isRestoringDestination = needsAuthoritativeDestination
+    && ['idle', 'loading'].includes(destinationRefreshStatus)
+  const destinationRefreshFailed = needsAuthoritativeDestination
+    && destinationRefreshStatus === 'failed'
+  const currentCoordinateText = position
+    ? `${position.latitude.toFixed(6)}, ${position.longitude.toFixed(6)}`
+    : '尚未定位'
+  const destinationCoordinateText = routeDestination
+    ? `${routeDestination.latitude.toFixed(6)}, ${routeDestination.longitude.toFixed(6)}`
+    : '服务端未返回本轮终点'
+  const testDistanceText = distance !== null && Number.isFinite(distance)
+    ? `${Math.round(distance)} 米`
+    : '等待定位'
+
+  useEffect(() => {
+    setClientConfigurationInvalid(false)
+  }, [routeDestination?.latitude, routeDestination?.longitude])
+
+  useEffect(() => {
+    if (hasAbnormalDistance) setClientConfigurationInvalid(true)
+  }, [hasAbnormalDistance])
 
   useEffect(() => {
     if (!position) return
@@ -190,8 +270,72 @@ export default function AlangCompanionPage() {
     }
   }, [refetch])
 
+  const handleReconfigure = useCallback(async () => {
+    if (!canUseDebugTools
+      || !slug
+      || reconfigureActionRef.current
+      || resetMutation.isPending) return
+    reconfigureActionRef.current = true
+    try {
+      const modal = await Taro.showModal({
+        title: '重新配置测试点位',
+        content: '将清除当前阿浪测试进度与本轮点位，是否重新设置？',
+        confirmText: '重新配置',
+        cancelText: '取消',
+        confirmColor: BRAND_COLORS.primary,
+      })
+      if (!modal.confirm) return
+
+      await resetMutation.mutateAsync(slug)
+      await Taro.reLaunch({
+        url: `${MINI_PROGRAM_ROUTES.alangConfig}?slug=${encodeURIComponent(slug)}`,
+      })
+    } catch {
+      Taro.showToast({ title: '没有清除成功，请稍后再试', icon: 'none' })
+    } finally {
+      reconfigureActionRef.current = false
+    }
+  }, [canUseDebugTools, resetMutation, slug])
+
+  const handleOpenDebugTools = useCallback(() => {
+    if (!canUseDebugTools || !slug) return
+    void Taro.navigateTo({
+      url: `${MINI_PROGRAM_ROUTES.alangDebug}?slug=${encodeURIComponent(slug)}`,
+    })
+  }, [canUseDebugTools, slug])
+
+  const handleMockArrival = useCallback(async () => {
+    if (!canUseDebugTools
+      || !slug
+      || mockArrivalActionRef.current
+      || isMockingArrival
+      || arrived) return
+    mockArrivalActionRef.current = true
+    setIsMockingArrival(true)
+    try {
+      const result = await callDebugMockArrival(slug)
+      if (result.arrived) {
+        if (!result.nodeId) throw new Error('MOCK_ARRIVAL_NODE_MISSING')
+        syncMissionProgress(slug, {
+          stage: result.stage,
+          currentNodeId: result.nodeId,
+        })
+        setCurrentNodeId(result.nodeId)
+        handleArrival()
+        await refetch()
+      } else {
+        Taro.showToast({ title: '模拟位置仍在确认，请再试一次', icon: 'none' })
+      }
+    } catch {
+      Taro.showToast({ title: '模拟到达没有成功，请稍后再试', icon: 'none' })
+    } finally {
+      mockArrivalActionRef.current = false
+      setIsMockingArrival(false)
+    }
+  }, [arrived, canUseDebugTools, handleArrival, isMockingArrival, refetch, slug, syncMissionProgress])
+
   const handleConfirmArrival = async () => {
-    if (!slug || !arrived || isConfirming) return
+    if (!slug || !arrived || isConfirming || isMockingArrival) return
     alangEvents.confirmArrivalTap(slug)
     setIsConfirming(true)
     try {
@@ -202,6 +346,10 @@ export default function AlangCompanionPage() {
         const nextNode = nodes.find((item) => item.id === node?.nextNodeId)
         if (!nextNode) throw new Error('INVALID_RESULT_PATH')
         const updated = await callReportProgress(slug, nextNode.id)
+        syncMissionProgress(slug, {
+          stage: updated.stage,
+          currentNodeId: updated.currentNodeId,
+        })
         setCurrentNodeId(updated.currentNodeId)
         node = nextNode
         safety += 1
@@ -296,6 +444,78 @@ export default function AlangCompanionPage() {
           action={{ label: '重新打开', onClick: () => { void refetch() } }}
         />
       </View>
+    )
+  }
+
+  if (isRestoringDestination) {
+    return (
+      <View className='alang-companion__loading' role='status'>
+        <Text>正在恢复本轮陪伴终点…</Text>
+      </View>
+    )
+  }
+
+  if (destinationRefreshFailed) {
+    return (
+      <View className='alang-companion__status-shell'>
+        <StatusCard
+          tone='error'
+          title='陪伴终点暂时没有恢复'
+          description='当前进度仍然保留，请在网络恢复后重试，不会清除本轮点位。'
+          action={{ label: '重新恢复', onClick: () => { void refreshCompanionMission() } }}
+        />
+      </View>
+    )
+  }
+
+  if (hasInvalidCompanionConfiguration) {
+    return (
+      <ScrollView className='alang-companion' scrollY>
+        <View className='alang-companion__content alang-companion__content--recovery'>
+          <View className='alang-companion__config-error' role='alert'>
+            <Text className='alang-companion__config-error-kicker'>测试点位需要调整</Text>
+            <Text className='alang-companion__config-error-title'>陪伴终点配置异常，请重新设置测试点位</Text>
+            <Text className='alang-companion__config-error-copy'>本页已停止显示异常距离，也不会继续规划错误路线。</Text>
+            {canUseDebugTools && (
+              <View className='alang-companion__config-error-actions'>
+                <View
+                  className={`alang-companion__debug-btn alang-companion__debug-btn--primary${resetMutation.isPending ? ' alang-companion__debug-btn--disabled' : ''}`}
+                  onClick={() => { void handleReconfigure() }}
+                  role='button'
+                  aria-label={resetMutation.isPending ? '正在清除测试进度' : '重新配置点位'}
+                  aria-disabled={resetMutation.isPending}
+                >
+                  <Text>{resetMutation.isPending ? '正在清除…' : '重新配置点位'}</Text>
+                </View>
+                <View
+                  className='alang-companion__debug-btn'
+                  onClick={handleOpenDebugTools}
+                  role='button'
+                  aria-label='打开测试工具'
+                >
+                  <Text>打开测试工具</Text>
+                </View>
+                <View
+                  className='alang-companion__debug-btn'
+                  onClick={() => setShowTestCoordinates((visible) => !visible)}
+                  role='button'
+                  aria-label={showTestCoordinates ? '收起测试坐标' : '查看测试坐标'}
+                  aria-expanded={showTestCoordinates}
+                >
+                  <Text>{showTestCoordinates ? '收起测试坐标' : '查看测试坐标'}</Text>
+                </View>
+              </View>
+            )}
+            {canUseDebugTools && showTestCoordinates && (
+              <View className='alang-companion__debug-coordinates'>
+                <Text>当前位置：{currentCoordinateText}</Text>
+                <Text>陪伴终点：{destinationCoordinateText}</Text>
+                <Text>计算距离：{testDistanceText}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </ScrollView>
     )
   }
 
@@ -406,16 +626,59 @@ export default function AlangCompanionPage() {
         </View>
       </View>
 
+      {canUseDebugTools && (
+        <View className='alang-companion__debug-tools'>
+          <Text className='alang-companion__debug-title'>内部测试工具</Text>
+          <Text className='alang-companion__debug-copy'>仅在非生产 single test mode 中显示</Text>
+          <View className='alang-companion__debug-actions'>
+            <View
+              className={`alang-companion__debug-btn alang-companion__debug-btn--primary${isMockingArrival || arrived ? ' alang-companion__debug-btn--disabled' : ''}`}
+              onClick={() => { void handleMockArrival() }}
+              role='button'
+              aria-label={isMockingArrival ? '正在模拟到达终点' : '模拟到达终点'}
+              aria-disabled={isMockingArrival || arrived}
+            >
+              <Text>{isMockingArrival ? '正在模拟…' : '模拟到达终点'}</Text>
+            </View>
+            <View
+              className={`alang-companion__debug-btn${resetMutation.isPending ? ' alang-companion__debug-btn--disabled' : ''}`}
+              onClick={() => { void handleReconfigure() }}
+              role='button'
+              aria-label={resetMutation.isPending ? '正在清除测试进度' : '重新配置点位'}
+              aria-disabled={resetMutation.isPending}
+            >
+              <Text>重新配置点位</Text>
+            </View>
+            <View
+              className='alang-companion__debug-btn'
+              onClick={() => setShowTestCoordinates((visible) => !visible)}
+              role='button'
+              aria-label={showTestCoordinates ? '收起测试坐标' : '查看测试坐标'}
+              aria-expanded={showTestCoordinates}
+            >
+              <Text>{showTestCoordinates ? '收起测试坐标' : '查看测试坐标'}</Text>
+            </View>
+          </View>
+          {showTestCoordinates && (
+            <View className='alang-companion__debug-coordinates'>
+              <Text>当前位置：{currentCoordinateText}</Text>
+              <Text>陪伴终点：{destinationCoordinateText}</Text>
+              <Text>计算距离：{testDistanceText}</Text>
+            </View>
+          )}
+        </View>
+      )}
+
         {arrived && (
         <View className='alang-companion__arrival'>
-          <Text className='alang-companion__arrival-text'>你们到了</Text>
+          <Text className='alang-companion__arrival-text'>我们到了</Text>
           <Text className='alang-companion__arrival-note'>确认后先看结果卡，再决定是否收录故事。</Text>
           <View
-            className={`alang-companion__arrival-cta${isConfirming ? ' alang-companion__arrival-cta--disabled' : ''}`}
+            className={`alang-companion__arrival-cta${isConfirming || isMockingArrival ? ' alang-companion__arrival-cta--disabled' : ''}`}
             onClick={() => { void handleConfirmArrival() }}
             role='button'
-            aria-label={isConfirming ? '正在生成结果' : '确认到达'}
-            aria-disabled={isConfirming}
+            aria-label={isConfirming || isMockingArrival ? '正在同步到达状态' : '确认到达'}
+            aria-disabled={isConfirming || isMockingArrival}
           >
             <Text className='alang-companion__arrival-cta-text'>
               {isConfirming ? '正在生成结果…' : '确认到达'}

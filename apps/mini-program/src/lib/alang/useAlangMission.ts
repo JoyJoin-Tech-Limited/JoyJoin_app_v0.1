@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import { useCallback } from 'react'
 import {
   useQuery,
   useMutation,
@@ -68,11 +69,55 @@ export function useAlangMissionDetail(slug: string, enabled = true) {
   })
 }
 
+export type AlangProgressTransition = {
+  stage: string
+  currentNodeId: string
+}
+
+export function syncAlangMissionProgress(
+  queryClient: QueryClient,
+  slug: string,
+  snapshot: AlangProgressTransition,
+): void {
+  queryClient.setQueryData<AlangMissionDetail>(ALANG_MISSION_DETAIL_KEY(slug), (current) => {
+    if (!current?.myProgress) return current
+    const nodeHistory = current.myProgress.nodeHistory.includes(snapshot.currentNodeId)
+      ? current.myProgress.nodeHistory
+      : [...current.myProgress.nodeHistory, snapshot.currentNodeId]
+    return {
+      ...current,
+      myProgress: {
+        ...current.myProgress,
+        stage: snapshot.stage,
+        currentNodeId: snapshot.currentNodeId,
+        nodeHistory,
+      },
+    }
+  })
+}
+
+/**
+ * Keeps stage routing synchronous after a raw progress edge succeeds. Without
+ * this, a newly mounted stage page can read the pre-edge Query snapshot and
+ * redirect back before its background refetch finishes.
+ */
+export function useSyncAlangMissionProgress() {
+  const queryClient = useQueryClient()
+
+  return useCallback((
+    slug: string,
+    snapshot: AlangProgressTransition,
+  ) => {
+    syncAlangMissionProgress(queryClient, slug, snapshot)
+  }, [queryClient])
+}
+
 export function useStartMission() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: callStartMission,
-    onSuccess: async (data, slug) => {
+    onSuccess: async (data, input) => {
+      const slug = typeof input === 'string' ? input : input.slug
       qc.setQueryData<AlangMissionDetail>(ALANG_MISSION_DETAIL_KEY(slug), (current) =>
         current
           ? {

@@ -5,40 +5,37 @@ import {
   ALANG_ARRIVAL_RADIUS_METERS,
   ALANG_DEFAULT_SEARCH_RADIUS_METERS,
 } from '@shared/alang/constants'
-import {
-  normalizeAlangCoordinate,
-  type AlangCoordinate,
-} from '@shared/alang/missionTypes'
 import { useAlangGps } from '../../../lib/alang/useAlangGps'
-import { useAlangMissionDetail } from '../../../lib/alang/useAlangMission'
+import {
+  useAlangMissionDetail,
+  useResetAlangMission,
+  useSyncAlangMissionProgress,
+} from '../../../lib/alang/useAlangMission'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
 import { alangEvents } from '../../../lib/alang/alangAnalytics'
 import { useAlangAssetSource } from '../../../lib/alang/alangAssets'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
+import { BRAND_COLORS } from '../../../styles/colors'
 import './index.scss'
-
-type AlangSearchConfig = {
-  target?: AlangCoordinate
-  radius: number
-}
 
 type SignalTone = 'locating' | 'steady' | 'fair' | 'weak' | 'error'
 
 export default function AlangSearchPage() {
   const { user } = useAuth()
-  const canUseDebugTools = shouldShowAlangDebugTools(user)
   const slug = Taro.getCurrentInstance().router?.params?.slug ?? ''
+  const canUseDebugTools = shouldShowAlangDebugTools(user)
   const { data: mission, refetch } = useAlangMissionDetail(
     slug,
     !!slug && !!user?.features?.alangEnabled,
   )
+  const resetMutation = useResetAlangMission()
+  const syncMissionProgress = useSyncAlangMissionProgress()
   const progress = mission?.myProgress
   const areaArtwork = useAlangAssetSource('eventHero')
   const foundSceneArtwork = useAlangAssetSource('foundScene')
 
-  const [config, setConfig] = useState<AlangSearchConfig | null>(null)
   const [showMap, setShowMap] = useState(false)
   const [found, setFound] = useState(false)
   const [gpsEnabled, setGpsEnabled] = useState(false)
@@ -48,24 +45,7 @@ export default function AlangSearchPage() {
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const recoveryNavigationKeyRef = useRef('')
-
-  const loadStoredConfig = useCallback(() => {
-    if (!slug) return
-    const stored = Taro.getStorageSync(`jj_alang_config_${slug}`) as AlangSearchConfig | undefined
-    const target = canUseDebugTools
-      ? normalizeAlangCoordinate(stored?.target)
-      : null
-    if (target) {
-      setConfig({
-        target,
-        radius: stored?.radius ?? ALANG_ARRIVAL_RADIUS_METERS,
-      })
-      return
-    }
-
-    // Canonical NPC coordinates stay server-side.
-    setConfig({ radius: ALANG_ARRIVAL_RADIUS_METERS })
-  }, [canUseDebugTools, slug])
+  const reconfigureActionRef = useRef(false)
 
   const restartLocation = useCallback(() => {
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
@@ -93,19 +73,17 @@ export default function AlangSearchPage() {
   useEffect(() => {
     if (!slug) return
     alangEvents.searchPageView(slug)
-    loadStoredConfig()
     void resumeLocation()
 
     return () => {
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
       if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current)
     }
-  }, [loadStoredConfig, resumeLocation, slug])
+  }, [resumeLocation, slug])
 
   useDidShow(() => {
-    // Re-read the local mission point and permission after a cold start or
-    // returning from WeChat settings/background.
-    loadStoredConfig()
+    // Server progress owns the configured target. Resume only permission and
+    // mission state after a cold start/background transition.
     void resumeLocation()
     if (slug) void refetch()
   })
@@ -148,15 +126,29 @@ export default function AlangSearchPage() {
       .catch(() => undefined)
   }, [])
 
-  const { distance, accuracy, nodeId: gpsNodeId, position } = useAlangGps({
+  const handleProgress = useCallback((snapshot: { stage: string; currentNodeId: string }) => {
+    syncMissionProgress(slug, snapshot)
+  }, [slug, syncMissionProgress])
+
+  const {
+    distance,
+    accuracy,
+    nodeId: gpsNodeId,
+    position,
+    configurationInvalid: gpsConfigurationInvalid,
+  } = useAlangGps({
     slug,
-    target: config?.target,
+    // Never recover a hidden NPC point from device storage. The server computes
+    // distance against the per-run point saved by the start request.
+    target: undefined,
     enabled: !!slug
       && gpsEnabled
       && !found
       && !permissionDenied
+      && !mission?.testConfigurationInvalid
       && (!progress || progress.stage === 'searching'),
     onArrival: handleArrival,
+    onProgress: handleProgress,
     onError: handleGpsError,
   })
 
@@ -215,6 +207,32 @@ export default function AlangSearchPage() {
     }
     void handleRetryLocation()
   }, [handleOpenSetting, handleRetryLocation, permissionDenied])
+
+  const handleReconfigure = useCallback(async () => {
+    if (!canUseDebugTools
+      || !slug
+      || reconfigureActionRef.current
+      || resetMutation.isPending) return
+    reconfigureActionRef.current = true
+    try {
+      const modal = await Taro.showModal({
+        title: '重新配置测试点位',
+        content: '将清除当前阿浪测试进度与本轮点位，是否重新设置？',
+        confirmText: '重新配置',
+        cancelText: '取消',
+        confirmColor: BRAND_COLORS.primary,
+      })
+      if (!modal.confirm) return
+      await resetMutation.mutateAsync(slug)
+      await Taro.reLaunch({
+        url: `${MINI_PROGRAM_ROUTES.alangConfig}?slug=${encodeURIComponent(slug)}`,
+      })
+    } catch {
+      Taro.showToast({ title: '没有清除成功，请稍后再试', icon: 'none' })
+    } finally {
+      reconfigureActionRef.current = false
+    }
+  }, [canUseDebugTools, resetMutation, slug])
 
   useEffect(() => {
     if (!found || !gpsNodeId) return
@@ -276,6 +294,49 @@ export default function AlangSearchPage() {
       : distance === null
         ? '开始寻找'
         : '继续寻找'
+
+  const hasInvalidTestConfiguration = !!mission?.testConfigurationInvalid
+    || !!gpsConfigurationInvalid
+
+  if (hasInvalidTestConfiguration) {
+    return (
+      <ScrollView className='alang-search' scrollY>
+        <View className='alang-search__content'>
+          <View className='alang-search__recovery' role='alert'>
+            <Text className='alang-search__recovery-title'>测试点位配置异常，请重新设置测试点位</Text>
+            <Text className='alang-search__recovery-detail'>旧点位不会继续用于定位，本轮需要重新设置出现点和陪伴终点。</Text>
+            {canUseDebugTools && (
+              <View className='alang-search__recovery-actions'>
+                <View
+                  className='alang-search__recovery-btn alang-search__recovery-btn--primary'
+                  onClick={() => { void handleReconfigure() }}
+                  role='button'
+                  aria-label={resetMutation.isPending ? '正在清除测试进度' : '重新配置点位'}
+                  aria-disabled={resetMutation.isPending}
+                >
+                  <Text className='alang-search__recovery-btn-text alang-search__recovery-btn-text--primary'>
+                    {resetMutation.isPending ? '正在清除…' : '重新配置点位'}
+                  </Text>
+                </View>
+                <View
+                  className='alang-search__recovery-btn'
+                  onClick={() => {
+                    void Taro.navigateTo({
+                      url: `${MINI_PROGRAM_ROUTES.alangDebug}?slug=${encodeURIComponent(slug)}`,
+                    })
+                  }}
+                  role='button'
+                  aria-label='打开测试工具'
+                >
+                  <Text className='alang-search__recovery-btn-text'>打开测试工具</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+    )
+  }
 
   if (found) {
     return (

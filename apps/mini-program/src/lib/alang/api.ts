@@ -15,7 +15,9 @@ import {
   alangDebugForceNode,
   alangDebugReset,
   alangDebugMockGps,
+  alangDebugMockArrival,
 } from '@shared/api'
+import type { AlangStartMissionRequest } from '@shared/api'
 import type { AlangGpsRequest, AlangChoiceRequest } from '@shared/alang/missionTypes'
 
 export async function fetchAlangMissions() {
@@ -26,8 +28,12 @@ export async function fetchAlangMissionDetail(slug: string) {
   return getAlangMissionDetail(apiRequest, slug)
 }
 
-export async function callStartMission(slug: string) {
-  return startAlangMission(apiRequest, slug)
+export type StartAlangMissionInput = string | ({ slug: string } & AlangStartMissionRequest)
+
+export async function callStartMission(input: StartAlangMissionInput) {
+  if (typeof input === 'string') return startAlangMission(apiRequest, input)
+  const { slug, ...configuration } = input
+  return startAlangMission(apiRequest, slug, configuration)
 }
 
 export async function callReportProgress(slug: string, nodeId: string) {
@@ -72,6 +78,10 @@ export async function callDebugReset(slug: string) {
 
 export async function callDebugMockGps(slug: string, latitude: number, longitude: number) {
   return alangDebugMockGps(apiRequest, slug, latitude, longitude)
+}
+
+export async function callDebugMockArrival(slug: string) {
+  return alangDebugMockArrival(apiRequest, slug)
 }
 
 // GPS helpers

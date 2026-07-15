@@ -1,6 +1,8 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import AlangConfigPage from './index'
+import AlangConfigPage, {
+  getTestPointValidationError,
+} from './index'
 
 const mocks = vi.hoisted(() => ({
   navigateBack: vi.fn(),
@@ -13,6 +15,13 @@ const mocks = vi.hoisted(() => ({
   searchNearbyGeoPlaces: vi.fn(),
   getWalkingRoute: vi.fn(),
   callReportProgress: vi.fn(),
+  startMission: vi.fn(),
+  useStartMission: vi.fn(),
+  syncMissionProgress: vi.fn(),
+  showToast: vi.fn(),
+  redirectTo: vi.fn(),
+  setStorageSync: vi.fn(),
+  distanceMeters: { current: 150 },
 }))
 
 vi.mock('@tarojs/taro', () => {
@@ -21,9 +30,9 @@ vi.mock('@tarojs/taro', () => {
       router: { params: { slug: 'meet-alang' } },
     }),
     navigateBack: mocks.navigateBack,
-    showToast: vi.fn(),
-    setStorageSync: vi.fn(),
-    redirectTo: vi.fn(),
+    showToast: mocks.showToast,
+    setStorageSync: mocks.setStorageSync,
+    redirectTo: mocks.redirectTo,
   }
   return { default: taro }
 })
@@ -42,6 +51,8 @@ vi.mock('../../../hooks/useAuth', () => ({
 
 vi.mock('../../../lib/alang/useAlangMission', () => ({
   useAlangMissionDetail: mocks.useAlangMissionDetail,
+  useStartMission: mocks.useStartMission,
+  useSyncAlangMissionProgress: () => mocks.syncMissionProgress,
 }))
 
 vi.mock('../../../lib/alang/useAlangGps', () => ({
@@ -49,7 +60,7 @@ vi.mock('../../../lib/alang/useAlangGps', () => ({
 }))
 
 vi.mock('../../../lib/alang/api', () => ({
-  haversine: vi.fn(() => 0),
+  haversine: vi.fn(() => mocks.distanceMeters.current),
   callReportProgress: mocks.callReportProgress,
 }))
 
@@ -102,6 +113,24 @@ describe('AlangConfigPage production access gate', () => {
       error: null,
       request: mocks.requestLocation,
     })
+    mocks.useStartMission.mockReturnValue({
+      isPending: false,
+      mutateAsync: mocks.startMission,
+    })
+    mocks.redirectTo.mockResolvedValue({})
+    mocks.reverseGeocode.mockResolvedValue({ name: '测试地点', address: '深圳' })
+    mocks.requestLocation.mockResolvedValue({ latitude: 22.5431, longitude: 114.0579, accuracy: 8 })
+    mocks.startMission.mockResolvedValue({
+      stage: 'configuring',
+      currentNodeId: 'event-detail',
+      nodeHistory: ['event-card', 'event-detail'],
+      choicesMade: [],
+    })
+    mocks.callReportProgress.mockResolvedValue({
+      ok: true,
+      stage: 'searching',
+      currentNodeId: 'search-gate',
+    })
   })
 
   it('renders only the test-permission gate and disables mission loading', () => {
@@ -125,5 +154,102 @@ describe('AlangConfigPage production access gate', () => {
     expect(mocks.searchNearbyGeoPlaces).not.toHaveBeenCalled()
     expect(mocks.getWalkingRoute).not.toHaveBeenCalled()
     expect(mocks.callReportProgress).not.toHaveBeenCalled()
+  })
+})
+
+describe('AlangConfigPage test-point start flow', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.distanceMeters.current = 150
+    mocks.useAuth.mockReturnValue({
+      user: { appMode: 'test', features: { alangEnabled: true } },
+      isLoading: false,
+    })
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: {
+        content: {
+          nodes: [
+            { id: 'event-detail', type: 'event_detail', nextNodeId: 'search-gate', content: { body: '' } },
+            { id: 'search-gate', type: 'search_gate', content: { body: '' } },
+          ],
+        },
+        myProgress: null,
+      },
+    })
+    mocks.useAlangGpsOnce.mockReturnValue({
+      position: null,
+      loading: false,
+      error: null,
+      request: mocks.requestLocation,
+    })
+    mocks.useStartMission.mockReturnValue({
+      isPending: false,
+      mutateAsync: mocks.startMission,
+    })
+    mocks.requestLocation.mockResolvedValue({ latitude: 22.5431, longitude: 114.0579, accuracy: 8 })
+    mocks.reverseGeocode.mockResolvedValue({ name: '测试地点', address: '深圳' })
+    mocks.startMission.mockResolvedValue({
+      stage: 'configuring',
+      currentNodeId: 'event-detail',
+      nodeHistory: ['event-detail'],
+      choicesMade: [],
+    })
+    mocks.callReportProgress.mockResolvedValue({
+      ok: true,
+      stage: 'searching',
+      currentNodeId: 'search-gate',
+    })
+    mocks.redirectTo.mockResolvedValue({})
+  })
+
+  it('starts the run with this round’s GCJ-02 points and does not rely on local storage', async () => {
+    render(<AlangConfigPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: '使用当前位置' }))
+    await screen.findByText('直线 150 米')
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+
+    await waitFor(() => {
+      expect(mocks.startMission).toHaveBeenCalledWith(expect.objectContaining({
+        slug: 'meet-alang',
+        targetLocation: { latitude: 22.5431, longitude: 114.0579 },
+        coordinateSystem: 'gcj02',
+      }))
+    })
+    const startPayload = mocks.startMission.mock.calls[0]?.[0]
+    expect(startPayload.companionEndLocation.latitude).toBeCloseTo(22.54445, 8)
+    expect(startPayload.companionEndLocation.longitude).toBe(114.0579)
+    expect(mocks.callReportProgress).toHaveBeenCalledWith('meet-alang', 'search-gate')
+    expect(mocks.syncMissionProgress).toHaveBeenCalledWith('meet-alang', {
+      ok: true,
+      stage: 'searching',
+      currentNodeId: 'search-gate',
+    })
+    expect(mocks.syncMissionProgress.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.redirectTo.mock.invocationCallOrder[0],
+    )
+    expect(mocks.setStorageSync).not.toHaveBeenCalled()
+    expect(mocks.redirectTo).toHaveBeenCalledWith({
+      url: '/pages/alang/search/index?slug=meet-alang&nodeId=search-gate',
+    })
+  })
+
+  it('rejects zero, invalid, too-near and cross-city test coordinates', () => {
+    expect(getTestPointValidationError(
+      { latitude: 0, longitude: 0 },
+      { latitude: 22.5431, longitude: 114.0579 },
+    )).toMatch(/无效/)
+    expect(getTestPointValidationError(
+      { latitude: 114.0579, longitude: 22.5431 },
+      { latitude: 22.5431, longitude: 114.0579 },
+    )).toMatch(/无效/)
+    expect(getTestPointValidationError(
+      { latitude: 22.5431, longitude: 114.0579 },
+      { latitude: 22.5431, longitude: 114.05791 },
+    )).toMatch(/10–2000/)
+    expect(getTestPointValidationError(
+      { latitude: 22.5431, longitude: 114.0579 },
+      { latitude: 25.5431, longitude: 114.0579 },
+    )).toMatch(/10–2000/)
   })
 })

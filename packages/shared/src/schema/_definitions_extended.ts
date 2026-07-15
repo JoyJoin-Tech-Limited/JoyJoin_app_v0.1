@@ -1692,6 +1692,8 @@ export const alangMissionProgress = pgTable("alang_mission_progress", {
   nodeHistory: jsonb("node_history").$type<string[]>(),
   choicesMade: jsonb("choices_made").$type<Array<{ nodeId: string; choiceIndex: number; label: string }>>(),
   gpsHistory: jsonb("gps_history").$type<Array<{ latitude: number; longitude: number; ts: number; accuracy?: number }>>(),
+  targetLocation: jsonb("target_location").$type<{ latitude: number; longitude: number; radiusMeters: number; coordinateSystem: "gcj02" }>(),
+  companionEndLocation: jsonb("companion_end_location").$type<{ latitude: number; longitude: number; radiusMeters: number; coordinateSystem: "gcj02" }>(),
   status: varchar("status").notNull().default("in_progress"),
   stage: varchar("stage").notNull().default("not_started"),
   arrivedAt: timestamp("arrived_at"),

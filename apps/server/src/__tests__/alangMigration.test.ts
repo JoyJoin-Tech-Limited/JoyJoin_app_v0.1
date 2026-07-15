@@ -14,6 +14,12 @@ const snapshot62Path = fileURLToPath(
 const snapshot64Path = fileURLToPath(
   new URL("../../migrations/meta/0064_snapshot.json", import.meta.url)
 );
+const progressPointMigrationPath = fileURLToPath(
+  new URL("../../migrations/0067_add_alang_progress_test_points.sql", import.meta.url)
+);
+const snapshot67Path = fileURLToPath(
+  new URL("../../migrations/meta/0067_snapshot.json", import.meta.url)
+);
 const journalPath = fileURLToPath(
   new URL("../../migrations/meta/_journal.json", import.meta.url)
 );
@@ -81,5 +87,37 @@ describe("Alang migration metadata", () => {
     expect(journal.entries[alangJournalIndex + 1]?.tag).toBe(
       "0063_orange_gambit"
     );
+  });
+
+  it("keeps the per-run test point migration, snapshot, schema, and journal aligned", () => {
+    const sql = readFileSync(progressPointMigrationPath, "utf8");
+    const schema = readFileSync(schemaPath, "utf8");
+    const snapshot = JSON.parse(readFileSync(snapshot67Path, "utf8"));
+    const journal = JSON.parse(readFileSync(journalPath, "utf8"));
+    const progressColumns = snapshot.tables["public.alang_mission_progress"].columns;
+
+    expect(sql.trimStart().startsWith("-- Per-run internal Alang coordinates.")).toBe(true);
+    expect(sql).toContain("BEGIN;");
+    expect(sql.trimEnd().endsWith("COMMIT;")).toBe(true);
+
+    for (const columnName of ["target_location", "companion_end_location"]) {
+      expect(sql).toContain(`ADD COLUMN IF NOT EXISTS "${columnName}" jsonb`);
+      expect(progressColumns[columnName]).toMatchObject({
+        name: columnName,
+        type: "jsonb",
+        notNull: false,
+      });
+    }
+    expect(schema).toContain('jsonb("target_location")');
+    expect(schema).toContain('jsonb("companion_end_location")');
+
+    const journalIndex = journal.entries.findIndex(
+      (entry: { tag: string }) => entry.tag === "0067_add_alang_progress_test_points"
+    );
+    expect(journalIndex).toBeGreaterThan(0);
+    expect(journal.entries[journalIndex]).toMatchObject({
+      idx: journalIndex,
+      tag: "0067_add_alang_progress_test_points",
+    });
   });
 });

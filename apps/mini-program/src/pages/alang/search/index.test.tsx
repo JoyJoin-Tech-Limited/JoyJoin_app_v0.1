@@ -5,12 +5,18 @@ import AlangSearchPage from './index'
 const mocks = vi.hoisted(() => ({
   getSetting: vi.fn(),
   openSetting: vi.fn(),
+  navigateTo: vi.fn(),
+  reLaunch: vi.fn(),
   redirectTo: vi.fn(),
+  showModal: vi.fn(),
   showToast: vi.fn(),
   getStorageSync: vi.fn(),
   useAlangGps: vi.fn(),
   useAuth: vi.fn(),
   useAlangMissionDetail: vi.fn(),
+  useResetAlangMission: vi.fn(),
+  syncMissionProgress: vi.fn(),
+  resetMission: vi.fn(),
   refetch: vi.fn(),
   mapProps: vi.fn(),
 }))
@@ -21,7 +27,10 @@ vi.mock('@tarojs/taro', () => {
     getStorageSync: mocks.getStorageSync,
     getSetting: mocks.getSetting,
     openSetting: mocks.openSetting,
+    navigateTo: mocks.navigateTo,
+    reLaunch: mocks.reLaunch,
     redirectTo: mocks.redirectTo,
+    showModal: mocks.showModal,
     showToast: mocks.showToast,
   }
   return {
@@ -51,6 +60,8 @@ vi.mock('../../../hooks/useAuth', () => ({
 
 vi.mock('../../../lib/alang/useAlangMission', () => ({
   useAlangMissionDetail: mocks.useAlangMissionDetail,
+  useResetAlangMission: mocks.useResetAlangMission,
+  useSyncAlangMissionProgress: () => mocks.syncMissionProgress,
 }))
 
 vi.mock('../../../lib/alang/alangAnalytics', () => ({
@@ -82,7 +93,15 @@ describe('AlangSearchPage', () => {
     })
     mocks.getSetting.mockResolvedValue({ authSetting: { 'scope.userLocation': true } })
     mocks.openSetting.mockResolvedValue({ authSetting: { 'scope.userLocation': true } })
+    mocks.showModal.mockResolvedValue({ confirm: true, cancel: false })
+    mocks.navigateTo.mockResolvedValue({})
+    mocks.reLaunch.mockResolvedValue({})
     mocks.redirectTo.mockResolvedValue({})
+    mocks.resetMission.mockResolvedValue({
+      reset: true,
+      deletedProgressCount: 1,
+      deletedArchiveCount: 0,
+    })
     mocks.useAuth.mockReturnValue({
       user: { features: { alangEnabled: true } },
     })
@@ -96,15 +115,20 @@ describe('AlangSearchPage', () => {
       },
       refetch: mocks.refetch,
     })
+    mocks.useResetAlangMission.mockReturnValue({
+      isPending: false,
+      mutateAsync: mocks.resetMission,
+    })
     mocks.useAlangGps.mockReturnValue({
       distance: 84,
       accuracy: 18,
       nodeId: null,
       position: { latitude: 22.5431, longitude: 114.0579 },
+      configurationInvalid: false,
     })
   })
 
-  it('keeps distance primary and never passes the hidden target to the auxiliary map', async () => {
+  it('uses server-owned distance and never restores or exposes a hidden local target', async () => {
     const { container } = render(<AlangSearchPage />)
 
     expect(screen.getByText('84')).toBeInTheDocument()
@@ -117,6 +141,21 @@ describe('AlangSearchPage', () => {
     expect(container.querySelectorAll('.alang-search__signal-bar')).toHaveLength(4)
     expect(container.querySelector('.alang-search__radar-sweep')).not.toBeInTheDocument()
     expect(screen.getByText('只确认你在哪里，不显示阿浪坐标或路线')).toBeInTheDocument()
+    expect(mocks.getStorageSync).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(mocks.useAlangGps).toHaveBeenCalledWith(expect.objectContaining({
+        slug: 'meet-alang',
+        target: undefined,
+        enabled: true,
+      }))
+    })
+    const gpsCalls = mocks.useAlangGps.mock.calls
+    const gpsOptions = gpsCalls[gpsCalls.length - 1]?.[0]
+    gpsOptions.onProgress({ stage: 'found', currentNodeId: 'found-scene' })
+    expect(mocks.syncMissionProgress).toHaveBeenCalledWith('meet-alang', {
+      stage: 'found',
+      currentNodeId: 'found-scene',
+    })
 
     fireEvent.click(screen.getByText('打开'))
     expect(await screen.findByTestId('auxiliary-map')).toBeInTheDocument()
@@ -169,6 +208,38 @@ describe('AlangSearchPage', () => {
       expect(mocks.redirectTo).toHaveBeenCalledWith({
         url: '/pages/alang/dialogue/index?slug=meet-alang&nodeId=dialogue-1',
       })
+    })
+  })
+
+  it('resets a legacy searching run with invalid server points before reopening config', async () => {
+    mocks.useAuth.mockReturnValue({
+      user: { appMode: 'test', features: { alangEnabled: true } },
+    })
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: {
+        testConfigurationInvalid: true,
+        myProgress: {
+          progressId: 'legacy-progress',
+          stage: 'searching',
+          currentNodeId: 'search-gate',
+        },
+      },
+      refetch: mocks.refetch,
+    })
+
+    render(<AlangSearchPage />)
+
+    expect(screen.getByText('测试点位配置异常，请重新设置测试点位')).toBeInTheDocument()
+    expect(mocks.useAlangGps).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }))
+    fireEvent.click(screen.getByRole('button', { name: '打开测试工具' }))
+    expect(mocks.navigateTo).toHaveBeenCalledWith({
+      url: '/pages/alang/debug/index?slug=meet-alang',
+    })
+    fireEvent.click(screen.getByRole('button', { name: '重新配置点位' }))
+
+    await waitFor(() => expect(mocks.resetMission).toHaveBeenCalledWith('meet-alang'))
+    expect(mocks.reLaunch).toHaveBeenCalledWith({
+      url: '/pages/alang/config/index?slug=meet-alang',
     })
   })
 })

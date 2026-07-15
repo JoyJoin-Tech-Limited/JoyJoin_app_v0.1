@@ -6,6 +6,7 @@ import {
   ALANG_GPS_INTERVAL_MS,
 } from '@shared/alang/constants'
 import type { AlangCoordinate } from '@shared/alang/missionTypes'
+import type { AlangProgressTransition } from './useAlangMission'
 import {
   EMPTY_ALANG_DISTANCE_SMOOTHING_STATE,
   smoothAlangDistance,
@@ -17,6 +18,7 @@ export interface UseAlangGpsOptions {
   target?: AlangCoordinate
   enabled: boolean
   onArrival?: () => void
+  onProgress?: (snapshot: AlangProgressTransition) => void
   onError?: (err: unknown) => void
 }
 
@@ -25,6 +27,7 @@ export function useAlangGps({
   target,
   enabled,
   onArrival,
+  onProgress,
   onError,
 }: UseAlangGpsOptions) {
   const [distance, setDistance] = useState<number | null>(null)
@@ -32,6 +35,7 @@ export function useAlangGps({
   const [accuracy, setAccuracy] = useState<number | null>(null)
   const [nodeId, setNodeId] = useState<string | null>(null)
   const [position, setPosition] = useState<AlangCoordinate | null>(null)
+  const [configurationInvalid, setConfigurationInvalid] = useState(false)
   const cleanupRef = useRef<(() => void) | null>(null)
   const lastReportRef = useRef(0)
   const reportingRef = useRef(false)
@@ -75,12 +79,19 @@ export function useAlangGps({
           timestamp: now,
           targetOverride,
         })
+        if (res.configurationInvalid) {
+          setConfigurationInvalid(true)
+          setDistance(null)
+          return
+        }
+        setConfigurationInvalid(false)
         updateDisplayDistance(
           res.arrived ? Math.min(res.distanceMeters, res.radiusMeters) : res.distanceMeters,
           res.arrived,
         )
         if (res.nodeId) {
           setNodeId(res.nodeId)
+          onProgress?.({ stage: res.stage, currentNodeId: res.nodeId })
         }
         if (res.arrived && !arrived) {
           setArrived(true)
@@ -92,7 +103,7 @@ export function useAlangGps({
         reportingRef.current = false
       }
     },
-    [slug, target, arrived, onArrival, reportError, updateDisplayDistance]
+    [slug, target, arrived, onArrival, onProgress, reportError, updateDisplayDistance]
   )
 
   useEffect(() => {
@@ -100,6 +111,7 @@ export function useAlangGps({
     setDistance(null)
     setArrived(false)
     setNodeId(null)
+    setConfigurationInvalid(false)
   }, [slug, target?.latitude, target?.longitude])
 
   useEffect(() => {
@@ -148,7 +160,7 @@ export function useAlangGps({
     }
   }, [enabled, target, arrived, reportGps, reportError, updateDisplayDistance])
 
-  return { distance, arrived, accuracy, nodeId, position }
+  return { distance, arrived, accuracy, nodeId, position, configurationInvalid }
 }
 
 export function useAlangGpsOnce() {

@@ -204,6 +204,11 @@
     font-size: $font-size-xs;
   }
 
+  &__route-note--error {
+    color: $color-error;
+    font-weight: 600;
+  }
+
   &__coordinate {
     max-width: 280rpx;
     text-align: right;

@@ -34,9 +34,16 @@ import {
 } from "../../lib/alang/alangDisclosure";
 import { resolveAlangArrivalTarget } from "../../lib/alang/alangTargetResolver";
 import {
+  alangCoordinateSchema,
   alangGpsPointSchema,
   type AlangGpsPoint,
 } from "@shared/alang/missionTypes";
+import {
+  ALANG_TEST_COORDINATE_SYSTEM,
+  ALANG_TEST_MAX_DISTANCE_METERS,
+  alangHaversineDistanceMeters,
+  validateAlangTestPointConfiguration,
+} from "@shared/alang/testPointValidation";
 import type { AlangMission, AlangMissionProgress } from "@shared/schema";
 import {
   ALANG_ARRIVAL_MIN_STABLE_COUNT,
@@ -88,6 +95,71 @@ function normalizeGpsHistory(value: unknown): AlangGpsPoint[] {
   return value.flatMap((point) => {
     const parsed = alangGpsPointSchema.safeParse(point);
     return parsed.success ? [parsed.data] : [];
+  });
+}
+
+const alangStartMissionSchema = z.object({
+  targetLocation: alangCoordinateSchema,
+  companionEndLocation: alangCoordinateSchema,
+  coordinateSystem: z.literal(ALANG_TEST_COORDINATE_SYSTEM),
+}).strict();
+
+const alangMockGpsSchema = z.union([
+  z.object({ mode: z.literal("arrive") }).strict(),
+  z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }).strict(),
+]);
+
+function hasRequestBody(body: unknown): boolean {
+  return !!body
+    && typeof body === "object"
+    && !Array.isArray(body)
+    && Object.keys(body as Record<string, unknown>).length > 0;
+}
+
+function storedTestCoordinate(coordinate: { latitude: number; longitude: number }) {
+  return {
+    latitude: coordinate.latitude,
+    longitude: coordinate.longitude,
+    radiusMeters: ALANG_ARRIVAL_RADIUS_METERS,
+    coordinateSystem: ALANG_TEST_COORDINATE_SYSTEM,
+  } as const;
+}
+
+function progressTestPointValidation(progress: AlangMissionProgress | null) {
+  if (!progress) return { valid: false as const, reason: "invalid_coordinate" as const };
+  const targetCoordinateSystem = progress.targetLocation
+    && typeof progress.targetLocation === "object"
+    && "coordinateSystem" in progress.targetLocation
+    ? progress.targetLocation.coordinateSystem
+    : null;
+  const companionCoordinateSystem = progress.companionEndLocation
+    && typeof progress.companionEndLocation === "object"
+    && "coordinateSystem" in progress.companionEndLocation
+    ? progress.companionEndLocation.coordinateSystem
+    : null;
+  if (targetCoordinateSystem !== ALANG_TEST_COORDINATE_SYSTEM
+    || companionCoordinateSystem !== ALANG_TEST_COORDINATE_SYSTEM) {
+    return { valid: false as const, reason: "invalid_coordinate" as const };
+  }
+  return validateAlangTestPointConfiguration(
+    progress.targetLocation,
+    progress.companionEndLocation,
+  );
+}
+
+function resolveProgressArrivalTarget(options: {
+  mission: AlangMission;
+  progress: AlangMissionProgress;
+  content: NonNullable<Awaited<ReturnType<typeof loadMissionContent>>>;
+  kind: "search" | "companion";
+  currentNode?: ReturnType<typeof getNodeById>;
+}) {
+  return resolveAlangArrivalTarget({
+    ...options,
+    requireProgressCoordinates: isAlangDebugMode(),
   });
 }
 
@@ -157,8 +229,14 @@ export function registerAlangRoutes(app: Express): void {
       const completedArchive = progress?.status === "completed"
         ? await getStoryArchiveByProgressId(progress.id)
         : null;
-      const routeDestination = canRevealCompanionDestination(progress) && content
-        ? resolveAlangArrivalTarget({ mission, content, kind: "companion" })
+      const testConfigurationInvalid = isAlangDebugMode()
+        && !!progress
+        && !progressTestPointValidation(progress).valid;
+      const routeDestination = canRevealCompanionDestination(progress)
+        && content
+        && progress
+        && !testConfigurationInvalid
+        ? resolveProgressArrivalTarget({ mission, progress, content, kind: "companion" })
         : null;
 
       res.json({
@@ -173,6 +251,7 @@ export function registerAlangRoutes(app: Express): void {
               longitude: routeDestination.longitude,
             }
           : undefined,
+        testConfigurationInvalid: testConfigurationInvalid || undefined,
         myProgress: progress
           ? {
               progressId: progress.id,
@@ -214,8 +293,60 @@ export function registerAlangRoutes(app: Express): void {
         return;
       }
 
+      const debugMode = isAlangDebugMode();
+      const requestHasBody = hasRequestBody(req.body);
+      if (requestHasBody && !debugMode) {
+        res.status(403).json({ error: "ALANG_TEST_POINTS_FORBIDDEN" });
+        return;
+      }
+
+      const parsedConfiguration = requestHasBody
+        ? alangStartMissionSchema.safeParse(req.body)
+        : null;
+      if (requestHasBody && !parsedConfiguration?.success) {
+        res.status(400).json({ error: "ALANG_TEST_POINTS_INVALID" });
+        return;
+      }
+
+      const validatedConfiguration = parsedConfiguration?.success
+        ? validateAlangTestPointConfiguration(
+            parsedConfiguration.data.targetLocation,
+            parsedConfiguration.data.companionEndLocation,
+          )
+        : null;
+      if (validatedConfiguration && !validatedConfiguration.valid) {
+        res.status(400).json({
+          error: "ALANG_TEST_POINTS_INVALID",
+          reason: validatedConfiguration.reason,
+        });
+        return;
+      }
+
       let progress = await getMissionProgress(userId, mission.id);
       if (progress && progress.status === "in_progress") {
+        if (debugMode && validatedConfiguration?.valid) {
+          if (!["not_started", "configuring"].includes(progress.stage)) {
+            res.status(409).json({ error: "ALANG_RECONFIG_REQUIRES_RESET" });
+            return;
+          }
+          progress = await updateMissionProgress(progress.id, {
+            targetLocation: storedTestCoordinate(validatedConfiguration.targetLocation),
+            companionEndLocation: storedTestCoordinate(validatedConfiguration.companionEndLocation),
+            isDebugSession: true,
+            debugMarkers: Array.from(new Set([
+              ...(progress.debugMarkers ?? []),
+              "test-points-configured",
+            ])),
+          });
+          if (!progress) {
+            res.status(409).json({ error: "PROGRESS_UPDATE_CONFLICT" });
+            return;
+          }
+        } else if (debugMode && !progressTestPointValidation(progress).valid) {
+          res.status(409).json({ error: "ALANG_TEST_POINTS_REQUIRED" });
+          return;
+        }
+
         res.json({
           progressId: progress.id,
           stage: progress.stage,
@@ -243,6 +374,12 @@ export function registerAlangRoutes(app: Express): void {
       if (progress?.status === "abandoned") {
         // Abandoned runs can restart; completed archives require explicit debug reset.
         await deleteMissionProgress(userId, mission.id);
+        progress = null;
+      }
+
+      if (debugMode && !validatedConfiguration?.valid) {
+        res.status(400).json({ error: "ALANG_TEST_POINTS_REQUIRED" });
+        return;
       }
 
       const startNode = getNodeById(content, content.startNodeId);
@@ -270,6 +407,14 @@ export function registerAlangRoutes(app: Express): void {
         gpsHistory: [],
         status: "in_progress",
         stage: computeStageFromNodeType(initialNode.type),
+        ...(validatedConfiguration?.valid
+          ? {
+              targetLocation: storedTestCoordinate(validatedConfiguration.targetLocation),
+              companionEndLocation: storedTestCoordinate(validatedConfiguration.companionEndLocation),
+              isDebugSession: true,
+              debugMarkers: ["test-points-configured"],
+            }
+          : {}),
       });
 
       res.json({
@@ -314,6 +459,10 @@ export function registerAlangRoutes(app: Express): void {
       const content = await loadMissionContent(slug);
       if (!content) {
         res.status(500).json({ error: "CONTENT_NOT_LOADED" });
+        return;
+      }
+      if (isAlangDebugMode() && !progressTestPointValidation(progress).valid) {
+        res.status(409).json({ error: "ALANG_TEST_POINTS_REQUIRED" });
         return;
       }
 
@@ -405,6 +554,32 @@ export function registerAlangRoutes(app: Express): void {
         res.status(400).json({ error: "NOT_GPS_NODE" });
         return;
       }
+      if (isAlangDebugMode() && !progressTestPointValidation(progress).valid) {
+        res.status(422).json({ error: "ALANG_TEST_POINTS_INVALID" });
+        return;
+      }
+
+      const target = resolveProgressArrivalTarget({
+        mission,
+        progress,
+        content,
+        kind: currentNode.type === "companion_move" ? "companion" : "search",
+        currentNode,
+      });
+      if (!target) {
+        res.status(isAlangDebugMode() ? 422 : 500).json({
+          error: isAlangDebugMode() ? "ALANG_TEST_POINTS_INVALID" : "NO_TARGET_LOCATION",
+        });
+        return;
+      }
+
+      const debugTargetOverride = isAlangDebugMode() && parse.data.targetOverride
+        ? parse.data.targetOverride
+        : null;
+      if (debugTargetOverride && alangHaversineDistanceMeters(debugTargetOverride, target) > 1) {
+        res.status(409).json({ error: "ALANG_TEST_POINT_MISMATCH" });
+        return;
+      }
 
       const gpsPoint: AlangGpsPoint = {
         latitude: parse.data.latitude,
@@ -419,27 +594,24 @@ export function registerAlangRoutes(app: Express): void {
           .slice(-(ALANG_ARRIVAL_MIN_STABLE_COUNT - 1)),
         gpsPoint,
       ];
-      // Test-point overrides are never trusted outside strict single-test mode.
-      const debugTargetOverride = isAlangDebugMode() && parse.data.targetOverride
-        ? parse.data.targetOverride
-        : null;
-      const target = debugTargetOverride ?? resolveAlangArrivalTarget({
-        mission,
-        content,
-        kind: currentNode.type === "companion_move" ? "companion" : "search",
-        currentNode,
-      });
-      if (!target) {
-        res.status(500).json({ error: "NO_TARGET_LOCATION" });
-        return;
-      }
-
       const arrival = checkGpsArrival(
         gpsPoint.latitude,
         gpsPoint.longitude,
         target,
         gpsHistory,
       );
+      if (isAlangDebugMode() && arrival.distanceMeters > ALANG_TEST_MAX_DISTANCE_METERS) {
+        res.json({
+          arrived: false,
+          configurationInvalid: true,
+          distanceMeters: Math.round(arrival.distanceMeters * 100) / 100,
+          radiusMeters: arrival.radiusMeters,
+          stableCount: 0,
+          nodeId: progress.currentNodeId,
+          stage: progress.stage,
+        });
+        return;
+      }
 
       let updates: Partial<typeof progress> = {
         gpsHistory,
@@ -473,6 +645,7 @@ export function registerAlangRoutes(app: Express): void {
         radiusMeters: arrival.radiusMeters,
         stableCount: arrival.stableCount,
         nodeId: updates.currentNodeId ?? progress.currentNodeId,
+        stage: updates.stage ?? progress.stage,
       });
     } catch (error: any) {
       requestLogger(req).error("[Alang] gps error", { slug, error: error?.message });
@@ -536,6 +709,7 @@ export function registerAlangRoutes(app: Express): void {
           nextNodeId: choice.nextNodeId,
           response: choice.response,
           moodShift: choice.moodShift,
+          stage: computeStageFromNodeType(getNodeById(content, choice.nextNodeId)?.type ?? "unknown"),
           replayed: true,
         });
         return;
@@ -575,6 +749,7 @@ export function registerAlangRoutes(app: Express): void {
         nextNodeId: choice.nextNodeId,
         response: choice.response,
         moodShift: choice.moodShift,
+        stage,
       });
     } catch (error: any) {
       requestLogger(req).error("[Alang] choice error", { slug, error: error?.message });
@@ -602,12 +777,31 @@ export function registerAlangRoutes(app: Express): void {
         return;
       }
 
+      const content = await loadMissionContent(slug);
+      if (!content) {
+        res.status(500).json({ error: "CONTENT_NOT_LOADED" });
+        return;
+      }
+      const testConfigurationInvalid = isAlangDebugMode()
+        && !progressTestPointValidation(progress).valid;
+      const routeDestination = canRevealCompanionDestination(progress)
+        && !testConfigurationInvalid
+        ? resolveProgressArrivalTarget({ mission, progress, content, kind: "companion" })
+        : null;
+
       res.json({
         progressId: progress.id,
         stage: progress.stage,
         currentNodeId: progress.currentNodeId,
         nodeHistory: progress.nodeHistory ?? [],
         choicesMade: progress.choicesMade ?? [],
+        routeDestination: routeDestination
+          ? {
+              latitude: routeDestination.latitude,
+              longitude: routeDestination.longitude,
+            }
+          : undefined,
+        testConfigurationInvalid: testConfigurationInvalid || undefined,
       });
     } catch (error: any) {
       requestLogger(req).error("[Alang] recover error", { slug, error: error?.message });
@@ -914,10 +1108,7 @@ export function registerAlangRoutes(app: Express): void {
     if (!userId) return;
 
     const { slug } = req.params;
-    const parse = z.object({
-      latitude: z.number().min(-90).max(90),
-      longitude: z.number().min(-180).max(180),
-    }).safeParse(req.body);
+    const parse = alangMockGpsSchema.safeParse(req.body);
     if (!parse.success) {
       res.status(400).json({ error: "INVALID_INPUT" });
       return;
@@ -947,30 +1138,45 @@ export function registerAlangRoutes(app: Express): void {
         res.status(400).json({ error: "NOT_GPS_NODE" });
         return;
       }
+      if (!progressTestPointValidation(progress).valid) {
+        res.status(422).json({ error: "ALANG_TEST_POINTS_INVALID" });
+        return;
+      }
 
-      const target = resolveAlangArrivalTarget({
+      const target = resolveProgressArrivalTarget({
         mission,
+        progress,
         content,
         kind: currentNode.type === "companion_move" ? "companion" : "search",
         currentNode,
       });
       if (!target) {
-        res.status(500).json({ error: "NO_TARGET_LOCATION" });
+        res.status(422).json({ error: "ALANG_TEST_POINTS_INVALID" });
         return;
       }
 
+      const manualPoint = "latitude" in parse.data ? parse.data : null;
+      const mockArrival = manualPoint === null;
+      const now = Date.now();
       const gpsPoint: AlangGpsPoint = {
-        latitude: parse.data.latitude,
-        longitude: parse.data.longitude,
-        ts: Date.now(),
+        latitude: mockArrival
+          ? target.latitude + (2 / 111_000)
+          : manualPoint.latitude,
+        longitude: mockArrival ? target.longitude : manualPoint.longitude,
+        ts: now,
         accuracy: 1,
       };
 
-      const gpsHistory = [
-        ...normalizeGpsHistory(progress.gpsHistory)
-          .slice(-(ALANG_ARRIVAL_MIN_STABLE_COUNT - 1)),
-        gpsPoint,
-      ];
+      const gpsHistory = mockArrival
+        ? Array.from({ length: ALANG_ARRIVAL_MIN_STABLE_COUNT }, (_, index) => ({
+            ...gpsPoint,
+            ts: now + index,
+          }))
+        : [
+            ...normalizeGpsHistory(progress.gpsHistory)
+              .slice(-(ALANG_ARRIVAL_MIN_STABLE_COUNT - 1)),
+            gpsPoint,
+          ];
       const arrival = checkGpsArrival(
         gpsPoint.latitude,
         gpsPoint.longitude,
@@ -981,7 +1187,10 @@ export function registerAlangRoutes(app: Express): void {
       let updates: Partial<typeof progress> = {
         gpsHistory,
         isDebugSession: true,
-        debugMarkers: [...(progress.debugMarkers ?? []), "mock-gps"],
+        debugMarkers: [
+          ...(progress.debugMarkers ?? []),
+          mockArrival ? "mock-gps:arrive" : "mock-gps",
+        ],
       };
 
       if (arrival.arrived && currentNode.nextNodeId) {
@@ -1007,6 +1216,7 @@ export function registerAlangRoutes(app: Express): void {
         radiusMeters: arrival.radiusMeters,
         stableCount: arrival.stableCount,
         nodeId: updates.currentNodeId ?? progress.currentNodeId,
+        stage: updates.stage ?? progress.stage,
         debug: true,
       });
     } catch (error: any) {

@@ -3,10 +3,18 @@ import type {
   AlangProgressRequest,
   AlangGpsRequest,
   AlangChoiceRequest,
+  AlangChoiceResponse,
   AlangArrivalResponse,
   AlangStoryArchiveSummary,
   AlangCoordinate,
 } from "../alang/missionTypes.js";
+import { ALANG_TEST_COORDINATE_SYSTEM } from "../alang/testPointValidation.js";
+
+export interface AlangStartMissionRequest {
+  targetLocation: AlangCoordinate;
+  companionEndLocation: AlangCoordinate;
+  coordinateSystem: typeof ALANG_TEST_COORDINATE_SYSTEM;
+}
 
 // API DTO types (mirrored from server route responses)
 export interface AlangMissionSummary {
@@ -33,6 +41,8 @@ export interface AlangMissionDetail {
    * story content during search.
    */
   routeDestination?: AlangCoordinate;
+  /** Internal single-test recovery signal; never used to expose search coordinates. */
+  testConfigurationInvalid?: boolean;
   myProgress: {
     progressId: string;
     stage: string;
@@ -55,6 +65,9 @@ export interface AlangProgressSnapshot {
   choicesMade: Array<{ nodeId: string; choiceIndex: number; label: string }>;
   completed?: boolean;
   archiveId?: string;
+  /** Disclosed only after the companion stage is reached. */
+  routeDestination?: AlangCoordinate;
+  testConfigurationInvalid?: boolean;
 }
 
 export interface AlangDebugResetResponse {
@@ -71,10 +84,15 @@ export function getAlangMissionDetail(api: ApiTransport, slug: string): Promise<
   return api<AlangMissionDetail>({ path: `/api/alang/missions/${slug}`, method: "GET" });
 }
 
-export function startAlangMission(api: ApiTransport, slug: string): Promise<AlangProgressSnapshot> {
+export function startAlangMission(
+  api: ApiTransport,
+  slug: string,
+  data?: AlangStartMissionRequest,
+): Promise<AlangProgressSnapshot> {
   return api<AlangProgressSnapshot>({
     path: `/api/alang/missions/${slug}/start`,
     method: "POST",
+    ...(data ? { data } : {}),
   });
 }
 
@@ -94,8 +112,8 @@ export function reportAlangGps(api: ApiTransport, slug: string, data: AlangGpsRe
   });
 }
 
-export function submitAlangChoice(api: ApiTransport, slug: string, data: AlangChoiceRequest): Promise<{ nextNodeId: string; response: string; moodShift?: string }> {
-  return api<{ nextNodeId: string; response: string; moodShift?: string }>({
+export function submitAlangChoice(api: ApiTransport, slug: string, data: AlangChoiceRequest): Promise<AlangChoiceResponse> {
+  return api<AlangChoiceResponse>({
     path: `/api/alang/missions/${slug}/choice`,
     method: "POST",
     data,
@@ -156,5 +174,16 @@ export function alangDebugMockGps(
     path: `/api/alang/debug/missions/${slug}/mock-gps`,
     method: "POST",
     data: { latitude, longitude },
+  });
+}
+
+export function alangDebugMockArrival(
+  api: ApiTransport,
+  slug: string,
+): Promise<AlangArrivalResponse> {
+  return api<AlangArrivalResponse>({
+    path: `/api/alang/debug/missions/${slug}/mock-gps`,
+    method: "POST",
+    data: { mode: "arrive" },
   });
 }
