@@ -342,6 +342,38 @@ async function captureSquadUnboxingStoryRevealed(storyName, { groupId = 'group-s
   )
 }
 
+/**
+ * Pocketed-phase capture (2026-07-15 audit CONCERN-3): `__story=revealed-pocketed`
+ * jumps straight to the settled pocketed phase with partial flip seeds. The
+ * deck stage stays mounted but `visibility:hidden` (instant re-fan), so this
+ * capture waits on the pill instead of the deck. The bottom dock is kept
+ * visible on purpose — pill-vs-dock geometry is part of what this verifies.
+ */
+async function captureSquadUnboxingStoryPocketed({ groupId = 'group-screenshot-001' } = {}) {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(
+        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=${groupId}&__story=revealed-pocketed&motion=reduce`,
+        { waitUntil: 'domcontentloaded', timeout: 60000 }
+      )
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await page.waitForSelector('.squad-unboxing__deck-pill', { timeout: 10000 })
+      // Spoiler gating check: back-chips for unflipped members must be in the
+      // strip (audit CONCERN-3 — this is the state the old pipeline could not
+      // render at all).
+      await page.waitForSelector('.squad-unboxing__deck-pill-mini--back', { timeout: 10000 })
+      // Give archetype images time to load over the CDN.
+      await page.waitForTimeout(2500)
+      await page.waitForTimeout(400)
+
+      return page.screenshot({ fullPage: false })
+    }
+  )
+}
+
 async function captureSquadUnboxingRevealed(groupId = 'group-screenshot-001') {
   return withBrowserPage(
     { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
@@ -550,6 +582,7 @@ register('squad-unboxing-revealed-6', () => captureSquadUnboxingRevealed('group-
 register('squad-unboxing-revealed-partial', () => captureSquadUnboxingStoryRevealed('revealed-partial', { waitChip: true }))
 register('squad-unboxing-revealed-allup', () => captureSquadUnboxingStoryRevealed('revealed-allup'))
 register('squad-unboxing-revealed-overflow', () => captureSquadUnboxingStoryRevealed('revealed-partial', { groupId: 'group-screenshot-009', waitChip: true }))
+register('squad-unboxing-revealed-pocketed', () => captureSquadUnboxingStoryPocketed())
 register('profile-review-welcome-coupon', captureProfileReview)
 register('matching-status-puzzle-prelude', captureMatchingStatusPuzzlePrelude)
 register('profile-v17', captureProfileV17)
