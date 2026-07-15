@@ -88,13 +88,12 @@ const YUEZAI_REACTIONS: Record<TierMachineId, Record<VibeId, string>> = {
 }
 
 // ─── Start-session retry policy ─────────────────────────────────────
-// POST /api/social-icebreaker/start is idempotent for a given sessionId:
-// the server returns an existing session instead of creating a duplicate.
-// We retry transport errors and 5xx/408/429 responses, but fail fast on
-// auth or validation errors.
-const START_MAX_ATTEMPTS = 3
-const START_RETRY_DELAYS_MS = [300, 800]
-const START_REQUEST_TIMEOUT_MS = 20000
+// POST /api/social-icebreaker/start must feel immediate. Surface one clear
+// failure instead of holding users through repeated long retries; the backend
+// now keeps non-essential generation work off the critical path.
+const START_MAX_ATTEMPTS = 1
+const START_RETRY_DELAYS_MS: number[] = []
+const START_REQUEST_TIMEOUT_MS = 12000
 
 function isRetriableStartError(err: unknown): boolean {
   if (err === null || err === undefined) return true

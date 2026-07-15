@@ -40,7 +40,7 @@ const VALID_VIBES: Array<'chat' | 'balanced' | 'game'> = ['chat', 'balanced', 'g
  *
  * Side effects:
  * - Persists the mutated session via `updateSession`.
- * - Invalidates any pre-generated content for the old run plan.
+ * - Invalidates any pre-generated content for the old run plan asynchronously.
  * - Emits a structured log event.
  *
  * The participant roster is preserved; only tier/vibe and phase progress are
@@ -108,7 +108,12 @@ export async function resetSocialIcebreakerTier(
   }
 
   await updateSession(state.socialSessionId, state);
-  await invalidatePreGenerationForSession(state.socialSessionId);
+  void invalidatePreGenerationForSession(state.socialSessionId).catch((err) => {
+    logger.warn('Failed to invalidate pre-generated content after tier reset', {
+      socialSessionId: state.socialSessionId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
 
   logger.info('Social icebreaker tier reset', {
     socialSessionId: state.socialSessionId,

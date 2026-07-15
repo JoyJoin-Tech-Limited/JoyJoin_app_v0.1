@@ -192,6 +192,87 @@ function resolveIncomingVibe(vibe: string | undefined): 'chat' | 'balanced' | 'g
     : undefined;
 }
 
+function scheduleStartBackgroundGeneration(params: {
+  socialSessionId: string;
+  state: SocialSessionState;
+  eventType?: string;
+  runPlan?: IcebreakerRunPlan;
+}): void {
+  const { socialSessionId, state, eventType, runPlan } = params;
+
+  void (async () => {
+    const roster = await listParticipants(socialSessionId);
+
+    if (runPlan) {
+      void enqueueRunPlanPreGeneration(
+        socialSessionId,
+        runPlan,
+        {
+          participantCount: roster.length,
+          eventType,
+          participants: roster.map((p) => ({
+            userId: p.userId,
+            displayName: p.displayName,
+            archetype: p.archetype,
+          })),
+        },
+      ).catch((preGenErr) => {
+        logger.warn('Failed to enqueue run plan pre-generation on start', {
+          socialSessionId,
+          error: preGenErr instanceof Error ? preGenErr.message : String(preGenErr),
+        });
+      });
+    }
+
+    const warmupBudgetMs = process.env.NODE_ENV === 'test' ? 50 : 3000;
+    let warmupBudgetTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const vibeMoodMap: Record<string, AtmosphereMood> = { chat: 'life', balanced: 'relaxed', game: 'funny' };
+      const topicResult = await Promise.race([
+        generateWarmupTopics({
+          mood: vibeMoodMap[state.vibe ?? 'balanced'] ?? 'relaxed',
+          eventType: state.eventType || eventType || '活动',
+          participantCount: roster.length || 1,
+          roster: roster.map((p) => ({ archetype: p.archetype })),
+          vibe: state.vibe,
+        }),
+        new Promise<null>((resolve) => {
+          warmupBudgetTimer = setTimeout(() => resolve(null), warmupBudgetMs);
+        }),
+      ]);
+
+      if (topicResult) {
+        state.warmupTopics = topicResult.data;
+        state.warmupTopicsMeta = topicResult.meta;
+        await updateSession(socialSessionId, state);
+        logger.info('Warmup topics pre-compiled after session start', {
+          socialSessionId,
+          source: topicResult.meta.fallbackUsed ? 'curated' : 'ai',
+          topicCount: topicResult.data.length,
+          vibe: state.vibe,
+        });
+      } else {
+        logger.warn('Warmup pre-compilation exceeded background budget', {
+          socialSessionId,
+          budgetMs: warmupBudgetMs,
+        });
+      }
+    } catch (warmupErr) {
+      logger.warn('Warmup pre-compilation failed after session start', {
+        socialSessionId,
+        error: warmupErr instanceof Error ? warmupErr.message : String(warmupErr),
+      });
+    } finally {
+      if (warmupBudgetTimer) clearTimeout(warmupBudgetTimer);
+    }
+  })().catch((err) => {
+    logger.warn('Start background generation failed', {
+      socialSessionId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+}
+
 router.post('/start', async (req: any, res) => {
   const parsedBody = startBodySchema.safeParse(req.body);
   if (!parsedBody.success) {
@@ -232,8 +313,10 @@ router.post('/start', async (req: any, res) => {
     // Register (or re-register) this participant and bump lastSeen.
     await upsertParticipant(existing.socialSessionId, userId, participantDisplayName);
 
-    const rosterCount = await getRosterCount(existing.socialSessionId);
-    const activeCount = await getActiveParticipantCount(existing.socialSessionId);
+    const [rosterCount, activeCount] = await Promise.all([
+      getRosterCount(existing.socialSessionId),
+      getActiveParticipantCount(existing.socialSessionId),
+    ]);
 
     const previousPlayerCount = state.playerCount ?? 1;
     state.playerCount = rosterCount;
@@ -263,7 +346,10 @@ router.post('/start', async (req: any, res) => {
       });
       if (resetResult.reset) {
         tierResetOccurred = true;
-        shouldPersist = true;
+        // resetSocialIcebreakerTier already persists the mutated state. Avoid a
+        // second write on the /start critical path, which can make the CTA feel
+        // stuck on slow staging databases.
+        shouldPersist = false;
       }
     }
 
@@ -394,76 +480,10 @@ router.post('/start', async (req: any, res) => {
       });
     }
 
-    const roster = await listParticipants(socialSessionId);
-
-    // The session and participant writes above are the only work required for
-    // /start to succeed. Keep the warmup pre-compile within a strict budget so
-    // topics are normally ready for the first advance, but never let a stalled
-    // provider exhaust the client's 10s request timeout. A late result is
-    // intentionally discarded, preventing it from overwriting newer state.
-    const warmupBudgetMs = process.env.NODE_ENV === 'test' ? 50 : 3000;
-    let warmupBudgetTimer: ReturnType<typeof setTimeout> | undefined;
-    try {
-      const vibeMoodMap: Record<string, AtmosphereMood> = { chat: 'life', balanced: 'relaxed', game: 'funny' };
-      const topicResult = await Promise.race([
-        generateWarmupTopics({
-          mood: vibeMoodMap[newState.vibe ?? 'balanced'] ?? 'relaxed',
-          eventType: newState.eventType || '活动',
-          participantCount: roster.length || 1,
-          roster: roster.map((p) => ({ archetype: p.archetype })),
-          vibe: newState.vibe,
-        }),
-        new Promise<null>((resolve) => {
-          warmupBudgetTimer = setTimeout(() => resolve(null), warmupBudgetMs);
-        }),
-      ]);
-
-      if (topicResult) {
-        newState.warmupTopics = topicResult.data;
-        newState.warmupTopicsMeta = topicResult.meta;
-        await updateSession(socialSessionId, newState);
-        logger.info('Warmup topics pre-compiled at session creation', {
-          socialSessionId,
-          source: topicResult.meta.fallbackUsed ? 'curated' : 'ai',
-          topicCount: topicResult.data.length,
-          vibe: newState.vibe,
-        });
-      } else {
-        logger.warn('Warmup pre-compilation exceeded start budget; continuing without cached topics', {
-          socialSessionId,
-          budgetMs: warmupBudgetMs,
-        });
-      }
-    } catch (warmupErr) {
-      logger.warn('Warmup pre-compilation failed, session starts without cached topics', {
-        socialSessionId,
-        error: warmupErr instanceof Error ? warmupErr.message : String(warmupErr),
-      });
-    } finally {
-      if (warmupBudgetTimer) clearTimeout(warmupBudgetTimer);
-    }
-
-    // Queue pre-generation uses its own persistence, so it is safe to detach.
-    if (runPlan) {
-      void enqueueRunPlanPreGeneration(
-        socialSessionId,
-        runPlan,
-        {
-          participantCount: roster.length,
-          eventType,
-          participants: roster.map((p) => ({
-            userId: p.userId,
-            displayName: p.displayName,
-            archetype: p.archetype,
-          })),
-        },
-      ).catch((preGenErr) => {
-        logger.warn('Failed to enqueue run plan pre-generation on start', {
-          socialSessionId,
-          error: preGenErr instanceof Error ? preGenErr.message : String(preGenErr),
-        });
-      });
-    }
+    // Start must return as soon as the session and participant rows exist.
+    // Warmup topic pre-compilation and run-plan pre-generation are helpful,
+    // but they must never block the button that enters the session.
+    scheduleStartBackgroundGeneration({ socialSessionId, state: newState, eventType, runPlan });
 
     logger.info('Started social icebreaker session', {
       sessionId,
@@ -496,8 +516,10 @@ router.post('/start', async (req: any, res) => {
 
     await upsertParticipant(concurrent.socialSessionId, userId, participantDisplayName);
 
-    const rosterCount = await getRosterCount(concurrent.socialSessionId);
-    const activeCount = await getActiveParticipantCount(concurrent.socialSessionId);
+    const [rosterCount, activeCount] = await Promise.all([
+      getRosterCount(concurrent.socialSessionId),
+      getActiveParticipantCount(concurrent.socialSessionId),
+    ]);
     concurrent.state.playerCount = rosterCount;
     concurrent.state.activePlayerCount = activeCount;
 
