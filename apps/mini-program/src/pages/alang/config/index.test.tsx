@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   useStartMission: vi.fn(),
   syncMissionProgress: vi.fn(),
   showToast: vi.fn(),
+  haptics: vi.fn(),
   redirectTo: vi.fn(),
   setStorageSync: vi.fn(),
   distanceMeters: { current: 150 },
@@ -76,6 +77,10 @@ vi.mock('@shared/api', () => ({
 
 vi.mock('../../../lib/api/api', () => ({
   apiRequest: vi.fn(),
+}))
+
+vi.mock('../../../lib/utils/haptics', () => ({
+  haptics: mocks.haptics,
 }))
 
 vi.mock('../../../components/ui/StatusCard', () => ({
@@ -257,15 +262,18 @@ describe('AlangConfigPage test-point start flow', () => {
 
     const startButton = screen.getByRole('button', { name: '开始测试' })
     expect(startButton.tagName).toBe('BUTTON')
+    expect(screen.getByRole('status')).toHaveTextContent('启动反馈已开启 · 点击后会立即显示进度')
 
     fireEvent.click(startButton)
     fireEvent.click(startButton)
 
-    await waitFor(() => {
-      expect(mocks.startMission).toHaveBeenCalledTimes(1)
-      expect(screen.getByRole('button', { name: '正在准备测试' })).toBeDisabled()
-      expect(screen.getByRole('button', { name: '正在准备测试' })).toHaveAttribute('data-loading', 'true')
-    })
+    expect(mocks.haptics).toHaveBeenCalledTimes(1)
+    expect(mocks.haptics).toHaveBeenCalledWith('light')
+    expect(mocks.startMission).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('status')).toHaveTextContent('已收到点击，正在启动阿浪…')
+    expect(screen.getByRole('button', { name: '正在准备测试' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '正在准备测试' })).toHaveAttribute('data-loading', 'true')
+    expect(screen.getByRole('button', { name: '正在准备测试' })).toHaveAttribute('aria-busy', 'true')
 
     await act(async () => {
       resolveStart({
@@ -296,6 +304,7 @@ describe('AlangConfigPage test-point start flow', () => {
       icon: 'none',
     })
     expect(mocks.redirectTo).not.toHaveBeenCalled()
+    expect(mocks.haptics).toHaveBeenCalledTimes(1)
 
     const retryButton = screen.getByRole('button', { name: '开始测试' })
     expect(retryButton).toBeEnabled()
@@ -303,8 +312,25 @@ describe('AlangConfigPage test-point start flow', () => {
 
     await waitFor(() => {
       expect(mocks.startMission).toHaveBeenCalledTimes(2)
+      expect(mocks.haptics).toHaveBeenCalledTimes(2)
       expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+  })
+
+  it('still starts when haptic feedback is unavailable', async () => {
+    mocks.haptics.mockImplementationOnce(() => {
+      throw new Error('haptics unavailable')
+    })
+
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+
+    expect(mocks.startMission).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
     })
   })
 

@@ -30,6 +30,7 @@ import { useAlangGpsOnce } from '../../../lib/alang/useAlangGps'
 import { apiRequest } from '../../../lib/api/api'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { logInfo, logWarn } from '../../../lib/utils/logger'
+import { haptics } from '../../../lib/utils/haptics'
 import StatusCard from '../../../components/ui/StatusCard'
 import './index.scss'
 
@@ -283,6 +284,7 @@ export default function AlangConfigPage() {
   const pointValidationError = target && endPoint
     ? getTestPointValidationError(target, endPoint)
     : null
+  const isStartPending = isSubmitting || startMutation.isPending
   const shouldRecommendShorterRoute = !pointValidationError
     && pointValidation?.valid
     && (pointValidation.distanceMeters < ALANG_TEST_RECOMMENDED_MIN_DISTANCE_METERS
@@ -309,7 +311,7 @@ export default function AlangConfigPage() {
   }, [endPoint, target])
 
   const handleConfirm = async () => {
-    if (submitLockRef.current || isSubmitting || startMutation.isPending) return
+    if (submitLockRef.current || isStartPending) return
     if (!target || !endPoint || !mission) {
       const message = '请先设置阿浪出现点和陪伴终点'
       setSubmitError(message)
@@ -331,6 +333,11 @@ export default function AlangConfigPage() {
     }
 
     submitLockRef.current = true
+    try {
+      haptics('light')
+    } catch {
+      // Optional device feedback must never block the mission start request.
+    }
     setSubmitError(null)
     setIsSubmitting(true)
     logInfo('[AlangConfig] start test tapped', { slug })
@@ -595,16 +602,32 @@ export default function AlangConfigPage() {
             <Text>{submitError}</Text>
           </View>
         )}
+        {!submitError && (
+          <View
+            className={`alang-config__submit-feedback ${isStartPending ? 'alang-config__submit-feedback--active' : ''}`}
+            role='status'
+            aria-live='polite'
+          >
+            <Text>
+              {isStartPending
+                ? '已收到点击，正在启动阿浪…'
+                : '启动反馈已开启 · 点击后会立即显示进度'}
+            </Text>
+          </View>
+        )}
         <Button
-          className={`alang-config__confirm ${!target || !endPoint || !!pointValidationError || isSubmitting || startMutation.isPending ? 'alang-config__confirm--disabled' : ''}`}
+          className={`alang-config__confirm ${!target || !endPoint || !!pointValidationError || isStartPending ? 'alang-config__confirm--disabled' : ''}`}
           onClick={() => { void handleConfirm() }}
-          disabled={!target || !endPoint || !!pointValidationError || isSubmitting || startMutation.isPending}
-          loading={isSubmitting || startMutation.isPending}
-          hoverClass={isSubmitting || startMutation.isPending ? '' : 'alang-config__confirm--pressed'}
-          aria-label={isSubmitting ? '正在准备测试' : '开始测试'}
-          aria-disabled={!target || !endPoint || !!pointValidationError || isSubmitting || startMutation.isPending}
+          disabled={!target || !endPoint || !!pointValidationError || isStartPending}
+          loading={isStartPending}
+          hoverClass={isStartPending ? '' : 'alang-config__confirm--pressed'}
+          hoverStartTime={0}
+          hoverStayTime={100}
+          aria-label={isStartPending ? '正在准备测试' : '开始测试'}
+          aria-disabled={!target || !endPoint || !!pointValidationError || isStartPending}
+          aria-busy={isStartPending}
         >
-          <Text className='alang-config__confirm-text'>{isSubmitting ? '正在准备…' : '开始测试'}</Text>
+          <Text className='alang-config__confirm-text'>{isStartPending ? '已收到，正在启动…' : '开始测试'}</Text>
         </Button>
       </View>
     </View>

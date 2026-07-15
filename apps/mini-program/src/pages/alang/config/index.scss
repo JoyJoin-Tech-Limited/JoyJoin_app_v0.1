@@ -298,6 +298,20 @@
     text-align: center;
   }
 
+  &__submit-feedback {
+    display: block;
+    margin-bottom: 16rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    line-height: 1.5;
+    text-align: center;
+
+    &--active {
+      color: $color-primary-dark;
+      font-weight: 600;
+    }
+  }
+
   &__confirm {
     display: flex;
     width: 100%;
