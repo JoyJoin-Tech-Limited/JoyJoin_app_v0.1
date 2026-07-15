@@ -105,8 +105,19 @@ describe('useSquadUnboxingController flip-state wiring (tap-to-reveal)', () => {
     expect(source).toContain("storyName === 'revealed-partial'")
     expect(source).toContain("storyName === 'revealed-allup'")
     expect(source).toContain("storyName === 'focused'")
+    // Audit CONCERN-3: pocketed-phase story for H5 screenshot coverage.
+    expect(source).toContain("storyName === 'revealed-pocketed'")
     expect(source).toContain('flipSessionRef.current?.seedFlipped(')
     const storyBlock = source.split('Story-mode seeding')[1]?.split('const groupThemeHighlights')[0] ?? ''
     expect(storyBlock).not.toContain('track(')
+  })
+
+  it('defers a collapse tap that lands inside the flip guard window (audit NIT-1)', () => {
+    // The in-flight guard stays, but the tap is deferred one guard window
+    // and re-entered through the latest-callback ref — never silently dropped.
+    expect(source).toContain('flipSessionRef.current!.isFlipInFlight()')
+    expect(source).toContain('FLIP_IN_FLIGHT_GUARD_MS')
+    expect(source).toContain('collapseDeckRef.current()')
+    expect(source).toContain('clearCollapseDeferTimer')
   })
 })

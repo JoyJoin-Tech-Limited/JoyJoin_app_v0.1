@@ -165,6 +165,12 @@ $fan-rotations: (
     height: clamp(360rpx, 42dvh, 460rpx);
     pointer-events: none;
     flex-shrink: 0;
+    // Height eases in BOTH directions (fold AND re-fan) — declaring this only
+    // on --pocketed dropped the transition the moment the class was removed,
+    // so re-fan jump-cut the content ~350–500rpx (2026-07-15 audit CONCERN-2).
+    // The reduce-motion blanket above (`&--reduce-motion &__stage-spacer`)
+    // already suppresses this for RM users.
+    transition: height 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 
     &--revealed {
       // Must match &__stage--revealed exactly (fixed-stage sizing rule).
@@ -183,10 +189,9 @@ $fan-rotations: (
     // the pocketed footprint must win the equal-specificity source-order tie.
     &--pocketed {
       height: calc(148rpx + env(safe-area-inset-top));
-      // Height eases (never jump-cuts) so the first-collapse hint growth
-      // below and the pocketed snap-in glide the 团魂 content instead of
-      // slicing it (G1).
-      transition: height 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+      // Height transition lives on the base spacer (both directions); the
+      // first-collapse hint growth below and the pocketed snap-in glide the
+      // 团魂 content instead of slicing it (G1).
     }
 
     // First-collapse hint clearance (G1): the fixed pocket-hint bubble

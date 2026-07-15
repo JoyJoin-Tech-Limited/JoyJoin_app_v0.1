@@ -30,6 +30,7 @@ import { MAX_FAN_CARDS } from './computeFanLayout'
 import {
   computeUnflippedCount,
   createSquadFlipSession,
+  FLIP_IN_FLIGHT_GUARD_MS,
   type FlipSnapshot,
   type SquadFlipSession,
 } from './squadFlipState'
@@ -185,9 +186,14 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       storyName === 'focused' ||
       storyName === 'revealed' ||
       storyName === 'revealed-partial' ||
-      storyName === 'revealed-allup'
+      storyName === 'revealed-allup' ||
+      storyName === 'revealed-pocketed'
     ) {
       setFlowState('revealed')
+      // Audit CONCERN-3: screenshot coverage for the pocketed phase — jump
+      // straight to the settled phase (no cascade) so H5 captures of the
+      // pill/hint/spacer geometry are timer-independent.
+      if (storyName === 'revealed-pocketed') setDeckPhase('pocketed')
       return
     }
   }, [storyMode, storyName])
@@ -454,12 +460,26 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     hintTimerRef.current = null
   }, [])
 
+  // Deferred collapse (audit NIT-1): a 收起卡组 tap that lands inside the
+  // mid-flip guard window waits one guard period instead of being dropped.
+  const collapseDeferTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const clearCollapseDeferTimer = useCallback(() => {
+    if (collapseDeferTimerRef.current !== null) {
+      clearTimeout(collapseDeferTimerRef.current)
+      collapseDeferTimerRef.current = null
+    }
+  }, [])
+  // Latest-callback ref so the defer timer re-enters collapseDeck through
+  // the full guard set without the useCallback depending on itself.
+  const collapseDeckRef = useRef<() => void>(() => {})
+
   useEffect(
     () => () => {
       clearHeartbeatTimers()
       clearHintTimer()
+      clearCollapseDeferTimer()
     },
-    [clearHeartbeatTimers, clearHintTimer],
+    [clearHeartbeatTimers, clearHintTimer, clearCollapseDeferTimer],
   )
 
   const dismissPocketHint = useCallback(() => {
@@ -472,8 +492,19 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     if (deckPhase !== 'fan') return
     if (visibleIds.length === 0) return
     // Mid-flip fold geometry is undefined — the in-flight guard (≤380ms) also
-    // protects the card taps, so reuse it here.
-    if (flipSessionRef.current!.isFlipInFlight()) return
+    // protects the card taps, so reuse it here. Don't drop the tap silently
+    // (audit NIT-1): defer one guard window, then re-enter through all the
+    // same guards so the collapse lands as soon as the flip settles. If the
+    // user keeps flipping, the defer re-arms; if the phase changed meanwhile,
+    // the guards above no-op the stale fire.
+    if (flipSessionRef.current!.isFlipInFlight()) {
+      clearCollapseDeferTimer()
+      collapseDeferTimerRef.current = setTimeout(() => {
+        collapseDeferTimerRef.current = null
+        collapseDeckRef.current()
+      }, FLIP_IN_FLIGHT_GUARD_MS)
+      return
+    }
 
     haptics('medium')
 
@@ -515,7 +546,13 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     bestPartnerUserId,
     foldDelayById,
     clearHeartbeatTimers,
+    clearCollapseDeferTimer,
   ])
+
+  // Keep the defer-entry ref pointed at the latest collapseDeck (NIT-1).
+  useEffect(() => {
+    collapseDeckRef.current = collapseDeck
+  }, [collapseDeck])
 
   const reopenDeck = useCallback(() => {
     if (deckPhase !== 'pocketed') return
@@ -558,6 +595,15 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     if (!storyMode || members.length === 0) return
     const meId = currentUserId
     if (storyName === 'revealed-partial') {
+      const seeds = [meId, ...visibleIds.filter((id) => id !== meId).slice(0, 2)].filter(
+        (id): id is string => Boolean(id),
+      )
+      flipSessionRef.current?.seedFlipped(seeds)
+      return
+    }
+    if (storyName === 'revealed-pocketed') {
+      // Partial seeds keep the pill's spoiler gating visible in captures:
+      // face-up members render minis, the rest stay card-back chips.
       const seeds = [meId, ...visibleIds.filter((id) => id !== meId).slice(0, 2)].filter(
         (id): id is string => Boolean(id),
       )

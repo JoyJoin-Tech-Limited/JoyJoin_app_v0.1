@@ -41,6 +41,7 @@ import {
   SQUAD_BURST_COMPLETION_BUBBLE_TEXT,
   SQUAD_SELF_CARD_BUBBLE_TEXT,
   SQUAD_TEASE_BUBBLE_TEXT,
+  SQUAD_TEASE_POCKETED_BUBBLE_TEXT,
 } from './squadUnboxingViewModels'
 import { scheduleFlipSettleNarration } from './squadFlipState'
 import { getOracleCardCornerAsset } from '../../components/discover/oracleCardAssets'
@@ -469,7 +470,9 @@ export default function SquadUnboxingPage() {
   // Bubble voice: burst-completion line > focused-member narration (only when
   // the narration matches the currently focused card — a pending flip keeps
   // the resting voice until flip-end) > resting voice. While face-down cards
-  // remain in an interactive session the resting voice is the tease line (C1);
+  // remain in an interactive session the resting voice is the tease line (C1),
+  // swapped for the pocket-aware variant once the deck is pocketed so the copy
+  // never invites tapping cards that are hidden inside the pill (CONCERN-1);
   // the soul line is earned once every card is face-up.
   const bubbleText = bubbleNarration?.kind === 'burst'
     ? SQUAD_BURST_COMPLETION_BUBBLE_TEXT
@@ -484,7 +487,9 @@ export default function SquadUnboxingPage() {
           focusedMember,
         )
       : isInteractiveSession && unflippedCount > 0
-        ? SQUAD_TEASE_BUBBLE_TEXT
+        ? deckPhase === 'fan'
+          ? SQUAD_TEASE_BUBBLE_TEXT
+          : SQUAD_TEASE_POCKETED_BUBBLE_TEXT
         : buildSquadSoulBubbleText(
           archetypeMixCopy,
           groupAnalysis?.groupThemeCompanion || matchExplanationCopy,

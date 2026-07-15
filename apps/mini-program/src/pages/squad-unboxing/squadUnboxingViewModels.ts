@@ -243,6 +243,16 @@ export const SQUAD_BURST_COMPLETION_BUBBLE_TEXT = '全员揭晓，今晚这桌�
 export const SQUAD_TEASE_BUBBLE_TEXT = '桌友卡都扣好了，轻点翻开，看看今晚和谁一桌。'
 
 /**
+ * Pocketed-phase resting voice while face-down cards remain (2026-07-15
+ * audit CONCERN-1): the plain tease line invites tapping cards that are
+ * hidden inside the pill, so while the deck is pocketed the verb changes
+ * from 翻开 to 拉下. Deliberately distinct from the one-time hint
+ * (`SQUAD_DECK_POCKETED_HINT_TEXT`) — that teaches the gesture once; this is
+ * the standing resting voice and names the affordance (小条 = the pill).
+ */
+export const SQUAD_TEASE_POCKETED_BUBBLE_TEXT = '拉下小条，继续揭晓今晚的同桌。'
+
+/**
  * Hint-chip label — live unflipped count plus an explicit tap verb, since the
  * chip doubles as the reveal-all trigger (AC-04). Absent when N = 0.
  */

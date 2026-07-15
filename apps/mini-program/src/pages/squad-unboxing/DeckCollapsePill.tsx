@@ -154,9 +154,11 @@ export default function DeckCollapsePill({
 
   const handleTap = useCallback(() => {
     if (leaving) return
-    haptics('light')
+    // Gated on !instant to match drag-reopen (audit NIT-3): on instant tiers
+    // the reopen is a crossfade with no cascade for a haptic to punctuate.
+    if (!instant) haptics('light')
     onReopen()
-  }, [leaving, onReopen])
+  }, [leaving, instant, onReopen])
 
   const className = [
     'squad-unboxing__deck-pill',
