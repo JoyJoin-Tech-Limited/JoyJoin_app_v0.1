@@ -337,36 +337,21 @@ jobs:
             ~/JoyJoin/deployment/scripts/deploy-staging.sh
 
       - name: Verify staging health after deploy
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
-          command_timeout: 5m
-          script: |
-            set -euo pipefail
-            # A schema drift (code deployed without its migration) crashes the
-            # API container at startup via validateDbSchema. Without this gate
-            # the deploy would report success while the API stays down.
-            echo "⏳ Waiting for joyjoin-api-staging to become healthy..."
-            for i in $(seq 1 36); do
-              STATUS=$(docker inspect --format '{{.State.Health.Status}}' joyjoin-api-staging 2>/dev/null || echo "missing")
-              if [ "$STATUS" = "healthy" ]; then
-                echo "✅ joyjoin-api-staging is healthy"
-                break
-              fi
-              if [ "$i" = "36" ]; then
-                echo "❌ joyjoin-api-staging never became healthy (last status: $STATUS)"
-                echo "--- last 80 log lines ---"
-                docker logs joyjoin-api-staging --tail 80 2>&1 || true
-                exit 1
-              fi
-              sleep 5
-            done
-            echo "⏳ Verifying public health endpoint..."
-            curl -fsS -m 15 https://staging.joyjoinapp.com/api/health > /dev/null
-            echo "✅ https://staging.joyjoinapp.com/api/health OK"
+        run: |
+          set -euo pipefail
+          echo "⏳ Waiting for staging API to become healthy..."
+          for i in $(seq 1 36); do
+            HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' -m 10 https://staging.joyjoinapp.com/api/health 2>/dev/null || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ staging.joyjoinapp.com/api/health returned 200"
+              break
+            fi
+            if [ "$i" = "36" ]; then
+              echo "❌ Health endpoint never returned 200 (last HTTP code: $HTTP_CODE)"
+              exit 1
+            fi
+            sleep 10
+          done
 
       - name: Notify staging deployment failure
         if: failure()
