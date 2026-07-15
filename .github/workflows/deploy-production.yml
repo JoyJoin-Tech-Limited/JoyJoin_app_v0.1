@@ -185,6 +185,38 @@ jobs:
             cd ~/JoyJoin
             ~/JoyJoin/deployment/scripts/deploy-production.sh
 
+      - name: Verify production health after deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          command_timeout: 5m
+          script: |
+            set -euo pipefail
+            # A schema drift (code deployed without its migration) crashes the
+            # API container at startup via validateDbSchema. Without this gate
+            # the deploy would report success while the API stays down.
+            echo "⏳ Waiting for joyjoin-api to become healthy..."
+            for i in $(seq 1 36); do
+              STATUS=$(docker inspect --format '{{.State.Health.Status}}' joyjoin-api 2>/dev/null || echo "missing")
+              if [ "$STATUS" = "healthy" ]; then
+                echo "✅ joyjoin-api is healthy"
+                break
+              fi
+              if [ "$i" = "36" ]; then
+                echo "❌ joyjoin-api never became healthy (last status: $STATUS)"
+                echo "--- last 80 log lines ---"
+                docker logs joyjoin-api --tail 80 2>&1 || true
+                exit 1
+              fi
+              sleep 5
+            done
+            echo "⏳ Verifying public health endpoint..."
+            curl -fsS -m 15 https://api.joyjoinapp.com/api/health > /dev/null
+            echo "✅ https://api.joyjoinapp.com/api/health OK"
+
       - name: Notify deployment failure
         if: failure()
         env:
