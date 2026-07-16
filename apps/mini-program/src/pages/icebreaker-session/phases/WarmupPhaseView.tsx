@@ -378,7 +378,7 @@ export function WarmupPhaseView({
         <View className='icebreaker__test-mode-badge'>
           <View className='icebreaker__test-mode-badge-dot' />
           <Text className='icebreaker__test-mode-badge-text'>
-            {runBots ? '调试局 · 虚拟伙伴参与完整流程' : '调试局 · 完整多人流程'}
+            {runBots ? '调试局 · 虚拟伙伴参与完整流程' : '调试局 · 仅话题卡预览'}
           </Text>
         </View>
       )}

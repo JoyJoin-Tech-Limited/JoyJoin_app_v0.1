@@ -72,10 +72,10 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  Env fallback: ORACLE_CARD_CORNER_STAT_ENABLED (default: true). */
   oracleCardCornerStatEnabled: "ORACLE_CARD_CORNER_STAT_ENABLED",
   /** Master kill-switch for Social Icebreaker test-mode bot simulation.
-   *  When false, bot users cannot be added as participants in social icebreaker
-   *  sessions, even if single-test mode is active. Env fallback:
-   *  SOCIAL_ICEBREAKER_TEST_MODE_ENABLED (default: false). */
-  socialIcebreakerTestModeEnabled: "SOCIAL_ICEBREAKER_TEST_MODE_ENABLED",
+   *  NOTE: intentionally NOT registered here — the fail-closed gate
+   *  `isSocialIcebreakerTestMode()` reads process.env directly on hot paths
+   *  (session start/advance), so a DB toggle would be a silent no-op.
+   *  Env-only: SOCIAL_ICEBREAKER_TEST_MODE_ENABLED (default: false). */
   /** Master kill-switch for venue assignment after pool matching.
    *  When false, assignVenuesToGroups() marks all groups unassigned
    *  with reason 'feature_disabled'.
