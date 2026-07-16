@@ -636,6 +636,124 @@ export default function SquadUnboxingPage() {
     )
   }
 
+  const tonightsPanel = (
+    <View
+      className={[
+        'squad-unboxing__tonights-panel',
+        tonightsTableOpen ? 'squad-unboxing__tonights-panel--open' : '',
+      ].filter(Boolean).join(' ')}
+      role='region'
+      aria-label='今晚这桌详情'
+      aria-hidden={!tonightsTableOpen}
+    >
+      <View className={[
+        'squad-unboxing__chapter',
+        'squad-unboxing__chapter--meta',
+        headerReady ? 'squad-unboxing__chapter--ready' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}>
+        {/* Event-brief header: date-led. Big day numeral + month/weekday·time
+            on the left; event-type pill + the shared OracleCard corner
+            vignette (dining/drinks) on the right. Collapses gracefully —
+            with no dateTime the date block drops and the pill stays. */}
+        <View className='squad-unboxing__brief-header'>
+          <View className='squad-unboxing__brief-header-main'>
+            <Text className='squad-unboxing__chapter-title'>今晚这桌</Text>
+            {briefDate ? (
+              <View className='squad-unboxing__brief-date'>
+                <Text className='squad-unboxing__brief-date-day'>{briefDate.day}</Text>
+                <View className='squad-unboxing__brief-date-side'>
+                  <Text className='squad-unboxing__brief-date-month'>{briefDate.month}</Text>
+                  <Text className='squad-unboxing__brief-date-weekday'>
+                    {briefDate.weekday} · {briefDate.time}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+          </View>
+          <View className='squad-unboxing__brief-header-aside'>
+            <View className='squad-unboxing__brief-type-pill'>
+              <Text className='squad-unboxing__brief-type-pill-text'>{getEventTypeLabel(pool.eventType)}</Text>
+            </View>
+            {briefVignetteSrc && !briefVignetteFailed ? (
+              <Image
+                className='squad-unboxing__brief-vignette'
+                src={briefVignetteSrc}
+                mode='aspectFit'
+                lazyLoad
+                aria-hidden='true'
+                onError={() => setBriefVignetteFailed(true)}
+              />
+            ) : null}
+          </View>
+        </View>
+
+        <View className='squad-unboxing__meta-row'>
+          <View className='squad-unboxing__meta-label'>
+            <JoyJoinIcon emoji='📍' size={24} className='squad-unboxing__meta-icon' />
+            <Text>地点</Text>
+          </View>
+          <View className='squad-unboxing__meta-value-wrap'>
+            <View className='squad-unboxing__meta-value-line'>
+              <Text className='squad-unboxing__meta-value'>
+                {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '地点待定'}
+              </Text>
+              {group.venueName ? (
+                <View
+                  className='squad-unboxing__copy-chip'
+                  hoverClass='squad-unboxing__copy-chip--pressed'
+                  role='button'
+                  aria-label='复制地址'
+                  onClick={handleCopyVenue}
+                >
+                  <Text className='squad-unboxing__copy-chip-text'>复制</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text className={`squad-unboxing__meta-status ${group.venueName ? 'squad-unboxing__meta-status--assigned' : 'squad-unboxing__meta-status--pending'}`}>
+              {group.venueName ? '场地已确定' : '场地待定，悦仔会在确认后提醒你'}
+            </Text>
+            {group.venueAddress ? (
+              <Text className='squad-unboxing__meta-sub'>{group.venueAddress}</Text>
+            ) : null}
+          </View>
+        </View>
+
+        {group.theme || group.themeEmoji || group.vibe ? (
+          <View className='squad-unboxing__meta-row squad-unboxing__meta-row--theme'>
+            <View className='squad-unboxing__meta-label'>
+              {group.themeEmoji ? (
+                <JoyJoinIcon emoji={group.themeEmoji} size={24} className='squad-unboxing__meta-icon' />
+              ) : (
+                <JoyJoinIcon emoji='✨' size={24} className='squad-unboxing__meta-icon' />
+              )}
+              <Text>主题</Text>
+            </View>
+            <View className='squad-unboxing__meta-value-wrap'>
+              <Text className='squad-unboxing__meta-value'>
+                {group.theme || '今晚的主题'}
+                {group.vibe ? ` · ${getVibeLabel(group.vibe)}` : ''}
+              </Text>
+              {group.subtitle ? (
+                <Text className='squad-unboxing__meta-sub'>{group.subtitle}</Text>
+              ) : null}
+              {groupThemeHighlights.length > 0 ? (
+                <View className='squad-unboxing__meta-highlights'>
+                  {groupThemeHighlights.map((highlight) => (
+                    <View key={highlight} className='squad-unboxing__meta-highlight'>
+                      <Text className='squad-unboxing__meta-highlight-text'>{highlight}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+
   const legacyHeader = (
     <View className={['squad-unboxing__header', headerReady ? 'squad-unboxing__header--ready' : ''].filter(Boolean).join(' ')}>
       <Image
@@ -718,7 +836,7 @@ export default function SquadUnboxingPage() {
 
           <View className={[
             'squad-unboxing__scroll-content',
-            flowState === 'revealed' ? '' : 'squad-unboxing__scroll-content--ready',
+            flowState === 'revealed' ? 'squad-unboxing__scroll-content--revealed' : 'squad-unboxing__scroll-content--ready',
             isComposedHeroActive ? 'squad-unboxing__scroll-content--composed' : '',
           ].filter(Boolean).join(' ')}>
 
@@ -784,6 +902,14 @@ export default function SquadUnboxingPage() {
               {`${DEFAULT_MASCOT_DISPLAY_NAME}正在把盒盖掀开，把今晚最值得期待的那一页翻给你看。`}
             </Text>
           </Card>
+        ) : null}
+
+        {flowState === 'revealed' ? (
+          <>
+            <View className='squad-unboxing__blank-spacer' />
+            {tonightsPanel}
+            <View className='squad-unboxing__spacer' />
+          </>
         ) : null}
         </View>
       </View>
@@ -915,126 +1041,6 @@ export default function SquadUnboxingPage() {
           because WeChat scroll-view does not support fixed descendants. */}
       {flowState === 'revealed' ? (
         <View className='squad-unboxing__dock-cluster'>
-          {/* 今晚这桌 collapsible panel: FIRST cluster child so it grows
-              upward into the blank space when expanded (auto-expanded on
-              pocket; the band between stage bottom and cluster top is too
-              small for an in-flow panel in the fan phase). */}
-          <View
-            className={[
-              'squad-unboxing__tonights-panel',
-              tonightsTableOpen ? 'squad-unboxing__tonights-panel--open' : '',
-            ].filter(Boolean).join(' ')}
-            role='region'
-            aria-label='今晚这桌详情'
-            aria-hidden={!tonightsTableOpen}
-          >
-            <View className={[
-              'squad-unboxing__chapter',
-              'squad-unboxing__chapter--meta',
-              headerReady ? 'squad-unboxing__chapter--ready' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}>
-              {/* Event-brief header: date-led. Big day numeral + month/weekday·time
-                  on the left; event-type pill + the shared OracleCard corner
-                  vignette (dining/drinks) on the right. Collapses gracefully —
-                  with no dateTime the date block drops and the pill stays. */}
-              <View className='squad-unboxing__brief-header'>
-                <View className='squad-unboxing__brief-header-main'>
-                  <Text className='squad-unboxing__chapter-title'>今晚这桌</Text>
-                  {briefDate ? (
-                    <View className='squad-unboxing__brief-date'>
-                      <Text className='squad-unboxing__brief-date-day'>{briefDate.day}</Text>
-                      <View className='squad-unboxing__brief-date-side'>
-                        <Text className='squad-unboxing__brief-date-month'>{briefDate.month}</Text>
-                        <Text className='squad-unboxing__brief-date-weekday'>
-                          {briefDate.weekday} · {briefDate.time}
-                        </Text>
-                      </View>
-                    </View>
-                  ) : null}
-                </View>
-                <View className='squad-unboxing__brief-header-aside'>
-                  <View className='squad-unboxing__brief-type-pill'>
-                    <Text className='squad-unboxing__brief-type-pill-text'>{getEventTypeLabel(pool.eventType)}</Text>
-                  </View>
-                  {briefVignetteSrc && !briefVignetteFailed ? (
-                    <Image
-                      className='squad-unboxing__brief-vignette'
-                      src={briefVignetteSrc}
-                      mode='aspectFit'
-                      lazyLoad
-                      aria-hidden='true'
-                      onError={() => setBriefVignetteFailed(true)}
-                    />
-                  ) : null}
-                </View>
-              </View>
-
-              <View className='squad-unboxing__meta-row'>
-                <View className='squad-unboxing__meta-label'>
-                  <JoyJoinIcon emoji='📍' size={24} className='squad-unboxing__meta-icon' />
-                  <Text>地点</Text>
-                </View>
-                <View className='squad-unboxing__meta-value-wrap'>
-                  <View className='squad-unboxing__meta-value-line'>
-                    <Text className='squad-unboxing__meta-value'>
-                      {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '地点待定'}
-                    </Text>
-                    {group.venueName ? (
-                      <View
-                        className='squad-unboxing__copy-chip'
-                        hoverClass='squad-unboxing__copy-chip--pressed'
-                        role='button'
-                        aria-label='复制地址'
-                        onClick={handleCopyVenue}
-                      >
-                        <Text className='squad-unboxing__copy-chip-text'>复制</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <Text className={`squad-unboxing__meta-status ${group.venueName ? 'squad-unboxing__meta-status--assigned' : 'squad-unboxing__meta-status--pending'}`}>
-                    {group.venueName ? '场地已确定' : '场地待定，悦仔会在确认后提醒你'}
-                  </Text>
-                  {group.venueAddress ? (
-                    <Text className='squad-unboxing__meta-sub'>{group.venueAddress}</Text>
-                  ) : null}
-                </View>
-              </View>
-
-              {group.theme || group.themeEmoji || group.vibe ? (
-                <View className='squad-unboxing__meta-row squad-unboxing__meta-row--theme'>
-                  <View className='squad-unboxing__meta-label'>
-                    {group.themeEmoji ? (
-                      <JoyJoinIcon emoji={group.themeEmoji} size={24} className='squad-unboxing__meta-icon' />
-                    ) : (
-                      <JoyJoinIcon emoji='✨' size={24} className='squad-unboxing__meta-icon' />
-                    )}
-                    <Text>主题</Text>
-                  </View>
-                  <View className='squad-unboxing__meta-value-wrap'>
-                    <Text className='squad-unboxing__meta-value'>
-                      {group.theme || '今晚的主题'}
-                      {group.vibe ? ` · ${getVibeLabel(group.vibe)}` : ''}
-                    </Text>
-                    {group.subtitle ? (
-                      <Text className='squad-unboxing__meta-sub'>{group.subtitle}</Text>
-                    ) : null}
-                    {groupThemeHighlights.length > 0 ? (
-                      <View className='squad-unboxing__meta-highlights'>
-                        {groupThemeHighlights.map((highlight) => (
-                          <View key={highlight} className='squad-unboxing__meta-highlight'>
-                            <Text className='squad-unboxing__meta-highlight-text'>{highlight}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-              ) : null}
-            </View>
-          </View>
-
           <View
             className='squad-unboxing__analysis-bubble'
             role='status'

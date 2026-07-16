@@ -352,6 +352,11 @@ $fan-rotations: (
     padding-bottom: $spacing-xl;
   }
 
+  &__scroll-content--revealed {
+    display: flex;
+    flex-direction: column;
+  }
+
   // ── Fixed dock cluster (2026-07-16) ─────────────────────────────────────
   // Joy's words bubble + the single 今晚这桌 collapse toggle, pinned directly
   // above the bottom action dock at the PAGE ROOT (WeChat scroll-view does
@@ -365,7 +370,7 @@ $fan-rotations: (
     left: $container-padding;
     right: $container-padding;
     bottom: calc(628rpx + env(safe-area-inset-bottom));
-    z-index: 15; // below dock (100) & pocket pill (20), above stage (10)
+    z-index: 110; // above opaque bottom dock (100) and pocket pill (20)
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
@@ -417,12 +422,9 @@ $fan-rotations: (
 
   // Collapsible panel: max-height + opacity + visibility so the closed state
   // is invisible, un-tappable, and out of the a11y tree (the 复制 chip inside
-  // must not be focusable while collapsed). Lives INSIDE the fixed dock
-  // cluster as its first child, so opening grows the cluster upward into the
-  // blank space — fully visible in the pocketed phase, and an intentional
-  // overlay over the fan's lower band in the fan phase. Open height is
-  // viewport-capped (vh fallback before dvh — WeChat dvh pitfall) so the
-  // bubble + toggle below it can never be pushed off-screen.
+  // must not be focusable while collapsed). Lives inside the ScrollView content
+  // so it can scroll naturally when expanded; the fixed dock cluster above it
+  // only holds the Joy bubble and the collapse toggle.
   &__tonights-panel {
     max-height: 0;
     overflow: hidden;
@@ -434,20 +436,13 @@ $fan-rotations: (
       visibility 0s linear 0.34s;
 
     &--open {
-      max-height: 44vh;
-      max-height: 44dvh;
+      max-height: 1600rpx;
       opacity: 1;
       visibility: visible;
       transition:
         max-height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
         opacity 0.26s ease 0.04s,
         visibility 0s;
-    }
-
-    // The cluster's gap owns the rhythm — the chapter's flow margin would
-    // leak dead space at the panel's bottom edge.
-    .squad-unboxing__chapter {
-      margin-bottom: 0;
     }
   }
 
@@ -2706,6 +2701,12 @@ $fan-rotations: (
     }
   }
 
+
+  &__blank-spacer {
+    flex: 1 1 auto;
+    min-height: $spacing-lg;
+    pointer-events: none;
+  }
 
   &__spacer {
     height: $spacing-xl;
