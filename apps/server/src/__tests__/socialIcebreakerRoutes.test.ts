@@ -3151,6 +3151,58 @@ describe.sequential('social icebreaker routes', () => {
       });
     });
 
+    it('registers bot attendees as ready participants even when runBots is false', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'single-test-roster-host');
+        const sessionId = `session-single-test-roster-${Date.now()}`;
+
+        vi.mocked(isSingleTestMode).mockReturnValue(true);
+        vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
+          version: 2,
+          groupId: sessionId,
+          isTestModeSkip: true,
+          runBots: false,
+          botPersonas: [
+            { botId: 'bot-1', userId: 'virtual-user-1', displayName: 'Bot One', archetype: '社牛柯基' },
+            { botId: 'bot-2', userId: 'virtual-user-2', displayName: 'Bot Two', archetype: '小太阳鸡' },
+          ],
+          bots: [
+            { botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' },
+            { botId: 'bot-2', displayName: 'Bot Two', archetype: '小太阳鸡' },
+          ],
+        });
+
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        // Host + 2 bots are counted, and bot IDs are masked for the client.
+        expect(body.state.playerCount).toBe(3);
+        const participantIds = body.state.joinedParticipants.map((p: any) => p.userId).sort();
+        expect(participantIds).toEqual(['bot-1', 'bot-2', body.state.hostUserId].sort());
+        // Bots default to ready so the host can preview the full warmup flow.
+        expect(body.state.warmupReadyUserIds).toEqual(expect.arrayContaining(['bot-1', 'bot-2']));
+
+        // Rejoin keeps the bot roster and ready defaults intact.
+        const rejoinResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const rejoinBody = await rejoinResponse.json() as any;
+
+        expect(rejoinResponse.status).toBe(200);
+        expect(rejoinBody.state.playerCount).toBe(3);
+        expect(rejoinBody.state.warmupReadyUserIds).toEqual(expect.arrayContaining(['bot-1', 'bot-2']));
+        const rejoinParticipantIds = rejoinBody.state.joinedParticipants.map((p: any) => p.userId).sort();
+        expect(rejoinParticipantIds).toEqual(['bot-1', 'bot-2', rejoinBody.state.hostUserId].sort());
+      });
+    });
+
     it('does not auto-advance a single-test session past the disclosure gate', async () => {
       await withServer(async (baseUrl) => {
         const hostCookie = await login(baseUrl, 'single-test-auto-advance-host');

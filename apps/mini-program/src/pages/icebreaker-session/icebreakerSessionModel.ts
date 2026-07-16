@@ -2,6 +2,7 @@ import type {
   SocialSessionState,
   SocialIcebreakerPhase,
 } from '@shared/socialIcebreaker'
+import { resolveArchetype } from '@shared/personality/archetypeNames'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import type { SessionParticipant, SessionPhase } from './phaseViews'
 
@@ -163,7 +164,12 @@ export function deriveParticipants(
         ...details,
         userId: participant.userId,
         displayName: participant.displayName || details?.displayName || details?.nickname,
-        archetype: details?.archetype,
+        // Resolve to the canonical archetype ID ('corgi') from whichever source
+        // is available: primaryArchetype (ID), archetype (Chinese display name),
+        // or roster details. Glyph/head icon lookups require the ID.
+        archetype: resolveArchetype(
+          participant.primaryArchetype ?? participant.archetype ?? details?.archetype ?? '',
+        )?.id,
         interests: Array.isArray(details?.interests)
           ? details.interests.filter((value): value is string => typeof value === 'string')
           : [],
@@ -181,7 +187,7 @@ export function deriveParticipants(
         ...participant,
         userId,
         displayName: participant.displayName ?? participant.nickname,
-        archetype: participant.archetype,
+        archetype: resolveArchetype(participant.archetype ?? '')?.id,
         interests: Array.isArray(participant.interests)
           ? participant.interests.filter((value): value is string => typeof value === 'string')
           : [],
