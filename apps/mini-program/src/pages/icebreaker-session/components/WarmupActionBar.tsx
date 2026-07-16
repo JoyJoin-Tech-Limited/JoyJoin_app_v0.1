@@ -33,7 +33,7 @@ export function WarmupActionBar({
   const isLoading = isUpdatingReady || isAdvancingTopic || isAdvancing
 
   const handlePrimary = () => {
-    if (isLoading) return
+    if (isLoading || ctaState.primary === '已准备 ✓') return
     haptics('medium')
     if (ctaState.primary === '本轮结束') {
       onAdvance()

@@ -11,7 +11,6 @@ export type WarmupCardState =
   | 'generating'
   | 'topic_card'
   | 'error'
-  | 'terminal'
 
 export interface ResolveCardStateInput {
   topics: SocialTopic[]
@@ -24,7 +23,7 @@ export interface ResolveCardStateInput {
 /**
  * Resolve the hero card slot state machine (contract Q7 / AC5).
  *
- * Priority: error > generating > empty topics (host/player) > terminal > topic card.
+ * Priority: error > generating > empty topics (host/player) > topic card.
  */
 export function getWarmupCardState(input: ResolveCardStateInput): WarmupCardState {
   if (input.topicsError) return 'error'
@@ -32,7 +31,6 @@ export function getWarmupCardState(input: ResolveCardStateInput): WarmupCardStat
   if (input.topics.length === 0) {
     return input.isHost ? 'host_no_topics' : 'player_no_topics'
   }
-  if (input.currentIndex >= input.topics.length) return 'terminal'
   return 'topic_card'
 }
 

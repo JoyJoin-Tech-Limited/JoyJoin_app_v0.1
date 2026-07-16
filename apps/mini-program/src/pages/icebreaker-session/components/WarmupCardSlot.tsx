@@ -142,7 +142,7 @@ export function WarmupCardSlot({
     aiGenerated: true,
     labelType: 'ai-generated' as const,
   }
-  const currentTopic = topics[currentIndex]
+  const currentTopic = topics[Math.min(currentIndex, Math.max(topics.length - 1, 0))]
   const totalTopics = getTotalTopics(topics)
   const cornerText = getDepthCornerText(vibe, currentTopic?.depthLevel)
   const moodOptions = useMemo(
@@ -218,13 +218,6 @@ export function WarmupCardSlot({
             >
               重试
             </Button>
-          </View>
-        )
-      case 'terminal':
-        return (
-          <View className='warmup-card-slot__content warmup-card-slot__content--centered'>
-            <Text className='warmup-card-slot__terminal-text'>已结束</Text>
-            <Text className='warmup-card-slot__terminal-sub'>主持人可以选择进入下一阶段</Text>
           </View>
         )
       case 'topic_card':
@@ -316,13 +309,17 @@ export function WarmupCardSlot({
 
   return (
     <View className='warmup-card-slot'>
-      <CardFlip
-        front={frontFace}
-        back={backFace}
-        flipped={state === 'topic_card' ? isFlipped : false}
-        duration={500}
-        reducedMotion={reduceMotion}
-      />
+      {state === 'topic_card' ? (
+        <CardFlip
+          front={frontFace}
+          back={backFace}
+          flipped={isFlipped}
+          duration={500}
+          reducedMotion={reduceMotion}
+        />
+      ) : (
+        <View className='warmup-card-slot__flat-card'>{backFace}</View>
+      )}
     </View>
   )
 }

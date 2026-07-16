@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { View, Text } from '@tarojs/components'
-import Taro from '@tarojs/taro'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
+import { getSystemReducedMotion } from '../../../lib/utils/accessibility'
 import { haptics } from '../../../lib/utils/haptics'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
 import type { AtmosphereMood, SocialTopic } from '@shared/socialIcebreaker'
@@ -86,13 +86,7 @@ export function WarmupPhaseView({
   const everyoneReady = participants.length > 0 && readyUserIds.length >= participants.length
   const isLastTopic = currentIndex >= Math.max(topics.length - 1, 0)
 
-  const reduceMotion = useMemo(() => {
-    try {
-      return !!(Taro.getSystemInfoSync() as any).reduceMotion
-    } catch {
-      return false
-    }
-  }, [])
+  const reduceMotion = useMemo(() => getSystemReducedMotion(), [])
 
   const fallbackMixText = useMemo(() => buildArchetypeMixText(participants), [participants])
   const archetypeMixText = propArchetypeMixText ?? fallbackMixText
@@ -288,7 +282,10 @@ export function WarmupPhaseView({
   }, [everyoneReady, participants.length, archetypeMixText, socialSessionId, icebreakerSessionId])
 
   // ── Swipe-back safety: reset transient flags on re-show ───────
-  useResetOnShow(setShowCelebration, setDeepPromptExpanded)
+  const resetDeepPromptTeaching = useCallback((_: boolean) => {
+    deepPromptTeachingFiredRef.current = false
+  }, [])
+  useResetOnShow(setShowCelebration, setDeepPromptExpanded, resetDeepPromptTeaching)
 
   // ── Handlers ───────────────────────────────────────────────────
   const handleRetry = useCallback(() => {
@@ -301,7 +298,7 @@ export function WarmupPhaseView({
     onAigcFeedbackTap?.('card')
   }, [onAigcFeedbackTap])
 
-  const showActionBar = cardState === 'topic_card' || cardState === 'terminal'
+  const showActionBar = cardState === 'topic_card'
   const celebrationLine = buildCelebrationLine(archetypeMixText)
   const hostUserId = participants.find((p) => p.isHost)?.userId ?? currentUserId
 

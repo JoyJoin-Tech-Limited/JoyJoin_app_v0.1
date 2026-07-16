@@ -10,6 +10,10 @@ type EventType =
   | 'end_party_failed'
   | 'custom_mode_selected'
   | 'icebreaker_session_tier_changed'
+  // Tier selector events (also social-icebreaker scoped)
+  | 'combo_selected'
+  | 'preset_selected'
+  | 'advanced_mode_opened'
   | 'icebreaker_test_mode_disclosure_rendered'
   | 'icebreaker_test_mode_disclosure_shown'
   | 'icebreaker_test_mode_disclosure_dismissed'
@@ -24,7 +28,6 @@ type EventType =
   | 'warmup_deep_prompt_expand'
   | 'warmup_aigc_feedback_tap'
   | 'warmup_celebration_shown'
-  | string
 
 /**
  * Fire-and-forget POST to /api/analytics/social-icebreaker (server accepts any

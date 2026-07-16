@@ -139,13 +139,16 @@ export default function XiaoyueSessionShell({
 
   // Suggestion overlay auto-dismiss. Manual `知道了` uses the same handler.
   const suggestion = isHost ? adaptiveSuggestion : undefined
+  const suggestionKey = suggestion
+    ? `${suggestion.type}:${suggestion.message}:${suggestion.actionableHint}`
+    : undefined
   useEffect(() => {
-    if (!suggestion || !onDismissSuggestion) {
+    if (!suggestionKey || !onDismissSuggestion) {
       return
     }
     const timer = setTimeout(onDismissSuggestion, SUGGESTION_AUTO_DISMISS_MS)
     return () => clearTimeout(timer)
-  }, [suggestion, onDismissSuggestion])
+  }, [suggestionKey, onDismissSuggestion])
 
   const handleDismissSuggestionTap = () => {
     haptics('light')
@@ -197,7 +200,7 @@ export default function XiaoyueSessionShell({
 
       {/* Merged quiet AIGC footer (contract Q9): single muted line, shell-level.
           Regulatory floor copy `内容由 AI 生成` is preserved verbatim. */}
-      {sessionPack && aigcEnabled && (
+      {sessionPack && aigcEnabled && phase !== 'warmup' && (
         <View className='xiaoyue-session-shell__aigc'>
           <Text className='xiaoyue-session-shell__aigc-text'>内容由 AI 生成</Text>
           <Text className='xiaoyue-session-shell__aigc-sep'>·</Text>

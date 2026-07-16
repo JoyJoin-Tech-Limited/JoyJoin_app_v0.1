@@ -1018,46 +1018,6 @@ export default function IcebreakerSessionPage() {
     />
   )
 
-  const HOST_CONTROL_HIDDEN_PHASES: SessionPhase[] = [
-    'recap',
-    'ended',
-    'waiting',
-    'phase_selection',
-    'auction',
-    'mini_script',
-    'warmup',
-    'lie_detective',
-    'quip_battle',
-    'undercover_word',
-    'group_mirror',
-    'speed_friending',
-  ]
-
-  const hostControls =
-    isHost &&
-    !HOST_CONTROL_HIDDEN_PHASES.includes(phase) && (
-    <View className='icebreaker__host-controls'>
-      <View className='icebreaker__host-badge'>
-        <View className='icebreaker__host-badge-text'>
-          <Image
-            className='icebreaker__host-badge-icon'
-            src={localAsset('/assets/icons/status-icons/status-crown.webp')}
-            lazyLoad
-          />
-          <Text>你是主持人</Text>
-        </View>
-      </View>
-      <Button
-        variant='primary'
-        className='icebreaker__advance-btn'
-        onClick={handleAdvancePhase}
-        disabled={pendingAction !== null}
-        loading={pendingAction === 'advance'}
-      >
-        {pendingAction === 'advance' ? '切换中…' : '下一阶段'}
-      </Button>
-    </View>
-  )
 
   const supportedPhases: SessionPhase[] = [
     'waiting',
@@ -1399,8 +1359,6 @@ export default function IcebreakerSessionPage() {
           <FallbackPhaseView phase={phase} isHost={isHost} onAdvance={handleAdvancePhase} />
         )}
       </View>
-
-      {hostControls}
 
       <View className='icebreaker__spacer' />
 

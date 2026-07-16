@@ -53,14 +53,14 @@ describe('getWarmupCardState', () => {
     ).toBe('topic_card')
   })
 
-  it('returns terminal when index is at or beyond the last topic', () => {
+  it('returns topic_card when topics exist even if index is beyond range', () => {
     expect(
       getWarmupCardState({
         ...base,
         topics: [{ question: 'q' } as any],
         currentIndex: 1,
       }),
-    ).toBe('terminal')
+    ).toBe('topic_card')
   })
 })
 
