@@ -2,6 +2,7 @@ import type { SocialSessionState } from '@shared/socialIcebreaker';
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest';
 import { cleanupPhaseStateForNextPhase } from '../socialIcebreakerPhaseConfig';
 import { compileForSession } from './runPlanService';
+import { seedSingleTestBotsWarmupReady } from './socialIcebreakerBotService';
 import { updateSession, invalidatePreGenerationForSession } from '../lib/socialIcebreakerStore';
 import { logger } from '../lib/logger';
 
@@ -91,6 +92,8 @@ export async function resetSocialIcebreakerTier(
   state.phaseStartedAt = Date.now();
   state.autoAdvanceScheduledAt = undefined;
   state.warmupReadyUserIds = [];
+  // Single-test bot attendees default to ready after a tier reset.
+  seedSingleTestBotsWarmupReady(state);
 
   if (newTier === 'custom') {
     state.eventTier = 'custom';

@@ -3200,6 +3200,32 @@ describe.sequential('social icebreaker routes', () => {
         expect(rejoinBody.state.warmupReadyUserIds).toEqual(expect.arrayContaining(['bot-1', 'bot-2']));
         const rejoinParticipantIds = rejoinBody.state.joinedParticipants.map((p: any) => p.userId).sort();
         expect(rejoinParticipantIds).toEqual(['bot-1', 'bot-2', rejoinBody.state.hostUserId].sort());
+
+        // Changing to the next topic resets human readiness but keeps bots ready.
+        const topicsResponse = await fetch(`${baseUrl}/api/social-icebreaker/${rejoinBody.socialSessionId}/topics`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ mood: 'relaxed' }),
+        });
+        expect(topicsResponse.status).toBe(200);
+
+        const hostReadyResponse = await fetch(`${baseUrl}/api/social-icebreaker/${rejoinBody.socialSessionId}/warmup/ready`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ ready: true }),
+        });
+        expect(hostReadyResponse.status).toBe(200);
+
+        const nextTopicResponse = await fetch(`${baseUrl}/api/social-icebreaker/${rejoinBody.socialSessionId}/warmup/next-topic`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        });
+        const nextTopicBody = await nextTopicResponse.json() as any;
+
+        expect(nextTopicResponse.status).toBe(200);
+        expect(nextTopicBody.currentTopicIndex).toBe(1);
+        expect(nextTopicBody.state.warmupReadyUserIds).toEqual(expect.arrayContaining(['bot-1', 'bot-2']));
+        expect(nextTopicBody.state.warmupReadyUserIds).not.toContain(nextTopicBody.state.hostUserId);
       });
     });
 

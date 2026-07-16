@@ -108,7 +108,7 @@ import { enqueueRunPlanPreGeneration, shouldSkipOnDemandGeneration } from '../jo
 import { recordVoteOptimistically } from '../lib/optimisticSync';
 import { resetSocialIcebreakerTier } from '../services/socialIcebreakerTierReset';
 import { getSingleTestMetaForSessionStart } from '../services/singleTestService';
-import { runBotSimulationSafely } from '../services/socialIcebreakerBotService';
+import { runBotSimulationSafely, seedSingleTestBotsWarmupReady } from '../services/socialIcebreakerBotService';
 
 import socialIcebreakerTierRouter from './socialIcebreakerTier';
 import socialIcebreakerCustomRouter from './socialIcebreakerCustom';
@@ -336,12 +336,9 @@ router.post('/start', async (req: any, res) => {
         await upsertParticipant(existing.socialSessionId, persona.userId, persona.displayName, true);
       }
       if (state.currentPhase === 'warmup') {
-        const ready = new Set(state.warmupReadyUserIds ?? []);
-        for (const persona of state.singleTest.botPersonas) {
-          ready.add(persona.userId);
-        }
-        state.warmupReadyUserIds = [...ready];
-        botsBackfilled = true;
+        const readyBefore = (state.warmupReadyUserIds ?? []).length;
+        seedSingleTestBotsWarmupReady(state);
+        botsBackfilled = (state.warmupReadyUserIds ?? []).length !== readyBefore;
       }
     }
 
@@ -690,6 +687,8 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     state.selectedMood = mood;
     state.currentTopicIndex = 0;
     state.warmupReadyUserIds = [];
+    // Single-test bot attendees default to ready on the fresh topic set.
+    seedSingleTestBotsWarmupReady(state);
     await updateSession(socialSessionId, state);
 
     return res.json({ topics: topicResult.data, meta: topicResult.meta });
@@ -785,6 +784,8 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
   incrementCommonGround(state);
   state.currentTopicIndex = currentTopicIndex + 1;
   state.warmupReadyUserIds = [];
+  // Single-test bot attendees default to ready on each new topic card.
+  seedSingleTestBotsWarmupReady(state);
   await updateSession(socialSessionId, state);
 
   return res.json({
