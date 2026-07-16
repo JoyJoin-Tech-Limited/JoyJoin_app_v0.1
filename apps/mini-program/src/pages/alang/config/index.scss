@@ -352,22 +352,16 @@
     line-height: 1.4;
     transition: transform 120ms ease-out;
 
-    &::after {
-      border: 0;
-    }
-
-    &--disabled,
-    &[disabled] {
+    &--disabled {
       background: rgba($color-text-primary, 0.12);
       opacity: 1;
     }
 
-    &--disabled .alang-config__confirm-text,
-    &[disabled] .alang-config__confirm-text {
+    &--disabled .alang-config__confirm-text {
       color: $color-text-primary;
     }
 
-    &--pressed:not([disabled]) {
+    &--pressed:not(.alang-config__confirm--disabled) {
       transform: scale(0.99);
     }
   }
@@ -376,6 +370,7 @@
     color: $color-text-white;
     font-size: $font-size-md;
     font-weight: 600;
+    pointer-events: none;
   }
 }
 
@@ -383,7 +378,7 @@
   .alang-config__confirm {
     transition: none;
 
-    &--pressed:not([disabled]) {
+    &--pressed:not(.alang-config__confirm--disabled) {
       transform: none;
     }
   }

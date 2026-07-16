@@ -657,21 +657,19 @@ export default function AlangConfigPage() {
             </Text>
           </View>
         )}
-        <Button
+        <View
           className={`alang-config__confirm ${!target || !endPoint || !!pointValidationError || isStartPending ? 'alang-config__confirm--disabled' : ''}`}
           onClick={() => { void handleConfirm() }}
-          onTouchEnd={() => { void handleConfirm() }}
-          disabled={!target || !endPoint || !!pointValidationError || isStartPending}
-          loading={isStartPending}
           hoverClass={isStartPending ? '' : 'alang-config__confirm--pressed'}
           hoverStartTime={0}
           hoverStayTime={100}
+          role='button'
           aria-label={isStartPending ? '正在准备测试' : '开始测试'}
           aria-disabled={!target || !endPoint || !!pointValidationError || isStartPending}
           aria-busy={isStartPending}
         >
           <Text className='alang-config__confirm-text'>{isStartPending ? '已收到，正在启动…' : '开始测试'}</Text>
-        </Button>
+        </View>
       </View>
     </View>
   )

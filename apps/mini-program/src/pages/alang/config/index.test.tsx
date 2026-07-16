@@ -245,6 +245,19 @@ describe('AlangConfigPage test-point start flow', () => {
     mocks.refetchMission.mockResolvedValue({ isError: false })
   })
 
+  it('keeps the View CTA observable before points are ready without starting a run', async () => {
+    render(<AlangConfigPage />)
+
+    const startButton = screen.getByRole('button', { name: '开始测试' })
+    expect(startButton.tagName).toBe('DIV')
+    expect(startButton).toHaveAttribute('aria-disabled', 'true')
+
+    fireEvent.click(startButton)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('请先设置阿浪出现点和陪伴终点')
+    expect(mocks.startMission).not.toHaveBeenCalled()
+  })
+
   it('starts the run with this round’s GCJ-02 points and does not rely on local storage', async () => {
     render(<AlangConfigPage />)
 
@@ -275,7 +288,7 @@ describe('AlangConfigPage test-point start flow', () => {
     })
   })
 
-  it('accepts the real-device touch-end fallback, shows loading, and blocks the following click', async () => {
+  it('uses the proven View tap path and blocks a repeated tap while starting', async () => {
     let resolveStart!: (value: {
       stage: string
       currentNodeId: string
@@ -290,24 +303,22 @@ describe('AlangConfigPage test-point start flow', () => {
     await setDefaultTestPoints()
 
     const startButton = screen.getByRole('button', { name: '开始测试' })
-    expect(startButton.tagName).toBe('BUTTON')
+    expect(startButton.tagName).toBe('DIV')
+    expect(startButton).not.toHaveAttribute('disabled')
     expect(screen.getByRole('status')).toHaveTextContent('启动反馈已开启 · 点击后会立即显示进度')
 
-    fireEvent.touchEnd(startButton)
-
-    // WeChat may drop the synthetic click when the CTA sits next to a native
-    // Map or the iOS gesture area. The touch-end fallback must start the run on
-    // its own, before any click event is delivered.
+    fireEvent.click(startButton)
     expect(mocks.startMission).toHaveBeenCalledTimes(1)
 
+    // The synchronous lock keeps rapid repeated taps to one request.
     fireEvent.click(startButton)
 
     expect(mocks.haptics).toHaveBeenCalledTimes(1)
     expect(mocks.haptics).toHaveBeenCalledWith('light')
     expect(mocks.startMission).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('status')).toHaveTextContent('已收到点击，正在启动阿浪…')
-    expect(screen.getByRole('button', { name: '正在准备测试' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '正在准备测试' })).toHaveAttribute('data-loading', 'true')
+    expect(screen.getByRole('button', { name: '正在准备测试' })).not.toHaveAttribute('disabled')
+    expect(screen.getByRole('button', { name: '正在准备测试' })).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByRole('button', { name: '正在准备测试' })).toHaveAttribute('aria-busy', 'true')
 
     await act(async () => {
