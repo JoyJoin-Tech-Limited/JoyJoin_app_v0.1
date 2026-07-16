@@ -249,8 +249,8 @@ describe('SquadUnboxingPage fan orchestration', () => {
   it('renders the reveal story without the removed connection-analysis chapter', () => {
     expect(source).not.toContain('连接解读')
     expect(source).not.toContain('squad-unboxing__chapter--analysis')
-    expect(source.indexOf("className='squad-unboxing__analysis-bubble'"))
-      .toBeLessThan(source.indexOf("'squad-unboxing__chapter--meta'"))
+    expect(source.indexOf("'squad-unboxing__chapter--meta'"))
+      .toBeLessThan(source.indexOf("className='squad-unboxing__analysis-bubble'"))
   })
 
   it('keeps focused member copy in the Xiaoyue dock without a blank inline panel', () => {
