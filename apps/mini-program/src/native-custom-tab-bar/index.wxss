@@ -177,12 +177,19 @@
 }
 
 /* Flexbox wrapper replaces the fragile left:50% + translateX(-50%)
-   pattern which shifts right during cover-view re-renders. */
+   pattern which shifts right during cover-view re-renders.
+   Vertical anchor (2026-07-16): top:-44rpx aligns the 164rpx ring's center
+   with the surface's top edge — surface top sits 38rpx below root top
+   (182 root − 16 bottom − 128 surface), ring radius is 82rpx, so the wrap
+   offset is 38 − 82 = −44. The ring's top 44rpx overflows the 182rpx root
+   upward (root has no overflow clipping); its bottom half rests inside the
+   bar, leaving a 46rpx band (ring bottom 120 → surface bottom 166) for the
+   center label. Off the 8rpx grid by derivation — do NOT round. */
 .joy-custom-tab-bar__center-wrap {
   position: absolute;
   left: 0;
   right: 0;
-  top: 0;
+  top: -44rpx;
   z-index: 3;
   display: flex;
   justify-content: center;
@@ -251,8 +258,12 @@
   50% { transform: scale(1.2); opacity: 0.8; }
 }
 
+/* Sits in the 46rpx free band below the ring (ring bottom 120 → surface
+   bottom 166 from root top): 8rpx gap places the 24rpx label at 128→152,
+   fully clear of the circle and 14rpx above the bar's bottom edge.
+   (Was margin-top:-28rpx, which tucked the label behind the opaque ring.) */
 .joy-custom-tab-bar__center-label {
-  margin-top: -28rpx;
+  margin-top: 8rpx;
   max-width: 178rpx;
   font-size: 22rpx;
   line-height: 24rpx;
