@@ -1,32 +1,71 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import type { SocialIcebreakerPhase } from '@shared/socialIcebreaker'
 import type { SessionParticipant } from '../phaseUtils'
+import {
+  buildArchetypeMixText,
+  buildWelcomeLine,
+  buildWelcomeSegments,
+  buildCelebrationLine,
+  buildCTAState,
+  buildWarmupCaption,
+  getWarmupCardState,
+  countArchetypes,
+} from '../viewModels/warmupViewModels'
 
-/**
- * Pure-logic extraction of buildArchetypeMixText from WarmupPhaseView.tsx
- * Tests the archetype-counting and label-generation logic without React render.
- */
-function buildArchetypeMixText(participants: SessionParticipant[]): string {
-  const counts = new Map<string, number>()
-  for (const p of participants) {
-    if (p.archetype) {
-      counts.set(p.archetype, (counts.get(p.archetype) ?? 0) + 1)
-    }
+// ── getWarmupCardState ─────────────────────────────────────────────
+describe('getWarmupCardState', () => {
+  const base = {
+    topics: [],
+    currentIndex: 0,
+    isHost: true,
+    isGeneratingTopics: false,
+    topicsError: false,
   }
-  if (counts.size === 0) return ''
 
-  const segments: string[] = []
-  for (const [id, count] of counts) {
-    const def = ARCHETYPE_BY_ID[id]
-    const name = def?.nameCn ?? id
-    segments.push(count > 1 ? `${name}×${count}` : name)
-  }
-  return segments.join('、')
-}
+  it('returns host_no_topics for empty topics when host', () => {
+    expect(getWarmupCardState(base)).toBe('host_no_topics')
+  })
 
-// ── buildArchetypeMixText ──────────────────────────────────────────────
-describe('buildArchetypeMixText (WarmupPhaseView logic)', () => {
+  it('returns player_no_topics for empty topics when player', () => {
+    expect(getWarmupCardState({ ...base, isHost: false })).toBe('player_no_topics')
+  })
+
+  it('returns generating when generating flag is true', () => {
+    expect(getWarmupCardState({ ...base, isGeneratingTopics: true })).toBe('generating')
+  })
+
+  it('returns error when topicsError is true', () => {
+    expect(
+      getWarmupCardState({
+        ...base,
+        topics: [{ question: 'q' } as any],
+        topicsError: true,
+      }),
+    ).toBe('error')
+  })
+
+  it('returns topic_card when topics exist and index is in range', () => {
+    expect(
+      getWarmupCardState({
+        ...base,
+        topics: [{ question: 'q' } as any],
+      }),
+    ).toBe('topic_card')
+  })
+
+  it('returns terminal when index is at or beyond the last topic', () => {
+    expect(
+      getWarmupCardState({
+        ...base,
+        topics: [{ question: 'q' } as any],
+        currentIndex: 1,
+      }),
+    ).toBe('terminal')
+  })
+})
+
+// ── buildArchetypeMixText ──────────────────────────────────────────
+describe('buildArchetypeMixText', () => {
   it('returns empty string for empty participants', () => {
     expect(buildArchetypeMixText([])).toBe('')
   })
@@ -40,12 +79,8 @@ describe('buildArchetypeMixText (WarmupPhaseView logic)', () => {
   })
 
   it('returns archetype name for single participant', () => {
-    // corgi = 社牛柯基 in the archetype registry
-    const participants: SessionParticipant[] = [
-      { userId: 'u1', archetype: 'corgi' },
-    ]
-    const result = buildArchetypeMixText(participants)
-    expect(result).toBe('社牛柯基')
+    const participants: SessionParticipant[] = [{ userId: 'u1', archetype: 'corgi' }]
+    expect(buildArchetypeMixText(participants)).toBe('社牛柯基')
   })
 
   it('shows count for repeated archetypes', () => {
@@ -54,8 +89,7 @@ describe('buildArchetypeMixText (WarmupPhaseView logic)', () => {
       { userId: 'u2', archetype: 'corgi' },
       { userId: 'u3', archetype: 'corgi' },
     ]
-    const result = buildArchetypeMixText(participants)
-    expect(result).toBe('社牛柯基×3')
+    expect(buildArchetypeMixText(participants)).toBe('社牛柯基×3')
   })
 
   it('joins multiple archetypes with Chinese enumeration comma', () => {
@@ -68,31 +102,134 @@ describe('buildArchetypeMixText (WarmupPhaseView logic)', () => {
     expect(result).toContain('社牛柯基')
     expect(result).toContain('寻宝狐')
   })
+})
 
-  it('falls back to archetype ID when name not found in registry', () => {
+// ── countArchetypes ────────────────────────────────────────────────
+describe('countArchetypes', () => {
+  it('orders by count descending, then join order', () => {
     const participants: SessionParticipant[] = [
-      { userId: 'u1', archetype: 'unknown_12345' },
+      { userId: 'u1', archetype: 'fox' },
+      { userId: 'u2', archetype: 'corgi' },
+      { userId: 'u3', archetype: 'corgi' },
     ]
-    const result = buildArchetypeMixText(participants)
-    expect(result).toBe('unknown_12345')
+    const result = countArchetypes(participants)
+    expect(result.map((r) => r.id)).toEqual(['corgi', 'fox'])
+    expect(result[0].count).toBe(2)
+    expect(result[1].count).toBe(1)
+  })
+})
+
+// ── buildWelcomeLine / buildWelcomeSegments ────────────────────────
+describe('buildWelcomeLine', () => {
+  it('fallback when no participants or no archetypes', () => {
+    expect(buildWelcomeLine([])).toBe('先到先聊，抽张话题卡暖暖场')
   })
 
-  it('skips participants without archetype', () => {
+  it('1-person variant', () => {
+    const participants: SessionParticipant[] = [{ userId: 'u1', archetype: 'corgi' }]
+    expect(buildWelcomeLine(participants)).toBe('今晚是社牛柯基的试玩时间')
+  })
+
+  it('all-same variant', () => {
     const participants: SessionParticipant[] = [
       { userId: 'u1', archetype: 'corgi' },
-      { userId: 'u2' }, // no archetype
+      { userId: 'u2', archetype: 'corgi' },
+    ]
+    expect(buildWelcomeLine(participants)).toBe('一桌子社牛柯基，先抽张卡暖暖场')
+  })
+
+  it('two-archetype variant', () => {
+    const participants: SessionParticipant[] = [
+      { userId: 'u1', archetype: 'corgi' },
+      { userId: 'u2', archetype: 'fox' },
+    ]
+    expect(buildWelcomeLine(participants)).toBe('社牛柯基和寻宝狐的小桌，先抽张卡暖暖场')
+  })
+
+  it('three-plus-archetype variant', () => {
+    const participants: SessionParticipant[] = [
+      { userId: 'u1', archetype: 'corgi' },
+      { userId: 'u2', archetype: 'fox' },
       { userId: 'u3', archetype: 'owl' },
     ]
-    const result = buildArchetypeMixText(participants)
-    expect(result).toContain('社牛柯基')
-    expect(result).toContain('好奇猫头鹰')
-    expect(result.split('、')).toHaveLength(2)
+    expect(buildWelcomeLine(participants)).toBe('社牛柯基、寻宝狐和伙伴们的小桌，先抽张卡暖暖场')
+  })
+})
+
+describe('buildWelcomeSegments', () => {
+  it('tags accent archetype for colored rendering', () => {
+    const segments = buildWelcomeSegments([{ userId: 'u1', archetype: 'corgi' }])
+    expect(segments).toEqual([
+      { text: '今晚是' },
+      { text: '社牛柯基', accentArchetype: 'corgi' },
+      { text: '的试玩时间' },
+    ])
+  })
+})
+
+// ── buildCelebrationLine ─────────────────────────────────────────────
+describe('buildCelebrationLine', () => {
+  it('includes archetype mix when available', () => {
+    expect(buildCelebrationLine('社牛柯基×2、寻宝狐')).toBe(
+      '气氛组集结完毕：社牛柯基×2、寻宝狐',
+    )
+  })
+
+  it('falls back to plain celebration when mix is empty', () => {
+    expect(buildCelebrationLine()).toBe('气氛组集结完毕')
+  })
+})
+
+// ── buildCTAState ────────────────────────────────────────────────────
+describe('buildCTAState', () => {
+  it('not ready: primary = 我准备好了', () => {
+    const state = buildCTAState(false, false, false, false)
+    expect(state.primary).toBe('我准备好了')
+    expect(state.secondaryVisible).toBe(false)
+    expect(state.showCancel).toBe(false)
+  })
+
+  it('ready but not everyone: primary = 已准备 ✓ with cancel', () => {
+    const state = buildCTAState(true, false, false, false)
+    expect(state.primary).toBe('已准备 ✓')
+    expect(state.showCancel).toBe(true)
+  })
+
+  it('host, everyone ready, not last: primary = 已准备 ✓, secondary visible', () => {
+    const state = buildCTAState(true, true, true, false)
+    expect(state.primary).toBe('已准备 ✓')
+    expect(state.secondaryVisible).toBe(true)
+  })
+
+  it('host, everyone ready, last: primary = 本轮结束', () => {
+    const state = buildCTAState(true, true, true, true)
+    expect(state.primary).toBe('本轮结束')
+    expect(state.secondaryVisible).toBe(false)
+    expect(state.showCancel).toBe(false)
+  })
+})
+
+// ── buildWarmupCaption ─────────────────────────────────────────────
+describe('buildWarmupCaption', () => {
+  it('custom mode returns 自由局', () => {
+    expect(buildWarmupCaption(undefined, 'custom', true)).toBe('自由局')
+  })
+
+  it('deep_chat glow preset', () => {
+    expect(buildWarmupCaption('deep_chat', 'glow', false)).toBe('深度畅聊 · 约60分钟')
+  })
+
+  it('balanced breeze preset', () => {
+    expect(buildWarmupCaption('balanced', 'breeze', false)).toBe('轻松破冰 · 约40分钟')
+  })
+
+  it('play_fun blaze preset', () => {
+    expect(buildWarmupCaption('play_fun', 'blaze', false)).toBe('游戏狂欢 · 约90分钟')
   })
 })
 
 // ── getNextPhase (from shared) ─────────────────────────────────────────
 describe('getNextPhase (shared socialIcebreaker)', () => {
-  // Import dynamically to verify shared alias works
   let getNextPhase: (current: SocialIcebreakerPhase, enabledPhases: SocialIcebreakerPhase[]) => SocialIcebreakerPhase
 
   beforeAll(async () => {

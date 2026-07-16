@@ -11,6 +11,7 @@ import { apiRequest } from '../../lib/api/api'
 import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../../lib/utils/uiConstants'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
+import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { logInfo, logError } from '../../lib/utils/logger'
 import { haptics } from '../../lib/utils/haptics'
 import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerAnalytics'
@@ -61,6 +62,11 @@ import {
   type SocialRecapResponse,
   type SocialStartResponse,
 } from './icebreakerSessionModel'
+import {
+  HOST_MENU_COACHMARK_STORAGE_KEY,
+  resolveHostMenuItems,
+  resolveSyncLossVisible,
+} from './sessionShellLogic'
 import './index.scss'
 
 function getPhaseToastText(phase: string): ReactNode {
@@ -102,9 +108,16 @@ export default function IcebreakerSessionPage() {
   const [phaseToast, setPhaseToast] = useState<{ visible: boolean; text: ReactNode }>({ visible: false, text: '' })
   const [isTierSheetOpen, setIsTierSheetOpen] = useState(false)
   const [pendingTierSwitch, setPendingTierSwitch] = useState<TierSheetSelection | null>(null)
+  // PR1 壳层 transient flags — covered by useResetOnShow for swipe-back safety.
+  const [coachmarkShown, setCoachmarkShown] = useState(false)
+  const [suggestionOverlayOpen, setSuggestionOverlayOpen] = useState(false)
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
   const customSessionCompletedRef = useRef(false)
+  const coachmarkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const syncLostRef = useRef(false)
+
+  useResetOnShow(setCoachmarkShown, setSuggestionOverlayOpen)
 
   // Preload CDN-only assets in parallel with session bootstrap.
   // Phase emblems, reactions, reveals, and achievements are CDN tiers.
@@ -230,6 +243,36 @@ export default function IcebreakerSessionPage() {
   }, [socialSessionQuery.data, bootstrapState])
 
   const phase: SessionPhase = session?.phase ?? 'waiting'
+
+  // PR1 壳层: suggestion visibility = data-derived suggestion AND an explicit
+  // overlay flag (useResetOnShow-covered) so swipe-back never resurrects a stuck card.
+  const adaptiveSuggestion =
+    session?.xiaoyueAdaptiveSuggestion &&
+    dismissedSuggestionAt !== session.xiaoyueAdaptiveSuggestion.generatedAt
+      ? session.xiaoyueAdaptiveSuggestion
+      : undefined
+
+  useEffect(() => {
+    setSuggestionOverlayOpen(!!adaptiveSuggestion)
+  }, [adaptiveSuggestion])
+
+  // PR1 壳层: calm-by-default sync-loss. A failed poll with a live session lights
+  // the grey dot + fires one reconnect toast per failure edge; recovery auto-clears.
+  // (Pre-bootstrap failures still route to the full-page error state via pageError.)
+  const syncLost = resolveSyncLossVisible({
+    hasSession: !!session,
+    isPollError: socialSessionQuery.isError,
+  })
+  useEffect(() => {
+    if (syncLost && !syncLostRef.current) {
+      void Taro.showToast({
+        title: '连接断了，正在重连…',
+        icon: 'none',
+        duration: TOAST_MEDIUM_MS,
+      })
+    }
+    syncLostRef.current = syncLost
+  }, [syncLost])
 
   // CSS custom properties for challenge-card backgrounds.
   // Primary rendering is via <ChallengeCardBgImage> inside each card.
@@ -671,23 +714,6 @@ export default function IcebreakerSessionPage() {
     })
   }, [pendingTierSwitch, handleAcceptCustomConfirm, handleDismissCustomConfirm])
 
-  const handleHostMenuTap = useCallback(async () => {
-    if (!isHost || !(phase === 'waiting' || phase === 'warmup')) {
-      return
-    }
-    haptics('light')
-    try {
-      const { tapIndex } = await Taro.showActionSheet({
-        itemList: ['更换模式'],
-      })
-      if (tapIndex === 0) {
-        setIsTierSheetOpen(true)
-      }
-    } catch {
-      // User cancelled the action sheet
-    }
-  }, [isHost, phase])
-
   const handleCompleteChallenge = useCallback(() => {
     void performSocialAction('micro-complete', '/micro-challenge/complete', {})
   }, [performSocialAction])
@@ -783,6 +809,114 @@ export default function IcebreakerSessionPage() {
     setDismissedSuggestionAt(session?.xiaoyueAdaptiveSuggestion?.generatedAt ?? 'dismissed')
   }, [session?.xiaoyueAdaptiveSuggestion?.generatedAt])
 
+  // ─── PR1 壳层: host ⋯ menu (all phases) ──────────────────────────────────
+  // Items come from the pure resolver (unit-tested in sessionShellLogic.test.ts):
+  // waiting/warmup → tier item; all phases except waiting/recap/ended → suggestion.
+  const hostMenuItems = useMemo(
+    () =>
+      resolveHostMenuItems({
+        phase,
+        isHost,
+        tier: session?.eventTier ?? 'glow',
+        vibe: apiVibeToClient(session?.vibe),
+      }),
+    [phase, isHost, session?.eventTier, session?.vibe],
+  )
+
+  const handleHostMenuTap = useCallback(async () => {
+    if (!isHost || hostMenuItems.length === 0) {
+      return
+    }
+    haptics('light')
+    // Host discovered the menu on their own — the one-time coachmark has served its purpose.
+    setCoachmarkShown(false)
+    socialIcebreakerAnalytics.track(
+      'warmup_host_menu_open',
+      socialSessionId ?? undefined,
+      session?.icebreakerSessionId,
+      phase,
+      {
+        itemCount: hostMenuItems.length,
+        items: hostMenuItems.map((item) => item.id).join(','),
+      },
+    )
+    try {
+      const { tapIndex } = await Taro.showActionSheet({
+        itemList: hostMenuItems.map((item) => item.label),
+      })
+      const selected = hostMenuItems[tapIndex]
+      if (selected?.id === 'change-tier') {
+        socialIcebreakerAnalytics.track(
+          'warmup_tier_sheet_open',
+          socialSessionId ?? undefined,
+          session?.icebreakerSessionId,
+          phase,
+          { source: 'host_menu' },
+        )
+        setIsTierSheetOpen(true)
+      } else if (selected?.id === 'suggestion') {
+        handleRequestAdaptiveSuggestion()
+      }
+    } catch {
+      // User cancelled the action sheet
+    }
+  }, [isHost, hostMenuItems, socialSessionId, session?.icebreakerSessionId, phase, handleRequestAdaptiveSuggestion])
+
+  const handleAigcFeedbackTap = useCallback(
+    (location: 'footer' | 'suggestion' | 'card') => {
+      socialIcebreakerAnalytics.track(
+        'warmup_aigc_feedback_tap',
+        socialSessionId ?? undefined,
+        session?.icebreakerSessionId,
+        phase,
+        { location },
+      )
+    },
+    [socialSessionId, session?.icebreakerSessionId, phase],
+  )
+
+  // ─── PR1 壳层: one-time host ⋯ coachmark on first warmup entry ────────────
+  // Persisted via storage at first show (truly once-ever), dismissible by tap,
+  // auto-dismissed after 6s, and covered by useResetOnShow for swipe-back safety.
+  useEffect(() => {
+    if (phase !== 'warmup' || !isHost || coachmarkShown) {
+      return
+    }
+    let seen = false
+    try {
+      seen = Taro.getStorageSync(HOST_MENU_COACHMARK_STORAGE_KEY) === '1'
+    } catch {
+      seen = false
+    }
+    if (seen) {
+      return
+    }
+    try {
+      Taro.setStorageSync(HOST_MENU_COACHMARK_STORAGE_KEY, '1')
+    } catch {
+      // Storage full / unavailable — coachmark still shows, persistence is best-effort.
+    }
+    setCoachmarkShown(true)
+  }, [phase, isHost, coachmarkShown])
+
+  useEffect(() => {
+    if (!coachmarkShown) {
+      return
+    }
+    coachmarkTimerRef.current = setTimeout(() => setCoachmarkShown(false), 6000)
+    return () => {
+      if (coachmarkTimerRef.current) {
+        clearTimeout(coachmarkTimerRef.current)
+        coachmarkTimerRef.current = null
+      }
+    }
+  }, [coachmarkShown])
+
+  const handleDismissCoachmark = useCallback(() => {
+    haptics('light')
+    setCoachmarkShown(false)
+  }, [])
+
   const handleGoBack = useCallback(() => {
     Taro.navigateBack({
       fail: () => Taro.switchTab({ url: '/pages/events/index' }),
@@ -826,11 +960,14 @@ export default function IcebreakerSessionPage() {
     [socialSessionId, session, socialSessionQuery],
   )
 
+  // PR1 壳层 (calm-by-default): once a session is live, a failed 3s poll no longer
+  // routes to the full-page error — the sync-loss dot + reconnect toast own that state.
+  // Poll errors only become pageError when there is no session to render yet.
   const pageError =
     bootstrapError ??
     (eventSessionError ? getIcebreakerPageErrorText(eventSessionError, '无法创建破冰会话') : null) ??
     (sessionError ? getIcebreakerPageErrorText(sessionError, getErrorMessage('load-failed')) : null) ??
-    (socialSessionQuery.error ? getIcebreakerPageErrorText(socialSessionQuery.error, getErrorMessage('sync-failed')) : null)
+    (socialSessionQuery.error && !session ? getIcebreakerPageErrorText(socialSessionQuery.error, getErrorMessage('sync-failed')) : null)
 
   const isBootstrapping = !!resolvedSessionId && !socialSessionId && pendingAction === 'start' && !session
 
@@ -867,24 +1004,17 @@ export default function IcebreakerSessionPage() {
     )
   }
 
-  const adaptiveSuggestion =
-    session?.xiaoyueAdaptiveSuggestion &&
-    dismissedSuggestionAt !== session.xiaoyueAdaptiveSuggestion.generatedAt
-      ? session.xiaoyueAdaptiveSuggestion
-      : undefined
-
   const phaseHeader = (
     <XiaoyueSessionShell
       phase={phase}
       sessionPack={session?.xiaoyueSessionPack}
-      sessionPackMeta={session?.xiaoyueSessionPackMeta}
-      adaptiveSuggestion={adaptiveSuggestion}
-      playerCount={playerCount}
+      adaptiveSuggestion={suggestionOverlayOpen ? adaptiveSuggestion : undefined}
       isHost={isHost}
-      isSyncing={socialSessionQuery.isRefetching}
-      eventTitle={undefined}
-      onRequestSuggestion={handleRequestAdaptiveSuggestion}
+      syncLost={syncLost}
+      showHostMenu={hostMenuItems.length > 0}
+      onOpenHostMenu={handleHostMenuTap}
       onDismissSuggestion={handleDismissAdaptiveSuggestion}
+      onAigcFeedbackTap={handleAigcFeedbackTap}
     />
   )
 
@@ -953,13 +1083,30 @@ export default function IcebreakerSessionPage() {
     (session.currentLieDetectivePlayerIndex ?? 0) < (session.lieDetectivePlayers?.length ?? 0) - 1
 
   return (
-    <ScrollView className='icebreaker' scrollY enhanced showScrollbar={false} style={bgStyles}>
+    <ScrollView
+      className={`icebreaker${phase === 'warmup' ? ' icebreaker--warmup' : ''}`}
+      scrollY={phase !== 'warmup'}
+      enhanced
+      showScrollbar={false}
+      style={bgStyles}
+      enableFlex={phase === 'warmup'}
+    >
       <View className='icebreaker__header-wrap'>
         {phaseHeader}
 
-        {isHost && (phase === 'waiting' || phase === 'warmup') && (
-          <View className='icebreaker__host-menu' onClick={handleHostMenuTap}>
-            <Text className='icebreaker__host-menu-icon'>⋯</Text>
+        {/* PR1 壳层: one-time host ⋯ coachmark — floats below the band's right
+            edge, points up at the trigger, never covers the CTA area. */}
+        {coachmarkShown && (
+          <View
+            className='icebreaker__coachmark'
+            onClick={handleDismissCoachmark}
+            role='button'
+            aria-label='知道了'
+          >
+            <Text className='icebreaker__coachmark-text'>
+              {`点 ⋯ 更换模式，或找${getMascotDisplayName(user)}支招`}
+            </Text>
+            <View className='icebreaker__coachmark-arrow' aria-hidden='true' />
           </View>
         )}
       </View>
@@ -1028,11 +1175,12 @@ export default function IcebreakerSessionPage() {
             archetypeMixText={session.archetypeMixText}
             isCustomMode={session.eventTier === 'custom'}
             currentTier={session.eventTier ?? 'glow'}
-            canChangeTier={canChangeTier}
             isTestMode={session.isTestModeSkip ?? false}
             runBots={session.runBots ?? false}
             warmupTopicsMeta={session.warmupTopicsMeta}
-            onChangeTier={() => setIsTierSheetOpen(true)}
+            socialSessionId={socialSessionId ?? undefined}
+            icebreakerSessionId={session.icebreakerSessionId}
+            onAigcFeedbackTap={handleAigcFeedbackTap}
             onGenerateTopics={handleGenerateTopics}
             onToggleReady={handleToggleWarmupReady}
             onNextTopic={handleNextWarmupTopic}

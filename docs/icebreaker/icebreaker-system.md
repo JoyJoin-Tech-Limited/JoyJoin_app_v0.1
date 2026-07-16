@@ -111,7 +111,7 @@ const DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES = [...MVP_PHASES, 'personality_di
 
 | Phase | Emoji | CN Name | Timeout | Min Players | Key Mechanic |
 |-------|-------|---------|---------|-------------|--------------|
-| `warmup` | 🌅 | 话题卡 | 6–20 min | 2 | Mood-filtered topics, host navigates, all see same topic. **Vibe-aware duration:** 深聊 = 18–20 min with 6–7 cards + 3-tier prompts; 均衡 = 10–12 min with 5 cards; 暢玩 = 6–8 min with 4 cards. Archetype mix badge, mood selection animations, CardFlip topic entrance, ParticleBurst all-ready celebration. |
+| `warmup` | 🌅 | 话题卡 | 6–20 min | 2 | Mood-filtered topics, host navigates, all see same topic. **Vibe-aware duration:** 深聊 = 18–20 min with 6–7 cards + 3-tier prompts; 均衡 = 10–12 min with 5 cards; 暢玩 = 6–8 min with 4 cards. **UI (2026-07-16):** 4-band zero-scroll layout: slim host band, hero card slot (state machine: mood pick → generating → deal-flip), chrome-less presence strip, white action bar. CardFlip topic entrance is the single wow moment; archetype mix is woven into welcome copy and shown at the all-ready celebration; AIGC labels are a single quiet footer. ParticleBurst all-ready celebration. |
 | `micro_challenge` | ⚡ | 挑战 | 8–10 min | 2 | Timed group task, each player taps "done". Duration varies by vibe. |
 | `lie_detective` | 🕵️ | 侦探 | 12–25 min | 3 | Per-player AI statements, group votes on which is the lie. Duration varies by vibe. |
 | `undercover_word` | 🕵️‍♂️ | 谁是卧底 | 12–15 min | 3 | Hidden-role word deduction; AI generates word pairs, players describe and vote |

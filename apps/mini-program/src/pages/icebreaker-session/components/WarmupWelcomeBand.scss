@@ -1,0 +1,56 @@
+@use '../../../styles/variables' as *;
+
+.warmup-welcome {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 16rpx;
+  }
+
+  &__avatar {
+    width: 40rpx;
+    height: 40rpx;
+    flex-shrink: 0;
+  }
+
+  &__line {
+    flex: 1;
+    min-width: 0;
+    font-family: $font-cn-display;
+    font-size: 32rpx; // Alimama display scale for the welcome moment
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  &__accent {
+    font-family: inherit;
+    font-weight: inherit;
+  }
+
+  &__plain {
+    font-family: inherit;
+  }
+
+  &__caption {
+    font-size: 22rpx;
+    line-height: 1.45;
+    color: $color-text-muted;
+    padding-left: 56rpx; // aligns under the welcome text (40rpx avatar + 16rpx gap)
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .warmup-welcome__avatar {
+    animation: none;
+  }
+}

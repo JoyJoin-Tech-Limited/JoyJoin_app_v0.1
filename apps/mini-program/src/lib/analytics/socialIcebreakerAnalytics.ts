@@ -1,4 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+import { apiRequest } from '../api/api'
+import { logWarn } from '../utils/logger'
 
 type EventType =
   | 'phase_picker_returned'
@@ -14,8 +15,23 @@ type EventType =
   | 'icebreaker_test_mode_disclosure_dismissed'
   | 'icebreaker_test_mode_advance_retry'
   | 'icebreaker_test_mode_bot_advance'
+  // PR1 壳层 (locked contract Q11) — warmup-prefixed names kept verbatim;
+  // the ⋯ menu / tier sheet / AIGC footer are shell-owned surfaces.
+  | 'warmup_entry_view'
+  | 'warmup_ready_tap'
+  | 'warmup_host_menu_open'
+  | 'warmup_tier_sheet_open'
+  | 'warmup_deep_prompt_expand'
+  | 'warmup_aigc_feedback_tap'
+  | 'warmup_celebration_shown'
   | string
 
+/**
+ * Fire-and-forget POST to /api/analytics/social-icebreaker (server accepts any
+ * eventType and always 200s). Session identifiers ride inside metadata because
+ * the endpoint only persists eventType + metadata + timestamp. Failures are
+ * silent for the UI — a logWarn is the only trace (mirrors authAnalytics).
+ */
 function track(
   eventType: EventType,
   socialSessionId?: string,
@@ -23,8 +39,25 @@ function track(
   phase?: string,
   metadata?: Record<string, unknown>,
 ): void {
-  // v0.1 stub: analytics are persisted server-side via /api/analytics/social-icebreaker.
-  // Local no-op keeps the call site type-safe and avoids console noise in production.
+  void apiRequest<{ success?: boolean }>({
+    path: '/api/analytics/social-icebreaker',
+    method: 'POST',
+    data: {
+      eventType,
+      metadata: {
+        ...metadata,
+        ...(socialSessionId ? { socialSessionId } : {}),
+        ...(icebreakerSessionId ? { icebreakerSessionId } : {}),
+        ...(phase ? { phase } : {}),
+      },
+    },
+    handleUnauthorized: false,
+  }).catch((error) => {
+    logWarn('[SocialIcebreakerAnalytics] Failed to send event', {
+      eventType,
+      message: error instanceof Error ? error.message : 'unknown error',
+    })
+  })
 }
 
 export const socialIcebreakerAnalytics = { track }

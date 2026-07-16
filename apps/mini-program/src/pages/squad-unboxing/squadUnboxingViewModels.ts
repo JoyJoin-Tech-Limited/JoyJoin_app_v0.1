@@ -169,6 +169,17 @@ export function buildSquadSoulBubbleText(
 }
 
 /**
+ * Row-4 fallback hook (2026-07-16 PM "every card has a hook"): when a card
+ * has no viewer connection point, the hook pill falls back to the member's
+ * top interest so every card deals a full 4-row face. Returns the first
+ * non-empty trimmed interest, or '' when the member has none (row 4 then
+ * collapses, same as before).
+ */
+export function buildInterestHookText(member?: PoolGroupMemberSummary | null): string {
+  return (member?.topInterests ?? []).map((interest) => (interest ?? '').trim()).filter(Boolean)[0] ?? ''
+}
+
+/**
  * Card-focus narration for the fixed Xiaoyue dock. Pair explanations are
  * already generated from both members' profiles by matchExplanationService;
  * this formatter only gives that governed copy a concise mascot voice.
@@ -185,12 +196,18 @@ export function buildFocusedMemberBubbleText(
   const industry = member?.industryVisible === false
     ? ''
     : normalize(member?.industryNicheLabel ?? member?.industryCategoryLabel)
+  // Education clause (2026-07-16 PM): sits right after industry in the beat
+  // priority (connection > industry > education > hometown). The slice(0, 3)
+  // cap below now pushes hometown/archetype out first when every field is
+  // present, which protects the 3s typewriter budget.
+  const education = member?.educationVisible === false ? '' : normalize(member?.educationLevel)
   const interests = (member?.topInterests ?? []).map((interest) => normalize(interest)).filter(Boolean).slice(0, 3)
   const hometown = member?.hometownAffinityOptin === false ? '' : normalize(member?.hometownRegionCity)
   // member.archetype may be an ID or a legacy nameCn — resolve either form.
   const archetype = member?.archetype ? resolveArchetype(member.archetype)?.nameCn ?? '' : ''
   const profileBeats = [
     industry ? `在${industry}领域` : '',
+    education ? `${education}学历` : '',
     interests.length > 0 ? `喜欢${interests.join('、')}` : '',
     hometown ? `来自${hometown}` : '',
     archetype ? `带着${archetype}的社交气质` : '',

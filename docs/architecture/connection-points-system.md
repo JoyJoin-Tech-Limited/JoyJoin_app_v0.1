@@ -268,7 +268,7 @@ Timer leak fixes in the matching-status screen:
 
 **Phase 1: Server-driven rarity** — `findConnectionPoints` now returns `{ text: string, rarity: 'common'|'rare'|'epic' }[]`. Both fields (`connectionPoints` and `connectionPointsWithRarity`) are emitted for backward compatibility.
 
-**Phase 2: Mini-program tiered pills** — `MatchingStatusSections` and `squad-unboxing` now render rarity-colored pills (common = grey, rare = purple, epic = gold) using the server-provided `connectionPointsWithRarity` field.
+**Phase 2: Mini-program tiered pills** — `MatchingStatusSections` and `squad-unboxing` now render rarity-colored pills (common = grey, rare = purple, epic = gold) using the server-provided `connectionPointsWithRarity` field. On `squad-unboxing` (2026-07-16), a card without a viewer connection point falls back to the member's top interest in a neutral-outline pill (`buildInterestHookText`), so every dealt card carries a row-4 hook — connection points always win the slot when present.
 
 **Phase 3: Web client** — EnergyRing unchanged; compat shim in `packages/shared` pipes server-driven rarity into existing ring props. Legacy `generateSparkPredictions` deleted from both user-client and admin-client in this sprint.
 
