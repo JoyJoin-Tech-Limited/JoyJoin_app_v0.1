@@ -660,6 +660,7 @@ export default function AlangConfigPage() {
         <Button
           className={`alang-config__confirm ${!target || !endPoint || !!pointValidationError || isStartPending ? 'alang-config__confirm--disabled' : ''}`}
           onClick={() => { void handleConfirm() }}
+          onTouchEnd={() => { void handleConfirm() }}
           disabled={!target || !endPoint || !!pointValidationError || isStartPending}
           loading={isStartPending}
           hoverClass={isStartPending ? '' : 'alang-config__confirm--pressed'}

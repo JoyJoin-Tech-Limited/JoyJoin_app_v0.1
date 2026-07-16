@@ -275,7 +275,7 @@ describe('AlangConfigPage test-point start flow', () => {
     })
   })
 
-  it('uses a native button, shows loading on the first tap, and blocks duplicate starts', async () => {
+  it('accepts the real-device touch-end fallback, shows loading, and blocks the following click', async () => {
     let resolveStart!: (value: {
       stage: string
       currentNodeId: string
@@ -293,7 +293,13 @@ describe('AlangConfigPage test-point start flow', () => {
     expect(startButton.tagName).toBe('BUTTON')
     expect(screen.getByRole('status')).toHaveTextContent('启动反馈已开启 · 点击后会立即显示进度')
 
-    fireEvent.click(startButton)
+    fireEvent.touchEnd(startButton)
+
+    // WeChat may drop the synthetic click when the CTA sits next to a native
+    // Map or the iOS gesture area. The touch-end fallback must start the run on
+    // its own, before any click event is delivered.
+    expect(mocks.startMission).toHaveBeenCalledTimes(1)
+
     fireEvent.click(startButton)
 
     expect(mocks.haptics).toHaveBeenCalledTimes(1)
