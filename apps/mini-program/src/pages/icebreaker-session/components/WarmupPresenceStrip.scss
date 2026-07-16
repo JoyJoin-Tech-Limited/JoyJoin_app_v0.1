@@ -1,0 +1,114 @@
+@use '../../../styles/variables' as *;
+
+.warmup-presence {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  width: 100%;
+  height: 96rpx;
+  position: relative;
+
+  &__scroll {
+    flex: 1;
+    min-width: 0;
+    height: 96rpx;
+    white-space: nowrap;
+  }
+
+  &__inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 16rpx;
+    height: 96rpx;
+    padding-right: 16rpx; // breathing room before the fade edge
+  }
+
+  &__item {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    width: 64rpx;
+    opacity: 0.48;
+    transition: opacity 200ms ease;
+
+    &--ready {
+      opacity: 1;
+    }
+  }
+
+  &__avatar-wrap {
+    position: relative;
+    width: 40rpx;
+    height: 40rpx;
+  }
+
+  &__avatar {
+    width: 40rpx;
+    height: 40rpx;
+  }
+
+  &__host-crown {
+    position: absolute;
+    top: -6rpx;
+    right: -8rpx;
+    width: 20rpx;
+    height: 20rpx;
+    z-index: 2;
+  }
+
+  &__ready-badge {
+    position: absolute;
+    bottom: -4rpx;
+    right: -6rpx;
+    width: 20rpx;
+    height: 20rpx;
+    border-radius: 50%;
+    background: $color-success;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  &__name {
+    font-size: 22rpx;
+    line-height: 1.2;
+    color: $color-text-secondary;
+    max-width: 96rpx;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__count {
+    flex-shrink: 0;
+    min-width: 128rpx;
+    text-align: right;
+  }
+
+  &__count-text {
+    font-size: 24rpx;
+    line-height: 1;
+    color: $color-text-muted;
+    font-family: $font-mono;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__fade {
+    position: absolute;
+    top: 0;
+    right: 128rpx; // aligns with the reserved count width
+    width: 16rpx;
+    height: 100%;
+    background: linear-gradient(90deg, rgba($color-bg, 0) 0%, $color-bg 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .warmup-presence__item {
+    transition: none;
+  }
+}

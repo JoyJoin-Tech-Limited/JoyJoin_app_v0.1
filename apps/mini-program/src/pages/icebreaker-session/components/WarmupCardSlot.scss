@@ -1,0 +1,429 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.warmup-card-slot {
+  width: 100%;
+  flex: 1;
+  min-height: 480rpx;
+  display: flex;
+  flex-direction: column;
+
+  .reveal-card-flip {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .reveal-card-flip__wrapper,
+  .reveal-card-flip__face {
+    min-height: 480rpx;
+  }
+
+  .reveal-card-flip__face {
+    @include card-premium;
+    padding: 40rpx;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__face {
+    width: 100%;
+    height: 100%;
+  }
+
+  &__flat-card {
+    @include card-premium;
+    padding: 40rpx;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 480rpx;
+    width: 100%;
+
+    .warmup-card-slot__face {
+      height: 100%;
+    }
+  }
+
+  &__face--front {
+    @include flex-center;
+  }
+
+  &__front {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-sm;
+    text-align: center;
+
+    &-icon {
+      opacity: 0.6;
+    }
+  }
+
+  &__front-label {
+    @include type-heading;
+    color: $color-text-secondary;
+    line-height: 1.4;
+  }
+
+  &__front-sub {
+    @include type-caption;
+    color: $color-text-muted;
+  }
+
+  &__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16rpx;
+    min-height: 0;
+
+    &--centered {
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+  }
+
+  &__top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 24rpx;
+  }
+
+  &__dots {
+    display: flex;
+    align-items: center;
+    gap: 12rpx;
+  }
+
+  &__dot {
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: $radius-circle;
+    background: $color-divider;
+    transition: background 200ms ease, transform 200ms ease;
+
+    &--active {
+      background: $color-primary;
+      transform: scale(1.25);
+    }
+  }
+
+  &__corner {
+    font-size: 20rpx;
+    line-height: 1;
+    color: $color-text-muted;
+    white-space: nowrap;
+  }
+
+  &__mood-wrap {
+    @include flex-center;
+    height: 56rpx;
+    transition: opacity 200ms ease, height 200ms ease;
+
+    &--hidden {
+      opacity: 0;
+      height: 0;
+      overflow: hidden;
+    }
+  }
+
+  &__question {
+    font-family: $font-cn-display;
+    font-size: 36rpx;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    line-height: 1.5;
+    text-align: center;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    margin-top: 0;
+
+    &--expanded {
+      -webkit-line-clamp: 3;
+    }
+  }
+
+  &__expander {
+    margin-top: auto;
+    padding-top: 8rpx;
+  }
+
+  &__expander-hit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    transition: opacity 150ms ease;
+
+    &--pressed {
+      opacity: 0.6;
+    }
+  }
+
+  &__expander-text {
+    font-size: 28rpx;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    line-height: 1;
+  }
+
+  &__prompts {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+    width: 100%;
+    margin-top: 8rpx;
+    overflow: hidden;
+    animation: warmup-prompt-expand 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--static {
+      animation: none;
+    }
+  }
+
+  &__prompt {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4rpx;
+    padding: 8rpx 12rpx;
+    background: rgba($color-primary, 0.04);
+    border-radius: 12rpx;
+    border: 2rpx solid rgba($color-primary, 0.1);
+    opacity: 0;
+    transform: translateY(8rpx);
+    transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
+
+    &--visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &__prompt-label {
+    font-size: 20rpx;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+    line-height: 1.4;
+  }
+
+  &__prompt-text {
+    font-size: 24rpx;
+    color: $color-text-primary;
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  @keyframes warmup-prompt-expand {
+    from {
+      opacity: 0;
+      transform: translateY(-8rpx);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &__aigc {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+    margin-top: auto;
+    padding-top: 16rpx;
+    white-space: nowrap;
+
+    &-text,
+    &-sep {
+      font-size: 20rpx;
+      line-height: 1.4;
+      color: $color-text-secondary;
+    }
+
+    &-report {
+      .aigc-report-button {
+        min-height: 88rpx;
+        min-width: 88rpx;
+        margin: -28rpx -16rpx;
+        padding: 0 16rpx;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+      }
+
+      .aigc-report-button__text {
+        font-size: 20rpx;
+        line-height: 1.4;
+        color: $color-text-secondary;
+        text-decoration: underline;
+        text-underline-offset: 4rpx;
+      }
+    }
+  }
+
+  // State A: mood grid
+  &__empty-title {
+    font-family: $font-cn-display;
+    font-size: 32rpx;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    text-align: center;
+    line-height: 1.5;
+    margin-bottom: 8rpx;
+  }
+
+  &__mood-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16rpx;
+    width: 100%;
+  }
+
+  &__mood-option {
+    @include flex-center;
+    flex-direction: column;
+    gap: 8rpx;
+    padding: 24rpx 16rpx;
+    background: $color-surface;
+    border-radius: $card-radius-sm;
+    border: 2rpx solid transparent;
+    box-shadow: $shadow-sm;
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      opacity 0.2s ease,
+      background-color 0.2s ease;
+    position: relative;
+
+    &--active {
+      transform: scale(1.04);
+      border-color: rgba($color-primary, 0.5);
+      background: rgba($color-primary, 0.06);
+      box-shadow: 0 4rpx 20rpx rgba($color-primary, 0.18);
+    }
+
+    &--disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    &--pressed {
+      transform: scale(0.98);
+    }
+  }
+
+  &__mood-option-emoji {
+    width: 56rpx;
+    height: 56rpx;
+  }
+
+  &__mood-option-label {
+    @include type-label;
+    color: $color-text-primary;
+  }
+
+  &__mood-option-check {
+    position: absolute;
+    top: 8rpx;
+    right: 8rpx;
+    width: 32rpx;
+    height: 32rpx;
+    @include flex-center;
+    background: $color-primary;
+    border-radius: 50%;
+    animation: mood-check-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes mood-check-pop {
+    0% {
+      transform: scale(0);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.15);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  // State A': player waiting
+  &__empty-mascot {
+    width: 120rpx;
+    height: 120rpx;
+    margin-bottom: 8rpx;
+  }
+
+  // State G: generating
+  &__shimmer {
+    width: 96rpx;
+    height: 96rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.08);
+    animation: warmup-shimmer 1.5s ease-in-out infinite;
+    margin-bottom: 16rpx;
+  }
+
+  @keyframes warmup-shimmer {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 0.65;
+    }
+  }
+
+  &__generating-text {
+    font-size: 28rpx;
+    color: $color-text-secondary;
+  }
+
+  // State E: error
+  &__error-text {
+    @include type-body;
+    color: $color-error;
+    text-align: center;
+    margin-bottom: 16rpx;
+  }
+
+  &__retry-btn {
+    min-width: 160rpx;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .warmup-card-slot {
+    &__dot,
+    &__mood-wrap,
+    &__mood-option,
+    &__prompt,
+    &__question {
+      transition: none !important;
+    }
+
+    &__shimmer {
+      animation: none;
+      opacity: 0.45;
+    }
+
+    &__mood-option-check {
+      animation: none;
+    }
+
+    &__prompts {
+      animation: none;
+    }
+  }
+}

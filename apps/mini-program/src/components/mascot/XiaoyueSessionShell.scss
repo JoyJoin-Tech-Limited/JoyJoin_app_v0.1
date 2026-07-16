@@ -1,114 +1,270 @@
-@import '../../styles/variables';
+@use '../../styles/variables' as *;
+
+// ─── XiaoyueSessionShell — slim host band (PR1 壳层) ─────────────────────────
+// R1: the band itself carries NO background / border / shadow — the hero card
+// (owned by the phase view) is the only surfaced element on screen.
+// The permanent XiaoyueChatBubble furniture is retired (contract Q2).
 
 .xiaoyue-session-shell {
+  position: relative; // anchor for the suggestion overlay card
   box-sizing: border-box;
   width: 100%;
-  max-width: 100vw;
-  overflow: hidden;
-  padding: 24rpx 32rpx 16rpx;
-  background: linear-gradient(180deg, rgba(139, 92, 246, 0.06) 0%, transparent 100%);
+  max-width: 100%;
+  padding: $spacing-sm 32rpx $spacing-xs;
+
+  // ── Slim host band ────────────────────────────────────────────────────────
+  &__band {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    // Stable across the 3s poll — the retired 同步中… chip used to reflow this row.
+    min-height: 56rpx;
+  }
+
+  &__avatar {
+    position: relative;
+    flex-shrink: 0;
+    width: 40rpx;
+    height: 40rpx;
+    // Crop fix: no border-radius / overflow clipping — the expression art renders whole.
+  }
+
+  &__avatar-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+
+    &--out {
+      // 200ms opacity crossfade (contract R5); the incoming image sits static
+      // underneath, so this single fade-out reads as a dissolve.
+      animation: xiaoyue-shell-avatar-out 200ms ease forwards;
+    }
+  }
+
+  &__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  &__tone {
+    font-size: $font-size-sm; // 24rpx
+    line-height: 1.45;
+    color: $color-text-primary;
+    // Target 1 line, hard cap 2 (contract Q2).
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  &__hint {
+    margin-top: 4rpx; // optical hairline below toneLine — off-grid by design
+    font-size: 20rpx;
+    line-height: 1.45;
+    color: $color-text-muted;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__sync-dot {
+    flex-shrink: 0;
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+    background: $color-text-muted;
+  }
+
+  // ── Host ⋯ menu trigger — outlined circle, distinct from the native capsule ──
+  &__menu {
+    flex-shrink: 0;
+    width: 88rpx;
+    height: 88rpx;
+    // Bleed the 88rpx tap target over the band edges so the row stays slim.
+    margin: -16rpx -16rpx -16rpx 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 150ms ease;
+
+    &:active {
+      opacity: 0.6;
+    }
+  }
+
+  &__menu-circle {
+    width: 48rpx;
+    height: 48rpx;
+    border-radius: 50%;
+    border: 2rpx solid rgba($color-primary, 0.45);
+    background: transparent; // outlined, not filled — visual break from CTAs
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__menu-icon {
+    font-size: 32rpx;
+    line-height: 1;
+    color: $color-primary;
+    font-weight: $font-weight-bold;
+    letter-spacing: 2rpx;
+    // Optical: the ⋯ glyph rides low in its em box; nudge up to optically centre.
+    transform: translateY(-6rpx);
+  }
+
+  // ── Merged quiet AIGC footer (contract Q9) ────────────────────────────────
+  &__aigc {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+    white-space: nowrap;
+
+    &--inline {
+      margin-top: 0;
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  &__aigc-text,
+  &__aigc-sep {
+    font-size: 20rpx;
+    line-height: 1.4;
+    color: $color-text-secondary; // #6B7280 — ≥4.5:1 on the near-white page bg
+  }
+
+  &__aigc-report {
+    // Quiet restyle of the shared report button: plain muted text, no border,
+    // while keeping the ≥88rpx touch target via negative-margin bleed.
+    .aigc-report-button {
+      min-height: 88rpx;
+      min-width: 88rpx;
+      margin: -28rpx -16rpx;
+      padding: 0 16rpx;
+      border: none;
+      border-radius: 0;
+    }
+
+    .aigc-report-button__text {
+      font-size: 20rpx;
+      line-height: 1.4;
+      color: $color-text-secondary;
+      text-decoration: underline;
+      text-underline-offset: 4rpx;
+    }
+  }
+
+  // ── Adaptive suggestion overlay card ──────────────────────────────────────
+  &__suggestion {
+    position: absolute;
+    top: 100%;
+    left: 32rpx;
+    right: 32rpx;
+    z-index: $z-modal; // floats above the hero card — never pushes layout
+    margin-top: $spacing-xs;
+  }
+
+  &__suggestion-card {
+    background: $color-surface;
+    border: 1rpx solid rgba($color-primary, 0.1);
+    border-radius: 24rpx;
+    padding: $spacing-md;
+    box-shadow: 0 8rpx 32rpx rgba($color-text-primary, 0.1);
+    animation: xiaoyue-shell-suggestion-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__suggestion-head {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+  }
+
+  &__suggestion-avatar {
+    flex-shrink: 0;
+    width: 40rpx;
+    height: 40rpx;
+  }
+
+  &__suggestion-message {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-sm;
+    line-height: 1.5;
+    color: $color-text-primary;
+    overflow-wrap: break-word;
+  }
+
+  &__suggestion-hint {
+    display: block;
+    margin-top: $spacing-xs;
+    font-size: $font-size-xs;
+    line-height: 1.45;
+    color: $color-text-secondary;
+    overflow-wrap: break-word;
+  }
+
+  &__suggestion-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__suggestion-dismiss {
+    flex-shrink: 0;
+    min-height: 88rpx;
+    margin: -24rpx -16rpx -24rpx 0; // ≥88rpx tap target without growing the card
+    padding: 0 16rpx;
+    display: inline-flex;
+    align-items: center;
+    font-size: $font-size-xs;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+    white-space: nowrap;
+  }
 }
 
-.xiaoyue-session-shell__hint {
-  margin-top: 12rpx;
-  margin-left: 32rpx;
-  padding: 12rpx 20rpx;
-  background: rgba(139, 92, 246, 0.08);
-  border-radius: 16rpx;
-  border-left: 4rpx solid $color-primary;
+// ── Keyframes ────────────────────────────────────────────────────────────────
+
+@keyframes xiaoyue-shell-avatar-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
-.xiaoyue-session-shell__hint-text {
-  font-size: 24rpx;
-  color: $color-text-secondary;
-  line-height: 1.5;
+@keyframes xiaoyue-shell-suggestion-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.xiaoyue-session-shell__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12rpx;
-  margin-top: 16rpx;
-  margin-left: 32rpx;
-}
+// ── Reduced motion: every animated moment degrades to an instant swap ───────
+@media (prefers-reduced-motion: reduce) {
+  .xiaoyue-session-shell__avatar-img--out {
+    display: none; // instant expression swap, no fade layer
+    animation: none;
+  }
 
-.xiaoyue-session-shell__meta-event {
-  font-size: 24rpx;
-  font-weight: 500;
-  color: $color-text-primary;
-}
+  .xiaoyue-session-shell__suggestion-card {
+    animation: none;
+  }
 
-.xiaoyue-session-shell__meta-players {
-  font-size: 22rpx;
-  color: $color-text-secondary;
-}
-
-.xiaoyue-session-shell__meta-sync {
-  padding: 4rpx 12rpx;
-  background: rgba(139, 92, 246, 0.1);
-  border-radius: 12rpx;
-}
-
-.xiaoyue-session-shell__meta-sync-text {
-  font-size: 20rpx;
-  color: $color-primary;
-}
-
-// ─── Adaptive Nudge ─────────────────────────────────────────────────────────
-
-.xiaoyue-session-shell__nudge {
-  margin-top: 16rpx;
-  margin-left: 32rpx;
-  padding: 16rpx 20rpx;
-  background: rgba(245, 158, 11, 0.08);
-  border-radius: 16rpx;
-  border-left: 4rpx solid #f59e0b;
-}
-
-.xiaoyue-session-shell__nudge-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 8rpx;
-}
-
-.xiaoyue-session-shell__nudge-hint {
-  font-size: 22rpx;
-  color: $color-text-secondary;
-  line-height: 1.4;
-  flex: 1;
-}
-
-.xiaoyue-session-shell__nudge-dismiss {
-  font-size: 22rpx;
-  color: $color-primary;
-  font-weight: 500;
-  padding: 4rpx 12rpx;
-  margin-left: 12rpx;
-  white-space: nowrap;
-}
-
-// ─── Host Ask Trigger ───────────────────────────────────────────────────────
-
-.xiaoyue-session-shell__ask {
-  margin-top: 16rpx;
-  margin-left: 32rpx;
-  display: flex;
-  align-items: center;
-}
-
-.xiaoyue-session-shell__ask-text {
-  display: inline-flex;
-  align-items: center;
-  gap: 8rpx;
-  padding: 8rpx 16rpx;
-  background: rgba(139, 92, 246, 0.08);
-  border-radius: 24rpx;
-}
-
-.xiaoyue-session-shell__ask-label {
-  font-size: 24rpx;
-  color: $color-primary;
-  font-weight: 500;
+  .xiaoyue-session-shell__menu {
+    transition: none;
+  }
 }

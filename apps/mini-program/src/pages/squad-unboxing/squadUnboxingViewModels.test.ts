@@ -5,6 +5,7 @@ import {
   buildEventBriefDate,
   buildFaceDownCardAriaLabel,
   buildFocusedMemberBubbleText,
+  buildInterestHookText,
   buildPairKeyMemberMap,
   buildRevealChipLabel,
   buildSquadSoulBubbleText,
@@ -200,6 +201,55 @@ describe('squadUnboxingViewModels', () => {
     })).toBe(
       '先认识一下草原：喜欢社区营造。你们的共同点还没显出来，不妨先问问社区营造背后的故事。',
     )
+  })
+
+  it('buildFocusedMemberBubbleText inserts the education clause right after industry (2026-07-16)', () => {
+    expect(buildFocusedMemberBubbleText('艾米丽', null, [], null, {
+      userId: 'u1',
+      industryNicheLabel: '互联网产品',
+      educationLevel: '本科',
+      topInterests: ['城市摄影', '独立电影'],
+      hometownRegionCity: '广东深圳',
+    })).toBe(
+      '先认识一下艾米丽：在互联网产品领域，本科学历，喜欢城市摄影、独立电影。你们的共同点还没显出来，不妨先问问城市摄影背后的故事。',
+    )
+  })
+
+  it('buildFocusedMemberBubbleText omits the education clause when education is privacy-hidden', () => {
+    expect(buildFocusedMemberBubbleText('艾米丽', null, [], null, {
+      userId: 'u1',
+      industryNicheLabel: '互联网产品',
+      educationLevel: '本科',
+      educationVisible: false,
+      topInterests: ['城市摄影'],
+    })).toBe(
+      '先认识一下艾米丽：在互联网产品领域，喜欢城市摄影。你们的共同点还没显出来，不妨先问问城市摄影背后的故事。',
+    )
+  })
+
+  it('buildFocusedMemberBubbleText introduces an education-only member gracefully', () => {
+    expect(buildFocusedMemberBubbleText('豆沙', null, [], null, {
+      userId: 'u1',
+      educationLevel: '硕士',
+    })).toBe(
+      '先认识一下豆沙：硕士学历。你们的共同点还没显出来，不妨先聊聊最近各自遇到的一件有趣小事。',
+    )
+  })
+
+  describe('buildInterestHookText (row-4 fallback hook, 2026-07-16)', () => {
+    it('returns the first non-empty trimmed interest', () => {
+      expect(buildInterestHookText({ userId: 'u1', topInterests: ['脱口秀', '攀岩'] })).toBe('脱口秀')
+      expect(buildInterestHookText({ userId: 'u1', topInterests: ['   ', '攀岩'] })).toBe('攀岩')
+      expect(buildInterestHookText({ userId: 'u1', topInterests: ['  脱口秀  '] })).toBe('脱口秀')
+    })
+
+    it('returns an empty string when the member has no usable interest (row 4 collapses)', () => {
+      expect(buildInterestHookText({ userId: 'u1', topInterests: [] })).toBe('')
+      expect(buildInterestHookText({ userId: 'u1', topInterests: ['   '] })).toBe('')
+      expect(buildInterestHookText({ userId: 'u1' })).toBe('')
+      expect(buildInterestHookText(null)).toBe('')
+      expect(buildInterestHookText(undefined)).toBe('')
+    })
   })
 
   describe('buildEventBriefDate', () => {
