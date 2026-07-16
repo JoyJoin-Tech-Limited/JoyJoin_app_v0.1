@@ -2,9 +2,7 @@ import type { Router } from 'express';
 import type { SocialSessionState, SocialIcebreakerPhase, LieDetectivePlayer, LieDetectiveVote, LieDetectiveReveal } from '@shared/socialIcebreaker';
 import { z } from 'zod';
 import { AUCTION_STARTING_COINS } from '@shared/socialIcebreaker';
-import { getNextEligiblePhase } from '../socialIcebreakerPhaseConfig';
 import {
-  generateMicroChallenges,
   generateXiaoYueComment,
   generateAuctionLots,
   generateLieDetectiveStatements,
@@ -13,8 +11,6 @@ import {
   buildLieDetectiveV2RecapData,
 } from '../socialIcebreakerAIService';
 import { buildCachedAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
-import { cleanupPhaseStateForNextPhase } from '../socialIcebreakerPhaseConfig';
-import { isCustomMode } from '../services/customModeService';
 import {
   buildClientState,
   hasAllRosterParticipantsResponded,
@@ -25,8 +21,10 @@ import {
   resolveSession,
   isHostAuthorized,
   recapDisplayNameByUserId,
-  generateSpeedFriendingPairs,
   ensureRecapSnapshot,
+  transitionPhase,
+  hasWarmupTurnCompleted,
+  isWarmupTurnExpired,
 } from './socialIcebreakerHelpers';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import {
@@ -36,27 +34,13 @@ import {
   listParticipants,
   setLieTruths,
   getLieTruths,
-  savePhaseMetric,
 } from '../lib/socialIcebreakerStore';
 import { logger } from '../lib/logger';
 import { getFeatureFlag } from '../lib/featureFlags';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
-import { generatePhaseSelectionId } from '../services/customModeService';
-import { simulateBotsForSession, runBotSimulationSafely, seedSingleTestBotsWarmupReady } from '../services/socialIcebreakerBotService';
+import { simulateBotsForSession, runBotSimulationSafely } from '../services/socialIcebreakerBotService';
 
 export function registerExtendedRoutes(router: Router): void {
-  const WARMUP_TURN_DURATION_SECONDS = 30;
-
-  function hasWarmupTurnCompleted(state: SocialSessionState): boolean {
-    return !!state.warmupTurnUserId && (state.warmupReadyUserIds || []).includes(state.warmupTurnUserId);
-  }
-
-  function isWarmupTurnExpired(state: SocialSessionState): boolean {
-    const turnStartedAt = state.warmupTurnStartedAt;
-    if (!turnStartedAt) return false;
-    const durationSeconds = state.warmupTurnDurationSeconds ?? WARMUP_TURN_DURATION_SECONDS;
-    return Date.now() - turnStartedAt >= durationSeconds * 1000;
-  }
 
 // ---------------------------------------------------------------------------
 // POST /api/social-icebreaker/:socialSessionId/advance
@@ -64,7 +48,7 @@ export function registerExtendedRoutes(router: Router): void {
 router.post('/:socialSessionId/advance', async (req: any, res) => {
   const { socialSessionId } = req.params;
   const userId = req.session?.userId;
-  const { currentPhase } = req.body as { currentPhase: SocialIcebreakerPhase };
+  const { currentPhase, force } = req.body as { currentPhase: SocialIcebreakerPhase; force?: boolean };
 
   if (!userId) {
     return res.status(401).json({ error: 'Authentication required' });
@@ -99,20 +83,34 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     return res.status(400).json({ error: 'Use select-phase or end-session while in phase_selection' });
   }
 
-  if (currentPhase === 'warmup') {
-    const everyoneReady = hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCount);
-    if (!everyoneReady && !hasWarmupTurnCompleted(state) && !isWarmupTurnExpired(state)) {
-      return res.status(400).json({ error: 'Current speaker must finish or the timer must expire before advancing warmup' });
-    }
+  // `force` is the stall-nudge escape hatch: the host explicitly skips
+  // stragglers. Per-phase completion guards are bypassed; structural checks
+  // (auth, phase match) above always apply.
+  const skipGuards = force === true;
+  if (skipGuards) {
+    logger.info('[SocialIcebreaker] Force advance requested (stall nudge)', {
+      socialSessionId,
+      phase: currentPhase,
+      userId,
+    });
+  }
 
-    if ((state.warmupTopics || []).length === 0) {
-      return res.status(400).json({ error: 'Topic cards must be generated before advancing' });
+  if (currentPhase === 'warmup') {
+    if (!skipGuards) {
+      const everyoneReady = hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCount);
+      if (!everyoneReady && !hasWarmupTurnCompleted(state) && !isWarmupTurnExpired(state)) {
+        return res.status(400).json({ error: 'Current speaker must finish or the timer must expire before advancing warmup' });
+      }
+
+      if ((state.warmupTopics || []).length === 0) {
+        return res.status(400).json({ error: 'Topic cards must be generated before advancing' });
+      }
     }
 
     incrementCommonGround(state);
   }
 
-  if (currentPhase === 'micro_challenge') {
+  if (!skipGuards && currentPhase === 'micro_challenge') {
     const challengeDeadlineMs = getMicroChallengeDeadlineMs(state);
     const everyoneCompleted = hasAllRosterParticipantsResponded(state.challengeCompletedBy, state.playerCount);
     const timerExpired = challengeDeadlineMs !== null && Date.now() >= challengeDeadlineMs;
@@ -123,24 +121,26 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   }
 
   if (currentPhase === 'lie_detective') {
-    const generatedPlayers = state.lieDetectivePlayers || [];
-    const currentPlayer = getCurrentLieDetectivePlayer(state);
+    if (!skipGuards) {
+      const generatedPlayers = state.lieDetectivePlayers || [];
+      const currentPlayer = getCurrentLieDetectivePlayer(state);
 
-    if (generatedPlayers.length < state.playerCount) {
-      return res.status(400).json({ error: 'All participants must generate statements before leaving lie_detective' });
-    }
+      if (generatedPlayers.length < state.playerCount) {
+        return res.status(400).json({ error: 'All participants must generate statements before leaving lie_detective' });
+      }
 
-    if (!currentPlayer || state.currentLieDetectivePlayerIndex !== generatedPlayers.length - 1) {
-      return res.status(400).json({ error: 'Finish every lie-detective turn before advancing' });
-    }
+      if (!currentPlayer || state.currentLieDetectivePlayerIndex !== generatedPlayers.length - 1) {
+        return res.status(400).json({ error: 'Finish every lie-detective turn before advancing' });
+      }
 
-    const reveal = state.currentLieDetectiveReveal;
-    if (!reveal || reveal.targetUserId !== currentPlayer.userId) {
-      return res.status(400).json({ error: 'The current lie-detective turn must be revealed before advancing' });
-    }
+      const reveal = state.currentLieDetectiveReveal;
+      if (!reveal || reveal.targetUserId !== currentPlayer.userId) {
+        return res.status(400).json({ error: 'The current lie-detective turn must be revealed before advancing' });
+      }
 
-    if (!hasAllRosterParticipantsResponded(state.lieDetectiveCompletedUserIds, state.playerCount)) {
-      return res.status(400).json({ error: 'Every lie-detective turn must be completed before advancing' });
+      if (!hasAllRosterParticipantsResponded(state.lieDetectiveCompletedUserIds, state.playerCount)) {
+        return res.status(400).json({ error: 'Every lie-detective turn must be completed before advancing' });
+      }
     }
 
     // Build V2 recap data when leaving lie_detective
@@ -155,7 +155,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
-  if (currentPhase === 'auction') {
+  if (!skipGuards && currentPhase === 'auction') {
     if (!state.auctionAllLotsClosed) {
       return res.status(400).json({
         error: 'Host must close every auction lot (use close-lot) before advancing out of auction',
@@ -163,7 +163,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
-  if (currentPhase === 'mini_script') {
+  if (!skipGuards && currentPhase === 'mini_script') {
     // Must have framework
     if (!state.miniScriptFramework) {
       return res.status(400).json({
@@ -186,7 +186,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
-  if (currentPhase === 'undercover_word') {
+  if (!skipGuards && currentPhase === 'undercover_word') {
     if (!state.undercoverWordPair) {
       return res.status(400).json({ error: 'Word pair not generated' });
     }
@@ -195,7 +195,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
-  if (currentPhase === 'group_mirror') {
+  if (!skipGuards && currentPhase === 'group_mirror') {
     if (!state.groupMirrorQuestions || state.groupMirrorQuestions.length === 0) {
       return res.status(400).json({ error: 'Group mirror questions not generated' });
     }
@@ -204,7 +204,7 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
-  if (currentPhase === 'speed_friending') {
+  if (!skipGuards && currentPhase === 'speed_friending') {
     if (!state.speedFriendingAllRoundsComplete) {
       return res.status(400).json({
         error: 'All speed friending rounds must be completed before advancing',
@@ -212,95 +212,17 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
-  const effectiveNextPhase = getNextEligiblePhase(currentPhase, state);
-
-  // Close out the current phase bookkeeping before any transition logic
-  if (!state.completedPhases.includes(currentPhase)) {
-    state.completedPhases = [...(state.completedPhases || []), currentPhase];
-  }
-
-  // Compute and persist phase dwell time for Q2 pilot instrumentation
-  const phaseStartedAt = state.phaseStartedAt ? new Date(state.phaseStartedAt).getTime() : Date.now();
-  const dwellTimeMs = Date.now() - phaseStartedAt;
-  savePhaseMetric(socialSessionId, currentPhase, {
-    dwellTimeMs,
-    startedAt: new Date(phaseStartedAt),
-    endedAt: new Date(),
-    participantCount: state.playerCount,
-  }).catch((err) => {
-    logger.warn('[PhaseMetrics] save failed', { socialSessionId, phase: currentPhase, error: err instanceof Error ? err.message : String(err) });
+  const result = await transitionPhase({
+    state,
+    socialSessionId,
+    trigger: 'host_tap',
   });
 
-  cleanupPhaseStateForNextPhase(state, currentPhase);
-
-  if (effectiveNextPhase === 'phase_selection') {
-    state.phaseSelectionId = generatePhaseSelectionId();
+  if (result.pausedAtBonusGate) {
+    return res.json({ state: await buildClientState(state, userId) });
   }
 
-  // Bonus gate: if advancing to mini_script for the first time, pause for host decision.
-  // In custom mode the host already explicitly selected mini_script from the picker,
-  // so skip the redundant bonus gate.
-  if (
-    effectiveNextPhase === 'mini_script' &&
-    !isCustomMode(state) &&
-    !state.bonusGateOffered &&
-    !state.bonusGateAccepted &&
-    !state.bonusGateDeclined
-  ) {
-    state.bonusGateOffered = true;
-    // Fire-and-forget background framework pre-generation
-    if (!state.bonusGateFrameworkPreloading) {
-      state.bonusGateFrameworkPreloading = true;
-      // Background pre-generation is optional; actual generation is triggered on accept
-    }
-    await updateSession(socialSessionId, state);
-    return res.json({ state: buildClientState(state) });
-  }
-
-  state.currentPhase = effectiveNextPhase;
-  state.phaseStartedAt = Date.now();
-  state.pulseChecks = [];
-  if (effectiveNextPhase === 'warmup') {
-    state.warmupReadyUserIds = [];
-    // Single-test bot attendees default to ready when warmup restarts.
-    seedSingleTestBotsWarmupReady(state);
-  }
-  if (effectiveNextPhase === 'speed_friending') {
-    const roster = await listParticipants(socialSessionId);
-    const playerIds = roster.map((p) => p.userId);
-    const displayNames = new Map(roster.map((p) => [p.userId, p.displayName]));
-    const rounds = generateSpeedFriendingPairs(playerIds, displayNames);
-    state.speedFriendingPairs = rounds.flat();
-    state.speedFriendingTotalRounds = rounds.length;
-    state.speedFriendingCurrentRound = 0;
-    state.speedFriendingAllRoundsComplete = false;
-    state.speedFriendingRoundStartedAt = Date.now();
-  }
-  await updateSession(socialSessionId, state);
-
-  if (effectiveNextPhase === 'recap') {
-    await ensureRecapSnapshot(state, socialSessionId);
-  }
-
-  let content: any = null;
-  let meta: AIResponseMeta | undefined;
-  if (effectiveNextPhase === 'micro_challenge') {
-    try {
-      const challengeResult = await generateMicroChallenges({
-        eventType: state.eventType || '活动',
-        participantCount: state.playerCount,
-        seed: socialSessionId,
-      });
-      state.currentChallenge = challengeResult.data[0];
-      state.currentChallengeMeta = challengeResult.meta;
-      state.challengeCompletedBy = [];
-      await updateSession(socialSessionId, state);
-      content = { challenge: state.currentChallenge };
-      meta = challengeResult.meta;
-    } catch {
-      // fallback silently handled in AI service
-    }
-  }
+  const effectiveNextPhase = result.nextPhase;
 
   // Fetch participant roster with profiles for personalised 悦仔 commentary
   let xyParticipants: Array<{ displayName: string; archetype?: string | null; profile?: import('@shared/socialIcebreaker').SocialSessionParticipantProfile | null }> | undefined;
@@ -336,12 +258,85 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
 
   return res.json({
     nextPhase: effectiveNextPhase,
-    content,
+    content: result.challenge ? { challenge: result.challenge } : null,
     xiaoYueComment: xyResult.data,
     xiaoYueCommentMeta: xyResult.meta,
-    meta,
+    meta: result.challengeMeta,
     state: await buildClientState(state, userId),
   });
+});
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/early-end
+// Host escape hatch: jump the whole table to recap from any playable phase.
+// The skipped phase is NOT counted as played so recap framing stays honest.
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/early-end', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+    return res.status(403).json({ error: 'Only the host can end the session early' });
+  }
+
+  const blockedPhases: SocialIcebreakerPhase[] = ['warmup', 'recap', 'phase_selection'];
+  if (blockedPhases.includes(state.currentPhase) || (state.currentPhase as string) === 'ended') {
+    return res.status(400).json({
+      error: 'Session cannot be ended early from the current phase',
+      code: 'EARLY_END_PHASE_BLOCKED',
+    });
+  }
+
+  // Resolve a pending bonus gate cleanly so mid-vote players land in recap
+  // without a ghost gate overlay.
+  if (state.bonusGateOffered && !state.bonusGateAccepted && !state.bonusGateDeclined) {
+    state.bonusGateDeclined = true;
+    state.bonusGatePlayerSentiment = undefined;
+  }
+
+  await transitionPhase({
+    state,
+    socialSessionId,
+    trigger: 'early_end_jump',
+    targetPhase: 'recap',
+    countCurrentPhaseCompleted: false,
+    skipBonusGate: true,
+  });
+
+  logger.info('[SocialIcebreaker] Session ended early by host', { socialSessionId, userId });
+  return res.json({ state: await buildClientState(state, userId) });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/stall-nudge/dismiss
+// Host dismisses the stall nudge; stall automation stays silent for this phase.
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/stall-nudge/dismiss', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId = req.session?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+    return res.status(403).json({ error: 'Only the host can dismiss the stall nudge' });
+  }
+
+  state.stallNudgeAt = undefined;
+  state.stallSuppressedForPhase = state.currentPhase;
+  await updateSession(socialSessionId, state);
+
+  return res.json({ state: await buildClientState(state, userId) });
 });
 // ---------------------------------------------------------------------------
 // POST /api/social-icebreaker/:socialSessionId/lie-detective/generate
@@ -890,7 +885,7 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
     undercoverWordResult: snapshot.undercoverWordResult,
     microChallengeHighlights: snapshot.microChallengeHighlights,
     groupMirrorHighlights: snapshot.groupMirrorHighlights,
-    state: await buildClientState(state),
+    state: await buildClientState(state, userId),
   });
 });
 

@@ -194,7 +194,7 @@ export function buildCTAState(
   if (isReady) {
     // Cancel is hidden only when the host has the "next/end" authority available.
     const showCancel = !(everyoneReady && isHost)
-    return { primary: '已准备 ✓', secondaryVisible, showCancel }
+    return { primary: '已准备', secondaryVisible, showCancel }
   }
 
   return { primary: '我准备好了', secondaryVisible, showCancel: false }

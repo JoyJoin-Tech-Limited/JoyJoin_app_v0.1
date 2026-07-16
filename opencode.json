@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "kimi-for-coding/kimi-k2.7-code-highspeed",
+  "model": "kimi-for-coding/k3",
   "provider": {
     "deepseek": {
       "models": {
@@ -71,6 +71,19 @@
           },
           "options": {
             "maxTokens": 32768
+          }
+        },
+        "k3": {
+          "limit": {
+            "context": 1048576,
+            "output": 65536
+          },
+          "modalities": {
+            "input": ["text", "image", "video"],
+            "output": ["text"]
+          },
+          "options": {
+            "maxTokens": 65536
           }
         }
       }

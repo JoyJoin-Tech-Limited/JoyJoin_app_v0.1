@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import JoyJoinIcon from '../ui/JoyJoinIcon'
 import './TapRhythm.scss'
 
 function prefersReducedMotion(): boolean {
@@ -22,8 +23,10 @@ export interface TapRhythmProps {
   tapCount?: number
   /** Target count to reach */
   targetCount?: number
-  /** Emoji shown inside the tap target */
+  /** Emoji shown inside the tap target (rendered via JoyJoinIcon) */
   emoji?: string
+  /** JoyJoinIcon tier for the target glyph */
+  tier?: 'phase' | 'reaction' | 'achievement' | 'intent' | 'semantic'
   /** Override reduced-motion detection for testing */
   reducedMotion?: boolean
 }
@@ -38,6 +41,7 @@ export interface TapRhythmProps {
 export default function TapRhythm({
   onTap,
   tapCount = 0,
+  tier = 'achievement',
   targetCount,
   emoji = '👏',
   reducedMotion,
@@ -82,7 +86,7 @@ export default function TapRhythm({
         className={`gesture-tap-rhythm__target${pulsing ? ' gesture-tap-rhythm__target--pulse' : ''}${colorFlash ? ' gesture-tap-rhythm__target--flash' : ''}`}
         onClick={handleTap}
       >
-        <Text className='gesture-tap-rhythm__emoji'>{emoji}</Text>
+        <JoyJoinIcon emoji={emoji} tier={tier} size={72} />
       </View>
 
       {typeof targetCount === 'number' && targetCount > 0 && (

@@ -31,8 +31,14 @@
   flex-direction: column;
   gap: $spacing-sm;
   width: 100%;
-  padding: 0 $container-padding;
+  padding: $spacing-md 0;
   text-align: center;
+  // PR3: terminal gold foil — full foil frame (border + ambient shadow +
+  // inset highlight), the capstone of the phase foil family.
+  border: 2rpx solid rgba($color-landed-gold, 0.45);
+  border-radius: $card-radius;
+  background: $color-surface;
+  box-shadow: 0 8rpx 24rpx rgba($color-landed-gold, 0.16), inset 0 0 0 1rpx rgba($color-archetype-fire, 0.14);
 }
 
 .icebreaker__recap-hero-icon {
@@ -154,7 +160,7 @@
   flex-direction: column;
   gap: $spacing-sm;
   width: 100%;
-  padding: 0 $container-padding;
+  
 }
 
 .icebreaker__recap-section {
@@ -299,7 +305,7 @@
 .icebreaker__recap-share-wrap {
   width: 100%;
   max-width: 640rpx;
-  padding: 0 $container-padding;
+  
 
   .reveal-card-flip {
     min-height: 220rpx;
@@ -360,8 +366,10 @@
   width: 100%;
   max-width: 640rpx;
   overflow: hidden;
-  background: linear-gradient(135deg, rgba($color-primary-dark, 0.95) 0%, rgba($color-text-primary, 0.9) 100%);
-  border: 2rpx solid rgba($color-landed-gold, 0.3);
+  // Warm surface + gold foil (design audit: was the system's only dark-gradient card)
+  background: $color-bg-tint-cream;
+  border: 2rpx solid rgba($color-landed-gold, 0.45);
+  box-shadow: 0 8rpx 24rpx rgba($color-landed-gold, 0.14), inset 0 0 0 1rpx rgba($color-archetype-fire, 0.12);
 }
 
 .icebreaker__recap-moment-cta-glow {
@@ -371,7 +379,7 @@
   width: 120rpx;
   height: 120rpx;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba($color-landed-gold, 0.25) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba($color-landed-gold, 0.2) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -385,12 +393,12 @@
 
 .icebreaker__recap-moment-cta-title {
   @include type-subheading;
-  color: $color-landed-gold;
+  color: $color-archetype-fire;
 }
 
 .icebreaker__recap-moment-cta-sub {
   @include type-caption;
-  color: rgba($color-text-white, 0.65);
+  color: $color-text-secondary;
 }
 
 .icebreaker__recap-moment-cta-btn {
@@ -414,7 +422,7 @@
   align-items: center;
   gap: $spacing-xs;
   margin-top: $spacing-lg;
-  padding: 0 $container-padding;
+  
 }
 
 .icebreaker__recap-stamp-img {
@@ -424,7 +432,7 @@
   opacity: 0;
   transform: scale(1.4) rotate(-8deg);
   transform-origin: center center;
-  animation: recap-stamp-press 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s forwards;
+  animation: recap-stamp-press 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s forwards;
 }
 
 .icebreaker__recap-stamp-caption {
@@ -433,7 +441,7 @@
   font-weight: $font-weight-bold;
   margin-top: $spacing-xs;
   opacity: 0;
-  animation: recap-stamp-caption-in 0.4s ease-out 0.55s forwards;
+  animation: recap-stamp-caption-in 0.4s ease-out 0.45s forwards;
 }
 
 // ── C6 — "See you next time" ceremony end overlay (Batch C) ──────
@@ -441,7 +449,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: $spacing-xl $container-padding $spacing-md;
+  margin: $spacing-xl 0 $spacing-md;
   padding: $spacing-xl $spacing-md;
   position: relative;
   background: linear-gradient(
@@ -459,7 +467,7 @@
   display: block;
   opacity: 0;
   transform: translateY(16rpx);
-  animation: recap-ceremony-end-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
+  animation: recap-ceremony-end-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
 }
 
 // ── Leave button ─────────────────────────────────────────────────
@@ -515,5 +523,17 @@
     animation: none;
     opacity: 1;
     transform: none;
+  }
+}
+
+.icebreaker__recap-leave-row {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  width: 100%;
+  align-items: center;
+
+  .icebreaker__recap-connect-btn {
+    min-width: 320rpx;
   }
 }

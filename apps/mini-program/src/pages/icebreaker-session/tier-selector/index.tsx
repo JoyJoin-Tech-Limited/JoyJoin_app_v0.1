@@ -61,7 +61,7 @@ export const VIBE_OPTIONS: Array<{
 }> = [
   { id: 'deep_chat', display: '深聊', hint: '对话为主', description: '深度连接，沉浸交流' },
   { id: 'balanced', display: '均衡', hint: '灵活混搭', description: '均衡搭配，默认推荐' },
-  { id: 'play_fun', display: '暢玩', hint: '游戏为主', description: '活力互动，轻松畅玩' },
+  { id: 'play_fun', display: '畅玩', hint: '游戏为主', description: '活力互动，轻松畅玩' },
 ]
 
 const YUEZAI_REACTIONS: Record<TierMachineId, Record<VibeId, string>> = {

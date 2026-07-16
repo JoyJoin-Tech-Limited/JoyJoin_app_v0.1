@@ -10,18 +10,17 @@ describe('phaseViews barrel exports', () => {
     expect(mod).toHaveProperty('getMoodLabel')
   })
 
-  it('exports all expansion phase views', () => {
-    expect(mod).toHaveProperty('QuipBattlePhaseView')
-    expect(mod).toHaveProperty('UndercoverWordPhaseView')
-    expect(mod).toHaveProperty('GroupMirrorPhaseView')
-  })
-
-  it('exports all core phase views', () => {
+  it('exports all phase views (PhaseHeroCard visual system)', () => {
     expect(mod).toHaveProperty('WarmupPhaseView')
-    expect(mod).toHaveProperty('MicroChallengePhaseView')
-    expect(mod).toHaveProperty('LieDetectivePhaseView')
-    expect(mod).toHaveProperty('PersonalityDicePhaseView')
-    expect(mod).toHaveProperty('AuctionPhaseView')
+    expect(mod).toHaveProperty('MicroChallengeHeroView')
+    expect(mod).toHaveProperty('LieDetectiveHeroView')
+    expect(mod).toHaveProperty('PersonalityDiceHeroView')
+    expect(mod).toHaveProperty('SpeedFriendingHeroView')
+    expect(mod).toHaveProperty('QuipBattleHeroView')
+    expect(mod).toHaveProperty('UndercoverWordHeroView')
+    expect(mod).toHaveProperty('GroupMirrorHeroView')
+    expect(mod).toHaveProperty('AuctionHeroView')
+    expect(mod).toHaveProperty('MiniScriptHeroView')
     expect(mod).toHaveProperty('FallbackPhaseView')
     expect(mod).toHaveProperty('RecapPhaseView')
   })
@@ -32,19 +31,19 @@ describe('phaseViews barrel exports', () => {
       'getPhaseLabel',
       'PhaseHeaderIcon',
       'getMoodLabel',
-      'QuipBattlePhaseView',
-      'UndercoverWordPhaseView',
-      'GroupMirrorPhaseView',
       'WarmupPhaseView',
-      'MicroChallengePhaseView',
-      'LieDetectivePhaseView',
-      'PersonalityDicePhaseView',
-      'AuctionPhaseView',
+      'MicroChallengeHeroView',
+      'LieDetectiveHeroView',
+      'PersonalityDiceHeroView',
+      'SpeedFriendingHeroView',
+      'QuipBattleHeroView',
+      'UndercoverWordHeroView',
+      'GroupMirrorHeroView',
+      'AuctionHeroView',
+      'MiniScriptHeroView',
       'FallbackPhaseView',
       'RecapPhaseView',
-      'AuctionBidRecordLocal', // type re-export
     ])
-    // Verify we didn't forget any in the test
-    expect(expectedExports.size).toBe(15)
+    expect(expectedExports.size).toBe(16)
   })
 })

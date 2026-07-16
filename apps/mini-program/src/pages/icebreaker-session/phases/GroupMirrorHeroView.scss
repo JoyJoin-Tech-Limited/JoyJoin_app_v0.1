@@ -1,0 +1,113 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+$gm-accent: $phase-accent-mirror;
+$gm-deep: $phase-accent-mirror-deep;
+
+.group-mirror-hero {
+  position: relative;
+
+  &__burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  &__identity {
+    display: flex;
+    justify-content: center;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__results {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__result-item {
+    border-radius: $radius-md;
+    overflow: hidden;
+  }
+
+  &__card-front,
+  &__card-back {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    padding: $spacing-md;
+    min-height: 160rpx;
+  }
+
+  &__card-front {
+    background: rgba($gm-accent, 0.1);
+  }
+
+  &__card-back {
+    background: rgba($gm-deep, 0.14);
+  }
+
+  &__card-question {
+    @include type-body-emphasis;
+    color: $color-text-primary;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__card-hint {
+    @include type-caption;
+    color: $gm-deep;
+  }
+
+  &__card-winner {
+    @include type-heading;
+    color: $gm-deep;
+  }
+
+  &__card-votes {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__reactions {
+    display: flex;
+    justify-content: center;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__questions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__question-block {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__question-text {
+    @include type-body-emphasis;
+    color: $color-text-primary;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__question-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8rpx;
+  }
+
+  &__error {
+    @include type-caption;
+    display: block;
+    margin-top: $spacing-sm;
+    color: $color-error;
+    text-align: center;
+  }
+}

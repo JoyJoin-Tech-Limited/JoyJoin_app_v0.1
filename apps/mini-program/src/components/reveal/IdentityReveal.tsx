@@ -25,6 +25,14 @@ export interface IdentityRevealProps {
   spotlightColor?: string
   /** Override reduced-motion detection for testing */
   reducedMotion?: boolean
+  /**
+   * 'dark' (default): full-screen 72%-black radial spotlight for dramatic moments.
+   * 'warm': quiet accent-tint surface for inline use inside warm cards
+   * (auction high-bidder, group-mirror winner) — no dark slab.
+   */
+  tone?: 'dark' | 'warm'
+  /** Accent rgba color for the warm surface border/tint (tone='warm'). */
+  warmAccent?: string
 }
 
 /**
@@ -40,8 +48,25 @@ export default function IdentityReveal({
   revealed,
   spotlightColor = '#8B5CF6',
   reducedMotion,
+  tone = 'dark',
+  warmAccent,
 }: IdentityRevealProps) {
   const isReduced = reducedMotion ?? REDUCED_MOTION
+
+  if (tone === 'warm') {
+    return (
+      <View
+        className={`reveal-identity-reveal reveal-identity-reveal--warm${revealed ? ' reveal-identity-reveal--warm-revealed' : ''}`}
+        style={warmAccent ? { borderColor: warmAccent } : undefined}
+      >
+        {label && <Text className='reveal-identity-reveal__warm-label'>{label}</Text>}
+        <Text className='reveal-identity-reveal__warm-identity' style={{ color: spotlightColor }}>
+          {identity}
+        </Text>
+      </View>
+    )
+  }
+
   return (
     <View
       className={`reveal-identity-reveal${revealed ? ' reveal-identity-reveal--revealed' : ''}${isReduced ? ' reveal-identity-reveal--reduced' : ''}`}

@@ -10,17 +10,16 @@ export {
   getMoodLabel,
 } from './phaseUtils'
 
-// Expansion phase views (pre-existing standalone files)
-export { default as QuipBattlePhaseView } from './phases/QuipBattlePhaseView'
-export { default as UndercoverWordPhaseView } from './phases/UndercoverWordPhaseView'
-export { default as GroupMirrorPhaseView } from './phases/GroupMirrorPhaseView'
-
-// Core phase views (extracted from former phaseViews.tsx)
+// Phase views (PhaseHeroCard visual system, PR2/PR3 2026-07-17)
 export { WarmupPhaseView } from './phases/WarmupPhaseView'
-export { MicroChallengePhaseView } from './phases/MicroChallengePhaseView'
-export { LieDetectivePhaseView } from './phases/LieDetectivePhaseView'
-export { PersonalityDicePhaseView } from './phases/PersonalityDicePhaseView'
-export { AuctionPhaseView, type AuctionBidRecordLocal } from './phases/AuctionPhaseView'
+export { MicroChallengeHeroView } from './phases/MicroChallengeHeroView'
+export { LieDetectiveHeroView } from './phases/LieDetectiveHeroView'
+export { PersonalityDiceHeroView } from './phases/PersonalityDiceHeroView'
+export { SpeedFriendingHeroView } from './phases/SpeedFriendingHeroView'
+export { QuipBattleHeroView } from './phases/QuipBattleHeroView'
+export { UndercoverWordHeroView } from './phases/UndercoverWordHeroView'
+export { GroupMirrorHeroView } from './phases/GroupMirrorHeroView'
+export { AuctionHeroView } from './phases/AuctionHeroView'
+export { MiniScriptHeroView } from './phases/MiniScriptHeroView'
 export { FallbackPhaseView } from './phases/FallbackPhaseView'
 export { RecapPhaseView } from './phases/RecapPhaseView'
-export { SpeedFriendingPhaseView } from './phases/SpeedFriendingPhaseView'

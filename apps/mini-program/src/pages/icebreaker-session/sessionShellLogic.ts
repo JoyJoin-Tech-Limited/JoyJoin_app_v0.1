@@ -16,7 +16,7 @@ import { TIER_PRESETS } from './tierPresets'
 /** Storage key for the one-time host ⋯ coachmark (persisted via Taro.setStorageSync). */
 export const HOST_MENU_COACHMARK_STORAGE_KEY = 'jj_ib_host_menu_coachmark_seen_v1'
 
-export type HostMenuItemId = 'change-tier' | 'suggestion'
+export type HostMenuItemId = 'change-tier' | 'suggestion' | 'early-end'
 
 export interface HostMenuItem {
   id: HostMenuItemId
@@ -35,6 +35,23 @@ const TIER_MENU_PHASES: ReadonlySet<string> = new Set(['waiting', 'warmup'])
  * the menu itself stays visible in all phases that have any valid action.
  */
 const SUGGESTION_HIDDEN_PHASES: ReadonlySet<string> = new Set(['waiting', 'recap', 'ended'])
+
+/**
+ * Phases where 「提前进入总结」 is offered. Hidden in warmup (nothing to
+ * summarize yet), phase_selection (custom mode's own end affordance lives in
+ * the picker), and the terminal phases.
+ */
+const EARLY_END_PHASES: ReadonlySet<string> = new Set([
+  'micro_challenge',
+  'lie_detective',
+  'personality_dice',
+  'auction',
+  'quip_battle',
+  'undercover_word',
+  'group_mirror',
+  'speed_friending',
+  'mini_script',
+])
 
 /**
  * Menu copy for the tier item, e.g. `更换模式（当前·深度畅聊·60min）`.
@@ -60,7 +77,8 @@ export interface ResolveHostMenuItemsInput {
 
 /**
  * Contextual ⋯ menu items per phase. Host-only. Ordering is stable
- * (tier first, suggestion second) so ActionSheet indices are deterministic.
+ * (tier first, suggestion second, early-end last) so ActionSheet indices
+ * are deterministic.
  */
 export function resolveHostMenuItems(input: ResolveHostMenuItemsInput): HostMenuItem[] {
   if (!input.isHost) {
@@ -72,6 +90,9 @@ export function resolveHostMenuItems(input: ResolveHostMenuItemsInput): HostMenu
   }
   if (!SUGGESTION_HIDDEN_PHASES.has(input.phase)) {
     items.push({ id: 'suggestion', label: `${DEFAULT_MASCOT_DISPLAY_NAME}，给点建议？` })
+  }
+  if (EARLY_END_PHASES.has(input.phase)) {
+    items.push({ id: 'early-end', label: '提前进入总结' })
   }
   return items
 }

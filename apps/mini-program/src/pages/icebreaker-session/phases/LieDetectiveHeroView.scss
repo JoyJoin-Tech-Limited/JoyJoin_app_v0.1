@@ -1,0 +1,175 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// lie_detective accent family (tokens mirror phases/phaseAccents.ts)
+$ld-accent: $phase-accent-lie;
+$ld-accent-deep: $phase-accent-lie-deep;
+$ld-tint: $phase-accent-lie-tint;
+
+@keyframes ld-statement-flip-in {
+  0% {
+    opacity: 0;
+    transform: perspective(1200rpx) rotateY(88deg);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1200rpx) rotateY(0deg);
+  }
+}
+
+.lie-detective-hero {
+  &__statements {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__statement {
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    background: $color-surface;
+    border: 2rpx solid rgba($ld-accent, 0.18);
+    transition: border-color 0.15s ease, background 0.15s ease;
+
+    &--selected {
+      border-color: rgba($ld-accent, 0.65);
+      background: rgba($ld-accent, 0.08);
+    }
+
+    &--lie {
+      border-color: rgba($ld-accent-deep, 0.85);
+      background: rgba($ld-accent, 0.14);
+    }
+
+    &--truth {
+      border-color: rgba($ld-accent, 0.12);
+      opacity: 0.85;
+    }
+
+    &--flip-in {
+      animation: ld-statement-flip-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      backface-visibility: hidden;
+    }
+  }
+
+  &__statement-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__statement-index {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36rpx;
+    height: 36rpx;
+    border-radius: $radius-circle;
+    background: rgba($ld-accent, 0.12);
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $ld-accent-deep;
+  }
+
+  &__statement-tag {
+    @include type-caption;
+    padding: 2rpx $spacing-sm;
+    border-radius: $radius-pill;
+
+    &--lie {
+      background: rgba($ld-accent-deep, 0.14);
+      color: $ld-accent-deep;
+      font-weight: $font-weight-semibold;
+    }
+
+    &--truth {
+      background: rgba($color-text-primary, 0.05);
+      color: $color-text-secondary;
+    }
+
+    &--ai {
+      background: rgba($ld-accent-deep, 0.14);
+      color: $ld-accent-deep;
+      font-weight: $font-weight-semibold;
+    }
+
+    &--user {
+      background: rgba($color-text-primary, 0.05);
+      color: $color-text-secondary;
+    }
+  }
+
+  &__statement-text {
+    @include type-body;
+    color: $color-text-primary;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__statement-votes {
+    @include type-caption;
+    margin-top: $spacing-xs;
+    color: $ld-accent-deep;
+  }
+
+  &__edge-msg {
+    display: flex;
+    justify-content: center;
+    margin-top: $spacing-sm;
+    padding: $spacing-xs $spacing-md;
+    border-radius: $radius-pill;
+    background: rgba($ld-accent, 0.1);
+  }
+
+  &__edge-text {
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $ld-accent-deep;
+  }
+
+  // V2 tag form
+  &__tag-form {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    width: 100%;
+  }
+
+  &__tag-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+  }
+
+  &__tag-input {
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    border: 2rpx solid rgba($ld-accent, 0.25);
+    background: $color-surface;
+    @include type-body;
+
+    &--error {
+      border-color: $color-error;
+    }
+  }
+
+  &__tag-counter {
+    @include type-micro;
+    align-self: flex-end;
+  }
+
+  &__tag-error {
+    @include type-caption;
+    color: $color-error;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lie-detective-hero__statement--flip-in {
+    animation-duration: 150ms;
+    animation-name: none;
+    opacity: 1;
+  }
+}

@@ -170,8 +170,14 @@ interface RecapPhaseViewProps {
   }>
   playerCount: number
   onLeave: () => void
+  /** Post-session hook: route to connections (「去认识这桌人」). */
+  onConnectTap?: () => void
   socialSessionId?: string | null
   recapMeta?: AIResponseMeta | null
+  /** Playable phases completed (excludes phase_selection) — honest partial-recap framing. */
+  phasesCompleted?: number
+  /** True when the host jumped the table to recap via 提前进入总结. */
+  isEarlyEnd?: boolean
 }
 
 export function RecapPhaseView({
@@ -180,8 +186,11 @@ export function RecapPhaseView({
   medals,
   playerCount,
   onLeave,
+  onConnectTap,
   socialSessionId,
   recapMeta,
+  phasesCompleted,
+  isEarlyEnd,
 }: RecapPhaseViewProps) {
   const { shouldReduceMotion } = useMiniRevealMotion()
   const recapMoments = summary?.moments ?? recapData?.funMoments ?? []
@@ -267,12 +276,19 @@ export function RecapPhaseView({
           />
         ) : (
           <>
-            <Text className='icebreaker__recap-title'>破冰回顾</Text>
+            {/* PM-locked terminal copy (2026-07-17): celebrate → thank →
+                permission to pocket the phone → one clean exit. */}
+            <Text className='icebreaker__recap-title'>今晚到这儿，刚刚好</Text>
             <Text className='icebreaker__recap-subtitle'>
               今晚 {playerCount} 人一起度过了愉快的破冰时光！
             </Text>
           </>
         )}
+        {typeof phasesCompleted === 'number' && phasesCompleted > 0 ? (
+          <Text className='icebreaker__recap-subtitle'>
+            {isEarlyEnd ? `今晚玩了 ${phasesCompleted} 个环节，剩下的留到下次～` : `今晚玩了 ${phasesCompleted} 个环节`}
+          </Text>
+        ) : null}
         {summary?.closingLine ? (
           <Text className='icebreaker__recap-closing'>{summary.closingLine}</Text>
         ) : null}
@@ -378,7 +394,7 @@ export function RecapPhaseView({
                   <Text className='icebreaker__recap-stat-value'>
                     第 {recapData.lieDetective.hardestRound} 轮
                   </Text>
-                  <Text className='icebreaker__recap-stat-label'>最难 round</Text>
+                  <Text className='icebreaker__recap-stat-label'>最难一轮</Text>
                 </View>
                 <View className='icebreaker__recap-stat-box'>
                   <Text className='icebreaker__recap-stat-value'>
@@ -480,7 +496,7 @@ export function RecapPhaseView({
                 ))}
                 <View className='icebreaker__recap-share-back-cta'>
                   <Button variant='primary' onClick={onLeave}>
-                    保存并分享
+                    收好今晚，回到活动
                   </Button>
                 </View>
               </View>
@@ -506,10 +522,10 @@ export function RecapPhaseView({
       {/* Moment card CTA */}
       {socialSessionId && <MomentCardCTA socialSessionId={socialSessionId} />}
 
-      {/* Xiaoyue farewell */}
+      {/* Xiaoyue farewell — PM-locked permission line (2026-07-17) */}
       <View className='icebreaker__recap-farewell'>
         <XiaoyueChatBubble
-          content='今晚很开心！期待下次和你再见面~'
+          content='悦仔的任务完成啦，接下来的故事，你们当面接着讲～'
           pose='casual'
           tail
         />
@@ -539,10 +555,17 @@ export function RecapPhaseView({
         />
       </View>
 
-      {/* Leave button */}
-      <Button variant='primary' className='icebreaker__recap-leave-btn' onClick={onLeave}>
-        返回活动
-      </Button>
+      {/* Leave row — primary exit + connections hook at peak warmth */}
+      <View className='icebreaker__recap-leave-row'>
+        <Button variant='primary' className='icebreaker__recap-leave-btn' onClick={onLeave}>
+          回到活动详情
+        </Button>
+        {onConnectTap ? (
+          <Button variant='secondary' className='icebreaker__recap-connect-btn' onClick={onConnectTap}>
+            去认识这桌人
+          </Button>
+        ) : null}
+      </View>
     </View>
   )
 }

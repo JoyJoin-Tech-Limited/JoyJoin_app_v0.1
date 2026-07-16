@@ -1,0 +1,121 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+$sf-accent: $phase-accent-speed;
+$sf-deep: $phase-accent-speed-deep;
+
+@keyframes sf-partner-deal-in {
+  0% {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.speed-friending-hero {
+  position: relative;
+
+  &__burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  &__pairs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: $spacing-sm;
+  }
+
+  &__pair-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    border-radius: $radius-md;
+    background: $color-surface;
+    border: 2rpx solid rgba($sf-accent, 0.16);
+    animation: sf-partner-deal-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--mine {
+      border-color: rgba($sf-deep, 0.7);
+      background: rgba($sf-accent, 0.08);
+    }
+  }
+
+  &__pair-tile-avatars {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  &__pair-tile-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__pair-tile-vs {
+    @include type-caption;
+    color: $sf-deep;
+  }
+
+  &__avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48rpx;
+    height: 48rpx;
+    border-radius: $radius-circle;
+    background: rgba($sf-accent, 0.16);
+  }
+
+  &__avatar-fallback-text {
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $sf-deep;
+  }
+
+  &__pair-tile-names {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rpx;
+  }
+
+  &__pair-tile-name {
+    @include type-caption;
+    color: $color-text-primary;
+    max-width: 200rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__pair-tile-badge {
+    position: absolute;
+    top: -10rpx;
+    right: -10rpx;
+    padding: 2rpx 12rpx;
+    border-radius: $radius-pill;
+    background: $sf-deep;
+  }
+
+  &__pair-tile-badge-text {
+    @include type-micro;
+    color: $color-surface;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speed-friending-hero__pair-tile {
+    animation-duration: 150ms;
+    animation-name: none;
+    opacity: 1;
+  }
+}

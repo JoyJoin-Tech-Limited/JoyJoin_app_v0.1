@@ -1,0 +1,34 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.micro-challenge-hero {
+  position: relative;
+
+  &__aigc-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12rpx;
+  }
+
+  &__complete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    padding: 0 $spacing-lg;
+    border-radius: $radius-pill;
+    background: rgba($phase-accent-micro-deep, 0.1);
+  }
+
+  &__complete-text {
+    @include type-subheading;
+    color: $phase-accent-micro-deep;
+  }
+
+  &__burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+}

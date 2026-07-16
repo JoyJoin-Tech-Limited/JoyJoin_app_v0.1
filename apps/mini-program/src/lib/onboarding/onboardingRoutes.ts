@@ -251,9 +251,13 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
     network: 'all',
     packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
   },
+  [MINI_PROGRAM_PAGE_PATHS.squadUnboxing]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT],
+  },
   [MINI_PROGRAM_PAGE_PATHS.eventDetail]: {
     network: 'all',
-    packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
+    packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT, MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT],
   },
   [MINI_PROGRAM_PAGE_PATHS.events]: {
     network: 'all',

@@ -189,15 +189,15 @@ describe('buildCTAState', () => {
     expect(state.showCancel).toBe(false)
   })
 
-  it('ready but not everyone: primary = 已准备 ✓ with cancel', () => {
+  it('ready but not everyone: primary = 已准备 with cancel', () => {
     const state = buildCTAState(true, false, false, false)
-    expect(state.primary).toBe('已准备 ✓')
+    expect(state.primary).toBe('已准备')
     expect(state.showCancel).toBe(true)
   })
 
-  it('host, everyone ready, not last: primary = 已准备 ✓, secondary visible', () => {
+  it('host, everyone ready, not last: primary = 已准备, secondary visible', () => {
     const state = buildCTAState(true, true, true, false)
-    expect(state.primary).toBe('已准备 ✓')
+    expect(state.primary).toBe('已准备')
     expect(state.secondaryVisible).toBe(true)
   })
 

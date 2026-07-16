@@ -1,0 +1,158 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+$au-accent: $phase-accent-auction;
+$au-deep: $phase-accent-auction-deep;
+
+.auction-hero {
+  position: relative;
+
+  &__burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  &__outbid {
+    display: flex;
+    justify-content: center;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__outbid-text {
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $au-deep;
+    padding: $spacing-xs $spacing-md;
+    border-radius: $radius-pill;
+    background: rgba($au-accent, 0.14);
+  }
+
+  &__lot-wrap {
+    display: flex;
+    justify-content: center;
+  }
+
+  &__lot-front,
+  &__lot-back {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    padding: $spacing-lg $spacing-md;
+    min-width: 480rpx;
+    min-height: 260rpx;
+    border-radius: $radius-md;
+  }
+
+  &__lot-front {
+    background: rgba($au-accent, 0.12);
+    border: 2rpx solid rgba($au-accent, 0.35);
+  }
+
+  &__lot-back {
+    background: rgba($au-deep, 0.1);
+    border: 2rpx solid rgba($au-deep, 0.4);
+  }
+
+  &__lot-front-label,
+  &__lot-back-index {
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $au-deep;
+  }
+
+  &__lot-front-sub,
+  &__lot-back-teaser {
+    @include type-caption;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__lot-back-header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__lot-back-title {
+    @include type-heading;
+    color: $color-text-primary;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__high-bidder {
+    display: flex;
+    justify-content: center;
+    margin-top: $spacing-sm;
+  }
+
+  &__history {
+    margin-top: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    background: $color-surface;
+    border: 2rpx solid rgba($au-accent, 0.16);
+  }
+
+  &__history-title {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $au-deep;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__history-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8rpx 0;
+  }
+
+  &__history-name {
+    @include type-body;
+    color: $color-text-primary;
+  }
+
+  &__history-amount {
+    @include type-label;
+    font-family: $font-mono;
+    font-weight: $font-weight-semibold;
+    color: $au-deep;
+  }
+
+  &__bid-zone {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    width: 100%;
+  }
+
+  &__quick-bids {
+    display: flex;
+    gap: $spacing-sm;
+
+    > * {
+      flex: 1;
+    }
+  }
+
+  &__input {
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    border: 2rpx solid rgba($au-accent, 0.3);
+    background: $color-surface;
+    @include type-body;
+    font-family: $font-mono;
+  }
+
+  &__error {
+    @include type-caption;
+    color: $color-error;
+    text-align: center;
+  }
+}

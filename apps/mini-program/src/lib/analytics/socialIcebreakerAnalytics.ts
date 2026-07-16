@@ -28,6 +28,21 @@ type EventType =
   | 'warmup_deep_prompt_expand'
   | 'warmup_aigc_feedback_tap'
   | 'warmup_celebration_shown'
+  // PR1 flow revamp — early-end funnel + stall nudge + recap attribution.
+  | 'early_end_shown'
+  | 'early_end_confirm'
+  | 'early_end_cancel'
+  | 'stall_nudge_shown'
+  | 'stall_nudge_advance'
+  | 'stall_nudge_dismiss'
+  | 'recap_view'
+  // Gameplay interactions (audit C11)
+  | 'phase_view'
+  | 'lie_vote_cast'
+  | 'auction_bid_placed'
+  | 'dice_option_chosen'
+  | 'micro_challenge_completed'
+  | 'recap_connections_tap'
 
 /**
  * Fire-and-forget POST to /api/analytics/social-icebreaker (server accepts any

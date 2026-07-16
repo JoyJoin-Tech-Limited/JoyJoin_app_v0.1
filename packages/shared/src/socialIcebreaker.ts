@@ -484,6 +484,14 @@ export interface SocialSessionState {
   autoAdvanceEnabled?: boolean;
   /** Timestamp (ms) when auto-advance should trigger. Set when adaptive engine signals advance_ready. */
   autoAdvanceScheduledAt?: number;
+  /** What scheduled the current auto-advance fuse — drives client copy and advance attribution. */
+  advanceFuseKind?: 'all_ready' | 'stall_recovery';
+  /** Timestamp (ms) when the host was nudged about a stalled phase. */
+  stallNudgeAt?: number;
+  /** Phase whose stall automation the host dismissed; suppressed until the next phase. */
+  stallSuppressedForPhase?: SocialIcebreakerPhase;
+  /** Trigger that caused the most recent phase transition (analytics attribution). */
+  lastAdvanceTrigger?: 'host_tap' | 'auto_all_ready' | 'stall_recovery' | 'early_end_jump' | 'custom_select' | 'custom_end';
   // Per-phase data
   warmupTopics?: SocialTopic[];
   warmupTopicsMeta?: AIResponseMeta;

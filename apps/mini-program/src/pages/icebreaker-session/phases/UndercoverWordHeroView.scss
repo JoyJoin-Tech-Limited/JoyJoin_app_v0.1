@@ -1,0 +1,284 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+$uw-accent: $phase-accent-undercover;
+$uw-deep: $phase-accent-undercover-deep;
+
+// Signature wow: unmask sheen — one 45%-wide band sweeps the identity card
+// (squad deck-back shimmer pattern, transform-only, GPU-safe).
+@keyframes uw-sheen-sweep {
+  0% {
+    transform: translateX(-120%) skewX(-12deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(320%) skewX(-12deg);
+    opacity: 0;
+  }
+}
+
+.undercover-hero {
+  position: relative;
+
+  &__burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  &__word-reminder {
+    display: flex;
+    justify-content: center;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__word-front,
+  &__word-back {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    padding: $spacing-md $spacing-lg;
+    min-width: 420rpx;
+    border-radius: $radius-md;
+  }
+
+  &__word-front {
+    background: rgba($uw-accent, 0.12);
+    border: 2rpx solid rgba($uw-accent, 0.35);
+  }
+
+  &__word-front-title {
+    @include type-subheading;
+    color: $color-text-primary;
+  }
+
+  &__word-front-hint {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__word-back {
+    background: rgba($uw-accent, 0.1);
+    border: 2rpx solid rgba($uw-deep, 0.45);
+
+    &--undercover {
+      background: rgba($color-error, 0.08);
+      border-color: rgba($color-error, 0.35);
+    }
+  }
+
+  &__word-back-word {
+    @include type-headline;
+    color: $color-text-primary;
+  }
+
+  &__word-back-pill {
+    padding: 4rpx $spacing-md;
+    border-radius: $radius-pill;
+    background: rgba($uw-deep, 0.14);
+
+    &--undercover {
+      background: rgba($color-error, 0.14);
+    }
+  }
+
+  &__word-back-pill-text {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $uw-deep;
+  }
+
+  &__word-back-pill--undercover &__word-back-pill-text {
+    color: $color-error;
+  }
+
+  &__word-back-hint {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__identity-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: $radius-md;
+    border: 2rpx solid rgba($uw-deep, 0.35);
+    background: $color-surface;
+  }
+
+  &__sheen {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 45%;
+    background: linear-gradient(90deg, transparent, rgba($uw-accent, 0.22), transparent);
+    animation: uw-sheen-sweep 450ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+    pointer-events: none;
+  }
+
+  &__vote-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+    padding: $spacing-md;
+  }
+
+  &__vote-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12rpx $spacing-sm;
+    border-radius: $radius-md;
+    background: rgba($uw-accent, 0.08);
+  }
+
+  &__vote-name {
+    @include type-body;
+    color: $color-text-primary;
+  }
+
+  &__vote-count {
+    @include type-label;
+    font-family: $font-mono;
+    font-weight: $font-weight-semibold;
+    color: $uw-deep;
+  }
+
+  &__targets {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__target {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    background: $color-surface;
+    border: 2rpx solid rgba($uw-accent, 0.18);
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+
+    &--selected {
+      border-color: rgba($uw-deep, 0.75);
+      box-shadow: 0 0 20rpx rgba($uw-accent, 0.3);
+    }
+  }
+
+  &__target-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: $radius-circle;
+    background: rgba($uw-accent, 0.18);
+    flex-shrink: 0;
+  }
+
+  &__target-avatar-text {
+    @include type-subheading;
+    color: $uw-deep;
+  }
+
+  &__target-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+  }
+
+  &__target-name {
+    @include type-body-emphasis;
+    color: $color-text-primary;
+  }
+
+  &__target-descs {
+    @include type-caption;
+    color: $color-text-secondary;
+    line-height: 1.4;
+  }
+
+  &__target-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: $radius-circle;
+    background: $uw-deep;
+    flex-shrink: 0;
+  }
+
+  &__target-check-text {
+    @include type-label;
+    color: $color-surface;
+  }
+
+  &__desc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10rpx;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__desc-item {
+    padding: 14rpx $spacing-sm;
+    border-radius: $radius-md;
+    background: rgba($uw-accent, 0.08);
+  }
+
+  &__desc-name {
+    @include type-caption;
+    color: $color-text-secondary;
+    margin-bottom: 2rpx;
+  }
+
+  &__desc-text {
+    @include type-body;
+    color: $color-text-primary;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__reactions {
+    display: flex;
+    justify-content: center;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__input {
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    border: 2rpx solid rgba($uw-accent, 0.3);
+    background: $color-surface;
+    @include type-body;
+    transition: box-shadow 200ms ease;
+
+    &--focused {
+      box-shadow: 0 0 20rpx rgba($uw-accent, 0.35);
+    }
+  }
+
+  &__error {
+    @include type-caption;
+    display: block;
+    margin-top: $spacing-sm;
+    color: $color-error;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .undercover-hero__sheen {
+    animation: none;
+    opacity: 0;
+  }
+}

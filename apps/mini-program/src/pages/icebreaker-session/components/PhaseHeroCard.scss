@@ -1,0 +1,18 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+@use '../styles/phase-hero-card' as *;
+@use '../styles/phase-motion' as *;
+
+.phase-hero-card {
+  @include phase-hero-card-frame;
+
+  &__art {
+    width: 100%;
+    height: auto;
+    border-radius: $radius-md;
+    margin-bottom: $spacing-md;
+  }
+}
+
+@include phase-hero-card-parts;
+@include phase-hero-motion-parts;

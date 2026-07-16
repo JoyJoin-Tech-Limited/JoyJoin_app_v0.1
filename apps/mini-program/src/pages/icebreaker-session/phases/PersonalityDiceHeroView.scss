@@ -1,0 +1,309 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+$pd-accent: $phase-accent-dice;
+$pd-deep: $phase-accent-dice-deep;
+
+// Signature wow: dice settle — chosen dare lands with a squash.
+@keyframes pd-dice-settle {
+  0% {
+    transform: translateY(-12rpx) scale(1.06);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pd-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-12rpx); }
+  75% { transform: translateX(12rpx); }
+}
+
+.personality-dice-hero {
+  position: relative;
+
+  &__burst {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  &__card {
+    display: flex;
+    justify-content: center;
+
+    &--shake {
+      animation: pd-shake 400ms ease-in-out;
+    }
+  }
+
+  &__dice-face,
+  &__challenge-face {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-lg $spacing-md;
+    min-width: 480rpx;
+    border-radius: $radius-md;
+  }
+
+  &__dice-face {
+    background: rgba($pd-accent, 0.1);
+    border: 2rpx solid rgba($pd-accent, 0.3);
+  }
+
+  &__dice-title {
+    @include type-title;
+    color: $color-text-primary;
+  }
+
+  &__dice-desc {
+    @include type-body;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__challenge-face {
+    background: rgba($pd-deep, 0.08);
+    border: 2rpx solid rgba($pd-deep, 0.4);
+  }
+
+  &__challenge-player {
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $pd-deep;
+  }
+
+  &__challenge-title {
+    @include type-heading;
+    color: $color-text-primary;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__challenge-body {
+    @include type-body;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__challenge-pass {
+    @include type-caption;
+    color: $pd-deep;
+  }
+
+  &__helper {
+    @include type-body;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__choose-area {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__choose-header {
+    @include type-subheading;
+    color: $color-text-primary;
+    text-align: center;
+  }
+
+  &__choose-cards {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__choose-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    background: $color-surface;
+    border: 2rpx solid rgba($pd-accent, 0.2);
+    transition: border-color 0.15s ease, opacity 0.15s ease;
+
+    &--selected {
+      border-color: rgba($pd-deep, 0.75);
+      background: rgba($pd-accent, 0.08);
+    }
+
+    &--settle {
+      animation: pd-dice-settle 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    &--dimmed {
+      opacity: 0.55;
+    }
+
+    &--loading {
+      pointer-events: none;
+    }
+  }
+
+  &__choose-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__choose-card-check {
+    @include type-label;
+    font-weight: $font-weight-bold;
+    color: $pd-deep;
+  }
+
+  &__choose-card-emoji {
+    display: flex;
+    justify-content: center;
+  }
+
+  &__choose-card-title {
+    @include type-body-emphasis;
+    color: $color-text-primary;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__choose-card-body {
+    @include type-body;
+    color: $color-text-secondary;
+  }
+
+  &__choose-card-pass {
+    @include type-caption;
+    color: $pd-deep;
+  }
+
+  &__choose-card-spinner {
+    position: absolute;
+    top: $spacing-sm;
+    right: $spacing-sm;
+    width: 32rpx;
+    height: 32rpx;
+    border-radius: $radius-circle;
+    border: 4rpx solid rgba($pd-accent, 0.3);
+    border-top-color: $pd-deep;
+    animation: pd-spinner 0.8s linear infinite;
+  }
+
+  &__swipe-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-md;
+  }
+
+  &__swipe-hint {
+    @include type-subheading;
+    color: $color-text-primary;
+  }
+
+  &__swipe-subhint {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__status-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+    padding: $spacing-sm $spacing-lg;
+    border-radius: $radius-pill;
+
+    &--accept {
+      background: rgba($pd-accent, 0.14);
+    }
+
+    &--pass {
+      background: rgba($color-text-primary, 0.06);
+    }
+  }
+
+  &__status-badge-text {
+    @include type-subheading;
+    color: $pd-deep;
+  }
+
+  &__reaction-row {
+    display: flex;
+    justify-content: center;
+  }
+
+  &__pass-reveal {
+    margin-top: $spacing-sm;
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    background: rgba($pd-accent, 0.1);
+    border: 2rpx dashed rgba($pd-deep, 0.4);
+  }
+
+  &__pass-reveal-label {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $pd-deep;
+    margin-bottom: 4rpx;
+  }
+
+  &__pass-reveal-text {
+    @include type-body;
+    color: $color-text-primary;
+  }
+
+  &__summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-md;
+    background: rgba($pd-accent, 0.06);
+  }
+
+  &__summary-name {
+    @include type-body;
+    color: $color-text-primary;
+  }
+
+  &__summary-tag {
+    @include type-caption;
+    padding: 2rpx $spacing-sm;
+    border-radius: $radius-pill;
+
+    &--completed {
+      background: rgba($pd-deep, 0.14);
+      color: $pd-deep;
+      font-weight: $font-weight-semibold;
+    }
+
+    &--passed {
+      background: rgba($color-text-primary, 0.06);
+      color: $color-text-secondary;
+    }
+  }
+}
+
+@keyframes pd-spinner {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .personality-dice-hero__choose-card--settle,
+  .personality-dice-hero__card--shake {
+    animation: none;
+  }
+}

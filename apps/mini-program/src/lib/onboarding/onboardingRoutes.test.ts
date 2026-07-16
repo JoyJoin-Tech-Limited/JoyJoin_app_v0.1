@@ -106,9 +106,13 @@ describe('mini-program onboarding routes', () => {
         network: 'all',
         packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
       },
+      'pages/squad-unboxing/index': {
+        network: 'all',
+        packages: [MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT],
+      },
       'pages/event-detail/index': {
         network: 'all',
-        packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
+        packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT, MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT],
       },
       'pages/events/index': {
         network: 'all',

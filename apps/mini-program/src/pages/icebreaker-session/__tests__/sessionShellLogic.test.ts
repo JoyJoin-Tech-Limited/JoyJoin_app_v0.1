@@ -47,11 +47,22 @@ describe('resolveHostMenuItems', () => {
     expect(items[1].label).toBe('悦仔，给点建议？')
   })
 
-  it('mid-session phases: suggestion only (tier locked outside waiting/warmup)', () => {
-    for (const phase of ['micro_challenge', 'lie_detective', 'auction', 'personality_dice', 'speed_friending', 'phase_selection', 'mini_script'] as const) {
+  it('mid-session playable phases: suggestion first, early-end last', () => {
+    for (const phase of ['micro_challenge', 'lie_detective', 'auction', 'personality_dice', 'speed_friending', 'mini_script'] as const) {
       const items = resolveHostMenuItems({ phase, isHost: true, tier: 'glow', vibe: 'deep_chat' })
-      expect(items.map((i) => i.id)).toEqual(['suggestion'])
+      expect(items.map((i) => i.id)).toEqual(['suggestion', 'early-end'])
+      expect(items[1].label).toBe('提前进入总结')
     }
+  })
+
+  it('phase_selection: suggestion only (custom end lives in the picker)', () => {
+    const items = resolveHostMenuItems({ phase: 'phase_selection', isHost: true, tier: 'custom', vibe: undefined })
+    expect(items.map((i) => i.id)).toEqual(['suggestion'])
+  })
+
+  it('warmup: early-end hidden (nothing to summarize)', () => {
+    const items = resolveHostMenuItems({ phase: 'warmup', isHost: true, tier: 'glow', vibe: 'deep_chat' })
+    expect(items.map((i) => i.id)).not.toContain('early-end')
   })
 
   it('recap/ended: no items (suggestion hidden, tier locked)', () => {

@@ -671,6 +671,11 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     return res.status(403).json({ error: 'Only the host can change topics' });
   }
 
+  // Persist the mood pick BEFORE generation so a failed first attempt keeps
+  // the client's 重试 path alive (it re-fires /topics with the stored mood).
+  state.selectedMood = mood;
+  await updateSession(socialSessionId, state);
+
   try {
     const participants = await listParticipants(socialSessionId);
     const topicResult = await generateWarmupTopics({
@@ -684,7 +689,6 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
 
     state.warmupTopics = topicResult.data;
     state.warmupTopicsMeta = topicResult.meta;
-    state.selectedMood = mood;
     state.currentTopicIndex = 0;
     state.warmupReadyUserIds = [];
     // Single-test bot attendees default to ready on the fresh topic set.

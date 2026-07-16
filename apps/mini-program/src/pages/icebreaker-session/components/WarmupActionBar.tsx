@@ -33,7 +33,7 @@ export function WarmupActionBar({
   const isLoading = isUpdatingReady || isAdvancingTopic || isAdvancing
 
   const handlePrimary = () => {
-    if (isLoading || ctaState.primary === '已准备 ✓') return
+    if (isLoading || ctaState.primary === '已准备') return
     haptics('medium')
     if (ctaState.primary === '本轮结束') {
       onAdvance()
@@ -59,14 +59,14 @@ export function WarmupActionBar({
       key={ctaState.primary}
       variant={ctaState.primary === '我准备好了' || ctaState.primary === '本轮结束' ? 'primary' : 'secondary'}
       className={`warmup-action__primary ${
-        ctaState.primary === '已准备 ✓' ? 'warmup-action__primary--ready' : ''
+        ctaState.primary === '已准备' ? 'warmup-action__primary--ready' : ''
       }`}
       onClick={handlePrimary}
       disabled={isLoading}
       loading={isLoading}
     >
       <View className='warmup-action__primary-inner'>
-        {ctaState.primary === '已准备 ✓' && (
+        {ctaState.primary === '已准备' && (
           <JoyJoinIcon emoji='✓' tier='status' size={24} />
         )}
         <Text className='warmup-action__primary-text'>{ctaState.primary}</Text>

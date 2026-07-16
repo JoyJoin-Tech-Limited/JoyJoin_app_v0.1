@@ -1,0 +1,233 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+$qb-accent: $phase-accent-quip;
+$qb-deep: $phase-accent-quip-deep;
+
+// Signature wow: punchline pop — accent burst ring behind the winning quip.
+@keyframes qb-punchline-ring {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+.quip-battle-hero {
+  position: relative;
+
+  &__burst {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  &__prompts,
+  &__results {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+  }
+
+  &__prompt-card,
+  &__result-card {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    background: $color-surface;
+    border: 2rpx solid rgba($qb-accent, 0.18);
+  }
+
+  &__prompt-label {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $qb-deep;
+  }
+
+  &__prompt-text {
+    @include type-body-emphasis;
+    color: $color-text-primary;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__input {
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    border: 2rpx solid rgba($qb-accent, 0.25);
+    background: $color-surface;
+    @include type-body;
+  }
+
+  &__char-count {
+    @include type-micro;
+    align-self: flex-end;
+  }
+
+  &__stack {
+    display: flex;
+    justify-content: center;
+  }
+
+  &__stack-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-lg $spacing-md;
+    border-radius: $radius-md;
+    background: $color-surface;
+    border: 2rpx solid rgba($qb-accent, 0.3);
+  }
+
+  &__stack-prompt {
+    @include type-caption;
+    color: $qb-deep;
+    text-align: center;
+  }
+
+  &__stack-author {
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__stack-answer {
+    @include type-heading;
+    color: $color-text-primary;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__stack-done {
+    @include type-body;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__answer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+    padding: $spacing-sm;
+    border-radius: $radius-md;
+
+    &--winner {
+      background: rgba($qb-accent, 0.12);
+      border: 2rpx solid rgba($qb-deep, 0.5);
+    }
+  }
+
+  &__answer-ring {
+    position: absolute;
+    inset: -8rpx;
+    border-radius: $radius-md;
+    border: 4rpx solid rgba($qb-deep, 0.6);
+    animation: qb-punchline-ring 400ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+    pointer-events: none;
+  }
+
+  &__answer-author {
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $qb-deep;
+  }
+
+  &__answer-text {
+    @include type-body;
+    color: $color-text-primary;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__winner-banner {
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $qb-deep;
+    margin-top: $spacing-xs;
+  }
+
+  &__best-of {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+  }
+
+  &__best-of-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  &__best-of-title {
+    @include type-subheading;
+    color: $color-text-primary;
+  }
+
+  &__best-of-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    background: rgba($qb-accent, 0.08);
+    border: 2rpx solid rgba($qb-accent, 0.2);
+  }
+
+  &__best-of-rank {
+    @include type-caption;
+    font-weight: $font-weight-bold;
+    color: $qb-deep;
+  }
+
+  &__best-of-author {
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__best-of-text {
+    @include type-body;
+    color: $color-text-primary;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__best-of-votes {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__reaction-row {
+    display: flex;
+    justify-content: center;
+    margin-top: $spacing-md;
+  }
+
+  &__error {
+    @include type-caption;
+    display: block;
+    margin-top: $spacing-sm;
+    color: $color-error;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quip-battle-hero__answer-ring {
+    animation: none;
+    opacity: 0;
+  }
+}

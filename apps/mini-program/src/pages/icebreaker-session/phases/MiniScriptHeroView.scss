@@ -1,0 +1,302 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+$ms-accent: $phase-accent-miniscript;
+$ms-deep: $phase-accent-miniscript-deep;
+
+// Signature wow: curtain rise — two panels part, act title fades up.
+@keyframes ms-curtain-left {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(-100%); opacity: 0; }
+}
+@keyframes ms-curtain-right {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+@keyframes ms-curtain-title {
+  0% { opacity: 0; transform: translateY(16rpx); }
+  30% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 1; }
+}
+
+.miniscript-hero {
+  position: relative;
+
+  &__burst {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  &__curtain {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  &__curtain-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    background: rgba($ms-deep, 0.92);
+
+    &--left {
+      left: 0;
+      animation: ms-curtain-left 500ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+    }
+
+    &--right {
+      right: 0;
+      animation: ms-curtain-right 500ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+    }
+  }
+
+  &__curtain-title {
+    @include type-heading;
+    color: $color-surface;
+    z-index: 31;
+    animation: ms-curtain-title 500ms ease-out 300ms both;
+    text-align: center;
+    padding: 0 $spacing-lg;
+  }
+
+  &__stepper {
+    display: flex;
+    justify-content: center;
+    gap: $spacing-sm;
+    margin: $spacing-sm 0;
+  }
+
+  &__stepper-item {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  &__stepper-dot {
+    width: 20rpx;
+    height: 20rpx;
+    border-radius: $radius-circle;
+    background: rgba($color-text-primary, 0.12);
+    transition: background 0.3s ease;
+
+    &--active {
+      background: $ms-accent;
+    }
+
+    &--past {
+      background: rgba($ms-accent, 0.45);
+    }
+  }
+
+  &__stepper-label {
+    @include type-caption;
+    color: $color-text-muted;
+
+    &--active {
+      color: $ms-deep;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  &__role-flip {
+    display: flex;
+    justify-content: center;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__role-front,
+  &__role-back {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-lg $spacing-md;
+    min-width: 480rpx;
+    border-radius: $radius-md;
+  }
+
+  &__role-front {
+    background: rgba($ms-accent, 0.1);
+    border: 2rpx solid rgba($ms-accent, 0.3);
+  }
+
+  &__role-front-label {
+    @include type-subheading;
+    color: $color-text-primary;
+  }
+
+  &__role-front-hint {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__role-back {
+    background: rgba($ms-deep, 0.08);
+    border: 2rpx solid rgba($ms-deep, 0.4);
+  }
+
+  &__role-back-title {
+    @include type-heading;
+    color: $ms-deep;
+  }
+
+  &__role-back-line {
+    @include type-body;
+    color: $color-text-primary;
+    text-align: center;
+
+    &--secret {
+      color: $ms-deep;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  &__premise {
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    background: rgba($ms-accent, 0.08);
+  }
+
+  &__premise-label {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $ms-deep;
+    margin-bottom: 4rpx;
+  }
+
+  &__premise-text {
+    @include type-body;
+    color: $color-text-primary;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__section {
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    background: rgba($ms-accent, 0.06);
+    margin-bottom: $spacing-sm;
+  }
+
+  &__section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__section-title {
+    @include type-body-emphasis;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__section-toggle {
+    @include type-caption;
+    color: $color-text-muted;
+  }
+
+  &__clue {
+    position: relative;
+    padding: $spacing-xs 0;
+  }
+
+  &__clue-text,
+  &__beat {
+    @include type-body;
+    color: $color-text-primary;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__clue-new {
+    @include type-micro;
+    padding: 2rpx 12rpx;
+    border-radius: $radius-pill;
+    background: $ms-accent;
+    color: $color-surface;
+    margin-left: $spacing-xs;
+  }
+
+  &__secret {
+    @include type-body;
+    color: $ms-deep;
+    font-weight: $font-weight-semibold;
+    margin-top: $spacing-xs;
+    padding-top: $spacing-xs;
+    border-top: 1rpx dashed rgba($ms-deep, 0.3);
+  }
+
+  &__reactions {
+    display: flex;
+    justify-content: center;
+    margin: $spacing-sm 0;
+  }
+
+  &__vote-field {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__vote-label {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__vote-input {
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    border: 2rpx solid rgba($ms-accent, 0.3);
+    background: $color-surface;
+    @include type-body;
+  }
+
+  &__vote-done {
+    @include type-caption;
+    color: $ms-deep;
+  }
+
+  &__vote-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8rpx 0;
+  }
+
+  &__vote-count {
+    @include type-label;
+    font-family: $font-mono;
+    color: $ms-deep;
+  }
+
+  &__vote-total,
+  &__confession {
+    @include type-caption;
+    color: $color-text-secondary;
+    margin-top: $spacing-xs;
+  }
+
+  &__confession {
+    color: $ms-deep;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .miniscript-hero__curtain-panel {
+    display: none;
+  }
+
+  .miniscript-hero__curtain-title {
+    animation-duration: 150ms;
+  }
+}

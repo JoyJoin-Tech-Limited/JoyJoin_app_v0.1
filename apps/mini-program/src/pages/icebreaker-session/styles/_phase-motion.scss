@@ -1,0 +1,62 @@
+// ─── PhaseHeroCard shared motion vocabulary (PR2/PR3 revamp) ────────────────
+// Locked rules: transform/opacity only; entrance easing
+// cubic-bezier(0.22, 1, 0.36, 1); ≤500ms emotional reveals; no permanent
+// will-change; ONE reduced-motion block collapses everything to a 150ms
+// opacity crossfade.
+
+$motion-entrance-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+@keyframes phase-hero-deal-in {
+  0% {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes phase-hero-complete-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@mixin phase-hero-motion-parts {
+  .phase-hero-card {
+    &--deal-in {
+      animation: phase-hero-deal-in 400ms $motion-entrance-ease both;
+    }
+
+    &__complete-badge {
+      animation: phase-hero-complete-pop 320ms $motion-entrance-ease both;
+    }
+  }
+
+  // ONE RM block for the whole phase-card system: motion collapses to a
+  // 150ms opacity crossfade.
+  @media (prefers-reduced-motion: reduce) {
+    .phase-hero-card {
+      &--deal-in,
+      &__complete-badge {
+        animation-duration: 150ms;
+        animation-timing-function: ease-out;
+      }
+
+      &--deal-in {
+        animation-name: none;
+        opacity: 1;
+      }
+    }
+  }
+}

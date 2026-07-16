@@ -27,16 +27,8 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import {
-  AuctionPhaseView,
   FallbackPhaseView,
-  LieDetectivePhaseView,
-  MicroChallengePhaseView,
-  PersonalityDicePhaseView,
-  QuipBattlePhaseView,
-  UndercoverWordPhaseView,
-  GroupMirrorPhaseView,
   RecapPhaseView,
-  SpeedFriendingPhaseView,
   type SessionPhase,
   WarmupPhaseView,
 } from './phaseViews'
@@ -44,8 +36,17 @@ import { apiVibeToClient, VIBE_TO_API, type VibeId } from '../../lib/vibeMapping
 import IcebreakerTierSelector from './components/IcebreakerTierSelector'
 import IcebreakerTierSheet, { type TierSheetSelection } from './components/IcebreakerTierSheet'
 import CustomModeSection from './components/CustomModeSection'
+import { AdvanceFuseBanner } from './components/AdvanceFuseBanner'
+import { MicroChallengeHeroView } from './phases/MicroChallengeHeroView'
+import { LieDetectiveHeroView } from './phases/LieDetectiveHeroView'
+import { PersonalityDiceHeroView } from './phases/PersonalityDiceHeroView'
+import { SpeedFriendingHeroView } from './phases/SpeedFriendingHeroView'
+import { QuipBattleHeroView } from './phases/QuipBattleHeroView'
+import { UndercoverWordHeroView } from './phases/UndercoverWordHeroView'
+import { GroupMirrorHeroView } from './phases/GroupMirrorHeroView'
+import { AuctionHeroView } from './phases/AuctionHeroView'
+import { MiniScriptHeroView } from './phases/MiniScriptHeroView'
 import { PhaseIntroOverlay } from './overlays/PhaseIntroOverlay'
-import { MiniScriptPhaseView } from './phases/MiniScriptPhaseView'
 import { IcebreakerToolSelector } from './overlays/IcebreakerToolSelector'
 import { MiniScriptConfigModal } from './overlays/MiniScriptConfigModal'
 import BonusGateOverlay from './overlays/BonusGateOverlay'
@@ -85,6 +86,10 @@ function getPhaseToastText(phase: string): ReactNode {
 
 // ─── Component ────────────────────────────────────────────────────
 
+// F1: hoisted — a stable reference keeps usePreloadCdnIcons' effect from
+// re-firing 31 parallel getImageInfo bridge calls on every render.
+const ICEBREAKER_PRELOAD_ASSETS = [...SPRITE_SHEET_ASSETS, ...ICEBREAKER_PHASE_EMBLEM_ASSETS]
+
 export default function IcebreakerSessionPage() {
   const router = useRouter()
   const routeSessionId = router.params.sessionId ?? ''
@@ -121,7 +126,7 @@ export default function IcebreakerSessionPage() {
 
   // Preload CDN-only assets in parallel with session bootstrap.
   // Phase emblems, reactions, reveals, and achievements are CDN tiers.
-  usePreloadCdnIcons([...SPRITE_SHEET_ASSETS, ...ICEBREAKER_PHASE_EMBLEM_ASSETS])
+  usePreloadCdnIcons(ICEBREAKER_PRELOAD_ASSETS)
 
   const {
     data: eventSession,
@@ -235,6 +240,9 @@ export default function IcebreakerSessionPage() {
     enabled: !!socialSessionId && !authLoading,
     refetchInterval: pendingAction ? false : POLL_SOCIAL_SESSION_MS,
     staleTime: 0,
+    // F3: nothing reads isFetching — don't re-render the full tree on every
+    // fetch start/settle (2 wasted reconciliations per 3s poll).
+    notifyOnChangeProps: ['data', 'isError', 'error'],
   })
 
   const session = useMemo(() => {
@@ -273,19 +281,6 @@ export default function IcebreakerSessionPage() {
     }
     syncLostRef.current = syncLost
   }, [syncLost])
-
-  // CSS custom properties for challenge-card backgrounds.
-  // Primary rendering is via <ChallengeCardBgImage> inside each card.
-  // These vars act as a secondary fallback if the Image component fails.
-  const bgStyles = useMemo(() => {
-    const p = (path: string) => `url(${cdnAsset(path)})`
-    const phaseBgMap: Record<string, React.CSSProperties> = {
-      undercover_word: { '--bg-undercover-word': p('/assets/lovart/icebreaker/backgrounds/bg-undercover-word.jpg') } as React.CSSProperties,
-      group_mirror: { '--bg-group-mirror': p('/assets/lovart/icebreaker/backgrounds/bg-group-mirror.jpg') } as React.CSSProperties,
-      quip_battle: { '--bg-quip-battle': p('/assets/lovart/icebreaker/backgrounds/bg-quip-battle.jpg') } as React.CSSProperties,
-    }
-    return phaseBgMap[phase]
-  }, [phase])
 
   if (session?.eventTier === 'custom' && (phase === 'recap' || phase === 'ended')) {
     customSessionCompletedRef.current = true
@@ -332,6 +327,59 @@ export default function IcebreakerSessionPage() {
     }
     prevPhaseRef.current = phase
   }, [phase, socialSessionId, session, playerCount])
+
+  // Phase impression analytics (audit C11): one phase_view per phase entry.
+  const phaseViewTrackedRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!session || phase === 'waiting' || phaseViewTrackedRef.current === phase) {
+      return
+    }
+    phaseViewTrackedRef.current = phase
+    socialIcebreakerAnalytics.track(
+      'phase_view',
+      socialSessionId ?? undefined,
+      session.icebreakerSessionId,
+      phase,
+      { playerCount },
+    )
+  }, [phase, session, socialSessionId, playerCount])
+
+  // PR1 flow revamp — stall nudge impression (host only; once per nudge).
+  const stallNudgeShownForRef = useRef<number | null>(null)
+  useEffect(() => {
+    const nudgeAt = session?.stallNudgeAt
+    if (!nudgeAt || !isHost || stallNudgeShownForRef.current === nudgeAt) {
+      return
+    }
+    stallNudgeShownForRef.current = nudgeAt
+    socialIcebreakerAnalytics.track(
+      'stall_nudge_shown',
+      socialSessionId ?? undefined,
+      session?.icebreakerSessionId,
+      session?.currentPhase,
+      { playerCount },
+    )
+  }, [session?.stallNudgeAt, isHost, socialSessionId, session?.icebreakerSessionId, session?.currentPhase, playerCount])
+
+  // PR1 flow revamp — recap_view with source attribution (natural vs early-end).
+  const recapTrackedRef = useRef(false)
+  useEffect(() => {
+    if ((phase !== 'recap' && phase !== 'ended') || !session || recapTrackedRef.current) {
+      return
+    }
+    recapTrackedRef.current = true
+    socialIcebreakerAnalytics.track(
+      'recap_view',
+      socialSessionId ?? undefined,
+      session.icebreakerSessionId,
+      phase,
+      {
+        source: session.lastAdvanceTrigger === 'early_end_jump' ? 'early_end' : 'natural',
+        phasesCompleted: (session.completedPhases ?? []).filter((p) => p !== 'phase_selection').length,
+        playerCount,
+      },
+    )
+  }, [phase, session, socialSessionId, playerCount])
 
   // Keep latest session metadata in refs for unmount-time abandonment tracking.
   const customSessionMetaRef = useRef({
@@ -490,6 +538,39 @@ export default function IcebreakerSessionPage() {
       currentPhase: session.currentPhase,
     })
   }, [performSocialAction, session, socialSessionId])
+
+  // PR1 flow revamp — stall nudge: host explicitly skips stragglers (force)
+  // or suppresses stall automation for the rest of the phase.
+  const handleStallAdvance = useCallback(() => {
+    if (!session) {
+      return
+    }
+    socialIcebreakerAnalytics.track(
+      'stall_nudge_advance',
+      socialSessionId ?? undefined,
+      session.icebreakerSessionId,
+      session.currentPhase,
+      { playerCount },
+    )
+    void performSocialAction('advance', '/advance', {
+      currentPhase: session.currentPhase,
+      force: true,
+    })
+  }, [performSocialAction, session, socialSessionId, playerCount])
+
+  const handleStallDismiss = useCallback(() => {
+    if (!session) {
+      return
+    }
+    socialIcebreakerAnalytics.track(
+      'stall_nudge_dismiss',
+      socialSessionId ?? undefined,
+      session.icebreakerSessionId,
+      session.currentPhase,
+      { playerCount },
+    )
+    void performSocialAction('stall-dismiss', '/stall-nudge/dismiss', {})
+  }, [performSocialAction, session, socialSessionId, playerCount])
 
   const handleSelectCustomPhase = useCallback(
     async (selectedPhase: SocialIcebreakerPhase) => {
@@ -715,8 +796,15 @@ export default function IcebreakerSessionPage() {
   }, [pendingTierSwitch, handleAcceptCustomConfirm, handleDismissCustomConfirm])
 
   const handleCompleteChallenge = useCallback(() => {
+    socialIcebreakerAnalytics.track(
+      'micro_challenge_completed',
+      socialSessionId ?? undefined,
+      session?.icebreakerSessionId,
+      'micro_challenge',
+      { playerCount },
+    )
     void performSocialAction('micro-complete', '/micro-challenge/complete', {})
-  }, [performSocialAction])
+  }, [performSocialAction, socialSessionId, session?.icebreakerSessionId, playerCount])
 
   const handleNextSpeedFriendingRound = useCallback(() => {
     void performSocialAction('speed-next', '/speed-friending/next-round', {})
@@ -748,6 +836,13 @@ export default function IcebreakerSessionPage() {
         return
       }
 
+      socialIcebreakerAnalytics.track(
+        'lie_vote_cast',
+        socialSessionId ?? undefined,
+        session?.icebreakerSessionId,
+        'lie_detective',
+        { playerCount },
+      )
       void performSocialAction('lie-vote', '/lie-detective/vote', {
         targetUserId: targetPlayer.userId,
         guessedStatementIndex: statementIndex,
@@ -775,12 +870,19 @@ export default function IcebreakerSessionPage() {
   }, [performSocialAction])
 
   const handleChooseDiceOption = useCallback((optionIndex: number) => {
+    socialIcebreakerAnalytics.track(
+      'dice_option_chosen',
+      socialSessionId ?? undefined,
+      session?.icebreakerSessionId,
+      'personality_dice',
+      { optionIndex, playerCount },
+    )
     void performSocialAction('dice-choose', '/personality-dice/choose', {
       userId: currentUserId,
       optionIndex,
       operationId: `${currentUserId}-choose-${Date.now()}`,
     })
-  }, [performSocialAction, currentUserId])
+  }, [performSocialAction, currentUserId, socialSessionId, session?.icebreakerSessionId, playerCount])
 
   const handleGenerateAuctionLots = useCallback(() => {
     void performSocialAction('auction-gen', '/auction/generate-lots', {})
@@ -788,9 +890,16 @@ export default function IcebreakerSessionPage() {
 
   const handleAuctionBid = useCallback(
     (amount: number) => {
+      socialIcebreakerAnalytics.track(
+        'auction_bid_placed',
+        socialSessionId ?? undefined,
+        session?.icebreakerSessionId,
+        'auction',
+        { amount, playerCount },
+      )
       void performSocialAction('auction-bid', '/auction/bid', { amount })
     },
-    [performSocialAction],
+    [performSocialAction, socialSessionId, session?.icebreakerSessionId, playerCount],
   )
 
   const handleCloseAuctionLot = useCallback(() => {
@@ -856,11 +965,46 @@ export default function IcebreakerSessionPage() {
         setIsTierSheetOpen(true)
       } else if (selected?.id === 'suggestion') {
         handleRequestAdaptiveSuggestion()
+      } else if (selected?.id === 'early-end') {
+        // PM-locked copy (2026-07-17): next-chapter framing, neutral tone,
+        // consequence stated plainly. Analytics: shown/confirm/cancel funnel.
+        socialIcebreakerAnalytics.track(
+          'early_end_shown',
+          socialSessionId ?? undefined,
+          session?.icebreakerSessionId,
+          phase,
+          { playerCount },
+        )
+        const modalRes = await Taro.showModal({
+          title: '提前进入总结？',
+          content: '全桌会一起进入今晚的回顾，当前环节将跳过，之后不能再回来。',
+          confirmText: '进入总结',
+          cancelText: '再玩一会儿',
+        })
+        if (modalRes.confirm) {
+          haptics('medium')
+          socialIcebreakerAnalytics.track(
+            'early_end_confirm',
+            socialSessionId ?? undefined,
+            session?.icebreakerSessionId,
+            phase,
+            { playerCount },
+          )
+          void performSocialAction('early-end', '/early-end', {})
+        } else {
+          socialIcebreakerAnalytics.track(
+            'early_end_cancel',
+            socialSessionId ?? undefined,
+            session?.icebreakerSessionId,
+            phase,
+            { playerCount },
+          )
+        }
       }
     } catch {
       // User cancelled the action sheet
     }
-  }, [isHost, hostMenuItems, socialSessionId, session?.icebreakerSessionId, phase, handleRequestAdaptiveSuggestion])
+  }, [isHost, hostMenuItems, socialSessionId, session?.icebreakerSessionId, phase, handleRequestAdaptiveSuggestion, performSocialAction, playerCount])
 
   const handleAigcFeedbackTap = useCallback(
     (location: 'footer' | 'suggestion' | 'card') => {
@@ -923,6 +1067,19 @@ export default function IcebreakerSessionPage() {
     })
   }, [])
 
+  // Post-session hook: connections tab at peak warmth (audit C10).
+  const handleConnectTap = useCallback(() => {
+    haptics('light')
+    socialIcebreakerAnalytics.track(
+      'recap_connections_tap',
+      socialSessionId ?? undefined,
+      session?.icebreakerSessionId,
+      phase,
+      { playerCount },
+    )
+    Taro.switchTab({ url: '/pages/connections/index' })
+  }, [socialSessionId, session?.icebreakerSessionId, phase, playerCount])
+
   const submitMiniScriptGenerate = useCallback(
     async (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[]; lite?: boolean }) => {
       if (!socialSessionId || !session) {
@@ -971,6 +1128,34 @@ export default function IcebreakerSessionPage() {
 
   const isBootstrapping = !!resolvedSessionId && !socialSessionId && pendingAction === 'start' && !session
 
+  // Mid-session expiry: a 410 on the live poll is NOT a sync blip — show the
+  // terminal surface instead of the infinite reconnect toast.
+  const sessionExpired =
+    !!session &&
+    !!socialSessionQuery.error &&
+    (socialSessionQuery.error as { statusCode?: number }).statusCode === 410
+
+  if (sessionExpired) {
+    return (
+      <View className='icebreaker icebreaker--error'>
+        <View className='icebreaker__error' role='alert'>
+          <Image
+            className='icebreaker__error-hero'
+            src={cdnAsset('/assets/lovart/lovart-generic-empty.webp')}
+            mode='widthFix'
+            lazyLoad
+          />
+          <Text className='icebreaker__error-text'>
+            这场破冰已经结束了，回忆都帮你留好啦
+          </Text>
+          <Button variant='primary' className='icebreaker__error-btn' onClick={handleGoBack}>
+            回到活动详情
+          </Button>
+        </View>
+      </View>
+    )
+  }
+
   if (authLoading || eventSessionLoading || sessionLoading || isBootstrapping) {
     return (
       <OnboardingLoadingShell
@@ -986,7 +1171,7 @@ export default function IcebreakerSessionPage() {
   if (!resolvedSessionId || pageError || !session) {
     return (
       <View className='icebreaker icebreaker--error'>
-        <View className='icebreaker__error'>
+        <View className='icebreaker__error' role='alert'>
           <Image
             className='icebreaker__error-hero'
             src={cdnAsset('/assets/lovart/lovart-generic-error.webp')}
@@ -1027,6 +1212,9 @@ export default function IcebreakerSessionPage() {
     'lie_detective',
     'auction',
     'personality_dice',
+    'quip_battle',
+    'undercover_word',
+    'group_mirror',
     'mini_script',
     'recap',
     'ended',
@@ -1048,7 +1236,6 @@ export default function IcebreakerSessionPage() {
       scrollY={phase !== 'warmup'}
       enhanced
       showScrollbar={false}
-      style={bgStyles}
       enableFlex={phase === 'warmup'}
     >
       <View className='icebreaker__header-wrap'>
@@ -1070,6 +1257,17 @@ export default function IcebreakerSessionPage() {
           </View>
         )}
       </View>
+
+      {/* PR1 flow revamp — visible advance fuse (all players) + stall nudge (host) */}
+      <AdvanceFuseBanner
+        fuseAt={session?.autoAdvanceScheduledAt}
+        fuseKind={session?.advanceFuseKind}
+        stallNudgeAt={session?.stallNudgeAt}
+        isHost={isHost}
+        isActing={pendingAction !== null}
+        onStallAdvance={handleStallAdvance}
+        onStallDismiss={handleStallDismiss}
+      />
 
       <PhaseIntroOverlay phase={phase} visible={showPhaseIntro} />
 
@@ -1166,19 +1364,30 @@ export default function IcebreakerSessionPage() {
         )}
 
         {phase === 'micro_challenge' && session && (
-          <MicroChallengePhaseView
+          <MicroChallengeHeroView
             challenge={session.currentChallenge ?? null}
             challengeMeta={session.currentChallengeMeta}
             completedBy={session.challengeCompletedBy ?? []}
             currentUserId={currentUserId}
             playerCount={playerCount}
+            phaseStartedAt={session.phaseStartedAt}
             onComplete={handleCompleteChallenge}
             isCompleting={pendingAction === 'micro-complete'}
+            isHost={isHost}
+            onAdvance={handleAdvancePhase}
+            isAdvancing={pendingAction === 'advance'}
+            canAdvance={
+              new Set(session.challengeCompletedBy ?? []).size >= playerCount ||
+              (!!session.currentChallenge?.durationSeconds &&
+                Date.now() >=
+                  (session.phaseStartedAt ?? 0) + session.currentChallenge.durationSeconds * 1000)
+            }
+            advanceDisabledReason='还有小伙伴未完成'
           />
         )}
 
         {phase === 'lie_detective' && session && (
-          <LieDetectivePhaseView
+          <LieDetectiveHeroView
             players={session.lieDetectivePlayers ?? []}
             playerCount={playerCount}
             currentPlayerIndex={session.currentLieDetectivePlayerIndex ?? 0}
@@ -1204,7 +1413,7 @@ export default function IcebreakerSessionPage() {
         )}
 
         {phase === 'auction' && session && (
-          <AuctionPhaseView
+          <AuctionHeroView
             session={session}
             currentUserId={currentUserId}
             isHost={isHost}
@@ -1214,6 +1423,7 @@ export default function IcebreakerSessionPage() {
             onAdvance={handleAdvancePhase}
             isAdvancing={pendingAction === 'advance'}
             isGeneratingLots={pendingAction === 'auction-gen'}
+            lotsMeta={session.auctionLotsMeta}
             isPlacingBid={pendingAction === 'auction-bid'}
             isClosingLot={pendingAction === 'auction-close'}
           />
@@ -1224,7 +1434,7 @@ export default function IcebreakerSessionPage() {
             {isHost && session.enabledPhases?.includes('mini_script') ? (
               <IcebreakerToolSelector onOpenMiniScript={() => setMiniScriptModalOpen(true)} />
             ) : null}
-            <MiniScriptPhaseView
+            <MiniScriptHeroView
               session={session}
               currentUserId={currentUserId}
               isHost={isHost}
@@ -1252,7 +1462,7 @@ export default function IcebreakerSessionPage() {
         )}
 
         {phase === 'personality_dice' && session && (
-          <PersonalityDicePhaseView
+          <PersonalityDiceHeroView
             participants={participants}
             challenges={session.personalityDiceChallenges ?? []}
             currentPlayerIndex={session.currentDicePlayerIndex ?? 0}
@@ -1269,11 +1479,13 @@ export default function IcebreakerSessionPage() {
             selectedOption={session.diceSelectedOption ?? {}}
             onChoose={handleChooseDiceOption}
             isChoosing={pendingAction === 'dice-choose'}
+            challengesMeta={session.personalityDiceChallengesMeta}
+            onAdvance={handleAdvancePhase}
           />
         )}
 
         {phase === 'quip_battle' && session && (
-          <QuipBattlePhaseView
+          <QuipBattleHeroView
             socialSessionId={socialSessionId || ''}
             isHost={isHost}
             prompts={session.quipBattlePrompts ?? []}
@@ -1287,11 +1499,12 @@ export default function IcebreakerSessionPage() {
             onRefresh={() => socialSessionQuery.refetch()}
             onAdvance={handleAdvancePhase}
             isAdvancing={pendingAction === 'advance'}
+            promptsMeta={session.quipBattlePromptsMeta}
           />
         )}
 
         {phase === 'undercover_word' && session && (
-          <UndercoverWordPhaseView
+          <UndercoverWordHeroView
             socialSessionId={socialSessionId || ''}
             isHost={isHost}
             userId={currentUserId}
@@ -1307,11 +1520,12 @@ export default function IcebreakerSessionPage() {
             participants={participants}
             onAdvance={handleAdvancePhase}
             isAdvancing={pendingAction === 'advance'}
+            pairMeta={session.undercoverWordPairMeta}
           />
         )}
 
         {phase === 'group_mirror' && session && (
-          <GroupMirrorPhaseView
+          <GroupMirrorHeroView
             socialSessionId={socialSessionId || ''}
             isHost={isHost}
             userId={currentUserId}
@@ -1324,11 +1538,12 @@ export default function IcebreakerSessionPage() {
             participants={participants}
             onAdvance={handleAdvancePhase}
             isAdvancing={pendingAction === 'advance'}
+            questionsMeta={session.groupMirrorQuestionsMeta}
           />
         )}
 
         {phase === 'speed_friending' && session && (
-          <SpeedFriendingPhaseView
+          <SpeedFriendingHeroView
             pairs={session.speedFriendingPairs ?? []}
             currentRound={session.speedFriendingCurrentRound ?? 0}
             totalRounds={session.speedFriendingTotalRounds ?? 0}
@@ -1340,6 +1555,8 @@ export default function IcebreakerSessionPage() {
             onNextRound={handleNextSpeedFriendingRound}
             onComplete={handleCompleteSpeedFriending}
             isLoading={pendingAction === 'speed-next' || pendingAction === 'speed-complete'}
+            onAdvance={handleAdvancePhase}
+            isAdvancing={pendingAction === 'advance'}
           />
         )}
 
@@ -1350,8 +1567,11 @@ export default function IcebreakerSessionPage() {
             medals={recapQuery.data?.medals ?? []}
             playerCount={playerCount}
             onLeave={handleGoBack}
+            onConnectTap={handleConnectTap}
             socialSessionId={socialSessionId}
             recapMeta={recapQuery.data?.meta ?? null}
+            phasesCompleted={(session.completedPhases ?? []).filter((p) => p !== 'phase_selection').length}
+            isEarlyEnd={session.lastAdvanceTrigger === 'early_end_jump'}
           />
         )}
 
@@ -1359,8 +1579,6 @@ export default function IcebreakerSessionPage() {
           <FallbackPhaseView phase={phase} isHost={isHost} onAdvance={handleAdvancePhase} />
         )}
       </View>
-
-      <View className='icebreaker__spacer' />
 
       <IcebreakerTierSheet
         isOpen={isTierSheetOpen}

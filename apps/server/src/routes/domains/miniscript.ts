@@ -26,7 +26,7 @@ import { buildCachedAIMeta } from '@shared/types/aiMeta';
 import { ensureSessionEnabledPhases, cleanupPhaseStateForNextPhase } from '../../socialIcebreakerPhaseConfig';
 import { logger } from '../../lib/logger';
 import { aiEndpointLimiter } from '../../rateLimiter';
-import { buildClientState, isHostAuthorized } from '../socialIcebreakerHelpers';
+import { buildClientState, isHostAuthorized, transitionPhase } from '../socialIcebreakerHelpers';
 import { runBotSimulationSafely } from '../../services/socialIcebreakerBotService';
 
 const router = Router();
@@ -562,27 +562,31 @@ router.post('/bonus/respond', async (req: any, res) => {
 
   if (accept) {
     state.bonusGateAccepted = true;
-    // Transition into mini_script phase
-    const priorPhase = state.currentPhase;
-    cleanupPhaseStateForNextPhase(state, priorPhase);
-    state.currentPhase = 'mini_script';
-    state.phaseStartedAt = Date.now();
-    state.pulseChecks = [];
-    await updateSession(socialSessionId, state);
+    // Transition into mini_script via the unified pipeline (dwell metrics,
+    // completion bookkeeping, cleanup).
+    await transitionPhase({
+      state,
+      socialSessionId,
+      trigger: 'host_tap',
+      targetPhase: 'mini_script',
+      skipBonusGate: true,
+    });
     logger.info('[miniscript] bonus gate accepted', { socialSessionId, hostUserId: userId });
-    return res.json({ state: buildClientState(state) });
+    return res.json({ state: await buildClientState(state, userId) });
   }
 
-  // Decline: skip mini_script and go to recap
+  // Decline: skip mini_script and go to recap via the unified pipeline
+  // (recap snapshot included).
   state.bonusGateDeclined = true;
-  const priorPhase = state.currentPhase;
-  cleanupPhaseStateForNextPhase(state, priorPhase);
-  state.currentPhase = 'recap';
-  state.phaseStartedAt = Date.now();
-  state.pulseChecks = [];
-  await updateSession(socialSessionId, state);
+  await transitionPhase({
+    state,
+    socialSessionId,
+    trigger: 'host_tap',
+    targetPhase: 'recap',
+    skipBonusGate: true,
+  });
   logger.info('[miniscript] bonus gate declined', { socialSessionId, hostUserId: userId });
-  return res.json({ state: buildClientState(state) });
+  return res.json({ state: await buildClientState(state, userId) });
 });
 
 const bonusSentimentSchema = z.object({

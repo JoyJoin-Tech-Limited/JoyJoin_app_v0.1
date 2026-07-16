@@ -14,8 +14,8 @@
   &__overlay {
     position: absolute;
     inset: 0;
-    transition: background 400ms cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: background;
+    // opacity-only: background transitions repaint every frame (motion budget)
+    transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   &__content {
@@ -30,7 +30,6 @@
     transition:
       opacity 400ms cubic-bezier(0.22, 1, 0.36, 1) 100ms,
       transform 400ms cubic-bezier(0.22, 1, 0.36, 1) 100ms;
-    will-change: opacity, transform;
   }
 
   &__label {
@@ -64,6 +63,44 @@
       opacity: 1;
       transform: none;
       transition: opacity 200ms ease;
+    }
+  }
+
+  // ── Warm tone: quiet accent-tint surface for inline use inside warm cards ──
+  &--warm {
+    height: auto;
+    min-height: 0;
+    flex-direction: column;
+    gap: 8rpx;
+    padding: $spacing-sm $spacing-md;
+    background: $color-bg-tint-cream;
+    border: 2rpx solid rgba($color-landed-gold, 0.4);
+    opacity: 0;
+    transform: translateY(8rpx);
+    transition:
+      opacity 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &--warm-revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  &__warm-label {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__warm-identity {
+    @include type-heading;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &--warm {
+      opacity: 1;
+      transform: none;
+      transition: none;
     }
   }
 }

@@ -223,3 +223,37 @@ $chemistry-calm-bg:    rgba($color-success, 0.12);
 $chemistry-calm-text:  #059669;
 $chemistry-mild-bg:    rgba($color-primary-light, 0.96);
 $chemistry-mild-text:  $color-primary-dark;
+
+// ─── Phase Accent Tokens (Social Icebreaker PhaseHeroCard, PR2/PR3) ──
+// Canonical source of truth for accent identity: phases/phaseAccents.ts.
+// Family discipline: jewel band (S 45–60%, L 45–55% foil / deep ≥4.5:1 on tint).
+$phase-accent-warmup:          #8B5CF6;
+$phase-accent-warmup-deep:     #7C3AED;
+$phase-accent-warmup-tint:     #FFFAF4;
+$phase-accent-micro:           #F2727F;
+$phase-accent-micro-deep:      #C23E33;
+$phase-accent-micro-tint:      #FFF3EF;
+$phase-accent-lie:             #6E5BA6;
+$phase-accent-lie-deep:        #58478C;
+$phase-accent-lie-tint:        #F3F0FA;
+$phase-accent-dice:            #FF6B9D;
+$phase-accent-dice-deep:       #C42E68;
+$phase-accent-dice-tint:       #FFF0F5;
+$phase-accent-quip:            #F0A030;
+$phase-accent-quip-deep:       #9C5F0A;
+$phase-accent-quip-tint:       #FEF7EA;
+$phase-accent-undercover:      #E67E22;
+$phase-accent-undercover-deep: #A64E0E;
+$phase-accent-undercover-tint: #FCF1E6;
+$phase-accent-mirror:          #5FA88F;
+$phase-accent-mirror-deep:     #35755C;
+$phase-accent-mirror-tint:     #EDF6F2;
+$phase-accent-auction:         #C99A3C;
+$phase-accent-auction-deep:    #8A651A;
+$phase-accent-auction-tint:    #FAF4E4;
+$phase-accent-speed:           #5B8DB8;
+$phase-accent-speed-deep:      #3D6E9C;
+$phase-accent-speed-tint:      #EEF4FA;
+$phase-accent-miniscript:      #C26A8C;
+$phase-accent-miniscript-deep: #A8486E;
+$phase-accent-miniscript-tint: #F9EEF2;
