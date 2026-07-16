@@ -477,7 +477,7 @@ Re-seeding resets old bot registrations before inserting new ones.
 
 ## I. Social Icebreaker Test Mode (Single-Player + Bot Simulation)
 
-Social Icebreaker test mode lets staff/internal users start a Social Icebreaker session without a full matched group, so QA can validate the session flow, phase UIs, and recap end-to-end. It is gated by `isMatchingTestMode()` (requires `ENABLE_SINGLE_TEST_MODE=true`; disabled in `APP_MODE=production`).
+Social Icebreaker test mode lets staff/internal users start a Social Icebreaker session without a full matched group, so QA can validate the session flow, phase UIs, and recap end-to-end. Session creation is gated by `isSingleTestMode()` (requires `ENABLE_SINGLE_TEST_MODE=true`; disabled in `APP_MODE=production`). Bot simulation is gated separately by `isSocialIcebreakerTestMode()`, which additionally requires `SOCIAL_ICEBREAKER_TEST_MODE_ENABLED=true` (also hard-blocked in production). Both variables must be set on the environment — the staging deploy workflow writes both; if `SOCIAL_ICEBREAKER_TEST_MODE_ENABLED` is missing, 调试局 sessions run with `runBots: false` (warmup-only, see below).
 
 ### How it works
 
