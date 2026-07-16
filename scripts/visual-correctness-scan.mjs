@@ -33,7 +33,8 @@
  */
 
 import { chromium } from 'playwright'
-import { writeFileSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
 import process from 'node:process'
 
 // ─── CLI parsing ─────────────────────────────────────────────────
@@ -107,11 +108,56 @@ function measureInPage(maxPerCheck) {
       right: Math.round(r.right), bottom: Math.round(r.bottom) }
   }
 
+  function visibleRectOf(el) {
+    const source = el.getBoundingClientRect()
+    let left = Math.max(0, source.left)
+    let top = source.top
+    let right = Math.min(vw, source.right)
+    let bottom = source.bottom
+    let node = el.parentElement
+
+    while (node && node.nodeType === 1 && right > left && bottom > top) {
+      const nodeStyle = getComputedStyle(node)
+      const nodeRect = node.getBoundingClientRect()
+      if (['hidden', 'clip', 'auto', 'scroll'].includes(nodeStyle.overflowX)) {
+        left = Math.max(left, nodeRect.left)
+        right = Math.min(right, nodeRect.right)
+      }
+      if (['hidden', 'clip', 'auto', 'scroll'].includes(nodeStyle.overflowY)) {
+        top = Math.max(top, nodeRect.top)
+        bottom = Math.min(bottom, nodeRect.bottom)
+      }
+      node = node.parentElement
+    }
+
+    return {
+      left,
+      top,
+      right,
+      bottom,
+      width: Math.max(0, right - left),
+      height: Math.max(0, bottom - top),
+    }
+  }
+
   function isVisible(el, style) {
-    if (style.display === 'none' || style.visibility === 'hidden') return false
-    if (parseFloat(style.opacity) === 0) return false
+    let node = el
+    while (node && node.nodeType === 1) {
+      const nodeStyle = node === el ? style : getComputedStyle(node)
+      if (node.hidden || node.getAttribute('aria-hidden') === 'true') return false
+      if (nodeStyle.display === 'none' || nodeStyle.visibility === 'hidden') return false
+      if (parseFloat(nodeStyle.opacity) === 0) return false
+      node = node.parentElement
+    }
     const r = el.getBoundingClientRect()
-    return r.width > 0 && r.height > 0
+    // Screen-reader-only copy is deliberately clipped to a 1px box. It is
+    // reachable to assistive technology and must not be reported as visual UI.
+    if (r.width <= 1 && r.height <= 1 &&
+        (style.overflow === 'hidden' || style.clip !== 'auto' || style.clipPath !== 'none')) {
+      return false
+    }
+    const visible = visibleRectOf(el)
+    return r.width > 0 && r.height > 0 && visible.width > 0 && visible.height > 0
   }
 
   // direct visible text content (own text nodes), trimmed
@@ -167,7 +213,7 @@ function measureInPage(maxPerCheck) {
     // collect text-bearing elements for overflow / overlap / contrast checks
     const txt = ownText(el)
     if (txt) {
-      textEls.push({ el, style, r, txt })
+      textEls.push({ el, style, r, visibleR: visibleRectOf(el), txt })
 
       // ── 3. Horizontal text clipping ──
       const overflowX = style.overflowX
@@ -236,11 +282,13 @@ function measureInPage(maxPerCheck) {
       const b = sample[j]
       if (a.el.contains(b.el) || b.el.contains(a.el)) continue
       if (a.txt === b.txt) continue
-      const ix = Math.max(0, Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left))
-      const iy = Math.max(0, Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top))
+      const ar = a.visibleR
+      const br = b.visibleR
+      const ix = Math.max(0, Math.min(ar.right, br.right) - Math.max(ar.left, br.left))
+      const iy = Math.max(0, Math.min(ar.bottom, br.bottom) - Math.max(ar.top, br.top))
       if (ix <= 0 || iy <= 0) continue
       const inter = ix * iy
-      const minArea = Math.min(a.r.width * a.r.height, b.r.width * b.r.height)
+      const minArea = Math.min(ar.width * ar.height, br.width * br.height)
       if (minArea <= 0) continue
       // require a meaningful overlap of the smaller element's text box
       if (inter / minArea > 0.4 && iy > 6 && ix > 6) {
@@ -269,6 +317,7 @@ function measureInPage(maxPerCheck) {
   }
 
   function effectiveBackground(el) {
+    const layers = []
     let node = el
     while (node && node.nodeType === 1) {
       const s = getComputedStyle(node)
@@ -277,10 +326,25 @@ function measureInPage(maxPerCheck) {
         return null // gradient/image background — cannot compute reliably
       }
       const c = parseRGB(s.backgroundColor)
-      if (c && c.a > 0) return c
+      if (c && c.a > 0) {
+        layers.push(c)
+        if (c.a >= 1) break
+      }
       node = node.parentElement
     }
-    return { r: 255, g: 255, b: 255, a: 1, css: 'rgb(255, 255, 255)' }
+
+    let composed = { r: 255, g: 255, b: 255, a: 1, css: 'rgb(255, 255, 255)' }
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const layer = layers[i]
+      composed = {
+        r: layer.r * layer.a + composed.r * (1 - layer.a),
+        g: layer.g * layer.a + composed.g * (1 - layer.a),
+        b: layer.b * layer.a + composed.b * (1 - layer.a),
+        a: 1,
+        css: layer.css,
+      }
+    }
+    return composed
   }
 
   function srgbToLin(c) {
@@ -320,9 +384,51 @@ async function main() {
 
   let browser
   try {
-    browser = await chromium.launch({ headless: true })
-    const context = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2 })
+    browser = await chromium.launch({
+      headless: true,
+      ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH
+        ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
+        : {}),
+    })
+    const geoLatitude = Number(process.env.PLAYWRIGHT_GEO_LATITUDE)
+    const geoLongitude = Number(process.env.PLAYWRIGHT_GEO_LONGITUDE)
+    const hasGeolocation = Number.isFinite(geoLatitude) && Number.isFinite(geoLongitude)
+    const context = await browser.newContext({
+      viewport: { width: w, height: h },
+      deviceScaleFactor: 2,
+      locale: 'zh-CN',
+      reducedMotion: 'reduce',
+      ...(hasGeolocation
+        ? {
+            permissions: ['geolocation'],
+            geolocation: {
+              latitude: geoLatitude,
+              longitude: geoLongitude,
+              accuracy: Number(process.env.PLAYWRIGHT_GEO_ACCURACY) || 18,
+            },
+          }
+        : {}),
+    })
     const page = await context.newPage()
+
+    const localAssetRoot = process.env.PLAYWRIGHT_LOCAL_ASSET_ROOT
+      ? path.resolve(process.env.PLAYWRIGHT_LOCAL_ASSET_ROOT)
+      : null
+    if (localAssetRoot) {
+      await page.route('https://joyjoinapp.com/static/assets/**', async (route) => {
+        const pathname = new URL(route.request().url()).pathname
+        const relativePath = pathname.replace(/^\/static\/assets\//, '')
+        const localPath = path.resolve(localAssetRoot, relativePath)
+        const staysInAssetRoot = localPath.startsWith(`${localAssetRoot}${path.sep}`)
+
+        if (staysInAssetRoot && existsSync(localPath)) {
+          await route.fulfill({ path: localPath })
+          return
+        }
+
+        await route.continue()
+      })
+    }
 
     await page.goto(args.url, { waitUntil: 'domcontentloaded', timeout: 60000 })
     if (args.wait) {

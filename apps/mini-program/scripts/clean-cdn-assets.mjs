@@ -58,6 +58,7 @@ await Promise.all(
     'personality',
     'matching',
     'promo',
+    'profile-pixel',
     'ceremony',
     'icons/phase-icons',
     'icons/phase-icons/reference-grid.png',

@@ -265,14 +265,51 @@ export async function deleteMissionProgress(
   return result;
 }
 
-export async function seedDemoMissionIfNeeded(): Promise<void> {
-  const existing = await getMissionBySlug("alang-demo");
-  if (existing) return;
-
+export async function seedDemoMissionIfNeeded(): Promise<boolean> {
   const rawContent = await import("../../content/alang/stories/demo-story.json", {
     assert: { type: "json" },
   }).then((m) => m.default);
   const content = missionContentSchema.parse(rawContent);
+  const existing = await getMissionBySlug("alang-demo");
+
+  if (existing) {
+    const currentContent = missionContentSchema.safeParse(existing.contentJson);
+    if (currentContent.success && currentContent.data.version === content.version) {
+      return false;
+    }
+    if (!existing.isInternalOnly) {
+      logger.warn("[AlangRepo] Refused to update non-internal demo mission", {
+        missionId: existing.id,
+        slug: existing.slug,
+      });
+      return false;
+    }
+
+    const [updated] = await db
+      .update(alangMissions)
+      .set({
+        title: content.title,
+        description: content.description,
+        contentJson: content,
+        targetLocation: content.meta?.defaultTargetLocation ?? null,
+        companionEndLocation: content.meta?.defaultCompanionEndLocation ?? null,
+      })
+      .where(
+        and(
+          eq(alangMissions.id, existing.id),
+          eq(alangMissions.slug, "alang-demo"),
+          eq(alangMissions.isInternalOnly, true),
+        ),
+      )
+      .returning({ id: alangMissions.id });
+
+    if (!updated) throw new Error("ALANG_DEMO_CONTENT_UPDATE_CONFLICT");
+    logger.info("[AlangRepo] Updated approved demo mission content", {
+      missionId: updated.id,
+      version: content.version,
+    });
+    return true;
+  }
 
   await db
     .insert(alangMissions)
@@ -289,4 +326,5 @@ export async function seedDemoMissionIfNeeded(): Promise<void> {
     .onConflictDoNothing({ target: alangMissions.slug });
 
   logger.info("[AlangRepo] Ensured demo mission exists");
+  return true;
 }

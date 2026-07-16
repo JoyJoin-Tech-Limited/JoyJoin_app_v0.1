@@ -99,21 +99,26 @@ Boundary:
 - Mini-program payment verification remains separate under `apps/mini-program/src/pages/payment-verification/index.tsx`; keep the JSAPI in-program payment flow there as the canonical launch-primary flow. The browser H5 confirmation path is reference-only.
 - Mini-program personality-test results live in `apps/mini-program/src/pages/onboarding/personality-test/results/index.tsx`; keep reveal replay, native share hooks, and the poster composition helper in `apps/mini-program/src/pages/onboarding/personality-test/results/sharePoster.ts` inside that Taro onboarding surface rather than moving them into server or shared runtime modules.
 
-### 2a. 闪现 NPC｜阿浪 V1.5 runtime / V1.7 visual alignment
+### 2a. 闪现 NPC｜阿浪 + Profile V1.7
 
 **Authority chain**
 1. `apps/server/src/routes/domains/alang.ts` owns mission transitions, GPS reports, completion, and archive identity.
 2. `apps/server/src/lib/alang/alangDisclosure.ts` removes all search/trigger coordinates and releases `routeDestination` only from the companion stage onward; `alangTargetResolver.ts` supplies the same canonical endpoint to route display and GPS.
 3. `packages/shared/src/alang/` and `packages/shared/src/api/alang.ts` own the GCJ-02 `latitude/longitude` contract and legacy JSON normalization.
 4. `apps/mini-program/src/pages/alang/` reads `myProgress` on foreground recovery and replaces stale pages according to the server stage.
+5. `apps/server/src/routes/domains/personalStory.ts` + `jobs/personalStoryWorker.ts` own the private append-only story; source facts are selected server-side and one durable job resumes from its persisted source cursor.
+6. `apps/server/src/routes/domains/equipment.ts` + `repositories/equipmentRepo.ts` own wardrobe, venue/mission pools, entitlement draws, pity, fragments and fragment-only redemption. Clients never choose a user or reward source.
 
 **Map boundary**
 - Native Taro/WeChat Map renders the client view; `apps/server/src/routes/domains/geo.ts` reuses `TENCENT_MAP_KEY` for reverse geocoding, POI suggestion/search, and walking routes.
 - Search Map receives only the user's current location. The companion route is fetched only after explicit user action.
 - Tencent walking distance/ETA is presentational. `alangGeoFence.ts` (5 m + consecutive stable reports) remains arrival authority.
 - Alang config/debug pages and target overrides are strict non-production single-test surfaces.
-- Visual implementation is limited to ACTIVE 03/05/07 plus APPROVED TARGET 06. FUTURE 04/08 and REMOVED 09 are not active code surfaces.
-- V1.7 changes only the mini-program presentation layer for Discover, search, Profile, and My Stories; server stage authority and privacy boundaries remain V1.5. Formal Alang art is still `awaiting-approved-art`, so labelled placeholders remain intentional.
+- FUTURE 04 and REMOVED 09 are not active code surfaces. A 2026-07-15 product override uses ACTIVE 07 only as visual tone and authorizes a Profile-only My Image/equipment minimum loop instead of implementing the full FUTURE 08 mockup.
+- Profile V1.7 reads real shell/gamification data and renders one of 12 Profile-only 512×768 transparent pixel-animal WebP assets from the CDN over the existing warm-white/purple UI. The approved base assets already contain initial clothing; a character-only fallback handles image failure. Equip/unequip/save/inventory remain server-backed, but unapproved item raster is not requested or replaced with fabricated geometric/code-native layers—the UI keeps the clothed base character until formal layered art is approved and published. It links to `pages/profile-linked/my-image` and `personal-story`. `profileRedesignEnabled=false` stops the V1.7-only gamification/equipment/story work.
+- Blind-box story eligibility is server proof, not client or outcome-only state: the acting user's group outcome binds the group, and eligibility additionally requires the current user to be matched, the non-test pool/group to be uncancelled and finished, and that event's current-user `event_feedback.completedAt` to be non-null. Feedback content and scores never enter the model prompt.
+- Personal-story AI reuses existing MiniMax/DeepSeek clients. It receives only server-selected keywords and rejects unsupported details; provider failure never creates a deterministic or fabricated chapter. `personalStoryEnabled=false` closes the client entry and GET/POST/status before any story-table access; when the flag is `true` but providers are unavailable, existing chapters remain readable and failed updates do not mutate history.
+- Formal Alang art is still `awaiting-approved-art`, so labelled placeholders remain intentional.
 
 Canonical implementation and rollback notes: `docs/alang-prototype/implementation-map.md`.
 
@@ -191,7 +196,7 @@ Boundary:
 - `apps/server/src/phoneAuth.ts`
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
-- `apps/server/src/lib/featureFlags.ts` — DB-backed feature flag resolver (DB row → env fallback → 5s cache). Five kill switches exposed in auth response and toggleable from `/admin/feature-flags` (super_admin only).
+- `apps/server/src/lib/featureFlags.ts` — DB-backed feature flag resolver (DB row → env fallback → 5s cache). Auth-exposed Profile rollout keys include `profileRedesignEnabled`, `profilePixelAvatarEnabled`, `equipmentRewardsEnabled`, and `personalStoryEnabled`; whitelisted keys are independently toggleable from `/admin/feature-flags` by `super_admin`.
 
 ### 6. Runtime deployment topology
 

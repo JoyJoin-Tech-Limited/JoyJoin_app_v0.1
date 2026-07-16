@@ -63,7 +63,9 @@ export const storyNodeSchema = z.object({
 });
 
 const missionContentObjectSchema = z.object({
-  version: z.literal("1.0"),
+  // Approved Alang copy is immutable per published semantic version. Accept
+  // future reviewed versions without weakening the rest of the content graph.
+  version: z.string().regex(/^\d+\.\d+$/, "Mission content version must use major.minor format"),
   title: z.string(),
   description: z.string(),
   startNodeId: z.string(),

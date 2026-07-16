@@ -60,6 +60,13 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  or share-card entry point. Env fallback: PROFILE_REDESIGN_ENABLED
    *  (default: true). */
   profileRedesignEnabled: "PROFILE_REDESIGN_ENABLED",
+  /** Profile-only pixel companion stage. Kept independent from the V1.7
+   * layout rollback so art can be disabled without reverting Profile data. */
+  profilePixelAvatarEnabled: "PROFILE_PIXEL_AVATAR_ENABLED",
+  /** Server-authoritative equipment economy switch. No payment path exists. */
+  equipmentRewardsEnabled: "EQUIPMENT_REWARDS_ENABLED",
+  /** Private append-only personal story generation and reading surface. */
+  personalStoryEnabled: "PERSONAL_STORY_ENABLED",
   /** Discover OracleCard corner participant-count badge kill-switch. When false,
    *  the mini-program hides the top-right registration-count badge on pool cards.
    *  Env fallback: ORACLE_CARD_CORNER_STAT_ENABLED (default: true). */
@@ -114,6 +121,9 @@ export const FLAG_ENV_MAP: Record<string, string> = {
 export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   matchingOperatorReviewEnabled: true,
   profileRedesignEnabled: true,
+  profilePixelAvatarEnabled: false,
+  equipmentRewardsEnabled: false,
+  personalStoryEnabled: false,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

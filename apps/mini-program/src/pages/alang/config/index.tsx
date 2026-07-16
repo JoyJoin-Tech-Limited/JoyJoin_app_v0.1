@@ -20,12 +20,13 @@ import {
 } from '@shared/alang/testPointValidation'
 import {
   useAlangMissionDetail,
+  useResetAlangMission,
   useStartMission,
   useSyncAlangMissionProgress,
 } from '../../../lib/alang/useAlangMission'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
-import { haversine, callReportProgress } from '../../../lib/alang/api'
+import { haversine } from '../../../lib/alang/api'
 import { useAlangGpsOnce } from '../../../lib/alang/useAlangGps'
 import { apiRequest } from '../../../lib/api/api'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
@@ -79,7 +80,9 @@ export function getAlangStartErrorMessage(error: unknown): string {
   const statusCode = (error as AlangStartError | null)?.statusCode
 
   if (statusCode === 401) return '登录状态已失效，请重新进入小程序'
-  if (code === 'ALANG_RECONFIG_REQUIRES_RESET') return '检测到上一轮测试进度，请返回测试工具重置后再配置点位'
+  if (code === 'ALANG_RECONFIG_REQUIRES_RESET' || code === 'ALANG_RETEST_REQUIRES_RESET') {
+    return '检测到上一轮测试进度，请先重置阿浪测试，再开始新一轮'
+  }
   if (code === 'ALANG_TEST_POINTS_REQUIRED' || code === 'ALANG_TEST_POINTS_INVALID') {
     return '测试点位没有保存成功，请重新设置两个点位'
   }
@@ -106,11 +109,9 @@ export default function AlangConfigPage() {
     !!slug && canUseDebugTools,
   )
   const startMutation = useStartMission()
+  const resetMutation = useResetAlangMission()
   const syncMissionProgress = useSyncAlangMissionProgress()
   const { position, request, loading } = useAlangGpsOnce()
-
-  const content = mission?.content as any
-  const nodes: Array<any> = content?.nodes ?? []
 
   const [target, setTarget] = useState<AlangCoordinate | null>(null)
   const [endPoint, setEndPoint] = useState<AlangCoordinate | null>(null)
@@ -124,6 +125,7 @@ export default function AlangConfigPage() {
   const [routeUnavailable, setRouteUnavailable] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [requiresReset, setRequiresReset] = useState(false)
   const submitLockRef = useRef(false)
 
   const describePoint = useCallback(async (
@@ -324,61 +326,88 @@ export default function AlangConfigPage() {
       Taro.showToast({ title: validationError, icon: 'none' })
       return
     }
-    const searchNode = nodes.find((node) => node.type === 'search_gate')
-    if (!searchNode) {
-      const message = '故事配置暂时不可用，请稍后再试'
-      setSubmitError(message)
-      Taro.showToast({ title: message, icon: 'none' })
-      return
-    }
-
     submitLockRef.current = true
-    try {
-      haptics('light')
-    } catch {
-      // Optional device feedback must never block the mission start request.
-    }
     setSubmitError(null)
+    setRequiresReset(false)
     setIsSubmitting(true)
-    logInfo('[AlangConfig] start test tapped', { slug })
     try {
+      try {
+        haptics('light')
+      } catch {
+        // Optional device feedback must never block the mission start request.
+      }
+      try {
+        logInfo('[AlangConfig] start test tapped', { slug })
+      } catch {
+        // Realtime logging is diagnostic-only and must never trap the start lock.
+      }
+
       const started = await startMutation.mutateAsync({
         slug,
         targetLocation: target,
         companionEndLocation: endPoint,
         coordinateSystem: 'gcj02',
       })
-      let currentNode = nodes.find((node) => node.id === started.currentNodeId)
-      let safety = 0
-      while (currentNode && currentNode.id !== searchNode.id && safety < nodes.length) {
-        if (!currentNode.nextNodeId) throw new Error('NO_PATH_TO_SEARCH')
-        const nextNode = nodes.find((node) => node.id === currentNode.nextNodeId)
-        if (!nextNode) throw new Error('INVALID_SEARCH_PATH')
-        const updated = await callReportProgress(slug, nextNode.id)
-        syncMissionProgress(slug, updated)
-        currentNode = nextNode
-        safety += 1
+      if (started.completed) throw new Error('ALANG_RETEST_REQUIRES_RESET')
+      if (started.stage !== 'searching' || !started.currentNodeId) {
+        throw new Error('SEARCH_NODE_NOT_REACHED')
       }
-      if (currentNode?.id !== searchNode.id) throw new Error('SEARCH_NODE_NOT_REACHED')
+      syncMissionProgress(slug, {
+        stage: started.stage,
+        currentNodeId: started.currentNodeId,
+      })
 
       await Taro.redirectTo({
-        url: `${MINI_PROGRAM_ROUTES.alangSearch}?slug=${encodeURIComponent(slug)}&nodeId=${encodeURIComponent(searchNode.id)}`,
+        url: `${MINI_PROGRAM_ROUTES.alangSearch}?slug=${encodeURIComponent(slug)}&nodeId=${encodeURIComponent(started.currentNodeId)}`,
       })
     } catch (error) {
       const message = getAlangStartErrorMessage(error)
       const apiError = error as AlangStartError
-      logWarn('[AlangConfig] start test failed', {
-        slug,
-        statusCode: apiError?.statusCode,
-        errorCode: getAlangStartErrorCode(error),
-      })
       setSubmitError(message)
-      Taro.showToast({ title: message, icon: 'none' })
+      setRequiresReset([
+        'ALANG_RECONFIG_REQUIRES_RESET',
+        'ALANG_RETEST_REQUIRES_RESET',
+      ].includes(getAlangStartErrorCode(error) ?? ''))
+      try {
+        Taro.showToast({ title: message, icon: 'none' })
+      } catch {
+        // The persistent inline error above remains the user-facing fallback.
+      }
+      try {
+        logWarn('[AlangConfig] start test failed', {
+          slug,
+          statusCode: apiError?.statusCode,
+          errorCode: getAlangStartErrorCode(error),
+        })
+      } catch {
+        // Failure telemetry must never hide the actionable error or keep the lock set.
+      }
     } finally {
       submitLockRef.current = false
       setIsSubmitting(false)
     }
   }
+
+  const handleClearPreviousRun = useCallback(async () => {
+    if (!slug || resetMutation.isPending || isStartPending) return
+    try {
+      const modal = await Taro.showModal({
+        title: '清除上一轮阿浪测试',
+        content: '将清除当前账号上一轮阿浪测试进度与测试故事；本页刚设置的两个新点位会保留，是否继续？',
+        confirmText: '清除旧进度',
+        cancelText: '取消',
+        confirmColor: '#8B5CF6',
+      })
+      if (!modal.confirm) return
+      await resetMutation.mutateAsync(slug)
+      setSubmitError(null)
+      setRequiresReset(false)
+      await refetch()
+      Taro.showToast({ title: '旧进度已清除，可以开始新一轮', icon: 'none' })
+    } catch {
+      Taro.showToast({ title: '旧进度没有清除成功，请稍后再试', icon: 'none' })
+    }
+  }, [isStartPending, refetch, resetMutation, slug])
 
   const markers = useMemo<NonNullable<MapProps['markers']>>(() => {
     const items: NonNullable<MapProps['markers']> = []
@@ -598,9 +627,22 @@ export default function AlangConfigPage() {
 
       <View className='alang-config__actions'>
         {submitError && (
-          <View className='alang-config__submit-error' role='alert' aria-live='polite'>
-            <Text>{submitError}</Text>
-          </View>
+          <>
+            <View className='alang-config__submit-error' role='alert' aria-live='polite'>
+              <Text>{submitError}</Text>
+            </View>
+            {requiresReset && (
+              <View
+                className={`alang-config__reset-previous${resetMutation.isPending ? ' alang-config__reset-previous--disabled' : ''}`}
+                onClick={() => { void handleClearPreviousRun() }}
+                role='button'
+                aria-label={resetMutation.isPending ? '正在清除上一轮阿浪测试' : '清除旧进度'}
+                aria-disabled={resetMutation.isPending}
+              >
+                <Text>{resetMutation.isPending ? '正在清除…' : '清除旧进度'}</Text>
+              </View>
+            )}
+          </>
         )}
         {!submitError && (
           <View
@@ -618,6 +660,7 @@ export default function AlangConfigPage() {
         <Button
           className={`alang-config__confirm ${!target || !endPoint || !!pointValidationError || isStartPending ? 'alang-config__confirm--disabled' : ''}`}
           onClick={() => { void handleConfirm() }}
+          onTouchEnd={() => { void handleConfirm() }}
           disabled={!target || !endPoint || !!pointValidationError || isStartPending}
           loading={isStartPending}
           hoverClass={isStartPending ? '' : 'alang-config__confirm--pressed'}

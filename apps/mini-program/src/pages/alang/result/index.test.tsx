@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
   refetchArchives: vi.fn(),
   callReportProgress: vi.fn(),
   authUser: {
-    current: { appMode: 'production', features: { alangEnabled: true } } as any,
+    current: { appMode: 'production', features: { alangEnabled: true, personalStoryEnabled: true } } as any,
   },
 }))
 
@@ -141,7 +141,7 @@ describe('AlangResultPage', () => {
     })
     mocks.authUser.current = {
       appMode: 'production',
-      features: { alangEnabled: true },
+      features: { alangEnabled: true, personalStoryEnabled: true },
     }
     mocks.useAlangMissionDetail.mockReturnValue({
       data: createMission(),
@@ -218,9 +218,34 @@ describe('AlangResultPage', () => {
     fireEvent.click(storyEntry as Element)
 
     expect(mocks.navigateTo).toHaveBeenCalledWith({
-      url: '/pages/alang/story-detail/index?archiveId=archive-from-progress',
+      url: '/pages/profile-linked/personal-story/index',
     })
     expect(mocks.refetchArchives).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the archived Alang story while personal story rollout is disabled', async () => {
+    mocks.authUser.current = {
+      appMode: 'production',
+      features: { alangEnabled: true, personalStoryEnabled: false },
+    }
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: createMission({
+        status: 'completed',
+        stage: 'completed',
+        archiveId: 'archive-from-progress',
+      }),
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetchMission,
+    })
+
+    const { container } = render(<AlangResultPage />)
+    await waitFor(() => expect(container.querySelector('.alang-result__completed')).toBeInTheDocument())
+    fireEvent.click(container.querySelector('.alang-result__completed-btn') as Element)
+
+    expect(mocks.navigateTo).toHaveBeenCalledWith({
+      url: '/pages/alang/story-detail/index?archiveId=archive-from-progress',
+    })
   })
 
   it('does not show the retest entry outside single-test mode', async () => {

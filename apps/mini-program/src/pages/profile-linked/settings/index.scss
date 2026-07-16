@@ -1,0 +1,219 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.profile-settings {
+  min-height: 100%;
+  font-family: $font-ui;
+  color: $color-text-primary-warm;
+  background: linear-gradient(180deg, $color-bg-clean 0%, $color-bg-warm-mid 58%, $color-bg-warm-to 100%);
+
+  &__scroll {
+    height: 100dvh;
+    box-sizing: border-box;
+  }
+
+  &__intro {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    padding: $spacing-xl $container-padding $spacing-lg;
+  }
+
+  &__intro-mark {
+    width: 84rpx;
+    height: 84rpx;
+    border-radius: 26rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: $color-bg-tint-purple;
+    border: 1rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__intro-copy,
+  &__row-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__intro-copy {
+    gap: 6rpx;
+  }
+
+  &__title {
+    font-family: $font-cn-display;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    line-height: $line-height-tight;
+    color: $color-text-primary-warm;
+  }
+
+  &__subtitle {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    line-height: $line-height-relaxed;
+    color: $color-text-secondary;
+  }
+
+  &__section {
+    padding: 0 $container-padding;
+  }
+
+  &__section-label {
+    display: block;
+    margin: 0 6rpx $spacing-sm;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+  }
+
+  &__card {
+    overflow: hidden;
+    border-radius: 30rpx;
+    background: $color-surface;
+    border: 1rpx solid rgba($color-primary, 0.06);
+    box-shadow: 0 12rpx 32rpx rgba(55, 44, 83, 0.07);
+  }
+
+  &__row {
+    position: relative;
+    min-height: 116rpx;
+    margin: 0 $spacing-md;
+    padding: $spacing-sm 4rpx;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    transition: transform 120ms ease-out, background-color 120ms ease-out, opacity 120ms ease-out;
+
+    &--divided::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 76rpx;
+      right: 0;
+      height: 1rpx;
+      background: $color-divider;
+    }
+
+    &--pressed {
+      margin-left: $spacing-sm;
+      margin-right: $spacing-sm;
+      padding-left: 12rpx;
+      padding-right: 12rpx;
+      border-radius: 22rpx;
+      background: $color-bg-tint-purple;
+      transform: scale(0.99);
+    }
+
+    &--busy {
+      opacity: 0.68;
+      pointer-events: none;
+    }
+  }
+
+  &__icon-well {
+    width: 68rpx;
+    height: 68rpx;
+    border-radius: 22rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: $color-bg-tint-purple;
+  }
+
+  &__icon {
+    display: block;
+  }
+
+  &__row-copy {
+    flex: 1;
+    gap: 4rpx;
+  }
+
+  &__row-label {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-normal;
+    color: $color-text-primary-warm;
+  }
+
+  &__row-description {
+    font-size: $font-size-xs;
+    line-height: $line-height-normal;
+    color: $color-text-secondary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__meta {
+    flex-shrink: 0;
+    max-width: 104rpx;
+    padding: 5rpx 12rpx;
+    border-radius: $radius-pill;
+    box-sizing: border-box;
+    font-size: 20rpx;
+    line-height: $line-height-normal;
+    color: $color-text-tertiary;
+    background: $color-bg-tint-warm;
+    white-space: nowrap;
+
+    &--active {
+      color: $color-primary-dark;
+      background: $color-primary-light;
+    }
+  }
+
+  &__chevron {
+    width: 13rpx;
+    height: 13rpx;
+    margin: 0 8rpx 0 2rpx;
+    flex-shrink: 0;
+    border-top: 3rpx solid $color-text-muted;
+    border-right: 3rpx solid $color-text-muted;
+    transform: rotate(45deg);
+  }
+
+  &__logout {
+    padding: $spacing-xl $container-padding 0;
+    text-align: center;
+  }
+
+  &__logout-button {
+    width: 360rpx;
+    max-width: 100%;
+    margin: 0 auto;
+    border-color: rgba($color-error, 0.18) !important;
+    background: rgba($color-surface, 0.88) !important;
+  }
+
+  &__logout-text {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-error;
+  }
+
+  &__logout-hint {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-xs;
+    line-height: $line-height-relaxed;
+    color: $color-text-muted;
+  }
+
+  &__safe-area {
+    @include safe-area-bottom-padding(padding-bottom, $spacing-xl);
+    height: $spacing-lg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-settings__row {
+    transition: none;
+  }
+}

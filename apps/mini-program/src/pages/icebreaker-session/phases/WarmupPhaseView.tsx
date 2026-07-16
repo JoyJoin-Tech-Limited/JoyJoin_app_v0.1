@@ -8,7 +8,7 @@ import type { AIResponseMeta } from '@shared/types/aiMeta'
 import { localAsset } from '../../../lib/utils/cdnAssets'
 import { stripEmojis } from '../../../lib/utils/emojiGuard'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
-import ArchetypeGlyph from '../../../components/mascot/ArchetypeGlyph'
+import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
 import MissingArchetypePlaceholder from '../../../components/mascot/MissingArchetypePlaceholder'
 import Button from '../../../components/ui/Button'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
@@ -436,7 +436,7 @@ export function WarmupPhaseView({
                 >
                   <View className='icebreaker__participant-avatar'>
                     {p.archetype ? (
-                      <ArchetypeGlyph archetype={p.archetype} size={28} />
+                      <ArchetypeHead archetype={p.archetype} size={40} fallback='none' />
                     ) : (
                       <MissingArchetypePlaceholder size={40} />
                     )}

@@ -25,8 +25,27 @@ const mission = vi.hoisted(() => ({
   isInternalOnly: true,
 }));
 const content = vi.hoisted(() => ({
-  startNodeId: "result-card",
+  startNodeId: "event-card",
   nodes: [
+    {
+      id: "event-card",
+      type: "event_card",
+      content: { body: "内部测试" },
+      nextNodeId: "event-detail",
+    },
+    {
+      id: "event-detail",
+      type: "event_detail",
+      content: { body: "准备开始" },
+      nextNodeId: "search",
+    },
+    {
+      id: "search",
+      type: "search_gate",
+      content: { body: "寻找阿浪" },
+      gpsTrigger: { latitude: 23.1291, longitude: 113.2644, radiusMeters: 5 },
+      nextNodeId: "result-card",
+    },
     {
       id: "result-card",
       type: "result_card",
@@ -107,7 +126,7 @@ const repository = vi.hoisted(() => ({
       deletedArchiveCount: ownsArchive ? 1 : 0,
     };
   }),
-  seedDemoMissionIfNeeded: vi.fn(),
+  seedDemoMissionIfNeeded: vi.fn(async () => false),
 }));
 
 vi.mock("../lib/featureFlags", () => ({
@@ -131,6 +150,7 @@ vi.mock("../services/alangContentService", () => ({
   ),
   getNodeById: (loadedContent: typeof content, nodeId: string) =>
     loadedContent.nodes.find((node) => node.id === nodeId) ?? null,
+  invalidateMissionCache: vi.fn(),
 }));
 
 const { registerAlangRoutes } = await import("../routes/domains/alang");
@@ -331,7 +351,7 @@ describe("Alang internal retest route", () => {
     const startBody = await startResponse.json() as any;
 
     expect(startResponse.status).toBe(200);
-    expect(startBody).toMatchObject({ stage: "result", currentNodeId: "result-card" });
+    expect(startBody).toMatchObject({ stage: "searching", currentNodeId: "search" });
     expect(startBody.progressId).not.toBe("progress-user-1-mission-alang");
     expect(state.progresses.get(key("user-1", mission.id))).toMatchObject({
       status: "in_progress",
@@ -345,6 +365,7 @@ describe("Alang internal retest route", () => {
     expect((await post("/api/alang/debug/missions/alang-demo/reset")).status).toBe(200);
     const startResponse = await post("/api/alang/missions/alang-demo/start", configuredPoints);
     const { progressId } = await startResponse.json() as any;
+    expect((await post("/api/alang/debug/missions/alang-demo/mock-gps", { mode: "arrive" })).status).toBe(200);
 
     const completeResponse = await post("/api/alang/missions/alang-demo/complete");
     const completeBody = await completeResponse.json();

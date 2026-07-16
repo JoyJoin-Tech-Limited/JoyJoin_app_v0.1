@@ -123,7 +123,9 @@ const DEFAULT_VIEWPORT = {
 }
 
 const V17_VIEWPORT = {
-  ...DEFAULT_VIEWPORT,
+  ...devices['iPhone 13'],
+  viewport: { width: 390, height: 844 },
+  deviceScaleFactor: 2,
   colorScheme: 'light',
   locale: 'zh-CN',
   reducedMotion: 'reduce',
@@ -490,8 +492,10 @@ async function captureProfileV17() {
     await page.waitForSelector('.profile-page__story-card', { state: 'visible', timeout: 10000 })
     await page.waitForFunction(() => {
       const growth = document.querySelector('.profile-page__growth-value')?.textContent?.trim()
-      const story = document.querySelector('.profile-page__story-summary')?.textContent ?? ''
-      return growth === '260' && story.includes('2 段故事收藏')
+      const stats = Array.from(document.querySelectorAll('.profile-page__stat-value'))
+        .map((element) => element.textContent?.trim())
+      const storyCta = document.querySelector('.profile-page__story-cta')?.textContent?.trim()
+      return growth === '260' && stats.includes('4') && stats.includes('11') && storyCta === '进入我的故事'
     }, undefined, { timeout: 10000 })
 
     return screenshotViewport(page)
@@ -523,8 +527,8 @@ async function captureDiscoverAlangV17() {
     await card.scrollIntoViewIfNeeded()
     await page.waitForTimeout(300)
 
-    // Keep the Alang card in context and use the same 375×812 viewport as the
-    // other V1.7 captures so the four-page acceptance set is directly comparable.
+    // Keep the Alang card in context and use the same 390×844 viewport as the
+    // other V1.7 captures so the five-page acceptance set is directly comparable.
     return screenshotViewport(page)
   })
 }
@@ -549,21 +553,64 @@ async function captureAlangSearchV17() {
   })
 }
 
-async function captureAlangStoriesV17() {
+async function capturePersonalStoryV17() {
   return withBrowserPage(V17_VIEWPORT, async (page) => {
-    await page.goto(`${H5_BASE_URL}/#/pages/alang/event/index?view=stories&motion=reduce`, {
+    await page.goto(`${H5_BASE_URL}/#/pages/profile-linked/personal-story/index?motion=reduce`, {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
     })
     await clearAndSeedStorage(page)
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
 
-    await waitForContent(page, '.alang-event__story-summary')
-    await page.waitForSelector('.alang-event__story-feed', { state: 'visible', timeout: 10000 })
+    await waitForContent(page, '.personal-story__cover')
+    await page.waitForSelector('.personal-story__timeline', { state: 'visible', timeout: 10000 })
     await page.waitForFunction(() => {
-      const summary = document.querySelector('.alang-event__story-summary')?.getAttribute('aria-label') ?? ''
-      const firstTitle = document.querySelector('.alang-event__card-title')?.textContent ?? ''
-      return summary.includes('2 段故事收藏') && firstTitle.includes('晚风')
+      const title = document.querySelector('.personal-story__title')?.textContent ?? ''
+      const chapters = document.querySelectorAll('.personal-story__chapter').length
+      return title.includes('你的故事') && chapters === 2
+    }, undefined, { timeout: 10000 })
+
+    return screenshotViewport(page)
+  })
+}
+
+async function captureMyImageV17() {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/profile-linked/my-image/index?motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await waitForContent(page, '.my-image__stage')
+    await page.waitForSelector('.my-image__tabs', { state: 'visible', timeout: 10000 })
+    await page.waitForFunction(() => {
+      const name = document.querySelector('.my-image__stage-name')?.textContent ?? ''
+      const fragment = document.querySelector('.my-image__balance-value')?.textContent ?? ''
+      return name.length > 0 && fragment.includes('70')
+    }, undefined, { timeout: 10000 })
+
+    return screenshotViewport(page)
+  })
+}
+
+async function captureProfileSettingsV17() {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/profile-linked/settings/index?motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await waitForContent(page, '.profile-settings__intro')
+    await page.waitForSelector('.profile-settings__card', { state: 'visible', timeout: 10000 })
+    await page.waitForFunction(() => {
+      const title = document.querySelector('.profile-settings__title')?.textContent?.trim()
+      const rows = document.querySelectorAll('.profile-settings__row').length
+      const logout = document.querySelector('.profile-settings__logout-text')?.textContent?.trim()
+      return title === '设置与服务' && rows === 6 && logout === '退出登录'
     }, undefined, { timeout: 10000 })
 
     return screenshotViewport(page)
@@ -588,7 +635,9 @@ register('matching-status-puzzle-prelude', captureMatchingStatusPuzzlePrelude)
 register('profile-v17', captureProfileV17)
 register('discover-alang-v17', captureDiscoverAlangV17)
 register('alang-search-v17', captureAlangSearchV17)
-register('alang-stories-v17', captureAlangStoriesV17)
+register('personal-story-v17', capturePersonalStoryV17)
+register('my-image-v17', captureMyImageV17)
+register('profile-settings-v17', captureProfileSettingsV17)
 
 const server = app.listen(PORT, () => {
   console.log(`[screenshot-server] listening on http://localhost:${PORT}`)

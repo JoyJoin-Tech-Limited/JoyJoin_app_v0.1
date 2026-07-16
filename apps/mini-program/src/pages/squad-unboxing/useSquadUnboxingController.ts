@@ -761,13 +761,11 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     }
 
     writeRevealFlag(groupId)
-
-    const timer = setTimeout(() => {
-      squadUnboxingAnalytics.track('squad_unboxing_tonights_table_view', { groupId, screen: 'squad-unboxing' })
-    }, shouldReduceMotion ? 120 : 900)
-
-    return () => clearTimeout(timer)
-  }, [flowState, groupId, shouldReduceMotion])
+    // `squad_unboxing_tonights_table_view` moved to the page's panel toggle
+    // (2026-07-16): the 今晚这桌 chapter is collapsed by default, so the
+    // impression now fires on the user's first expand, not on reveal entry.
+    return undefined
+  }, [flowState, groupId])
 
   return {
     authLoading,

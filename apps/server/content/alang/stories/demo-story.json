@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "title": "阿浪的傍晚",
   "description": "在深圳湾公园，你会遇见一个正在等人的人。",
   "startNodeId": "event_card",
@@ -50,9 +50,9 @@
       "type": "found_scene",
       "content": {
         "title": "他抬起头",
-        "body": "你走近时，阿浪正好抬起头。他没有惊讶，只是轻轻笑了一下。『你来了。』",
+        "body": "你走近时，阿浪抬起头，朝你笑了一下：『来了？』",
         "imageKey": "alang-found-scene-placeholder",
-        "narration": "海风吹过来，带着傍晚的凉意。阿浪把外套拉链往上拉了一点。"
+        "narration": "海风有点凉。他把外套拉链往上拉了拉。你们安静了一秒。"
       },
       "nextNodeId": "dialogue_1"
     },
@@ -61,25 +61,25 @@
       "type": "dialogue",
       "content": {
         "speaker": "阿浪",
-        "body": "『你平时等人吗？』",
+        "body": "你也常等人吗？",
         "imageKey": "alang-found-scene-placeholder"
       },
       "choices": [
         {
-          "label": "等过，但很少被人等",
-          "response": "阿浪点点头：『我也是。所以今天我提前来了。』",
+          "label": "会。只是很少有人等我。",
+          "response": "阿浪点点头：『那我们有点像。我今天也早到了一会儿。』",
           "nextNodeId": "dialogue_2",
           "moodShift": "共鸣"
         },
         {
-          "label": "不习惯等，习惯被等",
-          "response": "阿浪笑了一下：『那今天我们换换位置。』",
+          "label": "我比较常让别人等。",
+          "response": "阿浪笑了：『那今天换我等到你了。』",
           "nextNodeId": "dialogue_2",
           "moodShift": "轻松"
         },
         {
-          "label": "我不等人，我找人",
-          "response": "阿浪愣了一下，然后笑了：『那你找到了。』",
+          "label": "我不太等，会直接去找。",
+          "response": "他愣了一下，笑出来：『那你今天算找到了。』",
           "nextNodeId": "dialogue_2",
           "moodShift": "俏皮"
         }
@@ -90,25 +90,25 @@
       "type": "dialogue",
       "content": {
         "speaker": "阿浪",
-        "body": "『如果今天没有遇到我，你本来打算做什么？』",
+        "body": "那你今天如果没碰见我，本来想做什么？",
         "imageKey": "alang-found-scene-placeholder"
       },
       "choices": [
         {
-          "label": "沿着海边走一圈",
-          "response": "『那现在有人陪你走了。』阿浪站起来，拍了拍裤子上的沙。",
+          "label": "沿着海边走一圈。",
+          "response": "阿浪拍了拍裤脚：『那正好，今天有人一起走。』",
           "nextNodeId": "dialogue_3",
           "moodShift": "温暖"
         },
         {
-          "label": "找个地方坐着发呆",
-          "response": "『那现在有人陪你发呆了。』阿浪没有动，但往旁边挪了挪，让出半个长椅。",
+          "label": "找个地方坐着发会儿呆。",
+          "response": "他往旁边挪了挪：『那先一起坐会儿，也行。』",
           "nextNodeId": "dialogue_3",
           "moodShift": "安静"
         },
         {
-          "label": "本来没打算来",
-          "response": "『那现在来了。』阿浪站起来，『走吧，既然来了。』",
+          "label": "其实，我本来没打算来。",
+          "response": "阿浪看了你一眼：『但你还是来了。走吧，来都来了。』",
           "nextNodeId": "dialogue_3",
           "moodShift": "随性"
         }
@@ -119,25 +119,25 @@
       "type": "dialogue",
       "content": {
         "speaker": "阿浪",
-        "body": "『你觉得，两个人一起走，和一个人走，最大的区别是什么？』",
+        "body": "要是一起走一段，你觉得会和一个人走有什么不一样？",
         "imageKey": "alang-found-scene-placeholder"
       },
       "choices": [
         {
-          "label": "有人可以说话",
-          "response": "『说话很重要。』阿浪说，『但有时候，一起不说话也很好。』",
+          "label": "有人能说说话。",
+          "response": "阿浪点点头：『嗯。不过不想说的时候，安静走着也很好。』",
           "nextNodeId": "companion_start",
           "moodShift": "温和"
         },
         {
-          "label": "节奏会变慢",
-          "response": "『对。』阿浪说，『一个人走得快，两个人走得远。』",
+          "label": "会不自觉走慢一点。",
+          "response": "『我也觉得。』阿浪看着前面的路，『慢一点，反而记得更久。』",
           "nextNodeId": "companion_start",
           "moodShift": "深沉"
         },
         {
-          "label": "没什么区别",
-          "response": "阿浪看了你一眼，没说话，只是笑了笑。",
+          "label": "可能……没什么不一样。",
+          "response": "阿浪看了你一眼，笑了：『那就走走看。』",
           "nextNodeId": "companion_start",
           "moodShift": "淡然"
         }
@@ -148,7 +148,7 @@
       "type": "companion_start",
       "content": {
         "title": "一起走走",
-        "body": "阿浪站起来，把外套拉链拉到顶。『走吧，海边的路很长。』",
+        "body": "阿浪站起来，把外套拉链拉到顶：『走吧。海边这段路，慢慢走就好。』",
         "imageKey": "alang-found-scene-placeholder"
       },
       "nextNodeId": "companion_move"
@@ -158,11 +158,11 @@
       "type": "companion_move",
       "content": {
         "title": "海边步道",
-        "body": "你们沿着海边走。阿浪走得不快，偶尔停下来看看水面。",
+        "body": "你们沿着海边往前走。阿浪走得不快，偶尔看看水面。",
         "companionLines": [
-          "『这里的海不蓝，但很安静。』",
-          "『我以前常来，后来不来了。』",
-          "『今天是因为你，才来的。』"
+          "『这里的海不算蓝，倒是挺安静的。』",
+          "『我以前常来，后来就来得少了。』",
+          "『今天又走到这里了。还好，不是一个人。』"
         ]
       },
       "gpsTrigger": {
@@ -177,7 +177,7 @@
       "type": "arrival_gate",
       "content": {
         "title": "到了",
-        "body": "阿浪停下脚步。『我们到了。』",
+        "body": "阿浪停下脚步，回头看你：『到了。』",
         "imageKey": "alang-found-scene-placeholder"
       },
       "nextNodeId": "user_confirm"
@@ -187,7 +187,7 @@
       "type": "user_confirm",
       "content": {
         "title": "我们到了",
-        "body": "阿浪看着你，没有说话。",
+        "body": "阿浪看着你，没有催你。",
         "confirmLabel": "嗯，到了"
       },
       "nextNodeId": "closing"
@@ -197,11 +197,11 @@
       "type": "closing",
       "content": {
         "title": "收束",
-        "body": "阿浪从口袋里掏出一张折叠的纸，递给你。『下次，你可以提前来。』",
+        "body": "阿浪从口袋里拿出一张折好的纸，递给你：『下次，也可以换你先到。』",
         "closingLines": [
-          "『等人是一种练习。』",
-          "『被等是一种幸运。』",
-          "『今天，我们都有。』"
+          "『原来等人，也没那么难熬。』",
+          "『被人等着，好像也不错。』",
+          "『至少今天，我们都等到了。』"
         ],
         "imageKey": "alang-result-placeholder"
       },
@@ -212,11 +212,11 @@
       "type": "result_card",
       "content": {
         "title": "阿浪的傍晚",
-        "body": "你们一起走过了一段海边的路。",
+        "body": "你和阿浪沿着海边，安静地走完了一小段路。",
         "dateLabel": "今天",
         "locationLabel": "深圳湾公园",
         "finalMood": "安静 / 完成",
-        "summaryLine": "你们一起走过了一段海边的路。",
+        "summaryLine": "你和阿浪沿着海边，安静地走完了一小段路。",
         "eventLog": [
           "遇见阿浪",
           "三段对话",

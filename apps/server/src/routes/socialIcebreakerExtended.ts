@@ -42,7 +42,7 @@ import { logger } from '../lib/logger';
 import { getFeatureFlag } from '../lib/featureFlags';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import { generatePhaseSelectionId } from '../services/customModeService';
-import { simulateBotsForSession, runBotSimulationSafely } from '../services/socialIcebreakerBotService';
+import { simulateBotsForSession, runBotSimulationSafely, seedSingleTestBotsWarmupReady } from '../services/socialIcebreakerBotService';
 
 export function registerExtendedRoutes(router: Router): void {
   const WARMUP_TURN_DURATION_SECONDS = 30;
@@ -262,6 +262,8 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   state.pulseChecks = [];
   if (effectiveNextPhase === 'warmup') {
     state.warmupReadyUserIds = [];
+    // Single-test bot attendees default to ready when warmup restarts.
+    seedSingleTestBotsWarmupReady(state);
   }
   if (effectiveNextPhase === 'speed_friending') {
     const roster = await listParticipants(socialSessionId);

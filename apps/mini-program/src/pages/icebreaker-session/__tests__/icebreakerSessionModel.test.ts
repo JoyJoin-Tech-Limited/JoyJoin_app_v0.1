@@ -218,6 +218,41 @@ describe('deriveParticipants', () => {
     expect(result[0].interests).toEqual(['gaming', 'cooking'])
   })
 
+  it('prefers joinedParticipants primaryArchetype ID for the avatar glyph', () => {
+    const session: IcebreakerSession = {
+      ...normaliseSession(mockSession()),
+      joinedParticipants: [
+        { userId: 'u1', displayName: '小明', primaryArchetype: 'fox' },
+      ],
+    }
+    const result = deriveParticipants(session, [])
+    expect(result[0].archetype).toBe('fox')
+  })
+
+  it('resolves Chinese display-name archetypes from joinedParticipants to canonical IDs', () => {
+    const session: IcebreakerSession = {
+      ...normaliseSession(mockSession()),
+      joinedParticipants: [
+        { userId: 'bot-1', displayName: '测试搭子', archetype: '社牛柯基' },
+        { userId: 'bot-2', displayName: '测试搭子2', archetype: '树洞考拉' },
+      ],
+    }
+    const result = deriveParticipants(session, [])
+    expect(result[0].archetype).toBe('corgi')
+    expect(result[1].archetype).toBe('koala')
+  })
+
+  it('leaves archetype undefined when no source provides one', () => {
+    const session: IcebreakerSession = {
+      ...normaliseSession(mockSession()),
+      joinedParticipants: [
+        { userId: 'u1', displayName: '小明' },
+      ],
+    }
+    const result = deriveParticipants(session, [])
+    expect(result[0].archetype).toBeUndefined()
+  })
+
   it('falls back to roster when no joinedParticipants', () => {
     const session: IcebreakerSession = normaliseSession(mockSession())
     const roster = [

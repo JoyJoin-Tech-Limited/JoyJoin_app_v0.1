@@ -1337,6 +1337,54 @@
     {
       "localPath": "assets/icons/flow-icons/flow-7.webp",
       "cdnPath": "assets/icons/flow-icons/flow-7.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/archetypes/corgi/base-v1.webp",
+      "cdnPath": "assets/profile-pixel/archetypes/corgi/base-v1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/archetypes/rooster/base-v1.webp",
+      "cdnPath": "assets/profile-pixel/archetypes/rooster/base-v1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/archetypes/hamster_praise/base-v1.webp",
+      "cdnPath": "assets/profile-pixel/archetypes/hamster_praise/base-v1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/archetypes/fox/base-v1.webp",
+      "cdnPath": "assets/profile-pixel/archetypes/fox/base-v1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/archetypes/dolphin_calm/base-v1.webp",
+      "cdnPath": "assets/profile-pixel/archetypes/dolphin_calm/base-v1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/archetypes/spider/base-v1.webp",
+      "cdnPath": "assets/profile-pixel/archetypes/spider/base-v1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/archetypes/koala/base-v1.webp",
+      "cdnPath": "assets/profile-pixel/archetypes/koala/base-v1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/archetypes/octopus/base-v1.webp",
+      "cdnPath": "assets/profile-pixel/archetypes/octopus/base-v1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/archetypes/owl/base-v1.webp",
+      "cdnPath": "assets/profile-pixel/archetypes/owl/base-v1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/archetypes/elephant/base-v1.webp",
+      "cdnPath": "assets/profile-pixel/archetypes/elephant/base-v1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/archetypes/turtle/base-v1.webp",
+      "cdnPath": "assets/profile-pixel/archetypes/turtle/base-v1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/archetypes/cat/base-v1.webp",
+      "cdnPath": "assets/profile-pixel/archetypes/cat/base-v1.webp"
     }
   ],
   "pendingAssets": [

@@ -135,7 +135,10 @@ export interface SocialSessionParticipantProfile {
 export interface SocialSessionParticipantSummary {
   userId: string;
   displayName: string;
+  /** Legacy Chinese display name (users.archetype), when present. */
   archetype?: string;
+  /** Canonical 12-archetype ID (users.primary_archetype), e.g. 'corgi'. Preferred for icon/glyph lookup. */
+  primaryArchetype?: string;
   /** Server-only: AI prompt context. Must be stripped before sending to clients. */
   profile?: SocialSessionParticipantProfile | null;
   joinedAt?: string;

@@ -108,7 +108,7 @@ import { enqueueRunPlanPreGeneration, shouldSkipOnDemandGeneration } from '../jo
 import { recordVoteOptimistically } from '../lib/optimisticSync';
 import { resetSocialIcebreakerTier } from '../services/socialIcebreakerTierReset';
 import { getSingleTestMetaForSessionStart } from '../services/singleTestService';
-import { runBotSimulationSafely } from '../services/socialIcebreakerBotService';
+import { runBotSimulationSafely, seedSingleTestBotsWarmupReady } from '../services/socialIcebreakerBotService';
 
 import socialIcebreakerTierRouter from './socialIcebreakerTier';
 import socialIcebreakerCustomRouter from './socialIcebreakerCustom';
@@ -327,6 +327,21 @@ router.post('/start', async (req: any, res) => {
     // Register (or re-register) this participant and bump lastSeen.
     await upsertParticipant(existing.socialSessionId, userId, participantDisplayName);
 
+    // Single-test sessions: backfill bot attendees so the warmup roster always
+    // reflects the full debug group (covers sessions created before bots were
+    // registered unconditionally). Bots default to ready during warmup.
+    let botsBackfilled = false;
+    if (state.singleTest?.botPersonas?.length) {
+      for (const persona of state.singleTest.botPersonas) {
+        await upsertParticipant(existing.socialSessionId, persona.userId, persona.displayName, true);
+      }
+      if (state.currentPhase === 'warmup') {
+        const readyBefore = (state.warmupReadyUserIds ?? []).length;
+        seedSingleTestBotsWarmupReady(state);
+        botsBackfilled = (state.warmupReadyUserIds ?? []).length !== readyBefore;
+      }
+    }
+
     const [rosterCount, activeCount] = await Promise.all([
       getRosterCount(existing.socialSessionId),
       getActiveParticipantCount(existing.socialSessionId),
@@ -340,7 +355,8 @@ router.post('/start', async (req: any, res) => {
     // sessions; only persist when that backfill actually changed the payload.
     const enabledPhasesBefore = JSON.stringify(state.enabledPhases ?? []);
     ensureSessionEnabledPhases(state);
-    let shouldPersist = JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore;
+    let shouldPersist =
+      JSON.stringify(state.enabledPhases ?? []) !== enabledPhasesBefore || botsBackfilled;
 
     // Detect a tier/vibe change from the mini-program tier-selector and reset
     // the session accordingly. This fixes the case where a single-player test
@@ -452,8 +468,8 @@ router.post('/start', async (req: any, res) => {
     currentPhase: 'warmup',
     hostUserId: userId,
     hostDisplayName: displayName || '主持人',
-    playerCount: 1 + (isBotSimulation ? (singleTestMeta?.botPersonas?.length ?? 0) : 0),
-    activePlayerCount: 1 + (isBotSimulation ? (singleTestMeta?.botPersonas?.length ?? 0) : 0),
+    playerCount: 1 + (singleTestMeta?.botPersonas?.length ?? 0),
+    activePlayerCount: 1 + (singleTestMeta?.botPersonas?.length ?? 0),
     phaseStartedAt: now,
     sessionStartedAt: now,
     completedPhases: [],
@@ -462,7 +478,9 @@ router.post('/start', async (req: any, res) => {
     vibe: resolvedVibe,
     enabledPhases: getServerEnabledPhases(),
     commonGroundCount: 0,
-    warmupReadyUserIds: [],
+    // Single-test bot attendees default to ready so the host can preview the
+    // full "everyone ready" warmup flow immediately.
+    warmupReadyUserIds: singleTestMeta?.botPersonas?.map((p) => p.userId) ?? [],
     lieDetectiveCompletedUserIds: [],
     autoAdvanceEnabled: resolvedTier !== 'custom',
     ...(singleTestMeta ? { singleTest: singleTestMeta } : {}),
@@ -480,8 +498,10 @@ router.post('/start', async (req: any, res) => {
     await createSession(newState);
     await upsertParticipant(socialSessionId, userId, displayName || '主持人');
 
-    // Single-test bot simulation: add virtual bots as participants.
-    if (isBotSimulation && singleTestMeta?.botPersonas) {
+    // Single-test sessions: register virtual bots as participants so the
+    // warmup roster shows every debug-group attendee (not only when the bot
+    // simulation harness is enabled via SOCIAL_ICEBREAKER_TEST_MODE_ENABLED).
+    if (singleTestMeta?.botPersonas) {
       for (const persona of singleTestMeta.botPersonas) {
         await upsertParticipant(socialSessionId, persona.userId, persona.displayName, true);
       }
@@ -491,6 +511,7 @@ router.post('/start', async (req: any, res) => {
         groupId: singleTestMeta.groupId,
         botCount: singleTestMeta.botPersonas.length,
         botArchetypes: singleTestMeta.bots.map((b) => b.archetype),
+        runBots: isBotSimulation,
       });
     }
 
@@ -666,6 +687,8 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     state.selectedMood = mood;
     state.currentTopicIndex = 0;
     state.warmupReadyUserIds = [];
+    // Single-test bot attendees default to ready on the fresh topic set.
+    seedSingleTestBotsWarmupReady(state);
     await updateSession(socialSessionId, state);
 
     return res.json({ topics: topicResult.data, meta: topicResult.meta });
@@ -761,6 +784,8 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
   incrementCommonGround(state);
   state.currentTopicIndex = currentTopicIndex + 1;
   state.warmupReadyUserIds = [];
+  // Single-test bot attendees default to ready on each new topic card.
+  seedSingleTestBotsWarmupReady(state);
   await updateSession(socialSessionId, state);
 
   return res.json({

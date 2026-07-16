@@ -22,6 +22,7 @@ import {
 import {
   loadMissionContent,
   getNodeById,
+  invalidateMissionCache,
 } from "../../services/alangContentService";
 import {
   checkGpsArrival,
@@ -163,9 +164,51 @@ function resolveProgressArrivalTarget(options: {
   });
 }
 
+type LoadedMissionContent = NonNullable<Awaited<ReturnType<typeof loadMissionContent>>>;
+
+function resolveSingleTestSearchEntry(content: LoadedMissionContent) {
+  const nodeHistory: string[] = [];
+  const visited = new Set<string>();
+  let nodeId: string | undefined = content.startNodeId;
+
+  while (nodeId && !visited.has(nodeId)) {
+    visited.add(nodeId);
+    const node = getNodeById(content, nodeId);
+    if (!node) return null;
+    nodeHistory.push(node.id);
+    if (node.type === "search_gate") {
+      return { node, nodeHistory };
+    }
+    nodeId = node.nextNodeId;
+  }
+
+  return null;
+}
+
 export function registerAlangRoutes(app: Express): void {
-  // Seed demo mission on first route hit (lazy)
-  let seeded = false;
+  // Synchronize the reviewed internal story once per process. The database is
+  // runtime authority, so a changed approved content version must not remain
+  // stuck behind the original insert-only seed.
+  let contentSynchronized = false;
+  let contentSyncPromise: Promise<void> | null = null;
+
+  const ensureDemoContent = async (req: Request): Promise<void> => {
+    if (contentSynchronized) return;
+    if (!contentSyncPromise) {
+      contentSyncPromise = seedDemoMissionIfNeeded()
+        .then((changed) => {
+          if (changed) invalidateMissionCache("alang-demo");
+          contentSynchronized = true;
+        })
+        .catch((error: unknown) => {
+          contentSyncPromise = null;
+          requestLogger(req).error("[Alang] demo mission synchronization failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+    }
+    await contentSyncPromise;
+  };
 
   // ─── Public: List missions ───
   app.get("/api/alang/missions", async (req: Request, res: Response) => {
@@ -173,15 +216,7 @@ export function registerAlangRoutes(app: Express): void {
     const userId = requireAlangUserId(req, res);
     if (!userId) return;
 
-    if (!seeded) {
-      await seedDemoMissionIfNeeded().then(() => {
-        seeded = true;
-      }).catch((error: unknown) => {
-        requestLogger(req).error("[Alang] demo mission seed failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
-    }
+    await ensureDemoContent(req);
 
     try {
       const missions = await getActiveMissions();
@@ -218,6 +253,7 @@ export function registerAlangRoutes(app: Express): void {
 
     const { slug } = req.params;
     try {
+      if (slug === "alang-demo") await ensureDemoContent(req);
       const mission = await getActiveInternalMissionBySlug(slug);
       if (!mission) {
         res.status(404).json({ error: "MISSION_NOT_FOUND" });
@@ -281,6 +317,7 @@ export function registerAlangRoutes(app: Express): void {
 
     const { slug } = req.params;
     try {
+      if (slug === "alang-demo") await ensureDemoContent(req);
       const mission = await getActiveInternalMissionBySlug(slug);
       if (!mission) {
         res.status(404).json({ error: "MISSION_NOT_FOUND" });
@@ -322,6 +359,14 @@ export function registerAlangRoutes(app: Express): void {
         return;
       }
 
+      const configuredSearchEntry = validatedConfiguration?.valid
+        ? resolveSingleTestSearchEntry(content)
+        : null;
+      if (validatedConfiguration?.valid && !configuredSearchEntry) {
+        res.status(500).json({ error: "INVALID_SEARCH_NODE" });
+        return;
+      }
+
       let progress = await getMissionProgress(userId, mission.id);
       if (progress && progress.status === "in_progress") {
         if (debugMode && validatedConfiguration?.valid) {
@@ -330,6 +375,12 @@ export function registerAlangRoutes(app: Express): void {
             return;
           }
           progress = await updateMissionProgress(progress.id, {
+            currentNodeId: configuredSearchEntry!.node.id,
+            nodeHistory: Array.from(new Set([
+              ...(progress.nodeHistory ?? []),
+              ...configuredSearchEntry!.nodeHistory,
+            ])),
+            stage: computeStageFromNodeType(configuredSearchEntry!.node.type),
             targetLocation: storedTestCoordinate(validatedConfiguration.targetLocation),
             companionEndLocation: storedTestCoordinate(validatedConfiguration.companionEndLocation),
             isDebugSession: true,
@@ -388,9 +439,9 @@ export function registerAlangRoutes(app: Express): void {
         return;
       }
 
-      let initialNode = startNode;
-      const nodeHistory = [startNode.id];
-      if (startNode.type === "event_card" && startNode.nextNodeId) {
+      let initialNode = configuredSearchEntry?.node ?? startNode;
+      const nodeHistory = configuredSearchEntry?.nodeHistory ?? [startNode.id];
+      if (!configuredSearchEntry && startNode.type === "event_card" && startNode.nextNodeId) {
         const eventDetailNode = getNodeById(content, startNode.nextNodeId);
         if (eventDetailNode?.type === "event_detail") {
           initialNode = eventDetailNode;

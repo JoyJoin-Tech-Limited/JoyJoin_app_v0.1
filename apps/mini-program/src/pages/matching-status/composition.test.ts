@@ -41,9 +41,10 @@ describe('matching-status page composition', () => {
     expect(controllerSource).toContain('if (!hasRevealed && resolvedGroupId)')
   })
 
-  it('routes main matched CTA through the matched destination helper', () => {
+  it('routes main matched CTA to the event detail page', () => {
     expect(controllerSource).toContain('const handleOpenMatchedJourney = useCallback')
-    expect(controllerSource).toContain('navigateToMatchedDestination(resolvedGroupId)')
+    expect(controllerSource).toContain('/pages/event-detail/index?id=')
+    expect(controllerSource).not.toContain('navigateToMatchedDestination(resolvedGroupId)')
   })
 
   it('keeps top-level screen-state ownership in the controller', () => {

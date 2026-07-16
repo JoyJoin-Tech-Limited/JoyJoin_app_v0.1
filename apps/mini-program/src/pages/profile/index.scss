@@ -1,6 +1,5 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
-@use '../../styles/dark-variables' as dark;
 
 .profile-page {
   display: flex;
@@ -299,7 +298,7 @@
     font-size: $font-size-2xs;
     font-family: $font-ui;
     font-weight: $font-weight-medium;
-    color: var(--profile-text-link);
+    color: $color-primary-dark;
     line-height: $line-height-normal;
   }
 
@@ -372,30 +371,6 @@
     line-height: $line-height-normal;
   }
 
-  // Menu section
-  &__menu-section {
-    padding: 0 $container-padding;
-    margin-bottom: $spacing-lg;
-    opacity: 0;
-    transform: translateY(16rpx);
-    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.2s,
-      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
-
-    &--entered {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  &__menu-title {
-    display: block;
-    font-size: $font-size-base;
-    font-family: $font-ui;
-    font-weight: $font-weight-semibold;
-    color: var(--profile-text-secondary);
-    margin-bottom: $spacing-sm;
-  }
-
   // Reference 06 — approved Profile identity stage
   &__identity-stage {
     position: relative;
@@ -404,12 +379,13 @@
     border-radius: 36rpx;
     overflow: hidden;
     box-sizing: border-box;
-    color: $color-text-white;
+    color: var(--profile-text-primary);
     background:
-      radial-gradient(circle at 76% 38%, rgba(139, 92, 246, 0.34), transparent 38%),
-      radial-gradient(circle at 14% 8%, rgba(168, 197, 221, 0.12), transparent 30%),
-      linear-gradient(150deg, dark.$dark-color-bg-mid 0%, #2e1065 54%, dark.$dark-color-bg-deep 100%);
-    box-shadow: 0 18rpx 44rpx rgba(36, 24, 84, 0.2);
+      radial-gradient(circle at 88% 18%, rgba(255, 214, 165, 0.28), transparent 34%),
+      radial-gradient(circle at 14% 90%, rgba(139, 92, 246, 0.09), transparent 36%),
+      linear-gradient(155deg, $color-bg-clean 0%, $color-bg-tint-cream 48%, $color-bg-tint-purple 100%);
+    border: 2rpx solid rgba($color-primary, 0.1);
+    box-shadow: 0 16rpx 38rpx rgba(45, 49, 66, 0.09);
     opacity: 0;
     transform: translateY(16rpx);
     transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
@@ -418,38 +394,24 @@
     &::before {
       content: '';
       position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 112rpx;
-      height: 180rpx;
-      opacity: 0.3;
-      background:
-        linear-gradient(90deg,
-          transparent 0 5%,
-          rgba(139, 92, 246, 0.24) 5% 9%,
-          transparent 9% 15%,
-          rgba(168, 197, 221, 0.16) 15% 21%,
-          transparent 21% 30%,
-          rgba(139, 92, 246, 0.16) 30% 36%,
-          transparent 36% 74%,
-          rgba(168, 197, 221, 0.14) 74% 80%,
-          transparent 80% 86%,
-          rgba(139, 92, 246, 0.2) 86% 92%,
-          transparent 92% 100%);
-      clip-path: polygon(0 58%, 8% 58%, 8% 24%, 15% 24%, 15% 48%, 22% 48%, 22% 10%, 31% 10%, 31% 54%, 42% 54%, 42% 31%, 50% 31%, 50% 64%, 63% 64%, 63% 18%, 72% 18%, 72% 47%, 82% 47%, 82% 4%, 91% 4%, 91% 56%, 100% 56%, 100% 100%, 0 100%);
+      inset: 0;
+      opacity: 0.24;
+      background-image: radial-gradient(rgba($color-primary, 0.2) 1rpx, transparent 1rpx);
+      background-size: 28rpx 28rpx;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 28%, black 74%, transparent 100%);
     }
 
     &::after {
       content: '';
       position: absolute;
-      left: 36%;
-      right: -12%;
-      bottom: 76rpx;
-      height: 92rpx;
-      border: 2rpx solid rgba(139, 92, 246, 0.28);
+      left: 42%;
+      right: 5%;
+      bottom: 126rpx;
+      height: 70rpx;
+      border: 2rpx solid rgba($color-primary, 0.12);
       border-radius: 50%;
-      transform: rotate(-4deg);
-      box-shadow: 0 0 26rpx rgba(139, 92, 246, 0.2);
+      background: rgba($color-primary, 0.035);
+      box-shadow: 0 12rpx 30rpx rgba(45, 49, 66, 0.06);
     }
 
     &--entered {
@@ -465,7 +427,7 @@
     width: 280rpx;
     height: 76rpx;
     border-radius: 50%;
-    background: radial-gradient(ellipse, rgba(139, 92, 246, 0.28) 0%, rgba(139, 92, 246, 0) 72%);
+    background: radial-gradient(ellipse, rgba(255, 201, 130, 0.22) 0%, rgba(255, 201, 130, 0) 72%);
   }
 
   &__settings {
@@ -548,12 +510,13 @@
   }
 
   &__identity-name {
+    display: block;
     max-width: 260rpx;
     font-family: $font-cn-display;
     font-size: 44rpx;
-    line-height: 1.12;
+    line-height: 1.3;
     font-weight: $font-weight-bold;
-    color: $color-text-white;
+    color: var(--profile-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -575,17 +538,18 @@
     font-family: $font-ui;
     font-size: $font-size-2xs;
     line-height: $line-height-normal;
-    color: rgba($color-text-white, 0.94);
-    background: rgba($color-surface, 0.14);
-    border: 1rpx solid rgba($color-surface, 0.12);
+    color: var(--profile-text-secondary);
+    background: rgba($color-primary, 0.06);
+    border: 1rpx solid rgba($color-primary, 0.08);
 
     &--primary {
-      color: $color-text-white;
-      background: rgba($color-secondary, 0.78);
+      color: $color-primary-dark;
+      background: rgba($color-primary, 0.12);
     }
 
     &--blue {
-      background: rgba($color-info, 0.54);
+      color: $color-info;
+      background: rgba($color-info, 0.1);
     }
   }
 
@@ -595,7 +559,7 @@
     font-family: $font-ui;
     font-size: $font-size-2xs;
     line-height: $line-height-normal;
-    color: rgba($color-text-white, 0.68);
+    color: var(--profile-text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -617,6 +581,37 @@
     display: block;
     width: 100%;
     height: 100%;
+  }
+
+  &__partner-pixel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__partner-pixel-code {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border: 0;
+    border-radius: 24rpx;
+    box-shadow: none;
+  }
+
+  &__partner-pixel-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+
+    &--base { z-index: 1; }
+    &--bottom { z-index: 2; }
+    &--shoes { z-index: 3; }
+    &--top { z-index: 4; }
+    &--accessory { z-index: 5; }
   }
 
   &__partner-fallback {
@@ -648,7 +643,7 @@
     font-family: $font-ui;
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
-    color: rgba($color-text-white, 0.78);
+    color: var(--profile-text-secondary);
   }
 
   &__growth-value {
@@ -656,13 +651,13 @@
     font-size: 48rpx;
     font-weight: $font-weight-bold;
     line-height: 1;
-    color: dark.$dark-color-text-link;
+    color: $color-primary-dark;
   }
 
   &__growth-target {
     font-family: $font-en-brand;
     font-size: $font-size-sm;
-    color: rgba($color-text-white, 0.68);
+    color: var(--profile-text-secondary);
   }
 
   &__growth-progress {
@@ -671,8 +666,8 @@
     margin-top: $spacing-sm;
     border-radius: $radius-pill;
     overflow: hidden;
-    background: rgba($color-surface, 0.12);
-    border: 1rpx solid rgba($color-surface, 0.08);
+    background: rgba($color-primary, 0.08);
+    border: 1rpx solid rgba($color-primary, 0.06);
   }
 
   &__growth-progress-bar {
@@ -681,7 +676,7 @@
     border-radius: inherit;
     transform: scaleX(0);
     transform-origin: left center;
-    background: linear-gradient(90deg, $color-primary 0%, dark.$dark-color-text-link 100%);
+    background: linear-gradient(90deg, $color-primary 0%, $color-secondary 100%);
     transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
@@ -691,7 +686,7 @@
     font-family: $font-ui;
     font-size: $font-size-2xs;
     line-height: $line-height-normal;
-    color: rgba($color-text-white, 0.56);
+    color: var(--profile-text-tertiary);
   }
 
   &__partner-entry {
@@ -707,13 +702,14 @@
     display: flex;
     align-items: center;
     gap: $spacing-md;
-    background: rgba(11, 9, 37, 0.86);
-    border: 1rpx solid rgba($color-surface, 0.16);
+    background: rgba($color-surface, 0.9);
+    border: 1rpx solid rgba($color-primary, 0.12);
+    box-shadow: 0 10rpx 24rpx rgba(45, 49, 66, 0.08);
     transition: transform 0.12s ease, background 0.12s ease;
 
     &--pressed {
       transform: scale(0.985);
-      background: rgba(28, 20, 65, 0.94);
+      background: rgba($color-primary, 0.06);
     }
   }
 
@@ -730,7 +726,7 @@
     font-family: $font-ui;
     font-size: 22rpx;
     font-weight: $font-weight-semibold;
-    color: rgba($color-text-white, 0.78);
+    color: var(--profile-text-secondary);
   }
 
   &__equipment-slots {
@@ -745,15 +741,27 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba($color-surface, 0.07);
-    border: 1rpx solid rgba($color-surface, 0.22);
+    background: rgba($color-primary, 0.045);
+    border: 1rpx solid rgba($color-primary, 0.12);
+
+    &--filled {
+      border-color: rgba($color-secondary, 0.72);
+      background: linear-gradient(145deg, rgba($color-primary, 0.16), rgba($color-secondary, 0.15));
+      box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.1);
+    }
+  }
+
+  &__equipment-slot-glyph {
+    color: $color-primary-dark;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
   }
 
   &__equipment-slot-mark {
     width: 18rpx;
     height: 18rpx;
     border-radius: 50%;
-    border: 2rpx dashed rgba($color-text-white, 0.34);
+    border: 2rpx dashed rgba($color-primary, 0.32);
   }
 
   &__partner-entry-label,
@@ -783,7 +791,7 @@
     font-family: $font-ui;
     font-size: 20rpx;
     line-height: $line-height-normal;
-    color: rgba($color-text-white, 0.64);
+    color: var(--profile-text-tertiary);
   }
 
   &__partner-entry-action {
@@ -800,7 +808,7 @@
     font-family: $font-ui;
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
-    color: rgba($color-text-white, 0.94);
+    color: var(--profile-text-primary);
     white-space: nowrap;
   }
 
@@ -815,7 +823,7 @@
   }
 
   &__partner-entry-chevron {
-    color: rgba($color-text-white, 0.8);
+    color: $color-primary;
   }
 
   &__archive {
@@ -876,7 +884,7 @@
 
   &__story-card {
     position: relative;
-    height: 244rpx;
+    height: 280rpx;
     border-radius: 34rpx;
     overflow: hidden;
     background: $color-primary-light;
@@ -908,14 +916,29 @@
   &__story-placeholder {
     position: absolute;
     z-index: 3;
-    top: $spacing-sm;
+    top: 58rpx;
     right: $spacing-sm;
     padding: 4rpx $spacing-xs;
     border-radius: $radius-pill;
-    background: rgba($color-text-primary, 0.5);
+    background: rgba($color-text-primary, 0.76);
     font-family: $font-ui;
     font-size: 20rpx;
     color: $color-text-white;
+  }
+
+  &__story-bookmark {
+    position: absolute;
+    z-index: 3;
+    top: $spacing-sm;
+    right: $spacing-sm;
+    padding: 6rpx 12rpx;
+    border: 1rpx solid rgba($color-text-white, 0.28);
+    border-radius: $radius-pill;
+    background: rgba(29, 18, 64, 0.72);
+    color: $color-text-white;
+    font-family: $font-mono;
+    font-size: 18rpx;
+    letter-spacing: 1rpx;
   }
 
   &__story-content {
@@ -931,7 +954,7 @@
     font-size: $font-size-lg;
     font-weight: $font-weight-bold;
     line-height: $line-height-normal;
-    color: dark.$dark-color-bg-mid;
+    color: $color-text-primary;
   }
 
   &__story-summary {
@@ -955,14 +978,14 @@
   &__story-status {
     margin-top: 4rpx;
     font-size: 22rpx;
-    color: rgba(36, 22, 79, 0.56);
+    color: rgba(36, 22, 79, 0.76);
   }
 
   &__story-cta {
     margin-top: $spacing-sm;
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
-    color: $color-primary;
+    color: $color-primary-dark;
   }
 
   &__story-action {
@@ -978,78 +1001,6 @@
     color: $color-primary;
     background: rgba($color-surface, 0.94);
     box-shadow: 0 8rpx 18rpx rgba(63, 42, 121, 0.12);
-  }
-
-  &__service-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-sm;
-  }
-
-  &__service-item {
-    position: relative;
-    width: calc(50% - #{$spacing-xs});
-    min-height: 92rpx;
-    padding: $spacing-sm $spacing-md;
-    border-radius: $card-radius-sm;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    background: var(--profile-surface);
-    border: 1rpx solid rgba($color-primary, 0.05);
-    box-shadow: $shadow-sm;
-    transition: transform 0.12s ease, background 0.12s ease;
-
-    &--pressed {
-      transform: scale(0.98);
-      background: var(--profile-primary-04);
-    }
-  }
-
-  &__service-icon-well {
-    width: 54rpx;
-    height: 54rpx;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    background: var(--profile-primary-06);
-  }
-
-  &__service-icon {
-    width: 36rpx;
-    height: 36rpx;
-  }
-
-  &__service-label {
-    min-width: 0;
-    flex: 1;
-    font-family: $font-ui;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    line-height: $line-height-normal;
-    color: var(--profile-text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__service-meta {
-    min-width: 30rpx;
-    height: 30rpx;
-    padding: 0 6rpx;
-    border-radius: $radius-pill;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: $font-ui;
-    font-size: 20rpx;
-    line-height: 30rpx;
-    color: $color-text-white;
-    background: $color-primary;
   }
 
   // Error card
@@ -1126,40 +1077,6 @@
     color: var(--profile-text-white);
   }
 
-  // Logout
-  &__logout {
-    display: flex;
-    justify-content: center;
-    padding: $spacing-md $container-padding;
-  }
-
-  &__logout-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: $spacing-sm $spacing-lg;
-    min-height: $cta-min-tap;
-    border-radius: $radius-pill;
-    transition: background 0.12s ease, transform 0.12s ease, opacity 0.12s ease;
-
-    &--pressed {
-      background: #{rgba($color-text-primary, 0.04)};
-      transform: scale(0.98);
-    }
-
-    &--busy {
-      opacity: 0.6;
-      pointer-events: none;
-    }
-  }
-
-  &__logout-text {
-    font-size: $font-size-sm;
-    font-family: $font-ui;
-    color: var(--profile-text-secondary);
-    line-height: $line-height-normal;
-  }
-
   &__spacer {
     @include safe-area-bottom-padding(padding-bottom, $tab-bar-root-height + $spacing-md + $spacing-xs);
     height: 0;
@@ -1168,8 +1085,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .profile-page__identity-stage,
-  .profile-page__stats,
-  .profile-page__menu-section {
+  .profile-page__stats {
     opacity: 1;
     transform: none;
     transition: none;
@@ -1182,7 +1098,6 @@
   .profile-page__partner-entry,
   .profile-page__archive-link,
   .profile-page__story-card,
-  .profile-page__service-item,
   .profile-page__growth-progress-bar,
   .profile-page__milestone {
     opacity: 1;

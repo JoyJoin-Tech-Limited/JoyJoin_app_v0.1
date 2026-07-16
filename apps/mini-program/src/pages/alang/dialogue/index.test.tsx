@@ -10,12 +10,13 @@ const mocks = vi.hoisted(() => ({
   callSubmitChoice: vi.fn(),
   refetch: vi.fn(),
   syncMissionProgress: vi.fn(),
+  routerParams: { current: { slug: 'meet-alang', nodeId: 'dialogue-1' } },
 }))
 
 vi.mock('@tarojs/taro', () => {
   const taro = {
     getCurrentInstance: () => ({
-      router: { params: { slug: 'meet-alang', nodeId: 'dialogue-1' } },
+      router: { params: mocks.routerParams.current },
     }),
     redirectTo: mocks.redirectTo,
     showToast: mocks.showToast,
@@ -124,6 +125,7 @@ const mission = {
 describe('AlangDialoguePage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.routerParams.current = { slug: 'meet-alang', nodeId: 'dialogue-1' }
     mocks.redirectTo.mockResolvedValue({})
     mocks.refetch.mockResolvedValue({ data: mission })
     mocks.useAlangMissionDetail.mockReturnValue({
@@ -139,20 +141,47 @@ describe('AlangDialoguePage', () => {
     })
   })
 
-  it('uses server progress and replays completed rounds as a story log instead of chat bubbles', async () => {
+  it('shows both the first spoken line and the scene narration when Alang is found', async () => {
+    mocks.routerParams.current = { slug: 'meet-alang', nodeId: 'found' }
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: {
+        ...mission,
+        myProgress: {
+          ...mission.myProgress,
+          stage: 'found',
+          currentNodeId: 'found',
+          nodeHistory: ['found'],
+          choicesMade: [],
+        },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    render(<AlangDialoguePage />)
+
+    expect(await screen.findByText('你看见阿浪靠在墙边。')).toBeInTheDocument()
+    expect(screen.getByText('阿浪抬头看了你一眼。')).toBeInTheDocument()
+  })
+
+  it('uses server progress and restores only the latest exchange in natural language', async () => {
     const { container } = render(<AlangDialoguePage />)
 
     expect(screen.getByText('“我想走一走，你有空吗？”')).toBeInTheDocument()
     expect(screen.queryByText('第一段')).not.toBeInTheDocument()
-    expect(await screen.findByText('你选择：先听听')).toBeInTheDocument()
-    expect(screen.getByText('他慢慢开口。')).toBeInTheDocument()
-    expect(container.querySelectorAll('.alang-dialogue__recap-item')).toHaveLength(2)
+    expect(await screen.findByText('刚才聊到这里')).toBeInTheDocument()
+    expect(screen.getByText('你：不催他')).toBeInTheDocument()
+    expect(screen.getByText('夜风安静了一会儿。')).toBeInTheDocument()
+    expect(screen.queryByText(/你选择：/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/第 3 \/ 3 段/)).not.toBeInTheDocument()
+    expect(container.querySelector('.alang-dialogue__choice-letter')).not.toBeInTheDocument()
     expect(container.querySelector('.alang-dialogue__history-item')).not.toBeInTheDocument()
     expect(container.querySelector('.alang-dialogue__choices-dock')).toBeInTheDocument()
     expect(screen.getAllByRole('img')[0]).toHaveAttribute('src', '/assets/lovart/alang-found-scene-placeholder.webp')
   })
 
-  it('submits the selected server choice and replaces dialogue with companion in the return stack', async () => {
+  it('shows Alang response before the next beat and enters companion only after an explicit tap', async () => {
     render(<AlangDialoguePage />)
 
     const choice = await screen.findByText('陪你走走')
@@ -164,19 +193,51 @@ describe('AlangDialoguePage', () => {
         choiceIndex: 0,
       })
     })
+    expect(await screen.findByText('“那就一起吧。”')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '继续听阿浪说' })).toBeInTheDocument()
+    expect(mocks.syncMissionProgress).not.toHaveBeenCalled()
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: '继续听阿浪说' }))
+    expect(await screen.findByText('阿浪站了起来。')).toBeInTheDocument()
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: '陪他走走' }))
     expect(mocks.syncMissionProgress).toHaveBeenCalledWith('meet-alang', {
       stage: 'companion',
       currentNodeId: 'companion',
     })
-    expect(await screen.findByText('阿浪站起身了')).toBeInTheDocument()
-    await waitFor(() => {
-      expect(mocks.redirectTo).toHaveBeenCalledWith({
-        url: '/pages/alang/companion/index?slug=meet-alang&nodeId=companion',
-      })
-    }, { timeout: 1600 })
+    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledWith({
+      url: '/pages/alang/companion/index?slug=meet-alang&nodeId=companion',
+    }))
     expect(mocks.syncMissionProgress.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.redirectTo.mock.invocationCallOrder[0],
     )
+  })
+
+  it('sends only one choice while the first tap is still pending', async () => {
+    let resolveChoice!: (value: {
+      nextNodeId: string
+      response: string
+      stage: string
+    }) => void
+    mocks.callSubmitChoice.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveChoice = resolve
+    }))
+    render(<AlangDialoguePage />)
+
+    const choice = await screen.findByText('陪你走走')
+    fireEvent.click(choice)
+    fireEvent.click(choice)
+
+    expect(mocks.callSubmitChoice).toHaveBeenCalledTimes(1)
+    expect(await screen.findByText('阿浪想了想…')).toBeInTheDocument()
+    resolveChoice({
+      nextNodeId: 'companion',
+      response: '“那就一起吧。”',
+      stage: 'companion',
+    })
+    expect(await screen.findByText('“那就一起吧。”')).toBeInTheDocument()
   })
 
   it('uses the server stage to leave a stale dialogue page after the story reached its result', async () => {

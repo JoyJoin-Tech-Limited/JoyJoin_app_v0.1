@@ -141,83 +141,34 @@
     line-height: $line-height-loose;
   }
 
-  &__recap {
+  &__previous {
     margin-top: 34rpx;
-    padding: 0 4rpx;
+    padding: 24rpx 26rpx;
+    border: 2rpx solid rgba($color-primary, 0.08);
+    border-radius: $card-radius-sm;
+    background: rgba($color-surface, 0.64);
   }
 
-  &__recap-heading {
-    display: flex;
-    margin-bottom: 18rpx;
-    align-items: baseline;
-    justify-content: space-between;
-  }
-
-  &__recap-title,
-  &__recap-count {
+  &__previous-label,
+  &__previous-choice,
+  &__previous-response {
     display: block;
   }
 
-  &__recap-title {
-    color: $color-text-primary-warm;
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-  }
-
-  &__recap-count {
+  &__previous-label {
+    margin-bottom: 12rpx;
     color: $color-text-tertiary;
     font-size: $font-size-xs;
   }
 
-  &__recap-item {
-    display: flex;
-    padding: 20rpx 0;
-    border-top: 2rpx solid rgba($color-text-primary, 0.065);
-    align-items: flex-start;
-
-    &:last-child {
-      border-bottom: 2rpx solid rgba($color-text-primary, 0.065);
-      animation: alang-dialogue-response-enter 220ms ease-out both;
-    }
-  }
-
-  &__recap-index {
-    display: flex;
-    width: 42rpx;
-    height: 42rpx;
-    margin: 2rpx 20rpx 0 0;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    border-radius: 14rpx;
-    background: $color-primary-light;
-  }
-
-  &__recap-index-text {
-    color: $color-primary-dark;
-    font-family: $font-mono;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-  }
-
-  &__recap-copy {
-    min-width: 0;
-    flex: 1;
-  }
-
-  &__recap-choice,
-  &__recap-response {
-    display: block;
-  }
-
-  &__recap-choice {
+  &__previous-choice {
     color: $color-text-secondary;
-    font-size: $font-size-xs;
+    font-size: $font-size-sm;
     line-height: $line-height-normal;
   }
 
-  &__recap-response {
-    margin-top: 8rpx;
+  &__previous-response {
+    margin-top: 10rpx;
     color: $color-text-primary-warm;
     font-size: $font-size-sm;
     line-height: $line-height-relaxed;
@@ -296,22 +247,6 @@
     }
   }
 
-  &__choice-letter {
-    display: flex;
-    width: 42rpx;
-    height: 42rpx;
-    margin-right: 18rpx;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    border-radius: $radius-circle;
-    color: $color-text-white;
-    background: $color-primary;
-    font-family: $font-mono;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-  }
-
   &__choice-text {
     display: block;
     min-width: 0;
@@ -330,11 +265,51 @@
     text-align: center;
   }
 
+  &__response-panel {
+    animation: alang-dialogue-response-enter 220ms ease-out both;
+  }
+
+  &__response-speaker,
+  &__response-copy {
+    display: block;
+  }
+
+  &__response-speaker {
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    letter-spacing: 2rpx;
+  }
+
+  &__response-copy {
+    margin-top: 12rpx;
+    color: $color-text-primary-warm;
+    font-size: $font-size-md;
+    line-height: $line-height-loose;
+  }
+
+  &__response-continue {
+    display: flex;
+    min-height: $cta-min-tap;
+    margin-top: 22rpx;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-pill;
+    background: $color-primary;
+  }
+
+  &__response-continue-text {
+    color: $color-text-white;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+  }
+
   &__transition {
     display: flex;
     min-height: 90rpx;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   &__transition-dot {
@@ -352,6 +327,11 @@
     display: block;
   }
 
+  &__transition-copy {
+    min-width: 0;
+    flex: 1;
+  }
+
   &__transition-title {
     color: $color-text-primary-warm;
     font-size: $font-size-base;
@@ -366,8 +346,10 @@
 
   &__transition-retry {
     display: flex;
+    width: 100%;
     min-height: $cta-min-tap;
-    margin-left: auto;
+    box-sizing: border-box;
+    margin-top: 22rpx;
     padding: 10rpx 24rpx;
     align-items: center;
     justify-content: center;
@@ -449,8 +431,17 @@
 
   &__found-narration-text {
     display: block;
+    margin-top: 14rpx;
+    color: $color-text-primary-warm;
+    font-size: $font-size-sm;
+    line-height: $line-height-loose;
+  }
+
+  &__found-spoken {
+    display: block;
     color: $color-text-primary-warm;
     font-size: $font-size-md;
+    font-weight: $font-weight-medium;
     line-height: $line-height-loose;
   }
 

@@ -9,6 +9,8 @@ export * from './personality.js';
 export * from './socialIcebreaker.js';
 export * from './users.js';
 export * from './venues.js';
+export * from './equipment.js';
+export * from './personalStory.js';
 export {
   userCityInterests,
   cityUnlockProgress,

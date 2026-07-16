@@ -92,6 +92,12 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     socialIcebreakerCustomModeEnabled?: boolean
     /** When true, enables the redesigned profile page UI. Default: true. */
     profileRedesignEnabled?: boolean
+    /** Enables the Profile-only pixel avatar stage and My Image entry. */
+    profilePixelAvatarEnabled?: boolean
+    /** Enables equipment draws, fragments and the fragment-only shop. */
+    equipmentRewardsEnabled?: boolean
+    /** Enables the private, append-only AI personal story surface. */
+    personalStoryEnabled?: boolean
     /** When false, hides the corner participant-count badge on Discover OracleCards.
      *  Default: true. */
     oracleCardCornerStatEnabled?: boolean

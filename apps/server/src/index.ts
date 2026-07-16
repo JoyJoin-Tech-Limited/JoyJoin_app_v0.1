@@ -12,6 +12,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import { warmTTSCache } from "./ai/minimaxTTSService";
 import { startPoolCardCopyWorker } from "./ai/workers/poolCardCopyWorker";
+import { startPersonalStoryWorker } from "./jobs/personalStoryWorker";
 import { validateConfig } from "./lib/configValidation";
 import { globalErrorHandler } from "./lib/errorResponse";
 import { logger } from "./lib/logger";
@@ -153,6 +154,7 @@ app.use((req, res, next) => {
 
       // Start pool card AI copy worker (catch-up cron every 5 min)
       startPoolCardCopyWorker(5);
+      startPersonalStoryWorker();
     });
   } catch (error) {
     logger.error("Failed to start server", { error: String(error) });

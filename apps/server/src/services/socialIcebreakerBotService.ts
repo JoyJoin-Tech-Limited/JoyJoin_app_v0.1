@@ -54,6 +54,23 @@ export function getBots(state: SocialSessionState): BotInfo[] {
   }));
 }
 
+/**
+ * Seed single-test bot attendees into the warmup ready list.
+ *
+ * Bots are debug-group attendees regardless of whether the bot-simulation
+ * harness (runBots) is enabled, so they default to ready on every warmup
+ * topic card. Call after any `warmupReadyUserIds` reset. Idempotent.
+ */
+export function seedSingleTestBotsWarmupReady(state: SocialSessionState): void {
+  const bots = getBots(state);
+  if (bots.length === 0) return;
+  const ready = new Set(state.warmupReadyUserIds ?? []);
+  for (const bot of bots) {
+    ready.add(bot.userId);
+  }
+  state.warmupReadyUserIds = [...ready];
+}
+
 /** Deterministic seeded PRNG. Returns floats in [0, 1). */
 function createSeededRandom(seed: string): () => number {
   let hash = 2166136261;

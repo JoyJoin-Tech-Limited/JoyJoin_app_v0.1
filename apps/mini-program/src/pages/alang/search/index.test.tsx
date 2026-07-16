@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   resetMission: vi.fn(),
   refetch: vi.fn(),
   mapProps: vi.fn(),
+  mockArrival: vi.fn(),
 }))
 
 vi.mock('@tarojs/taro', () => {
@@ -52,6 +53,10 @@ vi.mock('@tarojs/components', () => ({
 
 vi.mock('../../../lib/alang/useAlangGps', () => ({
   useAlangGps: mocks.useAlangGps,
+}))
+
+vi.mock('../../../lib/alang/api', () => ({
+  callDebugMockArrival: mocks.mockArrival,
 }))
 
 vi.mock('../../../hooks/useAuth', () => ({
@@ -101,6 +106,15 @@ describe('AlangSearchPage', () => {
       reset: true,
       deletedProgressCount: 1,
       deletedArchiveCount: 0,
+    })
+    mocks.mockArrival.mockResolvedValue({
+      arrived: true,
+      distanceMeters: 2,
+      radiusMeters: 5,
+      stableCount: 3,
+      stage: 'found',
+      nodeId: 'found-scene',
+      debug: true,
     })
     mocks.useAuth.mockReturnValue({
       user: { features: { alangEnabled: true } },
@@ -241,5 +255,56 @@ describe('AlangSearchPage', () => {
     expect(mocks.reLaunch).toHaveBeenCalledWith({
       url: '/pages/alang/config/index?slug=meet-alang',
     })
+  })
+
+  it('shows a direct internal quick-test action and simulates finding without changing device GPS', async () => {
+    mocks.useAuth.mockReturnValue({
+      user: { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } },
+    })
+
+    const { rerender } = render(<AlangSearchPage />)
+
+    expect(screen.getByTestId('alang-search-quick-test')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '模拟找到阿浪' }))
+
+    await waitFor(() => {
+      expect(mocks.showModal).toHaveBeenCalledWith(expect.objectContaining({
+        title: '模拟找到阿浪',
+        content: '仅用于内部测试。将模拟进入阿浪 5 米范围，是否继续？',
+      }))
+      expect(mocks.mockArrival).toHaveBeenCalledWith('meet-alang')
+      expect(mocks.syncMissionProgress).toHaveBeenCalledWith('meet-alang', {
+        stage: 'found',
+        currentNodeId: 'found-scene',
+      })
+    })
+    // The handler must not race the stage-recovery effect with a second
+    // imperative redirect. Navigation begins only after Query state advances.
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: {
+        myProgress: {
+          progressId: 'progress-1',
+          stage: 'found',
+          currentNodeId: 'found-scene',
+        },
+      },
+      refetch: mocks.refetch,
+    })
+    rerender(<AlangSearchPage />)
+
+    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledTimes(1))
+    expect(mocks.redirectTo).toHaveBeenCalledWith({
+      url: '/pages/alang/dialogue/index?slug=meet-alang&nodeId=found-scene',
+    })
+  })
+
+  it('hides the search quick-test action outside server-authorized test mode', () => {
+    mocks.useAuth.mockReturnValue({
+      user: { appMode: 'production', singleTestMode: true, features: { alangEnabled: true } },
+    })
+    render(<AlangSearchPage />)
+    expect(screen.queryByTestId('alang-search-quick-test')).not.toBeInTheDocument()
   })
 })

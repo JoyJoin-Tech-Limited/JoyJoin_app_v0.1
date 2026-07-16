@@ -37,6 +37,11 @@ on:
 permissions:
   contents: read
 
+# Cancel superseded builds when pushes land in quick succession — saves Actions minutes.
+concurrency:
+  group: taro-weapp-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-weapp:
     runs-on: ubuntu-latest

@@ -352,6 +352,90 @@ $fan-rotations: (
     padding-bottom: $spacing-xl;
   }
 
+  // Revealed state (2026-07-16): flex column so the blank space between the
+  // fixed card stage and the bottom dock acts as a spring — the 团魂 bubble +
+  // 今晚这桌 toggle cluster pins to the bottom of the blank space instead of
+  // floating mid-viewport or crowding the fan.
+  &__scroll-content--revealed {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__blank-spacer {
+    flex: 1 1 auto;
+    min-height: $spacing-lg;
+    pointer-events: none;
+  }
+
+  // ── 今晚这桌 collapse toggle (2026-07-16) ────────────────────────────────
+  // Single button below the Joy bubble; contains the event-brief panel.
+  &__tonights-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    min-height: $cta-min-tap;
+    padding: $spacing-sm $spacing-lg;
+    border-radius: $card-radius;
+    background: rgba($color-surface, 0.96);
+    border: 1rpx solid rgba($color-secondary, 0.1);
+    box-shadow: $shadow-md;
+    transition: background 0.12s ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.06);
+    }
+  }
+
+  &__tonights-toggle-copy {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+  }
+
+  &__tonights-toggle-text {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    word-break: keep-all;
+  }
+
+  &__tonights-toggle-summary {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Collapsible panel: max-height + opacity + visibility so the closed state
+  // is invisible, un-tappable, and out of the a11y tree (the 复制 chip inside
+  // must not be focusable while collapsed). Inner chapter margin stays inside
+  // the overflow-hidden box (BFC), so the closed footprint is truly zero.
+  &__tonights-panel {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      max-height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.26s ease,
+      visibility 0s linear 0.34s;
+
+    &--open {
+      max-height: 1600rpx;
+      opacity: 1;
+      visibility: visible;
+      transition:
+        max-height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.26s ease 0.04s,
+        visibility 0s;
+    }
+  }
+
   &__scroll-content--composed {
     justify-content: flex-start;
     padding-top: 0;
@@ -569,7 +653,8 @@ $fan-rotations: (
   }
 
   &__analysis-bubble {
-    margin-bottom: $spacing-xl;
+    // Tight cluster rhythm (2026-07-16): bubble → 今晚这桌 toggle spacing.
+    margin-bottom: $spacing-md;
   }
 
   &__analysis-bubble--in-dock {
@@ -2821,7 +2906,9 @@ $fan-rotations: (
   .squad-unboxing__deck-card-pocket-glow,
   .squad-unboxing__deck-pill,
   .squad-unboxing__pocket-hint,
-  .squad-unboxing__collapse-trigger {
+  .squad-unboxing__collapse-trigger,
+  .squad-unboxing__tonights-toggle,
+  .squad-unboxing__tonights-panel {
     animation: none !important;
     transition: none !important;
   }

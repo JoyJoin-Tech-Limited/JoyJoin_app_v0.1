@@ -27,11 +27,13 @@ import {
   SQUAD_DECK_COLLAPSE_TRIGGER_LABEL,
   SQUAD_DECK_POCKETED_ANNOUNCEMENT,
   SQUAD_DECK_POCKETED_HINT_TEXT,
+  SQUAD_TONIGHTS_TABLE_TOGGLE_LABEL,
   buildDeckPillStripModel,
   buildEventBriefDate,
   buildFocusedMemberBubbleText,
   buildRevealChipLabel,
   buildSquadSoulBubbleText,
+  buildTonightsTableToggleAriaLabel,
   getChemistryWord,
   getDeckPillChemistryClass,
   getEventTypeLabel,
@@ -170,6 +172,12 @@ export default function SquadUnboxingPage() {
   // the flip ends (ref-tracked timer, ≤500ms bound — never tap-instant).
   const [bubbleNarration, setBubbleNarration] = useState<{ kind: 'member'; userId: string } | { kind: 'burst' } | null>(null)
   const narrationCancelRef = useRef<(() => void) | null>(null)
+  // 今晚这桌 collapsible panel (2026-07-16): collapsed by default — the single
+  // toggle below the 团魂 bubble expands it in place. The ref mirror keeps the
+  // toggle handler free of side effects inside a state updater.
+  const [tonightsTableOpen, setTonightsTableOpen] = useState(false)
+  const tonightsTableOpenRef = useRef(false)
+  const tonightsTableViewTrackedRef = useRef(false)
   const matchExplanationCopy = normalizeMatchingCopy(group?.matchExplanation)
 
   const cancelNarrationTimer = useCallback(() => {
@@ -197,6 +205,9 @@ export default function SquadUnboxingPage() {
     seenMemberNarrationsRef.current = new Set()
     animateFocusedNarrationRef.current = false
     setAnimateFocusedNarration(false)
+    tonightsTableOpenRef.current = false
+    tonightsTableViewTrackedRef.current = false
+    setTonightsTableOpen(false)
   }, [groupId])
 
   useEffect(() => {
@@ -441,6 +452,26 @@ export default function SquadUnboxingPage() {
     collapseDeck()
   }, [deckPhase, cancelNarrationTimer, collapseDeck])
 
+  /**
+   * 今晚这桌 panel toggle (2026-07-16): the event-brief chapter is collapsed
+   * by default so the revealed state's blank space stays clean; the single
+   * toggle below the bubble expands it in place. The chapter impression
+   * analytics event fires once per group on the FIRST expand.
+   */
+  const handleTonightsTableToggle = useCallback(() => {
+    haptics('light')
+    const next = !tonightsTableOpenRef.current
+    tonightsTableOpenRef.current = next
+    setTonightsTableOpen(next)
+    if (next && !tonightsTableViewTrackedRef.current) {
+      tonightsTableViewTrackedRef.current = true
+      squadUnboxingAnalytics.track('squad_unboxing_tonights_table_view', {
+        groupId,
+        screen: 'squad-unboxing',
+      })
+    }
+  }, [groupId])
+
   // Pill view models (AC-03): strip + chemistry-tinted ring. Memoized on the
   // flip set so a freshly revealed card swaps its back-chip for a mini.
   const pillStripModel = useMemo(
@@ -499,6 +530,10 @@ export default function SquadUnboxingPage() {
   // Event-brief card: structured date block + shared OracleCard corner vignette.
   const briefDate = buildEventBriefDate(group?.finalDateTime ?? pool?.dateTime)
   const briefVignetteSrc = getOracleCardCornerAsset(pool?.eventType ?? undefined)
+  // One-line summary on the collapsed 今晚这桌 toggle (date · time · type).
+  const tonightsTableSummary = briefDate
+    ? `${briefDate.month}${briefDate.day}日 ${briefDate.weekday} ${briefDate.time} · ${getEventTypeLabel(pool?.eventType)}`
+    : getEventTypeLabel(pool?.eventType)
 
   // Warm the fan's archetype art during the reveal so cards never paint blank
   // frames on 4G (skeleton covers first paint; this shrinks the decode gap).
@@ -669,7 +704,7 @@ export default function SquadUnboxingPage() {
 
           <View className={[
             'squad-unboxing__scroll-content',
-            flowState === 'revealed' ? '' : 'squad-unboxing__scroll-content--ready',
+            flowState === 'revealed' ? 'squad-unboxing__scroll-content--revealed' : 'squad-unboxing__scroll-content--ready',
             isComposedHeroActive ? 'squad-unboxing__scroll-content--composed' : '',
           ].filter(Boolean).join(' ')}>
 
@@ -739,6 +774,11 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'revealed' ? (
           <>
+            {/* Blank-space spring: pins the Joy-bubble + 今晚这桌 toggle cluster
+                just above the bottom dock (2026-07-16). The panel itself stays
+                collapsed by default so nothing crowds the card fan. */}
+            <View className='squad-unboxing__blank-spacer' />
+
             <View
               className='squad-unboxing__analysis-bubble'
               role='status'
@@ -785,6 +825,43 @@ export default function SquadUnboxingPage() {
               </View>
             </View>
 
+            {/* 今晚这桌 toggle (2026-07-16): single collapse button pinned
+                below the Joy bubble in the blank space above the dock. The
+                event-brief panel stays collapsed until tapped. */}
+            <View
+              className='squad-unboxing__tonights-toggle'
+              hoverClass='squad-unboxing__tonights-toggle--pressed'
+              role='button'
+              aria-expanded={tonightsTableOpen}
+              aria-label={buildTonightsTableToggleAriaLabel(tonightsTableOpen)}
+              onClick={handleTonightsTableToggle}
+            >
+              <View className='squad-unboxing__tonights-toggle-copy'>
+                <Text className='squad-unboxing__tonights-toggle-text'>
+                  {SQUAD_TONIGHTS_TABLE_TOGGLE_LABEL}
+                </Text>
+                <Text className='squad-unboxing__tonights-toggle-summary'>
+                  {tonightsTableSummary}
+                </Text>
+              </View>
+              <View
+                className={[
+                  'squad-unboxing__expand-chevron',
+                  tonightsTableOpen ? 'squad-unboxing__expand-chevron--open' : '',
+                ].filter(Boolean).join(' ')}
+                aria-hidden='true'
+              />
+            </View>
+
+            <View
+              className={[
+                'squad-unboxing__tonights-panel',
+                tonightsTableOpen ? 'squad-unboxing__tonights-panel--open' : '',
+              ].filter(Boolean).join(' ')}
+              role='region'
+              aria-label='今晚这桌详情'
+              aria-hidden={!tonightsTableOpen}
+            >
             <View className={[
               'squad-unboxing__chapter',
               'squad-unboxing__chapter--meta',
@@ -889,6 +966,7 @@ export default function SquadUnboxingPage() {
                   </View>
                 </View>
               ) : null}
+            </View>
             </View>
 
             <View className='squad-unboxing__spacer' />

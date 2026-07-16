@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   navigateBack: vi.fn(),
   useAuth: vi.fn(),
   useAlangMissionDetail: vi.fn(),
+  refetchMission: vi.fn(),
   useAlangGpsOnce: vi.fn(),
   requestLocation: vi.fn(),
   reverseGeocode: vi.fn(),
@@ -18,9 +19,14 @@ const mocks = vi.hoisted(() => ({
   callReportProgress: vi.fn(),
   startMission: vi.fn(),
   useStartMission: vi.fn(),
+  useResetAlangMission: vi.fn(),
+  resetMission: vi.fn(),
   syncMissionProgress: vi.fn(),
   showToast: vi.fn(),
+  showModal: vi.fn(),
   haptics: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
   redirectTo: vi.fn(),
   setStorageSync: vi.fn(),
   distanceMeters: { current: 150 },
@@ -33,6 +39,7 @@ vi.mock('@tarojs/taro', () => {
     }),
     navigateBack: mocks.navigateBack,
     showToast: mocks.showToast,
+    showModal: mocks.showModal,
     setStorageSync: mocks.setStorageSync,
     redirectTo: mocks.redirectTo,
   }
@@ -56,6 +63,7 @@ vi.mock('../../../hooks/useAuth', () => ({
 vi.mock('../../../lib/alang/useAlangMission', () => ({
   useAlangMissionDetail: mocks.useAlangMissionDetail,
   useStartMission: mocks.useStartMission,
+  useResetAlangMission: mocks.useResetAlangMission,
   useSyncAlangMissionProgress: () => mocks.syncMissionProgress,
 }))
 
@@ -81,6 +89,11 @@ vi.mock('../../../lib/api/api', () => ({
 
 vi.mock('../../../lib/utils/haptics', () => ({
   haptics: mocks.haptics,
+}))
+
+vi.mock('../../../lib/utils/logger', () => ({
+  logInfo: mocks.logInfo,
+  logWarn: mocks.logWarn,
 }))
 
 vi.mock('../../../components/ui/StatusCard', () => ({
@@ -114,6 +127,7 @@ describe('AlangConfigPage production access gate', () => {
           nodes: [],
         },
       },
+      refetch: mocks.refetchMission,
     })
     mocks.useAlangGpsOnce.mockReturnValue({
       position: null,
@@ -125,13 +139,17 @@ describe('AlangConfigPage production access gate', () => {
       isPending: false,
       mutateAsync: mocks.startMission,
     })
+    mocks.useResetAlangMission.mockReturnValue({
+      isPending: false,
+      mutateAsync: mocks.resetMission,
+    })
     mocks.redirectTo.mockResolvedValue({})
     mocks.reverseGeocode.mockResolvedValue({ name: '测试地点', address: '深圳' })
     mocks.requestLocation.mockResolvedValue({ latitude: 22.5431, longitude: 114.0579, accuracy: 8 })
     mocks.startMission.mockResolvedValue({
-      stage: 'configuring',
-      currentNodeId: 'event-detail',
-      nodeHistory: ['event-card', 'event-detail'],
+      stage: 'searching',
+      currentNodeId: 'search-gate',
+      nodeHistory: ['event-card', 'event-detail', 'search-gate'],
       choicesMade: [],
     })
     mocks.callReportProgress.mockResolvedValue({
@@ -188,6 +206,7 @@ describe('AlangConfigPage test-point start flow', () => {
         },
         myProgress: null,
       },
+      refetch: mocks.refetchMission,
     })
     mocks.useAlangGpsOnce.mockReturnValue({
       position: null,
@@ -199,12 +218,16 @@ describe('AlangConfigPage test-point start flow', () => {
       isPending: false,
       mutateAsync: mocks.startMission,
     })
+    mocks.useResetAlangMission.mockReturnValue({
+      isPending: false,
+      mutateAsync: mocks.resetMission,
+    })
     mocks.requestLocation.mockResolvedValue({ latitude: 22.5431, longitude: 114.0579, accuracy: 8 })
     mocks.reverseGeocode.mockResolvedValue({ name: '测试地点', address: '深圳' })
     mocks.startMission.mockResolvedValue({
-      stage: 'configuring',
-      currentNodeId: 'event-detail',
-      nodeHistory: ['event-detail'],
+      stage: 'searching',
+      currentNodeId: 'search-gate',
+      nodeHistory: ['event-detail', 'search-gate'],
       choicesMade: [],
     })
     mocks.callReportProgress.mockResolvedValue({
@@ -213,6 +236,13 @@ describe('AlangConfigPage test-point start flow', () => {
       currentNodeId: 'search-gate',
     })
     mocks.redirectTo.mockResolvedValue({})
+    mocks.showModal.mockResolvedValue({ confirm: true, cancel: false })
+    mocks.resetMission.mockResolvedValue({
+      reset: true,
+      deletedProgressCount: 1,
+      deletedArchiveCount: 0,
+    })
+    mocks.refetchMission.mockResolvedValue({ isError: false })
   })
 
   it('starts the run with this round’s GCJ-02 points and does not rely on local storage', async () => {
@@ -231,9 +261,8 @@ describe('AlangConfigPage test-point start flow', () => {
     const startPayload = mocks.startMission.mock.calls[0]?.[0]
     expect(startPayload.companionEndLocation.latitude).toBeCloseTo(22.54445, 8)
     expect(startPayload.companionEndLocation.longitude).toBe(114.0579)
-    expect(mocks.callReportProgress).toHaveBeenCalledWith('meet-alang', 'search-gate')
+    expect(mocks.callReportProgress).not.toHaveBeenCalled()
     expect(mocks.syncMissionProgress).toHaveBeenCalledWith('meet-alang', {
-      ok: true,
       stage: 'searching',
       currentNodeId: 'search-gate',
     })
@@ -246,7 +275,7 @@ describe('AlangConfigPage test-point start flow', () => {
     })
   })
 
-  it('uses a native button, shows loading on the first tap, and blocks duplicate starts', async () => {
+  it('accepts the real-device touch-end fallback, shows loading, and blocks the following click', async () => {
     let resolveStart!: (value: {
       stage: string
       currentNodeId: string
@@ -264,7 +293,13 @@ describe('AlangConfigPage test-point start flow', () => {
     expect(startButton.tagName).toBe('BUTTON')
     expect(screen.getByRole('status')).toHaveTextContent('启动反馈已开启 · 点击后会立即显示进度')
 
-    fireEvent.click(startButton)
+    fireEvent.touchEnd(startButton)
+
+    // WeChat may drop the synthetic click when the CTA sits next to a native
+    // Map or the iOS gesture area. The touch-end fallback must start the run on
+    // its own, before any click event is delivered.
+    expect(mocks.startMission).toHaveBeenCalledTimes(1)
+
     fireEvent.click(startButton)
 
     expect(mocks.haptics).toHaveBeenCalledTimes(1)
@@ -277,9 +312,9 @@ describe('AlangConfigPage test-point start flow', () => {
 
     await act(async () => {
       resolveStart({
-        stage: 'configuring',
-        currentNodeId: 'event-detail',
-        nodeHistory: ['event-detail'],
+        stage: 'searching',
+        currentNodeId: 'search-gate',
+        nodeHistory: ['event-detail', 'search-gate'],
         choicesMade: [],
       })
     })
@@ -334,11 +369,67 @@ describe('AlangConfigPage test-point start flow', () => {
     })
   })
 
+  it('still starts and unlocks retry when optional realtime logging throws', async () => {
+    mocks.logInfo.mockImplementationOnce(() => {
+      throw new Error('realtime logger unavailable')
+    })
+
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+
+    await waitFor(() => {
+      expect(mocks.startMission).toHaveBeenCalledTimes(1)
+      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('still shows the server failure when optional warning logging throws', async () => {
+    mocks.startMission.mockRejectedValueOnce(new Error('network unavailable'))
+    mocks.logWarn.mockImplementationOnce(() => {
+      throw new Error('realtime warning logger unavailable')
+    })
+
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+
+    const errorMessage = await screen.findByRole('alert')
+    expect(errorMessage).toHaveTextContent('没有准备好，请检查网络后再试')
+    expect(screen.getByRole('button', { name: '开始测试' })).toBeEnabled()
+  })
+
   it('tells stale-progress testers to reset before configuring again', () => {
     expect(getAlangStartErrorMessage({
       statusCode: 409,
       data: { error: 'ALANG_RECONFIG_REQUIRES_RESET' },
-    })).toBe('检测到上一轮测试进度，请返回测试工具重置后再配置点位')
+    })).toBe('检测到上一轮测试进度，请先重置阿浪测试，再开始新一轮')
+  })
+
+  it('offers an in-page reset when an older run blocks the new test', async () => {
+    mocks.startMission.mockRejectedValueOnce({
+      statusCode: 409,
+      data: { error: 'ALANG_RECONFIG_REQUIRES_RESET' },
+    })
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('请先重置阿浪测试')
+
+    fireEvent.click(screen.getByRole('button', { name: '清除旧进度' }))
+    await waitFor(() => expect(mocks.resetMission).toHaveBeenCalledWith('meet-alang'))
+    expect(mocks.showModal).toHaveBeenCalledWith(expect.objectContaining({
+      title: '清除上一轮阿浪测试',
+      confirmText: '清除旧进度',
+    }))
+    expect(mocks.showToast).toHaveBeenCalledWith({
+      title: '旧进度已清除，可以开始新一轮',
+      icon: 'none',
+    })
+    expect(screen.getByRole('button', { name: '开始测试' })).toBeEnabled()
   })
 
   it('rejects zero, invalid, too-near and cross-city test coordinates', () => {

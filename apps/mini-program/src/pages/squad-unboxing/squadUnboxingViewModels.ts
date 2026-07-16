@@ -282,6 +282,18 @@ export function buildDeckPillAriaLabel(memberCount: number): string {
   return `展开卡组，查看你的${memberCount}位桌友`
 }
 
+// ── "今晚这桌" collapsible panel copy (2026-07-16) ──────────────────────────
+// The event-brief chapter is collapsed by default in the revealed state; a
+// single toggle below the 团魂 bubble expands it in place.
+
+/** Toggle label — mirrors the chapter title so the button "contains" the panel. */
+export const SQUAD_TONIGHTS_TABLE_TOGGLE_LABEL = '今晚这桌'
+
+/** Toggle aria-label — state-aware action verb for screen readers. */
+export function buildTonightsTableToggleAriaLabel(open: boolean): string {
+  return open ? '收起今晚这桌详情' : '展开今晚这桌，查看时间地点'
+}
+
 /** Mini-strip cap inside the pill; the rest collapses into a +N chip. */
 export const DECK_PILL_STRIP_CAP = 5
 

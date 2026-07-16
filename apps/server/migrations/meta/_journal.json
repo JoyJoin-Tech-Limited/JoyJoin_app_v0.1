@@ -484,6 +484,20 @@
       "when": 1784073600000,
       "tag": "20260715_add_social_icebreaker_participants_is_test_bot",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1784077200000,
+      "tag": "20260715010000_add_equipment_personal_story",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1784080800000,
+      "tag": "20260715011000_seed_equipment_catalog_pools",
+      "breakpoints": true
     }
   ]
 }

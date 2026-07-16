@@ -1,4 +1,5 @@
-@import '../../../styles/variables';
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
 
 .alang-config {
   min-height: 100dvh;
@@ -139,8 +140,9 @@
   }
 
   &__map-wrap {
-    flex: 1;
     position: relative;
+    flex: 0 0 auto;
+    height: 400rpx;
     min-height: 400rpx;
   }
 
@@ -281,7 +283,11 @@
   }
 
   &__actions {
+    position: relative;
+    z-index: 5;
+    box-sizing: border-box;
     padding: 24rpx;
+    @include safe-area-bottom-padding(padding-bottom, 24rpx);
     background: $color-surface;
   }
 
@@ -309,6 +315,25 @@
     &--active {
       color: $color-primary-dark;
       font-weight: 600;
+    }
+  }
+
+  &__reset-previous {
+    display: flex;
+    min-height: 76rpx;
+    margin: 0 0 16rpx;
+    align-items: center;
+    justify-content: center;
+    border: 2rpx solid rgba($color-primary, 0.24);
+    border-radius: $radius-pill;
+    color: $color-primary-dark;
+    background: $color-bg-tint-purple;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+
+    &--disabled {
+      opacity: 0.5;
+      pointer-events: none;
     }
   }
 

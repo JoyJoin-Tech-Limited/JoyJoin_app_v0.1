@@ -279,6 +279,7 @@ export async function listParticipants(
       joinedAt: socialIcebreakerParticipants.joinedAt,
       lastSeenAt: socialIcebreakerParticipants.lastSeenAt,
       archetype: users.archetype,
+      primaryArchetype: users.primaryArchetype,
       industryNicheLabel: users.industryNicheLabel,
       birthdate: users.birthdate,
       currentCity: users.currentCity,
@@ -307,6 +308,7 @@ export async function listParticipants(
       lastSeenAt: participant.lastSeenAt.toISOString(),
       isActive: participant.lastSeenAt.getTime() >= cutoff,
       archetype: participant.archetype ?? undefined,
+      primaryArchetype: participant.primaryArchetype ?? undefined,
       profile: participant.archetype ? buildParticipantProfile(participant) : null,
     }));
 }

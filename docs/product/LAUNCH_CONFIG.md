@@ -228,7 +228,7 @@ available at the `/api/metrics` endpoint.
 
 ---
 
-## 闪现 NPC｜阿浪 V1.5
+## 闪现 NPC｜阿浪 V1.7
 
 `ALANG_ENABLED` is the environment fallback for the DB-backed `alangEnabled`
 feature flag. Its safe default is `false`. When enabled, every authenticated
@@ -236,8 +236,8 @@ tester in that environment receives `features.alangEnabled=true`; entry points
 do not depend on a special local account or on `APP_MODE=test`.
 
 The three Alang tables are introduced by the existing `0062_military_spirit.sql`
-migration and must already be present in the target environment. The 2026-07-13
-V1.5 map/coordinate update adds no DDL and requires no new migration. For staging
+migration and must already be present in the target environment. The 2026-07-15
+V1.7 search/companion updates add no Alang DDL and require no Alang migration. For staging
 validation, set:
 
 ```bash
@@ -255,6 +255,56 @@ and coordinate overrides. Those capabilities are hard-disabled when
 mini-program: Alang renders the native WeChat Map and calls the existing
 `/api/geo` proxy. If Tencent POI/routes are unavailable, search GPS and the
 JoyJoin 5 m arrival gate continue independently.
+
+---
+
+## Profile V1.7｜像素形象、装备奖励与私人故事
+
+These three surfaces use independent DB-backed flags and all default to `false`:
+
+| Environment fallback | Auth feature key | Scope |
+|---|---|---|
+| `PROFILE_PIXEL_AVATAR_ENABLED` | `profilePixelAvatarEnabled` | Profile-only 12-archetype anthropomorphic pixel visual and “我的形象”. |
+| `EQUIPMENT_REWARDS_ENABLED` | `equipmentRewardsEnabled` | Four-slot inventory/outfit, manual real-activity draws, global fourth-draw guarantee, duplicate fragments, and fragment-only exchange. |
+| `PERSONAL_STORY_ENABLED` | `personalStoryEnabled` | Private append-only story surface and asynchronous “更新故事” jobs. `false` closes the client entry and GET/POST/status before any new-table access. With the flag `true`, provider outage leaves existing chapters readable while updates fail without deleting history. |
+
+The existing `PROFILE_REDESIGN_ENABLED` remains the parent Profile V1.7 rollout switch.
+When it is `false`, the client renders the compact real-data Profile and does not issue
+gamification, equipment, or personal-story requests. The three child flags must remain
+independently reversible; enabling one must not implicitly enable the others.
+
+Before any of these new flags are enabled in staging or production, apply both migrations
+in order:
+
+```text
+20260715010000_add_equipment_personal_story.sql
+20260715011000_seed_equipment_catalog_pools.sql
+```
+
+Repository verification on 2026-07-15 reports 71/71 migration files registered in
+`meta/_journal.json`. This is a static consistency result only; it does not prove that either
+new migration has been applied to staging or production.
+
+The seed is idempotent and creates starter items plus pools for venues and active/approved
+Alang missions that exist at execution time. A later venue or mission needs the seed rerun
+or an explicit admin pool-creation flow before its rewards can be drawn.
+
+The personal-story writer uses the existing creative-provider clients: MiniMax is primary
+and DeepSeek is the runtime fallback. `CREATIVE_AI_PERSONAL_STORY_PROVIDER` may override the
+initial provider for controlled operations, but it does not authorize a deterministic or
+fabricated fallback. If both providers are unavailable, the update fails visibly and old
+chapters remain readable and unchanged.
+
+Recommended staging activation order:
+
+1. Apply and verify both migrations.
+2. Deploy the server and mini-program with all three flags still `false`.
+3. Enable `PROFILE_PIXEL_AVATAR_ENABLED` and verify all 12 archetypes and explicit outfit save.
+4. Enable `EQUIPMENT_REWARDS_ENABLED` and verify a server-issued real participation entitlement.
+5. Confirm MiniMax and DeepSeek credentials, then enable `PERSONAL_STORY_ENABLED` and run one fact-only chapter update.
+
+Rollback is flag-only. Do not remove the tables or delete user chapters, inventory, outfits,
+entitlements, fragments, or draw history during rollback.
 
 ---
 
