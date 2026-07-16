@@ -7,13 +7,13 @@ import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
-import { navigateToEventCard } from '../../lib/utils/eventCardNavigation'
 import Button from '../../components/ui/Button'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
 import FootprintOracleCard from '../../components/events/FootprintOracleCard'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import './index.scss'
 
 function CenterHubContent({
@@ -28,7 +28,9 @@ function CenterHubContent({
   const { isDegradation } = useDeviceTier()
 
   const handleEventTap = (event: JoinedEventSummary) => {
-    navigateToEventCard(event)
+    Taro.navigateTo({
+      url: `${MINI_PROGRAM_ROUTES.eventDetail}?id=${encodeURIComponent(event.id)}`,
+    })
   }
 
   if (isLoading) {

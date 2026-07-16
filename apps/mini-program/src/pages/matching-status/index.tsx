@@ -446,26 +446,10 @@ export default function MatchingStatusPage() {
       />
 
       <View className='matching-status__actions'>
-        {matchStatus === 'matched' && resolvedGroupId ? (
+        {matchStatus === 'matched' ? (
           <Button className='matching-status__cta-btn' onClick={handleOpenMatchedJourney}>
             查看活动详情
           </Button>
-        ) : null}
-
-        {matchStatus === 'matched' && !resolvedGroupId ? (
-          <Card className='matching-status__loading-card'>
-            <Text className='matching-status__loading-title'>正在整理你的小队信息</Text>
-            <Text className='matching-status__loading-text'>
-              匹配已经完成，桌友卡片和主题揭晓马上就会到位。
-            </Text>
-            <Button
-              variant='secondary'
-              className='matching-status__secondary-btn'
-              onClick={invalidateRegistrationQuery}
-            >
-              立即刷新
-            </Button>
-          </Card>
         ) : null}
 
         {matchStatus === 'pending' ? (
