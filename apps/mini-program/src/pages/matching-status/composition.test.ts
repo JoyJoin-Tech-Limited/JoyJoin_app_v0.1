@@ -43,7 +43,7 @@ describe('matching-status page composition', () => {
 
   it('routes main matched CTA to the event detail page', () => {
     expect(controllerSource).toContain('const handleOpenMatchedJourney = useCallback')
-    expect(controllerSource).toContain('/pages/event-detail/index?id=')
+    expect(controllerSource).toContain('MINI_PROGRAM_ROUTES.eventDetail')
     expect(controllerSource).not.toContain('navigateToMatchedDestination(resolvedGroupId)')
   })
 

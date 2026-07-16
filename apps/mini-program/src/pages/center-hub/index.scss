@@ -8,6 +8,9 @@
 
 .center-hub {
   @include viewport-min-height;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
   box-sizing: border-box;
   background: $color-bg;
   padding-bottom: calc($tab-bar-root-height + env(safe-area-inset-bottom));
@@ -39,42 +42,27 @@
     margin-top: $spacing-sm;
   }
 
-  &__event-card,
-  &__status-card {
-    width: 100%;
-    margin-top: $spacing-xl;
-    text-align: left;
+  &__list {
+    flex: 1;
+    min-height: 0;
+    padding: 0 $container-padding;
+    box-sizing: border-box;
   }
 
-  &__countdown-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: $spacing-xs $spacing-sm;
-    background: rgba($color-error, 0.08);
-    border-radius: 100rpx;
-    margin-top: $spacing-xs;
+  &__list-header {
+    @include font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    padding: $spacing-lg 0 $spacing-md;
   }
 
-  &__countdown-text {
-    font-size: $font-size-xs;
-    color: $color-error;
-    font-weight: $font-weight-semibold;
+  &__card {
+    margin-bottom: $spacing-md;
   }
 
-  &__type-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: $spacing-xs $spacing-sm;
-    background: rgba($color-primary, 0.08);
-    border-radius: 100rpx;
-    margin-top: $spacing-xs;
-    margin-right: $spacing-xs;
-  }
-
-  &__type-text {
-    font-size: $font-size-xs;
-    color: $color-primary;
-    font-weight: $font-weight-semibold;
+  &__bottom-spacer {
+    height: calc($tab-bar-root-height + env(safe-area-inset-bottom) + $spacing-lg);
   }
 
   &__cta {

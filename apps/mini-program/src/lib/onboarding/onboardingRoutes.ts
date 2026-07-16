@@ -68,6 +68,7 @@ export const MINI_PROGRAM_ROUTES = {
   connections: `/${MINI_PROGRAM_PAGE_PATHS.connections}`,
   profile: `/${MINI_PROGRAM_PAGE_PATHS.profile}`,
   login: `/${MINI_PROGRAM_PAGE_PATHS.login}`,
+  eventDetail: `/${MINI_PROGRAM_PAGE_PATHS.eventDetail}`,
   eventCoordination: `/${MINI_PROGRAM_PAGE_PATHS.eventCoordination}`,
   matchingStatus: `/${MINI_PROGRAM_PAGE_PATHS.matchingStatus}`,
   squadUnboxing: `/${MINI_PROGRAM_PAGE_PATHS.squadUnboxing}`,

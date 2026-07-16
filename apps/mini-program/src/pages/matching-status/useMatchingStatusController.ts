@@ -55,6 +55,7 @@ import {
   switchToDiscoverTab,
   switchToEventsTab,
 } from '../../lib/navigation/matchingNavigation'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import {
   AUTH_QUERY_KEY,
 } from '../../lib/api/authSession'
@@ -555,7 +556,7 @@ export function useMatchingStatusController({
     logInfo('[MatchingStatus] CTA tapped, opening event detail', { poolId, groupId: resolvedGroupId })
     setLiveStage('idle')
     Taro.navigateTo({
-      url: `/pages/event-detail/index?id=${encodeURIComponent(poolId)}`,
+      url: `${MINI_PROGRAM_ROUTES.eventDetail}?id=${encodeURIComponent(poolId)}`,
       fail: () => {
         Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: TOAST_DEFAULT_MS })
       },
