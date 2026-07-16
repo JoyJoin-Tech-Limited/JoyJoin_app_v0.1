@@ -1,3 +1,5 @@
+@use '../../../styles/variables' as *;
+
 .warmup-action {
   width: 100%;
   background: $color-surface;
@@ -118,7 +120,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .warmup-action {
+.warmup-action {
     &__primary {
       animation: none;
     }
