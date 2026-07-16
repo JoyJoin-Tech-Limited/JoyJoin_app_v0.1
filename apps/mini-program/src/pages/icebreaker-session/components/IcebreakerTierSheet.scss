@@ -111,11 +111,6 @@
     overflow: hidden;
     will-change: transform;
 
-    > *:not(.tier-sheet__card-bg) {
-      position: relative;
-      z-index: 1;
-    }
-
     &--active {
       border-color: $color-primary;
       box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.12);
@@ -148,6 +143,10 @@
   }
 
   &__card-body {
+    // Explicit stacking — WXSS cannot be trusted with `*:not()` selectors;
+    // without this the absolute card-bg image paints over the text.
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     gap: $spacing-xs;
@@ -210,6 +209,9 @@
 
   &__card-check {
     @include flex-center;
+    // Same explicit stacking as card-body so the badge stays above card-bg.
+    position: relative;
+    z-index: 1;
     width: 40rpx;
     height: 40rpx;
     background: $color-primary;
