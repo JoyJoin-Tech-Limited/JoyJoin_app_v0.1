@@ -184,9 +184,20 @@ Discover 卡
 
 ### 配置页“开始测试”真机无反馈修复（2026-07-16）
 
-- 真机静默根因不是坐标或 20 米距离校验：启动处理器取得防重复锁后，诊断用 realtime logger 位于请求与 `finally` 保护之外。日志实现若在设备上抛错，start 请求不会发出且锁无法释放；失败分支的 warning logger 抛错时又会跳过页面错误反馈。
-- 修复后触觉和 realtime logger 都是 best-effort；任何诊断异常均不能阻断 `start`。错误文案先写入页面持久状态，再尝试 Toast/日志，并由最外层 `finally` 无条件释放点击锁。
-- 回归测试明确模拟 `logInfo` 与 `logWarn` 抛错，分别验证请求仍发出、失败仍可见且按钮可再次点击。正常 GPS、点位、腾讯地图和服务端 5 米到达权威均未修改。
+- 真机静默根因不是坐标或 20 米距离校验：旧体验包中的启动处理器取得防重复锁后，诊断用 realtime logger 位于请求与 `finally` 保护之外。日志实现若在设备上抛错，start 请求不会发出且锁无法释放；失败分支的 warning logger 抛错时又会跳过页面错误反馈。
+- 公共 `lib/utils/logger.ts` 现在对 manager 初始化和每次 info/warn/error 都实行 best-effort：任何日志实现异常都不得再阻断 Discover、搜索、对话选择、到达确认或结果收录。配置页仍保留最外层 `finally`，错误先写入页面持久状态再尝试 Toast/日志。
+- 内部测试 start 由服务端在同一个请求中保存本轮两个 GCJ-02 点位并推进到 `search_gate`；客户端不再串行补发 progress 请求。start 成功后的 Query 列表刷新改为后台执行，不再让一次成功点击额外等待移动网络 GET。
+- 旧 progress 返回 `ALANG_RECONFIG_REQUIRES_RESET` 时，配置页直接提供“清除旧进度”，调用现有事务 reset 后留在当前配置页，测试人员不用退出流程寻找 Debug 页。
+- 回归测试模拟 manager 初始化/写日志抛错、重复点击、旧 progress、单请求直达 search 和正常 production 无 body 启动。正常 GPS、点位校验、腾讯地图和服务端 5 米到达权威均未修改。
+- GitHub Actions 的 `miniprogram-ci upload` 只上传开发版，不会自动替换微信后台已选中的体验版；真机验收前仍必须把包含本修复的最新开发版手动设为体验版。
+
+### 三轮对话自然化与受控内容发布（2026-07-16）
+
+- 内容仍是人工审核、版本化的固定三轮分支，不接运行时 LLM、不开放自由输入，也不改变九个 choice index、节点 ID、`nextNodeId` 或 moodShift。`demo-story.json` 的批准版本由 `1.0` 升为 `1.1`。
+- 找到场景同时展示阿浪第一句和环境旁白；选择后先在当前操作区完整展示该分支的阿浪回应，用户点“继续”后才出现下一问。第三轮回应结束后先展示陪伴开场，再由用户点“陪他走走”，不再 900ms 自动跳页。
+- 移除 A/B/C、`第 N / 3 段`、`你选择`、`正在把选择交给阿浪`等问卷/系统语言；断点恢复只保留最近一次交流，并用“刚才聊到这里 / 你：…”恢复语境。
+- 文案保持深圳湾、长椅、海风、等人和安静陪伴等已知事实，删去模板金句和动作重复，没有增加新的背景故事、人物关系或结果个性化声明。
+- 运行时数据库 `alang_missions.content_json` 仍是内容权威。`seedDemoMissionIfNeeded()` 现在只对 `slug=alang-demo && isInternalOnly=true` 的内部任务按 semantic version 幂等同步；相同版本不写入，非内部任务拒绝覆盖，更新后立即清除该任务 5 分钟内容缓存。因此 staging 不再永久停留在首次 seed 的旧回答库。
 
 ## 9. 私人连续故事（产品决定覆盖旧 ACTIVE 07 数据模型）
 

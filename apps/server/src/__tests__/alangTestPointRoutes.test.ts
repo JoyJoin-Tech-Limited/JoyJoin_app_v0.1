@@ -92,7 +92,7 @@ const repository = vi.hoisted(() => ({
     const existed = state.progresses.delete(key(userId, missionId));
     return { deletedProgressCount: existed ? 1 : 0, deletedArchiveCount: 0 };
   }),
-  seedDemoMissionIfNeeded: vi.fn(),
+  seedDemoMissionIfNeeded: vi.fn(async () => false),
 }));
 
 vi.mock("../lib/featureFlags", () => ({ getFeatureFlag: mockGetFeatureFlag }));
@@ -109,6 +109,7 @@ vi.mock("../repositories/alangRepo", () => repository);
 vi.mock("../services/alangContentService", () => ({
   loadMissionContent: vi.fn(async (slug: string) => slug === mission.slug ? content : null),
   getNodeById: (loaded: typeof content, nodeId: string) => loaded.nodes.find((node) => node.id === nodeId) ?? null,
+  invalidateMissionCache: vi.fn(),
 }));
 
 const { registerAlangRoutes } = await import("../routes/domains/alang");
@@ -190,14 +191,77 @@ describe("Alang per-run test point flow", () => {
   it("stores this run's configured points instead of the demo mission defaults", async () => {
     const response = await request("POST", "/api/alang/missions/alang-demo/start", configuredPoints);
     expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      stage: "searching",
+      currentNodeId: "search",
+      nodeHistory: ["event-card", "event-detail", "search"],
+    });
 
     const progress = state.progresses.get(key("user-1"));
     expect(progress).toMatchObject({
+      stage: "searching",
+      currentNodeId: "search",
+      nodeHistory: ["event-card", "event-detail", "search"],
       targetLocation: { ...configuredPoints.targetLocation, coordinateSystem: "gcj02" },
       companionEndLocation: { ...configuredPoints.companionEndLocation, coordinateSystem: "gcj02" },
       isDebugSession: true,
     });
     expect(progress.companionEndLocation).not.toMatchObject(mission.companionEndLocation);
+  });
+
+  it("moves an existing configuring run to the search gate in the same request", async () => {
+    const existing = seedProgress("user-1", {
+      currentNodeId: "event-detail",
+      nodeHistory: ["event-card", "event-detail"],
+      stage: "configuring",
+      targetLocation: null,
+      companionEndLocation: null,
+      isDebugSession: false,
+      debugMarkers: [],
+    });
+
+    const response = await request("POST", "/api/alang/missions/alang-demo/start", configuredPoints);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      progressId: existing.id,
+      stage: "searching",
+      currentNodeId: "search",
+      nodeHistory: ["event-card", "event-detail", "search"],
+    });
+    expect(state.progresses.get(key("user-1"))).toMatchObject({
+      id: existing.id,
+      stage: "searching",
+      currentNodeId: "search",
+      nodeHistory: ["event-card", "event-detail", "search"],
+      targetLocation: { ...configuredPoints.targetLocation, coordinateSystem: "gcj02" },
+      companionEndLocation: { ...configuredPoints.companionEndLocation, coordinateSystem: "gcj02" },
+      isDebugSession: true,
+      debugMarkers: ["test-points-configured"],
+    });
+  });
+
+  it("keeps the normal no-body production start flow on event detail", async () => {
+    process.env.APP_MODE = "production";
+    process.env.ENABLE_SINGLE_TEST_MODE = "false";
+
+    const response = await request("POST", "/api/alang/missions/alang-demo/start");
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      stage: "configuring",
+      currentNodeId: "event-detail",
+      nodeHistory: ["event-card", "event-detail"],
+    });
+    const progress = state.progresses.get(key("user-1"));
+    expect(progress).toMatchObject({
+      stage: "configuring",
+      currentNodeId: "event-detail",
+      nodeHistory: ["event-card", "event-detail"],
+    });
+    expect(progress).not.toHaveProperty("isDebugSession");
+    expect(progress).not.toHaveProperty("targetLocation");
+    expect(progress).not.toHaveProperty("companionEndLocation");
   });
 
   it("recovers the current run's companion endpoint without exposing the demo endpoint", async () => {

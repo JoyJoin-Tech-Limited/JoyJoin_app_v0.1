@@ -14,6 +14,22 @@ describe("Alang demo story", () => {
     expect(parsed.success, parsed.success ? undefined : JSON.stringify(parsed.error.flatten())).toBe(true);
   });
 
+  it("publishes the reviewed natural-dialogue revision without changing branch ids", () => {
+    expect(story.version).toBe("1.1");
+    const firstRound = story.nodes.find((node: { id: string }) => node.id === "dialogue_1");
+    const thirdRound = story.nodes.find((node: { id: string }) => node.id === "dialogue_3");
+    expect(firstRound.content.body).toBe("你也常等人吗？");
+    expect(firstRound.choices[0]).toMatchObject({
+      label: "会。只是很少有人等我。",
+      nextNodeId: "dialogue_2",
+      moodShift: "共鸣",
+    });
+    expect(thirdRound.choices[1].response).not.toContain("一个人走得快，两个人走得远");
+    expect(thirdRound.choices.every((choice: { nextNodeId: string }) => (
+      choice.nextNodeId === "companion_start"
+    ))).toBe(true);
+  });
+
   it("normalizes persisted legacy lat/lng JSON at the content boundary", () => {
     const legacy = structuredClone(story);
     const target = legacy.meta.defaultTargetLocation;

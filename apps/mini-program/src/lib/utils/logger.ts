@@ -2,10 +2,19 @@ import Taro from '@tarojs/taro'
 
 type LogContext = Record<string, unknown>
 
-const realtimeLogManager =
-  typeof Taro.getRealtimeLogManager === 'function'
-    ? Taro.getRealtimeLogManager()
-    : null
+function getRealtimeLogManagerSafely() {
+  try {
+    return typeof Taro.getRealtimeLogManager === 'function'
+      ? Taro.getRealtimeLogManager()
+      : null
+  } catch {
+    // Logging is diagnostic-only. Unsupported or partially initialized WeChat
+    // runtimes must never prevent a user action from reaching the API.
+    return null
+  }
+}
+
+const realtimeLogManager = getRealtimeLogManagerSafely()
 
 function serializeContext(context?: LogContext): string {
   if (!context) return ''
@@ -18,13 +27,25 @@ function serializeContext(context?: LogContext): string {
 }
 
 export function logInfo(message: string, context?: LogContext) {
-  realtimeLogManager?.info?.(message, serializeContext(context))
+  try {
+    realtimeLogManager?.info?.(message, serializeContext(context))
+  } catch {
+    // Best-effort only.
+  }
 }
 
 export function logWarn(message: string, context?: LogContext) {
-  realtimeLogManager?.warn?.(message, serializeContext(context))
+  try {
+    realtimeLogManager?.warn?.(message, serializeContext(context))
+  } catch {
+    // Best-effort only.
+  }
 }
 
 export function logError(message: string, context?: LogContext) {
-  realtimeLogManager?.error?.(message, serializeContext(context))
+  try {
+    realtimeLogManager?.error?.(message, serializeContext(context))
+  } catch {
+    // Best-effort only.
+  }
 }

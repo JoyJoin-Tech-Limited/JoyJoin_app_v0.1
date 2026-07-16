@@ -312,6 +312,25 @@
     }
   }
 
+  &__reset-previous {
+    display: flex;
+    min-height: 76rpx;
+    margin: 0 0 16rpx;
+    align-items: center;
+    justify-content: center;
+    border: 2rpx solid rgba($color-primary, 0.24);
+    border-radius: $radius-pill;
+    color: $color-primary-dark;
+    background: $color-bg-tint-purple;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+
+    &--disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
   &__confirm {
     display: flex;
     width: 100%;

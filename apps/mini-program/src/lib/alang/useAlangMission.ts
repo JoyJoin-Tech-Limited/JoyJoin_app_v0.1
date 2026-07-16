@@ -116,7 +116,7 @@ export function useStartMission() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: callStartMission,
-    onSuccess: async (data, input) => {
+    onSuccess: (data, input) => {
       const slug = typeof input === 'string' ? input : input.slug
       qc.setQueryData<AlangMissionDetail>(ALANG_MISSION_DETAIL_KEY(slug), (current) =>
         current
@@ -135,7 +135,10 @@ export function useStartMission() {
             }
           : current
       )
-      await Promise.all([
+      // The start response is already authoritative. Refresh supporting lists
+      // in the background so a slow mobile GET cannot hold the primary tap in
+      // a loading state after the POST succeeded.
+      void Promise.all([
         qc.invalidateQueries({ queryKey: ALANG_MISSIONS_KEY }),
         qc.invalidateQueries({ queryKey: ALANG_MISSION_DETAIL_KEY(slug) }),
       ])

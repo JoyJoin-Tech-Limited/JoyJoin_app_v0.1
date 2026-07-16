@@ -26,6 +26,13 @@ type DialogueRound = {
   response?: string
 }
 
+type PendingDialogueResponse = {
+  choice: string
+  response: string
+  nextNodeId: string
+  stage: string
+}
+
 function buildDialogueRounds(history: StoryHistoryItem[]): DialogueRound[] {
   const rounds: DialogueRound[] = []
   for (let index = 0; index < history.length; index += 1) {
@@ -54,10 +61,11 @@ export default function AlangDialoguePage() {
   const [history, setHistory] = useState<StoryHistoryItem[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [isRecovered, setIsRecovered] = useState(false)
+  const [pendingResponse, setPendingResponse] = useState<PendingDialogueResponse | null>(null)
   const [companionNavigationFailed, setCompanionNavigationFailed] = useState(false)
-  const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const recoveredProgressKeyRef = useRef('')
   const recoveryNavigationKeyRef = useRef('')
+  const choiceActionRef = useRef(false)
   const foundSceneArtwork = useAlangAssetSource('foundScene')
 
   const content = mission?.content as MissionContent | undefined
@@ -76,6 +84,7 @@ export default function AlangDialoguePage() {
     setHistory([])
     setIsRecovered(false)
     setIsProcessing(false)
+    setPendingResponse(null)
     setCompanionNavigationFailed(false)
     recoveredProgressKeyRef.current = ''
   }, [initialNodeId, slug])
@@ -151,39 +160,34 @@ export default function AlangDialoguePage() {
   }, [currentNode])
 
   const enterCompanion = useCallback(async (nodeId: string) => {
+    const navigationKey = `${progress?.progressId ?? 'local'}:companion:${nodeId}`
+    recoveryNavigationKeyRef.current = navigationKey
+    syncMissionProgress(slug, {
+      stage: 'companion',
+      currentNodeId: nodeId,
+    })
     try {
       await Taro.redirectTo({
         url: `${MINI_PROGRAM_ROUTES.alangCompanion}?slug=${slug}&nodeId=${nodeId}`,
       })
     } catch {
+      recoveryNavigationKeyRef.current = ''
       setCompanionNavigationFailed(true)
       Taro.showToast({ title: '陪伴页没有打开，再试一次即可', icon: 'none' })
     }
-  }, [slug])
-
-  useEffect(() => {
-    if (currentNode?.type !== 'companion_start' || !slug) return
-    setCompanionNavigationFailed(false)
-    if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current)
-    navigationTimerRef.current = setTimeout(() => {
-      navigationTimerRef.current = null
-      void enterCompanion(currentNode.id)
-    }, 900)
-
-    return () => {
-      if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current)
-    }
-  }, [currentNode, enterCompanion, slug])
-
-  useEffect(() => () => {
-    if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current)
-  }, [])
+  }, [progress?.progressId, slug, syncMissionProgress])
 
   const handleChoice = useCallback(async (choiceIndex: number) => {
-    if (!currentNode || currentNode.type !== 'dialogue' || !slug || isProcessing) return
+    if (!currentNode
+      || currentNode.type !== 'dialogue'
+      || !slug
+      || isProcessing
+      || pendingResponse
+      || choiceActionRef.current) return
     const choice = currentNode.choices?.[choiceIndex]
     if (!choice) return
 
+    choiceActionRef.current = true
     setIsProcessing(true)
     alangEvents.choiceMade(slug, currentNode.id, choiceIndex)
 
@@ -194,17 +198,26 @@ export default function AlangDialoguePage() {
         { type: 'choice', text: choice.label },
         { type: 'response', text: response.response },
       ])
-      syncMissionProgress(slug, {
+      setPendingResponse({
+        choice: choice.label,
+        response: response.response,
+        nextNodeId: response.nextNodeId,
         stage: response.stage,
-        currentNodeId: response.nextNodeId,
       })
-      setCurrentNodeId(response.nextNodeId)
     } catch {
       Taro.showToast({ title: '这次没送达，再选一次就好', icon: 'none' })
     } finally {
+      choiceActionRef.current = false
       setIsProcessing(false)
     }
-  }, [currentNode, isProcessing, slug, syncMissionProgress])
+  }, [currentNode, isProcessing, pendingResponse, slug])
+
+  const handleContinueAfterResponse = useCallback(() => {
+    if (!pendingResponse) return
+    setCurrentNodeId(pendingResponse.nextNodeId)
+    setPendingResponse(null)
+    setCompanionNavigationFailed(false)
+  }, [pendingResponse])
 
   const handleContinueFromFoundScene = useCallback(async () => {
     if (!currentNode || currentNode.type !== 'found_scene' || !currentNode.nextNodeId || isProcessing) return
@@ -285,8 +298,11 @@ export default function AlangDialoguePage() {
             )}
           </View>
           <View className='alang-dialogue__found-narration'>
+            <Text className='alang-dialogue__found-spoken'>
+              {currentNode.content.body}
+            </Text>
             <Text className='alang-dialogue__found-narration-text'>
-              {currentNode.content.narration ?? currentNode.content.body}
+              {currentNode.content.narration}
             </Text>
           </View>
           <View className='alang-dialogue__found-progress'>
@@ -309,7 +325,8 @@ export default function AlangDialoguePage() {
     )
   }
 
-  const completedRoundCount = progress?.choicesMade?.length ?? dialogueRounds.length
+  const previousRounds = dialogueRounds.slice(0, pendingResponse ? -1 : undefined)
+  const previousRound = previousRounds[previousRounds.length - 1]
   const visibleChoices = currentNode.type === 'dialogue'
     ? (currentNode.choices ?? []).slice(0, 3)
     : []
@@ -347,25 +364,13 @@ export default function AlangDialoguePage() {
             <Text className='alang-dialogue__body'>{currentNode.content.body}</Text>
           </View>
 
-          {dialogueRounds.length > 0 && (
-            <View className='alang-dialogue__recap'>
-              <View className='alang-dialogue__recap-heading'>
-                <Text className='alang-dialogue__recap-title'>刚才的故事</Text>
-                <Text className='alang-dialogue__recap-count'>保留最近 {dialogueRounds.length} 段</Text>
-              </View>
-              {dialogueRounds.map((round, index) => (
-                <View key={`${round.choice}-${index}`} className='alang-dialogue__recap-item'>
-                  <View className='alang-dialogue__recap-index'>
-                    <Text className='alang-dialogue__recap-index-text'>{index + 1}</Text>
-                  </View>
-                  <View className='alang-dialogue__recap-copy'>
-                    <Text className='alang-dialogue__recap-choice'>你选择：{round.choice}</Text>
-                    {round.response && (
-                      <Text className='alang-dialogue__recap-response'>{round.response}</Text>
-                    )}
-                  </View>
-                </View>
-              ))}
+          {previousRound && (
+            <View className='alang-dialogue__previous'>
+              <Text className='alang-dialogue__previous-label'>刚才聊到这里</Text>
+              <Text className='alang-dialogue__previous-choice'>你：{previousRound.choice}</Text>
+              {previousRound.response && (
+                <Text className='alang-dialogue__previous-response'>{previousRound.response}</Text>
+              )}
             </View>
           )}
         </View>
@@ -373,47 +378,60 @@ export default function AlangDialoguePage() {
 
       <View className='alang-dialogue__choices-dock'>
         {currentNode.type === 'dialogue' ? (
-          <>
-            <View className='alang-dialogue__choices-heading'>
-              <Text className='alang-dialogue__choices-title'>你想怎么回应？</Text>
-              <Text className='alang-dialogue__choices-step'>第 {Math.min(completedRoundCount + 1, 3)} / 3 段</Text>
+          pendingResponse ? (
+            <View className='alang-dialogue__response-panel' aria-live='polite'>
+              <Text className='alang-dialogue__response-speaker'>阿浪</Text>
+              <Text className='alang-dialogue__response-copy'>{pendingResponse.response}</Text>
+              <View
+                className='alang-dialogue__response-continue'
+                onClick={handleContinueAfterResponse}
+                role='button'
+                aria-label='继续听阿浪说'
+              >
+                <Text className='alang-dialogue__response-continue-text'>继续</Text>
+              </View>
             </View>
-            <View className={`alang-dialogue__choices${isProcessing ? ' alang-dialogue__choices--processing' : ''}`}>
-              {visibleChoices.map((choice, index) => (
-                <View
-                  key={`${currentNode.id}-${index}`}
-                  className={`alang-dialogue__choice ${isProcessing ? 'alang-dialogue__choice--disabled' : ''}`}
-                  onClick={() => { void handleChoice(index) }}
-                  role='button'
-                  aria-label={choice.label}
-                  aria-disabled={isProcessing}
-                >
-                  <Text className='alang-dialogue__choice-letter'>{String.fromCharCode(65 + index)}</Text>
-                  <Text className='alang-dialogue__choice-text'>{choice.label}</Text>
-                </View>
-              ))}
-            </View>
-            {isProcessing && (
-              <Text className='alang-dialogue__processing'>正在把你的选择交给阿浪…</Text>
-            )}
-          </>
+          ) : (
+            <>
+              <View className='alang-dialogue__choices-heading'>
+                <Text className='alang-dialogue__choices-title'>你会怎么回答？</Text>
+              </View>
+              <View className={`alang-dialogue__choices${isProcessing ? ' alang-dialogue__choices--processing' : ''}`}>
+                {visibleChoices.map((choice, index) => (
+                  <View
+                    key={`${currentNode.id}-${index}`}
+                    className={`alang-dialogue__choice ${isProcessing ? 'alang-dialogue__choice--disabled' : ''}`}
+                    onClick={() => { void handleChoice(index) }}
+                    role='button'
+                    aria-label={choice.label}
+                    aria-disabled={isProcessing}
+                  >
+                    <Text className='alang-dialogue__choice-text'>{choice.label}</Text>
+                  </View>
+                ))}
+              </View>
+              {isProcessing && (
+                <Text className='alang-dialogue__processing'>阿浪想了想…</Text>
+              )}
+            </>
+          )
         ) : (
           <View className='alang-dialogue__transition'>
             <View className='alang-dialogue__transition-dot' />
-            <View>
-              <Text className='alang-dialogue__transition-title'>阿浪站起身了</Text>
-              <Text className='alang-dialogue__transition-detail'>接下来，陪他走一段路</Text>
+            <View className='alang-dialogue__transition-copy'>
+              <Text className='alang-dialogue__transition-title'>准备一起出发</Text>
+              <Text className='alang-dialogue__transition-detail'>接下来，陪他走一小段路</Text>
             </View>
-            {companionNavigationFailed && (
-              <View
-                className='alang-dialogue__transition-retry'
-                onClick={() => { void enterCompanion(currentNode.id) }}
-                role='button'
-                aria-label='继续同行'
-              >
-                <Text className='alang-dialogue__transition-retry-text'>继续同行</Text>
-              </View>
-            )}
+            <View
+              className='alang-dialogue__transition-retry'
+              onClick={() => { void enterCompanion(currentNode.id) }}
+              role='button'
+              aria-label={companionNavigationFailed ? '再试一次，陪他走走' : '陪他走走'}
+            >
+              <Text className='alang-dialogue__transition-retry-text'>
+                {companionNavigationFailed ? '再试一次' : '陪他走走'}
+              </Text>
+            </View>
           </View>
         )}
       </View>
