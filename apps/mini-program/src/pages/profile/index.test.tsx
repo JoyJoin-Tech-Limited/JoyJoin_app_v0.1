@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render } from '@testing-library/react'
+import { fireEvent, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const state = vi.hoisted(() => ({
@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   storyEnabled: false,
   navigateTo: vi.fn(),
   switchTab: vi.fn(),
+  showToast: vi.fn(),
 }))
 
 vi.mock('@tarojs/taro', () => ({
@@ -17,7 +18,7 @@ vi.mock('@tarojs/taro', () => ({
     navigateTo: state.navigateTo,
     switchTab: state.switchTab,
     showActionSheet: vi.fn(),
-    showToast: vi.fn(),
+    showToast: state.showToast,
     reLaunch: vi.fn(),
   },
   useDidShow: vi.fn(),
@@ -104,6 +105,7 @@ vi.mock('../../lib/api/authSession', () => ({
 }))
 
 import ProfilePage from './index'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 
 function makeUser(profileRedesignEnabled: boolean) {
   return {
@@ -163,6 +165,7 @@ describe('Profile approved V4 layout', () => {
     })
     state.navigateTo.mockReset()
     state.switchTab.mockReset()
+    state.showToast.mockReset()
   })
 
   it('shows the complete V4 structure when the flag is true and every count is zero', () => {
@@ -170,13 +173,14 @@ describe('Profile approved V4 layout', () => {
       data: { stats: { eventsJoined: 0, connectionsCount: 0 } },
     })
 
-    const { getByTestId, getByText } = render(<ProfilePage />)
+    const { getByTestId, getByText, queryByText } = render(<ProfilePage />)
 
     expect(getByTestId('profile-v4')).toBeTruthy()
     expect(getByText('只根据你真实参加过的相遇，一章一章继续写下去。')).toBeTruthy()
     expect(getByText('当前装备')).toBeTruthy()
     expect(getByText('4 件')).toBeTruthy()
-    expect(getByText('更多服务')).toBeTruthy()
+    expect(queryByText('更多服务')).toBeNull()
+    expect(queryByText('退出登录')).toBeNull()
   })
 
   it('does not layer the code placeholder behind an available pixel character', () => {
@@ -184,6 +188,25 @@ describe('Profile approved V4 layout', () => {
 
     expect(container.querySelector('.profile-page__partner-pixel-layer--base')).toBeTruthy()
     expect(container.querySelector('.pixel-avatar')).toBeNull()
+  })
+
+  it('keeps the base pixel character when no outfit is available yet', () => {
+    state.queryStates.set('mini-program/equipment/me', {
+      data: {
+        archetypeId: 'corgi',
+        outfit: undefined,
+        inventory: [],
+        recentItems: [],
+        wallet: { fragmentBalance: 0, pityMisses: 0, pityTarget: 4 },
+        pendingEntitlements: [],
+        rewardsEnabled: true,
+      },
+    })
+
+    const { container } = render(<ProfilePage />)
+
+    expect(container.querySelector('.profile-page__partner-pixel-layer--base')).toBeTruthy()
+    expect(container.querySelector('.profile-page__partner-image')).toBeNull()
   })
 
   it('keeps V4 visible when one optional request fails', () => {
@@ -208,18 +231,16 @@ describe('Profile approved V4 layout', () => {
     expect(state.enabledByKey.get('mini-program/equipment/me')).toBe(false)
   })
 
-  it('keeps partner/story entries actionable and services after growth assets', () => {
-    const { getByTestId } = render(<ProfilePage />)
+  it('keeps the two primary Profile entries actionable without service clutter', () => {
+    const { getByTestId, queryByTestId } = render(<ProfilePage />)
     const partnerEntry = getByTestId('profile-partner-equipment-entry')
     const storyEntry = getByTestId('profile-story-entry')
-    const growthArchive = getByTestId('profile-growth-archive')
-    const services = getByTestId('profile-more-services')
 
     fireEvent.click(partnerEntry)
     fireEvent.click(storyEntry)
 
     expect(state.navigateTo).toHaveBeenCalledTimes(2)
-    expect(growthArchive.compareDocumentPosition(services) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(queryByTestId('profile-more-services')).toBeNull()
   })
 
   it('hides the personal story surface while its rollout flag is disabled', () => {
@@ -244,5 +265,21 @@ describe('Profile approved V4 layout', () => {
 
     expect(getByTestId('profile-top-navigation').contains(settings)).toBe(true)
     expect(hero.contains(settings)).toBe(false)
+
+    fireEvent.click(settings)
+    expect(state.navigateTo).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.profileSettings })
+  })
+
+  it('shows a visible recovery message when the settings subpackage does not open', async () => {
+    state.navigateTo.mockRejectedValueOnce(new Error('subpackage unavailable'))
+    state.showToast.mockResolvedValueOnce(undefined)
+    const { getByTestId } = render(<ProfilePage />)
+
+    fireEvent.click(getByTestId('profile-top-settings'))
+
+    await waitFor(() => expect(state.showToast).toHaveBeenCalledWith({
+      title: '设置没有打开，请稍后再试',
+      icon: 'none',
+    }))
   })
 })

@@ -1,10 +1,8 @@
 import {
   getJoinedEvents,
   getProfileShell,
-  getUserCoupons,
   getUserGamificationInfo,
 } from '@shared/api'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { useQuery } from '@tanstack/react-query'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
@@ -12,30 +10,22 @@ import Taro, { useDidShow } from '@tarojs/taro'
 import { useRef, useState } from 'react'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import PixelAvatarFallback from '../../components/profile/PixelAvatarFallback'
-import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { apiRequest } from '../../lib/api/api'
-import {
-  clearMiniProgramAuthSession,
-  getApiErrorStatusCode,
-  isUnauthorizedApiError,
-} from '../../lib/api/authSession'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { useAlangAssetSource } from '../../lib/alang/alangAssets'
 import { queryClient } from '../../lib/api/queryClient'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { fetchMyEquipment, type EquipmentItem, type EquipmentOutfit } from '../../lib/profile/equipmentApi'
-import { openMiniProgramPaymentPage } from '../../lib/payment/paymentEntry'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import {
   getPixelAvatarBaseUrl,
   getPixelEquipmentLayerUrl,
 } from '../../lib/profile/pixelAvatarAssets'
 import { haptics } from '../../lib/utils/haptics'
-import { logError, logInfo } from '../../lib/utils/logger'
 import './index.scss'
 import {
   getProfileCompletion,
@@ -82,13 +72,15 @@ function ProfilePartnerVisual({
   const [pixelBaseFailed, setPixelBaseFailed] = useState(false)
   const [failedPixelLayers, setFailedPixelLayers] = useState<Set<string>>(new Set())
 
-  if (pixelEnabled && archetype && outfit && !pixelBaseFailed) {
-    const equippedItemIds = [
-      outfit.bottomItemId,
-      outfit.shoesItemId,
-      outfit.topItemId,
-      outfit.accessoryItemId,
-    ].filter((itemId): itemId is string => !!itemId)
+  if (pixelEnabled && archetype && !pixelBaseFailed) {
+    const equippedItemIds = outfit
+      ? [
+          outfit.bottomItemId,
+          outfit.shoesItemId,
+          outfit.topItemId,
+          outfit.accessoryItemId,
+        ].filter((itemId): itemId is string => !!itemId)
+      : []
 
     return (
       <View className='profile-page__partner-pixel' role='img' aria-label={`${archetypeName ?? '我的'}像素伙伴形象`}>
@@ -118,7 +110,7 @@ function ProfilePartnerVisual({
     )
   }
 
-  if (pixelEnabled && archetype && outfit && pixelBaseFailed) {
+  if (pixelEnabled && archetype && pixelBaseFailed) {
     return (
       <PixelAvatarFallback
         archetypeId={archetype}
@@ -176,7 +168,6 @@ function ProfileStoryArtwork() {
 
 export default function ProfilePage() {
   const { authLoading, authUser, renderGate } = useMiniPageGate()
-  const logoutLockRef = useRef(false)
   const profileV17Enabled = isProfileV17Enabled(authUser)
   const profileV17DataPolicy = getProfileV17DataPolicy(authUser)
   const pixelAvatarEnabled = profileV17Enabled
@@ -194,7 +185,6 @@ export default function ProfilePage() {
     }
     if (authLoading || !authUser) return
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'joined-events'] })
-    void queryClient.invalidateQueries({ queryKey: ['mini-program', 'coupons'] })
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/profile'] })
     if (profileV17DataPolicy.gamificationEnabled) {
       void queryClient.invalidateQueries({ queryKey: ['mini-program', 'gamification'] })
@@ -202,12 +192,6 @@ export default function ProfilePage() {
     if (profileV17DataPolicy.equipmentEnabled) {
       void queryClient.invalidateQueries({ queryKey: ['mini-program', 'equipment', 'me'] })
     }
-  })
-
-  const { data: coupons = { count: 0, availableCount: 0, coupons: [] }, isLoading: isLoadingCoupons } = useQuery({
-    queryKey: ['mini-program', 'coupons'],
-    queryFn: () => getUserCoupons(apiRequest),
-    enabled: !authLoading && !!authUser,
   })
 
   const { data: joinedEvents = [], isLoading: isLoadingEvents } = useQuery({
@@ -240,51 +224,6 @@ export default function ProfilePage() {
   const connectionsCount = profileShellQuery.data?.stats.connectionsCount
   const isLoadingStats = isLoadingEvents || profileShellQuery.isLoading
 
-  const handleOpenPayment = () => {
-    haptics('light')
-    void openMiniProgramPaymentPage({
-      currentUserId: authUser?.id,
-    })
-  }
-  const handleLogout = async () => {
-    if (logoutLockRef.current) {
-      return
-    }
-
-    haptics('medium')
-    logoutLockRef.current = true
-    logInfo('[Profile] User initiated logout')
-
-    try {
-      await apiRequest<{ message: string }>({
-        path: '/api/auth/logout',
-        method: 'POST',
-        handleUnauthorized: false,
-      })
-
-      clearMiniProgramAuthSession({ mode: 'hard' })
-      Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
-    } catch (error) {
-      if (isUnauthorizedApiError(error)) {
-        clearMiniProgramAuthSession({ mode: 'hard' })
-        Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
-        return
-      }
-
-      logError('[Profile] Logout failed', {
-        statusCode: getApiErrorStatusCode(error),
-        message: error instanceof Error ? error.message : 'Unknown error',
-      })
-
-      Taro.showToast({
-        title: getErrorMessage('logout-failed'),
-        icon: 'none',
-        duration: 3000,
-      })
-    } finally {
-      logoutLockRef.current = false
-    }
-  }
   const displayName = authUser?.nickname || authUser?.displayName || '悦聚用户'
   const archetype = authUser?.archetype ?? authUser?.primaryArchetype ?? null
   const archetypeName = archetype ? (ARCHETYPE_BY_ID[archetype]?.nameCn || archetype) : null
@@ -324,22 +263,22 @@ export default function ProfilePage() {
   }
 
   const handleOpenSettings = async () => {
-    haptics('light')
     try {
-      const { tapIndex } = await Taro.showActionSheet({
-        itemList: ['编辑资料', '服务条款', '退出登录'],
-      })
-      if (tapIndex === 0) {
-        haptics('light')
-        void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile })
-      } else if (tapIndex === 1) {
-        haptics('light')
-        void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.terms })
-      } else if (tapIndex === 2) {
-        void handleLogout()
-      }
+      haptics('light')
     } catch {
-      // Cancelling the action sheet is an intentional no-op.
+      // Optional device feedback must never block the settings workflow.
+    }
+    try {
+      await Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.profileSettings })
+    } catch {
+      try {
+        await Taro.showToast({
+          title: '设置没有打开，请稍后再试',
+          icon: 'none',
+        })
+      } catch {
+        // Keep Profile usable if the platform toast is unavailable.
+      }
     }
   }
 
@@ -364,13 +303,15 @@ export default function ProfilePage() {
           <View className='profile-page__identity-glow' aria-hidden='true' />
 
           <View className='profile-page__identity-copy'>
-            <View className='profile-page__identity-avatar'>
-              <ArchetypeHead
-                archetype={archetype}
-                size={112}
-                fallbackText={displayName}
-              />
-            </View>
+            {!pixelAvatarEnabled && (
+              <View className='profile-page__identity-avatar'>
+                <ArchetypeHead
+                  archetype={archetype}
+                  size={112}
+                  fallbackText={displayName}
+                />
+              </View>
+            )}
             <View className='profile-page__identity-text'>
               <Text className='profile-page__identity-name'>{displayName}</Text>
               <View className='profile-page__identity-tags'>
@@ -648,103 +589,6 @@ export default function ProfilePage() {
             </View>
           </View>
         )}
-
-        <View className='profile-page__menu-section profile-page__menu-section--entered' data-testid='profile-more-services'>
-          <Text className='profile-page__menu-title'>更多服务</Text>
-          <View className='profile-page__service-grid'>
-            <View
-              className='profile-page__service-item'
-              hoverClass='profile-page__service-item--pressed'
-              onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile }) }}
-              role='button'
-              aria-label='编辑资料'
-            >
-              <View className='profile-page__service-icon-well'>
-                <JoyJoinIcon emoji='✏️' size={36} className='profile-page__service-icon' />
-              </View>
-              <Text className='profile-page__service-label'>编辑资料</Text>
-            </View>
-
-            <View
-              className='profile-page__service-item'
-              hoverClass='profile-page__service-item--pressed'
-              onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.rewards }) }}
-              role='button'
-              aria-label={`奖励福利，${isLoadingCoupons ? '正在加载' : `${coupons.count ?? 0} 项`}`}
-            >
-              <View className='profile-page__service-icon-well'>
-                <JoyJoinIcon emoji='🏆' size={36} className='profile-page__service-icon' />
-              </View>
-              <Text className='profile-page__service-label'>奖励福利</Text>
-              {!isLoadingCoupons && (coupons.count ?? 0) > 0 && (
-                <Text className='profile-page__service-meta'>{coupons.count}</Text>
-              )}
-            </View>
-
-            <View
-              className='profile-page__service-item'
-              hoverClass='profile-page__service-item--pressed'
-              onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.invite }) }}
-              role='button'
-              aria-label='邀请好友'
-            >
-              <View className='profile-page__service-icon-well'>
-                <JoyJoinIcon emoji='🤝' tier='semantic' size={36} className='profile-page__service-icon' />
-              </View>
-              <Text className='profile-page__service-label'>邀请好友</Text>
-            </View>
-
-            <View
-              className='profile-page__service-item'
-              hoverClass='profile-page__service-item--pressed'
-              onClick={handleOpenPayment}
-              role='button'
-              aria-label='我的权益'
-            >
-              <View className='profile-page__service-icon-well'>
-                <JoyJoinIcon emoji='🎁' size={36} className='profile-page__service-icon' />
-              </View>
-              <Text className='profile-page__service-label'>我的权益</Text>
-            </View>
-
-            <View
-              className='profile-page__service-item'
-              hoverClass='profile-page__service-item--pressed'
-              onClick={() => { haptics('light'); void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
-              role='button'
-              aria-label='我的足迹'
-            >
-              <View className='profile-page__service-icon-well'>
-                <JoyJoinIcon emoji='👣' tier='ui' size={36} className='profile-page__service-icon' />
-              </View>
-              <Text className='profile-page__service-label'>我的足迹</Text>
-            </View>
-
-            <View
-              className='profile-page__service-item'
-              hoverClass='profile-page__service-item--pressed'
-              onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.terms }) }}
-              role='button'
-              aria-label='服务条款'
-            >
-              <View className='profile-page__service-icon-well'>
-                <JoyJoinIcon emoji='📄' size={36} className='profile-page__service-icon' />
-              </View>
-              <Text className='profile-page__service-label'>服务条款</Text>
-            </View>
-          </View>
-        </View>
-
-        <View className='profile-page__logout'>
-          <Button
-            variant='secondary'
-            className='profile-page__logout-btn'
-            hoverClass='profile-page__logout-btn--pressed'
-            onClick={handleLogout}
-          >
-            <Text className='profile-page__logout-text'>退出登录</Text>
-          </Button>
-        </View>
 
         <View className='profile-page__spacer' />
       </ScrollView>

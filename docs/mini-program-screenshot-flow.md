@@ -75,14 +75,15 @@ Then open the URL in a browser (do not paste the URL into the terminal):
 | `http://localhost:9000/alang-search-v17.png` | V1.7 阿浪寻找页（模拟用户定位） |
 | `http://localhost:9000/personal-story-v17.png` | V1.7 私人连续“我的故事”页 |
 | `http://localhost:9000/my-image-v17.png` | V1.7 “我的形象”页 |
+| `http://localhost:9000/profile-settings-v17.png` | V1.7 Profile 齿轮“设置与服务”页 |
 
 If port 9000 is occupied, the screenshot server will use the next free port; use `SCREENSHOT_PORT=9003 node scripts/screenshot-server.mjs` to force a specific port.
 
 ## V1.7 Profile + Alang verification (Windows-safe manual flow)
 
-The five V1.7 generators (`profile-v17`, `discover-alang-v17`, `alang-search-v17`, `personal-story-v17`, and `my-image-v17`) use the same `390×844` CSS viewport at 2× device scale, request reduced motion, wait for loaded data selectors, and return a `780×1688` PNG as the HTTP response buffer. Discover scrolls the Alang card into view but keeps the surrounding page context. They do not write image files.
+The six V1.7 generators (`profile-v17`, `profile-settings-v17`, `discover-alang-v17`, `alang-search-v17`, `personal-story-v17`, and `my-image-v17`) use the same `390×844` CSS viewport at 2× device scale, request reduced motion, wait for loaded data selectors, and return a `780×1688` PNG as the HTTP response buffer. Discover scrolls the Alang card into view but keeps the surrounding page context. They do not write image files.
 
-The final 2026-07-15 H5 production build completed with 1,393 modules. All five `780×1688` captures were generated outside the repository and the latest re-capture was reviewed: Profile, Discover Alang card, Search, Personal Story, and My Image are F3. The clipping-aware My Image scan reports 0 blocking overlaps; the two previously reported sticky-save-bar intersections were false positives caused by labels already clipped outside their scroll viewport. H5 screenshots do not establish F4: formal layered equipment raster art, WeChat native Map, custom TabBar, safe areas, device fonts, location lifecycle, real providers, long-list behavior, and the physical-device matrix still require approval, DevTools, and device verification.
+The final 2026-07-16 H5 production build completed with 1,397 modules. All six `780×1688` captures were generated outside the repository and reviewed: Profile, Profile Settings, Discover Alang card, Search, Personal Story, and My Image are F3. The clipping-aware My Image scan reports 0 blocking overlaps; the two previously reported sticky-save-bar intersections were false positives caused by labels already clipped outside their scroll viewport. H5 screenshots do not establish F4: formal layered equipment raster art, WeChat native Map, custom TabBar, safe areas, device fonts, location lifecycle, real providers, long-list behavior, and the physical-device matrix still require approval, DevTools, and device verification.
 
 Run these commands in separate PowerShell terminals from the repository root:
 
@@ -103,7 +104,7 @@ node scripts/screenshot-server.mjs
 
 `PLAYWRIGHT_EXECUTABLE_PATH` is optional. Set it when Playwright's bundled Chromium is not installed; on macOS/Linux, omit it or point it to an installed Chromium-compatible browser.
 
-Request one of the five V1.7 URLs shown in the table above. Every request creates a fresh browser context and returns a new PNG buffer. The current one-command `screenshot-open.mjs` helper uses Unix process/open commands, so no V1.7 npm aliases are added until that launcher has a Windows lifecycle path.
+Request one of the six V1.7 URLs shown in the table above. Every request creates a fresh browser context and returns a new PNG buffer. The current one-command `screenshot-open.mjs` helper uses Unix process/open commands, so no V1.7 npm aliases are added until that launcher has a Windows lifecycle path.
 
 The V1.7 mock server supplies these authenticated data boundaries:
 

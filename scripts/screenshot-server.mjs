@@ -563,6 +563,28 @@ async function captureMyImageV17() {
   })
 }
 
+async function captureProfileSettingsV17() {
+  return withBrowserPage(V17_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/profile-linked/settings/index?motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await waitForContent(page, '.profile-settings__intro')
+    await page.waitForSelector('.profile-settings__card', { state: 'visible', timeout: 10000 })
+    await page.waitForFunction(() => {
+      const title = document.querySelector('.profile-settings__title')?.textContent?.trim()
+      const rows = document.querySelectorAll('.profile-settings__row').length
+      const logout = document.querySelector('.profile-settings__logout-text')?.textContent?.trim()
+      return title === '设置与服务' && rows === 6 && logout === '退出登录'
+    }, undefined, { timeout: 10000 })
+
+    return screenshotViewport(page)
+  })
+}
+
 register('events-footprint-oracle-card', captureEventsPage)
 register('tier-selector-preset-cards', captureTierSelector)
 register('pool-registration-step-0-brief', capturePoolRegistration)
@@ -582,6 +604,7 @@ register('discover-alang-v17', captureDiscoverAlangV17)
 register('alang-search-v17', captureAlangSearchV17)
 register('personal-story-v17', capturePersonalStoryV17)
 register('my-image-v17', captureMyImageV17)
+register('profile-settings-v17', captureProfileSettingsV17)
 
 const server = app.listen(PORT, () => {
   console.log(`[screenshot-server] listening on http://localhost:${PORT}`)

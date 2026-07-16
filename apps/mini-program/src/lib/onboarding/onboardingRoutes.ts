@@ -33,6 +33,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   icebreakerSession: 'pages/icebreaker-session/index',
   tierSelector: 'pages/icebreaker-session/tier-selector/index',
   editProfile: 'pages/profile-linked/edit-profile/index',
+  profileSettings: 'pages/profile-linked/settings/index',
   rewards: 'pages/profile-linked/rewards/index',
   invite: 'pages/profile-linked/invite/index',
   myImage: 'pages/profile-linked/my-image/index',
@@ -75,6 +76,7 @@ export const MINI_PROGRAM_ROUTES = {
   icebreakerSession: `/${MINI_PROGRAM_PAGE_PATHS.icebreakerSession}`,
   tierSelector: `/${MINI_PROGRAM_PAGE_PATHS.tierSelector}`,
   editProfile: `/${MINI_PROGRAM_PAGE_PATHS.editProfile}`,
+  profileSettings: `/${MINI_PROGRAM_PAGE_PATHS.profileSettings}`,
   rewards: `/${MINI_PROGRAM_PAGE_PATHS.rewards}`,
   invite: `/${MINI_PROGRAM_PAGE_PATHS.invite}`,
   myImage: `/${MINI_PROGRAM_PAGE_PATHS.myImage}`,
@@ -110,6 +112,7 @@ export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES = [
 
 export const MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_PAGES = [
   'edit-profile/index',
+  'settings/index',
   'rewards/index',
   'invite/index',
   'my-image/index',
@@ -149,6 +152,7 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
 
 export const MINI_PROGRAM_PROFILE_LINKED_PACKAGE_PAGE_PATHS = [
   MINI_PROGRAM_PAGE_PATHS.editProfile,
+  MINI_PROGRAM_PAGE_PATHS.profileSettings,
   MINI_PROGRAM_PAGE_PATHS.rewards,
   MINI_PROGRAM_PAGE_PATHS.invite,
   MINI_PROGRAM_PAGE_PATHS.myImage,

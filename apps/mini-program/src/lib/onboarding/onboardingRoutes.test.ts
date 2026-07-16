@@ -52,11 +52,13 @@ describe('mini-program onboarding routes', () => {
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/onboarding/onboarding/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/pool-registration/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/edit-profile/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/settings/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/rewards/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/invite/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/my-image/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/personal-story/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/terms/index')
+    expect(MINI_PROGRAM_PAGES).toContain('pages/profile-linked/settings/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/alang/event/index')
     // D1: squad-unboxing left the main package — the tap-to-reveal revamp grew
     // the page past the 2 MB zip ceiling.

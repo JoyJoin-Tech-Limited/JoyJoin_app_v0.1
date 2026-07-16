@@ -1,6 +1,6 @@
 # 闪现 NPC｜阿浪 V1.7 — Active Implementation Map
 
-> 当前版本：2026-07-15
+> 当前版本：2026-07-16
 > 产品基准：`JoyJoin_Master_PRD_V1.7_Codex执行版_强调Mockup未完全落地.docx`
 > Scope ID：`ALANG-V17-VISUAL-ALIGNMENT`
 
@@ -40,6 +40,7 @@ Discover 卡
 | --- | --- |
 | Discover 入口 | `apps/mini-program/src/components/alang/AlangDiscoverCard.tsx` |
 | “我的”身份舞台、私人故事与“我的形象”入口 | `apps/mini-program/src/pages/profile/` |
+| 齿轮“设置与服务”独立 workflow | `apps/mini-program/src/pages/profile-linked/settings/` |
 | 私人连续故事 | `apps/mini-program/src/pages/profile-linked/personal-story/` |
 | 我的形象/衣橱/碎片商店 | `apps/mini-program/src/pages/profile-linked/my-image/` |
 | 装备客户端契约 | `apps/mini-program/src/lib/profile/equipmentApi.ts` |
@@ -181,6 +182,12 @@ Discover 卡
 - 搜索页同样直接提供“模拟找到阿浪”，使用当前搜索节点调用既有 Mock GPS 能力；成功后刷新服务端进度并进入对话，不修改手机系统定位，也不直接完成任务。测试人员不需要真的走完搜索或陪伴距离。
 - 安全：请求不接受 `userId`，只能读写登录用户的当前 mission；普通模式隐藏入口，服务端也拒绝 debug API。
 
+### 配置页“开始测试”真机无反馈修复（2026-07-16）
+
+- 真机静默根因不是坐标或 20 米距离校验：启动处理器取得防重复锁后，诊断用 realtime logger 位于请求与 `finally` 保护之外。日志实现若在设备上抛错，start 请求不会发出且锁无法释放；失败分支的 warning logger 抛错时又会跳过页面错误反馈。
+- 修复后触觉和 realtime logger 都是 best-effort；任何诊断异常均不能阻断 `start`。错误文案先写入页面持久状态，再尝试 Toast/日志，并由最外层 `finally` 无条件释放点击锁。
+- 回归测试明确模拟 `logInfo` 与 `logWarn` 抛错，分别验证请求仍发出、失败仍可见且按钮可再次点击。正常 GPS、点位、腾讯地图和服务端 5 米到达权威均未修改。
+
 ## 9. 私人连续故事（产品决定覆盖旧 ACTIVE 07 数据模型）
 
 - API：`GET /api/personal-story`、`POST /api/personal-story/update`、`GET /api/personal-story/update-status`；身份只来自登录会话。
@@ -193,6 +200,8 @@ Discover 卡
 ## 10. 我的形象与装备（产品授权的 Profile-only 最小闭环）
 
 - 12 个 canonical V4 动物人格分别使用全身拟人像素伙伴；透明人物层统一为 512×768 WebP 并从 CDN 加载，只用于新版 Profile/我的形象，不替换人格结果和分享资产。已批准的基础人物图自带安全初始服装，且不包含 UI、城市或霓虹背景；两个页面保留原有品牌背景，CDN 失败时使用 character-only fallback。
+- Profile 主舞台使用暖白/暖米表面与轻紫品牌点缀，不使用紫色赛博城市背景。基础像素角色只依赖人格与 `profilePixelAvatarEnabled`；`outfit` 为空、装备请求尚未返回或当前没有穿戴时仍显示基础角色，不再错误回退旧低多边形素材。
+- Profile 主页面只保留身份主舞台、真实潮流值、真实活动/连接/资料完成度、“我的形象”、“我的故事”和真实徽章。原“更多服务”及退出登录全部迁入齿轮打开的 `/pages/profile-linked/settings/index` 新页面；主页齿轮不再弹 ActionSheet。
 - 四个独立槽：上装、下装、鞋履、配饰。页面内变更只修改草稿，用户点击“保存形象”后带 `expectedVersion` 持久化；穿脱、保存和库存均为服务端状态。正式单品分层 raster 获批并发布前，装备状态不叠加任何紫色几何块、code-native 覆盖层或其他伪造图形，画面继续显示穿着初始服装的基础角色。
 - 每个人格首次进入幂等获得四件初始装备。真实活动奖励是永久保留、手动领取的抽取资格；测试阿浪/测试池不产生资格。
 - 地点池绑定稳定 `venues.id`；盲盒与未来同餐厅活动共享池。阿浪使用 mission-owned pool。每池 4 普通 + 2 稀有，权重 80/20；全局连续三次未获得新品后，第 4 抽保证当前池未拥有单品（若仍有），当前池集齐时保底计数冻结。
@@ -227,7 +236,7 @@ npm run test -w mini-program -- --run src/pages/alang src/lib/alang src/componen
 | `V17-REF-01` | 执行 ACTIVE 03/05 + APPROVED 06；ACTIVE 07 数据模型和 Profile-only 形象按产品决定覆盖；不实现 FUTURE 04，不恢复 REMOVED 09 | 本文范围边界、现有路由/Tab | 文档映射、路由测试 | **PASS**：阿浪正式美术仍待审批 |
 | `V17-UI-03` | Discover 单 NPC 紧凑入口、3 个说明 chip、单 CTA | `AlangDiscoverCard.tsx/.scss` | 组件测试 + `discover-alang-v17` 780×1688 全页截图 | **F3（已截图）**：目标卡区域无 Class A 阻断；正式阿浪图和微信真机仍阻断 F4 |
 | `V17-UI-05` | 区域提示 → 雷达/距离 → 找到后说明；地图只显示用户 | `pages/alang/search/` | 定向测试 + `alang-search-v17` 780×1688 截图 | **F3（已截图）**：H5 结构通过；正式区域/找到后图、原生 Map 与定位真机仍阻断 F4 |
-| `V17-UI-06` | “我的”身份舞台、透明像素伙伴、真实潮流值/统计、故事与形象入口、设置 | `pages/profile/` | 数据策略/Profile/装备测试 + `profile-v17` 780×1688 截图 | **F3（最新复截图）**：结构、数据与主要视觉层级基本一致；微信 TabBar、安全区与多机型真机仍阻断 F4 |
+| `V17-UI-06` | “我的”暖白身份舞台、透明像素伙伴、真实潮流值/统计、故事与形象入口、齿轮独立设置页 | `pages/profile/`、`pages/profile-linked/settings/` | 数据策略/Profile/设置/装备测试 + `profile-v17` 同尺寸截图 | **F3（待本轮真机复验）**：已移除紫色赛博背景和主页服务列表；12 张 CDN 基础角色已逐项返回 200。微信 TabBar、安全区、staging flags 与多机型真机仍阻断 F4 |
 | `V17-UI-07` | 仅本人可见的真实经历连续故事；手动更新、一次一章、历史保留 | `pages/profile-linked/personal-story/`、`/api/personal-story*` | Mini/Server personal-story 专项测试 + `personal-story-v17` 780×1688 截图 | **F3（最新复截图）**：主要视觉层级通过；真实 provider/staging 与多机型真机仍阻断 F4 |
 | `V17-UI-08-OVERRIDE` | 12 人格像素形象、四槽穿脱/保存、活动装备池、保底、碎片商店 | `pages/profile-linked/my-image/`、`/api/equipment/*` | Mini/Server equipment 专项测试 + `my-image-v17` 780×1688 截图 | **F3（最新复截图）**：clipping-aware 扫描为 0 个阻断项；此前 sticky 保存栏与下装/鞋履标签的 2 处报告是滚动视口裁切误报。基础人物自带初始服装；未发布单品不显示伪造覆盖层，正式四槽分层 raster 仍待审批，设备验收未完成，因此不得提升为 F4 |
 | `V17-AI-01` | MiniMax 主、DeepSeek 回退；结构化事实约束叙事，不虚构 | personal-story generation service/worker | provider/schema/grounding/worker tests | PASS |

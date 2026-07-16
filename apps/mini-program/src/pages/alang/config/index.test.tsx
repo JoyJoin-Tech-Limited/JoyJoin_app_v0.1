@@ -21,6 +21,8 @@ const mocks = vi.hoisted(() => ({
   syncMissionProgress: vi.fn(),
   showToast: vi.fn(),
   haptics: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
   redirectTo: vi.fn(),
   setStorageSync: vi.fn(),
   distanceMeters: { current: 150 },
@@ -81,6 +83,11 @@ vi.mock('../../../lib/api/api', () => ({
 
 vi.mock('../../../lib/utils/haptics', () => ({
   haptics: mocks.haptics,
+}))
+
+vi.mock('../../../lib/utils/logger', () => ({
+  logInfo: mocks.logInfo,
+  logWarn: mocks.logWarn,
 }))
 
 vi.mock('../../../components/ui/StatusCard', () => ({
@@ -332,6 +339,38 @@ describe('AlangConfigPage test-point start flow', () => {
     await waitFor(() => {
       expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('still starts and unlocks retry when optional realtime logging throws', async () => {
+    mocks.logInfo.mockImplementationOnce(() => {
+      throw new Error('realtime logger unavailable')
+    })
+
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+
+    await waitFor(() => {
+      expect(mocks.startMission).toHaveBeenCalledTimes(1)
+      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('still shows the server failure when optional warning logging throws', async () => {
+    mocks.startMission.mockRejectedValueOnce(new Error('network unavailable'))
+    mocks.logWarn.mockImplementationOnce(() => {
+      throw new Error('realtime warning logger unavailable')
+    })
+
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+
+    const errorMessage = await screen.findByRole('alert')
+    expect(errorMessage).toHaveTextContent('没有准备好，请检查网络后再试')
+    expect(screen.getByRole('button', { name: '开始测试' })).toBeEnabled()
   })
 
   it('tells stale-progress testers to reset before configuring again', () => {

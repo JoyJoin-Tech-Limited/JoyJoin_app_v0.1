@@ -333,15 +333,20 @@ export default function AlangConfigPage() {
     }
 
     submitLockRef.current = true
-    try {
-      haptics('light')
-    } catch {
-      // Optional device feedback must never block the mission start request.
-    }
     setSubmitError(null)
     setIsSubmitting(true)
-    logInfo('[AlangConfig] start test tapped', { slug })
     try {
+      try {
+        haptics('light')
+      } catch {
+        // Optional device feedback must never block the mission start request.
+      }
+      try {
+        logInfo('[AlangConfig] start test tapped', { slug })
+      } catch {
+        // Realtime logging is diagnostic-only and must never trap the start lock.
+      }
+
       const started = await startMutation.mutateAsync({
         slug,
         targetLocation: target,
@@ -367,13 +372,21 @@ export default function AlangConfigPage() {
     } catch (error) {
       const message = getAlangStartErrorMessage(error)
       const apiError = error as AlangStartError
-      logWarn('[AlangConfig] start test failed', {
-        slug,
-        statusCode: apiError?.statusCode,
-        errorCode: getAlangStartErrorCode(error),
-      })
       setSubmitError(message)
-      Taro.showToast({ title: message, icon: 'none' })
+      try {
+        Taro.showToast({ title: message, icon: 'none' })
+      } catch {
+        // The persistent inline error above remains the user-facing fallback.
+      }
+      try {
+        logWarn('[AlangConfig] start test failed', {
+          slug,
+          statusCode: apiError?.statusCode,
+          errorCode: getAlangStartErrorCode(error),
+        })
+      } catch {
+        // Failure telemetry must never hide the actionable error or keep the lock set.
+      }
     } finally {
       submitLockRef.current = false
       setIsSubmitting(false)
