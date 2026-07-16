@@ -114,6 +114,35 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
     expect(source).toContain('member.industryVisible === false')
   })
 
+  it('falls back to the member top-interest hook pill when no connection point exists (2026-07-16)', () => {
+    // PM "every card has a hook": row 4 never collapses just because the
+    // viewer has no connection point with this member. The interest pill
+    // carries the --interest modifier so its neutral outline differs from
+    // the filled connection pill (variance reads as semantics).
+    expect(source).toContain('buildInterestHookText')
+    expect(source).toContain("from './squadUnboxingViewModels'")
+    expect(source).toContain('squad-unboxing__deck-card-pills--interest')
+    // Hierarchy lock: the interest pill renders ONLY when there are no
+    // connection points (connection point wins row 4).
+    expect(source).toContain("connectionPoints.length > 0 ? '' : buildInterestHookText(member)")
+    const pillsBlock = source.slice(source.indexOf('{connectionPoints.length > 0 ? ('))
+    expect(pillsBlock).toContain(') : interestHook ? (')
+  })
+
+  it('renders the focused-card education·industry caption as an art-zone overlay, privacy-gated', () => {
+    // 2026-07-16 PM: the lifted card is fully visible, so education ·
+    // industry return at the moment of attention. Overlay (not a 5th info
+    // row) keeps the verified 4-row grid + fan geometry untouched; covered
+    // cards never render it (round-3 truncation physics).
+    expect(source).toContain('squad-unboxing__deck-card-art-caption')
+    expect(source).toContain('member.educationVisible === false')
+    expect(source).toContain("[education, industry].filter(Boolean).join(' · ')")
+    expect(source).toContain('{focused && focusCaption ? (')
+    // Screen readers get the same facts: education joins the face-up aria.
+    const ariaBlock = source.slice(source.indexOf('const ariaLabel = isFaceUp'))
+    expect(ariaBlock).toContain('education')
+  })
+
   it('derives the flip from isDealt && isFaceUp (controller-owned set), never local state', () => {
     // REL-01: --flipped renders only when dealt, and the face derives from
     // the single controller-owned flip set passed down as isFaceUp.

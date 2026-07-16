@@ -1884,6 +1884,35 @@ $fan-rotations: (
     height: 120rpx;
   }
 
+  // Focused-card caption (2026-07-16 PM): education · industry rendered as an
+  // art-zone bottom overlay on the LIFTED card only — the one state with no
+  // cover, so the round-3 truncation physics don't apply. Overlay (not a 5th
+  // info row) keeps the verified 4-row grid + fan geometry untouched; the
+  // entrance is opacity-only (transform/opacity animation rule). A soft
+  // surface scrim guarantees legibility over both archetype art and real
+  // avatar photos (aspectFill).
+  &__deck-card-art-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    padding: 20rpx $spacing-sm 6rpx;
+    background: linear-gradient(to top, rgba($color-surface, 0.94) 0%, rgba($color-surface, 0.72) 60%, rgba($color-surface, 0) 100%);
+    animation: squad-unboxing-caption-in 0.2s ease-out both;
+  }
+
+  &__deck-card-art-caption-text {
+    display: block;
+    font-size: $font-size-2xs;
+    color: $color-text-secondary;
+    @include text-truncate;
+  }
+
+  &__deck-card--reduce-motion &__deck-card-art-caption {
+    animation: none;
+  }
+
   // Info zone (48% of the card) — strict 4-row grid: name, accent archetype,
   // grey meta line (age·gender · industry), one rarity pill. Every row is a
   // single ellipsis-safe line; on covered cards the right safe inset (from
@@ -1953,6 +1982,15 @@ $fan-rotations: (
         text-overflow: ellipsis;
         word-break: keep-all;
       }
+    }
+
+    // Interest fallback hook (2026-07-16 PM): when a card has no viewer
+    // connection point, row 4 falls back to the member's top interest so
+    // every card deals a full 4-row face. Neutral outline differentiates it
+    // from the filled connection pill — the variance must read as semantics,
+    // not inconsistency.
+    &--interest .connection-point-pill {
+      background: transparent;
     }
   }
 
@@ -2802,6 +2840,15 @@ $fan-rotations: (
 
   50% {
     opacity: 0.65;
+  }
+}
+
+@keyframes squad-unboxing-caption-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

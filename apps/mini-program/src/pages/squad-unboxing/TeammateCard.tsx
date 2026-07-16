@@ -9,7 +9,7 @@ import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import MissingArchetypePlaceholder from '../../components/mascot/MissingArchetypePlaceholder'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { haptics } from '../../lib/utils/haptics'
-import { buildFaceDownCardAriaLabel, stripConnectionPointParens } from './squadUnboxingViewModels'
+import { buildFaceDownCardAriaLabel, buildInterestHookText, stripConnectionPointParens } from './squadUnboxingViewModels'
 
 export interface TeammateCardProps {
   member: PoolGroupMemberSummary
@@ -163,6 +163,14 @@ export default function TeammateCard({
   const name = getMemberName(member)
   const archetypeName = getArchetypeDisplayName(member.archetype)
   const connectionPoints = useMemo(() => getConnectionPoints(viewerPair), [viewerPair])
+  // Row-4 fallback hook (2026-07-16 PM "every card has a hook"): no viewer
+  // connection point → the member's top interest, so every card deals a full
+  // 4-row face. Visual contract: connection pill = filled rarity style,
+  // interest pill = neutral outline (variance reads as semantics).
+  const interestHook = useMemo(
+    () => (connectionPoints.length > 0 ? '' : buildInterestHookText(member)),
+    [connectionPoints, member],
+  )
 
   // Privacy: hidden fields are silently omitted (no placeholders).
   const agePart = member.ageVisible === false ? '' : (member.ageLabel ?? '')
@@ -171,12 +179,19 @@ export default function TeammateCard({
   // Industry moved off the card: on fan-covered cards the 48rpx safe inset
   // leaves ~126rpx of text width, so `28·女 · 互联网产品` truncated to a
   // broken-looking single character. Industry still reaches the user via the
-  // aria-label below and the focused narration bubble (`在{industry}领域`), where it
+  // aria-label below, the focused narration bubble (`在{industry}领域`), and
+  // — since 2026-07-16 — the focused card's art-zone caption, where it
   // renders in full.
   const ageGender = [agePart, genderPart].filter(Boolean).join('·')
   const industry = member.industryVisible === false
     ? ''
     : (member.industryNicheLabel ?? member.industryCategoryLabel ?? '')
+  const education = member.educationVisible === false ? '' : (member.educationLevel ?? '').trim()
+  // Focused-card caption (2026-07-16 PM): the lifted card is fully visible,
+  // so education · industry return at the moment of attention — rendered as
+  // an art-zone overlay so the verified 4-row info grid stays untouched
+  // (round-3 physics still banish them from covered cards).
+  const focusCaption = [education, industry].filter(Boolean).join(' · ')
   const metaLine = ageGender
 
   const usingAvatar = Boolean(member.avatarUrl && !avatarFailed)
@@ -292,6 +307,7 @@ export default function TeammateCard({
         archetypeName,
         agePart,
         industry,
+        education,
         isCurrentUser ? '我' : '',
         isBestPartner ? '最佳拍档' : '',
       ].filter(Boolean).join('，')
@@ -443,12 +459,26 @@ export default function TeammateCard({
                 </>
               )}
             </View>
+            {/* Focused-only caption (2026-07-16 PM): education · industry as
+                an art-zone bottom overlay. Only the lifted card carries it —
+                covered cards keep the round-3 minimal face. Opacity-fade
+                entrance; privacy-gated fields silently omitted. */}
+            {focused && focusCaption ? (
+              <View className='squad-unboxing__deck-card-art-caption'>
+                <Text className='squad-unboxing__deck-card-art-caption-text' numberOfLines={1}>
+                  {focusCaption}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Info zone — strict 4-row grid (round-3 restructure): name,
-              accent archetype, grey meta line (age·gender), one
-              connection-point pill. Every row is one line, ellipsis-safe; the
-              full industry + connection list feeds the focused narration bubble. */}
+              accent archetype, grey meta line (age·gender), one hook pill.
+              Every row is one line, ellipsis-safe. The hook pill is the
+              viewer's strongest connection point when one exists, else the
+              member's top interest (2026-07-16 fallback — every card has a
+              hook); the full industry + connection list feeds the focused
+              narration bubble. */}
           <View className='squad-unboxing__deck-card-info'>
             <Text className='squad-unboxing__deck-card-name' numberOfLines={1}>{name}</Text>
             {archetypeName ? (
@@ -470,6 +500,10 @@ export default function TeammateCard({
                 {connectionPoints.map((point) => (
                   <ConnectionPointPill key={point.text} text={point.text} rarity={point.rarity} />
                 ))}
+              </View>
+            ) : interestHook ? (
+              <View className='squad-unboxing__deck-card-pills squad-unboxing__deck-card-pills--interest'>
+                <ConnectionPointPill text={interestHook} rarity='common' />
               </View>
             ) : null}
           </View>
