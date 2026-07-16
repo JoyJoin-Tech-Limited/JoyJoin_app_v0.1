@@ -1,4 +1,8 @@
-# Synthetic Happy-Path Probe — runs every 5 minutes via GitHub Actions
+# Synthetic Happy-Path Probe — runs hourly via GitHub Actions
+#
+# Quota note (2026-07-16): was every 5 minutes (`*/5 * * * *`) = ~288 runs/day,
+# which alone exceeded the org's free Actions minutes on a private repo.
+# Reduced to hourly. Use workflow_dispatch for ad-hoc probes.
 #
 # Exercises the /api/health, /api/metrics, and /api/auth/user endpoints on the
 # production server to verify basic availability and observability infrastructure.
@@ -17,8 +21,8 @@ name: Synthetic Monitoring Probe
 
 on:
   schedule:
-    # Every 5 minutes
-    - cron: "*/5 * * * *"
+    # Hourly at minute 7 (off the top-of-hour rush)
+    - cron: "7 * * * *"
   workflow_dispatch:
     inputs:
       base_url:
