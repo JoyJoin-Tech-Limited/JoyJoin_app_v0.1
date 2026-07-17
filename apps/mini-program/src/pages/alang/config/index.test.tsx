@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AlangConfigPage, {
   getAlangConfigRecoveryUrl,
   getAlangStartErrorMessage,
@@ -29,10 +29,35 @@ const mocks = vi.hoisted(() => ({
   logInfo: vi.fn(),
   logWarn: vi.fn(),
   redirectTo: vi.fn(),
+  reLaunch: vi.fn(),
+  nativeRedirectTo: vi.fn(),
+  nativeReLaunch: vi.fn(),
+  getCurrentPages: vi.fn(),
   didShowCallback: { current: null as null | (() => void) },
   setStorageSync: vi.fn(),
   distanceMeters: { current: 150 },
 }))
+
+type NativeNavigationOptions = {
+  url: string
+  success?: (result: unknown) => void
+  fail?: (error: unknown) => void
+}
+
+const resolveNativeNavigation = (options: NativeNavigationOptions) => {
+  options.success?.({ errMsg: 'ok' })
+}
+
+beforeEach(() => {
+  vi.stubGlobal('wx', {
+    redirectTo: mocks.nativeRedirectTo,
+    reLaunch: mocks.nativeReLaunch,
+  })
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 vi.mock('@tarojs/taro', () => {
   const taro = {
@@ -44,6 +69,8 @@ vi.mock('@tarojs/taro', () => {
     showModal: mocks.showModal,
     setStorageSync: mocks.setStorageSync,
     redirectTo: mocks.redirectTo,
+    reLaunch: mocks.reLaunch,
+    getCurrentPages: mocks.getCurrentPages,
   }
   return {
     default: taro,
@@ -152,6 +179,10 @@ describe('AlangConfigPage production access gate', () => {
       mutateAsync: mocks.resetMission,
     })
     mocks.redirectTo.mockResolvedValue({})
+    mocks.reLaunch.mockResolvedValue({})
+    mocks.nativeRedirectTo.mockImplementation(resolveNativeNavigation)
+    mocks.nativeReLaunch.mockImplementation(resolveNativeNavigation)
+    mocks.getCurrentPages.mockReturnValue([])
     mocks.reverseGeocode.mockResolvedValue({ name: '测试地点', address: '深圳' })
     mocks.requestLocation.mockResolvedValue({ latitude: 22.5431, longitude: 114.0579, accuracy: 8 })
     mocks.startMission.mockResolvedValue({
@@ -254,6 +285,10 @@ describe('AlangConfigPage test-point start flow', () => {
       currentNodeId: 'search-gate',
     })
     mocks.redirectTo.mockResolvedValue({})
+    mocks.reLaunch.mockResolvedValue({})
+    mocks.nativeRedirectTo.mockImplementation(resolveNativeNavigation)
+    mocks.nativeReLaunch.mockImplementation(resolveNativeNavigation)
+    mocks.getCurrentPages.mockReturnValue([])
     mocks.showModal.mockResolvedValue({ confirm: true, cancel: false })
     mocks.resetMission.mockResolvedValue({
       reset: true,
@@ -298,15 +333,15 @@ describe('AlangConfigPage test-point start flow', () => {
       currentNodeId: 'search-gate',
     })
     expect(mocks.syncMissionProgress.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.redirectTo.mock.invocationCallOrder[0],
+      mocks.nativeRedirectTo.mock.invocationCallOrder[0],
     )
     expect(mocks.setStorageSync).not.toHaveBeenCalled()
-    expect(mocks.redirectTo).toHaveBeenCalledWith({
+    expect(mocks.nativeRedirectTo).toHaveBeenCalledWith(expect.objectContaining({
       url: '/pages/alang/search/index?slug=meet-alang',
-    })
+    }))
   })
 
-  it('uses the proven View tap path and blocks a repeated tap while starting', async () => {
+  it('accepts a center-label tap and blocks a repeated tap while starting', async () => {
     let resolveStart!: (value: {
       stage: string
       currentNodeId: string
@@ -325,7 +360,9 @@ describe('AlangConfigPage test-point start flow', () => {
     expect(startButton).not.toHaveAttribute('disabled')
     expect(screen.getByRole('status')).toHaveTextContent('启动反馈已开启 · 点击后会立即显示进度')
 
-    fireEvent.click(startButton)
+    // Exercise the visible Text label that receives a center tap in desktop
+    // WeChat, not only the surrounding View hit area.
+    fireEvent.click(screen.getByText('开始测试'))
     await waitFor(() => expect(mocks.startMission).toHaveBeenCalledTimes(1))
 
     // The synchronous lock keeps rapid repeated taps to one request.
@@ -349,8 +386,170 @@ describe('AlangConfigPage test-point start flow', () => {
     })
 
     await waitFor(() => {
-      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('uses the proven native WeChat redirect first without waiting for Taro', async () => {
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+    let currentRoute = 'pages/alang/config/index'
+    mocks.getCurrentPages.mockImplementation(() => [{ route: currentRoute }])
+    mocks.nativeRedirectTo.mockImplementation(({
+      url,
+      success,
+    }: NativeNavigationOptions) => {
+      currentRoute = url.split('?')[0].replace(/^\/+/, '')
+      success?.({ errMsg: 'redirectTo:ok' })
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+
+    await waitFor(() => expect(mocks.nativeRedirectTo).toHaveBeenCalledWith(expect.objectContaining({
+      url: '/pages/alang/search/index?slug=meet-alang',
+    })))
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+    expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
+    expect(mocks.reLaunch).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('uses native reLaunch only after both redirect paths fail to change pages', async () => {
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+    vi.useFakeTimers()
+    try {
+      let currentRoute = 'pages/alang/config/index'
+      mocks.getCurrentPages.mockImplementation(() => [{ route: currentRoute }])
+      mocks.nativeReLaunch.mockImplementation(({
+        url,
+        success,
+      }: NativeNavigationOptions) => {
+        currentRoute = url.split('?')[0].replace(/^\/+/, '')
+        success?.({ errMsg: 'reLaunch:ok' })
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+      await act(async () => {
+        await Promise.resolve()
+        await Promise.resolve()
+        await vi.advanceTimersByTimeAsync(5_001)
+      })
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_001)
+      })
+
+      expect(mocks.nativeReLaunch).toHaveBeenCalledWith(expect.objectContaining({
+        url: '/pages/alang/search/index?slug=meet-alang',
+      }))
+      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.reLaunch).not.toHaveBeenCalled()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps the next-step retry visible only after every navigation path fails', async () => {
+    mocks.getCurrentPages.mockReturnValue([{ route: 'pages/alang/config/index' }])
+    mocks.redirectTo.mockRejectedValue(new Error('taro redirect failed'))
+    mocks.nativeRedirectTo.mockImplementation(({ fail }: NativeNavigationOptions) => {
+      fail?.(new Error('native redirect failed'))
+    })
+    mocks.nativeReLaunch.mockImplementation(({ fail }: NativeNavigationOptions) => {
+      fail?.(new Error('native relaunch failed'))
+    })
+    mocks.reLaunch.mockRejectedValue(new Error('taro relaunch failed'))
+
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('下一步没有打开')
+    expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+    expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
+    expect(mocks.nativeReLaunch).toHaveBeenCalledTimes(1)
+    expect(mocks.reLaunch).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: /开始测试|继续当前测试/ }))
+      .toHaveAttribute('aria-disabled', 'false')
+  })
+
+  it('trusts an explicit native success when the page stack becomes unavailable', async () => {
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+    let pageStackReadCount = 0
+    mocks.getCurrentPages.mockImplementation(() => {
+      pageStackReadCount += 1
+      return pageStackReadCount === 1
+        ? [{ route: 'pages/alang/config/index' }]
+        : []
+    })
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+
+    await waitFor(() => expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1))
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+    expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('does not relaunch when a slow redirect eventually leaves the config page', async () => {
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+    vi.useFakeTimers()
+    try {
+      let currentRoute = 'pages/alang/config/index'
+      mocks.getCurrentPages.mockImplementation(() => [{ route: currentRoute }])
+      mocks.nativeRedirectTo.mockImplementation(({ fail }: NativeNavigationOptions) => {
+        fail?.(new Error('native redirect unavailable'))
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+      await act(async () => {
+        await Promise.resolve()
+        await Promise.resolve()
+        setTimeout(() => {
+          currentRoute = 'pages/alang/dialogue/index'
+        }, 1_500)
+        await vi.advanceTimersByTimeAsync(2_000)
+      })
+
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
+      expect(mocks.reLaunch).not.toHaveBeenCalled()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not relaunch after the source page unmounts', async () => {
+    const { unmount } = render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+    vi.useFakeTimers()
+    try {
+      mocks.getCurrentPages.mockReturnValue([{ route: 'pages/alang/config/index' }])
+
+      fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+      await act(async () => {
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+      unmount()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_001)
+      })
+
+      expect(mocks.redirectTo).not.toHaveBeenCalled()
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
+      expect(mocks.reLaunch).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('recovers a server-owned searching stage without configuring points or starting again', async () => {
@@ -375,18 +574,24 @@ describe('AlangConfigPage test-point start flow', () => {
     render(<AlangConfigPage />)
 
     await waitFor(() => {
-      expect(mocks.redirectTo).toHaveBeenCalledWith({
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledWith(expect.objectContaining({
         url: '/pages/alang/search/index?slug=meet-alang',
-      })
+      }))
     })
     expect(mocks.startMission).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: '继续当前测试' })).toHaveAttribute('aria-disabled', 'false')
   })
 
-  it('keeps a visible next-step action when automatic stage recovery fails', async () => {
-    mocks.redirectTo
-      .mockRejectedValueOnce(new Error('redirectTo:fail interrupted'))
-      .mockResolvedValueOnce({})
+  it('falls back to Taro navigation when native WeChat redirect rejects', async () => {
+    let currentRoute = 'pages/alang/config/index'
+    mocks.getCurrentPages.mockImplementation(() => [{ route: currentRoute }])
+    mocks.nativeRedirectTo.mockImplementation(({ fail }: NativeNavigationOptions) => {
+      fail?.(new Error('native redirect failed'))
+    })
+    mocks.redirectTo.mockImplementation(async ({ url }: { url: string }) => {
+      currentRoute = url.split('?')[0].replace(/^\/+/, '')
+      return {}
+    })
     const existingMission = {
       ...defaultMission(),
       myProgress: {
@@ -407,10 +612,11 @@ describe('AlangConfigPage test-point start flow', () => {
 
     render(<AlangConfigPage />)
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('下一步没有打开')
-    fireEvent.click(screen.getByRole('button', { name: '继续当前测试' }))
-
-    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledTimes(1))
+    expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
+    expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
+    expect(mocks.reLaunch).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(mocks.startMission).not.toHaveBeenCalled()
     expect(mocks.resetMission).not.toHaveBeenCalled()
   })
@@ -440,9 +646,9 @@ describe('AlangConfigPage test-point start flow', () => {
     fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
 
     await waitFor(() => {
-      expect(mocks.redirectTo).toHaveBeenCalledWith({
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledWith(expect.objectContaining({
         url: '/pages/alang/search/index?slug=meet-alang',
-      })
+      }))
     })
     expect(mocks.startMission).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -468,8 +674,8 @@ describe('AlangConfigPage test-point start flow', () => {
     })
     mocks.refetchMission.mockResolvedValue({ isError: false, data: existingMission })
     render(<AlangConfigPage />)
-    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledTimes(1))
-    mocks.redirectTo.mockClear()
+    await waitFor(() => expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1))
+    mocks.nativeRedirectTo.mockClear()
     mocks.refetchMission.mockClear()
 
     expect(mocks.didShowCallback.current).not.toBeNull()
@@ -479,9 +685,9 @@ describe('AlangConfigPage test-point start flow', () => {
 
     expect(mocks.refetchMission).toHaveBeenCalled()
     await waitFor(() => {
-      expect(mocks.redirectTo).toHaveBeenCalledWith({
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledWith(expect.objectContaining({
         url: '/pages/alang/search/index?slug=meet-alang',
-      })
+      }))
     })
   })
 
@@ -519,7 +725,7 @@ describe('AlangConfigPage test-point start flow', () => {
     render(<AlangConfigPage />)
     await waitFor(() => expect(mocks.refetchMission).toHaveBeenCalled())
 
-    expect(mocks.redirectTo).not.toHaveBeenCalled()
+    expect(mocks.nativeRedirectTo).not.toHaveBeenCalled()
     expect(mocks.startMission).not.toHaveBeenCalled()
   })
 
@@ -547,7 +753,7 @@ describe('AlangConfigPage test-point start flow', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('测试点位已经失效')
     expect(screen.getByRole('button', { name: '清除旧进度' })).toBeInTheDocument()
-    expect(mocks.redirectTo).not.toHaveBeenCalled()
+    expect(mocks.nativeRedirectTo).not.toHaveBeenCalled()
     expect(mocks.startMission).not.toHaveBeenCalled()
   })
 
@@ -573,14 +779,14 @@ describe('AlangConfigPage test-point start flow', () => {
     render(<AlangConfigPage />)
 
     await waitFor(() => {
-      expect(mocks.redirectTo).toHaveBeenCalledWith({
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledWith(expect.objectContaining({
         url: '/pages/alang/result/index?slug=meet-alang',
-      })
+      }))
     })
     expect(mocks.startMission).not.toHaveBeenCalled()
   })
 
-  it('unlocks the persistent recovery action when redirectTo never settles', async () => {
+  it('falls back to Taro navigation when native WeChat redirect never settles', async () => {
     vi.useFakeTimers()
     try {
       const existingMission = {
@@ -600,30 +806,30 @@ describe('AlangConfigPage test-point start flow', () => {
         refetch: mocks.refetchMission,
       })
       mocks.refetchMission.mockResolvedValue({ isError: false, data: existingMission })
-      mocks.redirectTo
-        .mockImplementationOnce(() => new Promise(() => undefined))
-        .mockResolvedValueOnce({})
+      let currentRoute = 'pages/alang/config/index'
+      mocks.getCurrentPages.mockImplementation(() => [{ route: currentRoute }])
+      mocks.nativeRedirectTo.mockImplementationOnce(() => undefined)
+      mocks.redirectTo.mockImplementationOnce(async ({ url }: { url: string }) => {
+        currentRoute = url.split('?')[0].replace(/^\/+/, '')
+        return {}
+      })
 
       render(<AlangConfigPage />)
       await act(async () => {
         await Promise.resolve()
         await Promise.resolve()
       })
-      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.redirectTo).not.toHaveBeenCalled()
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(5_001)
       })
 
-      expect(screen.getByRole('alert')).toHaveTextContent('下一步没有打开')
-      const retry = screen.getByRole('button', { name: '继续当前测试' })
-      expect(retry).toHaveAttribute('aria-disabled', 'false')
-      fireEvent.click(retry)
-      await act(async () => {
-        await Promise.resolve()
-        await Promise.resolve()
-      })
-      expect(mocks.redirectTo).toHaveBeenCalledTimes(2)
+      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
+      expect(mocks.reLaunch).not.toHaveBeenCalled()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
       expect(mocks.startMission).not.toHaveBeenCalled()
     } finally {
       vi.useRealTimers()
@@ -644,7 +850,7 @@ describe('AlangConfigPage test-point start flow', () => {
       title: '没有准备好，请检查网络后再试',
       icon: 'none',
     })
-    expect(mocks.redirectTo).not.toHaveBeenCalled()
+    expect(mocks.nativeRedirectTo).not.toHaveBeenCalled()
     expect(mocks.haptics).toHaveBeenCalledTimes(1)
 
     const retryButton = screen.getByRole('button', { name: '开始测试' })
@@ -654,7 +860,7 @@ describe('AlangConfigPage test-point start flow', () => {
     await waitFor(() => {
       expect(mocks.startMission).toHaveBeenCalledTimes(2)
       expect(mocks.haptics).toHaveBeenCalledTimes(2)
-      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
   })
@@ -671,7 +877,7 @@ describe('AlangConfigPage test-point start flow', () => {
 
     await waitFor(() => {
       expect(mocks.startMission).toHaveBeenCalledTimes(1)
-      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -687,7 +893,7 @@ describe('AlangConfigPage test-point start flow', () => {
 
     await waitFor(() => {
       expect(mocks.startMission).toHaveBeenCalledTimes(1)
-      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
     })
   })
 

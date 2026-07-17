@@ -29,6 +29,13 @@ import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
 import { haversine } from '../../../lib/alang/api'
 import { useAlangGpsOnce } from '../../../lib/alang/useAlangGps'
 import { apiRequest } from '../../../lib/api/api'
+import {
+  attemptMiniProgramNavigation,
+  callNativeWeChatNavigation,
+  canAttemptNavigationFallback,
+  getCurrentMiniProgramRoute,
+  normalizeMiniProgramRoute,
+} from '../../../lib/navigation/reliableMiniProgramNavigation'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { logInfo, logWarn } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
@@ -103,7 +110,6 @@ type AlangConfigProgress = {
   isDebugSession?: boolean
 }
 
-const ALANG_NAVIGATION_TIMEOUT_MS = 5_000
 const ALANG_AUTHORITY_REFRESH_TIMEOUT_MS = 5_000
 const ALANG_PROGRESS_BLOCKED_MESSAGE = '服务器记录的测试阶段无法安全续接，请先清除旧进度后重新开始'
 const ALANG_TEST_CONFIGURATION_INVALID_MESSAGE = '上一轮测试点位已经失效，请先清除旧进度后重新配置'
@@ -403,6 +409,7 @@ export default function AlangConfigPage() {
     let operation!: Promise<boolean>
     operation = (async () => {
       try {
+        const sourceRoute = getCurrentMiniProgramRoute()
         try {
           logInfo('[AlangConfig] opening server-owned stage', {
             slug,
@@ -413,12 +420,70 @@ export default function AlangConfigPage() {
         } catch {
           // Stage recovery never depends on optional realtime logging.
         }
-        await withAlangTimeout(
-          Promise.resolve(Taro.redirectTo({ url })),
-          ALANG_NAVIGATION_TIMEOUT_MS,
-          'ALANG_STAGE_NAVIGATION_TIMEOUT',
-        )
-        return true
+        const attempts = [
+          {
+            method: 'wx.redirectTo',
+            navigate: () => callNativeWeChatNavigation('redirectTo', url),
+            timeoutCode: 'ALANG_STAGE_NATIVE_REDIRECT_TIMEOUT',
+            trustSuccessWhenRouteUnknown: true,
+          },
+          {
+            method: 'taro.redirectTo',
+            navigate: () => Promise.resolve(Taro.redirectTo({ url })),
+            timeoutCode: 'ALANG_STAGE_TARO_REDIRECT_TIMEOUT',
+            trustSuccessWhenRouteUnknown: false,
+          },
+          {
+            method: 'wx.reLaunch',
+            navigate: () => callNativeWeChatNavigation('reLaunch', url),
+            timeoutCode: 'ALANG_STAGE_NATIVE_RELAUNCH_TIMEOUT',
+            trustSuccessWhenRouteUnknown: true,
+          },
+          {
+            method: 'taro.reLaunch',
+            navigate: () => Promise.resolve(Taro.reLaunch({ url })),
+            timeoutCode: 'ALANG_STAGE_TARO_RELAUNCH_TIMEOUT',
+            trustSuccessWhenRouteUnknown: false,
+          },
+        ] as const
+
+        let lastAttemptError: unknown
+        for (const attempt of attempts) {
+          // The preceding API may have committed between its final observation
+          // and this continuation. Never let an old config page override a
+          // destination page or a user's own navigation.
+          if (!canAttemptNavigationFallback(sourceRoute, () => mountedRef.current)) {
+            return true
+          }
+          const result = await attemptMiniProgramNavigation(
+            attempt.navigate,
+            sourceRoute,
+            () => mountedRef.current,
+            attempt.timeoutCode,
+            attempt.trustSuccessWhenRouteUnknown,
+          )
+          if (result.committed) return true
+          lastAttemptError = result.error
+          try {
+            logWarn('[AlangConfig] navigation attempt did not open stage', {
+              slug,
+              source,
+              stage: progress.stage,
+              currentNodeId: progress.currentNodeId,
+              method: attempt.method,
+              currentRoute: getCurrentMiniProgramRoute(),
+              targetRoute: normalizeMiniProgramRoute(url),
+              error: result.error instanceof Error
+                ? result.error.message
+                : result.error === undefined ? undefined : String(result.error),
+            })
+          } catch {
+            // Navigation fallbacks never depend on optional telemetry.
+          }
+        }
+        throw lastAttemptError instanceof Error
+          ? lastAttemptError
+          : new Error('ALANG_STAGE_NAVIGATION_NOT_COMMITTED')
       } catch (error) {
         recoveryNavigationKeyRef.current = ''
         if (mountedRef.current) {
