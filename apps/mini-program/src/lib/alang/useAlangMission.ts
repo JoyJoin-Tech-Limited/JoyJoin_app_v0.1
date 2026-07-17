@@ -72,6 +72,9 @@ export function useAlangMissionDetail(slug: string, enabled = true) {
 export type AlangProgressTransition = {
   stage: string
   currentNodeId: string
+  progressId?: string
+  status?: string
+  isDebugSession?: boolean
 }
 
 export function syncAlangMissionProgress(
@@ -80,7 +83,22 @@ export function syncAlangMissionProgress(
   snapshot: AlangProgressTransition,
 ): void {
   queryClient.setQueryData<AlangMissionDetail>(ALANG_MISSION_DETAIL_KEY(slug), (current) => {
-    if (!current?.myProgress) return current
+    if (!current) return current
+    if (!current.myProgress) {
+      if (!snapshot.progressId) return current
+      return {
+        ...current,
+        myProgress: {
+          progressId: snapshot.progressId,
+          stage: snapshot.stage,
+          currentNodeId: snapshot.currentNodeId,
+          nodeHistory: [snapshot.currentNodeId],
+          choicesMade: [],
+          status: snapshot.status ?? 'in_progress',
+          isDebugSession: snapshot.isDebugSession ?? false,
+        },
+      }
+    }
     const nodeHistory = current.myProgress.nodeHistory.includes(snapshot.currentNodeId)
       ? current.myProgress.nodeHistory
       : [...current.myProgress.nodeHistory, snapshot.currentNodeId]

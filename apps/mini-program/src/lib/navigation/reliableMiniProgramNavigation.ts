@@ -1,6 +1,7 @@
 import Taro from '@tarojs/taro'
 
 const NAVIGATION_TIMEOUT_MS = 5_000
+const NAVIGATION_COMMIT_TIMEOUT_MS = 3_000
 const NAVIGATION_COMMIT_POLL_MS = 100
 
 type NativeRouteOptions = {
@@ -16,6 +17,7 @@ type NativeWeChatNavigation = {
 
 type MiniProgramGlobal = typeof globalThis & {
   wx?: NativeWeChatNavigation
+  getCurrentPages?: () => Array<{ route?: string }>
 }
 
 type NavigationAttemptResult = {
@@ -38,10 +40,22 @@ export function normalizeMiniProgramRoute(routeOrUrl: string): string {
 }
 
 export function getCurrentMiniProgramRoute(): string | null {
+  const nativeGetCurrentPages = (globalThis as MiniProgramGlobal).getCurrentPages
+  if (typeof nativeGetCurrentPages === 'function') {
+    try {
+      const nativePages = nativeGetCurrentPages()
+      const nativeRoute = nativePages[nativePages.length - 1]?.route
+      if (nativeRoute) return normalizeMiniProgramRoute(nativeRoute)
+    } catch {
+      // Desktop WeChat can expose the native API before its page stack is
+      // readable. The Taro wrapper can still have the committed route.
+    }
+  }
+
   try {
-    const pages = Taro.getCurrentPages()
-    const route = pages[pages.length - 1]?.route
-    return route ? normalizeMiniProgramRoute(route) : null
+    const taroPages = Taro.getCurrentPages()
+    const taroRoute = taroPages[taroPages.length - 1]?.route
+    return taroRoute ? normalizeMiniProgramRoute(taroRoute) : null
   } catch {
     return null
   }
@@ -72,18 +86,17 @@ export function callNativeWeChatNavigation(
 
 async function didLeaveMiniProgramRoute(
   sourceRoute: string | null,
+  targetRoute: string,
   isSourceMounted: () => boolean,
-  trustSuccessWhenRouteUnknown: boolean,
 ): Promise<boolean> {
   if (!isSourceMounted()) return true
-  if (!sourceRoute) return trustSuccessWhenRouteUnknown
 
-  const deadline = Date.now() + NAVIGATION_TIMEOUT_MS
+  const deadline = Date.now() + NAVIGATION_COMMIT_TIMEOUT_MS
   while (Date.now() < deadline) {
     if (!isSourceMounted()) return true
     const currentRoute = getCurrentMiniProgramRoute()
-    if (currentRoute && currentRoute !== sourceRoute) return true
-    if (!currentRoute && trustSuccessWhenRouteUnknown) return true
+    if (currentRoute === targetRoute) return true
+    if (sourceRoute && currentRoute && currentRoute !== sourceRoute) return true
     await new Promise<void>((resolve) => {
       setTimeout(resolve, NAVIGATION_COMMIT_POLL_MS)
     })
@@ -91,9 +104,8 @@ async function didLeaveMiniProgramRoute(
 
   if (!isSourceMounted()) return true
   const settledRoute = getCurrentMiniProgramRoute()
-  return settledRoute
-    ? settledRoute !== sourceRoute
-    : trustSuccessWhenRouteUnknown
+  if (settledRoute === targetRoute) return true
+  return !!settledRoute && !!sourceRoute && settledRoute !== sourceRoute
 }
 
 export function canAttemptNavigationFallback(
@@ -109,16 +121,17 @@ export function canAttemptNavigationFallback(
 export async function attemptMiniProgramNavigation(
   navigate: () => Promise<unknown>,
   sourceRoute: string | null,
+  targetRoute: string,
   isSourceMounted: () => boolean,
   timeoutCode: string,
-  trustSuccessWhenRouteUnknown: boolean,
 ): Promise<NavigationAttemptResult> {
   try {
     await withNavigationTimeout(navigate(), timeoutCode)
   } catch (error) {
     if (!isSourceMounted()) return { committed: true }
     const currentRoute = getCurrentMiniProgramRoute()
-    if (sourceRoute && currentRoute && currentRoute !== sourceRoute) {
+    if (currentRoute === targetRoute
+      || (sourceRoute && currentRoute && currentRoute !== sourceRoute)) {
       return { committed: true }
     }
     return { committed: false, error }
@@ -127,8 +140,8 @@ export async function attemptMiniProgramNavigation(
   return {
     committed: await didLeaveMiniProgramRoute(
       sourceRoute,
+      targetRoute,
       isSourceMounted,
-      trustSuccessWhenRouteUnknown,
     ),
   }
 }

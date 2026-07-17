@@ -409,7 +409,13 @@ export default function AlangConfigPage() {
     let operation!: Promise<boolean>
     operation = (async () => {
       try {
+        // Desktop WeChat can temporarily report an empty page stack even
+        // though this config page is visibly mounted. Keep a stable source so
+        // a late redirect or a user-driven stage advance cannot be overwritten
+        // by the stronger reLaunch fallback.
         const sourceRoute = getCurrentMiniProgramRoute()
+          ?? normalizeMiniProgramRoute(MINI_PROGRAM_ROUTES.alangConfig)
+        const targetRoute = normalizeMiniProgramRoute(url)
         try {
           logInfo('[AlangConfig] opening server-owned stage', {
             slug,
@@ -425,25 +431,21 @@ export default function AlangConfigPage() {
             method: 'wx.redirectTo',
             navigate: () => callNativeWeChatNavigation('redirectTo', url),
             timeoutCode: 'ALANG_STAGE_NATIVE_REDIRECT_TIMEOUT',
-            trustSuccessWhenRouteUnknown: true,
-          },
-          {
-            method: 'taro.redirectTo',
-            navigate: () => Promise.resolve(Taro.redirectTo({ url })),
-            timeoutCode: 'ALANG_STAGE_TARO_REDIRECT_TIMEOUT',
-            trustSuccessWhenRouteUnknown: false,
           },
           {
             method: 'wx.reLaunch',
             navigate: () => callNativeWeChatNavigation('reLaunch', url),
             timeoutCode: 'ALANG_STAGE_NATIVE_RELAUNCH_TIMEOUT',
-            trustSuccessWhenRouteUnknown: true,
+          },
+          {
+            method: 'taro.redirectTo',
+            navigate: () => Promise.resolve(Taro.redirectTo({ url })),
+            timeoutCode: 'ALANG_STAGE_TARO_REDIRECT_TIMEOUT',
           },
           {
             method: 'taro.reLaunch',
             navigate: () => Promise.resolve(Taro.reLaunch({ url })),
             timeoutCode: 'ALANG_STAGE_TARO_RELAUNCH_TIMEOUT',
-            trustSuccessWhenRouteUnknown: false,
           },
         ] as const
 
@@ -458,9 +460,9 @@ export default function AlangConfigPage() {
           const result = await attemptMiniProgramNavigation(
             attempt.navigate,
             sourceRoute,
+            targetRoute,
             () => mountedRef.current,
             attempt.timeoutCode,
-            attempt.trustSuccessWhenRouteUnknown,
           )
           if (result.committed) return true
           lastAttemptError = result.error
@@ -528,6 +530,9 @@ export default function AlangConfigPage() {
     )
     if (progress && recoveryUrl) {
       syncMissionProgress(slug, {
+        progressId: progress.progressId,
+        status: progress.status,
+        isDebugSession: progress.isDebugSession,
         stage: progress.stage,
         currentNodeId: progress.currentNodeId,
       })
@@ -648,6 +653,9 @@ export default function AlangConfigPage() {
       )
       if (freshProgress && freshRecoveryUrl) {
         syncMissionProgress(slug, {
+          progressId: freshProgress.progressId,
+          status: freshProgress.status,
+          isDebugSession: freshProgress.isDebugSession,
           stage: freshProgress.stage,
           currentNodeId: freshProgress.currentNodeId,
         })
@@ -692,6 +700,9 @@ export default function AlangConfigPage() {
         // The successful start must not depend on optional telemetry.
       }
       syncMissionProgress(slug, {
+        progressId: started.progressId,
+        status: started.completed ? 'completed' : 'in_progress',
+        isDebugSession: true,
         stage: started.stage,
         currentNodeId: started.currentNodeId,
       })
@@ -715,6 +726,9 @@ export default function AlangConfigPage() {
         )
         if (progress && authoritativeUrl) {
           syncMissionProgress(slug, {
+            progressId: progress.progressId,
+            status: progress.status,
+            isDebugSession: progress.isDebugSession,
             stage: progress.stage,
             currentNodeId: progress.currentNodeId,
           })

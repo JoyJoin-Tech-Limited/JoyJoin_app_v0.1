@@ -79,4 +79,36 @@ describe('clearAlangRetestClientState', () => {
     })
     queryClient.clear()
   })
+
+  it('hydrates a server-owned progress snapshot when the cached detail was still empty', () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(['alang', 'mission', 'alang-demo'], {
+      id: 'mission-1',
+      slug: 'alang-demo',
+      title: '阿浪',
+      description: '测试任务',
+      content: {},
+      myProgress: null,
+    })
+
+    syncAlangMissionProgress(queryClient, 'alang-demo', {
+      progressId: 'progress-server',
+      status: 'in_progress',
+      isDebugSession: true,
+      stage: 'searching',
+      currentNodeId: 'search-gate',
+    })
+
+    const cached = queryClient.getQueryData<any>(['alang', 'mission', 'alang-demo'])
+    expect(cached.myProgress).toEqual({
+      progressId: 'progress-server',
+      status: 'in_progress',
+      isDebugSession: true,
+      stage: 'searching',
+      currentNodeId: 'search-gate',
+      nodeHistory: ['search-gate'],
+      choicesMade: [],
+    })
+    queryClient.clear()
+  })
 })

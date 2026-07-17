@@ -36,6 +36,7 @@ const mocks = vi.hoisted(() => ({
   didShowCallback: { current: null as null | (() => void) },
   setStorageSync: vi.fn(),
   distanceMeters: { current: 150 },
+  currentRoute: { current: 'pages/alang/config/index' },
 }))
 
 type NativeNavigationOptions = {
@@ -45,6 +46,7 @@ type NativeNavigationOptions = {
 }
 
 const resolveNativeNavigation = (options: NativeNavigationOptions) => {
+  mocks.currentRoute.current = options.url.split('?')[0].replace(/^\/+/, '')
   options.success?.({ errMsg: 'ok' })
 }
 
@@ -56,6 +58,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
@@ -246,6 +249,7 @@ describe('AlangConfigPage test-point start flow', () => {
     vi.clearAllMocks()
     mocks.didShowCallback.current = null
     mocks.distanceMeters.current = 150
+    mocks.currentRoute.current = 'pages/alang/config/index'
     mocks.useAuth.mockReturnValue({
       user: { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } },
       isLoading: false,
@@ -274,6 +278,7 @@ describe('AlangConfigPage test-point start flow', () => {
     mocks.requestLocation.mockResolvedValue({ latitude: 22.5431, longitude: 114.0579, accuracy: 8 })
     mocks.reverseGeocode.mockResolvedValue({ name: '测试地点', address: '深圳' })
     mocks.startMission.mockResolvedValue({
+      progressId: 'progress-started',
       stage: 'searching',
       currentNodeId: 'search-gate',
       nodeHistory: ['event-detail', 'search-gate'],
@@ -288,7 +293,7 @@ describe('AlangConfigPage test-point start flow', () => {
     mocks.reLaunch.mockResolvedValue({})
     mocks.nativeRedirectTo.mockImplementation(resolveNativeNavigation)
     mocks.nativeReLaunch.mockImplementation(resolveNativeNavigation)
-    mocks.getCurrentPages.mockReturnValue([])
+    mocks.getCurrentPages.mockImplementation(() => [{ route: mocks.currentRoute.current }])
     mocks.showModal.mockResolvedValue({ confirm: true, cancel: false })
     mocks.resetMission.mockResolvedValue({
       reset: true,
@@ -329,6 +334,9 @@ describe('AlangConfigPage test-point start flow', () => {
     expect(startPayload.companionEndLocation.longitude).toBe(114.0579)
     expect(mocks.callReportProgress).not.toHaveBeenCalled()
     expect(mocks.syncMissionProgress).toHaveBeenCalledWith('meet-alang', {
+      progressId: 'progress-started',
+      status: 'in_progress',
+      isDebugSession: true,
       stage: 'searching',
       currentNodeId: 'search-gate',
     })
@@ -414,7 +422,7 @@ describe('AlangConfigPage test-point start flow', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('uses native reLaunch only after both redirect paths fail to change pages', async () => {
+  it('uses native reLaunch when redirect reports success without changing pages', async () => {
     render(<AlangConfigPage />)
     await setDefaultTestPoints()
     vi.useFakeTimers()
@@ -433,19 +441,13 @@ describe('AlangConfigPage test-point start flow', () => {
       await act(async () => {
         await Promise.resolve()
         await Promise.resolve()
-        await vi.advanceTimersByTimeAsync(5_001)
+        await vi.advanceTimersByTimeAsync(3_001)
       })
       expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
-      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
-      expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(5_001)
-      })
-
       expect(mocks.nativeReLaunch).toHaveBeenCalledWith(expect.objectContaining({
         url: '/pages/alang/search/index?slug=meet-alang',
       }))
-      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.redirectTo).not.toHaveBeenCalled()
       expect(mocks.reLaunch).not.toHaveBeenCalled()
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     } finally {
@@ -477,33 +479,48 @@ describe('AlangConfigPage test-point start flow', () => {
       .toHaveAttribute('aria-disabled', 'false')
   })
 
-  it('trusts an explicit native success when the page stack becomes unavailable', async () => {
+  it('does not trust native success while the page stack is unavailable', async () => {
     render(<AlangConfigPage />)
     await setDefaultTestPoints()
-    let pageStackReadCount = 0
-    mocks.getCurrentPages.mockImplementation(() => {
-      pageStackReadCount += 1
-      return pageStackReadCount === 1
-        ? [{ route: 'pages/alang/config/index' }]
-        : []
-    })
-    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+    vi.useFakeTimers()
+    try {
+      let currentRoute = 'pages/alang/config/index'
+      let stackVisible = true
+      mocks.getCurrentPages.mockImplementation(() => stackVisible ? [{ route: currentRoute }] : [])
+      mocks.nativeRedirectTo.mockImplementation(({ success }: NativeNavigationOptions) => {
+        stackVisible = false
+        success?.({ errMsg: 'redirectTo:ok' })
+      })
+      mocks.nativeReLaunch.mockImplementation(({ url, success }: NativeNavigationOptions) => {
+        currentRoute = url.split('?')[0].replace(/^\/+/, '')
+        stackVisible = true
+        success?.({ errMsg: 'reLaunch:ok' })
+      })
+      fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+      await act(async () => {
+        await Promise.resolve()
+        await Promise.resolve()
+        await vi.advanceTimersByTimeAsync(3_001)
+      })
 
-    await waitFor(() => expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1))
-    expect(mocks.redirectTo).not.toHaveBeenCalled()
-    expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
+      expect(mocks.nativeReLaunch).toHaveBeenCalledTimes(1)
+      expect(mocks.redirectTo).not.toHaveBeenCalled()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
-  it('does not relaunch when a slow redirect eventually leaves the config page', async () => {
+  it('does not relaunch when redirect reaches the target within the commit window', async () => {
     render(<AlangConfigPage />)
     await setDefaultTestPoints()
     vi.useFakeTimers()
     try {
       let currentRoute = 'pages/alang/config/index'
       mocks.getCurrentPages.mockImplementation(() => [{ route: currentRoute }])
-      mocks.nativeRedirectTo.mockImplementation(({ fail }: NativeNavigationOptions) => {
-        fail?.(new Error('native redirect unavailable'))
+      mocks.nativeRedirectTo.mockImplementation(({ success }: NativeNavigationOptions) => {
+        success?.({ errMsg: 'redirectTo:ok' })
       })
 
       fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
@@ -511,19 +528,38 @@ describe('AlangConfigPage test-point start flow', () => {
         await Promise.resolve()
         await Promise.resolve()
         setTimeout(() => {
-          currentRoute = 'pages/alang/dialogue/index'
-        }, 1_500)
-        await vi.advanceTimersByTimeAsync(2_000)
+          currentRoute = 'pages/alang/search/index'
+        }, 500)
+        await vi.advanceTimersByTimeAsync(700)
       })
 
       expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
-      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
       expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
+      expect(mocks.redirectTo).not.toHaveBeenCalled()
       expect(mocks.reLaunch).not.toHaveBeenCalled()
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('does not overwrite an advanced route when the source stack was initially unknown', async () => {
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+    let currentRoute: string | null = null
+    mocks.getCurrentPages.mockImplementation(() => currentRoute ? [{ route: currentRoute }] : [])
+    mocks.nativeRedirectTo.mockImplementation(({ success }: NativeNavigationOptions) => {
+      currentRoute = 'pages/alang/dialogue/index'
+      success?.({ errMsg: 'redirectTo:ok' })
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+
+    await waitFor(() => expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1))
+    expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+    expect(mocks.reLaunch).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('does not relaunch after the source page unmounts', async () => {
@@ -582,11 +618,14 @@ describe('AlangConfigPage test-point start flow', () => {
     expect(screen.getByRole('button', { name: '继续当前测试' })).toHaveAttribute('aria-disabled', 'false')
   })
 
-  it('falls back to Taro navigation when native WeChat redirect rejects', async () => {
+  it('falls back to Taro navigation when both native navigation paths reject', async () => {
     let currentRoute = 'pages/alang/config/index'
     mocks.getCurrentPages.mockImplementation(() => [{ route: currentRoute }])
     mocks.nativeRedirectTo.mockImplementation(({ fail }: NativeNavigationOptions) => {
       fail?.(new Error('native redirect failed'))
+    })
+    mocks.nativeReLaunch.mockImplementation(({ fail }: NativeNavigationOptions) => {
+      fail?.(new Error('native relaunch failed'))
     })
     mocks.redirectTo.mockImplementation(async ({ url }: { url: string }) => {
       currentRoute = url.split('?')[0].replace(/^\/+/, '')
@@ -614,7 +653,7 @@ describe('AlangConfigPage test-point start flow', () => {
 
     await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledTimes(1))
     expect(mocks.nativeRedirectTo).toHaveBeenCalledTimes(1)
-    expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
+    expect(mocks.nativeReLaunch).toHaveBeenCalledTimes(1)
     expect(mocks.reLaunch).not.toHaveBeenCalled()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(mocks.startMission).not.toHaveBeenCalled()
@@ -809,6 +848,9 @@ describe('AlangConfigPage test-point start flow', () => {
       let currentRoute = 'pages/alang/config/index'
       mocks.getCurrentPages.mockImplementation(() => [{ route: currentRoute }])
       mocks.nativeRedirectTo.mockImplementationOnce(() => undefined)
+      mocks.nativeReLaunch.mockImplementationOnce(({ fail }: NativeNavigationOptions) => {
+        fail?.(new Error('native relaunch failed'))
+      })
       mocks.redirectTo.mockImplementationOnce(async ({ url }: { url: string }) => {
         currentRoute = url.split('?')[0].replace(/^\/+/, '')
         return {}
@@ -827,7 +869,7 @@ describe('AlangConfigPage test-point start flow', () => {
       })
 
       expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
-      expect(mocks.nativeReLaunch).not.toHaveBeenCalled()
+      expect(mocks.nativeReLaunch).toHaveBeenCalledTimes(1)
       expect(mocks.reLaunch).not.toHaveBeenCalled()
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
       expect(mocks.startMission).not.toHaveBeenCalled()
