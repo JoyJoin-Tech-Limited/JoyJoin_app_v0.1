@@ -24,7 +24,6 @@ import XiaoyueHostImage from './XiaoyueHostImage'
 import SquadDeckStage from './SquadDeckStage'
 import DeckCollapsePill from './DeckCollapsePill'
 import {
-  SQUAD_DECK_COLLAPSE_TRIGGER_LABEL,
   SQUAD_DECK_POCKETED_ANNOUNCEMENT,
   SQUAD_DECK_POCKETED_HINT_TEXT,
   SQUAD_TONIGHTS_TABLE_TOGGLE_LABEL,
@@ -121,10 +120,8 @@ export default function SquadUnboxingPage() {
     isFlipInFlight,
     notifyDealSettled,
     deckPhase,
-    pocketDeckEnabled,
     foldDelayById,
     unfoldDelayById,
-    collapseDeck,
     reopenDeck,
     notifyFoldSettled,
     notifyUnfoldSettled,
@@ -437,22 +434,6 @@ export default function SquadUnboxingPage() {
     : null
 
   /**
-   * "收起卡组" (AC-01): dismiss any focused-card lift BEFORE the cascade
-   * starts (REL-01 — a lifted card breaks the fold geometry). Focus and the
-   * fold request clear in the same render batch, so the fold's first frame
-   * already shows the unfocused dealt pose. The bubble returns to the
-   * resting voice; flip state is controller-owned and untouched (AC-04).
-   */
-  const handleCollapseDeck = useCallback(() => {
-    if (deckPhase !== 'fan') return
-    focusedCardIndexRef.current = -1
-    setFocusedCardIndex(-1)
-    cancelNarrationTimer()
-    setBubbleNarration(null)
-    collapseDeck()
-  }, [deckPhase, cancelNarrationTimer, collapseDeck])
-
-  /**
    * 今晚这桌 panel toggle (2026-07-16): the event-brief chapter is collapsed
    * by default so the revealed state's blank space stays clean; the single
    * toggle below the bubble expands it in place. The chapter impression
@@ -638,7 +619,7 @@ export default function SquadUnboxingPage() {
 
   // Dock cluster + scroll padding must track the bottom dock's actual height
   // (368rpx action-zone, +128rpx when the reveal chip shows) so the cluster
-  // sits just above the lower buttons and never covers the 收起卡组 trigger.
+  // sits just above the lower buttons and never covers the card fan.
   const showRevealChip = isInteractiveSession && unflippedCount > 0 && deckPhase === 'fan'
   const dockClusterBottomRpx = (showRevealChip ? 496 : 368) + 16
   const revealedScrollPaddingBottomRpx = dockClusterBottomRpx + 400
@@ -847,28 +828,6 @@ export default function SquadUnboxingPage() {
             flowState === 'revealed' ? 'squad-unboxing__scroll-content--revealed' : 'squad-unboxing__scroll-content--ready',
             isComposedHeroActive ? 'squad-unboxing__scroll-content--composed' : '',
           ].filter(Boolean).join(' ')}>
-
-        {/* Pocket-the-deck trigger (AC-01): sits in the scroll flow directly
-            below the fixed stage, visually hugging the fan's bottom edge.
-            Fan phase only — the fold hides it in the same frame the cascade
-            starts, and the pill owns the return path once pocketed. Hidden
-            when the pocketDeckEnabled kill switch is off (2026-07-15). */}
-        {flowState === 'revealed' && deckPhase === 'fan' && pocketDeckEnabled && members.length > 0 ? (
-          <View className='squad-unboxing__collapse-trigger-wrap'>
-            <View
-              className='squad-unboxing__collapse-trigger'
-              hoverClass='squad-unboxing__collapse-trigger--pressed'
-              role='button'
-              aria-label={SQUAD_DECK_COLLAPSE_TRIGGER_LABEL}
-              onClick={handleCollapseDeck}
-            >
-              <Text className='squad-unboxing__collapse-trigger-text'>
-                {SQUAD_DECK_COLLAPSE_TRIGGER_LABEL}
-              </Text>
-              <View className='squad-unboxing__collapse-trigger-chevron' aria-hidden='true' />
-            </View>
-          </View>
-        ) : null}
 
         {flowState === 'ready' && !composedHeroEnabled ? (
           <View className='squad-unboxing__ribbon-wrap'>

@@ -281,9 +281,6 @@ export function buildRevealChipLabel(unflippedCount: number): string {
 // Two-phase reveal: full-screen fan ⇄ pocketed pill. Copy is craft-owned; the
 // strings live here so the copy review has exactly one place to edit.
 
-/** Collapse trigger chip below the card fan (fan phase only). */
-export const SQUAD_DECK_COLLAPSE_TRIGGER_LABEL = '收起卡组'
-
 /** Screen-reader announcement when the deck finishes pocketing (AC-09). */
 export const SQUAD_DECK_POCKETED_ANNOUNCEMENT = '卡组已收起'
 

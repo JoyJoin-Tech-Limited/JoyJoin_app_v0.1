@@ -1420,6 +1420,16 @@ $fan-rotations: (
     align-items: center;
     justify-content: flex-end;
     padding-bottom: $spacing-md;
+    // 2026-07-17: uniform fan scale — the dealt fan renders at 75% so the
+    // two-row layout clears BOTH the viewport top edge and the dock-cluster
+    // chatbox on ~1450rpx-content devices (iPhone X/11 class). A transform
+    // scale (not smaller size maps) keeps the card's fixed-rpx typography
+    // proportional; origin bottom-centre + the translateY lift anchors the
+    // visual fan just above the chatbox. Shadow + back-shimmer live inside
+    // this container, so they stay aligned with the scaled fan. Static
+    // (no animation), so reduce-motion needs no override.
+    transform: translateY(-88rpx) scale(0.75);
+    transform-origin: 50% 100%;
 
     &--empty {
       @include flex-center;
@@ -2328,55 +2338,6 @@ $fan-rotations: (
     transition: none;
   }
 
-  // ── Pocket-the-deck: collapse trigger (AC-01) ────────────────────────────
-  // Sits in the scroll flow directly below the fixed stage, hugging the fan's
-  // bottom edge. A discreet secondary chip — the fan is the hero, the trigger
-  // is a utility affordance.
-  &__collapse-trigger-wrap {
-    display: flex;
-    justify-content: center;
-    // Tuck slightly up toward the stage bottom edge (stage is pointer-events:
-    // none in revealed, so the overlap never eats the chip's taps).
-    margin-top: -$spacing-lg;
-    padding: 0 0 $spacing-sm;
-  }
-
-  &__collapse-trigger {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-xs;
-    min-height: $cta-min-tap;
-    padding: $spacing-xs $spacing-md;
-    box-sizing: border-box;
-    border-radius: 999rpx;
-    background: rgba($color-surface, 0.94);
-    border: 1rpx solid rgba($color-primary, 0.16);
-    box-shadow: 0 4rpx 16rpx rgba($color-text-primary, 0.05);
-    transition: background 0.12s ease;
-
-    &--pressed {
-      background: rgba($color-primary, 0.08);
-    }
-  }
-
-  &__collapse-trigger-text {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
-    white-space: nowrap;
-  }
-
-  // Up-chevron: the deck folds UP into the pill.
-  &__collapse-trigger-chevron {
-    width: 14rpx;
-    height: 14rpx;
-    border-left: 2rpx solid $color-text-secondary;
-    border-top: 2rpx solid $color-text-secondary;
-    transform: rotate(45deg);
-    margin-top: 6rpx; // optical centre of the chevron glyph
-  }
-
   // ── Pocket-the-deck: floating pill (AC-01/03/04) ─────────────────────────
   // position: fixed at the page root — CSS sticky is WeChat-fragile inside
   // <ScrollView>. The resting horizontal centre (translateX(-50%)) is
@@ -2969,7 +2930,6 @@ $fan-rotations: (
   .squad-unboxing__deck-card-pocket-glow,
   .squad-unboxing__deck-pill,
   .squad-unboxing__pocket-hint,
-  .squad-unboxing__collapse-trigger,
   .squad-unboxing__tonights-toggle,
   .squad-unboxing__tonights-panel {
     animation: none !important;
