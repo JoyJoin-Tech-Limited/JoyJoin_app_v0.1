@@ -129,7 +129,10 @@ export function useStartMission() {
                 nodeHistory: data.nodeHistory,
                 choicesMade: data.choicesMade,
                 status: data.completed ? 'completed' : 'in_progress',
-                isDebugSession: false,
+                // A configured start payload exists only in strict single-test
+                // mode. Preserve that fact in the synchronous cache snapshot so
+                // config-page recovery cannot briefly misclassify the new run.
+                isDebugSession: typeof input !== 'string',
                 archiveId: data.archiveId,
               },
             }

@@ -77,7 +77,17 @@ const repository = vi.hoisted(() => ({
     }
     return null;
   }),
-  updateMissionProgressIfCurrent: vi.fn(),
+  updateMissionProgressIfCurrent: vi.fn(async (progressId: string, expectedNodeId: string, updates: any) => {
+    for (const [progressKey, progress] of state.progresses) {
+      if (progress.id !== progressId
+        || progress.currentNodeId !== expectedNodeId
+        || progress.status !== "in_progress") continue;
+      const updated = { ...progress, ...updates, updatedAt: new Date() };
+      state.progresses.set(progressKey, updated);
+      return updated;
+    }
+    return null;
+  }),
   archiveStory: vi.fn(async (data: any) => ({
     archive: {
       id: `archive-${data.progressId}`,
@@ -239,6 +249,182 @@ describe("Alang per-run test point flow", () => {
       isDebugSession: true,
       debugMarkers: ["test-points-configured"],
     });
+  });
+
+  it("resumes the same configured search run after the first response or navigation is lost", async () => {
+    const existing = seedProgress("user-1", {
+      currentNodeId: "search",
+      nodeHistory: ["event-card", "event-detail", "search"],
+      stage: "searching",
+    });
+
+    const response = await request("POST", "/api/alang/missions/alang-demo/start", configuredPoints);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      progressId: existing.id,
+      stage: "searching",
+      currentNodeId: "search",
+      nodeHistory: ["event-card", "event-detail", "search"],
+    });
+    expect(repository.updateMissionProgress).not.toHaveBeenCalled();
+    expect(state.progresses.get(key("user-1"))).toEqual(existing);
+  });
+
+  it("returns the later authoritative stage when an identical start response is retried late", async () => {
+    const existing = seedProgress("user-1", {
+      currentNodeId: "companion",
+      nodeHistory: ["event-card", "event-detail", "search", "companion"],
+      stage: "companion",
+    });
+
+    const response = await request("POST", "/api/alang/missions/alang-demo/start", configuredPoints);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      progressId: existing.id,
+      stage: "companion",
+      currentNodeId: "companion",
+    });
+    expect(repository.updateMissionProgressIfCurrent).not.toHaveBeenCalled();
+    expect(state.progresses.get(key("user-1"))).toEqual(existing);
+  });
+
+  it("does not silently replace points after a configured search run has started", async () => {
+    seedProgress("user-1", {
+      currentNodeId: "search",
+      nodeHistory: ["event-card", "event-detail", "search"],
+      stage: "searching",
+    });
+
+    const response = await request("POST", "/api/alang/missions/alang-demo/start", {
+      ...configuredPoints,
+      targetLocation: { latitude: 23.1293, longitude: 113.2644 },
+      companionEndLocation: { latitude: 23.1305, longitude: 113.2644 },
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: "ALANG_RECONFIG_REQUIRES_RESET",
+    });
+    expect(repository.updateMissionProgress).not.toHaveBeenCalled();
+  });
+
+  it("reuses the winner when identical configuring starts race", async () => {
+    const configuring = seedProgress("user-1", {
+      currentNodeId: "event-detail",
+      nodeHistory: ["event-card", "event-detail"],
+      stage: "configuring",
+      targetLocation: null,
+      companionEndLocation: null,
+      isDebugSession: false,
+      debugMarkers: [],
+    });
+    repository.updateMissionProgressIfCurrent.mockImplementationOnce(async () => {
+      state.progresses.set(key("user-1"), {
+        ...configuring,
+        currentNodeId: "search",
+        nodeHistory: ["event-card", "event-detail", "search"],
+        stage: "searching",
+        targetLocation: { ...configuredPoints.targetLocation, radiusMeters: 5, coordinateSystem: "gcj02" },
+        companionEndLocation: { ...configuredPoints.companionEndLocation, radiusMeters: 5, coordinateSystem: "gcj02" },
+        isDebugSession: true,
+        debugMarkers: ["test-points-configured"],
+      });
+      return null;
+    });
+
+    const response = await request("POST", "/api/alang/missions/alang-demo/start", configuredPoints);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      progressId: configuring.id,
+      stage: "searching",
+      currentNodeId: "search",
+    });
+  });
+
+  it("does not overwrite the winner when different configuring starts race", async () => {
+    const configuring = seedProgress("user-1", {
+      currentNodeId: "event-detail",
+      nodeHistory: ["event-card", "event-detail"],
+      stage: "configuring",
+      targetLocation: null,
+      companionEndLocation: null,
+      isDebugSession: false,
+      debugMarkers: [],
+    });
+    const winningTarget = { latitude: 23.1295, longitude: 113.2644 };
+    const winningEnd = { latitude: 23.1307, longitude: 113.2644 };
+    repository.updateMissionProgressIfCurrent.mockImplementationOnce(async () => {
+      state.progresses.set(key("user-1"), {
+        ...configuring,
+        currentNodeId: "search",
+        nodeHistory: ["event-card", "event-detail", "search"],
+        stage: "searching",
+        targetLocation: { ...winningTarget, radiusMeters: 5, coordinateSystem: "gcj02" },
+        companionEndLocation: { ...winningEnd, radiusMeters: 5, coordinateSystem: "gcj02" },
+        isDebugSession: true,
+        debugMarkers: ["test-points-configured"],
+      });
+      return null;
+    });
+
+    const response = await request("POST", "/api/alang/missions/alang-demo/start", configuredPoints);
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: "ALANG_RECONFIG_REQUIRES_RESET",
+    });
+    expect(state.progresses.get(key("user-1"))).toMatchObject({
+      targetLocation: winningTarget,
+      companionEndLocation: winningEnd,
+    });
+  });
+
+  it("reuses an identical winner returned by the unique insert conflict", async () => {
+    const winner = seedProgress("user-1", {
+      currentNodeId: "search",
+      nodeHistory: ["event-card", "event-detail", "search"],
+      stage: "searching",
+    });
+    state.progresses.clear();
+    repository.createMissionProgress.mockImplementationOnce(async () => {
+      state.progresses.set(key("user-1"), winner);
+      return winner;
+    });
+
+    const response = await request("POST", "/api/alang/missions/alang-demo/start", configuredPoints);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      progressId: winner.id,
+      stage: "searching",
+      currentNodeId: "search",
+    });
+  });
+
+  it("rejects a different winner returned by the unique insert conflict", async () => {
+    const winner = seedProgress("user-1", {
+      currentNodeId: "search",
+      nodeHistory: ["event-card", "event-detail", "search"],
+      stage: "searching",
+      targetLocation: { latitude: 23.1295, longitude: 113.2644, radiusMeters: 5, coordinateSystem: "gcj02" },
+      companionEndLocation: { latitude: 23.1307, longitude: 113.2644, radiusMeters: 5, coordinateSystem: "gcj02" },
+    });
+    state.progresses.clear();
+    repository.createMissionProgress.mockImplementationOnce(async () => {
+      state.progresses.set(key("user-1"), winner);
+      return winner;
+    });
+
+    const response = await request("POST", "/api/alang/missions/alang-demo/start", configuredPoints);
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: "ALANG_RECONFIG_REQUIRES_RESET",
+    });
+    expect(state.progresses.get(key("user-1"))).toEqual(winner);
   });
 
   it("keeps the normal no-body production start flow on event detail", async () => {

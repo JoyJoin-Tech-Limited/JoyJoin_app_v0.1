@@ -121,8 +121,8 @@ export async function updateMissionProgress(
 }
 
 /**
- * Compare-and-set transition for dialogue choices. Only the first request
- * observing the expected node may advance it; concurrent stale choices fail.
+ * Compare-and-set transition for progress edges. Only the first request
+ * observing the expected node may advance it; concurrent stale writes fail.
  */
 export async function updateMissionProgressIfCurrent(
   progressId: string,

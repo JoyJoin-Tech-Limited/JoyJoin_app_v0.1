@@ -151,6 +151,26 @@ function progressTestPointValidation(progress: AlangMissionProgress | null) {
   );
 }
 
+function progressMatchesTestConfiguration(
+  progress: AlangMissionProgress,
+  configuration: {
+    targetLocation: { latitude: number; longitude: number };
+    companionEndLocation: { latitude: number; longitude: number };
+  },
+): boolean {
+  const persisted = progressTestPointValidation(progress);
+  if (!persisted.valid) return false;
+
+  return alangHaversineDistanceMeters(
+    persisted.targetLocation,
+    configuration.targetLocation,
+  ) <= 1
+    && alangHaversineDistanceMeters(
+      persisted.companionEndLocation,
+      configuration.companionEndLocation,
+    ) <= 1;
+}
+
 function resolveProgressArrivalTarget(options: {
   mission: AlangMission;
   progress: AlangMissionProgress;
@@ -370,11 +390,35 @@ export function registerAlangRoutes(app: Express): void {
       let progress = await getMissionProgress(userId, mission.id);
       if (progress && progress.status === "in_progress") {
         if (debugMode && validatedConfiguration?.valid) {
+          const hasReachedConfiguredSearch = progress.currentNodeId === configuredSearchEntry!.node.id
+            || (progress.nodeHistory ?? []).includes(configuredSearchEntry!.node.id);
+          const isSameConfiguredRun = progress.isDebugSession === true
+            && progressMatchesTestConfiguration(progress, validatedConfiguration);
+          if (hasReachedConfiguredSearch
+            && !["not_started", "configuring"].includes(progress.stage)) {
+            if (!isSameConfiguredRun) {
+              res.status(409).json({ error: "ALANG_RECONFIG_REQUIRES_RESET" });
+              return;
+            }
+            res.json({
+              progressId: progress.id,
+              stage: progress.stage,
+              currentNodeId: progress.currentNodeId,
+              nodeHistory: progress.nodeHistory ?? [],
+              choicesMade: progress.choicesMade ?? [],
+            });
+            return;
+          }
           if (!["not_started", "configuring"].includes(progress.stage)) {
             res.status(409).json({ error: "ALANG_RECONFIG_REQUIRES_RESET" });
             return;
           }
-          progress = await updateMissionProgress(progress.id, {
+          if (!progress.currentNodeId) {
+            res.status(409).json({ error: "ALANG_RECONFIG_REQUIRES_RESET" });
+            return;
+          }
+          const expectedCurrentNodeId = progress.currentNodeId;
+          const updated = await updateMissionProgressIfCurrent(progress.id, expectedCurrentNodeId, {
             currentNodeId: configuredSearchEntry!.node.id,
             nodeHistory: Array.from(new Set([
               ...(progress.nodeHistory ?? []),
@@ -389,9 +433,21 @@ export function registerAlangRoutes(app: Express): void {
               "test-points-configured",
             ])),
           });
-          if (!progress) {
-            res.status(409).json({ error: "PROGRESS_UPDATE_CONFLICT" });
-            return;
+          if (updated) {
+            progress = updated;
+          } else {
+            const winner = await getMissionProgress(userId, mission.id);
+            const winnerIsSameConfiguredSearch = !!winner
+              && winner.status === "in_progress"
+              && winner.stage === "searching"
+              && winner.currentNodeId === configuredSearchEntry!.node.id
+              && winner.isDebugSession === true
+              && progressMatchesTestConfiguration(winner, validatedConfiguration);
+            if (!winnerIsSameConfiguredSearch) {
+              res.status(409).json({ error: "ALANG_RECONFIG_REQUIRES_RESET" });
+              return;
+            }
+            progress = winner!;
           }
         } else if (debugMode && !progressTestPointValidation(progress).valid) {
           res.status(409).json({ error: "ALANG_TEST_POINTS_REQUIRED" });
@@ -467,6 +523,19 @@ export function registerAlangRoutes(app: Express): void {
             }
           : {}),
       });
+
+      // A concurrent start can win the unique (user, mission) insert. The
+      // repository then returns that winning row, which is safe to reuse only
+      // when it represents the same configured search run. Point comparison
+      // allows only a 1 m serialization tolerance.
+      if (validatedConfiguration?.valid
+        && (progress.stage !== "searching"
+          || progress.currentNodeId !== configuredSearchEntry!.node.id
+          || progress.isDebugSession !== true
+          || !progressMatchesTestConfiguration(progress, validatedConfiguration))) {
+        res.status(409).json({ error: "ALANG_RECONFIG_REQUIRES_RESET" });
+        return;
+      }
 
       res.json({
         progressId: progress.id,

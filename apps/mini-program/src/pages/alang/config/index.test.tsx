@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AlangConfigPage, {
+  getAlangConfigRecoveryUrl,
   getAlangStartErrorMessage,
   getTestPointValidationError,
 } from './index'
@@ -28,7 +29,7 @@ const mocks = vi.hoisted(() => ({
   logInfo: vi.fn(),
   logWarn: vi.fn(),
   redirectTo: vi.fn(),
-  reLaunch: vi.fn(),
+  didShowCallback: { current: null as null | (() => void) },
   setStorageSync: vi.fn(),
   distanceMeters: { current: 150 },
 }))
@@ -43,9 +44,13 @@ vi.mock('@tarojs/taro', () => {
     showModal: mocks.showModal,
     setStorageSync: mocks.setStorageSync,
     redirectTo: mocks.redirectTo,
-    reLaunch: mocks.reLaunch,
   }
-  return { default: taro }
+  return {
+    default: taro,
+    useDidShow: (callback: () => void) => {
+      mocks.didShowCallback.current = callback
+    },
+  }
 })
 
 vi.mock('@tarojs/components', () => ({
@@ -111,6 +116,7 @@ vi.mock('../../../components/ui/StatusCard', () => ({
 describe('AlangConfigPage production access gate', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.didShowCallback.current = null
     mocks.useAuth.mockReturnValue({
       user: {
         appMode: 'production',
@@ -146,7 +152,6 @@ describe('AlangConfigPage production access gate', () => {
       mutateAsync: mocks.resetMission,
     })
     mocks.redirectTo.mockResolvedValue({})
-    mocks.reLaunch.mockResolvedValue({})
     mocks.reverseGeocode.mockResolvedValue({ name: '测试地点', address: '深圳' })
     mocks.requestLocation.mockResolvedValue({ latitude: 22.5431, longitude: 114.0579, accuracy: 8 })
     mocks.startMission.mockResolvedValue({
@@ -187,6 +192,20 @@ describe('AlangConfigPage production access gate', () => {
 })
 
 describe('AlangConfigPage test-point start flow', () => {
+  const defaultMission = () => ({
+    id: 'mission-alang',
+    slug: 'meet-alang',
+    title: '阿浪测试',
+    description: '测试任务',
+    content: {
+      nodes: [
+        { id: 'event-detail', type: 'event_detail', nextNodeId: 'search-gate', content: { body: '' } },
+        { id: 'search-gate', type: 'search_gate', content: { body: '' } },
+      ],
+    },
+    myProgress: null,
+  })
+
   const setDefaultTestPoints = async () => {
     fireEvent.click(screen.getByRole('button', { name: '使用当前位置' }))
     await screen.findByText('直线 150 米')
@@ -194,21 +213,17 @@ describe('AlangConfigPage test-point start flow', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.didShowCallback.current = null
     mocks.distanceMeters.current = 150
     mocks.useAuth.mockReturnValue({
       user: { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } },
       isLoading: false,
     })
+    const mission = defaultMission()
     mocks.useAlangMissionDetail.mockReturnValue({
-      data: {
-        content: {
-          nodes: [
-            { id: 'event-detail', type: 'event_detail', nextNodeId: 'search-gate', content: { body: '' } },
-            { id: 'search-gate', type: 'search_gate', content: { body: '' } },
-          ],
-        },
-        myProgress: null,
-      },
+      data: mission,
+      isLoading: false,
+      isError: false,
       refetch: mocks.refetchMission,
     })
     mocks.useAlangGpsOnce.mockReturnValue({
@@ -239,14 +254,13 @@ describe('AlangConfigPage test-point start flow', () => {
       currentNodeId: 'search-gate',
     })
     mocks.redirectTo.mockResolvedValue({})
-    mocks.reLaunch.mockResolvedValue({})
     mocks.showModal.mockResolvedValue({ confirm: true, cancel: false })
     mocks.resetMission.mockResolvedValue({
       reset: true,
       deletedProgressCount: 1,
       deletedArchiveCount: 0,
     })
-    mocks.refetchMission.mockResolvedValue({ isError: false })
+    mocks.refetchMission.mockResolvedValue({ isError: false, data: mission })
   })
 
   it('keeps the View CTA observable before points are ready without starting a run', async () => {
@@ -288,7 +302,7 @@ describe('AlangConfigPage test-point start flow', () => {
     )
     expect(mocks.setStorageSync).not.toHaveBeenCalled()
     expect(mocks.redirectTo).toHaveBeenCalledWith({
-      url: '/pages/alang/search/index?slug=meet-alang&nodeId=search-gate',
+      url: '/pages/alang/search/index?slug=meet-alang',
     })
   })
 
@@ -312,7 +326,7 @@ describe('AlangConfigPage test-point start flow', () => {
     expect(screen.getByRole('status')).toHaveTextContent('启动反馈已开启 · 点击后会立即显示进度')
 
     fireEvent.click(startButton)
-    expect(mocks.startMission).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(mocks.startMission).toHaveBeenCalledTimes(1))
 
     // The synchronous lock keeps rapid repeated taps to one request.
     fireEvent.click(startButton)
@@ -339,19 +353,281 @@ describe('AlangConfigPage test-point start flow', () => {
     })
   })
 
-  it('still opens the next stage when redirectTo fails on a real device', async () => {
-    mocks.redirectTo.mockRejectedValueOnce(new Error('redirectTo:fail page is not ready'))
+  it('recovers a server-owned searching stage without configuring points or starting again', async () => {
+    const existingMission = {
+      ...defaultMission(),
+      myProgress: {
+        progressId: 'progress-existing',
+        status: 'in_progress',
+        stage: 'searching',
+        currentNodeId: 'search-gate',
+        nodeHistory: ['event-detail', 'search-gate'],
+        choicesMade: [],
+        isDebugSession: true,
+      },
+    }
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: existingMission,
+      refetch: mocks.refetchMission,
+    })
+    mocks.refetchMission.mockResolvedValue({ isError: false, data: existingMission })
 
     render(<AlangConfigPage />)
+
+    await waitFor(() => {
+      expect(mocks.redirectTo).toHaveBeenCalledWith({
+        url: '/pages/alang/search/index?slug=meet-alang',
+      })
+    })
+    expect(mocks.startMission).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: '继续当前测试' })).toHaveAttribute('aria-disabled', 'false')
+  })
+
+  it('keeps a visible next-step action when automatic stage recovery fails', async () => {
+    mocks.redirectTo
+      .mockRejectedValueOnce(new Error('redirectTo:fail interrupted'))
+      .mockResolvedValueOnce({})
+    const existingMission = {
+      ...defaultMission(),
+      myProgress: {
+        progressId: 'progress-existing',
+        status: 'in_progress',
+        stage: 'searching',
+        currentNodeId: 'search-gate',
+        nodeHistory: ['event-detail', 'search-gate'],
+        choicesMade: [],
+        isDebugSession: true,
+      },
+    }
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: existingMission,
+      refetch: mocks.refetchMission,
+    })
+    mocks.refetchMission.mockResolvedValue({ isError: false, data: existingMission })
+
+    render(<AlangConfigPage />)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('下一步没有打开')
+    fireEvent.click(screen.getByRole('button', { name: '继续当前测试' }))
+
+    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledTimes(2))
+    expect(mocks.startMission).not.toHaveBeenCalled()
+    expect(mocks.resetMission).not.toHaveBeenCalled()
+  })
+
+  it('recovers from the authoritative stage when the first start response is lost', async () => {
+    mocks.startMission.mockRejectedValueOnce(new Error('response lost after commit'))
+    const committedMission = {
+      ...defaultMission(),
+      myProgress: {
+        progressId: 'progress-committed',
+        status: 'in_progress',
+        stage: 'searching',
+        currentNodeId: 'search-gate',
+        nodeHistory: ['event-detail', 'search-gate'],
+        choicesMade: [],
+        isDebugSession: true,
+      },
+    }
+
+    render(<AlangConfigPage />)
+    await waitFor(() => expect(mocks.refetchMission).toHaveBeenCalled())
+    mocks.refetchMission.mockClear()
+    mocks.refetchMission
+      .mockResolvedValueOnce({ isError: false, data: defaultMission() })
+      .mockResolvedValueOnce({ isError: false, data: committedMission })
     await setDefaultTestPoints()
     fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
 
-    const searchUrl = '/pages/alang/search/index?slug=meet-alang&nodeId=search-gate'
     await waitFor(() => {
-      expect(mocks.redirectTo).toHaveBeenCalledWith({ url: searchUrl })
-      expect(mocks.reLaunch).toHaveBeenCalledWith({ url: searchUrl })
+      expect(mocks.redirectTo).toHaveBeenCalledWith({
+        url: '/pages/alang/search/index?slug=meet-alang',
+      })
     })
+    expect(mocks.startMission).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(mocks.showToast).not.toHaveBeenCalled()
+  })
+
+  it('refetches and retries the same authoritative stage whenever the config page returns to foreground', async () => {
+    const existingMission = {
+      ...defaultMission(),
+      myProgress: {
+        progressId: 'progress-existing',
+        status: 'in_progress',
+        stage: 'searching',
+        currentNodeId: 'search-gate',
+        nodeHistory: ['event-detail', 'search-gate'],
+        choicesMade: [],
+        isDebugSession: true,
+      },
+    }
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: existingMission,
+      refetch: mocks.refetchMission,
+    })
+    mocks.refetchMission.mockResolvedValue({ isError: false, data: existingMission })
+    render(<AlangConfigPage />)
+    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledTimes(1))
+    mocks.redirectTo.mockClear()
+    mocks.refetchMission.mockClear()
+
+    expect(mocks.didShowCallback.current).not.toBeNull()
+    await act(async () => {
+      await mocks.didShowCallback.current?.()
+    })
+
+    expect(mocks.refetchMission).toHaveBeenCalled()
+    await waitFor(() => {
+      expect(mocks.redirectTo).toHaveBeenCalledWith({
+        url: '/pages/alang/search/index?slug=meet-alang',
+      })
+    })
+  })
+
+  it('waits for the fresh GET and never routes from a stale cached stage', async () => {
+    const staleSearchingMission = {
+      ...defaultMission(),
+      myProgress: {
+        progressId: 'progress-stale',
+        status: 'in_progress',
+        stage: 'searching',
+        currentNodeId: 'search-gate',
+        nodeHistory: ['search-gate'],
+        choicesMade: [],
+        isDebugSession: true,
+      },
+    }
+    const freshConfiguringMission = {
+      ...defaultMission(),
+      myProgress: {
+        progressId: 'progress-stale',
+        status: 'in_progress',
+        stage: 'configuring',
+        currentNodeId: 'event-detail',
+        nodeHistory: ['event-detail'],
+        choicesMade: [],
+        isDebugSession: true,
+      },
+    }
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: staleSearchingMission,
+      refetch: mocks.refetchMission,
+    })
+    mocks.refetchMission.mockResolvedValue({ isError: false, data: freshConfiguringMission })
+
+    render(<AlangConfigPage />)
+    await waitFor(() => expect(mocks.refetchMission).toHaveBeenCalled())
+
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+    expect(mocks.startMission).not.toHaveBeenCalled()
+  })
+
+  it('fails closed and offers reset for an invalid or unknown server stage', async () => {
+    const invalidMission = {
+      ...defaultMission(),
+      testConfigurationInvalid: true,
+      myProgress: {
+        progressId: 'progress-invalid',
+        status: 'in_progress',
+        stage: 'future-stage',
+        currentNodeId: 'future-node',
+        nodeHistory: ['future-node'],
+        choicesMade: [],
+        isDebugSession: true,
+      },
+    }
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: invalidMission,
+      refetch: mocks.refetchMission,
+    })
+    mocks.refetchMission.mockResolvedValue({ isError: false, data: invalidMission })
+
+    render(<AlangConfigPage />)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('测试点位已经失效')
+    expect(screen.getByRole('button', { name: '清除旧进度' })).toBeInTheDocument()
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+    expect(mocks.startMission).not.toHaveBeenCalled()
+  })
+
+  it('routes a completed server run to its result instead of starting again', async () => {
+    const completedMission = {
+      ...defaultMission(),
+      myProgress: {
+        progressId: 'progress-complete',
+        status: 'completed',
+        stage: 'completed',
+        currentNodeId: 'result-card',
+        nodeHistory: ['result-card'],
+        choicesMade: [],
+        isDebugSession: true,
+      },
+    }
+    mocks.useAlangMissionDetail.mockReturnValue({
+      data: completedMission,
+      refetch: mocks.refetchMission,
+    })
+    mocks.refetchMission.mockResolvedValue({ isError: false, data: completedMission })
+
+    render(<AlangConfigPage />)
+
+    await waitFor(() => {
+      expect(mocks.redirectTo).toHaveBeenCalledWith({
+        url: '/pages/alang/result/index?slug=meet-alang',
+      })
+    })
+    expect(mocks.startMission).not.toHaveBeenCalled()
+  })
+
+  it('unlocks the persistent recovery action when redirectTo never settles', async () => {
+    vi.useFakeTimers()
+    try {
+      const existingMission = {
+        ...defaultMission(),
+        myProgress: {
+          progressId: 'progress-timeout',
+          status: 'in_progress',
+          stage: 'searching',
+          currentNodeId: 'search-gate',
+          nodeHistory: ['search-gate'],
+          choicesMade: [],
+          isDebugSession: true,
+        },
+      }
+      mocks.useAlangMissionDetail.mockReturnValue({
+        data: existingMission,
+        refetch: mocks.refetchMission,
+      })
+      mocks.refetchMission.mockResolvedValue({ isError: false, data: existingMission })
+      mocks.redirectTo
+        .mockImplementationOnce(() => new Promise(() => undefined))
+        .mockResolvedValueOnce({})
+
+      render(<AlangConfigPage />)
+      await act(async () => {
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+      expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_001)
+      })
+
+      expect(screen.getByRole('alert')).toHaveTextContent('下一步没有打开')
+      const retry = screen.getByRole('button', { name: '继续当前测试' })
+      expect(retry).toHaveAttribute('aria-disabled', 'false')
+      fireEvent.click(retry)
+      await act(async () => {
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+      expect(mocks.redirectTo).toHaveBeenCalledTimes(2)
+      expect(mocks.startMission).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('keeps a failed start actionable with a persistent reason and allows retry', async () => {
@@ -393,8 +669,8 @@ describe('AlangConfigPage test-point start flow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
 
-    expect(mocks.startMission).toHaveBeenCalledTimes(1)
     await waitFor(() => {
+      expect(mocks.startMission).toHaveBeenCalledTimes(1)
       expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
     })
   })
@@ -436,6 +712,37 @@ describe('AlangConfigPage test-point start flow', () => {
       statusCode: 409,
       data: { error: 'ALANG_RECONFIG_REQUIRES_RESET' },
     })).toBe('检测到上一轮测试进度，请先重置阿浪测试，再开始新一轮')
+  })
+
+  it('maps every resumable server stage away from the stale config page', () => {
+    expect(getAlangConfigRecoveryUrl('meet-alang', {
+      progressId: 'p1',
+      status: 'in_progress',
+      isDebugSession: true,
+      stage: 'dialogue',
+      currentNodeId: 'dialogue-2',
+    })).toBe('/pages/alang/dialogue/index?slug=meet-alang')
+    expect(getAlangConfigRecoveryUrl('meet-alang', {
+      progressId: 'p1',
+      status: 'in_progress',
+      isDebugSession: true,
+      stage: 'companion',
+      currentNodeId: 'companion-move',
+    })).toBe('/pages/alang/companion/index?slug=meet-alang')
+    expect(getAlangConfigRecoveryUrl('meet-alang', {
+      progressId: 'p1',
+      status: 'completed',
+      isDebugSession: true,
+      stage: 'completed',
+      currentNodeId: 'result-card',
+    })).toBe('/pages/alang/result/index?slug=meet-alang')
+    expect(getAlangConfigRecoveryUrl('meet-alang', {
+      progressId: 'p1',
+      status: 'in_progress',
+      isDebugSession: true,
+      stage: 'configuring',
+      currentNodeId: 'event-detail',
+    })).toBeNull()
   })
 
   it('offers an in-page reset when an older run blocks the new test', async () => {

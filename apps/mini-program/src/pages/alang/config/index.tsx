@@ -1,9 +1,9 @@
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { View, Text, Map, Button, Input } from '@tarojs/components'
 import type { MapProps } from '@tarojs/components'
 import type { AlangCoordinate } from '@shared/alang/missionTypes'
-import type { GeoPlace, WalkingRouteSuccessResponse } from '@shared/api'
+import type { AlangMissionDetail, GeoPlace, WalkingRouteSuccessResponse } from '@shared/api'
 import {
   getWalkingRoute,
   reverseGeocode,
@@ -95,15 +95,79 @@ export function getAlangStartErrorMessage(error: unknown): string {
   return '没有准备好，请检查网络后再试'
 }
 
-export async function openAlangSearchStage(url: string): Promise<void> {
-  try {
-    await Taro.redirectTo({ url })
-  } catch (redirectError) {
-    logWarn('[AlangConfig] redirect to search failed, retrying with reLaunch', {
-      error: redirectError instanceof Error ? redirectError.message : String(redirectError),
-    })
-    await Taro.reLaunch({ url })
+type AlangConfigProgress = {
+  progressId?: string
+  stage: string
+  currentNodeId: string
+  status?: string
+  isDebugSession?: boolean
+}
+
+const ALANG_NAVIGATION_TIMEOUT_MS = 5_000
+const ALANG_AUTHORITY_REFRESH_TIMEOUT_MS = 5_000
+const ALANG_PROGRESS_BLOCKED_MESSAGE = '服务器记录的测试阶段无法安全续接，请先清除旧进度后重新开始'
+const ALANG_TEST_CONFIGURATION_INVALID_MESSAGE = '上一轮测试点位已经失效，请先清除旧进度后重新配置'
+
+function withAlangTimeout<T>(operation: Promise<T>, timeoutMs: number, timeoutCode: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(timeoutCode)), timeoutMs)
+  })
+  return Promise.race([operation, timeout]).finally(() => {
+    if (timer) clearTimeout(timer)
+  })
+}
+
+export function isAlangConfigProgressStartable(
+  progress: AlangConfigProgress | null | undefined,
+): boolean {
+  if (!progress || progress.status === 'abandoned') return true
+  return progress.status === 'in_progress'
+    && ['not_started', 'configuring'].includes(progress.stage)
+}
+
+export function getAlangConfigRecoveryUrl(
+  slug: string,
+  progress: AlangConfigProgress | null | undefined,
+  testConfigurationInvalid = false,
+): string | null {
+  if (!slug || !progress || testConfigurationInvalid) return null
+  const encodedSlug = encodeURIComponent(slug)
+
+  if (progress.status === 'completed') {
+    return `${MINI_PROGRAM_ROUTES.alangResult}?slug=${encodedSlug}`
   }
+  if (progress.status !== 'in_progress'
+    || progress.isDebugSession !== true
+    || !progress.currentNodeId) return null
+
+  if (progress.stage === 'searching') {
+    return `${MINI_PROGRAM_ROUTES.alangSearch}?slug=${encodedSlug}`
+  }
+  if (progress.stage === 'found' || progress.stage === 'dialogue') {
+    return `${MINI_PROGRAM_ROUTES.alangDialogue}?slug=${encodedSlug}`
+  }
+  if (progress.stage === 'companion' || progress.stage === 'arrived') {
+    return `${MINI_PROGRAM_ROUTES.alangCompanion}?slug=${encodedSlug}`
+  }
+  if (progress.stage === 'closing'
+    || progress.stage === 'result'
+    || progress.stage === 'completed') {
+    return `${MINI_PROGRAM_ROUTES.alangResult}?slug=${encodedSlug}`
+  }
+  return null
+}
+
+function getAlangConfigProgressBlockMessage(
+  slug: string,
+  mission: Pick<AlangMissionDetail, 'myProgress' | 'testConfigurationInvalid'> | null | undefined,
+): string | null {
+  if (mission?.testConfigurationInvalid) return ALANG_TEST_CONFIGURATION_INVALID_MESSAGE
+  const progress = mission?.myProgress
+  if (!progress
+    || isAlangConfigProgressStartable(progress)
+    || getAlangConfigRecoveryUrl(slug, progress)) return null
+  return ALANG_PROGRESS_BLOCKED_MESSAGE
 }
 
 export default function AlangConfigPage() {
@@ -138,6 +202,20 @@ export default function AlangConfigPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [requiresReset, setRequiresReset] = useState(false)
   const submitLockRef = useRef(false)
+  const recoveryNavigationKeyRef = useRef('')
+  const authorityRefreshPromiseRef = useRef<Promise<AlangMissionDetail | null> | null>(null)
+  const navigationPromiseRef = useRef<{
+    key: string
+    promise: Promise<boolean>
+  } | null>(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   const describePoint = useCallback(async (
     point: AlangCoordinate,
@@ -283,6 +361,141 @@ export default function AlangConfigPage() {
     })
   }, [])
 
+  const readAuthoritativeMission = useCallback(async (): Promise<AlangMissionDetail | null> => {
+    if (authorityRefreshPromiseRef.current) return authorityRefreshPromiseRef.current
+
+    let request!: Promise<AlangMissionDetail | null>
+    request = withAlangTimeout(
+      refetch(),
+      ALANG_AUTHORITY_REFRESH_TIMEOUT_MS,
+      'ALANG_AUTHORITY_REFRESH_TIMEOUT',
+    ).then((result) => result.isError ? null : result.data ?? null)
+      .catch(() => null)
+      .finally(() => {
+        if (authorityRefreshPromiseRef.current === request) {
+          authorityRefreshPromiseRef.current = null
+        }
+      })
+    authorityRefreshPromiseRef.current = request
+    return request
+  }, [refetch])
+
+  const navigateToAuthoritativeProgress = useCallback(async (
+    progress: AlangConfigProgress,
+    source: 'initial' | 'foreground' | 'manual' | 'start-response' | 'start-reconcile',
+    force = false,
+  ): Promise<boolean> => {
+    const url = getAlangConfigRecoveryUrl(slug, progress)
+    if (!url) return false
+    const navigationKey = `${progress.progressId ?? 'server'}:${progress.status ?? 'unknown'}:${progress.stage}:${progress.currentNodeId}`
+    const activeNavigation = navigationPromiseRef.current
+    if (activeNavigation) return activeNavigation.promise
+    if (!force && recoveryNavigationKeyRef.current === navigationKey) return true
+
+    recoveryNavigationKeyRef.current = navigationKey
+    submitLockRef.current = true
+    if (mountedRef.current) {
+      setSubmitError(null)
+      setRequiresReset(false)
+      setIsSubmitting(true)
+    }
+
+    let operation!: Promise<boolean>
+    operation = (async () => {
+      try {
+        try {
+          logInfo('[AlangConfig] opening server-owned stage', {
+            slug,
+            source,
+            stage: progress.stage,
+            currentNodeId: progress.currentNodeId,
+          })
+        } catch {
+          // Stage recovery never depends on optional realtime logging.
+        }
+        await withAlangTimeout(
+          Promise.resolve(Taro.redirectTo({ url })),
+          ALANG_NAVIGATION_TIMEOUT_MS,
+          'ALANG_STAGE_NAVIGATION_TIMEOUT',
+        )
+        return true
+      } catch (error) {
+        recoveryNavigationKeyRef.current = ''
+        if (mountedRef.current) {
+          setSubmitError('下一步没有打开，请点击“继续当前测试”重试')
+        }
+        try {
+          logWarn('[AlangConfig] server-owned stage navigation failed', {
+            slug,
+            source,
+            stage: progress.stage,
+            currentNodeId: progress.currentNodeId,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        } catch {
+          // The visible retry action remains available without telemetry.
+        }
+        return false
+      } finally {
+        if (navigationPromiseRef.current?.promise === operation) {
+          navigationPromiseRef.current = null
+        }
+        submitLockRef.current = false
+        if (mountedRef.current) setIsSubmitting(false)
+      }
+    })()
+    navigationPromiseRef.current = { key: navigationKey, promise: operation }
+    return operation
+  }, [slug])
+
+  const recoverAuthoritativeStage = useCallback(async (
+    source: 'initial' | 'foreground' | 'manual',
+    force = false,
+  ): Promise<'recovered' | 'startable' | 'blocked' | 'unavailable'> => {
+    const freshMission = await readAuthoritativeMission()
+    if (!freshMission) return 'unavailable'
+
+    const progress = freshMission.myProgress
+    const recoveryUrl = getAlangConfigRecoveryUrl(
+      slug,
+      progress,
+      !!freshMission.testConfigurationInvalid,
+    )
+    if (progress && recoveryUrl) {
+      syncMissionProgress(slug, {
+        stage: progress.stage,
+        currentNodeId: progress.currentNodeId,
+      })
+      await navigateToAuthoritativeProgress(progress, source, force)
+      return 'recovered'
+    }
+
+    const blockMessage = getAlangConfigProgressBlockMessage(slug, freshMission)
+    if (blockMessage) {
+      if (mountedRef.current) {
+        setSubmitError(blockMessage)
+        setRequiresReset(true)
+      }
+      return 'blocked'
+    }
+
+    if (mountedRef.current) {
+      setSubmitError(null)
+      setRequiresReset(false)
+    }
+    return 'startable'
+  }, [navigateToAuthoritativeProgress, readAuthoritativeMission, slug, syncMissionProgress])
+
+  useEffect(() => {
+    if (slug && canUseDebugTools) void recoverAuthoritativeStage('initial')
+  }, [canUseDebugTools, recoverAuthoritativeStage, slug])
+
+  useDidShow(() => {
+    if (!slug || !canUseDebugTools) return
+    recoveryNavigationKeyRef.current = ''
+    void recoverAuthoritativeStage('foreground', true)
+  })
+
   const straightDistance = target && endPoint
     ? haversine(
         target.latitude,
@@ -298,6 +511,17 @@ export default function AlangConfigPage() {
     ? getTestPointValidationError(target, endPoint)
     : null
   const isStartPending = isSubmitting || startMutation.isPending
+  const recoveryUrl = getAlangConfigRecoveryUrl(
+    slug,
+    mission?.myProgress,
+    !!mission?.testConfigurationInvalid,
+  )
+  const progressBlockMessage = getAlangConfigProgressBlockMessage(slug, mission)
+  const visibleSubmitError = submitError ?? progressBlockMessage
+  const shouldShowReset = requiresReset || !!progressBlockMessage
+  const isStartDisabled = isStartPending
+    || !!progressBlockMessage
+    || (!recoveryUrl && (!target || !endPoint || !!pointValidationError))
   const shouldRecommendShorterRoute = !pointValidationError
     && pointValidation?.valid
     && (pointValidation.distanceMeters < ALANG_TEST_RECOMMENDED_MIN_DISTANCE_METERS
@@ -325,18 +549,6 @@ export default function AlangConfigPage() {
 
   const handleConfirm = async () => {
     if (submitLockRef.current || isStartPending) return
-    if (!target || !endPoint || !mission) {
-      const message = '请先设置阿浪出现点和陪伴终点'
-      setSubmitError(message)
-      Taro.showToast({ title: message, icon: 'none' })
-      return
-    }
-    const validationError = getTestPointValidationError(target, endPoint)
-    if (validationError) {
-      setSubmitError(validationError)
-      Taro.showToast({ title: validationError, icon: 'none' })
-      return
-    }
     submitLockRef.current = true
     setSubmitError(null)
     setRequiresReset(false)
@@ -353,24 +565,104 @@ export default function AlangConfigPage() {
         // Realtime logging is diagnostic-only and must never trap the start lock.
       }
 
+      // Never decide whether this is a new run from a cached client snapshot.
+      // The fresh GET either resumes the server-owned stage or explicitly
+      // confirms that starting with the selected points is safe.
+      const freshMission = await readAuthoritativeMission()
+      if (!freshMission) {
+        const message = '没有读取到当前测试进度，请检查网络后再试'
+        setSubmitError(message)
+        Taro.showToast({ title: message, icon: 'none' })
+        return
+      }
+      const freshProgress = freshMission.myProgress
+      const freshRecoveryUrl = getAlangConfigRecoveryUrl(
+        slug,
+        freshProgress,
+        !!freshMission.testConfigurationInvalid,
+      )
+      if (freshProgress && freshRecoveryUrl) {
+        syncMissionProgress(slug, {
+          stage: freshProgress.stage,
+          currentNodeId: freshProgress.currentNodeId,
+        })
+        await navigateToAuthoritativeProgress(freshProgress, 'manual', true)
+        return
+      }
+      const freshBlockMessage = getAlangConfigProgressBlockMessage(slug, freshMission)
+      if (freshBlockMessage) {
+        setSubmitError(freshBlockMessage)
+        setRequiresReset(true)
+        return
+      }
+      if (!target || !endPoint) {
+        const message = '请先设置阿浪出现点和陪伴终点'
+        setSubmitError(message)
+        Taro.showToast({ title: message, icon: 'none' })
+        return
+      }
+      const validationError = getTestPointValidationError(target, endPoint)
+      if (validationError) {
+        setSubmitError(validationError)
+        Taro.showToast({ title: validationError, icon: 'none' })
+        return
+      }
+
       const started = await startMutation.mutateAsync({
         slug,
         targetLocation: target,
         companionEndLocation: endPoint,
         coordinateSystem: 'gcj02',
       })
-      if (started.completed) throw new Error('ALANG_RETEST_REQUIRES_RESET')
-      if (started.stage !== 'searching' || !started.currentNodeId) {
+      if (!started.completed && (started.stage !== 'searching' || !started.currentNodeId)) {
         throw new Error('SEARCH_NODE_NOT_REACHED')
+      }
+      try {
+        logInfo('[AlangConfig] start response received', {
+          slug,
+          stage: started.stage,
+          currentNodeId: started.currentNodeId,
+        })
+      } catch {
+        // The successful start must not depend on optional telemetry.
       }
       syncMissionProgress(slug, {
         stage: started.stage,
         currentNodeId: started.currentNodeId,
       })
-
-      const searchUrl = `${MINI_PROGRAM_ROUTES.alangSearch}?slug=${encodeURIComponent(slug)}&nodeId=${encodeURIComponent(started.currentNodeId)}`
-      await openAlangSearchStage(searchUrl)
+      await navigateToAuthoritativeProgress({
+        progressId: started.progressId,
+        status: started.completed ? 'completed' : 'in_progress',
+        stage: started.stage,
+        currentNodeId: started.currentNodeId,
+        isDebugSession: true,
+      }, 'start-response', true)
     } catch (error) {
+      const statusCode = (error as AlangStartError | null)?.statusCode
+      const shouldReconcile = statusCode === undefined || statusCode === 409 || statusCode >= 500
+      if (shouldReconcile) {
+        const refreshed = await readAuthoritativeMission()
+        const progress = refreshed?.myProgress
+        const authoritativeUrl = getAlangConfigRecoveryUrl(
+          slug,
+          progress,
+          !!refreshed?.testConfigurationInvalid,
+        )
+        if (progress && authoritativeUrl) {
+          syncMissionProgress(slug, {
+            stage: progress.stage,
+            currentNodeId: progress.currentNodeId,
+          })
+          await navigateToAuthoritativeProgress(progress, 'start-reconcile', true)
+          return
+        }
+        const refreshedBlockMessage = getAlangConfigProgressBlockMessage(slug, refreshed)
+        if (refreshedBlockMessage) {
+          setSubmitError(refreshedBlockMessage)
+          setRequiresReset(true)
+          return
+        }
+      }
       const message = getAlangStartErrorMessage(error)
       const apiError = error as AlangStartError
       setSubmitError(message)
@@ -394,7 +686,7 @@ export default function AlangConfigPage() {
       }
     } finally {
       submitLockRef.current = false
-      setIsSubmitting(false)
+      if (mountedRef.current) setIsSubmitting(false)
     }
   }
 
@@ -636,12 +928,12 @@ export default function AlangConfigPage() {
       </View>
 
       <View className='alang-config__actions'>
-        {submitError && (
+        {visibleSubmitError && (
           <>
             <View className='alang-config__submit-error' role='alert' aria-live='polite'>
-              <Text>{submitError}</Text>
+              <Text>{visibleSubmitError}</Text>
             </View>
-            {requiresReset && (
+            {shouldShowReset && (
               <View
                 className={`alang-config__reset-previous${resetMutation.isPending ? ' alang-config__reset-previous--disabled' : ''}`}
                 onClick={() => { void handleClearPreviousRun() }}
@@ -654,7 +946,7 @@ export default function AlangConfigPage() {
             )}
           </>
         )}
-        {!submitError && (
+        {!visibleSubmitError && (
           <View
             className={`alang-config__submit-feedback ${isStartPending ? 'alang-config__submit-feedback--active' : ''}`}
             role='status'
@@ -668,17 +960,31 @@ export default function AlangConfigPage() {
           </View>
         )}
         <View
-          className={`alang-config__confirm ${!target || !endPoint || !!pointValidationError || isStartPending ? 'alang-config__confirm--disabled' : ''}`}
+          className={`alang-config__confirm ${isStartDisabled ? 'alang-config__confirm--disabled' : ''}`}
           onClick={() => { void handleConfirm() }}
           hoverClass={isStartPending ? '' : 'alang-config__confirm--pressed'}
           hoverStartTime={0}
           hoverStayTime={100}
           role='button'
-          aria-label={isStartPending ? '正在准备测试' : '开始测试'}
-          aria-disabled={!target || !endPoint || !!pointValidationError || isStartPending}
+          aria-label={isStartPending
+            ? '正在准备测试'
+            : progressBlockMessage
+              ? '请先清除旧进度'
+              : recoveryUrl
+                ? '继续当前测试'
+                : '开始测试'}
+          aria-disabled={isStartDisabled}
           aria-busy={isStartPending}
         >
-          <Text className='alang-config__confirm-text'>{isStartPending ? '已收到，正在启动…' : '开始测试'}</Text>
+          <Text className='alang-config__confirm-text'>
+            {isStartPending
+              ? '已收到，正在启动…'
+              : progressBlockMessage
+                ? '请先清除旧进度'
+                : recoveryUrl
+                  ? '继续当前测试'
+                  : '开始测试'}
+          </Text>
         </View>
       </View>
     </View>
