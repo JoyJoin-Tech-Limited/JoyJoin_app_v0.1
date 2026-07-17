@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => ({
   logInfo: vi.fn(),
   logWarn: vi.fn(),
   redirectTo: vi.fn(),
+  reLaunch: vi.fn(),
   setStorageSync: vi.fn(),
   distanceMeters: { current: 150 },
 }))
@@ -42,6 +43,7 @@ vi.mock('@tarojs/taro', () => {
     showModal: mocks.showModal,
     setStorageSync: mocks.setStorageSync,
     redirectTo: mocks.redirectTo,
+    reLaunch: mocks.reLaunch,
   }
   return { default: taro }
 })
@@ -144,6 +146,7 @@ describe('AlangConfigPage production access gate', () => {
       mutateAsync: mocks.resetMission,
     })
     mocks.redirectTo.mockResolvedValue({})
+    mocks.reLaunch.mockResolvedValue({})
     mocks.reverseGeocode.mockResolvedValue({ name: '测试地点', address: '深圳' })
     mocks.requestLocation.mockResolvedValue({ latitude: 22.5431, longitude: 114.0579, accuracy: 8 })
     mocks.startMission.mockResolvedValue({
@@ -236,6 +239,7 @@ describe('AlangConfigPage test-point start flow', () => {
       currentNodeId: 'search-gate',
     })
     mocks.redirectTo.mockResolvedValue({})
+    mocks.reLaunch.mockResolvedValue({})
     mocks.showModal.mockResolvedValue({ confirm: true, cancel: false })
     mocks.resetMission.mockResolvedValue({
       reset: true,
@@ -333,6 +337,21 @@ describe('AlangConfigPage test-point start flow', () => {
     await waitFor(() => {
       expect(mocks.redirectTo).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('still opens the next stage when redirectTo fails on a real device', async () => {
+    mocks.redirectTo.mockRejectedValueOnce(new Error('redirectTo:fail page is not ready'))
+
+    render(<AlangConfigPage />)
+    await setDefaultTestPoints()
+    fireEvent.click(screen.getByRole('button', { name: '开始测试' }))
+
+    const searchUrl = '/pages/alang/search/index?slug=meet-alang&nodeId=search-gate'
+    await waitFor(() => {
+      expect(mocks.redirectTo).toHaveBeenCalledWith({ url: searchUrl })
+      expect(mocks.reLaunch).toHaveBeenCalledWith({ url: searchUrl })
+    })
+    expect(mocks.showToast).not.toHaveBeenCalled()
   })
 
   it('keeps a failed start actionable with a persistent reason and allows retry', async () => {

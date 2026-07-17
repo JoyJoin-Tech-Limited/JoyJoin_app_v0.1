@@ -95,6 +95,17 @@ export function getAlangStartErrorMessage(error: unknown): string {
   return '没有准备好，请检查网络后再试'
 }
 
+export async function openAlangSearchStage(url: string): Promise<void> {
+  try {
+    await Taro.redirectTo({ url })
+  } catch (redirectError) {
+    logWarn('[AlangConfig] redirect to search failed, retrying with reLaunch', {
+      error: redirectError instanceof Error ? redirectError.message : String(redirectError),
+    })
+    await Taro.reLaunch({ url })
+  }
+}
+
 export default function AlangConfigPage() {
   const { user, isLoading: isAuthLoading } = useAuth()
   const slug = Taro.getCurrentInstance().router?.params?.slug ?? ''
@@ -357,9 +368,8 @@ export default function AlangConfigPage() {
         currentNodeId: started.currentNodeId,
       })
 
-      await Taro.redirectTo({
-        url: `${MINI_PROGRAM_ROUTES.alangSearch}?slug=${encodeURIComponent(slug)}&nodeId=${encodeURIComponent(started.currentNodeId)}`,
-      })
+      const searchUrl = `${MINI_PROGRAM_ROUTES.alangSearch}?slug=${encodeURIComponent(slug)}&nodeId=${encodeURIComponent(started.currentNodeId)}`
+      await openAlangSearchStage(searchUrl)
     } catch (error) {
       const message = getAlangStartErrorMessage(error)
       const apiError = error as AlangStartError
