@@ -38,7 +38,7 @@ vi.mock('@tarojs/taro', () => ({
 vi.mock('@tarojs/components', () => ({
   View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>,
   Text: ({ children, userSelect: _userSelect, ...props }: any) => <span {...props}>{children}</span>,
-  Image: ({ mode: _mode, onError: _onError, ...props }: any) => <img {...props} />,
+  Image: ({ mode: _mode, ...props }: any) => <img alt='' {...props} />,
   ScrollView: ({ children, scrollY: _scrollY, scrollX: _scrollX, enhanced: _enhanced, showScrollbar: _showScrollbar, ...props }: any) => (
     <div {...props}>{children}</div>
   ),
@@ -60,11 +60,6 @@ vi.mock('../../../lib/profile/equipmentApi', async (importOriginal) => {
   }
 })
 
-vi.mock('../../../lib/profile/pixelAvatarAssets', () => ({
-  getPixelAvatarBaseUrl: () => 'https://cdn.example.test/base.webp',
-  getPixelEquipmentLayerUrl: (assetKey: string) => `https://cdn.example.test/${assetKey}.webp`,
-}))
-
 vi.mock('../../../lib/utils/haptics', () => ({
   haptics: mocks.haptics,
 }))
@@ -80,7 +75,7 @@ const topItem = {
   description: '一件深紫色夹克',
   slot: 'top' as const,
   rarity: 'rare' as const,
-  assetKey: 'starlight-jacket',
+  assetKey: 'equipment/starter/cat/top/v1',
   compatibleArchetypes: null,
 }
 
@@ -91,7 +86,7 @@ const accessoryItem = {
   description: '一枚柔和的胸针',
   slot: 'accessory' as const,
   rarity: 'common' as const,
-  assetKey: 'warm-pin',
+  assetKey: 'equipment/starter/cat/accessory/v1',
   compatibleArchetypes: null,
 }
 
@@ -102,7 +97,7 @@ const oldCatStarter = {
   description: 'Starter retained from the previous archetype',
   slot: 'top' as const,
   rarity: 'common' as const,
-  assetKey: 'starter/cat/top',
+  assetKey: 'equipment/starter/cat/top/v1',
   compatibleArchetypes: ['cat'],
 }
 
@@ -113,8 +108,19 @@ const owlStarter = {
   description: 'Starter for the current archetype',
   slot: 'top' as const,
   rarity: 'common' as const,
-  assetKey: 'starter/owl/top',
+  assetKey: 'equipment/starter/owl/top/v1',
   compatibleArchetypes: ['owl'],
+}
+
+const unavailableTopItem = {
+  id: 'item-top-unavailable',
+  slug: 'future-jacket',
+  name: '未来夹克',
+  description: '素材尚未发布的装备',
+  slot: 'top' as const,
+  rarity: 'common' as const,
+  assetKey: 'equipment/future/cat/top/v1',
+  compatibleArchetypes: ['cat'],
 }
 
 const baseEquipment: EquipmentMeResponse = {
@@ -244,7 +250,10 @@ describe('MyImagePage', () => {
     expect(screen.getByText('稀有')).toBeInTheDocument()
     expect(screen.getByText('45')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存形象' })).toHaveAttribute('aria-disabled', 'true')
-    expect(container.querySelector('.my-image__avatar-layer--base')).toBeTruthy()
+    expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
+    expect(container.querySelector<HTMLImageElement>('.my-image__item-art')?.src)
+      .toMatch(/layer-v2\.[a-f0-9]{12}\.webp/)
+    expect(screen.getByText('基础内搭不可脱')).toBeInTheDocument()
     expect(container.querySelector('.pixel-avatar')).toBeNull()
   })
 
@@ -316,20 +325,129 @@ describe('MyImagePage', () => {
   })
 
   it('keeps equip and unequip choices as a draft until explicit Save', async () => {
-    renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: '穿上星夜夹克' }))
+    const { container } = renderPage()
+    const equipButton = await screen.findByRole('button', { name: '穿上星夜夹克' })
+    expect(equipButton).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(equipButton)
 
     expect(mocks.saveMyEquipmentOutfit).not.toHaveBeenCalled()
     expect(screen.getByText('保存形象')).toBeInTheDocument()
+    expect(container.querySelector('.pixel-avatar-composite__layer--top')).toBeTruthy()
+    expect(equipButton).toHaveAttribute('aria-pressed', 'true')
+    expect(equipButton.querySelector('.my-image__selection-mark')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: '脱下上装' }))
     expect(mocks.saveMyEquipmentOutfit).not.toHaveBeenCalled()
+    expect(container.querySelector('.pixel-avatar-composite__layer--top')).toBeNull()
+    expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: '穿上星夜夹克' }))
     fireEvent.click(screen.getByRole('button', { name: '保存形象' }))
 
     await waitFor(() => expect(mocks.saveMyEquipmentOutfit).toHaveBeenCalledWith({
       topItemId: topItem.id,
+      bottomItemId: null,
+      shoesItemId: null,
+      accessoryItemId: null,
+      expectedVersion: 7,
+    }))
+  })
+
+  it('keeps unpublished equipment disabled and never persists its item id', async () => {
+    const { container } = renderPage({
+      ...baseEquipment,
+      inventory: [{
+        id: 'inventory-top-unavailable',
+        itemId: unavailableTopItem.id,
+        sourceType: 'draw',
+        sourceId: 'future-pool',
+        acquiredAt: '2026-07-15T12:00:00.000Z',
+        item: unavailableTopItem,
+      }],
+    })
+
+    const unavailableButton = await screen.findByRole('button', { name: '未来夹克，素材准备中' })
+    expect(unavailableButton).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByText('素材准备中')).toBeInTheDocument()
+
+    fireEvent.click(unavailableButton)
+
+    expect(container.querySelector('.pixel-avatar-composite__layer--top')).toBeNull()
+    expect(screen.getByRole('button', { name: '保存形象' })).toHaveAttribute('aria-disabled', 'true')
+    expect(mocks.saveMyEquipmentOutfit).not.toHaveBeenCalled()
+  })
+
+  it('keeps a previously saved unpublished item until the user explicitly removes it', async () => {
+    renderPage({
+      ...baseEquipment,
+      outfit: {
+        ...baseEquipment.outfit,
+        topItemId: unavailableTopItem.id,
+      },
+      inventory: [{
+        id: 'inventory-top-unavailable',
+        itemId: unavailableTopItem.id,
+        sourceType: 'draw',
+        sourceId: 'future-pool',
+        acquiredAt: '2026-07-15T12:00:00.000Z',
+        item: unavailableTopItem,
+      }],
+    })
+
+    expect(await screen.findByRole('button', { name: '未来夹克，素材准备中' })).toHaveAttribute('aria-disabled', 'true')
+    const saveButton = screen.getByRole('button', { name: '保存形象' })
+    expect(saveButton).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('status')).toHaveAccessibleName('1件装备素材准备中')
+
+    fireEvent.click(screen.getByRole('button', { name: '脱下上装' }))
+
+    expect(saveButton).toHaveAttribute('aria-disabled', 'false')
+    fireEvent.click(saveButton)
+
+    await waitFor(() => expect(mocks.saveMyEquipmentOutfit).toHaveBeenCalledWith({
+      topItemId: null,
+      bottomItemId: null,
+      shoesItemId: null,
+      accessoryItemId: null,
+      expectedVersion: 7,
+    }))
+  })
+
+  it('replaces a failed equipment thumbnail with a visible retry state', async () => {
+    renderPage()
+    const equipButton = await screen.findByRole('button', { name: '穿上星夜夹克' })
+    const thumbnail = equipButton.querySelector<HTMLImageElement>('.my-image__item-art')
+
+    expect(thumbnail).toBeTruthy()
+    fireEvent.error(thumbnail!)
+
+    expect(equipButton).toHaveTextContent('图片暂未加载，点击装备重试')
+
+    fireEvent.click(equipButton)
+
+    expect(equipButton.querySelector('.my-image__item-art')).toBeInTheDocument()
+  })
+
+  it('saves null after removing an equipped item while keeping the permanent base layer', async () => {
+    const { container } = renderPage({
+      ...baseEquipment,
+      outfit: {
+        ...baseEquipment.outfit,
+        topItemId: topItem.id,
+      },
+    })
+
+    expect(await screen.findByText('星夜夹克')).toBeInTheDocument()
+    expect(container.querySelector('.pixel-avatar-composite__layer--top')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: '脱下上装' }))
+
+    expect(container.querySelector('.pixel-avatar-composite__layer--top')).toBeNull()
+    expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '保存形象' }))
+
+    await waitFor(() => expect(mocks.saveMyEquipmentOutfit).toHaveBeenCalledWith({
+      topItemId: null,
       bottomItemId: null,
       shoesItemId: null,
       accessoryItemId: null,
@@ -365,6 +483,31 @@ describe('MyImagePage', () => {
       expect.stringMatching(/^equipment-shop-item-accessory-1-/),
     ))
     expect(mocks.requestPayment).not.toHaveBeenCalled()
+  })
+
+  it('shows an explicit retry state when the shop request fails', async () => {
+    mocks.fetchEquipmentShop.mockRejectedValueOnce(new Error('shop unavailable'))
+    renderPage()
+    fireEvent.click(await screen.findByRole('tab', { name: '碎片商店' }))
+
+    expect(await screen.findByText('商店目录暂时没有打开')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '重新加载商店目录' }))
+
+    expect(await screen.findByRole('button', { name: '兑换暖光胸针' })).toBeInTheDocument()
+    expect(mocks.fetchEquipmentShop).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows a warm empty state when the shop directory has no items', async () => {
+    mocks.fetchEquipmentShop.mockResolvedValueOnce({
+      fragmentBalance: 45,
+      prices: { common: 20, rare: 40 },
+      items: [],
+    })
+    renderPage()
+    fireEvent.click(await screen.findByRole('tab', { name: '碎片商店' }))
+
+    expect(await screen.findByText('新装备正在准备')).toBeInTheDocument()
+    expect(screen.getByText('目录还是空的，稍后再来看看。')).toBeInTheDocument()
   })
 
   it('keeps the inventory page usable when saving the draft fails', async () => {

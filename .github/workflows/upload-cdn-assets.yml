@@ -5,14 +5,33 @@ on:
   push:
     branches: [main]
     paths:
+      - .github/workflows/upload-cdn-assets.yml
+      - apps/mini-program/package.json
+      - package-lock.json
       - apps/mini-program/scripts/cdn-asset-manifest.json
       - apps/mini-program/src/assets/**
       - apps/mini-program/scripts/upload-cdn-assets.mjs
       - apps/mini-program/scripts/check-profile-pixel-assets.mjs
+      - apps/mini-program/scripts/build-profile-pixel-v2-assets.mjs
+      - apps/mini-program/scripts/extract-profile-pixel-atlas-layers.mjs
+      - assets-source/profile-pixel-v2/**
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/upload-cdn-assets.yml
+      - apps/mini-program/package.json
+      - package-lock.json
+      - apps/mini-program/scripts/cdn-asset-manifest.json
+      - apps/mini-program/src/assets/**
+      - apps/mini-program/scripts/upload-cdn-assets.mjs
+      - apps/mini-program/scripts/check-profile-pixel-assets.mjs
+      - apps/mini-program/scripts/build-profile-pixel-v2-assets.mjs
+      - apps/mini-program/scripts/extract-profile-pixel-atlas-layers.mjs
+      - assets-source/profile-pixel-v2/**
 
 jobs:
   upload-assets:
-    name: Upload assets to CVM CDN
+    name: Validate assets and upload on main
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -26,7 +45,15 @@ jobs:
       - name: Validate CDN-only profile pixel assets
         run: |
           npm ci
-          node apps/mini-program/scripts/check-profile-pixel-assets.mjs
+          npm run build:profile-pixel-v2 -w mini-program
+          generated_status="$(git status --porcelain --untracked-files=all -- \
+            apps/mini-program/scripts/cdn-asset-manifest.json \
+            apps/mini-program/src/assets/profile-pixel/v2)"
+          if [[ -n "$generated_status" ]]; then
+            echo "Profile pixel generated assets are out of date:"
+            echo "$generated_status"
+            exit 1
+          fi
 
       - name: Compile mini-program without publishing it
         env:
@@ -36,6 +63,7 @@ jobs:
           test ! -d apps/mini-program/dist/assets/profile-pixel
 
       - name: Upload manifest assets to CVM /var/www/cdn/
+        if: github.event_name != 'pull_request'
         env:
           CDN_BACKEND: rsync
           CDN_BASE_URL: https://joyjoinapp.com/static
@@ -70,8 +98,25 @@ jobs:
           echo "=== Starting upload ==="
           node apps/mini-program/scripts/upload-cdn-assets.mjs
 
-          echo "=== Verifying profile pixel assets ==="
+          echo "=== Verifying profile pixel assets (legacy + V2 paper doll) ==="
           for archetype in corgi rooster hamster_praise fox dolphin_calm spider koala octopus owl elephant turtle cat; do
             curl --fail --silent --show-error --retry 5 --retry-all-errors --output /dev/null \
               "https://joyjoinapp.com/static/assets/profile-pixel/archetypes/${archetype}/base-v1.webp"
           done
+
+          jq -er '
+            . as $manifest
+            | [.archetypes[].body, (.items[] | .layer)]
+            | unique as $paths
+            | if (($paths | length) == $manifest.sourceAssetCount and ($paths | length) >= 60)
+              then $paths[]
+              else error("V2 asset path count does not match sourceAssetCount")
+              end
+          ' apps/mini-program/src/assets/profile-pixel/v2/avatar-assets-v2.json \
+            > /tmp/profile-pixel-v2-paths
+
+          test -s /tmp/profile-pixel-v2-paths
+          while IFS= read -r asset_path; do
+            curl --fail --silent --show-error --retry 5 --retry-all-errors --output /dev/null \
+              "https://joyjoinapp.com/static/${asset_path}"
+          done < /tmp/profile-pixel-v2-paths

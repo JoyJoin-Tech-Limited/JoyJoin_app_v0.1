@@ -4,4 +4,5 @@ export default definePageConfig({
   navigationBarTextStyle: 'white',
   backgroundColor: '#17122D',
   enablePullDownRefresh: false,
+  disableScroll: true,
 })

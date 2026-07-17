@@ -8,7 +8,7 @@ import type {
   EquipmentShopRedeemResponse,
   EquipmentShopResponse,
   EquipmentSlot,
-} from '@joyjoin/shared'
+} from '@joyjoin/shared/schema'
 
 export type {
   EquipmentDrawResponse,

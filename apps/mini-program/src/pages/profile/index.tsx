@@ -7,9 +7,9 @@ import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { useQuery } from '@tanstack/react-query'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
-import PixelAvatarFallback from '../../components/profile/PixelAvatarFallback'
+import PixelAvatarComposite from '../../components/profile/PixelAvatarComposite'
 import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
@@ -21,10 +21,7 @@ import { queryClient } from '../../lib/api/queryClient'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { fetchMyEquipment, type EquipmentItem, type EquipmentOutfit } from '../../lib/profile/equipmentApi'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
-import {
-  getPixelAvatarBaseUrl,
-  getPixelEquipmentLayerUrl,
-} from '../../lib/profile/pixelAvatarAssets'
+import { getPixelEquipmentLayerUrl } from '../../lib/profile/pixelAvatarAssets'
 import { haptics } from '../../lib/utils/haptics'
 import './index.scss'
 import {
@@ -34,6 +31,14 @@ import {
   getProfileV17DataPolicy,
   isProfileV17Enabled,
 } from './profileConstants'
+
+const EMPTY_EQUIPMENT_OUTFIT: EquipmentOutfit = {
+  topItemId: null,
+  bottomItemId: null,
+  shoesItemId: null,
+  accessoryItemId: null,
+  version: 0,
+}
 
 function getGenderLabel(value?: string | null): string | null {
   switch (value?.trim().toLowerCase()) {
@@ -57,66 +62,68 @@ function ProfilePartnerVisual({
   archetypeName,
   displayName,
   pixelEnabled,
+  equipmentState,
   outfit,
   itemsById,
+  onRetryEquipment,
 }: {
   archetype: string | null
   archetypeName: string | null
   displayName: string
   pixelEnabled: boolean
+  equipmentState: 'ready' | 'loading' | 'error'
   outfit?: EquipmentOutfit
   itemsById: Map<string, EquipmentItem>
+  onRetryEquipment: () => void
 }) {
   const asset = archetype ? ARCHETYPE_ASSET_MAP[archetype] : undefined
   const [sourceKind, setSourceKind] = useState<'webp' | 'png' | 'fallback'>('webp')
-  const [pixelBaseFailed, setPixelBaseFailed] = useState(false)
-  const [failedPixelLayers, setFailedPixelLayers] = useState<Set<string>>(new Set())
 
-  if (pixelEnabled && archetype && !pixelBaseFailed) {
-    const equippedItemIds = outfit
-      ? [
-          outfit.bottomItemId,
-          outfit.shoesItemId,
-          outfit.topItemId,
-          outfit.accessoryItemId,
-        ].filter((itemId): itemId is string => !!itemId)
-      : []
+  if (pixelEnabled && archetype) {
+    if (equipmentState !== 'ready' || !outfit) {
+      const isError = equipmentState === 'error'
+      return (
+        <View
+          className={`profile-page__partner-equipment-state${isError ? ' profile-page__partner-equipment-state--error' : ''}`}
+          role='status'
+          aria-live='polite'
+        >
+          <View className='profile-page__partner-equipment-placeholder' aria-hidden='true'>
+            <View className='profile-page__partner-equipment-placeholder-bar profile-page__partner-equipment-placeholder-bar--short' />
+            <View className='profile-page__partner-equipment-placeholder-bar profile-page__partner-equipment-placeholder-bar--tall' />
+            <View className='profile-page__partner-equipment-placeholder-bar profile-page__partner-equipment-placeholder-bar--medium' />
+          </View>
+          <Text className='profile-page__partner-equipment-state-title'>
+            {isError ? '装备暂未同步' : '装备同步中…'}
+          </Text>
+          <Text className='profile-page__partner-equipment-state-copy'>
+            {isError ? '已保存的搭配不会丢失' : '正在取回你已保存的搭配'}
+          </Text>
+          {isError && (
+            <View
+              className='profile-page__partner-equipment-retry'
+              onClick={onRetryEquipment}
+              role='button'
+              aria-label='重新同步装备'
+            >
+              <Text>重试</Text>
+            </View>
+          )}
+        </View>
+      )
+    }
 
     return (
-      <View className='profile-page__partner-pixel' role='img' aria-label={`${archetypeName ?? '我的'}像素伙伴形象`}>
-        <Image
-          className='profile-page__partner-pixel-layer profile-page__partner-pixel-layer--base'
-          src={getPixelAvatarBaseUrl(archetype)}
-          mode='aspectFit'
-          lazyLoad={false}
-          onError={() => setPixelBaseFailed(true)}
+      <View className='profile-page__partner-pixel'>
+        <PixelAvatarComposite
+          archetypeId={archetype}
+          outfit={outfit ?? EMPTY_EQUIPMENT_OUTFIT}
+          itemsById={itemsById}
+          frameId='front'
+          variant='compact'
+          className='profile-page__partner-pixel-composite'
         />
-        {equippedItemIds.map((itemId) => {
-          const item = itemsById.get(itemId)
-          const layerUrl = item ? getPixelEquipmentLayerUrl(item.assetKey, archetype) : null
-          if (!item || failedPixelLayers.has(itemId) || !layerUrl) return null
-          return (
-            <Image
-              key={itemId}
-              className={`profile-page__partner-pixel-layer profile-page__partner-pixel-layer--${item.slot}`}
-              src={layerUrl}
-              mode='aspectFit'
-              lazyLoad={false}
-              onError={() => setFailedPixelLayers((current) => new Set(current).add(itemId))}
-            />
-          )
-        })}
       </View>
-    )
-  }
-
-  if (pixelEnabled && archetype && pixelBaseFailed) {
-    return (
-      <PixelAvatarFallback
-        archetypeId={archetype}
-        variant='compact'
-        className='profile-page__partner-pixel-code'
-      />
     )
   }
 
@@ -244,6 +251,21 @@ export default function ProfilePage() {
   const equipmentInventory = equipmentQuery.data?.inventory ?? []
   const equipmentItemsById = new Map(equipmentInventory.map((entry) => [entry.item.id, entry.item]))
   const outfit = equipmentQuery.data?.outfit
+  const equipmentPreviewAssetSignature = `${archetype ?? 'none'}:${equipmentInventory
+    .map(({ item }) => `${item.id}:${item.assetKey}`)
+    .sort()
+    .join('|')}`
+  const [failedEquipmentPreviewItemIds, setFailedEquipmentPreviewItemIds] = useState<Set<string>>(
+    () => new Set(),
+  )
+  useEffect(() => {
+    setFailedEquipmentPreviewItemIds(new Set())
+  }, [equipmentPreviewAssetSignature])
+  const equipmentState: 'ready' | 'loading' | 'error' = outfit
+    ? 'ready'
+    : equipmentQuery.isError || (!!equipmentQuery.data && !equipmentQuery.isLoading)
+      ? 'error'
+      : 'loading'
   const equippedCount = outfit
     ? [outfit.topItemId, outfit.bottomItemId, outfit.shoesItemId, outfit.accessoryItemId].filter(Boolean).length
     : 0
@@ -340,8 +362,10 @@ export default function ProfilePage() {
               archetypeName={archetypeName}
               displayName={displayName}
               pixelEnabled={pixelAvatarEnabled}
+              equipmentState={equipmentState}
               outfit={outfit}
               itemsById={equipmentItemsById}
+              onRetryEquipment={() => { void equipmentQuery.refetch() }}
             />
           </View>
 
@@ -382,29 +406,71 @@ export default function ProfilePage() {
               aria-label='进入我的形象与装备'
               data-testid='profile-partner-equipment-entry'
             >
-              <View className='profile-page__equipment-preview' aria-label={`当前装备 ${equippedCount} 件`}>
+              <View
+                className='profile-page__equipment-preview'
+                aria-label={equipmentState === 'ready'
+                  ? `当前装备 ${equippedCount} 件`
+                  : equipmentState === 'error'
+                    ? '当前装备同步失败'
+                    : '当前装备正在同步'}
+              >
                 <Text className='profile-page__equipment-label'>当前装备</Text>
-                <View className='profile-page__equipment-slots'>
-                  {(['top', 'bottom', 'shoes', 'accessory'] as const).map((slot) => {
-                    const itemId = outfit?.[`${slot}ItemId`]
-                    const item = itemId ? equipmentItemsById.get(itemId) : undefined
-                    return (
-                      <View
-                        key={slot}
-                        className={`profile-page__equipment-slot${item ? ' profile-page__equipment-slot--filled' : ''}`}
-                        aria-label={item ? item.name : `空${slot}装备槽`}
-                      >
-                        {item
-                          ? <Text className='profile-page__equipment-slot-glyph'>{item.name.slice(0, 1)}</Text>
-                          : <View className='profile-page__equipment-slot-mark' />}
-                      </View>
-                    )
-                  })}
-                </View>
+                {equipmentState === 'ready' && equipmentQuery.isError && (
+                  <Text className='profile-page__equipment-cache-badge'>上次同步</Text>
+                )}
+                {equipmentState === 'ready' ? (
+                  <View className='profile-page__equipment-slots'>
+                    {(['top', 'bottom', 'shoes', 'accessory'] as const).map((slot) => {
+                      const itemId = outfit?.[`${slot}ItemId`]
+                      const item = itemId ? equipmentItemsById.get(itemId) : undefined
+                      const artworkUrl = item && archetype
+                        ? getPixelEquipmentLayerUrl(item.assetKey, archetype)
+                        : null
+                      const artworkFailed = item
+                        ? failedEquipmentPreviewItemIds.has(item.id)
+                        : false
+                      return (
+                        <View
+                          key={slot}
+                          className={`profile-page__equipment-slot${item ? ' profile-page__equipment-slot--filled' : ''}`}
+                          aria-label={item ? item.name : `空${slot}装备槽`}
+                        >
+                          {item && artworkUrl && !artworkFailed
+                            ? (
+                              <Image
+                                className='profile-page__equipment-slot-art'
+                                src={artworkUrl}
+                                mode='aspectFit'
+                                lazyLoad
+                                aria-hidden='true'
+                                onError={() => {
+                                  setFailedEquipmentPreviewItemIds((current) => {
+                                    if (current.has(item.id)) return current
+                                    const next = new Set(current)
+                                    next.add(item.id)
+                                    return next
+                                  })
+                                }}
+                              />
+                            )
+                            : item
+                              ? <Text className='profile-page__equipment-slot-glyph'>{item.name.slice(0, 1)}</Text>
+                              : <View className='profile-page__equipment-slot-mark' />}
+                        </View>
+                      )
+                    })}
+                  </View>
+                ) : (
+                  <Text className={`profile-page__equipment-state-copy profile-page__equipment-state-copy--${equipmentState}`}>
+                    {equipmentState === 'error' ? '待重试' : '同步中…'}
+                  </Text>
+                )}
               </View>
               <View className='profile-page__partner-entry-action'>
                 <Text className='profile-page__partner-entry-count'>
-                  {equipmentQuery.isLoading ? '—' : `${equipmentInventory.length} 件`}
+                  {equipmentState === 'ready'
+                    ? `${equipmentInventory.length} 件`
+                    : equipmentState === 'error' ? '待重试' : '—'}
                 </Text>
                 <Text className='profile-page__partner-entry-action-text'>我的形象</Text>
                 <View className='profile-page__partner-entry-chevron' />

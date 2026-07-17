@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import PixelAvatarFallback, {
   PIXEL_AVATAR_ARCHETYPE_IDS,
-  PixelAvatarEquipmentFallback,
   type PixelAvatarArchetypeId,
 } from './PixelAvatarFallback'
 
@@ -30,26 +29,10 @@ describe('PixelAvatarFallback', () => {
   it.each(PIXEL_AVATAR_ARCHETYPE_IDS)('accepts and labels canonical archetype %s', (archetypeId) => {
     const { container } = render(<PixelAvatarFallback archetypeId={archetypeId} variant='compact' />)
 
-    expect(screen.getByRole('img', { name: `${LABELS[archetypeId]}像素伙伴，穿着初始服装` })).toBeInTheDocument()
+    expect(screen.getByRole('img', {
+      name: `${LABELS[archetypeId]}像素伙伴，仅保留不可脱的基础背心与安全短裤`,
+    })).toBeInTheDocument()
     expect(container.querySelector(`[data-archetype="${archetypeId}"]`)).toHaveClass(`pixel-avatar--${archetypeId}`)
-  })
-
-  it('renders each optional equipment slot and exposes equipment names as one image description', () => {
-    const { container } = render(
-      <PixelAvatarFallback
-        archetypeId='corgi'
-        equippedItems={[
-          { id: 'top-1', name: '紫色街头连帽衫', slot: 'top', rarity: 'rare' },
-          { id: 'bottom-1', name: '黑色工装裤', slot: 'bottom' },
-          { id: 'shoes-1', name: '白紫高帮鞋', slot: 'shoes' },
-          { id: 'accessory-1', name: '爪印吊坠', slot: 'accessory' },
-        ]}
-      />,
-    )
-
-    expect(container.querySelectorAll('[data-slot]')).toHaveLength(4)
-    expect(container.querySelector('[data-slot="top"]')).toHaveClass('pixel-avatar__equipment--rare')
-    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('紫色街头连帽衫、黑色工装裤、白紫高帮鞋、爪印吊坠')
   })
 
   it('keeps the safe base clothing when no equipment is supplied', () => {
@@ -57,6 +40,8 @@ describe('PixelAvatarFallback', () => {
 
     expect(container.querySelector('.pixel-avatar__base-top')).toBeInTheDocument()
     expect(container.querySelector('.pixel-avatar__base-bottom')).toBeInTheDocument()
+    expect(container.querySelector('.pixel-avatar__base-shoe')).not.toBeInTheDocument()
+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('不可脱的基础背心与安全短裤')
     expect(container.querySelector('.pixel-avatar__scene')).not.toBeInTheDocument()
     expect(container.querySelector('.pixel-avatar__shadow')).not.toBeInTheDocument()
     expect(container.querySelectorAll('[data-slot]')).toHaveLength(0)
@@ -69,16 +54,4 @@ describe('PixelAvatarFallback', () => {
     expect(screen.getByRole('img').getAttribute('aria-label')).toContain('使用默认形象')
   })
 
-  it('renders equipment-only safety layers without adding a character or scene', () => {
-    const { container } = render(
-      <PixelAvatarEquipmentFallback
-        variant='compact'
-        equippedItems={[{ id: 'top-1', name: '初始上装', slot: 'top' }]}
-      />,
-    )
-
-    expect(container.querySelector('[data-slot="top"]')).toBeInTheDocument()
-    expect(container.querySelector('.pixel-avatar__body')).not.toBeInTheDocument()
-    expect(container.querySelector('.pixel-avatar__scene')).not.toBeInTheDocument()
-  })
 })

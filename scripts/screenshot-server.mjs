@@ -586,9 +586,14 @@ async function captureMyImageV17() {
     await waitForContent(page, '.my-image__stage')
     await page.waitForSelector('.my-image__tabs', { state: 'visible', timeout: 10000 })
     await page.waitForFunction(() => {
-      const name = document.querySelector('.my-image__stage-name')?.textContent ?? ''
+      const body = document.querySelector('.pixel-avatar-composite__body')?.getAttribute('src') ?? ''
+      const layers = document.querySelectorAll('.pixel-avatar-composite__layer').length
       const fragment = document.querySelector('.my-image__balance-value')?.textContent ?? ''
-      return name.length > 0 && fragment.includes('70')
+      const baseNote = document.querySelector('.my-image__base-note')?.textContent ?? ''
+      return /body-front-v2\.[a-f0-9]{12}\.webp/.test(body)
+        && layers === 4
+        && fragment.includes('70')
+        && baseNote.includes('基础内搭不可脱')
     }, undefined, { timeout: 10000 })
 
     return screenshotViewport(page)

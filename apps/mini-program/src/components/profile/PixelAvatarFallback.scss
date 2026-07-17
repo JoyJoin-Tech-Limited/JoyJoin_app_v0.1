@@ -596,61 +596,6 @@
       #2ECC71;
   }
 
-  &__equipment {
-    position: absolute;
-    z-index: 10;
-    border: 4rpx solid #4C1D95;
-    background: #8b5cf6;
-    box-shadow: inset 7rpx 0 rgba(255, 255, 255, 0.2), inset -7rpx 0 rgba(26, 15, 58, 0.2);
-
-    &--rare {
-      border-color: #92400E;
-      background: #ff9b85;
-      box-shadow: inset 7rpx 0 rgba(255, 255, 255, 0.28), 0 0 18rpx rgba(255, 155, 133, 0.28);
-    }
-
-    &--top {
-      bottom: 33%;
-      left: 25%;
-      width: 50%;
-      height: 27%;
-    }
-
-    &--bottom {
-      bottom: 19%;
-      left: 24%;
-      width: 52%;
-      height: 16%;
-      background: #7B6A96;
-    }
-
-    &--shoes {
-      bottom: 2%;
-      left: 17%;
-      width: 29%;
-      height: 10%;
-      box-shadow: 76rpx 0 0 -4rpx #8b5cf6, inset 7rpx 0 rgba(255, 255, 255, 0.2);
-    }
-
-    &--accessory {
-      z-index: 11;
-      top: 18%;
-      right: 11%;
-      width: 15%;
-      height: 15%;
-      transform: rotate(45deg);
-    }
-  }
-
-  &__accessory-spark {
-    position: absolute;
-    top: 33%;
-    left: 33%;
-    width: 34%;
-    height: 34%;
-    background: #FFFBEB;
-  }
-
   &__accessible-copy {
     position: absolute;
     width: 1rpx;
@@ -677,25 +622,4 @@
 @keyframes pixel-avatar-breathe {
   0%, 100% { transform: translateX(-50%) translateY(0); }
   50% { transform: translateX(-50%) translateY(-4rpx); }
-}
-
-.pixel-equipment-fallback {
-  position: absolute;
-  z-index: 6;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-
-  .pixel-avatar__figure--equipment-only {
-    width: 47%;
-    height: 79%;
-    bottom: 3%;
-    animation: none;
-  }
-
-  &--compact .pixel-avatar__figure--equipment-only {
-    width: 36%;
-    height: 84%;
-    bottom: 1%;
-  }
 }

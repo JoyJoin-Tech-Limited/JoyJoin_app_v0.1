@@ -68,8 +68,92 @@ function logFile(file, size) {
   console.log(`   ↑ ${file} (${formatSize(size)})`)
 }
 
+// Retained for backend-specific skip reporting hooks.
+// eslint-disable-next-line no-unused-vars
 function logSkip(file) {
   console.log(`   ✓ ${file} (already uploaded, skipping)`)
+}
+
+function assertStrictDescendant(candidate, parent, label) {
+  const resolvedCandidate = path.resolve(candidate)
+  const resolvedParent = path.resolve(parent)
+  const relative = path.relative(resolvedParent, resolvedCandidate)
+  if (
+    !relative
+    || relative === '..'
+    || relative.startsWith(`..${path.sep}`)
+    || path.isAbsolute(relative)
+  ) {
+    throw new Error(`${label} must be a strict child of ${resolvedParent}`)
+  }
+}
+
+function validateManifestRelativePath(value, label) {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error(`${label} must be a non-empty string`)
+  }
+  if (value.includes('\0')) {
+    throw new Error(`${label} must not contain a NUL byte`)
+  }
+  if (value.includes('\\')) {
+    throw new Error(`${label} must use POSIX '/' separators`)
+  }
+  if (path.posix.isAbsolute(value) || path.win32.isAbsolute(value) || /^[A-Za-z]:/.test(value)) {
+    throw new Error(`${label} must be a relative POSIX path`)
+  }
+
+  const segments = value.split('/')
+  if (segments.some((segment) => !segment || segment === '.' || segment === '..')) {
+    throw new Error(`${label} must not contain empty, '.' or '..' segments`)
+  }
+  if (path.posix.normalize(value) !== value) {
+    throw new Error(`${label} must already be a normalized POSIX path`)
+  }
+  return value
+}
+
+function resolveManifestDescendant(parent, relativePath, label) {
+  const candidate = path.resolve(parent, ...relativePath.split('/'))
+  assertStrictDescendant(candidate, parent, label)
+  return candidate
+}
+
+function projectedRealPathSync(candidate) {
+  let cursor = path.resolve(candidate)
+  const missingSegments = []
+
+  while (true) {
+    try {
+      const realAncestor = fs.realpathSync(cursor)
+      return path.resolve(realAncestor, ...missingSegments.reverse())
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error
+      const parent = path.dirname(cursor)
+      if (parent === cursor) {
+        throw new Error(`Cannot resolve an existing ancestor for ${candidate}`)
+      }
+      missingSegments.push(path.basename(cursor))
+      cursor = parent
+    }
+  }
+}
+
+function resolveManifestSource(localPath) {
+  const realRoot = fs.realpathSync(ROOT)
+  for (const sourceRoot of [DIST_DIR, SRC_DIR]) {
+    const candidate = resolveManifestDescendant(sourceRoot, localPath, `manifest source ${localPath}`)
+    if (!fs.existsSync(candidate)) continue
+
+    const realSourceRoot = fs.realpathSync(sourceRoot)
+    const realSource = fs.realpathSync(candidate)
+    assertStrictDescendant(realSourceRoot, realRoot, `manifest source root for ${localPath}`)
+    assertStrictDescendant(realSource, realSourceRoot, `manifest source ${localPath}`)
+    if (!fs.statSync(realSource).isFile()) {
+      throw new Error(`manifest source ${localPath} must resolve to a regular file`)
+    }
+    return realSource
+  }
+  return null
 }
 
 function readManifest() {
@@ -84,6 +168,19 @@ function readManifest() {
     console.error('❌ Invalid manifest: missing assets array')
     process.exit(1)
   }
+  const seenCdnPaths = new Set()
+  manifest.assets = manifest.assets.map((asset, index) => {
+    if (!asset || typeof asset !== 'object' || Array.isArray(asset)) {
+      throw new Error(`manifest asset[${index}] must be an object`)
+    }
+    const localPath = validateManifestRelativePath(asset.localPath, `manifest asset[${index}].localPath`)
+    const cdnPath = validateManifestRelativePath(asset.cdnPath, `manifest asset[${index}].cdnPath`)
+    if (seenCdnPaths.has(cdnPath)) {
+      throw new Error(`manifest asset[${index}].cdnPath duplicates ${cdnPath}`)
+    }
+    seenCdnPaths.add(cdnPath)
+    return { ...asset, localPath, cdnPath }
+  })
   return manifest
 }
 
@@ -163,7 +260,8 @@ async function uploadRsync(files) {
     if (DRY_RUN) {
       console.log(`   [dry-run] Would rsync: ${src} → ${dest}`)
     } else {
-      await runTransportCommand('rsync', ['-avz', '--delete', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest])
+      // Keep prior content-hashed files so older mini-program releases remain loadable.
+      await runTransportCommand('rsync', ['-avz', '--checksum', '-e', `ssh ${sshArgsQuoted.join(' ')}`, src, dest])
     }
     return
   }
@@ -173,21 +271,17 @@ async function uploadRsync(files) {
   try {
     let stagedCount = 0
 
-    for (const { localPath, cdnPath } of files) {
-      const srcInDist = path.join(DIST_DIR, localPath)
-      const srcInSrc = path.join(SRC_DIR, localPath)
-      const src = fs.existsSync(srcInDist) ? srcInDist : fs.existsSync(srcInSrc) ? srcInSrc : null
+    for (const { localPath, cdnPath, sourcePath: src } of files) {
       if (!src) {
         console.warn(`   ⚠️ Source file missing in both dist/ and src/, skipping: ${localPath}`)
         continue
       }
 
-      const stagingDest = path.join(stagingDir, cdnPath)
+      const stagingDest = resolveManifestDescendant(stagingDir, cdnPath, `CDN staging target ${cdnPath}`)
       fs.mkdirSync(path.dirname(stagingDest), { recursive: true })
-      // Resolve symlinks so local alias directories (e.g. src/assets/archetypes)
-      // copy the real file instead of a broken symlink on the remote host.
-      const realSrc = fs.realpathSync(src)
-      fs.cpSync(realSrc, stagingDest)
+      const projectedStagingDest = projectedRealPathSync(stagingDest)
+      assertStrictDescendant(projectedStagingDest, fs.realpathSync(stagingDir), `CDN staging target ${cdnPath}`)
+      fs.cpSync(src, stagingDest)
       stagedCount++
 
       logFile(cdnPath, fs.statSync(src).size)
@@ -240,10 +334,7 @@ async function uploadS3(files) {
     env.AWS_ENDPOINT_URL = endpoint
   }
 
-  for (const { localPath, cdnPath } of files) {
-    const srcInDist = path.join(DIST_DIR, localPath)
-    const srcInSrc = path.join(SRC_DIR, localPath)
-    const src = fs.existsSync(srcInDist) ? srcInDist : fs.existsSync(srcInSrc) ? srcInSrc : null
+  for (const { localPath, cdnPath, sourcePath: src } of files) {
     if (!src) {
       console.warn(`   ⚠️ Source file missing in both dist/ and src/, skipping: ${localPath}`)
       continue
@@ -273,10 +364,7 @@ async function uploadOss(files) {
     process.exit(1)
   }
 
-  for (const { localPath, cdnPath } of files) {
-    const srcInDist = path.join(DIST_DIR, localPath)
-    const srcInSrc = path.join(SRC_DIR, localPath)
-    const src = fs.existsSync(srcInDist) ? srcInDist : fs.existsSync(srcInSrc) ? srcInSrc : null
+  for (const { localPath, cdnPath, sourcePath: src } of files) {
     if (!src) {
       console.warn(`   ⚠️ Source file missing in both dist/ and src/, skipping: ${localPath}`)
       continue
@@ -306,10 +394,7 @@ async function uploadCos(files) {
     process.exit(1)
   }
 
-  for (const { localPath, cdnPath } of files) {
-    const srcInDist = path.join(DIST_DIR, localPath)
-    const srcInSrc = path.join(SRC_DIR, localPath)
-    const src = fs.existsSync(srcInDist) ? srcInDist : fs.existsSync(srcInSrc) ? srcInSrc : null
+  for (const { localPath, cdnPath, sourcePath: src } of files) {
     if (!src) {
       console.warn(`   ⚠️ Source file missing in both dist/ and src/, skipping: ${localPath}`)
       continue
@@ -363,15 +448,15 @@ async function main() {
   } else {
     // Manifest mode
     const manifest = readManifest()
-    files = manifest.assets
+    files = manifest.assets.map((asset) => ({
+      ...asset,
+      sourcePath: resolveManifestSource(asset.localPath),
+    }))
 
     let missingCount = 0
-    for (const { localPath } of files) {
-      const srcInDist = path.join(DIST_DIR, localPath)
-      const srcInSrc = path.join(SRC_DIR, localPath)
-      const src = fs.existsSync(srcInDist) ? srcInDist : fs.existsSync(srcInSrc) ? srcInSrc : null
-      if (src) {
-        totalSize += fs.statSync(src).size
+    for (const { sourcePath } of files) {
+      if (sourcePath) {
+        totalSize += fs.statSync(sourcePath).size
       } else {
         missingCount++
       }

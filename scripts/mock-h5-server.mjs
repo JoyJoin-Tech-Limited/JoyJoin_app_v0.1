@@ -319,7 +319,7 @@ const MOCK_EQUIPMENT_ITEMS = [
     description: '人格形象的初始上装。',
     slot: 'top',
     rarity: 'common',
-    assetKey: 'starter/corgi/violet-city-jacket',
+    assetKey: 'equipment/starter/corgi/top/v1',
     compatibleArchetypes: ['corgi'],
   },
   {
@@ -329,7 +329,7 @@ const MOCK_EQUIPMENT_ITEMS = [
     description: '人格形象的初始下装。',
     slot: 'bottom',
     rarity: 'common',
-    assetKey: 'starter/corgi/indigo-city-pants',
+    assetKey: 'equipment/starter/corgi/bottom/v1',
     compatibleArchetypes: ['corgi'],
   },
   {
@@ -339,7 +339,7 @@ const MOCK_EQUIPMENT_ITEMS = [
     description: '人格形象的初始鞋子。',
     slot: 'shoes',
     rarity: 'common',
-    assetKey: 'starter/corgi/white-city-sneakers',
+    assetKey: 'equipment/starter/corgi/shoes/v1',
     compatibleArchetypes: ['corgi'],
   },
   {
@@ -349,7 +349,7 @@ const MOCK_EQUIPMENT_ITEMS = [
     description: '人格形象的初始配饰。',
     slot: 'accessory',
     rarity: 'common',
-    assetKey: 'starter/corgi/star-city-pin',
+    assetKey: 'equipment/starter/corgi/accessory/v1',
     compatibleArchetypes: ['corgi'],
   },
 ]
@@ -357,11 +357,19 @@ const MOCK_EQUIPMENT_ITEMS = [
 const MOCK_EQUIPMENT_INVENTORY = MOCK_EQUIPMENT_ITEMS.map((item, index) => ({
   id: `inventory-screenshot-${index + 1}`,
   itemId: item.id,
-  sourceType: 'starter',
+  sourceType: 'initial',
   sourceId: 'corgi',
   acquiredAt: `2026-07-${String(10 + index).padStart(2, '0')}T12:00:00+08:00`,
   item,
 }))
+
+let mockEquipmentOutfit = {
+  topItemId: 'equipment-top-violet',
+  bottomItemId: 'equipment-bottom-indigo',
+  shoesItemId: 'equipment-shoes-white',
+  accessoryItemId: 'equipment-accessory-star',
+  version: 1,
+}
 
 // Joined events for 我的足迹
 app.get('/api/events/joined', (req, res) => {
@@ -667,13 +675,7 @@ app.post('/api/personal-story/update', (req, res) => {
 app.get('/api/equipment/me', (req, res) => {
   res.json({
     archetypeId: 'corgi',
-    outfit: {
-      topItemId: 'equipment-top-violet',
-      bottomItemId: 'equipment-bottom-indigo',
-      shoesItemId: 'equipment-shoes-white',
-      accessoryItemId: 'equipment-accessory-star',
-      version: 1,
-    },
+    outfit: mockEquipmentOutfit,
     inventory: MOCK_EQUIPMENT_INVENTORY,
     recentItems: [...MOCK_EQUIPMENT_INVENTORY].reverse(),
     wallet: { fragmentBalance: 70, pityMisses: 2, pityTarget: 4 },
@@ -693,6 +695,17 @@ app.get('/api/equipment/me', (req, res) => {
     ],
     rewardsEnabled: true,
   })
+})
+
+app.put('/api/equipment/me/outfit', (req, res) => {
+  mockEquipmentOutfit = {
+    topItemId: req.body?.topItemId ?? null,
+    bottomItemId: req.body?.bottomItemId ?? null,
+    shoesItemId: req.body?.shoesItemId ?? null,
+    accessoryItemId: req.body?.accessoryItemId ?? null,
+    version: mockEquipmentOutfit.version + 1,
+  }
+  res.json({ saved: true, outfit: mockEquipmentOutfit })
 })
 
 app.get('/api/equipment/shop', (req, res) => {

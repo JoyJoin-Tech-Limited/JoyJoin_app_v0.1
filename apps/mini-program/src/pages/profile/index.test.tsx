@@ -1,6 +1,8 @@
 import React from 'react'
 import { fireEvent, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
+import ProfilePage from './index'
 
 const state = vi.hoisted(() => ({
   user: null as Record<string, unknown> | null,
@@ -11,6 +13,7 @@ const state = vi.hoisted(() => ({
   navigateTo: vi.fn(),
   switchTab: vi.fn(),
   showToast: vi.fn(),
+  equipmentRefetch: vi.fn(),
 }))
 
 vi.mock('@tarojs/taro', () => ({
@@ -27,7 +30,7 @@ vi.mock('@tarojs/taro', () => ({
 vi.mock('@tarojs/components', () => ({
   View: ({ children, hoverClass: _hoverClass, ...props }: React.HTMLAttributes<HTMLDivElement> & { hoverClass?: string }) => <div {...props}>{children}</div>,
   Text: ({ children, ...props }: React.HTMLAttributes<HTMLSpanElement>) => <span {...props}>{children}</span>,
-  Image: ({ onError: _onError, lazyLoad: _lazyLoad, mode: _mode, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { lazyLoad?: boolean; mode?: string }) => <img {...props} />,
+  Image: ({ lazyLoad: _lazyLoad, mode: _mode, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { lazyLoad?: boolean; mode?: string }) => <img {...props} />,
   ScrollView: ({ children, scrollY: _scrollY, enhanced: _enhanced, showScrollbar: _showScrollbar, ...props }: React.HTMLAttributes<HTMLDivElement> & { scrollY?: boolean; enhanced?: boolean; showScrollbar?: boolean }) => <div {...props}>{children}</div>,
 }))
 
@@ -39,6 +42,7 @@ vi.mock('@tanstack/react-query', () => ({
       data: undefined,
       isLoading: false,
       isError: false,
+      refetch: state.equipmentRefetch,
       ...state.queryStates.get(key),
     }
   },
@@ -104,9 +108,6 @@ vi.mock('../../lib/api/authSession', () => ({
   isUnauthorizedApiError: vi.fn(() => false),
 }))
 
-import ProfilePage from './index'
-import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
-
 function makeUser(profileRedesignEnabled: boolean) {
   return {
     id: 'profile-user',
@@ -155,7 +156,14 @@ describe('Profile approved V4 layout', () => {
           itemId: id,
           acquiredAt: '2026-07-15T00:00:00.000Z',
           sourceType: 'initial',
-          item: { id, slug: id, slot, name, rarity: 'common', assetKey: id },
+          item: {
+            id,
+            slug: id,
+            slot,
+            name,
+            rarity: 'common',
+            assetKey: `equipment/starter/corgi/${slot}/v1`,
+          },
         })),
         recentItems: [],
         wallet: { fragmentBalance: 0, pityMisses: 0, pityTarget: 4 },
@@ -166,6 +174,7 @@ describe('Profile approved V4 layout', () => {
     state.navigateTo.mockReset()
     state.switchTab.mockReset()
     state.showToast.mockReset()
+    state.equipmentRefetch.mockReset()
   })
 
   it('shows the complete V4 structure when the flag is true and every count is zero', () => {
@@ -186,11 +195,60 @@ describe('Profile approved V4 layout', () => {
   it('does not layer the code placeholder behind an available pixel character', () => {
     const { container } = render(<ProfilePage />)
 
-    expect(container.querySelector('.profile-page__partner-pixel-layer--base')).toBeTruthy()
+    expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
     expect(container.querySelector('.pixel-avatar')).toBeNull()
   })
 
-  it('keeps the base pixel character when no outfit is available yet', () => {
+  it('shows the actual starter-equipment art in every filled slot', () => {
+    const { container } = render(<ProfilePage />)
+    const equipmentArt = Array.from(container.querySelectorAll<HTMLImageElement>('.profile-page__equipment-slot-art'))
+
+    expect(equipmentArt).toHaveLength(4)
+    equipmentArt.forEach((image) => {
+      expect(image.src).toMatch(/layer-v2\.[a-f0-9]{12}\.webp/)
+    })
+  })
+
+  it('falls back to the existing glyph after slot art fails and retries when its asset signature changes', async () => {
+    const { container, rerender } = render(<ProfilePage />)
+    const initialArt = Array.from(container.querySelectorAll<HTMLImageElement>('.profile-page__equipment-slot-art'))
+
+    fireEvent.error(initialArt[0])
+
+    expect(container.querySelectorAll('.profile-page__equipment-slot-art')).toHaveLength(3)
+    expect(container.querySelectorAll('.profile-page__equipment-slot-glyph')).toHaveLength(1)
+
+    const cachedEquipment = state.queryStates.get('mini-program/equipment/me')
+    const cachedData = cachedEquipment?.data as {
+      inventory: Array<{
+        item: { id: string; assetKey: string }
+      }>
+    }
+    state.queryStates.set('mini-program/equipment/me', {
+      ...cachedEquipment,
+      data: {
+        ...cachedData,
+        inventory: cachedData.inventory.map((entry) => entry.item.id === 'top-1'
+          ? {
+            ...entry,
+            item: {
+              ...entry.item,
+              assetKey: 'equipment/starter/corgi/bottom/v1',
+            },
+          }
+          : entry),
+      },
+    })
+
+    rerender(<ProfilePage />)
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('.profile-page__equipment-slot-art')).toHaveLength(4)
+      expect(container.querySelectorAll('.profile-page__equipment-slot-glyph')).toHaveLength(0)
+    })
+  })
+
+  it('shows a recovery state instead of an undressed avatar when the outfit payload is missing', () => {
     state.queryStates.set('mini-program/equipment/me', {
       data: {
         archetypeId: 'corgi',
@@ -203,10 +261,58 @@ describe('Profile approved V4 layout', () => {
       },
     })
 
-    const { container } = render(<ProfilePage />)
+    const { container, getAllByText, getByText } = render(<ProfilePage />)
 
-    expect(container.querySelector('.profile-page__partner-pixel-layer--base')).toBeTruthy()
+    expect(getByText('装备暂未同步')).toBeTruthy()
+    expect(getAllByText('待重试').length).toBeGreaterThan(0)
+    expect(container.querySelector('.pixel-avatar-composite__body')).toBeNull()
     expect(container.querySelector('.profile-page__partner-image')).toBeNull()
+  })
+
+  it('does not claim zero equipment while the first equipment request is loading', () => {
+    state.queryStates.set('mini-program/equipment/me', {
+      data: undefined,
+      isLoading: true,
+      isError: false,
+    })
+
+    const { container, getByText, queryByText } = render(<ProfilePage />)
+
+    expect(getByText('装备同步中…')).toBeTruthy()
+    expect(queryByText('0 件')).toBeNull()
+    expect(container.querySelector('.pixel-avatar-composite__body')).toBeNull()
+  })
+
+  it('offers retry after equipment sync fails without showing an empty outfit', () => {
+    state.queryStates.set('mini-program/equipment/me', {
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    })
+
+    const { container, getByRole, getByText, queryByText } = render(<ProfilePage />)
+
+    expect(getByText('装备暂未同步')).toBeTruthy()
+    expect(queryByText('0 件')).toBeNull()
+    expect(container.querySelector('.pixel-avatar-composite__body')).toBeNull()
+
+    fireEvent.click(getByRole('button', { name: '重新同步装备' }))
+    expect(state.equipmentRefetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the cached outfit visible when a background refresh fails', () => {
+    const cachedEquipment = state.queryStates.get('mini-program/equipment/me')
+    state.queryStates.set('mini-program/equipment/me', {
+      ...cachedEquipment,
+      isError: true,
+    })
+
+    const { container, getByText, queryByText } = render(<ProfilePage />)
+
+    expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
+    expect(getByText('4 件')).toBeTruthy()
+    expect(getByText('上次同步')).toBeTruthy()
+    expect(queryByText('装备暂未同步')).toBeNull()
   })
 
   it('keeps V4 visible when one optional request fails', () => {
