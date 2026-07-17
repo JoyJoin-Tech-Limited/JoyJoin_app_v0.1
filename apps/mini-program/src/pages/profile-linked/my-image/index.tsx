@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
-import PixelAvatarFallback from '../../../components/profile/PixelAvatarFallback'
+import PixelAvatarTurntable from '../../../components/profile/PixelAvatarTurntable'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import {
   drawEquipmentEntitlement,
@@ -17,7 +16,6 @@ import {
   type EquipmentSlot,
 } from '../../../lib/profile/equipmentApi'
 import {
-  getPixelAvatarBaseUrl,
   getPixelEquipmentLayerUrl,
 } from '../../../lib/profile/pixelAvatarAssets'
 import { haptics } from '../../../lib/utils/haptics'
@@ -61,77 +59,41 @@ function sanitizeOutfitForInventory(
   }, outfit)
 }
 
+function getCompatibleEquipmentItemIds(snapshot: {
+  archetypeId: string
+  outfit: EquipmentOutfit
+  inventory: Array<{ item: EquipmentItem }>
+}): Set<string> {
+  return new Set(
+    snapshot.inventory
+      .filter((entry) => isEquipmentItemCompatible(entry.item, snapshot.archetypeId))
+      .map((entry) => entry.item.id),
+  )
+}
+
+function getUsableEquipmentItemIds(snapshot: {
+  archetypeId: string
+  outfit: EquipmentOutfit
+  inventory: Array<{ item: EquipmentItem }>
+}): Set<string> {
+  return new Set(
+    snapshot.inventory
+      .filter((entry) => isEquipmentItemCompatible(entry.item, snapshot.archetypeId)
+        && !!getPixelEquipmentLayerUrl(entry.item.assetKey, snapshot.archetypeId))
+      .map((entry) => entry.item.id),
+  )
+}
+
 function sanitizeEquipmentSnapshotOutfit(snapshot: {
   archetypeId: string
   outfit: EquipmentOutfit
   inventory: Array<{ item: EquipmentItem }>
 }): EquipmentOutfit {
-  const compatibleItemIds = new Set(
-    snapshot.inventory
-      .filter((entry) => isEquipmentItemCompatible(entry.item, snapshot.archetypeId))
-      .map((entry) => entry.item.id),
-  )
-  return sanitizeOutfitForInventory(snapshot.outfit, compatibleItemIds)
+  return sanitizeOutfitForInventory(snapshot.outfit, getCompatibleEquipmentItemIds(snapshot))
 }
 
 function makeIdempotencyKey(itemId: string): string {
   return `equipment-shop-${itemId}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-}
-
-function PixelAvatarStage({
-  archetypeId,
-  outfit,
-  itemsById,
-}: {
-  archetypeId: string
-  outfit: EquipmentOutfit
-  itemsById: Map<string, EquipmentItem>
-}) {
-  const [baseFailed, setBaseFailed] = useState(false)
-  const [failedLayers, setFailedLayers] = useState<Set<string>>(new Set())
-  const equippedItems = SLOT_ORDER
-    .map((slot) => getOutfitItemId(outfit, slot))
-    .flatMap((id) => id ? [itemsById.get(id)] : [])
-    .filter((item): item is EquipmentItem => !!item)
-
-  return (
-    <View className='my-image__stage' aria-label='当前形象预览'>
-      <View className='my-image__stage-grid' aria-hidden='true' />
-      <View className='my-image__avatar-frame'>
-        {baseFailed && (
-          <PixelAvatarFallback
-            archetypeId={archetypeId}
-            variant='full'
-            className='my-image__avatar-code'
-          />
-        )}
-        {!baseFailed && (
-          <Image
-            className='my-image__avatar-layer my-image__avatar-layer--base'
-            src={getPixelAvatarBaseUrl(archetypeId)}
-            mode='aspectFit'
-            onError={() => setBaseFailed(true)}
-          />
-        )}
-        {!baseFailed && equippedItems.map((item) => {
-          const layerUrl = getPixelEquipmentLayerUrl(item.assetKey, archetypeId)
-          return failedLayers.has(item.id) || !layerUrl ? null : (
-            <Image
-              key={item.id}
-              className={`my-image__avatar-layer my-image__avatar-layer--${item.slot}`}
-              src={layerUrl}
-              mode='aspectFit'
-              onError={() => setFailedLayers((current) => new Set(current).add(item.id))}
-            />
-          )
-        })}
-      </View>
-      <View className='my-image__stage-caption'>
-        <Text className='my-image__stage-eyebrow'>JOYJOIN PIXEL PERSONA</Text>
-        <Text className='my-image__stage-name'>{ARCHETYPE_BY_ID[archetypeId]?.nameCn ?? '我的伙伴'}</Text>
-      </View>
-    </View>
-  )
 }
 
 export default function MyImagePage() {
@@ -143,6 +105,7 @@ export default function MyImagePage() {
   const [activeSlot, setActiveSlot] = useState<EquipmentSlot>('top')
   const [draftOutfit, setDraftOutfit] = useState<EquipmentOutfit | null>(null)
   const [drawResult, setDrawResult] = useState<EquipmentDrawResponse | null>(null)
+  const [failedArtworkKeys, setFailedArtworkKeys] = useState<Set<string>>(new Set())
 
   const equipmentQuery = useQuery({
     queryKey: EQUIPMENT_QUERY_KEY,
@@ -156,24 +119,41 @@ export default function MyImagePage() {
     enabled: !authLoading && pixelAvatarEnabled && rewardsEnabled && activeTab === 'shop',
     staleTime: 15_000,
   })
+  const data = equipmentQuery.data
+  const usableItemIds = useMemo(
+    () => data ? getUsableEquipmentItemIds(data) : new Set<string>(),
+    [data],
+  )
+  const compatibleItemIds = useMemo(
+    () => data ? getCompatibleEquipmentItemIds(data) : new Set<string>(),
+    [data],
+  )
 
   useEffect(() => {
-    const snapshot = equipmentQuery.data
+    const snapshot = data
     if (!snapshot) return
     const sanitized = sanitizeEquipmentSnapshotOutfit(snapshot)
-    setDraftOutfit((current) => !current || current.version !== sanitized.version
-      ? sanitized
-      : current)
-  }, [equipmentQuery.data])
+    setDraftOutfit((current) => {
+      if (!current || current.version !== sanitized.version) return sanitized
+      return sanitizeOutfitForInventory(current, compatibleItemIds)
+    })
+  }, [compatibleItemIds, data])
+
+  useEffect(() => {
+    setFailedArtworkKeys(new Set())
+  }, [data?.archetypeId])
 
   const saveMutation = useMutation({
-    mutationFn: (outfit: EquipmentOutfit) => saveMyEquipmentOutfit({
-      topItemId: outfit.topItemId,
-      bottomItemId: outfit.bottomItemId,
-      shoesItemId: outfit.shoesItemId,
-      accessoryItemId: outfit.accessoryItemId,
-      expectedVersion: outfit.version,
-    }),
+    mutationFn: (outfit: EquipmentOutfit) => {
+      const safeOutfit = sanitizeOutfitForInventory(outfit, usableItemIds)
+      return saveMyEquipmentOutfit({
+        topItemId: safeOutfit.topItemId,
+        bottomItemId: safeOutfit.bottomItemId,
+        shoesItemId: safeOutfit.shoesItemId,
+        accessoryItemId: safeOutfit.accessoryItemId,
+        expectedVersion: safeOutfit.version,
+      })
+    },
     onSuccess: async (response) => {
       setDraftOutfit(response.outfit)
       await queryClient.invalidateQueries({ queryKey: EQUIPMENT_QUERY_KEY })
@@ -215,7 +195,6 @@ export default function MyImagePage() {
     onError: () => Taro.showToast({ title: '碎片不足或兑换没有完成', icon: 'none' }),
   })
 
-  const data = equipmentQuery.data
   const inventory = useMemo(
     () => (data?.inventory ?? []).filter((entry) =>
       !!data && isEquipmentItemCompatible(entry.item, data.archetypeId)),
@@ -234,6 +213,33 @@ export default function MyImagePage() {
   const isDirty = !!data && !!draftOutfit && SLOT_ORDER.some(
     (slot) => getOutfitItemId(data.outfit, slot) !== getOutfitItemId(draftOutfit, slot),
   )
+  const hasUnavailableDraftItem = !!draftOutfit && SLOT_ORDER.some((slot) => {
+    const itemId = getOutfitItemId(draftOutfit, slot)
+    return !!itemId && !usableItemIds.has(itemId)
+  })
+  const canSave = isDirty && !hasUnavailableDraftItem && !saveMutation.isPending
+
+  const getArtworkFailureKey = (item: Pick<EquipmentItem, 'id' | 'assetKey'>) => `${item.id}:${item.assetKey}`
+
+  const markArtworkFailed = (item: Pick<EquipmentItem, 'id' | 'assetKey'>) => {
+    const failureKey = getArtworkFailureKey(item)
+    setFailedArtworkKeys((current) => {
+      if (current.has(failureKey)) return current
+      const next = new Set(current)
+      next.add(failureKey)
+      return next
+    })
+  }
+
+  const retryArtwork = (item: Pick<EquipmentItem, 'id' | 'assetKey'>) => {
+    const failureKey = getArtworkFailureKey(item)
+    setFailedArtworkKeys((current) => {
+      if (!current.has(failureKey)) return current
+      const next = new Set(current)
+      next.delete(failureKey)
+      return next
+    })
+  }
 
   const handleDraw = async (entitlementId: string, poolName: string) => {
     if (!rewardsEnabled || drawMutation.isPending) return
@@ -248,7 +254,13 @@ export default function MyImagePage() {
   }
 
   const handleRedeem = async (item: EquipmentItem & { price: number; owned: boolean }) => {
-    if (!rewardsEnabled || item.owned || redeemMutation.isPending) return
+    if (
+      !rewardsEnabled
+      || item.owned
+      || redeemMutation.isPending
+      || !data
+      || !getPixelEquipmentLayerUrl(item.assetKey, data.archetypeId)
+    ) return
     const modal = await Taro.showModal({
       title: '兑换装备',
       content: `使用 ${item.price} 通用碎片兑换「${item.name}」？`,
@@ -268,7 +280,7 @@ export default function MyImagePage() {
     )
   }
 
-  if (equipmentQuery.isError) {
+  if (equipmentQuery.isError && !data) {
     return (
       <View className='my-image my-image--centered'>
         <Text className='my-image__empty-title'>衣橱暂时没有打开</Text>
@@ -280,7 +292,7 @@ export default function MyImagePage() {
     )
   }
 
-  if (authLoading || equipmentQuery.isLoading || !draftOutfit || !data) {
+  if (authLoading || (equipmentQuery.isLoading && !data) || !draftOutfit || !data) {
     return (
       <View className='my-image my-image--centered'>
         <View className='my-image__loading-dot' />
@@ -293,7 +305,20 @@ export default function MyImagePage() {
     <View className='my-image'>
       <ScrollView className='my-image__scroll' scrollY enhanced showScrollbar={false}>
         <View className='my-image__content'>
-          <PixelAvatarStage archetypeId={data.archetypeId} outfit={draftOutfit} itemsById={itemsById} />
+          <View className='my-image__stage' aria-label='当前形象预览'>
+            <View className='my-image__stage-grid' aria-hidden='true' />
+            <PixelAvatarTurntable
+              className='my-image__turntable'
+              archetypeId={data.archetypeId}
+              outfit={draftOutfit}
+              itemsById={itemsById}
+              variant='full'
+            />
+            <View className='my-image__base-note' role='note' aria-label='基础内搭不可脱'>
+              <View className='my-image__base-note-dot' aria-hidden='true' />
+              <Text>基础内搭不可脱</Text>
+            </View>
+          </View>
 
           <View className='my-image__tabs' role='tablist' aria-label='形象功能'>
             <View
@@ -344,6 +369,7 @@ export default function MyImagePage() {
 
               <View className='my-image__section'>
                 <Text className='my-image__section-title'>搭配装备</Text>
+                <Text className='my-image__section-copy'>四类装备都可以自由穿脱，贴身基础内搭会一直保留。</Text>
                 <View className='my-image__slot-tabs'>
                   {SLOT_ORDER.map((slot) => (
                     <View
@@ -352,6 +378,7 @@ export default function MyImagePage() {
                       onClick={() => setActiveSlot(slot)}
                       role='button'
                       aria-label={`选择${SLOT_COPY[slot]}槽位`}
+                      aria-pressed={activeSlot === slot}
                     ><Text>{SLOT_COPY[slot]}</Text></View>
                   ))}
                 </View>
@@ -361,23 +388,52 @@ export default function MyImagePage() {
                     onClick={() => setDraftOutfit(withOutfitItem(draftOutfit, activeSlot, null))}
                     role='button'
                     aria-label={`脱下${SLOT_COPY[activeSlot]}`}
+                    aria-pressed={getOutfitItemId(draftOutfit, activeSlot) === null}
                   >
                     <View className='my-image__item-icon my-image__item-icon--empty'><Text>空</Text></View>
                     <Text className='my-image__item-name'>脱下</Text>
+                    {getOutfitItemId(draftOutfit, activeSlot) === null && (
+                      <View className='my-image__selection-mark' aria-hidden='true'><Text>✓</Text></View>
+                    )}
                   </View>
                   {slotInventory.map((entry) => {
                     const selected = getOutfitItemId(draftOutfit, activeSlot) === entry.item.id
+                    const artworkUrl = getPixelEquipmentLayerUrl(entry.item.assetKey, data.archetypeId)
+                    const artworkFailed = failedArtworkKeys.has(getArtworkFailureKey(entry.item))
+                    const artworkUnavailable = !artworkUrl
                     return (
                       <View
                         key={entry.id}
-                        className={`my-image__item-card${selected ? ' my-image__item-card--selected' : ''}`}
-                        onClick={() => setDraftOutfit(withOutfitItem(draftOutfit, activeSlot, entry.item.id))}
+                        className={`my-image__item-card${selected ? ' my-image__item-card--selected' : ''}${artworkUnavailable ? ' my-image__item-card--unavailable' : ''}`}
+                        onClick={() => {
+                          if (artworkUnavailable) return
+                          if (artworkFailed) retryArtwork(entry.item)
+                          setDraftOutfit(withOutfitItem(draftOutfit, activeSlot, entry.item.id))
+                        }}
                         role='button'
-                        aria-label={`穿上${entry.item.name}`}
+                        aria-label={artworkUnavailable ? `${entry.item.name}，素材准备中` : `穿上${entry.item.name}`}
+                        aria-disabled={artworkUnavailable}
+                        aria-pressed={selected}
                       >
-                        <View className={`my-image__item-icon my-image__item-icon--${entry.item.rarity}`}><Text>{SLOT_COPY[entry.item.slot].slice(0, 1)}</Text></View>
+                        <View className={`my-image__item-icon my-image__item-icon--${entry.item.rarity}`}>
+                          {artworkUrl && !artworkFailed ? (
+                            <Image
+                              className='my-image__item-art'
+                              src={artworkUrl}
+                              mode='aspectFit'
+                              lazyLoad
+                              aria-hidden='true'
+                              onError={() => markArtworkFailed(entry.item)}
+                            />
+                          ) : (
+                            <View className='my-image__item-art-placeholder'>
+                              <Text>{artworkUnavailable ? '素材准备中' : '图片暂未加载，点击装备重试'}</Text>
+                            </View>
+                          )}
+                        </View>
                         <Text className='my-image__item-name'>{entry.item.name}</Text>
                         {entry.item.rarity === 'rare' && <Text className='my-image__rare-badge'>稀有</Text>}
+                        {selected && <View className='my-image__selection-mark' aria-hidden='true'><Text>✓</Text></View>}
                       </View>
                     )
                   })}
@@ -388,7 +444,18 @@ export default function MyImagePage() {
                 <View className='my-image__section'>
                   <Text className='my-image__section-title'>最近获得</Text>
                   <ScrollView className='my-image__recent' scrollX enhanced showScrollbar={false}>
-                    {recentItems.map((entry) => <Text key={entry.id} className='my-image__recent-chip'>{entry.item.name}</Text>)}
+                    {recentItems.map((entry) => {
+                      const artworkUrl = getPixelEquipmentLayerUrl(entry.item.assetKey, data.archetypeId)
+                      const artworkFailed = failedArtworkKeys.has(getArtworkFailureKey(entry.item))
+                      return (
+                        <View key={entry.id} className='my-image__recent-chip'>
+                          {artworkUrl && !artworkFailed
+                            ? <Image className='my-image__recent-art' src={artworkUrl} mode='aspectFit' lazyLoad aria-hidden='true' onError={() => markArtworkFailed(entry.item)} />
+                            : <View className='my-image__recent-art-placeholder' aria-hidden='true' onClick={() => artworkFailed && retryArtwork(entry.item)}><Text>图</Text></View>}
+                          <Text>{entry.item.name}</Text>
+                        </View>
+                      )
+                    })}
                   </ScrollView>
                 </View>
               )}
@@ -399,26 +466,68 @@ export default function MyImagePage() {
                 <View><Text className='my-image__section-title'>通用碎片商店</Text><Text className='my-image__section-copy'>所有地点装备都可兑换，不使用现金或悦币。</Text></View>
                 <Text className='my-image__shop-balance'>{shopQuery.data?.fragmentBalance ?? data.wallet.fragmentBalance} 碎片</Text>
               </View>
+              {shopQuery.isError && shopQuery.data && (
+                <Text className='my-image__shop-cache-note'>商店暂未刷新，先展示上次目录。</Text>
+              )}
               {!rewardsEnabled ? (
                 <Text className='my-image__shop-disabled'>商店兑换暂未开放，已有装备和碎片会继续保留。</Text>
-              ) : shopQuery.isLoading ? (
+              ) : shopQuery.isLoading && !shopQuery.data ? (
                 <Text className='my-image__shop-disabled'>正在整理装备目录…</Text>
+              ) : shopQuery.isError && !shopQuery.data ? (
+                <View className='my-image__shop-state' role='status'>
+                  <Text className='my-image__shop-state-title'>商店目录暂时没有打开</Text>
+                  <Text className='my-image__shop-state-copy'>碎片不会减少，可以重新加载。</Text>
+                  <View className='my-image__shop-retry' onClick={() => shopQuery.refetch()} role='button' aria-label='重新加载商店目录'>
+                    <Text>重新加载</Text>
+                  </View>
+                </View>
+              ) : (shopQuery.data?.items.length ?? 0) === 0 ? (
+                <View className='my-image__shop-state' role='status'>
+                  <Text className='my-image__shop-state-title'>新装备正在准备</Text>
+                  <Text className='my-image__shop-state-copy'>目录还是空的，稍后再来看看。</Text>
+                </View>
               ) : (
                 <View className='my-image__shop-grid'>
-                  {(shopQuery.data?.items ?? []).map((item) => (
-                    <View key={item.id} className='my-image__shop-item'>
-                      <View className={`my-image__item-icon my-image__item-icon--${item.rarity}`}><Text>{SLOT_COPY[item.slot].slice(0, 1)}</Text></View>
-                      <Text className='my-image__shop-item-name'>{item.name}</Text>
-                      <Text className='my-image__shop-item-meta'>{item.rarity === 'rare' ? '稀有' : '普通'} · {item.price} 碎片</Text>
-                      <View
-                        className={`my-image__shop-action${item.owned ? ' my-image__shop-action--owned' : ''}`}
-                        onClick={() => { void handleRedeem(item) }}
-                        role='button'
-                        aria-label={item.owned ? `已拥有${item.name}` : `兑换${item.name}`}
-                        aria-disabled={item.owned || redeemMutation.isPending}
-                      ><Text>{item.owned ? '已拥有' : '兑换'}</Text></View>
-                    </View>
-                  ))}
+                  {(shopQuery.data?.items ?? []).map((item) => {
+                    const artworkUrl = getPixelEquipmentLayerUrl(item.assetKey, data.archetypeId)
+                    const artworkFailed = failedArtworkKeys.has(getArtworkFailureKey(item))
+                    const artworkUnavailable = !artworkUrl
+                    const actionDisabled = item.owned || redeemMutation.isPending || artworkUnavailable
+                    return (
+                      <View key={item.id} className={`my-image__shop-item${artworkUnavailable ? ' my-image__shop-item--unavailable' : ''}`}>
+                        <View className={`my-image__item-icon my-image__item-icon--${item.rarity}`}>
+                          {artworkUrl && !artworkFailed ? (
+                            <Image
+                              className='my-image__item-art'
+                              src={artworkUrl}
+                              mode='aspectFit'
+                              lazyLoad
+                              aria-hidden='true'
+                              onError={() => markArtworkFailed(item)}
+                            />
+                          ) : (
+                            <View
+                              className='my-image__item-art-placeholder'
+                              onClick={() => artworkFailed && retryArtwork(item)}
+                              role={artworkFailed ? 'button' : undefined}
+                              aria-label={artworkFailed ? `重新加载${item.name}图片` : undefined}
+                            >
+                              <Text>{artworkUnavailable ? '素材准备中' : '图片暂未加载，点击重试'}</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text className='my-image__shop-item-name'>{item.name}</Text>
+                        <Text className='my-image__shop-item-meta'>{item.rarity === 'rare' ? '稀有' : '普通'} · {item.price} 碎片</Text>
+                        <View
+                          className={`my-image__shop-action${item.owned ? ' my-image__shop-action--owned' : ''}${artworkUnavailable ? ' my-image__shop-action--disabled' : ''}`}
+                          onClick={() => !actionDisabled && void handleRedeem(item)}
+                          role='button'
+                          aria-label={artworkUnavailable ? `${item.name}素材准备中` : item.owned ? `已拥有${item.name}` : `兑换${item.name}`}
+                          aria-disabled={actionDisabled}
+                        ><Text>{artworkUnavailable ? '准备中' : item.owned ? '已拥有' : '兑换'}</Text></View>
+                      </View>
+                    )
+                  })}
                 </View>
               )}
             </View>
@@ -429,12 +538,12 @@ export default function MyImagePage() {
       {activeTab === 'wardrobe' && (
         <View className='my-image__save-bar'>
           <View
-            className={`my-image__save-button${!isDirty || saveMutation.isPending ? ' my-image__save-button--disabled' : ''}`}
-            onClick={() => isDirty && !saveMutation.isPending && saveMutation.mutate(draftOutfit)}
+            className={`my-image__save-button${!canSave ? ' my-image__save-button--disabled' : ''}`}
+            onClick={() => canSave && saveMutation.mutate(draftOutfit)}
             role='button'
             aria-label={saveMutation.isPending ? '正在保存形象' : '保存形象'}
-            aria-disabled={!isDirty || saveMutation.isPending}
-          ><Text>{saveMutation.isPending ? '正在保存…' : isDirty ? '保存形象' : '形象已保存'}</Text></View>
+            aria-disabled={!canSave}
+          ><Text>{saveMutation.isPending ? '正在保存…' : hasUnavailableDraftItem ? '素材准备中' : isDirty ? '保存形象' : '形象已保存'}</Text></View>
         </View>
       )}
 

@@ -17,26 +17,10 @@ export const PIXEL_AVATAR_ARCHETYPE_IDS = [
 ] as const
 
 export type PixelAvatarArchetypeId = (typeof PIXEL_AVATAR_ARCHETYPE_IDS)[number]
-export type PixelAvatarEquipmentSlot = 'top' | 'bottom' | 'shoes' | 'accessory'
-
-export interface PixelAvatarEquipmentSummary {
-  id: string
-  name: string
-  slot: PixelAvatarEquipmentSlot
-  rarity?: 'common' | 'rare'
-}
 
 export interface PixelAvatarFallbackProps {
   /** Canonical V4 archetype ID. Unknown runtime values use the neutral owl fallback. */
   archetypeId: PixelAvatarArchetypeId | string
-  /** Equipped summaries are visual-only; the persisted outfit remains server authority. */
-  equippedItems?: readonly PixelAvatarEquipmentSummary[]
-  variant?: 'compact' | 'full'
-  className?: string
-}
-
-export interface PixelAvatarEquipmentFallbackProps {
-  equippedItems: readonly PixelAvatarEquipmentSummary[]
   variant?: 'compact' | 'full'
   className?: string
 }
@@ -56,61 +40,12 @@ const ARCHETYPE_LABELS: Record<PixelAvatarArchetypeId, string> = {
   cat: '小透明猫',
 }
 
-const SLOT_ORDER: PixelAvatarEquipmentSlot[] = ['top', 'bottom', 'shoes', 'accessory']
-
 export function isPixelAvatarArchetypeId(value: string): value is PixelAvatarArchetypeId {
   return (PIXEL_AVATAR_ARCHETYPE_IDS as readonly string[]).includes(value)
 }
 
 function normalizeArchetypeId(value: string): PixelAvatarArchetypeId {
   return isPixelAvatarArchetypeId(value) ? value : 'owl'
-}
-
-function renderEquipmentLayers(
-  equippedItems: readonly PixelAvatarEquipmentSummary[],
-) {
-  const equippedBySlot = new Map<PixelAvatarEquipmentSlot, PixelAvatarEquipmentSummary>()
-  for (const item of equippedItems) {
-    if (SLOT_ORDER.includes(item.slot)) equippedBySlot.set(item.slot, item)
-  }
-
-  return SLOT_ORDER.map((slot) => {
-    const item = equippedBySlot.get(slot)
-    if (!item) return null
-    return (
-      <View
-        key={slot}
-        className={`pixel-avatar__equipment pixel-avatar__equipment--${slot} pixel-avatar__equipment--${item.rarity ?? 'common'}`}
-        data-slot={slot}
-        data-item-id={item.id}
-      >
-        {slot === 'accessory' && <View className='pixel-avatar__accessory-spark' />}
-      </View>
-    )
-  })
-}
-
-/**
- * Visible code-native safety layer for equipment whose optional CDN raster is unavailable.
- * It intentionally contains no character or scene, so the approved base character stays visible.
- */
-export function PixelAvatarEquipmentFallback({
-  equippedItems,
-  variant = 'full',
-  className = '',
-}: PixelAvatarEquipmentFallbackProps) {
-  if (equippedItems.length === 0) return null
-
-  return (
-    <View
-      className={`pixel-equipment-fallback pixel-equipment-fallback--${variant} ${className}`.trim()}
-      aria-hidden='true'
-    >
-      <View className='pixel-avatar__figure pixel-avatar__figure--equipment-only'>
-        {renderEquipmentLayers(equippedItems)}
-      </View>
-    </View>
-  )
 }
 
 /**
@@ -122,24 +57,11 @@ export function PixelAvatarEquipmentFallback({
  */
 export default function PixelAvatarFallback({
   archetypeId,
-  equippedItems = [],
   variant = 'full',
   className = '',
 }: PixelAvatarFallbackProps) {
   const normalizedId = normalizeArchetypeId(archetypeId)
   const archetypeLabel = ARCHETYPE_LABELS[normalizedId]
-  const equippedBySlot = new Map<PixelAvatarEquipmentSlot, PixelAvatarEquipmentSummary>()
-
-  for (const item of equippedItems) {
-    if (SLOT_ORDER.includes(item.slot)) equippedBySlot.set(item.slot, item)
-  }
-
-  const equippedNames = SLOT_ORDER
-    .map((slot) => equippedBySlot.get(slot)?.name.trim())
-    .filter((name): name is string => Boolean(name))
-  const equipmentLabel = equippedNames.length > 0
-    ? `，已穿戴${equippedNames.join('、')}`
-    : '，穿着初始服装'
   const runtimeFallbackLabel = archetypeId === normalizedId ? '' : '，使用默认形象'
 
   return (
@@ -147,7 +69,7 @@ export default function PixelAvatarFallback({
       className={`pixel-avatar pixel-avatar--${variant} pixel-avatar--${normalizedId} ${className}`.trim()}
       data-archetype={normalizedId}
       role='img'
-      aria-label={`${archetypeLabel}像素伙伴${equipmentLabel}${runtimeFallbackLabel}`}
+      aria-label={`${archetypeLabel}像素伙伴，仅保留不可脱的基础背心与安全短裤${runtimeFallbackLabel}`}
     >
       <View className='pixel-avatar__figure' aria-hidden='true'>
         <View className='pixel-avatar__shell' />
@@ -165,8 +87,6 @@ export default function PixelAvatarFallback({
 
         <View className='pixel-avatar__leg pixel-avatar__leg--left' />
         <View className='pixel-avatar__leg pixel-avatar__leg--right' />
-        <View className='pixel-avatar__base-shoe pixel-avatar__base-shoe--left' />
-        <View className='pixel-avatar__base-shoe pixel-avatar__base-shoe--right' />
         <View className='pixel-avatar__body' />
         <View className='pixel-avatar__base-top'>
           <View className='pixel-avatar__base-top-mark' />
@@ -201,12 +121,10 @@ export default function PixelAvatarFallback({
           <View className='pixel-avatar__whisker pixel-avatar__whisker--right-one' />
           <View className='pixel-avatar__whisker pixel-avatar__whisker--right-two' />
         </View>
-
-        {renderEquipmentLayers(equippedItems)}
       </View>
 
       <Text className='pixel-avatar__accessible-copy'>
-        {archetypeLabel}{equippedNames.length > 0 ? `，穿戴${equippedNames.join('、')}` : '，初始服装'}
+        {archetypeLabel}，基础内搭不可脱
       </Text>
     </View>
   )

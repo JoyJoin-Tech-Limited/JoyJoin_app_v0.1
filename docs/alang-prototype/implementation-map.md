@@ -210,10 +210,10 @@ Discover 卡
 
 ## 10. 我的形象与装备（产品授权的 Profile-only 最小闭环）
 
-- 12 个 canonical V4 动物人格分别使用全身拟人像素伙伴；透明人物层统一为 512×768 WebP 并从 CDN 加载，只用于新版 Profile/我的形象，不替换人格结果和分享资产。已批准的基础人物图自带安全初始服装，且不包含 UI、城市或霓虹背景；两个页面保留原有品牌背景，CDN 失败时使用 character-only fallback。
+- 12 个 canonical V4 动物人格使用 V2 纸娃娃渲染；每人格只有一张 512×768 透明基础身体图，固定保留贴身背心与安全短裤，不包含 UI、城市或霓虹背景。每件初始装备是一张裁边透明 WebP，由 `avatar-assets-v2.json` 的画布锚点放到身体上；同一图也直接作为衣橱缩略图。两个页面保留原有品牌背景，CDN 失败时使用含安全内搭的 character-only fallback。
 - Profile 主舞台使用暖白/暖米表面与轻紫品牌点缀，不使用紫色赛博城市背景。基础像素角色只依赖人格与 `profilePixelAvatarEnabled`；`outfit` 为空、装备请求尚未返回或当前没有穿戴时仍显示基础角色，不再错误回退旧低多边形素材。
 - Profile 主页面只保留身份主舞台、真实潮流值、真实活动/连接/资料完成度、“我的形象”、“我的故事”和真实徽章。原“更多服务”及退出登录全部迁入齿轮打开的 `/pages/profile-linked/settings/index` 新页面；主页齿轮不再弹 ActionSheet。
-- 四个独立槽：上装、下装、鞋履、配饰。页面内变更只修改草稿，用户点击“保存形象”后带 `expectedVersion` 持久化；穿脱、保存和库存均为服务端状态。正式单品分层 raster 获批并发布前，装备状态不叠加任何紫色几何块、code-native 覆盖层或其他伪造图形，画面继续显示穿着初始服装的基础角色。
+- 四个独立可脱槽：上装、下装、鞋履、配饰。脱下仅移除对应透明层，固定内搭永不移除。页面内变更只修改草稿，用户点击“保存形象”后带 `expectedVersion` 持久化；穿脱、保存和库存均为服务端状态。客户端以五档场景透视/景深视差提供伪 3D 拖动，不为 16 种槽位组合或未来组合生成整人图；新增装备只需一个透明 layer 与 placement/depth 元数据。
 - 每个人格首次进入幂等获得四件初始装备。真实活动奖励是永久保留、手动领取的抽取资格；测试阿浪/测试池不产生资格。
 - 地点池绑定稳定 `venues.id`；盲盒与未来同餐厅活动共享池。阿浪使用 mission-owned pool。每池 4 普通 + 2 稀有，权重 80/20；全局连续三次未获得新品后，第 4 抽保证当前池未拥有单品（若仍有），当前池集齐时保底计数冻结。
 - 重复普通/稀有装备分别转为 10/30 通用碎片；碎片商店普通/稀有价格为 40/120，不接现金、支付或会员权益。兑换使用幂等键。
@@ -231,7 +231,7 @@ npm run test -w mini-program -- --run src/pages/alang src/lib/alang src/componen
 2026-07-15 已知验证快照：
 
 - 5 个服务端个人故事/装备正确性专项文件共 47 项测试通过；这不替代最终全量 Server/Mini 专项门禁。
-- `check-profile-pixel-assets.mjs` 验证 12 张 512×768 透明 WebP，共 473,844 bytes，单张均不超过 64 KiB；manifest/CDN 路径已接线，但远端上传和逐 URL HTTP 验证仍需成功的 CDN workflow 证明。
+- `check-profile-pixel-assets.mjs` 以 manifest 驱动方式验证 V2 的 12 张 512×768 基础身体、固定 48 张初始装备层，以及 `equipment-items.json` 登记的任意后续装备；同时校验不可脱内搭标记、placement 边界、透明度、实际裁图尺寸、depth、内容哈希和 CDN 映射。CDN workflow 会先重建并确认源图、运行时 manifest 与发布 manifest 没有漂移，再按 manifest 逐 URL 做 HTTP 验证。
 - migration journal 静态校验通过，71/71 migration 均已登记；该结果不等于 staging/production 已实际应用两份新 migration。
 - H5 production build 通过（1,393 modules）。五张页面均已按 390×844 CSS viewport、2× 输出为 780×1688 完成 2026-07-15 最新复截图：Profile、Discover 阿浪卡、Search、我的故事和我的形象均为 F3。我的形象 clipping-aware 视觉扫描为 0 个阻断项；此前 sticky 保存栏与下装/鞋履标签的 2 处报告是滚动视口裁切误报。正式装备美术、设备/微信真机验证尚未完成，所有页面均不得提升为 F4。
 - `git diff --check` 通过。微信真机、真实 provider、真实 PostgreSQL migration/并发 smoke 和最终 Weapp/package gate 仍是发布前条件。

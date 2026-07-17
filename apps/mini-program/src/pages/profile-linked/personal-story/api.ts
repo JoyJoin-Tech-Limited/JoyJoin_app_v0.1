@@ -6,7 +6,7 @@ import type {
   PersonalStoryResponse,
   PersonalStoryUpdateJobView as PersonalStoryUpdateJob,
   PersonalStoryUpdateResponse,
-} from '@joyjoin/shared'
+} from '@joyjoin/shared/schema'
 
 export const PERSONAL_STORY_QUERY_KEY = ['mini-program', 'personal-story'] as const
 export const PERSONAL_STORY_POLL_INTERVAL_MS = 3_000

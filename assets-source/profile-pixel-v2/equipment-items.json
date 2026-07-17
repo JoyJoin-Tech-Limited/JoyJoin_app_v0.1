@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "description": "Source-of-truth for future reusable paper-doll equipment. Put each transparent source image under assets-source/profile-pixel-v2/equipment/ and register it here. Placements use the canonical 512x768 body canvas.",
+  "items": []
+}
