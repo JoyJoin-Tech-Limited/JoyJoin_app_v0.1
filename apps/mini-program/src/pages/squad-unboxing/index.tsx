@@ -636,6 +636,13 @@ export default function SquadUnboxingPage() {
     )
   }
 
+  // Dock cluster + scroll padding must track the bottom dock's actual height
+  // (368rpx action-zone, +128rpx when the reveal chip shows) so the cluster
+  // sits just above the lower buttons and never covers the 收起卡组 trigger.
+  const showRevealChip = isInteractiveSession && unflippedCount > 0 && deckPhase === 'fan'
+  const dockClusterBottomRpx = (showRevealChip ? 496 : 368) + 16
+  const revealedScrollPaddingBottomRpx = dockClusterBottomRpx + 400
+
   const tonightsPanel = (
     <View
       className={[
@@ -813,6 +820,7 @@ export default function SquadUnboxingPage() {
     <View className={pageClassName}>
       <ScrollView
         className={['squad-unboxing__scroll', flowState === 'revealed' ? 'squad-unboxing__scroll--revealed' : ''].filter(Boolean).join(' ')}
+        style={flowState === 'revealed' ? { paddingBottom: `calc(${revealedScrollPaddingBottomRpx}rpx + env(safe-area-inset-bottom))` } : undefined}
         scrollY
         enhanced
         showScrollbar={false}
@@ -1040,7 +1048,10 @@ export default function SquadUnboxingPage() {
           position, exactly like previous versions. Lives at the page root
           because WeChat scroll-view does not support fixed descendants. */}
       {flowState === 'revealed' ? (
-        <View className='squad-unboxing__dock-cluster'>
+        <View
+          className='squad-unboxing__dock-cluster'
+          style={{ bottom: `calc(${dockClusterBottomRpx}rpx + env(safe-area-inset-bottom))` }}
+        >
           <View
             className='squad-unboxing__analysis-bubble'
             role='status'
