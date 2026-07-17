@@ -296,16 +296,16 @@ export function buildDeckPillAriaLabel(memberCount: number): string {
   return `展开卡组，查看你的${memberCount}位桌友`
 }
 
-// ── "今晚这桌" collapsible panel copy (2026-07-16) ──────────────────────────
-// The event-brief chapter is collapsed by default in the revealed state; a
-// single toggle below the 团魂 bubble expands it in place.
+// ── "今晚这桌" event-type pill tone (2026-07-17) ───────────────────────────
+// The brief-type pill renders as a colored label; the tone is derived from the
+// pool's event type so 饭局 / 酒局 read as distinct categories at a glance.
 
-/** Toggle label — mirrors the chapter title so the button "contains" the panel. */
-export const SQUAD_TONIGHTS_TABLE_TOGGLE_LABEL = '今晚这桌'
-
-/** Toggle aria-label — state-aware action verb for screen readers. */
-export function buildTonightsTableToggleAriaLabel(open: boolean): string {
-  return open ? '收起今晚这桌详情' : '展开今晚这桌，查看时间地点'
+/** Pill tone for the 今晚这桌 brief-type label. */
+export function getEventTypePillTone(eventType?: string | null): 'dining' | 'drinks' | 'default' {
+  if (!eventType) return 'default'
+  if (eventType === 'dining' || eventType === 'dinner' || eventType === '饭局') return 'dining'
+  if (eventType === 'bar' || eventType === 'drinks' || eventType === '酒局') return 'drinks'
+  return 'default'
 }
 
 /** Mini-strip cap inside the pill; the rest collapses into a +N chip. */

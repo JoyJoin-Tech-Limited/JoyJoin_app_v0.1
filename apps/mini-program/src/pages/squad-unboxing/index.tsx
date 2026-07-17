@@ -26,16 +26,15 @@ import DeckCollapsePill from './DeckCollapsePill'
 import {
   SQUAD_DECK_POCKETED_ANNOUNCEMENT,
   SQUAD_DECK_POCKETED_HINT_TEXT,
-  SQUAD_TONIGHTS_TABLE_TOGGLE_LABEL,
   buildDeckPillStripModel,
   buildEventBriefDate,
   buildFocusedMemberBubbleText,
   buildRevealChipLabel,
   buildSquadSoulBubbleText,
-  buildTonightsTableToggleAriaLabel,
   getChemistryWord,
   getDeckPillChemistryClass,
   getEventTypeLabel,
+  getEventTypePillTone,
   getMemberName,
   getVibeLabel,
   resolveCardFocusInteraction,
@@ -169,11 +168,6 @@ export default function SquadUnboxingPage() {
   // the flip ends (ref-tracked timer, ≤500ms bound — never tap-instant).
   const [bubbleNarration, setBubbleNarration] = useState<{ kind: 'member'; userId: string } | { kind: 'burst' } | null>(null)
   const narrationCancelRef = useRef<(() => void) | null>(null)
-  // 今晚这桌 collapsible panel (2026-07-16): collapsed by default — the single
-  // toggle below the 团魂 bubble expands it in place. The ref mirror keeps the
-  // toggle handler free of side effects inside a state updater.
-  const [tonightsTableOpen, setTonightsTableOpen] = useState(false)
-  const tonightsTableOpenRef = useRef(false)
   const tonightsTableViewTrackedRef = useRef(false)
   const matchExplanationCopy = normalizeMatchingCopy(group?.matchExplanation)
 
@@ -202,9 +196,7 @@ export default function SquadUnboxingPage() {
     seenMemberNarrationsRef.current = new Set()
     animateFocusedNarrationRef.current = false
     setAnimateFocusedNarration(false)
-    tonightsTableOpenRef.current = false
     tonightsTableViewTrackedRef.current = false
-    setTonightsTableOpen(false)
   }, [groupId])
 
   useEffect(() => {
@@ -433,26 +425,6 @@ export default function SquadUnboxingPage() {
     ? (viewerPairByMemberId.get(focusedMember.userId) ?? null)
     : null
 
-  /**
-   * 今晚这桌 panel toggle (2026-07-16): the event-brief chapter is collapsed
-   * by default so the revealed state's blank space stays clean; the single
-   * toggle below the bubble expands it in place. The chapter impression
-   * analytics event fires once per group on the FIRST expand.
-   */
-  const handleTonightsTableToggle = useCallback(() => {
-    haptics('light')
-    const next = !tonightsTableOpenRef.current
-    tonightsTableOpenRef.current = next
-    setTonightsTableOpen(next)
-    if (next && !tonightsTableViewTrackedRef.current) {
-      tonightsTableViewTrackedRef.current = true
-      squadUnboxingAnalytics.track('squad_unboxing_tonights_table_view', {
-        groupId,
-        screen: 'squad-unboxing',
-      })
-    }
-  }, [groupId])
-
   // Pill view models (AC-03): strip + chemistry-tinted ring. Memoized on the
   // flip set so a freshly revealed card swaps its back-chip for a mini.
   const pillStripModel = useMemo(
@@ -475,24 +447,24 @@ export default function SquadUnboxingPage() {
     if (prev !== 'pocketed' && deckPhase === 'pocketed') {
       setAnnouncement(SQUAD_DECK_POCKETED_ANNOUNCEMENT)
       const timer = setTimeout(() => setAnnouncement(''), 1200)
-      // Auto-expand the 今晚这桌 panel when the cards fold away (2026-07-16):
-      // pocketing is the user's explicit "focus the event content" gesture,
-      // so the panel must be visible in that phase without an extra tap.
-      if (!tonightsTableOpenRef.current) {
-        tonightsTableOpenRef.current = true
-        setTonightsTableOpen(true)
-        if (!tonightsTableViewTrackedRef.current) {
-          tonightsTableViewTrackedRef.current = true
-          squadUnboxingAnalytics.track('squad_unboxing_tonights_table_view', {
-            groupId,
-            screen: 'squad-unboxing',
-          })
-        }
-      }
       return () => clearTimeout(timer)
     }
     return undefined
   }, [deckPhase, groupId])
+
+  // 今晚这桌 chapter is always expanded (2026-07-17): fire the impression
+  // analytics once per group on first reveal, mirroring the old first-expand
+  // semantics from the removed collapse toggle.
+  useEffect(() => {
+    if (flowState !== 'revealed') return
+    if (tonightsTableViewTrackedRef.current) return
+    tonightsTableViewTrackedRef.current = true
+    squadUnboxingAnalytics.track('squad_unboxing_tonights_table_view', {
+      groupId,
+      screen: 'squad-unboxing',
+    })
+  }, [flowState, groupId])
+
   // Bubble voice: burst-completion line > focused-member narration (only when
   // the narration matches the currently focused card — a pending flip keeps
   // the resting voice until flip-end) > resting voice. While face-down cards
@@ -525,11 +497,6 @@ export default function SquadUnboxingPage() {
   // Event-brief card: structured date block + shared OracleCard corner vignette.
   const briefDate = buildEventBriefDate(group?.finalDateTime ?? pool?.dateTime)
   const briefVignetteSrc = getOracleCardCornerAsset(pool?.eventType ?? undefined)
-  // One-line summary on the collapsed 今晚这桌 toggle (date · time · type).
-  const tonightsTableSummary = briefDate
-    ? `${briefDate.month}${briefDate.day}日 ${briefDate.weekday} ${briefDate.time} · ${getEventTypeLabel(pool?.eventType)}`
-    : getEventTypeLabel(pool?.eventType)
-
   // Warm the fan's archetype art during the reveal so cards never paint blank
   // frames on 4G (skeleton covers first paint; this shrinks the decode gap).
   useEffect(() => {
@@ -624,15 +591,13 @@ export default function SquadUnboxingPage() {
   const dockClusterBottomRpx = (showRevealChip ? 496 : 368) + 16
   const revealedScrollPaddingBottomRpx = dockClusterBottomRpx + 400
 
+  // Always expanded (2026-07-17) — the collapse toggle/link was removed; the
+  // chapter renders directly in the scroll flow below the bubble.
   const tonightsPanel = (
     <View
-      className={[
-        'squad-unboxing__tonights-panel',
-        tonightsTableOpen ? 'squad-unboxing__tonights-panel--open' : '',
-      ].filter(Boolean).join(' ')}
+      className='squad-unboxing__tonights-panel squad-unboxing__tonights-panel--open'
       role='region'
       aria-label='今晚这桌详情'
-      aria-hidden={!tonightsTableOpen}
     >
       <View className={[
         'squad-unboxing__chapter',
@@ -661,7 +626,9 @@ export default function SquadUnboxingPage() {
             ) : null}
           </View>
           <View className='squad-unboxing__brief-header-aside'>
-            <View className='squad-unboxing__brief-type-pill'>
+            <View
+              className={`squad-unboxing__brief-type-pill squad-unboxing__brief-type-pill--${getEventTypePillTone(pool.eventType)}`}
+            >
               <Text className='squad-unboxing__brief-type-pill-text'>{getEventTypeLabel(pool.eventType)}</Text>
             </View>
             {briefVignetteSrc && !briefVignetteFailed ? (
@@ -873,9 +840,52 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'revealed' ? (
           <>
-            <View className='squad-unboxing__blank-spacer' />
+            <View
+              className='squad-unboxing__analysis-bubble'
+              role='status'
+              aria-live='polite'
+              aria-atomic='true'
+            >
+              <View
+                className={[
+                  'squad-unboxing__analysis-bubble-inner',
+                  headerReady ? 'squad-unboxing__analysis-bubble-inner--ready' : '',
+                ].filter(Boolean).join(' ')}
+              >
+                <Image
+                  className={['squad-unboxing__analysis-bubble-mascot', headerReady ? 'squad-unboxing__analysis-bubble-mascot--ready' : ''].filter(Boolean).join(' ')}
+                  mode='aspectFit'
+                  src={getXiaoyueExpressionAsset('matchSuccess')}
+                  aria-hidden='true'
+                />
+                <View className='squad-unboxing__analysis-bubble-bubble'>
+                  <View aria-hidden='true'>
+                    <TypewriterText
+                      className='squad-unboxing__analysis-bubble-text'
+                      text={bubbleText}
+                      speed={45}
+                      delay={180}
+                      maxDuration={bubbleNarration?.kind === 'member' ? undefined : 3000}
+                      enabled={!shouldReduceMotion && !isDegradation && (bubbleNarration?.kind !== 'member' || animateFocusedNarration)}
+                      showCursor={false}
+                      onComplete={() => {
+                        squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
+                          groupId,
+                          screen: 'squad-unboxing',
+                        })
+                      }}
+                    />
+                  </View>
+                  <Text className='squad-unboxing__sr-only'>{bubbleText}</Text>
+                  <AIGCLabel
+                    meta={groupAnalysis?.meta?.aigc}
+                    className='squad-unboxing__analysis-bubble-aigc'
+                    reduceMotion={shouldReduceMotion}
+                  />
+                </View>
+              </View>
+            </View>
             {tonightsPanel}
-            <View className='squad-unboxing__spacer' />
           </>
         ) : null}
         </View>
@@ -998,89 +1008,6 @@ export default function SquadUnboxingPage() {
             aria-hidden='true'
           />
           <Text className='squad-unboxing__pocket-hint-text'>{SQUAD_DECK_POCKETED_HINT_TEXT}</Text>
-        </View>
-      ) : null}
-
-      {/* Fixed dock cluster (2026-07-16): Joy's words + the single 今晚这桌
-          collapse toggle pinned directly above the bottom action dock —
-          visible in BOTH fan and pocketed phases, independent of scroll
-          position, exactly like previous versions. Lives at the page root
-          because WeChat scroll-view does not support fixed descendants. */}
-      {flowState === 'revealed' ? (
-        <View
-          className='squad-unboxing__dock-cluster'
-          style={{ bottom: `calc(${dockClusterBottomRpx}rpx + env(safe-area-inset-bottom))` }}
-        >
-          <View
-            className='squad-unboxing__analysis-bubble'
-            role='status'
-            aria-live='polite'
-            aria-atomic='true'
-          >
-            <View
-              className={[
-                'squad-unboxing__analysis-bubble-inner',
-                headerReady ? 'squad-unboxing__analysis-bubble-inner--ready' : '',
-              ].filter(Boolean).join(' ')}
-            >
-              <Image
-                className={['squad-unboxing__analysis-bubble-mascot', headerReady ? 'squad-unboxing__analysis-bubble-mascot--ready' : ''].filter(Boolean).join(' ')}
-                mode='aspectFit'
-                src={getXiaoyueExpressionAsset('matchSuccess')}
-                aria-hidden='true'
-              />
-              <View className='squad-unboxing__analysis-bubble-bubble'>
-                <View aria-hidden='true'>
-                  <TypewriterText
-                    className='squad-unboxing__analysis-bubble-text'
-                    text={bubbleText}
-                    speed={45}
-                    delay={180}
-                    maxDuration={bubbleNarration?.kind === 'member' ? undefined : 3000}
-                    enabled={!shouldReduceMotion && !isDegradation && (bubbleNarration?.kind !== 'member' || animateFocusedNarration)}
-                    showCursor={false}
-                    onComplete={() => {
-                      squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
-                        groupId,
-                        screen: 'squad-unboxing',
-                      })
-                    }}
-                  />
-                </View>
-                <Text className='squad-unboxing__sr-only'>{bubbleText}</Text>
-                <AIGCLabel
-                  meta={groupAnalysis?.meta?.aigc}
-                  className='squad-unboxing__analysis-bubble-aigc'
-                  reduceMotion={shouldReduceMotion}
-                />
-              </View>
-            </View>
-          </View>
-
-          <View
-            className='squad-unboxing__tonights-toggle'
-            hoverClass='squad-unboxing__tonights-toggle--pressed'
-            role='button'
-            aria-expanded={tonightsTableOpen}
-            aria-label={buildTonightsTableToggleAriaLabel(tonightsTableOpen)}
-            onClick={handleTonightsTableToggle}
-          >
-            <View className='squad-unboxing__tonights-toggle-copy'>
-              <Text className='squad-unboxing__tonights-toggle-text'>
-                {SQUAD_TONIGHTS_TABLE_TOGGLE_LABEL}
-              </Text>
-              <Text className='squad-unboxing__tonights-toggle-summary'>
-                {tonightsTableSummary}
-              </Text>
-            </View>
-            <View
-              className={[
-                'squad-unboxing__expand-chevron',
-                tonightsTableOpen ? 'squad-unboxing__expand-chevron--open' : '',
-              ].filter(Boolean).join(' ')}
-              aria-hidden='true'
-            />
-          </View>
         </View>
       ) : null}
 
