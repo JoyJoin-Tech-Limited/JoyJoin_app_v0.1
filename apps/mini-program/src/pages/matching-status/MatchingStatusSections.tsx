@@ -338,12 +338,6 @@ export function MatchingStatusLiveOverlay({
   onDismissLiveReveal,
 }: MatchingStatusLiveOverlayProps) {
   const aigcLabelsEnabled = useAIGCLabelsEnabled()
-
-  if (liveStage === 'idle') {
-    return null
-  }
-
-  const resolvedGroupNumber = matchedGroupNumber ?? effectiveGroupDetails?.group.groupNumber ?? null
   const [isPuzzleComplete, setIsPuzzleComplete] = useState(shouldReduceMotion || puzzlePreludeEnabled === false)
   const showPuzzlePrelude = puzzlePreludeEnabled && !hasRevealed && effectiveGroupDetails != null
   const memberCount = effectiveGroupDetails?.members.length ?? 0
@@ -358,6 +352,12 @@ export function MatchingStatusLiveOverlay({
       })
     }
   }, [memberCount, resolvedGroupId, showPuzzlePrelude])
+
+  if (liveStage === 'idle') {
+    return null
+  }
+
+  const resolvedGroupNumber = matchedGroupNumber ?? effectiveGroupDetails?.group.groupNumber ?? null
 
   return (
     <View className='matching-status__overlay'>
