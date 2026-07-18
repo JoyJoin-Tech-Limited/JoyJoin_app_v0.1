@@ -584,12 +584,11 @@ export default function SquadUnboxingPage() {
     )
   }
 
-  // Dock cluster + scroll padding must track the bottom dock's actual height
-  // (368rpx action-zone, +128rpx when the reveal chip shows) so the cluster
-  // sits just above the lower buttons and never covers the card fan.
+  // Scroll padding must clear the bottom dock's actual height (368rpx
+  // action-zone, +128rpx when the reveal chip shows) plus a breathing gap, so
+  // the in-flow bubble + 今晚这桌 chapter stay visible above the lower buttons.
   const showRevealChip = isInteractiveSession && unflippedCount > 0 && deckPhase === 'fan'
-  const dockClusterBottomRpx = (showRevealChip ? 496 : 368) + 16
-  const revealedScrollPaddingBottomRpx = dockClusterBottomRpx + 400
+  const revealedScrollPaddingBottomRpx = (showRevealChip ? 496 : 368) + 40
 
   // Always expanded (2026-07-17) — the collapse toggle/link was removed; the
   // chapter renders directly in the scroll flow below the bubble.

@@ -357,30 +357,9 @@ $fan-rotations: (
     padding: 0 $container-padding;
   }
 
-  // ── Fixed dock cluster (2026-07-16) ─────────────────────────────────────
-  // Joy's words bubble + the single 今晚这桌 collapse toggle, pinned directly
-  // above the bottom action dock at the PAGE ROOT (WeChat scroll-view does
-  // not support fixed descendants; an in-flow flex-pinned cluster lands
-  // behind the opaque fixed dock). Visible in both fan and pocketed phases,
-  // independent of scroll position. Bottom anchor mirrors the dock reserve:
-  // fixed-footer-reserve(580rpx, $spacing-md) = 580 + 32 + safe-area, plus a
-  // 16rpx breathing gap.
-  &__dock-cluster {
-    position: fixed;
-    left: $container-padding;
-    right: $container-padding;
-    bottom: calc(628rpx + env(safe-area-inset-bottom));
-    z-index: 110; // above opaque bottom dock (100) and pocket pill (20)
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-  }
-
-  // Collapsible panel: max-height + opacity + visibility so the closed state
-  // is invisible, un-tappable, and out of the a11y tree (the 复制 chip inside
-  // must not be focusable while collapsed). Lives inside the ScrollView content
-  // so it can scroll naturally when expanded; the fixed dock cluster above it
-  // only holds the Joy bubble and the collapse toggle.
+  // Event-brief panel: always expanded in the ScrollView flow below the Joy
+  // bubble (the collapse toggle + fixed dock cluster were removed 2026-07-17);
+  // it scrolls naturally with the content.
   &__tonights-panel {
     max-height: 0;
     overflow: hidden;
@@ -1381,8 +1360,8 @@ $fan-rotations: (
     justify-content: flex-end;
     padding-bottom: $spacing-md;
     // 2026-07-17: uniform fan scale — the dealt fan renders at 75% so the
-    // two-row layout clears BOTH the viewport top edge and the dock-cluster
-    // chatbox on ~1450rpx-content devices (iPhone X/11 class). A transform
+    // two-row layout clears BOTH the viewport top edge and the Joy chatbox
+    // on ~1450rpx-content devices (iPhone X/11 class). A transform
     // scale (not smaller size maps) keeps the card's fixed-rpx typography
     // proportional; origin bottom-centre + the translateY lift anchors the
     // visual fan just above the chatbox. Shadow + back-shimmer live inside
@@ -2623,16 +2602,6 @@ $fan-rotations: (
   }
 
 
-  &__blank-spacer {
-    flex: 1 1 auto;
-    min-height: $spacing-lg;
-    pointer-events: none;
-  }
-
-  &__spacer {
-    height: $spacing-xl;
-  }
-
   &__success-overlay {
     position: fixed;
     inset: 0;
@@ -2890,7 +2859,6 @@ $fan-rotations: (
   .squad-unboxing__deck-card-pocket-glow,
   .squad-unboxing__deck-pill,
   .squad-unboxing__pocket-hint,
-  .squad-unboxing__tonights-toggle,
   .squad-unboxing__tonights-panel {
     animation: none !important;
     transition: none !important;
