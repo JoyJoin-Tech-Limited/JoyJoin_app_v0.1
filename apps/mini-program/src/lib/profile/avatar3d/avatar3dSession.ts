@@ -161,8 +161,8 @@ export function createAvatar3DSession(options: Avatar3DSessionOptions): Avatar3D
 
   const scene = new Scene()
   const camera = new PerspectiveCamera(34, options.cssWidth / Math.max(1, options.cssHeight), 0.1, 60)
-  camera.position.set(0, 1.68, 6.45)
-  camera.lookAt(0, 1.68, 0)
+  camera.position.set(0, 2.02, 6.45)
+  camera.lookAt(0, 2.02, 0)
 
   // Lighting: warm hemisphere fill + white key + purple rim from behind so the
   // black-purple spider reads at every yaw.

@@ -114,6 +114,13 @@ describe('spider persona model — scene graph structure', () => {
     expect(findByName(model.groups.underwear, 'underwear-vest').geometry.type).toBe('CylinderGeometry')
     expect(findByName(model.groups.underwear, 'underwear-short-leg-left')).toBeTruthy()
     expect(findByName(model.groups.underwear, 'underwear-short-leg-right')).toBeTruthy()
+    // Reference silhouette: tall human proportions and the asymmetric stance
+    // (left hand at the face, right hand resting at the waist).
+    expect(findByName(model.groups.head, 'head-sphere').position.y).toBeGreaterThan(3.3)
+    expect(findByName(model.groups.body, 'hips').position.y).toBeGreaterThan(1.5)
+    expect(findByName(model.groups.legs, 'foot-left').position.y).toBeLessThan(0.15)
+    expect(findByName(model.groups.arms, 'hand-left').position.y).toBeGreaterThan(3)
+    expect(findByName(model.groups.arms, 'hand-right').position.y).toBeLessThan(2)
     model.dispose()
   })
 
@@ -224,8 +231,8 @@ describe('pre-built spider starter garments', () => {
   it('makes each garment read as its real item: zipper front, right cargo pocket, toe caps, chest web', () => {
     const model = buildSpiderPersonaModel()
     // Bomber: zipper runs down the chest front; zip pocket on the LEFT sleeve.
-    expect(findByName(model.equipmentGroups.top, 'bomber-zipper-front').position.z).toBeGreaterThan(0.5)
-    expect(findByName(model.equipmentGroups.top, 'bomber-sleeve-pocket-left').position.x).toBeLessThan(-0.8)
+    expect(findByName(model.equipmentGroups.top, 'bomber-zipper-front').position.z).toBeGreaterThan(0.35)
+    expect(findByName(model.equipmentGroups.top, 'bomber-sleeve-pocket-left').position.x).toBeLessThan(-0.55)
     // Cargo: the 3D pouch sits on the RIGHT thigh.
     expect(findByName(model.equipmentGroups.bottom, 'cargo-pocket-right').position.x).toBeGreaterThan(0.4)
     // High-tops: toe cap covers the front of each foot.
