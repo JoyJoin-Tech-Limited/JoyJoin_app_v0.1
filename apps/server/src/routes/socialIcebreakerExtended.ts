@@ -416,6 +416,11 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
     state.votes = state.votes || [];
     await updateSession(socialSessionId, state);
 
+    // Single-test mode: bots cannot call this route themselves, so fill their
+    // statements now or the phase stalls at "waiting for all statements".
+    await runBotSimulationSafely(socialSessionId, state, 'lie-detective-generate');
+    await updateSession(socialSessionId, state);
+
     return res.json({ statements: sanitizedStatements, meta: statementResult.meta });
   } catch (error) {
     logger.error('[SocialIcebreaker] lie-detective/generate error:', { error });
