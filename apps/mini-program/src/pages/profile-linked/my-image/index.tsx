@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import PixelAvatarTurntable from '../../../components/profile/PixelAvatarTurntable'
+import PixelAvatar3D from '../../../components/profile/PixelAvatar3D'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import {
   drawEquipmentEntitlement,
@@ -307,7 +307,7 @@ export default function MyImagePage() {
         <View className='my-image__content'>
           <View className='my-image__stage' aria-label='当前形象预览'>
             <View className='my-image__stage-grid' aria-hidden='true' />
-            <PixelAvatarTurntable
+            <PixelAvatar3D
               className='my-image__turntable'
               archetypeId={data.archetypeId}
               outfit={draftOutfit}
@@ -318,6 +318,14 @@ export default function MyImagePage() {
               <View className='my-image__base-note-dot' aria-hidden='true' />
               <Text>基础内搭不可脱</Text>
             </View>
+            {process.env.TARO_APP_AVATAR_3D_QA === 'true' && (
+              <View
+                className='my-image__qa-entry'
+                onClick={() => Taro.navigateTo({ url: '/pages/profile-linked/my-image/qa3d/index' })}
+                role='button'
+                aria-label='打开 3D 形象调试页'
+              ><Text>3D 调试</Text></View>
+            )}
           </View>
 
           <View className='my-image__tabs' role='tablist' aria-label='形象功能'>
@@ -375,7 +383,11 @@ export default function MyImagePage() {
                     <View
                       key={slot}
                       className={`my-image__slot-tab${activeSlot === slot ? ' my-image__slot-tab--active' : ''}`}
-                      onClick={() => setActiveSlot(slot)}
+                      hoverClass='my-image__slot-tab--pressed'
+                      onClick={() => {
+                        haptics('light')
+                        setActiveSlot(slot)
+                      }}
                       role='button'
                       aria-label={`选择${SLOT_COPY[slot]}槽位`}
                       aria-pressed={activeSlot === slot}
@@ -385,7 +397,11 @@ export default function MyImagePage() {
                 <View className='my-image__inventory-grid'>
                   <View
                     className={`my-image__item-card${getOutfitItemId(draftOutfit, activeSlot) === null ? ' my-image__item-card--selected' : ''}`}
-                    onClick={() => setDraftOutfit(withOutfitItem(draftOutfit, activeSlot, null))}
+                    hoverClass='my-image__item-card--pressed'
+                    onClick={() => {
+                      haptics('light')
+                      setDraftOutfit(withOutfitItem(draftOutfit, activeSlot, null))
+                    }}
                     role='button'
                     aria-label={`脱下${SLOT_COPY[activeSlot]}`}
                     aria-pressed={getOutfitItemId(draftOutfit, activeSlot) === null}
@@ -405,8 +421,10 @@ export default function MyImagePage() {
                       <View
                         key={entry.id}
                         className={`my-image__item-card${selected ? ' my-image__item-card--selected' : ''}${artworkUnavailable ? ' my-image__item-card--unavailable' : ''}`}
+                        hoverClass='my-image__item-card--pressed'
                         onClick={() => {
                           if (artworkUnavailable) return
+                          haptics('light')
                           if (artworkFailed) retryArtwork(entry.item)
                           setDraftOutfit(withOutfitItem(draftOutfit, activeSlot, entry.item.id))
                         }}

@@ -33,12 +33,22 @@ vi.mock('@tarojs/taro', () => ({
     showToast: mocks.showToast,
     requestPayment: mocks.requestPayment,
   },
+  // PixelAvatar3D registers page lifecycle hooks unconditionally (rules of hooks).
+  useDidShow: vi.fn(),
+  useDidHide: vi.fn(),
+}))
+
+vi.mock('../../../lib/utils/logger', () => ({
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
 }))
 
 vi.mock('@tarojs/components', () => ({
   View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>,
   Text: ({ children, userSelect: _userSelect, ...props }: any) => <span {...props}>{children}</span>,
   Image: ({ mode: _mode, ...props }: any) => <img alt='' {...props} />,
+  Canvas: ({ children: _children, ...props }: any) => <canvas {...props} />,
   ScrollView: ({ children, scrollY: _scrollY, scrollX: _scrollX, enhanced: _enhanced, showScrollbar: _showScrollbar, ...props }: any) => (
     <div {...props}>{children}</div>
   ),
@@ -522,5 +532,30 @@ describe('MyImagePage', () => {
     }))
     expect(await screen.findByText('星夜夹克')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '保存形象' })).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('shows the honest 3D-preparing notice for non-spider personas (no WebGL boot)', async () => {
+    renderPage()
+
+    // cat persona: the 3D gate falls back synchronously to the V2 turntable.
+    expect(await screen.findByText('该人格 3D 形象正在准备，先展示经典形象')).toBeInTheDocument()
+    expect(document.querySelector('canvas')).toBeNull()
+  })
+
+  it('gives light haptic feedback on slot-tab, equip and unequip taps', async () => {
+    renderPage()
+    await screen.findByText('星夜夹克')
+
+    fireEvent.click(screen.getByRole('button', { name: '选择下装槽位' }))
+    expect(mocks.haptics).toHaveBeenCalledWith('light')
+
+    mocks.haptics.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: '选择上装槽位' }))
+    fireEvent.click(screen.getByRole('button', { name: '穿上星夜夹克' }))
+    expect(mocks.haptics).toHaveBeenCalledWith('light')
+
+    mocks.haptics.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: '脱下上装' }))
+    expect(mocks.haptics).toHaveBeenCalledWith('light')
   })
 })

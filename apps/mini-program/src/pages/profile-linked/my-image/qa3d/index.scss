@@ -1,0 +1,119 @@
+@use '../../../../styles/variables' as *;
+
+.avatar3d-qa {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  flex-direction: column;
+  background: $color-bg-gradient;
+  color: $color-text-primary;
+  font-family: $font-ui;
+
+  &__scroll {
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__content {
+    box-sizing: border-box;
+    padding: 32rpx $container-padding 64rpx;
+  }
+
+  &__title {
+    display: block;
+    color: $color-text-primary-warm;
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+  }
+
+  &__subtitle {
+    display: block;
+    margin-top: 8rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+  }
+
+  &__status {
+    display: block;
+    margin-top: 8rpx;
+    color: $color-primary;
+    font-family: $font-mono;
+    font-size: $font-size-xs;
+  }
+
+  &__stage {
+    position: relative;
+    height: 720rpx;
+    margin-top: 24rpx;
+    overflow: hidden;
+    border: 2rpx solid $color-border;
+    border-radius: 40rpx;
+    background: $color-surface;
+    box-shadow: $shadow-md;
+  }
+
+  &__section-title {
+    display: block;
+    margin-top: 32rpx;
+    color: $color-text-primary-warm;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+  }
+
+  &__button-row {
+    display: flex;
+    margin-top: 16rpx;
+    flex-wrap: wrap;
+    gap: 16rpx;
+  }
+
+  &__button {
+    display: flex;
+    min-width: 144rpx;
+    min-height: $cta-min-tap;
+    padding: 0 28rpx;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    border: 2rpx solid rgba($color-primary, 0.22);
+    border-radius: $radius-pill;
+    background: $color-surface;
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.14);
+      transform: scale(0.95);
+    }
+
+    &--primary {
+      background: $color-primary;
+      color: $color-text-white;
+    }
+
+    &--active {
+      border-color: $color-primary;
+      background: $color-bg-tint-purple;
+    }
+  }
+
+  &__note {
+    display: block;
+    margin-top: 32rpx;
+    padding: 20rpx 24rpx;
+    border-radius: $radius-md;
+    background: rgba($color-primary, 0.06);
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+    line-height: $line-height-relaxed;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar3d-qa__button {
+    transition: none;
+  }
+}
