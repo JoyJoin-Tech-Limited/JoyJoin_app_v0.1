@@ -21,8 +21,8 @@ export const SPIDER_PERSONA_PALETTE: SpiderPersonaPalette = {
   fur: hexToRgb('#171419'),         // near-black fuzzy head
   spiderLeg: hexToRgb('#29252D'),   // charcoal articulated back limbs
   spiderLegJoint: hexToRgb('#514A59'),
-  eyeWhite: hexToRgb('#D8CDED'),    // compact lavender eye shells
-  eyeIris: hexToRgb('#9270D8'),     // restrained violet iris
+  eyeWhite: hexToRgb('#E8DEFF'),    // luminous lavender eye shells
+  eyeIris: hexToRgb('#A78BFA'),     // violet iris survives pixel sampling
   pupil: hexToRgb('#151119'),
   fang: hexToRgb('#F5EDDD'),        // warm cream fangs
   blush: hexToRgb('#765B72'),       // subtle, not toy-like

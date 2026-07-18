@@ -66,7 +66,7 @@ export interface Avatar3DSession {
  * layout, while WebGL draws at this deliberately small resolution and the
  * compositor enlarges it with nearest-neighbour sampling.
  */
-export const AVATAR_PIXEL_ART_BUFFER_WIDTH = 144
+export const AVATAR_PIXEL_ART_BUFFER_WIDTH = 192
 
 export function resolvePixelArtRenderSize(cssWidth: number, cssHeight: number): { width: number; height: number } {
   const safeWidth = Math.max(1, Math.round(cssWidth))
