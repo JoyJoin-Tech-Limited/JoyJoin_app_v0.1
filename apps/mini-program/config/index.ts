@@ -32,6 +32,10 @@ const MINI_PROGRAM_XIAOYUE_CONNECTION_REACTIONS_ENABLED =
 /** Build-time flag to enable H5 screenshot story modes (dev/preview only). */
 const MINI_PROGRAM_ENABLE_STORY_MODE =
   process.env.TARO_APP_ENABLE_STORY_MODE ?? ''
+/** Avatar 3D QA page entry on my-image (dev/preview only; page itself stays registered). */
+const MINI_PROGRAM_AVATAR_3D_QA =
+  process.env.TARO_APP_AVATAR_3D_QA ??
+  (process.env.NODE_ENV !== 'production' ? 'true' : '')
 /** vConsole is only allowed in local development builds. Production, staging,
  *  and 体验版 builds must ship with vConsole disabled. */
 const MINI_PROGRAM_VCONSOLE_ENABLED =
@@ -52,6 +56,64 @@ if (MINI_PROGRAM_NODE_ENV === 'production' && !MINI_PROGRAM_CDN_BASE_URL) {
       '  Set it in apps/mini-program/.env.local or as an environment variable, then rebuild.\n' +
       '  Example: TARO_APP_CDN_BASE_URL=https://joyjoinapp.com/static',
   )
+}
+
+/**
+ * WebGL avatar (three.js + avatar3d) chunk routing.
+ *
+ * The 3D spider avatar stack is only reachable from pages/profile-linked/*
+ * (my-image + qa3d — verified by import-cone grep 2026-07-18). Taro's
+ * vite-runner forces every node_modules module into the root `vendors` chunk
+ * (main package), which pushed the main package over WeChat's 2 MB zip
+ * ceiling. Routing the whole avatar3d import cone into a slash-named chunk
+ * emits the file inside the profile-linked subpackage directory instead
+ * (chunkFileNames stays '[name].js'). Subpackage → main-package requires are
+ * allowed by WeChat; main → subpackage is forbidden, so nothing outside this
+ * cone may import these modules — keep it that way when adding imports.
+ */
+const AVATAR_3D_CHUNK_NAME = 'pages/profile-linked/three-avatar'
+// Mirrored from @tarojs/helper dist/constants.js (Taro 4.2) — inlined so this
+// config does not rely on hoisted transitive deps.
+const REG_TARO_SCOPED_PACKAGE = /@tarojs[\\/][a-z]+/
+const REG_NODE_MODULES_DIR = /[\\/]node_modules[\\/]/gi
+
+type ManualChunksModuleInfo = { importers?: string[] } | null
+
+/**
+ * Mirrors Taro's manualChunks (react branch of getManualChunks() in
+ * @tarojs/vite-runner dist/mini/config.js) and prepends the avatar3d rules.
+ * This fully replaces Taro's function: vite mergeConfig lets the later plugin
+ * config win for function values, and mini.compiler.vitePlugins run after
+ * Taro's internal config plugin (dist/index.mini.js pushes them last).
+ */
+function miniProgramManualChunks(
+  id: string,
+  api: { getModuleInfo: (moduleId: string) => ManualChunksModuleInfo },
+): string | null | undefined {
+  if (
+    /node_modules[\\/]three[\\/]/.test(id) ||
+    /[\\/]src[\\/]lib[\\/]profile[\\/]avatar3d[\\/]/.test(id) ||
+    /[\\/]src[\\/]components[\\/]profile[\\/]PixelAvatar3D\.tsx$/.test(id)
+  ) {
+    return AVATAR_3D_CHUNK_NAME
+  }
+  REG_NODE_MODULES_DIR.lastIndex = 0
+  if (/node_modules[\\/]@tarojs[\\/]vite-runner/.test(id)) return null
+  if (/node_modules[\\/]@babel[\\/]/.test(id) || /commonjsHelpers\.js$/.test(id)) {
+    return 'babelHelpers'
+  }
+  if (
+    REG_TARO_SCOPED_PACKAGE.test(id) ||
+    /node_modules[\\/](react-reconciler|react|scheduler|tslib)[\\/]/.test(id)
+  ) {
+    return 'taro'
+  }
+  if (REG_NODE_MODULES_DIR.test(id)) return 'vendors'
+  const moduleInfo = api.getModuleInfo(id)
+  if (moduleInfo?.importers?.length && moduleInfo.importers.length > 1) {
+    return 'common'
+  }
+  return undefined
 }
 
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
@@ -84,6 +146,9 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
       ),
       'process.env.TARO_APP_ENABLE_STORY_MODE': JSON.stringify(
         MINI_PROGRAM_ENABLE_STORY_MODE,
+      ),
+      'process.env.TARO_APP_AVATAR_3D_QA': JSON.stringify(
+        MINI_PROGRAM_AVATAR_3D_QA,
       ),
       'process.env.TARO_APP_VCONSOLE_ENABLED': JSON.stringify(
         MINI_PROGRAM_VCONSOLE_ENABLED ? 'true' : 'false',
@@ -417,6 +482,12 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
               build: {
                 esbuild: {
                   drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+                },
+                rollupOptions: {
+                  output: {
+                    // Keep the WebGL avatar stack out of the main package.
+                    manualChunks: miniProgramManualChunks,
+                  },
                 },
               },
             }

@@ -37,6 +37,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   rewards: 'pages/profile-linked/rewards/index',
   invite: 'pages/profile-linked/invite/index',
   myImage: 'pages/profile-linked/my-image/index',
+  myImageQa3d: 'pages/profile-linked/my-image/qa3d/index',
   personalStory: 'pages/profile-linked/personal-story/index',
   cityUnlock: 'pages/city-unlock/index',
   alangEvent: 'pages/alang/event/index',
@@ -81,6 +82,7 @@ export const MINI_PROGRAM_ROUTES = {
   rewards: `/${MINI_PROGRAM_PAGE_PATHS.rewards}`,
   invite: `/${MINI_PROGRAM_PAGE_PATHS.invite}`,
   myImage: `/${MINI_PROGRAM_PAGE_PATHS.myImage}`,
+  myImageQa3d: `/${MINI_PROGRAM_PAGE_PATHS.myImageQa3d}`,
   personalStory: `/${MINI_PROGRAM_PAGE_PATHS.personalStory}`,
   terms: `/${MINI_PROGRAM_PAGE_PATHS.terms}`,
   cityUnlock: `/${MINI_PROGRAM_PAGE_PATHS.cityUnlock}`,
@@ -117,6 +119,7 @@ export const MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_PAGES = [
   'rewards/index',
   'invite/index',
   'my-image/index',
+  'my-image/qa3d/index',
   'personal-story/index',
   'terms/index',
 ] as const
@@ -157,6 +160,7 @@ export const MINI_PROGRAM_PROFILE_LINKED_PACKAGE_PAGE_PATHS = [
   MINI_PROGRAM_PAGE_PATHS.rewards,
   MINI_PROGRAM_PAGE_PATHS.invite,
   MINI_PROGRAM_PAGE_PATHS.myImage,
+  MINI_PROGRAM_PAGE_PATHS.myImageQa3d,
   MINI_PROGRAM_PAGE_PATHS.personalStory,
   MINI_PROGRAM_PAGE_PATHS.terms,
 ] as const
