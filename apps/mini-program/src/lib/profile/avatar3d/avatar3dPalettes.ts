@@ -16,17 +16,17 @@ import {
 
 /** JoyJoin black-purple spider persona. */
 export const SPIDER_PERSONA_PALETTE: SpiderPersonaPalette = {
-  body: hexToRgb('#2B2830'),        // reference charcoal skin
+  body: hexToRgb('#242128'),        // reference near-black charcoal skin
   belly: hexToRgb('#5A5560'),       // muted grey chest plane
   fur: hexToRgb('#171419'),         // near-black fuzzy head
-  spiderLeg: hexToRgb('#29252D'),   // charcoal articulated back limbs
-  spiderLegJoint: hexToRgb('#514A59'),
+  spiderLeg: hexToRgb('#1B181F'),   // near-black articulated back limbs
+  spiderLegJoint: hexToRgb('#443D4C'),
   eyeWhite: hexToRgb('#E8DEFF'),    // luminous lavender eye shells
   eyeIris: hexToRgb('#A78BFA'),     // violet iris survives pixel sampling
   pupil: hexToRgb('#151119'),
   fang: hexToRgb('#F5EDDD'),        // warm cream fangs
   blush: hexToRgb('#765B72'),       // subtle, not toy-like
-  underwearVest: hexToRgb('#403B45'),   // permanent fitted grey tank
+  underwearVest: hexToRgb('#39353D'),   // permanent fitted grey tank
   underwearShorts: hexToRgb('#28262C'), // permanent charcoal safety shorts
   underwearTrim: hexToRgb('#71687B'),
 }

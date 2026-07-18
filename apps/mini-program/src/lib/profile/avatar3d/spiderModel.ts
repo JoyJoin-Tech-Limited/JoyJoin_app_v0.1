@@ -297,12 +297,12 @@ function buildHeadGroup(palette: SpiderPersonaPalette): Group {
     addMesh(group, `pupil-${side}`, new SphereGeometry(0.026, 9, 7), pupilMat, [eyeX, eyeY, 0.548], [0.88, 1.02, 0.34])
     addMesh(group, `eye-sparkle-${side}`, new SphereGeometry(0.011, 7, 5), eyeWhiteMat, [eyeX - 0.018 * s, eyeY + 0.025, 0.563])
 
-    addMesh(group, `mini-eye-inner-${side}`, new SphereGeometry(0.046, 10, 8), eyeWhiteMat, [0.065 * s, 3.57, 0.47], [0.92, 1.03, 0.42])
-    addMesh(group, `mini-eye-inner-pupil-${side}`, new SphereGeometry(0.021, 8, 6), irisMat, [0.065 * s, 3.57, 0.491], [0.9, 1.02, 0.36])
-    addMesh(group, `mini-eye-outer-${side}`, new SphereGeometry(0.043, 10, 8), eyeWhiteMat, [0.255 * s, 3.5, 0.455], [0.92, 1.03, 0.42])
-    addMesh(group, `mini-eye-outer-pupil-${side}`, new SphereGeometry(0.019, 8, 6), irisMat, [0.255 * s, 3.5, 0.474], [0.9, 1.02, 0.36])
-    addMesh(group, `mini-eye-high-${side}`, new SphereGeometry(0.038, 9, 7), eyeWhiteMat, [0.17 * s, 3.65, 0.425], [0.92, 1.03, 0.42])
-    addMesh(group, `mini-eye-high-pupil-${side}`, new SphereGeometry(0.017, 8, 6), irisMat, [0.17 * s, 3.65, 0.442], [0.9, 1.02, 0.35])
+    addMesh(group, `mini-eye-inner-${side}`, new SphereGeometry(0.052, 10, 8), eyeWhiteMat, [0.065 * s, 3.57, 0.505], [0.92, 1.03, 0.42])
+    addMesh(group, `mini-eye-inner-pupil-${side}`, new SphereGeometry(0.024, 8, 6), irisMat, [0.065 * s, 3.57, 0.53], [0.9, 1.02, 0.36])
+    addMesh(group, `mini-eye-outer-${side}`, new SphereGeometry(0.05, 10, 8), eyeWhiteMat, [0.255 * s, 3.5, 0.5], [0.92, 1.03, 0.42])
+    addMesh(group, `mini-eye-outer-pupil-${side}`, new SphereGeometry(0.022, 8, 6), irisMat, [0.255 * s, 3.5, 0.524], [0.9, 1.02, 0.36])
+    addMesh(group, `mini-eye-high-${side}`, new SphereGeometry(0.046, 9, 7), eyeWhiteMat, [0.17 * s, 3.65, 0.495], [0.92, 1.03, 0.42])
+    addMesh(group, `mini-eye-high-pupil-${side}`, new SphereGeometry(0.02, 8, 6), irisMat, [0.17 * s, 3.65, 0.517], [0.9, 1.02, 0.35])
     // Fangs under the eyes.
     const fang = addMesh(group, `fang-${side}`, new ConeGeometry(0.027, 0.09, 8), fangMat, [0.095 * s, 3.22, 0.48])
     fang.rotation.x = Math.PI
@@ -393,9 +393,9 @@ function buildLegsGroup(palette: SpiderPersonaPalette): Group {
     const hip = new Vector3(0.24 * s, 1.66, 0)
     const knee = new Vector3((side === 'left' ? 0.3 : 0.27) * s, 0.86, 0.035)
     const ankle = new Vector3((side === 'left' ? 0.24 : 0.31) * s, 0.2, 0.045)
-    addSegment(group, `leg-${side}`, hip, knee, 0.21, 0.17, bodyMat)
-    addJoint(group, `leg-${side}-knee`, knee, 0.16, lambert(palette.spiderLegJoint))
-    addSegment(group, `leg-${side}-lower`, knee, ankle, 0.155, 0.105, bodyMat)
+    addSegment(group, `leg-${side}`, hip, knee, 0.23, 0.18, bodyMat)
+    addJoint(group, `leg-${side}-knee`, knee, 0.17, lambert(palette.spiderLegJoint))
+    addSegment(group, `leg-${side}-lower`, knee, ankle, 0.17, 0.11, bodyMat)
     // Long, narrow feet preserve the human silhouette from the reference.
     addMesh(group, `foot-${side}`, new SphereGeometry(1, 12, 9), furMat, [ankle.x, 0.08, 0.16], [0.2, 0.13, 0.36])
   }
