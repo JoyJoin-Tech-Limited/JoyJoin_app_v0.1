@@ -108,6 +108,15 @@ describe('spider persona model — scene graph structure', () => {
     model.dispose()
   })
 
+  it('uses a shaped humanoid torso instead of the former stacked-sphere blob', () => {
+    const model = buildSpiderPersonaModel()
+    expect(findByName(model.groups.body, 'torso').geometry.type).toBe('CylinderGeometry')
+    expect(findByName(model.groups.underwear, 'underwear-vest').geometry.type).toBe('CylinderGeometry')
+    expect(findByName(model.groups.underwear, 'underwear-short-leg-left')).toBeTruthy()
+    expect(findByName(model.groups.underwear, 'underwear-short-leg-right')).toBeTruthy()
+    model.dispose()
+  })
+
   it('front and back views are genuinely different (eyes front, spider legs back)', () => {
     const model = buildSpiderPersonaModel()
     // Eyes/face live on +z
@@ -336,7 +345,10 @@ describe('dressing semantics — visibility flip only', () => {
       node = node.parent
     }
     expect(foundTorso).toBe(true)
-    expect(accessoryGroup.position.z).toBeGreaterThan(0.8) // on the chest front
+    // The torso is now a slim cylinder: the scaled badge clears both the
+    // permanent tank and the bomber shell without floating far off the chest.
+    expect(accessoryGroup.position.z).toBeGreaterThan(0.55)
+    expect(accessoryGroup.position.z).toBeLessThan(0.7)
     model.dispose()
   })
 

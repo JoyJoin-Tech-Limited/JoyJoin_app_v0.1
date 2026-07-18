@@ -37,7 +37,7 @@ export interface Avatar3DSessionOptions {
   /** CSS-pixel canvas size. */
   cssWidth: number
   cssHeight: number
-  /** Capped device pixel ratio. */
+  /** Device pixel ratio (accepted for API stability; pixel art always renders at DPR 1). */
   pixelRatio: number
   /** Called once when the GL context is reported lost. */
   onContextLost?: () => void
@@ -59,6 +59,23 @@ export interface Avatar3DSession {
   getModel: () => SpiderPersonaModel
   dispose: () => void
   readonly disposed: boolean
+}
+
+/**
+ * Pixel-art render buffer. The canvas keeps its full CSS size for touch and
+ * layout, while WebGL draws at this deliberately small resolution and the
+ * compositor enlarges it with nearest-neighbour sampling.
+ */
+export const AVATAR_PIXEL_ART_BUFFER_WIDTH = 144
+
+export function resolvePixelArtRenderSize(cssWidth: number, cssHeight: number): { width: number; height: number } {
+  const safeWidth = Math.max(1, Math.round(cssWidth))
+  const safeHeight = Math.max(1, Math.round(cssHeight))
+  const scale = Math.min(1, AVATAR_PIXEL_ART_BUFFER_WIDTH / safeWidth)
+  return {
+    width: Math.max(1, Math.round(safeWidth * scale)),
+    height: Math.max(1, Math.round(safeHeight * scale)),
+  }
 }
 
 /**
@@ -102,7 +119,7 @@ function ensureContextAttributes(gl: WebGLRenderingContext): void {
       alpha: true,
       depth: true,
       stencil: false,
-      antialias: true,
+      antialias: false,
       premultipliedAlpha: false,
       preserveDrawingBuffer: false,
       powerPreference: 'low-power',
@@ -127,7 +144,7 @@ export function createAvatar3DSession(options: Avatar3DSessionOptions): Avatar3D
       canvas: adaptedCanvas,
       context: gl,
       alpha: true,
-      antialias: true,
+      antialias: false,
       depth: true,
       stencil: false,
       premultipliedAlpha: false,
@@ -138,23 +155,24 @@ export function createAvatar3DSession(options: Avatar3DSessionOptions): Avatar3D
   }
 
   renderer.setClearColor(new Color(0, 0, 0), 0)
-  renderer.setPixelRatio(Math.min(options.pixelRatio, 1.5))
-  renderer.setSize(options.cssWidth, options.cssHeight, false)
+  const initialBufferSize = resolvePixelArtRenderSize(options.cssWidth, options.cssHeight)
+  renderer.setPixelRatio(1)
+  renderer.setSize(initialBufferSize.width, initialBufferSize.height, false)
 
   const scene = new Scene()
-  const camera = new PerspectiveCamera(35, options.cssWidth / Math.max(1, options.cssHeight), 0.1, 60)
-  camera.position.set(0, 1.6, 7.0)
-  camera.lookAt(0, 1.55, 0)
+  const camera = new PerspectiveCamera(34, options.cssWidth / Math.max(1, options.cssHeight), 0.1, 60)
+  camera.position.set(0, 1.68, 6.45)
+  camera.lookAt(0, 1.68, 0)
 
   // Lighting: warm hemisphere fill + white key + purple rim from behind so the
   // black-purple spider reads at every yaw.
   const palette = SPIDER_PERSONA_PALETTE
-  const hemisphere = new HemisphereLight(new Color(1, 0.97, 0.94), toThreeColor(palette.body), 0.85)
-  const keyLight = new DirectionalLight(new Color(1, 1, 1), 0.9)
-  keyLight.position.set(3.2, 5.5, 4.2)
-  const rimLight = new DirectionalLight(toThreeColor(palette.eyeIris), 0.55)
-  rimLight.position.set(-2.4, 3.2, -4.4)
-  const ambient = new AmbientLight(new Color(1, 1, 1), 0.25)
+  const hemisphere = new HemisphereLight(new Color(1, 0.96, 0.92), toThreeColor(palette.fur), 1.05)
+  const keyLight = new DirectionalLight(new Color(1, 0.94, 0.9), 1.18)
+  keyLight.position.set(3.4, 5.8, 4.5)
+  const rimLight = new DirectionalLight(toThreeColor(palette.eyeIris), 0.72)
+  rimLight.position.set(-3.2, 3.6, -4.8)
+  const ambient = new AmbientLight(new Color(0.92, 0.88, 1), 0.22)
   scene.add(hemisphere, keyLight, rimLight, ambient)
 
   const model = buildSpiderPersonaModel({ palette })
@@ -203,14 +221,15 @@ export function createAvatar3DSession(options: Avatar3DSessionOptions): Avatar3D
     }
   }
 
-  function resize(cssWidth: number, cssHeight: number, pixelRatio: number): void {
+  function resize(cssWidth: number, cssHeight: number, _pixelRatio: number): void {
     if (disposed) return
     const safeWidth = Math.max(1, cssWidth)
     const safeHeight = Math.max(1, cssHeight)
     camera.aspect = safeWidth / safeHeight
     camera.updateProjectionMatrix()
-    renderer.setPixelRatio(Math.min(pixelRatio, 1.5))
-    renderer.setSize(safeWidth, safeHeight, false)
+    const bufferSize = resolvePixelArtRenderSize(safeWidth, safeHeight)
+    renderer.setPixelRatio(1)
+    renderer.setSize(bufferSize.width, bufferSize.height, false)
   }
 
   function dispose(): void {

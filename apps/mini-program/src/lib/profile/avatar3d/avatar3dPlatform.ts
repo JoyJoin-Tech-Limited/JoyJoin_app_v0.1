@@ -123,13 +123,13 @@ export function acquireWebGLContext(canvasNode: any): WebGLRenderingContext | nu
       alpha: true,
       depth: true,
       stencil: false,
-      antialias: true,
+      antialias: false,
       premultipliedAlpha: false,
       preserveDrawingBuffer: false,
       powerPreference: 'low-power',
       failIfMajorPerformanceCaveat: false,
     },
-    { alpha: true, antialias: true },
+    { alpha: true, antialias: false },
     undefined,
   ]
   for (const attrs of attempts) {

@@ -16,19 +16,19 @@ import {
 
 /** JoyJoin black-purple spider persona. */
 export const SPIDER_PERSONA_PALETTE: SpiderPersonaPalette = {
-  body: hexToRgb('#4A3B52'),        // dark muted purple
-  belly: hexToRgb('#8A7694'),       // soft lavender belly
-  fur: hexToRgb('#2B2135'),         // near-black purple fur
-  spiderLeg: hexToRgb('#3A2E45'),
-  spiderLegJoint: hexToRgb('#564468'),
+  body: hexToRgb('#35283F'),        // warm charcoal-purple skin
+  belly: hexToRgb('#5E4C6C'),       // restrained plum body accent
+  fur: hexToRgb('#19111F'),         // near-black violet fur
+  spiderLeg: hexToRgb('#24182E'),   // ink-purple articulated legs
+  spiderLegJoint: hexToRgb('#624879'),
   eyeWhite: hexToRgb('#FFFFFF'),
   eyeIris: hexToRgb('#8B5CF6'),     // brand purple iris
   pupil: hexToRgb('#17111F'),
   fang: hexToRgb('#F5EDDD'),        // warm cream fangs
   blush: hexToRgb('#D98BA6'),       // soft pink cheeks
-  underwearVest: hexToRgb('#6D28D9'),   // permanent deep-purple vest
-  underwearShorts: hexToRgb('#4C1D95'), // permanent safety shorts
-  underwearTrim: hexToRgb('#C4B5FD'),
+  underwearVest: hexToRgb('#332040'),   // permanent fitted aubergine tank
+  underwearShorts: hexToRgb('#24182E'), // permanent charcoal safety shorts
+  underwearTrim: hexToRgb('#B99BEA'),
 }
 
 const WHITE = hexToRgb('#FFFFFF')
@@ -68,9 +68,9 @@ export const EQUIPMENT_SLOT_DEFAULT_PALETTES: Record<EquipmentSlot3D, Equipment3
  */
 const EQUIPMENT_ASSET_PALETTE_OVERRIDES: Record<string, Partial<Equipment3DPalette>> = {
   'equipment/starter/spider/top/v1': {
-    primary: hexToRgb('#4B2E5F'),   // eggplant jacket body + sleeves
-    secondary: hexToRgb('#2A1A38'), // ribbed collar/cuffs/hem + sleeve pocket
-    trim: hexToRgb('#C9B8D9'),      // front zipper + stitching
+    primary: hexToRgb('#59356B'),   // rich eggplant jacket body + sleeves
+    secondary: hexToRgb('#21152B'), // ink ribbing / pocket panels
+    trim: hexToRgb('#D8C8E8'),      // pale zipper + stitching
   },
   'equipment/starter/spider/bottom/v1': {
     primary: hexToRgb('#3B3B42'),   // cargo short body
@@ -78,8 +78,8 @@ const EQUIPMENT_ASSET_PALETTE_OVERRIDES: Record<string, Partial<Equipment3DPalet
     trim: hexToRgb('#B9B9C4'),      // button + buckle hardware
   },
   'equipment/starter/spider/shoes/v1': {
-    primary: hexToRgb('#241F2E'),   // black shoe body + ankle collar
-    secondary: hexToRgb('#A586D8'), // purple toe cap / ankle panel / tongue / laces
+    primary: hexToRgb('#1D1725'),   // black shoe body + ankle collar
+    secondary: hexToRgb('#9A76D2'), // purple toe cap / ankle panel / tongue / laces
     trim: hexToRgb('#EFE6D4'),      // cream layered soles
   },
   'equipment/starter/spider/accessory/v1': {
