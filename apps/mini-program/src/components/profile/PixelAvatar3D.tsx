@@ -390,6 +390,10 @@ export function PixelAvatar3D({
   // -------------------------------------------------------------------------
   const handleTouchStart = useCallback((event: any) => {
     if (status !== 'ready') return
+    // The weapp WebGL Canvas is a native host. On real devices it can receive
+    // the same touch before (or instead of) the semantic overlay, so keep one
+    // authoritative gesture stream rather than resetting the drag origin.
+    if (gestureRef.current) return
     const point = getTouchPoint(event)
     const session = sessionRef.current
     if (!point || !session) return
@@ -494,7 +498,11 @@ export function PixelAvatar3D({
           id={canvasId}
           canvasId={canvasId}
           className='pixel-avatar-3d__canvas'
-          disableScroll
+          disableScroll={dragAxis === 'horizontal'}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={finishGesture}
+          onTouchCancel={finishGesture}
         />
       ) : null}
 

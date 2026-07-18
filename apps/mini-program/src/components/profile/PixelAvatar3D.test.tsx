@@ -381,6 +381,35 @@ describe('PixelAvatar3D — ready session', () => {
     fireEvent.touchEnd(slider, { changedTouches: [{ clientX: 100 + 420 * 1.5, clientY: 100 }] })
   })
 
+  it('handles the real weapp touch stream directly on the native WebGL canvas', async () => {
+    mockSuccessfulBoot()
+    const { container } = renderAvatar()
+    await waitFor(() => expect(mocks.fakeSession.renderNow).toHaveBeenCalled())
+
+    const canvas = container.querySelector('canvas')
+    expect(canvas).toBeTruthy()
+    fireEvent.touchStart(canvas!, { touches: [{ clientX: 80, clientY: 120 }] })
+    fireEvent.touchMove(canvas!, { touches: [{ clientX: 200, clientY: 124 }] })
+
+    expect(mocks.fakeSession.yaw).toBeCloseTo(computeDragYaw(0, 120), 5)
+    fireEvent.touchEnd(canvas!, { changedTouches: [{ clientX: 200, clientY: 124 }] })
+  })
+
+  it('keeps the first drag origin if the native canvas and overlay both report touch-start', async () => {
+    mockSuccessfulBoot()
+    const { container } = renderAvatar()
+    await waitFor(() => expect(mocks.fakeSession.renderNow).toHaveBeenCalled())
+
+    const canvas = container.querySelector('canvas')
+    const slider = screen.getByRole('slider', { name: /360/ })
+    fireEvent.touchStart(canvas!, { touches: [{ clientX: 100, clientY: 100 }] })
+    fireEvent.touchStart(slider, { touches: [{ clientX: 180, clientY: 100 }] })
+    fireEvent.touchMove(canvas!, { touches: [{ clientX: 205, clientY: 102 }] })
+
+    expect(mocks.fakeSession.yaw).toBeCloseTo(computeDragYaw(0, 105), 5)
+    fireEvent.touchEnd(canvas!, { changedTouches: [{ clientX: 205, clientY: 102 }] })
+  })
+
   it('ignores vertical gestures so page scrolling is not hijacked', async () => {
     mockSuccessfulBoot()
     renderAvatar()
