@@ -45,15 +45,7 @@ jobs:
       - name: Validate CDN-only profile pixel assets
         run: |
           npm ci
-          npm run build:profile-pixel-v2 -w mini-program
-          generated_status="$(git status --porcelain --untracked-files=all -- \
-            apps/mini-program/scripts/cdn-asset-manifest.json \
-            apps/mini-program/src/assets/profile-pixel/v2)"
-          if [[ -n "$generated_status" ]]; then
-            echo "Profile pixel generated assets are out of date:"
-            echo "$generated_status"
-            exit 1
-          fi
+          node scripts/check-profile-pixel-assets.mjs
 
       - name: Compile mini-program without publishing it
         env:
