@@ -16,11 +16,11 @@ import {
 
 /** JoyJoin black-purple spider persona. */
 export const SPIDER_PERSONA_PALETTE: SpiderPersonaPalette = {
-  body: hexToRgb('#242129'),        // charcoal-violet skin sampled from the 2D profile body
-  belly: hexToRgb('#3D3942'),       // muted grey face plane and tiny torso modelling detail
-  fur: hexToRgb('#19161D'),         // fuzzy black-violet head ring
-  spiderLeg: hexToRgb('#1D1921'),   // deep articulated back limbs
-  spiderLegJoint: hexToRgb('#3A3342'),
+  body: hexToRgb('#19171E'),        // charcoal-violet skin; compensated for the bright three-light rig
+  belly: hexToRgb('#2E2B31'),       // muted grey face plane sampled against the approved 2D portrait
+  fur: hexToRgb('#0B0A0E'),         // near-black fuzzy head ring, not the former washed-grey helmet
+  spiderLeg: hexToRgb('#121017'),   // deep articulated back limbs
+  spiderLegJoint: hexToRgb('#29242F'),
   eyeWhite: hexToRgb('#F4EEE5'),    // warm glossy catchlights, never a white eye shell
   eyeIris: hexToRgb('#7752A5'),     // purple crescent around the large black eyes
   pupil: hexToRgb('#0C0A0E'),       // both large and six small eyes are predominantly black

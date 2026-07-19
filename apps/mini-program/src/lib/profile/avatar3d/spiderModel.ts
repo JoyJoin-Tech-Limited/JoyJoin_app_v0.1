@@ -279,9 +279,12 @@ function buildHeadGroup(palette: SpiderPersonaPalette): Group {
   const furMat = lambert(palette.fur)
   const faceMat = lambert(palette.belly)
   const eyeWhiteMat = phong(palette.eyeWhite, 110)
-  const irisMat = phong(palette.eyeIris, 90)
-  const eyeSocketMat = phong(shadeColor(palette.eyeIris, 0.52), 65)
-  const pupilMat = phong(palette.pupil, 100)
+  // Keep the dark eye surfaces flat and paint the two catchlights explicitly.
+  // A shiny black Phong surface produced uncontrolled white blooms on WeChat,
+  // which made the official glossy pixel eyes read like plastic googly eyes.
+  const irisMat = lambert(palette.eyeIris)
+  const eyeSocketMat = lambert(shadeColor(palette.eyeIris, 0.52))
+  const pupilMat = lambert(palette.pupil)
   const fangMat = lambert(palette.pupil)
   const blushMat = lambert(palette.blush)
 
@@ -322,9 +325,20 @@ function buildHeadGroup(palette: SpiderPersonaPalette): Group {
     addMesh(group, `cheek-${side}`, new SphereGeometry(0.04, 9, 7), blushMat, [0.31 * s, 3.2, 0.514], [1.15, 0.42, 0.24])
   }
 
-  const smile = addMesh(group, 'mouth-smile', new TorusGeometry(0.05, 0.008, 5, 14, Math.PI), pupilMat, [0, 3.17, 0.558])
-  smile.rotation.z = Math.PI
-  smile.scale.y = 0.55
+  // The 2D face has a tiny double-curve spider mouth rather than one human
+  // smile. Two tucked semicircles preserve that expression at pixel scale.
+  for (const side of ['left', 'right'] as const) {
+    const s = side === 'left' ? -1 : 1
+    const smile = addMesh(
+      group,
+      `mouth-smile-${side}`,
+      new TorusGeometry(0.034, 0.006, 5, 12, Math.PI),
+      pupilMat,
+      [0.032 * s, 3.17, 0.558],
+    )
+    smile.rotation.z = Math.PI
+    smile.scale.set(0.92, 0.48, 1)
+  }
 
   return group
 }
@@ -345,6 +359,13 @@ function buildFurGroup(palette: SpiderPersonaPalette): Group {
     { pos: [0.5, 3.695, -0.025], radius: 0.046, height: 0.1, tiltX: -0.08, tiltZ: -1.12 },
     { pos: [-0.555, 3.43, -0.015], radius: 0.044, height: 0.095, tiltX: -0.04, tiltZ: 1.48 },
     { pos: [0.555, 3.43, -0.015], radius: 0.044, height: 0.095, tiltX: -0.04, tiltZ: -1.48 },
+    // Short jaw tufts break the smooth ball silhouette and reproduce the
+    // shaggy lower edge visible in the approved 2D spider portrait.
+    { pos: [-0.46, 3.14, -0.02], radius: 0.043, height: 0.09, tiltX: 0.05, tiltZ: 1.92 },
+    { pos: [-0.25, 2.99, -0.025], radius: 0.042, height: 0.088, tiltX: 0.08, tiltZ: 2.56 },
+    { pos: [0, 2.94, -0.03], radius: 0.043, height: 0.09, tiltX: 0.08, tiltZ: Math.PI },
+    { pos: [0.25, 2.99, -0.025], radius: 0.042, height: 0.088, tiltX: 0.08, tiltZ: -2.56 },
+    { pos: [0.46, 3.14, -0.02], radius: 0.043, height: 0.09, tiltX: 0.05, tiltZ: -1.92 },
   ]
   tuftSpecs.forEach((spec, index) => {
     const tuft = addMesh(group, `fur-tuft-${index}`, new ConeGeometry(spec.radius, spec.height, 8), furMat, spec.pos)
