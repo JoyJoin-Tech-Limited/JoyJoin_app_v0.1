@@ -293,11 +293,11 @@ function buildHeadGroup(palette: SpiderPersonaPalette): Group {
   const fangMat = lambert(palette.pupil)
   const blushMat = lambert(palette.blush)
 
-  addMesh(group, 'head-sphere', new SphereGeometry(0.6, 18, 13), furMat, HEAD_POSITION, [0.99, 0.97, 0.87])
-  addMesh(group, 'face-mask', new SphereGeometry(1, 16, 11), faceMat, [0, 3.39, 0.49], [0.43, 0.38, 0.05])
+  addMesh(group, 'head-sphere', new SphereGeometry(0.6, 18, 13), furMat, HEAD_POSITION, [1.05, 0.94, 0.87])
+  addMesh(group, 'face-mask', new SphereGeometry(1, 16, 11), faceMat, [0, 3.39, 0.49], [0.44, 0.36, 0.05])
 
   // Match the official 2D profile face: two dominant glossy black eyes with a
-  // purple lower crescent, then six much smaller black eyes in an upper arc.
+  // purple lower crescent, then four much smaller black eyes in an upper arc.
   // The earlier pale, equal-sized eye cluster read as a different character.
   const mainEyeY = 3.35
   for (const side of ['left', 'right'] as const) {
@@ -309,18 +309,17 @@ function buildHeadGroup(palette: SpiderPersonaPalette): Group {
     addMesh(group, `iris-mask-${side}`, new SphereGeometry(0.081, 12, 9), pupilMat, [eyeX, mainEyeY + 0.004, 0.634], [0.92, 1.02, 0.2])
     // Both catchlights sit toward the shared upper-left light source, exactly
     // like the glossy eyes in the 2D pixel sheet.
-    addMesh(group, `eye-sparkle-${side}`, new SphereGeometry(0.026, 9, 7), eyeWhiteMat, [eyeX - 0.043, mainEyeY + 0.062, 0.678], [0.86, 1.05, 0.22])
+    addMesh(group, `eye-sparkle-${side}`, new SphereGeometry(0.042, 9, 7), eyeWhiteMat, [eyeX - 0.043, mainEyeY + 0.062, 0.678], [0.82, 1.06, 0.22])
     addMesh(group, `eye-sparkle-small-${side}`, new SphereGeometry(0.01, 7, 5), eyeWhiteMat, [eyeX + 0.035, mainEyeY + 0.012, 0.68], [0.9, 1, 0.22])
 
     const smallEyes = [
-      { key: 'inner', x: 0.07, y: 3.625, radius: 0.043 },
-      { key: 'high', x: 0.205, y: 3.64, radius: 0.046 },
-      { key: 'outer', x: 0.345, y: 3.555, radius: 0.043 },
+      { key: 'inner', x: 0.105, y: 3.64, radius: 0.05 },
+      { key: 'outer', x: 0.345, y: 3.555, radius: 0.047 },
     ] as const
     smallEyes.forEach(({ key, x, y, radius }) => {
       const signedX = x * s
       addMesh(group, `mini-eye-${key}-${side}`, new SphereGeometry(radius, 10, 8), pupilMat, [signedX, y, 0.555], [0.96, 1.04, 0.34])
-      addMesh(group, `mini-eye-${key}-pupil-${side}`, new SphereGeometry(Math.max(0.011, radius * 0.22), 7, 5), eyeWhiteMat, [signedX - 0.011, y + 0.014, 0.598], [0.9, 1, 0.22])
+      addMesh(group, `mini-eye-${key}-pupil-${side}`, new SphereGeometry(Math.max(0.014, radius * 0.24), 7, 5), eyeWhiteMat, [signedX - 0.011, y + 0.014, 0.598], [0.88, 1, 0.22])
     })
 
     // The profile sheet has only tiny, tucked-away fangs; keep the spider cue
@@ -330,20 +329,11 @@ function buildHeadGroup(palette: SpiderPersonaPalette): Group {
     addMesh(group, `cheek-${side}`, new SphereGeometry(0.04, 9, 7), blushMat, [0.31 * s, 3.2, 0.514], [1.15, 0.42, 0.24])
   }
 
-  // The 2D face has a tiny double-curve spider mouth rather than one human
-  // smile. Two tucked semicircles preserve that expression at pixel scale.
-  for (const side of ['left', 'right'] as const) {
-    const s = side === 'left' ? -1 : 1
-    const smile = addMesh(
-      group,
-      `mouth-smile-${side}`,
-      new TorusGeometry(0.034, 0.006, 5, 12, Math.PI),
-      pupilMat,
-      [0.032 * s, 3.17, 0.558],
-    )
-    smile.rotation.z = Math.PI
-    smile.scale.set(0.92, 0.48, 1)
-  }
+  // One quiet U-curve matches the approved portrait. The previous double arc
+  // collapsed into four black dots at the intentionally low render buffer.
+  const smile = addMesh(group, 'mouth-smile', new TorusGeometry(0.054, 0.006, 5, 16, Math.PI), pupilMat, [0, 3.17, 0.558])
+  smile.rotation.z = Math.PI
+  smile.scale.y = 0.58
 
   return group
 }

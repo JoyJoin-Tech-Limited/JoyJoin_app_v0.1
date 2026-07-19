@@ -25,7 +25,7 @@ export const SPIDER_PERSONA_PALETTE: SpiderPersonaPalette = {
   eyeIris: hexToRgb('#7752A5'),     // purple crescent around the large black eyes
   pupil: hexToRgb('#0C0A0E'),       // both large and six small eyes are predominantly black
   fang: hexToRgb('#F5EDDD'),        // warm cream fangs
-  blush: hexToRgb('#59424F'),       // subtle, not toy-like
+  blush: hexToRgb('#342E35'),       // quiet charcoal cheek modelling; the 2D face has no pink blush
   underwearVest: hexToRgb('#4B4651'),   // permanent fitted grey tank from the 2D body
   underwearShorts: hexToRgb('#29262D'), // permanent charcoal safety shorts
   underwearTrim: hexToRgb('#71687B'),

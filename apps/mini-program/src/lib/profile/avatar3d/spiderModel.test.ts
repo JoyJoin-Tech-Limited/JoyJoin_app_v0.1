@@ -160,15 +160,14 @@ describe('spider persona model — scene graph structure', () => {
     model.dispose()
   })
 
-  it('matches the official 2D face hierarchy: two dominant eyes above six small eyes', () => {
+  it('matches the official 2D face hierarchy: two dominant eyes below four small eyes', () => {
     const model = buildSpiderPersonaModel()
     const expected = [
       'head-sphere',
       'eye-left', 'eye-right', 'iris-left', 'iris-right', 'pupil-left', 'pupil-right',
       'mini-eye-inner-left', 'mini-eye-inner-right', 'mini-eye-outer-left', 'mini-eye-outer-right',
-      'mini-eye-high-left', 'mini-eye-high-right',
       'fang-left', 'fang-right', 'cheek-left', 'cheek-right',
-      'mouth-smile-left', 'mouth-smile-right',
+      'mouth-smile',
       'fur-tuft-0', 'fur-tuft-1', 'fur-tuft-2',
       'fur-tuft-13',
     ]
