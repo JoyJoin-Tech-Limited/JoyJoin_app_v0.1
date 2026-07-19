@@ -1,7 +1,9 @@
 
 import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { questionsV4 } from '@shared/personality/questionsV4'
 import {
   hasAnonymousAssessmentResult,
+  readAnonymousAssessmentAnswers,
   type AnonymousAssessmentResult,
   type AnonymousAssessmentSessionSnapshot,
   type AnonymousAssessmentTopMatch,
@@ -55,6 +57,12 @@ export interface AnimationProfile {
   slotSlowStepDelays: number[]
   slotNearMissMs: number
   slotNearMissProbability: number
+  /**
+   * F1 blend reframe (2026-07-19 satisfaction audit): 'blend' overshoots onto the
+   * user's secondary archetype — "almost you" instead of a random neighbour.
+   * 'random' retains the legacy neighbour-overshoot for rollback.
+   */
+  slotNearMissMode: 'blend' | 'random'
   slotRevealPauseMs: number
   revealSilhouetteMs: number
   revealFillMs: number
@@ -72,6 +80,7 @@ const DEFAULT_PROFILE: AnimationProfile = {
   slotSlowStepDelays: [80, 130, 180, 230, 280, 330, 380, 430, 480, 530],
   slotNearMissMs: 360,
   slotNearMissProbability: 0.3,
+  slotNearMissMode: 'blend',
   slotRevealPauseMs: 280,
   revealSilhouetteMs: 520,
   revealFillMs: 760,
@@ -131,6 +140,37 @@ export function waitFor(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
+}
+
+/** Max echo whispers rotated during the spin (2026-07-19 PM spec). */
+export const ECHO_WHISPER_MAX = 3
+/** Answers shorter than this are skipped as whispers (too trivial to quote). */
+export const ECHO_WHISPER_MIN_CHARS = 4
+/** Spin steps between whisper rotations (7 × 120ms ≈ 840ms). */
+export const ECHO_WHISPER_ROTATE_STEPS = 7
+
+/**
+ * Slice 3 (2026-07-19): answer-echo whispers for the spin phase.
+ * Maps locally stored anonymous answers back to their option texts so the slot
+ * can quote the user ("你说过「…」") — proof of analysis, not chance.
+ * Returns up to ECHO_WHISPER_MAX unique texts; empty for authenticated users
+ * (their answers are not stored locally).
+ */
+export function buildEchoWhispers(): string[] {
+  const answers = readAnonymousAssessmentAnswers()
+  if (!Array.isArray(answers) || answers.length === 0) return []
+  const whispers: string[] = []
+  for (const answer of answers.slice(-8)) {
+    const question = questionsV4.find((q) => q.id === answer.questionId)
+    const optionText = trimSentence(
+      question?.options?.find((o) => o.value === answer.selectedOption)?.text ?? '',
+    )
+    if (optionText.length >= ECHO_WHISPER_MIN_CHARS && !whispers.includes(optionText)) {
+      whispers.push(optionText)
+      if (whispers.length >= ECHO_WHISPER_MAX) break
+    }
+  }
+  return whispers
 }
 
 export function trimSentence(text: string | undefined): string {

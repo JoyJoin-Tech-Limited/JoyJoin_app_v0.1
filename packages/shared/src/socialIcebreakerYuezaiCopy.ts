@@ -13,6 +13,7 @@
  */
 
 import type { TierMachineId } from './socialIcebreakerTierManifest.js';
+import type { SocialTopicDepthLevel } from './socialIcebreaker.js';
 
 export interface YuezaiTierCopy {
   /** 悦仔 quote shown on the tier card — conversational, friendly, plural */
@@ -70,4 +71,83 @@ export const YUEZAI_TIER_COPY: Record<TierMachineId, YuezaiTierCopy> = {
 /** Returns copy for a given tier machine ID. */
 export function getYuezaiCopyForTier(tier: TierMachineId): YuezaiTierCopy {
   return YUEZAI_TIER_COPY[tier];
+}
+
+// ─── 悦仔说 Permission Lines (Campfire Vault Card PR1) ───────────────────────
+//
+// Xiaoyue-voiced psychological-permission whispers attached to warmup topic
+// cards as `SocialTopic.permissionLine`. The SERVER selects one line per topic
+// at generation time so every table member sees the identical whisper for the
+// same topic; the client renders it under the 「悦仔说」 prefix (the prefix is
+// NOT part of the stored line — it is a styled client element).
+//
+// Register keying design: pools are keyed by `SocialTopicDepthLevel` (1/2/3),
+// not by mood. The whisper's job is to grant permission proportional to the
+// emotional exposure a question asks for — light casualness for L1 openers,
+// warm partialness for L2 sharing, held safety for L3 reflection. Mood
+// (funny/life/relaxed/emotional) changes topic flavor, not how much
+// permission a reader needs, so depth is the honest register axis.
+//
+// Copy rules (contract A3): zero emoji, ≤20 chars, never names or pressures
+// an individual, second-person-plural-safe, no demand to answer.
+
+export const YUEZAI_PERMISSION_LINES: Record<SocialTopicDepthLevel, readonly string[]> = {
+  /** L1 轻松开场 — permission to be casual. */
+  1: [
+    '这题没有标准答案，说一半也算数',
+    '想到什么说什么，都很有意思',
+    '第一反应就很好，不用打草稿',
+    '随便聊聊，没人记笔记',
+    '答案没有对错，你的版本最好',
+    '说个大概就行，细节随意',
+    '好玩比正确重要，放心说',
+  ],
+  /** L2 体验分享 — permission to be partial. */
+  2: [
+    '想到多少说多少，听的人也很珍贵',
+    '说给自己听也行，这里没人打分',
+    '讲一半也很好，剩下的留给我猜',
+    '不用讲完，有感觉的那段就够',
+    '慢慢来，这道题不赶时间',
+    '说得乱也没关系，我们都听得懂',
+    '你可以只说今天想说的部分',
+  ],
+  /** L3 温和反思 — permission to be vulnerable. */
+  3: [
+    '这里没人打分，只说给自己听也行',
+    '不想说的部分，可以留在心里',
+    '沉默也算回答，我们都在听',
+    '能说多少是多少，已经很勇敢',
+    '不用坚强，想到什么说什么',
+    '这题可以跳过，也可以只说一半',
+    '你的感受不用漂亮，真实就好',
+  ],
+} as const;
+
+/**
+ * djb2 string hash — deterministic across Node and browser runtimes.
+ * Used so the same topic always yields the same permission line.
+ */
+function hashPermissionLineKey(key: string): number {
+  let hash = 5381;
+  for (let i = 0; i < key.length; i++) {
+    hash = ((hash << 5) + hash + key.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+/**
+ * Deterministically select the 悦仔说 permission line for a topic.
+ * Same question text + depthLevel always yields the same line, so all table
+ * members (and re-rendered / persisted state) stay consistent.
+ */
+export function selectPermissionLineForTopic(topic: {
+  question: string;
+  depthLevel?: SocialTopicDepthLevel;
+}): string {
+  const depthLevel: SocialTopicDepthLevel =
+    topic.depthLevel === 2 || topic.depthLevel === 3 ? topic.depthLevel : 1;
+  const pool = YUEZAI_PERMISSION_LINES[depthLevel];
+  const index = hashPermissionLineKey(topic.question.trim()) % pool.length;
+  return pool[index];
 }

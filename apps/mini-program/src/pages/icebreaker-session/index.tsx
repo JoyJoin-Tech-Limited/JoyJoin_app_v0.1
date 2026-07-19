@@ -37,6 +37,7 @@ import IcebreakerTierSelector from './components/IcebreakerTierSelector'
 import IcebreakerTierSheet, { type TierSheetSelection } from './components/IcebreakerTierSheet'
 import CustomModeSection from './components/CustomModeSection'
 import { AdvanceFuseBanner } from './components/AdvanceFuseBanner'
+import { useIcebreakerSessionAnalytics } from './useIcebreakerSessionAnalytics'
 import { MicroChallengeHeroView } from './phases/MicroChallengeHeroView'
 import { LieDetectiveHeroView } from './phases/LieDetectiveHeroView'
 import { PersonalityDiceHeroView } from './phases/PersonalityDiceHeroView'
@@ -77,7 +78,7 @@ function getPhaseToastText(phase: string): ReactNode {
     personality_dice: <>人格骰子，看看今天的运势！<JoyJoinIcon emoji='🎲' tier='phase' size={24} /></>,
     quip_battle: <>接梗大战，接得住吗？<JoyJoinIcon emoji='😏' size={24} /></>,
     undercover_word: <>谁是卧底？小心别暴露！<JoyJoinIcon emoji='🕵️' tier='phase' size={24} /></>,
-    speed_friending: <>快速破冰，认识新伙伴！<JoyJoinIcon emoji='🤝' size={24} /></>,
+    speed_friending: <>快速交友，认识新伙伴！<JoyJoinIcon emoji='🤝' size={24} /></>,
     group_mirror: <>团队镜像，看看大家的默契！<JoyJoinIcon emoji='🪞' size={24} /></>,
     recap: <>精彩回顾，今天真开心！<JoyJoinIcon emoji='🎉' tier='reaction' size={24} /></>,
   }
@@ -118,7 +119,6 @@ export default function IcebreakerSessionPage() {
   const [suggestionOverlayOpen, setSuggestionOverlayOpen] = useState(false)
   const startAttemptRef = useRef<string | null>(null)
   const prevPhaseRef = useRef<SessionPhase>('waiting')
-  const customSessionCompletedRef = useRef(false)
   const coachmarkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const syncLostRef = useRef(false)
 
@@ -282,10 +282,6 @@ export default function IcebreakerSessionPage() {
     syncLostRef.current = syncLost
   }, [syncLost])
 
-  if (session?.eventTier === 'custom' && (phase === 'recap' || phase === 'ended')) {
-    customSessionCompletedRef.current = true
-  }
-
   // Xiaoyue phase-transition toast
   useEffect(() => {
     if (phase && phase !== 'warmup' && phase !== 'phase_selection' && prevPhaseRef.current !== 'waiting') {
@@ -303,6 +299,8 @@ export default function IcebreakerSessionPage() {
   )
   const playerCount = session?.playerCount ?? participants.length
 
+  useIcebreakerSessionAnalytics({ session, phase, socialSessionId, playerCount, isHost })
+
   // Phase intro overlay: trigger when entering a playable phase (not initial load).
   // Future refactor: extract into useSessionPhase() hook to reduce God-component size.
   useEffect(() => {
@@ -312,113 +310,9 @@ export default function IcebreakerSessionPage() {
     if (isRealTransition) {
       setShowPhaseIntro(true)
     }
-    // Track when the host returns to the custom-mode picker after a real phase.
-    if (prev !== phase && phase === 'phase_selection' && prev !== 'waiting' && prev !== 'ended') {
-      socialIcebreakerAnalytics.track(
-        'phase_picker_returned',
-        socialSessionId ?? undefined,
-        session?.icebreakerSessionId,
-        prev,
-        {
-          playerCount,
-          completedCount: session?.completedPhases?.length ?? 0,
-        },
-      )
-    }
     prevPhaseRef.current = phase
   }, [phase, socialSessionId, session, playerCount])
 
-  // Phase impression analytics (audit C11): one phase_view per phase entry.
-  const phaseViewTrackedRef = useRef<string | null>(null)
-  useEffect(() => {
-    if (!session || phase === 'waiting' || phaseViewTrackedRef.current === phase) {
-      return
-    }
-    phaseViewTrackedRef.current = phase
-    socialIcebreakerAnalytics.track(
-      'phase_view',
-      socialSessionId ?? undefined,
-      session.icebreakerSessionId,
-      phase,
-      { playerCount },
-    )
-  }, [phase, session, socialSessionId, playerCount])
-
-  // PR1 flow revamp — stall nudge impression (host only; once per nudge).
-  const stallNudgeShownForRef = useRef<number | null>(null)
-  useEffect(() => {
-    const nudgeAt = session?.stallNudgeAt
-    if (!nudgeAt || !isHost || stallNudgeShownForRef.current === nudgeAt) {
-      return
-    }
-    stallNudgeShownForRef.current = nudgeAt
-    socialIcebreakerAnalytics.track(
-      'stall_nudge_shown',
-      socialSessionId ?? undefined,
-      session?.icebreakerSessionId,
-      session?.currentPhase,
-      { playerCount },
-    )
-  }, [session?.stallNudgeAt, isHost, socialSessionId, session?.icebreakerSessionId, session?.currentPhase, playerCount])
-
-  // PR1 flow revamp — recap_view with source attribution (natural vs early-end).
-  const recapTrackedRef = useRef(false)
-  useEffect(() => {
-    if ((phase !== 'recap' && phase !== 'ended') || !session || recapTrackedRef.current) {
-      return
-    }
-    recapTrackedRef.current = true
-    socialIcebreakerAnalytics.track(
-      'recap_view',
-      socialSessionId ?? undefined,
-      session.icebreakerSessionId,
-      phase,
-      {
-        source: session.lastAdvanceTrigger === 'early_end_jump' ? 'early_end' : 'natural',
-        phasesCompleted: (session.completedPhases ?? []).filter((p) => p !== 'phase_selection').length,
-        playerCount,
-      },
-    )
-  }, [phase, session, socialSessionId, playerCount])
-
-  // Keep latest session metadata in refs for unmount-time abandonment tracking.
-  const customSessionMetaRef = useRef({
-    socialSessionId: '',
-    icebreakerSessionId: '',
-    eventTier: undefined as string | undefined,
-    phase: '' as string,
-    playerCount: 0,
-    completedPhases: [] as string[],
-  })
-  useEffect(() => {
-    customSessionMetaRef.current = {
-      socialSessionId: socialSessionId ?? '',
-      icebreakerSessionId: session?.icebreakerSessionId ?? '',
-      eventTier: session?.eventTier,
-      phase,
-      playerCount,
-      completedPhases: session?.completedPhases ?? [],
-    }
-  }, [session, socialSessionId, phase, playerCount])
-
-  // Track custom-mode abandonment when the page unmounts without reaching recap/ended.
-  useEffect(() => {
-    return () => {
-      const meta = customSessionMetaRef.current
-      if (meta.eventTier === 'custom' && !customSessionCompletedRef.current && meta.socialSessionId) {
-        socialIcebreakerAnalytics.track(
-          'custom_session_abandoned',
-          meta.socialSessionId,
-          meta.icebreakerSessionId,
-          meta.phase,
-          {
-            playerCount: meta.playerCount,
-            completedPhases: meta.completedPhases,
-          },
-        )
-      }
-    }
-  }, [])
 
   const recapQuery = useQuery<SocialRecapResponse>({
     queryKey: ['mini-program', 'social-icebreaker-recap', socialSessionId],
@@ -1325,6 +1219,7 @@ export default function IcebreakerSessionPage() {
             topics={session.warmupTopics ?? []}
             currentIndex={session.currentTopicIndex ?? 0}
             readyUserIds={session.warmupReadyUserIds ?? []}
+            warmupDataReady={session.warmupReadyUserIds !== undefined}
             participants={participants}
             currentUserId={currentUserId}
             selectedMood={session.selectedMood}
@@ -1407,6 +1302,7 @@ export default function IcebreakerSessionPage() {
             onAdvance={handleAdvancePhase}
             isAdvancing={pendingAction === 'advance'}
             lieDetectiveMode={session.lieDetectiveMode ?? 'v1'}
+            statementsMeta={session.lieDetectiveStatementsMeta}
             onSubmitTags={handleSubmitTags}
             isSubmittingTags={pendingAction === 'lie-submit-tags'}
           />

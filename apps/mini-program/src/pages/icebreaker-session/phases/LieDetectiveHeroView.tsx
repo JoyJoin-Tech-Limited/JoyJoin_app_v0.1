@@ -5,10 +5,12 @@ import type {
   LieDetectiveReveal,
   LieDetectiveVote,
 } from '@shared/socialIcebreaker'
+import type { AIResponseMeta } from '@shared/types/aiMeta'
 import Button from '../../../components/ui/Button'
 import { haptics } from '../../../lib/utils/haptics'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import './LieDetectiveHeroView.scss'
 
 // ─── Minimal client-side profanity guard (subset of server filter) ──────────
@@ -48,6 +50,7 @@ export interface LieDetectiveHeroViewProps {
   lieDetectiveMode?: 'v1' | 'v2'
   onSubmitTags?: (tags: [string, string]) => void
   isSubmittingTags?: boolean
+  statementsMeta?: AIResponseMeta
 }
 
 export function LieDetectiveHeroView({
@@ -72,6 +75,7 @@ export function LieDetectiveHeroView({
   lieDetectiveMode = 'v1',
   onSubmitTags,
   isSubmittingTags,
+  statementsMeta,
 }: LieDetectiveHeroViewProps) {
   const everyoneGenerated = playerCount > 0 && players.length >= playerCount
   const currentPlayer = players[currentPlayerIndex]
@@ -122,6 +126,7 @@ export function LieDetectiveHeroView({
       <View className='lie-detective-hero'>
         <PhaseHeroCard
           phase='lie_detective'
+          artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-lie-detective.webp')}
           title={
             isV2
               ? submitted
@@ -216,7 +221,11 @@ export function LieDetectiveHeroView({
   if (!currentPlayer) {
     return (
       <View className='lie-detective-hero'>
-        <PhaseHeroCard phase='lie_detective' title='等待侦探回合开启…' />
+        <PhaseHeroCard
+          phase='lie_detective'
+          artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-lie-detective.webp')}
+          title='等待侦探回合开启…'
+        />
       </View>
     )
   }
@@ -247,6 +256,7 @@ export function LieDetectiveHeroView({
     <View className='lie-detective-hero'>
       <PhaseHeroCard
         phase='lie_detective'
+        artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-lie-detective.webp')}
         title={`${currentPlayer.displayName} 的回合`}
         statusChip={`第 ${currentPlayerIndex + 1} / ${players.length} 位玩家`}
         statusText={statusText}
@@ -357,7 +367,7 @@ export function LieDetectiveHeroView({
             <Text className='lie-detective-hero__edge-text'>火眼金睛！全对！</Text>
           </View>
         ) : null}
-        <PhaseAigcRow reason='AI 生成侦探陈述' />
+        <PhaseAigcRow meta={statementsMeta} reason='AI 生成侦探陈述' />
       </PhaseHeroCard>
     </View>
   )

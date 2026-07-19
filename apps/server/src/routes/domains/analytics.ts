@@ -223,6 +223,44 @@ const SOCIAL_ICEBREAKER_EVENT_TYPES = [
   "end_party_tapped",
   "custom_session_completed",
   "custom_session_abandoned",
+  // Client-emitted session events (mini-program socialIcebreakerAnalytics)
+  "phase_picker_returned",
+  "select_phase_failed",
+  "end_party_failed",
+  "icebreaker_session_tier_changed",
+  "combo_selected",
+  "preset_selected",
+  "advanced_mode_opened",
+  "icebreaker_test_mode_disclosure_rendered",
+  "icebreaker_test_mode_disclosure_shown",
+  "icebreaker_test_mode_disclosure_dismissed",
+  "icebreaker_test_mode_advance_retry",
+  "icebreaker_test_mode_bot_advance",
+  "warmup_entry_view",
+  "warmup_ready_tap",
+  "warmup_host_menu_open",
+  "warmup_tier_sheet_open",
+  "warmup_deep_prompt_expand",
+  "warmup_aigc_feedback_tap",
+  "warmup_celebration_shown",
+  "early_end_shown",
+  "early_end_confirm",
+  "early_end_cancel",
+  "stall_nudge_shown",
+  "stall_nudge_advance",
+  "stall_nudge_dismiss",
+  "recap_view",
+  "phase_view",
+  "lie_vote_cast",
+  "auction_bid_placed",
+  "dice_option_chosen",
+  "micro_challenge_completed",
+  "recap_connections_tap",
+  "recap_leave_tap",
+  "icebreaker_band_image_error",
+  // Campfire Vault Card PR1 (contract A5) — no PII in payloads
+  "topic_card_brave_view",
+  "permission_line_view",
 ] as const;
 
 type SocialIcebreakerEventType = (typeof SOCIAL_ICEBREAKER_EVENT_TYPES)[number];
@@ -617,6 +655,11 @@ export function registerAnalyticsRoutes(app: Express): void {
       }
 
       const { eventType, metadata, timestamp } = parsed.data;
+      if (!ALLOWED_SOCIAL_ICEBREAKER_EVENT_TYPES.has(eventType as SocialIcebreakerEventType)) {
+        // Whitelisted event types only — silently ignore unknown events so
+        // analytics never errors loudly and the table stays free of noise.
+        return res.status(200).json({ success: false, error: "invalid eventType" });
+      }
       const normalizedMetadata = sanitizeMetadata(metadata);
       const userId = req.session?.userId ?? null;
       const sessionId = req.sessionID ?? null;

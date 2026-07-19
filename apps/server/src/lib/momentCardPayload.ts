@@ -16,6 +16,18 @@ export interface MomentCardCastMember {
   archetypeEmoji?: string;
 }
 
+/**
+ * 话题留档 keepsake — the night's brave REACHED warmup topic, upgraded onto the
+ * Moment Card as a designed editorial block. Additive optional field; payload
+ * version stays 1 and old cached payloads still render.
+ */
+export interface MomentCardKeepsake {
+  question: string;
+  permissionLine?: string | null;
+  depthLevel?: 1 | 2 | 3;
+  mood?: string;
+}
+
 export interface MomentCardPayload {
   version: 1;
   headline: string;
@@ -30,6 +42,7 @@ export interface MomentCardPayload {
   };
   quote?: string;
   quoteAuthor?: string;
+  keepsake?: MomentCardKeepsake;
   medals: Array<{
     emoji: string;
     title: string;
@@ -49,9 +62,42 @@ function buildDeepLink(sessionId: string): string {
   return `${base}/discover?utm_source=moment_card&utm_medium=share&utm_campaign=viral&ref_session=${encodeURIComponent(sessionId)}`;
 }
 
+/**
+ * Pick the night's keepsake topic — pure and deterministic from session state.
+ *
+ * Among REACHED topics only (index ≤ currentTopicIndex — a keepsake must be a
+ * real memory, never an unreached card): prefer the LAST reached topic with
+ * `safety === 'reflective'`; else the last reached topic; else undefined.
+ */
+export function pickKeepsakeTopic(state: SocialSessionState): MomentCardKeepsake | undefined {
+  const topics = state.warmupTopics || [];
+  if (topics.length === 0) return undefined;
+
+  const reachedUpTo = Math.min(state.currentTopicIndex ?? 0, topics.length - 1);
+  if (reachedUpTo < 0) return undefined;
+
+  const reached = topics.slice(0, reachedUpTo + 1);
+  let chosen = reached[reached.length - 1];
+  for (let i = reached.length - 1; i >= 0; i--) {
+    if (reached[i]?.safety === 'reflective') {
+      chosen = reached[i];
+      break;
+    }
+  }
+
+  if (!chosen?.question) return undefined;
+  return {
+    question: chosen.question,
+    permissionLine: chosen.permissionLine ?? null,
+    depthLevel: chosen.depthLevel,
+    mood: chosen.mood,
+  };
+}
+
 function pickQuote(
   state: SocialSessionState,
   recapSummary?: { headline?: string; closingLine?: string; moments?: string[] },
+  options?: { suppressWarmupTopic?: boolean },
 ): { text: string; author: string } | undefined {
   // Priority 1: standout moment from AI recap
   const standoutMoment = recapSummary?.moments?.[0];
@@ -62,14 +108,17 @@ function pickQuote(
     };
   }
 
-  // Priority 2: current warmup topic question
-  const topics = state.warmupTopics || [];
-  const currentTopic = topics[state.currentTopicIndex ?? 0];
-  if (currentTopic?.question) {
-    return {
-      text: currentTopic.question,
-      author: '今晚的话题',
-    };
+  // Priority 2: current warmup topic question — suppressed when the topic was
+  // upgraded into the keepsake block (the keepsake IS the quote).
+  if (!options?.suppressWarmupTopic) {
+    const topics = state.warmupTopics || [];
+    const currentTopic = topics[state.currentTopicIndex ?? 0];
+    if (currentTopic?.question) {
+      return {
+        text: currentTopic.question,
+        author: '今晚的话题',
+      };
+    }
   }
 
   // Priority 3: deterministic warm quote seeded by session id
@@ -103,7 +152,8 @@ export function buildMomentCardPayload(
     archetypeEmoji: getArchetypeEmoji(p.archetype),
   }));
 
-  const quote = pickQuote(state, recapSummary);
+  const keepsake = pickKeepsakeTopic(state);
+  const quote = pickQuote(state, recapSummary, { suppressWarmupTopic: !!keepsake });
 
   // Build headline from recap or fallback
   let headline = recapSummary?.headline || '';
@@ -138,6 +188,7 @@ export function buildMomentCardPayload(
     },
     quote: quote?.text,
     quoteAuthor: quote?.author,
+    keepsake,
     medals: (medals || []).map((m) => ({
       emoji: m.emoji,
       title: m.title,

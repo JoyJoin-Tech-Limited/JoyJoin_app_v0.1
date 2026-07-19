@@ -337,7 +337,7 @@ export function QuipBattleHeroView({
         <PhaseHeroCard
           phase='quip_battle'
           title='投票环节'
-          prompt='右滑 = 投票 · 左滑 = 跳过'
+          prompt='右滑投票，左滑跳过'
           statusText={`卡片 ${Math.min(stackIndex + 1, swipeStack.length)}/${swipeStack.length} · 已选 ${votedPromptCount}/${totalPromptCount} 题`}
           doneCount={votedPromptCount}
           totalCount={totalPromptCount}

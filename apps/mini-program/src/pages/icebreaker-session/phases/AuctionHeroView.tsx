@@ -1,4 +1,4 @@
-import { View, Text, Input, Image } from '@tarojs/components'
+import { View, Text, Input } from '@tarojs/components'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { haptics } from '../../../lib/utils/haptics'
 import type { SocialSessionState } from '@shared/socialIcebreaker'
@@ -12,6 +12,7 @@ import IdentityReveal from '../../../components/reveal/IdentityReveal'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PhaseHeaderIcon } from '../phaseUtils'
 import { PHASE_ACCENTS } from './phaseAccents'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import './AuctionHeroView.scss'
 
@@ -257,6 +258,7 @@ export function AuctionHeroView({
       <View className='auction-hero'>
         <PhaseHeroCard
           phase='auction'
+          artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-auction.webp')}
           title='脑洞拍卖会'
           prompt='虚拟币竞拍，仅供娱乐。主持人生成竞拍条目后，大家按轮出价。'
           statusText={isHost ? '生成竞拍条目后开拍' : '等待主持人生成竞拍条目…'}
@@ -291,6 +293,7 @@ export function AuctionHeroView({
         />
         <PhaseHeroCard
           phase='auction'
+          artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-auction.webp')}
           title='拍卖结束'
           prompt='全部竞拍已完成。'
           statusText='本环节已完成'
@@ -334,6 +337,7 @@ export function AuctionHeroView({
 
       <PhaseHeroCard
         phase='auction'
+        artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-auction.webp')}
         title={currentLot?.title ?? '竞拍中'}
         statusChip={`第 ${idx + 1} / ${lots.length} 标`}
         statusText={
@@ -371,7 +375,7 @@ export function AuctionHeroView({
                     onClick={() => handleQuickBid(balance)}
                     disabled={!canBid || isPlacingBid || balance <= (high?.amount ?? 0)}
                   >
-                    ALL IN
+                    全押
                   </Button>
                 </View>
                 <Input
@@ -448,7 +452,7 @@ export function AuctionHeroView({
             {bidHistory.slice(0, 6).map((bid, i) => (
               <View key={`${bid.userId}-${bid.amount}-${i}`} className='auction-hero__history-row'>
                 <Text className='auction-hero__history-name'>{bid.displayName}</Text>
-                <Text className='auction-hero__history-amount'>{bid.amount} 币</Text>
+                <Text className='auction-hero__history-amount'><Text className='auction-hero__numeral'>{bid.amount}</Text> 币</Text>
               </View>
             ))}
           </View>

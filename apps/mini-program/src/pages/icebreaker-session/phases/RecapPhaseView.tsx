@@ -4,8 +4,6 @@ import type { AIResponseMeta, AIGCMeta } from '@shared/types/aiMeta'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
-import AIGCLabel from '../../../components/ai-content/AIGCLabel'
-import AIContentReportButton from '../../../components/ai-content/AIContentReportButton'
 import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import { PhaseHeaderIcon } from '../phaseUtils'
 import { apiRequest } from '../../../lib/api/api'
@@ -19,6 +17,8 @@ import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import { MILESTONE_BADGES } from '../../../lib/milestoneBadges'
 import { haptics } from '../../../lib/utils/haptics'
+import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
+import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import './RecapPhaseView.scss'
 
 function MedalIcon({ title, emoji }: { title: string; emoji: string }) {
@@ -225,7 +225,6 @@ export function RecapPhaseView({
   }, [])
 
   const aigcEnabled = useAIGCLabelsEnabled()
-  const recapAigcMeta: AIGCMeta = recapMeta?.aigc ?? { aiGenerated: true, labelType: 'ai-generated' }
 
   // Build dynamic share card lines
   const shareLines = useCallback(() => {
@@ -272,7 +271,9 @@ export function RecapPhaseView({
             revealed={headlineRevealed}
             identity={summary.headline}
             label='今晚总结'
-            spotlightColor='#FF6B9D'
+            spotlightColor='#C26A8C'
+            tone='warm'
+            warmAccent='rgba(251, 191, 36, 0.45)'
           />
         ) : (
           <>
@@ -293,34 +294,10 @@ export function RecapPhaseView({
           <Text className='icebreaker__recap-closing'>{summary.closingLine}</Text>
         ) : null}
 
-        {aigcEnabled && (
-          <View
-            className='icebreaker__recap-aigc-row'
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12rpx',
-              marginTop: '16rpx',
-            }}
-          >
-            <AIGCLabel meta={recapAigcMeta} />
-            {socialSessionId && (
-              <AIContentReportButton
-                options={{
-                  reason: 'AI 生成回顾内容',
-                  relatedEventId: socialSessionId,
-                }}
-                label='反馈这段内容'
-              />
-            )}
-          </View>
-        )}
+        {aigcEnabled && socialSessionId ? (
+          <PhaseAigcRow meta={recapMeta ?? undefined} reason='AI 生成回顾内容' />
+        ) : null}
       </View>
-
-      {socialSessionId ? (
-        <RecapAiFeedbackBar socialSessionId={socialSessionId} recapMeta={recapMeta} />
-      ) : null}
 
       {/* Medals section */}
       {medals.length > 0 && (
@@ -495,7 +472,7 @@ export function RecapPhaseView({
                   </Text>
                 ))}
                 <View className='icebreaker__recap-share-back-cta'>
-                  <Button variant='primary' onClick={onLeave}>
+                  <Button variant='secondary' onClick={onLeave}>
                     收好今晚，回到活动
                   </Button>
                 </View>
@@ -557,7 +534,19 @@ export function RecapPhaseView({
 
       {/* Leave row — primary exit + connections hook at peak warmth */}
       <View className='icebreaker__recap-leave-row'>
-        <Button variant='primary' className='icebreaker__recap-leave-btn' onClick={onLeave}>
+        <Button
+          variant='primary'
+          className='icebreaker__recap-leave-btn'
+          onClick={() => {
+            haptics('light')
+            if (socialSessionId) {
+              socialIcebreakerAnalytics.track('recap_leave_tap', socialSessionId, undefined, 'recap', {
+                phasesCompleted,
+              })
+            }
+            onLeave()
+          }}
+        >
           回到活动详情
         </Button>
         {onConnectTap ? (
@@ -566,6 +555,11 @@ export function RecapPhaseView({
           </Button>
         ) : null}
       </View>
+
+      {/* AI feedback lives below the exits — it must not interrupt the arc */}
+      {socialSessionId ? (
+        <RecapAiFeedbackBar socialSessionId={socialSessionId} recapMeta={recapMeta} />
+      ) : null}
     </View>
   )
 }

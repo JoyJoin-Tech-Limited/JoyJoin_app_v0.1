@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { View, Text, Input } from '@tarojs/components'
-import Taro from '@tarojs/taro'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Button from '../../../components/ui/Button'
 import { apiRequest } from '../../../lib/api/api'
 import { buildSocialPath } from '../icebreakerSessionModel'
 import { CardFlip, IdentityReveal, ParticleBurst } from '../../../components/reveal'
 import { SwipeCard, TapReaction } from '../../../components/gesture'
+import { haptics } from '../../../lib/utils/haptics'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PHASE_ACCENTS } from './phaseAccents'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
@@ -180,11 +180,7 @@ export function UndercoverWordHeroView({
   }, [])
 
   const handleSwipeSelect = useCallback((targetId: string) => {
-    try {
-      Taro.vibrateShort({ type: 'light' })
-    } catch {
-      // ignore haptic failure
-    }
+    haptics('light')
     setSelectedTarget(targetId)
   }, [])
 
@@ -284,7 +280,7 @@ export function UndercoverWordHeroView({
               {participants.map((p) => (
                 <View key={p.userId} className='undercover-hero__vote-row'>
                   <Text className='undercover-hero__vote-name'>{p.displayName}</Text>
-                  <Text className='undercover-hero__vote-count'>{results.voteCounts[p.userId] || 0} 票</Text>
+                  <Text className='undercover-hero__vote-count'><Text className='undercover-hero__numeral'>{results.voteCounts[p.userId] || 0}</Text> 票</Text>
                 </View>
               ))}
             </View>

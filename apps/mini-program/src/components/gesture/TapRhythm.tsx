@@ -94,7 +94,7 @@ export default function TapRhythm({
           <View className='gesture-tap-rhythm__track'>
             <View
               className='gesture-tap-rhythm__fill'
-              style={{ width: `${progress * 100}%` }}
+              style={{ transform: `scaleX(${progress})` }}
             />
           </View>
           <Text className='gesture-tap-rhythm__count'>

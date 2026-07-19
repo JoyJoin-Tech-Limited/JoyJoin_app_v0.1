@@ -5,11 +5,11 @@ import Button from '../../../components/ui/Button'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { TapRhythm } from '../../../components/gesture'
 import { ParticleBurst } from '../../../components/reveal'
-import AIGCLabel from '../../../components/ai-content/AIGCLabel'
-import AIContentReportButton from '../../../components/ai-content/AIContentReportButton'
 import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import { haptics } from '../../../lib/utils/haptics'
 import { PHASE_ACCENTS } from './phaseAccents'
+import { PhaseAigcRow } from '../components/PhaseAigcRow'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import './MicroChallengeHeroView.scss'
 
 const TAP_TARGET = 5
@@ -89,7 +89,6 @@ export function MicroChallengeHeroView({
 
   const hasCompleted = optimisticCompletedBy.includes(currentUserId)
   const aigcEnabled = useAIGCLabelsEnabled()
-  const challengeAigcMeta = challengeMeta?.aigc ?? { aiGenerated: true, labelType: 'ai-generated' as const }
 
   const deadlineMs =
     challenge?.durationSeconds && phaseStartedAt
@@ -117,7 +116,11 @@ export function MicroChallengeHeroView({
   if (!challenge) {
     return (
       <View className='micro-challenge-hero'>
-        <PhaseHeroCard phase='micro_challenge' title='挑战准备中…' />
+        <PhaseHeroCard
+          phase='micro_challenge'
+          artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-micro-challenge.webp')}
+          title='挑战准备中…'
+        />
       </View>
     )
   }
@@ -134,6 +137,7 @@ export function MicroChallengeHeroView({
     <View className='micro-challenge-hero'>
       <PhaseHeroCard
         phase='micro_challenge'
+        artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-micro-challenge.webp')}
         title={challenge.title}
         prompt={challenge.visualHint ? `${challenge.description}\n提示：${challenge.visualHint}` : challenge.description}
         statusText={statusText}
@@ -173,12 +177,7 @@ export function MicroChallengeHeroView({
           </>
         }
       >
-        {aigcEnabled ? (
-          <View className='micro-challenge-hero__aigc-row'>
-            <AIGCLabel meta={challengeAigcMeta} />
-            <AIContentReportButton options={{ reason: 'AI 生成微挑战' }} label='反馈这段内容' />
-          </View>
-        ) : null}
+        {aigcEnabled ? <PhaseAigcRow meta={challengeMeta} reason='AI 生成微挑战' /> : null}
       </PhaseHeroCard>
 
       {/* Signature wow (kept): tap-rhythm completion burst */}

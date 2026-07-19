@@ -303,7 +303,8 @@ $pd-deep: $phase-accent-dice-deep;
 
 @media (prefers-reduced-motion: reduce) {
   .personality-dice-hero__choose-card--settle,
-  .personality-dice-hero__card--shake {
+  .personality-dice-hero__card--shake,
+  .personality-dice-hero__choose-card-spinner {
     animation: none;
   }
 }

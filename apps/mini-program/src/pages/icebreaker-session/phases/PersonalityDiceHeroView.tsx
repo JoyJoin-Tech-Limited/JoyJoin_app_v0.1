@@ -8,10 +8,11 @@ import Chip from '../../../components/ui/Chip'
 import Button from '../../../components/ui/Button'
 import { CelebrationOverlay } from '../overlays/CelebrationOverlay'
 import { CardFlip, ParticleBurst } from '../../../components/reveal'
-import { SwipeCard, TapReaction } from '../../../components/gesture'
+import { SwipeCard } from '../../../components/gesture'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { haptics } from '../../../lib/utils/haptics'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import './PersonalityDiceHeroView.scss'
 
 function hslToHex(h: number, s: number, l: number): string {
@@ -24,13 +25,6 @@ function hslToHex(h: number, s: number, l: number): string {
   }
   return `#${f(0)}${f(8)}${f(4)}`
 }
-
-const REACTION_ITEMS = [
-  { emoji: '👏', label: '鼓掌' },
-  { emoji: '🎉', label: '庆祝' },
-  { emoji: '😂', label: '好笑' },
-  { emoji: '🔥', label: '燃' },
-]
 
 const DIFFICULTY_LABELS: Record<string, string> = {
   easy: '简单',
@@ -50,8 +44,6 @@ export interface PersonalityDiceHeroViewProps {
   onComplete: (pass?: boolean) => void
   isGenerating: boolean
   isCompleting: boolean
-  onReact?: (emoji: string) => void
-  reactions?: Record<string, number>
   currentPlayerArchetype?: string
   onAdvance?: () => void
   chooseModeEnabled?: boolean
@@ -74,8 +66,6 @@ export function PersonalityDiceHeroView({
   onComplete,
   isGenerating,
   isCompleting,
-  onReact,
-  reactions,
   currentPlayerArchetype,
   onAdvance,
   chooseModeEnabled = false,
@@ -96,7 +86,6 @@ export function PersonalityDiceHeroView({
   const [showPassReveal, setShowPassReveal] = useState(false)
   const [shakeCard, setShakeCard] = useState(false)
   const [burstTrigger, setBurstTrigger] = useState(false)
-  const [selectedReaction, setSelectedReaction] = useState<number | null>(null)
   const [showReveal, setShowReveal] = useState(false)
   const [flipped, setFlipped] = useState(() => challenges.length > 0)
   const prevChallengesLenRef = useRef(0)
@@ -192,14 +181,6 @@ export function PersonalityDiceHeroView({
     [onChoose],
   )
 
-  const handleReaction = useCallback(
-    (index: number) => {
-      setSelectedReaction(index)
-      onReact?.(REACTION_ITEMS[index].emoji)
-    },
-    [onReact],
-  )
-
   const diceFace = (
     <View className='personality-dice-hero__dice-face'>
       <JoyJoinIcon emoji='🎲' tier='phase' size={56} />
@@ -292,6 +273,7 @@ export function PersonalityDiceHeroView({
         </View>
         <PhaseHeroCard
           phase='personality_dice'
+          artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-personality-dice.webp')}
           title='人格骰子完成'
           prompt={`${participants.length} 位玩家都完成了自己的专属挑战`}
           statusText='本环节已完成'
@@ -366,6 +348,7 @@ export function PersonalityDiceHeroView({
 
       <PhaseHeroCard
         phase='personality_dice'
+        artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-personality-dice.webp')}
         title={
           hasContent
             ? isMyChallenge
@@ -401,19 +384,6 @@ export function PersonalityDiceHeroView({
             {hasContent && isMyChallenge && hasPassed ? (
               <View className='personality-dice-hero__status-badge personality-dice-hero__status-badge--pass'>
                 <Text className='personality-dice-hero__status-badge-text'>已认怂</Text>
-              </View>
-            ) : null}
-            {hasContent && !isMyChallenge && !hasResponded && onReact ? (
-              <View className='personality-dice-hero__reaction-row'>
-                <TapReaction
-                  reactions={REACTION_ITEMS.map((item) => ({
-                    emoji: item.emoji,
-                    label: item.label,
-                    count: reactions?.[item.emoji] ?? 0,
-                  }))}
-                  onReact={handleReaction}
-                  selectedIndex={selectedReaction ?? undefined}
-                />
               </View>
             ) : null}
           </>

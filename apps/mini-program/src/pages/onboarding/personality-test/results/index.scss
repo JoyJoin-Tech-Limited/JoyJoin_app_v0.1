@@ -2464,3 +2464,68 @@ $color-skill-cool: #7c3aed;
     transition: opacity 0.32s ease, transform 0.32s ease !important;
   }
 }
+
+
+/* ── Slice 5 (2026-07-19): landed white flash + particle-burst overlay ── */
+.personality-results__slot-flash {
+  position: absolute;
+  inset: 0;
+  border-radius: 42rpx;
+  background: #FFFFFF;
+  opacity: 0;
+  pointer-events: none;
+  animation: slot-flash-fade 0.45s ease-out forwards;
+  z-index: 6;
+}
+
+.personality-results__slot-burst {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 7;
+}
+
+@keyframes slot-flash-fade {
+  0% { opacity: 0; }
+  12% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+/* ── Slice 5 (2026-07-19): letter-by-letter hero name reveal ── */
+.personality-results__hero-name-char {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(24rpx) scale(0.6);
+  animation: hero-name-char-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes hero-name-char-pop {
+  from { opacity: 0; transform: translateY(24rpx) scale(0.6); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.personality-results--reduce-motion {
+  .personality-results__slot-flash {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+
+  .personality-results__hero-name-char {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ── Slice 6 (2026-07-19): next-horizon return hook above the primary CTA ── */
+.personality-results__next-horizon {
+  display: block;
+  text-align: center;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: rgba(76, 39, 146, 0.62);
+  margin-bottom: 20rpx;
+}

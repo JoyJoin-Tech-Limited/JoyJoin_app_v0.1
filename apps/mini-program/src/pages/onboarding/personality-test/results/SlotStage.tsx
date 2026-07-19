@@ -10,7 +10,9 @@ import {
 } from '../visuals'
 import { ARCHETYPE_SEQUENCE, type SlotPhase } from './resultHelpers'
 import ArchetypeSpritesheet from './ArchetypeSpritesheet'
+import ParticleBurst from '../../../../components/reveal/ParticleBurst'
 import { haptics } from '../../../../lib/utils/haptics'
+import type { DegradationTier } from '../../../../lib/utils/frameBudget'
 
 /* ── constants ─────────────────────────────────────────────────────── */
 const CARD_HEIGHT = 184 // rpx
@@ -29,6 +31,8 @@ interface SlotStageProps {
   isSlowNetwork: boolean
   progress: number
   phaseText?: string
+  /** Gates landed celebration effects (slice 5, 2026-07-19): full = flash + particles, reduced = flash only, minimal/emergency = CSS rings only. */
+  celebrationTier?: DegradationTier
 }
 
 /* ── memoised card row (prevents 47 re-renders every tick) ─────────── */
@@ -93,6 +97,7 @@ export default function SlotStage({
   isSlowNetwork,
   progress,
   phaseText,
+  celebrationTier = 'full',
 }: SlotStageProps) {
   /* internal unbounded track position */
   const [displayIndex, setDisplayIndex] = useState(reelIndex)
@@ -169,6 +174,8 @@ export default function SlotStage({
 
   const isLanded = slotPhase === 'landed'
   const isAnticipation = slotPhase === 'anticipation'
+  const showFlash = isLanded && (celebrationTier === 'full' || celebrationTier === 'reduced')
+  const showBurst = isLanded && celebrationTier === 'full'
 
   const slotAriaLabel = isAnticipation
     ? '命格卡面即将开始转动'
@@ -183,9 +190,9 @@ export default function SlotStage({
   return (
     <View className='personality-results__immersive-shell' role='status' aria-live='polite' aria-label={slotAriaLabel}>
       <Text className='personality-results__immersive-eyebrow'>JoyJoin 原型揭晓</Text>
-      <Text className='personality-results__immersive-title'>你的命格卡面正在靠近</Text>
+      <Text className='personality-results__immersive-title'>你的答案正在凝成命格卡</Text>
       <Text className='personality-results__immersive-copy'>
-        先让命运转几圈，再锁定真正属于你的那一张牌。
+        你写下的每个选择，都在锁定真正属于你的那一张牌。
       </Text>
 
       {/* ── slot machine frame ── */}
@@ -194,6 +201,9 @@ export default function SlotStage({
       >
         <View className='personality-results__slot-rail' />
         <View className='personality-results__slot-highlight' />
+
+        {/* white flash on landed (storyboard Act 5, slice 5) */}
+        {showFlash && <View className='personality-results__slot-flash' />}
 
         {/* gold burst ring on landed */}
         {isLanded && <View className='personality-results__slot-gold-ring' />}
@@ -215,6 +225,18 @@ export default function SlotStage({
             ))}
           </View>
         </View>
+
+        {/* particle burst on landed (storyboard Act 6, slice 5 — full tier only; ParticleBurst self-handles reduced-motion) */}
+        {showBurst && (
+          <View className='personality-results__slot-burst'>
+            <ParticleBurst
+              trigger={isLanded}
+              type='confetti'
+              count={40}
+              spotlightColor={slotFocusVisual.accent}
+            />
+          </View>
+        )}
 
         {/* particle burst rings on landed */}
         {isLanded && (

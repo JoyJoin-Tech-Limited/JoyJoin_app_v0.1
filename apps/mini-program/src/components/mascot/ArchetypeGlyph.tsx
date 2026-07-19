@@ -23,6 +23,10 @@ interface ArchetypeGlyphProps {
   size?: number // rpx
   highlighted?: boolean // paint-only ring highlight (Oracle Card)
   highlightColor?: string // hex color for ring
+  /** Optional class for H5-safe sizing (inline rpx is ignored by the H5
+   *  preview — postcss transforms stylesheets only). Pair with an SCSS class
+   *  that sets width/height + inner img sizing. */
+  className?: string
 }
 
 const GLYPH_PATHS: Record<string, string> = {
@@ -47,6 +51,7 @@ export default function ArchetypeGlyph({
   size = 16,
   highlighted = false,
   highlightColor = '#A86BFF',
+  className,
 }: ArchetypeGlyphProps) {
   const [src, setSrc] = React.useState(GLYPH_PATHS[archetype] ?? FALLBACK_PATH)
   const sizeStr = `${size}rpx`
@@ -75,7 +80,7 @@ export default function ArchetypeGlyph({
     : {}
 
   return (
-    <View className='archetype-glyph' style={wrapperStyle}>
+    <View className={`archetype-glyph${className ? ` ${className}` : ''}`} style={wrapperStyle}>
       <Image
         src={src}
         mode='aspectFit'

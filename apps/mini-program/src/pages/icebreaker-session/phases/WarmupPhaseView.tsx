@@ -52,6 +52,11 @@ interface WarmupPhaseViewProps {
   isAdvancing: boolean
   topicsError?: boolean
   onAigcFeedbackTap?: (location: 'card') => void
+  /**
+   * C3 — true once the first ready-state payload has arrived; threaded to
+   * the ember rim so seeding never races an unresolved query. Defaults true.
+   */
+  warmupDataReady?: boolean
 }
 
 export function WarmupPhaseView({
@@ -81,6 +86,7 @@ export function WarmupPhaseView({
   isAdvancing,
   topicsError = false,
   onAigcFeedbackTap,
+  warmupDataReady = true,
 }: WarmupPhaseViewProps) {
   const isReady = readyUserIds.includes(currentUserId)
   const everyoneReady = participants.length > 0 && readyUserIds.length >= participants.length
@@ -142,6 +148,16 @@ export function WarmupPhaseView({
     }
   }, [cardState])
 
+  // Campfire Vault Card PR2 (S1) — the optimistic self ember hands off to
+  // server truth: cleared when the echo confirms, rolled back (quiet S4 fade
+  // inside the rim) when the update settles without confirmation.
+  const [selfReadyOptimistic, setSelfReadyOptimistic] = useState(false)
+  useEffect(() => {
+    if (isReady || !isUpdatingReady) {
+      setSelfReadyOptimistic(false)
+    }
+  }, [isReady, isUpdatingReady])
+
   const handleToggleReady = useCallback(() => {
     const ttcMs = Date.now() - (firstTopicRenderedAtRef.current ?? componentMountAtRef.current)
     socialIcebreakerAnalytics.track(
@@ -157,6 +173,9 @@ export function WarmupPhaseView({
         readyCount: readyUserIds.length,
       },
     )
+    // S1 — self ember ignites optimistically on tap (no server wait); the
+    // haptics('medium') for this tap already lives in WarmupActionBar.
+    setSelfReadyOptimistic(!isReady)
     onToggleReady()
   }, [
     onToggleReady,
@@ -183,6 +202,15 @@ export function WarmupPhaseView({
 
     const indexChanged = currentIndex !== prevIndexRef.current
     prevIndexRef.current = currentIndex
+
+    // C5 — quiet topic change: when the card is already showing the topic
+    // face, a bare index change must NOT re-flip to the front (the 500ms
+    // flip would hide the 360ms question crossfade on the back face).
+    // Re-flips are preserved for state transitions INTO topic_card
+    // (mood-regenerate / error recovery reset topicFlipped above).
+    if (indexChanged && topicFlipped) {
+      return
+    }
 
     if (indexChanged || !topicFlipped) {
       setTopicFlipped(false)
@@ -333,17 +361,37 @@ export function WarmupPhaseView({
           onToggleDeepPrompt={handleToggleDeepPrompt}
           onFeedbackTap={handleAigcFeedback}
           warmupTopicsMeta={warmupTopicsMeta}
+          participants={participants}
+          readyUserIds={readyUserIds}
+          currentUserId={currentUserId}
+          selfReadyOptimistic={selfReadyOptimistic}
+          warmupDataReady={warmupDataReady}
         />
       </View>
 
-      <WarmupPresenceStrip
-        participants={participants}
-        readyUserIds={readyUserIds}
-        hostUserId={hostUserId}
-        currentUserId={currentUserId}
-        readyCount={readyUserIds.length}
-        totalCount={participants.length}
-      />
+      {/* P1 — in topic_card the ember rim carries per-member presence, so the
+          strip slims to a compact count-only row (no duplicate avatar row).
+          Other warmup states keep the full strip. Reuses WarmupPresenceStrip
+          classes (its SCSS is bundled via the import below). */}
+      {cardState === 'topic_card' ? (
+        <View className='warmup-presence'>
+          <View style={{ flex: 1 }} />
+          <View className='warmup-presence__count'>
+            <Text className='warmup-presence__count-text'>
+              {readyUserIds.length}/{participants.length} 已准备
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <WarmupPresenceStrip
+          participants={participants}
+          readyUserIds={readyUserIds}
+          hostUserId={hostUserId}
+          currentUserId={currentUserId}
+          readyCount={readyUserIds.length}
+          totalCount={participants.length}
+        />
+      )}
 
       {showActionBar && (
         <WarmupActionBar

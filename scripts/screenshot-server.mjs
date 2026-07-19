@@ -98,7 +98,7 @@ async function withBrowserPage(viewport, fn) {
   const context = await browser.newContext(viewport)
   const page = await context.newPage()
   try {
-    await page.route('https://joyjoinapp.com/static/assets/**', async (route) => {
+    await page.route(/https:\/\/(cdn\.)?joyjoinapp\.com\/static\/assets\/.*/, async (route) => {
       const pathname = new URL(route.request().url()).pathname
       const relativePath = pathname.replace(/^\/static\/assets\//, '')
       const localPath = path.resolve(LOCAL_MINI_PROGRAM_ASSETS, relativePath)
@@ -622,6 +622,30 @@ async function captureProfileSettingsV17() {
   })
 }
 
+// ─── Social Icebreaker (PhaseHeroCard revamp visual review) ─────
+
+function captureIcebreaker(sessionId, waitSelector = '.phase-hero-card', extraWaitMs = 1200) {
+  return withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/icebreaker-session/index?sessionId=${sessionId}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+    await waitForContent(page, waitSelector)
+    await page.waitForTimeout(extraWaitMs)
+    return screenshotPage(page)
+  })
+}
+
+register('icebreaker-micro-challenge', () => captureIcebreaker('mock-micro_challenge'))
+register('icebreaker-lie-detective', () => captureIcebreaker('mock-lie_detective'))
+register('icebreaker-auction', () => captureIcebreaker('mock-auction'))
+register('icebreaker-personality-dice', () => captureIcebreaker('mock-personality_dice'))
+register('icebreaker-speed-friending', () => captureIcebreaker('mock-speed_friending'))
+register('icebreaker-fuse', () => captureIcebreaker('mock-fuse', '.icebreaker__fuse-banner'))
+register('icebreaker-stall', () => captureIcebreaker('mock-stall', '.icebreaker__stall-nudge'))
+register('icebreaker-recap', () => captureIcebreaker('mock-recap', '.icebreaker__recap-hero'))
 register('events-footprint-oracle-card', captureEventsPage)
 register('tier-selector-preset-cards', captureTierSelector)
 register('pool-registration-step-0-brief', capturePoolRegistration)
@@ -644,7 +668,7 @@ register('personal-story-v17', capturePersonalStoryV17)
 register('my-image-v17', captureMyImageV17)
 register('profile-settings-v17', captureProfileSettingsV17)
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '127.0.0.1', () => {
   console.log(`[screenshot-server] listening on http://localhost:${PORT}`)
   console.log(`[screenshot-server] available URLs:`)
   Array.from(generators.keys()).forEach(k => {

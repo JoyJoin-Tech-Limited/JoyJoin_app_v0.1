@@ -1,0 +1,247 @@
+@use '../../../styles/variables' as *;
+
+// ─── Campfire Vault Card PR2 — Ember Rim (contract E1–E5 / S1–S4 / I1 / H1) ─
+// Overlay sits on the card border band; absolute positioning only, so the
+// question zone, seals, 悦仔说, and AIGC footer never shift (E4). All motion
+// is transform/opacity; the glow is a separate opacity-animated disc (E3) —
+// box-shadow is never animated here.
+.warmup-ember-rim {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 5; // above the sheen (z 4), below nothing interactive
+
+  &__seat {
+    position: absolute;
+    width: 16rpx;
+    height: 16rpx;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+
+    // E1 — first-entry pop-in (40ms inline stagger).
+    &--enter {
+      animation: warmup-ember-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    // H1 — embers swell and fade into the halo (60ms inline stagger).
+    &--halo {
+      animation: warmup-ember-halo 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    // Seeded / settled halo: embers are already consumed, no replay (S3).
+    &--halo-static {
+      opacity: 0;
+    }
+  }
+
+  &__dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: $radius-circle;
+    background: rgba(55, 65, 81, 0.12); // E2 — unlit ember
+    opacity: 0.5;
+  }
+
+  // E3 — separate glow disc, faded via opacity only.
+  &__glow {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 24rpx;
+    height: 24rpx;
+    border-radius: $radius-circle;
+    transform: translate(-50%, -50%);
+    opacity: 0.75;
+    pointer-events: none;
+  }
+
+  // Lit states render the accent fill inline; opacity comes up to 1 (E2).
+  &__seat--lit &__dot,
+  &__seat--igniting &__dot,
+  &__seat--self-ignite &__dot,
+  &__seat--extinguish &__dot,
+  &__seat--halo &__dot {
+    opacity: 1;
+  }
+
+  // I1 — idle breath, desynced by a negative inline delay per seat.
+  &__seat--lit &__dot {
+    animation: warmup-ember-breathe 3s ease-in-out infinite;
+  }
+
+  // S2 — friend ignition: spring pop 0.4 → 1.18 → 1 + glow bloom 0 → 0.9 → 0.75.
+  &__seat--igniting &__dot,
+  &__seat--self-ignite &__dot {
+    animation: warmup-ember-ignite 300ms cubic-bezier(0.34, 1.3, 0.64, 1) both;
+  }
+
+  &__seat--igniting &__glow,
+  &__seat--self-ignite &__glow {
+    animation: warmup-ember-glow-bloom 300ms ease-out both;
+  }
+
+  // S4 — un-ready: quiet 200ms fade, no haptic.
+  &__seat--extinguish &__dot {
+    animation: warmup-ember-extinguish 200ms ease-in both;
+  }
+
+  &__seat--extinguish &__glow {
+    animation: warmup-ember-glow-out 200ms ease-in both;
+  }
+
+  // S1 — golden-fill sweep over the self ember.
+  &__self-flash {
+    position: absolute;
+    top: -4rpx;
+    right: -4rpx;
+    bottom: -4rpx;
+    left: -4rpx;
+    border-radius: $radius-circle;
+    background: radial-gradient(circle, rgba(212, 168, 67, 0.9) 0%, rgba(212, 168, 67, 0) 70%);
+    animation: warmup-ember-self-flash 300ms ease-out both;
+    pointer-events: none;
+  }
+}
+
+@keyframes warmup-ember-enter {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes warmup-ember-halo {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.3);
+    opacity: 0;
+  }
+}
+
+@keyframes warmup-ember-breathe {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes warmup-ember-ignite {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes warmup-ember-glow-bloom {
+  0% {
+    opacity: 0;
+  }
+  83% {
+    opacity: 0.9; // ≈250ms of the 300ms window
+  }
+  100% {
+    opacity: 0.75;
+  }
+}
+
+@keyframes warmup-ember-extinguish {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes warmup-ember-glow-out {
+  from {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes warmup-ember-self-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+// G1 — reduced motion: ignition / halo / breaths render statically; the lit
+// state is driven by the hook (no anim classes), so this is belt-and-braces.
+@media (prefers-reduced-motion: reduce) {
+  .warmup-ember-rim {
+    &__seat--enter {
+      animation: none;
+    }
+
+    &__seat--halo {
+      animation: none;
+      opacity: 0;
+    }
+
+    &__dot,
+    &__glow {
+      animation: none !important;
+    }
+
+    &__self-flash {
+      display: none;
+    }
+  }
+}
+
+// C8 — degradation tier (benchmarkLevel ≤ 15 / old iOS): same static render
+// as reduced motion. Class-driven because this is a performance gate, not an
+// OS accessibility setting.
+.warmup-ember-rim--degraded {
+  .warmup-ember-rim__seat--enter {
+    animation: none;
+  }
+
+  .warmup-ember-rim__seat--halo {
+    animation: none;
+    opacity: 0;
+  }
+
+  .warmup-ember-rim__dot,
+  .warmup-ember-rim__glow {
+    animation: none !important;
+  }
+
+  .warmup-ember-rim__self-flash {
+    display: none;
+  }
+}

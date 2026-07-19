@@ -38,6 +38,7 @@ import { getDaresForArchetype } from '@shared/personalityDiceDares';
 import { getFallbackUndercoverPair } from '@shared/undercoverWord';
 import { getFallbackGroupMirrorQuestions } from '@shared/groupMirror';
 import type { SocialTopic, AtmosphereMood, LieDetectiveStatement, AuctionLot, MicroChallenge, GroupMirrorQuestion, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker';
+import { selectPermissionLineForTopic } from '@shared/socialIcebreakerYuezaiCopy';
 import { logger } from '../lib/logger';
 
 // ---------------------------------------------------------------------------
@@ -69,15 +70,25 @@ const PHASE_FEATURE_TYPES: Record<string, JudgeFeatureType> = {
 // ---------------------------------------------------------------------------
 
 function getFallbackTopics(mood: AtmosphereMood): SocialTopic[] {
+  // campfire-vault-card-pr1 A1: fb_w2 carries the brave-but-safe slot
+  // (safety 'reflective' — invites admitting a regret, never death/abuse/
+  // self-harm/explicit), so this quality-gate-discard bank also guarantees
+  // ≥1 brave question.
   const topics: SocialTopic[] = [
     { id: 'fb_w1', question: '最近最离谱的一次外卖经历是什么？', mood: 'funny', emoji: '🍜', category: '生活趣事', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-    { id: 'fb_w2', question: '如果今天能重来一件事，你会改什么？', mood: 'life', emoji: '🔄', category: '今日状态', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+    { id: 'fb_w2', question: '如果今天能重来一件事，你会改什么？', mood: 'life', emoji: '🔄', category: '今日状态', depthLevel: 2, promptStyle: 'experiential', safety: 'reflective' },
     { id: 'fb_w3', question: '你手机里最新的一张照片是什么？（不想秀可以描述）', mood: 'funny', emoji: '📸', category: '轻松好奇', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
     { id: 'fb_w4', question: '最近有get到什么新技能吗？哪怕是煮泡面不糊锅', mood: 'life', emoji: '✨', category: '成长小事', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
     { id: 'fb_w5', question: '如果用一种动物形容今天的自己，你会选什么？', mood: 'funny', emoji: '🐾', category: '脑洞联想', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
   ];
   const shuffled = [...topics].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 5).map((t, i) => ({ ...t, id: `fb_${mood}_${i}`, mood }));
+  return shuffled.slice(0, 5).map((t, i) => ({
+    ...t,
+    id: `fb_${mood}_${i}`,
+    mood,
+    // 悦仔说 permission whisper — deterministic per topic (contract A2).
+    permissionLine: selectPermissionLineForTopic({ question: t.question, depthLevel: t.depthLevel }),
+  }));
 }
 
 function getFallbackLieDetectiveStatements(): LieDetectiveStatement[] {

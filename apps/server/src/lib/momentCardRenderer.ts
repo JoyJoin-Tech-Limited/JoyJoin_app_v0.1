@@ -12,7 +12,7 @@
 import { createCanvas, loadImage, SKRSContext2D, GlobalFonts } from "@napi-rs/canvas";
 import QRCode from "qrcode";
 import { getArchetypeHSL } from "@joyjoin/shared";
-import type { MomentCardPayload } from "./momentCardPayload";
+import type { MomentCardKeepsake, MomentCardPayload } from "./momentCardPayload";
 import { logger } from "./logger";
 import { existsSync } from "fs";
 
@@ -108,6 +108,198 @@ function drawRoundedRect(
   ctx.lineTo(x, y + radius);
   ctx.arcTo(x, y, x + radius, y, radius);
   ctx.closePath();
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** Clamp text to maxWidth, appending an ellipsis when truncation is needed. */
+function fitWithEllipsis(ctx: SKRSContext2D, text: string, maxWidth: number): string {
+  if (measureTextWidth(ctx, text) <= maxWidth) return text;
+  const chars = [...text]; // codepoint-safe (CJK)
+  let out = text;
+  while (chars.length > 0 && measureTextWidth(ctx, out + "…") > maxWidth) {
+    chars.pop();
+    out = chars.join("");
+  }
+  return out + "…";
+}
+
+/**
+ * CJK-safe manual word wrap: breaks per codepoint (no word-boundary assumption),
+ * capped at maxLines with an ellipsis on the last line when truncated.
+ * Caller must set the font before invoking.
+ */
+function wrapTextLines(
+  ctx: SKRSContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines: number,
+): string[] {
+  const chars = [...text];
+  const lines: string[] = [];
+  let current = "";
+  for (let i = 0; i < chars.length; i++) {
+    const candidate = current + chars[i];
+    if (current && measureTextWidth(ctx, candidate) > maxWidth) {
+      lines.push(current);
+      if (lines.length === maxLines - 1) {
+        // Last allowed line — fit the remainder with an ellipsis reservation.
+        lines.push(fitWithEllipsis(ctx, chars.slice(i).join(""), maxWidth));
+        return lines;
+      }
+      current = chars[i];
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.slice(0, maxLines);
+}
+
+/** Depth seal palette — same colors as PR1 seals. */
+const KEEPSAKE_SEAL_STYLES: Record<number, { base: string; deep: string }> = {
+  1: { base: "#5B8DB8", deep: "#3D6E9C" },
+  2: { base: "#8B5CF6", deep: "#7C3AED" },
+  3: { base: "#C99A3C", deep: "#8A651A" },
+};
+
+/**
+ * 话题留档 keepsake block — cream editorial card on the dark Moment Card.
+ * Draws the eyebrow row (「今晚的话题卡」 + depth seal pill), the question
+ * (bold, ≤2 lines, ellipsis-clamped), and the 悦仔说 permission line when
+ * present. Returns the Y coordinate just below the block.
+ */
+function drawKeepsakeBlock(
+  ctx: SKRSContext2D,
+  w: number,
+  y: number,
+  keepsake: MomentCardKeepsake,
+): number {
+  const blockX = 30;
+  const blockW = w - 60;
+  const padX = 24;
+  const padTop = 20;
+  const padBottom = 20;
+  const contentW = blockW - padX * 2;
+
+  const eyebrowRowH = 16;
+  const questionFontSize = 20;
+  const questionLineH = 27;
+  const gapEyebrowQuestion = 8;
+
+  const permissionLine =
+    typeof keepsake.permissionLine === "string" && keepsake.permissionLine.trim().length > 0
+      ? keepsake.permissionLine.trim()
+      : null;
+  const permissionGap = 6;
+  const permissionH = permissionLine ? 16 : 0;
+
+  // AIGC compliance microline — always present, right-aligned inside the
+  // block's bottom padding (mirrors the mini-program MomentCardView label).
+  const AIGC_LABEL = "话题由 AI 生成";
+  const aigcFontSize = 10;
+  const aigcGap = 6;
+  const aigcRowH = 14;
+
+  // Pre-measure the question so block height is known before painting.
+  setFont(ctx, questionFontSize, 600);
+  const questionLines = wrapTextLines(ctx, keepsake.question, contentW, 2);
+  const questionH = questionLines.length * questionLineH;
+
+  const blockH =
+    padTop + eyebrowRowH + gapEyebrowQuestion + questionH +
+    (permissionLine ? permissionGap + permissionH : 0) +
+    aigcGap + aigcRowH + padBottom;
+
+  // Cream card + foil border
+  ctx.fillStyle = "#FFFAF4";
+  drawRoundedRect(ctx, blockX, y, blockW, blockH, 16);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(139, 92, 246, 0.45)";
+  ctx.lineWidth = 2;
+  drawRoundedRect(ctx, blockX, y, blockW, blockH, 16);
+  ctx.stroke();
+
+  // Eyebrow — per-char advance for letterspacing. Canvas has no
+  // letter-spacing, and U+2009 thin-space joins render as tofu when the host
+  // CJK font lacks that glyph (mirrors mini-program MomentCardView).
+  setFont(ctx, 11, 600);
+  ctx.fillStyle = "#7C3AED";
+  ctx.textAlign = "left";
+  const eyebrowLetterSpacing = 1.5;
+  const eyebrowBaselineY = y + padTop + 11;
+  let eyebrowX = blockX + padX;
+  for (const ch of "今晚的话题卡") {
+    ctx.fillText(ch, eyebrowX, eyebrowBaselineY);
+    eyebrowX += measureTextWidth(ctx, ch) + eyebrowLetterSpacing;
+  }
+
+  // Depth seal pill, right-aligned on the eyebrow row (text only, no emoji).
+  const level =
+    keepsake.depthLevel === 1 || keepsake.depthLevel === 2 || keepsake.depthLevel === 3
+      ? keepsake.depthLevel
+      : undefined;
+  if (level) {
+    const seal = KEEPSAKE_SEAL_STYLES[level];
+    const sealText = `深度·L${level}`;
+    setFont(ctx, 10, 600);
+    const sealPillH = 18;
+    const sealPadX = 8;
+    const sealPillW = measureTextWidth(ctx, sealText) + sealPadX * 2;
+    const sealX = blockX + blockW - padX - sealPillW;
+    const sealY = y + padTop + 1;
+    ctx.fillStyle = hexToRgba(seal.base, 0.14);
+    drawRoundedRect(ctx, sealX, sealY, sealPillW, sealPillH, sealPillH / 2);
+    ctx.fill();
+    ctx.strokeStyle = hexToRgba(seal.base, 0.55);
+    ctx.lineWidth = 1;
+    drawRoundedRect(ctx, sealX, sealY, sealPillW, sealPillH, sealPillH / 2);
+    ctx.stroke();
+    ctx.fillStyle = seal.deep;
+    ctx.textAlign = "center";
+    ctx.fillText(sealText, sealX + sealPillW / 2, sealY + sealPillH / 2 + 3.5);
+  }
+
+  // Question — bold, centered, ≤2 lines.
+  ctx.textAlign = "center";
+  setFont(ctx, questionFontSize, 600);
+  ctx.fillStyle = "#1F2937";
+  const questionTop = y + padTop + eyebrowRowH + gapEyebrowQuestion;
+  questionLines.forEach((line, i) => {
+    ctx.fillText(line, w / 2, questionTop + 16 + i * questionLineH);
+  });
+
+  // 悦仔说 permission whisper — omitted entirely when absent (no dangling prefix).
+  if (permissionLine) {
+    setFont(ctx, 13);
+    ctx.fillStyle = "rgba(55, 65, 81, 0.62)";
+    const permissionBaseline =
+      questionTop + questionH + permissionGap + 11;
+    ctx.fillText(
+      fitWithEllipsis(ctx, `悦仔说 · ${permissionLine}`, contentW),
+      w / 2,
+      permissionBaseline,
+    );
+  }
+
+  // AIGC compliance microline — quiet, right-aligned at the content edge,
+  // sitting in the reserved row above the bottom padding.
+  setFont(ctx, aigcFontSize);
+  ctx.fillStyle = "rgba(55, 65, 81, 0.45)";
+  ctx.textAlign = "right";
+  const aigcBaseline =
+    questionTop + questionH +
+    (permissionLine ? permissionGap + permissionH : 0) +
+    aigcGap + 10;
+  ctx.fillText(AIGC_LABEL, blockX + blockW - padX, aigcBaseline);
+
+  ctx.textAlign = "left";
+  return y + blockH;
 }
 
 export async function renderMomentCardToPng(payload: MomentCardPayload): Promise<Buffer> {
@@ -254,6 +446,11 @@ export async function renderMomentCardToPng(payload: MomentCardPayload): Promise
     const quoteText = payload.quote.length > 40 ? payload.quote.slice(0, 39) + "…" : payload.quote;
     ctx.fillText(`"${quoteText}"`, w / 2, quoteY);
     nextY = quoteY + 30;
+  }
+
+  // ── Keepsake block (话题留档) — replaces the quote zone when present ──
+  if (payload.keepsake) {
+    nextY = drawKeepsakeBlock(ctx, w, nextY, payload.keepsake) + 24;
   }
 
   // ── Medals ──

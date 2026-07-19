@@ -1,6 +1,6 @@
 # Icebreaker System — Complete Reference
 
-**Last Updated:** 2026-07-07
+**Last Updated:** 2026-07-17
 
 > ⭐ **CANONICAL FLOW:** The Social Icebreaker is the **primary and default in-event icebreaking experience** for JoyJoin matched groups. When building any feature that relates to icebreaking or in-event social facilitation, you MUST integrate with or extend the Social Icebreaker. Do NOT build new standalone icebreaking UIs.
 
@@ -375,7 +375,7 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 | `POST` | `/api/social-icebreaker/:socialSessionId/topics` | host | Generate mood-filtered warmup topics (vibe-aware depth when `RUN_PLAN_TEMPLATES_ENABLED=true`) |
 | `POST` | `/api/social-icebreaker/:socialSessionId/warmup/ready` | any | Mark whether the current player is ready to move on |
 | `POST` | `/api/social-icebreaker/:socialSessionId/warmup/next-topic` | host | Advance to the next shared warmup topic after mutual readiness |
-| `POST` | `/api/social-icebreaker/:socialSessionId/advance` | host | Advance to next phase; auto-skips `lie_detective` if <3 players |
+| `POST` | `/api/social-icebreaker/:socialSessionId/advance` | host | Advance to next phase; accepts `force: true` to skip stragglers; auto-skips `lie_detective` if <3 players |
 | `POST` | `/api/social-icebreaker/:socialSessionId/set-tier` | host | Change tier + vibe during `waiting` or `warmup` phase; server recompiles run plan |
 | `POST` | `/api/social-icebreaker/:socialSessionId/pulse-check` | any | Submit vibe (1=cold, 2=warm, 3=fire) |
 | `POST` | `/api/social-icebreaker/:socialSessionId/micro-challenge/complete` | any | Mark self as challenge done |
@@ -386,15 +386,25 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 | `GET` | `/api/social-icebreaker/:socialSessionId/moment-card.png` | any | Server-rendered shareable Moment Card PNG (feature-flagged: `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER`; rate-limited: 5 req/min per user) |
 | `POST` | `/api/social-icebreaker/:socialSessionId/bonus/respond` | host | Host accepts or declines the bonus `mini_script` offer |
 | `POST` | `/api/social-icebreaker/:socialSessionId/bonus/sentiment` | any | Player votes `want` or `pass` on the bonus `mini_script` offer |
+| `POST` | `/api/social-icebreaker/:socialSessionId/early-end` | host | Jump to recap early without counting the current phase as completed; routes through `transitionPhase()` |
+| `POST` | `/api/social-icebreaker/:socialSessionId/end-session` | host | End a custom-mode session early |
+| `POST` | `/api/social-icebreaker/:socialSessionId/select-phase` | host | Select the next phase in custom mode (`phase_selection`) |
 
 ### Frontend Surfaces
 
 **Files (mini-program first):**
 - `apps/mini-program/src/pages/icebreaker-session/index.tsx` — Taro session page (primary in-field client)
-- `apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx` — phase UI modules for mini-program
+- `apps/mini-program/src/pages/icebreaker-session/phaseViews.tsx` — barrel that now exports hero views exclusively (PH3 PR3: all 9 non-warmup phases), `PhaseHeroCard` shared premium frame with per-phase foil accent, 4 zones (header rail → hero → status → action), abandoned `--paused` rollback
+- `apps/mini-program/src/pages/icebreaker-session/components/PhaseHeroCard.tsx` — shared premium card frame used by all hero views; per-phase foil border/shadow via `getPhaseFoilStyle()`, `artUrl` Lovart band (≤40%, widthFix)
 - `apps/mini-program/src/pages/icebreaker-session/tier-selector/index.tsx` — host-facing tier+vibe selector: 3 opinionated presets (`轻松破冰`, `深度畅聊`, `游戏狂欢`) plus an advanced 3×3 grid and a `自由局` custom mode card; feature-flagged via `features.runPlanTemplatesEnabled` and `features.socialIcebreakerCustomModeEnabled`
-- `apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.tsx` — Warmup phase with vibe-aware depth badges (golden "深度话题" for 深聊, green "快速暖场" for 暢玩) and 3-tier `TierPromptReveal` for 深聊
-- `apps/mini-program/src/hooks/useTierReveal.ts` — Staggered tier-prompt reveal hook with punctuation-aware delays
+- `apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.tsx` — Warmup phase (4-band zero-scroll layout: welcome band, hero card slot, chrome-less presence strip, white action bar). Host band replaced permanent XiaoyueChatBubble with 40rpx expression avatar + single toneLine. Host tools consolidated in `⋯` menu. Warmup hero card state machine: mood pick → generating shimmer → deal-flip to topic. `深聊` collapse expander. Ready CTA morphs `我准备好了` → `已准备 ✓`.
+- `apps/mini-program/src/pages/icebreaker-session/phases/MicroChallengeHeroView.tsx` — Micro-challenge hero (live countdown, tap-burst, calm `已完成 ✓` morph) — pilot of PR2 PhaseHeroCard visual system
+- `apps/mini-program/src/pages/icebreaker-session/phases/LieDetectiveHeroView.tsx` — Lie Detective hero (statement flip-to-reveal on vote complete, emoji-purged tags)
+- `apps/mini-program/src/pages/icebreaker-session/phases/MomentCardView.tsx` — Session recap terminal card; dual-preview (Moment + keepsake); `keepsake` topic optional editorial block
+- `apps/mini-program/src/pages/icebreaker-session/warmupViewModels.ts` — Warmup state machine, hero card state, ready CTA logic extracted from WarmupPhaseView
+- `apps/mini-program/src/pages/icebreaker-session/phaseAccents.ts` — Per-phase foil accent tokens (`getPhaseFoilStyle()`), locked by `phaseAccents.test.ts` (≥4.5:1 deep-on-tint contrast)
+- `apps/mini-program/src/styles/_phase-hero-card.scss` — PhaseHeroCard shared styles + `_phase-motion.scss` shared motion vocabulary
+- `packages/shared/src/socialIcebreakerYuezaiCopy.ts` — Centralised 悦仔 copy: tier copy, permission lines (`YUEZAI_PERMISSION_LINES` keyed by `SocialTopicDepthLevel`), `getYuezaiCopyForTier()`
 - `apps/user-client/src/pages/IcebreakerSessionPage.tsx` — web session page (parity)
 - `apps/user-client/src/hooks/useSocialIcebreaker.ts` — web hook (parity)
 
@@ -650,6 +660,7 @@ interface SocialTopic {
   mood: AtmosphereMood;
   depthLevel: number;           // 1 (light) → 3 (deep)
   promptTiers?: SocialTopicPromptTiers;  // 3-tier prompts for 深聊 vibe
+  permissionLine?: string | null;       // 悦仔说 whisper, server-selected from register-matched pool at generation (PR3 PR1)
 }
 ```
 

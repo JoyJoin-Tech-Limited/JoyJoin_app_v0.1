@@ -17,7 +17,6 @@
     align-items: center;
     justify-content: center;
     transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
-    will-change: transform, opacity;
     @include tap-feedback;
 
     &--pulse {
@@ -56,8 +55,8 @@
     height: 100%;
     border-radius: 6rpx;
     background: $brand-gradient;
-    transition: width 0.2s ease;
-    will-change: width;
+    transform-origin: left center;
+    transition: transform 0.2s ease;
   }
 
   &__count {

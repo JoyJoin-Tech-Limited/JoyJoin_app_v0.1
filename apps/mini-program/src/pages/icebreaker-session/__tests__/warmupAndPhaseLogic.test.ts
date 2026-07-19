@@ -10,6 +10,19 @@ import {
   buildWarmupCaption,
   getWarmupCardState,
   countArchetypes,
+  getDepthSealColors,
+  shouldShowPermissionLine,
+  computeEmberSeats,
+  diffReadyUserIds,
+  buildEmberIgnitionQueue,
+  seedLitUserIds,
+  computeEmberAccent,
+  resolveEmberHalo,
+  isBraveTopic,
+  getDepthCornerText,
+  EMBER_MAX_SEATS,
+  EMBER_IGNITION_STAGGER_MS,
+  EMBER_IGNITION_BATCH_THRESHOLD,
 } from '../viewModels/warmupViewModels'
 
 // ── getWarmupCardState ─────────────────────────────────────────────
@@ -228,6 +241,258 @@ describe('buildWarmupCaption', () => {
   })
 })
 
+// ── getDepthSealColors (Campfire Vault Card PR1, contract B2) ───────────────
+describe('getDepthSealColors', () => {
+  it('returns null for missing depth level', () => {
+    expect(getDepthSealColors(undefined)).toBeNull()
+    expect(getDepthSealColors(null)).toBeNull()
+  })
+
+  it('returns null for out-of-range depth level', () => {
+    expect(getDepthSealColors(0)).toBeNull()
+    expect(getDepthSealColors(4)).toBeNull()
+  })
+
+  it('L1 seal is blue with deep variant and rgba border/fill', () => {
+    expect(getDepthSealColors(1)).toEqual({
+      accent: '#5B8DB8',
+      deep: '#3D6E9C',
+      borderColor: 'rgba(91, 141, 184, 0.3)',
+      backgroundColor: 'rgba(91, 141, 184, 0.1)',
+    })
+  })
+
+  it('L2 seal is purple', () => {
+    expect(getDepthSealColors(2)).toEqual({
+      accent: '#8B5CF6',
+      deep: '#7C3AED',
+      borderColor: 'rgba(139, 92, 246, 0.3)',
+      backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    })
+  })
+
+  it('L3 seal is gold', () => {
+    expect(getDepthSealColors(3)).toEqual({
+      accent: '#C99A3C',
+      deep: '#8A651A',
+      borderColor: 'rgba(201, 154, 60, 0.3)',
+      backgroundColor: 'rgba(201, 154, 60, 0.1)',
+    })
+  })
+})
+
+// ── shouldShowPermissionLine (Campfire Vault Card PR1, contract C6) ─────────
+describe('shouldShowPermissionLine', () => {
+  const line = '这题没有标准答案，说一半也算数'
+
+  it('hidden when topic or line is missing', () => {
+    expect(shouldShowPermissionLine(null, 0)).toBe(false)
+    expect(shouldShowPermissionLine(undefined, 0)).toBe(false)
+    expect(shouldShowPermissionLine({ depthLevel: 3, permissionLine: null }, 0)).toBe(false)
+    expect(shouldShowPermissionLine({ depthLevel: 3, permissionLine: '   ' }, 0)).toBe(false)
+  })
+
+  it('visible on the first card regardless of depth', () => {
+    expect(shouldShowPermissionLine({ depthLevel: 1, permissionLine: line }, 0)).toBe(true)
+    expect(shouldShowPermissionLine({ permissionLine: line }, 0)).toBe(true)
+  })
+
+  it('visible for depthLevel >= 2 beyond the first card', () => {
+    expect(shouldShowPermissionLine({ depthLevel: 2, permissionLine: line }, 1)).toBe(true)
+    expect(shouldShowPermissionLine({ depthLevel: 3, permissionLine: line }, 2)).toBe(true)
+  })
+
+  it('hidden for depthLevel 1 beyond the first card', () => {
+    expect(shouldShowPermissionLine({ depthLevel: 1, permissionLine: line }, 1)).toBe(false)
+    expect(shouldShowPermissionLine({ permissionLine: line }, 3)).toBe(false)
+  })
+})
+
+// ─── Campfire Vault Card PR2 — Ember Rim (contract E1 / E2 / S2 / S3) ───────
+describe('computeEmberSeats', () => {
+  it('returns no seats for 0 members', () => {
+    expect(computeEmberSeats(0)).toEqual([])
+  })
+
+  it('1 member → a single centered top seat', () => {
+    expect(computeEmberSeats(1)).toEqual([{ edge: 'top', leftPercent: 50 }])
+  })
+
+  it('2 members → one centered seat per edge', () => {
+    expect(computeEmberSeats(2)).toEqual([
+      { edge: 'top', leftPercent: 50 },
+      { edge: 'bottom', leftPercent: 50 },
+    ])
+  })
+
+  it('4 members → 2 top + 2 bottom seats at the insets', () => {
+    const seats = computeEmberSeats(4)
+    expect(seats).toHaveLength(4)
+    expect(seats.filter((s) => s.edge === 'top')).toHaveLength(2)
+    expect(seats.filter((s) => s.edge === 'bottom')).toHaveLength(2)
+    expect(seats.map((s) => s.leftPercent)).toEqual([12, 88, 12, 88])
+  })
+
+  it('6 members → 3 top + 3 bottom seats, centered middle seat', () => {
+    const seats = computeEmberSeats(6)
+    expect(seats).toHaveLength(6)
+    expect(seats.filter((s) => s.edge === 'top')).toHaveLength(3)
+    expect(seats.filter((s) => s.edge === 'bottom')).toHaveLength(3)
+    expect(seats.map((s) => s.leftPercent)).toEqual([12, 50, 88, 12, 50, 88])
+  })
+
+  it('8 members → 4 top + 4 bottom seats', () => {
+    const seats = computeEmberSeats(8)
+    expect(seats).toHaveLength(8)
+    expect(seats.filter((s) => s.edge === 'top')).toHaveLength(4)
+    expect(seats.filter((s) => s.edge === 'bottom')).toHaveLength(4)
+  })
+
+  it('is deterministic — identical output across calls', () => {
+    for (const count of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      expect(computeEmberSeats(count)).toEqual(computeEmberSeats(count))
+    }
+  })
+
+  it('all seats sit on the border band within the corner insets', () => {
+    for (const count of [1, 2, 4, 6, 8]) {
+      for (const seat of computeEmberSeats(count)) {
+        expect(['top', 'bottom']).toContain(seat.edge)
+        expect(seat.leftPercent).toBeGreaterThanOrEqual(12)
+        expect(seat.leftPercent).toBeLessThanOrEqual(88)
+      }
+    }
+  })
+
+  it('no duplicate positions on the same edge', () => {
+    for (const count of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const seats = computeEmberSeats(count)
+      for (const edge of ['top', 'bottom'] as const) {
+        const positions = seats.filter((s) => s.edge === edge).map((s) => s.leftPercent)
+        expect(new Set(positions).size).toBe(positions.length)
+      }
+    }
+  })
+
+  it('caps at EMBER_MAX_SEATS for oversized rosters', () => {
+    expect(computeEmberSeats(12)).toHaveLength(EMBER_MAX_SEATS)
+    expect(computeEmberSeats(100)).toHaveLength(EMBER_MAX_SEATS)
+  })
+
+  it('guards negative and fractional counts', () => {
+    expect(computeEmberSeats(-3)).toEqual([])
+    expect(computeEmberSeats(4.9)).toHaveLength(4)
+  })
+})
+
+describe('diffReadyUserIds', () => {
+  it('detects newly ready ids as ignited', () => {
+    expect(diffReadyUserIds(['u1'], ['u1', 'u2'])).toEqual({
+      ignited: ['u2'],
+      extinguished: [],
+    })
+  })
+
+  it('detects un-ready ids as extinguished', () => {
+    expect(diffReadyUserIds(['u1', 'u2'], ['u1'])).toEqual({
+      ignited: [],
+      extinguished: ['u2'],
+    })
+  })
+
+  it('detects mixed changes in one cycle', () => {
+    expect(diffReadyUserIds(['u1', 'u2'], ['u2', 'u3'])).toEqual({
+      ignited: ['u3'],
+      extinguished: ['u1'],
+    })
+  })
+
+  it('dedupes across cycles — identical sets produce no work', () => {
+    expect(diffReadyUserIds(['u1', 'u2'], ['u1', 'u2'])).toEqual({
+      ignited: [],
+      extinguished: [],
+    })
+  })
+
+  it('self-heals missed cycles — diff is against the last applied set', () => {
+    // Cycle missed u2; next diff against prev=[u1] surfaces both u2 and u3.
+    expect(diffReadyUserIds(['u1'], ['u1', 'u2', 'u3']).ignited).toEqual(['u2', 'u3'])
+  })
+})
+
+describe('buildEmberIgnitionQueue', () => {
+  it('excludes the viewer (self ignites optimistically)', () => {
+    const queue = buildEmberIgnitionQueue(['u1', 'u2'], { excludeUserId: 'u1' })
+    expect(queue.items).toEqual([{ userId: 'u2', delayMs: 0 }])
+  })
+
+  it('dedupes repeated ids', () => {
+    const queue = buildEmberIgnitionQueue(['u1', 'u1', 'u1'])
+    expect(queue.items).toEqual([{ userId: 'u1', delayMs: 0 }])
+  })
+
+  it('staggers ≤2 ignitions ≥120ms apart', () => {
+    const queue = buildEmberIgnitionQueue(['u1', 'u2'])
+    expect(queue.mode).toBe('staggered')
+    expect(queue.items).toEqual([
+      { userId: 'u1', delayMs: 0 },
+      { userId: 'u2', delayMs: EMBER_IGNITION_STAGGER_MS },
+    ])
+    expect(EMBER_IGNITION_STAGGER_MS).toBeGreaterThanOrEqual(120)
+  })
+
+  it('batch-ignites when >2 arrive in one cycle', () => {
+    const queue = buildEmberIgnitionQueue(['u1', 'u2', 'u3'])
+    expect(queue.mode).toBe('batch')
+    expect(queue.items).toHaveLength(3)
+    expect(queue.items.every((item) => item.delayMs === 0)).toBe(true)
+    expect(queue.items.length).toBeGreaterThan(EMBER_IGNITION_BATCH_THRESHOLD)
+  })
+
+  it('empty input produces an empty staggered queue', () => {
+    expect(buildEmberIgnitionQueue([])).toEqual({ mode: 'staggered', items: [] })
+  })
+})
+
+describe('seedLitUserIds', () => {
+  const participants: SessionParticipant[] = [
+    { userId: 'u1', archetype: 'corgi' },
+    { userId: 'u2', archetype: 'fox' },
+  ]
+
+  it('keeps only ready ids that are on the roster', () => {
+    expect(seedLitUserIds(['u1', 'u2', 'ghost'], participants)).toEqual(['u1', 'u2'])
+  })
+
+  it('dedupes repeated ready ids', () => {
+    expect(seedLitUserIds(['u1', 'u1'], participants)).toEqual(['u1'])
+  })
+
+  it('returns empty for empty ready list or roster', () => {
+    expect(seedLitUserIds([], participants)).toEqual([])
+    expect(seedLitUserIds(['u1'], [])).toEqual([])
+  })
+})
+
+describe('computeEmberAccent', () => {
+  it('returns rgba strings (WeChat drops hsla)', () => {
+    const accent = computeEmberAccent('corgi')
+    expect(accent.fill).toMatch(/^rgba\(\d+, \d+, \d+, 1\)$/)
+    expect(accent.glow).toMatch(/^rgba\(\d+, \d+, \d+, 0\.45\)$/)
+    expect(accent.glowFade).toMatch(/^rgba\(\d+, \d+, \d+, 0\)$/)
+    expect(accent.fill.slice(0, accent.fill.lastIndexOf(','))).toBe(
+      accent.glow.slice(0, accent.glow.lastIndexOf(',')),
+    )
+  })
+
+  it('missing archetype falls back to the neutral brand purple', () => {
+    const missing = computeEmberAccent(undefined)
+    const unknown = computeEmberAccent('not_an_archetype')
+    expect(missing).toEqual(unknown)
+    expect(missing.fill).toMatch(/^rgba\(\d+, \d+, \d+, 1\)$/)
+  })
+})
+
 // ── getNextPhase (from shared) ─────────────────────────────────────────
 describe('getNextPhase (shared socialIcebreaker)', () => {
   let getNextPhase: (current: SocialIcebreakerPhase, enabledPhases: SocialIcebreakerPhase[]) => SocialIcebreakerPhase
@@ -321,5 +586,162 @@ describe('getNextEligiblePhase (shared socialIcebreaker)', () => {
     // All phases in runPlan allow 4 players, so should return next one
     const result = getNextEligiblePhase('lie_detective', state)
     expect(result).toBe('personality_dice')
+  })
+})
+
+// ── resolveEmberHalo (audit B2 / C2 / C3) ──────────────────────────
+describe('resolveEmberHalo', () => {
+  const base = {
+    isTopicCard: true,
+    dataReady: true,
+    indexChanged: false,
+    everyoneReady: false,
+    consumed: false,
+    firstEval: true,
+    reduceMotion: false,
+  }
+
+  it('not a topic card → off, refs untouched', () => {
+    const r = resolveEmberHalo({ ...base, isTopicCard: false })
+    expect(r.decision).toBe('off')
+    expect(r.nextConsumed).toBe(false)
+    expect(r.nextFirstEval).toBe(true)
+  })
+
+  it('C3 — no ready-state data yet → no-op, firstEval NOT consumed', () => {
+    const r = resolveEmberHalo({ ...base, dataReady: false, everyoneReady: true })
+    expect(r.decision).toBeNull()
+    expect(r.nextConsumed).toBe(false)
+    expect(r.nextFirstEval).toBe(true)
+  })
+
+  it('mount with everyone already ready → static, no swell replay (S3)', () => {
+    const r = resolveEmberHalo({ ...base, everyoneReady: true })
+    expect(r.decision).toBe('static')
+    expect(r.nextConsumed).toBe(true)
+    expect(r.nextFirstEval).toBe(false)
+  })
+
+  it('mount with not-ready → off, and firstEval IS consumed (B2)', () => {
+    const r = resolveEmberHalo({ ...base, everyoneReady: false })
+    expect(r.decision).toBe('off')
+    expect(r.nextConsumed).toBe(false)
+    expect(r.nextFirstEval).toBe(false)
+  })
+
+  it('B2 — live transition not-ready → all-ready plays the climax swell', () => {
+    // First data-bearing evaluation: nobody ready.
+    const first = resolveEmberHalo({ ...base, everyoneReady: false })
+    expect(first.decision).toBe('off')
+    // Later poll: everyone ready. Must be 'playing', never 'static'.
+    const second = resolveEmberHalo({
+      ...base,
+      everyoneReady: true,
+      consumed: first.nextConsumed,
+      firstEval: first.nextFirstEval,
+    })
+    expect(second.decision).toBe('playing')
+    expect(second.nextConsumed).toBe(true)
+  })
+
+  it('H4 — the same all-ready moment never replays (second cycle → no-op)', () => {
+    const r = resolveEmberHalo({
+      ...base,
+      everyoneReady: true,
+      consumed: true,
+      firstEval: false,
+    })
+    expect(r.decision).toBeNull()
+    expect(r.nextConsumed).toBe(true)
+  })
+
+  it('reduced motion always settles to the static glow (G1)', () => {
+    const r = resolveEmberHalo({
+      ...base,
+      everyoneReady: true,
+      firstEval: false,
+      reduceMotion: true,
+    })
+    expect(r.decision).toBe('static')
+  })
+
+  it('C2 — topic change clears the halo AND re-arms it for the new card', () => {
+    const r = resolveEmberHalo({
+      ...base,
+      indexChanged: true,
+      everyoneReady: true,
+      consumed: true,
+      firstEval: false,
+    })
+    expect(r.decision).toBe('off')
+    expect(r.nextConsumed).toBe(false)
+  })
+
+  it('C2 — after re-arm, an all-ready new topic plays the halo again', () => {
+    const rearm = resolveEmberHalo({
+      ...base,
+      indexChanged: true,
+      everyoneReady: true,
+      consumed: true,
+      firstEval: false,
+    })
+    const next = resolveEmberHalo({
+      ...base,
+      indexChanged: false,
+      everyoneReady: true,
+      consumed: rearm.nextConsumed,
+      firstEval: rearm.nextFirstEval,
+    })
+    expect(next.decision).toBe('playing')
+  })
+
+  it('not-ready re-arms a consumed halo', () => {
+    const r = resolveEmberHalo({
+      ...base,
+      everyoneReady: false,
+      consumed: true,
+      firstEval: false,
+    })
+    expect(r.decision).toBe('off')
+    expect(r.nextConsumed).toBe(false)
+  })
+})
+
+// ── isBraveTopic (audit C4, contract A1) ───────────────────────────
+describe('isBraveTopic', () => {
+  it('reflective safety → brave', () => {
+    expect(isBraveTopic({ safety: 'reflective' })).toBe(true)
+  })
+
+  it('C4 — depth level alone does NOT make a card brave', () => {
+    // The pre-fix predicate fired for every L2+ card; contract A1 limits
+    // brave to server-flagged reflective safety only.
+    expect(isBraveTopic({ safety: 'open' })).toBe(false)
+    expect(isBraveTopic({ safety: 'gentle' })).toBe(false)
+  })
+
+  it('missing topic / missing safety → not brave', () => {
+    expect(isBraveTopic(null)).toBe(false)
+    expect(isBraveTopic(undefined)).toBe(false)
+    expect(isBraveTopic({})).toBe(false)
+  })
+})
+
+// ── getDepthCornerText (audit P1 — keepsake seal parity) ───────────
+describe('getDepthCornerText', () => {
+  it('deep_chat renders the unspaced keepsake form 深度·L{n}', () => {
+    expect(getDepthCornerText('deep_chat', 2)).toBe('深度·L2')
+    expect(getDepthCornerText('deep_chat', 1)).toBe('深度·L1')
+    expect(getDepthCornerText('deep_chat', 3)).toBe('深度·L3')
+  })
+
+  it('play_fun hides the seal', () => {
+    expect(getDepthCornerText('play_fun', 2)).toBeNull()
+  })
+
+  it('no vibe / no depth → null', () => {
+    expect(getDepthCornerText(undefined, 2)).toBeNull()
+    expect(getDepthCornerText('deep_chat', null)).toBeNull()
+    expect(getDepthCornerText('deep_chat', undefined)).toBeNull()
   })
 })

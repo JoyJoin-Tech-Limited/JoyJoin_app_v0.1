@@ -119,3 +119,18 @@ $sf-deep: $phase-accent-speed-deep;
     opacity: 1;
   }
 }
+
+// H5-safe glyph sizing: inline rpx styles are dropped by the H5 preview
+// (postcss transforms stylesheets only), so the class carries the size.
+.speed-friending-hero__glyph {
+  display: inline-flex;
+  width: 64rpx;
+  height: 64rpx;
+  overflow: hidden;
+
+  img,
+  taro-image-core {
+    width: 100%;
+    height: 100%;
+  }
+}

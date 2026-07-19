@@ -39,6 +39,7 @@
     "./ui/buttonVariants": "./src/ui/buttonVariants.ts",
     "./ui/categoryColors": "./src/ui/categoryColors.ts",
     "./ui/connectionPointCompat": "./src/ui/connectionPointCompat.ts",
+    "./ui/mingCard": "./src/ui/mingCard.ts",
     "./ui/responsiveSpacer": "./src/ui/ResponsiveSpacer.tsx",
     "./archetypeColors": "./src/archetypeColors.ts",
     "./achievements": "./src/achievements.ts",

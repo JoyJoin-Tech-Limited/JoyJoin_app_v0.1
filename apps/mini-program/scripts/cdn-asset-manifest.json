@@ -1625,6 +1625,26 @@
     {
       "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/layer-v2.b68a1568c0a8.webp",
       "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/layer-v2.b68a1568c0a8.webp"
+    },
+    {
+      "localPath": "assets/lovart/icebreaker/bands/band-micro-challenge.webp",
+      "cdnPath": "assets/lovart/icebreaker/bands/band-micro-challenge.webp"
+    },
+    {
+      "localPath": "assets/lovart/icebreaker/bands/band-lie-detective.webp",
+      "cdnPath": "assets/lovart/icebreaker/bands/band-lie-detective.webp"
+    },
+    {
+      "localPath": "assets/lovart/icebreaker/bands/band-auction.webp",
+      "cdnPath": "assets/lovart/icebreaker/bands/band-auction.webp"
+    },
+    {
+      "localPath": "assets/lovart/icebreaker/bands/band-personality-dice.webp",
+      "cdnPath": "assets/lovart/icebreaker/bands/band-personality-dice.webp"
+    },
+    {
+      "localPath": "assets/lovart/icebreaker/bands/band-speed-friending.webp",
+      "cdnPath": "assets/lovart/icebreaker/bands/band-speed-friending.webp"
     }
   ],
   "pendingAssets": [

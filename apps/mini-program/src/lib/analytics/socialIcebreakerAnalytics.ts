@@ -43,12 +43,21 @@ type EventType =
   | 'dice_option_chosen'
   | 'micro_challenge_completed'
   | 'recap_connections_tap'
+  | 'recap_leave_tap'
+  | 'icebreaker_band_image_error'
+  // Campfire Vault Card PR1 — brave card + permission whisper views.
+  | 'topic_card_brave_view'
+  | 'permission_line_view'
 
 /**
- * Fire-and-forget POST to /api/analytics/social-icebreaker (server accepts any
- * eventType and always 200s). Session identifiers ride inside metadata because
- * the endpoint only persists eventType + metadata + timestamp. Failures are
- * silent for the UI — a logWarn is the only trace (mirrors authAnalytics).
+ * Fire-and-forget POST to /api/analytics/social-icebreaker. The server gates
+ * eventType against a whitelist (ALLOWED_SOCIAL_ICEBREAKER_EVENT_TYPES in
+ * apps/server/src/routes/domains/analytics.ts) — unknown types are silently
+ * dropped with `{ success: false }` and never persisted, so every new client
+ * event must be whitelisted server-side first. Session identifiers ride
+ * inside metadata because the endpoint only persists eventType + metadata +
+ * timestamp. Failures are silent for the UI — a logWarn is the only trace
+ * (mirrors authAnalytics).
  */
 function track(
   eventType: EventType,

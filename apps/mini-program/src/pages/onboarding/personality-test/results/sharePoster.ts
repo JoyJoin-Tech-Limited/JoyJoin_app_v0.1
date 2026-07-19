@@ -114,6 +114,8 @@ export interface PersonalitySharePosterInput {
   archetypeAsset: string
   archetypeAssetPng: string
   preResolvedImagePath?: string
+  /** Slice 4 (2026-07-19): pre-generated 命格卡 temp image; hero panel prefers it over raw art. */
+  mingCardImagePath?: string
   confidenceLabel?: string
   rarityLabel?: string
   activeSkillTitle: string
@@ -371,6 +373,7 @@ function drawHeroPanel(
   accentColor: string,
   archetype: string,
   dimensions: ImageDimensions,
+  mingCardImagePath?: string,
 ): void {
   const panelX = LEFT_EDGE
   const panelY = HERO_PANEL_Y
@@ -400,7 +403,28 @@ function drawHeroPanel(
   fillRoundedRect(ctx, panelX + 6, panelY + 6, panelW - 12, panelH - 12, HERO_PANEL_RADIUS - 6, heroGlow)
 
   let drewImage = false
-  if (archetypeImagePath) {
+  // Preferred: the canonical 命格卡 (744×1039), contain-fit on the accent glow.
+  if (mingCardImagePath) {
+    ctx.save()
+    clipRoundedRect(ctx, panelX + 6, panelY + 6, panelW - 12, panelH - 12, HERO_PANEL_RADIUS - 6)
+    try {
+      const scale = Math.min((panelW - 12) / 744, (panelH - 12) / 1039)
+      const drawW = 744 * scale
+      const drawH = 1039 * scale
+      ctx.drawImage(
+        mingCardImagePath,
+        panelX + 6 + (panelW - 12 - drawW) / 2,
+        panelY + 6 + (panelH - 12 - drawH) / 2,
+        drawW,
+        drawH,
+      )
+      drewImage = true
+    } catch {
+      logWarn('[sharePoster] ming card drawImage failed, falling back to raw art', { archetype })
+    }
+    ctx.restore()
+  }
+  if (!drewImage && archetypeImagePath) {
     ctx.save()
     clipRoundedRect(ctx, panelX + 6, panelY + 6, panelW - 12, panelH - 12, HERO_PANEL_RADIUS - 6)
 
@@ -665,7 +689,7 @@ export async function generatePersonalitySharePoster(input: PersonalitySharePost
 
   drawTopChrome(ctx, input.confidenceLabel)
   drawArchetypeHeader(ctx, input)
-  drawHeroPanel(ctx, archetypeImagePath, input.accentColor, input.archetype, heroDimensions)
+  drawHeroPanel(ctx, archetypeImagePath, input.accentColor, input.archetype, heroDimensions, input.mingCardImagePath)
 
   if (typeof input.archetypeRank === 'number' && input.serialNumber) {
     drawRankStrip(ctx, input.archetypeRank, input.serialNumber, input.rarityLabel, input.globalRank)

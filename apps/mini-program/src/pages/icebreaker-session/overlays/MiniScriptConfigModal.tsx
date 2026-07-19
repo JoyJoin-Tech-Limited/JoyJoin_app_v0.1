@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Image } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import { haptics } from '../../../lib/utils/haptics'
 import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework'
 import {
   MINISCRIPT_CATALOG,
@@ -97,7 +97,7 @@ export function MiniScriptConfigModal({
       const runShuffle = () => {
         const randomIdx = Math.floor(Math.random() * styleCount)
         setShuffleIndex(randomIdx)
-        Taro.vibrateShort({ type: 'light' }).catch(() => {})
+        haptics('light')
         tick++
         if (tick < maxTicks) {
           shuffleTimerRef.current = setTimeout(runShuffle, 120)

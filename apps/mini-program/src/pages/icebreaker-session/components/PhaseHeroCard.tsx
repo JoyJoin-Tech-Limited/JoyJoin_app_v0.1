@@ -1,16 +1,19 @@
 import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import type { SocialIcebreakerPhase } from '@shared/socialIcebreaker'
 import { PhaseHeaderIcon } from '../phaseUtils'
 import { getPhaseFoilStyle, PHASE_ACCENTS } from '../phases/phaseAccents'
+import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
 import './PhaseHeroCard.scss'
 
 /**
  * PhaseHeroCard (PR2/PR3 revamp) — one shared premium frame for every phase.
  *
- * Zone blueprint (locked 2026-07-17 UIUX review):
- *   A. header rail  — 48rpx accent emblem chip + phase label + status chip
- *   B. hero zone    — title (Alimama) + prompt + phase slot
+ * Zone blueprint (updated 2026-07-19):
+ *   A. header rail  — phase label + status chip
+ *   B. hero zone    — ONE visual anchor (art band XOR 96rpx emblem) +
+ *                     title (Alimama) + prompt + phase slot
  *   C. status zone  — ONE grammar: roster dots + one label line + countdown
  *   D. action zone  — solid CTA + ghost link (margin-top: auto)
  *
@@ -57,6 +60,7 @@ export function PhaseHeroCard({
 }: PhaseHeroCardProps) {
   const foil = getPhaseFoilStyle(phase)
   const accent = PHASE_ACCENTS[phase]
+  const [artFailed, setArtFailed] = useState(false)
   const showDots =
     typeof doneCount === 'number' && typeof totalCount === 'number' && totalCount > 0
 
@@ -66,12 +70,6 @@ export function PhaseHeroCard({
       style={foil ? { borderColor: foil.borderColor, boxShadow: foil.boxShadow, background: foil.background } : undefined}
     >
       <View className='phase-hero-card__header-rail'>
-        <View
-          className='phase-hero-card__emblem-chip'
-          style={foil ? { background: foil.emblemBackground } : undefined}
-        >
-          <PhaseHeaderIcon phase={phase} size={48} />
-        </View>
         <Text
           className='phase-hero-card__phase-label'
           style={foil ? { color: foil.accentDeep } : undefined}
@@ -82,9 +80,30 @@ export function PhaseHeroCard({
       </View>
 
       <View className='phase-hero-card__hero'>
-        {artUrl ? (
-          <Image className='phase-hero-card__art' src={artUrl} mode='widthFix' lazyLoad />
-        ) : null}
+        {/* One visual anchor: the Lovart art band when available, otherwise
+            the 96rpx accent-halo emblem. Never both. The art band reserves
+            its aspect box (no layout shift) and falls back to the emblem on
+            load failure (never a dead anchor). */}
+        {artUrl && !artFailed ? (
+          <Image
+            className='phase-hero-card__art'
+            src={artUrl}
+            mode='aspectFill'
+            onError={() => {
+              setArtFailed(true)
+              socialIcebreakerAnalytics.track('icebreaker_band_image_error', undefined, undefined, phase, {
+                artUrl,
+              })
+            }}
+          />
+        ) : (
+          <View
+            className='phase-hero-card__emblem phase-hero-card__complete-badge'
+            style={foil ? { background: foil.emblemBackground, borderColor: foil.borderColor, boxShadow: foil.boxShadow } : undefined}
+          >
+            <PhaseHeaderIcon phase={phase} size={72} />
+          </View>
+        )}
         <Text className='phase-hero-card__title'>{title}</Text>
         {prompt ? <Text className='phase-hero-card__prompt'>{prompt}</Text> : null}
         {children ? <View className='phase-hero-card__slot'>{children}</View> : null}

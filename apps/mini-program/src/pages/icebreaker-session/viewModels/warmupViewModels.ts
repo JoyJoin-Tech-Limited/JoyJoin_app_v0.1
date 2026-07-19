@@ -1,4 +1,5 @@
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { getArchetypeHSL, formatHSLAsRGBA } from '@shared/archetypeColors'
 import type { AtmosphereMood, SocialTopic } from '@shared/socialIcebreaker'
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import { TIER_PRESETS } from '../tierPresets'
@@ -218,15 +219,26 @@ export function buildWarmupCaption(
   return `${vibeLabel} · 约60分钟`
 }
 
-/** Corner text for the topic card: `深度 · L{n}` for deep_chat, hidden for play_fun. */
+/** Corner text for the topic card: `深度·L{n}` for deep_chat, hidden for play_fun. */
 export function getDepthCornerText(vibe?: VibeId, depthLevel?: number | null): string | null {
   if (vibe === 'deep_chat' && depthLevel) {
-    return `深度 · L${depthLevel}`
+    return `深度·L${depthLevel}`
   }
   if (vibe === 'play_fun') {
     return null // 快速暖场 per contract, but rendered as hidden.
   }
   return null
+}
+
+/**
+ * Brave-topic analytics predicate (contract A1): a card is "brave" only when
+ * the server flags its safety as `reflective` — depth level alone does not
+ * qualify (analytics A5 must not over-fire `topic_card_brave_view`).
+ */
+export function isBraveTopic(
+  topic?: Pick<SocialTopic, 'safety'> | null,
+): boolean {
+  return topic?.safety === 'reflective'
 }
 
 export interface MoodOptionRender {
@@ -253,4 +265,260 @@ export function buildMoodOptions(
 /** Total number of topics for progress dots. */
 export function getTotalTopics(topics: SocialTopic[]): number {
   return Math.max(topics.length, 1)
+}
+
+// ─── Campfire Vault Card PR1 (contract B2 / C6) ─────────────────────────────
+
+export interface DepthSealColors {
+  /** Base accent (hex). */
+  accent: string
+  /** Deep variant for seal text on the warm card tint (≥4.5:1 on #FFFAF4). */
+  deep: string
+  /** 2rpx seal border — rgba(accent, 0.3). */
+  borderColor: string
+  /** Soft seal fill — rgba(accent, 0.10) over the warm tint. */
+  backgroundColor: string
+}
+
+const DEPTH_SEAL_PALETTE: Record<number, { accent: string; deep: string }> = {
+  1: { accent: '#5B8DB8', deep: '#3D6E9C' },
+  2: { accent: '#8B5CF6', deep: '#7C3AED' },
+  3: { accent: '#C99A3C', deep: '#8A651A' },
+}
+
+function sealHexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+/**
+ * Depth seal pill colors (contract B2). Computed rgba strings ride inline —
+ * WeChat WXSS silently drops hsla(), and the values are depth-keyed.
+ */
+export function getDepthSealColors(depthLevel?: number | null): DepthSealColors | null {
+  if (!depthLevel) return null
+  const entry = DEPTH_SEAL_PALETTE[depthLevel]
+  if (!entry) return null
+  return {
+    accent: entry.accent,
+    deep: entry.deep,
+    borderColor: sealHexToRgba(entry.accent, 0.3),
+    backgroundColor: sealHexToRgba(entry.accent, 0.1),
+  }
+}
+
+/**
+ * 悦仔说 cadence (contract C6): the permission whisper is visible on the first
+ * card, or on any card with depthLevel ≥ 2 — and only when the server attached
+ * a non-empty line to the topic.
+ */
+export function shouldShowPermissionLine(
+  topic?: Pick<SocialTopic, 'depthLevel' | 'permissionLine'> | null,
+  index?: number,
+): boolean {
+  if (!topic?.permissionLine?.trim()) return false
+  return index === 0 || (topic.depthLevel ?? 1) >= 2
+}
+
+// ─── Campfire Vault Card PR2 — Ember Rim (contract E1 / E2 / S2 / S3) ───────
+
+export interface EmberSeat {
+  /** Which border-band edge the seat sits on. */
+  edge: 'top' | 'bottom'
+  /** Percent (0–100) along the edge — consumed as an inline `left` style. */
+  leftPercent: number
+}
+
+/** Roster is bounded by group size; never render more embers than seats. */
+export const EMBER_MAX_SEATS = 8
+const EMBER_EDGE_INSET_PERCENT = 12
+const EMBER_EDGE_SPAN_PERCENT = 76
+
+function emberEdgePosition(index: number, count: number): number {
+  if (count <= 1) return 50
+  return EMBER_EDGE_INSET_PERCENT + (index * EMBER_EDGE_SPAN_PERCENT) / (count - 1)
+}
+
+/**
+ * E1 — deterministic ember seat positions on the card border band. Seats are
+ * split across the top (ceil) and bottom (floor) edges and evenly distributed
+ * between 12% and 88% so corner curvature never clips a seat. Pure: same
+ * count → same seats, no overlap, no CSS custom properties downstream.
+ */
+export function computeEmberSeats(count: number): EmberSeat[] {
+  const n = Math.max(0, Math.min(Math.floor(count), EMBER_MAX_SEATS))
+  if (n === 0) return []
+  const topCount = Math.ceil(n / 2)
+  const bottomCount = n - topCount
+  const seats: EmberSeat[] = []
+  for (let i = 0; i < topCount; i += 1) {
+    seats.push({ edge: 'top', leftPercent: emberEdgePosition(i, topCount) })
+  }
+  for (let i = 0; i < bottomCount; i += 1) {
+    seats.push({ edge: 'bottom', leftPercent: emberEdgePosition(i, bottomCount) })
+  }
+  return seats
+}
+
+export interface EmberIgnitionDiff {
+  /** Newly ready user ids (present in next, absent in prev). */
+  ignited: string[]
+  /** Newly un-ready user ids (present in prev, absent in next). */
+  extinguished: string[]
+}
+
+/**
+ * Poll-diff of ready ids (S2 / Reliability pillar). The visual target state is
+ * always `f(current readyUserIds)` — a missed poll cycle self-heals on the
+ * next one because the diff is recomputed against the last applied set.
+ */
+export function diffReadyUserIds(prevReady: string[], nextReady: string[]): EmberIgnitionDiff {
+  const prev = new Set(prevReady)
+  const next = new Set(nextReady)
+  return {
+    ignited: nextReady.filter((id) => !prev.has(id)),
+    extinguished: prevReady.filter((id) => !next.has(id)),
+  }
+}
+
+export type EmberIgnitionMode = 'staggered' | 'batch'
+
+export interface EmberIgnitionItem {
+  userId: string
+  delayMs: number
+}
+
+export interface EmberIgnitionQueue {
+  mode: EmberIgnitionMode
+  items: EmberIgnitionItem[]
+}
+
+/** S2 — minimum spacing between staggered friend ignitions. */
+export const EMBER_IGNITION_STAGGER_MS = 120
+/** S2 — more than this many ignitions in one poll cycle ignite as one batch. */
+export const EMBER_IGNITION_BATCH_THRESHOLD = 2
+
+/**
+ * S2 — build the ignition queue for one poll cycle. Duplicates collapse; the
+ * viewer (self) is excluded because self ignition is optimistic on tap (S1).
+ * ≤2 arrivals stagger ≥120ms apart; >2 batch-ignite together (one burst).
+ */
+export function buildEmberIgnitionQueue(
+  ignitedUserIds: string[],
+  options: { excludeUserId?: string } = {},
+): EmberIgnitionQueue {
+  const seen = new Set<string>()
+  const ids: string[] = []
+  for (const id of ignitedUserIds) {
+    if (id === options.excludeUserId || seen.has(id)) continue
+    seen.add(id)
+    ids.push(id)
+  }
+  if (ids.length > EMBER_IGNITION_BATCH_THRESHOLD) {
+    return { mode: 'batch', items: ids.map((userId) => ({ userId, delayMs: 0 })) }
+  }
+  return {
+    mode: 'staggered',
+    items: ids.map((userId, index) => ({ userId, delayMs: index * EMBER_IGNITION_STAGGER_MS })),
+  }
+}
+
+/**
+ * S3 — re-entry seed: ready ids intersected with the roster, deduped. Seeded
+ * embers render lit with NO ignition replay.
+ */
+export function seedLitUserIds(
+  readyUserIds: string[],
+  participants: SessionParticipant[],
+): string[] {
+  const roster = new Set(participants.map((p) => p.userId))
+  return Array.from(new Set(readyUserIds.filter((id) => roster.has(id))))
+}
+
+export interface EmberAccent {
+  /** Lit dot fill — archetype accent at full alpha. */
+  fill: string
+  /** Glow disc tint — archetype accent at 0.45 alpha (E3). */
+  glow: string
+  /** Glow fade tail — accent at 0 alpha for a clean radial falloff. */
+  glowFade: string
+}
+
+/**
+ * E2 — resolve an ember's accent colors via the shared archetype color path
+ * (TeammateCard precedent). Missing/unknown archetype falls back to the
+ * neutral brand purple (DEFAULT_ACCENT inside getArchetypeHSL). All values
+ * are rgba strings — WeChat WXSS silently drops hsla().
+ */
+export function computeEmberAccent(archetype?: string | null): EmberAccent {
+  const hsl = getArchetypeHSL(archetype)
+  return {
+    fill: formatHSLAsRGBA(hsl, 1),
+    glow: formatHSLAsRGBA(hsl, 0.45),
+    glowFade: formatHSLAsRGBA(hsl, 0),
+  }
+}
+
+// ─── Campfire Vault Card PR2 — all-ready halo decision (H1–H4) ─────────────
+
+export type EmberHaloVisual = 'off' | 'playing' | 'static'
+
+export interface EmberHaloEvalInput {
+  isTopicCard: boolean
+  /** S3 — false until the first ready-state payload has actually arrived. */
+  dataReady: boolean
+  /** True on the evaluation where the topic index just changed. */
+  indexChanged: boolean
+  everyoneReady: boolean
+  /** True once this all-ready moment has already consumed its halo. */
+  consumed: boolean
+  /** True until the first data-bearing evaluation has run. */
+  firstEval: boolean
+  reduceMotion: boolean
+}
+
+export interface EmberHaloEvalResult {
+  /** null = keep the current halo state (nothing changed). */
+  decision: EmberHaloVisual | null
+  nextConsumed: boolean
+  nextFirstEval: boolean
+}
+
+/**
+ * H1–H4 halo decision, pure (unit-tested; the hook only applies the result).
+ *
+ * - Not a topic card → off.
+ * - No ready-state data yet → no-op (never consume firstEval on an empty
+ *   payload, C3).
+ * - Topic change → off + RE-ARM consumed (a new topic is a new all-ready
+ *   moment, C2).
+ * - Not everyone ready → off + re-arm; the first data-bearing evaluation
+ *   still consumes firstEval so 'static' is reserved for mount-with-
+ *   everyone-already-ready (S3), never for a live transition (B2).
+ * - Same all-ready moment → no replay (H4).
+ * - First eval / reduced motion → static glow, no swell replay (G1).
+ * - Live transition into all-ready → 'playing' (the one climax swell).
+ */
+export function resolveEmberHalo(input: EmberHaloEvalInput): EmberHaloEvalResult {
+  if (!input.isTopicCard) {
+    return { decision: 'off', nextConsumed: input.consumed, nextFirstEval: input.firstEval }
+  }
+  if (!input.dataReady) {
+    return { decision: null, nextConsumed: input.consumed, nextFirstEval: input.firstEval }
+  }
+  if (input.indexChanged) {
+    return { decision: 'off', nextConsumed: false, nextFirstEval: input.firstEval }
+  }
+  if (!input.everyoneReady) {
+    return { decision: 'off', nextConsumed: false, nextFirstEval: false }
+  }
+  if (input.consumed) {
+    return { decision: null, nextConsumed: true, nextFirstEval: false }
+  }
+  if (input.reduceMotion || input.firstEval) {
+    return { decision: 'static', nextConsumed: true, nextFirstEval: false }
+  }
+  return { decision: 'playing', nextConsumed: true, nextFirstEval: false }
 }

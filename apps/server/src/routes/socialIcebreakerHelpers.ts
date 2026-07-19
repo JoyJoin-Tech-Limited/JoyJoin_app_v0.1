@@ -789,7 +789,22 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
       state.autoAdvanceScheduledAt = undefined;
       state.advanceFuseKind = undefined;
       await updateSession(state.socialSessionId, state);
-      await transitionPhase({ state, socialSessionId: state.socialSessionId, trigger });
+      try {
+        await transitionPhase({ state, socialSessionId: state.socialSessionId, trigger });
+      } catch (error) {
+        // C1: transition failed after the clear persist — log and re-arm a
+        // short retry fuse so the session self-heals on a later poll instead
+        // of silently wedging on the pre-transition phase.
+        logger.error('[SocialIcebreaker] Fuse transition failed; re-arming retry fuse', {
+          sessionId: state.socialSessionId,
+          phase: state.currentPhase,
+          trigger,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        state.autoAdvanceScheduledAt = Date.now() + 15_000;
+        state.advanceFuseKind = trigger === 'stall_recovery' ? 'stall_recovery' : 'all_ready';
+        await updateSession(state.socialSessionId, state).catch(() => {});
+      }
     } else {
       state.autoAdvanceScheduledAt = undefined;
       state.advanceFuseKind = undefined;

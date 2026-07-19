@@ -40,6 +40,14 @@ const PAGES = {
     url: 'http://localhost:9000/profile-review-welcome-coupon.png',
     altPort: 9003,
   },
+  'icebreaker-micro-challenge': { url: 'http://localhost:9000/icebreaker-micro-challenge.png', altPort: 9003 },
+  'icebreaker-lie-detective': { url: 'http://localhost:9000/icebreaker-lie-detective.png', altPort: 9003 },
+  'icebreaker-auction': { url: 'http://localhost:9000/icebreaker-auction.png', altPort: 9003 },
+  'icebreaker-personality-dice': { url: 'http://localhost:9000/icebreaker-personality-dice.png', altPort: 9003 },
+  'icebreaker-speed-friending': { url: 'http://localhost:9000/icebreaker-speed-friending.png', altPort: 9003 },
+  'icebreaker-fuse': { url: 'http://localhost:9000/icebreaker-fuse.png', altPort: 9003 },
+  'icebreaker-stall': { url: 'http://localhost:9000/icebreaker-stall.png', altPort: 9003 },
+  'icebreaker-recap': { url: 'http://localhost:9000/icebreaker-recap.png', altPort: 9003 },
 }
 
 const page = process.argv[2] || 'events'

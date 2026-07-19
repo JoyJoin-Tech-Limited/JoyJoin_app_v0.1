@@ -21,7 +21,7 @@ $__gold-accent:  $color-landed-gold;
   &__fuse-banner {
     display: flex;
     justify-content: center;
-    margin: $spacing-sm auto 0;
+    margin: $spacing-sm auto;
     padding: $spacing-xs $spacing-md;
     max-width: 560rpx;
     border-radius: $radius-full;
@@ -34,6 +34,10 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__fuse-banner-countdown {
+    // Numerals only in mono — the CJK stays in the system font.
+  }
+
+  &__fuse-banner-numeral {
     font-family: $font-mono;
   }
 
@@ -42,7 +46,7 @@ $__gold-accent:  $color-landed-gold;
     flex-direction: column;
     align-items: center;
     gap: $spacing-sm;
-    margin: $spacing-sm auto 0;
+    margin: $spacing-sm auto;
     padding: $spacing-md;
     max-width: 640rpx;
     border-radius: $card-radius-lg;
@@ -148,7 +152,7 @@ $__gold-accent:  $color-landed-gold;
   // ── Phase Transition Toast (restored 2026-07-17; purged by mistake in PR3) ──
   &__phase-toast {
     position: fixed;
-    top: calc(120rpx + env(safe-area-inset-top));
+    top: calc(200rpx + env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
     box-sizing: border-box;
@@ -268,13 +272,6 @@ $__gold-accent:  $color-landed-gold;
     justify-content: center;
   }
 
-  &__recap-leave-btn {
-    @include button-primary;
-    width: 100%;
-    border: 0;
-    margin-top: $spacing-md;
-  }
-
   &__tool-strip {
     margin-bottom: $spacing-md;
   }
@@ -334,13 +331,6 @@ $__gold-accent:  $color-landed-gold;
     font-size: $font-size-xs;
     color: $color-text-secondary;
     margin-top: 6rpx;
-  }
-
-  &__ms-role,
-  &__ms-act {
-    margin-top: $spacing-md;
-    padding-top: $spacing-sm;
-    border-top: 1rpx solid rgba($color-text-primary, 0.06);
   }
 
 }
@@ -829,18 +819,6 @@ $__gold-accent:  $color-landed-gold;
     transform: none;
   }
 
-  .icebreaker__statement--ai-glow {
-    animation: none;
-    box-shadow: 0 0 8rpx rgba($__emerald-glow, 0.3);
-  }
-
-  .icebreaker__detective-edge-msg--animate,
-  .icebreaker__statement-votes--animate {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-
   .icebreaker__phase-toast {
     animation: none;
     opacity: 1;
@@ -1165,16 +1143,6 @@ $__gold-accent:  $color-landed-gold;
     color: $color-text-secondary;
     font-weight: $font-weight-semibold;
     text-align: right;
-  }
-}
-
-@keyframes skeleton-pulse {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 0.85;
   }
 }
 

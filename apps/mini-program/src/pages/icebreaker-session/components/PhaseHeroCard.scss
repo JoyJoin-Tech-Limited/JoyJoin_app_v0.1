@@ -8,8 +8,11 @@
 
   &__art {
     width: 100%;
-    height: auto;
+    // Reserve the band's aspect box before the WebP decodes — no layout
+    // shift at the phase-entry reveal beat. aspectFill crops to the box.
+    aspect-ratio: 1500 / 560;
     border-radius: $radius-md;
+    background: rgba($color-text-primary, 0.04);
     margin-bottom: $spacing-md;
   }
 }

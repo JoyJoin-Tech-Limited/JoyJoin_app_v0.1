@@ -26,7 +26,7 @@ function useNow(active: boolean): number {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     if (!active) return
-    const timer = setInterval(() => setNow(Date.now()), 500)
+    const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [active])
   return now
@@ -52,7 +52,12 @@ export function AdvanceFuseBanner({
       <View className='icebreaker__fuse-banner' role='status' aria-live='polite'>
         <Text className='icebreaker__fuse-banner-text'>
           {sentence}
-          <Text className='icebreaker__fuse-banner-countdown' aria-hidden='true'> 剩余 {remainingSeconds} 秒</Text>
+          {/* Numerals only in the mono span — CJK glyphs don't exist in the
+              mono stack and would fall back to a mismatched system font. */}
+          <Text className='icebreaker__fuse-banner-countdown' aria-hidden='true'>
+            {' '}
+            剩余 <Text className='icebreaker__fuse-banner-numeral'>{remainingSeconds}</Text> 秒
+          </Text>
         </Text>
       </View>
     )

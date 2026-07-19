@@ -50,6 +50,7 @@ interface FinalStageProps {
   onContinue: () => void
   onRestart: () => void
   authIsLoading: boolean
+  isAuthenticated?: boolean
   isLoggingIn?: boolean
   isDecisive?: boolean
   secondaryDisplayName?: string
@@ -94,6 +95,7 @@ export default function FinalStage({
   onContinue,
   onRestart,
   authIsLoading,
+  isAuthenticated,
   isLoggingIn,
   isDecisive,
   secondaryDisplayName,
@@ -337,7 +339,19 @@ export default function FinalStage({
           <View className='personality-results__hero-copy'>
             <Text className='personality-results__hero-eyebrow'>解锁成功</Text>
             <Text className='personality-results__hero-title'>你的氛围命格是</Text>
-            <Text className='personality-results__hero-name'>{displayArchetypeName}</Text>
+            <Text className='personality-results__hero-name' aria-label={displayArchetypeName}>
+              {/* Slice 5 (2026-07-19): letter-by-letter reveal; suppressed under reduce-motion */}
+              {[...displayArchetypeName].map((ch, i) => (
+                <Text
+                  key={`${ch}-${i}`}
+                  className='personality-results__hero-name-char'
+                  style={{ animationDelay: `${i * 90}ms` }}
+                  aria-hidden='true'
+                >
+                  {ch}
+                </Text>
+              ))}
+            </Text>
             <Text className='personality-results__hero-summary'>{summary}</Text>
 
             <View className='personality-results__hero-badges'>
@@ -630,6 +644,14 @@ export default function FinalStage({
         </Card>
 
         <View className='personality-results__stack-actions personality-results__stack-actions--spacious personality-results__stagger--6'>
+          {/* Slice 6 (2026-07-19): next-horizon return hook — plants the pending thread.
+              Copy is deliberately soft-truth: guests get the login-gated promise,
+              authenticated users get the discover pointer (matching runs in pools). */}
+          <Text className='personality-results__next-horizon'>
+            {isAuthenticated
+              ? '悦仔会在发现页为你留意同频的人——记得回来看看'
+              : '登录后，悦仔就开始为你寻找同频的人'}
+          </Text>
           <Button variant='wechat' onClick={() => void onContinue()} disabled={authIsLoading || isLoggingIn} loading={isLoggingIn}>
             {continueButtonLabel}
           </Button>

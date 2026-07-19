@@ -6,24 +6,25 @@ import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 
 /**
  * PhaseAigcRow — quiet AIGC disclosure row for phase cards.
- * When no meta is persisted for the phase, falls back to the plain
- * "AI 生成内容" label (the content is still AI-generated).
+ * FAIL-CLOSED: renders only when meta explicitly marks the content as
+ * AI-generated. A missing meta must never claim AI authorship (e.g.,
+ * curated-bank fallbacks or user-authored content).
  */
 export function PhaseAigcRow({ meta, reason }: { meta?: AIResponseMeta; reason: string }) {
   const enabled = useAIGCLabelsEnabled()
   if (!enabled) return null
-  const aigcMeta = meta?.aigc ?? { aiGenerated: true, labelType: 'ai-generated' as const }
+  if (!meta?.aigc?.aiGenerated) return null
   return (
     <View
       style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '12rpx',
+        gap: '8rpx',
         marginTop: '16rpx',
       }}
     >
-      <AIGCLabel meta={aigcMeta} />
+      <AIGCLabel meta={meta.aigc} />
       <AIContentReportButton options={{ reason }} label='反馈这段内容' />
     </View>
   )

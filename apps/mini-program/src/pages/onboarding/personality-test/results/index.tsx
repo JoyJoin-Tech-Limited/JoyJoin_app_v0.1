@@ -50,10 +50,16 @@ import {
   type PersonalitySquarePosterInput,
 } from '../../../../lib/utils/momentsPosterFactory'
 import {
+  generateMingCardImage,
+  MING_CARD_CANVAS_ID,
+} from '../../../../lib/utils/mingCardImage'
+import {
   ARCHETYPE_SEQUENCE,
+  buildEchoWhispers,
   buildResolvedResultState,
   buildShareLine,
   buildShareTitle,
+  ECHO_WHISPER_ROTATE_STEPS,
   getAnimationProfile,
   buildTypicalityLabel,
   getTraitEntries,
@@ -144,7 +150,22 @@ export default function PersonalityTestResultsPage() {
   const [sessionSnapshot, setSessionSnapshot] = useState<AnonymousAssessmentSessionSnapshot | null>(initialSnapshot)
   const [resultState, setResultState] = useState<ResolvedResultState | null>(initialResolvedResult)
   const [flowStage, setFlowStage] = useState<FlowStage>(hasCompletedReplay ? 'result' : 'loading')
+  /**
+   * OS-level reduced-motion (pre-ship pipeline blocker fix, 2026-07-19): the
+   * `--reduce-motion` SCSS guards were dead code until this class wiring.
+   * Mirrors the sibling pattern in personality-test/index.tsx.
+   */
+  const [systemReducedMotion] = useState(() => {
+    try {
+      // reduceMotion is absent from Taro's typed SystemInfo but present at runtime (sibling: personality-test/index.tsx:153)
+      return (Taro.getSystemInfoSync() as { reduceMotion?: boolean }).reduceMotion === true
+    } catch {
+      return false
+    }
+  })
   const [slotPhase, setSlotPhase] = useState<SlotPhase>('anticipation')
+  /** Celebration tier mirrored from degradationTierRef as state so SlotStage can gate effects. */
+  const [celebrationTier, setCelebrationTier] = useState<DegradationTier>('full')
 
   // Track spritesheet decode readiness before starting slot animation.
   // Falls back after 500ms so we never block indefinitely.
@@ -488,6 +509,26 @@ export default function PersonalityTestResultsPage() {
   }, [analytics, auth.isAuthenticated, completionMode, displayArchetypeName, flowStage, isDecisive])
 
   /**
+   * Slice 0 (2026-07-19): per-stage dwell instrumentation. Fires on every stage
+   * transition with the previous stage's dwell time; the final stage's dwell is
+   * reported by the next page's funnel data instead (this page unloads on exit).
+   */
+  const stageEnteredAtRef = useRef(Date.now())
+  // Initialize from the same expression as flowStage so the replay fast-path
+  // doesn't emit a phantom 'loading' dwell event (review concern C1).
+  const prevStageRef = useRef<FlowStage>(hasCompletedReplay ? 'result' : 'loading')
+  useEffect(() => {
+    if (prevStageRef.current === flowStage) return
+    const now = Date.now()
+    analytics.interaction('result_stage_dwell', {
+      stage: prevStageRef.current,
+      dwellMs: now - stageEnteredAtRef.current,
+    })
+    stageEnteredAtRef.current = now
+    prevStageRef.current = flowStage
+  }, [analytics, flowStage])
+
+  /**
    * Escape hatch for the intro<->results redirect loop.
    *
    * This page renders only the anonymous (pre-login) assessment result read
@@ -787,7 +828,17 @@ export default function PersonalityTestResultsPage() {
       }
 
       setSlotPhase('spinning')
-      setPhaseText('命运转动中...')
+      // Analysis-framed fallback caption for users without local answers
+      // (authenticated flow); anonymous users get echo whispers at step 0.
+      setPhaseText('正在比对你的选择…')
+      analytics.interaction('slot_animation_start', { sessionId: latestSnapshot.sessionId })
+
+      // Slice 3 (2026-07-19): answer-echo whispers — rotate the user's own answer
+      // texts during the spin so the wait reads as "proof of analysis", not chance.
+      // Local answers exist for the anonymous flow (persona A's path); authenticated
+      // users keep the default caption. Rotates inside the spin loop — no new timers.
+      const echoWhispers = buildEchoWhispers()
+      let lastWhisperIndex = -1
 
       // Measure frame budget during first half of spin for tiered degradation
       const frameBudgetPromise = getDegradationTier()
@@ -801,11 +852,22 @@ export default function PersonalityTestResultsPage() {
           progress: 10 + ((step + 1) / spinSteps) * 50,
         }))
 
+        // Rotate echo whispers (~every 840ms); identical strings are skipped.
+        if (echoWhispers.length > 0) {
+          const whisperIndex = Math.floor(step / ECHO_WHISPER_ROTATE_STEPS) % echoWhispers.length
+          if (whisperIndex !== lastWhisperIndex) {
+            lastWhisperIndex = whisperIndex
+            setPhaseText(`你说过「${echoWhispers[whisperIndex]}」`)
+          }
+        }
+
         // Check frame budget mid-spin
         if (step === budgetCheckStep) {
           const tier = await frameBudgetPromise
           degradationTierRef.current = tier
+          setCelebrationTier(tier)
           logInfo('[PersonalityResults] Degradation tier', { tier })
+          analytics.interaction('result_degradation_tier', { tier })
         }
 
         await waitFor(profile.slotSpinIntervalMs)
@@ -933,11 +995,25 @@ export default function PersonalityTestResultsPage() {
 
       const shouldDoNearMiss = shouldNearMiss(latestSnapshot.sessionId, profile.slotNearMissProbability)
       if (shouldDoNearMiss) {
+        // F1 blend reframe (2026-07-19 satisfaction audit): the overshoot card is the
+        // user's secondary archetype when known — "you're almost X, but really Y with
+        // a shadow of X" — instead of a random neighbour. Converts a casino mechanic
+        // into 被理解感; the blend indicator on the result card echoes the same archetype.
+        const secondaryId = resolvedResult.result.secondaryArchetype
+          ?? sessionSnapshot?.result?.secondaryArchetype
+        const secondaryIndex = secondaryId ? ARCHETYPE_SEQUENCE.indexOf(secondaryId) : -1
+        const useBlendMiss = profile.slotNearMissMode === 'blend'
+          && secondaryIndex >= 0
+          && secondaryIndex !== safeTargetIndex
         setSlotPhase('nearMiss')
-        setPhaseText('等等...')
+        setPhaseText(useBlendMiss ? '还有一丝别的气息…' : '等等...')
         setSlotDisplay({
-          reelIndex: (safeTargetIndex + 1) % 12,
+          reelIndex: useBlendMiss ? secondaryIndex : (safeTargetIndex + 1) % 12,
           progress: 92,
+        })
+        analytics.interaction('slot_near_miss', {
+          mode: useBlendMiss ? 'blend' : 'random',
+          secondaryArchetype: useBlendMiss ? secondaryId : undefined,
         })
         await waitFor(profile.slotNearMissMs)
 
@@ -1401,6 +1477,27 @@ export default function PersonalityTestResultsPage() {
       // `displayAsset` is the subpackage local WebP; `visual.asset` is
       // the CDN/main-package path.
       const canvasArchetypeAsset = visual.asset || displayAsset
+
+      // Slice 4 (2026-07-19): canonical 命格卡 for the poster hero panel.
+      // Fail-open: generation failure just means the poster uses raw archetype art.
+      setGenerationPhase('正在绘制命格卡…')
+      const archetypeSequenceIndex = ARCHETYPE_SEQUENCE.indexOf(displayArchetype)
+      if (archetypeSequenceIndex < 0) {
+        // Canonical-order drift guard (review concern C2) — never print a wrong set number silently.
+        logWarn('[PersonalityResults] displayArchetype missing from ARCHETYPE_SEQUENCE; card footer falls back to No.01', { archetype: displayArchetype })
+      }
+      const mingCardImagePath = await generateMingCardImage({
+        name: displayArchetypeName,
+        badge: typicalityLabel?.prefix ?? '典型',
+        keywords: (xiaoyueAnalysis?.expressionTags ?? []).slice(0, 3),
+        blendLine: isDecisive === false && secondaryDisplayName
+          ? `隐约有${secondaryDisplayName}的影子`
+          : undefined,
+        accent: accentColor,
+        index: archetypeSequenceIndex >= 0 ? archetypeSequenceIndex + 1 : 1,
+        artImagePath: preResolvedImageRef.current || undefined,
+      }) ?? undefined
+
       const posterInput: PersonalitySharePosterInput = {
         archetype: displayArchetypeName,
         nickname: cardNickname || visual.nickname || displayArchetypeName,
@@ -1411,6 +1508,7 @@ export default function PersonalityTestResultsPage() {
         archetypeAsset: canvasArchetypeAsset,
         archetypeAssetPng: visual.assetPng,
         preResolvedImagePath: preResolvedImageRef.current || undefined,
+        mingCardImagePath,
         confidenceLabel: typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : undefined,
         rarityLabel:
           typeof visual.rarityPercentage === 'number'
@@ -1558,6 +1656,7 @@ export default function PersonalityTestResultsPage() {
             isSlowNetwork={isSlowNetwork}
             progress={progress}
             phaseText={phaseText}
+            celebrationTier={celebrationTier}
           />
         )
       case 'reveal':
@@ -1610,6 +1709,7 @@ export default function PersonalityTestResultsPage() {
             onContinue={handleContinue}
             onRestart={handleRestart}
             authIsLoading={auth.isLoading}
+            isAuthenticated={auth.isAuthenticated}
             isLoggingIn={isLoggingIn}
             isDecisive={isDecisive}
             secondaryDisplayName={secondaryDisplayName}
@@ -1626,7 +1726,7 @@ export default function PersonalityTestResultsPage() {
   })()
 
   return (
-    <View className={`personality-results personality-results--${flowStage}${deviceTier.isDegradation ? ' personality-results--low-end' : ''}`}>
+    <View className={`personality-results personality-results--${flowStage}${deviceTier.isDegradation ? ' personality-results--low-end' : ''}${systemReducedMotion ? ' personality-results--reduce-motion' : ''}`}>
       {content}
       {showSkipAnimation && (
         <View
@@ -1645,6 +1745,17 @@ export default function PersonalityTestResultsPage() {
         style={{ width: '1080px', height: '1560px' }}
         aria-hidden='true'
       />
+      {/* Slice 4 (2026-07-19): hidden canvas for 命格卡 generation (shared @shared/ui/mingCard).
+           Gated like the square-poster canvas — low-end devices skip the ~3MB native
+           bitmap; poster generation fails open to raw art (review concern C4). */}
+      {!deviceTier.isDegradation && (
+        <Canvas
+          canvasId={MING_CARD_CANVAS_ID}
+          className='personality-results__poster-canvas'
+          style={{ width: '744px', height: '1039px' }}
+          aria-hidden='true'
+        />
+      )}
       {!deviceTier.isDegradation && (
         <Canvas
           canvasId={PERSONALITY_SQUARE_CANVAS_ID}

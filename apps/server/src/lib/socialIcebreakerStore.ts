@@ -43,8 +43,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 export const SESSION_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
-/** A participant is "active" if their last heartbeat is within this window. */
-export const PRESENCE_THRESHOLD_MS = 30_000; // 30 seconds
+/** A participant is "active" if their last heartbeat is within this window. */export const PRESENCE_THRESHOLD_MS = 30_000; // 30 seconds
 
 // ---------------------------------------------------------------------------
 // ID helpers
@@ -203,11 +202,24 @@ export async function upsertParticipant(
     });
 }
 
-/** Bump lastSeenAt for presence tracking (call from heartbeat endpoint). */
+/** Bump lastSeenAt for presence tracking (call from heartbeat endpoint).
+ *  Throttled in-memory: presence granularity is 30s, so writes within 10s
+ *  are redundant. The 3s client poll would otherwise produce one UPDATE per
+ *  user per poll (~7K writes/session/hour before buildClientState costs). */
+const HEARTBEAT_WRITE_INTERVAL_MS = 10_000;
+const lastHeartbeatWrite = new Map<string, number>();
+
 export async function heartbeat(
   socialSessionId: string,
   userId: string,
 ): Promise<void> {
+  const key = `${socialSessionId}:${userId}`;
+  const last = lastHeartbeatWrite.get(key) ?? 0;
+  const now = Date.now();
+  if (now - last < HEARTBEAT_WRITE_INTERVAL_MS) return;
+  lastHeartbeatWrite.set(key, now);
+  // Bound the map: a session roster is small, but sweep stale keys hourly.
+  if (lastHeartbeatWrite.size > 10_000) lastHeartbeatWrite.clear();
   await db
     .update(socialIcebreakerParticipants)
     .set({ lastSeenAt: new Date() })

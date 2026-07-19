@@ -408,6 +408,7 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
     }
 
     state.lieDetectivePlayers = players;
+    state.lieDetectiveStatementsMeta = statementResult.meta;
     if (state.currentLieDetectivePlayerIndex === undefined) {
       state.currentLieDetectivePlayerIndex = 0;
     }

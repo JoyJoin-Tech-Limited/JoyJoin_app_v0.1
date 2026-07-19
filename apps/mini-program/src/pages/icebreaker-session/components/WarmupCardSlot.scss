@@ -31,6 +31,11 @@
     height: 100%;
   }
 
+  &__face--back {
+    display: flex;
+    flex-direction: column;
+  }
+
   &__flat-card {
     @include card-premium;
     padding: 40rpx;
@@ -42,6 +47,157 @@
 
     .warmup-card-slot__face {
       height: 100%;
+    }
+  }
+
+  // ─── Campfire Vault Card PR1 (contract B1 / C1 / C2) ──────────────────────
+  // In topic_card state the generic card-premium face is replaced by the
+  // warmup foil frame: rgba colors ride inline from getPhaseFoilStyle()
+  // (WeChat drops hsla); only the static shape lives here.
+  &--foil {
+    .reveal-card-flip__face {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+  }
+
+  &__foil-shell {
+    position: relative;
+    flex: 1;
+    min-height: 480rpx;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    border: 2rpx solid transparent; // foil borderColor inline (PhaseHeroCard precedent)
+    border-radius: $card-radius;
+    overflow: hidden; // clips the sheen band to the rounded card
+    // H2 — halo border melts into ONE purple over 500ms (inline color swap).
+    transition: border-color 500ms ease;
+
+    &--dealing {
+      animation: warmup-card-deal 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  }
+
+  // PR2 — foil zone: the ember rim + halo glow anchor to this box so they
+  // track the shell exactly, even when the E5 chip grows the slot below it.
+  &__foil-zone {
+    position: relative;
+    flex: 1;
+    min-height: 480rpx;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // H2 / H4 — all-ready halo glow. A separate opacity-only overlay (never an
+  // animated box-shadow): fades in over the first 500ms, takes ONE breath dip
+  // (1 → 0.72 → 1) inside a ≤3s window, then settles static (fill both; the
+  // hook drops --breathing to a static opacity-1 state after 3.6s).
+  &__halo-glow {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: $card-radius;
+    box-shadow: 0 0 32rpx rgba(139, 92, 246, 0.35);
+    opacity: 1;
+    pointer-events: none;
+    z-index: 3;
+
+    &--breathing {
+      animation: warmup-halo-glow 3.5s ease-in-out both;
+    }
+  }
+
+  @keyframes warmup-halo-glow {
+    0% {
+      opacity: 0;
+    }
+    14% {
+      opacity: 1; // ≈500ms of the 3.5s window
+    }
+    57% {
+      opacity: 0.72;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  // E5 — <640rpx slot degradation: the rim collapses to this count chip
+  // below the card.
+  &__ember-chip {
+    align-self: center;
+    margin-top: 16rpx;
+    padding: 8rpx 24rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.06);
+    border: 2rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__ember-chip-text {
+    font-size: 22rpx;
+    line-height: 1.4;
+    color: $color-text-secondary;
+    font-family: $font-mono;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // C1 — 480ms two-beat deal: rise + un-rotate with a soft overshoot, then rest.
+  @keyframes warmup-card-deal {
+    0% {
+      transform: translateY(56rpx) rotate(-3.5deg);
+      opacity: 0;
+    }
+    55% {
+      transform: translateY(-6rpx) rotate(0.5deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(0) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  // C2 — single 45%-wide sheen band, one pass, transform/opacity only,
+  // never loops (squad-unboxing deck-card-sheen precedent).
+  &__sheen {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 45%;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(115deg,
+      rgba($color-surface, 0) 0%,
+      rgba($color-surface, 0.75) 50%,
+      rgba($color-surface, 0) 100%);
+    transform: translateX(-120%);
+
+    &--active {
+      animation: warmup-card-sheen 700ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+  }
+
+  @keyframes warmup-card-sheen {
+    0% {
+      transform: translateX(-120%);
+      opacity: 0;
+    }
+    15% {
+      opacity: 1;
+    }
+    85% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(220%);
+      opacity: 0;
     }
   }
 
@@ -83,6 +239,21 @@
       justify-content: center;
       text-align: center;
     }
+
+    // C3 — question content crossfades in during the CardFlip's second half;
+    // fully legible ≤600ms after the deal completes (250ms delay + 350ms fade).
+    &--deal-in {
+      animation: warmup-content-in 350ms ease-out 250ms both;
+    }
+  }
+
+  @keyframes warmup-content-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   &__top-row {
@@ -95,7 +266,7 @@
   &__dots {
     display: flex;
     align-items: center;
-    gap: 12rpx;
+    gap: 16rpx;
   }
 
   &__dot {
@@ -116,38 +287,103 @@
     line-height: 1;
     color: $color-text-muted;
     white-space: nowrap;
+
+    // B2 — depth seal pill. Deep-variant text / rgba border / soft tint fill
+    // ride inline from getDepthSealColors(); static shape lives here.
+    &--seal {
+      font-size: 18rpx;
+      font-weight: $font-weight-semibold;
+      letter-spacing: 1rpx;
+      line-height: 1.4;
+      padding: 8rpx 16rpx;
+      border: 2rpx solid transparent; // rgba(accent, 0.3) inline
+      border-radius: 999rpx;
+    }
   }
 
   &__mood-wrap {
     @include flex-center;
-    height: 56rpx;
+    height: 48rpx;
+    // B3 rhythm: top-row → 32rpx → mood icon (16rpx content gap + 16rpx here).
+    margin-top: 16rpx;
     transition: opacity 200ms ease, height 200ms ease;
 
     &--hidden {
       opacity: 0;
       height: 0;
+      margin-top: 0;
       overflow: hidden;
     }
   }
 
   &__question {
     font-family: $font-cn-display;
-    font-size: 36rpx;
+    font-size: 38rpx;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
-    line-height: 1.5;
+    line-height: 1.55;
+    letter-spacing: 0.5rpx;
     text-align: center;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 4;
     overflow: hidden;
     overflow-wrap: break-word;
-    word-break: break-word;
+    word-break: keep-all; // 孤字 guard: CJK breaks at word boundaries first
     margin-top: 0;
 
     &--expanded {
       -webkit-line-clamp: 3;
     }
+
+    // C4 — quiet topic change: 360ms opacity crossfade on the same card,
+    // no deal, no sheen. Settles to rest; the question never moves after (C5).
+    &--switching {
+      animation: warmup-question-switch 360ms ease both;
+    }
+  }
+
+  @keyframes warmup-question-switch {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  // B4 — 悦仔说 permission whisper. Two lines (2 × 24rpx × 1.65 ≈ 80rpx)
+  // are reserved ONLY when a whisper actually renders on this card (C6/G2) —
+  // cards without a line carry zero dead space; while typing the reserved
+  // box keeps height stable so content never shifts.
+  &__permission {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+
+    &--reserved {
+      min-height: 80rpx;
+      margin-top: 12rpx; // 16rpx content gap + 12rpx = 28rpx
+    }
+  }
+
+  &__permission-inner {
+    line-height: 1.65;
+    text-align: center;
+  }
+
+  &__permission-prefix {
+    font-size: 20rpx;
+    font-weight: $font-weight-semibold;
+    color: #7c3aed; // warmup accentDeep
+    margin-right: 8rpx;
+  }
+
+  &__permission-text {
+    font-size: 24rpx;
+    color: rgba(55, 65, 81, 0.62);
+    letter-spacing: 0.5rpx;
+    line-height: 1.65;
   }
 
   &__expander {
@@ -365,14 +601,23 @@
     margin-bottom: 8rpx;
   }
 
-  // State G: generating
+  // State G: generating — card-shaped skeleton echoing the foil shell
+  // silhouette (L7). GPU-safe opacity pulse only (profile-review precedent);
+  // --static is applied by JS for RM / degradation-tier devices.
   &__shimmer {
-    width: 96rpx;
-    height: 96rpx;
-    border-radius: 50%;
-    background: rgba($color-primary, 0.08);
+    width: 100%;
+    max-width: 480rpx;
+    height: 320rpx;
+    border-radius: $card-radius;
+    background: rgba($color-primary, 0.06);
+    border: 2rpx solid rgba($color-primary, 0.12);
     animation: warmup-shimmer 1.5s ease-in-out infinite;
     margin-bottom: 16rpx;
+
+    &--static {
+      animation: none;
+      opacity: 0.45;
+    }
   }
 
   @keyframes warmup-shimmer {
@@ -424,6 +669,37 @@
 
     &__prompts {
       animation: none;
+    }
+
+    // G1 — Campfire Vault Card beats degrade to a 150ms opacity crossfade;
+    // the sheen is removed entirely.
+    &__foil-shell--dealing,
+    &__content--deal-in,
+    &__question--switching {
+      animation: warmup-rm-fade 150ms ease-out both !important;
+    }
+
+    // G1 — halo renders as a static glow; no border transition, no breath.
+    &__foil-shell {
+      transition: none;
+    }
+
+    &__halo-glow--breathing {
+      animation: none;
+      opacity: 1;
+    }
+
+    &__sheen {
+      display: none;
+    }
+  }
+
+  @keyframes warmup-rm-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 }

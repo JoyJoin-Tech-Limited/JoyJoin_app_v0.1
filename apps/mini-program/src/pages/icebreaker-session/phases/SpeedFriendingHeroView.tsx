@@ -3,12 +3,12 @@ import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import type { SpeedFriendingPair } from '@shared/socialIcebreaker'
 import Button from '../../../components/ui/Button'
-import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import ArchetypeGlyph from '../../../components/mascot/ArchetypeGlyph'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { ParticleBurst } from '../../../components/reveal'
 import { haptics } from '../../../lib/utils/haptics'
 import './SpeedFriendingHeroView.scss'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 
 interface SpeedFriendingHeroViewProps {
   pairs: SpeedFriendingPair[]
@@ -116,7 +116,8 @@ export function SpeedFriendingHeroView({
         </View>
         <PhaseHeroCard
           phase='speed_friending'
-          title='快速破冰完成'
+          artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-speed-friending.webp')}
+          title='快速交友完成'
           prompt={`共 ${totalRounds} 轮，${pairs.length} 次配对 · 大家都认识了新伙伴，真棒！`}
           statusText='本环节已完成'
           doneCount={totalRounds}
@@ -152,6 +153,7 @@ export function SpeedFriendingHeroView({
 
       <PhaseHeroCard
         phase='speed_friending'
+        artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-speed-friending.webp')}
         title={myPair ? `搭档：${partnerName}` : isBye ? '本轮观察席' : '快速交友'}
         prompt={
           myPair
@@ -196,7 +198,7 @@ export function SpeedFriendingHeroView({
                   <View className='speed-friending-hero__pair-tile-avatars'>
                     <View className='speed-friending-hero__pair-tile-avatar'>
                       {getArchetype(pair.userIdA) ? (
-                        <ArchetypeGlyph archetype={getArchetype(pair.userIdA)!} size={32} />
+                        <ArchetypeGlyph archetype={getArchetype(pair.userIdA)!} size={64} className='speed-friending-hero__glyph' />
                       ) : (
                         <View className='speed-friending-hero__avatar-fallback'>
                           <Text className='speed-friending-hero__avatar-fallback-text'>
@@ -208,7 +210,7 @@ export function SpeedFriendingHeroView({
                     <Text className='speed-friending-hero__pair-tile-vs'>×</Text>
                     <View className='speed-friending-hero__pair-tile-avatar'>
                       {getArchetype(pair.userIdB) ? (
-                        <ArchetypeGlyph archetype={getArchetype(pair.userIdB)!} size={32} />
+                        <ArchetypeGlyph archetype={getArchetype(pair.userIdB)!} size={64} className='speed-friending-hero__glyph' />
                       ) : (
                         <View className='speed-friending-hero__avatar-fallback'>
                           <Text className='speed-friending-hero__avatar-fallback-text'>

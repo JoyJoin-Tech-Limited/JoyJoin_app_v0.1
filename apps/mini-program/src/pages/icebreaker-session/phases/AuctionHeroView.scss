@@ -119,9 +119,12 @@ $au-deep: $phase-accent-auction-deep;
 
   &__history-amount {
     @include type-label;
+    color: $au-deep;
+  }
+
+  &__numeral {
     font-family: $font-mono;
     font-weight: $font-weight-semibold;
-    color: $au-deep;
   }
 
   &__bid-zone {
@@ -147,7 +150,6 @@ $au-deep: $phase-accent-auction-deep;
     border: 2rpx solid rgba($au-accent, 0.3);
     background: $color-surface;
     @include type-body;
-    font-family: $font-mono;
   }
 
   &__error {

@@ -143,9 +143,12 @@ $uw-deep: $phase-accent-undercover-deep;
 
   &__vote-count {
     @include type-label;
+    color: $uw-deep;
+  }
+
+  &__numeral {
     font-family: $font-mono;
     font-weight: $font-weight-semibold;
-    color: $uw-deep;
   }
 
   &__targets {

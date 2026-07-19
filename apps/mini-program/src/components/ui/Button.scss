@@ -48,6 +48,13 @@
     }
   }
 
+  // Disabled state must read disabled in BOTH runtimes: WeChat's native
+  // button greys itself, but the H5/preview render keeps the variant skin.
+  &[disabled],
+  &--disabled {
+    opacity: 0.45;
+  }
+
   &--sm {
     min-height: max($button-height-sm, $cta-min-tap);
     height: $button-height-sm;

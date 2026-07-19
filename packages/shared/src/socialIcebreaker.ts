@@ -45,6 +45,8 @@ export interface SocialTopic {
   safety?: SocialTopicSafety;
   /** 3-tier prompts for 深聊 vibe (opener → follow-up → reflection). */
   promptTiers?: SocialTopicPromptTiers;
+  /** 悦仔说 permission whisper, server-selected from register-matched pool at generation. */
+  permissionLine?: string | null;
 }
 
 export interface MicroChallenge {
@@ -511,6 +513,7 @@ export interface SocialSessionState {
   currentChallengeMeta?: AIResponseMeta;
   challengeCompletedBy?: string[];
   lieDetectivePlayers?: LieDetectivePlayer[];
+  lieDetectiveStatementsMeta?: AIResponseMeta;
   currentLieDetectivePlayerIndex?: number;
   lieDetectiveCompletedUserIds?: string[];
   currentLieDetectiveReveal?: LieDetectiveReveal;

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>JoyJoin WebGL Reveal Spike — 命格凝成</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #140e18; }
+  #stage { position: fixed; inset: 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; }
+
+  /* vignette */
+  #vignette { position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 42%, transparent 42%, rgba(10,6,14,.55) 100%); }
+
+  /* white flash */
+  #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+
+  /* name reveal */
+  #name { position: fixed; left: 0; right: 0; top: 83.5%; text-align: center; pointer-events: none;
+    font-family: "PingFang SC", "Noto Sans SC", sans-serif; }
+  #name .ch { display: inline-block; font-size: 36px; font-weight: 800; color: #f5ead9;
+    text-shadow: 0 2px 18px rgba(203,146,104,.65); opacity: 0;
+    animation: ch-pop .5s cubic-bezier(.34,1.56,.64,1) forwards; }
+  #name .sub { margin-top: 10px; font-size: 15px; letter-spacing: .35em; color: rgba(245,234,217,.72);
+    opacity: 0; animation: sub-in .6s ease-out forwards; }
+  @keyframes ch-pop { from { opacity: 0; transform: translateY(26px) scale(.6); }
+                      to   { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes sub-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  #hud { position: fixed; left: 10px; top: 10px; color: #8f8496; font: 12px/1.5 monospace;
+    white-space: pre; pointer-events: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "./node_modules/three/build/three.module.js",
+    "three/addons/": "./node_modules/three/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="stage"></div>
+<div id="vignette"></div>
+<div id="flash"></div>
+<div id="name"></div>
+<div id="hud"></div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>

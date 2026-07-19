@@ -437,9 +437,12 @@ export function MiniScriptHeroView({
             <View
               className='miniscript-hero__section-header'
               onClick={() => setRoleCardCollapsed(!roleCardCollapsed)}
+              role='button'
+              aria-expanded={!roleCardCollapsed}
+              aria-label='我的角色详情'
             >
               <Text className='miniscript-hero__section-title'>我的角色 · {myRole.roleLabel}</Text>
-              <Text className='miniscript-hero__section-toggle'>{roleCardCollapsed ? '▼' : '▲'}</Text>
+              <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{roleCardCollapsed ? '▼' : '▲'}</Text>
             </View>
             {!roleCardCollapsed && (
               <>
@@ -457,9 +460,12 @@ export function MiniScriptHeroView({
             <View
               className='miniscript-hero__section-header'
               onClick={() => setShowDeductionHints(!showDeductionHints)}
+              role='button'
+              aria-expanded={showDeductionHints}
+              aria-label='推理提示'
             >
-              <Text className='miniscript-hero__section-title'>推理提示 ({deductionHints.length})</Text>
-              <Text className='miniscript-hero__section-toggle'>{showDeductionHints ? '▼' : '▶'}</Text>
+              <Text className='miniscript-hero__section-title'>推理提示（{deductionHints.length}）</Text>
+              <Text className='miniscript-hero__section-toggle' aria-hidden='true'>{showDeductionHints ? '▼' : '▶'}</Text>
             </View>
             {showDeductionHints && deductionHints.map((hint) => (
               <Text key={hint.stepNumber} className='miniscript-hero__beat'>

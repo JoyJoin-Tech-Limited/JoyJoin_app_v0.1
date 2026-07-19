@@ -341,4 +341,37 @@ describe('transitionPhase', () => {
       expect.objectContaining({ auctionRecapLines: ['表演节目由Host以10币拍下'] }),
     );
   });
+
+  it('skips the dwell metric when the phase was already counted (R6: bonus-gate decline re-entry)', async () => {
+    const state = makeState({
+      currentPhase: 'lie_detective',
+      completedPhases: ['warmup', 'micro_challenge', 'lie_detective'],
+    });
+
+    await transitionPhase({
+      state,
+      socialSessionId: state.socialSessionId,
+      trigger: 'host_tap',
+      targetPhase: 'recap',
+      skipBonusGate: true,
+    });
+
+    expect(savePhaseMetricMock).not.toHaveBeenCalled();
+  });
+
+  it('builds the lie V2 recapData on automated transitions out of lie_detective (O1)', async () => {
+    const state = makeState({
+      currentPhase: 'lie_detective',
+      lieDetectiveRevealHistory: [{ round: 1, correctRate: 0.5 }],
+      enabledPhases: ['warmup', 'lie_detective', 'micro_challenge'],
+    });
+
+    await transitionPhase({
+      state,
+      socialSessionId: state.socialSessionId,
+      trigger: 'auto_all_ready',
+    });
+
+    expect(state.recapData?.lieDetective).toBeDefined();
+  });
 });

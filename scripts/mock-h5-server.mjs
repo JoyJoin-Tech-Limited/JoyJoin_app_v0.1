@@ -46,6 +46,7 @@ const MOCK_USER = {
   intent: ['deep_chat', 'fun'],
   pendingReferralCode: '',
   features: {
+    aigcLabelsEnabled: true,
     restartOnboarding: false,
     smartProfession: true,
     onboardingForceSkip: false,
@@ -1214,6 +1215,243 @@ app.post('/api/analytics/:event', (req, res) => {
   res.json({ success: true })
 })
 
+// ─── Social Icebreaker (screenshot states) ──────────────────────
+// Phase comes from the sessionId: /pages/icebreaker-session/index?sessionId=mock-<phase>
+// Variants: mock-fuse (all-ready countdown), mock-stall (host stall nudge).
+
+const IB_HOST_ID = 'user-screenshot-001'
+
+// Minimal AIGC meta fixture — lets the screenshot gate verify the disclosure
+// rows (mirrors the shared AIResponseMeta shape).
+function mockAigcMeta(promptVersion) {
+  return {
+    generatedAt: new Date().toISOString(),
+    fromCache: false,
+    provider: 'deepseek',
+    fallbackUsed: false,
+    promptVersion,
+    aigc: { aiGenerated: true, labelType: 'ai-generated' },
+  }
+}
+const IB_PARTICIPANTS = [
+  { userId: IB_HOST_ID, displayName: '悦仔测试', archetype: '社牛柯基', isActive: true },
+  { userId: 'ib-p2', displayName: '小鹿', archetype: '寻宝狐', isActive: true },
+  { userId: 'ib-p3', displayName: '阿澈', archetype: '机灵海豚', isActive: true },
+  { userId: 'ib-p4', displayName: '桃桃', archetype: '夸夸仓鼠', isActive: true },
+  { userId: 'ib-p5', displayName: '老周', archetype: '靠谱大象', isActive: true },
+  { userId: 'ib-p6', displayName: '眠眠', archetype: '树洞考拉', isActive: true },
+]
+
+const IB_LIE_STATEMENTS = [
+  { index: 0, text: '我小时候拿过全省少儿围棋冠军' },
+  { index: 1, text: '我从来不喝咖啡，一喝就睡不着' },
+  { index: 2, text: '我曾经在沙漠里住过一个月的帐篷' },
+]
+
+function buildIcebreakerState(sessionId) {
+  const variant = sessionId.replace('mock-', '')
+  const now = Date.now()
+  const base = {
+    socialSessionId: sessionId,
+    icebreakerSessionId: sessionId,
+    hostUserId: IB_HOST_ID,
+    hostDisplayName: '悦仔测试',
+    playerCount: 6,
+    activePlayerCount: 6,
+    phaseStartedAt: now - 90_000,
+    sessionStartedAt: now - 20 * 60_000,
+    completedPhases: ['warmup'],
+    eventTier: 'glow',
+    eventType: '饭局',
+    vibe: 'balanced',
+    autoAdvanceEnabled: true,
+    enabledPhases: ['warmup', 'micro_challenge', 'lie_detective', 'auction', 'personality_dice', 'speed_friending'],
+    joinedParticipants: IB_PARTICIPANTS,
+    archetypeMixText: '柯基 × 狐狸 × 海豚 × 仓鼠 × 大象 × 考拉',
+  }
+
+  switch (variant) {
+    case 'micro_challenge':
+      return {
+        ...base,
+        currentPhase: 'micro_challenge',
+        currentChallenge: {
+          id: 'mc-shot-1',
+          title: '互相问3个问题',
+          description: '每人准备3个能真正了解对方的问题，轮流问。越真诚越好。',
+          durationSeconds: 180,
+          completionCTA: '我完成了',
+          visualHint: '越真诚越好',
+        },
+        challengeCompletedBy: [IB_HOST_ID, 'ib-p2'],
+        currentChallengeMeta: mockAigcMeta('social-micro-challenge-v1'),
+      }
+    case 'fuse':
+      return {
+        ...base,
+        currentPhase: 'micro_challenge',
+        currentChallenge: {
+          id: 'mc-shot-2',
+          title: '互相问3个问题',
+          description: '每人准备3个能真正了解对方的问题，轮流问。越真诚越好。',
+          durationSeconds: 180,
+          completionCTA: '我完成了',
+        },
+        challengeCompletedBy: IB_PARTICIPANTS.map((p) => p.userId),
+        autoAdvanceScheduledAt: now + 6_000,
+        advanceFuseKind: 'all_ready',
+      }
+    case 'stall':
+      return {
+        ...base,
+        currentPhase: 'micro_challenge',
+        currentChallenge: {
+          id: 'mc-shot-3',
+          title: '互相问3个问题',
+          description: '每人准备3个能真正了解对方的问题，轮流问。越真诚越好。',
+          durationSeconds: 180,
+          completionCTA: '我完成了',
+        },
+        challengeCompletedBy: [IB_HOST_ID, 'ib-p2'],
+        stallNudgeAt: now - 30_000,
+      }
+    case 'lie_detective':
+      return {
+        ...base,
+        currentPhase: 'lie_detective',
+        lieDetectiveMode: 'v1',
+        lieDetectivePlayers: IB_PARTICIPANTS.map((p) => ({
+          userId: p.userId,
+          displayName: p.displayName,
+          statements: IB_LIE_STATEMENTS,
+        })),
+        currentLieDetectivePlayerIndex: 1,
+        votes: [],
+        lieDetectiveStatementsMeta: mockAigcMeta('social-lie-detective-v1'),
+      }
+    case 'auction':
+      return {
+        ...base,
+        currentPhase: 'auction',
+        auctionLots: [
+          { id: 'lot-1', title: '当众唱一句儿歌', teaser: '跑调也要唱完，大家投票打分', emoji: '🎤' },
+          { id: 'lot-2', title: '爆料一个自己的小怪癖', teaser: '越具体越好笑', emoji: '🤫' },
+          { id: 'lot-3', title: '请全桌喝一杯', teaser: '今晚的豪气担当就是你', emoji: '🍜' },
+        ],
+        auctionCurrentLotIndex: 0,
+        auctionBalances: { [IB_HOST_ID]: 120, 'ib-p2': 75 },
+        auctionHighBid: { userId: 'ib-p2', amount: 45 },
+        auctionLotStartedAt: now - 10_000,
+        auctionAllLotsClosed: false,
+        auctionLotsMeta: mockAigcMeta('social-auction-lots-v1'),
+        auctionBidHistory: [
+          { userId: IB_HOST_ID, amount: 20, at: now - 60_000, lotIndex: 0 },
+          { userId: 'ib-p2', amount: 45, at: now - 30_000, lotIndex: 0 },
+        ],
+      }
+    case 'personality_dice':
+      return {
+        ...base,
+        currentPhase: 'personality_dice',
+        personalityDiceChallenges: IB_PARTICIPANTS.map((p, i) => ({
+          userId: p.userId,
+          displayName: p.displayName,
+          archetype: p.archetype,
+          challengeEmoji: ['🎤', '📷', '🕺', '💌', '🎭', '🌟'][i],
+          challengeTitle: ['模仿一种动物叫声', '和左边的人自拍一张', '即兴跳10秒舞', '夸右边的人三个优点', '用方言自我介绍', '分享一个童年糗事'][i],
+          challengeBody: '放轻松，大家陪你一起玩',
+          passLine: '喝杯茶压压惊',
+        })),
+        currentDicePlayerIndex: 1,
+        diceCompletedBy: [],
+        dicePassedBy: [],
+        personalityDiceChallengesMeta: mockAigcMeta('social-personality-dice-v1'),
+      }
+    case 'speed_friending':
+      return {
+        ...base,
+        currentPhase: 'speed_friending',
+        speedFriendingPairs: [
+          { userIdA: IB_HOST_ID, userIdB: 'ib-p2', displayNameA: '悦仔测试', displayNameB: '小鹿', roundIndex: 0 },
+          { userIdA: 'ib-p3', userIdB: 'ib-p4', displayNameA: '阿澈', displayNameB: '桃桃', roundIndex: 0 },
+          { userIdA: 'ib-p5', userIdB: 'ib-p6', displayNameA: '老周', displayNameB: '眠眠', roundIndex: 0 },
+        ],
+        speedFriendingCurrentRound: 0,
+        speedFriendingTotalRounds: 3,
+        speedFriendingRoundStartedAt: now - 3 * 60_000,
+        speedFriendingAllRoundsComplete: false,
+      }
+    case 'recap':
+      return {
+        ...base,
+        currentPhase: 'recap',
+        completedPhases: ['warmup', 'micro_challenge', 'lie_detective', 'auction', 'personality_dice'],
+        lastAdvanceTrigger: 'auto_all_ready',
+      }
+    default:
+      return { ...base, currentPhase: 'warmup' }
+  }
+}
+
+app.post('/api/social-icebreaker/start', (req, res) => {
+  const sessionId = req.body?.sessionId || 'mock-micro_challenge'
+  const state = buildIcebreakerState(sessionId)
+  res.json({
+    socialSessionId: state.socialSessionId,
+    currentPhase: state.currentPhase,
+    hostUserId: state.hostUserId,
+    hostDisplayName: state.hostDisplayName,
+    state,
+  })
+})
+
+app.get('/api/social-icebreaker/:socialSessionId/recap', (req, res) => {
+  const state = buildIcebreakerState(req.params.socialSessionId)
+  res.json({
+    meta: mockAigcMeta('social-recap-summary-v1'),
+    summary: {
+      headline: '今晚到这儿，刚刚好',
+      closingLine: '悦仔的任务完成啦，接下来的故事，你们当面接着讲～',
+      moments: ['小鹿猜中了老周的谎言，全场惊呼', '桃桃的儿歌拍卖拍出了 85 币高价', '眠眠说她是全桌最会倾听的人，没人反对'],
+    },
+    medals: [
+      { emoji: '🕵️', title: '最佳侦探', recipientDisplayName: '小鹿', description: '猜对谎言次数最多' },
+      { emoji: '🎯', title: '挑战先锋', recipientDisplayName: '悦仔测试', description: '最快完成微挑战' },
+      { emoji: '💬', title: '话题王', recipientDisplayName: '阿澈', description: '贡献了最多有趣话题' },
+    ],
+    state,
+  })
+})
+
+app.get('/api/social-icebreaker/:socialSessionId', (req, res) => {
+  res.json(buildIcebreakerState(req.params.socialSessionId))
+})
+
+// Transition/action endpoints must not silently no-op: future interactive
+// flows would pass green while doing nothing. Static screenshot captures
+// don't call these; anything that does should fail loudly.
+const MOCK_ACTION_501 = [
+  'advance', 'early-end', 'warmup/ready', 'micro-challenge/complete',
+  'lie-detective/vote', 'lie-detective/generate', 'lie-detective/submit-tags',
+  'lie-detective/next-player', 'auction/bid', 'auction/close-lot', 'auction/generate-lots',
+  'personality-dice/complete', 'personality-dice/choose', 'personality-dice/generate',
+  'speed-friending/next-round', 'speed-friending/complete', 'quip-battle/submit',
+  'quip-battle/vote', 'undercover-word/describe', 'undercover-word/vote',
+  'group-mirror/submit', 'group-mirror/reveal', 'stall-nudge/dismiss', 'select-phase',
+  'end-session',
+]
+
+app.post('/api/social-icebreaker/:socialSessionId/:action', (req, res) => {
+  if (MOCK_ACTION_501.includes(req.params.action)) {
+    return res.status(501).json({ error: 'MOCK_ACTION_NOT_SIMULATED', action: req.params.action })
+  }
+  res.json({ state: buildIcebreakerState(req.params.socialSessionId) })
+})
+
+app.post('/api/analytics/social-icebreaker', (req, res) => {
+  res.json({ success: true })
+})
+
 app.post('/api/analytics/auth', (req, res) => {
   res.json({ success: true })
 })
@@ -1224,7 +1462,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(DIST_DIR, 'index.html'))
 })
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '127.0.0.1', () => {
   console.log(`[mock-h5-server] listening on http://localhost:${PORT}`)
 })
 

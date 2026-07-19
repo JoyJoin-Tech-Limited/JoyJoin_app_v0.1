@@ -31,7 +31,7 @@
   flex-direction: column;
   gap: $spacing-sm;
   width: 100%;
-  padding: $spacing-md 0;
+  padding: $spacing-md;
   text-align: center;
   // PR3: terminal gold foil — full foil frame (border + ambient shadow +
   // inset highlight), the capstone of the phase foil family.
@@ -63,6 +63,7 @@
 }
 
 // IdentityReveal inside hero
+// (continued from :29 — IdentityReveal child rules)
 .icebreaker__recap-hero {
   .reveal-identity-reveal {
     min-height: 140rpx;
@@ -517,6 +518,16 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .icebreaker__recap-medal,
+  .icebreaker__recap-hero,
+  .icebreaker__recap-share-wrap,
+  .icebreaker__recap-stamp-img,
+  .icebreaker__recap-ceremony-end-img {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
   .icebreaker__recap-stamp-img,
   .icebreaker__recap-stamp-caption,
   .icebreaker__recap-ceremony-end-img {

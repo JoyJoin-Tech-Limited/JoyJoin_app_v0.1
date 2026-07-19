@@ -12,6 +12,7 @@ import type {
   XiaoyueSessionPack,
 } from '@shared/socialIcebreaker';
 import { auctionLotsLlmPayloadSchema, parseXiaoyueSessionPack } from '@shared/socialIcebreaker';
+import { selectPermissionLineForTopic } from '@shared/socialIcebreakerYuezaiCopy';
 import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework';
 import {
   buildAIGCMeta,
@@ -41,7 +42,7 @@ import {
   buildGroupMirrorPrompt,
   MINISCRIPT_FRAMEWORK_SYSTEM,
   WARMUP_TOPICS_PROMPT_VERSION,
-  WARMUP_TOPICS_V3_PROMPT_VERSION,
+  WARMUP_TOPICS_CHAT_PROMPT_VERSION,
   MICRO_CHALLENGES_PROMPT_VERSION,
   LIE_DETECTIVE_PROMPT_VERSION,
   LIE_DETECTIVE_V2_PROMPT_VERSION,
@@ -104,6 +105,9 @@ function normalizeSocialTopic(topic: Partial<SocialTopic>, fallbackMood: Atmosph
     promptStyle: normalizeTopicPromptStyle(topic.promptStyle),
     safety: normalizeTopicSafety(topic.safety),
   };
+  // 悦仔说 permission whisper — deterministic per topic so every table member
+  // sees the identical line (campfire-vault-card-pr1 A2).
+  base.permissionLine = selectPermissionLineForTopic({ question: base.question, depthLevel: base.depthLevel });
   if (topic.promptTiers?.opener && topic.promptTiers?.followUp && topic.promptTiers?.reflection) {
     base.promptTiers = {
       opener: String(topic.promptTiers.opener).slice(0, 30),
@@ -129,6 +133,48 @@ function warmupTopicsChecks(topics: SocialTopic[]): ModerationCheck[] {
     }
     return checks;
   });
+}
+
+/**
+ * Brave-but-safe guarantee (campfire-vault-card-pr1 A1).
+ *
+ * A topic counts as "brave" when it is marked `safety: 'reflective'` — the
+ * existing field, no new enum. Brave questions are emotionally vulnerable
+ * (jealousy toward a friend, fear of falling behind, pretending to fit in)
+ * but must never touch death, abuse, self-harm, or explicit content; the
+ * moderation pass below remains the hard gate on that.
+ */
+export function hasBraveTopic(topics: SocialTopic[]): boolean {
+  return topics.some((t) => t.safety === 'reflective');
+}
+
+/**
+ * Repair an LLM topic set that contains no brave question by replacing the
+ * final topic with a curated brave topic for the requested mood. Deterministic:
+ * the first curated brave topic for the mood whose question is not already in
+ * the set is chosen. Runs BEFORE moderation so the repaired set is what gets
+ * checked and persisted.
+ */
+function ensureBraveTopic(
+  topics: SocialTopic[],
+  mood: AtmosphereMood,
+  aiCorrelationId?: string,
+): SocialTopic[] {
+  if (hasBraveTopic(topics)) return topics;
+  const presentQuestions = new Set(topics.map((t) => t.question));
+  const candidate = FALLBACK_WARMUP_TOPICS.find(
+    (t) => t.mood === mood && t.safety === 'reflective' && !presentQuestions.has(t.question),
+  ) ?? FALLBACK_WARMUP_TOPICS.find((t) => t.safety === 'reflective' && !presentQuestions.has(t.question));
+  if (!candidate) return topics;
+  const repaired = [...topics];
+  const replacementIndex = repaired.length > 0 ? repaired.length - 1 : 0;
+  repaired[replacementIndex] = normalizeSocialTopic(candidate, mood, replacementIndex);
+  logger.info('[SocialIcebreakerAI] generateWarmupTopics brave guarantee repair: injected curated brave topic', {
+    mood,
+    replacementQuestion: candidate.question,
+    aiCorrelationId,
+  });
+  return repaired;
 }
 
 function microChallengesChecks(challenges: MicroChallenge[]): ModerationCheck[] {
@@ -236,7 +282,8 @@ function moderateAndAttachAIGC<T>(
 
 // ============ CURATED FALLBACK CONTENT ============
 
-const FALLBACK_WARMUP_TOPICS: SocialTopic[] = [
+/** Curated warmup fallback bank — exported for contract tests (A1 brave-per-mood coverage). */
+export const FALLBACK_WARMUP_TOPICS: SocialTopic[] = [
   { id: 'w1', question: '最近最离谱的一次外卖经历是什么？', mood: 'funny', emoji: '🍜', category: '生活趣事', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
   { id: 'w2', question: '如果今天能重来一件事，你会改什么？', mood: 'life', emoji: '🔄', category: '今日状态', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
   { id: 'w3', question: '手机里现在最奇怪的一张照片，敢不敢给大家看看？', mood: 'funny', emoji: '📱', category: '轻松破冰', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
@@ -244,7 +291,7 @@ const FALLBACK_WARMUP_TOPICS: SocialTopic[] = [
   { id: 'w5', question: '你的性格要是道菜，你是什么菜？', mood: 'funny', emoji: '🍽️', category: '自我比喻', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
   { id: 'w6', question: '最近一次真正放松是在哪儿？干嘛呢？', mood: 'relaxed', emoji: '😌', category: '舒适感', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
   { id: 'w7', question: '明天要是突然不用上班，第一件事做什么？', mood: 'relaxed', emoji: '🌟', category: '理想日常', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
-  { id: 'w8', question: '最想和谁（活着或已故）吃一顿饭？', mood: 'emotional', emoji: '💫', category: '重要关系', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
+  { id: 'w8', question: '如果能和任何人对坐吃一顿饭，你最想选谁？想聊点什么？', mood: 'emotional', emoji: '💫', category: '重要关系', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
   { id: 'w9', question: '最近有没有一个瞬间，让你突然心里一暖？', mood: 'emotional', emoji: '🥹', category: '感动瞬间', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
   { id: 'w10', question: '你觉得自己哪个优点，其实被身边人低估了？', mood: 'life', emoji: '💡', category: '自我认知', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
   { id: 'w11', question: '描述一下你理想的周末，越具体越好', mood: 'relaxed', emoji: '☀️', category: '理想节奏', depthLevel: 2, promptStyle: 'experiential', safety: 'gentle' },
@@ -262,6 +309,12 @@ const FALLBACK_WARMUP_TOPICS: SocialTopic[] = [
   { id: 'w23', question: '有什么生活习惯，说出来别人会觉得"你也这样？"', mood: 'funny', emoji: '🙈', category: '可爱怪癖', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
   { id: 'w24', question: '最近有没有一件事，让你突然改变了想法？', mood: 'emotional', emoji: '🌱', category: '观点变化', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
   { id: 'w25', question: '如果人生是部电影，你现在演到哪个章节了？', mood: 'life', emoji: '🎬', category: '人生叙事', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
+  // Brave-but-safe entries (campfire-vault-card-pr1 A1): every mood carries ≥1
+  // emotionally vulnerable question marked safety 'reflective' — never death,
+  // abuse, self-harm, or explicit content.
+  { id: 'w26', question: '有没有哪一刻，你突然觉得自己被落下了？', mood: 'life', emoji: '🍂', category: '情绪共鸣', depthLevel: 3, promptStyle: 'reflective', safety: 'reflective' },
+  { id: 'w27', question: '你有没有过跟着大家一起笑，其实没听懂笑点的时候？', mood: 'funny', emoji: '😅', category: '可爱瞬间', depthLevel: 2, promptStyle: 'experiential', safety: 'reflective' },
+  { id: 'w28', question: '最近有没有觉得累，却不好意思说出来的时刻？', mood: 'relaxed', emoji: '🌙', category: '情绪安放', depthLevel: 2, promptStyle: 'reflective', safety: 'reflective' },
 ];
 
 const FALLBACK_MICRO_CHALLENGES: MicroChallenge[] = [
@@ -361,7 +414,7 @@ function getTargetTopicCount(vibe?: 'chat' | 'balanced' | 'game'): number {
 }
 
 function getPromptVersionForVibe(vibe?: 'chat' | 'balanced' | 'game'): string {
-  return vibe === 'chat' ? WARMUP_TOPICS_V3_PROMPT_VERSION : WARMUP_TOPICS_PROMPT_VERSION;
+  return vibe === 'chat' ? WARMUP_TOPICS_CHAT_PROMPT_VERSION : WARMUP_TOPICS_PROMPT_VERSION;
 }
 
 function isWarmupLlmEnabled(): boolean {
@@ -426,7 +479,10 @@ export async function generateWarmupTopics(params: {
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion: meta.promptVersion });
       fireAndForgetQualityGate(content, 'icebreaker_warmup', aiCorrelationId, 'warmup', params.eventType);
       const targetCount = getTargetTopicCount(params.vibe);
-      const liveTopics: SocialTopic[] = parsed.slice(0, targetCount + 1).map((topic, index) => normalizeSocialTopic(topic, params.mood, index));
+      const normalizedTopics: SocialTopic[] = parsed.slice(0, targetCount + 1).map((topic, index) => normalizeSocialTopic(topic, params.mood, index));
+      // Brave-but-safe guarantee: repair before moderation so the checked and
+      // persisted set always contains ≥1 brave question (contract A1/A4).
+      const liveTopics = ensureBraveTopic(normalizedTopics, params.mood, aiCorrelationId);
       return moderateAndAttachAIGC(
         { data: liveTopics, meta },
         {
@@ -463,13 +519,16 @@ function getFallbackTopics(mood: AtmosphereMood, vibe?: 'chat' | 'balanced' | 'g
   const filtered = FALLBACK_WARMUP_TOPICS.filter(t => t.mood === mood);
   const shuffled = [...filtered].sort(() => Math.random() - 0.5);
   // If not enough for this mood, supplement with others
-  if (shuffled.length < targetCount) {
-    const others = FALLBACK_WARMUP_TOPICS.filter(t => t.mood !== mood)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, targetCount - shuffled.length);
-    return [...shuffled, ...others].map((topic, index) => normalizeSocialTopic(topic, mood, index));
-  }
-  return shuffled.slice(0, targetCount).map((topic, index) => normalizeSocialTopic(topic, mood, index));
+  const topics = shuffled.length < targetCount
+    ? [...shuffled, ...FALLBACK_WARMUP_TOPICS.filter(t => t.mood !== mood)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, targetCount - shuffled.length)]
+      .map((topic, index) => normalizeSocialTopic(topic, mood, index))
+    : shuffled.slice(0, targetCount).map((topic, index) => normalizeSocialTopic(topic, mood, index));
+  // Brave-but-safe guarantee applies to the served fallback set too: shuffle +
+  // slice can otherwise drop the mood's only brave topic (contract A1 /
+  // Reliability pillar — repair swaps the final card for a curated brave one).
+  return ensureBraveTopic(topics, mood);
 }
 
 function isMicroChallengeLlmEnabled(): boolean {

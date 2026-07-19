@@ -19,8 +19,12 @@ import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFr
 import { XIAOYUE_CRAFT_LITE } from '../prompts/craft';
 
 export const XIAOYUE_COMMENT_PROMPT_VERSION = 'social-xiaoyue-comment-v2';
-export const WARMUP_TOPICS_PROMPT_VERSION = 'social-warmup-topics-v2';
-export const WARMUP_TOPICS_V3_PROMPT_VERSION = 'social-warmup-topics-v3';
+// v4 (2026-07-17, campfire-vault-card-pr1): brave-but-safe question guarantee —
+// every generated set must include ≥1 emotionally vulnerable question marked
+// safety:"reflective", never death/abuse/self-harm/explicit. Chat variant keeps
+// its own version string because the prompt shape differs (promptTiers).
+export const WARMUP_TOPICS_PROMPT_VERSION = 'social-warmup-topics-v4';
+export const WARMUP_TOPICS_CHAT_PROMPT_VERSION = 'social-warmup-topics-v4-chat';
 export const MICRO_CHALLENGES_PROMPT_VERSION = 'social-micro-challenges-v2';
 export const LIE_DETECTIVE_PROMPT_VERSION = 'social-lie-detective-v1';
 export const LIE_DETECTIVE_V2_PROMPT_VERSION = 'social-lie-detective-v2';
@@ -66,19 +70,19 @@ export function buildWarmupTopicsPrompt(params: {
   const vibeConfig = {
     chat: {
       cardCount: '6-7',
-      depthCurve: '1个 Level 1 轻松开场、3-4个 Level 2 体验分享、2个 Level 3 温和反思',
+      depthCurve: '1个 Level 1 轻松开场、3-4个 Level 2 体验分享、2个 Level 3 温和反思（其中至少1个为勇敢但安全的问题）',
       styleNote: '每个话题必须包含三级提示（promptTiers）：\n  * opener：30秒 warm entry 引导语（≤15字）\n  * followUp：60秒 deeper probe 追问（≤20字）\n  * reflection：90秒 meaningful closure 反思引导（≤25字）',
       jsonShape: '{"id":"ai1","question":"话题文本","mood":"life","emoji":"相关emoji","category":"话题类别","depthLevel":2,"promptStyle":"experiential","safety":"gentle","promptTiers":{"opener":"...","followUp":"...","reflection":"..."}}',
     },
     balanced: {
       cardCount: '5',
-      depthCurve: '至少2个 Level 1 轻松开场、2个 Level 2 体验分享、1个 Level 3 温和反思',
+      depthCurve: '至少2个 Level 1 轻松开场、2个 Level 2 体验分享、1个 Level 3 温和反思（其中至少1个为勇敢但安全的问题）',
       styleNote: '每个话题一个简短引导即可',
       jsonShape: '{"id":"ai1","question":"话题文本","mood":"relaxed","emoji":"相关emoji","category":"话题类别","depthLevel":1,"promptStyle":"binary","safety":"gentle"}',
     },
     game: {
       cardCount: '4',
-      depthCurve: '2个 Level 1 轻松开场、2个 Level 2 体验分享',
+      depthCurve: '2个 Level 1 轻松开场、2个 Level 2 体验分享（其中1个 Level 2 为勇敢但安全的问题）',
       styleNote: '快速暖场风格，每个话题一个简短引导，节奏轻快',
       jsonShape: '{"id":"ai1","question":"话题文本","mood":"funny","emoji":"相关emoji","category":"话题类别","depthLevel":1,"promptStyle":"binary","safety":"gentle"}',
     },
@@ -98,6 +102,11 @@ export function buildWarmupTopicsPrompt(params: {
 - 话题深度形成曲线：${vibeConfig.depthCurve}
 - 适合初次见面，不查户口、不逼问隐私
 - 每个话题一句话，不超过30字
+- 勇敢但安全的问题（整组至少1个，必须满足）：
+  * 触碰轻微真实的情感，让人想说又有点小紧张，例如：嫉妒朋友、怕被落下、假装合群、不好意思说累
+  * 绝不涉及：死亡、虐待、自伤、露骨内容、重大创伤、疾病
+  * 该问题的 "safety" 必须标记为 "reflective"，depthLevel ≥ 2
+  * 语气依然是轻轻一问，不是心理咨询
 ${vibeConfig.styleNote ? `- ${vibeConfig.styleNote}` : ''}
 ${params.avoidTopics?.length ? `- 避免以下话题：${params.avoidTopics.join('、')}` : ''}
 
