@@ -1387,6 +1387,26 @@
       "cdnPath": "assets/profile-pixel/archetypes/cat/base-v1.webp"
     },
     {
+      "localPath": "assets/lovart/icebreaker/bands/band-micro-challenge.webp",
+      "cdnPath": "assets/lovart/icebreaker/bands/band-micro-challenge.webp"
+    },
+    {
+      "localPath": "assets/lovart/icebreaker/bands/band-lie-detective.webp",
+      "cdnPath": "assets/lovart/icebreaker/bands/band-lie-detective.webp"
+    },
+    {
+      "localPath": "assets/lovart/icebreaker/bands/band-auction.webp",
+      "cdnPath": "assets/lovart/icebreaker/bands/band-auction.webp"
+    },
+    {
+      "localPath": "assets/lovart/icebreaker/bands/band-personality-dice.webp",
+      "cdnPath": "assets/lovart/icebreaker/bands/band-personality-dice.webp"
+    },
+    {
+      "localPath": "assets/lovart/icebreaker/bands/band-speed-friending.webp",
+      "cdnPath": "assets/lovart/icebreaker/bands/band-speed-friending.webp"
+    },
+    {
       "localPath": "assets/profile-pixel/v2/archetypes/cat/body-front-v2.5df6a8f70a1b.webp",
       "cdnPath": "assets/profile-pixel/v2/archetypes/cat/body-front-v2.5df6a8f70a1b.webp"
     },
@@ -1507,8 +1527,8 @@
       "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/bottom/layer-v2.54fa8c764a32.webp"
     },
     {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/shoes/layer-v2.a79b8cdc8770.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/shoes/layer-v2.a79b8cdc8770.webp"
+      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/shoes/layer-v2.a341f94bb73c.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/shoes/layer-v2.a341f94bb73c.webp"
     },
     {
       "localPath": "assets/profile-pixel/v2/equipment/starter/fox/top/layer-v2.f1e4cf330e0e.webp",
@@ -1535,8 +1555,8 @@
       "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/accessory/layer-v2.cbd90d2f9e4f.webp"
     },
     {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/bottom/layer-v2.1c7c682ef96e.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/bottom/layer-v2.1c7c682ef96e.webp"
+      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/bottom/layer-v2.3372348a7bf9.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/bottom/layer-v2.3372348a7bf9.webp"
     },
     {
       "localPath": "assets/profile-pixel/v2/equipment/starter/koala/shoes/layer-v2.15f8ef253d4f.webp",
@@ -1615,8 +1635,8 @@
       "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/accessory/layer-v2.96d57dac9cd0.webp"
     },
     {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/layer-v2.61b46d4ac8ec.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/layer-v2.61b46d4ac8ec.webp"
+      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/layer-v2.312570c8d80a.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/layer-v2.312570c8d80a.webp"
     },
     {
       "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/shoes/layer-v2.8276d24471e2.webp",
@@ -1625,26 +1645,6 @@
     {
       "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/layer-v2.b68a1568c0a8.webp",
       "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/layer-v2.b68a1568c0a8.webp"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/bands/band-micro-challenge.webp",
-      "cdnPath": "assets/lovart/icebreaker/bands/band-micro-challenge.webp"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/bands/band-lie-detective.webp",
-      "cdnPath": "assets/lovart/icebreaker/bands/band-lie-detective.webp"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/bands/band-auction.webp",
-      "cdnPath": "assets/lovart/icebreaker/bands/band-auction.webp"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/bands/band-personality-dice.webp",
-      "cdnPath": "assets/lovart/icebreaker/bands/band-personality-dice.webp"
-    },
-    {
-      "localPath": "assets/lovart/icebreaker/bands/band-speed-friending.webp",
-      "cdnPath": "assets/lovart/icebreaker/bands/band-speed-friending.webp"
     }
   ],
   "pendingAssets": [
