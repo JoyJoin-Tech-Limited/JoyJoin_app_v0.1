@@ -6,13 +6,13 @@ import {
 } from './avatar3dSession'
 
 describe('pixel-art render buffer', () => {
-  it('renders a phone-width stage at a deliberately low nearest-neighbour resolution', () => {
-    expect(resolvePixelArtRenderSize(360, 540)).toEqual({ width: 256, height: 384 })
-    expect(AVATAR_PIXEL_ART_BUFFER_WIDTH).toBe(256)
+  it('caps a phone-width stage at a DPR-1 pixel-art buffer', () => {
+    expect(resolvePixelArtRenderSize(360, 540)).toEqual({ width: 320, height: 480 })
+    expect(AVATAR_PIXEL_ART_BUFFER_WIDTH).toBe(320)
   })
 
   it('preserves aspect ratio and never upscales a small canvas', () => {
-    expect(resolvePixelArtRenderSize(320, 240)).toEqual({ width: 256, height: 192 })
+    expect(resolvePixelArtRenderSize(320, 240)).toEqual({ width: 320, height: 240 })
     expect(resolvePixelArtRenderSize(100, 150)).toEqual({ width: 100, height: 150 })
   })
 })

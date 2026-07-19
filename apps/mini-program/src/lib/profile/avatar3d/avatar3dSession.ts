@@ -4,12 +4,11 @@ import {
   DirectionalLight,
   Group,
   HemisphereLight,
-  PerspectiveCamera,
+  OrthographicCamera,
   Scene,
   WebGLRenderer,
 } from 'three'
-import type { EquipmentSlot3D, EquipmentVisibilityMap, RgbColor } from './avatar3dTypes'
-import { SPIDER_PERSONA_PALETTE } from './avatar3dPalettes'
+import type { EquipmentSlot3D, EquipmentVisibilityMap } from './avatar3dTypes'
 import { buildSpiderPersonaModel, type SpiderPersonaModel } from './spiderModel'
 import { getEquipmentVisibilitySignature } from './equipment3dMapping'
 import {
@@ -25,8 +24,8 @@ import {
  *
  * Resource ownership: the MODEL owns every mesh/geometry/material (released
  * once via model.dispose()); the SESSION owns the renderer + GL context. No
- * shared textures exist anywhere in the system — garments are solid-palette
- * procedural meshes, so dressing can never reference a disposed texture.
+ * shared textures exist anywhere in the system — the character and garments
+ * use model-owned materials, so dressing can never reference a disposed asset.
  */
 
 export interface Avatar3DSessionOptions {
@@ -66,7 +65,7 @@ export interface Avatar3DSession {
  * layout, while WebGL draws at this deliberately small resolution and the
  * compositor enlarges it with nearest-neighbour sampling.
  */
-export const AVATAR_PIXEL_ART_BUFFER_WIDTH = 256
+export const AVATAR_PIXEL_ART_BUFFER_WIDTH = 320
 
 export function resolvePixelArtRenderSize(cssWidth: number, cssHeight: number): { width: number; height: number } {
   const safeWidth = Math.max(1, Math.round(cssWidth))
@@ -128,10 +127,6 @@ function ensureContextAttributes(gl: WebGLRenderingContext): void {
   }
 }
 
-function toThreeColor(color: RgbColor): Color {
-  return new Color(color.r, color.g, color.b)
-}
-
 export function createAvatar3DSession(options: Avatar3DSessionOptions): Avatar3DSession {
   const { canvas, gl } = options
   ensureContextAttributes(gl)
@@ -160,22 +155,35 @@ export function createAvatar3DSession(options: Avatar3DSessionOptions): Avatar3D
   renderer.setSize(initialBufferSize.width, initialBufferSize.height, false)
 
   const scene = new Scene()
-  const camera = new PerspectiveCamera(34, options.cssWidth / Math.max(1, options.cssHeight), 0.1, 60)
-  camera.position.set(0, 2.02, 7.15)
-  camera.lookAt(0, 2.02, 0)
+  const camera = new OrthographicCamera(-2, 2, 2.4, -2.4, 0.1, 60)
+  const updateCameraFrustum = (cssWidth: number, cssHeight: number) => {
+    const aspect = Math.max(0.5, cssWidth / Math.max(1, cssHeight))
+    const halfHeight = 2.34
+    camera.left = -halfHeight * aspect
+    camera.right = halfHeight * aspect
+    camera.top = halfHeight
+    camera.bottom = -halfHeight
+    camera.updateProjectionMatrix()
+  }
+  updateCameraFrustum(options.cssWidth, options.cssHeight)
+  camera.position.set(0, 2.13, 7.4)
+  camera.lookAt(0, 2.13, 0)
 
-  // Lighting: warm hemisphere fill + white key + purple rim from behind so the
-  // black-purple spider reads at every yaw.
-  const palette = SPIDER_PERSONA_PALETTE
-  const hemisphere = new HemisphereLight(new Color(1, 0.96, 0.92), toThreeColor(palette.fur), 0.68)
-  const keyLight = new DirectionalLight(new Color(1, 0.94, 0.9), 0.9)
+  // Soft four-point rig for the rounded pixel-styled model. It keeps the dark
+  // purple materials readable without plastic highlights or shadow maps.
+  const hemisphere = new HemisphereLight(
+    new Color(1, 0.96, 0.92),
+    new Color('#282431'),
+    0.82,
+  )
+  const keyLight = new DirectionalLight(new Color(1, 0.94, 0.9), 1)
   keyLight.position.set(3.4, 5.8, 4.5)
-  const rimLight = new DirectionalLight(toThreeColor(palette.eyeIris), 0.5)
+  const rimLight = new DirectionalLight(new Color('#7752a5'), 0.45)
   rimLight.position.set(-3.2, 3.6, -4.8)
-  const ambient = new AmbientLight(new Color(0.92, 0.88, 1), 0.12)
+  const ambient = new AmbientLight(new Color(0.92, 0.88, 1), 0.2)
   scene.add(hemisphere, keyLight, rimLight, ambient)
 
-  const model = buildSpiderPersonaModel({ palette })
+  const model = buildSpiderPersonaModel()
   const stageGroup = new Group()
   stageGroup.name = 'spider-persona-stage'
   stageGroup.add(model.root)
@@ -225,8 +233,7 @@ export function createAvatar3DSession(options: Avatar3DSessionOptions): Avatar3D
     if (disposed) return
     const safeWidth = Math.max(1, cssWidth)
     const safeHeight = Math.max(1, cssHeight)
-    camera.aspect = safeWidth / safeHeight
-    camera.updateProjectionMatrix()
+    updateCameraFrustum(safeWidth, safeHeight)
     const bufferSize = resolvePixelArtRenderSize(safeWidth, safeHeight)
     renderer.setPixelRatio(1)
     renderer.setSize(bufferSize.width, bufferSize.height, false)

@@ -32,9 +32,7 @@ export interface Equipment3DPalette {
 }
 
 /**
- * The four spider starter garments are the ONLY real 3D garments in phase 1.
- * Every other starter item (11 other archetypes) keeps its V2 thumbnail and the
- * persona stays in permanent underwear — descriptors are only issued for these.
+ * Named garment kinds for the four spider starter items in phase 1.
  */
 export type SpiderStarterGarmentKind =
   | 'spider-bomber-jacket'
@@ -115,10 +113,16 @@ export function hexToRgb(hex: string): RgbColor {
       : normalized,
     16,
   )
+  const toLinear = (channel: number) => {
+    const srgb = channel / 255
+    return srgb <= 0.04045
+      ? srgb / 12.92
+      : ((srgb + 0.055) / 1.055) ** 2.4
+  }
   return {
-    r: ((value >> 16) & 0xff) / 255,
-    g: ((value >> 8) & 0xff) / 255,
-    b: (value & 0xff) / 255,
+    r: toLinear((value >> 16) & 0xff),
+    g: toLinear((value >> 8) & 0xff),
+    b: toLinear(value & 0xff),
   }
 }
 

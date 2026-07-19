@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Group, Mesh, type BufferGeometry, type Material } from 'three'
+import { Group, Mesh, Vector3, type BufferGeometry, type Material } from 'three'
 import {
   PERMANENT_AVATAR_GROUPS,
   SPIDER_MODEL_GROUP_NAMES,
@@ -110,8 +110,8 @@ describe('spider persona model — scene graph structure', () => {
 
   it('uses a shaped humanoid torso instead of the former stacked-sphere blob', () => {
     const model = buildSpiderPersonaModel()
-    expect(findByName(model.groups.body, 'torso').geometry.type).toBe('CylinderGeometry')
-    expect(findByName(model.groups.underwear, 'underwear-vest').geometry.type).toBe('CylinderGeometry')
+    expect(findByName(model.groups.body, 'torso').geometry.type).toBe('SphereGeometry')
+    expect(findByName(model.groups.underwear, 'underwear-vest').geometry.type).toBe('SphereGeometry')
     expect(findByName(model.groups.underwear, 'underwear-short-leg-left')).toBeTruthy()
     expect(findByName(model.groups.underwear, 'underwear-short-leg-right')).toBeTruthy()
     // Reference silhouette: tall human proportions and the asymmetric stance
@@ -155,8 +155,7 @@ describe('spider persona model — scene graph structure', () => {
         expect(Math.abs(claw.position.x)).toBeGreaterThan(1.2)
       }
     }
-    // Back spikes also live behind the torso
-    expect(findByName(model.character, 'back-spike-0').position.z).toBeLessThan(-0.4)
+    expect(findByName(model.character, 'fur-depth-tuft-rear-upper').position.z).toBeLessThan(-0.35)
     model.dispose()
   })
 
@@ -179,7 +178,7 @@ describe('spider persona model — scene graph structure', () => {
     expect(mainEyeRadius).toBeGreaterThan(smallEyeRadius * 3)
     expect(findByName(model.character, 'eye-sparkle-left').scale.x).toBeLessThan(1)
     expect(findByName(model.character, 'eye-sparkle-left').material.type).toBe('MeshBasicMaterial')
-    expect(findByName(model.character, 'eye-sparkle-left').position.z).toBeGreaterThan(0.67)
+    expect(findByName(model.character, 'eye-sparkle-left').position.z).toBeGreaterThan(0.45)
     expect(findByName(model.character, 'pupil-left').material.type).toBe('MeshLambertMaterial')
     model.dispose()
   })
@@ -376,10 +375,11 @@ describe('dressing semantics — visibility flip only', () => {
       node = node.parent
     }
     expect(foundTorso).toBe(true)
-    // The torso is now a slim cylinder: the scaled badge clears both the
-    // permanent tank and the bomber shell without floating far off the chest.
-    expect(accessoryGroup.position.z).toBeGreaterThan(0.55)
-    expect(accessoryGroup.position.z).toBeLessThan(0.7)
+    // The local anchor compensates for the torso's non-uniform scale; the
+    // resulting world position clears both tank and jacket without floating.
+    const worldPosition = accessoryGroup.getWorldPosition(new Vector3())
+    expect(worldPosition.z).toBeGreaterThan(0.55)
+    expect(worldPosition.z).toBeLessThan(0.7)
     model.dispose()
   })
 

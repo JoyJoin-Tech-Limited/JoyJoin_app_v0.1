@@ -20,11 +20,9 @@ import { getSpiderStarterGarmentSpec } from './spiderStarterGarments'
  * (`getPixelEquipmentLayerUrl`), so the card picture and the 3D group can never
  * drift apart.
  *
- * Phase 1 scope: ONLY the four spider starter garments have real 3D meshes
- * (see spiderStarterGarments.ts). Every other item — including the other 11
- * archetypes' starters — resolves to `null` here: the slot stays in permanent
- * underwear and the wardrobe card keeps its V2 thumbnail. Never claim 3D for
- * an item that has no unique garment registered.
+ * Phase 1 scope: the four approved spider starter items each have one real,
+ * pre-built garment. Other archetypes remain on their safe clothed base image
+ * rather than receiving an invented 3D item.
  */
 
 export function getOutfitSlotItemId(outfit: EquipmentOutfit, slot: EquipmentSlot3D): string | null {
@@ -34,10 +32,9 @@ export function getOutfitSlotItemId(outfit: EquipmentOutfit, slot: EquipmentSlot
 const VALID_RARITIES = new Set(['common', 'rare'])
 
 /**
- * Resolve the visual descriptor for an item. Returns null unless the assetKey
- * is one of the four spider starter garments with a registered unique garment
- * (kind + detail meshes). A starter key whose parsed slot contradicts the
- * item's declared slot is also rejected — thumbnail and 3D group must agree.
+ * Resolve the visual descriptor for an item. Returns null unless its assetKey
+ * has a registered spider garment. A key whose parsed slot contradicts the
+ * item's slot is rejected so thumbnail and 3D garment always agree.
  */
 export function resolveEquipment3DDescriptor(
   item: Pick<EquipmentItem, 'assetKey' | 'slot' | 'rarity'>,
@@ -100,11 +97,9 @@ export function getEquipmentVisibilitySignature(visibility: EquipmentVisibilityM
 }
 
 /**
- * Consistency contract used by tests. For the four spider starter garments the
- * descriptor must exist and point at the unique garment registered for the
- * SAME slot as the thumbnail. For every other starter item the descriptor must
- * be null (no fake 3D claim). Returns null when consistent, otherwise a
- * human-readable drift description.
+ * Consistency contract used by tests. Registered spider garments must resolve
+ * to the SAME slot as their thumbnail. Unsupported items remain absent from
+ * the 3D mapping. Returns null when consistent, otherwise a readable drift.
  */
 export function describeThumbnailDrift(
   item: Pick<EquipmentItem, 'assetKey' | 'slot'>,
@@ -117,7 +112,7 @@ export function describeThumbnailDrift(
     rarity: 'common',
   })
   if (!descriptor) {
-    // Non-spider starters are expected to have no 3D garment in phase 1.
+    // Unsupported starters intentionally have no 3D garment in phase 1.
     return getSpiderStarterGarmentSpec(normalizePixelEquipmentAssetKey(item.assetKey))
       ? `spider starter assetKey '${item.assetKey}' lost its 3D descriptor`
       : null

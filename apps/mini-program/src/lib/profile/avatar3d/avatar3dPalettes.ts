@@ -16,11 +16,11 @@ import {
 
 /** JoyJoin black-purple spider persona. */
 export const SPIDER_PERSONA_PALETTE: SpiderPersonaPalette = {
-  body: hexToRgb('#19171E'),        // charcoal-violet skin; compensated for the bright three-light rig
-  belly: hexToRgb('#2E2B31'),       // muted grey face plane sampled against the approved 2D portrait
-  fur: hexToRgb('#0B0A0E'),         // near-black fuzzy head ring, not the former washed-grey helmet
-  spiderLeg: hexToRgb('#121017'),   // deep articulated back limbs
-  spiderLegJoint: hexToRgb('#29242F'),
+  body: hexToRgb('#302D35'),        // charcoal-violet skin, lifted so side views retain pixel detail
+  belly: hexToRgb('#49454D'),       // muted grey face plane sampled against the approved 2D portrait
+  fur: hexToRgb('#1C1921'),         // near-black fuzzy head ring, not the former washed-grey helmet
+  spiderLeg: hexToRgb('#28232E'),   // deep articulated back limbs
+  spiderLegJoint: hexToRgb('#494050'),
   eyeWhite: hexToRgb('#F4EEE5'),    // warm glossy catchlights, never a white eye shell
   eyeIris: hexToRgb('#7752A5'),     // purple crescent around the large black eyes
   pupil: hexToRgb('#0C0A0E'),       // both large and six small eyes are predominantly black
@@ -68,17 +68,17 @@ export const EQUIPMENT_SLOT_DEFAULT_PALETTES: Record<EquipmentSlot3D, Equipment3
  */
 const EQUIPMENT_ASSET_PALETTE_OVERRIDES: Record<string, Partial<Equipment3DPalette>> = {
   'equipment/starter/spider/top/v1': {
-    primary: hexToRgb('#302437'),   // near-black eggplant jacket body + sleeves
-    secondary: hexToRgb('#18131D'), // ink ribbing / pocket panels
+    primary: hexToRgb('#4A2C54'),   // near-black eggplant jacket body + sleeves
+    secondary: hexToRgb('#2C2132'), // ink ribbing / pocket panels
     trim: hexToRgb('#9D89AE'),      // quiet mauve zipper + stitching
   },
   'equipment/starter/spider/bottom/v1': {
-    primary: hexToRgb('#303038'),   // cargo short body
-    secondary: hexToRgb('#202027'), // waistband, fly, belt loops, pocket flap/strap
+    primary: hexToRgb('#45434B'),   // cargo short body
+    secondary: hexToRgb('#302E36'), // waistband, fly, belt loops, pocket flap/strap
     trim: hexToRgb('#AAA5B4'),      // button + buckle hardware
   },
   'equipment/starter/spider/shoes/v1': {
-    primary: hexToRgb('#18131E'),   // black shoe body + ankle collar
+    primary: hexToRgb('#2A2230'),   // black shoe body + ankle collar
     secondary: hexToRgb('#8865BD'), // muted purple panels / tongue / laces
     trim: hexToRgb('#E8DECC'),      // warm cream layered soles
   },
