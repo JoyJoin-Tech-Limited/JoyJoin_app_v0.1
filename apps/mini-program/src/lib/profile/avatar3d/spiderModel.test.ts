@@ -160,18 +160,23 @@ describe('spider persona model — scene graph structure', () => {
     model.dispose()
   })
 
-  it('keeps a complete head: big eyes, secondary eyes, fangs, cheeks, fur tufts', () => {
+  it('matches the official 2D face hierarchy: two dominant eyes above six small eyes', () => {
     const model = buildSpiderPersonaModel()
     const expected = [
       'head-sphere',
       'eye-left', 'eye-right', 'iris-left', 'iris-right', 'pupil-left', 'pupil-right',
       'mini-eye-inner-left', 'mini-eye-inner-right', 'mini-eye-outer-left', 'mini-eye-outer-right',
+      'mini-eye-high-left', 'mini-eye-high-right',
       'fang-left', 'fang-right', 'cheek-left', 'cheek-right',
       'fur-tuft-0', 'fur-tuft-1', 'fur-tuft-2',
     ]
     for (const name of expected) {
       expect(findByName(model.character, name), `${name} missing`).toBeTruthy()
     }
+    const mainEyeRadius = findByName(model.character, 'eye-left').geometry.parameters.radius
+    const smallEyeRadius = findByName(model.character, 'mini-eye-inner-left').geometry.parameters.radius
+    expect(mainEyeRadius).toBeGreaterThan(smallEyeRadius * 3)
+    expect(findByName(model.character, 'eye-sparkle-left').scale.x).toBeLessThan(1)
     model.dispose()
   })
 })

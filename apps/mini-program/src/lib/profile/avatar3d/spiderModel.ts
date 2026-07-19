@@ -277,40 +277,54 @@ function buildHeadGroup(palette: SpiderPersonaPalette): Group {
   group.name = SPIDER_MODEL_GROUP_NAMES.head
 
   const furMat = lambert(palette.fur)
-  const eyeWhiteMat = phong(palette.eyeWhite, 80)
+  const faceMat = lambert(palette.belly)
+  const eyeWhiteMat = phong(palette.eyeWhite, 110)
   const irisMat = phong(palette.eyeIris, 90)
+  const eyeSocketMat = phong(shadeColor(palette.eyeIris, 0.52), 65)
   const pupilMat = phong(palette.pupil, 100)
-  const fangMat = lambert(palette.fang)
+  const fangMat = lambert(palette.pupil)
   const blushMat = lambert(palette.blush)
 
-  addMesh(group, 'head-sphere', new SphereGeometry(0.59, 16, 12), furMat, HEAD_POSITION, [0.96, 1, 0.88])
-  addMesh(group, 'face-mask', new SphereGeometry(1, 14, 10), lambert(palette.body), [0, 3.4, 0.49], [0.4, 0.36, 0.05])
+  addMesh(group, 'head-sphere', new SphereGeometry(0.6, 18, 13), furMat, HEAD_POSITION, [0.99, 0.97, 0.87])
+  addMesh(group, 'face-mask', new SphereGeometry(1, 16, 11), faceMat, [0, 3.39, 0.49], [0.43, 0.38, 0.05])
 
-  // Eight compact violet eyes, arranged like the reference. They deliberately
-  // avoid the former oversized white "googly eye" treatment.
-  const eyeY = 3.42
+  // Match the official 2D profile face: two dominant glossy black eyes with a
+  // purple lower crescent, then six much smaller black eyes in an upper arc.
+  // The earlier pale, equal-sized eye cluster read as a different character.
+  const mainEyeY = 3.35
   for (const side of ['left', 'right'] as const) {
     const s = side === 'left' ? -1 : 1
-    const eyeX = 0.14 * s
-    addMesh(group, `eye-${side}`, new SphereGeometry(0.098, 12, 9), eyeWhiteMat, [eyeX, eyeY, 0.525], [0.92, 1.08, 0.42])
-    addMesh(group, `iris-${side}`, new SphereGeometry(0.062, 10, 8), irisMat, [eyeX, eyeY, 0.565], [0.9, 1.05, 0.38])
-    addMesh(group, `pupil-${side}`, new SphereGeometry(0.028, 9, 7), pupilMat, [eyeX, eyeY, 0.592], [0.88, 1.02, 0.34])
-    addMesh(group, `eye-sparkle-${side}`, new SphereGeometry(0.012, 7, 5), fangMat, [eyeX - 0.018 * s, eyeY + 0.027, 0.61])
+    const eyeX = 0.175 * s
+    addMesh(group, `eye-${side}`, new SphereGeometry(0.151, 14, 10), eyeSocketMat, [eyeX, mainEyeY, 0.535], [0.96, 1.08, 0.34])
+    addMesh(group, `pupil-${side}`, new SphereGeometry(0.137, 14, 10), pupilMat, [eyeX, mainEyeY, 0.574], [0.96, 1.06, 0.31])
+    addMesh(group, `iris-${side}`, new SphereGeometry(0.101, 12, 9), irisMat, [eyeX, mainEyeY - 0.044, 0.613], [0.9, 0.72, 0.24])
+    addMesh(group, `iris-mask-${side}`, new SphereGeometry(0.081, 12, 9), pupilMat, [eyeX, mainEyeY + 0.004, 0.634], [0.92, 1.02, 0.2])
+    // Both catchlights sit toward the shared upper-left light source, exactly
+    // like the glossy eyes in the 2D pixel sheet.
+    addMesh(group, `eye-sparkle-${side}`, new SphereGeometry(0.028, 9, 7), eyeWhiteMat, [eyeX - 0.043, mainEyeY + 0.062, 0.658], [0.86, 1.05, 0.26])
+    addMesh(group, `eye-sparkle-small-${side}`, new SphereGeometry(0.01, 7, 5), eyeWhiteMat, [eyeX + 0.035, mainEyeY + 0.012, 0.661], [0.9, 1, 0.25])
 
-    addMesh(group, `mini-eye-inner-${side}`, new SphereGeometry(0.054, 10, 8), eyeWhiteMat, [0.065 * s, 3.57, 0.535], [0.92, 1.03, 0.42])
-    addMesh(group, `mini-eye-inner-pupil-${side}`, new SphereGeometry(0.027, 8, 6), irisMat, [0.065 * s, 3.57, 0.563], [0.9, 1.02, 0.36])
-    addMesh(group, `mini-eye-outer-${side}`, new SphereGeometry(0.052, 10, 8), eyeWhiteMat, [0.255 * s, 3.5, 0.53], [0.92, 1.03, 0.42])
-    addMesh(group, `mini-eye-outer-pupil-${side}`, new SphereGeometry(0.025, 8, 6), irisMat, [0.255 * s, 3.5, 0.557], [0.9, 1.02, 0.36])
-    addMesh(group, `mini-eye-high-${side}`, new SphereGeometry(0.048, 9, 7), eyeWhiteMat, [0.17 * s, 3.65, 0.525], [0.92, 1.03, 0.42])
-    addMesh(group, `mini-eye-high-pupil-${side}`, new SphereGeometry(0.023, 8, 6), irisMat, [0.17 * s, 3.65, 0.55], [0.9, 1.02, 0.35])
-    // Fangs under the eyes.
-    const fang = addMesh(group, `fang-${side}`, new ConeGeometry(0.026, 0.085, 8), fangMat, [0.095 * s, 3.22, 0.54])
+    const smallEyes = [
+      { key: 'inner', x: 0.07, y: 3.625, radius: 0.043 },
+      { key: 'high', x: 0.205, y: 3.64, radius: 0.046 },
+      { key: 'outer', x: 0.345, y: 3.555, radius: 0.043 },
+    ] as const
+    smallEyes.forEach(({ key, x, y, radius }) => {
+      const signedX = x * s
+      addMesh(group, `mini-eye-${key}-${side}`, new SphereGeometry(radius, 10, 8), pupilMat, [signedX, y, 0.555], [0.96, 1.04, 0.34])
+      addMesh(group, `mini-eye-${key}-pupil-${side}`, new SphereGeometry(radius * 0.2, 7, 5), eyeWhiteMat, [signedX - 0.011, y + 0.014, 0.585], [0.9, 1, 0.25])
+    })
+
+    // The profile sheet has only tiny, tucked-away fangs; keep the spider cue
+    // without turning the friendly mouth into a vampire grin.
+    const fang = addMesh(group, `fang-${side}`, new ConeGeometry(0.008, 0.022, 7), fangMat, [0.05 * s, 3.17, 0.551])
     fang.rotation.x = Math.PI
-    addMesh(group, `cheek-${side}`, new SphereGeometry(0.038, 9, 7), blushMat, [0.3 * s, 3.28, 0.5], [1.2, 0.55, 0.32])
+    addMesh(group, `cheek-${side}`, new SphereGeometry(0.04, 9, 7), blushMat, [0.31 * s, 3.2, 0.514], [1.15, 0.42, 0.24])
   }
 
-  const smile = addMesh(group, 'mouth-smile', new TorusGeometry(0.065, 0.009, 5, 12, Math.PI), pupilMat, [0, 3.24, 0.545])
+  const smile = addMesh(group, 'mouth-smile', new TorusGeometry(0.05, 0.008, 5, 14, Math.PI), pupilMat, [0, 3.17, 0.558])
   smile.rotation.z = Math.PI
+  smile.scale.y = 0.55
 
   return group
 }
@@ -322,13 +336,15 @@ function buildFurGroup(palette: SpiderPersonaPalette): Group {
 
   // Head tufts.
   const tuftSpecs: Array<{ pos: [number, number, number]; radius: number; height: number; tiltX: number; tiltZ: number }> = [
-    { pos: [0, 4.05, -0.01], radius: 0.095, height: 0.25, tiltX: -0.18, tiltZ: 0 },
-    { pos: [-0.18, 4.01, -0.03], radius: 0.09, height: 0.24, tiltX: -0.24, tiltZ: 0.34 },
-    { pos: [0.18, 4.01, -0.03], radius: 0.09, height: 0.24, tiltX: -0.24, tiltZ: -0.34 },
-    { pos: [-0.37, 3.87, -0.035], radius: 0.085, height: 0.23, tiltX: -0.18, tiltZ: 0.76 },
-    { pos: [0.37, 3.87, -0.035], radius: 0.085, height: 0.23, tiltX: -0.18, tiltZ: -0.76 },
-    { pos: [-0.5, 3.58, -0.03], radius: 0.08, height: 0.22, tiltX: -0.1, tiltZ: 1.24 },
-    { pos: [0.5, 3.58, -0.03], radius: 0.08, height: 0.22, tiltX: -0.1, tiltZ: -1.24 },
+    { pos: [0, 4.025, -0.01], radius: 0.052, height: 0.115, tiltX: -0.16, tiltZ: 0 },
+    { pos: [-0.17, 3.995, -0.025], radius: 0.05, height: 0.11, tiltX: -0.2, tiltZ: 0.3 },
+    { pos: [0.17, 3.995, -0.025], radius: 0.05, height: 0.11, tiltX: -0.2, tiltZ: -0.3 },
+    { pos: [-0.34, 3.885, -0.03], radius: 0.048, height: 0.105, tiltX: -0.16, tiltZ: 0.68 },
+    { pos: [0.34, 3.885, -0.03], radius: 0.048, height: 0.105, tiltX: -0.16, tiltZ: -0.68 },
+    { pos: [-0.5, 3.695, -0.025], radius: 0.046, height: 0.1, tiltX: -0.08, tiltZ: 1.12 },
+    { pos: [0.5, 3.695, -0.025], radius: 0.046, height: 0.1, tiltX: -0.08, tiltZ: -1.12 },
+    { pos: [-0.555, 3.43, -0.015], radius: 0.044, height: 0.095, tiltX: -0.04, tiltZ: 1.48 },
+    { pos: [0.555, 3.43, -0.015], radius: 0.044, height: 0.095, tiltX: -0.04, tiltZ: -1.48 },
   ]
   tuftSpecs.forEach((spec, index) => {
     const tuft = addMesh(group, `fur-tuft-${index}`, new ConeGeometry(spec.radius, spec.height, 8), furMat, spec.pos)
@@ -338,9 +354,9 @@ function buildFurGroup(palette: SpiderPersonaPalette): Group {
 
   for (const side of ['left', 'right'] as const) {
     const s = side === 'left' ? -1 : 1
-    const cheekTuft = addMesh(group, `fur-cheek-tuft-${side}`, new ConeGeometry(0.09, 0.24, 7), furMat, [0.53 * s, 3.31, -0.02])
+    const cheekTuft = addMesh(group, `fur-cheek-tuft-${side}`, new ConeGeometry(0.047, 0.105, 7), furMat, [0.55 * s, 3.27, -0.015])
     cheekTuft.rotation.z = (-Math.PI / 2) * s
-    const templeTuft = addMesh(group, `fur-temple-tuft-${side}`, new ConeGeometry(0.08, 0.22, 7), furMat, [0.5 * s, 3.69, -0.05])
+    const templeTuft = addMesh(group, `fur-temple-tuft-${side}`, new ConeGeometry(0.045, 0.1, 7), furMat, [0.51 * s, 3.71, -0.03])
     templeTuft.rotation.z = -1.2 * s
 
     const shoulderTuft = addMesh(group, `fur-shoulder-tuft-${side}`, new ConeGeometry(0.1, 0.26, 7), furMat, [0.5 * s, 2.79, -0.05])

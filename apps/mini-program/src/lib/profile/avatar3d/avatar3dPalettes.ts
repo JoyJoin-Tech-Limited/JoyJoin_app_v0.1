@@ -16,19 +16,19 @@ import {
 
 /** JoyJoin black-purple spider persona. */
 export const SPIDER_PERSONA_PALETTE: SpiderPersonaPalette = {
-  body: hexToRgb('#171419'),        // soft near-black charcoal skin
-  belly: hexToRgb('#29252D'),       // restrained chest modelling, never a bright oval
-  fur: hexToRgb('#0E0C10'),         // plush black-violet head fur
-  spiderLeg: hexToRgb('#151217'),   // deep articulated back limbs
-  spiderLegJoint: hexToRgb('#302A38'),
-  eyeWhite: hexToRgb('#55376F'),    // deep violet eye rims
-  eyeIris: hexToRgb('#C4A7FF'),     // luminous lavender centres
-  pupil: hexToRgb('#151119'),
+  body: hexToRgb('#242129'),        // charcoal-violet skin sampled from the 2D profile body
+  belly: hexToRgb('#3D3942'),       // muted grey face plane and tiny torso modelling detail
+  fur: hexToRgb('#19161D'),         // fuzzy black-violet head ring
+  spiderLeg: hexToRgb('#1D1921'),   // deep articulated back limbs
+  spiderLegJoint: hexToRgb('#3A3342'),
+  eyeWhite: hexToRgb('#F4EEE5'),    // warm glossy catchlights, never a white eye shell
+  eyeIris: hexToRgb('#7752A5'),     // purple crescent around the large black eyes
+  pupil: hexToRgb('#0C0A0E'),       // both large and six small eyes are predominantly black
   fang: hexToRgb('#F5EDDD'),        // warm cream fangs
-  blush: hexToRgb('#634A60'),       // subtle, not toy-like
-  underwearVest: hexToRgb('#27232B'),   // permanent fitted graphite tank
-  underwearShorts: hexToRgb('#1D1A20'), // permanent charcoal safety shorts
-  underwearTrim: hexToRgb('#5C5266'),
+  blush: hexToRgb('#59424F'),       // subtle, not toy-like
+  underwearVest: hexToRgb('#4B4651'),   // permanent fitted grey tank from the 2D body
+  underwearShorts: hexToRgb('#29262D'), // permanent charcoal safety shorts
+  underwearTrim: hexToRgb('#71687B'),
 }
 
 const WHITE = hexToRgb('#FFFFFF')
