@@ -179,6 +179,8 @@ describe('spider persona model — scene graph structure', () => {
     const smallEyeRadius = findByName(model.character, 'mini-eye-inner-left').geometry.parameters.radius
     expect(mainEyeRadius).toBeGreaterThan(smallEyeRadius * 3)
     expect(findByName(model.character, 'eye-sparkle-left').scale.x).toBeLessThan(1)
+    expect(findByName(model.character, 'eye-sparkle-left').material.type).toBe('MeshBasicMaterial')
+    expect(findByName(model.character, 'eye-sparkle-left').position.z).toBeGreaterThan(0.67)
     expect(findByName(model.character, 'pupil-left').material.type).toBe('MeshLambertMaterial')
     model.dispose()
   })

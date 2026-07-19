@@ -278,7 +278,12 @@ function buildHeadGroup(palette: SpiderPersonaPalette): Group {
 
   const furMat = lambert(palette.fur)
   const faceMat = lambert(palette.belly)
-  const eyeWhiteMat = phong(palette.eyeWhite, 110)
+  // Catchlights are painted as unlit warm pixels. Lighting them with Phong
+  // made the tiny meshes disappear after the black eye surface was flattened.
+  const eyeWhiteMat = new MeshBasicMaterial({
+    color: new Color(palette.eyeWhite.r, palette.eyeWhite.g, palette.eyeWhite.b),
+    toneMapped: false,
+  })
   // Keep the dark eye surfaces flat and paint the two catchlights explicitly.
   // A shiny black Phong surface produced uncontrolled white blooms on WeChat,
   // which made the official glossy pixel eyes read like plastic googly eyes.
@@ -304,8 +309,8 @@ function buildHeadGroup(palette: SpiderPersonaPalette): Group {
     addMesh(group, `iris-mask-${side}`, new SphereGeometry(0.081, 12, 9), pupilMat, [eyeX, mainEyeY + 0.004, 0.634], [0.92, 1.02, 0.2])
     // Both catchlights sit toward the shared upper-left light source, exactly
     // like the glossy eyes in the 2D pixel sheet.
-    addMesh(group, `eye-sparkle-${side}`, new SphereGeometry(0.028, 9, 7), eyeWhiteMat, [eyeX - 0.043, mainEyeY + 0.062, 0.658], [0.86, 1.05, 0.26])
-    addMesh(group, `eye-sparkle-small-${side}`, new SphereGeometry(0.01, 7, 5), eyeWhiteMat, [eyeX + 0.035, mainEyeY + 0.012, 0.661], [0.9, 1, 0.25])
+    addMesh(group, `eye-sparkle-${side}`, new SphereGeometry(0.026, 9, 7), eyeWhiteMat, [eyeX - 0.043, mainEyeY + 0.062, 0.678], [0.86, 1.05, 0.22])
+    addMesh(group, `eye-sparkle-small-${side}`, new SphereGeometry(0.01, 7, 5), eyeWhiteMat, [eyeX + 0.035, mainEyeY + 0.012, 0.68], [0.9, 1, 0.22])
 
     const smallEyes = [
       { key: 'inner', x: 0.07, y: 3.625, radius: 0.043 },
@@ -315,7 +320,7 @@ function buildHeadGroup(palette: SpiderPersonaPalette): Group {
     smallEyes.forEach(({ key, x, y, radius }) => {
       const signedX = x * s
       addMesh(group, `mini-eye-${key}-${side}`, new SphereGeometry(radius, 10, 8), pupilMat, [signedX, y, 0.555], [0.96, 1.04, 0.34])
-      addMesh(group, `mini-eye-${key}-pupil-${side}`, new SphereGeometry(radius * 0.2, 7, 5), eyeWhiteMat, [signedX - 0.011, y + 0.014, 0.585], [0.9, 1, 0.25])
+      addMesh(group, `mini-eye-${key}-pupil-${side}`, new SphereGeometry(Math.max(0.011, radius * 0.22), 7, 5), eyeWhiteMat, [signedX - 0.011, y + 0.014, 0.598], [0.9, 1, 0.22])
     })
 
     // The profile sheet has only tiny, tucked-away fangs; keep the spider cue
