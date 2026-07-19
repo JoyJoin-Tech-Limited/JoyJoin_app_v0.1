@@ -66,7 +66,7 @@ export interface Avatar3DSession {
  * layout, while WebGL draws at this deliberately small resolution and the
  * compositor enlarges it with nearest-neighbour sampling.
  */
-export const AVATAR_PIXEL_ART_BUFFER_WIDTH = 192
+export const AVATAR_PIXEL_ART_BUFFER_WIDTH = 256
 
 export function resolvePixelArtRenderSize(cssWidth: number, cssHeight: number): { width: number; height: number } {
   const safeWidth = Math.max(1, Math.round(cssWidth))
@@ -161,18 +161,18 @@ export function createAvatar3DSession(options: Avatar3DSessionOptions): Avatar3D
 
   const scene = new Scene()
   const camera = new PerspectiveCamera(34, options.cssWidth / Math.max(1, options.cssHeight), 0.1, 60)
-  camera.position.set(0, 2.02, 6.45)
+  camera.position.set(0, 2.02, 7.15)
   camera.lookAt(0, 2.02, 0)
 
   // Lighting: warm hemisphere fill + white key + purple rim from behind so the
   // black-purple spider reads at every yaw.
   const palette = SPIDER_PERSONA_PALETTE
-  const hemisphere = new HemisphereLight(new Color(1, 0.96, 0.92), toThreeColor(palette.fur), 1.05)
-  const keyLight = new DirectionalLight(new Color(1, 0.94, 0.9), 1.18)
+  const hemisphere = new HemisphereLight(new Color(1, 0.96, 0.92), toThreeColor(palette.fur), 0.68)
+  const keyLight = new DirectionalLight(new Color(1, 0.94, 0.9), 0.9)
   keyLight.position.set(3.4, 5.8, 4.5)
-  const rimLight = new DirectionalLight(toThreeColor(palette.eyeIris), 0.72)
+  const rimLight = new DirectionalLight(toThreeColor(palette.eyeIris), 0.5)
   rimLight.position.set(-3.2, 3.6, -4.8)
-  const ambient = new AmbientLight(new Color(0.92, 0.88, 1), 0.22)
+  const ambient = new AmbientLight(new Color(0.92, 0.88, 1), 0.12)
   scene.add(hemisphere, keyLight, rimLight, ambient)
 
   const model = buildSpiderPersonaModel({ palette })

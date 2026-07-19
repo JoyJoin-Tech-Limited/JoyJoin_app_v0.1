@@ -1,4 +1,8 @@
 @use '../../../styles/variables' as *;
+// This page lives in a subpackage. Compile the shared WebGL surface rules into
+// the page WXSS as well, so WeChat never falls back to the canvas 300x150
+// default when common-component styles are split into another package.
+@use '../../../components/profile/PixelAvatar3D';
 
 .my-image {
   position: relative;
@@ -58,7 +62,13 @@
   &__turntable {
     position: absolute;
     z-index: 2;
-    inset: 16rpx;
+    top: 16rpx;
+    right: 16rpx;
+    bottom: 16rpx;
+    left: 16rpx;
+    width: auto;
+    height: auto;
+    min-height: 0;
   }
 
   &__base-note {

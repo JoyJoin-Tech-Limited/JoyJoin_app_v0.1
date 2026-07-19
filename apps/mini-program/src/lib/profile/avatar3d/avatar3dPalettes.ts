@@ -16,19 +16,19 @@ import {
 
 /** JoyJoin black-purple spider persona. */
 export const SPIDER_PERSONA_PALETTE: SpiderPersonaPalette = {
-  body: hexToRgb('#242128'),        // reference near-black charcoal skin
-  belly: hexToRgb('#5A5560'),       // muted grey chest plane
-  fur: hexToRgb('#171419'),         // near-black fuzzy head
-  spiderLeg: hexToRgb('#1B181F'),   // near-black articulated back limbs
-  spiderLegJoint: hexToRgb('#443D4C'),
-  eyeWhite: hexToRgb('#E8DEFF'),    // luminous lavender eye shells
-  eyeIris: hexToRgb('#A78BFA'),     // violet iris survives pixel sampling
+  body: hexToRgb('#171419'),        // soft near-black charcoal skin
+  belly: hexToRgb('#29252D'),       // restrained chest modelling, never a bright oval
+  fur: hexToRgb('#0E0C10'),         // plush black-violet head fur
+  spiderLeg: hexToRgb('#151217'),   // deep articulated back limbs
+  spiderLegJoint: hexToRgb('#302A38'),
+  eyeWhite: hexToRgb('#55376F'),    // deep violet eye rims
+  eyeIris: hexToRgb('#C4A7FF'),     // luminous lavender centres
   pupil: hexToRgb('#151119'),
   fang: hexToRgb('#F5EDDD'),        // warm cream fangs
-  blush: hexToRgb('#765B72'),       // subtle, not toy-like
-  underwearVest: hexToRgb('#39353D'),   // permanent fitted grey tank
-  underwearShorts: hexToRgb('#28262C'), // permanent charcoal safety shorts
-  underwearTrim: hexToRgb('#71687B'),
+  blush: hexToRgb('#634A60'),       // subtle, not toy-like
+  underwearVest: hexToRgb('#27232B'),   // permanent fitted graphite tank
+  underwearShorts: hexToRgb('#1D1A20'), // permanent charcoal safety shorts
+  underwearTrim: hexToRgb('#5C5266'),
 }
 
 const WHITE = hexToRgb('#FFFFFF')
@@ -68,24 +68,24 @@ export const EQUIPMENT_SLOT_DEFAULT_PALETTES: Record<EquipmentSlot3D, Equipment3
  */
 const EQUIPMENT_ASSET_PALETTE_OVERRIDES: Record<string, Partial<Equipment3DPalette>> = {
   'equipment/starter/spider/top/v1': {
-    primary: hexToRgb('#59356B'),   // rich eggplant jacket body + sleeves
-    secondary: hexToRgb('#21152B'), // ink ribbing / pocket panels
-    trim: hexToRgb('#D8C8E8'),      // pale zipper + stitching
+    primary: hexToRgb('#302437'),   // near-black eggplant jacket body + sleeves
+    secondary: hexToRgb('#18131D'), // ink ribbing / pocket panels
+    trim: hexToRgb('#9D89AE'),      // quiet mauve zipper + stitching
   },
   'equipment/starter/spider/bottom/v1': {
-    primary: hexToRgb('#3B3B42'),   // cargo short body
-    secondary: hexToRgb('#2A2A31'), // waistband, fly, belt loops, pocket flap/strap
-    trim: hexToRgb('#B9B9C4'),      // button + buckle hardware
+    primary: hexToRgb('#303038'),   // cargo short body
+    secondary: hexToRgb('#202027'), // waistband, fly, belt loops, pocket flap/strap
+    trim: hexToRgb('#AAA5B4'),      // button + buckle hardware
   },
   'equipment/starter/spider/shoes/v1': {
-    primary: hexToRgb('#1D1725'),   // black shoe body + ankle collar
-    secondary: hexToRgb('#9A76D2'), // purple toe cap / ankle panel / tongue / laces
-    trim: hexToRgb('#EFE6D4'),      // cream layered soles
+    primary: hexToRgb('#18131E'),   // black shoe body + ankle collar
+    secondary: hexToRgb('#8865BD'), // muted purple panels / tongue / laces
+    trim: hexToRgb('#E8DECC'),      // warm cream layered soles
   },
   'equipment/starter/spider/accessory/v1': {
-    primary: hexToRgb('#D9D9E4'),   // silver web spokes/rings + spider emblem
-    secondary: hexToRgb('#3A2450'), // purple-black comm device body
-    trim: hexToRgb('#8B5CF6'),      // center gem + top band
+    primary: hexToRgb('#A8A1AE'),   // aged silver web spokes/rings + emblem
+    secondary: hexToRgb('#211725'), // purple-black comm device body
+    trim: hexToRgb('#8060AC'),      // restrained amethyst gem + accent band
   },
 }
 
