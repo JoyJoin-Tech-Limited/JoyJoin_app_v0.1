@@ -211,7 +211,7 @@ Keep the codebases separate, but enforce strong contracts.
 
 - Both clients should point to the **same local backend** during development.
 - In this repo, use the backend started by `npm run dev:server` as the shared local target, and keep both clients aligned to that same origin.
-- **CI build alignment (2026-06-30):** the mini-program CI workflow (`.github/workflows/taro-weapp-build.yml`) now defaults `TARO_APP_API_BASE_URL` to the staging API (`https://staging.joyjoinapp.com`). Production API builds require an explicit `workflow_dispatch` `api_target=production` selection; this prevents accidental production uploads from the default CI path.
+- **CI build alignment (2026-07-20):** the mini-program CI workflow (`.github/workflows/taro-weapp-build.yml`) defaults `TARO_APP_API_BASE_URL` to the staging API (`https://staging.joyjoinapp.com`) and automatically uploads only after `Deploy Staging` succeeds for the same commit. Production API builds require an explicit `workflow_dispatch` `api_target=production` selection; this prevents accidental production uploads and client-before-server version skew.
 - Practical rule:
   - **Breaks on Mini Program** → backend or shared business logic issue
   - **Works in admin client but breaks on Mini Program** → Mini Program adapter/runtime issue

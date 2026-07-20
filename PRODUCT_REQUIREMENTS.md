@@ -4046,6 +4046,7 @@ CREATE TABLE event_pool_groups (
 - Session Store: PostgreSQL
 - File Storage: Not yet implemented as an app-managed subsystem; current profile images come from external identity providers (`wechatAvatarUrl`, legacy `profileImageUrl` via Replit auth), and there is no user-initiated upload pipeline in the active runtime
 - Real-time: WebSocket over WSS
+- Release safety (2026-07-20): staging images build on GitHub-hosted runners, while the shared CVM only loads and atomically switches them with readiness checks and rollback. The WeChat development build for a commit uploads only after that commit is healthy on staging.
 
 **Environment Variables:**
 ```bash

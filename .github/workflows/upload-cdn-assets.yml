@@ -29,18 +29,69 @@ on:
       - apps/mini-program/scripts/extract-profile-pixel-atlas-layers.mjs
       - assets-source/profile-pixel-v2/**
 
+permissions:
+  contents: read
+
 jobs:
-  upload-assets:
-    name: Validate assets and upload on main
+  validate-assets:
+    name: Validate CDN assets
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      should_upload: ${{ steps.changes.outputs.should_upload }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Match changed files against the CDN manifest
+        id: changes
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "should_upload=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch requested a full manifest upload."
+            exit 0
+          fi
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            echo "should_upload=false" >> "$GITHUB_OUTPUT"
+            echo "Pull requests validate assets without opening a CVM session."
+            exit 0
+          fi
+
+          CHANGED_FILE="$RUNNER_TEMP/cdn-changed-files-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.txt"
+          if [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ] && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" > "$CHANGED_FILE"
+          else
+            git show --pretty='' --name-only "$GITHUB_SHA" > "$CHANGED_FILE"
+          fi
+
+          echo "Changed files considered for CDN publication:"
+          sed 's/^/  - /' "$CHANGED_FILE"
+          SHOULD_UPLOAD=$(node -e '
+            const fs = require("node:fs");
+            const changed = new Set(fs.readFileSync(process.argv[1], "utf8").split(/\r?\n/).filter(Boolean));
+            const manifestPath = process.argv[2];
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+            const publishable = new Set(manifest.assets.map(({ localPath }) => `apps/mini-program/src/${localPath}`));
+            process.stdout.write(String(changed.has(manifestPath) || [...changed].some((file) => publishable.has(file))));
+          ' "$CHANGED_FILE" "apps/mini-program/scripts/cdn-asset-manifest.json")
+          echo "should_upload=$SHOULD_UPLOAD" >> "$GITHUB_OUTPUT"
+
+          if [ "$SHOULD_UPLOAD" = "true" ]; then
+            echo "A manifest entry or manifest-listed asset changed. Run this workflow manually to publish it after validation."
+          else
+            echo "No manifest-listed asset changed; validation will run without a CVM session."
+          fi
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Validate CDN-only profile pixel assets
         run: |
@@ -54,48 +105,203 @@ jobs:
           npm exec --workspace=mini-program -- taro build --type weapp
           test ! -d apps/mini-program/dist/assets/profile-pixel
 
+      - name: Preserve compiled assets for upload
+        # Remote CDN publication is intentionally manual so routine pushes do
+        # not add another bandwidth/disk-heavy task to the shared CVM queue.
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: cdn-weapp-dist
+          path: apps/mini-program/dist
+          retention-days: 1
+          if-no-files-found: error
+
+  upload-assets:
+    name: Upload assets to CVM CDN
+    needs: validate-assets
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    concurrency:
+      group: joyjoin-cvm-remote
+      queue: max
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: cdn-weapp-dist
+          path: apps/mini-program/dist
+
       - name: Upload manifest assets to CVM /var/www/cdn/
-        if: github.event_name != 'pull_request'
+        timeout-minutes: 20
         env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
           CDN_BACKEND: rsync
           CDN_BASE_URL: https://joyjoinapp.com/static
-          CDN_RSYNC_HOST: ${{ secrets.SERVER_IP }}
-          CDN_RSYNC_USER: ${{ secrets.SERVER_USER }}
           CDN_RSYNC_PATH: /var/www/cdn
         run: |
-          # Write deploy key with proper newline handling
-          printf '%s\n' '${{ secrets.SSH_PRIVATE_KEY }}' > /tmp/deploy_key
-          chmod 600 /tmp/deploy_key
-          export CDN_RSYNC_KEY=/tmp/deploy_key
+          set -euo pipefail
 
-          # Test connectivity without printing any key material.
-          echo "=== TCP connectivity test ==="
-          timeout 5 bash -c "cat < /dev/null > /dev/tcp/${{ secrets.SERVER_IP }}/22" && echo "Port 22 reachable" || echo "Port 22 NOT reachable (firewall?)"
-
-          echo "=== SSH handshake test ==="
-          connected=false
-          for attempt in 1 2 3; do
-            if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=15 -o BatchMode=yes -o PasswordAuthentication=no -o IdentitiesOnly=yes -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -i /tmp/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "echo 'SSH OK'"; then
-              connected=true
-              break
-            fi
-            echo "SSH handshake attempt ${attempt}/3 failed"
-            sleep $((attempt * 5))
-          done
-          if [ "$connected" != "true" ]; then
-            echo "SSH handshake failed after 3 attempts"
-            exit 255
+          if [ -z "${SSH_PRIVATE_KEY:-}" ] || [ -z "${SERVER_IP:-}" ] || [ -z "${SERVER_USER:-}" ]; then
+            echo "::error::SSH_PRIVATE_KEY, SERVER_IP, and SERVER_USER are required for the CDN upload"
+            exit 1
+          fi
+          if [[ ! "$SERVER_IP" =~ ^[A-Za-z0-9._:-]+$ ]] || [[ ! "$SERVER_USER" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::SERVER_IP or SERVER_USER contains unsupported SSH config characters"
+            exit 1
+          fi
+          if [ "$SERVER_IP" != "1.12.243.104" ]; then
+            echo "::error::SERVER_IP does not match the pinned JoyJoin CVM host"
+            exit 1
           fi
 
-          echo "=== Starting upload ==="
-          node apps/mini-program/scripts/upload-cdn-assets.mjs
+          LOCAL_TEMP_DIR=$(mktemp -d)
+          SSH_KEY_FILE="$LOCAL_TEMP_DIR/cvm.key"
+          KNOWN_HOSTS_FILE="$LOCAL_TEMP_DIR/known_hosts"
+          SSH_CONTROL_DIR="$LOCAL_TEMP_DIR/control"
+          SSH_CONFIG_FILE="$HOME/.ssh/config"
+          SSH_CONFIG_BACKUP="$LOCAL_TEMP_DIR/ssh-config.backup"
+          SSH_CONFIG_EXISTED=false
+          SSH_READY=false
+          CVM="$SERVER_USER@$SERVER_IP"
+          mkdir -m 700 "$SSH_CONTROL_DIR"
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          if [ -f "$SSH_CONFIG_FILE" ]; then
+            cp "$SSH_CONFIG_FILE" "$SSH_CONFIG_BACKUP"
+            SSH_CONFIG_EXISTED=true
+          fi
 
-          echo "=== Verifying profile pixel assets (legacy + V2 paper doll) ==="
+          cleanup() {
+            set +e
+            if [ "$SSH_READY" = "true" ]; then
+              timeout 15s ssh "${SSH_OPTIONS[@]}" -O exit "$CVM" >/dev/null 2>&1 || true
+            fi
+            if [ -n "${SSH_AGENT_PID:-}" ]; then
+              ssh-agent -k >/dev/null 2>&1 || true
+            fi
+            if [ "$SSH_CONFIG_EXISTED" = "true" ] && [ -f "$SSH_CONFIG_BACKUP" ]; then
+              cp "$SSH_CONFIG_BACKUP" "$SSH_CONFIG_FILE"
+              chmod 600 "$SSH_CONFIG_FILE"
+            else
+              rm -f -- "$SSH_CONFIG_FILE"
+            fi
+            for secret_file in "$SSH_KEY_FILE" "${SSH_PASSPHRASE_FILE:-}"; do
+              if [ -n "$secret_file" ] && [ -f "$secret_file" ]; then
+                if command -v shred >/dev/null 2>&1; then
+                  shred -u "$secret_file" || true
+                else
+                  rm -f -- "$secret_file"
+                fi
+              fi
+            done
+            rm -rf -- "$LOCAL_TEMP_DIR"
+          }
+          trap cleanup EXIT
+
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$SSH_KEY_FILE"
+          chmod 600 "$SSH_KEY_FILE"
+          printf '%s\n' \
+            '1.12.243.104 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa6ZQ6p9Lcy/G4jco+PbBR0vhdAd9Upg9HIkN8+M/hf' \
+            > "$KNOWN_HOSTS_FILE"
+          chmod 600 "$KNOWN_HOSTS_FILE"
+          {
+            [ "$SSH_CONFIG_EXISTED" = "false" ] || cat "$SSH_CONFIG_BACKUP"
+            printf '\nHost %s\n' "$SERVER_IP"
+            printf '  ControlMaster auto\n'
+            printf '  ControlPersist 300\n'
+            printf '  ControlPath %s/%%C\n' "$SSH_CONTROL_DIR"
+          } > "$SSH_CONFIG_FILE"
+          chmod 600 "$SSH_CONFIG_FILE"
+
+          if [ -n "${SSH_KEY_PASSPHRASE:-}" ]; then
+            eval "$(ssh-agent -s)"
+            SSH_PASSPHRASE_FILE="$LOCAL_TEMP_DIR/passphrase"
+            SSH_ASKPASS_FILE="$LOCAL_TEMP_DIR/askpass.sh"
+            printf '%s\n' "$SSH_KEY_PASSPHRASE" > "$SSH_PASSPHRASE_FILE"
+            chmod 600 "$SSH_PASSPHRASE_FILE"
+            printf '%s\n' '#!/bin/sh' 'cat "$SSH_PASSPHRASE_FILE"' > "$SSH_ASKPASS_FILE"
+            chmod 700 "$SSH_ASKPASS_FILE"
+            export SSH_PASSPHRASE_FILE
+            DISPLAY=dummy SSH_ASKPASS="$SSH_ASKPASS_FILE" SSH_ASKPASS_REQUIRE=force ssh-add "$SSH_KEY_FILE" </dev/null
+          fi
+
+          SSH_OPTIONS=(
+            -i "$SSH_KEY_FILE"
+            -o StrictHostKeyChecking=yes
+            -o "UserKnownHostsFile=$KNOWN_HOSTS_FILE"
+            -o ConnectTimeout=15
+            -o ConnectionAttempts=1
+            -o BatchMode=yes
+            -o PasswordAuthentication=no
+            -o IdentitiesOnly=yes
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=3
+            -o ControlMaster=auto
+            -o ControlPersist=300
+            -o "ControlPath=$SSH_CONTROL_DIR/%C"
+          )
+
+          wait_for_ssh_banner() {
+            local delays=(0 5 10 20 40 60)
+            local attempt
+            for attempt in "${!delays[@]}"; do
+              if [ "${delays[$attempt]}" -gt 0 ]; then
+                echo "Waiting ${delays[$attempt]} seconds before SSH banner attempt $((attempt + 1))/${#delays[@]}..."
+                sleep "${delays[$attempt]}"
+              fi
+              if timeout 35s ssh "${SSH_OPTIONS[@]}" "$CVM" "printf 'SSH ready\\n'"; then
+                SSH_READY=true
+                return 0
+              fi
+              echo "::warning::CVM accepted TCP but did not complete SSH banner/auth attempt $((attempt + 1))/${#delays[@]}"
+            done
+            echo "::error::CVM SSH did not become ready after ${#delays[@]} attempts"
+            return 1
+          }
+
+          export CDN_RSYNC_HOST="$SERVER_IP"
+          export CDN_RSYNC_USER="$SERVER_USER"
+          export CDN_RSYNC_KEY="$SSH_KEY_FILE"
+          export CDN_RSYNC_KNOWN_HOSTS_FILE="$KNOWN_HOSTS_FILE"
+
+          wait_for_ssh_banner
+          echo "Starting manifest asset upload..."
+          timeout --signal=TERM --kill-after=30s 15m node apps/mini-program/scripts/upload-cdn-assets.mjs
+
+      - name: Verify profile pixel assets (legacy and V2)
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          CURL_OPTIONS=(
+            --fail
+            --silent
+            --show-error
+            --head
+            --connect-timeout 10
+            --max-time 30
+            --retry 3
+            --retry-delay 5
+            --retry-all-errors
+            --output /dev/null
+          )
+
           for archetype in corgi rooster hamster_praise fox dolphin_calm spider koala octopus owl elephant turtle cat; do
-            curl --fail --silent --show-error --retry 5 --retry-all-errors --output /dev/null \
+            curl "${CURL_OPTIONS[@]}" \
               "https://joyjoinapp.com/static/assets/profile-pixel/archetypes/${archetype}/base-v1.webp"
           done
 
+          V2_PATHS_FILE=$(mktemp "$RUNNER_TEMP/profile-pixel-v2-paths-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.XXXXXX")
+          trap 'rm -f -- "$V2_PATHS_FILE"' EXIT
           jq -er '
             . as $manifest
             | [.archetypes[].body, (.items[] | .layer)]
@@ -104,11 +310,9 @@ jobs:
               then $paths[]
               else error("V2 asset path count does not match sourceAssetCount")
               end
-          ' apps/mini-program/src/assets/profile-pixel/v2/avatar-assets-v2.json \
-            > /tmp/profile-pixel-v2-paths
+          ' apps/mini-program/src/assets/profile-pixel/v2/avatar-assets-v2.json > "$V2_PATHS_FILE"
 
-          test -s /tmp/profile-pixel-v2-paths
+          test -s "$V2_PATHS_FILE"
           while IFS= read -r asset_path; do
-            curl --fail --silent --show-error --retry 5 --retry-all-errors --output /dev/null \
-              "https://joyjoinapp.com/static/${asset_path}"
-          done < /tmp/profile-pixel-v2-paths
+            curl "${CURL_OPTIONS[@]}" "https://joyjoinapp.com/static/${asset_path}"
+          done < "$V2_PATHS_FILE"

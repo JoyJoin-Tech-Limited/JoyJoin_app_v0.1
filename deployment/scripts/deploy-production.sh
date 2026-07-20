@@ -5,22 +5,33 @@ set -euo pipefail
 # Run this ON the remote server after CI has rsynced the repository to ~/JoyJoin.
 # All required environment variables are exported by the caller (GitHub Actions).
 
+# Production and staging share this host-level lock. The descriptor stays open
+# for the process lifetime, preventing CI and manual deploys from overlapping.
+DEPLOY_LOCK_FILE="${JOYJOIN_CVM_DEPLOY_LOCK_FILE:-/var/lock/joyjoin-cvm-remote.lock}"
+if ! command -v flock >/dev/null 2>&1; then
+  echo "❌ flock is required to serialize deployments on this host"
+  exit 1
+fi
+exec 9>"$DEPLOY_LOCK_FILE"
+if ! flock -n 9; then
+  echo "❌ Another JoyJoin deployment is already running; refusing to overlap"
+  exit 75
+fi
+
 : "${DATABASE_URL:?DATABASE_URL GitHub secret is required}"
 : "${SESSION_SECRET:?SESSION_SECRET GitHub secret is required}"
 : "${WECHAT_APPID:?WECHAT_APPID GitHub secret is required}"
 : "${WECHAT_SECRET:?WECHAT_SECRET GitHub secret is required}"
 
-soft_cleanup() {
-  echo "🧹 Soft cleanup: prune unused images/builder cache..."
-  docker builder prune -af || true
-  docker image prune -af || true
-}
-
-hard_cleanup() {
-  echo "🔥 Hard cleanup (aggressive image/cache prune, volumes preserved)..."
-  docker builder prune -af || true
-  docker image prune -af || true
-  docker system prune -af || true
+reclaim_unused_docker_data() {
+  echo "🧹 Reclaiming unused Docker images and builder cache (containers/volumes preserved)..."
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 180s docker builder prune -af || true
+    timeout 120s docker image prune -af || true
+  else
+    docker builder prune -af || true
+    docker image prune -af || true
+  fi
 }
 
 retry_command() {
@@ -33,9 +44,9 @@ retry_command() {
   while true; do
     if "$@"; then
       return 0
+    else
+      exit_code=$?
     fi
-
-    exit_code=$?
     if [ "$attempt" -ge "$max_attempts" ]; then
       echo "❌ Command failed after ${max_attempts} attempts: $*"
       return "$exit_code"
@@ -48,23 +59,63 @@ retry_command() {
 }
 
 disk_guard() {
-  local usep
-  usep=$(df -P / | awk 'NR==2{gsub("%","",$5); print $5}')
-  if [ "${usep}" -ge 70 ]; then
-    echo "⚠️ Disk usage is ${usep}%. Cleanup before deploy..."
-    soft_cleanup
+  local min_bytes=8589934592
+  local min_inodes=20000
+  local docker_root
+  local path
+  local available_bytes
+  local available_inodes
+  local use_percent
+  local needs_cleanup=false
+  local -a paths=("/")
+
+  docker_root="$(timeout 20s docker info --format '{{.DockerRootDir}}' 2>/dev/null || true)"
+  if [ -n "$docker_root" ] && [ -d "$docker_root" ]; then
+    paths+=("$docker_root")
   fi
-  if [ "${usep}" -ge 95 ]; then
-    echo "❌ Disk usage is ${usep}%. Refusing to deploy — disk is critically full."
-    exit 1
+
+  for path in "${paths[@]}"; do
+    available_bytes="$(df -PB1 "$path" | awk 'NR == 2 { print $4 }')"
+    available_inodes="$(df -Pi "$path" | awk 'NR == 2 { print $4 }')"
+    use_percent="$(df -P "$path" | awk 'NR == 2 { gsub("%", "", $5); print $5 }')"
+    if (( use_percent >= 70 || available_bytes < min_bytes || available_inodes < min_inodes )); then
+      needs_cleanup=true
+    fi
+  done
+
+  if [ "$needs_cleanup" = "true" ]; then
+    echo "⚠️ Disk is at least 70% used or below the emergency headroom. Reusing the proven unused-image cleanup before deploy..."
+    reclaim_unused_docker_data
   fi
+
+  for path in "${paths[@]}"; do
+    available_bytes="$(df -PB1 "$path" | awk 'NR == 2 { print $4 }')"
+    available_inodes="$(df -Pi "$path" | awk 'NR == 2 { print $4 }')"
+    if (( available_bytes < min_bytes )); then
+      echo "❌ Refusing production deploy: $path has less than 8 GiB free."
+      echo "   Available: $available_bytes bytes."
+      return 75
+    fi
+    if (( available_inodes < min_inodes )); then
+      echo "❌ Refusing production deploy: $path has fewer than 20000 free inodes."
+      echo "   Available: $available_inodes inodes."
+      return 75
+    fi
+  done
 }
 
 on_fail() {
-  echo "❌ Deploy failed. Running hard cleanup to prevent builder cache explosion..."
-  hard_cleanup
-  echo "🧭 Disk after hard cleanup:"
-  df -h /
+  local exit_code=$?
+  trap - ERR
+  echo "❌ Deploy failed. Preserving containers, networks, images, and volumes for diagnosis."
+  echo "🧭 Disk diagnostics:"
+  df -h / || true
+  docker system df || true
+  echo "📋 Container diagnostics:"
+  docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Image}}" || true
+  echo "📋 Builder cache diagnostics:"
+  docker builder du || true
+  exit "$exit_code"
 }
 trap on_fail ERR
 
@@ -102,6 +153,10 @@ upsert_env_var() {
   local value="$2"
   local compose_value
   local tmp
+  if [[ "$value" == *$'\n'* || "$value" == *$'\r'* ]]; then
+    echo "❌ $key contains a raw newline and cannot be written safely to .env.production"
+    return 1
+  fi
   # Docker Compose interpolates $VAR-like text from env files; $$ preserves literal $.
   compose_value="${value//\$/\$\$}"
   tmp=$(mktemp)
@@ -121,6 +176,28 @@ upsert_if_nonempty() {
   upsert_env_var "$key" "$value"
 }
 
+upsert_private_key_from_base64() {
+  local encoded_value="${1-}"
+  local decoded_pem
+  local single_line_pem
+  [ -n "$encoded_value" ] || return 0
+
+  if ! decoded_pem="$(printf '%s' "$encoded_value" | base64 -d)"; then
+    echo "❌ WECHAT_PAY_PRIVATE_KEY is not valid base64"
+    return 1
+  fi
+  if [[ "$decoded_pem" != *"-----BEGIN PRIVATE KEY-----"* && \
+        "$decoded_pem" != *"-----BEGIN RSA PRIVATE KEY-----"* ]]; then
+    echo "❌ WECHAT_PAY_PRIVATE_KEY did not decode to a supported PEM private key"
+    return 1
+  fi
+
+  single_line_pem="${decoded_pem//$'\r'/}"
+  single_line_pem="${single_line_pem//$'\n'/\\n}"
+  upsert_env_var "WECHAT_PAY_PRIVATE_KEY" "$single_line_pem"
+  unset decoded_pem single_line_pem
+}
+
 upsert_env_var "DATABASE_URL" "$DATABASE_URL"
 upsert_env_var "SESSION_SECRET" "$SESSION_SECRET"
 upsert_env_var "WECHAT_APPID" "$WECHAT_APPID"
@@ -133,13 +210,9 @@ upsert_if_nonempty "MINIMAX_API_KEY" "$MINIMAX_API_KEY"
 upsert_if_nonempty "WECHAT_PAY_APP_ID" "$WECHAT_PAY_APP_ID"
 upsert_if_nonempty "WECHAT_PAY_MCH_ID" "$WECHAT_PAY_MCH_ID"
 upsert_if_nonempty "WECHAT_PAY_SERIAL_NO" "$WECHAT_PAY_SERIAL_NO"
-if [ -n "${WECHAT_PAY_PRIVATE_KEY_B64:-}" ]; then
-  upsert_env_var "WECHAT_PAY_PRIVATE_KEY" "$(echo "$WECHAT_PAY_PRIVATE_KEY_B64" | base64 -d)"
-fi
+upsert_private_key_from_base64 "${WECHAT_PAY_PRIVATE_KEY_B64:-}"
 upsert_if_nonempty "WECHAT_PAY_APIV3_KEY" "$WECHAT_PAY_APIV3_KEY"
-if [ -n "${WECHAT_PAY_PLATFORM_CERT_B64:-}" ]; then
-  upsert_env_var "WECHAT_PAY_PLATFORM_CERT" "$(echo "$WECHAT_PAY_PLATFORM_CERT_B64" | base64 -d)"
-fi
+upsert_if_nonempty "WECHAT_PAY_PLATFORM_CERT" "${WECHAT_PAY_PLATFORM_CERT_B64:-}"
 
 upsert_if_nonempty "NODE_ENV" "$NODE_ENV"
 upsert_if_nonempty "PORT" "$PORT"
@@ -294,28 +367,14 @@ NODE
 )
 debug_log "H4" "database_identity_and_migration_table_probe" "$DB_IDENTITY_JSON"
 
-# --- Snapshot DB for safety ---
-echo "   Creating pre-deploy database snapshot..."
-SNAPSHOT_FILE=~/JoyJoin/deployment/pre-deploy-$(date +%Y%m%d-%H%M%S).sql
-pg_dump "$DATABASE_URL" --no-owner --no-acl -f "$SNAPSHOT_FILE" 2>&1 || echo "⚠️ pg_dump failed or not installed (non-fatal — snapshot skipped)"
-
-# ───────────────────────────────────────────────────────────
-# Schema management strategy:
-#   Schema changes are defined as .sql migration files committed
-#   under apps/server/migrations/ and registered in _journal.json.
-#
-#   On deploy, we apply any un-applied migration SQL files
-#   sequentially. This is safe because each file is idempotent
-#   (uses IF NOT EXISTS / DO $$ blocks).
-# ───────────────────────────────────────────────────────────
-echo "   Applying pending migration SQL files..."
-MIGRATIONS_DIR=apps/server/migrations
-for f in $(ls "$MIGRATIONS_DIR"/*.sql 2>/dev/null | sort); do
-  fname=$(basename "$f")
-  echo "     → $fname"
-  psql "$DATABASE_URL" -f "$f" -q 2>&1 || echo "     ⚠️ Migration $fname failed (may already be applied)"
-done
-echo "   ✓ All migration SQL files applied"
+# Production DDL is deliberately outside the application deployment. Migration
+# SQL must be reviewed, backed up, and applied manually before this workflow.
+# The deploy only proves that the configured database is reachable and that the
+# checked-in SQL/journal inventory is internally consistent.
+echo "   Verifying read-only production database connectivity..."
+docker exec postgres \
+  psql -U joyjoin -d joyjoin -v ON_ERROR_STOP=1 -Atc 'SELECT 1;' >/dev/null
+echo "   ✓ Database reachable; no DDL, migration, or seed was executed"
 
 # --- 3) Sync and reload Nginx BEFORE restarting containers ---
 echo "🌐 Syncing and reloading host Nginx config..."
@@ -372,19 +431,10 @@ echo "🔎 Active Nginx joyjoin.conf markers..."
 sudo awk 'NR<=120{print}' /etc/nginx/conf.d/joyjoin.conf | sed -n '/X-JoyJoin-Edge/p;/X-JoyJoin-Proxy/p;/upstream joyjoin_api/,/}/p'
 
 # --- 4) Restart containers ---
-echo "🐳 Removing stale joyjoin-api container if present..."
-docker rm -f joyjoin-api || true
-if [ -f docker-compose.postgres.yml ]; then
-  POSTGRES_OVERRIDE="-f docker-compose.postgres.yml"
-  POSTGRES_SERVICE="postgres"
-else
-  POSTGRES_OVERRIDE=""
-  POSTGRES_SERVICE=""
-fi
-
-echo "🐳 Restarting core containers (api, admin, postgres)..."
+echo "🐳 Restarting application containers (database remains untouched)..."
 cd ~/JoyJoin/deployment
-retry_command 3 15 docker compose -f docker-compose.nginx.yml $POSTGRES_OVERRIDE up -d --build joyjoin-api joyjoin-admin $POSTGRES_SERVICE
+disk_guard
+retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --no-deps joyjoin-api joyjoin-admin
 
 echo "🐳 Starting granite-embedding (non-blocking)..."
 echo "$GITHUB_TOKEN" | docker login ghcr.io -u x-access-token --password-stdin 2>/dev/null
@@ -419,7 +469,7 @@ echo "   Nginx route response headers:"
 curl -sSI -H "Host: joyjoinapp.com" http://127.0.0.1/api/health || true
 
 # --- 6) Post-deploy cleanup ---
-soft_cleanup
+reclaim_unused_docker_data
 
 echo "🧭 Disk after:"
 df -h /

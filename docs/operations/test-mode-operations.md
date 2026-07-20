@@ -229,11 +229,13 @@ WeChat's 体验版 (trial version) allows up to 100 whitelisted users to access 
 
 ### Auto-Upload Pipeline
 
-Every push to `main` triggers `.github/workflows/taro-weapp-build.yml`:
+A push to `main` first runs `.github/workflows/deploy-staging.yml`. After that exact commit passes schema/catalog gates, DB/config readiness, Admin-content checks, and the rollback-safe container switch, its successful `workflow_run` triggers `.github/workflows/taro-weapp-build.yml`:
 
 1. Builds the mini-program (TypeScript → WeChat dist)
 2. Uploads as **开发版** via `miniprogram-ci` (robot 1)
 3. Version: `1.0.YYYYMMDD.HHMM`
+
+This ordering prevents a new client from being published before its staging API is healthy. A failed staging deployment does not upload a development build.
 
 > 2026-06-30：CI 默认将 `TARO_APP_API_BASE_URL` 指向 `https://staging.joyjoinapp.com`。因此自动上传的**开发版默认连接 staging API**；如需指生产 API，必须在手动触发 workflow 时选择 `api_target=production`。
 
@@ -288,15 +290,16 @@ JoyJoin supports a same-server staging API (`staging.joyjoinapp.com`) and stagin
 
 See `deployment/README.md` §“同服务器 staging（体验版测试价）” for the full steps. Short version:
 
+Use the GitHub **Deploy Staging** workflow. It builds API/Admin images on the hosted runner, uploads them to the CVM, validates schema/catalog state without applying DDL or seed data, switches containers, and gates on `/api/readyz` plus the actual Admin pages. After readiness passes, the deployment syncs only the staging `paymentsEnabled` feature-flag row from its configured payment mode. A failed switch restores the previous images and Nginx config.
+
+Direct server execution is recovery-only and requires an image bundle built elsewhere:
+
 ```bash
-ssh -i "~/Desktop/Business idea/JoyJoin/SSH/OpenCode.pem" root@1.12.243.104
-cd ~/JoyJoin
-./deployment/scripts/deploy-staging.sh
+STAGING_IMAGE_BUNDLE=/path/to/joyjoin-staging-images.tar.gz \
+  ./deployment/scripts/deploy-staging.sh
 ```
 
-The script reloads Nginx, rebuilds the staging API + admin containers, applies migrations, and health-checks both `staging.joyjoinapp.com` and `staging.admin.joyjoinapp.com`.
-
-Once the initial manual deploy is done, every push to `main` automatically triggers `.github/workflows/deploy-staging.yml`, which re-runs the same steps from CI. Staging secrets are kept in sync from GitHub (`STAGING_DATABASE_URL`, `STAGING_SESSION_SECRET`, `STAGING_ADMIN_CREATE_SECRET_KEY`, `STAGING_POSTGRES_PASSWORD`) while app secrets (WeChat, AI, WeChat Pay) are reused from production secrets.
+Every push to `main` automatically triggers `.github/workflows/deploy-staging.yml`. Staging secrets are kept in sync from GitHub (`STAGING_DATABASE_URL`, `STAGING_SESSION_SECRET`, `STAGING_ADMIN_CREATE_SECRET_KEY`, `STAGING_POSTGRES_PASSWORD`) while app secrets (WeChat, AI, WeChat Pay) are reused from production secrets. `STAGING_DATABASE_URL` must use `postgres-staging:5432/joyjoin_staging` from inside Docker. Database migrations and equipment seed data are applied manually before deployment; CI only verifies them.
 
 > 2026-06-30：staging 部署流程从 GitHub Secret `WECHAT_PAY_PLATFORM_CERT` 读取微信支付平台证书/公钥，base64 编码后写入 `deployment/.env.staging` 的 `WECHAT_PAY_PLATFORM_CERT`。后端 `resolvePlatformCert()` 会自动解码并同时支持 PEM 证书和 RSA 公钥，用于 webhook 签名验证。若需要真实 ¥0.01 支付测试，请确保该 secret 已配置。
 
@@ -318,7 +321,7 @@ Set the staging origin before building:
 TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com
 ```
 
-> 2026-06-30：`.github/workflows/taro-weapp-build.yml` 已默认使用 `https://staging.joyjoinapp.com`，因此 CI 自动上传的开发版默认指向 staging。手动本地构建时仍需显式设置上述环境变量。
+> 2026-07-20：`.github/workflows/taro-weapp-build.yml` 自动上传的开发版默认指向 staging，并且仅在同一 commit 的 staging 部署成功后运行。手动本地构建时仍需显式设置上述环境变量。
 
 ```bash
 npm run build:weapp --workspace=mini-program

@@ -134,9 +134,10 @@ npm run simulate:expert-packet        # generate human-readable review packet
 npm run simulate:gate                 # CI gate: generate + run centroids
 
 # WeChat Mini-Program upload (开发版)
-# CI: every push to main triggers taro-weapp-build.yml → auto-uploads 开发版.
-#   The workflow now defaults TARO_APP_API_BASE_URL to https://staging.joyjoinapp.com;
-#   production builds require explicit workflow input api_target=production.
+# CI: a push to main first deploys the same commit to staging. Only after that
+#   workflow passes does taro-weapp-build.yml rebuild and upload the 开发版.
+#   Automatic uploads target https://staging.joyjoinapp.com; production builds
+#   require explicit workflow input api_target=production.
 # Manual upload (--appid is required; won't auto-read from project.config.json):
 #   npx miniprogram-ci upload --appid wx5a038ee6dee12032 --pp apps/mini-program \
 #     --pkp <private-key-file> --uv "1.0.$(date +%Y%m%d).$(date +%H%M)" \
@@ -167,6 +168,7 @@ npm run simulate:gate                 # CI gate: generate + run centroids
 - Set `APP_MODE=staging` and `TEST_PAYMENT_PRICE_IN_CENTS=1` in `deployment/.env.staging` to charge ¥0.01.
 - Set `PAYMENTS_ENABLED=true` and `MOCK_PAYMENTS=false` (from GitHub repository variables) to run real WeChat Pay test charges; set `MOCK_PAYMENTS=true` to skip real payment and receive instantly-paid mock orders.
 - Staging deploy reads `WECHAT_PAY_PLATFORM_CERT` from GitHub secrets, base64-encodes the value, and writes it into `deployment/.env.staging`. `WECHAT_PAY_PLATFORM_CERT` accepts a plain PEM or base64-encoded PEM, and supports both legacy platform-certificate mode and 微信支付公钥 (public-key) mode.
+- **2026-07-20 deployment safety:** staging API/Admin images are built on the GitHub runner and uploaded as a bundle; the shared CVM never compiles them. The script validates schema/catalog read-only, requires the container-reachable `postgres-staging:5432/joyjoin_staging` target, gates on `/api/readyz` plus real Admin content, and restores the previous images/Nginx config if the switch fails. The mini-program 开发版 upload starts only after the matching staging commit succeeds.
 - Build the mini-program with `TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com`.
 - Manage staging events and feature flags via `https://staging.admin.joyjoinapp.com`.
 - Staging does **not** auto-run migrations; apply `.sql` files manually against `postgres-staging`.

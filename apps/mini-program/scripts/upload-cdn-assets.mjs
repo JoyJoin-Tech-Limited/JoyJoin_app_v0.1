@@ -28,6 +28,8 @@
  *   CDN_RSYNC_USER       — SSH user (default: current user)
  *   CDN_RSYNC_PATH       — Remote directory path (default: /var/www/cdn)
  *   CDN_RSYNC_KEY        — SSH private key path (optional)
+ *   CDN_RSYNC_KNOWN_HOSTS_FILE — pinned OpenSSH known_hosts file (optional;
+ *                                defaults to the user's standard file)
  *   CDN_S3_BUCKET        — S3 bucket name
  *   CDN_S3_REGION        — S3 region (default: us-east-1)
  *   CDN_S3_ENDPOINT      — Custom endpoint for R2/MinIO
@@ -234,16 +236,17 @@ async function uploadRsync(files) {
   const user = process.env.CDN_RSYNC_USER ?? process.env.USER
   const remotePath = process.env.CDN_RSYNC_PATH
   const key = process.env.CDN_RSYNC_KEY
+  const knownHostsFile = process.env.CDN_RSYNC_KNOWN_HOSTS_FILE
 
   const sshArgs = [
-    '-o', 'StrictHostKeyChecking=no',
-    '-o', 'UserKnownHostsFile=/dev/null',
+    '-o', 'StrictHostKeyChecking=yes',
     '-o', 'BatchMode=yes',
     '-o', 'PasswordAuthentication=no',
     '-o', 'ConnectTimeout=15',
     '-o', 'ServerAliveInterval=10',
     '-o', 'ServerAliveCountMax=3',
   ]
+  if (knownHostsFile) sshArgs.push('-o', `UserKnownHostsFile=${knownHostsFile}`)
   if (key) sshArgs.push('-o', 'IdentitiesOnly=yes', '-i', key)
 
   const sshArgsQuoted = sshArgs.map((a) => (a.includes(' ') ? `'${a}'` : a))

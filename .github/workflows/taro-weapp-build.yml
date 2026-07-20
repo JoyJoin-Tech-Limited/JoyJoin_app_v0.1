@@ -18,6 +18,11 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/taro-weapp-build.yml'
+  # Publish only after the matching staging commit is healthy. A push still
+  # gets an early compile/package check above; this event performs the release.
+  workflow_run:
+    workflows: ['Deploy Staging']
+    types: [completed]
   workflow_dispatch:
     inputs:
       api_target:
@@ -37,19 +42,27 @@ on:
 permissions:
   contents: read
 
-# Cancel superseded builds when pushes land in quick succession — saves Actions minutes.
+# Never interrupt an in-flight upload, but collapse multiple waiting runs to the
+# newest commit so push bursts cannot queue repeated builds/CVM uploads.
 concurrency:
-  group: taro-weapp-${{ github.ref }}
-  cancel-in-progress: true
+  group: taro-weapp-${{ github.event.workflow_run.head_branch || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   build-weapp:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4.3.1
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4.4.0
@@ -85,13 +98,23 @@ jobs:
           if-no-files-found: error
 
   # CVM tunnel upload: rsync dist → SSH → miniprogram-ci on CVM (fixed IP).
-  # Main pushes must surface upload failures; transient SSH transport failures are
-  # retried below, while miniprogram-ci itself is intentionally single-attempt.
+  # Automatic uploads follow a successful staging deployment for the exact
+  # commit; transient SSH failures are retried, while miniprogram-ci itself is
+  # intentionally single-attempt.
   upload-weapp:
-    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && github.event.inputs.should_upload == 'true')
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.should_upload == 'true')
     needs: build-weapp
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
+    concurrency:
+      group: joyjoin-cvm-remote
+      queue: max
+      cancel-in-progress: false
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -99,102 +122,206 @@ jobs:
           path: apps/mini-program/dist
 
       - name: Upload to WeChat Mini Program via CVM
+        timeout-minutes: 25
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
+          SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          REQUIRE_STAGING_SHA: ${{ github.event_name == 'workflow_run' && 'true' || 'false' }}
         run: |
           set -euo pipefail
 
+          if [ -z "${SSH_PRIVATE_KEY:-}" ] || [ -z "${SERVER_IP:-}" ] || [ -z "${SERVER_USER:-}" ]; then
+            echo "::error::SSH_PRIVATE_KEY, SERVER_IP, and SERVER_USER are required for the CVM upload"
+            exit 1
+          fi
           if [ -z "${WECHAT_PRIVATE_KEY:-}" ]; then
             echo "::error::WECHAT_PRIVATE_KEY secret is required for the WeChat upload"
             exit 1
           fi
+          if [ "$SERVER_IP" != "1.12.243.104" ]; then
+            echo "::error::SERVER_IP does not match the pinned JoyJoin CVM host"
+            exit 1
+          fi
+          if [[ ! "$SERVER_USER" =~ ^[A-Za-z0-9._-]+$ ]] || [[ ! "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::SERVER_USER or SOURCE_SHA failed validation"
+            exit 1
+          fi
 
-          REMOTE_DIR="/root/joyjoin-upload"
+          REMOTE_DIR="/tmp/joyjoin-weapp-upload-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${SOURCE_SHA:0:12}"
           CVM="$SERVER_USER@$SERVER_IP"
-
-          # Write SSH key
-          SSH_KEY_FILE=$(mktemp)
-          printf '%s\n' "$SSH_PRIVATE_KEY" > "$SSH_KEY_FILE"
-          chmod 600 "$SSH_KEY_FILE"
-
-          # Write WeChat private key to temp file for rsync
-          WX_KEY_FILE=$(mktemp)
-          printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$WX_KEY_FILE"
-          chmod 600 "$WX_KEY_FILE"
+          LOCAL_TEMP_DIR=$(mktemp -d)
+          SSH_KEY_FILE="$LOCAL_TEMP_DIR/cvm.key"
+          WX_KEY_FILE="$LOCAL_TEMP_DIR/wechat.key"
+          KNOWN_HOSTS_FILE="$LOCAL_TEMP_DIR/known_hosts"
+          SSH_CONTROL_DIR="$LOCAL_TEMP_DIR/control"
+          SSH_READY=false
+          mkdir -m 700 "$SSH_CONTROL_DIR"
 
           cleanup() {
-            rm -f "$SSH_KEY_FILE" "$WX_KEY_FILE"
+            set +e
+            if [ "$SSH_READY" = "true" ]; then
+              timeout 60s ssh "${SSH_OPTIONS[@]}" "$CVM" "rm -rf -- '$REMOTE_DIR'" >/dev/null 2>&1 || true
+              timeout 15s ssh "${SSH_OPTIONS[@]}" -O exit "$CVM" >/dev/null 2>&1 || true
+            fi
             if [ -n "${SSH_AGENT_PID:-}" ]; then
               ssh-agent -k >/dev/null 2>&1 || true
             fi
+            for secret_file in "$SSH_KEY_FILE" "$WX_KEY_FILE" "${SSH_PASSPHRASE_FILE:-}"; do
+              if [ -n "$secret_file" ] && [ -f "$secret_file" ]; then
+                if command -v shred >/dev/null 2>&1; then
+                  shred -u "$secret_file" || true
+                else
+                  rm -f -- "$secret_file"
+                fi
+              fi
+            done
+            rm -rf -- "$LOCAL_TEMP_DIR"
           }
           trap cleanup EXIT
 
-          run_with_ssh_retry() {
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$SSH_KEY_FILE"
+          chmod 600 "$SSH_KEY_FILE"
+          printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$WX_KEY_FILE"
+          chmod 600 "$WX_KEY_FILE"
+          printf '%s\n' \
+            '1.12.243.104 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa6ZQ6p9Lcy/G4jco+PbBR0vhdAd9Upg9HIkN8+M/hf' \
+            > "$KNOWN_HOSTS_FILE"
+          chmod 600 "$KNOWN_HOSTS_FILE"
+
+          run_transport_with_backoff() {
+            local command_timeout="$1"
+            shift
             local attempt=1
             local exit_code=0
+            local delays=(5 10)
 
             while true; do
-              if "$@"; then
+              if timeout "$command_timeout" "$@"; then
                 return 0
               else
                 exit_code=$?
               fi
 
-              if [ "$exit_code" -ne 255 ] || [ "$attempt" -ge 3 ]; then
+              case "$exit_code" in
+                12|30|35|124|255) ;;
+                *) return "$exit_code" ;;
+              esac
+              if [ "$attempt" -ge 3 ]; then
                 return "$exit_code"
               fi
 
-              echo "::warning::SSH transport closed during attempt ${attempt}/3; retrying in 15 seconds"
-              sleep 15
+              echo "::warning::CVM transport failed during attempt ${attempt}/3; retrying in ${delays[$((attempt - 1))]} seconds"
+              sleep "${delays[$((attempt - 1))]}"
               attempt=$((attempt + 1))
             done
           }
 
           if [ -n "${SSH_KEY_PASSPHRASE:-}" ]; then
             eval "$(ssh-agent -s)"
-            echo "$SSH_KEY_PASSPHRASE" | ssh-add "$SSH_KEY_FILE"
+            SSH_PASSPHRASE_FILE="$LOCAL_TEMP_DIR/passphrase"
+            SSH_ASKPASS_FILE="$LOCAL_TEMP_DIR/askpass.sh"
+            printf '%s\n' "$SSH_KEY_PASSPHRASE" > "$SSH_PASSPHRASE_FILE"
+            chmod 600 "$SSH_PASSPHRASE_FILE"
+            printf '%s\n' '#!/bin/sh' 'cat "$SSH_PASSPHRASE_FILE"' > "$SSH_ASKPASS_FILE"
+            chmod 700 "$SSH_ASKPASS_FILE"
+            export SSH_PASSPHRASE_FILE
+            DISPLAY=dummy SSH_ASKPASS="$SSH_ASKPASS_FILE" SSH_ASKPASS_REQUIRE=force ssh-add "$SSH_KEY_FILE" </dev/null
           fi
 
           SSH_OPTIONS=(
             -i "$SSH_KEY_FILE"
             -o BatchMode=yes
             -o IdentitiesOnly=yes
-            -o ConnectTimeout=20
-            -o ConnectionAttempts=3
+            -o ConnectTimeout=15
+            -o ConnectionAttempts=1
             -o ServerAliveInterval=15
             -o ServerAliveCountMax=3
-            -o StrictHostKeyChecking=no
-            -o UserKnownHostsFile=/dev/null
+            -o ControlMaster=auto
+            -o ControlPersist=300
+            -o "ControlPath=$SSH_CONTROL_DIR/%C"
+            -o StrictHostKeyChecking=yes
+            -o "UserKnownHostsFile=$KNOWN_HOSTS_FILE"
           )
-          RSYNC_SSH="ssh -i $SSH_KEY_FILE -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=20 -o ConnectionAttempts=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          RSYNC_SSH="ssh -i $SSH_KEY_FILE -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 -o ConnectionAttempts=1 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o ControlMaster=auto -o ControlPersist=300 -o ControlPath=$SSH_CONTROL_DIR/%C -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KNOWN_HOSTS_FILE"
+
+          wait_for_ssh_banner() {
+            local delays=(0 5 10 20 40 60)
+            local attempt
+            for attempt in "${!delays[@]}"; do
+              if [ "${delays[$attempt]}" -gt 0 ]; then
+                echo "Waiting ${delays[$attempt]} seconds before SSH banner attempt $((attempt + 1))/${#delays[@]}..."
+                sleep "${delays[$attempt]}"
+              fi
+              if timeout 35s ssh "${SSH_OPTIONS[@]}" "$CVM" "printf 'SSH ready\\n'"; then
+                SSH_READY=true
+                return 0
+              fi
+              echo "::warning::CVM accepted TCP but did not complete SSH banner/auth attempt $((attempt + 1))/${#delays[@]}"
+            done
+            echo "::error::CVM SSH did not become ready after ${#delays[@]} attempts"
+            return 1
+          }
 
           API_TARGET="${{ github.event.inputs.api_target || 'staging' }}"
           VERSION="1.0.$(date +%Y%m%d).$(date +%H%M)"
-          DESCRIPTION="Auto-deploy (${API_TARGET}): ${GITHUB_SHA:0:7}"
+          DESCRIPTION="Auto-deploy (${API_TARGET}): ${SOURCE_SHA:0:7}"
+
+          wait_for_ssh_banner
+
+          # Automatic publishing is allowed only while staging still serves
+          # this exact commit. The shared CVM lock keeps the marker stable for
+          # the check plus upload, so a later API deploy cannot overtake it.
+          if [ "$REQUIRE_STAGING_SHA" = "true" ]; then
+            DEPLOYED_SHA=$(timeout 45s ssh "${SSH_OPTIONS[@]}" "$CVM" \
+              "test -f ~/JoyJoin/deployment/.staging-deployed-sha && cat ~/JoyJoin/deployment/.staging-deployed-sha")
+            if [ "$DEPLOYED_SHA" != "$SOURCE_SHA" ]; then
+              echo "::warning::Skipping stale WeChat upload: staging no longer serves ${SOURCE_SHA:0:7}"
+              {
+                echo "### WeChat mini-program upload"
+                echo "- Commit: \`${SOURCE_SHA:0:7}\`"
+                echo "- Result: skipped because a newer staging release is active"
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          fi
 
           echo "📱 Uploading mini-program v$VERSION via CVM..."
 
-          # Create remote dir
-          run_with_ssh_retry ssh "${SSH_OPTIONS[@]}" "$CVM" "mkdir -p $REMOTE_DIR/dist"
+          # Remove abandoned directories from earlier hard disconnects. The
+          # current private key is streamed only inside the final command. Do
+          # not start npm/miniprogram-ci unless /tmp has 2 GiB free.
+          run_transport_with_backoff 60s ssh "${SSH_OPTIONS[@]}" "$CVM" \
+            "available_kb=\$(df -Pk /tmp | awk 'NR == 2 { print \$4 }'); \
+             test \"\$available_kb\" -ge 2097152 || { echo 'CVM has less than 2 GiB free; refusing WeChat upload'; exit 75; }; \
+             find /tmp -maxdepth 1 -type d -name 'joyjoin-weapp-upload-*' -mmin +30 -exec rm -rf -- {} +"
 
-          # rsync dist
-          run_with_ssh_retry rsync -avz --delete -e "$RSYNC_SSH" \
+          # The run/attempt/SHA-qualified directory prevents interrupted jobs
+          # from sharing dist or private.key with a later upload.
+          run_transport_with_backoff 60s ssh "${SSH_OPTIONS[@]}" "$CVM" \
+            "install -d -m 700 '$REMOTE_DIR' '$REMOTE_DIR/dist'"
+
+          run_transport_with_backoff 10m rsync -avz --delete --timeout=180 -e "$RSYNC_SSH" \
             apps/mini-program/dist/ "$CVM:$REMOTE_DIR/dist/"
-
-          # rsync WeChat key
-          run_with_ssh_retry rsync -avz -e "$RSYNC_SSH" \
-            "$WX_KEY_FILE" "$CVM:$REMOTE_DIR/private.key"
 
           # SSH + upload. Do not retry miniprogram-ci itself because a dropped
           # return channel does not prove whether WeChat accepted the upload.
-          ssh "${SSH_OPTIONS[@]}" "$CVM" \
-            "cd $REMOTE_DIR && \
-             NODE_OPTIONS='--dns-result-order=ipv4first' npx --yes miniprogram-ci upload \
+          # Stream the key into the same shell that installs the cleanup trap;
+          # there is no unguarded key file between two SSH commands.
+          base64 -w0 "$WX_KEY_FILE" | \
+          timeout --signal=TERM --kill-after=30s 16m ssh "${SSH_OPTIONS[@]}" "$CVM" \
+            "cd '$REMOTE_DIR' && \
+             command -v flock >/dev/null && \
+             exec 9>/var/lock/joyjoin-cvm-remote.lock && \
+             flock -n 9 && \
+             umask 077 && \
+             trap 'rm -f -- private.key' EXIT && \
+             trap 'exit 143' HUP INT TERM && \
+             base64 -d > private.key && \
+             timeout --signal=TERM --kill-after=30s 14m systemd-run --quiet --wait --collect --scope -p MemoryMax=768M -p CPUQuota=50% nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' NPM_CONFIG_CACHE='$REMOTE_DIR/.npm-cache' NPM_CONFIG_UPDATE_NOTIFIER='false' npx --yes miniprogram-ci@2.1.31 upload \
                --appid wx5a038ee6dee12032 \
                --pp dist \
                --pkp private.key \
@@ -205,7 +332,7 @@ jobs:
           echo "✅ WeChat upload complete!"
           {
             echo "### WeChat mini-program upload"
-            echo "- Commit: \`${GITHUB_SHA:0:7}\`"
+            echo "- Commit: \`${SOURCE_SHA:0:7}\`"
             echo "- Version: \`$VERSION\`"
             echo "- API target: \`$API_TARGET\`"
             echo "- Result: success"

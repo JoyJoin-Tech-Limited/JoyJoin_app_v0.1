@@ -9,6 +9,10 @@ permissions:
 jobs:
   upload-cdn:
     name: Upload CDN assets to CVM
+    concurrency:
+      group: joyjoin-cvm-remote
+      queue: max
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

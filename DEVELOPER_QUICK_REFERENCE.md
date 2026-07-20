@@ -111,8 +111,9 @@ npm run db:studio        # Open Drizzle Studio (database GUI)
 ### Production deployment topology
 
 - Active production deploys run from `.github/workflows/deploy-production.yml` (triggered by pushes to `release`): GitHub Actions SSHes to `SERVER_IP`, rsyncs code to the remote host, runs `deployment/scripts/deploy-production.sh`, which reloads Nginx and restarts containers. Pushes to `main` deploy to staging via `.github/workflows/deploy-staging.yml`.
+- Staging images are built on the GitHub runner, transferred as a bundle, and switched with rollback on the CVM; staging deployment never runs application builds or DDL on the shared host. A successful `Deploy Staging` run triggers the matching mini-program 开发版 upload, so the client is not published ahead of its API.
 - The public edge is the self-managed remote server plus host Nginx using `deployment/nginx/joyjoin.conf` (`joyjoinapp.com`, `www.joyjoinapp.com`, `admin.joyjoinapp.com`, `api.joyjoinapp.com`). This is the active production path; do not revive old Fly.io deployment assumptions in active docs or scripts.
-- The app runtime still requires `DATABASE_URL`, but the repository does **not** provision PostgreSQL on the remote host (`deployment/docker-compose.nginx.yml` has no DB service and no `5432` mapping). Current deployment expects an external PostgreSQL instance via `DATABASE_URL`.
+- The app runtime requires `DATABASE_URL`; production PostgreSQL 16 is the `postgres` service in `deployment/docker-compose.nginx.yml`, backed by the persistent `pgdata` volume and bound to host loopback only.
 
 ### Same-server staging for 体验版 test pricing
 
@@ -122,6 +123,7 @@ An isolated staging API can run on the same production host:
 - Nginx server block: `deployment/nginx/joyjoin.conf` (`staging.joyjoinapp.com`)
 - Env template: `deployment/.env.staging.example`
 - Build the mini-program with `TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com`
+- Deployment acceptance uses `GET /api/readyz` (DB + config), not the liveness-only `/api/health`; the Admin root page is checked separately.
 - Set `APP_MODE=staging` and `TEST_PAYMENT_PRICE_IN_CENTS=1` to charge ¥0.01 in 体验版
 - Set `PAYMENTS_ENABLED=true` and `MOCK_PAYMENTS=false` for real WeChat Pay test charges, or `MOCK_PAYMENTS=true` for instantly-paid mock orders
 - `WECHAT_PAY_PLATFORM_CERT` supports raw PEM or base64-encoded PEM; staging deploy validates it and aborts on invalid keys

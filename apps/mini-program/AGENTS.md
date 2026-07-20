@@ -203,7 +203,7 @@ npm run dev:weapp --workspace=mini-program   # Taro watch build
 npm run check:package-size -w mini-program   # zip-compressed size vs 2MB WeChat limit
 ```
 
-**WeChat Mini-Program upload (开发版)**: CI auto-uploads on push to main. Manual upload requires `--appid` flag (`miniprogram-ci` will not auto-read from `project.config.json`):
+**WeChat Mini-Program upload (开发版)**: A push to `main` first deploys staging; CI uploads the matching commit only after that staging deployment succeeds. Manual upload requires `--appid` flag (`miniprogram-ci` will not auto-read from `project.config.json`):
 
 ```bash
 npx miniprogram-ci upload \

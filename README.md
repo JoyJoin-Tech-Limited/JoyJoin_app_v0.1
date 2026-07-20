@@ -384,7 +384,8 @@ Run `npm run dep-check` to verify ownership is correct.
 
 The GitHub Actions pipelines run on branch push:
 
-- `.github/workflows/deploy-staging.yml` runs on push to `main` and deploys to staging.
+- `.github/workflows/deploy-staging.yml` runs on push to `main`, builds staging images off-host, and deploys them with readiness checks and rollback.
+- After that exact staging commit succeeds, `.github/workflows/taro-weapp-build.yml` uploads the matching WeChat 开发版.
 - `.github/workflows/deploy-production.yml` runs on push to `release` and deploys to production (gated by the `production` environment).
 
 Both share `.github/workflows/quality-gates.yml`, which runs:
@@ -392,7 +393,7 @@ Both share `.github/workflows/quality-gates.yml`, which runs:
 1. **Guardrails** — env files, secrets, legacy identifiers, import boundaries
 2. **Typecheck** — TypeScript for mini-program, admin-client, and server
 3. **AI simulation test** — runs 100 AI simulation iterations
-4. **Deploy** — SSH deployment with Docker Compose + schema push
+4. **Deploy** — staging uses SSH deployment with prebuilt Docker images; database DDL remains a separate manual operation
 
 ## Documentation map
 

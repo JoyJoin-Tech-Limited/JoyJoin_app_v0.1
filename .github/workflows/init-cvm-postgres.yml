@@ -9,6 +9,10 @@ permissions:
 jobs:
   init-db:
     name: Initialize CVM Postgres
+    concurrency:
+      group: joyjoin-cvm-remote
+      queue: max
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

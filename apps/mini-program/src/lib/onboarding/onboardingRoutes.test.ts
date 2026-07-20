@@ -48,6 +48,18 @@ describe('mini-program onboarding routes', () => {
     expect(new Set(MINI_PROGRAM_PAGES).size).toBe(MINI_PROGRAM_PAGES.length)
   })
 
+  it('keeps the real-device-proven pages roots for every subpackage', () => {
+    expect(MINI_PROGRAM_SUBPACKAGES.map(({ root }) => root)).toEqual([
+      'pages/onboarding',
+      'pages/profile-linked',
+      'pages/icebreaker-session',
+      'pages/matching-status',
+      'pages/pool-registration',
+      'pages/squad-unboxing',
+      'pages/alang',
+    ])
+  })
+
   it('moves the onboarding chain into an ordinary subpackage registration', () => {
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/onboarding/onboarding/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/pool-registration/index')

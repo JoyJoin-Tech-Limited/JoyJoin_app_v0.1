@@ -22,18 +22,19 @@
 GitHub Actions
   └─ SSH 到远程服务器
        └─ cd ~/JoyJoin/deployment && docker compose -f docker-compose.nginx.yml up -d --build
-            ├─ host nginx      (80/443, HTTPS 与反向代理)
-            ├─ joyjoin-user    (用户端静态站点, 127.0.0.1:3000)
-            ├─ joyjoin-admin   (管理后台静态站点, 127.0.0.1:3001)
-            └─ joyjoin-api     (Node.js API, 127.0.0.1:5000)
+            ├─ host nginx              (80/443, HTTPS 与反向代理)
+            ├─ joyjoin-admin           (管理后台静态站点, 127.0.0.1:3001)
+            ├─ joyjoin-api             (Node.js API, 127.0.0.1:5000)
+            ├─ postgres                (PostgreSQL 16, 127.0.0.1:5432 + pgdata)
+            └─ joyjoin-granite-embedding (向量服务, 127.0.0.1:8000)
 
 公网域名 (多域名 SAN 证书)
-  ├─ joyjoinapp.com / www.joyjoinapp.com  -> Nginx -> joyjoin-user
+  ├─ joyjoinapp.com / www.joyjoinapp.com  -> Nginx maintenance page (`/api/*` -> joyjoin-api)
   ├─ admin.joyjoinapp.com                 -> Nginx -> joyjoin-admin
   └─ api.joyjoinapp.com                      -> Nginx -> joyjoin-api
 
 数据库
-  └─ DATABASE_URL -> 外部 PostgreSQL
+  └─ DATABASE_URL -> Compose 内的 postgres:5432/joyjoin
 ```
 
 ---
@@ -57,7 +58,7 @@ GitHub Actions
 
 - Docker Engine
 - Docker Compose Plugin
-- Node.js（建议 **20+**，并确保宿主机可用 `npm` / `npx`，因为部署过程中会在宿主机执行 `node ...` 与 `npx drizzle-kit push`）
+- Node.js（建议 **20+**；生产发布仍会在宿主机运行 `npm ci`/校验，微信开发版固定 IP 上传也在宿主机执行 `miniprogram-ci`）
 - 一个已检出的仓库目录（当前流水线假设为 `~/JoyJoin`）
 - 80 / 443 端口对公网开放
 - 域名 A 记录指向该服务器 IP
@@ -65,10 +66,11 @@ GitHub Actions
 当前 Compose 文件会启动这些服务：
 
 - `joyjoin-api`
-- `joyjoin-user`
 - `joyjoin-admin`
+- `postgres`
+- `granite-embedding`
 
-当前 Compose 文件**不会**启动 PostgreSQL。
+PostgreSQL 仅绑定宿主机回环地址，并通过 `pgdata` volume 持久化。
 
 ---
 
@@ -77,22 +79,10 @@ GitHub Actions
 ### 当前状态
 
 - 应用通过 `DATABASE_URL` 连接 PostgreSQL
-- `deployment/docker-compose.nginx.yml` 中没有 `postgres` 服务
-- 仓库中没有远程服务器本地 PostgreSQL 的编排、备份、迁移或端口暴露配置
-
-### 这意味着什么
-
-当前部署默认依赖**外部 PostgreSQL**。  
-仅从仓库配置来看，**不能把“远程应用服务器自带本地数据库”当作现成可直接连接的能力**。
-
-如果团队后续要改成“同一台远程服务器自建 PostgreSQL”，那是一个新的基础设施决策，至少需要：
-
-- 明确 PostgreSQL 的安装方式（宿主机或容器）
-- 增加持久化卷、备份、升级和恢复方案
-- 调整 `DATABASE_URL`
-- 评估与当前会话存储、Drizzle schema push、健康检查、磁盘容量的关系
-
-在这些工作完成前，当前权威状态仍然是：**外部 PostgreSQL 是唯一被仓库显式支持的数据库路径**。
+- 生产数据库由 `deployment/docker-compose.nginx.yml` 的 `postgres:16` 服务提供
+- 数据保存在 `pgdata` volume，宿主机端口仅绑定 `127.0.0.1:5432`
+- staging 使用独立的 `postgres-staging`、`joyjoin_staging` 和 `pgdata_staging`
+- 生产与 staging 的 DDL 都不由常规部署自动执行；先人工应用迁移，再发布应用
 
 ---
 
@@ -207,12 +197,16 @@ cp deployment/.env.production.example deployment/.env.production
 每次推送 `main` 分支，GitHub Actions 会自动：
 
 1. 运行质量门（guardrails、类型检查、测试、Harness gate、AI 模拟）
-2. rsync 代码到服务器 `~/JoyJoin`
-3. 从 GitHub secrets/vars 写入 `deployment/.env.staging`
-4. 执行 `deployment/scripts/deploy-staging.sh`
-5. 健康检查 `staging.joyjoinapp.com` 和 `staging.admin.joyjoinapp.com`
+2. 在 GitHub runner 上构建 API/Admin 镜像并打包；共享 CVM 不执行应用编译
+3. rsync 代码和预构建镜像包到服务器 `~/JoyJoin`
+4. 从 GitHub secrets/vars 写入 `deployment/.env.staging`
+5. 只读验证 staging schema 和容器内数据库地址；仅当 `profilePixelAvatarEnabled` 或 `equipmentRewardsEnabled` 生效时，校验 12 种人格的启用中初始装备
+6. 加载镜像、切换容器并验证 `/api/readyz`、本机/公网 Admin 页面；失败时恢复旧镜像与旧 Nginx 配置
+7. staging 成功后，才触发同一 commit 的微信小程序开发版上传
 
 > 2026-06-30：server Dockerfile 的 HEALTHCHECK 已改为 `http://127.0.0.1:${PORT:-5000}/api/health`，因此 staging 容器（PORT=5001）不再被误判为 unhealthy。
+>
+> 2026-07-20：`/api/health` 只表示进程存活，发布验收必须使用 `/api/readyz`（数据库 + 关键配置）并单独检查 Admin 根页面。部署脚本不再运行 migration、DDL 或 seed；这些操作必须按仓库迁移纪律预先人工执行。
 
 #### 手动部署（服务器内执行）
 
@@ -237,30 +231,24 @@ sudo certbot certonly --nginx -d staging.joyjoinapp.com
 sudo certbot certonly --nginx -d staging.admin.joyjoinapp.com
 ```
 
-然后一键部署 staging：
+`deploy-staging.sh` 现在要求预构建镜像包，不能再直接在共享 CVM 上编译。正常恢复或发布请重新运行 GitHub 的 **Deploy Staging** workflow。只有已在其他机器生成并上传镜像包时，才可在服务器手动执行：
 
 ```bash
-./deployment/scripts/deploy-staging.sh
+STAGING_IMAGE_BUNDLE=/path/to/joyjoin-staging-images.tar.gz \
+  ./deployment/scripts/deploy-staging.sh
 ```
 
 > 注意：
 > - `docker-compose.staging.yml` 中的 `postgres-staging` 服务不要写死 `POSTGRES_PASSWORD`，应让它从 `.env.staging` 读取，否则会出现密码不一致导致 API 无法连接的问题。
 > - CI 自动部署时会覆盖写入 `.env.staging`，手动编辑的值会在下一次 `main` 推送后被覆盖。
-
-如需重置 staging 数据库，手动重建 Postgres 卷后再跑脚本：
-
-```bash
-cd ~/JoyJoin/deployment
-docker compose -f docker-compose.staging.yml down
-docker volume rm deployment_pgdata_staging
-./deployment/scripts/deploy-staging.sh
-```
+> - `DATABASE_URL` 必须从 API 容器内指向 `postgres-staging:5432/joyjoin_staging`；`localhost:5433` 只适用于宿主机诊断，不能作为 API 运行时地址。
+> - 不要通过部署脚本重置数据库卷。迁移与 seed 必须先人工执行并验证，脚本只做只读 schema/catalog gate。
 
 ### 验证
 
 ```bash
-curl -fsS https://staging.joyjoinapp.com/api/health
-curl -fsS https://staging.admin.joyjoinapp.com/api/health
+curl -fsS https://staging.joyjoinapp.com/api/readyz
+curl -fsS https://staging.admin.joyjoinapp.com/
 ```
 
 ### 小程序指向 staging
@@ -291,11 +279,12 @@ APP_URL=https://staging.joyjoinapp.com
 >
 > 2026-07-14 运维补充（健康检查与 unhealthy 判定）：
 > - 用 `127.0.0.1` 而非 `localhost` 的另一原因：容器内 `localhost` 会解析到 IPv6 `::1`，而 compose 将端口绑定在 IPv4（`127.0.0.1:5000:5000`），健康检查打 `::1:5000` 被拒，误报 unhealthy。
-> - **`unhealthy` ≠ 服务宕机**：`restart: unless-stopped` 不会因 unhealthy 标签自动重启容器；应用可能正常对外服务却仍被标记 unhealthy。判断真实可用性以 `curl /api/health` 与业务日志为准，勿只看 `docker ps` 的 STATUS 列。
+> - **`unhealthy` ≠ 服务宕机**：`restart: unless-stopped` 不会因 unhealthy 标签自动重启容器。`/api/health` 只验证进程存活；发布可用性以 `/api/readyz`、Admin 页面与业务日志为准，勿只看 `docker ps` 的 STATUS 列。
 > - 该修复**只在镜像重建后生效**：2026-06-30 之前构建的镜像（仍带旧 `localhost` 健康检查）在重新部署前会持续误报 unhealthy。
 
 ```bash
 curl -fsS http://127.0.0.1:5000/api/health
+curl -fsS http://127.0.0.1:5000/api/readyz
 docker logs joyjoin-api --tail 120
 sudo nginx -t
 sudo systemctl reload nginx
@@ -309,14 +298,16 @@ https://joyjoinapp.com
 https://admin.joyjoinapp.com
 https://joyjoinapp.com/api/health
 https://api.joyjoinapp.com/api/health
-https://staging.joyjoinapp.com/api/health
+https://staging.joyjoinapp.com/api/readyz
 https://staging.admin.joyjoinapp.com
 ```
 
 ---
 
-## 运维边界
+## 磁盘安全与运维边界
 
-- 当前仓库维护的是**应用服务器部署**，不是数据库平台编排
-- 当前仓库没有定义本地 PostgreSQL 备份、故障切换、数据盘挂载或监控
-- 如果未来要把数据库迁回远程服务器，需要单独做基础设施设计，不应直接假设“服务器上已经有现成数据库可连”
+- staging 的 API/Admin 镜像在 GitHub runner 构建；CVM 只接收经过容量与 inode 预检的临时包，校验后原子替换。生产发布在宿主机构建前要求至少 8 GiB 和 20000 个空闲 inode，不足时安全中止。
+- 参考已成功恢复本次故障的策略：磁盘使用率达到 70%、低于发布余量或发布成功后，清理全部未被任何容器引用的 Docker images 与 builder cache；不会删除容器、网络或 volumes。另只清理明确命名的发布临时文件与过期备份。严禁 `docker volume prune`、`docker system prune --volumes`、`docker compose down -v`，也不得删除 `pgdata` / `pgdata_staging`。
+- API/Admin 等无状态容器在发布重建后会启用 `json-file` 轮转。Postgres 的轮转参数虽已写入 Compose，但现有数据库容器必须在完成可恢复备份、核对 volume 挂载并安排维护窗口后受控重建才会生效；普通应用发布使用 `--no-deps`，不会暗中重启数据库。
+- 生产数据库备份脚本采用临时文件、gzip 校验、原子改名，并在写新 dump 前先安全清理过期文件（始终保留最新一份）；随后按 `max(数据库大小, 最近备份×2) + 2 GiB` 和 10000 个空闲 inode 做 fail-closed 预检，成功后再执行 7 天保留。备份任务与发布共享主机锁，`pg_dump` 在数据库容器内以低 CPU 优先级运行。
+- 当前备份仍位于同一台主机的 `$HOME/backups`，不是异地灾备；仓库也尚未提供 PostgreSQL 高可用、独立数据盘或云端磁盘告警。上线后仍需补 COS/独立盘备份与 75%/85%/90% 容量告警。

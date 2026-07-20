@@ -13,6 +13,11 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "127.0.0.1:5432:5432"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
 
   granite-embedding:
     image: ghcr.io/joyjoin-tech-limited/granite-embedding:latest
@@ -20,6 +25,11 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
 
   joyjoin-api:
     build:
@@ -37,6 +47,11 @@ services:
       PORT: "5000"
     ports:
       - "127.0.0.1:5000:5000"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
 
   joyjoin-admin:
     build:
@@ -46,6 +61,11 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:3001:80"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
 
 volumes:
   pgdata:

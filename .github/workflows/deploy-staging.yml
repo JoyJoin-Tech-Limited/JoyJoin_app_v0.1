@@ -5,6 +5,8 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Keep the in-flight staging release, but let GitHub collapse multiple waiting
+# pushes to the newest commit before they can consume build or CVM resources.
 concurrency:
   group: joyjoin-staging-${{ github.ref }}
   cancel-in-progress: false
@@ -14,77 +16,124 @@ jobs:
     uses: ./.github/workflows/quality-gates.yml
     secrets: inherit
 
-  deploy-staging:
-    name: Staging Deployment
+  build-images:
+    name: Build Staging Images
     needs: [quality-gates]
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare remote rsync target
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
-          script: |
-            set -euo pipefail
-            mkdir -p ~/JoyJoin
-            if ! command -v rsync >/dev/null 2>&1; then
-              echo "rsync not found on server; installing..."
-              if command -v dnf >/dev/null 2>&1; then
-                sudo dnf install -y rsync
-              elif command -v yum >/dev/null 2>&1; then
-                sudo yum install -y rsync
-              elif command -v apt-get >/dev/null 2>&1; then
-                sudo apt-get update
-                sudo apt-get install -y rsync
-              else
-                echo "❌ Cannot install rsync automatically. Install rsync on the server and rerun deployment."
-                exit 1
-              fi
-            fi
+      # BuildKit runs on the GitHub runner, never on the shared production CVM.
+      # The CVM only loads completed images and switches containers.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Upload deployment workspace via rsync
+      - name: Build staging API image off-host
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          load: true
+          tags: joyjoin-api-staging:candidate
+          cache-from: type=gha,scope=joyjoin-staging-api
+          cache-to: type=gha,mode=max,scope=joyjoin-staging-api
+
+      - name: Build staging Admin image off-host
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/admin-client/Dockerfile
+          load: true
+          tags: joyjoin-admin-staging:candidate
+          cache-from: type=gha,scope=joyjoin-staging-admin
+          cache-to: type=gha,mode=max,scope=joyjoin-staging-admin
+
+      - name: Bundle prebuilt staging images
+        run: |
+          set -euo pipefail
+          docker save \
+            joyjoin-api-staging:candidate \
+            joyjoin-admin-staging:candidate \
+            | gzip -1 > "$RUNNER_TEMP/joyjoin-staging-images.tar.gz"
+          test -s "$RUNNER_TEMP/joyjoin-staging-images.tar.gz"
+          sha256sum "$RUNNER_TEMP/joyjoin-staging-images.tar.gz"
+
+      - name: Preserve prebuilt staging images
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: joyjoin-staging-images-${{ github.sha }}
+          path: ${{ runner.temp }}/joyjoin-staging-images.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+
+  deploy-staging:
+    name: Staging Deployment
+    needs: [build-images]
+    # Only the job that actually touches the CVM holds the shared FIFO lock.
+    concurrency:
+      group: joyjoin-cvm-remote
+      queue: max
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore prebuilt staging images
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: joyjoin-staging-images-${{ github.sha }}
+          path: ${{ runner.temp }}
+
+      - name: Prepare remote and upload deployment workspace
         env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          STAGING_IMAGE_BUNDLE: ${{ runner.temp }}/joyjoin-staging-images.tar.gz
         run: |
           set -euo pipefail
 
           SSH_KEY_FILE=$(mktemp)
-          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > "$SSH_KEY_FILE"
+          KNOWN_HOSTS_FILE=$(mktemp)
+          SSH_CONTROL_DIR=$(mktemp -d)
+          SSH_CONTROL_PATH="$SSH_CONTROL_DIR/cvm.sock"
+          CVM="$SERVER_USER@$SERVER_IP"
+          REMOTE_BUNDLE_TEMP=""
+
+          if [ "$SERVER_IP" != "1.12.243.104" ]; then
+            echo "::error::SERVER_IP does not match the pinned JoyJoin CVM host"
+            exit 1
+          fi
+          if [[ ! "$SERVER_USER" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::SERVER_USER contains unsupported SSH characters"
+            exit 1
+          fi
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$SSH_KEY_FILE"
           chmod 600 "$SSH_KEY_FILE"
+          printf '%s\n' \
+            '1.12.243.104 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINa6ZQ6p9Lcy/G4jco+PbBR0vhdAd9Upg9HIkN8+M/hf' \
+            > "$KNOWN_HOSTS_FILE"
+          chmod 600 "$KNOWN_HOSTS_FILE"
 
           cleanup() {
-            rm -f "$SSH_KEY_FILE"
+            if [ -n "$REMOTE_BUNDLE_TEMP" ] && [ -S "$SSH_CONTROL_PATH" ]; then
+              ssh "${SSH_OPTIONS[@]}" "$CVM" \
+                "rm -f -- \"\$HOME/$REMOTE_BUNDLE_TEMP\"" >/dev/null 2>&1 || true
+            fi
+            if [ -S "$SSH_CONTROL_PATH" ]; then
+              ssh -S "$SSH_CONTROL_PATH" -O exit "$CVM" >/dev/null 2>&1 || true
+            fi
+            rm -f "$SSH_KEY_FILE" "$KNOWN_HOSTS_FILE" \
+              "${SSH_PASSPHRASE_FILE:-}" "${SSH_ASKPASS_FILE:-}"
+            rmdir "$SSH_CONTROL_DIR" >/dev/null 2>&1 || true
             if [ -n "${SSH_AGENT_PID:-}" ]; then
               ssh-agent -k >/dev/null 2>&1 || true
             fi
           }
           trap cleanup EXIT
-
-          run_with_ssh_retry() {
-            local attempt=1
-            local exit_code=0
-
-            while true; do
-              if "$@"; then
-                return 0
-              else
-                exit_code=$?
-              fi
-
-              if [ "$exit_code" -ne 255 ] || [ "$attempt" -ge 3 ]; then
-                return "$exit_code"
-              fi
-
-              echo "::warning::SSH transport closed during rsync attempt ${attempt}/3; retrying in 15 seconds"
-              sleep 15
-              attempt=$((attempt + 1))
-            done
-          }
 
           RSYNC_OPTS=(
             -az --delete
@@ -94,6 +143,8 @@ jobs:
             --exclude=.agents/
             --exclude=.env
             --exclude=.env.*
+            --exclude=deployment/.staging-deployed-sha
+            --exclude=deployment/.staging-deployed-sha.tmp
             --exclude=node_modules/
             --exclude=dist/
             --exclude=build/
@@ -107,22 +158,211 @@ jobs:
 
           if [ -n "${SSH_KEY_PASSPHRASE:-}" ]; then
             eval "$(ssh-agent -s)"
-            echo "$SSH_KEY_PASSPHRASE" | ssh-add "$SSH_KEY_FILE"
+            SSH_PASSPHRASE_FILE=$(mktemp)
+            SSH_ASKPASS_FILE=$(mktemp)
+            printf '%s\n' "$SSH_KEY_PASSPHRASE" > "$SSH_PASSPHRASE_FILE"
+            chmod 600 "$SSH_PASSPHRASE_FILE"
+            printf '%s\n' '#!/bin/sh' 'cat "$SSH_PASSPHRASE_FILE"' > "$SSH_ASKPASS_FILE"
+            chmod 700 "$SSH_ASKPASS_FILE"
+            export SSH_PASSPHRASE_FILE
+            DISPLAY=dummy SSH_ASKPASS="$SSH_ASKPASS_FILE" SSH_ASKPASS_REQUIRE=force \
+              ssh-add "$SSH_KEY_FILE" </dev/null
           fi
 
-          RSYNC_SSH="ssh -i $SSH_KEY_FILE -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=20 -o ConnectionAttempts=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          SSH_OPTIONS=(
+            -i "$SSH_KEY_FILE"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o ConnectTimeout=20
+            -o ConnectionAttempts=1
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=3
+            -o StrictHostKeyChecking=yes
+            -o "UserKnownHostsFile=$KNOWN_HOSTS_FILE"
+            -o LogLevel=ERROR
+            -o ControlMaster=auto
+            -o ControlPersist=300
+            -o "ControlPath=$SSH_CONTROL_PATH"
+          )
+          RSYNC_SSH="ssh -i $SSH_KEY_FILE -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=20 -o ConnectionAttempts=1 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KNOWN_HOSTS_FILE -o LogLevel=ERROR -o ControlMaster=auto -o ControlPersist=300 -o ControlPath=$SSH_CONTROL_PATH"
 
-          run_with_ssh_retry rsync "${RSYNC_OPTS[@]}" \
+          run_transport_with_backoff() {
+            local command_timeout="$1"
+            shift
+            local attempt=1
+            local exit_code=0
+            local delays=(10 30)
+
+            while true; do
+              if timeout "$command_timeout" "$@"; then
+                return 0
+              else
+                exit_code=$?
+              fi
+
+              case "$exit_code" in
+                12|30|35|124|255) ;;
+                *) return "$exit_code" ;;
+              esac
+              if [ "$attempt" -ge 3 ]; then
+                return "$exit_code"
+              fi
+
+              echo "::warning::CVM transport failed during attempt ${attempt}/3; retrying in ${delays[$((attempt - 1))]} seconds"
+              sleep "${delays[$((attempt - 1))]}"
+              attempt=$((attempt + 1))
+            done
+          }
+
+          connected=false
+          for attempt in 1 2 3 4 5; do
+            echo "SSH readiness attempt ${attempt}/5"
+            if ssh "${SSH_OPTIONS[@]}" "$CVM" "printf 'remote-ready\\n'"; then
+              connected=true
+              echo "SSH control connection established; subsequent commands will reuse it."
+              break
+            fi
+
+            if [ "$attempt" -lt 5 ]; then
+              backoff=$((5 * (1 << (attempt - 1))))
+              echo "::warning::CVM SSH is not ready after attempt ${attempt}/5; retrying in ${backoff}s"
+              sleep "$backoff"
+            fi
+          done
+
+          if [ "$connected" != "true" ]; then
+            echo "::error::CVM SSH did not become ready after 5 attempts. No remote preparation or rsync was attempted."
+            exit 255
+          fi
+
+          echo "Preparing remote rsync target over the established SSH connection..."
+          ssh "${SSH_OPTIONS[@]}" "$CVM" 'bash -se' <<'REMOTE_PREP'
+          set -euo pipefail
+
+          readonly MIN_REMOTE_HEADROOM_BYTES=2147483648
+          readonly MIN_REMOTE_FREE_INODES=10000
+          available_bytes="$(df -PB1 "$HOME" | awk 'NR == 2 { print $4 }')"
+          available_inodes="$(df -Pi "$HOME" | awk 'NR == 2 { print $4 }')"
+
+          if (( available_bytes < MIN_REMOTE_HEADROOM_BYTES || available_inodes < MIN_REMOTE_FREE_INODES )); then
+            echo "Low CVM headroom before workspace sync; pruning unused images and builder cache while preserving containers and volumes."
+            if command -v docker >/dev/null 2>&1; then
+              timeout 180s docker builder prune -af || true
+              timeout 120s docker image prune -af || true
+            fi
+            available_bytes="$(df -PB1 "$HOME" | awk 'NR == 2 { print $4 }')"
+            available_inodes="$(df -Pi "$HOME" | awk 'NR == 2 { print $4 }')"
+          fi
+
+          if (( available_bytes < MIN_REMOTE_HEADROOM_BYTES )); then
+            echo "CVM has less than 2 GiB free before workspace sync; refusing to write more data."
+            echo "Available: $available_bytes bytes."
+            exit 75
+          fi
+          if (( available_inodes < MIN_REMOTE_FREE_INODES )); then
+            echo "CVM has too few free inodes before workspace sync; refusing to write more data."
+            echo "Available: $available_inodes inodes."
+            exit 75
+          fi
+
+          mkdir -p ~/JoyJoin
+          if ! command -v rsync >/dev/null 2>&1; then
+            echo "rsync not found on server; installing..."
+            if command -v dnf >/dev/null 2>&1; then
+              sudo dnf install -y rsync
+            elif command -v yum >/dev/null 2>&1; then
+              sudo yum install -y rsync
+            elif command -v apt-get >/dev/null 2>&1; then
+              sudo apt-get update
+              sudo apt-get install -y rsync
+            else
+              echo "Cannot install rsync automatically. Install rsync on the server and rerun deployment."
+              exit 1
+            fi
+          fi
+          REMOTE_PREP
+
+          echo "Uploading deployment workspace over the same SSH control connection..."
+          run_transport_with_backoff 8m rsync "${RSYNC_OPTS[@]}" \
             -e "$RSYNC_SSH" \
-            ./ "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:~/JoyJoin/"
+            ./ "$CVM:~/JoyJoin/"
+
+          # Check capacity before writing the bundle. The reserve covers the
+          # compressed upload, Docker's expanded layers, and 2 GiB of emergency
+          # headroom. Cleanup is deliberately bounded: never containers,
+          # networks, or volumes.
+          test -s "$STAGING_IMAGE_BUNDLE"
+          BUNDLE_BYTES=$(stat -c '%s' "$STAGING_IMAGE_BUNDLE")
+          [[ "$BUNDLE_BYTES" =~ ^[0-9]+$ ]]
+          REMOTE_BUNDLE_TEMP="JoyJoin/deployment/.staging-images-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA}.tar.gz.part"
+          REMOTE_BUNDLE_FINAL="JoyJoin/deployment/.staging-images.tar.gz"
+
+          echo "Checking CVM capacity before uploading prebuilt staging images..."
+          ssh "${SSH_OPTIONS[@]}" "$CVM" \
+            "bash -se -- '$BUNDLE_BYTES' '$REMOTE_BUNDLE_TEMP'" <<'REMOTE_BUNDLE_PREFLIGHT'
+          set -Eeuo pipefail
+          bundle_bytes="$1"
+          remote_bundle_temp="$HOME/$2"
+          deploy_dir="$HOME/JoyJoin/deployment"
+          required_bytes=$((bundle_bytes * 5 + 2147483648))
+
+          mkdir -p -- "$deploy_dir"
+          find "$deploy_dir" -maxdepth 1 -type f \
+            -name '.staging-images-*.tar.gz.part' -mmin +30 -delete
+
+          available_bytes="$(df -PB1 "$deploy_dir" | awk 'NR == 2 { print $4 }')"
+          available_inodes="$(df -Pi "$deploy_dir" | awk 'NR == 2 { print $4 }')"
+          if (( available_bytes < required_bytes || available_inodes < 10000 )); then
+            echo "Low CVM headroom; pruning unused images and builder cache while preserving containers and volumes."
+            timeout 180s docker builder prune -af || true
+            timeout 120s docker image prune -af || true
+            available_bytes="$(df -PB1 "$deploy_dir" | awk 'NR == 2 { print $4 }')"
+            available_inodes="$(df -Pi "$deploy_dir" | awk 'NR == 2 { print $4 }')"
+          fi
+
+          if (( available_bytes < required_bytes )); then
+            echo "Not enough CVM disk headroom for the staging image bundle."
+            echo "Required before upload: $required_bytes bytes; available: $available_bytes bytes."
+            docker system df 2>&1 || true
+            exit 75
+          fi
+          if (( available_inodes < 10000 )); then
+            echo "Not enough free CVM inodes for the staging image bundle."
+            echo "Free inodes: $available_inodes (minimum: 10000)."
+            exit 75
+          fi
+
+          rm -f -- "$remote_bundle_temp"
+          REMOTE_BUNDLE_PREFLIGHT
+
+          echo "Uploading prebuilt staging images to a run-scoped temporary file..."
+          run_transport_with_backoff 15m rsync -az --partial --timeout=180 \
+            -e "$RSYNC_SSH" \
+            "$STAGING_IMAGE_BUNDLE" "$CVM:$REMOTE_BUNDLE_TEMP"
+
+          echo "Verifying and atomically publishing the staging image bundle..."
+          ssh "${SSH_OPTIONS[@]}" "$CVM" \
+            "bash -se -- '$REMOTE_BUNDLE_TEMP' '$REMOTE_BUNDLE_FINAL'" <<'REMOTE_BUNDLE_COMMIT'
+          set -Eeuo pipefail
+          remote_bundle_temp="$HOME/$1"
+          remote_bundle_final="$HOME/$2"
+          test -s "$remote_bundle_temp"
+          gzip -t "$remote_bundle_temp"
+          mv -f -- "$remote_bundle_temp" "$remote_bundle_final"
+          REMOTE_BUNDLE_COMMIT
+          REMOTE_BUNDLE_TEMP=""
 
       - name: Encode multiline secrets for SSH transport
         env:
           WECHAT_PAY_PRIVATE_KEY: ${{ secrets.WECHAT_PAY_PRIVATE_KEY }}
           WECHAT_PAY_PLATFORM_CERT: ${{ secrets.WECHAT_PAY_PLATFORM_CERT }}
         run: |
-          echo "WECHAT_PAY_PRIVATE_KEY_B64=$(printf '%s' "$WECHAT_PAY_PRIVATE_KEY" | base64 -w0)" >> "$GITHUB_ENV"
-          echo "WECHAT_PAY_PLATFORM_CERT_B64=$(printf '%s' "$WECHAT_PAY_PLATFORM_CERT" | base64 -w0)" >> "$GITHUB_ENV"
+          PRIVATE_KEY_B64=$(printf '%s' "$WECHAT_PAY_PRIVATE_KEY" | base64 -w0)
+          PLATFORM_CERT_B64=$(printf '%s' "$WECHAT_PAY_PLATFORM_CERT" | base64 -w0)
+          echo "::add-mask::$PRIVATE_KEY_B64"
+          echo "::add-mask::$PLATFORM_CERT_B64"
+          echo "WECHAT_PAY_PRIVATE_KEY_B64=$PRIVATE_KEY_B64" >> "$GITHUB_ENV"
+          echo "WECHAT_PAY_PLATFORM_CERT_B64=$PLATFORM_CERT_B64" >> "$GITHUB_ENV"
 
       - name: SSH Remote Staging Deployment
         env:
@@ -209,68 +449,111 @@ jobs:
           WECHAT_PAY_NOTIFY_URL: ${{ vars.WECHAT_PAY_NOTIFY_URL }}
           APP_MODE: staging
           TEST_PAYMENT_PRICE_IN_CENTS: 1
+          DEPLOY_SOURCE_SHA: ${{ github.sha }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
-          command_timeout: 60m
-          envs: STAGING_DATABASE_URL,STAGING_SESSION_SECRET,STAGING_ADMIN_CREATE_SECRET_KEY,STAGING_POSTGRES_PASSWORD,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,ALANG_ENABLED,PROFILE_PIXEL_AVATAR_ENABLED,EQUIPMENT_REWARDS_ENABLED,PERSONAL_STORY_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,CREATIVE_AI_PERSONAL_STORY_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,RESTART_ONBOARDING_ENABLED,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,APP_MODE,TEST_PAYMENT_PRICE_IN_CENTS,MOCK_PAYMENTS
+          fingerprint: SHA256:sEwQhJlNg1wGXn0Xd9iNPmpq6NPGi/Y/WH9bx599UrM
+          # Allow a recovering CVM more time to complete the SSH banner while
+          # bounding the now build-free remote switch.
+          timeout: 120s
+          command_timeout: 24m
+          envs: STAGING_DATABASE_URL,STAGING_SESSION_SECRET,STAGING_ADMIN_CREATE_SECRET_KEY,STAGING_POSTGRES_PASSWORD,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,ALANG_ENABLED,PROFILE_PIXEL_AVATAR_ENABLED,EQUIPMENT_REWARDS_ENABLED,PERSONAL_STORY_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,CREATIVE_AI_PERSONAL_STORY_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,RESTART_ONBOARDING_ENABLED,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,APP_MODE,TEST_PAYMENT_PRICE_IN_CENTS,MOCK_PAYMENTS,DEPLOY_SOURCE_SHA
           script: |
             set -euo pipefail
+            umask 077
 
             : "${STAGING_DATABASE_URL:?STAGING_DATABASE_URL GitHub secret is required}"
             : "${STAGING_SESSION_SECRET:?STAGING_SESSION_SECRET GitHub secret is required}"
             : "${WECHAT_APPID:?WECHAT_APPID GitHub secret is required}"
             : "${WECHAT_SECRET:?WECHAT_SECRET GitHub secret is required}"
             : "${STAGING_POSTGRES_PASSWORD:?STAGING_POSTGRES_PASSWORD GitHub secret is required}"
+            [[ "$DEPLOY_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid deploy source SHA"; exit 1; }
 
             cd ~/JoyJoin
 
-            # Write the staging env file fresh from CI secrets/vars.
-            # This overwrites any stale keys and keeps staging in sync with GitHub.
-            ENV_FILE=~/JoyJoin/deployment/.env.staging
-            mkdir -p ~/JoyJoin/deployment
-
-            # Decode multiline PEM secrets
-            WECHAT_PAY_PRIVATE_KEY=""
-            WECHAT_PAY_PLATFORM_CERT=""
-            if [ -n "${WECHAT_PAY_PRIVATE_KEY_B64:-}" ]; then
-              WECHAT_PAY_PRIVATE_KEY=$(echo "$WECHAT_PAY_PRIVATE_KEY_B64" | base64 -d)
-            fi
-            if [ -n "${WECHAT_PAY_PLATFORM_CERT_B64:-}" ]; then
-              WECHAT_PAY_PLATFORM_CERT=$(echo "$WECHAT_PAY_PLATFORM_CERT_B64" | base64 -d)
-            fi
+            # Build a candidate env without touching the currently working
+            # .env.staging. deploy-staging.sh installs it atomically and keeps a
+            # rollback copy until the new release passes readiness checks.
+            DEPLOY_DIR=~/JoyJoin/deployment
+            ENV_CANDIDATE="$DEPLOY_DIR/.env.staging.candidate"
+            ENV_FILE="$ENV_CANDIDATE.tmp"
+            mkdir -p "$DEPLOY_DIR"
+            rm -f -- "$ENV_FILE" "$ENV_CANDIDATE"
+            cleanup_env_candidate() {
+              rm -f -- "$ENV_FILE" "$ENV_CANDIDATE"
+            }
+            trap cleanup_env_candidate EXIT
 
             # Write env values wrapped in single quotes so bash "source" does not
-            # expand $-characters in secrets/URLs when deploy-staging.sh loads the file.
+            # expand $-characters in secrets/URLs when deploy-staging.sh loads the
+            # file. The platform certificate stays base64-encoded; the merchant
+            # private key is decoded and stored with literal \\n separators that
+            # paymentService converts back into PEM newlines.
+            write_env_value() {
+              local key="$1"
+              local value="${2-}"
+              if [[ "$value" == *$'\n'* || "$value" == *$'\r'* || "$value" == *"'"* ]]; then
+                echo "::error::$key contains a newline or single quote and cannot be represented safely in .env.staging"
+                return 1
+              fi
+              printf "%s='%s'\n" "$key" "$value" >> "$ENV_FILE"
+            }
+
             write_if_nonempty() {
               local key="$1"
               local value="${2-}"
               [ -n "${value}" ] || return 0
-              printf "%s='%s'\n" "$key" "$value" >> "$ENV_FILE"
+              write_env_value "$key" "$value"
             }
 
-            cat > "$ENV_FILE" <<EOF
-            # Auto-generated by GitHub Actions deploy-staging.yml
-            # Do not edit manually on the server — changes will be overwritten on next deploy.
-            APP_MODE='staging'
-            NODE_ENV='staging'
-            PORT='5001'
-            APP_URL='https://staging.joyjoinapp.com'
-            CORS_ORIGINS='${CORS_ORIGINS}'
-            ALLOWED_ORIGINS='${ALLOWED_ORIGINS}'
-            DATABASE_URL='${STAGING_DATABASE_URL}'
-            SESSION_SECRET='${STAGING_SESSION_SECRET}'
-            POSTGRES_PASSWORD='${STAGING_POSTGRES_PASSWORD}'
-            ADMIN_CREATE_SECRET_KEY='${STAGING_ADMIN_CREATE_SECRET_KEY}'
-            TEST_PAYMENT_PRICE_IN_CENTS='1'
-            ENABLE_SINGLE_TEST_MODE='true'
-            SOCIAL_ICEBREAKER_TEST_MODE_ENABLED='true'
-            WECHAT_APPID='${WECHAT_APPID}'
-            WECHAT_SECRET='${WECHAT_SECRET}'
-            EOF
+            write_private_key_from_base64() {
+              local encoded_value="${1-}"
+              local decoded_pem
+              local single_line_pem
+              [ -n "$encoded_value" ] || return 0
+
+              if ! decoded_pem="$(printf '%s' "$encoded_value" | base64 -d)"; then
+                echo "::error::WECHAT_PAY_PRIVATE_KEY is not valid base64"
+                return 1
+              fi
+              if [[ "$decoded_pem" != *"-----BEGIN PRIVATE KEY-----"* && \
+                    "$decoded_pem" != *"-----BEGIN RSA PRIVATE KEY-----"* ]]; then
+                echo "::error::WECHAT_PAY_PRIVATE_KEY did not decode to a supported PEM private key"
+                return 1
+              fi
+
+              # paymentService normalizes literal \\n sequences back to PEM
+              # newlines. This keeps .env.staging single-line and avoids
+              # mistaking a base64 private key for raw signing material.
+              single_line_pem="${decoded_pem//$'\r'/}"
+              single_line_pem="${single_line_pem//$'\n'/\\n}"
+              write_env_value "WECHAT_PAY_PRIVATE_KEY" "$single_line_pem"
+              unset decoded_pem single_line_pem
+            }
+
+            printf '%s\n' \
+              '# Auto-generated by GitHub Actions deploy-staging.yml' \
+              '# Do not edit manually on the server — changes will be overwritten on next deploy.' \
+              > "$ENV_FILE"
+            write_env_value "APP_MODE" "staging"
+            write_env_value "NODE_ENV" "staging"
+            write_env_value "PORT" "5001"
+            write_env_value "APP_URL" "https://staging.joyjoinapp.com"
+            write_env_value "CORS_ORIGINS" "$CORS_ORIGINS"
+            write_env_value "ALLOWED_ORIGINS" "$ALLOWED_ORIGINS"
+            write_env_value "DATABASE_URL" "$STAGING_DATABASE_URL"
+            write_env_value "SESSION_SECRET" "$STAGING_SESSION_SECRET"
+            write_env_value "POSTGRES_PASSWORD" "$STAGING_POSTGRES_PASSWORD"
+            write_env_value "ADMIN_CREATE_SECRET_KEY" "$STAGING_ADMIN_CREATE_SECRET_KEY"
+            write_env_value "TEST_PAYMENT_PRICE_IN_CENTS" "1"
+            write_env_value "ENABLE_SINGLE_TEST_MODE" "true"
+            write_env_value "SOCIAL_ICEBREAKER_TEST_MODE_ENABLED" "true"
+            write_env_value "WECHAT_APPID" "$WECHAT_APPID"
+            write_env_value "WECHAT_SECRET" "$WECHAT_SECRET"
 
             write_if_nonempty "DEEPSEEK_API_KEY" "$DEEPSEEK_API_KEY"
             write_if_nonempty "JWT_SECRET" "$JWT_SECRET"
@@ -278,7 +561,7 @@ jobs:
             write_if_nonempty "WECHAT_PAY_APP_ID" "$WECHAT_PAY_APP_ID"
             write_if_nonempty "WECHAT_PAY_MCH_ID" "$WECHAT_PAY_MCH_ID"
             write_if_nonempty "WECHAT_PAY_SERIAL_NO" "$WECHAT_PAY_SERIAL_NO"
-            write_if_nonempty "WECHAT_PAY_PRIVATE_KEY" "$WECHAT_PAY_PRIVATE_KEY"
+            write_private_key_from_base64 "$WECHAT_PAY_PRIVATE_KEY_B64"
             write_if_nonempty "WECHAT_PAY_APIV3_KEY" "$WECHAT_PAY_APIV3_KEY"
             # Store as base64 to avoid docker-compose env_file multi-line corruption.
             # paymentService.ts decodes this automatically.
@@ -340,30 +623,40 @@ jobs:
             write_if_nonempty "WECHAT_PAY_NOTIFY_URL" "$WECHAT_PAY_NOTIFY_URL"
 
             chmod 600 "$ENV_FILE"
+            mv -f -- "$ENV_FILE" "$ENV_CANDIDATE"
+            ENV_FILE="$ENV_CANDIDATE"
 
-            echo "🔐 Wrote fresh .env.staging from GitHub secrets/vars"
+            echo "🔐 Wrote rollback-protected .env.staging candidate from GitHub secrets/vars"
             echo "🚀 Running deploy-staging.sh..."
-            ~/JoyJoin/deployment/scripts/deploy-staging.sh
+            STAGING_ENV_CANDIDATE="$ENV_CANDIDATE" \
+              timeout --signal=TERM --kill-after=300s 18m \
+              ~/JoyJoin/deployment/scripts/deploy-staging.sh
+
+            printf '%s\n' "$DEPLOY_SOURCE_SHA" > ~/JoyJoin/deployment/.staging-deployed-sha.tmp
+            mv ~/JoyJoin/deployment/.staging-deployed-sha.tmp \
+              ~/JoyJoin/deployment/.staging-deployed-sha
 
       - name: Verify staging health after deploy
         run: |
           set -euo pipefail
-          echo "⏳ Waiting for staging API to become healthy..."
-          for i in $(seq 1 36); do
-            HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' -m 10 https://staging.joyjoinapp.com/api/health 2>/dev/null || echo "000")
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "✅ staging.joyjoinapp.com/api/health returned 200"
-              break
-            fi
-            if [ "$i" = "36" ]; then
-              echo "❌ Health endpoint never returned 200 (last HTTP code: $HTTP_CODE)"
-              exit 1
-            fi
-            sleep 10
-          done
+          CURL_OPTIONS=(
+            --fail
+            --silent
+            --show-error
+            --connect-timeout 10
+            --max-time 30
+            --retry 12
+            --retry-delay 5
+            --retry-all-errors
+            --output /dev/null
+          )
+          curl "${CURL_OPTIONS[@]}" https://staging.joyjoinapp.com/api/readyz
+          curl "${CURL_OPTIONS[@]}" https://staging.admin.joyjoinapp.com/
+          echo "✅ Staging API readiness and Admin content are reachable"
 
       - name: Notify staging deployment failure
         if: failure()
+        continue-on-error: true
         env:
           WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
         run: |
@@ -376,6 +669,7 @@ jobs:
 
       - name: Notify staging deployment success
         if: success() && github.event_name == 'push'
+        continue-on-error: true
         env:
           WECOM_BOT_KEY: ${{ secrets.WECOM_BOT_KEY }}
         run: |

@@ -20,12 +20,12 @@ A dedicated migration script (`scripts/migrate-rename-role-to-archetype.js`) has
 
 ## Running the Migration
 
-### Automatic (via deployment)
-The migration is now integrated into:
+### Historical deployment integration (retired)
+When this migration was introduced, it was integrated into:
 1. GitHub Actions workflow (`.github/workflows/cicd.yml`)
 2. Deployment script (`deployment/scripts/deploy.sh`)
 
-Both will run the migration before executing `drizzle-kit push`.
+Those paths are retired. Current staging and production deploy workflows do not run migrations or `drizzle-kit push`; apply required SQL manually and verify it before deploying the application.
 
 ### Manual Execution
 If you need to run the migration manually:

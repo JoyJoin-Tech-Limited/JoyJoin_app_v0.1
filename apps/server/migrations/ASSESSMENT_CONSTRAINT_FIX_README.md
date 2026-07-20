@@ -28,9 +28,9 @@ error: there is no unique or exclusion constraint matching the ON CONFLICT speci
    - Includes validation before and after
    - Idempotent - safe to run multiple times
 
-3. **Deployment Scripts**:
-   - `deployment/scripts/deploy.sh` - Added migration step
-   - `.github/workflows/cicd.yml` - Added migration to CI/CD pipeline
+3. **Historical deployment integration (retired)**:
+   - `deployment/scripts/deploy.sh` - included the migration step at the time
+   - `.github/workflows/cicd.yml` - included the migration in the former CI/CD pipeline
 
 ### How It Works
 
@@ -49,14 +49,14 @@ The migration:
 DATABASE_URL="your-connection-string" node scripts/migrate-fix-assessment-constraint.js
 ```
 
-#### Automatic Execution
+#### Historical Automatic Execution (retired)
 
-The migration is automatically run during deployment:
+When this migration was introduced, it ran automatically during deployment through:
 
 1. **Local deployment**: `deployment/scripts/deploy.sh`
 2. **CI/CD pipeline**: `.github/workflows/cicd.yml`
 
-Both run the migration before `drizzle-kit push`.
+Those paths are retired. Current staging and production deploy workflows do not run migrations or `drizzle-kit push`; apply required SQL manually and verify it before deploying the application.
 
 ### Verification
 

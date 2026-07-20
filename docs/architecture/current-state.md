@@ -202,12 +202,14 @@ Boundary:
 
 **Active production path**
 - `.github/workflows/deploy-staging.yml` (push to `main`) and `.github/workflows/deploy-production.yml` (push to `release`) deploy by SSHing into the remote server (`SERVER_IP` secret), rsyncing code to `~/JoyJoin`, and running `deployment/scripts/deploy-staging.sh` or `deployment/scripts/deploy-production.sh` respectively. The production job is gated by the GitHub `production` environment.
+- Staging API/Admin images are built by GitHub Actions and transferred as a compressed bundle. The shared CVM only loads and switches images; it does not compile application code. The switch is gated by the real DB/config readiness endpoint and Admin content, with previous-image/Nginx rollback on failure.
+- The WeChat development-version upload is triggered by a successful `Deploy Staging` `workflow_run` for the same `main` commit, rather than racing the backend deploy.
 - `deployment/nginx/joyjoin.conf` is the public edge configuration for host Nginx serving `joyjoinapp.com`, `www.joyjoinapp.com`, `admin.joyjoinapp.com`, and `api.joyjoinapp.com`.
-- `deployment/docker-compose.nginx.yml` runs the active runtime containers: `joyjoin-api`, `joyjoin-user`, and `joyjoin-admin`.
+- `deployment/docker-compose.nginx.yml` runs the active runtime containers: `joyjoin-api`, `joyjoin-admin`, `postgres`, and `granite-embedding`. Host Nginx serves the maintenance page at the user-facing root domains; no user-client container is part of the active stack.
 
 **Database boundary**
-- The active deployment expects `DATABASE_URL` to point at an external PostgreSQL instance.
-- The repository does not provision a PostgreSQL container or host-managed database service in `deployment/docker-compose.nginx.yml`; contributors should not assume the remote app server has a local database to attach to.
+- Production provisions PostgreSQL 16 as the `postgres` service in `deployment/docker-compose.nginx.yml`, backed by the persistent `pgdata` volume and exposed only on host loopback. The API's `DATABASE_URL` uses that service as its database authority.
+- The isolated staging exception is `postgres-staging` in `deployment/docker-compose.staging.yml`; the API URL must resolve to `postgres-staging:5432/joyjoin_staging` from inside Docker. Staging deployment only validates schema/catalog state and never applies DDL or seed data.
 
 ## Where new files go
 
