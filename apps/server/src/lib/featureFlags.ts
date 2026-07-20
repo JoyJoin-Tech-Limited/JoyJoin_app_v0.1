@@ -110,6 +110,11 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  collapsed (no forced re-fan).
    *  Env fallback: SQUAD_UNBOXING_POCKET_DECK_ENABLED (default: true). */
   squadUnboxingPocketDeckEnabled: "SQUAD_UNBOXING_POCKET_DECK_ENABLED",
+  /** HD-2D Identity Stage background parallax scene. When false, the profile
+   *  tab renders the existing static identity card without the multi-plane
+   *  depth background. Env fallback: PROFILE_IDENTITY_STAGE_ENABLED
+   *  (default: true). */
+  profileIdentityStageEnabled: "PROFILE_IDENTITY_STAGE_ENABLED",
 };
 
 /**
@@ -124,6 +129,7 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   profilePixelAvatarEnabled: false,
   equipmentRewardsEnabled: false,
   personalStoryEnabled: false,
+  profileIdentityStageEnabled: true,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

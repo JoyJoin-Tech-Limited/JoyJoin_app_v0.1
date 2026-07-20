@@ -131,6 +131,7 @@ const [
     matchingOperatorReviewEnabled,
     alangEnabled,
     squadUnboxingPocketDeckEnabled,
+    profileIdentityStageEnabled,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -157,6 +158,7 @@ const [
     getFeatureFlag('matchingOperatorReviewEnabled', false),
     getFeatureFlag('alangEnabled', false),
     getFeatureFlag('squadUnboxingPocketDeckEnabled', true),
+    getFeatureFlag('profileIdentityStageEnabled', true),
   ]);
 
   // Never expose client debug surfaces in production, even if a stale
@@ -205,6 +207,7 @@ const [
       matchingOperatorReviewEnabled,
       alangEnabled,
       squadUnboxingPocketDeckEnabled,
+      profileIdentityStageEnabled,
     },
   };
 

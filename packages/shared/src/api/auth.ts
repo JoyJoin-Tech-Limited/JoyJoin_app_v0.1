@@ -120,6 +120,9 @@ export interface AuthUserResponse extends SanitizedAuthUser {
      *  the deck stays in the fan phase (users already collapsed stay collapsed).
      *  Kill switch for the pocket-deck collapse. Default: true. */
     squadUnboxingPocketDeckEnabled?: boolean
+    /** When false, the profile tab renders the existing static identity card
+     *  without the HD-2D multi-plane depth background. Default: true. */
+    profileIdentityStageEnabled?: boolean
   }
 }
 
