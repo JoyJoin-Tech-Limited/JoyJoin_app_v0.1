@@ -8,7 +8,7 @@
  * Layout: 3×4 grid, 120×120px per thumbnail with 4px padding
  * Output: WebP primary + PNG fallback
  *   - CDN path: src/assets/personality/archetypes/ (for canvas fallback, cache priming)
- *   - Local bundle: src/pages/onboarding/assets/archetypes/ (slot animation, immune to CDN staleness)
+ *   - Local bundle: src/subpackages/onboarding/assets/archetypes/ (slot animation, immune to CDN staleness)
  *
  * Usage (from apps/mini-program):
  *   npm run generate:spritesheet
@@ -24,7 +24,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const INPUT_DIR = path.join(ROOT, 'assets-source/personality/archetypes')
 const CDN_OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
-const LOCAL_OUTPUT_DIR = path.join(ROOT, 'src/pages/onboarding/assets/archetypes')
+const LOCAL_OUTPUT_DIR = path.join(ROOT, 'src/subpackages/onboarding/assets/archetypes')
 
 const THUMB_SIZE = 120
 const PADDING = 4

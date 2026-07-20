@@ -159,7 +159,7 @@ async function captureEventsPage() {
 async function captureTierSelector() {
   return withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
     await page.goto(
-      `${H5_BASE_URL}/#/pages/icebreaker-session/tier-selector/index?sessionId=test-screenshot-123`,
+      `${H5_BASE_URL}/#/subpackages/icebreaker-session/tier-selector/index?sessionId=test-screenshot-123`,
       { waitUntil: 'domcontentloaded', timeout: 60000 }
     )
     await clearAndSeedStorage(page)
@@ -196,7 +196,7 @@ async function capturePoolRegistration() {
         updatedAt: Date.now(),
       }
 
-      await page.goto(`${H5_BASE_URL}/#/pages/pool-registration/index?id=${POOL_ID}`, {
+      await page.goto(`${H5_BASE_URL}/#/subpackages/pool-registration/index?id=${POOL_ID}`, {
         waitUntil: 'domcontentloaded',
         timeout: 60000,
       })
@@ -246,7 +246,7 @@ async function captureSquadUnboxingReady() {
     { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
     async (page) => {
       await page.goto(
-        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=group-screenshot-001&__story=ready&motion=reduce`,
+        `${H5_BASE_URL}/#/subpackages/squad-unboxing/index?groupId=group-screenshot-001&__story=ready&motion=reduce`,
         { waitUntil: 'domcontentloaded', timeout: 60000 }
       )
       await clearAndSeedStorage(page)
@@ -264,7 +264,7 @@ async function captureSquadUnboxingShaking() {
     { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
     async (page) => {
       await page.goto(
-        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=group-screenshot-001&__story=shaking&motion=reduce`,
+        `${H5_BASE_URL}/#/subpackages/squad-unboxing/index?groupId=group-screenshot-001&__story=shaking&motion=reduce`,
         { waitUntil: 'domcontentloaded', timeout: 60000 }
       )
       await clearAndSeedStorage(page)
@@ -282,7 +282,7 @@ async function captureSquadUnboxingFocused() {
     { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
     async (page) => {
       await page.goto(
-        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=group-screenshot-001&__story=focused&motion=reduce`,
+        `${H5_BASE_URL}/#/subpackages/squad-unboxing/index?groupId=group-screenshot-001&__story=focused&motion=reduce`,
         { waitUntil: 'domcontentloaded', timeout: 60000 }
       )
       await clearAndSeedStorage(page)
@@ -316,7 +316,7 @@ async function captureSquadUnboxingStoryRevealed(storyName, { groupId = 'group-s
     { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
     async (page) => {
       await page.goto(
-        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=${groupId}&__story=${storyName}&motion=reduce`,
+        `${H5_BASE_URL}/#/subpackages/squad-unboxing/index?groupId=${groupId}&__story=${storyName}&motion=reduce`,
         { waitUntil: 'domcontentloaded', timeout: 60000 }
       )
       await clearAndSeedStorage(page)
@@ -356,7 +356,7 @@ async function captureSquadUnboxingStoryPocketed({ groupId = 'group-screenshot-0
     { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
     async (page) => {
       await page.goto(
-        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=${groupId}&__story=revealed-pocketed&motion=reduce`,
+        `${H5_BASE_URL}/#/subpackages/squad-unboxing/index?groupId=${groupId}&__story=revealed-pocketed&motion=reduce`,
         { waitUntil: 'domcontentloaded', timeout: 60000 }
       )
       await clearAndSeedStorage(page)
@@ -381,7 +381,7 @@ async function captureSquadUnboxingRevealed(groupId = 'group-screenshot-001') {
     { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
     async (page) => {
       await page.goto(
-        `${H5_BASE_URL}/#/pages/squad-unboxing/index?groupId=${groupId}&motion=reduce`,
+        `${H5_BASE_URL}/#/subpackages/squad-unboxing/index?groupId=${groupId}&motion=reduce`,
         { waitUntil: 'domcontentloaded', timeout: 60000 }
       )
       await clearAndSeedStorage(page)
@@ -433,7 +433,7 @@ async function captureProfileReview() {
         fs.appendFileSync('/tmp/profile-review-screenshot-debug.log', line)
       }
       log({ step: 'enter' })
-      const url = `${H5_BASE_URL}/#/pages/onboarding/profile-review/index?motion=reduce`
+      const url = `${H5_BASE_URL}/#/subpackages/onboarding/profile-review/index?motion=reduce`
       log({ step: 'goto', url })
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await clearAndSeedStorage(page)
@@ -464,7 +464,7 @@ async function captureMatchingStatusPuzzlePrelude() {
     { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
     async (page) => {
       const url =
-        `${H5_BASE_URL}/#/pages/matching-status/index` +
+        `${H5_BASE_URL}/#/subpackages/matching-status/index` +
         '?registrationId=reg-screenshot-001&__story=puzzle&motion=reduce'
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await clearAndSeedStorage(page)
@@ -536,7 +536,7 @@ async function captureDiscoverAlangV17() {
 async function captureAlangSearchV17() {
   return withBrowserPage(V17_GEO_VIEWPORT, async (page) => {
     await page.goto(
-      `${H5_BASE_URL}/#/pages/alang/search/index?slug=${encodeURIComponent('meet-alang')}&motion=reduce`,
+      `${H5_BASE_URL}/#/subpackages/alang/search/index?slug=${encodeURIComponent('meet-alang')}&motion=reduce`,
       { waitUntil: 'domcontentloaded', timeout: 60000 }
     )
     await clearAndSeedStorage(page)
@@ -555,7 +555,7 @@ async function captureAlangSearchV17() {
 
 async function capturePersonalStoryV17() {
   return withBrowserPage(V17_VIEWPORT, async (page) => {
-    await page.goto(`${H5_BASE_URL}/#/pages/profile-linked/personal-story/index?motion=reduce`, {
+    await page.goto(`${H5_BASE_URL}/#/subpackages/profile-linked/personal-story/index?motion=reduce`, {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
     })
@@ -576,7 +576,7 @@ async function capturePersonalStoryV17() {
 
 async function captureMyImageV17() {
   return withBrowserPage(V17_VIEWPORT, async (page) => {
-    await page.goto(`${H5_BASE_URL}/#/pages/profile-linked/my-image/index?motion=reduce`, {
+    await page.goto(`${H5_BASE_URL}/#/subpackages/profile-linked/my-image/index?motion=reduce`, {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
     })
@@ -602,7 +602,7 @@ async function captureMyImageV17() {
 
 async function captureProfileSettingsV17() {
   return withBrowserPage(V17_VIEWPORT, async (page) => {
-    await page.goto(`${H5_BASE_URL}/#/pages/profile-linked/settings/index?motion=reduce`, {
+    await page.goto(`${H5_BASE_URL}/#/subpackages/profile-linked/settings/index?motion=reduce`, {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
     })
@@ -626,7 +626,7 @@ async function captureProfileSettingsV17() {
 
 function captureIcebreaker(sessionId, waitSelector = '.phase-hero-card', extraWaitMs = 1200) {
   return withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
-    await page.goto(`${H5_BASE_URL}/#/pages/icebreaker-session/index?sessionId=${sessionId}`, {
+    await page.goto(`${H5_BASE_URL}/#/subpackages/icebreaker-session/index?sessionId=${sessionId}`, {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
     })

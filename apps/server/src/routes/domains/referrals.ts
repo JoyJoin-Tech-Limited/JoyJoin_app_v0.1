@@ -23,7 +23,7 @@ export function registerReferralRoutes(app: Express): void {
   }
 
   function buildInviteLink(code: string): string {
-    return `weixin://dl/business/?appid=${WECHAT_APPID}&path=pages/pool-registration/index&query=invitationCode%3D${encodeURIComponent(code)}`;
+    return `weixin://dl/business/?appid=${WECHAT_APPID}&path=subpackages/pool-registration/index&query=invitationCode%3D${encodeURIComponent(code)}`;
   }
 
   // POST /api/events/:id/create-invitation - Generate invitation link

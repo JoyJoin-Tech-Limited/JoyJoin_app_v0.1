@@ -139,7 +139,7 @@ const config = {
 const routes = {
   landing: '/pages/index/index',
   login: '/pages/login/index',
-  personality: '/pages/onboarding/personality-test/index',
+  personality: '/subpackages/onboarding/personality-test/index',
 }
 
 const selectors = {

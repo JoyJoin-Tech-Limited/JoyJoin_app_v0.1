@@ -435,17 +435,17 @@ function AuthenticatedDiscover({
 
   const handlePoolTap = useCallback((pool: EventPoolSummary) => {
     haptics('light')
-    Taro.navigateTo({ url: `/pages/pool-registration/index?id=${pool.id}` })
+    Taro.navigateTo({ url: `/subpackages/pool-registration/index?id=${pool.id}` })
   }, [])
 
   const handleBannerCtaTap = useCallback(() => {
     if (!userArchetype) {
-      Taro.navigateTo({ url: '/pages/onboarding/personality-test/index' })
+      Taro.navigateTo({ url: '/subpackages/onboarding/personality-test/index' })
       return
     }
     const firstOpenPool = openPools[0]
     if (firstOpenPool) {
-      Taro.navigateTo({ url: `/pages/pool-registration/index?id=${firstOpenPool.id}` })
+      Taro.navigateTo({ url: `/subpackages/pool-registration/index?id=${firstOpenPool.id}` })
     } else {
       Taro.showToast({ title: '暂无开放活动', icon: 'none' })
     }

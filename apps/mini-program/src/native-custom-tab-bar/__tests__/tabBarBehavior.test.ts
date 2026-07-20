@@ -568,7 +568,7 @@ describe('native custom tab bar behavior', () => {
 
   it('shows the Discover tab for pool-registration and keeps the bar visible on swipe-back', async () => {
     setupMocks()
-    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'pages/pool-registration/index' }])
+    global.getCurrentPages = vi.fn().mockReturnValue([{ route: 'subpackages/pool-registration/index' }])
     const component = await loadComponent()
 
     component.attached()

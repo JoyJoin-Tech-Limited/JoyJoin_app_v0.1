@@ -39,10 +39,10 @@ usePageTTI({ pageName: string; ready?: boolean; disabled?: boolean }): void
 
 | Page | Ready condition | Notes |
 |------|-----------------|-------|
-| `pages/profile-linked/terms/index.tsx` | none (static page) | Reports on mount. |
-| `pages/profile-linked/invite/index.tsx` | `!authLoading && !isLoading` | Waits for auth + referral stats. |
-| `pages/profile-linked/rewards/index.tsx` | `!authLoading && !couponsQuery.isLoading` | Waits for auth + primary coupons query. |
-| `pages/profile-linked/edit-profile/index.tsx` | `!authLoading && !isInitializing` | Waits for auth gate and local initialization effect. |
+| `subpackages/profile-linked/terms/index.tsx` | none (static page) | Reports on mount. |
+| `subpackages/profile-linked/invite/index.tsx` | `!authLoading && !isLoading` | Waits for auth + referral stats. |
+| `subpackages/profile-linked/rewards/index.tsx` | `!authLoading && !couponsQuery.isLoading` | Waits for auth + primary coupons query. |
+| `subpackages/profile-linked/edit-profile/index.tsx` | `!authLoading && !isInitializing` | Waits for auth gate and local initialization effect. |
 
 ---
 
@@ -144,10 +144,10 @@ These maintainability findings are **pre-existing** and unrelated to the profile
 ```
 apps/mini-program/src/hooks/usePageTTI.ts                         (new)
 apps/mini-program/src/hooks/usePageTTI.test.ts                    (new)
-apps/mini-program/src/pages/profile-linked/terms/index.tsx
-apps/mini-program/src/pages/profile-linked/invite/index.tsx
-apps/mini-program/src/pages/profile-linked/rewards/index.tsx
-apps/mini-program/src/pages/profile-linked/edit-profile/index.tsx
+apps/mini-program/src/subpackages/profile-linked/terms/index.tsx
+apps/mini-program/src/subpackages/profile-linked/invite/index.tsx
+apps/mini-program/src/subpackages/profile-linked/rewards/index.tsx
+apps/mini-program/src/subpackages/profile-linked/edit-profile/index.tsx
 tmp/profile-debug.mjs                                             (removed)
 tmp/profile-find-scroll.mjs                                       (removed)
 tmp/profile-linked-debug.mjs                                      (removed)
@@ -182,14 +182,14 @@ tmp/profile-tap-debug.mjs                                         (removed)
 | No hardcoded legacy paths | `grep` for `/pages/{edit-profile,rewards,invite,terms}/index` across `apps/mini-program/src` | ✅ None found |
 | Old page directories removed | `glob` for `src/pages/{edit-profile,rewards,invite,terms}/*` | ✅ Removed |
 | Route constants used consistently | `grep` for `MINI_PROGRAM_ROUTES.{editProfile,rewards,invite,terms}` callers | ✅ 9 call sites all use constants |
-| Subpackage registered | `onboardingRoutes.ts` + `dist/app.json` | ✅ `pages/profile-linked` subpackage + 4 pages |
-| Preload rule registered | `MINI_PROGRAM_PRELOAD_RULES['pages/profile/index']` → `pages/profile-linked` | ✅ Present in source and `dist/app.json` |
-| Asset preload map updated | `routePreloadAssets.ts` | ✅ `pages/profile-linked/rewards/index` + predictive `edit-profile` |
+| Subpackage registered | `onboardingRoutes.ts` + `dist/app.json` | ✅ `subpackages/profile-linked` subpackage + 4 pages |
+| Preload rule registered | `MINI_PROGRAM_PRELOAD_RULES['pages/profile/index']` → `subpackages/profile-linked` | ✅ Present in source and `dist/app.json` |
+| Asset preload map updated | `routePreloadAssets.ts` | ✅ `subpackages/profile-linked/rewards/index` + predictive `edit-profile` |
 | `usePageTTI` integration | Read 4 migrated pages + hook source | ✅ All 4 pages call hook; hook is side-effect only (refs, `setTimeout`) |
 | `usePageTTI` does not block render | Hook implementation review | ✅ No state/setState; reporting deferred via `setTimeout(..., 0)` |
 | Type safety | `npm run typecheck -w mini-program` | ✅ Pass |
 | Unit tests | `npm run test -w mini-program` | ✅ 53 files, 361 passed, 1 skipped |
-| Build | `npm run build:weapp` | ✅ Built successfully; outputs under `dist/pages/profile-linked/` |
+| Build | `npm run build:weapp` | ✅ Built successfully; outputs under `dist/subpackages/profile-linked/` |
 | Package size | `npm run check:package-size` | ✅ Main 1.89 MB / 2.00 MB; Profile Linked 23.2 KiB |
 | Guardrails | `npm run guardrails` | ✅ Pass |
 | Harness gate | `npm run harness:gate` | ⚠️ CONCERN (pre-existing maintainability findings only) |

@@ -10,7 +10,7 @@ import PixelAvatar3D from './PixelAvatar3D'
  * components (e.g. `Canvas === 'canvas'`), not function/class components.
  * The old `typeof Canvas === 'function' || typeof Canvas === 'object'` gate
  * rejected the string form, so the compiled
- * pages/profile-linked/three-avatar.js hard-coded every spider into the
+ * subpackages/profile-linked/three-avatar.js hard-coded every spider into the
  * `canvas-component-missing` fallback and tree-shook the real Canvas JSX to
  * null. This file models Canvas as a string host component (via a getter so
  * each test can swap the exported value before mounting) and proves the

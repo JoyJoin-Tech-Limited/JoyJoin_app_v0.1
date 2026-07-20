@@ -33,9 +33,9 @@ describe('mini-program onboarding routes', () => {
 
   it('retains the canonical events tab page and core pages', () => {
     expect(MINI_PROGRAM_PAGES).toContain('pages/events/index')
-    expect(MINI_PROGRAM_PAGES).toContain('pages/profile-linked/terms/index')
+    expect(MINI_PROGRAM_PAGES).toContain('subpackages/profile-linked/terms/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/event-detail/index')
-    expect(MINI_PROGRAM_PAGES).toContain('pages/pool-registration/index')
+    expect(MINI_PROGRAM_PAGES).toContain('subpackages/pool-registration/index')
   })
 
   it('does not keep removed redirect aliases registered', () => {
@@ -48,22 +48,39 @@ describe('mini-program onboarding routes', () => {
     expect(new Set(MINI_PROGRAM_PAGES).size).toBe(MINI_PROGRAM_PAGES.length)
   })
 
+  it('keeps every subpackage root outside the main pages directory', () => {
+    const roots = MINI_PROGRAM_SUBPACKAGES.map(({ root }) => root)
+
+    expect(roots.every((root) => root.startsWith('subpackages/'))).toBe(true)
+    expect(roots.some((root) => root.startsWith('pages/'))).toBe(false)
+  })
+
+  it('uses exact registered roots in every preload rule', () => {
+    const registeredRoots = new Set(MINI_PROGRAM_SUBPACKAGES.map(({ root }) => root))
+    const preloadPackages = Object.values(MINI_PROGRAM_PRELOAD_RULES)
+      .flatMap(({ packages }) => packages)
+
+    for (const packageRoot of preloadPackages) {
+      expect(registeredRoots.has(packageRoot)).toBe(true)
+    }
+  })
+
   it('moves the onboarding chain into an ordinary subpackage registration', () => {
-    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/onboarding/onboarding/index')
-    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/pool-registration/index')
-    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/edit-profile/index')
-    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/settings/index')
-    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/rewards/index')
-    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/invite/index')
-    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/my-image/index')
-    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/personal-story/index')
-    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/terms/index')
-    expect(MINI_PROGRAM_PAGES).toContain('pages/profile-linked/settings/index')
-    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/alang/event/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('subpackages/onboarding/onboarding/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('subpackages/pool-registration/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('subpackages/profile-linked/edit-profile/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('subpackages/profile-linked/settings/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('subpackages/profile-linked/rewards/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('subpackages/profile-linked/invite/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('subpackages/profile-linked/my-image/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('subpackages/profile-linked/personal-story/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('subpackages/profile-linked/terms/index')
+    expect(MINI_PROGRAM_PAGES).toContain('subpackages/profile-linked/settings/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('subpackages/alang/event/index')
     // D1: squad-unboxing left the main package — the tap-to-reveal revamp grew
     // the page past the 2 MB zip ceiling.
-    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/squad-unboxing/index')
-    expect(MINI_PROGRAM_PAGES).toContain('pages/squad-unboxing/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('subpackages/squad-unboxing/index')
+    expect(MINI_PROGRAM_PAGES).toContain('subpackages/squad-unboxing/index')
     expect(MINI_PROGRAM_SUBPACKAGES).toEqual([
       {
         root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
@@ -106,7 +123,7 @@ describe('mini-program onboarding routes', () => {
         network: 'all',
         packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
       },
-      'pages/squad-unboxing/index': {
+      'subpackages/squad-unboxing/index': {
         network: 'all',
         packages: [MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT],
       },
@@ -125,7 +142,7 @@ describe('mini-program onboarding routes', () => {
         network: 'all',
         packages: [MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT],
       },
-      'pages/matching-status/index': {
+      'subpackages/matching-status/index': {
         network: 'all',
         packages: [MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT],
       },

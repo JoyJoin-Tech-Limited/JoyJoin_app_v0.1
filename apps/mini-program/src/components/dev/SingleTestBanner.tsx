@@ -79,7 +79,7 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
       )
       Taro.showToast({ title: `调试局已创建，共${result.bots.length + 1}人`, icon: 'none' })
       await Taro.navigateTo({
-        url: `/pages/matching-status/index?registrationId=${encodeURIComponent(result.registrationId)}`,
+        url: `/subpackages/matching-status/index?registrationId=${encodeURIComponent(result.registrationId)}`,
       })
     } catch (err: unknown) {
       logSingleTestError('start', err)

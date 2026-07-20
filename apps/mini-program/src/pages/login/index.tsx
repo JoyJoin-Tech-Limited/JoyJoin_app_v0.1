@@ -13,7 +13,7 @@ import { navigateToMiniProgramNextStep } from '../../lib/onboarding/onboardingNa
 import { logInfo, logError } from '../../lib/utils/logger'
 import { TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
-import { getArchetypeVisual } from '../onboarding/personality-test/visuals'
+import { getArchetypeVisual } from '../../subpackages/onboarding/personality-test/visuals'
 import './index.scss'
 
 // Featured archetypes that orbit the avatar — unmistakably JoyJoin

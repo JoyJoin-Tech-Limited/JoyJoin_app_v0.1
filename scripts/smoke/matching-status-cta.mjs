@@ -106,7 +106,7 @@ async function runScenario(scenario) {
 
   try {
     const url =
-      `${H5_BASE_URL}/#/pages/matching-status/index` +
+      `${H5_BASE_URL}/#/subpackages/matching-status/index` +
       '?registrationId=reg-screenshot-001&motion=reduce'
 
     console.log(`[smoke] scenario: ${scenario} -> navigating to ${url}`)
@@ -150,9 +150,9 @@ async function runScenario(scenario) {
       // The overlay can route to either the reveal prelude or directly to the
       // squad unboxing / pool group detail page depending on the current flow.
       const validDestinations = [
-        '#/pages/squad-unboxing/index',
+        '#/subpackages/squad-unboxing/index',
         '#/pages/pool-group-detail/index',
-        '#/pages/matching-status/index', // still on the same page during in-page transition
+        '#/subpackages/matching-status/index', // still on the same page during in-page transition
       ]
       if (!validDestinations.some((d) => currentPath.startsWith(d))) {
         throw new Error(`Expected overlay navigation, got ${currentPath}`)

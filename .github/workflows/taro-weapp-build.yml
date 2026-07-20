@@ -33,6 +33,16 @@ on:
         required: true
         default: true
         type: boolean
+      generate_preview:
+        description: 'Generate a WeChat preview QR code'
+        required: true
+        default: false
+        type: boolean
+      preview_page_path:
+        description: 'Page path opened by the preview QR code'
+        required: true
+        default: 'subpackages/profile-linked/my-image/qa3d/index'
+        type: string
 
 permissions:
   contents: read
@@ -210,3 +220,164 @@ jobs:
             echo "- API target: \`$API_TARGET\`"
             echo "- Result: success"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Preview QR generation is intentionally opt-in. Main pushes require a
+  # [preview] marker; manual runs require generate_preview=true.
+  preview-weapp:
+    if: >-
+      (github.event_name == 'push' &&
+       github.ref == 'refs/heads/main' &&
+       contains(github.event.head_commit.message, '[preview]')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.generate_preview == true)
+    needs: build-weapp
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: taro-weapp-dist
+          path: apps/mini-program/dist
+
+      - name: Generate WeChat preview QR code via CVM
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          WECHAT_PRIVATE_KEY: ${{ secrets.WECHAT_PRIVATE_KEY }}
+          PREVIEW_PAGE_PATH: ${{ github.event_name == 'workflow_dispatch' && inputs.preview_page_path || 'subpackages/profile-linked/my-image/qa3d/index' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${WECHAT_PRIVATE_KEY:-}" ]; then
+            echo "::error::WECHAT_PRIVATE_KEY secret is required for the WeChat preview"
+            exit 1
+          fi
+
+          if [[ ! "$PREVIEW_PAGE_PATH" =~ ^[A-Za-z0-9_./-]+$ ]] ||
+             [[ "$PREVIEW_PAGE_PATH" == /* ]] ||
+             [[ "$PREVIEW_PAGE_PATH" == *".."* ]]; then
+            echo "::error::preview_page_path must be a relative mini-program page path"
+            exit 1
+          fi
+
+          REMOTE_DIR="/root/joyjoin-preview-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          REMOTE_QR_FILE="$REMOTE_DIR/preview-qr.jpg"
+          LOCAL_QR_DIR="$RUNNER_TEMP/wechat-preview"
+          LOCAL_QR_FILE="$LOCAL_QR_DIR/preview-qr.jpg"
+          CVM="$SERVER_USER@$SERVER_IP"
+          REMOTE_DIR_CREATED=false
+
+          mkdir -p "$LOCAL_QR_DIR"
+
+          # Keep both credentials in permission-restricted temporary files.
+          SSH_KEY_FILE=$(mktemp)
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$SSH_KEY_FILE"
+          chmod 600 "$SSH_KEY_FILE"
+
+          WX_KEY_FILE=$(mktemp)
+          printf '%s\n' "$WECHAT_PRIVATE_KEY" > "$WX_KEY_FILE"
+          chmod 600 "$WX_KEY_FILE"
+
+          SSH_OPTIONS=(
+            -i "$SSH_KEY_FILE"
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o ConnectTimeout=20
+            -o ConnectionAttempts=3
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=3
+            -o StrictHostKeyChecking=no
+            -o UserKnownHostsFile=/dev/null
+          )
+          RSYNC_SSH="ssh -i $SSH_KEY_FILE -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=20 -o ConnectionAttempts=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+          cleanup() {
+            set +e
+            if [ "$REMOTE_DIR_CREATED" = true ]; then
+              ssh "${SSH_OPTIONS[@]}" "$CVM" \
+                "rm -f '$REMOTE_DIR/private.preview.key' '$REMOTE_QR_FILE'; rm -rf '$REMOTE_DIR/dist'; rmdir '$REMOTE_DIR' 2>/dev/null || true" \
+                >/dev/null 2>&1 || true
+            fi
+            rm -f "$SSH_KEY_FILE" "$WX_KEY_FILE"
+            if [ -n "${SSH_AGENT_PID:-}" ]; then
+              ssh-agent -k >/dev/null 2>&1 || true
+            fi
+          }
+          trap cleanup EXIT
+
+          run_with_ssh_retry() {
+            local attempt=1
+            local exit_code=0
+
+            while true; do
+              if "$@"; then
+                return 0
+              else
+                exit_code=$?
+              fi
+
+              if [ "$exit_code" -ne 255 ] || [ "$attempt" -ge 3 ]; then
+                return "$exit_code"
+              fi
+
+              echo "::warning::SSH transport closed during attempt ${attempt}/3; retrying in 15 seconds"
+              sleep 15
+              attempt=$((attempt + 1))
+            done
+          }
+
+          if [ -n "${SSH_KEY_PASSPHRASE:-}" ]; then
+            eval "$(ssh-agent -s)"
+            echo "$SSH_KEY_PASSPHRASE" | ssh-add "$SSH_KEY_FILE" >/dev/null
+          fi
+
+          VERSION="1.0.$(date +%Y%m%d).$(date +%H%M)"
+
+          run_with_ssh_retry ssh "${SSH_OPTIONS[@]}" "$CVM" \
+            "mkdir -p '$REMOTE_DIR/dist'"
+          REMOTE_DIR_CREATED=true
+
+          run_with_ssh_retry rsync -avz --delete -e "$RSYNC_SSH" \
+            apps/mini-program/dist/ "$CVM:$REMOTE_DIR/dist/"
+
+          run_with_ssh_retry rsync -avz -e "$RSYNC_SSH" \
+            "$WX_KEY_FILE" "$CVM:$REMOTE_DIR/private.preview.key"
+
+          # Do not retry miniprogram-ci: a dropped return channel does not prove
+          # whether WeChat accepted the preview request.
+          ssh "${SSH_OPTIONS[@]}" "$CVM" \
+            "cd '$REMOTE_DIR' && \
+             NODE_OPTIONS='--dns-result-order=ipv4first' npx --yes miniprogram-ci preview \
+               --appid wx5a038ee6dee12032 \
+               --pp dist \
+               --pkp private.preview.key \
+               --uv '$VERSION' \
+               --robot 2 \
+               --preview-page-path '$PREVIEW_PAGE_PATH' \
+               --qrcode-format image \
+               --qrcode-output-dest preview-qr.jpg"
+
+          run_with_ssh_retry ssh "${SSH_OPTIONS[@]}" "$CVM" \
+            "rm -f '$REMOTE_DIR/private.preview.key'"
+
+          run_with_ssh_retry rsync -avz -e "$RSYNC_SSH" \
+            "$CVM:$REMOTE_QR_FILE" "$LOCAL_QR_FILE"
+
+          test -s "$LOCAL_QR_FILE"
+
+          {
+            echo "### WeChat preview QR code"
+            echo "- Commit: \`${GITHUB_SHA:0:7}\`"
+            echo "- Robot: \`2\`"
+            echo "- Page: \`$PREVIEW_PAGE_PATH\`"
+            echo "- Artifact: \`wechat-preview-qr\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload WeChat preview QR artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: wechat-preview-qr
+          path: ${{ runner.temp }}/wechat-preview/preview-qr.jpg
+          retention-days: 1
+          if-no-files-found: error

@@ -20,7 +20,7 @@ describe('mini-program onboarding analytics event builder', () => {
         now: 2_000,
         sessionStartTime: 500,
         stepStartTime: 1_200,
-        route: 'pages/onboarding/essential-data/index',
+        route: 'subpackages/onboarding/essential-data/index',
         systemInfo: {
           platform: 'ios',
           system: 'iOS 18.2',
@@ -47,7 +47,7 @@ describe('mini-program onboarding analytics event builder', () => {
         nextStep: 'extended-data',
         appSurface: 'mini-program',
         runtime: 'taro',
-        route: 'pages/onboarding/essential-data/index',
+        route: 'subpackages/onboarding/essential-data/index',
         platform: 'ios',
         system: 'iOS 18.2',
         brand: 'Apple',
