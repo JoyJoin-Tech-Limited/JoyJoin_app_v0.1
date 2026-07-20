@@ -31,7 +31,7 @@ Deploy only proceeds after all gates pass.
 ## Staging Deploy
 
 - Pushing to `main` triggers `deploy-staging.yml`.
-- The workflow builds API/Admin images on the GitHub runner, then rsyncs only `deployment/` plus the prebuilt image bundle to the same server and runs `deployment/scripts/deploy-staging.sh`.
+- The workflow builds API/Admin images on the GitHub runner, rsyncs only `deployment/`, and transfers the prebuilt bundle as 8 MiB chunks over at most four independent SSH connections. The server verifies sequence, byte count, SHA-256, and gzip integrity before atomically publishing the bundle and running `deployment/scripts/deploy-staging.sh`.
 - The workflow writes `deployment/.env.staging` from GitHub secrets/vars before running the script.
 - Staging uses its own database (`joyjoin_staging` on `postgres-staging`) and `APP_MODE=staging`.
 - The script never builds application images or applies DDL/seed data on the CVM. It validates schema and, only when the Profile pixel-avatar or equipment rollout is enabled, the active starter catalog; then it loads the bundle, switches with rollback, and requires `/api/readyz` plus actual Admin content.
