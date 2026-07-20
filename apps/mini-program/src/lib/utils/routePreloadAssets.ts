@@ -109,27 +109,27 @@ const REWARDS_PRELOADS = [
 export const ROUTE_PRELOAD_MAP: Record<string, string[]> = {
   'pages/discover/index': DISCOVER_PRELOADS,
   'pages/index/index': PERSONALITY_TEST_PRELOADS, // landing → personality test is the primary CTA
-  'subpackages/pool-registration/index': POOL_REGISTRATION_PRELOADS,
-  'subpackages/matching-status/index': MATCHING_PRELOADS,
+  'pages/pool-registration/index': POOL_REGISTRATION_PRELOADS,
+  'pages/matching-status/index': MATCHING_PRELOADS,
   'pages/event-detail/index': EVENT_DETAIL_PRELOADS,
-  'subpackages/icebreaker-session/index': ICEBREAKER_PRELOADS,
-  'subpackages/profile-linked/rewards/index': REWARDS_PRELOADS,
-  'subpackages/onboarding/personality-test/index': PERSONALITY_TEST_PRELOADS,
-  'subpackages/squad-unboxing/index': SQUAD_UNBOXING_PRELOADS,
+  'pages/icebreaker-session/index': ICEBREAKER_PRELOADS,
+  'pages/profile-linked/rewards/index': REWARDS_PRELOADS,
+  'pages/onboarding/personality-test/index': PERSONALITY_TEST_PRELOADS,
+  'pages/squad-unboxing/index': SQUAD_UNBOXING_PRELOADS,
 }
 
 // ─── Predictive (preload next likely page) ───
 
 /** Map of page path → routes whose assets should be preloaded when idle. */
 export const PREDICTIVE_PRELOAD_MAP: Record<string, string[]> = {
-  'pages/discover/index': ['subpackages/pool-registration/index', 'pages/event-detail/index'],
-  'pages/index/index': ['subpackages/onboarding/personality-test/index'],
-  'subpackages/pool-registration/index': ['subpackages/matching-status/index'],
-  'subpackages/matching-status/index': ['subpackages/squad-unboxing/index'],
-  'pages/event-detail/index': ['subpackages/pool-registration/index'],
+  'pages/discover/index': ['pages/pool-registration/index', 'pages/event-detail/index'],
+  'pages/index/index': ['pages/onboarding/personality-test/index'],
+  'pages/pool-registration/index': ['pages/matching-status/index'],
+  'pages/matching-status/index': ['pages/squad-unboxing/index'],
+  'pages/event-detail/index': ['pages/pool-registration/index'],
   'pages/connections/index': ['pages/event-detail/index'],
-  'pages/events/index': ['pages/event-detail/index', 'subpackages/pool-registration/index'],
-  'pages/profile/index': ['subpackages/profile-linked/edit-profile/index'],
+  'pages/events/index': ['pages/event-detail/index', 'pages/pool-registration/index'],
+  'pages/profile/index': ['pages/profile-linked/edit-profile/index'],
 }
 
 // ─── Preload API ───

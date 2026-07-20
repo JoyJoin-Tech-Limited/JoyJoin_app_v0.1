@@ -5,14 +5,14 @@ export const ONBOARDING_MASCOT_SIZE = '200rpx'
 export const MINI_PROGRAM_PAGE_PATHS = {
   discover: 'pages/discover/index',
   centerHub: 'pages/center-hub/index',
-  onboarding: 'subpackages/onboarding/onboarding/index',
-  personalityTest: 'subpackages/onboarding/personality-test/index',
-  personalityTestResults: 'subpackages/onboarding/personality-test/results/index',
+  onboarding: 'pages/onboarding/onboarding/index',
+  personalityTest: 'pages/onboarding/personality-test/index',
+  personalityTestResults: 'pages/onboarding/personality-test/results/index',
 
-  essentialData: 'subpackages/onboarding/essential-data/index',
-  extendedData: 'subpackages/onboarding/extended-data/index',
-  profileReview: 'subpackages/onboarding/profile-review/index',
-  welcomeBack: 'subpackages/onboarding/welcome-back/index',
+  essentialData: 'pages/onboarding/essential-data/index',
+  extendedData: 'pages/onboarding/extended-data/index',
+  profileReview: 'pages/onboarding/profile-review/index',
+  welcomeBack: 'pages/onboarding/welcome-back/index',
   blindBoxPayment: 'pages/blind-box-payment/index',
   eventTicketPayment: 'pages/event-ticket-payment/index',
   paymentVerification: 'pages/payment-verification/index',
@@ -21,34 +21,34 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   profile: 'pages/profile/index',
   login: 'pages/login/index',
   index: 'pages/index/index',
-  terms: 'subpackages/profile-linked/terms/index',
+  terms: 'pages/profile-linked/terms/index',
   eventDetail: 'pages/event-detail/index',
   eventFeedback: 'pages/event-feedback/index',
-  poolRegistration: 'subpackages/pool-registration/index',
+  poolRegistration: 'pages/pool-registration/index',
   eventCoordination: 'pages/event-coordination/index',
-  matchingStatus: 'subpackages/matching-status/index',
-  squadUnboxing: 'subpackages/squad-unboxing/index',
+  matchingStatus: 'pages/matching-status/index',
+  squadUnboxing: 'pages/squad-unboxing/index',
   poolGroupDetail: 'pages/pool-group-detail/index',
   centerTabEmpty: 'pages/center-tab-empty/index',
-  icebreakerSession: 'subpackages/icebreaker-session/index',
-  tierSelector: 'subpackages/icebreaker-session/tier-selector/index',
-  editProfile: 'subpackages/profile-linked/edit-profile/index',
-  profileSettings: 'subpackages/profile-linked/settings/index',
-  rewards: 'subpackages/profile-linked/rewards/index',
-  invite: 'subpackages/profile-linked/invite/index',
-  myImage: 'subpackages/profile-linked/my-image/index',
-  myImageQa3d: 'subpackages/profile-linked/my-image/qa3d/index',
-  personalStory: 'subpackages/profile-linked/personal-story/index',
+  icebreakerSession: 'pages/icebreaker-session/index',
+  tierSelector: 'pages/icebreaker-session/tier-selector/index',
+  editProfile: 'pages/profile-linked/edit-profile/index',
+  profileSettings: 'pages/profile-linked/settings/index',
+  rewards: 'pages/profile-linked/rewards/index',
+  invite: 'pages/profile-linked/invite/index',
+  myImage: 'pages/profile-linked/my-image/index',
+  myImageQa3d: 'pages/profile-linked/my-image/qa3d/index',
+  personalStory: 'pages/profile-linked/personal-story/index',
   cityUnlock: 'pages/city-unlock/index',
-  alangEvent: 'subpackages/alang/event/index',
-  alangEventDetail: 'subpackages/alang/event-detail/index',
-  alangConfig: 'subpackages/alang/config/index',
-  alangSearch: 'subpackages/alang/search/index',
-  alangDialogue: 'subpackages/alang/dialogue/index',
-  alangCompanion: 'subpackages/alang/companion/index',
-  alangResult: 'subpackages/alang/result/index',
-  alangStoryDetail: 'subpackages/alang/story-detail/index',
-  alangDebug: 'subpackages/alang/debug/index',
+  alangEvent: 'pages/alang/event/index',
+  alangEventDetail: 'pages/alang/event-detail/index',
+  alangConfig: 'pages/alang/config/index',
+  alangSearch: 'pages/alang/search/index',
+  alangDialogue: 'pages/alang/dialogue/index',
+  alangCompanion: 'pages/alang/companion/index',
+  alangResult: 'pages/alang/result/index',
+  alangStoryDetail: 'pages/alang/story-detail/index',
+  alangDebug: 'pages/alang/debug/index',
 } as const
 
 export const MINI_PROGRAM_ROUTES = {
@@ -98,9 +98,9 @@ export const MINI_PROGRAM_ROUTES = {
   index: `/${MINI_PROGRAM_PAGE_PATHS.index}`,
 } as const
 
-export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT = 'subpackages/onboarding' as const
+export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT = 'pages/onboarding' as const
 
-export const MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_ROOT = 'subpackages/profile-linked' as const
+export const MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_ROOT = 'pages/profile-linked' as const
 
 export const MINI_PROGRAM_ONBOARDING_SUBPACKAGE_PAGES = [
   'onboarding/index',
@@ -176,11 +176,11 @@ export const MINI_PROGRAM_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.squadUnboxing,
 ] as const
 
-export const MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT = 'subpackages/icebreaker-session' as const
+export const MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT = 'pages/icebreaker-session' as const
 
-export const MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT = 'subpackages/matching-status' as const
+export const MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT = 'pages/matching-status' as const
 
-export const MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT = 'subpackages/alang' as const
+export const MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT = 'pages/alang' as const
 
 export const MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES = [
   'event/index',
@@ -203,13 +203,13 @@ export const MINI_PROGRAM_FEATURES_SUBPACKAGE_PAGES = [
   'tier-selector/index',
 ] as const
 
-export const MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT = 'subpackages/pool-registration' as const
+export const MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT = 'pages/pool-registration' as const
 
 export const MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES = [
   'index',
 ] as const
 
-export const MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT = 'subpackages/squad-unboxing' as const
+export const MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT = 'pages/squad-unboxing' as const
 
 export const MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES = [
   'index',
@@ -290,7 +290,7 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
 
 export function nextStepToMiniProgramRoute(step: OnboardingStep | string | undefined): string {
   switch (step) {
-    // 'onboarding' is a redirect hub (subpackages/onboarding/onboarding/index) whose
+    // 'onboarding' is a redirect hub (pages/onboarding/onboarding/index) whose
     // sole purpose is to map 'onboarding' → 'personality-test'. Route directly
     // to the first real step to prevent an infinite bounce loop: any page that
     // sees nextStep='onboarding' would redirect to the entry page, which would

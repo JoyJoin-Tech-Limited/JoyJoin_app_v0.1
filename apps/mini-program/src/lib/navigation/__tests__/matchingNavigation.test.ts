@@ -46,7 +46,7 @@ describe('matchingNavigation', () => {
 
     it('builds squad unboxing URL with encoded groupId', () => {
       expect(buildSquadUnboxingUrl(mockGroupId)).toBe(
-        `/subpackages/squad-unboxing/index?groupId=${encodeURIComponent(mockGroupId)}`,
+        `/pages/squad-unboxing/index?groupId=${encodeURIComponent(mockGroupId)}`,
       )
     })
   })

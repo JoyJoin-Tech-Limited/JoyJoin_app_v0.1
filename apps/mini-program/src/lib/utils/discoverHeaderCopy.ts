@@ -69,7 +69,7 @@ export function getDiscoverActionLabel(ctx: DiscoverHeaderContext): {
     return {
       label: '测测我的氛围原型',
       emoji: '🧩',
-      path: '/subpackages/onboarding/personality-test/index',
+      path: '/pages/onboarding/personality-test/index',
     }
   }
 

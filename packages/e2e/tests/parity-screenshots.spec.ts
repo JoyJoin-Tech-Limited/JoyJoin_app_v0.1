@@ -79,7 +79,7 @@ test.describe('Screenshot parity checklist (manual mini-program comparison)', ()
       '',
       '2. **Onboarding Setup**',
       `   - Web baseline: ${SCREENSHOT_PATHS.onboardingSetup}`,
-      '   - Mini-program page: subpackages/onboarding/setup',
+      '   - Mini-program page: pages/onboarding/setup',
       '   - Check: form field labels, spacing, step indicator',
       '',
       '3. **Discover (Event Pools)**',

@@ -24,19 +24,19 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 
 - `src/app.ts` — app lifecycle entry (launch, providers, `AutoLoginBridge` for silent returning-user re-auth, pending-order resume bridge)
 - `src/app.config.ts` — consumes main package pages, subpackages, and `preloadRule` from `lib/onboarding/onboardingRoutes.ts` + tab config from `lib/navigation/tabBarConfig.ts`
-- `src/lib/onboarding/onboardingRoutes.ts` — **register new pages here** (main package list, subpackages under `subpackages/onboarding`, `subpackages/pool-registration`, etc., preload rules)
+- `src/lib/onboarding/onboardingRoutes.ts` — **register new pages here** (main package list, subpackages under `pages/onboarding`, `pages/pool-registration`, etc., preload rules)
 - `src/lib/api/api.ts` — mini-program auth/API bootstrap surface (`authenticateMiniProgramUser`, `authenticateMiniProgramUserWithTest`, `getUserState`)
-- `src/subpackages/onboarding/personality-test/` — V4 personality test, results, and post-result auth gate (split into focused sub-components: `index.tsx` orchestrator, `PersonalityTestIntro`, `PersonalityTestQuestion`, `PersonalityTestPreloadLayer`, `PersonalityTestCompletingError`, and shared `types.ts`)
+- `src/pages/onboarding/personality-test/` — V4 personality test, results, and post-result auth gate (split into focused sub-components: `index.tsx` orchestrator, `PersonalityTestIntro`, `PersonalityTestQuestion`, `PersonalityTestPreloadLayer`, `PersonalityTestCompletingError`, and shared `types.ts`)
 - `src/pages/login/index.tsx` + `src/hooks/auth/useWeChatLogin.ts` — returning-user WeChat login
 - `src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling
 - `src/pages/event-ticket-payment/` — paid event-ticket registration with ceremony success/verifying states; event-type tail illustration v2 full-bleed footer vignette with 4 s load-timeout fallback to barcode; zero-discount coupon skip when test price is ¥0.01
 - `src/components/HeroPromoBanner.tsx` — top-of-discover hero promo banner (full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles). Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`)
-- `src/subpackages/alang/` + `src/lib/alang/` — 闪现 NPC｜阿浪 V1.7 subpackage and runtime. Server `myProgress`/archive owns recovery; search Map only shows the user; walking routes are requested only after companion-stage disclosure and an explicit tap. Internal config/debug is strict single-test only. Visual execution uses ACTIVE 03/05/07 plus APPROVED TARGET 06; no multi-NPC, full equipment, or removed exploration-map surface. Formal Alang art remains `awaiting-approved-art`; labelled bundled placeholders are not production art.
+- `src/pages/alang/` + `src/lib/alang/` — 闪现 NPC｜阿浪 V1.7 subpackage and runtime. Server `myProgress`/archive owns recovery; search Map only shows the user; walking routes are requested only after companion-stage disclosure and an explicit tap. Internal config/debug is strict single-test only. Visual execution uses ACTIVE 03/05/07 plus APPROVED TARGET 06; no multi-NPC, full equipment, or removed exploration-map surface. Formal Alang art remains `awaiting-approved-art`; labelled bundled placeholders are not production art.
 - `src/components/onboarding/WelcomeGiftCard.tsx` — premium welcome-coupon card rendered on first profile-review view; calls `GET /api/user/welcome-coupon`, displays the Lovart coupon illustration + dynamic discount badge (`悦仔见面礼`), and routes to Discover on tap. Reduced-motion and skeleton loading states supported.
 - `src/components/onboarding/ProfileReviewInviteCard.tsx` — invitation teaser card rendered after the welcome-coupon state settles on profile-review. Uses Lovart `invite-teaser.webp` with CDN-first loading and local/BrandLogo fallback, disabled/busy states, and haptics. Tapping completes onboarding and routes to Discover; reveal triggers a predictive `GET /api/shell/discover` prefetch via `PrefetchEngine`.
 - `src/components/events/FootprintOracleCard.tsx` — interactive "足迹" tab event card. Wraps `EventSummaryCard` in a two-rail layout: left body (status, title, date/time/location) and right rail (compact countdown, group size, price, or "待公布" placeholder). Supports list affordances (tap, hover, haptics, entrance delay). The right rail contents are included in the card's accessible name; only the decorative `›` cue is `aria-hidden`.
 - `src/components/events/EventSummaryCard.tsx` — shared presentational event-card shell used by `FootprintOracleCard` and read-only confirmation surfaces such as pool-registration terminal states. Renders the same gradient shell, status pulse pill, segmented countdown, title, date/time/location meta, and corner vignette. Supports `interactive`, `railMode`, and `rightRail` props; title clamps to 2 lines with `keep-all` word breaking.
-- `src/subpackages/pool-registration/components/PersonaSnapshotCard.tsx` — aggregate "persona 拼图卡" preview rendered on pool-registration step 0. Gated by `user.features.personaSnapshotEnabled`; uses CDN Lovart art with subpackage fallback and `usePersonaSnapshotAnimation.ts`. Particle colors are derived from the pool's top archetype distribution (or the user's archetype) by mapping to real colored particle assets — CSS tint filters are not used because they are unreliable in WeChat runtime. The outer merged hero+persona card uses `hoverClass` for pressed feedback and is the sole tap target; dimension pills are individually interactive once the CTA is ready.
+- `src/pages/pool-registration/components/PersonaSnapshotCard.tsx` — aggregate "persona 拼图卡" preview rendered on pool-registration step 0. Gated by `user.features.personaSnapshotEnabled`; uses CDN Lovart art with subpackage fallback and `usePersonaSnapshotAnimation.ts`. Particle colors are derived from the pool's top archetype distribution (or the user's archetype) by mapping to real colored particle assets — CSS tint filters are not used because they are unreliable in WeChat runtime. The outer merged hero+persona card uses `hoverClass` for pressed feedback and is the sole tap target; dimension pills are individually interactive once the CTA is ready.
 - `src/hooks/useEventCountdown.ts` — visibility-aware countdown hook returning `display`, `segments`, `isUrgent`, `hasStarted`, `isLive`. Gated by viewport visibility, app background, reduced-motion, and device tier.
 - `src/lib/utils/eventDisplay.ts` — `formatEventDateTime` (with `今天`/`明天`/`后天` relative prefixes), `getJoinedEventDisplayDateTime` for display-time vs matching-time precedence, and `isJoinedEventTerminal()` for terminal-state detection.
 - `src/lib/utils/accessibility.ts` — `getSystemReducedMotion()` canonical helper for reading the OS-level reduced-motion preference.
@@ -162,13 +162,13 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 | `npm run extract:xiaoyue-frames` | Extract raw frames from Xiaoyue source strips |
 | `npm run contact-sheet:xiaoyue` | Generate contact-sheet preview of Xiaoyue frames |
 | `npm run repair:xiaoyue` | Queue Xiaoyue asset repair jobs |
-| `npm run optimize:archetypes` | Generate archetype WebP/PNG assets into `src/subpackages/onboarding/assets/archetypes/` |
+| `npm run optimize:archetypes` | Generate archetype WebP/PNG assets into `src/pages/onboarding/assets/archetypes/` |
 | `npm run check:archetype-assets` | Validate archetype asset sizes |
 | `npm run generate:spritesheet` | Generate archetype spritesheet + manifest for share-poster canvas |
 | `npm run optimize:promo` | Generate promotional image assets |
 | `npm run optimize:lovart` | Generate Lovart-designed image assets |
 | `npm run check:lovart-assets` | Validate Lovart asset sizes |
-| `npm run upload:cdn-assets` | Upload manifest assets to CDN (`--dry-run` for preview). For production, trigger `gh workflow run "Upload CDN Assets"` which builds + uploads via GitHub Actions. **Symlink resolution:** the uploader resolves symlinks (e.g. `src/assets/archetypes/` → `src/subpackages/onboarding/assets/archetypes/`) before rsync so the remote host receives real files, not broken symlinks. |
+| `npm run upload:cdn-assets` | Upload manifest assets to CDN (`--dry-run` for preview). For production, trigger `gh workflow run "Upload CDN Assets"` which builds + uploads via GitHub Actions. **Symlink resolution:** the uploader resolves symlinks (e.g. `src/assets/archetypes/` → `src/pages/onboarding/assets/archetypes/`) before rsync so the remote host receives real files, not broken symlinks. |
 | `npm run check:package-size` | Audit mini-program bundle size against the 2MB WeChat limit; compressed measurement currently requires a system `zip`, so verify the reported mode and use WeChat tooling as authority |
 
 **Active copy patterns** (`config/index.ts`) — bundled assets:
@@ -181,12 +181,12 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 - `src/native-custom-tab-bar/` → `dist/custom-tab-bar/`
 
 *Onboarding subpackage:*
-- `src/subpackages/onboarding/assets/archetypes` → `dist/subpackages/onboarding/assets/archetypes`
+- `src/pages/onboarding/assets/archetypes` → `dist/pages/onboarding/assets/archetypes`
 
 *Pool-registration subpackage:*
-- `src/subpackages/pool-registration/assets/` → `dist/subpackages/pool-registration/assets/` (pool-specific hero backdrops; Batch C ceremony registry is CDN-backed)
-- `src/subpackages/pool-registration/assets/ceremony/lovart-pool-registration-hero-*.webp` → `dist/assets/pool-heroes/` (main-package local fallback that survives `clean:cdn-assets`; CDN primary via `assets/ceremony/`)
-- `src/subpackages/pool-registration/assets/pool-persona/` → `dist/subpackages/pool-registration/assets/pool-persona/` (persona snapshot card CDN fallbacks)
+- `src/pages/pool-registration/assets/` → `dist/pages/pool-registration/assets/` (pool-specific hero backdrops; Batch C ceremony registry is CDN-backed)
+- `src/pages/pool-registration/assets/ceremony/lovart-pool-registration-hero-*.webp` → `dist/assets/pool-heroes/` (main-package local fallback that survives `clean:cdn-assets`; CDN primary via `assets/ceremony/`)
+- `src/pages/pool-registration/assets/pool-persona/` → `dist/pages/pool-registration/assets/pool-persona/` (persona snapshot card CDN fallbacks)
 
 *Icon tiers (bundled as single high-resolution bare `.webp` files; no `@2x`/`@3x` variants; WeChat downscales automatically. `validate:icon-transparency` fails the build if any bundled `src/assets/icons/**/*.webp` contains `@`):*
 - `src/assets/icons/mood-icons` (~16KB raw)
@@ -283,7 +283,7 @@ The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons
 - `preloadOnboardingAssets` (`src/lib/utils/onboardingPreload.ts`) — app-launch staggered preloader for onboarding-critical raster assets. Tier 1 (immediate) warms intro/welcome art; Tier 2 (~400ms) warms test expressions, personality emoji icons, intent icons, milestone badge, and welcome-back hero; Tier 3 (~1200ms) warms a curated core of mascot sprite sheets on capable devices. Skips entirely on 2G/offline and defers Tier 3 on low-end devices (`benchmarkLevel <= 15`).
 
 **Archetype asset registry:**
-- `src/lib/utils/archetypeAssets.ts` is the canonical source for full-size archetype WebP/PNG URLs, the bundled slot-machine spritesheet path, and bulk-preload helpers (`getAllArchetypeAssetUrls`, `getArchetypeSpritesheetLocalPath`). The personality-test subpackage re-exports these from `subpackages/onboarding/personality-test/visuals.ts` for historical consumers.
+- `src/lib/utils/archetypeAssets.ts` is the canonical source for full-size archetype WebP/PNG URLs, the bundled slot-machine spritesheet path, and bulk-preload helpers (`getAllArchetypeAssetUrls`, `getArchetypeSpritesheetLocalPath`). The personality-test subpackage re-exports these from `pages/onboarding/personality-test/visuals.ts` for historical consumers.
 
 **When to use raw emoji intentionally** (do not wire through `JoyJoinIcon`):
 - Dynamic conversational copy (`ProfessionChatOverlay`, Xiaoyue bubbles)
@@ -317,7 +317,7 @@ The guard normalizes route formats (`pages/discover/index`, `/pages/discover/ind
 | **State sync** | `useCustomTabBarSync.ts` calls `Taro.getTabBar(page).syncState(...)` on every `useDidShow`. Native side debounces at 50ms with shallow diff to avoid icon flicker. `_confirmedSelected` tracks the authoritative selection for rollback. Offline state is detected via `wx.getNetworkType` / `wx.onNetworkStatusChange`; `syncState` skips updates while offline and replays the latest pending state on reconnect |
 | **Badges** | Notification counts mapped to `discover`, `activities`, `chat` categories. Badge updates use WeChat path syntax (`leftTabs[idx].badgeCount`) to avoid array reconstruction and icon reload flicker |
 | **Collapse API** | `setCollapsed(boolean)` toggles `data.collapsed`, returns `true` on change, and no-ops after `detached` or when already in target state. Writes collapse/expand announcements to `data.announcement` |
-| **Visibility** | `data.hidden` defaults to `true`; `setSelected()` reveals the bar only on tab pages. The `_shouldHideOnPage` helper normalizes routes and hides the bar on known non-tab routes. Top-level conversion flows such as `subpackages/pool-registration/index` can opt into the tab bar by adding their route to the allow-lists in `src/native-custom-tab-bar/index.js` and `src/hooks/navigation/useCustomTabBarSync.ts` and calling `useCustomTabBarSync()` from the page. Detail, checkout, and session pages (e.g. `event-detail`, `event-ticket-payment`, `matching-status`, `icebreaker-session`, `profile-linked`) remain hidden to preserve focus and avoid ambiguous tab highlights. |
+| **Visibility** | `data.hidden` defaults to `true`; `setSelected()` reveals the bar only on tab pages. The `_shouldHideOnPage` helper normalizes routes and hides the bar on known non-tab routes. Top-level conversion flows such as `pages/pool-registration/index` can opt into the tab bar by adding their route to the allow-lists in `src/native-custom-tab-bar/index.js` and `src/hooks/navigation/useCustomTabBarSync.ts` and calling `useCustomTabBarSync()` from the page. Detail, checkout, and session pages (e.g. `event-detail`, `event-ticket-payment`, `matching-status`, `icebreaker-session`, `profile-linked`) remain hidden to preserve focus and avoid ambiguous tab highlights. |
 | **Device tiering** | `wx.getSystemInfoSync().benchmarkLevel <= 15` or iOS devices without a `benchmarkLevel` value gate all animations (badge pop-in, pulse, fade-in, transitions) via `.joy-custom-tab-bar--low-end` |
 | **Swipe-back safety** | `pageLifetimes.show` resets `selected` to `_confirmedSelected` after 100ms, correcting any stuck optimistic state after swipe-back |
 
@@ -357,11 +357,11 @@ The guard normalizes route formats (`pages/discover/index`, `/pages/discover/ind
 
 1. **Tab pages** (`discover`, `events`, `connections`, `profile`, `center-hub`) live in the **main package**.
 2. **Heavy non-tab flows** are in subpackages:
-   - `subpackages/onboarding` — personality test, profile forms, review.
-   - `subpackages/pool-registration` — pool sign-up (free registration success uses CDN ceremony hero).
-   - `subpackages/matching-status` — match waiting / reveal.
-   - `subpackages/icebreaker-session` — in-event social icebreaker.
-   - `subpackages/profile-linked` — edit-profile, rewards, invite, terms (preloaded from `pages/profile`).
+   - `pages/onboarding` — personality test, profile forms, review.
+   - `pages/pool-registration` — pool sign-up (free registration success uses CDN ceremony hero).
+   - `pages/matching-status` — match waiting / reveal.
+   - `pages/icebreaker-session` — in-event social icebreaker.
+   - `pages/profile-linked` — edit-profile, rewards, invite, terms (preloaded from `pages/profile`).
 3. **Preload rules** are declared from likely entry pages (`index`, `login`, `event-detail`, `events`, `profile`) before reaching for independent subpackages.
 4. Any proposal for independent subpackages must include a self-contained bootstrap plan because `app.ts` and `AuthProvider` centralize app-level providers and auth setup.
 5. `useAuth` hydrates from `HYDRATE_AUTH_STORAGE_KEY` (`mj_auth_cache`) via `getStoredAuthUser()` so returning users skip the auth-loading gate on tab switches. `AuthProvider` triggers a background revalidation on mount and on app foreground.

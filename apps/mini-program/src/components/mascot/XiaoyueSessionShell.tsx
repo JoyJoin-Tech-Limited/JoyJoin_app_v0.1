@@ -17,7 +17,7 @@ import './XiaoyueSessionShell.scss'
  *   - the slim host band: 40rpx expression avatar + toneLine (+ optional hostHint line)
  *   - expression swap per phase (ICEBREAKER_XIAOYUE_EXPRESSION, 200ms opacity crossfade)
  *   - the host ⋯ menu TRIGGER semantics (host-only, all phases with valid actions;
- *     the ActionSheet itself lives in subpackages/icebreaker-session/index.tsx)
+ *     the ActionSheet itself lives in pages/icebreaker-session/index.tsx)
  *   - the calm-by-default sync-loss dot (band right side; page owns the toast)
  *   - the adaptive-suggestion OVERLAY card (floats over content, never pushes layout)
  *   - the merged quiet AIGC footer `内容由 AI 生成 · 反馈` (shell-level, sessionPack only)

@@ -125,7 +125,7 @@ function main() {
   const filtersUnusedFiles =
     privateProjectConfig?.setting?.ignoreDevUnusedFiles === true
   const subpackageRoots =
-    appConfig?.subPackages?.map((pkg) => pkg.root).filter(Boolean) ?? ['subpackages/onboarding']
+    appConfig?.subPackages?.map((pkg) => pkg.root).filter(Boolean) ?? ['pages/onboarding']
   const subpackageDirNames = subpackageRoots.map((root) => root.split('/').filter(Boolean)[1]).filter(Boolean)
 
   console.log('=== Package Size Breakdown ===\n')

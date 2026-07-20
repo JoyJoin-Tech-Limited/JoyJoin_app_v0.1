@@ -245,7 +245,7 @@ const result = await Promise.race([
 ])
 ```
 
-The timeout rejects, triggering the query's error path. Use `staleTime` (e.g., `30_000`) for queries that refetch on frequent mount/unmount to avoid unnecessary loading states. See `apps/mini-program/src/subpackages/onboarding/profile-review/index.tsx` for production use (tagline + interests queries, 2026-06-11).
+The timeout rejects, triggering the query's error path. Use `staleTime` (e.g., `30_000`) for queries that refetch on frequent mount/unmount to avoid unnecessary loading states. See `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` for production use (tagline + interests queries, 2026-06-11).
 
 ---
 
@@ -276,11 +276,11 @@ Server-driven `nextStep` values from `GET /api/auth/user` are mapped to mini-pro
 
 | `nextStep` | Route |
 |------------|-------|
-| `onboarding` | `/subpackages/onboarding/onboarding/index` |
-| `personality-test` | `/subpackages/onboarding/personality-test/index` |
-| `essential-data` | `/subpackages/onboarding/essential-data/index` |
-| `extended-data` | `/subpackages/onboarding/extended-data/index` |
-| `profile-review` | `/subpackages/onboarding/profile-review/index` |
+| `onboarding` | `/pages/onboarding/onboarding/index` |
+| `personality-test` | `/pages/onboarding/personality-test/index` |
+| `essential-data` | `/pages/onboarding/essential-data/index` |
+| `extended-data` | `/pages/onboarding/extended-data/index` |
+| `profile-review` | `/pages/onboarding/profile-review/index` |
 | `discover` / `guide` / default | `/pages/discover/index` |
 
 `navigateToMiniProgramNextStep()` in `src/lib/onboardingNavigation.ts` handles the switch between `switchTab` and `redirectTo` based on target type.
@@ -305,14 +305,14 @@ Bar styling: `color: #9CA3AF`, `selectedColor: #8B5CF6`, `backgroundColor: #ffff
 
 | Root | Pages |
 |------|-------|
-| `subpackages/onboarding` | `onboarding/index`, `personality-test/index`, `personality-test/results/index`, `essential-data/index`, `extended-data/index`, `profile-review/index` |
+| `pages/onboarding` | `onboarding/index`, `personality-test/index`, `personality-test/results/index`, `essential-data/index`, `extended-data/index`, `profile-review/index` |
 
 ### Preload Rules
 
 | Entry Page | Preloaded Package | Network |
 |------------|-------------------|---------|
-| `pages/index/index` | `subpackages/onboarding` | `all` |
-| `pages/login/index` | `subpackages/onboarding` | `all` |
+| `pages/index/index` | `pages/onboarding` | `all` |
+| `pages/login/index` | `pages/onboarding` | `all` |
 
 ---
 

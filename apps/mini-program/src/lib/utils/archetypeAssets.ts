@@ -10,13 +10,13 @@ export const ASSET_BASE_WEBP = cdnAsset('/assets/personality/archetypes')
 export const ASSET_BASE_PNG = cdnAsset('/assets/personality/archetypes')
 
 /** Onboarding subpackage local paths (used by subpackage pages). */
-export const ASSET_BASE_WEBP_LOCAL = '/subpackages/onboarding/assets/archetypes'
-export const ASSET_BASE_PNG_LOCAL = '/subpackages/onboarding/assets/archetypes'
+export const ASSET_BASE_WEBP_LOCAL = '/pages/onboarding/assets/archetypes'
+export const ASSET_BASE_PNG_LOCAL = '/pages/onboarding/assets/archetypes'
 
 /** Local spritesheet path — bundled in the preloaded onboarding subpackage.
  *  Use this for the slot animation so the spritesheet is guaranteed to match
  *  the local manifest (eliminates CDN staleness as a source of split-brain). */
-export const ASSET_BASE_SPRITESHEET_LOCAL = '/subpackages/onboarding/assets/archetypes'
+export const ASSET_BASE_SPRITESHEET_LOCAL = '/pages/onboarding/assets/archetypes'
 
 export const ARCHETYPE_ASSET_MAP: Record<string, ArchetypeAssetPaths> = {
   corgi:         { webp: `${ASSET_BASE_WEBP}/archetype-corgi.webp`,         png: `${ASSET_BASE_PNG}/archetype-corgi.png` },

@@ -17,7 +17,7 @@ describe('eventCardNavigation', () => {
   describe('buildEventCardUrl', () => {
     it('routes non-terminal registered events to matching-status', () => {
       const event = makeEvent({ registrationId: 'reg-1', displayStatus: 'registered' })
-      expect(buildEventCardUrl(event)).toBe('/subpackages/matching-status/index?registrationId=reg-1')
+      expect(buildEventCardUrl(event)).toBe('/pages/matching-status/index?registrationId=reg-1')
     })
 
     it('routes terminal events to event-detail even when registrationId exists', () => {
@@ -37,7 +37,7 @@ describe('eventCardNavigation', () => {
 
     it('encodes registrationId for safety', () => {
       const event = makeEvent({ registrationId: 'reg 1&2', displayStatus: 'registered' })
-      expect(buildEventCardUrl(event)).toBe('/subpackages/matching-status/index?registrationId=reg%201%262')
+      expect(buildEventCardUrl(event)).toBe('/pages/matching-status/index?registrationId=reg%201%262')
     })
 
     it('encodes event id for safety', () => {

@@ -32,7 +32,7 @@ import { cdnAsset } from './utils/cdnAssets'
 const BASE = '/assets/ceremony'
 
 export const CEREMONY_HEROES = {
-  /** C1 — `/subpackages/onboarding/welcome-back` */
+  /** C1 — `/pages/onboarding/welcome-back` */
   welcomeBack: cdnAsset(`${BASE}/welcome-back-hero-20260604-v1.webp`),
   /** C2 — `/pages/payment-verification` success state */
   eventPaidConfirmed: cdnAsset(`${BASE}/event-paid-confirmed-20260604-v1.webp`),
@@ -40,7 +40,7 @@ export const CEREMONY_HEROES = {
   inviteCoBranded: cdnAsset(`${BASE}/invite-co-branded-20260604-v1.webp`),
   /** C5 — `/pages/event-feedback` success state */
   eventFeedbackThanks: cdnAsset(`${BASE}/event-feedback-thanks-20260604-v1.webp`),
-  /** C6 — `/subpackages/icebreaker-session/phases/RecapPhaseView` end overlay */
+  /** C6 — `/pages/icebreaker-session/phases/RecapPhaseView` end overlay */
   seeYouNextTime: cdnAsset(`${BASE}/see-you-next-time-20260604-v1.webp`),
 
   /** v0.1 — `/pages/event-ticket-payment` ticket hero banner */
@@ -58,7 +58,7 @@ export const CEREMONY_HEROES = {
   },
   /** v0.1 — `/pages/event-ticket-payment` verifying state */
   paymentVerifying: cdnAsset(`${BASE}/payment-verifying-20260616-v1.webp`),
-  /** v0.1 — `/subpackages/pool-registration` free-registration success state */
+  /** v0.1 — `/pages/pool-registration` free-registration success state */
   poolRegistrationSuccess: cdnAsset(`${BASE}/pool-registration-success-20260616-v1.webp`),
   /** v0.1 — `/pages/blind-box-payment` Ritual V2 revelation backdrop */
   blindBoxReveal: cdnAsset(`${BASE}/blind-box-reveal-20260616-v1.webp`),

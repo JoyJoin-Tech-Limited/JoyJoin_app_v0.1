@@ -78,9 +78,9 @@ export default function EventDetailPage() {
     ? undefined
     : isPoolEvent
       ? matchedGroupId
-        ? `/subpackages/icebreaker-session/tier-selector/index?sessionId=${encodeURIComponent(matchedGroupId)}`
+        ? `/pages/icebreaker-session/tier-selector/index?sessionId=${encodeURIComponent(matchedGroupId)}`
         : undefined
-      : `/subpackages/icebreaker-session/index?eventId=${encodeURIComponent(event.id)}`
+      : `/pages/icebreaker-session/index?eventId=${encodeURIComponent(event.id)}`
 
   const handlePreviewSupportQr = () => {
     void Taro.previewImage({

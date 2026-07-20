@@ -42,7 +42,7 @@ export function replaceWithPoolGroupDetail(groupId: string): void {
 
 /** Canonical URL for the squad unboxing (blind-box reveal) page. */
 export function buildSquadUnboxingUrl(groupId: string): string {
-  return `/subpackages/squad-unboxing/index?groupId=${encodeURIComponent(groupId)}`
+  return `/pages/squad-unboxing/index?groupId=${encodeURIComponent(groupId)}`
 }
 
 export function openSquadUnboxing(groupId: string): void {

@@ -94,13 +94,13 @@ Assets copied by `vite-plugin-static-copy` in `config/index.ts`.
 ### Onboarding Subpackage
 | Asset | Path | Size | Used in |
 |-------|------|------|---------|
-| Archetype spritesheet | `subpackages/onboarding/assets/archetypes/` | ~20KB | Personality test slot animation |
+| Archetype spritesheet | `pages/onboarding/assets/archetypes/` | ~20KB | Personality test slot animation |
 
 ### Pool-registration subpackage
 | Asset | Path | Size | Used in |
 |-------|------|------|---------|
-| Persona snapshot art | `subpackages/pool-registration/assets/pool-persona/` | varies | `PersonaSnapshotCard` CDN fallback copies (base, cluster texture, paw nudge, particles) |
-| **Pool-registration hero v2** | `subpackages/pool-registration/assets/ceremony/` | ~40 KB WebP each | Offline subpackage fallback for `PoolRegistrationHero` dining/drinks hero art (CDN primary served from `assets/ceremony/`; main-package fallback copied to `assets/pool-heroes/`) |
+| Persona snapshot art | `pages/pool-registration/assets/pool-persona/` | varies | `PersonaSnapshotCard` CDN fallback copies (base, cluster texture, paw nudge, particles) |
+| **Pool-registration hero v2** | `pages/pool-registration/assets/ceremony/` | ~40 KB WebP each | Offline subpackage fallback for `PoolRegistrationHero` dining/drinks hero art (CDN primary served from `assets/ceremony/`; main-package fallback copied to `assets/pool-heroes/`) |
 
 ### Landing Page (critical first impression)
 | Asset | Path | Size | Used in |
@@ -137,7 +137,7 @@ These are **NOT** copied to `dist/assets/` by the build. They must exist on the 
 | **Celebration images** | `assets/lovart/icebreaker/celebrations/*.png` | ~770KB | Post-phase celebration overlays |
 | **Icebreaker tier cards** | `assets/lovart/icebreaker/tier-card-*.webp` | ~96KB | Tier-selector preset/custom card side-art |
 | **Lovart illustrations** | `assets/lovart/lovart-*.webp` | ~130KB | Empty/error states |
-| **Lovart pool persona / particles** | `assets/lovart/lovart-pool-persona-*`, `assets/lovart/lovart-particle-*` | — | Pool-registration persona snapshot card art and animated particles. Subpackage fallback copies are bundled under `subpackages/pool-registration/assets/pool-persona/`. |
+| **Lovart pool persona / particles** | `assets/lovart/lovart-pool-persona-*`, `assets/lovart/lovart-particle-*` | — | Pool-registration persona snapshot card art and animated particles. Subpackage fallback copies are bundled under `pages/pool-registration/assets/pool-persona/`. |
 | **Matching heroes** | `assets/matching/matching-*.webp` | ~157KB | Matching status page |
 | **Promo banners** | `assets/promo/banner-*.webp` | ~175KB | Source copies of promo banners for CDN upload. The active Discover hero banner is **CDN-only**; a gradient skeleton preserves first paint while loading. The previous `promo-local/` bundled copy was removed in 2026-07-06. |
 | **Rating faces** | `assets/icons/rating-faces/*.webp` | ~84KB | Event-feedback 5-step selector; emoji fallback when CDN fails. |

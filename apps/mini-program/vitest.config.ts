@@ -9,7 +9,7 @@ export default defineConfig({
     exclude: [
       'node_modules',
       'dist',
-      'src/subpackages/icebreaker-session/UndercoverWordPhaseView.tsx',
+      'src/pages/icebreaker-session/UndercoverWordPhaseView.tsx',
     ],
     setupFiles: ['./vitest.setup.ts'],
     coverage: {

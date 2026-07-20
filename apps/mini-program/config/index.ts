@@ -61,7 +61,7 @@ if (MINI_PROGRAM_NODE_ENV === 'production' && !MINI_PROGRAM_CDN_BASE_URL) {
 /**
  * WebGL avatar (three.js + avatar3d) chunk routing.
  *
- * The 3D spider avatar stack is only reachable from subpackages/profile-linked/*
+ * The 3D spider avatar stack is only reachable from pages/profile-linked/*
  * (my-image + qa3d — verified by import-cone grep 2026-07-18). Taro's
  * vite-runner forces every node_modules module into the root `vendors` chunk
  * (main package), which pushed the main package over WeChat's 2 MB zip
@@ -71,7 +71,7 @@ if (MINI_PROGRAM_NODE_ENV === 'production' && !MINI_PROGRAM_CDN_BASE_URL) {
  * allowed by WeChat; main → subpackage is forbidden, so nothing outside this
  * cone may import these modules — keep it that way when adding imports.
  */
-const AVATAR_3D_CHUNK_NAME = 'subpackages/profile-linked/three-avatar'
+const AVATAR_3D_CHUNK_NAME = 'pages/profile-linked/three-avatar'
 // Mirrored from @tarojs/helper dist/constants.js (Taro 4.2) — inlined so this
 // config does not rely on hoisted transitive deps.
 const REG_TARO_SCOPED_PACKAGE = /@tarojs[\\/][a-z]+/
@@ -184,8 +184,8 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         // Individual archetype images loaded via CDN (cdnAsset).
         // PNG moved to CDN (2026-05-22); canvas draws WebP primary with CDN PNG fallback.
         {
-          from: 'src/subpackages/onboarding/assets/archetypes',
-          to: 'dist/subpackages/onboarding/assets/archetypes',
+          from: 'src/pages/onboarding/assets/archetypes',
+          to: 'dist/pages/onboarding/assets/archetypes',
         },
         // Mood icons — bundled locally (~16KB total).
         {
@@ -290,8 +290,8 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         // Pool-registration ceremony heroes travel with the subpackage so
         // the main package stays under the 2 MB ceiling.
         {
-          from: 'src/subpackages/pool-registration/assets',
-          to: 'dist/subpackages/pool-registration/assets',
+          from: 'src/pages/pool-registration/assets',
+          to: 'dist/pages/pool-registration/assets',
         },
         // The three Alang prototype placeholders are byte-identical. Bundle one
         // shared fallback in the main package because Discover/Profile can render

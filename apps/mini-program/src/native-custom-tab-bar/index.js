@@ -26,7 +26,7 @@ Component({
   _announcementTimer: null,
   _routeToIndex: {
     'pages/discover/index': 0,
-    'subpackages/pool-registration/index': 0,
+    'pages/pool-registration/index': 0,
     'pages/events/index': 1,
     'pages/connections/index': 2,
     'pages/profile/index': 3,
@@ -103,7 +103,7 @@ Component({
       if (!this._routeToIndex) {
         this._routeToIndex = {
           'pages/discover/index': 0,
-          'subpackages/pool-registration/index': 0,
+          'pages/pool-registration/index': 0,
           'pages/events/index': 1,
           'pages/connections/index': 2,
           'pages/profile/index': 3,

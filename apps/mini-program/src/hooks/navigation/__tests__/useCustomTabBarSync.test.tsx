@@ -96,7 +96,7 @@ describe('useCustomTabBarSync', () => {
 
   it('highlights Discover for the pool-registration page', async () => {
     ;(Taro as any).getCurrentInstance.mockReturnValue({
-      page: { route: 'subpackages/pool-registration/index', getTabBar: mockGetTabBar },
+      page: { route: 'pages/pool-registration/index', getTabBar: mockGetTabBar },
     })
 
     renderHook(

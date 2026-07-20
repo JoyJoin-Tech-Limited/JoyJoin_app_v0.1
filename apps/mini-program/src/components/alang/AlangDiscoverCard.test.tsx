@@ -105,7 +105,7 @@ describe('AlangDiscoverCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '进入闪现' }))
     expect(mockHaptics).toHaveBeenCalledWith('light')
-    expect(Taro.navigateTo).toHaveBeenCalledWith({ url: '/subpackages/alang/event/index' })
+    expect(Taro.navigateTo).toHaveBeenCalledWith({ url: '/pages/alang/event/index' })
   })
 
   it('prioritizes an in-progress story over the first mission', () => {
@@ -131,7 +131,7 @@ describe('AlangDiscoverCard', () => {
     expect(screen.queryByText('一段新故事')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '继续这段故事' }))
     expect(Taro.navigateTo).toHaveBeenCalledWith({
-      url: '/subpackages/alang/event-detail/index?slug=active-story',
+      url: '/pages/alang/event-detail/index?slug=active-story',
     })
   })
 })

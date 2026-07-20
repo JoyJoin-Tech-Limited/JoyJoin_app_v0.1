@@ -9,7 +9,7 @@
  *
  * Output goes to two locations:
  *   - CDN: src/assets/personality/archetypes/ (canvas drawImage, cache priming)
- *   - Local bundle: src/subpackages/onboarding/assets/archetypes/ (instant load during onboarding)
+ *   - Local bundle: src/pages/onboarding/assets/archetypes/ (instant load during onboarding)
  *
  * Usage (from apps/mini-program):
  *   npm run optimize:archetypes
@@ -29,7 +29,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const INPUT_DIR = path.join(ROOT, 'assets-source/personality/archetypes')
 const CDN_OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
-const LOCAL_OUTPUT_DIR = path.join(ROOT, 'src/subpackages/onboarding/assets/archetypes')
+const LOCAL_OUTPUT_DIR = path.join(ROOT, 'src/pages/onboarding/assets/archetypes')
 
 const MAX_WIDTH = 750
 const WEBP_QUALITY = 85
