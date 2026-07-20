@@ -421,7 +421,218 @@ function buildFurGroup(palette: SpiderPersonaPalette): Group {
     const templeTuft = addMesh(group, `fur-temple-tuft-${side}`, new ConeGeometry(0.04, 0.072, 7), furMat, [0.51 * s, 3.71, -0.03])
     templeTuft.rotation.z = -1.2 * s
 
-    const shoulderTuft = addMesh(group, `fur-shoulder-tuft-${side}`, new C…2390 tokens truncated…)
+    const shoulderTuft = addMesh(group, `fur-shoulder-tuft-${side}`, new ConeGeometry(0.1, 0.26, 7), furMat, [0.5 * s, 2.79, -0.05])
+    shoulderTuft.rotation.z = -1.2 * s
+  }
+
+  return group
+}
+
+function buildArmsGroup(palette: SpiderPersonaPalette): Group {
+  const group = new Group()
+  group.name = SPIDER_MODEL_GROUP_NAMES.arms
+  const bodyMat = lambert(palette.body)
+  const furMat = lambert(palette.fur)
+
+  for (const side of ['left', 'right'] as const) {
+    const { shoulder, elbow, wrist } = getArmPose(side)
+    addJoint(group, `arm-${side}-shoulder`, shoulder, 0.15, bodyMat)
+    addSegment(group, `arm-${side}-upper`, shoulder, elbow, 0.145, 0.12, bodyMat)
+    addJoint(group, `arm-${side}-elbow`, elbow, 0.1, lambert(palette.spiderLegJoint))
+    addSegment(group, `arm-${side}-fore`, elbow, wrist, 0.12, 0.085, bodyMat)
+    addMesh(group, `hand-${side}`, new SphereGeometry(1, 12, 9), furMat, [wrist.x, wrist.y, wrist.z], [0.13, 0.17, 0.115])
+
+    // Three tapered fingers make the raised-hand / hand-on-hip pose readable
+    // even at the deliberately small pixel-art render resolution.
+    const fingerTips = side === 'left'
+      ? [
+          wrist.clone().add(new Vector3(-0.08, 0.18, 0.015)),
+          wrist.clone().add(new Vector3(0, 0.22, 0.045)),
+          wrist.clone().add(new Vector3(0.08, 0.17, 0.025)),
+        ]
+      : [
+          wrist.clone().add(new Vector3(-0.08, -0.15, 0.025)),
+          wrist.clone().add(new Vector3(0, -0.19, 0.045)),
+          wrist.clone().add(new Vector3(0.08, -0.14, 0.02)),
+        ]
+    fingerTips.forEach((tip, index) => {
+      const base = wrist.clone().add(new Vector3((index - 1) * 0.025, side === 'left' ? 0.045 : -0.035, 0.025))
+      addSegment(group, `hand-${side}-finger-${index}`, base, tip, 0.035, 0.014, furMat)
+    })
+  }
+
+  return group
+}
+
+function buildLegsGroup(palette: SpiderPersonaPalette): Group {
+  const group = new Group()
+  group.name = SPIDER_MODEL_GROUP_NAMES.legs
+  const bodyMat = lambert(palette.body)
+  const furMat = lambert(palette.fur)
+
+  for (const side of ['left', 'right'] as const) {
+    const s = side === 'left' ? -1 : 1
+    const hip = new Vector3(0.27 * s, 1.66, 0)
+    const knee = new Vector3((side === 'left' ? 0.41 : 0.29) * s, side === 'left' ? 0.9 : 0.84, side === 'left' ? 0.1 : -0.015)
+    const ankle = new Vector3((side === 'left' ? 0.38 : 0.48) * s, 0.2, side === 'left' ? 0.16 : 0.02)
+    addSegment(group, `leg-${side}`, hip, knee, 0.25, 0.195, bodyMat)
+    addJoint(group, `leg-${side}-knee`, knee, 0.155, lambert(palette.spiderLegJoint))
+    addSegment(group, `leg-${side}-lower`, knee, ankle, 0.185, 0.12, bodyMat)
+    const thighCenter = hip.clone().lerp(knee, 0.5)
+    const thighContour = addMesh(
+      group,
+      `leg-${side}-thigh-contour`,
+      new SphereGeometry(1, 12, 9),
+      bodyMat,
+      [thighCenter.x, thighCenter.y, thighCenter.z],
+      [0.235, 0.35, 0.2],
+    )
+    thighContour.rotation.z = side === 'left' ? -0.12 : 0.03
+    const calfCenter = knee.clone().lerp(ankle, 0.46)
+    const calfContour = addMesh(
+      group,
+      `leg-${side}-calf-contour`,
+      new SphereGeometry(1, 12, 9),
+      bodyMat,
+      [calfCenter.x, calfCenter.y, calfCenter.z],
+      [0.165, 0.29, 0.15],
+    )
+    calfContour.rotation.z = side === 'left' ? 0.08 : -0.08
+    // Long, narrow feet preserve the human silhouette from the reference.
+    const foot = addMesh(group, `foot-${side}`, new SphereGeometry(1, 12, 9), furMat, [ankle.x, 0.08, side === 'left' ? 0.26 : 0.15], [0.25, 0.14, 0.43])
+    foot.rotation.y = side === 'left' ? -0.08 : 0.1
+    foot.rotation.z = side === 'left' ? 0.06 : -0.04
+  }
+
+  return group
+}
+
+function buildSpiderLegsGroup(palette: SpiderPersonaPalette): Group {
+  const group = new Group()
+  group.name = SPIDER_MODEL_GROUP_NAMES.spiderLegs
+  const legMat = lambert(palette.spiderLeg)
+  const jointMat = lambert(palette.spiderLegJoint)
+  const clawMat = lambert(palette.spiderLegJoint)
+
+  // Three articulated segments give every back limb the hooked, organic arc
+  // visible in the reference instead of reading as two straight rods.
+  const legSpecs: Array<{
+    root: [number, number, number]
+    knee: [number, number, number]
+    ankle: [number, number, number]
+    tip: [number, number, number]
+  }> = [
+    { root: [0.43, 2.69, -0.35], knee: [0.79, 3.08, -0.52], ankle: [1.11, 2.84, -0.72], tip: [1.23, 2.43, -0.42] },
+    { root: [0.46, 2.4, -0.42], knee: [0.92, 2.58, -0.84], ankle: [1.23, 2.02, -1.02], tip: [1.22, 1.56, -0.72] },
+    { root: [0.43, 2.09, -0.38], knee: [0.93, 1.93, -0.64], ankle: [1.2, 1.25, -0.82], tip: [1.21, 0.79, -0.5] },
+  ]
+
+  for (const side of ['left', 'right'] as const) {
+    const s = side === 'left' ? -1 : 1
+    const xScale = side === 'left' ? 1.02 : 0.97
+    const yOffsets = side === 'left' ? [0.035, -0.025, 0.045] : [-0.025, 0.035, -0.02]
+    // Separate the paired limbs in depth so a true 90-degree profile still
+    // shows layered spider-leg silhouettes instead of three merged dark bars.
+    const zOffset = side === 'left' ? 0.08 : -0.08
+    legSpecs.forEach((spec, index) => {
+      const root = new Vector3(spec.root[0] * s, spec.root[1] + yOffsets[index] * 0.3, spec.root[2] + zOffset)
+      const knee = new Vector3(spec.knee[0] * s * xScale, spec.knee[1] + yOffsets[index], spec.knee[2] + zOffset)
+      const ankle = new Vector3(spec.ankle[0] * s * xScale, spec.ankle[1] + yOffsets[index] * 0.65, spec.ankle[2] + zOffset)
+      const tip = new Vector3(spec.tip[0] * s * xScale, spec.tip[1] + yOffsets[index] * 0.45, spec.tip[2] + zOffset)
+      addJoint(group, `spider-leg-${side}-${index}-root`, root, 0.12, jointMat)
+      addSegment(group, `spider-leg-${side}-${index}-femur`, root, knee, 0.13, 0.102, legMat)
+      addJoint(group, `spider-leg-${side}-${index}-knee`, knee, 0.11, jointMat)
+      addSegment(group, `spider-leg-${side}-${index}-tibia`, knee, ankle, 0.102, 0.076, legMat)
+      addJoint(group, `spider-leg-${side}-${index}-ankle`, ankle, 0.082, jointMat)
+      addSegment(group, `spider-leg-${side}-${index}-tarsus`, ankle, tip, 0.076, 0.039, legMat)
+      // Claw tip pointing down-out.
+      const claw = addMesh(
+        group,
+        `spider-leg-${side}-${index}-claw`,
+        new ConeGeometry(0.036, 0.12, 7),
+        clawMat,
+        [tip.x + 0.03 * s, tip.y - 0.06, tip.z],
+      )
+      claw.rotation.x = Math.PI
+      claw.rotation.z = 0.35 * s
+    })
+  }
+
+  return group
+}
+
+/**
+ * Permanent underwear: fitted vest + safety shorts + shoulder straps.
+ * This group is never hidden — taking off top/bottom must stay decent.
+ */
+function buildUnderwearGroup(palette: SpiderPersonaPalette): Group {
+  const group = new Group()
+  group.name = SPIDER_MODEL_GROUP_NAMES.underwear
+  const vestMat = lambert(palette.underwearVest)
+  const shortsMat = lambert(palette.underwearShorts)
+  const trimMat = lambert(palette.underwearTrim)
+
+  // Vest — torso shell, chest to waist, slightly proud of the body shell.
+  const vest = addMesh(
+    group,
+    'underwear-vest',
+    new SphereGeometry(1, 22, 16),
+    vestMat,
+    [TORSO_POSITION[0], TORSO_POSITION[1] + 0.04, TORSO_POSITION[2]],
+    [0.585, 0.665, 0.515],
+  )
+  vest.userData.permanent = true
+
+  // Shoulder straps.
+  for (const side of ['left', 'right'] as const) {
+    const s = side === 'left' ? -1 : 1
+    const strap = addMesh(
+      group,
+      `underwear-strap-${side}`,
+      new BoxGeometry(0.1, 0.35, 0.09),
+      vestMat,
+      [0.27 * s, 2.79, 0.42],
+    )
+    strap.rotation.z = -0.18 * s
+    strap.rotation.x = -0.12
+  }
+
+  addMesh(group, 'underwear-chest-panel', new SphereGeometry(1, 14, 10), trimMat, [0, 2.39, 0.44], [0.06, 0.075, 0.018])
+  addMesh(group, 'underwear-neckline', new TorusGeometry(0.21, 0.022, 6, 18), trimMat, [0, 2.77, 0.43], [1, 0.56, 1])
+  for (const side of ['left', 'right'] as const) {
+    const s = side === 'left' ? -1 : 1
+    const seam = addMesh(
+      group,
+      `underwear-side-seam-${side}`,
+      new BoxGeometry(0.025, 0.62, 0.022),
+      trimMat,
+      [0.37 * s, 2.25, 0.43],
+    )
+    seam.rotation.z = 0.12 * s
+  }
+
+  // Small woven-in spider mark: enough identity to feel intentional when all
+  // removable equipment is off, without competing with the chest accessory.
+  const emblemY = 2.32
+  addMesh(group, 'underwear-emblem-body', new SphereGeometry(0.044, 10, 8), trimMat, [0, emblemY, 0.47], [1, 1.3, 0.42])
+  addMesh(group, 'underwear-emblem-head', new SphereGeometry(0.028, 9, 7), trimMat, [0, emblemY + 0.07, 0.47])
+  for (let index = 0; index < 8; index += 1) {
+    const s = index < 4 ? -1 : 1
+    const row = index % 4
+    const from = new Vector3(0.028 * s, emblemY + 0.035 - row * 0.023, 0.47)
+    const to = new Vector3(0.082 * s, emblemY + 0.058 - row * 0.038, 0.47)
+    addSegment(group, `underwear-emblem-leg-${index}`, from, to, 0.007, 0.004, trimMat)
+  }
+
+  // Safety shorts — hip shell, waist to mid-thigh.
+  const shorts = addMesh(
+    group,
+    'underwear-shorts',
+    new SphereGeometry(1, 20, 14),
+    shortsMat,
+    HIPS_POSITION,
+    [0.55, 0.31, 0.49],
+  )
   shorts.userData.permanent = true
   for (const side of ['left', 'right'] as const) {
     const s = side === 'left' ? -1 : 1
