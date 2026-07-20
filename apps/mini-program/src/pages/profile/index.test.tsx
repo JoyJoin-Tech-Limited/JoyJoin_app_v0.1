@@ -25,6 +25,19 @@ vi.mock('@tarojs/taro', () => ({
     reLaunch: vi.fn(),
   },
   useDidShow: vi.fn(),
+  useDidHide: vi.fn(),
+}))
+
+vi.mock('../../lib/analytics/profileAnalytics', () => ({
+  profileAnalytics: { track: vi.fn() },
+}))
+
+vi.mock('../../lib/utils/accessibility', () => ({
+  getSystemReducedMotion: () => true,
+}))
+
+vi.mock('../../lib/utils/frameBudget', () => ({
+  getDegradationTier: () => Promise.resolve('minimal'),
 }))
 
 vi.mock('@tarojs/components', () => ({

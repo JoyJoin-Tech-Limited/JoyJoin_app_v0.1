@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "renderer": "hd2d-identity-stage",
+  "artStatus": "approved",
+  "approvedAt": "2026-07-20T23:50:00+08:00",
+  "approvedBy": "PM / brand reviewer",
+  "notes": "HD-2D Identity Stage (sprint hd2d-identity-stage). One shared warm-Shenzhen scene for all 12 archetypes. Depth-of-field blur is pre-baked into farBg; no runtime filter. Avatar stands on the mid-bg plaza ground in the lower-right quadrant; bottom-left is reserved for the partner-entry UI panel.",
+  "perLayerMaxBytes": 204800,
+  "totalMaxBytes": 819200,
+  "layers": {
+    "farBg": {
+      "path": "assets/profile-pixel/v2/stage/far-bg-v1.webp",
+      "bytes": 48116,
+      "dimensions": { "width": 960, "height": 768 },
+      "tone": "cool-purple-distant",
+      "role": "Distant Shenzhen skyline plane with pre-baked depth-of-field blur; the only plane allowed to carry cold purple."
+    },
+    "midBg": {
+      "path": "assets/profile-pixel/v2/stage/mid-bg-v1.webp",
+      "bytes": 92190,
+      "dimensions": { "width": 960, "height": 768 },
+      "tone": "warm-gold-sunset-pink",
+      "role": "Mid street/plaza plane with warm gold/sunset-pink light sources ($color-landed-gold family); provides the ground the avatar stands on."
+    }
+  }
+}

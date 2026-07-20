@@ -9,6 +9,7 @@ import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useRef, useState } from 'react'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import IdentityStageScene from '../../components/profile/IdentityStageScene'
 import PixelAvatarComposite from '../../components/profile/PixelAvatarComposite'
 import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
@@ -322,161 +323,169 @@ export default function ProfilePage() {
       <ScrollView className='profile-page__scroll' scrollY enhanced showScrollbar={false}>
         {profileV17Enabled ? (
           <View className='profile-page__identity-stage profile-page__identity-stage--entered' data-testid='profile-v4'>
-          <View className='profile-page__identity-glow' aria-hidden='true' />
+            <IdentityStageScene absoluteAvatar={false}>
+              {/* Readable glass card for the identity copy (top-left) */}
+              <View className='profile-page__identity-copy-card'>
+                <View className='profile-page__identity-copy'>
+                  {!pixelAvatarEnabled && (
+                    <View className='profile-page__identity-avatar'>
+                      <ArchetypeHead
+                        archetype={archetype}
+                        size={112}
+                        fallbackText={displayName}
+                      />
+                    </View>
+                  )}
+                  <View className='profile-page__identity-text'>
+                    <Text className='profile-page__identity-name'>{displayName}</Text>
+                    <View className='profile-page__identity-tags'>
+                      {archetypeName && (
+                        <Text className='profile-page__identity-tag profile-page__identity-tag--primary'>
+                          {archetypeName}
+                        </Text>
+                      )}
+                      {lifeStage && (
+                        <Text className='profile-page__identity-tag'>{lifeStage}</Text>
+                      )}
+                      {genderLabel && (
+                        <Text className='profile-page__identity-tag profile-page__identity-tag--blue'>
+                          {genderLabel}
+                        </Text>
+                      )}
+                    </View>
+                    {bio && <Text className='profile-page__identity-bio'>{bio}</Text>}
+                  </View>
+                </View>
+              </View>
 
-          <View className='profile-page__identity-copy'>
-            {!pixelAvatarEnabled && (
-              <View className='profile-page__identity-avatar'>
-                <ArchetypeHead
+              {/* Avatar anchored on the plaza with a warm platform shadow */}
+              <View className='profile-page__partner-visual'>
+                <View className='profile-page__partner-platform' aria-hidden='true' />
+                <ProfilePartnerVisual
+                  key={archetype ?? 'profile-partner-fallback'}
                   archetype={archetype}
-                  size={112}
-                  fallbackText={displayName}
+                  archetypeName={archetypeName}
+                  displayName={displayName}
+                  pixelEnabled={pixelAvatarEnabled}
+                  equipmentState={equipmentState}
+                  outfit={outfit}
+                  itemsById={equipmentItemsById}
+                  onRetryEquipment={() => { void equipmentQuery.refetch() }}
                 />
               </View>
-            )}
-            <View className='profile-page__identity-text'>
-              <Text className='profile-page__identity-name'>{displayName}</Text>
-              <View className='profile-page__identity-tags'>
-                {archetypeName && (
-                  <Text className='profile-page__identity-tag profile-page__identity-tag--primary'>
-                    {archetypeName}
-                  </Text>
-                )}
-                {lifeStage && (
-                  <Text className='profile-page__identity-tag'>{lifeStage}</Text>
-                )}
-                {genderLabel && (
-                  <Text className='profile-page__identity-tag profile-page__identity-tag--blue'>
-                    {genderLabel}
-                  </Text>
-                )}
-              </View>
-              {bio && <Text className='profile-page__identity-bio'>{bio}</Text>}
-            </View>
-          </View>
 
-          <View className='profile-page__partner-visual'>
-            <ProfilePartnerVisual
-              key={archetype ?? 'profile-partner-fallback'}
-              archetype={archetype}
-              archetypeName={archetypeName}
-              displayName={displayName}
-              pixelEnabled={pixelAvatarEnabled}
-              equipmentState={equipmentState}
-              outfit={outfit}
-              itemsById={equipmentItemsById}
-              onRetryEquipment={() => { void equipmentQuery.refetch() }}
-            />
-          </View>
-
-          <View
-            className='profile-page__growth'
-            aria-label={gamificationQuery.isLoading
-              ? '潮流值正在加载'
-              : `潮流值 ${growth.current}，${visibleGrowthProgress}%`}
-          >
-            <View className='profile-page__growth-heading'>
-              <Text className='profile-page__growth-label'>潮流值</Text>
-              <Text className='profile-page__growth-value'>
-                {gamificationQuery.isLoading ? '—' : growth.current}
-              </Text>
-              {!gamificationQuery.isLoading && growth.nextTarget !== null && (
-                <Text className='profile-page__growth-target'>/{growth.nextTarget}</Text>
-              )}
-            </View>
-            <View className='profile-page__growth-progress'>
-              <View
-                className='profile-page__growth-progress-bar'
-                style={{
-                  transform: `scaleX(${visibleGrowthProgress / 100})`,
-                }}
-              />
-            </View>
-            <Text className='profile-page__growth-level'>
-              {gamificationQuery.isError ? '成长记录稍后会自动刷新' : growthLevelLabel}
-            </Text>
-          </View>
-
-          {pixelAvatarEnabled && (
-            <View
-              className='profile-page__partner-entry'
-              hoverClass='profile-page__partner-entry--pressed'
-              onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.myImage }) }}
-              role='button'
-              aria-label='进入我的形象与装备'
-              data-testid='profile-partner-equipment-entry'
-            >
-              <View
-                className='profile-page__equipment-preview'
-                aria-label={equipmentState === 'ready'
-                  ? `当前装备 ${equippedCount} 件`
-                  : equipmentState === 'error'
-                    ? '当前装备同步失败'
-                    : '当前装备正在同步'}
-              >
-                <Text className='profile-page__equipment-label'>当前装备</Text>
-                {equipmentState === 'ready' && equipmentQuery.isError && (
-                  <Text className='profile-page__equipment-cache-badge'>上次同步</Text>
-                )}
-                {equipmentState === 'ready' ? (
-                  <View className='profile-page__equipment-slots'>
-                    {(['top', 'bottom', 'shoes', 'accessory'] as const).map((slot) => {
-                      const itemId = outfit?.[`${slot}ItemId`]
-                      const item = itemId ? equipmentItemsById.get(itemId) : undefined
-                      const artworkUrl = item && archetype
-                        ? getPixelEquipmentLayerUrl(item.assetKey, archetype)
-                        : null
-                      const artworkFailed = item
-                        ? failedEquipmentPreviewItemIds.has(item.id)
-                        : false
-                      return (
-                        <View
-                          key={slot}
-                          className={`profile-page__equipment-slot${item ? ' profile-page__equipment-slot--filled' : ''}`}
-                          aria-label={item ? item.name : `空${slot}装备槽`}
-                        >
-                          {item && artworkUrl && !artworkFailed
-                            ? (
-                              <Image
-                                className='profile-page__equipment-slot-art'
-                                src={artworkUrl}
-                                mode='aspectFit'
-                                lazyLoad
-                                aria-hidden='true'
-                                onError={() => {
-                                  setFailedEquipmentPreviewItemIds((current) => {
-                                    if (current.has(item.id)) return current
-                                    const next = new Set(current)
-                                    next.add(item.id)
-                                    return next
-                                  })
-                                }}
-                              />
-                            )
-                            : item
-                              ? <Text className='profile-page__equipment-slot-glyph'>{item.name.slice(0, 1)}</Text>
-                              : <View className='profile-page__equipment-slot-mark' />}
-                        </View>
-                      )
-                    })}
+              {/* Readable glass card for growth stats (bottom-left) */}
+              <View className='profile-page__growth-card'>
+                <View
+                  className='profile-page__growth'
+                  aria-label={gamificationQuery.isLoading
+                    ? '潮流值正在加载'
+                    : `潮流值 ${growth.current}，${visibleGrowthProgress}%`}
+                >
+                  <View className='profile-page__growth-heading'>
+                    <Text className='profile-page__growth-label'>潮流值</Text>
+                    <Text className='profile-page__growth-value'>
+                      {gamificationQuery.isLoading ? '—' : growth.current}
+                    </Text>
+                    {!gamificationQuery.isLoading && growth.nextTarget !== null && (
+                      <Text className='profile-page__growth-target'>/{growth.nextTarget}</Text>
+                    )}
                   </View>
-                ) : (
-                  <Text className={`profile-page__equipment-state-copy profile-page__equipment-state-copy--${equipmentState}`}>
-                    {equipmentState === 'error' ? '待重试' : '同步中…'}
+                  <View className='profile-page__growth-progress'>
+                    <View
+                      className='profile-page__growth-progress-bar'
+                      style={{
+                        transform: `scaleX(${visibleGrowthProgress / 100})`,
+                      }}
+                    />
+                  </View>
+                  <Text className='profile-page__growth-level'>
+                    {gamificationQuery.isError ? '成长记录稍后会自动刷新' : growthLevelLabel}
                   </Text>
-                )}
+                </View>
               </View>
-              <View className='profile-page__partner-entry-action'>
-                <Text className='profile-page__partner-entry-count'>
-                  {equipmentState === 'ready'
-                    ? `${equipmentInventory.length} 件`
-                    : equipmentState === 'error' ? '待重试' : '—'}
-                </Text>
-                <Text className='profile-page__partner-entry-action-text'>我的形象</Text>
-                <View className='profile-page__partner-entry-chevron' />
-              </View>
-            </View>
-          )}
+
+              {pixelAvatarEnabled && (
+                <View
+                  className='profile-page__partner-entry'
+                  hoverClass='profile-page__partner-entry--pressed'
+                  onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.myImage }) }}
+                  role='button'
+                  aria-label='进入我的形象与装备'
+                  data-testid='profile-partner-equipment-entry'
+                >
+                  <View
+                    className='profile-page__equipment-preview'
+                    aria-label={equipmentState === 'ready'
+                      ? `当前装备 ${equippedCount} 件`
+                      : equipmentState === 'error'
+                        ? '当前装备同步失败'
+                        : '当前装备正在同步'}
+                  >
+                    <Text className='profile-page__equipment-label'>当前装备</Text>
+                    {equipmentState === 'ready' && equipmentQuery.isError && (
+                      <Text className='profile-page__equipment-cache-badge'>上次同步</Text>
+                    )}
+                    {equipmentState === 'ready' ? (
+                      <View className='profile-page__equipment-slots'>
+                        {(['top', 'bottom', 'shoes', 'accessory'] as const).map((slot) => {
+                          const itemId = outfit?.[`${slot}ItemId`]
+                          const item = itemId ? equipmentItemsById.get(itemId) : undefined
+                          const artworkUrl = item && archetype
+                            ? getPixelEquipmentLayerUrl(item.assetKey, archetype)
+                            : null
+                          const artworkFailed = item
+                            ? failedEquipmentPreviewItemIds.has(item.id)
+                            : false
+                          return (
+                            <View
+                              key={slot}
+                              className={`profile-page__equipment-slot${item ? ' profile-page__equipment-slot--filled' : ''}`}
+                              aria-label={item ? item.name : `空${slot}装备槽`}
+                            >
+                              {item && artworkUrl && !artworkFailed
+                                ? (
+                                  <Image
+                                    className='profile-page__equipment-slot-art'
+                                    src={artworkUrl}
+                                    mode='aspectFit'
+                                    lazyLoad
+                                    aria-hidden='true'
+                                    onError={() => {
+                                      setFailedEquipmentPreviewItemIds((current) => {
+                                        if (current.has(item.id)) return current
+                                        const next = new Set(current)
+                                        next.add(item.id)
+                                        return next
+                                      })
+                                    }}
+                                  />
+                                )
+                                : item
+                                  ? <Text className='profile-page__equipment-slot-glyph'>{item.name.slice(0, 1)}</Text>
+                                  : <View className='profile-page__equipment-slot-mark' />}
+                            </View>
+                          )
+                        })}
+                      </View>
+                    ) : (
+                      <Text className={`profile-page__equipment-state-copy profile-page__equipment-state-copy--${equipmentState}`}>
+                        {equipmentState === 'error' ? '待重试' : '同步中…'}
+                      </Text>
+                    )}
+                  </View>
+                  <View className='profile-page__partner-entry-action'>
+                    <Text className='profile-page__partner-entry-count'>
+                      {equipmentState === 'ready'
+                        ? `${equipmentInventory.length} 件`
+                        : equipmentState === 'error' ? '待重试' : '—'}
+                    </Text>
+                    <Text className='profile-page__partner-entry-action-text'>我的形象</Text>
+                    <View className='profile-page__partner-entry-chevron' />
+                  </View>
+                </View>
+              )}
+            </IdentityStageScene>
           </View>
         ) : (
           <View

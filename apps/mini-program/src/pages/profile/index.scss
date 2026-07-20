@@ -380,10 +380,6 @@
     overflow: hidden;
     box-sizing: border-box;
     color: var(--profile-text-primary);
-    background:
-      radial-gradient(circle at 88% 18%, rgba(255, 214, 165, 0.28), transparent 34%),
-      radial-gradient(circle at 14% 90%, rgba(139, 92, 246, 0.09), transparent 36%),
-      linear-gradient(155deg, $color-bg-clean 0%, $color-bg-tint-cream 48%, $color-bg-tint-purple 100%);
     border: 2rpx solid rgba($color-primary, 0.1);
     box-shadow: 0 16rpx 38rpx rgba(45, 49, 66, 0.09);
     opacity: 0;
@@ -391,43 +387,35 @@
     transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
       transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      opacity: 0.24;
-      background-image: radial-gradient(rgba($color-primary, 0.2) 1rpx, transparent 1rpx);
-      background-size: 28rpx 28rpx;
-      mask-image: linear-gradient(to bottom, transparent 0%, black 28%, black 74%, transparent 100%);
-    }
-
-    &::after {
-      content: '';
-      position: absolute;
-      left: 42%;
-      right: 5%;
-      bottom: 126rpx;
-      height: 70rpx;
-      border: 2rpx solid rgba($color-primary, 0.12);
-      border-radius: 50%;
-      background: rgba($color-primary, 0.035);
-      box-shadow: 0 12rpx 30rpx rgba(45, 49, 66, 0.06);
-    }
-
     &--entered {
       opacity: 1;
       transform: translateY(0);
     }
   }
 
-  &__identity-glow {
+  // Readable warm-glass containers so text never sits bare on the HD-2D scene.
+  &__identity-copy-card,
+  &__growth-card {
     position: absolute;
-    right: 72rpx;
-    bottom: 120rpx;
-    width: 280rpx;
-    height: 76rpx;
-    border-radius: 50%;
-    background: radial-gradient(ellipse, rgba(255, 201, 130, 0.22) 0%, rgba(255, 201, 130, 0) 72%);
+    z-index: 4;
+    border-radius: 24rpx;
+    background: rgba($color-surface, 0.92);
+    border: 1rpx solid rgba($color-surface, 0.4);
+    box-shadow: 0 12rpx 32rpx rgba(45, 49, 66, 0.12),
+      0 2rpx 8rpx rgba(45, 49, 66, 0.06);
+    box-sizing: border-box;
+  }
+
+  &__identity-copy-card {
+    top: 24rpx;
+    left: 24rpx;
+    padding: 20rpx 24rpx;
+  }
+
+  &__growth-card {
+    left: 24rpx;
+    bottom: 142rpx;
+    padding: 16rpx 20rpx;
   }
 
   &__settings {
@@ -462,14 +450,10 @@
   }
 
   &__identity-copy {
-    position: absolute;
-    z-index: 4;
-    top: 34rpx;
-    left: 28rpx;
+    position: relative;
     display: flex;
     align-items: center;
     gap: $spacing-md;
-    width: 392rpx;
     min-width: 0;
   }
 
@@ -575,6 +559,19 @@
     display: flex;
     align-items: flex-end;
     justify-content: center;
+  }
+
+  // Warm plaza platform grounding the avatar so it does not float on the scene.
+  &__partner-platform {
+    position: absolute;
+    left: 50%;
+    bottom: 16rpx;
+    width: 260rpx;
+    height: 56rpx;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(255, 201, 130, 0.38) 0%, rgba(255, 201, 130, 0) 74%);
+    box-shadow: 0 10rpx 26rpx rgba(45, 49, 66, 0.16);
   }
 
   &__partner-image {
@@ -684,10 +681,7 @@
   }
 
   &__growth {
-    position: absolute;
-    z-index: 4;
-    left: 30rpx;
-    bottom: 142rpx;
+    position: relative;
     width: 296rpx;
   }
 
