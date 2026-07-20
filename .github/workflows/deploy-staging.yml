@@ -83,6 +83,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Resolve deployment client host fingerprint
+        id: cvm-host-key
+        uses: ./.github/actions/resolve-cvm-host-fingerprint
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+
+      # Fail fast before the image transfer if the Go SSH client cannot verify
+      # the live key resolved through the pinned ED25519 connection above.
+      - name: Verify deployment SSH client
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
+          timeout: 60s
+          command_timeout: 1m
+          script: printf 'deployment-ssh-ready\n'
+
       - name: Restore prebuilt staging images
         uses: actions/download-artifact@v4.3.0
         with:
@@ -637,7 +660,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
-          fingerprint: SHA256:sEwQhJlNg1wGXn0Xd9iNPmpq6NPGi/Y/WH9bx599UrM
+          fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
           # Allow a recovering CVM more time to complete the SSH banner while
           # bounding the now build-free remote switch.
           timeout: 120s

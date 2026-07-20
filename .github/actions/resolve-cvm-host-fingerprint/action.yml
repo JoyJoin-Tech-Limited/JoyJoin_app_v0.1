@@ -1,0 +1,143 @@
+name: Resolve JoyJoin CVM host fingerprint
+description: Resolve the Go SSH client's preferred CVM host key through the pinned ED25519 trust channel.
+
+inputs:
+  host:
+    description: CVM IPv4 address
+    required: true
+  username:
+    description: CVM SSH username
+    required: true
+  private-key:
+    description: SSH private key
+    required: true
+  passphrase:
+    description: Optional SSH private-key passphrase
+    required: false
+
+outputs:
+  fingerprint:
+    description: SHA256 fingerprint for the CVM ECDSA P-256 host key
+    value: ${{ steps.resolve.outputs.fingerprint }}
+
+runs:
+  using: composite
+  steps:
+    - id: resolve
+      shell: bash
+      env:
+        CVM_HOST: ${{ inputs.host }}
+        CVM_USER: ${{ inputs.username }}
+        CVM_PRIVATE_KEY: ${{ inputs.private-key }}
+        CVM_KEY_PASSPHRASE: ${{ inputs.passphrase }}
+      run: |
+        set -euo pipefail
+
+        readonly PINNED_CVM_HOST='1.12.243.104'
+        readonly PINNED_ED25519_KEY='AAAAC3NzaC1lZDI1NTE5AAAAINa6ZQ6p9Lcy/G4jco+PbBR0vhdAd9Upg9HIkN8+M/hf'
+        SSH_KEY_FILE=$(mktemp)
+        KNOWN_HOSTS_FILE=$(mktemp)
+        SSH_PASSPHRASE_FILE=""
+        SSH_ASKPASS_FILE=""
+
+        cleanup() {
+          local cleanup_status=$?
+          trap - EXIT
+          set +e
+          rm -f -- "$SSH_KEY_FILE" "$KNOWN_HOSTS_FILE" \
+            "$SSH_PASSPHRASE_FILE" "$SSH_ASKPASS_FILE"
+          if [ -n "${SSH_AGENT_PID:-}" ]; then
+            ssh-agent -k >/dev/null 2>&1 || true
+          fi
+          exit "$cleanup_status"
+        }
+        trap cleanup EXIT
+
+        if [ "$CVM_HOST" != "$PINNED_CVM_HOST" ]; then
+          echo "::error::SERVER_IP does not match the pinned JoyJoin CVM host"
+          exit 1
+        fi
+        if [[ ! "$CVM_USER" =~ ^[A-Za-z0-9._-]+$ ]]; then
+          echo "::error::SERVER_USER contains unsupported SSH characters"
+          exit 1
+        fi
+
+        printf '%s\n' "$CVM_PRIVATE_KEY" > "$SSH_KEY_FILE"
+        chmod 600 "$SSH_KEY_FILE"
+        printf '%s ssh-ed25519 %s\n' \
+          "$PINNED_CVM_HOST" "$PINNED_ED25519_KEY" > "$KNOWN_HOSTS_FILE"
+        chmod 600 "$KNOWN_HOSTS_FILE"
+
+        if [ -n "${CVM_KEY_PASSPHRASE:-}" ]; then
+          eval "$(ssh-agent -s)"
+          SSH_PASSPHRASE_FILE=$(mktemp)
+          SSH_ASKPASS_FILE=$(mktemp)
+          printf '%s\n' "$CVM_KEY_PASSPHRASE" > "$SSH_PASSPHRASE_FILE"
+          chmod 600 "$SSH_PASSPHRASE_FILE"
+          printf '%s\n' '#!/bin/sh' 'cat "$SSH_PASSPHRASE_FILE"' > "$SSH_ASKPASS_FILE"
+          chmod 700 "$SSH_ASKPASS_FILE"
+          export SSH_PASSPHRASE_FILE
+          DISPLAY=dummy SSH_ASKPASS="$SSH_ASKPASS_FILE" SSH_ASKPASS_REQUIRE=force \
+            ssh-add "$SSH_KEY_FILE" </dev/null
+        fi
+
+        SSH_OPTIONS=(
+          -i "$SSH_KEY_FILE"
+          -o BatchMode=yes
+          -o IdentitiesOnly=yes
+          -o ConnectTimeout=20
+          -o ConnectionAttempts=1
+          -o ServerAliveInterval=15
+          -o ServerAliveCountMax=2
+          -o HostKeyAlgorithms=ssh-ed25519
+          -o StrictHostKeyChecking=yes
+          -o "UserKnownHostsFile=$KNOWN_HOSTS_FILE"
+          -o LogLevel=ERROR
+        )
+
+        resolved_fingerprint=""
+        for attempt in 1 2 3; do
+          if resolved_fingerprint="$(
+            timeout --signal=TERM --kill-after=10s 45s \
+              ssh "${SSH_OPTIONS[@]}" "$CVM_USER@$CVM_HOST" 'bash -se' <<'REMOTE_RESOLVE'
+        set -euo pipefail
+        if ! command -v ssh-keygen >/dev/null 2>&1; then
+          echo "ssh-keygen is required on the CVM" >&2
+          exit 1
+        fi
+        live_ecdsa_key=""
+        if command -v ssh-keyscan >/dev/null 2>&1; then
+          live_ecdsa_key="$(
+            ssh-keyscan -T 5 -t ecdsa 127.0.0.1 2>/dev/null | head -n 1 || true
+          )"
+        fi
+        if [ -n "$live_ecdsa_key" ]; then
+          printf '%s\n' "$live_ecdsa_key" | \
+            ssh-keygen -E sha256 -lf - | awk 'NR == 1 { print $2 }'
+        elif [ -r /etc/ssh/ssh_host_ecdsa_key.pub ]; then
+          ssh-keygen -E sha256 -lf /etc/ssh/ssh_host_ecdsa_key.pub | \
+            awk 'NR == 1 { print $2 }'
+        else
+          echo "Could not read the CVM ECDSA host key" >&2
+          exit 1
+        fi
+        REMOTE_RESOLVE
+          )"; then
+            break
+          fi
+
+          resolved_fingerprint=""
+          if [ "$attempt" -lt 3 ]; then
+            delay=$((attempt * 10))
+            echo "::warning::Pinned CVM identity check failed during attempt ${attempt}/3; retrying in ${delay}s"
+            sleep "$delay"
+          fi
+        done
+
+        if [[ ! "$resolved_fingerprint" =~ ^SHA256:[A-Za-z0-9+/]{43}$ ]]; then
+          echo "::error::Could not resolve a valid live ECDSA host-key fingerprint through the pinned ED25519 channel"
+          exit 1
+        fi
+
+        echo "fingerprint=$resolved_fingerprint" >> "$GITHUB_OUTPUT"
+        echo "Resolved the deployment client's host key through the pinned ED25519 trust channel."

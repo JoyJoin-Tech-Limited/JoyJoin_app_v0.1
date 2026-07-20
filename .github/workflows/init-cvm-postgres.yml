@@ -18,6 +18,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Resolve deployment client host fingerprint
+        id: cvm-host-key
+        uses: ./.github/actions/resolve-cvm-host-fingerprint
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+
       - name: Ensure Postgres running + create tables
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -27,6 +36,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
           envs: POSTGRES_PASSWORD
           script: |
             set -euo pipefail

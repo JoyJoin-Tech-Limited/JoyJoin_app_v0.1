@@ -18,6 +18,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Resolve deployment client host fingerprint
+        id: cvm-host-key
+        uses: ./.github/actions/resolve-cvm-host-fingerprint
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -35,6 +44,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
           script: |
             sudo mkdir -p /static/assets
             sudo chmod 755 /static /static/assets
@@ -57,6 +67,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
           script: |
             echo "📋 Assets uploaded: $(find /static/assets/ -type f | wc -l) files"
             echo "   Size: $(du -sh /static/assets/ | cut -f1)"
