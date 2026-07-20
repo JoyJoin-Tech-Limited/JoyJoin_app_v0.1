@@ -11,14 +11,15 @@ set -euo pipefail
 : "${WECHAT_SECRET:?WECHAT_SECRET GitHub secret is required}"
 
 soft_cleanup() {
-  echo "🧹 Soft cleanup (keep 7 days)..."
-  docker builder prune -af --filter "until=168h" || true
-  docker system prune -af --filter "until=168h" || true
+  echo "🧹 Soft cleanup: prune unused images/builder cache..."
+  docker builder prune -af || true
+  docker image prune -af || true
 }
 
 hard_cleanup() {
-  echo "🔥 Hard cleanup (aggressive, no volumes)..."
+  echo "🔥 Hard cleanup (aggressive image/cache prune, volumes preserved)..."
   docker builder prune -af || true
+  docker image prune -af || true
   docker system prune -af || true
 }
 
@@ -49,9 +50,13 @@ retry_command() {
 disk_guard() {
   local usep
   usep=$(df -P / | awk 'NR==2{gsub("%","",$5); print $5}')
-  if [ "${usep}" -ge 85 ]; then
+  if [ "${usep}" -ge 70 ]; then
     echo "⚠️ Disk usage is ${usep}%. Cleanup before deploy..."
     soft_cleanup
+  fi
+  if [ "${usep}" -ge 95 ]; then
+    echo "❌ Disk usage is ${usep}%. Refusing to deploy — disk is critically full."
+    exit 1
   fi
 }
 

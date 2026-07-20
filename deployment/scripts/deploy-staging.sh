@@ -16,6 +16,33 @@ ENV_FILE="$DEPLOY_DIR/.env.staging"
 
 cd "$REPO_ROOT"
 
+# ── Disk guard / cleanup helpers (prevent image-cache explosion) ──
+disk_use_percent() {
+  df -P / | awk 'NR==2{gsub("%","",$5); print $5}'
+}
+
+cleanup_docker_images() {
+  echo "🧹 Pruning unused Docker images and build cache..."
+  docker builder prune -af || true
+  docker image prune -af || true
+  echo "🧭 Disk after cleanup: $(df -h / | tail -1)"
+}
+
+# Defensive cleanup before the build if disk is already tight.
+CURRENT_DISK=$(disk_use_percent)
+if [[ "$CURRENT_DISK" -ge 75 ]]; then
+  echo "⚠️ Disk usage is ${CURRENT_DISK}% before deploy; cleaning stale images..."
+  cleanup_docker_images
+fi
+
+# If the deploy fails at any point, aggressively clean up the image cache it
+# just produced so a crash-looping retry can't fill the disk.
+cleanup_on_fail() {
+  echo "❌ Deploy failed. Running hard Docker image cleanup to prevent disk exhaustion..."
+  cleanup_docker_images
+}
+trap cleanup_on_fail ERR
+
 if [[ ! -f "$ENV_FILE" ]]; then
     echo "❌ Missing required runtime env file: $ENV_FILE"
     echo "   Copy from deployment/.env.staging.example and fill in real values first."
@@ -217,6 +244,10 @@ retry_health_check() {
 
 retry_health_check "https://staging.joyjoinapp.com/api/health" "Staging API"
 retry_health_check "https://staging.admin.joyjoinapp.com/api/health" "Staging Admin Portal"
+
+echo ""
+echo "🧹 Post-deploy cleanup..."
+cleanup_docker_images
 
 echo ""
 echo "✅ Staging deployment completed"
