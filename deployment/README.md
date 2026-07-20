@@ -307,6 +307,7 @@ https://staging.admin.joyjoinapp.com
 ## 磁盘安全与运维边界
 
 - staging 的 API/Admin 镜像在 GitHub runner 构建；CVM 只接收经过容量与 inode 预检的临时包，校验后原子替换。生产发布在宿主机构建前要求至少 8 GiB 和 20000 个空闲 inode，不足时安全中止。
+- staging 只同步 `deployment/` 运行文件，不再把整个源码与素材目录重复传到 CVM；已 gzip 的镜像包关闭二次压缩，并写入 run-scoped `.part` 文件以支持安全续传。
 - 参考已成功恢复本次故障的策略：磁盘使用率达到 70%、低于发布余量或发布成功后，清理全部未被任何容器引用的 Docker images 与 builder cache；不会删除容器、网络或 volumes。另只清理明确命名的发布临时文件与过期备份。严禁 `docker volume prune`、`docker system prune --volumes`、`docker compose down -v`，也不得删除 `pgdata` / `pgdata_staging`。
 - API/Admin 等无状态容器在发布重建后会启用 `json-file` 轮转。Postgres 的轮转参数虽已写入 Compose，但现有数据库容器必须在完成可恢复备份、核对 volume 挂载并安排维护窗口后受控重建才会生效；普通应用发布使用 `--no-deps`，不会暗中重启数据库。
 - 生产数据库备份脚本采用临时文件、gzip 校验、原子改名，并在写新 dump 前先安全清理过期文件（始终保留最新一份）；随后按 `max(数据库大小, 最近备份×2) + 2 GiB` 和 10000 个空闲 inode 做 fail-closed 预检，成功后再执行 7 天保留。备份任务与发布共享主机锁，`pg_dump` 在数据库容器内以低 CPU 优先级运行。

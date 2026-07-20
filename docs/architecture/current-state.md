@@ -201,7 +201,7 @@ Boundary:
 ### 6. Runtime deployment topology
 
 **Active production path**
-- `.github/workflows/deploy-staging.yml` (push to `main`) and `.github/workflows/deploy-production.yml` (push to `release`) deploy by SSHing into the remote server (`SERVER_IP` secret), rsyncing code to `~/JoyJoin`, and running `deployment/scripts/deploy-staging.sh` or `deployment/scripts/deploy-production.sh` respectively. The production job is gated by the GitHub `production` environment.
+- `.github/workflows/deploy-staging.yml` (push to `main`) and `.github/workflows/deploy-production.yml` (push to `release`) deploy through SSH (`SERVER_IP` secret). Staging syncs only `deployment/` plus its prebuilt image bundle; production still syncs the application workspace before running `deployment/scripts/deploy-production.sh`. The production job is gated by the GitHub `production` environment.
 - Staging API/Admin images are built by GitHub Actions and transferred as a compressed bundle. The shared CVM only loads and switches images; it does not compile application code. The switch is gated by the real DB/config readiness endpoint and Admin content, with previous-image/Nginx rollback on failure.
 - The WeChat development-version upload is triggered by a successful `Deploy Staging` `workflow_run` for the same `main` commit, rather than racing the backend deploy.
 - `deployment/nginx/joyjoin.conf` is the public edge configuration for host Nginx serving `joyjoinapp.com`, `www.joyjoinapp.com`, `admin.joyjoinapp.com`, and `api.joyjoinapp.com`.

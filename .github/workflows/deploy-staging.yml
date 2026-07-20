@@ -137,23 +137,12 @@ jobs:
 
           RSYNC_OPTS=(
             -az --delete
-            --exclude=.git/
-            --exclude=.github/
-            --exclude=.cursor/
-            --exclude=.agents/
             --exclude=.env
             --exclude=.env.*
-            --exclude=deployment/.staging-deployed-sha
-            --exclude=deployment/.staging-deployed-sha.tmp
-            --exclude=node_modules/
-            --exclude=dist/
-            --exclude=build/
-            --exclude=coverage/
-            --exclude=.joyjoin/
-            --exclude=tmp/
-            --exclude=reports/
-            --exclude=attached_assets/
-            --exclude=archived/
+            --exclude=.staging-deployed-sha
+            --exclude=.staging-deployed-sha.tmp
+            --exclude=.staging-images.tar.gz
+            --exclude=.staging-images-*.tar.gz.part
           )
 
           if [ -n "${SSH_KEY_PASSPHRASE:-}" ]; then
@@ -265,7 +254,7 @@ jobs:
             exit 75
           fi
 
-          mkdir -p ~/JoyJoin
+          mkdir -p ~/JoyJoin/deployment
           if ! command -v rsync >/dev/null 2>&1; then
             echo "rsync not found on server; installing..."
             if command -v dnf >/dev/null 2>&1; then
@@ -282,10 +271,12 @@ jobs:
           fi
           REMOTE_PREP
 
-          echo "Uploading deployment workspace over the same SSH control connection..."
+          # Images are already built off-host. The CVM needs only runtime
+          # deployment files, not the 300+ MiB source/assets tree.
+          echo "Uploading the minimal deployment directory over the same SSH control connection..."
           run_transport_with_backoff 8m rsync "${RSYNC_OPTS[@]}" \
             -e "$RSYNC_SSH" \
-            ./ "$CVM:~/JoyJoin/"
+            deployment/ "$CVM:~/JoyJoin/deployment/"
 
           # Check capacity before writing the bundle. The reserve covers the
           # compressed upload, Docker's expanded layers, and 2 GiB of emergency
@@ -336,7 +327,10 @@ jobs:
           REMOTE_BUNDLE_PREFLIGHT
 
           echo "Uploading prebuilt staging images to a run-scoped temporary file..."
-          run_transport_with_backoff 15m rsync -az --partial --timeout=180 \
+          # The bundle is already gzip-compressed. Avoid recompressing it and
+          # write only to the run-scoped .part file so retries resume without
+          # a second temporary copy on the CVM.
+          run_transport_with_backoff 15m rsync -a --partial --inplace --timeout=180 \
             -e "$RSYNC_SSH" \
             "$STAGING_IMAGE_BUNDLE" "$CVM:$REMOTE_BUNDLE_TEMP"
 
