@@ -11,6 +11,7 @@ import {
 import { alangEvents } from '../../../lib/alang/alangAnalytics'
 import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
+import { COLOR_PRIMARY } from '../../../lib/utils/uiConstants'
 import './index.scss'
 
 export default function AlangDebugPage() {
@@ -49,7 +50,7 @@ export default function AlangDebugPage() {
         content: '将清除当前账号本次阿浪测试的进度与测试故事，是否重新开始？',
         confirmText: '确认重置',
         cancelText: '取消',
-        confirmColor: '#8B5CF6',
+        confirmColor: COLOR_PRIMARY,
       })
       if (!modal.confirm) {
         resetActionRef.current = false

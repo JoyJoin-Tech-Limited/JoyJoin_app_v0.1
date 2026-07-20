@@ -1,434 +1,352 @@
-import Taro from '@tarojs/taro'
-import { useEffect, useMemo, useState } from 'react'
-import { View, Text, ScrollView, Image } from '@tarojs/components'
-import { useAlangMissions, useStoryArchives } from '../../../lib/alang/useAlangMission'
-import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
-import { alangEvents } from '../../../lib/alang/alangAnalytics'
-import { useAlangAssetSource } from '../../../lib/alang/alangAssets'
-import StatusCard from '../../../components/ui/StatusCard'
+import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
+import { useCallback, useEffect, useState } from 'react'
+import { ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
+import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
+import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
+import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
+import { useFlashHome } from '../../../lib/alang/useFlash'
+import type { FlashLocationSnapshot, FlashNpcSummary, FlashTaskSummary } from '../../../lib/alang/flashTypes'
+import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
-import './index.scss'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
+import {
+  FlashButton,
+  FlashNpcPortrait,
+  FlashPageState,
+  FlashTaskCard,
+  formatFlashRemainingTime,
+} from '../../../components/alang/FlashUi'
+import '../flash.scss'
 
-type ArtworkKind = 'event' | 'story'
-type StoryTab = 'all' | 'continuing'
+const FLASH_INTRO_ACK_STORAGE_KEY = 'joyjoin_flash_intro_ack_v1'
 
-function NarrativeArtwork({
-  kind,
-  placeholderLabel = '场景示意',
-}: {
-  kind: ArtworkKind
-  placeholderLabel?: string
-}) {
-  const artwork = useAlangAssetSource(kind === 'event' ? 'eventHero' : 'resultHero')
+type GateState = 'checking' | 'intro' | 'locating' | 'ready' | 'denied' | 'error'
+
+function readIntroAcknowledgement(): boolean {
+  try {
+    return Taro.getStorageSync(FLASH_INTRO_ACK_STORAGE_KEY) === true
+  } catch {
+    return false
+  }
+}
+
+function rememberIntroAcknowledgement(): void {
+  try {
+    Taro.setStorageSync(FLASH_INTRO_ACK_STORAGE_KEY, true)
+  } catch {
+    // The disclosure remains visible again next time if storage is unavailable.
+  }
+}
+
+function FlashIntro({ onContinue }: { onContinue: () => void }) {
   return (
-    <>
-      <Image
-        className='alang-event__card-image'
-        src={artwork.src}
-        mode='aspectFill'
-        onError={artwork.onError}
-        aria-hidden='true'
-      />
-      {artwork.usingFallback && (
-        <Text className='alang-event__placeholder-label'>{placeholderLabel}</Text>
-      )}
-    </>
+    <View className='flash-intro'>
+      <View className='flash-intro__mark' aria-hidden='true'>
+        <JoyJoinIcon emoji='⚡' tier='phase' size={52} />
+      </View>
+      <Text className='flash-intro__title'>先说好，这是一场数字角色相遇</Text>
+      <Text className='flash-intro__lead'>
+        闪现里遇到的动物都是数字叙事角色，不是真人工作人员，也不会在现实里等你。它们是谁，留给你碰见时再认识。
+      </Text>
+      <View className='flash-intro__rules'>
+        <View className='flash-intro__rule'>
+          <Text className='flash-intro__rule-index'>1</Text>
+          <Text className='flash-intro__rule-text'>你主动打开闪现时，我们才申请一次定位，用来显示当前在线角色和判断是否到达附近。</Text>
+        </View>
+        <View className='flash-intro__rule'>
+          <Text className='flash-intro__rule-index'>2</Text>
+          <Text className='flash-intro__rule-text'>不开放定位就不能参加闪现，但发现页和其他功能照常使用；这里不会用 IP 猜位置。</Text>
+        </View>
+        <View className='flash-intro__rule'>
+          <Text className='flash-intro__rule-index'>3</Text>
+          <Text className='flash-intro__rule-text'>任务不要求消费、拍照或打扰陌生人。去不去、进不进店，都由你决定。</Text>
+        </View>
+      </View>
+      <View className='flash-intro__actions'>
+        <FlashButton onClick={onContinue}>我知道了，开启定位</FlashButton>
+        <Text className='flash-intro__privacy'>闪现不会订阅消息，也不会主动推送提醒。</Text>
+      </View>
+    </View>
   )
 }
 
-function formatStoryMoment(value: string): {
-  dateLabel: string
-  detailLabel: string
-  periodTag: string
-} {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return { dateLabel: '某个夜晚', detailLabel: '时间留在故事里', periodTag: '城市相遇' }
-  }
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  const hour = date.getHours()
-  const minute = String(date.getMinutes()).padStart(2, '0')
-  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-  const periodTag = hour < 6 ? '深夜' : hour < 12 ? '清晨' : hour < 18 ? '白天' : '夜晚'
-  return {
-    dateLabel: `${month}月${day}日`,
-    detailLabel: `${month}月${day}日 · ${weekdays[date.getDay()]} · ${String(hour).padStart(2, '0')}:${minute}`,
-    periodTag,
-  }
+function OnlineNpcCard({ npc, onClick }: { npc: FlashNpcSummary; onClick: () => void }) {
+  return (
+    <View
+      className='flash-online-card'
+      hoverClass='flash-online-card--pressed'
+      onClick={onClick}
+      role='button'
+      aria-label={`去找${npc.name}，${npc.districtName}，${formatFlashRemainingTime(npc.remainingSeconds, npc.endsAt)}`}
+    >
+      <FlashNpcPortrait npc={npc} />
+      <View className='flash-online-card__body'>
+        <View className='flash-online-card__name-row'>
+          <Text className='flash-online-card__name'>{npc.name}</Text>
+          <Text className='flash-online-card__online'>正在闪现</Text>
+        </View>
+        <Text className='flash-online-card__invite'>{npc.invitation}</Text>
+        <Text className='flash-online-card__meta'>
+          {npc.districtName} · {formatFlashRemainingTime(npc.remainingSeconds, npc.endsAt)}
+        </Text>
+      </View>
+      <Text className='flash-online-card__arrow' aria-hidden='true'>›</Text>
+    </View>
+  )
 }
 
-function missionStatusCopy(status: string): { badge: string; action: string } {
-  switch (status) {
-    case 'in_progress':
-      return { badge: '故事进行中', action: '继续上次的脚步' }
-    case 'completed':
-      return { badge: '已经收录', action: '重温这段故事' }
-    default:
-      return { badge: '今晚可出发', action: '看看是谁在等你' }
-  }
-}
-
-function missionStageTag(stage: string): string {
-  switch (stage) {
-    case 'searching':
-      return '寻找中'
-    case 'found':
-    case 'dialogue':
-      return '对话中'
-    case 'companion':
-    case 'arrived':
-      return '同行中'
-    case 'closing':
-    case 'result':
-      return '待收录'
-    default:
-      return '进行中'
-  }
-}
-
-export default function AlangEventPage() {
+export default function FlashHomePage() {
   const { user } = useAuth()
-  const view = Taro.getCurrentInstance().router?.params?.view ?? ''
-  const showStories = view === 'stories'
-  const [storyTab, setStoryTab] = useState<StoryTab>('all')
-  const enabled = !!user?.features?.alangEnabled
-  const {
-    data: missions,
-    isLoading: missionsLoading,
-    error: missionsError,
-    refetch: refetchMissions,
-  } = useAlangMissions(enabled)
-  const {
-    data: archives,
-    isLoading: archivesLoading,
-    error: archivesError,
-    refetch: refetchArchives,
-  } = useStoryArchives(enabled && showStories)
-
-  const inProgressMissions = useMemo(
-    () => (missions ?? []).filter(({ status }) => status === 'in_progress'),
-    [missions],
+  const enabled = shouldShowAlangEntry(user)
+  const [gate, setGate] = useState<GateState>('checking')
+  const [location, setLocation] = useState<FlashLocationSnapshot | null>(null)
+  const [pageVisible, setPageVisible] = useState(true)
+  const { data, isLoading, isError, error, refetch } = useFlashHome(
+    location,
+    enabled && gate === 'ready' && pageVisible,
   )
-  const uniqueLocationCount = useMemo(() => {
-    const locations = (archives ?? [])
-      .map(({ locationName }) => locationName?.trim())
-      .filter((location): location is string => Boolean(location))
-    return new Set(locations).size
-  }, [archives])
 
-  useEffect(() => {
-    void Taro.setNavigationBarTitle({ title: showStories ? '我的故事' : '闪现' })
-  }, [showStories])
-
-  useEffect(() => {
-    if (!showStories && missions && missions.length > 0) {
-      alangEvents.discoverCardImpression()
+  const requestLocation = useCallback(async (rememberIntro = false) => {
+    setGate('locating')
+    try {
+      const snapshot = await getOneShotFlashLocation()
+      if (rememberIntro) rememberIntroAcknowledgement()
+      setLocation(snapshot)
+      setGate('ready')
+    } catch {
+      const permission = await getFlashLocationPermission()
+      setGate(permission === 'denied' ? 'denied' : 'error')
     }
-  }, [missions, showStories])
+  }, [])
 
-  const handleMissionTap = (slug: string) => {
+  const restoreGate = useCallback(async () => {
+    if (!readIntroAcknowledgement()) {
+      setGate('intro')
+      return
+    }
+    const permission = await getFlashLocationPermission()
+    if (permission === 'denied') {
+      setGate('denied')
+      return
+    }
+    await requestLocation(false)
+  }, [requestLocation])
+
+  useEffect(() => {
+    void Taro.setNavigationBarTitle({ title: '闪现' })
+    if (!enabled) return
+    void restoreGate()
+  }, [enabled, restoreGate])
+
+  useDidShow(() => {
+    setPageVisible(true)
+    if (gate === 'ready' && location) void refetch()
+  })
+
+  useDidHide(() => {
+    setPageVisible(false)
+  })
+
+  useEffect(() => {
+    if (!pageVisible || gate !== 'ready' || !location) return undefined
+    const timer = setInterval(() => { void refetch() }, 60_000)
+    return () => clearInterval(timer)
+  }, [gate, location, pageVisible, refetch])
+
+  useEffect(() => {
+    if (!data?.canonicalScreen) return
+    void redirectToFlashCanonical(data, MINI_PROGRAM_ROUTES.alangEvent)
+  }, [data])
+
+  const openLocationSettings = useCallback(async () => {
+    try {
+      const setting = await Taro.openSetting()
+      if (setting.authSetting?.['scope.userLocation'] === true) {
+        rememberIntroAcknowledgement()
+        await requestLocation(false)
+      } else {
+        setGate('denied')
+      }
+    } catch {
+      Taro.showToast({ title: '设置没有打开，请稍后再试', icon: 'none' })
+    }
+  }, [requestLocation])
+
+  const openNpc = (npc: FlashNpcSummary) => {
     haptics('light')
-    alangEvents.discoverCardTap()
+    const params = [
+      `appearanceId=${encodeURIComponent(npc.appearanceId)}`,
+      `npcName=${encodeURIComponent(npc.name)}`,
+      `npcSlug=${encodeURIComponent(npc.slug)}`,
+      `districtName=${encodeURIComponent(npc.districtName)}`,
+      npc.endsAt ? `endsAt=${encodeURIComponent(npc.endsAt)}` : '',
+    ].filter(Boolean).join('&')
+    void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangSearch}?${params}` })
+  }
+
+  const openTask = (task: FlashTaskSummary) => {
+    haptics('light')
+    const assignmentId = task.assignmentId ?? task.id
     void Taro.navigateTo({
-      url: `${MINI_PROGRAM_ROUTES.alangEventDetail}?slug=${encodeURIComponent(slug)}`,
+      url: `${MINI_PROGRAM_ROUTES.alangCompanion}?assignmentId=${encodeURIComponent(assignmentId)}`,
     })
   }
 
-  const handleArchiveTap = (archiveId: string) => {
-    haptics('light')
-    void Taro.navigateTo({
-      url: `${MINI_PROGRAM_ROUTES.alangStoryDetail}?archiveId=${encodeURIComponent(archiveId)}`,
-    })
-  }
-
-  const handleStoryTabChange = (nextTab: StoryTab) => {
-    if (nextTab === storyTab) return
-    haptics('light')
-    setStoryTab(nextTab)
-  }
-
-  const handleOpenAvailableStories = () => {
-    haptics('light')
-    void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent })
-  }
-
-  if (showStories) {
-    if (archivesLoading) {
-      return (
-        <View className='alang-event__loading'>
-          <Text className='alang-event__loading-text'>正在翻开你的故事…</Text>
-        </View>
-      )
-    }
-
-    if (archivesError) {
-      return (
-        <View className='alang-event__status-shell'>
-          <StatusCard
-            tone='error'
-            title='故事档案暂时没有打开'
-            description='网络恢复后，可以重新读取已经收录的章节。'
-            action={{ label: '重新加载', onClick: () => { void refetchArchives() } }}
-          />
-        </View>
-      )
-    }
-
+  if (!enabled) {
     return (
-      <ScrollView className='alang-event alang-event--stories' scrollY>
-        <View
-          className='alang-event__story-summary'
-          role='region'
-          aria-label={`${archives?.length ?? 0} 段故事收藏，${missionsLoading ? '进行中故事读取中' : `${inProgressMissions.length} 条仍在继续`}，${uniqueLocationCount} 个故事地点`}
-        >
-          <View className='alang-event__story-summary-copy'>
-            <View className='alang-event__story-summary-stat'>
-              <Text className='alang-event__story-summary-value'>{archives?.length ?? 0}</Text>
-              <Text className='alang-event__story-summary-label'>段故事收藏</Text>
-            </View>
-            <View className='alang-event__story-summary-stat'>
-              <Text className='alang-event__story-summary-value'>
-                {missionsLoading ? '—' : inProgressMissions.length}
-              </Text>
-              <Text className='alang-event__story-summary-label'>条仍在继续</Text>
-            </View>
-            <View className='alang-event__story-summary-stat'>
-              <Text className='alang-event__story-summary-value'>{uniqueLocationCount}</Text>
-              <Text className='alang-event__story-summary-label'>个故事地点</Text>
-            </View>
-          </View>
-          <View className='alang-event__story-summary-art' aria-hidden='true'>
-            <NarrativeArtwork kind='story' placeholderLabel='故事总览场景示意' />
-            <View className='alang-event__story-summary-wash' />
-          </View>
-        </View>
-
-        <View className='alang-event__story-tabs' role='tablist' aria-label='故事筛选'>
-          <View
-            className={`alang-event__story-tab${storyTab === 'all' ? ' alang-event__story-tab--active' : ''}`}
-            hoverClass='alang-event__story-tab--pressed'
-            onClick={() => handleStoryTabChange('all')}
-            role='tab'
-            aria-selected={storyTab === 'all'}
-            aria-label='查看全部故事'
-          >
-            <Text className='alang-event__story-tab-text'>全部故事</Text>
-          </View>
-          <View
-            className={`alang-event__story-tab${storyTab === 'continuing' ? ' alang-event__story-tab--active' : ''}`}
-            hoverClass='alang-event__story-tab--pressed'
-            onClick={() => handleStoryTabChange('continuing')}
-            role='tab'
-            aria-selected={storyTab === 'continuing'}
-            aria-label='查看继续中的故事'
-          >
-            <Text className='alang-event__story-tab-text'>继续中的故事</Text>
-          </View>
-        </View>
-
-        {storyTab === 'all' && (
-          archives?.length ? (
-            <View className='alang-event__story-feed' role='list' aria-label='已收录故事'>
-              {archives.map((archive) => {
-                const moment = formatStoryMoment(archive.completedAt)
-                const tags = [...new Set([moment.periodTag, archive.finalMood].filter(Boolean))].slice(0, 2)
-                const locationName = archive.locationName?.trim() || '城市里的某处'
-                return (
-                  <View key={archive.id} className='alang-event__story-feed-item' role='listitem'>
-                    <View className='alang-event__story-timeline-dot' aria-hidden='true' />
-                    <View
-                      className='alang-event__card alang-event__card--story'
-                      hoverClass='alang-event__card--pressed'
-                      onClick={() => handleArchiveTap(archive.id)}
-                      role='button'
-                      aria-label={`打开故事：${archive.title}，${locationName}，${moment.detailLabel}`}
-                    >
-                      <View className='alang-event__card-visual alang-event__card-visual--story'>
-                        <NarrativeArtwork kind='story' placeholderLabel='故事场景示意' />
-                      </View>
-                      <View className='alang-event__card-body alang-event__card-body--story'>
-                        <Text className='alang-event__card-title'>{archive.title}</Text>
-                        <Text className='alang-event__story-location'>地点 · {locationName}</Text>
-                        <Text className='alang-event__story-moment'>时间 · {moment.detailLabel}</Text>
-                        <View className='alang-event__story-tags'>
-                          {tags.map((tag) => (
-                            <Text key={tag} className='alang-event__story-mood'>{tag}</Text>
-                          ))}
-                        </View>
-                      </View>
-                      <View className='alang-event__story-chevron' aria-hidden='true' />
-                    </View>
-                  </View>
-                )
-              })}
-            </View>
-          ) : (
-            <View className='alang-event__story-inline-state' role='status' aria-live='polite'>
-              <Text className='alang-event__story-inline-title'>故事页还在等第一章</Text>
-              <Text className='alang-event__story-inline-copy'>完成一次闪现后，走过的路和遇见的人会收录在这里。</Text>
-              <View
-                className='alang-event__story-inline-action'
-                hoverClass='alang-event__story-inline-action--pressed'
-                onClick={handleOpenAvailableStories}
-                role='button'
-                aria-label='去看看当前可开始的闪现故事'
-              >
-                <Text className='alang-event__story-inline-action-text'>去看看谁出现了</Text>
-              </View>
-            </View>
-          )
-        )}
-
-        {storyTab === 'continuing' && (
-          missionsLoading ? (
-            <View className='alang-event__story-inline-state' role='status' aria-live='polite'>
-              <Text className='alang-event__story-inline-title'>正在找回继续中的故事…</Text>
-              <Text className='alang-event__story-inline-copy'>已经走过的进度会从服务端恢复。</Text>
-            </View>
-          ) : missionsError ? (
-            <View className='alang-event__story-inline-state' role='alert'>
-              <Text className='alang-event__story-inline-title'>继续中的故事暂时没读到</Text>
-              <Text className='alang-event__story-inline-copy'>网络恢复后，可以从上次停下的地方接着走。</Text>
-              <View
-                className='alang-event__story-inline-action'
-                hoverClass='alang-event__story-inline-action--pressed'
-                onClick={() => { haptics('light'); void refetchMissions() }}
-                role='button'
-                aria-label='重新读取继续中的故事'
-              >
-                <Text className='alang-event__story-inline-action-text'>重新读取</Text>
-              </View>
-            </View>
-          ) : inProgressMissions.length ? (
-            <View className='alang-event__story-feed' role='list' aria-label='继续中的故事'>
-              {inProgressMissions.map((mission) => {
-                const progressPercent = Math.max(0, Math.min(100, Math.round(mission.progressPercent)))
-                return (
-                  <View key={mission.id} className='alang-event__story-feed-item' role='listitem'>
-                    <View className='alang-event__story-timeline-dot alang-event__story-timeline-dot--continuing' aria-hidden='true' />
-                    <View
-                      className='alang-event__card alang-event__card--story alang-event__card--continuing'
-                      hoverClass='alang-event__card--pressed'
-                      onClick={() => handleMissionTap(mission.slug)}
-                      role='button'
-                      aria-label={`继续故事：${mission.title}，当前进度 ${progressPercent}%`}
-                    >
-                      <View className='alang-event__card-visual alang-event__card-visual--story'>
-                        <NarrativeArtwork kind='event' placeholderLabel='故事场景示意' />
-                      </View>
-                      <View className='alang-event__card-body alang-event__card-body--story'>
-                        <Text className='alang-event__card-title'>{mission.title}</Text>
-                        <Text className='alang-event__story-location'>地点 · 精确位置会在到达时揭晓</Text>
-                        <Text className='alang-event__story-moment'>进度 · 已走完 {progressPercent}%</Text>
-                        <View className='alang-event__story-tags'>
-                          <Text className='alang-event__story-mood'>继续中</Text>
-                          <Text className='alang-event__story-mood'>{missionStageTag(mission.stage)}</Text>
-                        </View>
-                      </View>
-                      <View className='alang-event__story-chevron' aria-hidden='true' />
-                    </View>
-                  </View>
-                )
-              })}
-            </View>
-          ) : (
-            <View className='alang-event__story-inline-state' role='status' aria-live='polite'>
-              <Text className='alang-event__story-inline-title'>没有停在半路的故事</Text>
-              <Text className='alang-event__story-inline-copy'>下一次闪现开始后，你可以随时从这里接着走。</Text>
-            </View>
-          )
-        )}
-
-        <Text className='alang-event__story-footer'>每段故事，都是记忆留下的一点光。</Text>
-      </ScrollView>
-    )
-  }
-
-  if (missionsLoading) {
-    return (
-      <View className='alang-event__loading'>
-        <Text className='alang-event__loading-text'>正在看看谁出现了…</Text>
+      <View className='flash-page'>
+        <FlashPageState title='闪现正在准备下一次见面' description='这项体验暂时没有开放，过些时候再来看看。' />
       </View>
     )
   }
 
-  if (missionsError) {
+  if (gate === 'intro') return <FlashIntro onContinue={() => { void requestLocation(true) }} />
+
+  if (gate === 'checking' || gate === 'locating') {
     return (
-      <View className='alang-event__status-shell'>
-        <StatusCard
+      <View className='flash-page'>
+        <FlashPageState
+          title={gate === 'checking' ? '正在打开闪现…' : '看看深圳哪里有角色在线…'}
+          description='只进行这一次定位，不会在后台持续追踪。'
+        />
+      </View>
+    )
+  }
+
+  if (gate === 'denied') {
+    return (
+      <View className='flash-page'>
+        <FlashPageState
+          title='需要定位，才能参加闪现'
+          description='我们不会用 IP 猜你的位置。打开定位后，才会读取当前在线角色并判断 50 米到达范围。'
+          action={() => { void openLocationSettings() }}
+          actionLabel='打开定位设置'
+        />
+      </View>
+    )
+  }
+
+  if (gate === 'error') {
+    return (
+      <View className='flash-page'>
+        <FlashPageState
           tone='error'
-          title='今晚的闪现暂时没有打开'
-          description='网络恢复后，可以重新看看谁正在城市里出现。'
-          action={{ label: '重新加载', onClick: () => { void refetchMissions() } }}
+          title='这次没有拿到位置'
+          description='可能是定位信号或网络暂时不稳定。你可以稍后再试。'
+          action={() => { void requestLocation(false) }}
+          actionLabel='重新定位'
         />
       </View>
     )
   }
 
-  if (!missions?.length) {
+  if (isError) {
+    const code = getFlashApiErrorCode(error)
+    const outsideShenzhen = code === 'FLASH_OUTSIDE_SHENZHEN'
+    const locationUnavailable = code === 'FLASH_LOCATION_UNAVAILABLE'
+    const contentUnavailable = code === 'FLASH_DISABLED'
+      || code === 'FLASH_SCHEMA_NOT_READY'
+      || code === 'FLASH_CATALOG_NOT_READY'
     return (
-      <View className='alang-event__status-shell'>
-        <StatusCard
-          tone='empty'
-          title='今晚还没有角色现身'
-          description='闪现仍在 Beta，新的城市片段准备好后会来这里和你见面。'
+      <View className='flash-page'>
+        <FlashPageState
+          tone={outsideShenzhen || contentUnavailable ? 'plain' : 'error'}
+          title={outsideShenzhen
+            ? '闪现目前只在深圳'
+            : locationUnavailable
+              ? '暂时无法确认你是否在深圳'
+              : contentUnavailable
+                ? '闪现还在准备中'
+                : '闪现暂时没打开'}
+          description={outsideShenzhen
+            ? '你仍然可以使用发现页的其他功能；我们不会改用 IP 猜位置。'
+            : locationUnavailable
+              ? '位置确认服务暂时不可用，可以稍后再试；我们不会改用 IP 猜位置。'
+              : contentUnavailable
+                ? '地点和任务需要先通过人工审核，准备好后才会开放。'
+                : '你的定位不会被缓存。网络恢复后可以重新读取。'}
+          action={outsideShenzhen || contentUnavailable ? undefined : () => { void refetch() }}
+          actionLabel={outsideShenzhen || contentUnavailable ? undefined : '重新读取'}
         />
+      </View>
+    )
+  }
+
+  if (isLoading || !data) {
+    return (
+      <View className='flash-page'>
+        <FlashPageState title='正在看看谁在线…' description='角色有自己的出没时间，不一定每次都会遇见。' />
       </View>
     )
   }
 
   return (
-    <ScrollView className='alang-event' scrollY>
-      <View className='alang-event__header'>
-        <View className='alang-event__title-row'>
-          <Text className='alang-event__title'>闪现</Text>
-          <Text className='alang-event__beta'>Beta</Text>
-        </View>
-        <Text className='alang-event__subtitle'>附近的角色，会带来一段真实城市故事。</Text>
-        <View className='alang-event__privacy-note'>
-          <Text className='alang-event__privacy-note-dot'>●</Text>
-          <Text className='alang-event__privacy-note-text'>精确位置会在你到达时揭晓</Text>
-        </View>
-      </View>
-      <View className='alang-event__mission-list'>
-        {missions.map((mission) => {
-          const copy = missionStatusCopy(mission.status)
-          return (
-            <View
-              key={mission.id}
-              className='alang-event__card alang-event__card--mission'
-              hoverClass='alang-event__card--pressed'
-              onClick={() => handleMissionTap(mission.slug)}
-              role='button'
-              aria-label={`${copy.action}：${mission.title}`}
-            >
-              <View className='alang-event__card-visual'>
-                <NarrativeArtwork kind='event' />
-                <View className='alang-event__card-image-wash' />
-                <View className='alang-event__card-overlay'>
-                  <Text className='alang-event__card-status'>{copy.badge}</Text>
-                </View>
+    <View className='flash-page'>
+      <ScrollView className='flash-page__scroll' scrollY>
+        <View className='flash-page__content'>
+          <View className='flash-page__hero'>
+            <Text className='flash-page__eyebrow'>SHENZHEN · NOW</Text>
+            <Text className='flash-page__title'>今天，会碰见谁呢？</Text>
+            <Text className='flash-page__lead'>他们不会一直在线。看见想聊的，就去附近碰碰运气。</Text>
+          </View>
+
+          <View className='flash-page__section'>
+            <View className='flash-page__section-head'>
+              <Text className='flash-page__section-title'>现在在线</Text>
+              <Text className='flash-page__section-meta'>{data.onlineNpcs.length} 位</Text>
+            </View>
+            {data.onlineNpcs.length ? (
+              <View className='flash-online-list'>
+                {data.onlineNpcs.map((npc) => (
+                  <OnlineNpcCard key={npc.appearanceId} npc={npc} onClick={() => openNpc(npc)} />
+                ))}
               </View>
-              <View className='alang-event__card-body'>
-                <Text className='alang-event__card-kicker'>一段正在发生的城市片段</Text>
-                <Text className='alang-event__card-title'>{mission.title}</Text>
-                <Text className='alang-event__card-desc'>{mission.description}</Text>
-                {mission.status === 'in_progress' && (
-                  <View className='alang-event__card-progress' aria-label={`故事进度 ${mission.progressPercent}%`}>
-                    <View
-                      className='alang-event__card-progress-bar'
-                      style={{ transform: `scaleX(${Math.max(0, Math.min(100, mission.progressPercent)) / 100})` }}
-                    />
-                  </View>
-                )}
-                <Text className='alang-event__card-action'>{copy.action} ›</Text>
+            ) : (
+              <View className='flash-empty-card'>
+                <Text className='flash-empty-card__title'>这会儿没有谁出来晃荡</Text>
+                <Text className='flash-empty-card__copy'>不用守着刷新。角色想出现的时候，自然会来。</Text>
+              </View>
+            )}
+          </View>
+
+          <View className='flash-page__section'>
+            <View className='flash-page__section-head'>
+              <Text className='flash-page__section-title'>我的任务</Text>
+              <View
+                className='flash-page__link'
+                onClick={() => { void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangPreferences }) }}
+                role='button'
+                aria-label='打开任务偏好设置'
+              >
+                <Text>任务偏好</Text>
               </View>
             </View>
-          )
-        })}
-      </View>
-    </ScrollView>
+            {data.myTasks.length ? (
+              <View className='flash-task-list'>
+                {data.myTasks.map((task) => (
+                  <FlashTaskCard key={task.assignmentId ?? task.id} task={task} onClick={() => openTask(task)} />
+                ))}
+              </View>
+            ) : (
+              <View className='flash-empty-card'>
+                <Text className='flash-empty-card__title'>口袋还是空的</Text>
+                <Text className='flash-empty-card__copy'>先和在线角色聊聊。聊得来，他也许会托你做件小事。</Text>
+              </View>
+            )}
+          </View>
+
+          <View className='flash-page__notice'>
+            <JoyJoinIcon
+              className='flash-page__notice-mark'
+              emoji='✨'
+              tier='reveal'
+              size={32}
+            />
+            <Text className='flash-page__notice-text'>这里没有真人 NPC，也不会推送催你出门。到点后角色会正常离开，去不去由你决定。</Text>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   )
 }

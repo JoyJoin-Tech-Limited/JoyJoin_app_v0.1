@@ -3,135 +3,52 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Taro from '@tarojs/taro'
 import AlangDiscoverCard from './AlangDiscoverCard'
 
-const { mockUseAuth, mockUseAlangMissions } = vi.hoisted(() => ({
-  mockUseAuth: vi.fn(),
-  mockUseAlangMissions: vi.fn(),
+const mocks = vi.hoisted(() => ({
+  useAuth: vi.fn(),
+  haptics: vi.fn(),
+  cardTap: vi.fn(),
 }))
 
-const { mockHaptics } = vi.hoisted(() => ({
-  mockHaptics: vi.fn(),
-}))
-
-vi.mock('../../hooks/useAuth', () => ({
-  useAuth: mockUseAuth,
-}))
-
-vi.mock('../../lib/alang/useAlangMission', () => ({
-  useAlangMissions: mockUseAlangMissions,
-}))
-
+vi.mock('../../hooks/useAuth', () => ({ useAuth: mocks.useAuth }))
 vi.mock('../../lib/alang/alangAnalytics', () => ({
-  alangEvents: { discoverCardTap: vi.fn() },
+  alangEvents: { discoverCardTap: mocks.cardTap },
 }))
-
-vi.mock('../../lib/utils/haptics', () => ({
-  haptics: mockHaptics,
-}))
-
+vi.mock('../../lib/utils/haptics', () => ({ haptics: mocks.haptics }))
 vi.mock('@tarojs/components', () => ({
   View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>,
   Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-  Image: ({ mode: _mode, ...props }: any) => <img {...props} />,
+  Image: ({ mode: _mode, onError: _onError, ...props }: any) => <img {...props} />,
 }))
 
-const mission = (overrides: Record<string, unknown> = {}) => ({
-  id: 'mission-1',
-  slug: 'alang-demo',
-  title: '阿浪今晚想去吹吹风',
-  description: '他在城市里留了一段没有说完的话。',
-  status: 'not_started',
-  stage: 'not_started',
-  progressPercent: 0,
-  isDebugSession: false,
-  ...overrides,
-})
-
-describe('AlangDiscoverCard', () => {
+describe('AlangDiscoverCard formal entry', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseAuth.mockReturnValue({
-      user: { appMode: 'production', features: { alangEnabled: true } },
-    })
-    mockUseAlangMissions.mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      isError: false,
-    })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
   })
 
-  it('keeps the Reference 03 entry visible while mission data is loading', () => {
-    const { container } = render(<AlangDiscoverCard />)
+  it('renders a static Shenzhen entry without reading mission or location data', () => {
+    render(<AlangDiscoverCard />)
 
     expect(screen.getByText('闪现')).toBeInTheDocument()
-    expect(screen.getByText('Beta')).toBeInTheDocument()
-    expect(screen.getByText('附近有个角色，正等你出发')).toBeInTheDocument()
-    expect(screen.getByText('正在看看谁出现了…')).toBeInTheDocument()
-    expect(screen.getByText('附近角色')).toBeInTheDocument()
-    expect(screen.getByText('位置保持神秘')).toBeInTheDocument()
-    expect(screen.getByText('到达后触发故事')).toBeInTheDocument()
-    expect(container.querySelectorAll('.alang-discover-card__chip')).toHaveLength(3)
-    expect(mockUseAlangMissions).toHaveBeenCalledWith(true)
+    expect(screen.getByText('深圳限定')).toBeInTheDocument()
+    expect(screen.getByText('城市里的数字角色，偶尔会出来聊两句')).toBeInTheDocument()
+    expect(screen.queryByText('Beta')).not.toBeInTheDocument()
   })
 
-  it('keeps a single usable CTA when the enabled mission query is empty', () => {
-    mockUseAlangMissions.mockReturnValue({ data: [], isLoading: false, isError: false })
+  it('opens only the Flash home after an explicit tap', () => {
     render(<AlangDiscoverCard />)
 
-    expect(screen.getByRole('button', { name: '进入闪现' })).toBeInTheDocument()
-    expect(screen.getAllByRole('button')).toHaveLength(1)
-  })
+    fireEvent.click(screen.getByRole('button', { name: '进入闪现，查看深圳当前在线的数字角色' }))
 
-  it('uses warm recovery copy when the enabled mission query fails', () => {
-    mockUseAlangMissions.mockReturnValue({ data: undefined, isLoading: false, isError: true })
-    render(<AlangDiscoverCard />)
-
-    expect(screen.getByText('今晚的角色还没回信')).toBeInTheDocument()
-    expect(screen.getByText('先逛逛别处，稍后再回来看看。')).toBeInTheDocument()
-  })
-
-  it('hides when alangEnabled is false', () => {
-    mockUseAuth.mockReturnValue({
-      user: { appMode: 'test', features: { alangEnabled: false } },
-    })
-    render(<AlangDiscoverCard />)
-
-    expect(screen.queryByText('闪现')).not.toBeInTheDocument()
-    expect(mockUseAlangMissions).toHaveBeenCalledWith(false)
-  })
-
-  it('opens the Alang list fallback when no mission is available', () => {
-    mockUseAlangMissions.mockReturnValue({ data: [], isLoading: false, isError: false })
-    render(<AlangDiscoverCard />)
-
-    fireEvent.click(screen.getByRole('button', { name: '进入闪现' }))
-    expect(mockHaptics).toHaveBeenCalledWith('light')
+    expect(mocks.haptics).toHaveBeenCalledWith('light')
+    expect(mocks.cardTap).toHaveBeenCalledTimes(1)
     expect(Taro.navigateTo).toHaveBeenCalledWith({ url: '/pages/alang/event/index' })
   })
 
-  it('prioritizes an in-progress story over the first mission', () => {
-    mockUseAlangMissions.mockReturnValue({
-      data: [
-        mission({ id: 'new', slug: 'new-story', title: '一段新故事' }),
-        mission({
-          id: 'active',
-          slug: 'active-story',
-          title: '还没说完的那一晚',
-          status: 'in_progress',
-          stage: 'searching',
-          progressPercent: 35,
-        }),
-      ],
-      isLoading: false,
-      isError: false,
-    })
+  it('fails closed when the server flag is disabled', () => {
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<AlangDiscoverCard />)
 
-    expect(screen.getByText('还没说完的那一晚')).toBeInTheDocument()
-    expect(screen.getByText('可继续上次进度')).toBeInTheDocument()
-    expect(screen.queryByText('一段新故事')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '继续这段故事' }))
-    expect(Taro.navigateTo).toHaveBeenCalledWith({
-      url: '/pages/alang/event-detail/index?slug=active-story',
-    })
+    expect(screen.queryByText('闪现')).not.toBeInTheDocument()
   })
 })

@@ -31,14 +31,10 @@ export default defineAppConfig({
   lazyCodeLoading: 'requiredComponents',
   permission: {
     'scope.userLocation': {
-      desc: '用于寻找附近的城市人物、判断到达状态和规划陪伴路线',
+      desc: '用于查看深圳当前在线的数字角色，并在你主动操作时确认角色相遇和任务到达',
     },
   },
-  requiredPrivateInfos: [
-    'getLocation',
-    'startLocationUpdate',
-    'onLocationChange',
-  ],
+  requiredPrivateInfos: ['getLocation'],
   pages: [...MINI_PROGRAM_MAIN_PACKAGE_PAGES],
   subPackages: MINI_PROGRAM_SUBPACKAGES_CONFIG,
   preloadRule: MINI_PROGRAM_PRELOAD_RULE_CONFIG,

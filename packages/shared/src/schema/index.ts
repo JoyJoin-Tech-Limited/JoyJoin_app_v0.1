@@ -11,6 +11,7 @@ export * from './users.js';
 export * from './venues.js';
 export * from './equipment.js';
 export * from './personalStory.js';
+export * from './flash.js';
 export {
   userCityInterests,
   cityUnlockProgress,

@@ -30,6 +30,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/admin/audit-logs": "审计日志",
   "/admin/feature-flags": "功能开关",
   "/admin/templates": "活动模板",
+  "/admin/alang": "闪现运营",
 };
 
 const DEFAULT_TITLE = "悦聚·Joy - 管理后台";

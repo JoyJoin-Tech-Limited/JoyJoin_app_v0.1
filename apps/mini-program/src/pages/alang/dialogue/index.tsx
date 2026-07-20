@@ -1,440 +1,266 @@
-import Taro, { useDidShow } from '@tarojs/taro'
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { View, Text, Image, ScrollView } from '@tarojs/components'
-import type { MissionContent, StoryNode } from '@shared/alang/contentSchema'
-import {
-  useAlangMissionDetail,
-  useSyncAlangMissionProgress,
-} from '../../../lib/alang/useAlangMission'
+import Taro from '@tarojs/taro'
+import { useEffect, useState } from 'react'
+import { ScrollView, Text, View } from '@tarojs/components'
+import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashPageState } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
-import { callReportProgress, callSubmitChoice } from '../../../lib/alang/api'
-import { alangEvents } from '../../../lib/alang/alangAnalytics'
+import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
+import { resolveFlashTaskCategory } from '../../../lib/alang/flashNpcAssets'
+import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
+import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
+import {
+  useAnswerFlashEncounter,
+  useDeliverFlashTask,
+  useFlashEncounter,
+  useRerollFlashEncounter,
+  useRespondToFlashTaskOffer,
+} from '../../../lib/alang/useFlash'
+import type { FlashCanonicalSnapshot } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
-import { useAlangAssetSource } from '../../../lib/alang/alangAssets'
-import StatusCard from '../../../components/ui/StatusCard'
 import { haptics } from '../../../lib/utils/haptics'
-import './index.scss'
+import '../flash.scss'
 
-type StoryHistoryItem = {
-  type: 'narration' | 'choice' | 'response'
-  text: string
-  imageKey?: string
-}
-
-type DialogueRound = {
-  choice: string
-  response?: string
-}
-
-type PendingDialogueResponse = {
-  choice: string
-  response: string
-  nextNodeId: string
-  stage: string
-}
-
-function buildDialogueRounds(history: StoryHistoryItem[]): DialogueRound[] {
-  const rounds: DialogueRound[] = []
-  for (let index = 0; index < history.length; index += 1) {
-    const item = history[index]
-    if (item.type !== 'choice') continue
-    const nextItem = history[index + 1]
-    rounds.push({
-      choice: item.text,
-      response: nextItem?.type === 'response' ? nextItem.text : undefined,
-    })
+function dialogueActionError(error: unknown, fallback: string): string {
+  switch (getFlashApiErrorCode(error)) {
+    case 'FLASH_TASK_LIMIT_REACHED':
+      return '手上已经有三个任务了，先完成或放下一个再来接。'
+    case 'FLASH_NPC_TASK_LIMIT_REACHED':
+      return '你已经有这位角色的一件任务了，先把那件事做完吧。'
+    case 'FLASH_REROLL_ALREADY_USED':
+      return '这次已经换过一次任务了，原来的选择仍然有效。'
+    case 'FLASH_NO_TASK_AVAILABLE':
+      return '暂时没有另一件合适的任务，这次可以先不接。'
+    case 'FLASH_INVALID_DIALOGUE_OPTION':
+      return '这个回答已经变化了，重新读取后再选一次。'
+    case 'FLASH_INVALID_TASK_STATE':
+      return '状态刚刚发生了变化，任务和对话进度都没有丢。'
+    default:
+      return fallback
   }
-  return rounds.slice(-3)
 }
 
-export default function AlangDialoguePage() {
+export default function FlashDialoguePage() {
   const { user } = useAuth()
-  const slug = Taro.getCurrentInstance().router?.params?.slug ?? ''
-  const initialNodeId = Taro.getCurrentInstance().router?.params?.nodeId ?? ''
-  const { data: mission, isLoading, isError, refetch } = useAlangMissionDetail(
-    slug,
-    !!slug && !!user?.features?.alangEnabled
-  )
-  const syncMissionProgress = useSyncAlangMissionProgress()
-
-  const [currentNodeId, setCurrentNodeId] = useState(initialNodeId)
-  const [history, setHistory] = useState<StoryHistoryItem[]>([])
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [isRecovered, setIsRecovered] = useState(false)
-  const [pendingResponse, setPendingResponse] = useState<PendingDialogueResponse | null>(null)
-  const [companionNavigationFailed, setCompanionNavigationFailed] = useState(false)
-  const recoveredProgressKeyRef = useRef('')
-  const recoveryNavigationKeyRef = useRef('')
-  const choiceActionRef = useRef(false)
-  const foundSceneArtwork = useAlangAssetSource('foundScene')
-
-  const content = mission?.content as MissionContent | undefined
-  const nodes = useMemo<StoryNode[]>(() => content?.nodes ?? [], [content?.nodes])
-  const progress = mission?.myProgress
-  const activeNodeId = isRecovered
-    ? (currentNodeId || progress?.currentNodeId || initialNodeId)
-    : (progress?.currentNodeId || currentNodeId || initialNodeId)
-  const currentNode = useMemo(
-    () => nodes.find((node) => node.id === activeNodeId),
-    [activeNodeId, nodes]
-  )
+  const enabled = shouldShowAlangEntry(user)
+  const params = Taro.getCurrentInstance().router?.params ?? {}
+  const encounterId = params.encounterId ?? ''
+  const { data, isLoading, isError, error, refetch } = useFlashEncounter(encounterId, enabled && !!encounterId)
+  const answerMutation = useAnswerFlashEncounter()
+  const rerollMutation = useRerollFlashEncounter()
+  const offerMutation = useRespondToFlashTaskOffer()
+  const deliverMutation = useDeliverFlashTask()
+  const [actionError, setActionError] = useState('')
+  const [deliveryReply, setDeliveryReply] = useState<{ message: string; canContinue: boolean } | null>(null)
 
   useEffect(() => {
-    setCurrentNodeId(initialNodeId)
-    setHistory([])
-    setIsRecovered(false)
-    setIsProcessing(false)
-    setPendingResponse(null)
-    setCompanionNavigationFailed(false)
-    recoveredProgressKeyRef.current = ''
-  }, [initialNodeId, slug])
-
-  // Recover the three dialogue rounds from server progress. The replay is
-  // rendered as a compact story log, not as chat bubbles.
-  useEffect(() => {
-    if (!progress || nodes.length === 0) return
-    const progressKey = `${progress.progressId}:${progress.currentNodeId}:${progress.choicesMade?.length ?? 0}`
-    if (recoveredProgressKeyRef.current === progressKey) return
-    const recoveredHistory: StoryHistoryItem[] = []
-
-    for (const nodeId of progress.nodeHistory ?? []) {
-      const node = nodes.find((item) => item.id === nodeId)
-      if (node?.type === 'found_scene' && node.content.narration) {
-        recoveredHistory.push({
-          type: 'narration',
-          text: node.content.narration,
-          imageKey: node.content.imageKey,
-        })
-      }
-    }
-
-    for (const choiceMade of progress.choicesMade ?? []) {
-      const node = nodes.find((item) => item.id === choiceMade.nodeId)
-      const choice = node?.choices?.[choiceMade.choiceIndex]
-      if (!choice) continue
-      recoveredHistory.push({ type: 'choice', text: choice.label })
-      recoveredHistory.push({ type: 'response', text: choice.response })
-    }
-
-    setHistory(recoveredHistory)
-    setCurrentNodeId(progress.currentNodeId || initialNodeId)
-    setIsRecovered(true)
-    recoveredProgressKeyRef.current = progressKey
-  }, [initialNodeId, nodes, progress])
-
-  useDidShow(() => {
-    if (slug) void refetch()
-  })
+    void Taro.setNavigationBarTitle({ title: data?.npc?.name ? `和${data.npc.name}聊聊` : '角色对话' })
+  }, [data?.npc?.name])
 
   useEffect(() => {
-    if (!progress || ['found', 'dialogue'].includes(progress.stage)) return
-    const key = `${progress.progressId}:${progress.stage}:${progress.currentNodeId}`
-    if (recoveryNavigationKeyRef.current === key) return
+    if (!enabled || !data?.canonicalScreen || data.status === 'expired') return
+    void redirectToFlashCanonical(data, MINI_PROGRAM_ROUTES.alangDialogue)
+  }, [data, enabled])
 
-    const encodedSlug = encodeURIComponent(slug)
-    const encodedNode = encodeURIComponent(progress.currentNodeId)
-    const url = progress.stage === 'searching'
-      ? `${MINI_PROGRAM_ROUTES.alangSearch}?slug=${encodedSlug}&nodeId=${encodedNode}`
-      : ['companion', 'arrived'].includes(progress.stage)
-        ? `${MINI_PROGRAM_ROUTES.alangCompanion}?slug=${encodedSlug}&nodeId=${encodedNode}`
-        : ['closing', 'result', 'completed'].includes(progress.stage)
-          ? `${MINI_PROGRAM_ROUTES.alangResult}?slug=${encodedSlug}`
-          : `${MINI_PROGRAM_ROUTES.alangEventDetail}?slug=${encodedSlug}`
+  const applyResponse = async (response: FlashCanonicalSnapshot) => {
+    const redirected = await redirectToFlashCanonical(response, MINI_PROGRAM_ROUTES.alangDialogue)
+    if (!redirected && !('npc' in response)) await refetch()
+  }
 
-    recoveryNavigationKeyRef.current = key
-    void Taro.redirectTo({ url }).catch(() => {
-      recoveryNavigationKeyRef.current = ''
-    })
-  }, [progress, slug])
-
-  useEffect(() => {
-    if (activeNodeId && slug) alangEvents.dialoguePageView(slug, activeNodeId)
-  }, [activeNodeId, slug])
-
-  useEffect(() => {
-    if (currentNode?.type !== 'found_scene') return
-    const narration = currentNode.content.narration ?? '你看到了阿浪。'
-    setHistory((items) => items.some((item) => item.type === 'narration' && item.text === narration)
-      ? items
-      : [...items, { type: 'narration', text: narration, imageKey: currentNode.content.imageKey }])
-  }, [currentNode])
-
-  const enterCompanion = useCallback(async (nodeId: string) => {
-    const navigationKey = `${progress?.progressId ?? 'local'}:companion:${nodeId}`
-    recoveryNavigationKeyRef.current = navigationKey
-    syncMissionProgress(slug, {
-      stage: 'companion',
-      currentNodeId: nodeId,
-    })
+  const answer = async (questionId: string, optionId: string) => {
+    if (!enabled || answerMutation.isPending) return
+    setActionError('')
     try {
-      await Taro.redirectTo({
-        url: `${MINI_PROGRAM_ROUTES.alangCompanion}?slug=${slug}&nodeId=${nodeId}`,
-      })
-    } catch {
-      recoveryNavigationKeyRef.current = ''
-      setCompanionNavigationFailed(true)
-      Taro.showToast({ title: '陪伴页没有打开，再试一次即可', icon: 'none' })
-    }
-  }, [progress?.progressId, slug, syncMissionProgress])
-
-  const handleChoice = useCallback(async (choiceIndex: number) => {
-    if (!currentNode
-      || currentNode.type !== 'dialogue'
-      || !slug
-      || isProcessing
-      || pendingResponse
-      || choiceActionRef.current) return
-    const choice = currentNode.choices?.[choiceIndex]
-    if (!choice) return
-
-    choiceActionRef.current = true
-    setIsProcessing(true)
-    alangEvents.choiceMade(slug, currentNode.id, choiceIndex)
-
-    try {
-      const response = await callSubmitChoice(slug, { nodeId: currentNode.id, choiceIndex })
-      setHistory((items) => [
-        ...items,
-        { type: 'choice', text: choice.label },
-        { type: 'response', text: response.response },
-      ])
-      setPendingResponse({
-        choice: choice.label,
-        response: response.response,
-        nextNodeId: response.nextNodeId,
-        stage: response.stage,
-      })
-    } catch {
-      Taro.showToast({ title: '这次没送达，再选一次就好', icon: 'none' })
-    } finally {
-      choiceActionRef.current = false
-      setIsProcessing(false)
-    }
-  }, [currentNode, isProcessing, pendingResponse, slug])
-
-  const handleContinueAfterResponse = useCallback(() => {
-    if (!pendingResponse) return
-    setCurrentNodeId(pendingResponse.nextNodeId)
-    setPendingResponse(null)
-    setCompanionNavigationFailed(false)
-  }, [pendingResponse])
-
-  const handleContinueFromFoundScene = useCallback(async () => {
-    if (!currentNode || currentNode.type !== 'found_scene' || !currentNode.nextNodeId || isProcessing) return
-    setIsProcessing(true)
-    try {
-      const updated = await callReportProgress(slug, currentNode.nextNodeId)
       haptics('light')
-      syncMissionProgress(slug, {
-        stage: updated.stage,
-        currentNodeId: updated.currentNodeId,
-      })
-      setCurrentNodeId(updated.currentNodeId)
-    } catch {
-      Taro.showToast({ title: '故事同步遇到小状况，再试一次即可', icon: 'none' })
-    } finally {
-      setIsProcessing(false)
+      const response = await answerMutation.mutateAsync({ encounterId, questionId, optionId })
+      await applyResponse(response)
+    } catch (error) {
+      if (getFlashApiErrorCode(error) === 'FLASH_ENCOUNTER_EXPIRED') {
+        await refetch()
+        return
+      }
+      setActionError(dialogueActionError(error, '刚才那句话没有送到，再选一次就好。'))
     }
-  }, [currentNode, isProcessing, slug, syncMissionProgress])
-
-  const dialogueRounds = useMemo(() => buildDialogueRounds(history), [history])
-  const isUsingPlaceholder = foundSceneArtwork.usingFallback
-
-  if (isLoading) {
-    return (
-      <View className='alang-dialogue__loading'>
-        <View className='alang-dialogue__loading-mark' />
-        <Text className='alang-dialogue__loading-title'>阿浪的故事正在展开…</Text>
-        <Text className='alang-dialogue__loading-detail'>会从你离开的地方继续</Text>
-      </View>
-    )
   }
 
-  if (isError || !mission) {
+  const deliver = async (assignmentId: string) => {
+    if (!enabled || deliverMutation.isPending) return
+    setActionError('')
+    try {
+      const response = await deliverMutation.mutateAsync({ encounterId, assignmentId })
+      haptics('success')
+      setDeliveryReply({
+        message: response.deliveryMessage || `${response.npc.name}认真收好了你的回话。谢谢你真的替我去看了。`,
+        canContinue: Boolean(response.currentQuestion),
+      })
+      await applyResponse(response)
+    } catch (error) {
+      if (getFlashApiErrorCode(error) === 'FLASH_ENCOUNTER_EXPIRED') {
+        await refetch()
+        return
+      }
+      setActionError(dialogueActionError(error, '任务还在你这里，没有丢。稍后再交一次就好。'))
+    }
+  }
+
+  const reroll = async () => {
+    if (!enabled || rerollMutation.isPending) return
+    setActionError('')
+    try {
+      const response = await rerollMutation.mutateAsync(encounterId)
+      await applyResponse(response)
+    } catch (error) {
+      setActionError(dialogueActionError(error, '这次没有换成功，原来的任务还为你留着。'))
+    }
+  }
+
+  const respondToOffer = async (accepted: boolean) => {
+    if (!enabled || offerMutation.isPending) return
+    setActionError('')
+    try {
+      const response = await offerMutation.mutateAsync({ encounterId, accepted })
+      if (accepted) haptics('success')
+      await applyResponse(response)
+    } catch (error) {
+      setActionError(dialogueActionError(error, accepted ? '任务没有接稳，再点一次就好。' : '这次选择没有送到，请再试一下。'))
+    }
+  }
+
+  if (!enabled) return <FlashFeatureClosed />
+
+  if (!encounterId) {
     return (
-      <View className='alang-dialogue__status'>
-        <StatusCard
-          tone='error'
-          title='故事暂时没加载出来'
-          description='网络恢复后，可以从刚才的位置继续'
-          action={{ label: '重新加载', onClick: () => { void refetch() } }}
+      <View className='flash-page'>
+        <FlashPageState
+          title='这段旧对话已经收好了'
+          description='回到闪现页，可以从服务端保存的最新状态继续。'
+          action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}
+          actionLabel='返回闪现'
         />
       </View>
     )
   }
 
-  if (!currentNode) {
+  if (isError) {
+    const expired = getFlashApiErrorCode(error) === 'FLASH_ENCOUNTER_EXPIRED'
     return (
-      <View className='alang-dialogue__status'>
-        <StatusCard
-          tone='error'
-          title='这一页故事走丢了'
-          description='重新加载会读取已保存的故事进度'
-          action={{ label: '重新加载', onClick: () => { void refetch() } }}
+      <View className='flash-page'>
+        <FlashPageState
+          tone={expired ? 'plain' : 'error'}
+          title={expired ? '这段对话已经聊完了' : '刚才的话暂时没接上'}
+          description={expired ? '解锁后的对话会保留 24 小时。现在可以回去看看有没有其他角色在线。' : '进度保存在服务端，重新读取不会从头开始。'}
+          action={expired ? () => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) } : () => { void refetch() }}
+          actionLabel={expired ? '返回闪现' : '重新接上'}
         />
       </View>
     )
   }
 
-  if (currentNode.type === 'found_scene') {
+  if (isLoading || !data) {
+    return <View className='flash-page'><FlashPageState title='正在接上刚才的话…' description='聊上以后，即使角色下线，这段对话也能继续完成。' /></View>
+  }
+
+  if (data.status === 'expired') {
     return (
-      <ScrollView className='alang-dialogue__found-scene' scrollY enhanced showScrollbar={false}>
-        <View className='alang-dialogue__found-scene-inner'>
-          <View className='alang-dialogue__found-header'>
-            <Text className='alang-dialogue__found-kicker'>刚刚 · 找到阿浪</Text>
-            <Text className='alang-dialogue__found-title'>你们第一次面对面</Text>
-          </View>
-          <View className='alang-dialogue__found-visual'>
-            <Image
-              className='alang-dialogue__found-image'
-              src={foundSceneArtwork.src}
-              mode='aspectFill'
-              onError={foundSceneArtwork.onError}
-            />
-            {isUsingPlaceholder && (
-              <View className='alang-dialogue__scene-note'>
-                <Text className='alang-dialogue__scene-note-text'>场景示意</Text>
-              </View>
-            )}
-          </View>
-          <View className='alang-dialogue__found-narration'>
-            <Text className='alang-dialogue__found-spoken'>
-              {currentNode.content.body}
-            </Text>
-            <Text className='alang-dialogue__found-narration-text'>
-              {currentNode.content.narration}
-            </Text>
-          </View>
-          <View className='alang-dialogue__found-progress'>
-            <View className='alang-dialogue__found-progress-dot' />
-            <Text className='alang-dialogue__found-progress-text'>先看清这一刻，再继续听阿浪说</Text>
-          </View>
-          <View
-            className={`alang-dialogue__found-continue${isProcessing ? ' alang-dialogue__found-continue--disabled' : ''}`}
-            onClick={handleContinueFromFoundScene}
-            role='button'
-            aria-label='继续和阿浪聊聊'
-            aria-disabled={isProcessing}
-          >
-            <Text className='alang-dialogue__found-continue-text'>
-              {isProcessing ? '正在接上故事…' : '和阿浪聊聊'}
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
+      <View className='flash-page'>
+        <FlashPageState title='这段对话已经聊完了' description='解锁后的对话会保留 24 小时。现在可以回去看看有没有其他角色在线。' action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }} actionLabel='返回闪现' />
+      </View>
     )
   }
 
-  const previousRounds = dialogueRounds.slice(0, pendingResponse ? -1 : undefined)
-  const previousRound = previousRounds[previousRounds.length - 1]
-  const visibleChoices = currentNode.type === 'dialogue'
-    ? (currentNode.choices ?? []).slice(0, 3)
-    : []
+  const question = data.currentQuestion
+  const offer = data.taskOffer
+  const category = offer ? resolveFlashTaskCategory(offer.category) : null
 
   return (
-    <View className='alang-dialogue'>
-      <ScrollView className='alang-dialogue__story' scrollY enhanced showScrollbar={false}>
-        <View className='alang-dialogue__story-inner'>
-          <View className='alang-dialogue__scene'>
-            <Image
-              className='alang-dialogue__scene-image'
-              src={foundSceneArtwork.src}
-              mode='aspectFill'
-              onError={foundSceneArtwork.onError}
-            />
-            <View className='alang-dialogue__scene-shade' />
-            <View className='alang-dialogue__scene-caption'>
-              <Text className='alang-dialogue__scene-name'>{currentNode.content.speaker ?? '阿浪'}</Text>
-              <Text className='alang-dialogue__scene-moment'>一段真实相遇</Text>
-            </View>
-            {isUsingPlaceholder && (
-              <View className='alang-dialogue__scene-note'>
-                <Text className='alang-dialogue__scene-note-text'>场景示意</Text>
-              </View>
-            )}
+    <View className='flash-page flash-dialogue'>
+      <ScrollView className='flash-page__scroll' scrollY>
+        <View className='flash-page__content'>
+          <View className='flash-dialogue__host'>
+            <FlashNpcPortrait npc={data.npc} size='large' />
+            <Text className='flash-dialogue__name'>{data.npc.name}</Text>
+            <Text className='flash-dialogue__animal'>{data.npc.animal ?? '数字动物角色'}</Text>
           </View>
 
-          <View className='alang-dialogue__narrative-card'>
-            <View className='alang-dialogue__narrative-meta'>
-              <Text className='alang-dialogue__speaker'>{currentNode.content.speaker ?? '阿浪'}</Text>
-              {currentNode.content.moodTag && (
-                <Text className='alang-dialogue__mood'>{currentNode.content.moodTag}</Text>
-              )}
+          {deliveryReply ? (
+            <View className='flash-dialogue__delivery-success' role='status'>
+              <Text className='flash-dialogue__kicker'>这件事有了回音</Text>
+              <Text className='flash-dialogue__bubble'>{deliveryReply.message}</Text>
+              <FlashButton onClick={() => setDeliveryReply(null)}>
+                {deliveryReply.canContinue ? '再聊两句' : '收好这次见面'}
+              </FlashButton>
             </View>
-            <Text className='alang-dialogue__body'>{currentNode.content.body}</Text>
-          </View>
-
-          {previousRound && (
-            <View className='alang-dialogue__previous'>
-              <Text className='alang-dialogue__previous-label'>刚才聊到这里</Text>
-              <Text className='alang-dialogue__previous-choice'>你：{previousRound.choice}</Text>
-              {previousRound.response && (
-                <Text className='alang-dialogue__previous-response'>{previousRound.response}</Text>
-              )}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      <View className='alang-dialogue__choices-dock'>
-        {currentNode.type === 'dialogue' ? (
-          pendingResponse ? (
-            <View className='alang-dialogue__response-panel' aria-live='polite'>
-              <Text className='alang-dialogue__response-speaker'>阿浪</Text>
-              <Text className='alang-dialogue__response-copy'>{pendingResponse.response}</Text>
-              <View
-                className='alang-dialogue__response-continue'
-                onClick={handleContinueAfterResponse}
-                role='button'
-                aria-label='继续听阿浪说'
+          ) : data.pendingDelivery ? (
+            <View className='flash-dialogue__delivery'>
+              <Text className='flash-dialogue__kicker'>上次托你的事</Text>
+              <Text className='flash-dialogue__delivery-title'>{data.pendingDelivery.taskTitle}</Text>
+              <Text className='flash-dialogue__bubble'>你真的去过了？那先把这件事讲给我听吧。</Text>
+              <FlashButton
+                disabled={deliverMutation.isPending}
+                onClick={() => { void deliver(data.pendingDelivery!.assignmentId) }}
               >
-                <Text className='alang-dialogue__response-continue-text'>继续</Text>
-              </View>
+                {deliverMutation.isPending ? '正在交付…' : `交给${data.npc.name}`}
+              </FlashButton>
             </View>
-          ) : (
-            <>
-              <View className='alang-dialogue__choices-heading'>
-                <Text className='alang-dialogue__choices-title'>你会怎么回答？</Text>
-              </View>
-              <View className={`alang-dialogue__choices${isProcessing ? ' alang-dialogue__choices--processing' : ''}`}>
-                {visibleChoices.map((choice, index) => (
+          ) : question ? (
+            <View className='flash-dialogue__conversation'>
+              <Text className='flash-dialogue__progress'>聊两句 · {question.position ?? (data.answeredQuestionCount ?? 0) + 1}/{question.total ?? 2}</Text>
+              {data.openingLine ? <Text className='flash-dialogue__bubble'>{data.openingLine}</Text> : null}
+              <Text className='flash-dialogue__question'>{question.text}</Text>
+              <View className='flash-dialogue__choices'>
+                {question.options.map((option) => (
                   <View
-                    key={`${currentNode.id}-${index}`}
-                    className={`alang-dialogue__choice ${isProcessing ? 'alang-dialogue__choice--disabled' : ''}`}
-                    onClick={() => { void handleChoice(index) }}
+                    key={option.id}
+                    className={`flash-dialogue__choice${answerMutation.isPending ? ' flash-dialogue__choice--disabled' : ''}`}
+                    hoverClass={answerMutation.isPending ? '' : 'flash-dialogue__choice--pressed'}
+                    onClick={() => { void answer(question.id, option.id) }}
                     role='button'
-                    aria-label={choice.label}
-                    aria-disabled={isProcessing}
+                    aria-label={option.label}
+                    aria-disabled={answerMutation.isPending}
                   >
-                    <Text className='alang-dialogue__choice-text'>{choice.label}</Text>
+                    <Text>{option.label}</Text>
                   </View>
                 ))}
               </View>
-              {isProcessing && (
-                <Text className='alang-dialogue__processing'>阿浪想了想…</Text>
-              )}
-            </>
-          )
-        ) : (
-          <View className='alang-dialogue__transition'>
-            <View className='alang-dialogue__transition-dot' />
-            <View className='alang-dialogue__transition-copy'>
-              <Text className='alang-dialogue__transition-title'>准备一起出发</Text>
-              <Text className='alang-dialogue__transition-detail'>接下来，陪他走一小段路</Text>
+              <Text className='flash-dialogue__hint'>慢慢选，没有标准答案 ( ´ ▽ ` )</Text>
             </View>
-            <View
-              className='alang-dialogue__transition-retry'
-              onClick={() => { void enterCompanion(currentNode.id) }}
-              role='button'
-              aria-label={companionNavigationFailed ? '再试一次，陪他走走' : '陪他走走'}
-            >
-              <Text className='alang-dialogue__transition-retry-text'>
-                {companionNavigationFailed ? '再试一次' : '陪他走走'}
-              </Text>
+          ) : offer && category ? (
+            <View className='flash-dialogue__offer'>
+              <Text className='flash-dialogue__kicker'>有件小事想拜托你</Text>
+              <Text className='flash-dialogue__bubble'>{offer.invitation}</Text>
+              <View className='flash-dialogue__offer-card'>
+                <Text className='flash-dialogue__offer-category' style={{ color: category.text, backgroundColor: category.tint }}>
+                  {category.label}
+                </Text>
+                <Text className='flash-dialogue__offer-title'>{offer.title}</Text>
+                {offer.destinationName ? (
+                  <Text className='flash-dialogue__offer-place'>{offer.districtName ? `${offer.districtName} · ` : ''}{offer.destinationName}</Text>
+                ) : null}
+                <Text className='flash-dialogue__offer-rule'>到附近点击到达即可；不要求消费，也不要求进店。</Text>
+              </View>
+              <View className='flash-dialogue__offer-actions'>
+                <FlashButton disabled={offerMutation.isPending} onClick={() => { void respondToOffer(true) }}>
+                  {offerMutation.isPending ? '正在收好任务…' : '好，我替你去看看'}
+                </FlashButton>
+                {data.canReroll && (data.rerollsRemaining ?? 1) > 0 ? (
+                  <FlashButton variant='secondary' disabled={rerollMutation.isPending} onClick={() => { void reroll() }}>
+                    {rerollMutation.isPending ? '正在想另一个…' : '换一件事'}
+                  </FlashButton>
+                ) : null}
+                <FlashButton variant='quiet' disabled={offerMutation.isPending} onClick={() => { void respondToOffer(false) }}>
+                  这次先不了
+                </FlashButton>
+              </View>
             </View>
-          </View>
-        )}
-      </View>
+          ) : (
+            <View className='flash-dialogue__conversation'>
+              <Text className='flash-dialogue__bubble'>{data.message || '今天先聊到这里吧，下次再碰见的时候再继续。'}</Text>
+              <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>回到闪现</FlashButton>
+            </View>
+          )}
+
+          {actionError ? <View className='flash-dialogue__error' role='alert'><Text>{actionError}</Text></View> : null}
+          <Text className='flash-dialogue__safety'>对话已解锁后可以聊完，不会因为角色下线突然中断。</Text>
+        </View>
+      </ScrollView>
     </View>
   )
 }

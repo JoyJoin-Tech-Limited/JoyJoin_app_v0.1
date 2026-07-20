@@ -101,8 +101,9 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  approve or reject the formed groups. Default: true. Env fallback:
    *  MATCHING_OPERATOR_REVIEW_ENABLED. */
   matchingOperatorReviewEnabled: "MATCHING_OPERATOR_REVIEW_ENABLED",
-  /** Alang NPC prototype kill-switch. When false, hides all Alang entry
-   *  points and routes. Env fallback: ALANG_ENABLED (default: false). */
+  /** Alang/Flash digital-NPC kill-switch. When false, hides the legacy Alang
+   * prototype and all formal Flash routes. Env fallback: ALANG_ENABLED
+   * (default: false). */
   alangEnabled: "ALANG_ENABLED",
   /** Squad-unboxing pocket-deck collapse kill-switch. When false, the
    *  mini-program hides the "收起卡组" trigger and collapseDeck() is a no-op,

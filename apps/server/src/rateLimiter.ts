@@ -49,10 +49,11 @@ interface RateLimitConfig {
   maxRequests: number;
   keyPrefix?: string;
   keyResolver?: (req: Request) => string;
+  errorCode?: string;
 }
 
 export function createRateLimiter(config: RateLimitConfig) {
-  const { windowMs, maxRequests, keyPrefix = 'rl', keyResolver } = config;
+  const { windowMs, maxRequests, keyPrefix = 'rl', keyResolver, errorCode } = config;
 
   return (req: Request, res: Response, next: NextFunction) => {
     const userId = keyResolver?.(req) ||
@@ -79,6 +80,7 @@ export function createRateLimiter(config: RateLimitConfig) {
       const retryAfter = Math.ceil((entry.resetTime - now) / 1000);
       res.set('Retry-After', String(retryAfter));
       return res.status(429).json({
+        ...(errorCode ? { code: errorCode } : {}),
         message: '请求过于频繁，请稍后再试',
         retryAfterSeconds: retryAfter,
       });
@@ -131,6 +133,22 @@ export const geoEndpointLimiter = createRateLimiter({
   windowMs: 60000,
   maxRequests: 60,
   keyPrefix: 'geo',
+});
+
+/**
+ * Hidden Flash encounter lookup is deliberately much tighter than ordinary
+ * map traffic. The key includes the appearance so repeated synthetic points
+ * cannot cheaply probe one NPC's hidden location.
+ */
+export const flashLocateEndpointLimiter = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  maxRequests: 6,
+  keyPrefix: 'flash-locate',
+  keyResolver: (req) => {
+    const actor = (req as any).session?.userId || (req as any).user?.id || req.ip || 'anonymous';
+    return `${actor}:${req.params.id || 'unknown'}`;
+  },
+  errorCode: 'FLASH_LOCATE_RATE_LIMITED',
 });
 
 /**

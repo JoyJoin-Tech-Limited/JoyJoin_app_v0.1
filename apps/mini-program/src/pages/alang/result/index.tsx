@@ -1,306 +1,195 @@
-import Taro, { useDidShow } from '@tarojs/taro'
-import { useEffect, useState, useRef } from 'react'
-import { View, Text, Image, ScrollView } from '@tarojs/components'
-import {
-  useAlangMissionDetail,
-  useCompleteMission,
-  useResetAlangMission,
-  useStoryArchives,
-} from '../../../lib/alang/useAlangMission'
+import Taro from '@tarojs/taro'
+import { useEffect, useMemo, useState } from 'react'
+import { ScrollView, Text, Textarea, View } from '@tarojs/components'
+import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashPageState } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
-import { alangEvents } from '../../../lib/alang/alangAnalytics'
-import { callReportProgress } from '../../../lib/alang/api'
+import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
+import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
+import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
+import { useFlashAssignment, useSubmitFlashFeedback } from '../../../lib/alang/useFlash'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
-import StatusCard from '../../../components/ui/StatusCard'
-import { useAlangAssetSource } from '../../../lib/alang/alangAssets'
 import { haptics } from '../../../lib/utils/haptics'
-import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
-import './index.scss'
+import '../flash.scss'
 
-export default function AlangResultPage() {
+export default function FlashFeedbackPage() {
   const { user } = useAuth()
-  const slug = Taro.getCurrentInstance().router?.params?.slug ?? ''
-  const { data: mission, isLoading, isError, refetch } = useAlangMissionDetail(slug, !!slug && !!user?.features?.alangEnabled)
-  const {
-    data: archives,
-    refetch: refetchArchives,
-  } = useStoryArchives(!!slug && !!user?.features?.alangEnabled)
-  const completeMutation = useCompleteMission()
-  const resetMutation = useResetAlangMission()
-  const resultHero = useAlangAssetSource('resultHero')
-  const [completed, setCompleted] = useState(false)
-  const [archiveId, setArchiveId] = useState('')
-  const [isConfirmingRetest, setIsConfirmingRetest] = useState(false)
-  const closingAdvanceRef = useRef(false)
-  const navigationKeyRef = useRef('')
-  const retestActionRef = useRef(false)
-
-  const progress = mission?.myProgress
-
-  useDidShow(() => {
-    if (!slug) return
-    void Promise.all([refetch(), refetchArchives()])
-  })
-
-  // Recover archive identity from the mission response first. The archive list
-  // remains a compatibility fallback for older server responses.
-  useEffect(() => {
-    if (progress?.status !== 'completed') return
-    const recoveredArchiveId = progress.archiveId
-      ?? archives?.find((archive) => archive.missionId === mission?.id)?.id
-    if (recoveredArchiveId) {
-      setArchiveId(recoveredArchiveId)
-    }
-    setCompleted(true)
-  }, [progress?.archiveId, progress?.status, archives, mission?.id])
+  const enabled = shouldShowAlangEntry(user)
+  const params = Taro.getCurrentInstance().router?.params ?? {}
+  const assignmentId = params.assignmentId ?? ''
+  const { data, isLoading, isError, refetch } = useFlashAssignment(assignmentId, enabled && !!assignmentId)
+  const submitMutation = useSubmitFlashFeedback()
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [privateReply, setPrivateReply] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
-    if (slug) alangEvents.resultPageView(slug)
-  }, [slug])
-
-  const content = mission?.content as any
-  const nodes: Array<any> = content?.nodes ?? []
+    void Taro.setNavigationBarTitle({ title: '写下反馈' })
+  }, [])
 
   useEffect(() => {
-    if (!progress || ['closing', 'result', 'completed'].includes(progress.stage)) return
-    const key = `${progress.progressId}:${progress.stage}:${progress.currentNodeId}`
-    if (navigationKeyRef.current === key) return
-    const encodedSlug = encodeURIComponent(slug)
-    const encodedNode = encodeURIComponent(progress.currentNodeId)
-    const url = progress.stage === 'searching'
-      ? `${MINI_PROGRAM_ROUTES.alangSearch}?slug=${encodedSlug}&nodeId=${encodedNode}`
-      : ['found', 'dialogue'].includes(progress.stage)
-        ? `${MINI_PROGRAM_ROUTES.alangDialogue}?slug=${encodedSlug}&nodeId=${encodedNode}`
-        : ['companion', 'arrived'].includes(progress.stage)
-          ? `${MINI_PROGRAM_ROUTES.alangCompanion}?slug=${encodedSlug}&nodeId=${encodedNode}`
-          : `${MINI_PROGRAM_ROUTES.alangEventDetail}?slug=${encodedSlug}`
-    navigationKeyRef.current = key
-    void Taro.redirectTo({ url }).catch(() => {
-      navigationKeyRef.current = ''
-    })
-  }, [progress, slug])
+    if (!enabled || submitted || !data?.canonicalScreen || ['expired', 'withdrawn'].includes(data.status)) return
+    void redirectToFlashCanonical(data, MINI_PROGRAM_ROUTES.alangResult)
+  }, [data, enabled, submitted])
 
-  useEffect(() => {
-    if (closingAdvanceRef.current || progress?.stage !== 'closing') return
-    const currentNode = nodes.find((node: any) => node.id === progress.currentNodeId)
-    if (!currentNode?.nextNodeId) return
-    const nextNode = nodes.find((node: any) => node.id === currentNode.nextNodeId)
-    if (nextNode?.type !== 'result_card') return
+  const prompts = data?.feedbackQuestions ?? []
+  const allAnswered = useMemo(
+    () => prompts.length > 0 && prompts.every((prompt) => Boolean(answers[prompt.promptId ?? prompt.id])),
+    [answers, prompts],
+  )
 
-    closingAdvanceRef.current = true
-    callReportProgress(slug, nextNode.id)
-      .then(() => refetch())
-      .catch(() => {
-        closingAdvanceRef.current = false
-        Taro.showToast({ title: '结果同步遇到小状况', icon: 'none' })
-      })
-  }, [nodes, progress?.currentNodeId, progress?.stage, refetch, slug])
-
-  // Find result card node from history
-  const currentResultNode = nodes.find((node: any) => (
-    node.id === progress?.currentNodeId && node.type === 'result_card'
-  ))
-  const resultNodeId = progress?.nodeHistory?.find((id: string) => {
-    const n = nodes.find((node: any) => node.id === id)
-    return n?.type === 'result_card'
-  })
-  const resultNode = currentResultNode ?? nodes.find((n: any) => n.id === resultNodeId)
-  const resultContent = resultNode?.content ?? {}
-
-  const handleComplete = async () => {
-    if (!slug || completed || completeMutation.isPending) return
-    alangEvents.resultConfirmTap(slug)
+  const handleSubmit = async () => {
+    if (!enabled || !assignmentId || !allAnswered || submitMutation.isPending) return
+    setSubmitError('')
     try {
-      const res = await completeMutation.mutateAsync(slug)
-      setArchiveId(res.archiveId)
-      setCompleted(true)
+      await submitMutation.mutateAsync({
+        assignmentId,
+        answers: prompts.map((prompt) => ({
+          promptId: prompt.promptId ?? prompt.id,
+          optionId: answers[prompt.promptId ?? prompt.id],
+        })),
+        privateReply,
+      })
       haptics('success')
-    } catch {
-      Taro.showToast({ title: '没成功，再点一次即可', icon: 'none' })
-    }
-  }
-
-  const handleGoDiscover = () => {
-    Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover })
-  }
-
-  const handleViewStory = () => {
-    if (user?.features?.personalStoryEnabled) {
-      Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.personalStory })
-      return
-    }
-    if (archiveId) {
-      Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangStoryDetail}?archiveId=${archiveId}` })
-    }
-  }
-
-  const canRetest = shouldShowAlangDebugTools(user) && completed && !!archiveId
-  const isRetestBusy = isConfirmingRetest || resetMutation.isPending
-
-  const handleRetest = async () => {
-    if (!slug || !canRetest || retestActionRef.current) return
-
-    retestActionRef.current = true
-    setIsConfirmingRetest(true)
-    try {
-      const modal = await Taro.showModal({
-        title: '重新测试阿浪',
-        content: '将清除当前账号本次阿浪测试的进度与测试故事，是否重新开始？',
-        confirmText: '重新开始',
-        cancelText: '取消',
-        confirmColor: '#8B5CF6',
-      })
-      setIsConfirmingRetest(false)
-
-      if (!modal.confirm) {
-        retestActionRef.current = false
+      setPrivateReply('')
+      setAnswers({})
+      setSubmitted(true)
+    } catch (error) {
+      const code = getFlashApiErrorCode(error)
+      if (code === 'FLASH_TASK_EXPIRED' || code === 'FLASH_DESTINATION_WITHDRAWN') {
+        await refetch()
         return
       }
-
-      await resetMutation.mutateAsync(slug)
-      haptics('success')
-      void Taro.showToast({ title: '已重置，可以重新测试', icon: 'success' })
-      await Taro.reLaunch({
-        url: `${MINI_PROGRAM_ROUTES.alangConfig}?slug=${encodeURIComponent(slug)}`,
-      })
-    } catch {
-      setIsConfirmingRetest(false)
-      retestActionRef.current = false
-      Taro.showToast({ title: '重置没成功，请稍后再试', icon: 'none' })
+      setSubmitError(code === 'FLASH_INVALID_TASK_STATE'
+        ? '任务状态刚刚变化了，重新读取后再确认一次。'
+        : '反馈没有送到，内容还留在这里，可以再试一次。')
     }
   }
 
-  const handleRefreshArchive = () => {
-    void Promise.all([refetch(), refetchArchives()])
-  }
+  if (!enabled) return <FlashFeatureClosed />
 
-  if (isLoading) {
+  if (!assignmentId) {
     return (
-      <View className='alang-result__loading'>
-        <Text>加载中…</Text>
+      <View className='flash-page'>
+        <FlashPageState title='这条旧反馈链接已经失效' description='回到闪现页，会从服务端保存的任务状态继续。' action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }} actionLabel='返回闪现' />
       </View>
     )
   }
 
-  if (isError || !mission) {
+  if (isError) {
     return (
-      <View className='alang-result__status-shell'>
-        <StatusCard
-          tone='error'
-          title='结果暂时没加载出来'
-          description='网络恢复后可以再试一次'
-          action={{ label: '重新加载', onClick: () => { void refetch() } }}
+      <View className='flash-page'>
+        <FlashPageState tone='error' title='反馈页暂时没打开' description='到达状态已经保存，不用重新跑一趟。' action={() => { void refetch() }} actionLabel='重新读取' />
+      </View>
+    )
+  }
+
+  if (isLoading || !data) {
+    return <View className='flash-page'><FlashPageState title='正在收好这次到达…' /></View>
+  }
+
+  if (data.status === 'expired' || data.status === 'withdrawn') {
+    return (
+      <View className='flash-page'>
+        <FlashPageState
+          title='这项任务已经结束了'
+          description='可能已经超过 7 天，或任务地点被安全撤下；不会有惩罚。'
+          action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}
+          actionLabel='返回闪现'
         />
       </View>
     )
   }
 
-  if (completed) {
+  const alreadyReady = data.status === 'ready_to_deliver' || Boolean(data.feedbackSubmittedAt)
+  if (submitted || alreadyReady) {
     return (
-      <View className='alang-result__completed'>
-        <Text className='alang-result__completed-title'>故事已收录</Text>
-        <Text className='alang-result__completed-sub'>
-          {user?.features?.personalStoryEnabled
-            ? '这次真实经历已保存；进入「我的故事」后，可由你手动更新下一章'
-            : '这次经历已保存，可以随时回看已收录故事'}
-        </Text>
-        <View className='alang-result__completed-actions'>
-          <View
-            className='alang-result__completed-btn'
-            onClick={archiveId ? handleViewStory : handleRefreshArchive}
-            hoverClass='alang-result__completed-btn--pressed'
-            role='button'
-            aria-label={archiveId
-              ? user?.features?.personalStoryEnabled ? '进入我的故事' : '查看已收录故事'
-              : '同步故事记录'}
-          >
-            <Text className='alang-result__completed-btn-text'>
-              {archiveId
-                ? user?.features?.personalStoryEnabled ? '进入我的故事' : '查看故事'
-                : '同步故事记录'}
-            </Text>
+      <View className='flash-page flash-feedback-success'>
+        <View className='flash-feedback-success__content'>
+          <FlashNpcPortrait npc={data.npc} size='large' />
+          <Text className='flash-feedback-success__title'>这件事，先替你收好了</Text>
+          <Text className='flash-feedback-success__copy'>
+            下次再遇见 {data.npc.name}，对话会先让你交付这项任务。角色今天下线也没关系。
+          </Text>
+          <View className='flash-feedback-success__actions'>
+            <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>回到闪现</FlashButton>
           </View>
-          <View
-            className='alang-result__completed-btn alang-result__completed-btn--secondary'
-            onClick={handleGoDiscover}
-            hoverClass='alang-result__completed-btn--pressed'
-            role='button'
-            aria-label='返回发现'
-          >
-            <Text className='alang-result__completed-btn-text'>返回发现</Text>
-          </View>
-          {canRetest && (
-            <View
-              className={`alang-result__completed-btn alang-result__completed-btn--secondary${isRetestBusy ? ' alang-result__completed-btn--disabled' : ''}`}
-              onClick={() => { void handleRetest() }}
-              hoverClass={isRetestBusy ? '' : 'alang-result__completed-btn--pressed'}
-              role='button'
-              aria-label={resetMutation.isPending ? '正在重置阿浪测试' : '重新测试阿浪'}
-              aria-disabled={isRetestBusy}
-            >
-              <Text className='alang-result__completed-btn-text'>
-                {resetMutation.isPending ? '正在重置…' : '重新测试阿浪'}
-              </Text>
-            </View>
-          )}
+          <Text className='flash-feedback-success__note'>没有积分或奖品；这段经历会让下次见面更完整。</Text>
         </View>
       </View>
     )
   }
 
-  const stableMoment = progress?.arrivedAt ?? progress?.completedAt
-  const stableDate = stableMoment ? new Date(stableMoment) : null
-  const dateStr = stableDate && !Number.isNaN(stableDate.getTime())
-    ? stableDate.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })
-    : (resultContent.dateLabel ?? '这次相遇')
-
   return (
-    <ScrollView className='alang-result' scrollY>
-      <View className='alang-result__card'>
-        <View className='alang-result__card-header'>
-          <Text className='alang-result__card-date'>{dateStr}</Text>
-          <Text className='alang-result__card-location'>{resultContent.locationLabel ?? '某个角落'}</Text>
-        </View>
-        <View className='alang-result__card-visual'>
-          <Image
-            className='alang-result__card-image'
-            src={resultHero.src}
-            mode='aspectFill'
-            onError={resultHero.onError}
-          />
-          {resultHero.usingFallback && (
-            <Text className='alang-result__placeholder-label'>结果场景示意</Text>
-          )}
-        </View>
-        <View className='alang-result__card-body'>
-          <Text className='alang-result__card-mood'>
-            {resultContent.finalMood ?? '平静'}
-          </Text>
-          <Text className='alang-result__card-summary'>
-            {resultContent.summaryLine ?? '你们一起走过了一段路。'}
-          </Text>
-          {resultContent.companionStyle && (
-            <Text className='alang-result__card-style'>
-              你用「{resultContent.companionStyle}」陪他走完了这一段。
-            </Text>
-          )}
-        </View>
-      </View>
+    <View className='flash-page flash-feedback'>
+      <ScrollView className='flash-page__scroll' scrollY>
+        <View className='flash-page__content'>
+          <View className='flash-feedback__hero'>
+            <FlashNpcPortrait npc={data.npc} />
+            <View className='flash-feedback__hero-copy'>
+              <Text className='flash-feedback__eyebrow'>已经到达</Text>
+              <Text className='flash-feedback__title'>给 {data.npc.name} 留点真实感受</Text>
+            </View>
+          </View>
 
-      <View className='alang-result__actions'>
-        <View
-          className={`alang-result__cta${completeMutation.isPending ? ' alang-result__cta--disabled' : ''}`}
-          onClick={handleComplete}
-          hoverClass={completeMutation.isPending ? '' : 'alang-result__cta--pressed'}
-          role='button'
-          aria-label={completeMutation.isPending ? '正在收录故事' : '收录故事'}
-          aria-disabled={completeMutation.isPending}
-        >
-          <Text className='alang-result__cta-text'>
-            {completeMutation.isPending ? '正在收录…' : '收录故事'}
-          </Text>
+          <View className='flash-feedback__form'>
+            {prompts.map((prompt, index) => {
+              const key = prompt.promptId ?? prompt.id
+              return (
+                <View key={key} className='flash-feedback__prompt'>
+                  <Text className='flash-feedback__prompt-number'>0{index + 1}</Text>
+                  <Text className='flash-feedback__prompt-title'>{prompt.prompt}</Text>
+                  <View className='flash-feedback__options'>
+                    {prompt.options.map((option) => {
+                      const selected = answers[key] === option.id
+                      return (
+                        <View
+                          key={option.id}
+                          className={`flash-feedback__option${selected ? ' flash-feedback__option--selected' : ''}`}
+                          hoverClass='flash-feedback__option--pressed'
+                          onClick={() => setAnswers((current) => ({ ...current, [key]: option.id }))}
+                          role='button'
+                          aria-label={option.label}
+                          aria-pressed={selected}
+                        >
+                          <Text>{option.label}</Text>
+                        </View>
+                      )
+                    })}
+                  </View>
+                </View>
+              )
+            })}
+
+            <View className='flash-feedback__reply'>
+              <View className='flash-feedback__reply-head'>
+                <Text className='flash-feedback__reply-title'>想单独回他一句吗？</Text>
+                <Text className='flash-feedback__reply-count'>{privateReply.length}/100</Text>
+              </View>
+              <Textarea
+                className='flash-feedback__textarea'
+                value={privateReply}
+                maxlength={100}
+                placeholder='可不填。说说你看见了什么，或当时是什么感觉。'
+                onInput={(event) => setPrivateReply(event.detail.value.slice(0, 100))}
+                aria-label='给角色的私密回信，最多100字'
+              />
+              <Text className='flash-feedback__privacy'>回信不用于用户画像、数据分析、个人故事或模型训练；交付后 30 天删除。</Text>
+            </View>
+          </View>
+
+          {prompts.length === 0 ? (
+            <View className='flash-feedback__error' role='alert'>反馈题还没准备好，请稍后重新读取。</View>
+          ) : null}
+          {submitError ? <View className='flash-feedback__error' role='alert'><Text>{submitError}</Text></View> : null}
+
+          <View className='flash-feedback__actions'>
+            <FlashButton disabled={!allAnswered || submitMutation.isPending} onClick={() => { void handleSubmit() }}>
+              {submitMutation.isPending ? '正在收好…' : '保存，等下次交付'}
+            </FlashButton>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   )
 }
