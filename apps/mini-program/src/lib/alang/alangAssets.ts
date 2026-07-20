@@ -34,7 +34,7 @@ export const ALANG_ASSET_MANIFEST = {
     approver: 'product + visual owner',
     approvalStatus: 'awaiting-approved-art',
     cdnPath: '/assets/alang/alang-found-scene.webp',
-    fallbackPath: '/assets/lovart/alang-found-scene-placeholder.webp',
+    fallbackPath: '/assets/lovart/alang-event-card-placeholder.webp',
   },
   companionAtmosphere: {
     assetId: 'alang-companion-atmosphere-v1',
@@ -51,7 +51,7 @@ export const ALANG_ASSET_MANIFEST = {
     approver: 'product + visual owner',
     approvalStatus: 'awaiting-approved-art',
     cdnPath: '/assets/alang/alang-companion-bg.webp',
-    fallbackPath: '/assets/lovart/alang-found-scene-placeholder.webp',
+    fallbackPath: '/assets/lovart/alang-event-card-placeholder.webp',
   },
   resultHero: {
     assetId: 'alang-result-hero-v1',
@@ -68,7 +68,7 @@ export const ALANG_ASSET_MANIFEST = {
     approver: 'product + visual owner',
     approvalStatus: 'awaiting-approved-art',
     cdnPath: '/assets/alang/alang-result-hero.webp',
-    fallbackPath: '/assets/lovart/alang-result-placeholder.webp',
+    fallbackPath: '/assets/lovart/alang-event-card-placeholder.webp',
   },
 } as const
 

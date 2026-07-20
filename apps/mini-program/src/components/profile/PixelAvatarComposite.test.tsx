@@ -26,6 +26,15 @@ function makeItem(slot: EquipmentSlot): EquipmentItem {
   }
 }
 
+function makeSpiderItem(slot: EquipmentSlot): EquipmentItem {
+  return {
+    ...makeItem(slot),
+    slug: `spider-${slot}`,
+    assetKey: `equipment/starter/spider/${slot}/v1`,
+    compatibleArchetypes: ['spider'],
+  }
+}
+
 function makeOutfit(overrides: Partial<EquipmentOutfit> = {}): EquipmentOutfit {
   return {
     topItemId: 'top-item',
@@ -43,6 +52,105 @@ const itemsById = new Map(SLOT_ORDER.map((slot) => {
 }))
 
 describe('PixelAvatarComposite', () => {
+  it('uses the pose-locked approved spider art for the complete starter outfit', () => {
+    const spiderItems = new Map(SLOT_ORDER.map((slot) => {
+      const item = makeSpiderItem(slot)
+      return [item.id, item] as const
+    }))
+    const { container } = render(
+      <PixelAvatarComposite
+        archetypeId='spider'
+        outfit={makeOutfit()}
+        itemsById={spiderItems}
+      />,
+    )
+
+    expect(container.querySelector('.pixel-avatar-composite__body--approved-starter'))
+      .toHaveAttribute('src', expect.stringContaining('/profile-pixel/archetypes/spider/base-v1.webp'))
+    expect(container.querySelectorAll('.pixel-avatar-composite__layer')).toHaveLength(0)
+  })
+
+  it('keeps the approved complete spider pose through pseudo-3D turntable frames', () => {
+    const spiderItems = new Map(SLOT_ORDER.map((slot) => {
+      const item = makeSpiderItem(slot)
+      return [item.id, item] as const
+    }))
+    const { container, rerender } = render(
+      <PixelAvatarComposite
+        archetypeId='spider'
+        outfit={makeOutfit()}
+        itemsById={spiderItems}
+        frameId='left-far'
+      />,
+    )
+
+    const approvedSrc = container.querySelector('.pixel-avatar-composite__body--approved-starter')
+      ?.getAttribute('src')
+    expect(approvedSrc).toContain('/profile-pixel/archetypes/spider/base-v1.webp')
+    expect(container.querySelectorAll('.pixel-avatar-composite__layer')).toHaveLength(0)
+
+    rerender(
+      <PixelAvatarComposite
+        archetypeId='spider'
+        outfit={makeOutfit()}
+        itemsById={spiderItems}
+        frameId='right-far'
+      />,
+    )
+
+    expect(container.querySelector('.pixel-avatar-composite__body--approved-starter'))
+      .toHaveAttribute('src', approvedSrc)
+    expect(container.querySelectorAll('.pixel-avatar-composite__layer')).toHaveLength(0)
+  })
+
+  it('returns to independent spider layers as soon as one starter item is removed', () => {
+    const spiderItems = new Map(SLOT_ORDER.map((slot) => {
+      const item = makeSpiderItem(slot)
+      return [item.id, item] as const
+    }))
+    const { container } = render(
+      <PixelAvatarComposite
+        archetypeId='spider'
+        outfit={makeOutfit({ accessoryItemId: null })}
+        itemsById={spiderItems}
+      />,
+    )
+
+    expect(container.querySelector('.pixel-avatar-composite__body--approved-starter')).not.toBeInTheDocument()
+    expect(container.querySelector('.pixel-avatar-composite__layer--top')).toBeInTheDocument()
+  })
+
+  it('recovers from an approved starter image failure when the outfit changes its body source', () => {
+    const spiderItems = new Map(SLOT_ORDER.map((slot) => {
+      const item = makeSpiderItem(slot)
+      return [item.id, item] as const
+    }))
+    const { container, rerender } = render(
+      <PixelAvatarComposite
+        archetypeId='spider'
+        outfit={makeOutfit()}
+        itemsById={spiderItems}
+      />,
+    )
+
+    fireEvent.error(container.querySelector('.pixel-avatar-composite__body') as Element)
+    expect(container.querySelector('.pixel-avatar__base-top')).toBeInTheDocument()
+
+    rerender(
+      <PixelAvatarComposite
+        archetypeId='spider'
+        outfit={makeOutfit({ accessoryItemId: null })}
+        itemsById={spiderItems}
+      />,
+    )
+
+    expect(container.querySelector('.pixel-avatar-composite__body')).toHaveAttribute(
+      'src',
+      expect.stringMatching(/\/body-front-v2\.[a-f0-9]{12}\.webp/),
+    )
+    expect(container.querySelector('.pixel-avatar-composite__layer--top')).toBeInTheDocument()
+  })
+
   it('keeps the permanent modest body and renders all equipped cropped layers', () => {
     const { container } = render(
       <PixelAvatarComposite

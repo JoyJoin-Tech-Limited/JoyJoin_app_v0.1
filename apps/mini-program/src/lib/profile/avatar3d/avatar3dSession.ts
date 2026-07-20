@@ -65,7 +65,10 @@ export interface Avatar3DSession {
  * layout, while WebGL draws at this deliberately small resolution and the
  * compositor enlarges it with nearest-neighbour sampling.
  */
-export const AVATAR_PIXEL_ART_BUFFER_WIDTH = 320
+// 160px gives the 320-360px wardrobe stage a deliberate 2x-ish nearest-
+// neighbour scale. At 320px the canvas was effectively native resolution, so
+// the procedural model read as smooth low-poly rather than the approved sprite.
+export const AVATAR_PIXEL_ART_BUFFER_WIDTH = 160
 
 export function resolvePixelArtRenderSize(cssWidth: number, cssHeight: number): { width: number; height: number } {
   const safeWidth = Math.max(1, Math.round(cssWidth))
@@ -247,6 +250,15 @@ export function createAvatar3DSession(options: Avatar3DSessionOptions): Avatar3D
       renderer.dispose()
     } catch {
       // ignore — dispose is best effort
+    }
+    // Some WeChat canvas adapters are not real EventTargets. Explicitly drop
+    // callbacks still retained by our shim after three.js disposes so a closed
+    // wardrobe page cannot keep the component/session alive.
+    const retainedListeners = Object.entries(adaptedCanvas.__listeners) as Array<
+      [string, Array<(...args: any[]) => void>]
+    >
+    for (const [type, callbacks] of retainedListeners) {
+      for (const callback of [...callbacks]) adaptedCanvas.removeEventListener(type, callback)
     }
     try {
       // Free the underlying GL context so the WeChat canvas can be reused.

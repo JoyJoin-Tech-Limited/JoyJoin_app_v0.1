@@ -178,7 +178,7 @@ describe('AlangDialoguePage', () => {
     expect(container.querySelector('.alang-dialogue__choice-letter')).not.toBeInTheDocument()
     expect(container.querySelector('.alang-dialogue__history-item')).not.toBeInTheDocument()
     expect(container.querySelector('.alang-dialogue__choices-dock')).toBeInTheDocument()
-    expect(screen.getAllByRole('img')[0]).toHaveAttribute('src', '/assets/lovart/alang-found-scene-placeholder.webp')
+    expect(screen.getAllByRole('img')[0]).toHaveAttribute('src', '/assets/lovart/alang-event-card-placeholder.webp')
   })
 
   it('shows Alang response before the next beat and enters companion only after an explicit tap', async () => {

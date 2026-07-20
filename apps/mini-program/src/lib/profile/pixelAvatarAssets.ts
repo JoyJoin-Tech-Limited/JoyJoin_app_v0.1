@@ -234,6 +234,21 @@ export function getPixelAvatarBaseUrl(archetypeId?: string | null): string {
 }
 
 /**
+ * Approved, fully dressed 2D reference art. The spider starter outfit was
+ * painted as one pose-aware illustration; rendering its separately generated
+ * garment crops reintroduced a neutral arm pose and made the jacket float off
+ * the raised hand. Use this reference only when the complete matching starter
+ * set is equipped. Partial outfits continue to use independent layers.
+ */
+export function getPixelAvatarApprovedStarterLookUrl(
+  archetypeId?: string | null,
+): string | null {
+  const safeId = normalizePixelArchetypeId(archetypeId)
+  if (safeId !== 'spider') return null
+  return cdnAsset(`/assets/profile-pixel/archetypes/${safeId}/base-v1.webp`)
+}
+
+/**
  * The five pseudo-3D stops reuse one approved front body asset. Scene transforms create the
  * restrained paper-doll tilt; this function intentionally does not imply real side views.
  */

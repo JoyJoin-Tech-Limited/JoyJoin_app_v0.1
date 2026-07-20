@@ -7,12 +7,12 @@ import {
 
 describe('pixel-art render buffer', () => {
   it('caps a phone-width stage at a DPR-1 pixel-art buffer', () => {
-    expect(resolvePixelArtRenderSize(360, 540)).toEqual({ width: 320, height: 480 })
-    expect(AVATAR_PIXEL_ART_BUFFER_WIDTH).toBe(320)
+    expect(resolvePixelArtRenderSize(360, 540)).toEqual({ width: 160, height: 240 })
+    expect(AVATAR_PIXEL_ART_BUFFER_WIDTH).toBe(160)
   })
 
   it('preserves aspect ratio and never upscales a small canvas', () => {
-    expect(resolvePixelArtRenderSize(320, 240)).toEqual({ width: 320, height: 240 })
+    expect(resolvePixelArtRenderSize(320, 240)).toEqual({ width: 160, height: 120 })
     expect(resolvePixelArtRenderSize(100, 150)).toEqual({ width: 100, height: 150 })
   })
 })

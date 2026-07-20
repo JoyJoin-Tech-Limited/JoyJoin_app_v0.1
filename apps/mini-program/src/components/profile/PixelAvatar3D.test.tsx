@@ -51,6 +51,7 @@ const mocks = vi.hoisted(() => {
     createAvatar3DSession: vi.fn(() => fakeSession),
     haptics: vi.fn(),
     logWarn: vi.fn(),
+    getSystemReducedMotion: vi.fn(() => false),
     didShowCallbacks,
     didHideCallbacks,
     useDidShow: vi.fn((callback: () => void) => { didShowCallbacks.push(callback) }),
@@ -100,6 +101,10 @@ vi.mock('../../lib/utils/logger', () => ({
   logInfo: vi.fn(),
   logWarn: mocks.logWarn,
   logError: vi.fn(),
+}))
+
+vi.mock('../../lib/utils/accessibility', () => ({
+  getSystemReducedMotion: mocks.getSystemReducedMotion,
 }))
 
 function makeItem(slot: EquipmentItem['slot'], id = `${slot}-item`): EquipmentItem {
@@ -175,6 +180,8 @@ beforeEach(() => {
   mocks.acquireWebGLContext.mockReset()
   mocks.createAvatar3DSession.mockClear()
   mocks.createAvatar3DSession.mockImplementation(() => mocks.fakeSession)
+  mocks.getSystemReducedMotion.mockReset()
+  mocks.getSystemReducedMotion.mockReturnValue(false)
   // The capability-delegation test mutates this; always restore a function.
   mocks.taroDefault.createSelectorQuery = vi.fn()
 })
@@ -452,6 +459,19 @@ describe('PixelAvatar3D — ready session', () => {
     flushRaf(20)
     // Math.round(0.5) rounds up, so π settles on 2π — the same front pose.
     expect(mocks.fakeSession.yaw).toBeCloseTo(Math.PI * 2, 5)
+  })
+
+  it('snaps back without RAF animation when reduced motion is enabled', async () => {
+    mocks.getSystemReducedMotion.mockReturnValue(true)
+    mockSuccessfulBoot()
+    renderAvatar()
+    await waitFor(() => expect(mocks.fakeSession.renderNow).toHaveBeenCalled())
+
+    mocks.fakeSession.yaw = 2.5
+    fireEvent.click(screen.getByRole('button', { name: '回到正面视角' }))
+
+    expect(mocks.rafQueue).toHaveLength(0)
+    expect(mocks.fakeSession.yaw).toBeCloseTo(nearestFrontYaw(2.5), 5)
   })
 
   it('honors externalYaw commands (QA presets)', async () => {

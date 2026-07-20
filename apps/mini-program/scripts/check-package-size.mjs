@@ -15,7 +15,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import os from 'node:os'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -65,14 +65,29 @@ function formatSize(bytes) {
 function getZipSize(dirPath) {
   const tmpZip = path.join(os.tmpdir(), `joyjoin-mp-${Date.now()}.zip`)
   try {
-    // -r recursive, -q quiet, -X no extra file attributes (closer to WeChat)
-    execSync(`zip -r -q -X "${tmpZip}" .`, { cwd: dirPath, stdio: 'pipe' })
+    try {
+      // -r recursive, -q quiet, -X no extra file attributes (closer to WeChat)
+      execFileSync('zip', ['-r', '-q', '-X', tmpZip, '.'], { cwd: dirPath, stdio: 'pipe' })
+    } catch (zipError) {
+      if (process.platform !== 'win32') throw zipError
+      // Windows ships bsdtar but normally has no `zip` executable. The old
+      // fallback silently returned the raw byte count, making every local
+      // package check report a false 3.28 MB failure. `-a` selects ZIP from
+      // the output extension and preserves the same compressed-size contract.
+      const tarExecutable = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe')
+      execFileSync(tarExecutable, ['-a', '-c', '-f', tmpZip, '.'], {
+        cwd: dirPath,
+        stdio: 'pipe',
+      })
+    }
     const size = getFileSize(tmpZip)
     fs.unlinkSync(tmpZip)
     return size
-  } catch (e) {
+  } catch {
     // If zip fails, fall back to uncompressed
     return getDirectorySize(dirPath)
+  } finally {
+    if (fs.existsSync(tmpZip)) fs.unlinkSync(tmpZip)
   }
 }
 
@@ -130,6 +145,9 @@ function main() {
     'comp.js',
     'comp.json',
     'comp.wxml',
+    'custom-wrapper.js',
+    'custom-wrapper.json',
+    'custom-wrapper.wxml',
     'utils.wxs',
     'project.config.json',
   ]
@@ -158,8 +176,15 @@ function main() {
   const assetsSize = fs.existsSync(assetsDir) ? getDirectorySize(assetsDir) : 0
   console.log(`Shared assets:         ${formatSize(assetsSize)}`)
 
+  // Native custom tab bar is a root-level main-package component.
+  const customTabBarDir = path.join(DIST_DIR, 'custom-tab-bar')
+  const customTabBarRawSize = fs.existsSync(customTabBarDir)
+    ? getDirectorySize(customTabBarDir)
+    : 0
+  console.log(`Custom tab-bar:        ${formatSize(customTabBarRawSize)} (included in main)`)
+
   // Uncompressed estimate (for comparison)
-  const uncompressedSize = coreSize + mainPagesSize + assetsSize
+  const uncompressedSize = coreSize + mainPagesSize + assetsSize + customTabBarRawSize
   console.log(`─────────────────────────────────`)
   console.log(`Main package (raw):    ${formatSize(uncompressedSize)}`)
 
@@ -189,6 +214,10 @@ function main() {
     if (fs.existsSync(assetsDir)) {
       fs.cpSync(assetsDir, path.join(tmpDir, 'assets'), { recursive: true })
     }
+    // Root-level native components are part of the main package as uploaded.
+    if (fs.existsSync(customTabBarDir)) {
+      fs.cpSync(customTabBarDir, path.join(tmpDir, 'custom-tab-bar'), { recursive: true })
+    }
 
     const mainPackageSize = getZipSize(tmpDir)
     console.log(`Main package (zip):    ${formatSize(mainPackageSize)} (limit: ${formatSize(MAIN_PACKAGE_MAX_BYTES)})`)
@@ -211,16 +240,6 @@ function main() {
       }
       subpackageTotal += subSize
       fs.rmSync(tmpSub, { recursive: true, force: true })
-    }
-
-    const customTabBarDir = path.join(DIST_DIR, 'custom-tab-bar')
-    if (fs.existsSync(customTabBarDir)) {
-      const tmpTabBar = fs.mkdtempSync(path.join(os.tmpdir(), 'joyjoin-mp-tab-'))
-      fs.cpSync(customTabBarDir, path.join(tmpTabBar, 'custom-tab-bar'), { recursive: true })
-      const tabBarSize = getZipSize(tmpTabBar)
-      console.log(`Custom tab-bar:        ${formatSize(tabBarSize)}`)
-      subpackageTotal += tabBarSize
-      fs.rmSync(tmpTabBar, { recursive: true, force: true })
     }
 
     const totalSize = mainPackageSize + subpackageTotal

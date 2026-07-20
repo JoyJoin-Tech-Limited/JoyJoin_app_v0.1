@@ -52,7 +52,7 @@ vi.mock('../../../lib/alang/alangAnalytics', () => ({
 
 vi.mock('../../../lib/alang/alangAssets', () => ({
   useAlangAssetSource: vi.fn(() => ({
-    src: '/assets/lovart/alang-result-placeholder.webp',
+    src: '/assets/lovart/alang-event-card-placeholder.webp',
     onError: vi.fn(),
     usingFallback: true,
   })),

@@ -26,6 +26,7 @@ import {
   resolvePixelRatio,
 } from '../../lib/profile/avatar3d/avatar3dPlatform'
 import { createAvatar3DSession, type Avatar3DSession } from '../../lib/profile/avatar3d/avatar3dSession'
+import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { haptics } from '../../lib/utils/haptics'
 import { logWarn } from '../../lib/utils/logger'
 import PixelAvatarTurntable from './PixelAvatarTurntable'
@@ -149,6 +150,7 @@ export function PixelAvatar3D({
   const [fallbackReason, setFallbackReason] = useState<Avatar3DFallbackReason | null>(initialGate.reason)
   const [dragAxis, setDragAxis] = useState<AvatarDragAxis | 'idle'>('idle')
   const [displayDegrees, setDisplayDegrees] = useState(0)
+  const [reduceMotion] = useState(getSystemReducedMotion)
 
   const sessionRef = useRef<Avatar3DSession | null>(null)
   const bootStartedRef = useRef(false)
@@ -226,6 +228,10 @@ export function PixelAvatar3D({
     stopResetAnimation()
     const fromYaw = session.getYaw()
     const toYaw = nearestFrontYaw(fromYaw)
+    if (reduceMotion) {
+      renderYaw(toYaw, true)
+      return
+    }
     if (Math.abs(toYaw - fromYaw) < 0.001) {
       renderYaw(0, true)
       return
@@ -247,13 +253,17 @@ export function PixelAvatar3D({
       }
     }
     resetAnimRef.current = session.raf.request(tick)
-  }, [publishYaw, renderYaw, stopInertia, stopResetAnimation])
+  }, [publishYaw, reduceMotion, renderYaw, stopInertia, stopResetAnimation])
 
   const startInertia = useCallback((initialVelocity: number) => {
     const session = sessionRef.current
     if (!session || Math.abs(initialVelocity) <= 0.001) return
     stopResetAnimation()
     stopInertia()
+    if (reduceMotion) {
+      publishYaw(session.getYaw(), true)
+      return
+    }
     inertiaRef.current.velocity = initialVelocity
     let lastTime = nowMs()
     const tick = () => {
@@ -278,7 +288,7 @@ export function PixelAvatar3D({
       }
     }
     inertiaRef.current.handle = session.raf.request(tick)
-  }, [publishYaw, stopInertia, stopResetAnimation])
+  }, [publishYaw, reduceMotion, stopInertia, stopResetAnimation])
 
   // -------------------------------------------------------------------------
   // Boot: query the canvas node, acquire GL, create the session.

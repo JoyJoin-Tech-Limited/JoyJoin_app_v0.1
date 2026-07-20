@@ -4,6 +4,7 @@ import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import type { EquipmentItem, EquipmentOutfit, EquipmentSlot } from '../../lib/profile/equipmentApi'
 import {
   PIXEL_AVATAR_EQUIPMENT_SLOTS,
+  getPixelAvatarApprovedStarterLookUrl,
   getPixelAvatarBodyUrl,
   getPixelAvatarScenePose,
   getPixelEquipmentAsset,
@@ -92,9 +93,20 @@ export function PixelAvatarComposite({
     .map((item) => `${item.id}:${item.assetKey}`)
     .join('|')
 
+  const approvedStarterLookUrl = getPixelAvatarApprovedStarterLookUrl(safeArchetypeId)
+  const usesApprovedStarterLook = approvedStarterLookUrl !== null
+    && failedLayerIds.size === 0
+    && PIXEL_AVATAR_EQUIPMENT_SLOTS.every((slot) => requestedItems.some((item) => (
+      item.slot === slot
+      && item.assetKey === `equipment/starter/${safeArchetypeId}/${slot}/v1`
+    )))
+  const bodyUrl = usesApprovedStarterLook
+    ? approvedStarterLookUrl
+    : getPixelAvatarBodyUrl(safeArchetypeId)
+
   useEffect(() => {
     setBodyFailed(false)
-  }, [safeArchetypeId])
+  }, [bodyUrl])
 
   useEffect(() => {
     setFailedLayerIds(new Set())
@@ -174,14 +186,14 @@ export function PixelAvatarComposite({
           aria-hidden='true'
         >
           <Image
-            className='pixel-avatar-composite__body'
-            src={getPixelAvatarBodyUrl(safeArchetypeId)}
+            className={`pixel-avatar-composite__body${usesApprovedStarterLook ? ' pixel-avatar-composite__body--approved-starter' : ''}`}
+            src={bodyUrl}
             mode='scaleToFill'
             lazyLoad={false}
             onError={() => setBodyFailed(true)}
           />
 
-          {visibleLayers.map(({ item, asset }) => (
+          {!usesApprovedStarterLook && visibleLayers.map(({ item, asset }) => (
             <Image
               key={item.id}
               className={`pixel-avatar-composite__layer pixel-avatar-composite__layer--${asset.slot}`}

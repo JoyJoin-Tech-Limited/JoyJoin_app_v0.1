@@ -166,10 +166,10 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         },
         // Taro Vite runner does not auto-compile custom-tab-bar.
         // We ship it as a pre-built native WeChat component instead.
-        {
-          from: 'src/native-custom-tab-bar/',
-          to: 'dist/custom-tab-bar/',
-        },
+        ...['index.js', 'index.json', 'index.wxml', 'index.wxss'].map((fileName) => ({
+          from: `src/native-custom-tab-bar/${fileName}`,
+          to: `dist/custom-tab-bar/${fileName}`,
+        })),
         // Tab bar notch background image for native custom tab bar (~3KB, critical)
         {
           from: 'src/assets/tab-bar-notch-bg.png',
@@ -293,19 +293,12 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/pages/pool-registration/assets',
           to: 'dist/pages/pool-registration/assets',
         },
-        // Alang internal-prototype placeholders — bundled locally so the
-        // GPS/story flow remains testable even when the CDN is unavailable.
+        // The three Alang prototype placeholders are byte-identical. Bundle one
+        // shared fallback in the main package because Discover/Profile can render
+        // it before the Alang subpackage is loaded.
         {
           from: 'src/assets/lovart/alang-event-card-placeholder.webp',
           to: 'dist/assets/lovart/alang-event-card-placeholder.webp',
-        },
-        {
-          from: 'src/assets/lovart/alang-found-scene-placeholder.webp',
-          to: 'dist/assets/lovart/alang-found-scene-placeholder.webp',
-        },
-        {
-          from: 'src/assets/lovart/alang-result-placeholder.webp',
-          to: 'dist/assets/lovart/alang-result-placeholder.webp',
         },
         // Matching-status puzzle prelude pieces — bundled locally (~130KB total)
         // so the live-reveal prelude paints instantly even if CDN is slow.
