@@ -76,7 +76,10 @@ jobs:
       queue: max
       cancel-in-progress: false
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Covers three resumable 15-minute bundle attempts plus the bounded remote
+    # deploy and post-switch health verification. Existing services stay live
+    # throughout the upload phase.
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@v4
 
