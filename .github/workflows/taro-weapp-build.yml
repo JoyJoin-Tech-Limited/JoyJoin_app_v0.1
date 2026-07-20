@@ -321,7 +321,7 @@ jobs:
              trap 'rm -f -- private.key' EXIT && \
              trap 'exit 143' HUP INT TERM && \
              base64 -d > private.key && \
-             timeout --signal=TERM --kill-after=30s 14m systemd-run --quiet --wait --collect --scope -p MemoryMax=768M -p CPUQuota=50% nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' NPM_CONFIG_CACHE='$REMOTE_DIR/.npm-cache' NPM_CONFIG_UPDATE_NOTIFIER='false' npx --yes miniprogram-ci@2.1.31 upload \
+             timeout --signal=TERM --kill-after=30s 14m systemd-run --quiet --collect --scope -p MemoryMax=768M -p CPUQuota=50% nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' NPM_CONFIG_CACHE='$REMOTE_DIR/.npm-cache' NPM_CONFIG_UPDATE_NOTIFIER='false' npx --yes miniprogram-ci@2.1.31 upload \
                --appid wx5a038ee6dee12032 \
                --pp dist \
                --pkp private.key \
