@@ -99,7 +99,7 @@ export default function AdminLayout() {
                 <Route path="/admin/templates" component={AdminEventTemplatesPage} />
                 <Route path="/admin/events" component={AdminEventsPage} />
                 <Route path="/admin/event-pools" component={AdminEventPoolsPage} />
-                <Route path="/admin/flash-ops" component={AdminFlashOpsPage} />
+                <Route path="/admin/flash-ops" component={AdminFlashPage} />
                 <Route path="/admin/finance" component={AdminFinancePage} />
                 <Route path="/admin/insights" component={AdminDataInsightsPage} />
                 <Route path="/admin/outcome-analytics" component={AdminOutcomeAnalyticsPage} />
