@@ -74,7 +74,7 @@ export function AdvanceFuseBanner({
             onClick={onStallAdvance}
             disabled={isActing}
           >
-            进入下一阶段
+            <Text className='icebreaker__stall-nudge-btn-label'>进入下一阶段</Text>
           </Button>
           <Button
             variant='secondary'
@@ -82,7 +82,7 @@ export function AdvanceFuseBanner({
             onClick={onStallDismiss}
             disabled={isActing}
           >
-            再等一会儿
+            <Text className='icebreaker__stall-nudge-btn-label'>再等一会儿</Text>
           </Button>
         </View>
       </View>

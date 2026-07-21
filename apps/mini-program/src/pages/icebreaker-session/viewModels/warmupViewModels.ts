@@ -24,15 +24,15 @@ export interface ResolveCardStateInput {
 /**
  * Resolve the hero card slot state machine (contract Q7 / AC5).
  *
- * Priority: error > generating > empty topics (host/player) > topic card.
+ * Priority: generating > loaded topic card > error > empty topics.
+ * A request can time out locally while the server finishes successfully; the
+ * next poll's real topics must replace that stale transport error immediately.
  */
 export function getWarmupCardState(input: ResolveCardStateInput): WarmupCardState {
-  if (input.topicsError) return 'error'
   if (input.isGeneratingTopics) return 'generating'
-  if (input.topics.length === 0) {
-    return input.isHost ? 'host_no_topics' : 'player_no_topics'
-  }
-  return 'topic_card'
+  if (input.topics.length > 0) return 'topic_card'
+  if (input.topicsError) return 'error'
+  return input.isHost ? 'host_no_topics' : 'player_no_topics'
 }
 
 export interface ArchetypeCount {

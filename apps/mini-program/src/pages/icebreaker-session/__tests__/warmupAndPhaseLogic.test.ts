@@ -47,14 +47,18 @@ describe('getWarmupCardState', () => {
     expect(getWarmupCardState({ ...base, isGeneratingTopics: true })).toBe('generating')
   })
 
-  it('returns error when topicsError is true', () => {
+  it('does not let a stale request error hide topics that arrived through polling', () => {
     expect(
       getWarmupCardState({
         ...base,
         topics: [{ question: 'q' } as any],
         topicsError: true,
       }),
-    ).toBe('error')
+    ).toBe('topic_card')
+  })
+
+  it('returns error when generation failed and no topics are available', () => {
+    expect(getWarmupCardState({ ...base, topicsError: true })).toBe('error')
   })
 
   it('returns topic_card when topics exist and index is in range', () => {

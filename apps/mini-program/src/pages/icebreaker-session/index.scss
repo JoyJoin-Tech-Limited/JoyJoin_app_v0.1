@@ -69,12 +69,18 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__stall-nudge-btn {
-    flex: 1;
-    width: 0;
+    flex: 1 1 0;
     min-width: 0;
     padding-right: $spacing-sm;
     padding-left: $spacing-sm;
     white-space: nowrap;
+  }
+
+  &__stall-nudge-btn-label {
+    display: block;
+    flex-shrink: 0;
+    white-space: nowrap;
+    word-break: keep-all;
   }
 
   &__host-advance {

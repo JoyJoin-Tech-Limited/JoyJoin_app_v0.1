@@ -58,7 +58,7 @@ vi.mock('../lib/socialIcebreakerStore', () => {
     },
     getParticipant: async (socialSessionId: string, userId: string) =>
       participants.get(socialSessionId)?.get(userId) ?? null,
-    listParticipants: async (socialSessionId: string) => {
+    listParticipants: vi.fn(async (socialSessionId: string) => {
       const ps = participants.get(socialSessionId);
       if (!ps) return [];
       const cutoff = Date.now() - 30_000;
@@ -71,7 +71,7 @@ vi.mock('../lib/socialIcebreakerStore', () => {
           lastSeenAt: new Date(participant.lastSeenAt).toISOString(),
           isActive: participant.lastSeenAt > cutoff,
         }));
-    },
+    }),
     setLieTruths: async (socialSessionId: string, userId: string, truths: any[]) => {
       if (!lieTruthsStore.has(socialSessionId)) lieTruthsStore.set(socialSessionId, new Map());
       lieTruthsStore.get(socialSessionId)!.set(userId, truths);
@@ -316,7 +316,7 @@ const { default: socialIcebreakerRouter } = await import('../routes/socialIcebre
 
 // Import mocked AI service functions so tests can modify V1/V2 behaviour per-test.
 import { generateLieDetectiveStatements, generateWarmupTopics, getLieDetectiveMode } from '../socialIcebreakerAIService';
-import { getSession, updateSession, getPreGenerationResult } from '../lib/socialIcebreakerStore';
+import { getSession, updateSession, getPreGenerationResult, listParticipants } from '../lib/socialIcebreakerStore';
 import { shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
 import { recordVoteOptimistically } from '../lib/optimisticSync';
 import { getFeatureFlag } from '../lib/featureFlags';
@@ -456,6 +456,33 @@ describe.sequential('social icebreaker routes', () => {
         fallbackUsed: false,
         promptVersion: 'social-warmup-topics-v2',
       });
+    });
+  });
+
+  it('still generates warmup topics when roster enrichment is unavailable', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'topics-roster-fallback-host');
+      const sessionId = `session-topics-roster-fallback-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      vi.mocked(listParticipants).mockRejectedValueOnce(new Error('roster enrichment unavailable'));
+
+      const topicsResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/topics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ mood: 'relaxed' }),
+      });
+      const topicsBody = await topicsResponse.json() as any;
+
+      expect(topicsResponse.status).toBe(200);
+      expect(topicsBody.topics).toHaveLength(2);
+      expect(generateWarmupTopics).toHaveBeenCalledWith(expect.objectContaining({ roster: [] }));
     });
   });
 

@@ -677,7 +677,16 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
   await updateSession(socialSessionId, state);
 
   try {
-    const participants = await listParticipants(socialSessionId);
+    // Participant profile enrichment improves prompts but is not required to
+    // serve a playable warmup. A transient join/profile query failure must not
+    // turn the curated, fallback-rich topic path into an HTTP 500.
+    const participants = await listParticipants(socialSessionId).catch((error) => {
+      logger.warn('[SocialIcebreaker] topics roster enrichment unavailable; continuing without roster context', {
+        socialSessionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    });
     const topicResult = await generateWarmupTopics({
       mood,
       eventType,
