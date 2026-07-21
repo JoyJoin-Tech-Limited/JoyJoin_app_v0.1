@@ -443,7 +443,32 @@ export async function generateWarmupTopics(params: {
     return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe), meta });
   }
 
-  const { client, model, provider } = getClientForFunction('generateWarmupTopics');
+  let selection: ReturnType<typeof getClientForFunction>;
+  try {
+    selection = getClientForFunction('generateWarmupTopics');
+  } catch (error) {
+    logger.error('[SocialIcebreakerAI] generateWarmupTopics provider selection failed; using curated fallback', {
+      error: error instanceof Error ? error.message : String(error),
+      aiCorrelationId,
+    });
+    const meta = buildFallbackAIMeta('provider_unavailable', promptVersion, aiCorrelationId);
+    logAITrace({
+      traceId: aiCorrelationId,
+      domain: 'icebreaker',
+      feature: 'generateWarmupTopics',
+      provider: null,
+      model: 'n/a',
+      latencyMs: 0,
+      success: false,
+      fallbackUsed: true,
+      fromCache: false,
+      promptVersion: meta.promptVersion,
+      errorCode: meta.evaluatorRejectionReason,
+    });
+    return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe), meta });
+  }
+
+  const { client, model, provider } = selection;
   const t0 = Date.now();
 
   // 3s timeout for warmup generation (LLM safety)

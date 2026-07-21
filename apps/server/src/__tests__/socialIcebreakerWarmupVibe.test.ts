@@ -59,7 +59,9 @@ vi.mock('../ai/aiQualityGate', () => ({
 // Import after mocks
 const { generateWarmupTopics, hasBraveTopic, FALLBACK_WARMUP_TOPICS } = await import('../socialIcebreakerAIService');
 const { logAITrace } = await import('../lib/aiTraceLogger');
+const { getClientForFunction } = await import('../ai/socialModelRouter');
 const mockLogAITrace = logAITrace as unknown as ReturnType<typeof vi.fn>;
+const mockGetClientForFunction = getClientForFunction as unknown as ReturnType<typeof vi.fn>;
 
 /** Helper: mock a successful LLM response carrying the given topic array. */
 function mockLlmTopics(topics: Array<Record<string, unknown>>) {
@@ -149,6 +151,28 @@ describe('buildWarmupTopicsPrompt — vibe-aware prompt generation', () => {
 describe('generateWarmupTopics — vibe-aware generation', () => {
   beforeEach(() => {
     mockCreate.mockReset();
+    mockGetClientForFunction.mockImplementation(() => ({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-mock',
+      provider: 'deepseek' as const,
+    }));
+  });
+
+  it('uses curated topics when provider selection fails', async () => {
+    mockGetClientForFunction.mockImplementationOnce(() => {
+      throw new Error('AI provider is not configured');
+    });
+
+    const result = await generateWarmupTopics({
+      mood: 'relaxed',
+      eventType: '活动',
+      participantCount: 6,
+      vibe: 'balanced',
+    });
+
+    expect(result.data).toHaveLength(5);
+    expect(result.meta.fallbackUsed).toBe(true);
+    expect(result.meta.evaluatorRejectionReason).toBe('provider_unavailable');
   });
 
   it('deep_chat returns 6-7 cards from mocked LLM response', async () => {
