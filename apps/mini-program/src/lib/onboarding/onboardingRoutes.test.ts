@@ -143,10 +143,7 @@ describe('mini-program onboarding routes', () => {
       },
       'pages/discover/index': {
         network: 'all',
-        packages: [
-          MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
-          MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
-        ],
+        packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
       },
       'pages/profile/index': {
         network: 'all',

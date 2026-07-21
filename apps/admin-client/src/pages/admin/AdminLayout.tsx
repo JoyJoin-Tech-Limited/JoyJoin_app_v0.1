@@ -41,7 +41,7 @@ const AdminEvolutionPage = lazy(() => import("@/pages/admin/AdminEvolutionPage")
 const AdminAccountsPage = lazy(() => import("@/pages/admin/AdminAccountsPage"));
 const AdminAuditLogsPage = lazy(() => import("@/pages/admin/AdminAuditLogsPage"));
 const AdminFeatureFlagsPage = lazy(() => import("@/pages/admin/AdminFeatureFlagsPage"));
-const AdminFlashOpsPage = lazy(() => import("@/pages/admin/AdminFlashOpsPage"));
+const AdminFlashPage = lazy(() => import("@/pages/admin/AdminFlashPage"));
 
 export default function AdminLayout() {
   const { user } = useAuth();
@@ -59,19 +59,19 @@ export default function AdminLayout() {
       <SidebarProvider style={sidebarStyle as React.CSSProperties}>
       <div className="flex min-h-[100dvh] w-full">
         <AdminSidebar />
-        <div className="flex flex-1 flex-col">
-          <header className="flex items-center justify-between border-b px-6 py-3">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex min-w-0 items-center justify-between gap-3 border-b px-4 py-3 md:px-6">
             <div className="flex items-center gap-2">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <h1 className="text-lg font-medium">{pageTitle}</h1>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
+              <span className="max-w-32 truncate text-sm text-muted-foreground">
                 {user?.displayName || "管理员"}
               </span>
             </div>
           </header>
-          <div className="border-b bg-background px-6 py-2">
+          <div className="min-w-0 overflow-hidden border-b bg-background px-4 py-2 md:px-6">
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
@@ -86,7 +86,7 @@ export default function AdminLayout() {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          <main className="flex-1 overflow-auto bg-muted/30">
+          <main className="min-w-0 flex-1 overflow-auto bg-muted/30">
             <Suspense fallback={<div className="flex h-full items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>
               <Switch>
                 <Route path="/admin" component={AdminDashboard} />
@@ -118,6 +118,7 @@ export default function AdminLayout() {
                 <Route path="/admin/accounts" component={AdminAccountsPage} />
                 <Route path="/admin/audit-logs" component={AdminAuditLogsPage} />
                 <Route path="/admin/feature-flags" component={AdminFeatureFlagsPage} />
+                <Route path="/admin/alang" component={AdminFlashPage} />
               </Switch>
             </Suspense>
           </main>

@@ -44,6 +44,8 @@
     "./archetypeColors": "./src/archetypeColors.ts",
     "./achievements": "./src/achievements.ts",
     "./legal/joyjoinTermsZh": "./src/legal/joyjoinTermsZh.ts",
+    "./alang/flashTypes": "./src/alang/flashTypes.ts",
+    "./alang/flashCatalog": "./src/alang/flashCatalog.ts",
     "./miniscriptStoryFramework": "./src/miniscriptStoryFramework.ts",
     "./miniscriptCatalog": "./src/miniscriptCatalog.ts",
     "./miniscriptGameModes": "./src/miniscriptGameModes.ts",

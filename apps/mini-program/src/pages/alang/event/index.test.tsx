@@ -1,234 +1,129 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import AlangEventPage from './index'
+import FlashHomePage from './index'
 
 const mocks = vi.hoisted(() => ({
-  view: 'stories',
-  navigateTo: vi.fn(),
-  redirectTo: vi.fn(),
-  setNavigationBarTitle: vi.fn(),
   useAuth: vi.fn(),
-  useAlangMissions: vi.fn(),
-  useStoryArchives: vi.fn(),
-  refetchMissions: vi.fn(),
-  refetchArchives: vi.fn(),
-  haptics: vi.fn(),
+  useFlashHome: vi.fn(),
+  getStorageSync: vi.fn(),
+  setStorageSync: vi.fn(),
+  permission: vi.fn(),
+  location: vi.fn(),
+  navigateTo: vi.fn(),
+  refetch: vi.fn(),
 }))
 
-vi.mock('@tarojs/taro', () => {
-  const taro = {
-    getCurrentInstance: () => ({
-      router: { params: { view: mocks.view } },
-    }),
+vi.mock('@tarojs/taro', () => ({
+  default: {
+    getStorageSync: mocks.getStorageSync,
+    setStorageSync: mocks.setStorageSync,
+    setNavigationBarTitle: vi.fn(),
     navigateTo: mocks.navigateTo,
-    redirectTo: mocks.redirectTo,
-    setNavigationBarTitle: mocks.setNavigationBarTitle,
-  }
-  return { default: taro }
-})
-
+    redirectTo: vi.fn(),
+    openSetting: vi.fn(),
+    showToast: vi.fn(),
+  },
+  useDidShow: vi.fn(),
+  useDidHide: vi.fn(),
+}))
 vi.mock('@tarojs/components', () => ({
   View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>,
   Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-  Image: ({ mode: _mode, onError: _onError, ...props }: any) => <img {...props} />,
   ScrollView: ({ children, scrollY: _scrollY, ...props }: any) => <div {...props}>{children}</div>,
+  Image: ({ mode: _mode, onError: _onError, ...props }: any) => <img {...props} />,
 }))
-
-vi.mock('../../../hooks/useAuth', () => ({
-  useAuth: mocks.useAuth,
+vi.mock('../../../hooks/useAuth', () => ({ useAuth: mocks.useAuth }))
+vi.mock('../../../lib/alang/flashApi', () => ({
+  getFlashApiErrorCode: (error: { code?: string } | undefined) => error?.code,
+  getFlashLocationPermission: mocks.permission,
+  getOneShotFlashLocation: mocks.location,
 }))
+vi.mock('../../../lib/alang/useFlash', () => ({ useFlashHome: mocks.useFlashHome }))
+vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: vi.fn() }))
+vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
 
-vi.mock('../../../lib/alang/useAlangMission', () => ({
-  useAlangMissions: mocks.useAlangMissions,
-  useStoryArchives: mocks.useStoryArchives,
-}))
+const home = {
+  serverNow: '2026-07-20T12:00:00+08:00',
+  onlineNpcs: [{
+    id: 'npc-1', slug: 'alang', name: '阿浪', animal: '灰狼', appearanceId: 'appearance-1',
+    invitation: '我有点好奇那边是什么样。', districtName: '南山区', remainingSeconds: 3600,
+  }],
+  myTasks: [{
+    id: 'assignment-1', assignmentId: 'assignment-1', npc: { id: 'npc-2', slug: 'momo', name: '默默' },
+    title: '找一个安静角落', category: '独处放松', status: 'accepted',
+  }],
+  preferenceSummary: { personalizationEnabled: true },
+}
 
-vi.mock('../../../lib/alang/alangAnalytics', () => ({
-  alangEvents: {
-    discoverCardImpression: vi.fn(),
-    discoverCardTap: vi.fn(),
-  },
-}))
-
-vi.mock('../../../lib/alang/alangAssets', () => ({
-  useAlangAssetSource: vi.fn(() => ({
-    src: '/assets/lovart/alang-event-card-placeholder.webp',
-    onError: vi.fn(),
-    usingFallback: true,
-  })),
-}))
-
-vi.mock('../../../lib/utils/haptics', () => ({
-  haptics: mocks.haptics,
-}))
-
-vi.mock('../../../components/ui/StatusCard', () => ({
-  default: ({ title, description, action }: any) => (
-    <div>
-      <span>{title}</span>
-      <span>{description}</span>
-      {action ? <button onClick={action.onClick}>{action.label}</button> : null}
-    </div>
-  ),
-}))
-
-const archives = [
-  {
-    id: 'archive-1',
-    missionId: 'mission-1',
-    title: '夜跑遇见的桥上',
-    locationName: '南头古城',
-    completedAt: '2026-07-12T23:15:00+08:00',
-    finalMood: '思考',
-    summaryLine: '风把没说完的话留在桥边。',
-    isDebugSession: false,
-  },
-  {
-    id: 'archive-2',
-    missionId: 'mission-2',
-    title: '雨后的偶遇',
-    locationName: '南头古城',
-    completedAt: '2026-07-04T18:40:00+08:00',
-    finalMood: '温暖',
-    summaryLine: '雨停后，城市亮了一点。',
-    isDebugSession: false,
-  },
-]
-
-const missions = [
-  {
-    id: 'mission-3',
-    slug: 'meet-alang',
-    title: '阿浪还有一段路想一起走',
-    description: '从上次停下的地方继续。',
-    status: 'in_progress',
-    stage: 'searching',
-    progressPercent: 42,
-    isDebugSession: false,
-  },
-  {
-    id: 'mission-4',
-    slug: 'another-story',
-    title: '今晚的新故事',
-    description: '一段新的城市片段。',
-    status: 'not_started',
-    stage: 'not_started',
-    progressPercent: 0,
-    isDebugSession: false,
-  },
-]
-
-describe('AlangEventPage story archive', () => {
+describe('formal Flash home', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.view = 'stories'
-    mocks.navigateTo.mockResolvedValue({})
-    mocks.redirectTo.mockResolvedValue({})
-    mocks.setNavigationBarTitle.mockResolvedValue({})
-    mocks.useAuth.mockReturnValue({
-      user: { features: { alangEnabled: true } },
-    })
-    mocks.useAlangMissions.mockReturnValue({
-      data: missions,
-      isLoading: false,
-      error: null,
-      refetch: mocks.refetchMissions,
-    })
-    mocks.useStoryArchives.mockReturnValue({
-      data: archives,
-      isLoading: false,
-      error: null,
-      refetch: mocks.refetchArchives,
-    })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.permission.mockResolvedValue('granted')
+    mocks.location.mockResolvedValue({ latitude: 22.54, longitude: 114.05, accuracy: 12 })
+    mocks.useFlashHome.mockReturnValue({ data: home, isLoading: false, isError: false, refetch: mocks.refetch })
   })
 
-  it('builds the summary from real archives, active missions, and unique locations', async () => {
-    render(<AlangEventPage />)
+  it('discloses digital NPCs before any location request', async () => {
+    mocks.getStorageSync.mockReturnValue(false)
+    render(<FlashHomePage />)
 
-    expect(screen.getByRole('region', {
-      name: '2 段故事收藏，1 条仍在继续，1 个故事地点',
-    })).toBeInTheDocument()
-    expect(screen.getByText('夜跑遇见的桥上')).toBeInTheDocument()
-    expect(screen.getAllByText('地点 · 南头古城')).toHaveLength(2)
-    expect(screen.getByText('故事总览场景示意')).toBeInTheDocument()
-    expect(mocks.useAlangMissions).toHaveBeenCalledWith(true)
-    expect(mocks.useStoryArchives).toHaveBeenCalledWith(true)
-
-    await waitFor(() => {
-      expect(mocks.setNavigationBarTitle).toHaveBeenCalledWith({ title: '我的故事' })
-    })
+    expect(await screen.findByText('先说好，这是一场数字角色相遇')).toBeInTheDocument()
+    expect(screen.getByText(/不是真人工作人员/)).toBeInTheDocument()
+    expect(screen.getByText(/留给你碰见时再认识/)).toBeInTheDocument()
+    expect(screen.queryByText(/栗子、默默、拾柒和阿团/)).not.toBeInTheDocument()
+    expect(mocks.location).not.toHaveBeenCalled()
   })
 
-  it('opens an archive with haptic feedback', () => {
-    render(<AlangEventPage />)
+  it('loads online NPCs and tasks only after one-shot location is available', async () => {
+    mocks.getStorageSync.mockReturnValue(true)
+    render(<FlashHomePage />)
 
-    fireEvent.click(screen.getByRole('button', { name: /打开故事：夜跑遇见的桥上/ }))
-
-    expect(mocks.haptics).toHaveBeenCalledWith('light')
-    expect(mocks.navigateTo).toHaveBeenCalledWith({
-      url: '/pages/alang/story-detail/index?archiveId=archive-1',
-    })
+    expect(await screen.findByText('阿浪')).toBeInTheDocument()
+    expect(screen.getByText('南山区 · 还在 1 小时')).toBeInTheDocument()
+    expect(screen.getByText('找一个安静角落')).toBeInTheDocument()
+    expect(mocks.location).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(mocks.useFlashHome).toHaveBeenLastCalledWith(
+      { latitude: 22.54, longitude: 114.05, accuracy: 12 },
+      true,
+    ))
   })
 
-  it('filters to real in-progress missions and continues through the existing detail route', () => {
-    render(<AlangEventPage />)
+  it('opens the radar with safe display metadata but no coordinates', async () => {
+    mocks.getStorageSync.mockReturnValue(true)
+    render(<FlashHomePage />)
+    fireEvent.click(await screen.findByRole('button', { name: /去找阿浪/ }))
 
-    fireEvent.click(screen.getByRole('tab', { name: '查看继续中的故事' }))
-
-    expect(screen.getByText('阿浪还有一段路想一起走')).toBeInTheDocument()
-    expect(screen.getByText('进度 · 已走完 42%')).toBeInTheDocument()
-    expect(screen.getByText('寻找中')).toBeInTheDocument()
-    expect(screen.queryByText('今晚的新故事')).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /继续故事：阿浪还有一段路想一起走/ }))
-    expect(mocks.navigateTo).toHaveBeenCalledWith({
-      url: '/pages/alang/event-detail/index?slug=meet-alang',
-    })
+    const url = mocks.navigateTo.mock.calls[0][0].url as string
+    expect(url).toContain('appearanceId=appearance-1')
+    expect(url).toContain('npcName=%E9%98%BF%E6%B5%AA')
+    expect(url).not.toContain('22.54')
+    expect(url).not.toContain('114.05')
   })
 
-  it('keeps a warm, actionable empty state without fabricated counts', () => {
-    mocks.useAlangMissions.mockReturnValue({
-      data: [],
-      isLoading: false,
-      error: null,
-      refetch: mocks.refetchMissions,
-    })
-    mocks.useStoryArchives.mockReturnValue({
-      data: [],
-      isLoading: false,
-      error: null,
-      refetch: mocks.refetchArchives,
-    })
-
-    render(<AlangEventPage />)
-
-    expect(screen.getByRole('region', {
-      name: '0 段故事收藏，0 条仍在继续，0 个故事地点',
-    })).toBeInTheDocument()
-    expect(screen.getByText('故事页还在等第一章')).toBeInTheDocument()
-    expect(screen.queryByText('12')).not.toBeInTheDocument()
-    expect(screen.queryByText('680')).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: '去看看当前可开始的闪现故事' }))
-    expect(mocks.redirectTo).toHaveBeenCalledWith({ url: '/pages/alang/event/index' })
+  it('fails closed when the server feature flag is disabled', () => {
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
+    render(<FlashHomePage />)
+    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
+    expect(mocks.location).not.toHaveBeenCalled()
   })
 
-  it('preserves the ordinary mission-list mode', async () => {
-    mocks.view = ''
-    mocks.useStoryArchives.mockReturnValue({
+  it('shows a retryable Shenzhen verification state when the server cannot verify location', async () => {
+    mocks.getStorageSync.mockReturnValue(true)
+    mocks.useFlashHome.mockReturnValue({
       data: undefined,
       isLoading: false,
-      error: null,
-      refetch: mocks.refetchArchives,
+      isError: true,
+      error: { code: 'FLASH_LOCATION_UNAVAILABLE' },
+      refetch: mocks.refetch,
     })
 
-    render(<AlangEventPage />)
+    render(<FlashHomePage />)
 
-    expect(screen.getByText('闪现')).toBeInTheDocument()
-    expect(screen.getByText('今晚的新故事')).toBeInTheDocument()
-    expect(mocks.useStoryArchives).toHaveBeenCalledWith(false)
-    await waitFor(() => {
-      expect(mocks.setNavigationBarTitle).toHaveBeenCalledWith({ title: '闪现' })
-    })
+    expect(await screen.findByText('暂时无法确认你是否在深圳')).toBeInTheDocument()
+    expect(screen.getByText(/可以稍后再试/)).toBeInTheDocument()
+    expect(screen.queryByText('街头盲盒暂时没打开')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '重新读取' }))
+    expect(mocks.refetch).toHaveBeenCalledTimes(1)
   })
 })

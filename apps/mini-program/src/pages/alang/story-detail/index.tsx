@@ -3,23 +3,30 @@ import { useEffect } from 'react'
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import { useArchiveDetail } from '../../../lib/alang/useAlangMission'
 import { useAuth } from '../../../hooks/useAuth'
+import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
 import { alangEvents } from '../../../lib/alang/alangAnalytics'
 import { useAlangAssetSource } from '../../../lib/alang/alangAssets'
+import { FlashFeatureClosed } from '../../../components/alang/FlashUi'
 import StatusCard from '../../../components/ui/StatusCard'
 import './index.scss'
 
 export default function AlangStoryDetailPage() {
   const { user } = useAuth()
+  const enabled = shouldShowAlangEntry(user)
   const archiveId = Taro.getCurrentInstance().router?.params?.archiveId ?? ''
   const resultHero = useAlangAssetSource('resultHero')
   const { data: archive, isLoading, isError, refetch } = useArchiveDetail(
     archiveId,
-    !!archiveId && !!user?.features?.alangEnabled
+    !!archiveId && enabled
   )
 
   useEffect(() => {
-    if (archiveId) alangEvents.storyDetailView(archiveId)
-  }, [archiveId])
+    if (enabled && archiveId) alangEvents.storyDetailView(archiveId)
+  }, [archiveId, enabled])
+
+  // Render the closed state explicitly so a cached query can never leak an
+  // archived story after the server-owned kill switch is disabled.
+  if (!enabled) return <FlashFeatureClosed />
 
   if (isLoading) {
     return (

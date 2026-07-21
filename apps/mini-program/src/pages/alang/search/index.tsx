@@ -1,597 +1,186 @@
-import Taro, { useDidShow } from '@tarojs/taro'
-import { useEffect, useState, useCallback, useRef } from 'react'
-import { View, Text, Image, Map, ScrollView } from '@tarojs/components'
-import {
-  ALANG_ARRIVAL_RADIUS_METERS,
-  ALANG_DEFAULT_SEARCH_RADIUS_METERS,
-} from '@shared/alang/constants'
-import { useAlangGps } from '../../../lib/alang/useAlangGps'
-import { callDebugMockArrival } from '../../../lib/alang/api'
-import {
-  useAlangMissionDetail,
-  useResetAlangMission,
-  useSyncAlangMissionProgress,
-} from '../../../lib/alang/useAlangMission'
+import Taro from '@tarojs/taro'
+import { useEffect, useMemo, useState } from 'react'
+import { Image, ScrollView, Text, View } from '@tarojs/components'
+import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashPageState, formatFlashRemainingTime } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
-import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
-import { alangEvents } from '../../../lib/alang/alangAnalytics'
-import { useAlangAssetSource } from '../../../lib/alang/alangAssets'
+import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
+import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
+import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
+import { useLocateFlashAppearance } from '../../../lib/alang/useFlash'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
+import { FLASH_UNIVERSAL_ART } from '../../../lib/alang/flashNpcAssets'
 import { haptics } from '../../../lib/utils/haptics'
-import { BRAND_COLORS } from '../../../styles/colors'
-import './index.scss'
+import '../flash.scss'
 
-type SignalTone = 'locating' | 'steady' | 'fair' | 'weak' | 'error'
+type LocateState = 'idle' | 'locating' | 'outside' | 'denied' | 'ended' | 'rate_limited' | 'error'
 
-export default function AlangSearchPage() {
+export default function FlashRadarPage() {
   const { user } = useAuth()
-  const slug = Taro.getCurrentInstance().router?.params?.slug ?? ''
-  const canUseDebugTools = shouldShowAlangDebugTools(user)
-  const { data: mission, refetch } = useAlangMissionDetail(
-    slug,
-    !!slug && !!user?.features?.alangEnabled,
-  )
-  const resetMutation = useResetAlangMission()
-  const syncMissionProgress = useSyncAlangMissionProgress()
-  const progress = mission?.myProgress
-  const areaArtwork = useAlangAssetSource('eventHero')
-  const foundSceneArtwork = useAlangAssetSource('foundScene')
+  const enabled = shouldShowAlangEntry(user)
+  const params = Taro.getCurrentInstance().router?.params ?? {}
+  const appearanceId = params.appearanceId ?? ''
+  const npcName = params.npcName ?? '这位朋友'
+  const npcSlug = params.npcSlug ?? ''
+  const districtName = params.districtName ?? '深圳'
+  const endsAt = params.endsAt ?? ''
+  const locateMutation = useLocateFlashAppearance()
+  const [state, setState] = useState<LocateState>('idle')
 
-  const [showMap, setShowMap] = useState(false)
-  const [found, setFound] = useState(false)
-  const [gpsEnabled, setGpsEnabled] = useState(false)
-  const [permissionDenied, setPermissionDenied] = useState(false)
-  const [locationError, setLocationError] = useState<string | null>(null)
-  const [mapError, setMapError] = useState(false)
-  const [isMockingFound, setIsMockingFound] = useState(false)
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const recoveryNavigationKeyRef = useRef('')
-  const reconfigureActionRef = useRef(false)
-  const mockFoundActionRef = useRef(false)
+  const isPossiblyLate = useMemo(() => {
+    if (!endsAt) return false
+    const remaining = new Date(endsAt).getTime() - Date.now()
+    return Number.isFinite(remaining) && remaining > 0 && remaining <= 15 * 60 * 1000
+  }, [endsAt])
 
-  const restartLocation = useCallback(() => {
-    if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
-    setGpsEnabled(false)
-    setLocationError(null)
-    retryTimerRef.current = setTimeout(() => {
-      setGpsEnabled(true)
-      retryTimerRef.current = null
-    }, 120)
-  }, [])
+  useEffect(() => {
+    void Taro.setNavigationBarTitle({ title: `寻找${npcName}` })
+  }, [npcName])
 
-  const resumeLocation = useCallback(async () => {
-    if (!slug) return
+  const handleLocate = async () => {
+    if (!enabled || !appearanceId || locateMutation.isPending) return
+    setState('locating')
     try {
-      const setting = await Taro.getSetting()
-      const denied = setting.authSetting?.['scope.userLocation'] === false
-      setPermissionDenied(denied)
-      if (!denied) restartLocation()
-    } catch {
-      // A settings lookup failure must not block the native location request.
-      restartLocation()
-    }
-  }, [restartLocation, slug])
-
-  useEffect(() => {
-    if (!slug) return
-    alangEvents.searchPageView(slug)
-    void resumeLocation()
-
-    return () => {
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current)
-      if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current)
-    }
-  }, [resumeLocation, slug])
-
-  useDidShow(() => {
-    // Server progress owns the configured target. Resume only permission and
-    // mission state after a cold start/background transition.
-    void resumeLocation()
-    if (slug) void refetch()
-  })
-
-  useEffect(() => {
-    if (!progress || progress.stage === 'searching') return
-    const key = `${progress.progressId}:${progress.stage}:${progress.currentNodeId}`
-    if (recoveryNavigationKeyRef.current === key) return
-
-    const encodedSlug = encodeURIComponent(slug)
-    const encodedNode = encodeURIComponent(progress.currentNodeId)
-    const url = ['found', 'dialogue'].includes(progress.stage)
-      ? `${MINI_PROGRAM_ROUTES.alangDialogue}?slug=${encodedSlug}&nodeId=${encodedNode}`
-      : ['companion', 'arrived'].includes(progress.stage)
-        ? `${MINI_PROGRAM_ROUTES.alangCompanion}?slug=${encodedSlug}&nodeId=${encodedNode}`
-        : ['closing', 'result', 'completed'].includes(progress.stage)
-          ? `${MINI_PROGRAM_ROUTES.alangResult}?slug=${encodedSlug}`
-          : `${MINI_PROGRAM_ROUTES.alangEventDetail}?slug=${encodedSlug}`
-
-    recoveryNavigationKeyRef.current = key
-    void Taro.redirectTo({ url }).catch(() => {
-      recoveryNavigationKeyRef.current = ''
-    })
-  }, [progress, slug])
-
-  const handleArrival = useCallback(() => {
-    if (!found) {
-      haptics('success')
-      setFound(true)
-      alangEvents.foundAuto(slug)
-    }
-  }, [found, slug])
-
-  const handleGpsError = useCallback(() => {
-    setLocationError('定位信号暂时中断，距离可能不会更新')
-    void Taro.getSetting()
-      .then((setting) => {
-        setPermissionDenied(setting.authSetting?.['scope.userLocation'] === false)
-      })
-      .catch(() => undefined)
-  }, [])
-
-  const handleProgress = useCallback((snapshot: { stage: string; currentNodeId: string }) => {
-    syncMissionProgress(slug, snapshot)
-  }, [slug, syncMissionProgress])
-
-  const {
-    distance,
-    accuracy,
-    nodeId: gpsNodeId,
-    position,
-    configurationInvalid: gpsConfigurationInvalid,
-  } = useAlangGps({
-    slug,
-    // Never recover a hidden NPC point from device storage. The server computes
-    // distance against the per-run point saved by the start request.
-    target: undefined,
-    enabled: !!slug
-      && gpsEnabled
-      && !found
-      && !permissionDenied
-      && !mission?.testConfigurationInvalid
-      && (!progress || progress.stage === 'searching'),
-    onArrival: handleArrival,
-    onProgress: handleProgress,
-    onError: handleGpsError,
-  })
-
-  useEffect(() => {
-    if (!position) return
-    setPermissionDenied(false)
-    setLocationError(null)
-  }, [position])
-
-  const handleToggleMap = () => {
-    haptics('light')
-    alangEvents.mapViewTap(slug)
-    if (!position) {
-      setLocationError('还没有收到你的位置，请先重新定位')
-      return
-    }
-    setMapError(false)
-    setShowMap((visible) => !visible)
-  }
-
-  const handleRetryLocation = useCallback(async () => {
-    try {
-      const setting = await Taro.getSetting()
-      const denied = setting.authSetting?.['scope.userLocation'] === false
-      setPermissionDenied(denied)
-      if (denied) {
-        Taro.showToast({ title: '请打开定位权限后再试', icon: 'none' })
+      const location = await getOneShotFlashLocation()
+      const response = await locateMutation.mutateAsync({ appearanceId, location })
+      if (response.canonicalScreen === 'unavailable') {
+        setState('ended')
         return
       }
-    } catch {
-      // Continue with the native location request when settings are unavailable.
+      if (response.withinRange) {
+        haptics('success')
+        const redirected = await redirectToFlashCanonical(response, MINI_PROGRAM_ROUTES.alangSearch)
+        if (!redirected && response.encounterId) {
+          await Taro.redirectTo({
+            url: `${MINI_PROGRAM_ROUTES.alangDialogue}?encounterId=${encodeURIComponent(response.encounterId)}`,
+          })
+        }
+        return
+      }
+      setState('outside')
+    } catch (error) {
+      const code = getFlashApiErrorCode(error)
+      if (code === 'FLASH_APPEARANCE_ENDED' || code === 'FLASH_APPEARANCE_NOT_FOUND' || code === 'NOT_FOUND') {
+        setState('ended')
+        return
+      }
+      if (code === 'FLASH_LOCATE_RATE_LIMITED') {
+        setState('rate_limited')
+        return
+      }
+      const permission = await getFlashLocationPermission()
+      setState(permission === 'denied' ? 'denied' : 'error')
     }
-    restartLocation()
-  }, [restartLocation])
+  }
 
-  const handleOpenSetting = useCallback(async () => {
+  const handleOpenSetting = async () => {
     try {
       const setting = await Taro.openSetting()
-      const granted = setting.authSetting?.['scope.userLocation'] === true
-      setPermissionDenied(!granted)
-      if (granted) {
-        restartLocation()
+      if (setting.authSetting?.['scope.userLocation'] === true) {
+        setState('idle')
       } else {
-        Taro.showToast({ title: '需要允许定位，才能继续寻找阿浪', icon: 'none' })
+        setState('denied')
       }
     } catch {
       Taro.showToast({ title: '设置没有打开，请稍后再试', icon: 'none' })
     }
-  }, [restartLocation])
-
-  const handlePrimarySearchAction = useCallback(() => {
-    haptics('light')
-    if (permissionDenied) {
-      void handleOpenSetting()
-      return
-    }
-    void handleRetryLocation()
-  }, [handleOpenSetting, handleRetryLocation, permissionDenied])
-
-  const handleReconfigure = useCallback(async () => {
-    if (!canUseDebugTools
-      || !slug
-      || reconfigureActionRef.current
-      || resetMutation.isPending) return
-    reconfigureActionRef.current = true
-    try {
-      const modal = await Taro.showModal({
-        title: '重新配置测试点位',
-        content: '将清除当前阿浪测试进度与本轮点位，是否重新设置？',
-        confirmText: '重新配置',
-        cancelText: '取消',
-        confirmColor: BRAND_COLORS.primary,
-      })
-      if (!modal.confirm) return
-      await resetMutation.mutateAsync(slug)
-      await Taro.reLaunch({
-        url: `${MINI_PROGRAM_ROUTES.alangConfig}?slug=${encodeURIComponent(slug)}`,
-      })
-    } catch {
-      Taro.showToast({ title: '没有清除成功，请稍后再试', icon: 'none' })
-    } finally {
-      reconfigureActionRef.current = false
-    }
-  }, [canUseDebugTools, resetMutation, slug])
-
-  const handleMockFound = useCallback(async () => {
-    if (!canUseDebugTools || !slug || mockFoundActionRef.current || isMockingFound) return
-    mockFoundActionRef.current = true
-    try {
-      const modal = await Taro.showModal({
-        title: '模拟找到阿浪',
-        content: '仅用于内部测试。将模拟进入阿浪 5 米范围，是否继续？',
-        confirmText: '继续',
-        cancelText: '取消',
-        confirmColor: BRAND_COLORS.primary,
-      })
-      if (!modal.confirm) return
-
-      setIsMockingFound(true)
-      const result = await callDebugMockArrival(slug)
-      if (!result.arrived || !result.nodeId) {
-        Taro.showToast({ title: '模拟位置仍在确认，请再试一次', icon: 'none' })
-        return
-      }
-
-      syncMissionProgress(slug, {
-        stage: result.stage,
-        currentNodeId: result.nodeId,
-      })
-      haptics('success')
-      setFound(true)
-      // The synchronous cache update above is the single navigation trigger.
-      // The stage-recovery effect observes it and redirects exactly once; a
-      // second imperative redirect here races the real Query Cache on device.
-      await refetch()
-    } catch {
-      Taro.showToast({ title: '模拟找到没有成功，请稍后再试', icon: 'none' })
-    } finally {
-      mockFoundActionRef.current = false
-      setIsMockingFound(false)
-    }
-  }, [canUseDebugTools, isMockingFound, refetch, slug, syncMissionProgress])
-
-  useEffect(() => {
-    if (!found || !gpsNodeId) return
-    if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current)
-    navigationTimerRef.current = setTimeout(() => {
-      navigationTimerRef.current = null
-      void Taro.redirectTo({
-        url: `${MINI_PROGRAM_ROUTES.alangDialogue}?slug=${slug}&nodeId=${gpsNodeId}`,
-      }).catch(() => {
-        setFound(false)
-        restartLocation()
-        Taro.showToast({ title: '故事页没有打开，再试一次即可', icon: 'none' })
-      })
-    }, 1200)
-
-    return () => {
-      if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current)
-    }
-  }, [found, gpsNodeId, restartLocation, slug])
-
-  const signal: { tone: SignalTone; label: string; detail: string } = permissionDenied
-    ? { tone: 'error', label: '定位权限未开启', detail: '允许定位后，距离会自动继续更新' }
-    : locationError && !position
-      ? { tone: 'error', label: '定位暂时不可用', detail: locationError }
-      : accuracy === null
-        ? { tone: 'locating', label: '正在接收定位信号', detail: '到开阔处走几步，通常会更快' }
-        : accuracy <= 25
-          ? { tone: 'steady', label: '定位信号稳定', detail: `当前精度约 ±${Math.round(accuracy)} 米` }
-          : accuracy <= 65
-            ? { tone: 'fair', label: '定位信号一般', detail: `当前精度约 ±${Math.round(accuracy)} 米，距离仅供参考` }
-            : { tone: 'weak', label: '定位信号较弱', detail: `当前精度约 ±${Math.round(accuracy)} 米，建议走到室外` }
-
-  const areaMessage = distance === null
-    ? '阿浪在附近的一片区域里，先让定位找到你'
-    : distance <= ALANG_ARRIVAL_RADIUS_METERS
-      ? '已经进入到达范围，正在确认你的位置…'
-      : distance <= ALANG_DEFAULT_SEARCH_RADIUS_METERS
-        ? '你已进入寻找区域，再慢慢靠近一点'
-        : '继续朝阿浪所在的区域走近'
-
-  const areaTitle = distance === null
-    ? '正在确认你所在的寻找区域'
-    : distance <= ALANG_DEFAULT_SEARCH_RADIUS_METERS
-      ? '你已进入阿浪可能出现的范围'
-      : '继续靠近阿浪出现的区域'
-  const signalStrength = signal.tone === 'steady'
-    ? 4
-    : signal.tone === 'fair'
-      ? 3
-      : signal.tone === 'weak'
-        ? 2
-        : signal.tone === 'locating'
-          ? 1
-          : 0
-  const primaryActionLabel = permissionDenied
-    ? '打开定位并继续'
-    : locationError
-      ? '重新定位'
-      : distance === null
-        ? '开始寻找'
-        : '继续寻找'
-
-  const hasInvalidTestConfiguration = !!mission?.testConfigurationInvalid
-    || !!gpsConfigurationInvalid
-
-  if (hasInvalidTestConfiguration) {
-    return (
-      <ScrollView className='alang-search' scrollY>
-        <View className='alang-search__content'>
-          <View className='alang-search__recovery' role='alert'>
-            <Text className='alang-search__recovery-title'>测试点位配置异常，请重新设置测试点位</Text>
-            <Text className='alang-search__recovery-detail'>旧点位不会继续用于定位，本轮需要重新设置出现点和陪伴终点。</Text>
-            {canUseDebugTools && (
-              <View className='alang-search__recovery-actions'>
-                <View
-                  className='alang-search__recovery-btn alang-search__recovery-btn--primary'
-                  onClick={() => { void handleReconfigure() }}
-                  role='button'
-                  aria-label={resetMutation.isPending ? '正在清除测试进度' : '重新配置点位'}
-                  aria-disabled={resetMutation.isPending}
-                >
-                  <Text className='alang-search__recovery-btn-text alang-search__recovery-btn-text--primary'>
-                    {resetMutation.isPending ? '正在清除…' : '重新配置点位'}
-                  </Text>
-                </View>
-                <View
-                  className='alang-search__recovery-btn'
-                  onClick={() => {
-                    void Taro.navigateTo({
-                      url: `${MINI_PROGRAM_ROUTES.alangDebug}?slug=${encodeURIComponent(slug)}`,
-                    })
-                  }}
-                  role='button'
-                  aria-label='打开测试工具'
-                >
-                  <Text className='alang-search__recovery-btn-text'>打开测试工具</Text>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-      </ScrollView>
-    )
   }
 
-  if (found) {
+  if (!enabled) return <FlashFeatureClosed />
+
+  if (!appearanceId) {
     return (
-      <View className='alang-search__found'>
-        <View className='alang-search__found-glow' />
-        <Text className='alang-search__found-kicker'>距离归零</Text>
-        <Text className='alang-search__found-title'>你找到阿浪了</Text>
-        <Text className='alang-search__found-sub'>故事正在向你走来…</Text>
+      <View className='flash-page'>
+        <FlashPageState
+          title='这次街头盲盒已经散场了'
+          description='入口信息不完整，回到街头盲盒页看看还有谁在线。'
+          action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}
+          actionLabel='返回街头盲盒'
+        />
       </View>
     )
   }
 
   return (
-    <ScrollView className='alang-search' scrollY>
-      <View className='alang-search__content'>
-      <View className='alang-search__area-card'>
-        <View className='alang-search__area-icon'>
-          <View className='alang-search__area-icon-core' />
-        </View>
-        <View className='alang-search__area-copy'>
-          <Text className='alang-search__area-title'>{areaTitle}</Text>
-          <Text className='alang-search__area-detail'>{areaMessage}</Text>
-        </View>
-        <View className='alang-search__area-art' aria-hidden='true'>
-          <Image
-            className='alang-search__area-art-image'
-            src={areaArtwork.src}
-            mode='aspectFill'
-            onError={areaArtwork.onError}
-          />
-          <View className='alang-search__area-art-wash' />
-          {areaArtwork.usingFallback && (
-            <Text className='alang-search__area-placeholder-label'>区域场景示意</Text>
-          )}
-        </View>
-      </View>
-
-      <View className='alang-search__radar-card'>
-        <View className='alang-search__radar-heading'>
-          <Text className='alang-search__radar-title'>阿浪就在附近</Text>
-          <Text className='alang-search__radar-subtitle'>他在约 {ALANG_DEFAULT_SEARCH_RADIUS_METERS} 米的寻找区域里，越靠近信号越清楚</Text>
-        </View>
-        <View className='alang-search__radar-grid'>
-          <View className='alang-search__radar-visual' aria-hidden='true'>
-            <View className='alang-search__orbit alang-search__orbit--outer' />
-            <View className='alang-search__orbit alang-search__orbit--middle' />
-            <View className='alang-search__orbit alang-search__orbit--inner' />
-            <View className='alang-search__radar-axis alang-search__radar-axis--horizontal' />
-            <View className='alang-search__radar-axis alang-search__radar-axis--vertical' />
-            <View className='alang-search__radar-core'>
-              <Text className='alang-search__radar-core-glyph'>?</Text>
-            </View>
-            <View className='alang-search__radar-clue'>
-              <Text className='alang-search__radar-clue-glyph'>✦</Text>
-            </View>
+    <View className='flash-page flash-radar'>
+      <ScrollView className='flash-page__scroll' scrollY>
+        <View className='flash-page__content flash-radar__content'>
+          <View className='flash-radar__npc'>
+            <FlashNpcPortrait npc={{ slug: npcSlug, name: npcName }} size='large' />
+            <Text className='flash-radar__name'>{npcName}</Text>
+            <Text className='flash-radar__meta'>在{districtName} · {formatFlashRemainingTime(undefined, endsAt)}</Text>
           </View>
-          <View className='alang-search__distance-panel'>
-            <Text className='alang-search__distance-label'>距离阿浪约</Text>
-            <View className='alang-search__distance-readout'>
-              <Text className='alang-search__distance-value'>
-                {distance !== null ? `${Math.max(0, Math.round(distance))}` : '—'}
-              </Text>
-              <Text className='alang-search__distance-unit'>米</Text>
-            </View>
-            <View className='alang-search__signal-bars' aria-label={`信号强度 ${signalStrength} 格`}>
-              {[1, 2, 3, 4].map((level) => (
-                <View
-                  key={level}
-                  className={`alang-search__signal-bar${level <= signalStrength ? ' alang-search__signal-bar--active' : ''}`}
-                />
-              ))}
-            </View>
-            <Text className={`alang-search__signal-label alang-search__signal-label--${signal.tone}`}>{signal.label}</Text>
-            <Text className='alang-search__signal-detail'>{signal.detail}</Text>
-          </View>
-        </View>
-        <View className='alang-search__radar-tip'>
-          <Text className='alang-search__radar-tip-text'>小提示：朝距离变小的方向走，信号会越来越稳</Text>
-        </View>
-      </View>
 
-      {(permissionDenied || locationError) && (
-        <View className='alang-search__recovery'>
-          <Text className='alang-search__recovery-title'>距离没有变化？</Text>
-          <Text className='alang-search__recovery-detail'>
-            重新定位会继续当前故事，不会丢失进度。
-          </Text>
-          <View className='alang-search__recovery-actions'>
-            <View
-              className='alang-search__recovery-btn'
-              onClick={() => { void handleRetryLocation() }}
-              role='button'
-              aria-label='重新定位'
+          <View className='flash-radar__instrument' aria-label='隐藏位置雷达，不显示角色坐标'>
+            <Image className='flash-radar__city-art' src={FLASH_UNIVERSAL_ART} mode='aspectFill' />
+            <View className='flash-radar__veil' />
+            <View className='flash-radar__ring flash-radar__ring--outer' />
+            <View className='flash-radar__ring flash-radar__ring--middle' />
+            <View className='flash-radar__ring flash-radar__ring--inner' />
+            <View className='flash-radar__signal'><Text>50m</Text></View>
+          </View>
+
+          <Text className='flash-radar__title'>到了你觉得对的附近，再确认一次</Text>
+          <Text className='flash-radar__copy'>我们不会给出角色的精确坐标。每次点击只读取一次你的位置，用来判断是否进入 50 米范围。</Text>
+
+          {isPossiblyLate ? (
+            <View className='flash-radar__warning' role='status'>
+              <Text>可能有点来不及了，但去不去还是你决定。角色到点会正常离开。</Text>
+            </View>
+          ) : null}
+
+          {state === 'outside' ? (
+            <View className='flash-radar__result' role='status'>
+              <Text className='flash-radar__result-title'>还没有到附近</Text>
+              <Text className='flash-radar__result-copy'>再走近一点后，可以重新确认。这里不会显示角色的距离或方向。</Text>
+            </View>
+          ) : null}
+
+          {state === 'ended' ? (
+            <View className='flash-radar__result' role='status'>
+              <Text className='flash-radar__result-title'>刚好散场了</Text>
+              <Text className='flash-radar__result-copy'>角色到点就会离开，不接受预约，也不会为这次寻找延长时间。</Text>
+              <FlashButton variant='secondary' onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>看看还有谁在线</FlashButton>
+            </View>
+          ) : null}
+
+          {state === 'denied' ? (
+            <View className='flash-radar__result flash-radar__result--error' role='alert'>
+              <Text className='flash-radar__result-title'>定位权限没有打开</Text>
+              <Text className='flash-radar__result-copy'>拒绝定位就无法参加街头盲盒，我们也不会改用 IP 定位。</Text>
+              <FlashButton variant='secondary' onClick={() => { void handleOpenSetting() }}>打开定位设置</FlashButton>
+            </View>
+          ) : null}
+
+          {state === 'rate_limited' ? (
+            <View className='flash-radar__result flash-radar__result--error' role='alert'>
+              <Text className='flash-radar__result-title'>先歇一会儿再确认</Text>
+              <Text className='flash-radar__result-copy'>为了保护角色的隐藏地点，同一次街头盲盒 10 分钟内最多确认 6 次。稍后再试就好。</Text>
+            </View>
+          ) : null}
+
+          {state === 'error' ? (
+            <View className='flash-radar__result flash-radar__result--error' role='alert'>
+              <Text className='flash-radar__result-title'>这次没有确认成功</Text>
+              <Text className='flash-radar__result-copy'>定位信号或网络可能暂时不稳定，稍后可以再点一次。</Text>
+            </View>
+          ) : null}
+
+          <View className='flash-radar__actions'>
+            <FlashButton
+              disabled={state === 'locating' || locateMutation.isPending}
+              onClick={() => { void handleLocate() }}
             >
-              <Text className='alang-search__recovery-btn-text'>重新定位</Text>
-            </View>
-            {permissionDenied && (
-              <View
-                className='alang-search__recovery-btn alang-search__recovery-btn--primary'
-                onClick={() => { void handleOpenSetting() }}
-                role='button'
-                aria-label='打开定位设置'
-              >
-                <Text className='alang-search__recovery-btn-text alang-search__recovery-btn-text--primary'>打开定位设置</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      )}
-
-      <View className='alang-search__after-card'>
-        <Text className='alang-search__after-title'>找到阿浪后</Text>
-        <Text className='alang-search__after-subtitle'>先看看他怎么了，再决定下一步要不要帮他。</Text>
-        <View className='alang-search__after-layout'>
-          <View className='alang-search__after-visual' aria-hidden='true'>
-            <Image
-              className='alang-search__after-image'
-              src={foundSceneArtwork.src}
-              mode='aspectFill'
-              onError={foundSceneArtwork.onError}
-            />
-            {foundSceneArtwork.usingFallback && (
-              <Text className='alang-search__after-placeholder-label'>找到后场景示意</Text>
-            )}
-          </View>
-          <View className='alang-search__after-steps'>
-            <View className='alang-search__after-step'>
-              <Text className='alang-search__after-index'>聊</Text>
-              <View className='alang-search__after-step-copy'>
-                <Text className='alang-search__after-text'>与阿浪对话</Text>
-                <Text className='alang-search__after-detail'>了解他的情况</Text>
-              </View>
-            </View>
-            <View className='alang-search__after-step'>
-              <Text className='alang-search__after-index'>托</Text>
-              <View className='alang-search__after-step-copy'>
-                <Text className='alang-search__after-text'>触发委托</Text>
-                <Text className='alang-search__after-detail'>可能需要你的帮助</Text>
-              </View>
-            </View>
-            <View className='alang-search__after-step'>
-              <Text className='alang-search__after-index'>藏</Text>
-              <View className='alang-search__after-step-copy'>
-                <Text className='alang-search__after-text'>收录故事</Text>
-                <Text className='alang-search__after-detail'>完成后留下这一章</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-        <View
-          className='alang-search__primary-action'
-          hoverClass='alang-search__primary-action--pressed'
-          onClick={handlePrimarySearchAction}
-          role='button'
-          aria-label={primaryActionLabel}
-        >
-          <Text className='alang-search__primary-action-text'>{primaryActionLabel}</Text>
-        </View>
-        <Text className='alang-search__after-note'>在 {ALANG_ARRIVAL_RADIUS_METERS} 米范围内稳定停留后，故事会自动继续。</Text>
-        {canUseDebugTools && (
-          <View className='alang-search__quick-test' data-testid='alang-search-quick-test'>
-            <View className='alang-search__quick-test-heading'>
-              <Text className='alang-search__quick-test-title'>内部测试</Text>
-              <Text className='alang-search__quick-test-copy'>无需步行，不会修改手机系统定位</Text>
-            </View>
-            <View
-              className={`alang-search__quick-test-action${isMockingFound ? ' alang-search__quick-test-action--disabled' : ''}`}
-              onClick={() => { void handleMockFound() }}
-              role='button'
-              aria-label={isMockingFound ? '正在模拟找到阿浪' : '模拟找到阿浪'}
-              aria-disabled={isMockingFound}
+              {state === 'locating' || locateMutation.isPending ? '正在确认这一次位置…' : '我到附近了'}
+            </FlashButton>
+            <FlashButton
+              variant='quiet'
+              onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}
             >
-              <Text>{isMockingFound ? '正在模拟…' : '模拟找到阿浪'}</Text>
-            </View>
-          </View>
-        )}
-      </View>
-
-      <View className='alang-search__map-section'>
-        <View className='alang-search__map-heading'>
-          <View>
-            <Text className='alang-search__map-title'>辅助地图</Text>
-            <Text className='alang-search__map-subtitle'>只确认你在哪里，不显示阿浪坐标或路线</Text>
-          </View>
-          <View
-            className='alang-search__map-toggle'
-            hoverClass='alang-search__map-toggle--pressed'
-            onClick={handleToggleMap}
-            role='button'
-            aria-label={showMap ? '收起辅助地图' : '打开辅助地图'}
-          >
-            <Text className='alang-search__map-toggle-text'>{showMap ? '收起' : '打开'}</Text>
+              先不去了
+            </FlashButton>
           </View>
         </View>
-
-        {showMap && position && (
-          <View className='alang-search__map-frame'>
-            <Map
-              className='alang-search__map'
-              latitude={position.latitude}
-              longitude={position.longitude}
-              onError={() => setMapError(true)}
-              showLocation
-            />
-            <View className='alang-search__map-note'>
-              <Text className='alang-search__map-note-text'>地图中心是你当前的位置</Text>
-            </View>
-          </View>
-        )}
-        {mapError && (
-          <Text className='alang-search__map-error'>辅助地图暂时没加载出来，距离寻找仍会继续</Text>
-        )}
-      </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   )
 }

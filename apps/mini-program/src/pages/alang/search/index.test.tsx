@@ -1,310 +1,92 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import AlangSearchPage from './index'
+import FlashRadarPage from './index'
 
 const mocks = vi.hoisted(() => ({
-  getSetting: vi.fn(),
-  openSetting: vi.fn(),
-  navigateTo: vi.fn(),
-  reLaunch: vi.fn(),
-  redirectTo: vi.fn(),
-  showModal: vi.fn(),
-  showToast: vi.fn(),
-  getStorageSync: vi.fn(),
-  useAlangGps: vi.fn(),
   useAuth: vi.fn(),
-  useAlangMissionDetail: vi.fn(),
-  useResetAlangMission: vi.fn(),
-  syncMissionProgress: vi.fn(),
-  resetMission: vi.fn(),
-  refetch: vi.fn(),
-  mapProps: vi.fn(),
-  mockArrival: vi.fn(),
+  mutateAsync: vi.fn(),
+  location: vi.fn(),
+  permission: vi.fn(),
+  redirectTo: vi.fn(),
+  canonicalRedirect: vi.fn(),
 }))
 
-vi.mock('@tarojs/taro', () => {
-  const taro = {
-    getCurrentInstance: () => ({ router: { params: { slug: 'meet-alang' } } }),
-    getStorageSync: mocks.getStorageSync,
-    getSetting: mocks.getSetting,
-    openSetting: mocks.openSetting,
-    navigateTo: mocks.navigateTo,
-    reLaunch: mocks.reLaunch,
+vi.mock('@tarojs/taro', () => ({
+  default: {
+    getCurrentInstance: () => ({ router: { params: {
+      appearanceId: 'appearance-1', npcName: '阿浪', npcSlug: 'alang', districtName: '南山区',
+    } } }),
+    setNavigationBarTitle: vi.fn(),
     redirectTo: mocks.redirectTo,
-    showModal: mocks.showModal,
-    showToast: mocks.showToast,
-  }
-  return {
-    default: taro,
-    useDidShow: vi.fn(),
-  }
-})
-
+    openSetting: vi.fn(),
+    showToast: vi.fn(),
+  },
+}))
 vi.mock('@tarojs/components', () => ({
   View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>,
   Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-  Image: ({ mode: _mode, ...props }: any) => <img {...props} />,
   ScrollView: ({ children, scrollY: _scrollY, ...props }: any) => <div {...props}>{children}</div>,
-  Map: (props: any) => {
-    mocks.mapProps(props)
-    return <div data-testid='auxiliary-map' />
-  },
+  Image: ({ mode: _mode, onError: _onError, ...props }: any) => <img {...props} />,
 }))
-
-vi.mock('../../../lib/alang/useAlangGps', () => ({
-  useAlangGps: mocks.useAlangGps,
+vi.mock('../../../hooks/useAuth', () => ({ useAuth: mocks.useAuth }))
+vi.mock('../../../lib/alang/useFlash', () => ({
+  useLocateFlashAppearance: () => ({ mutateAsync: mocks.mutateAsync, isPending: false }),
 }))
-
-vi.mock('../../../lib/alang/api', () => ({
-  callDebugMockArrival: mocks.mockArrival,
+vi.mock('../../../lib/alang/flashApi', () => ({
+  getOneShotFlashLocation: mocks.location,
+  getFlashLocationPermission: mocks.permission,
+  getFlashApiErrorCode: (error: any) => error?.data?.code ?? null,
 }))
+vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: mocks.canonicalRedirect }))
+vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
 
-vi.mock('../../../hooks/useAuth', () => ({
-  useAuth: mocks.useAuth,
-}))
-
-vi.mock('../../../lib/alang/useAlangMission', () => ({
-  useAlangMissionDetail: mocks.useAlangMissionDetail,
-  useResetAlangMission: mocks.useResetAlangMission,
-  useSyncAlangMissionProgress: () => mocks.syncMissionProgress,
-}))
-
-vi.mock('../../../lib/alang/alangAnalytics', () => ({
-  alangEvents: {
-    searchPageView: vi.fn(),
-    mapViewTap: vi.fn(),
-    foundAuto: vi.fn(),
-  },
-}))
-
-vi.mock('../../../lib/alang/alangAssets', () => ({
-  useAlangAssetSource: (assetId: string) => ({
-    src: `/mock-${assetId}.webp`,
-    onError: vi.fn(),
-    usingFallback: true,
-  }),
-}))
-
-vi.mock('../../../lib/utils/haptics', () => ({
-  haptics: vi.fn(),
-}))
-
-describe('AlangSearchPage', () => {
+describe('formal Flash radar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.getStorageSync.mockReturnValue({
-      target: { latitude: 22.999, longitude: 114.999 },
-      radius: 5,
-    })
-    mocks.getSetting.mockResolvedValue({ authSetting: { 'scope.userLocation': true } })
-    mocks.openSetting.mockResolvedValue({ authSetting: { 'scope.userLocation': true } })
-    mocks.showModal.mockResolvedValue({ confirm: true, cancel: false })
-    mocks.navigateTo.mockResolvedValue({})
-    mocks.reLaunch.mockResolvedValue({})
-    mocks.redirectTo.mockResolvedValue({})
-    mocks.resetMission.mockResolvedValue({
-      reset: true,
-      deletedProgressCount: 1,
-      deletedArchiveCount: 0,
-    })
-    mocks.mockArrival.mockResolvedValue({
-      arrived: true,
-      distanceMeters: 2,
-      radiusMeters: 5,
-      stableCount: 3,
-      stage: 'found',
-      nodeId: 'found-scene',
-      debug: true,
-    })
-    mocks.useAuth.mockReturnValue({
-      user: { features: { alangEnabled: true } },
-    })
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: {
-        myProgress: {
-          progressId: 'progress-1',
-          stage: 'searching',
-          currentNodeId: 'search-gate',
-        },
-      },
-      refetch: mocks.refetch,
-    })
-    mocks.useResetAlangMission.mockReturnValue({
-      isPending: false,
-      mutateAsync: mocks.resetMission,
-    })
-    mocks.useAlangGps.mockReturnValue({
-      distance: 84,
-      accuracy: 18,
-      nodeId: null,
-      position: { latitude: 22.5431, longitude: 114.0579 },
-      configurationInvalid: false,
-    })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.location.mockResolvedValue({ latitude: 22.54, longitude: 114.05, accuracy: 10 })
+    mocks.permission.mockResolvedValue('granted')
+    mocks.mutateAsync.mockResolvedValue({ canonicalScreen: 'radar', withinRange: false, distanceMeters: 83 })
+    mocks.canonicalRedirect.mockResolvedValue(false)
   })
 
-  it('uses server-owned distance and never restores or exposes a hidden local target', async () => {
-    const { container } = render(<AlangSearchPage />)
+  it('never locates until the user explicitly taps and sends one snapshot', async () => {
+    render(<FlashRadarPage />)
+    expect(mocks.location).not.toHaveBeenCalled()
+    expect(screen.getByText('只读取一次你的位置，用来判断是否进入 50 米范围。', { exact: false })).toBeInTheDocument()
 
-    expect(screen.getByText('84')).toBeInTheDocument()
-    expect(screen.getByText('定位信号稳定')).toBeInTheDocument()
-    expect(screen.getByText('你已进入阿浪可能出现的范围')).toBeInTheDocument()
-    expect(screen.queryByText('跟着距离，去见一个人')).not.toBeInTheDocument()
-    expect(screen.getByText('区域场景示意')).toBeInTheDocument()
-    expect(screen.getByText('找到后场景示意')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '继续寻找' })).toBeInTheDocument()
-    expect(container.querySelectorAll('.alang-search__signal-bar')).toHaveLength(4)
-    expect(container.querySelector('.alang-search__radar-sweep')).not.toBeInTheDocument()
-    expect(screen.getByText('只确认你在哪里，不显示阿浪坐标或路线')).toBeInTheDocument()
-    expect(mocks.getStorageSync).not.toHaveBeenCalled()
-    await waitFor(() => {
-      expect(mocks.useAlangGps).toHaveBeenCalledWith(expect.objectContaining({
-        slug: 'meet-alang',
-        target: undefined,
-        enabled: true,
-      }))
-    })
-    const gpsCalls = mocks.useAlangGps.mock.calls
-    const gpsOptions = gpsCalls[gpsCalls.length - 1]?.[0]
-    gpsOptions.onProgress({ stage: 'found', currentNodeId: 'found-scene' })
-    expect(mocks.syncMissionProgress).toHaveBeenCalledWith('meet-alang', {
-      stage: 'found',
-      currentNodeId: 'found-scene',
-    })
-
-    fireEvent.click(screen.getByText('打开'))
-    expect(await screen.findByTestId('auxiliary-map')).toBeInTheDocument()
-
-    const mapCalls = mocks.mapProps.mock.calls
-    const mapProps = mapCalls[mapCalls.length - 1]?.[0]
-    expect(mapProps.latitude).toBe(22.5431)
-    expect(mapProps.longitude).toBe(114.0579)
-    expect(mapProps.markers).toBeUndefined()
-    expect(mapProps.circles).toBeUndefined()
-    expect(mapProps.polyline).toBeUndefined()
+    fireEvent.click(screen.getByText('我到附近了'))
+    await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledWith({
+      appearanceId: 'appearance-1',
+      location: { latitude: 22.54, longitude: 114.05, accuracy: 10 },
+    }))
+    expect(await screen.findByText(/不会显示角色的距离或方向/)).toBeInTheDocument()
+    expect(screen.queryByText(/83 米/)).not.toBeInTheDocument()
   })
 
-  it('shows explicit retry and settings actions after location permission is denied', async () => {
-    mocks.getSetting.mockResolvedValue({ authSetting: { 'scope.userLocation': false } })
-    mocks.useAlangGps.mockReturnValue({
-      distance: null,
-      accuracy: null,
-      nodeId: null,
-      position: null,
-    })
+  it('treats an ended appearance as a normal dispersal, not a location failure', async () => {
+    mocks.mutateAsync.mockRejectedValue({ data: { code: 'FLASH_APPEARANCE_ENDED' } })
+    render(<FlashRadarPage />)
+    fireEvent.click(screen.getByText('我到附近了'))
 
-    render(<AlangSearchPage />)
-
-    expect(await screen.findByText('定位权限未开启')).toBeInTheDocument()
-    expect(screen.getByText('重新定位')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '打开定位并继续' })).toBeInTheDocument()
-    const openSetting = screen.getByText('打开定位设置')
-    expect(openSetting).toBeInTheDocument()
-
-    fireEvent.click(openSetting)
-    await waitFor(() => expect(mocks.openSetting).toHaveBeenCalledTimes(1))
+    expect(await screen.findByText('刚好散场了')).toBeInTheDocument()
+    expect(screen.getByText(/不接受预约/)).toBeInTheDocument()
   })
 
-  it('replaces a stale search page using the server progress after arrival', async () => {
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: {
-        myProgress: {
-          progressId: 'progress-1',
-          stage: 'dialogue',
-          currentNodeId: 'dialogue-1',
-        },
-      },
-      refetch: mocks.refetch,
-    })
+  it('explains the shared hidden-location budget without requesting permissions again', async () => {
+    mocks.mutateAsync.mockRejectedValue({ data: { code: 'FLASH_LOCATE_RATE_LIMITED' } })
+    render(<FlashRadarPage />)
+    fireEvent.click(screen.getByText('我到附近了'))
 
-    render(<AlangSearchPage />)
-
-    await waitFor(() => {
-      expect(mocks.redirectTo).toHaveBeenCalledWith({
-        url: '/pages/alang/dialogue/index?slug=meet-alang&nodeId=dialogue-1',
-      })
-    })
+    expect(await screen.findByText('先歇一会儿再确认')).toBeInTheDocument()
+    expect(screen.getByText(/10 分钟内最多确认 6 次/)).toBeInTheDocument()
+    expect(mocks.permission).not.toHaveBeenCalled()
   })
 
-  it('resets a legacy searching run with invalid server points before reopening config', async () => {
-    mocks.useAuth.mockReturnValue({
-      user: { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } },
-    })
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: {
-        testConfigurationInvalid: true,
-        myProgress: {
-          progressId: 'legacy-progress',
-          stage: 'searching',
-          currentNodeId: 'search-gate',
-        },
-      },
-      refetch: mocks.refetch,
-    })
-
-    render(<AlangSearchPage />)
-
-    expect(screen.getByText('测试点位配置异常，请重新设置测试点位')).toBeInTheDocument()
-    expect(mocks.useAlangGps).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }))
-    fireEvent.click(screen.getByRole('button', { name: '打开测试工具' }))
-    expect(mocks.navigateTo).toHaveBeenCalledWith({
-      url: '/pages/alang/debug/index?slug=meet-alang',
-    })
-    fireEvent.click(screen.getByRole('button', { name: '重新配置点位' }))
-
-    await waitFor(() => expect(mocks.resetMission).toHaveBeenCalledWith('meet-alang'))
-    expect(mocks.reLaunch).toHaveBeenCalledWith({
-      url: '/pages/alang/config/index?slug=meet-alang',
-    })
-  })
-
-  it('shows a direct internal quick-test action and simulates finding without changing device GPS', async () => {
-    mocks.useAuth.mockReturnValue({
-      user: { appMode: 'test', singleTestMode: true, features: { alangEnabled: true } },
-    })
-
-    const { rerender } = render(<AlangSearchPage />)
-
-    expect(screen.getByTestId('alang-search-quick-test')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '模拟找到阿浪' }))
-
-    await waitFor(() => {
-      expect(mocks.showModal).toHaveBeenCalledWith(expect.objectContaining({
-        title: '模拟找到阿浪',
-        content: '仅用于内部测试。将模拟进入阿浪 5 米范围，是否继续？',
-      }))
-      expect(mocks.mockArrival).toHaveBeenCalledWith('meet-alang')
-      expect(mocks.syncMissionProgress).toHaveBeenCalledWith('meet-alang', {
-        stage: 'found',
-        currentNodeId: 'found-scene',
-      })
-    })
-    // The handler must not race the stage-recovery effect with a second
-    // imperative redirect. Navigation begins only after Query state advances.
-    expect(mocks.redirectTo).not.toHaveBeenCalled()
-
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: {
-        myProgress: {
-          progressId: 'progress-1',
-          stage: 'found',
-          currentNodeId: 'found-scene',
-        },
-      },
-      refetch: mocks.refetch,
-    })
-    rerender(<AlangSearchPage />)
-
-    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledTimes(1))
-    expect(mocks.redirectTo).toHaveBeenCalledWith({
-      url: '/pages/alang/dialogue/index?slug=meet-alang&nodeId=found-scene',
-    })
-  })
-
-  it('hides the search quick-test action outside server-authorized test mode', () => {
-    mocks.useAuth.mockReturnValue({
-      user: { appMode: 'production', singleTestMode: true, features: { alangEnabled: true } },
-    })
-    render(<AlangSearchPage />)
-    expect(screen.queryByTestId('alang-search-quick-test')).not.toBeInTheDocument()
+  it('does not request location through a disabled deep link', () => {
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
+    render(<FlashRadarPage />)
+    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
+    expect(mocks.location).not.toHaveBeenCalled()
   })
 })

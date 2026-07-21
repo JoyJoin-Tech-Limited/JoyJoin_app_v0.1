@@ -58,7 +58,7 @@ const SUPER_OPERATOR: AdminRole[] = ["super_admin", "operator"];
  *  ═══════════════════════════════════════════════════════════ */
 const dailyOpsItems: NavItem[] = [
   { title: "数据看板", url: "/admin/dashboard", icon: LayoutDashboard, roles: ALL_ROLES },
-  { title: "闪现运营", url: "/admin/flash-ops", icon: Zap, roles: SUPER_OPERATOR },
+  { title: "街头盲盒运营", url: "/admin/alang", icon: Sparkles, roles: ALL_ROLES },
   { title: "活动池管理", url: "/admin/event-pools", icon: Layers, roles: ALL_ROLES },
   { title: "用户管理", url: "/admin/users", icon: Users, roles: ALL_ROLES },
   { title: "场地管理", url: "/admin/venues", icon: MapPin, roles: ALL_ROLES },

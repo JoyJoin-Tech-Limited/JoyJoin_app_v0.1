@@ -77,9 +77,19 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-07-15)
+## 🆕 Recent Updates (Last updated: 2026-07-20)
 
 ### 2026 Milestones (June–July 2026)
+
+**54. 街头盲盒正式版｜深圳数字动物 NPC 与人工审核任务库** *(2026-07-20; current override)*
+- **Scope:** Discover 静态入口 + `pages/alang` 正式街头盲盒页面 + `/api/alang/flash/*` + 后台 `/admin/alang`。旧 `missions/:slug` 阿浪故事流程仅兼容保留，不再定义正式街头盲盒。
+- **NPC/schedule:** 5 位数字动物 NPC 使用固定星期、随机地点和随机 1–2 班；单班 90–150 分钟，09:00–21:00，同 NPC 间隔至少 90 分钟，生成器均衡上午/下午/晚上。没有可用安全班次时允许当天不出现，不展示未来排班，也不预约或加班。
+- **Encounter:** 用户主动进入后进行一次 GCJ-02 定位；拒绝定位不能参加且无 IP 回退。在线响应只给角色、区、剩余时间；隐藏地点坐标/地址/路线/精确距离均不下发。50 米服务端判断，班次结束即关闭；已解锁对话保留 24 小时。
+- **Tasks:** 30 条人工审核任务，6 类各 5 条，按 NPC 人设与用户可选偏好抽取；每次相遇最多 2 个结构化问题、任务随机、允许换 1 次。最多同时 3 件、同 NPC 1 件、未完成 7 天；已完成模板按 `max(5%, 0.35^n)` 降权。
+- **Completion/delivery:** 目的地 50 米到达即可，进店、消费、拍照、扫码、评价或打扰他人均非要求。反馈后任务保留，必须在之后一次同 NPC encounter 交付；不提供积分、奖品或门店权益。
+- **Privacy:** 原始用户坐标不落库、不入日志/URL/query key；可选 100 字回信不进入画像、分析、故事、LLM 或后台列表，交付 30 天后清除。个性化总开关及人格、兴趣、宽泛行业、行政区、任务行为来源均默认关闭并可撤回。
+- **Operations:** 相遇地点和任务目的地分库；批准前必须由服务端腾讯地图反查深圳及行政区。危险目的地撤回会事务性撤回未完成任务。内容版本 CAS、operator+ 写权限、管理员审计、次日草案编辑/发布/readiness 均由服务端约束。
+- **Rollout:** `alangEnabled` 默认关闭。先完成真实 PostgreSQL 只读核对和 additive migration，再 seed 草案、逐条人工审核、readiness、staging/微信真机验证，最后小流量开启。Canonical docs: `docs/alang-prototype/implementation-map.md`、`flash-formal-privacy-and-safety.md`、`flash-schema-rollout.md`。
 
 **52. V1.7 Profile 像素形象、活动装备与私人连续故事** *(2026-07-15)*
 - **Product override:** Word 的 ACTIVE 07 只保留视觉语气，不再把“我的故事”实现为活动/阿浪档案列表；FUTURE 08 也不整套照搬。当前产品权威是新版 Profile 内的私人连续故事入口，以及仅用于新版 Profile 的最小“我的形象”闭环。FUTURE 04 与 REMOVED 09 仍禁止实现。
@@ -91,7 +101,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Flags and rollout:** `profilePixelAvatarEnabled`、`equipmentRewardsEnabled`、`personalStoryEnabled` 独立、默认关闭。`personalStoryEnabled=false` 时入口及 GET/POST/status 在访问故事表前关闭；开关为 `true` 但 provider 不可用时才允许读取旧章并让更新显式失败。先应用 `20260715010000_add_equipment_personal_story.sql` 和 `20260715011000_seed_equipment_catalog_pools.sql`，再在 staging 开启并做真实 provider/真机 smoke。
 - **APIs:** `GET /api/personal-story`、`POST /api/personal-story/update`、`GET /api/personal-story/update-status`；`GET /api/equipment/me`、`PUT /api/equipment/me/outfit`、`POST /api/equipment/entitlements/:id/draw`、`GET /api/equipment/shop`、`POST /api/equipment/shop/items/:id/redeem`。所有身份来自 session；装备兑换使用幂等键。
 
-**51. 闪现 NPC｜阿浪 V1.7 — 腾讯地图复用、服务端恢复与批准目标 F3 对齐** *(2026-07-14)*
+**51. 街头盲盒 NPC｜阿浪 V1.7 — 腾讯地图复用、服务端恢复与批准目标 F3 对齐** *(2026-07-14)*
 - **Scope:** Mini Program `pages/alang` subpackage、Discover 入口、Alang 服务端状态机与现有 `/api/geo` 腾讯地图代理。
 - **Flow:** Discover → 事件详情 → 距离搜索 → 非聊天气泡叙事选择 → 陪伴步行 → 5 米稳定到达 → 结果卡 → 用户主动收录。搜索、对话、陪伴和结果页均以服务端 `myProgress` 纠正陈旧 URL；未收录的 `stage=result` 刷新后仍回到结果卡。收录只保存真实经历来源，不直接跳入旧档案列表；用户之后在 Profile 的私人故事页主动更新，才会按事实追加新章。
 - **Location secrecy:** 搜索阶段不向客户端返回任务目标、剧情 `gpsTrigger`、陪伴终点或路线；辅助 Map 只显示用户本人。`routeDestination` 只在 `companion` 及以后阶段披露，且路线仅在用户点击后请求。
