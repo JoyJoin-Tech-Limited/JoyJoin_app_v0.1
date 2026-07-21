@@ -8,7 +8,7 @@ import {
 } from "@shared/alang/flashCatalog";
 import type { FlashAvailabilityWindow, FlashFeedbackPrompt } from "@shared/schema";
 
-import { requireAdmin, requireOperatorOrAbove, requireSuperAdmin } from "../../adminAuth";
+import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { db } from "../../db";
 import { logAdminAudit, type AdminAuditAction } from "../../lib/adminAuditLogger";
 import { getActingAdminId } from "../../lib/getActingAdminId";
@@ -592,7 +592,7 @@ export function registerAdminAlangRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/admin/alang/catalog/seed", requireAdmin, requireSuperAdmin, async (req, res) => {
+  app.post("/api/admin/alang/catalog/seed", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     try {
       if (process.env.APP_MODE !== "staging") {
         res.status(403).json({ code: "FLASH_SEED_STAGING_ONLY", message: "正式目录初始化仅允许在 staging 执行" });
