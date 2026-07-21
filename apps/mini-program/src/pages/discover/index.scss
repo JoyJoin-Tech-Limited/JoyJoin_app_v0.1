@@ -324,8 +324,10 @@
 //   L6 CTA              — 32rpx, $font-cn-display, black (action)
 //   L6 CTA sub          — 22rpx                          (value prop)
 
-// Decorative corner vignette size; also used to reserve layout space.
-$oracle-corner-vignette-size: 220rpx;
+// Decorative corner vignette size.
+$oracle-corner-vignette-size: 280rpx;
+// Minimum horizontal clearance for the solid corner-stat badge on the topline.
+$oracle-badge-clearance: 120rpx;
 
 .oracle-card {
   @include card;
@@ -430,14 +432,12 @@ $oracle-corner-vignette-size: 220rpx;
   // Surfaces the real participant count in the top-right corner, overlapping
   // the decorative vignette. Warm, card-contextual palette so it reads as
   // JoyJoin metadata rather than a marketplace urgency sticker.
+  // The light vignette is allowed to sit behind all text; only the solid
+  // badge gets a small clearance on the topline row so the countdown stays
+  // readable. Lower text layers flow full-width under the vignette.
   &--has-corner-stat {
-    .oracle-card__topline,
-    .oracle-card__hero,
-    .oracle-card__facts,
-    .oracle-card__meta,
-    .oracle-card__teaser {
-      // Reserve space so text layers do not run under the badge.
-      padding-right: $oracle-corner-vignette-size;
+    .oracle-card__topline {
+      padding-right: $oracle-badge-clearance;
     }
   }
 

@@ -76,6 +76,8 @@ interface RawRegisteredEquipmentAsset extends RawEquipmentAsset {
 
 interface RawArchetypeAssets {
   body?: unknown
+  /** Approved fully dressed starter look (atlas full-dress cell, 512x768). */
+  fullStarter?: unknown
   starter?: Partial<Record<PixelAvatarEquipmentSlot, RawEquipmentAsset>>
 }
 
@@ -234,18 +236,22 @@ export function getPixelAvatarBaseUrl(archetypeId?: string | null): string {
 }
 
 /**
- * Approved, fully dressed 2D reference art. The spider starter outfit was
- * painted as one pose-aware illustration; rendering its separately generated
- * garment crops reintroduced a neutral arm pose and made the jacket float off
- * the raised hand. Use this reference only when the complete matching starter
- * set is equipped. Partial outfits continue to use independent layers.
+ * Approved, fully dressed 2D reference art, used when the complete matching
+ * starter set is equipped (partial outfits continue to use independent
+ * layers). Every archetype's full-starter look is derived from the approved
+ * full-dress cell of its atlas by the V2 pipeline (2026-07-21), so the default
+ * outfit always renders exactly the approved pose-aware illustration. Spider
+ * keeps its byte-approved V1 art (the original raised-hand fix).
  */
 export function getPixelAvatarApprovedStarterLookUrl(
   archetypeId?: string | null,
 ): string | null {
   const safeId = normalizePixelArchetypeId(archetypeId)
-  if (safeId !== 'spider') return null
-  return cdnAsset(`/assets/profile-pixel/archetypes/${safeId}/base-v1.webp`)
+  if (safeId === 'spider') {
+    return cdnAsset(`/assets/profile-pixel/archetypes/${safeId}/base-v1.webp`)
+  }
+  const fullStarterPath = normalizeManifestPath(RAW_MANIFEST.archetypes?.[safeId]?.fullStarter, '')
+  return fullStarterPath ? cdnAsset(`/${fullStarterPath}`) : null
 }
 
 /**

@@ -385,6 +385,29 @@ async function readStarterLayerRaw(archetypeId, slot) {
   }
 }
 
+async function readFullStarterRaw(archetypeId) {
+  const extractedSourcePath = path.join(
+    SOURCE_ROOT,
+    'generated-starter-layers',
+    archetypeId,
+    'full-starter.png',
+  )
+  try {
+    const metadata = await sharp(extractedSourcePath).metadata()
+    if (metadata.width !== WIDTH || metadata.height !== HEIGHT || metadata.hasAlpha !== true) {
+      throw new Error(
+        `Extracted full-starter look ${extractedSourcePath} must be a ${WIDTH}x${HEIGHT} transparent image`,
+      )
+    }
+    return sharp(extractedSourcePath).ensureAlpha().raw().toBuffer()
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error
+    throw new Error(
+      `Missing extracted full-starter look ${extractedSourcePath}; run npm run extract:profile-pixel-layers -w mini-program`,
+    )
+  }
+}
+
 async function buildArchetype(archetypeId) {
   const sourcePath = path.join(SOURCE_ROOT, archetypeId, 'atlas-source.png')
   const body = await readBody(sourcePath)
@@ -404,6 +427,14 @@ async function buildArchetype(archetypeId) {
     )
     manifest.starter[slot] = { ...asset, depth: SLOT_DEPTH[slot] }
   }
+  // Approved fully dressed look (single illustration of the complete starter
+  // set). The runtime swaps to it when all four starter items are equipped, so
+  // the default look is pixel-perfect even where per-slot layers interact.
+  manifest.fullStarter = await writeHashedFile(
+    `archetypes/${archetypeId}`,
+    'full-starter-v2',
+    await encodeBody(await readFullStarterRaw(archetypeId)),
+  )
   return manifest
 }
 
@@ -562,7 +593,7 @@ async function buildFutureEquipmentItem(rawItem, existingKeys) {
 
 function collectGeneratedAssetPaths(manifest) {
   return [...new Set([
-    ...Object.values(manifest.archetypes).map((archetype) => archetype.body),
+    ...Object.values(manifest.archetypes).flatMap((archetype) => [archetype.body, archetype.fullStarter]),
     ...Object.values(manifest.items).map((item) => item.layer),
   ])].sort()
 }
@@ -570,9 +601,15 @@ function collectGeneratedAssetPaths(manifest) {
 async function buildCdnManifest(generatedPaths) {
   const cdnManifest = JSON.parse(await fs.readFile(CDN_MANIFEST_PATH, 'utf8'))
   if (!Array.isArray(cdnManifest.assets)) throw new Error('CDN manifest must contain an assets array')
+  // Only the generated subtrees are refreshed; independently governed v2
+  // assets (stage art, future hand-managed files) keep their manifest entries.
+  const generatedPrefixes = [
+    'assets/profile-pixel/v2/archetypes/',
+    'assets/profile-pixel/v2/equipment/',
+  ]
   const retained = cdnManifest.assets.filter((asset) => (
     typeof asset?.localPath !== 'string'
-    || !asset.localPath.startsWith('assets/profile-pixel/v2/')
+    || !generatedPrefixes.some((prefix) => asset.localPath.startsWith(prefix))
   ))
   const generatedEntries = generatedPaths.map((assetPath) => ({
     localPath: assetPath,
@@ -690,8 +727,14 @@ async function main() {
     )
     await fs.writeFile(stagedCdnManifestPath, await buildCdnManifest(generatedPaths))
     await validateStagedBuild(stagedRoot, stagedCdnManifestPath)
+    // Replace only the generated subtrees. The v2 directory also contains
+    // independently governed assets (e.g. stage-assets-v1.json + stage/*.webp
+    // for IdentityStageScene) which a whole-directory swap would silently wipe
+    // (regression hit on 2026-07-21).
     await replaceArtifacts([
-      { stagedPath: stagedRoot, targetPath: OUTPUT_ROOT },
+      { stagedPath: path.join(stagedRoot, 'archetypes'), targetPath: path.join(OUTPUT_ROOT, 'archetypes') },
+      { stagedPath: path.join(stagedRoot, 'equipment'), targetPath: path.join(OUTPUT_ROOT, 'equipment') },
+      { stagedPath: path.join(stagedRoot, 'avatar-assets-v2.json'), targetPath: path.join(OUTPUT_ROOT, 'avatar-assets-v2.json') },
       { stagedPath: stagedCdnManifestPath, targetPath: CDN_MANIFEST_PATH },
     ])
     activeOutputRoot = OUTPUT_ROOT

@@ -3,6 +3,15 @@
 // the page WXSS as well, so WeChat never falls back to the canvas 300x150
 // default when common-component styles are split into another package.
 @use '../../../components/profile/PixelAvatar3D';
+// The V2 turntable fallback chain (non-spider archetypes) hits the same
+// subpackage style split: its rules were chunked into the unreachable
+// `pages/profile-linked/three-avatar.wxss`, leaving the stage unstyled and
+// blank for 11/12 archetypes. Compile them into the page WXSS explicitly.
+@use '../../../components/profile/PixelAvatarTurntable';
+@use '../../../components/profile/PixelAvatarComposite';
+@use '../../../components/profile/PixelAvatarFallback';
+// The HD-2D identity stage wraps the avatar on this page; same split guard.
+@use '../../../components/profile/IdentityStageScene';
 
 .my-image {
   position: relative;
@@ -57,6 +66,17 @@
       linear-gradient(rgba($color-primary, 0.035) 2rpx, transparent 2rpx),
       linear-gradient(90deg, rgba($color-primary, 0.035) 2rpx, transparent 2rpx);
     background-size: 24rpx 24rpx;
+  }
+
+  // HD-2D identity stage backdrop (far/mid street art + rim light + warm
+  // grade). Fills the stage; the turntable keeps its 16rpx inset inside, so
+  // the character stands on the scene rather than touching the card edge.
+  // When the scene art is unavailable the scene degrades to children only and
+  // the grid above becomes the visible backdrop again.
+  &__stage-scene {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
   }
 
   &__turntable {
@@ -275,6 +295,7 @@
   }
 
   &__slot-tab {
+    position: relative;
     display: flex;
     min-height: $cta-min-tap;
     align-items: center;
@@ -295,6 +316,17 @@
     &--pressed {
       background: rgba($color-primary, 0.08);
     }
+  }
+
+  &__slot-tab-dot {
+    position: absolute;
+    top: 10rpx;
+    right: 10rpx;
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+    background: $color-secondary;
+    box-shadow: 0 0 0 4rpx rgba($color-secondary, 0.18);
   }
 
   &__inventory-grid,

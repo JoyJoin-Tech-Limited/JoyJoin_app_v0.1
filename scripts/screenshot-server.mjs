@@ -590,8 +590,13 @@ async function captureMyImageV17() {
       const layers = document.querySelectorAll('.pixel-avatar-composite__layer').length
       const fragment = document.querySelector('.my-image__balance-value')?.textContent ?? ''
       const baseNote = document.querySelector('.my-image__base-note')?.textContent ?? ''
-      return /body-front-v2\.[a-f0-9]{12}\.webp/.test(body)
-        && layers === 4
+      const hotspots = document.querySelectorAll('.pixel-avatar-composite__hotspot').length
+      // Complete starter set → approved full-starter look (zero per-slot layers).
+      const approvedLook = /full-starter-v2\.[a-f0-9]{12}\.webp/.test(body) && layers === 0
+      // Partial outfit → body + independent layers.
+      const layeredLook = /body-front-v2\.[a-f0-9]{12}\.webp/.test(body) && layers > 0
+      return (approvedLook || layeredLook)
+        && hotspots === 4
         && fragment.includes('70')
         && baseNote.includes('基础内搭不可脱')
     }, undefined, { timeout: 10000 })

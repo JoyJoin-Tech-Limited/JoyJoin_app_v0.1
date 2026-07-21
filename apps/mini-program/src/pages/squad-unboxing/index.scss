@@ -728,6 +728,7 @@ $fan-rotations: (
   // gives the card a structured "header zone / body zone" read instead of
   // floating content.
   &__brief-header {
+    position: relative;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -738,6 +739,8 @@ $fan-rotations: (
   }
 
   &__brief-header-main {
+    position: relative;
+    z-index: 1;
     flex: 1;
     min-width: 0;
     display: flex;
@@ -779,15 +782,15 @@ $fan-rotations: (
     white-space: nowrap;
   }
 
-  // Stretches to the date block's full height: pill pins top, vignette sinks
-  // to the bottom so it aligns with the date baseline.
+  // Holds the event-type pill; the vignette is now absolute so the date block
+  // can flow underneath it for a more balanced header composition.
   &__brief-header-aside {
+    position: relative;
+    z-index: 1;
     flex-shrink: 0;
-    align-self: stretch;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    justify-content: space-between;
     gap: $spacing-xs;
   }
 
@@ -824,8 +827,13 @@ $fan-rotations: (
   }
 
   &__brief-vignette {
-    width: 112rpx;
-    height: 112rpx;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 160rpx;
+    height: 160rpx;
+    z-index: 0;
+    pointer-events: none;
   }
 
   &__chapter-title {

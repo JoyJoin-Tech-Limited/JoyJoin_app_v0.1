@@ -12,9 +12,17 @@ import {
   normalizePixelAvatarFrameId,
   type PixelAvatarFrameId,
   type PixelEquipmentAsset,
+  type PixelEquipmentPlacement,
 } from '../../lib/profile/pixelAvatarAssets'
 import PixelAvatarFallback from './PixelAvatarFallback'
 import './PixelAvatarComposite.scss'
+
+export interface PixelAvatarSlotHotspot {
+  slot: EquipmentSlot
+  /** Accessible name, e.g. 「查看上装」. */
+  label: string
+  placement: PixelEquipmentPlacement
+}
 
 export interface PixelAvatarCompositeProps {
   archetypeId: string
@@ -23,6 +31,13 @@ export interface PixelAvatarCompositeProps {
   frameId?: PixelAvatarFrameId
   variant?: 'compact' | 'full'
   className?: string
+  /**
+   * Optional tap-to-slot hotspots over the character (placement-rect hit
+   * areas, from the open-source slot hit-rect pattern). Rendered only on the
+   * front frame — off-front poses hide them rather than misalign.
+   */
+  slotHotspots?: PixelAvatarSlotHotspot[]
+  onSlotTap?: (slot: EquipmentSlot) => void
 }
 
 interface EquippedLayer {
@@ -61,6 +76,8 @@ export function PixelAvatarComposite({
   frameId = 'front',
   variant = 'full',
   className = '',
+  slotHotspots,
+  onSlotTap,
 }: PixelAvatarCompositeProps) {
   const safeArchetypeId = normalizePixelArchetypeId(archetypeId)
   const safeFrameId = normalizePixelAvatarFrameId(frameId)
@@ -214,6 +231,27 @@ export function PixelAvatarComposite({
 
         <Text className='pixel-avatar-composite__accessible-copy'>{accessibleLabel}</Text>
       </View>
+
+      {!bodyFailed && safeFrameId === 'front' && onSlotTap && slotHotspots && slotHotspots.length > 0 && (
+        <View className='pixel-avatar-composite__hotspot-plane'>
+          {slotHotspots.map(({ slot, label, placement }) => (
+            <View
+              key={slot}
+              className='pixel-avatar-composite__hotspot'
+              hoverClass='pixel-avatar-composite__hotspot--pressed'
+              style={{
+                left: `${(placement.left / BODY_CANVAS_WIDTH) * 100}%`,
+                top: `${(placement.top / BODY_CANVAS_HEIGHT) * 100}%`,
+                width: `${(placement.width / BODY_CANVAS_WIDTH) * 100}%`,
+                height: `${(placement.height / BODY_CANVAS_HEIGHT) * 100}%`,
+              }}
+              onClick={() => onSlotTap(slot)}
+              role='button'
+              aria-label={label}
+            />
+          ))}
+        </View>
+      )}
 
       {failedLayerCount > 0 && (
         <View

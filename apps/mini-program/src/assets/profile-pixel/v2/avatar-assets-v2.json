@@ -6,7 +6,7 @@
   "height": 768,
   "bodyAssetCount": 12,
   "itemAssetCount": 48,
-  "sourceAssetCount": 60,
+  "sourceAssetCount": 72,
   "equipmentLayersDoubleAsThumbnails": true,
   "parallaxSteps": [
     -2,
@@ -20,406 +20,415 @@
       "body": "assets/profile-pixel/v2/archetypes/corgi/body-front-v2.5c2a54dc465f.webp",
       "starter": {
         "top": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/corgi/top/layer-v2.543644d80b6d.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/corgi/top/layer-v2.d663cc07deb5.webp",
           "placement": {
-            "left": 85,
-            "top": 198,
-            "width": 296,
-            "height": 281
+            "left": 147,
+            "top": 194,
+            "width": 293,
+            "height": 290
           },
           "depth": 0.55
         },
         "bottom": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/corgi/bottom/layer-v2.8a010e5ab9aa.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/corgi/bottom/layer-v2.929477c3556e.webp",
           "placement": {
-            "left": 158,
-            "top": 398,
-            "width": 204,
-            "height": 180
+            "left": 166,
+            "top": 342,
+            "width": 228,
+            "height": 262
           },
           "depth": 0.35
         },
         "shoes": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/corgi/shoes/layer-v2.92280d778850.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/corgi/shoes/layer-v2.81d0ffcaf3f5.webp",
           "placement": {
-            "left": 168,
-            "top": 584,
-            "width": 194,
-            "height": 135
+            "left": 138,
+            "top": 564,
+            "width": 277,
+            "height": 172
           },
           "depth": 0.25
         },
         "accessory": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/corgi/accessory/layer-v2.3850ab27faa2.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/corgi/accessory/layer-v2.c705eb3a5a94.webp",
           "placement": {
-            "left": 216,
+            "left": 184,
             "top": 245,
-            "width": 85,
+            "width": 150,
             "height": 130
           },
           "depth": 0.85
         }
-      }
+      },
+      "fullStarter": "assets/profile-pixel/v2/archetypes/corgi/full-starter-v2.23d1c0da23d7.webp"
     },
     "rooster": {
       "body": "assets/profile-pixel/v2/archetypes/rooster/body-front-v2.352f1154e7c5.webp",
       "starter": {
         "top": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/rooster/top/layer-v2.c56e64809519.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/rooster/top/layer-v2.ae11ee4a66c4.webp",
           "placement": {
-            "left": 151,
-            "top": 214,
-            "width": 209,
-            "height": 258
+            "left": 126,
+            "top": 182,
+            "width": 301,
+            "height": 298
           },
           "depth": 0.55
         },
         "bottom": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/rooster/bottom/layer-v2.993f8e77284f.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/rooster/bottom/layer-v2.8378f569534c.webp",
           "placement": {
-            "left": 166,
-            "top": 398,
-            "width": 182,
-            "height": 170
+            "left": 142,
+            "top": 342,
+            "width": 274,
+            "height": 252
           },
           "depth": 0.35
         },
         "shoes": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/rooster/shoes/layer-v2.1b206f5374cd.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/rooster/shoes/layer-v2.2be01d39ff9c.webp",
           "placement": {
-            "left": 168,
-            "top": 576,
-            "width": 196,
-            "height": 145
+            "left": 125,
+            "top": 556,
+            "width": 281,
+            "height": 197
           },
           "depth": 0.25
         },
         "accessory": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/rooster/accessory/layer-v2.876fca5b62b1.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/rooster/accessory/layer-v2.71db0abb97f9.webp",
           "placement": {
-            "left": 300,
-            "top": 278,
-            "width": 58,
-            "height": 62
+            "left": 190,
+            "top": 268,
+            "width": 185,
+            "height": 120
           },
           "depth": 0.85
         }
-      }
+      },
+      "fullStarter": "assets/profile-pixel/v2/archetypes/rooster/full-starter-v2.62d1a68f40db.webp"
     },
     "hamster_praise": {
       "body": "assets/profile-pixel/v2/archetypes/hamster_praise/body-front-v2.59f92487d4c5.webp",
       "starter": {
         "top": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/top/layer-v2.1a47a3aa8134.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/top/layer-v2.50f961f73787.webp",
           "placement": {
-            "left": 105,
-            "top": 236,
-            "width": 302,
-            "height": 260
-          },
-          "depth": 0.55
-        },
-        "bottom": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/bottom/layer-v2.fb9782f65904.webp",
-          "placement": {
-            "left": 134,
-            "top": 408,
-            "width": 239,
-            "height": 178
-          },
-          "depth": 0.35
-        },
-        "shoes": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/shoes/layer-v2.d63cf9bc62da.webp",
-          "placement": {
-            "left": 151,
-            "top": 582,
-            "width": 208,
-            "height": 150
-          },
-          "depth": 0.25
-        },
-        "accessory": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/accessory/layer-v2.c755e6a2ca5b.webp",
-          "placement": {
-            "left": 146,
-            "top": 271,
-            "width": 260,
-            "height": 264
-          },
-          "depth": 0.85
-        }
-      }
-    },
-    "fox": {
-      "body": "assets/profile-pixel/v2/archetypes/fox/body-front-v2.69f998579064.webp",
-      "starter": {
-        "top": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/fox/top/layer-v2.f1e4cf330e0e.webp",
-          "placement": {
-            "left": 120,
+            "left": 89,
             "top": 210,
-            "width": 266,
-            "height": 274
-          },
-          "depth": 0.55
-        },
-        "bottom": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/fox/bottom/layer-v2.54fa8c764a32.webp",
-          "placement": {
-            "left": 168,
-            "top": 398,
-            "width": 175,
-            "height": 265
-          },
-          "depth": 0.35
-        },
-        "shoes": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/fox/shoes/layer-v2.a79b8cdc8770.webp",
-          "placement": {
-            "left": 144,
-            "top": 584,
-            "width": 253,
-            "height": 150
-          },
-          "depth": 0.25
-        },
-        "accessory": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/fox/accessory/layer-v2.507f3fb4ea21.webp",
-          "placement": {
-            "left": 278,
-            "top": 279,
-            "width": 96,
-            "height": 42
-          },
-          "depth": 0.85
-        }
-      }
-    },
-    "dolphin_calm": {
-      "body": "assets/profile-pixel/v2/archetypes/dolphin_calm/body-front-v2.f6c7e7247e3d.webp",
-      "starter": {
-        "top": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/top/layer-v2.900f0c81340d.webp",
-          "placement": {
-            "left": 134,
-            "top": 178,
-            "width": 273,
-            "height": 304
-          },
-          "depth": 0.55
-        },
-        "bottom": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/bottom/layer-v2.db965e21257b.webp",
-          "placement": {
-            "left": 156,
-            "top": 398,
-            "width": 203,
-            "height": 180
-          },
-          "depth": 0.35
-        },
-        "shoes": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/shoes/layer-v2.e8cc599ff932.webp",
-          "placement": {
-            "left": 146,
-            "top": 582,
-            "width": 262,
-            "height": 150
-          },
-          "depth": 0.25
-        },
-        "accessory": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/accessory/layer-v2.ac31baab9155.webp",
-          "placement": {
-            "left": 203,
-            "top": 205,
-            "width": 114,
-            "height": 185
-          },
-          "depth": 0.85
-        }
-      }
-    },
-    "spider": {
-      "body": "assets/profile-pixel/v2/archetypes/spider/body-front-v2.cb3448756189.webp",
-      "starter": {
-        "top": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/spider/top/layer-v2.058f873599d2.webp",
-          "placement": {
-            "left": 115,
-            "top": 219,
-            "width": 282,
-            "height": 221
-          },
-          "depth": 0.55
-        },
-        "bottom": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/spider/bottom/layer-v2.eef749a880f7.webp",
-          "placement": {
-            "left": 164,
-            "top": 384,
-            "width": 184,
-            "height": 170
-          },
-          "depth": 0.35
-        },
-        "shoes": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/spider/shoes/layer-v2.36fd50623b8e.webp",
-          "placement": {
-            "left": 184,
-            "top": 509,
-            "width": 199,
-            "height": 143
-          },
-          "depth": 0.25
-        },
-        "accessory": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/spider/accessory/layer-v2.89817495b583.webp",
-          "placement": {
-            "left": 155,
-            "top": 316,
-            "width": 235,
-            "height": 128
-          },
-          "depth": 0.85
-        }
-      }
-    },
-    "koala": {
-      "body": "assets/profile-pixel/v2/archetypes/koala/body-front-v2.9b56e1ad0ae2.webp",
-      "starter": {
-        "top": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/koala/top/layer-v2.9371d83da27f.webp",
-          "placement": {
-            "left": 107,
-            "top": 200,
-            "width": 308,
-            "height": 275
-          },
-          "depth": 0.55
-        },
-        "bottom": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/koala/bottom/layer-v2.1c7c682ef96e.webp",
-          "placement": {
-            "left": 181,
-            "top": 398,
-            "width": 159,
-            "height": 258
-          },
-          "depth": 0.35
-        },
-        "shoes": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/koala/shoes/layer-v2.15f8ef253d4f.webp",
-          "placement": {
-            "left": 134,
-            "top": 588,
-            "width": 240,
-            "height": 128
-          },
-          "depth": 0.25
-        },
-        "accessory": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/koala/accessory/layer-v2.cbd90d2f9e4f.webp",
-          "placement": {
-            "left": 172,
-            "top": 235,
-            "width": 190,
-            "height": 325
-          },
-          "depth": 0.85
-        }
-      }
-    },
-    "octopus": {
-      "body": "assets/profile-pixel/v2/archetypes/octopus/body-front-v2.12e36f5d647c.webp",
-      "starter": {
-        "top": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/octopus/top/layer-v2.5c831eef491a.webp",
-          "placement": {
-            "left": 106,
-            "top": 222,
-            "width": 299,
-            "height": 276
-          },
-          "depth": 0.55
-        },
-        "bottom": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/octopus/bottom/layer-v2.5ad0c061c4c8.webp",
-          "placement": {
-            "left": 151,
-            "top": 408,
-            "width": 213,
-            "height": 172
-          },
-          "depth": 0.35
-        },
-        "shoes": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/octopus/shoes/layer-v2.c3c82037f065.webp",
-          "placement": {
-            "left": 159,
-            "top": 556,
-            "width": 197,
-            "height": 131
-          },
-          "depth": 0.25
-        },
-        "accessory": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/octopus/accessory/layer-v2.eda5beab1b05.webp",
-          "placement": {
-            "left": 184,
-            "top": 260,
-            "width": 171,
-            "height": 285
-          },
-          "depth": 0.85
-        }
-      }
-    },
-    "owl": {
-      "body": "assets/profile-pixel/v2/archetypes/owl/body-front-v2.4e3d0a530077.webp",
-      "starter": {
-        "top": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/owl/top/layer-v2.4b9bea01547b.webp",
-          "placement": {
-            "left": 102,
-            "top": 200,
-            "width": 316,
+            "width": 334,
             "height": 286
           },
           "depth": 0.55
         },
         "bottom": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/owl/bottom/layer-v2.155a55822a6c.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/bottom/layer-v2.62153347972e.webp",
           "placement": {
-            "left": 155,
-            "top": 410,
-            "width": 203,
-            "height": 170
+            "left": 115,
+            "top": 352,
+            "width": 304,
+            "height": 260
           },
           "depth": 0.35
         },
         "shoes": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/owl/shoes/layer-v2.f83eead88a42.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/shoes/layer-v2.95b854733463.webp",
           "placement": {
-            "left": 166,
-            "top": 546,
-            "width": 167,
-            "height": 96
+            "left": 105,
+            "top": 567,
+            "width": 307,
+            "height": 196
           },
           "depth": 0.25
         },
         "accessory": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/owl/accessory/layer-v2.5616fc43df22.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/accessory/layer-v2.a634972023c3.webp",
           "placement": {
-            "left": 142,
-            "top": 246,
-            "width": 260,
-            "height": 300
+            "left": 120,
+            "top": 235,
+            "width": 300,
+            "height": 320
           },
           "depth": 0.85
         }
-      }
+      },
+      "fullStarter": "assets/profile-pixel/v2/archetypes/hamster_praise/full-starter-v2.71221a906fe9.webp"
+    },
+    "fox": {
+      "body": "assets/profile-pixel/v2/archetypes/fox/body-front-v2.69f998579064.webp",
+      "starter": {
+        "top": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/fox/top/layer-v2.14e7110efa21.webp",
+          "placement": {
+            "left": 129,
+            "top": 190,
+            "width": 280,
+            "height": 294
+          },
+          "depth": 0.55
+        },
+        "bottom": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/fox/bottom/layer-v2.38722d5ae753.webp",
+          "placement": {
+            "left": 161,
+            "top": 342,
+            "width": 233,
+            "height": 347
+          },
+          "depth": 0.35
+        },
+        "shoes": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/fox/shoes/layer-v2.b3368c4f661c.webp",
+          "placement": {
+            "left": 139,
+            "top": 556,
+            "width": 318,
+            "height": 191
+          },
+          "depth": 0.25
+        },
+        "accessory": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/fox/accessory/layer-v2.dd6f0338fd01.webp",
+          "placement": {
+            "left": 165,
+            "top": 245,
+            "width": 223,
+            "height": 165
+          },
+          "depth": 0.85
+        }
+      },
+      "fullStarter": "assets/profile-pixel/v2/archetypes/fox/full-starter-v2.33d65c449748.webp"
+    },
+    "dolphin_calm": {
+      "body": "assets/profile-pixel/v2/archetypes/dolphin_calm/body-front-v2.f6c7e7247e3d.webp",
+      "starter": {
+        "top": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/top/layer-v2.ec872d9c77a1.webp",
+          "placement": {
+            "left": 129,
+            "top": 178,
+            "width": 298,
+            "height": 304
+          },
+          "depth": 0.55
+        },
+        "bottom": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/bottom/layer-v2.d6512eb0878d.webp",
+          "placement": {
+            "left": 150,
+            "top": 342,
+            "width": 267,
+            "height": 262
+          },
+          "depth": 0.35
+        },
+        "shoes": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/shoes/layer-v2.dce7199da2a6.webp",
+          "placement": {
+            "left": 130,
+            "top": 556,
+            "width": 250,
+            "height": 210
+          },
+          "depth": 0.25
+        },
+        "accessory": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/accessory/layer-v2.c836b7503905.webp",
+          "placement": {
+            "left": 180,
+            "top": 205,
+            "width": 160,
+            "height": 185
+          },
+          "depth": 0.85
+        }
+      },
+      "fullStarter": "assets/profile-pixel/v2/archetypes/dolphin_calm/full-starter-v2.d8065e0cff90.webp"
+    },
+    "spider": {
+      "body": "assets/profile-pixel/v2/archetypes/spider/body-front-v2.cb3448756189.webp",
+      "starter": {
+        "top": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/spider/top/layer-v2.638c3606222b.webp",
+          "placement": {
+            "left": 134,
+            "top": 192,
+            "width": 263,
+            "height": 276
+          },
+          "depth": 0.55
+        },
+        "bottom": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/spider/bottom/layer-v2.03c19913cfd7.webp",
+          "placement": {
+            "left": 175,
+            "top": 328,
+            "width": 201,
+            "height": 252
+          },
+          "depth": 0.35
+        },
+        "shoes": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/spider/shoes/layer-v2.22b046fc12c4.webp",
+          "placement": {
+            "left": 167,
+            "top": 509,
+            "width": 230,
+            "height": 153
+          },
+          "depth": 0.25
+        },
+        "accessory": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/spider/accessory/layer-v2.0fa24d1f0359.webp",
+          "placement": {
+            "left": 155,
+            "top": 255,
+            "width": 235,
+            "height": 250
+          },
+          "depth": 0.85
+        }
+      },
+      "fullStarter": "assets/profile-pixel/v2/archetypes/spider/full-starter-v2.59d1d9d366fd.webp"
+    },
+    "koala": {
+      "body": "assets/profile-pixel/v2/archetypes/koala/body-front-v2.9b56e1ad0ae2.webp",
+      "starter": {
+        "top": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/koala/top/layer-v2.e17570bc4a7d.webp",
+          "placement": {
+            "left": 109,
+            "top": 192,
+            "width": 308,
+            "height": 292
+          },
+          "depth": 0.55
+        },
+        "bottom": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/koala/bottom/layer-v2.a7513ccbaca5.webp",
+          "placement": {
+            "left": 132,
+            "top": 342,
+            "width": 263,
+            "height": 340
+          },
+          "depth": 0.35
+        },
+        "shoes": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/koala/shoes/layer-v2.c999553c7bcd.webp",
+          "placement": {
+            "left": 130,
+            "top": 620,
+            "width": 235,
+            "height": 137
+          },
+          "depth": 0.25
+        },
+        "accessory": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/koala/accessory/layer-v2.32477b53743a.webp",
+          "placement": {
+            "left": 131,
+            "top": 236,
+            "width": 276,
+            "height": 324
+          },
+          "depth": 0.85
+        }
+      },
+      "fullStarter": "assets/profile-pixel/v2/archetypes/koala/full-starter-v2.feaa4dfb402f.webp"
+    },
+    "octopus": {
+      "body": "assets/profile-pixel/v2/archetypes/octopus/body-front-v2.12e36f5d647c.webp",
+      "starter": {
+        "top": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/octopus/top/layer-v2.2e062c272cf1.webp",
+          "placement": {
+            "left": 89,
+            "top": 222,
+            "width": 342,
+            "height": 276
+          },
+          "depth": 0.55
+        },
+        "bottom": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/octopus/bottom/layer-v2.f48926a8f4b5.webp",
+          "placement": {
+            "left": 131,
+            "top": 352,
+            "width": 252,
+            "height": 254
+          },
+          "depth": 0.35
+        },
+        "shoes": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/octopus/shoes/layer-v2.10bd1df1e09e.webp",
+          "placement": {
+            "left": 133,
+            "top": 573,
+            "width": 257,
+            "height": 129
+          },
+          "depth": 0.25
+        },
+        "accessory": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/octopus/accessory/layer-v2.e463a816741c.webp",
+          "placement": {
+            "left": 115,
+            "top": 260,
+            "width": 310,
+            "height": 285
+          },
+          "depth": 0.85
+        }
+      },
+      "fullStarter": "assets/profile-pixel/v2/archetypes/octopus/full-starter-v2.b3a92133f99d.webp"
+    },
+    "owl": {
+      "body": "assets/profile-pixel/v2/archetypes/owl/body-front-v2.4e3d0a530077.webp",
+      "starter": {
+        "top": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/owl/top/layer-v2.d8d9db3aad69.webp",
+          "placement": {
+            "left": 120,
+            "top": 190,
+            "width": 316,
+            "height": 306
+          },
+          "depth": 0.55
+        },
+        "bottom": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/owl/bottom/layer-v2.db87b66ea8bc.webp",
+          "placement": {
+            "left": 138,
+            "top": 354,
+            "width": 281,
+            "height": 252
+          },
+          "depth": 0.35
+        },
+        "shoes": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/owl/shoes/layer-v2.3b17ce2b4721.webp",
+          "placement": {
+            "left": 132,
+            "top": 546,
+            "width": 259,
+            "height": 139
+          },
+          "depth": 0.25
+        },
+        "accessory": {
+          "layer": "assets/profile-pixel/v2/equipment/starter/owl/accessory/layer-v2.9a7a82fdab0f.webp",
+          "placement": {
+            "left": 136,
+            "top": 225,
+            "width": 285,
+            "height": 340
+          },
+          "depth": 0.85
+        }
+      },
+      "fullStarter": "assets/profile-pixel/v2/archetypes/owl/full-starter-v2.619584186994.webp"
     },
     "elephant": {
       "body": "assets/profile-pixel/v2/archetypes/elephant/body-front-v2.d0bd4b46eb07.webp",
@@ -464,7 +473,8 @@
           },
           "depth": 0.85
         }
-      }
+      },
+      "fullStarter": "assets/profile-pixel/v2/archetypes/elephant/full-starter-v2.6efbb041607f.webp"
     },
     "turtle": {
       "body": "assets/profile-pixel/v2/archetypes/turtle/body-front-v2.a2056ebbc4cb.webp",
@@ -480,7 +490,7 @@
           "depth": 0.55
         },
         "bottom": {
-          "layer": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/layer-v2.61b46d4ac8ec.webp",
+          "layer": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/layer-v2.312570c8d80a.webp",
           "placement": {
             "left": 176,
             "top": 421,
@@ -509,7 +519,8 @@
           },
           "depth": 0.85
         }
-      }
+      },
+      "fullStarter": "assets/profile-pixel/v2/archetypes/turtle/full-starter-v2.18f70577b2fd.webp"
     },
     "cat": {
       "body": "assets/profile-pixel/v2/archetypes/cat/body-front-v2.5df6a8f70a1b.webp",
@@ -554,475 +565,476 @@
           },
           "depth": 0.85
         }
-      }
+      },
+      "fullStarter": "assets/profile-pixel/v2/archetypes/cat/full-starter-v2.ab31cfee7029.webp"
     }
   },
   "items": {
     "equipment/starter/corgi/top/v1": {
       "slot": "top",
-      "layer": "assets/profile-pixel/v2/equipment/starter/corgi/top/layer-v2.543644d80b6d.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/corgi/top/layer-v2.d663cc07deb5.webp",
       "depth": 0.55,
       "placements": {
         "corgi": {
-          "left": 85,
-          "top": 198,
-          "width": 296,
-          "height": 281
+          "left": 147,
+          "top": 194,
+          "width": 293,
+          "height": 290
         }
       }
     },
     "equipment/starter/corgi/bottom/v1": {
       "slot": "bottom",
-      "layer": "assets/profile-pixel/v2/equipment/starter/corgi/bottom/layer-v2.8a010e5ab9aa.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/corgi/bottom/layer-v2.929477c3556e.webp",
       "depth": 0.35,
       "placements": {
         "corgi": {
-          "left": 158,
-          "top": 398,
-          "width": 204,
-          "height": 180
+          "left": 166,
+          "top": 342,
+          "width": 228,
+          "height": 262
         }
       }
     },
     "equipment/starter/corgi/shoes/v1": {
       "slot": "shoes",
-      "layer": "assets/profile-pixel/v2/equipment/starter/corgi/shoes/layer-v2.92280d778850.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/corgi/shoes/layer-v2.81d0ffcaf3f5.webp",
       "depth": 0.25,
       "placements": {
         "corgi": {
-          "left": 168,
-          "top": 584,
-          "width": 194,
-          "height": 135
+          "left": 138,
+          "top": 564,
+          "width": 277,
+          "height": 172
         }
       }
     },
     "equipment/starter/corgi/accessory/v1": {
       "slot": "accessory",
-      "layer": "assets/profile-pixel/v2/equipment/starter/corgi/accessory/layer-v2.3850ab27faa2.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/corgi/accessory/layer-v2.c705eb3a5a94.webp",
       "depth": 0.85,
       "placements": {
         "corgi": {
-          "left": 216,
+          "left": 184,
           "top": 245,
-          "width": 85,
+          "width": 150,
           "height": 130
         }
       }
     },
     "equipment/starter/rooster/top/v1": {
       "slot": "top",
-      "layer": "assets/profile-pixel/v2/equipment/starter/rooster/top/layer-v2.c56e64809519.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/rooster/top/layer-v2.ae11ee4a66c4.webp",
       "depth": 0.55,
       "placements": {
         "rooster": {
-          "left": 151,
-          "top": 214,
-          "width": 209,
-          "height": 258
+          "left": 126,
+          "top": 182,
+          "width": 301,
+          "height": 298
         }
       }
     },
     "equipment/starter/rooster/bottom/v1": {
       "slot": "bottom",
-      "layer": "assets/profile-pixel/v2/equipment/starter/rooster/bottom/layer-v2.993f8e77284f.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/rooster/bottom/layer-v2.8378f569534c.webp",
       "depth": 0.35,
       "placements": {
         "rooster": {
-          "left": 166,
-          "top": 398,
-          "width": 182,
-          "height": 170
+          "left": 142,
+          "top": 342,
+          "width": 274,
+          "height": 252
         }
       }
     },
     "equipment/starter/rooster/shoes/v1": {
       "slot": "shoes",
-      "layer": "assets/profile-pixel/v2/equipment/starter/rooster/shoes/layer-v2.1b206f5374cd.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/rooster/shoes/layer-v2.2be01d39ff9c.webp",
       "depth": 0.25,
       "placements": {
         "rooster": {
-          "left": 168,
-          "top": 576,
-          "width": 196,
-          "height": 145
+          "left": 125,
+          "top": 556,
+          "width": 281,
+          "height": 197
         }
       }
     },
     "equipment/starter/rooster/accessory/v1": {
       "slot": "accessory",
-      "layer": "assets/profile-pixel/v2/equipment/starter/rooster/accessory/layer-v2.876fca5b62b1.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/rooster/accessory/layer-v2.71db0abb97f9.webp",
       "depth": 0.85,
       "placements": {
         "rooster": {
-          "left": 300,
-          "top": 278,
-          "width": 58,
-          "height": 62
+          "left": 190,
+          "top": 268,
+          "width": 185,
+          "height": 120
         }
       }
     },
     "equipment/starter/hamster_praise/top/v1": {
       "slot": "top",
-      "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/top/layer-v2.1a47a3aa8134.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/top/layer-v2.50f961f73787.webp",
       "depth": 0.55,
       "placements": {
         "hamster_praise": {
-          "left": 105,
-          "top": 236,
-          "width": 302,
-          "height": 260
+          "left": 89,
+          "top": 210,
+          "width": 334,
+          "height": 286
         }
       }
     },
     "equipment/starter/hamster_praise/bottom/v1": {
       "slot": "bottom",
-      "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/bottom/layer-v2.fb9782f65904.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/bottom/layer-v2.62153347972e.webp",
       "depth": 0.35,
       "placements": {
         "hamster_praise": {
-          "left": 134,
-          "top": 408,
-          "width": 239,
-          "height": 178
+          "left": 115,
+          "top": 352,
+          "width": 304,
+          "height": 260
         }
       }
     },
     "equipment/starter/hamster_praise/shoes/v1": {
       "slot": "shoes",
-      "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/shoes/layer-v2.d63cf9bc62da.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/shoes/layer-v2.95b854733463.webp",
       "depth": 0.25,
       "placements": {
         "hamster_praise": {
-          "left": 151,
-          "top": 582,
-          "width": 208,
-          "height": 150
+          "left": 105,
+          "top": 567,
+          "width": 307,
+          "height": 196
         }
       }
     },
     "equipment/starter/hamster_praise/accessory/v1": {
       "slot": "accessory",
-      "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/accessory/layer-v2.c755e6a2ca5b.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/hamster_praise/accessory/layer-v2.a634972023c3.webp",
       "depth": 0.85,
       "placements": {
         "hamster_praise": {
-          "left": 146,
-          "top": 271,
-          "width": 260,
-          "height": 264
+          "left": 120,
+          "top": 235,
+          "width": 300,
+          "height": 320
         }
       }
     },
     "equipment/starter/fox/top/v1": {
       "slot": "top",
-      "layer": "assets/profile-pixel/v2/equipment/starter/fox/top/layer-v2.f1e4cf330e0e.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/fox/top/layer-v2.14e7110efa21.webp",
       "depth": 0.55,
       "placements": {
         "fox": {
-          "left": 120,
-          "top": 210,
-          "width": 266,
-          "height": 274
+          "left": 129,
+          "top": 190,
+          "width": 280,
+          "height": 294
         }
       }
     },
     "equipment/starter/fox/bottom/v1": {
       "slot": "bottom",
-      "layer": "assets/profile-pixel/v2/equipment/starter/fox/bottom/layer-v2.54fa8c764a32.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/fox/bottom/layer-v2.38722d5ae753.webp",
       "depth": 0.35,
       "placements": {
         "fox": {
-          "left": 168,
-          "top": 398,
-          "width": 175,
-          "height": 265
+          "left": 161,
+          "top": 342,
+          "width": 233,
+          "height": 347
         }
       }
     },
     "equipment/starter/fox/shoes/v1": {
       "slot": "shoes",
-      "layer": "assets/profile-pixel/v2/equipment/starter/fox/shoes/layer-v2.a79b8cdc8770.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/fox/shoes/layer-v2.b3368c4f661c.webp",
       "depth": 0.25,
       "placements": {
         "fox": {
-          "left": 144,
-          "top": 584,
-          "width": 253,
-          "height": 150
+          "left": 139,
+          "top": 556,
+          "width": 318,
+          "height": 191
         }
       }
     },
     "equipment/starter/fox/accessory/v1": {
       "slot": "accessory",
-      "layer": "assets/profile-pixel/v2/equipment/starter/fox/accessory/layer-v2.507f3fb4ea21.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/fox/accessory/layer-v2.dd6f0338fd01.webp",
       "depth": 0.85,
       "placements": {
         "fox": {
-          "left": 278,
-          "top": 279,
-          "width": 96,
-          "height": 42
+          "left": 165,
+          "top": 245,
+          "width": 223,
+          "height": 165
         }
       }
     },
     "equipment/starter/dolphin_calm/top/v1": {
       "slot": "top",
-      "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/top/layer-v2.900f0c81340d.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/top/layer-v2.ec872d9c77a1.webp",
       "depth": 0.55,
       "placements": {
         "dolphin_calm": {
-          "left": 134,
+          "left": 129,
           "top": 178,
-          "width": 273,
+          "width": 298,
           "height": 304
         }
       }
     },
     "equipment/starter/dolphin_calm/bottom/v1": {
       "slot": "bottom",
-      "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/bottom/layer-v2.db965e21257b.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/bottom/layer-v2.d6512eb0878d.webp",
       "depth": 0.35,
       "placements": {
         "dolphin_calm": {
-          "left": 156,
-          "top": 398,
-          "width": 203,
-          "height": 180
+          "left": 150,
+          "top": 342,
+          "width": 267,
+          "height": 262
         }
       }
     },
     "equipment/starter/dolphin_calm/shoes/v1": {
       "slot": "shoes",
-      "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/shoes/layer-v2.e8cc599ff932.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/shoes/layer-v2.dce7199da2a6.webp",
       "depth": 0.25,
       "placements": {
         "dolphin_calm": {
-          "left": 146,
-          "top": 582,
-          "width": 262,
-          "height": 150
+          "left": 130,
+          "top": 556,
+          "width": 250,
+          "height": 210
         }
       }
     },
     "equipment/starter/dolphin_calm/accessory/v1": {
       "slot": "accessory",
-      "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/accessory/layer-v2.ac31baab9155.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/accessory/layer-v2.c836b7503905.webp",
       "depth": 0.85,
       "placements": {
         "dolphin_calm": {
-          "left": 203,
+          "left": 180,
           "top": 205,
-          "width": 114,
+          "width": 160,
           "height": 185
         }
       }
     },
     "equipment/starter/spider/top/v1": {
       "slot": "top",
-      "layer": "assets/profile-pixel/v2/equipment/starter/spider/top/layer-v2.058f873599d2.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/spider/top/layer-v2.638c3606222b.webp",
       "depth": 0.55,
       "placements": {
         "spider": {
-          "left": 115,
-          "top": 219,
-          "width": 282,
-          "height": 221
+          "left": 134,
+          "top": 192,
+          "width": 263,
+          "height": 276
         }
       }
     },
     "equipment/starter/spider/bottom/v1": {
       "slot": "bottom",
-      "layer": "assets/profile-pixel/v2/equipment/starter/spider/bottom/layer-v2.eef749a880f7.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/spider/bottom/layer-v2.03c19913cfd7.webp",
       "depth": 0.35,
       "placements": {
         "spider": {
-          "left": 164,
-          "top": 384,
-          "width": 184,
-          "height": 170
+          "left": 175,
+          "top": 328,
+          "width": 201,
+          "height": 252
         }
       }
     },
     "equipment/starter/spider/shoes/v1": {
       "slot": "shoes",
-      "layer": "assets/profile-pixel/v2/equipment/starter/spider/shoes/layer-v2.36fd50623b8e.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/spider/shoes/layer-v2.22b046fc12c4.webp",
       "depth": 0.25,
       "placements": {
         "spider": {
-          "left": 184,
+          "left": 167,
           "top": 509,
-          "width": 199,
-          "height": 143
+          "width": 230,
+          "height": 153
         }
       }
     },
     "equipment/starter/spider/accessory/v1": {
       "slot": "accessory",
-      "layer": "assets/profile-pixel/v2/equipment/starter/spider/accessory/layer-v2.89817495b583.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/spider/accessory/layer-v2.0fa24d1f0359.webp",
       "depth": 0.85,
       "placements": {
         "spider": {
           "left": 155,
-          "top": 316,
+          "top": 255,
           "width": 235,
-          "height": 128
+          "height": 250
         }
       }
     },
     "equipment/starter/koala/top/v1": {
       "slot": "top",
-      "layer": "assets/profile-pixel/v2/equipment/starter/koala/top/layer-v2.9371d83da27f.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/koala/top/layer-v2.e17570bc4a7d.webp",
       "depth": 0.55,
       "placements": {
         "koala": {
-          "left": 107,
-          "top": 200,
+          "left": 109,
+          "top": 192,
           "width": 308,
-          "height": 275
+          "height": 292
         }
       }
     },
     "equipment/starter/koala/bottom/v1": {
       "slot": "bottom",
-      "layer": "assets/profile-pixel/v2/equipment/starter/koala/bottom/layer-v2.1c7c682ef96e.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/koala/bottom/layer-v2.a7513ccbaca5.webp",
       "depth": 0.35,
       "placements": {
         "koala": {
-          "left": 181,
-          "top": 398,
-          "width": 159,
-          "height": 258
+          "left": 132,
+          "top": 342,
+          "width": 263,
+          "height": 340
         }
       }
     },
     "equipment/starter/koala/shoes/v1": {
       "slot": "shoes",
-      "layer": "assets/profile-pixel/v2/equipment/starter/koala/shoes/layer-v2.15f8ef253d4f.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/koala/shoes/layer-v2.c999553c7bcd.webp",
       "depth": 0.25,
       "placements": {
         "koala": {
-          "left": 134,
-          "top": 588,
-          "width": 240,
-          "height": 128
+          "left": 130,
+          "top": 620,
+          "width": 235,
+          "height": 137
         }
       }
     },
     "equipment/starter/koala/accessory/v1": {
       "slot": "accessory",
-      "layer": "assets/profile-pixel/v2/equipment/starter/koala/accessory/layer-v2.cbd90d2f9e4f.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/koala/accessory/layer-v2.32477b53743a.webp",
       "depth": 0.85,
       "placements": {
         "koala": {
-          "left": 172,
-          "top": 235,
-          "width": 190,
-          "height": 325
+          "left": 131,
+          "top": 236,
+          "width": 276,
+          "height": 324
         }
       }
     },
     "equipment/starter/octopus/top/v1": {
       "slot": "top",
-      "layer": "assets/profile-pixel/v2/equipment/starter/octopus/top/layer-v2.5c831eef491a.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/octopus/top/layer-v2.2e062c272cf1.webp",
       "depth": 0.55,
       "placements": {
         "octopus": {
-          "left": 106,
+          "left": 89,
           "top": 222,
-          "width": 299,
+          "width": 342,
           "height": 276
         }
       }
     },
     "equipment/starter/octopus/bottom/v1": {
       "slot": "bottom",
-      "layer": "assets/profile-pixel/v2/equipment/starter/octopus/bottom/layer-v2.5ad0c061c4c8.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/octopus/bottom/layer-v2.f48926a8f4b5.webp",
       "depth": 0.35,
       "placements": {
         "octopus": {
-          "left": 151,
-          "top": 408,
-          "width": 213,
-          "height": 172
+          "left": 131,
+          "top": 352,
+          "width": 252,
+          "height": 254
         }
       }
     },
     "equipment/starter/octopus/shoes/v1": {
       "slot": "shoes",
-      "layer": "assets/profile-pixel/v2/equipment/starter/octopus/shoes/layer-v2.c3c82037f065.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/octopus/shoes/layer-v2.10bd1df1e09e.webp",
       "depth": 0.25,
       "placements": {
         "octopus": {
-          "left": 159,
-          "top": 556,
-          "width": 197,
-          "height": 131
+          "left": 133,
+          "top": 573,
+          "width": 257,
+          "height": 129
         }
       }
     },
     "equipment/starter/octopus/accessory/v1": {
       "slot": "accessory",
-      "layer": "assets/profile-pixel/v2/equipment/starter/octopus/accessory/layer-v2.eda5beab1b05.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/octopus/accessory/layer-v2.e463a816741c.webp",
       "depth": 0.85,
       "placements": {
         "octopus": {
-          "left": 184,
+          "left": 115,
           "top": 260,
-          "width": 171,
+          "width": 310,
           "height": 285
         }
       }
     },
     "equipment/starter/owl/top/v1": {
       "slot": "top",
-      "layer": "assets/profile-pixel/v2/equipment/starter/owl/top/layer-v2.4b9bea01547b.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/owl/top/layer-v2.d8d9db3aad69.webp",
       "depth": 0.55,
       "placements": {
         "owl": {
-          "left": 102,
-          "top": 200,
+          "left": 120,
+          "top": 190,
           "width": 316,
-          "height": 286
+          "height": 306
         }
       }
     },
     "equipment/starter/owl/bottom/v1": {
       "slot": "bottom",
-      "layer": "assets/profile-pixel/v2/equipment/starter/owl/bottom/layer-v2.155a55822a6c.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/owl/bottom/layer-v2.db87b66ea8bc.webp",
       "depth": 0.35,
       "placements": {
         "owl": {
-          "left": 155,
-          "top": 410,
-          "width": 203,
-          "height": 170
+          "left": 138,
+          "top": 354,
+          "width": 281,
+          "height": 252
         }
       }
     },
     "equipment/starter/owl/shoes/v1": {
       "slot": "shoes",
-      "layer": "assets/profile-pixel/v2/equipment/starter/owl/shoes/layer-v2.f83eead88a42.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/owl/shoes/layer-v2.3b17ce2b4721.webp",
       "depth": 0.25,
       "placements": {
         "owl": {
-          "left": 166,
+          "left": 132,
           "top": 546,
-          "width": 167,
-          "height": 96
+          "width": 259,
+          "height": 139
         }
       }
     },
     "equipment/starter/owl/accessory/v1": {
       "slot": "accessory",
-      "layer": "assets/profile-pixel/v2/equipment/starter/owl/accessory/layer-v2.5616fc43df22.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/owl/accessory/layer-v2.9a7a82fdab0f.webp",
       "depth": 0.85,
       "placements": {
         "owl": {
-          "left": 142,
-          "top": 246,
-          "width": 260,
-          "height": 300
+          "left": 136,
+          "top": 225,
+          "width": 285,
+          "height": 340
         }
       }
     },
@@ -1093,7 +1105,7 @@
     },
     "equipment/starter/turtle/bottom/v1": {
       "slot": "bottom",
-      "layer": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/layer-v2.61b46d4ac8ec.webp",
+      "layer": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/layer-v2.312570c8d80a.webp",
       "depth": 0.35,
       "placements": {
         "turtle": {
