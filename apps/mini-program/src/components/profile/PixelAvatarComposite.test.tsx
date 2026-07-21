@@ -151,11 +151,29 @@ describe('PixelAvatarComposite', () => {
     expect(container.querySelector('.pixel-avatar-composite__layer--top')).toBeInTheDocument()
   })
 
-  it('keeps the permanent modest body and renders all equipped cropped layers', () => {
+  it('uses the atlas-derived approved full-starter look for a complete non-spider starter outfit', () => {
     const { container } = render(
       <PixelAvatarComposite
         archetypeId='corgi'
         outfit={makeOutfit()}
+        itemsById={itemsById}
+      />,
+    )
+
+    const image = screen.getByRole('img')
+    expect(image).toHaveAttribute('data-permanent-underwear', 'true')
+    expect(container.querySelector('.pixel-avatar-composite__body--approved-starter')).toHaveAttribute(
+      'src',
+      expect.stringMatching(/\/archetypes\/corgi\/full-starter-v2\.[a-f0-9]{12}\.webp/),
+    )
+    expect(container.querySelectorAll('.pixel-avatar-composite__layer')).toHaveLength(0)
+  })
+
+  it('keeps the permanent modest body and renders all equipped cropped layers', () => {
+    const { container } = render(
+      <PixelAvatarComposite
+        archetypeId='corgi'
+        outfit={makeOutfit({ accessoryItemId: null })}
         itemsById={itemsById}
       />,
     )
@@ -168,7 +186,7 @@ describe('PixelAvatarComposite', () => {
       expect.stringMatching(/\/body-front-v2\.[a-f0-9]{12}\.webp/),
     )
 
-    for (const slot of SLOT_ORDER) {
+    for (const slot of SLOT_ORDER.filter((slot) => slot !== 'accessory')) {
       const layer = container.querySelector(`.pixel-avatar-composite__layer--${slot}`)
       expect(layer).toBeInTheDocument()
       expect(layer).toHaveAttribute(
@@ -207,7 +225,7 @@ describe('PixelAvatarComposite', () => {
     const { container, rerender } = render(
       <PixelAvatarComposite
         archetypeId='corgi'
-        outfit={makeOutfit()}
+        outfit={makeOutfit({ accessoryItemId: null })}
         itemsById={itemsById}
         frameId='left-far'
       />,
@@ -223,7 +241,7 @@ describe('PixelAvatarComposite', () => {
     rerender(
       <PixelAvatarComposite
         archetypeId='corgi'
-        outfit={makeOutfit()}
+        outfit={makeOutfit({ accessoryItemId: null })}
         itemsById={itemsById}
         frameId='right-far'
       />,
@@ -258,7 +276,7 @@ describe('PixelAvatarComposite', () => {
     const { container } = render(
       <PixelAvatarComposite
         archetypeId='corgi'
-        outfit={makeOutfit()}
+        outfit={makeOutfit({ shoesItemId: null })}
         itemsById={itemsById}
       />,
     )
@@ -312,5 +330,46 @@ describe('PixelAvatarComposite', () => {
     expect(screen.getByRole('status')).toHaveAccessibleName('1件装备素材准备中')
     expect(screen.getByRole('img')).toHaveAccessibleName(/1件装备素材准备中/)
     expect(container.querySelector('.pixel-avatar-composite__body')).toBeInTheDocument()
+  })
+
+  it('renders placement slot hotspots on the front frame and forwards taps', () => {
+    const onSlotTap = vi.fn()
+    render(
+      <PixelAvatarComposite
+        archetypeId='corgi'
+        outfit={makeOutfit({ accessoryItemId: null })}
+        itemsById={itemsById}
+        onSlotTap={onSlotTap}
+        slotHotspots={[
+          { slot: 'top', label: '查看上装', placement: { left: 85, top: 194, width: 296, height: 290 } },
+          { slot: 'shoes', label: '查看鞋子', placement: { left: 135, top: 584, width: 260, height: 135 } },
+        ]}
+      />,
+    )
+
+    const topHotspot = screen.getByRole('button', { name: '查看上装' })
+    expect(topHotspot).toHaveStyle({ left: `${(85 / 512) * 100}%`, top: `${(194 / 768) * 100}%` })
+    fireEvent.click(topHotspot)
+    expect(onSlotTap).toHaveBeenCalledWith('top')
+
+    fireEvent.click(screen.getByRole('button', { name: '查看鞋子' }))
+    expect(onSlotTap).toHaveBeenCalledWith('shoes')
+  })
+
+  it('hides slot hotspots off the front frame instead of misaligning them', () => {
+    render(
+      <PixelAvatarComposite
+        archetypeId='corgi'
+        outfit={makeOutfit({ accessoryItemId: null })}
+        itemsById={itemsById}
+        frameId='right-near'
+        onSlotTap={() => {}}
+        slotHotspots={[
+          { slot: 'top', label: '查看上装', placement: { left: 85, top: 194, width: 296, height: 290 } },
+        ]}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: '查看上装' })).not.toBeInTheDocument()
   })
 })

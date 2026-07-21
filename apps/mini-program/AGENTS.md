@@ -201,6 +201,7 @@ npm run typecheck -w mini-program       # tsc --noEmit
 npm run guardrails                      # env, secrets, legacy, import checks
 npm run dev:weapp --workspace=mini-program   # Taro watch build
 npm run check:package-size -w mini-program   # zip-compressed size vs 2MB WeChat limit
+npm run verify:subpackage-styles -w mini-program  # assert required selectors in compiled page WXSS (CI gate after check:package-size)
 ```
 
 **WeChat Mini-Program upload (开发版)**: A push to `main` first deploys staging; CI uploads the matching commit only after that staging deployment succeeds. Manual upload requires `--appid` flag (`miniprogram-ci` will not auto-read from `project.config.json`):
@@ -250,7 +251,7 @@ npx miniprogram-ci upload \
 - **`useEventCountdown`** (`src/hooks/useEventCountdown.ts`) — visibility-aware countdown hook returning `display`, structured `segments` (`days/hours/minutes/seconds/progress`), `isUrgent`, `hasStarted`, and `isLive`. Ticks are gated by in-viewport IntersectionObserver state, app hide/show lifecycle, `prefers-reduced-motion`, and `useDeviceTier().isDegradation`.
 - **Venue disclosure rule:** Venue location is hidden when status is `registered`/`pending`/`upcoming`; disclosed only for `confirmed` or `venue_unlocked`. The raw `matched` status means the group has been formed but the venue is still being assigned, and the server derives the user-facing `displayStatus` from `matchStatus`, `poolStatus`, `venueAssignmentStatus`, and `venueName`. Terminal pool states (`completed`/`cancelled`) override the registration-level status. The card always renders event type + city/district and only appends the venue name once unlocked.
 - **Two-rail accessibility:** The right rail itself is not `aria-hidden`; only the decorative `›` cue is hidden. `FootprintOracleCard` builds a `railAriaLabel` from the rail contents (countdown, group size, price) and appends it to the card's accessible name, so screen readers announce the same facts sighted users see.
-- **Corner vignette layout guard:** In rail mode the Lovart event-type vignette is clamped to `168rpx × 168rpx` so it stays inside the right rail and never overlaps the left-body text.
+- **Corner vignette text overlap (2026-07-21):** The Lovart event-type vignette is no longer avoided by text layers — all content (title, meta, badge) may flow over the light (opacity 0.5) vignette for a visually balanced card. Non-rail vignette enlarged from 220→280rpx; rail mode vignette stays at 168×168rpx (inside the right rail). OracleCard (`--has-corner-stat`) reserves only 120rpx for the solid corner-stat badge on the topline; all other layers flow full-width. Squad-unboxing event-brief vignette: repositioned to `absolute` top-right, 112→160rpx, date text flows underneath.
 - **Terminal-state detection:** `FootprintOracleCard` consumes `isJoinedEventTerminal()` from `eventDisplay.ts` instead of maintaining its own status list.
 - **`formatEventDateTime`** (`src/lib/utils/eventDisplay.ts`) — renders `今天`/`明天`/`后天` prefixes for near-term event dates.
 - **`getSystemReducedMotion()`** (`src/lib/utils/accessibility.ts`) — canonical helper for reading the OS-level reduced-motion preference. Prefer this over duplicating `Taro.getSystemInfoSync()` reads.
@@ -277,3 +278,11 @@ npx miniprogram-ci upload \
 - **Skeleton state:** A shimmer placeholder pill renders while pool data is loading, gated by the same reduced-motion / degradation rules.
 - **Analytics:** `corner_badge_impression` once per mount (if count > 0), `corner_badge_live_update` when count changes while mounted, and `pool_card_tap` carries `hasCornerCount` + `cornerCount`.
 - **Accessibility / ARIA:** Card keeps `role='button'`, `aria-label` includes the participant count when badge is shown, and `aria-disabled` is set when full or disabled. Tap target remains ≥88rpx.
+
+## 15. My-Image stage scene & subpackage WXSS guard (2026-07-21)
+
+- **`IdentityStageScene`** — stage wrapper for `PixelAvatar3D`/V2 paper doll: sunset street depth scene (`layerImageMode='aspectFill'`), CDN-first via `v2/stage/*.webp` + CDN manifest; total art failure degrades to children over the legacy grid backdrop.
+- **Subpackage WXSS splitting is a hard trap**: WeChat applies only the page's own WXSS + the `app.wxss` chain (`app.wxss` → `common.wxss`). Taro's chunk graph can move a component's rules into an unreachable chunk (e.g., V2 turntable/composite rules landed in `pages/profile-linked/three-avatar.wxss`, blanking the stage for all 11 non-spider archetypes). **Any component SCSS used by a `profile-linked` page MUST be `@use`d in the page SCSS.** CI gate: `npm run verify:subpackage-styles -w mini-program` asserts the required selectors in compiled page WXSS; runs in `taro-weapp-build.yml` after `check:package-size`.
+- **Slot hotspots** — `PixelAvatarComposite` accepts `slotHotspots` + `onSlotTap`: placement-rect hit areas on the character, front frame only (off-front poses hide them). Tapping jacket/shoes on the character jumps to that wardrobe slot.
+- **Wardrobe slot tabs** show an equipped-state dot; equipment layers fade in on item change (240ms opacity transition, RM-suppressed).
+- **Layer extraction** — 48 starter layers derived by atlas character-difference from each archetype's `atlas-source.png` (2×3 dressed-stage grid). Coarse silhouette + head alignment; diff-bounds placement; hard fit gate ≤3% missed/≤5% extra. 12 per-archetype `fullStarter` approved full-dress illustrations (spider keeps V1). See `assets-source/profile-pixel-v2/README.md` for the full pipeline.

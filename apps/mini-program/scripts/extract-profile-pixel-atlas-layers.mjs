@@ -72,64 +72,22 @@ const EXTERNAL_EQUIPMENT_SHEET_IDS = new Set([
   'owl',
 ])
 
-// Every target is fitted against the permanent-underwear body. The first nine
-// archetypes read a dedicated 2x2 isolated-equipment sheet; elephant, turtle and cat
-// already have isolated equipment cells in their canonical 3x2 atlas.
+// EXTRACTION MODES (2026-07-21):
+// - The first nine archetypes extract via ATLAS CHARACTER-DIFFERENCE: each
+//   `atlas-source.png` is a 2x3 grid of dressed-stage renders sharing one body
+//   pose ([base, +top, +bottom, +shoes, +accessory, full-dress]). Every garment
+//   layer is derived as (aligned dressed cell − base cell), so layers fit the
+//   body by construction and placements fall out of the diff bounds. This
+//   replaced the old isolated-equipment-sheet fitting, whose garments were
+//   drawn in a different pose than the body (arm sticking out of the jacket,
+//   misaligned shoes — see the 2026-07-21 dolphin incident).
+// - elephant, turtle and cat keep ISOLATED-CELL FITTING because their canonical
+//   3x2 atlases contain isolated equipment cells instead of dressed stages.
+//   Every target below is fitted against the permanent-underwear body.
+// - Fallback: re-adding an archetype to ISOLATED_TARGETS restores isolated
+//   fitting (via its 2x2 equipment sheet when listed in
+//   EXTERNAL_EQUIPMENT_SHEET_IDS, otherwise via atlas isolated cells).
 const ISOLATED_TARGETS = {
-  corgi: {
-    top: { left: 85, top: 194, width: 296, height: 290 },
-    bottom: { left: 145, top: 398, width: 230, height: 180 },
-    shoes: { left: 135, top: 584, width: 260, height: 135 },
-    accessory: { left: 184, top: 245, width: 150, height: 130 },
-  },
-  rooster: {
-    top: { left: 106, top: 214, width: 300, height: 258 },
-    bottom: { left: 150, top: 398, width: 214, height: 170 },
-    shoes: { left: 136, top: 576, width: 260, height: 145 },
-    accessory: { left: 298, top: 278, width: 62, height: 62 },
-  },
-  hamster_praise: {
-    top: { left: 101, top: 236, width: 310, height: 260 },
-    bottom: { left: 128, top: 408, width: 252, height: 178 },
-    shoes: { left: 124, top: 582, width: 262, height: 150 },
-    accessory: { left: 146, top: 262, width: 260, height: 282 },
-  },
-  fox: {
-    top: { left: 111, top: 210, width: 284, height: 274 },
-    bottom: { left: 142, top: 398, width: 228, height: 265 },
-    shoes: { left: 136, top: 584, width: 270, height: 150 },
-    accessory: { left: 278, top: 268, width: 96, height: 64 },
-  },
-  dolphin_calm: {
-    top: { left: 114, top: 178, width: 313, height: 304 },
-    bottom: { left: 145, top: 398, width: 226, height: 180 },
-    shoes: { left: 139, top: 582, width: 276, height: 150 },
-    accessory: { left: 180, top: 205, width: 160, height: 185 },
-  },
-  spider: {
-    top: { left: 115, top: 192, width: 282, height: 276 },
-    bottom: { left: 156, top: 384, width: 200, height: 170 },
-    shoes: { left: 154, top: 509, width: 260, height: 143 },
-    accessory: { left: 155, top: 255, width: 235, height: 250 },
-  },
-  koala: {
-    top: { left: 107, top: 192, width: 308, height: 292 },
-    bottom: { left: 142, top: 398, width: 238, height: 258 },
-    shoes: { left: 134, top: 580, width: 240, height: 145 },
-    accessory: { left: 105, top: 235, width: 325, height: 325 },
-  },
-  octopus: {
-    top: { left: 81, top: 222, width: 350, height: 276 },
-    bottom: { left: 140, top: 408, width: 236, height: 172 },
-    shoes: { left: 119, top: 556, width: 277, height: 131 },
-    accessory: { left: 115, top: 260, width: 310, height: 285 },
-  },
-  owl: {
-    top: { left: 102, top: 190, width: 316, height: 306 },
-    bottom: { left: 142, top: 410, width: 230, height: 170 },
-    shoes: { left: 110, top: 546, width: 279, height: 96 },
-    accessory: { left: 130, top: 246, width: 284, height: 300 },
-  },
   elephant: {
     top: { left: 126, top: 238, width: 274, height: 252 },
     bottom: { left: 171, top: 406, width: 185, height: 239 },
@@ -344,10 +302,59 @@ function scoreHeadAlignment(base, variant, dx, dy, maxY) {
   return count > 0 ? score / count : Number.POSITIVE_INFINITY
 }
 
+function silhouetteMask(raw, scale) {
+  const maskWidth = Math.floor(WIDTH / scale)
+  const maskHeight = Math.floor(HEIGHT / scale)
+  const mask = new Uint8Array(maskWidth * maskHeight)
+  for (let y = 0; y < maskHeight; y += 1) {
+    for (let x = 0; x < maskWidth; x += 1) {
+      let visible = 0
+      for (let oy = 0; oy < scale && !visible; oy += 1) {
+        for (let ox = 0; ox < scale; ox += 1) {
+          if (raw[pixelOffset(x * scale + ox, y * scale + oy) + 3] >= 32) visible = 1
+        }
+      }
+      mask[y * maskWidth + x] = visible
+    }
+  }
+  return { mask, width: maskWidth, height: maskHeight }
+}
+
+// The dressed-stage cells are independent AI renders: the character can sit
+// tens of pixels away from its base-cell position (verified 2026-07-21: corgi's
+// +bottom cell is offset ~80px, far beyond the old ±12 search). Coarse-align on
+// downsampled silhouette overlap first, then refine with the head-region
+// colour score.
+function coarseAlignSilhouettes(base, variant, scale = 4, maxShift = 140) {
+  const a = silhouetteMask(base, scale)
+  const b = silhouetteMask(variant, scale)
+  const range = Math.floor(maxShift / scale)
+  let best = { dx: 0, dy: 0, intersection: -1 }
+  for (let dy = -range; dy <= range; dy += 1) {
+    const yStart = Math.max(0, dy)
+    const yEnd = Math.min(a.height, b.height + dy)
+    for (let dx = -range; dx <= range; dx += 1) {
+      const xStart = Math.max(0, dx)
+      const xEnd = Math.min(a.width, b.width + dx)
+      let intersection = 0
+      for (let y = yStart; y < yEnd; y += 1) {
+        const aRow = y * a.width
+        const bRow = (y - dy) * b.width
+        for (let x = xStart; x < xEnd; x += 1) {
+          if (a.mask[aRow + x] && b.mask[bRow + x - dx]) intersection += 1
+        }
+      }
+      if (intersection > best.intersection) best = { dx: dx * scale, dy: dy * scale, intersection }
+    }
+  }
+  return best
+}
+
 function alignVariantToBase(base, variant, maxY) {
-  let best = { dx: 0, dy: 0, score: Number.POSITIVE_INFINITY }
-  for (let dy = -12; dy <= 12; dy += 1) {
-    for (let dx = -12; dx <= 12; dx += 1) {
+  const coarse = coarseAlignSilhouettes(base, variant)
+  let best = { dx: coarse.dx, dy: coarse.dy, score: Number.POSITIVE_INFINITY }
+  for (let dy = coarse.dy - 10; dy <= coarse.dy + 10; dy += 1) {
+    for (let dx = coarse.dx - 10; dx <= coarse.dx + 10; dx += 1) {
       const score = scoreHeadAlignment(base, variant, dx, dy, maxY)
       if (score < best.score) best = { dx, dy, score }
     }
@@ -364,7 +371,7 @@ function alignVariantToBase(base, variant, maxY) {
       variant.copy(output, targetOffset, sourceOffset, sourceOffset + 4)
     }
   }
-  return { raw: output, alignment: best }
+  return { raw: output, alignment: { ...best, coarseDx: coarse.dx, coarseDy: coarse.dy } }
 }
 
 function slotRoi(archetypeId, slot) {
@@ -736,6 +743,13 @@ function extractSeededGarmentLayer(variant, geometry) {
   return { raw: output, seedRoi, garmentRoi }
 }
 
+// Bottom extraction (2026-07-21): the palette-seeded path alone systematically
+// lost garment pixels — cuffs below its garmentRoi (corgi 9.5%) and shading
+// outside the seed palette (hamster 47.7%). The union of a strong-change mask
+// (catches cuffs/edges/silhouette) and the palette seed (catches
+// garment-over-underwear regions with similar colours, e.g. beige-on-beige)
+// reproduces the approved dressed stage; the hip anchor keeps only the
+// garment-connected mass.
 function extractBottomLayer(base, variant, roi, geometry) {
   const mask = new Uint8Array(WIDTH * HEIGHT)
   for (let y = Math.max(0, Math.floor(roi.top)); y < Math.min(HEIGHT, Math.ceil(roi.top + roi.height)); y += 1) {
@@ -747,6 +761,10 @@ function extractBottomLayer(base, variant, roi, geometry) {
         + Math.abs(variant[offset + 2] - base[offset + 2])
       if (base[offset + 3] < 32 || colorDelta >= 50) mask[y * WIDTH + x] = 1
     }
+  }
+  const seeded = extractSeededGarmentLayer(variant, geometry)
+  for (let offset = 0; offset < seeded.raw.length; offset += 4) {
+    if (seeded.raw[offset + 3] >= 16) mask[offset / 4] = 1
   }
   const anchor = {
     left: 256 - geometry.hipWidth / 2 + 8,
@@ -824,16 +842,192 @@ async function writeRawPng(filePath, raw) {
     .toFile(filePath)
 }
 
+function dilateMask(mask, passes) {
+  let current = mask
+  for (let pass = 0; pass < passes; pass += 1) {
+    const next = new Uint8Array(current)
+    for (let y = 1; y < HEIGHT - 1; y += 1) {
+      for (let x = 1; x < WIDTH - 1; x += 1) {
+        if (current[y * WIDTH + x]) continue
+        let touches = false
+        for (let oy = -1; oy <= 1 && !touches; oy += 1) {
+          for (let ox = -1; ox <= 1; ox += 1) {
+            if (current[(y + oy) * WIDTH + x + ox]) { touches = true; break }
+          }
+        }
+        if (touches) next[y * WIDTH + x] = 1
+      }
+    }
+    current = next
+  }
+  return current
+}
+
+function colorDeltaAt(a, b, offset) {
+  return Math.abs(a[offset] - b[offset])
+    + Math.abs(a[offset + 1] - b[offset + 1])
+    + Math.abs(a[offset + 2] - b[offset + 2])
+}
+
+function erodeMask(mask, passes) {
+  let current = mask
+  for (let pass = 0; pass < passes; pass += 1) {
+    const next = new Uint8Array(current.length)
+    for (let y = 1; y < HEIGHT - 1; y += 1) {
+      for (let x = 1; x < WIDTH - 1; x += 1) {
+        const index = y * WIDTH + x
+        if (!current[index]) continue
+        let keep = true
+        for (let oy = -1; oy <= 1 && keep; oy += 1) {
+          for (let ox = -1; ox <= 1; ox += 1) {
+            if (!current[(y + oy) * WIDTH + x + ox]) { keep = false; break }
+          }
+        }
+        if (keep) next[index] = 1
+      }
+    }
+    current = next
+  }
+  return current
+}
+
+// Fit quality gate (atlas character-difference mode). The extracted layer is
+// built from guide pixels verbatim, so the composite can only deviate from the
+// approved dressed-stage guide where the mask missed garment pixels (missed)
+// or captured redraw noise outside the garment (extra). Both are measurable
+// against the aligned guide — this is the "严丝合缝" gate.
+async function assertLayerFitsGuide(archetypeId, slot, base, layer, guide, roi) {
+  // Use the same visibility bar as the extractor (extractChangedLayer): pixels
+  // below it are subtle shading transitions the extraction intentionally keeps
+  // as base pixels — counting them as "approved garment" would measure noise,
+  // not fit.
+  const visibilityThreshold = slot === 'accessory' ? 90 : 76
+  const refMask = new Uint8Array(WIDTH * HEIGHT)
+  let refCount = 0
+  for (let y = Math.max(0, Math.floor(roi.top)); y < Math.min(HEIGHT, Math.ceil(roi.top + roi.height)); y += 1) {
+    for (let x = Math.max(0, Math.floor(roi.left)); x < Math.min(WIDTH, Math.ceil(roi.left + roi.width)); x += 1) {
+      const offset = pixelOffset(x, y)
+      if (guide[offset + 3] < 24) continue
+      if (base[offset + 3] < 24 || colorDeltaAt(guide, base, offset) >= visibilityThreshold) {
+        refMask[y * WIDTH + x] = 1
+        refCount += 1
+      }
+    }
+  }
+  const dilatedRef = dilateMask(refMask, 2)
+  const layerMask = new Uint8Array(WIDTH * HEIGHT)
+  for (let offset = 0; offset < layer.length; offset += 4) {
+    if (layer[offset + 3] >= 16) layerMask[offset / 4] = 1
+  }
+  // Boundary jitter between independent cell renders is ±2px. Misses are
+  // counted only against the eroded reference interior — interior holes (real
+  // misses like cuffs/patches) still count in full, while thin structures
+  // (necklace chains, spider legs) dominated by edge jitter do not produce
+  // phantom failures.
+  const erodedRef = erodeMask(refMask, 1)
+  const dilatedLayer = dilateMask(layerMask, 2)
+  let layerCount = 0
+  let missed = 0
+  let extra = 0
+  let erodedRefCount = 0
+  for (let y = 0; y < HEIGHT; y += 1) {
+    for (let x = 0; x < WIDTH; x += 1) {
+      const index = y * WIDTH + x
+      const offset = pixelOffset(x, y)
+      const layerVisible = layerMask[index] === 1
+      if (erodedRef[index] === 1) {
+        erodedRefCount += 1
+        if (dilatedLayer[index] !== 1) missed += 1
+      }
+      if (!layerVisible) continue
+      layerCount += 1
+      if (!dilatedRef[index] && colorDeltaAt(layer, base, offset) >= visibilityThreshold) extra += 1
+    }
+  }
+  const metrics = {
+    refCount,
+    layerCount,
+    missedFraction: erodedRefCount > 0 ? missed / erodedRefCount : 0,
+    extraFraction: layerCount > 0 ? extra / layerCount : 0,
+  }
+  if (process.env.PROFILE_PIXEL_DEBUG_FIT === '1') {
+    console.error(`[fit] ${archetypeId}/${slot}: refCount=${refCount} layerCount=${layerCount} missed=${(metrics.missedFraction * 100).toFixed(1)}% extra=${(metrics.extraFraction * 100).toFixed(1)}%`)
+    if (metrics.missedFraction > 0.03) {
+      const debugDir = process.env.PROFILE_PIXEL_DEBUG_FIT_DIR
+      if (debugDir) {
+        const overlay = Buffer.from(base)
+        for (let index = 0; index < refMask.length; index += 1) {
+          const offset = index * 4
+          const layerVisible = layer[offset + 3] >= 16
+          if (refMask[index] && !layerVisible) {
+            overlay[offset] = 255
+            overlay[offset + 1] = 0
+            overlay[offset + 2] = 0
+            overlay[offset + 3] = 230
+          } else if (layerVisible && !dilatedRef[index]) {
+            overlay[offset] = 0
+            overlay[offset + 1] = 180
+            overlay[offset + 2] = 255
+            overlay[offset + 3] = 200
+          }
+        }
+        await writeRawPng(path.join(debugDir, `${archetypeId}-${slot}-fit-debug.png`), overlay)
+      }
+    }
+  }
+  if (metrics.missedFraction > 0.03 && process.env.PROFILE_PIXEL_FIT_GATE_MODE !== 'warn') {
+    throw new Error(
+      `${archetypeId}/${slot} missed ${(metrics.missedFraction * 100).toFixed(1)}% of the approved garment pixels (limit 3%) — extraction does not reproduce the dressed-stage guide`,
+    )
+  }
+  if (metrics.extraFraction > 0.05 && process.env.PROFILE_PIXEL_FIT_GATE_MODE !== 'warn') {
+    throw new Error(
+      `${archetypeId}/${slot} captured ${(metrics.extraFraction * 100).toFixed(1)}% non-garment pixels (limit 5%) — likely cell misalignment or atlas redraw noise`,
+    )
+  }
+  return metrics
+}
+
+// Report-only metric: how closely the full 4-layer stack reproduces the
+// approved full-dress guide. The runtime uses the approved full-starter look
+// for the complete set, so this measures partial-outfit fidelity instead.
+function measureFullStackFit(base, layers, alignedFullGuide) {
+  const compositeOrder = ['bottom', 'shoes', 'top', 'accessory']
+  const composite = Buffer.from(base)
+  for (const slot of compositeOrder) {
+    const layer = layers[slot]
+    for (let offset = 0; offset < composite.length; offset += 4) {
+      if (layer[offset + 3] >= 16) layer.copy(composite, offset, offset, offset + 4)
+    }
+  }
+  let deltaSum = 0
+  let count = 0
+  let bigDelta = 0
+  for (let offset = 0; offset < composite.length; offset += 4) {
+    if (composite[offset + 3] < 16 && alignedFullGuide[offset + 3] < 16) continue
+    const delta = colorDeltaAt(composite, alignedFullGuide, offset)
+    deltaSum += delta
+    count += 1
+    if (delta >= 60) bigDelta += 1
+  }
+  return {
+    meanDelta: count > 0 ? deltaSum / count : 0,
+    bigDeltaFraction: count > 0 ? bigDelta / count : 0,
+  }
+}
+
 async function buildArchetype(archetypeId) {
   const atlasPath = path.join(SOURCE_ROOT, archetypeId, 'atlas-source.png')
   const cells = await readAtlasCells(atlasPath)
   const base = cells[0]
-  const usesExternalEquipmentSheet = EXTERNAL_EQUIPMENT_SHEET_IDS.has(archetypeId)
+  const isolatedTargets = ISOLATED_TARGETS[archetypeId]
+  const usesExternalEquipmentSheet = !!isolatedTargets && EXTERNAL_EQUIPMENT_SHEET_IDS.has(archetypeId)
   const equipmentCells = usesExternalEquipmentSheet
     ? await readEquipmentSheetCells(path.join(SOURCE_ROOT, archetypeId, 'equipment-sheet-source.png'))
     : cells.slice(1, 5)
-  const paletteDistance = ISOLATED_TARGETS[archetypeId] ? null : buildBasePaletteDistance(base)
+  const paletteDistance = isolatedTargets ? null : buildBasePaletteDistance(base)
   const layers = {}
+  const guides = {}
   const diagnostics = {}
   for (let slotIndex = 0; slotIndex < SLOT_ORDER.length; slotIndex += 1) {
     const slot = SLOT_ORDER[slotIndex]
@@ -841,29 +1035,27 @@ async function buildArchetype(archetypeId) {
       equipmentCells[slotIndex],
       ISOLATED_SOURCE_CLIPS[archetypeId]?.[slot],
     )
-    if (ISOLATED_TARGETS[archetypeId]) {
-      layers[slot] = await fitIsolatedItem(itemCell, ISOLATED_TARGETS[archetypeId][slot])
+    if (isolatedTargets) {
+      layers[slot] = await fitIsolatedItem(itemCell, isolatedTargets[slot])
+      guides[slot] = itemCell
       diagnostics[slot] = {
         mode: usesExternalEquipmentSheet ? 'external-isolated-sheet' : 'atlas-isolated-cell',
-        target: ISOLATED_TARGETS[archetypeId][slot],
+        target: isolatedTargets[slot],
       }
     } else {
       const geometry = BODY_GEOMETRY[archetypeId]
       const { raw: aligned, alignment } = alignVariantToBase(base, itemCell, geometry.torsoTop - 28)
+      if (process.env.PROFILE_PIXEL_DEBUG_FIT === '1') {
+        console.error(`[align] ${archetypeId}/${slot}: ${JSON.stringify(alignment)}`)
+      }
+      guides[slot] = aligned
       const roi = slotRoi(archetypeId, slot)
       if (slot === 'bottom') {
         if (process.env.PROFILE_PIXEL_DEBUG_CELLS === '1') {
           await writeRawPng(path.join(activeProofRoot, `debug-${archetypeId}-bottom-cell.png`), aligned)
         }
-        const extraction = extractSeededGarmentLayer(aligned, geometry)
-        layers[slot] = extraction.raw
-        diagnostics[slot] = {
-          mode: 'character-seeded-garment-palette',
-          alignment,
-          roi,
-          seedRoi: extraction.seedRoi,
-          garmentRoi: extraction.garmentRoi,
-        }
+        layers[slot] = extractBottomLayer(base, aligned, roi, geometry)
+        diagnostics[slot] = { mode: 'character-difference-union', alignment, roi }
       } else {
         layers[slot] = extractChangedLayer(base, aligned, roi, slot)
         diagnostics[slot] = { mode: 'character-difference', alignment, roi }
@@ -874,7 +1066,30 @@ async function buildArchetype(archetypeId) {
     diagnostics[slot].bounds = bounds
     await writeRawPng(path.join(activeOutputRoot, archetypeId, `${slot}.png`), layers[slot])
   }
-  return { archetypeId, base, layers, fullGuide: cells[5], diagnostics }
+  if (!isolatedTargets) {
+    for (const slot of SLOT_ORDER) {
+      diagnostics[slot].fit = await assertLayerFitsGuide(
+        archetypeId,
+        slot,
+        base,
+        layers[slot],
+        guides[slot],
+        slotRoi(archetypeId, slot),
+      )
+    }
+    const { raw: alignedFullGuide } = alignVariantToBase(
+      base,
+      cells[5],
+      BODY_GEOMETRY[archetypeId].torsoTop - 28,
+    )
+    diagnostics.fullStack = measureFullStackFit(base, layers, alignedFullGuide)
+  }
+  // Approved full-dress look (single fully dressed illustration per archetype).
+  // The runtime uses it when the complete starter set is equipped, so the
+  // default look is pixel-perfect even where per-slot layers interact.
+  await writeRawPng(path.join(activeOutputRoot, archetypeId, 'full-starter.png'), cells[5])
+  diagnostics.fullStarter = { bounds: alphaBounds(cells[5]) }
+  return { archetypeId, base, layers, guides, fullGuide: cells[5], diagnostics }
 }
 
 async function makeProofSheet(results, sheetIndex) {
@@ -962,6 +1177,50 @@ async function makeLayerProofSheet(results, sheetIndex) {
   }
   await canvas.composite(composites).png({ compressionLevel: 9 }).toFile(
     path.join(activeProofRoot, `layer-proof-${sheetIndex}.png`),
+  )
+}
+
+// A/B fit review: for every single-garment state, the approved dressed-stage
+// guide next to the base+layer composite. Reviewers can spot fit regressions
+// (floating garments, ghost limbs, missed patches) at a glance.
+async function makeFitProofSheet(results, sheetIndex) {
+  const cellWidth = 128
+  const cellHeight = 192
+  const columns = SLOT_ORDER.length * 2
+  const rows = results.length
+  const canvas = sharp({
+    create: {
+      width: cellWidth * columns,
+      height: cellHeight * rows,
+      channels: 4,
+      background: { r: 244, g: 240, b: 248, alpha: 1 },
+    },
+  })
+  const composites = []
+  for (let row = 0; row < results.length; row += 1) {
+    const { base, layers, guides } = results[row]
+    for (let slotIndex = 0; slotIndex < SLOT_ORDER.length; slotIndex += 1) {
+      const slot = SLOT_ORDER[slotIndex]
+      const composite = await sharp(base, { raw: { width: WIDTH, height: HEIGHT, channels: 4 } })
+        .composite([{ input: layers[slot], raw: { width: WIDTH, height: HEIGHT, channels: 4 } }])
+        .raw()
+        .toBuffer()
+      const pair = [guides[slot], composite]
+      for (let half = 0; half < 2; half += 1) {
+        const thumbnail = await sharp(pair[half], { raw: { width: WIDTH, height: HEIGHT, channels: 4 } })
+          .resize({ width: cellWidth - 8, height: cellHeight - 8, fit: 'contain', kernel: sharp.kernel.nearest })
+          .png()
+          .toBuffer()
+        composites.push({
+          input: thumbnail,
+          left: (slotIndex * 2 + half) * cellWidth + 4,
+          top: row * cellHeight + 4,
+        })
+      }
+    }
+  }
+  await canvas.composite(composites).png({ compressionLevel: 9 }).toFile(
+    path.join(activeProofRoot, `fit-proof-${sheetIndex}.png`),
   )
 }
 
@@ -1100,6 +1359,7 @@ async function main() {
       const sheetIndex = Math.floor(index / 4) + 1
       await makeProofSheet(sheetResults, sheetIndex)
       await makeLayerProofSheet(sheetResults, sheetIndex)
+      await makeFitProofSheet(sheetResults, sheetIndex)
     }
     await replaceDirectories([
       { stagedPath: stagedOutputRoot, targetPath: OUTPUT_ROOT, allowedRoot: SOURCE_ROOT },

@@ -1,12 +1,12 @@
 import { Text, View } from '@tarojs/components'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { EquipmentItem, EquipmentOutfit } from '../../lib/profile/equipmentApi'
+import type { EquipmentItem, EquipmentOutfit, EquipmentSlot } from '../../lib/profile/equipmentApi'
 import {
   PIXEL_AVATAR_FRAME_IDS,
   normalizePixelAvatarFrameId,
   type PixelAvatarFrameId,
 } from '../../lib/profile/pixelAvatarAssets'
-import PixelAvatarComposite from './PixelAvatarComposite'
+import PixelAvatarComposite, { type PixelAvatarSlotHotspot } from './PixelAvatarComposite'
 import './PixelAvatarTurntable.scss'
 
 export interface PixelAvatarTurntableProps {
@@ -17,6 +17,8 @@ export interface PixelAvatarTurntableProps {
   className?: string
   initialFrameId?: PixelAvatarFrameId
   onFrameChange?: (frameId: PixelAvatarFrameId) => void
+  slotHotspots?: PixelAvatarSlotHotspot[]
+  onSlotTap?: (slot: EquipmentSlot) => void
 }
 
 type DragAxis = 'idle' | 'pending' | 'horizontal' | 'vertical'
@@ -69,6 +71,8 @@ export function PixelAvatarTurntable({
   className = '',
   initialFrameId = 'front',
   onFrameChange,
+  slotHotspots,
+  onSlotTap,
 }: PixelAvatarTurntableProps) {
   const normalizedInitialFrame = normalizePixelAvatarFrameId(initialFrameId)
   const [frameIndex, setFrameIndex] = useState(
@@ -173,6 +177,8 @@ export function PixelAvatarTurntable({
           itemsById={itemsById}
           frameId={frameId}
           variant={variant}
+          slotHotspots={slotHotspots}
+          onSlotTap={onSlotTap}
         />
       </View>
 

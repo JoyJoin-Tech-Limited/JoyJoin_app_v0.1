@@ -158,21 +158,23 @@
 
   // ── Event-type corner vignette ────────────────────────────────
   // Bleed the illustration to the card's content edge so it sits flush
-  // with the shell instead of floating inside the padding.
+  // with the shell instead of floating inside the padding. The light vignette
+  // is intentionally allowed to sit behind the text layers for a more balanced
+  // composition; text readability relies on the 0.5 opacity and dark copy.
   &__type-corner {
     position: absolute;
     top: 0;
     right: 0;
-    width: 220rpx;
-    height: 220rpx;
+    width: 280rpx;
+    height: 280rpx;
     opacity: 0.5;
     z-index: 0;
     pointer-events: none;
     border-top-right-radius: $card-radius-sm;
   }
 
-  // In rail mode the vignette must stay within the 168rpx right rail so it
-  // does not overlap the left-body text.
+  // In rail mode the vignette stays within the 168rpx right rail; the rail
+  // already carries the countdown / size / price info, so no overlap is needed.
   &--rail &__type-corner {
     width: 168rpx;
     height: 168rpx;
@@ -424,7 +426,6 @@
     display: -webkit-box;
     width: 100%;
     max-width: 100%;
-    padding-right: 140rpx;
     font-size: $font-size-xl;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
@@ -437,22 +438,11 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-
-    // In rail mode the right rail occupies the right edge; remove the
-    // conservative padding used to clear the floating vignette.
-    .footprint-oracle-card--rail & {
-      padding-right: 0;
-    }
   }
 
   // ── Date / time / location meta ───────────────────────────────
   &__meta {
     margin-bottom: $spacing-sm;
-    padding-right: 140rpx;
-
-    .footprint-oracle-card--rail & {
-      padding-right: 0;
-    }
   }
 
   &__date-time {

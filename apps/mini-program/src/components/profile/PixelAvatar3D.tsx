@@ -1,7 +1,7 @@
 import { Canvas, Text, View } from '@tarojs/components'
 import { useDidHide, useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { EquipmentItem, EquipmentOutfit } from '../../lib/profile/equipmentApi'
+import type { EquipmentItem, EquipmentOutfit, EquipmentSlot } from '../../lib/profile/equipmentApi'
 import { normalizePixelArchetypeId } from '../../lib/profile/pixelAvatarAssets'
 import {
   computeDragYaw,
@@ -30,6 +30,7 @@ import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { haptics } from '../../lib/utils/haptics'
 import { logWarn } from '../../lib/utils/logger'
 import PixelAvatarTurntable from './PixelAvatarTurntable'
+import type { PixelAvatarSlotHotspot } from './PixelAvatarComposite'
 import './PixelAvatar3D.scss'
 
 export interface PixelAvatar3DProps {
@@ -51,6 +52,12 @@ export interface PixelAvatar3DProps {
    * surfaces stay on the gentle notice only.
    */
   onStatusChange?: (report: Avatar3DStatusReport) => void
+  /**
+   * Optional tap-to-slot hotspots for the V2 turntable fallback (placement
+   * hit-rects on the character). Not wired into the WebGL spider surface.
+   */
+  slotHotspots?: PixelAvatarSlotHotspot[]
+  onSlotTap?: (slot: EquipmentSlot) => void
 }
 
 type Avatar3DStatus = 'boot' | 'ready' | 'fallback'
@@ -116,6 +123,8 @@ export function PixelAvatar3D({
   onYawChange,
   externalYaw = null,
   onStatusChange,
+  slotHotspots,
+  onSlotTap,
 }: PixelAvatar3DProps) {
   const canvasIdRef = useRef(`avatar3d-canvas-${++canvasInstanceCounter}`)
   const canvasId = canvasIdRef.current
@@ -486,6 +495,8 @@ export function PixelAvatar3D({
           outfit={outfit}
           itemsById={itemsById}
           variant={variant}
+          slotHotspots={slotHotspots}
+          onSlotTap={onSlotTap}
         />
         <View className='pixel-avatar-3d__fallback-note' role='note' aria-label={notice}>
           <Text>{notice}</Text>

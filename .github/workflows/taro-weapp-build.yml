@@ -89,6 +89,9 @@ jobs:
       - name: Check package size
         run: npm run check:package-size -w mini-program
 
+      - name: Verify subpackage styles
+        run: npm run verify:subpackage-styles -w mini-program
+
       - name: Upload mini-program artifact
         uses: actions/upload-artifact@v4.6.2
         with:

@@ -132,6 +132,26 @@ function assertContentHash(relativePath, buffer, label) {
   }
 }
 
+async function computeAlphaBounds(buffer) {
+  const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+  let minX = info.width
+  let minY = info.height
+  let maxX = -1
+  let maxY = -1
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      if (data[(y * info.width + x) * 4 + 3] < 16) continue
+      minX = Math.min(minX, x)
+      minY = Math.min(minY, y)
+      maxX = Math.max(maxX, x)
+      maxY = Math.max(maxY, y)
+    }
+  }
+  return maxX >= minX
+    ? { left: minX, top: minY, width: maxX - minX + 1, height: maxY - minY + 1 }
+    : null
+}
+
 async function inspectTransparentWebp(relativePath, { width, height, maxWidth, maxHeight, label = relativePath } = {}) {
   assertSafeV2Path(relativePath, label)
   if (
@@ -159,7 +179,8 @@ async function inspectTransparentWebp(relativePath, { width, height, maxWidth, m
   if (!alpha || alpha.min > 16 || alpha.max < 128) {
     throw new Error(`${relativePath} must contain transparent background and visible pixels`)
   }
-  return { metadata, bytes: buffer.length }
+  const bounds = await computeAlphaBounds(buffer)
+  return { metadata, bytes: buffer.length, bounds }
 }
 
 async function inspectLegacyWebp(relativePath) {
@@ -291,6 +312,18 @@ async function main() {
     })
     totalBytes += body.bytes
 
+    const fullStarterPrefix = `assets/profile-pixel/v2/archetypes/${archetypeId}/full-starter-v2.`
+    if (typeof archetype.fullStarter !== 'string' || !archetype.fullStarter.startsWith(fullStarterPrefix)) {
+      throw new Error(`${archetypeId} fullStarter must use a content-hashed full-starter-v2 path`)
+    }
+    expectedV2Paths.add(archetype.fullStarter)
+    const fullStarter = await inspectTransparentWebp(archetype.fullStarter, {
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      label: `${archetypeId} fullStarter`,
+    })
+    totalBytes += fullStarter.bytes
+
     assertExactKeys(archetype.starter, EQUIPMENT_SLOTS, `${archetypeId} starter slots`)
     for (const slot of EQUIPMENT_SLOTS) {
       const assetKey = `equipment/starter/${archetypeId}/${slot}/v1`
@@ -355,6 +388,27 @@ async function main() {
         throw new Error(`${assetKey} has unknown placement archetype: ${archetypeId}`)
       }
       validatePlacement(placement, layer.metadata, `${assetKey}/${archetypeId}`)
+      if (assetKey.startsWith('equipment/starter/')) {
+        // Starter layers are tightly cropped to their diff bounds: the shipped
+        // crop's own content must span the whole file, and its dimensions must
+        // match the placement rect it anchors to on the body canvas.
+        if (
+          !layer.bounds
+          || layer.bounds.left !== 0
+          || layer.bounds.top !== 0
+          || layer.bounds.width !== layer.metadata.width
+          || layer.bounds.height !== layer.metadata.height
+        ) {
+          throw new Error(
+            `${assetKey} must be tightly cropped to its content (layer bounds ${JSON.stringify(layer.bounds)} inside ${layer.metadata.width}x${layer.metadata.height})`,
+          )
+        }
+        if (placement.width !== layer.metadata.width || placement.height !== layer.metadata.height) {
+          throw new Error(
+            `${assetKey}/${archetypeId} placement ${placement.width}x${placement.height} must match its cropped layer ${layer.metadata.width}x${layer.metadata.height}`,
+          )
+        }
+      }
     }
   }
 
@@ -374,6 +428,12 @@ async function main() {
       `assets/profile-pixel/v2/${path.relative(V2_ROOT, absolutePath).replaceAll('\\', '/')}`
     )),
   )
+  // Stage art (IdentityStageScene) is governed by stage-assets-v1.json, not by
+  // the avatar manifest — it must not trip the exact-tree check.
+  const STAGE_V2_PREFIX = 'assets/profile-pixel/v2/stage/'
+  for (const relativePath of [...actualV2Paths]) {
+    if (relativePath.startsWith(STAGE_V2_PREFIX)) actualV2Paths.delete(relativePath)
+  }
   const missingFiles = [...expectedV2Paths].filter((relativePath) => !actualV2Paths.has(relativePath))
   const extraFiles = [...actualV2Paths].filter((relativePath) => !expectedV2Paths.has(relativePath))
   if (missingFiles.length > 0 || extraFiles.length > 0) {
@@ -394,6 +454,7 @@ async function main() {
   const unexpectedManifestPaths = cdnManifest.assets
     .filter((asset) => (
       asset.localPath.startsWith('assets/profile-pixel/')
+      && !asset.localPath.startsWith(STAGE_V2_PREFIX)
       && !expectedProfilePaths.has(asset.localPath)
     ))
     .map((asset) => asset.localPath)

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   PIXEL_AVATAR_ARCHETYPE_IDS,
   PIXEL_AVATAR_EQUIPMENT_SLOTS,
+  getPixelAvatarApprovedStarterLookUrl,
   getPixelAvatarBaseUrl,
   getPixelAvatarBodyFrameUrl,
   getPixelAvatarBodyUrl,
@@ -83,5 +84,23 @@ describe('pixelAvatarAssets', () => {
     expect(getPixelAvatarScenePose('left-far').scaleX)
       .toBe(getPixelAvatarScenePose('right-far').scaleX)
     expect(getPixelAvatarScenePose('unknown').frameId).toBe('front')
+  })
+
+  it('serves the atlas-derived approved full-starter look for every archetype', () => {
+    for (const archetypeId of PIXEL_AVATAR_ARCHETYPE_IDS) {
+      const url = getPixelAvatarApprovedStarterLookUrl(archetypeId)
+      if (archetypeId === 'spider') {
+        // Spider keeps its byte-approved V1 illustration (raised-hand fix).
+        expect(url).toBe(getPixelAvatarApprovedStarterLookUrl('spider'))
+        expect(url).toContain('/assets/profile-pixel/archetypes/spider/base-v1.webp')
+      } else {
+        expect(url).toContain(`/assets/profile-pixel/v2/archetypes/${archetypeId}/full-starter-v2.`)
+        expect(url).toMatch(/full-starter-v2\.[a-f0-9]{12}\.webp/)
+      }
+    }
+    expect(getPixelAvatarApprovedStarterLookUrl('legacy-bear'))
+      .toBe(getPixelAvatarApprovedStarterLookUrl('cat'))
+    expect(getPixelAvatarApprovedStarterLookUrl(null))
+      .toBe(getPixelAvatarApprovedStarterLookUrl('cat'))
   })
 })

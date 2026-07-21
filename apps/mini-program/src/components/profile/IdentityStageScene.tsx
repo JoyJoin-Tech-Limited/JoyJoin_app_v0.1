@@ -98,12 +98,19 @@ export interface IdentityStageSceneProps {
    * stage fills a larger hero card and the avatar floats at a specific corner.
    */
   absoluteAvatar?: boolean
+  /**
+   * How the far/mid background art fits the stage. `scaleToFill` (default)
+   * matches the identity card's original behavior; `aspectFill` crops the wide
+   * art without distortion for near-square stages (e.g. the my-image stage).
+   */
+  layerImageMode?: 'scaleToFill' | 'aspectFill'
 }
 
 export function IdentityStageScene({
   children,
   className = '',
   absoluteAvatar = true,
+  layerImageMode = 'scaleToFill',
 }: IdentityStageSceneProps) {
   // Reduced-motion is read synchronously on first render so there is no
   // motion flash before the preference is known (contract AC-07).
@@ -248,7 +255,7 @@ export function IdentityStageScene({
               className='identity-stage__layer identity-stage__layer--far-bg'
               data-testid='identity-stage-far-bg'
               src={farBgUrl}
-              mode='scaleToFill'
+              mode={layerImageMode}
               lazyLoad={false}
               aria-hidden='true'
               style={{ opacity: layerStatus.farBg === 'loaded' ? 1 : 0 }}
@@ -261,7 +268,7 @@ export function IdentityStageScene({
               className='identity-stage__layer identity-stage__layer--mid-bg'
               data-testid='identity-stage-mid-bg'
               src={midBgUrl}
-              mode='scaleToFill'
+              mode={layerImageMode}
               lazyLoad={false}
               aria-hidden='true'
               style={{ opacity: layerStatus.midBg === 'loaded' ? 1 : 0 }}

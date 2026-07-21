@@ -3,6 +3,7 @@ import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import PixelAvatar3D from '../../../components/profile/PixelAvatar3D'
+import IdentityStageScene from '../../../components/profile/IdentityStageScene'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import {
   drawEquipmentEntitlement,
@@ -16,6 +17,7 @@ import {
   type EquipmentSlot,
 } from '../../../lib/profile/equipmentApi'
 import {
+  getPixelEquipmentAsset,
   getPixelEquipmentLayerUrl,
 } from '../../../lib/profile/pixelAvatarAssets'
 import { haptics } from '../../../lib/utils/haptics'
@@ -209,6 +211,22 @@ export default function MyImagePage() {
     () => new Map(inventory.map((entry) => [entry.item.id, entry.item])),
     [inventory],
   )
+  const slotHotspots = useMemo(() => {
+    if (!data || !draftOutfit) return []
+    return SLOT_ORDER.flatMap((slot) => {
+      const itemId = getOutfitItemId(draftOutfit, slot)
+      const item = itemId ? itemsById.get(itemId) : undefined
+      const assetKey = item?.assetKey ?? `equipment/starter/${data.archetypeId}/${slot}/v1`
+      const placement = getPixelEquipmentAsset(assetKey, data.archetypeId)?.placement
+      return placement ? [{ slot, label: `查看${SLOT_COPY[slot]}`, placement }] : []
+    })
+  }, [data, draftOutfit, itemsById])
+
+  const handleSlotHotspotTap = (slot: EquipmentSlot) => {
+    haptics('light')
+    setActiveTab('wardrobe')
+    setActiveSlot(slot)
+  }
   const slotInventory = inventory.filter((entry) => entry.item.slot === activeSlot)
   const isDirty = !!data && !!draftOutfit && SLOT_ORDER.some(
     (slot) => getOutfitItemId(data.outfit, slot) !== getOutfitItemId(draftOutfit, slot),
@@ -307,13 +325,19 @@ export default function MyImagePage() {
         <View className='my-image__content'>
           <View className='my-image__stage' aria-label='当前形象预览'>
             <View className='my-image__stage-grid' aria-hidden='true' />
-            <PixelAvatar3D
-              className='my-image__turntable'
-              archetypeId={data.archetypeId}
-              outfit={draftOutfit}
-              itemsById={itemsById}
-              variant='full'
-            />
+            <View className='my-image__stage-scene'>
+              <IdentityStageScene layerImageMode='aspectFill'>
+                <PixelAvatar3D
+                  className='my-image__turntable'
+                  archetypeId={data.archetypeId}
+                  outfit={draftOutfit}
+                  itemsById={itemsById}
+                  variant='full'
+                  slotHotspots={slotHotspots}
+                  onSlotTap={handleSlotHotspotTap}
+                />
+              </IdentityStageScene>
+            </View>
             <View className='my-image__base-note' role='note' aria-label='基础内搭不可脱'>
               <View className='my-image__base-note-dot' aria-hidden='true' />
               <Text>基础内搭不可脱</Text>
@@ -389,9 +413,14 @@ export default function MyImagePage() {
                         setActiveSlot(slot)
                       }}
                       role='button'
-                      aria-label={`选择${SLOT_COPY[slot]}槽位`}
+                      aria-label={`选择${SLOT_COPY[slot]}槽位${getOutfitItemId(draftOutfit, slot) ? '，已装备' : ''}`}
                       aria-pressed={activeSlot === slot}
-                    ><Text>{SLOT_COPY[slot]}</Text></View>
+                    >
+                      <Text>{SLOT_COPY[slot]}</Text>
+                      {getOutfitItemId(draftOutfit, slot) && (
+                        <View className='my-image__slot-tab-dot' aria-hidden='true' />
+                      )}
+                    </View>
                   ))}
                 </View>
                 <View className='my-image__inventory-grid'>
