@@ -62,7 +62,9 @@ export const RATING_FACES_ORDERED: IconMapping[] = [
 
 export const INFO_LABEL_MAP: Record<string, IconMapping> = {
   '📅': { assetKey: 'label-calendar', tier: 'semantic', size: 24, fallbackEmoji: '📅' },
-  '📍': { assetKey: 'label-location', tier: 'semantic', size: 24, fallbackEmoji: '📍' },
+  // Use the clean standalone pin asset. The legacy semantic asset contains a
+  // clipped fragment of a neighbouring icon along its left edge.
+  '📍': { assetKey: 'icon-location', tier: 'ui', size: 24, fallbackEmoji: '📍' },
   '👥': { assetKey: 'label-people', tier: 'semantic', size: 24, fallbackEmoji: '👥' },
   '🎯': { assetKey: 'label-target', tier: 'semantic', size: 24, fallbackEmoji: '🎯' },
   // Discover page mappings
