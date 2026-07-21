@@ -575,13 +575,14 @@ function AuthenticatedDiscover({
           role='button'
           aria-label={`当前区域: ${hasManualFilter ? '深圳 · ' + locationPillLabel : isGeoUnknown ? '选择你的区域' : '深圳 · 切换区域'}, 点击切换`}
         >
-          <Image
-            className='discover-auth__location-pill-icon'
-            src={localAsset('/assets/icons/ui/icon-location.webp')}
-            mode='aspectFit'
-            lazyLoad={false}
-            aria-hidden='true'
-          />
+          <View className='discover-auth__location-pill-icon-slot' aria-hidden='true'>
+            <Image
+              className='discover-auth__location-pill-icon'
+              src={localAsset('/assets/icons/ui/icon-location.webp')}
+              mode='aspectFit'
+              lazyLoad={false}
+            />
+          </View>
           <Text className='discover-auth__location-pill-text'>
             {hasManualFilter ? `深圳 · ${locationPillLabel}` : isGeoUnknown ? '选择你的区域' : '深圳 · 切换区域'}
           </Text>

@@ -83,7 +83,7 @@
       transform: scale(0.96);
     }
 
-    .discover-auth__location-pill-icon {
+    .discover-auth__location-pill-icon-slot {
       filter: brightness(0) invert(1);
     }
 
@@ -92,13 +92,20 @@
     }
   }
 
+  &__location-pill-icon-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 28rpx;
+    width: 28rpx;
+    height: 28rpx;
+    overflow: hidden;
+  }
+
   &__location-pill-icon {
     display: block;
-    flex: 0 0 28rpx;
-    width: 28rpx !important;
-    height: 28rpx !important;
-    font-size: 28rpx;
-    line-height: 1;
+    width: 100%;
+    height: 100%;
   }
 
   &__location-pill-text {
