@@ -10,6 +10,8 @@
   border-radius: $button-radius;
   font-size: $font-size-base;
   font-weight: $font-weight-semibold;
+  white-space: nowrap;
+  overflow: hidden;
   transition: transform 0.12s ease, opacity 0.12s ease;
 
   &::after {

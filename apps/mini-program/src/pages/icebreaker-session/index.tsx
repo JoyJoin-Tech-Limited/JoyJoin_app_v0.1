@@ -91,6 +91,12 @@ function getPhaseToastText(phase: string): ReactNode {
 // re-firing 31 parallel getImageInfo bridge calls on every render.
 const ICEBREAKER_PRELOAD_ASSETS = [...SPRITE_SHEET_ASSETS, ...ICEBREAKER_PHASE_EMBLEM_ASSETS]
 
+// Warmup topic generation is LLM-backed (3s server cap + DB writes) — the
+// 5s dev default timeout is too tight, give it headroom.
+const TOPICS_REQUEST_TIMEOUT_MS = 12000
+const TOPICS_SKIP_RETRY_MAX = 5
+const TOPICS_SKIP_RETRY_DELAY_MS = 700
+
 export default function IcebreakerSessionPage() {
   const router = useRouter()
   const routeSessionId = router.params.sessionId ?? ''
@@ -335,13 +341,20 @@ export default function IcebreakerSessionPage() {
   }, [session, currentUserId])
 
   const performSocialAction = useCallback(
-    async <T,>(actionKey: string, suffix: string, data?: unknown): Promise<T | null> => {
+    async <T,>(
+      actionKey: string,
+      suffix: string,
+      data?: unknown,
+      options?: { timeoutMs?: number },
+    ): Promise<T | null | undefined> => {
       if (!socialSessionId) {
         return null
       }
 
       if (pendingAction !== null && pendingAction !== actionKey) {
-        return null
+        // Skipped (another action in flight) — distinct from a real failure
+        // so callers don't surface a false error state.
+        return undefined
       }
 
       setPendingAction(actionKey)
@@ -351,6 +364,7 @@ export default function IcebreakerSessionPage() {
           path: buildSocialPath(socialSessionId, suffix),
           method: 'POST',
           data,
+          timeout: options?.timeoutMs,
         })
 
         await socialSessionQuery.refetch()
@@ -375,19 +389,46 @@ export default function IcebreakerSessionPage() {
     [socialSessionId, pendingAction, socialSessionQuery],
   )
 
-  const handleGenerateTopics = useCallback((mood: AtmosphereMood) => {
+  const topicsSkipRetryRef = useRef(0)
+  const topicsRetryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const generateTopicsRef = useRef<(mood: AtmosphereMood) => void>(() => {})
+  const generateTopics = useCallback((mood: AtmosphereMood) => {
     setTopicsError(false)
     void performSocialAction('topics', '/topics', {
       mood,
       eventType: '活动',
       participantCount: Math.max(playerCount, 2),
       avoidTopics: [],
-    }).then((result) => {
+    }, { timeoutMs: TOPICS_REQUEST_TIMEOUT_MS }).then((result) => {
       if (result === null) {
         setTopicsError(true)
+        topicsSkipRetryRef.current = 0
+      } else if (result === undefined) {
+        // Skipped because another social action was in flight — the tap would
+        // otherwise be lost. Retry briefly until the in-flight action settles.
+        if (topicsSkipRetryRef.current < TOPICS_SKIP_RETRY_MAX) {
+          topicsSkipRetryRef.current += 1
+          topicsRetryTimerRef.current = setTimeout(() => generateTopicsRef.current(mood), TOPICS_SKIP_RETRY_DELAY_MS)
+        }
+      } else {
+        topicsSkipRetryRef.current = 0
       }
     })
   }, [performSocialAction, playerCount])
+  generateTopicsRef.current = generateTopics
+  const handleGenerateTopics = useCallback((mood: AtmosphereMood) => {
+    topicsSkipRetryRef.current = 0
+    if (topicsRetryTimerRef.current) {
+      clearTimeout(topicsRetryTimerRef.current)
+      topicsRetryTimerRef.current = undefined
+    }
+    generateTopicsRef.current(mood)
+  }, [])
+  useEffect(() => () => {
+    if (topicsRetryTimerRef.current) {
+      clearTimeout(topicsRetryTimerRef.current)
+    }
+  }, [])
 
   const handleToggleWarmupReady = useCallback(() => {
     const isReady = session?.warmupReadyUserIds?.includes(currentUserId) ?? false
