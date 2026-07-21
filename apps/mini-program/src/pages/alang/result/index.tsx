@@ -71,7 +71,7 @@ export default function FlashFeedbackPage() {
   if (!assignmentId) {
     return (
       <View className='flash-page'>
-        <FlashPageState title='这条旧反馈链接已经失效' description='回到闪现页，会从服务端保存的任务状态继续。' action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }} actionLabel='返回闪现' />
+        <FlashPageState title='这条旧反馈链接已经失效' description='回到街头盲盒页，会从服务端保存的任务状态继续。' action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }} actionLabel='返回街头盲盒' />
       </View>
     )
   }
@@ -95,7 +95,7 @@ export default function FlashFeedbackPage() {
           title='这项任务已经结束了'
           description='可能已经超过 7 天，或任务地点被安全撤下；不会有惩罚。'
           action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}
-          actionLabel='返回闪现'
+          actionLabel='返回街头盲盒'
         />
       </View>
     )
@@ -112,7 +112,7 @@ export default function FlashFeedbackPage() {
             下次再遇见 {data.npc.name}，对话会先让你交付这项任务。角色今天下线也没关系。
           </Text>
           <View className='flash-feedback-success__actions'>
-            <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>回到闪现</FlashButton>
+            <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>回到街头盲盒</FlashButton>
           </View>
           <Text className='flash-feedback-success__note'>没有积分或奖品；这段经历会让下次见面更完整。</Text>
         </View>

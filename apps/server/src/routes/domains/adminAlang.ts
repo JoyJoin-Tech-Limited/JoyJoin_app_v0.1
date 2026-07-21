@@ -728,7 +728,7 @@ export function registerAdminAlangRoutes(app: Express): void {
       const actor = getActingAdminId(req);
       const locations = await enrichedEncounterLocations();
       const current = locations.find((location: any) => location.id === req.params.id);
-      if (!current) throw new Error("FLASH_ADMIN_NOT_FOUND:没有找到闪现地点");
+      if (!current) throw new Error("FLASH_ADMIN_NOT_FOUND:没有找到街头盲盒地点");
       const reviewBoundFields = ["name", "district", "address", "latitude", "longitude", "availabilityWindows", "safetyNotes", "npcIds"] as const;
       const reviewBoundContentChanged = reviewBoundFields.some((key) => parsed.data[key] !== undefined);
       const requiresFreshReview = current.approvalStatus === "approved" && reviewBoundContentChanged;
@@ -756,7 +756,7 @@ export function registerAdminAlangRoutes(app: Express): void {
       const { npcIds, ...values } = valuesWithReview;
       const updated = await db.transaction(async (tx: any) => {
         const row = await updateFlashEncounterLocation(req.params.id, values as any, tx);
-        if (!row) throw new Error("FLASH_ADMIN_NOT_FOUND:没有找到闪现地点");
+        if (!row) throw new Error("FLASH_ADMIN_NOT_FOUND:没有找到街头盲盒地点");
         if (npcIds) await replaceFlashNpcLocationLinks(row.id, npcIds, tx);
         return row;
       });

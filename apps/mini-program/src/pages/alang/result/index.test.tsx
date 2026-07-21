@@ -92,6 +92,6 @@ describe('formal Flash feedback', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashFeedbackPage />)
     expect(mocks.useAssignment).toHaveBeenCalledWith('assignment-1', false)
-    expect(screen.getByText('闪现正在准备下一次见面')).toBeInTheDocument()
+    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
   })
 })

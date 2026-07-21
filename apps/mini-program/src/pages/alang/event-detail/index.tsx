@@ -21,7 +21,7 @@ export default function LegacyFlashDetailRedirect() {
 
   return (
     <View className='flash-page'>
-      <FlashPageState title='正在接回新的闪现…' description='旧链接会从服务端保存的正式版状态继续。' />
+      <FlashPageState title='正在接回新的街头盲盒…' description='旧链接会从服务端保存的正式版状态继续。' />
     </View>
   )
 }

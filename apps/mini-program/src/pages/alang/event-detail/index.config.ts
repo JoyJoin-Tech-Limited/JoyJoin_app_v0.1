@@ -1,5 +1,5 @@
 export default definePageConfig({
-  navigationBarTitleText: '闪现',
+  navigationBarTitleText: '街头盲盒',
   navigationBarBackgroundColor: '#F5F1E8',
   navigationBarTextStyle: 'black',
 })

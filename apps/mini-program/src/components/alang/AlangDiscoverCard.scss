@@ -27,10 +27,16 @@
     height: 76rpx;
     flex-shrink: 0;
     border-radius: $card-radius-sm;
-    background: $color-primary;
+    overflow: hidden;
+    background: $color-primary-light;
     color: $color-text-white;
     font-size: $font-size-lg;
     box-shadow: 0 6rpx 18rpx rgba($color-primary-dark, 0.2);
+  }
+
+  &__icon {
+    width: 100%;
+    height: 100%;
   }
 
   &__content {

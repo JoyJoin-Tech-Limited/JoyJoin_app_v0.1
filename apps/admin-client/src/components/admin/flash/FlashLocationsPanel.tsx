@@ -111,7 +111,7 @@ export function FlashLocationsPanel({
       await queryClient.invalidateQueries({ queryKey: [endpoint] });
       setEditorOpen(false);
       setEditing(null);
-      toast({ title: isEncounter ? "闪现地点已保存" : "任务目的地已保存", description: "只有通过人工审核且处于可用状态的地点会进入随机池。" });
+      toast({ title: isEncounter ? "街头盲盒地点已保存" : "任务目的地已保存", description: "只有通过人工审核且处于可用状态的地点会进入随机池。" });
     },
     onError: (error) => toast({ title: "地点没保存", description: describeFlashAdminError(error), variant: "destructive" }),
   });
@@ -143,14 +143,14 @@ export function FlashLocationsPanel({
             className="shrink-0"
           >
             <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-            {isEncounter ? "新增闪现地点" : "新增任务目的地"}
+            {isEncounter ? "新增街头盲盒地点" : "新增任务目的地"}
           </Button>
         )}
       </div>
 
       {items.length === 0 ? (
         <FlashEmptyState
-          title={isEncounter ? "还没有闪现地点" : "还没有任务目的地"}
+          title={isEncounter ? "还没有街头盲盒地点" : "还没有任务目的地"}
           description={isEncounter ? "添加并审核安全地点后，NPC 才能参与随机排班。" : "目的地需人工审核，且任务必须无需消费也能完成。"}
           icon={isEncounter ? MapPinned : Store}
         />
@@ -344,7 +344,7 @@ function LocationEditorDialog({
       <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{item ? "编辑" : "新增"}{kind === "encounter" ? "闪现地点" : "任务目的地"}</DialogTitle>
+            <DialogTitle>{item ? "编辑" : "新增"}{kind === "encounter" ? "街头盲盒地点" : "任务目的地"}</DialogTitle>
             <DialogDescription>仅录入深圳、GCJ-02 坐标。地点与行政区分别管理，进入随机池前必须人工审核。</DialogDescription>
           </DialogHeader>
           <form

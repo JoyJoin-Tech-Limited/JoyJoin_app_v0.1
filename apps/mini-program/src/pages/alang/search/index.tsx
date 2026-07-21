@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 import { useEffect, useMemo, useState } from 'react'
-import { ScrollView, Text, View } from '@tarojs/components'
+import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashPageState, formatFlashRemainingTime } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
@@ -8,6 +8,7 @@ import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocati
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useLocateFlashAppearance } from '../../../lib/alang/useFlash'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
+import { FLASH_UNIVERSAL_ART } from '../../../lib/alang/flashNpcAssets'
 import { haptics } from '../../../lib/utils/haptics'
 import '../flash.scss'
 
@@ -90,10 +91,10 @@ export default function FlashRadarPage() {
     return (
       <View className='flash-page'>
         <FlashPageState
-          title='这次闪现已经散场了'
-          description='入口信息不完整，回到闪现页看看还有谁在线。'
+          title='这次街头盲盒已经散场了'
+          description='入口信息不完整，回到街头盲盒页看看还有谁在线。'
           action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}
-          actionLabel='返回闪现'
+          actionLabel='返回街头盲盒'
         />
       </View>
     )
@@ -110,6 +111,8 @@ export default function FlashRadarPage() {
           </View>
 
           <View className='flash-radar__instrument' aria-label='隐藏位置雷达，不显示角色坐标'>
+            <Image className='flash-radar__city-art' src={FLASH_UNIVERSAL_ART} mode='aspectFill' />
+            <View className='flash-radar__veil' />
             <View className='flash-radar__ring flash-radar__ring--outer' />
             <View className='flash-radar__ring flash-radar__ring--middle' />
             <View className='flash-radar__ring flash-radar__ring--inner' />
@@ -143,7 +146,7 @@ export default function FlashRadarPage() {
           {state === 'denied' ? (
             <View className='flash-radar__result flash-radar__result--error' role='alert'>
               <Text className='flash-radar__result-title'>定位权限没有打开</Text>
-              <Text className='flash-radar__result-copy'>拒绝定位就无法参加闪现，我们也不会改用 IP 定位。</Text>
+              <Text className='flash-radar__result-copy'>拒绝定位就无法参加街头盲盒，我们也不会改用 IP 定位。</Text>
               <FlashButton variant='secondary' onClick={() => { void handleOpenSetting() }}>打开定位设置</FlashButton>
             </View>
           ) : null}
@@ -151,7 +154,7 @@ export default function FlashRadarPage() {
           {state === 'rate_limited' ? (
             <View className='flash-radar__result flash-radar__result--error' role='alert'>
               <Text className='flash-radar__result-title'>先歇一会儿再确认</Text>
-              <Text className='flash-radar__result-copy'>为了保护角色的隐藏地点，同一次闪现 10 分钟内最多确认 6 次。稍后再试就好。</Text>
+              <Text className='flash-radar__result-copy'>为了保护角色的隐藏地点，同一次街头盲盒 10 分钟内最多确认 6 次。稍后再试就好。</Text>
             </View>
           ) : null}
 

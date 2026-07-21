@@ -59,7 +59,7 @@ export default function AdminFlashPage() {
       icon: UsersRound,
     },
     {
-      label: "安全闪现地点",
+      label: "安全街头盲盒地点",
       value: counts?.activeEncounterLocations ?? counts?.approvedEncounterLocations ?? locations.filter((item) => item.isActive && item.approvalStatus === "approved").length,
       hint: "已审核且可参与排班",
       icon: MapPinned,
@@ -92,7 +92,7 @@ export default function AdminFlashPage() {
             <span className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
             深圳 · 数字叙事 NPC
           </div>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">闪现运营</h1>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">街头盲盒运营</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             管理 NPC 的次日随机草案、固定上线日、两类地点与人工审核任务库。这里不会发送推送，也不会公开未来排班。
           </p>
@@ -143,7 +143,7 @@ export default function AdminFlashPage() {
           <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-3 xl:grid-cols-5">
             <TabsTrigger value="schedules" data-testid="tab-flash-schedules">今日 / 次日排班</TabsTrigger>
             <TabsTrigger value="npcs" data-testid="tab-flash-npcs">NPC</TabsTrigger>
-            <TabsTrigger value="encounter-locations" data-testid="tab-flash-locations">闪现地点</TabsTrigger>
+            <TabsTrigger value="encounter-locations" data-testid="tab-flash-locations">街头盲盒地点</TabsTrigger>
             <TabsTrigger value="task-destinations" data-testid="tab-flash-destinations">任务目的地</TabsTrigger>
             <TabsTrigger value="task-templates" data-testid="tab-flash-tasks">任务库</TabsTrigger>
           </TabsList>

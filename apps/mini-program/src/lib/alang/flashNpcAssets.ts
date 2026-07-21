@@ -9,12 +9,15 @@ export type FlashNpcTheme = {
   ink: string
 }
 
+export const FLASH_UNIVERSAL_ART = '/pages/alang/assets/flash-city-encounter.webp'
+export const FLASH_STREET_BOX_ICON = '/pages/alang/assets/street-blind-box-icon.webp'
+
 const npcThemes: FlashNpcTheme[] = [
   {
     slug: 'alang',
     name: '阿浪',
     animal: '灰狼',
-    imageSrc: '/pages/alang/assets/npcs/alang.webp',
+    imageSrc: FLASH_UNIVERSAL_ART,
     fallbackGlyph: '浪',
     accent: '#64748B',
     tint: '#F0F2F7',
@@ -24,7 +27,7 @@ const npcThemes: FlashNpcTheme[] = [
     slug: 'lizi',
     name: '栗子',
     animal: '水獭',
-    imageSrc: '/pages/alang/assets/npcs/lizi.webp',
+    imageSrc: FLASH_UNIVERSAL_ART,
     fallbackGlyph: '栗',
     accent: '#F97360',
     tint: '#FFF2E9',
@@ -34,7 +37,7 @@ const npcThemes: FlashNpcTheme[] = [
     slug: 'momo',
     name: '默默',
     animal: '兔狲',
-    imageSrc: '/pages/alang/assets/npcs/momo.webp',
+    imageSrc: FLASH_UNIVERSAL_ART,
     fallbackGlyph: '默',
     accent: '#829AB1',
     tint: '#F3F0EC',
@@ -44,7 +47,7 @@ const npcThemes: FlashNpcTheme[] = [
     slug: 'shiqi',
     name: '拾柒',
     animal: '乌鸦',
-    imageSrc: '/pages/alang/assets/npcs/shiqi.webp',
+    imageSrc: FLASH_UNIVERSAL_ART,
     fallbackGlyph: '柒',
     accent: '#5B5266',
     tint: '#F1EFF8',
@@ -54,7 +57,7 @@ const npcThemes: FlashNpcTheme[] = [
     slug: 'atuan',
     name: '阿团',
     animal: '水豚',
-    imageSrc: '/pages/alang/assets/npcs/atuan.webp',
+    imageSrc: FLASH_UNIVERSAL_ART,
     fallbackGlyph: '团',
     accent: '#8DA399',
     tint: '#F0F5EC',

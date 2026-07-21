@@ -1,6 +1,6 @@
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useState } from 'react'
-import { ScrollView, Text, View } from '@tarojs/components'
+import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
@@ -9,6 +9,7 @@ import { useFlashHome } from '../../../lib/alang/useFlash'
 import type { FlashLocationSnapshot, FlashNpcSummary, FlashTaskSummary } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
+import { FLASH_STREET_BOX_ICON } from '../../../lib/alang/flashNpcAssets'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import {
   FlashButton,
@@ -43,20 +44,20 @@ function FlashIntro({ onContinue }: { onContinue: () => void }) {
   return (
     <View className='flash-intro'>
       <View className='flash-intro__mark' aria-hidden='true'>
-        <JoyJoinIcon emoji='⚡' tier='phase' size={52} />
+        <Image className='flash-intro__icon' src={FLASH_STREET_BOX_ICON} mode='aspectFill' />
       </View>
       <Text className='flash-intro__title'>先说好，这是一场数字角色相遇</Text>
       <Text className='flash-intro__lead'>
-        闪现里遇到的动物都是数字叙事角色，不是真人工作人员，也不会在现实里等你。它们是谁，留给你碰见时再认识。
+        街头盲盒里遇到的动物都是数字叙事角色，不是真人工作人员，也不会在现实里等你。它们是谁，留给你碰见时再认识。
       </Text>
       <View className='flash-intro__rules'>
         <View className='flash-intro__rule'>
           <Text className='flash-intro__rule-index'>1</Text>
-          <Text className='flash-intro__rule-text'>你主动打开闪现时，我们才申请一次定位，用来显示当前在线角色和判断是否到达附近。</Text>
+          <Text className='flash-intro__rule-text'>你主动打开街头盲盒时，我们才申请一次定位，用来显示当前在线角色和判断是否到达附近。</Text>
         </View>
         <View className='flash-intro__rule'>
           <Text className='flash-intro__rule-index'>2</Text>
-          <Text className='flash-intro__rule-text'>不开放定位就不能参加闪现，但发现页和其他功能照常使用；这里不会用 IP 猜位置。</Text>
+          <Text className='flash-intro__rule-text'>不开放定位就不能参加街头盲盒，但发现页和其他功能照常使用；这里不会用 IP 猜位置。</Text>
         </View>
         <View className='flash-intro__rule'>
           <Text className='flash-intro__rule-index'>3</Text>
@@ -65,7 +66,7 @@ function FlashIntro({ onContinue }: { onContinue: () => void }) {
       </View>
       <View className='flash-intro__actions'>
         <FlashButton onClick={onContinue}>我知道了，开启定位</FlashButton>
-        <Text className='flash-intro__privacy'>闪现不会订阅消息，也不会主动推送提醒。</Text>
+        <Text className='flash-intro__privacy'>街头盲盒不会订阅消息，也不会主动推送提醒。</Text>
       </View>
     </View>
   )
@@ -84,7 +85,7 @@ function OnlineNpcCard({ npc, onClick }: { npc: FlashNpcSummary; onClick: () => 
       <View className='flash-online-card__body'>
         <View className='flash-online-card__name-row'>
           <Text className='flash-online-card__name'>{npc.name}</Text>
-          <Text className='flash-online-card__online'>正在闪现</Text>
+          <Text className='flash-online-card__online'>此刻在线</Text>
         </View>
         <Text className='flash-online-card__invite'>{npc.invitation}</Text>
         <Text className='flash-online-card__meta'>
@@ -134,7 +135,7 @@ export default function FlashHomePage() {
   }, [requestLocation])
 
   useEffect(() => {
-    void Taro.setNavigationBarTitle({ title: '闪现' })
+    void Taro.setNavigationBarTitle({ title: '街头盲盒' })
     if (!enabled) return
     void restoreGate()
   }, [enabled, restoreGate])
@@ -196,7 +197,7 @@ export default function FlashHomePage() {
   if (!enabled) {
     return (
       <View className='flash-page'>
-        <FlashPageState title='闪现正在准备下一次见面' description='这项体验暂时没有开放，过些时候再来看看。' />
+        <FlashPageState title='街头盲盒正在准备下一次见面' description='这项体验暂时没有开放，过些时候再来看看。' />
       </View>
     )
   }
@@ -207,7 +208,7 @@ export default function FlashHomePage() {
     return (
       <View className='flash-page'>
         <FlashPageState
-          title={gate === 'checking' ? '正在打开闪现…' : '看看深圳哪里有角色在线…'}
+          title={gate === 'checking' ? '正在打开街头盲盒…' : '看看深圳哪里有角色在线…'}
           description='只进行这一次定位，不会在后台持续追踪。'
         />
       </View>
@@ -218,7 +219,7 @@ export default function FlashHomePage() {
     return (
       <View className='flash-page'>
         <FlashPageState
-          title='需要定位，才能参加闪现'
+          title='需要定位，才能参加街头盲盒'
           description='我们不会用 IP 猜你的位置。打开定位后，才会读取当前在线角色并判断 50 米到达范围。'
           action={() => { void openLocationSettings() }}
           actionLabel='打开定位设置'
@@ -253,12 +254,12 @@ export default function FlashHomePage() {
         <FlashPageState
           tone={outsideShenzhen || contentUnavailable ? 'plain' : 'error'}
           title={outsideShenzhen
-            ? '闪现目前只在深圳'
+            ? '街头盲盒目前只在深圳'
             : locationUnavailable
               ? '暂时无法确认你是否在深圳'
               : contentUnavailable
-                ? '闪现还在准备中'
-                : '闪现暂时没打开'}
+                ? '街头盲盒还在准备中'
+                : '街头盲盒暂时没打开'}
           description={outsideShenzhen
             ? '你仍然可以使用发现页的其他功能；我们不会改用 IP 猜位置。'
             : locationUnavailable

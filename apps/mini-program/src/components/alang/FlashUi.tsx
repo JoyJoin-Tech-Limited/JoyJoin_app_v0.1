@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Image, Text, View } from '@tarojs/components'
-import { resolveFlashNpcTheme, resolveFlashTaskCategory } from '../../lib/alang/flashNpcAssets'
+import { FLASH_UNIVERSAL_ART, resolveFlashNpcTheme, resolveFlashTaskCategory } from '../../lib/alang/flashNpcAssets'
 import type { FlashNpcReference, FlashTaskSummary } from '../../lib/alang/flashTypes'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
 
@@ -28,7 +28,7 @@ export function FlashNpcPortrait({
         <Image
           className='flash-npc-portrait__image'
           src={theme.imageSrc}
-          mode='aspectFit'
+          mode='aspectFill'
           onError={() => setFailed(true)}
         />
       ) : (
@@ -36,6 +36,9 @@ export function FlashNpcPortrait({
           {theme.fallbackGlyph}
         </Text>
       )}
+      <Text className='flash-npc-portrait__identity' style={{ backgroundColor: theme.accent }}>
+        {npc.name.slice(0, 1)}
+      </Text>
     </View>
   )
 }
@@ -84,6 +87,7 @@ export function FlashPageState({
 }) {
   return (
     <View className={`flash-state flash-state--${tone}`} role={tone === 'error' ? 'alert' : 'status'}>
+      <Image className='flash-state__art' src={FLASH_UNIVERSAL_ART} mode='aspectFill' />
       {tone === 'error' ? (
         <Text className='flash-state__mark' aria-hidden='true'>…</Text>
       ) : (
@@ -107,7 +111,7 @@ export function FlashFeatureClosed() {
   return (
     <View className='flash-page'>
       <FlashPageState
-        title='闪现正在准备下一次见面'
+        title='街头盲盒正在准备下一次见面'
         description='这项体验暂时没有开放，过些时候再来看看。'
       />
     </View>
@@ -185,6 +189,9 @@ export function FlashTaskCard({
       data-assignment-id={assignmentId}
     >
       <View className='flash-task-card__accent' style={{ backgroundColor: category.accent }} />
+      <View className='flash-task-card__portrait'>
+        <FlashNpcPortrait npc={task.npc} size='small' />
+      </View>
       <View className='flash-task-card__body'>
         <View className='flash-task-card__topline'>
           <Text className='flash-task-card__category' style={{ color: category.text, backgroundColor: category.tint }}>

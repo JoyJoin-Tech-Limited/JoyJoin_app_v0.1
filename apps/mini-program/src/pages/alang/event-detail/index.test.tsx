@@ -21,14 +21,14 @@ describe('legacy Flash detail redirect', () => {
 
   it('recovers old URLs through the formal server-owned home', async () => {
     render(<LegacyFlashDetailRedirect />)
-    expect(screen.getByText('正在接回新的闪现…')).toBeInTheDocument()
+    expect(screen.getByText('正在接回新的街头盲盒…')).toBeInTheDocument()
     await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledWith({ url: '/pages/alang/event/index' }))
   })
 
   it('fails closed without navigating when the feature is disabled', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<LegacyFlashDetailRedirect />)
-    expect(screen.getByText('闪现正在准备下一次见面')).toBeInTheDocument()
+    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
     expect(mocks.redirectTo).not.toHaveBeenCalled()
   })
 })

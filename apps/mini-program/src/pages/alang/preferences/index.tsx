@@ -27,7 +27,7 @@ const sourceRows: Array<{
   { key: 'usePersonality', title: '性格类型', description: '使用你正式测试得到的角色类型，不读取答题原文。' },
   { key: 'useInterests', title: '兴趣选择', description: '参考你主动选过的兴趣，让任务更顺手。' },
   { key: 'useIndustry', title: '宽泛行业', description: '只使用行业大类，不使用具体职业、公司或单位。' },
-  { key: 'useDistrict', title: '当前所在区', description: '只在你打开闪现时参考当前区域。' },
+  { key: 'useDistrict', title: '当前所在区', description: '只在你打开街头盲盒时参考当前区域。' },
   { key: 'useTaskBehavior', title: '任务经历', description: '参考完成次数和偏好，不会改写正式性格与职业资料。' },
 ]
 
@@ -118,7 +118,7 @@ export default function FlashPreferencesPage() {
               <View className='flash-preferences__row-copy'>
                 <Text className='flash-preferences__row-title'>个性化任务</Text>
                 <Text className='flash-preferences__row-description'>综合你允许的数据，挑选更可能喜欢的任务。</Text>
-                <Text className='flash-preferences__consent'>开启代表你明确同意下列已勾选数据用于闪现任务推荐，可随时关闭。</Text>
+                <Text className='flash-preferences__consent'>开启代表你明确同意下列已勾选数据用于街头盲盒任务推荐，可随时关闭。</Text>
               </View>
               <Switch
                 checked={draft.personalizationEnabled}
@@ -175,7 +175,7 @@ export default function FlashPreferencesPage() {
             ) : (
               <View className='flash-empty-card'>
                 <Text className='flash-empty-card__title'>暂时没有任务标签</Text>
-                <Text className='flash-empty-card__copy'>这不会影响参加闪现，系统会从通用任务里随机挑选。</Text>
+                <Text className='flash-empty-card__copy'>这不会影响参加街头盲盒，系统会从通用任务里随机挑选。</Text>
               </View>
             )}
           </View>

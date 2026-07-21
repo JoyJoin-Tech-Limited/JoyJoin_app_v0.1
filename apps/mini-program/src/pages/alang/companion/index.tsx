@@ -119,7 +119,7 @@ export default function FlashTaskPage() {
   if (!assignmentId) {
     return (
       <View className='flash-page'>
-        <FlashPageState title='这条旧任务链接已经失效' description='回到闪现页，会显示服务端保存的当前任务。' action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }} actionLabel='返回闪现' />
+        <FlashPageState title='这条旧任务链接已经失效' description='回到街头盲盒页，会显示服务端保存的当前任务。' action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }} actionLabel='返回街头盲盒' />
       </View>
     )
   }
@@ -138,7 +138,7 @@ export default function FlashTaskPage() {
           title={unavailable ? '这个任务已经不能继续了' : '任务暂时没打开'}
           description={unavailable ? '可能已经超过 7 天，或地点因安全与运营原因被撤下。任务会从列表消失，也不会有惩罚。' : '任务仍保存在服务端，重新读取不会丢失。'}
           action={unavailable ? () => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) } : () => { void refetch() }}
-          actionLabel={unavailable ? '返回闪现' : '重新读取'}
+          actionLabel={unavailable ? '返回街头盲盒' : '重新读取'}
         />
       </View>
     )
@@ -157,7 +157,7 @@ export default function FlashTaskPage() {
             ? '任务已经超过 7 天，会从列表自然消失，也不会有任何惩罚。'
             : '地点因安全或运营原因被撤下了。任务会从列表消失，不会影响以后遇见这个角色。'}
           action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}
-          actionLabel='返回闪现'
+          actionLabel='返回街头盲盒'
         />
       </View>
     )

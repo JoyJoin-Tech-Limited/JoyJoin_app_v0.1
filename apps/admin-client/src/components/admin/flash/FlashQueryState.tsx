@@ -7,7 +7,7 @@ import EmptyState from "@/components/admin/EmptyState";
 
 export function FlashListSkeleton() {
   return (
-    <div className="grid gap-3" aria-label="正在加载闪现运营内容">
+    <div className="grid gap-3" aria-label="正在加载街头盲盒运营内容">
       {[0, 1, 2].map((index) => (
         <Card key={index}>
           <CardContent className="space-y-3 p-4">
@@ -33,7 +33,7 @@ export function FlashErrorState({
       <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
         <AlertCircle className="h-8 w-8 text-destructive" aria-hidden="true" />
         <div>
-          <p className="font-medium">闪现内容暂时没加载出来</p>
+          <p className="font-medium">街头盲盒内容暂时没加载出来</p>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
             {message || "请检查服务端连接后再试一次。"}
           </p>

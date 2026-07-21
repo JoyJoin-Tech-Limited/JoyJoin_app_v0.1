@@ -125,7 +125,7 @@ describe('formal Flash dialogue', () => {
   it('does not fetch a disabled deep link', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashDialoguePage />)
-    expect(screen.getByText('闪现正在准备下一次见面')).toBeInTheDocument()
+    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
     expect(mocks.useEncounter).toHaveBeenCalledWith('encounter-1', false)
   })
 })

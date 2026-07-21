@@ -1,11 +1,11 @@
 import Taro from '@tarojs/taro'
-import { Text, View } from '@tarojs/components'
+import { Image, Text, View } from '@tarojs/components'
 import { useAuth } from '../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../lib/alang/alangAccess'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { alangEvents } from '../../lib/alang/alangAnalytics'
 import { haptics } from '../../lib/utils/haptics'
-import JoyJoinIcon from '../ui/JoyJoinIcon'
+import { FLASH_STREET_BOX_ICON } from '../../lib/alang/flashNpcAssets'
 import './AlangDiscoverCard.scss'
 
 /**
@@ -28,14 +28,14 @@ export default function AlangDiscoverCard() {
       hoverClass='alang-discover-card--pressed'
       onClick={handleTap}
       role='button'
-      aria-label='进入闪现，查看深圳当前在线的数字角色'
+      aria-label='进入街头盲盒，查看深圳当前在线的数字角色'
     >
       <View className='alang-discover-card__bolt' aria-hidden='true'>
-        <JoyJoinIcon emoji='⚡' tier='phase' size={34} />
+        <Image className='alang-discover-card__icon' src={FLASH_STREET_BOX_ICON} mode='aspectFill' />
       </View>
       <View className='alang-discover-card__content'>
         <View className='alang-discover-card__title-row'>
-          <Text className='alang-discover-card__title'>闪现</Text>
+          <Text className='alang-discover-card__title'>街头盲盒</Text>
           <Text className='alang-discover-card__city'>深圳限定</Text>
         </View>
         <Text className='alang-discover-card__description'>城市里的数字角色，偶尔会出来聊两句</Text>

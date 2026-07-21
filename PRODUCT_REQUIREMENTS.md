@@ -81,8 +81,8 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ### 2026 Milestones (June–July 2026)
 
-**54. 闪现正式版｜深圳数字动物 NPC 与人工审核任务库** *(2026-07-20; current override)*
-- **Scope:** Discover 静态入口 + `pages/alang` 正式闪现页面 + `/api/alang/flash/*` + 后台 `/admin/alang`。旧 `missions/:slug` 阿浪故事流程仅兼容保留，不再定义正式闪现。
+**54. 街头盲盒正式版｜深圳数字动物 NPC 与人工审核任务库** *(2026-07-20; current override)*
+- **Scope:** Discover 静态入口 + `pages/alang` 正式街头盲盒页面 + `/api/alang/flash/*` + 后台 `/admin/alang`。旧 `missions/:slug` 阿浪故事流程仅兼容保留，不再定义正式街头盲盒。
 - **NPC/schedule:** 5 位数字动物 NPC 使用固定星期、随机地点和随机 1–2 班；单班 90–150 分钟，09:00–21:00，同 NPC 间隔至少 90 分钟，生成器均衡上午/下午/晚上。没有可用安全班次时允许当天不出现，不展示未来排班，也不预约或加班。
 - **Encounter:** 用户主动进入后进行一次 GCJ-02 定位；拒绝定位不能参加且无 IP 回退。在线响应只给角色、区、剩余时间；隐藏地点坐标/地址/路线/精确距离均不下发。50 米服务端判断，班次结束即关闭；已解锁对话保留 24 小时。
 - **Tasks:** 30 条人工审核任务，6 类各 5 条，按 NPC 人设与用户可选偏好抽取；每次相遇最多 2 个结构化问题、任务随机、允许换 1 次。最多同时 3 件、同 NPC 1 件、未完成 7 天；已完成模板按 `max(5%, 0.35^n)` 降权。
@@ -101,7 +101,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Flags and rollout:** `profilePixelAvatarEnabled`、`equipmentRewardsEnabled`、`personalStoryEnabled` 独立、默认关闭。`personalStoryEnabled=false` 时入口及 GET/POST/status 在访问故事表前关闭；开关为 `true` 但 provider 不可用时才允许读取旧章并让更新显式失败。先应用 `20260715010000_add_equipment_personal_story.sql` 和 `20260715011000_seed_equipment_catalog_pools.sql`，再在 staging 开启并做真实 provider/真机 smoke。
 - **APIs:** `GET /api/personal-story`、`POST /api/personal-story/update`、`GET /api/personal-story/update-status`；`GET /api/equipment/me`、`PUT /api/equipment/me/outfit`、`POST /api/equipment/entitlements/:id/draw`、`GET /api/equipment/shop`、`POST /api/equipment/shop/items/:id/redeem`。所有身份来自 session；装备兑换使用幂等键。
 
-**51. 闪现 NPC｜阿浪 V1.7 — 腾讯地图复用、服务端恢复与批准目标 F3 对齐** *(2026-07-14)*
+**51. 街头盲盒 NPC｜阿浪 V1.7 — 腾讯地图复用、服务端恢复与批准目标 F3 对齐** *(2026-07-14)*
 - **Scope:** Mini Program `pages/alang` subpackage、Discover 入口、Alang 服务端状态机与现有 `/api/geo` 腾讯地图代理。
 - **Flow:** Discover → 事件详情 → 距离搜索 → 非聊天气泡叙事选择 → 陪伴步行 → 5 米稳定到达 → 结果卡 → 用户主动收录。搜索、对话、陪伴和结果页均以服务端 `myProgress` 纠正陈旧 URL；未收录的 `stage=result` 刷新后仍回到结果卡。收录只保存真实经历来源，不直接跳入旧档案列表；用户之后在 Profile 的私人故事页主动更新，才会按事实追加新章。
 - **Location secrecy:** 搜索阶段不向客户端返回任务目标、剧情 `gpsTrigger`、陪伴终点或路线；辅助 Map 只显示用户本人。`routeDestination` 只在 `companion` 及以后阶段披露，且路线仅在用户点击后请求。

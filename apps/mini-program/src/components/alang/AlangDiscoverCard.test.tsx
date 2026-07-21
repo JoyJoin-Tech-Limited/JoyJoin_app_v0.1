@@ -29,7 +29,7 @@ describe('AlangDiscoverCard formal entry', () => {
   it('renders a static Shenzhen entry without reading mission or location data', () => {
     render(<AlangDiscoverCard />)
 
-    expect(screen.getByText('闪现')).toBeInTheDocument()
+    expect(screen.getByText('街头盲盒')).toBeInTheDocument()
     expect(screen.getByText('深圳限定')).toBeInTheDocument()
     expect(screen.getByText('城市里的数字角色，偶尔会出来聊两句')).toBeInTheDocument()
     expect(screen.queryByText('Beta')).not.toBeInTheDocument()
@@ -38,7 +38,7 @@ describe('AlangDiscoverCard formal entry', () => {
   it('opens only the Flash home after an explicit tap', () => {
     render(<AlangDiscoverCard />)
 
-    fireEvent.click(screen.getByRole('button', { name: '进入闪现，查看深圳当前在线的数字角色' }))
+    fireEvent.click(screen.getByRole('button', { name: '进入街头盲盒，查看深圳当前在线的数字角色' }))
 
     expect(mocks.haptics).toHaveBeenCalledWith('light')
     expect(mocks.cardTap).toHaveBeenCalledTimes(1)
@@ -49,6 +49,6 @@ describe('AlangDiscoverCard formal entry', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<AlangDiscoverCard />)
 
-    expect(screen.queryByText('闪现')).not.toBeInTheDocument()
+    expect(screen.queryByText('街头盲盒')).not.toBeInTheDocument()
   })
 })

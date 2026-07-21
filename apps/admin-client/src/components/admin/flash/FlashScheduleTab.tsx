@@ -64,7 +64,7 @@ import { FlashEmptyState, FlashErrorState, FlashListSkeleton } from "./FlashQuer
 const shiftSchema = z
   .object({
     npcId: z.string().min(1, "请选择 NPC"),
-    locationId: z.string().min(1, "请选择闪现地点"),
+    locationId: z.string().min(1, "请选择街头盲盒地点"),
     startTime: z.string().regex(/^\d{2}:\d{2}$/, "请输入开始时间"),
     endTime: z.string().regex(/^\d{2}:\d{2}$/, "请输入结束时间"),
   })
@@ -545,7 +545,7 @@ function ShiftEditorDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="flash-shift-location">闪现地点</Label>
+                <Label htmlFor="flash-shift-location">街头盲盒地点</Label>
                 <Controller
                   name="locationId"
                   control={control}

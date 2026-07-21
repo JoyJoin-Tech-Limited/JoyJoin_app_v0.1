@@ -47,7 +47,7 @@ function sendFlashError(res: Response, error: unknown): Response {
   if (error instanceof FlashServiceError) {
     return res.status(error.status).json({ code: error.code, error: error.message });
   }
-  return res.status(500).json({ code: "FLASH_INTERNAL_ERROR", error: "闪现暂时走神了，请稍后再试" });
+  return res.status(500).json({ code: "FLASH_INTERNAL_ERROR", error: "街头盲盒暂时走神了，请稍后再试" });
 }
 
 function logSafeRouteFailure(req: Request, resourceId: string | null, error: unknown): void {
@@ -61,7 +61,7 @@ function logSafeRouteFailure(req: Request, resourceId: string | null, error: unk
 async function requireFlashReady(_req: Request, res: Response, next: NextFunction) {
   try {
     if (!(await getFeatureFlag("alangEnabled", false))) {
-      return res.status(503).json({ code: "FLASH_DISABLED", error: "闪现暂时休息中" });
+      return res.status(503).json({ code: "FLASH_DISABLED", error: "街头盲盒暂时休息中" });
     }
     await assertFlashRuntimeReady();
     return next();
@@ -110,10 +110,10 @@ function sendCoordinateError(res: Response, code: "FLASH_LOCATION_REQUIRED" | "F
   return res.status(status).json({
     code,
     error: code === "FLASH_OUTSIDE_SHENZHEN"
-      ? "闪现目前只在深圳开放"
+      ? "街头盲盒目前只在深圳开放"
       : code === "FLASH_LOCATION_UNAVAILABLE"
         ? "暂时无法确认你是否在深圳，请稍后再试"
-        : "需要定位权限才能参加闪现",
+        : "需要定位权限才能参加街头盲盒",
   });
 }
 
@@ -142,7 +142,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const appearanceId = idParamSchema.safeParse(req.params.id);
-    if (!appearanceId.success) return res.status(400).json({ code: "FLASH_APPEARANCE_NOT_FOUND", error: "无效的闪现编号" });
+    if (!appearanceId.success) return res.status(400).json({ code: "FLASH_APPEARANCE_NOT_FOUND", error: "无效的街头盲盒编号" });
     const coordinate = await parseShenzhenCoordinate(req.body);
     if (!coordinate.success) return sendCoordinateError(res, coordinate.code);
     try {

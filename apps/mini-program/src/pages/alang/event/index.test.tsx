@@ -104,7 +104,7 @@ describe('formal Flash home', () => {
   it('fails closed when the server feature flag is disabled', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashHomePage />)
-    expect(screen.getByText('闪现正在准备下一次见面')).toBeInTheDocument()
+    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
     expect(mocks.location).not.toHaveBeenCalled()
   })
 
@@ -122,7 +122,7 @@ describe('formal Flash home', () => {
 
     expect(await screen.findByText('暂时无法确认你是否在深圳')).toBeInTheDocument()
     expect(screen.getByText(/可以稍后再试/)).toBeInTheDocument()
-    expect(screen.queryByText('闪现暂时没打开')).not.toBeInTheDocument()
+    expect(screen.queryByText('街头盲盒暂时没打开')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '重新读取' }))
     expect(mocks.refetch).toHaveBeenCalledTimes(1)
   })

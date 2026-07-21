@@ -131,9 +131,9 @@ export default function FlashDialoguePage() {
       <View className='flash-page'>
         <FlashPageState
           title='这段旧对话已经收好了'
-          description='回到闪现页，可以从服务端保存的最新状态继续。'
+          description='回到街头盲盒页，可以从服务端保存的最新状态继续。'
           action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}
-          actionLabel='返回闪现'
+          actionLabel='返回街头盲盒'
         />
       </View>
     )
@@ -148,7 +148,7 @@ export default function FlashDialoguePage() {
           title={expired ? '这段对话已经聊完了' : '刚才的话暂时没接上'}
           description={expired ? '解锁后的对话会保留 24 小时。现在可以回去看看有没有其他角色在线。' : '进度保存在服务端，重新读取不会从头开始。'}
           action={expired ? () => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) } : () => { void refetch() }}
-          actionLabel={expired ? '返回闪现' : '重新接上'}
+          actionLabel={expired ? '返回街头盲盒' : '重新接上'}
         />
       </View>
     )
@@ -161,7 +161,7 @@ export default function FlashDialoguePage() {
   if (data.status === 'expired') {
     return (
       <View className='flash-page'>
-        <FlashPageState title='这段对话已经聊完了' description='解锁后的对话会保留 24 小时。现在可以回去看看有没有其他角色在线。' action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }} actionLabel='返回闪现' />
+        <FlashPageState title='这段对话已经聊完了' description='解锁后的对话会保留 24 小时。现在可以回去看看有没有其他角色在线。' action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }} actionLabel='返回街头盲盒' />
       </View>
     )
   }
@@ -253,7 +253,7 @@ export default function FlashDialoguePage() {
           ) : (
             <View className='flash-dialogue__conversation'>
               <Text className='flash-dialogue__bubble'>{data.message || '今天先聊到这里吧，下次再碰见的时候再继续。'}</Text>
-              <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>回到闪现</FlashButton>
+              <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>回到街头盲盒</FlashButton>
             </View>
           )}
 

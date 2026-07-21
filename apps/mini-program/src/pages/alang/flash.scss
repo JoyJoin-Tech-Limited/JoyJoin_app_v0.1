@@ -123,6 +123,24 @@ page {
     height: 100%;
   }
 
+  &__identity {
+    position: absolute;
+    right: 6rpx;
+    bottom: 6rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34%;
+    height: 34%;
+    border: 2rpx solid rgba($color-surface, 0.94);
+    border-radius: $radius-circle;
+    color: $color-text-white;
+    font-family: $font-cn-display;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-black;
+    box-shadow: $shadow-sm;
+  }
+
   &__fallback {
     display: flex;
     align-items: center;
@@ -203,6 +221,15 @@ page {
     font-size: $font-size-lg;
   }
 
+  &__art {
+    width: 240rpx;
+    height: 240rpx;
+    margin-bottom: 18rpx;
+    border: 6rpx solid rgba($color-surface, 0.92);
+    border-radius: $radius-circle;
+    box-shadow: $shadow-md;
+  }
+
   &__title {
     margin-top: 24rpx;
     font-family: $font-cn-display;
@@ -262,6 +289,7 @@ page {
 
   &--pressed { opacity: 0.78; }
   &__accent { width: 10rpx; flex-shrink: 0; }
+  &__portrait { display: flex; align-items: center; padding-left: 20rpx; }
   &__body { flex: 1; min-width: 0; padding: 22rpx 16rpx 22rpx 24rpx; }
   &__topline { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
   &__category { padding: 5rpx 14rpx; border-radius: $radius-pill; font-size: $font-size-xs; font-weight: $font-weight-bold; }
@@ -286,11 +314,14 @@ page {
     width: 104rpx;
     height: 104rpx;
     border-radius: $card-radius;
-    background: $color-primary;
+    overflow: hidden;
+    background: $color-primary-light;
     color: $color-text-white;
     font-size: $font-size-2xl;
     box-shadow: $shadow-primary-soft;
   }
+
+  &__icon { width: 100%; height: 100%; }
 
   &__title { display: block; margin-top: 40rpx; font-family: $font-cn-display; font-size: $font-size-3xl; font-weight: $font-weight-black; line-height: 1.35; }
   &__lead { display: block; margin-top: 18rpx; color: $color-text-secondary-on-light; font-size: $font-size-base; line-height: $line-height-relaxed; }
@@ -303,10 +334,14 @@ page {
 }
 
 .flash-empty-card {
+  position: relative;
+  overflow: hidden;
   padding: 34rpx 30rpx;
   border: 1rpx dashed rgba($color-primary, 0.2);
   border-radius: $card-radius;
-  background: rgba($color-surface, 0.62);
+  background:
+    linear-gradient(90deg, rgba($color-surface, 0.96) 0%, rgba($color-surface, 0.86) 62%, rgba($color-surface, 0.45) 100%),
+    url('/pages/alang/assets/flash-city-encounter.webp') center / cover no-repeat;
 
   &__title { display: block; color: $color-text-primary-warm; font-size: $font-size-md; font-weight: $font-weight-bold; }
   &__copy { display: block; margin-top: 10rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; line-height: $line-height-relaxed; }
@@ -317,12 +352,28 @@ page {
   &__npc { display: flex; flex-direction: column; align-items: center; margin-top: 24rpx; }
   &__name { margin-top: 18rpx; font-family: $font-cn-display; font-size: $font-size-xl; font-weight: $font-weight-black; }
   &__meta { margin-top: 8rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; }
-  &__instrument { position: relative; width: 360rpx; height: 360rpx; margin-top: 42rpx; }
-  &__ring { position: absolute; border: 2rpx solid rgba($color-primary, 0.18); border-radius: $radius-circle; }
+  &__instrument {
+    position: relative;
+    width: 420rpx;
+    height: 420rpx;
+    margin-top: 42rpx;
+    overflow: hidden;
+    border: 8rpx solid rgba($color-surface, 0.94);
+    border-radius: $radius-circle;
+    background: $color-bg-tint-cream;
+    box-shadow: 0 24rpx 54rpx rgba($color-primary-dark, 0.2);
+  }
+  &__city-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+  &__veil {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba($color-surface, 0.06) 0 18%, rgba($color-primary, 0.1) 55%, rgba($color-primary-dark, 0.28) 100%);
+  }
+  &__ring { position: absolute; z-index: 1; border: 2rpx solid rgba($color-surface, 0.7); border-radius: $radius-circle; box-shadow: 0 0 24rpx rgba($color-primary, 0.18); }
   &__ring--outer { inset: 0; }
-  &__ring--middle { inset: 64rpx; }
-  &__ring--inner { inset: 126rpx; }
-  &__signal { position: absolute; inset: 146rpx; display: flex; align-items: center; justify-content: center; border-radius: $radius-circle; background: $color-primary; color: $color-text-white; font-family: $font-mono; font-size: $font-size-sm; box-shadow: $shadow-primary-soft; }
+  &__ring--middle { inset: 72rpx; }
+  &__ring--inner { inset: 144rpx; }
+  &__signal { position: absolute; z-index: 2; inset: 168rpx; display: flex; align-items: center; justify-content: center; border: 4rpx solid rgba($color-surface, 0.9); border-radius: $radius-circle; background: $color-primary; color: $color-text-white; font-family: $font-mono; font-size: $font-size-sm; box-shadow: 0 0 0 14rpx rgba($color-primary, 0.16), $shadow-primary-soft; }
   &__title { margin-top: 34rpx; font-family: $font-cn-display; font-size: $font-size-lg; font-weight: $font-weight-black; text-align: center; }
   &__copy { margin-top: 14rpx; color: $color-text-secondary-on-light; font-size: $font-size-base; line-height: $line-height-relaxed; text-align: center; }
   &__warning,
