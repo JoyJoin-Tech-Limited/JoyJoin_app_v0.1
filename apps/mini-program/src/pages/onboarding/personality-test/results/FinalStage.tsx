@@ -353,32 +353,6 @@ export default function FinalStage({
               ))}
             </Text>
             <Text className='personality-results__hero-summary'>{summary}</Text>
-
-            <View className='personality-results__hero-badges'>
-              {typicalityLabel ? (
-                <Text
-                  className={`personality-results__hero-badge personality-results__hero-badge--typicality ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}
-                  aria-label={`${typicalityLabel.prefix}${typicalityLabel.name}`}
-                >
-                  <Text aria-hidden='true'>{typicalityLabel.prefix}</Text>
-                  <Text style={{ color: typicalityLabel.accent }} aria-hidden='true'>{typicalityLabel.name}</Text>
-                </Text>
-              ) : null}
-              {typeof visual.rarityPercentage === 'number' ? (
-                <Text className={`personality-results__hero-badge personality-results__hero-badge--rarity ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>稀有度 {Math.round(visual.rarityPercentage)}%</Text>
-              ) : null}
-              {visual.nickname ? (
-                <Text className={`personality-results__hero-badge personality-results__hero-badge--nickname ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>{visual.nickname}</Text>
-              ) : null}
-            </View>
-
-            {isDecisive === false && secondaryDisplayName ? (
-              <Text className='personality-results__hero-blend'>
-                <Text>隐约有</Text>
-                <Text style={{ color: secondaryAccent || visual.accentText }}>{secondaryDisplayName}</Text>
-                <Text>的影子</Text>
-              </Text>
-            ) : null}
           </View>
 
           <View className='personality-results__hero-art-shell'>
@@ -392,6 +366,32 @@ export default function FinalStage({
             />
             {/* No text overlay on archetype image — clean art only */}
           </View>
+
+          <View className='personality-results__hero-badges'>
+            {typicalityLabel ? (
+              <Text
+                className={`personality-results__hero-badge personality-results__hero-badge--typicality ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}
+                aria-label={`${typicalityLabel.prefix}${typicalityLabel.name}`}
+              >
+                <Text aria-hidden='true'>{typicalityLabel.prefix}</Text>
+                <Text style={{ color: typicalityLabel.accent }} aria-hidden='true'>{typicalityLabel.name}</Text>
+              </Text>
+            ) : null}
+            {typeof visual.rarityPercentage === 'number' ? (
+              <Text className={`personality-results__hero-badge personality-results__hero-badge--rarity ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>稀有度 {Math.round(visual.rarityPercentage)}%</Text>
+            ) : null}
+            {visual.nickname ? (
+              <Text className={`personality-results__hero-badge personality-results__hero-badge--nickname ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>{visual.nickname}</Text>
+            ) : null}
+          </View>
+
+          {isDecisive === false && secondaryDisplayName ? (
+            <Text className='personality-results__hero-blend'>
+              <Text>隐约有</Text>
+              <Text style={{ color: secondaryAccent || visual.accentText }}>{secondaryDisplayName}</Text>
+              <Text>的影子</Text>
+            </Text>
+          ) : null}
 
           {/* Xiaoyue short analysis — integrated into hero card */}
           <View className='personality-results__hero-xiaoyue'>
