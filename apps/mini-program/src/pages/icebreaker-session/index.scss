@@ -65,10 +65,16 @@ $__gold-accent:  $color-landed-gold;
     display: flex;
     gap: $spacing-sm;
     width: 100%;
+    min-width: 0;
   }
 
   &__stall-nudge-btn {
     flex: 1;
+    width: 0;
+    min-width: 0;
+    padding-right: $spacing-sm;
+    padding-left: $spacing-sm;
+    white-space: nowrap;
   }
 
   &__host-advance {

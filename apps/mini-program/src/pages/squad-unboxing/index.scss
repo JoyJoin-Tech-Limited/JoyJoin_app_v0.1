@@ -36,6 +36,7 @@ $fan-rotations: (
 
   &--reduce-motion {
     .squad-unboxing__blind-box-visual,
+    .squad-unboxing__blind-box-lid,
     .squad-unboxing__blind-box-aura,
     .squad-unboxing__blind-box-spark,
     .squad-unboxing__blind-box-lid,
@@ -123,8 +124,11 @@ $fan-rotations: (
     }
 
     &--degradation {
+<<<<<<< Updated upstream
       transition: none;
 
+=======
+>>>>>>> Stashed changes
       .squad-unboxing__blind-box-visual--ready,
       .squad-unboxing__blind-box-lid--ready {
         animation: none;

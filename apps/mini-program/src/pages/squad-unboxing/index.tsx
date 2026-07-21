@@ -584,11 +584,28 @@ export default function SquadUnboxingPage() {
     )
   }
 
+<<<<<<< Updated upstream
   // Scroll padding must clear the bottom dock's actual height (368rpx
   // action-zone, +128rpx when the reveal chip shows) plus a breathing gap, so
   // the in-flow bubble + 今晚这桌 chapter stay visible above the lower buttons.
   const showRevealChip = isInteractiveSession && unflippedCount > 0 && deckPhase === 'fan'
   const revealedScrollPaddingBottomRpx = (showRevealChip ? 496 : 368) + 40
+=======
+  return (
+    <View className={pageClassName}>
+      <ScrollView
+        className={['squad-unboxing__scroll', flowState === 'revealed' ? 'squad-unboxing__scroll--revealed' : ''].filter(Boolean).join(' ')}
+        scrollY
+        enhanced
+        showScrollbar={false}
+        onScroll={handleScroll}
+        scrollTop={programmaticScrollTop}
+      >
+        <View className={[
+          'squad-unboxing__stage-spacer',
+          flowState === 'revealed' ? 'squad-unboxing__stage-spacer--revealed' : '',
+        ].filter(Boolean).join(' ')} />
+>>>>>>> Stashed changes
 
   // Always expanded (2026-07-17) — the collapse toggle/link was removed; the
   // chapter renders directly in the scroll flow below the bubble.

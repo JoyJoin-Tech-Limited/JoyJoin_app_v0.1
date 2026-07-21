@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react'
 import { View, Text } from '@tarojs/components'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { getSystemReducedMotion } from '../../../lib/utils/accessibility'
@@ -57,6 +57,8 @@ interface WarmupPhaseViewProps {
    * the ember rim so seeding never races an unresolved query. Defaults true.
    */
   warmupDataReady?: boolean
+  /** Shared advance status/prompt, placed directly below the topic card. */
+  advancePrompt?: ReactNode
 }
 
 export function WarmupPhaseView({
@@ -87,6 +89,7 @@ export function WarmupPhaseView({
   topicsError = false,
   onAigcFeedbackTap,
   warmupDataReady = true,
+  advancePrompt,
 }: WarmupPhaseViewProps) {
   const isReady = readyUserIds.includes(currentUserId)
   const everyoneReady = participants.length > 0 && readyUserIds.length >= participants.length
@@ -373,6 +376,8 @@ export function WarmupPhaseView({
           strip slims to a compact count-only row (no duplicate avatar row).
           Other warmup states keep the full strip. Reuses WarmupPresenceStrip
           classes (its SCSS is bundled via the import below). */}
+      {advancePrompt}
+
       {cardState === 'topic_card' ? (
         <View className='warmup-presence'>
           <View style={{ flex: 1 }} />

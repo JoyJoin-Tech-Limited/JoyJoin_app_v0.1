@@ -1194,15 +1194,17 @@ export default function IcebreakerSessionPage() {
       </View>
 
       {/* PR1 flow revamp — visible advance fuse (all players) + stall nudge (host) */}
-      <AdvanceFuseBanner
-        fuseAt={session?.autoAdvanceScheduledAt}
-        fuseKind={session?.advanceFuseKind}
-        stallNudgeAt={session?.stallNudgeAt}
-        isHost={isHost}
-        isActing={pendingAction !== null}
-        onStallAdvance={handleStallAdvance}
-        onStallDismiss={handleStallDismiss}
-      />
+      {phase !== 'warmup' && (
+        <AdvanceFuseBanner
+          fuseAt={session?.autoAdvanceScheduledAt}
+          fuseKind={session?.advanceFuseKind}
+          stallNudgeAt={session?.stallNudgeAt}
+          isHost={isHost}
+          isActing={pendingAction !== null}
+          onStallAdvance={handleStallAdvance}
+          onStallDismiss={handleStallDismiss}
+        />
+      )}
 
       <PhaseIntroOverlay phase={phase} visible={showPhaseIntro} />
 
@@ -1284,6 +1286,17 @@ export default function IcebreakerSessionPage() {
             isAdvancingTopic={pendingAction === 'warmup-next-topic'}
             isAdvancing={pendingAction === 'advance'}
             topicsError={topicsError}
+            advancePrompt={
+              <AdvanceFuseBanner
+                fuseAt={session.autoAdvanceScheduledAt}
+                fuseKind={session.advanceFuseKind}
+                stallNudgeAt={session.stallNudgeAt}
+                isHost={isHost}
+                isActing={pendingAction !== null}
+                onStallAdvance={handleStallAdvance}
+                onStallDismiss={handleStallDismiss}
+              />
+            }
           />
         )}
 
