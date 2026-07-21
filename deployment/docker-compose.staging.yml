@@ -51,6 +51,7 @@ services:
     environment:
       NODE_ENV: staging
       PORT: "5001"
+      GIT_SHA: ${GIT_SHA:-unknown}
     ports:
       - "127.0.0.1:5001:5001"
     mem_limit: 512m

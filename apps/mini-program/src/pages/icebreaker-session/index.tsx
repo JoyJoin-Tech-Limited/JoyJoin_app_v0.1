@@ -69,6 +69,7 @@ import {
   resolveHostMenuItems,
   resolveSyncLossVisible,
 } from './sessionShellLogic'
+import { shouldRetryWarmupTopics } from './viewModels/warmupViewModels'
 import './index.scss'
 
 function getPhaseToastText(phase: string): ReactNode {
@@ -96,6 +97,7 @@ const ICEBREAKER_PRELOAD_ASSETS = [...SPRITE_SHEET_ASSETS, ...ICEBREAKER_PHASE_E
 const TOPICS_REQUEST_TIMEOUT_MS = 12000
 const TOPICS_SKIP_RETRY_MAX = 5
 const TOPICS_SKIP_RETRY_DELAY_MS = 700
+const TOPICS_RECOVERY_RETRY_DELAY_MS = 1200
 
 export default function IcebreakerSessionPage() {
   const router = useRouter()
@@ -391,6 +393,8 @@ export default function IcebreakerSessionPage() {
 
   const topicsSkipRetryRef = useRef(0)
   const topicsRetryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const topicsRecoveryRetryCountRef = useRef(0)
+  const topicsRecoveryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const generateTopicsRef = useRef<(mood: AtmosphereMood) => void>(() => {})
   const generateTopics = useCallback((mood: AtmosphereMood) => {
     setTopicsError(false)
@@ -412,12 +416,14 @@ export default function IcebreakerSessionPage() {
         }
       } else {
         topicsSkipRetryRef.current = 0
+        topicsRecoveryRetryCountRef.current = 0
       }
     })
   }, [performSocialAction, playerCount])
   generateTopicsRef.current = generateTopics
   const handleGenerateTopics = useCallback((mood: AtmosphereMood) => {
     topicsSkipRetryRef.current = 0
+    topicsRecoveryRetryCountRef.current = 0
     if (topicsRetryTimerRef.current) {
       clearTimeout(topicsRetryTimerRef.current)
       topicsRetryTimerRef.current = undefined
@@ -427,6 +433,9 @@ export default function IcebreakerSessionPage() {
   useEffect(() => () => {
     if (topicsRetryTimerRef.current) {
       clearTimeout(topicsRetryTimerRef.current)
+    }
+    if (topicsRecoveryTimerRef.current) {
+      clearTimeout(topicsRecoveryTimerRef.current)
     }
   }, [])
 
@@ -619,6 +628,38 @@ export default function IcebreakerSessionPage() {
   )
 
   const [topicsError, setTopicsError] = useState(false)
+
+  useEffect(() => {
+    const topicCount = session?.warmupTopics?.length ?? 0
+    if (topicCount > 0) {
+      setTopicsError(false)
+      topicsRecoveryRetryCountRef.current = 0
+      return
+    }
+
+    if (!shouldRetryWarmupTopics({
+      isHost,
+      topicsError,
+      syncLost,
+      topicCount,
+      selectedMood: session?.selectedMood,
+      pendingAction,
+      retryCount: topicsRecoveryRetryCountRef.current,
+    })) return
+
+    topicsRecoveryRetryCountRef.current += 1
+    topicsRecoveryTimerRef.current = setTimeout(() => {
+      topicsRecoveryTimerRef.current = undefined
+      generateTopicsRef.current(session!.selectedMood as AtmosphereMood)
+    }, TOPICS_RECOVERY_RETRY_DELAY_MS)
+
+    return () => {
+      if (topicsRecoveryTimerRef.current) {
+        clearTimeout(topicsRecoveryTimerRef.current)
+        topicsRecoveryTimerRef.current = undefined
+      }
+    }
+  }, [isHost, pendingAction, session?.selectedMood, session?.warmupTopics?.length, syncLost, topicsError])
 
   const canChangeTier = (phase === 'waiting' || phase === 'warmup') && isHost
 

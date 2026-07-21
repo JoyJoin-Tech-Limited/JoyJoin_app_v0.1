@@ -82,6 +82,14 @@ jobs:
     timeout-minutes: 140
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reject stale staging candidate before transfer
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          node scripts/verify-deployment-freshness.mjs "$GITHUB_SHA" "$(git rev-parse origin/main)"
 
       - name: Resolve deployment client host fingerprint
         id: cvm-host-key
@@ -568,6 +576,12 @@ jobs:
           echo "WECHAT_PAY_PRIVATE_KEY_B64=$PRIVATE_KEY_B64" >> "$GITHUB_ENV"
           echo "WECHAT_PAY_PLATFORM_CERT_B64=$PLATFORM_CERT_B64" >> "$GITHUB_ENV"
 
+      - name: Reject stale staging candidate before switch
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          node scripts/verify-deployment-freshness.mjs "$GITHUB_SHA" "$(git rev-parse origin/main)"
+
       - name: SSH Remote Staging Deployment
         env:
           # ── Staging-specific secrets (must differ from production) ───────
@@ -756,6 +770,7 @@ jobs:
             write_env_value "TEST_PAYMENT_PRICE_IN_CENTS" "1"
             write_env_value "ENABLE_SINGLE_TEST_MODE" "true"
             write_env_value "SOCIAL_ICEBREAKER_TEST_MODE_ENABLED" "true"
+            write_env_value "GIT_SHA" "$DEPLOY_SOURCE_SHA"
             write_env_value "WECHAT_APPID" "$WECHAT_APPID"
             write_env_value "WECHAT_SECRET" "$WECHAT_SECRET"
 

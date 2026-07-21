@@ -9,6 +9,7 @@ import {
   buildCTAState,
   buildWarmupCaption,
   getWarmupCardState,
+  shouldRetryWarmupTopics,
   countArchetypes,
   getDepthSealColors,
   shouldShowPermissionLine,
@@ -78,6 +79,32 @@ describe('getWarmupCardState', () => {
         currentIndex: 1,
       }),
     ).toBe('topic_card')
+  })
+})
+
+describe('shouldRetryWarmupTopics', () => {
+  it('retries a failed host topic request after polling connectivity recovers', () => {
+    expect(shouldRetryWarmupTopics({
+      isHost: true,
+      topicsError: true,
+      syncLost: false,
+      topicCount: 0,
+      selectedMood: 'relaxed',
+      pendingAction: null,
+      retryCount: 0,
+    })).toBe(true)
+  })
+
+  it('does not retry while disconnected or after the bounded retry budget', () => {
+    const base = {
+      isHost: true,
+      topicsError: true,
+      topicCount: 0,
+      selectedMood: 'relaxed' as const,
+      pendingAction: null,
+    }
+    expect(shouldRetryWarmupTopics({ ...base, syncLost: true, retryCount: 0 })).toBe(false)
+    expect(shouldRetryWarmupTopics({ ...base, syncLost: false, retryCount: 2 })).toBe(false)
   })
 })
 

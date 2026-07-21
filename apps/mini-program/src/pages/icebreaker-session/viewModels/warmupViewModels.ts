@@ -21,6 +21,26 @@ export interface ResolveCardStateInput {
   topicsError: boolean
 }
 
+export interface WarmupTopicRetryInput {
+  isHost: boolean
+  topicsError: boolean
+  syncLost: boolean
+  topicCount: number
+  selectedMood?: string
+  pendingAction: string | null
+  retryCount: number
+}
+
+export function shouldRetryWarmupTopics(input: WarmupTopicRetryInput): boolean {
+  return input.isHost
+    && input.topicsError
+    && !input.syncLost
+    && input.topicCount === 0
+    && Boolean(input.selectedMood)
+    && input.pendingAction === null
+    && input.retryCount < 2
+}
+
 /**
  * Resolve the hero card slot state machine (contract Q7 / AC5).
  *
