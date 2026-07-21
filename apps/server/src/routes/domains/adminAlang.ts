@@ -594,6 +594,10 @@ export function registerAdminAlangRoutes(app: Express): void {
 
   app.post("/api/admin/alang/catalog/seed", requireAdmin, requireSuperAdmin, async (req, res) => {
     try {
+      if (process.env.APP_MODE !== "staging") {
+        res.status(403).json({ code: "FLASH_SEED_STAGING_ONLY", message: "正式目录初始化仅允许在 staging 执行" });
+        return;
+      }
       const readiness = await getFlashFeatureReadiness();
       if (!readiness.schemaReady) {
         res.status(503).json({ code: "FLASH_SCHEMA_NOT_READY", message: "请先完成并核验数据库迁移" });

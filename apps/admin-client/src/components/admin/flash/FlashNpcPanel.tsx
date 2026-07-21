@@ -41,12 +41,29 @@ import {
 } from "./FlashCatalogShared";
 import { FlashEmptyState, FlashErrorState, FlashListSkeleton } from "./FlashQueryState";
 
-export function FlashNpcPanel({ canWrite }: { canWrite: boolean }) {
+export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean; canSeed?: boolean }) {
   const { toast } = useToast();
   const [editing, setEditing] = useState<FlashNpc | null>(null);
   const [pendingToggle, setPendingToggle] = useState<FlashNpc | null>(null);
   const query = useQuery<FlashCollectionResponse<FlashNpc>>({ queryKey: ["/api/admin/alang/npcs"] });
   const npcs = unpackFlashCollection(query.data);
+
+  const seedMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/alang/catalog/seed", {});
+      return response.json().catch(() => null);
+    },
+    onSuccess: async (result: { npcCount?: number; taskCount?: number } | null) => {
+      await queryClient.invalidateQueries({
+        predicate: (item) => String(item.queryKey[0] ?? "").startsWith("/api/admin/alang"),
+      });
+      toast({
+        title: "正式目录已初始化",
+        description: `已写入 ${result?.npcCount ?? 5} 位 NPC 与 ${result?.taskCount ?? 30} 条待审任务。`,
+      });
+    },
+    onError: (error) => toast({ title: "目录初始化失败", description: describeFlashAdminError(error), variant: "destructive" }),
+  });
 
   const saveMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: string; payload: unknown }) => {
@@ -81,7 +98,16 @@ export function FlashNpcPanel({ canWrite }: { canWrite: boolean }) {
     <div className="space-y-4">
       <FlashWriteHint canWrite={canWrite} />
       {npcs.length === 0 ? (
-        <FlashEmptyState title="还没有 NPC" description="正式版应由服务端预置 5 位动物 NPC，请先确认种子数据。" icon={UserRound} />
+        <div className="space-y-3">
+          <FlashEmptyState title="还没有 NPC" description="先初始化正式目录，再录入并关联深圳地点。任务会保持待审核，不会自动上线。" icon={UserRound} />
+          {canSeed && (
+            <div className="flex justify-center">
+              <Button onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending}>
+                {seedMutation.isPending ? "正在初始化…" : "初始化 5 位 NPC 与 30 条任务"}
+              </Button>
+            </div>
+          )}
+        </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
           {npcs.map((npc) => (
