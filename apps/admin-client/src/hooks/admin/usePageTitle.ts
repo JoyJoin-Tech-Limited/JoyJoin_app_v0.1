@@ -6,6 +6,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/admin/dashboard": "数据看板",
   "/admin/users": "用户管理",
   "/admin/event-pools": "活动池管理",
+  "/admin/flash-ops": "闪现运营",
   "/admin/venues": "场地管理",
   "/admin/matching": "匹配实验室",
   "/admin/matching-config": "匹配配置",
@@ -30,6 +31,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/admin/audit-logs": "审计日志",
   "/admin/feature-flags": "功能开关",
   "/admin/templates": "活动模板",
+  "/admin/alang": "闪现运营",
 };
 
 const DEFAULT_TITLE = "悦聚·Joy - 管理后台";

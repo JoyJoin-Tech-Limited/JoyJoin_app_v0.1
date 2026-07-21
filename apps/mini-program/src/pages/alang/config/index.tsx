@@ -26,6 +26,7 @@ import {
 } from '../../../lib/alang/useAlangMission'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangDebugTools } from '../../../lib/alang/alangAccess'
+import { COLOR_PRIMARY } from '../../../lib/utils/uiConstants'
 import { haversine } from '../../../lib/alang/api'
 import { useAlangGpsOnce } from '../../../lib/alang/useAlangGps'
 import { apiRequest } from '../../../lib/api/api'
@@ -777,7 +778,7 @@ export default function AlangConfigPage() {
         content: '将清除当前账号上一轮阿浪测试进度与测试故事；本页刚设置的两个新点位会保留，是否继续？',
         confirmText: '清除旧进度',
         cancelText: '取消',
-        confirmColor: '#8B5CF6',
+        confirmColor: COLOR_PRIMARY,
       })
       if (!modal.confirm) return
       await resetMutation.mutateAsync(slug)

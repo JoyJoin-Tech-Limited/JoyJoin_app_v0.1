@@ -1,419 +1,97 @@
-import { fireEvent, render, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import AlangResultPage from './index'
+import FlashFeedbackPage from './index'
 
 const mocks = vi.hoisted(() => ({
-  navigateTo: vi.fn(),
-  redirectTo: vi.fn(),
-  switchTab: vi.fn(),
-  reLaunch: vi.fn(),
-  showToast: vi.fn(),
-  showModal: vi.fn(),
-  useDidShow: vi.fn(),
-  useAlangMissionDetail: vi.fn(),
-  useStoryArchives: vi.fn(),
-  useCompleteMission: vi.fn(),
-  completeMission: vi.fn(),
-  resetMission: vi.fn(),
-  refetchMission: vi.fn(),
-  refetchArchives: vi.fn(),
-  callReportProgress: vi.fn(),
-  authUser: {
-    current: { appMode: 'production', features: { alangEnabled: true, personalStoryEnabled: true } } as any,
-  },
+  useAuth: vi.fn(),
+  useAssignment: vi.fn(),
+  submit: vi.fn(),
+  refetch: vi.fn(),
+  canonicalRedirect: vi.fn(),
 }))
 
-vi.mock('@tarojs/taro', () => {
-  const taro = {
-    getCurrentInstance: () => ({
-      router: { params: { slug: 'meet-alang' } },
-    }),
-    navigateTo: mocks.navigateTo,
-    redirectTo: mocks.redirectTo,
-    switchTab: mocks.switchTab,
-    reLaunch: mocks.reLaunch,
-    showToast: mocks.showToast,
-    showModal: mocks.showModal,
-  }
-  return {
-    default: taro,
-    useDidShow: mocks.useDidShow,
-  }
-})
-
+vi.mock('@tarojs/taro', () => ({
+  default: {
+    getCurrentInstance: () => ({ router: { params: { assignmentId: 'assignment-1' } } }),
+    setNavigationBarTitle: vi.fn(),
+    redirectTo: vi.fn(),
+  },
+}))
 vi.mock('@tarojs/components', () => ({
-  View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>,
   Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-  Image: ({ mode: _mode, ...props }: any) => <img {...props} />,
   ScrollView: ({ children, scrollY: _scrollY, ...props }: any) => <div {...props}>{children}</div>,
+  Image: ({ mode: _mode, onError: _onError, ...props }: any) => <img {...props} />,
+  Textarea: ({ onInput, maxlength, ...props }: any) => (
+    <textarea
+      {...props}
+      maxLength={maxlength}
+      onChange={(event) => onInput({ detail: { value: event.target.value } })}
+    />
+  ),
 }))
-
-vi.mock('../../../hooks/useAuth', () => ({
-  useAuth: () => ({ user: mocks.authUser.current }),
+vi.mock('../../../hooks/useAuth', () => ({ useAuth: mocks.useAuth }))
+vi.mock('../../../lib/alang/useFlash', () => ({
+  useFlashAssignment: mocks.useAssignment,
+  useSubmitFlashFeedback: () => ({ mutateAsync: mocks.submit, isPending: false }),
 }))
+vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: mocks.canonicalRedirect }))
+vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
 
-vi.mock('../../../lib/alang/useAlangMission', () => ({
-  useAlangMissionDetail: mocks.useAlangMissionDetail,
-  useStoryArchives: mocks.useStoryArchives,
-  useCompleteMission: mocks.useCompleteMission,
-  useResetAlangMission: () => ({
-    isPending: false,
-    mutateAsync: mocks.resetMission,
-  }),
-}))
-
-vi.mock('../../../lib/alang/api', () => ({
-  callReportProgress: mocks.callReportProgress,
-}))
-
-vi.mock('../../../lib/alang/alangAnalytics', () => ({
-  alangEvents: {
-    resultPageView: vi.fn(),
-    resultConfirmTap: vi.fn(),
-  },
-}))
-
-vi.mock('../../../lib/alang/alangAssets', () => ({
-  useAlangAssetSource: () => ({
-    src: 'mock-alang-result.webp',
-    usingFallback: false,
-    onError: vi.fn(),
-  }),
-}))
-
-vi.mock('../../../lib/utils/haptics', () => ({
-  haptics: vi.fn(),
-}))
-
-vi.mock('../../../components/ui/StatusCard', () => ({
-  default: ({ title }: { title: string }) => <div>{title}</div>,
-}))
-
-function createMission(overrides: Record<string, unknown> = {}) {
-  return {
-    id: 'mission-1',
-    slug: 'meet-alang',
-    content: {
-      version: '1.0',
-      title: 'Alang story',
-      description: 'A city encounter',
-      startNodeId: 'result-card',
-      nodes: [
-        {
-          id: 'result-card',
-          type: 'result_card',
-          content: {
-            locationLabel: 'Shenzhen',
-            finalMood: 'calm',
-            summaryLine: 'A finished walk',
-          },
-        },
-      ],
-    },
-    myProgress: {
-      progressId: 'progress-1',
-      status: 'in_progress',
-      stage: 'result',
-      currentNodeId: 'result-card',
-      nodeHistory: ['result-card'],
-      choicesMade: [],
-      isDebugSession: false,
-      ...overrides,
-    },
-  }
+const assignment = {
+  id: 'assignment-1', assignmentId: 'assignment-1', canonicalScreen: 'feedback',
+  npc: { id: 'npc-1', slug: 'shiqi', name: '拾柒' },
+  title: '看看旧街的招牌', category: '城市观察', status: 'feedback_pending',
+  feedbackQuestions: [
+    { id: 'legacy-1', promptId: 'prompt-1', prompt: '那里给你的第一感觉是？', options: [
+      { id: 'quiet', label: '安静' }, { id: 'alive', label: '有生命力' },
+    ] },
+    { id: 'legacy-2', promptId: 'prompt-2', prompt: '你还会想再去吗？', options: [
+      { id: 'yes', label: '会' }, { id: 'maybe', label: '看心情' },
+    ] },
+  ],
 }
 
-describe('AlangResultPage', () => {
+describe('formal Flash feedback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.navigateTo.mockResolvedValue({})
-    mocks.redirectTo.mockResolvedValue({})
-    mocks.switchTab.mockResolvedValue({})
-    mocks.reLaunch.mockResolvedValue({})
-    mocks.showModal.mockResolvedValue({ confirm: true, cancel: false })
-    mocks.refetchMission.mockResolvedValue({ data: createMission() })
-    mocks.refetchArchives.mockResolvedValue({ data: [] })
-    mocks.completeMission.mockResolvedValue({ archiveId: 'archive-new' })
-    mocks.resetMission.mockResolvedValue({
-      reset: true,
-      deletedProgressCount: 1,
-      deletedArchiveCount: 1,
-    })
-    mocks.authUser.current = {
-      appMode: 'production',
-      features: { alangEnabled: true, personalStoryEnabled: true },
-    }
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: createMission(),
-      isLoading: false,
-      isError: false,
-      refetch: mocks.refetchMission,
-    })
-    mocks.useStoryArchives.mockReturnValue({
-      data: [],
-      refetch: mocks.refetchArchives,
-    })
-    mocks.useCompleteMission.mockReturnValue({
-      isPending: false,
-      mutateAsync: mocks.completeMission,
-    })
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.useAssignment.mockReturnValue({ data: assignment, isLoading: false, isError: false, refetch: mocks.refetch })
+    mocks.submit.mockResolvedValue({ canonicalScreen: 'delivery', assignmentId: 'assignment-1' })
+    mocks.canonicalRedirect.mockResolvedValue(false)
   })
 
-  it('shows the unarchived result card without completing or advancing automatically', () => {
-    const { container } = render(<AlangResultPage />)
-
-    expect(container.querySelector('.alang-result__card')).toBeInTheDocument()
-    expect(container.querySelector('.alang-result__cta')).toBeInTheDocument()
-    expect(mocks.completeMission).not.toHaveBeenCalled()
-    expect(mocks.callReportProgress).not.toHaveBeenCalled()
-    expect(mocks.redirectTo).not.toHaveBeenCalled()
-  })
-
-  it('restores the same unarchived result card after a page refresh breakpoint', () => {
-    const firstRender = render(<AlangResultPage />)
-    expect(firstRender.container.querySelector('.alang-result__card')).toBeInTheDocument()
-    firstRender.unmount()
-
-    const refreshedRender = render(<AlangResultPage />)
-    expect(refreshedRender.container.querySelector('.alang-result__card')).toBeInTheDocument()
-    expect(refreshedRender.container.querySelector('.alang-result__completed')).not.toBeInTheDocument()
-    expect(mocks.completeMission).not.toHaveBeenCalled()
-    expect(mocks.callReportProgress).not.toHaveBeenCalled()
-  })
-
-  it('completes only after the user explicitly collects the story', async () => {
-    const { container } = render(<AlangResultPage />)
-
-    fireEvent.click(container.querySelector('.alang-result__cta') as Element)
-
-    await waitFor(() => {
-      expect(mocks.completeMission).toHaveBeenCalledWith('meet-alang')
+  it('submits 1–2 structured answers plus an optional 100-char private reply', async () => {
+    render(<FlashFeedbackPage />)
+    fireEvent.click(screen.getByRole('button', { name: '有生命力' }))
+    fireEvent.click(screen.getByRole('button', { name: '会' }))
+    fireEvent.change(screen.getByRole('textbox', { name: '给角色的私密回信，最多100字' }), {
+      target: { value: '我注意到一块很旧的蓝色招牌。' },
     })
-    expect(mocks.completeMission).toHaveBeenCalledTimes(1)
-    expect(mocks.callReportProgress).not.toHaveBeenCalled()
-    expect(container.querySelector('.alang-result__completed')).toBeInTheDocument()
-  })
+    fireEvent.click(screen.getByText('保存，等下次交付'))
 
-  it('recovers the story entry directly from myProgress.archiveId after completion', async () => {
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: createMission({
-        status: 'completed',
-        stage: 'completed',
-        archiveId: 'archive-from-progress',
-      }),
-      isLoading: false,
-      isError: false,
-      refetch: mocks.refetchMission,
-    })
-
-    const { container } = render(<AlangResultPage />)
-
-    await waitFor(() => {
-      expect(container.querySelector('.alang-result__completed')).toBeInTheDocument()
-    })
-    expect(mocks.completeMission).not.toHaveBeenCalled()
-
-    const storyEntry = container.querySelector('.alang-result__completed-btn')
-    expect(storyEntry).toBeInTheDocument()
-    fireEvent.click(storyEntry as Element)
-
-    expect(mocks.navigateTo).toHaveBeenCalledWith({
-      url: '/pages/profile-linked/personal-story/index',
-    })
-    expect(mocks.refetchArchives).not.toHaveBeenCalled()
-  })
-
-  it('falls back to the archived Alang story while personal story rollout is disabled', async () => {
-    mocks.authUser.current = {
-      appMode: 'production',
-      features: { alangEnabled: true, personalStoryEnabled: false },
-    }
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: createMission({
-        status: 'completed',
-        stage: 'completed',
-        archiveId: 'archive-from-progress',
-      }),
-      isLoading: false,
-      isError: false,
-      refetch: mocks.refetchMission,
-    })
-
-    const { container } = render(<AlangResultPage />)
-    await waitFor(() => expect(container.querySelector('.alang-result__completed')).toBeInTheDocument())
-    fireEvent.click(container.querySelector('.alang-result__completed-btn') as Element)
-
-    expect(mocks.navigateTo).toHaveBeenCalledWith({
-      url: '/pages/alang/story-detail/index?archiveId=archive-from-progress',
-    })
-  })
-
-  it('does not show the retest entry outside single-test mode', async () => {
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: createMission({
-        status: 'completed',
-        stage: 'completed',
-        archiveId: 'archive-from-progress',
-      }),
-      isLoading: false,
-      isError: false,
-      refetch: mocks.refetchMission,
-    })
-
-    const { queryByText } = render(<AlangResultPage />)
-
-    await waitFor(() => {
-      expect(queryByText('故事已收录')).toBeInTheDocument()
-    })
-    expect(queryByText('重新测试阿浪')).not.toBeInTheDocument()
-  })
-
-  it('shows the retest entry only for an archived result in single-test mode', async () => {
-    mocks.authUser.current = {
-      appMode: 'test',
-      singleTestMode: true,
-      features: { alangEnabled: true },
-    }
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: createMission({
-        status: 'completed',
-        stage: 'completed',
-        archiveId: 'archive-from-progress',
-      }),
-      isLoading: false,
-      isError: false,
-      refetch: mocks.refetchMission,
-    })
-
-    const { findByText } = render(<AlangResultPage />)
-
-    expect(await findByText('重新测试阿浪')).toBeInTheDocument()
-  })
-
-  it('asks for confirmation and cancellation does not reset', async () => {
-    mocks.authUser.current = {
-      appMode: 'test',
-      singleTestMode: true,
-      features: { alangEnabled: true },
-    }
-    mocks.showModal.mockResolvedValue({ confirm: false, cancel: true })
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: createMission({
-        status: 'completed',
-        stage: 'completed',
-        archiveId: 'archive-from-progress',
-      }),
-      isLoading: false,
-      isError: false,
-      refetch: mocks.refetchMission,
-    })
-
-    const { findByText } = render(<AlangResultPage />)
-    fireEvent.click(await findByText('重新测试阿浪'))
-
-    await waitFor(() => {
-      expect(mocks.showModal).toHaveBeenCalledWith(expect.objectContaining({
-        content: '将清除当前账号本次阿浪测试的进度与测试故事，是否重新开始？',
-      }))
-    })
-    expect(mocks.resetMission).not.toHaveBeenCalled()
-    expect(mocks.reLaunch).not.toHaveBeenCalled()
-  })
-
-  it('relaunches the fresh point configuration after a successful reset', async () => {
-    mocks.authUser.current = {
-      appMode: 'test',
-      singleTestMode: true,
-      features: { alangEnabled: true },
-    }
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: createMission({
-        status: 'completed',
-        stage: 'completed',
-        archiveId: 'archive-from-progress',
-      }),
-      isLoading: false,
-      isError: false,
-      refetch: mocks.refetchMission,
-    })
-
-    const { findByText } = render(<AlangResultPage />)
-    fireEvent.click(await findByText('重新测试阿浪'))
-
-    await waitFor(() => {
-      expect(mocks.resetMission).toHaveBeenCalledWith('meet-alang')
-      expect(mocks.showToast).toHaveBeenCalledWith({
-        title: '已重置，可以重新测试',
-        icon: 'success',
-      })
-      expect(mocks.reLaunch).toHaveBeenCalledWith({
-        url: '/pages/alang/config/index?slug=meet-alang',
-      })
-    })
-  })
-
-  it('keeps the result page open when reset fails', async () => {
-    mocks.authUser.current = {
-      appMode: 'test',
-      singleTestMode: true,
-      features: { alangEnabled: true },
-    }
-    mocks.resetMission.mockRejectedValue(new Error('RESET_FAILED'))
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: createMission({
-        status: 'completed',
-        stage: 'completed',
-        archiveId: 'archive-from-progress',
-      }),
-      isLoading: false,
-      isError: false,
-      refetch: mocks.refetchMission,
-    })
-
-    const { findByText } = render(<AlangResultPage />)
-    fireEvent.click(await findByText('重新测试阿浪'))
-
-    await waitFor(() => {
-      expect(mocks.showToast).toHaveBeenCalledWith({
-        title: '重置没成功，请稍后再试',
-        icon: 'none',
-      })
-    })
-    expect(mocks.reLaunch).not.toHaveBeenCalled()
-  })
-
-  it('sends only one reset request when the retest entry is tapped repeatedly', async () => {
-    mocks.authUser.current = {
-      appMode: 'test',
-      singleTestMode: true,
-      features: { alangEnabled: true },
-    }
-    let resolveReset: ((value: unknown) => void) | undefined
-    mocks.resetMission.mockImplementation(() => new Promise((resolve) => {
-      resolveReset = resolve
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith({
+      assignmentId: 'assignment-1',
+      answers: [
+        { promptId: 'prompt-1', optionId: 'alive' },
+        { promptId: 'prompt-2', optionId: 'yes' },
+      ],
+      privateReply: '我注意到一块很旧的蓝色招牌。',
     }))
-    mocks.useAlangMissionDetail.mockReturnValue({
-      data: createMission({
-        status: 'completed',
-        stage: 'completed',
-        archiveId: 'archive-from-progress',
-      }),
-      isLoading: false,
-      isError: false,
-      refetch: mocks.refetchMission,
-    })
+    expect(await screen.findByText('这件事，先替你收好了')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  })
 
-    const { findByText } = render(<AlangResultPage />)
-    const button = await findByText('重新测试阿浪')
-    fireEvent.click(button)
-    fireEvent.click(button)
+  it('explains the private-reply retention and profiling boundary', () => {
+    render(<FlashFeedbackPage />)
+    expect(screen.getByText(/不用于用户画像、数据分析、个人故事或模型训练/)).toBeInTheDocument()
+    expect(screen.getByText(/交付后 30 天删除/)).toBeInTheDocument()
+  })
 
-    await waitFor(() => {
-      expect(mocks.resetMission).toHaveBeenCalledTimes(1)
-    })
-    resolveReset?.({ reset: true, deletedProgressCount: 1, deletedArchiveCount: 1 })
-    await waitFor(() => {
-      expect(mocks.reLaunch).toHaveBeenCalledTimes(1)
-    })
+  it('does not fetch a disabled deep link', () => {
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
+    render(<FlashFeedbackPage />)
+    expect(mocks.useAssignment).toHaveBeenCalledWith('assignment-1', false)
+    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
   })
 })

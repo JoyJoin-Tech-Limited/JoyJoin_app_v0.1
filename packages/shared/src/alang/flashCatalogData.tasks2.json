@@ -1,0 +1,467 @@
+[
+  {
+    "code": "T11",
+    "category": "轻社交勇气",
+    "title": "去一条不熟的街",
+    "brief": "我总从熟路走。你替我去一条不太熟的街吧。到那里看看就行，不用把自己变成探险家。",
+    "instructions": "到达 50 米内；是否继续步行由用户决定。",
+    "dialogueIntro": "我总从熟路走。你替我去一条不太熟的街吧。到那里看看就行，不用把自己变成探险家。",
+    "feedbackPrompts": [
+      {
+        "id": "arrival_feeling",
+        "prompt": "到达以后，你更接近哪种感受？",
+        "options": [
+          {
+            "id": "option_1",
+            "label": "比想象轻松"
+          },
+          {
+            "id": "option_2",
+            "label": "有一点紧张"
+          },
+          {
+            "id": "option_3",
+            "label": "不太适合"
+          },
+          {
+            "id": "option_4",
+            "label": "想再来"
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "轻社交勇气",
+      "城市漫步",
+      "轻量"
+    ],
+    "durationDays": 7,
+    "baseWeight": 100,
+    "safetyLevel": "L1",
+    "safetyNotes": "L1。仅选连续人行空间；不要求偏航、穿小巷或夜间进入低人流区域。",
+    "npcSlugs": [
+      "alang",
+      "lizi"
+    ],
+    "requestCopy": "我总从熟路走。你替我去一条不太熟的街吧。到那里看看就行，不用把自己变成探险家。"
+  },
+  {
+    "code": "T12",
+    "category": "轻社交勇气",
+    "title": "热闹边缘三分钟",
+    "brief": "不用站到最中间。去热闹的边上待一小会儿，看看那份热闹会不会刚好够你用。",
+    "instructions": "到达 50 米内；可选在不挡路处停留最多三分钟。",
+    "dialogueIntro": "不用站到最中间。去热闹的边上待一小会儿，看看那份热闹会不会刚好够你用。",
+    "feedbackPrompts": [
+      {
+        "id": "arrival_feeling",
+        "prompt": "到达以后，你更接近哪种感受？",
+        "options": [
+          {
+            "id": "option_1",
+            "label": "能量刚好"
+          },
+          {
+            "id": "option_2",
+            "label": "有点太满"
+          },
+          {
+            "id": "option_3",
+            "label": "比预想舒服"
+          },
+          {
+            "id": "option_4",
+            "label": "到达就离开了"
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "轻社交勇气",
+      "城市漫步",
+      "轻量"
+    ],
+    "durationDays": 7,
+    "baseWeight": 100,
+    "safetyLevel": "L1",
+    "safetyNotes": "L1。不得在人群通道停留；拥挤、临时活动或秩序异常时下架。",
+    "npcSlugs": [
+      "lizi",
+      "momo",
+      "atuan"
+    ],
+    "requestCopy": "不用站到最中间。去热闹的边上待一小会儿，看看那份热闹会不会刚好够你用。"
+  },
+  {
+    "code": "T13",
+    "category": "轻社交勇气",
+    "title": "一个人的位子",
+    "brief": "一个人坐下有时比走进去更需要一点勇气。你替我试试。坐不坐都行，到了就算。",
+    "instructions": "到达 50 米内；可选独自坐三分钟，不与陌生人互动。",
+    "dialogueIntro": "一个人坐下有时比走进去更需要一点勇气。你替我试试。坐不坐都行，到了就算。",
+    "feedbackPrompts": [
+      {
+        "id": "arrival_feeling",
+        "prompt": "到达以后，你更接近哪种感受？",
+        "options": [
+          {
+            "id": "option_1",
+            "label": "很自然"
+          },
+          {
+            "id": "option_2",
+            "label": "开始有点不自在"
+          },
+          {
+            "id": "option_3",
+            "label": "不想坐"
+          },
+          {
+            "id": "option_4",
+            "label": "下次可以更久"
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "轻社交勇气",
+      "城市漫步",
+      "轻量"
+    ],
+    "durationDays": 7,
+    "baseWeight": 100,
+    "safetyLevel": "L1",
+    "safetyNotes": "L1。不得占用他人物品旁或优先座位；用户感到不适可立即离开。",
+    "npcSlugs": [
+      "lizi",
+      "momo",
+      "atuan"
+    ],
+    "requestCopy": "一个人坐下有时比走进去更需要一点勇气。你替我试试。坐不坐都行，到了就算。"
+  },
+  {
+    "code": "T14",
+    "category": "轻社交勇气",
+    "title": "推开之前先看看",
+    "brief": "我对那扇门后面有点好奇。你先替我走到门口。要不要进去，是你的事。",
+    "instructions": "到达 50 米内；可选进入免费公开区域，不需要与工作人员交流。",
+    "dialogueIntro": "我对那扇门后面有点好奇。你先替我走到门口。要不要进去，是你的事。",
+    "feedbackPrompts": [
+      {
+        "id": "arrival_feeling",
+        "prompt": "到达以后，你更接近哪种感受？",
+        "options": [
+          {
+            "id": "option_1",
+            "label": "进去了"
+          },
+          {
+            "id": "option_2",
+            "label": "只在门口看了"
+          },
+          {
+            "id": "option_3",
+            "label": "临时不想靠近"
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "轻社交勇气",
+      "城市漫步",
+      "轻量"
+    ],
+    "durationDays": 7,
+    "baseWeight": 100,
+    "safetyLevel": "L1",
+    "safetyNotes": "L1。不得要求购票、登记私人资料或绕过入场规则；场所关闭时不发放。",
+    "npcSlugs": [
+      "alang",
+      "lizi",
+      "shiqi"
+    ],
+    "requestCopy": "我对那扇门后面有点好奇。你先替我走到门口。要不要进去，是你的事。"
+  },
+  {
+    "code": "T15",
+    "category": "轻社交勇气",
+    "title": "在人群里留自己的节奏",
+    "brief": "大家走得快的时候，也可以不跟着赶。你去那里，按自己的速度待一会儿就好。",
+    "instructions": "到达 50 米内；可选在步行区按舒适节奏停留或缓慢行走。",
+    "dialogueIntro": "大家走得快的时候，也可以不跟着赶。你去那里，按自己的速度待一会儿就好。",
+    "feedbackPrompts": [
+      {
+        "id": "arrival_feeling",
+        "prompt": "到达以后，你更接近哪种感受？",
+        "options": [
+          {
+            "id": "option_1",
+            "label": "没那么赶了"
+          },
+          {
+            "id": "option_2",
+            "label": "还是想离开"
+          },
+          {
+            "id": "option_3",
+            "label": "想再待一会儿"
+          },
+          {
+            "id": "option_4",
+            "label": "只完成到达"
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "轻社交勇气",
+      "城市漫步",
+      "轻量"
+    ],
+    "durationDays": 7,
+    "baseWeight": 100,
+    "safetyLevel": "L1",
+    "safetyNotes": "L1。不得边走边操作手机；所有选择和反馈须停在安全位置完成。",
+    "npcSlugs": [
+      "lizi",
+      "momo",
+      "atuan"
+    ],
+    "requestCopy": "大家走得快的时候，也可以不跟着赶。你去那里，按自己的速度待一会儿就好。"
+  },
+  {
+    "code": "T16",
+    "category": "独处放松",
+    "title": "把一阵风听完",
+    "brief": "我总在风刚来的时候就走了。你替我多留一小会儿，把这一阵听完。觉得冷就别逞强。",
+    "instructions": "到达 50 米内；可选安全停留五分钟。",
+    "dialogueIntro": "我总在风刚来的时候就走了。你替我多留一小会儿，把这一阵听完。觉得冷就别逞强。",
+    "feedbackPrompts": [
+      {
+        "id": "arrival_feeling",
+        "prompt": "到达以后，你更接近哪种感受？",
+        "options": [
+          {
+            "id": "option_1",
+            "label": "风很明显"
+          },
+          {
+            "id": "option_2",
+            "label": "风很轻"
+          },
+          {
+            "id": "option_3",
+            "label": "没什么风"
+          },
+          {
+            "id": "option_4",
+            "label": "没有停留"
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "独处放松",
+      "安静",
+      "公园"
+    ],
+    "durationDays": 7,
+    "baseWeight": 100,
+    "safetyLevel": "L2",
+    "safetyNotes": "L2。只在护栏内；强风、降雨、雷电、高温或湿滑时下架。",
+    "npcSlugs": [
+      "alang",
+      "momo",
+      "atuan"
+    ],
+    "requestCopy": "我总在风刚来的时候就走了。你替我多留一小会儿，把这一阵听完。觉得冷就别逞强。"
+  },
+  {
+    "code": "T17",
+    "category": "独处放松",
+    "title": "找一块舒服的光",
+    "brief": "我想找一块不会催人的光。可能在树影里，也可能落在墙上。你替我看看它今天是什么样。",
+    "instructions": "到达 50 米内；可选观察非人物对象上的自然光影。",
+    "dialogueIntro": "我想找一块不会催人的光。可能在树影里，也可能落在墙上。你替我看看它今天是什么样。",
+    "feedbackPrompts": [
+      {
+        "id": "arrival_feeling",
+        "prompt": "到达以后，你更接近哪种感受？",
+        "options": [
+          {
+            "id": "option_1",
+            "label": "树影"
+          },
+          {
+            "id": "option_2",
+            "label": "建筑影子"
+          },
+          {
+            "id": "option_3",
+            "label": "一整片亮光"
+          },
+          {
+            "id": "option_4",
+            "label": "没找到"
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "独处放松",
+      "安静",
+      "公园"
+    ],
+    "durationDays": 7,
+    "baseWeight": 100,
+    "safetyLevel": "L1",
+    "safetyNotes": "L1。高温和强紫外线时仅投放有遮阴点位；不要求直视太阳。",
+    "npcSlugs": [
+      "lizi",
+      "shiqi",
+      "atuan"
+    ],
+    "requestCopy": "我想找一块不会催人的光。可能在树影里，也可能落在墙上。你替我看看它今天是什么样。"
+  },
+  {
+    "code": "T18",
+    "category": "独处放松",
+    "title": "五分钟低音量",
+    "brief": "我想借一个低音量的地方。你到那里以后，把手机安静一会儿也行。五分钟够了。",
+    "instructions": "到达 50 米内；可选将设备调为静音并停留五分钟。",
+    "dialogueIntro": "我想借一个低音量的地方。你到那里以后，把手机安静一会儿也行。五分钟够了。",
+    "feedbackPrompts": [
+      {
+        "id": "arrival_feeling",
+        "prompt": "到达以后，你更接近哪种感受？",
+        "options": [
+          {
+            "id": "option_1",
+            "label": "安静得刚好"
+          },
+          {
+            "id": "option_2",
+            "label": "环境声舒服"
+          },
+          {
+            "id": "option_3",
+            "label": "还是有点吵"
+          },
+          {
+            "id": "option_4",
+            "label": "没有停留"
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "独处放松",
+      "安静",
+      "公园"
+    ],
+    "durationDays": 7,
+    "baseWeight": 100,
+    "safetyLevel": "L1",
+    "safetyNotes": "L1。无健康效果承诺；不引导佩戴降噪设备穿行道路。",
+    "npcSlugs": [
+      "alang",
+      "momo",
+      "atuan"
+    ],
+    "requestCopy": "我想借一个低音量的地方。你到那里以后，把手机安静一会儿也行。五分钟够了。"
+  },
+  {
+    "code": "T19",
+    "category": "独处放松",
+    "title": "只看一个小东西",
+    "brief": "别一次看完整个地方。只挑一个小东西，看清楚它就回来告诉我。",
+    "instructions": "到达 50 米内；可选专注观察一个非人物公开细节。",
+    "dialogueIntro": "别一次看完整个地方。只挑一个小东西，看清楚它就回来告诉我。",
+    "feedbackPrompts": [
+      {
+        "id": "arrival_feeling",
+        "prompt": "到达以后，你更接近哪种感受？",
+        "options": [
+          {
+            "id": "option_1",
+            "label": "颜色"
+          },
+          {
+            "id": "option_2",
+            "label": "形状"
+          },
+          {
+            "id": "option_3",
+            "label": "材质"
+          },
+          {
+            "id": "option_4",
+            "label": "文字"
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "独处放松",
+      "安静",
+      "公园"
+    ],
+    "durationDays": 7,
+    "baseWeight": 100,
+    "safetyLevel": "L1",
+    "safetyNotes": "L1。不得触摸艺术品、采摘植物或记录私人空间。",
+    "npcSlugs": [
+      "alang",
+      "momo",
+      "shiqi"
+    ],
+    "requestCopy": "别一次看完整个地方。只挑一个小东西，看清楚它就回来告诉我。"
+  },
+  {
+    "code": "T20",
+    "category": "独处放松",
+    "title": "什么都不用赶",
+    "brief": "这个委托没什么大场面。去到那里，给自己留几分钟。什么都不完成，也算完成。",
+    "instructions": "到达 50 米内；可选休息五分钟。",
+    "dialogueIntro": "这个委托没什么大场面。去到那里，给自己留几分钟。什么都不完成，也算完成。",
+    "feedbackPrompts": [
+      {
+        "id": "arrival_feeling",
+        "prompt": "到达以后，你更接近哪种感受？",
+        "options": [
+          {
+            "id": "option_1",
+            "label": "坐了一会儿"
+          },
+          {
+            "id": "option_2",
+            "label": "站着看了看"
+          },
+          {
+            "id": "option_3",
+            "label": "到达就走"
+          },
+          {
+            "id": "option_4",
+            "label": "想以后再来"
+          }
+        ]
+      }
+    ],
+    "tags": [
+      "独处放松",
+      "安静",
+      "公园"
+    ],
+    "durationDays": 7,
+    "baseWeight": 100,
+    "safetyLevel": "L1",
+    "safetyNotes": "L1。不得占用优先座位；不作改善焦虑、睡眠或情绪的医疗化承诺。",
+    "npcSlugs": [
+      "lizi",
+      "momo",
+      "atuan"
+    ],
+    "requestCopy": "这个委托没什么大场面。去到那里，给自己留几分钟。什么都不完成，也算完成。"
+  }
+]

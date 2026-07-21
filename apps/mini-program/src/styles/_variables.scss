@@ -33,6 +33,8 @@ $color-text-primary:   #2D3142;
 $color-text-primary-warm: #2D2B28; // warm near-black for cream/warm backgrounds
 $color-text-secondary: #6B7280;
 $color-text-tertiary:  #8E949E;
+$color-text-secondary-on-light: #59616C; // readable secondary copy on white/warm/tinted surfaces
+$color-text-tertiary-on-light:  #626A75; // readable small print on white/warm/tinted surfaces
 $color-text-link:      #A86BFF;
 $color-text-white:     #FFFFFF;
 $color-text-muted:     #9CA3AF;
@@ -41,6 +43,7 @@ $color-border:         #E2E5ED;
 $color-divider:        #F3F4F6;
 
 $color-success:        #2ECC71;
+$color-success-text-on-light: #207A46; // accessible success text on white/warm surfaces
 $color-warning:        #F0A030;
 $color-error:          #EF4444;
 $color-info:           #2563EB;

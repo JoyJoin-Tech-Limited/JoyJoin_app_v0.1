@@ -9,6 +9,17 @@ import type {
   AlangCoordinate,
 } from "../alang/missionTypes.js";
 import { ALANG_TEST_COORDINATE_SYSTEM } from "../alang/testPointValidation.js";
+import type {
+  FlashAcceptRequest,
+  FlashAssignmentResponse,
+  FlashCoordinateRequest,
+  FlashEncounterResponse,
+  FlashFeedbackRequest,
+  FlashHomeResponse,
+  FlashLocateResponse,
+  FlashPreferenceDto,
+  FlashPreferenceUpdateRequest,
+} from "../alang/flashTypes.js";
 
 export interface AlangStartMissionRequest {
   targetLocation: AlangCoordinate;
@@ -185,5 +196,147 @@ export function alangDebugMockArrival(
     path: `/api/alang/debug/missions/${slug}/mock-gps`,
     method: "POST",
     data: { mode: "arrive" },
+  });
+}
+
+export function getFlashHome(
+  api: ApiTransport,
+  coordinate: FlashCoordinateRequest,
+): Promise<FlashHomeResponse> {
+  return api<FlashHomeResponse>({
+    path: "/api/alang/flash/home",
+    method: "POST",
+    data: coordinate,
+  });
+}
+
+export function locateFlashNpc(
+  api: ApiTransport,
+  appearanceId: string,
+  coordinate: FlashCoordinateRequest,
+): Promise<FlashLocateResponse> {
+  return api<FlashLocateResponse>({
+    path: `/api/alang/flash/appearances/${appearanceId}/locate`,
+    method: "POST",
+    data: coordinate,
+  });
+}
+
+export function getFlashEncounter(
+  api: ApiTransport,
+  encounterId: string,
+): Promise<FlashEncounterResponse> {
+  return api<FlashEncounterResponse>({
+    path: `/api/alang/flash/encounters/${encounterId}`,
+    method: "GET",
+  });
+}
+
+export function answerFlashEncounter(
+  api: ApiTransport,
+  encounterId: string,
+  data: { questionId: string; optionId: string },
+): Promise<FlashEncounterResponse> {
+  return api<FlashEncounterResponse>({
+    path: `/api/alang/flash/encounters/${encounterId}/answer`,
+    method: "POST",
+    data,
+  });
+}
+
+export function rerollFlashTask(
+  api: ApiTransport,
+  encounterId: string,
+): Promise<FlashEncounterResponse> {
+  return api<FlashEncounterResponse>({
+    path: `/api/alang/flash/encounters/${encounterId}/reroll`,
+    method: "POST",
+  });
+}
+
+export function respondToFlashTask(
+  api: ApiTransport,
+  encounterId: string,
+  data: FlashAcceptRequest,
+): Promise<FlashAssignmentResponse | FlashEncounterResponse> {
+  return api<FlashAssignmentResponse | FlashEncounterResponse>({
+    path: `/api/alang/flash/encounters/${encounterId}/accept`,
+    method: "POST",
+    data,
+  });
+}
+
+export function deliverFlashTask(
+  api: ApiTransport,
+  encounterId: string,
+  assignmentId: string,
+): Promise<FlashEncounterResponse> {
+  return api<FlashEncounterResponse>({
+    path: `/api/alang/flash/encounters/${encounterId}/deliver`,
+    method: "POST",
+    data: { assignmentId },
+  });
+}
+
+export function getFlashAssignment(
+  api: ApiTransport,
+  assignmentId: string,
+): Promise<FlashAssignmentResponse> {
+  return api<FlashAssignmentResponse>({
+    path: `/api/alang/flash/assignments/${assignmentId}`,
+    method: "GET",
+  });
+}
+
+export function arriveAtFlashTask(
+  api: ApiTransport,
+  assignmentId: string,
+  coordinate: FlashCoordinateRequest,
+): Promise<FlashAssignmentResponse & { distanceMeters: number; arrived: boolean }> {
+  return api<FlashAssignmentResponse & { distanceMeters: number; arrived: boolean }>({
+    path: `/api/alang/flash/assignments/${assignmentId}/arrive`,
+    method: "POST",
+    data: coordinate,
+  });
+}
+
+export function submitFlashFeedback(
+  api: ApiTransport,
+  assignmentId: string,
+  data: FlashFeedbackRequest,
+): Promise<FlashAssignmentResponse> {
+  return api<FlashAssignmentResponse>({
+    path: `/api/alang/flash/assignments/${assignmentId}/feedback`,
+    method: "POST",
+    data,
+  });
+}
+
+export function abandonFlashTask(api: ApiTransport, assignmentId: string): Promise<{ ok: true }> {
+  return api<{ ok: true }>({
+    path: `/api/alang/flash/assignments/${assignmentId}/abandon`,
+    method: "POST",
+  });
+}
+
+export function getFlashPreferences(api: ApiTransport): Promise<FlashPreferenceDto> {
+  return api<FlashPreferenceDto>({ path: "/api/alang/flash/preferences", method: "GET" });
+}
+
+export function updateFlashPreferences(
+  api: ApiTransport,
+  data: FlashPreferenceUpdateRequest,
+): Promise<FlashPreferenceDto> {
+  return api<FlashPreferenceDto>({
+    path: "/api/alang/flash/preferences",
+    method: "PUT",
+    data,
+  });
+}
+
+export function deleteFlashPreferenceTag(api: ApiTransport, tagId: string): Promise<FlashPreferenceDto> {
+  return api<FlashPreferenceDto>({
+    path: `/api/alang/flash/preferences/tags/${tagId}`,
+    method: "DELETE",
   });
 }

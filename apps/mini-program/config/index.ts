@@ -300,6 +300,20 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/lovart/alang-event-card-placeholder.webp',
           to: 'dist/assets/lovart/alang-event-card-placeholder.webp',
         },
+        {
+          from: 'src/assets/lovart/alang-found-scene-placeholder.webp',
+          to: 'dist/assets/lovart/alang-found-scene-placeholder.webp',
+        },
+        {
+          from: 'src/assets/lovart/alang-result-placeholder.webp',
+          to: 'dist/assets/lovart/alang-result-placeholder.webp',
+        },
+        // Formal Flash NPC portraits live with the Alang subpackage. Keep only
+        // the five compressed WebP deliverables in this directory.
+        {
+          from: 'src/pages/alang/assets/npcs',
+          to: 'dist/pages/alang/assets/npcs',
+        },
         // Matching-status puzzle prelude pieces — bundled locally (~130KB total)
         // so the live-reveal prelude paints instantly even if CDN is slow.
         // Source PNG masters and the contact sheet live in

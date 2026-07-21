@@ -355,60 +355,70 @@ function requireGeoProxyAuth(req: Request, res: Response, next: NextFunction): v
   next();
 }
 
+export async function reverseGeocodeCoordinate(
+  coordinate: GeoCoordinate,
+  options: { cache?: boolean } = {},
+): Promise<ReverseGeocodeResponse> {
+  const useCache = options.cache !== false;
+  const cacheKey = useCache ? coordinateCacheKey(coordinate) : null;
+  if (cacheKey) {
+    const cached = reverseCache.get(cacheKey);
+    if (cached) return cached;
+  }
+
+  const apiKey = process.env.TENCENT_MAP_KEY;
+  if (!apiKey) return buildLocalReverseFallback(coordinate, "MAP_NOT_CONFIGURED");
+
+  const url = buildTencentUrl("/ws/geocoder/v1/", apiKey, {
+    location: `${coordinate.latitude.toFixed(6)},${coordinate.longitude.toFixed(6)}`,
+    get_poi: "1",
+  });
+
+  try {
+    const payload = await fetchTencentJson(url);
+    const status = readTencentStatus(payload);
+    if (status !== 0 || !isRecord(payload) || !isRecord(payload.result)) {
+      return buildLocalReverseFallback(coordinate, "MAP_UPSTREAM_ERROR");
+    }
+
+    const result = payload.result;
+    const addressComponent = isRecord(result.address_component) ? result.address_component : {};
+    const formattedAddresses = isRecord(result.formatted_addresses) ? result.formatted_addresses : {};
+    const adInfo = isRecord(result.ad_info) ? result.ad_info : {};
+    const poi = Array.isArray(result.pois)
+      ? result.pois.map(mapTencentPlace).find((item): item is GeoPlace => item !== null)
+      : undefined;
+    const address = toNonEmptyString(result.address);
+    const response: ReverseGeocodeResponse = {
+      success: true,
+      city: normalizeCity(addressComponent.city ?? addressComponent.province),
+      district: toNonEmptyString(addressComponent.district),
+      name: toNonEmptyString(formattedAddresses.recommend) ?? poi?.name ?? address,
+      address,
+      adcode: toNonEmptyString(adInfo.adcode ?? addressComponent.adcode),
+      poi,
+      source: "tencent",
+    };
+    if (cacheKey) reverseCache.set(cacheKey, response);
+    return response;
+  } catch (error) {
+    const code = error instanceof TencentMapRequestError
+      ? error.code
+      : "MAP_UPSTREAM_ERROR";
+    return buildLocalReverseFallback(coordinate, code);
+  }
+}
+
 export function registerGeoRoutes(app: Express): void {
   app.post("/api/geo/reverse-geocode", publicGeoEndpointLimiter, async (req, res) => {
     const parsed = reverseGeocodeSchema.safeParse(req.body);
     if (!parsed.success) return sendMapFailure(res, "MAP_INVALID_REQUEST");
 
-    const coordinate = parsed.data;
-    const cacheKey = coordinateCacheKey(coordinate);
-    const cached = reverseCache.get(cacheKey);
-    if (cached) return res.json(cached);
-
-    const apiKey = process.env.TENCENT_MAP_KEY;
-    if (!apiKey) return res.json(buildLocalReverseFallback(coordinate, "MAP_NOT_CONFIGURED"));
-
-    const url = buildTencentUrl("/ws/geocoder/v1/", apiKey, {
-      location: `${coordinate.latitude.toFixed(6)},${coordinate.longitude.toFixed(6)}`,
-      get_poi: "1",
-    });
-
-    try {
-      const payload = await fetchTencentJson(url);
-      const status = readTencentStatus(payload);
-      if (status !== 0 || !isRecord(payload) || !isRecord(payload.result)) {
-        logUpstreamFailure(req, "reverse-geocode", "MAP_UPSTREAM_ERROR", status);
-        return res.json(buildLocalReverseFallback(coordinate, "MAP_UPSTREAM_ERROR"));
-      }
-
-      const result = payload.result;
-      const addressComponent = isRecord(result.address_component) ? result.address_component : {};
-      const formattedAddresses = isRecord(result.formatted_addresses) ? result.formatted_addresses : {};
-      const adInfo = isRecord(result.ad_info) ? result.ad_info : {};
-      const poi = Array.isArray(result.pois)
-        ? result.pois.map(mapTencentPlace).find((item): item is GeoPlace => item !== null)
-        : undefined;
-
-      const address = toNonEmptyString(result.address);
-      const response: ReverseGeocodeResponse = {
-        success: true,
-        city: normalizeCity(addressComponent.city ?? addressComponent.province),
-        district: toNonEmptyString(addressComponent.district),
-        name: toNonEmptyString(formattedAddresses.recommend) ?? poi?.name ?? address,
-        address,
-        adcode: toNonEmptyString(adInfo.adcode ?? addressComponent.adcode),
-        poi,
-        source: "tencent",
-      };
-      reverseCache.set(cacheKey, response);
-      return res.json(response);
-    } catch (error) {
-      const code = error instanceof TencentMapRequestError
-        ? error.code
-        : "MAP_UPSTREAM_ERROR";
-      logUpstreamFailure(req, "reverse-geocode", code);
-      return res.json(buildLocalReverseFallback(coordinate, code));
+    const response = await reverseGeocodeCoordinate(parsed.data);
+    if (response.source !== "tencent" && response.code) {
+      logUpstreamFailure(req, "reverse-geocode", response.code);
     }
+    return res.json(response);
   });
 
   app.post("/api/geo/ip-locate", publicGeoEndpointLimiter, async (req, res) => {

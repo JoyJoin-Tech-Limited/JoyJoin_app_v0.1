@@ -5,7 +5,6 @@ import {
   getAlangMissionDetail,
   startAlangMission,
   reportAlangProgress,
-  reportAlangGps,
   submitAlangChoice,
   recoverAlangMission,
   completeAlangMission,
@@ -18,7 +17,7 @@ import {
   alangDebugMockArrival,
 } from '@shared/api'
 import type { AlangStartMissionRequest } from '@shared/api'
-import type { AlangGpsRequest, AlangChoiceRequest } from '@shared/alang/missionTypes'
+import type { AlangChoiceRequest } from '@shared/alang/missionTypes'
 
 export async function fetchAlangMissions() {
   return getAlangMissions(apiRequest)
@@ -38,10 +37,6 @@ export async function callStartMission(input: StartAlangMissionInput) {
 
 export async function callReportProgress(slug: string, nodeId: string) {
   return reportAlangProgress(apiRequest, slug, { nodeId })
-}
-
-export async function callReportGps(slug: string, data: AlangGpsRequest) {
-  return reportAlangGps(apiRequest, slug, data)
 }
 
 export async function callSubmitChoice(slug: string, data: AlangChoiceRequest) {
@@ -93,30 +88,6 @@ export function getCurrentPosition(): Promise<Taro.getLocation.SuccessCallbackRe
       fail: reject,
     })
   })
-}
-
-export function startLocationChange(
-  callback: (res: Taro.onLocationChange.CallbackResult) => void,
-  onError?: (error: unknown) => void
-): () => void {
-  let disposed = false
-  Taro.startLocationUpdate({
-    success: () => {
-      if (disposed) {
-        Taro.stopLocationUpdate()
-        return
-      }
-      Taro.onLocationChange(callback)
-    },
-    fail: (error) => {
-      onError?.(error)
-    },
-  })
-  return () => {
-    disposed = true
-    Taro.offLocationChange(callback)
-    Taro.stopLocationUpdate()
-  }
 }
 
 export function haversine(

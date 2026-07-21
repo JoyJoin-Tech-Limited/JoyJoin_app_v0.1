@@ -1,6 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { registerAdminRoutes } from "./routes/domains/admin";
+import { registerAdminAlangRoutes } from "./routes/domains/adminAlang";
 import { registerAdminBillingRoutes } from "./routes/domains/adminBilling";
 import { registerAdminEventManagementRoutes } from "./routes/domains/adminEventManagement";
 import { registerAdminEventPoolRoutes } from "./routes/domains/adminEventPools";
@@ -48,6 +49,7 @@ import { registerSingleTestRoutes } from "./routes/domains/singleTest";
 import { registerMatchingTestRoutes } from "./routes/domains/matchingTest";
 import { registerMonitoringWebhookRoutes } from "./routes/domains/monitoringWebhooks";
 import { registerAlangRoutes } from "./routes/domains/alang";
+import { registerAlangFlashRoutes } from "./routes/domains/alangFlash";
 import { registerEquipmentRoutes } from "./routes/domains/equipment";
 import { registerPersonalStoryRoutes } from "./routes/domains/personalStory";
 import { registerHealthRoutes } from "./healthRoutes";
@@ -167,6 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerDemoRoutes(app);
   registerDevToolRoutes(app);
   registerAdminRoutes(app);
+  registerAdminAlangRoutes(app);
   registerAdminBillingRoutes(app);
   registerAdminUserRoutes(app);
   registerAdminOperationsRoutes(app);
@@ -186,6 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerSingleTestRoutes(app);
   registerMatchingTestRoutes(app);
   registerAlangRoutes(app);
+  registerAlangFlashRoutes(app);
   registerEquipmentRoutes(app);
   registerPersonalStoryRoutes(app);
 

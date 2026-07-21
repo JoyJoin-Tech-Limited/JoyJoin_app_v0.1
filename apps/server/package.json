@@ -20,6 +20,8 @@
     "user:bypass": "node --env-file=../../.env --import tsx/esm src/cli/bypassLogin.ts",
     "seed:test-data": "node --env-file=../../.env --import tsx/esm src/scripts/seed-test-data.ts",
     "seed:mock-data": "node --env-file=../../.env --import tsx/esm src/scripts/generate-mock-data.ts",
+    "seed:flash": "node --env-file=../../.env --import tsx/esm src/scripts/seed-flash-catalog.ts",
+    "check:flash-readiness": "node --env-file=../../.env --import tsx/esm src/scripts/check-flash-readiness.ts",
     "benchmark:matching-stress": "tsx src/benchmarks/matchingStressSimulation.cli.ts"
   },
   "dependencies": {
