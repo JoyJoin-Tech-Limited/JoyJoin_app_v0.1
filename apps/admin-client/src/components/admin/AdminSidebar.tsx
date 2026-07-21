@@ -24,6 +24,7 @@ import {
   Sparkles,
   ChevronDown,
   ClipboardCheck,
+  Zap,
 } from "lucide-react";
 import {
   Sidebar,
