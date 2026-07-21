@@ -158,7 +158,7 @@ export default function AdminFlashPage() {
             locations={locations}
           />
         </TabsContent>
-        <TabsContent value="npcs" className="mt-0"><FlashNpcPanel canWrite={canWrite} /></TabsContent>
+        <TabsContent value="npcs" className="mt-0"><FlashNpcPanel canWrite={canWrite} canSeed={user?.adminRole === "super_admin"} /></TabsContent>
         <TabsContent value="encounter-locations" className="mt-0">
           <FlashLocationsPanel canWrite={canWrite} kind="encounter" npcs={npcs} />
         </TabsContent>
