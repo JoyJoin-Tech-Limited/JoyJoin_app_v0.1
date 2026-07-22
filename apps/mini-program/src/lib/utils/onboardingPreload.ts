@@ -6,7 +6,7 @@ import { PERSONALITY_EMOJI_ASSETS } from './personalityEmojiAssets'
 import { CEREMONY_HEROES } from '../ceremonyHeroes'
 import { MILESTONE_BADGES } from '../milestoneBadges'
 import { getXiaoyueExpressionAsset } from '../mascot/xiaoyueExpressions'
-import { cdnAsset, localAsset } from './cdnAssets'
+import { cdnAsset, CDN_BASE_URL, localAsset } from './cdnAssets'
 import { logInfo } from './logger'
 import { preloadImagesWithDiagnostics } from './imagePreload'
 import { cacheAssets, clearAssetCacheOnVersionChange } from './persistentAssetCache'
@@ -119,6 +119,10 @@ function schedulePreload(assets: string[], context: string, delayMs: number, con
   activeTimers.push(timer)
 }
 
+function isCdnUrl(url: string): boolean {
+  return typeof url === 'string' && CDN_BASE_URL.length > 0 && url.startsWith(CDN_BASE_URL)
+}
+
 async function shouldSkipPreload(): Promise<{ skip: boolean; reason?: string }> {
   try {
     const { networkType } = await Taro.getNetworkType()
@@ -169,28 +173,39 @@ export async function preloadOnboardingAssets(): Promise<void> {
   const heavyCheck = shouldSkipHeavyTier()
   const heavy = heavyCheck.skip ? [] : getHeavyAssets()
 
+  // Only CDN URLs can be primed with getImageInfo; bundled local assets
+  // (intent icons, mascot sprites) fail with "image not found" and should rely
+  // on normal <Image> loading.
+  const criticalCdn = critical.filter(isCdnUrl)
+  const testPhaseCdn = testPhase.filter(isCdnUrl)
+  const heavyCdn = heavy.filter(isCdnUrl)
+
   logInfo('[preloadOnboardingAssets] Starting staggered preload', {
-    critical: critical.length,
-    testPhase: testPhase.length,
-    heavy: heavy.length,
+    critical: criticalCdn.length,
+    testPhase: testPhaseCdn.length,
+    heavy: heavyCdn.length,
     skipHeavyReason: heavyCheck.reason,
   })
 
   // Tier 1: immediate — small, high-impact intro assets.
-  schedulePreload(critical, 'onboarding:critical', 0)
+  schedulePreload(criticalCdn, 'onboarding:critical', 0)
 
   // Tier 2: defer slightly so the critical bundle goes first.
-  schedulePreload(testPhase, 'onboarding:test-phase', 400)
+  schedulePreload(testPhaseCdn, 'onboarding:test-phase', 400)
 
   // Tier 3: heavy sprite sheets — lowest priority, concurrency-limited.
-  if (heavy.length > 0) {
-    schedulePreload(heavy, 'onboarding:heavy', 1200, 2)
+  if (heavyCdn.length > 0) {
+    schedulePreload(heavyCdn, 'onboarding:heavy', 1200, 2)
   }
 
   // Tier 4: persist critical + test phase assets to local storage for zero-network
   // return visits. Runs after warm-preloads have started, deferred so it never
   // competes with first-paint critical path.
-  const persistTargets = [...critical, ...testPhase]
+  // Only CDN URLs can be persisted — bundled local assets are not reachable via
+  // download and would 404 (e.g. /assets/icons/intent-icons/...).
+  const persistTargets = [...critical, ...testPhase].filter((url): url is string =>
+    typeof url === 'string' && CDN_BASE_URL.length > 0 && url.startsWith(CDN_BASE_URL)
+  )
   if (persistTargets.length > 0) {
     const timer = setTimeout(() => {
       const idx = activeTimers.indexOf(timer)
