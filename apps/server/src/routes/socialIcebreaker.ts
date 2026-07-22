@@ -736,9 +736,26 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
   state.warmupReadyUserIds = [];
   // Single-test bot attendees default to ready on the fresh topic set.
   seedSingleTestBotsWarmupReady(state);
-  await updateSession(socialSessionId, state);
+  try {
+    await updateSession(socialSessionId, state);
+  } catch (error) {
+    logger.error('[SocialIcebreaker] topics save failed after generation; returning playable topics to client', {
+      socialSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return res.json({
+      topics: topicResult.data,
+      meta: {
+        ...topicResult.meta,
+        fallbackUsed: true,
+        evaluatorRejectionReason: topicResult.meta.evaluatorRejectionReason ?? 'session_persist_failed',
+      },
+      state: await buildClientState(state, userId),
+      persistence: { saved: false },
+    });
+  }
 
-  return res.json({ topics: topicResult.data, meta: topicResult.meta });
+  return res.json({ topics: topicResult.data, meta: topicResult.meta, state: await buildClientState(state, userId) });
 });
 
 // ---------------------------------------------------------------------------
@@ -763,6 +780,14 @@ router.post('/:socialSessionId/warmup/ready', async (req: any, res) => {
 
   if (state.currentPhase !== 'warmup') {
     return res.status(400).json({ error: 'Not in warmup phase' });
+  }
+
+  if ((state.warmupTopics || []).length === 0) {
+    const healingMood = state.selectedMood ?? 'relaxed';
+    state.selectedMood = healingMood;
+    state.warmupTopics = getCuratedWarmupTopics(healingMood, state.vibe);
+    state.warmupTopicsMeta = buildFallbackAIMeta('ready_route_missing_topics', 'social-warmup-topics-ready-heal');
+    state.currentTopicIndex = 0;
   }
 
   const readyUserIds = new Set(state.warmupReadyUserIds || []);
@@ -808,6 +833,16 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
 
   if (state.currentPhase !== 'warmup') {
     return res.status(400).json({ error: 'Not in warmup phase' });
+  }
+
+  if ((state.warmupTopics || []).length === 0) {
+    const healingMood = state.selectedMood ?? 'relaxed';
+    state.selectedMood = healingMood;
+    state.warmupTopics = getCuratedWarmupTopics(healingMood, state.vibe);
+    state.warmupTopicsMeta = buildFallbackAIMeta('next_topic_route_missing_topics', 'social-warmup-topics-next-heal');
+    state.currentTopicIndex = 0;
+    seedSingleTestBotsWarmupReady(state);
+    await updateSession(socialSessionId, state);
   }
 
   const topics = state.warmupTopics || [];

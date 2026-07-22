@@ -139,7 +139,13 @@ export async function buildClientState(
   state: SocialSessionState,
   requestingUserId?: string,
 ): Promise<SocialSessionState> {
-  const joinedParticipants = await listParticipants(state.socialSessionId);
+  const joinedParticipants = await listParticipants(state.socialSessionId).catch((error) => {
+    logger.warn('[SocialIcebreaker] buildClientState roster unavailable; returning session state without roster', {
+      socialSessionId: state.socialSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return [];
+  });
   const archetypeCtx = buildArchetypeContext(joinedParticipants.map((p) => ({ archetype: p.archetype })));
   const withCustomExtras = isCustomMode(state)
     ? { ...state, selectablePhases: computeSelectablePhases(state) }

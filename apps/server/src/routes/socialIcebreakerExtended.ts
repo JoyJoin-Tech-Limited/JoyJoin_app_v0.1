@@ -6,11 +6,12 @@ import {
   generateXiaoYueComment,
   generateAuctionLots,
   generateLieDetectiveStatements,
+  getCuratedWarmupTopics,
   getLieDetectiveMode,
   getDynamicDifficulty,
   buildLieDetectiveV2RecapData,
 } from '../socialIcebreakerAIService';
-import { buildCachedAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
+import { buildCachedAIMeta, buildFallbackAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
 import {
   buildClientState,
   hasAllRosterParticipantsResponded,
@@ -96,6 +97,20 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   }
 
   if (currentPhase === 'warmup') {
+    if ((state.warmupTopics || []).length === 0) {
+      const healingMood = state.selectedMood ?? 'relaxed';
+      state.selectedMood = healingMood;
+      state.warmupTopics = getCuratedWarmupTopics(healingMood, state.vibe);
+      state.warmupTopicsMeta = buildFallbackAIMeta('advance_route_missing_topics', 'social-warmup-topics-advance-heal');
+      state.currentTopicIndex = state.currentTopicIndex ?? 0;
+      await updateSession(socialSessionId, state).catch((err) => {
+        logger.warn('[SocialIcebreaker] Warmup topic self-heal save failed during advance', {
+          socialSessionId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+    }
+
     if (!skipGuards) {
       const everyoneReady = hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCount);
       if (!everyoneReady && !hasWarmupTurnCompleted(state) && !isWarmupTurnExpired(state)) {

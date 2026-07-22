@@ -1,9 +1,9 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
-import type { AtmosphereMood, SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
+import type { AtmosphereMood, SocialIcebreakerPhase, SocialSessionState, SocialTopic } from '@shared/socialIcebreaker'
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import type { MiniScriptGenre, MiniScriptStyle, MiniScriptVoteInput } from '@shared/miniscriptStoryFramework'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
@@ -99,8 +99,44 @@ const TOPICS_SKIP_RETRY_MAX = 5
 const TOPICS_SKIP_RETRY_DELAY_MS = 700
 const TOPICS_RECOVERY_RETRY_DELAY_MS = 1200
 
+type WarmupTopicsResponse = {
+  topics?: SocialTopic[]
+  state?: SocialSessionState
+}
+
+const LOCAL_WARMUP_TOPICS: Record<AtmosphereMood, SocialTopic[]> = {
+  relaxed: [
+    { id: 'local-relaxed-1', question: '最近有没有一个小瞬间，让你觉得今天还不错？', mood: 'relaxed', emoji: '🌿', category: '轻松开场', depthLevel: 1, promptStyle: 'experiential', safety: 'gentle' },
+    { id: 'local-relaxed-2', question: '如果今晚这桌有一个关键词，你希望它是什么？', mood: 'relaxed', emoji: '✨', category: '桌面气氛', depthLevel: 1, promptStyle: 'reflective', safety: 'gentle' },
+    { id: 'local-relaxed-3', question: '你通常是先观察一下，还是很快加入聊天？', mood: 'relaxed', emoji: '☕', category: '社交节奏', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  ],
+  funny: [
+    { id: 'local-funny-1', question: '最近一次让你笑出来的小事是什么？', mood: 'funny', emoji: '😄', category: '轻松开场', depthLevel: 1, promptStyle: 'experiential', safety: 'gentle' },
+    { id: 'local-funny-2', question: '如果你要给今晚这桌起个队名，会叫什么？', mood: 'funny', emoji: '🎲', category: '桌面气氛', depthLevel: 1, promptStyle: 'reflective', safety: 'gentle' },
+    { id: 'local-funny-3', question: '你朋友最常用哪句话吐槽你？', mood: 'funny', emoji: '🍌', category: '熟人视角', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+  ],
+  life: [
+    { id: 'local-life-1', question: '最近你生活里最想按下暂停键的一个时刻是什么？', mood: 'life', emoji: '🌙', category: '生活片段', depthLevel: 1, promptStyle: 'experiential', safety: 'gentle' },
+    { id: 'local-life-2', question: '如果周末多出半天时间，你会拿来做什么？', mood: 'life', emoji: '🧭', category: '生活节奏', depthLevel: 1, promptStyle: 'reflective', safety: 'gentle' },
+    { id: 'local-life-3', question: '你觉得自己最近在哪件小事上变成熟了一点？', mood: 'life', emoji: '🌱', category: '自我观察', depthLevel: 2, promptStyle: 'reflective', safety: 'open' },
+  ],
+  emotional: [
+    { id: 'local-emotional-1', question: '最近有没有一句话，让你记了挺久？', mood: 'emotional', emoji: '💬', category: '温柔开场', depthLevel: 1, promptStyle: 'experiential', safety: 'gentle' },
+    { id: 'local-emotional-2', question: '你希望别人第一次认识你时，先看到你的哪一面？', mood: 'emotional', emoji: '💜', category: '被看见', depthLevel: 2, promptStyle: 'reflective', safety: 'open' },
+    { id: 'local-emotional-3', question: '在一段舒服的关系里，你最看重什么感觉？', mood: 'emotional', emoji: '🫶', category: '关系偏好', depthLevel: 2, promptStyle: 'reflective', safety: 'reflective' },
+  ],
+}
+
+function buildLocalWarmupTopics(mood: AtmosphereMood): SocialTopic[] {
+  return LOCAL_WARMUP_TOPICS[mood].map((topic, index) => ({
+    ...topic,
+    id: `${topic.id}-${Date.now()}-${index}`,
+  }))
+}
+
 export default function IcebreakerSessionPage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const routeSessionId = router.params.sessionId ?? ''
   const routeEventId = router.params.eventId ?? ''
   const { isLoading: authLoading } = useAuthGuard()
@@ -258,6 +294,29 @@ export default function IcebreakerSessionPage() {
     return sourceState ? normaliseSession(sourceState) : null
   }, [socialSessionQuery.data, bootstrapState])
 
+  const applyWarmupTopicsToLocalState = useCallback((mood: AtmosphereMood, topics: SocialTopic[], nextState?: SocialSessionState) => {
+    if (!socialSessionId || topics.length === 0) {
+      return
+    }
+
+    const baseState = nextState ?? socialSessionQuery.data ?? bootstrapState
+    if (!baseState) {
+      return
+    }
+
+    const patchedState: SocialSessionState = {
+      ...baseState,
+      selectedMood: mood,
+      warmupTopics: topics,
+      currentTopicIndex: 0,
+      warmupReadyUserIds: [],
+    }
+
+    setBootstrapState(patchedState)
+    queryClient.setQueryData(['mini-program', 'social-icebreaker-session', socialSessionId], patchedState)
+    setTopicsError(false)
+  }, [bootstrapState, queryClient, socialSessionId, socialSessionQuery.data])
+
   const phase: SessionPhase = session?.phase ?? 'waiting'
 
   // PR1 壳层: suggestion visibility = data-derived suggestion AND an explicit
@@ -398,14 +457,14 @@ export default function IcebreakerSessionPage() {
   const generateTopicsRef = useRef<(mood: AtmosphereMood) => void>(() => {})
   const generateTopics = useCallback((mood: AtmosphereMood) => {
     setTopicsError(false)
-    void performSocialAction('topics', '/topics', {
+    void performSocialAction<WarmupTopicsResponse>('topics', '/topics', {
       mood,
       eventType: '活动',
       participantCount: Math.max(playerCount, 2),
       avoidTopics: [],
     }, { timeoutMs: TOPICS_REQUEST_TIMEOUT_MS }).then((result) => {
       if (result === null) {
-        setTopicsError(true)
+        applyWarmupTopicsToLocalState(mood, buildLocalWarmupTopics(mood))
         topicsSkipRetryRef.current = 0
       } else if (result === undefined) {
         // Skipped because another social action was in flight — the tap would
@@ -415,11 +474,14 @@ export default function IcebreakerSessionPage() {
           topicsRetryTimerRef.current = setTimeout(() => generateTopicsRef.current(mood), TOPICS_SKIP_RETRY_DELAY_MS)
         }
       } else {
+        if (Array.isArray(result.topics) && result.topics.length > 0) {
+          applyWarmupTopicsToLocalState(mood, result.topics, result.state)
+        }
         topicsSkipRetryRef.current = 0
         topicsRecoveryRetryCountRef.current = 0
       }
     })
-  }, [performSocialAction, playerCount])
+  }, [applyWarmupTopicsToLocalState, performSocialAction, playerCount])
   generateTopicsRef.current = generateTopics
   const handleGenerateTopics = useCallback((mood: AtmosphereMood) => {
     topicsSkipRetryRef.current = 0
