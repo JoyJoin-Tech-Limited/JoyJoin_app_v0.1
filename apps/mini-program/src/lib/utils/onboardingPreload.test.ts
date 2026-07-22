@@ -1,23 +1,37 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest'
-import Taro from '@tarojs/taro'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { preloadOnboardingAssets, __resetOnboardingPreloadGuard } from './onboardingPreload'
-import * as imagePreload from './imagePreload'
+
+const { preloadMock, networkMock, systemInfoMock } = vi.hoisted(() => ({
+  preloadMock: vi.fn(),
+  networkMock: vi.fn(),
+  systemInfoMock: vi.fn(),
+}))
 
 vi.mock('@tarojs/taro', () => ({
   default: {
-    getNetworkType: vi.fn(),
-    getSystemInfoSync: vi.fn(),
+    getNetworkType: networkMock,
+    getSystemInfoSync: systemInfoMock,
   },
 }))
 
-describe('onboardingPreload', () => {
-  let preloadSpy: MockInstance<typeof imagePreload.preloadImagesWithDiagnostics>
+vi.mock('./cdnAssets', () => ({
+  CDN_BASE_URL: 'https://cdn.test',
+  cdnAsset: (path: string) => `https://cdn.test${path}`,
+  localAsset: (path: string) => path,
+}))
 
+vi.mock('./imagePreload', () => ({
+  preloadImagesWithDiagnostics: preloadMock,
+}))
+
+describe('onboardingPreload', () => {
   beforeEach(() => {
-    vi.restoreAllMocks()
-    preloadSpy = vi.spyOn(imagePreload, 'preloadImagesWithDiagnostics').mockResolvedValue(undefined)
+    vi.clearAllMocks()
+    preloadMock.mockResolvedValue(undefined)
+    networkMock.mockResolvedValue({ networkType: 'wifi' })
+    systemInfoMock.mockReturnValue({ benchmarkLevel: 30 })
     __resetOnboardingPreloadGuard()
-    vi.useFakeTimers({ shouldAdvanceTime: false })
+    vi.useFakeTimers()
   })
 
   afterEach(() => {
@@ -25,65 +39,44 @@ describe('onboardingPreload', () => {
     vi.useRealTimers()
   })
 
-  it('is a one-shot operation', async () => {
-    vi.spyOn(Taro, 'getNetworkType').mockResolvedValue({ networkType: 'wifi', signalStrength: 100 } as any)
-    vi.spyOn(Taro, 'getSystemInfoSync').mockReturnValue({ benchmarkLevel: 30 } as any)
-
+  it('schedules CDN tiers only once', async () => {
     await preloadOnboardingAssets()
     await preloadOnboardingAssets()
-    vi.runAllTimers()
+    await vi.runAllTimersAsync()
 
-    // Three tiers should fire exactly once across both calls.
-    const contexts = preloadSpy.mock.calls.map((call) => call[1] as string)
-    expect(contexts.filter((c) => c === 'onboarding:critical').length).toBe(1)
-    expect(contexts.filter((c) => c === 'onboarding:test-phase').length).toBe(1)
-    expect(contexts.filter((c) => c === 'onboarding:heavy').length).toBe(1)
+    const contexts = preloadMock.mock.calls.map((call) => call[1] as string)
+    expect(contexts.filter((context) => context === 'onboarding:critical')).toHaveLength(1)
+    expect(contexts.filter((context) => context === 'onboarding:test-phase')).toHaveLength(1)
+    expect(contexts).not.toContain('onboarding:heavy')
+    expect(networkMock).toHaveBeenCalledTimes(1)
   })
 
   it('skips entirely on 2g network', async () => {
-    vi.spyOn(Taro, 'getNetworkType').mockResolvedValue({ networkType: '2g' } as any)
+    networkMock.mockResolvedValue({ networkType: '2g' })
 
     await preloadOnboardingAssets()
-    vi.runAllTimers()
+    await vi.runAllTimersAsync()
 
-    expect(preloadSpy).not.toHaveBeenCalled()
+    expect(preloadMock).not.toHaveBeenCalled()
   })
 
-  it('skips heavy tier on low-end devices', async () => {
-    vi.spyOn(Taro, 'getNetworkType').mockResolvedValue({ networkType: 'wifi' } as any)
-    vi.spyOn(Taro, 'getSystemInfoSync').mockReturnValue({ benchmarkLevel: 10 } as any)
+  it('never sends bundled local heavy assets to the CDN image preloader', async () => {
+    systemInfoMock.mockReturnValue({ benchmarkLevel: 30 })
 
     await preloadOnboardingAssets()
-    vi.runAllTimers()
+    await vi.runAllTimersAsync()
 
-    const contexts = preloadSpy.mock.calls.map((call) => call[1] as string)
+    const contexts = preloadMock.mock.calls.map((call) => call[1] as string)
     expect(contexts).toContain('onboarding:critical')
     expect(contexts).toContain('onboarding:test-phase')
     expect(contexts).not.toContain('onboarding:heavy')
   })
 
-  it('runs heavy tier on capable devices with good network', async () => {
-    vi.spyOn(Taro, 'getNetworkType').mockResolvedValue({ networkType: 'wifi' } as any)
-    vi.spyOn(Taro, 'getSystemInfoSync').mockReturnValue({ benchmarkLevel: 30 } as any)
-
-    await preloadOnboardingAssets()
-    vi.runAllTimers()
-
-    const contexts = preloadSpy.mock.calls.map((call) => call[1] as string)
-    expect(contexts).toContain('onboarding:critical')
-    expect(contexts).toContain('onboarding:test-phase')
-    expect(contexts).toContain('onboarding:heavy')
-  })
-
   it('clears pending timers when reset', async () => {
-    vi.spyOn(Taro, 'getNetworkType').mockResolvedValue({ networkType: 'wifi' } as any)
-    vi.spyOn(Taro, 'getSystemInfoSync').mockReturnValue({ benchmarkLevel: 30 } as any)
-
     await preloadOnboardingAssets()
     __resetOnboardingPreloadGuard()
-    vi.runAllTimers()
+    await vi.runAllTimersAsync()
 
-    // Reset should cancel all pending timers so no preloads fire.
-    expect(preloadSpy).not.toHaveBeenCalled()
+    expect(preloadMock).not.toHaveBeenCalled()
   })
 })
