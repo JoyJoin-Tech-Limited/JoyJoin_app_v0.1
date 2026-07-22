@@ -371,6 +371,22 @@ export async function seedBuiltinFlashCatalog() {
         reviewedAt: null,
         isActive: false,
       }).onConflictDoNothing({ target: flashTaskTemplates.code });
+
+      await tx.update(flashTaskTemplates).set({
+        title: task.title,
+        brief: task.brief,
+        instructions: task.instructions,
+        dialogueIntro: task.dialogueIntro,
+        feedbackPrompts: task.feedbackPrompts,
+        tags: task.tags,
+        safetyNotes: task.safetyNotes,
+        contentVersion: sql`${flashTaskTemplates.contentVersion} + 1`,
+        updatedAt: new Date(),
+      }).where(and(
+        eq(flashTaskTemplates.code, task.code),
+        eq(flashTaskTemplates.reviewStatus, "pending_review"),
+        eq(flashTaskTemplates.isHumanReviewed, false),
+      ));
     }
 
     const npcRows = await tx.select({ id: flashNpcs.id, slug: flashNpcs.slug }).from(flashNpcs);
@@ -391,8 +407,13 @@ export async function seedBuiltinFlashCatalog() {
           deliveryCopy: FLASH_DELIVERY_COPY_BY_NPC[npcSlug] ?? "我收到了。谢谢你替我去看。",
           weight: 100,
           isActive: true,
-        }).onConflictDoNothing({
+        }).onConflictDoUpdate({
           target: [flashNpcTaskLinks.npcId, flashNpcTaskLinks.taskTemplateId],
+          set: {
+            requestCopy: buildFlashNpcTaskRequestCopy(npcSlug, task),
+            deliveryCopy: FLASH_DELIVERY_COPY_BY_NPC[npcSlug] ?? "我收到了。谢谢你替我去看。",
+            updatedAt: new Date(),
+          },
         });
       }
     }
