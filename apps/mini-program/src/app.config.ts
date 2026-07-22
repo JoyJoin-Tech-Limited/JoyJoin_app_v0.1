@@ -31,7 +31,7 @@ export default defineAppConfig({
   lazyCodeLoading: 'requiredComponents',
   permission: {
     'scope.userLocation': {
-      desc: '用于查看深圳当前在线的数字角色，并在你主动操作时确认角色相遇和任务到达',
+      desc: '用于查看当前在线角色并确认任务到达',
     },
   },
   requiredPrivateInfos: ['getLocation'],
