@@ -231,6 +231,8 @@
 
   // ─── Textarea ─────────────────────────────────────────────────────────────
   &__textarea {
+    box-sizing: border-box;
+    display: block;
     width: 100%;
     min-height: 200rpx;
     padding: $spacing-md;
