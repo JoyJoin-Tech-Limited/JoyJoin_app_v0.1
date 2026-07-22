@@ -37,6 +37,7 @@ import {
 import {
   buildFlashNpcTaskRequestCopy,
   FLASH_DELIVERY_COPY_BY_NPC,
+  FLASH_LOCATION_SEEDS,
   FLASH_NPC_SEEDS,
   FLASH_TASK_SEEDS,
 } from "@shared/alang/flashCatalog";
@@ -423,6 +424,110 @@ export async function seedBuiltinFlashCatalog() {
       taskCount: taskRows.filter((row: any) => FLASH_TASK_SEEDS.some((seed) => seed.code === row.code)).length,
       note: "Encounter locations, task destinations and destination links must be approved by operators before readiness passes.",
     };
+  });
+}
+
+/**
+ * Persist the explicitly reviewed Shenzhen place catalog after the admin route
+ * has verified every GCJ-02 coordinate through Tencent Maps. Existing approved
+ * rows remain operator-owned; only missing or still-draft built-in rows are
+ * synchronized.
+ */
+export async function seedBuiltinFlashLocations(reviewedBy: string) {
+  return db.transaction(async (tx: DbExecutor) => {
+    const now = new Date();
+    const npcRows = await tx.select({ id: flashNpcs.id }).from(flashNpcs)
+      .where(and(eq(flashNpcs.isActive, true), inArray(flashNpcs.slug, CANONICAL_FLASH_NPC_SLUGS)));
+    const taskRows = await tx.select({ id: flashTaskTemplates.id, category: flashTaskTemplates.category }).from(flashTaskTemplates)
+      .where(inArray(flashTaskTemplates.code, FLASH_TASK_SEEDS.map((task) => task.code)));
+    const existingEncounters = await tx.select().from(flashEncounterLocations);
+    const existingDestinations = await tx.select().from(flashTaskDestinations);
+    const encounterByKey = new Map<string, any>(existingEncounters.map((row: any) => [`${row.district}:${row.name}`, row]));
+    const destinationByKey = new Map<string, any>(existingDestinations.map((row: any) => [`${row.district}:${row.name}`, row]));
+    const availabilityWindows = Array.from({ length: 7 }, (_, index) => ({
+      weekday: index + 1,
+      startTime: "09:00",
+      endTime: "20:00",
+    }));
+
+    let encounterCount = 0;
+    let destinationCount = 0;
+    for (const seed of FLASH_LOCATION_SEEDS) {
+      const key = `${seed.district}:${seed.name}`;
+      const encounterValues = {
+        name: seed.name,
+        city: "深圳",
+        district: seed.district,
+        address: seed.address,
+        latitude: seed.latitude,
+        longitude: seed.longitude,
+        coordinateSystem: "gcj02",
+        availabilityWindows,
+        approvalStatus: "approved",
+        safetyNotes: seed.safetyNotes,
+        lastReviewedAt: now,
+        reviewedBy,
+        isActive: true,
+      } as const;
+      const existingEncounter = encounterByKey.get(key);
+      let encounter = existingEncounter;
+      if (!existingEncounter) {
+        [encounter] = await tx.insert(flashEncounterLocations).values(encounterValues).returning();
+      } else if (existingEncounter.approvalStatus !== "approved") {
+        [encounter] = await tx.update(flashEncounterLocations).set({ ...encounterValues, updatedAt: now })
+          .where(eq(flashEncounterLocations.id, existingEncounter.id)).returning();
+      }
+      if (encounter) {
+        encounterCount += 1;
+        for (const npc of npcRows) {
+          await tx.insert(flashNpcLocationLinks).values({ npcId: npc.id, locationId: encounter.id, isActive: true })
+            .onConflictDoUpdate({
+              target: [flashNpcLocationLinks.npcId, flashNpcLocationLinks.locationId],
+              set: { isActive: true, updatedAt: now },
+            });
+        }
+      }
+
+      const destinationValues = {
+        name: seed.name,
+        city: "深圳",
+        district: seed.district,
+        address: seed.address,
+        latitude: seed.latitude,
+        longitude: seed.longitude,
+        coordinateSystem: "gcj02",
+        destinationType: seed.destinationType,
+        tags: seed.tags,
+        approvalStatus: "approved",
+        safetyNotes: seed.safetyNotes,
+        lastReviewedAt: now,
+        reviewedBy,
+        isActive: true,
+      } as const;
+      const existingDestination = destinationByKey.get(key);
+      let destination = existingDestination;
+      if (!existingDestination) {
+        [destination] = await tx.insert(flashTaskDestinations).values(destinationValues).returning();
+      } else if (existingDestination.approvalStatus !== "approved") {
+        [destination] = await tx.update(flashTaskDestinations).set({ ...destinationValues, updatedAt: now })
+          .where(eq(flashTaskDestinations.id, existingDestination.id)).returning();
+      }
+      if (destination) {
+        destinationCount += 1;
+        for (const task of taskRows.filter((row: any) => seed.taskCategories.includes(row.category))) {
+          await tx.insert(flashTaskDestinationLinks).values({
+            taskTemplateId: task.id,
+            destinationId: destination.id,
+            isActive: true,
+          }).onConflictDoUpdate({
+            target: [flashTaskDestinationLinks.taskTemplateId, flashTaskDestinationLinks.destinationId],
+            set: { isActive: true, updatedAt: now },
+          });
+        }
+      }
+    }
+
+    return { encounterCount, destinationCount };
   });
 }
 

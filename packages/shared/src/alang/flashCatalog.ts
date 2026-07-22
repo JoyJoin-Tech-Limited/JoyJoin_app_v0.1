@@ -40,6 +40,60 @@ export type FlashTaskSeed = {
   requestCopy: string;
 };
 
+export type FlashLocationSeed = {
+  code: string;
+  name: string;
+  district: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  destinationType: "public_place" | "park" | "culture_space";
+  tags: string[];
+  taskCategories: FlashTaskSeed["category"][];
+  safetyNotes: string;
+};
+
+const ALL_TASK_CATEGORIES = ["探店", "城市观察", "轻社交勇气", "独处放松", "文化发现", "微小善意"];
+const PARK_TASK_CATEGORIES = ["城市观察", "轻社交勇气", "独处放松", "微小善意"];
+const CULTURE_TASK_CATEGORIES = ["探店", "城市观察", "轻社交勇气", "文化发现", "微小善意"];
+
+/**
+ * Operator-reviewed GCJ-02 candidates for the Shenzhen-only formal Flash
+ * catalog. Every district has two public, no-purchase-required places. The
+ * staging seed route still reverse-geocodes every coordinate through Tencent
+ * Maps before it may persist these rows as approved.
+ */
+export const FLASH_LOCATION_SEEDS: FlashLocationSeed[] = [
+  { code: "NS-TALENT", name: "深圳人才公园", district: "南山区", address: "深圳市南山区科苑南路深圳人才公园", latitude: 22.5106467, longitude: 113.9490497, destinationType: "park", tags: ["公园", "滨水", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放公共步道；避开临水边缘、施工区和封闭时段。" },
+  { code: "NS-NANTOU", name: "南头古城公共街区", district: "南山区", address: "深圳市南山区南山大道南头古城", latitude: 22.5373061, longitude: 113.9242904, destinationType: "culture_space", tags: ["古城", "街区", "免费"], taskCategories: CULTURE_TASK_CATEGORIES, safetyNotes: "仅在开放公共街巷活动；不要求进店、消费、拍摄或与商户互动。" },
+  { code: "FT-LIANHUASHAN", name: "莲花山公园", district: "福田区", address: "深圳市福田区红荔路莲花山公园", latitude: 22.5539027, longitude: 114.0583476, destinationType: "park", tags: ["公园", "草地", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放步道和广场；雨天避开湿滑坡道，服从现场开放管理。" },
+  { code: "FT-XIANGMI", name: "香蜜公园", district: "福田区", address: "深圳市福田区农园路香蜜公园", latitude: 22.5470286, longitude: 114.0216548, destinationType: "park", tags: ["公园", "花园", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放公共区域；不进入婚姻登记等办事空间，不打扰现场活动。" },
+  { code: "LH-EASTLAKE", name: "东湖公园", district: "罗湖区", address: "深圳市罗湖区爱国路东湖公园", latitude: 22.5629093, longitude: 114.1487351, destinationType: "park", tags: ["公园", "湖景", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放公共步道；与水边保持安全距离，避开偏僻和照明不足区域。" },
+  { code: "LH-PEOPLE", name: "人民公园", district: "罗湖区", address: "深圳市罗湖区人民北路人民公园", latitude: 22.5534514, longitude: 114.1166622, destinationType: "park", tags: ["公园", "城市", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅在开放公共区域停留；不采摘植物，不影响园内居民和活动。" },
+  { code: "BA-PARK", name: "宝安公园", district: "宝安区", address: "深圳市宝安区公园路宝安公园", latitude: 22.5860298, longitude: 113.9029171, destinationType: "park", tags: ["公园", "步道", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放步道和广场；不进入封闭山林，夜间遵守现场开放时间。" },
+  { code: "BA-OH-BAY", name: "欢乐港湾海滨文化公园", district: "宝安区", address: "深圳市宝安区宝华路欢乐港湾", latitude: 22.5432666, longitude: 113.8859008, destinationType: "public_place", tags: ["滨水", "广场", "免费"], taskCategories: ALL_TASK_CATEGORIES, safetyNotes: "任务只使用免消费公共区域；不要求进入商业设施、乘坐项目或购买商品。" },
+  { code: "LG-DAYUN", name: "大运山自然公园", district: "龙岗区", address: "深圳市龙岗区龙城街道大运山自然公园", latitude: 22.6908987, longitude: 114.2089059, destinationType: "park", tags: ["公园", "自然", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅走开放步道；不进入未开放山地，恶劣天气或天黑后不安排深入路线。" },
+  { code: "LG-LONGCHENG", name: "龙城公园", district: "龙岗区", address: "深圳市龙岗区黄阁路龙城公园", latitude: 22.7044352, longitude: 114.2184478, destinationType: "park", tags: ["公园", "城市", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放公共区域；避开施工、陡坡和照明不足路段。" },
+  { code: "YT-CENTRAL", name: "盐田中央公园", district: "盐田区", address: "深圳市盐田区海景二路盐田中央公园", latitude: 22.5524397, longitude: 114.2397995, destinationType: "park", tags: ["公园", "海景", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅在开放公共空间活动；与车道、临水边缘保持安全距离。" },
+  { code: "YT-HAISHAN", name: "海山公园", district: "盐田区", address: "深圳市盐田区深盐路海山公园", latitude: 22.5596491, longitude: 114.2401710, destinationType: "park", tags: ["公园", "步道", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放步道；雨后注意台阶湿滑，不进入封闭或维护区域。" },
+  { code: "LHUA-NORTH", name: "深圳北站中心公园", district: "龙华区", address: "深圳市龙华区民治街道深圳北站中心公园", latitude: 22.6062626, longitude: 114.0246392, destinationType: "park", tags: ["公园", "交通", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用公园开放区域；避开车道、接驳区和人流拥挤的站口。" },
+  { code: "LHUA-GUANLAN", name: "观澜河湿地公园", district: "龙华区", address: "深圳市龙华区观澜河湿地公园", latitude: 22.6829351, longitude: 114.0431405, destinationType: "park", tags: ["湿地", "步道", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅走开放步道；不靠近水边、不进入生态保育区域，不打扰野生动物。" },
+  { code: "PS-CENTRAL", name: "坪山中心公园", district: "坪山区", address: "深圳市坪山区和安路坪山中心公园", latitude: 22.7017868, longitude: 114.3479818, destinationType: "park", tags: ["公园", "广场", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅在开放公共区域活动；避开施工围挡和机动车通行区域。" },
+  { code: "PS-DASHANBEI", name: "大山陂主题公园", district: "坪山区", address: "深圳市坪山区马峦街道大山陂主题公园", latitude: 22.6686781, longitude: 114.3447790, destinationType: "park", tags: ["公园", "自然", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放步道；不进入水库管理区或未开放山地，遵守现场告示。" },
+  { code: "GM-RAINBOW", name: "虹桥公园", district: "光明区", address: "深圳市光明区光明街道虹桥公园", latitude: 22.7452484, longitude: 113.9582031, destinationType: "park", tags: ["公园", "步道", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放栈道和公共区域；高温、雷雨或关闭时不进入。" },
+  { code: "GM-KAIMING", name: "光明开明公园", district: "光明区", address: "深圳市光明区光明街道开明公园", latitude: 22.7493693, longitude: 113.9288328, destinationType: "park", tags: ["公园", "草地", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放公共区域；不进入养护区，不影响其他游园者。" },
+  { code: "DP-KUICHONG", name: "葵涌生态公园", district: "大鹏新区", address: "深圳市大鹏新区葵涌街道葵涌生态公园", latitude: 22.6206750, longitude: 114.4238357, destinationType: "park", tags: ["公园", "生态", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放步道；不进入偏僻山地，天黑、雷雨或现场关闭时不参与。" },
+  { code: "DP-FORTRESS", name: "大鹏所城公共街区", district: "大鹏新区", address: "深圳市大鹏新区鹏城社区大鹏所城", latitude: 22.5949930, longitude: 114.5123735, destinationType: "culture_space", tags: ["古城", "文化", "免费"], taskCategories: CULTURE_TASK_CATEGORIES, safetyNotes: "仅在免票开放公共街巷活动；不要求进入收费展馆、消费、拍照或与居民商户互动。" },
+];
+
+const districtSeedCounts = new Map<string, number>();
+for (const location of FLASH_LOCATION_SEEDS) {
+  districtSeedCounts.set(location.district, (districtSeedCounts.get(location.district) ?? 0) + 1);
+}
+if (FLASH_LOCATION_SEEDS.length !== 20 || [...districtSeedCounts.values()].some((count) => count !== 2)) {
+  throw new Error("Built-in Flash location catalog must contain exactly two places per Shenzhen district");
+}
+
 const optionSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
