@@ -125,16 +125,19 @@ function makeTaskFeelLikeAConversation(task: unknown) {
     .replace(/你替我/g, "你哪天刚好路过的话，能帮我")
     .replace(/替我看看/g, "顺便帮我看看")
     .replace(/你到附近帮我/g, "你哪天路过那附近，顺便帮我")
-    .replace(/你去看看/g, "你哪天想去的话，顺便看看");
+    .replace(/你去看看/g, "你哪天想去的话，顺便看看")
+    .replace(/你去那里/g, "你哪天刚好到了那里")
+    .replace(/替后来的人/g, "顺手给后来的人");
+  const instructionDetail = value.instructions
+    .replace(/^到达 50 米内；(?:可选)?/, "")
+    .replace(/^若用户/, "如果你")
+    .replace(/^若/, "如果");
   return {
     ...value,
     brief: soften(value.brief),
     dialogueIntro: soften(value.dialogueIntro),
     requestCopy: soften(value.requestCopy),
-    instructions: value.instructions.replace(
-      /^到达 50 米内；可选/,
-      "哪天顺路到了附近，点一下“我已到达”就好。想的话，也可以",
-    ),
+    instructions: `哪天顺路到了附近，点一下“我已到达”就好。${instructionDetail}`,
     feedbackPrompts: value.feedbackPrompts.map((prompt: Record<string, any>) => ({
       ...prompt,
       prompt: prompt.prompt.replace(/^到达以后，/, "后来真去了的话，").replace(/^这次到达，/, "后来到了那边，"),

@@ -109,7 +109,15 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
           )}
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+        <div className="space-y-4">
+          {canSeed && (
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending}>
+                {seedMutation.isPending ? "正在同步…" : "同步待审任务文案"}
+              </Button>
+            </div>
+          )}
+          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
           {npcs.map((npc) => (
             <Card key={npc.id} className="overflow-hidden">
               <div className="h-1.5" style={{ backgroundColor: npc.themeColor || "#8B5CF6" }} />
@@ -155,6 +163,7 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
               </CardContent>
             </Card>
           ))}
+          </div>
         </div>
       )}
 
