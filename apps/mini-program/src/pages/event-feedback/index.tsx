@@ -34,7 +34,7 @@ interface MutualMatch {
   wechatContactId: string | null
 }
 
-type FeedbackStep = 'rating' | 'connections' | 'comment' | 'revealed'
+type FeedbackStep = 'form' | 'revealed'
 
 export default function EventFeedbackPage() {
   const router = useRouter()
@@ -42,7 +42,7 @@ export default function EventFeedbackPage() {
   const { user: currentUser, isLoading: authLoading } = useAuthGuard()
   const currentUserId = currentUser?.id
 
-  const [step, setStep] = useState<FeedbackStep>('rating')
+  const [step, setStep] = useState<FeedbackStep>('form')
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
   const [selectedConnections, setSelectedConnections] = useState<string[]>([])
@@ -203,88 +203,7 @@ export default function EventFeedbackPage() {
     )
   }
 
-  // ─── Rating step ───────────────────────────────────────────────────────────
-  if (step === 'rating') {
-    return (
-      <View className='event-feedback'>
-        <View className='event-feedback__header'>
-          <Text className='event-feedback__subtitle'>今晚这局怎么样？</Text>
-        </View>
-
-        <View className='event-feedback__card'>
-          <Text className='event-feedback__card-title'>整体体验如何？</Text>
-          <View className='event-feedback__rating'>
-            <RatingFace value={rating} onSelect={setRating} disabled={false} />
-          </View>
-        </View>
-
-        <View className='event-feedback__footer'>
-          <Button
-            className='event-feedback__submit'
-            onClick={() => rating > 0 && setStep('connections')}
-            disabled={rating === 0}
-          >
-            下一步
-          </Button>
-        </View>
-      </View>
-    )
-  }
-
-  // ─── Connections step ──────────────────────────────────────────────────────
-  if (step === 'connections') {
-    return (
-      <View className='event-feedback'>
-        <View className='event-feedback__header'>
-          <Text className='event-feedback__subtitle'>想继续了解谁？</Text>
-        </View>
-
-        <View className='event-feedback__card'>
-          <Text className='event-feedback__card-title'>选择想保持联系的人</Text>
-          <Text className='event-feedback__card-hint'>互相选择后，即可看到对方的微信号</Text>
-          {participants.length === 0 ? (
-            <Text className='event-feedback__empty-participants'>暂时没有其他参与者信息</Text>
-          ) : (
-            <View className='event-feedback__participant-grid'>
-              {participants.map((p) => {
-                const isSelected = selectedConnections.includes(p.id)
-                return (
-                  <View
-                    key={p.id}
-                    className={`event-feedback__participant-item ${isSelected ? 'event-feedback__participant-item--selected' : ''}`}
-                    onClick={() => toggleConnection(p.id)}
-                  >
-                    <ArchetypeHead
-                      archetype={p.archetype}
-                      size={80}
-                      fallbackText={p.displayName || p.firstName}
-                    />
-                    <Text className='event-feedback__participant-name'>
-                      {p.displayName || p.firstName || '匿名'}
-                    </Text>
-                    {isSelected && (
-                      <Text className='event-feedback__participant-check'>✓</Text>
-                    )}
-                  </View>
-                )
-              })}
-            </View>
-          )}
-        </View>
-
-        <View className='event-feedback__footer'>
-          <Button className='event-feedback__submit' onClick={() => setStep('comment')}>
-            {selectedConnections.length > 0
-              ? `已选 ${selectedConnections.length} 人，下一步`
-              : '跳过，下一步'}
-          </Button>
-        </View>
-      </View>
-    )
-  }
-
-  // ─── Comment step ──────────────────────────────────────────────────────────
-  if (step !== 'comment') {
+  if (step !== 'form') {
     // Defensive: unknown step state
     return (
       <JoyJoinLoadingScreen
@@ -298,7 +217,47 @@ export default function EventFeedbackPage() {
   return (
     <View className='event-feedback'>
       <View className='event-feedback__header'>
-        <Text className='event-feedback__subtitle'>最后一步</Text>
+        <Text className='event-feedback__subtitle'>今晚这局怎么样？</Text>
+      </View>
+
+      <View className='event-feedback__card'>
+        <Text className='event-feedback__card-title'>整体体验如何？（必选）</Text>
+        <View className='event-feedback__rating'>
+          <RatingFace value={rating} onSelect={setRating} disabled={false} />
+        </View>
+      </View>
+
+      <View className='event-feedback__card'>
+        <Text className='event-feedback__card-title'>选择想保持联系的人（可选）</Text>
+        <Text className='event-feedback__card-hint'>互相选择后，即可看到对方的微信号</Text>
+        {participants.length === 0 ? (
+          <Text className='event-feedback__empty-participants'>暂时没有其他参与者信息</Text>
+        ) : (
+          <View className='event-feedback__participant-grid'>
+            {participants.map((p) => {
+              const isSelected = selectedConnections.includes(p.id)
+              return (
+                <View
+                  key={p.id}
+                  className={`event-feedback__participant-item ${isSelected ? 'event-feedback__participant-item--selected' : ''}`}
+                  onClick={() => toggleConnection(p.id)}
+                >
+                  <ArchetypeHead
+                    archetype={p.archetype}
+                    size={80}
+                    fallbackText={p.displayName || p.firstName}
+                  />
+                  <Text className='event-feedback__participant-name'>
+                    {p.displayName || p.firstName || '匿名'}
+                  </Text>
+                  {isSelected && (
+                    <Text className='event-feedback__participant-check'>✓</Text>
+                  )}
+                </View>
+              )
+            })}
+          </View>
+        )}
       </View>
 
       <View className='event-feedback__card'>
@@ -318,7 +277,7 @@ export default function EventFeedbackPage() {
         <Button
           className='event-feedback__submit'
           onClick={handleSubmit}
-          disabled={isSubmitting}
+          disabled={rating === 0 || isSubmitting}
           loading={isSubmitting}
         >
           {isSubmitting ? '提交中…' : '提交反馈'}
