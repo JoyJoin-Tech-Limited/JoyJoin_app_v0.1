@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   FLASH_DELIVERY_COPY_BY_NPC,
+  FLASH_LOCATION_SEEDS,
   buildFlashNpcTaskRequestCopy,
   type FlashTaskSeed,
 } from "@shared/alang/flashCatalog";
@@ -35,6 +36,7 @@ import {
   replaceFlashNpcTaskLinks,
   replaceFlashTaskDestinationLinks,
   seedBuiltinFlashCatalog,
+  seedBuiltinFlashLocations,
   updateFlashEncounterLocation,
   updateFlashNpc,
   updateFlashTaskDestination,
@@ -603,10 +605,25 @@ export function registerAdminAlangRoutes(app: Express): void {
         res.status(503).json({ code: "FLASH_SCHEMA_NOT_READY", message: "请先完成并核验数据库迁移" });
         return;
       }
-      const result = await seedBuiltinFlashCatalog();
+      for (let index = 0; index < FLASH_LOCATION_SEEDS.length; index += 4) {
+        await Promise.all(FLASH_LOCATION_SEEDS.slice(index, index + 4).map((location) => (
+          verifyApprovedShenzhenCoordinate({
+            approvalStatus: "approved",
+            isActive: true,
+            district: location.district,
+            latitude: location.latitude,
+            longitude: location.longitude,
+          })
+        )));
+      }
+      const catalog = await seedBuiltinFlashCatalog();
+      const locations = await seedBuiltinFlashLocations(getActingAdminId(req));
+      const result = { ...catalog, ...locations };
       audit(req, "FLASH_CATALOG_SEEDED", "flash_catalog", "builtin-v1", undefined, {
         npcCount: result.npcCount,
         taskCount: result.taskCount,
+        encounterCount: result.encounterCount,
+        destinationCount: result.destinationCount,
       });
       res.json(result);
     } catch (error) {

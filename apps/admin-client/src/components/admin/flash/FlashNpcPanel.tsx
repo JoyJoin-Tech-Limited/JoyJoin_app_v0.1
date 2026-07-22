@@ -53,13 +53,13 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
       const response = await apiRequest("POST", "/api/admin/alang/catalog/seed", {});
       return response.json().catch(() => null);
     },
-    onSuccess: async (result: { npcCount?: number; taskCount?: number } | null) => {
+    onSuccess: async (result: { npcCount?: number; taskCount?: number; encounterCount?: number; destinationCount?: number } | null) => {
       await queryClient.invalidateQueries({
         predicate: (item) => String(item.queryKey[0] ?? "").startsWith("/api/admin/alang"),
       });
       toast({
         title: "正式目录已初始化",
-        description: `已写入 ${result?.npcCount ?? 5} 位 NPC 与 ${result?.taskCount ?? 30} 条待审任务。`,
+        description: `已写入 ${result?.npcCount ?? 5} 位 NPC、${result?.taskCount ?? 30} 条待审任务、${result?.encounterCount ?? 20} 个遭遇点与 ${result?.destinationCount ?? 20} 个免消费目的地。`,
       });
     },
     onError: (error) => toast({ title: "目录初始化失败", description: describeFlashAdminError(error), variant: "destructive" }),
@@ -103,7 +103,7 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
           {canSeed && (
             <div className="flex justify-center">
               <Button onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending}>
-                {seedMutation.isPending ? "正在初始化…" : "初始化 5 位 NPC 与 30 条任务"}
+                {seedMutation.isPending ? "正在初始化…" : "初始化 NPC、任务与深圳地点"}
               </Button>
             </div>
           )}
@@ -113,7 +113,7 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
           {canSeed && (
             <div className="flex justify-end">
               <Button variant="outline" onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending}>
-                {seedMutation.isPending ? "正在同步…" : "同步待审任务文案"}
+                {seedMutation.isPending ? "正在同步…" : "同步正式目录与深圳地点"}
               </Button>
             </div>
           )}
