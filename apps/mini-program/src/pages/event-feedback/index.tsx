@@ -222,8 +222,9 @@ export default function EventFeedbackPage() {
           <Button
             className='event-feedback__submit'
             onClick={() => setStep('connections')}
+            ariaLabel={rating > 0 ? '进入下一步' : '跳过整体体验评分'}
           >
-            {rating > 0 ? '下一步' : '跳过，下一步'}
+            {rating > 0 ? '下一步' : '跳过'}
           </Button>
         </View>
       </View>
