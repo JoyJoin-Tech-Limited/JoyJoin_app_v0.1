@@ -187,6 +187,10 @@ export default function ProfilePage() {
 
   const hasDidShowRef = useRef(false)
   useDidShow(() => {
+    // Auth feature flags are server-owned, while the auth query is cached indefinitely.
+    // Refresh on every Profile appearance so newly enabled equipment is visible on-device.
+    void queryClient.invalidateQueries({ queryKey: ['mini-program', 'auth-user'] })
+
     if (!hasDidShowRef.current) {
       hasDidShowRef.current = true
       return
