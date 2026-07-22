@@ -119,12 +119,35 @@ const catalogSchema = z.object({
   }
 });
 
+function makeTaskFeelLikeAConversation(task: unknown) {
+  const value = task as Record<string, any>;
+  const soften = (text: string) => text
+    .replace(/你替我/g, "你哪天刚好路过的话，能帮我")
+    .replace(/替我看看/g, "顺便帮我看看")
+    .replace(/你到附近帮我/g, "你哪天路过那附近，顺便帮我")
+    .replace(/你去看看/g, "你哪天想去的话，顺便看看");
+  return {
+    ...value,
+    brief: soften(value.brief),
+    dialogueIntro: soften(value.dialogueIntro),
+    requestCopy: soften(value.requestCopy),
+    instructions: value.instructions.replace(
+      /^到达 50 米内；可选/,
+      "哪天顺路到了附近，点一下“我已到达”就好。想的话，也可以",
+    ),
+    feedbackPrompts: value.feedbackPrompts.map((prompt: Record<string, any>) => ({
+      ...prompt,
+      prompt: prompt.prompt.replace(/^到达以后，/, "后来真去了的话，").replace(/^这次到达，/, "后来到了那边，"),
+    })),
+  };
+}
+
 const parsedCatalog = catalogSchema.parse({
   npcs: npcData,
   tasks: [
-  ...taskData1,
-  ...taskData2,
-  ...taskData3,
+  ...taskData1.map(makeTaskFeelLikeAConversation),
+  ...taskData2.map(makeTaskFeelLikeAConversation),
+  ...taskData3.map(makeTaskFeelLikeAConversation),
   ],
 });
 
@@ -147,11 +170,11 @@ export const FLASH_DELIVERY_COPY_BY_NPC: Record<string, string> = {
  */
 export function buildFlashNpcTaskRequestCopy(npcSlug: string, task: FlashTaskSeed): string {
   const frame: Record<string, (brief: string) => string> = {
-    alang: (brief) => `${brief} 不用勉强，到附近就够了。`,
-    lizi: (brief) => `我刚听到一个挺有意思的说法：${brief} 不进去也完全没关系 (´▽｀)`,
-    momo: (brief) => `我想请你慢慢确认一件事：${brief} 只到附近看看就好。`,
-    shiqi: (brief) => `这个细节我先记下了：${brief} 不用拍，替我看清就行。`,
-    atuan: (brief) => `${brief} 不用做得很特别，不舒服就离开。`,
+    alang: (brief) => `我刚好想到一件事。${brief} 你哪天顺路再去，不赶。`,
+    lizi: (brief) => `欸，这个感觉你可能会喜欢：${brief} 哪天想出门了再说 (´▽｀)`,
+    momo: (brief) => `我有点好奇那里。${brief} 你按自己的节奏来就好。`,
+    shiqi: (brief) => `我总觉得那里藏着个小细节。${brief} 要是正好看见了，回来跟我说。`,
+    atuan: (brief) => `这个地方也许适合随便走走。${brief} 不想去也没关系。`,
   };
   return (frame[npcSlug] ?? ((brief) => brief))(task.brief);
 }
