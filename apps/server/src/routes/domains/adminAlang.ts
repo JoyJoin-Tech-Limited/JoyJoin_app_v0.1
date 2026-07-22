@@ -626,15 +626,26 @@ export function registerAdminAlangRoutes(app: Express): void {
         res.status(503).json({ code: "FLASH_SCHEMA_NOT_READY", message: "请先完成并核验数据库迁移" });
         return;
       }
-      for (const location of FLASH_LOCATION_SEEDS) await verifyBuiltinLocationSeed(location);
+      const verifiedLocationKeys = new Set<string>();
+      const verificationFailures: Array<{ name: string; district: string }> = [];
+      for (const location of FLASH_LOCATION_SEEDS) {
+        try {
+          await verifyBuiltinLocationSeed(location);
+          verifiedLocationKeys.add(`${location.district}:${location.name}`);
+        } catch {
+          verificationFailures.push({ name: location.name, district: location.district });
+        }
+      }
       const catalog = await seedBuiltinFlashCatalog();
-      const locations = await seedBuiltinFlashLocations(getActingAdminId(req));
-      const result = { ...catalog, ...locations };
+      const locations = await seedBuiltinFlashLocations(getActingAdminId(req), verifiedLocationKeys);
+      const result = { ...catalog, ...locations, verificationFailures };
       audit(req, "FLASH_CATALOG_SEEDED", "flash_catalog", "builtin-v1", undefined, {
         npcCount: result.npcCount,
         taskCount: result.taskCount,
         encounterCount: result.encounterCount,
         destinationCount: result.destinationCount,
+        approvedLocationCount: result.approvedLocationCount,
+        draftLocationCount: result.draftLocationCount,
       });
       res.json(result);
     } catch (error) {
