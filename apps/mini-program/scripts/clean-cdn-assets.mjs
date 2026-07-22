@@ -81,6 +81,8 @@ await removeMatching(
   (name) => name !== 'puzzle' && name !== 'squad' && !bundledAlangAssets.has(name),
 )
 await Promise.all([
+  removePath('lovart/puzzle'),
+  removePath('auction-icons'),
   removePath('lovart/puzzle/_contact-sheet.png'),
   removeMatching('lovart/puzzle', (name) => name.endsWith('.png')),
   // Keep only the bundled composed-hero fallback; the CDN-primary hero and the

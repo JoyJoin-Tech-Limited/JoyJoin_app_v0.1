@@ -2,6 +2,7 @@ import { cdnAsset, localAsset } from './cdnAssets'
 
 const LOVART_BASE = '/assets/lovart'
 const PUZZLE_DIR = `${LOVART_BASE}/puzzle`
+const LOCAL_PUZZLE_DIR = '/pages/matching-status/assets/puzzle'
 
 export const PUZZLE_PIECE_COUNT = 6
 
@@ -17,7 +18,7 @@ export const MATCHING_PUZZLE_ASSETS = {
     return {
       id,
       webp: cdnAsset(`${base}.webp`),
-      local: `${base}.webp`,
+      local: `${LOCAL_PUZZLE_DIR}/lovart-puzzle-piece-${String(id).padStart(2, '0')}-20260701-v1.webp`,
     }
   }),
   particles: {

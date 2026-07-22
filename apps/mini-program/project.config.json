@@ -59,23 +59,19 @@
     "include": [
       {
         "type": "regexp",
-        "value": "assets/landing-phase-icons/phase-.*\\.png$"
+        "value": "assets/landing-phase-icons/.*\\.webp$"
       },
       {
-        "type": "file",
-        "value": "assets/xiaoyue-expressions/xiaoyue-home-welcome.png"
+        "type": "regexp",
+        "value": "assets/mascot/.*\\.(webp|json)$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/fonts/.*\\.(woff2|woff|ttf|otf)$"
       },
       {
         "type": "file",
         "value": "assets/joyjoin-logo-tab.png"
-      },
-      {
-        "type": "file",
-        "value": "assets/promo-local/banner-hero-lovart-v1.webp"
-      },
-      {
-        "type": "regexp",
-        "value": "assets/icons/ui/.*\\.webp$"
       },
       {
         "type": "regexp",
@@ -95,10 +91,6 @@
       },
       {
         "type": "regexp",
-        "value": "assets/icons/mood-icons/.*\\.webp$"
-      },
-      {
-        "type": "regexp",
         "value": "assets/icons/chemistry-badges/.*\\.webp$"
       },
       {
@@ -114,28 +106,8 @@
         "value": "assets/icons/archetype-grid/.*\\.webp$"
       },
       {
-        "type": "file",
-        "value": "assets/icons/custom-tier-icon.webp"
-      },
-      {
-        "type": "regexp",
-        "value": "assets/landing-phase-icons/.*\\.webp$"
-      },
-      {
-        "type": "regexp",
-        "value": "assets/mascot/.*\\.webp$"
-      },
-      {
         "type": "regexp",
         "value": "assets/xiaoyue-expressions/.*\\.webp$"
-      },
-      {
-        "type": "regexp",
-        "value": "assets/personality/xiaoyue/.*\\.webp$"
-      },
-      {
-        "type": "regexp",
-        "value": "assets/fonts/.*\\.(woff2|woff|ttf|otf)$"
       },
       {
         "type": "regexp",
@@ -143,11 +115,15 @@
       },
       {
         "type": "regexp",
-        "value": "assets/pool-heroes/.*\\.webp$"
+        "value": "assets/qr/.*\\.(webp|png)$"
       },
       {
         "type": "regexp",
-        "value": "assets/qr/.*\\.(webp|png)$"
+        "value": "assets/icons/ui/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/tab-icons/.*\\.png$"
       }
     ]
   },

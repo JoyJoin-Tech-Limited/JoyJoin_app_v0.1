@@ -146,7 +146,7 @@ describe('MOOD_OPTIONS', () => {
   it('every option has a non-empty asset path', () => {
     for (const opt of MOOD_OPTIONS) {
       expect(opt.asset.length).toBeGreaterThan(0)
-      expect(opt.asset.startsWith('/assets/')).toBe(true)
+      expect(opt.asset.startsWith('/pages/icebreaker-session/assets/')).toBe(true)
     }
   })
 

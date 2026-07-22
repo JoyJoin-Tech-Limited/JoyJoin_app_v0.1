@@ -16,10 +16,10 @@ export interface SessionParticipant {
 
 /** Root-relative paths — work from any JS chunk (e.g. `dist/common.js`); avoid `require('../../assets/…')` which resolves wrong when hoisted. */
 export const MOOD_OPTIONS: Array<{ mood: AtmosphereMood; label: string; asset: string }> = [
-  { mood: 'funny', label: '搞笑', asset: '/assets/icons/mood-icons/mood-funny.webp' },
-  { mood: 'life', label: '生活', asset: '/assets/icons/mood-icons/mood-life.webp' },
-  { mood: 'relaxed', label: '轻松', asset: '/assets/icons/mood-icons/mood-relaxed.webp' },
-  { mood: 'emotional', label: '情感', asset: '/assets/icons/mood-icons/mood-emotional.webp' },
+  { mood: 'funny', label: '搞笑', asset: '/pages/icebreaker-session/assets/mood-icons/mood-funny.webp' },
+  { mood: 'life', label: '生活', asset: '/pages/icebreaker-session/assets/mood-icons/mood-life.webp' },
+  { mood: 'relaxed', label: '轻松', asset: '/pages/icebreaker-session/assets/mood-icons/mood-relaxed.webp' },
+  { mood: 'emotional', label: '情感', asset: '/pages/icebreaker-session/assets/mood-icons/mood-emotional.webp' },
 ]
 
 // CDN-backed phase icons — eliminates domain-whitelist dependency and keeps the

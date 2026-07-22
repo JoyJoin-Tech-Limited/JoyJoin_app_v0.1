@@ -190,7 +190,7 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         // Mood icons — bundled locally (~16KB total).
         {
           from: 'src/assets/icons/mood-icons',
-          to: 'dist/assets/icons/mood-icons',
+          to: 'dist/pages/icebreaker-session/assets/mood-icons',
         },
         // Chemistry badges — matching status indicators (~16KB total).
         {
@@ -314,40 +314,34 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/pages/alang/assets/npcs',
           to: 'dist/pages/alang/assets/npcs',
         },
-        // Matching-status puzzle prelude pieces — bundled locally (~130KB total)
-        // so the live-reveal prelude paints instantly even if CDN is slow.
+        // Matching-status puzzle prelude pieces — bundled inside that page's
+        // subpackage (~130KB total) so they do not count against the 2MB main
+        // package while still painting instantly if the CDN is slow.
         // Source PNG masters and the contact sheet live in
         // assets-source/lovart/puzzle/ (not bundled).
         {
           from: 'src/assets/lovart/puzzle/lovart-puzzle-piece-01-20260701-v1.webp',
-          to: 'dist/assets/lovart/puzzle/lovart-puzzle-piece-01-20260701-v1.webp',
+          to: 'dist/pages/matching-status/assets/puzzle/lovart-puzzle-piece-01-20260701-v1.webp',
         },
         {
           from: 'src/assets/lovart/puzzle/lovart-puzzle-piece-02-20260701-v1.webp',
-          to: 'dist/assets/lovart/puzzle/lovart-puzzle-piece-02-20260701-v1.webp',
+          to: 'dist/pages/matching-status/assets/puzzle/lovart-puzzle-piece-02-20260701-v1.webp',
         },
         {
           from: 'src/assets/lovart/puzzle/lovart-puzzle-piece-03-20260701-v1.webp',
-          to: 'dist/assets/lovart/puzzle/lovart-puzzle-piece-03-20260701-v1.webp',
+          to: 'dist/pages/matching-status/assets/puzzle/lovart-puzzle-piece-03-20260701-v1.webp',
         },
         {
           from: 'src/assets/lovart/puzzle/lovart-puzzle-piece-04-20260701-v1.webp',
-          to: 'dist/assets/lovart/puzzle/lovart-puzzle-piece-04-20260701-v1.webp',
+          to: 'dist/pages/matching-status/assets/puzzle/lovart-puzzle-piece-04-20260701-v1.webp',
         },
         {
           from: 'src/assets/lovart/puzzle/lovart-puzzle-piece-05-20260701-v1.webp',
-          to: 'dist/assets/lovart/puzzle/lovart-puzzle-piece-05-20260701-v1.webp',
+          to: 'dist/pages/matching-status/assets/puzzle/lovart-puzzle-piece-05-20260701-v1.webp',
         },
         {
           from: 'src/assets/lovart/puzzle/lovart-puzzle-piece-06-20260701-v1.webp',
-          to: 'dist/assets/lovart/puzzle/lovart-puzzle-piece-06-20260701-v1.webp',
-        },
-        // Custom-tier icon — bundled locally for the icebreaker tier selector.
-        // Lives in the phase-icons source folder but is copied out so it is not
-        // wiped by the CDN-only phase-icons cleanup step.
-        {
-          from: 'src/assets/icons/phase-icons/custom-tier-icon.webp',
-          to: 'dist/assets/icons/custom-tier-icon.webp',
+          to: 'dist/pages/matching-status/assets/puzzle/lovart-puzzle-piece-06-20260701-v1.webp',
         },
         // Squad-unboxing composed-hero fallback — bundled locally (~19KB) so the
         // ready-state Xiaoyue host never paints a blank skeleton when the CDN is
@@ -396,21 +390,6 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         // `npm run upload:cdn-assets`. Local copies are no longer bundled so
         // the main package stays under WeChat's 2MB ceiling.
         // PNG masters live in `assets-source/lovart/batch-d/` (not bundled).
-        // Auction phase coin icons — tiny game UI elements (~23KB).
-        // Copied to a dedicated directory so the clean step doesn't remove them
-        // (the clean step wipes the entire lovart/ tree for CDN assets).
-        {
-          from: 'src/assets/lovart/icebreaker/icons/icon-coin-single.png',
-          to: 'dist/assets/auction-icons/icon-coin-single.png',
-        },
-        {
-          from: 'src/assets/lovart/icebreaker/icons/icon-coin-stack.png',
-          to: 'dist/assets/auction-icons/icon-coin-stack.png',
-        },
-        {
-          from: 'src/assets/lovart/icebreaker/icons/icon-coin-empty.png',
-          to: 'dist/assets/auction-icons/icon-coin-empty.png',
-        },
         // Customer service QR code — critical for support (~11KB).
         {
           from: 'src/assets/qr',
