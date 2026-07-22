@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  FLASH_LOCATION_SEEDS,
   FLASH_NPC_SEEDS,
   FLASH_TASK_SEEDS,
 } from "@shared/alang/flashCatalog";
@@ -73,6 +74,21 @@ describe("formal Flash catalog", () => {
     const counts = new Map<string, number>();
     for (const task of FLASH_TASK_SEEDS) counts.set(task.category, (counts.get(task.category) ?? 0) + 1);
     expect([...counts.values()].sort()).toEqual([5, 5, 5, 5, 5, 5]);
+  });
+
+  it("contains two free public location candidates for every Shenzhen district", () => {
+    expect(FLASH_LOCATION_SEEDS).toHaveLength(20);
+    const counts = new Map<string, number>();
+    for (const location of FLASH_LOCATION_SEEDS) {
+      counts.set(location.district, (counts.get(location.district) ?? 0) + 1);
+      expect(location.tags).toContain("免费");
+      expect(location.latitude).toBeGreaterThanOrEqual(22.35);
+      expect(location.latitude).toBeLessThanOrEqual(22.95);
+      expect(location.longitude).toBeGreaterThanOrEqual(113.7);
+      expect(location.longitude).toBeLessThanOrEqual(114.75);
+      expect(location.safetyNotes.length).toBeGreaterThan(8);
+    }
+    expect([...counts.values()].sort()).toEqual(Array(10).fill(2));
   });
 
   it("accepts partial preference updates and rejects empty writes", () => {
