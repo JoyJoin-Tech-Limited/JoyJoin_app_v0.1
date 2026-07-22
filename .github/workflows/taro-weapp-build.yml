@@ -313,6 +313,13 @@ jobs:
           # SSH + upload. Retry once on transient SSH disconnect (exit 255) only,
           # because a dropped return channel may leave an incomplete upload.
           # The lock + remote cleanup trap ensure safety across retries.
+          #
+          # --use-cos=false forces synchronous HTTP upload. This prevents the
+          # silent-success case where miniprogram-ci returns 0 after an async
+          # COS transfer but WeChat's backend later drops/rejects the package.
+          # Full output is captured in UPLOAD_LOG so we can grep for warnings
+          # and surface them in GitHub Actions.
+          UPLOAD_LOG="$REMOTE_DIR/miniprogram-ci.log"
           miniprogram_ci_upload() {
             base64 -w0 "$WX_KEY_FILE" | \
             timeout --signal=TERM --kill-after=30s 16m ssh "${SSH_OPTIONS[@]}" "$CVM" \
@@ -324,21 +331,41 @@ jobs:
                trap 'rm -f -- private.key' EXIT && \
                trap 'exit 143' HUP INT TERM && \
                base64 -d > private.key && \
-                timeout --signal=TERM --kill-after=30s 14m systemd-run --quiet --collect --scope --wait -p MemoryMax=768M -p CPUQuota=50% nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' NPM_CONFIG_CACHE='$REMOTE_DIR/.npm-cache' NPM_CONFIG_UPDATE_NOTIFIER='false' npx --yes miniprogram-ci@2.1.31 upload \
+                timeout --signal=TERM --kill-after=30s 14m nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' NPM_CONFIG_CACHE='$REMOTE_DIR/.npm-cache' NPM_CONFIG_UPDATE_NOTIFIER='false' npx --yes miniprogram-ci@2.1.31 upload \
                  --appid wx5a038ee6dee12032 \
                  --pp dist \
                  --pkp private.key \
                  --uv '$VERSION' \
                  --ud '$DESCRIPTION' \
-                 --rp 1"
+                 --rp 1 \
+                 --use-cos=false \
+                 --verbose 2>&1 | tee -a '$UPLOAD_LOG'"
           }
           miniprogram_ci_upload || { rc=$?; [ "$rc" -eq 255 ] && { echo "::warning::SSH disconnect during upload; retrying once"; sleep 5; miniprogram_ci_upload; } || exit "$rc"; }
 
-          echo "✅ WeChat upload complete!"
+          echo "----- miniprogram-ci output -----"
+          ssh "${SSH_OPTIONS[@]}" "$CVM" "cat '$UPLOAD_LOG'"
+          echo "----- end miniprogram-ci output -----"
+
+          # Fail the job if the captured log contains known failure/warning patterns
+          # that did not cause a non-zero exit code.
+          if ssh "${SSH_OPTIONS[@]}" "$CVM" "grep -Ei '\\[error\\]|upload failed|errcode|fail' '$UPLOAD_LOG'" >/dev/null 2>&1; then
+            echo "::error::miniprogram-ci output contains failure indicators; treating upload as failed"
+            {
+              echo "### WeChat mini-program upload"
+              echo "- Commit: \`${SOURCE_SHA:0:7}\`"
+              echo "- Version: \`$VERSION\`"
+              echo "- API target: \`$API_TARGET\`"
+              echo "- Result: **failed (see miniprogram-ci output)**"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "✅ WeChat upload complete (synchronous, output verified)"
           {
             echo "### WeChat mini-program upload"
             echo "- Commit: \`${SOURCE_SHA:0:7}\`"
             echo "- Version: \`$VERSION\`"
             echo "- API target: \`$API_TARGET\`"
-            echo "- Result: success"
+            echo "- Result: success (CI-side; still verify in the [WeChat admin console](https://mp.weixin.qq.com) under 版本管理 → 开发版本)"
           } >> "$GITHUB_STEP_SUMMARY"

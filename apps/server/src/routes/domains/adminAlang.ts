@@ -288,13 +288,34 @@ async function verifyApprovedShenzhenCoordinate(value: {
   const resolved = await reverseGeocodeCoordinate({
     latitude: value.latitude,
     longitude: value.longitude,
-  });
+  }, { cache: false });
   if (!resolved.success || resolved.source !== "tencent") {
     throw new Error("FLASH_ADMIN_INVALID:地图服务尚未完成真实行政区校验，请稍后重试审核");
   }
   if (resolved.city?.replace(/市$/, "") !== "深圳" || resolved.district !== value.district) {
     throw new Error(`FLASH_ADMIN_INVALID:坐标反查结果为${resolved.city ?? "未知城市"} ${resolved.district ?? "未知区"}，与深圳 ${value.district}不一致`);
   }
+}
+
+async function verifyBuiltinLocationSeed(location: (typeof FLASH_LOCATION_SEEDS)[number]): Promise<void> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      await verifyApprovedShenzhenCoordinate({
+        approvalStatus: "approved",
+        isActive: true,
+        district: location.district,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 350 * attempt));
+    }
+  }
+  const detail = lastError instanceof Error ? lastError.message.replace(/^FLASH_ADMIN_INVALID:/, "") : "地图校验失败";
+  throw new Error(`FLASH_ADMIN_INVALID:${location.name}：${detail}`);
 }
 
 function normalizeFeedbackPrompts(prompts: z.infer<typeof feedbackPromptSchema>[]): FlashFeedbackPrompt[] {
@@ -605,25 +626,26 @@ export function registerAdminAlangRoutes(app: Express): void {
         res.status(503).json({ code: "FLASH_SCHEMA_NOT_READY", message: "请先完成并核验数据库迁移" });
         return;
       }
-      for (let index = 0; index < FLASH_LOCATION_SEEDS.length; index += 4) {
-        await Promise.all(FLASH_LOCATION_SEEDS.slice(index, index + 4).map((location) => (
-          verifyApprovedShenzhenCoordinate({
-            approvalStatus: "approved",
-            isActive: true,
-            district: location.district,
-            latitude: location.latitude,
-            longitude: location.longitude,
-          })
-        )));
+      const verifiedLocationKeys = new Set<string>();
+      const verificationFailures: Array<{ name: string; district: string }> = [];
+      for (const location of FLASH_LOCATION_SEEDS) {
+        try {
+          await verifyBuiltinLocationSeed(location);
+          verifiedLocationKeys.add(`${location.district}:${location.name}`);
+        } catch {
+          verificationFailures.push({ name: location.name, district: location.district });
+        }
       }
       const catalog = await seedBuiltinFlashCatalog();
-      const locations = await seedBuiltinFlashLocations(getActingAdminId(req));
-      const result = { ...catalog, ...locations };
+      const locations = await seedBuiltinFlashLocations(getActingAdminId(req), verifiedLocationKeys);
+      const result = { ...catalog, ...locations, verificationFailures };
       audit(req, "FLASH_CATALOG_SEEDED", "flash_catalog", "builtin-v1", undefined, {
         npcCount: result.npcCount,
         taskCount: result.taskCount,
         encounterCount: result.encounterCount,
         destinationCount: result.destinationCount,
+        approvedLocationCount: result.approvedLocationCount,
+        draftLocationCount: result.draftLocationCount,
       });
       res.json(result);
     } catch (error) {

@@ -19,6 +19,14 @@
       "cdnPath": "assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin.woff2"
     },
     {
+      "localPath": "assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2",
+      "cdnPath": "assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2"
+    },
+    {
+      "localPath": "assets/fonts/Quicksand/Quicksand-VariableFont_wght.woff2",
+      "cdnPath": "assets/fonts/Quicksand/Quicksand-VariableFont_wght.woff2"
+    },
+    {
       "localPath": "assets/icons/phase-icons/phase-auction.webp",
       "cdnPath": "assets/icons/phase-icons/phase-auction.webp"
     },

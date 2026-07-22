@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 
-import { cdnAsset, localAsset } from './cdnAssets'
+import { cdnAsset } from './cdnAssets'
 import { logInfo, logWarn } from './logger'
 
 /**
@@ -15,7 +15,8 @@ import { logInfo, logWarn } from './logger'
 export const BRAND_DISPLAY_FONT_FAMILY = 'AlimamaFangYuanTiVF'
 
 // Minimal subset — only characters needed for landing + onboarding.
-const BRAND_FONT_MINIMAL_PATH = localAsset('/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2')
+// Served from CDN because WeChat loadFontFace does not accept bundled root-relative paths.
+const BRAND_FONT_MINIMAL_PATH = cdnAsset('/assets/fonts/Alimama/AlimamaFangYuanTiVF-Thin-minimal.woff2')
 
 // Full font — complete glyph set from CDN.
 // ?v=full forces cache bust after uploading the complete glyph set (2026-05-21).
@@ -31,10 +32,10 @@ let englishFontLoaded = false
  */
 export const EN_BRAND_FONT_FAMILY = 'Quicksand'
 
-const EN_BRAND_FONT_SOURCE_PATH = localAsset('/assets/fonts/Quicksand/Quicksand-VariableFont_wght.woff2')
+const EN_BRAND_FONT_SOURCE_PATH = cdnAsset('/assets/fonts/Quicksand/Quicksand-VariableFont_wght.woff2')
 
 /**
- * Load the minimal Alimama subset (66KB, local bundle).
+ * Load the minimal Alimama subset (66KB).
  * Call this immediately on app launch / landing page mount for instant brand text.
  */
 export function loadBrandDisplayFontMinimal(): void {
