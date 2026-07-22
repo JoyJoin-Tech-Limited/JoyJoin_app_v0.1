@@ -24,6 +24,7 @@ import { getArchetypeHSL } from '@shared/archetypeColors';
 import type { UndercoverWordPair } from '@shared/undercoverWord';
 import {
   generateWarmupTopics,
+  getCuratedWarmupTopics,
   generateMicroChallenges,
   generateLieDetectiveStatements,
   generateXiaoYueComment,
@@ -38,7 +39,7 @@ import {
   getLieDetectiveMode,
   getDynamicDifficulty,
 } from '../socialIcebreakerAIService';
-import { buildCachedAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
+import { buildCachedAIMeta, buildFallbackAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
 import {
   cleanupPhaseStateForNextPhase,
   ensureSessionEnabledPhases,
@@ -243,14 +244,28 @@ function scheduleStartBackgroundGeneration(params: {
       ]);
 
       if (topicResult) {
-        state.warmupTopics = topicResult.data;
-        state.warmupTopicsMeta = topicResult.meta;
-        await updateSession(socialSessionId, state);
+        const latestState = await getSession(socialSessionId);
+        if (!latestState) {
+          return;
+        }
+
+        if ((latestState.warmupTopics?.length ?? 0) > 0 || latestState.selectedMood) {
+          logger.info('Warmup pre-compilation skipped because topics were already requested', {
+            socialSessionId,
+            topicCount: latestState.warmupTopics?.length ?? 0,
+            selectedMood: latestState.selectedMood,
+          });
+          return;
+        }
+
+        latestState.warmupTopics = topicResult.data;
+        latestState.warmupTopicsMeta = topicResult.meta;
+        await updateSession(socialSessionId, latestState);
         logger.info('Warmup topics pre-compiled after session start', {
           socialSessionId,
           source: topicResult.meta.fallbackUsed ? 'curated' : 'ai',
           topicCount: topicResult.data.length,
-          vibe: state.vibe,
+          vibe: latestState.vibe,
         });
       } else {
         logger.warn('Warmup pre-compilation exceeded background budget', {
@@ -674,20 +689,29 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
   // Persist the mood pick BEFORE generation so a failed first attempt keeps
   // the client's 重试 path alive (it re-fires /topics with the stored mood).
   state.selectedMood = mood;
-  await updateSession(socialSessionId, state);
-
   try {
-    // Participant profile enrichment improves prompts but is not required to
-    // serve a playable warmup. A transient join/profile query failure must not
-    // turn the curated, fallback-rich topic path into an HTTP 500.
-    const participants = await listParticipants(socialSessionId).catch((error) => {
-      logger.warn('[SocialIcebreaker] topics roster enrichment unavailable; continuing without roster context', {
-        socialSessionId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return [];
+    await updateSession(socialSessionId, state);
+  } catch (error) {
+    logger.warn('[SocialIcebreaker] topics mood persistence failed; continuing to generate topics', {
+      socialSessionId,
+      error: error instanceof Error ? error.message : String(error),
     });
-    const topicResult = await generateWarmupTopics({
+  }
+
+  // Participant profile enrichment improves prompts but is not required to
+  // serve a playable warmup. A transient join/profile query failure must not
+  // turn the curated, fallback-rich topic path into an HTTP 500.
+  const participants = await listParticipants(socialSessionId).catch((error) => {
+    logger.warn('[SocialIcebreaker] topics roster enrichment unavailable; continuing without roster context', {
+      socialSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return [];
+  });
+
+  let topicResult: { data: SocialSessionState['warmupTopics']; meta: AIResponseMeta };
+  try {
+    topicResult = await generateWarmupTopics({
       mood,
       eventType,
       participantCount: state.playerCount || participantCount,
@@ -695,20 +719,26 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
       roster: participants || [],
       vibe: state.vibe,
     });
-
-    state.warmupTopics = topicResult.data;
-    state.warmupTopicsMeta = topicResult.meta;
-    state.currentTopicIndex = 0;
-    state.warmupReadyUserIds = [];
-    // Single-test bot attendees default to ready on the fresh topic set.
-    seedSingleTestBotsWarmupReady(state);
-    await updateSession(socialSessionId, state);
-
-    return res.json({ topics: topicResult.data, meta: topicResult.meta });
   } catch (error) {
-    logger.error('[SocialIcebreaker] topics error:', { error });
-    return res.status(500).json({ error: 'Failed to generate topics' });
+    logger.error('[SocialIcebreaker] topics generation failed; serving curated fallback topics', {
+      socialSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    topicResult = {
+      data: getCuratedWarmupTopics(mood, state.vibe),
+      meta: buildFallbackAIMeta('route_generation_error', 'social-warmup-topics-route-fallback'),
+    };
   }
+
+  state.warmupTopics = topicResult.data;
+  state.warmupTopicsMeta = topicResult.meta;
+  state.currentTopicIndex = 0;
+  state.warmupReadyUserIds = [];
+  // Single-test bot attendees default to ready on the fresh topic set.
+  seedSingleTestBotsWarmupReady(state);
+  await updateSession(socialSessionId, state);
+
+  return res.json({ topics: topicResult.data, meta: topicResult.meta });
 });
 
 // ---------------------------------------------------------------------------

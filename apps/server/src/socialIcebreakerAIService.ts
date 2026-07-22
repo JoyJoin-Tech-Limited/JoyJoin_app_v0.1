@@ -556,6 +556,10 @@ function getFallbackTopics(mood: AtmosphereMood, vibe?: 'chat' | 'balanced' | 'g
   return ensureBraveTopic(topics, mood);
 }
 
+export function getCuratedWarmupTopics(mood: AtmosphereMood, vibe?: 'chat' | 'balanced' | 'game'): SocialTopic[] {
+  return getFallbackTopics(mood, vibe);
+}
+
 function isMicroChallengeLlmEnabled(): boolean {
   const v = process.env.SOCIAL_MICRO_CHALLENGE_LLM_ENABLED;
   if (v === undefined || v === '') return true; // default: AI enabled for backward compat

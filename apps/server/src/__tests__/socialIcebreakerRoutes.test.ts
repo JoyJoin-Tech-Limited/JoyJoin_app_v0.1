@@ -127,6 +127,10 @@ vi.mock('../socialIcebreakerAIService', () => ({
       promptVersion: 'social-warmup-topics-v2',
     },
   }),
+  getCuratedWarmupTopics: vi.fn().mockReturnValue([
+    { id: 'fallback-1', question: '最近有什么小事让你放松了一点？', mood: 'relaxed', emoji: '🌿', category: '轻松开场', depthLevel: 1, promptStyle: 'experiential', safety: 'gentle' },
+    { id: 'fallback-2', question: '今天你最想把哪件事先放一放？', mood: 'relaxed', emoji: '☁️', category: '轻松开场', depthLevel: 1, promptStyle: 'binary', safety: 'gentle' },
+  ]),
   generateMicroChallenges: vi.fn().mockResolvedValue({
     data: [
       { id: 'c1', title: '击掌', description: '和你左边的人击掌', durationSeconds: 30, completionCTA: '完成了' },
@@ -456,6 +460,40 @@ describe.sequential('social icebreaker routes', () => {
         fallbackUsed: false,
         promptVersion: 'social-warmup-topics-v2',
       });
+    });
+  });
+
+  it('serves curated fallback warmup topics when AI generation throws', async () => {
+    await withServer(async (baseUrl) => {
+      const hostCookie = await login(baseUrl, 'topics-ai-fallback-host');
+      const sessionId = `session-topics-ai-fallback-${Date.now()}`;
+
+      const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ sessionId, displayName: 'Host' }),
+      });
+      const { socialSessionId } = await startResponse.json() as { socialSessionId: string };
+
+      vi.mocked(generateWarmupTopics).mockRejectedValueOnce(new Error('AI timeout'));
+
+      const topicsResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/topics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+        body: JSON.stringify({ mood: 'relaxed' }),
+      });
+      const topicsBody = await topicsResponse.json() as any;
+      const savedState = await getSession(socialSessionId) as any;
+
+      expect(topicsResponse.status).toBe(200);
+      expect(topicsBody.topics).toHaveLength(2);
+      expect(topicsBody.meta).toMatchObject({
+        provider: null,
+        fallbackUsed: true,
+        evaluatorRejectionReason: 'route_generation_error',
+      });
+      expect(savedState.warmupTopics).toHaveLength(2);
+      expect(savedState.selectedMood).toBe('relaxed');
     });
   });
 
