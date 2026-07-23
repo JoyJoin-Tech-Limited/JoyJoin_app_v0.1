@@ -216,6 +216,10 @@ npx miniprogram-ci upload \
   --rp 1
 ```
 
+**Upload gotchas (2026-07-22):**
+- `.github/workflows/taro-weapp-build.yml` uses `--use-cos=false` so `miniprogram-ci` waits for WeChat backend validation. Without synchronous upload, the async COS path returns exit 0 before WeChat scans the package, so rejected uploads look like successes in CI.
+- `scope.*` permission descriptions in `src/app.config.ts` must be **≤30 characters**. Exceeding this causes `errcode 80058` and an invisible upload. CI runs `npm run validate:wechat-app-config -w mini-program` (also part of `npm run build:weapp`) to catch this locally before upload.
+
 ---
 
 ## 9. Where to put new code
@@ -283,6 +287,7 @@ npx miniprogram-ci upload \
 
 - **`IdentityStageScene`** — stage wrapper for `PixelAvatar3D`/V2 paper doll: sunset street depth scene (`layerImageMode='aspectFill'`), CDN-first via `v2/stage/*.webp` + CDN manifest; total art failure degrades to children over the legacy grid backdrop.
 - **Subpackage WXSS splitting is a hard trap**: WeChat applies only the page's own WXSS + the `app.wxss` chain (`app.wxss` → `common.wxss`). Taro's chunk graph can move a component's rules into an unreachable chunk (e.g., V2 turntable/composite rules landed in `pages/profile-linked/three-avatar.wxss`, blanking the stage for all 11 non-spider archetypes). **Any component SCSS used by a `profile-linked` page MUST be `@use`d in the page SCSS.** CI gate: `npm run verify:subpackage-styles -w mini-program` asserts the required selectors in compiled page WXSS; runs in `taro-weapp-build.yml` after `check:package-size`.
+- **Percentage-height stage trap (2026-07-23)**: `IdentityStageScene` sizes itself with `height: 100%`, which never resolves against a host that only declares `min-height` — the scene collapses to 0 height and its `overflow: hidden` blanks the entire identity card (the Profile-tab blank-card bug). Stage hosts MUST set an explicit `height` next to `min-height` (pattern: `my-image__stage`); the component also carries `min-height: inherit` as component-level defense. The `verify:subpackage-styles` gate asserts both.
 - **Slot hotspots** — `PixelAvatarComposite` accepts `slotHotspots` + `onSlotTap`: placement-rect hit areas on the character, front frame only (off-front poses hide them). Tapping jacket/shoes on the character jumps to that wardrobe slot.
 - **Wardrobe slot tabs** show an equipped-state dot; equipment layers fade in on item change (240ms opacity transition, RM-suppressed).
 - **Layer extraction** — 48 starter layers derived by atlas character-difference from each archetype's `atlas-source.png` (2×3 dressed-stage grid). Coarse silhouette + head alignment; diff-bounds placement; hard fit gate ≤3% missed/≤5% extra. 12 per-archetype `fullStarter` approved full-dress illustrations (spider keeps V1). See `assets-source/profile-pixel-v2/README.md` for the full pipeline.

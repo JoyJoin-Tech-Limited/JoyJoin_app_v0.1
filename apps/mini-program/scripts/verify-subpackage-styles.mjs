@@ -41,6 +41,21 @@ const REQUIREMENTS = [
     page: 'pages/profile-linked/my-image/qa3d/index.wxss',
     selectors: [...AVATAR_STAGE_SELECTORS],
   },
+  {
+    // Second blank-stage trap (2026-07-23): IdentityStageScene sizes itself
+    // with `height: 100%`, which never resolves against a parent that only
+    // declares `min-height` — the scene collapses to 0 height and its
+    // overflow:hidden clips the entire identity card. The Profile stage must
+    // keep an explicit `height` next to its `min-height`.
+    page: 'pages/profile/index.wxss',
+    selectors: ['profile-page__identity-stage{position:relative;height:560rpx'],
+  },
+  {
+    // Component-level defense for the same trap: the scene root inherits the
+    // host's computed min-height so future min-height-only hosts stay open.
+    page: 'common.wxss',
+    selectors: ['.identity-stage{position:relative;width:100%;height:100%;min-height:inherit'],
+  },
 ]
 
 let failed = false

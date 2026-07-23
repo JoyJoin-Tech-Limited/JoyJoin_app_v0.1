@@ -16,6 +16,7 @@ const CDN_MANIFEST_PATH = process.env.PROFILE_PIXEL_CDN_MANIFEST_PATH
   ? path.resolve(process.env.PROFILE_PIXEL_CDN_MANIFEST_PATH)
   : path.join(__dirname, 'cdn-asset-manifest.json')
 const AVATAR_MANIFEST_PATH = path.join(V2_ROOT, 'avatar-assets-v2.json')
+const STAGE_MANIFEST_PATH = path.join(V2_ROOT, 'stage-assets-v1.json')
 const SOURCE_REGISTRY_PATH = path.join(
   process.env.PROFILE_PIXEL_SOURCE_ROOT
     ? path.resolve(process.env.PROFILE_PIXEL_SOURCE_ROOT)
@@ -216,12 +217,45 @@ async function listWebpFiles(directory) {
 }
 
 async function main() {
-  const [cdnManifest, avatarManifest, sourceRegistry] = await Promise.all([
+  const [cdnManifest, avatarManifest, sourceRegistry, stageManifest] = await Promise.all([
     fs.readFile(CDN_MANIFEST_PATH, 'utf8').then(JSON.parse),
     fs.readFile(AVATAR_MANIFEST_PATH, 'utf8').then(JSON.parse),
     fs.readFile(SOURCE_REGISTRY_PATH, 'utf8').then(JSON.parse),
+    fs.readFile(STAGE_MANIFEST_PATH, 'utf8').then(JSON.parse),
   ])
   if (!Array.isArray(cdnManifest.assets)) throw new Error('CDN manifest must contain an assets array')
+
+  // Stage art (IdentityStageScene) is governed by stage-assets-v1.json.
+  // Unlike avatar/equipment it is not part of the avatar manifest, so we
+  // explicitly verify every declared layer is registered in the CDN manifest
+  // and the referenced source file is a valid WebP.
+  if (!stageManifest.layers || typeof stageManifest.layers !== 'object') {
+    throw new Error('Stage manifest must declare layers')
+  }
+  async function inspectStageWebp(relativePath, label) {
+    assertSafeV2Path(relativePath, label)
+    const absolutePath = resolveV2AssetPath(relativePath)
+    const buffer = await fs.readFile(absolutePath)
+    if (buffer.length === 0) throw new Error(`${relativePath} is empty`)
+    const metadata = await sharp(buffer).metadata()
+    if (metadata.format !== 'webp') {
+      throw new Error(`${relativePath} must be a WebP`)
+    }
+    return metadata
+  }
+  for (const [layerId, layer] of Object.entries(stageManifest.layers)) {
+    if (!layer || typeof layer !== 'object' || typeof layer.path !== 'string') {
+      throw new Error(`Stage layer ${layerId} must declare a path`)
+    }
+    assertSafeV2Path(layer.path, `Stage layer ${layerId}`)
+    await inspectStageWebp(layer.path, `Stage layer ${layerId}`)
+    const stageManifestMatch = cdnManifest.assets.find((asset) => (
+      asset.localPath === layer.path && asset.cdnPath === layer.path
+    ))
+    if (!stageManifestMatch) {
+      throw new Error(`Stage layer ${layerId} (${layer.path}) must be registered in the CDN manifest`)
+    }
+  }
   if (avatarManifest.version !== 2) throw new Error('Avatar manifest version must be 2')
   if (avatarManifest.renderer !== 'layered-paper-doll-parallax') {
     throw new Error('Avatar manifest renderer must be layered-paper-doll-parallax')

@@ -374,6 +374,12 @@
   // Reference 06 — approved Profile identity stage
   &__identity-stage {
     position: relative;
+    // Explicit height is required: IdentityStageScene sizes itself with
+    // `height: 100%`, and percentage heights never resolve against a parent's
+    // `min-height` (they fall back to `auto` → the scene collapses to 0 and
+    // its overflow:hidden clips the whole identity card). Mirrors the proven
+    // `my-image__stage` pattern (`height` + `min-height`).
+    height: 560rpx;
     min-height: 560rpx;
     margin: $spacing-md $container-padding $spacing-lg;
     border-radius: 36rpx;

@@ -145,6 +145,16 @@ npm run simulate:gate                 # CI gate: generate + run centroids
 #     --pkp <private-key-file> --uv "1.0.$(date +%Y%m%d).$(date +%H%M)" \
 #     --ud "dev build" --rp 1
 #
+# WeChat upload gotchas (2026-07-22):
+#   - Synchronous upload: .github/workflows/taro-weapp-build.yml uses
+#     --use-cos=false so miniprogram-ci waits for WeChat backend validation.
+#     Without this, async COS upload returns exit 0 before WeChat scans the
+#     package, so rejected uploads look like successes in CI.
+#   - scope.* permission descriptions must be <= 30 characters.
+#     Exceeding this causes errcode 80058 and an invisible upload.
+#     Guardrail: npm run validate:wechat-app-config -w mini-program
+#     (also runs automatically as part of npm run build:weapp -w mini-program).
+#
 # CDN asset upload (mascot, phase icons, illustrations → joyjoinapp.com/static)
 # Trigger: gh workflow run "Upload CDN Assets"
 # Production: nginx serves /static/ from /var/www/cdn/ (alias directive).
