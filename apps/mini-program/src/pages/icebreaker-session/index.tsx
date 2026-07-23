@@ -12,7 +12,7 @@ import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../..
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
-import { logInfo, logError } from '../../lib/utils/logger'
+import { logInfo, logWarn, logError } from '../../lib/utils/logger'
 import { haptics } from '../../lib/utils/haptics'
 import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerAnalytics'
 import {
@@ -70,6 +70,7 @@ import {
   resolveSyncLossVisible,
 } from './sessionShellLogic'
 import { shouldRetryWarmupTopics } from './viewModels/warmupViewModels'
+import { syncSocialActionResponse } from './socialActionSync'
 import './index.scss'
 
 function getPhaseToastText(phase: string): ReactNode {
@@ -102,6 +103,15 @@ const TOPICS_RECOVERY_RETRY_DELAY_MS = 1200
 type WarmupTopicsResponse = {
   topics?: SocialTopic[]
   state?: SocialSessionState
+}
+
+type WarmupReadyResponse = {
+  readyUserIds: string[]
+  readyCount: number
+  allReady: boolean
+  currentTopicIndex: number
+  commonGroundCount: number
+  state: SocialSessionState
 }
 
 const LOCAL_WARMUP_TOPICS: Record<AtmosphereMood, SocialTopic[]> = {
@@ -294,6 +304,19 @@ export default function IcebreakerSessionPage() {
     return sourceState ? normaliseSession(sourceState) : null
   }, [socialSessionQuery.data, bootstrapState])
 
+  const applySocialSessionState = useCallback((nextState: SocialSessionState) => {
+    if (!socialSessionId || nextState.socialSessionId !== socialSessionId) {
+      logWarn('[IcebreakerSession] Ignored mismatched action state', {
+        socialSessionId,
+        responseSocialSessionId: nextState.socialSessionId,
+      })
+      return
+    }
+
+    setBootstrapState(nextState)
+    queryClient.setQueryData(['mini-program', 'social-icebreaker-session', socialSessionId], nextState)
+  }, [queryClient, socialSessionId])
+
   const applyWarmupTopicsToLocalState = useCallback((mood: AtmosphereMood, topics: SocialTopic[], nextState?: SocialSessionState) => {
     if (!socialSessionId || topics.length === 0) {
       return
@@ -428,7 +451,17 @@ export default function IcebreakerSessionPage() {
           timeout: options?.timeoutMs,
         })
 
-        await socialSessionQuery.refetch()
+        await syncSocialActionResponse(response, {
+          applyState: applySocialSessionState,
+          refetch: socialSessionQuery.refetch,
+          onSyncError: (syncError) => {
+            logWarn('[IcebreakerSession] Action succeeded but session reconciliation failed', {
+              socialSessionId,
+              actionKey,
+              message: syncError instanceof Error ? syncError.message : String(syncError),
+            })
+          },
+        })
         return response
       } catch (error) {
         const message = getErrorText(error, '操作没成功，再试试')
@@ -447,7 +480,7 @@ export default function IcebreakerSessionPage() {
         setPendingAction((current) => (current === actionKey ? null : current))
       }
     },
-    [socialSessionId, pendingAction, socialSessionQuery],
+    [applySocialSessionState, socialSessionId, pendingAction, socialSessionQuery.refetch],
   )
 
   const topicsSkipRetryRef = useRef(0)
@@ -503,7 +536,7 @@ export default function IcebreakerSessionPage() {
 
   const handleToggleWarmupReady = useCallback(() => {
     const isReady = session?.warmupReadyUserIds?.includes(currentUserId) ?? false
-    void performSocialAction('warmup-ready', '/warmup/ready', { ready: !isReady })
+    void performSocialAction<WarmupReadyResponse>('warmup-ready', '/warmup/ready', { ready: !isReady })
   }, [performSocialAction, session?.warmupReadyUserIds, currentUserId])
 
   const handleNextWarmupTopic = useCallback(() => {

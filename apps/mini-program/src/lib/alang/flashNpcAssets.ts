@@ -10,7 +10,7 @@ export type FlashNpcTheme = {
 }
 
 export const FLASH_UNIVERSAL_ART = '/pages/alang/assets/flash-city-encounter.webp'
-export const FLASH_STREET_BOX_ICON = '/pages/alang/assets/street-blind-box-icon.webp'
+export const FLASH_STREET_BOX_ICON = '/assets/flash/street-blind-box-icon.webp'
 
 const npcThemes: FlashNpcTheme[] = [
   {

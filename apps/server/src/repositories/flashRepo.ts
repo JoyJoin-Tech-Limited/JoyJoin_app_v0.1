@@ -433,7 +433,7 @@ export async function seedBuiltinFlashCatalog() {
  * rows remain operator-owned; only missing or still-draft built-in rows are
  * synchronized.
  */
-export async function seedBuiltinFlashLocations(reviewedBy: string) {
+export async function seedBuiltinFlashLocations(reviewedBy: string, verifiedLocationKeys: ReadonlySet<string>) {
   return db.transaction(async (tx: DbExecutor) => {
     const now = new Date();
     const npcRows = await tx.select({ id: flashNpcs.id }).from(flashNpcs)
@@ -452,8 +452,13 @@ export async function seedBuiltinFlashLocations(reviewedBy: string) {
 
     let encounterCount = 0;
     let destinationCount = 0;
+    let approvedLocationCount = 0;
+    let draftLocationCount = 0;
     for (const seed of FLASH_LOCATION_SEEDS) {
       const key = `${seed.district}:${seed.name}`;
+      const isVerified = verifiedLocationKeys.has(key);
+      if (isVerified) approvedLocationCount += 1;
+      else draftLocationCount += 1;
       const encounterValues = {
         name: seed.name,
         city: "深圳",
@@ -463,11 +468,11 @@ export async function seedBuiltinFlashLocations(reviewedBy: string) {
         longitude: seed.longitude,
         coordinateSystem: "gcj02",
         availabilityWindows,
-        approvalStatus: "approved",
+        approvalStatus: isVerified ? "approved" : "draft",
         safetyNotes: seed.safetyNotes,
-        lastReviewedAt: now,
-        reviewedBy,
-        isActive: true,
+        lastReviewedAt: isVerified ? now : null,
+        reviewedBy: isVerified ? reviewedBy : null,
+        isActive: isVerified,
       } as const;
       const existingEncounter = encounterByKey.get(key);
       let encounter = existingEncounter;
@@ -498,11 +503,11 @@ export async function seedBuiltinFlashLocations(reviewedBy: string) {
         coordinateSystem: "gcj02",
         destinationType: seed.destinationType,
         tags: seed.tags,
-        approvalStatus: "approved",
+        approvalStatus: isVerified ? "approved" : "draft",
         safetyNotes: seed.safetyNotes,
-        lastReviewedAt: now,
-        reviewedBy,
-        isActive: true,
+        lastReviewedAt: isVerified ? now : null,
+        reviewedBy: isVerified ? reviewedBy : null,
+        isActive: isVerified,
       } as const;
       const existingDestination = destinationByKey.get(key);
       let destination = existingDestination;
@@ -527,7 +532,7 @@ export async function seedBuiltinFlashLocations(reviewedBy: string) {
       }
     }
 
-    return { encounterCount, destinationCount };
+    return { encounterCount, destinationCount, approvedLocationCount, draftLocationCount };
   });
 }
 

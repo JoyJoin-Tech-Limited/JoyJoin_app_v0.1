@@ -53,13 +53,13 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
       const response = await apiRequest("POST", "/api/admin/alang/catalog/seed", {});
       return response.json().catch(() => null);
     },
-    onSuccess: async (result: { npcCount?: number; taskCount?: number; encounterCount?: number; destinationCount?: number } | null) => {
+    onSuccess: async (result: { npcCount?: number; taskCount?: number; encounterCount?: number; destinationCount?: number; approvedLocationCount?: number; draftLocationCount?: number } | null) => {
       await queryClient.invalidateQueries({
         predicate: (item) => String(item.queryKey[0] ?? "").startsWith("/api/admin/alang"),
       });
       toast({
         title: "正式目录已初始化",
-        description: `已写入 ${result?.npcCount ?? 5} 位 NPC、${result?.taskCount ?? 30} 条待审任务、${result?.encounterCount ?? 20} 个遭遇点与 ${result?.destinationCount ?? 20} 个免消费目的地。`,
+        description: `已写入 ${result?.npcCount ?? 5} 位 NPC、${result?.taskCount ?? 30} 条待审任务、${result?.encounterCount ?? 20} 个遭遇点与 ${result?.destinationCount ?? 20} 个免消费目的地；${result?.approvedLocationCount ?? 0} 个地点已通过腾讯校验，${result?.draftLocationCount ?? 0} 个保持待审核停用。`,
       });
     },
     onError: (error) => toast({ title: "目录初始化失败", description: describeFlashAdminError(error), variant: "destructive" }),

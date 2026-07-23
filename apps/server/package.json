@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --env-file=../../.env --import tsx/esm src/index.ts",
-    "build": "NODE_ENV=production esbuild ./src/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --external:vite --external:nanoid --define:process.env.NODE_ENV=\\\"production\\\"",
+    "build": "NODE_ENV=production esbuild ./src/index.ts ./src/scripts/seed-flash-catalog.ts ./src/scripts/check-flash-readiness.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --external:vite --external:nanoid --define:process.env.NODE_ENV=\\\"production\\\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "npm run typecheck",
     "test": "vitest run",

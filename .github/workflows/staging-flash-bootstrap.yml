@@ -1,0 +1,76 @@
+name: Bootstrap Staging Flash Data
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: joyjoin-cvm-remote
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Apply additive Flash schema and seed reviewed catalog drafts
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          command_timeout: 12m
+          script: |
+            set -euo pipefail
+            cd ~/JoyJoin
+
+            exec 9>/var/lock/joyjoin-cvm-remote.lock
+            flock -n 9
+
+            test -f deployment/.env.staging
+            set -a
+            source deployment/.env.staging
+            set +a
+            : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+
+            run_psql() {
+              docker exec -i \
+                -e PGPASSWORD="$POSTGRES_PASSWORD" \
+                postgres-staging \
+                psql -h 127.0.0.1 -U joyjoin -d joyjoin_staging "$@"
+            }
+
+            database_name="$(run_psql -Atc 'select current_database()')"
+            test "$database_name" = 'joyjoin_staging'
+
+            existing_flash_tables="$(run_psql -Atc \
+              "select count(*) from pg_tables where schemaname = 'public' and tablename like 'flash_%'")"
+            if [ "$existing_flash_tables" = '0' ]; then
+              run_psql -v ON_ERROR_STOP=1 \
+                -f /dev/stdin \
+                < apps/server/migrations/0071_add_flash_formal_schema.sql
+            elif [ "$existing_flash_tables" != '15' ]; then
+              echo "::error::Partial Flash schema detected (${existing_flash_tables}/15 tables); refusing automatic repair"
+              exit 1
+            fi
+
+            final_flash_tables="$(run_psql -Atc \
+              "select count(*) from pg_tables where schemaname = 'public' and tablename like 'flash_%'")"
+            test "$final_flash_tables" = '15'
+
+            docker exec joyjoin-api-staging \
+              node dist/scripts/seed-flash-catalog.js
+
+            run_psql -At <<'SQL'
+            select 'flash_tables=' || count(*)
+            from pg_tables
+            where schemaname = 'public' and tablename like 'flash_%';
+            select 'npcs=' || count(*) from flash_npcs;
+            select 'tasks=' || count(*) from flash_task_templates;
+            select 'approved_tasks=' || count(*)
+            from flash_task_templates
+            where review_status = 'active' and is_human_reviewed is true and is_active is true;
+            SQL

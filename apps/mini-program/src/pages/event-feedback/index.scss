@@ -233,7 +233,8 @@
   &__textarea {
     box-sizing: border-box;
     display: block;
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     min-height: 200rpx;
     padding: $spacing-md;
     border: 2rpx solid $color-border;

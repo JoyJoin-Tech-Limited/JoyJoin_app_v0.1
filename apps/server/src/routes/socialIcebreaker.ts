@@ -799,17 +799,25 @@ router.post('/:socialSessionId/warmup/ready', async (req: any, res) => {
 
   state.warmupReadyUserIds = [...readyUserIds];
 
-  // In single-test bot sessions, bots are always ready alongside the real user.
+  // Bot attendees belong to the debug roster even when the optional simulation
+  // harness is disabled. This also repairs sessions where /topics failed and
+  // the mini-program rendered its local fallback topic before this request.
+  seedSingleTestBotsWarmupReady(state);
+
+  // The simulation harness may add phase-specific bot actions when enabled.
   await runBotSimulationSafely(socialSessionId, state, 'warmup-ready');
 
   await updateSession(socialSessionId, state);
 
+  const clientState = await buildClientState(state, userId);
+
   return res.json({
-    readyUserIds: state.warmupReadyUserIds,
-    readyCount: state.warmupReadyUserIds.length,
+    readyUserIds: clientState.warmupReadyUserIds,
+    readyCount: clientState.warmupReadyUserIds?.length ?? 0,
     allReady: hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCount),
     currentTopicIndex: state.currentTopicIndex ?? 0,
     commonGroundCount: state.commonGroundCount ?? 0,
+    state: clientState,
   });
 });
 

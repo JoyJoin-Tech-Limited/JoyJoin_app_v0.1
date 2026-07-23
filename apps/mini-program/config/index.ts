@@ -314,6 +314,16 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/pages/alang/assets/npcs',
           to: 'dist/pages/alang/assets/npcs',
         },
+        // Discover is a main-package page, so its static entry artwork must
+        // also live in the main package. Flash pages can reuse that path.
+        {
+          from: 'src/pages/alang/assets/street-blind-box-icon.webp',
+          to: 'dist/assets/flash/street-blind-box-icon.webp',
+        },
+        {
+          from: 'src/pages/alang/assets/flash-city-encounter.webp',
+          to: 'dist/pages/alang/assets/flash-city-encounter.webp',
+        },
         // Matching-status puzzle prelude pieces — bundled inside that page's
         // subpackage (~130KB total) so they do not count against the 2MB main
         // package while still painting instantly if the CDN is slow.
