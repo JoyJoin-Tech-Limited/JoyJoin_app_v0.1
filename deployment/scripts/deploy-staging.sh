@@ -796,7 +796,16 @@ if ! retry_health_check "http://127.0.0.1:5001/api/readyz" "Staging API readines
     exit 1
 fi
 
-echo "💳 Step 9: Apply the requested staging payment state after the release is healthy..."
+echo "🗺️  Step 9: Resolve and approve the four core Flash public spaces..."
+if ! docker exec \
+    -e FLASH_STAGING_APPROVED_LOCATION_CODES="NS-SEAWORLD-ART,NS-NANTOU,FT-UPPERHILLS,FT-BOOK-CITY" \
+    joyjoin-api-staging \
+    node dist/scripts/seed-flash-catalog.js; then
+    echo "Core Flash location import failed; rolling back the staging release."
+    exit 1
+fi
+
+echo "💳 Step 10: Apply the requested staging payment state after the release is healthy..."
 ROLLBACK_ARMED=false
 FINAL_PAYMENT_PHASE=true
 if ! sync_and_verify_payments_flag "$PAYMENTS_ENABLED_NORMALIZED"; then
@@ -830,3 +839,4 @@ echo ""
 echo "✅ Staging deployment completed"
 echo "  Staging API:   https://staging.joyjoinapp.com"
 echo "  Staging Admin: https://staging.admin.joyjoinapp.com"
+
