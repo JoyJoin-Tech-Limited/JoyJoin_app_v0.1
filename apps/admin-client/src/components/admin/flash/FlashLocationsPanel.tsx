@@ -154,55 +154,7 @@ export function FlashLocationsPanel({
         )}
       </div>
 
-      {isEncounter && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <MapPinned className="h-4 w-4 text-primary" aria-hidden="true" />
-              城市公共空间推荐
-            </CardTitle>
-            <CardDescription>
-              套用后会带入推荐 NPC、安全说明和标签；坐标必须重新通过腾讯地图选点，保存后仍是待审核地点。
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {FLASH_LOCATION_PRESETS.map((preset) => (
-                <button
-                  key={preset.code}
-                  type="button"
-                  disabled={!canWrite}
-                  className="rounded-lg border bg-background p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={() => {
-                    setEditing(null);
-                    setSelectedPreset(preset);
-                    setEditorOpen(true);
-                  }}
-                >
-                  <span className="block text-sm font-medium">{preset.name}</span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {preset.district} · {preset.npcSlugs
-                      .map((slug) => npcs.find((npc) => npc.slug === slug)?.name)
-                      .filter(Boolean)
-                      .join("、")}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-950">
-              <p className="mb-2 flex items-center gap-2 font-medium">
-                <Info className="h-4 w-4" aria-hidden="true" />
-                运营注意事项
-              </p>
-              <ul className="space-y-1 pl-5 text-xs leading-5">
-                {FLASH_LOCATION_OPERATIONS_NOTICE.map((notice) => <li key={notice} className="list-disc">{notice}</li>)}
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {items.length === 0 ? (
+      {items.length === 0 && !isEncounter ? (
         <FlashEmptyState
           title={isEncounter ? "还没有闪现地点" : "还没有任务目的地"}
           description={isEncounter ? "添加并审核安全地点后，NPC 才能参与随机排班。" : "目的地需人工审核，且任务必须无需消费也能完成。"}
@@ -270,6 +222,71 @@ export function FlashLocationsPanel({
               </CardContent>
             </Card>
           ))}
+          {isEncounter && FLASH_LOCATION_PRESETS.map((preset) => (
+            <Card key={preset.code} className="border-dashed border-primary/30 bg-primary/[0.03]">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <CardTitle className="text-base">{preset.name}</CardTitle>
+                      <Badge variant="secondary">待地图选点</Badge>
+                    </div>
+                    <CardDescription className="mt-2">{preset.district} · {preset.addressHint}</CardDescription>
+                  </div>
+                  {canWrite && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`完善${preset.name}`}
+                      onClick={() => {
+                        setEditing(null);
+                        setSelectedPreset(preset);
+                        setEditorOpen(true);
+                      }}
+                      data-testid={`button-complete-flash-location-${preset.code}`}
+                    >
+                      <Edit3 className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <p className="rounded-lg bg-muted/50 p-3 text-muted-foreground">安全备注：{preset.safetyNotes}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {preset.npcSlugs.map((slug) => (
+                    <Badge key={slug} variant="outline">
+                      {npcs.find((npc) => npc.slug === slug)?.name || slug}
+                    </Badge>
+                  ))}
+                </div>
+                {canWrite && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditing(null);
+                      setSelectedPreset(preset);
+                      setEditorOpen(true);
+                    }}
+                  >
+                    完善地点资料
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {isEncounter && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-950">
+          <p className="mb-2 flex items-center gap-2 font-medium">
+            <Info className="h-4 w-4" aria-hidden="true" />
+            运营注意事项
+          </p>
+          <ul className="space-y-1 pl-5 text-xs leading-5">
+            {FLASH_LOCATION_OPERATIONS_NOTICE.map((notice) => <li key={notice} className="list-disc">{notice}</li>)}
+          </ul>
         </div>
       )}
 
