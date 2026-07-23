@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { FLASH_LOCATION_OPERATIONS_NOTICE, FLASH_LOCATION_PRESETS } from "./flashLocationPresets";
 
 describe("flash location presets", () => {
-  it("keeps ten distinct public-space recommendations", () => {
+  it("keeps ten distinct public-space locations", () => {
     expect(FLASH_LOCATION_PRESETS).toHaveLength(10);
     expect(new Set(FLASH_LOCATION_PRESETS.map((item) => item.code)).size).toBe(10);
     expect(FLASH_LOCATION_PRESETS.every((item) => item.name.includes("公共") || item.name.includes("街区") || item.name.includes("外围"))).toBe(true);
