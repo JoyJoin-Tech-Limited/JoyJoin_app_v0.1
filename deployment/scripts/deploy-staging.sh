@@ -839,4 +839,3 @@ echo ""
 echo "✅ Staging deployment completed"
 echo "  Staging API:   https://staging.joyjoinapp.com"
 echo "  Staging Admin: https://staging.admin.joyjoinapp.com"
-
