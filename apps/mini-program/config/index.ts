@@ -314,12 +314,11 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/pages/alang/assets/npcs',
           to: 'dist/pages/alang/assets/npcs',
         },
-        // Discover renders the Flash entry before the Alang subpackage loads,
-        // while Flash pages reuse the universal encounter scene afterward.
-        // Keep both small WebP assets at their stable runtime paths.
+        // Discover is a main-package page, so its static entry artwork must
+        // also live in the main package. Flash pages can reuse that path.
         {
           from: 'src/pages/alang/assets/street-blind-box-icon.webp',
-          to: 'dist/pages/alang/assets/street-blind-box-icon.webp',
+          to: 'dist/assets/flash/street-blind-box-icon.webp',
         },
         {
           from: 'src/pages/alang/assets/flash-city-encounter.webp',
