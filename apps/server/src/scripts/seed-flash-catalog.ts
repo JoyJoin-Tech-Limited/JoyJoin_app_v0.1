@@ -11,6 +11,13 @@ import {
 
 const STAGING_REVIEW_ACTOR = "deploy-staging";
 
+const TENCENT_PLACE_ALIASES: Record<string, string[]> = {
+  "NS-SEAWORLD-ART": ["海上世界文化艺术中心", "文化艺术中心"],
+  "NS-NANTOU": ["南头古城"],
+  "FT-UPPERHILLS": ["深业上城"],
+  "FT-BOOK-CITY": ["深圳书城", "中心书城"],
+};
+
 function stagingApprovedCodes(): string[] {
   return (process.env.FLASH_STAGING_APPROVED_LOCATION_CODES ?? "")
     .split(",")
@@ -22,43 +29,44 @@ async function resolveStagingSeedWithTencent(seed: FlashLocationSeed): Promise<F
   const key = process.env.TENCENT_MAP_KEY;
   if (!key) throw new Error("FLASH_STAGING_SEED_MAP_NOT_CONFIGURED");
 
-  const keyword = seed.name.replace(/公共阅读区|公共空间|外围广场/g, "");
-  const url = new URL("https://apis.map.qq.com/ws/place/v1/suggestion");
+  const url = new URL("https://apis.map.qq.com/ws/geocoder/v1/");
   url.searchParams.set("key", key);
-  url.searchParams.set("keyword", keyword);
-  url.searchParams.set("region", "深圳");
-  url.searchParams.set("region_fix", "1");
-  url.searchParams.set("page_size", "20");
+  url.searchParams.set("location", `${seed.latitude.toFixed(7)},${seed.longitude.toFixed(7)}`);
+  url.searchParams.set("get_poi", "1");
+  url.searchParams.set("poi_options", "radius=1000;page_size=20");
 
   const response = await fetch(url, { signal: AbortSignal.timeout(4_000) });
   if (!response.ok) throw new Error(`FLASH_STAGING_SEED_MAP_HTTP_${response.status}`);
   const payload = await response.json() as {
     status?: number;
-    data?: Array<{
+    result?: {
       address?: string;
-      location?: { lat?: number; lng?: number };
-      ad_info?: { city?: string; district?: string };
-    }>;
+      address_component?: { city?: string; district?: string };
+      formatted_addresses?: { recommend?: string };
+      pois?: Array<{ title?: string; address?: string }>;
+    };
   };
-  if (payload.status !== 0 || !Array.isArray(payload.data)) {
+  if (payload.status !== 0 || !payload.result) {
     throw new Error(`FLASH_STAGING_SEED_MAP_UPSTREAM_${payload.status ?? "UNKNOWN"}`);
   }
 
-  const candidate = payload.data.find((item) =>
-    item.ad_info?.city?.includes("深圳")
-    && item.ad_info?.district === seed.district
-    && Number.isFinite(item.location?.lat)
-    && Number.isFinite(item.location?.lng),
-  );
-  if (!candidate?.location?.lat || !candidate.location.lng) {
+  const result = payload.result;
+  const city = result.address_component?.city ?? "";
+  const district = result.address_component?.district ?? "";
+  const aliases = TENCENT_PLACE_ALIASES[seed.code] ?? [seed.name.replace(/公共阅读区|公共街区|公共空间|外围广场/g, "")];
+  const verifiedText = [
+    result.address,
+    result.formatted_addresses?.recommend,
+    ...(result.pois ?? []).flatMap((poi) => [poi.title, poi.address]),
+  ].filter(Boolean).join(" ");
+  const placeMatches = aliases.some((alias) => alias && verifiedText.includes(alias));
+  if (!city.includes("深圳") || district !== seed.district || !placeMatches) {
     throw new Error(`FLASH_STAGING_SEED_NO_VERIFIED_CANDIDATE:${seed.code}:${seed.district}`);
   }
 
   return {
     ...seed,
-    address: candidate.address?.trim() || seed.address,
-    latitude: candidate.location.lat,
-    longitude: candidate.location.lng,
+    address: result.address?.trim() || seed.address,
   };
 }
 
@@ -104,7 +112,7 @@ async function main() {
         approvalStatus: "approved",
         isActive: true,
       },
-      context: { source: "tencent-map-suggestion", idempotent: true },
+      context: { source: "tencent-map-reverse-geocode", idempotent: true },
     });
   }
   const readiness = await getFlashReadiness();
