@@ -148,6 +148,27 @@ export function FlashLocationsPanel({
         )}
       </div>
 
+      <Card className="border-violet-200 bg-violet-50/60 dark:border-violet-900/50 dark:bg-violet-950/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">选址方向：不只限于公园</CardTitle>
+          <CardDescription>
+            {isEncounter
+              ? "NPC 可以出现在书店公共阅读区、商场开放街区、文化空间、创意园和夜生活街区外围；请选择无需消费、可安全停留的公共位置。"
+              : "探店任务可指向书店、商场、商业街和生活方式街区，但必须允许用户只到附近观察，不要求进店或消费。"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="flex flex-wrap gap-2">
+            {["书店/阅读空间", "商场公共区", "开放商业街", "文化艺术空间", "创意园公共区", "夜生活街区外围"].map((label) => (
+              <Badge key={label} variant="outline" className="bg-background/80">{label}</Badge>
+            ))}
+          </div>
+          <p className="text-xs leading-5 text-muted-foreground">
+            酒吧街仅使用外围广场或公共街区，不录入具体酒吧作为相遇点；不得暗示有真人 NPC、店员接待、优惠或必须消费。所有地点仍需地图反查、深圳行政区校验和人工安全审核。
+          </p>
+        </CardContent>
+      </Card>
+
       {items.length === 0 ? (
         <FlashEmptyState
           title={isEncounter ? "还没有街头盲盒地点" : "还没有任务目的地"}
@@ -345,7 +366,7 @@ function LocationEditorDialog({
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{item ? "编辑" : "新增"}{kind === "encounter" ? "街头盲盒地点" : "任务目的地"}</DialogTitle>
-            <DialogDescription>仅录入深圳、GCJ-02 坐标。地点与行政区分别管理，进入随机池前必须人工审核。</DialogDescription>
+            <DialogDescription>可选择公园、书店公共区、商场开放街区、文化空间或夜生活街区外围；仅录入深圳 GCJ-02 坐标，进入随机池前必须人工审核。</DialogDescription>
           </DialogHeader>
           <form
             className="space-y-4"
