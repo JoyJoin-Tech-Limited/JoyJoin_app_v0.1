@@ -25,49 +25,63 @@ function stagingApprovedCodes(): string[] {
     .filter(Boolean);
 }
 
+function normalizeAdministrativeName(value: string | undefined): string {
+  return (value ?? "").trim().replace(/[市区]$/u, "");
+}
+
 async function resolveStagingSeedWithTencent(seed: FlashLocationSeed): Promise<FlashLocationSeed> {
   const key = process.env.TENCENT_MAP_KEY;
   if (!key) throw new Error("FLASH_STAGING_SEED_MAP_NOT_CONFIGURED");
 
-  const url = new URL("https://apis.map.qq.com/ws/geocoder/v1/");
-  url.searchParams.set("key", key);
-  url.searchParams.set("location", `${seed.latitude.toFixed(7)},${seed.longitude.toFixed(7)}`);
-  url.searchParams.set("get_poi", "1");
-  url.searchParams.set("poi_options", "radius=1000;page_size=20");
+  const aliases = TENCENT_PLACE_ALIASES[seed.code]
+    ?? [seed.name.replace(/公共阅读区|公共街区|公共空间|外围广场/g, "")];
+  for (const keyword of aliases) {
+    const url = new URL("https://apis.map.qq.com/ws/place/v1/suggestion");
+    url.searchParams.set("key", key);
+    url.searchParams.set("keyword", keyword);
+    url.searchParams.set("region", "深圳市");
+    url.searchParams.set("region_fix", "1");
+    url.searchParams.set("page_size", "20");
 
-  const response = await fetch(url, { signal: AbortSignal.timeout(4_000) });
-  if (!response.ok) throw new Error(`FLASH_STAGING_SEED_MAP_HTTP_${response.status}`);
-  const payload = await response.json() as {
-    status?: number;
-    result?: {
-      address?: string;
-      address_component?: { city?: string; district?: string };
-      formatted_addresses?: { recommend?: string };
-      pois?: Array<{ title?: string; address?: string }>;
+    const response = await fetch(url, { signal: AbortSignal.timeout(4_000) });
+    if (!response.ok) throw new Error(`FLASH_STAGING_SEED_MAP_HTTP_${response.status}`);
+    const payload = await response.json() as {
+      status?: number;
+      data?: Array<{
+        title?: string;
+        address?: string;
+        location?: { lat?: number; lng?: number };
+        ad_info?: { city?: string; district?: string; adcode?: number | string };
+      }>;
     };
-  };
-  if (payload.status !== 0 || !payload.result) {
-    throw new Error(`FLASH_STAGING_SEED_MAP_UPSTREAM_${payload.status ?? "UNKNOWN"}`);
+    if (payload.status !== 0 || !Array.isArray(payload.data)) {
+      throw new Error(`FLASH_STAGING_SEED_MAP_UPSTREAM_${payload.status ?? "UNKNOWN"}`);
+    }
+
+    const candidate = payload.data.find((item) => {
+      const verifiedText = `${item.title ?? ""} ${item.address ?? ""}`;
+      const cityMatches = normalizeAdministrativeName(item.ad_info?.city) === "深圳"
+        || String(item.ad_info?.adcode ?? "").startsWith("4403");
+      const districtMatches = normalizeAdministrativeName(item.ad_info?.district)
+        === normalizeAdministrativeName(seed.district);
+      const placeMatches = aliases.some((alias) => alias && verifiedText.includes(alias));
+      return cityMatches
+        && districtMatches
+        && placeMatches
+        && Number.isFinite(item.location?.lat)
+        && Number.isFinite(item.location?.lng);
+    });
+    if (candidate?.location && Number.isFinite(candidate.location.lat) && Number.isFinite(candidate.location.lng)) {
+      return {
+        ...seed,
+        address: candidate.address?.trim() || seed.address,
+        latitude: candidate.location.lat as number,
+        longitude: candidate.location.lng as number,
+      };
+    }
   }
 
-  const result = payload.result;
-  const city = result.address_component?.city ?? "";
-  const district = result.address_component?.district ?? "";
-  const aliases = TENCENT_PLACE_ALIASES[seed.code] ?? [seed.name.replace(/公共阅读区|公共街区|公共空间|外围广场/g, "")];
-  const verifiedText = [
-    result.address,
-    result.formatted_addresses?.recommend,
-    ...(result.pois ?? []).flatMap((poi) => [poi.title, poi.address]),
-  ].filter(Boolean).join(" ");
-  const placeMatches = aliases.some((alias) => alias && verifiedText.includes(alias));
-  if (!city.includes("深圳") || district !== seed.district || !placeMatches) {
-    throw new Error(`FLASH_STAGING_SEED_NO_VERIFIED_CANDIDATE:${seed.code}:${seed.district}`);
-  }
-
-  return {
-    ...seed,
-    address: result.address?.trim() || seed.address,
-  };
+  throw new Error(`FLASH_STAGING_SEED_NO_VERIFIED_CANDIDATE:${seed.code}:${seed.district}`);
 }
 
 async function main() {
@@ -112,7 +126,7 @@ async function main() {
         approvalStatus: "approved",
         isActive: true,
       },
-      context: { source: "tencent-map-reverse-geocode", idempotent: true },
+      context: { source: "tencent-map-suggestion", idempotent: true },
     });
   }
   const readiness = await getFlashReadiness();
