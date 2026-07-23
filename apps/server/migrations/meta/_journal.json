@@ -498,6 +498,13 @@
       "when": 1784080800000,
       "tag": "20260715011000_seed_equipment_catalog_pools",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1784773063829,
+      "tag": "0071_add_flash_formal_schema",
+      "breakpoints": true
     }
   ]
 }
