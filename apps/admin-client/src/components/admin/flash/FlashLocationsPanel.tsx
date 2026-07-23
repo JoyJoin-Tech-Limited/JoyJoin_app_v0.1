@@ -3,7 +3,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Edit3, MapPinned, Plus, Store } from "lucide-react";
+import { Edit3, Info, MapPinned, Plus, Store } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +59,11 @@ import {
   flashApprovalVariant,
 } from "./FlashCatalogShared";
 import { FlashEmptyState, FlashErrorState, FlashListSkeleton } from "./FlashQueryState";
+import {
+  FLASH_LOCATION_OPERATIONS_NOTICE,
+  FLASH_LOCATION_PRESETS,
+  type FlashLocationPreset,
+} from "./flashLocationPresets";
 
 const locationSchema = z.object({
   name: z.string().trim().min(1, "请输入地点名称").max(50, "地点名称过长"),
@@ -98,6 +103,7 @@ export function FlashLocationsPanel({
   const { toast } = useToast();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<FlashEncounterLocation | FlashTaskDestination | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<FlashLocationPreset | null>(null);
   const [pendingToggle, setPendingToggle] = useState<FlashEncounterLocation | FlashTaskDestination | null>(null);
   const query = useQuery<FlashCollectionResponse<FlashEncounterLocation | FlashTaskDestination>>({ queryKey: [endpoint] });
   const items = unpackFlashCollection(query.data);
@@ -111,7 +117,7 @@ export function FlashLocationsPanel({
       await queryClient.invalidateQueries({ queryKey: [endpoint] });
       setEditorOpen(false);
       setEditing(null);
-      toast({ title: isEncounter ? "街头盲盒地点已保存" : "任务目的地已保存", description: "只有通过人工审核且处于可用状态的地点会进入随机池。" });
+      toast({ title: isEncounter ? "闪现地点已保存" : "任务目的地已保存", description: "只有通过人工审核且处于可用状态的地点会进入随机池。" });
     },
     onError: (error) => toast({ title: "地点没保存", description: describeFlashAdminError(error), variant: "destructive" }),
   });
@@ -138,40 +144,67 @@ export function FlashLocationsPanel({
         <FlashWriteHint canWrite={canWrite} />
         {canWrite && (
           <Button
-            onClick={() => { setEditing(null); setEditorOpen(true); }}
+            onClick={() => { setEditing(null); setSelectedPreset(null); setEditorOpen(true); }}
             data-testid={`button-add-flash-${kind}`}
             className="shrink-0"
           >
             <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-            {isEncounter ? "新增街头盲盒地点" : "新增任务目的地"}
+            {isEncounter ? "新增闪现地点" : "新增任务目的地"}
           </Button>
         )}
       </div>
 
-      <Card className="border-violet-200 bg-violet-50/60 dark:border-violet-900/50 dark:bg-violet-950/20">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">选址方向：不只限于公园</CardTitle>
-          <CardDescription>
-            {isEncounter
-              ? "NPC 可以出现在书店公共阅读区、商场开放街区、文化空间、创意园和夜生活街区外围；请选择无需消费、可安全停留的公共位置。"
-              : "探店任务可指向书店、商场、商业街和生活方式街区，但必须允许用户只到附近观察，不要求进店或消费。"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="flex flex-wrap gap-2">
-            {["书店/阅读空间", "商场公共区", "开放商业街", "文化艺术空间", "创意园公共区", "夜生活街区外围"].map((label) => (
-              <Badge key={label} variant="outline" className="bg-background/80">{label}</Badge>
-            ))}
-          </div>
-          <p className="text-xs leading-5 text-muted-foreground">
-            酒吧街仅使用外围广场或公共街区，不录入具体酒吧作为相遇点；不得暗示有真人 NPC、店员接待、优惠或必须消费。所有地点仍需地图反查、深圳行政区校验和人工安全审核。
-          </p>
-        </CardContent>
-      </Card>
+      {isEncounter && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MapPinned className="h-4 w-4 text-primary" aria-hidden="true" />
+              城市公共空间推荐
+            </CardTitle>
+            <CardDescription>
+              套用后会带入推荐 NPC、安全说明和标签；坐标必须重新通过腾讯地图选点，保存后仍是待审核地点。
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {FLASH_LOCATION_PRESETS.map((preset) => (
+                <button
+                  key={preset.code}
+                  type="button"
+                  disabled={!canWrite}
+                  className="rounded-lg border bg-background p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => {
+                    setEditing(null);
+                    setSelectedPreset(preset);
+                    setEditorOpen(true);
+                  }}
+                >
+                  <span className="block text-sm font-medium">{preset.name}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {preset.district} · {preset.npcSlugs
+                      .map((slug) => npcs.find((npc) => npc.slug === slug)?.name)
+                      .filter(Boolean)
+                      .join("、")}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-950">
+              <p className="mb-2 flex items-center gap-2 font-medium">
+                <Info className="h-4 w-4" aria-hidden="true" />
+                运营注意事项
+              </p>
+              <ul className="space-y-1 pl-5 text-xs leading-5">
+                {FLASH_LOCATION_OPERATIONS_NOTICE.map((notice) => <li key={notice} className="list-disc">{notice}</li>)}
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {items.length === 0 ? (
         <FlashEmptyState
-          title={isEncounter ? "还没有街头盲盒地点" : "还没有任务目的地"}
+          title={isEncounter ? "还没有闪现地点" : "还没有任务目的地"}
           description={isEncounter ? "添加并审核安全地点后，NPC 才能参与随机排班。" : "目的地需人工审核，且任务必须无需消费也能完成。"}
           icon={isEncounter ? MapPinned : Store}
         />
@@ -194,7 +227,7 @@ export function FlashLocationsPanel({
                       variant="ghost"
                       size="icon"
                       aria-label={`编辑${item.name}`}
-                      onClick={() => { setEditing(item); setEditorOpen(true); }}
+                      onClick={() => { setEditing(item); setSelectedPreset(null); setEditorOpen(true); }}
                       data-testid={`button-edit-flash-${kind}-${item.id}`}
                     >
                       <Edit3 className="h-4 w-4" aria-hidden="true" />
@@ -243,10 +276,11 @@ export function FlashLocationsPanel({
       <LocationEditorDialog
         open={editorOpen}
         item={editing}
+        preset={selectedPreset}
         kind={kind}
         npcs={npcs}
         saving={saveMutation.isPending}
-        onClose={() => { setEditorOpen(false); setEditing(null); }}
+        onClose={() => { setEditorOpen(false); setEditing(null); setSelectedPreset(null); }}
         onSave={(values) => {
           const payload: Record<string, unknown> = {
             name: values.name,
@@ -300,6 +334,7 @@ export function FlashLocationsPanel({
 function LocationEditorDialog({
   open,
   item,
+  preset,
   kind,
   npcs,
   saving,
@@ -308,6 +343,7 @@ function LocationEditorDialog({
 }: {
   open: boolean;
   item: FlashEncounterLocation | FlashTaskDestination | null;
+  preset: FlashLocationPreset | null;
   kind: LocationKind;
   npcs: FlashNpc[];
   saving: boolean;
@@ -315,6 +351,7 @@ function LocationEditorDialog({
   onSave: (values: LocationFormValues) => void;
 }) {
   const [mapOpen, setMapOpen] = useState(false);
+  const [presetMapConfirmed, setPresetMapConfirmed] = useState(false);
   const { register, handleSubmit, control, reset, setError, setValue, watch, formState: { errors } } = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
     defaultValues: {
@@ -335,16 +372,23 @@ function LocationEditorDialog({
 
   useEffect(() => {
     if (!open) return;
+    setPresetMapConfirmed(!preset);
     reset({
-      name: item?.name ?? "",
-      district: item?.district ?? "",
-      address: item?.address ?? "",
+      name: item?.name ?? preset?.name ?? "",
+      district: item?.district ?? preset?.district ?? "",
+      address: item?.address ?? preset?.addressHint ?? "",
       latitude: item?.latitude ?? 22.5431,
       longitude: item?.longitude ?? 114.0579,
       approvalStatus: item?.approvalStatus ?? "draft",
-      safetyNotes: item?.safetyNotes ?? "",
-      npcIds: item && kind === "encounter" ? getNpcIds(item as FlashEncounterLocation) : [],
-      tags: item && kind === "destination" ? (item as FlashTaskDestination).tags?.join("，") ?? "" : "",
+      safetyNotes: item?.safetyNotes ?? preset?.safetyNotes ?? "",
+      npcIds: item && kind === "encounter"
+        ? getNpcIds(item as FlashEncounterLocation)
+        : preset
+          ? npcs.filter((npc) => preset.npcSlugs.includes(npc.slug)).map((npc) => npc.id)
+          : [],
+      tags: item && kind === "destination"
+        ? (item as FlashTaskDestination).tags?.join("，") ?? ""
+        : preset?.tags.join("，") ?? "",
       availabilityWeekdays: item && kind === "encounter" && (item as FlashEncounterLocation).availabilityWindows?.length
         ? (item as FlashEncounterLocation).availabilityWindows.map((window) => window.weekday)
         : WEEKDAY_OPTIONS.map((option) => option.value),
@@ -355,7 +399,7 @@ function LocationEditorDialog({
         ? (item as FlashEncounterLocation).availabilityWindows?.[0]?.endTime ?? "21:00"
         : "21:00",
     });
-  }, [open, item, kind, reset]);
+  }, [open, item, preset, kind, npcs, reset]);
 
   const lat = watch("latitude");
   const lng = watch("longitude");
@@ -365,12 +409,16 @@ function LocationEditorDialog({
       <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{item ? "编辑" : "新增"}{kind === "encounter" ? "街头盲盒地点" : "任务目的地"}</DialogTitle>
-            <DialogDescription>可选择公园、书店公共区、商场开放街区、文化空间或夜生活街区外围；仅录入深圳 GCJ-02 坐标，进入随机池前必须人工审核。</DialogDescription>
+            <DialogTitle>{item ? "编辑" : "新增"}{kind === "encounter" ? "闪现地点" : "任务目的地"}</DialogTitle>
+            <DialogDescription>仅录入深圳、GCJ-02 坐标。地点与行政区分别管理，进入随机池前必须人工审核。</DialogDescription>
           </DialogHeader>
           <form
             className="space-y-4"
             onSubmit={handleSubmit((values) => {
+              if (preset && !presetMapConfirmed) {
+                setError("address", { message: "请先打开腾讯地图，确认公共区域的准确坐标与地址" });
+                return;
+              }
               if (kind === "encounter" && values.approvalStatus === "approved" && values.npcIds.length === 0) {
                 setError("npcIds", { message: "已审核地点至少关联一位 NPC；全选可作为通用地点" });
                 return;
@@ -394,6 +442,11 @@ function LocationEditorDialog({
               />
             </div>
             <FlashFormField label="详细地址" error={errors.address?.message}><Input {...register("address")} /></FlashFormField>
+            {preset && !presetMapConfirmed && (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                推荐模板不携带可直接上线的坐标。请点击“地图选点”，在公共街区、外围广场或商场公共空间中确认安全停留点。
+              </p>
+            )}
             <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
               <FlashFormField label="纬度" error={errors.latitude?.message}><Input type="number" step="0.000001" {...register("latitude", { valueAsNumber: true })} /></FlashFormField>
               <FlashFormField label="经度" error={errors.longitude?.message}><Input type="number" step="0.000001" {...register("longitude", { valueAsNumber: true })} /></FlashFormField>
@@ -496,8 +549,10 @@ function LocationEditorDialog({
           setValue("address", location.address, { shouldValidate: true });
           setValue("latitude", location.lat, { shouldValidate: true });
           setValue("longitude", location.lng, { shouldValidate: true });
+          setPresetMapConfirmed(true);
         }}
       />
     </>
   );
 }
+
