@@ -3266,6 +3266,31 @@ describe.sequential('social icebreaker routes', () => {
         const rejoinParticipantIds = rejoinBody.state.joinedParticipants.map((p: any) => p.userId).sort();
         expect(rejoinParticipantIds).toEqual(['bot-1', 'bot-2', rejoinBody.state.hostUserId].sort());
 
+        // Reproduce the real-device recovery path: /topics failed upstream, so
+        // the client displayed a local fallback while the persisted session had
+        // neither topics nor ready users. The first ready tap must heal all of
+        // that state and return the canonical client payload in one response.
+        const stateWithoutTopics = await getSession(rejoinBody.socialSessionId) as any;
+        stateWithoutTopics.warmupTopics = [];
+        stateWithoutTopics.warmupReadyUserIds = [];
+        await updateSession(rejoinBody.socialSessionId, stateWithoutTopics);
+
+        const recoveredReadyResponse = await fetch(`${baseUrl}/api/social-icebreaker/${rejoinBody.socialSessionId}/warmup/ready`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ ready: true }),
+        });
+        const recoveredReadyBody = await recoveredReadyResponse.json() as any;
+
+        expect(recoveredReadyResponse.status).toBe(200);
+        expect(recoveredReadyBody.allReady).toBe(true);
+        expect(recoveredReadyBody.state.warmupTopics.length).toBeGreaterThan(0);
+        expect(recoveredReadyBody.state.warmupReadyUserIds.sort()).toEqual(
+          ['bot-1', 'bot-2', recoveredReadyBody.state.hostUserId].sort(),
+        );
+        expect(recoveredReadyBody.readyUserIds).not.toContain('virtual-user-1');
+        expect(recoveredReadyBody.readyUserIds).not.toContain('virtual-user-2');
+
         // Changing to the next topic resets human readiness but keeps bots ready.
         const topicsResponse = await fetch(`${baseUrl}/api/social-icebreaker/${rejoinBody.socialSessionId}/topics`, {
           method: 'POST',
