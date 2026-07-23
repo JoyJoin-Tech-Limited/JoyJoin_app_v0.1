@@ -4,6 +4,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, MapPin, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/ui/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+
+interface GeoPlace {
+  id: string;
+  name: string;
+  address?: string;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
+interface GeoPlacesResponse {
+  success: boolean;
+  places: GeoPlace[];
+}
+
+interface ReverseGeocodeResponse {
+  name?: string;
+  address?: string;
+}
 
 interface MapPickerProps {
   open: boolean;
@@ -16,10 +37,9 @@ export default function MapPicker({ open, onOpenChange, onSelect, initialCenter 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markerRef = useRef<any>(null);
-  const placeSearchRef = useRef<any>(null);
 
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<GeoPlace[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,14 +131,6 @@ export default function MapPicker({ open, onOpenChange, onSelect, initialCenter 
 
         markerRef.current = marker;
 
-        const search = new TMap.service.PlaceSearch({
-          pageSize: 10,
-          pageIndex: 1,
-          boundary: new TMap.service.Boundary({ city: '深圳' }),
-        });
-
-        placeSearchRef.current = search;
-
         map.on('click', (e: any) => {
           const { lat, lng } = e.latLng;
           marker.updateGeometries([{
@@ -169,41 +181,51 @@ export default function MapPicker({ open, onOpenChange, onSelect, initialCenter 
 
   const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
-      const TMap = (window as any).TMap;
-      const geocoder = new TMap.service.Geocoder();
-      const result = await geocoder.getAddress({ location: new TMap.LatLng(lat, lng) });
-      return result?.result?.address || `${lng.toFixed(6)}, ${lat.toFixed(6)}`;
+      const response = await apiRequest('POST', '/api/geo/reverse-geocode', {
+        latitude: lat,
+        longitude: lng,
+      });
+      const result = await response.json() as ReverseGeocodeResponse;
+      return result.address || result.name || `${lng.toFixed(6)}, ${lat.toFixed(6)}`;
     } catch {
       return `${lng.toFixed(6)}, ${lat.toFixed(6)}`;
     }
   };
 
-  const handleSearch = () => {
-    if (!searchKeyword.trim() || !placeSearchRef.current) return;
+  const handleSearch = async () => {
+    const keyword = searchKeyword.trim();
+    if (!keyword) return;
 
     setIsSearching(true);
-    placeSearchRef.current.search(searchKeyword).then((result: any) => {
-      setIsSearching(false);
-      const pois = result?.data || [];
-      if (pois.length > 0) {
-        setSearchResults(pois.slice(0, 5));
+    try {
+      const response = await apiRequest('POST', '/api/geo/places/suggest', {
+        keyword,
+        location: {
+          latitude: defaultCenter.lat,
+          longitude: defaultCenter.lng,
+        },
+        limit: 5,
+      });
+      const result = await response.json() as GeoPlacesResponse;
+      if (result.success && result.places.length > 0) {
+        setSearchResults(result.places);
       } else {
         setSearchResults([]);
         toast({ title: '未找到结果', description: '请尝试其他关键词' });
       }
-    }).catch(() => {
-      setIsSearching(false);
+    } catch {
       setSearchResults([]);
-      toast({ title: '搜索失败', description: '请重试' });
-    });
+      toast({ title: '搜索失败', description: '请稍后重试；地图仍可点击选点' });
+    } finally {
+      setIsSearching(false);
+    }
   };
 
-  const handleSelectResult = (poi: any) => {
+  const handleSelectResult = (poi: GeoPlace) => {
     if (!mapInstance.current || !markerRef.current) return;
 
-    const location = poi.location;
-    const lat = location.lat;
-    const lng = location.lng;
+    const lat = poi.location.latitude;
+    const lng = poi.location.longitude;
 
     markerRef.current.updateGeometries([{
       id: 'selected-location',
@@ -215,7 +237,7 @@ export default function MapPicker({ open, onOpenChange, onSelect, initialCenter 
     setSelectedLocation({
       lng,
       lat,
-      address: poi.address || poi.title,
+      address: poi.address || poi.name,
     });
     setSearchResults([]);
   };
@@ -270,7 +292,7 @@ export default function MapPicker({ open, onOpenChange, onSelect, initialCenter 
                   onClick={() => handleSelectResult(poi)}
                   data-testid={`search-result-${index}`}
                 >
-                  <div className="font-medium text-sm">{poi.title}</div>
+                  <div className="font-medium text-sm">{poi.name}</div>
                   <div className="text-xs text-muted-foreground">{poi.address}</div>
                 </button>
               ))}
