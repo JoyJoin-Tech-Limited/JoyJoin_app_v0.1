@@ -351,7 +351,10 @@ function coordinateCacheKey(coordinate: GeoCoordinate): string {
 }
 
 function requireGeoProxyAuth(req: Request, res: Response, next: NextFunction): void {
-  if (!requireAuthenticatedUserId(req, res)) return;
+  const isAuthenticatedAdmin = Boolean(
+    req.adminAccount?.id || req.session?.adminAccountId,
+  );
+  if (!isAuthenticatedAdmin && !requireAuthenticatedUserId(req, res)) return;
   next();
 }
 

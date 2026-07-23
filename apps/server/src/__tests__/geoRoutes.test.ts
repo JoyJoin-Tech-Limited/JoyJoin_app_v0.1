@@ -47,6 +47,18 @@ async function buildTestApp(authenticated = true) {
   return app;
 }
 
+async function buildAdminTestApp() {
+  const { registerGeoRoutes } = await import("../routes/domains/geo");
+  const app = express();
+  app.use(express.json());
+  app.use((req, _res, next) => {
+    (req as any).session = { adminAccountId: "geo-test-admin" };
+    next();
+  });
+  registerGeoRoutes(app);
+  return app;
+}
+
 async function postJson(
   request: (path: string, init?: RequestInit) => Promise<Response>,
   path: string,
@@ -103,6 +115,33 @@ describe("geo routes", () => {
       expect(response.status).toBe(401);
       await expect(response.json()).resolves.toEqual({ message: "Unauthorized" });
       expect(upstreamFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  it("allows an authenticated admin session to use metered place search", async () => {
+    upstreamFetch.mockResolvedValueOnce(jsonResponse({
+      status: 0,
+      data: [{
+        id: "poi-admin",
+        title: "深圳人才公园",
+        address: "南山区科苑南路",
+        location: { lat: 22.5111, lng: 113.9421 },
+      }],
+    }));
+
+    const app = await buildAdminTestApp();
+    await withServer(app, async (_baseUrl, request) => {
+      const response = await postJson(request, "/api/geo/places/suggest", {
+        keyword: "人才公园",
+        location: { latitude: 22.5431, longitude: 114.0579 },
+        limit: 5,
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        success: true,
+        places: [{ id: "poi-admin", name: "深圳人才公园" }],
+      });
     });
   });
 
