@@ -32,6 +32,9 @@ $fan-rotations: (
 .squad-unboxing {
   @include viewport-min-height;
   position: relative;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background: linear-gradient(180deg, $color-bg-tint-cream 0%, $color-bg-tint-pink 52%, $color-bg-tint-purple 100%);
 
   &--reduce-motion {
@@ -98,23 +101,21 @@ $fan-rotations: (
       // Fixed header stage for the revealed state. Now a flex COLUMN: the slim
       // title bar sits on top, the deck-stage (flex:1) fills the rest and
       // centres the fan. 660rpx ceiling (C4) tightens the two-row fan for
-      // 7–8 members so the 今晚这桌 brief card lands closer to the deck.
+      // 7–8 members so the 今晚这桌 brief card lands closer to the deck. The
+      // shorter 44dvh footprint also leaves the two revealed panels visible
+      // together above the single-action footer without page scrolling.
       // Parent-none / child-auto pointer events (same as the ready-state box):
       // the stage must NOT capture touch across the full width, or the fan band
       // touch-locks the top of the screen and scroll never starts. Card taps
       // survive via &__deck-fan (pointer-events: auto).
       //
-      // OPAQUE background with a bottom feather: the stage is fixed while the
-      // story content scrolls beneath it, so a transparent stage lets scrolled
-      // text bleed through behind the fan (verified bug in the 2026-07-13
-      // smoke). The gradient mirrors the page's top region (cream→pink); the
-      // last ~12% fades to transparent so content emerging from under the
-      // stage fades in softly instead of hard-cutting.
+      // OPAQUE background with a bottom feather keeps the fixed deck visually
+      // separate from the centred story panels beneath it.
       flex-direction: column;
       align-items: stretch;
       justify-content: flex-start;
-      height: clamp(500rpx, 56vh, 660rpx);
-      height: clamp(500rpx, 56dvh, 660rpx);
+      height: clamp(440rpx, 44vh, 560rpx);
+      height: clamp(440rpx, 44dvh, 560rpx);
       background: linear-gradient(
         180deg,
         $color-bg-tint-cream 0%,
@@ -173,8 +174,8 @@ $fan-rotations: (
 
     &--revealed {
       // Must match &__stage--revealed exactly (fixed-stage sizing rule).
-      height: clamp(500rpx, 56vh, 660rpx);
-      height: clamp(500rpx, 56dvh, 660rpx);
+      height: clamp(440rpx, 44vh, 560rpx);
+      height: clamp(440rpx, 44dvh, 560rpx);
     }
 
     &--composed {
@@ -326,7 +327,13 @@ $fan-rotations: (
   }
 
   &__scroll--revealed {
-    @include fixed-footer-reserve(580rpx, $spacing-md);
+    @include fixed-footer-reserve(128rpx, $spacing-sm);
+    overflow: hidden;
+  }
+
+  &__scroll--revealed &__scroll-inner {
+    height: 100%;
+    min-height: 0;
   }
 
   &__scroll-inner {
@@ -354,12 +361,13 @@ $fan-rotations: (
   &__scroll-content--revealed {
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    gap: $spacing-sm;
     padding: 0 $container-padding;
   }
 
-  // Event-brief panel: always expanded in the ScrollView flow below the Joy
-  // bubble (the collapse toggle + fixed dock cluster were removed 2026-07-17);
-  // it scrolls naturally with the content.
+  // Event-brief panel: always expanded below the Joy bubble. The revealed
+  // content column centres both panels inside the locked viewport.
   &__tonights-panel {
     max-height: 0;
     overflow: hidden;
@@ -598,7 +606,8 @@ $fan-rotations: (
   }
 
   &__analysis-bubble {
-    // Inside the fixed dock cluster the parent's gap owns the rhythm.
+    flex-shrink: 1;
+    min-height: 0;
     margin-bottom: 0;
   }
 
@@ -616,7 +625,7 @@ $fan-rotations: (
     display: flex;
     align-items: flex-start;
     gap: $spacing-sm;
-    padding: $spacing-md;
+    padding: $spacing-sm $spacing-md;
     border-radius: $card-radius;
     background: rgba($color-surface, 0.96);
     box-shadow: 0 12rpx 32rpx rgba($color-primary, 0.1), inset 0 0 0 1rpx rgba($color-primary, 0.08);
@@ -681,8 +690,8 @@ $fan-rotations: (
   // Chapter cards: fewer, grouped surfaces with surface tints.
   &__chapter {
     border-radius: $card-radius;
-    padding: $spacing-lg;
-    margin-bottom: $spacing-lg;
+    padding: $spacing-md;
+    margin-bottom: 0;
     box-shadow: $shadow-md;
     overflow: hidden;
     opacity: 0;
@@ -2502,8 +2511,6 @@ $fan-rotations: (
     right: 0;
     bottom: 0;
     z-index: 100;
-    display: flex;
-    flex-direction: column;
     background: $color-surface;
     box-shadow: 0 -8rpx 32rpx rgba($color-text-primary, 0.06);
     transform: translateY(100%);
@@ -2512,40 +2519,6 @@ $fan-rotations: (
     &--ready {
       transform: translateY(0);
     }
-  }
-
-  // Hint chip (AC-04/05): progress slot above the bubble — live unflipped
-  // count + explicit tap verb, doubles as the reveal-all trigger. Tappability
-  // reads from copy, not motion, so reduce-motion users lose nothing.
-  &__reveal-chip {
-    margin: $spacing-md $spacing-lg $spacing-sm;
-    align-self: center;
-    max-width: 100%;
-    // A5: 88rpx tap floor — min-height + flex centering keeps the visual
-    // size tasteful (no bigger text) while meeting the tap-target rule.
-    min-height: 88rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: $spacing-sm $spacing-md;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.08);
-    border: 1rpx solid rgba($color-primary, 0.18);
-    transition: background 0.12s ease;
-
-    &--pressed {
-      background: rgba($color-primary, 0.14);
-    }
-  }
-
-  &__reveal-chip-text {
-    @include type-body;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $color-primary;
-    text-align: center;
-    word-break: keep-all;
-    overflow-wrap: break-word;
   }
 
   // Screen-reader-only text (AC-18): holds the COMPLETE bubble narration for
@@ -2563,8 +2536,8 @@ $fan-rotations: (
   }
 
   &__action-zone {
-    padding: $spacing-md $spacing-lg;
-    padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+    padding: $spacing-sm $spacing-lg;
+    padding-bottom: calc(#{$spacing-sm} + env(safe-area-inset-bottom));
     background: $color-surface;
   }
 
@@ -2576,36 +2549,6 @@ $fan-rotations: (
 
     &:not(:disabled):active {
       transform: scale(0.98);
-    }
-  }
-
-  &__action-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: $spacing-md;
-    margin-top: $spacing-md;
-  }
-
-  &__share-btn,
-  &__detail-btn {
-    width: 100%;
-
-    &:not(:disabled):active {
-      transform: scale(0.98);
-    }
-  }
-
-  &__skip-link {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 88rpx;
-    margin-top: $spacing-sm;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-
-    &--pressed {
-      color: $color-text-primary;
     }
   }
 

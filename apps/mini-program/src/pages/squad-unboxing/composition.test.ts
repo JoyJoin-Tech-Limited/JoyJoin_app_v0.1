@@ -71,13 +71,11 @@ describe('squad-unboxing page composition', () => {
     expect(pageSource).toContain("trackCardFocus(index, current, 'narration_fast_forward')")
   })
 
-  it('renders the reveal-all hint chip above the bubble while cards remain face-down (AC-11)', () => {
-    expect(pageSource).toContain('squad-unboxing__reveal-chip')
-    expect(pageSource).toContain("hoverClass='squad-unboxing__reveal-chip--pressed'")
-    expect(pageSource).toContain('buildRevealChipLabel(unflippedCount)')
-    expect(pageSource).toContain('onClick={handleRevealAll}')
-    expect(pageSource).toContain("role='button'")
-    expect(pageSource).toContain('aria-label={buildRevealChipLabel(unflippedCount)}')
+  it('keeps the fixed dock focused on attendance instead of reveal controls', () => {
+    expect(pageSource).not.toContain('squad-unboxing__reveal-chip')
+    expect(pageSource).not.toContain('buildRevealChipLabel(unflippedCount)')
+    expect(pageSource).not.toContain('onClick={handleRevealAll}')
+    expect(pageSource).toContain("className='squad-unboxing__confirm-btn'")
   })
 
   it('makes the bubble the voice of the reveal (status + aria-live + sr-only full text, AC-18)', () => {

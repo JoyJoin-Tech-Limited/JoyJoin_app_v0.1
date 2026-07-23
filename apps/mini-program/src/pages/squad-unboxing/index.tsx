@@ -29,7 +29,6 @@ import {
   buildDeckPillStripModel,
   buildEventBriefDate,
   buildFocusedMemberBubbleText,
-  buildRevealChipLabel,
   buildSquadSoulBubbleText,
   getChemistryWord,
   getDeckPillChemistryClass,
@@ -51,32 +50,6 @@ import { preloadImagesWithDiagnostics } from '../../lib/utils/imagePreload'
 
 import { useSquadUnboxingController } from './useSquadUnboxingController'
 import './index.scss'
-
-const SCROLL_DEPTH_BUCKETS = ['tonights_table', 'connection_story', 'actions'] as const
-
-type ScrollDepthBucket = typeof SCROLL_DEPTH_BUCKETS[number]
-
-function useScrollDepthTracking(groupId: string) {
-  const reportedRef = useRef<Set<ScrollDepthBucket>>(new Set())
-
-  // New group (or re-entry with a different id) re-arms the buckets so depth
-  // is reported once per group, not once per page lifetime.
-  useEffect(() => {
-    reportedRef.current = new Set()
-  }, [groupId])
-
-  const reportDepth = useCallback((bucket: ScrollDepthBucket) => {
-    if (reportedRef.current.has(bucket)) return
-    reportedRef.current.add(bucket)
-    squadUnboxingAnalytics.track('squad_unboxing_scroll_depth', {
-      groupId,
-      screen: 'squad-unboxing',
-      bucket,
-    })
-  }, [groupId])
-
-  return reportDepth
-}
 
 function getPageTitle(eventType?: string | null): string {
   if (eventType === 'bar') return '你的酒局桌友来了'
@@ -115,7 +88,6 @@ export default function SquadUnboxingPage() {
     isInteractiveSession,
     bestPartnerUserId,
     flipOne,
-    flipAll,
     isFlipInFlight,
     notifyDealSettled,
     deckPhase,
@@ -128,9 +100,6 @@ export default function SquadUnboxingPage() {
     dismissPocketHint,
     handleOpenBox,
     handleConfirmAttendance,
-    handleOpenGroupDetail,
-    handleSharePosterTap,
-    handleSkip,
     refetch,
   } = useSquadUnboxingController({ groupId, routerParams: router.params })
 
@@ -181,8 +150,6 @@ export default function SquadUnboxingPage() {
   // No setState-after-unmount: an interrupted flip never narrates a stale
   // card (REL-04).
   useEffect(() => () => cancelNarrationTimer(), [cancelNarrationTimer])
-
-  const reportScrollDepth = useScrollDepthTracking(groupId)
 
   useEffect(() => {
     focusedCardIndexRef.current = focusedCardIndex
@@ -375,51 +342,6 @@ export default function SquadUnboxingPage() {
     handleCardTap(index, 'none')
   }, [handleCardTap])
 
-  /**
-   * Hint-chip reveal-all (AC-05): staggered flip burst with NO per-card focus
-   * chrome and NO per-card narration swaps. Any active focus is cleared
-   * BEFORE the burst; on completion the bubble shows one group-level line.
-   */
-  const handleRevealAll = useCallback(() => {
-    if (isFlipInFlight()) return
-    if (unflippedCount <= 0) return
-
-    const instant = shouldReduceMotion || isDegradation
-    if (!instant) haptics('light')
-    squadUnboxingAnalytics.track('squad_unboxing_reveal_all_tap', {
-      remainingCount: unflippedCount,
-      groupId,
-      screen: 'squad-unboxing',
-    })
-
-    focusedCardIndexRef.current = -1
-    setFocusedCardIndex(-1)
-    cancelNarrationTimer()
-    setBubbleNarration(null)
-
-    const { totalMs } = flipAll()
-    if (instant) {
-      setBubbleNarration({ kind: 'burst' })
-    } else {
-      narrationCancelRef.current = scheduleFlipSettleNarration(
-        { setTimer: (cb, ms) => setTimeout(cb, ms), clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>) },
-        () => {
-          narrationCancelRef.current = null
-          setBubbleNarration({ kind: 'burst' })
-        },
-        totalMs,
-      )
-    }
-  }, [
-    isFlipInFlight,
-    unflippedCount,
-    shouldReduceMotion,
-    isDegradation,
-    groupId,
-    flipAll,
-    cancelNarrationTimer,
-  ])
-
   const focusedMember = members[focusedCardIndex] ?? null
   const focusedViewerPair = focusedMember
     ? (viewerPairByMemberId.get(focusedMember.userId) ?? null)
@@ -538,13 +460,6 @@ export default function SquadUnboxingPage() {
     prevVenueStatusRef.current = currentStatus ?? null
   }, [groupId, group])
 
-  const handleScroll = useCallback((event: { detail?: { scrollTop?: number; scrollHeight?: number } }) => {
-    const scrollTop = event.detail?.scrollTop ?? 0
-    if (scrollTop > 120) reportScrollDepth('tonights_table')
-    if (scrollTop > 320) reportScrollDepth('connection_story')
-    if (scrollTop > 520) reportScrollDepth('actions')
-  }, [reportScrollDepth])
-
   const pageClassName = [
     rootClassName,
     `squad-unboxing--${flowState}`,
@@ -583,12 +498,6 @@ export default function SquadUnboxingPage() {
       </View>
     )
   }
-
-  // Scroll padding must clear the bottom dock's actual height (368rpx
-  // action-zone, +128rpx when the reveal chip shows) plus a breathing gap, so
-  // the in-flow bubble + 今晚这桌 chapter stay visible above the lower buttons.
-  const showRevealChip = isInteractiveSession && unflippedCount > 0 && deckPhase === 'fan'
-  const revealedScrollPaddingBottomRpx = (showRevealChip ? 496 : 368) + 40
 
   // Always expanded (2026-07-17) — the collapse toggle/link was removed; the
   // chapter renders directly in the scroll flow below the bubble.
@@ -767,11 +676,9 @@ export default function SquadUnboxingPage() {
     <View className={pageClassName}>
       <ScrollView
         className={['squad-unboxing__scroll', flowState === 'revealed' ? 'squad-unboxing__scroll--revealed' : ''].filter(Boolean).join(' ')}
-        style={flowState === 'revealed' ? { paddingBottom: `calc(${revealedScrollPaddingBottomRpx}rpx + env(safe-area-inset-bottom))` } : undefined}
-        scrollY
+        scrollY={flowState !== 'revealed'}
         enhanced
         showScrollbar={false}
-        onScroll={handleScroll}
       >
         <View className='squad-unboxing__scroll-inner'>
           {/* Phase-aware spacer: matches the fixed stage height while the fan
@@ -1019,26 +926,6 @@ export default function SquadUnboxingPage() {
             .filter(Boolean)
             .join(' ')}
         >
-          {/* Hint chip (AC-04): progress slot — live unflipped count with an
-              explicit tap verb; doubles as the reveal-all trigger (AC-05).
-              Absent when N=0 and on all-up re-entry. Separate visual slot
-              from the bubble (chip = progress, bubble = voice). Fan phase
-              only: while pocketed the deck is out of reach — the pill's
-              face-down back-chips carry the unrevealed count visually. */}
-          {isInteractiveSession && unflippedCount > 0 && deckPhase === 'fan' ? (
-            <View
-              className='squad-unboxing__reveal-chip'
-              hoverClass='squad-unboxing__reveal-chip--pressed'
-              role='button'
-              aria-label={buildRevealChipLabel(unflippedCount)}
-              onClick={handleRevealAll}
-            >
-              <Text className='squad-unboxing__reveal-chip-text'>
-                {buildRevealChipLabel(unflippedCount)}
-              </Text>
-            </View>
-          ) : null}
-
           <View className='squad-unboxing__action-zone'>
             <Button
               className='squad-unboxing__confirm-btn'
@@ -1049,35 +936,6 @@ export default function SquadUnboxingPage() {
               {showSuccessOverlay ? '座位已锁定' : isSubmitting ? '确认中…' : '确认出席'}
             </Button>
 
-            <View className='squad-unboxing__action-row'>
-              <Button
-                variant='secondary'
-                className='squad-unboxing__share-btn'
-                onClick={handleSharePosterTap}
-                disabled={showSuccessOverlay}
-              >
-                截图保存记忆
-              </Button>
-
-              <Button
-                variant='secondary'
-                className='squad-unboxing__detail-btn'
-                onClick={handleOpenGroupDetail}
-                disabled={showSuccessOverlay}
-              >
-                查看活动详情
-              </Button>
-            </View>
-
-            <View
-              className='squad-unboxing__skip-link'
-              hoverClass='squad-unboxing__skip-link--pressed'
-              onClick={handleSkip}
-              role='button'
-              aria-label='稍后再看'
-            >
-              <Text>稍后再看</Text>
-            </View>
           </View>
         </View>
       ) : null}

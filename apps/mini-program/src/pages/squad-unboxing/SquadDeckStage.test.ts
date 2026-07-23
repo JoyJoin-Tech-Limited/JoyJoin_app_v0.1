@@ -424,12 +424,9 @@ describe('SCSS fan poses + anti-collision (Direction: Cascading Hand Fan)', () =
     expect(latticeBlock).toContain('opacity: 0.7')
   })
 
-  it('renders the reveal-all hint chip + sr-only a11y pattern in SCSS (AC-11/AC-18)', () => {
-    expect(scss).toContain('&__reveal-chip')
-    // Nested pressed state: `&--pressed` under `&__reveal-chip`.
-    const chipBlock = scss.split('&__reveal-chip {')[1]?.split('}')[0] ?? ''
-    expect(chipBlock).toContain('&--pressed')
-    expect(scss).toContain('&__reveal-chip-text')
+  it('removes the reveal-all dock chip while retaining the sr-only a11y pattern', () => {
+    expect(scss).not.toContain('&__reveal-chip')
+    expect(scss).not.toContain('&__reveal-chip-text')
     expect(scss).toContain('&__sr-only')
   })
 
