@@ -41,6 +41,8 @@ import AIContentReportButton from '../../../components/ai-content/AIContentRepor
 import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import WelcomeGiftCard from '../../../components/onboarding/WelcomeGiftCard'
 import ProfileReviewInviteCard from '../../../components/onboarding/ProfileReviewInviteCard'
+import JoyJoinIntroFlow from '../../../components/flow-animation/JoyJoinIntroFlow'
+import { shouldShowFlow } from '../../../components/flow-animation/FlowStorage'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
@@ -122,6 +124,7 @@ export default function ProfileReviewPage() {
   const [couponError, setCouponError] = useState(false)
   const [couponAttempt, setCouponAttempt] = useState(0)
   const [isInviteCardVisible, setIsInviteCardVisible] = useState(false)
+  const [introNextStep, setIntroNextStep] = useState<string | undefined>()
   const hasTrackedInviteImpressionRef = useRef(false)
   const hasStagedDiscoverPrefetchRef = useRef(false)
   const isScrolledRef = useRef(false)
@@ -429,6 +432,15 @@ export default function ProfileReviewPage() {
         nextStep: userState.nextStep,
       })
 
+      if (
+        userState.nextStep === 'discover'
+        && shouldShowFlow('joyjoin-intro', user?.id)
+      ) {
+        setIsCelebrating(false)
+        setIntroNextStep(userState.nextStep)
+        return
+      }
+
       await navigateToMiniProgramNextStep(userState.nextStep, {
         mode: 'replace',
         transition: { beforeNavigate: () => setIsPageExiting(true) },
@@ -444,7 +456,16 @@ export default function ProfileReviewPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, archetype, interestsData?.totalSelections, invalidateAuth, isSubmitting])
+  }, [analytics, archetype, interestsData?.totalSelections, invalidateAuth, isSubmitting, user?.id])
+
+  const handleIntroComplete = useCallback(async () => {
+    const nextStep = introNextStep
+    setIntroNextStep(undefined)
+    await navigateToMiniProgramNextStep(nextStep, {
+      mode: 'replace',
+      transition: { beforeNavigate: () => setIsPageExiting(true) },
+    })
+  }, [introNextStep])
 
   const getStageClassName = useCallback(
     (step: number) =>
@@ -485,6 +506,10 @@ export default function ProfileReviewPage() {
   const stampText = visual?.rarityPercentage
     ? `稀有度 前${visual.rarityPercentage}%`
     : 'JOYJOIN ORIGINAL'
+
+  if (introNextStep) {
+    return <JoyJoinIntroFlow userId={user?.id} onComplete={handleIntroComplete} />
+  }
 
   if (isLoading) {
     return (

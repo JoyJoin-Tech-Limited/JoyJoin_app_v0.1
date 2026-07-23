@@ -1,0 +1,659 @@
+@use '../../styles/variables' as *;
+
+.product-flow {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  color: $color-text-white;
+  background:
+    radial-gradient(circle at 50% 38%, rgba($color-primary, 0.24), transparent 34%),
+    linear-gradient(160deg, #211936 0%, #171323 54%, #292034 100%);
+  font-family: $font-ui;
+
+  &__ambient {
+    position: absolute;
+    width: 520rpx;
+    height: 520rpx;
+    border-radius: 50%;
+    opacity: 0.22;
+    background: radial-gradient(circle, rgba($color-primary, 0.42), transparent 68%);
+    animation: flow-ambient 7s ease-in-out infinite alternate;
+    pointer-events: none;
+
+    &--one {
+      top: -240rpx;
+      right: -160rpx;
+    }
+
+    &--two {
+      bottom: -280rpx;
+      left: -180rpx;
+      animation-delay: -3s;
+    }
+  }
+
+  &__topbar,
+  &__footer {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 40rpx;
+    padding-left: 40rpx;
+  }
+
+  &__topbar {
+    padding-top: calc(env(safe-area-inset-top) + 24rpx);
+  }
+
+  &__brand {
+    color: $color-text-white;
+    font-family: $font-en-brand;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    letter-spacing: 1rpx;
+  }
+
+  &__skip {
+    min-width: 104rpx;
+    min-height: 72rpx;
+    margin: 0;
+    padding: 0 26rpx;
+    border: 1rpx solid rgba($color-text-white, 0.2);
+    border-radius: 999rpx;
+    color: rgba($color-text-white, 0.86);
+    background: rgba($color-surface, 0.08);
+    font-size: $font-size-sm;
+    line-height: 70rpx;
+
+    &::after {
+      border: 0;
+    }
+
+    &--pressed {
+      opacity: 0.7;
+      transform: scale(0.98);
+    }
+  }
+
+  &__stage {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__footer {
+    gap: 24rpx;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 32rpx);
+  }
+
+  &__progress {
+    flex: 1;
+    height: 4rpx;
+    overflow: hidden;
+    border-radius: 999rpx;
+    background: rgba($color-text-white, 0.12);
+  }
+
+  &__progress-fill {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, $color-primary, #A8C5DD);
+    transform-origin: left center;
+    transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__count {
+    min-width: 84rpx;
+    color: rgba($color-text-white, 0.58);
+    font-family: $font-mono;
+    font-size: $font-size-xs;
+    text-align: right;
+  }
+}
+
+.flow-scene {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 28rpx 48rpx 20rpx;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translateY(18rpx);
+  transition: opacity 360ms ease-out, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+
+  &--active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  &__visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 250rpx;
+    text-align: center;
+  }
+
+  &__kicker {
+    margin-bottom: 16rpx;
+    color: #C4B5FD;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    letter-spacing: 3rpx;
+  }
+
+  &__title {
+    max-width: 650rpx;
+    color: $color-text-white;
+    font-family: $font-cn-display;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-semibold;
+    line-height: 1.35;
+  }
+
+  &__body {
+    max-width: 610rpx;
+    margin-top: 18rpx;
+    color: rgba($color-text-white, 0.68);
+    font-size: $font-size-base;
+    line-height: 1.65;
+  }
+}
+
+.flow-visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 660rpx;
+  height: 520rpx;
+
+  &__result,
+  &__guide {
+    position: absolute;
+    bottom: 36rpx;
+    padding: 10rpx 22rpx;
+    border: 1rpx solid rgba(#A8C5DD, 0.25);
+    border-radius: 999rpx;
+    color: rgba($color-text-white, 0.68);
+    background: rgba(#A8C5DD, 0.08);
+    font-size: $font-size-xs;
+  }
+
+  &__branches {
+    position: absolute;
+    top: 238rpx;
+    left: 50%;
+  }
+
+  &__pair {
+    position: absolute;
+    right: 0;
+    bottom: 34rpx;
+    left: 0;
+    display: flex;
+    justify-content: space-between;
+
+    .flow-node {
+      width: 240rpx;
+    }
+  }
+}
+
+.flow-node {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  width: 210rpx;
+  min-height: 142rpx;
+  padding: 20rpx;
+  border: 1rpx solid rgba($color-primary, 0.48);
+  border-radius: 34rpx;
+  box-sizing: border-box;
+  background: rgba($color-primary, 0.12);
+  box-shadow: 0 18rpx 64rpx rgba($color-primary, 0.18);
+  overflow: hidden;
+
+  &--compact {
+    width: 180rpx;
+    min-height: 112rpx;
+  }
+
+  &--coral {
+    border-color: rgba(#FF9B85, 0.5);
+    background: rgba(#FF9B85, 0.1);
+  }
+
+  &--blue {
+    border-color: rgba(#A8C5DD, 0.5);
+    background: rgba(#A8C5DD, 0.1);
+  }
+
+  &--green {
+    border-color: rgba(#9ACD32, 0.5);
+    background: rgba(#9ACD32, 0.1);
+  }
+
+  &__light {
+    position: absolute;
+    top: -70rpx;
+    width: 150rpx;
+    height: 150rpx;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba($color-text-white, 0.3), transparent 68%);
+    animation: flow-node-light 2.4s ease-in-out infinite alternate;
+  }
+
+  &__label {
+    position: relative;
+    color: $color-text-white;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    text-align: center;
+  }
+
+  &__detail {
+    position: relative;
+    margin-top: 8rpx;
+    color: rgba($color-text-white, 0.58);
+    font-size: $font-size-xs;
+    text-align: center;
+  }
+}
+
+.flow-particles {
+  position: absolute;
+  inset: 0;
+
+  &__item {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 10rpx;
+    padding: 10rpx 16rpx;
+    border: 1rpx solid rgba($color-text-white, 0.12);
+    border-radius: 999rpx;
+    color: rgba($color-text-white, 0.66);
+    background: rgba($color-surface, 0.06);
+    font-size: $font-size-xs;
+    animation: flow-particle-in 1.8s ease-in-out infinite alternate;
+
+    &--1 { top: 40rpx; left: 20rpx; }
+    &--2 { top: 74rpx; right: 4rpx; animation-delay: -0.4s; }
+    &--3 { top: 220rpx; left: 0; animation-delay: -0.8s; }
+    &--4 { top: 260rpx; right: 0; animation-delay: -1.2s; }
+    &--5 { right: 190rpx; bottom: 36rpx; animation-delay: -1.6s; }
+  }
+
+  &__dot {
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: 50%;
+    background: #C4B5FD;
+    box-shadow: 0 0 18rpx rgba(#C4B5FD, 0.8);
+  }
+}
+
+.animated-path {
+  position: relative;
+  width: 56rpx;
+  height: 4rpx;
+  overflow: hidden;
+
+  &__beam {
+    position: absolute;
+    inset: 1rpx 0;
+    background: rgba($color-primary, 0.32);
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+
+  &__traveler {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: 50%;
+    opacity: 0;
+    background: #C4B5FD;
+  }
+
+  &--active &__beam {
+    animation: flow-path-draw 500ms ease-out forwards;
+  }
+
+  &--active &__traveler {
+    animation: flow-path-travel 1.5s 400ms ease-in-out infinite;
+  }
+
+  &--vertical {
+    width: 4rpx;
+    height: 56rpx;
+  }
+
+  &--branch-left,
+  &--branch-right {
+    position: absolute;
+    width: 190rpx;
+    transform-origin: left center;
+  }
+
+  &--branch-left { transform: rotate(150deg); }
+  &--branch-right { transform: rotate(30deg); }
+}
+
+.flow-visual--dual {
+  flex-direction: column;
+}
+
+.flow-map {
+  position: relative;
+  width: 580rpx;
+  height: 360rpx;
+  border: 1rpx solid rgba(#A8C5DD, 0.22);
+  border-radius: 48rpx;
+  background:
+    linear-gradient(38deg, transparent 48%, rgba(#A8C5DD, 0.08) 49%, rgba(#A8C5DD, 0.08) 51%, transparent 52%),
+    rgba(#A8C5DD, 0.04);
+  overflow: hidden;
+
+  &__road {
+    position: absolute;
+    width: 470rpx;
+    height: 2rpx;
+    background: rgba(#A8C5DD, 0.25);
+
+    &--one { top: 170rpx; left: 38rpx; transform: rotate(-13deg); }
+    &--two { top: 205rpx; left: 92rpx; transform: rotate(20deg); }
+  }
+
+  &__stop {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 10rpx;
+
+    &--1 { top: 78rpx; left: 64rpx; }
+    &--2 { top: 218rpx; left: 142rpx; }
+    &--3 { top: 96rpx; right: 92rpx; }
+    &--4 { right: 54rpx; bottom: 58rpx; }
+  }
+
+  &__pin {
+    width: 18rpx;
+    height: 18rpx;
+    border: 5rpx solid rgba(#A8C5DD, 0.4);
+    border-radius: 50%;
+    background: #A8C5DD;
+    box-shadow: 0 0 26rpx rgba(#A8C5DD, 0.7);
+    animation: flow-pin 1.8s ease-in-out infinite alternate;
+  }
+
+  &__label {
+    color: rgba($color-text-white, 0.76);
+    font-size: $font-size-xs;
+  }
+}
+
+.flow-people,
+.flow-visual--offline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flow-people {
+  flex-wrap: wrap;
+  gap: 36rpx 10rpx;
+  max-width: 650rpx;
+
+  &__step {
+    display: flex;
+    align-items: center;
+  }
+
+  &__avatar {
+    width: 56rpx;
+    height: 56rpx;
+    border: 1rpx solid rgba($color-text-white, 0.34);
+    border-radius: 50%;
+    background: rgba($color-primary, 0.5);
+    box-shadow: 0 0 24rpx rgba($color-primary, 0.28);
+
+    &--2 { background: rgba(#FF9B85, 0.5); }
+    &--3 { background: rgba(#A8C5DD, 0.5); }
+    &--4 { background: rgba(#9ACD32, 0.45); }
+  }
+
+  &__label {
+    width: 88rpx;
+    margin-left: 10rpx;
+    color: rgba($color-text-white, 0.72);
+    font-size: $font-size-xs;
+  }
+}
+
+.flow-visual--ecosystem {
+  gap: 14rpx;
+
+  .flow-node {
+    width: 160rpx;
+  }
+
+  .animated-path {
+    width: 36rpx;
+  }
+}
+
+.flow-box {
+  position: relative;
+  width: 250rpx;
+  height: 250rpx;
+
+  &__body,
+  &__lid {
+    position: absolute;
+    left: 25rpx;
+    width: 200rpx;
+    border: 1rpx solid rgba($color-primary, 0.66);
+    background: linear-gradient(145deg, rgba($color-primary, 0.54), rgba($color-primary, 0.18));
+    box-shadow: 0 22rpx 70rpx rgba($color-primary, 0.28);
+  }
+
+  &__body {
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 150rpx;
+    border-radius: 18rpx 18rpx 38rpx 38rpx;
+  }
+
+  &__lid {
+    top: 45rpx;
+    height: 52rpx;
+    border-radius: 22rpx 22rpx 12rpx 12rpx;
+    transform: translateY(-28rpx) rotate(-5deg);
+    animation: flow-box-open 1.8s ease-in-out infinite alternate;
+  }
+
+  &__glow {
+    position: absolute;
+    top: 42rpx;
+    left: 50rpx;
+    width: 150rpx;
+    height: 120rpx;
+    background: radial-gradient(ellipse, rgba(#C4B5FD, 0.7), transparent 68%);
+    animation: flow-glow 1.8s ease-in-out infinite alternate;
+  }
+
+  &__mark {
+    color: rgba($color-text-white, 0.9);
+    font-family: $font-en-brand;
+    font-size: $font-size-4xl;
+    font-weight: $font-weight-bold;
+  }
+}
+
+.flow-visual--reveal {
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.flow-reveal-card,
+.flow-story-card {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  width: 250rpx;
+  min-height: 90rpx;
+  padding: 18rpx 22rpx;
+  border: 1rpx solid rgba($color-text-white, 0.14);
+  border-radius: 26rpx;
+  box-sizing: border-box;
+  color: rgba($color-text-white, 0.78);
+  background: rgba($color-surface, 0.06);
+  font-size: $font-size-sm;
+  animation: flow-card-reveal 2.4s ease-in-out infinite alternate;
+
+  &__dot {
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+    background: #C4B5FD;
+  }
+
+  &--2 { animation-delay: -0.5s; }
+  &--3 { animation-delay: -1s; }
+  &--4 { animation-delay: -1.5s; }
+}
+
+.flow-offline-step {
+  display: flex;
+  align-items: center;
+  color: rgba($color-text-white, 0.72);
+  font-size: $font-size-xs;
+
+  &__ring {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 62rpx;
+    height: 62rpx;
+    margin-right: 10rpx;
+    border: 1rpx solid rgba(#A8C5DD, 0.4);
+    border-radius: 50%;
+  }
+
+  &__core {
+    width: 22rpx;
+    height: 22rpx;
+    border-radius: 50%;
+    background: #A8C5DD;
+    box-shadow: 0 0 22rpx rgba(#A8C5DD, 0.68);
+  }
+}
+
+.flow-visual--story {
+  gap: 18rpx;
+  perspective: 800rpx;
+}
+
+.flow-story-card {
+  justify-content: center;
+  width: 180rpx;
+  height: 240rpx;
+  flex-direction: column;
+
+  &__line {
+    width: 74rpx;
+    height: 4rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.72);
+  }
+}
+
+@keyframes flow-ambient {
+  from { opacity: 0.14; transform: translate3d(-12rpx, 0, 0) scale(0.94); }
+  to { opacity: 0.26; transform: translate3d(12rpx, 8rpx, 0) scale(1.04); }
+}
+
+@keyframes flow-node-light {
+  from { opacity: 0.35; transform: scale(0.9); }
+  to { opacity: 0.75; transform: scale(1.08); }
+}
+
+@keyframes flow-particle-in {
+  from { opacity: 0.46; transform: translate3d(0, 5rpx, 0); }
+  to { opacity: 0.88; transform: translate3d(0, -5rpx, 0); }
+}
+
+@keyframes flow-path-draw {
+  to { transform: scaleX(1); }
+}
+
+@keyframes flow-path-travel {
+  0% { opacity: 0; transform: translateX(0); }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(48rpx); }
+}
+
+@keyframes flow-pin {
+  from { opacity: 0.65; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes flow-box-open {
+  from { transform: translateY(0) rotate(0); }
+  to { transform: translateY(-34rpx) rotate(-6deg); }
+}
+
+@keyframes flow-glow {
+  from { opacity: 0.35; transform: scale(0.9); }
+  to { opacity: 0.86; transform: scale(1.1); }
+}
+
+@keyframes flow-card-reveal {
+  from { opacity: 0.5; transform: translateY(6rpx); }
+  to { opacity: 1; transform: translateY(-4rpx); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-flow *,
+  .product-flow *::before,
+  .product-flow *::after {
+    animation: none !important;
+    transition-duration: 1ms !important;
+  }
+
+  .animated-path__beam {
+    transform: scaleX(1);
+  }
+}

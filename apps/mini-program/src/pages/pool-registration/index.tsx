@@ -41,6 +41,8 @@ import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import StatusCard from '../../components/ui/StatusCard'
 import IntentCard from '../../components/intent/IntentCard'
 import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
+import BlindBoxFlow from '../../components/flow-animation/BlindBoxFlow'
+import { shouldShowFlow } from '../../components/flow-animation/FlowStorage'
 
 import {
   ALCOHOL_COMFORT_OPTIONS,
@@ -161,6 +163,7 @@ export default function PoolRegistrationPage() {
   const [formState, setFormState] = useState<RegistrationFormState>(INITIAL_FORM_STATE)
   const [isRegistering, setIsRegistering] = useState(false)
   const [registered, setRegistered] = useState(false)
+  const [showBlindBoxFlow, setShowBlindBoxFlow] = useState(false)
   const [isEnablingNotifications, setIsEnablingNotifications] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [error, setError] = useState('')
@@ -787,7 +790,11 @@ export default function PoolRegistrationPage() {
       setResumeContext(null)
       setRegistered(true)
       discoverAnalytics.track('registration_complete', poolId)
-      Taro.showToast({ title: '报名成功！', icon: 'success', duration: TOAST_DEFAULT_MS })
+      if (shouldShowFlow('blind-box-lifecycle', user?.id)) {
+        setShowBlindBoxFlow(true)
+      } else {
+        Taro.showToast({ title: '报名成功！', icon: 'success', duration: TOAST_DEFAULT_MS })
+      }
     } catch (err) {
       const entitlementCode = getEntitlementCode(err)
 
@@ -879,6 +886,15 @@ export default function PoolRegistrationPage() {
         eventType={eventType}
         poolArea={poolArea}
         poolDateTime={pool.dateTime}
+      />
+    )
+  }
+
+  if (registered && showBlindBoxFlow) {
+    return (
+      <BlindBoxFlow
+        userId={user?.id}
+        onComplete={() => setShowBlindBoxFlow(false)}
       />
     )
   }
