@@ -314,6 +314,17 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/pages/alang/assets/npcs',
           to: 'dist/pages/alang/assets/npcs',
         },
+        // Discover renders the Flash entry before the Alang subpackage loads,
+        // while Flash pages reuse the universal encounter scene afterward.
+        // Keep both small WebP assets at their stable runtime paths.
+        {
+          from: 'src/pages/alang/assets/street-blind-box-icon.webp',
+          to: 'dist/pages/alang/assets/street-blind-box-icon.webp',
+        },
+        {
+          from: 'src/pages/alang/assets/flash-city-encounter.webp',
+          to: 'dist/pages/alang/assets/flash-city-encounter.webp',
+        },
         // Matching-status puzzle prelude pieces — bundled inside that page's
         // subpackage (~130KB total) so they do not count against the 2MB main
         // package while still painting instantly if the CDN is slow.
