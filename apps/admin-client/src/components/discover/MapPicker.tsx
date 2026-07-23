@@ -101,10 +101,12 @@ export default function MapPicker({ open, onOpenChange, onSelect, initialCenter 
 
         mapInstance.current = map;
 
-        const marker = new TMap.Marker({
-          position: new TMap.LatLng(defaultCenter.lat, defaultCenter.lng),
+        const marker = new TMap.MultiMarker({
           map,
-          draggable: true,
+          geometries: [{
+            id: 'selected-location',
+            position: new TMap.LatLng(defaultCenter.lat, defaultCenter.lng),
+          }],
         });
 
         markerRef.current = marker;
@@ -119,17 +121,10 @@ export default function MapPicker({ open, onOpenChange, onSelect, initialCenter 
 
         map.on('click', (e: any) => {
           const { lat, lng } = e.latLng;
-          marker.setPosition(new TMap.LatLng(lat, lng));
-
-          reverseGeocode(lat, lng).then(address => {
-            setSelectedLocation({ lng, lat, address });
-          });
-        });
-
-        marker.on('dragend', () => {
-          const pos = marker.getPosition();
-          const lat = pos.lat;
-          const lng = pos.lng;
+          marker.updateGeometries([{
+            id: 'selected-location',
+            position: new TMap.LatLng(lat, lng),
+          }]);
 
           reverseGeocode(lat, lng).then(address => {
             setSelectedLocation({ lng, lat, address });
@@ -210,7 +205,10 @@ export default function MapPicker({ open, onOpenChange, onSelect, initialCenter 
     const lat = location.lat;
     const lng = location.lng;
 
-    markerRef.current.setPosition(new (window as any).TMap.LatLng(lat, lng));
+    markerRef.current.updateGeometries([{
+      id: 'selected-location',
+      position: new (window as any).TMap.LatLng(lat, lng),
+    }]);
     mapInstance.current.setCenter(new (window as any).TMap.LatLng(lat, lng));
     mapInstance.current.setZoom(16);
 
