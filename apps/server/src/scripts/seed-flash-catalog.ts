@@ -124,4 +124,3 @@ main()
   .finally(async () => {
     await pool.end();
   });
-
