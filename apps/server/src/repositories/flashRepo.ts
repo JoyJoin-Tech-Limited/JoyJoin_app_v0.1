@@ -433,8 +433,17 @@ export async function seedBuiltinFlashCatalog() {
  * rows remain operator-owned; only missing or still-draft built-in rows are
  * synchronized.
  */
-export async function seedBuiltinFlashLocations(reviewedBy: string, verifiedLocationKeys: ReadonlySet<string>) {
+export async function seedBuiltinFlashLocations(
+  reviewedBy: string,
+  verifiedLocationKeys: ReadonlySet<string>,
+  options: {
+    locationSeeds?: ReadonlyArray<(typeof FLASH_LOCATION_SEEDS)[number]>;
+    includeDestinations?: boolean;
+  } = {},
+) {
   return db.transaction(async (tx: DbExecutor) => {
+    const locationSeeds = options.locationSeeds ?? FLASH_LOCATION_SEEDS;
+    const includeDestinations = options.includeDestinations ?? true;
     const now = new Date();
     const npcRows = await tx.select({ id: flashNpcs.id }).from(flashNpcs)
       .where(and(eq(flashNpcs.isActive, true), inArray(flashNpcs.slug, CANONICAL_FLASH_NPC_SLUGS)));
@@ -454,7 +463,7 @@ export async function seedBuiltinFlashLocations(reviewedBy: string, verifiedLoca
     let destinationCount = 0;
     let approvedLocationCount = 0;
     let draftLocationCount = 0;
-    for (const seed of FLASH_LOCATION_SEEDS) {
+    for (const seed of locationSeeds) {
       const key = `${seed.district}:${seed.name}`;
       const isVerified = verifiedLocationKeys.has(key);
       if (isVerified) approvedLocationCount += 1;
@@ -493,6 +502,7 @@ export async function seedBuiltinFlashLocations(reviewedBy: string, verifiedLoca
         }
       }
 
+      if (!includeDestinations) continue;
       const destinationValues = {
         name: seed.name,
         city: "深圳",
