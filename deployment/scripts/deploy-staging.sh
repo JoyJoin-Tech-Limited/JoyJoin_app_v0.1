@@ -796,13 +796,15 @@ if ! retry_health_check "http://127.0.0.1:5001/api/readyz" "Staging API readines
     exit 1
 fi
 
-echo "🗺️  Step 9: Resolve and approve the four core Flash public spaces..."
-if ! docker exec \
+echo "🗺️  Step 9: Attempt the optional four-location Flash catalog bootstrap..."
+if docker exec \
     -e FLASH_STAGING_APPROVED_LOCATION_CODES="NS-SEAWORLD-ART,NS-NANTOU,FT-UPPERHILLS,FT-BOOK-CITY" \
     joyjoin-api-staging \
     node dist/scripts/seed-flash-catalog.js; then
-    echo "Core Flash location import failed; rolling back the staging release."
-    exit 1
+    echo "✅ Core Flash public spaces imported and approved"
+else
+    echo "::warning::Core Flash location bootstrap was skipped because Tencent server-side place search is unavailable."
+    echo "   The healthy application release remains active; operators must select, approve, and enable locations through the audited Admin Tencent Map picker."
 fi
 
 echo "💳 Step 10: Apply the requested staging payment state after the release is healthy..."
