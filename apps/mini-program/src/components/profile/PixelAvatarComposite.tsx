@@ -242,7 +242,7 @@ export function PixelAvatarComposite({
         <Text className='pixel-avatar-composite__accessible-copy'>{accessibleLabel}</Text>
       </View>
 
-      {bodySource !== 'placeholder' && safeFrameId === 'front' && onSlotTap && slotHotspots && slotHotspots.length > 0 && (
+      {safeFrameId === 'front' && onSlotTap && slotHotspots && slotHotspots.length > 0 && (
         <View className='pixel-avatar-composite__hotspot-plane'>
           {slotHotspots.map(({ slot, label, placement }) => (
             <View
