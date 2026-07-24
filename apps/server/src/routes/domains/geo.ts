@@ -114,10 +114,49 @@ const walkingCache = new TtlCache<WalkingRouteSuccessResponse>(
 
 type UpstreamErrorCode = "MAP_UPSTREAM_TIMEOUT" | "MAP_UPSTREAM_ERROR";
 
+export type TencentMapValidationErrorCategory =
+  | "RATE_LIMIT_QPS"
+  | "RATE_LIMIT_DAILY"
+  | "KEY_INVALID"
+  | "KEY_NOT_ENABLED"
+  | "PERMISSION_ERROR"
+  | "SIGNATURE_ERROR"
+  | "REQUEST_ERROR"
+  | "NETWORK_ERROR"
+  | "UPSTREAM_UNKNOWN";
+
+interface TencentMapDiagnostic {
+  httpStatus?: number;
+  tencentStatus?: number;
+  tencentMessage?: string;
+}
+
 class TencentMapRequestError extends Error {
-  constructor(readonly code: UpstreamErrorCode) {
+  constructor(
+    readonly code: UpstreamErrorCode,
+    readonly diagnostic: TencentMapDiagnostic = {},
+  ) {
     super(code);
     this.name = "TencentMapRequestError";
+  }
+}
+
+export class TencentMapValidationError extends Error {
+  readonly provider = "tencent_map";
+  readonly httpStatus?: number;
+  readonly tencentStatus?: number;
+  readonly tencentMessage?: string;
+
+  constructor(
+    readonly category: TencentMapValidationErrorCategory,
+    readonly requestId: string | undefined,
+    diagnostic: TencentMapDiagnostic = {},
+  ) {
+    super(`Tencent Maps validation failed: ${category}`);
+    this.name = "TencentMapValidationError";
+    this.httpStatus = diagnostic.httpStatus;
+    this.tencentStatus = diagnostic.tencentStatus;
+    this.tencentMessage = diagnostic.tencentMessage;
   }
 }
 
@@ -152,6 +191,78 @@ function readTencentStatus(payload: unknown): number | undefined {
   return toFiniteNumber(payload.status);
 }
 
+function sanitizeTencentMessage(value: unknown, apiKey?: string): string | undefined {
+  const message = toNonEmptyString(value);
+  if (!message) return undefined;
+
+  let sanitized = message;
+  if (apiKey) sanitized = sanitized.replaceAll(apiKey, "[REDACTED]");
+  sanitized = sanitized
+    .replace(/https?:\/\/\S+/gi, "[REDACTED_URL]")
+    .replace(/-?\d{1,3}\.\d{4,}\s*,\s*-?\d{1,3}\.\d{4,}/g, "[REDACTED_COORDINATE]");
+  return sanitized.slice(0, 500);
+}
+
+function readTencentDiagnostic(
+  payload: unknown,
+  httpStatus: number | undefined,
+  apiKey?: string,
+): TencentMapDiagnostic {
+  return {
+    httpStatus,
+    tencentStatus: readTencentStatus(payload),
+    tencentMessage: isRecord(payload)
+      ? sanitizeTencentMessage(payload.message, apiKey)
+      : undefined,
+  };
+}
+
+function classifyTencentValidationError(
+  diagnostic: TencentMapDiagnostic,
+  networkError = false,
+): TencentMapValidationErrorCategory {
+  if (networkError) return "NETWORK_ERROR";
+  switch (diagnostic.tencentStatus) {
+    case 120:
+      return "RATE_LIMIT_QPS";
+    case 121:
+      return "RATE_LIMIT_DAILY";
+    case 190:
+      return "KEY_INVALID";
+    case 199:
+      return "KEY_NOT_ENABLED";
+    case 110:
+    case 112:
+    case 113:
+      return "PERMISSION_ERROR";
+    case 111:
+    case 160:
+    case 161:
+      return "SIGNATURE_ERROR";
+    default:
+      return diagnostic.tencentStatus !== undefined
+        && diagnostic.tencentStatus >= 300
+        && diagnostic.tencentStatus <= 408
+        ? "REQUEST_ERROR"
+        : "UPSTREAM_UNKNOWN";
+  }
+}
+
+function logTencentValidationFailure(
+  error: TencentMapValidationError,
+  purpose: string | undefined,
+): void {
+  logger.warn("[Geo] Tencent Maps validation failed", {
+    requestId: error.requestId,
+    provider: error.provider,
+    purpose,
+    category: error.category,
+    httpStatus: error.httpStatus,
+    tencentStatus: error.tencentStatus,
+    tencentMessage: error.tencentMessage,
+  });
+}
+
 function buildTencentUrl(
   path: string,
   apiKey: string,
@@ -175,13 +286,21 @@ async function fetchTencentJson(url: URL): Promise<unknown> {
       headers: { Accept: "application/json" },
       signal: controller.signal,
     });
-    if (!response.ok) throw new TencentMapRequestError("MAP_UPSTREAM_ERROR");
-
+    let payload: unknown;
     try {
-      return await response.json();
+      payload = await response.json();
     } catch {
-      throw new TencentMapRequestError("MAP_UPSTREAM_ERROR");
+      throw new TencentMapRequestError("MAP_UPSTREAM_ERROR", {
+        httpStatus: response.status,
+      });
     }
+    if (!response.ok) {
+      throw new TencentMapRequestError(
+        "MAP_UPSTREAM_ERROR",
+        readTencentDiagnostic(payload, response.status, process.env.TENCENT_MAP_KEY),
+      );
+    }
+    return payload;
   } catch (error) {
     if (error instanceof TencentMapRequestError) throw error;
 
@@ -360,7 +479,12 @@ function requireGeoProxyAuth(req: Request, res: Response, next: NextFunction): v
 
 export async function reverseGeocodeCoordinate(
   coordinate: GeoCoordinate,
-  options: { cache?: boolean } = {},
+  options: {
+    cache?: boolean;
+    failClosed?: boolean;
+    requestId?: string;
+    purpose?: string;
+  } = {},
 ): Promise<ReverseGeocodeResponse> {
   const useCache = options.cache !== false;
   const cacheKey = useCache ? coordinateCacheKey(coordinate) : null;
@@ -370,7 +494,17 @@ export async function reverseGeocodeCoordinate(
   }
 
   const apiKey = process.env.TENCENT_MAP_KEY;
-  if (!apiKey) return buildLocalReverseFallback(coordinate, "MAP_NOT_CONFIGURED");
+  if (!apiKey) {
+    if (options.failClosed) {
+      const error = new TencentMapValidationError(
+        "KEY_INVALID",
+        options.requestId,
+      );
+      logTencentValidationFailure(error, options.purpose);
+      throw error;
+    }
+    return buildLocalReverseFallback(coordinate, "MAP_NOT_CONFIGURED");
+  }
 
   const url = buildTencentUrl("/ws/geocoder/v1/", apiKey, {
     location: `${coordinate.latitude.toFixed(6)},${coordinate.longitude.toFixed(6)}`,
@@ -381,6 +515,16 @@ export async function reverseGeocodeCoordinate(
     const payload = await fetchTencentJson(url);
     const status = readTencentStatus(payload);
     if (status !== 0 || !isRecord(payload) || !isRecord(payload.result)) {
+      if (options.failClosed) {
+        const diagnostic = readTencentDiagnostic(payload, 200, apiKey);
+        const error = new TencentMapValidationError(
+          classifyTencentValidationError(diagnostic),
+          options.requestId,
+          diagnostic,
+        );
+        logTencentValidationFailure(error, options.purpose);
+        throw error;
+      }
       return buildLocalReverseFallback(coordinate, "MAP_UPSTREAM_ERROR");
     }
 
@@ -405,6 +549,25 @@ export async function reverseGeocodeCoordinate(
     if (cacheKey) reverseCache.set(cacheKey, response);
     return response;
   } catch (error) {
+    if (error instanceof TencentMapValidationError) throw error;
+    if (options.failClosed) {
+      const diagnostic = error instanceof TencentMapRequestError
+        ? error.diagnostic
+        : {};
+      const validationError = new TencentMapValidationError(
+        classifyTencentValidationError(
+          diagnostic,
+          error instanceof TencentMapRequestError
+            ? error.code === "MAP_UPSTREAM_TIMEOUT"
+              || diagnostic.httpStatus === undefined
+            : true,
+        ),
+        options.requestId,
+        diagnostic,
+      );
+      logTencentValidationFailure(validationError, options.purpose);
+      throw validationError;
+    }
     const code = error instanceof TencentMapRequestError
       ? error.code
       : "MAP_UPSTREAM_ERROR";

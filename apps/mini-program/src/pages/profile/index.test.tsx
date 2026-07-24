@@ -222,14 +222,15 @@ describe('Profile approved V4 layout', () => {
     })
   })
 
-  it('falls back to the existing glyph after slot art fails and retries when its asset signature changes', async () => {
+  it('falls back to a product placeholder after slot art fails without showing a text glyph', async () => {
     const { container, rerender } = render(<ProfilePage />)
     const initialArt = Array.from(container.querySelectorAll<HTMLImageElement>('.profile-page__equipment-slot-art'))
 
     fireEvent.error(initialArt[0])
 
-    expect(container.querySelectorAll('.profile-page__equipment-slot-art')).toHaveLength(3)
-    expect(container.querySelectorAll('.profile-page__equipment-slot-glyph')).toHaveLength(1)
+    expect(container.querySelectorAll('.profile-page__equipment-slot-art')).toHaveLength(4)
+    expect(container.querySelectorAll('.profile-page__equipment-slot-art--placeholder')).toHaveLength(1)
+    expect(container.querySelectorAll('.profile-page__equipment-slot-glyph')).toHaveLength(0)
 
     const cachedEquipment = state.queryStates.get('mini-program/equipment/me')
     const cachedData = cachedEquipment?.data as {
@@ -257,6 +258,7 @@ describe('Profile approved V4 layout', () => {
 
     await waitFor(() => {
       expect(container.querySelectorAll('.profile-page__equipment-slot-art')).toHaveLength(4)
+      expect(container.querySelectorAll('.profile-page__equipment-slot-art--placeholder')).toHaveLength(0)
       expect(container.querySelectorAll('.profile-page__equipment-slot-glyph')).toHaveLength(0)
     })
   })
@@ -360,6 +362,21 @@ describe('Profile approved V4 layout', () => {
 
     expect(state.navigateTo).toHaveBeenCalledTimes(2)
     expect(queryByTestId('profile-more-services')).toBeNull()
+  })
+
+  it('shows a visible reason when the my-image subpackage does not open', async () => {
+    state.navigateTo.mockImplementationOnce(({ fail }: { fail?: (error: Error) => void }) => {
+      fail?.(new Error('subpackage unavailable'))
+    })
+    state.showToast.mockResolvedValueOnce(undefined)
+    const { getByTestId } = render(<ProfilePage />)
+
+    fireEvent.click(getByTestId('profile-partner-equipment-entry'))
+
+    await waitFor(() => expect(state.showToast).toHaveBeenCalledWith({
+      title: '形象加载失败，请稍后重试',
+      icon: 'none',
+    }))
   })
 
   it('hides the personal story surface while its rollout flag is disabled', () => {

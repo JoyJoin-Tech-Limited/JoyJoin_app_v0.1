@@ -21,10 +21,10 @@ describe('FlowStorage', () => {
 
   it('isolates seen state by flow, version and user', () => {
     expect(getFlowStorageKey('joyjoin-intro', 'user-a')).toBe(
-      'joyjoin_flow_seen:v1:joyjoin-intro:user-a',
+      'joyjoin_flow_seen:v2:joyjoin-intro:user-a',
     )
     expect(getFlowStorageKey('blind-box-lifecycle', 'user-b')).toBe(
-      'joyjoin_flow_seen:v1:blind-box-lifecycle:user-b',
+      'joyjoin_flow_seen:v2:blind-box-lifecycle:user-b',
     )
   })
 
@@ -38,7 +38,7 @@ describe('FlowStorage', () => {
   it('marks completion without throwing when storage is unavailable', () => {
     markFlowSeen('blind-box-lifecycle', 'user-a')
     expect(Taro.setStorageSync).toHaveBeenCalledWith(
-      'joyjoin_flow_seen:v1:blind-box-lifecycle:user-a',
+      'joyjoin_flow_seen:v2:blind-box-lifecycle:user-a',
       true,
     )
 

@@ -134,7 +134,10 @@ describe('PixelAvatarComposite', () => {
     )
 
     fireEvent.error(container.querySelector('.pixel-avatar-composite__body') as Element)
-    expect(container.querySelector('.pixel-avatar__base-top')).toBeInTheDocument()
+    expect(container.querySelector('.pixel-avatar-composite__body')).toHaveAttribute(
+      'src',
+      expect.stringMatching(/\/body-front-v2\.[a-f0-9]{12}\.webp/),
+    )
 
     rerender(
       <PixelAvatarComposite
@@ -254,7 +257,7 @@ describe('PixelAvatarComposite', () => {
     expect(screen.getByRole('img')).toHaveAttribute('data-frame', 'right-far')
   })
 
-  it('falls back to the safe clothed code-native avatar when the body cannot load', () => {
+  it('falls back to the product placeholder after both avatar sources fail', () => {
     const { container } = render(
       <PixelAvatarComposite
         archetypeId='corgi'
@@ -264,9 +267,10 @@ describe('PixelAvatarComposite', () => {
     )
 
     fireEvent.error(container.querySelector('.pixel-avatar-composite__body') as Element)
+    fireEvent.error(container.querySelector('.pixel-avatar-composite__body') as Element)
 
-    expect(container.querySelector('.pixel-avatar__base-top')).toBeInTheDocument()
-    expect(container.querySelector('.pixel-avatar__base-bottom')).toBeInTheDocument()
+    expect(container.querySelector('.avatar-placeholder')).toBeInTheDocument()
+    expect(container.querySelector('.pixel-avatar')).not.toBeInTheDocument()
     expect(container.querySelectorAll('[data-slot]')).toHaveLength(0)
     expect(container.querySelector('.pixel-avatar-composite__body')).not.toBeInTheDocument()
     expect(screen.getByRole('img')).toHaveAccessibleName(/装备图层已暂时隐藏/)
@@ -294,7 +298,7 @@ describe('PixelAvatarComposite', () => {
     expect(screen.getByRole('img')).not.toHaveAccessibleName(/装备图片未加载/)
   })
 
-  it('offers a retry from the safe clothed fallback when the body image fails', () => {
+  it('offers a retry from the product placeholder when both body images fail', () => {
     const { container } = render(
       <PixelAvatarComposite
         archetypeId='corgi'
@@ -303,6 +307,7 @@ describe('PixelAvatarComposite', () => {
       />,
     )
 
+    fireEvent.error(container.querySelector('.pixel-avatar-composite__body') as Element)
     fireEvent.error(container.querySelector('.pixel-avatar-composite__body') as Element)
     fireEvent.click(screen.getByRole('button', { name: '重新加载形象图片' }))
 

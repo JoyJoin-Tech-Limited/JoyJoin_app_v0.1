@@ -458,4 +458,96 @@ describe("geo routes", () => {
       });
     });
   });
+
+  it.each([
+    [120, "RATE_LIMIT_QPS"],
+    [121, "RATE_LIMIT_DAILY"],
+    [190, "KEY_INVALID"],
+    [199, "KEY_NOT_ENABLED"],
+    [112, "PERMISSION_ERROR"],
+    [160, "SIGNATURE_ERROR"],
+    [408, "REQUEST_ERROR"],
+    [450, "UPSTREAM_UNKNOWN"],
+  ] as const)(
+    "preserves Tencent status %s as validation category %s",
+    async (tencentStatus, category) => {
+      upstreamFetch.mockResolvedValueOnce(jsonResponse({
+        status: tencentStatus,
+        message: `safe upstream message ${tencentStatus}`,
+      }));
+      const { reverseGeocodeCoordinate } = await import("../routes/domains/geo");
+
+      await expect(reverseGeocodeCoordinate(
+        { latitude: 22.5431, longitude: 114.0579 },
+        {
+          cache: false,
+          failClosed: true,
+          requestId: "geo-validation-test",
+          purpose: "test",
+        },
+      )).rejects.toMatchObject({
+        provider: "tencent_map",
+        httpStatus: 200,
+        tencentStatus,
+        tencentMessage: `safe upstream message ${tencentStatus}`,
+        requestId: "geo-validation-test",
+        category,
+      });
+    },
+  );
+
+  it("keeps HTTP status separate from Tencent JSON status", async () => {
+    upstreamFetch.mockResolvedValueOnce(jsonResponse({
+      status: 199,
+      message: "service not enabled",
+    }, 500));
+    const { reverseGeocodeCoordinate } = await import("../routes/domains/geo");
+
+    await expect(reverseGeocodeCoordinate(
+      { latitude: 22.5431, longitude: 114.0579 },
+      { cache: false, failClosed: true },
+    )).rejects.toMatchObject({
+      httpStatus: 500,
+      tencentStatus: 199,
+      category: "KEY_NOT_ENABLED",
+    });
+  });
+
+  it("classifies a network failure without exposing request coordinates", async () => {
+    upstreamFetch.mockRejectedValueOnce(new TypeError("fetch failed"));
+    const { reverseGeocodeCoordinate } = await import("../routes/domains/geo");
+
+    await expect(reverseGeocodeCoordinate(
+      { latitude: 22.5431, longitude: 114.0579 },
+      {
+        cache: false,
+        failClosed: true,
+        requestId: "geo-network-test",
+      },
+    )).rejects.toMatchObject({
+      provider: "tencent_map",
+      requestId: "geo-network-test",
+      category: "NETWORK_ERROR",
+    });
+  });
+
+  it("redacts keys, URLs, and coordinates from the preserved Tencent message", async () => {
+    upstreamFetch.mockResolvedValueOnce(jsonResponse({
+      status: 199,
+      message: "test-tencent-map-key https://example.test 22.543100,114.057900",
+    }));
+    const { reverseGeocodeCoordinate } = await import("../routes/domains/geo");
+
+    const error = await reverseGeocodeCoordinate(
+      { latitude: 22.5431, longitude: 114.0579 },
+      { cache: false, failClosed: true },
+    ).catch((reason: unknown) => reason);
+
+    expect(error).toMatchObject({
+      category: "KEY_NOT_ENABLED",
+      tencentMessage: "[REDACTED] [REDACTED_URL] [REDACTED_COORDINATE]",
+    });
+    expect(JSON.stringify(error)).not.toContain("test-tencent-map-key");
+    expect(JSON.stringify(error)).not.toContain("22.543100");
+  });
 });

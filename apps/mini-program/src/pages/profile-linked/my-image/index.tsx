@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import PixelAvatar3D from '../../../components/profile/PixelAvatar3D'
+import PixelAvatar3D, { type Avatar3DStatusReport } from '../../../components/profile/PixelAvatar3D'
 import IdentityStageScene from '../../../components/profile/IdentityStageScene'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import {
@@ -98,6 +98,10 @@ function makeIdempotencyKey(itemId: string): string {
   return `equipment-shop-${itemId}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+function getArtworkFailureKey(item: Pick<EquipmentItem, 'id' | 'assetKey'>): string {
+  return `${item.id}:${item.assetKey}`
+}
+
 export default function MyImagePage() {
   const { user, isLoading: authLoading } = useAuthGuard()
   const queryClient = useQueryClient()
@@ -108,6 +112,7 @@ export default function MyImagePage() {
   const [draftOutfit, setDraftOutfit] = useState<EquipmentOutfit | null>(null)
   const [drawResult, setDrawResult] = useState<EquipmentDrawResponse | null>(null)
   const [failedArtworkKeys, setFailedArtworkKeys] = useState<Set<string>>(new Set())
+  const [avatarStatus, setAvatarStatus] = useState<Avatar3DStatusReport | null>(null)
 
   const equipmentQuery = useQuery({
     queryKey: EQUIPMENT_QUERY_KEY,
@@ -202,6 +207,23 @@ export default function MyImagePage() {
       !!data && isEquipmentItemCompatible(entry.item, data.archetypeId)),
     [data],
   )
+  const loadedEquipmentCount = useMemo(() => {
+    if (!data) return 0
+    return inventory.filter(({ item }) => (
+      !!getPixelEquipmentLayerUrl(item.assetKey, data.archetypeId)
+      && !failedArtworkKeys.has(getArtworkFailureKey(item))
+    )).length
+  }, [data, failedArtworkKeys, inventory])
+
+  useEffect(() => {
+    if (!data || !avatarStatus) return
+    console.info({
+      page: 'my-image',
+      avatarLoaded: avatarStatus.status === 'ready',
+      equipmentLoaded: loadedEquipmentCount,
+      totalEquipment: inventory.length,
+    })
+  }, [avatarStatus, data, inventory.length, loadedEquipmentCount])
   const recentItems = useMemo(
     () => (data?.recentItems ?? []).filter((entry) =>
       !!data && isEquipmentItemCompatible(entry.item, data.archetypeId)),
@@ -237,10 +259,13 @@ export default function MyImagePage() {
   })
   const canSave = isDirty && !hasUnavailableDraftItem && !saveMutation.isPending
 
-  const getArtworkFailureKey = (item: Pick<EquipmentItem, 'id' | 'assetKey'>) => `${item.id}:${item.assetKey}`
-
   const markArtworkFailed = (item: Pick<EquipmentItem, 'id' | 'assetKey'>) => {
     const failureKey = getArtworkFailureKey(item)
+    console.error({
+      type: 'equipment_asset_error',
+      itemId: item.id,
+      image: data ? getPixelEquipmentLayerUrl(item.assetKey, data.archetypeId) : null,
+    })
     setFailedArtworkKeys((current) => {
       if (current.has(failureKey)) return current
       const next = new Set(current)
@@ -335,6 +360,7 @@ export default function MyImagePage() {
                   variant='full'
                   slotHotspots={slotHotspots}
                   onSlotTap={handleSlotHotspotTap}
+                  onStatusChange={setAvatarStatus}
                 />
               </IdentityStageScene>
             </View>

@@ -8,6 +8,7 @@ $color-primary:        #8B5CF6;
 $color-primary-dark:   #7C3AED;
 $color-primary-light:  #EDE9FE;
 $color-secondary:      #FF6B9D;
+$color-brand-lavender: #C4B5FD;
 
 $color-bg:             #FAFAFA;
 $color-surface:        #FFFFFF;
@@ -22,6 +23,17 @@ $color-bg-warm-from:   #FDFCFA;
 $color-bg-warm-mid:    #F8F6F1;
 $color-bg-warm-to:     #F5F1E8;
 $color-bg-clean:       #FDFCFA;
+
+// Flow Animation semantic palette.
+$flow-bg-primary:      $color-bg-warm-to;
+$flow-surface-primary: $color-surface;
+$flow-border-subtle:   rgba($color-primary, 0.14);
+$flow-brand-primary:   $color-primary;
+$flow-brand-light:     $color-brand-lavender;
+$flow-accent-human:    #FF9B85;
+$flow-accent-city:     #69B9F5;
+$flow-line-inactive:   #D8D3DF;
+$flow-shadow-brand:    0 12rpx 36rpx rgba($color-primary, 0.16);
 
 // ─── Light tinted backgrounds (card shells, section accents) ──────
 $color-bg-tint-pink:   #FFF4F8;

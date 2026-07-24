@@ -2,7 +2,7 @@ import Taro from '@tarojs/taro'
 
 export type FlowStorageKind = 'joyjoin-intro' | 'blind-box-lifecycle'
 
-const FLOW_STORAGE_VERSION = 1
+const FLOW_STORAGE_VERSION = 2
 const FLOW_STORAGE_PREFIX = 'joyjoin_flow_seen'
 
 function normalizeUserScope(userId?: string | null): string {
@@ -31,4 +31,12 @@ export function markFlowSeen(kind: FlowStorageKind, userId?: string | null): voi
 
 export function shouldShowFlow(kind: FlowStorageKind, userId?: string | null): boolean {
   return !hasSeenFlow(kind, userId)
+}
+
+export function resetFlowSeen(kind: FlowStorageKind, userId?: string | null): void {
+  try {
+    Taro.removeStorageSync(getFlowStorageKey(kind, userId))
+  } catch {
+    // Development/demo recovery must not affect the primary journey.
+  }
 }
