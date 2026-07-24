@@ -1311,7 +1311,7 @@ $fan-rotations: (
     // visual fan just above the chatbox. Shadow + back-shimmer live inside
     // this container, so they stay aligned with the scaled fan. Static
     // (no animation), so reduce-motion needs no override.
-    transform: translateY(-88rpx) scale(0.75);
+    transform: translateY(-16rpx) scale(0.75);
     transform-origin: 50% 100%;
 
     &--empty {
@@ -2446,6 +2446,35 @@ $fan-rotations: (
     &--ready {
       transform: translateY(0);
     }
+  }
+
+  &__reveal-chip {
+    margin: $spacing-md $spacing-lg $spacing-sm;
+    align-self: center;
+    max-width: 100%;
+    min-height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-sm $spacing-md;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+    border: 1rpx solid rgba($color-primary, 0.18);
+    transition: background 0.12s ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.14);
+    }
+  }
+
+  &__reveal-chip-text {
+    @include type-body;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-primary;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
   // Screen-reader-only text (AC-18): holds the COMPLETE bubble narration for
