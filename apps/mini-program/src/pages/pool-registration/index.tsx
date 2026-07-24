@@ -31,6 +31,7 @@ import { logInfo, logError } from '../../lib/utils/logger'
 import { usePreloadIntentIcons } from '../../hooks/usePreloadIntentIcons'
 import { useLoadingDeadline } from '../../hooks/useLoadingDeadline'
 import { AUTH_QUERY_KEY } from '../../lib/api/authSession'
+import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
@@ -157,6 +158,7 @@ export default function PoolRegistrationPage() {
   const registeredRef = useRef(false)
   const queryClient = useQueryClient()
   const appliedReturnContextRef = useRef(0)
+  const lifecycleNavigationRef = useRef(false)
 
   const [step, setStep] = useState<RegistrationStep>(0)
   const [prevStep, setPrevStep] = useState<RegistrationStep>(0)
@@ -752,6 +754,20 @@ export default function PoolRegistrationPage() {
     setStep((currentStep) => (currentStep > STEP_BRIEF ? ((currentStep - 1) as RegistrationStep) : STEP_BRIEF))
   }, [step])
 
+  const handleViewRegisteredActivity = useCallback(() => {
+    if (!poolId || lifecycleNavigationRef.current) {
+      return
+    }
+    lifecycleNavigationRef.current = true
+    Taro.redirectTo({
+      url: `${MINI_PROGRAM_ROUTES.eventDetail}?id=${encodeURIComponent(poolId)}`,
+      fail: () => {
+        lifecycleNavigationRef.current = false
+        Taro.showToast({ title: '暂时无法打开活动，请稍后再试', icon: 'none' })
+      },
+    })
+  }, [poolId])
+
   /**
    * Submits the pool registration with the current form state.
    * @returns Promise that resolves when registration completes or fails
@@ -878,7 +894,7 @@ export default function PoolRegistrationPage() {
     )
   }
 
-  if (alreadyRegistered) {
+  if (alreadyRegistered && !registered) {
     return (
       <PoolRegistrationAlreadyJoined
         poolId={pool.id}
@@ -894,7 +910,8 @@ export default function PoolRegistrationPage() {
     return (
       <BlindBoxFlow
         userId={user?.id}
-        onComplete={() => setShowBlindBoxFlow(false)}
+        onSkip={() => setShowBlindBoxFlow(false)}
+        onViewActivity={handleViewRegisteredActivity}
       />
     )
   }
