@@ -42,6 +42,7 @@ $fan-rotations: (
     .squad-unboxing__blind-box-lid,
     .squad-unboxing__blind-box-aura,
     .squad-unboxing__blind-box-spark,
+    .squad-unboxing__blind-box-interior-img,
     .squad-unboxing__blind-box-lid,
     .squad-unboxing__deck-card,
     .squad-unboxing__deck-detail,
@@ -1187,6 +1188,47 @@ $fan-rotations: (
     transform: translateX(-50%);
     pointer-events: none;
     z-index: 1;
+  }
+
+  &__blind-box-opening {
+    position: absolute;
+    left: 50%;
+    top: 108rpx;
+    width: 232rpx;
+    height: 82rpx;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    overflow: visible;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  &__blind-box-opening-rim {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255, 209, 92, 0.98) 0%,
+      rgba(255, 190, 61, 0.96) 50%,
+      rgba(116, 72, 31, 0.78) 72%,
+      rgba(91, 57, 27, 0.18) 100%
+    );
+    box-shadow:
+      0 -8rpx 24rpx rgba(255, 200, 67, 0.72),
+      0 8rpx 18rpx rgba(95, 60, 27, 0.18);
+    transform: scaleY(0.44);
+  }
+
+  &__blind-box-interior-img {
+    position: absolute;
+    left: 50%;
+    bottom: -20rpx;
+    width: 300rpx;
+    height: 270rpx;
+    transform: translateX(-50%);
+    opacity: 0.96;
+    animation: squad-unboxing-interior-flash 0.92s ease-in-out infinite;
   }
 
   &__blind-box-shadow {
@@ -2650,6 +2692,19 @@ $fan-rotations: (
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes squad-unboxing-interior-flash {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: translateX(-50%) scale(0.94);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.04);
   }
 }
 

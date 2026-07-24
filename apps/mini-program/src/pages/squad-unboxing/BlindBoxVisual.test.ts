@@ -17,4 +17,12 @@ describe('squad-unboxing blind-box opening sequence', () => {
     expect(styleSource).toContain('transform: translate3d(-50%, -120rpx, 0) rotate(-12deg);')
     expect(styleSource).toContain('transform: translate3d(-50%, -106rpx, 0) rotate(-10deg);')
   })
+
+  it('reveals the warm interior above the box body while opening', () => {
+    expect(visualSource).toContain('BLIND_BOX_INTERIOR_ASSET')
+    expect(visualSource).toContain("className='squad-unboxing__blind-box-opening'")
+    expect(visualSource).toContain("className='squad-unboxing__blind-box-opening-rim'")
+    expect(styleSource).toContain('@keyframes squad-unboxing-interior-flash')
+    expect(styleSource).toContain('rgba(255, 209, 92, 0.98)')
+  })
 })

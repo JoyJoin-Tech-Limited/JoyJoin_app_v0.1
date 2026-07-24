@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react'
 import type { BlindBoxVisualState } from './squadUnboxingViewModels'
 import {
   BLIND_BOX_BODY_ASSET,
+  BLIND_BOX_INTERIOR_ASSET,
   BLIND_BOX_ALT,
 } from '../../lib/mascot/blindBoxAssets'
 
@@ -50,6 +51,19 @@ export function BlindBoxVisual({
         lazyLoad={false}
         onError={handleError}
       />
+
+      {isOpening ? (
+        <View className='squad-unboxing__blind-box-opening'>
+          <View className='squad-unboxing__blind-box-opening-rim' />
+          <Image
+            className='squad-unboxing__blind-box-interior-img'
+            mode='aspectFit'
+            src={BLIND_BOX_INTERIOR_ASSET}
+            ariaLabel={BLIND_BOX_ALT.interior}
+            lazyLoad={false}
+          />
+        </View>
+      ) : null}
 
       <View className='squad-unboxing__blind-box-shadow' />
     </View>
