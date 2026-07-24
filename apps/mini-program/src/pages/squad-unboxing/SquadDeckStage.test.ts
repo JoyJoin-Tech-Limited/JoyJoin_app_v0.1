@@ -424,9 +424,10 @@ describe('SCSS fan poses + anti-collision (Direction: Cascading Hand Fan)', () =
     expect(latticeBlock).toContain('opacity: 0.7')
   })
 
-  it('removes the reveal-all dock chip while retaining the sr-only a11y pattern', () => {
-    expect(scss).not.toContain('&__reveal-chip')
-    expect(scss).not.toContain('&__reveal-chip-text')
+  it('styles the restored reveal-all dock chip and retains the sr-only a11y pattern', () => {
+    expect(scss).toContain('&__reveal-chip')
+    expect(scss).toContain('&__reveal-chip-text')
+    expect(scss).toMatch(/&__reveal-chip\s*\{[\s\S]*?min-height:\s*88rpx;/)
     expect(scss).toContain('&__sr-only')
   })
 

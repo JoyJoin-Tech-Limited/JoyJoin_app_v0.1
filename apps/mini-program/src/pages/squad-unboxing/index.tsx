@@ -29,6 +29,7 @@ import {
   buildDeckPillStripModel,
   buildEventBriefDate,
   buildFocusedMemberBubbleText,
+  buildRevealChipLabel,
   buildSquadSoulBubbleText,
   getChemistryWord,
   getDeckPillChemistryClass,
@@ -88,6 +89,7 @@ export default function SquadUnboxingPage() {
     isInteractiveSession,
     bestPartnerUserId,
     flipOne,
+    flipAll,
     isFlipInFlight,
     notifyDealSettled,
     deckPhase,
@@ -341,6 +343,50 @@ export default function SquadUnboxingPage() {
     // swallows the release tap so nothing double-fires (AC-12).
     handleCardTap(index, 'none')
   }, [handleCardTap])
+
+  /**
+   * Reveal-all keeps the original staggered burst without per-card focus or
+   * narration. The group-level line lands only after the final flip settles.
+   */
+  const handleRevealAll = useCallback(() => {
+    if (isFlipInFlight()) return
+    if (unflippedCount <= 0) return
+
+    const instant = shouldReduceMotion || isDegradation
+    if (!instant) haptics('light')
+    squadUnboxingAnalytics.track('squad_unboxing_reveal_all_tap', {
+      remainingCount: unflippedCount,
+      groupId,
+      screen: 'squad-unboxing',
+    })
+
+    focusedCardIndexRef.current = -1
+    setFocusedCardIndex(-1)
+    cancelNarrationTimer()
+    setBubbleNarration(null)
+
+    const { totalMs } = flipAll()
+    if (instant) {
+      setBubbleNarration({ kind: 'burst' })
+    } else {
+      narrationCancelRef.current = scheduleFlipSettleNarration(
+        { setTimer: (cb, ms) => setTimeout(cb, ms), clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>) },
+        () => {
+          narrationCancelRef.current = null
+          setBubbleNarration({ kind: 'burst' })
+        },
+        totalMs,
+      )
+    }
+  }, [
+    isFlipInFlight,
+    unflippedCount,
+    shouldReduceMotion,
+    isDegradation,
+    groupId,
+    flipAll,
+    cancelNarrationTimer,
+  ])
 
   const focusedMember = members[focusedCardIndex] ?? null
   const focusedViewerPair = focusedMember
@@ -926,6 +972,20 @@ export default function SquadUnboxingPage() {
             .filter(Boolean)
             .join(' ')}
         >
+          {isInteractiveSession && unflippedCount > 0 && deckPhase === 'fan' ? (
+            <View
+              className='squad-unboxing__reveal-chip'
+              hoverClass='squad-unboxing__reveal-chip--pressed'
+              role='button'
+              aria-label={buildRevealChipLabel(unflippedCount)}
+              onClick={handleRevealAll}
+            >
+              <Text className='squad-unboxing__reveal-chip-text'>
+                {buildRevealChipLabel(unflippedCount)}
+              </Text>
+            </View>
+          ) : null}
+
           <View className='squad-unboxing__action-zone'>
             <Button
               className='squad-unboxing__confirm-btn'

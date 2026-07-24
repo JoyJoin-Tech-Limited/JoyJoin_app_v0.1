@@ -10,12 +10,14 @@ const pageStyles = readFileSync(resolve(here, 'index.scss'), 'utf8')
 const pageConfig = readFileSync(resolve(here, 'index.config.ts'), 'utf8')
 
 describe('squad unboxing revealed layout contract', () => {
-  it('keeps only the attendance action in the fixed bottom dock', () => {
+  it('keeps reveal-all directly above attendance without restoring retired actions', () => {
     expect(pageSource).toContain("className='squad-unboxing__confirm-btn'")
     expect(pageSource).not.toContain('截图保存记忆')
     expect(pageSource).not.toContain('查看活动详情')
     expect(pageSource).not.toContain('稍后再看')
-    expect(pageSource).not.toContain("className='squad-unboxing__reveal-chip'")
+    expect(pageSource).toContain("className='squad-unboxing__reveal-chip'")
+    expect(pageSource.indexOf("className='squad-unboxing__reveal-chip'"))
+      .toBeLessThan(pageSource.indexOf("className='squad-unboxing__confirm-btn'"))
   })
 
   it('locks the revealed state to the viewport instead of enabling page scroll', () => {
@@ -23,5 +25,10 @@ describe('squad unboxing revealed layout contract', () => {
     expect(pageConfig).toContain('disableScroll: true')
     expect(pageStyles).toMatch(/&__scroll--revealed\s*\{[\s\S]*?overflow:\s*hidden;/)
     expect(pageStyles).toMatch(/&__scroll-content--revealed\s*\{[\s\S]*?justify-content:\s*center;/)
+  })
+
+  it('keeps the scaled card fan below the navigation bar', () => {
+    expect(pageStyles).toContain('transform: translateY(-16rpx) scale(0.75);')
+    expect(pageStyles).not.toContain('transform: translateY(-88rpx) scale(0.75);')
   })
 })

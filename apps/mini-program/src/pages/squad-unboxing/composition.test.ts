@@ -71,10 +71,11 @@ describe('squad-unboxing page composition', () => {
     expect(pageSource).toContain("trackCardFocus(index, current, 'narration_fast_forward')")
   })
 
-  it('keeps the fixed dock focused on attendance instead of reveal controls', () => {
-    expect(pageSource).not.toContain('squad-unboxing__reveal-chip')
-    expect(pageSource).not.toContain('buildRevealChipLabel(unflippedCount)')
-    expect(pageSource).not.toContain('onClick={handleRevealAll}')
+  it('restores reveal-all directly above the attendance action', () => {
+    expect(pageSource).toContain('squad-unboxing__reveal-chip')
+    expect(pageSource).toContain('buildRevealChipLabel(unflippedCount)')
+    expect(pageSource).toContain('onClick={handleRevealAll}')
+    expect(pageSource.indexOf('squad-unboxing__reveal-chip')).toBeLessThan(pageSource.indexOf("className='squad-unboxing__confirm-btn'"))
     expect(pageSource).toContain("className='squad-unboxing__confirm-btn'")
   })
 
