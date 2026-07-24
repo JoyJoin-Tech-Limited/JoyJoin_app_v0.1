@@ -4,7 +4,7 @@
 > Event union: `apps/mini-program/src/lib/analytics/squadUnboxingAnalytics.ts`.
 > Server whitelist: `apps/server/src/routes/domains/analytics.ts`
 > (`squadUnboxingAnalyticsRoutes.test.ts` locks the accepted set).
-> Last updated: 2026-07-15 (pocket-deck events added to server whitelist).
+> Last updated: 2026-07-24 (ready-dwell event added).
 
 ## 1. Primary funnel (first visit)
 
@@ -50,6 +50,7 @@ wall-clock from deal-settle to completion, not animation time.
 | `squad_unboxing_share_poster_tap` | 截图保存记忆 CTA (toast-based; no poster pipeline yet) |
 | `squad_unboxing_analysis_retry_tap` | Group-analysis fetch retry |
 | `squad_unboxing_ready_hero_fallback` | Composed-hero image fell back (CDN → bundled → gradient) |
+| `squad_unboxing_ready_dwell` | `{ dwellMs, groupId, screen }` | Dwell time (ms) the user spent in `ready` state before opening the box — measures anticipation time. Fired on `box_tap`/`reveal`/`drag`; source field in payload. |
 
 ## 2b. Pocket-the-deck events (2026-07-15)
 

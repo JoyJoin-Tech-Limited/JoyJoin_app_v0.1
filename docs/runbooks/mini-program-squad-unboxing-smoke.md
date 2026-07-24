@@ -4,7 +4,7 @@
 >
 > **Audience:** Frontend engineers and QA validating `apps/mini-program/src/pages/squad-unboxing` in WeChat DevTools or on a real device.
 >
-> **Last updated:** 2026-07-13
+> **Last updated:** 2026-07-24
 
 ---
 
@@ -12,9 +12,9 @@
 
 The squad-unboxing page renders a fixed-position stage (gift box, then fanned card deck) above a scrollable story. The page has three visual states and several hard-won layout constraints:
 
-1. `ready` — white instruction card + drag-to-reveal ribbon below the gift box.
-2. `shaking` — same card, no ribbon, box shakes.
-3. `revealed` — header, analysis bubble, chapters, inline card detail, and action dock below the fanned deck.
+1. `ready` — gift box with breath idle animation + header (eyebrow `第N组 · M位同桌`, title `你的桌友来了`, tagline) + `DragRevealRibbon` restacked below header; no copy card.
+2. `shaking` — box shakes with `success` haptic at lid apex (550ms); ribbon unmounted.
+3. `revealed` — header, analysis bubble, chapters (bubble + chapter gated by `dealSettled`), and action dock below the fanned deck.
 
 This smoke proves:
 
@@ -60,8 +60,8 @@ These checks catch type, import, and regression issues. The manual DevTools smok
 
 | State | How to reach | What to look for |
 | --- | --- | --- |
-| `ready` | Land on `pages/squad-unboxing/index` for a matched group that has not been revealed. | Gift box is tappable (`role="button"`, pressed state) and triggers reveal; white instruction card sits **below** the gift box; `DragRevealRibbon` is anchored below the box (not inside the card) and is reachable; vertical scroll works in tap-fallback / low-end mode. |
-| `shaking` | Tap the gift box or drag the ribbon past 50%. | Gift box shakes; white card stays below; no overlap; ribbon is no longer mounted. |
+| `ready` | Land on `pages/squad-unboxing/index` for a matched group that has not been revealed. | Gift box is tappable (`role="button"`, pressed state) with breath idle animation; header shows `第N组 · M位同桌` + `你的桌友来了` + tagline; `DragRevealRibbon` restacked below header (not below box); vertical scroll works in tap-fallback / low-end mode. |
+| `shaking` | Tap the gift box or drag the ribbon past 50%. | Gift box shakes for 1000ms (220ms RM); `success` haptic fires at 550ms lid apex (150ms RM); ribbon unmounted; no overlap. |
 | `revealed` | After shake completes. | Fanned deck is visible; header + analysis bubble are below the deck; scroll down to see chapters and action dock. |
 | `error` | Force a failed group fetch (e.g., disconnect network or use a bad group ID). | Full-screen error state centered; CTA reachable. |
 | `empty deck` | Matched group with zero members. | Empty-deck state with Xiaoyue `actionFailure` mascot; copy readable. |
@@ -74,9 +74,9 @@ These checks catch type, import, and regression issues. The manual DevTools smok
 Use the WeChat DevTools **Inspect** panel (or real-device screenshot) and confirm:
 
 - [ ] No fixed-stage element overlaps any text, card, or tappable surface in the scrollable area.
-- [ ] The gift box bottom edge aligns with the top of the scrollable story; the white card is fully below the stage.
+- [ ] The stage bottom aligns with the top of the scrollable story; no copy card below the stage.
 - [ ] Tapping the gift box in `ready` state triggers the `shaking` → `revealed` flow.
-- [ ] The `DragRevealRibbon` is anchored below the gift box, not inside the white copy card, and remains reachable on all screen heights.
+- [ ] The `DragRevealRibbon` is anchored below the header (not below the box) and remains reachable on all screen heights.
 - [ ] Drag mode blocks parent `ScrollView` scroll; tap-fallback / low-end mode allows vertical scroll.
 - [ ] **Cascading fan deal:** after the box opens, cards deal **face-down** one-by-one (staggered slide-up) and settle into a rotated hand-fan pose (rotation per position, 28rpx overlap); the whole deal finishes within ~600ms + a ~200ms anticipation beat. Cards then flip face-up via controller-owned `squadFlipState`: my card auto-flips on deal (`auto_me`), other cards flip on tap (`tap`), and the reveal-all count chip flips every remaining card (`reveal_all`).
 - [ ] 4–6 members render on a single fanned row; 7–8 members wrap to two fanned rows and both rows stay fully inside the revealed stage (no clipping top or bottom).
@@ -90,7 +90,7 @@ Use the WeChat DevTools **Inspect** panel (or real-device screenshot) and confir
 - [ ] All tap targets (cards, drag ribbon, dismiss button, action dock buttons) are ≥ 88rpx tall and not overlapped.
 - [ ] Reduced-motion preference suppresses entrance animations (deal becomes an opacity fade) but preserves layout.
 - [ ] Degradation-tier device (or simulated low-end) shortens transitions but preserves layout.
-- [ ] On the smallest target device (iPhone SE / 375 × 667), the white card and action dock are still visible without needing to scroll.
+- [ ] On the smallest target device (iPhone SE / 375 × 667), the header, ribbon, and action dock are still visible without needing to scroll.
 
 ---
 
@@ -98,7 +98,7 @@ Use the WeChat DevTools **Inspect** panel (or real-device screenshot) and confir
 
 | Symptom | Likely cause |
 | --- | --- |
-| Gift box covers the white card text | Scroll `padding-top` is too small (often overriden by `safe-area-top` mixin) or the stage `height` is too small. |
+| Stage overlaps scrollable content | Scroll `padding-top` is too small (often overriden by `safe-area-top` mixin) or the stage `height` is too small. |
 | Fanned deck is clipped at the top or bottom | `revealed` stage height `clamp(500rpx, 56dvh, 660rpx)` is smaller than the fanned deck (two 284rpx rows + 8rpx row gap + title bar). |
 | Header or analysis bubble appears behind the stage | Root `squad-unboxing--${flowState}` class is missing, so `padding-top` for that state is not applied. |
 | White card is off-screen at the bottom | Stage height is too large for the ready state; reduce `clamp(420rpx, 54vh, 560rpx)` minimum. |
