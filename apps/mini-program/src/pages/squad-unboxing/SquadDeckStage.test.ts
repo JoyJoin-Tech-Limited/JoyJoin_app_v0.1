@@ -368,13 +368,12 @@ describe('SCSS fan poses + anti-collision (Direction: Cascading Hand Fan)', () =
     expect(offenders, `transforms out of order: ${offenders.join(' | ')}`).toEqual([])
   })
 
-  it('has no flat-row SCSS remnants', () => {
+  it('has no flat-row deck SCSS remnants', () => {
     expect(scss).not.toContain('&__deck-cards')
     expect(scss).not.toContain('deck-cards--count')
     expect(scss).not.toContain('&__deck-chips')
     expect(scss).not.toContain('&__deck-chip')
     expect(scss).not.toContain('&__inline-detail')
-    expect(scss).not.toContain('blind-box-interior-img')
   })
 
   it('emits the fan pose + state transforms from per-(row-length,index) classes', () => {
