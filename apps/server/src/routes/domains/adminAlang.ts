@@ -15,7 +15,11 @@ import { logAdminAudit, type AdminAuditAction } from "../../lib/adminAuditLogger
 import { getActingAdminId } from "../../lib/getActingAdminId";
 import { isCanonicalFlashNpcSlug, matchesCanonicalFlashNpcWeekdays } from "../../lib/flashNpcPolicy";
 import { logger } from "../../lib/logger";
-import { reverseGeocodeCoordinate } from "./geo";
+import {
+  reverseGeocodeCoordinate,
+  TencentMapValidationError,
+  type TencentMapValidationErrorCategory,
+} from "./geo";
 import {
   createFlashEncounterLocation,
   createFlashNpc,
@@ -283,12 +287,17 @@ async function verifyApprovedShenzhenCoordinate(value: {
   district: string;
   latitude: number;
   longitude: number;
-}) {
+}, requestId?: string) {
   if (value.approvalStatus !== "approved" || !value.isActive) return;
   const resolved = await reverseGeocodeCoordinate({
     latitude: value.latitude,
     longitude: value.longitude,
-  }, { cache: false });
+  }, {
+    cache: false,
+    failClosed: true,
+    requestId,
+    purpose: "flash-location-approval",
+  });
   if (!resolved.success || resolved.source !== "tencent") {
     throw new Error("FLASH_ADMIN_INVALID:地图服务尚未完成真实行政区校验，请稍后重试审核");
   }
@@ -397,6 +406,74 @@ function validationFailure(res: any, error: z.ZodError) {
 }
 
 function routeFailure(req: any, res: any, label: string, error: unknown) {
+  if (error instanceof TencentMapValidationError) {
+    const responseByCategory: Record<TencentMapValidationErrorCategory, {
+      status: number;
+      code: string;
+      message: string;
+    }> = {
+      RATE_LIMIT_QPS: {
+        status: 429,
+        code: "FLASH_ADMIN_MAP_QPS_LIMIT_REACHED",
+        message: "腾讯地图请求过于频繁，请稍后重试",
+      },
+      RATE_LIMIT_DAILY: {
+        status: 429,
+        code: "FLASH_ADMIN_MAP_DAILY_QUOTA_REACHED",
+        message: "腾讯地图每日调用额度达到限制",
+      },
+      KEY_INVALID: {
+        status: 503,
+        code: "FLASH_ADMIN_MAP_KEY_INVALID",
+        message: "腾讯地图 Key 无效，请检查服务配置",
+      },
+      KEY_NOT_ENABLED: {
+        status: 503,
+        code: "FLASH_ADMIN_MAP_WEBSERVICE_NOT_ENABLED",
+        message: "腾讯地图 WebService 未开启",
+      },
+      PERMISSION_ERROR: {
+        status: 503,
+        code: "FLASH_ADMIN_MAP_PERMISSION_ERROR",
+        message: "腾讯地图权限配置异常",
+      },
+      SIGNATURE_ERROR: {
+        status: 503,
+        code: "FLASH_ADMIN_MAP_SIGNATURE_ERROR",
+        message: "腾讯地图签名配置异常",
+      },
+      REQUEST_ERROR: {
+        status: 502,
+        code: "FLASH_ADMIN_MAP_REQUEST_ERROR",
+        message: "腾讯地图请求参数异常",
+      },
+      NETWORK_ERROR: {
+        status: 503,
+        code: "FLASH_ADMIN_MAP_NETWORK_ERROR",
+        message: "腾讯地图服务连接失败",
+      },
+      UPSTREAM_UNKNOWN: {
+        status: 502,
+        code: "FLASH_ADMIN_MAP_UPSTREAM_UNKNOWN",
+        message: "腾讯地图返回未知错误，请联系管理员检查服务日志",
+      },
+    };
+    const mapped = responseByCategory[error.category];
+    logger.error(`[FlashAdmin] ${label}`, {
+      requestId: error.requestId ?? req.requestId,
+      provider: error.provider,
+      category: error.category,
+      httpStatus: error.httpStatus,
+      tencentStatus: error.tencentStatus,
+      tencentMessage: error.tencentMessage,
+      adminId: getActingAdminId(req),
+    });
+    return res.status(mapped.status).json({
+      code: mapped.code,
+      category: error.category,
+      message: mapped.message,
+    });
+  }
   const message = error instanceof Error ? error.message : String(error);
   logger.error(`[FlashAdmin] ${label}`, { error: message, adminId: getActingAdminId(req) });
   if (message.startsWith("FLASH_ADMIN_")) {
@@ -746,7 +823,7 @@ export function registerAdminAlangRoutes(app: Express): void {
     try {
       const actor = getActingAdminId(req);
       const { npcIds, ...values } = parsed.data;
-      await verifyApprovedShenzhenCoordinate(parsed.data);
+      await verifyApprovedShenzhenCoordinate(parsed.data, req.requestId);
       const created = await db.transaction(async (tx: any) => {
         const row = await createFlashEncounterLocation({
           ...values,
@@ -795,7 +872,7 @@ export function registerAdminAlangRoutes(app: Express): void {
         npcIds: z.array(z.string()),
       }).superRefine(validateApprovedEncounterLocation).safeParse(next);
       if (!safety.success) return void validationFailure(res, safety.error);
-      await verifyApprovedShenzhenCoordinate(next);
+      await verifyApprovedShenzhenCoordinate(next, req.requestId);
       const { npcIds, ...values } = valuesWithReview;
       const updated = await db.transaction(async (tx: any) => {
         const row = await updateFlashEncounterLocation(req.params.id, values as any, tx);
@@ -826,7 +903,7 @@ export function registerAdminAlangRoutes(app: Express): void {
     if (!parsed.success) return void validationFailure(res, parsed.error);
     try {
       const actor = getActingAdminId(req);
-      await verifyApprovedShenzhenCoordinate(parsed.data);
+      await verifyApprovedShenzhenCoordinate(parsed.data, req.requestId);
       const created = await createFlashTaskDestination({
         ...parsed.data,
         coordinateSystem: "gcj02",
@@ -869,7 +946,7 @@ export function registerAdminAlangRoutes(app: Express): void {
         safetyNotes: z.string().nullable().optional(),
       }).superRefine(validateApprovedDestination).safeParse(next);
       if (!safety.success) return void validationFailure(res, safety.error);
-      await verifyApprovedShenzhenCoordinate(next);
+      await verifyApprovedShenzhenCoordinate(next, req.requestId);
       const result = await db.transaction(async (tx: any) => {
         const updated = await updateFlashTaskDestination(req.params.id, values as any, tx);
         if (!updated) throw new Error("FLASH_ADMIN_NOT_FOUND:任务目的地不存在");
