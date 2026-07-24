@@ -1,5 +1,5 @@
 import avatarAssetsManifest from '../../assets/profile-pixel/v2/avatar-assets-v2.json'
-import { localAsset } from '../utils/cdnAssets'
+import { cdnAsset } from '../utils/cdnAssets'
 
 export const PIXEL_AVATAR_ARCHETYPE_IDS = [
   'corgi',
@@ -224,7 +224,7 @@ export function getPixelAvatarBodyUrl(archetypeId?: string | null): string {
       : undefined
   const manifestPath = normalizeManifestPath(manifestBody, '')
   const safePath = manifestPath || `assets/profile-pixel/archetypes/${safeId}/base-v1.webp`
-  return localAsset(`/${safePath}`)
+  return cdnAsset(`/${safePath}`)
 }
 
 /**
@@ -248,10 +248,10 @@ export function getPixelAvatarApprovedStarterLookUrl(
 ): string | null {
   const safeId = normalizePixelArchetypeId(archetypeId)
   if (safeId === 'spider') {
-    return localAsset(`/assets/profile-pixel/archetypes/${safeId}/base-v1.webp`)
+    return cdnAsset(`/assets/profile-pixel/archetypes/${safeId}/base-v1.webp`)
   }
   const fullStarterPath = normalizeManifestPath(RAW_MANIFEST.archetypes?.[safeId]?.fullStarter, '')
-  return fullStarterPath ? localAsset(`/${fullStarterPath}`) : null
+  return fullStarterPath ? cdnAsset(`/${fullStarterPath}`) : null
 }
 
 /**
@@ -315,7 +315,7 @@ export function getPixelEquipmentAsset(
     const layerPath = normalizeManifestPath(registeredAsset.layer, '')
     if (!layerPath) return null
     return {
-      url: localAsset(`/${layerPath}`),
+        url: cdnAsset(`/${layerPath}`),
       slot,
       placement: normalizePlacement(placement, slot),
       depth: normalizeDepth(registeredAsset.depth, slot),
@@ -331,7 +331,7 @@ export function getPixelEquipmentAsset(
   if (!layerPath) return null
 
   return {
-    url: localAsset(`/${layerPath}`),
+    url: cdnAsset(`/${layerPath}`),
     slot,
     placement: normalizePlacement(manifestAsset?.placement, slot),
     depth: normalizeDepth(manifestAsset?.depth, slot),
