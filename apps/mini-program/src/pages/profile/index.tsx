@@ -24,6 +24,7 @@ import { fetchMyEquipment, type EquipmentItem, type EquipmentOutfit } from '../.
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import { getPixelEquipmentLayerUrl } from '../../lib/profile/pixelAvatarAssets'
 import { haptics } from '../../lib/utils/haptics'
+import { localAsset } from '../../lib/utils/cdnAssets'
 import './index.scss'
 import {
   getProfileCompletion,
@@ -39,6 +40,48 @@ const EMPTY_EQUIPMENT_OUTFIT: EquipmentOutfit = {
   shoesItemId: null,
   accessoryItemId: null,
   version: 0,
+}
+
+const DEFAULT_EQUIPMENT_PLACEHOLDER_URL = localAsset('/assets/joyjoin-logo-tab.png')
+
+function EquipmentPreviewArtwork({
+  item,
+  artworkUrl,
+}: {
+  item: EquipmentItem
+  artworkUrl: string | null
+}) {
+  const [source, setSource] = useState<'artwork' | 'default' | 'empty'>(
+    artworkUrl ? 'artwork' : 'default',
+  )
+
+  useEffect(() => {
+    setSource(artworkUrl ? 'artwork' : 'default')
+  }, [artworkUrl, item.id])
+
+  const image = source === 'artwork' ? artworkUrl : DEFAULT_EQUIPMENT_PLACEHOLDER_URL
+
+  if (source === 'empty' || !image) {
+    return <View className='profile-page__equipment-slot-mark' aria-hidden='true' />
+  }
+
+  return (
+    <Image
+      className={`profile-page__equipment-slot-art${source === 'default' ? ' profile-page__equipment-slot-art--placeholder' : ''}`}
+      src={image}
+      mode='aspectFit'
+      lazyLoad={false}
+      aria-hidden='true'
+      onError={() => {
+        console.error({
+          type: 'equipment_asset_error',
+          itemId: item.id,
+          image,
+        })
+        setSource((current) => current === 'artwork' ? 'default' : 'empty')
+      }}
+    />
+  )
 }
 
 function getGenderLabel(value?: string | null): string | null {
@@ -256,16 +299,6 @@ export default function ProfilePage() {
   const equipmentInventory = equipmentQuery.data?.inventory ?? []
   const equipmentItemsById = new Map(equipmentInventory.map((entry) => [entry.item.id, entry.item]))
   const outfit = equipmentQuery.data?.outfit
-  const equipmentPreviewAssetSignature = `${archetype ?? 'none'}:${equipmentInventory
-    .map(({ item }) => `${item.id}:${item.assetKey}`)
-    .sort()
-    .join('|')}`
-  const [failedEquipmentPreviewItemIds, setFailedEquipmentPreviewItemIds] = useState<Set<string>>(
-    () => new Set(),
-  )
-  useEffect(() => {
-    setFailedEquipmentPreviewItemIds(new Set())
-  }, [equipmentPreviewAssetSignature])
   const equipmentState: 'ready' | 'loading' | 'error' = outfit
     ? 'ready'
     : equipmentQuery.isError || (!!equipmentQuery.data && !equipmentQuery.isLoading)
@@ -413,7 +446,25 @@ export default function ProfilePage() {
                 <View
                   className='profile-page__partner-entry'
                   hoverClass='profile-page__partner-entry--pressed'
-                  onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.myImage }) }}
+                  onClick={() => {
+                    haptics('light')
+                    Taro.navigateTo({
+                      url: MINI_PROGRAM_ROUTES.myImage,
+                      success: () => {
+                        console.info({ action: 'open_my_image', status: 'success' })
+                      },
+                      fail: (error) => {
+                        console.error({
+                          action: 'open_my_image',
+                          error,
+                        })
+                        void Taro.showToast({
+                          title: '形象加载失败，请稍后重试',
+                          icon: 'none',
+                        })
+                      },
+                    })
+                  }}
                   role='button'
                   aria-label='进入我的形象与装备'
                   data-testid='profile-partner-equipment-entry'
@@ -438,35 +489,19 @@ export default function ProfilePage() {
                           const artworkUrl = item && archetype
                             ? getPixelEquipmentLayerUrl(item.assetKey, archetype)
                             : null
-                          const artworkFailed = item
-                            ? failedEquipmentPreviewItemIds.has(item.id)
-                            : false
-                          return (
+                            return (
                             <View
                               key={slot}
                               className={`profile-page__equipment-slot${item ? ' profile-page__equipment-slot--filled' : ''}`}
                               aria-label={item ? item.name : `空${slot}装备槽`}
                             >
-                              {item && artworkUrl && !artworkFailed
-                                ? (
-                                  <Image
-                                    className='profile-page__equipment-slot-art'
-                                    src={artworkUrl}
-                                    mode='aspectFit'
-                                    lazyLoad
-                                    aria-hidden='true'
-                                    onError={() => {
-                                      setFailedEquipmentPreviewItemIds((current) => {
-                                        if (current.has(item.id)) return current
-                                        const next = new Set(current)
-                                        next.add(item.id)
-                                        return next
-                                      })
-                                    }}
-                                  />
-                                )
-                                : item
-                                  ? <Text className='profile-page__equipment-slot-glyph'>{item.name.slice(0, 1)}</Text>
+                                {item
+                                  ? (
+                                    <EquipmentPreviewArtwork
+                                      item={item}
+                                      artworkUrl={artworkUrl}
+                                    />
+                                  )
                                   : <View className='profile-page__equipment-slot-mark' />}
                             </View>
                           )

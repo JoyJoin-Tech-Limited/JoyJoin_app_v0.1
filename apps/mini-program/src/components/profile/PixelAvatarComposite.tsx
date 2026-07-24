@@ -14,7 +14,7 @@ import {
   type PixelEquipmentAsset,
   type PixelEquipmentPlacement,
 } from '../../lib/profile/pixelAvatarAssets'
-import PixelAvatarFallback from './PixelAvatarFallback'
+import AvatarPlaceholder from './AvatarPlaceholder'
 import './PixelAvatarComposite.scss'
 
 export interface PixelAvatarSlotHotspot {
@@ -82,7 +82,7 @@ export function PixelAvatarComposite({
   const safeArchetypeId = normalizePixelArchetypeId(archetypeId)
   const safeFrameId = normalizePixelAvatarFrameId(frameId)
   const pose = getPixelAvatarScenePose(safeFrameId)
-  const [bodyFailed, setBodyFailed] = useState(false)
+  const [bodySource, setBodySource] = useState<'primary' | 'base' | 'placeholder'>('primary')
   const [failedLayerIds, setFailedLayerIds] = useState<Set<string>>(new Set())
 
   const requestedItems = useMemo<EquipmentItem[]>(() => {
@@ -120,9 +120,11 @@ export function PixelAvatarComposite({
   const bodyUrl = usesApprovedStarterLook
     ? approvedStarterLookUrl
     : getPixelAvatarBodyUrl(safeArchetypeId)
+  const fallbackBodyUrl = getPixelAvatarBodyUrl(safeArchetypeId)
+  const renderedBodyUrl = bodySource === 'base' ? fallbackBodyUrl : bodyUrl
 
   useEffect(() => {
-    setBodyFailed(false)
+    setBodySource('primary')
   }, [bodyUrl])
 
   useEffect(() => {
@@ -150,7 +152,7 @@ export function PixelAvatarComposite({
     transform: `perspective(900px) translate3d(${-50 + pose.translateXPercent}%, 0, 0) rotateY(${pose.yaw * 7}deg) scaleX(${pose.scaleX})`,
   }
 
-  if (bodyFailed) {
+  if (bodySource === 'placeholder') {
     return (
       <View
         className={`pixel-avatar-composite pixel-avatar-composite--${variant} ${className}`.trim()}
@@ -165,9 +167,7 @@ export function PixelAvatarComposite({
           aria-label={bodyFallbackAccessibleLabel}
         >
           <View className='pixel-avatar-composite__fallback-shell' aria-hidden='true'>
-            <PixelAvatarFallback
-              archetypeId={safeArchetypeId}
-              variant={variant}
+            <AvatarPlaceholder
               className='pixel-avatar-composite__fallback'
             />
           </View>
@@ -175,7 +175,7 @@ export function PixelAvatarComposite({
         </View>
         <View
           className='pixel-avatar-composite__asset-warning'
-          onClick={() => setBodyFailed(false)}
+          onClick={() => setBodySource('primary')}
           role='button'
           aria-label='重新加载形象图片'
           hoverClass='pixel-avatar-composite__asset-warning--pressed'
@@ -204,10 +204,20 @@ export function PixelAvatarComposite({
         >
           <Image
             className={`pixel-avatar-composite__body${usesApprovedStarterLook ? ' pixel-avatar-composite__body--approved-starter' : ''}`}
-            src={bodyUrl}
+            src={renderedBodyUrl}
             mode='scaleToFill'
             lazyLoad={false}
-            onError={() => setBodyFailed(true)}
+            onError={() => {
+              console.error({
+                type: 'avatar_asset_error',
+                src: renderedBodyUrl,
+              })
+              setBodySource((current) => (
+                current === 'primary' && renderedBodyUrl !== fallbackBodyUrl
+                  ? 'base'
+                  : 'placeholder'
+              ))
+            }}
           />
 
           {!usesApprovedStarterLook && visibleLayers.map(({ item, asset }) => (
@@ -232,7 +242,7 @@ export function PixelAvatarComposite({
         <Text className='pixel-avatar-composite__accessible-copy'>{accessibleLabel}</Text>
       </View>
 
-      {!bodyFailed && safeFrameId === 'front' && onSlotTap && slotHotspots && slotHotspots.length > 0 && (
+      {bodySource !== 'placeholder' && safeFrameId === 'front' && onSlotTap && slotHotspots && slotHotspots.length > 0 && (
         <View className='pixel-avatar-composite__hotspot-plane'>
           {slotHotspots.map(({ slot, label, placement }) => (
             <View

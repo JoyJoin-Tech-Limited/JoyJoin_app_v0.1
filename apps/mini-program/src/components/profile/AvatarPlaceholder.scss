@@ -1,0 +1,47 @@
+@use '../../styles/variables' as *;
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 32rpx;
+  background: rgba($color-surface, 0.76);
+
+  &__image {
+    width: 46%;
+    height: 46%;
+    opacity: 0.72;
+  }
+
+  &__empty {
+    position: relative;
+    width: 128rpx;
+    height: 128rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.09);
+    border: 2rpx solid rgba($color-primary, 0.16);
+  }
+
+  &__spark {
+    position: absolute;
+    border-radius: 50%;
+    background: $color-primary;
+    opacity: 0.62;
+
+    &--large {
+      width: 24rpx;
+      height: 24rpx;
+      top: 36rpx;
+      left: 38rpx;
+    }
+
+    &--small {
+      width: 12rpx;
+      height: 12rpx;
+      right: 34rpx;
+      bottom: 38rpx;
+    }
+  }
+}
