@@ -1078,19 +1078,6 @@ $fan-rotations: (
       animation: squad-unboxing-float 3.2s ease-in-out infinite;
     }
 
-    &--opening,
-    &--open {
-      .squad-unboxing__blind-box-stack {
-        animation: squad-unboxing-stack-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-      }
-    }
-
-    &--open {
-      .squad-unboxing__blind-box-stack {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0) scale(1);
-      }
-    }
   }
 
   &__blind-box-lid {
@@ -1118,7 +1105,7 @@ $fan-rotations: (
     &--open {
       .squad-unboxing__blind-box-lid-img {
         animation: none;
-        transform: translate3d(-50%, -90rpx, 0) rotate(-10deg);
+        transform: translate3d(-50%, -106rpx, 0) rotate(-10deg);
       }
     }
   }
@@ -1129,7 +1116,7 @@ $fan-rotations: (
     top: 0;
     width: 360rpx;
     height: 292rpx;
-    transform: translateX(-50%);
+    transform: translate3d(-50%, -16rpx, 0);
     pointer-events: none;
   }
 
@@ -1139,7 +1126,7 @@ $fan-rotations: (
     top: 0;
     width: 220rpx;
     height: 60rpx;
-    transform: translateX(-50%);
+    transform: translate3d(-50%, -16rpx, 0);
     border-radius: 24rpx 24rpx 0 0;
     background: linear-gradient(145deg, rgba($color-primary-light, 0.96) 0%, $color-primary-light 100%);
     box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.2);
@@ -1200,66 +1187,6 @@ $fan-rotations: (
     transform: translateX(-50%);
     pointer-events: none;
     z-index: 1;
-  }
-
-  // Interior card stack — three CSS premium card-backs (brand gradient, foil
-  // edge, logo mark) that rise from the box as the lid opens, foreshadowing the
-  // fan's design language. Sits between the box body (z1) and the lid (z3).
-  &__blind-box-stack {
-    position: absolute;
-    left: 50%;
-    top: 44rpx;
-    width: 220rpx;
-    height: 168rpx;
-    transform: translateX(-50%) translateY(56rpx) scale(0.82);
-    opacity: 0;
-    transition:
-      opacity 0.3s ease,
-      transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-    z-index: 2;
-    pointer-events: none;
-  }
-
-  &__blind-box-stack-card {
-    position: absolute;
-    left: 50%;
-    bottom: 0;
-    width: 120rpx;
-    height: 160rpx;
-    border-radius: 16rpx;
-    background: linear-gradient(145deg, $color-primary 0%, $color-primary-dark 100%);
-    box-shadow: 0 10rpx 26rpx rgba($color-primary, 0.3);
-    overflow: hidden;
-    transform-origin: 50% 100%;
-
-    &--1 {
-      transform: translateX(-50%) rotate(0deg);
-      z-index: 3;
-    }
-
-    &--2 {
-      transform: translateX(-50%) translateY(10rpx) rotate(-9deg);
-      z-index: 2;
-    }
-
-    &--3 {
-      transform: translateX(-50%) translateY(10rpx) rotate(9deg);
-      z-index: 1;
-    }
-  }
-
-  &__blind-box-stack-card-foil {
-    position: absolute;
-    inset: 0;
-    border-radius: 16rpx;
-    border: 1rpx solid rgba($color-surface, 0.38);
-    background: linear-gradient(135deg, rgba($color-surface, 0.3) 0%, rgba($color-surface, 0) 42%);
-  }
-
-  &__blind-box-stack-card-logo {
-    position: absolute;
-    inset: 0;
-    @include flex-center;
   }
 
   &__blind-box-shadow {
@@ -2607,27 +2534,15 @@ $fan-rotations: (
 
 @keyframes squad-unboxing-lid-lift-open {
   0% {
-    transform: translateX(-50%) rotate(0deg);
+    transform: translate3d(-50%, -16rpx, 0) rotate(0deg);
   }
 
   40% {
-    transform: translate3d(-50%, -104rpx, 0) rotate(-12deg);
+    transform: translate3d(-50%, -120rpx, 0) rotate(-12deg);
   }
 
   100% {
-    transform: translate3d(-50%, -90rpx, 0) rotate(-10deg);
-  }
-}
-
-@keyframes squad-unboxing-stack-rise {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(56rpx) scale(0.82);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translate3d(-50%, -106rpx, 0) rotate(-10deg);
   }
 }
 
@@ -2795,7 +2710,6 @@ $fan-rotations: (
   .squad-unboxing__blind-box-lid,
   .squad-unboxing__blind-box-aura,
   .squad-unboxing__blind-box-spark,
-  .squad-unboxing__blind-box-stack,
   .squad-unboxing__pair-card,
   .squad-unboxing__topic-chip,
   .squad-unboxing__skeleton,
