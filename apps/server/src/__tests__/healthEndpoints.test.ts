@@ -4,7 +4,7 @@
 
 import express from "express";
 import { withServerForApp as withServer } from '../test-utils/withServer';
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── DB mock ───────────────────────────────────────────────────────────────────
 const mockDbExecute = vi.fn();
@@ -27,7 +27,18 @@ async function buildTestApp() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("GET /api/health", () => {
+  const originalAppMode = process.env.APP_MODE;
+  const originalTencentMapKey = process.env.TENCENT_MAP_KEY;
+
+  afterEach(() => {
+    if (originalAppMode === undefined) delete process.env.APP_MODE;
+    else process.env.APP_MODE = originalAppMode;
+    if (originalTencentMapKey === undefined) delete process.env.TENCENT_MAP_KEY;
+    else process.env.TENCENT_MAP_KEY = originalTencentMapKey;
+  });
+
   it("returns 200 with status ok", async () => {
+    process.env.APP_MODE = "production";
     const app = await buildTestApp();
     await withServer(app, async (base) => {
       const res = await fetch(`${base}/api/health`);
@@ -35,6 +46,36 @@ describe("GET /api/health", () => {
       expect(res.status).toBe(200);
       expect(body.status).toBe("ok");
       expect(body).toEqual({ status: "ok" });
+    });
+  });
+
+  it("returns the Tencent Map configuration fingerprint in staging", async () => {
+    process.env.APP_MODE = "staging";
+    process.env.TENCENT_MAP_KEY = "staging-tencent-map-key-for-test";
+    const app = await buildTestApp();
+
+    await withServer(app, async (base) => {
+      const res = await fetch(`${base}/api/health`);
+      await expect(res.json()).resolves.toEqual({
+        status: "ok",
+        tencentMapConfigured: true,
+        tencentMapFingerprint: "3daaabd08682",
+      });
+    });
+  });
+
+  it("reports an unconfigured Tencent Map key in staging without exposing a value", async () => {
+    process.env.APP_MODE = "staging";
+    delete process.env.TENCENT_MAP_KEY;
+    const app = await buildTestApp();
+
+    await withServer(app, async (base) => {
+      const res = await fetch(`${base}/api/health`);
+      await expect(res.json()).resolves.toEqual({
+        status: "ok",
+        tencentMapConfigured: false,
+        tencentMapFingerprint: null,
+      });
     });
   });
 });

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Express } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "./db";
@@ -46,7 +47,21 @@ export async function evaluateReadiness(
 export function registerHealthRoutes(app: Express): void {
   app.get("/api/health", (_req, res) => {
     res.setHeader("X-JoyJoin-API", "health-route");
-    res.status(200).json({ status: "ok" });
+    const body: {
+      status: "ok";
+      tencentMapConfigured?: boolean;
+      tencentMapFingerprint?: string | null;
+    } = { status: "ok" };
+
+    if (process.env.APP_MODE === "staging") {
+      const tencentMapKey = process.env.TENCENT_MAP_KEY;
+      body.tencentMapConfigured = Boolean(tencentMapKey);
+      body.tencentMapFingerprint = tencentMapKey
+        ? createHash("sha256").update(tencentMapKey).digest("hex").slice(0, 12)
+        : null;
+    }
+
+    res.status(200).json(body);
   });
 
   app.get("/healthz", (_req, res) => {
