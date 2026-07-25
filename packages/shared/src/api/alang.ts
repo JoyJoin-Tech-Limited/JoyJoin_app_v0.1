@@ -270,11 +270,12 @@ export function deliverFlashTask(
   api: ApiTransport,
   encounterId: string,
   assignmentId: string,
+  answers?: Array<{ promptId: string; optionId: string }>,
 ): Promise<FlashEncounterResponse> {
   return api<FlashEncounterResponse>({
     path: `/api/alang/flash/encounters/${encounterId}/deliver`,
     method: "POST",
-    data: { assignmentId },
+    data: { assignmentId, ...(answers ? { answers } : {}) },
   });
 }
 

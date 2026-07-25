@@ -4,6 +4,7 @@ import {
   FLASH_NPC_SEEDS,
   FLASH_TASK_SEEDS,
 } from "@shared/alang/flashCatalog";
+import { FLASH_INVITATION_DEFINITIONS } from "@shared/alang/flashInvitationCatalog";
 import {
   FLASH_PERSONALIZATION_CONSENT_VERSION,
   flashCoordinateSchema,
@@ -74,6 +75,18 @@ describe("formal Flash catalog", () => {
     const counts = new Map<string, number>();
     for (const task of FLASH_TASK_SEEDS) counts.set(task.category, (counts.get(task.category) ?? 0) + 1);
     expect([...counts.values()].sort()).toEqual([5, 5, 5, 5, 5, 5]);
+  });
+
+  it("uses self-reported life invitations and NPC messages without proof requirements", () => {
+    expect(FLASH_INVITATION_DEFINITIONS).toHaveLength(30);
+    expect(FLASH_INVITATION_DEFINITIONS.filter((item) => item.kind === "life_invitation")).toHaveLength(25);
+    expect(FLASH_INVITATION_DEFINITIONS.filter((item) => item.kind === "npc_message")).toHaveLength(5);
+    expect(FLASH_INVITATION_DEFINITIONS
+      .filter((item) => item.kind === "life_invitation")
+      .every((item) => !item.targetNpcSlug && !item.messageCopy)).toBe(true);
+    expect(FLASH_INVITATION_DEFINITIONS
+      .filter((item) => item.kind === "npc_message")
+      .every((item) => item.targetNpcSlug && item.messageCopy)).toBe(true);
   });
 
   it("contains two free public location candidates for every Shenzhen district", () => {

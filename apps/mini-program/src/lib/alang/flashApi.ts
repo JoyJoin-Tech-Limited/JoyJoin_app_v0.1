@@ -61,8 +61,8 @@ function adaptTaskDto(task: FlashTaskDto): FlashTaskSummary {
     category: task.category,
     status: task.status,
     dueAt: task.expiresAt,
-    destinationName: task.destination.name,
-    districtName: task.destination.district,
+    destinationName: task.destination?.name,
+    districtName: task.destination?.district,
     shortBrief: task.brief,
     arrivedAt: task.arrivedAt ?? undefined,
     feedbackSubmittedAt: task.feedbackSubmittedAt ?? undefined,
@@ -140,8 +140,10 @@ export function adaptFlashEncounterDto(response: SharedFlashEncounterResponse): 
           title: response.offer.title,
           category: response.offer.category,
           invitation: response.offer.requestCopy,
-          destinationName: response.offer.destinationPreview.name,
-          districtName: response.offer.destinationPreview.district,
+          invitationType: response.offer.invitationType,
+          followUpTargetNpc: response.offer.followUpTargetNpc,
+          destinationName: response.offer.destinationPreview?.name,
+          districtName: response.offer.destinationPreview?.district,
           expiresInDays: 7,
           canCompleteWithoutPurchase: true,
         }
@@ -156,6 +158,9 @@ export function adaptFlashEncounterDto(response: SharedFlashEncounterResponse): 
           assignmentId: response.pendingDelivery.id,
           taskTitle: response.pendingDelivery.title,
           completedAt: response.pendingDelivery.feedbackSubmittedAt ?? undefined,
+          invitationType: response.pendingDelivery.invitationType,
+          followUpTargetNpc: response.pendingDelivery.followUpTargetNpc,
+          feedbackQuestions: response.pendingDelivery.followUpPrompts,
         }
       : null,
     deliveryMessage: response.deliveryMessage ?? undefined,
@@ -171,11 +176,13 @@ export function adaptFlashAssignmentDto(response: SharedFlashAssignmentResponse)
     canonicalScreen: response.canonicalScreen,
     assignmentId: task.id,
     description: task.instructions,
-    destinationAddress: task.destination.address,
-    destination: {
+    invitationType: task.invitationType,
+    followUpTargetNpc: task.followUpTargetNpc,
+    destinationAddress: task.destination?.address,
+    destination: task.destination ? {
       latitude: task.destination.latitude,
       longitude: task.destination.longitude,
-    },
+    } : undefined,
     arrivalInstructions: '到达地点附近 50 米内，主动点击一次「我已到达」。',
     feedbackQuestions: response.feedbackPrompts.map((prompt) => ({
       id: prompt.id,
@@ -251,11 +258,13 @@ export async function respondToFlashTaskOffer(input: {
 export async function deliverFlashTask(input: {
   encounterId: string
   assignmentId: string
+  answers?: Array<{ promptId: string; optionId: string }>
 }): Promise<FlashEncounterView> {
   return adaptFlashEncounterDto(await deliverFlashTaskRequest(
     apiRequest,
     input.encounterId,
     input.assignmentId,
+    input.answers,
   ))
 }
 

@@ -46,6 +46,10 @@ export type FlashTaskSnapshot = {
   dialogueIntro: string;
   /** NPC-specific acknowledgement captured with the accepted task version. */
   deliveryCopy?: string;
+  invitationType?: "destination_exploration" | "life_invitation" | "npc_message";
+  followUpTargetNpcSlug?: string;
+  followUpTargetNpcName?: string;
+  messageCopy?: string;
   feedbackPrompts: FlashFeedbackPrompt[];
   npcName: string;
   npcSlug: string;

@@ -42,6 +42,7 @@ import {
   FLASH_TASK_SEEDS,
 } from "@shared/alang/flashCatalog";
 import { FLASH_PERSONALIZATION_CONSENT_VERSION } from "@shared/alang/flashTypes";
+import { getFlashInvitationDefinition } from "@shared/alang/flashInvitationCatalog";
 
 import { db } from "../db";
 import { countCanonicalFlashNpcWeekdayMatches } from "../lib/flashNpcPolicy";
@@ -1372,17 +1373,30 @@ export async function getFlashAssignmentOwned(assignmentId: string, userId: stri
   return row ?? null;
 }
 
-export async function getPendingFlashDelivery(userId: string, npcId: string, executor: DbExecutor = db) {
-  const [row] = await executor
-    .select({ id: flashTaskAssignments.id })
+export async function getPendingFlashDelivery(
+  userId: string,
+  npcId: string,
+  npcSlug?: string,
+  executor: DbExecutor = db,
+) {
+  const rows = await executor
+    .select({ id: flashTaskAssignments.id, contentSnapshot: flashTaskAssignments.contentSnapshot })
     .from(flashTaskAssignments)
     .where(and(
       eq(flashTaskAssignments.userId, userId),
-      eq(flashTaskAssignments.npcId, npcId),
       eq(flashTaskAssignments.status, "ready_to_deliver"),
     ))
     .orderBy(asc(flashTaskAssignments.feedbackSubmittedAt))
-    .limit(1);
+    .limit(10);
+  const row = rows.find((candidate: any) => {
+    const snapshot = candidate.contentSnapshot as FlashTaskSnapshot;
+    return snapshot.invitationType === "npc_message"
+      ? Boolean(npcSlug && snapshot.followUpTargetNpcSlug === npcSlug)
+      : snapshot.npcSlug ? snapshot.npcSlug === npcSlug : false;
+  }) ?? rows.find((candidate: any) => {
+    const snapshot = candidate.contentSnapshot as FlashTaskSnapshot;
+    return !snapshot.invitationType && snapshot.npcSlug === npcSlug;
+  });
   if (!row) return null;
   return getFlashAssignmentOwned(row.id, userId, new Date(), executor);
 }
@@ -1483,6 +1497,7 @@ export async function acceptFlashAssignment(input: {
     if (Number(counts?.total ?? 0) >= 3) return { ok: false as const, reason: "task_limit" as const };
     if (Number(counts?.sameNpc ?? 0) >= 1) return { ok: false as const, reason: "npc_limit" as const };
 
+    const invitation = getFlashInvitationDefinition(offer.code);
     const snapshot: FlashTaskSnapshot = {
       templateVersion: offer.contentVersion,
       code: offer.code,
@@ -1495,6 +1510,10 @@ export async function acceptFlashAssignment(input: {
       feedbackPrompts: offer.feedbackPrompts,
       npcName: encounter.npcName,
       npcSlug: encounter.npcSlug,
+      invitationType: invitation?.kind,
+      followUpTargetNpcSlug: invitation?.targetNpcSlug,
+      followUpTargetNpcName: invitation?.targetNpcName,
+      messageCopy: invitation?.messageCopy,
       destination: {
         name: offer.destinationName,
         city: "深圳",
@@ -1512,9 +1531,10 @@ export async function acceptFlashAssignment(input: {
       encounterId: input.encounterId,
       taskTemplateId: offer.taskTemplateId,
       destinationId: offer.destinationId,
-      status: "accepted",
+      status: invitation ? "ready_to_deliver" : "accepted",
       contentSnapshot: snapshot,
       expiresAt: new Date(input.now.getTime() + offer.durationDays * 24 * 60 * 60 * 1000),
+      feedbackSubmittedAt: invitation ? input.now : null,
     }).returning({ id: flashTaskAssignments.id });
 
     const [acceptedEncounter] = await tx.update(flashEncounters).set({
@@ -1581,15 +1601,24 @@ export async function deliverFlashAssignment(input: {
   encounterId: string;
   userId: string;
   npcId: string;
+  npcSlug?: string;
+  answers?: Array<{ promptId: string; optionId: string }>;
   deliveryEncounterUnlockedAt: Date;
   now: Date;
   privateReplyDeleteAfter: Date;
 }) {
   return db.transaction(async (tx: DbExecutor) => {
+    const owned = await getFlashAssignmentOwned(input.assignmentId, input.userId, input.now, tx);
+    const snapshot = owned?.contentSnapshot as FlashTaskSnapshot | undefined;
+    const canDeliverHere = snapshot?.invitationType === "npc_message"
+      ? snapshot.followUpTargetNpcSlug === input.npcSlug
+      : owned?.npcId === input.npcId;
+    if (!owned || !canDeliverHere) return null;
     const [assignment] = await tx.update(flashTaskAssignments).set({
       status: "delivered",
       deliveryEncounterId: input.encounterId,
       deliveredAt: input.now,
+      feedbackAnswers: input.answers ?? owned.feedbackAnswers ?? [],
       privateReplyDeleteAfter: sql`case
         when ${flashTaskAssignments.privateReply} is null then null
         when ${flashTaskAssignments.privateReplyDeleteAfter} is null then ${input.privateReplyDeleteAfter}
@@ -1599,7 +1628,6 @@ export async function deliverFlashAssignment(input: {
     }).where(and(
       eq(flashTaskAssignments.id, input.assignmentId),
       eq(flashTaskAssignments.userId, input.userId),
-      eq(flashTaskAssignments.npcId, input.npcId),
       eq(flashTaskAssignments.status, "ready_to_deliver"),
       ne(flashTaskAssignments.encounterId, input.encounterId),
       isNotNull(flashTaskAssignments.feedbackSubmittedAt),

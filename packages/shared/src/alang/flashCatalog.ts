@@ -1,10 +1,8 @@
 import npcData from "./flashCatalogData.npcs.json";
-import taskData1 from "./flashCatalogData.tasks1.json";
-import taskData2 from "./flashCatalogData.tasks2.json";
-import taskData3 from "./flashCatalogData.tasks3.json";
 import { z } from "zod";
 
 import type { FlashDialogueQuestion, FlashFeedbackPrompt } from "../schema/flash.js";
+import { FLASH_INVITATION_DEFINITIONS } from "./flashInvitationCatalog.js";
 
 export type FlashNpcSeed = {
   slug: string;
@@ -53,9 +51,9 @@ export type FlashLocationSeed = {
   safetyNotes: string;
 };
 
-const ALL_TASK_CATEGORIES = ["探店", "城市观察", "轻社交勇气", "独处放松", "文化发现", "微小善意"];
-const PARK_TASK_CATEGORIES = ["城市观察", "轻社交勇气", "独处放松", "微小善意"];
-const CULTURE_TASK_CATEGORIES = ["探店", "城市观察", "轻社交勇气", "文化发现", "微小善意"];
+const ALL_TASK_CATEGORIES = ["城市出发", "文化娱乐", "身体动起来", "一直想做", "关系连接", "NPC传话"];
+const PARK_TASK_CATEGORIES = ALL_TASK_CATEGORIES;
+const CULTURE_TASK_CATEGORIES = ALL_TASK_CATEGORIES;
 
 /**
  * Operator-reviewed GCJ-02 candidates for the Shenzhen-only formal Flash
@@ -129,7 +127,7 @@ const npcSeedSchema = z.object({
 });
 const taskSeedSchema = z.object({
   code: z.string().regex(/^T\d{2}$/),
-  category: z.enum(["探店", "城市观察", "轻社交勇气", "独处放松", "文化发现", "微小善意"]),
+  category: z.enum(["城市出发", "文化娱乐", "身体动起来", "一直想做", "关系连接", "NPC传话"]),
   title: z.string().min(1),
   brief: z.string().min(1),
   instructions: z.string().min(1),
@@ -175,37 +173,48 @@ const catalogSchema = z.object({
 
 function makeTaskFeelLikeAConversation(task: unknown) {
   const value = task as Record<string, any>;
-  const soften = (text: string) => text
-    .replace(/你替我/g, "你哪天刚好路过的话，能帮我")
-    .replace(/替我看看/g, "顺便帮我看看")
-    .replace(/你到附近帮我/g, "你哪天路过那附近，顺便帮我")
-    .replace(/你去看看/g, "你哪天想去的话，顺便看看")
-    .replace(/你去那里/g, "你哪天刚好到了那里")
-    .replace(/替后来的人/g, "顺手给后来的人");
-  const instructionDetail = value.instructions
-    .replace(/^到达 50 米内；(?:可选)?/, "")
-    .replace(/^若用户/, "如果你")
-    .replace(/^若/, "如果");
+  const invitation = FLASH_INVITATION_DEFINITIONS.find((item) => item.code === value.code);
+  if (!invitation) throw new Error(`Missing Flash invitation definition for ${value.code}`);
+  const outcomeOptions = invitation.kind === "npc_message"
+    ? [
+      { id: "relayed_original", label: "原话带到了" },
+      { id: "relayed_rephrased", label: "换了种说法" },
+      { id: "not_relayed", label: "最后没有说" },
+      { id: "forgot", label: "我忘了" },
+      { id: "changed_mind", label: "现在不想说了" },
+    ]
+    : [
+      { id: "completed", label: "做了" },
+      { id: "started", label: "开始了一点" },
+      { id: "not_done", label: "还没有" },
+      { id: "changed_mind", label: "后来不想做了" },
+      { id: "did_something_else", label: "换成了另一件事" },
+    ];
   return {
-    ...value,
-    brief: soften(value.brief),
-    dialogueIntro: soften(value.dialogueIntro),
-    requestCopy: soften(value.requestCopy),
-    instructions: `哪天顺路到了附近，点一下“我已到达”就好。${instructionDetail}`,
-    feedbackPrompts: value.feedbackPrompts.map((prompt: Record<string, any>) => ({
-      ...prompt,
-      prompt: prompt.prompt.replace(/^到达以后，/, "后来真去了的话，").replace(/^这次到达，/, "后来到了那边，"),
-    })),
+    code: invitation.code,
+    category: invitation.category,
+    title: invitation.title,
+    brief: invitation.brief,
+    dialogueIntro: invitation.brief,
+    requestCopy: invitation.brief,
+    instructions: invitation.instructions,
+    tags: invitation.tags,
+    npcSlugs: invitation.npcSlugs,
+    durationDays: 7,
+    baseWeight: 100,
+    safetyLevel: "L1",
+    safetyNotes: "无验收、无惩罚、无强制消费；可随时拒绝或改变主意。",
+    feedbackPrompts: [{
+      id: invitation.kind === "npc_message" ? "relay_outcome" : "invitation_outcome",
+      prompt: invitation.kind === "npc_message" ? `后来遇见${invitation.targetNpcName}时，你怎么做了？` : "上次接住的那件事，后来怎么样了？",
+      options: outcomeOptions,
+    }],
   };
 }
 
 const parsedCatalog = catalogSchema.parse({
   npcs: npcData,
-  tasks: [
-  ...taskData1.map(makeTaskFeelLikeAConversation),
-  ...taskData2.map(makeTaskFeelLikeAConversation),
-  ...taskData3.map(makeTaskFeelLikeAConversation),
-  ],
+  tasks: FLASH_INVITATION_DEFINITIONS.map(makeTaskFeelLikeAConversation),
 });
 
 export const FLASH_NPC_SEEDS = parsedCatalog.npcs as FlashNpcSeed[];

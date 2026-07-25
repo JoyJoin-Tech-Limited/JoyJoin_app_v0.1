@@ -37,7 +37,13 @@ import { startFlashBackgroundJobs } from "../../services/flashScheduleService";
 import { reverseGeocodeCoordinate } from "./geo";
 
 const idParamSchema = z.string().uuid();
-const deliveryRequestSchema = z.object({ assignmentId: z.string().uuid() }).strict();
+const deliveryRequestSchema = z.object({
+  assignmentId: z.string().uuid(),
+  answers: z.array(z.object({
+    promptId: z.string().min(1).max(80),
+    optionId: z.string().min(1).max(80),
+  }).strict()).max(2).optional(),
+}).strict();
 const SHENZHEN_DISTRICTS = new Set([
   "南山区", "福田区", "罗湖区", "宝安区", "龙岗区",
   "盐田区", "龙华区", "坪山区", "光明区", "大鹏新区",
@@ -235,6 +241,7 @@ export function registerAlangFlashRoutes(app: Express): void {
         encounterId: encounterId.data,
         assignmentId: body.data.assignmentId,
         userId: authenticatedUserId,
+        answers: body.data.answers,
       }));
     } catch (error) {
       return sendFlashError(res, error);

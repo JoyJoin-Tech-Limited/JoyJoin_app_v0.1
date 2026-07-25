@@ -71,12 +71,12 @@ const SHENZHEN_DISTRICTS = [
 ] as const;
 
 const TASK_CATEGORIES = [
-  "探店",
-  "城市观察",
-  "轻社交勇气",
-  "独处放松",
-  "文化发现",
-  "微小善意",
+  "城市出发",
+  "文化娱乐",
+  "身体动起来",
+  "一直想做",
+  "关系连接",
+  "NPC传话",
 ] as const;
 const FLASH_ANIMAL_SPECIES = ["灰狼", "水獭", "兔狲", "乌鸦", "水豚"] as const;
 

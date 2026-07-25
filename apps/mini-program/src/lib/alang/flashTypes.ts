@@ -69,6 +69,8 @@ export interface FlashTaskSummary {
   npc: FlashNpcReference
   title: string
   category: string
+  invitationType?: 'destination_exploration' | 'life_invitation' | 'npc_message'
+  followUpTargetNpc?: { slug: string; name: string } | null
   status: FlashTaskStatus
   dueAt?: string
   destinationName?: string
@@ -106,6 +108,7 @@ export interface FlashLocateView {
   assignmentId?: string
   npc?: FlashNpcReference
   message?: string
+  deliveryMessage?: string
 }
 
 export interface FlashDialogueOption {
@@ -126,6 +129,8 @@ export interface FlashTaskOffer {
   title: string
   category: string
   invitation: string
+  invitationType?: 'destination_exploration' | 'life_invitation' | 'npc_message'
+  followUpTargetNpc?: { slug: string; name: string } | null
   destinationName?: string
   districtName?: string
   expiresInDays?: number
@@ -135,6 +140,9 @@ export interface FlashTaskOffer {
 export interface FlashDeliverySummary {
   assignmentId: string
   taskTitle: string
+  invitationType?: 'destination_exploration' | 'life_invitation' | 'npc_message'
+  followUpTargetNpc?: { slug: string; name: string } | null
+  feedbackQuestions?: FlashFeedbackQuestion[]
   completedAt?: string
 }
 
@@ -152,7 +160,6 @@ export interface FlashEncounterView {
   canReroll?: boolean
   rerollsRemaining?: number
   pendingDelivery?: FlashDeliverySummary | null
-  deliveryMessage?: string
   conversationExpiresAt?: string
   shiftEndsAt?: string
   message?: string

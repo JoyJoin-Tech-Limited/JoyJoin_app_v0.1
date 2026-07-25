@@ -81,14 +81,21 @@ export default function FlashDialoguePage() {
     }
   }
 
-  const deliver = async (assignmentId: string) => {
+  const deliver = async (
+    assignmentId: string,
+    answers?: Array<{ promptId: string; optionId: string }>,
+  ) => {
     if (!enabled || deliverMutation.isPending) return
     setActionError('')
     try {
-      const response = await deliverMutation.mutateAsync({ encounterId, assignmentId })
+      const response = await deliverMutation.mutateAsync({
+        encounterId,
+        assignmentId,
+        ...(answers ? { answers } : {}),
+      })
       haptics('success')
       setDeliveryReply({
-        message: response.deliveryMessage || `${response.npc.name}认真收好了你的回话。谢谢你真的替我去看了。`,
+        message: response.deliveryMessage || `${response.npc.name}认真收好了你的回话。`,
         canContinue: Boolean(response.currentQuestion),
       })
       await applyResponse(response)
@@ -131,9 +138,9 @@ export default function FlashDialoguePage() {
       <View className='flash-page'>
         <FlashPageState
           title='这段旧对话已经收好了'
-          description='回到街头盲盒页，可以从服务端保存的最新状态继续。'
+          description='回到闪现页，可以从服务端保存的最新状态继续。'
           action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}
-          actionLabel='返回街头盲盒'
+          actionLabel='返回闪现'
         />
       </View>
     )
@@ -148,7 +155,7 @@ export default function FlashDialoguePage() {
           title={expired ? '这段对话已经聊完了' : '刚才的话暂时没接上'}
           description={expired ? '解锁后的对话会保留 24 小时。现在可以回去看看有没有其他角色在线。' : '进度保存在服务端，重新读取不会从头开始。'}
           action={expired ? () => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) } : () => { void refetch() }}
-          actionLabel={expired ? '返回街头盲盒' : '重新接上'}
+          actionLabel={expired ? '返回闪现' : '重新接上'}
         />
       </View>
     )
@@ -161,7 +168,7 @@ export default function FlashDialoguePage() {
   if (data.status === 'expired') {
     return (
       <View className='flash-page'>
-        <FlashPageState title='这段对话已经聊完了' description='解锁后的对话会保留 24 小时。现在可以回去看看有没有其他角色在线。' action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }} actionLabel='返回街头盲盒' />
+        <FlashPageState title='这段对话已经聊完了' description='解锁后的对话会保留 24 小时。现在可以回去看看有没有其他角色在线。' action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }} actionLabel='返回闪现' />
       </View>
     )
   }
@@ -190,15 +197,47 @@ export default function FlashDialoguePage() {
             </View>
           ) : data.pendingDelivery ? (
             <View className='flash-dialogue__delivery'>
-              <Text className='flash-dialogue__kicker'>上次托你的事</Text>
+              <Text className='flash-dialogue__kicker'>
+                {data.pendingDelivery.invitationType === 'npc_message'
+                  ? '有句话到了这里'
+                  : data.pendingDelivery.invitationType === 'life_invitation'
+                    ? '上次接住的那件事'
+                    : '上次托你的事'}
+              </Text>
               <Text className='flash-dialogue__delivery-title'>{data.pendingDelivery.taskTitle}</Text>
-              <Text className='flash-dialogue__bubble'>你真的去过了？那先把这件事讲给我听吧。</Text>
-              <FlashButton
-                disabled={deliverMutation.isPending}
-                onClick={() => { void deliver(data.pendingDelivery!.assignmentId) }}
-              >
-                {deliverMutation.isPending ? '正在交付…' : `交给${data.npc.name}`}
-              </FlashButton>
+              <Text className='flash-dialogue__bubble'>
+                {data.pendingDelivery.feedbackQuestions?.[0]?.prompt
+                  ?? (data.pendingDelivery.invitationType ? '后来怎么样了？' : '你真的去过了？那先把这件事讲给我听吧。')}
+              </Text>
+              {data.pendingDelivery.feedbackQuestions?.[0] ? (
+                <View className='flash-dialogue__choices'>
+                  {data.pendingDelivery.feedbackQuestions[0].options.map((option) => (
+                    <View
+                      key={option.id}
+                      className={`flash-dialogue__choice${deliverMutation.isPending ? ' flash-dialogue__choice--disabled' : ''}`}
+                      onClick={() => {
+                        const prompt = data.pendingDelivery?.feedbackQuestions?.[0]
+                        if (!prompt) return
+                        void deliver(data.pendingDelivery!.assignmentId, [{
+                          promptId: prompt.promptId ?? prompt.id,
+                          optionId: option.id,
+                        }])
+                      }}
+                      role='button'
+                      aria-label={option.label}
+                    >
+                      <Text>{option.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <FlashButton
+                  disabled={deliverMutation.isPending}
+                  onClick={() => { void deliver(data.pendingDelivery!.assignmentId) }}
+                >
+                  {deliverMutation.isPending ? '正在交付…' : `交给${data.npc.name}`}
+                </FlashButton>
+              )}
             </View>
           ) : question ? (
             <View className='flash-dialogue__conversation'>
@@ -227,18 +266,24 @@ export default function FlashDialoguePage() {
               <Text className='flash-dialogue__kicker'>有件小事想拜托你</Text>
               <Text className='flash-dialogue__bubble'>{offer.invitation}</Text>
               <View className='flash-dialogue__offer-card'>
-                <Text className='flash-dialogue__offer-category' style={{ color: category.text, backgroundColor: category.tint }}>
+                <Text className='flash-dialogue__offer-category' style={{ color: category.accent, backgroundColor: category.tint }}>
                   {category.label}
                 </Text>
                 <Text className='flash-dialogue__offer-title'>{offer.title}</Text>
                 {offer.destinationName ? (
                   <Text className='flash-dialogue__offer-place'>{offer.districtName ? `${offer.districtName} · ` : ''}{offer.destinationName}</Text>
                 ) : null}
-                <Text className='flash-dialogue__offer-rule'>到附近点击到达即可；不要求消费，也不要求进店。</Text>
+                <Text className='flash-dialogue__offer-rule'>
+                  {offer.invitationType === 'npc_message'
+                    ? `以后遇见${offer.followUpTargetNpc?.name ?? '它'}时再决定要不要说；忘了也没关系。`
+                    : offer.invitationType === 'life_invitation'
+                      ? '不用打卡，也不用证明。下次见面时，再聊聊后来怎么样。'
+                      : '到附近点击到达即可；不要求消费，也不要求进店。'}
+                </Text>
               </View>
               <View className='flash-dialogue__offer-actions'>
                 <FlashButton disabled={offerMutation.isPending} onClick={() => { void respondToOffer(true) }}>
-                  {offerMutation.isPending ? '正在收好任务…' : '好，我替你去看看'}
+                  {offerMutation.isPending ? '正在收好邀请…' : '好，我接住了'}
                 </FlashButton>
                 {data.canReroll && (data.rerollsRemaining ?? 1) > 0 ? (
                   <FlashButton variant='secondary' disabled={rerollMutation.isPending} onClick={() => { void reroll() }}>
@@ -253,7 +298,7 @@ export default function FlashDialoguePage() {
           ) : (
             <View className='flash-dialogue__conversation'>
               <Text className='flash-dialogue__bubble'>{data.message || '今天先聊到这里吧，下次再碰见的时候再继续。'}</Text>
-              <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>回到街头盲盒</FlashButton>
+              <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>回到闪现</FlashButton>
             </View>
           )}
 

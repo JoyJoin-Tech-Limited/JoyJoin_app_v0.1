@@ -119,7 +119,14 @@ export type FlashTaskDto = {
   title: string;
   brief: string;
   instructions: string;
-  destination: FlashTaskDestinationDto;
+  invitationType?: "destination_exploration" | "life_invitation" | "npc_message";
+  followUpTargetNpc?: { slug: string; name: string } | null;
+  followUpPrompts?: Array<{
+    id: string;
+    prompt: string;
+    options: Array<{ id: string; label: string }>;
+  }>;
+  destination: FlashTaskDestinationDto | null;
   status: "accepted" | "arrived" | "ready_to_deliver" | "delivered" | "expired" | "abandoned" | "withdrawn";
   expiresAt: string;
   arrivedAt: string | null;
@@ -172,10 +179,12 @@ export type FlashTaskOfferDto = {
   title: string;
   brief: string;
   requestCopy: string;
+  invitationType?: "destination_exploration" | "life_invitation" | "npc_message";
+  followUpTargetNpc?: { slug: string; name: string } | null;
   destinationPreview: {
     name: string;
     district: string;
-  };
+  } | null;
   canReroll: boolean;
 };
 

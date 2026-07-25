@@ -15,6 +15,7 @@ import {
 import { alangHaversineDistanceMeters } from "@shared/alang/testPointValidation";
 import type { FlashTaskSnapshot } from "@shared/schema";
 import { FLASH_TASK_SEEDS } from "@shared/alang/flashCatalog";
+import { getFlashInvitationDefinition } from "@shared/alang/flashInvitationCatalog";
 
 import {
   abandonFlashAssignment,
@@ -210,6 +211,7 @@ function assignmentScreen(status: string): FlashCanonicalScreen {
 
 function taskDto(row: any): FlashTaskDto {
   const snapshot = row.contentSnapshot as FlashTaskSnapshot;
+  const invitationType = snapshot.invitationType ?? "destination_exploration";
   return {
     id: row.id,
     npc: {
@@ -223,7 +225,12 @@ function taskDto(row: any): FlashTaskDto {
     title: snapshot.title,
     brief: snapshot.brief,
     instructions: snapshot.instructions,
-    destination: snapshot.destination,
+    invitationType,
+    followUpTargetNpc: snapshot.followUpTargetNpcSlug && snapshot.followUpTargetNpcName
+      ? { slug: snapshot.followUpTargetNpcSlug, name: snapshot.followUpTargetNpcName }
+      : null,
+    followUpPrompts: snapshot.feedbackPrompts,
+    destination: invitationType === "destination_exploration" ? snapshot.destination : null,
     status: row.status,
     expiresAt: row.expiresAt.toISOString(),
     arrivedAt: row.arrivedAt?.toISOString() ?? null,
@@ -325,7 +332,7 @@ export async function locateFlashAppearance(input: {
     expiresAt: new Date(now.getTime() + FLASH_ENCOUNTER_TTL_HOURS * 60 * 60 * 1000),
   });
   if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 409, "这次相遇没有解锁成功");
-  const pendingCandidate = await getPendingFlashDelivery(input.userId, appearance.npcId);
+  const pendingCandidate = await getPendingFlashDelivery(input.userId, appearance.npcId, appearance.npcSlug);
   const pendingDelivery = isLaterFlashDeliveryEncounter(pendingCandidate, encounter)
     ? pendingCandidate
     : null;
@@ -528,6 +535,7 @@ export async function getFlashEncounter(input: {
       ? await getFlashTaskOffer({ npcId: encounter.npcId, taskTemplateId, destinationId })
       : null;
     if (row) {
+      const invitation = getFlashInvitationDefinition(row.code);
       offer = {
         templateId: row.taskTemplateId,
         code: row.code,
@@ -535,7 +543,11 @@ export async function getFlashEncounter(input: {
         title: row.title,
         brief: row.brief,
         requestCopy: row.requestCopy,
-        destinationPreview: { name: row.destinationName, district: row.destinationDistrict },
+        invitationType: invitation?.kind ?? "destination_exploration",
+        followUpTargetNpc: invitation?.targetNpcSlug && invitation.targetNpcName
+          ? { slug: invitation.targetNpcSlug, name: invitation.targetNpcName }
+          : null,
+        destinationPreview: invitation ? null : { name: row.destinationName, district: row.destinationDistrict },
         canReroll: encounter.rerollCount === 0,
       };
       break;
@@ -552,7 +564,7 @@ export async function getFlashEncounter(input: {
     if (!refreshed) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 404, "没有找到这次相遇");
     encounter = refreshed;
   }
-  const pendingCandidate = await getPendingFlashDelivery(input.userId, encounter.npcId);
+  const pendingCandidate = await getPendingFlashDelivery(input.userId, encounter.npcId, encounter.npcSlug);
   const pendingDelivery = isLaterFlashDeliveryEncounter(pendingCandidate, encounter)
     ? pendingCandidate
     : null;
@@ -611,7 +623,7 @@ export async function answerFlashEncounter(input: {
     await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
     throw new FlashServiceError("FLASH_ENCOUNTER_EXPIRED", 410, "这次对话已经结束了");
   }
-  if (await getPendingFlashDelivery(input.userId, encounter.npcId)) {
+  if (await getPendingFlashDelivery(input.userId, encounter.npcId, encounter.npcSlug)) {
     throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "先把上次的委托交给它吧");
   }
   if (encounter.status !== "dialogue") {
@@ -798,13 +810,14 @@ export async function deliverFlashTaskToNpc(input: {
   encounterId: string;
   assignmentId: string;
   userId: string;
+  answers?: Array<{ promptId: string; optionId: string }>;
   now?: Date;
 }): Promise<FlashEncounterResponse> {
   const now = input.now ?? new Date();
   const encounter = await getFlashEncounterOwned(input.encounterId, input.userId);
   if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 404, "没有找到这次相遇");
   if (encounter.expiresAt <= now) throw new FlashServiceError("FLASH_ENCOUNTER_EXPIRED", 410, "这次对话已经结束了");
-  const pending = await getPendingFlashDelivery(input.userId, encounter.npcId);
+  const pending = await getPendingFlashDelivery(input.userId, encounter.npcId, encounter.npcSlug);
   if (!pending || pending.id !== input.assignmentId) {
     throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这件委托现在不能交付");
   }
@@ -813,6 +826,8 @@ export async function deliverFlashTaskToNpc(input: {
     encounterId: input.encounterId,
     userId: input.userId,
     npcId: encounter.npcId,
+    npcSlug: encounter.npcSlug,
+    answers: input.answers,
     deliveryEncounterUnlockedAt: encounter.unlockedAt,
     now,
     privateReplyDeleteAfter: flashPrivateReplyDeliveryDeadline(now),
