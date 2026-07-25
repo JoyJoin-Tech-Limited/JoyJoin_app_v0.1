@@ -163,6 +163,7 @@ export interface FlashEncounterView {
   conversationExpiresAt?: string
   shiftEndsAt?: string
   message?: string
+  deliveryMessage?: string
 }
 
 export interface FlashAssignmentView extends FlashTaskSummary {

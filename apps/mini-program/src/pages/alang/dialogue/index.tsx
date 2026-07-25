@@ -266,7 +266,7 @@ export default function FlashDialoguePage() {
               <Text className='flash-dialogue__kicker'>有件小事想拜托你</Text>
               <Text className='flash-dialogue__bubble'>{offer.invitation}</Text>
               <View className='flash-dialogue__offer-card'>
-                <Text className='flash-dialogue__offer-category' style={{ color: category.accent, backgroundColor: category.tint }}>
+                <Text className='flash-dialogue__offer-category' style={{ color: category.text, backgroundColor: category.tint }}>
                   {category.label}
                 </Text>
                 <Text className='flash-dialogue__offer-title'>{offer.title}</Text>
