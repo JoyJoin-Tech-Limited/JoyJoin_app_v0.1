@@ -47,10 +47,9 @@ export default function ExperienceEntryFlow({
                   <FlowIcon name={entry.icon} active accent={accent} size='lg' />
                 </View>
                 <View className='experience-banner__copy'>
-                  <Text className='experience-banner__eyebrow'>{entry.eyebrow}</Text>
                   <Text className='experience-banner__title'>{entry.title}</Text>
+                  <Text className='experience-banner__eyebrow'>{entry.eyebrow}</Text>
                   <Text className='experience-banner__dimension'>{entry.headline}</Text>
-                  <Text className='experience-banner__description'>{entry.description}</Text>
                 </View>
                 <View className={`experience-banner__art experience-banner__art--${entry.id}`}>
                   <View className='experience-banner__art-node experience-banner__art-node--one' />

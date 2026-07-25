@@ -31,10 +31,10 @@ export default function ExperienceDetail({ experience, onBack }: ExperienceDetai
           <View className={`experience-detail__scene experience-detail__scene--${experience.id}`}>
             <View className='experience-detail__scene-copy'>
               <Text className='experience-detail__scene-kicker'>
-                {experience.id === 'event' ? 'MATCHING IN PROGRESS' : 'CITY CLUE FOUND'}
+                {experience.id === 'event' ? 'YOUR GROUP IS TAKING SHAPE' : 'A CLUE FOR TODAY'}
               </Text>
               <Text className='experience-detail__scene-title'>
-                {experience.id === 'event' ? '一次相遇，正在慢慢成形' : '一条城市线索，正在为你发光'}
+                {experience.id === 'event' ? '报名后，我们开始认真组队' : '今天的城市，从一条线索开始'}
               </Text>
             </View>
             <View className='experience-detail__scene-art'>

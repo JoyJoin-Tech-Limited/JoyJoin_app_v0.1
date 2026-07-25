@@ -1709,6 +1709,54 @@
     {
       "localPath": "assets/profile-pixel/v2/stage/mid-bg-v1.webp",
       "cdnPath": "assets/profile-pixel/v2/stage/mid-bg-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-corgi-v3.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-corgi-v3.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-rooster-v1.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-rooster-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-hamster_praise-v1.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-hamster_praise-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-fox-v1.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-fox-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-dolphin_calm-v1.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-dolphin_calm-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-spider-v1.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-spider-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-koala-v1.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-koala-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-octopus-v1.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-octopus-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-owl-v1.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-owl-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-elephant-v1.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-elephant-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-turtle-v1.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-turtle-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-cat-v1.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-cat-v1.webp"
     }
   ],
   "pendingAssets": [

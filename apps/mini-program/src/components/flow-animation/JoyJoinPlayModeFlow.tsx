@@ -8,12 +8,14 @@ import { useFlowProgress } from './useFlowProgress'
 
 interface JoyJoinPlayModeFlowProps {
   userId?: string | null
+  archetypeId?: string | null
   onComplete: () => void
   initialDetailId?: 'event' | 'street'
 }
 
 export default function JoyJoinPlayModeFlow({
   userId,
+  archetypeId,
   onComplete,
   initialDetailId,
 }: JoyJoinPlayModeFlowProps) {
@@ -43,6 +45,7 @@ export default function JoyJoinPlayModeFlow({
     <FlowShell
       title='玩法介绍'
       showGameBackground
+      archetypeId={archetypeId}
       onSkip={handleSkip}
       actionLabel='开始探索'
       actionVisible={progress >= 0.62}

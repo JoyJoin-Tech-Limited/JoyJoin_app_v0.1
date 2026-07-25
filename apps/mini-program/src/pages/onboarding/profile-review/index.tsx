@@ -508,7 +508,13 @@ export default function ProfileReviewPage() {
     : 'JOYJOIN ORIGINAL'
 
   if (introNextStep) {
-    return <JoyJoinIntroFlow userId={user?.id} onComplete={handleIntroComplete} />
+    return (
+      <JoyJoinIntroFlow
+        userId={user?.id}
+        archetypeId={archetype}
+        onComplete={handleIntroComplete}
+      />
+    )
   }
 
   if (isLoading) {
