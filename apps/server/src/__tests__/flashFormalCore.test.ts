@@ -89,6 +89,21 @@ describe("formal Flash catalog", () => {
       .every((item) => item.targetNpcSlug && item.messageCopy)).toBe(true);
   });
 
+  it("gives every NPC a distinct five-invitation life pool plus its own message", () => {
+    const lifeInvitations = FLASH_INVITATION_DEFINITIONS.filter((item) => item.kind === "life_invitation");
+    const pools = FLASH_NPC_SEEDS.map((npc) => lifeInvitations
+      .filter((item) => item.npcSlugs.includes(npc.slug))
+      .map((item) => item.code)
+      .sort());
+
+    expect(pools.every((pool) => pool.length === 5)).toBe(true);
+    expect(new Set(pools.map((pool) => pool.join(","))).size).toBe(5);
+    expect(lifeInvitations.every((item) => item.npcSlugs.length === 1)).toBe(true);
+    for (const npc of FLASH_NPC_SEEDS) {
+      expect(FLASH_INVITATION_DEFINITIONS.filter((item) => item.npcSlugs.includes(npc.slug))).toHaveLength(6);
+    }
+  });
+
   it("contains two free public location candidates for every Shenzhen district", () => {
     expect(FLASH_LOCATION_SEEDS).toHaveLength(20);
     const counts = new Map<string, number>();

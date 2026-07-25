@@ -177,19 +177,34 @@ function makeTaskFeelLikeAConversation(task: unknown) {
   if (!invitation) throw new Error(`Missing Flash invitation definition for ${value.code}`);
   const outcomeOptions = invitation.kind === "npc_message"
     ? [
-      { id: "relayed_original", label: "原话带到了" },
-      { id: "relayed_rephrased", label: "换了种说法" },
-      { id: "not_relayed", label: "最后没有说" },
-      { id: "forgot", label: "我忘了" },
-      { id: "changed_mind", label: "现在不想说了" },
+      { id: "relayed_original", label: "嗯，原话带到了" },
+      { id: "relayed_rephrased", label: "说了，不过换了个说法" },
+      { id: "not_relayed", label: "见到了，最后没说" },
+      { id: "forgot", label: "这次给忘了" },
+      { id: "changed_mind", label: "后来觉得不说更好" },
     ]
     : [
-      { id: "completed", label: "做了" },
-      { id: "started", label: "开始了一点" },
-      { id: "not_done", label: "还没有" },
+      { id: "completed", label: "做了，还挺不错" },
+      { id: "started", label: "只开了个头" },
+      { id: "not_done", label: "还没顾上" },
       { id: "changed_mind", label: "后来不想做了" },
-      { id: "did_something_else", label: "换成了另一件事" },
+      { id: "did_something_else", label: "我换了件别的事" },
     ];
+  const sourceNpcSlug = invitation.npcSlugs[0] ?? "";
+  const lifeFollowUp: Record<string, string> = {
+    alang: "上次说的那件事，后来有风把你带过去吗？",
+    lizi: "欸，上次那个主意后来成行了吗？好不好玩？",
+    momo: "上次聊的那件事……后来怎么样了？",
+    shiqi: "上次那件事有后续吗？没发生也算一种结果。",
+    atuan: "前阵子说的那件事，后来有空试试吗？",
+  };
+  const relayFollowUp: Record<string, string> = {
+    alang: `后来碰见${invitation.targetNpcName}了吗？那句话，不说也没事。`,
+    lizi: `你后来见到${invitation.targetNpcName}了吗？我有点好奇！`,
+    momo: `后来遇见${invitation.targetNpcName}了吗？那句话……随你怎么处理。`,
+    shiqi: `后来见到${invitation.targetNpcName}了吗？我想知道那句话去了哪里。`,
+    atuan: `后来碰见${invitation.targetNpcName}了吗？没来得及说也不要紧。`,
+  };
   return {
     code: invitation.code,
     category: invitation.category,
@@ -206,7 +221,9 @@ function makeTaskFeelLikeAConversation(task: unknown) {
     safetyNotes: "无验收、无惩罚、无强制消费；可随时拒绝或改变主意。",
     feedbackPrompts: [{
       id: invitation.kind === "npc_message" ? "relay_outcome" : "invitation_outcome",
-      prompt: invitation.kind === "npc_message" ? `后来遇见${invitation.targetNpcName}时，你怎么做了？` : "上次接住的那件事，后来怎么样了？",
+      prompt: invitation.kind === "npc_message"
+        ? (relayFollowUp[sourceNpcSlug] ?? `后来遇见${invitation.targetNpcName}了吗？`)
+        : (lifeFollowUp[sourceNpcSlug] ?? "前阵子聊的那件事，后来怎么样了？"),
       options: outcomeOptions,
     }],
   };
@@ -221,11 +238,11 @@ export const FLASH_NPC_SEEDS = parsedCatalog.npcs as FlashNpcSeed[];
 export const FLASH_TASK_SEEDS = parsedCatalog.tasks as FlashTaskSeed[];
 
 export const FLASH_DELIVERY_COPY_BY_NPC: Record<string, string> = {
-  alang: "你真的替我去看了。你看到的，比我听来的准。",
-  lizi: "原来是这样！这趟小冒险，我收到了 (´▽｀)",
-  momo: "嗯，我听见了。谢谢你慢慢走完这一趟。",
-  shiqi: "细节记下了。普通地方果然也会留下暗号。",
-  atuan: "收到啦。能舒服地到过那里，就已经很好。",
+  alang: "原来后来是这样。行，我记住了。",
+  lizi: "原来是这样！好，这个后续我喜欢。",
+  momo: "嗯，我听见了。这样就很好。",
+  shiqi: "有后续了。和我猜的不太一样，挺好。",
+  atuan: "好，我知道啦。做没做成其实都没关系。",
 };
 
 /**
@@ -235,12 +252,23 @@ export const FLASH_DELIVERY_COPY_BY_NPC: Record<string, string> = {
  * an LLM to improvise a mission.
  */
 export function buildFlashNpcTaskRequestCopy(npcSlug: string, task: FlashTaskSeed): string {
+  const isMessage = task.tags.includes("invitation:npc_message");
   const frame: Record<string, (brief: string) => string> = {
-    alang: (brief) => `我刚好想到一件事。${brief} 你哪天顺路再去，不赶。`,
-    lizi: (brief) => `欸，这个感觉你可能会喜欢：${brief} 哪天想出门了再说 (´▽｀)`,
-    momo: (brief) => `我有点好奇那里。${brief} 你按自己的节奏来就好。`,
-    shiqi: (brief) => `我总觉得那里藏着个小细节。${brief} 要是正好看见了，回来跟我说。`,
-    atuan: (brief) => `这个地方也许适合随便走走。${brief} 不想去也没关系。`,
+    alang: (brief) => isMessage
+      ? `有句话我自己没赶上说。${brief} 碰见了就帮我带到，没碰见算了。`
+      : `我忽然想到，这件事也许适合你。${brief} 哪天想起来再试。`,
+    lizi: (brief) => isMessage
+      ? `我有句话托你捎一下！${brief} 怎么说都行，别有压力。`
+      : `欸，这个听起来会有点意思：${brief} 去不去都算你说了算。`,
+    momo: (brief) => isMessage
+      ? `有句话……如果刚好遇见了，帮我带一下。${brief}`
+      : `最近想起一件安静的小事。${brief} 不急。`,
+    shiqi: (brief) => isMessage
+      ? `有句话需要经过第三个人，结果可能会不一样。${brief} 你自己决定怎么说。`
+      : `我对这件事的后续有点好奇。${brief} 没发生也可以告诉我。`,
+    atuan: (brief) => isMessage
+      ? `下次要是碰见了，替我说一句。${brief} 忘了也没关系。`
+      : `给生活留个小空当怎么样？${brief} 舒服最重要。`,
   };
   return (frame[npcSlug] ?? ((brief) => brief))(task.brief);
 }

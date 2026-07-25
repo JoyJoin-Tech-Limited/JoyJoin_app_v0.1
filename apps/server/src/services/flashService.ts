@@ -837,7 +837,7 @@ export async function deliverFlashTaskToNpc(input: {
   const snapshot = pending.contentSnapshot as FlashTaskSnapshot;
   return {
     ...response,
-    deliveryMessage: snapshot.deliveryCopy ?? `${encounter.npcName}认真收好了你的回话。谢谢你真的替我去看了。`,
+    deliveryMessage: snapshot.deliveryCopy ?? "好，我记住了。下次碰见，我们再接着聊。",
   };
 }
 

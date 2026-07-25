@@ -19,6 +19,14 @@ import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
 import '../flash.scss'
 
+const NPC_OFFER_COPY: Record<string, { kicker: string; accept: string; reroll: string }> = {
+  alang: { kicker: '我刚想到一件事', accept: '行，哪天试试', reroll: '还有别的吗' },
+  lizi: { kicker: '欸，要不要试个好玩的', accept: '好啊，我记下了', reroll: '换个更对胃口的' },
+  momo: { kicker: '有件小事，想问问你', accept: '嗯，我记下了', reroll: '想听另一个' },
+  shiqi: { kicker: '我有个后续想知道', accept: '行，我留意一下', reroll: '换条线索' },
+  atuan: { kicker: '下次有空，可以试试这个', accept: '好，有空试试', reroll: '再想个轻松点的' },
+}
+
 function dialogueActionError(error: unknown, fallback: string): string {
   switch (getFlashApiErrorCode(error)) {
     case 'FLASH_TASK_LIMIT_REACHED':
@@ -95,7 +103,7 @@ export default function FlashDialoguePage() {
       })
       haptics('success')
       setDeliveryReply({
-        message: response.deliveryMessage || `${response.npc.name}认真收好了你的回话。`,
+        message: response.deliveryMessage || '好，我记住了。下次碰见，我们再接着聊。',
         canContinue: Boolean(response.currentQuestion),
       })
       await applyResponse(response)
@@ -176,6 +184,11 @@ export default function FlashDialoguePage() {
   const question = data.currentQuestion
   const offer = data.taskOffer
   const category = offer ? resolveFlashTaskCategory(offer.category) : null
+  const offerCopy = NPC_OFFER_COPY[data.npc.slug] ?? {
+    kicker: '我刚想到一件事',
+    accept: '好，有空试试',
+    reroll: '想听另一个',
+  }
 
   return (
     <View className='flash-page flash-dialogue'>
@@ -201,7 +214,7 @@ export default function FlashDialoguePage() {
                 {data.pendingDelivery.invitationType === 'npc_message'
                   ? '有句话到了这里'
                   : data.pendingDelivery.invitationType === 'life_invitation'
-                    ? '上次接住的那件事'
+                    ? '前阵子聊的那件事'
                     : '上次托你的事'}
               </Text>
               <Text className='flash-dialogue__delivery-title'>{data.pendingDelivery.taskTitle}</Text>
@@ -263,7 +276,7 @@ export default function FlashDialoguePage() {
             </View>
           ) : offer && category ? (
             <View className='flash-dialogue__offer'>
-              <Text className='flash-dialogue__kicker'>有件小事想拜托你</Text>
+              <Text className='flash-dialogue__kicker'>{offerCopy.kicker}</Text>
               <Text className='flash-dialogue__bubble'>{offer.invitation}</Text>
               <View className='flash-dialogue__offer-card'>
                 <Text className='flash-dialogue__offer-category' style={{ color: category.text, backgroundColor: category.tint }}>
@@ -277,17 +290,17 @@ export default function FlashDialoguePage() {
                   {offer.invitationType === 'npc_message'
                     ? `以后遇见${offer.followUpTargetNpc?.name ?? '它'}时再决定要不要说；忘了也没关系。`
                     : offer.invitationType === 'life_invitation'
-                      ? '不用打卡，也不用证明。下次见面时，再聊聊后来怎么样。'
+                      ? '做不做成不重要。以后再碰见，想聊就说两句。'
                       : '到附近点击到达即可；不要求消费，也不要求进店。'}
                 </Text>
               </View>
               <View className='flash-dialogue__offer-actions'>
                 <FlashButton disabled={offerMutation.isPending} onClick={() => { void respondToOffer(true) }}>
-                  {offerMutation.isPending ? '正在收好邀请…' : '好，我接住了'}
+                  {offerMutation.isPending ? '先记下来…' : offerCopy.accept}
                 </FlashButton>
                 {data.canReroll && (data.rerollsRemaining ?? 1) > 0 ? (
                   <FlashButton variant='secondary' disabled={rerollMutation.isPending} onClick={() => { void reroll() }}>
-                    {rerollMutation.isPending ? '正在想另一个…' : '换一件事'}
+                    {rerollMutation.isPending ? '再想想…' : offerCopy.reroll}
                   </FlashButton>
                 ) : null}
                 <FlashButton variant='quiet' disabled={offerMutation.isPending} onClick={() => { void respondToOffer(false) }}>
