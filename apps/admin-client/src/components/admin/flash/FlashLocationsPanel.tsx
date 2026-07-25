@@ -62,6 +62,7 @@ import { FlashEmptyState, FlashErrorState, FlashListSkeleton } from "./FlashQuer
 import {
   FLASH_LOCATION_OPERATIONS_NOTICE,
   FLASH_LOCATION_PRESETS,
+  isFlashLocationPresetFulfilled,
   type FlashLocationPreset,
 } from "./flashLocationPresets";
 
@@ -107,6 +108,7 @@ export function FlashLocationsPanel({
   const [pendingToggle, setPendingToggle] = useState<FlashEncounterLocation | FlashTaskDestination | null>(null);
   const query = useQuery<FlashCollectionResponse<FlashEncounterLocation | FlashTaskDestination>>({ queryKey: [endpoint] });
   const items = unpackFlashCollection(query.data);
+  const existingLocationNames = new Set(items.map((item) => item.name));
 
   const saveMutation = useMutation({
     mutationFn: async ({ id, payload }: { id?: string; payload: unknown }) => {
@@ -222,7 +224,9 @@ export function FlashLocationsPanel({
               </CardContent>
             </Card>
           ))}
-          {isEncounter && FLASH_LOCATION_PRESETS.map((preset) => (
+          {isEncounter && FLASH_LOCATION_PRESETS
+            .filter((preset) => !isFlashLocationPresetFulfilled(preset, existingLocationNames))
+            .map((preset) => (
             <Card key={preset.code} className="border-dashed border-primary/30 bg-primary/[0.03]">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-3">

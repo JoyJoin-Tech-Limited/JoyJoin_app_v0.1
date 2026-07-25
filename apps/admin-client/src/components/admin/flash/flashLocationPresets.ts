@@ -8,6 +8,18 @@ export type FlashLocationPreset = {
   safetyNotes: string;
 };
 
+export function isFlashLocationPresetFulfilled(
+  preset: FlashLocationPreset,
+  existingLocationNames: ReadonlySet<string>,
+): boolean {
+  if (existingLocationNames.has(preset.name)) return true;
+
+  // The reviewed database row predates the preset copy change from
+  // "公共街区" to "公共街巷"; both names represent the same Nantou location.
+  return preset.code === "NS-NANTOU-PUBLIC-LANES"
+    && [...existingLocationNames].some((name) => name.includes("\u5357\u5934\u53e4\u57ce"));
+}
+
 const COMMON_PUBLIC_SPACE_RULES =
   "仅限开放、可安全停留且不阻塞通道的公共区域；无需进店或消费，不要求扫码、拍照、评价或与店员交流。现场关闭、拥挤、施工或照明不足时停用。";
 
