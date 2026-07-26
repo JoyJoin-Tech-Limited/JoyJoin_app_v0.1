@@ -16,10 +16,21 @@ export default function AlangDiscoverCard() {
   const { user } = useAuth()
   if (!shouldShowAlangEntry(user)) return null
 
-  const handleTap = () => {
+  const handleTap = async () => {
     haptics('light')
     alangEvents.discoverCardTap()
-    void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangEvent })
+    try {
+      await Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangEvent })
+    } catch (error) {
+      // A stale development build can contain the Discover entry without the
+      // matching Flash subpackage. Never swallow that failure: make the
+      // recovery action visible and keep the native error in the realtime log.
+      console.error('[Flash] failed to open street blind box subpackage', error)
+      await Taro.showToast({
+        title: '街头盲盒打开失败，请更新小程序后重试',
+        icon: 'none',
+      })
+    }
   }
 
   return (

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Taro from '@tarojs/taro'
 import AlangDiscoverCard from './AlangDiscoverCard'
@@ -43,6 +43,20 @@ describe('AlangDiscoverCard formal entry', () => {
     expect(mocks.haptics).toHaveBeenCalledWith('light')
     expect(mocks.cardTap).toHaveBeenCalledTimes(1)
     expect(Taro.navigateTo).toHaveBeenCalledWith({ url: '/pages/alang/event/index' })
+  })
+
+  it('surfaces a visible recovery message when the Flash subpackage cannot open', async () => {
+    vi.mocked(Taro.navigateTo).mockRejectedValueOnce(new Error('page is not found'))
+    render(<AlangDiscoverCard />)
+
+    fireEvent.click(screen.getByRole('button', { name: '进入街头盲盒，查看深圳当前在线的数字角色' }))
+
+    await waitFor(() => {
+      expect(Taro.showToast).toHaveBeenCalledWith({
+        title: '街头盲盒打开失败，请更新小程序后重试',
+        icon: 'none',
+      })
+    })
   })
 
   it('fails closed when the server flag is disabled', () => {
