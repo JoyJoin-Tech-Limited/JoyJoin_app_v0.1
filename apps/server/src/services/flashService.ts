@@ -14,7 +14,7 @@ import {
 } from "@shared/alang/flashTypes";
 import { alangHaversineDistanceMeters } from "@shared/alang/testPointValidation";
 import type { FlashTaskSnapshot } from "@shared/schema";
-import { FLASH_TASK_SEEDS } from "@shared/alang/flashCatalog";
+import { FLASH_TASK_SEEDS, resolveFlashDeliveryCopy } from "@shared/alang/flashCatalog";
 import { getFlashInvitationDefinition } from "@shared/alang/flashInvitationCatalog";
 
 import {
@@ -837,7 +837,13 @@ export async function deliverFlashTaskToNpc(input: {
   const snapshot = pending.contentSnapshot as FlashTaskSnapshot;
   return {
     ...response,
-    deliveryMessage: snapshot.deliveryCopy ?? "好，我记住了。下次碰见，我们再接着聊。",
+    deliveryMessage: resolveFlashDeliveryCopy({
+      npcSlug: encounter.npcSlug,
+      taskCode: snapshot.code,
+      invitationKind: snapshot.invitationType,
+      optionId: input.answers?.[0]?.optionId,
+      fallback: snapshot.deliveryCopy,
+    }),
   };
 }
 

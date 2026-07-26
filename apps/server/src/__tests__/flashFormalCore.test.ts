@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  buildFlashNpcTaskRequestCopy,
   FLASH_LOCATION_SEEDS,
   FLASH_NPC_SEEDS,
   FLASH_TASK_SEEDS,
+  resolveFlashDeliveryCopy,
 } from "@shared/alang/flashCatalog";
 import { FLASH_INVITATION_DEFINITIONS } from "@shared/alang/flashInvitationCatalog";
 import {
@@ -102,6 +104,54 @@ describe("formal Flash catalog", () => {
     for (const npc of FLASH_NPC_SEEDS) {
       expect(FLASH_INVITATION_DEFINITIONS.filter((item) => item.npcSlugs.includes(npc.slug))).toHaveLength(6);
     }
+  });
+
+  it("frames life invitations as something to begin now and preserves each NPC voice", () => {
+    const lifeTasks = FLASH_TASK_SEEDS.filter((task) => task.tags.includes("invitation:life"));
+    const copies = lifeTasks.map((task) => {
+      const npcSlug = task.npcSlugs[0];
+      return buildFlashNpcTaskRequestCopy(npcSlug, task);
+    });
+
+    expect(copies.every((copy) => !copy.includes("哪天想起来"))).toBe(true);
+    expect(new Set(FLASH_NPC_SEEDS.map((npc) => {
+      const task = lifeTasks.find((candidate) => candidate.npcSlugs.includes(npc.slug));
+      return task ? buildFlashNpcTaskRequestCopy(npc.slug, task).split("：")[0] : "";
+    })).size).toBe(5);
+    expect(FLASH_TASK_SEEDS.find((task) => task.code === "T06")?.brief).toContain("现在");
+    expect(FLASH_TASK_SEEDS.find((task) => task.code === "T10")?.brief).toContain("现在");
+  });
+
+  it("makes every life invitation actionable now and responds to the reported outcome", () => {
+    const lifeTasks = FLASH_TASK_SEEDS.filter((task) => task.tags.includes("invitation:life"));
+    expect(lifeTasks.every((task) => task.brief.includes("现在") || task.brief.includes("今天"))).toBe(true);
+
+    const liziMovie = FLASH_TASK_SEEDS.find((task) => task.code === "T06");
+    expect(liziMovie?.feedbackPrompts[0]?.options.map((option) => option.id)).toEqual([
+      "liked",
+      "continuing",
+      "not_for_me",
+      "switched",
+      "not_started",
+    ]);
+    expect(resolveFlashDeliveryCopy({
+      npcSlug: "lizi",
+      taskCode: "T06",
+      invitationKind: "life_invitation",
+      optionId: "not_for_me",
+    })).toContain("别对一部电影讲礼貌");
+    expect(resolveFlashDeliveryCopy({
+      npcSlug: "momo",
+      taskCode: "T10",
+      invitationKind: "life_invitation",
+      optionId: "liked",
+    })).toContain("没有过期");
+    expect(resolveFlashDeliveryCopy({
+      npcSlug: "shiqi",
+      taskCode: "T16",
+      invitationKind: "life_invitation",
+      optionId: "started",
+    })).toContain("零和一之间");
   });
 
   it("contains two free public location candidates for every Shenzhen district", () => {

@@ -11,6 +11,7 @@ import {
   lt,
   lte,
   ne,
+  notInArray,
   or,
   sql,
 } from "drizzle-orm";
@@ -393,12 +394,28 @@ export async function seedBuiltinFlashCatalog() {
 
     const npcRows = await tx.select({ id: flashNpcs.id, slug: flashNpcs.slug }).from(flashNpcs);
     const taskRows = await tx.select({ id: flashTaskTemplates.id, code: flashTaskTemplates.code }).from(flashTaskTemplates);
-    const npcBySlug = new Map(npcRows.map((row: any) => [row.slug, row.id]));
-    const taskByCode = new Map(taskRows.map((row: any) => [row.code, row.id]));
+    const npcBySlug = new Map<string, string>(
+      npcRows.map((row: any) => [String(row.slug), String(row.id)]),
+    );
+    const taskByCode = new Map<string, string>(
+      taskRows.map((row: any) => [String(row.code), String(row.id)]),
+    );
 
     for (const task of FLASH_TASK_SEEDS) {
       const taskTemplateId = taskByCode.get(task.code);
       if (!taskTemplateId) continue;
+      const intendedNpcIds = task.npcSlugs
+        .map((npcSlug) => npcBySlug.get(npcSlug))
+        .filter((npcId): npcId is string => typeof npcId === "string");
+      if (intendedNpcIds.length > 0) {
+        await tx.update(flashNpcTaskLinks).set({
+          isActive: false,
+          updatedAt: new Date(),
+        }).where(and(
+          eq(flashNpcTaskLinks.taskTemplateId, taskTemplateId),
+          notInArray(flashNpcTaskLinks.npcId, intendedNpcIds),
+        ));
+      }
       for (const npcSlug of task.npcSlugs) {
         const npcId = npcBySlug.get(npcSlug);
         if (!npcId) continue;
@@ -414,6 +431,7 @@ export async function seedBuiltinFlashCatalog() {
           set: {
             requestCopy: buildFlashNpcTaskRequestCopy(npcSlug, task),
             deliveryCopy: FLASH_DELIVERY_COPY_BY_NPC[npcSlug] ?? "我收到了。谢谢你替我去看。",
+            isActive: true,
             updatedAt: new Date(),
           },
         });

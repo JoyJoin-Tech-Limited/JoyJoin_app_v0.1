@@ -24,7 +24,7 @@ const NPC_OFFER_COPY: Record<string, { kicker: string; accept: string; reroll: s
   lizi: { kicker: '欸，要不要试个好玩的', accept: '好啊，我记下了', reroll: '换个更对胃口的' },
   momo: { kicker: '有件小事，想问问你', accept: '嗯，我记下了', reroll: '想听另一个' },
   shiqi: { kicker: '我有个后续想知道', accept: '行，我留意一下', reroll: '换条线索' },
-  atuan: { kicker: '下次有空，可以试试这个', accept: '好，有空试试', reroll: '再想个轻松点的' },
+  atuan: { kicker: '今天先照顾自己一点', accept: '好，现在开始', reroll: '再想个轻松点的' },
 }
 
 function dialogueActionError(error: unknown, fallback: string): string {
@@ -186,7 +186,7 @@ export default function FlashDialoguePage() {
   const category = offer ? resolveFlashTaskCategory(offer.category) : null
   const offerCopy = NPC_OFFER_COPY[data.npc.slug] ?? {
     kicker: '我刚想到一件事',
-    accept: '好，有空试试',
+    accept: '好，现在开始',
     reroll: '想听另一个',
   }
 
@@ -290,7 +290,7 @@ export default function FlashDialoguePage() {
                   {offer.invitationType === 'npc_message'
                     ? `以后遇见${offer.followUpTargetNpc?.name ?? '它'}时再决定要不要说；忘了也没关系。`
                     : offer.invitationType === 'life_invitation'
-                      ? '做不做成不重要。以后再碰见，想聊就说两句。'
+                      ? '现在先开始一点点。下次再碰见，它会记得听你讲后来。'
                       : '到附近点击到达即可；不要求消费，也不要求进店。'}
                 </Text>
               </View>

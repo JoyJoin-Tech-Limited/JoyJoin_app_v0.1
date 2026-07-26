@@ -183,6 +183,14 @@ function makeTaskFeelLikeAConversation(task: unknown) {
       { id: "forgot", label: "这次给忘了" },
       { id: "changed_mind", label: "后来觉得不说更好" },
     ]
+    : invitation.code === "T06" || invitation.code === "T10"
+      ? [
+        { id: "liked", label: "比想象中更喜欢" },
+        { id: "continuing", label: "看了一点，还想继续" },
+        { id: "not_for_me", label: "不太对胃口" },
+        { id: "switched", label: "最后换了一部" },
+        { id: "not_started", label: "还没打开" },
+      ]
     : [
       { id: "completed", label: "做了，还挺不错" },
       { id: "started", label: "只开了个头" },
@@ -192,11 +200,11 @@ function makeTaskFeelLikeAConversation(task: unknown) {
     ];
   const sourceNpcSlug = invitation.npcSlugs[0] ?? "";
   const lifeFollowUp: Record<string, string> = {
-    alang: "上次说的那件事，后来有风把你带过去吗？",
-    lizi: "欸，上次那个主意后来成行了吗？好不好玩？",
-    momo: "上次聊的那件事……后来怎么样了？",
-    shiqi: "上次那件事有后续吗？没发生也算一种结果。",
-    atuan: "前阵子说的那件事，后来有空试试吗？",
+    alang: "我还记得上次那件事。后来你去了哪里？没去也没关系，我想听听。",
+    lizi: "你回来啦！上次那件事后来怎么样？快讲给我听，哪种结果都算后续。",
+    momo: "我记得我们上次说的事……后来呢？慢慢讲，我在听。",
+    shiqi: "上次那件事，我一直留着一个问号。后来发生了什么？没发生也算答案。",
+    atuan: "回来就好。前阵子那件事后来怎么样？做没做成，我都想听你说说。",
   };
   const relayFollowUp: Record<string, string> = {
     alang: `后来碰见${invitation.targetNpcName}了吗？那句话，不说也没事。`,
@@ -238,12 +246,127 @@ export const FLASH_NPC_SEEDS = parsedCatalog.npcs as FlashNpcSeed[];
 export const FLASH_TASK_SEEDS = parsedCatalog.tasks as FlashTaskSeed[];
 
 export const FLASH_DELIVERY_COPY_BY_NPC: Record<string, string> = {
-  alang: "原来后来是这样。行，我记住了。",
-  lizi: "原来是这样！好，这个后续我喜欢。",
-  momo: "嗯，我听见了。这样就很好。",
-  shiqi: "有后续了。和我猜的不太一样，挺好。",
-  atuan: "好，我知道啦。做没做成其实都没关系。",
+  alang: "原来后来是这样。谢谢你回来告诉我，这段路现在也有我一小份记忆了。",
+  lizi: "原来是这样！我就知道等你回来讲，会比任务本身更有意思。",
+  momo: "嗯，我听见了。谢谢你愿意把这段小小的后来讲给我。",
+  shiqi: "问号有答案了。不是因为你一定做成了，是因为你真的回来告诉了我。",
+  atuan: "好，我收到了。做成、只做了一点，或者改变主意，都不影响我高兴你回来。",
 };
+
+const FLASH_LIFE_DELIVERY_COPY_BY_NPC: Record<string, Record<string, string>> = {
+  alang: {
+    completed: "所以你真的去了。你看到的那一小段城市，现在也被我记住了。",
+    started: "只走了一点也够。路不是非要走完，才算真的出发过。",
+    not_done: "没去也没关系。至少你回来告诉我了，这件事还没有被悄悄忘掉。",
+    changed_mind: "那就不去了。会转身的人，通常比只顾往前的人更知道自己要去哪。",
+    did_something_else: "原来风把你带去了别处。也行，我更想听你最后选的那条路。",
+  },
+  lizi: {
+    completed: "你真的把它变成今天的一部分了。快留一个最好玩的细节给我，下次接着讲。",
+    started: "开了头就不再只是“想做”了。剩下的先别急，我已经开始期待后续了。",
+    not_done: "被我逮到啦。没关系，今天没发生的事也算后续，你肯回来就行。",
+    changed_mind: "不喜欢就换，别对一个旧计划讲礼貌。这个决定反而很像你。",
+    did_something_else: "擅自改剧情是吧？可以，这个版本听起来更有意思。下次讲细一点。",
+  },
+  momo: {
+    completed: "嗯，我听见了。谢谢你把那一小段时间留给自己，也留了一点给我听。",
+    started: "一点点就够了。有些事情轻轻碰一下，比用力完成更适合今天。",
+    not_done: "没关系。有些事暂时只适合被记得，不一定现在就要发生。",
+    changed_mind: "那就放下吧。你不需要为了过去的一个念头，勉强现在的自己。",
+    did_something_else: "原来你去了另一边。只要那是你真正想选的，就很好。",
+  },
+  shiqi: {
+    completed: "问号有答案了。不是因为你一定做成了，是因为你真的让它发生了一次。",
+    started: "五分钟已经足够留下痕迹。零和一之间，通常比一和一百之间更远。",
+    not_done: "记录：这次没有发生。别小看它，空白也是一种准确结果。",
+    changed_mind: "结论更新：这件事现在不值得继续。及时删掉错误选项，很有效率。",
+    did_something_else: "你改了实验条件。结果反而更像你自己的答案，我接受。",
+  },
+  atuan: {
+    completed: "好，我收到了。你愿意为今天的自己做这件小事，我听着就很踏实。",
+    started: "做一点就很好。生活不是考勤表，不用把每一格都填满。",
+    not_done: "没做也没关系。你肯回来坐一会儿、说一句后来，我就很高兴了。",
+    changed_mind: "那就不做了。照顾自己有时候是开始，有时候也是及时停下。",
+    did_something_else: "换一件也好。计划是拿来照顾生活的，不是让生活迁就计划。",
+  },
+};
+
+const FLASH_RELAY_DELIVERY_COPY_BY_NPC: Record<string, Record<string, string>> = {
+  alang: {
+    relayed_original: "原话到了就好。有些话走得慢一点，也还是能找到地方落下。",
+    relayed_rephrased: "换成你的说法也好。话经过一个人，本来就会带上一点新的风。",
+    not_relayed: "没说也没关系。你当时一定看见了什么，才决定把它留下。",
+    forgot: "忘了就忘了。真要紧的话，也许它还会自己绕回来。",
+    changed_mind: "那就别说了。谢谢你没有只把自己当成一条传话的路。",
+  },
+  lizi: {
+    relayed_original: "真的带到啦？好，我现在有点想知道它听完是什么表情。",
+    relayed_rephrased: "你还给它换了个版本？可以，这下有一半也算你的故事了。",
+    not_relayed: "见到了却没说——这里面肯定有个理由。没关系，我尊重你的现场判断。",
+    forgot: "居然忘了。好吧，这次先放过你，反正我们还有下一次碰见。",
+    changed_mind: "那就不说。临时改变主意不叫失败，叫你真的参与了这件事。",
+  },
+  momo: {
+    relayed_original: "嗯，谢谢你。那句话终于不用一直留在我这里了。",
+    relayed_rephrased: "换一种说法也好。你觉得舒服的方式，比原句完整更重要。",
+    not_relayed: "没说也没关系。沉默有时候不是空白，是你替大家留的位置。",
+    forgot: "忘了就算了。不是每句话都一定要赶上某一次见面。",
+    changed_mind: "好，那就留在这里。谢谢你认真想过它该不该被说出去。",
+  },
+  shiqi: {
+    relayed_original: "信息完整抵达。现在我更好奇，它会怎么处理这个答案。",
+    relayed_rephrased: "发生了转译。意料之中——语言经过人，总会留下指纹。",
+    not_relayed: "信息在最后一步停下了。可以，你拥有终止传递的判断权。",
+    forgot: "变量丢失。没关系，这也证明记忆不是可靠的快递系统。",
+    changed_mind: "你撤回了传递。合理，有些信息经过思考后，本来就该留在原地。",
+  },
+  atuan: {
+    relayed_original: "好，辛苦你把话带到了。现在可以把这件事从心里放下来一点。",
+    relayed_rephrased: "用你的方式说也很好。让人听得舒服，比一字不差更重要。",
+    not_relayed: "没说就没说。你在现场觉得不合适，那份分寸比任务重要。",
+    forgot: "忘了没关系。你不是来替谁完成指标的，下次见面还是照常坐会儿。",
+    changed_mind: "那就不说了。谢谢你替这句话多想了一步，也替自己守住了选择。",
+  },
+};
+
+const FLASH_MOVIE_DELIVERY_COPY_BY_TASK: Record<string, Record<string, string>> = {
+  T06: {
+    liked: "我就知道，你片单里肯定藏着漏网之鱼。先把最喜欢的那一段记住，下次我要听完整版。",
+    continuing: "那就别急着一次看完。能让你愿意回来继续，它已经赢过片单里不少名字了。",
+    not_for_me: "那就关掉，别对一部电影讲礼貌。你愿意试过一次，它就没资格继续占着你的期待了。",
+    switched: "擅自改剧情是吧？可以，这个结局反而更像你。下次记得告诉我，你最后选中了哪一部。",
+    not_started: "原来“下次一定”本人就在这里。没关系，我先替你记着——不过下次见面，可别还拿同一句糊弄我。",
+  },
+  T10: {
+    liked: "原来它还在原来的地方等你。有些喜欢没有过期，只是很久没被想起来。",
+    continuing: "那就慢慢看。旧喜欢不用一次重温完，它已经认出你回来了。",
+    not_for_me: "嗯，那也很好。不是它突然变差了，是你已经走到别的地方了。",
+    switched: "你最后还是选了别的。没关系，现在真正想看的，比过去喜欢过的更诚实。",
+    not_started: "没关系。有些东西暂时只适合被记得，不一定非要重新打开。",
+  },
+};
+
+export function resolveFlashDeliveryCopy(input: {
+  npcSlug: string;
+  taskCode: string;
+  invitationKind?: "destination_exploration" | "life_invitation" | "npc_message";
+  optionId?: string;
+  fallback?: string;
+}): string {
+  if (input.optionId) {
+    const movieCopy = FLASH_MOVIE_DELIVERY_COPY_BY_TASK[input.taskCode]?.[input.optionId];
+    if (movieCopy) return movieCopy;
+    const outcomeCopy = input.invitationKind === "npc_message"
+      ? FLASH_RELAY_DELIVERY_COPY_BY_NPC[input.npcSlug]?.[input.optionId]
+      : input.invitationKind === "life_invitation"
+        ? FLASH_LIFE_DELIVERY_COPY_BY_NPC[input.npcSlug]?.[input.optionId]
+        : undefined;
+    if (outcomeCopy) return outcomeCopy;
+  }
+  return input.fallback
+    ?? FLASH_DELIVERY_COPY_BY_NPC[input.npcSlug]
+    ?? "好，我记住了。谢谢你愿意回来告诉我。";
+}
 
 /**
  * Curated draft voice frames used only by the explicit seed command. The
@@ -256,19 +379,19 @@ export function buildFlashNpcTaskRequestCopy(npcSlug: string, task: FlashTaskSee
   const frame: Record<string, (brief: string) => string> = {
     alang: (brief) => isMessage
       ? `有句话我自己没赶上说。${brief} 碰见了就帮我带到，没碰见算了。`
-      : `我忽然想到，这件事也许适合你。${brief} 哪天想起来再试。`,
+      : `我忽然想到，这件事也许适合现在的你。${brief} 出发以后，记得回来讲给我听。`,
     lizi: (brief) => isMessage
       ? `我有句话托你捎一下！${brief} 怎么说都行，别有压力。`
-      : `欸，这个听起来会有点意思：${brief} 去不去都算你说了算。`,
+      : `欸，我想把今天轻轻往前推一下：${brief} 先开始一点点，回来我要听你的版本。`,
     momo: (brief) => isMessage
       ? `有句话……如果刚好遇见了，帮我带一下。${brief}`
-      : `最近想起一件安静的小事。${brief} 不急。`,
+      : `现在留一点安静给自己，好吗？${brief} 下次见面，你愿意说多少，我就听多少。`,
     shiqi: (brief) => isMessage
       ? `有句话需要经过第三个人，结果可能会不一样。${brief} 你自己决定怎么说。`
-      : `我对这件事的后续有点好奇。${brief} 没发生也可以告诉我。`,
+      : `我想知道，今天从这里开始会发生什么。${brief} 回来告诉我结果，哪种结果都算。`,
     atuan: (brief) => isMessage
       ? `下次要是碰见了，替我说一句。${brief} 忘了也没关系。`
-      : `给生活留个小空当怎么样？${brief} 舒服最重要。`,
+      : `先照顾一下今天的自己吧。${brief} 不用做得漂亮，回来让我知道你过得怎么样。`,
   };
   return (frame[npcSlug] ?? ((brief) => brief))(task.brief);
 }
