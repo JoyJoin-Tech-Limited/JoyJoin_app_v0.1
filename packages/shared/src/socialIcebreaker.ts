@@ -497,6 +497,14 @@ export interface SocialSessionState {
   // Per-phase data
   warmupTopics?: SocialTopic[];
   warmupTopicsMeta?: AIResponseMeta;
+  /** Server-owned warmup generation lifecycle. 'generating' is written BEFORE
+   *  the LLM call so the stall detector can suspend nudges/fuses while the
+   *  host is waiting on the system rather than on people (2026-07-26). */
+  warmupTopicsStatus?: 'idle' | 'generating' | 'ready' | 'failed';
+  /** Timestamp (ms) when topic generation started. Stall suppression only
+   *  applies within a bounded window from this moment, so a wedged
+   *  'generating' state (e.g. server restart mid-request) self-heals. */
+  warmupTopicsGeneratingAt?: number;
   currentTopicIndex?: number;
   warmupReadyUserIds?: string[];
   /** Current warmup speaker. Used for turn-based card reveal and timeout flow. */

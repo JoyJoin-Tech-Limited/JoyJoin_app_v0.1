@@ -270,7 +270,7 @@ async function captureSquadUnboxingShaking() {
       await clearAndSeedStorage(page)
       await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
 
-      await page.waitForSelector('.squad-unboxing__blind-box-card', { timeout: 10000 })
+      await page.waitForSelector('.squad-unboxing__stage--shaking', { timeout: 10000 })
       await page.waitForTimeout(1200)
       return page.screenshot({ fullPage: false })
     }
@@ -399,7 +399,7 @@ async function captureSquadUnboxingRevealed(groupId = 'group-screenshot-001') {
       await page.waitForTimeout(1200)
 
       // Wait for the analysis chapter to render (progressive reveal in stages).
-      await page.waitForSelector('.squad-unboxing__chapter--analysis', { timeout: 10000 })
+      await page.waitForSelector('.squad-unboxing__analysis-bubble', { timeout: 10000 })
       // Give archetype images time to load over the CDN.
       await page.waitForTimeout(2500)
 
@@ -651,6 +651,46 @@ register('icebreaker-speed-friending', () => captureIcebreaker('mock-speed_frien
 register('icebreaker-fuse', () => captureIcebreaker('mock-fuse', '.icebreaker__fuse-banner'))
 register('icebreaker-stall', () => captureIcebreaker('mock-stall', '.icebreaker__stall-nudge'))
 register('icebreaker-recap', () => captureIcebreaker('mock-recap', '.icebreaker__recap-hero'))
+register('icebreaker-warmup-mood', () => captureIcebreaker('mock-warmup-mood', '.warmup-card-slot__mood-grid'))
+register('icebreaker-warmup-topic', () => captureIcebreaker('mock-warmup-topic', '.warmup-card-slot__foil-shell', 5000))
+
+// Interactive warmup captures: tap a mood, then screenshot the resulting state.
+function captureIcebreakerWarmupInteraction(sessionId, waitSelector, settleMs = 800) {
+  return withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/icebreaker-session/index?sessionId=${sessionId}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+    await waitForContent(page, '.warmup-card-slot__mood-grid')
+    await page.click('.warmup-card-slot__mood-option')
+    await page.waitForSelector(waitSelector, { state: 'visible', timeout: 15000 })
+    await page.waitForTimeout(settleMs)
+    return screenshotPage(page)
+  })
+}
+
+// Reduce-motion variant: the H5 preview cannot complete the CardFlip CSS
+// transition reliably, so the settled topic-card layout is verified with
+// motion=reduce (deal/flip resolve instantly, final face shown).
+register('icebreaker-warmup-topic-settled', () =>
+  withBrowserPage(DEFAULT_VIEWPORT, async (page) => {
+    await page.goto(`${H5_BASE_URL}/#/pages/icebreaker-session/index?sessionId=mock-warmup-topic&motion=reduce`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+    await waitForContent(page, '.warmup-card-slot__foil-shell')
+    await page.waitForTimeout(2500)
+    return screenshotPage(page)
+  }))
+
+register('icebreaker-warmup-generating', () =>
+  captureIcebreakerWarmupInteraction('mock-warmup-generating', '.warmup-card-slot__generating-text', 1200))
+register('icebreaker-warmup-error', () =>
+  captureIcebreakerWarmupInteraction('mock-warmup-error', '.warmup-card-slot__error-text'))
 register('events-footprint-oracle-card', captureEventsPage)
 register('tier-selector-preset-cards', captureTierSelector)
 register('pool-registration-step-0-brief', capturePoolRegistration)

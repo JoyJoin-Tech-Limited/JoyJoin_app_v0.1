@@ -328,8 +328,14 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 4;
     overflow: hidden;
+    // Documented exception to the repo-wide keep-all 孤字 rule: at 38rpx in
+    // the narrow card, an unspaced ~14-glyph question becomes ONE unbreakable
+    // run under keep-all, and the only legal break lands before the trailing
+    // ？ — creating the lone-punctuation orphan it was meant to prevent.
+    // Default CJK per-character breaking + UAX#14 no-break-before-closing-
+    // punctuation keeps ？ attached to its final word instead.
     overflow-wrap: break-word;
-    word-break: keep-all; // 孤字 guard: CJK breaks at word boundaries first
+    word-break: normal;
     margin-top: 0;
 
     &--expanded {
@@ -638,13 +644,22 @@
   // State E: error
   &__error-text {
     @include type-body;
-    color: $color-error;
+    // Warm rose (approved palette) — a generation hiccup is a soft retry
+    // moment, not an alarm; pure $color-error red reads punitive on cream.
+    color: #B83A5E;
     text-align: center;
     margin-bottom: 16rpx;
   }
 
+  // Error surface: center the whole block vertically in the flat card and
+  // keep the retry action content-hugging instead of edge-to-edge.
+  &__content--error {
+    justify-content: center;
+    gap: 24rpx;
+  }
+
   &__retry-btn {
-    min-width: 160rpx;
+    min-width: 240rpx;
   }
 }
 

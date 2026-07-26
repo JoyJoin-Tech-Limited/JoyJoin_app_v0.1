@@ -266,6 +266,10 @@ Component({
     setSelected: function (selected) {
       var n = Number(selected)
       this._confirmedSelected = n
+      // No-op guard: tab switches already set selected optimistically in
+      // handleTabTap/handleCenterTap. Skipping the redundant setData avoids
+      // an extra native re-render (icon flicker) on every switch.
+      if (this.data.selected === n && !this.data.hidden) return
       this.setData({ selected: n, hidden: false })
     },
 

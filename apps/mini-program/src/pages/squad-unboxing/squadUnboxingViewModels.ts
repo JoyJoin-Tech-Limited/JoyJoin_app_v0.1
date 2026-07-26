@@ -142,6 +142,21 @@ export function stripConnectionPointParens(text: string): string {
 }
 
 /**
+ * Card-pill copy budget (2026-07-24 full-marks): a mid-glyph ellipsis
+ * (`都爱在…`) reads as broken, not mysterious. Strip the leading filler
+ * （都 / 爱在 / 喜欢 / 是 / 偏 …) so the pill carries the semantic core
+ * ("咖啡馆里发呆", "阅读习惯相似") and only ellipsizes truly long tails.
+ * Display-only — narration keeps the full governed copy.
+ */
+export function shortenConnectionPointForPill(text: string): string {
+  let value = stripConnectionPointParens(text)
+  value = value.replace(/^都/, '')
+  value = value.replace(/^(爱在|喜欢去|喜欢看|喜欢听|喜欢|爱看|爱去|爱听|爱)/, '')
+  value = value.replace(/^(是|偏|偏好|相信)/, '')
+  return value.trim() || stripConnectionPointParens(text)
+}
+
+/**
  * 团魂 bubble copy. The archetype-mix clause is only inserted when non-empty,
  * so the bubble never renders a stranded `！，` when no member archetypes are
  * known. Trailing punctuation on each line is stripped before the final `。`
@@ -226,9 +241,16 @@ export function buildFocusedMemberBubbleText(
   const intro = normalize(introAngle)
   if (intro) return `${introduction}。悦仔也给你们留了个开场：${intro}。`
 
+  // Dignity floor (2026-07-24 P0): never admit "没找到共同点" — the user just
+  // paid, and conceding the engine found nothing actively negates that
+  // purchase. Reframe as complementarity (archetype contrast IS a match
+  // reason) and always hand over a concrete first move.
+  const complement = archetype
+    ? `TA身上${archetype}的气质，和你正好互补`
+    : 'TA的气质和你正好互补'
   const opener = interests[0]
-    ? `你们的共同点还没显出来，不妨先问问${interests[0]}背后的故事。`
-    : '你们的共同点还没显出来，不妨先聊聊最近各自遇到的一件有趣小事。'
+    ? `${complement}——今晚从${interests[0]}聊起，说不定能互相打开新话题。`
+    : `${complement}——不妨先聊聊最近各自遇到的一件有趣小事。`
   return `${introduction}。${opener}`
 }
 
@@ -438,6 +460,15 @@ export function getPairChemistryWord(score?: number | null): string {
   return CHEMISTRY_TITLES[scoreToChemistryType(score)]
 }
 
+/**
+ * Raw chemistry tier for a pair score (2026-07-24 polish): drives the
+ * tier-aware temperature-chip tint — a cold read must not wear hot pink.
+ */
+export function getPairChemistryTier(score?: number | null): ChemistryType | null {
+  if (typeof score !== 'number' || Number.isNaN(score)) return null
+  return scoreToChemistryType(score)
+}
+
 export function getSquadChemistryTokens(chemistry?: OverallChemistry): SquadChemistryTokens {
   switch (chemistry) {
     case 'fire':
@@ -495,4 +526,141 @@ export function buildPairKeyMemberMap(
   }
 
   return map
+}
+
+// ── 桌型诊断 (2026-07-24 P0) ────────────────────────────────────────────────
+// Deterministic roster → social-role read ("这桌：2个暖心派 + 1个气氛组").
+// No LLM: each archetype maps to exactly one role from its ACOEXP profile
+// (see the trait notes in archetypeNames.ts). Unknown archetypes are skipped.
+
+export type SquadRoleKey = 'hype' | 'deep' | 'warm'
+
+const SQUAD_ROLE_BY_ARCHETYPE: Record<string, SquadRoleKey> = {
+  corgi: 'hype',
+  rooster: 'hype',
+  hamster_praise: 'hype',
+  fox: 'deep',
+  octopus: 'deep',
+  owl: 'deep',
+  dolphin_calm: 'warm',
+  spider: 'warm',
+  koala: 'warm',
+  elephant: 'warm',
+  turtle: 'warm',
+  cat: 'warm',
+}
+
+const SQUAD_ROLE_LABELS: Record<SquadRoleKey, string> = {
+  hype: '气氛组',
+  deep: '深度派',
+  warm: '暖心派',
+}
+
+const SQUAD_ROLE_ORDER: readonly SquadRoleKey[] = ['hype', 'deep', 'warm']
+
+/** Self-addressed role labels ("你是这桌的气氛担当") for the 我 card. */
+const SQUAD_ROLE_SELF_LABELS: Record<SquadRoleKey, string> = {
+  hype: '气氛担当',
+  deep: '深度担当',
+  warm: '暖心担当',
+}
+
+/**
+ * The viewer's own table role (2026-07-24 self-relevance pass): derived from
+ * the same deterministic archetype→role map as the 桌型诊断. '' when the
+ * archetype doesn't resolve.
+ */
+export function getSelfSquadRoleLabel(archetype?: string | null): string {
+  if (!archetype) return ''
+  const id = resolveArchetype(archetype)?.id
+  const role = id ? SQUAD_ROLE_BY_ARCHETYPE[id] : undefined
+  return role ? SQUAD_ROLE_SELF_LABELS[role] : ''
+}
+
+/**
+ * 我-card narration with role positioning (2026-07-24): the self card's
+ * bubble tells the user what they bring to the table — self-relevance is
+ * the strongest blind-box hook ("我在这桌是什么位置").
+ */
+export function buildSelfCardBubbleText(roleLabel: string): string {
+  const role = roleLabel.trim()
+  return role
+    ? `这张是你的桌友卡。你是这桌的${role}——悦仔把你放进来，就是要你把这份能量带上桌。`
+    : SQUAD_SELF_CARD_BUBBLE_TEXT
+}
+
+export interface SquadDiagnosisSegment {
+  key: SquadRoleKey
+  label: string
+  count: number
+}
+
+/**
+ * Role-mix segments for the 桌型诊断 strip. Fixed hype→deep→warm order,
+ * zero-count segments dropped. Empty when no member archetype resolves.
+ */
+export function buildTableDiagnosis(members: PoolGroupMemberSummary[]): SquadDiagnosisSegment[] {
+  const counts: Record<SquadRoleKey, number> = { hype: 0, deep: 0, warm: 0 }
+  for (const member of members) {
+    if (!member.archetype) continue
+    const id = resolveArchetype(member.archetype)?.id
+    const role = id ? SQUAD_ROLE_BY_ARCHETYPE[id] : undefined
+    if (role) counts[role] += 1
+  }
+  return SQUAD_ROLE_ORDER
+    .filter((key) => counts[key] > 0)
+    .map((key) => ({ key, label: SQUAD_ROLE_LABELS[key], count: counts[key] }))
+}
+
+// ── 结构化同频分析卡 (2026-07-24 P1) ────────────────────────────────────────
+// Focused-member narration as verdict → evidence chips → opener instead of
+// one flat prose block. Returns null when the pair data is too thin to
+// structure — the caller then falls back to the (dignity-floored) prose
+// bubble from buildFocusedMemberBubbleText.
+
+export interface FocusedNarrativeModel {
+  verdict: string
+  /** Up to 3 connection points, paren-stripped, chip-ready. */
+  evidence: string[]
+  /** Concrete first move; '' when nothing quotable exists. */
+  opener: string
+  isBestPartner: boolean
+}
+
+export function buildFocusedNarrativeModel(
+  pair: PairExplanation | null | undefined,
+  opts: { isBestPartner: boolean },
+): FocusedNarrativeModel | null {
+  if (!pair) return null
+  const normalize = (value?: string | null) => (value ?? '').trim().replace(/[。！？，\s]*$/, '')
+
+  const rawPoints = pair.connectionPointsWithRarity && pair.connectionPointsWithRarity.length > 0
+    ? pair.connectionPointsWithRarity.map((point) => point.text)
+    : (pair.connectionPoints ?? [])
+  const evidence = rawPoints
+    .map((point) => stripConnectionPointParens(normalize(point)))
+    .filter(Boolean)
+    .slice(0, 3)
+
+  const intro = normalize(pair.introAngle)
+  const explanation = normalize(pair.explanation)
+  const opener = intro || (evidence.length > 0 ? `见面可以先从${evidence[0]}聊起` : '')
+
+  // Too thin to structure → prose fallback (still dignity-floored).
+  if (evidence.length === 0 && !opener && !explanation) return null
+
+  const score = typeof pair.chemistryScore === 'number' ? pair.chemistryScore : null
+  const verdict = opts.isBestPartner
+    ? '这是今晚和你最同频的人'
+    : score === null
+      ? '你们俩的气场很有意思'
+      : score >= 85
+        ? '你们俩大概率一见如故'
+        : score >= 70
+          ? '你们俩大概率聊得来'
+          : score >= 55
+            ? '你们俩有不少可聊的点'
+            : '你们俩是互补型同桌'
+
+  return { verdict, evidence, opener, isBestPartner: opts.isBestPartner }
 }

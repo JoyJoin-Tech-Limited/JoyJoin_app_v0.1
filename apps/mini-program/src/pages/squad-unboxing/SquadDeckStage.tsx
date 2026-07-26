@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PoolGroupMemberSummary } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
+import { resolveArchetype } from '@shared/personality/archetypeNames'
+import { getArchetypeHSL, formatHSLAsRGBA } from '@shared/archetypeColors'
 import { haptics } from '../../lib/utils/haptics'
 import TeammateCard from './TeammateCard'
 import {
@@ -59,6 +61,8 @@ export interface SquadDeckStageProps {
   onFoldSettled: () => void
   /** Fired when the re-fan fully settles (controller → `fan`). */
   onUnfoldSettled: () => void
+  /** Front art loaded for a member (page-level flip hold-to-onLoad gate). */
+  onArtLoad?: (userId: string) => void
 }
 
 // Re-export the pure deal budget helpers so existing consumers/tests that
@@ -93,6 +97,7 @@ export default function SquadDeckStage({
   unfoldDelayById,
   onFoldSettled,
   onUnfoldSettled,
+  onArtLoad,
 }: SquadDeckStageProps) {
   const instant = reduceMotion || isDegradation
   const [dealt, setDealt] = useState(() => instant)
@@ -159,6 +164,20 @@ export default function SquadDeckStage({
     prevFlippedRef.current = flippedIds
   }, [flippedIds])
 
+  // ── 契合点光迹 (2026-07-24 P2) ────────────────────────────────────────────
+  // A falling archetype-tinted light blob per live flip, dropping from the
+  // card's slot toward the dock bubble — "the card's story flows there".
+  // Transform/opacity only, ≤500ms, aria-hidden. Instant tiers never spawn.
+  interface FlipTrail {
+    key: number
+    leftPct: number
+    color: string
+  }
+  const [trails, setTrails] = useState<FlipTrail[]>([])
+  const trailKeyRef = useRef(0)
+  const trailTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const prevTrailSourceRef = useRef<ReadonlySet<string>>(new Set())
+
   // Split the roster into rows (top row first) per the fan layout.
   const memberRows = useMemo(() => {
     const rows: PoolGroupMemberSummary[][] = []
@@ -169,6 +188,49 @@ export default function SquadDeckStage({
     }
     return rows
   }, [displayMembers, layout.rows])
+
+  // userId → approximate horizontal centre (%) + archetype tint for trails.
+  const trailMetaById = useMemo(() => {
+    const map = new Map<string, { leftPct: number; color: string }>()
+    memberRows.forEach((rowMembers) => {
+      rowMembers.forEach((member, indexInRow) => {
+        const archetypeId = member.archetype ? resolveArchetype(member.archetype)?.id ?? null : null
+        const hsl = getArchetypeHSL(archetypeId)
+        map.set(member.userId, {
+          leftPct: ((indexInRow + 0.5) / rowMembers.length) * 100,
+          color: formatHSLAsRGBA(hsl, 0.85),
+        })
+      })
+    })
+    return map
+  }, [memberRows])
+
+  useEffect(() => {
+    const fresh = [...justFlippedIds].filter((id) => !prevTrailSourceRef.current.has(id))
+    prevTrailSourceRef.current = justFlippedIds
+    if (instant || fresh.length === 0) return undefined
+    const spawned: FlipTrail[] = []
+    for (const id of fresh) {
+      const meta = trailMetaById.get(id)
+      if (!meta) continue
+      trailKeyRef.current += 1
+      spawned.push({ key: trailKeyRef.current, ...meta })
+    }
+    if (spawned.length === 0) return undefined
+    setTrails((prev) => [...prev, ...spawned])
+    const keys = new Set(spawned.map((trail) => trail.key))
+    trailTimersRef.current.push(
+      setTimeout(() => {
+        setTrails((prev) => prev.filter((trail) => !keys.has(trail.key)))
+      }, 560),
+    )
+    return undefined
+  }, [justFlippedIds, instant, trailMetaById])
+
+  useEffect(() => () => {
+    trailTimersRef.current.forEach(clearTimeout)
+    trailTimersRef.current = []
+  }, [])
 
   const clearAllTimers = useCallback(() => {
     if (dealStartTimerRef.current) clearTimeout(dealStartTimerRef.current)
@@ -270,6 +332,7 @@ export default function SquadDeckStage({
     clearAllTimers()
     setDealt(true)
     setDealComplete(true)
+    setTrails([])
     // Pocket-the-deck settle (AC-05): transient fold/unfold windows never
     // survive a hide/show cycle — snap the phase machine to its target so a
     // paused timer can't leave the deck stuck half-cascaded. The settle
@@ -324,6 +387,20 @@ export default function SquadDeckStage({
     >
       <View className='squad-unboxing__deck-shadow' />
 
+      {/* 契合点光迹 (2026-07-24 P2): one falling archetype-tinted blob per
+          live flip — pure visual, transform/opacity only, ≤500ms. */}
+      {trails.map((trail) => (
+        <View
+          key={trail.key}
+          className='squad-unboxing__flip-trail'
+          style={{
+            left: `${trail.leftPct}%`,
+            background: `radial-gradient(circle, ${trail.color} 0%, rgba(255, 255, 255, 0) 70%)`,
+          }}
+          aria-hidden='true'
+        />
+      ))}
+
       {/* One-time shimmer sweep across the face-down backs (transform-only
           band; replays never — see shimmerArmed derivation). */}
       {shimmerArmed ? (
@@ -343,6 +420,10 @@ export default function SquadDeckStage({
           'squad-unboxing__deck-fan',
           `squad-unboxing__deck-fan--count-${layout.count}`,
           dealt ? 'squad-unboxing__deck-fan--dealt' : '',
+          // Focus grammar (2026-07-24 polish, visual audit B2): while a card
+          // is lifted, siblings drop their info zones (art stays, deck stays
+          // legible) so the lift never slices a neighbour's text mid-glyph.
+          focusedIndex >= 0 ? 'squad-unboxing__deck-fan--has-focus' : '',
           cardsPocketed ? 'squad-unboxing__deck-fan--pocketing' : '',
         ]
           .filter(Boolean)
@@ -407,6 +488,10 @@ export default function SquadDeckStage({
                     pocketGlowActive={
                       cardsPocketed && !instant && member.userId === bestPartnerUserId
                     }
+                    slowFlipActive={
+                      !instant && justFlippedIds.has(member.userId) && member.userId === bestPartnerUserId
+                    }
+                    onArtLoad={onArtLoad}
                     onTap={() => onCardTap(rosterIndex)}
                     onLongPress={() => onCardLongPress(rosterIndex)}
                   />

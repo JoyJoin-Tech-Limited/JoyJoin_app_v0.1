@@ -1726,8 +1726,11 @@ export function registerUserEventPoolRoutes(app: Express): void {
           where: (groups: any, { eq }: any) => eq(groups.id, groupId),
         });
 
-        let blindBoxEventId: string | null = null;
-        if (group?.poolId) {
+        // Prefer the group's own blind_box_events link (written at match
+        // commit) — a pool-level lookup can bind another group's event when a
+        // pool formed multiple groups.
+        let blindBoxEventId: string | null = group?.blindBoxEventId ?? null;
+        if (!blindBoxEventId && group?.poolId) {
           const linkedEvent = await db
             .select({ id: blindBoxEvents.id })
             .from(blindBoxEvents)

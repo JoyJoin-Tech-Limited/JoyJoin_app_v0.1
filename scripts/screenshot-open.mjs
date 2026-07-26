@@ -48,6 +48,10 @@ const PAGES = {
   'icebreaker-fuse': { url: 'http://localhost:9000/icebreaker-fuse.png', altPort: 9003 },
   'icebreaker-stall': { url: 'http://localhost:9000/icebreaker-stall.png', altPort: 9003 },
   'icebreaker-recap': { url: 'http://localhost:9000/icebreaker-recap.png', altPort: 9003 },
+  'icebreaker-warmup-mood': { url: 'http://localhost:9000/icebreaker-warmup-mood.png', altPort: 9003 },
+  'icebreaker-warmup-topic': { url: 'http://localhost:9000/icebreaker-warmup-topic.png', altPort: 9003 },
+  'icebreaker-warmup-generating': { url: 'http://localhost:9000/icebreaker-warmup-generating.png', altPort: 9003 },
+  'icebreaker-warmup-error': { url: 'http://localhost:9000/icebreaker-warmup-error.png', altPort: 9003 },
 }
 
 const page = process.argv[2] || 'events'

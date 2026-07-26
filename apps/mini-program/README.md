@@ -40,7 +40,7 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 - `src/hooks/useEventCountdown.ts` — visibility-aware countdown hook returning `display`, `segments`, `isUrgent`, `hasStarted`, `isLive`. Gated by viewport visibility, app background, reduced-motion, and device tier.
 - `src/lib/utils/eventDisplay.ts` — `formatEventDateTime` (with `今天`/`明天`/`后天` relative prefixes), `getJoinedEventDisplayDateTime` for display-time vs matching-time precedence, and `isJoinedEventTerminal()` for terminal-state detection.
 - `src/lib/utils/accessibility.ts` — `getSystemReducedMotion()` canonical helper for reading the OS-level reduced-motion preference.
-- `src/pages/profile/index.tsx` — V1.7 “我的” target: dark identity stage, approved V4 archetype hero with resilient fallbacks, real gamification progress, real Profile shell event/connection stats, profile completion, milestones, service grid, settings, and an `alangEnabled`-gated story archive card. The companion/equipment peer entry routes to the existing personality result and remains labelled “装备筹备中”; no FUTURE 08 inventory page or fabricated Mockup counts are implemented.
+- `src/pages/profile/index.tsx` — V1.7 “我的” target: warm sunset-street identity stage (`IdentityStageScene`), approved V4 archetype hero (`ArchetypeHead` ring + grid emblem) with resilient fallbacks, real gamification progress, real Profile shell event/connection stats, profile completion, milestones, service grid, settings, and an `alangEnabled`-gated story archive card. Glass cards, purple equipment bar, and three stat cards use brand warm/purple semantic tints with RPG-style nameplate and XP-sheen polish. The companion/equipment peer entry routes to the existing personality result and remains labelled “装备筹备中”; no FUTURE 08 inventory page or fabricated Mockup counts are implemented.
 
 ---
 
@@ -350,6 +350,8 @@ The guard normalizes route formats (`pages/discover/index`, `/pages/discover/ind
 | **GPU compositing** | `will-change: transform` / `opacity` / `box-shadow` / `background-color` hints on 7 animated subtrees; reset to `auto` on low-end + reduced-motion |
 | **Accessibility** | Hidden `aria-live="polite"` region announces tab switches ("已切换到发现"). Tab items use `role="button"`, `aria-label`, `aria-pressed` |
 | **Offline resilience** | `wx.getNetworkType` initial read + `wx.onNetworkStatusChange` listener; `syncState` skipped when offline to avoid stale badge counts and replayed on reconnect |
+| **setSelected no-op guard (2026-07-24)** | `setSelected` skips `setData` when already selected + visible, preventing redundant re-renders on same-tab taps |
+| **Dual-icon crossfade (2026-07-24)** | Each tab mounts both icons; opacity toggles instead of `src` swap, eliminating the PNG re-decode flash from WeChat's image cache |
 
 ---
 

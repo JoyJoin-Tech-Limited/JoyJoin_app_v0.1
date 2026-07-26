@@ -7,6 +7,7 @@ import { TapRhythm } from '../../../components/gesture'
 import { ParticleBurst } from '../../../components/reveal'
 import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import { haptics } from '../../../lib/utils/haptics'
+import { stripEmojis } from '../../../lib/utils/emojiGuard'
 import { PHASE_ACCENTS } from './phaseAccents'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
@@ -133,13 +134,21 @@ export function MicroChallengeHeroView({
         ? '提交中…'
         : '点按节奏球，和大家一起完成'
 
+  // Zero raw emoji on primary copy: fallback-bank hints are emoji-only
+  // decoration (e.g. '❓💬') — strip them and drop the dangling 提示 line;
+  // text-bearing hints from AI content keep their words.
+  const strippedHint = challenge.visualHint ? stripEmojis(challenge.visualHint).trim() : ''
+  const promptText = stripEmojis(
+    strippedHint ? `${challenge.description}\n提示：${strippedHint}` : challenge.description,
+  )
+
   return (
     <View className='micro-challenge-hero'>
       <PhaseHeroCard
         phase='micro_challenge'
         artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-micro-challenge.webp')}
         title={challenge.title}
-        prompt={challenge.visualHint ? `${challenge.description}\n提示：${challenge.visualHint}` : challenge.description}
+        prompt={promptText}
         statusText={statusText}
         doneCount={optimisticCompletedBy.length}
         totalCount={playerCount}

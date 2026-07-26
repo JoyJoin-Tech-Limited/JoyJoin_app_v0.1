@@ -12,6 +12,8 @@ import { queryClient } from '../../lib/api/queryClient'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
+import { shouldRefreshOnShow } from '../../lib/utils/showRefreshGate'
+import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Card from '../../components/ui/Card'
@@ -65,6 +67,13 @@ export default function EventsPage() {
     eventsAnalytics.track('events_view')
   }, [])
 
+  // Warm own first-viewport assets + adjacent tabs' assets during idle so
+  // the next tab switch paints instantly.
+  useEffect(() => {
+    preloadRouteAssets('pages/events/index')
+    preloadPredictiveAssets('pages/events/index')
+  }, [])
+
   const hasDidShowRef = useRef(false)
   useDidShow(() => {
     if (!hasDidShowRef.current) {
@@ -72,11 +81,17 @@ export default function EventsPage() {
       return
     }
     if (authLoading) return
-    handleRefresh()
+    // Silent, staleness-gated refresh on re-show — no haptics/analytics,
+    // and skip entirely when the last refresh is still fresh (tab switches
+    // must feel instant and must not hammer the network).
+    if (!shouldRefreshOnShow('events')) return
+    queryClient.invalidateQueries({ queryKey: ['mini-program', 'joined-events'] })
+    queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/events'] })
   })
 
   const { data: events = [], isLoading, isFetching, isError, refetch } = useQuery<JoinedEventSummary[]>({
     queryKey: ['mini-program', 'joined-events'],
+    staleTime: 30_000,
     queryFn: async (): Promise<JoinedEventSummary[]> => {
       // Primary: composite endpoint — 1 request for all Events data.
       try {

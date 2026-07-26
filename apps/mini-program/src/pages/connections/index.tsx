@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
@@ -10,6 +10,8 @@ import { queryClient } from '../../lib/api/queryClient'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
+import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
+import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
@@ -39,6 +41,13 @@ export default function ConnectionsPage() {
     markAsRead.mutate('chat')
   }, [markAsRead])
 
+  // Warm own first-viewport assets + adjacent tabs' assets during idle so
+  // the next tab switch paints instantly.
+  useEffect(() => {
+    preloadRouteAssets('pages/connections/index')
+    preloadPredictiveAssets('pages/connections/index')
+  }, [])
+
   const { data: connections = [], isLoading, isError, refetch } = useQuery<Connection[]>({
     queryKey: ['mini-program', 'connections'],
     queryFn: async (): Promise<Connection[]> => {
@@ -53,10 +62,13 @@ export default function ConnectionsPage() {
       return apiRequest<Connection[]>({ path: '/api/my-connections' })
     },
     enabled: !authLoading,
+    staleTime: 30_000,
   })
 
+  const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
+
   return renderGate(
-    <View className='connections-page tab-page-enter'>
+    <View className={`connections-page ${tabEntranceClass}`}>
 
       <ScrollView className='connections-page__list' scrollY enhanced showScrollbar={false}>
         {isLoading ? (

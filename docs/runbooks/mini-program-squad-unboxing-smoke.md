@@ -107,6 +107,79 @@ Use the WeChat DevTools **Inspect** panel (or real-device screenshot) and confir
 
 ---
 
+## Wow-pass psychology checklist (2026-07-24)
+
+### Card geometry
+- [ ] N≤6 members render on a single row, each card 245rpx wide at fan scale 0.85; 4 members split [2,2]; the rightmost card shows the full pill row (hook + temperature chip).
+- [ ] N=7–8 members render two fanned rows at legacy 190rpx; no card exceeds the stage boundary.
+- [ ] Fan rotation: ±5° for cards in the top row of a multi-row layout; the whole fan sits at scale 0.85.
+- [ ] Stage revealed height clamps to 460–640rpx (3rd gear) and is bottom-anchored.
+- [ ] Focused card drops its covered-band safe inset so the pill row has the full 245rpx width; sibling info zones ghost-fade to opacity 0.12 via `deck-fan--has-focus`.
+
+### Pair-temperature chips
+- [ ] Every pair-backed card shows a tier-aware temperature chip (`超级火花` → fire/warm pink, `暖意融融` → warm pink, `相聊甚欢` → mild purple, `慢慢发现` → cold grey).
+- [ ] Covered cards (non-rightmost, non-focused) show the temperature chip only — the connection pill row is hidden behind the overlapping neighbour.
+- [ ] Connection pills use `shortenConnectionPointForPill` — filler prefixes (都爱/喜欢/是/偏/相信) are stripped; the 1-line ellipsis never shows a truncated filler word.
+- [ ] Cards without a viewer connection point show the member's top interest as a neutral-outline pill (transparent background, visually distinct).
+
+### 最佳拍档
+- [ ] The highest pair-chemistry card (`computeBestPartnerUserId`, strict `>` tie-break) flips at 0.6× speed via `--slow-flip`, with a gold 1s sheen and heartbeat haptics (medium → 90ms gap → light).
+- [ ] Narration delay for the best-partner card extends to 700ms (normal: 400ms).
+- [ ] The best-partner stamp is inset to `$fan-safe-inset` on non-rightmost cards so the overlapping neighbour cannot paint over it.
+
+### Structured 同频分析 + dignity-floor copy
+- [ ] Focusing a tablemate upgrades the dock bubble from flat prose to verdict (typewriter) → evidence chips (gated on verdict `onComplete`) → one concrete opener quote.
+- [ ] When pair data is sparse, the fallback keeps a warm prose format (no degeneracy).
+- [ ] `buildFocusedMemberBubbleText` never outputs "没找到共同点" or equivalent — empty connections reframe as complementarity (test-locked).
+- [ ] 桌型诊断 chips (气氛组/深度派/暖心派) render inside the bubble footer — deterministic archetype→role map, no LLM.
+
+### Self-relevance (我 card)
+- [ ] The 我 card carries a top-left role badge (`气氛担当`/`深度担当`/`暖心担当`) that is never covered by the overlapping card to its right.
+- [ ] `buildSelfCardBubbleText` renders role-positioned self narration (different from the narrative used for other members).
+
+### Press-and-hold anticipation
+- [ ] Pressing and holding a face-down card tilts it +8° along the fan direction + foil glint + haptic tick.
+- [ ] The tilt and glint are cleared on release, cancel, flip, or pocket (store → foreground re-entry).
+- [ ] Under reduced-motion / degradation tier: anticipation is completely suppressed (including the foil glint).
+
+### 契合点光迹 (flip trails)
+- [ ] Each live flip spawns a single falling archetype-tinted blob (transform + opacity only).
+- [ ] Motion-tiers only: suppressed under reduced-motion and degradation tier.
+
+### 桌卡 poster
+- [ ] 「这桌的桌卡」 collectible banner is visible once every card is face-up; persists on re-entry.
+- [ ] Tap `保存桌卡` triggers `squadTableCardPoster.ts` — generates a 750×1100 canvas (archetype head ring + chemistry word + date), calls `saveImageToPhotosAlbum`.
+- [ ] Canvas DOM is unmounted immediately after successful save (avoids 13MB backing-store leak).
+- [ ] On save failure (incl. album-permission denial), a toast shows and the CTA remains tappable.
+- [ ] Degradation-tier devices hide the poster banner entirely (canvas generation excluded).
+- [ ] Analytics: `squad_unboxing_table_card_tap` / `_saved` / `_save_failed` fire correctly.
+
+### Peak-end settle breath
+- [ ] After the last flip lands, after a 420ms delay, the stage performs a scale 1.0→1.015→1.0 settle + `haptics('success')`.
+- [ ] Suppressed under reduced-motion and degradation tier.
+- [ ] Does not fire on re-entry (group already revealed) — only on the live last flip.
+
+### CTA lit state
+- [ ] The confirm CTA shows a `::after` opacity-pulse glow + label 「确认出席 · 锁定座位」 after all cards are face-up.
+- [ ] The CTA is always tappable — the glow is cosmetic. `aria-disabled` is never set; conversion is not gated.
+
+### Return thread
+- [ ] 「活动结束后，回来看看这桌的故事」 renders below the CTA in the action dock (opacity 0.6, smaller font).
+- [ ] RM / degradation keeps the text but removes any entrance animation.
+
+### Flip reliability
+- [ ] Rapid double-taps on a face-down card never double-flip it (pending-trailing-tap guard).
+- [ ] `FLIP_IN_FLIGHT_GUARD_MS` prevents concurrent flip burst — cards flip one at a time with no overlap.
+- [ ] Flip hold-to-onLoad (userId-keyed, 1200ms ceiling, `HELD_FLIP_MAX_RETRIES=3`) — never flips into a skeleton and never stacks mid-burst.
+- [ ] `onError` fallback on archetype art does not block the flip — the card shows a gradient placeholder and the user can still focus it.
+
+### 人→关系→场合 narrative arc
+- [ ] The transition line 「都认识了，就差一张桌子」 renders above the event brief card.
+- [ ] The event brief card inherits the table's chemistry colour as a foil top border (`--chem-fire/warm/mild/cold/fallback`).
+- [ ] The gap hierarchy is 16/16/32rpx (no visual collisions between the transition line, event card, and CTA).
+
+---
+
 ## How to simulate states in DevTools
 
 If you cannot easily reach a state naturally:

@@ -144,7 +144,7 @@ function assertMatchingTestMode() {
  * 今晚这桌 brief renders a realistic dinner time instead of "now + 7 days"
  * (which landed at whatever time-of-day the test was started, e.g. 14:23).
  */
-function nextDinnerDateTime(): Date {
+export function nextDinnerDateTime(): Date {
   const now = new Date();
   const d = new Date(now);
   d.setHours(18, 59, 0, 0);
@@ -478,6 +478,17 @@ export async function finalizeMatchingTestGroups(
   poolId: string,
 ): Promise<{ groupsFinalized: number; venuesAssigned: number }> {
   assertMatchingTestMode();
+  return finalizeTestPoolGroups(poolId);
+}
+
+/**
+ * Ungated core of finalizeMatchingTestGroups, shared with the single-test
+ * (单人调试局) path which runs under isSingleTestMode() rather than
+ * isMatchingTestMode(). Callers must enforce their own test-mode gate.
+ */
+export async function finalizeTestPoolGroups(
+  poolId: string,
+): Promise<{ groupsFinalized: number; venuesAssigned: number }> {
 
   const [pool] = await db
     .select({

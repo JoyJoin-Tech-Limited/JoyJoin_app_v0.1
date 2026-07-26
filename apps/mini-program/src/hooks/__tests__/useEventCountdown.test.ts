@@ -38,6 +38,8 @@ vi.mock('@tarojs/taro', () => {
         }
       }, [fn])
     },
+    // Page-hide lifecycle: no-op in tests (page visibility not simulated).
+    useDidHide: (_fn: () => void) => {},
     __mockFns: {
       mockOnAppHide,
       mockOnAppShow,

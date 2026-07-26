@@ -16,11 +16,14 @@ import {
 // docs/deliberations/2026-07-13-squad-unboxing-fan-revamp-locked.md §1.
 
 describe('computeFanLayout — row split (ceil/floor)', () => {
-  it('keeps N≤4 on a single row', () => {
+  it('keeps N≤3 on a single row', () => {
     expect(computeFanRows(1)).toEqual([1])
     expect(computeFanRows(2)).toEqual([2])
     expect(computeFanRows(3)).toEqual([3])
-    expect(computeFanRows(4)).toEqual([4])
+  })
+
+  it('splits N=4 into [2,2] so its cards join the 245rpx width class (2026-07-24 wow pass)', () => {
+    expect(computeFanRows(4)).toEqual([2, 2])
   })
 
   it('splits N≥5 into two rows with ceil on top', () => {
@@ -39,27 +42,30 @@ describe('computeFanLayout — row split (ceil/floor)', () => {
 })
 
 describe('computeFanLayout — locked geometry table', () => {
-  it('matches the locked per-count card sizes', () => {
-    expect(computeFanLayout(4).cardWidth).toBe(190)
+  it('matches the locked per-count card sizes (2026-07-24 wow pass: N≤6 at the 245rpx 3-per-row ceiling)', () => {
+    // 245rpx is the widest a 3-card row can be: 3×245 − 2×28 = 679 ≤ 686.
+    expect(computeFanLayout(1).cardWidth).toBe(245)
+    expect(computeFanLayout(2).cardWidth).toBe(245)
+    expect(computeFanLayout(3).cardWidth).toBe(245)
+    expect(computeFanLayout(4).cardWidth).toBe(245)
     expect(computeFanLayout(4).cardHeight).toBe(332)
-    expect(computeFanLayout(5).cardWidth).toBe(222)
+    expect(computeFanLayout(5).cardWidth).toBe(245)
     expect(computeFanLayout(5).cardHeight).toBe(332)
-    expect(computeFanLayout(6).cardWidth).toBe(222)
+    expect(computeFanLayout(6).cardWidth).toBe(245)
+    // N=7–8 keep the legacy 190rpx 4-per-row shape (stage height budget).
     expect(computeFanLayout(7).cardWidth).toBe(190)
     expect(computeFanLayout(8).cardWidth).toBe(190)
   })
 
   it('emits the locked rotations per row shape', () => {
-    // N=4: single row of 4 → -5, -2.5, +2.5, +5 (G2: ±7° poked ~40rpx past
-    // the unrotated edge and hard-cropped the 4th card at the viewport edge;
-    // ±5° keeps the rotated bounding box ~733rpx ≤ 750 − 8).
-    expect(computeFanLayout(4).rotations).toEqual([-5, -2.5, 2.5, 5])
-    // N=5: row3 (-6,0,+6) then row2 (-4.5,+4.5).
-    expect(computeFanLayout(5).rotations).toEqual([-6, 0, 6, -4.5, 4.5])
+    // N=4: [2,2] split (2026-07-24) → two rows of ±4.5.
+    expect(computeFanLayout(4).rotations).toEqual([-4.5, 4.5, -4.5, 4.5])
+    // N=5: row3 (-5,0,+5 — capped with the 245rpx cards) then row2 (-4.5,+4.5).
+    expect(computeFanLayout(5).rotations).toEqual([-5, 0, 5, -4.5, 4.5])
     // N=6: two rows of 3.
-    expect(computeFanLayout(6).rotations).toEqual([-6, 0, 6, -6, 0, 6])
-    // N=7: row4 (±5, G2-capped) then row3 (±6).
-    expect(computeFanLayout(7).rotations).toEqual([-5, -2.5, 2.5, 5, -6, 0, 6])
+    expect(computeFanLayout(6).rotations).toEqual([-5, 0, 5, -5, 0, 5])
+    // N=7: row4 (±5, G2-capped) then row3 (±5).
+    expect(computeFanLayout(7).rotations).toEqual([-5, -2.5, 2.5, 5, -5, 0, 5])
     // N=8: two rows of 4.
     expect(computeFanLayout(8).rotations).toEqual([-5, -2.5, 2.5, 5, -5, -2.5, 2.5, 5])
   })

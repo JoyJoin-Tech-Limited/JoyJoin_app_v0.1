@@ -107,10 +107,6 @@ export function WarmupPhaseView({
     () => buildWarmupCaption(vibe, currentTier, isCustomMode),
     [vibe, currentTier, isCustomMode],
   )
-  const ctaState = useMemo(
-    () => buildCTAState(isReady, isHost, everyoneReady, isLastTopic),
-    [isReady, isHost, everyoneReady, isLastTopic],
-  )
   const cardState = useMemo<WarmupCardState>(
     () =>
       getWarmupCardState({
@@ -156,10 +152,36 @@ export function WarmupPhaseView({
   // inside the rim) when the update settles without confirmation.
   const [selfReadyOptimistic, setSelfReadyOptimistic] = useState(false)
   useEffect(() => {
+    if (!selfReadyOptimistic) return
+    // Clear when the server confirms (isReady), and also when no ready
+    // request is actually in flight — covers the skipped-tap path where
+    // pendingAction never changed and the optimistic flag would otherwise
+    // stick forever (deps wouldn't re-fire without selfReadyOptimistic).
     if (isReady || !isUpdatingReady) {
       setSelfReadyOptimistic(false)
     }
-  }, [isReady, isUpdatingReady])
+  }, [isReady, isUpdatingReady, selfReadyOptimistic])
+
+  // P0-4 (2026-07-26): optimistic ready morph — the CTA flips to the calm
+  // "已准备" state at tap time instead of showing a spinner while the
+  // request is in flight. Rollback is the effect above + the warm toast
+  // from the page handler.
+  const effectiveIsReady = isReady || selfReadyOptimistic
+  const effectiveEveryoneReady =
+    everyoneReady ||
+    (selfReadyOptimistic && !isReady && readyUserIds.length + 1 >= participants.length)
+  const ctaState = useMemo(
+    () => buildCTAState(effectiveIsReady, isHost, effectiveEveryoneReady, isLastTopic),
+    [effectiveIsReady, isHost, effectiveEveryoneReady, isLastTopic],
+  )
+
+  // S1 companion — the count mirrors the optimistic self ember so the ready
+  // tally responds to the tap immediately instead of waiting for the server
+  // echo (previously the button spun for seconds with a frozen count).
+  const optimisticReadyCount =
+    selfReadyOptimistic && !readyUserIds.includes(currentUserId)
+      ? readyUserIds.length + 1
+      : readyUserIds.length
 
   const handleToggleReady = useCallback(() => {
     const ttcMs = Date.now() - (firstTopicRenderedAtRef.current ?? componentMountAtRef.current)
@@ -359,6 +381,7 @@ export function WarmupPhaseView({
           isFlipped={topicFlipped}
           reduceMotion={reduceMotion}
           isDeepPromptExpanded={deepPromptExpanded}
+          isHost={isHost}
           onGenerateTopics={onGenerateTopics}
           onRetry={handleRetry}
           onToggleDeepPrompt={handleToggleDeepPrompt}
@@ -383,7 +406,7 @@ export function WarmupPhaseView({
           <View style={{ flex: 1 }} />
           <View className='warmup-presence__count'>
             <Text className='warmup-presence__count-text'>
-              {readyUserIds.length}/{participants.length} 已准备
+              {optimisticReadyCount}/{participants.length} 已准备
             </Text>
           </View>
         </View>
@@ -401,10 +424,10 @@ export function WarmupPhaseView({
       {showActionBar && (
         <WarmupActionBar
           ctaState={ctaState}
-          isReady={isReady}
+          isReady={effectiveIsReady}
           isHost={isHost}
-          everyoneReady={everyoneReady}
-          isUpdatingReady={isUpdatingReady}
+          everyoneReady={effectiveEveryoneReady}
+          isUpdatingReady={isUpdatingReady && !selfReadyOptimistic}
           isAdvancingTopic={isAdvancingTopic}
           isAdvancing={isAdvancing}
           onToggleReady={handleToggleReady}

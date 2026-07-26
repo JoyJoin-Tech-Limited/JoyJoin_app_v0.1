@@ -1,4 +1,4 @@
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow, useDidHide } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDeviceTier } from './useDeviceTier'
 
@@ -106,7 +106,10 @@ function getCurrentPage(): unknown | undefined {
 export function useEventCountdown(options: UseEventCountdownOptions): UseEventCountdownResult {
   const urgentThresholdMinutes = options.urgentThresholdMinutes ?? DEFAULT_URGENT_THRESHOLD_MINUTES
   const { isDegradation } = useDeviceTier()
-  const reduceMotion = prefersReducedMotion()
+  // Memoized: getSystemInfoSync is synchronous + deprecated and this hook
+  // re-renders every second per countdown card — an unmemoized read taxes the
+  // JS thread ~1 call/card/sec even when the hosting page is hidden.
+  const reduceMotion = useMemo(() => prefersReducedMotion(), [])
 
   const [tick, setTick] = useState(0)
   // Track viewport/app visibility as state (not refs) so `isLive` is derived
@@ -265,6 +268,13 @@ export function useEventCountdown(options: UseEventCountdownOptions): UseEventCo
     if (!shouldTick) return
     setIsAppVisible(true)
     forceTick()
+  })
+
+  // WeChat keeps tab pages alive-but-hidden in the page stack; without this,
+  // hidden cards keep ticking (and re-rendering) every second in the
+  // background while the user is on another page.
+  useDidHide(() => {
+    setIsAppVisible(false)
   })
 
   return { display, segments, isUrgent, hasStarted, isLive }

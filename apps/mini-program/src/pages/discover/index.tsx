@@ -36,6 +36,7 @@ import {
   getDiscoverSubtitle,
 } from '../../lib/utils/discoverHeaderCopy'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
+import { shouldRefreshOnShow } from '../../lib/utils/showRefreshGate'
 import { logInfo, logWarn } from '../../lib/utils/logger'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import LoadingScreen from '../../components/loading/LoadingScreen'
@@ -219,7 +220,8 @@ function AuthenticatedDiscover({
 
   // Refresh data on foreground so registration/payment changes are reflected
   // after the user returns from other pages. Skip the first show (mount) to
-  // avoid duplicating the initial query fetch.
+  // avoid duplicating the initial query fetch. Staleness-gated so rapid tab
+  // switches do not trigger a refetch + re-render burst.
   const hasDidShowRef = useRef(false)
   useDidShow(() => {
     if (!hasDidShowRef.current) {
@@ -227,6 +229,7 @@ function AuthenticatedDiscover({
       return
     }
     if (authLoading) return
+    if (!shouldRefreshOnShow('discover')) return
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pools'] })
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] })
   })

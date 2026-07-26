@@ -418,4 +418,63 @@ describe('Profile approved V4 layout', () => {
       icon: 'none',
     }))
   })
+
+  it('keeps the archetype circle icon visible in pixel mode and adds the class emblem', () => {
+    const { container, getByTestId, getAllByTestId } = render(<ProfilePage />)
+
+    // Request-4 regression lock: the circle icon renders even with the pixel
+    // avatar on, plus the class emblem on the avatar's bottom-right corner.
+    expect(container.querySelector('.profile-page__identity-avatar')).toBeTruthy()
+    expect(getByTestId('profile-partner-emblem')).toBeTruthy()
+    expect(getAllByTestId('archetype-head').length).toBeGreaterThanOrEqual(2)
+
+    // Pixel-on: grounded above the equipment bar — no --no-entry modifiers.
+    expect(container.querySelector('.profile-page__partner-visual--no-entry')).toBeNull()
+    expect(container.querySelector('.profile-page__growth-card--no-entry')).toBeNull()
+  })
+
+  it('grounds the avatar on the stage floor without the emblem when the pixel avatar is off', () => {
+    state.user = {
+      ...makeUser(true),
+      features: {
+        ...makeUser(true).features,
+        profilePixelAvatarEnabled: false,
+      },
+    }
+
+    const { container, queryByTestId } = render(<ProfilePage />)
+
+    // Circle icon still renders (request 4), but no emblem badge — pixel-off
+    // already shows the full-body archetype art as the visual itself.
+    expect(container.querySelector('.profile-page__identity-avatar')).toBeTruthy()
+    expect(queryByTestId('profile-partner-emblem')).toBeNull()
+    expect(queryByTestId('profile-partner-equipment-entry')).toBeNull()
+
+    // No equipment bar → both the avatar and the growth card drop to the
+    // stage floor via the --no-entry modifiers.
+    expect(container.querySelector('.profile-page__partner-visual--no-entry')).toBeTruthy()
+    expect(container.querySelector('.profile-page__growth-card--no-entry')).toBeTruthy()
+  })
+
+  it('renders the level plate with the current level and never mounts it on gamification error', () => {
+    state.queryStates.set('mini-program/gamification', {
+      data: {
+        experiencePoints: 40,
+        currentLevel: 1,
+        levelConfig: { nameCn: '新芽' },
+        nextLevelInfo: { xpNeeded: 100, progress: 40 },
+      },
+    })
+
+    const { container, getByText } = render(<ProfilePage />)
+
+    expect(container.querySelector('.profile-page__level-plate')).toBeTruthy()
+    expect(getByText('Lv.1 新芽')).toBeTruthy()
+
+    state.queryStates.set('mini-program/gamification', { isError: true })
+    const errorRender = render(<ProfilePage />)
+
+    expect(errorRender.getByText('成长记录稍后会自动刷新')).toBeTruthy()
+    expect(errorRender.container.querySelector('.profile-page__level-plate')).toBeNull()
+  })
 })

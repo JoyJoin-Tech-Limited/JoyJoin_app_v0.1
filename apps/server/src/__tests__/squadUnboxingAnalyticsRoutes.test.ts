@@ -164,4 +164,22 @@ describe("POST /api/analytics/squad-unboxing", () => {
       expect(mockTransaction).toHaveBeenCalledTimes(pocketDeckTypes.length);
     });
   });
+
+  it("accepts the ready-dwell anticipation metric (Batch A, 2026-07-24)", async () => {
+    const app = await buildTestApp();
+    await withServer(app, async (base) => {
+      const res = await fetch(`${base}/api/analytics/squad-unboxing`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventType: "squad_unboxing_ready_dwell",
+          metadata: { groupId: "group-1", screen: "squad-unboxing", source: "box", dwellMs: 3200 },
+          timestamp: Date.now(),
+        }),
+      });
+      const body: any = await res.json();
+      expect(res.status).toBe(200);
+      expect(body.success).toBe(true);
+    });
+  });
 });

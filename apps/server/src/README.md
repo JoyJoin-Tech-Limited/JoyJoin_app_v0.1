@@ -49,12 +49,13 @@ Boundary:
 Owns end-to-end matching validation with one real tester + full-profile bot users through the production matching engine. Defense-in-depth isolation via env gates, DB markers, and a startup sentinel.
 
 Primary files:
-- `apps/server/src/services/matchingTestService.ts` — seed bots, create test pool, trigger match, cleanup
+- `apps/server/src/services/matchingTestService.ts` — seed bots, create test pool, trigger match, finalize group into events/blindBoxEvent records, cleanup
 - `apps/server/src/routes/domains/matchingTest.ts` — `/api/test/matching-test/*` routes, gated by `isMatchingTestMode()`
 - `apps/server/src/lib/isSingleTestMode.ts` — `isMatchingTestMode()` double gate
 
 Boundary:
 - Bot profiles include full matching-compatible data (archetypes, `user_interests`, industry tiers) so `poolMatchingService` scores them identically to real users.
+- `finalizeTestPoolGroups()` creates real `events` / `blindBoxEvents` / `eventAttendance` / `venueTimeSlotBookings` for the test group so the post-match flow (event detail, confirm-attendance) works end-to-end.
 - Cleanup deletes all test pool registrations and icebreaker data but preserves `payments` records.
 - Startup sentinel crashes the server if `is_test_bot=true` rows exist in `APP_MODE=production`.
 
@@ -68,14 +69,21 @@ Primary files:
 - `apps/server/src/routes/socialIcebreaker.ts`
 - `apps/server/src/lib/socialIcebreakerStore.ts`
 - `apps/server/src/routes/socialIcebreaker.ts` — active social icebreaker session flow
-- `apps/server/src/socialIcebreakerAIService.ts`
+- `apps/server/src/socialIcebreakerAIService.ts` — public barrel for icebreaker AI generators
+- `apps/server/src/socialIcebreakerAICore.ts` — shared AI core: `AIServiceResult`, `fireAndForgetQualityGate`, `raceWithTimeout`, `isLLMTimeoutError`, `RACE_LLM_TIMEOUT_MS`
+- `apps/server/src/socialIcebreakerAuctionAI.ts` — auction lot generation
+- `apps/server/src/socialIcebreakerPersonalityDiceAI.ts` — personality-dice challenge generation
+- `apps/server/src/socialIcebreakerMiniScriptAI.ts` — mini-script framework fetch (owns its own 32s pipeline timeout)
 - `apps/server/src/socialIcebreakerPhaseConfig.ts`
+- `apps/server/src/routes/socialIcebreakerHelpers.ts` — phase transition pipeline, auto-advance fuse, stall recovery, recap snapshot
+- `apps/server/src/routes/socialIcebreakerGameplayCore.ts`, `socialIcebreakerGameplayExtra.ts`, `socialIcebreakerCustom.ts`, `socialIcebreakerTier.ts`, `socialIcebreakerExtended.ts` — phase routes and custom/tier/extended flows
 
 Boundary:
 - `apps/server/src/routes/socialIcebreaker.ts` persists live social-session state through `apps/server/src/lib/socialIcebreakerStore.ts`.
 - `apps/server/src/routes/socialIcebreaker.ts` and `apps/server/src/lib/socialIcebreakerStore.ts` own the active social icebreaker session flow.
 - Legacy `icebreakerSessions.ts` and `icebreakerRepo.ts` were archived/removed (2026-05).
 - New in-event icebreaker work should integrate here, not into legacy toolkit-style flows.
+- All LLM calls in this domain use `raceWithTimeout(..., RACE_LLM_TIMEOUT_MS = 6000)` from `socialIcebreakerAICore.ts` with deterministic fallback on timeout/error; `miniScriptAgent.ts` keeps its own longer pipeline timeout by design.
 
 ### AI text quality and Xiaoyue writing craft
 

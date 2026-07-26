@@ -40,7 +40,7 @@ export const FAN_SAFE_INSET_RPX = 48
  * Per-card rotation (deg) keyed by the LENGTH of the row the card sits in.
  * Rotation is a function of row length only, so every count decomposes into
  * these four row shapes:
- *   N=4 → one row of 4 · N=5 → 3+2 · N=6 → 3+3 · N=7 → 4+3 · N=8 → 4+4
+ *   N=4 → 2+2 · N=5 → 3+2 · N=6 → 3+3 · N=7 → 4+3 · N=8 → 4+4
  *
  * 4-per-row outer rotation is capped at ±5° (was ±7°): a 190×332 card at 7°
  * pokes ~40rpx past its unrotated edge, pushing the row's rotated bounding
@@ -52,25 +52,30 @@ export const FAN_SAFE_INSET_RPX = 48
 export const FAN_ROTATIONS_BY_ROW_LENGTH: Record<number, readonly number[]> = {
   1: [0],
   2: [-4.5, 4.5],
-  3: [-6, 0, 6],
+  // 3-per-row capped at ±5° with the 245rpx wow-pass cards (was ±6° at
+  // 216–222rpx): at 6° the rotated bounding box measured ~747rpx — past the
+  // 750 − 8 viewport allowance. At 5° it is ~736rpx (viewport-edge
+  // invariant test locks this).
+  3: [-5, 0, 5],
   4: [-5, -2.5, 2.5, 5],
 }
 
 /** Card W×H (rpx) keyed by member count. Matches the locked geometry table.
  *
- * Round-3 restructure (2026-07-13): taller 332rpx cards so the info zone can
- * carry a strict 4-row grid (name / archetype / meta / pill) without squeeze.
- * Widths: 3-per-row counts (1–3, 5–6) get wider cards (216–222); 4-per-row
- * counts (4, 7–8) cap at 190 — the widest a 4-card row can be inside the
- * 686rpx fan content width with 28rpx overlap (4×190 − 3×28 = 676 ≤ 686).
+ * Wow-pass resize (2026-07-24): N≤6 cards widen to the 3-per-row ceiling —
+ * 245rpx is the widest a 3-card row can be inside the 686rpx fan content
+ * width with 28rpx overlap (3×245 − 2×28 = 679 ≤ 686). N=4 leaves the
+ * 4-per-row shape for [2,2] so its cards join the 245 class (+29% width).
+ * N=7–8 keep the legacy 190×332 4-per-row shape: a 3-per-row cap there
+ * would force three rows and blow the fixed-stage height budget.
  */
 export const FAN_CARD_SIZE_BY_COUNT: Record<number, { width: number; height: number }> = {
-  1: { width: 216, height: 332 },
-  2: { width: 216, height: 332 },
-  3: { width: 216, height: 332 },
-  4: { width: 190, height: 332 },
-  5: { width: 222, height: 332 },
-  6: { width: 222, height: 332 },
+  1: { width: 245, height: 332 },
+  2: { width: 245, height: 332 },
+  3: { width: 245, height: 332 },
+  4: { width: 245, height: 332 },
+  5: { width: 245, height: 332 },
+  6: { width: 245, height: 332 },
   7: { width: 190, height: 332 },
   8: { width: 190, height: 332 },
 }
@@ -95,12 +100,14 @@ export function clampFanCount(count: number): number {
 }
 
 /**
- * Row split. N≤4 stays a single row; N≥5 splits ceil/floor into two rows
- * (ceil on top). No horizontal scroll, no shrink-to-fit.
+ * Row split. N≤3 stays a single row; N=4 splits [2,2] so its cards join the
+ * 245rpx 3-per-row width class (2026-07-24 wow pass); N≥5 splits ceil/floor
+ * into two rows (ceil on top). No horizontal scroll, no shrink-to-fit.
  */
 export function computeFanRows(count: number): number[] {
   const clamped = clampFanCount(count)
-  if (clamped <= 4) return [clamped]
+  if (clamped <= 3) return [clamped]
+  if (clamped === 4) return [2, 2]
   return [Math.ceil(clamped / 2), Math.floor(clamped / 2)]
 }
 

@@ -66,9 +66,9 @@ import { logger } from "./lib/logger";
 import { moderateGeneratedContent, type ModerationCheck } from './lib/aiContentModeration';
 import { XIAOYUE_PERSONA } from './prompts';
 import { validateContentSafe } from './lib/contentSafety';
-import { AIServiceResult, fireAndForgetQualityGate } from './socialIcebreakerAICore';
+import { AIServiceResult, fireAndForgetQualityGate, isLLMTimeoutError, raceWithTimeout, RACE_LLM_TIMEOUT_MS } from './socialIcebreakerAICore';
 
-export { fireAndForgetQualityGate } from './socialIcebreakerAICore';
+export { fireAndForgetQualityGate, isLLMTimeoutError, raceWithTimeout, RACE_LLM_TIMEOUT_MS } from './socialIcebreakerAICore';
 export type { AIServiceResult } from './socialIcebreakerAICore';
 
 /** Re-export for downstream consumers that previously imported from this file. */
@@ -423,6 +423,11 @@ function isWarmupLlmEnabled(): boolean {
   return v.toLowerCase() === 'true';
 }
 
+/** Hard ceiling for one warmup-topics LLM call. The AbortController below is
+ *  best-effort (SDK/transport may swallow signals); the race in raceWithTimeout
+ *  is the deterministic bound, so a hung provider can never freeze /topics. */
+const WARMUP_TOPICS_LLM_TIMEOUT_MS = 6000;
+
 export async function generateWarmupTopics(params: {
   mood: AtmosphereMood;
   eventType: string;
@@ -471,9 +476,11 @@ export async function generateWarmupTopics(params: {
   const { client, model, provider } = selection;
   const t0 = Date.now();
 
-  // 3s timeout for warmup generation (LLM safety)
+  // 6s budget for warmup generation. AbortController is best-effort; the race
+  // wrapper is the hard bound — a hung provider must never freeze /topics
+  // (2026-07-26 出题卡死 incident: >75s generating, stall nudge misfired).
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3000);
+  const timeoutId = setTimeout(() => controller.abort(), WARMUP_TOPICS_LLM_TIMEOUT_MS);
 
   try {
     const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
@@ -482,12 +489,15 @@ export async function generateWarmupTopics(params: {
     }
     const prompt = buildWarmupTopicsPrompt({ ...params, sessionContext });
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.9,
-      max_tokens: params.vibe === 'chat' ? 1200 : 500,
-    }, { signal: controller.signal });
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.9,
+        max_tokens: params.vibe === 'chat' ? 1200 : 500,
+      }, { signal: controller.signal }),
+      WARMUP_TOPICS_LLM_TIMEOUT_MS,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
@@ -529,7 +539,7 @@ export async function generateWarmupTopics(params: {
     return attachAIGC({ data: getFallbackTopics(params.mood, params.vibe), meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
-    const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message?.includes('abort'));
+    const isTimeout = isLLMTimeoutError(error);
     logger.error(`[SocialIcebreakerAI] generateWarmupTopics error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error), isTimeout });
     const meta = buildFallbackAIMeta(isTimeout ? 'timeout' : 'llm_error', promptVersion, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateWarmupTopics', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
@@ -640,6 +650,13 @@ export async function generateMicroChallenges(params: {
   // 3. AI path (backward-compatible primary)
   const { client, model, provider } = getClientForFunction('generateMicroChallenges');
   const t0 = Date.now();
+
+  // 6s hard abort — this generator runs inline inside transitionPhase (host
+  // /advance, auto fuse, poll-driven processAutoAdvance), so an unbounded
+  // DeepSeek call freezes phase transitions and stalls every session poll.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000);
+
   try {
     const sessionContext = params.roster ? buildArchetypeContext(params.roster) : undefined;
     if (sessionContext?.mixText) {
@@ -647,12 +664,15 @@ export async function generateMicroChallenges(params: {
     }
     const prompt = buildMicroChallengesPrompt({ ...params, sessionContext });
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
-      max_tokens: 400,
-    });
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.8,
+        max_tokens: 400,
+      }, { signal: controller.signal }),
+      6000,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
@@ -699,11 +719,14 @@ export async function generateMicroChallenges(params: {
     return attachAIGC({ data: selectorResult, meta });
   } catch (error) {
     const latencyMs = Date.now() - t0;
-    logger.error(`[SocialIcebreakerAI] generateMicroChallenges error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error) });
-    const meta = buildFallbackAIMeta('llm_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
+    const isTimeout = isLLMTimeoutError(error);
+    logger.error(`[SocialIcebreakerAI] generateMicroChallenges error provider=${provider} latency=${latencyMs}ms:`, { error: error instanceof Error ? error.message : String(error), isTimeout });
+    const meta = buildFallbackAIMeta(isTimeout ? 'timeout' : 'llm_error', MICRO_CHALLENGES_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMicroChallenges', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     if (selectorResult.length === 0) throw error;
     return attachAIGC({ data: selectorResult, meta });
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -805,12 +828,15 @@ async function generateLieDetectiveV1Statements(params: {
   try {
     const prompt = buildLieDetectivePrompt(params);
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.9,
-      max_tokens: 300,
-    });
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.9,
+        max_tokens: 300,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
@@ -960,12 +986,15 @@ async function tryV2Prompt(
       difficulty,
     });
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.9,
-      max_tokens: 400,
-    });
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.9,
+        max_tokens: 400,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
@@ -1126,15 +1155,18 @@ export async function generateXiaoYueComment(params: {
   try {
     const prompt = buildXiaoYueCommentPrompt(params);
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: 'system', content: XIAOYUE_PERSONA },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.8,
-      max_tokens: 100,
-    });
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: XIAOYUE_PERSONA },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.8,
+        max_tokens: 100,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     const latencyMs = Date.now() - t0;
@@ -1242,12 +1274,17 @@ export async function generateRecapSummary(params: {
 
     const prompt = buildRecapSummaryPrompt({ ...params, sessionContext });
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
-      max_tokens: 300,
-    });
+    // 6s hard bound — this generator runs inside transitionPhase on the path
+    // into recap, so an unbounded call freezes the whole session.
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.8,
+        max_tokens: 300,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
@@ -1385,12 +1422,15 @@ export async function generateXiaoyueSessionPack(params: {
       participants: params.participants,
     });
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
-      max_tokens: 800,
-    });
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.9,
+        max_tokens: 400,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
@@ -1541,12 +1581,15 @@ export async function generateQuipBattlePrompts(params: {
     }
     const prompt = buildQuipBattlePrompt({ ...params, sessionContext });
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.9,
-      max_tokens: 400,
-    });
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.9,
+        max_tokens: 400,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
@@ -1648,12 +1691,15 @@ export async function generateUndercoverWordPair(params: {
       eventType: params.eventType,
       sessionContext,
     });
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
-      max_tokens: 200,
-    });
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.8,
+        max_tokens: 800,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
@@ -1743,12 +1789,15 @@ export async function generateGroupMirrorQuestions(params: {
       logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'contextInjector', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: false, fromCache: false, promptVersion: 'context-injector-v1', extra: { mixText: sessionContext.mixText, diversityScore: sessionContext.diversityScore } });
     }
     const prompt = buildGroupMirrorPrompt({ ...params, sessionContext });
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.85,
-      max_tokens: 600,
-    });
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.85,
+        max_tokens: 600,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {

@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { View, Text, ScrollView, Image, Canvas } from '@tarojs/components'
 import Taro, { useRouter, useDidShow } from '@tarojs/taro'
 import { useEffect, useCallback, useMemo, useRef, useState } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
@@ -11,10 +11,10 @@ import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigatio
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import LoadingScreen from '../../components/loading/LoadingScreen'
-import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import AIGCLabel from '../../components/ai-content/AIGCLabel'
 import TypewriterText from '../../components/ui/TypewriterText'
+import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { haptics } from '../../lib/utils/haptics'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import { BlindBoxVisual } from './BlindBoxVisual'
@@ -23,19 +23,30 @@ import DragRevealRibbon from './DragRevealRibbon'
 import XiaoyueHostImage from './XiaoyueHostImage'
 import SquadDeckStage from './SquadDeckStage'
 import DeckCollapsePill from './DeckCollapsePill'
+import SquadTableCard from './SquadTableCard'
+import {
+  drawSquadTableCardPoster,
+  SQUAD_TABLE_CARD_CANVAS_ID,
+  SQUAD_TABLE_CARD_POSTER_HEIGHT,
+  SQUAD_TABLE_CARD_POSTER_WIDTH,
+} from './squadTableCardPoster'
 import {
   SQUAD_DECK_POCKETED_ANNOUNCEMENT,
   SQUAD_DECK_POCKETED_HINT_TEXT,
   buildDeckPillStripModel,
   buildEventBriefDate,
   buildFocusedMemberBubbleText,
+  buildFocusedNarrativeModel,
   buildRevealChipLabel,
+  buildSelfCardBubbleText,
   buildSquadSoulBubbleText,
+  buildTableDiagnosis,
   getChemistryWord,
   getDeckPillChemistryClass,
   getEventTypeLabel,
   getEventTypePillTone,
   getMemberName,
+  getSelfSquadRoleLabel,
   getVibeLabel,
   resolveCardFocusInteraction,
   SQUAD_BURST_COMPLETION_BUBBLE_TEXT,
@@ -43,7 +54,7 @@ import {
   SQUAD_TEASE_BUBBLE_TEXT,
   SQUAD_TEASE_POCKETED_BUBBLE_TEXT,
 } from './squadUnboxingViewModels'
-import { scheduleFlipSettleNarration } from './squadFlipState'
+import { scheduleFlipSettleNarration, FLIP_NARRATION_DELAY_MS, FLIP_IN_FLIGHT_GUARD_MS } from './squadFlipState'
 import { getOracleCardCornerAsset } from '../../components/discover/oracleCardAssets'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import { resolveArchetype } from '@shared/personality/archetypeNames'
@@ -57,6 +68,15 @@ function getPageTitle(eventType?: string | null): string {
   if (eventType === 'dining') return '你的饭局桌友来了'
   return '你的桌友来了'
 }
+
+/** Flip hold-to-onLoad (2026-07-24 P1): max wait for the front art before
+ *  flipping anyway — a card never flips into a skeleton on slow networks. */
+const ART_FLIP_HOLD_TIMEOUT_MS = 1200
+/** Bounded re-arms for a held flip that keeps landing inside the in-flight
+ *  guard window (review CONCERN-1). */
+const HELD_FLIP_MAX_RETRIES = 3
+/** 最佳拍档 heartbeat haptics: the light pulse follows the medium beat. */
+const BEST_PARTNER_HEARTBEAT_GAP_MS = 90
 
 export default function SquadUnboxingPage() {
   const router = useRouter()
@@ -76,6 +96,8 @@ export default function SquadUnboxingPage() {
     viewerPairByMemberId,
     groupThemeHighlights,
     flowState,
+    boxExiting,
+    dealSettled,
     actionDockState,
     rootClassName,
     shouldReduceMotion,
@@ -289,6 +311,129 @@ export default function SquadUnboxingPage() {
    * `haptic: 'none'` is used by the long-press path — the card already fired
    * the medium long-press haptic (AC-12).
    */
+  // 最佳拍档 heartbeat timer (2026-07-24 P1): ref-tracked so unmount never
+  // fires a stale vibrate.
+  const bestPartnerHapticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Flip hold-to-onLoad (2026-07-24 P1): ids whose front art has decoded, and
+  // the one pending flip waiting on an image (replaced by any newer tap).
+  const artReadyIdsRef = useRef<Set<string>>(new Set())
+  const pendingFlipRef = useRef<{ userId: string; timer: ReturnType<typeof setTimeout> } | null>(null)
+
+  const clearPendingFlip = useCallback(() => {
+    if (pendingFlipRef.current) {
+      clearTimeout(pendingFlipRef.current.timer)
+      pendingFlipRef.current = null
+    }
+  }, [])
+
+  useEffect(() => () => {
+    clearPendingFlip()
+    if (bestPartnerHapticTimerRef.current) clearTimeout(bestPartnerHapticTimerRef.current)
+  }, [clearPendingFlip])
+
+  /**
+   * The flip + focus + narration beat for a face-down card (AC-02). Extracted
+   * from handleCardTap so the hold-to-onLoad gate can defer it: the gesture
+   * acknowledges instantly (haptic), the flip lands when the front art has
+   * decoded (or the 1200ms ceiling trips) — never into a skeleton.
+   */
+  const revealCardAtIndex = useCallback((index: number, haptic: 'light' | 'none' = 'light') => {
+    const member = members[index]
+    if (!member) return
+    const instant = shouldReduceMotion || isDegradation
+    const isBestPartner = member.userId === bestPartnerUserId
+
+    // First flip of a card is by definition unseen — animate the narration
+    // when it lands after flip-end (resolver semantics for later re-taps).
+    const current = focusedCardIndexRef.current
+    flipOne(member.userId, 'tap')
+    seenMemberNarrationsRef.current.add(member.userId)
+    animateFocusedNarrationRef.current = true
+    setAnimateFocusedNarration(true)
+    focusedCardIndexRef.current = index
+    setFocusedCardIndex(index)
+    if (!instant && haptic !== 'none') {
+      if (isBestPartner) {
+        // 最佳拍档 jackpot heartbeat (2026-07-24 P1): medium → 90ms → light
+        // replaces the plain tap haptic so the flip reads as the peak.
+        haptics('medium')
+        if (bestPartnerHapticTimerRef.current) clearTimeout(bestPartnerHapticTimerRef.current)
+        bestPartnerHapticTimerRef.current = setTimeout(() => {
+          bestPartnerHapticTimerRef.current = null
+          haptics('light')
+        }, BEST_PARTNER_HEARTBEAT_GAP_MS)
+      } else {
+        haptics('light')
+      }
+    }
+    trackCardFocus(index, current)
+    cancelNarrationTimer()
+    if (instant) {
+      setBubbleNarration({ kind: 'member', userId: member.userId })
+    } else {
+      // The slow (0.6×) jackpot flip gets a proportionally later narration.
+      const narrationDelay = isBestPartner
+        ? Math.round(FLIP_NARRATION_DELAY_MS * 1.75)
+        : FLIP_NARRATION_DELAY_MS
+      narrationCancelRef.current = scheduleFlipSettleNarration(
+        { setTimer: (cb, ms) => setTimeout(cb, ms), clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>) },
+        () => {
+          narrationCancelRef.current = null
+          setBubbleNarration({ kind: 'member', userId: member.userId })
+        },
+        narrationDelay,
+      )
+    }
+  }, [
+    members,
+    shouldReduceMotion,
+    isDegradation,
+    bestPartnerUserId,
+    flipOne,
+    trackCardFocus,
+    cancelNarrationTimer,
+  ])
+
+  /**
+   * Hold release with the in-flight guard (2026-07-24 review CONCERN-1):
+   * both release paths (onLoad + 1200ms ceiling) re-check the flip guard
+   * instead of bypassing it — a held flip landing mid-burst re-arms after
+   * the guard window (bounded retries) rather than stacking two flips. The
+   * closure captures userId (never index) so a roster refetch during the
+   * hold can never flip the wrong card.
+   */
+  const scheduleHeldFlip = useCallback((userId: string, retriesLeft: number) => {
+    pendingFlipRef.current = {
+      userId,
+      timer: setTimeout(() => {
+        pendingFlipRef.current = null
+        if (isFlipInFlight()) {
+          if (retriesLeft > 0) scheduleHeldFlip(userId, retriesLeft - 1)
+          return
+        }
+        const index = members.findIndex((member) => member.userId === userId)
+        if (index >= 0) revealCardAtIndex(index, 'none')
+      }, retriesLeft === HELD_FLIP_MAX_RETRIES
+        ? ART_FLIP_HOLD_TIMEOUT_MS
+        : FLIP_IN_FLIGHT_GUARD_MS),
+    }
+  }, [isFlipInFlight, members, revealCardAtIndex])
+
+  /** Front art decoded — release a flip that was held for this card. */
+  const handleCardArtLoad = useCallback((userId: string) => {
+    artReadyIdsRef.current.add(userId)
+    const pending = pendingFlipRef.current
+    if (!pending || pending.userId !== userId) return
+    clearTimeout(pending.timer)
+    pendingFlipRef.current = null
+    if (isFlipInFlight()) {
+      scheduleHeldFlip(userId, HELD_FLIP_MAX_RETRIES - 1)
+      return
+    }
+    const index = members.findIndex((member) => member.userId === userId)
+    if (index >= 0) revealCardAtIndex(index, 'none')
+  }, [members, revealCardAtIndex, isFlipInFlight, scheduleHeldFlip])
+
   const handleCardTap = useCallback((index: number, haptic: 'light' | 'none' = 'light') => {
     const member = members[index]
     if (!member) return
@@ -302,29 +447,22 @@ export default function SquadUnboxingPage() {
       return
     }
 
-    // First flip of a card is by definition unseen — animate the narration
-    // when it lands after flip-end (resolver semantics for later re-taps).
-    const current = focusedCardIndexRef.current
-    flipOne(member.userId, 'tap')
-    seenMemberNarrationsRef.current.add(member.userId)
-    animateFocusedNarrationRef.current = true
-    setAnimateFocusedNarration(true)
-    focusedCardIndexRef.current = index
-    setFocusedCardIndex(index)
-    if (!instant && haptic !== 'none') haptics('light')
-    trackCardFocus(index, current)
-    cancelNarrationTimer()
-    if (instant) {
-      setBubbleNarration({ kind: 'member', userId: member.userId })
-    } else {
-      narrationCancelRef.current = scheduleFlipSettleNarration(
-        { setTimer: (cb, ms) => setTimeout(cb, ms), clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>) },
-        () => {
-          narrationCancelRef.current = null
-          setBubbleNarration({ kind: 'member', userId: member.userId })
-        },
-      )
+    // Hold-to-onLoad gate (2026-07-24 P1): if the front art has not decoded
+    // yet, acknowledge the tap with a haptic and hold the flip until onLoad
+    // (or the 1200ms ceiling) — a card never flips into a skeleton.
+    if (!instant && !artReadyIdsRef.current.has(member.userId)) {
+      const archetypeId = member.archetype ? resolveArchetype(member.archetype)?.id ?? member.archetype : null
+      const artExpected = Boolean(member.avatarUrl) || Boolean(archetypeId && ARCHETYPE_ASSET_MAP[archetypeId]?.webp)
+      if (artExpected) {
+        if (pendingFlipRef.current?.userId === member.userId) return
+        clearPendingFlip()
+        if (haptic !== 'none') haptics('light')
+        scheduleHeldFlip(member.userId, HELD_FLIP_MAX_RETRIES)
+        return
+      }
     }
+
+    revealCardAtIndex(index, haptic)
   }, [
     members,
     isFlipInFlight,
@@ -332,10 +470,10 @@ export default function SquadUnboxingPage() {
     isDegradation,
     isInteractiveSession,
     flippedIds,
-    flipOne,
-    trackCardFocus,
-    cancelNarrationTimer,
     handleCardFocus,
+    clearPendingFlip,
+    revealCardAtIndex,
+    scheduleHeldFlip,
   ])
 
   const handleCardLongPress = useCallback((index: number) => {
@@ -363,6 +501,7 @@ export default function SquadUnboxingPage() {
     focusedCardIndexRef.current = -1
     setFocusedCardIndex(-1)
     cancelNarrationTimer()
+    clearPendingFlip()
     setBubbleNarration(null)
 
     const { totalMs } = flipAll()
@@ -386,12 +525,76 @@ export default function SquadUnboxingPage() {
     groupId,
     flipAll,
     cancelNarrationTimer,
+    clearPendingFlip,
   ])
 
   const focusedMember = members[focusedCardIndex] ?? null
   const focusedViewerPair = focusedMember
     ? (viewerPairByMemberId.get(focusedMember.userId) ?? null)
     : null
+
+  // 结构化同频分析卡 (2026-07-24 P1): when the dock narrates a focused
+  // tablemate (never the 我 card) and the pair data is rich enough, the
+  // bubble upgrades from flat prose to verdict → evidence chips → opener.
+  const focusedNarrativeModel = bubbleNarration?.kind === 'member'
+    && focusedMember
+    && bubbleNarration.userId === focusedMember.userId
+    && focusedMember.userId !== currentUserId
+    ? buildFocusedNarrativeModel(focusedViewerPair, {
+      isBestPartner: focusedMember.userId === bestPartnerUserId,
+    })
+    : null
+
+  // 桌型诊断 (2026-07-24 P0): deterministic role mix — no LLM.
+  const tableDiagnosis = useMemo(() => buildTableDiagnosis(members), [members])
+
+  // Narrative cascade (2026-07-24 audit fix): evidence chips + opener only
+  // enter AFTER the verdict typewriter completes — fixed CSS delays raced
+  // the typing. Non-animated paths (RM/degradation/revisit) show instantly.
+  const [verdictComplete, setVerdictComplete] = useState(false)
+  const narrationUserId = bubbleNarration?.kind === 'member' ? bubbleNarration.userId : null
+  useEffect(() => {
+    setVerdictComplete(false)
+  }, [narrationUserId])
+  const narrativeAnimating = !shouldReduceMotion && !isDegradation && animateFocusedNarration
+  const showNarrativeDetails = !narrativeAnimating || verdictComplete
+
+  // Lit CTA (2026-07-24 P0): every card face-up → the confirm button earns
+  // its glow. Tap stays enabled either way (conversion is never gated).
+  const allCardsUp = !isInteractiveSession || unflippedCount === 0
+
+  // Peak-end settle breath (2026-07-24): the moment the LAST card lands, the
+  // whole stage exhales once (1.0→1.015→1.0) with a success haptic — the
+  // session's final 400ms decides what the user remembers. Motion tiers
+  // only; never on re-entry (isInteractiveSession false).
+  const [settleBreath, setSettleBreath] = useState(false)
+  const prevUnflippedRef = useRef(unflippedCount)
+  const breathTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  useEffect(() => () => {
+    breathTimersRef.current.forEach(clearTimeout)
+    breathTimersRef.current = []
+  }, [])
+  useEffect(() => {
+    const prev = prevUnflippedRef.current
+    prevUnflippedRef.current = unflippedCount
+    if (!isInteractiveSession) return undefined
+    if (prev <= 0 || unflippedCount !== 0) return undefined
+    if (shouldReduceMotion || isDegradation) return undefined
+    // Let the final flip land before the breath (flip 340ms + settle beat).
+    breathTimersRef.current.push(setTimeout(() => {
+      haptics('success')
+      setSettleBreath(true)
+      breathTimersRef.current.push(setTimeout(() => setSettleBreath(false), 480))
+    }, 420))
+    return undefined
+  }, [unflippedCount, isInteractiveSession, shouldReduceMotion, isDegradation])
+
+  // 这桌的桌卡 (2026-07-24 P2): the collectible + poster-save flow.
+  const [tableCardSaving, setTableCardSaving] = useState(false)
+  // Canvas retention (2026-07-24 perf audit fix): the hidden poster canvas
+  // holds a ~13MB backing store; after a successful save it unmounts. A
+  // repeat save remounts and waits a beat before drawing.
+  const [posterSaved, setPosterSaved] = useState(false)
 
   // Pill view models (AC-03): strip + chemistry-tinted ring. Memoized on the
   // flip set so a freshly revealed card swaps its back-chip for a mini.
@@ -422,16 +625,18 @@ export default function SquadUnboxingPage() {
 
   // 今晚这桌 chapter is always expanded (2026-07-17): fire the impression
   // analytics once per group on first reveal, mirroring the old first-expand
-  // semantics from the removed collapse toggle.
+  // semantics from the removed collapse toggle. Post-review: gated on
+  // dealSettled — the chapter only becomes VISIBLE after the deal, so the
+  // impression must wait for the same beat.
   useEffect(() => {
-    if (flowState !== 'revealed') return
+    if (flowState !== 'revealed' || !dealSettled) return
     if (tonightsTableViewTrackedRef.current) return
     tonightsTableViewTrackedRef.current = true
     squadUnboxingAnalytics.track('squad_unboxing_tonights_table_view', {
       groupId,
       screen: 'squad-unboxing',
     })
-  }, [flowState, groupId])
+  }, [flowState, dealSettled, groupId])
 
   // Bubble voice: burst-completion line > focused-member narration (only when
   // the narration matches the currently focused card — a pending flip keeps
@@ -444,7 +649,7 @@ export default function SquadUnboxingPage() {
     ? SQUAD_BURST_COMPLETION_BUBBLE_TEXT
     : bubbleNarration?.kind === 'member' && focusedMember && bubbleNarration.userId === focusedMember.userId
       ? focusedMember.userId === currentUserId
-        ? SQUAD_SELF_CARD_BUBBLE_TEXT
+        ? buildSelfCardBubbleText(getSelfSquadRoleLabel(focusedMember.archetype))
         : buildFocusedMemberBubbleText(
           getMemberName(focusedMember),
           normalizeMatchingCopy(focusedViewerPair?.explanation),
@@ -465,6 +670,70 @@ export default function SquadUnboxingPage() {
   // Event-brief card: structured date block + shared OracleCard corner vignette.
   const briefDate = buildEventBriefDate(group?.finalDateTime ?? pool?.dateTime)
   const briefVignetteSrc = getOracleCardCornerAsset(pool?.eventType ?? undefined)
+  // 桌卡 derivatives (2026-07-24 P2): date line reuses the brief breakdown;
+  // place line mirrors the 地点 row.
+  const tableCardDateLine = briefDate
+    ? `${briefDate.month}${briefDate.day}日·${briefDate.weekday}`
+    : ''
+  const tableCardPlaceLine = group?.venueName || [pool?.city, pool?.district].filter(Boolean).join(' · ') || ''
+  const tableCardChemistryWord = getChemistryWord(groupAnalysis?.overallChemistry)
+
+  const handleSaveTableCard = useCallback(async () => {
+    if (tableCardSaving) return
+    if (isDegradation) {
+      Taro.showToast({ title: '当前设备不支持生成桌卡', icon: 'none', duration: 1800 })
+      return
+    }
+    setTableCardSaving(true)
+    haptics('medium')
+    squadUnboxingAnalytics.track('squad_unboxing_table_card_tap', {
+      groupId,
+      screen: 'squad-unboxing',
+    })
+    try {
+      if (posterSaved) {
+        // Canvas was retired after the last save — remount and let it attach.
+        setPosterSaved(false)
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      }
+      const filePath = await drawSquadTableCardPoster({
+        members,
+        currentUserId,
+        chemistryWord: tableCardChemistryWord,
+        dateLine: tableCardDateLine,
+        placeLine: tableCardPlaceLine,
+        groupNumber: group?.groupNumber ?? null,
+      })
+      await Taro.saveImageToPhotosAlbum({ filePath })
+      setPosterSaved(true)
+      haptics('success')
+      squadUnboxingAnalytics.track('squad_unboxing_table_card_saved', {
+        groupId,
+        screen: 'squad-unboxing',
+      })
+      Taro.showToast({ title: '桌卡已存进相册', icon: 'success', duration: 1800 })
+    } catch (error) {
+      squadUnboxingAnalytics.track('squad_unboxing_table_card_save_failed', {
+        groupId,
+        screen: 'squad-unboxing',
+        message: error instanceof Error ? error.message : String(error),
+      })
+      Taro.showToast({ title: '保存没成功，打开相册权限后再试试', icon: 'none', duration: 2000 })
+    } finally {
+      setTableCardSaving(false)
+    }
+  }, [
+    tableCardSaving,
+    isDegradation,
+    posterSaved,
+    groupId,
+    members,
+    currentUserId,
+    tableCardChemistryWord,
+    tableCardDateLine,
+    tableCardPlaceLine,
+    group?.groupNumber,
+  ])
   // Warm the fan's archetype art during the reveal so cards never paint blank
   // frames on 4G (skeleton covers first paint; this shrinks the decode gap).
   useEffect(() => {
@@ -549,14 +818,23 @@ export default function SquadUnboxingPage() {
   // chapter renders directly in the scroll flow below the bubble.
   const tonightsPanel = (
     <View
-      className='squad-unboxing__tonights-panel squad-unboxing__tonights-panel--open'
+      className={[
+        'squad-unboxing__tonights-panel',
+        // Post-review fix: --open follows dealSettled (people first,
+        // logistics second) — the chapter never renders during the deal.
+        dealSettled ? 'squad-unboxing__tonights-panel--open' : '',
+      ].filter(Boolean).join(' ')}
       role='region'
       aria-label='今晚这桌详情'
     >
       <View className={[
         'squad-unboxing__chapter',
         'squad-unboxing__chapter--meta',
-        headerReady ? 'squad-unboxing__chapter--ready' : '',
+        // Chemistry-tint foil top border (2026-07-24 P2): the event card
+        // inherits the table's chemistry colour so "人" flows into "事".
+        `squad-unboxing__chapter--chem-${groupAnalysis?.overallChemistry ?? 'fallback'}`,
+        allCardsUp ? 'squad-unboxing__chapter--late' : '',
+        headerReady && dealSettled ? 'squad-unboxing__chapter--ready' : '',
       ]
         .filter(Boolean)
         .join(' ')}>
@@ -663,34 +941,37 @@ export default function SquadUnboxingPage() {
     </View>
   );
 
+  // Batch A (2026-07-24): mascot avatar + the puzzle copy card removed —
+  // the gift box is the sole focal point; one tease line in present tense
+  // (gift-box metaphor only — 拼图 language belongs to matching-status).
+  // Eyebrow carries the spoiler-free count tease (「N 位同桌」).
+  const memberCountTease = members.length > 0 ? `${members.length} 位同桌` : ''
+  const openBoxAriaLabel = memberCountTease
+    ? `轻点打开礼盒，查看今晚的 ${memberCountTease}`
+    : '轻点打开礼盒，查看今晚的同桌'
+  const readyEyebrow = [
+    group.groupNumber ? `第 ${group.groupNumber} 组` : '',
+    memberCountTease,
+  ].filter(Boolean).join(' · ')
+
   const legacyHeader = (
     <View className={['squad-unboxing__header', headerReady ? 'squad-unboxing__header--ready' : ''].filter(Boolean).join(' ')}>
-      <Image
-        className='squad-unboxing__header-mascot'
-        mode='aspectFit'
-        src={getXiaoyueExpressionAsset('homeWelcome')}
-        ariaLabel='欢迎'
-      />
+      {readyEyebrow ? (
+        <Text className='squad-unboxing__header-eyebrow'>{readyEyebrow}</Text>
+      ) : null}
       <Text className='squad-unboxing__header-title'>
         {getPageTitle(pool.eventType)}
       </Text>
       <Text className='squad-unboxing__header-tagline'>
-        {matchExplanationCopy || `${DEFAULT_MASCOT_DISPLAY_NAME}已经把拼图聚齐，准备让你看看今晚会和谁同桌。`}
+        {`${DEFAULT_MASCOT_DISPLAY_NAME}把今晚的同桌装进盒子了，就等你亲手拆开。`}
       </Text>
-      <View className='squad-unboxing__header-meta'>
-        {group.groupNumber ? (
-          <Text className='squad-unboxing__header-group-num'>第 {group.groupNumber} 组</Text>
-        ) : null}
-        {/* Chemistry signal renders once in revealed state — the chapter badge
-            below ("今晚这桌") owns it; the header pill was removed as a dup. */}
-      </View>
     </View>
   )
 
   const composedReadyHeader = (
     <View className={['squad-unboxing__hero-copy', headerReady ? 'squad-unboxing__hero-copy--ready' : ''].filter(Boolean).join(' ')}>
-      {group.groupNumber ? (
-        <Text className='squad-unboxing__hero-eyebrow'>第 {group.groupNumber} 组</Text>
+      {readyEyebrow ? (
+        <Text className='squad-unboxing__hero-eyebrow'>{readyEyebrow}</Text>
       ) : null}
       <Text className='squad-unboxing__hero-title'>盒子里的，是今晚的同桌</Text>
       <Text className='squad-unboxing__hero-supporting'>
@@ -701,22 +982,21 @@ export default function SquadUnboxingPage() {
         onClick={() => handleOpenBox('box')}
         hoverClass='squad-unboxing__hero-gesture--pressed'
         role='button'
-        aria-label='轻点打开礼盒，查看今晚的同桌'
+        aria-label={openBoxAriaLabel}
       >
         <Text className='squad-unboxing__hero-gesture-text'>轻点打开</Text>
       </View>
     </View>
   )
 
-  // The mascot + tagline header is retired in the revealed state — the slim
-  // fixed title bar (below) owns it there; Xiaoyue lives in the 团魂 bubble.
-  const header = flowState === 'revealed'
-    ? null
-    : composedHeroEnabled && flowState === 'ready'
+  // The header is a READY-state element only (Batch A): during shaking the
+  // stage owns the screen purely visually — no text competes with the lid
+  // animation. In revealed state the slim title bar owns it instead.
+  const header = flowState === 'ready'
+    ? composedHeroEnabled
       ? composedReadyHeader
-      : composedHeroEnabled && flowState === 'shaking'
-        ? null
-        : legacyHeader
+      : legacyHeader
+    : null
 
   return (
     <View className={pageClassName}>
@@ -748,8 +1028,10 @@ export default function SquadUnboxingPage() {
             isComposedHeroActive ? 'squad-unboxing__scroll-content--composed' : '',
           ].filter(Boolean).join(' ')}>
 
+        {header}
+
         {flowState === 'ready' && !composedHeroEnabled ? (
-          <View className='squad-unboxing__ribbon-wrap'>
+          <View className={['squad-unboxing__ribbon-wrap', headerReady ? 'squad-unboxing__ribbon-wrap--ready' : ''].filter(Boolean).join(' ')}>
             <DragRevealRibbon
               shouldReduceMotion={shouldReduceMotion}
               isDegradation={isDegradation}
@@ -757,37 +1039,6 @@ export default function SquadUnboxingPage() {
               onReveal={() => handleOpenBox('ribbon')}
             />
           </View>
-        ) : null}
-
-        {header}
-
-
-        {flowState === 'ready' && !composedHeroEnabled ? (
-          <Card className='squad-unboxing__blind-box-card squad-unboxing__blind-box-card--copy-only'>
-            <Text className='squad-unboxing__blind-box-title'>拼图已经聚齐</Text>
-            <Text className='squad-unboxing__blind-box-copy'>
-              上一页的每一块拼图，都会在这里变成一个真实的队友。轻点打开，看看是谁和你坐在同一桌。
-            </Text>
-            {group.theme || group.themeEmoji ? (
-              <View className='squad-unboxing__blind-box-theme-pill'>
-                {group.themeEmoji ? (
-                  <JoyJoinIcon emoji={group.themeEmoji} size={28} className='squad-unboxing__blind-box-theme-icon' />
-                ) : null}
-                <Text className='squad-unboxing__blind-box-theme-text'>
-                  {group.theme || '今晚成桌'}
-                </Text>
-              </View>
-            ) : null}
-          </Card>
-        ) : null}
-
-        {flowState === 'shaking' ? (
-          <Card className='squad-unboxing__blind-box-card squad-unboxing__blind-box-card--copy-only squad-unboxing__blind-box-card--shaking'>
-            <Text className='squad-unboxing__blind-box-title'>盒子正在打开…</Text>
-            <Text className='squad-unboxing__blind-box-copy'>
-              {`${DEFAULT_MASCOT_DISPLAY_NAME}正在把盒盖掀开，把今晚最值得期待的那一页翻给你看。`}
-            </Text>
-          </Card>
         ) : null}
 
         {flowState === 'revealed' ? (
@@ -801,42 +1052,134 @@ export default function SquadUnboxingPage() {
               <View
                 className={[
                   'squad-unboxing__analysis-bubble-inner',
-                  headerReady ? 'squad-unboxing__analysis-bubble-inner--ready' : '',
+                  // Post-review fix: the bubble holds its entrance until the
+                  // deal settles — no empty white slab during the handoff.
+                  headerReady && dealSettled ? 'squad-unboxing__analysis-bubble-inner--ready' : '',
                 ].filter(Boolean).join(' ')}
               >
                 <Image
-                  className={['squad-unboxing__analysis-bubble-mascot', headerReady ? 'squad-unboxing__analysis-bubble-mascot--ready' : ''].filter(Boolean).join(' ')}
+                  className={['squad-unboxing__analysis-bubble-mascot', headerReady && dealSettled ? 'squad-unboxing__analysis-bubble-mascot--ready' : ''].filter(Boolean).join(' ')}
                   mode='aspectFit'
                   src={getXiaoyueExpressionAsset('matchSuccess')}
                   aria-hidden='true'
                 />
-                <View className='squad-unboxing__analysis-bubble-bubble'>
-                  <View aria-hidden='true'>
-                    <TypewriterText
-                      className='squad-unboxing__analysis-bubble-text'
-                      text={bubbleText}
-                      speed={45}
-                      delay={180}
-                      maxDuration={bubbleNarration?.kind === 'member' ? undefined : 3000}
-                      enabled={!shouldReduceMotion && !isDegradation && (bubbleNarration?.kind !== 'member' || animateFocusedNarration)}
-                      showCursor={false}
-                      onComplete={() => {
-                        squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
-                          groupId,
-                          screen: 'squad-unboxing',
-                        })
-                      }}
-                    />
-                  </View>
-                  <Text className='squad-unboxing__sr-only'>{bubbleText}</Text>
+                {/* key remounts the typewriters when the deal settles so the
+                    first keystroke lands with the bubble's entrance, never
+                    mid-type while hidden. */}
+                <View className='squad-unboxing__analysis-bubble-bubble' key={dealSettled ? 'settled' : 'pending'}>
+                  {focusedNarrativeModel ? (
+                    <>
+                      <View aria-hidden='true'>
+                        <TypewriterText
+                          className='squad-unboxing__narrative-verdict'
+                          text={focusedNarrativeModel.verdict}
+                          speed={45}
+                          delay={180}
+                          enabled={!shouldReduceMotion && !isDegradation && animateFocusedNarration}
+                          showCursor={false}
+                          onComplete={() => {
+                            setVerdictComplete(true)
+                            squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
+                              groupId,
+                              screen: 'squad-unboxing',
+                            })
+                          }}
+                        />
+                        {showNarrativeDetails && focusedNarrativeModel.evidence.length > 0 ? (
+                          <View className='squad-unboxing__narrative-evidence'>
+                            {focusedNarrativeModel.evidence.map((point) => (
+                              <ConnectionPointPill key={point} text={point} rarity='common' />
+                            ))}
+                          </View>
+                        ) : null}
+                        {showNarrativeDetails && focusedNarrativeModel.opener ? (
+                          <Text className='squad-unboxing__narrative-opener'>
+                            {`「${focusedNarrativeModel.opener}」`}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Text className='squad-unboxing__sr-only'>
+                        {[
+                          focusedNarrativeModel.verdict,
+                          ...focusedNarrativeModel.evidence,
+                          focusedNarrativeModel.opener,
+                        ].filter(Boolean).join('。')}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <View aria-hidden='true'>
+                        <TypewriterText
+                          className='squad-unboxing__analysis-bubble-text'
+                          text={bubbleText}
+                          speed={45}
+                          delay={180}
+                          maxDuration={bubbleNarration?.kind === 'member' ? undefined : 3000}
+                          enabled={!shouldReduceMotion && !isDegradation && (bubbleNarration?.kind !== 'member' || animateFocusedNarration)}
+                          showCursor={false}
+                          onComplete={() => {
+                            squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
+                              groupId,
+                              screen: 'squad-unboxing',
+                            })
+                          }}
+                        />
+                      </View>
+                      <Text className='squad-unboxing__sr-only'>{bubbleText}</Text>
+                    </>
+                  )}
                   <AIGCLabel
                     meta={groupAnalysis?.meta?.aigc}
                     className='squad-unboxing__analysis-bubble-aigc'
                     reduceMotion={shouldReduceMotion}
                   />
+                  {/* 桌型诊断 (2026-07-24 P0/P2): group-level role mix, shown
+                      only under the GROUP voice (tease/burst/soul) — hidden
+                      while the bubble narrates a single member. Lives inside
+                      the bubble footer to keep the vertical budget honest. */}
+                  {tableDiagnosis.length > 0 && bubbleNarration?.kind !== 'member' ? (
+                    <View
+                      className='squad-unboxing__diagnosis'
+                      aria-label={`这桌配置：${tableDiagnosis.map((segment) => `${segment.count}个${segment.label}`).join('，')}`}
+                    >
+                      <Text className='squad-unboxing__diagnosis-label'>这桌配置</Text>
+                      <View className='squad-unboxing__diagnosis-chips'>
+                        {tableDiagnosis.map((segment) => (
+                          <View
+                            key={segment.key}
+                            className={`squad-unboxing__diagnosis-chip squad-unboxing__diagnosis-chip--${segment.key}`}
+                          >
+                            <Text className='squad-unboxing__diagnosis-chip-text'>
+                              {`${segment.count}个${segment.label}`}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
                 </View>
               </View>
             </View>
+            {/* 人→关系→场合 transition (2026-07-24 P2): once every card is
+                face-up, one quiet line hands the story from the people to
+                the occasion before the event card slides in. */}
+            {allCardsUp ? (
+              <View className='squad-unboxing__table-transition' aria-hidden='true'>
+                <Text className='squad-unboxing__table-transition-text'>都认识了，就差一张桌子</Text>
+              </View>
+            ) : null}
+            {/* 这桌的桌卡 (2026-07-24 P2): the collectible artifact + poster
+                save. Persists on re-entry — the return hook. */}
+            {allCardsUp && members.length > 0 ? (
+              <SquadTableCard
+                members={members}
+                currentUserId={currentUserId}
+                chemistryWord={tableCardChemistryWord}
+                dateLine={tableCardDateLine}
+                saving={tableCardSaving}
+                onSave={handleSaveTableCard}
+              />
+            ) : null}
             {tonightsPanel}
           </>
         ) : null}
@@ -850,6 +1193,7 @@ export default function SquadUnboxingPage() {
           `squad-unboxing__stage--${flowState}`,
           isComposedHeroActive ? 'squad-unboxing__stage--composed' : '',
           isDegradation ? 'squad-unboxing__stage--degradation' : '',
+          settleBreath ? 'squad-unboxing__stage--breath' : '',
           // Pocketed phase hides the whole fixed stage (cards already sit at
           // the vanish point); visibility keeps React state + flip progress
           // alive so the re-fan restores exactly what the user had (AC-04).
@@ -870,7 +1214,7 @@ export default function SquadUnboxingPage() {
             onClick={() => handleOpenBox('box')}
             hoverClass='squad-unboxing__stage-tap-layer--pressed'
             role='button'
-            aria-label='轻点打开礼盒，查看今晚的同桌'
+            aria-label={openBoxAriaLabel}
           />
         ) : null}
         {flowState !== 'revealed' ? (
@@ -883,7 +1227,7 @@ export default function SquadUnboxingPage() {
             onClick={flowState === 'ready' && !isStageTap ? () => handleOpenBox('box') : undefined}
             hoverClass={flowState === 'ready' && !isStageTap ? 'squad-unboxing__stage-body--pressed' : ''}
             role={flowState === 'ready' && !isStageTap ? 'button' : undefined}
-            aria-label={flowState === 'ready' && !isStageTap ? '轻点打开礼盒，查看今晚的同桌' : undefined}
+            aria-label={flowState === 'ready' && !isStageTap ? openBoxAriaLabel : undefined}
           >
             <BlindBoxVisual
               state={flowState === 'shaking' ? 'opening' : 'ready'}
@@ -912,6 +1256,7 @@ export default function SquadUnboxingPage() {
             unfoldDelayById={unfoldDelayById}
             onFoldSettled={notifyFoldSettled}
             onUnfoldSettled={notifyUnfoldSettled}
+            onArtLoad={handleCardArtLoad}
           />
         ) : null}
         {flowState !== 'revealed' ? (
@@ -922,6 +1267,27 @@ export default function SquadUnboxingPage() {
           </View>
         ) : null}
       </View>
+
+      {/* Batch B handoff overlay: the opened box rises + fades for ~240ms
+          above the revealed stage so the dealt fan reads as "cards coming
+          OUT of the box". Never mounted on reduce-motion / degradation
+          (the controller gates boxExiting), so no RM CSS is needed. */}
+      {boxExiting ? (
+        <View
+          className={[
+            'squad-unboxing__box-exit',
+            // Composed hero uses the taller stage clamp — the overlay must
+            // match or the box jumps at handoff (review CONCERN-1).
+            isComposedHeroActive ? 'squad-unboxing__box-exit--composed' : '',
+          ].filter(Boolean).join(' ')}
+          aria-hidden='true'
+        >
+          <BlindBoxVisual state='open' />
+          <View className='squad-unboxing__stage-lid'>
+            <BlindBoxLid state='open' />
+          </View>
+        </View>
+      ) : null}
 
       {/* Screen-reader announcements live at the PAGE ROOT (moved out of the
           stage 2026-07-15): the stage is visibility:hidden while pocketed,
@@ -972,7 +1338,7 @@ export default function SquadUnboxingPage() {
             .filter(Boolean)
             .join(' ')}
         >
-          {isInteractiveSession && unflippedCount > 0 && deckPhase === 'fan' ? (
+          {isInteractiveSession && unflippedCount > 0 && deckPhase === 'fan' && dealSettled ? (
             <View
               className='squad-unboxing__reveal-chip'
               hoverClass='squad-unboxing__reveal-chip--pressed'
@@ -988,13 +1354,24 @@ export default function SquadUnboxingPage() {
 
           <View className='squad-unboxing__action-zone'>
             <Button
-              className='squad-unboxing__confirm-btn'
+              className={[
+                'squad-unboxing__confirm-btn',
+                allCardsUp && !showSuccessOverlay ? 'squad-unboxing__confirm-btn--lit' : '',
+              ].filter(Boolean).join(' ')}
               onClick={handleConfirmAttendance}
               disabled={isSubmitting || confirmAttendanceMutation.isPending || showSuccessOverlay}
               loading={isSubmitting || confirmAttendanceMutation.isPending}
             >
-              {showSuccessOverlay ? '座位已锁定' : isSubmitting ? '确认中…' : '确认出席'}
+              {showSuccessOverlay ? '座位已锁定' : isSubmitting ? '确认中…' : allCardsUp ? '确认出席 · 锁定座位' : '确认出席'}
             </Button>
+            {/* Return thread (2026-07-24 full-marks, user-sat angle 5): one
+                quiet line seeding the post-event loop — the screen otherwise
+                ends at the CTA with no pull back. */}
+            {allCardsUp ? (
+              <Text className='squad-unboxing__return-thread'>
+                活动结束后，回来看看这桌的故事
+              </Text>
+            ) : null}
 
           </View>
         </View>
@@ -1013,6 +1390,23 @@ export default function SquadUnboxingPage() {
             <Text className='squad-unboxing__success-subtitle'>解锁新羁绊 · 准备见面吧</Text>
           </View>
         </View>
+      ) : null}
+
+      {/* Hidden poster canvas (2026-07-24 P2): mounted only when the 桌卡 is
+          available so low-end devices never hold the ~13MB bitmap (perf
+          audit fix: degradation tier is excluded from the gate). */}
+      {allCardsUp && members.length > 0 && !isDegradation && !posterSaved ? (
+        <Canvas
+          canvasId={SQUAD_TABLE_CARD_CANVAS_ID}
+          style={{
+            width: `${SQUAD_TABLE_CARD_POSTER_WIDTH}px`,
+            height: `${SQUAD_TABLE_CARD_POSTER_HEIGHT}px`,
+            position: 'fixed',
+            left: '-9999px',
+            top: 0,
+          }}
+          aria-hidden='true'
+        />
       ) : null}
     </View>
   )

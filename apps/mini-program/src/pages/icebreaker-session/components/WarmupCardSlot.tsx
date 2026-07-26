@@ -41,6 +41,8 @@ interface WarmupCardSlotProps {
   isFlipped: boolean
   reduceMotion: boolean
   isDeepPromptExpanded: boolean
+  /** Host sees the 重试 action on the error card; players see a waiting line. */
+  isHost?: boolean
   onGenerateTopics: (mood: AtmosphereMood) => void
   onRetry: () => void
   onToggleDeepPrompt: () => void
@@ -174,6 +176,7 @@ export function WarmupCardSlot({
   isFlipped,
   reduceMotion,
   isDeepPromptExpanded,
+  isHost = false,
   onGenerateTopics,
   onRetry,
   onToggleDeepPrompt,
@@ -437,18 +440,27 @@ export function WarmupCardSlot({
       case 'error':
         return (
           <View
-            className='warmup-card-slot__content warmup-card-slot__content--centered'
+            className='warmup-card-slot__content warmup-card-slot__content--centered warmup-card-slot__content--error'
             role='alert'
             aria-live='polite'
           >
-            <Text className='warmup-card-slot__error-text'>出题失败了，再试一次吧</Text>
-            <Button
-              variant='secondary'
-              className='warmup-card-slot__retry-btn'
-              onClick={handleRetry}
-            >
-              重试
-            </Button>
+            <Image
+              className='warmup-card-slot__empty-mascot'
+              src={getXiaoyueExpressionAsset(isHost ? 'actionFailure' : 'coachGuide')}
+              mode='aspectFit'
+            />
+            <Text className='warmup-card-slot__error-text'>
+              {isHost ? '出题失败了，再试一次吧' : '出题遇到小状况，主持人正在重试～'}
+            </Text>
+            {isHost && (
+              <Button
+                variant='primary'
+                className='warmup-card-slot__retry-btn'
+                onClick={handleRetry}
+              >
+                重试
+              </Button>
+            )}
           </View>
         )
       case 'topic_card':
@@ -627,13 +639,6 @@ export function WarmupCardSlot({
         </View>
       ) : (
         <View className='warmup-card-slot__flat-card'>{backFace}</View>
-      )}
-      {isTopicCard && rimCollapsed && (
-        <View className='warmup-card-slot__ember-chip'>
-          <Text className='warmup-card-slot__ember-chip-text'>
-            {emberSync.readyCount}/{emberSync.totalCount} 已准备
-          </Text>
-        </View>
       )}
     </View>
   )

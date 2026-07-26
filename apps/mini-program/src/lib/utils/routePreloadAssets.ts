@@ -4,6 +4,9 @@ import {
   BLIND_BOX_INTERIOR_ASSET,
   BLIND_BOX_LID_ASSET,
 } from '../mascot/blindBoxAssets'
+import { MILESTONE_BADGES } from '../milestoneBadges'
+import { getXiaoyueExpressionAsset } from '../mascot/xiaoyueExpressions'
+import { getIdentityStageLayerUrl, IDENTITY_STAGE_LAYER_IDS } from '../profile/identityStageAssets'
 import { preloadImagesWithDiagnostics } from './imagePreload'
 import { cacheAssets } from './persistentAssetCache'
 import { logInfo } from './logger'
@@ -44,10 +47,58 @@ export const ARCHETYPE_GLYPH_CDN_ASSETS: string[] = [
 
 // ─── Per-route asset lists ───
 
+const ORACLE_CARD_CORNER_PRELOADS: string[] = [
+  // OracleCard / FootprintOracleCard event-type corner vignettes — rendered
+  // above the fold on both Discover pool cards and Events footprint cards.
+  cdnAsset('/assets/lovart/oraclecard-corner-dining-20260623-v1.webp'),
+  cdnAsset('/assets/lovart/oraclecard-corner-drinks-20260623-v1.webp'),
+]
+
 const DISCOVER_PRELOADS: string[] = [
   // Discover hero banner is CDN-only; local bundle removed to keep main package
   // under 2 MB. Persistent asset cache reduces repeat network reads.
   cdnAsset('/assets/promo/banner-hero-lovart-v1.webp'),
+  ...ORACLE_CARD_CORNER_PRELOADS,
+]
+
+// ─── Tab pages (first viewport) ───
+// Cross-tab predictive preloading warms the assets a user is most likely to
+// see on the next tab they switch to, so a warm tab switch paints instantly
+// instead of decoding images on first render.
+
+const EVENTS_TAB_PRELOADS: string[] = [
+  ...ORACLE_CARD_CORNER_PRELOADS,
+  // Empty-state hero + first-event celebration badge.
+  cdnAsset('/assets/lovart/lovart-generic-empty.webp'),
+  MILESTONE_BADGES.firstEvent,
+]
+
+const CONNECTIONS_TAB_PRELOADS: string[] = [
+  // Empty-state mascot + guidance flow icons.
+  cdnAsset('/assets/personality/xiaoyue/xiaoyue-connections-empty.webp'),
+  cdnAsset('/assets/icons/flow-icons/flow-5.webp'),
+  cdnAsset('/assets/icons/flow-icons/flow-6.webp'),
+  cdnAsset('/assets/icons/flow-icons/flow-7.webp'),
+]
+
+const CENTER_HUB_TAB_PRELOADS: string[] = [
+  // Welcome mascot + coach illustration + guidance flow icons.
+  getXiaoyueExpressionAsset('homeWelcome'),
+  cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp'),
+  cdnAsset('/assets/icons/flow-icons/flow-1.webp'),
+  cdnAsset('/assets/icons/flow-icons/flow-2.webp'),
+  cdnAsset('/assets/icons/flow-icons/flow-3.webp'),
+  cdnAsset('/assets/icons/flow-icons/flow-4.webp'),
+]
+
+const PROFILE_TAB_PRELOADS: string[] = [
+  // HD-2D identity stage scene layers (manifest-driven; empty until art ships).
+  ...IDENTITY_STAGE_LAYER_IDS
+    .map((layerId) => getIdentityStageLayerUrl(layerId))
+    .filter((url): url is string => typeof url === 'string'),
+  // Growth-section milestone badges.
+  MILESTONE_BADGES.firstEvent,
+  MILESTONE_BADGES.streak3,
 ]
 
 const MATCHING_PRELOADS: string[] = [
@@ -108,6 +159,10 @@ const REWARDS_PRELOADS = [
 /** Map of page path → CDN assets to preload when entering that page. */
 export const ROUTE_PRELOAD_MAP: Record<string, string[]> = {
   'pages/discover/index': DISCOVER_PRELOADS,
+  'pages/events/index': EVENTS_TAB_PRELOADS,
+  'pages/connections/index': CONNECTIONS_TAB_PRELOADS,
+  'pages/center-hub/index': CENTER_HUB_TAB_PRELOADS,
+  'pages/profile/index': PROFILE_TAB_PRELOADS,
   'pages/index/index': PERSONALITY_TEST_PRELOADS, // landing → personality test is the primary CTA
   'pages/pool-registration/index': POOL_REGISTRATION_PRELOADS,
   'pages/matching-status/index': MATCHING_PRELOADS,
@@ -120,27 +175,56 @@ export const ROUTE_PRELOAD_MAP: Record<string, string[]> = {
 
 // ─── Predictive (preload next likely page) ───
 
-/** Map of page path → routes whose assets should be preloaded when idle. */
+/** Map of page path → routes whose assets should be preloaded when idle.
+ *  Tab pages include their adjacent tabs so a warm tab switch paints instantly. */
 export const PREDICTIVE_PRELOAD_MAP: Record<string, string[]> = {
-  'pages/discover/index': ['pages/pool-registration/index', 'pages/event-detail/index'],
+  'pages/discover/index': [
+    'pages/pool-registration/index',
+    'pages/event-detail/index',
+    'pages/events/index',
+    'pages/center-hub/index',
+  ],
+  'pages/events/index': [
+    'pages/event-detail/index',
+    'pages/pool-registration/index',
+    'pages/discover/index',
+    'pages/center-hub/index',
+  ],
+  'pages/connections/index': ['pages/event-detail/index', 'pages/events/index', 'pages/profile/index'],
+  'pages/profile/index': ['pages/profile-linked/edit-profile/index', 'pages/events/index', 'pages/connections/index'],
+  'pages/center-hub/index': ['pages/events/index', 'pages/discover/index', 'pages/connections/index'],
   'pages/index/index': ['pages/onboarding/personality-test/index'],
   'pages/pool-registration/index': ['pages/matching-status/index'],
   'pages/matching-status/index': ['pages/squad-unboxing/index'],
   'pages/event-detail/index': ['pages/pool-registration/index'],
-  'pages/connections/index': ['pages/event-detail/index'],
-  'pages/events/index': ['pages/event-detail/index', 'pages/pool-registration/index'],
-  'pages/profile/index': ['pages/profile-linked/edit-profile/index'],
 }
 
 // ─── Preload API ───
+
+/**
+ * Session-level dedup. Cross-tab predictive preloading means the same asset
+ * is often listed by several routes; without this, bouncing between tabs
+ * re-issues getImageInfo for images that are already warm.
+ */
+const sessionPreloadedUrls = new Set<string>()
+
+function takeFreshAssets(assets: string[]): string[] {
+  const fresh: string[] = []
+  for (const url of assets) {
+    if (!url || sessionPreloadedUrls.has(url)) continue
+    sessionPreloadedUrls.add(url)
+    fresh.push(url)
+  }
+  return fresh
+}
 
 /**
  * Preload CDN assets for a specific route.
  * Fails silently — logs diagnostics in development.
  */
 export function preloadRouteAssets(route: string): void {
-  const assets = ROUTE_PRELOAD_MAP[route]
-  if (!assets || assets.length === 0) return
+  const assets = takeFreshAssets(ROUTE_PRELOAD_MAP[route] ?? [])
+  if (assets.length === 0) return
 
   // Defer by one tick so we never block first paint or interaction.
   setTimeout(() => {
@@ -158,9 +242,11 @@ export function preloadPredictiveAssets(currentRoute: string): void {
   const nextRoutes = PREDICTIVE_PRELOAD_MAP[currentRoute]
   if (!nextRoutes || nextRoutes.length === 0) return
 
-  const assets = nextRoutes
-    .flatMap((r) => ROUTE_PRELOAD_MAP[r] ?? [])
-    .filter(Boolean)
+  const assets = takeFreshAssets(
+    nextRoutes
+      .flatMap((r) => ROUTE_PRELOAD_MAP[r] ?? [])
+      .filter(Boolean)
+  )
 
   if (assets.length === 0) return
 

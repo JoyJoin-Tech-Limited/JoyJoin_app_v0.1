@@ -40,6 +40,11 @@ export default function DragRevealRibbon({
   const [dragProgress, setDragProgress] = useState(0)
   const [isRevealing, setIsRevealing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  // Ghost-thumb hint (Batch B, 2026-07-24): demonstrates the drag direction
+  // kinesthetically until the user's first touch, then never again this
+  // session. Not rendered at all in tap-fallback mode (RM / degradation /
+  // flag-off) — those users get the 点击拆盒 label instead.
+  const [hintDismissed, setHintDismissed] = useState(false)
 
   const measureMaxDrag = useCallback(() => {
     return new Promise<number>((resolve) => {
@@ -77,6 +82,7 @@ export default function DragRevealRibbon({
   const handleTouchStart = useCallback(
     async (e: any) => {
       if (useTapFallback || isRevealing) return
+      setHintDismissed(true)
       const touch = e.touches[0]
       const maxPx = await measureMaxDrag()
       hasDraggedRef.current = false
@@ -200,6 +206,9 @@ export default function DragRevealRibbon({
           className='drag-reveal-ribbon__fill'
           style={{ width: fillWidth }}
         />
+        {!useTapFallback && !isRevealing && !hintDismissed ? (
+          <View className='drag-reveal-ribbon__ghost' aria-hidden='true' />
+        ) : null}
         <View
           className={[
             'drag-reveal-ribbon__thumb',

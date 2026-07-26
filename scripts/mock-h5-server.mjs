@@ -1388,6 +1388,32 @@ function buildIcebreakerState(sessionId) {
         completedPhases: ['warmup', 'micro_challenge', 'lie_detective', 'auction', 'personality_dice'],
         lastAdvanceTrigger: 'auto_all_ready',
       }
+    case 'warmup-mood':
+      // Host with no topics yet → mood grid (host_no_topics).
+      return { ...base, currentPhase: 'warmup', completedPhases: [] }
+    case 'warmup-generating':
+      // Same entry state; the /topics mock for this session hangs so the
+      // generating shimmer is capturable after a mood tap.
+      return { ...base, currentPhase: 'warmup', completedPhases: [] }
+    case 'warmup-error':
+      // /topics 500s for this session → client topicsError → error card.
+      return { ...base, currentPhase: 'warmup', completedPhases: [] }
+    case 'warmup-topic':
+      // Topic dealt, partial ready — ember rim + count + ready CTA.
+      return {
+        ...base,
+        currentPhase: 'warmup',
+        completedPhases: [],
+        selectedMood: 'funny',
+        warmupTopics: [
+          { id: 'wt-1', question: '最近一次让你笑出来的小事是什么？', mood: 'funny', emoji: '😄', category: '轻松开场', depthLevel: 1, promptStyle: 'experiential', safety: 'gentle' },
+          { id: 'wt-2', question: '如果你要给今晚这桌起个队名，会叫什么？', mood: 'funny', emoji: '🎲', category: '桌面气氛', depthLevel: 1, promptStyle: 'reflective', safety: 'gentle' },
+          { id: 'wt-3', question: '你朋友最常用哪句话吐槽你？', mood: 'funny', emoji: '🍌', category: '熟人视角', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
+        ],
+        warmupTopicsMeta: mockAigcMeta('social-warmup-topics-v1'),
+        currentTopicIndex: 0,
+        warmupReadyUserIds: [IB_HOST_ID, 'ib-p2', 'ib-p3'],
+      }
     default:
       return { ...base, currentPhase: 'warmup' }
   }
@@ -1442,6 +1468,14 @@ const MOCK_ACTION_501 = [
 ]
 
 app.post('/api/social-icebreaker/:socialSessionId/:action', (req, res) => {
+  // Interactive warmup captures: deterministic /topics outcomes per session.
+  if (req.params.action === 'topics' && req.params.socialSessionId === 'mock-warmup-error') {
+    return res.status(500).json({ error: 'MOCK_TOPICS_FAILURE' })
+  }
+  if (req.params.action === 'topics' && req.params.socialSessionId === 'mock-warmup-generating') {
+    // Hold long enough for the generating shimmer to be screenshotted.
+    return setTimeout(() => res.status(500).json({ error: 'MOCK_TOPICS_TIMEOUT' }), 8000)
+  }
   if (MOCK_ACTION_501.includes(req.params.action)) {
     return res.status(501).json({ error: 'MOCK_ACTION_NOT_SIMULATED', action: req.params.action })
   }

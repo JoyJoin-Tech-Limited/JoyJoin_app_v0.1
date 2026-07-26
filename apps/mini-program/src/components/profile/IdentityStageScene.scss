@@ -30,11 +30,13 @@
     position: absolute;
     inset: 0;
     opacity: 0;
-    transform: translate3d(0, 12rpx, 0) scale(1.03);
+    // Entrance is translate+opacity only — no scale, so first paint never
+    // reads as the art "shrinking back" into the frame.
+    transform: translate3d(0, 10rpx, 0);
 
     &--revealed {
       opacity: 1;
-      transform: translate3d(0, 0, 0) scale(1);
+      transform: translate3d(0, 0, 0);
     }
   }
 
@@ -105,15 +107,17 @@
 }
 
 // Camera drift: a single 12s transform loop on the scene container.
-// The base scale keeps the pre-baked art covering the viewport at every stop.
+// Zoom range is deliberately narrow (1.03 ↔ 1.045): enough overscan to keep
+// the pre-baked art covering the viewport at every stop (per-side overscan
+// 1.5% ≥ max 1% translation), without a perceptible perpetual zoom.
 @keyframes identity-stage-drift {
   0%,
   100% {
-    transform: translate3d(0, 0, 0) scale(1.05);
+    transform: translate3d(0, 0, 0) scale(1.03);
   }
 
   50% {
-    transform: translate3d(-1.6%, -1.1%, 0) scale(1.08);
+    transform: translate3d(-1%, -0.7%, 0) scale(1.045);
   }
 }
 

@@ -22,7 +22,7 @@ import {
 import { moderateGeneratedContent, toModerationChecksFromArray, type ModerationCheck } from './lib/aiContentModeration';
 import { buildArchetypeContext } from './lib/contextInjector';
 import { logger } from './lib/logger';
-import { fireAndForgetQualityGate, type AIServiceResult } from './socialIcebreakerAICore';
+import { fireAndForgetQualityGate, raceWithTimeout, RACE_LLM_TIMEOUT_MS, type AIServiceResult } from './socialIcebreakerAICore';
 
 type DominantTrait = 'A' | 'C' | 'E' | 'O' | 'X' | 'P';
 
@@ -175,12 +175,15 @@ export async function generatePersonalityDiceChallenges(params: {
 
     const prompt = buildPersonalityDicePrompt({ participants: participantList, _refinementHint: params._refinementHint, sessionContext });
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.85,
-      max_tokens: 400,
-    });
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.85,
+        max_tokens: 400,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {
@@ -368,12 +371,15 @@ export async function generatePersonalityDiceChallengeGroups(params: {
       sessionContext,
     });
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.85,
-      max_tokens: 800,
-    });
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.85,
+        max_tokens: 800,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {

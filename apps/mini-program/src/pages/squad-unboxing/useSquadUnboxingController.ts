@@ -1,4 +1,4 @@
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -144,13 +144,48 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     groupId && readRevealFlag(groupId) && readDeckCollapsedFlag(groupId) ? 'pocketed' : 'fan',
   )
   const prevGroupIdRef = useRef<string>(groupId)
+  // Ready-dwell anticipation metric (Batch A, 2026-07-24): timestamp of the
+  // latest entry into the ready state; handleOpenBox reports the dwell so
+  // PM can guard the ready→open conversion curve after the copy-card removal.
+  // Review fix (CONCERN-2): re-armed on every page show while still in ready
+  // — WeChat keeps the page alive in the nav stack, so without this a
+  // backgrounded-for-hours ready page reports a multi-hour dwellMs outlier.
+  const readyEnteredAtRef = useRef<number>(Date.now())
+  // Batch B handoff (2026-07-24): after the lid pop the opened box keeps
+  // rendering for ~240ms in a fixed overlay pinned to the ready-stage
+  // geometry, rising + fading while the deck's 200ms anticipation beat plays
+  // — the dealt fan visually continues the box's upward exit ("cards come
+  // OUT of the box"). Skipped entirely on reduce-motion / degradation.
+  const [boxExiting, setBoxExiting] = useState(false)
+  const boxExitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (boxExitTimerRef.current) clearTimeout(boxExitTimerRef.current)
+  }, [])
+  // Deal-settled gate (post-review fix): the 团魂 bubble + 今晚这桌 chapter
+  // hold their entrance until the deal finishes so the handoff never shows
+  // an empty white slab and logistics never render before people. Cold
+  // re-entry (reveal flag present) starts settled — nothing to wait for.
+  const [dealSettled, setDealSettled] = useState(() => (groupId ? readRevealFlag(groupId) : false))
+  const flowStateRef = useRef<FlowState>(flowState)
+  useEffect(() => {
+    flowStateRef.current = flowState
+  }, [flowState])
+  useDidShow(() => {
+    if (flowStateRef.current === 'ready') readyEnteredAtRef.current = Date.now()
+  })
   useEffect(() => {
     if (!groupId) return
     if (prevGroupIdRef.current === groupId) return
     prevGroupIdRef.current = groupId
-    setFlowState(readRevealFlag(groupId) ? 'revealed' : 'ready')
+    const nextFlow = readRevealFlag(groupId) ? 'revealed' : 'ready'
+    setFlowState(nextFlow)
     setIsInteractiveSession(!readRevealFlag(groupId))
     setDeckPhase(readRevealFlag(groupId) && readDeckCollapsedFlag(groupId) ? 'pocketed' : 'fan')
+    if (nextFlow === 'ready') readyEnteredAtRef.current = Date.now()
+    if (boxExitTimerRef.current) clearTimeout(boxExitTimerRef.current)
+    boxExitTimerRef.current = null
+    setBoxExiting(false)
+    setDealSettled(readRevealFlag(groupId))
     reopenCountRef.current = 0
   }, [groupId])
 
@@ -416,6 +451,7 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
 
   const notifyDealSettled = useCallback(
     (instant: boolean) => {
+      setDealSettled(true)
       flipSessionRef.current!.notifyDealSettled({
         visibleIds,
         currentUserId,
@@ -669,6 +705,12 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   const handleOpenBox = useCallback((source: 'box' | 'ribbon' = 'box') => {
     if (flowState !== 'ready') return
     haptics('medium')
+    squadUnboxingAnalytics.track('squad_unboxing_ready_dwell', {
+      groupId,
+      screen: 'squad-unboxing',
+      source,
+      dwellMs: Math.max(0, Date.now() - readyEnteredAtRef.current),
+    })
     if (source === 'box') {
       squadUnboxingAnalytics.track('squad_unboxing_box_tap', {
         groupId,
@@ -741,18 +783,34 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       return undefined
     }
 
+    // Batch A (2026-07-24): anticipation hold — the lid waits an extra 150ms
+    // (850→1000) so the open feels responsive-then-alive, not pre-recorded.
+    // The `success` haptic fires at the lid apex (~550ms into the pop) instead
+    // of the old end-of-shaking cardReveal+medium punch; per-card landing
+    // haptics take over from the deal.
+    const holdMs = shouldReduceMotion ? 220 : 1000
+    const apexTimer = setTimeout(() => haptics('success'), shouldReduceMotion ? 150 : 550)
     const timer = setTimeout(() => {
-      haptics('cardReveal')
-      haptics('medium')
       setFlowState('revealed')
       squadUnboxingAnalytics.track('squad_unboxing_box_open_milestone', {
         groupId,
         screen: 'squad-unboxing',
       })
-    }, shouldReduceMotion ? 220 : 850)
+      if (!motionInstant) {
+        setBoxExiting(true)
+        if (boxExitTimerRef.current) clearTimeout(boxExitTimerRef.current)
+        boxExitTimerRef.current = setTimeout(() => {
+          boxExitTimerRef.current = null
+          setBoxExiting(false)
+        }, 260)
+      }
+    }, holdMs)
 
-    return () => clearTimeout(timer)
-  }, [flowState, groupId, shouldReduceMotion])
+    return () => {
+      clearTimeout(apexTimer)
+      clearTimeout(timer)
+    }
+  }, [flowState, groupId, shouldReduceMotion, motionInstant])
 
 
   useEffect(() => {
@@ -787,6 +845,8 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     groupThemeHighlights,
     analysisThemeTags,
     flowState,
+    boxExiting,
+    dealSettled,
     isAnalysisExpanded,
     setIsAnalysisExpanded,
     actionDockState,

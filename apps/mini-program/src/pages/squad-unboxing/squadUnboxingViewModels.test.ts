@@ -5,10 +5,13 @@ import {
   buildEventBriefDate,
   buildFaceDownCardAriaLabel,
   buildFocusedMemberBubbleText,
+  buildFocusedNarrativeModel,
   buildInterestHookText,
   buildPairKeyMemberMap,
   buildRevealChipLabel,
+  buildSelfCardBubbleText,
   buildSquadSoulBubbleText,
+  buildTableDiagnosis,
   computeActionDockState,
   computeBestPartnerUserId,
   DECK_PILL_STRIP_CAP,
@@ -16,8 +19,10 @@ import {
   getDeckPillChemistryClass,
   getEventTypeLabel,
   getPairChemistryWord,
+  getSelfSquadRoleLabel,
   getSquadChemistryTokens,
   resolveCardFocusInteraction,
+  shortenConnectionPointForPill,
   SQUAD_BURST_COMPLETION_BUBBLE_TEXT,
   SQUAD_SELF_CARD_BUBBLE_TEXT,
   SQUAD_TEASE_BUBBLE_TEXT,
@@ -170,7 +175,7 @@ describe('squadUnboxingViewModels', () => {
     )
   })
 
-  it('buildFocusedMemberBubbleText degrades through connection points, intro angle, and a safe fallback', () => {
+  it('buildFocusedMemberBubbleText degrades through connection points, intro angle, and a dignity-floored fallback (2026-07-24 P0)', () => {
     expect(buildFocusedMemberBubbleText('豆沙', '', ['独立电影', '城市漫步'])).toBe(
       '先认识一下豆沙：这是今晚会和你同桌的新伙伴。你们都对独立电影、城市漫步感兴趣，见面可以从这里聊起。',
     )
@@ -178,8 +183,27 @@ describe('squadUnboxingViewModels', () => {
       '先认识一下豆沙：这是今晚会和你同桌的新伙伴。悦仔也给你们留了个开场：问问最近看过的好电影。',
     )
     expect(buildFocusedMemberBubbleText('豆沙')).toBe(
-      '先认识一下豆沙：这是今晚会和你同桌的新伙伴。你们的共同点还没显出来，不妨先聊聊最近各自遇到的一件有趣小事。',
+      '先认识一下豆沙：这是今晚会和你同桌的新伙伴。TA的气质和你正好互补——不妨先聊聊最近各自遇到的一件有趣小事。',
     )
+  })
+
+  it('buildFocusedMemberBubbleText never concedes "没找到共同点" (dignity floor, 2026-07-24 P0)', () => {
+    const cases = [
+      buildFocusedMemberBubbleText('豆沙'),
+      buildFocusedMemberBubbleText('雪花', null, [], null, {
+        userId: 'bot-4',
+        archetype: 'octopus',
+        topInterests: ['攀岩'],
+      }),
+      buildFocusedMemberBubbleText('草原', '悦仔还在整理你和草原的连接线索。', [], null, {
+        userId: 'bot-5',
+        topInterests: ['社区营造'],
+      }),
+    ]
+    for (const text of cases) {
+      expect(text).not.toContain('共同点还没显出来')
+      expect(text).not.toContain('还没找到')
+    }
   })
 
   it('buildFocusedMemberBubbleText introduces a rich member even when viewer data is empty', () => {
@@ -190,7 +214,7 @@ describe('squadUnboxingViewModels', () => {
       topInterests: ['攀岩', '科幻小说', '硬件制作'],
       hometownRegionCity: '陕西西安',
     })).toBe(
-      '先认识一下雪花：在服务机器人研发领域，喜欢攀岩、科幻小说、硬件制作，来自陕西西安。你们的共同点还没显出来，不妨先问问攀岩背后的故事。',
+      '先认识一下雪花：在服务机器人研发领域，喜欢攀岩、科幻小说、硬件制作，来自陕西西安。TA身上脑洞章鱼的气质，和你正好互补——今晚从攀岩聊起，说不定能互相打开新话题。',
     )
   })
 
@@ -199,7 +223,7 @@ describe('squadUnboxingViewModels', () => {
       userId: 'bot-5',
       topInterests: ['社区营造'],
     })).toBe(
-      '先认识一下草原：喜欢社区营造。你们的共同点还没显出来，不妨先问问社区营造背后的故事。',
+      '先认识一下草原：喜欢社区营造。TA的气质和你正好互补——今晚从社区营造聊起，说不定能互相打开新话题。',
     )
   })
 
@@ -211,7 +235,7 @@ describe('squadUnboxingViewModels', () => {
       topInterests: ['城市摄影', '独立电影'],
       hometownRegionCity: '广东深圳',
     })).toBe(
-      '先认识一下艾米丽：在互联网产品领域，本科学历，喜欢城市摄影、独立电影。你们的共同点还没显出来，不妨先问问城市摄影背后的故事。',
+      '先认识一下艾米丽：在互联网产品领域，本科学历，喜欢城市摄影、独立电影。TA的气质和你正好互补——今晚从城市摄影聊起，说不定能互相打开新话题。',
     )
   })
 
@@ -223,7 +247,7 @@ describe('squadUnboxingViewModels', () => {
       educationVisible: false,
       topInterests: ['城市摄影'],
     })).toBe(
-      '先认识一下艾米丽：在互联网产品领域，喜欢城市摄影。你们的共同点还没显出来，不妨先问问城市摄影背后的故事。',
+      '先认识一下艾米丽：在互联网产品领域，喜欢城市摄影。TA的气质和你正好互补——今晚从城市摄影聊起，说不定能互相打开新话题。',
     )
   })
 
@@ -232,7 +256,7 @@ describe('squadUnboxingViewModels', () => {
       userId: 'u1',
       educationLevel: '硕士',
     })).toBe(
-      '先认识一下豆沙：硕士学历。你们的共同点还没显出来，不妨先聊聊最近各自遇到的一件有趣小事。',
+      '先认识一下豆沙：硕士学历。TA的气质和你正好互补——不妨先聊聊最近各自遇到的一件有趣小事。',
     )
   })
 
@@ -412,6 +436,130 @@ describe('squadUnboxingViewModels', () => {
       expect(getDeckPillChemistryClass('mild')).toBe('squad-unboxing__deck-pill--fallback')
       expect(getDeckPillChemistryClass(null)).toBe('squad-unboxing__deck-pill--fallback')
       expect(getDeckPillChemistryClass(undefined)).toBe('squad-unboxing__deck-pill--fallback')
+    })
+  })
+
+  describe('buildTableDiagnosis (桌型诊断, 2026-07-24 P0)', () => {
+    it('counts deterministic role buckets in hype→deep→warm order', () => {
+      const members = [
+        { userId: 'a', archetype: 'corgi' },
+        { userId: 'b', archetype: 'rooster' },
+        { userId: 'c', archetype: 'owl' },
+        { userId: 'd', archetype: 'koala' },
+        { userId: 'e', archetype: 'turtle' },
+        { userId: 'f', archetype: 'cat' },
+      ] as never
+      expect(buildTableDiagnosis(members)).toEqual([
+        { key: 'hype', label: '气氛组', count: 2 },
+        { key: 'deep', label: '深度派', count: 1 },
+        { key: 'warm', label: '暖心派', count: 3 },
+      ])
+    })
+
+    it('drops zero-count segments and resolves legacy nameCn forms', () => {
+      const members = [
+        { userId: 'a', archetype: '社牛柯基' },
+        { userId: 'b', archetype: '小太阳鸡' },
+      ] as never
+      expect(buildTableDiagnosis(members)).toEqual([
+        { key: 'hype', label: '气氛组', count: 2 },
+      ])
+    })
+
+    it('returns empty when no archetype resolves', () => {
+      const members = [
+        { userId: 'a', archetype: null },
+        { userId: 'b' },
+      ] as never
+      expect(buildTableDiagnosis(members)).toEqual([])
+    })
+  })
+
+  describe('buildFocusedNarrativeModel (结构化同频分析卡, 2026-07-24 P1)', () => {
+    const richPair = {
+      pairKey: 'me-a',
+      chemistryScore: 88,
+      connectionPoints: ['（都偏内向细腻）', '爵士乐', '旧书店'],
+      explanation: '你们都偏好深度的一对一交流。',
+      introAngle: '问问TA最近单曲循环的一张专辑',
+    } as never
+
+    it('structures verdict → evidence → opener from a rich pair', () => {
+      const model = buildFocusedNarrativeModel(richPair, { isBestPartner: false })
+      expect(model).not.toBeNull()
+      expect(model!.verdict).toBe('你们俩大概率一见如故')
+      expect(model!.evidence).toEqual(['都偏内向细腻', '爵士乐', '旧书店'])
+      expect(model!.opener).toBe('问问TA最近单曲循环的一张专辑')
+    })
+
+    it('leads with the jackpot verdict for the best partner', () => {
+      const model = buildFocusedNarrativeModel(richPair, { isBestPartner: true })
+      expect(model!.verdict).toBe('这是今晚和你最同频的人')
+      expect(model!.isBestPartner).toBe(true)
+    })
+
+    it('falls back to an evidence-derived opener when introAngle is absent', () => {
+      const pair = { pairKey: 'me-b', chemistryScore: 72, connectionPoints: ['城市摄影'] } as never
+      const model = buildFocusedNarrativeModel(pair, { isBestPartner: false })
+      expect(model!.verdict).toBe('你们俩大概率聊得来')
+      expect(model!.opener).toBe('见面可以先从城市摄影聊起')
+    })
+
+    it('reads cold chemistry honestly but constructively', () => {
+      const pair = { pairKey: 'me-c', chemistryScore: 40, connectionPoints: ['早起'] } as never
+      const model = buildFocusedNarrativeModel(pair, { isBestPartner: false })
+      expect(model!.verdict).toBe('你们俩是互补型同桌')
+    })
+
+    it('returns null for missing or empty pairs so the caller falls back to prose', () => {
+      expect(buildFocusedNarrativeModel(null, { isBestPartner: false })).toBeNull()
+      expect(buildFocusedNarrativeModel(undefined, { isBestPartner: false })).toBeNull()
+      expect(buildFocusedNarrativeModel({ pairKey: 'me-d', chemistryScore: 60 } as never, { isBestPartner: false })).toBeNull()
+    })
+
+    it('still structures when only an explanation exists (no points, no angle)', () => {
+      const pair = { pairKey: 'me-e', chemistryScore: 63, explanation: '你们都看重稳定的节奏。' } as never
+      const model = buildFocusedNarrativeModel(pair, { isBestPartner: false })
+      expect(model).not.toBeNull()
+      expect(model!.verdict).toBe('你们俩有不少可聊的点')
+      expect(model!.evidence).toEqual([])
+      expect(model!.opener).toBe('')
+    })
+  })
+
+  describe('self role + self narration (自我关联, 2026-07-24)', () => {
+    it('getSelfSquadRoleLabel maps archetypes to self-addressed roles', () => {
+      expect(getSelfSquadRoleLabel('corgi')).toBe('气氛担当')
+      expect(getSelfSquadRoleLabel('社牛柯基')).toBe('气氛担当')
+      expect(getSelfSquadRoleLabel('owl')).toBe('深度担当')
+      expect(getSelfSquadRoleLabel('koala')).toBe('暖心担当')
+      expect(getSelfSquadRoleLabel(null)).toBe('')
+      expect(getSelfSquadRoleLabel('unknown-thing')).toBe('')
+    })
+
+    it('buildSelfCardBubbleText positions the viewer in the table', () => {
+      expect(buildSelfCardBubbleText('气氛担当')).toBe(
+        '这张是你的桌友卡。你是这桌的气氛担当——悦仔把你放进来，就是要你把这份能量带上桌。',
+      )
+      expect(buildSelfCardBubbleText('')).toBe(
+        '这张是你的桌友卡。悦仔把你放进这桌，也把属于你的视角带进了今晚。',
+      )
+    })
+  })
+
+  describe('shortenConnectionPointForPill (card-pill copy budget, 2026-07-24)', () => {
+    it('strips filler prefixes so the semantic core survives the ellipsis', () => {
+      expect(shortenConnectionPointForPill('（都爱在咖啡馆里发呆）')).toBe('咖啡馆里发呆')
+      expect(shortenConnectionPointForPill('都爱在咖啡馆里发呆')).toBe('咖啡馆里发呆')
+      expect(shortenConnectionPointForPill('都喜欢动手做东西')).toBe('动手做东西')
+      expect(shortenConnectionPointForPill('都偏内向细腻')).toBe('内向细腻')
+      expect(shortenConnectionPointForPill('阅读习惯相似')).toBe('阅读习惯相似')
+      expect(shortenConnectionPointForPill('都相信长期主义')).toBe('长期主义')
+    })
+
+    it('never returns an empty pill', () => {
+      expect(shortenConnectionPointForPill('都爱')).toBe('都爱')
+      expect(shortenConnectionPointForPill('')).toBe('')
     })
   })
 })

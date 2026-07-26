@@ -96,6 +96,7 @@ const ICEBREAKER_PRELOAD_ASSETS = [...SPRITE_SHEET_ASSETS, ...ICEBREAKER_PHASE_E
 // Warmup topic generation is LLM-backed (3s server cap + DB writes) — the
 // 5s dev default timeout is too tight, give it headroom.
 const TOPICS_REQUEST_TIMEOUT_MS = 12000
+const SKIPPED_ACTION_TOAST_INTERVAL_MS = 1500
 const TOPICS_SKIP_RETRY_MAX = 5
 const TOPICS_SKIP_RETRY_DELAY_MS = 700
 const TOPICS_RECOVERY_RETRY_DELAY_MS = 1200
@@ -112,36 +113,6 @@ type WarmupReadyResponse = {
   currentTopicIndex: number
   commonGroundCount: number
   state: SocialSessionState
-}
-
-const LOCAL_WARMUP_TOPICS: Record<AtmosphereMood, SocialTopic[]> = {
-  relaxed: [
-    { id: 'local-relaxed-1', question: '最近有没有一个小瞬间，让你觉得今天还不错？', mood: 'relaxed', emoji: '🌿', category: '轻松开场', depthLevel: 1, promptStyle: 'experiential', safety: 'gentle' },
-    { id: 'local-relaxed-2', question: '如果今晚这桌有一个关键词，你希望它是什么？', mood: 'relaxed', emoji: '✨', category: '桌面气氛', depthLevel: 1, promptStyle: 'reflective', safety: 'gentle' },
-    { id: 'local-relaxed-3', question: '你通常是先观察一下，还是很快加入聊天？', mood: 'relaxed', emoji: '☕', category: '社交节奏', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  ],
-  funny: [
-    { id: 'local-funny-1', question: '最近一次让你笑出来的小事是什么？', mood: 'funny', emoji: '😄', category: '轻松开场', depthLevel: 1, promptStyle: 'experiential', safety: 'gentle' },
-    { id: 'local-funny-2', question: '如果你要给今晚这桌起个队名，会叫什么？', mood: 'funny', emoji: '🎲', category: '桌面气氛', depthLevel: 1, promptStyle: 'reflective', safety: 'gentle' },
-    { id: 'local-funny-3', question: '你朋友最常用哪句话吐槽你？', mood: 'funny', emoji: '🍌', category: '熟人视角', depthLevel: 2, promptStyle: 'experiential', safety: 'open' },
-  ],
-  life: [
-    { id: 'local-life-1', question: '最近你生活里最想按下暂停键的一个时刻是什么？', mood: 'life', emoji: '🌙', category: '生活片段', depthLevel: 1, promptStyle: 'experiential', safety: 'gentle' },
-    { id: 'local-life-2', question: '如果周末多出半天时间，你会拿来做什么？', mood: 'life', emoji: '🧭', category: '生活节奏', depthLevel: 1, promptStyle: 'reflective', safety: 'gentle' },
-    { id: 'local-life-3', question: '你觉得自己最近在哪件小事上变成熟了一点？', mood: 'life', emoji: '🌱', category: '自我观察', depthLevel: 2, promptStyle: 'reflective', safety: 'open' },
-  ],
-  emotional: [
-    { id: 'local-emotional-1', question: '最近有没有一句话，让你记了挺久？', mood: 'emotional', emoji: '💬', category: '温柔开场', depthLevel: 1, promptStyle: 'experiential', safety: 'gentle' },
-    { id: 'local-emotional-2', question: '你希望别人第一次认识你时，先看到你的哪一面？', mood: 'emotional', emoji: '💜', category: '被看见', depthLevel: 2, promptStyle: 'reflective', safety: 'open' },
-    { id: 'local-emotional-3', question: '在一段舒服的关系里，你最看重什么感觉？', mood: 'emotional', emoji: '🫶', category: '关系偏好', depthLevel: 2, promptStyle: 'reflective', safety: 'reflective' },
-  ],
-}
-
-function buildLocalWarmupTopics(mood: AtmosphereMood): SocialTopic[] {
-  return LOCAL_WARMUP_TOPICS[mood].map((topic, index) => ({
-    ...topic,
-    id: `${topic.id}-${Date.now()}-${index}`,
-  }))
 }
 
 export default function IcebreakerSessionPage() {
@@ -331,8 +302,11 @@ export default function IcebreakerSessionPage() {
       ...baseState,
       selectedMood: mood,
       warmupTopics: topics,
+      warmupTopicsStatus: 'ready',
       currentTopicIndex: 0,
-      warmupReadyUserIds: [],
+      // The server is the single writer of the ready set — never hard-reset
+      // it locally (2026-07-26: wiping this wiped bot-ready seeding and
+      // produced the 5/6 → 0/6 "lying counter" frame).
     }
 
     setBootstrapState(patchedState)
@@ -429,15 +403,23 @@ export default function IcebreakerSessionPage() {
       actionKey: string,
       suffix: string,
       data?: unknown,
-      options?: { timeoutMs?: number },
+      options?: { timeoutMs?: number; suppressErrorToast?: boolean },
     ): Promise<T | null | undefined> => {
       if (!socialSessionId) {
         return null
       }
 
-      if (pendingAction !== null && pendingAction !== actionKey) {
-        // Skipped (another action in flight) — distinct from a real failure
-        // so callers don't surface a false error state.
+      if (pendingAction !== null) {
+        // Skipped (another action — or a duplicate of this same one — already
+        // in flight). Distinct from a real failure so callers don't surface a
+        // false error state. Blocking same-key duplicates also closes the
+        // parallel-POST vector that could fire two LLM generations at once.
+        // Never silent (2026-07-26 死屏 incident): throttled acknowledgement.
+        const now = Date.now()
+        if (now - skippedActionToastAtRef.current > SKIPPED_ACTION_TOAST_INTERVAL_MS) {
+          skippedActionToastAtRef.current = now
+          void Taro.showToast({ title: '正在同步，请稍候', icon: 'none', duration: 1500 })
+        }
         return undefined
       }
 
@@ -470,11 +452,15 @@ export default function IcebreakerSessionPage() {
           actionKey,
           message,
         })
-        Taro.showToast({
-          title: message.length > 12 ? '操作没成功' : message,
-          icon: 'none',
-          duration: TOAST_MEDIUM_MS,
-        })
+        // Some flows own a persistent error surface (e.g. the topics error
+        // card with 重试) — a transient toast on top is double-signalling.
+        if (!options?.suppressErrorToast) {
+          Taro.showToast({
+            title: message.length > 12 ? '操作没成功' : message,
+            icon: 'none',
+            duration: TOAST_MEDIUM_MS,
+          })
+        }
         return null
       } finally {
         setPendingAction((current) => (current === actionKey ? null : current))
@@ -487,17 +473,26 @@ export default function IcebreakerSessionPage() {
   const topicsRetryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const topicsRecoveryRetryCountRef = useRef(0)
   const topicsRecoveryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const skippedActionToastAtRef = useRef(0)
   const generateTopicsRef = useRef<(mood: AtmosphereMood) => void>(() => {})
+  // Last mood the host actually requested — retry path survives even when the
+  // server never persisted selectedMood (e.g. request died before the write).
+  const lastTopicsMoodRef = useRef<AtmosphereMood | undefined>(undefined)
   const generateTopics = useCallback((mood: AtmosphereMood) => {
     setTopicsError(false)
+    lastTopicsMoodRef.current = mood
     void performSocialAction<WarmupTopicsResponse>('topics', '/topics', {
       mood,
       eventType: '活动',
       participantCount: Math.max(playerCount, 2),
       avoidTopics: [],
-    }, { timeoutMs: TOPICS_REQUEST_TIMEOUT_MS }).then((result) => {
+    }, { timeoutMs: TOPICS_REQUEST_TIMEOUT_MS, suppressErrorToast: true }).then((result) => {
       if (result === null) {
-        applyWarmupTopicsToLocalState(mood, buildLocalWarmupTopics(mood))
+        // Surface the designed error card (重试 + auto-retry) instead of the
+        // old phantom local-fallback deck — the fallback dealt a card the next
+        // poll then swapped out, producing an error-toast-plus-card flash and
+        // a visible ready-count wipe.
+        setTopicsError(true)
         topicsSkipRetryRef.current = 0
       } else if (result === undefined) {
         // Skipped because another social action was in flight — the tap would
@@ -536,7 +531,14 @@ export default function IcebreakerSessionPage() {
 
   const handleToggleWarmupReady = useCallback(() => {
     const isReady = session?.warmupReadyUserIds?.includes(currentUserId) ?? false
-    void performSocialAction<WarmupReadyResponse>('warmup-ready', '/warmup/ready', { ready: !isReady })
+    void performSocialAction<WarmupReadyResponse>('warmup-ready', '/warmup/ready', { ready: !isReady }, { suppressErrorToast: true })
+      .then((result) => {
+        if (result === null) {
+          // Rollback path (the optimistic morph in WarmupPhaseView reverts via
+          // the isUpdatingReady effect) — acknowledge warmly and keep the CTA.
+          void Taro.showToast({ title: '刚才那一下没传到，再点一次试试', icon: 'none', duration: 2000 })
+        }
+      })
   }, [performSocialAction, session?.warmupReadyUserIds, currentUserId])
 
   const handleNextWarmupTopic = useCallback(() => {
@@ -737,7 +739,7 @@ export default function IcebreakerSessionPage() {
       topicsError,
       syncLost,
       topicCount,
-      selectedMood: session?.selectedMood,
+      selectedMood: session?.selectedMood ?? lastTopicsMoodRef.current,
       pendingAction,
       retryCount: topicsRecoveryRetryCountRef.current,
     })) return
@@ -745,7 +747,10 @@ export default function IcebreakerSessionPage() {
     topicsRecoveryRetryCountRef.current += 1
     topicsRecoveryTimerRef.current = setTimeout(() => {
       topicsRecoveryTimerRef.current = undefined
-      generateTopicsRef.current(session!.selectedMood as AtmosphereMood)
+      const mood = (session?.selectedMood ?? lastTopicsMoodRef.current) as AtmosphereMood | undefined
+      if (mood) {
+        generateTopicsRef.current(mood)
+      }
     }, TOPICS_RECOVERY_RETRY_DELAY_MS)
 
     return () => {
@@ -1309,6 +1314,8 @@ export default function IcebreakerSessionPage() {
       showScrollbar={false}
       enableFlex={phase === 'warmup'}
     >
+      {/* scroll-view padding is unsupported in WeChat — pad the inner wrapper. */}
+      <View className='icebreaker__inner'>
       <View className='icebreaker__header-wrap'>
         {phaseHeader}
 
@@ -1401,7 +1408,7 @@ export default function IcebreakerSessionPage() {
             warmupDataReady={session.warmupReadyUserIds !== undefined}
             participants={participants}
             currentUserId={currentUserId}
-            selectedMood={session.selectedMood}
+            selectedMood={session.selectedMood ?? lastTopicsMoodRef.current}
             isHost={isHost}
             vibe={apiVibeToClient(session.vibe)}
             archetypeMixText={session.archetypeMixText}
@@ -1675,6 +1682,7 @@ export default function IcebreakerSessionPage() {
         onClose={() => setIsTierSheetOpen(false)}
         onConfirm={handleConfirmTierSwitch}
       />
+      </View>
     </ScrollView>
   )
 }

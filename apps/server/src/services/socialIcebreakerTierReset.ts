@@ -92,6 +92,8 @@ export async function resetSocialIcebreakerTier(
   state.phaseStartedAt = Date.now();
   state.autoAdvanceScheduledAt = undefined;
   state.warmupReadyUserIds = [];
+  // Tier reset discards the previous topic set; generation is not in-flight.
+  state.warmupTopicsStatus = 'idle';
   // Single-test bot attendees default to ready after a tier reset.
   seedSingleTestBotsWarmupReady(state);
 

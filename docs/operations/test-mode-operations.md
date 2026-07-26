@@ -482,6 +482,8 @@ Re-seeding resets old bot registrations before inserting new ones.
 
 Social Icebreaker test mode lets staff/internal users start a Social Icebreaker session without a full matched group, so QA can validate the session flow, phase UIs, and recap end-to-end. Session creation is gated by `isSingleTestMode()` (requires `ENABLE_SINGLE_TEST_MODE=true`; disabled in `APP_MODE=production`). Bot simulation is gated separately by `isSocialIcebreakerTestMode()`, which additionally requires `SOCIAL_ICEBREAKER_TEST_MODE_ENABLED=true` (also hard-blocked in production). Both variables must be set on the environment — the staging deploy workflow writes both; if `SOCIAL_ICEBREAKER_TEST_MODE_ENABLED` is missing, 调试局 sessions run with `runBots: false` (warmup-only, see below).
 
+When starting a single-test session, the server creates a matching-test pool + bot registrations, runs the production matching engine, and then **finalizes the group into real `events` / `blindBoxEvents` / `eventAttendance` / venue time-slot bookings** so that later surfaces (event detail, `POST /api/event-pools/:groupId/confirm-attendance`) behave exactly like a real matched group. Confirm-attendance prefers `group.blindBoxEventId` when available, so the single-test path no longer returns 409 `ATTENDANCE_NOT_READY` after matching.
+
 ### How it works
 
 - The mini-program starts a single-test session via `POST /api/social-icebreaker/start` with the `singleTest` option; the session is marked `state.singleTest.isTestModeSkip = true`.
@@ -503,7 +505,9 @@ Social Icebreaker test mode lets staff/internal users start a Social Icebreaker 
 | File | Purpose |
 |------|---------|
 | `apps/server/src/services/socialIcebreakerBotService.ts` | Core deterministic bot simulation for all phases |
-| `apps/server/src/services/singleTestService.ts` | Decides `runBots`, propagates it to client state, logs decision |
+| `apps/server/src/services/singleTestService.ts` | Decides `runBots`, creates matching-test pool, finalizes group into `events`/`blindBoxEvents`/`eventAttendance`/`venueTimeSlotBookings`, propagates meta to client |
+| `apps/server/src/services/matchingTestService.ts` | Shared helpers reused by single-test finalization: `nextDinnerDateTime()`, `finalizeTestPoolGroups()` |
+| `apps/server/src/routes/domains/userEventPools.ts` | `POST /api/event-pools/:groupId/confirm-attendance` — prefers `group.blindBoxEventId` for single-test groups |
 | `apps/server/src/services/socialIcebreakerSessionState.ts` | Session state shape and helpers |
 | `apps/mini-program/src/components/icebreaker/TestModeDisclosure.tsx` | Dismissible test-mode disclosure UI with ready hint, empty roster, error retry |
 | `apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.tsx` | Warmup view with persistent test-mode badge |
@@ -513,6 +517,8 @@ Social Icebreaker test mode lets staff/internal users start a Social Icebreaker 
 - `apps/server/src/services/__tests__/socialIcebreakerBotService.test.ts`
 - `apps/server/src/routes/__tests__/singleTestMetaRunBots.test.ts`
 - `apps/server/src/routes/__tests__/socialIcebreakerClientState.test.ts`
+- `apps/server/src/__tests__/singleTestGroupFinalization.test.ts` — finalization into events/blindBoxEvents + confirm-attendance path
+- `apps/server/src/__tests__/warmupTopicsTimeout.test.ts` — LLM hard-timeout invariant and fallback
 
 ### UX / a11y notes
 

@@ -4,7 +4,7 @@
 > Event union: `apps/mini-program/src/lib/analytics/squadUnboxingAnalytics.ts`.
 > Server whitelist: `apps/server/src/routes/domains/analytics.ts`
 > (`squadUnboxingAnalyticsRoutes.test.ts` locks the accepted set).
-> Last updated: 2026-07-24 (ready-dwell event added).
+> Last updated: 2026-07-24 (table-card poster events added, wow pass).
 
 ## 1. Primary funnel (first visit)
 
@@ -47,10 +47,22 @@ wall-clock from deal-settle to completion, not animation time.
 | `squad_unboxing_scroll_depth` | Scroll-depth buckets (reset per groupId) |
 | `squad_unboxing_tonights_table_view` | Event-brief chapter impression |
 | `squad_unboxing_connection_story_expand` / `_collapse` | Connection-story chips in the analysis chapter |
-| `squad_unboxing_share_poster_tap` | 截图保存记忆 CTA (toast-based; no poster pipeline yet) |
+| `squad_unboxing_share_poster_tap` | 截图保存记忆 CTA (toast-based; superseded by the 桌卡 poster pipeline below) |
 | `squad_unboxing_analysis_retry_tap` | Group-analysis fetch retry |
 | `squad_unboxing_ready_hero_fallback` | Composed-hero image fell back (CDN → bundled → gradient) |
 | `squad_unboxing_ready_dwell` | `{ dwellMs, groupId, screen }` | Dwell time (ms) the user spent in `ready` state before opening the box — measures anticipation time. Fired on `box_tap`/`reveal`/`drag`; source field in payload. |
+
+## 2c. 桌卡 poster events (2026-07-24, wow pass P2)
+
+The 「这桌的桌卡」 collectible banner (visible once every card is face-up,
+persists on re-entry) generates a 750×1100 canvas poster into the photo
+album via `squadTableCardPoster.ts`.
+
+| Event | Payload | When |
+| --- | --- | --- |
+| `squad_unboxing_table_card_tap` | `{ groupId, screen }` | User tapped 保存桌卡 |
+| `squad_unboxing_table_card_saved` | `{ groupId, screen }` | Poster drawn + `saveImageToPhotosAlbum` succeeded |
+| `squad_unboxing_table_card_save_failed` | `{ groupId, screen, message }` | Draw/export/save threw (incl. album-permission denial) |
 
 ## 2b. Pocket-the-deck events (2026-07-15)
 
@@ -89,9 +101,10 @@ rows (focus-dismiss) as distinct semantics.
 - Client union contains all events above including `card_detail_dismiss`
   (`lib/analytics/squadUnboxingAnalytics.ts`).
 - Server whitelist accepts the three tap-to-reveal events
-  (`reveal_all_tap`, `card_flip`, `all_revealed`) plus `card_detail_dismiss`
-  and the two pocket-deck events (`deck_collapse`, `deck_reopen`), and
-  rejects unknown types
+  (`reveal_all_tap`, `card_flip`, `all_revealed`) plus `card_detail_dismiss`,
+  the two pocket-deck events (`deck_collapse`, `deck_reopen`), and the three
+  table-card poster events (`table_card_tap`, `table_card_saved`,
+  `table_card_save_failed`), and rejects unknown types
   (`apps/server/src/__tests__/squadUnboxingAnalyticsRoutes.test.ts`).
 - `all_revealed` single-fire semantics (both completion paths, no re-entry
   fire) are unit-tested in `squadFlipState.test.ts`.

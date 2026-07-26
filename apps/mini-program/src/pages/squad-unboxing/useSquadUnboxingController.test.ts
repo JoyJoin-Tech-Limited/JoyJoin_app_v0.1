@@ -12,7 +12,47 @@ describe('useSquadUnboxingController flowState derivation', () => {
   it('re-derives flowState when groupId changes', () => {
     expect(source).toContain('prevGroupIdRef')
     expect(source).toContain("prevGroupIdRef.current === groupId")
-    expect(source).toContain("setFlowState(readRevealFlag(groupId) ? 'revealed' : 'ready')")
+    expect(source).toContain("const nextFlow = readRevealFlag(groupId) ? 'revealed' : 'ready'")
+    expect(source).toContain('setFlowState(nextFlow)')
+  })
+
+  it('tracks ready dwell and fires squad_unboxing_ready_dwell on box open (Batch A)', () => {
+    expect(source).toContain('readyEnteredAtRef')
+    expect(source).toContain('squad_unboxing_ready_dwell')
+    expect(source).toContain('dwellMs')
+  })
+
+  it('holds the lid for 1000ms with a success haptic at the apex (Batch A)', () => {
+    // Anticipation hold: 850 → 1000ms; success haptic at ~550ms lid apex
+    // replaces the old end-of-shaking cardReveal+medium punch.
+    expect(source).toContain('shouldReduceMotion ? 220 : 1000')
+    expect(source).toContain("setTimeout(() => haptics('success'), shouldReduceMotion ? 150 : 550)")
+    expect(source).not.toContain("haptics('cardReveal')")
+  })
+
+  it('runs the box→cards handoff overlay for 260ms, skipped on instant tiers (Batch B)', () => {
+    // The opened box keeps rendering as a fixed overlay after flowState flips
+    // to revealed so the dealt fan visually exits the box; reduce-motion and
+    // degradation tiers (motionInstant) never mount it.
+    expect(source).toContain('boxExiting')
+    expect(source).toContain('setBoxExiting(true)')
+    expect(source).toContain('setBoxExiting(false)')
+    expect(source).toContain('if (!motionInstant)')
+    expect(source).toContain('boxExiting,')
+  })
+
+  it('gates bubble + chapter entrance on dealSettled, true at cold re-entry (post-review fix)', () => {
+    // First visit starts unsettled; the 团魂 bubble + 今晚这桌 chapter hold
+    // until notifyDealSettled. Re-entry (reveal flag) starts settled.
+    expect(source).toContain('readRevealFlag(groupId) : false')
+    expect(source).toContain('setDealSettled(true)')
+    expect(source).toContain('dealSettled,')
+  })
+
+  it('re-arms the ready-dwell clock on every page show while still ready (CONCERN-2)', () => {
+    expect(source).toContain('useDidShow')
+    expect(source).toContain("flowStateRef.current === 'ready'")
+    expect(source).toContain('readyEnteredAtRef.current = Date.now()')
   })
 
   it('guards handleOpenBox so it only runs in ready state', () => {

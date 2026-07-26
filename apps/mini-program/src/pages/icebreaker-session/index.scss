@@ -11,7 +11,17 @@ $__gold-accent:  $color-landed-gold;
 // ─── Root ─────────────────────────────────────────────────────────
 .icebreaker {
   @include page-warm-bg;
-  padding: $container-padding;
+
+  // Padding lives on the inner wrapper — WeChat ignores padding on the
+  // native scroll-view element itself.
+  &__inner {
+    padding: $container-padding;
+  }
+
+  // Error surfaces are plain Views (no scroll-view), so they carry their own.
+  &--error {
+    padding: $container-padding;
+  }
 
   &__header-wrap {
     position: relative;
@@ -268,6 +278,15 @@ $__gold-accent:  $color-landed-gold;
   // phase shell fills the remaining viewport so the action bar sits at the
   // bottom of the SE 667pt viewport.
   &--warmup {
+    display: flex;
+    flex-direction: column;
+  }
+
+  // Keep the flex chain alive through the inner padding wrapper so
+  // &__phase-shell (flex: 1) still stretches in the zero-scroll warmup layout.
+  &--warmup &__inner {
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
   }

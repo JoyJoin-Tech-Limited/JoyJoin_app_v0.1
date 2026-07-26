@@ -145,6 +145,7 @@ Canonical implementation and rollback notes: `docs/alang-prototype/implementatio
 Boundary:
 - This is the active in-event icebreaker system; do not route new primary icebreaker work through legacy toolkit flows.
 - All session reads and writes go through `lib/socialIcebreakerStore.ts`; do not add direct `db` calls in the route file.
+- **Warmup reliability (2026-07-24):** `generateMicroChallenges` (socialIcebreakerAIService.ts) has a 6s AbortController timeout + deterministic fallback (`evaluatorRejectionReason: 'timeout'`). `processAutoAdvance` (socialIcebreakerHelpers.ts) uses an in-process `fuseExecutionsInFlight` Set + re-verify of persisted `autoAdvanceScheduledAt`. `POST /topics` (socialIcebreaker.ts) re-reads latest session and merges owned fields only to prevent concurrent-ready lost updates. Client topics error path renders error card with mascot/warm-rose copy/重试 CTA instead of phantom local deck.
 - `GET /api/social-icebreaker/:socialSessionId` returns `joinedParticipants` in `SocialSessionState`; client participant rendering should prefer that roster over event-attendee fallbacks when it is present.
 - `GET /api/social-icebreaker/:socialSessionId/moment-card.png` returns a server-rendered 640×1040 PNG share card when `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER` is enabled. Rate-limited to 5 req/min per user.
 - Bonus gate: when `mini_script` is the next eligible phase and `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT=true`, phase advance pauses at a host+player vote gate (`bonusGateOffered`) instead of entering `mini_script` directly.

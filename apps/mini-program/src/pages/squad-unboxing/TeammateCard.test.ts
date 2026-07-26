@@ -100,13 +100,15 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
   it('strips wrapping full-width parens before the pill text (A3)', () => {
     // A leading （ under 1-line ellipsis read as a severed fragment
     // (`（都偏内向…`); the strip helper lives in the pure view-model module.
-    expect(source).toContain('stripConnectionPointParens')
+    // 2026-07-24: shortenConnectionPointForPill wraps the paren strip AND
+    // drops filler prefixes (都爱/喜欢/是/偏…) for the pill copy budget.
+    expect(source).toContain('shortenConnectionPointForPill')
     expect(source).toContain("from './squadUnboxingViewModels'")
     const pointsBlock = source.slice(
       source.indexOf('function getConnectionPoints'),
       source.indexOf('function getArchetypeAssetUrl'),
     )
-    expect(pointsBlock.match(/stripConnectionPointParens/g)?.length).toBeGreaterThanOrEqual(2)
+    expect(pointsBlock.match(/shortenConnectionPointForPill/g)?.length).toBeGreaterThanOrEqual(2)
   })
 
   it('silently omits privacy-hidden fields (no placeholders)', () => {

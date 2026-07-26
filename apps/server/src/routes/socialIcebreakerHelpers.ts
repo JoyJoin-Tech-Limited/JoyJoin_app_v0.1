@@ -735,6 +735,22 @@ const ALL_READY_FUSE_TEST_MODE_MS = 10_000;
 /** Grace period after the stall nudge before automation fires without the host. */
 const STALL_GRACE_MS = 75_000;
 
+/** Bound on stall suppression during warmup topic generation. Well beyond the
+ *  6s LLM race + route overhead so a live /topics request is never nudged,
+ *  but short enough that a wedged 'generating' state (server restart
+ *  mid-request) self-heals and the host gets nudged to retry. */
+const WARMUP_GENERATING_STALL_SUPPRESS_MS = 30_000;
+
+/** True while warmup topics are actively generating (bounded window). The
+ *  stall detector must never nudge a host who is waiting on the system rather
+ *  than on people (2026-07-26 出题卡死 incident). Exported for tests. */
+export function isWarmupTopicsGenerating(state: SocialSessionState, now = Date.now()): boolean {
+  if (state.currentPhase !== 'warmup' || state.warmupTopicsStatus !== 'generating') return false;
+  const startedAt = state.warmupTopicsGeneratingAt;
+  if (!startedAt) return false;
+  return now - startedAt < WARMUP_GENERATING_STALL_SUPPRESS_MS;
+}
+
 function resolveFuseMs(state: SocialSessionState): number {
   return isSingleTestMode() && state.singleTest?.isTestModeSkip
     ? ALL_READY_FUSE_TEST_MODE_MS
@@ -753,6 +769,9 @@ function resolveFuseMs(state: SocialSessionState): number {
  * - Bonus gate → the fuse pauses at the offer; it never auto-enters mini_script
  *   and never auto-skips the vote.
  */
+/** In-flight fuse executions (sessionId:fuseAt) — prevents double transitionPhase. */
+const fuseExecutionsInFlight = new Set<string>();
+
 export async function processAutoAdvance(state: SocialSessionState): Promise<SocialSessionState> {
   if (state.autoAdvanceEnabled !== true) return state;
   if (state.currentPhase === 'recap' || (state.currentPhase as string) === 'ended') return state;
@@ -762,61 +781,80 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
 
   // Execute a due fuse.
   if (state.autoAdvanceScheduledAt && now >= state.autoAdvanceScheduledAt) {
-    const nextPhase = getNextEligiblePhase(state.currentPhase, state);
-    const gatePending =
-      nextPhase === 'mini_script' && !state.bonusGateAccepted && !state.bonusGateDeclined;
-    if (gatePending) {
-      state.autoAdvanceScheduledAt = undefined;
-      state.advanceFuseKind = undefined;
-      if (!state.bonusGateOffered) {
-        state.bonusGateOffered = true;
-        state.bonusGateFrameworkPreloading = true;
+    // Concurrent readers (poll + mutation routes) can both see the same due
+    // fuse before either persists the clear — the state store is
+    // last-writer-wins with no CAS. Claim the fuse in-process so
+    // transitionPhase (and its inline content generation) runs exactly once.
+    const fuseKey = `${state.socialSessionId}:${state.autoAdvanceScheduledAt}`;
+    if (fuseExecutionsInFlight.has(fuseKey)) return state;
+    fuseExecutionsInFlight.add(fuseKey);
+    try {
+      // Re-verify against the persisted row before executing: a stale reader
+      // whose snapshot predates another executor's clear-persist could claim
+      // the same key after its finally released it. If the persisted fuse no
+      // longer matches ours, someone else already handled it.
+      const persisted = await getSessionWithExpiry(state.socialSessionId).catch(() => null);
+      if (persisted?.state && persisted.state.autoAdvanceScheduledAt !== state.autoAdvanceScheduledAt) {
+        return state;
       }
-      await updateSession(state.socialSessionId, state);
-      return state;
-    }
-    // R2: an all-ready fuse re-verifies completion at execution — a player may
-    // have un-readied (or a guard condition regressed) during the fuse window.
-    if (state.advanceFuseKind === 'all_ready' && !isPhaseNaturallyComplete(state)) {
-      state.autoAdvanceScheduledAt = undefined;
-      state.advanceFuseKind = undefined;
-      await updateSession(state.socialSessionId, state);
-      logger.info('[SocialIcebreaker] All-ready fuse cancelled (completion regressed)', {
-        sessionId: state.socialSessionId,
-        phase: state.currentPhase,
-      });
-      return state;
-    }
-    if (nextPhase !== state.currentPhase) {
-      const trigger: AdvanceTrigger =
-        state.advanceFuseKind === 'stall_recovery' ? 'stall_recovery' : 'auto_all_ready';
-      // R3: clear + persist the fuse BEFORE the transition so concurrent
-      // poll-driven reads cannot double-execute it.
-      state.autoAdvanceScheduledAt = undefined;
-      state.advanceFuseKind = undefined;
-      await updateSession(state.socialSessionId, state);
-      try {
-        await transitionPhase({ state, socialSessionId: state.socialSessionId, trigger });
-      } catch (error) {
-        // C1: transition failed after the clear persist — log and re-arm a
-        // short retry fuse so the session self-heals on a later poll instead
-        // of silently wedging on the pre-transition phase.
-        logger.error('[SocialIcebreaker] Fuse transition failed; re-arming retry fuse', {
+      const nextPhase = getNextEligiblePhase(state.currentPhase, state);
+      const gatePending =
+        nextPhase === 'mini_script' && !state.bonusGateAccepted && !state.bonusGateDeclined;
+      if (gatePending) {
+        state.autoAdvanceScheduledAt = undefined;
+        state.advanceFuseKind = undefined;
+        if (!state.bonusGateOffered) {
+          state.bonusGateOffered = true;
+          state.bonusGateFrameworkPreloading = true;
+        }
+        await updateSession(state.socialSessionId, state);
+        return state;
+      }
+      // R2: an all-ready fuse re-verifies completion at execution — a player may
+      // have un-readied (or a guard condition regressed) during the fuse window.
+      if (state.advanceFuseKind === 'all_ready' && !isPhaseNaturallyComplete(state)) {
+        state.autoAdvanceScheduledAt = undefined;
+        state.advanceFuseKind = undefined;
+        await updateSession(state.socialSessionId, state);
+        logger.info('[SocialIcebreaker] All-ready fuse cancelled (completion regressed)', {
           sessionId: state.socialSessionId,
           phase: state.currentPhase,
-          trigger,
-          error: error instanceof Error ? error.message : String(error),
         });
-        state.autoAdvanceScheduledAt = Date.now() + 15_000;
-        state.advanceFuseKind = trigger === 'stall_recovery' ? 'stall_recovery' : 'all_ready';
-        await updateSession(state.socialSessionId, state).catch(() => {});
+        return state;
       }
-    } else {
-      state.autoAdvanceScheduledAt = undefined;
-      state.advanceFuseKind = undefined;
-      await updateSession(state.socialSessionId, state);
+      if (nextPhase !== state.currentPhase) {
+        const trigger: AdvanceTrigger =
+          state.advanceFuseKind === 'stall_recovery' ? 'stall_recovery' : 'auto_all_ready';
+        // R3: clear + persist the fuse BEFORE the transition so concurrent
+        // poll-driven reads cannot double-execute it.
+        state.autoAdvanceScheduledAt = undefined;
+        state.advanceFuseKind = undefined;
+        await updateSession(state.socialSessionId, state);
+        try {
+          await transitionPhase({ state, socialSessionId: state.socialSessionId, trigger });
+        } catch (error) {
+          // C1: transition failed after the clear persist — log and re-arm a
+          // short retry fuse so the session self-heals on a later poll instead
+          // of silently wedging on the pre-transition phase.
+          logger.error('[SocialIcebreaker] Fuse transition failed; re-arming retry fuse', {
+            sessionId: state.socialSessionId,
+            phase: state.currentPhase,
+            trigger,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          state.autoAdvanceScheduledAt = Date.now() + 15_000;
+          state.advanceFuseKind = trigger === 'stall_recovery' ? 'stall_recovery' : 'all_ready';
+          await updateSession(state.socialSessionId, state).catch(() => {});
+        }
+      } else {
+        state.autoAdvanceScheduledAt = undefined;
+        state.advanceFuseKind = undefined;
+        await updateSession(state.socialSessionId, state);
+      }
+      return state;
+    } finally {
+      fuseExecutionsInFlight.delete(fuseKey);
     }
-    return state;
   }
 
   // Fuse already ticking — clients render the countdown from autoAdvanceScheduledAt.
@@ -837,6 +875,10 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
 
   // Stall path: host nudge first, auto-fire only after the grace period.
   if (state.stallSuppressedForPhase === state.currentPhase) return state;
+
+  // Never nudge or fuse warmup while topics are generating — the host is
+  // waiting on the system, not on people.
+  if (isWarmupTopicsGenerating(state, now)) return state;
 
   if (state.stallNudgeAt) {
     if (now - state.stallNudgeAt >= STALL_GRACE_MS) {

@@ -109,6 +109,14 @@ const ALLOWED_HEX_COLORS = new Set([
   '#F3EFFF',   // puzzle table gradient start
   '#EDE8FF',   // puzzle table gradient end
   '#F5F0FF',   // puzzle overlay fade
+
+  // Product flow-animation dark stage palette (components/flow-animation)
+  '#211936',   // stage gradient deep indigo
+  '#171323',   // stage gradient near-black indigo
+  '#292034',   // stage gradient violet-grey
+  '#A8C5DD',   // steel blue accent
+  '#C4B5FD',   // light violet glow
+  '#9ACD32',   // yellow-green player accent
 ])
 
 // Regex to find hex colors in SCSS

@@ -1,6 +1,6 @@
 # Icebreaker System — Complete Reference
 
-**Last Updated:** 2026-07-17
+**Last Updated:** 2026-07-26
 
 > ⭐ **CANONICAL FLOW:** The Social Icebreaker is the **primary and default in-event icebreaking experience** for JoyJoin matched groups. When building any feature that relates to icebreaking or in-event social facilitation, you MUST integrate with or extend the Social Icebreaker. Do NOT build new standalone icebreaking UIs.
 
@@ -171,7 +171,14 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
         ▼
 [WARMUP PHASE]
   Host selects mood → POST .../topics (server generates shared warmupTopics list)
+    — Server sets `warmupTopicsStatus = 'generating'` + `warmupTopicsGeneratingAt` before any LLM work, and `warmupTopicsStatus = 'ready'` (or `'error'`) when generation finishes
+    — All Social Icebreaker LLM calls are wrapped with `raceWithTimeout(ms, RACE_LLM_TIMEOUT_MS = 6000)` in `apps/server/src/socialIcebreakerAICore.ts`; this is a deterministic Promise.race hard bound, not just an AbortController signal. On timeout/error the generator returns a deterministic fallback and logs `fallbackUsed: true` / `evaluatorRejectionReason: 'timeout'` via `logAITrace`
+    — The `/topics` endpoint **re-reads the latest session snapshot** after generation + merges only owned fields (`selectedMood`, `warmupTopics*`, `currentTopicIndex`, `warmupReadyUserIds`) — this eliminates the lost-update that previously clobbered concurrent ready writes
+    — While `warmupTopicsStatus === 'generating'`, the auto-advance stall machinery is suppressed for up to 30s so the host and players do not see a false "再等一会儿" nudge during generation
+    — If topics generation fails on the client, the host sees an **error card** (Xiaoyue mascot, warm-rose #B83A5E copy, primary 重试 button, ≤2 auto-retries via `shouldRetryWarmupTopics`) instead of a phantom local fallback deck that would be swapped out by the next poll
   Any player → POST .../warmup/ready once they are comfortable moving on
+    — Client updates **optimistic ready count** immediately (mirrors the self-ember), avoids the "ready tap → 6s spinner → nothing happened" UX
+    — Concurrent duplicate ready POSTs are blocked by `performSocialAction`'s same-key action guard; suppressed taps show 「正在同步，请稍候」 toast
   Host → POST .../warmup/next-topic once everyone is ready
   Any player → POST .../pulse-check { vibe: 1|2|3 }
         │
@@ -296,6 +303,8 @@ interface SocialSessionState {
   warmupReadyUserIds?: string[];
   selectedMood?: AtmosphereMood;
   commonGroundCount?: number;
+  warmupTopicsStatus?: 'idle' | 'generating' | 'ready' | 'error'; // server-owned generation lifecycle (2026-07-26)
+  warmupTopicsGeneratingAt?: number; // ms timestamp when generation started; used to bound stall suppression
 
   // Micro-challenge phase
   currentChallenge?: MicroChallenge;
@@ -372,7 +381,7 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 |--------|------|------|-------------|
 | `POST` | `/api/social-icebreaker/start` | any | Join or create session; first caller = host; participant roster is persisted. Accepts optional `{ tier, vibe }` |
 | `GET` | `/api/social-icebreaker/:socialSessionId` | any | Poll state (every 3s); registers presence and returns `joinedParticipants` roster summary |
-| `POST` | `/api/social-icebreaker/:socialSessionId/topics` | host | Generate mood-filtered warmup topics (vibe-aware depth when `RUN_PLAN_TEMPLATES_ENABLED=true`) |
+| `POST` | `/api/social-icebreaker/:socialSessionId/topics` | host | Generate mood-filtered warmup topics. Sets `warmupTopicsStatus = 'generating'` before LLM work and `'ready'`/`'error'` after. **Reliability:** 6s deterministic `raceWithTimeout` hard bound (Promise.race) on all icebreaker LLM calls → deterministic fallback; endpoint re-reads latest session snapshot + merges owned fields only to avoid concurrent-ready lost updates; stall suppression while generating (≤30s). Client shows error card with retry on failure (no phantom local deck). |
 | `POST` | `/api/social-icebreaker/:socialSessionId/warmup/ready` | any | Mark whether the current player is ready to move on |
 | `POST` | `/api/social-icebreaker/:socialSessionId/warmup/next-topic` | host | Advance to the next shared warmup topic after mutual readiness |
 | `POST` | `/api/social-icebreaker/:socialSessionId/advance` | host | Advance to next phase; accepts `force: true` to skip stragglers; auto-skips `lie_detective` if <3 players |
@@ -635,9 +644,11 @@ This widget **fetches and displays a random question** (`GET /api/icebreakers/ra
 **File:** `apps/server/src/socialIcebreakerAIService.ts`
 **Provider:** DeepSeek (`deepseek-chat` model)
 
+> **Deterministic hard timeout (2026-07-26):** Every LLM call in the Social Icebreaker generators is wrapped with `raceWithTimeout(promise, RACE_LLM_TIMEOUT_MS = 6000)` exported from `apps/server/src/socialIcebreakerAICore.ts`. This is a Promise.race hard bound, not a best-effort AbortController signal, so a hung transport or retrying SDK can never freeze a phase or route. On timeout or any error, the generator returns a deterministic curated fallback and logs `fallbackUsed: true` / `evaluatorRejectionReason: 'timeout'` (where applicable) via `logAITrace`. The regression test `warmupTopicsTimeout.test.ts` asserts that no bare `await client.chat.completions.create` remains in `socialIcebreakerAIService.ts`, `socialIcebreakerAuctionAI.ts`, or `socialIcebreakerPersonalityDiceAI.ts`.
+
 | Function | Input | Output | Fallback |
 |----------|-------|--------|---------|
-| `generateWarmupTopics` | `{ mood, eventType, participantCount, vibe?, avoidTopics? }` | 5 `SocialTopic[]` | 25 curated topics (mood-filtered). When `vibe='deep_chat'`, generates 3-tier prompts (`opener`/`followUp`/`reflection`) on each `SocialTopic`. When `vibe='play_fun'`, generates lighter, faster prompts. 3s LLM timeout with curated fallback. |
+| `generateWarmupTopics` | `{ mood, eventType, participantCount, vibe?, avoidTopics? }` | 5 `SocialTopic[]` | 25 curated topics (mood-filtered). When `vibe='deep_chat'`, generates 3-tier prompts (`opener`/`followUp`/`reflection`) on each `SocialTopic`. When `vibe='play_fun'`, generates lighter, faster prompts. **6s LLM timeout** with curated fallback. |
 | `generateMicroChallenges` | `{ eventType, participantCount, completedChallengeIds? }` | 3 `MicroChallenge[]` | 8 curated challenges |
 | `generateLieDetectiveStatements` | `{ userId, displayName, archetype?, interests? }` | 3 statements (2T+1F) | 3 curated fallback sets |
 | `generateAuctionLots` | `{ eventType, participantCount, sessionContext? { mixText } }` | `AuctionLot[]` (with optional `emoji`) | Curated fallback lots; archetype mix injected when `sessionContext` provided |
@@ -693,10 +704,10 @@ const CLIENT_TO_API_VIBE = {
 | `apps/server/src/routes/socialIcebreakerTier.ts` | Tier/vibe selection route, including custom tier switching. |
 | `apps/server/src/routes/socialIcebreakerExtended.ts` | Extended phase routes: auction (generate-lots, bid, close-lot), speed_friending auto-init (pair generation on phase advance) + advance guard |
 | `apps/server/src/socialIcebreakerAIService.ts` | Public barrel for AI generation functions (re-exports topical modules). |
-| `apps/server/src/socialIcebreakerAICore.ts` | Shared AI core: `AIServiceResult`, `fireAndForgetQualityGate`. |
+| `apps/server/src/socialIcebreakerAICore.ts` | Shared AI core: `AIServiceResult`, `fireAndForgetQualityGate`, `raceWithTimeout`, `isLLMTimeoutError`, `RACE_LLM_TIMEOUT_MS`. |
 | `apps/server/src/socialIcebreakerPersonalityDiceAI.ts` | Personality-dice challenge generation (V1/V4 choose mode). |
 | `apps/server/src/socialIcebreakerAuctionAI.ts` | Auction lot generation. |
-| `apps/server/src/socialIcebreakerMiniScriptAI.ts` | Mini-script framework JSON fetch (MiniMax-first hybrid). |
+| `apps/server/src/socialIcebreakerMiniScriptAI.ts` | Mini-script framework JSON fetch (MiniMax-first hybrid; owns its own 32s pipeline AbortController + catalog fallback). |
 | `apps/server/src/services/runPlanService.ts` | Template-driven run plan compiler with 4-tier fallback chain; feature-flag gated by `RUN_PLAN_TEMPLATES_ENABLED` |
 | `apps/server/src/repositories/runPlanTemplateRepo.ts` | DB queries for `run_plan_templates` table |
 | `packages/shared/src/runPlanCompiler.ts` | `resolveTemplateSlots()` — 9 default templates (3 vibes × 3 tiers), category-spacing enforcement, slot resolution |

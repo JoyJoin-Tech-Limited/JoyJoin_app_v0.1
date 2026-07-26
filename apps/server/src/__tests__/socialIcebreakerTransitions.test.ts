@@ -8,6 +8,7 @@ const {
   loadSessionLieTruthsMock,
   generateMicroChallengesMock,
   generateRecapSummaryMock,
+  getSessionWithExpiryMock,
 } = vi.hoisted(() => ({
   updateSessionMock: vi.fn(async () => {}),
   listParticipantsMock: vi.fn(async () => [
@@ -36,6 +37,7 @@ const {
     data: { headline: '今晚到这儿，刚刚好', closingLine: '下次见', moments: [] },
     meta: { generatedAt: new Date().toISOString(), fromCache: false, provider: null, fallbackUsed: false },
   })),
+  getSessionWithExpiryMock: vi.fn(async () => ({ state: null as SocialSessionState | null, expired: false })),
 }));
 
 vi.mock('../lib/socialIcebreakerStore', () => ({
@@ -43,7 +45,7 @@ vi.mock('../lib/socialIcebreakerStore', () => ({
   listParticipants: listParticipantsMock,
   savePhaseMetric: savePhaseMetricMock,
   loadSessionLieTruths: loadSessionLieTruthsMock,
-  getSessionWithExpiry: vi.fn(async () => ({ state: null, expired: false })),
+  getSessionWithExpiry: getSessionWithExpiryMock,
   getParticipant: vi.fn(async () => null),
   setLieTruths: vi.fn(async () => {}),
   getLieTruths: vi.fn(async () => null),
@@ -79,6 +81,7 @@ vi.mock('../services/customModeService', () => ({
 
 import {
   isPhaseNaturallyComplete,
+  isWarmupTopicsGenerating,
   processAutoAdvance,
   transitionPhase,
 } from '../routes/socialIcebreakerHelpers';
@@ -103,6 +106,7 @@ function makeState(overrides: Partial<SocialSessionState> = {}): SocialSessionSt
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(isSingleTestMode).mockReturnValue(false);
+  getSessionWithExpiryMock.mockResolvedValue({ state: null, expired: false });
 });
 
 describe('isPhaseNaturallyComplete', () => {
@@ -197,6 +201,73 @@ describe('processAutoAdvance — all-ready fast fuse', () => {
     expect(savePhaseMetricMock).toHaveBeenCalledOnce();
   });
 
+  it('runs transitionPhase exactly once when two readers see the same due fuse concurrently', async () => {
+    const fuseAt = Date.now() - 1_000;
+    const makeDueState = () =>
+      makeState({
+        currentPhase: 'warmup',
+        completedPhases: [],
+        warmupTopics: [{ question: 'q', depthLevel: 1, style: 'binary', safety: 'gentle' } as never],
+        warmupReadyUserIds: ['a', 'b', 'c', 'd'],
+        autoAdvanceScheduledAt: fuseAt,
+        advanceFuseKind: 'all_ready',
+        enabledPhases: ['warmup', 'micro_challenge', 'lie_detective'],
+      });
+
+    // The re-verify read sees the fuse still due; the R3 clear-persist blocks
+    // so executor 1 holds the in-flight claim while reader 2 arrives.
+    getSessionWithExpiryMock.mockImplementation(async () => ({
+      state: makeDueState(),
+      expired: false,
+    }));
+    let releaseClearPersist!: () => void;
+    const clearPersistGate = new Promise<void>((resolve) => {
+      releaseClearPersist = resolve;
+    });
+    updateSessionMock.mockImplementationOnce(() => clearPersistGate);
+
+    const p1 = processAutoAdvance(makeDueState());
+    await vi.waitFor(() => {
+      expect(updateSessionMock).toHaveBeenCalledTimes(1);
+    });
+
+    const stateB = makeDueState();
+    const p2 = await processAutoAdvance(stateB);
+
+    // Reader 2 saw the claim and bailed without executing anything.
+    expect(p2.currentPhase).toBe('warmup');
+    expect(generateMicroChallengesMock).not.toHaveBeenCalled();
+
+    releaseClearPersist();
+    const result1 = await p1;
+
+    expect(result1.currentPhase).toBe('micro_challenge');
+    expect(generateMicroChallengesMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips execution when the persisted fuse was already cleared by another executor', async () => {
+    const state = makeState({
+      currentPhase: 'warmup',
+      completedPhases: [],
+      warmupTopics: [{ question: 'q', depthLevel: 1, style: 'binary', safety: 'gentle' } as never],
+      warmupReadyUserIds: ['a', 'b', 'c', 'd'],
+      autoAdvanceScheduledAt: Date.now() - 1_000,
+      advanceFuseKind: 'all_ready',
+      enabledPhases: ['warmup', 'micro_challenge', 'lie_detective'],
+    });
+    // Another executor already cleared + persisted the fuse.
+    getSessionWithExpiryMock.mockResolvedValue({
+      state: makeState({ autoAdvanceScheduledAt: undefined }),
+      expired: false,
+    });
+
+    const result = await processAutoAdvance(state);
+
+    expect(result.currentPhase).toBe('warmup');
+    expect(generateMicroChallengesMock).not.toHaveBeenCalled();
+    expect(updateSessionMock).not.toHaveBeenCalled();
+  });
+
   it('pauses at the bonus gate instead of auto-entering mini_script', async () => {
     const state = makeState({
       currentPhase: 'lie_detective',
@@ -262,6 +333,76 @@ describe('processAutoAdvance — stall path', () => {
 
     expect(result.stallNudgeAt).toBeUndefined();
     expect(result.autoAdvanceScheduledAt).toBeUndefined();
+  });
+});
+
+describe('processAutoAdvance — warmup generating suppression (2026-07-26 出题卡死)', () => {
+  it('never nudges or fuses while warmup topics are generating', async () => {
+    const state = makeState({
+      currentPhase: 'warmup',
+      completedPhases: [],
+      warmupTopicsStatus: 'generating',
+      warmupTopicsGeneratingAt: Date.now(),
+      phaseStartedAt: Date.now() - 20 * 60_000, // past the phase timeout — without suppression this WOULD nudge
+    });
+
+    const result = await processAutoAdvance(state);
+
+    expect(result.currentPhase).toBe('warmup');
+    expect(result.stallNudgeAt).toBeUndefined();
+    expect(result.autoAdvanceScheduledAt).toBeUndefined();
+  });
+
+  it('resumes the stall machinery when the generating marker is wedged (>30s)', async () => {
+    const state = makeState({
+      currentPhase: 'warmup',
+      completedPhases: [],
+      warmupTopicsStatus: 'generating',
+      warmupTopicsGeneratingAt: Date.now() - 31_000,
+      phaseStartedAt: Date.now() - 20 * 60_000,
+    });
+
+    const result = await processAutoAdvance(state);
+
+    expect(result.stallNudgeAt).toBeDefined();
+  });
+
+  it('resumes the stall machinery immediately once topics are ready', async () => {
+    const state = makeState({
+      currentPhase: 'warmup',
+      completedPhases: [],
+      warmupTopicsStatus: 'ready',
+      phaseStartedAt: Date.now() - 20 * 60_000,
+    });
+
+    const result = await processAutoAdvance(state);
+
+    expect(result.stallNudgeAt).toBeDefined();
+  });
+});
+
+describe('isWarmupTopicsGenerating', () => {
+  it('is false outside warmup, without the marker, and past the window', () => {
+    const now = Date.now();
+    expect(isWarmupTopicsGenerating(makeState({
+      currentPhase: 'micro_challenge',
+      warmupTopicsStatus: 'generating',
+      warmupTopicsGeneratingAt: now,
+    }), now)).toBe(false);
+    expect(isWarmupTopicsGenerating(makeState({
+      currentPhase: 'warmup',
+      warmupTopicsStatus: 'generating',
+    }), now)).toBe(false);
+    expect(isWarmupTopicsGenerating(makeState({
+      currentPhase: 'warmup',
+      warmupTopicsStatus: 'generating',
+      warmupTopicsGeneratingAt: now - 31_000,
+    }), now)).toBe(false);
+    expect(isWarmupTopicsGenerating(makeState({
+      currentPhase: 'warmup',
+      warmupTopicsStatus: 'generating',
+      warmupTopicsGeneratingAt: now - 5_000,
+    }), now)).toBe(true);
   });
 });
 

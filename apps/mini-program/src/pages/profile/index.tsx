@@ -4,10 +4,12 @@ import {
   getUserGamificationInfo,
 } from '@shared/api'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { formatHSLAsRGBA, getArchetypeHSL, getContrastSafeArchetypeColor } from '@shared/archetypeColors'
+import type { PersonalStoryResponse } from '@joyjoin/shared/schema'
 import { useQuery } from '@tanstack/react-query'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import IdentityStageScene from '../../components/profile/IdentityStageScene'
 import PixelAvatarComposite from '../../components/profile/PixelAvatarComposite'
@@ -25,6 +27,9 @@ import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import { getPixelEquipmentLayerUrl } from '../../lib/profile/pixelAvatarAssets'
 import { haptics } from '../../lib/utils/haptics'
 import { localAsset } from '../../lib/utils/cdnAssets'
+import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
+import { shouldRefreshOnShow } from '../../lib/utils/showRefreshGate'
+import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import './index.scss'
 import {
   getProfileCompletion,
@@ -209,10 +214,10 @@ function ProfileStoryArtwork() {
         onError={artwork.onError}
       />
       <View className='profile-page__story-wash' />
-      {artwork.usingFallback && (
+      {/* Dev-only placeholder marker — never ships on user-facing builds. */}
+      {artwork.usingFallback && process.env.NODE_ENV !== 'production' && (
         <Text className='profile-page__story-placeholder'>场景示意</Text>
       )}
-      <View className='profile-page__story-bookmark'><Text>PRIVATE STORY</Text></View>
     </>
   )
 }
@@ -228,17 +233,25 @@ export default function ProfilePage() {
     enabled: !authLoading,
   })
 
+  // Warm own first-viewport assets + adjacent tabs' assets during idle so
+  // the next tab switch paints instantly.
+  useEffect(() => {
+    preloadRouteAssets('pages/profile/index')
+    preloadPredictiveAssets('pages/profile/index')
+  }, [])
+
   const hasDidShowRef = useRef(false)
   useDidShow(() => {
-    // Auth feature flags are server-owned, while the auth query is cached indefinitely.
-    // Refresh on every Profile appearance so newly enabled equipment is visible on-device.
-    void queryClient.invalidateQueries({ queryKey: ['mini-program', 'auth-user'] })
-
     if (!hasDidShowRef.current) {
       hasDidShowRef.current = true
       return
     }
     if (authLoading || !authUser) return
+    // Auth feature flags are server-owned, while the auth query is cached indefinitely.
+    // Refresh on Profile appearance so newly enabled equipment is visible on-device —
+    // but at most once per staleness window so tab switches stay instant.
+    if (!shouldRefreshOnShow('profile')) return
+    void queryClient.invalidateQueries({ queryKey: ['mini-program', 'auth-user'] })
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'joined-events'] })
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/profile'] })
     if (profileV17DataPolicy.gamificationEnabled) {
@@ -275,6 +288,20 @@ export default function ProfilePage() {
     staleTime: 30_000,
   })
 
+  // Lightweight chapter-count teaser for the story card title. Key is scoped
+  // with `profile-teaser` so it never collides with the personal-story page
+  // query (`[...PERSONAL_STORY_QUERY_KEY, viewerKey]`).
+  const personalStoryTeaserQuery = useQuery({
+    queryKey: ['mini-program', 'personal-story', 'profile-teaser'],
+    queryFn: () => apiRequest<PersonalStoryResponse>({
+      path: '/api/personal-story',
+      method: 'GET',
+    }),
+    enabled: !authLoading && !!authUser && profileV17DataPolicy.personalStoryEnabled,
+    staleTime: 60_000,
+    retry: 1,
+  })
+
   const joinedEventsCount = profileShellQuery.data?.stats.eventsJoined ?? joinedEvents.length
   const connectionsCount = profileShellQuery.data?.stats.connectionsCount
   const isLoadingStats = isLoadingEvents || profileShellQuery.isLoading
@@ -308,6 +335,47 @@ export default function ProfilePage() {
     ? [outfit.topItemId, outfit.bottomItemId, outfit.shoesItemId, outfit.accessoryItemId].filter(Boolean).length
     : 0
   const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
+  const storyChapterCount = personalStoryTeaserQuery.data?.story?.chapters?.length ?? 0
+
+  // Entrance stagger: the `--entered` modifiers are driven by mounted state so
+  // the CSS transitions actually play. Delays live in SCSS (stage 0ms → stats
+  // 80ms → story 160ms) and are suppressed under prefers-reduced-motion.
+  const [hasEntered, setHasEntered] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setHasEntered(true), 16)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Archetype foil frame (TeammateCard / PhaseHeroCard pattern): quiet tinted
+  // border + soft ambient shadow, rgba only — WeChat WXSS drops hsla().
+  const identityStageFoilStyle = useMemo(() => {
+    if (!archetype) return undefined
+    const hsl = getArchetypeHSL(archetype)
+    return {
+      borderColor: formatHSLAsRGBA(hsl, 0.55),
+      boxShadow: `0 16rpx 38rpx ${formatHSLAsRGBA(hsl, 0.24)}, inset 0 0 0 1rpx ${formatHSLAsRGBA(hsl, 0.14)}`,
+    }
+  }, [archetype])
+
+  // Same accent family on the archetype tag (contrast-safe text on a soft tint).
+  const archetypeTagStyle = useMemo(() => {
+    if (!archetype) return undefined
+    const hsl = getArchetypeHSL(archetype)
+    return {
+      color: getContrastSafeArchetypeColor(archetype),
+      background: formatHSLAsRGBA(hsl, 0.12),
+      borderColor: formatHSLAsRGBA(hsl, 0.2),
+    }
+  }, [archetype])
+
+  // Archetype-tinted ring on the circle icon (falls back to the SCSS
+  // secondary-pink ring when no archetype is resolved yet). rgba only —
+  // WeChat WXSS drops hsla().
+  const archetypeRingStyle = useMemo(() => {
+    if (!archetype) return undefined
+    const hsl = getArchetypeHSL(archetype)
+    return { borderColor: formatHSLAsRGBA(hsl, 0.9) }
+  }, [archetype])
 
   const handleOpenPersonalityType = () => {
     haptics('light')
@@ -342,8 +410,10 @@ export default function ProfilePage() {
     }
   }
 
+  const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
+
   return renderGate(
-    <View className='profile-page tab-page-enter'>
+    <View className={`profile-page ${tabEntranceClass}`}>
       <View className='profile-page__nav' data-testid='profile-top-navigation'>
         <Text className='profile-page__nav-title'>我的</Text>
         <View
@@ -359,25 +429,32 @@ export default function ProfilePage() {
       </View>
       <ScrollView className='profile-page__scroll' scrollY enhanced showScrollbar={false}>
         {profileV17Enabled ? (
-          <View className='profile-page__identity-stage profile-page__identity-stage--entered' data-testid='profile-v4'>
+          <View
+            className={`profile-page__identity-stage${hasEntered ? ' profile-page__identity-stage--entered' : ''}`}
+            style={identityStageFoilStyle}
+            data-testid='profile-v4'
+          >
             <IdentityStageScene absoluteAvatar={false}>
               {/* Readable glass card for the identity copy (top-left) */}
               <View className='profile-page__identity-copy-card'>
                 <View className='profile-page__identity-copy'>
-                  {!pixelAvatarEnabled && (
-                    <View className='profile-page__identity-avatar'>
-                      <ArchetypeHead
-                        archetype={archetype}
-                        size={112}
-                        fallbackText={displayName}
-                      />
-                    </View>
-                  )}
+                  {/* Archetype circle icon is always rendered — it is the
+                      user's class emblem, independent of the pixel avatar. */}
+                  <View className='profile-page__identity-avatar' style={archetypeRingStyle}>
+                    <ArchetypeHead
+                      archetype={archetype}
+                      size={92}
+                      fallbackText={displayName}
+                    />
+                  </View>
                   <View className='profile-page__identity-text'>
                     <Text className='profile-page__identity-name'>{displayName}</Text>
                     <View className='profile-page__identity-tags'>
                       {archetypeName && (
-                        <Text className='profile-page__identity-tag profile-page__identity-tag--primary'>
+                        <Text
+                          className='profile-page__identity-tag profile-page__identity-tag--primary'
+                          style={archetypeTagStyle}
+                        >
                           {archetypeName}
                         </Text>
                       )}
@@ -385,9 +462,7 @@ export default function ProfilePage() {
                         <Text className='profile-page__identity-tag'>{lifeStage}</Text>
                       )}
                       {genderLabel && (
-                        <Text className='profile-page__identity-tag profile-page__identity-tag--blue'>
-                          {genderLabel}
-                        </Text>
+                        <Text className='profile-page__identity-tag'>{genderLabel}</Text>
                       )}
                     </View>
                     {bio && <Text className='profile-page__identity-bio'>{bio}</Text>}
@@ -396,7 +471,9 @@ export default function ProfilePage() {
               </View>
 
               {/* Avatar anchored on the plaza with a warm platform shadow */}
-              <View className='profile-page__partner-visual'>
+              <View
+                className={`profile-page__partner-visual${pixelAvatarEnabled ? '' : ' profile-page__partner-visual--no-entry'}`}
+              >
                 <View className='profile-page__partner-platform' aria-hidden='true' />
                 <ProfilePartnerVisual
                   key={archetype ?? 'profile-partner-fallback'}
@@ -409,10 +486,29 @@ export default function ProfilePage() {
                   itemsById={equipmentItemsById}
                   onRetryEquipment={() => { void equipmentQuery.refetch() }}
                 />
+                {/* Class emblem — only in pixel mode; pixel-off already shows
+                    the full-body archetype art as the visual itself. */}
+                {pixelAvatarEnabled && archetype && (
+                  <View
+                    className='profile-page__partner-emblem'
+                    style={archetypeRingStyle}
+                    aria-hidden='true'
+                    data-testid='profile-partner-emblem'
+                  >
+                    <ArchetypeHead
+                      archetype={archetype}
+                      size={56}
+                      variant='grid'
+                      fallbackText={displayName}
+                    />
+                  </View>
+                )}
               </View>
 
               {/* Readable glass card for growth stats (bottom-left) */}
-              <View className='profile-page__growth-card'>
+              <View
+                className={`profile-page__growth-card${pixelAvatarEnabled ? '' : ' profile-page__growth-card--no-entry'}`}
+              >
                 <View
                   className='profile-page__growth'
                   aria-label={gamificationQuery.isLoading
@@ -434,11 +530,20 @@ export default function ProfilePage() {
                       style={{
                         transform: `scaleX(${visibleGrowthProgress / 100})`,
                       }}
-                    />
+                    >
+                      <View className='profile-page__growth-progress-sheen' aria-hidden='true' />
+                    </View>
                   </View>
-                  <Text className='profile-page__growth-level'>
-                    {gamificationQuery.isError ? '成长记录稍后会自动刷新' : growthLevelLabel}
-                  </Text>
+                  {/* Level plate doubles as the gamification error surface:
+                      error copy stays a plain text line, never on the plate. */}
+                  {gamificationQuery.isError ? (
+                    <Text className='profile-page__growth-level'>成长记录稍后会自动刷新</Text>
+                  ) : (
+                    <View className='profile-page__level-plate'>
+                      <View className='profile-page__level-plate-spark' aria-hidden='true' />
+                      <Text className='profile-page__level-plate-text'>{growthLevelLabel}</Text>
+                    </View>
+                  )}
                 </View>
               </View>
 
@@ -478,6 +583,11 @@ export default function ProfilePage() {
                         : '当前装备正在同步'}
                   >
                     <Text className='profile-page__equipment-label'>当前装备</Text>
+                    {equipmentState === 'ready' && (
+                      <Text className='profile-page__partner-entry-count'>
+                        {`${equipmentInventory.length} 件`}
+                      </Text>
+                    )}
                     {equipmentState === 'ready' && equipmentQuery.isError && (
                       <Text className='profile-page__equipment-cache-badge'>上次同步</Text>
                     )}
@@ -514,11 +624,6 @@ export default function ProfilePage() {
                     )}
                   </View>
                   <View className='profile-page__partner-entry-action'>
-                    <Text className='profile-page__partner-entry-count'>
-                      {equipmentState === 'ready'
-                        ? `${equipmentInventory.length} 件`
-                        : equipmentState === 'error' ? '待重试' : '—'}
-                    </Text>
                     <Text className='profile-page__partner-entry-action-text'>我的形象</Text>
                     <View className='profile-page__partner-entry-chevron' />
                   </View>
@@ -561,14 +666,15 @@ export default function ProfilePage() {
           </View>
         )}
 
-        <View className='profile-page__stats profile-page__stats--entered'>
+        <View className={`profile-page__stats${hasEntered ? ' profile-page__stats--entered' : ''}`}>
           <Card
-            className='profile-page__stat'
+            className='profile-page__stat profile-page__stat--tint-cream'
             hoverClass='profile-page__stat--pressed'
             onClick={() => { haptics('light'); void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.events }) }}
             role='button'
             aria-label={`已参加 ${joinedEventsCount} 场活动，去浏览足迹`}
           >
+            <JoyJoinIcon emoji='👣' tier='ui' size={40} className='profile-page__stat-icon' />
             <Text className='profile-page__stat-value'>
               {isLoadingStats ? '—' : joinedEventsCount}
             </Text>
@@ -578,12 +684,13 @@ export default function ProfilePage() {
           </Card>
 
           <Card
-            className='profile-page__stat'
+            className='profile-page__stat profile-page__stat--tint-pink'
             hoverClass='profile-page__stat--pressed'
             onClick={() => { haptics('light'); void Taro.switchTab({ url: MINI_PROGRAM_ROUTES.connections }) }}
             role='button'
             aria-label={connectionsCount == null ? '连接数正在加载' : `已有 ${connectionsCount} 个连接，去查看`}
           >
+            <JoyJoinIcon emoji='👥' tier='ui' size={40} className='profile-page__stat-icon' />
             <Text className='profile-page__stat-value'>
               {profileShellQuery.isLoading || connectionsCount == null ? '—' : connectionsCount}
             </Text>
@@ -593,12 +700,13 @@ export default function ProfilePage() {
           </Card>
 
           <Card
-            className='profile-page__stat'
+            className='profile-page__stat profile-page__stat--tint-purple'
             hoverClass='profile-page__stat--pressed'
             onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile }) }}
             role='button'
             aria-label={`资料完成度 ${profileCompletion}%，去完善资料`}
           >
+            <JoyJoinIcon emoji='📄' tier='ui' size={40} className='profile-page__stat-icon' />
             <Text className='profile-page__stat-value'>{profileCompletion}%</Text>
             <Text className='profile-page__stat-label'>资料完成度</Text>
             <Text className='profile-page__stat-caption'>去完善</Text>
@@ -613,24 +721,18 @@ export default function ProfilePage() {
         </View>
 
         {profileV17DataPolicy.personalStoryEnabled && (
-          <View className='profile-page__archive' data-testid='profile-growth-archive'>
+          <View
+            className={`profile-page__archive${hasEntered ? ' profile-page__archive--entered' : ''}`}
+            data-testid='profile-growth-archive'
+          >
             <View className='profile-page__archive-heading'>
               <View className='profile-page__archive-title-wrap'>
-                <Text className='profile-page__archive-spark'>✦</Text>
+                <View className='profile-page__archive-spark' aria-hidden='true' />
                 <Text className='profile-page__archive-title'>我的故事</Text>
               </View>
-              <View
-                className='profile-page__archive-link'
-                hoverClass='profile-page__archive-link--pressed'
-                onClick={() => {
-                  haptics('light')
-                  void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.personalStory })
-                }}
-                role='button'
-                aria-label='进入仅本人可见的故事'
-              >
+              {/* Non-interactive privacy badge — the story card itself is the only entry. */}
+              <View className='profile-page__archive-link'>
                 <Text className='profile-page__archive-link-text'>仅自己可见</Text>
-                <View className='profile-page__archive-link-chevron' />
               </View>
             </View>
             <View
@@ -646,7 +748,9 @@ export default function ProfilePage() {
             >
               <ProfileStoryArtwork />
               <View className='profile-page__story-content'>
-                <Text className='profile-page__story-title'>我的故事</Text>
+                <Text className='profile-page__story-title'>
+                  {storyChapterCount > 0 ? `第 ${storyChapterCount} 章 · 继续书写` : '开始你的第一章'}
+                </Text>
                 <Text className='profile-page__story-summary'>
                   只根据你真实参加过的相遇，一章一章继续写下去。
                 </Text>

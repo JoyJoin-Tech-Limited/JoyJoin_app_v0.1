@@ -9,7 +9,7 @@ import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import MissingArchetypePlaceholder from '../../components/mascot/MissingArchetypePlaceholder'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { haptics } from '../../lib/utils/haptics'
-import { buildFaceDownCardAriaLabel, buildInterestHookText, stripConnectionPointParens } from './squadUnboxingViewModels'
+import { buildFaceDownCardAriaLabel, buildInterestHookText, getPairChemistryTier, getPairChemistryWord, getSelfSquadRoleLabel, shortenConnectionPointForPill } from './squadUnboxingViewModels'
 
 export interface TeammateCardProps {
   member: PoolGroupMemberSummary
@@ -50,6 +50,15 @@ export interface TeammateCardProps {
   pocketTransitionDelayMs?: number | null
   /** 最佳拍档 heartbeat glow pulse while this card folds (fires at its fold delay). */
   pocketGlowActive?: boolean
+  /**
+   * 最佳拍档 slow reveal (2026-07-24 P1): true only on the live flip that
+   * reveals the jackpot card — slows the flip to 0.6× and swaps the sheen
+   * for a gold band. Never set on re-entry or instant tiers.
+   */
+  slowFlipActive?: boolean
+  /** Front art finished loading (avatar or archetype image) — feeds the
+   *  page-level flip hold-to-onLoad gate (2026-07-24 P1). */
+  onArtLoad?: (userId: string) => void
   onTap: () => void
   onLongPress: () => void
 }
@@ -74,15 +83,17 @@ function getConnectionPoints(pair?: PairExplanation | null) {
   // pill — a leading （ under 1-line ellipsis read as a severed fragment
   // (`（都偏内向…`). The pill stays 1-line nowrap+ellipsis (Chrome 143
   // serializes `display: -webkit-box` as flow-root — no 2-line clamp).
+  // 2026-07-24 full-marks: shortenConnectionPointForPill then drops filler
+  // prefixes （都爱/喜欢/是/偏…) so the pill carries the semantic core.
   if (pair.connectionPointsWithRarity && pair.connectionPointsWithRarity.length > 0) {
     return pair.connectionPointsWithRarity
       .slice(0, 1)
-      .map((point) => ({ ...point, text: stripConnectionPointParens(point.text) }))
+      .map((point) => ({ ...point, text: shortenConnectionPointForPill(point.text) }))
   }
   if (pair.connectionPoints && pair.connectionPoints.length > 0) {
     return pair.connectionPoints
       .slice(0, 1)
-      .map((text) => ({ text: stripConnectionPointParens(text), rarity: 'common' as const }))
+      .map((text) => ({ text: shortenConnectionPointForPill(text), rarity: 'common' as const }))
   }
   return []
 }
@@ -131,12 +142,18 @@ export default function TeammateCard({
   pocketPose = false,
   pocketTransitionDelayMs = null,
   pocketGlowActive = false,
+  slowFlipActive = false,
+  onArtLoad,
   onTap,
   onLongPress,
 }: TeammateCardProps) {
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [avatarFailed, setAvatarFailed] = useState(false)
+  // Press-and-hold anticipation (2026-07-24 P2): a face-down dealt card tilts
+  // +8° with a foil glint while pressed — the gacha "almost" beat. Transient
+  // press state only (not flip state — that stays controller-owned).
+  const [anticipating, setAnticipating] = useState(false)
 
   useEffect(() => {
     setAvatarFailed(false)
@@ -158,7 +175,10 @@ export default function TeammateCard({
     }
     setImageError(true)
   }, [member.avatarUrl, avatarFailed])
-  const handleImageLoad = useCallback(() => setImageLoaded(true), [])
+  const handleImageLoad = useCallback(() => {
+    setImageLoaded(true)
+    onArtLoad?.(member.userId)
+  }, [onArtLoad, member.userId])
 
   const name = getMemberName(member)
   const archetypeName = getArchetypeDisplayName(member.archetype)
@@ -170,6 +190,27 @@ export default function TeammateCard({
   const interestHook = useMemo(
     () => (connectionPoints.length > 0 ? '' : buildInterestHookText(member)),
     [connectionPoints, member],
+  )
+  // Pair-temperature word (2026-07-24 P1): the viewer's chemistry with THIS
+  // tablemate as a chip prepended to the hook pill — every pair-backed card
+  // leads with "how 同频 we are". Absent when no viewer pair exists.
+  const temperatureWord = useMemo(
+    () => (viewerPair && typeof viewerPair.chemistryScore === 'number'
+      ? getPairChemistryWord(viewerPair.chemistryScore)
+      : ''),
+    [viewerPair],
+  )
+  // Tier-aware chip tint (2026-07-24 polish): cold reads never wear hot pink.
+  const temperatureTier = useMemo(
+    () => getPairChemistryTier(viewerPair?.chemistryScore),
+    [viewerPair],
+  )
+  // Self role badge (2026-07-24 self-relevance pass): the 我 card names what
+  // the viewer brings to the table ("气氛担当"), top-left — the one corner
+  // never covered by a neighbour.
+  const selfRoleLabel = useMemo(
+    () => (isCurrentUser ? getSelfSquadRoleLabel(member.archetype) : ''),
+    [isCurrentUser, member.archetype],
   )
 
   // Privacy: hidden fields are silently omitted (no placeholders).
@@ -220,6 +261,25 @@ export default function TeammateCard({
     haptics('medium')
     onLongPress()
   }, [isDealt, onLongPress])
+
+  // Press-and-hold anticipation (2026-07-24 P2): only face-down dealt cards
+  // on motion tiers. The release tap still drives the flip via handleTap.
+  const handleTouchStart = useCallback(() => {
+    if (!isDealt || isFaceUp || reduceMotion || isDegradation) return
+    if (anticipating) return
+    setAnticipating(true)
+    haptics('light')
+  }, [isDealt, isFaceUp, reduceMotion, isDegradation, anticipating])
+  const clearAnticipation = useCallback(() => setAnticipating(false), [])
+  // Flip always clears the pose (defensive: onTouchCancel is not guaranteed).
+  useEffect(() => {
+    if (isFaceUp) setAnticipating(false)
+  }, [isFaceUp])
+  // Pocket-the-deck fold also clears it — a card cascading into the pill can
+  // never be mid-anticipation (review NIT: swipe-back during a press).
+  useEffect(() => {
+    if (pocketPose) setAnticipating(false)
+  }, [pocketPose])
 
   // Fan pose + state transforms live in SCSS classes (inline `rpx`/`deg` is
   // not transformed by the Taro H5 build). The per-index rotation comes from
@@ -326,6 +386,11 @@ export default function TeammateCard({
         // face-down card shows the enriched back; --flipped reveals the front.
         // No per-card local flip state may be reintroduced.
         isDealt && isFaceUp ? 'squad-unboxing__deck-card--flipped' : '',
+        // 最佳拍档 slow reveal: only on the live flip transition — slows the
+        // inner rotateY to 0.6× so the gold moment reads as ceremony.
+        slowFlipActive ? 'squad-unboxing__deck-card--slow-flip' : '',
+        // Press-and-hold anticipation tilt (face-down only, motion tiers).
+        anticipating && !isFaceUp ? 'squad-unboxing__deck-card--anticipating' : '',
         // Pocket-the-deck fold transform: motion tiers only. Reduced-motion /
         // degradation fold via the inline opacity crossfade alone (AC-06).
         pocketPose && !reduceMotion && !isDegradation ? 'squad-unboxing__deck-card--pocketing' : '',
@@ -345,6 +410,9 @@ export default function TeammateCard({
       }}
       onClick={handleTap}
       onLongPress={handleLongPress}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={clearAnticipation}
+      onTouchCancel={clearAnticipation}
       hoverClass='squad-unboxing__deck-card--pressed'
       role='listitem'
       aria-label={ariaLabel}
@@ -369,14 +437,19 @@ export default function TeammateCard({
             CSS lattice (SCSS gradients only — no raster pattern asset), foil
             edge, logo mark. The logo is a bundled <Image> sized in SCSS:
             BrandLogo sizes via inline rpx, which the H5 postcss pass drops →
-            the back logo collapsed to a broken-image glyph in H5 (A8). Backs
-            are uniform except the best-partner gold tease; no identity text
-            on any back. */}
+            the back logo collapsed to a broken-image glyph in H5 (A8).
+
+            Variable-reward design (2026-07-24): backs are NOT uniform — each
+            back's edge tint carries the pair chemistry tier (fire/warm pink,
+            mild purple, cold quiet) so every flip is a differently-priced
+            bet BEFORE the reveal (盲盒心理: partial information pre-flip).
+            No identity text on any back; the 最佳拍档 gold tease still wins. */}
         <View
           className={[
             'squad-unboxing__deck-card-face',
             'squad-unboxing__deck-card-face--back',
             isBestPartner ? 'squad-unboxing__deck-card-face--back-gold' : '',
+            !isBestPartner && temperatureTier ? `squad-unboxing__deck-card-face--back-${temperatureTier}` : '',
           ].filter(Boolean).join(' ')}
         >
           <View className='squad-unboxing__deck-card-back-lattice' aria-hidden='true' />
@@ -406,6 +479,7 @@ export default function TeammateCard({
             className={[
               'squad-unboxing__deck-card-sheen',
               sheenActive ? 'squad-unboxing__deck-card-sheen--active' : '',
+              slowFlipActive ? 'squad-unboxing__deck-card-sheen--gold' : '',
             ].filter(Boolean).join(' ')}
             style={{ animationDelay: `${sheenDelayMs}ms` }}
             aria-hidden='true'
@@ -420,6 +494,11 @@ export default function TeammateCard({
                 {isCurrentUser ? (
                   <View className='squad-unboxing__deck-card-me-badge squad-unboxing__deck-card-me-badge--in-row'>
                     <Text className='squad-unboxing__deck-card-me-badge-text'>我</Text>
+                  </View>
+                ) : null}
+                {isCurrentUser && selfRoleLabel ? (
+                  <View className='squad-unboxing__deck-card-role-badge'>
+                    <Text className='squad-unboxing__deck-card-role-badge-text'>{selfRoleLabel}</Text>
                   </View>
                 ) : null}
                 {overflowBadge > 0 ? (
@@ -495,15 +574,30 @@ export default function TeammateCard({
                 {metaLine}
               </Text>
             ) : null}
-            {connectionPoints.length > 0 ? (
-              <View className='squad-unboxing__deck-card-pills'>
-                {connectionPoints.map((point) => (
-                  <ConnectionPointPill key={point.text} text={point.text} rarity={point.rarity} />
-                ))}
-              </View>
-            ) : interestHook ? (
-              <View className='squad-unboxing__deck-card-pills squad-unboxing__deck-card-pills--interest'>
-                <ConnectionPointPill text={interestHook} rarity='common' />
+            {connectionPoints.length > 0 || interestHook || temperatureWord ? (
+              <View
+                className={[
+                  'squad-unboxing__deck-card-pills',
+                  connectionPoints.length === 0 && interestHook ? 'squad-unboxing__deck-card-pills--interest' : '',
+                ].filter(Boolean).join(' ')}
+              >
+                {temperatureWord ? (
+                  <View
+                    className={[
+                      'squad-unboxing__deck-card-temp-chip',
+                      temperatureTier ? `squad-unboxing__deck-card-temp-chip--${temperatureTier}` : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    <Text className='squad-unboxing__deck-card-temp-chip-text'>{temperatureWord}</Text>
+                  </View>
+                ) : null}
+                {connectionPoints.length > 0 ? (
+                  connectionPoints.map((point) => (
+                    <ConnectionPointPill key={point.text} text={point.text} rarity={point.rarity} />
+                  ))
+                ) : interestHook ? (
+                  <ConnectionPointPill text={interestHook} rarity='common' />
+                ) : null}
               </View>
             ) : null}
           </View>

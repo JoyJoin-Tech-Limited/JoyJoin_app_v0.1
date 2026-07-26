@@ -12,21 +12,27 @@ import { cacheAssets } from './persistentAssetCache'
  */
 export function preloadImage(src: string): Promise<boolean> {
   return new Promise((resolve) => {
-    if (!src) {
+    // Guard environments without getImageInfo (vitest mocks, H5) — a
+    // synchronous throw here would escape as an unhandled rejection.
+    if (!src || typeof Taro.getImageInfo !== 'function') {
       resolve(false)
       return
     }
-    // Taro may still return a rejecting promise even when fail/success
-    // callbacks are provided. Catch it so the rejection never surfaces
-    // as an unhandled promise rejection in vConsole.
-    Taro.getImageInfo({
-      src,
-      success: () => resolve(true),
-      fail: (err) => {
-        logWarn('[preloadImage] Failed to preload', { src, err: err.errMsg })
-        resolve(false)
-      },
-    }).catch(() => resolve(false))
+    try {
+      // Taro may still return a rejecting promise even when fail/success
+      // callbacks are provided. Catch it so the rejection never surfaces
+      // as an unhandled promise rejection in vConsole.
+      Taro.getImageInfo({
+        src,
+        success: () => resolve(true),
+        fail: (err) => {
+          logWarn('[preloadImage] Failed to preload', { src, err: err.errMsg })
+          resolve(false)
+        },
+      }).catch(() => resolve(false))
+    } catch {
+      resolve(false)
+    }
   })
 }
 

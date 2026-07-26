@@ -1,7 +1,7 @@
 # JoyJoin (悦聚·Joy) - Product Requirements Document
 
-**Version:** 1.7
-**Last Updated:** 2026-07-13
+**Version:** 1.8
+**Last Updated:** 2026-07-24
 **Platform:** WeChat Mini Program (Taro) — launch-primary  
 **Reference Surface:** Web (React + Vite) — development sandbox / parity reference only, not shipping  
 **Target Market:** Hong Kong & Shenzhen  
@@ -174,6 +174,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Social Icebreaker tier selector a11y + assets:** Preset/custom cards now use CDN-backed Lovart WebP backgrounds with local bundled fallbacks; added `JoyJoinIcon` checkmarks, CSS chevrons, haptics, and full `aria-label`/`aria-pressed`/`role="button"` coverage. **In-session tier management (2026-07-07):** during `warmup`, the host sees a status chip and can open a `⋯` host menu → "更换模式" to change tier/vibe; changes are host-only, locked to `warmup`, and require a double-confirm `Taro.showModal` when switching between preset and `custom` mode. Analytics: `icebreaker_session_tier_changed`.
 - **Social Icebreaker single-test disclosure gate (2026-07-07):** Single-player test sessions (`state.singleTest.isTestModeSkip === true`) now pause at a `TestModeDisclosure` overlay in `warmup` instead of auto-advancing. The host must explicitly tap **查看总结** to advance to `recap` (or **重试** on failure). Server `processAutoAdvance` skips these sessions so the gate cannot be bypassed.
 - **Misc mini-program hardening:** Center participation hub unblocked, native custom tab bar selection syncs from the current route on `useDidShow`, Discover activity list stability fallback, profile page layout fixes, assessment persistence fixes.
+- **Social Icebreaker warmup reliability pass (2026-07-24):** Fixed the root causes of the 12s+ "悦仔正在出题…" hang and connection-drop cycle discovered during on-device QA. Server: added 6s `AbortController` timeout + deterministic fallback to `generateMicroChallenges` (was unbounded inside `transitionPhase`, blocking polls and advance). In-process `fuseExecutionsInFlight` Set + persisted-fuse re-verify in `processAutoAdvance` prevents double-execution by concurrent readers. `POST /topics` re-reads latest session + merges only owned fields to eliminate concurrent-ready lost updates. Client: topics failure now shows the designed error card (Xiaoyue mascot, warm-rose `#B83A5E` copy, primary 重试, ≤2 auto-retries) instead of a phantom local fallback deck. Ready tap shows optimistic count immediately and 「正在同步，请稍候」 toast on skipped taps. `performSocialAction` blocks same-key concurrent actions. `useEventCountdown` memoized `prefersReducedMotion()` to eliminate ~6 calls/sec `getSystemInfoSync` hot loop from hidden tab cards. WXSS: tab-bar reduced-motion block uses class selectors instead of `image{}` tag selector; scroll-view padding moved to inner wrapper.
 
 **45. Squad Unboxing + Icebreaker Test Mode Full-Marks Push** 🎯 *(2026-07-08)*
 - **Squad Unboxing:** Fixed inline-detail scroll math so the focused `TeammateCard` never overlaps its detail; added `calc(100vh)` fallback before `100dvh` for the ScrollView container; changed share-poster CTA copy to the non-placeholder "保存这桌记忆". Completeness audit now 44/44.
@@ -189,6 +190,18 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Subpackage move:** The page moved from the main package to the `pages/squad-unboxing` subpackage (preloaded from events / center-hub / matching-status), bringing the main-package zip from 1.94MB to 1.92MB and clearing the performance-audit package-size BLOCK.
 - **Analytics:** New events `squad_unboxing_card_flip` (method=auto_me/tap/reveal_all), `squad_unboxing_reveal_all_tap`, `squad_unboxing_all_revealed` (single-fire per session, never on re-entry), plus diagnostics (`squad_unboxing_tonights_table_view`, `squad_unboxing_connection_story_expand`/`_collapse`, `squad_unboxing_analysis_retry_tap`, `squad_unboxing_ready_hero_fallback`); server whitelist extended with route tests. Canonical funnel: `docs/systems/squad-unboxing-analytics-funnels.md`.
 - **Verification:** Squad suite 169/169, full mini-program vitest 739 passed, server analytics route tests 4/4, typecheck clean; audit swarm — code review APPROVE, QA 30 PASS / 0 FAIL, ui-layout 83/100, frontend-design 17/20, 情绪价值 22/24, completeness 35/44.
+
+**47. Squad Unboxing 盲盒心理 Wow Pass — Full-Marks Reveal** 🎁 *(2026-07-24)*
+- **Frame:** the revealed screen was redesigned end-to-end against the blind-box psychology framework — variable reward (变动奖励), self-relevance (自我关联), paid-validation loss aversion (损失厌恶), social curiosity (社会好奇), collection instinct (收藏欲), peak-end rule (峰终), agency (掌控感). Sprint contracts: `.git/.orchestration/sprints/sprint-contract.squad-unboxing-wow-p0p1.md` + `-wow-p2.md`.
+- **匹配证据浮上卡面:** every pair-backed card leads with a tier-aware pair-temperature chip (`超级火花/暖意融融/相聊甚欢/慢慢发现` — fire/warm pink, mild purple, cold grey) + the strongest connection-point pill (`shortenConnectionPointForPill` strips filler prefixes so the semantic core survives the ellipsis). Covered cards carry the temperature chip only; the focused/rightmost card shows the full row. Cards widened to the 245rpx 3-per-row ceiling (N≤6; N=4 splits [2,2]; N=7/8 keep 190rpx 4-per-row), fan scale 0.75→0.85.
+- **结构化同频分析:** focusing a tablemate upgrades the dock bubble from flat prose to verdict (typewriter) → evidence chips → one concrete opener question (`buildFocusedNarrativeModel`); dignity-floor copy guarantees the bubble never concedes "没找到共同点". 桌型诊断 (deterministic role mix 气氛组/深度派/暖心派) rides the bubble footer.
+- **Jackpot moments:** 最佳拍档 slow reveal (0.6× flip, gold sheen, heartbeat haptics); chemistry-tier tinted card backs (each flip is a differently-priced bet); press-and-hold +8° anticipation tilt; flip light trails; peak-end settle breath on the last flip.
+- **自我关联:** the 我 card carries a role badge (`气氛担当/深度担当/暖心担当`) and role-positioned self narration.
+- **收藏 + 回流:** 「这桌的桌卡」 collectible banner (heads ring + chemistry word + date) with a 750×1100 canvas poster saved to the photo album (`saveImageToPhotosAlbum`; canvas unmounts after save; degradation tier excluded); CTA lights up as 「确认出席 · 锁定座位」 after all flips (tap never gated); return thread 「活动结束后，回来看看这桌的故事」 under the CTA.
+- **叙事串联:** 人→关系→场合 — transition line 「都认识了，就差一张桌子」, event card inherits the table's chemistry colour as a foil top border, 16/16/32 gap hierarchy.
+- **Reliability:** flip hold-to-onLoad (1200ms ceiling, userId-keyed, bounded in-flight re-arm — never flips into a skeleton or stacks mid-burst); all motion transform/opacity-only with RM/degradation parity; reduced-motion kills every new animation including pseudo-elements.
+- **Analytics:** new events `squad_unboxing_table_card_tap` / `_saved` / `_save_failed` (client union + server whitelist + route tests).
+- **Verification:** 229/229 squad tests, typecheck clean, guardrails clean; final audit swarm — **ui-layout 100/100, frontend-design 20/20, performance 60/60, user-satisfaction 24/24** (from 11/24). Recorded caveat: mixed-tier back-band perceptibility needs one on-device glance (H5 mock is single-tier).
 
 **40. Interest-Heat Picker Full-Marks Push** 🎯 *(2026-06-15)*
 - **Scope:** Mini-program onboarding step 4 (`pages/onboarding/extended-data/index`) — interest selection and heat signaling.

@@ -23,7 +23,7 @@ describe('squad-unboxing page composition', () => {
     expect(pageSource).toContain("aria-hidden={flowState === 'shaking' ? 'true' : undefined}")
     expect(pageSource).not.toContain("aria-hidden={flowState === 'ready' || flowState === 'shaking' ? 'true' : undefined}")
     expect(pageSource).toContain("role={flowState === 'ready' && !isStageTap ? 'button' : undefined}")
-    expect(pageSource).toContain("aria-label={flowState === 'ready' && !isStageTap ? '轻点打开礼盒，查看今晚的同桌' : undefined}")
+    expect(pageSource).toContain("aria-label={flowState === 'ready' && !isStageTap ? openBoxAriaLabel : undefined}")
   })
 
   it('distinguishes box taps from ribbon reveals by calling handleOpenBox with explicit source', () => {
@@ -36,7 +36,7 @@ describe('squad-unboxing page composition', () => {
     expect(pageSource).toContain('squad-unboxing__stage-tap-layer')
     expect(pageSource).toContain("hoverClass='squad-unboxing__stage-tap-layer--pressed'")
     expect(pageSource).toContain("role='button'")
-    expect(pageSource).toContain("aria-label='轻点打开礼盒，查看今晚的同桌'")
+    expect(pageSource).toContain('aria-label={openBoxAriaLabel}')
     // The stage body drops its own handlers in composed mode to avoid double-firing.
     expect(pageSource).toContain("isStageTap ? 'squad-unboxing__stage-body--tap-target' : ''")
   })
@@ -50,8 +50,41 @@ describe('squad-unboxing page composition', () => {
     expect(pageSource).toContain('轻点打开')
   })
 
-  it('keeps the legacy ready ribbon and copy card available only when the composed hero flag is off', () => {
+  it('keeps the legacy ready ribbon available only when the composed hero flag is off', () => {
     expect(pageSource).toContain("flowState === 'ready' && !composedHeroEnabled")
+  })
+
+  it('ships the Batch A ready state: no copy cards, ready-only header, count tease', () => {
+    // 「拼图已经聚齐」/「盒子正在打开…」 copy cards deleted (2026-07-24) —
+    // the gift box is the sole focal point; shaking stays purely visual.
+    expect(pageSource).not.toContain('拼图已经聚齐')
+    expect(pageSource).not.toContain('squad-unboxing__blind-box-card')
+    expect(pageSource).not.toContain('盒子正在打开')
+    expect(pageSource).toContain("const header = flowState === 'ready'")
+    // Eyebrow count tease + count-bearing aria label for screen readers.
+    expect(pageSource).toContain('位同桌')
+    expect(pageSource).toContain('squad-unboxing__header-eyebrow')
+  })
+
+  it('ships the Batch B motion layer: ribbon stagger class + box-exit overlay', () => {
+    expect(pageSource).toContain('squad-unboxing__ribbon-wrap--ready')
+    expect(pageSource).toContain('squad-unboxing__box-exit')
+    expect(pageSource).toContain("BlindBoxVisual state='open'")
+    expect(pageSource).toContain('boxExiting')
+  })
+
+  it('holds the bubble + chapter entrance until the deal settles (post-review fix)', () => {
+    // No empty white slab during the handoff; logistics never render before
+    // people. The composed hero gets the taller box-exit geometry.
+    expect(pageSource).toContain("headerReady && dealSettled ? 'squad-unboxing__analysis-bubble-inner--ready' : ''")
+    expect(pageSource).toContain("headerReady && dealSettled ? 'squad-unboxing__chapter--ready' : ''")
+    expect(pageSource).toContain("key={dealSettled ? 'settled' : 'pending'}")
+    expect(pageSource).toContain('squad-unboxing__box-exit--composed')
+    expect(pageSource).toContain("if (flowState !== 'revealed' || !dealSettled) return")
+  })
+
+  it('gates the reveal-all chip until the deal settles (PM polish — no dead control mid-deal)', () => {
+    expect(pageSource).toContain("isInteractiveSession && unflippedCount > 0 && deckPhase === 'fan' && dealSettled")
   })
 
   it('routes focused member explanations into the Xiaoyue dock without mounting a blank detail frame', () => {
@@ -75,8 +108,8 @@ describe('squad-unboxing page composition', () => {
     expect(pageSource).toContain('squad-unboxing__reveal-chip')
     expect(pageSource).toContain('buildRevealChipLabel(unflippedCount)')
     expect(pageSource).toContain('onClick={handleRevealAll}')
-    expect(pageSource.indexOf('squad-unboxing__reveal-chip')).toBeLessThan(pageSource.indexOf("className='squad-unboxing__confirm-btn'"))
-    expect(pageSource).toContain("className='squad-unboxing__confirm-btn'")
+    expect(pageSource.indexOf('squad-unboxing__reveal-chip')).toBeLessThan(pageSource.indexOf('squad-unboxing__confirm-btn'))
+    expect(pageSource).toContain('squad-unboxing__confirm-btn')
   })
 
   it('makes the bubble the voice of the reveal (status + aria-live + sr-only full text, AC-18)', () => {

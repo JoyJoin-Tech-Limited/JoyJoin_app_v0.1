@@ -89,6 +89,48 @@
     z-index: 1;
     white-space: nowrap;
   }
+
+  // Ghost-thumb hint (Batch B): a translucent dot that slides ~40% of the
+  // track and fades on a 3.6s cycle (2.4s travel + 1.2s rest), teaching the
+  // drag direction without a word of instruction. Never occupies the real
+  // thumb's resting position, so it reads as a hint, not a second control.
+  &__ghost {
+    position: absolute;
+    left: 8%;
+    top: 50%;
+    width: 28rpx;
+    height: 28rpx;
+    margin-top: -14rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.35);
+    pointer-events: none;
+    z-index: 1;
+    animation: drag-reveal-ghost-hint 3.6s ease-in-out infinite;
+  }
+}
+
+@keyframes drag-reveal-ghost-hint {
+  0%,
+  66%,
+  100% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+
+  8% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateX(220rpx);
+  }
+
+  66% {
+    opacity: 0;
+    transform: translateX(260rpx);
+  }
 }
 
 @keyframes drag-reveal-pulse {
@@ -111,5 +153,9 @@
 
   .drag-reveal-ribbon__thumb--dragging {
     transform: none;
+  }
+
+  .drag-reveal-ribbon__ghost {
+    display: none;
   }
 }

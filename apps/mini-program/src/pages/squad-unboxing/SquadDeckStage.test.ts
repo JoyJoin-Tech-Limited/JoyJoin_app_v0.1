@@ -344,7 +344,9 @@ describe('SCSS fan poses + anti-collision (Direction: Cascading Hand Fan)', () =
   })
 
   it('applies the safe inset to non-rightmost cards (text never in covered band)', () => {
-    expect(scss).toContain('&:not(:last-child) .squad-unboxing__deck-card-info')
+    // 2026-07-24: the focused card drops the inset (it is fully visible when
+    // lifted), so the selector carries the :not(--focused) exception.
+    expect(scss).toContain('&:not(:last-child):not(.squad-unboxing__deck-card--focused) .squad-unboxing__deck-card-info')
     expect(scss).toContain('padding-right: $fan-safe-inset')
   })
 

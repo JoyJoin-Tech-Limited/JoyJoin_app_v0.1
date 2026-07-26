@@ -6,6 +6,8 @@ import {
   eventAttendance,
   eventCreditRedemptions,
   eventGroupOutcomes,
+  events,
+  blindBoxEvents,
   poolAICopy,
   poolMatchingLogs,
   users,
@@ -25,6 +27,7 @@ import {
   preGenerationResults,
   momentCardInteractions,
   userInterests,
+  venueTimeSlotBookings,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
@@ -43,6 +46,7 @@ import {
 import { isSingleTestMode } from "../lib/isSingleTestMode";
 import { isSocialIcebreakerTestMode } from "../lib/isSocialIcebreakerTestMode";
 import { cleanupBotFillUsers } from "./botFillService";
+import { finalizeTestPoolGroups, nextDinnerDateTime } from "./matchingTestService";
 
 type IdRow = { id: string };
 type DbTransaction = NodePgDatabase<typeof schema>;
@@ -252,6 +256,20 @@ export function buildSingleTestBotAvatarUrl(groupId: string, index: number): str
   const avatarIndex = (simpleHash(groupId) + index) % ARCHETYPE_CANONICAL_ORDER.length;
   const avatarId = ARCHETYPE_CANONICAL_ORDER[avatarIndex] ?? "corgi";
   return `${TEST_AVATAR_CDN_BASE}/archetype-${avatarId}-head.webp`;
+}
+
+/** Curated group themes for single-test sessions. The production match commit
+ *  generates these via LLM; the test path picks deterministically by groupId
+ *  so the squad-unboxing 今晚这桌 theme row always has content without an AI
+ *  call. */
+const SINGLE_TEST_GROUP_THEMES = [
+  { theme: "深夜食堂：一桌人的城市故事", subtitle: "从粤菜聊到凌晨四点的深圳", themeEmoji: "🍲", vibe: "温暖慢热 (85分)" },
+  { theme: "高能充电站：周末出逃计划", subtitle: "行动派和脑洞星人的碰撞", themeEmoji: "⚡", vibe: "超高能 (88分)" },
+  { theme: "灵魂共振局：小众热爱交流会", subtitle: "从旧书店到爵士黑胶", themeEmoji: "🎷", vibe: "深度畅聊 (82分)" },
+] as const;
+
+export function pickSingleTestGroupTheme(groupId: string): (typeof SINGLE_TEST_GROUP_THEMES)[number] {
+  return SINGLE_TEST_GROUP_THEMES[simpleHash(groupId) % SINGLE_TEST_GROUP_THEMES.length];
 }
 
 /** Pick BOT_COUNT bots with distinct archetypes when possible, deterministically
@@ -492,6 +510,93 @@ export async function startSingleTestSession(testerUserId: string): Promise<{
     .set({ matchStatus: "matched", assignedGroupId: groupId })
     .where(and(eq(eventPoolRegistrations.poolId, poolId), eq(eventPoolRegistrations.matchStatus, "pending")));
 
+  // Finalize the group the same way the production match commit does
+  // (poolMatchingService steps 2.5-2.8): events + eventAttendance +
+  // blind_box_events records, group back-links, and a theme. Without these the
+  // squad-unboxing 确认出席 flow 409s (ATTENDANCE_NOT_READY) and the
+  // post-confirm event-detail redirect has nothing to load.
+  const dinnerDateTime = nextDinnerDateTime();
+  const [pool] = await db
+    .update(eventPools)
+    .set({
+      dateTime: dinnerDateTime,
+      registrationDeadline: new Date(dinnerDateTime.getTime() - 24 * 60 * 60 * 1000),
+      updatedAt: new Date(),
+    })
+    .where(eq(eventPools.id, poolId))
+    .returning();
+
+  const theme = pickSingleTestGroupTheme(groupId);
+
+  const [testerRow] = await db
+    .select({ archetype: users.archetype, primaryArchetype: users.primaryArchetype })
+    .from(users)
+    .where(eq(users.id, testerUserId))
+    .limit(1);
+
+  const location = pool?.district ? `${pool.city} ${pool.district}` : pool?.city || "待定";
+  const [eventRecord] = await db.insert(events).values({
+    title: `${pool?.title || SINGLE_TEST_POOL_TITLE} - 第1组`,
+    description: "单人调试局自动成局 — 仅限测试模式",
+    dateTime: pool?.dateTime || dinnerDateTime,
+    location,
+    area: pool?.district || null,
+    maxAttendees: allMemberIds.length,
+    currentAttendees: allMemberIds.length,
+    hostId: testerUserId,
+    status: "matched",
+    iconName: pool?.eventType === "酒局" ? "wine" : "utensils",
+  }).returning();
+
+  for (const memberId of allMemberIds) {
+    await db.insert(eventAttendance).values({
+      eventId: eventRecord.id,
+      userId: memberId,
+      status: "confirmed",
+    });
+  }
+
+  const [blindBoxEventRecord] = await db.insert(blindBoxEvents).values({
+    poolId,
+    userId: testerUserId,
+    title: pool?.title ?? SINGLE_TEST_POOL_TITLE,
+    eventType: pool?.eventType ?? "饭局",
+    city: pool?.city ?? "",
+    district: pool?.district ?? "",
+    dateTime: pool?.dateTime ?? dinnerDateTime,
+    budgetTier: "",
+    status: "matched",
+    progress: 100,
+    currentParticipants: allMemberIds.length,
+    totalParticipants: allMemberIds.length,
+    matchedAttendees: [
+      { userId: testerUserId, archetype: testerRow?.archetype ?? testerRow?.primaryArchetype ?? null },
+      ...bots.map((b) => ({
+        userId: b.id,
+        archetype: b.archetype ?? ARCHETYPE_BY_ID[b.primaryArchetype ?? "corgi"]?.nameCn ?? null,
+      })),
+    ],
+    matchExplanation: "单人调试局自动成局 — 仅限测试模式",
+  }).returning();
+
+  await db
+    .update(eventPoolGroups)
+    .set({
+      eventId: eventRecord.id,
+      blindBoxEventId: blindBoxEventRecord?.id ?? null,
+      theme: theme.theme,
+      subtitle: theme.subtitle,
+      themeEmoji: theme.themeEmoji,
+      vibe: theme.vibe,
+      themeGeneratedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(eventPoolGroups.id, groupId));
+
+  // Reserve the shared test venue + finalDateTime so the squad-unboxing
+  // 今晚这桌 brief renders 场地已确定 instead of 场地待定.
+  await finalizeTestPoolGroups(poolId);
+
   // Build client-safe bot roster and server-side persona mapping.
   // Raw users.id must never leave the server boundary.
   const selectedBots = bots;
@@ -631,10 +736,20 @@ async function cleanupSingleTestPoolRows(
   const registrationIds = registrationRows.map((row: IdRow) => row.id);
 
   const groupRows = await conn
-    .select({ id: eventPoolGroups.id })
+    .select({
+      id: eventPoolGroups.id,
+      eventId: eventPoolGroups.eventId,
+      blindBoxEventId: eventPoolGroups.blindBoxEventId,
+    })
     .from(eventPoolGroups)
     .where(eq(eventPoolGroups.poolId, poolId));
   const groupIds = groupRows.map((row: IdRow) => row.id);
+  const linkedEventIds = groupRows
+    .map((row: { eventId: string | null }) => row.eventId)
+    .filter((id: string | null): id is string => Boolean(id));
+  const linkedBlindBoxEventIds = groupRows
+    .map((row: { blindBoxEventId: string | null }) => row.blindBoxEventId)
+    .filter((id: string | null): id is string => Boolean(id));
 
   let deletedSocialSessions = 0;
 
@@ -706,6 +821,37 @@ async function cleanupSingleTestPoolRows(
     }
 
     await conn.delete(eventGroupOutcomes).where(inArray(eventGroupOutcomes.groupId, groupIds));
+
+    await conn
+      .delete(venueTimeSlotBookings)
+      .where(inArray(venueTimeSlotBookings.eventGroupId, groupIds));
+
+    if (linkedEventIds.length > 0) {
+      await conn.delete(eventAttendance).where(inArray(eventAttendance.eventId, linkedEventIds));
+      await conn.delete(events).where(inArray(events.id, linkedEventIds));
+    }
+
+    if (linkedBlindBoxEventIds.length > 0) {
+      await conn
+        .delete(eventAttendance)
+        .where(inArray(eventAttendance.blindBoxEventId, linkedBlindBoxEventIds));
+    }
+  }
+
+  // Safety net: blind_box_events rows for this pool created before the group
+  // back-link existed (or left behind by an interrupted start) would otherwise
+  // leak across runs and satisfy the confirm-attendance pool-level fallback
+  // lookup with a stale event.
+  const staleBlindBoxRows = await conn
+    .select({ id: blindBoxEvents.id })
+    .from(blindBoxEvents)
+    .where(eq(blindBoxEvents.poolId, poolId));
+  const staleBlindBoxEventIds = staleBlindBoxRows.map((row: IdRow) => row.id);
+  if (staleBlindBoxEventIds.length > 0) {
+    await conn
+      .delete(eventAttendance)
+      .where(inArray(eventAttendance.blindBoxEventId, staleBlindBoxEventIds));
+    await conn.delete(blindBoxEvents).where(inArray(blindBoxEvents.id, staleBlindBoxEventIds));
   }
 
   await conn.delete(poolAICopy).where(eq(poolAICopy.poolId, poolId));

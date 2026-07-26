@@ -95,7 +95,21 @@
   transition: opacity 150ms ease;
 }
 
-.joy-custom-tab-bar__item-icon--active {
+/* Selected variant is stacked on top of the inactive icon and revealed via
+   opacity only — no src swap, no image re-decode on tab switch. */
+.joy-custom-tab-bar__item-icon--overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+}
+
+.joy-custom-tab-bar__item-icon--off {
+  opacity: 0;
+}
+
+.joy-custom-tab-bar__item-icon--on {
   opacity: 1;
 }
 
@@ -330,7 +344,10 @@
 .joy-custom-tab-bar--low-end .joy-custom-tab-bar__center-badge {
   animation: none !important;
 }
-.joy-custom-tab-bar--low-end image {
+/* Scoped to non-stacked images only: a blanket `image { opacity: 1 }` would
+   reveal both stacked tab icons at once and break the crossfade overlay. */
+.joy-custom-tab-bar--low-end .joy-custom-tab-bar__bg,
+.joy-custom-tab-bar--low-end .joy-custom-tab-bar__center-logo {
   animation: none !important;
   opacity: 1 !important;
 }
@@ -372,8 +389,12 @@
   .joy-custom-tab-bar__center-button {
     transition: none !important;
   }
-  image {
+  /* Kill the crossfade ANIMATION only — never force opacity here. Each tab
+     mounts two stacked icons (base + --overlay) and toggles visibility via
+     opacity; forcing opacity: 1 renders both variants at once. */
+  .joy-custom-tab-bar__item-icon,
+  .joy-custom-tab-bar__center-logo {
     animation: none !important;
-    opacity: 1 !important;
+    transition: none !important;
   }
 }

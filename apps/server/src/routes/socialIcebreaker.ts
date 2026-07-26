@@ -688,9 +688,25 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
 
   // Persist the mood pick BEFORE generation so a failed first attempt keeps
   // the client's 重试 path alive (it re-fires /topics with the stored mood).
-  state.selectedMood = mood;
+  // Merge onto the latest persisted state — writing the whole T0 snapshot
+  // here could resurrect a pre-transition state if a fuse fired during the
+  // host-authorization await above.
   try {
-    await updateSession(socialSessionId, state);
+    const latest = await getSessionWithExpiry(socialSessionId);
+    const moodBase = latest.state ? hydrateDerivedState({ ...latest.state }) : state;
+    moodBase.selectedMood = mood;
+    // Mark generation in-flight BEFORE the LLM call so the stall detector
+    // suspends nudges/fuses while the host is waiting on the system.
+    moodBase.warmupTopicsStatus = 'generating';
+    moodBase.warmupTopicsGeneratingAt = Date.now();
+    // Retract any stall nudge/fuse already issued — the host is acting again;
+    // a stale stall fuse would otherwise fire mid-generation.
+    moodBase.stallNudgeAt = undefined;
+    if (moodBase.advanceFuseKind === 'stall_recovery') {
+      moodBase.autoAdvanceScheduledAt = undefined;
+      moodBase.advanceFuseKind = undefined;
+    }
+    await updateSession(socialSessionId, moodBase);
   } catch (error) {
     logger.warn('[SocialIcebreaker] topics mood persistence failed; continuing to generate topics', {
       socialSessionId,
@@ -730,14 +746,34 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
     };
   }
 
-  state.warmupTopics = topicResult.data;
-  state.warmupTopicsMeta = topicResult.meta;
-  state.currentTopicIndex = 0;
-  state.warmupReadyUserIds = [];
-  // Single-test bot attendees default to ready on the fresh topic set.
-  seedSingleTestBotsWarmupReady(state);
+  // Re-read the latest state before write-back: generation takes seconds and
+  // concurrent routes (/warmup/ready, /advance, polls) may have mutated the
+  // session meanwhile. Writing the stale T0 snapshot back would silently
+  // clobber those writes (lost update). Merge only the fields this route owns.
+  let stateToPersist = state;
   try {
-    await updateSession(socialSessionId, state);
+    const latest = await getSessionWithExpiry(socialSessionId);
+    if (latest.state) {
+      stateToPersist = hydrateDerivedState({ ...latest.state });
+    }
+  } catch (error) {
+    logger.warn('[SocialIcebreaker] topics pre-save re-read failed; merging onto last-known state', {
+      socialSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  stateToPersist.selectedMood = mood;
+  stateToPersist.warmupTopics = topicResult.data;
+  stateToPersist.warmupTopicsMeta = topicResult.meta;
+  stateToPersist.warmupTopicsStatus = 'ready';
+  stateToPersist.warmupTopicsGeneratingAt = undefined;
+  stateToPersist.currentTopicIndex = 0;
+  stateToPersist.warmupReadyUserIds = [];
+  // Single-test bot attendees default to ready on the fresh topic set.
+  seedSingleTestBotsWarmupReady(stateToPersist);
+  try {
+    await updateSession(socialSessionId, stateToPersist);
   } catch (error) {
     logger.error('[SocialIcebreaker] topics save failed after generation; returning playable topics to client', {
       socialSessionId,
@@ -750,12 +786,12 @@ router.post('/:socialSessionId/topics', async (req: any, res) => {
         fallbackUsed: true,
         evaluatorRejectionReason: topicResult.meta.evaluatorRejectionReason ?? 'session_persist_failed',
       },
-      state: await buildClientState(state, userId),
+      state: await buildClientState(stateToPersist, userId),
       persistence: { saved: false },
     });
   }
 
-  return res.json({ topics: topicResult.data, meta: topicResult.meta, state: await buildClientState(state, userId) });
+  return res.json({ topics: topicResult.data, meta: topicResult.meta, state: await buildClientState(stateToPersist, userId) });
 });
 
 // ---------------------------------------------------------------------------
@@ -787,6 +823,8 @@ router.post('/:socialSessionId/warmup/ready', async (req: any, res) => {
     state.selectedMood = healingMood;
     state.warmupTopics = getCuratedWarmupTopics(healingMood, state.vibe);
     state.warmupTopicsMeta = buildFallbackAIMeta('ready_route_missing_topics', 'social-warmup-topics-ready-heal');
+    state.warmupTopicsStatus = 'ready';
+    state.warmupTopicsGeneratingAt = undefined;
     state.currentTopicIndex = 0;
   }
 
@@ -848,6 +886,8 @@ router.post('/:socialSessionId/warmup/next-topic', async (req: any, res) => {
     state.selectedMood = healingMood;
     state.warmupTopics = getCuratedWarmupTopics(healingMood, state.vibe);
     state.warmupTopicsMeta = buildFallbackAIMeta('next_topic_route_missing_topics', 'social-warmup-topics-next-heal');
+    state.warmupTopicsStatus = 'ready';
+    state.warmupTopicsGeneratingAt = undefined;
     state.currentTopicIndex = 0;
     seedSingleTestBotsWarmupReady(state);
     await updateSession(socialSessionId, state);

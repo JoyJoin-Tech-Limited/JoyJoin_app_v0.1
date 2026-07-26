@@ -13,7 +13,7 @@ import {
 } from '@shared/types/aiMeta';
 import { moderateGeneratedContent, type ModerationCheck } from './lib/aiContentModeration';
 import { logger } from './lib/logger';
-import { fireAndForgetQualityGate, type AIServiceResult } from './socialIcebreakerAICore';
+import { fireAndForgetQualityGate, raceWithTimeout, RACE_LLM_TIMEOUT_MS, type AIServiceResult } from './socialIcebreakerAICore';
 
 function auctionLotsChecks(lots: AuctionLot[]): ModerationCheck[] {
   return lots.flatMap((lot, index) => [
@@ -123,12 +123,15 @@ export async function generateAuctionLots(params: {
       mixText: params.sessionContext?.mixText,
     });
 
-    const response = await client.chat.completions.create({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.75,
-      max_tokens: 500,
-    });
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.75,
+        max_tokens: 500,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
 
     const content = response.choices[0]?.message?.content?.trim();
     if (!content) {

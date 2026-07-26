@@ -27,9 +27,16 @@
           aria-pressed="{{selected === item.index}}"
         >
           <view class="joy-custom-tab-bar__item-icon-wrap">
+            <!-- Dual-icon crossfade: both icons stay mounted so selection
+                 toggles opacity instead of swapping src (no PNG re-decode flash). -->
             <image
-              class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
-              src="{{selected === item.index ? item.selectedIcon : item.icon}}"
+              class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--off' : ''}}"
+              src="{{item.icon}}"
+              mode="aspectFit"
+            />
+            <image
+              class="joy-custom-tab-bar__item-icon joy-custom-tab-bar__item-icon--overlay {{selected === item.index ? 'joy-custom-tab-bar__item-icon--on' : ''}}"
+              src="{{item.selectedIcon}}"
               mode="aspectFit"
             />
             <view
@@ -69,8 +76,13 @@
         >
           <view class="joy-custom-tab-bar__item-icon-wrap">
             <image
-              class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--active' : ''}}"
-              src="{{selected === item.index ? item.selectedIcon : item.icon}}"
+              class="joy-custom-tab-bar__item-icon {{selected === item.index ? 'joy-custom-tab-bar__item-icon--off' : ''}}"
+              src="{{item.icon}}"
+              mode="aspectFit"
+            />
+            <image
+              class="joy-custom-tab-bar__item-icon joy-custom-tab-bar__item-icon--overlay {{selected === item.index ? 'joy-custom-tab-bar__item-icon--on' : ''}}"
+              src="{{item.selectedIcon}}"
               mode="aspectFit"
             />
             <view

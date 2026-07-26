@@ -34,8 +34,6 @@
   --profile-text-secondary-12: #{rgba($color-text-secondary, 0.12)};
   --profile-text-tertiary-12: #{rgba($color-text-tertiary, 0.12)};
   --profile-divider: #{$color-divider};
-  --profile-success: #{$color-success};
-  --profile-success-10: #{rgba($color-success, 0.10)};
   --profile-brand-gradient: #{$brand-gradient};
 
   background: var(--profile-bg);
@@ -55,7 +53,7 @@
 
   &__nav-title {
     font-family: $font-cn-display;
-    font-size: 34rpx;
+    font-size: $font-size-lg;
     line-height: 1.4;
     font-weight: $font-weight-bold;
     color: var(--profile-text-primary);
@@ -63,10 +61,12 @@
 
   &__nav-settings {
     position: absolute;
-    right: 190rpx;
-    bottom: 8rpx;
-    width: 72rpx;
-    height: 72rpx;
+    right: 32rpx;
+    // 88rpx button in an 88rpx bar — fills the bar vertically, so it is
+    // optically centered against the nav title by construction.
+    bottom: 0;
+    width: $cta-min-tap;
+    height: $cta-min-tap;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -187,33 +187,6 @@
     transform: rotate(45deg);
   }
 
-  &__fallback-settings {
-    position: absolute;
-    top: $spacing-md;
-    right: $spacing-md;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: $cta-min-tap;
-    min-height: $cta-min-tap;
-    padding: 0 $spacing-sm;
-    border-radius: $radius-pill;
-    background: var(--profile-primary-08);
-    transition: transform 0.12s ease, opacity 0.12s ease;
-
-    &--pressed {
-      transform: scale(0.96);
-      opacity: 0.82;
-    }
-  }
-
-  &__fallback-settings-text {
-    font-family: $font-ui;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: var(--profile-text-link);
-  }
-
   // Stats row
   &__stats {
     display: flex;
@@ -222,8 +195,8 @@
     margin-bottom: $spacing-lg;
     opacity: 0;
     transform: translateY(16rpx);
-    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.1s,
-      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.1s;
+    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.08s,
+      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.08s;
 
     &--entered {
       opacity: 1;
@@ -243,18 +216,44 @@
     gap: $spacing-xs;
     padding: $spacing-md $spacing-sm;
     background: var(--profile-surface);
+    border: 1rpx solid transparent;
     border-radius: $card-radius-sm;
     box-shadow: $shadow-card;
+    overflow: hidden;
     transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
       transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+
+    // Unified brand-gradient anchor strip (2rpx) across all three stats.
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2rpx;
+      background: $brand-gradient;
+    }
+
+    // Semantic brand tints: footprint=cream, connections=pink,
+    // completion=purple (matches its primary progress bar).
+    &--tint-cream {
+      background: $color-bg-tint-cream;
+      border-color: rgba($color-landed-gold, 0.3);
+    }
+
+    &--tint-pink {
+      background: $color-bg-tint-pink;
+      border-color: rgba($color-secondary, 0.22);
+    }
+
+    &--tint-purple {
+      background: $color-bg-tint-purple;
+      border-color: rgba($color-primary, 0.18);
+    }
 
     &--pressed {
       transform: scale(0.97);
       background: var(--profile-primary-04);
-    }
-
-    .profile-page__stats--entered &--pressed {
-      transform: scale(0.97);
     }
 
   }
@@ -282,8 +281,14 @@
     font-size: $font-size-xl;
     font-family: $font-en-brand;
     font-weight: $font-weight-bold;
-    color: var(--profile-text-primary);
+    color: $color-primary-dark;
     line-height: $line-height-normal;
+  }
+
+  // Taro H5 drops dynamic inline rpx — bound the 40rpx stat icons everywhere.
+  &__stat-icon {
+    width: 40rpx !important;
+    height: 40rpx !important;
   }
 
   &__stat-label {
@@ -327,16 +332,17 @@
 
   &__milestones-title {
     display: block;
-    font-size: $font-size-base;
-    font-family: $font-ui;
-    font-weight: $font-weight-semibold;
-    color: var(--profile-text-secondary);
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    line-height: $line-height-normal;
+    color: var(--profile-text-primary);
     margin-bottom: $spacing-sm;
   }
 
   &__milestones-row {
     display: flex;
-    gap: $spacing-md;
+    gap: $spacing-sm;
   }
 
   &__milestone {
@@ -382,12 +388,12 @@
     height: 560rpx;
     min-height: 560rpx;
     margin: $spacing-md $container-padding $spacing-lg;
-    border-radius: 36rpx;
+    border-radius: $card-radius;
     overflow: hidden;
     box-sizing: border-box;
     color: var(--profile-text-primary);
     border: 2rpx solid rgba($color-primary, 0.1);
-    box-shadow: 0 16rpx 38rpx rgba(45, 49, 66, 0.09);
+    box-shadow: 0 16rpx 38rpx rgba($color-text-primary, 0.09);
     opacity: 0;
     transform: translateY(16rpx);
     transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
@@ -400,59 +406,42 @@
   }
 
   // Readable warm-glass containers so text never sits bare on the HD-2D scene.
+  // Brand tint family (cream → pink) with a landed-gold trim — echoes the
+  // stage's rim-light/particle warmth instead of plain white.
   &__identity-copy-card,
   &__growth-card {
     position: absolute;
     z-index: 4;
     border-radius: 24rpx;
-    background: rgba($color-surface, 0.92);
-    border: 1rpx solid rgba($color-surface, 0.4);
-    box-shadow: 0 12rpx 32rpx rgba(45, 49, 66, 0.12),
-      0 2rpx 8rpx rgba(45, 49, 66, 0.06);
+    background: linear-gradient(145deg, rgba($color-bg-tint-cream, 0.94), rgba($color-bg-tint-pink, 0.9));
+    border: 1rpx solid rgba($color-landed-gold, 0.35);
+    box-shadow: 0 12rpx 32rpx rgba($color-text-primary, 0.12),
+      0 2rpx 8rpx rgba($color-text-primary, 0.06);
     box-sizing: border-box;
   }
 
   &__identity-copy-card {
     top: 24rpx;
     left: 24rpx;
-    padding: 20rpx 24rpx;
+    max-width: 360rpx;
+    padding: $spacing-sm $spacing-md;
   }
 
   &__growth-card {
     left: 24rpx;
-    bottom: 142rpx;
-    padding: 16rpx 20rpx;
-  }
+    // Coupled to the equipment bar below: bar bottom (16rpx) + bar min-height
+    // (112rpx) + 24rpx gap = 152rpx. Keep these three values in sync.
+    bottom: 152rpx;
+    // Explicit cap (was shrink-to-fit): shares the 638rpx bottom band with the
+    // 352rpx partner visual — 24 + 280 + 352 + 8 = 664 ≤ 670rpx stage width.
+    max-width: 280rpx;
+    padding: $spacing-sm $spacing-md;
 
-  &__settings {
-    position: absolute;
-    z-index: 6;
-    top: 24rpx;
-    right: 24rpx;
-    width: $cta-min-tap;
-    height: $cta-min-tap;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba($color-surface, 0.12);
-    border: 1rpx solid rgba($color-surface, 0.2);
-    transition: background 0.12s ease, transform 0.12s ease;
-
-    &--pressed {
-      transform: scale(0.96);
-      background: rgba($color-surface, 0.2);
+    // No equipment bar when the pixel avatar is off — drop to the stage floor
+    // so the avatar and this card share the same grounded horizon.
+    &--no-entry {
+      bottom: 32rpx;
     }
-  }
-
-  &__settings-icon {
-    width: 40rpx;
-    height: 40rpx;
-    font-family: $font-ui;
-    font-size: 38rpx;
-    line-height: 40rpx;
-    text-align: center;
-    color: $color-text-white;
   }
 
   &__identity-copy {
@@ -464,15 +453,15 @@
   }
 
   &__identity-avatar {
-    width: 116rpx;
-    height: 116rpx;
+    width: 96rpx;
+    height: 96rpx;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     background: rgba($color-surface, 0.94);
-    border: 5rpx solid rgba($color-secondary, 0.9);
+    border: 4rpx solid rgba($color-secondary, 0.9);
     box-shadow: 0 0 0 4rpx rgba($color-surface, 0.12),
       0 8rpx 22rpx rgba(0, 0, 0, 0.22);
     overflow: hidden;
@@ -481,13 +470,13 @@
     // ArchetypeHead. Keep the approved avatar artwork bounded in both the
     // screenshot harness and the WeChat runtime.
     > .archetype-head {
-      width: 112rpx !important;
-      height: 112rpx !important;
+      width: 92rpx !important;
+      height: 92rpx !important;
     }
 
     .archetype-head__image {
-      width: 102rpx !important;
-      height: 102rpx !important;
+      width: 84rpx !important;
+      height: 84rpx !important;
     }
   }
 
@@ -501,10 +490,10 @@
 
   &__identity-name {
     display: block;
-    max-width: 260rpx;
+    max-width: 200rpx;
     font-family: $font-cn-display;
-    font-size: 44rpx;
-    line-height: 1.3;
+    font-size: $font-size-xl;
+    line-height: 1.4;
     font-weight: $font-weight-bold;
     color: var(--profile-text-primary);
     white-space: nowrap;
@@ -536,16 +525,11 @@
       color: $color-primary-dark;
       background: rgba($color-primary, 0.12);
     }
-
-    &--blue {
-      color: $color-info;
-      background: rgba($color-info, 0.1);
-    }
   }
 
   &__identity-bio {
     display: block;
-    max-width: 260rpx;
+    max-width: 200rpx;
     font-family: $font-ui;
     font-size: $font-size-2xs;
     line-height: $line-height-normal;
@@ -558,13 +542,23 @@
   &__partner-visual {
     position: absolute;
     z-index: 3;
-    top: 58rpx;
+    // Bottom-anchored so the avatar stands on the stage floor (platform
+    // ellipse at the box bottom) instead of floating mid-scene, and leans
+    // into the bottom-right corner. 132rpx = equipment bar bottom (16) +
+    // bar min-height (112) + 4rpx breathing room — keep in sync.
     right: 8rpx;
+    bottom: 132rpx;
     width: 352rpx;
-    height: 334rpx;
+    height: 352rpx;
     display: flex;
     align-items: flex-end;
     justify-content: center;
+
+    // No equipment bar when the pixel avatar is off — ground on the stage
+    // floor directly.
+    &--no-entry {
+      bottom: 32rpx;
+    }
   }
 
   // Warm plaza platform grounding the avatar so it does not float on the scene.
@@ -577,7 +571,37 @@
     transform: translateX(-50%);
     border-radius: 50%;
     background: radial-gradient(ellipse, rgba(255, 201, 130, 0.38) 0%, rgba(255, 201, 130, 0) 74%);
-    box-shadow: 0 10rpx 26rpx rgba(45, 49, 66, 0.16);
+    box-shadow: 0 10rpx 26rpx rgba($color-text-primary, 0.16);
+  }
+
+  // Class emblem badge pinned to the avatar's bottom-right corner (pixel
+  // mode only). Ring colour follows the user's archetype via inline style.
+  &__partner-emblem {
+    position: absolute;
+    right: 8rpx;
+    bottom: 24rpx;
+    z-index: 4;
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($color-surface, 0.94);
+    border: 3rpx solid rgba($color-secondary, 0.9);
+    box-shadow: 0 4rpx 12rpx rgba($color-text-primary, 0.18);
+    overflow: hidden;
+
+    // Taro H5 drops dynamic inline rpx — keep the emblem bounded everywhere.
+    > .archetype-head {
+      width: 56rpx !important;
+      height: 56rpx !important;
+    }
+
+    .archetype-head__image {
+      width: 52rpx !important;
+      height: 52rpx !important;
+    }
   }
 
   &__partner-image {
@@ -601,7 +625,7 @@
     width: 286rpx;
     min-height: 228rpx;
     box-sizing: border-box;
-    padding: 30rpx 24rpx 22rpx;
+    padding: $spacing-lg $spacing-md $spacing-md;
     display: flex;
     align-items: center;
     flex-direction: column;
@@ -688,7 +712,9 @@
 
   &__growth {
     position: relative;
-    width: 296rpx;
+    // Fills the growth card's inner width (card is max-width: 280rpx with
+    // 24rpx horizontal padding).
+    width: 100%;
   }
 
   &__growth-heading {
@@ -720,7 +746,7 @@
 
   &__growth-progress {
     width: 100%;
-    height: 10rpx;
+    height: 16rpx;
     margin-top: $spacing-sm;
     border-radius: $radius-pill;
     overflow: hidden;
@@ -729,13 +755,41 @@
   }
 
   &__growth-progress-bar {
+    position: relative;
     width: 100%;
     height: 100%;
     border-radius: inherit;
+    overflow: hidden;
     transform: scaleX(0);
     transform-origin: left center;
     background: linear-gradient(90deg, $color-primary 0%, $color-secondary 100%);
     transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  // XP sheen: one soft light sweep per 8s cycle (mostly idle), carried inside
+  // the fill bar so it scales away when progress is 0. Transform only.
+  &__growth-progress-sheen {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 40%;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba($color-surface, 0) 0%, rgba($color-surface, 0.6) 50%, rgba($color-surface, 0) 100%);
+    transform: translateX(-110%);
+    animation: profile-xp-sheen 8s ease-in-out infinite;
+  }
+
+  @keyframes profile-xp-sheen {
+    0%,
+    64% {
+      transform: translateX(-110%);
+    }
+
+    84%,
+    100% {
+      transform: translateX(260%);
+    }
   }
 
   &__growth-level {
@@ -747,22 +801,58 @@
     color: var(--profile-text-tertiary);
   }
 
+  // RPG level plate: gold-trimmed pill carrying `Lv.X 名称`. Hidden on
+  // gamification error (error copy renders as the plain `&__growth-level`
+  // line above — never on the plate).
+  &__level-plate {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 8rpx;
+    margin-top: $spacing-xs;
+    padding: 4rpx $spacing-sm;
+    min-height: 40rpx;
+    box-sizing: border-box;
+    border-radius: $radius-pill;
+    background: rgba($color-landed-gold, 0.14);
+    border: 1rpx solid rgba($color-landed-gold, 0.55);
+  }
+
+  &__level-plate-spark {
+    // Same CSS four-point spark technique as `&__archive-spark`.
+    width: 14rpx;
+    height: 14rpx;
+    background: $color-landed-gold;
+    border-radius: 4rpx;
+    transform: rotate(45deg) scale(0.9);
+    flex-shrink: 0;
+  }
+
+  &__level-plate-text {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-normal;
+    color: $color-primary-dark;
+    white-space: nowrap;
+  }
+
   &__partner-entry {
     position: absolute;
     z-index: 7;
-    left: 16rpx;
-    right: 16rpx;
+    left: 24rpx;
+    right: 24rpx;
     bottom: 16rpx;
     min-height: 112rpx;
-    padding: $spacing-sm $spacing-md;
+    padding: 0 $spacing-sm;
     box-sizing: border-box;
-    border-radius: 26rpx;
+    border-radius: $card-radius-sm;
     display: flex;
     align-items: center;
     gap: $spacing-md;
-    background: rgba($color-surface, 0.9);
-    border: 1rpx solid rgba($color-primary, 0.12);
-    box-shadow: 0 10rpx 24rpx rgba(45, 49, 66, 0.08);
+    background: rgba($color-bg-tint-purple, 0.92);
+    border: 1rpx solid rgba($color-primary, 0.18);
+    box-shadow: 0 10rpx 24rpx rgba($color-text-primary, 0.08);
     transition: transform 0.12s ease, background 0.12s ease;
 
     &--pressed {
@@ -782,19 +872,19 @@
   &__equipment-label {
     flex-shrink: 0;
     font-family: $font-ui;
-    font-size: 22rpx;
+    font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
     color: var(--profile-text-secondary);
   }
 
   &__equipment-cache-badge {
     flex-shrink: 0;
-    padding: 4rpx 10rpx;
+    padding: 4rpx 12rpx;
     border-radius: $radius-pill;
     background: rgba($color-primary, 0.08);
     color: var(--profile-text-tertiary);
     font-family: $font-ui;
-    font-size: 18rpx;
+    font-size: $font-size-2xs;
   }
 
   &__equipment-state-copy {
@@ -820,9 +910,9 @@
   }
 
   &__equipment-slot {
-    width: 54rpx;
-    height: 54rpx;
-    border-radius: 14rpx;
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: $radius-md;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -835,12 +925,6 @@
       background: linear-gradient(145deg, rgba($color-primary, 0.16), rgba($color-secondary, 0.15));
       box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.1);
     }
-  }
-
-  &__equipment-slot-glyph {
-    color: $color-primary-dark;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
   }
 
   &__equipment-slot-art {
@@ -865,32 +949,10 @@
     border: 2rpx dashed rgba($color-primary, 0.32);
   }
 
-  &__partner-entry-label,
-  &__partner-entry-name {
-    display: block;
-    max-width: 154rpx;
-    font-family: $font-ui;
-    line-height: $line-height-normal;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__partner-entry-label {
-    font-size: $font-size-2xs;
-    color: rgba($color-text-white, 0.56);
-  }
-
-  &__partner-entry-name {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    color: $color-text-white;
-  }
-
   &__partner-entry-count {
     flex-shrink: 0;
     font-family: $font-ui;
-    font-size: 20rpx;
+    font-size: $font-size-2xs;
     line-height: $line-height-normal;
     color: var(--profile-text-tertiary);
   }
@@ -914,7 +976,6 @@
   }
 
   &__partner-entry-chevron,
-  &__archive-link-chevron,
   &__story-action-chevron {
     width: 12rpx;
     height: 12rpx;
@@ -928,7 +989,16 @@
   }
 
   &__archive {
-    margin: 0 $container-padding $spacing-xl;
+    margin: 0 $container-padding $spacing-lg;
+    opacity: 0;
+    transform: translateY(16rpx);
+    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.16s,
+      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.16s;
+
+    &--entered {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   &__archive-heading {
@@ -950,9 +1020,13 @@
   }
 
   &__archive-spark {
-    font-size: 34rpx;
-    line-height: 1;
-    color: $color-primary;
+    // CSS-drawn four-point spark (rotated rounded diamond) — replaces the
+    // inline ✦ glyph so no raw emoji/ dingbat ships on primary UI copy.
+    width: 22rpx;
+    height: 22rpx;
+    background: $color-primary;
+    border-radius: 6rpx;
+    transform: rotate(45deg) scale(0.9);
   }
 
   &__archive-title {
@@ -965,15 +1039,8 @@
 
   &__archive-link {
     gap: $spacing-xs;
-    min-height: $cta-min-tap;
     padding: 0 $spacing-xs 0 $spacing-sm;
-    color: $color-primary;
-    transition: opacity 0.12s ease, transform 0.12s ease;
-
-    &--pressed {
-      opacity: 0.7;
-      transform: scale(0.97);
-    }
+    color: $color-text-tertiary;
   }
 
   &__archive-link-text {
@@ -986,15 +1053,15 @@
   &__story-card {
     position: relative;
     height: 280rpx;
-    border-radius: 34rpx;
+    border-radius: $card-radius;
     overflow: hidden;
     background: $color-primary-light;
-    box-shadow: 0 14rpx 30rpx rgba(91, 67, 151, 0.14);
+    box-shadow: 0 14rpx 30rpx rgba($color-primary, 0.14);
     transition: transform 0.16s ease, box-shadow 0.16s ease;
 
     &--pressed {
       transform: scale(0.985);
-      box-shadow: 0 8rpx 20rpx rgba(91, 67, 151, 0.12);
+      box-shadow: 0 8rpx 20rpx rgba($color-primary, 0.12);
     }
   }
 
@@ -1011,7 +1078,7 @@
   }
 
   &__story-wash {
-    background: linear-gradient(90deg, rgba(244, 239, 255, 0.96) 0%, rgba(244, 239, 255, 0.78) 42%, rgba(244, 239, 255, 0.08) 76%);
+    background: linear-gradient(90deg, rgba($color-bg-tint-purple, 0.96) 0%, rgba($color-bg-tint-purple, 0.78) 42%, rgba($color-bg-tint-purple, 0.08) 76%);
   }
 
   &__story-placeholder {
@@ -1025,21 +1092,6 @@
     font-family: $font-ui;
     font-size: 20rpx;
     color: $color-text-white;
-  }
-
-  &__story-bookmark {
-    position: absolute;
-    z-index: 3;
-    top: $spacing-sm;
-    right: $spacing-sm;
-    padding: 6rpx 12rpx;
-    border: 1rpx solid rgba($color-text-white, 0.28);
-    border-radius: $radius-pill;
-    background: rgba(29, 18, 64, 0.72);
-    color: $color-text-white;
-    font-family: $font-mono;
-    font-size: 18rpx;
-    letter-spacing: 1rpx;
   }
 
   &__story-content {
@@ -1078,7 +1130,7 @@
 
   &__story-status {
     margin-top: 4rpx;
-    font-size: 22rpx;
+    font-size: $font-size-xs;
     color: rgba(36, 22, 79, 0.76);
   }
 
@@ -1101,81 +1153,7 @@
     justify-content: center;
     color: $color-primary;
     background: rgba($color-surface, 0.94);
-    box-shadow: 0 8rpx 18rpx rgba(63, 42, 121, 0.12);
-  }
-
-  // Error card
-  &__error-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $spacing-sm;
-    margin: 0 $container-padding $spacing-lg;
-    padding: $spacing-lg;
-    background: var(--profile-surface);
-    border-radius: $card-radius;
-    box-shadow: $shadow-card;
-    text-align: center;
-  }
-
-  &__refresh-success {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 $container-padding $spacing-lg;
-    padding: $spacing-sm $spacing-md;
-    background: var(--profile-success-10);
-    border-radius: $radius-pill;
-  }
-
-  &__refresh-success-text {
-    font-size: $font-size-sm;
-    font-family: $font-ui;
-    font-weight: $font-weight-medium;
-    color: var(--profile-success);
-    line-height: $line-height-normal;
-  }
-
-  &__error-mascot {
-    width: 120rpx;
-    height: 120rpx;
-  }
-
-  &__error-title {
-    font-size: $font-size-md;
-    font-family: $font-cn-display;
-    font-weight: $font-weight-bold;
-    color: var(--profile-text-primary);
-  }
-
-  &__error-subtitle {
-    font-size: $font-size-sm;
-    font-family: $font-ui;
-    color: var(--profile-text-secondary);
-  }
-
-  &__error-retry {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: $button-height-sm;
-    margin-top: $spacing-xs;
-    padding: $spacing-xs $spacing-lg;
-    background: var(--profile-primary);
-    border-radius: $radius-pill;
-    transition: transform 0.12s ease, opacity 0.12s ease;
-    box-sizing: border-box;
-
-    &--pressed {
-      transform: scale(0.97);
-      opacity: 0.92;
-    }
-  }
-
-  &__error-retry-text {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: var(--profile-text-white);
+    box-shadow: 0 8rpx 18rpx rgba($color-primary, 0.12);
   }
 
   &__spacer {
@@ -1186,7 +1164,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .profile-page__identity-stage,
-  .profile-page__stats {
+  .profile-page__stats,
+  .profile-page__archive {
     opacity: 1;
     transform: none;
     transition: none;
@@ -1194,16 +1173,21 @@
 
   .profile-page__stat,
   .profile-page__fallback-personality,
-  .profile-page__fallback-settings,
   .profile-page__nav-settings,
   .profile-page__partner-entry,
-  .profile-page__archive-link,
   .profile-page__story-card,
   .profile-page__growth-progress-bar,
   .profile-page__milestone {
     opacity: 1;
     transform: none;
     transition: none;
+    animation: none;
+  }
+
+  // The XP sheen has no static pose — under reduced-motion it is removed
+  // entirely rather than frozen mid-bar.
+  .profile-page__growth-progress-sheen {
+    display: none;
     animation: none;
   }
 }
