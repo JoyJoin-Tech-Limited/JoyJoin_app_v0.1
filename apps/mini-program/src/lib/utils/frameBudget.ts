@@ -27,23 +27,45 @@ export function measureFrameBudget(durationMs = 1000): Promise<FrameBudgetResult
     let lastTime = 0
     let rafId: number | undefined
 
+    const requestNextFrame = (callback: (timestamp: number) => void) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const taroRequest = (Taro as any).requestAnimationFrame
+      if (typeof taroRequest === 'function') {
+        return taroRequest.call(Taro, callback) as number
+      }
+
+      const globalRequest = globalThis.requestAnimationFrame
+      return typeof globalRequest === 'function' ? globalRequest(callback) : undefined
+    }
+
+    const cancelFrame = (id: number) => {
+      // Taro's cancellation API returns void, so nullish coalescing would also
+      // invoke the browser fallback after a successful Taro cancellation.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const taroCancel = (Taro as any).cancelAnimationFrame
+      if (typeof taroCancel === 'function') {
+        taroCancel.call(Taro, id)
+        return
+      }
+
+      const globalCancel = globalThis.cancelAnimationFrame
+      if (typeof globalCancel === 'function') globalCancel(id)
+    }
+
     const collect = (timestamp: number) => {
       if (lastTime > 0) {
         const delta = timestamp - lastTime
         frameTimes.push(delta)
       }
       lastTime = timestamp
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      rafId = (Taro as any).requestAnimationFrame?.(collect) ?? requestAnimationFrame(collect)
+      rafId = requestNextFrame(collect)
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    rafId = (Taro as any).requestAnimationFrame?.(collect) ?? requestAnimationFrame(collect)
+    rafId = requestNextFrame(collect)
 
     setTimeout(() => {
       if (rafId !== undefined) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(Taro as any).cancelAnimationFrame?.(rafId) ?? cancelAnimationFrame(rafId)
+        cancelFrame(rafId)
       }
 
       if (frameTimes.length < 3) {
