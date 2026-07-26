@@ -218,6 +218,18 @@ const ALLOWED_SQUAD_UNBOXING_EVENT_TYPES = new Set<SquadUnboxingEventType>(
   SQUAD_UNBOXING_EVENT_TYPES,
 );
 
+const LANDING_EVENT_TYPES = [
+  "landing_cta_tap",
+  "landing_hero_asset",
+  "landing_dwell",
+] as const;
+
+type LandingEventType = (typeof LANDING_EVENT_TYPES)[number];
+
+const ALLOWED_LANDING_EVENT_TYPES = new Set<LandingEventType>(
+  LANDING_EVENT_TYPES,
+);
+
 const SOCIAL_ICEBREAKER_EVENT_TYPES = [
   "custom_mode_selected",
   "phase_picker_impression",
@@ -634,6 +646,53 @@ export function registerAnalyticsRoutes(app: Express): void {
       return res.status(200).json({ success: true });
     } catch (error) {
       logger.warn("squad unboxing analytics write failed (non-fatal)", {
+        request_id: req.requestId,
+        error: String(error),
+      });
+      return res.status(200).json({ success: false, error: "analytics write failed" });
+    }
+  });
+
+  /**
+   * POST /api/analytics/landing
+   *
+   * Landing screen instrumentation.
+   * Tracks: CTA taps, hero asset load outcomes, dwell/exit behaviour.
+   *
+   * Fire-and-forget. Always returns 200. Silent fail.
+   * Reuses discoverAnalyticsEvents table and discoverAnalyticsLimiter (120 req/min).
+   */
+  app.post("/api/analytics/landing", discoverAnalyticsLimiter, async (req: Request, res) => {
+    try {
+      const { eventType, metadata, timestamp } = req.body as {
+        eventType?: unknown;
+        metadata?: unknown;
+        timestamp?: unknown;
+      };
+
+      if (
+        typeof eventType !== "string" ||
+        !ALLOWED_LANDING_EVENT_TYPES.has(eventType as LandingEventType)
+      ) {
+        return res.status(200).json({ success: false, error: "invalid eventType" });
+      }
+
+      const normalizedMetadata = sanitizeMetadata(metadata);
+      const userId = req.session?.userId ?? null;
+      const sessionId = req.sessionID ?? null;
+
+      await insertAnalyticsEvent(discoverAnalyticsEvents, {
+        userId,
+        sessionId,
+        eventType,
+        poolId: null,
+        metadata: normalizedMetadata,
+        timestamp: parseTimestamp(timestamp),
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      logger.warn("landing analytics write failed (non-fatal)", {
         request_id: req.requestId,
         error: String(error),
       });

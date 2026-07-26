@@ -1,6 +1,11 @@
 @use "../../styles/variables" as *;
 
-// ─── Landing Page ───────────────────────────────────────────────────
+// ─── Landing Page · Blind-box City (2026-07-26 redesign) ─────────────
+// Poster discipline: logo → hero (glowing box + peeking Xiaoyue + floating
+// elements) → one headline + one subtitle → CTA stack. The CSS dusk
+// gradient is the "far-away sky"; the Lovart hero composite carries the
+// actual light. All motion is transform/opacity/clip-path only.
+
 .landing-page {
   display: flex;
   flex-direction: column;
@@ -9,37 +14,18 @@
   height: 100dvh;
   min-height: 100vh;
   min-height: 100dvh;
-  background-color: $color-bg-warm-to;
-  background-image: radial-gradient(ellipse at 50% 18%, rgba($color-primary, 0.08) 0%, transparent 70%);
+  background-color: $color-dusk-cream;
+  background-image:
+    radial-gradient(ellipse at 50% 18%, rgba($color-primary, 0.06) 0%, transparent 70%),
+    linear-gradient(180deg, $color-dusk-cream 0%, $color-dusk-blush 26%, $color-dusk-mist 55%, $color-dusk-lavender 80%, $color-dusk-deep 100%);
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
 }
 
-/* Exit animation — Logo shrink + items fall back */
-.landing-page--exiting .brand-mark {
-  opacity: 0;
-  transform: translateY(-10rpx) scale(0.92);
-  transition: opacity 0.18s ease-in, transform 0.18s ease-in;
-}
-.landing-page--exiting .hero-zone {
-  opacity: 0;
-  transform: translateY(10rpx);
-  transition: opacity 0.18s ease-in, transform 0.18s ease-in;
-}
-.landing-page--exiting .bonding-cloud-wrap {
-  opacity: 0;
-  transition: opacity 0.18s ease-in;
-}
-.landing-page--exiting .game-preview {
-  opacity: 0;
-  transform: translateY(10rpx);
-  transition: opacity 0.18s ease-in, transform 0.18s ease-in;
-}
-.landing-page--exiting .bottom-zone {
-  opacity: 0;
-  transform: translateY(10rpx);
-  transition: opacity 0.18s ease-in, transform 0.18s ease-in;
+/* Hidden asset preloads — keep out of visual tree but in WeChat package. */
+.landing-page__asset-preload {
+  display: none;
 }
 
 /* ── Content Zone ──────────────────────────────────────────────────── */
@@ -52,227 +38,485 @@
   align-items: center;
   justify-content: flex-start;
   width: 100%;
-  padding-top: 8rpx;
-}
-
-/* Hidden asset preloads — keep out of visual tree but in WeChat package. */
-.landing-page__asset-preload {
-  display: none;
 }
 
 /* ── Brand Watermark ───────────────────────────────────────────────── */
 .brand-mark {
-  margin-top: 0;
-  opacity: 0.35;
+  padding-top: 24rpx;
+  opacity: 0; // revealed by --entered fade
+  flex-shrink: 0;
 }
 
-/* ── Hero ──────────────────────────────────────────────────────────── */
+// BrandLogo sizes itself via inline rpx (dropped by the H5 preview); the
+// !important SCSS class wins over the inline style in every runtime.
+.landing-page__brand-logo {
+  width: 74rpx !important;
+  height: 74rpx !important;
+}
+
+/* ── Hero Stage ────────────────────────────────────────────────────── */
 .hero-zone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0 48rpx;
-  margin-top: 0;
+  width: 100%;
+  height: 704rpx;
+  margin-top: 16rpx;
+  position: relative;
+  flex-shrink: 0;
 }
 
-.hero-mascot {
+.hero-stage {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.hero-stage__scale {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Golden halo — two stacked radial-gradient layers (no filter/blur, which
+   are unreliable on Android WebView). The hot core lives in the artwork;
+   CSS only adds the ambient wash. */
+.hero-stage__halo {
+  position: absolute;
+  left: 15rpx; // (750 - 720) / 2
+  top: 156rpx; // 436 (glow center) - 280
+  width: 720rpx;
+  height: 560rpx;
+  background-image: radial-gradient(ellipse at center, rgba($color-brand-gold, 0.14) 0%, rgba($color-brand-gold, 0) 70%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero-stage__halo-core {
+  position: absolute;
+  left: 80rpx; // (720 - 560) / 2
+  top: 60rpx; // (560 - 440) / 2
+  width: 560rpx;
+  height: 440rpx;
+  background-image: radial-gradient(ellipse at center, rgba($color-landed-gold, 0.30) 0%, rgba($color-landed-gold, 0) 62%);
+}
+
+/* Light motes drifting up from the box mouth (idle only) */
+.hero-stage__particles {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.hero-stage__particle {
+  position: absolute;
+  border-radius: 999rpx;
+  background: rgba($color-landed-gold, 0.9);
+  opacity: 0;
+
+  &--1 { left: 296rpx; top: 400rpx; width: 8rpx; height: 8rpx; }
+  &--2 { left: 360rpx; top: 392rpx; width: 16rpx; height: 16rpx; background: rgba($color-glow-gold-hot, 0.9); }
+  &--3 { left: 440rpx; top: 400rpx; width: 8rpx; height: 8rpx; }
+}
+
+/* Floating element sprites (transparent WebP, CDN) */
+.hero-stage__sprite {
+  position: absolute;
+  opacity: 0; // revealed by --entered stagger
+  pointer-events: none;
+  image-rendering: -webkit-optimize-contrast;
+  z-index: 6;
+
+  &--buildings {
+    // Portrait towers, behind the box's left shoulder (z3). Slot geometry is
+    // fitted to the shipped master: far enough left that the towers stay
+    // visible beyond the box body (which starts at x≈134rpx on stage), and
+    // tall enough that their tops clear the box rim (~365rpx). Enlarged
+    // 128→160rpx after the PM render review (was getting eaten by the box).
+    left: 32rpx;
+    top: 300rpx;
+    width: 160rpx;
+    height: 260rpx;
+    z-index: 3; // behind the hero composite
+  }
+
+  &--cards {
+    left: 80rpx;
+    top: 128rpx;
+    width: 152rpx;
+    height: 152rpx;
+    transform: rotate(-10deg);
+  }
+
+  &--map-pin {
+    // Between the ears: bottom edge must clear the head top (~158rpx on stage).
+    left: 424rpx;
+    top: 64rpx;
+    width: 96rpx;
+    height: 96rpx;
+    transform: rotate(-4deg);
+  }
+
+  &--dice {
+    // In front of the box's right shoulder — clear of the head (which ends at
+    // ~344rpx on stage); a sprite over the ear reads as "stuck to the ear".
+    left: 560rpx;
+    top: 344rpx;
+    width: 128rpx;
+    height: 128rpx;
+    transform: rotate(12deg);
+  }
+
+  &--glass {
+    // Left arc, below the cards, above the buildings.
+    left: 96rpx;
+    top: 280rpx;
+    width: 112rpx;
+    height: 112rpx;
+    transform: rotate(8deg);
+  }
+}
+
+/* LQIP blur-up placeholder — same geometry as the hero */
+.hero-stage__lqip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16rpx;
+  display: flex;
+  justify-content: center;
+  z-index: 4;
+  opacity: 1;
+  transition: opacity 200ms ease-out;
+  pointer-events: none;
+
+  &--out {
+    opacity: 0;
+  }
+}
+
+.hero-stage__lqip-img {
+  width: 688rpx;
+  height: 688rpx;
+  transform: scale(1.06); // blur edges bleed past the hero bounds
+}
+
+/* Breathing wrapper — flexbox centering (never translateX(-50%), which the
+   WeChat renderer can drop on re-render). The idle breath lives here so it
+   never fights the land/peek transforms on the image itself. */
+.hero-stage__breath {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16rpx;
+  display: flex;
+  justify-content: center;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.hero-stage__hero-img {
+  width: 688rpx;
+  height: 688rpx;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+  image-rendering: -webkit-optimize-contrast;
+
+  &--in {
+    opacity: 1;
+  }
+}
+
+.hero-stage__hero-fallback {
   width: 200rpx;
   height: 200rpx;
   image-rendering: -webkit-optimize-contrast;
-  animation: mascot-bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-.hero-mascot-fallback {
-  width: 200rpx;
-  height: 200rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hero-mascot-fallback-emoji {
-  font-size: 96rpx;
-  line-height: 1;
-}
-
+/* ── Copy ──────────────────────────────────────────────────────────── */
 .hero-text {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-top: 16rpx;
+  margin-top: 24rpx;
+  padding: 0 $container-padding;
+  flex-shrink: 0;
 }
 
 .headline {
   font-family: $font-cn-display;
-  font-size: 56rpx; // mobile headline
+  font-size: $font-size-3xl;
   font-weight: 700;
   color: $color-text-primary-warm;
-  line-height: 1.4;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
+  line-height: 1.3;
+  max-width: 670rpx;
+  opacity: 0; // revealed by --entered stagger
 }
 
+// $color-primary fails 4.5:1 on the mist stop (3.2:1); primary-dark passes.
 .headline--accent {
-  color: $color-primary;
+  color: $color-primary-dark;
 }
 
 .subtitle {
   margin-top: 16rpx;
-  font-size: 28rpx;
+  font-size: $font-size-base;
   font-weight: 400;
-  color: rgba($color-text-primary-warm, 0.62);
-  line-height: 1.6;
-  max-width: 520rpx;
+  // 0.85 ≈ 4.9:1 on the deepest dusk stop (0.75 was ~3.9:1, below the 4.5 bar).
+  color: rgba($color-text-primary-warm, 0.85);
+  line-height: 1.5;
+  max-width: 640rpx;
+  opacity: 0; // revealed by --entered stagger
 }
 
-/* ── Bonding Cloud ─────────────────────────────────────────────────── */
-.bonding-cloud-wrap {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  margin-top: 44rpx;
-  margin-bottom: 12rpx;
-  padding: 0 32rpx;
+/* ── Entrance choreography (0–1410ms) ──────────────────────────────── */
+// 1. Box lands (drop + settle bounce), then peek reveals Xiaoyue's head.
+//    (The --rm block below neutralises both animations via !important —
+//    :not() pseudo-classes are banned here by the landing style test.)
+.landing-page--entered .hero-stage__hero-img--in {
+  animation:
+    hero-land 480ms cubic-bezier(0.22, 1, 0.36, 1) both,
+    hero-peek 300ms ease-out 860ms both;
 }
 
-/* ── Game Preview ──────────────────────────────────────────────────── */
-.game-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 0;
-  padding: 0 40rpx;
-  width: 100%;
+// 2. Halo blooms at 300ms, then breathes with the box (idle, same phase).
+.landing-page--entered .hero-stage__halo {
+  animation:
+    halo-bloom 380ms ease-out 300ms both,
+    halo-pulse 4s ease-in-out 1.4s infinite;
 }
 
-.game-preview__title {
-  align-self: center;
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10rpx;
-  padding: 14rpx 40rpx;
-  border-radius: 999rpx;
-  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
-  color: $color-text-white;
-  font-family: $font-cn-display;
-  font-size: 28rpx;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  margin-bottom: 24rpx;
-  box-shadow:
-    0 8rpx 28rpx rgba($color-primary, 0.28),
-    inset 0 2rpx 4rpx rgba(255, 255, 255, 0.15);
+// 3. Box breathing idle (starts after the entrance settles).
+.landing-page--entered .hero-stage__breath {
+  animation: hero-breathe 4s ease-in-out 1.4s infinite;
+}
 
-  /* Outer seal ring */
-  &::before {
-    content: '';
-    position: absolute;
-    inset: -8rpx;
-    border-radius: 999rpx;
-    border: 2rpx solid rgba($color-primary, 0.22);
-    pointer-events: none;
+// 4. Floating sprites stagger in (100ms apart, slight overshoot).
+.landing-page--entered .hero-stage__sprite--cards {
+  animation: sprite-in-cards 420ms cubic-bezier(0.34, 1.3, 0.64, 1) 500ms both;
+}
+
+.landing-page--entered .hero-stage__sprite--dice {
+  animation: sprite-in-dice 420ms cubic-bezier(0.34, 1.3, 0.64, 1) 600ms both;
+}
+
+.landing-page--entered .hero-stage__sprite--map-pin {
+  animation: sprite-in-pin 420ms cubic-bezier(0.34, 1.3, 0.64, 1) 700ms both;
+}
+
+.landing-page--entered .hero-stage__sprite--glass {
+  animation: sprite-in-glass 420ms cubic-bezier(0.34, 1.3, 0.64, 1) 800ms both;
+}
+
+.landing-page--entered .hero-stage__sprite--buildings {
+  animation: sprite-in-buildings 420ms ease-out 900ms both;
+}
+
+// 5. Particles rise (idle loop, self-staggered by delay).
+.landing-page--entered .hero-stage__particle--1 {
+  animation: particle-rise 6s ease-in-out 0.8s infinite;
+}
+
+.landing-page--entered .hero-stage__particle--2 {
+  animation: particle-rise 7.5s ease-in-out 2.6s infinite;
+}
+
+.landing-page--entered .hero-stage__particle--3 {
+  animation: particle-rise 9s ease-in-out 4.4s infinite;
+}
+
+// 6. Logo, copy, CTA stack.
+.landing-page--entered .brand-mark {
+  animation: fade-in-soft 400ms ease-out both;
+}
+
+.landing-page--entered .headline {
+  animation: rise-in 350ms cubic-bezier(0.22, 1, 0.36, 1) 920ms both;
+}
+
+.landing-page--entered .subtitle {
+  animation: rise-in 320ms cubic-bezier(0.22, 1, 0.36, 1) 990ms both;
+}
+
+.landing-page--entered .bottom-zone {
+  animation: rise-in 350ms cubic-bezier(0.22, 1, 0.36, 1) 1060ms both;
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────── */
+@keyframes hero-land {
+  0% {
+    opacity: 0;
+    transform: translateY(-48rpx) scale(0.96);
   }
 
-  /* Second outer ring */
-  &::after {
-    content: '';
-    position: absolute;
-    inset: -14rpx;
-    border-radius: 999rpx;
-    border: 1rpx solid rgba($color-primary, 0.1);
-    pointer-events: none;
+  62% {
+    opacity: 1;
+    transform: translateY(6rpx) scale(1.004);
   }
-}
 
-/* Inner highlight sheen */
-.game-preview__title-sheen {
-  position: absolute;
-  top: 8rpx;
-  left: 20%;
-  right: 20%;
-  height: 1rpx;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
-  pointer-events: none;
-}
-
-/* Seal star decorations */
-.game-preview__title-star {
-  position: absolute;
-  font-size: 20rpx;
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 0 6rpx rgba($color-primary, 0.5);
-  pointer-events: none;
-
-  &--tl { top: -6rpx; left: 18%; transform: rotate(-15deg); }
-  &--tr { top: -6rpx; right: 18%; transform: rotate(15deg); }
-  &--bl { bottom: -6rpx; left: 22%; transform: rotate(10deg); }
-  &--br { bottom: -6rpx; right: 22%; transform: rotate(-10deg); }
-}
-
-.game-preview__grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32rpx 16rpx;
-  width: 100%;
-}
-
-.game-preview__cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12rpx;
-  padding: 8rpx 0;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-
-}
-
-.game-preview__cell-icon {
-  background: transparent;
-  border-radius: 50%;
-  width: 112rpx;
-  height: 112rpx;
-
-  &--fallback {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 24rpx;
-    background: linear-gradient(135deg, rgba($color-primary, 0.12), rgba($color-primary, 0.22));
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
-.game-preview__cell-fallback-text {
-  font-size: 48rpx;
-  color: $color-primary;
-  font-weight: $font-weight-semibold;
-  line-height: 1;
+// CALIBRATION CONFIRMED (2026-07-26, measured on the shipped master): opaque-
+// coverage profile shows the dog's head spans y≈23–50% and the box body becomes
+// dominant at y≈53% (glow seam ≈48–55%). inset(52%) starts the reveal edge just
+// above the rim, so Xiaoyue's head "peeks" out as the edge sweeps up to 0.
+// Graceful degradation: engines that cannot interpolate clip-path jump straight
+// to the final frame (fully revealed) — never stuck half-clipped.
+@keyframes hero-peek {
+  from {
+    clip-path: inset(52% 0 0 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
 }
 
-.game-preview__cell-label {
-  font-size: 24rpx;
-  font-weight: 500;
-  color: $color-text-secondary;
-  text-align: center;
-}
+@keyframes halo-bloom {
+  from {
+    opacity: 0;
+    transform: scale(0.72);
+  }
 
-.game-preview__cell--hidden {
-  opacity: 0;
-  transform: translate3d(0, 8rpx, 0);
-}
-
-.game-preview__cell--in {
-  opacity: 0;
-  transform: translate3d(0, 8rpx, 0);
-  animation: game-preview-cell-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-@keyframes game-preview-cell-in {
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: scale(1);
+  }
+}
+
+@keyframes halo-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.85;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes hero-breathe {
+  0%, 100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8rpx);
+  }
+}
+
+@keyframes particle-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+
+  20% {
+    opacity: 0.8;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-144rpx);
+  }
+}
+
+@keyframes sprite-in-cards {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.8) rotate(-4deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(-10deg);
+  }
+}
+
+@keyframes sprite-in-dice {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.8) rotate(6deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(12deg);
+  }
+}
+
+@keyframes sprite-in-pin {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.8) rotate(0deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(-4deg);
+  }
+}
+
+@keyframes sprite-in-glass {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.8) rotate(4deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(8deg);
+  }
+}
+
+@keyframes sprite-in-buildings {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx) scale(0.85);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-soft {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 0.8;
+  }
+}
+
+@keyframes landing-rm-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }
 
@@ -284,24 +528,59 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12rpx;
   flex-shrink: 0;
   box-sizing: border-box;
+  opacity: 0; // revealed by --entered stagger
 }
 
 .landing-page__cta {
   width: 100%;
   height: 92rpx;
   border-radius: 50rpx;
+  font-family: $font-cn-display;
   font-size: 32rpx;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+  position: relative;
+  overflow: hidden;
   transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.25s ease;
 }
 
 .landing-page__cta--primary {
   background: $color-primary;
   color: $color-text-white;
-  box-shadow: 0 2rpx 12rpx rgba($color-primary, 0.2);
+  box-shadow: $shadow-primary-soft;
+
+  // PM review (2026-07-26): a faint golden sheen sweeps the CTA every 8s,
+  // carrying the box's glow down to the action — the light path from hero
+  // to tap. Suppressed while dimmed, on low-end devices, and under
+  // reduced-motion (see those blocks).
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 60%;
+    background: linear-gradient(100deg, rgba($color-glow-gold-hot, 0) 15%, rgba($color-glow-gold-hot, 0.32) 50%, rgba($color-glow-gold-hot, 0) 85%);
+    transform: translateX(-170%);
+    animation: cta-sheen-sweep 8s ease-in-out 2s infinite;
+    pointer-events: none;
+  }
+}
+
+@keyframes cta-sheen-sweep {
+  0% {
+    transform: translateX(-170%);
+  }
+
+  20% {
+    transform: translateX(280%);
+  }
+
+  100% {
+    transform: translateX(280%);
+  }
 }
 
 .landing-page__cta:focus-visible {
@@ -314,14 +593,77 @@
   box-shadow: 0 4rpx 20rpx rgba($color-primary, 0.28);
 }
 
+// Dimmed-but-not-dead (PM review P1): 0.65 keeps the legal gate legible
+// without reading as "broken / still loading" the way 0.38 did.
 .landing-page__cta--disabled {
-  opacity: 0.38;
+  opacity: 0.65;
   transform: none !important;
 
+  &::after {
+    display: none;
+  }
+
   &:active {
-    opacity: 0.38 !important;
+    opacity: 0.65 !important;
     transform: none !important;
   }
+}
+
+.landing-page__login-row {
+  width: 100%;
+  margin-top: 16rpx;
+}
+
+/* Ghost secondary: white card reads clean on the lavender dusk and stays
+   clearly below the primary purple CTA in hierarchy. */
+.landing-page .landing-page__login-btn {
+  width: 100%;
+  height: 92rpx;
+  border-radius: 50rpx;
+  background: $color-surface;
+  color: $color-text-primary-warm;
+  border: 1rpx solid rgba($color-primary, 0.28);
+  box-shadow: $shadow-sm;
+  font-size: 30rpx;
+  transition: opacity 0.25s ease, transform 0.12s ease;
+
+  &:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+
+  &.joy-button--disabled,
+  &.joy-button--loading {
+    opacity: 0.4;
+    background: $color-surface;
+  }
+}
+
+.landing-page__test-login-row {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 8rpx;
+}
+
+.landing-page__test-login-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64rpx;
+  padding: 8rpx 24rpx;
+  transition: background 0.12s ease;
+  border-radius: 16rpx;
+
+  &--hover {
+    background: rgba($color-primary, 0.06);
+  }
+}
+
+.landing-page__test-login-link-text {
+  font-size: 24rpx;
+  color: $color-text-tertiary;
+  border-bottom: 1rpx dashed $color-text-tertiary;
 }
 
 .landing-page__legal-row {
@@ -330,7 +672,7 @@
   gap: 16rpx;
   min-height: 72rpx;
   padding: 0;
-  margin-top: 0;
+  margin-top: 8rpx;
   position: relative;
 
   &.shake {
@@ -345,13 +687,15 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  // Invisible 88rpx hit area; visual checkbox is rendered by the inner pseudo-state.
+  // Containing block for the ✓ mark (position: relative is REQUIRED — without
+  // it the absolute mark escapes to the legal-row and renders off-box).
+  position: relative;
 
   &::before {
     content: '';
     width: 48rpx;
     height: 48rpx;
-    border: 2rpx solid rgba($color-text-primary-warm, 0.28);
+    border: 2rpx solid rgba($color-text-primary-warm, 0.35);
     border-radius: 10rpx;
     box-sizing: border-box;
     transition: background 0.15s ease, border-color 0.15s ease;
@@ -384,72 +728,19 @@
   display: flex;
   flex-wrap: wrap;
   font-size: 24rpx;
-  color: rgba($color-text-primary-warm, 0.55);
+  color: rgba($color-text-primary-warm, 0.85);
   line-height: 1.5;
   // Ensure the text row is also tappable as part of the legal agreement.
   min-height: 72rpx;
   align-items: center;
 }
 
+// No purple link passes 4.5:1 on every dusk stop — dark text + underline
+// carries the affordance instead (6.5:1 on the deepest stop).
 .landing-page__legal-link {
-  color: $color-primary;
-  text-decoration: none;
+  color: $color-text-primary-warm;
+  text-decoration: underline;
   margin: 0 6rpx;
-}
-
-
-
-.landing-page__login-row {
-  width: 100%;
-}
-
-.landing-page__test-login-row {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  padding-top: 8rpx;
-}
-
-.landing-page__test-login-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 64rpx;
-  padding: 8rpx 24rpx;
-  transition: background 0.12s ease;
-  border-radius: 16rpx;
-
-  &--hover {
-    background: rgba($color-primary, 0.06);
-  }
-}
-
-.landing-page__test-login-link-text {
-  font-size: 24rpx;
-  color: $color-text-tertiary;
-  border-bottom: 1rpx dashed $color-text-tertiary;
-}
-
-.landing-page .landing-page__login-btn {
-  width: 100%;
-  height: 92rpx;
-  border-radius: 50rpx;
-  background: $color-text-primary;
-  color: $color-text-white;
-  box-shadow: $shadow-sm;
-  font-size: 30rpx;
-  transition: opacity 0.25s ease, transform 0.12s ease;
-
-  &:active {
-    transform: scale(0.98);
-    opacity: 0.9;
-  }
-
-  &.joy-button--disabled,
-  &.joy-button--loading {
-    opacity: 0.4;
-    background: $color-text-primary;
-  }
 }
 
 @keyframes shake {
@@ -470,151 +761,20 @@
   border-width: 0;
 }
 
-/* ── Auth Gate Timeout UI ──────────────────────────────────────────── */
-.index-gate {
-  position: relative;
-  width: 100%;
-  min-height: 100dvh;
+/* ── Exit transition (CTA navigation) ──────────────────────────────── */
+// animation:none drops the entrance fill state so the fade-out can take over.
+.landing-page--exiting .brand-mark,
+.landing-page--exiting .hero-zone,
+.landing-page--exiting .hero-text,
+.landing-page--exiting .bottom-zone {
+  animation: none;
+  opacity: 0;
+  transform: translateY(10rpx);
+  transition: opacity 0.18s ease-in, transform 0.18s ease-in;
 }
 
-.index-gate__timeout {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 120rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 24rpx;
-  padding: 0 48rpx;
-  animation: index-gate-timeout-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-@keyframes index-gate-timeout-in {
-  from { opacity: 0; transform: translateY(8rpx); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.index-gate__timeout-text {
-  font-size: 26rpx;
-  color: rgba($color-text-primary-warm, 0.62);
-  line-height: 1.4;
-  text-align: center;
-}
-
-.index-gate__timeout-actions {
-  display: flex;
-  align-items: center;
-  gap: 24rpx;
-}
-
-.index-gate__timeout-btn {
-  min-width: 168rpx;
-  height: 80rpx;
-  padding: 0 32rpx;
-  border-radius: 40rpx;
-  background: rgba($color-primary, 0.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.12s ease, background 0.12s ease;
-
-  &:active {
-    transform: scale(0.96);
-    background: rgba($color-primary, 0.14);
-  }
-}
-
-.index-gate__timeout-btn--hover {
-  background: rgba($color-primary, 0.14);
-}
-
-.index-gate__timeout-btn--primary {
-  background: $color-primary;
-  box-shadow: 0 4rpx 14rpx rgba($color-primary, 0.22);
-
-  &:active {
-    background: $color-primary-dark;
-  }
-}
-
-.index-gate__timeout-btn--primary.index-gate__timeout-btn--hover {
-  background: $color-primary-dark;
-}
-
-.index-gate__timeout-btn-text {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: $color-text-primary-warm;
-  line-height: 1;
-}
-
-.index-gate__timeout-btn--primary .index-gate__timeout-btn-text {
-  color: $color-text-white;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .index-gate__timeout {
-    animation: none !important;
-  }
-  .index-gate__timeout-btn {
-    transition: none !important;
-  }
-}
-
-// Reduced-motion fallback
-@media (prefers-reduced-motion: reduce) {
-  .game-preview__cell--hidden,
-  .game-preview__cell--in {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .landing-page__legal-row.shake {
-    animation: none !important;
-  }
-
-  .hero-mascot {
-    animation: none !important;
-  }
-
-  .phase-carousel__item {
-    transition: none !important;
-    will-change: auto !important;
-  }
-
-  .phase-carousel__item--pos-0::before,
-  .game-preview__title-sheen {
-    animation: none !important;
-  }
-
-  .game-preview__title-star {
-    display: none !important;
-  }
-
-  .phase-carousel__dot--active {
-    animation: none !important;
-  }
-
-  .landing-page__cta::after {
-    animation: none !important;
-  }
-
-  .landing-page__auth-hint {
-    animation: none !important;
-  }
-
-  /* Exit animations should be instant when reduced motion is preferred */
-  .landing-page--exiting .brand-mark,
-  .landing-page--exiting .hero-zone,
-  .landing-page--exiting .bonding-cloud-wrap,
-  .landing-page--exiting .game-preview,
-  .landing-page--exiting .bottom-zone {
-    opacity: 0 !important;
-    transform: none !important;
-    transition: opacity 0.05s ease-in !important;
-  }
+.landing-page--exiting .brand-mark {
+  transform: translateY(-10rpx) scale(0.92);
 }
 
 /* ── Invisible auth gate on LandingPage ────────────────────────────── */
@@ -627,7 +787,7 @@
   }
 }
 
-/* ── Auth-hint: warm "悦仔正在确认…" indicator while CTAs are gated ── */
+/* ── Auth-hint: warm indicator while CTAs are gated ────────────────── */
 .landing-page__auth-hint {
   display: flex;
   align-items: center;
@@ -656,43 +816,6 @@
   line-height: 1;
 }
 
-.landing-page__auth-hint-dots {
-  display: flex;
-  align-items: center;
-  gap: 4rpx;
-}
-
-.landing-page__auth-hint-dot {
-  width: 4rpx;
-  height: 4rpx;
-  border-radius: 999rpx;
-  background: rgba($color-text-primary-warm, 0.45);
-  animation: auth-hint-dot-pulse 1.2s ease-in-out infinite;
-
-  &:nth-child(2) {
-    animation-delay: 0.2s;
-  }
-
-  &:nth-child(3) {
-    animation-delay: 0.4s;
-  }
-}
-
-@keyframes auth-hint-dot-pulse {
-
-  0%,
-  80%,
-  100% {
-    opacity: 0.3;
-    transform: scale(0.8);
-  }
-
-  40% {
-    opacity: 1;
-    transform: scale(1.2);
-  }
-}
-
 .landing-page__auth-spinner {
   width: 24rpx;
   height: 24rpx;
@@ -709,23 +832,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .landing-page__auth-hint {
-    animation: none !important;
-  }
-
-  .landing-page__auth-hint-dot {
-    animation: none !important;
-    opacity: 0.45;
-  }
-
-  .landing-page__auth-spinner {
-    animation: none !important;
-    opacity: 0.45;
-  }
-}
-
-/* ── Auth timeout banner (inline on LandingPage) ──────────────────── */
+/* ── Auth timeout / offline banner ─────────────────────────────────── */
 .landing-page__auth-timeout {
   position: fixed;
   left: 0;
@@ -829,18 +936,137 @@
   color: $color-text-white;
 }
 
-@media (prefers-reduced-motion: reduce) {
+/* ── Short-screen compaction (< 640px window height) ───────────────── */
+.landing-page--short {
+  .brand-mark {
+    padding-top: 16rpx;
+  }
+
+  .hero-zone {
+    height: 576rpx;
+    margin-top: 8rpx;
+  }
+
+  // One wrapper scale shrinks halo/hero/sprites/particles together — no
+  // per-element geometry recalculation.
+  .hero-stage__scale {
+    transform: scale(0.85);
+    transform-origin: center bottom;
+  }
+
+  .hero-text {
+    margin-top: 16rpx;
+  }
+
+  .headline {
+    font-size: $font-size-2xl;
+  }
+}
+
+/* ── Low-end devices: keep the one-shot entrance, kill infinite idles ─ */
+.landing-page--low-end {
+  .hero-stage__breath,
+  .hero-stage__particle {
+    animation: none !important;
+  }
+
+  .hero-stage__particles {
+    display: none !important;
+  }
+
+  // Bloom (one-shot) stays; the 4s pulse idle is dropped.
+  .hero-stage__halo {
+    animation: halo-bloom 380ms ease-out 300ms both !important;
+  }
+
+  // clip-path animates on the main thread (repaint, not compositor) in
+  // WKWebView — low-end devices skip the peek sweep and jump straight to the
+  // revealed frame (perf WARN-3).
+  .hero-stage__hero-img--in {
+    animation: hero-land 480ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
+    clip-path: none !important;
+  }
+
+  .landing-page__cta--primary::after {
+    display: none !important;
+  }
+}
+
+/* ── Reduced motion: everything static, one 150ms fade ─────────────── */
+.landing-page--rm {
+  .brand-mark,
+  .headline,
+  .subtitle,
+  .bottom-zone {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .brand-mark {
+    opacity: 0.8 !important;
+  }
+
+  .hero-stage__halo,
+  .hero-stage__breath {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .hero-stage__hero-img {
+    animation: none !important;
+    clip-path: none !important;
+    transition: opacity 150ms ease-out;
+  }
+
+  .hero-stage__sprite {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .hero-stage__particles {
+    display: none !important;
+  }
+
+  .landing-page__cta--primary::after {
+    display: none !important;
+  }
+
+  .content-zone,
+  .bottom-zone {
+    animation: landing-rm-fade 150ms ease-out both;
+  }
+
+  .landing-page__legal-row.shake {
+    animation: none !important;
+  }
+
+  .landing-page__cta,
+  .landing-page__login-btn,
+  .landing-page__auth-timeout-btn,
+  .landing-page__test-login-link {
+    transition: none !important;
+  }
+
+  .landing-page__auth-hint,
   .landing-page__auth-timeout {
     animation: none !important;
   }
 
-  .landing-page__auth-timeout-btn {
-    transition: none !important;
-  }
-
+  .landing-page__auth-spinner,
   .landing-page__auth-timeout-spinner {
     animation: none !important;
-    opacity: 0.65;
+    opacity: 0.45;
+  }
+
+  /* Exit transitions should be instant when reduced motion is preferred */
+  &.landing-page--exiting .brand-mark,
+  &.landing-page--exiting .hero-zone,
+  &.landing-page--exiting .hero-text,
+  &.landing-page--exiting .bottom-zone {
+    opacity: 0 !important;
+    transform: none !important;
+    transition: opacity 0.05s ease-in !important;
   }
 }
-

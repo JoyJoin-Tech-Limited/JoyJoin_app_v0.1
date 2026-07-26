@@ -156,6 +156,20 @@ const REWARDS_PRELOADS = [
   cdnAsset('/assets/lovart/lovart-rewards-history-20260423-v1.webp'),
 ]
 
+/** Landing blind-box hero set (2026-07-26) — preloaded during the
+ *  BoxLogoEntryScreen splash window (index.tsx fires preloadRouteAssets before
+ *  entryDone), so the entrance choreography starts with the hero already warm
+ *  instead of issuing its first request at LandingPage mount (perf WARN-1). */
+const LANDING_HERO_PRELOADS = [
+  cdnAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk.webp'),
+  cdnAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk-lqip.webp'),
+  cdnAsset('/assets/lovart/landing/sprite-buildings.webp'),
+  cdnAsset('/assets/lovart/landing/sprite-cards.webp'),
+  cdnAsset('/assets/lovart/landing/sprite-map-pin.webp'),
+  cdnAsset('/assets/lovart/landing/sprite-dice.webp'),
+  cdnAsset('/assets/lovart/landing/sprite-glass.webp'),
+]
+
 /** Map of page path → CDN assets to preload when entering that page. */
 export const ROUTE_PRELOAD_MAP: Record<string, string[]> = {
   'pages/discover/index': DISCOVER_PRELOADS,
@@ -163,7 +177,7 @@ export const ROUTE_PRELOAD_MAP: Record<string, string[]> = {
   'pages/connections/index': CONNECTIONS_TAB_PRELOADS,
   'pages/center-hub/index': CENTER_HUB_TAB_PRELOADS,
   'pages/profile/index': PROFILE_TAB_PRELOADS,
-  'pages/index/index': PERSONALITY_TEST_PRELOADS, // landing → personality test is the primary CTA
+  'pages/index/index': [...LANDING_HERO_PRELOADS, ...PERSONALITY_TEST_PRELOADS], // landing hero + primary CTA target
   'pages/pool-registration/index': POOL_REGISTRATION_PRELOADS,
   'pages/matching-status/index': MATCHING_PRELOADS,
   'pages/event-detail/index': EVENT_DETAIL_PRELOADS,

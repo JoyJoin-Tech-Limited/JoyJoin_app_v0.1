@@ -116,6 +116,11 @@ export default function PersonalityTestIntro({
             <Text className='personality-test__intro-subtitle'>
               找到你的氛围命格，让后面的遇见都更对味。
             </Text>
+            {/* 装盒承接句（盲盒城市故事线，2026-07-26）：landing 的「拆开我的盲盒」
+                落地到这里，把"答题"重新叙事为拆盒的第一拍——先装盒，再拆盒。 */}
+            <Text className='personality-test__intro-bridge'>
+              先装盒，再拆盒：几道小题，把你的样子装进去。
+            </Text>
           </View>
 
           <ResponsiveSpacer heightRpx={16} collapseBelow={700} />

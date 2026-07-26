@@ -59,10 +59,6 @@
     "include": [
       {
         "type": "regexp",
-        "value": "assets/landing-phase-icons/.*\\.webp$"
-      },
-      {
-        "type": "regexp",
         "value": "assets/mascot/.*\\.(webp|json)$"
       },
       {

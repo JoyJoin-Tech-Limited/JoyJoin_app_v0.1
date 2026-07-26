@@ -79,6 +79,17 @@ $color-bg-tint-warm:   #FFF8F1;
 $color-bg-tint-purple: #F5F0FF;
 $color-bg-tint-cream:  #FFFAF4;
 
+// ─── Dusk gradient (landing page "blind-box city" world, 2026-07-26) ──
+// Warm cream → soft lavender dusk. The glowing box art is the only light
+// source; CSS gradient is just the far-away sky. Small luminance steps
+// between stops avoid banding on 16-bit Android panels.
+$color-dusk-cream:    #FFFAF4; // = $color-bg-tint-cream
+$color-dusk-blush:    #FBF0F5; // $color-bg-tint-pink one notch deeper
+$color-dusk-mist:     #E3D6F7; // between $color-primary-light and $color-brand-lavender
+$color-dusk-lavender: #C9B4EE; // $color-brand-lavender slightly deepened
+$color-dusk-deep:     #B9A6E6; // ~10% deeper than $color-brand-lavender — dusk, NOT night
+$color-glow-gold-hot: #FDE68A; // hot core of the box glow (brightest point)
+
 $color-text-primary:   #2D3142;
 $color-text-primary-warm: #2D2B28; // warm near-black for cream/warm backgrounds
 $color-text-secondary: #6B7280;

@@ -52,6 +52,7 @@ const PAGES = {
   'icebreaker-warmup-topic': { url: 'http://localhost:9000/icebreaker-warmup-topic.png', altPort: 9003 },
   'icebreaker-warmup-generating': { url: 'http://localhost:9000/icebreaker-warmup-generating.png', altPort: 9003 },
   'icebreaker-warmup-error': { url: 'http://localhost:9000/icebreaker-warmup-error.png', altPort: 9003 },
+  'landing': { url: 'http://localhost:9000/landing-blind-box.png', altPort: 9003 },
 }
 
 const page = process.argv[2] || 'events'

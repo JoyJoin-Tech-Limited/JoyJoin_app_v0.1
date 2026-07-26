@@ -1757,6 +1757,34 @@
     {
       "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-cat-v1.webp",
       "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-cat-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/landing/hero-box-xiaoyue-dusk.webp",
+      "cdnPath": "assets/lovart/landing/hero-box-xiaoyue-dusk.webp"
+    },
+    {
+      "localPath": "assets/lovart/landing/hero-box-xiaoyue-dusk-lqip.webp",
+      "cdnPath": "assets/lovart/landing/hero-box-xiaoyue-dusk-lqip.webp"
+    },
+    {
+      "localPath": "assets/lovart/landing/sprite-buildings.webp",
+      "cdnPath": "assets/lovart/landing/sprite-buildings.webp"
+    },
+    {
+      "localPath": "assets/lovart/landing/sprite-cards.webp",
+      "cdnPath": "assets/lovart/landing/sprite-cards.webp"
+    },
+    {
+      "localPath": "assets/lovart/landing/sprite-map-pin.webp",
+      "cdnPath": "assets/lovart/landing/sprite-map-pin.webp"
+    },
+    {
+      "localPath": "assets/lovart/landing/sprite-dice.webp",
+      "cdnPath": "assets/lovart/landing/sprite-dice.webp"
+    },
+    {
+      "localPath": "assets/lovart/landing/sprite-glass.webp",
+      "cdnPath": "assets/lovart/landing/sprite-glass.webp"
     }
   ],
   "pendingAssets": [

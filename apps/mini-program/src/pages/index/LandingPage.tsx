@@ -1,12 +1,12 @@
 import { View, Text, Image, Navigator } from "@tarojs/components"
-import Taro, { useRouter } from "@tarojs/taro"
+import Taro, { useRouter, useDidHide } from "@tarojs/taro"
 import { useState, useEffect, useRef, useMemo } from "react"
-import { cdnAsset, localAsset } from "../../lib/utils/cdnAssets"
+import { CDN_BASE_URL, cdnAsset, localAsset } from "../../lib/utils/cdnAssets"
 import { loadBrandDisplayFont } from "../../lib/utils/brandFont"
 import Button from "../../components/ui/Button"
 import BrandLogo from "../../components/ui/BrandLogo"
-import PhaseIconCarousel from "../../components/landing/PhaseIconCarousel"
 import { useStaggerMount } from "../../hooks/useStaggerMount"
+import { useDeviceTier } from "../../hooks/useDeviceTier"
 import { ResponsiveSpacer } from "../../components/ui/ResponsiveSpacer"
 import { runMiniProgramRouteTransition, navigateToMiniProgramNextStep } from "../../lib/onboarding/onboardingNavigation"
 import { MINI_PROGRAM_ROUTES } from "../../lib/onboarding/onboardingRoutes"
@@ -14,13 +14,61 @@ import { useWeChatLogin } from "../../hooks/auth/useWeChatLogin"
 import { useResetOnShow } from "../../hooks/useResetOnShow"
 import { readAnonymousAssessmentSession, isAnonymousAssessmentSessionCompleted } from "../../lib/auth/anonymousOnboarding"
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
-import { logInfo, logWarn } from "../../lib/utils/logger"
+import { landingAnalytics } from "../../lib/analytics/landingAnalytics"
+import { getSystemReducedMotion } from "../../lib/utils/accessibility"
+import { logWarn } from "../../lib/utils/logger"
 import TestLoginSheet from "../../components/dev/TestLoginSheet"
 import "./index.scss"
 
-/** Mascot — bundled locally; CDN fallback if the bundle is stripped at upload. */
-const MASCOT_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')
-const MASCOT_CDN = cdnAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')
+/**
+ * Blind-box city hero (2026-07-26 redesign). The master composite
+ * (box + golden glow + peeking Xiaoyue) is ONE Lovart image so the lighting
+ * stays coherent; the floating elements are separate transparent sprites so
+ * the entrance can stagger them. All CDN-delivered; the bundled welcome
+ * mascot is the resilience fallback when the CDN hero cannot load.
+ */
+const HERO_SRC = cdnAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk.webp')
+const HERO_LQIP_SRC = cdnAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk-lqip.webp')
+const HERO_FALLBACK_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')
+
+const HERO_SPRITES = [
+  { key: 'buildings', src: cdnAsset('/assets/lovart/landing/sprite-buildings.webp') },
+  { key: 'cards', src: cdnAsset('/assets/lovart/landing/sprite-cards.webp') },
+  { key: 'map-pin', src: cdnAsset('/assets/lovart/landing/sprite-map-pin.webp') },
+  { key: 'dice', src: cdnAsset('/assets/lovart/landing/sprite-dice.webp') },
+  { key: 'glass', src: cdnAsset('/assets/lovart/landing/sprite-glass.webp') },
+] as const
+
+type HeroSpriteKey = (typeof HERO_SPRITES)[number]['key']
+type HeroState = 'loading' | 'ready' | 'fallback'
+type LandingCtaType = 'new' | 'continue' | 'discover'
+
+const HERO_SRC_TYPE: 'local' | 'cdn' = CDN_BASE_URL ? 'cdn' : 'local'
+
+/** Same window-height probe pattern as ResponsiveSpacer (not exported there). */
+function readWindowHeightPx(): number {
+  try {
+    const wi = Taro.getWindowInfo?.()
+    if (wi && typeof wi.windowHeight === 'number') return wi.windowHeight
+  } catch {
+    /* ignore */
+  }
+  try {
+    const s = Taro.getSystemInfoSync()
+    if (typeof s.windowHeight === 'number') return s.windowHeight
+  } catch {
+    /* ignore */
+  }
+  return 9999
+}
+
+function toDwellBucket(dwellMs: number): '<3s' | '3-8s' | '8-15s' | '15-30s' | '>=30s' {
+  if (dwellMs < 3000) return '<3s'
+  if (dwellMs < 8000) return '3-8s'
+  if (dwellMs < 15000) return '8-15s'
+  if (dwellMs < 30000) return '15-30s'
+  return '>=30s'
+}
 
 interface MiniProgramLandingPageProps {
   isAuthLoading?: boolean
@@ -45,67 +93,45 @@ export default function MiniProgramLandingPage({
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [shakeLegal, setShakeLegal] = useState(false)
-  const [mascotSrc, setMascotSrc] = useState(MASCOT_SRC)
-  const [mascotError, setMascotError] = useState(false)
+  const [heroState, setHeroState] = useState<HeroState>('loading')
+  const [lqipGone, setLqipGone] = useState(false)
+  const [failedSprites, setFailedSprites] = useState<ReadonlySet<HeroSpriteKey>>(new Set())
   const [hasIncompleteSession, setHasIncompleteSession] = useState(false)
   const [showTestLogin, setShowTestLogin] = useState(false)
   const [envVersion, setEnvVersion] = useState<string | null>(null)
+  const [isShortScreen, setIsShortScreen] = useState(false)
+  const [reduceMotion] = useState(() => getSystemReducedMotion())
   const isMounted = useStaggerMount()
+  const { isDegradation } = useDeviceTier()
 
   const { handleWeChatLogin, isLoggingIn } = useWeChatLogin({
     referralCode: invitationCode || undefined,
   })
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const navSafetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Mount timestamp — dwell + hero-duration measurements anchor here. */
+  const mountedAtRef = useRef(Date.now())
+  const networkTypeRef = useRef('unknown')
+  const dwellFiredRef = useRef(false)
 
   useEffect(() => {
     loadBrandDisplayFont()
     const snapshot = readAnonymousAssessmentSession()
     setHasIncompleteSession(!!snapshot && !isAnonymousAssessmentSessionCompleted(snapshot))
+    setIsShortScreen(readWindowHeightPx() < 640)
     try {
       const info = Taro.getAccountInfoSync()
       setEnvVersion(info?.miniProgram?.envVersion ?? null)
     } catch {
       // Some Taro versions may throw — ignore.
     }
-
-    // Diagnostic probe: verify critical local assets are reachable & decodable.
-    // Logs to vConsole (dev) and WeChat realtime logs (production).
-    const probeAssets = [
-      { name: 'mascot', src: MASCOT_SRC },
-      { name: 'phase-topic-card', src: localAsset('/assets/landing-phase-icons/phase-topic-card.webp') },
-      { name: 'phase-lie-detective', src: localAsset('/assets/landing-phase-icons/phase-lie-detective.webp') },
-      { name: 'phase-personality-dice', src: localAsset('/assets/landing-phase-icons/phase-personality-dice.webp') },
-      { name: 'phase-auction', src: localAsset('/assets/landing-phase-icons/phase-auction.webp') },
-      { name: 'phase-mini-script', src: localAsset('/assets/landing-phase-icons/phase-mini-script.webp') },
-      { name: 'phase-quip-battle', src: localAsset('/assets/landing-phase-icons/phase-quip-battle.webp') },
-    ]
-    void Taro.getNetworkType().then((networkRes) => {
-      probeAssets.forEach((asset) => {
-        Taro.getImageInfo({ src: asset.src })
-          .then((info) => {
-            logInfo('[LandingPage] asset probe ok', {
-              name: asset.name,
-              src: asset.src,
-              width: info.width,
-              height: info.height,
-              type: info.type,
-              networkType: networkRes.networkType,
-            })
-          })
-          .catch((err) => {
-            const ctx = {
-              name: asset.name,
-              src: asset.src,
-              networkType: networkRes.networkType,
-              error: err?.errMsg || String(err),
-            }
-            logWarn('[LandingPage] asset probe failed', ctx)
-            // eslint-disable-next-line no-console
-            console.warn('[LandingPage] asset probe failed', ctx)
-          })
+    void Taro.getNetworkType()
+      .then((res) => {
+        networkTypeRef.current = res.networkType
       })
-    })
+      .catch(() => {
+        /* keep 'unknown' */
+      })
   }, [])
 
   // Reset navigation loading state when the user swipes back or foregrounds
@@ -136,17 +162,125 @@ export default function MiniProgramLandingPage({
   // Guests only enter continue mode when they have an incomplete anonymous
   // session or an unfinished onboarding nextStep before discover.
   const isContinueMode = hasIncompleteSession || !!userNextStep
+  const ctaType: LandingCtaType = !isContinueMode ? 'new' : userNextStep === 'discover' ? 'discover' : 'continue'
   const ctaLabel = useMemo(() => {
-    if (!isContinueMode) return '测测我的社交氛围'
-    if (userNextStep === 'discover') return '进入发现页'
-    if (userNextStep) return '继续完善档案'
-    return '继续完成测试'
-  }, [isContinueMode, userNextStep])
+    if (ctaType === 'new') return '拆开我的盲盒'
+    if (ctaType === 'discover') return '进入发现页'
+    return '继续开盒'
+  }, [ctaType])
   const ctaDisabledClass = hasAcceptedLegal ? "" : " landing-page__cta--disabled"
   const ctaHoverClass = hasAcceptedLegal ? "landing-page__cta-hover" : ""
-  const pageClassName = ["landing-page", isPageExiting ? "landing-page--exiting" : ""]
+  const pageClassName = [
+    "landing-page",
+    isPageExiting ? "landing-page--exiting" : "",
+    isShortScreen ? "landing-page--short" : "",
+    isDegradation ? "landing-page--low-end" : "",
+    reduceMotion ? "landing-page--rm" : "",
+    isMounted ? "landing-page--entered" : "",
+  ]
     .filter(Boolean)
     .join(" ")
+
+  const ctaTypeRef = useRef<LandingCtaType>(ctaType)
+  ctaTypeRef.current = ctaType
+
+  const fireDwell = (exitAction: 'cta_tap' | 'login_tap' | 'page_leave' | 'app_hide') => {
+    if (dwellFiredRef.current) return
+    dwellFiredRef.current = true
+    const dwellMs = Date.now() - mountedAtRef.current
+    landingAnalytics.trackDwell({
+      dwellMs,
+      dwellBucket: toDwellBucket(dwellMs),
+      exitAction,
+      // Read via ref: the unmount cleanup closes over the first render's
+      // fireDwell, and ctaType can flip from 'new' to 'continue' once the
+      // anonymous-session snapshot resolves.
+      ctaTypeShown: ctaTypeRef.current,
+    })
+  }
+  // Single-fire dwell on first exit signal: CTA/login tap (below), page hide,
+  // or unmount — whichever comes first.
+  useDidHide(() => fireDwell('app_hide'))
+  useEffect(() => () => fireDwell('page_leave'), []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Unmount the LQIP right after its fade-out completes (no DOM residue).
+  useEffect(() => {
+    if (heroState !== 'ready') return
+    const timer = setTimeout(() => setLqipGone(true), 250)
+    return () => clearTimeout(timer)
+  }, [heroState])
+
+  const handleHeroLoad = () => {
+    if (heroState !== 'loading') return
+    setHeroState('ready')
+    landingAnalytics.trackHeroAsset({
+      asset: 'hero-box-xiaoyue-dusk',
+      result: 'success',
+      srcType: HERO_SRC_TYPE,
+      durationMs: Date.now() - mountedAtRef.current,
+      networkType: networkTypeRef.current,
+    })
+  }
+
+  const handleHeroError = () => {
+    if (heroState !== 'loading') return
+    setHeroState('fallback')
+    landingAnalytics.trackHeroAsset({
+      asset: 'hero-box-xiaoyue-dusk',
+      result: 'error',
+      srcType: HERO_SRC_TYPE,
+      durationMs: Date.now() - mountedAtRef.current,
+      networkType: networkTypeRef.current,
+    })
+    logWarn('[LandingPage] hero image failed, using bundled mascot fallback', {
+      src: HERO_SRC,
+      networkType: networkTypeRef.current,
+    })
+  }
+
+  const handleFallbackLoad = () => {
+    landingAnalytics.trackHeroAsset({
+      asset: 'hero-box-xiaoyue-dusk',
+      result: 'fallback',
+      srcType: 'local',
+      durationMs: Date.now() - mountedAtRef.current,
+      networkType: networkTypeRef.current,
+    })
+  }
+
+  const handleSpriteError = (key: HeroSpriteKey) => {
+    setFailedSprites((current) => {
+      if (current.has(key)) return current
+      const next = new Set(current)
+      next.add(key)
+      return next
+    })
+    // Sprites are decorative: failures are tracked (error-only to keep the
+    // metric noise-free) and the element is simply removed from the stage.
+    landingAnalytics.trackHeroAsset({
+      asset: `sprite-${key}`,
+      result: 'error',
+      srcType: HERO_SRC_TYPE,
+      durationMs: Date.now() - mountedAtRef.current,
+      networkType: networkTypeRef.current,
+    })
+  }
+
+  const renderSprite = (key: HeroSpriteKey) => {
+    if (failedSprites.has(key)) return null
+    const sprite = HERO_SPRITES.find((item) => item.key === key)
+    if (!sprite) return null
+    return (
+      <Image
+        className={`hero-stage__sprite hero-stage__sprite--${key}`}
+        src={sprite.src}
+        mode='aspectFit'
+        lazyLoad={false}
+        aria-hidden='true'
+        onError={() => handleSpriteError(key)}
+      />
+    )
+  }
 
   const triggerLegalShake = () => {
     setShakeLegal(true)
@@ -194,87 +328,104 @@ export default function MiniProgramLandingPage({
 
   return (
     <View className={pageClassName}>
-      {/* Hidden preloads force WeChat to keep this critical local asset in the package.
-          Without explicit <Image> tags, DevTools may treat string-only references as unused. */}
+      {/* Hidden preload: keeps the bundled fallback mascot decodable and inside
+          the WeChat package (DevTools strips string-only references). */}
       <View className='landing-page__asset-preload' aria-hidden>
-        <Image src={MASCOT_SRC} />
+        <Image src={HERO_FALLBACK_SRC} />
       </View>
 
       <View className='content-zone'>
-        {/* Brand watermark */}
-        <View
-          className={`brand-mark ${isMounted ? "stagger-in stagger-in--0" : "stagger-in-hidden"}`}
-        >
-          <BrandLogo size='md' />
+        {/* Brand watermark — className sizing (SCSS) instead of the component's
+            inline-rpx preset because the H5 preview drops inline rpx and
+            balloons the logo, which then clips the copy zone below it. */}
+        <View className='brand-mark'>
+          <BrandLogo size='sm' className='landing-page__brand-logo' />
         </View>
 
-        {/* Hero: mascot + headline */}
-        <View
-          className={`hero-zone ${isMounted ? "stagger-in stagger-in--1" : "stagger-in-hidden"}`}
-        >
-          {!mascotError ? (
-            <Image
-              className='hero-mascot'
-              src={mascotSrc}
-              mode='aspectFit'
-              ariaLabel='悦仔'
-              lazyLoad={false}
-              onLoad={() => {
-                logInfo('[LandingPage] mascot loaded', { src: mascotSrc })
-              }}
-              onError={() => {
-                // First failure: bundled copy may be stripped at upload — retry from CDN.
-                if (mascotSrc !== MASCOT_CDN) {
-                  setMascotSrc(MASCOT_CDN)
-                  return
-                }
-                void Taro.getNetworkType().then((res) => {
-                  const ctx = {
-                    src: mascotSrc,
-                    networkType: res.networkType,
-                    env: process.env.NODE_ENV,
-                    cdnBase: process.env.TARO_APP_CDN_BASE_URL || '(none)',
-                  }
-                  logWarn('[LandingPage] mascot load failed (local+cdn)', ctx)
-                  // eslint-disable-next-line no-console
-                  console.warn('[LandingPage] mascot load failed (local+cdn)', ctx)
-                })
-                setMascotError(true)
-              }}
-            />
-          ) : (
-            <View className='hero-mascot-fallback'>
-              <Text className='hero-mascot-fallback-emoji' aria-label='悦仔'>🐶</Text>
+        {/* Hero stage: glowing blind box + peeking Xiaoyue + floating elements */}
+        <View className='hero-zone'>
+          <View className='hero-stage'>
+            <View className='hero-stage__scale'>
+              <View className='hero-stage__halo' aria-hidden='true'>
+                <View className='hero-stage__halo-core' />
+              </View>
+
+              <View className='hero-stage__particles' aria-hidden='true'>
+                <View className='hero-stage__particle hero-stage__particle--1' />
+                <View className='hero-stage__particle hero-stage__particle--2' />
+                <View className='hero-stage__particle hero-stage__particle--3' />
+              </View>
+
+              {/* City skyline sits behind the hero composite */}
+              {renderSprite('buildings')}
+
+              {/* Blur-up placeholder: same geometry as the hero, fades out on
+                  load and unmounts right after the fade (no DOM residue). */}
+              {heroState !== 'fallback' && !lqipGone && (
+                <View
+                  className={`hero-stage__lqip${heroState === 'ready' ? ' hero-stage__lqip--out' : ''}`}
+                  aria-hidden='true'
+                >
+                  <Image
+                    className='hero-stage__lqip-img'
+                    src={HERO_LQIP_SRC}
+                    mode='aspectFit'
+                    lazyLoad={false}
+                    onError={() => {
+                      /* the dusk gradient skeleton underneath is enough */
+                    }}
+                  />
+                </View>
+              )}
+
+              <View className='hero-stage__breath'>
+                {heroState !== 'fallback' ? (
+                  <Image
+                    className={`hero-stage__hero-img${heroState === 'ready' ? ' hero-stage__hero-img--in' : ''}`}
+                    src={HERO_SRC}
+                    mode='aspectFit'
+                    lazyLoad={false}
+                    ariaLabel='半开的紫色盲盒透出金光，悦仔从盒后好奇地探出头'
+                    onLoad={handleHeroLoad}
+                    onError={handleHeroError}
+                  />
+                ) : (
+                  <Image
+                    className='hero-stage__hero-fallback'
+                    src={HERO_FALLBACK_SRC}
+                    mode='aspectFit'
+                    lazyLoad={false}
+                    ariaLabel='悦仔'
+                    onLoad={handleFallbackLoad}
+                    onError={() => {
+                      /* already reported via the hero error path */
+                    }}
+                  />
+                )}
+              </View>
+
+              {/* Floating elements: dinner/game line + city-exploration line */}
+              {renderSprite('cards')}
+              {renderSprite('map-pin')}
+              {renderSprite('dice')}
+              {renderSprite('glass')}
             </View>
-          )}
-          <View className='hero-text'>
-            <Text className='headline'>你的<Text className='headline--accent'>命格</Text>里，藏着谁</Text>
-            <Text className='subtitle'>测出你的氛围命格，找到最聊得来的 4-6 人小局</Text>
           </View>
+        </View>
+
+        {/* Copy: mystery headline + one-line mechanism */}
+        <View className='hero-text'>
+          <Text className='headline'>这座城市，为你<Text className='headline--accent'>藏了一局</Text></Text>
+          <Text className='subtitle'>答几道小题，悦仔替你攒一桌聊得来的人</Text>
         </View>
 
         {/* Dynamic spacer: disappears on short phones so the fixed CTA stays reachable */}
-        <ResponsiveSpacer heightRpx={32} collapseBelow={640} />
-
-        {/* Game preview */}
-        <View
-          className={`game-preview ${isMounted ? "stagger-in stagger-in--3" : "stagger-in-hidden"}`}
-        >
-          <View className='game-preview__title' role='heading' aria-level={3}>
-            <View className='game-preview__title-sheen' />
-            <View className='game-preview__title-star game-preview__title-star--tl'>✦</View>
-            <View className='game-preview__title-star game-preview__title-star--tr'>✦</View>
-            <View className='game-preview__title-star game-preview__title-star--bl'>✦</View>
-            <View className='game-preview__title-star game-preview__title-star--br'>✦</View>
-            <Text>氛围引擎 · 10+ 种玩法随局定制</Text>
-          </View>
-          <PhaseIconCarousel isVisible={isMounted} />
-        </View>
+        <ResponsiveSpacer heightRpx={64} collapseBelow={640} />
       </View>
 
       {/* CTA */}
       <View
-        className={`bottom-zone ${isAuthLoading && !isAuthTimedOut ? "bottom-zone--gated" : ""} ${isMounted ? "stagger-in stagger-in--4" : "stagger-in-hidden"}`}
+        className={`bottom-zone ${isAuthLoading && !isAuthTimedOut ? "bottom-zone--gated" : ""}`}
         aria-hidden={isAuthLoading && !isAuthTimedOut ? "true" : undefined}
         aria-busy={isAuthLoading && !isAuthTimedOut ? "true" : undefined}
       >
@@ -293,6 +444,15 @@ export default function MiniProgramLandingPage({
           loading={isPageExiting}
           disabled={isAuthLoading || isOffline}
           onClick={() => {
+            landingAnalytics.trackCtaTap({
+              ctaType,
+              userNextStep,
+              hasIncompleteSession,
+              blockedByLegal: !hasAcceptedLegal,
+              dwellMs: Date.now() - mountedAtRef.current,
+              heroReady: heroState !== 'loading',
+            })
+            fireDwell('cta_tap')
             if (!hasAcceptedLegal) {
               triggerLegalShake()
               return
@@ -319,9 +479,7 @@ export default function MiniProgramLandingPage({
         </Button>
 
         {/* Inline login for returning users */}
-        <View
-          className={`landing-page__login-row ${isMounted ? "stagger-in stagger-in--5" : "stagger-in-hidden"}`}
-        >
+        <View className='landing-page__login-row'>
           <Button
             variant='brand'
             className='landing-page__login-btn'
@@ -330,6 +488,7 @@ export default function MiniProgramLandingPage({
             onClick={() => {
               hapticLight()
               onboardingAnalytics.interaction('login', 'landing_login_clicked')
+              fireDwell('login_tap')
               void handleWeChatLogin()
             }}
           >
@@ -339,9 +498,7 @@ export default function MiniProgramLandingPage({
 
         {/* Test login entry — visible only on 体验版 (temp) builds */}
         {envVersion === 'trial' && (
-          <View
-            className={`landing-page__test-login-row ${isMounted ? "stagger-in stagger-in--5" : "stagger-in-hidden"}`}
-          >
+          <View className='landing-page__test-login-row'>
             <View
               className='landing-page__test-login-link'
               onClick={() => {

@@ -643,6 +643,47 @@ function captureIcebreaker(sessionId, waitSelector = '.phase-hero-card', extraWa
   })
 }
 
+// ─── Landing (Blind-box City hero, 2026-07-26) ──────────────────────
+// Guest-state capture: the mock server auths as MOCK_USER by default, which
+// would trigger the landing's unified redirect to nextStep — force 401 on
+// /api/auth/user so the page stays on the landing in new-user mode.
+async function captureLandingBlindBox() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.route('**/api/auth/user', (route) =>
+        route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: false, error: 'unauthenticated' }),
+        }),
+      )
+      await page.goto(`${H5_BASE_URL}/#/pages/index/index`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      // BoxLogoEntryScreen finishes first; then LandingPage mounts and the
+      // ~1.4s entrance choreography (box land → halo bloom → sprite stagger →
+      // Xiaoyue peek → copy rise → CTA) plays out.
+      await page.waitForSelector('.landing-page', { state: 'visible', timeout: 20000 })
+      await page.waitForSelector('.hero-stage__hero-img--in', { state: 'attached', timeout: 15000 })
+      // Let the entrance settle and the hero/sprites decode via the asset proxy.
+      await page.waitForTimeout(2800)
+
+      // Accept the legal checkbox so the capture shows the primary CTA fully
+      // lit (one-tap reachable state; also exercises the checkbox visual).
+      await page.click('.landing-page__legal-checkbox')
+      await page.waitForTimeout(400)
+
+      return screenshotViewport(page)
+    }
+  )
+}
+
+register('landing-blind-box', captureLandingBlindBox)
 register('icebreaker-micro-challenge', () => captureIcebreaker('mock-micro_challenge'))
 register('icebreaker-lie-detective', () => captureIcebreaker('mock-lie_detective'))
 register('icebreaker-auction', () => captureIcebreaker('mock-auction'))

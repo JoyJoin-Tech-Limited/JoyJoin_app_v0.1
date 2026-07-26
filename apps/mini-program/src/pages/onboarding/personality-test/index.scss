@@ -164,6 +164,16 @@
     line-height: $line-height-relaxed;
   }
 
+  &__intro-bridge {
+    display: block;
+    max-width: 620rpx;
+    margin-top: 8rpx;
+    font-family: $font-ui;
+    font-size: 26rpx;
+    color: $color-text-secondary-on-light;
+    line-height: $line-height-relaxed;
+  }
+
   &__intro-hero {
     @include card-premium;
     padding: $spacing-sm;
