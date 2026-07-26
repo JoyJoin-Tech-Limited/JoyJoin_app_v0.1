@@ -34,6 +34,44 @@ $flow-accent-human:    #FF9B85;
 $flow-accent-city:     #69B9F5;
 $flow-line-inactive:   #D8D3DF;
 $flow-shadow-brand:    0 12rpx 36rpx rgba($color-primary, 0.16);
+$flow-accent-sky:      #A8C5DD;
+
+// Flow Animation archetype worlds. Keep character-specific palettes centralized
+// so the component only consumes semantic tokens.
+$flow-world-corgi-bg:              #F7E8DC;
+$flow-world-corgi-accent:          #CB9268;
+$flow-world-corgi-dark:            #9A6B4A;
+$flow-world-rooster-bg:            #F5EBCE;
+$flow-world-rooster-accent:        #C49538;
+$flow-world-rooster-dark:          #8B6A28;
+$flow-world-hamster-praise-bg:     #F2EAE3;
+$flow-world-hamster-praise-accent: #D8C6B7;
+$flow-world-hamster-praise-dark:   #9A8575;
+$flow-world-fox-bg:                #F5E5D8;
+$flow-world-fox-accent:            #C68E61;
+$flow-world-fox-dark:              #8B5E3C;
+$flow-world-dolphin-calm-bg:       #E3F4FB;
+$flow-world-dolphin-calm-accent:   #4A8AAF;
+$flow-world-spider-bg:             #E5E1E8;
+$flow-world-spider-accent:         #62526A;
+$flow-world-spider-dark:           #423648;
+$flow-world-koala-bg:              #E8E7F0;
+$flow-world-koala-accent:          #ADABBC;
+$flow-world-koala-dark:            #6B6980;
+$flow-world-octopus-bg:            #F7E5E4;
+$flow-world-octopus-accent:        #CB8783;
+$flow-world-octopus-dark:          #9A5F5C;
+$flow-world-owl-bg:                #E8DDD8;
+$flow-world-owl-accent:            #714C42;
+$flow-world-owl-dark:              #4A3229;
+$flow-world-elephant-bg:           #E8EEF7;
+$flow-world-elephant-accent:       #6A7F9C;
+$flow-world-turtle-bg:             #DDE8D3;
+$flow-world-turtle-accent:         #4D613A;
+$flow-world-turtle-dark:           #2F3A23;
+$flow-world-cat-bg:                #F0F0EA;
+$flow-world-cat-accent:            #8A8878;
+$flow-world-cat-dark:              #656458;
 
 // ─── Light tinted backgrounds (card shells, section accents) ──────
 $color-bg-tint-pink:   #FFF4F8;

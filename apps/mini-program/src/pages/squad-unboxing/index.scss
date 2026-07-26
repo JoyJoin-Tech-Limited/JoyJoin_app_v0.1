@@ -32,7 +32,6 @@ $fan-rotations: (
 .squad-unboxing {
   @include viewport-min-height;
   position: relative;
-  height: 100vh;
   height: 100dvh;
   overflow: hidden;
   background: linear-gradient(180deg, $color-bg-tint-cream 0%, $color-bg-tint-pink 52%, $color-bg-tint-purple 100%);

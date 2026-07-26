@@ -204,7 +204,7 @@ describe("Flash task acceptance state integrity", () => {
     expect(serviceSource).toContain("declineUnavailableFlashEncounterOffer");
   });
 
-  it("keeps offers on the dialogue route and carries reviewed delivery copy through the snapshot", () => {
+  it("keeps offers on the dialogue route and uses reviewed delivery copy as the outcome-aware fallback", () => {
     const serviceSource = readFileSync(
       fileURLToPath(new URL("../services/flashService.ts", import.meta.url)),
       "utf8",
@@ -215,7 +215,9 @@ describe("Flash task acceptance state integrity", () => {
     );
     expect(serviceSource).toContain('else if (status === "offered") canonicalScreen = "dialogue"');
     expect(repositorySource).toContain("deliveryCopy: offer.deliveryCopy");
-    expect(serviceSource).toContain("deliveryMessage: snapshot.deliveryCopy");
+    expect(serviceSource).toContain("deliveryMessage: resolveFlashDeliveryCopy");
+    expect(serviceSource).toContain("fallback: snapshot.deliveryCopy");
+    expect(serviceSource).toContain("optionId: input.answers?.[0]?.optionId");
   });
 });
 

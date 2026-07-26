@@ -483,7 +483,7 @@
   }
 
   &--street {
-    background: linear-gradient(135deg, rgba(#a8c5dd, 0.24), rgba($color-primary, 0.12)),
+    background: linear-gradient(135deg, rgba($flow-accent-sky, 0.24), rgba($color-primary, 0.12)),
       $color-surface;
   }
 
@@ -607,7 +607,7 @@
     position: absolute;
     bottom: 8rpx;
     border-radius: 8rpx 8rpx 0 0;
-    background: rgba(#a8c5dd, 0.78);
+    background: rgba($flow-accent-sky, 0.78);
 
     &--one {
       right: 18rpx;
@@ -1022,18 +1022,18 @@
     }
   }
 
-  &__game-bg--corgi { --world-bg: #f7e8dc; --world-accent: #cb9268; --world-dark: #9a6b4a; --world-glow: rgba(232,191,160,.38); --world-glow-soft: rgba(255,155,133,.13); }
-  &__game-bg--rooster { --world-bg: #f5ebce; --world-accent: #c49538; --world-dark: #8b6a28; --world-glow: rgba(229,192,117,.4); --world-glow-soft: rgba(255,220,120,.14); }
-  &__game-bg--hamster_praise { --world-bg: #f2eae3; --world-accent: #d8c6b7; --world-dark: #9a8575; --world-glow: rgba(238,227,216,.52); --world-glow-soft: rgba(255,155,133,.12); }
-  &__game-bg--fox { --world-bg: #f5e5d8; --world-accent: #c68e61; --world-dark: #8b5e3c; --world-glow: rgba(229,184,150,.4); --world-glow-soft: rgba(198,142,97,.12); }
-  &__game-bg--dolphin_calm { --world-bg: #e3f4fb; --world-accent: #4a8aaf; --world-dark: #4a8aaf; --world-glow: rgba(184,223,239,.46); --world-glow-soft: rgba(74,138,175,.12); }
-  &__game-bg--spider { --world-bg: #e5e1e8; --world-accent: #62526a; --world-dark: #423648; --world-glow: rgba(155,143,165,.3); --world-glow-soft: rgba(98,82,106,.1); }
-  &__game-bg--koala { --world-bg: #e8e7f0; --world-accent: #adabbc; --world-dark: #6b6980; --world-glow: rgba(213,212,224,.45); --world-glow-soft: rgba(139,92,246,.09); }
-  &__game-bg--octopus { --world-bg: #f7e5e4; --world-accent: #cb8783; --world-dark: #9a5f5c; --world-glow: rgba(232,191,188,.4); --world-glow-soft: rgba(203,135,131,.12); }
-  &__game-bg--owl { --world-bg: #e8ddd8; --world-accent: #714c42; --world-dark: #4a3229; --world-glow: rgba(244,223,173,.4); --world-glow-soft: rgba(113,76,66,.1); }
-  &__game-bg--elephant { --world-bg: #e8eef7; --world-accent: #6a7f9c; --world-dark: #6a7f9c; --world-glow: rgba(224,232,243,.5); --world-glow-soft: rgba(106,127,156,.1); }
-  &__game-bg--turtle { --world-bg: #dde8d3; --world-accent: #4d613a; --world-dark: #2f3a23; --world-glow: rgba(139,168,114,.28); --world-glow-soft: rgba(77,97,58,.1); }
-  &__game-bg--cat { --world-bg: #f0f0ea; --world-accent: #8a8878; --world-dark: #656458; --world-glow: rgba(238,238,229,.58); --world-glow-soft: rgba(138,136,120,.1); }
+  &__game-bg--corgi { --world-bg: #{$flow-world-corgi-bg}; --world-accent: #{$flow-world-corgi-accent}; --world-dark: #{$flow-world-corgi-dark}; --world-glow: rgba(232,191,160,.38); --world-glow-soft: rgba(255,155,133,.13); }
+  &__game-bg--rooster { --world-bg: #{$flow-world-rooster-bg}; --world-accent: #{$flow-world-rooster-accent}; --world-dark: #{$flow-world-rooster-dark}; --world-glow: rgba(229,192,117,.4); --world-glow-soft: rgba(255,220,120,.14); }
+  &__game-bg--hamster_praise { --world-bg: #{$flow-world-hamster-praise-bg}; --world-accent: #{$flow-world-hamster-praise-accent}; --world-dark: #{$flow-world-hamster-praise-dark}; --world-glow: rgba(238,227,216,.52); --world-glow-soft: rgba(255,155,133,.12); }
+  &__game-bg--fox { --world-bg: #{$flow-world-fox-bg}; --world-accent: #{$flow-world-fox-accent}; --world-dark: #{$flow-world-fox-dark}; --world-glow: rgba(229,184,150,.4); --world-glow-soft: rgba(198,142,97,.12); }
+  &__game-bg--dolphin_calm { --world-bg: #{$flow-world-dolphin-calm-bg}; --world-accent: #{$flow-world-dolphin-calm-accent}; --world-dark: #{$flow-world-dolphin-calm-accent}; --world-glow: rgba(184,223,239,.46); --world-glow-soft: rgba(74,138,175,.12); }
+  &__game-bg--spider { --world-bg: #{$flow-world-spider-bg}; --world-accent: #{$flow-world-spider-accent}; --world-dark: #{$flow-world-spider-dark}; --world-glow: rgba(155,143,165,.3); --world-glow-soft: rgba(98,82,106,.1); }
+  &__game-bg--koala { --world-bg: #{$flow-world-koala-bg}; --world-accent: #{$flow-world-koala-accent}; --world-dark: #{$flow-world-koala-dark}; --world-glow: rgba(213,212,224,.45); --world-glow-soft: rgba(139,92,246,.09); }
+  &__game-bg--octopus { --world-bg: #{$flow-world-octopus-bg}; --world-accent: #{$flow-world-octopus-accent}; --world-dark: #{$flow-world-octopus-dark}; --world-glow: rgba(232,191,188,.4); --world-glow-soft: rgba(203,135,131,.12); }
+  &__game-bg--owl { --world-bg: #{$flow-world-owl-bg}; --world-accent: #{$flow-world-owl-accent}; --world-dark: #{$flow-world-owl-dark}; --world-glow: rgba(244,223,173,.4); --world-glow-soft: rgba(113,76,66,.1); }
+  &__game-bg--elephant { --world-bg: #{$flow-world-elephant-bg}; --world-accent: #{$flow-world-elephant-accent}; --world-dark: #{$flow-world-elephant-accent}; --world-glow: rgba(224,232,243,.5); --world-glow-soft: rgba(106,127,156,.1); }
+  &__game-bg--turtle { --world-bg: #{$flow-world-turtle-bg}; --world-accent: #{$flow-world-turtle-accent}; --world-dark: #{$flow-world-turtle-dark}; --world-glow: rgba(139,168,114,.28); --world-glow-soft: rgba(77,97,58,.1); }
+  &__game-bg--cat { --world-bg: #{$flow-world-cat-bg}; --world-accent: #{$flow-world-cat-accent}; --world-dark: #{$flow-world-cat-dark}; --world-glow: rgba(238,238,229,.58); --world-glow-soft: rgba(138,136,120,.1); }
 
   &__route {
     position: absolute;
@@ -1231,18 +1231,18 @@
     }
   }
 
-  &__companion--corgi { --world-bg: #f7e8dc; --world-accent: #cb9268; --world-shadow: rgba(154, 107, 74, 0.18); }
-  &__companion--rooster { --world-bg: #f5ebce; --world-accent: #c49538; --world-shadow: rgba(139, 106, 40, 0.18); }
-  &__companion--hamster_praise { --world-bg: #f2eae3; --world-accent: #d8c6b7; --world-shadow: rgba(154, 133, 117, 0.18); }
-  &__companion--fox { --world-bg: #f5e5d8; --world-accent: #c68e61; --world-shadow: rgba(139, 94, 60, 0.18); }
-  &__companion--dolphin_calm { --world-bg: #e3f4fb; --world-accent: #4a8aaf; --world-shadow: rgba(74, 138, 175, 0.17); }
-  &__companion--spider { --world-bg: #e5e1e8; --world-accent: #62526a; --world-shadow: rgba(66, 54, 72, 0.17); }
-  &__companion--koala { --world-bg: #e8e7f0; --world-accent: #adabbc; --world-shadow: rgba(107, 105, 128, 0.17); }
-  &__companion--octopus { --world-bg: #f7e5e4; --world-accent: #cb8783; --world-shadow: rgba(154, 95, 92, 0.17); }
-  &__companion--owl { --world-bg: #e8ddd8; --world-accent: #714c42; --world-shadow: rgba(74, 50, 41, 0.17); }
-  &__companion--elephant { --world-bg: #e8eef7; --world-accent: #6a7f9c; --world-shadow: rgba(106, 127, 156, 0.17); }
-  &__companion--turtle { --world-bg: #dde8d3; --world-accent: #4d613a; --world-shadow: rgba(47, 58, 35, 0.17); }
-  &__companion--cat { --world-bg: #f0f0ea; --world-accent: #8a8878; --world-shadow: rgba(138, 136, 120, 0.17); }
+  &__companion--corgi { --world-bg: #{$flow-world-corgi-bg}; --world-accent: #{$flow-world-corgi-accent}; --world-shadow: rgba(154, 107, 74, 0.18); }
+  &__companion--rooster { --world-bg: #{$flow-world-rooster-bg}; --world-accent: #{$flow-world-rooster-accent}; --world-shadow: rgba(139, 106, 40, 0.18); }
+  &__companion--hamster_praise { --world-bg: #{$flow-world-hamster-praise-bg}; --world-accent: #{$flow-world-hamster-praise-accent}; --world-shadow: rgba(154, 133, 117, 0.18); }
+  &__companion--fox { --world-bg: #{$flow-world-fox-bg}; --world-accent: #{$flow-world-fox-accent}; --world-shadow: rgba(139, 94, 60, 0.18); }
+  &__companion--dolphin_calm { --world-bg: #{$flow-world-dolphin-calm-bg}; --world-accent: #{$flow-world-dolphin-calm-accent}; --world-shadow: rgba(74, 138, 175, 0.17); }
+  &__companion--spider { --world-bg: #{$flow-world-spider-bg}; --world-accent: #{$flow-world-spider-accent}; --world-shadow: rgba(66, 54, 72, 0.17); }
+  &__companion--koala { --world-bg: #{$flow-world-koala-bg}; --world-accent: #{$flow-world-koala-accent}; --world-shadow: rgba(107, 105, 128, 0.17); }
+  &__companion--octopus { --world-bg: #{$flow-world-octopus-bg}; --world-accent: #{$flow-world-octopus-accent}; --world-shadow: rgba(154, 95, 92, 0.17); }
+  &__companion--owl { --world-bg: #{$flow-world-owl-bg}; --world-accent: #{$flow-world-owl-accent}; --world-shadow: rgba(74, 50, 41, 0.17); }
+  &__companion--elephant { --world-bg: #{$flow-world-elephant-bg}; --world-accent: #{$flow-world-elephant-accent}; --world-shadow: rgba(106, 127, 156, 0.17); }
+  &__companion--turtle { --world-bg: #{$flow-world-turtle-bg}; --world-accent: #{$flow-world-turtle-accent}; --world-shadow: rgba(47, 58, 35, 0.17); }
+  &__companion--cat { --world-bg: #{$flow-world-cat-bg}; --world-accent: #{$flow-world-cat-accent}; --world-shadow: rgba(138, 136, 120, 0.17); }
 
   &__companion--rooster &__companion-motif--three {
     border-style: solid;
