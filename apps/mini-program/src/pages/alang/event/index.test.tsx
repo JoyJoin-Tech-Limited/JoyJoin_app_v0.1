@@ -80,6 +80,7 @@ describe('formal Flash home', () => {
     render(<FlashHomePage />)
 
     expect(await screen.findByText('阿浪')).toBeInTheDocument()
+    expect(document.querySelector("img[src='/pages/alang/assets/ui/flash-city-ambient-bg.webp']")).toBeTruthy()
     expect(screen.getByText('南山区 · 还在 1 小时')).toBeInTheDocument()
     expect(screen.getByText('找一个安静角落')).toBeInTheDocument()
     expect(mocks.location).toHaveBeenCalledTimes(1)

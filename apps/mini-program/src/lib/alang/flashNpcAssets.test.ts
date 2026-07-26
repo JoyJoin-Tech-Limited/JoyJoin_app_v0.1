@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FLASH_NPC_SEEDS } from '@shared/alang/flashCatalog'
-import { FLASH_UNIVERSAL_ART, flashNpcAssets, flashTaskCategories, resolveFlashNpcTheme } from './flashNpcAssets'
+import { flashNpcAssets, flashTaskCategories, resolveFlashNpcTheme } from './flashNpcAssets'
 
 function hexToRgb(hex: string): [number, number, number] {
   return [
@@ -30,14 +30,14 @@ function contrastRatio(hexA: string, hexB: string): number {
 }
 
 describe('Flash NPC asset registry', () => {
-  it('reuses one lightweight city encounter artwork across every animal NPC', () => {
+  it('maps every formal NPC to its governed local portrait', () => {
     expect(Object.values(flashNpcAssets).map(({ name, animal, imageSrc }) => ({ name, animal, imageSrc })))
       .toEqual([
-        { name: '阿浪', animal: '灰狼', imageSrc: FLASH_UNIVERSAL_ART },
-        { name: '栗子', animal: '水獭', imageSrc: FLASH_UNIVERSAL_ART },
-        { name: '默默', animal: '兔狲', imageSrc: FLASH_UNIVERSAL_ART },
-        { name: '拾柒', animal: '乌鸦', imageSrc: FLASH_UNIVERSAL_ART },
-        { name: '阿团', animal: '水豚', imageSrc: FLASH_UNIVERSAL_ART },
+        { name: '阿浪', animal: '灰狼', imageSrc: '/pages/alang/assets/npcs/alang.webp' },
+        { name: '栗子', animal: '水獭', imageSrc: '/pages/alang/assets/npcs/lizi.webp' },
+        { name: '默默', animal: '兔狲', imageSrc: '/pages/alang/assets/npcs/momo.webp' },
+        { name: '拾柒', animal: '乌鸦', imageSrc: '/pages/alang/assets/npcs/shiqi.webp' },
+        { name: '阿团', animal: '水豚', imageSrc: '/pages/alang/assets/npcs/atuan.webp' },
       ])
   })
 

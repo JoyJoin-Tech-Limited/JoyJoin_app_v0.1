@@ -314,11 +314,19 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/pages/alang/assets/npcs',
           to: 'dist/pages/alang/assets/npcs',
         },
+        {
+          from: 'src/pages/alang/assets/ui',
+          to: 'dist/pages/alang/assets/ui',
+        },
+        {
+          from: 'src/pages/alang/assets/candidates',
+          to: 'dist/pages/alang/assets/candidates',
+        },
         // Discover is a main-package page, so its static entry artwork must
         // also live in the main package. Flash pages can reuse that path.
         {
-          from: 'src/pages/alang/assets/street-blind-box-icon.webp',
-          to: 'dist/assets/flash/street-blind-box-icon.webp',
+          from: 'src/assets/illustrations/street-blind-box-entry.webp',
+          to: 'dist/assets/illustrations/street-blind-box-entry.webp',
         },
         {
           from: 'src/pages/alang/assets/flash-city-encounter.webp',

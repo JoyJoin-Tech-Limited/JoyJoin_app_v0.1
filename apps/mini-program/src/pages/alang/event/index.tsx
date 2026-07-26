@@ -21,6 +21,9 @@ import {
 import '../flash.scss'
 
 const FLASH_INTRO_ACK_STORAGE_KEY = 'joyjoin_flash_intro_ack_v1'
+const FLASH_AMBIENT_BACKGROUND = '/pages/alang/assets/ui/flash-city-ambient-bg.webp'
+const FLASH_EMPTY_ONLINE = '/pages/alang/assets/ui/flash-empty-online.webp'
+const FLASH_EMPTY_TASKS = '/pages/alang/assets/ui/flash-empty-tasks.webp'
 
 type GateState = 'checking' | 'intro' | 'locating' | 'ready' | 'denied' | 'error'
 
@@ -287,9 +290,12 @@ export default function FlashHomePage() {
       <ScrollView className='flash-page__scroll' scrollY>
         <View className='flash-page__content'>
           <View className='flash-page__hero'>
-            <Text className='flash-page__eyebrow'>SHENZHEN · NOW</Text>
-            <Text className='flash-page__title'>今天，会碰见谁呢？</Text>
-            <Text className='flash-page__lead'>他们不会一直在线。看见想聊的，就去附近碰碰运气。</Text>
+            <Image className='flash-page__hero-art' src={FLASH_AMBIENT_BACKGROUND} mode='aspectFill' />
+            <View className='flash-page__hero-copy'>
+              <Text className='flash-page__eyebrow'>SHENZHEN · NOW</Text>
+              <Text className='flash-page__title'>今天，会碰见谁呢？</Text>
+              <Text className='flash-page__lead'>他们不会一直在线。看见想聊的，就去附近碰碰运气。</Text>
+            </View>
           </View>
 
           <View className='flash-page__section'>
@@ -305,6 +311,7 @@ export default function FlashHomePage() {
               </View>
             ) : (
               <View className='flash-empty-card'>
+                <Image className='flash-empty-card__art' src={FLASH_EMPTY_ONLINE} mode='aspectFit' />
                 <Text className='flash-empty-card__title'>这会儿没有谁出来晃荡</Text>
                 <Text className='flash-empty-card__copy'>不用守着刷新。角色想出现的时候，自然会来。</Text>
               </View>
@@ -331,6 +338,7 @@ export default function FlashHomePage() {
               </View>
             ) : (
               <View className='flash-empty-card'>
+                <Image className='flash-empty-card__art' src={FLASH_EMPTY_TASKS} mode='aspectFit' />
                 <Text className='flash-empty-card__title'>口袋还是空的</Text>
                 <Text className='flash-empty-card__copy'>先和在线角色聊聊。聊得来，他也许会托你做件小事。</Text>
               </View>
