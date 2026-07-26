@@ -9,9 +9,9 @@ const appJsonPath = resolve(distRoot, 'app.json')
 
 const requiredFiles = [
   'assets/illustrations/street-blind-box-entry.webp',
+  'common.wxss',
   'pages/alang/event/index.js',
   'pages/alang/event/index.wxml',
-  'pages/alang/event/index.wxss',
   'pages/alang/assets/npcs/alang.webp',
   'pages/alang/assets/npcs/lizi.webp',
   'pages/alang/assets/npcs/momo.webp',
@@ -59,6 +59,14 @@ for (const relativePath of requiredFiles) {
   if (!existsSync(resolve(distRoot, relativePath))) {
     failures.push(`dist/${relativePath} is missing`)
   }
+}
+
+const commonStylesPath = resolve(distRoot, 'common.wxss')
+if (
+  existsSync(commonStylesPath) &&
+  !readFileSync(commonStylesPath, 'utf8').includes('.flash-page')
+) {
+  failures.push('dist/common.wxss does not contain the shared Flash page styles')
 }
 
 if (failures.length) {
