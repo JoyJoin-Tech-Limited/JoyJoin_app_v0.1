@@ -1,5 +1,5 @@
 import Taro from '@tarojs/taro'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashPageState } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
@@ -16,16 +16,81 @@ import {
 } from '../../../lib/alang/useFlash'
 import type { FlashCanonicalSnapshot } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
+import { getSystemReducedMotion } from '../../../lib/utils/accessibility'
 import { haptics } from '../../../lib/utils/haptics'
 import '../flash.scss'
 
-const NPC_OFFER_COPY: Record<string, { kicker: string; accept: string; reroll: string }> = {
-  alang: { kicker: '我刚想到一件事', accept: '行，哪天试试', reroll: '还有别的吗' },
-  lizi: { kicker: '欸，要不要试个好玩的', accept: '好啊，我记下了', reroll: '换个更对胃口的' },
-  momo: { kicker: '有件小事，想问问你', accept: '嗯，我记下了', reroll: '想听另一个' },
-  shiqi: { kicker: '我有个后续想知道', accept: '行，我留意一下', reroll: '换条线索' },
-  atuan: { kicker: '今天先照顾自己一点', accept: '好，现在开始', reroll: '再想个轻松点的' },
+type OfferRevealPhase = 'sealed' | 'drawing' | 'revealed'
+
+interface NpcBlindBoxCopy {
+  intro: string
+  draw: string
+  drawing: string
+  reveal: string
+  accept: string
+  reroll: string
+  flashes: [string, string, string]
 }
+
+const NPC_BLIND_BOX_COPY: Record<string, NpcBlindBoxCopy> = {
+  alang: {
+    intro: '你今天像是把同一天过了很多遍。给我一下，你不用选，我替你换个今晚。',
+    draw: '让阿浪替我抽',
+    drawing: '阿浪正在替你换个今晚',
+    reveal: '阿浪替你抽到了',
+    accept: '收下这个今晚',
+    reroll: '再信你一次',
+    flashes: ['今晚别那么懂事', '把今天抢回来', '允许计划之外发生'],
+  },
+  lizi: {
+    intro: '今天先别照旧过。你不用挑，我替你拆一件能让日子亮一点的事。',
+    draw: '让栗子替我拆',
+    drawing: '栗子正在翻找今天的小惊喜',
+    reveal: '栗子替你拆到了',
+    accept: '把这份惊喜收好',
+    reroll: '再拆最后一次',
+    flashes: ['给今天加一点甜', '去碰见一点开心', '让普通日子亮起来'],
+  },
+  momo: {
+    intro: '你不用想一个正确答案。让我替你留一小段，只属于今天的安静。',
+    draw: '让默默替我抽',
+    drawing: '默默正在替你留一小段时间',
+    reveal: '默默替你留下了',
+    accept: '把这段时间收下',
+    reroll: '再听你一次',
+    flashes: ['不用向谁解释', '把声音调小一点', '给自己留一点空白'],
+  },
+  shiqi: {
+    intro: '今天的剧情有点太好猜了。别选，让我从计划外替你抽一条支线。',
+    draw: '让拾柒替我抽',
+    drawing: '拾柒正在改写今天的支线',
+    reveal: '拾柒替你翻到了',
+    accept: '接住这条支线',
+    reroll: '再偏航一次',
+    flashes: ['从计划外开始', '换一种剧情', '给偶然留个位置'],
+  },
+  atuan: {
+    intro: '今天还没有坏掉。你先别费力想怎么办，我替你抽一件能把它救回来一点的事。',
+    draw: '让阿团替我抽',
+    drawing: '阿团正在替你把今天接住',
+    reveal: '阿团替你抽到了',
+    accept: '今天就从这里开始',
+    reroll: '再轻一点',
+    flashes: ['先照顾好自己', '让今天暖回来', '不用一下子变好'],
+  },
+}
+
+const DEFAULT_BLIND_BOX_COPY: NpcBlindBoxCopy = {
+  intro: '今天不用什么都自己决定。让我替你从城市里抽一件值得期待的事。',
+  draw: '让它替我抽',
+  drawing: '正在替你打开今天的盲盒',
+  reveal: '今天替你抽到了',
+  accept: '收下这件事',
+  reroll: '再信一次',
+  flashes: ['换一种过法', '去见一点新鲜的', '让今天有点不一样'],
+}
+
+const OFFER_REVEAL_DELAY_MS = 480
 
 function dialogueActionError(error: unknown, fallback: string): string {
   switch (getFlashApiErrorCode(error)) {
@@ -58,6 +123,15 @@ export default function FlashDialoguePage() {
   const deliverMutation = useDeliverFlashTask()
   const [actionError, setActionError] = useState('')
   const [deliveryReply, setDeliveryReply] = useState<{ message: string; canContinue: boolean } | null>(null)
+  const [reducedMotion] = useState(() => getSystemReducedMotion())
+  const [offerReveal, setOfferReveal] = useState<{ templateId: string; phase: OfferRevealPhase } | null>(null)
+  const offerRevealTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearOfferRevealTimer = () => {
+    if (!offerRevealTimer.current) return
+    clearTimeout(offerRevealTimer.current)
+    offerRevealTimer.current = null
+  }
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: data?.npc?.name ? `和${data.npc.name}聊聊` : '角色对话' })
@@ -67,6 +141,14 @@ export default function FlashDialoguePage() {
     if (!enabled || !data?.canonicalScreen || data.status === 'expired') return
     void redirectToFlashCanonical(data, MINI_PROGRAM_ROUTES.alangDialogue)
   }, [data, enabled])
+
+  useEffect(() => () => clearOfferRevealTimer(), [])
+
+  useEffect(() => {
+    const templateId = data?.taskOffer?.templateId
+    clearOfferRevealTimer()
+    setOfferReveal(templateId ? { templateId, phase: 'sealed' } : null)
+  }, [data?.taskOffer?.templateId])
 
   const applyResponse = async (response: FlashCanonicalSnapshot) => {
     const redirected = await redirectToFlashCanonical(response, MINI_PROGRAM_ROUTES.alangDialogue)
@@ -118,8 +200,10 @@ export default function FlashDialoguePage() {
 
   const reroll = async () => {
     if (!enabled || rerollMutation.isPending) return
+    clearOfferRevealTimer()
     setActionError('')
     try {
+      haptics('light')
       const response = await rerollMutation.mutateAsync(encounterId)
       await applyResponse(response)
     } catch (error) {
@@ -137,6 +221,26 @@ export default function FlashDialoguePage() {
     } catch (error) {
       setActionError(dialogueActionError(error, accepted ? '任务没有接稳，再点一次就好。' : '这次选择没有送到，请再试一下。'))
     }
+  }
+
+  const revealOffer = (templateId: string) => {
+    if (offerReveal?.templateId === templateId && offerReveal.phase !== 'sealed') return
+    clearOfferRevealTimer()
+    setActionError('')
+    haptics('light')
+    setOfferReveal({ templateId, phase: 'drawing' })
+
+    const finishReveal = () => {
+      offerRevealTimer.current = null
+      setOfferReveal({ templateId, phase: 'revealed' })
+      haptics('success')
+    }
+
+    if (reducedMotion) {
+      finishReveal()
+      return
+    }
+    offerRevealTimer.current = setTimeout(finishReveal, OFFER_REVEAL_DELAY_MS)
   }
 
   if (!enabled) return <FlashFeatureClosed />
@@ -184,11 +288,10 @@ export default function FlashDialoguePage() {
   const question = data.currentQuestion
   const offer = data.taskOffer
   const category = offer ? resolveFlashTaskCategory(offer.category) : null
-  const offerCopy = NPC_OFFER_COPY[data.npc.slug] ?? {
-    kicker: '我刚想到一件事',
-    accept: '好，现在开始',
-    reroll: '想听另一个',
-  }
+  const offerCopy = NPC_BLIND_BOX_COPY[data.npc.slug] ?? DEFAULT_BLIND_BOX_COPY
+  const offerPhase: OfferRevealPhase = offer && offerReveal?.templateId === offer.templateId
+    ? offerReveal.phase
+    : 'sealed'
 
   return (
     <View className='flash-page flash-dialogue'>
@@ -276,37 +379,85 @@ export default function FlashDialoguePage() {
             </View>
           ) : offer && category ? (
             <View className='flash-dialogue__offer'>
-              <Text className='flash-dialogue__kicker'>{offerCopy.kicker}</Text>
-              <Text className='flash-dialogue__bubble'>{offer.invitation}</Text>
-              <View className='flash-dialogue__offer-card'>
-                <Text className='flash-dialogue__offer-category' style={{ color: category.text, backgroundColor: category.tint }}>
-                  {category.label}
-                </Text>
-                <Text className='flash-dialogue__offer-title'>{offer.title}</Text>
-                {offer.destinationName ? (
-                  <Text className='flash-dialogue__offer-place'>{offer.districtName ? `${offer.districtName} · ` : ''}{offer.destinationName}</Text>
-                ) : null}
-                <Text className='flash-dialogue__offer-rule'>
-                  {offer.invitationType === 'npc_message'
-                    ? `以后遇见${offer.followUpTargetNpc?.name ?? '它'}时再决定要不要说；忘了也没关系。`
-                    : offer.invitationType === 'life_invitation'
-                      ? '现在先开始一点点。下次再碰见，它会记得听你讲后来。'
-                      : '到附近点击到达即可；不要求消费，也不要求进店。'}
-                </Text>
-              </View>
-              <View className='flash-dialogue__offer-actions'>
-                <FlashButton disabled={offerMutation.isPending} onClick={() => { void respondToOffer(true) }}>
-                  {offerMutation.isPending ? '先记下来…' : offerCopy.accept}
-                </FlashButton>
-                {data.canReroll && (data.rerollsRemaining ?? 1) > 0 ? (
-                  <FlashButton variant='secondary' disabled={rerollMutation.isPending} onClick={() => { void reroll() }}>
-                    {rerollMutation.isPending ? '再想想…' : offerCopy.reroll}
+              {offerPhase === 'sealed' ? (
+                <View className='flash-dialogue__blind-box flash-dialogue__blind-box--sealed'>
+                  <Text className='flash-dialogue__kicker'>这次不让你选</Text>
+                  <Text className='flash-dialogue__blind-box-intro'>{offerCopy.intro}</Text>
+                  <View className='flash-dialogue__blind-box-visual' aria-hidden='true'>
+                    <View className='flash-dialogue__blind-box-lid' />
+                    <View className='flash-dialogue__blind-box-body'>
+                      <Text className='flash-dialogue__blind-box-mark'>?</Text>
+                    </View>
+                  </View>
+                  <FlashButton
+                    ariaLabel={offerCopy.draw}
+                    onClick={() => revealOffer(offer.templateId)}
+                  >
+                    {offerCopy.draw}
                   </FlashButton>
-                ) : null}
-                <FlashButton variant='quiet' disabled={offerMutation.isPending} onClick={() => { void respondToOffer(false) }}>
-                  这次先不了
-                </FlashButton>
-              </View>
+                  <Text className='flash-dialogue__blind-box-note'>这一件已经替你选好了，打开前不会偷偷换答案。</Text>
+                </View>
+              ) : offerPhase === 'drawing' ? (
+                <View className='flash-dialogue__blind-box flash-dialogue__blind-box--drawing' role='status'>
+                  <Text className='flash-dialogue__kicker'>正在打开城市盲盒</Text>
+                  <Text className='flash-dialogue__blind-box-drawing-title'>{offerCopy.drawing}</Text>
+                  <View className='flash-dialogue__blind-box-reel' aria-hidden='true'>
+                    <View className='flash-dialogue__blind-box-reel-track'>
+                      {offerCopy.flashes.map((line) => (
+                        <Text key={line} className='flash-dialogue__blind-box-reel-line'>{line}</Text>
+                      ))}
+                    </View>
+                  </View>
+                  <View className='flash-dialogue__blind-box-pulse' aria-hidden='true'>
+                    <View className='flash-dialogue__blind-box-pulse-core' />
+                  </View>
+                </View>
+              ) : (
+                <View className='flash-dialogue__blind-box flash-dialogue__blind-box--revealed' role='status'>
+                  <Text className='flash-dialogue__kicker'>{offerCopy.reveal}</Text>
+                  <Text className='flash-dialogue__bubble'>{offer.invitation}</Text>
+                  <View className='flash-dialogue__offer-card'>
+                    <Text className='flash-dialogue__offer-category' style={{ color: category.text, backgroundColor: category.tint }}>
+                      {category.label}
+                    </Text>
+                    <Text className='flash-dialogue__offer-title'>{offer.title}</Text>
+                    {offer.destinationName ? (
+                      <Text className='flash-dialogue__offer-place'>{offer.districtName ? `${offer.districtName} · ` : ''}{offer.destinationName}</Text>
+                    ) : null}
+                    <Text className='flash-dialogue__offer-rule'>
+                      {offer.invitationType === 'npc_message'
+                        ? `以后遇见${offer.followUpTargetNpc?.name ?? '它'}时再决定要不要说；忘了也没关系。`
+                        : offer.invitationType === 'life_invitation'
+                          ? '如果现在来得及，就从今天开始。下次再碰见，它会记得听你讲后来。'
+                          : '到附近点击到达即可；不要求消费，也不要求进店。'}
+                    </Text>
+                  </View>
+                  <View className='flash-dialogue__offer-actions'>
+                    <FlashButton
+                      disabled={offerMutation.isPending || rerollMutation.isPending}
+                      onClick={() => { void respondToOffer(true) }}
+                    >
+                      {offerMutation.isPending ? '正在替你收好…' : offerCopy.accept}
+                    </FlashButton>
+                    {data.canReroll && (data.rerollsRemaining ?? 1) > 0 ? (
+                      <FlashButton
+                        variant='secondary'
+                        disabled={offerMutation.isPending || rerollMutation.isPending}
+                        onClick={() => { void reroll() }}
+                      >
+                        {rerollMutation.isPending ? '正在重新抽取…' : offerCopy.reroll}
+                      </FlashButton>
+                    ) : null}
+                    <FlashButton
+                      variant='quiet'
+                      disabled={offerMutation.isPending || rerollMutation.isPending}
+                      onClick={() => { void respondToOffer(false) }}
+                    >
+                      这次真的不合适
+                    </FlashButton>
+                  </View>
+                </View>
+              )}
             </View>
           ) : (
             <View className='flash-dialogue__conversation'>

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FlashDialoguePage from './index'
 
@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   offer: vi.fn(),
   refetch: vi.fn(),
   canonicalRedirect: vi.fn(),
+  haptics: vi.fn(),
+  reducedMotion: false,
 }))
 
 vi.mock('@tarojs/taro', () => ({
@@ -18,6 +20,7 @@ vi.mock('@tarojs/taro', () => ({
     getCurrentInstance: () => ({ router: { params: { encounterId: 'encounter-1' } } }),
     setNavigationBarTitle: vi.fn(),
     redirectTo: vi.fn(),
+    getSystemInfoSync: vi.fn(() => ({ reduceMotion: mocks.reducedMotion })),
   },
 }))
 vi.mock('@tarojs/components', () => ({
@@ -35,7 +38,7 @@ vi.mock('../../../lib/alang/useFlash', () => ({
   useRespondToFlashTaskOffer: () => ({ mutateAsync: mocks.offer, isPending: false }),
 }))
 vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: mocks.canonicalRedirect }))
-vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
+vi.mock('../../../lib/utils/haptics', () => ({ haptics: mocks.haptics }))
 
 const questionEncounter = {
   canonicalScreen: 'dialogue',
@@ -50,13 +53,177 @@ const questionEncounter = {
   taskOffer: null,
 }
 
+const offerEncounter = {
+  ...questionEncounter,
+  npc: { id: 'npc-alang', slug: 'alang', name: '阿浪', animal: '柯基' },
+  currentQuestion: null,
+  taskOffer: {
+    templateId: 'task-movie-1',
+    title: '看一部一直想看的电影',
+    category: '文化娱乐',
+    invitation: '别再把它留给某个更合适的晚上。电影还没开始，但今晚已经有了一件值得期待的事。',
+    invitationType: 'life_invitation',
+    expiresInDays: 7,
+  },
+  canReroll: true,
+  rerollsRemaining: 1,
+}
+
 describe('formal Flash dialogue', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     vi.clearAllMocks()
+    mocks.reducedMotion = false
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
     mocks.useEncounter.mockReturnValue({ data: questionEncounter, isLoading: false, isError: false, refetch: mocks.refetch })
     mocks.answer.mockResolvedValue(questionEncounter)
     mocks.canonicalRedirect.mockResolvedValue(false)
+  })
+
+  it('keeps the server-selected task sealed until the blind box is opened', async () => {
+    vi.useFakeTimers()
+    mocks.useEncounter.mockReturnValue({
+      data: offerEncounter,
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    render(<FlashDialoguePage />)
+
+    expect(screen.getByText('这次不让你选')).toBeInTheDocument()
+    expect(screen.getByText('你今天像是把同一天过了很多遍。给我一下，你不用选，我替你换个今晚。')).toBeInTheDocument()
+    expect(screen.queryByText('看一部一直想看的电影')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '让阿浪替我抽' }))
+
+    expect(screen.getByText('阿浪正在替你换个今晚')).toBeInTheDocument()
+    expect(screen.queryByText('看一部一直想看的电影')).not.toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(480)
+    })
+
+    expect(screen.getByText('阿浪替你抽到了')).toBeInTheDocument()
+    expect(screen.getByText('看一部一直想看的电影')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '收下这个今晚' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '再信你一次' })).toBeInTheDocument()
+    expect(mocks.haptics).toHaveBeenNthCalledWith(1, 'light')
+    expect(mocks.haptics).toHaveBeenNthCalledWith(2, 'success')
+  })
+
+  it('submits only after reveal and preserves the existing offer API contract', async () => {
+    vi.useFakeTimers()
+    mocks.useEncounter.mockReturnValue({
+      data: offerEncounter,
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+    mocks.offer.mockResolvedValue({
+      canonicalScreen: 'task',
+      assignmentId: 'assignment-1',
+    })
+
+    render(<FlashDialoguePage />)
+    expect(mocks.offer).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: '让阿浪替我抽' }))
+    await act(async () => {
+      vi.advanceTimersByTime(480)
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '收下这个今晚' }))
+      await Promise.resolve()
+    })
+
+    expect(mocks.offer).toHaveBeenCalledWith({
+      encounterId: 'encounter-1',
+      accepted: true,
+    })
+  })
+
+  it('uses the existing one-time reroll only after the first task is revealed', async () => {
+    vi.useFakeTimers()
+    mocks.useEncounter.mockReturnValue({
+      data: offerEncounter,
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+    mocks.reroll.mockResolvedValue({
+      ...offerEncounter,
+      taskOffer: {
+        ...offerEncounter.taskOffer,
+        templateId: 'task-walk-2',
+        title: '今天换一小段路',
+      },
+      rerollsRemaining: 0,
+    })
+
+    render(<FlashDialoguePage />)
+    expect(screen.queryByRole('button', { name: '再信你一次' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '让阿浪替我抽' }))
+    await act(async () => {
+      vi.advanceTimersByTime(480)
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '再信你一次' }))
+      await Promise.resolve()
+    })
+
+    expect(mocks.reroll).toHaveBeenCalledWith('encounter-1')
+  })
+
+  it('reveals immediately when the device requests reduced motion', () => {
+    mocks.reducedMotion = true
+    mocks.useEncounter.mockReturnValue({
+      data: offerEncounter,
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    render(<FlashDialoguePage />)
+    fireEvent.click(screen.getByRole('button', { name: '让阿浪替我抽' }))
+
+    expect(screen.getByText('阿浪替你抽到了')).toBeInTheDocument()
+    expect(screen.getByText('看一部一直想看的电影')).toBeInTheDocument()
+    expect(screen.queryByText('阿浪正在替你换个今晚')).not.toBeInTheDocument()
+  })
+
+  it('cancels a stale reveal when the server replaces the offered task', async () => {
+    vi.useFakeTimers()
+    const encounterState = {
+      data: offerEncounter,
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    }
+    mocks.useEncounter.mockImplementation(() => encounterState)
+
+    const view = render(<FlashDialoguePage />)
+    fireEvent.click(screen.getByRole('button', { name: '让阿浪替我抽' }))
+
+    encounterState.data = {
+      ...offerEncounter,
+      taskOffer: {
+        ...offerEncounter.taskOffer,
+        templateId: 'task-walk-2',
+        title: '今天换一小段路',
+      },
+    }
+    view.rerender(<FlashDialoguePage />)
+
+    await act(async () => {
+      vi.advanceTimersByTime(480)
+    })
+
+    expect(screen.getByText('这次不让你选')).toBeInTheDocument()
+    expect(screen.queryByText('看一部一直想看的电影')).not.toBeInTheDocument()
+    expect(screen.queryByText('今天换一小段路')).not.toBeInTheDocument()
+    expect(mocks.haptics).not.toHaveBeenCalledWith('success')
   })
 
   it('uses structured natural choices and never presents free text for matching', async () => {
