@@ -9,19 +9,19 @@
 $fan-overlap: 28rpx;
 $fan-safe-inset: 48rpx; // overlap (28) + rotation poke (20); covered band = art/padding only
 $fan-card-sizes: (
-  1: (216, 332),
-  2: (216, 332),
-  3: (216, 332),
-  4: (190, 332),
-  5: (222, 332),
-  6: (222, 332),
+  1: (245, 332),
+  2: (245, 332),
+  3: (245, 332),
+  4: (245, 332),
+  5: (245, 332),
+  6: (245, 332),
   7: (190, 332),
   8: (190, 332),
 );
 $fan-rotations: (
   1: (0),
   2: (-4.5, 4.5),
-  3: (-6, 0, 6),
+  3: (-5, 0, 5),
   // 4-per-row outer rotation capped at ±5° (was ±7°): at 7° the outer card's
   // rotated bounding box (~756rpx) poked past the 750rpx viewport and the
   // 4th card was hard-cropped at the right edge; at 5° the box is ~733rpx,
@@ -114,8 +114,8 @@ $fan-rotations: (
       flex-direction: column;
       align-items: stretch;
       justify-content: flex-start;
-      height: clamp(440rpx, 44vh, 560rpx);
-      height: clamp(440rpx, 44dvh, 560rpx);
+      height: clamp(440rpx, 44vh, 640rpx);
+      height: clamp(440rpx, 44dvh, 640rpx);
       background: linear-gradient(
         180deg,
         $color-bg-tint-cream 0%,
@@ -174,8 +174,8 @@ $fan-rotations: (
 
     &--revealed {
       // Must match &__stage--revealed exactly (fixed-stage sizing rule).
-      height: clamp(440rpx, 44vh, 560rpx);
-      height: clamp(440rpx, 44dvh, 560rpx);
+      height: clamp(440rpx, 44vh, 640rpx);
+      height: clamp(440rpx, 44dvh, 640rpx);
     }
 
     &--composed {
@@ -1344,7 +1344,7 @@ $fan-rotations: (
     align-items: center;
     justify-content: flex-end;
     padding-bottom: $spacing-md;
-    // 2026-07-17: uniform fan scale — the dealt fan renders at 75% so the
+    // 2026-07-24: uniform fan scale — the dealt fan renders at 85% so the
     // two-row layout clears BOTH the viewport top edge and the Joy chatbox
     // on ~1450rpx-content devices (iPhone X/11 class). A transform
     // scale (not smaller size maps) keeps the card's fixed-rpx typography
@@ -1352,7 +1352,7 @@ $fan-rotations: (
     // visual fan just above the chatbox. Shadow + back-shimmer live inside
     // this container, so they stay aligned with the scaled fan. Static
     // (no animation), so reduce-motion needs no override.
-    transform: translateY(-16rpx) scale(0.75);
+    transform: translateY(-16rpx) scale(0.85);
     transform-origin: 50% 100%;
 
     &--empty {
@@ -1547,7 +1547,7 @@ $fan-rotations: (
     // The 最佳拍档 stamp gets the same treatment: z-index ascends left→right,
     // so a neighbour paints over a stamp inside the band.
     // Drift-locked to FAN_SAFE_INSET.
-    &:not(:last-child) .squad-unboxing__deck-card-info,
+    &:not(:last-child):not(.squad-unboxing__deck-card--focused) .squad-unboxing__deck-card-info,
     &:not(:last-child) .squad-unboxing__deck-card-nameplate {
       padding-right: $fan-safe-inset;
     }
