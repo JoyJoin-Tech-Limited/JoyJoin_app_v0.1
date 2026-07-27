@@ -121,6 +121,11 @@ if (existsSync(iconPath) && statSync(iconPath).size > 0) {
 }
 
 if (existsSync(runtimeIconPath) && statSync(runtimeIconPath).size > 0) {
+  if (statSync(runtimeIconPath).size > 64 * 1024) {
+    failures.push(
+      `dist/${runtimeIconRelativePath} exceeds the 64 KiB main-package icon budget`,
+    )
+  }
   try {
     const metadata = await sharp(runtimeIconPath).metadata()
     if (metadata.format !== 'png' || !metadata.width || !metadata.height) {
