@@ -598,6 +598,7 @@ Admin portal MapPicker uses Tencent Maps JavaScript API (`TENCENT_MAP_JS_KEY`) v
 - Admin routes must enforce admin middleware
 - Page-level loading/empty/error state blocks must include centering safety (`min-height`, `flex: 1`, or `@include scroll-view-centered-state`)
 - No inline emoji in `apps/mini-program/` TS/TSX (use `JoyJoinIcon` or CSS/text; server/admin files are exempt — the scanner reads full staged-file content, not the diff)
+- **BEM class coverage (2026-07-27):** every static `__`-containing class referenced in mini-program TS/TSX must be defined in some stylesheet under `src` (`scripts/check/check-class-coverage.mjs`, which compiles every non-partial SCSS so nesting/mixins/interpolation are fully expanded). Regression guard for the 2026-07-26 SquadTableCard zero-CSS incident and the `match-compass` mixin-namespace mismatch it caught. Legacy orphans live in `scripts/check/class-coverage-baseline.json` as a ratchet — the gate fails only on NEW orphans; after fixing baseline entries regenerate with `node scripts/check/check-class-coverage.mjs --write-baseline`. Any new component MUST ship its CSS in the same PR.
 
 **Never commit:** `.env`, secrets, or generated build artifacts.
 

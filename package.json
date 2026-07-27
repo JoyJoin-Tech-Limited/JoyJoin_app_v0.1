@@ -26,7 +26,7 @@
     "build:admin": "npm run build -w @joyjoin/admin-client",
     "build:server": "npm run build -w @joyjoin/server",
     "start": "npm run db:migrate && npm run start -w @joyjoin/server",
-    "guardrails": "node scripts/check/check-guardrails.mjs && node --test scripts/check/check-guardrails.test.mjs && node scripts/check/check-brand-colors.mjs && node scripts/devtools/design-audit.mjs && node scripts/check/check-doc-mapping.mjs",
+    "guardrails": "node scripts/check/check-guardrails.mjs && node --test scripts/check/check-guardrails.test.mjs && node scripts/check/check-brand-colors.mjs && node scripts/devtools/design-audit.mjs && node scripts/check/check-doc-mapping.mjs && node scripts/check/check-class-coverage.mjs",
     "bundle-size:check": "node scripts/check/check-bundle-size.mjs",
     "design:audit": "node scripts/devtools/design-audit.mjs",
     "audit:visual": "node scripts/visual-correctness-scan.mjs",
