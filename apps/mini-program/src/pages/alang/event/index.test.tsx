@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   location: vi.fn(),
   navigateTo: vi.fn(),
   refetch: vi.fn(),
+  didShow: undefined as (() => void) | undefined,
+  didHide: undefined as (() => void) | undefined,
 }))
 
 vi.mock('@tarojs/taro', () => ({
@@ -23,8 +25,8 @@ vi.mock('@tarojs/taro', () => ({
     openSetting: vi.fn(),
     showToast: vi.fn(),
   },
-  useDidShow: vi.fn(),
-  useDidHide: vi.fn(),
+  useDidShow: vi.fn((callback: () => void) => { mocks.didShow = callback }),
+  useDidHide: vi.fn((callback: () => void) => { mocks.didHide = callback }),
 }))
 vi.mock('@tarojs/components', () => ({
   View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>,
@@ -59,6 +61,8 @@ describe('formal Flash home', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.didShow = undefined
+    mocks.didHide = undefined
     mocks.permission.mockResolvedValue('granted')
     mocks.location.mockResolvedValue({ latitude: 22.54, longitude: 114.05, accuracy: 12 })
     mocks.useFlashHome.mockReturnValue({ data: home, isLoading: false, isError: false, refetch: mocks.refetch })
@@ -126,5 +130,31 @@ describe('formal Flash home', () => {
     expect(screen.queryByText('街头盲盒暂时没打开')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '重新读取' }))
     expect(mocks.refetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows a retry action when getSetting reports a timeout', async () => {
+    mocks.getStorageSync.mockReturnValue(true)
+    mocks.permission.mockResolvedValueOnce('timeout').mockResolvedValueOnce('granted')
+
+    render(<FlashHomePage />)
+
+    expect(await screen.findByText('这次没有拿到位置')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '重新定位' }))
+
+    await waitFor(() => expect(mocks.location).toHaveBeenCalledTimes(1))
+  })
+
+  it('recovers from a suspended checking state after the page is hidden and shown', async () => {
+    mocks.getStorageSync.mockReturnValue(true)
+    mocks.permission.mockReturnValue(new Promise(() => undefined))
+
+    render(<FlashHomePage />)
+    expect(screen.getByText('正在打开街头盲盒…')).toBeInTheDocument()
+
+    mocks.didHide?.()
+    mocks.didShow?.()
+
+    expect(await screen.findByText('这次没有拿到位置')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '重新定位' })).toBeInTheDocument()
   })
 })

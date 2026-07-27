@@ -1,5 +1,5 @@
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
@@ -106,20 +106,26 @@ export default function FlashHomePage() {
   const [gate, setGate] = useState<GateState>('checking')
   const [location, setLocation] = useState<FlashLocationSnapshot | null>(null)
   const [pageVisible, setPageVisible] = useState(true)
+  const locationAttemptRef = useRef(0)
+  const wasHiddenRef = useRef(false)
   const { data, isLoading, isError, error, refetch } = useFlashHome(
     location,
     enabled && gate === 'ready' && pageVisible,
   )
 
   const requestLocation = useCallback(async (rememberIntro = false) => {
+    const attempt = ++locationAttemptRef.current
     setGate('locating')
     try {
       const snapshot = await getOneShotFlashLocation()
+      if (attempt !== locationAttemptRef.current) return
       if (rememberIntro) rememberIntroAcknowledgement()
       setLocation(snapshot)
       setGate('ready')
     } catch {
+      if (attempt !== locationAttemptRef.current) return
       const permission = await getFlashLocationPermission()
+      if (attempt !== locationAttemptRef.current) return
       setGate(permission === 'denied' ? 'denied' : 'error')
     }
   }, [])
@@ -129,7 +135,13 @@ export default function FlashHomePage() {
       setGate('intro')
       return
     }
+    const attempt = ++locationAttemptRef.current
     const permission = await getFlashLocationPermission()
+    if (attempt !== locationAttemptRef.current) return
+    if (permission === 'timeout') {
+      setGate('error')
+      return
+    }
     if (permission === 'denied') {
       setGate('denied')
       return
@@ -145,10 +157,19 @@ export default function FlashHomePage() {
 
   useDidShow(() => {
     setPageVisible(true)
+    if (wasHiddenRef.current && (gate === 'checking' || gate === 'locating')) {
+      wasHiddenRef.current = false
+      locationAttemptRef.current += 1
+      setGate('error')
+      return
+    }
+    wasHiddenRef.current = false
     if (gate === 'ready' && location) void refetch()
   })
 
   useDidHide(() => {
+    wasHiddenRef.current = true
+    locationAttemptRef.current += 1
     setPageVisible(false)
   })
 
@@ -237,8 +258,8 @@ export default function FlashHomePage() {
         <FlashPageState
           tone='error'
           title='这次没有拿到位置'
-          description='可能是定位信号或网络暂时不稳定。你可以稍后再试。'
-          action={() => { void requestLocation(false) }}
+          description='定位响应超时或信号暂时不稳定。你可以重新检查权限并再试一次。'
+          action={() => { void restoreGate() }}
           actionLabel='重新定位'
         />
       </View>

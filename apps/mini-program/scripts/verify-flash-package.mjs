@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import sharp from 'sharp'
 
 const appRoot = resolve(import.meta.dirname, '..')
 const distRoot = resolve(appRoot, 'dist')
 const appJsonPath = resolve(distRoot, 'app.json')
+const manifestPath = resolve(distRoot, 'flash-build-manifest.json')
+const preupload = process.argv.includes('--preupload')
 
 const requiredFiles = [
   'assets/illustrations/street-blind-box-entry.webp',
@@ -37,6 +41,10 @@ const requiredPages = [
 
 const failures = []
 
+function digestFile(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex')
+}
+
 if (!existsSync(appJsonPath)) {
   failures.push('dist/app.json is missing')
 } else {
@@ -56,8 +64,24 @@ if (!existsSync(appJsonPath)) {
 }
 
 for (const relativePath of requiredFiles) {
-  if (!existsSync(resolve(distRoot, relativePath))) {
+  const absolutePath = resolve(distRoot, relativePath)
+  if (!existsSync(absolutePath)) {
     failures.push(`dist/${relativePath} is missing`)
+  } else if (statSync(absolutePath).size === 0) {
+    failures.push(`dist/${relativePath} is empty`)
+  }
+}
+
+const iconRelativePath = 'assets/illustrations/street-blind-box-entry.webp'
+const iconPath = resolve(distRoot, iconRelativePath)
+if (existsSync(iconPath) && statSync(iconPath).size > 0) {
+  try {
+    const metadata = await sharp(iconPath).metadata()
+    if (metadata.format !== 'webp' || !metadata.width || !metadata.height) {
+      failures.push(`dist/${iconRelativePath} is not a decodable WebP image`)
+    }
+  } catch (error) {
+    failures.push(`dist/${iconRelativePath} WebP decode failed: ${error.message}`)
   }
 }
 
@@ -75,7 +99,44 @@ if (failures.length) {
   process.exit(1)
 }
 
+const fileEntries = requiredFiles.map((relativePath) => {
+  const absolutePath = resolve(distRoot, relativePath)
+  return {
+    path: relativePath,
+    size: statSync(absolutePath).size,
+    sha256: digestFile(absolutePath),
+  }
+})
+const buildHash = createHash('sha256')
+  .update(fileEntries.map(({ path, size, sha256 }) => `${path}:${size}:${sha256}`).join('\n'))
+  .digest('hex')
+
+if (preupload) {
+  if (!existsSync(manifestPath)) {
+    console.error('[verify-flash-package] dist/flash-build-manifest.json is missing; run build:weapp first.')
+    process.exit(1)
+  }
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  if (manifest.buildHash !== buildHash) {
+    console.error('[verify-flash-package] Build manifest does not match the current upload package.')
+    process.exit(1)
+  }
+} else {
+  writeFileSync(manifestPath, `${JSON.stringify({
+    schemaVersion: 1,
+    buildHash,
+    generatedAt: new Date().toISOString(),
+    packageRoot: 'dist',
+    icon: {
+      path: iconRelativePath,
+      format: 'webp',
+    },
+    files: fileEntries,
+  }, null, 2)}\n`, 'utf8')
+}
+
 console.log(
-  `[verify-flash-package] OK — main-package icon, ${requiredPages.length} Flash pages, ` +
-    'five NPC portraits, and three UI illustrations are present.',
+  `[verify-flash-package] OK — build ${buildHash}; main-package icon exists, is non-empty, ` +
+    `and decodes as WebP; ${requiredPages.length} Flash pages, five NPC portraits, ` +
+    `and three UI illustrations are present${preupload ? ' and match the build manifest' : ''}.`,
 )

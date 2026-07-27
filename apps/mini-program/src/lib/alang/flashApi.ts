@@ -39,6 +39,39 @@ import type {
   FlashTaskSummary,
 } from './flashTypes'
 
+export const FLASH_SETTING_TIMEOUT_MS = 3_000
+export const FLASH_LOCATION_TIMEOUT_MS = 8_000
+
+export class FlashDeviceApiTimeoutError extends Error {
+  readonly code: 'FLASH_SETTING_TIMEOUT' | 'FLASH_LOCATION_TIMEOUT'
+
+  constructor(code: FlashDeviceApiTimeoutError['code']) {
+    super(code)
+    this.name = 'FlashDeviceApiTimeoutError'
+    this.code = code
+  }
+}
+
+function withTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  code: FlashDeviceApiTimeoutError['code'],
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new FlashDeviceApiTimeoutError(code)), timeoutMs)
+    operation.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
 function toCoordinate(location: FlashLocationSnapshot): FlashCoordinateRequest {
   return {
     latitude: location.latitude,
@@ -319,28 +352,44 @@ export async function updateFlashPreferences(update: FlashPreferenceUpdateReques
 
 export function getOneShotFlashLocation(): Promise<FlashLocationSnapshot> {
   return new Promise((resolve, reject) => {
+    let settled = false
+    const finish = <T>(callback: (value: T) => void, value: T) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      callback(value)
+    }
+    const timer = setTimeout(() => {
+      finish(reject, new FlashDeviceApiTimeoutError('FLASH_LOCATION_TIMEOUT'))
+    }, FLASH_LOCATION_TIMEOUT_MS)
+
     Taro.getLocation({
       type: 'gcj02',
       success: (result: { latitude: number; longitude: number; accuracy?: number }) => {
-        resolve({
+        finish(resolve, {
           latitude: result.latitude,
           longitude: result.longitude,
           accuracy: result.accuracy,
         })
       },
-      fail: reject,
+      fail: (error) => finish(reject, error),
     })
   })
 }
 
-export async function getFlashLocationPermission(): Promise<'granted' | 'denied' | 'unknown'> {
+export async function getFlashLocationPermission(): Promise<'granted' | 'denied' | 'unknown' | 'timeout'> {
   try {
-    const setting = await Taro.getSetting()
+    const setting = await withTimeout(
+      Taro.getSetting(),
+      FLASH_SETTING_TIMEOUT_MS,
+      'FLASH_SETTING_TIMEOUT',
+    )
     const value = setting.authSetting?.['scope.userLocation']
     if (value === true) return 'granted'
     if (value === false) return 'denied'
     return 'unknown'
-  } catch {
+  } catch (error) {
+    if (error instanceof FlashDeviceApiTimeoutError) return 'timeout'
     return 'unknown'
   }
 }

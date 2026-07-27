@@ -5,14 +5,28 @@ import {
   adaptFlashAssignmentDto,
   adaptFlashEncounterDto,
   fetchFlashHome,
+  FLASH_LOCATION_TIMEOUT_MS,
+  FLASH_SETTING_TIMEOUT_MS,
   getFlashApiErrorCode,
+  getFlashLocationPermission,
+  getOneShotFlashLocation,
   respondToFlashTaskOffer,
   submitFlashFeedback,
   updateFlashPreferences,
 } from './flashApi'
 
-const mocks = vi.hoisted(() => ({ apiRequest: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  apiRequest: vi.fn(),
+  getLocation: vi.fn(),
+  getSetting: vi.fn(),
+}))
 vi.mock('../api/api', () => ({ apiRequest: mocks.apiRequest }))
+vi.mock('@tarojs/taro', () => ({
+  default: {
+    getLocation: mocks.getLocation,
+    getSetting: mocks.getSetting,
+  },
+}))
 
 const preference: FlashPreferenceDto = {
   personalizationEnabled: true,
@@ -47,7 +61,10 @@ const assignmentResponse: FlashAssignmentResponse = {
 }
 
 describe('formal Flash shared-contract adapter', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useRealTimers()
+  })
 
   it('adapts the canonical nested home DTO into renderer-only view data', () => {
     const dto: FlashHomeResponse = {
@@ -162,5 +179,28 @@ describe('formal Flash shared-contract adapter', () => {
   it('recovers stable API error codes', () => {
     expect(getFlashApiErrorCode({ data: { code: 'FLASH_APPEARANCE_ENDED' } })).toBe('FLASH_APPEARANCE_ENDED')
     expect(getFlashApiErrorCode(new Error('Request failed: FLASH_TASK_EXPIRED'))).toBe('FLASH_TASK_EXPIRED')
+  })
+
+  it('times out when getSetting never resolves', async () => {
+    vi.useFakeTimers()
+    mocks.getSetting.mockReturnValue(new Promise(() => undefined))
+
+    const pending = getFlashLocationPermission()
+    await vi.advanceTimersByTimeAsync(FLASH_SETTING_TIMEOUT_MS)
+
+    await expect(pending).resolves.toBe('timeout')
+  })
+
+  it('times out when getLocation never calls success or fail', async () => {
+    vi.useFakeTimers()
+    mocks.getLocation.mockImplementation(() => undefined)
+
+    const pending = getOneShotFlashLocation()
+    const rejection = expect(pending).rejects.toMatchObject({
+      code: 'FLASH_LOCATION_TIMEOUT',
+    })
+    await vi.advanceTimersByTimeAsync(FLASH_LOCATION_TIMEOUT_MS)
+
+    await rejection
   })
 })
