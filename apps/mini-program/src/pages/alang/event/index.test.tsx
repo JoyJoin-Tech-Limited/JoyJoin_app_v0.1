@@ -1,4 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FlashHomePage from './index'
 
@@ -58,6 +60,13 @@ const home = {
 }
 
 describe('formal Flash home', () => {
+  it('keeps API error-code locals outside the async page component scope', () => {
+    const source = readFileSync(path.join(process.cwd(), 'src/pages/alang/event/index.tsx'), 'utf8')
+    const pageComponent = source.slice(source.indexOf('export default function FlashHomePage'))
+
+    expect(pageComponent).not.toContain('getFlashApiErrorCode(')
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
@@ -184,7 +193,7 @@ describe('formal Flash home', () => {
     render(<FlashHomePage />)
     act(() => { mocks.didShow?.() })
     expect(screen.getByText('看看深圳哪里有角色在线…')).toBeInTheDocument()
-    expect(document.querySelector('.flash-location-mount-v3')).toBeTruthy()
+    expect(document.querySelector('.flash-location-compiler-scope-v4')).toBeTruthy()
 
     mocks.didHide?.()
     mocks.didShow?.()

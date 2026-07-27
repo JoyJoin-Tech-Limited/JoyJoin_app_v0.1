@@ -29,7 +29,7 @@ const FLASH_AMBIENT_BACKGROUND = '/pages/alang/assets/ui/flash-city-ambient-bg.p
 const FLASH_EMPTY_ONLINE = '/pages/alang/assets/ui/flash-empty-online.png'
 const FLASH_EMPTY_TASKS = '/pages/alang/assets/ui/flash-empty-tasks.png'
 const FLASH_GATE_WATCHDOG_MS = 12_000
-const FLASH_LOCATION_RUNTIME_CONTRACT = 'flash-location-mount-v3'
+const FLASH_LOCATION_RUNTIME_CONTRACT = 'flash-location-compiler-scope-v4'
 
 type GateState = 'checking' | 'intro' | 'locating' | 'ready' | 'denied' | 'error'
 
@@ -111,6 +111,45 @@ function OnlineNpcCard({ npc, onClick }: { npc: FlashNpcSummary; onClick: () => 
         </Text>
       </View>
       <Text className='flash-online-card__arrow' aria-hidden='true'>›</Text>
+    </View>
+  )
+}
+
+function FlashHomeErrorState({
+  error,
+  onRetry,
+}: {
+  error: unknown
+  onRetry: () => void
+}) {
+  const apiErrorCode = getFlashApiErrorCode(error)
+  const outsideShenzhen = apiErrorCode === 'FLASH_OUTSIDE_SHENZHEN'
+  const locationUnavailable = apiErrorCode === 'FLASH_LOCATION_UNAVAILABLE'
+  const contentUnavailable = apiErrorCode === 'FLASH_DISABLED'
+    || apiErrorCode === 'FLASH_SCHEMA_NOT_READY'
+    || apiErrorCode === 'FLASH_CATALOG_NOT_READY'
+
+  return (
+    <View className='flash-page'>
+      <FlashPageState
+        tone={outsideShenzhen || contentUnavailable ? 'plain' : 'error'}
+        title={outsideShenzhen
+          ? '街头盲盒目前只在深圳'
+          : locationUnavailable
+            ? '暂时无法确认你是否在深圳'
+            : contentUnavailable
+              ? '街头盲盒还在准备中'
+              : '街头盲盒暂时没打开'}
+        description={outsideShenzhen
+          ? '你仍然可以使用发现页的其他功能；我们不会改用 IP 猜位置。'
+          : locationUnavailable
+            ? '位置确认服务暂时不可用，可以稍后再试；我们不会改用 IP 猜位置。'
+            : contentUnavailable
+              ? '地点和任务需要先通过人工审核，准备好后才会开放。'
+              : '你的定位不会被缓存。网络恢复后可以重新读取。'}
+        action={outsideShenzhen || contentUnavailable ? undefined : onRetry}
+        actionLabel={outsideShenzhen || contentUnavailable ? undefined : '重新读取'}
+      />
     </View>
   )
 }
@@ -299,34 +338,8 @@ export default function FlashHomePage() {
   }
 
   if (isError) {
-    const code = getFlashApiErrorCode(error)
-    const outsideShenzhen = code === 'FLASH_OUTSIDE_SHENZHEN'
-    const locationUnavailable = code === 'FLASH_LOCATION_UNAVAILABLE'
-    const contentUnavailable = code === 'FLASH_DISABLED'
-      || code === 'FLASH_SCHEMA_NOT_READY'
-      || code === 'FLASH_CATALOG_NOT_READY'
     return (
-      <View className='flash-page'>
-        <FlashPageState
-          tone={outsideShenzhen || contentUnavailable ? 'plain' : 'error'}
-          title={outsideShenzhen
-            ? '街头盲盒目前只在深圳'
-            : locationUnavailable
-              ? '暂时无法确认你是否在深圳'
-              : contentUnavailable
-                ? '街头盲盒还在准备中'
-                : '街头盲盒暂时没打开'}
-          description={outsideShenzhen
-            ? '你仍然可以使用发现页的其他功能；我们不会改用 IP 猜位置。'
-            : locationUnavailable
-              ? '位置确认服务暂时不可用，可以稍后再试；我们不会改用 IP 猜位置。'
-              : contentUnavailable
-                ? '地点和任务需要先通过人工审核，准备好后才会开放。'
-                : '你的定位不会被缓存。网络恢复后可以重新读取。'}
-          action={outsideShenzhen || contentUnavailable ? undefined : () => { void refetch() }}
-          actionLabel={outsideShenzhen || contentUnavailable ? undefined : '重新读取'}
-        />
-      </View>
+      <FlashHomeErrorState error={error} onRetry={() => { void refetch() }} />
     )
   }
 
