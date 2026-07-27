@@ -92,7 +92,7 @@ describe('formal Flash home', () => {
     expect(screen.getByText('南山区 · 还在 1 小时')).toBeInTheDocument()
     expect(screen.getByText('找一个安静角落')).toBeInTheDocument()
     expect(mocks.location).toHaveBeenCalledTimes(1)
-    expect(mocks.permission).not.toHaveBeenCalled()
+    expect(mocks.permission).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(mocks.useFlashHome).toHaveBeenLastCalledWith(
       { latitude: 22.54, longitude: 114.05, accuracy: 12 },
       true,
@@ -134,6 +134,15 @@ describe('formal Flash home', () => {
     expect(await screen.findByText('阿浪')).toBeInTheDocument()
   })
 
+  it('starts from the mounted page when the native didShow callback is missed', async () => {
+    mocks.getStorageSync.mockReturnValue(true)
+
+    render(<FlashHomePage />)
+
+    await waitFor(() => expect(mocks.location).toHaveBeenCalledTimes(1))
+    expect(await screen.findByText('阿浪')).toBeInTheDocument()
+  })
+
   it('shows a retryable Shenzhen verification state when the server cannot verify location', async () => {
     mocks.getStorageSync.mockReturnValue(true)
     mocks.useFlashHome.mockReturnValue({
@@ -165,7 +174,7 @@ describe('formal Flash home', () => {
     fireEvent.click(screen.getByRole('button', { name: '重新定位' }))
 
     await waitFor(() => expect(mocks.location).toHaveBeenCalledTimes(2))
-    expect(mocks.permission).not.toHaveBeenCalled()
+    expect(mocks.permission).toHaveBeenCalledTimes(2)
   })
 
   it('recovers from a suspended checking state after the page is hidden and shown', async () => {
@@ -175,7 +184,7 @@ describe('formal Flash home', () => {
     render(<FlashHomePage />)
     act(() => { mocks.didShow?.() })
     expect(screen.getByText('看看深圳哪里有角色在线…')).toBeInTheDocument()
-    expect(document.querySelector('.flash-location-show-v2')).toBeTruthy()
+    expect(document.querySelector('.flash-location-mount-v3')).toBeTruthy()
 
     mocks.didHide?.()
     mocks.didShow?.()

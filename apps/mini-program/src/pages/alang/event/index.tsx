@@ -3,7 +3,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
-import { getFlashApiErrorCode, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
+import {
+  getFlashApiErrorCode,
+  getFlashLocationPermission,
+  getOneShotFlashLocation,
+} from '../../../lib/alang/flashApi'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useFlashHome } from '../../../lib/alang/useFlash'
 import type { FlashLocationSnapshot, FlashNpcSummary, FlashTaskSummary } from '../../../lib/alang/flashTypes'
@@ -25,7 +29,7 @@ const FLASH_AMBIENT_BACKGROUND = '/pages/alang/assets/ui/flash-city-ambient-bg.p
 const FLASH_EMPTY_ONLINE = '/pages/alang/assets/ui/flash-empty-online.png'
 const FLASH_EMPTY_TASKS = '/pages/alang/assets/ui/flash-empty-tasks.png'
 const FLASH_GATE_WATCHDOG_MS = 12_000
-const FLASH_LOCATION_RUNTIME_CONTRACT = 'flash-location-show-v2'
+const FLASH_LOCATION_RUNTIME_CONTRACT = 'flash-location-mount-v3'
 
 type GateState = 'checking' | 'intro' | 'locating' | 'ready' | 'denied' | 'error'
 
@@ -118,17 +122,25 @@ export default function FlashHomePage() {
   const [location, setLocation] = useState<FlashLocationSnapshot | null>(null)
   const [pageVisible, setPageVisible] = useState(true)
   const locationAttemptRef = useRef(0)
+  const locationActiveRef = useRef(false)
   const wasHiddenRef = useRef(false)
-  const hasShownRef = useRef(false)
   const { data, isLoading, isError, error, refetch } = useFlashHome(
     location,
     enabled && gate === 'ready' && pageVisible,
   )
 
   const requestLocation = useCallback(async (rememberIntro = false) => {
+    if (locationActiveRef.current) return
+    locationActiveRef.current = true
     const attempt = ++locationAttemptRef.current
     setGate('locating')
     try {
+      const permission = await getFlashLocationPermission()
+      if (attempt !== locationAttemptRef.current) return
+      if (permission === 'denied') {
+        setGate('denied')
+        return
+      }
       const snapshot = await getOneShotFlashLocation()
       if (attempt !== locationAttemptRef.current) return
       if (rememberIntro) rememberIntroAcknowledgement()
@@ -137,6 +149,8 @@ export default function FlashHomePage() {
     } catch (error) {
       if (attempt !== locationAttemptRef.current) return
       setGate(isLocationPermissionDenied(error) ? 'denied' : 'error')
+    } finally {
+      if (attempt === locationAttemptRef.current) locationActiveRef.current = false
     }
   }, [])
 
@@ -153,7 +167,7 @@ export default function FlashHomePage() {
   }, [])
 
   useEffect(() => {
-    if (!enabled || !hasShownRef.current || gate !== 'checking') return
+    if (!enabled || gate !== 'checking') return
     void restoreGate()
   }, [enabled, gate, restoreGate])
 
@@ -161,17 +175,18 @@ export default function FlashHomePage() {
     if (gate !== 'checking' && gate !== 'locating') return undefined
     const timer = setTimeout(() => {
       locationAttemptRef.current += 1
+      locationActiveRef.current = false
       setGate('error')
     }, FLASH_GATE_WATCHDOG_MS)
     return () => clearTimeout(timer)
   }, [gate])
 
   useDidShow(() => {
-    hasShownRef.current = true
     setPageVisible(true)
     if (wasHiddenRef.current && (gate === 'checking' || gate === 'locating')) {
       wasHiddenRef.current = false
       locationAttemptRef.current += 1
+      locationActiveRef.current = false
       setGate('error')
       return
     }
@@ -186,6 +201,7 @@ export default function FlashHomePage() {
   useDidHide(() => {
     wasHiddenRef.current = true
     locationAttemptRef.current += 1
+    locationActiveRef.current = false
     setPageVisible(false)
   })
 
