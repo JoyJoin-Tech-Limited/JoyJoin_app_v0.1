@@ -14,6 +14,7 @@ const preupload = process.argv.includes('--preupload')
 
 const requiredFiles = [
   'assets/illustrations/street-blind-box-entry.webp',
+  'assets/illustrations/street-blind-box-entry.png',
   'common.wxss',
   'pages/alang/event/index.js',
   'pages/alang/event/index.wxml',
@@ -75,6 +76,8 @@ for (const relativePath of requiredFiles) {
 
 const iconRelativePath = 'assets/illustrations/street-blind-box-entry.webp'
 const iconPath = resolve(distRoot, iconRelativePath)
+const runtimeIconRelativePath = 'assets/illustrations/street-blind-box-entry.png'
+const runtimeIconPath = resolve(distRoot, runtimeIconRelativePath)
 
 if (!existsSync(projectConfigPath)) {
   failures.push('project.config.json is missing')
@@ -88,6 +91,14 @@ if (!existsSync(projectConfigPath)) {
     failures.push(
       `project.config.json packOptions.include must explicitly include ${iconRelativePath}; ` +
         'dynamic Taro image paths can otherwise be removed from the uploaded wxapkg',
+    )
+  }
+  const runtimeIconIsForcedIntoWxapkg = packIncludes.some(
+    (entry) => entry?.type === 'file' && entry?.value === runtimeIconRelativePath,
+  )
+  if (!runtimeIconIsForcedIntoWxapkg) {
+    failures.push(
+      `project.config.json packOptions.include must explicitly include ${runtimeIconRelativePath}`,
     )
   }
   if (projectConfig.setting?.ignoreUploadUnusedFiles !== false) {
@@ -106,6 +117,17 @@ if (existsSync(iconPath) && statSync(iconPath).size > 0) {
     }
   } catch (error) {
     failures.push(`dist/${iconRelativePath} WebP decode failed: ${error.message}`)
+  }
+}
+
+if (existsSync(runtimeIconPath) && statSync(runtimeIconPath).size > 0) {
+  try {
+    const metadata = await sharp(runtimeIconPath).metadata()
+    if (metadata.format !== 'png' || !metadata.width || !metadata.height) {
+      failures.push(`dist/${runtimeIconRelativePath} is not a decodable PNG image`)
+    }
+  } catch (error) {
+    failures.push(`dist/${runtimeIconRelativePath} PNG decode failed: ${error.message}`)
   }
 }
 
@@ -152,8 +174,10 @@ if (preupload) {
     generatedAt: new Date().toISOString(),
     packageRoot: 'dist',
     icon: {
-      path: iconRelativePath,
-      format: 'webp',
+      sourcePath: iconRelativePath,
+      sourceFormat: 'webp',
+      runtimePath: runtimeIconRelativePath,
+      runtimeFormat: 'png',
     },
     files: fileEntries,
   }, null, 2)}\n`, 'utf8')
@@ -161,6 +185,7 @@ if (preupload) {
 
 console.log(
   `[verify-flash-package] OK — build ${buildHash}; main-package icon exists, is non-empty, ` +
-    `and decodes as WebP; ${requiredPages.length} Flash pages, five NPC portraits, ` +
+    `and decodes as WebP; its runtime PNG derivative is present and decodable; ` +
+    `${requiredPages.length} Flash pages, five NPC portraits, ` +
     `and three UI illustrations are present${preupload ? ' and match the build manifest' : ''}.`,
 )

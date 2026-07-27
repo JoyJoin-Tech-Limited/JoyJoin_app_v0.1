@@ -301,6 +301,10 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/assets/illustrations/street-blind-box-entry.webp',
         },
         {
+          from: 'src/assets/illustrations/street-blind-box-entry.png',
+          to: 'dist/assets/illustrations/street-blind-box-entry.png',
+        },
+        {
           from: 'src/pages/alang/assets/flash-city-encounter.webp',
           to: 'dist/pages/alang/assets/flash-city-encounter.webp',
         },

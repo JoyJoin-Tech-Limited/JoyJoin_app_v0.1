@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { FLASH_NPC_SEEDS } from '@shared/alang/flashCatalog'
-import { flashNpcAssets, flashTaskCategories, resolveFlashNpcTheme } from './flashNpcAssets'
+import {
+  FLASH_STREET_BOX_ICON,
+  flashNpcAssets,
+  flashTaskCategories,
+  resolveFlashNpcTheme,
+} from './flashNpcAssets'
 
 function hexToRgb(hex: string): [number, number, number] {
   return [
@@ -30,6 +35,10 @@ function contrastRatio(hexA: string, hexB: string): number {
 }
 
 describe('Flash NPC asset registry', () => {
+  it('uses the packaged PNG derivative for the street blind box entry', () => {
+    expect(FLASH_STREET_BOX_ICON).toContain('street-blind-box-entry.png')
+  })
+
   it('maps every formal NPC to its governed local portrait', () => {
     expect(Object.values(flashNpcAssets).map(({ name, animal, imageSrc }) => ({ name, animal, imageSrc })))
       .toEqual([

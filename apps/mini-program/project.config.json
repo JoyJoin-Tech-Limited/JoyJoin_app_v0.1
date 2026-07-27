@@ -75,6 +75,10 @@
         "value": "assets/illustrations/street-blind-box-entry.webp"
       },
       {
+        "type": "file",
+        "value": "assets/illustrations/street-blind-box-entry.png"
+      },
+      {
         "type": "regexp",
         "value": "assets/icons/intent-icons/.*\\.webp$"
       },
