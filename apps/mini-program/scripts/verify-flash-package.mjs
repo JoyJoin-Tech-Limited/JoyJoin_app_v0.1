@@ -90,6 +90,12 @@ if (!existsSync(projectConfigPath)) {
         'dynamic Taro image paths can otherwise be removed from the uploaded wxapkg',
     )
   }
+  if (projectConfig.setting?.ignoreUploadUnusedFiles !== false) {
+    failures.push(
+      'project.config.json setting.ignoreUploadUnusedFiles must be false; ' +
+        `the WeChat upload optimizer cannot statically trace the Taro runtime path for ${iconRelativePath}`,
+    )
+  }
 }
 
 if (existsSync(iconPath) && statSync(iconPath).size > 0) {
