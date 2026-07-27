@@ -80,6 +80,10 @@
       },
       {
         "type": "regexp",
+        "value": "pages/alang/assets/.*\\.png$"
+      },
+      {
+        "type": "regexp",
         "value": "assets/icons/intent-icons/.*\\.webp$"
       },
       {

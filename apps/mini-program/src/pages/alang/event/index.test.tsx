@@ -84,7 +84,7 @@ describe('formal Flash home', () => {
     render(<FlashHomePage />)
 
     expect(await screen.findByText('阿浪')).toBeInTheDocument()
-    expect(document.querySelector("img[src='/pages/alang/assets/ui/flash-city-ambient-bg.webp']")).toBeTruthy()
+    expect(document.querySelector("img[src='/pages/alang/assets/ui/flash-city-ambient-bg.png']")).toBeTruthy()
     expect(screen.getByText('南山区 · 还在 1 小时')).toBeInTheDocument()
     expect(screen.getByText('找一个安静角落')).toBeInTheDocument()
     expect(mocks.location).toHaveBeenCalledTimes(1)
@@ -156,5 +156,20 @@ describe('formal Flash home', () => {
 
     expect(await screen.findByText('这次没有拿到位置')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '重新定位' })).toBeInTheDocument()
+  })
+
+  it('leaves checking even when the page stays visible and the device API never settles', async () => {
+    vi.useFakeTimers()
+    mocks.getStorageSync.mockReturnValue(true)
+    mocks.permission.mockReturnValue(new Promise(() => undefined))
+
+    render(<FlashHomePage />)
+    expect(screen.getByText('正在打开街头盲盒…')).toBeInTheDocument()
+
+    await vi.advanceTimersByTimeAsync(12_000)
+
+    expect(screen.getByText('这次没有拿到位置')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '重新定位' })).toBeInTheDocument()
+    vi.useRealTimers()
   })
 })

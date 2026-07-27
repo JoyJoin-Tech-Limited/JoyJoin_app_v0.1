@@ -280,8 +280,8 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/lovart/alang-result-placeholder.webp',
           to: 'dist/assets/lovart/alang-result-placeholder.webp',
         },
-        // Formal Flash NPC portraits live with the Alang subpackage. Keep only
-        // the five compressed WebP deliverables in this directory.
+        // Formal Flash runtime PNGs live with the Alang subpackage. The WebP
+        // masters stay beside them for source-quality/package-integrity checks.
         {
           from: 'src/pages/alang/assets/npcs',
           to: 'dist/pages/alang/assets/npcs',
@@ -307,6 +307,14 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         {
           from: 'src/pages/alang/assets/flash-city-encounter.webp',
           to: 'dist/pages/alang/assets/flash-city-encounter.webp',
+        },
+        {
+          from: 'src/pages/alang/assets/flash-city-encounter.png',
+          to: 'dist/pages/alang/assets/flash-city-encounter.png',
+        },
+        {
+          from: 'src/pages/alang/assets/street-blind-box-icon.png',
+          to: 'dist/pages/alang/assets/street-blind-box-icon.png',
         },
         // Matching-status puzzle prelude pieces — bundled inside that page's
         // subpackage (~130KB total) so they do not count against the 2MB main

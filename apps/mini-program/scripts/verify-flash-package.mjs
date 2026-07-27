@@ -12,20 +12,30 @@ const manifestPath = resolve(distRoot, 'flash-build-manifest.json')
 const projectConfigPath = resolve(appRoot, 'project.config.json')
 const preupload = process.argv.includes('--preupload')
 
+const flashRuntimeImages = [
+  'pages/alang/assets/flash-city-encounter.png',
+  'pages/alang/assets/street-blind-box-icon.png',
+  'pages/alang/assets/npcs/alang.png',
+  'pages/alang/assets/npcs/lizi.png',
+  'pages/alang/assets/npcs/momo.png',
+  'pages/alang/assets/npcs/shiqi.png',
+  'pages/alang/assets/npcs/atuan.png',
+  'pages/alang/assets/ui/flash-city-ambient-bg.png',
+  'pages/alang/assets/ui/flash-empty-online.png',
+  'pages/alang/assets/ui/flash-empty-tasks.png',
+  'pages/alang/assets/candidates/alang-event-card-candidate.png',
+  'pages/alang/assets/candidates/alang-found-scene-candidate.png',
+  'pages/alang/assets/candidates/alang-companion-atmosphere-candidate.png',
+  'pages/alang/assets/candidates/alang-result-candidate.png',
+]
+
 const requiredFiles = [
   'assets/illustrations/street-blind-box-entry.webp',
   'assets/illustrations/street-blind-box-entry.png',
   'common.wxss',
   'pages/alang/event/index.js',
   'pages/alang/event/index.wxml',
-  'pages/alang/assets/npcs/alang.webp',
-  'pages/alang/assets/npcs/lizi.webp',
-  'pages/alang/assets/npcs/momo.webp',
-  'pages/alang/assets/npcs/shiqi.webp',
-  'pages/alang/assets/npcs/atuan.webp',
-  'pages/alang/assets/ui/flash-city-ambient-bg.webp',
-  'pages/alang/assets/ui/flash-empty-online.webp',
-  'pages/alang/assets/ui/flash-empty-tasks.webp',
+  ...flashRuntimeImages,
 ]
 
 const requiredPages = [
@@ -101,6 +111,14 @@ if (!existsSync(projectConfigPath)) {
       `project.config.json packOptions.include must explicitly include ${runtimeIconRelativePath}`,
     )
   }
+  const flashRuntimeImagesAreForcedIntoWxapkg = packIncludes.some(
+    (entry) => entry?.type === 'regexp' && entry?.value === 'pages/alang/assets/.*\\.png$',
+  )
+  if (!flashRuntimeImagesAreForcedIntoWxapkg) {
+    failures.push(
+      'project.config.json packOptions.include must explicitly include all pages/alang PNG runtime assets',
+    )
+  }
   if (projectConfig.setting?.ignoreUploadUnusedFiles !== false) {
     failures.push(
       'project.config.json setting.ignoreUploadUnusedFiles must be false; ' +
@@ -134,6 +152,26 @@ if (existsSync(runtimeIconPath) && statSync(runtimeIconPath).size > 0) {
   } catch (error) {
     failures.push(`dist/${runtimeIconRelativePath} PNG decode failed: ${error.message}`)
   }
+}
+
+let flashRuntimeImageBytes = 0
+for (const relativePath of flashRuntimeImages) {
+  const absolutePath = resolve(distRoot, relativePath)
+  if (!existsSync(absolutePath) || statSync(absolutePath).size === 0) continue
+  flashRuntimeImageBytes += statSync(absolutePath).size
+  try {
+    const metadata = await sharp(absolutePath).metadata()
+    if (metadata.format !== 'png' || !metadata.width || !metadata.height) {
+      failures.push(`dist/${relativePath} is not a decodable PNG image`)
+    }
+  } catch (error) {
+    failures.push(`dist/${relativePath} PNG decode failed: ${error.message}`)
+  }
+}
+if (flashRuntimeImageBytes > 1024 * 1024) {
+  failures.push(
+    `Flash runtime PNG assets use ${flashRuntimeImageBytes} bytes, exceeding the 1 MiB subpackage budget`,
+  )
 }
 
 const commonStylesPath = resolve(distRoot, 'common.wxss')
@@ -184,6 +222,11 @@ if (preupload) {
       runtimePath: runtimeIconRelativePath,
       runtimeFormat: 'png',
     },
+    flashRuntimeAssets: {
+      format: 'png',
+      count: flashRuntimeImages.length,
+      totalBytes: flashRuntimeImageBytes,
+    },
     files: fileEntries,
   }, null, 2)}\n`, 'utf8')
 }
@@ -191,6 +234,6 @@ if (preupload) {
 console.log(
   `[verify-flash-package] OK — build ${buildHash}; main-package icon exists, is non-empty, ` +
     `and decodes as WebP; its runtime PNG derivative is present and decodable; ` +
-    `${requiredPages.length} Flash pages, five NPC portraits, ` +
-    `and three UI illustrations are present${preupload ? ' and match the build manifest' : ''}.`,
+    `${requiredPages.length} Flash pages and all ${flashRuntimeImages.length} runtime PNG assets ` +
+    `are present and decodable${preupload ? ' and match the build manifest' : ''}.`,
 )

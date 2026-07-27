@@ -52,26 +52,6 @@ export class FlashDeviceApiTimeoutError extends Error {
   }
 }
 
-function withTimeout<T>(
-  operation: Promise<T>,
-  timeoutMs: number,
-  code: FlashDeviceApiTimeoutError['code'],
-): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new FlashDeviceApiTimeoutError(code)), timeoutMs)
-    operation.then(
-      (value) => {
-        clearTimeout(timer)
-        resolve(value)
-      },
-      (error) => {
-        clearTimeout(timer)
-        reject(error)
-      },
-    )
-  })
-}
-
 function toCoordinate(location: FlashLocationSnapshot): FlashCoordinateRequest {
   return {
     latitude: location.latitude,
@@ -379,11 +359,30 @@ export function getOneShotFlashLocation(): Promise<FlashLocationSnapshot> {
 
 export async function getFlashLocationPermission(): Promise<'granted' | 'denied' | 'unknown' | 'timeout'> {
   try {
-    const setting = await withTimeout(
-      Taro.getSetting(),
-      FLASH_SETTING_TIMEOUT_MS,
-      'FLASH_SETTING_TIMEOUT',
-    )
+    const setting = await new Promise<Taro.getSetting.SuccessCallbackResult>((resolve, reject) => {
+      let settled = false
+      const finish = <T>(callback: (value: T) => void, value: T) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        callback(value)
+      }
+      const timer = setTimeout(() => {
+        finish(reject, new FlashDeviceApiTimeoutError('FLASH_SETTING_TIMEOUT'))
+      }, FLASH_SETTING_TIMEOUT_MS)
+      try {
+        const operation = Taro.getSetting({
+          success: (result) => finish(resolve, result),
+          fail: (error) => finish(reject, error),
+        })
+        operation?.then(
+          (result) => finish(resolve, result),
+          (error) => finish(reject, error),
+        )
+      } catch (error) {
+        finish(reject, error)
+      }
+    })
     const value = setting.authSetting?.['scope.userLocation']
     if (value === true) return 'granted'
     if (value === false) return 'denied'

@@ -21,9 +21,10 @@ import {
 import '../flash.scss'
 
 const FLASH_INTRO_ACK_STORAGE_KEY = 'joyjoin_flash_intro_ack_v1'
-const FLASH_AMBIENT_BACKGROUND = '/pages/alang/assets/ui/flash-city-ambient-bg.webp'
-const FLASH_EMPTY_ONLINE = '/pages/alang/assets/ui/flash-empty-online.webp'
-const FLASH_EMPTY_TASKS = '/pages/alang/assets/ui/flash-empty-tasks.webp'
+const FLASH_AMBIENT_BACKGROUND = '/pages/alang/assets/ui/flash-city-ambient-bg.png'
+const FLASH_EMPTY_ONLINE = '/pages/alang/assets/ui/flash-empty-online.png'
+const FLASH_EMPTY_TASKS = '/pages/alang/assets/ui/flash-empty-tasks.png'
+const FLASH_GATE_WATCHDOG_MS = 12_000
 
 type GateState = 'checking' | 'intro' | 'locating' | 'ready' | 'denied' | 'error'
 
@@ -154,6 +155,15 @@ export default function FlashHomePage() {
     if (!enabled) return
     void restoreGate()
   }, [enabled, restoreGate])
+
+  useEffect(() => {
+    if (gate !== 'checking' && gate !== 'locating') return undefined
+    const timer = setTimeout(() => {
+      locationAttemptRef.current += 1
+      setGate('error')
+    }, FLASH_GATE_WATCHDOG_MS)
+    return () => clearTimeout(timer)
+  }, [gate])
 
   useDidShow(() => {
     setPageVisible(true)

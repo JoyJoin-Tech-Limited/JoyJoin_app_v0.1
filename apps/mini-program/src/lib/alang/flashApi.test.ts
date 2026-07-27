@@ -191,6 +191,15 @@ describe('formal Flash shared-contract adapter', () => {
     await expect(pending).resolves.toBe('timeout')
   })
 
+  it('supports the native getSetting callback contract used by WeChat', async () => {
+    mocks.getSetting.mockImplementation(({ success }) => {
+      success({ authSetting: { 'scope.userLocation': true } })
+      return undefined
+    })
+
+    await expect(getFlashLocationPermission()).resolves.toBe('granted')
+  })
+
   it('times out when getLocation never calls success or fail', async () => {
     vi.useFakeTimers()
     mocks.getLocation.mockImplementation(() => undefined)
