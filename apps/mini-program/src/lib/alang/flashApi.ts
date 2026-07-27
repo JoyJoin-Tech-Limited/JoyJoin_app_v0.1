@@ -375,10 +375,13 @@ export async function getFlashLocationPermission(): Promise<'granted' | 'denied'
           success: (result) => finish(resolve, result),
           fail: (error) => finish(reject, error),
         })
-        operation?.then(
-          (result) => finish(resolve, result),
-          (error) => finish(reject, error),
-        )
+        const promiseLike = operation as Partial<PromiseLike<Taro.getSetting.SuccessCallbackResult>> | undefined
+        if (typeof promiseLike?.then === 'function') {
+          promiseLike.then(
+            (result) => finish(resolve, result),
+            (error) => finish(reject, error),
+          )
+        }
       } catch (error) {
         finish(reject, error)
       }

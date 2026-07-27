@@ -200,6 +200,15 @@ describe('formal Flash shared-contract adapter', () => {
     await expect(getFlashLocationPermission()).resolves.toBe('granted')
   })
 
+  it('ignores a non-callable then field returned by the WeChat runtime adapter', async () => {
+    mocks.getSetting.mockImplementation(({ success }) => {
+      success({ authSetting: { 'scope.userLocation': true } })
+      return { then: undefined }
+    })
+
+    await expect(getFlashLocationPermission()).resolves.toBe('granted')
+  })
+
   it('times out when getLocation never calls success or fail', async () => {
     vi.useFakeTimers()
     mocks.getLocation.mockImplementation(() => undefined)
