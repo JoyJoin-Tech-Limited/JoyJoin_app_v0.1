@@ -575,7 +575,12 @@
   }
 }
 
-// Apply within matching-status namespace
-.matching-status {
+// Apply within the match-compass namespace. The mixin body is `&__card`,
+// `&__gauge`, …, so the include root MUST match the root class the TSX
+// renders (`<View className='match-compass'>`): included under
+// `.matching-status` it emitted an unused `.matching-status__*` namespace and
+// left every real `match-compass__*` class unstyled (zero-CSS regression,
+// caught 2026-07-27 by scripts/check/check-class-coverage.mjs).
+.match-compass {
   @include match-compass;
 }

@@ -51,6 +51,17 @@ const REQUIREMENTS = [
     selectors: ['profile-page__identity-stage{position:relative;height:560rpx'],
   },
   {
+    // Zero-CSS regression (2026-07-26): SquadTableCard + the table-transition
+    // line shipped with NO stylesheet at all (the "giant circles" incident) —
+    // their classes now live in the page SCSS and must reach the page WXSS.
+    page: 'pages/squad-unboxing/index.wxss',
+    selectors: [
+      'squad-unboxing__table-card-head{',
+      'squad-unboxing__table-card-save{',
+      'squad-unboxing__table-transition{',
+    ],
+  },
+  {
     // Component-level defense for the same trap: the scene root inherits the
     // host's computed min-height so future min-height-only hosts stay open.
     page: 'common.wxss',
