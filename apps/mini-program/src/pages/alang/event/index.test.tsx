@@ -88,6 +88,7 @@ describe('formal Flash home', () => {
     expect(screen.getByText('南山区 · 还在 1 小时')).toBeInTheDocument()
     expect(screen.getByText('找一个安静角落')).toBeInTheDocument()
     expect(mocks.location).toHaveBeenCalledTimes(1)
+    expect(mocks.permission).not.toHaveBeenCalled()
     await waitFor(() => expect(mocks.useFlashHome).toHaveBeenLastCalledWith(
       { latitude: 22.54, longitude: 114.05, accuracy: 12 },
       true,
@@ -132,24 +133,26 @@ describe('formal Flash home', () => {
     expect(mocks.refetch).toHaveBeenCalledTimes(1)
   })
 
-  it('shows a retry action when getSetting reports a timeout', async () => {
+  it('shows a retry action when one-shot location fails', async () => {
     mocks.getStorageSync.mockReturnValue(true)
-    mocks.permission.mockResolvedValueOnce('timeout').mockResolvedValueOnce('granted')
+    mocks.location.mockRejectedValueOnce(new Error('getLocation:fail timeout'))
 
     render(<FlashHomePage />)
 
     expect(await screen.findByText('这次没有拿到位置')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '重新定位' }))
 
-    await waitFor(() => expect(mocks.location).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(mocks.location).toHaveBeenCalledTimes(2))
+    expect(mocks.permission).not.toHaveBeenCalled()
   })
 
   it('recovers from a suspended checking state after the page is hidden and shown', async () => {
     mocks.getStorageSync.mockReturnValue(true)
-    mocks.permission.mockReturnValue(new Promise(() => undefined))
+    mocks.location.mockReturnValue(new Promise(() => undefined))
 
     render(<FlashHomePage />)
-    expect(screen.getByText('正在打开街头盲盒…')).toBeInTheDocument()
+    expect(screen.getByText('看看深圳哪里有角色在线…')).toBeInTheDocument()
+    expect(document.querySelector('.flash-location-direct-v1')).toBeTruthy()
 
     mocks.didHide?.()
     mocks.didShow?.()
@@ -158,13 +161,13 @@ describe('formal Flash home', () => {
     expect(screen.getByRole('button', { name: '重新定位' })).toBeInTheDocument()
   })
 
-  it('leaves checking even when the page stays visible and the device API never settles', async () => {
+  it('leaves locating even when the page stays visible and the device API never settles', async () => {
     vi.useFakeTimers()
     mocks.getStorageSync.mockReturnValue(true)
-    mocks.permission.mockReturnValue(new Promise(() => undefined))
+    mocks.location.mockReturnValue(new Promise(() => undefined))
 
     render(<FlashHomePage />)
-    expect(screen.getByText('正在打开街头盲盒…')).toBeInTheDocument()
+    expect(screen.getByText('看看深圳哪里有角色在线…')).toBeInTheDocument()
 
     await vi.advanceTimersByTimeAsync(12_000)
 

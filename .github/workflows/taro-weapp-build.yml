@@ -323,7 +323,8 @@ jobs:
           miniprogram_ci_upload() {
             base64 -w0 "$WX_KEY_FILE" | \
             timeout --signal=TERM --kill-after=30s 16m ssh "${SSH_OPTIONS[@]}" "$CVM" \
-              "cd '$REMOTE_DIR' && \
+              "set -o pipefail && \
+               cd '$REMOTE_DIR' && \
                command -v flock >/dev/null && \
                exec 9>/var/lock/joyjoin-cvm-remote.lock && \
                flock -n 9 && \
@@ -331,7 +332,18 @@ jobs:
                trap 'rm -f -- private.key' EXIT && \
                trap 'exit 143' HUP INT TERM && \
                base64 -d > private.key && \
-                timeout --signal=TERM --kill-after=30s 14m nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' NPM_CONFIG_CACHE='$REMOTE_DIR/.npm-cache' NPM_CONFIG_UPDATE_NOTIFIER='false' npx --yes miniprogram-ci@2.1.31 upload \
+               command -v unzip >/dev/null && \
+               rm -rf compiled-check compiledResult.zip && \
+               timeout --signal=TERM --kill-after=30s 10m nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' NPM_CONFIG_CACHE='$REMOTE_DIR/.npm-cache' NPM_CONFIG_UPDATE_NOTIFIER='false' npx --yes miniprogram-ci@2.1.31 get-compiled-result \
+                 --appid wx5a038ee6dee12032 \
+                 --pp dist \
+                 --pkp private.key \
+                 --save-path compiledResult.zip \
+                 --robot 1 && \
+               mkdir compiled-check && \
+               unzip -q compiledResult.zip -d compiled-check && \
+               grep -R -a -q 'flash-location-direct-v1' compiled-check && \
+               timeout --signal=TERM --kill-after=30s 14m nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' NPM_CONFIG_CACHE='$REMOTE_DIR/.npm-cache' NPM_CONFIG_UPDATE_NOTIFIER='false' npx --yes miniprogram-ci@2.1.31 upload \
                  --appid wx5a038ee6dee12032 \
                  --pp dist \
                  --pkp private.key \

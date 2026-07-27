@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
-import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
+import { getFlashApiErrorCode, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useFlashHome } from '../../../lib/alang/useFlash'
 import type { FlashLocationSnapshot, FlashNpcSummary, FlashTaskSummary } from '../../../lib/alang/flashTypes'
@@ -25,8 +25,18 @@ const FLASH_AMBIENT_BACKGROUND = '/pages/alang/assets/ui/flash-city-ambient-bg.p
 const FLASH_EMPTY_ONLINE = '/pages/alang/assets/ui/flash-empty-online.png'
 const FLASH_EMPTY_TASKS = '/pages/alang/assets/ui/flash-empty-tasks.png'
 const FLASH_GATE_WATCHDOG_MS = 12_000
+const FLASH_LOCATION_RUNTIME_CONTRACT = 'flash-location-direct-v1'
 
 type GateState = 'checking' | 'intro' | 'locating' | 'ready' | 'denied' | 'error'
+
+function isLocationPermissionDenied(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const candidate = error as { errMsg?: unknown; message?: unknown }
+  const message = [candidate.errMsg, candidate.message]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ')
+  return /auth(?:orize)?\s*deny|permission\s*denied|user\s*deny/i.test(message)
+}
 
 function readIntroAcknowledgement(): boolean {
   try {
@@ -123,28 +133,15 @@ export default function FlashHomePage() {
       if (rememberIntro) rememberIntroAcknowledgement()
       setLocation(snapshot)
       setGate('ready')
-    } catch {
+    } catch (error) {
       if (attempt !== locationAttemptRef.current) return
-      const permission = await getFlashLocationPermission()
-      if (attempt !== locationAttemptRef.current) return
-      setGate(permission === 'denied' ? 'denied' : 'error')
+      setGate(isLocationPermissionDenied(error) ? 'denied' : 'error')
     }
   }, [])
 
   const restoreGate = useCallback(async () => {
     if (!readIntroAcknowledgement()) {
       setGate('intro')
-      return
-    }
-    const attempt = ++locationAttemptRef.current
-    const permission = await getFlashLocationPermission()
-    if (attempt !== locationAttemptRef.current) return
-    if (permission === 'timeout') {
-      setGate('error')
-      return
-    }
-    if (permission === 'denied') {
-      setGate('denied')
       return
     }
     await requestLocation(false)
@@ -240,7 +237,7 @@ export default function FlashHomePage() {
 
   if (gate === 'checking' || gate === 'locating') {
     return (
-      <View className='flash-page'>
+      <View className={`flash-page ${FLASH_LOCATION_RUNTIME_CONTRACT}`}>
         <FlashPageState
           title={gate === 'checking' ? '正在打开街头盲盒…' : '看看深圳哪里有角色在线…'}
           description='只进行这一次定位，不会在后台持续追踪。'
