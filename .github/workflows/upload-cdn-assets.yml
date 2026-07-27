@@ -304,7 +304,7 @@ jobs:
           trap 'rm -f -- "$V2_PATHS_FILE"' EXIT
           jq -er '
             . as $manifest
-            | [.archetypes[].body, (.items[] | .layer)]
+            | [.archetypes[].body, .archetypes[].fullStarter, (.items[] | .layer)]
             | unique as $paths
             | if (($paths | length) == $manifest.sourceAssetCount and ($paths | length) >= 60)
               then $paths[]
