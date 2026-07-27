@@ -70,6 +70,10 @@
         "value": "assets/joyjoin-logo-tab.png"
       },
       {
+        "type": "file",
+        "value": "assets/illustrations/street-blind-box-entry.webp"
+      },
+      {
         "type": "regexp",
         "value": "assets/icons/intent-icons/.*\\.webp$"
       },

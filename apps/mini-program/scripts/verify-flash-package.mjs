@@ -9,6 +9,7 @@ const appRoot = resolve(import.meta.dirname, '..')
 const distRoot = resolve(appRoot, 'dist')
 const appJsonPath = resolve(distRoot, 'app.json')
 const manifestPath = resolve(distRoot, 'flash-build-manifest.json')
+const projectConfigPath = resolve(appRoot, 'project.config.json')
 const preupload = process.argv.includes('--preupload')
 
 const requiredFiles = [
@@ -74,6 +75,23 @@ for (const relativePath of requiredFiles) {
 
 const iconRelativePath = 'assets/illustrations/street-blind-box-entry.webp'
 const iconPath = resolve(distRoot, iconRelativePath)
+
+if (!existsSync(projectConfigPath)) {
+  failures.push('project.config.json is missing')
+} else {
+  const projectConfig = JSON.parse(readFileSync(projectConfigPath, 'utf8'))
+  const packIncludes = projectConfig.packOptions?.include ?? []
+  const iconIsForcedIntoWxapkg = packIncludes.some(
+    (entry) => entry?.type === 'file' && entry?.value === iconRelativePath,
+  )
+  if (!iconIsForcedIntoWxapkg) {
+    failures.push(
+      `project.config.json packOptions.include must explicitly include ${iconRelativePath}; ` +
+        'dynamic Taro image paths can otherwise be removed from the uploaded wxapkg',
+    )
+  }
+}
+
 if (existsSync(iconPath) && statSync(iconPath).size > 0) {
   try {
     const metadata = await sharp(iconPath).metadata()
