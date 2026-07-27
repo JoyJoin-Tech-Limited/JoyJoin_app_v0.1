@@ -25,7 +25,7 @@ const FLASH_AMBIENT_BACKGROUND = '/pages/alang/assets/ui/flash-city-ambient-bg.p
 const FLASH_EMPTY_ONLINE = '/pages/alang/assets/ui/flash-empty-online.png'
 const FLASH_EMPTY_TASKS = '/pages/alang/assets/ui/flash-empty-tasks.png'
 const FLASH_GATE_WATCHDOG_MS = 12_000
-const FLASH_LOCATION_RUNTIME_CONTRACT = 'flash-location-direct-v1'
+const FLASH_LOCATION_RUNTIME_CONTRACT = 'flash-location-show-v2'
 
 type GateState = 'checking' | 'intro' | 'locating' | 'ready' | 'denied' | 'error'
 
@@ -119,6 +119,7 @@ export default function FlashHomePage() {
   const [pageVisible, setPageVisible] = useState(true)
   const locationAttemptRef = useRef(0)
   const wasHiddenRef = useRef(false)
+  const hasShownRef = useRef(false)
   const { data, isLoading, isError, error, refetch } = useFlashHome(
     location,
     enabled && gate === 'ready' && pageVisible,
@@ -149,9 +150,12 @@ export default function FlashHomePage() {
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: '街头盲盒' })
-    if (!enabled) return
+  }, [])
+
+  useEffect(() => {
+    if (!enabled || !hasShownRef.current || gate !== 'checking') return
     void restoreGate()
-  }, [enabled, restoreGate])
+  }, [enabled, gate, restoreGate])
 
   useEffect(() => {
     if (gate !== 'checking' && gate !== 'locating') return undefined
@@ -163,6 +167,7 @@ export default function FlashHomePage() {
   }, [gate])
 
   useDidShow(() => {
+    hasShownRef.current = true
     setPageVisible(true)
     if (wasHiddenRef.current && (gate === 'checking' || gate === 'locating')) {
       wasHiddenRef.current = false
@@ -171,6 +176,10 @@ export default function FlashHomePage() {
       return
     }
     wasHiddenRef.current = false
+    if (enabled && gate === 'checking') {
+      void restoreGate()
+      return
+    }
     if (gate === 'ready' && location) void refetch()
   })
 

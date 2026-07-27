@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FlashHomePage from './index'
 
@@ -71,6 +71,8 @@ describe('formal Flash home', () => {
   it('discloses digital NPCs before any location request', async () => {
     mocks.getStorageSync.mockReturnValue(false)
     render(<FlashHomePage />)
+    expect(mocks.location).not.toHaveBeenCalled()
+    act(() => { mocks.didShow?.() })
 
     expect(await screen.findByText('先说好，这是一场数字角色相遇')).toBeInTheDocument()
     expect(screen.getByText(/不是真人工作人员/)).toBeInTheDocument()
@@ -82,6 +84,8 @@ describe('formal Flash home', () => {
   it('loads online NPCs and tasks only after one-shot location is available', async () => {
     mocks.getStorageSync.mockReturnValue(true)
     render(<FlashHomePage />)
+    expect(mocks.location).not.toHaveBeenCalled()
+    act(() => { mocks.didShow?.() })
 
     expect(await screen.findByText('阿浪')).toBeInTheDocument()
     expect(document.querySelector("img[src='/pages/alang/assets/ui/flash-city-ambient-bg.png']")).toBeTruthy()
@@ -98,6 +102,7 @@ describe('formal Flash home', () => {
   it('opens the radar with safe display metadata but no coordinates', async () => {
     mocks.getStorageSync.mockReturnValue(true)
     render(<FlashHomePage />)
+    act(() => { mocks.didShow?.() })
     fireEvent.click(await screen.findByRole('button', { name: /去找阿浪/ }))
 
     const url = mocks.navigateTo.mock.calls[0][0].url as string
@@ -114,6 +119,21 @@ describe('formal Flash home', () => {
     expect(mocks.location).not.toHaveBeenCalled()
   })
 
+  it('starts from the active page lifecycle when auth resolves after the first show', async () => {
+    mocks.getStorageSync.mockReturnValue(true)
+    mocks.useAuth.mockReturnValue({ user: undefined })
+    const view = render(<FlashHomePage />)
+
+    act(() => { mocks.didShow?.() })
+    expect(mocks.location).not.toHaveBeenCalled()
+
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    view.rerender(<FlashHomePage />)
+
+    await waitFor(() => expect(mocks.location).toHaveBeenCalledTimes(1))
+    expect(await screen.findByText('阿浪')).toBeInTheDocument()
+  })
+
   it('shows a retryable Shenzhen verification state when the server cannot verify location', async () => {
     mocks.getStorageSync.mockReturnValue(true)
     mocks.useFlashHome.mockReturnValue({
@@ -125,6 +145,7 @@ describe('formal Flash home', () => {
     })
 
     render(<FlashHomePage />)
+    act(() => { mocks.didShow?.() })
 
     expect(await screen.findByText('暂时无法确认你是否在深圳')).toBeInTheDocument()
     expect(screen.getByText(/可以稍后再试/)).toBeInTheDocument()
@@ -138,6 +159,7 @@ describe('formal Flash home', () => {
     mocks.location.mockRejectedValueOnce(new Error('getLocation:fail timeout'))
 
     render(<FlashHomePage />)
+    act(() => { mocks.didShow?.() })
 
     expect(await screen.findByText('这次没有拿到位置')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '重新定位' }))
@@ -151,8 +173,9 @@ describe('formal Flash home', () => {
     mocks.location.mockReturnValue(new Promise(() => undefined))
 
     render(<FlashHomePage />)
+    act(() => { mocks.didShow?.() })
     expect(screen.getByText('看看深圳哪里有角色在线…')).toBeInTheDocument()
-    expect(document.querySelector('.flash-location-direct-v1')).toBeTruthy()
+    expect(document.querySelector('.flash-location-show-v2')).toBeTruthy()
 
     mocks.didHide?.()
     mocks.didShow?.()
@@ -167,6 +190,7 @@ describe('formal Flash home', () => {
     mocks.location.mockReturnValue(new Promise(() => undefined))
 
     render(<FlashHomePage />)
+    act(() => { mocks.didShow?.() })
     expect(screen.getByText('看看深圳哪里有角色在线…')).toBeInTheDocument()
 
     await vi.advanceTimersByTimeAsync(12_000)

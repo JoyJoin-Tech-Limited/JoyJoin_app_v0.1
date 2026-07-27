@@ -342,7 +342,7 @@ jobs:
                  --robot 1 && \
                mkdir compiled-check && \
                unzip -q compiledResult.zip -d compiled-check && \
-               grep -R -a -q 'flash-location-direct-v1' compiled-check && \
+               grep -R -a -q 'flash-location-show-v2' compiled-check && \
                timeout --signal=TERM --kill-after=30s 14m nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' NPM_CONFIG_CACHE='$REMOTE_DIR/.npm-cache' NPM_CONFIG_UPDATE_NOTIFIER='false' npx --yes miniprogram-ci@2.1.31 upload \
                  --appid wx5a038ee6dee12032 \
                  --pp dist \
