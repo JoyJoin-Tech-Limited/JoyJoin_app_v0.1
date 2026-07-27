@@ -111,7 +111,10 @@ export function FlashTaskTemplatesPanel({
       return response.json().catch(() => null);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: [endpoint] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [endpoint] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/overview"] }),
+      ]);
       setEditorOpen(false);
       setEditing(null);
       toast({ title: "任务模板已保存", description: "任务只会从人工审核库中抽取，不会在运行时生成。" });
@@ -135,7 +138,10 @@ export function FlashTaskTemplatesPanel({
       return response.json().catch(() => null);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: [endpoint] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [endpoint] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/overview"] }),
+      ]);
       setPendingToggle(null);
       toast({ title: "任务状态已更新" });
     },

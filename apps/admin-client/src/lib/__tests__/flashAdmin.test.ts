@@ -3,6 +3,7 @@ import {
   canWriteFlashAdmin,
   formatEligibleWeekdays,
   formatFeedbackPromptLines,
+  getFlashReadinessItems,
   getShenzhenDatePair,
   parseCommaList,
   parseFeedbackPromptLines,
@@ -23,6 +24,45 @@ describe("flashAdmin helpers", () => {
     expect(unpackFlashCollection({ npcs: [{ id: "2" }] })).toEqual([{ id: "2" }]);
     expect(unpackFlashCollection({ items: [] })).toEqual([]);
     expect(unpackFlashCollection(null)).toEqual([]);
+  });
+
+  it("turns server readiness blockers into actionable operator checks", () => {
+    expect(getFlashReadinessItems({
+      schemaReady: true,
+      ready: false,
+      blockers: [
+        "thirty_human_reviewed_tasks_required",
+        "all_tasks_require_approved_destinations",
+      ],
+      counts: {
+        reviewedTasks: 12,
+        linkedTasks: 8,
+      },
+    })).toEqual([
+      {
+        code: "thirty_human_reviewed_tasks_required",
+        label: "人工审核任务",
+        detail: "已完成 12/30 条；请在「任务库」逐条确认内容并启用。",
+      },
+      {
+        code: "all_tasks_require_approved_destinations",
+        label: "任务目的地绑定",
+        detail: "已完成 8/30 条；每条任务都要绑定至少一个已审核且启用的目的地。",
+      },
+    ]);
+  });
+
+  it("keeps unknown readiness blockers visible for forward compatibility", () => {
+    expect(getFlashReadinessItems({
+      schemaReady: true,
+      ready: false,
+      blockers: ["future_readiness_rule"],
+      counts: {},
+    })[0]).toEqual({
+      code: "future_readiness_rule",
+      label: "其他发布条件",
+      detail: "服务端返回未识别的检查项：future_readiness_rule。请联系开发人员确认。",
+    });
   });
 
   it("orders weekdays from Monday through Sunday", () => {

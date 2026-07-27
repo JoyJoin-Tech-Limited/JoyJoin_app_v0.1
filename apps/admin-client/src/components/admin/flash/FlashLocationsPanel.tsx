@@ -116,7 +116,10 @@ export function FlashLocationsPanel({
       return response.json().catch(() => null);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: [endpoint] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [endpoint] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/overview"] }),
+      ]);
       setEditorOpen(false);
       setEditing(null);
       toast({ title: isEncounter ? "闪现地点已保存" : "任务目的地已保存", description: "只有通过人工审核且处于可用状态的地点会进入随机池。" });
@@ -130,7 +133,10 @@ export function FlashLocationsPanel({
       return response.json().catch(() => null);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: [endpoint] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [endpoint] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/overview"] }),
+      ]);
       setPendingToggle(null);
       toast({ title: "地点状态已更新" });
     },

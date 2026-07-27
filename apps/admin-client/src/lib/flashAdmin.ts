@@ -141,10 +141,100 @@ export interface FlashOverviewCounts {
   publishedShiftsToday?: number;
 }
 
+export interface FlashReadinessCounts {
+  activeNpcs?: number;
+  canonicalNpcs?: number;
+  canonicalWeekdayNpcs?: number;
+  schedulableNpcs?: number;
+  taskReadyNpcs?: number;
+  reviewedTasks?: number;
+  approvedEncounterLocations?: number;
+  approvedTaskDestinations?: number;
+  linkedTasks?: number;
+  readyTaskCategoryCounts?: Record<string, number>;
+}
+
+export interface FlashReadiness {
+  schemaReady: boolean;
+  ready: boolean;
+  blockers: string[];
+  counts: FlashReadinessCounts;
+}
+
 export interface FlashOverview {
+  readiness?: FlashReadiness;
   counts?: FlashOverviewCounts;
   today?: FlashScheduleResponse | null;
   nextDraft?: FlashScheduleResponse | null;
+}
+
+export interface FlashReadinessItem {
+  code: string;
+  label: string;
+  detail: string;
+}
+
+export function getFlashReadinessItems(readiness?: FlashReadiness): FlashReadinessItem[] {
+  if (!readiness || readiness.ready) return [];
+  const counts = readiness.counts ?? {};
+  const formatCount = (value: number | undefined, target: number) => `${value ?? 0}/${target}`;
+  const categoryCounts = Object.values(counts.readyTaskCategoryCounts ?? {});
+  const completeCategories = categoryCounts.filter((count) => count >= 5).length;
+
+  const messages: Record<string, Omit<FlashReadinessItem, "code">> = {
+    schema_not_ready: {
+      label: "正式数据表",
+      detail: "街头盲盒正式数据表尚未部署；请先执行并核验 Flash 增量迁移。",
+    },
+    tencent_map_key_required: {
+      label: "腾讯地图服务",
+      detail: "服务端未配置腾讯地图密钥，地点无法完成深圳范围校验。",
+    },
+    exactly_five_canonical_active_npcs_required: {
+      label: "固定 NPC",
+      detail: `已启用 ${formatCount(counts.canonicalNpcs, 5)} 位固定 NPC；请保持五位正式角色全部启用。`,
+    },
+    canonical_npc_weekdays_required: {
+      label: "NPC 上线日",
+      detail: `已完成 ${formatCount(counts.canonicalWeekdayNpcs, 5)} 位；请恢复五位 NPC 的固定星期配置。`,
+    },
+    all_active_npcs_require_approved_locations: {
+      label: "NPC 地点绑定",
+      detail: `已完成 ${formatCount(counts.schedulableNpcs, counts.activeNpcs ?? 5)} 位；每位启用 NPC 都要绑定已审核且启用的街头盲盒地点。`,
+    },
+    all_active_npcs_require_ready_tasks: {
+      label: "NPC 任务覆盖",
+      detail: `已完成 ${formatCount(counts.taskReadyNpcs, counts.activeNpcs ?? 5)} 位；每位启用 NPC 都需要可用任务。`,
+    },
+    thirty_human_reviewed_tasks_required: {
+      label: "人工审核任务",
+      detail: `已完成 ${formatCount(counts.reviewedTasks, 30)} 条；请在「任务库」逐条确认内容并启用。`,
+    },
+    approved_encounter_location_required: {
+      label: "街头盲盒地点",
+      detail: "至少需要一个经过腾讯地图校验、人工审核并启用的地点。",
+    },
+    approved_task_destination_required: {
+      label: "任务目的地",
+      detail: "至少需要一个经过腾讯地图校验、人工审核并启用的任务目的地。",
+    },
+    all_tasks_require_approved_destinations: {
+      label: "任务目的地绑定",
+      detail: `已完成 ${formatCount(counts.linkedTasks, 30)} 条；每条任务都要绑定至少一个已审核且启用的目的地。`,
+    },
+    six_categories_with_five_ready_tasks_required: {
+      label: "任务分类覆盖",
+      detail: `已有 ${formatCount(completeCategories, 6)} 个分类达到 5 条可用任务；请补齐六类任务。`,
+    },
+  };
+
+  return readiness.blockers.map((code) => ({
+    code,
+    ...(messages[code] ?? {
+      label: "其他发布条件",
+      detail: `服务端返回未识别的检查项：${code}。请联系开发人员确认。`,
+    }),
+  }));
 }
 
 type CollectionEnvelope<T> =

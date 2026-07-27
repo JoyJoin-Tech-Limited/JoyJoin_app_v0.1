@@ -71,7 +71,10 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
       return response.json().catch(() => null);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/npcs"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/npcs"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/overview"] }),
+      ]);
       setEditing(null);
       toast({ title: "NPC 设定已保存", description: "后续草案会按新的上线日与文案生成。" });
     },
@@ -84,7 +87,10 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
       return response.json().catch(() => null);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/npcs"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/npcs"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/overview"] }),
+      ]);
       setPendingToggle(null);
       toast({ title: "NPC 状态已更新" });
     },

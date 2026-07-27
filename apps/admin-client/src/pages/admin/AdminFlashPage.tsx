@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { BookOpenCheck, CalendarClock, MapPinned, RefreshCw, Store, UsersRound } from "lucide-react";
+import { BookOpenCheck, CalendarClock, CheckCircle2, MapPinned, RefreshCw, Store, UsersRound } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import {
   type FlashOverview,
   type FlashTaskDestination,
   canWriteFlashAdmin,
+  getFlashReadinessItems,
   getShenzhenDatePair,
   unpackFlashCollection,
 } from "@/lib/flashAdmin";
@@ -32,7 +33,10 @@ export default function AdminFlashPage() {
   const canWrite = canWriteFlashAdmin(user?.adminRole);
   const datePair = getShenzhenDatePair();
 
-  const overviewQuery = useQuery<FlashOverview>({ queryKey: ["/api/admin/alang/overview"] });
+  const overviewQuery = useQuery<FlashOverview>({
+    queryKey: ["/api/admin/alang/overview"],
+    refetchInterval: (query) => query.state.data?.readiness?.ready ? false : 5_000,
+  });
   const npcsQuery = useQuery<CollectionResponse<FlashNpc>>({ queryKey: ["/api/admin/alang/npcs"] });
   const locationsQuery = useQuery<CollectionResponse<FlashEncounterLocation>>({
     queryKey: ["/api/admin/alang/encounter-locations"],
@@ -45,6 +49,8 @@ export default function AdminFlashPage() {
   const locations = unpackFlashCollection(locationsQuery.data);
   const destinations = unpackFlashCollection(destinationsQuery.data);
   const counts = overviewQuery.data?.counts;
+  const readiness = overviewQuery.data?.readiness;
+  const readinessItems = getFlashReadinessItems(readiness);
 
   const refreshAll = () =>
     queryClient.invalidateQueries({
@@ -116,6 +122,34 @@ export default function AdminFlashPage() {
           <AlertDescription>viewer 可以检查排班与内容，但不能生成、发布、审核或修改。</AlertDescription>
         </Alert>
       )}
+
+      {readiness?.ready ? (
+        <Alert className="border-emerald-200 bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+          <AlertTitle>街头盲盒目录已就绪</AlertTitle>
+          <AlertDescription>
+            正式 NPC、地点和任务均已通过发布检查。请继续确认当日排班已生成并发布。
+          </AlertDescription>
+        </Alert>
+      ) : readinessItems.length > 0 ? (
+        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20" data-testid="flash-readiness-blockers">
+          <BookOpenCheck className="h-4 w-4 text-amber-700" aria-hidden="true" />
+          <AlertTitle>街头盲盒尚未开放，还差 {readinessItems.length} 项</AlertTitle>
+          <AlertDescription>
+            <p className="mb-3">这里显示的是小程序正在执行的同一套服务端发布检查；完成后页面会自动刷新。</p>
+            <ul className="space-y-2">
+              {readinessItems.map((item) => (
+                <li key={item.code} className="rounded-lg border border-amber-200/80 bg-white/70 px-3 py-2 dark:border-amber-900/60 dark:bg-background/40">
+                  <span className="font-medium text-foreground">{item.label}</span>
+                  <span className="ml-2 text-muted-foreground">{item.detail}</span>
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      ) : overviewQuery.isLoading ? (
+        <Skeleton className="h-24 w-full rounded-xl" />
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {summaryCards.map(({ label, value, hint, icon: Icon }) => (
