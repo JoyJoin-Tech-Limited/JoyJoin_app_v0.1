@@ -55,6 +55,28 @@ describe('single-test group finalization (单人调试局全链路)', () => {
     expect(serviceSource).toContain('.delete(blindBoxEvents).where(inArray(blindBoxEvents.id, staleBlindBoxEventIds))');
   });
 
+  it('cleanup nulls group event back-links before deleting events/blind_box_events (NO ACTION FKs)', () => {
+    // Regression: the 2026-07-26 finalization writes eventId + blindBoxEventId
+    // onto groups; both columns are NO ACTION FKs. Cleanup must null them before
+    // deleting the referenced rows or the second test run 500s.
+    expect(serviceSource).toContain('.set({ eventId: null, blindBoxEventId: null })');
+    const nullOutIndex = serviceSource.indexOf('.set({ eventId: null, blindBoxEventId: null })');
+    const eventsDeleteIndex = serviceSource.indexOf('.delete(events).where(inArray(events.id, linkedEventIds))');
+    const blindBoxDeleteIndex = serviceSource.indexOf('.delete(blindBoxEvents).where(inArray(blindBoxEvents.id, staleBlindBoxEventIds))');
+    expect(nullOutIndex).toBeGreaterThan(-1);
+    expect(eventsDeleteIndex).toBeGreaterThan(nullOutIndex);
+    expect(blindBoxDeleteIndex).toBeGreaterThan(nullOutIndex);
+  });
+
+  it('event_attendance schema declares the partial unique index required by the confirm upsert', () => {
+    // Regression: without idx_event_attendance_blind_box_user the ON CONFLICT
+    // upsert in attendanceRepo throws 42P10 and confirm-attendance 500s. The
+    // index must be declared in the Drizzle schema so db:push creates it.
+    const schemaSource = readRepoFile('packages/shared/src/schema/_definitions.ts');
+    expect(schemaSource).toContain('uniqueIndex("idx_event_attendance_blind_box_user")');
+    expect(schemaSource).toContain('blind_box_event_id IS NOT NULL');
+  });
+
   it('confirm-attendance prefers the group blind_box_events link over the pool lookup', () => {
     expect(userEventPoolsSource).toContain('group?.blindBoxEventId ?? null');
     expect(userEventPoolsSource).toContain('if (!blindBoxEventId && group?.poolId)');

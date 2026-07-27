@@ -826,6 +826,15 @@ async function cleanupSingleTestPoolRows(
       .delete(venueTimeSlotBookings)
       .where(inArray(venueTimeSlotBookings.eventGroupId, groupIds));
 
+    // Groups reference events + blind_box_events with NO ACTION FKs (the
+    // 2026-07-26 finalization writes both back-links). Null the back-links
+    // before deleting the referenced rows, otherwise the second test run's
+    // cleanup violates the FK and the whole /start fails.
+    await conn
+      .update(eventPoolGroups)
+      .set({ eventId: null, blindBoxEventId: null })
+      .where(inArray(eventPoolGroups.id, groupIds));
+
     if (linkedEventIds.length > 0) {
       await conn.delete(eventAttendance).where(inArray(eventAttendance.eventId, linkedEventIds));
       await conn.delete(events).where(inArray(events.id, linkedEventIds));

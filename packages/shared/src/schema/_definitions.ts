@@ -368,7 +368,16 @@ export const eventAttendance = pgTable("event_attendance", {
   estimatedLateMinutes: integer("estimated_late_minutes"), // 10 | 20 | 30
   absentReason: varchar("absent_reason"), // '突发事情' | '身体不适' | '其他'
   attendanceStatusUpdatedAt: timestamp("attendance_status_updated_at"),
-});
+}, (table) => [
+  // Partial unique index required by attendanceRepo.updateAttendanceStatus
+  // ON CONFLICT (blind_box_event_id, user_id) WHERE blind_box_event_id IS NOT NULL.
+  // Without it the upsert throws 42P10 and confirm-attendance 500s. Declared here
+  // so db:push creates it and db:verify catches drift (the hand-written
+  // add_attendance_status.sql migration alone leaves db:push-rebuilt DBs bare).
+  uniqueIndex("idx_event_attendance_blind_box_user")
+    .on(table.blindBoxEventId, table.userId)
+    .where(sql`blind_box_event_id IS NOT NULL`),
+]);
 
 // ============ 两阶段匹配模型 - Event Pools ============
 
