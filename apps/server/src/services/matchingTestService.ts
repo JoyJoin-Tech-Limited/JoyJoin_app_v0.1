@@ -343,7 +343,7 @@ export async function seedMatchingTestBots(
         educationLevel: EDUCATION_LEVELS[i % EDUCATION_LEVELS.length],
         lifeStage: LIFE_STAGES[i % LIFE_STAGES.length],
         workMode: WORK_MODES[i % WORK_MODES.length],
-        hometown: city,
+        hometownRegionCity: city,
         hometownAffinityOptin: true,
         intent: [pick(EVENT_INTENTS), pick(EVENT_INTENTS)],
         industryCategory: industry.category,
@@ -379,7 +379,7 @@ export async function seedMatchingTestBots(
           educationLevel: EDUCATION_LEVELS[i % EDUCATION_LEVELS.length],
           lifeStage: LIFE_STAGES[i % LIFE_STAGES.length],
           workMode: WORK_MODES[i % WORK_MODES.length],
-          hometown: city,
+          hometownRegionCity: city,
           hometownAffinityOptin: true,
           intent: [pick(EVENT_INTENTS), pick(EVENT_INTENTS)],
           industryCategory: industry.category,
@@ -405,27 +405,15 @@ export async function seedMatchingTestBots(
       })
       .returning({ id: users.id, displayName: users.displayName, primaryArchetype: users.primaryArchetype });
 
-    await db
-      .insert(userInterests)
-      .values({
-        userId: user.id,
-        totalHeat: interests.totalHeat,
-        totalSelections: interests.totalSelections,
-        categoryHeat: interests.categoryHeat,
-        selections: interests.selections,
-        topPriorities: interests.topPriorities,
-      })
-      .onConflictDoUpdate({
-        target: userInterests.userId,
-        set: {
-          totalHeat: interests.totalHeat,
-          totalSelections: interests.totalSelections,
-          categoryHeat: interests.categoryHeat,
-          selections: interests.selections,
-          topPriorities: interests.topPriorities,
-          updatedAt: new Date(),
-        },
-      });
+    await db.delete(userInterests).where(eq(userInterests.userId, user.id));
+    await db.insert(userInterests).values({
+      userId: user.id,
+      totalHeat: interests.totalHeat,
+      totalSelections: interests.totalSelections,
+      categoryHeat: interests.categoryHeat,
+      selections: interests.selections,
+      topPriorities: interests.topPriorities,
+    });
 
     await db
       .insert(eventPoolRegistrations)
