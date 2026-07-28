@@ -15,6 +15,9 @@
 DO $$
 DECLARE
   duplicate_count int;
+  idx_unique boolean;
+  idx_valid boolean;
+  idx_ready boolean;
 BEGIN
   SELECT count(*) INTO duplicate_count
   FROM (
@@ -29,9 +32,23 @@ BEGIN
     RAISE EXCEPTION 'Cannot create unique index on users.phone_number: % duplicate phone_number values exist. Clean them first.', duplicate_count;
   END IF;
 
-  CREATE UNIQUE INDEX IF NOT EXISTS users_phone_number_unique ON users (phone_number);
+  SELECT i.indisunique, i.indisvalid, i.indisready
+  INTO idx_unique, idx_valid, idx_ready
+  FROM pg_class c
+  JOIN pg_index i ON i.indexrelid = c.oid
+  WHERE c.relname = 'users_phone_number_unique'
+    AND c.relnamespace = 'public'::regnamespace;
+
+  IF FOUND AND (NOT idx_unique OR NOT idx_valid OR NOT idx_ready) THEN
+    RAISE NOTICE 'Dropping stale users_phone_number_unique (unique=%, valid=%, ready=%)', idx_unique, idx_valid, idx_ready;
+    DROP INDEX public.users_phone_number_unique;
+  END IF;
+
+  CREATE UNIQUE INDEX IF NOT EXISTS users_phone_number_unique ON public.users (phone_number);
 END $$;
 
-SELECT indexname, indexdef
-FROM pg_indexes
-WHERE schemaname = 'public' AND tablename = 'users' AND indexname = 'users_phone_number_unique';
+SELECT c.relname AS indexname, i.indisunique, i.indisvalid, i.indisready, pg_get_indexdef(i.indexrelid) AS indexdef
+FROM pg_class c
+JOIN pg_index i ON i.indexrelid = c.oid
+WHERE c.relname = 'users_phone_number_unique'
+  AND c.relnamespace = 'public'::regnamespace;
