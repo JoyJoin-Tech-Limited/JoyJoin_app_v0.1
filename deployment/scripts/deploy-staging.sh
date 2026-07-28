@@ -449,7 +449,25 @@ if [[ "$USE_GHCR_PULL" == "true" ]]; then
         restore_previous_image_tags
         exit 1
     fi
-    if ! docker pull "$STAGING_API_IMAGE" || ! docker pull "$STAGING_ADMIN_IMAGE"; then
+
+    # Cross-Pacific GHCR pulls can stall on a single large layer. docker pull
+    # resumes already-downloaded layers, so re-invoking it is a cheap, safe
+    # retry that only re-fetches the incomplete layers.
+    pull_with_retry() {
+        local image="$1"
+        local attempt=1
+        local max_attempts=4
+        while (( attempt <= max_attempts )); do
+            if docker pull "$image"; then
+                return 0
+            fi
+            echo "  docker pull $image failed (attempt $attempt/$max_attempts); retrying in 10s (completed layers are cached)."
+            sleep 10
+            attempt=$((attempt + 1))
+        done
+        return 1
+    }
+    if ! pull_with_retry "$STAGING_API_IMAGE" || ! pull_with_retry "$STAGING_ADMIN_IMAGE"; then
         echo "❌ Failed to pull staging images from GHCR."
         restore_previous_image_tags
         exit 1
