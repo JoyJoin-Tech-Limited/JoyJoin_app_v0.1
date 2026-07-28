@@ -3,13 +3,16 @@ set -Eeuo pipefail
 
 # Staging same-server deploy helper.
 # Run this ON the remote server, not from your local machine. The normal GitHub
-# workflow first uploads deployment/.staging-images.tar.gz with images built on
-# the hosted runner; this script intentionally never compiles on the shared CVM.
+# workflow builds images on the hosted runner, pushes them to GHCR, and passes
+# STAGING_API_IMAGE / STAGING_ADMIN_IMAGE (+ GHCR_TOKEN) so this script pulls
+# them. It intentionally never compiles on the shared CVM.
+#
+# Backward-compatible fallback: if STAGING_API_IMAGE is unset, the script looks
+# for a prebuilt bundle at deployment/.staging-images.tar.gz (override with
+# STAGING_IMAGE_BUNDLE=/path/to/images.tar.gz).
 #
 # SSH in first (adjust key path if yours is different):
 #   ssh -i "~/Desktop/Business idea/JoyJoin/SSH/OpenCode.pem" root@1.12.243.104
-# Then on the server (only after providing that prebuilt bundle):
-#   STAGING_IMAGE_BUNDLE=/path/to/images.tar.gz ./deployment/scripts/deploy-staging.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -415,50 +418,91 @@ restore_previous_env() {
 }
 
 echo "📦 Step 4: Load application images built by GitHub Actions..."
-if [[ ! -s "$STAGING_IMAGE_BUNDLE" ]]; then
-    echo "❌ Missing prebuilt image bundle: $STAGING_IMAGE_BUNDLE"
-    echo "   Run the Deploy Staging workflow; application images must not be built on this shared CVM."
-    exit 1
-fi
-
-gzip -t "$STAGING_IMAGE_BUNDLE"
 DOCKER_STORAGE_PATH="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || true)"
 if [[ -z "$DOCKER_STORAGE_PATH" || ! -d "$DOCKER_STORAGE_PATH" ]]; then
     DOCKER_STORAGE_PATH="$DEPLOY_DIR"
 fi
-bundle_size_bytes="$(stat -c '%s' "$STAGING_IMAGE_BUNDLE")"
-available_bytes="$(df -PB1 "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
-available_inodes="$(df -Pi "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
-storage_use_percent="$(df -P "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { gsub("%", "", $5); print $5 }')"
-required_bytes=$((bundle_size_bytes * 5 + 2147483648))
-if (( storage_use_percent >= 70 || available_bytes < required_bytes || available_inodes < 10000 )); then
-    echo "  Disk is at least 70% used or below deployment headroom; pruning unused images and build cache (never containers or volumes)."
-    timeout 180s docker builder prune -af || true
-    timeout 120s docker image prune -af || true
-    available_bytes="$(df -PB1 "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
-    available_inodes="$(df -Pi "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
-fi
-if (( available_bytes < required_bytes )); then
-    echo "❌ Not enough disk headroom to load the staging images safely."
-    echo "   Required: $required_bytes bytes; available: $available_bytes bytes."
-    docker system df 2>&1 || true
-    exit 1
-fi
-if (( available_inodes < 10000 )); then
-    echo "❌ Not enough free inodes to load the staging images safely."
-    echo "   Free inodes: $available_inodes (minimum: 10000)."
-    exit 1
+
+USE_GHCR_PULL=false
+if [[ -n "${STAGING_API_IMAGE:-}" && -n "${STAGING_ADMIN_IMAGE:-}" ]]; then
+    USE_GHCR_PULL=true
 fi
 
-EARLY_IMAGE_TAG_ROLLBACK=true
-if ! gzip -dc "$STAGING_IMAGE_BUNDLE" | docker load; then
-    restore_previous_image_tags
-    exit 1
+if [[ "$USE_GHCR_PULL" == "true" ]]; then
+    echo "  Pulling staging images from GHCR (no rsync bundle required)."
+    storage_use_percent="$(df -P "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { gsub("%", "", $5); print $5 }')"
+    available_bytes="$(df -PB1 "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
+    available_inodes="$(df -Pi "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
+    if (( storage_use_percent >= 70 || available_bytes < 4294967296 || available_inodes < 10000 )); then
+        echo "  Disk is at least 70% used or below deployment headroom; pruning unused images and build cache (never containers or volumes)."
+        timeout 180s docker builder prune -af || true
+        timeout 120s docker image prune -af || true
+    fi
+
+    if [[ -z "${GHCR_TOKEN:-}" ]]; then
+        echo "❌ GHCR_TOKEN is required to pull staging images from ghcr.io."
+        exit 1
+    fi
+    EARLY_IMAGE_TAG_ROLLBACK=true
+    if ! printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u x-access-token --password-stdin; then
+        echo "❌ docker login ghcr.io failed."
+        restore_previous_image_tags
+        exit 1
+    fi
+    if ! docker pull "$STAGING_API_IMAGE" || ! docker pull "$STAGING_ADMIN_IMAGE"; then
+        echo "❌ Failed to pull staging images from GHCR."
+        restore_previous_image_tags
+        exit 1
+    fi
+    if ! docker image tag "$STAGING_API_IMAGE" "$API_IMAGE_REF" || \
+       ! docker image tag "$STAGING_ADMIN_IMAGE" "$ADMIN_IMAGE_REF"; then
+        echo "❌ Failed to tag pulled GHCR images as staging candidates."
+        restore_previous_image_tags
+        exit 1
+    fi
+else
+    if [[ ! -s "$STAGING_IMAGE_BUNDLE" ]]; then
+        echo "❌ Missing prebuilt image bundle: $STAGING_IMAGE_BUNDLE"
+        echo "   Run the Deploy Staging workflow; application images must not be built on this shared CVM."
+        exit 1
+    fi
+
+    gzip -t "$STAGING_IMAGE_BUNDLE"
+    bundle_size_bytes="$(stat -c '%s' "$STAGING_IMAGE_BUNDLE")"
+    available_bytes="$(df -PB1 "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
+    available_inodes="$(df -Pi "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
+    storage_use_percent="$(df -P "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { gsub("%", "", $5); print $5 }')"
+    required_bytes=$((bundle_size_bytes * 5 + 2147483648))
+    if (( storage_use_percent >= 70 || available_bytes < required_bytes || available_inodes < 10000 )); then
+        echo "  Disk is at least 70% used or below deployment headroom; pruning unused images and build cache (never containers or volumes)."
+        timeout 180s docker builder prune -af || true
+        timeout 120s docker image prune -af || true
+        available_bytes="$(df -PB1 "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
+        available_inodes="$(df -Pi "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
+    fi
+    if (( available_bytes < required_bytes )); then
+        echo "❌ Not enough disk headroom to load the staging images safely."
+        echo "   Required: $required_bytes bytes; available: $available_bytes bytes."
+        docker system df 2>&1 || true
+        exit 1
+    fi
+    if (( available_inodes < 10000 )); then
+        echo "❌ Not enough free inodes to load the staging images safely."
+        echo "   Free inodes: $available_inodes (minimum: 10000)."
+        exit 1
+    fi
+
+    EARLY_IMAGE_TAG_ROLLBACK=true
+    if ! gzip -dc "$STAGING_IMAGE_BUNDLE" | docker load; then
+        restore_previous_image_tags
+        exit 1
+    fi
+    rm -f -- "$STAGING_IMAGE_BUNDLE"
 fi
-rm -f -- "$STAGING_IMAGE_BUNDLE"
+
 if ! docker image inspect "$API_IMAGE_REF" >/dev/null || \
    ! docker image inspect "$ADMIN_IMAGE_REF" >/dev/null; then
-    echo "❌ The uploaded bundle did not contain both expected staging images."
+    echo "❌ The staged images did not contain both expected staging image refs."
     restore_previous_image_tags
     exit 1
 fi

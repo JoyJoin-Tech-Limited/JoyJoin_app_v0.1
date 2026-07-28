@@ -11,6 +11,11 @@ concurrency:
   group: joyjoin-staging-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  # Needed to push the staging API/Admin images to GHCR from the build job.
+  packages: write
+
 jobs:
   quality-gates:
     uses: ./.github/workflows/quality-gates.yml
@@ -25,47 +30,36 @@ jobs:
       - uses: actions/checkout@v4
 
       # BuildKit runs on the GitHub runner, never on the shared production CVM.
-      # The CVM only loads completed images and switches containers.
+      # The CVM pulls completed images from GHCR and switches containers.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build staging API image off-host
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push staging API image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/server/Dockerfile
-          load: true
-          tags: joyjoin-api-staging:candidate
+          push: true
+          tags: ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:${{ github.sha }}
           cache-from: type=gha,scope=joyjoin-staging-api
           cache-to: type=gha,mode=max,scope=joyjoin-staging-api
 
-      - name: Build staging Admin image off-host
+      - name: Build and push staging Admin image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/admin-client/Dockerfile
-          load: true
-          tags: joyjoin-admin-staging:candidate
+          push: true
+          tags: ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:${{ github.sha }}
           cache-from: type=gha,scope=joyjoin-staging-admin
           cache-to: type=gha,mode=max,scope=joyjoin-staging-admin
-
-      - name: Bundle prebuilt staging images
-        run: |
-          set -euo pipefail
-          docker save \
-            joyjoin-api-staging:candidate \
-            joyjoin-admin-staging:candidate \
-            | gzip -1 > "$RUNNER_TEMP/joyjoin-staging-images.tar.gz"
-          test -s "$RUNNER_TEMP/joyjoin-staging-images.tar.gz"
-          sha256sum "$RUNNER_TEMP/joyjoin-staging-images.tar.gz"
-
-      - name: Preserve prebuilt staging images
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: joyjoin-staging-images-${{ github.sha }}
-          path: ${{ runner.temp }}/joyjoin-staging-images.tar.gz
-          retention-days: 1
-          if-no-files-found: error
 
   deploy-staging:
     name: Staging Deployment
@@ -114,19 +108,12 @@ jobs:
           command_timeout: 1m
           script: printf 'deployment-ssh-ready\n'
 
-      - name: Restore prebuilt staging images
-        uses: actions/download-artifact@v4.3.0
-        with:
-          name: joyjoin-staging-images-${{ github.sha }}
-          path: ${{ runner.temp }}
-
       - name: Prepare remote and upload deployment workspace
         env:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
-          STAGING_IMAGE_BUNDLE: ${{ runner.temp }}/joyjoin-staging-images.tar.gz
         run: |
           set -euo pipefail
 
@@ -135,10 +122,6 @@ jobs:
           SSH_CONTROL_DIR=$(mktemp -d)
           SSH_CONTROL_PATH="$SSH_CONTROL_DIR/cvm.sock"
           CVM="$SERVER_USER@$SERVER_IP"
-          BUNDLE_PARTS_DIR=""
-          REMOTE_BUNDLE_TEMP=""
-          REMOTE_BUNDLE_PARTS=""
-          upload_pids=()
 
           if [ "$SERVER_IP" != "1.12.243.104" ]; then
             echo "::error::SERVER_IP does not match the pinned JoyJoin CVM host"
@@ -159,49 +142,12 @@ jobs:
             local cleanup_status=$?
             trap - EXIT
             set +e
-            for upload_pid in "${upload_pids[@]}"; do
-              if kill -0 "$upload_pid" >/dev/null 2>&1; then
-                pkill -TERM -P "$upload_pid" >/dev/null 2>&1 || true
-                kill -TERM "$upload_pid" >/dev/null 2>&1 || true
-              fi
-            done
-            for upload_pid in "${upload_pids[@]}"; do
-              wait "$upload_pid" >/dev/null 2>&1 || true
-            done
-            upload_pids=()
-            if [ -n "$REMOTE_BUNDLE_PARTS" ] || [ -n "$REMOTE_BUNDLE_TEMP" ]; then
-              timeout --signal=TERM --kill-after=10s 90s \
-                ssh "${SSH_DIRECT_OPTIONS[@]}" "$CVM" \
-                "bash -se -- '$REMOTE_BUNDLE_PARTS' '$REMOTE_BUNDLE_TEMP'" <<'REMOTE_BUNDLE_CLEANUP' >/dev/null 2>&1 || true
-          set -euo pipefail
-          remote_parts_rel="$1"
-          remote_bundle_temp_rel="$2"
-          if [ -n "$remote_parts_rel" ]; then
-            [[ "$remote_parts_rel" =~ ^JoyJoin/deployment/\.staging-images-[0-9]+-[0-9]+-[0-9a-f]{40}\.parts$ ]] || exit 1
-            remote_parts_dir="$HOME/$remote_parts_rel"
-            if [ -d "$remote_parts_dir" ] && [ ! -L "$remote_parts_dir" ]; then
-              find "$remote_parts_dir" -mindepth 1 -maxdepth 1 -type f \
-                -name 'chunk-[0-9][0-9][0-9][0-9]' -delete
-              rmdir -- "$remote_parts_dir" 2>/dev/null || true
-            fi
-          fi
-          if [ -n "$remote_bundle_temp_rel" ]; then
-            [[ "$remote_bundle_temp_rel" =~ ^JoyJoin/deployment/\.staging-images-[0-9]+-[0-9]+-[0-9a-f]{40}\.tar\.gz\.part$ ]] || exit 1
-            rm -f -- "$HOME/$remote_bundle_temp_rel"
-          fi
-          REMOTE_BUNDLE_CLEANUP
-            fi
             if [ -S "$SSH_CONTROL_PATH" ]; then
               ssh -S "$SSH_CONTROL_PATH" -O exit "$CVM" >/dev/null 2>&1 || true
             fi
             rm -f "$SSH_KEY_FILE" "$KNOWN_HOSTS_FILE" \
               "${SSH_PASSPHRASE_FILE:-}" "${SSH_ASKPASS_FILE:-}"
             rmdir "$SSH_CONTROL_DIR" >/dev/null 2>&1 || true
-            if [ -n "$BUNDLE_PARTS_DIR" ] && [ -d "$BUNDLE_PARTS_DIR" ]; then
-              find "$BUNDLE_PARTS_DIR" -mindepth 1 -maxdepth 1 -type f \
-                -name 'chunk-[0-9][0-9][0-9][0-9]' -delete
-              rmdir "$BUNDLE_PARTS_DIR" >/dev/null 2>&1 || true
-            fi
             if [ -n "${SSH_AGENT_PID:-}" ]; then
               ssh-agent -k >/dev/null 2>&1 || true
             fi
@@ -264,10 +210,6 @@ jobs:
             -o ControlPersist=no
           )
           RSYNC_SSH="ssh -i $SSH_KEY_FILE -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=20 -o ConnectionAttempts=1 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KNOWN_HOSTS_FILE -o LogLevel=ERROR -o ControlMaster=auto -o ControlPersist=300 -o ControlPath=$SSH_CONTROL_PATH"
-          # Bundle chunks deliberately use independent TCP connections. Reusing
-          # the control socket would multiplex all rsync processes over the same
-          # slow stream and eliminate the benefit of bounded parallelism.
-          RSYNC_SSH_PARALLEL="ssh -i $SSH_KEY_FILE -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=20 -o ConnectionAttempts=1 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KNOWN_HOSTS_FILE -o LogLevel=ERROR -o ControlMaster=no -o ControlPath=none -o ControlPersist=no"
 
           run_transport_with_backoff() {
             local command_timeout="$1"
@@ -365,204 +307,13 @@ jobs:
           fi
           REMOTE_PREP
 
-          # Images are already built off-host. The CVM needs only runtime
-          # deployment files, not the 300+ MiB source/assets tree.
+          # Images are built off-host and pulled from GHCR by the remote deploy
+          # step. The CVM only needs the runtime deployment files here, not the
+          # 300+ MiB source/assets tree or a Docker image bundle.
           echo "Uploading the minimal deployment directory over the same SSH control connection..."
           run_transport_with_backoff 8m rsync "${RSYNC_OPTS[@]}" \
             -e "$RSYNC_SSH" \
             deployment/ "$CVM:~/JoyJoin/deployment/"
-
-          # Check capacity before writing the bundle. The reserve covers the
-          # compressed upload, Docker's expanded layers, and 2 GiB of emergency
-          # headroom. Cleanup is deliberately bounded: never containers,
-          # networks, or volumes.
-          test -s "$STAGING_IMAGE_BUNDLE"
-          BUNDLE_BYTES=$(stat -c '%s' "$STAGING_IMAGE_BUNDLE")
-          [[ "$BUNDLE_BYTES" =~ ^[0-9]+$ ]]
-          BUNDLE_SHA256=$(sha256sum "$STAGING_IMAGE_BUNDLE" | awk '{ print $1 }')
-          [[ "$BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
-          BUNDLE_PARTS_DIR=$(mktemp -d)
-          split -b 8M -d -a 4 -- \
-            "$STAGING_IMAGE_BUNDLE" "$BUNDLE_PARTS_DIR/chunk-"
-          mapfile -t BUNDLE_PARTS < <(
-            find "$BUNDLE_PARTS_DIR" -mindepth 1 -maxdepth 1 -type f \
-              -name 'chunk-[0-9][0-9][0-9][0-9]' -print | sort
-          )
-          BUNDLE_PART_COUNT="${#BUNDLE_PARTS[@]}"
-          if (( BUNDLE_PART_COUNT < 1 )); then
-            echo "::error::The staging image bundle did not produce any upload chunks"
-            exit 1
-          fi
-          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ ]]
-          [[ "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
-          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
-          REMOTE_BUNDLE_TEMP="JoyJoin/deployment/.staging-images-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA}.tar.gz.part"
-          REMOTE_BUNDLE_PARTS="JoyJoin/deployment/.staging-images-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA}.parts"
-          REMOTE_BUNDLE_FINAL="JoyJoin/deployment/.staging-images.tar.gz"
-
-          echo "Checking CVM capacity before uploading prebuilt staging images..."
-          ssh "${SSH_OPTIONS[@]}" "$CVM" \
-            "bash -se -- '$BUNDLE_BYTES' '$REMOTE_BUNDLE_TEMP' '$REMOTE_BUNDLE_PARTS'" <<'REMOTE_BUNDLE_PREFLIGHT'
-          set -Eeuo pipefail
-          bundle_bytes="$1"
-          remote_bundle_temp_rel="$2"
-          remote_parts_rel="$3"
-          [[ "$bundle_bytes" =~ ^[0-9]+$ ]]
-          [[ "$remote_bundle_temp_rel" =~ ^JoyJoin/deployment/\.staging-images-[0-9]+-[0-9]+-[0-9a-f]{40}\.tar\.gz\.part$ ]]
-          [[ "$remote_parts_rel" =~ ^JoyJoin/deployment/\.staging-images-[0-9]+-[0-9]+-[0-9a-f]{40}\.parts$ ]]
-          remote_bundle_temp="$HOME/$remote_bundle_temp_rel"
-          remote_parts_dir="$HOME/$remote_parts_rel"
-          deploy_dir="$HOME/JoyJoin/deployment"
-          required_bytes=$((bundle_bytes * 6 + 2147483648))
-
-          mkdir -p -- "$deploy_dir"
-          find "$deploy_dir" -maxdepth 1 -type f \
-            -name '.staging-images-*.tar.gz.part' -mmin +30 -delete
-          while IFS= read -r -d '' stale_parts_dir; do
-            if [ -L "$stale_parts_dir" ]; then
-              continue
-            fi
-            find "$stale_parts_dir" -mindepth 1 -maxdepth 1 -type f \
-              -name 'chunk-[0-9][0-9][0-9][0-9]' -delete
-            rmdir -- "$stale_parts_dir" 2>/dev/null || true
-          done < <(
-            find "$deploy_dir" -mindepth 1 -maxdepth 1 -type d \
-              -name '.staging-images-*.parts' -mmin +120 -print0
-          )
-
-          available_bytes="$(df -PB1 "$deploy_dir" | awk 'NR == 2 { print $4 }')"
-          available_inodes="$(df -Pi "$deploy_dir" | awk 'NR == 2 { print $4 }')"
-          if (( available_bytes < required_bytes || available_inodes < 10000 )); then
-            echo "Low CVM headroom; pruning unused images and builder cache while preserving containers and volumes."
-            timeout 180s docker builder prune -af || true
-            timeout 120s docker image prune -af || true
-            available_bytes="$(df -PB1 "$deploy_dir" | awk 'NR == 2 { print $4 }')"
-            available_inodes="$(df -Pi "$deploy_dir" | awk 'NR == 2 { print $4 }')"
-          fi
-
-          if (( available_bytes < required_bytes )); then
-            echo "Not enough CVM disk headroom for the staging image bundle."
-            echo "Required before upload: $required_bytes bytes; available: $available_bytes bytes."
-            docker system df 2>&1 || true
-            exit 75
-          fi
-          if (( available_inodes < 10000 )); then
-            echo "Not enough free CVM inodes for the staging image bundle."
-            echo "Free inodes: $available_inodes (minimum: 10000)."
-            exit 75
-          fi
-
-          if [ -e "$remote_parts_dir" ]; then
-            if [ ! -d "$remote_parts_dir" ] || [ -L "$remote_parts_dir" ]; then
-              echo "Unsafe staging parts path; refusing to replace it."
-              exit 1
-            fi
-            find "$remote_parts_dir" -mindepth 1 -maxdepth 1 -type f \
-              -name 'chunk-[0-9][0-9][0-9][0-9]' -delete
-            rmdir -- "$remote_parts_dir"
-          fi
-          rm -f -- "$remote_bundle_temp"
-          mkdir -- "$remote_parts_dir"
-          REMOTE_BUNDLE_PREFLIGHT
-
-          echo "Uploading $BUNDLE_PART_COUNT image chunks over at most four independent SSH connections..."
-          upload_failed=0
-          upload_pids=()
-          for bundle_part in "${BUNDLE_PARTS[@]}"; do
-            (
-              part_name=$(basename "$bundle_part")
-              echo "Uploading $part_name..."
-              run_transport_with_backoff 20m rsync \
-                -a --checksum --partial --inplace --timeout=180 --bwlimit=2048 \
-                -e "$RSYNC_SSH_PARALLEL" \
-                "$bundle_part" "$CVM:$REMOTE_BUNDLE_PARTS/$part_name"
-            ) &
-            upload_pids+=("$!")
-
-            if (( ${#upload_pids[@]} >= 4 )); then
-              for upload_pid in "${upload_pids[@]}"; do
-                if ! wait "$upload_pid"; then
-                  upload_failed=1
-                fi
-              done
-              upload_pids=()
-              if (( upload_failed != 0 )); then
-                break
-              fi
-            fi
-          done
-          for upload_pid in "${upload_pids[@]}"; do
-            if ! wait "$upload_pid"; then
-              upload_failed=1
-            fi
-          done
-          upload_pids=()
-          if (( upload_failed != 0 )); then
-            echo "::error::One or more staging image chunks failed to upload"
-            exit 1
-          fi
-
-          echo "Verifying and atomically publishing the staging image bundle..."
-          ssh "${SSH_OPTIONS[@]}" "$CVM" \
-            "bash -se -- '$REMOTE_BUNDLE_PARTS' '$REMOTE_BUNDLE_TEMP' '$REMOTE_BUNDLE_FINAL' '$BUNDLE_PART_COUNT' '$BUNDLE_BYTES' '$BUNDLE_SHA256'" <<'REMOTE_BUNDLE_COMMIT'
-          set -Eeuo pipefail
-          remote_parts_rel="$1"
-          remote_bundle_temp_rel="$2"
-          remote_bundle_final_rel="$3"
-          [[ "$remote_parts_rel" =~ ^JoyJoin/deployment/\.staging-images-[0-9]+-[0-9]+-[0-9a-f]{40}\.parts$ ]]
-          [[ "$remote_bundle_temp_rel" =~ ^JoyJoin/deployment/\.staging-images-[0-9]+-[0-9]+-[0-9a-f]{40}\.tar\.gz\.part$ ]]
-          [[ "$remote_bundle_final_rel" == "JoyJoin/deployment/.staging-images.tar.gz" ]]
-          remote_parts_dir="$HOME/$remote_parts_rel"
-          remote_bundle_temp="$HOME/$remote_bundle_temp_rel"
-          remote_bundle_final="$HOME/$remote_bundle_final_rel"
-          expected_part_count="$4"
-          expected_bundle_bytes="$5"
-          expected_bundle_sha256="$6"
-
-          [[ "$expected_part_count" =~ ^[0-9]+$ ]]
-          [[ "$expected_bundle_bytes" =~ ^[0-9]+$ ]]
-          [[ "$expected_bundle_sha256" =~ ^[0-9a-f]{64}$ ]]
-          [ -d "$remote_parts_dir" ]
-          [ ! -L "$remote_parts_dir" ]
-
-          mapfile -t remote_part_names < <(
-            find "$remote_parts_dir" -mindepth 1 -maxdepth 1 -type f \
-              -name 'chunk-[0-9][0-9][0-9][0-9]' -printf '%f\n' | sort
-          )
-          if (( ${#remote_part_names[@]} != expected_part_count )); then
-            echo "Staging bundle chunk count mismatch."
-            exit 1
-          fi
-
-          remote_part_paths=()
-          for ((index = 0; index < expected_part_count; index++)); do
-            printf -v expected_name 'chunk-%04d' "$index"
-            if [ "${remote_part_names[$index]}" != "$expected_name" ]; then
-              echo "Staging bundle chunk sequence mismatch."
-              exit 1
-            fi
-            remote_part_paths+=("$remote_parts_dir/$expected_name")
-          done
-
-          cat -- "${remote_part_paths[@]}" > "$remote_bundle_temp"
-          actual_bundle_bytes=$(stat -c '%s' "$remote_bundle_temp")
-          actual_bundle_sha256=$(sha256sum "$remote_bundle_temp" | awk '{ print $1 }')
-          if [ "$actual_bundle_bytes" != "$expected_bundle_bytes" ]; then
-            echo "Staging bundle size mismatch after chunk assembly."
-            exit 1
-          fi
-          if [ "$actual_bundle_sha256" != "$expected_bundle_sha256" ]; then
-            echo "Staging bundle SHA-256 mismatch after chunk assembly."
-            exit 1
-          fi
-          test -s "$remote_bundle_temp"
-          gzip -t "$remote_bundle_temp"
-          mv -f -- "$remote_bundle_temp" "$remote_bundle_final"
-          rm -f -- "${remote_part_paths[@]}"
-          rmdir -- "$remote_parts_dir"
-          REMOTE_BUNDLE_COMMIT
-          REMOTE_BUNDLE_TEMP=""
-          REMOTE_BUNDLE_PARTS=""
 
       - name: Encode multiline secrets for SSH transport
         env:
@@ -677,6 +428,11 @@ jobs:
           APP_MODE: staging
           TEST_PAYMENT_PRICE_IN_CENTS: 1
           DEPLOY_SOURCE_SHA: ${{ github.sha }}
+          # Images are built+pushed to GHCR by the build job; the remote script
+          # pulls them instead of loading an rsync-uploaded bundle.
+          STAGING_API_IMAGE: ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:${{ github.sha }}
+          STAGING_ADMIN_IMAGE: ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:${{ github.sha }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -688,7 +444,7 @@ jobs:
           # bounding the now build-free remote switch.
           timeout: 120s
           command_timeout: 24m
-          envs: STAGING_DATABASE_URL,STAGING_SESSION_SECRET,STAGING_ADMIN_CREATE_SECRET_KEY,STAGING_POSTGRES_PASSWORD,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,ALANG_ENABLED,PROFILE_PIXEL_AVATAR_ENABLED,EQUIPMENT_REWARDS_ENABLED,PERSONAL_STORY_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,CREATIVE_AI_PERSONAL_STORY_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,RESTART_ONBOARDING_ENABLED,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,APP_MODE,TEST_PAYMENT_PRICE_IN_CENTS,MOCK_PAYMENTS,DEPLOY_SOURCE_SHA
+          envs: STAGING_DATABASE_URL,STAGING_SESSION_SECRET,STAGING_ADMIN_CREATE_SECRET_KEY,STAGING_POSTGRES_PASSWORD,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,ALANG_ENABLED,PROFILE_PIXEL_AVATAR_ENABLED,EQUIPMENT_REWARDS_ENABLED,PERSONAL_STORY_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,CREATIVE_AI_PERSONAL_STORY_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,RESTART_ONBOARDING_ENABLED,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,APP_MODE,TEST_PAYMENT_PRICE_IN_CENTS,MOCK_PAYMENTS,DEPLOY_SOURCE_SHA,STAGING_API_IMAGE,STAGING_ADMIN_IMAGE,GHCR_TOKEN
           script: |
             set -euo pipefail
             umask 077
