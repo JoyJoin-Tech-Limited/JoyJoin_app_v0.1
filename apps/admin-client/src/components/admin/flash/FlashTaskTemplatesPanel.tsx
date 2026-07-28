@@ -3,6 +3,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getFlashTaskSeedByCode } from "@shared/alang/flashCatalog";
+import { isDestinationFreeFlashInvitation } from "@shared/alang/flashInvitationCatalog";
 import { z } from "zod";
 import { BookOpenCheck, Edit3, Plus, Search, ShieldCheck } from "lucide-react";
 import {
@@ -130,7 +131,7 @@ export function FlashTaskTemplatesPanel({
       const approvedDestinationIds = new Set(
         destinations.filter((item) => item.isActive && item.approvalStatus === "approved").map((item) => item.id),
       );
-      const destinationFree = Boolean(getFlashTaskSeedByCode(task.code));
+      const destinationFree = isDestinationFreeFlashInvitation({ code: task.code, tags: task.tags });
       if (!task.isActive && !destinationFree && !task.destinationIds?.some((id) => approvedDestinationIds.has(id))) {
         throw new Error("请先关联至少一个已审核且可用的任务目的地。");
       }

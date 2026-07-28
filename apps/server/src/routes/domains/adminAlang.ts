@@ -8,7 +8,7 @@ import {
   buildFlashNpcTaskRequestCopy,
   type FlashTaskSeed,
 } from "@shared/alang/flashCatalog";
-import { getFlashInvitationDefinition } from "@shared/alang/flashInvitationCatalog";
+import { isDestinationFreeFlashInvitation } from "@shared/alang/flashInvitationCatalog";
 import type { FlashAvailabilityWindow, FlashFeedbackPrompt } from "@shared/schema";
 
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
@@ -649,7 +649,7 @@ async function assertTaskCanActivate(taskId: string, executor: any = db) {
   // The reviewed built-in life invitations and digital-NPC relay stories are
   // intentionally destination-free. Legacy destination_exploration templates
   // retain the approved-destination activation requirement.
-  if (getFlashInvitationDefinition(task.code)) return;
+  if (isDestinationFreeFlashInvitation({ code: task.code, tags: task.tags })) return;
   const readyDestinationIds = new Set(destinations
     .filter((destination: any) => destination.isActive && destination.approvalStatus === "approved")
     .map((destination: any) => destination.id));

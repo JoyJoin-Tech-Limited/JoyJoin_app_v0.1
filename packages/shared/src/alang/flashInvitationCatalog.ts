@@ -59,5 +59,17 @@ export const FLASH_INVITATION_DEFINITIONS: FlashInvitationDefinition[] = [
 ];
 
 export function getFlashInvitationDefinition(code: string): FlashInvitationDefinition | null {
-  return FLASH_INVITATION_DEFINITIONS.find((item) => item.code === code) ?? null;
+  const normalizedCode = code.trim().toUpperCase();
+  return FLASH_INVITATION_DEFINITIONS.find((item) => item.code === normalizedCode) ?? null;
+}
+
+export function isDestinationFreeFlashInvitation(input: {
+  code?: string | null;
+  tags?: readonly string[] | null;
+}): boolean {
+  if (input.code && getFlashInvitationDefinition(input.code)) return true;
+  return Boolean(input.tags?.some((tag) => (
+    tag.trim().toLowerCase() === "invitation:life"
+    || tag.trim().toLowerCase() === "invitation:npc_message"
+  )));
 }

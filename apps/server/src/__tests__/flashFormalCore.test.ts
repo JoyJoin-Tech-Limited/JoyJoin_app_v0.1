@@ -8,7 +8,10 @@ import {
   getFlashTaskSeedByCode,
   resolveFlashDeliveryCopy,
 } from "@shared/alang/flashCatalog";
-import { FLASH_INVITATION_DEFINITIONS } from "@shared/alang/flashInvitationCatalog";
+import {
+  FLASH_INVITATION_DEFINITIONS,
+  isDestinationFreeFlashInvitation,
+} from "@shared/alang/flashInvitationCatalog";
 import {
   FLASH_PERSONALIZATION_CONSENT_VERSION,
   flashCoordinateSchema,
@@ -95,6 +98,15 @@ describe("formal Flash catalog", () => {
     expect(FLASH_INVITATION_DEFINITIONS
       .filter((item) => item.kind === "npc_message")
       .every((item) => item.targetNpcSlug && item.messageCopy)).toBe(true);
+  });
+
+  it("treats every current invitation as destination-free even with normalized code or tag-only data", () => {
+    expect(FLASH_INVITATION_DEFINITIONS.every((task) => (
+      isDestinationFreeFlashInvitation({ code: task.code, tags: task.tags })
+    ))).toBe(true);
+    expect(isDestinationFreeFlashInvitation({ code: " t16 " })).toBe(true);
+    expect(isDestinationFreeFlashInvitation({ code: "custom", tags: ["invitation:life"] })).toBe(true);
+    expect(isDestinationFreeFlashInvitation({ code: "legacy-gps", tags: ["destination"] })).toBe(false);
   });
 
   it("gives every NPC a distinct five-invitation life pool plus its own message", () => {
