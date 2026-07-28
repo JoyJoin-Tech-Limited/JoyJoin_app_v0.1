@@ -177,11 +177,8 @@ function makeTaskFeelLikeAConversation(task: unknown) {
   if (!invitation) throw new Error(`Missing Flash invitation definition for ${value.code}`);
   const outcomeOptions = invitation.kind === "npc_message"
     ? [
-      { id: "relayed_original", label: "嗯，原话带到了" },
-      { id: "relayed_rephrased", label: "说了，不过换了个说法" },
-      { id: "not_relayed", label: "见到了，最后没说" },
-      { id: "forgot", label: "这次给忘了" },
-      { id: "changed_mind", label: "后来觉得不说更好" },
+      { id: "relay_message", label: "帮它把话带到" },
+      { id: "skip_message", label: "这次先不带" },
     ]
     : invitation.code === "T06" || invitation.code === "T10"
       ? [
@@ -236,6 +233,32 @@ function makeTaskFeelLikeAConversation(task: unknown) {
     }],
   };
 }
+
+export const FLASH_NPC_MESSAGE_TARGET_PROMPT = {
+  id: "relay_outcome",
+  prompt: "有句话托你带到这里。你想怎么做？",
+  options: [
+    { id: "relay_message", label: "帮它把话带到" },
+    { id: "skip_message", label: "这次先不带" },
+  ],
+} as const;
+
+export const FLASH_NPC_MESSAGE_SOURCE_DELIVERED_PROMPT = {
+  id: "relay_source_outcome",
+  prompt: "后来呢，那句话到它那里了吗？",
+  options: [
+    { id: "report_delivered", label: "我带到了" },
+  ],
+} as const;
+
+export const FLASH_NPC_MESSAGE_SOURCE_SKIPPED_PROMPT = {
+  id: "relay_source_outcome",
+  prompt: "那句话还留在你这里吗？",
+  options: [
+    { id: "retry_later", label: "还没带到" },
+    { id: "abandon_relay", label: "我不想带" },
+  ],
+} as const;
 
 const parsedCatalog = catalogSchema.parse({
   npcs: npcData,
@@ -333,6 +356,44 @@ const FLASH_RELAY_DELIVERY_COPY_BY_NPC: Record<string, Record<string, string>> =
   },
 };
 
+const FLASH_RELAY_STORY_COPY_BY_TASK: Record<string, Record<string, string>> = {
+  T26: {
+    relay_message: "栗子安静了一会儿，才笑着说：“我从来没有怪它走得慢。我只是怕它以为，我没有在原地等过。”",
+    skip_message: "栗子看见你欲言又止，没有追问，只把那句没说出口的话留在了风里。",
+    report_delivered: "阿浪低下头笑了很久：“原来它等过。可惜那天我只顾着追自己的影子，没有回头。”",
+    retry_later: "阿浪点点头：“那就先替我留着。迟到的话，也许还有一天能赶上。”",
+    abandon_relay: "阿浪沉默了一会儿：“好，不让你替我背着了。有些遗憾，本来就该由我自己收好。”",
+  },
+  T27: {
+    relay_message: "默默望向很远的地方：“我想去。只是栗子上次问的时候，我还不会承认自己也在等。”",
+    skip_message: "默默没有催你开口。它只是往旁边挪了挪，像给一句没来的话留了位置。",
+    report_delivered: "栗子的耳朵一下竖起来，又慢慢垂下：“它说想去啊……可我们错过的那天，风其实特别好。”",
+    retry_later: "栗子故作轻松地摆摆手：“没关系，下次风来的时候再说。”",
+    abandon_relay: "栗子笑了一下：“那就不带了。喜欢不是一定要抵达，至少我真的问过。”",
+  },
+  T28: {
+    relay_message: "阿团轻轻拍了拍身边那个空位：“我一直留着。只是后来才明白，等一个人和催一个人，是两回事。”",
+    skip_message: "阿团没有问那句话是什么，只说：“没准备好说，就先坐一会儿。”",
+    report_delivered: "默默看着自己的脚尖：“原来那个位置还在。可我那天经过了三次，都没敢坐下。”",
+    retry_later: "默默说：“先别急。那句谢谢放久一点，也不会变轻。”",
+    abandon_relay: "默默点点头：“好。没有说出口的谢谢，也曾经真心存在过。”",
+  },
+  T29: {
+    relay_message: "阿浪很久没有回答：“我看见了。只是那是拾柒最后一次回头，我怕承认以后，就再也骗不了自己。”",
+    skip_message: "阿浪顺着你的沉默看向远处，像是早就知道有一个问题来过。",
+    report_delivered: "拾柒轻声说：“果然看见了啊。那它当时为什么不叫住我呢？”",
+    retry_later: "拾柒说：“没关系。答案晚一点来，我就还能多猜一会儿。”",
+    abandon_relay: "拾柒收起那个问号：“好，不问了。有些真相只是让遗憾换一个名字。”",
+  },
+  T30: {
+    relay_message: "拾柒停住脚步：“我不是走得快。我只是怕一停下来，就会听见那句太晚的话。”",
+    skip_message: "拾柒没有回头，只把脚步放慢了一瞬，像是听见了什么。",
+    report_delivered: "阿团望着它离开的方向：“原来它不是没听见。是我把那句话留到连挽留都显得自私的时候。”",
+    retry_later: "阿团说：“那就再等等。至少这次，我不会把想说的话忘掉。”",
+    abandon_relay: "阿团把那句话咽了回去：“好。不是每一句挽留，都有资格让别人停下。”",
+  },
+};
+
 const FLASH_MOVIE_DELIVERY_COPY_BY_TASK: Record<string, Record<string, string>> = {
   T06: {
     liked: "我就知道，你片单里肯定藏着漏网之鱼。先把最喜欢的那一段记住，下次我要听完整版。",
@@ -358,6 +419,10 @@ export function resolveFlashDeliveryCopy(input: {
   fallback?: string;
 }): string {
   if (input.optionId) {
+    const storyCopy = input.invitationKind === "npc_message"
+      ? FLASH_RELAY_STORY_COPY_BY_TASK[input.taskCode]?.[input.optionId]
+      : undefined;
+    if (storyCopy) return storyCopy;
     const movieCopy = FLASH_MOVIE_DELIVERY_COPY_BY_TASK[input.taskCode]?.[input.optionId];
     if (movieCopy) return movieCopy;
     const outcomeCopy = input.invitationKind === "npc_message"

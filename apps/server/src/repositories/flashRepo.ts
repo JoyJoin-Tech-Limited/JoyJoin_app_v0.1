@@ -39,6 +39,9 @@ import {
   buildFlashNpcTaskRequestCopy,
   FLASH_DELIVERY_COPY_BY_NPC,
   FLASH_LOCATION_SEEDS,
+  FLASH_NPC_MESSAGE_SOURCE_DELIVERED_PROMPT,
+  FLASH_NPC_MESSAGE_SOURCE_SKIPPED_PROMPT,
+  FLASH_NPC_MESSAGE_TARGET_PROMPT,
   FLASH_NPC_SEEDS,
   FLASH_TASK_SEEDS,
 } from "@shared/alang/flashCatalog";
@@ -54,6 +57,18 @@ const ACTIVE_ASSIGNMENT_STATUSES = ["accepted", "arrived", "ready_to_deliver"] a
 export const FLASH_REPEAT_DECAY_STATUSES = ["delivered"] as const;
 const CANONICAL_FLASH_NPC_SLUGS = FLASH_NPC_SEEDS.map((npc) => npc.slug);
 const CANONICAL_FLASH_TASK_CATEGORIES = [...new Set(FLASH_TASK_SEEDS.map((task) => task.category))];
+
+export function resolveFlashNpcMessageCheckpoint(input: {
+  sourceNpcSlug: string;
+  targetNpcSlug?: string;
+  currentNpcSlug?: string;
+  targetOutcome?: string;
+}): "target" | "source" | null {
+  if (!input.targetOutcome) {
+    return input.currentNpcSlug && input.currentNpcSlug === input.targetNpcSlug ? "target" : null;
+  }
+  return input.currentNpcSlug === input.sourceNpcSlug ? "source" : null;
+}
 
 export async function isFlashSchemaReady(executor: DbExecutor = db): Promise<boolean> {
   try {
@@ -1399,7 +1414,11 @@ export async function getPendingFlashDelivery(
   executor: DbExecutor = db,
 ) {
   const rows = await executor
-    .select({ id: flashTaskAssignments.id, contentSnapshot: flashTaskAssignments.contentSnapshot })
+    .select({
+      id: flashTaskAssignments.id,
+      contentSnapshot: flashTaskAssignments.contentSnapshot,
+      feedbackAnswers: flashTaskAssignments.feedbackAnswers,
+    })
     .from(flashTaskAssignments)
     .where(and(
       eq(flashTaskAssignments.userId, userId),
@@ -1410,14 +1429,39 @@ export async function getPendingFlashDelivery(
   const row = rows.find((candidate: any) => {
     const snapshot = candidate.contentSnapshot as FlashTaskSnapshot;
     return snapshot.invitationType === "npc_message"
-      ? Boolean(npcSlug && snapshot.followUpTargetNpcSlug === npcSlug)
+      ? resolveFlashNpcMessageCheckpoint({
+        sourceNpcSlug: snapshot.npcSlug,
+        targetNpcSlug: snapshot.followUpTargetNpcSlug,
+        currentNpcSlug: npcSlug,
+        targetOutcome: candidate.feedbackAnswers?.[0]?.optionId,
+      }) !== null
       : snapshot.npcSlug ? snapshot.npcSlug === npcSlug : false;
   }) ?? rows.find((candidate: any) => {
     const snapshot = candidate.contentSnapshot as FlashTaskSnapshot;
     return !snapshot.invitationType && snapshot.npcSlug === npcSlug;
   });
   if (!row) return null;
-  return getFlashAssignmentOwned(row.id, userId, new Date(), executor);
+  const assignment = await getFlashAssignmentOwned(row.id, userId, new Date(), executor);
+  if (!assignment) return null;
+  const snapshot = assignment.contentSnapshot as FlashTaskSnapshot;
+  if (snapshot.invitationType !== "npc_message") return assignment;
+  const targetOutcome = assignment.feedbackAnswers?.[0]?.optionId;
+  const prompt = !targetOutcome
+    ? FLASH_NPC_MESSAGE_TARGET_PROMPT
+    : targetOutcome === "relay_message"
+      ? FLASH_NPC_MESSAGE_SOURCE_DELIVERED_PROMPT
+      : FLASH_NPC_MESSAGE_SOURCE_SKIPPED_PROMPT;
+  return {
+    ...assignment,
+    contentSnapshot: {
+      ...snapshot,
+      feedbackPrompts: [{
+        id: prompt.id,
+        prompt: prompt.prompt,
+        options: prompt.options.map((option) => ({ ...option })),
+      }],
+    },
+  };
 }
 
 export type AcceptFlashAssignmentResult =
@@ -1629,10 +1673,78 @@ export async function deliverFlashAssignment(input: {
   return db.transaction(async (tx: DbExecutor) => {
     const owned = await getFlashAssignmentOwned(input.assignmentId, input.userId, input.now, tx);
     const snapshot = owned?.contentSnapshot as FlashTaskSnapshot | undefined;
-    const canDeliverHere = snapshot?.invitationType === "npc_message"
-      ? snapshot.followUpTargetNpcSlug === input.npcSlug
+    const targetOutcome = owned?.feedbackAnswers?.[0]?.optionId;
+    const isNpcMessage = snapshot?.invitationType === "npc_message";
+    const atMessageTarget = isNpcMessage
+      && !targetOutcome
+      && snapshot.followUpTargetNpcSlug === input.npcSlug;
+    const atMessageSource = isNpcMessage
+      && Boolean(targetOutcome)
+      && snapshot.npcSlug === input.npcSlug;
+    const canDeliverHere = isNpcMessage
+      ? atMessageTarget || atMessageSource
       : owned?.npcId === input.npcId;
     if (!owned || !canDeliverHere) return null;
+
+    if (atMessageTarget) {
+      const optionId = input.answers?.[0]?.optionId;
+      if (
+        input.answers?.length !== 1
+        || input.answers[0]?.promptId !== FLASH_NPC_MESSAGE_TARGET_PROMPT.id
+        || !FLASH_NPC_MESSAGE_TARGET_PROMPT.options.some((option) => option.id === optionId)
+      ) return null;
+      const [recorded] = await tx.update(flashTaskAssignments).set({
+        feedbackAnswers: input.answers,
+        updatedAt: input.now,
+      }).where(and(
+        eq(flashTaskAssignments.id, input.assignmentId),
+        eq(flashTaskAssignments.userId, input.userId),
+        eq(flashTaskAssignments.status, "ready_to_deliver"),
+        ne(flashTaskAssignments.encounterId, input.encounterId),
+        sql`coalesce(jsonb_array_length(${flashTaskAssignments.feedbackAnswers}), 0) = 0`,
+      )).returning({ taskTemplateId: flashTaskAssignments.taskTemplateId });
+      return recorded ? { ...recorded, outcome: "target_recorded" as const } : null;
+    }
+
+    if (atMessageSource && targetOutcome === "skip_message") {
+      const optionId = input.answers?.[0]?.optionId;
+      if (
+        input.answers?.length !== 1
+        || input.answers[0]?.promptId !== FLASH_NPC_MESSAGE_SOURCE_SKIPPED_PROMPT.id
+      ) return null;
+      if (optionId === "retry_later") {
+        const [retried] = await tx.update(flashTaskAssignments).set({
+          feedbackAnswers: [],
+          updatedAt: input.now,
+        }).where(and(
+          eq(flashTaskAssignments.id, input.assignmentId),
+          eq(flashTaskAssignments.userId, input.userId),
+          eq(flashTaskAssignments.status, "ready_to_deliver"),
+          ne(flashTaskAssignments.encounterId, input.encounterId),
+        )).returning({ taskTemplateId: flashTaskAssignments.taskTemplateId });
+        return retried ? { ...retried, outcome: "retry_later" as const } : null;
+      }
+      if (optionId === "abandon_relay") {
+        const [abandoned] = await tx.update(flashTaskAssignments).set({
+          status: "abandoned",
+          abandonedAt: input.now,
+          updatedAt: input.now,
+        }).where(and(
+          eq(flashTaskAssignments.id, input.assignmentId),
+          eq(flashTaskAssignments.userId, input.userId),
+          eq(flashTaskAssignments.status, "ready_to_deliver"),
+        )).returning({ taskTemplateId: flashTaskAssignments.taskTemplateId });
+        return abandoned ? { ...abandoned, outcome: "abandoned" as const } : null;
+      }
+      return null;
+    }
+
+    if (atMessageSource && (
+      input.answers?.length !== 1
+      || input.answers[0]?.promptId !== FLASH_NPC_MESSAGE_SOURCE_DELIVERED_PROMPT.id
+      || input.answers[0]?.optionId !== "report_delivered"
+    )) return null;
+
     const [assignment] = await tx.update(flashTaskAssignments).set({
       status: "delivered",
       deliveryEncounterId: input.encounterId,
@@ -1667,7 +1779,7 @@ export async function deliverFlashAssignment(input: {
         updatedAt: input.now,
       },
     });
-    return assignment;
+    return { ...assignment, outcome: "delivered" as const };
   });
 }
 

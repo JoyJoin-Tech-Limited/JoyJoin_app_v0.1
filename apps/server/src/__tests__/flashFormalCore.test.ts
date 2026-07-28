@@ -15,7 +15,11 @@ import {
   flashPreferenceUpdateSchema,
 } from "@shared/alang/flashTypes";
 
-import { FLASH_REPEAT_DECAY_STATUSES, isFlashSchemaReady } from "../repositories/flashRepo";
+import {
+  FLASH_REPEAT_DECAY_STATUSES,
+  isFlashSchemaReady,
+  resolveFlashNpcMessageCheckpoint,
+} from "../repositories/flashRepo";
 import {
   createSeededRandom,
   generateFlashScheduleDraft,
@@ -154,6 +158,64 @@ describe("formal Flash catalog", () => {
       invitationKind: "life_invitation",
       optionId: "started",
     })).toContain("零和一之间");
+  });
+
+  it("uses the two-stage NPC relay contract instead of self-reported delivery", () => {
+    const relay = FLASH_TASK_SEEDS.find((task) => task.code === "T26");
+    expect(relay?.feedbackPrompts[0]?.options).toEqual([
+      { id: "relay_message", label: "帮它把话带到" },
+      { id: "skip_message", label: "这次先不带" },
+    ]);
+    expect(resolveFlashNpcMessageCheckpoint({
+      sourceNpcSlug: "alang",
+      targetNpcSlug: "lizi",
+      currentNpcSlug: "lizi",
+    })).toBe("target");
+    expect(resolveFlashNpcMessageCheckpoint({
+      sourceNpcSlug: "alang",
+      targetNpcSlug: "lizi",
+      currentNpcSlug: "alang",
+    })).toBeNull();
+    expect(resolveFlashNpcMessageCheckpoint({
+      sourceNpcSlug: "alang",
+      targetNpcSlug: "lizi",
+      currentNpcSlug: "alang",
+      targetOutcome: "relay_message",
+    })).toBe("source");
+    expect(resolveFlashNpcMessageCheckpoint({
+      sourceNpcSlug: "alang",
+      targetNpcSlug: "lizi",
+      currentNpcSlug: "lizi",
+      targetOutcome: "skip_message",
+    })).toBeNull();
+    expect(resolveFlashDeliveryCopy({
+      npcSlug: "lizi",
+      taskCode: "T26",
+      invitationKind: "npc_message",
+      optionId: "relay_message",
+    })).toContain("我没有在原地等过");
+    expect(resolveFlashDeliveryCopy({
+      npcSlug: "alang",
+      taskCode: "T26",
+      invitationKind: "npc_message",
+      optionId: "report_delivered",
+    })).toContain("没有回头");
+    for (const code of ["T26", "T27", "T28", "T29", "T30"]) {
+      for (const optionId of [
+        "relay_message",
+        "skip_message",
+        "report_delivered",
+        "retry_later",
+        "abandon_relay",
+      ]) {
+        expect(resolveFlashDeliveryCopy({
+          npcSlug: "alang",
+          taskCode: code,
+          invitationKind: "npc_message",
+          optionId,
+        })).not.toBe("好，我记住了。谢谢你愿意回来告诉我。");
+      }
+    }
   });
 
   it("contains two free public location candidates for every Shenzhen district", () => {
