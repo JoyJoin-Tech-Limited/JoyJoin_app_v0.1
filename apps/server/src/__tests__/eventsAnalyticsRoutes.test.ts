@@ -81,7 +81,7 @@ describe("POST /api/analytics/events", () => {
     });
   });
 
-  it("accepts all 5 whitelisted events event types", async () => {
+  it("accepts all 6 whitelisted events event types", async () => {
     const app = await buildTestApp();
     const types = [
       "events_view",
@@ -89,6 +89,7 @@ describe("POST /api/analytics/events", () => {
       "events_card_tap",
       "events_empty_state_cta_tap",
       "events_pull_refresh",
+      "support_contact_tap",
     ];
     await withServer(app, async (base) => {
       for (const eventType of types) {

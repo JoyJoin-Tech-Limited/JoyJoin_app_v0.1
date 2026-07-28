@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { db } from "../../db";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, ne } from "drizzle-orm";
 import { events } from "@shared/schema";
 import * as schema from "@shared/schema";
 import type { ChatMessage, User } from "@shared/schema";
@@ -54,6 +54,149 @@ function toEventChatMessageSummary(message: ChatMessage & { user: User }) {
 }
 
 export function registerSocialRoutes(app: Express): void {
+  // GET /api/events/:eventId/participants — table roster for the feedback
+  // mutual-contact picker (2026-07-28: the picker called this endpoint since
+  // the flow shipped, but it was never implemented — step 2 was permanently
+  // empty in production). Resolves all three event id families behind one
+  // privacy-minimal shape; the viewer is excluded server-side.
+  app.get('/api/events/:eventId/participants', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { eventId } = req.params;
+
+      type ParticipantRow = {
+        id: string;
+        displayName: string;
+        firstName: string | null;
+        archetype: string | null;
+      };
+      const seen = new Set<string>();
+      const participants: ParticipantRow[] = [];
+      const push = (row: ParticipantRow) => {
+        if (!row.id || row.id === userId || seen.has(row.id)) return;
+        seen.add(row.id);
+        participants.push(row);
+      };
+
+      // Path 1 — blind-box event id: the finalized per-user event row carries
+      // the table roster in matchedAttendees (populated at match time).
+      const [blindBoxEvent] = await db
+        .select({
+          userId: schema.blindBoxEvents.userId,
+          matchedAttendees: schema.blindBoxEvents.matchedAttendees,
+        })
+        .from(schema.blindBoxEvents)
+        .where(eq(schema.blindBoxEvents.id, eventId))
+        .limit(1);
+
+      if (blindBoxEvent) {
+        if (blindBoxEvent.userId !== userId) {
+          return res.status(403).json({ message: 'Not a participant of this event' });
+        }
+        const attendees = Array.isArray(blindBoxEvent.matchedAttendees)
+          ? (blindBoxEvent.matchedAttendees as Array<{ userId?: string; displayName?: string; archetype?: string | null }>)
+          : [];
+        for (const attendee of attendees) {
+          if (!attendee?.userId) continue;
+          push({
+            id: attendee.userId,
+            displayName: attendee.displayName?.trim() || '参与者',
+            firstName: null,
+            archetype: attendee.archetype ?? null,
+          });
+        }
+        return res.json(participants);
+      }
+
+      // Path 2 — event pool id: resolve the viewer's matched group, then list
+      // the group's matched members.
+      const [pool] = await db
+        .select({ id: schema.eventPools.id })
+        .from(schema.eventPools)
+        .where(eq(schema.eventPools.id, eventId))
+        .limit(1);
+
+      if (pool) {
+        const [myRegistration] = await db
+          .select({ assignedGroupId: schema.eventPoolRegistrations.assignedGroupId })
+          .from(schema.eventPoolRegistrations)
+          .where(
+            and(
+              eq(schema.eventPoolRegistrations.poolId, eventId),
+              eq(schema.eventPoolRegistrations.userId, userId),
+            ),
+          )
+          .limit(1);
+
+        if (!myRegistration) {
+          return res.status(403).json({ message: 'Not a participant of this event' });
+        }
+        if (!myRegistration.assignedGroupId) {
+          // Registered but not matched yet — nothing to pick from.
+          return res.json([]);
+        }
+
+        const memberRows = await db
+          .select({
+            id: schema.users.id,
+            displayName: schema.users.displayName,
+            firstName: schema.users.firstName,
+            lastName: schema.users.lastName,
+            archetype: schema.users.archetype,
+          })
+          .from(schema.eventPoolRegistrations)
+          .innerJoin(schema.users, eq(schema.eventPoolRegistrations.userId, schema.users.id))
+          .where(
+            and(
+              eq(schema.eventPoolRegistrations.assignedGroupId, myRegistration.assignedGroupId),
+              eq(schema.eventPoolRegistrations.matchStatus, 'matched'),
+            ),
+          );
+
+        for (const row of memberRows) {
+          push({
+            id: row.id,
+            displayName: getEventChatDisplayName(row),
+            firstName: row.firstName ?? null,
+            archetype: row.archetype ?? null,
+          });
+        }
+        return res.json(participants);
+      }
+
+      // Path 3 — legacy events.id: attendance roster (cancelled seats excluded).
+      const attendeeRows = await db
+        .select({
+          id: schema.users.id,
+          displayName: schema.users.displayName,
+          firstName: schema.users.firstName,
+          lastName: schema.users.lastName,
+          archetype: schema.users.archetype,
+        })
+        .from(schema.eventAttendance)
+        .innerJoin(schema.users, eq(schema.eventAttendance.userId, schema.users.id))
+        .where(
+          and(
+            eq(schema.eventAttendance.eventId, eventId),
+            ne(schema.eventAttendance.status, 'cancelled'),
+          ),
+        );
+
+      for (const row of attendeeRows) {
+        push({
+          id: row.id,
+          displayName: getEventChatDisplayName(row),
+          firstName: row.firstName ?? null,
+          archetype: row.archetype ?? null,
+        });
+      }
+      return res.json(participants);
+    } catch (error) {
+      logger.error("Error fetching event participants", { error: String(error) });
+      res.status(500).json({ message: "Failed to fetch participants" });
+    }
+  });
+
   app.get('/api/events/:eventId/messages', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;

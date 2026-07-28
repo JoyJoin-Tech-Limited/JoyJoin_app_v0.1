@@ -93,6 +93,8 @@ export default function MiniProgramLandingPage({
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [shakeLegal, setShakeLegal] = useState(false)
+  const [showLegalHint, setShowLegalHint] = useState(false)
+  const [legalHintSeq, setLegalHintSeq] = useState(0)
   const [heroState, setHeroState] = useState<HeroState>('loading')
   const [lqipGone, setLqipGone] = useState(false)
   const [failedSprites, setFailedSprites] = useState<ReadonlySet<HeroSpriteKey>>(new Set())
@@ -108,6 +110,7 @@ export default function MiniProgramLandingPage({
     referralCode: invitationCode || undefined,
   })
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const legalHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const navSafetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** Mount timestamp — dwell + hero-duration measurements anchor here. */
   const mountedAtRef = useRef(Date.now())
@@ -142,6 +145,9 @@ export default function MiniProgramLandingPage({
     return () => {
       if (shakeTimerRef.current) {
         clearTimeout(shakeTimerRef.current)
+      }
+      if (legalHintTimerRef.current) {
+        clearTimeout(legalHintTimerRef.current)
       }
       if (navSafetyTimeoutRef.current) {
         clearTimeout(navSafetyTimeoutRef.current)
@@ -284,9 +290,13 @@ export default function MiniProgramLandingPage({
 
   const triggerLegalShake = () => {
     setShakeLegal(true)
+    setLegalHintSeq((seq) => seq + 1)
+    setShowLegalHint(true)
     hapticLight()
     if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current)
     shakeTimerRef.current = setTimeout(() => setShakeLegal(false), 400)
+    if (legalHintTimerRef.current) clearTimeout(legalHintTimerRef.current)
+    legalHintTimerRef.current = setTimeout(() => setShowLegalHint(false), 2500)
   }
 
   const navigateWithLegalGate = (url: string) => {
@@ -339,7 +349,7 @@ export default function MiniProgramLandingPage({
             inline-rpx preset because the H5 preview drops inline rpx and
             balloons the logo, which then clips the copy zone below it. */}
         <View className='brand-mark'>
-          <BrandLogo size='sm' className='landing-page__brand-logo' />
+          <BrandLogo size='md' className='landing-page__brand-logo' />
         </View>
 
         {/* Hero stage: glowing blind box + peeking Xiaoyue + floating elements */}
@@ -416,7 +426,7 @@ export default function MiniProgramLandingPage({
         {/* Copy: mystery headline + one-line mechanism */}
         <View className='hero-text'>
           <Text className='headline'>这座城市，为你<Text className='headline--accent'>藏了一局</Text></Text>
-          <Text className='subtitle'>答几道小题，悦仔替你攒一桌聊得来的人</Text>
+          <Text className='subtitle'>答几道小题，悦仔替你攒一桌聊得来的人，线下见</Text>
         </View>
 
         {/* Dynamic spacer: disappears on short phones so the fixed CTA stays reachable */}
@@ -515,6 +525,13 @@ export default function MiniProgramLandingPage({
         )}
 
         <View className={`landing-page__legal-row ${shakeLegal ? 'shake' : ''}`}>
+          {showLegalHint && (
+            <View key={legalHintSeq} className='landing-page__legal-hint' aria-hidden='true'>
+              <Text className='landing-page__legal-hint-text'>
+                {ctaType === 'new' ? '先勾选协议，再拆盲盒' : '先勾选协议，再继续'}
+              </Text>
+            </View>
+          )}
           <View
             className={
               "landing-page__legal-checkbox" +
@@ -526,6 +543,11 @@ export default function MiniProgramLandingPage({
             onClick={() => {
               hapticLight()
               setHasAcceptedLegal((current) => !current)
+              if (legalHintTimerRef.current) {
+                clearTimeout(legalHintTimerRef.current)
+                legalHintTimerRef.current = null
+              }
+              setShowLegalHint(false)
             }}
           >
             {hasAcceptedLegal && <View className='landing-page__legal-checkbox-mark' aria-hidden='true' />}

@@ -4,6 +4,13 @@
 .rating-face {
   &__container {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16rpx;
+  }
+
+  &__row {
+    display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: center;
@@ -18,5 +25,14 @@
     &--selected {
       // Glow ring handled inline for dynamic brand color
     }
+  }
+
+  // Selection caption (2026-07-28): reserves its line height even when empty
+  // so the card never jumps when the first tap lands.
+  &__caption {
+    @include type-caption;
+    min-height: 32rpx;
+    color: $color-text-secondary;
+    text-align: center;
   }
 }

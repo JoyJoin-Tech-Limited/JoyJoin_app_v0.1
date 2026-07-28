@@ -1077,6 +1077,7 @@ export default function SquadUnboxingPage() {
                           delay={180}
                           enabled={!shouldReduceMotion && !isDegradation && animateFocusedNarration}
                           showCursor={false}
+                          numberOfLines={3}
                           onComplete={() => {
                             setVerdictComplete(true)
                             squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
@@ -1117,6 +1118,10 @@ export default function SquadUnboxingPage() {
                           maxDuration={bubbleNarration?.kind === 'member' ? undefined : 3000}
                           enabled={!shouldReduceMotion && !isDegradation && (bubbleNarration?.kind !== 'member' || animateFocusedNarration)}
                           showCursor={false}
+                          // BUG B (2026-07-28): clamp the narration so a long
+                          // member intro can never spill over the 桌卡 strip
+                          // in the locked revealed column.
+                          numberOfLines={4}
                           onComplete={() => {
                             squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
                               groupId,

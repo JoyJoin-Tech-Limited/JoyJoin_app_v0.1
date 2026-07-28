@@ -22,7 +22,7 @@ import {
   getWarmupCardState,
   buildArchetypeMixText,
 } from '../viewModels/warmupViewModels'
-import type { WarmupCardState } from '../viewModels/warmupViewModels'
+import type { TopicsRecoveryState, WarmupCardState } from '../viewModels/warmupViewModels'
 import './WarmupPhaseView.scss'
 
 interface WarmupPhaseViewProps {
@@ -51,6 +51,8 @@ interface WarmupPhaseViewProps {
   isAdvancingTopic: boolean
   isAdvancing: boolean
   topicsError?: boolean
+  /** Transient-failure auto-retry state (backoff ladder) — renders recovery copy. */
+  topicsRecovery?: TopicsRecoveryState | null
   onAigcFeedbackTap?: (location: 'card') => void
   /**
    * C3 — true once the first ready-state payload has arrived; threaded to
@@ -87,6 +89,7 @@ export function WarmupPhaseView({
   isAdvancingTopic,
   isAdvancing,
   topicsError = false,
+  topicsRecovery = null,
   onAigcFeedbackTap,
   warmupDataReady = true,
   advancePrompt,
@@ -115,8 +118,9 @@ export function WarmupPhaseView({
         isHost,
         isGeneratingTopics,
         topicsError,
+        topicsRecovery,
       }),
-    [topics, currentIndex, isHost, isGeneratingTopics, topicsError],
+    [topics, currentIndex, isHost, isGeneratingTopics, topicsError, topicsRecovery],
   )
 
   // ── Analytics: mount view ──────────────────────────────────────
@@ -392,6 +396,7 @@ export function WarmupPhaseView({
           currentUserId={currentUserId}
           selfReadyOptimistic={selfReadyOptimistic}
           warmupDataReady={warmupDataReady}
+          topicsRecovery={topicsRecovery}
         />
       </View>
 

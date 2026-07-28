@@ -175,6 +175,33 @@ describe('squadUnboxingViewModels', () => {
     )
   })
 
+  it('buildFocusedMemberBubbleText caps the intro at 2 beats when a pair explanation follows (2026-07-28 bubble-spill)', () => {
+    // With industry + education + interests + hometown all present, the 3-beat
+    // intro plus the explanation blew past the 4-line bubble clamp and spilled
+    // over the 桌卡 strip on device. The explanation path keeps 2 beats.
+    const text = buildFocusedMemberBubbleText('芝士', '你们都相信社区能改变城市。', [], null, {
+      userId: 'bot-9',
+      industryNicheLabel: '社区活动策划',
+      educationLevel: '本科',
+      topInterests: ['社区营造', '即兴喜剧'],
+      hometownRegionCity: '广东潮州',
+    })
+    expect(text).toBe(
+      '先认识一下芝士：在社区活动策划领域，本科学历。你们之间还有个连接点：你们都相信社区能改变城市。',
+    )
+    expect(text).not.toContain('社区营造')
+    expect(text).not.toContain('广东潮州')
+    // Without an explanation the 3-beat cap still applies.
+    const noExplanation = buildFocusedMemberBubbleText('芝士', '', ['社区营造'], null, {
+      userId: 'bot-9',
+      industryNicheLabel: '社区活动策划',
+      educationLevel: '本科',
+      topInterests: ['社区营造', '即兴喜剧'],
+      hometownRegionCity: '广东潮州',
+    })
+    expect(noExplanation).toContain('在社区活动策划领域，本科学历，喜欢社区营造、即兴喜剧')
+  })
+
   it('buildFocusedMemberBubbleText degrades through connection points, intro angle, and a dignity-floored fallback (2026-07-24 P0)', () => {
     expect(buildFocusedMemberBubbleText('豆沙', '', ['独立电影', '城市漫步'])).toBe(
       '先认识一下豆沙：这是今晚会和你同桌的新伙伴。你们都对独立电影、城市漫步感兴趣，见面可以从这里聊起。',

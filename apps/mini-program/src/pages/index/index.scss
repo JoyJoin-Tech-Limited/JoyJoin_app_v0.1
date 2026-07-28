@@ -50,8 +50,8 @@
 // BrandLogo sizes itself via inline rpx (dropped by the H5 preview); the
 // !important SCSS class wins over the inline style in every runtime.
 .landing-page__brand-logo {
-  width: 74rpx !important;
-  height: 74rpx !important;
+  width: 152rpx !important;
+  height: 152rpx !important;
 }
 
 /* ── Hero Stage ────────────────────────────────────────────────────── */
@@ -129,13 +129,13 @@
   z-index: 6;
 
   &--buildings {
-    // Portrait towers, behind the box's left shoulder (z3). Slot geometry is
-    // fitted to the shipped master: far enough left that the towers stay
-    // visible beyond the box body (which starts at x≈134rpx on stage), and
-    // tall enough that their tops clear the box rim (~365rpx). Enlarged
-    // 128→160rpx after the PM render review (was getting eaten by the box).
-    left: 32rpx;
-    top: 300rpx;
+    // Portrait towers tucked behind Xiaoyue's head (z3) in the top-center
+    // void between the cards and the map-pin — fills the empty sky so the
+    // sprite weight balances left/right instead of stacking on the left.
+    // Right edge (x≈392) slides behind the head (which starts at x≈341 on
+    // stage); tops at 56rpx clear the ear tips (y≈158).
+    left: 232rpx;
+    top: 56rpx;
     width: 160rpx;
     height: 260rpx;
     z-index: 3; // behind the hero composite
@@ -268,6 +268,9 @@
   color: rgba($color-text-primary-warm, 0.85);
   line-height: 1.5;
   max-width: 640rpx;
+  // 孤字 guard: wrap at phrase boundaries, never dangle a single character.
+  word-break: keep-all;
+  overflow-wrap: break-word;
   opacity: 0; // revealed by --entered stagger
 }
 
@@ -743,6 +746,46 @@
   margin: 0 6rpx;
 }
 
+// Floating legal-gate guidance — exactly overlays the login button's box
+// (full width × 92rpx, 8rpx above the legal row) so it reads as a deliberate
+// secondary-action state swap, never a partial cover of the button copy.
+// Absolute: zero layout shift, no clipping risk on zero-safe-area devices.
+.landing-page__legal-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 8rpx);
+  height: 92rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-bg-tint-purple;
+  border: 1rpx solid rgba($color-primary, 0.28);
+  border-radius: 50rpx;
+  box-shadow: $shadow-sm;
+  animation:
+    legal-hint-in 200ms ease-out both,
+    legal-hint-out 250ms ease-in 2250ms both;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.landing-page__legal-hint-text {
+  font-size: 28rpx;
+  color: $color-primary-dark;
+  line-height: 1.4;
+}
+
+@keyframes legal-hint-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes legal-hint-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-6rpx); }
@@ -994,6 +1037,10 @@
 
 /* ── Reduced motion: everything static, one 150ms fade ─────────────── */
 .landing-page--rm {
+  .landing-page__legal-hint {
+    animation: none !important;
+  }
+
   .brand-mark,
   .headline,
   .subtitle,

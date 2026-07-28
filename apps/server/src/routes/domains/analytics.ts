@@ -312,6 +312,8 @@ const EVENTS_EVENT_TYPES = [
   "events_card_tap",
   "events_empty_state_cta_tap",
   "events_pull_refresh",
+  // Native WeChat customer-service session taps (2026-07-28).
+  "support_contact_tap",
 ] as const;
 
 type EventsEventType = (typeof EVENTS_EVENT_TYPES)[number];

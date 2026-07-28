@@ -10,6 +10,9 @@ const EventsAnalyticsEventSchema = z.object({
     'events_card_tap',
     'events_empty_state_cta_tap',
     'events_pull_refresh',
+    // Native WeChat customer-service session taps (open-type="contact"),
+    // 2026-07-28 — replaces the placeholder QR support cards.
+    'support_contact_tap',
   ]),
   metadata: z.record(z.unknown()).optional(),
   timestamp: z.number(),

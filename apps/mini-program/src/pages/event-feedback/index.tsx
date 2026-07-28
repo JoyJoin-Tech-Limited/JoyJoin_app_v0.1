@@ -3,6 +3,7 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { getEventParticipants, type EventParticipantSummary } from '@shared/api'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { apiRequest } from '../../lib/api/api'
 import { queryClient } from '../../lib/api/queryClient'
@@ -20,13 +21,6 @@ import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Card from '../../components/ui/Card'
 import './index.scss'
 
-interface Participant {
-  id: string
-  displayName?: string
-  firstName?: string
-  archetype?: string
-}
-
 interface MutualMatch {
   userId: string
   displayName: string
@@ -35,6 +29,24 @@ interface MutualMatch {
 }
 
 type FeedbackStep = 'rating' | 'connections' | 'comment' | 'revealed'
+
+/** Ordered interactive steps (revealed is the terminal celebration, not a step). */
+const FEEDBACK_STEP_ORDER: Array<Exclude<FeedbackStep, 'revealed'>> = ['rating', 'connections', 'comment']
+
+/** 1/2/3 progress dots — the flow had no sense of place before (2026-07-28). */
+function renderStepProgress(current: Exclude<FeedbackStep, 'revealed'>) {
+  const activeIndex = FEEDBACK_STEP_ORDER.indexOf(current)
+  return (
+    <View className='event-feedback__progress' aria-hidden='true'>
+      {FEEDBACK_STEP_ORDER.map((stepId, index) => (
+        <View
+          key={stepId}
+          className={`event-feedback__progress-dot ${index <= activeIndex ? 'event-feedback__progress-dot--active' : ''}`}
+        />
+      ))}
+    </View>
+  )
+}
 
 export default function EventFeedbackPage() {
   const router = useRouter()
@@ -60,11 +72,12 @@ export default function EventFeedbackPage() {
     }
   }, [step])
 
-  const { data: participants = [], isLoading: participantsLoading } = useQuery<Participant[]>({
+  const { data: participants = [], isLoading: participantsLoading } = useQuery<EventParticipantSummary[]>({
     queryKey: ['mini-program', 'event-participants', eventId],
     queryFn: async () => {
-      const res = await apiRequest<Participant[]>({ path: `/api/events/${encodeURIComponent(eventId)}/participants` })
-      // Filter out current user
+      // The server already excludes the viewer; keep the client filter as a
+      // defensive no-op against stale cached shapes.
+      const res = await getEventParticipants(apiRequest, eventId)
       return res.filter((p) => p.id !== currentUserId)
     },
     enabled: !!eventId && !authLoading && !!currentUserId,
@@ -208,7 +221,8 @@ export default function EventFeedbackPage() {
     return (
       <View className='event-feedback'>
         <View className='event-feedback__header'>
-          <Text className='event-feedback__subtitle'>今晚这局怎么样？</Text>
+          <Text className='event-feedback__title'>今晚这局怎么样？</Text>
+          {renderStepProgress('rating')}
         </View>
 
         <View className='event-feedback__card'>
@@ -221,7 +235,10 @@ export default function EventFeedbackPage() {
         <View className='event-feedback__footer'>
           <Button
             className='event-feedback__submit'
-            onClick={() => setStep('connections')}
+            onClick={() => {
+              haptics('light')
+              setStep('connections')
+            }}
             ariaLabel={rating > 0 ? '进入下一步' : '跳过整体体验评分'}
           >
             {rating > 0 ? '下一步' : '跳过'}
@@ -236,7 +253,8 @@ export default function EventFeedbackPage() {
     return (
       <View className='event-feedback'>
         <View className='event-feedback__header'>
-          <Text className='event-feedback__subtitle'>想继续了解谁？</Text>
+          <Text className='event-feedback__title'>想继续了解谁？</Text>
+          {renderStepProgress('connections')}
         </View>
 
         <View className='event-feedback__card'>
@@ -248,19 +266,26 @@ export default function EventFeedbackPage() {
             <View className='event-feedback__participant-grid'>
               {participants.map((p) => {
                 const isSelected = selectedConnections.includes(p.id)
+                const participantName = p.displayName || p.firstName || '匿名'
                 return (
                   <View
                     key={p.id}
                     className={`event-feedback__participant-item ${isSelected ? 'event-feedback__participant-item--selected' : ''}`}
-                    onClick={() => toggleConnection(p.id)}
+                    onClick={() => {
+                      haptics('light')
+                      toggleConnection(p.id)
+                    }}
+                    role='button'
+                    aria-pressed={isSelected}
+                    aria-label={`选择${participantName}`}
                   >
                     <ArchetypeHead
                       archetype={p.archetype}
                       size={80}
-                      fallbackText={p.displayName || p.firstName}
+                      fallbackText={p.displayName || p.firstName || undefined}
                     />
                     <Text className='event-feedback__participant-name'>
-                      {p.displayName || p.firstName || '匿名'}
+                      {participantName}
                     </Text>
                     {isSelected && (
                       <Text className='event-feedback__participant-check'>✓</Text>
@@ -273,7 +298,14 @@ export default function EventFeedbackPage() {
         </View>
 
         <View className='event-feedback__footer'>
-          <Button className='event-feedback__submit' onClick={() => setStep('comment')}>
+          <Button
+            className='event-feedback__submit'
+            onClick={() => {
+              haptics('light')
+              setStep('comment')
+            }}
+            ariaLabel={selectedConnections.length > 0 ? `已选 ${selectedConnections.length} 人，进入下一步` : '跳过选择，进入下一步'}
+          >
             {selectedConnections.length > 0
               ? `已选 ${selectedConnections.length} 人，下一步`
               : '跳过，下一步'}
@@ -298,7 +330,8 @@ export default function EventFeedbackPage() {
   return (
     <View className='event-feedback'>
       <View className='event-feedback__header'>
-        <Text className='event-feedback__subtitle'>最后一步</Text>
+        <Text className='event-feedback__title'>最后一步</Text>
+        {renderStepProgress('comment')}
       </View>
 
       <View className='event-feedback__card'>
@@ -309,6 +342,7 @@ export default function EventFeedbackPage() {
           value={comment}
           onInput={(e) => setComment(e.detail.value)}
           maxlength={500}
+          aria-label='分享你的感受和建议（可选）'
         />
       </View>
 
@@ -317,9 +351,13 @@ export default function EventFeedbackPage() {
       <View className='event-feedback__footer'>
         <Button
           className='event-feedback__submit'
-          onClick={handleSubmit}
+          onClick={() => {
+            haptics('medium')
+            handleSubmit()
+          }}
           disabled={isSubmitting}
           loading={isSubmitting}
+          ariaLabel='提交反馈'
         >
           {isSubmitting ? '提交中…' : '提交反馈'}
         </Button>

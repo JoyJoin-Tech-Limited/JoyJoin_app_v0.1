@@ -10,8 +10,16 @@ export type WarmupCardState =
   | 'host_no_topics'
   | 'player_no_topics'
   | 'generating'
+  | 'recovering'
   | 'topic_card'
   | 'error'
+
+/** Visible auto-retry state while riding through a transient 5xx/network failure. */
+export interface TopicsRecoveryState {
+  /** 1-based attempt currently being waited out (backoff) or executed. */
+  attempt: number
+  maxAttempts: number
+}
 
 export interface ResolveCardStateInput {
   topics: SocialTopic[]
@@ -19,6 +27,7 @@ export interface ResolveCardStateInput {
   isHost: boolean
   isGeneratingTopics: boolean
   topicsError: boolean
+  topicsRecovery?: TopicsRecoveryState | null
 }
 
 export interface WarmupTopicRetryInput {
@@ -44,15 +53,40 @@ export function shouldRetryWarmupTopics(input: WarmupTopicRetryInput): boolean {
 /**
  * Resolve the hero card slot state machine (contract Q7 / AC5).
  *
- * Priority: generating > loaded topic card > error > empty topics.
+ * Priority: generating > loaded topic card > recovering > error > empty topics.
  * A request can time out locally while the server finishes successfully; the
  * next poll's real topics must replace that stale transport error immediately.
  */
 export function getWarmupCardState(input: ResolveCardStateInput): WarmupCardState {
   if (input.isGeneratingTopics) return 'generating'
   if (input.topics.length > 0) return 'topic_card'
+  if (input.topicsRecovery) return 'recovering'
   if (input.topicsError) return 'error'
   return input.isHost ? 'host_no_topics' : 'player_no_topics'
+}
+
+/** Failure flavour for the topics action — drives patient vs terminal UX. */
+export type TopicsFailureKind = 'server' | 'generic'
+
+/**
+ * Classify a /topics failure (2026-07-28 502 incident). The route itself
+ * degrades to curated topics and never emits a 5xx, so a 5xx (or a bare
+ * network/timeout failure with no statusCode) means the gateway/dev server is
+ * restarting — transient, worth patient auto-retry. 4xx is a real rejection
+ * and goes straight to the terminal error card.
+ */
+export function classifyTopicsFailure(error: unknown): TopicsFailureKind {
+  const statusCode = (error as { statusCode?: number } | null | undefined)?.statusCode
+  if (typeof statusCode !== 'number') return 'server'
+  return statusCode >= 500 ? 'server' : 'generic'
+}
+
+/** Patient backoff ladder (ms) for transient server failures, indexed by 1-based attempt. */
+export const TOPICS_SERVER_RETRY_BACKOFF_MS: readonly number[] = [2000, 5000, 10000]
+
+export function getTopicsServerRetryDelayMs(attempt: number): number {
+  const index = Math.min(Math.max(attempt, 1), TOPICS_SERVER_RETRY_BACKOFF_MS.length) - 1
+  return TOPICS_SERVER_RETRY_BACKOFF_MS[index]
 }
 
 export interface ArchetypeCount {

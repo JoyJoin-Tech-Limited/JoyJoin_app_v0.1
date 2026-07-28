@@ -26,4 +26,12 @@ describe('mini-program landing page styles', () => {
     expect(landingPageStyleSource).toContain('.landing-page__auth-timeout-spinner')
     expect(landingPageStyleSource).toContain('animation: auth-spinner-rotate 0.7s linear infinite;')
   })
+
+  it('shows a visible legal-gate hint when the CTA is tapped before accepting', () => {
+    expect(landingPageSource).toContain('landing-page__legal-hint')
+    expect(landingPageSource).toContain('setShowLegalHint')
+    expect(landingPageStyleSource).toContain('.landing-page__legal-hint')
+    expect(landingPageStyleSource).toContain('legal-hint-in')
+    expect(landingPageStyleSource).toContain('legal-hint-out')
+  })
 })

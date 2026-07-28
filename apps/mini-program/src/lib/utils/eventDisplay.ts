@@ -140,3 +140,28 @@ export function getJoinedEventStatusLabel(status?: string | null): string {
       return ''
   }
 }
+
+/**
+ * Event-pool lifecycle status → user-facing Chinese label (2026-07-28).
+ * The event-detail page previously rendered the raw enum (`active`) — pool
+ * statuses were never localized on that surface. Mirrors the admin portal's
+ * RAW_STATUS_LABEL (AdminEventPoolsPage) so both surfaces agree.
+ */
+export function getEventPoolStatusLabel(status?: string | null): string {
+  switch (status) {
+    case 'active':
+      return '招募中'
+    case 'matching':
+      return '匹配中'
+    case 'matched':
+      return '已成局'
+    case 'completed':
+      return '已结束'
+    case 'cancelled':
+      return '已取消'
+    case 'archived':
+      return '已关闭'
+    default:
+      return ''
+  }
+}

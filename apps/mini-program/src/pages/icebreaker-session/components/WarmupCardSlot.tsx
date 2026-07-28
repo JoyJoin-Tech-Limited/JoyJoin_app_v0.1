@@ -16,7 +16,7 @@ import type { SessionParticipant } from '../phaseUtils'
 import { getPhaseFoilStyle } from '../phases/phaseAccents'
 import { WarmupEmberRim, useEmberSync } from './WarmupEmberRim'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
-import type { WarmupCardState } from '../viewModels/warmupViewModels'
+import type { TopicsRecoveryState, WarmupCardState } from '../viewModels/warmupViewModels'
 import {
   getDepthCornerText,
   getDepthSealColors,
@@ -61,6 +61,8 @@ interface WarmupCardSlotProps {
    * back-compat with callers that always have resolved data.
    */
   warmupDataReady?: boolean
+  /** Transient-failure recovery state — shown on the 'recovering' card. */
+  topicsRecovery?: TopicsRecoveryState | null
 }
 
 const TOPIC_MOOD_EMOJI: Record<AtmosphereMood, string> = {
@@ -187,6 +189,7 @@ export function WarmupCardSlot({
   currentUserId = '',
   selfReadyOptimistic = false,
   warmupDataReady = true,
+  topicsRecovery = null,
 }: WarmupCardSlotProps) {
   const aigcEnabled = useAIGCLabelsEnabled()
   // C8 — degradation tier renders every decorative beat on this card
@@ -284,6 +287,20 @@ export function WarmupCardSlot({
     }, 60)
     return () => clearTimeout(timer)
   }, [isTopicCard, currentIndex])
+
+  // ── Staged generating copy (2026-07-28 502 incident): a static
+  // 「正在出题…」 for 8s+ reads as a hang. Swap to a reassuring second line
+  // after 4s; resets whenever the card leaves the generating state.
+  const GENERATING_STAGE_DELAY_MS = 4000
+  const [generatingStage, setGeneratingStage] = useState(0)
+  useEffect(() => {
+    if (state !== 'generating') {
+      setGeneratingStage(0)
+      return
+    }
+    const timer = setTimeout(() => setGeneratingStage(1), GENERATING_STAGE_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [state])
 
   type DealPhase = 'idle' | 'dealing' | 'settled'
   const [dealPhase, setDealPhase] = useState<DealPhase>('idle')
@@ -433,7 +450,26 @@ export function WarmupCardSlot({
               }`}
             />
             <Text className='warmup-card-slot__generating-text'>
-              {DEFAULT_MASCOT_DISPLAY_NAME}正在出题…
+              {generatingStage === 0
+                ? `${DEFAULT_MASCOT_DISPLAY_NAME}正在出题…`
+                : '还在思考中，马上就好~'}
+            </Text>
+          </View>
+        )
+      case 'recovering':
+        return (
+          <View
+            className='warmup-card-slot__content warmup-card-slot__content--centered'
+            role='status'
+            aria-live='polite'
+          >
+            <View
+              className={`warmup-card-slot__shimmer ${
+                motionReduced ? 'warmup-card-slot__shimmer--static' : ''
+              }`}
+            />
+            <Text className='warmup-card-slot__generating-text'>
+              {`网络打了个盹，${DEFAULT_MASCOT_DISPLAY_NAME}正在重新连接…（自动重试 ${topicsRecovery?.attempt ?? 1}/${topicsRecovery?.maxAttempts ?? 3}）`}
             </Text>
           </View>
         )

@@ -1,19 +1,17 @@
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { View, Text, ScrollView } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { type JoinedEventSummary } from '@shared/api'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
-import { localAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
+import { eventsAnalytics } from '../../lib/analytics/eventsAnalytics'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import './index.scss'
-
-const supportQrSrc = localAsset('/assets/qr/customer-service-support.png')
 
 function formatEventDate(dateTime?: string): string {
   if (!dateTime) {
@@ -49,13 +47,6 @@ export default function EventCoordinationPage() {
     () => joinedEvents.find((item: JoinedEventSummary) => item.id === eventId) ?? null,
     [joinedEvents, eventId],
   )
-
-  const handlePreviewSupportQr = () => {
-    void Taro.previewImage({
-      current: supportQrSrc,
-      urls: [supportQrSrc],
-    })
-  }
 
   const handleOpenEventDetail = () => {
     if (!eventId) {
@@ -114,16 +105,27 @@ export default function EventCoordinationPage() {
         </Card>
       ) : null}
 
-      <Card className='coordination-help__support-card' onClick={handlePreviewSupportQr}>
+      <Card className='coordination-help__support-card'>
         <View className='coordination-help__support-copy'>
           <Text className='coordination-help__section-label'>官方客服</Text>
-          <Text className='coordination-help__support-title'>扫码联系悦聚客服</Text>
+          <Text className='coordination-help__support-title'>联系悦聚客服</Text>
           <Text className='coordination-help__support-subtitle'>
-            如需确认时间、集合地点、签到提醒或现场协助，请使用微信扫描二维码联系客服。
+            如需确认时间、集合地点、签到提醒或现场协助，点下面按钮直接和客服聊。
           </Text>
-          <Text className='coordination-help__support-helper'>点击卡片可放大二维码，长按也可以保存。</Text>
         </View>
-        <Image className='coordination-help__support-qr' src={supportQrSrc} mode='aspectFit' />
+        {/* Native WeChat customer-service session (open-type="contact") —
+            replaces the placeholder QR card; user never leaves the mini program. */}
+        <Button
+          className='coordination-help__support-btn'
+          openType='contact'
+          sessionFrom={`event-coordination:${eventId}`}
+          showMessageCard
+          sendMessageTitle={event?.title ?? '悦聚活动'}
+          sendMessagePath={`/pages/event-coordination/index?id=${eventId}`}
+          onClick={() => eventsAnalytics.track('support_contact_tap', { location: 'event-coordination', eventId })}
+        >
+          联系客服
+        </Button>
       </Card>
 
       <View className='coordination-help__tips'>

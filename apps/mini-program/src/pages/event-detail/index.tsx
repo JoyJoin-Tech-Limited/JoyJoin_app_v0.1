@@ -3,13 +3,15 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery } from '@tanstack/react-query'
 import { type BlindBoxEventDetail, getJoinedEvents } from '@shared/api'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
+import { eventsAnalytics } from '../../lib/analytics/eventsAnalytics'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
 import { loadEventDetail } from './eventDetailData'
+import { formatEventDateTime, getEventPoolStatusLabel } from '../../lib/utils/eventDisplay'
 import './index.scss'
 
 export default function EventDetailPage() {
@@ -17,7 +19,6 @@ export default function EventDetailPage() {
   const eventId = router.params.id ?? ''
   const { isLoading: authLoading } = useAuthGuard()
   const { isExiting, navigateBack } = useJoyJoinNavigation()
-  const supportQrSrc = localAsset('/assets/qr/customer-service-support.png')
   const pageClass = `event-detail ${isExiting ? 'event-detail--exiting' : ''}`
 
   const { data: event, isLoading, error } = useQuery<BlindBoxEventDetail>({
@@ -82,13 +83,6 @@ export default function EventDetailPage() {
         : undefined
       : `/pages/icebreaker-session/index?eventId=${encodeURIComponent(event.id)}`
 
-  const handlePreviewSupportQr = () => {
-    void Taro.previewImage({
-      current: supportQrSrc,
-      urls: [supportQrSrc],
-    })
-  }
-
   return (
     <ScrollView className={pageClass} scrollY enhanced showScrollbar={false}>
       <View className='event-detail__hero event-detail__hero--animated'>
@@ -106,7 +100,7 @@ export default function EventDetailPage() {
             </View>
             <Text>时间</Text>
           </View>
-          <Text className='event-detail__info-value'>{event.dateTime ?? '时间待定'}</Text>
+          <Text className='event-detail__info-value'>{formatEventDateTime(event.dateTime)}</Text>
         </View>
         {event.location ? (
           <View className='event-detail__info-row'>
@@ -130,10 +124,15 @@ export default function EventDetailPage() {
             <Text className='event-detail__info-value'>{event.attendeeCount} 人</Text>
           </View>
         ) : null}
-        {event.status ? (
+        {getEventPoolStatusLabel(event.status) ? (
           <View className='event-detail__info-row'>
-            <Text className='event-detail__info-label'>状态</Text>
-            <Text className='event-detail__info-value'>{event.status}</Text>
+            <View className='event-detail__info-label'>
+              <View className='event-detail__icon-slot'>
+                <JoyJoinIcon emoji='📊' size={24} />
+              </View>
+              <Text>状态</Text>
+            </View>
+            <Text className='event-detail__info-value'>{getEventPoolStatusLabel(event.status)}</Text>
           </View>
         ) : null}
       </View>
@@ -154,13 +153,25 @@ export default function EventDetailPage() {
         </View>
       ) : null}
 
-      <View className='event-detail__card event-detail__support-card' onClick={handlePreviewSupportQr}>
+      <View className='event-detail__card event-detail__support-card'>
         <View className='event-detail__support-copy'>
-          <Text className='event-detail__support-title'>加入我们的客服</Text>
-          <Text className='event-detail__support-subtitle'>使用微信扫描二维码联系客服</Text>
-          <Text className='event-detail__support-helper'>长按保存二维码</Text>
+          <Text className='event-detail__support-title'>需要帮忙？</Text>
+          <Text className='event-detail__support-subtitle'>活动安排、签到或现场问题，点这里直接和悦聚客服聊</Text>
         </View>
-        <Image className='event-detail__support-qr' src={supportQrSrc} mode='aspectFit' />
+        {/* Native WeChat customer-service session (open-type="contact") —
+            no QR asset to maintain, user never leaves the mini program.
+            sessionFrom carries the surface + event for agent context. */}
+        <Button
+          className='event-detail__support-btn'
+          openType='contact'
+          sessionFrom={`event-detail:${eventId}`}
+          showMessageCard
+          sendMessageTitle={event.title ?? '悦聚活动'}
+          sendMessagePath={`/pages/event-detail/index?id=${eventId}`}
+          onClick={() => eventsAnalytics.track('support_contact_tap', { location: 'event-detail', eventId })}
+        >
+          联系客服
+        </Button>
       </View>
 
       <View className='event-detail__actions'>

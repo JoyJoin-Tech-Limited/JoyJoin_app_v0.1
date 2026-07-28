@@ -62,6 +62,11 @@ const BEM_CLASS_RE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*__[a-z0-9]+(?:-[a-z0-9]+)*(?
  */
 const ALLOWED_ORPHANS = new Set([
   // Example: 'some-runtime__class', // injected by <runtime> at run time
+  // IdentityStageScene scene layers carry their visuals inline (background
+  // art via style props per device/flag state); the modifier classes are
+  // semantic hooks for layer identification, not styling targets.
+  'identity-stage__layer--far-bg',
+  'identity-stage__layer--mid-bg',
 ])
 
 /** Directories/files never scanned for references. */
@@ -91,9 +96,18 @@ function walk(dir, predicate, out = []) {
 /** Extract referenced class tokens from string/template literals in TS/TSX. */
 function extractReferencedClasses(sourceText) {
   const found = new Set()
+  // Strip comments FIRST: an apostrophe inside a // or /* */ comment
+  // (neighbour's, bubble's) otherwise opens a fake string literal that
+  // swallows every real class token until the next quote char. The
+  // 2026-07-28 zero-CSS incidents (squad-unboxing__deck-fan--has-focus and
+  // the three narrative-* classes) hid from this gate behind exactly that.
+  // The [^:`'"] guard keeps https:// URLs inside string literals intact.
+  const stripped = sourceText
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:`'"])\/\/[^\n]*/g, '$1')
   const LITERAL_RE = /'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g
   let match
-  while ((match = LITERAL_RE.exec(sourceText)) !== null) {
+  while ((match = LITERAL_RE.exec(stripped)) !== null) {
     const raw = match[1] ?? match[2] ?? match[3] ?? ''
     // Dynamic template segments (`foo--${state}`) can't be checked statically;
     // only fully-static fragments are candidates.

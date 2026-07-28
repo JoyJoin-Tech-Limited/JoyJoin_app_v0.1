@@ -10,6 +10,9 @@ import {
   buildWarmupCaption,
   getWarmupCardState,
   shouldRetryWarmupTopics,
+  classifyTopicsFailure,
+  getTopicsServerRetryDelayMs,
+  TOPICS_SERVER_RETRY_BACKOFF_MS,
   countArchetypes,
   getDepthSealColors,
   shouldShowPermissionLine,
@@ -62,6 +65,42 @@ describe('getWarmupCardState', () => {
     expect(getWarmupCardState({ ...base, topicsError: true })).toBe('error')
   })
 
+  it('returns recovering while a transient-failure auto-retry is in flight', () => {
+    expect(
+      getWarmupCardState({
+        ...base,
+        topicsRecovery: { attempt: 1, maxAttempts: 3 },
+      }),
+    ).toBe('recovering')
+  })
+
+  it('generating wins over recovering while the retry request is executing', () => {
+    expect(
+      getWarmupCardState({
+        ...base,
+        isGeneratingTopics: true,
+        topicsRecovery: { attempt: 2, maxAttempts: 3 },
+      }),
+    ).toBe('generating')
+  })
+
+  it('recovering wins over the terminal error flag but never over real topics', () => {
+    expect(
+      getWarmupCardState({
+        ...base,
+        topicsError: true,
+        topicsRecovery: { attempt: 3, maxAttempts: 3 },
+      }),
+    ).toBe('recovering')
+    expect(
+      getWarmupCardState({
+        ...base,
+        topics: [{ question: 'q' } as any],
+        topicsRecovery: { attempt: 1, maxAttempts: 3 },
+      }),
+    ).toBe('topic_card')
+  })
+
   it('returns topic_card when topics exist and index is in range', () => {
     expect(
       getWarmupCardState({
@@ -79,6 +118,36 @@ describe('getWarmupCardState', () => {
         currentIndex: 1,
       }),
     ).toBe('topic_card')
+  })
+})
+
+describe('classifyTopicsFailure (2026-07-28 502 incident)', () => {
+  it('treats 5xx as transient server failures (gateway/restart)', () => {
+    expect(classifyTopicsFailure(Object.assign(new Error('Request failed with status 502'), { statusCode: 502 }))).toBe('server')
+    expect(classifyTopicsFailure(Object.assign(new Error('Request failed with status 500'), { statusCode: 500 }))).toBe('server')
+    expect(classifyTopicsFailure(Object.assign(new Error('Request failed with status 503'), { statusCode: 503 }))).toBe('server')
+  })
+
+  it('treats bare network/timeout failures (no statusCode) as transient', () => {
+    expect(classifyTopicsFailure(new Error('request:fail timeout'))).toBe('server')
+    expect(classifyTopicsFailure({})).toBe('server')
+    expect(classifyTopicsFailure(null)).toBe('server')
+  })
+
+  it('treats 4xx as a real rejection — terminal error card, no patient retry', () => {
+    expect(classifyTopicsFailure(Object.assign(new Error('Request failed with status 400'), { statusCode: 400 }))).toBe('generic')
+    expect(classifyTopicsFailure(Object.assign(new Error('Request failed with status 403'), { statusCode: 403 }))).toBe('generic')
+  })
+})
+
+describe('getTopicsServerRetryDelayMs', () => {
+  it('walks the backoff ladder by 1-based attempt and clamps at the top rung', () => {
+    expect(getTopicsServerRetryDelayMs(1)).toBe(2000)
+    expect(getTopicsServerRetryDelayMs(2)).toBe(5000)
+    expect(getTopicsServerRetryDelayMs(3)).toBe(10000)
+    expect(getTopicsServerRetryDelayMs(4)).toBe(10000)
+    expect(getTopicsServerRetryDelayMs(0)).toBe(2000)
+    expect(TOPICS_SERVER_RETRY_BACKOFF_MS).toHaveLength(3)
   })
 })
 

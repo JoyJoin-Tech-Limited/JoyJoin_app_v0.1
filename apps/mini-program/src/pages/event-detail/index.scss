@@ -124,21 +124,23 @@
     line-height: 1.6;
   }
 
-  &__support-helper {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-primary-dark;
-    font-weight: $font-weight-semibold;
-  }
-
-  &__support-qr {
-    width: 188rpx;
-    height: 188rpx;
+  &__support-btn {
     flex-shrink: 0;
-    padding: 8rpx;
-    border-radius: 24rpx;
-    background: rgba($color-surface, 0.92);
-    box-shadow: $shadow-sm;
+    min-width: 168rpx;
+    height: 72rpx;
+    padding: 0 $spacing-md;
+    border-radius: 999rpx;
+    border: 0;
+    background: $color-primary;
+    color: $color-surface;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    line-height: 72rpx;
+    text-align: center;
+
+    &::after {
+      border: 0;
+    }
   }
 
   &__info-row {

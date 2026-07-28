@@ -14,6 +14,7 @@ export * from './api/matchCompass.js'
 export * from './api/geo.js'
 export * from './api/occupation.js'
 export * from './api/alang.js'
+export * from './api/social.js'
 
 // Re-exports from topical schema modules
 export {

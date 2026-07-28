@@ -69,7 +69,12 @@ import {
   resolveHostMenuItems,
   resolveSyncLossVisible,
 } from './sessionShellLogic'
-import { shouldRetryWarmupTopics } from './viewModels/warmupViewModels'
+import {
+  shouldRetryWarmupTopics,
+  classifyTopicsFailure,
+  getTopicsServerRetryDelayMs,
+} from './viewModels/warmupViewModels'
+import type { TopicsFailureKind, TopicsRecoveryState } from './viewModels/warmupViewModels'
 import { syncSocialActionResponse } from './socialActionSync'
 import './index.scss'
 
@@ -93,13 +98,20 @@ function getPhaseToastText(phase: string): ReactNode {
 // re-firing 31 parallel getImageInfo bridge calls on every render.
 const ICEBREAKER_PRELOAD_ASSETS = [...SPRITE_SHEET_ASSETS, ...ICEBREAKER_PHASE_EMBLEM_ASSETS]
 
-// Warmup topic generation is LLM-backed (3s server cap + DB writes) — the
-// 5s dev default timeout is too tight, give it headroom.
-const TOPICS_REQUEST_TIMEOUT_MS = 12000
+// Warmup topic generation is LLM-backed (6s server LLM race + curated-topic
+// fallback + DB writes). Anything past ~8s means the request never reached a
+// healthy route (gateway 502 / dev-server restart) — fail fast and let the
+// patient backoff retry ride through the flap instead of staring at a dead
+// shimmer (2026-07-28 502 incident).
+const TOPICS_REQUEST_TIMEOUT_MS = 8000
 const SKIPPED_ACTION_TOAST_INTERVAL_MS = 1500
 const TOPICS_SKIP_RETRY_MAX = 5
 const TOPICS_SKIP_RETRY_DELAY_MS = 700
 const TOPICS_RECOVERY_RETRY_DELAY_MS = 1200
+// Transient 5xx/network failures get this many patient auto-retries (backoff
+// ladder lives in warmupViewModels.TOPICS_SERVER_RETRY_BACKOFF_MS) before the
+// terminal error card appears.
+const TOPICS_SERVER_RETRY_MAX = 3
 
 type WarmupTopicsResponse = {
   topics?: SocialTopic[]
@@ -315,6 +327,10 @@ export default function IcebreakerSessionPage() {
   }, [bootstrapState, queryClient, socialSessionId, socialSessionQuery.data])
 
   const phase: SessionPhase = session?.phase ?? 'waiting'
+  // Latest-phase ref for timer callbacks (the topics backoff retry must not
+  // regenerate topics after the fuse already advanced the session).
+  const phaseRef = useRef(phase)
+  phaseRef.current = phase
 
   // PR1 壳层: suggestion visibility = data-derived suggestion AND an explicit
   // overlay flag (useResetOnShow-covered) so swipe-back never resurrects a stuck card.
@@ -403,7 +419,7 @@ export default function IcebreakerSessionPage() {
       actionKey: string,
       suffix: string,
       data?: unknown,
-      options?: { timeoutMs?: number; suppressErrorToast?: boolean },
+      options?: { timeoutMs?: number; suppressErrorToast?: boolean; onError?: (error: unknown) => void },
     ): Promise<T | null | undefined> => {
       if (!socialSessionId) {
         return null
@@ -452,6 +468,9 @@ export default function IcebreakerSessionPage() {
           actionKey,
           message,
         })
+        // Let the owning flow classify the failure (e.g. topics treats 5xx /
+        // network flaps as transient and auto-retries with backoff).
+        options?.onError?.(error)
         // Some flows own a persistent error surface (e.g. the topics error
         // card with 重试) — a transient toast on top is double-signalling.
         if (!options?.suppressErrorToast) {
@@ -478,6 +497,12 @@ export default function IcebreakerSessionPage() {
   // Last mood the host actually requested — retry path survives even when the
   // server never persisted selectedMood (e.g. request died before the write).
   const lastTopicsMoodRef = useRef<AtmosphereMood | undefined>(undefined)
+  // 2026-07-28 502 incident — transient 5xx/network failures get a patient
+  // backoff auto-retry ladder with visible recovery copy; 4xx goes straight
+  // to the terminal error card.
+  const [topicsRecovery, setTopicsRecovery] = useState<TopicsRecoveryState | null>(null)
+  const topicsFailureKindRef = useRef<TopicsFailureKind>('generic')
+  const topicsServerRetryCountRef = useRef(0)
   const generateTopics = useCallback((mood: AtmosphereMood) => {
     setTopicsError(false)
     lastTopicsMoodRef.current = mood
@@ -486,12 +511,47 @@ export default function IcebreakerSessionPage() {
       eventType: '活动',
       participantCount: Math.max(playerCount, 2),
       avoidTopics: [],
-    }, { timeoutMs: TOPICS_REQUEST_TIMEOUT_MS, suppressErrorToast: true }).then((result) => {
+    }, {
+      timeoutMs: TOPICS_REQUEST_TIMEOUT_MS,
+      suppressErrorToast: true,
+      onError: (error) => {
+        topicsFailureKindRef.current = classifyTopicsFailure(error)
+      },
+    }).then((result) => {
       if (result === null) {
-        // Surface the designed error card (重试 + auto-retry) instead of the
-        // old phantom local-fallback deck — the fallback dealt a card the next
-        // poll then swapped out, producing an error-toast-plus-card flash and
-        // a visible ready-count wipe.
+        // Transient server/gateway failure (5xx or bare network/timeout — the
+        // route itself never 5xxs, it degrades to curated topics): ride
+        // through the restart with a patient backoff ladder + visible
+        // recovery state instead of an instant dead-end error card.
+        if (
+          topicsFailureKindRef.current === 'server'
+          && topicsServerRetryCountRef.current < TOPICS_SERVER_RETRY_MAX
+        ) {
+          topicsServerRetryCountRef.current += 1
+          const attempt = topicsServerRetryCountRef.current
+          setTopicsRecovery({ attempt, maxAttempts: TOPICS_SERVER_RETRY_MAX })
+          logInfo('[IcebreakerSession] Topics request hit a transient failure; auto-retrying with backoff', {
+            socialSessionId,
+            attempt,
+            maxAttempts: TOPICS_SERVER_RETRY_MAX,
+          })
+          topicsRetryTimerRef.current = setTimeout(
+            () => {
+              // The advance fuse may have moved the session out of warmup
+              // during the backoff window — never regenerate topics for a
+              // phase that no longer displays them.
+              if (phaseRef.current !== 'warmup' && phaseRef.current !== 'waiting') return
+              generateTopicsRef.current(mood)
+            },
+            getTopicsServerRetryDelayMs(attempt),
+          )
+          return
+        }
+        // Terminal failure — surface the designed error card (重试 +
+        // auto-retry) instead of the old phantom local-fallback deck — the
+        // fallback dealt a card the next poll then swapped out, producing an
+        // error-toast-plus-card flash and a visible ready-count wipe.
+        setTopicsRecovery(null)
         setTopicsError(true)
         topicsSkipRetryRef.current = 0
       } else if (result === undefined) {
@@ -507,13 +567,17 @@ export default function IcebreakerSessionPage() {
         }
         topicsSkipRetryRef.current = 0
         topicsRecoveryRetryCountRef.current = 0
+        topicsServerRetryCountRef.current = 0
+        setTopicsRecovery(null)
       }
     })
-  }, [applyWarmupTopicsToLocalState, performSocialAction, playerCount])
+  }, [applyWarmupTopicsToLocalState, performSocialAction, playerCount, socialSessionId])
   generateTopicsRef.current = generateTopics
   const handleGenerateTopics = useCallback((mood: AtmosphereMood) => {
     topicsSkipRetryRef.current = 0
     topicsRecoveryRetryCountRef.current = 0
+    topicsServerRetryCountRef.current = 0
+    setTopicsRecovery(null)
     if (topicsRetryTimerRef.current) {
       clearTimeout(topicsRetryTimerRef.current)
       topicsRetryTimerRef.current = undefined
@@ -730,7 +794,15 @@ export default function IcebreakerSessionPage() {
     const topicCount = session?.warmupTopics?.length ?? 0
     if (topicCount > 0) {
       setTopicsError(false)
+      setTopicsRecovery(null)
       topicsRecoveryRetryCountRef.current = 0
+      topicsServerRetryCountRef.current = 0
+      // Topics arrived through polling while a backoff retry was still
+      // pending — cancel it so the loaded card never flips back to generating.
+      if (topicsRetryTimerRef.current) {
+        clearTimeout(topicsRetryTimerRef.current)
+        topicsRetryTimerRef.current = undefined
+      }
       return
     }
 
@@ -1430,6 +1502,7 @@ export default function IcebreakerSessionPage() {
             isAdvancingTopic={pendingAction === 'warmup-next-topic'}
             isAdvancing={pendingAction === 'advance'}
             topicsError={topicsError}
+            topicsRecovery={topicsRecovery}
             advancePrompt={
               <AdvanceFuseBanner
                 fuseAt={session.autoAdvanceScheduledAt}

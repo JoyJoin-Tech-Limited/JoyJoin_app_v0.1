@@ -84,67 +84,79 @@ export default function RatingFace({
 
   return (
     <View className='rating-face__container'>
-      {RATING_FACES_ORDERED.map((mapping, idx) => {
-        const isSelected = value === idx + 1
-        const isPressed = pressedIndex === idx
-        const sizeRpx = 64
-        const sizeStr = `${sizeRpx}rpx`
+      <View className='rating-face__row'>
+        {RATING_FACES_ORDERED.map((mapping, idx) => {
+          const isSelected = value === idx + 1
+          const isPressed = pressedIndex === idx
+          // 2026-07-28 device audit: 64rpx faces were illegible — the
+          // monochrome-purple art carries all meaning in its silhouette and
+          // vanished at 32px. 88rpx keeps the row inside 750rpx (5×112 + gaps).
+          const sizeRpx = 88
+          const sizeStr = `${sizeRpx}rpx`
 
-        // Resolve asset path. Rating faces are CDN-only in production; the
-        // bundled local copies are no longer shipped to save package size.
-        let src = ''
-        try {
-          const path1x = getLocalIconAssetPath(mapping.assetKey, mapping.tier, 1)
-          src = cdnAsset(path1x)
-        } catch {
-          src = ''
-        }
+          // Resolve asset path. Rating faces are CDN-only in production; the
+          // bundled local copies are no longer shipped to save package size.
+          let src = ''
+          try {
+            const path1x = getLocalIconAssetPath(mapping.assetKey, mapping.tier, 1)
+            src = cdnAsset(path1x)
+          } catch {
+            src = ''
+          }
 
-        const hasError = faceErrors[mapping.assetKey] || !src
+          const hasError = faceErrors[mapping.assetKey] || !src
 
-        return (
-          <View
-            key={mapping.assetKey}
-            className={`rating-face__item ${isSelected ? 'rating-face__item--selected' : ''}`}
-            style={{
-              width: `${sizeRpx + 24}rpx`,
-              height: `${sizeRpx + 24}rpx`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%',
-              opacity: isSelected ? 1 : 0.5,
-              transform: isPressed ? 'scale(1.15)' : isSelected ? 'scale(1.08)' : 'scale(1)',
-              boxShadow: isSelected
-                ? `0 0 16rpx 4rpx ${SELECTED_GLOW}`
-                : 'none',
-              transition: REDUCED_MOTION ? 'none' : 'transform 150ms ease-out, opacity 200ms ease-out',
-            }}
-            role='button'
-            aria-label={`${RATING_LABELS[idx]}，${idx + 1}分`}
-            aria-pressed={isSelected}
-            aria-disabled={disabled}
-            onClick={() => handleTap(idx)}
-            onTouchStart={() => !disabled && setPressedIndex(idx)}
-            onTouchEnd={() => setPressedIndex(null)}
-          >
-            {!hasError ? (
-              <Image
-                src={src}
-                style={{
-                  width: sizeStr,
-                  height: sizeStr,
-                }}
-                onError={() => markFaceError(mapping.assetKey)}
-              />
-            ) : (
-              <Text style={{ fontSize: sizeStr, lineHeight: sizeStr }}>
-                {mapping.fallbackEmoji}
-              </Text>
-            )}
-          </View>
-        )
-      })}
+          return (
+            <View
+              key={mapping.assetKey}
+              className={`rating-face__item ${isSelected ? 'rating-face__item--selected' : ''}`}
+              style={{
+                width: `${sizeRpx + 24}rpx`,
+                height: `${sizeRpx + 24}rpx`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                // Unselected stays legible (0.72, was 0.5 — the wash-out made
+                // the five purple faces indistinguishable on device).
+                opacity: isSelected ? 1 : 0.72,
+                transform: isPressed ? 'scale(1.15)' : isSelected ? 'scale(1.08)' : 'scale(1)',
+                boxShadow: isSelected
+                  ? `0 0 16rpx 4rpx ${SELECTED_GLOW}`
+                  : 'none',
+                transition: REDUCED_MOTION ? 'none' : 'transform 150ms ease-out, opacity 200ms ease-out',
+              }}
+              role='button'
+              aria-label={`${RATING_LABELS[idx]}，${idx + 1}分`}
+              aria-pressed={isSelected}
+              aria-disabled={disabled}
+              onClick={() => handleTap(idx)}
+              onTouchStart={() => !disabled && setPressedIndex(idx)}
+              onTouchEnd={() => setPressedIndex(null)}
+            >
+              {!hasError ? (
+                <Image
+                  src={src}
+                  style={{
+                    width: sizeStr,
+                    height: sizeStr,
+                  }}
+                  onError={() => markFaceError(mapping.assetKey)}
+                />
+              ) : (
+                <Text style={{ fontSize: sizeStr, lineHeight: sizeStr }}>
+                  {mapping.fallbackEmoji}
+                </Text>
+              )}
+            </View>
+          )
+        })}
+      </View>
+      {/* Selection caption — the labels existed only in aria-label before;
+          sighted users had no word for each face's meaning (2026-07-28). */}
+      <Text className='rating-face__caption' aria-live='polite'>
+        {value > 0 ? RATING_LABELS[value - 1] : '轻点表情，告诉我们你的感受'}
+      </Text>
     </View>
   )
 }

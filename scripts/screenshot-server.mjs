@@ -684,6 +684,37 @@ async function captureLandingBlindBox() {
 }
 
 register('landing-blind-box', captureLandingBlindBox)
+
+// Legal-gate hint variant: tap the primary CTA WITHOUT accepting the legal
+// checkbox → shake + floating hint pill (PM review 2026-07-28).
+async function captureLandingLegalHint() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.route('**/api/auth/user', (route) =>
+        route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: false, error: 'unauthenticated' }),
+        }),
+      )
+      await page.goto(`${H5_BASE_URL}/#/pages/index/index`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.waitForSelector('.landing-page', { state: 'visible', timeout: 20000 })
+      await page.waitForSelector('.hero-stage__hero-img--in', { state: 'attached', timeout: 15000 })
+      await page.waitForTimeout(2800)
+      await page.click('.landing-page__cta--primary')
+      await page.waitForSelector('.landing-page__legal-hint', { state: 'visible', timeout: 5000 })
+      await page.waitForTimeout(300)
+      return screenshotViewport(page)
+    }
+  )
+}
+register('landing-legal-hint', captureLandingLegalHint)
 register('icebreaker-micro-challenge', () => captureIcebreaker('mock-micro_challenge'))
 register('icebreaker-lie-detective', () => captureIcebreaker('mock-lie_detective'))
 register('icebreaker-auction', () => captureIcebreaker('mock-auction'))

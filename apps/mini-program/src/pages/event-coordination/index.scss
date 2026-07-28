@@ -70,7 +70,6 @@
 
   &__notice-copy,
   &__support-subtitle,
-  &__support-helper,
   &__tip,
   &__event-meta {
     font-size: $font-size-sm;
@@ -103,30 +102,20 @@
   }
 
   &__support-card {
-    flex-direction: row;
-    align-items: center;
-    gap: 24rpx;
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-md;
   }
 
   &__support-copy {
-    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 12rpx;
   }
 
-  &__support-helper {
-    color: $color-text-muted;
-  }
-
-  &__support-qr {
-    width: 180rpx;
-    height: 180rpx;
-    flex-shrink: 0;
-    border-radius: 24rpx;
-    background: $color-bg-tint-cream;
-    padding: 12rpx;
-    box-sizing: border-box;
+  // Native contact entry (open-type="contact") — full-width pill under the copy.
+  &__support-btn {
+    width: 100%;
   }
 
   &__tips {

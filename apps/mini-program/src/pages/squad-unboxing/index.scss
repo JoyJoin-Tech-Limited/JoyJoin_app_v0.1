@@ -97,6 +97,14 @@ $fan-rotations: (
       height: clamp(360rpx, 42dvh, 460rpx);
     }
 
+    // Peak-end settle breath (2026-07-24 full-marks): one 600ms scale beat
+    // (1 → 1.015 → 1) after the last flip lands — the table "exhales" once
+    // to close the reveal. Controller-gated to motion tiers, so no RM
+    // override is needed here.
+    &--breath {
+      animation: squad-unboxing-settle-breath 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
     &--revealed {
       // Fixed header stage for the revealed state. Now a flex COLUMN: the slim
       // title bar sits on top, the deck-stage (flex:1) fills the rest and
@@ -218,10 +226,14 @@ $fan-rotations: (
       pointer-events: auto;
       cursor: pointer;
       transition: transform 0.12s ease;
+    }
 
-      &--pressed {
-        transform: translateX(-50%) scale(0.96);
-      }
+    // Press feedback for the ready-state box tap. The hoverClass adds this
+    // ALONGSIDE --ready, so it must be a flat modifier — the previous nested
+    // &--ready > &--pressed compiled to --ready--pressed and never matched
+    // (caught by the class-coverage gate 2026-07-28).
+    &--pressed {
+      transform: translateX(-50%) scale(0.96);
     }
 
     // Composed mode: the box is decorative — the tap layer owns interaction —
@@ -229,6 +241,30 @@ $fan-rotations: (
     // animates smoothly.
     &--tap-target {
       transition: transform 0.12s ease;
+    }
+  }
+
+  // Batch B handoff overlay (2026-07-24): the opened box rises + fades for
+  // ~240ms above the revealed stage so the dealt fan reads as "cards coming
+  // OUT of the box". Geometry mirrors &__stage-body (bottom-anchored
+  // 360×292rpx) so the box never jumps at the ready→revealed clamp change.
+  // Mounted only on motion tiers (controller-gated), so no RM override here.
+  &__box-exit {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: 360rpx;
+    height: 292rpx;
+    transform: translateX(-50%);
+    z-index: 6;
+    pointer-events: none;
+    animation: squad-unboxing-box-exit 0.24s ease both;
+
+    // Composed hero keeps the same bottom-anchored box geometry — restated
+    // explicitly so the two never drift (review CONCERN-1).
+    &--composed {
+      width: 360rpx;
+      height: 292rpx;
     }
   }
 
@@ -469,6 +505,17 @@ $fan-rotations: (
     word-break: keep-all;
   }
 
+  // Ready-state eyebrow (2026-07-24 copy-card removal): the quiet
+  // 第N组 · M位同桌 context line above the hero title.
+  &__header-eyebrow {
+    @include type-caption;
+    display: block;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+    text-align: center;
+    word-break: keep-all;
+  }
+
   &__header-tagline {
     @include type-body;
     display: block;
@@ -609,6 +656,10 @@ $fan-rotations: (
     flex-shrink: 1;
     min-height: 0;
     margin-bottom: 0;
+    // BUG B (2026-07-28 overlap incident): in the locked revealed column the
+    // bubble is the designated squeeze victim — clip its overflow instead of
+    // letting the unclamped narration spill over the 桌卡 strip below.
+    overflow: hidden;
   }
 
   &__analysis-bubble--in-dock {
@@ -682,6 +733,72 @@ $fan-rotations: (
     overflow-wrap: break-word;
   }
 
+  // Structured 同频分析卡 (2026-07-24 P1) — shipped 2026-07-28; these three
+  // classes rendered unstyled until now (zero-CSS incident hidden from the
+  // class-coverage guardrail by a comment-apostrophe extractor desync).
+  &__narrative-verdict {
+    @include type-body;
+    display: block;
+    color: $color-text-primary;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  &__narrative-evidence {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8rpx;
+    margin-top: $spacing-sm;
+  }
+
+  &__narrative-opener {
+    @include type-caption;
+    display: block;
+    margin-top: $spacing-sm;
+    color: $color-text-secondary;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  // 桌型诊断 chips (2026-07-24 P0): the group-level role mix lives inside the
+  // bubble footer under the group voice only. Label + wrap chips keep the
+  // bubble's vertical budget honest in the locked revealed column.
+  &__diagnosis {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__diagnosis-label {
+    flex-shrink: 0;
+    font-size: $font-size-2xs;
+    line-height: 1.5;
+    color: $color-text-secondary;
+    padding-top: 4rpx;
+  }
+
+  &__diagnosis-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8rpx;
+    min-width: 0;
+  }
+
+  &__diagnosis-chip {
+    padding: 4rpx 12rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.1);
+    box-sizing: border-box;
+  }
+
+  &__diagnosis-chip-text {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    white-space: nowrap;
+  }
+
   &__analysis-bubble-aigc {
     margin-top: $spacing-sm;
     align-self: flex-start;
@@ -721,6 +838,12 @@ $fan-rotations: (
     &--ready {
       opacity: 1;
       transform: translateY(0);
+    }
+
+    // 人→关系→场合 arc (2026-07-24 P2): the event-brief chapter enters last,
+    // after the people (cards) and the relationship (narration/strip).
+    &--late {
+      transition-delay: 0.24s;
     }
   }
 
@@ -1630,6 +1753,24 @@ $fan-rotations: (
         }
       }
     }
+
+    // Row-aware lift (2026-07-28 overlap incident): the full −40rpx +
+    // scale(1.1) lift on a bottom-pivot card carried a SECOND-row card's
+    // opaque body ~65rpx into row 1's info zones and sliced the neighbour's
+    // meta line (紫藤 20-24岁·男 covered by 芝士). The second row lifts
+    // gently instead: ≈28rpx total rise (before the stage scale), which
+    // stays inside row 1's padding/art band — emphasis without collision.
+    // Same (0,5,0) specificity as the ladder above; wins by source order.
+    // The reduce-motion !important override still beats both.
+    .squad-unboxing__deck-fan-row + .squad-unboxing__deck-fan-row {
+      .squad-unboxing__deck-card.squad-unboxing__deck-card--focused-lift {
+        transform: translateY(-8rpx) rotate(0deg) scale(1.06);
+      }
+
+      .squad-unboxing__deck-card.squad-unboxing__deck-card--focused-lift-deg {
+        transform: translateY(-4rpx) rotate(0deg) scale(1.03);
+      }
+    }
   }
 
   // ── Pocket-the-deck fold pose (2026-07-15) ────────────────────────────────
@@ -1653,6 +1794,16 @@ $fan-rotations: (
         }
       }
     }
+  }
+
+  // Focus grammar (2026-07-28 overlap incident): while a card is lifted,
+  // sibling info zones ghost-fade to 0.12 — art stays, the deck stays
+  // legible, and the lift never slices a neighbour's text mid-glyph.
+  // SquadDeckStage has emitted --has-focus since 2026-07-24 but this rule
+  // was never shipped (dead class — the class-coverage guardrail missed it
+  // because of a comment-apostrophe extractor desync, also fixed now).
+  &__deck-fan--has-focus &__deck-card:not(&__deck-card--focused) &__deck-card-info {
+    opacity: 0.12;
   }
 
   // The card. Fan pose + state transforms come from the per-(row-length,index)
@@ -1833,6 +1984,18 @@ $fan-rotations: (
     &--active {
       animation: squad-unboxing-holo-sweep 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     }
+
+    // 最佳拍档 slow-reveal sheen (2026-07-24 P1): same transform-only sweep
+    // but slower (1s) and gold, so the best-partner flip reads as the deck's
+    // premium moment. Coexists with --active; listed after it so the gold
+    // background wins the tie.
+    &--gold {
+      background: linear-gradient(115deg,
+        rgba($color-landed-gold, 0) 0%,
+        rgba($color-landed-gold, 0.55) 50%,
+        rgba($color-landed-gold, 0) 100%);
+      animation: squad-unboxing-holo-sweep 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
   }
 
   &__deck-card--flipped &__deck-card-inner {
@@ -1879,6 +2042,27 @@ $fan-rotations: (
     &--in-row {
       position: static;
     }
+  }
+
+  // 我-card role badge (2026-07-24 full-marks): the viewer's squad role
+  // (气氛担当/深度担当/暖心担当) flows in the top-left badge row next to the
+  // 我 marker — top-left is the one corner a neighbour never covers. Quiet
+  // outline pill so it supports the solid 我 badge instead of competing.
+  &__deck-card-role-badge {
+    height: 40rpx;
+    padding: 0 $spacing-sm;
+    box-sizing: border-box;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.86);
+    border: 1rpx solid rgba($color-primary, 0.32);
+    @include flex-center;
+  }
+
+  &__deck-card-role-badge-text {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    letter-spacing: 0.02em;
   }
 
   // Front-face top-left badge row: 我 marker + +N overflow chip. Top-left
@@ -2018,6 +2202,9 @@ $fan-rotations: (
     gap: 2rpx;
     padding: $spacing-sm;
     overflow: hidden;
+    // Ghost-fade motion (the --has-focus rule above only sets the target
+    // opacity; RM's global 150ms transition-duration cap covers this too).
+    transition: opacity 0.2s ease;
   }
 
   &__deck-card-name {
@@ -2083,6 +2270,54 @@ $fan-rotations: (
     // not inconsistency.
     &--interest .connection-point-pill {
       background: transparent;
+    }
+  }
+
+  // Pair-temperature chip (2026-07-24 P1): the viewer↔member chemistry word
+  // rides above the hook pill in the pills stack. Tier tints follow the
+  // chemistry palette — fire/warm pink, mild purple, cold grey — at chip
+  // strength so the foil border stays the card's only loud surface.
+  &__deck-card-temp-chip {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    max-width: 100%;
+    padding: 2rpx $spacing-xs;
+    border-radius: 999rpx;
+    box-sizing: border-box;
+
+    &--fire,
+    &--warm {
+      background: rgba($color-secondary, 0.16);
+    }
+
+    &--mild {
+      background: rgba($color-primary, 0.12);
+    }
+
+    &--cold {
+      background: rgba($color-text-secondary, 0.1);
+    }
+  }
+
+  &__deck-card-temp-chip-text {
+    display: block;
+    font-size: $font-size-2xs;
+    line-height: 1.3;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: keep-all;
+
+    .squad-unboxing__deck-card-temp-chip--fire &,
+    .squad-unboxing__deck-card-temp-chip--warm & {
+      color: $chemistry-warm-text;
+    }
+
+    .squad-unboxing__deck-card-temp-chip--mild & {
+      color: $chemistry-mild-text;
     }
   }
 
@@ -2695,6 +2930,40 @@ $fan-rotations: (
     &:not(:disabled):active {
       transform: scale(0.98);
     }
+
+    // Lit CTA (2026-07-24 P0): once every card is face-up the primary button
+    // breathes a soft glow — the tap is never gated, but the table's "done"
+    // moment deserves a lit exit. Opacity-pulse only (no transform); the
+    // glow falls back to a static halo under reduce-motion.
+    &--lit {
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: -6rpx;
+        border-radius: inherit;
+        box-shadow: 0 0 24rpx 6rpx rgba($color-primary, 0.35);
+        opacity: 0.2;
+        animation: squad-unboxing-confirm-lit 2.4s ease-in-out infinite;
+        pointer-events: none;
+      }
+    }
+  }
+
+  &--reduce-motion &__confirm-btn--lit::after {
+    animation: none;
+    opacity: 0.35;
+  }
+
+  // Return thread (2026-07-24 full-marks, user-sat angle 5): one quiet line
+  // seeding the post-event loop under the CTA.
+  &__return-thread {
+    @include type-caption;
+    display: block;
+    margin-top: $spacing-sm;
+    color: $color-text-secondary;
+    text-align: center;
   }
 
 
@@ -2735,6 +3004,38 @@ $fan-rotations: (
     color: $color-text-secondary;
     text-align: center;
     line-height: 1.7;
+  }
+}
+
+@keyframes squad-unboxing-settle-breath {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.015);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes squad-unboxing-box-exit {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-32rpx);
+  }
+}
+
+@keyframes squad-unboxing-confirm-lit {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.65;
   }
 }
 

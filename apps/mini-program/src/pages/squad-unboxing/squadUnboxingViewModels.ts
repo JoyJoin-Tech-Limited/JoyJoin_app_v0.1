@@ -212,9 +212,9 @@ export function buildFocusedMemberBubbleText(
     ? ''
     : normalize(member?.industryNicheLabel ?? member?.industryCategoryLabel)
   // Education clause (2026-07-16 PM): sits right after industry in the beat
-  // priority (connection > industry > education > hometown). The slice(0, 3)
-  // cap below now pushes hometown/archetype out first when every field is
-  // present, which protects the 3s typewriter budget.
+  // priority (connection > industry > education > hometown). The slice cap
+  // below (2 with a pair explanation, else 3) pushes hometown/archetype out
+  // first when every field is present, which protects the typewriter budget.
   const education = member?.educationVisible === false ? '' : normalize(member?.educationLevel)
   const interests = (member?.topInterests ?? []).map((interest) => normalize(interest)).filter(Boolean).slice(0, 3)
   const hometown = member?.hometownAffinityOptin === false ? '' : normalize(member?.hometownRegionCity)
@@ -227,11 +227,17 @@ export function buildFocusedMemberBubbleText(
     hometown ? `来自${hometown}` : '',
     archetype ? `带着${archetype}的社交气质` : '',
   ].filter(Boolean)
-  const introduction = profileBeats.length > 0
-    ? `先认识一下${name}：${profileBeats.slice(0, 3).join('，')}`
-    : `先认识一下${name}：这是今晚会和你同桌的新伙伴`
+  // BUG B (2026-07-28 overlap incident): when a pair explanation follows,
+  // cap the intro at 2 beats — intro(3 beats) + explanation blew past the
+  // 4-line bubble clamp and spilled over the 桌卡 strip in the locked
+  // revealed column.
   const reason = normalize(explanation)
-  if (reason && !/还在.{0,8}(整理|寻找).{0,8}连接线索/.test(reason)) {
+  const hasReason = Boolean(reason) && !/还在.{0,8}(整理|寻找).{0,8}连接线索/.test(reason)
+  const beatCap = hasReason ? 2 : 3
+  const introduction = profileBeats.length > 0
+    ? `先认识一下${name}：${profileBeats.slice(0, beatCap).join('，')}`
+    : `先认识一下${name}：这是今晚会和你同桌的新伙伴`
+  if (hasReason) {
     return `${introduction}。你们之间还有个连接点：${reason}。`
   }
 

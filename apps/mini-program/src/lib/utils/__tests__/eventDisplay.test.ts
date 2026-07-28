@@ -2,6 +2,7 @@ import type { JoinedEventSummary } from '@shared/api'
 import { describe, expect, it } from 'vitest'
 import {
   formatEventDateTime,
+  getEventPoolStatusLabel,
   getJoinedEventDisplayDateTime,
   getJoinedEventStatusLabel,
   isJoinedEventTerminal,
@@ -156,6 +157,24 @@ describe('eventDisplay', () => {
       expect(isJoinedEventTerminal('confirmed')).toBe(false)
       expect(isJoinedEventTerminal('venue_unlocked')).toBe(false)
       expect(isJoinedEventTerminal('upcoming')).toBe(false)
+    })
+  })
+
+  describe('getEventPoolStatusLabel (2026-07-28 — event-detail raw `active` fix)', () => {
+    it('localizes every pool lifecycle status', () => {
+      expect(getEventPoolStatusLabel('active')).toBe('招募中')
+      expect(getEventPoolStatusLabel('matching')).toBe('匹配中')
+      expect(getEventPoolStatusLabel('matched')).toBe('已成局')
+      expect(getEventPoolStatusLabel('completed')).toBe('已结束')
+      expect(getEventPoolStatusLabel('cancelled')).toBe('已取消')
+      expect(getEventPoolStatusLabel('archived')).toBe('已关闭')
+    })
+
+    it('never leaks a raw enum for unknown/empty statuses', () => {
+      expect(getEventPoolStatusLabel(null)).toBe('')
+      expect(getEventPoolStatusLabel(undefined)).toBe('')
+      expect(getEventPoolStatusLabel('')).toBe('')
+      expect(getEventPoolStatusLabel('some_future_status')).toBe('')
     })
   })
 })

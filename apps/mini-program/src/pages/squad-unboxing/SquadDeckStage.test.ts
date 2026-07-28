@@ -452,3 +452,89 @@ describe('SCSS fan poses + anti-collision (Direction: Cascading Hand Fan)', () =
     expect(tsx).not.toContain('[instant, dealTotalMs, staggerMs, members]')
   })
 })
+
+// 2026-07-28 device-recording incident (6-member table, rows [3,3]): the
+// focused bottom-row card's full lift sliced the top-row neighbour's meta
+// line, and the documented sibling ghost-fade class was emitted but never
+// styled. These locks keep the collision geometry + the fade shipped.
+describe('SCSS focus-lift collision guards (2026-07-28 overlap incident)', () => {
+  const scss = readFileSync(resolve(here, 'index.scss'), 'utf8')
+
+  it('ships the ghost-fade for the previously dead --has-focus class', () => {
+    expect(scss).toContain(
+      '&__deck-fan--has-focus &__deck-card:not(&__deck-card--focused) &__deck-card-info',
+    )
+    expect(scss).toContain('opacity: 0.12')
+    // The fade animates via the info zone's own opacity transition (the base
+    // rule is the block carrying `flex: 1 1 auto`, not the compound
+    // ghost-fade selector earlier in the file).
+    const infoBaseBlock =
+      scss
+        .split('&__deck-card-info {')
+        .slice(1)
+        .map((tail) => tail.split('}')[0] ?? '')
+        .find((block) => block.includes('flex: 1 1 auto')) ?? ''
+    expect(infoBaseBlock).toContain('transition: opacity 0.2s ease')
+  })
+
+  it('lifts second-row cards gently so the lift never reaches row 1 text', () => {
+    // Row-2 override scoped to the adjacent-sibling row, AFTER the dealt
+    // ladder so it wins the (0,5,0) source-order tie.
+    expect(scss).toContain('.squad-unboxing__deck-fan-row + .squad-unboxing__deck-fan-row')
+    expect(scss).toContain('transform: translateY(-8rpx) rotate(0deg) scale(1.06)')
+    expect(scss).toContain('transform: translateY(-4rpx) rotate(0deg) scale(1.03)')
+    // Geometry invariant: 332rpx card × 6% growth (≈20rpx) + 8rpx translate
+    // rises ≈28rpx — inside row 1's padding/art band, never its info zone.
+  })
+
+  it('keeps the full lift for first-row cards and the RM flatten override', () => {
+    expect(scss).toContain('transform: translateY(-40rpx) rotate(0deg) scale(1.1)')
+    expect(scss).toContain('transform: translateY(0) rotate(0deg) scale(1.04) !important')
+  })
+
+  it('ships the previously zero-CSS deck chip/badge/sheen styles', () => {
+    // All caught by the fixed class-coverage extractor (comment-apostrophe
+    // desync) — they rendered unstyled on device until now.
+    const tempChipBlock = scss.split('&__deck-card-temp-chip {')[1]?.split(/^  }/m)[0] ?? ''
+    expect(tempChipBlock).not.toBe('')
+    expect(tempChipBlock).toContain('&--fire')
+    expect(tempChipBlock).toContain('&--mild')
+    expect(tempChipBlock).toContain('&--cold')
+    expect(scss).toContain('&__deck-card-temp-chip-text {')
+    expect(scss).toContain('&__deck-card-role-badge {')
+    // Gold sheen is a nested modifier under the sheen base rule.
+    const sheenBlock = scss.split('&__deck-card-sheen {')[1]?.split(/^  }/m)[0] ?? ''
+    expect(sheenBlock).toContain('&--gold')
+    expect(sheenBlock).toContain('$color-landed-gold')
+    expect(scss).toContain('&__diagnosis-chip {')
+  })
+
+  it('ships the narrative verdict/evidence/opener styles (structured 同频分析卡)', () => {
+    expect(scss).toContain('&__narrative-verdict {')
+    expect(scss).toContain('&__narrative-evidence {')
+    expect(scss).toContain('&__narrative-opener {')
+  })
+})
+
+// 2026-07-28 device-recording incident: a 5-line focused narration spilled
+// out of the height-locked revealed column and painted over the 桌卡 strip
+// (保存桌卡 covered). The bubble is the column's designated squeeze victim —
+// it must clip, and the typewriters must clamp.
+describe('BUG B — narration bubble never spills over the 桌卡 strip (2026-07-28)', () => {
+  const scss = readFileSync(resolve(here, 'index.scss'), 'utf8')
+  const tsx = readFileSync(resolve(here, 'index.tsx'), 'utf8')
+
+  it('clips the analysis bubble instead of letting it overflow its flex slot', () => {
+    const bubbleBlock = scss.split('&__analysis-bubble {')[1]?.split('}')[0] ?? ''
+    expect(bubbleBlock).toContain('flex-shrink: 1')
+    expect(bubbleBlock).toContain('min-height: 0')
+    expect(bubbleBlock).toContain('overflow: hidden')
+  })
+
+  it('clamps both narration typewriters (verdict ≤3 lines, prose ≤4 lines)', () => {
+    const verdictBlock = tsx.split("className='squad-unboxing__narrative-verdict'")[1]?.split('/>')[0] ?? ''
+    expect(verdictBlock).toContain('numberOfLines={3}')
+    const proseBlock = tsx.split("className='squad-unboxing__analysis-bubble-text'")[1]?.split('/>')[0] ?? ''
+    expect(proseBlock).toContain('numberOfLines={4}')
+  })
+})

@@ -5,6 +5,10 @@
   min-height: 100dvh;
   background: $color-bg-gradient;
   padding: $container-padding;
+  // 2026-07-28 flow polish: steps were top-pinned with a dead gradient
+  // expanse below; the column flex pins the CTA to the bottom safe area.
+  display: flex;
+  flex-direction: column;
 
   &--revealed {
     padding: 0;
@@ -127,6 +131,7 @@
   &__header {
     padding-top: $spacing-xl;
     margin-bottom: $spacing-xl;
+    text-align: center;
   }
 
   &__title {
@@ -137,10 +142,24 @@
     margin-bottom: $spacing-xs;
   }
 
-  &__subtitle {
-    display: block;
-    font-size: $font-size-base;
-    color: $color-text-secondary;
+  // 1/2/3 step dots (2026-07-28): the flow previously gave no sense of place.
+  &__progress {
+    display: flex;
+    justify-content: center;
+    gap: 12rpx;
+    margin-top: $spacing-md;
+  }
+
+  &__progress-dot {
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.18);
+    transition: background-color 0.2s ease;
+
+    &--active {
+      background: $color-primary;
+    }
   }
 
   // ─── Card ──────────────────────────────────────────────────────────────────
@@ -148,6 +167,17 @@
     @include card;
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
+  }
+
+  // Step-enter motion (2026-07-28): each step remounts, so the animation
+  // replays naturally on advance — a quiet fade+rise, RM-gated below.
+  &__header,
+  &__card {
+    animation: event-feedback-step-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  &__card {
+    animation-delay: 0.06s;
   }
 
   &__card-title {
@@ -255,7 +285,11 @@
 
   // ─── Footer ───────────────────────────────────────────────────────────────
   &__footer {
-    margin-top: $spacing-xl;
+    // Bottom-anchored CTA (2026-07-28): margin-top auto inside the flex
+    // column pins the action to the safe area instead of floating mid-screen.
+    margin-top: auto;
+    padding-top: $spacing-xl;
+    @include safe-area-bottom-padding;
   }
 
   &__submit {
@@ -281,9 +315,26 @@
   }
 }
 
+// Quiet step transition (2026-07-28): fade + 12rpx rise per step advance.
+@keyframes event-feedback-step-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .event-feedback__success-hero {
     animation: none;
     opacity: 1;
+  }
+
+  .event-feedback__header,
+  .event-feedback__card {
+    animation: none;
   }
 }
