@@ -52,10 +52,6 @@
     &--skeleton {
       margin-top: 0;
     }
-
-    &--bob {
-      animation: xiaoyue-letter-card-mascot-bob 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
-    }
   }
 
   &__skeleton-mascot {
@@ -200,27 +196,11 @@
   }
 }
 
-@keyframes xiaoyue-letter-card-mascot-bob {
-  0% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8rpx);
-  }
-  100% {
-    transform: translateY(0);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .xiaoyue-letter-card--enter {
     animation: none;
     opacity: 1;
     transform: none;
-  }
-
-  .xiaoyue-letter-card__mascot-wrap--bob {
-    animation: none;
   }
 
   .xiaoyue-letter-card__skeleton-line {

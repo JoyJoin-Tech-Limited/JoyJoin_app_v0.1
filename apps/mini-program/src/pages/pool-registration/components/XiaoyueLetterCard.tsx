@@ -1,5 +1,5 @@
 import { View, Text } from '@tarojs/components'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
 import { ARCHETYPE_BY_ID } from '@shared/personality'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
@@ -33,14 +33,6 @@ export default function XiaoyueLetterCard({
   reduceMotion,
   isLoading = false,
 }: XiaoyueLetterCardProps) {
-  const [spriteState, setSpriteState] = useState<'welcome' | 'coach'>('welcome')
-
-  useEffect(() => {
-    if (isLoading) return
-    const timer = setTimeout(() => setSpriteState('coach'), 1400)
-    return () => clearTimeout(timer)
-  }, [isLoading])
-
   const archetypeTokens = useMemo(
     () => (userArchetype ? getArchetypeTokens(userArchetype) : null),
     [userArchetype],
@@ -101,18 +93,12 @@ export default function XiaoyueLetterCard({
     <View className={rootClasses}>
       <View className='xiaoyue-letter-card__paper'>
         <View className='xiaoyue-letter-card__header'>
-          <View
-            className={[
-              'xiaoyue-letter-card__mascot-wrap',
-              visible && !reduceMotion ? 'xiaoyue-letter-card__mascot-wrap--bob' : '',
-            ].join(' ')}
-          >
+          <View className='xiaoyue-letter-card__mascot-wrap'>
             <XiaoyueSpriteAnimator
-              state={spriteState}
+              state='welcome'
               size='120rpx'
-              showGlow
-              autoPlay
-              transitionMs={300}
+              autoPlay={false}
+              staticFrame={0}
             />
           </View>
 
