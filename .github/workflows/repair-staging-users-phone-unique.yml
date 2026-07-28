@@ -1,0 +1,70 @@
+name: Repair Staging users.phone_number Unique Constraint
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: joyjoin-cvm-remote
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Apply users.phone_number unique index repair on staging
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd ~/JoyJoin
+
+            exec 9>/var/lock/joyjoin-cvm-remote.lock
+            flock -n 9
+
+            test -f deployment/.env.staging
+            set -a
+            source deployment/.env.staging
+            set +a
+            : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+
+            run_psql() {
+              docker exec -i \
+                -e PGPASSWORD="$POSTGRES_PASSWORD" \
+                postgres-staging \
+                psql -h 127.0.0.1 -U joyjoin -d joyjoin_staging "$@"
+            }
+
+            database_name="$(run_psql -Atc 'select current_database()')"
+            test "$database_name" = 'joyjoin_staging'
+
+            echo "Duplicate phone_number values before repair (top 20):"
+            run_psql -At <<'SQL'
+            select phone_number, count(*) as cnt
+            from users
+            where phone_number is not null
+            group by phone_number
+            having count(*) > 1
+            order by cnt desc
+            limit 20;
+            SQL
+
+            echo "Applying users_phone_number_unique repair..."
+            run_psql -v ON_ERROR_STOP=1 \
+              -f /dev/stdin \
+              < apps/server/migrations/0072_repair_users_phone_number_unique.sql
+
+            echo "Repair applied. Index status:"
+            run_psql -At <<'SQL'
+            select indexname, indexdef
+            from pg_indexes
+            where schemaname = 'public' and tablename = 'users' and indexname = 'users_phone_number_unique';
+            SQL
