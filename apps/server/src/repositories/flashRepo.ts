@@ -376,6 +376,7 @@ export async function seedBuiltinFlashCatalog() {
       }).onConflictDoNothing({ target: flashTaskTemplates.code });
 
       await tx.update(flashTaskTemplates).set({
+        category: task.category,
         title: task.title,
         brief: task.brief,
         instructions: task.instructions,

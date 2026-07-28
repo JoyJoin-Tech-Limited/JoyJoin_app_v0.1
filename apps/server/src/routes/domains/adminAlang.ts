@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   FLASH_DELIVERY_COPY_BY_NPC,
   FLASH_LOCATION_SEEDS,
+  FLASH_TASK_CATEGORIES,
   buildFlashNpcTaskRequestCopy,
   type FlashTaskSeed,
 } from "@shared/alang/flashCatalog";
@@ -70,14 +71,6 @@ const SHENZHEN_DISTRICTS = [
   "大鹏新区",
 ] as const;
 
-const TASK_CATEGORIES = [
-  "城市出发",
-  "文化娱乐",
-  "身体动起来",
-  "一直想做",
-  "关系连接",
-  "NPC传话",
-] as const;
 const FLASH_ANIMAL_SPECIES = ["灰狼", "水獭", "兔狲", "乌鸦", "水豚"] as const;
 
 const uuidSchema = z.string().uuid();
@@ -196,7 +189,7 @@ const feedbackPromptSchema = z.object({
 
 const taskTemplateFields = {
   code: z.string().trim().min(2).max(24).regex(/^[A-Za-z0-9_-]+$/),
-  category: z.enum(TASK_CATEGORIES),
+  category: z.enum(FLASH_TASK_CATEGORIES),
   title: z.string().trim().min(2).max(40),
   brief: z.string().trim().min(4).max(160),
   instructions: z.string().trim().min(6).max(280),

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { FLASH_TASK_CATEGORIES } from "@shared/alang/flashCatalog";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import type { FlashApprovalStatus } from "@/lib/flashAdmin";
@@ -26,14 +27,7 @@ export const SHENZHEN_DISTRICTS = [
   "大鹏新区",
 ] as const;
 
-export const TASK_CATEGORIES = [
-  "探店",
-  "城市观察",
-  "轻社交勇气",
-  "独处放松",
-  "文化发现",
-  "微小善意",
-] as const;
+export const TASK_CATEGORIES = FLASH_TASK_CATEGORIES;
 
 export type FlashCollectionResponse<T> =
   | T[]

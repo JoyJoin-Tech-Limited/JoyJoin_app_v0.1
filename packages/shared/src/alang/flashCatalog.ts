@@ -51,9 +51,9 @@ export type FlashLocationSeed = {
   safetyNotes: string;
 };
 
-const ALL_TASK_CATEGORIES = ["城市出发", "文化娱乐", "身体动起来", "一直想做", "关系连接", "NPC传话"];
-const PARK_TASK_CATEGORIES = ALL_TASK_CATEGORIES;
-const CULTURE_TASK_CATEGORIES = ALL_TASK_CATEGORIES;
+export const FLASH_TASK_CATEGORIES = ["城市出发", "文化娱乐", "身体动起来", "一直想做", "关系连接", "NPC传话"] as const;
+const PARK_TASK_CATEGORIES = [...FLASH_TASK_CATEGORIES];
+const CULTURE_TASK_CATEGORIES = [...FLASH_TASK_CATEGORIES];
 
 /**
  * Operator-reviewed GCJ-02 candidates for the Shenzhen-only formal Flash
@@ -64,12 +64,12 @@ const CULTURE_TASK_CATEGORIES = ALL_TASK_CATEGORIES;
 export const FLASH_LOCATION_SEEDS: FlashLocationSeed[] = [
   { code: "NS-SEAWORLD-ART", name: "海上世界文化艺术中心外围广场", district: "南山区", address: "深圳市南山区望海路1187号海上世界文化艺术中心外围广场", latitude: 22.4806000, longitude: 113.9171000, destinationType: "culture_space", tags: ["文化", "滨水", "公共广场", "免费"], taskCategories: CULTURE_TASK_CATEGORIES, safetyNotes: "仅使用文化艺术中心外围开放广场；无需入馆、进店或消费，避开临水边缘和闭馆后封闭区域。" },
   { code: "NS-NANTOU", name: "南头古城公共街区", district: "南山区", address: "深圳市南山区南山大道南头古城", latitude: 22.5373061, longitude: 113.9242904, destinationType: "culture_space", tags: ["古城", "街区", "免费"], taskCategories: CULTURE_TASK_CATEGORIES, safetyNotes: "仅在开放公共街巷活动；不要求进店、消费、拍摄或与商户互动。" },
-  { code: "FT-UPPERHILLS", name: "深业上城公共空间", district: "福田区", address: "深圳市福田区皇岗路5001号深业上城公共空间", latitude: 22.5650000, longitude: 114.0670000, destinationType: "public_place", tags: ["街区", "连廊", "公共空间", "免费"], taskCategories: ALL_TASK_CATEGORIES, safetyNotes: "仅使用开放街区、公共连廊和休息区；无需进店或消费，闭店后停用且不在通道内聚集。" },
+  { code: "FT-UPPERHILLS", name: "深业上城公共空间", district: "福田区", address: "深圳市福田区皇岗路5001号深业上城公共空间", latitude: 22.5650000, longitude: 114.0670000, destinationType: "public_place", tags: ["街区", "连廊", "公共空间", "免费"], taskCategories: [...FLASH_TASK_CATEGORIES], safetyNotes: "仅使用开放街区、公共连廊和休息区；无需进店或消费，闭店后停用且不在通道内聚集。" },
   { code: "FT-BOOK-CITY", name: "深圳书城中心城公共阅读区", district: "福田区", address: "深圳市福田区福中一路深圳书城中心城公共阅读区", latitude: 22.5466000, longitude: 114.0596000, destinationType: "culture_space", tags: ["阅读", "文化", "公共空间", "免费"], taskCategories: CULTURE_TASK_CATEGORIES, safetyNotes: "仅使用免费开放的公共阅读区；无需购买书籍或消费，遵守开放时间并保持安静。" },
   { code: "LH-EASTLAKE", name: "东湖公园", district: "罗湖区", address: "深圳市罗湖区爱国路东湖公园", latitude: 22.5629093, longitude: 114.1487351, destinationType: "park", tags: ["公园", "湖景", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放公共步道；与水边保持安全距离，避开偏僻和照明不足区域。" },
   { code: "LH-PEOPLE", name: "人民公园", district: "罗湖区", address: "深圳市罗湖区人民北路人民公园", latitude: 22.5534514, longitude: 114.1166622, destinationType: "park", tags: ["公园", "城市", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅在开放公共区域停留；不采摘植物，不影响园内居民和活动。" },
   { code: "BA-PARK", name: "宝安公园", district: "宝安区", address: "深圳市宝安区公园路宝安公园", latitude: 22.5860298, longitude: 113.9029171, destinationType: "park", tags: ["公园", "步道", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放步道和广场；不进入封闭山林，夜间遵守现场开放时间。" },
-  { code: "BA-OH-BAY", name: "欢乐港湾海滨文化公园", district: "宝安区", address: "深圳市宝安区宝华路欢乐港湾", latitude: 22.5432666, longitude: 113.8859008, destinationType: "public_place", tags: ["滨水", "广场", "免费"], taskCategories: ALL_TASK_CATEGORIES, safetyNotes: "任务只使用免消费公共区域；不要求进入商业设施、乘坐项目或购买商品。" },
+  { code: "BA-OH-BAY", name: "欢乐港湾海滨文化公园", district: "宝安区", address: "深圳市宝安区宝华路欢乐港湾", latitude: 22.5432666, longitude: 113.8859008, destinationType: "public_place", tags: ["滨水", "广场", "免费"], taskCategories: [...FLASH_TASK_CATEGORIES], safetyNotes: "任务只使用免消费公共区域；不要求进入商业设施、乘坐项目或购买商品。" },
   { code: "LG-DAYUN", name: "大运山自然公园", district: "龙岗区", address: "深圳市龙岗区龙城街道大运山自然公园", latitude: 22.6908987, longitude: 114.2089059, destinationType: "park", tags: ["公园", "自然", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅走开放步道；不进入未开放山地，恶劣天气或天黑后不安排深入路线。" },
   { code: "LG-LONGCHENG", name: "龙城公园", district: "龙岗区", address: "深圳市龙岗区黄阁路龙城公园", latitude: 22.7044352, longitude: 114.2184478, destinationType: "park", tags: ["公园", "城市", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅使用开放公共区域；避开施工、陡坡和照明不足路段。" },
   { code: "YT-CENTRAL", name: "盐田中央公园", district: "盐田区", address: "深圳市盐田区海景二路盐田中央公园", latitude: 22.5524397, longitude: 114.2397995, destinationType: "park", tags: ["公园", "海景", "免费"], taskCategories: PARK_TASK_CATEGORIES, safetyNotes: "仅在开放公共空间活动；与车道、临水边缘保持安全距离。" },
@@ -244,6 +244,10 @@ const parsedCatalog = catalogSchema.parse({
 
 export const FLASH_NPC_SEEDS = parsedCatalog.npcs as FlashNpcSeed[];
 export const FLASH_TASK_SEEDS = parsedCatalog.tasks as FlashTaskSeed[];
+
+export function getFlashTaskSeedByCode(code: string): FlashTaskSeed | null {
+  return FLASH_TASK_SEEDS.find((task) => task.code === code) ?? null;
+}
 
 export const FLASH_DELIVERY_COPY_BY_NPC: Record<string, string> = {
   alang: "原来后来是这样。谢谢你回来告诉我，这段路现在也有我一小份记忆了。",

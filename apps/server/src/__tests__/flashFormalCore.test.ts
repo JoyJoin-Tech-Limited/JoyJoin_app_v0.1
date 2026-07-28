@@ -3,7 +3,9 @@ import {
   buildFlashNpcTaskRequestCopy,
   FLASH_LOCATION_SEEDS,
   FLASH_NPC_SEEDS,
+  FLASH_TASK_CATEGORIES,
   FLASH_TASK_SEEDS,
+  getFlashTaskSeedByCode,
   resolveFlashDeliveryCopy,
 } from "@shared/alang/flashCatalog";
 import { FLASH_INVITATION_DEFINITIONS } from "@shared/alang/flashInvitationCatalog";
@@ -217,6 +219,21 @@ describe("formal Flash catalog", () => {
       schedulableNpcs: 5,
       taskReadyNpcs: 5,
     }, readyRuntime).ready).toBe(true);
+  });
+
+  it("keeps the formal task catalog on the single six-category contract", () => {
+    expect(FLASH_TASK_CATEGORIES).toEqual([
+      "城市出发",
+      "文化娱乐",
+      "身体动起来",
+      "一直想做",
+      "关系连接",
+      "NPC传话",
+    ]);
+    expect(new Set(FLASH_TASK_SEEDS.map((task) => task.category))).toEqual(new Set(FLASH_TASK_CATEGORIES));
+    expect(getFlashTaskSeedByCode("T01")?.category).toBe("城市出发");
+    expect(getFlashTaskSeedByCode("T30")?.category).toBe("NPC传话");
+    expect(getFlashTaskSeedByCode("UNKNOWN")).toBeNull();
   });
 
   it("keeps rollout blocked until Tencent reverse geocoding is configured", () => {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { getFlashTaskSeedByCode } from "@shared/alang/flashCatalog";
 import { z } from "zod";
 import { BookOpenCheck, Edit3, Plus, Search, ShieldCheck } from "lucide-react";
 import {
@@ -96,6 +97,7 @@ export function FlashTaskTemplatesPanel({
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<FlashTaskTemplate | null>(null);
   const [pendingToggle, setPendingToggle] = useState<FlashTaskTemplate | null>(null);
+  const [bulkReviewOpen, setBulkReviewOpen] = useState(false);
   const query = useQuery<FlashCollectionResponse<FlashTaskTemplate>>({ queryKey: [endpoint] });
   const templates = unpackFlashCollection(query.data);
 
@@ -148,6 +150,64 @@ export function FlashTaskTemplatesPanel({
     onError: (error) => toast({ title: "状态没更新", description: describeFlashAdminError(error), variant: "destructive" }),
   });
 
+  const bulkReviewMutation = useMutation({
+    mutationFn: async () => {
+      const builtinTasks = templates.filter((task) => getFlashTaskSeedByCode(task.code));
+      if (builtinTasks.length !== 30) {
+        throw new Error(`正式任务数量异常：当前找到 ${builtinTasks.length}/30 条，请先初始化完整目录。`);
+      }
+
+      let approved = 0;
+      for (const original of builtinTasks) {
+        let current = original;
+        const canonical = getFlashTaskSeedByCode(current.code);
+        if (!canonical) continue;
+
+        try {
+          if (current.category !== canonical.category) {
+            const normalizeResponse = await apiRequest("PATCH", `${endpoint}/${current.id}`, {
+              expectedContentVersion: current.contentVersion,
+              category: canonical.category,
+            });
+            current = await normalizeResponse.json();
+          }
+
+          if (!current.isHumanReviewed || !current.isActive) {
+            const reviewResponse = await apiRequest("PATCH", `${endpoint}/${current.id}`, {
+              expectedContentVersion: current.contentVersion,
+              isHumanReviewed: true,
+              isActive: true,
+            });
+            current = await reviewResponse.json();
+          }
+          approved += 1;
+        } catch (error) {
+          throw new Error(`${current.code}「${current.title}」未通过：${describeFlashAdminError(error)}`);
+        }
+      }
+      return approved;
+    },
+    onSuccess: async (approved) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [endpoint] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/overview"] }),
+      ]);
+      setBulkReviewOpen(false);
+      toast({
+        title: "正式任务已全部审核并启用",
+        description: `${approved}/30 条任务已通过现有受审接口逐条核验。`,
+      });
+    },
+    onError: (error) => {
+      setBulkReviewOpen(false);
+      toast({
+        title: "批量审核在问题任务处停止",
+        description: describeFlashAdminError(error),
+        variant: "destructive",
+      });
+    },
+  });
+
   if (query.isLoading) return <FlashListSkeleton />;
   if (query.isError) return <FlashErrorState message={describeFlashAdminError(query.error)} onRetry={() => query.refetch()} />;
 
@@ -168,9 +228,20 @@ export function FlashTaskTemplatesPanel({
           </div>
         </div>
         {canWrite && (
-          <Button onClick={() => { setEditing(null); setEditorOpen(true); }} data-testid="button-add-flash-task">
-            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />新增任务
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setBulkReviewOpen(true)}
+              disabled={bulkReviewMutation.isPending || templates.length === 0}
+              data-testid="button-review-all-flash-tasks"
+            >
+              <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" />
+              {bulkReviewMutation.isPending ? "正在逐条审核…" : "审核并启用全部正式任务"}
+            </Button>
+            <Button onClick={() => { setEditing(null); setEditorOpen(true); }} data-testid="button-add-flash-task">
+              <Plus className="mr-2 h-4 w-4" aria-hidden="true" />新增任务
+            </Button>
+          </div>
         )}
       </div>
 
@@ -290,6 +361,27 @@ export function FlashTaskTemplatesPanel({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={bulkReviewOpen} onOpenChange={(open) => !bulkReviewMutation.isPending && setBulkReviewOpen(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认审核并启用全部 30 条正式任务？</AlertDialogTitle>
+            <AlertDialogDescription>
+              系统会先把旧任务分类纠正为正式六分类，再通过现有 Admin 接口逐条记录审核人、审核时间和审计日志。
+              任意任务缺少 NPC、已审核目的地或安全条件时会立即停止，并明确显示问题任务；不会直接修改数据库绕过检查。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkReviewMutation.isPending}>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => bulkReviewMutation.mutate()}
+              disabled={bulkReviewMutation.isPending}
+            >
+              确认全部审核并启用
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -315,7 +407,7 @@ function TaskEditorDialog({
     resolver: zodResolver(taskSchema),
     defaultValues: {
       code: "",
-      category: "城市观察",
+      category: "城市出发",
       title: "",
       brief: "",
       instructions: "",
@@ -334,7 +426,11 @@ function TaskEditorDialog({
     if (!open) return;
     reset({
       code: task?.code ?? "",
-      category: (TASK_CATEGORIES.includes(task?.category as typeof TASK_CATEGORIES[number]) ? task?.category : "城市观察") as TaskFormValues["category"],
+      category: (
+        TASK_CATEGORIES.includes(task?.category as typeof TASK_CATEGORIES[number])
+          ? task?.category
+          : getFlashTaskSeedByCode(task?.code ?? "")?.category ?? "城市出发"
+      ) as TaskFormValues["category"],
       title: task?.title ?? "",
       brief: task?.brief ?? "",
       instructions: task?.instructions ?? "",
