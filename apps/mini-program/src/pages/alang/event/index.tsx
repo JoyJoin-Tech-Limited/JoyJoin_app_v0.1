@@ -99,11 +99,12 @@ function OnlineNpcCard({ npc, onClick }: { npc: FlashNpcSummary; onClick: () => 
       role='button'
       aria-label={`去找${npc.name}，${npc.districtName}，${formatFlashRemainingTime(npc.remainingSeconds, npc.endsAt)}`}
     >
+      <View className='flash-online-card__glow' />
       <FlashNpcPortrait npc={npc} />
       <View className='flash-online-card__body'>
         <View className='flash-online-card__name-row'>
           <Text className='flash-online-card__name'>{npc.name}</Text>
-          <Text className='flash-online-card__online'>此刻在线</Text>
+          <Text className='flash-online-card__online'><Text className='flash-online-card__online-dot' />此刻可遇见</Text>
         </View>
         <Text className='flash-online-card__invite'>{npc.invitation}</Text>
         <Text className='flash-online-card__meta'>
@@ -357,17 +358,30 @@ export default function FlashHomePage() {
         <View className='flash-page__content'>
           <View className='flash-page__hero'>
             <Image className='flash-page__hero-art' src={FLASH_AMBIENT_BACKGROUND} mode='aspectFill' />
+            <View className='flash-page__hero-veil' />
+            <View className='flash-page__hero-orbit flash-page__hero-orbit--one' />
+            <View className='flash-page__hero-orbit flash-page__hero-orbit--two' />
             <View className='flash-page__hero-copy'>
-              <Text className='flash-page__eyebrow'>SHENZHEN · NOW</Text>
+              <View className='flash-page__hero-status'>
+                <Text className='flash-page__hero-status-dot' />
+                <Text className='flash-page__eyebrow'>SHENZHEN · NIGHT STORY</Text>
+              </View>
               <Text className='flash-page__title'>今天，会碰见谁呢？</Text>
               <Text className='flash-page__lead'>他们不会一直在线。看见想聊的，就去附近碰碰运气。</Text>
+            </View>
+            <View className='flash-page__hero-token'>
+              <Text className='flash-page__hero-token-mark'>?</Text>
+              <Text className='flash-page__hero-token-copy'>未知相遇</Text>
             </View>
           </View>
 
           <View className='flash-page__section'>
             <View className='flash-page__section-head'>
-              <Text className='flash-page__section-title'>现在在线</Text>
-              <Text className='flash-page__section-meta'>{data.onlineNpcs.length} 位</Text>
+              <View>
+                <Text className='flash-page__section-kicker'>ENCOUNTER</Text>
+                <Text className='flash-page__section-title'>今晚的角色</Text>
+              </View>
+              <Text className='flash-page__section-meta'>{data.onlineNpcs.length} 位可遇见</Text>
             </View>
             {data.onlineNpcs.length ? (
               <View className='flash-online-list'>
@@ -386,7 +400,10 @@ export default function FlashHomePage() {
 
           <View className='flash-page__section'>
             <View className='flash-page__section-head'>
-              <Text className='flash-page__section-title'>我的任务</Text>
+              <View>
+                <Text className='flash-page__section-kicker'>QUEST LOG</Text>
+                <Text className='flash-page__section-title'>我的任务手册</Text>
+              </View>
               <View
                 className='flash-page__link'
                 onClick={() => { void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangPreferences }) }}

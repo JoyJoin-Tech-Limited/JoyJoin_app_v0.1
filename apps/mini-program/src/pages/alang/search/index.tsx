@@ -1,14 +1,13 @@
 import Taro from '@tarojs/taro'
 import { useEffect, useMemo, useState } from 'react'
-import { Image, ScrollView, Text, View } from '@tarojs/components'
-import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashPageState, formatFlashRemainingTime } from '../../../components/alang/FlashUi'
+import { ScrollView, Text, View } from '@tarojs/components'
+import { FlashButton, FlashFeatureClosed, FlashPageState, formatFlashRemainingTime } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useLocateFlashAppearance } from '../../../lib/alang/useFlash'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
-import { FLASH_UNIVERSAL_ART } from '../../../lib/alang/flashNpcAssets'
 import { haptics } from '../../../lib/utils/haptics'
 import '../flash.scss'
 
@@ -20,7 +19,6 @@ export default function FlashRadarPage() {
   const params = Taro.getCurrentInstance().router?.params ?? {}
   const appearanceId = params.appearanceId ?? ''
   const npcName = params.npcName ?? '这位朋友'
-  const npcSlug = params.npcSlug ?? ''
   const districtName = params.districtName ?? '深圳'
   const endsAt = params.endsAt ?? ''
   const locateMutation = useLocateFlashAppearance()
@@ -104,19 +102,32 @@ export default function FlashRadarPage() {
     <View className='flash-page flash-radar'>
       <ScrollView className='flash-page__scroll' scrollY>
         <View className='flash-page__content flash-radar__content'>
-          <View className='flash-radar__npc'>
-            <FlashNpcPortrait npc={{ slug: npcSlug, name: npcName }} size='large' />
-            <Text className='flash-radar__name'>{npcName}</Text>
-            <Text className='flash-radar__meta'>在{districtName} · {formatFlashRemainingTime(undefined, endsAt)}</Text>
+          <View className='flash-radar__clue'>
+            <Text className='flash-radar__clue-kicker'>ENCOUNTER SEARCH</Text>
+            <Text className='flash-radar__clue-title'>今晚，去碰个运气</Text>
+            <Text className='flash-radar__clue-meta'>{npcName}在{districtName} · {formatFlashRemainingTime(undefined, endsAt)}</Text>
+            <Text className='flash-radar__clue-copy'>先到这个公共片区，再打开雷达寻找。真正找到以前，角色不会提前现身。</Text>
           </View>
 
           <View className='flash-radar__instrument' aria-label='隐藏位置雷达，不显示角色坐标'>
-            <Image className='flash-radar__city-art' src={FLASH_UNIVERSAL_ART} mode='aspectFill' />
-            <View className='flash-radar__veil' />
+            <View className='flash-radar__grid' />
+            <View className='flash-radar__sweep' />
+            <View className='flash-radar__crosshair flash-radar__crosshair--horizontal' />
+            <View className='flash-radar__crosshair flash-radar__crosshair--vertical' />
             <View className='flash-radar__ring flash-radar__ring--outer' />
             <View className='flash-radar__ring flash-radar__ring--middle' />
             <View className='flash-radar__ring flash-radar__ring--inner' />
-            <View className='flash-radar__signal'><Text>50m</Text></View>
+            <View className='flash-radar__tick flash-radar__tick--north'><Text>N</Text></View>
+            <View className='flash-radar__tick flash-radar__tick--east'><Text>E</Text></View>
+            <View className='flash-radar__tick flash-radar__tick--south'><Text>S</Text></View>
+            <View className='flash-radar__tick flash-radar__tick--west'><Text>W</Text></View>
+            <View className='flash-radar__blip flash-radar__blip--one' />
+            <View className='flash-radar__blip flash-radar__blip--two' />
+            <View className='flash-radar__signal'><Text>?</Text></View>
+            <View className='flash-radar__instrument-status'>
+              <Text className='flash-radar__instrument-status-dot' />
+              <Text>{state === 'locating' ? '正在扫描' : '等待启动'}</Text>
+            </View>
           </View>
 
           <Text className='flash-radar__title'>到了你觉得对的附近，再确认一次</Text>

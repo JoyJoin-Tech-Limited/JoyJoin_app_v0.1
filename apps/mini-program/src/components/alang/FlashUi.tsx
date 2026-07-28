@@ -24,11 +24,12 @@ export function FlashNpcPortrait({
       style={{ backgroundColor: theme.tint }}
       aria-label={`${npc.name}的角色形象`}
     >
+      <View className='flash-npc-portrait__aura' style={{ borderColor: theme.accent }} />
       {!failed ? (
         <Image
           className='flash-npc-portrait__image'
           src={theme.imageSrc}
-          mode='aspectFill'
+          mode='aspectFit'
           onError={() => setFailed(true)}
         />
       ) : (
@@ -39,6 +40,8 @@ export function FlashNpcPortrait({
       <Text className='flash-npc-portrait__identity' style={{ backgroundColor: theme.accent }}>
         {npc.name.slice(0, 1)}
       </Text>
+      <View className='flash-npc-portrait__spark flash-npc-portrait__spark--one' />
+      <View className='flash-npc-portrait__spark flash-npc-portrait__spark--two' />
     </View>
   )
 }
@@ -189,6 +192,7 @@ export function FlashTaskCard({
       data-assignment-id={assignmentId}
     >
       <View className='flash-task-card__accent' style={{ backgroundColor: category.accent }} />
+      <Text className='flash-task-card__chapter'>SIDE QUEST</Text>
       <View className='flash-task-card__portrait'>
         <FlashNpcPortrait npc={task.npc} size='small' />
       </View>

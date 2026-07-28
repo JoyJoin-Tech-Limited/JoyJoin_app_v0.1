@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 import { useEffect, useRef, useState } from 'react'
-import { ScrollView, Text, View } from '@tarojs/components'
+import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashPageState } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
@@ -91,6 +91,7 @@ const DEFAULT_BLIND_BOX_COPY: NpcBlindBoxCopy = {
 }
 
 const OFFER_REVEAL_DELAY_MS = 480
+const ALANG_DIALOGUE_SCENE = '/pages/alang/assets/ui/flash-alang-dialogue-scene-v2.webp'
 
 function dialogueActionError(error: unknown, fallback: string): string {
   switch (getFlashApiErrorCode(error)) {
@@ -292,20 +293,47 @@ export default function FlashDialoguePage() {
   const offerPhase: OfferRevealPhase = offer && offerReveal?.templateId === offer.templateId
     ? offerReveal.phase
     : 'sealed'
+  const usesNarrativeScene = data.npc.slug === 'alang'
 
   return (
-    <View className='flash-page flash-dialogue'>
+    <View className={`flash-page flash-dialogue${usesNarrativeScene ? ' flash-dialogue--scene' : ''}`}>
       <ScrollView className='flash-page__scroll' scrollY>
         <View className='flash-page__content'>
-          <View className='flash-dialogue__host'>
-            <FlashNpcPortrait npc={data.npc} size='large' />
-            <Text className='flash-dialogue__name'>{data.npc.name}</Text>
-            <Text className='flash-dialogue__animal'>{data.npc.animal ?? '数字动物角色'}</Text>
-          </View>
+          {usesNarrativeScene ? (
+            <View className='flash-dialogue__scene'>
+              <Image className='flash-dialogue__scene-art' src={ALANG_DIALOGUE_SCENE} mode='aspectFill' />
+              <View className='flash-dialogue__scene-shade' />
+              <View className='flash-dialogue__scene-head'>
+                <Text className='flash-dialogue__chapter-index'>ENCOUNTER</Text>
+                <View className='flash-dialogue__chapter-line' />
+                <Text className='flash-dialogue__chapter-state'>故事进行中</Text>
+              </View>
+              <View className='flash-dialogue__scene-nameplate'>
+                <Text className='flash-dialogue__scene-name'>{data.npc.name}</Text>
+                <Text className='flash-dialogue__scene-role'>{data.npc.animal ?? '数字动物角色'} · 城市旅人</Text>
+              </View>
+            </View>
+          ) : (
+            <>
+              <View className='flash-dialogue__chapter'>
+                <Text className='flash-dialogue__chapter-index'>ENCOUNTER</Text>
+                <View className='flash-dialogue__chapter-line' />
+                <Text className='flash-dialogue__chapter-state'>故事进行中</Text>
+              </View>
+              <View className='flash-dialogue__host'>
+                <View className='flash-dialogue__host-halo' />
+                <FlashNpcPortrait npc={data.npc} size='large' />
+                <View className='flash-dialogue__nameplate'>
+                  <Text className='flash-dialogue__name'>{data.npc.name}</Text>
+                  <Text className='flash-dialogue__animal'>{data.npc.animal ?? '数字动物角色'} · 城市旅人</Text>
+                </View>
+              </View>
+            </>
+          )}
 
           {deliveryReply ? (
             <View className='flash-dialogue__delivery-success' role='status'>
-              <Text className='flash-dialogue__kicker'>这件事有了回音</Text>
+              <Text className='flash-dialogue__kicker'>STORY UPDATED · 这件事有了回音</Text>
               <Text className='flash-dialogue__bubble'>{deliveryReply.message}</Text>
               <FlashButton onClick={() => setDeliveryReply(null)}>
                 {deliveryReply.canContinue ? '再聊两句' : '收好这次见面'}
@@ -357,7 +385,15 @@ export default function FlashDialoguePage() {
             </View>
           ) : question ? (
             <View className='flash-dialogue__conversation'>
-              <Text className='flash-dialogue__progress'>聊两句 · {question.position ?? (data.answeredQuestionCount ?? 0) + 1}/{question.total ?? 2}</Text>
+              <View className='flash-dialogue__progress-row'>
+                <Text className='flash-dialogue__progress'>DIALOGUE · {question.position ?? (data.answeredQuestionCount ?? 0) + 1}/{question.total ?? 2}</Text>
+                <View className='flash-dialogue__progress-track'>
+                  <View
+                    className='flash-dialogue__progress-fill'
+                    style={{ width: `${Math.min(100, ((question.position ?? (data.answeredQuestionCount ?? 0) + 1) / (question.total ?? 2)) * 100)}%` }}
+                  />
+                </View>
+              </View>
               {data.openingLine ? <Text className='flash-dialogue__bubble'>{data.openingLine}</Text> : null}
               <Text className='flash-dialogue__question'>{question.text}</Text>
               <View className='flash-dialogue__choices'>
@@ -381,9 +417,14 @@ export default function FlashDialoguePage() {
             <View className='flash-dialogue__offer'>
               {offerPhase === 'sealed' ? (
                 <View className='flash-dialogue__blind-box flash-dialogue__blind-box--sealed'>
-                  <Text className='flash-dialogue__kicker'>这次不让你选</Text>
+                  <View className='flash-dialogue__kicker-row'>
+                    <Text className='flash-dialogue__kicker'>MYSTERY QUEST</Text>
+                    <Text className='flash-dialogue__kicker-copy'>这次不让你选</Text>
+                  </View>
                   <Text className='flash-dialogue__blind-box-intro'>{offerCopy.intro}</Text>
                   <View className='flash-dialogue__blind-box-visual' aria-hidden='true'>
+                    <View className='flash-dialogue__blind-box-ray flash-dialogue__blind-box-ray--one' />
+                    <View className='flash-dialogue__blind-box-ray flash-dialogue__blind-box-ray--two' />
                     <View className='flash-dialogue__blind-box-lid' />
                     <View className='flash-dialogue__blind-box-body'>
                       <Text className='flash-dialogue__blind-box-mark'>?</Text>

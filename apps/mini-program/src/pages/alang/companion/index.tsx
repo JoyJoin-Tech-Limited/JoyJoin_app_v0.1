@@ -171,6 +171,10 @@ export default function FlashTaskPage() {
     <View className='flash-page flash-task'>
       <ScrollView className='flash-page__scroll' scrollY>
         <View className='flash-page__content'>
+          <View className='flash-task__chapter'>
+            <Text className='flash-task__chapter-label'>QUEST LOG</Text>
+            <Text className='flash-task__chapter-count'>支线任务 · 已收藏</Text>
+          </View>
           <View className='flash-task__sender'>
             <FlashNpcPortrait npc={data.npc} />
             <View className='flash-task__sender-copy'>
@@ -180,6 +184,9 @@ export default function FlashTaskPage() {
           </View>
 
           <View className='flash-task__paper'>
+            <View className='flash-task__paper-binding'>
+              <View /><View /><View />
+            </View>
             <Text className='flash-task__category' style={{ color: category.text, backgroundColor: category.tint }}>{category.label}</Text>
             <Text className='flash-task__title'>{data.title}</Text>
             <Text className='flash-task__description'>{data.description || data.shortBrief || '去附近走走，把你真实的感受带回来就好。'}</Text>
@@ -222,6 +229,7 @@ export default function FlashTaskPage() {
 
           {isInvitation ? (
             <View className='flash-task__ready' role='status'>
+              <Text className='flash-task__ready-kicker'>NEXT ENCOUNTER</Text>
               <Text className='flash-task__ready-title'>这件小事先替你留着</Text>
               <Text className='flash-task__ready-copy'>
                 {data.invitationType === 'npc_message'

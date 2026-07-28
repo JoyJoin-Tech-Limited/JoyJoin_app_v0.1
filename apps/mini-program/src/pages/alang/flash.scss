@@ -375,6 +375,11 @@ page {
 
 .flash-radar {
   &__content { display: flex; flex-direction: column; align-items: center; }
+  &__clue { width: 100%; padding: 10rpx 8rpx 4rpx; text-align: center; box-sizing: border-box; }
+  &__clue-kicker { display: block; color: $color-primary; font-family: $font-mono; font-size: $font-size-2xs; font-weight: $font-weight-bold; letter-spacing: 3rpx; }
+  &__clue-title { display: block; margin-top: 14rpx; font-family: $font-cn-display; font-size: $font-size-2xl; font-weight: $font-weight-black; }
+  &__clue-meta { display: block; margin-top: 10rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; }
+  &__clue-copy { display: block; margin: 18rpx auto 0; max-width: 580rpx; padding: 18rpx 22rpx; border-radius: $card-radius-sm; background: rgba($color-primary, 0.07); color: $color-primary-dark; font-size: $font-size-sm; line-height: $line-height-relaxed; }
   &__npc { display: flex; flex-direction: column; align-items: center; margin-top: 24rpx; }
   &__name { margin-top: 18rpx; font-family: $font-cn-display; font-size: $font-size-xl; font-weight: $font-weight-black; }
   &__meta { margin-top: 8rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; }
@@ -384,22 +389,31 @@ page {
     height: 420rpx;
     margin-top: 42rpx;
     overflow: hidden;
-    border: 8rpx solid rgba($color-surface, 0.94);
+    border: 8rpx solid #F8F3FF;
     border-radius: $radius-circle;
-    background: $color-bg-tint-cream;
-    box-shadow: 0 24rpx 54rpx rgba($color-primary-dark, 0.2);
+    background: radial-gradient(circle at center, #43345F 0%, #2B2340 62%, #171422 100%);
+    box-shadow: 0 28rpx 64rpx rgba(#241934, 0.28), 0 0 0 10rpx rgba($color-primary, 0.06), inset 0 0 64rpx rgba($color-primary, 0.12);
   }
-  &__city-art { position: absolute; inset: 0; width: 100%; height: 100%; }
-  &__veil {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at center, rgba($color-surface, 0.06) 0 18%, rgba($color-primary, 0.1) 55%, rgba($color-primary-dark, 0.28) 100%);
-  }
-  &__ring { position: absolute; z-index: 1; border: 2rpx solid rgba($color-surface, 0.7); border-radius: $radius-circle; box-shadow: 0 0 24rpx rgba($color-primary, 0.18); }
-  &__ring--outer { inset: 0; }
-  &__ring--middle { inset: 72rpx; }
-  &__ring--inner { inset: 144rpx; }
-  &__signal { position: absolute; z-index: 2; inset: 168rpx; display: flex; align-items: center; justify-content: center; border: 4rpx solid rgba($color-surface, 0.9); border-radius: $radius-circle; background: $color-primary; color: $color-text-white; font-family: $font-mono; font-size: $font-size-sm; box-shadow: 0 0 0 14rpx rgba($color-primary, 0.16), $shadow-primary-soft; }
+  &__grid { position: absolute; inset: 0; opacity: 0.34; background-image: linear-gradient(rgba($color-surface, 0.08) 2rpx, transparent 2rpx), linear-gradient(90deg, rgba($color-surface, 0.08) 2rpx, transparent 2rpx); background-size: 52rpx 52rpx; }
+  &__sweep { position: absolute; z-index: 1; inset: 0; border-radius: $radius-circle; background: conic-gradient(from -28deg, rgba($color-primary, 0.34), transparent 18%, transparent 100%); animation: flash-radar-sweep 3.2s linear infinite; }
+  &__crosshair { position: absolute; z-index: 1; background: linear-gradient(90deg, transparent, rgba($color-surface, 0.18), transparent); }
+  &__crosshair--horizontal { left: 22rpx; right: 22rpx; top: 50%; height: 2rpx; }
+  &__crosshair--vertical { top: 22rpx; bottom: 22rpx; left: 50%; width: 2rpx; background: linear-gradient(180deg, transparent, rgba($color-surface, 0.18), transparent); }
+  &__ring { position: absolute; z-index: 1; border: 2rpx solid rgba($color-surface, 0.34); border-radius: $radius-circle; box-shadow: 0 0 24rpx rgba($color-primary, 0.12); }
+  &__ring--outer { inset: 20rpx; border-style: dashed; }
+  &__ring--middle { inset: 86rpx; }
+  &__ring--inner { inset: 148rpx; border-color: rgba($color-primary-light, 0.42); }
+  &__tick { position: absolute; z-index: 2; color: rgba($color-surface, 0.56); font-family: $font-mono; font-size: 18rpx; font-weight: $font-weight-bold; }
+  &__tick--north { top: 24rpx; left: 50%; transform: translateX(-50%); }
+  &__tick--east { top: 50%; right: 26rpx; transform: translateY(-50%); }
+  &__tick--south { bottom: 24rpx; left: 50%; transform: translateX(-50%); }
+  &__tick--west { top: 50%; left: 26rpx; transform: translateY(-50%); }
+  &__blip { position: absolute; z-index: 2; width: 10rpx; height: 10rpx; border-radius: $radius-circle; background: rgba($color-surface, 0.42); box-shadow: 0 0 0 8rpx rgba($color-surface, 0.04); }
+  &__blip--one { top: 116rpx; left: 108rpx; }
+  &__blip--two { right: 96rpx; bottom: 126rpx; opacity: 0.5; }
+  &__signal { position: absolute; z-index: 3; inset: 166rpx; display: flex; align-items: center; justify-content: center; border: 4rpx solid rgba($color-surface, 0.94); border-radius: $radius-circle; background: $brand-gradient; color: $color-text-white; font-family: $font-cn-display; font-size: $font-size-lg; font-weight: $font-weight-black; box-shadow: 0 0 0 14rpx rgba($color-primary, 0.13), 0 0 36rpx rgba($color-primary, 0.4); animation: flash-radar-signal 1.8s ease-in-out infinite; }
+  &__instrument-status { position: absolute; z-index: 3; left: 50%; bottom: 50rpx; display: flex; align-items: center; gap: 8rpx; padding: 7rpx 16rpx; border: 1rpx solid rgba($color-surface, 0.16); border-radius: $radius-pill; background: rgba(#171422, 0.68); color: rgba($color-surface, 0.7); font-family: $font-mono; font-size: 18rpx; transform: translateX(-50%); }
+  &__instrument-status-dot { width: 8rpx; height: 8rpx; border-radius: $radius-circle; background: #A78BFA; box-shadow: 0 0 10rpx rgba(#A78BFA, 0.8); }
   &__title { margin-top: 34rpx; font-family: $font-cn-display; font-size: $font-size-lg; font-weight: $font-weight-black; text-align: center; }
   &__copy { margin-top: 14rpx; color: $color-text-secondary-on-light; font-size: $font-size-base; line-height: $line-height-relaxed; text-align: center; }
   &__warning,
@@ -410,6 +424,16 @@ page {
   &__result-copy { display: block; margin: 8rpx 0 18rpx; color: $color-text-secondary-on-light; }
   &__actions { width: 100%; margin-top: 34rpx; }
   &__actions .flash-button + .flash-button { margin-top: 12rpx; }
+}
+
+@keyframes flash-radar-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes flash-radar-signal {
+  0%, 100% { transform: scale(0.96); box-shadow: 0 0 0 12rpx rgba($color-primary, 0.1), 0 0 26rpx rgba($color-primary, 0.3); }
+  50% { transform: scale(1); box-shadow: 0 0 0 18rpx rgba($color-primary, 0.12), 0 0 44rpx rgba($color-primary, 0.46); }
 }
 
 .flash-dialogue {
@@ -566,4 +590,141 @@ page {
   .flash-dialogue__blind-box-reel-track,
   .flash-dialogue__blind-box-pulse-core,
   .flash-dialogue__blind-box--revealed { animation: none; }
+}
+
+// Street Blind Box V2 — warm urban storybook game skin.
+.flash-page {
+  background:
+    radial-gradient(circle at 88% 4%, rgba($color-primary, 0.1), transparent 30%),
+    radial-gradient(circle at 4% 42%, rgba(#F3B565, 0.1), transparent 34%),
+    $color-bg-warm-to;
+
+  &__content { padding: 28rpx 28rpx calc(72rpx + env(safe-area-inset-bottom)); }
+  &__hero {
+    min-height: 300rpx;
+    padding: 28rpx;
+    border: 2rpx solid rgba($color-surface, 0.68);
+    box-shadow: 0 24rpx 60rpx rgba(#3A235E, 0.18);
+  }
+  &__hero-veil {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(102deg, rgba(#231736, 0.78), rgba(#392551, 0.42) 55%, rgba(#6F4F8A, 0.08));
+  }
+  &__hero-orbit {
+    position: absolute;
+    border: 2rpx solid rgba($color-surface, 0.25);
+    border-radius: $radius-circle;
+    &--one { width: 240rpx; height: 240rpx; right: -42rpx; top: -70rpx; }
+    &--two { width: 140rpx; height: 140rpx; right: 10rpx; top: -18rpx; }
+  }
+  &__hero-copy { max-width: 72%; padding: 18rpx 16rpx; background: transparent; }
+  &__hero-status { display: flex; align-items: center; gap: 10rpx; }
+  &__hero-status-dot { width: 12rpx; height: 12rpx; border-radius: $radius-circle; background: #8CE6B1; box-shadow: 0 0 0 8rpx rgba(#8CE6B1, 0.12); }
+  &__hero .flash-page__eyebrow { color: rgba($color-surface, 0.76); }
+  &__hero .flash-page__title { color: $color-text-white; }
+  &__hero .flash-page__lead { color: rgba($color-surface, 0.8); }
+  &__hero-token { position: absolute; right: 30rpx; bottom: 30rpx; display: flex; flex-direction: column; align-items: center; }
+  &__hero-token-mark { display: flex; align-items: center; justify-content: center; width: 66rpx; height: 66rpx; border: 2rpx solid rgba($color-surface, 0.64); border-radius: $radius-circle; background: rgba($color-primary, 0.72); color: $color-text-white; font-family: $font-cn-display; font-size: $font-size-lg; font-weight: $font-weight-black; box-shadow: 0 0 0 10rpx rgba($color-surface, 0.08); }
+  &__hero-token-copy { margin-top: 10rpx; color: rgba($color-surface, 0.8); font-size: $font-size-2xs; }
+  &__section-kicker { display: block; margin-bottom: 4rpx; color: $color-primary; font-family: $font-mono; font-size: $font-size-2xs; font-weight: $font-weight-bold; letter-spacing: 2rpx; }
+}
+
+.flash-npc-portrait {
+  overflow: visible;
+  border-width: 5rpx;
+  box-shadow: 0 12rpx 30rpx rgba(#2F2342, 0.18), 0 0 0 2rpx rgba($color-primary, 0.12);
+  &__image { overflow: hidden; border-radius: $radius-circle; }
+  &__aura { position: absolute; z-index: -1; inset: -14rpx; border: 2rpx dashed; border-radius: $radius-circle; opacity: 0.36; }
+  &__identity { right: -4rpx; bottom: -4rpx; }
+  &__spark { position: absolute; z-index: 3; width: 9rpx; height: 9rpx; border-radius: $radius-circle; background: $color-surface; box-shadow: 0 0 12rpx rgba($color-surface, 0.8); }
+  &__spark--one { top: 8%; right: 2%; }
+  &__spark--two { bottom: 14%; left: -4%; width: 6rpx; height: 6rpx; }
+}
+
+.flash-online-card {
+  min-height: 190rpx;
+  padding: 28rpx 24rpx;
+  border: 2rpx solid rgba($color-primary, 0.11);
+  box-shadow: 0 14rpx 34rpx rgba(#4A375F, 0.1);
+  &__glow { position: absolute; left: -44rpx; top: 16rpx; width: 160rpx; height: 160rpx; border-radius: $radius-circle; background: rgba($color-primary, 0.08); filter: blur(12rpx); }
+  &__online { display: flex; align-items: center; gap: 8rpx; padding: 5rpx 12rpx; border-radius: $radius-pill; background: rgba(#45A66C, 0.08); }
+  &__online-dot { width: 9rpx; height: 9rpx; border-radius: $radius-circle; background: #45A66C; }
+}
+
+.flash-task-card {
+  position: relative;
+  border: 2rpx solid rgba($color-primary, 0.1);
+  box-shadow: 0 12rpx 28rpx rgba(#4A375F, 0.09);
+  &__chapter { position: absolute; top: 8rpx; right: 20rpx; color: rgba($color-primary, 0.32); font-family: $font-mono; font-size: 16rpx; font-weight: $font-weight-bold; letter-spacing: 2rpx; }
+}
+
+.flash-dialogue {
+  &__chapter { display: flex; align-items: center; gap: 14rpx; padding: 2rpx 4rpx 20rpx; color: $color-primary-dark; }
+  &__chapter-index, &__chapter-state { font-family: $font-mono; font-size: $font-size-2xs; font-weight: $font-weight-bold; letter-spacing: 2rpx; }
+  &__chapter-state { color: $color-text-tertiary-on-light; letter-spacing: 0; }
+  &__chapter-line { flex: 1; height: 2rpx; background: linear-gradient(90deg, rgba($color-primary, 0.38), rgba($color-primary, 0.04)); }
+  &__host { position: relative; padding: 30rpx 0 42rpx; }
+  &__host-halo { position: absolute; top: 2rpx; width: 264rpx; height: 264rpx; border: 2rpx solid rgba($color-primary, 0.12); border-radius: $radius-circle; box-shadow: 0 0 0 26rpx rgba($color-primary, 0.035), 0 0 0 54rpx rgba($color-primary, 0.025); }
+  &__nameplate { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; min-width: 220rpx; margin-top: -8rpx; padding: 12rpx 28rpx; border: 2rpx solid rgba($color-primary, 0.14); border-radius: $radius-pill; background: rgba($color-surface, 0.94); box-shadow: $shadow-sm; }
+  &__name { margin-top: 0; }
+  &__conversation, &__delivery-success, &__delivery, &__offer { position: relative; border: 2rpx solid rgba($color-primary, 0.1); background: rgba($color-surface, 0.96); box-shadow: 0 18rpx 42rpx rgba(#4A375F, 0.12); }
+  &__kicker-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
+  &__kicker-copy { color: $color-text-secondary-on-light; font-size: $font-size-xs; font-weight: $font-weight-bold; }
+  &__bubble { border: 2rpx solid rgba($color-primary, 0.12); }
+  &__choice { position: relative; min-height: 92rpx; padding-right: 52rpx; }
+  &__choice::after { content: '›'; position: absolute; right: 22rpx; color: $color-primary; font-size: $font-size-lg; font-weight: $font-weight-bold; }
+  &__progress-row { display: flex; align-items: center; gap: 18rpx; }
+  &__progress-track { flex: 1; height: 8rpx; overflow: hidden; border-radius: $radius-pill; background: rgba($color-primary, 0.1); }
+  &__progress-fill { height: 100%; border-radius: $radius-pill; background: $brand-gradient; transition: width 240ms ease-out; }
+  &__blind-box-visual { width: 196rpx; height: 196rpx; }
+  &__blind-box-ray { position: absolute; top: 50%; left: 50%; width: 280rpx; height: 2rpx; background: linear-gradient(90deg, transparent, rgba($color-primary, 0.32), transparent); transform-origin: center; }
+  &__blind-box-ray--one { transform: translate(-50%, -50%) rotate(24deg); }
+  &__blind-box-ray--two { transform: translate(-50%, -50%) rotate(-32deg); }
+  &__blind-box-lid { top: 24rpx; left: 18rpx; }
+  &__blind-box-body { right: 26rpx; left: 26rpx; }
+  &__offer-card { border: 2rpx solid rgba($color-primary, 0.12); background: linear-gradient(145deg, $color-bg-clean, $color-bg-tint-purple); box-shadow: 0 12rpx 28rpx rgba(#4A375F, 0.08); }
+  &__scene { position: relative; height: 900rpx; margin: -28rpx -28rpx 0; overflow: hidden; background: #171525; }
+  &__scene-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+  &__scene-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(#11101D, 0.18) 0%, transparent 40%, rgba(#11101D, 0.12) 63%, rgba(#11101D, 0.88) 100%); }
+  &__scene-head { position: absolute; top: 30rpx; left: 28rpx; right: 28rpx; display: flex; align-items: center; gap: 14rpx; color: rgba($color-surface, 0.86); }
+  &__scene-head .flash-dialogue__chapter-line { background: linear-gradient(90deg, rgba($color-surface, 0.62), rgba($color-surface, 0.08)); }
+  &__scene-head .flash-dialogue__chapter-state { color: rgba($color-surface, 0.7); }
+  &__scene-nameplate { position: absolute; left: 32rpx; bottom: 252rpx; display: flex; flex-direction: column; padding: 14rpx 24rpx; border-left: 6rpx solid $color-primary; background: rgba(#171525, 0.7); backdrop-filter: blur(12rpx); color: $color-text-white; }
+  &__scene-name { font-family: $font-cn-display; font-size: $font-size-xl; font-weight: $font-weight-black; }
+  &__scene-role { margin-top: 4rpx; color: rgba($color-surface, 0.7); font-size: $font-size-xs; }
+}
+
+.flash-dialogue--scene {
+  background: #171525;
+  .flash-page__content { padding-top: 28rpx; }
+  .flash-dialogue__conversation,
+  .flash-dialogue__delivery-success,
+  .flash-dialogue__delivery,
+  .flash-dialogue__offer {
+    z-index: 3;
+    margin-top: -226rpx;
+    border-color: rgba($color-surface, 0.36);
+    border-radius: 30rpx 30rpx $card-radius-lg $card-radius-lg;
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 -18rpx 50rpx rgba(#11101D, 0.28);
+    backdrop-filter: blur(18rpx);
+  }
+  .flash-dialogue__safety { position: relative; z-index: 3; color: rgba($color-surface, 0.58); }
+}
+
+.flash-task {
+  &__chapter { display: flex; align-items: flex-end; justify-content: space-between; margin: 2rpx 6rpx 20rpx; padding-bottom: 14rpx; border-bottom: 2rpx solid rgba($color-primary, 0.12); }
+  &__chapter-label { color: $color-primary; font-family: $font-mono; font-size: $font-size-xs; font-weight: $font-weight-bold; letter-spacing: 2rpx; }
+  &__chapter-count { color: $color-text-tertiary-on-light; font-size: $font-size-xs; }
+  &__paper { position: relative; padding-top: 42rpx; border: 2rpx solid rgba($color-primary, 0.1); background: linear-gradient(180deg, $color-surface, $color-bg-clean); box-shadow: 0 20rpx 46rpx rgba(#4A375F, 0.13); }
+  &__paper-binding { position: absolute; top: 17rpx; left: 0; right: 0; display: flex; justify-content: center; gap: 14rpx; }
+  &__paper-binding view { width: 34rpx; height: 6rpx; border-radius: $radius-pill; background: rgba($color-primary, 0.2); }
+  &__ready-kicker { display: block; margin-bottom: 10rpx; color: $color-primary; font-family: $font-mono; font-size: $font-size-2xs; font-weight: $font-weight-bold; letter-spacing: 2rpx; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-dialogue__progress-fill { transition: none; }
+  .flash-radar__sweep { animation: none; }
+  .flash-radar__signal { animation: none; }
 }
