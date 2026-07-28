@@ -412,15 +412,17 @@
   &__title {
     color: $color-text-primary;
     font-family: $font-cn-display;
-    font-size: 46rpx;
+    font-size: 50rpx;
     font-weight: $font-weight-bold;
+    letter-spacing: 2rpx;
     line-height: 1.25;
   }
 
   &__subtitle {
     margin-top: 12rpx;
     color: $color-text-secondary;
-    font-size: $font-size-sm;
+    font-size: 30rpx;
+    letter-spacing: 0.8rpx;
     line-height: 1.5;
   }
 
@@ -932,19 +934,12 @@
   }
 
   &--personalized {
+    .flow-shell__game-bg {
+      background: none;
+    }
+
     .flow-shell__game-bg::after {
-      position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(
-          180deg,
-          rgba($flow-bg-primary, 0.98) 0,
-          rgba($flow-bg-primary, 0.97) 47%,
-          rgba($flow-bg-primary, 0.86) 50%,
-          rgba($flow-bg-primary, 0.28) 56%,
-          transparent 100%
-        );
-      content: '';
+      display: none;
     }
 
     .flow-shell__route,
@@ -1134,7 +1129,7 @@
     right: 17rpx;
     color: rgba($flow-brand-primary, 0.54);
     font-family: $font-en-brand;
-    font-size: 44rpx;
+    font-size: 50rpx;
     font-weight: $font-weight-bold;
   }
 
@@ -1379,9 +1374,10 @@
 
 .experience-entry-flow {
   position: relative;
+  max-width: none;
 
   &__intro {
-    padding: 12rpx 4rpx 20rpx;
+    padding: 12rpx 4rpx 24rpx;
   }
 
   &__subtitle {
@@ -1389,75 +1385,152 @@
   }
 
   &__entries {
-    justify-content: flex-start;
-    align-items: center;
-    flex: 1;
+    justify-content: stretch;
+    align-items: stretch;
+    flex: 1 1 0;
+    min-height: 0;
     gap: 20rpx;
   }
 }
 
 .experience-banner {
-  flex: 0 1 270rpx;
-  width: calc(100% - 40rpx);
-  max-width: 620rpx;
-  min-height: 224rpx;
-  max-height: 278rpx;
-  border-color: transparent;
-  box-shadow: none;
+  flex: 1 1 0;
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  max-height: none;
+  border: 1rpx solid rgba($flow-surface-primary, 0.72);
+  border-radius: 32rpx;
+  box-shadow:
+    0 14rpx 36rpx rgba($color-text-primary, 0.075),
+    0 0 0 1rpx rgba($flow-brand-primary, 0.07),
+    inset 0 1rpx 0 rgba($flow-surface-primary, 0.9);
+  backdrop-filter: blur(12rpx);
+
+  &__world,
+  &__world-scrim {
+    position: absolute;
+    width: 100%;
+  }
+
+  &__world {
+    top: 28%;
+    right: -4%;
+    bottom: 0;
+    left: -4%;
+    z-index: 0;
+    width: 108%;
+    height: 72%;
+    opacity: 0.92;
+    filter: saturate(0.94) contrast(0.96);
+
+    &--event {
+      transform: scale(1.08);
+      transform-origin: 64% center;
+    }
+
+    &--street {
+      transform: scale(1.08);
+      transform-origin: 62% center;
+    }
+  }
+
+  &__world-scrim {
+    inset: 0;
+    height: 100%;
+    z-index: 1;
+
+    &--event {
+      background:
+        linear-gradient(180deg, rgba(#fffaf7, 0.99) 0 24%, rgba(#fffaf7, 0.86) 34%, rgba(#fffaf7, 0.08) 52%, rgba(#2d2742, 0.12) 100%),
+        linear-gradient(90deg, rgba(#fff7f1, 0.16), rgba(#ffb49f, 0.04));
+      box-shadow: inset 6rpx 0 0 rgba($flow-accent-human, 0.56);
+    }
+
+    &--street {
+      background:
+        linear-gradient(180deg, rgba(#f8fbff, 0.99) 0 24%, rgba(#f8fbff, 0.86) 34%, rgba(#f8fbff, 0.08) 52%, rgba(#252a46, 0.12) 100%),
+        linear-gradient(90deg, rgba(#f8fbff, 0.12), rgba(#78c8ff, 0.04));
+      box-shadow: inset 6rpx 0 0 rgba($flow-accent-city, 0.62);
+    }
+  }
+
+  &::before {
+    position: absolute;
+    top: 0;
+    right: 28rpx;
+    left: 28rpx;
+    z-index: 1;
+    height: 2rpx;
+    border-radius: 999rpx;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba($flow-surface-primary, 0.96),
+      transparent
+    );
+    content: '';
+  }
 
   &--event {
     background:
-      radial-gradient(circle at 88% 25%, rgba($flow-accent-human, 0.24), transparent 32%),
-      linear-gradient(135deg, rgba($flow-brand-light, 0.3), rgba($flow-accent-human, 0.14)),
-      $flow-surface-primary;
+      radial-gradient(circle at 91% 20%, rgba($flow-accent-human, 0.28), transparent 33%),
+      radial-gradient(circle at 6% 105%, rgba($flow-brand-primary, 0.1), transparent 40%),
+      linear-gradient(135deg, rgba($flow-brand-light, 0.24), rgba($flow-accent-human, 0.12)),
+      rgba($flow-surface-primary, 0.86);
   }
 
   &--street {
     background:
-      radial-gradient(circle at 88% 25%, rgba($flow-accent-city, 0.24), transparent 32%),
-      linear-gradient(135deg, rgba($flow-accent-city, 0.2), rgba($flow-brand-light, 0.22)),
-      $flow-surface-primary;
+      radial-gradient(circle at 91% 20%, rgba($flow-accent-city, 0.3), transparent 33%),
+      radial-gradient(circle at 6% 105%, rgba($flow-brand-primary, 0.09), transparent 40%),
+      linear-gradient(135deg, rgba($flow-accent-city, 0.17), rgba($flow-brand-light, 0.17)),
+      rgba($flow-surface-primary, 0.86);
   }
 
   &__summary {
-    min-height: 174rpx;
-    padding: 24rpx 30rpx 14rpx;
-  }
-
-  &__icon {
-    width: 100rpx;
-    height: 100rpx;
-    margin-right: 22rpx;
-    padding: 5rpx;
-    background: rgba($flow-surface-primary, 0.82);
-    box-shadow: 0 8rpx 24rpx rgba($color-text-primary, 0.07);
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    min-height: 0;
+    padding: 24rpx 32rpx 82rpx;
+    box-sizing: border-box;
   }
 
   &__copy {
-    padding-right: 116rpx;
+    max-width: 620rpx;
+    padding-right: 0;
   }
 
   &__title {
     margin-top: 0;
     color: $flow-brand-primary;
     font-family: $font-cn-display;
-    font-size: $font-size-xl;
+    font-size: 50rpx;
     font-weight: $font-weight-bold;
-    line-height: 1.25;
+    letter-spacing: 2rpx;
+    line-height: 1.2;
   }
 
   &__eyebrow {
     order: 2;
-    margin-top: 3rpx;
+    margin-top: 5rpx;
     color: rgba($flow-brand-primary, 0.82);
-    font-family: $font-cn-display;
-    font-size: $font-size-sm;
+    font-family: $font-ui;
+    font-size: 27rpx;
     font-weight: $font-weight-semibold;
+    letter-spacing: 1.2rpx;
   }
 
   &__dimension {
     order: 3;
-    margin-top: 10rpx;
+    max-width: 560rpx;
+    margin-top: 14rpx;
+    font-family: $font-ui;
+    font-size: 31rpx;
+    font-weight: $font-weight-semibold;
+    letter-spacing: 0.8rpx;
+    line-height: 1.38;
   }
 
   &__description {
@@ -1465,11 +1538,14 @@
   }
 
   &__art {
-    top: 34rpx;
-    right: 22rpx;
-    width: 130rpx;
-    height: 116rpx;
-    transform: none;
+    z-index: 2;
+    top: calc(50% - 60rpx);
+    right: 28rpx;
+    width: 136rpx;
+    height: 120rpx;
+    opacity: 0.62;
+    transform: scale(1.08);
+    transform-origin: center;
   }
 
   &__art-node {
@@ -1559,8 +1635,21 @@
   }
 
   &__footer {
-    right: 30rpx;
-    bottom: 20rpx;
+    z-index: 3;
+    right: 24rpx;
+    bottom: 22rpx;
+    min-height: 48rpx;
+    padding: 0 18rpx;
+    border: 1rpx solid rgba($flow-surface-primary, 0.7);
+    border-radius: 999rpx;
+    background: rgba($flow-surface-primary, 0.84);
+    box-shadow: 0 8rpx 22rpx rgba($color-text-primary, 0.12);
+    backdrop-filter: blur(10rpx);
+  }
+
+  &__link {
+    font-size: 26rpx;
+    letter-spacing: 1rpx;
   }
 
   &__arrow {
@@ -2471,13 +2560,13 @@
     }
 
     .experience-entry-flow__title {
-      font-size: 36rpx;
+      font-size: 40rpx;
       line-height: 1.18;
     }
 
     .experience-entry-flow__subtitle {
       margin-top: 5rpx;
-      font-size: 23rpx;
+      font-size: 25rpx;
       line-height: 1.35;
     }
 
@@ -2485,29 +2574,30 @@
       gap: 10rpx;
     }
 
+    .experience-banner {
+      flex: 1 1 0;
+      min-height: 0;
+      max-height: none;
+      border-radius: 26rpx;
+    }
+
     .experience-banner__summary {
       min-height: 136rpx;
       padding: 16rpx 18rpx 34rpx;
     }
 
-    .experience-banner__icon {
-      width: 58rpx;
-      height: 58rpx;
-      margin-right: 14rpx;
-      border-radius: 18rpx;
-    }
-
     .experience-banner__copy {
+      max-width: 390rpx;
       padding-right: 0;
     }
 
     .experience-banner__title {
-      font-size: 29rpx;
+      font-size: 40rpx;
     }
 
     .experience-banner__dimension {
       margin-top: 4rpx;
-      font-size: 25rpx;
+      font-size: 28rpx;
     }
 
     .experience-banner__headline {
@@ -2519,14 +2609,16 @@
     .experience-banner__art {
       top: 10rpx;
       right: 8rpx;
-      transform: scale(0.68);
+      transform: scale(0.74);
       transform-origin: top right;
       opacity: 0.38;
     }
 
     .experience-banner__footer {
       right: 18rpx;
-      bottom: 8rpx;
+      bottom: 14rpx;
+      min-height: 40rpx;
+      padding: 0 14rpx;
     }
 
     .flow-shell__action {
@@ -2598,11 +2690,11 @@
     }
 
     .experience-entry-flow__title {
-      font-size: 31rpx;
+      font-size: 34rpx;
     }
 
     .experience-entry-flow__subtitle {
-      font-size: 20rpx;
+      font-size: 22rpx;
     }
 
     .experience-banner__summary {
@@ -2610,18 +2702,27 @@
       padding: 12rpx 14rpx 30rpx;
     }
 
-    .experience-banner__icon {
-      width: 50rpx;
-      height: 50rpx;
-      margin-right: 10rpx;
+    .experience-banner {
+      flex: 1 1 0;
+      min-height: 0;
+      max-height: none;
+    }
+
+    .experience-banner__copy {
+      max-width: 340rpx;
+      padding-right: 0;
     }
 
     .experience-banner__title {
-      font-size: 25rpx;
+      font-size: 35rpx;
     }
 
     .experience-banner__dimension {
-      font-size: 22rpx;
+      font-size: 24rpx;
+    }
+
+    .experience-banner__art {
+      transform: scale(0.62);
     }
 
     .experience-banner__headline {
@@ -2630,7 +2731,7 @@
     }
 
     .experience-banner__footer {
-      font-size: 20rpx;
+      font-size: 22rpx;
     }
 
     .flow-shell__action {

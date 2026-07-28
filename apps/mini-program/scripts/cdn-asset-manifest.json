@@ -691,6 +691,10 @@
       "cdnPath": "assets/promo/banner-ai-match-understands-you.webp"
     },
     {
+      "localPath": "assets/qr/customer-service-support.png",
+      "cdnPath": "assets/qr/customer-service-support.png"
+    },
+    {
       "localPath": "assets/tab-bar-notch-bg.png",
       "cdnPath": "assets/tab-bar-notch-bg.png"
     },
@@ -1753,6 +1757,102 @@
     {
       "localPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-cat-v1.webp",
       "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-bg-cat-v1.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-corgi-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-corgi-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-corgi-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-corgi-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-rooster-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-rooster-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-rooster-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-rooster-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-hamster_praise-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-hamster_praise-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-hamster_praise-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-hamster_praise-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-fox-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-fox-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-fox-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-fox-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-dolphin_calm-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-dolphin_calm-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-dolphin_calm-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-dolphin_calm-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-spider-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-spider-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-spider-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-spider-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-koala-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-koala-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-koala-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-koala-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-octopus-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-octopus-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-octopus-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-octopus-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-owl-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-owl-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-owl-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-owl-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-elephant-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-elephant-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-elephant-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-elephant-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-turtle-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-turtle-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-turtle-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-turtle-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-cat-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-event-cat-v2.webp"
+    },
+    {
+      "localPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-cat-v2.webp",
+      "cdnPath": "assets/lovart/flow-archetype-backgrounds/flow-banner-street-cat-v2.webp"
     },
     {
       "localPath": "assets/lovart/landing/hero-box-xiaoyue-dusk.webp",

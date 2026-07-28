@@ -9,6 +9,10 @@ const brandLogoPath = path.resolve(miniProgramRoot, 'src/components/ui/BrandLogo
 export default defineConfig({
   root: previewRoot,
   publicDir: path.resolve(miniProgramRoot, 'src'),
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('development'),
+    'process.env.TARO_APP_CDN_BASE_URL': JSON.stringify(''),
+  },
   plugins: [
     {
       name: 'joyjoin-rpx-preview',

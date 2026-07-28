@@ -10,7 +10,7 @@ export const EXPERIENCE_DEFINITIONS: readonly ExperienceDefinition[] = [
   {
     id: 'event',
     eyebrow: '人与人',
-    title: '正式盲盒活动',
+    title: '盲盒活动',
     headline: '不是随机拼桌，是认真组一支合拍的小队',
     description: '你挑活动，我们参考彼此的偏好组成小组',
     icon: 'formal-blind-box',

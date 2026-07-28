@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import ExperienceEntryFlow from './ExperienceEntryFlow'
 import { EXPERIENCE_DEFINITIONS, FLOW_ANIMATION_TIMING } from './flowAnimation.config'
-import FlowShell from './FlowShell'
+import FlowShell, { resolveFlowArchetypeBackgrounds } from './FlowShell'
 import { markFlowSeen } from './FlowStorage'
 import { useFlowProgress } from './useFlowProgress'
 
@@ -54,6 +54,7 @@ export default function JoyJoinPlayModeFlow({
       <ExperienceEntryFlow
         entries={EXPERIENCE_DEFINITIONS}
         revealProgress={progress}
+        backgroundSources={resolveFlowArchetypeBackgrounds(archetypeId)}
         initialDetailId={initialDetailId}
       />
     </FlowShell>

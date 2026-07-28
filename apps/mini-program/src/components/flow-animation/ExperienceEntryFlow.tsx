@@ -1,18 +1,20 @@
 import { useState } from 'react'
-import { Button, Text, View } from '@tarojs/components'
+import { Button, Image, Text, View } from '@tarojs/components'
 import ExperienceDetail from './ExperienceDetail'
-import FlowIcon from './icons/FlowIcon'
+import type { FlowArchetypeBackgrounds } from './FlowShell'
 import type { ExperienceDefinition } from './flowAnimation.types'
 
 interface ExperienceEntryFlowProps {
   entries: readonly ExperienceDefinition[]
   revealProgress: number
+  backgroundSources?: FlowArchetypeBackgrounds | null
   initialDetailId?: ExperienceDefinition['id']
 }
 
 export default function ExperienceEntryFlow({
   entries,
   revealProgress,
+  backgroundSources,
   initialDetailId,
 }: ExperienceEntryFlowProps) {
   const [detailId, setDetailId] = useState<ExperienceDefinition['id'] | null>(initialDetailId ?? null)
@@ -28,7 +30,7 @@ export default function ExperienceEntryFlow({
       <View className='experience-entry-flow__entries'>
         {entries.map((entry, index) => {
           const visible = revealProgress >= (index === 0 ? 0.32 : 0.48)
-          const accent = entry.id === 'event' ? 'human' : 'city'
+          const backgroundSrc = backgroundSources?.[entry.id]
 
           return (
             <Button
@@ -42,27 +44,27 @@ export default function ExperienceEntryFlow({
               onClick={() => setDetailId(entry.id)}
               ariaLabel={`查看${entry.title}玩法`}
             >
+              {backgroundSrc ? (
+                <>
+                  <Image
+                    className={`experience-banner__world experience-banner__world--${entry.id}`}
+                    src={backgroundSrc}
+                    mode='aspectFill'
+                    lazyLoad={false}
+                  />
+                  <View className={`experience-banner__world-scrim experience-banner__world-scrim--${entry.id}`} />
+                </>
+              ) : null}
               <View className='experience-banner__summary'>
-                <View className='experience-banner__icon'>
-                  <FlowIcon name={entry.icon} active accent={accent} size='lg' />
-                </View>
                 <View className='experience-banner__copy'>
                   <Text className='experience-banner__title'>{entry.title}</Text>
                   <Text className='experience-banner__eyebrow'>{entry.eyebrow}</Text>
                   <Text className='experience-banner__dimension'>{entry.headline}</Text>
                 </View>
-                <View className={`experience-banner__art experience-banner__art--${entry.id}`}>
-                  <View className='experience-banner__art-node experience-banner__art-node--one' />
-                  <View className='experience-banner__art-node experience-banner__art-node--two' />
-                  <View className='experience-banner__art-node experience-banner__art-node--three' />
-                  <View className='experience-banner__art-path experience-banner__art-path--one' />
-                  <View className='experience-banner__art-path experience-banner__art-path--two' />
-                  <View className='experience-banner__art-glint' />
-                </View>
               </View>
 
               <View className='experience-banner__footer'>
-                <Text className='experience-banner__link'>查看玩法</Text>
+                <Text className='experience-banner__link'>进入看看</Text>
                 <View className='experience-banner__arrow' />
               </View>
             </Button>
