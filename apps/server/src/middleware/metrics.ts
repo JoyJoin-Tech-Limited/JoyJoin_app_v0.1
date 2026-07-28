@@ -20,6 +20,8 @@
  *   process_resident_memory_bytes                          — RSS memory
  *   process_heap_used_bytes                                — JS heap used
  *   process_heap_total_bytes                               — JS heap total
+ *   nodejs_heap_size_limit_bytes                           — V8 heap limit (OOM threshold; reflects --max-old-space-size)
+ *   nodejs_external_memory_bytes                           — external (native-backed) memory
  *   nodejs_event_loop_delay_ms                             — event-loop lag
  *   process_uptime_seconds                                 — server uptime
  *
@@ -42,6 +44,7 @@
  */
 
 import { type Request, type Response, type NextFunction } from 'express';
+import { getHeapStatistics } from 'node:v8';
 import { getMatchingMetricsText } from "../matchingMetrics";
 
 // ---------------------------------------------------------------------------
@@ -240,6 +243,7 @@ function renderCounterValue(name: string, help: string, value: number): string {
 function renderProcessMetrics(): string {
   const mem = process.memoryUsage();
   const cpu = process.cpuUsage();
+  const heapStats = getHeapStatistics();
   const sections: string[] = [
     renderGauge(
       'process_resident_memory_bytes',
@@ -255,6 +259,16 @@ function renderProcessMetrics(): string {
       'process_heap_total_bytes',
       'Process heap memory total in bytes.',
       mem.heapTotal,
+    ),
+    renderGauge(
+      'nodejs_heap_size_limit_bytes',
+      'V8 heap size limit in bytes (OOM threshold; reflects --max-old-space-size).',
+      heapStats.heap_size_limit,
+    ),
+    renderGauge(
+      'nodejs_external_memory_bytes',
+      'External (native-backed) memory in bytes.',
+      mem.external,
     ),
     renderCounterValue(
       'process_cpu_user_seconds_total',

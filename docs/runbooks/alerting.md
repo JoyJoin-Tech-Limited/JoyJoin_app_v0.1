@@ -17,6 +17,7 @@
    - [JoyJoinElevated4xxRate](#joyjoinelevated4xxrate)
    - [JoyJoinHighLatency](#joyjoinhighlatency)
    - [JoyJoinHighMemory](#joyjoinhighmemory)
+   - [JoyJoinHeapNearLimit](#joyjoinheapnearlimit)
    - [JoyJoinHighCPU](#joyjoinhighcpu)
    - [JoyJoinSyntheticProbeFailed](#joyjoinsyntheticprobefailed)
 3. [How to silence an alert](#how-to-silence-an-alert)
@@ -144,6 +145,25 @@
 5. For persistent leaks, enable heap snapshots (`--expose-gc`) in a staging environment.
 
 **Resolution:** Alert resolves when RSS drops below 768 MB.
+
+**Owner:** Backend team.
+
+---
+
+### JoyJoinHeapNearLimit
+
+**Severity:** Warning  
+**Condition:** V8 heap used > 80% of `nodejs_heap_size_limit_bytes`, sustained for 10 minutes (any `joyjoin_server*` job, prod and staging).  
+**Meaning:** The process is approaching the V8 heap ceiling and will die with `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory` (SIGABRT) near 100%, causing a restart-loop gap where nginx returns 502. This exact failure took down the staging API three times on 2026-07-28 (512m container → ~256MB heap cap, OOM under LLM bursts).
+
+**Immediate response:**
+1. Check `process_heap_used_bytes / nodejs_heap_size_limit_bytes` trend — gradual climb (leak/accumulation) or sudden spike (burst workload, e.g. match-explanation fan-out or icebreaker pre-generation)?
+2. Gradual climb: if the container runs with `--heapsnapshot-near-heap-limit` (staging does since 2026-07-28), pull the snapshot from the container workdir (`/app/apps/server/Heap.*.heapsnapshot`) and inspect top retainers in Chrome DevTools before the process dies.
+3. Sudden spike: correlate with `joyjoin_ai_calls_total` rate and recent icebreaker `/start` or group-analysis activity in logs.
+4. Confirm the current limits: `docker inspect --format '{{.HostConfig.Memory}}' <container>` and the `NODE_OPTIONS` env (`--max-old-space-size`).
+5. If users are being impacted (502s), restart the container during a low-traffic window and raise the heap/container limit as a stopgap while the accumulation source is investigated.
+
+**Resolution:** Alert resolves when the heap ratio drops below 80%.
 
 **Owner:** Backend team.
 

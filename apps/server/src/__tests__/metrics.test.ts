@@ -176,6 +176,22 @@ describe('metricsMiddleware', () => {
     expect(text).toContain('# TYPE process_cpu_system_seconds_total counter');
   });
 
+  it('exposes V8 heap limit and external memory gauges (pre-OOM alerting)', async () => {
+    const text = await getMetricsText();
+    expect(text).toContain('# TYPE nodejs_heap_size_limit_bytes gauge');
+    expect(text).toContain('# TYPE nodejs_external_memory_bytes gauge');
+
+    // The heap limit gauge must carry a positive numeric value — an empty or
+    // zero reading would silently break the JoyJoinHeapNearLimit alert ratio.
+    const limitMatch = text.match(/^nodejs_heap_size_limit_bytes (\d+(?:\.\d+)?)$/m);
+    expect(limitMatch).toBeTruthy();
+    expect(Number(limitMatch![1])).toBeGreaterThan(0);
+
+    const externalMatch = text.match(/^nodejs_external_memory_bytes (\d+(?:\.\d+)?)$/m);
+    expect(externalMatch).toBeTruthy();
+    expect(Number(externalMatch![1])).toBeGreaterThan(0);
+  });
+
   it('includes histogram _bucket, _sum, _count lines', async () => {
     const req = makeReq('GET', '/api/health');
     const { res, emitter } = makeRes(200);

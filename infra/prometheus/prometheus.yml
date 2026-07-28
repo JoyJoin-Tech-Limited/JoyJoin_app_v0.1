@@ -28,6 +28,13 @@ scrape_configs:
           - host.docker.internal:5000   # change for Linux: 172.17.0.1:5000
     metrics_path: /api/metrics
 
+  # JoyJoin staging API — same-host staging on the CVM (port 5001)
+  - job_name: joyjoin_server_staging
+    static_configs:
+      - targets:
+          - host.docker.internal:5001   # change for Linux: 172.17.0.1:5001
+    metrics_path: /api/metrics
+
   # Prometheus self-monitoring
   - job_name: prometheus
     static_configs:

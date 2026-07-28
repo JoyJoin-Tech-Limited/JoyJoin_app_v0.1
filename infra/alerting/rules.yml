@@ -103,6 +103,30 @@ groups:
             Current RSS: {{ $value | humanize }} MB.
           runbook_url: "https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinhighmemory"
 
+      # ── V8 heap near limit (pre-OOM early warning) ───────────────────────
+      # Added 2026-07-28 after the staging OOM crash loop: a 512m container
+      # capped the V8 heap at ~256MB and the process died in SIGABRT restart
+      # loops under LLM bursts. Ratio-based so it stays correct across
+      # per-environment --max-old-space-size settings; matches prod + staging.
+      - alert: JoyJoinHeapNearLimit
+        expr: |
+          process_heap_used_bytes{job=~"joyjoin_server.*"}
+          / nodejs_heap_size_limit_bytes{job=~"joyjoin_server.*"}
+          > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "JoyJoin V8 heap above 80% of its limit ({{ $labels.job }})"
+          description: >
+            The V8 heap has been above 80% of nodejs_heap_size_limit_bytes for
+            10 minutes; the process will SIGABRT (JavaScript heap out of
+            memory) near 100%. Investigate the accumulation source or raise
+            --max-old-space-size / the container memory limit.
+            Current ratio: {{ $value | humanizePercentage }}.
+          runbook_url: "https://github.com/JoyJoin-Tech-Limited/JoyJoin_app_v0.1/blob/main/docs/runbooks/alerting.md#joyjoinheapnearlimit"
+
       # ── CPU exhaustion ────────────────────────────────────────────────────
       # Detect sustained high CPU by monitoring the rate of CPU user-seconds.
       # A rate of > 0.85 means the process consumed 85% of one core over 10m.

@@ -52,10 +52,15 @@ services:
       NODE_ENV: staging
       PORT: "5001"
       GIT_SHA: ${GIT_SHA:-unknown}
+      # 2026-07-28 OOM fix: 512m container → V8 heap capped at ~256MB, LLM
+      # bursts + baseline (~170MB RSS) crashed the process in a restart loop.
+      # Explicit heap cap is deterministic; near-limit snapshots let us
+      # diagnose the slow accumulation before it kills the process again.
+      NODE_OPTIONS: "--max-old-space-size=1536 --heapsnapshot-near-heap-limit=3"
     ports:
       - "127.0.0.1:5001:5001"
-    mem_limit: 512m
-    mem_reservation: 256m
+    mem_limit: 2g
+    mem_reservation: 1g
     cpus: 0.75
     pids_limit: 256
     logging:
