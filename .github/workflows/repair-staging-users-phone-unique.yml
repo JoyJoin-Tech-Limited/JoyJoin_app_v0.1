@@ -58,9 +58,27 @@ jobs:
             SQL
 
             echo "Applying users_phone_number_unique repair..."
-            run_psql -v ON_ERROR_STOP=1 \
-              -f /dev/stdin \
-              < apps/server/migrations/0072_repair_users_phone_number_unique.sql
+            run_psql -v ON_ERROR_STOP=1 -f /dev/stdin <<'SQL'
+            DO $$
+            DECLARE
+              duplicate_count int;
+            BEGIN
+              SELECT count(*) INTO duplicate_count
+              FROM (
+                SELECT phone_number
+                FROM users
+                WHERE phone_number IS NOT NULL
+                GROUP BY phone_number
+                HAVING count(*) > 1
+              ) d;
+
+              IF duplicate_count > 0 THEN
+                RAISE EXCEPTION 'Cannot create unique index on users.phone_number: % duplicate phone_number values exist. Clean them first.', duplicate_count;
+              END IF;
+
+              CREATE UNIQUE INDEX IF NOT EXISTS users_phone_number_unique ON users (phone_number);
+            END $$;
+            SQL
 
             echo "Repair applied. Index status:"
             run_psql -At <<'SQL'
