@@ -184,6 +184,8 @@ npm run simulate:gate                 # CI gate: generate + run centroids
 - Build the mini-program with `TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com`.
 - Manage staging events and feature flags via `https://staging.admin.joyjoinapp.com`.
 - Staging does **not** auto-run migrations; apply `.sql` files manually against `postgres-staging`.
+- **2026-07-28 CVM memory safety update:** the staging API container (`joyjoin-api-staging`) is now limited to **2g** with `NODE_OPTIONS=--max-old-space-size=1536 --heapsnapshot-near-heap-limit=3`. The previous 512m limit produced a V8 heap OOM crash-loop (SIGABRT → 502 gaps) under LLM bursts; see `repo-memory/candidates/server-staging-oom-v8-heap-limit.md`. The production API (`joyjoin-api`) also carries `mem_limit: 2g` + `--max-old-space-size=1536` as a shared-host safety rail.
+- **2026-07-28 bundle/runtime change:** `@joyjoin/shared` is bundled into the server production bundle by `apps/server/build.mjs`; the container starts with plain `node dist/index.js` (tsx/esm is no longer required at runtime), lowering baseline memory.
 - Full guide: `deployment/README.md` and `docs/operations/test-mode-operations.md` §G.
 
 **Local dev payment smoke testing (2026-06-28):**
