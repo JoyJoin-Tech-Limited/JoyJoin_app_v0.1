@@ -129,5 +129,10 @@ jobs:
             select count(*) as smoke_user_count from users where phone_number = '+8615000000001';
             SQL
 
+            echo "Diagnostic: API container DATABASE_URL (masked):"
+            docker inspect joyjoin-api-staging --format '{{range .Config.Env}}{{println .}}{{end}}' \
+              | grep -E '^(DATABASE_URL|PGDATABASE|PGHOST|PGPORT|APP_MODE|NODE_ENV)=' \
+              | sed -E 's#(postgres(ql)?://[^:]+:)[^@]+@#\1***@#' || true
+
             echo "Diagnostic: recent API container logs (tail 80):"
             docker logs --tail 80 joyjoin-api-staging 2>&1 || true
