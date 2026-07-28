@@ -170,7 +170,7 @@ describe('PersonalStoryPage', () => {
 
     expect(await screen.findByText('2026.06.03 · 盲盒活动')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '故事正在更新' })).toBeDisabled()
-    expect(screen.getByText('你可以继续读旧章节，新的经历整理好后会自然出现在最后。')).toBeInTheDocument()
+    expect(screen.getByText('悦仲正在整理这段真实经历，你可以先读以前的章节。')).toBeInTheDocument()
     expect(screen.queryByText(/已生成|待续写/)).not.toBeInTheDocument()
   })
 
@@ -192,11 +192,11 @@ describe('PersonalStoryPage', () => {
 
   it('requests an update without a client-supplied user id and refreshes the story', async () => {
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: '更新故事' }))
+    fireEvent.click(await screen.findByRole('button', { name: '把新经历写成下一章' }))
 
     await waitFor(() => expect(mocks.requestPersonalStoryUpdate).toHaveBeenCalledWith())
     await waitFor(() => expect(mocks.showToast).toHaveBeenCalledWith(expect.objectContaining({
-      title: '新的经历会写进这本故事',
+      title: '新的一章正在写到故事最后',
     })))
     expect(mocks.haptics).toHaveBeenCalledWith('light')
   })
@@ -204,7 +204,7 @@ describe('PersonalStoryPage', () => {
   it('keeps old chapters visible when an update request fails', async () => {
     mocks.requestPersonalStoryUpdate.mockRejectedValueOnce(new Error('offline'))
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: '更新故事' }))
+    fireEvent.click(await screen.findByRole('button', { name: '把新经历写成下一章' }))
 
     await waitFor(() => expect(mocks.showToast).toHaveBeenCalledWith(expect.objectContaining({
       title: '这次没更新成功，旧章节都还在',
@@ -221,10 +221,10 @@ describe('PersonalStoryPage', () => {
       updateJob: null,
     })
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: '更新故事' }))
+    fireEvent.click(await screen.findByRole('button', { name: '把新经历写成下一章' }))
 
     await waitFor(() => expect(mocks.showToast).toHaveBeenCalledWith(expect.objectContaining({
-      title: '还没有新的真实经历，旧章节都在这里',
+      title: '最近的故事都已经写进来了',
     })))
     expect(screen.getByText('2026.06.03 · 盲盒活动')).toBeInTheDocument()
   })

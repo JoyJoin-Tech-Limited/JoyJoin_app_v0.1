@@ -22,8 +22,10 @@ import {
   eventPoolGroups,
   eventPoolRegistrations,
   eventPools,
+  flashTaskAssignments,
   users,
 } from "@shared/schema";
+import type { FlashTaskSnapshot } from "@shared/schema/flash";
 import {
   personalStoryChapters,
   personalStoryExperienceSnapshotSchema,
@@ -219,6 +221,86 @@ async function listAlangExperienceSnapshots(
   });
 }
 
+export interface FlashStorySourceRow {
+  assignmentId: string;
+  deliveredAt: Date;
+  contentSnapshot: FlashTaskSnapshot;
+  feedbackAnswers: Array<{ promptId: string; optionId: string }> | null;
+}
+
+/**
+ * Converts only server-owned, reviewed Flash data into story facts. The query
+ * intentionally never selects privateReply, coordinates, addresses or raw
+ * client prose, so those values cannot reach the LLM by accident.
+ */
+export function buildFlashStorySnapshot(
+  row: FlashStorySourceRow,
+): PersonalStoryExperienceSnapshot {
+  const feedbackOptionByKey = new Map<string, string>();
+  for (const prompt of row.contentSnapshot.feedbackPrompts ?? []) {
+    for (const option of prompt.options) {
+      feedbackOptionByKey.set(
+        `${prompt.id}:${option.id}`,
+        option.label,
+      );
+    }
+  }
+  const choices = (row.feedbackAnswers ?? [])
+    .map((answer) =>
+      cleanKeyword(
+        feedbackOptionByKey.get(`${answer.promptId}:${answer.optionId}`),
+        40,
+      ),
+    )
+    .filter((value): value is string => Boolean(value))
+    .slice(0, 12);
+  const storyBeat = cleanKeyword(row.contentSnapshot.title, 120);
+  const npcResponse = cleanKeyword(row.contentSnapshot.deliveryCopy, 160);
+  const publicLocation =
+    cleanKeyword(row.contentSnapshot.destination?.name, 80)
+    ?? cleanKeyword(row.contentSnapshot.destination?.district, 40);
+
+  return personalStoryExperienceSnapshotSchema.parse({
+    sourceType: "flash",
+    sourceId: row.assignmentId,
+    occurredAt: toIso(row.deliveredAt),
+    keywords: {
+      occurredOn: toDateOnly(row.deliveredAt),
+      activityType: "街头盲盒",
+      ...(publicLocation ? { location: publicLocation } : {}),
+      ...(cleanKeyword(row.contentSnapshot.npcName, 20)
+        ? { npc: cleanKeyword(row.contentSnapshot.npcName, 20) }
+        : {}),
+      ...(choices.length > 0 ? { choices } : {}),
+      ...(storyBeat ? { storyBeats: [storyBeat] } : {}),
+      ...(npcResponse ? { npcResponses: [npcResponse] } : {}),
+    },
+  });
+}
+
+async function listFlashExperienceSnapshots(
+  userId: string,
+): Promise<PersonalStoryExperienceSnapshot[]> {
+  const rows = (await db
+    .select({
+      assignmentId: flashTaskAssignments.id,
+      deliveredAt: flashTaskAssignments.deliveredAt,
+      contentSnapshot: flashTaskAssignments.contentSnapshot,
+      feedbackAnswers: flashTaskAssignments.feedbackAnswers,
+    })
+    .from(flashTaskAssignments)
+    .where(
+      and(
+        eq(flashTaskAssignments.userId, userId),
+        eq(flashTaskAssignments.status, "delivered"),
+        isNotNull(flashTaskAssignments.deliveredAt),
+        isNotNull(flashTaskAssignments.feedbackSubmittedAt),
+      ),
+    )) as Array<Omit<FlashStorySourceRow, "deliveredAt"> & { deliveredAt: Date }>;
+
+  return rows.map(buildFlashStorySnapshot);
+}
+
 async function listBlindBoxExperienceSnapshots(
   userId: string,
 ): Promise<PersonalStoryExperienceSnapshot[]> {
@@ -235,6 +317,7 @@ async function listBlindBoxExperienceSnapshots(
     poolDateTime: Date;
     groupDateTime: Date | null;
     venueName: string | null;
+    atmosphereScore: number | null;
   };
   const rows = (await db
     .select({
@@ -246,6 +329,7 @@ async function listBlindBoxExperienceSnapshots(
       poolDateTime: eventPools.dateTime,
       groupDateTime: eventPoolGroups.finalDateTime,
       venueName: eventPoolGroups.venueName,
+      atmosphereScore: eventFeedback.atmosphereScore,
     })
     .from(eventGroupOutcomes)
     .innerJoin(
@@ -322,11 +406,15 @@ async function listBlindBoxExperienceSnapshots(
       cleanKeyword(row.district, 40) ??
       cleanKeyword(row.city, 40);
     const partnerAnimals = [...(partnersByGroup.get(row.groupId) ?? [])].slice(0, 12);
+    const atmosphere = row.atmosphereScore
+      ? ["安静", "平淡", "舒服", "热烈", "难忘"][row.atmosphereScore - 1]
+      : undefined;
     const keywords: PersonalStoryFactKeywords = {
       occurredOn: toDateOnly(occurredAt),
       activityType: cleanKeyword(row.eventType, 40) ?? "盲盒活动",
       ...(location ? { location } : {}),
       ...(partnerAnimals.length > 0 ? { partnerAnimals } : {}),
+      ...(atmosphere ? { atmosphere } : {}),
     };
 
     return personalStoryExperienceSnapshotSchema.parse({
@@ -341,11 +429,12 @@ async function listBlindBoxExperienceSnapshots(
 export async function listEligiblePersonalStoryExperiences(
   userId: string,
 ): Promise<PersonalStoryExperienceSnapshot[]> {
-  const [alang, blindBox] = await Promise.all([
+  const [alang, flash, blindBox] = await Promise.all([
     listAlangExperienceSnapshots(userId),
+    listFlashExperienceSnapshots(userId),
     listBlindBoxExperienceSnapshots(userId),
   ]);
-  return sortAndDedupeExperienceSnapshots([...alang, ...blindBox]);
+  return sortAndDedupeExperienceSnapshots([...alang, ...flash, ...blindBox]);
 }
 
 export async function listMissingPersonalStoryExperiences(

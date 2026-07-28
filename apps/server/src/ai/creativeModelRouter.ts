@@ -8,8 +8,8 @@
  * Resolution order (per function):
  *  1. Function-level env override  (e.g. CREATIVE_AI_TAGS_PROVIDER=minimax)
  *  2. Global creative provider     (CREATIVE_AI_PROVIDER=minimax|deepseek)
- *  3. Default: DeepSeek for established surfaces; MiniMax for personal-story
- *     chapters, with runtime cross-provider failover.
+ *  3. Default: DeepSeek, including personal-story chapters, with runtime
+ *     cross-provider failover to MiniMax.
  *
  * Valid provider values: 'minimax' | 'deepseek'
  */
@@ -63,13 +63,6 @@ function resolveProvider(fn: CreativeFunction): AIProvider {
   const globalOverride = parseProviderOverride(process.env.CREATIVE_AI_PROVIDER);
   if (globalOverride) {
     return globalOverride;
-  }
-
-  // Grounded personal-story narrative plans prefer the existing MiniMax
-  // creative model. DeepSeek remains the runtime fallback below. Other
-  // established surfaces retain their current DeepSeek default.
-  if (fn === 'generatePersonalNovelChapter') {
-    return 'minimax';
   }
 
   // Default: use DeepSeek

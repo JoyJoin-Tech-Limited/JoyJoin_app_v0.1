@@ -78,8 +78,8 @@ export default function PersonalStoryPage() {
       await queryClient.invalidateQueries({ queryKey: storyQueryKey })
       Taro.showToast({
         title: response.noNewExperiences
-          ? '还没有新的真实经历，旧章节都在这里'
-          : '新的经历会写进这本故事',
+          ? '最近的故事都已经写进来了'
+          : '新的一章正在写到故事最后',
         icon: 'none',
         duration: 2200,
       })
@@ -155,12 +155,12 @@ export default function PersonalStoryPage() {
   }
 
   const updateHint = updateInProgress
-    ? '你可以继续读旧章节，新的经历整理好后会自然出现在最后。'
+    ? '悦仲正在整理这段真实经历，你可以先读以前的章节。'
     : updateFailed || serverUpdateFailed
       ? '旧章节都好好留着。准备好时，可以再试一次更新。'
       : updateUnavailable
         ? '旧章节会一直留在这里，故事更新开放后再继续写。'
-        : '有了新的真实经历，就把下一章写进来。'
+        : '有了新的真实经历，就把它写成故事的下一章。'
 
   return (
     <ScrollView
@@ -213,9 +213,9 @@ export default function PersonalStoryPage() {
             onClick={handleUpdate}
             disabled={updateUnavailable}
             loading={updateInProgress}
-            aria-label={updateInProgress ? '故事正在更新' : updateUnavailable ? '故事更新暂不可用' : '更新故事'}
+            aria-label={updateInProgress ? '故事正在更新' : updateUnavailable ? '故事更新暂不可用' : '把新经历写成下一章'}
           >
-            更新故事
+            把新经历写成下一章
           </Button>
           <Text className='personal-story__update-hint' aria-live='polite'>{updateHint}</Text>
         </View>

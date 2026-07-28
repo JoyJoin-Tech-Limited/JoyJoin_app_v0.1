@@ -20,7 +20,7 @@ import type { AIGCMeta } from "../types/aiMeta.js";
  * server-verified experiences. Raw feedback, GPS, names and arbitrary client
  * text are never part of this contract.
  */
-export const personalStorySourceTypeSchema = z.enum(["alang", "blind_box"]);
+export const personalStorySourceTypeSchema = z.enum(["alang", "flash", "blind_box"]);
 export type PersonalStorySourceType = z.infer<typeof personalStorySourceTypeSchema>;
 
 export const personalStoryFactKeywordsSchema = z
@@ -32,6 +32,9 @@ export const personalStoryFactKeywordsSchema = z
     finalMood: z.string().trim().min(1).max(30).optional(),
     choices: z.array(z.string().trim().min(1).max(40)).max(12).optional(),
     partnerAnimals: z.array(z.string().trim().min(1).max(30)).max(12).optional(),
+    storyBeats: z.array(z.string().trim().min(1).max(120)).max(8).optional(),
+    npcResponses: z.array(z.string().trim().min(1).max(160)).max(8).optional(),
+    atmosphere: z.string().trim().min(1).max(40).optional(),
   })
   .strict();
 

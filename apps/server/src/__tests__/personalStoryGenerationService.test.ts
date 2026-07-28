@@ -101,7 +101,7 @@ describe("personal story grounded narrative generation", () => {
       body: canonicalBody,
       provider: "minimax",
       model: "minimax-m2.7",
-      promptVersion: "personal-story-grounded-narrative-v3",
+      promptVersion: "personal-story-grounded-novel-v4",
       fallbackUsed: false,
     });
     expect(mocks.logAITrace).toHaveBeenCalledWith(
@@ -150,6 +150,48 @@ describe("personal story grounded narrative generation", () => {
     expect(rendered).toContain("故事发生在2026年07月15日。");
     expect(rendered).toContain("地点记录为深圳湾公园。");
     expect(rendered).not.toContain("\n\n");
+  });
+
+  it("renders verified Flash keywords with a novel opening, emotional rhythm and unfinished ending", () => {
+    const keywords = {
+      occurredOn: "2026-07-28",
+      activityType: "街头盲盒",
+      npc: "阿浪",
+      choices: ["我带到了"],
+      storyBeats: ["替阿浪把一句话带给栗子"],
+      npcResponses: ["原来你真的带到了。谢谢你。"],
+      finalMood: "遗憾里带着一点释然",
+    };
+    const allowed = buildPersonalStoryFactPlan(keywords);
+    const narrative: PersonalStoryNarrativePlan = {
+      openingStyle: "unexpected_beginning",
+      closingStyle: "unfinished_echo",
+      paragraphs: [{
+        factIds: allowed.map((fact) => fact.id),
+        clauses: allowed.map((fact) => {
+          const variants = {
+            occurred_on: "date_story_began",
+            activity_type: "activity_experience",
+            location: "location_happened",
+            npc: "npc_present",
+            final_mood: "mood_remained",
+            choice: "choice_made",
+            partner_animal: "partner_together",
+            story_beat: "story_beat_unfolded",
+            npc_response: "npc_response_echoed",
+            atmosphere: "atmosphere_felt",
+          } as const;
+          return { factId: fact.id, variant: variants[fact.kind] };
+        }),
+      }],
+    };
+
+    const rendered = renderPersonalStoryNarrativePlan(narrative, allowed);
+
+    expect(rendered).toContain("一件小事会在后来留下这么清楚的回声");
+    expect(rendered).toContain("替阿浪把一句话带给栗子");
+    expect(rendered).toContain("原来你真的带到了。谢谢你。");
+    expect(rendered).toContain("有些回声却还会继续");
   });
 
   it("rejects unknown, duplicate, missing and reordered fact references", () => {

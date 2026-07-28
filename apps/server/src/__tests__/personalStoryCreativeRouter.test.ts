@@ -50,15 +50,15 @@ describe("personal story creative provider routing", () => {
     restore("CREATIVE_AI_PERSONAL_STORY_PROVIDER", originalStoryProvider);
   });
 
-  it("prefers the existing MiniMax client for personal chapters", () => {
+  it("prefers DeepSeek for personal novel chapters", () => {
     expect(getProviderForCreativeFunction("generatePersonalNovelChapter")).toBe(
-      "minimax",
+      "deepseek",
     );
   });
 
-  it("falls through to the existing DeepSeek client when MiniMax fails", async () => {
-    mocks.minimaxCreate.mockRejectedValue(new Error("temporary MiniMax failure"));
-    mocks.deepseekCreate.mockResolvedValue({
+  it("falls through to MiniMax when DeepSeek fails", async () => {
+    mocks.deepseekCreate.mockRejectedValue(new Error("temporary DeepSeek failure"));
+    mocks.minimaxCreate.mockResolvedValue({
       choices: [{ message: { content: '{"body":"事实章节"}' } }],
     });
 
@@ -71,17 +71,17 @@ describe("personal story creative provider routing", () => {
     expect(mocks.minimaxCreate).toHaveBeenCalledTimes(1);
     expect(mocks.deepseekCreate).toHaveBeenCalledTimes(1);
     expect(result).toMatchObject({
-      provider: "deepseek",
-      model: "deepseek-chat",
+      provider: "minimax",
+      model: "minimax-m2.7",
       fallbackUsed: true,
     });
   });
 
-  it("falls through to DeepSeek when MiniMax returns non-empty but invalid content", async () => {
-    mocks.minimaxCreate.mockResolvedValue({
+  it("falls through to MiniMax when DeepSeek returns non-empty but invalid content", async () => {
+    mocks.deepseekCreate.mockResolvedValue({
       choices: [{ message: { content: '{"paragraphs":"not-an-array"}' } }],
     });
-    mocks.deepseekCreate.mockResolvedValue({
+    mocks.minimaxCreate.mockResolvedValue({
       choices: [{ message: { content: '{"paragraphs":[]}' } }],
     });
 
@@ -99,8 +99,8 @@ describe("personal story creative provider routing", () => {
     expect(mocks.deepseekCreate).toHaveBeenCalledTimes(1);
     expect(result).toMatchObject({
       content: '{"paragraphs":[]}',
-      provider: "deepseek",
-      model: "deepseek-chat",
+      provider: "minimax",
+      model: "minimax-m2.7",
       fallbackUsed: true,
     });
   });

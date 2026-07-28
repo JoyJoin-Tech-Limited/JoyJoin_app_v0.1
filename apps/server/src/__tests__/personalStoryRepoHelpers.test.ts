@@ -27,6 +27,7 @@ function blindBoxEligibilityQuerySource(): string {
 }
 
 const {
+  buildFlashStorySnapshot,
   createPersonalStoryLeaseToken,
   getPartnerAnimalLabel,
   sortAndDedupeExperienceSnapshots,
@@ -35,6 +36,55 @@ const {
 } = await import("../repositories/personalStoryRepo");
 
 describe("personal story repository boundaries", () => {
+  it("turns a delivered formal Flash task into a privacy-safe story snapshot", () => {
+    const snapshot = buildFlashStorySnapshot({
+      assignmentId: "assignment-1",
+      deliveredAt: new Date("2026-07-28T10:00:00.000Z"),
+      contentSnapshot: {
+        templateVersion: 1,
+        code: "T01",
+        category: "城市探索",
+        title: "替阿浪把一句话带给栗子",
+        brief: "一件没有说完的小事",
+        instructions: "下次遇见栗子时，把话带给她。",
+        dialogueIntro: "今天反正都出来了。",
+        deliveryCopy: "原来你真的带到了。谢谢你。",
+        invitationType: "npc_message",
+        followUpTargetNpcSlug: "lizi",
+        followUpTargetNpcName: "栗子",
+        feedbackPrompts: [{
+          id: "result",
+          prompt: "后来怎么样了",
+          options: [
+            { id: "delivered", label: "我带到了" },
+            { id: "not-yet", label: "还没带到" },
+          ],
+        }],
+        npcName: "阿浪",
+        npcSlug: "alang",
+        destination: null,
+      },
+      feedbackAnswers: [{ promptId: "result", optionId: "delivered" }],
+    });
+
+    expect(snapshot).toEqual({
+      sourceType: "flash",
+      sourceId: "assignment-1",
+      occurredAt: "2026-07-28T10:00:00.000Z",
+      keywords: {
+        occurredOn: "2026-07-28",
+        activityType: "街头盲盒",
+        npc: "阿浪",
+        choices: ["我带到了"],
+        storyBeats: ["替阿浪把一句话带给栗子"],
+        npcResponses: ["原来你真的带到了。谢谢你。"],
+      },
+    });
+    expect(JSON.stringify(snapshot)).not.toContain("privateReply");
+    expect(JSON.stringify(snapshot)).not.toContain("latitude");
+    expect(JSON.stringify(snapshot)).not.toContain("longitude");
+  });
+
   it("admits a completed blind-box experience only with the acting user's strict participation proof", () => {
     const source = blindBoxEligibilityQuerySource();
 
@@ -108,6 +158,15 @@ describe("personal story repository boundaries", () => {
         activityType: "盲盒饭局",
       },
     };
+    const flash = {
+      sourceType: "flash" as const,
+      sourceId: "assignment-1",
+      occurredAt: "2026-07-14T12:00:00.000Z",
+      keywords: {
+        occurredOn: "2026-07-14",
+        activityType: "街头盲盒",
+      },
+    };
     const alang = {
       sourceType: "alang" as const,
       sourceId: "archive-1",
@@ -118,8 +177,9 @@ describe("personal story repository boundaries", () => {
       },
     };
 
-    expect(sortAndDedupeExperienceSnapshots([blindBox, alang, blindBox])).toEqual([
+    expect(sortAndDedupeExperienceSnapshots([blindBox, alang, flash, blindBox])).toEqual([
       alang,
+      flash,
       blindBox,
     ]);
   });

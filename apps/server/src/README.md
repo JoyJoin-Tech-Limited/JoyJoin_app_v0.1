@@ -114,7 +114,7 @@ Owns the user's private, append-only story generated only from server-verified c
 
 Primary files:
 - `apps/server/src/routes/domains/personalStory.ts` — authenticated read/update/status endpoints
-- `apps/server/src/services/personalStoryGenerationService.ts` — fact-only prompt construction, validation, and MiniMax → DeepSeek provider fallback
+- `apps/server/src/services/personalStoryGenerationService.ts` — fact-only prompt construction, validation, and DeepSeek → MiniMax provider fallback
 - `apps/server/src/jobs/personalStoryWorker.ts` — durable one-active-job-per-user worker with resumable partial success
 - `apps/server/src/repositories/personalStoryRepo.ts` — current-user story, chapter, source, and job persistence
 - `packages/shared/src/schema/personalStory.ts` — database authority
@@ -123,7 +123,7 @@ Boundary:
 - One eligible real experience becomes at most one chapter; chapters are ordered oldest to newest and are never overwritten by an update.
 - Eligible sources are non-debug completed Alang archives and strict completed blind-box participation. The acting user's group outcome binds the group; eligibility additionally requires the current user to be matched, the non-test pool/group to be uncancelled and finished, and that event's current-user `event_feedback.completedAt` to be non-null. A submitted group outcome alone is insufficient.
 - Model input contains allowlisted factual keywords only. It excludes GPS, tokens, raw chat, PII, and user free text; generated text may not add unprovided setting, dialogue, thoughts, actions, people, or events.
-- MiniMax is primary and DeepSeek is the runtime fallback. Provider failure or fact-validation failure inserts no replacement chapter and preserves all previous chapters.
+- DeepSeek is primary and MiniMax is the runtime fallback. Provider failure or fact-validation failure inserts no replacement chapter and preserves all previous chapters.
 - `personalStoryEnabled=false` closes GET/POST/status before any personal-story table access. With the flag `true`, provider failure still allows authenticated reads of existing chapters while update attempts fail without replacing or deleting history.
 
 ### Profile equipment rewards

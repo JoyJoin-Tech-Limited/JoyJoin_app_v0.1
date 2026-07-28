@@ -223,7 +223,8 @@ Discover 卡
 - API：`GET /api/personal-story`、`POST /api/personal-story/update`、`GET /api/personal-story/update-status`；身份只来自登录会话。
 - 事实源只有两类：非 Debug 且 completed 的阿浪档案；严格完成的真实盲盒。盲盒以本人的 group outcome 锁定分组，并额外要求本人已匹配、活动池与分组均非测试/未取消、活动时间已过，以及该活动本人的 `event_feedback.completedAt` 非空；group outcome 单独不足以证明完成参加。反馈文本/分数、姓名、GPS、聊天和客户端自由文本都不进入提示词。
 - 用户只提交“更新故事”；服务端按经历发生时间从旧到新建立 durable job。一次真实经历对应一章，章节以 source 唯一约束追加，旧章节不覆盖、不删除。
-- 标题固定为 `日期 · 活动类型`。MiniMax 是首选，DeepSeek 使用现有客户端做运行时回退；模型每次只编排一章，输出带 `factIds` 的结构化 paragraphs/clauses，只能选择服务端批准的连接短语。服务端要求全部待写事实恰好使用一次、保持时间顺序，并拒绝任何自由正文、未知实体/数字/地点/日期或语义错配；MiniMax 返回非空但无效时也会继续尝试 DeepSeek。两家均失败或均被拒绝时不插入替代章，已存在章节继续可读，下一次更新从缺失经历继续。
+- 标题固定为 `日期 · 活动类型`。DeepSeek 是首选，MiniMax 使用现有客户端做运行时回退；模型每次只编排一章，输出带 `factIds` 的结构化 paragraphs/clauses，只能选择服务端批准的小说化开篇、连接和收束样式。服务端要求全部待写事实恰好使用一次、保持时间顺序，并拒绝任何自由正文、未知实体/数字、地点、日期或语义错配；首选模型返回非空但无效时也会继续尝试回退模型。两家均失败或均被拒绝时不插入替代章，已存在章节继续可读，下一次更新从缺失经历继续。
+- 正式街头盲盒仅在任务已交付且用户已提交结构化回访反馈后进入“我的故事”；仅使用审核过的任务标题、NPC、交付回应、反馈选项标签及可公开目的地区域，不读取私密回复、用户坐标、隐藏相遇坐标或地址。正式多人盲盒仍要求本人真实匹配、活动已结束且本人反馈完成，故事可使用活动类型、同行动物、公开地点和结构化氛围标签。
 - `personalStoryEnabled=false` 时 Profile/阿浪结果不进入私人连续故事，服务端在访问新故事表前关闭整个 surface：GET 返回 503、POST 返回 403、status 返回 disabled。只有开关为 `true`、故事表已迁移且 AI provider 暂不可用时，已存在章节仍可由 GET 读取；更新返回 503，不覆盖或删除历史。
 - 页面不显示“已生成/待续写”统计，不退化为活动流水账，不分享，只有进入页面后才展示章节状态。
 
@@ -269,7 +270,7 @@ npm run test -w mini-program -- --run src/pages/alang src/lib/alang src/componen
 | `V17-UI-06` | “我的”暖白身份舞台、透明像素伙伴、真实潮流值/统计、故事与形象入口、齿轮独立设置页 | `pages/profile/`、`pages/profile-linked/settings/` | 数据策略/Profile/设置/装备测试 + `profile-v17` 同尺寸截图 | **F3（待本轮真机复验）**：已移除紫色赛博背景和主页服务列表；12 张 CDN 基础角色已逐项返回 200。微信 TabBar、安全区、staging flags 与多机型真机仍阻断 F4 |
 | `V17-UI-07` | 仅本人可见的真实经历连续故事；手动更新、一次一章、历史保留 | `pages/profile-linked/personal-story/`、`/api/personal-story*` | Mini/Server personal-story 专项测试 + `personal-story-v17` 780×1688 截图 | **F3（最新复截图）**：主要视觉层级通过；真实 provider/staging 与多机型真机仍阻断 F4 |
 | `V17-UI-08-OVERRIDE` | 12 人格像素形象、四槽穿脱/保存、活动装备池、保底、碎片商店 | `pages/profile-linked/my-image/`、`/api/equipment/*` | Mini/Server equipment 专项测试 + `my-image-v17` 780×1688 截图 | **F3（最新复截图）**：clipping-aware 扫描为 0 个阻断项；此前 sticky 保存栏与下装/鞋履标签的 2 处报告是滚动视口裁切误报。基础人物自带初始服装；未发布单品不显示伪造覆盖层，正式四槽分层 raster 仍待审批，设备验收未完成，因此不得提升为 F4 |
-| `V17-AI-01` | MiniMax 主、DeepSeek 回退；结构化事实约束叙事，不虚构 | personal-story generation service/worker | provider/schema/grounding/worker tests | PASS |
+| `V17-AI-01` | DeepSeek 主、MiniMax 回退；结构化事实约束叙事，不虚构 | personal-story generation service/worker | provider/schema/grounding/worker tests | PASS |
 | `V17-GEO-01` | 复用现有腾讯地图接入，不新增 SDK/provider/Key | `routes/domains/geo.ts`、`api/geo.ts` | `geoRoutes.test.ts` | PASS |
 | `V17-SEC-01` | 搜索阶段隐藏目标，陪伴阶段才披露路线终点 | `alangDisclosure.ts`、`alangTargetResolver.ts` | disclosure/target resolver tests | PASS |
 | `V17-ARRIVE-01` | 服务端固定 5 米并要求稳定读数 | `alangGeoFence.ts`、`constants.ts` | geofence/content tests | PASS |

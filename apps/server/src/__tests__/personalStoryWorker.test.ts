@@ -97,7 +97,7 @@ describe("personal story durable worker", () => {
       keywordHash: `hash-${source.sourceId}`,
       provider: "minimax",
       model: "minimax-m2.7",
-      promptVersion: "personal-story-grounded-narrative-v3",
+      promptVersion: "personal-story-grounded-novel-v4",
       fallbackUsed: false,
     }));
     mocks.insert.mockResolvedValue({ created: true, chapter: { id: "chapter" } });
@@ -191,7 +191,7 @@ describe("personal story durable worker", () => {
         keywordHash: "hash-archive-1",
         provider: "minimax",
         model: "minimax-m2.7",
-        promptVersion: "personal-story-grounded-narrative-v3",
+        promptVersion: "personal-story-grounded-novel-v4",
         fallbackUsed: false,
       })
       .mockRejectedValueOnce(
@@ -307,7 +307,7 @@ describe("personal story durable worker", () => {
         keywordHash: `hash-${source.sourceId}`,
         provider: "minimax",
         model: "minimax-m2.7",
-        promptVersion: "personal-story-grounded-narrative-v3",
+        promptVersion: "personal-story-grounded-novel-v4",
         fallbackUsed: false,
       };
     });
