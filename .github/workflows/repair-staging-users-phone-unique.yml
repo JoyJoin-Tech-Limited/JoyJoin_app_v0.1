@@ -122,3 +122,9 @@ jobs:
             ROLLBACK;
             SQL
             echo "Diagnostic upsert succeeded."
+
+            echo "Diagnostic: DB identity + smoke user visibility:"
+            run_psql -At <<'SQL'
+            select current_database(), current_setting('search_path');
+            select count(*) as smoke_user_count from users where phone_number = '+8615000000001';
+            SQL
