@@ -32,7 +32,7 @@ describe("flashAdmin helpers", () => {
       ready: false,
       blockers: [
         "thirty_human_reviewed_tasks_required",
-        "all_tasks_require_approved_destinations",
+        "all_tasks_require_active_npc_links",
       ],
       counts: {
         reviewedTasks: 12,
@@ -45,9 +45,9 @@ describe("flashAdmin helpers", () => {
         detail: "已完成 12/30 条；请在「任务库」逐条确认内容并启用。",
       },
       {
-        code: "all_tasks_require_approved_destinations",
-        label: "任务目的地绑定",
-        detail: "已完成 8/30 条；每条任务都要绑定至少一个已审核且启用的目的地。",
+        code: "all_tasks_require_active_npc_links",
+        label: "任务 NPC 绑定",
+        detail: "已完成 8/30 条；每条任务都要绑定至少一个已启用的数字 NPC。",
       },
     ]);
   });

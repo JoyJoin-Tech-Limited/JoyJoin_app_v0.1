@@ -130,7 +130,8 @@ export function FlashTaskTemplatesPanel({
       const approvedDestinationIds = new Set(
         destinations.filter((item) => item.isActive && item.approvalStatus === "approved").map((item) => item.id),
       );
-      if (!task.isActive && !task.destinationIds?.some((id) => approvedDestinationIds.has(id))) {
+      const destinationFree = Boolean(getFlashTaskSeedByCode(task.code));
+      if (!task.isActive && !destinationFree && !task.destinationIds?.some((id) => approvedDestinationIds.has(id))) {
         throw new Error("请先关联至少一个已审核且可用的任务目的地。");
       }
       const response = await apiRequest("PATCH", `${endpoint}/${task.id}`, {

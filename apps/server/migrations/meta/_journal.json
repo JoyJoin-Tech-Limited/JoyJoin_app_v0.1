@@ -505,6 +505,13 @@
       "when": 1784773063829,
       "tag": "0071_add_flash_formal_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1785216000000,
+      "tag": "0072_flash_optional_task_destination",
+      "breakpoints": true
     }
   ]
 }

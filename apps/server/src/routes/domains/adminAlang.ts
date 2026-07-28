@@ -8,6 +8,7 @@ import {
   buildFlashNpcTaskRequestCopy,
   type FlashTaskSeed,
 } from "@shared/alang/flashCatalog";
+import { getFlashInvitationDefinition } from "@shared/alang/flashInvitationCatalog";
 import type { FlashAvailabilityWindow, FlashFeedbackPrompt } from "@shared/schema";
 
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
@@ -468,13 +469,30 @@ function routeFailure(req: any, res: any, label: string, error: unknown) {
     });
   }
   const message = error instanceof Error ? error.message : String(error);
-  logger.error(`[FlashAdmin] ${label}`, { error: message, adminId: getActingAdminId(req) });
+  const databaseError = error as { code?: string; constraint?: string; stack?: string };
+  logger.error(`[FlashAdmin] ${label}`, {
+    error: message,
+    errorCode: databaseError?.code,
+    constraint: databaseError?.constraint,
+    requestId: req.requestId,
+    adminId: getActingAdminId(req),
+  });
   if (message.startsWith("FLASH_ADMIN_")) {
     const [code, statusText] = message.split(":", 2);
     const status = code.includes("NOT_FOUND") ? 404 : code.includes("CONFLICT") ? 409 : 400;
     return res.status(status).json({ code, message: statusText || "操作没有完成" });
   }
-  return res.status(500).json({ code: "FLASH_ADMIN_FAILED", message: "操作没有完成，请稍后再试" });
+  if (databaseError?.code === "23505") {
+    return res.status(409).json({ code: "FLASH_ADMIN_CONFLICT", message: "任务编号或关联记录已存在，请刷新后重试" });
+  }
+  if (["23503", "23514", "22P02"].includes(databaseError?.code ?? "")) {
+    return res.status(400).json({ code: "FLASH_ADMIN_INVALID", message: "任务数据或关联项已经失效，请刷新后重新选择" });
+  }
+  return res.status(500).json({
+    code: "FLASH_ADMIN_FAILED",
+    message: "操作没有完成，请稍后再试",
+    requestId: req.requestId,
+  });
 }
 
 async function enrichedNpcs(executor: any = db) {
@@ -628,6 +646,10 @@ async function assertTaskCanActivate(taskId: string, executor: any = db) {
   if (!npcLinks.some((link: any) => link.taskTemplateId === taskId && link.isActive)) {
     throw new Error("FLASH_ADMIN_CONFLICT:任务至少需要关联一位 NPC");
   }
+  // The reviewed built-in life invitations and digital-NPC relay stories are
+  // intentionally destination-free. Legacy destination_exploration templates
+  // retain the approved-destination activation requirement.
+  if (getFlashInvitationDefinition(task.code)) return;
   const readyDestinationIds = new Set(destinations
     .filter((destination: any) => destination.isActive && destination.approvalStatus === "approved")
     .map((destination: any) => destination.id));

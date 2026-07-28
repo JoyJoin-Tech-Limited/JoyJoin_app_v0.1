@@ -28,6 +28,12 @@ function hasLeadingIndex(table: PgTable, columnName: string): boolean {
 }
 
 describe("formal Flash schema contract", () => {
+  it("allows destination-free assignments while keeping the destination column for legacy tasks", () => {
+    const destinationColumn = getTableConfig(flashTaskAssignments).columns
+      .find((column) => column.name === "destination_id");
+    expect(destinationColumn).toBeDefined();
+    expect(destinationColumn?.notNull).toBe(false);
+  });
   it("keeps lifecycle timestamps on link and locate-budget records", () => {
     for (const linkTable of [flashNpcLocationLinks, flashNpcTaskLinks, flashTaskDestinationLinks]) {
       expect(columnNames(linkTable)).toEqual(expect.arrayContaining(["created_at", "updated_at"]));

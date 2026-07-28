@@ -165,6 +165,7 @@ export default function FlashTaskPage() {
 
   const category = resolveFlashTaskCategory(data.category)
   const readyToDeliver = data.status === 'ready_to_deliver'
+  const isInvitation = data.invitationType === 'life_invitation' || data.invitationType === 'npc_message'
 
   return (
     <View className='flash-page flash-task'>
@@ -183,7 +184,7 @@ export default function FlashTaskPage() {
             <Text className='flash-task__title'>{data.title}</Text>
             <Text className='flash-task__description'>{data.description || data.shortBrief || '去附近走走，把你真实的感受带回来就好。'}</Text>
 
-            <View className='flash-task__place'>
+            {!isInvitation ? <View className='flash-task__place'>
               <Text className='flash-task__place-label'>要去的地方</Text>
               <Text className='flash-task__place-name'>{data.destinationName || '任务地点'}</Text>
               <Text className='flash-task__place-address'>
@@ -200,16 +201,39 @@ export default function FlashTaskPage() {
                   <Text>在地图中查看</Text>
                 </View>
               ) : null}
-            </View>
+            </View> : null}
 
             <View className='flash-task__rules'>
+              {isInvitation ? (
+                <>
+                  <Text>• 不需要定位、打卡或证明完成</Text>
+                  <Text>• 做一点、没开始或改变主意，都可以如实告诉角色</Text>
+                  <Text>• 只有之后再次遇见对应角色时，才会自然回访</Text>
+                </>
+              ) : (
+                <>
               <Text>• 到附近 50 米内，主动点击一次「我已到达」</Text>
               <Text>• 不要求消费、进店、拍照或与陌生人互动</Text>
               <Text>• 到达后写一两项感受，下次遇见 {data.npc.name} 再交付</Text>
+                </>
+              )}
             </View>
           </View>
 
-          {readyToDeliver ? (
+          {isInvitation ? (
+            <View className='flash-task__ready' role='status'>
+              <Text className='flash-task__ready-title'>这件小事先替你留着</Text>
+              <Text className='flash-task__ready-copy'>
+                {data.invitationType === 'npc_message'
+                  ? `以后真正遇见 ${data.followUpTargetNpc?.name ?? '指定角色'} 时，它会问你要不要把话带到。`
+                  : `以后再次遇见 ${data.npc.name}，它会问你后来怎么样了。现在不需要填写反馈。`}
+              </Text>
+              <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>看看谁在线</FlashButton>
+              <FlashButton variant='quiet' disabled={abandonMutation.isPending} onClick={() => { void handleAbandon() }}>
+                {abandonMutation.isPending ? '正在放下…' : '不再保留这个邀请'}
+              </FlashButton>
+            </View>
+          ) : readyToDeliver ? (
             <View className='flash-task__ready' role='status'>
               <Text className='flash-task__ready-title'>这件事已经做好了</Text>
               <Text className='flash-task__ready-copy'>先把它留在任务里。下次遇见 {data.npc.name}，对话会优先让你交付。</Text>

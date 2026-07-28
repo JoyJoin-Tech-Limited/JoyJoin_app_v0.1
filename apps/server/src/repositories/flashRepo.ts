@@ -223,21 +223,6 @@ export async function getFlashReadiness(executor: DbExecutor = db) {
         inArray(flashNpcs.slug, CANONICAL_FLASH_NPC_SLUGS),
       ),
     )
-    .innerJoin(
-      flashTaskDestinationLinks,
-      and(
-        eq(flashTaskDestinationLinks.taskTemplateId, flashTaskTemplates.id),
-        eq(flashTaskDestinationLinks.isActive, true),
-      ),
-    )
-    .innerJoin(
-      flashTaskDestinations,
-      and(
-        eq(flashTaskDestinationLinks.destinationId, flashTaskDestinations.id),
-        eq(flashTaskDestinations.approvalStatus, "approved"),
-        eq(flashTaskDestinations.isActive, true),
-      ),
-    )
     .where(and(
       eq(flashTaskTemplates.reviewStatus, "active"),
       eq(flashTaskTemplates.isHumanReviewed, true),
@@ -270,21 +255,6 @@ export async function getFlashReadiness(executor: DbExecutor = db) {
         eq(flashNpcs.isActive, true),
       ),
     )
-    .innerJoin(
-      flashTaskDestinationLinks,
-      and(
-        eq(flashTaskDestinationLinks.taskTemplateId, flashTaskTemplates.id),
-        eq(flashTaskDestinationLinks.isActive, true),
-      ),
-    )
-    .innerJoin(
-      flashTaskDestinations,
-      and(
-        eq(flashTaskDestinationLinks.destinationId, flashTaskDestinations.id),
-        eq(flashTaskDestinations.approvalStatus, "approved"),
-        eq(flashTaskDestinations.isActive, true),
-      ),
-    )
     .where(and(
       eq(flashTaskTemplates.reviewStatus, "active"),
       eq(flashTaskTemplates.isHumanReviewed, true),
@@ -308,21 +278,6 @@ export async function getFlashReadiness(executor: DbExecutor = db) {
         eq(flashTaskTemplates.reviewStatus, "active"),
         eq(flashTaskTemplates.isHumanReviewed, true),
         eq(flashTaskTemplates.isActive, true),
-      ),
-    )
-    .innerJoin(
-      flashTaskDestinationLinks,
-      and(
-        eq(flashTaskDestinationLinks.taskTemplateId, flashTaskTemplates.id),
-        eq(flashTaskDestinationLinks.isActive, true),
-      ),
-    )
-    .innerJoin(
-      flashTaskDestinations,
-      and(
-        eq(flashTaskDestinationLinks.destinationId, flashTaskDestinations.id),
-        eq(flashTaskDestinations.approvalStatus, "approved"),
-        eq(flashTaskDestinations.isActive, true),
       ),
     )
     .where(and(
@@ -416,6 +371,15 @@ export async function seedBuiltinFlashCatalog() {
     const taskByCode = new Map<string, string>(
       taskRows.map((row: any) => [String(row.code), String(row.id)]),
     );
+    const builtinTaskIds = [...taskByCode.entries()]
+      .filter(([code]) => FLASH_TASK_SEEDS.some((seed) => seed.code === code))
+      .map(([, id]) => id);
+    if (builtinTaskIds.length > 0) {
+      await tx.update(flashTaskDestinationLinks).set({
+        isActive: false,
+        updatedAt: new Date(),
+      }).where(inArray(flashTaskDestinationLinks.taskTemplateId, builtinTaskIds));
+    }
 
     for (const task of FLASH_TASK_SEEDS) {
       const taskTemplateId = taskByCode.get(task.code);
@@ -457,7 +421,7 @@ export async function seedBuiltinFlashCatalog() {
     return {
       npcCount: npcRows.filter((row: any) => FLASH_NPC_SEEDS.some((seed) => seed.slug === row.slug)).length,
       taskCount: taskRows.filter((row: any) => FLASH_TASK_SEEDS.some((seed) => seed.code === row.code)).length,
-      note: "Encounter locations, task destinations and destination links must be approved by operators before readiness passes.",
+      note: "Built-in invitations are destination-free; encounter locations and all task/NPC copy still require operator approval.",
     };
   });
 }
@@ -483,7 +447,7 @@ export async function seedBuiltinFlashLocations(
     const npcRows = await tx.select({ id: flashNpcs.id }).from(flashNpcs)
       .where(and(eq(flashNpcs.isActive, true), inArray(flashNpcs.slug, CANONICAL_FLASH_NPC_SLUGS)));
     const taskRows = await tx.select({ id: flashTaskTemplates.id, category: flashTaskTemplates.category }).from(flashTaskTemplates)
-      .where(inArray(flashTaskTemplates.code, FLASH_TASK_SEEDS.map((task) => task.code)));
+      .where(notInArray(flashTaskTemplates.code, FLASH_TASK_SEEDS.map((task) => task.code)));
     const existingEncounters = await tx.select().from(flashEncounterLocations);
     const existingDestinations = await tx.select().from(flashTaskDestinations);
     const encounterByKey = new Map<string, any>(existingEncounters.map((row: any) => [`${row.district}:${row.name}`, row]));
@@ -1034,7 +998,7 @@ export async function setFlashEncounterOffer(input: {
   encounterId: string;
   userId: string;
   taskTemplateId: string;
-  destinationId: string;
+  destinationId: string | null;
   isReroll: boolean;
   now: Date;
 }) {
@@ -1195,8 +1159,70 @@ export async function lockEligibleFlashTaskOfferForAcceptance(input: {
   };
 }
 
+async function lockEligibleDestinationFreeFlashOfferForAcceptance(input: {
+  npcId: string;
+  taskTemplateId: string;
+}, executor: DbExecutor) {
+  const [template] = await executor.select({
+    taskTemplateId: flashTaskTemplates.id,
+    code: flashTaskTemplates.code,
+    category: flashTaskTemplates.category,
+    title: flashTaskTemplates.title,
+    brief: flashTaskTemplates.brief,
+    instructions: flashTaskTemplates.instructions,
+    dialogueIntro: flashTaskTemplates.dialogueIntro,
+    feedbackPrompts: flashTaskTemplates.feedbackPrompts,
+    tags: flashTaskTemplates.tags,
+    durationDays: flashTaskTemplates.durationDays,
+    baseWeight: flashTaskTemplates.baseWeight,
+    contentVersion: flashTaskTemplates.contentVersion,
+    templateIsActive: flashTaskTemplates.isActive,
+    templateIsHumanReviewed: flashTaskTemplates.isHumanReviewed,
+    templateReviewStatus: flashTaskTemplates.reviewStatus,
+  }).from(flashTaskTemplates)
+    .where(eq(flashTaskTemplates.id, input.taskTemplateId))
+    .for("update", { of: flashTaskTemplates })
+    .limit(1);
+  if (
+    !template
+    || !getFlashInvitationDefinition(template.code)
+    || !template.templateIsActive
+    || !template.templateIsHumanReviewed
+    || template.templateReviewStatus !== "active"
+  ) return null;
+
+  const [npcTaskLink] = await executor.select({
+    requestCopy: flashNpcTaskLinks.requestCopy,
+    deliveryCopy: flashNpcTaskLinks.deliveryCopy,
+    npcWeight: flashNpcTaskLinks.weight,
+    npcTaskLinkIsActive: flashNpcTaskLinks.isActive,
+  }).from(flashNpcTaskLinks)
+    .where(and(
+      eq(flashNpcTaskLinks.npcId, input.npcId),
+      eq(flashNpcTaskLinks.taskTemplateId, input.taskTemplateId),
+    ))
+    .for("update", { of: flashNpcTaskLinks })
+    .limit(1);
+  if (!npcTaskLink?.npcTaskLinkIsActive) return null;
+  return {
+    ...template,
+    ...npcTaskLink,
+    destinationId: null,
+    destinationName: null,
+    destinationCity: null,
+    destinationDistrict: null,
+    destinationAddress: null,
+    destinationLatitude: null,
+    destinationLongitude: null,
+    destinationCoordinateSystem: null,
+    destinationTags: [] as string[],
+    destinationLinkWeight: 100,
+  };
+}
+
 export async function listFlashTaskCandidates(npcId: string, executor: DbExecutor = db) {
-  return executor
+  const invitationCodes = FLASH_TASK_SEEDS.map((task) => task.code);
+  const destinationRows = await executor
     .select({
       taskTemplateId: flashTaskTemplates.id,
       code: flashTaskTemplates.code,
@@ -1240,16 +1266,54 @@ export async function listFlashTaskCandidates(npcId: string, executor: DbExecuto
       eq(flashTaskTemplates.isActive, true),
       eq(flashTaskTemplates.isHumanReviewed, true),
       eq(flashTaskTemplates.reviewStatus, "active"),
+      notInArray(flashTaskTemplates.code, invitationCodes),
       eq(flashTaskDestinations.city, "深圳"),
       eq(flashTaskDestinations.isActive, true),
       eq(flashTaskDestinations.approvalStatus, "approved"),
     ));
+  const invitationRows = await executor.select({
+    taskTemplateId: flashTaskTemplates.id,
+    code: flashTaskTemplates.code,
+    category: flashTaskTemplates.category,
+    title: flashTaskTemplates.title,
+    brief: flashTaskTemplates.brief,
+    instructions: flashTaskTemplates.instructions,
+    dialogueIntro: flashTaskTemplates.dialogueIntro,
+    feedbackPrompts: flashTaskTemplates.feedbackPrompts,
+    tags: flashTaskTemplates.tags,
+    durationDays: flashTaskTemplates.durationDays,
+    baseWeight: flashTaskTemplates.baseWeight,
+    contentVersion: flashTaskTemplates.contentVersion,
+    requestCopy: flashNpcTaskLinks.requestCopy,
+    deliveryCopy: flashNpcTaskLinks.deliveryCopy,
+    npcWeight: flashNpcTaskLinks.weight,
+    destinationLinkWeight: sql<number>`100`,
+    destinationId: sql<string | null>`null`,
+    destinationName: sql<string | null>`null`,
+    destinationCity: sql<string | null>`null`,
+    destinationDistrict: sql<string | null>`null`,
+    destinationAddress: sql<string | null>`null`,
+    destinationLatitude: sql<number | null>`null`,
+    destinationLongitude: sql<number | null>`null`,
+    destinationCoordinateSystem: sql<string | null>`null`,
+    destinationTags: sql<string[]>`array[]::text[]`,
+  }).from(flashNpcTaskLinks)
+    .innerJoin(flashTaskTemplates, eq(flashNpcTaskLinks.taskTemplateId, flashTaskTemplates.id))
+    .where(and(
+      eq(flashNpcTaskLinks.npcId, npcId),
+      eq(flashNpcTaskLinks.isActive, true),
+      eq(flashTaskTemplates.isActive, true),
+      eq(flashTaskTemplates.isHumanReviewed, true),
+      eq(flashTaskTemplates.reviewStatus, "active"),
+      inArray(flashTaskTemplates.code, invitationCodes),
+    ));
+  return [...destinationRows, ...invitationRows];
 }
 
 export async function getFlashTaskOffer(input: {
   npcId: string;
   taskTemplateId: string;
-  destinationId: string;
+  destinationId: string | null;
 }, executor: DbExecutor = db) {
   const rows = await listFlashTaskCandidates(input.npcId, executor);
   return rows.find((row: any) => row.taskTemplateId === input.taskTemplateId && row.destinationId === input.destinationId) ?? null;
@@ -1422,12 +1486,15 @@ export async function getPendingFlashDelivery(
     .from(flashTaskAssignments)
     .where(and(
       eq(flashTaskAssignments.userId, userId),
-      eq(flashTaskAssignments.status, "ready_to_deliver"),
+      inArray(flashTaskAssignments.status, ["accepted", "ready_to_deliver"]),
     ))
-    .orderBy(asc(flashTaskAssignments.feedbackSubmittedAt))
+    .orderBy(asc(flashTaskAssignments.createdAt))
     .limit(10);
   const row = rows.find((candidate: any) => {
     const snapshot = candidate.contentSnapshot as FlashTaskSnapshot;
+    if (snapshot.invitationType !== "life_invitation" && snapshot.invitationType !== "npc_message") {
+      return false;
+    }
     return snapshot.invitationType === "npc_message"
       ? resolveFlashNpcMessageCheckpoint({
         sourceNpcSlug: snapshot.npcSlug,
@@ -1438,7 +1505,9 @@ export async function getPendingFlashDelivery(
       : snapshot.npcSlug ? snapshot.npcSlug === npcSlug : false;
   }) ?? rows.find((candidate: any) => {
     const snapshot = candidate.contentSnapshot as FlashTaskSnapshot;
-    return !snapshot.invitationType && snapshot.npcSlug === npcSlug;
+    return candidate.feedbackAnswers?.length
+      && !snapshot.invitationType
+      && snapshot.npcSlug === npcSlug;
   });
   if (!row) return null;
   const assignment = await getFlashAssignmentOwned(row.id, userId, new Date(), executor);
@@ -1493,17 +1562,21 @@ export async function acceptFlashAssignment(input: {
       !candidateEncounter
       || candidateEncounter.status !== "offered"
       || !candidateEncounter.taskTemplateId
-      || !candidateEncounter.destinationId
       || candidateEncounter.expiresAt <= input.now
     ) {
       return { ok: false as const, reason: "encounter_state" as const };
     }
 
-    const offer = await lockEligibleFlashTaskOfferForAcceptance({
-      npcId: candidateEncounter.npcId,
-      taskTemplateId: candidateEncounter.taskTemplateId,
-      destinationId: candidateEncounter.destinationId,
-    }, tx);
+    const offer = candidateEncounter.destinationId
+      ? await lockEligibleFlashTaskOfferForAcceptance({
+        npcId: candidateEncounter.npcId,
+        taskTemplateId: candidateEncounter.taskTemplateId,
+        destinationId: candidateEncounter.destinationId,
+      }, tx)
+      : await lockEligibleDestinationFreeFlashOfferForAcceptance({
+        npcId: candidateEncounter.npcId,
+        taskTemplateId: candidateEncounter.taskTemplateId,
+      }, tx);
     if (!offer) {
       const healed = await declineUnavailableFlashEncounterOffer({
         encounterId: input.encounterId,
@@ -1577,15 +1650,15 @@ export async function acceptFlashAssignment(input: {
       followUpTargetNpcSlug: invitation?.targetNpcSlug,
       followUpTargetNpcName: invitation?.targetNpcName,
       messageCopy: invitation?.messageCopy,
-      destination: {
-        name: offer.destinationName,
+      destination: offer.destinationId ? {
+        name: offer.destinationName!,
         city: "深圳",
-        district: offer.destinationDistrict,
-        address: offer.destinationAddress,
-        latitude: offer.destinationLatitude,
-        longitude: offer.destinationLongitude,
+        district: offer.destinationDistrict!,
+        address: offer.destinationAddress!,
+        latitude: offer.destinationLatitude!,
+        longitude: offer.destinationLongitude!,
         coordinateSystem: "gcj02",
-      },
+      } : null,
     };
 
     const [assignment] = await tx.insert(flashTaskAssignments).values({
@@ -1594,10 +1667,10 @@ export async function acceptFlashAssignment(input: {
       encounterId: input.encounterId,
       taskTemplateId: offer.taskTemplateId,
       destinationId: offer.destinationId,
-      status: invitation ? "ready_to_deliver" : "accepted",
+      status: "accepted",
       contentSnapshot: snapshot,
       expiresAt: new Date(input.now.getTime() + offer.durationDays * 24 * 60 * 60 * 1000),
-      feedbackSubmittedAt: invitation ? input.now : null,
+      feedbackSubmittedAt: null,
     }).returning({ id: flashTaskAssignments.id });
 
     const [acceptedEncounter] = await tx.update(flashEncounters).set({
@@ -1609,7 +1682,9 @@ export async function acceptFlashAssignment(input: {
       eq(flashEncounters.userId, input.userId),
       eq(flashEncounters.status, "offered"),
       eq(flashEncounters.offeredTaskTemplateId, offer.taskTemplateId),
-      eq(flashEncounters.offeredDestinationId, offer.destinationId),
+      offer.destinationId === null
+        ? isNull(flashEncounters.offeredDestinationId)
+        : eq(flashEncounters.offeredDestinationId, offer.destinationId),
     )).returning({ id: flashEncounters.id });
     if (!acceptedEncounter) throw new Error("FLASH_ACCEPTANCE_STATE_CHANGED");
     return { ok: true as const, assignmentId: assignment.id };
@@ -1695,11 +1770,12 @@ export async function deliverFlashAssignment(input: {
       ) return null;
       const [recorded] = await tx.update(flashTaskAssignments).set({
         feedbackAnswers: input.answers,
+        feedbackSubmittedAt: input.now,
         updatedAt: input.now,
       }).where(and(
         eq(flashTaskAssignments.id, input.assignmentId),
         eq(flashTaskAssignments.userId, input.userId),
-        eq(flashTaskAssignments.status, "ready_to_deliver"),
+        inArray(flashTaskAssignments.status, ["accepted", "ready_to_deliver"]),
         ne(flashTaskAssignments.encounterId, input.encounterId),
         sql`coalesce(jsonb_array_length(${flashTaskAssignments.feedbackAnswers}), 0) = 0`,
       )).returning({ taskTemplateId: flashTaskAssignments.taskTemplateId });
@@ -1715,11 +1791,12 @@ export async function deliverFlashAssignment(input: {
       if (optionId === "retry_later") {
         const [retried] = await tx.update(flashTaskAssignments).set({
           feedbackAnswers: [],
+          feedbackSubmittedAt: null,
           updatedAt: input.now,
         }).where(and(
           eq(flashTaskAssignments.id, input.assignmentId),
           eq(flashTaskAssignments.userId, input.userId),
-          eq(flashTaskAssignments.status, "ready_to_deliver"),
+          inArray(flashTaskAssignments.status, ["accepted", "ready_to_deliver"]),
           ne(flashTaskAssignments.encounterId, input.encounterId),
         )).returning({ taskTemplateId: flashTaskAssignments.taskTemplateId });
         return retried ? { ...retried, outcome: "retry_later" as const } : null;
@@ -1732,7 +1809,7 @@ export async function deliverFlashAssignment(input: {
         }).where(and(
           eq(flashTaskAssignments.id, input.assignmentId),
           eq(flashTaskAssignments.userId, input.userId),
-          eq(flashTaskAssignments.status, "ready_to_deliver"),
+          inArray(flashTaskAssignments.status, ["accepted", "ready_to_deliver"]),
         )).returning({ taskTemplateId: flashTaskAssignments.taskTemplateId });
         return abandoned ? { ...abandoned, outcome: "abandoned" as const } : null;
       }
@@ -1750,6 +1827,7 @@ export async function deliverFlashAssignment(input: {
       deliveryEncounterId: input.encounterId,
       deliveredAt: input.now,
       feedbackAnswers: input.answers ?? owned.feedbackAnswers ?? [],
+      feedbackSubmittedAt: owned.feedbackSubmittedAt ?? input.now,
       privateReplyDeleteAfter: sql`case
         when ${flashTaskAssignments.privateReply} is null then null
         when ${flashTaskAssignments.privateReplyDeleteAfter} is null then ${input.privateReplyDeleteAfter}
@@ -1759,10 +1837,14 @@ export async function deliverFlashAssignment(input: {
     }).where(and(
       eq(flashTaskAssignments.id, input.assignmentId),
       eq(flashTaskAssignments.userId, input.userId),
-      eq(flashTaskAssignments.status, "ready_to_deliver"),
+      inArray(flashTaskAssignments.status, ["accepted", "ready_to_deliver"]),
       ne(flashTaskAssignments.encounterId, input.encounterId),
-      isNotNull(flashTaskAssignments.feedbackSubmittedAt),
-      lte(flashTaskAssignments.feedbackSubmittedAt, input.deliveryEncounterUnlockedAt),
+      isNpcMessage
+        ? and(
+          isNotNull(flashTaskAssignments.feedbackSubmittedAt),
+          lte(flashTaskAssignments.feedbackSubmittedAt, input.deliveryEncounterUnlockedAt),
+        )
+        : sql`true`,
     )).returning({ taskTemplateId: flashTaskAssignments.taskTemplateId });
     if (!assignment) return null;
 

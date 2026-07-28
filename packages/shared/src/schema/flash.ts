@@ -61,7 +61,7 @@ export type FlashTaskSnapshot = {
     latitude: number;
     longitude: number;
     coordinateSystem: "gcj02";
-  };
+  } | null;
 };
 
 export const flashNpcs = pgTable("flash_npcs", {
@@ -327,7 +327,7 @@ export const flashTaskAssignments = pgTable("flash_task_assignments", {
   encounterId: varchar("encounter_id").notNull().references(() => flashEncounters.id),
   deliveryEncounterId: varchar("delivery_encounter_id").references(() => flashEncounters.id),
   taskTemplateId: varchar("task_template_id").notNull().references(() => flashTaskTemplates.id),
-  destinationId: varchar("destination_id").notNull().references(() => flashTaskDestinations.id),
+  destinationId: varchar("destination_id").references(() => flashTaskDestinations.id),
   status: varchar("status", { length: 32 }).notNull().default("accepted"),
   contentSnapshot: jsonb("content_snapshot").notNull().$type<FlashTaskSnapshot>(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),

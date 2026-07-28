@@ -269,7 +269,7 @@ describe("formal Flash catalog", () => {
       taskReadyNpcs: 4,
       reviewedTasks: 30,
       approvedEncounterLocations: 3,
-      approvedTaskDestinations: 10,
+      approvedTaskDestinations: 0,
       linkedTasks: 30,
       readyTaskCategoryCounts,
     }, readyRuntime);
@@ -528,6 +528,24 @@ describe("formal Flash delivery encounter", () => {
     expect(isLaterFlashDeliveryEncounter(assignment, {
       id: "encounter-next",
       unlockedAt: new Date("2026-07-21T10:00:00+08:00"),
+    })).toBe(true);
+  });
+
+  it("uses acceptance time for a destination-free invitation but still rejects the same encounter", () => {
+    const createdAt = new Date("2026-07-20T10:00:00+08:00");
+    const assignment = {
+      encounterId: "encounter-original",
+      feedbackSubmittedAt: null,
+      createdAt,
+      contentSnapshot: { invitationType: "life_invitation" } as any,
+    };
+    expect(isLaterFlashDeliveryEncounter(assignment, {
+      id: "encounter-original",
+      unlockedAt: new Date("2026-07-20T11:00:00+08:00"),
+    })).toBe(false);
+    expect(isLaterFlashDeliveryEncounter(assignment, {
+      id: "encounter-next",
+      unlockedAt: new Date("2026-07-20T11:00:00+08:00"),
     })).toBe(true);
   });
 });

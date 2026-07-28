@@ -218,9 +218,9 @@ export function getFlashReadinessItems(readiness?: FlashReadiness): FlashReadine
       label: "任务目的地",
       detail: "至少需要一个经过腾讯地图校验、人工审核并启用的任务目的地。",
     },
-    all_tasks_require_approved_destinations: {
-      label: "任务目的地绑定",
-      detail: `已完成 ${formatCount(counts.linkedTasks, 30)} 条；每条任务都要绑定至少一个已审核且启用的目的地。`,
+    all_tasks_require_active_npc_links: {
+      label: "任务 NPC 绑定",
+      detail: `已完成 ${formatCount(counts.linkedTasks, 30)} 条；每条任务都要绑定至少一个已启用的数字 NPC。`,
     },
     six_categories_with_five_ready_tasks_required: {
       label: "任务分类覆盖",

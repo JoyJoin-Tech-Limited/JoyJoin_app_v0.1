@@ -39,7 +39,9 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const BASELINE_PATH = join(SCRIPT_DIR, 'class-coverage-baseline.json')
 const WRITE_BASELINE = process.argv.includes('--write-baseline')
 
-const REPO_ROOT = new URL('../../', import.meta.url).pathname
+// fileURLToPath is required on Windows: URL.pathname returns `/D:/...`, which
+// path.join interprets as a relative segment and produces `D:\D:\...`.
+const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const SRC_ROOT = join(REPO_ROOT, 'apps/mini-program/src')
 const SASS_ENTRY = join(REPO_ROOT, 'node_modules/sass/sass.js')
 const COMPILE_CONCURRENCY = 8

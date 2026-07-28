@@ -69,14 +69,24 @@ export class FlashServiceError extends Error {
 }
 
 export function isLaterFlashDeliveryEncounter(
-  assignment: { encounterId: string; feedbackSubmittedAt: Date | null } | null,
+  assignment: {
+    encounterId: string;
+    feedbackSubmittedAt: Date | null;
+    createdAt?: Date;
+    contentSnapshot?: FlashTaskSnapshot;
+  } | null,
   encounter: { id: string; unlockedAt: Date },
 ): boolean {
+  const invitation = assignment?.contentSnapshot?.invitationType === "life_invitation"
+    || assignment?.contentSnapshot?.invitationType === "npc_message";
+  const checkpoint = invitation
+    ? assignment?.feedbackSubmittedAt ?? assignment?.createdAt
+    : assignment?.feedbackSubmittedAt;
   return Boolean(
     assignment
     && assignment.encounterId !== encounter.id
-    && assignment.feedbackSubmittedAt
-    && assignment.feedbackSubmittedAt <= encounter.unlockedAt,
+    && checkpoint
+    && checkpoint <= encounter.unlockedAt,
   );
 }
 
@@ -138,8 +148,7 @@ export function evaluateFlashFeatureReadiness(
   if (counts.taskReadyNpcs !== counts.activeNpcs) blockers.push("all_active_npcs_require_ready_tasks");
   if (counts.reviewedTasks < 30) blockers.push("thirty_human_reviewed_tasks_required");
   if (counts.approvedEncounterLocations < 1) blockers.push("approved_encounter_location_required");
-  if (counts.approvedTaskDestinations < 1) blockers.push("approved_task_destination_required");
-  if (counts.linkedTasks < 30) blockers.push("all_tasks_require_approved_destinations");
+  if (counts.linkedTasks < 30) blockers.push("all_tasks_require_active_npc_links");
   if (REQUIRED_FLASH_TASK_CATEGORIES.some((category) => (counts.readyTaskCategoryCounts[category] ?? 0) < 5)) {
     blockers.push("six_categories_with_five_ready_tasks_required");
   }
@@ -501,12 +510,12 @@ async function chooseFlashOffer(encounter: Awaited<ReturnType<typeof getFlashEnc
       calculatedWeight: calculateFlashCandidateWeight({
         baseWeight: candidate.baseWeight,
         npcWeight: candidate.npcWeight,
-        destinationWeight: candidate.destinationLinkWeight,
-        candidateTags: [...candidate.tags, ...candidate.destinationTags],
+        destinationWeight: candidate.destinationLinkWeight ?? 100,
+        candidateTags: [...candidate.tags, ...(candidate.destinationTags ?? [])],
         answerTags,
         userTagLabels,
         completionCount: completionCounts.get(candidate.taskTemplateId) ?? 0,
-        destinationDistrict: candidate.destinationDistrict,
+        destinationDistrict: candidate.destinationDistrict ?? "",
         contextDistrict: encounter.contextDistrict,
         useDistrict: preference.personalizationEnabled && preference.useDistrict,
       }),
@@ -531,7 +540,7 @@ export async function getFlashEncounter(input: {
   for (let attempt = 0; attempt < 2 && encounter.status === "offered" && !offer; attempt += 1) {
     const taskTemplateId = encounter.offeredTaskTemplateId;
     const destinationId = encounter.offeredDestinationId;
-    const row = taskTemplateId && destinationId
+    const row = taskTemplateId
       ? await getFlashTaskOffer({ npcId: encounter.npcId, taskTemplateId, destinationId })
       : null;
     if (row) {
@@ -547,7 +556,7 @@ export async function getFlashEncounter(input: {
         followUpTargetNpc: invitation?.targetNpcSlug && invitation.targetNpcName
           ? { slug: invitation.targetNpcSlug, name: invitation.targetNpcName }
           : null,
-        destinationPreview: invitation ? null : { name: row.destinationName, district: row.destinationDistrict },
+        destinationPreview: invitation ? null : { name: row.destinationName!, district: row.destinationDistrict! },
         canReroll: encounter.rerollCount === 0,
       };
       break;
@@ -623,7 +632,8 @@ export async function answerFlashEncounter(input: {
     await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
     throw new FlashServiceError("FLASH_ENCOUNTER_EXPIRED", 410, "这次对话已经结束了");
   }
-  if (await getPendingFlashDelivery(input.userId, encounter.npcId, encounter.npcSlug)) {
+  const pendingDelivery = await getPendingFlashDelivery(input.userId, encounter.npcId, encounter.npcSlug);
+  if (isLaterFlashDeliveryEncounter(pendingDelivery, encounter)) {
     throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "先把上次的委托交给它吧");
   }
   if (encounter.status !== "dialogue") {
@@ -763,6 +773,7 @@ export async function arriveAtFlashAssignment(input: {
   if (assignment.status === "expired") throw new FlashServiceError("FLASH_TASK_EXPIRED", 410, "这个委托已经过期了");
   if (assignment.status !== "accepted") throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "当前不能再次确认到达");
   const target = (assignment.contentSnapshot as FlashTaskSnapshot).destination;
+  if (!target) throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这个邀请不需要定位确认");
   const distanceMeters = alangHaversineDistanceMeters(input, target);
   if (distanceMeters > FLASH_ARRIVAL_RADIUS_METERS) {
     return { ...assignmentResponse(assignment), distanceMeters: Math.round(distanceMeters), arrived: false };
@@ -820,6 +831,20 @@ export async function deliverFlashTaskToNpc(input: {
   const pending = await getPendingFlashDelivery(input.userId, encounter.npcId, encounter.npcSlug);
   if (!pending || pending.id !== input.assignmentId) {
     throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这件委托现在不能交付");
+  }
+  const prompts = (pending.contentSnapshot as FlashTaskSnapshot).feedbackPrompts;
+  const invitationType = (pending.contentSnapshot as FlashTaskSnapshot).invitationType;
+  const answers = input.answers ?? [];
+  const answerByPrompt = new Map(answers.map((answer) => [answer.promptId, answer.optionId]));
+  const validAnswers = prompts.length > 0
+    && prompts.every((prompt) => {
+      const selected = answerByPrompt.get(prompt.id);
+      return selected && prompt.options.some((option) => option.id === selected);
+    })
+    && answers.length === prompts.length
+    && answers.every((answer) => prompts.some((prompt) => prompt.id === answer.promptId));
+  if (invitationType && !validAnswers) {
+    throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 400, "请选择这次见面的真实结果");
   }
   const delivered = await deliverFlashAssignment({
     assignmentId: input.assignmentId,
