@@ -152,13 +152,13 @@ export default function AdminPricingPage() {
 
   if (isError) {
     return (
-      <div className="flex items-center justify-center h-64" data-testid="error-pricing">
-        <Card className="w-full max-w-md">
+      <div className="flex items-center justify-center min-h-64" data-testid="error-pricing">
+        <Card className="w-full max-w-2xl">
           <CardContent className="py-10 text-center space-y-4">
             <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
             <div>
               <p className="font-medium">定价数据加载失败</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="mx-auto max-w-xl break-words text-sm text-muted-foreground">
                 {error instanceof Error ? error.message : "请稍后重试"}
               </p>
             </div>

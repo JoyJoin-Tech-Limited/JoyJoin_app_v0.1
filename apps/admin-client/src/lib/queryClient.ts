@@ -22,16 +22,56 @@ export function resolveApiUrl(url: string, apiBaseUrl = API_BASE_URL): string {
   return `${apiBaseUrl}${normalizedUrl}`;
 }
 
+function getFallbackHttpMessage(res: Response): string {
+  if (res.status === 401) {
+    return "登录已过期，请重新登录";
+  }
+
+  if (res.status === 403) {
+    return "没有权限执行此操作，或登录状态已失效";
+  }
+
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    return "后台服务暂时不可用，请稍后重试，或联系技术团队检查 staging API 服务";
+  }
+
+  if (res.status >= 500) {
+    return "服务器内部错误，请稍后重试";
+  }
+
+  return res.statusText || "请求失败";
+}
+
+function isHtmlErrorResponse(text: string, contentType: string): boolean {
+  const trimmed = text.trim().toLowerCase();
+
+  return (
+    contentType.includes("text/html")
+    || trimmed.startsWith("<!doctype")
+    || trimmed.startsWith("<html")
+    || /<title>.*<\/title>|<body[\s>]/i.test(text)
+  );
+}
+
 async function readErrorMessage(res: Response): Promise<string> {
+  const contentType = res.headers.get("content-type") ?? "";
   const text = await res.text().catch(() => "");
   if (!text) {
-    return res.statusText || "请求失败";
+    return getFallbackHttpMessage(res);
   }
 
   try {
     const data = JSON.parse(text);
-    return data?.message ?? data?.error ?? text;
+    return data?.message ?? data?.error ?? getFallbackHttpMessage(res);
   } catch {
+    if (isHtmlErrorResponse(text, contentType)) {
+      return getFallbackHttpMessage(res);
+    }
+
+    if (text.length > 300) {
+      return getFallbackHttpMessage(res);
+    }
+
     return text;
   }
 }

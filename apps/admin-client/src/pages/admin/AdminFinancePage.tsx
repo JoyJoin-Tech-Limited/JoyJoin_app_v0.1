@@ -98,6 +98,36 @@ const REFUND_STATUS_MAP: Record<string, { label: string; variant: "default" | "s
   failed: { label: "退款失败", variant: "destructive" },
 };
 
+function FinanceErrorState({
+  title,
+  error,
+  onRetry,
+  testId,
+}: {
+  title: string;
+  error: unknown;
+  onRetry: () => void;
+  testId: string;
+}) {
+  return (
+    <Card data-testid={testId}>
+      <CardContent className="py-12 text-center space-y-4">
+        <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
+        <div>
+          <p className="font-medium">{title}</p>
+          <p className="mx-auto max-w-2xl break-words text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : "请稍后重试"}
+          </p>
+        </div>
+        <Button variant="outline" onClick={onRetry}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          重试
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminFinancePage() {
   const [mainTab, setMainTab] = useState<"payments" | "commissions" | "refunds">("payments");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "subscription" | "event">("all");
@@ -129,11 +159,23 @@ export default function AdminFinancePage() {
     },
   });
 
-  const { data: commissions = [], isLoading: commissionsLoading } = useQuery<VenueCommission[]>({
+  const {
+    data: commissions = [],
+    isLoading: commissionsLoading,
+    isError: commissionsError,
+    error: commissionsQueryError,
+    refetch: refetchCommissions,
+  } = useQuery<VenueCommission[]>({
     queryKey: ["/api/admin/finance/commissions"],
   });
 
-  const { data: refundAttempts = [], isLoading: refundsLoading } = useQuery<RefundAttempt[]>({
+  const {
+    data: refundAttempts = [],
+    isLoading: refundsLoading,
+    isError: refundsError,
+    error: refundsQueryError,
+    refetch: refetchRefunds,
+  } = useQuery<RefundAttempt[]>({
     queryKey: ["/api/admin/refund-attempts"],
   });
 
@@ -324,25 +366,12 @@ export default function AdminFinancePage() {
               </div>
 
               {paymentsError ? (
-                <Card>
-                  <CardContent className="py-12 text-center space-y-4">
-                    <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
-                    <div>
-                      <p className="font-medium">支付记录加载失败</p>
-                      <p className="text-sm text-muted-foreground">
-                        {paymentsQueryError instanceof Error ? paymentsQueryError.message : "请稍后重试"}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => refetchPayments()}
-                      data-testid="button-retry-payments"
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      重试
-                    </Button>
-                  </CardContent>
-                </Card>
+                <FinanceErrorState
+                  title="支付记录加载失败"
+                  error={paymentsQueryError}
+                  onRetry={() => refetchPayments()}
+                  testId="error-payments"
+                />
               ) : paymentsLoading ? (
                 <div className="py-12 text-center text-muted-foreground" data-testid="text-loading-payments">
                   加载中...
@@ -459,7 +488,14 @@ export default function AdminFinancePage() {
                   导出 CSV
                 </Button>
               </div>
-              {refundsLoading ? (
+              {refundsError ? (
+                <FinanceErrorState
+                  title="退款记录加载失败"
+                  error={refundsQueryError}
+                  onRetry={() => refetchRefunds()}
+                  testId="error-refunds"
+                />
+              ) : refundsLoading ? (
                 <div className="py-12 text-center text-muted-foreground" data-testid="text-loading-refunds">
                   加载中...
                 </div>
@@ -526,7 +562,14 @@ export default function AdminFinancePage() {
 
             {/* Venue Commissions Tab */}
             <TabsContent value="commissions" className="space-y-4">
-              {commissionsLoading ? (
+              {commissionsError ? (
+                <FinanceErrorState
+                  title="场地佣金加载失败"
+                  error={commissionsQueryError}
+                  onRetry={() => refetchCommissions()}
+                  testId="error-commissions"
+                />
+              ) : commissionsLoading ? (
                 <div className="py-12 text-center text-muted-foreground" data-testid="text-loading-commissions">
                   加载中...
                 </div>

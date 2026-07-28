@@ -220,7 +220,7 @@ export default function AdminSubscriptionsPage() {
             <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
             <div>
               <p className="font-medium">订阅数据加载失败</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="mx-auto max-w-2xl break-words text-sm text-muted-foreground">
                 {error instanceof Error ? error.message : "请稍后重试"}
               </p>
             </div>
