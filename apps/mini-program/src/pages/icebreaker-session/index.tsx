@@ -890,11 +890,12 @@ export default function IcebreakerSessionPage() {
     void performSocialAction('speed-complete', '/speed-friending/complete', {})
   }, [performSocialAction])
 
-  const handleGenerateStatements = useCallback(() => {
+  const handleGenerateStatements = useCallback((statements?: string[], lieIndex?: number) => {
     void performSocialAction('lie-generate', '/lie-detective/generate', {
       displayName: currentUserDisplayName,
       archetype: currentUserArchetype,
       interests: currentUserInterests,
+      ...(statements && lieIndex ? { statements, lieIndex } : {}),
     })
   }, [performSocialAction, currentUserDisplayName, currentUserArchetype, currentUserInterests])
 

@@ -189,7 +189,11 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
         │
         ▼ Host calls POST .../advance after everyone finishes or the timer expires (skipped if <3 players)
 [LIE_DETECTIVE PHASE]
-  Each player → POST .../lie-detective/generate (AI creates 3 statements)
+  V1 mini-program: each player writes 3 statements (2 facts + 1 lie) and POSTs them to
+  .../lie-detective/generate; the server stores `isLie` separately. Legacy callers may omit
+  the custom set and use the server AI generator.
+  Single-test bots: the approved Lie Detective AI generator creates each bot's set, then
+  deterministic seeded bot votes simulate the other attendees.
   All other players → POST .../lie-detective/vote
   isLie revealed server-side when all votes received
   Host → POST .../lie-detective/next-player to move to the next player after reveal
@@ -388,7 +392,7 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 | `POST` | `/api/social-icebreaker/:socialSessionId/set-tier` | host | Change tier + vibe during `waiting` or `warmup` phase; server recompiles run plan |
 | `POST` | `/api/social-icebreaker/:socialSessionId/pulse-check` | any | Submit vibe (1=cold, 2=warm, 3=fire) |
 | `POST` | `/api/social-icebreaker/:socialSessionId/micro-challenge/complete` | any | Mark self as challenge done |
-| `POST` | `/api/social-icebreaker/:socialSessionId/lie-detective/generate` | any | AI generates 3 statements (2 true, 1 lie) per user |
+| `POST` | `/api/social-icebreaker/:socialSessionId/lie-detective/generate` | any | Accepts a V1 custom 3-statement set + secret `lieIndex`; legacy callers may omit it for AI generation |
 | `POST` | `/api/social-icebreaker/:socialSessionId/lie-detective/vote` | any | Vote on which statement is the lie; triggers reveal when all voted |
 | `POST` | `/api/social-icebreaker/:socialSessionId/lie-detective/next-player` | host | Advance to the next player after the current reveal resolves |
 | `GET` | `/api/social-icebreaker/:socialSessionId/recap` | any | Generates AI recap summary |

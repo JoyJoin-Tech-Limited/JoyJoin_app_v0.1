@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { View, Text, Input } from '@tarojs/components'
+import { View, Text, Input, Textarea } from '@tarojs/components'
 import type {
   LieDetectivePlayer,
   LieDetectiveReveal,
@@ -39,7 +39,7 @@ export interface LieDetectiveHeroViewProps {
   onVote: (index: number) => void
   isVoting: boolean
   hasGeneratedStatements: boolean
-  onGenerateStatements: () => void
+  onGenerateStatements: (statements?: string[], lieIndex?: number) => void
   isGeneratingStatements: boolean
   isHost: boolean
   canMoveToNextPlayer: boolean
@@ -102,6 +102,8 @@ export function LieDetectiveHeroView({
   // ── Tag input state (V2 only) ─────────────────────────────────────────────
   const [tag1, setTag1] = useState('')
   const [tag2, setTag2] = useState('')
+  const [customStatements, setCustomStatements] = useState(['', '', ''])
+  const [customLieIndex, setCustomLieIndex] = useState<number | null>(null)
 
   const tag1Trimmed = tag1.trim()
   const tag2Trimmed = tag2.trim()
@@ -118,6 +120,29 @@ export function LieDetectiveHeroView({
     if (!canSubmitTags || !onSubmitTags) return
     onSubmitTags([tag1Trimmed, tag2Trimmed])
   }, [canSubmitTags, onSubmitTags, tag1Trimmed, tag2Trimmed])
+
+  const normalizedCustomStatements = customStatements.map((statement) => statement.trim())
+  const hasDuplicateCustomStatements =
+    normalizedCustomStatements.every((statement) => statement.length >= 2) &&
+    new Set(normalizedCustomStatements).size !== 3
+  const customStatementsValid =
+    normalizedCustomStatements.every((statement) =>
+      statement.length >= 2 && statement.length <= 80 && !checkProfanity(statement)
+    ) &&
+    new Set(normalizedCustomStatements).size === 3
+  const canSubmitCustomSet =
+    customStatementsValid && customLieIndex !== null && !isGeneratingStatements
+
+  const updateCustomStatement = useCallback((index: number, value: string) => {
+    setCustomStatements((current) =>
+      current.map((statement, statementIndex) => statementIndex === index ? value : statement)
+    )
+  }, [])
+
+  const handleCustomSubmit = useCallback(() => {
+    if (!canSubmitCustomSet || customLieIndex === null) return
+    onGenerateStatements(normalizedCustomStatements, customLieIndex)
+  }, [canSubmitCustomSet, customLieIndex, normalizedCustomStatements, onGenerateStatements])
 
   // ── Generation phase (V2 tag input / V1 generate) ─────────────────────────
   if (!everyoneGenerated) {
@@ -199,14 +224,57 @@ export function LieDetectiveHeroView({
                 </View>
               ) : null}
               {!isV2 && !submitted ? (
-                <Button
-                  variant='primary'
-                  onClick={onGenerateStatements}
-                  disabled={isGeneratingStatements}
-                  loading={isGeneratingStatements}
-                >
-                  {isGeneratingStatements ? '生成中…' : '生成我的三句话'}
-                </Button>
+                <View className='lie-detective-hero__custom-form'>
+                  <Text className='lie-detective-hero__custom-guide'>
+                    写下两句真话和一句谎言，再点选哪句是谎言。只有揭晓时才会公开答案。
+                  </Text>
+                  {customStatements.map((statement, index) => {
+                    const trimmed = statement.trim()
+                    const invalid =
+                      trimmed.length > 0 &&
+                      (trimmed.length < 2 || checkProfanity(trimmed))
+                    const isLie = customLieIndex === index + 1
+                    return (
+                      <View className='lie-detective-hero__custom-field' key={index}>
+                        <View className='lie-detective-hero__custom-field-head'>
+                          <Text className='lie-detective-hero__custom-label'>第 {index + 1} 句</Text>
+                          <View
+                            className={`lie-detective-hero__lie-picker${isLie ? ' lie-detective-hero__lie-picker--selected' : ''}`}
+                            onClick={() => setCustomLieIndex(index + 1)}
+                            role='button'
+                            aria-label={`设为第 ${index + 1} 句谎言`}
+                          >
+                            <Text>{isLie ? '✓ 这是谎言' : '设为谎言'}</Text>
+                          </View>
+                        </View>
+                        <Textarea
+                          className={`lie-detective-hero__custom-input${invalid ? ' lie-detective-hero__custom-input--error' : ''}`}
+                          placeholder='写一件关于你、但不容易被猜中的事'
+                          value={statement}
+                          onInput={(event) => updateCustomStatement(index, event.detail.value)}
+                          maxlength={80}
+                          autoHeight
+                          disabled={isGeneratingStatements}
+                        />
+                        <Text className='lie-detective-hero__tag-counter'>{trimmed.length}/80</Text>
+                      </View>
+                    )
+                  })}
+                  {hasDuplicateCustomStatements ? (
+                    <Text className='lie-detective-hero__tag-error'>三句话不能重复</Text>
+                  ) : null}
+                  {customStatementsValid && customLieIndex === null ? (
+                    <Text className='lie-detective-hero__tag-error'>请选择其中一句作为谎言</Text>
+                  ) : null}
+                  <Button
+                    variant='primary'
+                    onClick={handleCustomSubmit}
+                    disabled={!canSubmitCustomSet}
+                    loading={isGeneratingStatements}
+                  >
+                    {isGeneratingStatements ? '正在提交…' : '提交我的三句话'}
+                  </Button>
+                </View>
               ) : null}
               {submitted && isGeneratingStatements ? (
                 <Text className='phase-hero-card__ghost-link'>悦仔生成中…</Text>
@@ -267,7 +335,7 @@ export function LieDetectiveHeroView({
             {!hasGeneratedStatements && !isV2 ? (
               <Button
                 variant='primary'
-                onClick={onGenerateStatements}
+                onClick={() => onGenerateStatements()}
                 disabled={isGeneratingStatements}
                 loading={isGeneratingStatements}
               >
@@ -326,7 +394,7 @@ export function LieDetectiveHeroView({
                 }}
               >
                 <View className='lie-detective-hero__statement-header'>
-                  <Text className='lie-detective-hero__statement-index'>{stmt.index + 1}</Text>
+                  <Text className='lie-detective-hero__statement-index'>{stmt.index}</Text>
                   {isRevealed && isLie && !isV2 && (
                     <Text className='lie-detective-hero__statement-tag lie-detective-hero__statement-tag--lie'>
                       谎言

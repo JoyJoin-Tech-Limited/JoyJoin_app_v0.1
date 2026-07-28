@@ -320,7 +320,14 @@ const { default: socialIcebreakerRouter } = await import('../routes/socialIcebre
 
 // Import mocked AI service functions so tests can modify V1/V2 behaviour per-test.
 import { generateLieDetectiveStatements, generateWarmupTopics, getLieDetectiveMode } from '../socialIcebreakerAIService';
-import { getSession, updateSession, getPreGenerationResult, listParticipants } from '../lib/socialIcebreakerStore';
+import {
+  getSession,
+  updateSession,
+  getPreGenerationResult,
+  listParticipants,
+  setLieTruths,
+  getLieTruths,
+} from '../lib/socialIcebreakerStore';
 import { shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
 import { recordVoteOptimistically } from '../lib/optimisticSync';
 import { getFeatureFlag } from '../lib/featureFlags';
@@ -3056,6 +3063,148 @@ describe.sequential('social icebreaker routes', () => {
   });
 
   describe('single-test mode disclosure', () => {
+    it('accepts a human-authored two-facts-and-one-lie set without exposing the lie', async () => {
+      await withServer(async (baseUrl) => {
+        const hostUserId = 'single-test-custom-lie-host';
+        const hostCookie = await login(baseUrl, hostUserId);
+        const sessionId = `session-single-test-custom-lie-${Date.now()}`;
+
+        vi.mocked(isSingleTestMode).mockReturnValue(true);
+        vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
+          version: 2,
+          groupId: sessionId,
+          isTestModeSkip: true,
+          runBots: false,
+          botPersonas: [],
+          bots: [],
+        });
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const socialSessionId = startBody.socialSessionId;
+        const state = await getSession(socialSessionId) as any;
+        state.currentPhase = 'lie_detective';
+        state.playerCount = 1;
+        await updateSession(socialSessionId, state);
+
+        const generateResponse = await fetch(
+          `${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/generate`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({
+              displayName: 'Host',
+              statements: ['我养过一只猫', '我在三个城市生活过', '我从来没有坐过飞机'],
+              lieIndex: 3,
+            }),
+          },
+        );
+        const generateBody = await generateResponse.json() as any;
+        const storedTruths = await getLieTruths(socialSessionId, hostUserId);
+
+        expect(generateResponse.status).toBe(200);
+        expect(generateBody.statements).toEqual([
+          { index: 1, text: '我养过一只猫' },
+          { index: 2, text: '我在三个城市生活过' },
+          { index: 3, text: '我从来没有坐过飞机' },
+        ]);
+        expect(JSON.stringify(generateBody)).not.toContain('isLie');
+        expect(storedTruths).toEqual([
+          { index: 1, text: '我养过一只猫', isLie: false },
+          { index: 2, text: '我在三个城市生活过', isLie: false },
+          { index: 3, text: '我从来没有坐过飞机', isLie: true },
+        ]);
+      });
+    });
+
+    it('accepts a vote for the active bot using its client-visible masked id', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'single-test-lie-vote-host');
+        const sessionId = `session-single-test-lie-vote-${Date.now()}`;
+        const botUserId = 'single-test-lie-vote-bot-user';
+
+        vi.mocked(isSingleTestMode).mockReturnValue(true);
+        vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
+          version: 2,
+          groupId: sessionId,
+          isTestModeSkip: true,
+          runBots: false,
+          botPersonas: [
+            {
+              botId: 'bot-1',
+              userId: botUserId,
+              displayName: 'Bot One',
+              archetype: '社牛柯基',
+            },
+          ],
+          bots: [{ botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' }],
+        });
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const socialSessionId = startBody.socialSessionId;
+        const state = await getSession(socialSessionId) as any;
+
+        state.currentPhase = 'lie_detective';
+        state.playerCount = 2;
+        state.currentLieDetectivePlayerIndex = 0;
+        state.lieDetectivePlayers = [
+          {
+            userId: botUserId,
+            displayName: 'Bot One',
+            statements: [
+              { index: 1, text: 'Bot statement one' },
+              { index: 2, text: 'Bot statement two' },
+              { index: 3, text: 'Bot statement three' },
+            ],
+          },
+          {
+            userId: 'single-test-lie-vote-host',
+            displayName: 'Host',
+            statements: [
+              { index: 1, text: 'Host statement one' },
+              { index: 2, text: 'Host statement two' },
+              { index: 3, text: 'Host statement three' },
+            ],
+          },
+        ];
+        state.votes = [];
+        state.currentLieDetectiveReveal = undefined;
+        await setLieTruths(socialSessionId, botUserId, [
+          { index: 1, text: 'Bot statement one', isLie: false },
+          { index: 2, text: 'Bot statement two', isLie: true },
+          { index: 3, text: 'Bot statement three', isLie: false },
+        ]);
+        await updateSession(socialSessionId, state);
+
+        const voteResponse = await fetch(
+          `${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/vote`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({ targetUserId: 'bot-1', guessedStatementIndex: 2 }),
+          },
+        );
+        const voteBody = await voteResponse.json() as any;
+
+        expect(voteResponse.status).toBe(200);
+        expect(voteBody.isRevealed).toBe(true);
+        expect(voteBody.reveal).toMatchObject({ targetUserId: 'bot-1', lieIndex: 2 });
+        expect(voteBody.votes).toEqual([
+          expect.objectContaining({ targetUserId: 'bot-1', guessedStatementIndex: 2 }),
+        ]);
+        expect(JSON.stringify(voteBody)).not.toContain(botUserId);
+      });
+    });
+
     it('includes isTestModeSkip and testModeBots when session is a single-test group', async () => {
       await withServer(async (baseUrl) => {
         const hostCookie = await login(baseUrl, 'single-test-host');

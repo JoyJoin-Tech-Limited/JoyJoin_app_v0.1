@@ -40,6 +40,11 @@ import { logger } from '../lib/logger';
 import { getFeatureFlag } from '../lib/featureFlags';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import { simulateBotsForSession, runBotSimulationSafely } from '../services/socialIcebreakerBotService';
+import {
+  buildCustomLieDetectiveStatements,
+  resolveLieDetectiveTargetUserId,
+} from '../lib/lieDetectiveSubmission';
+import { validateContentSafe, contentViolationResponse } from '../lib/contentSafety';
 
 export function registerExtendedRoutes(router: Router): void {
 
@@ -359,10 +364,12 @@ router.post('/:socialSessionId/stall-nudge/dismiss', async (req: any, res) => {
 router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) => {
   const { socialSessionId } = req.params;
   const userId: string = req.session?.userId;
-  const { displayName, archetype, interests } = req.body as {
+  const { displayName, archetype, interests, statements: customStatementTexts, lieIndex } = req.body as {
     displayName: string;
     archetype?: string;
     interests?: string[];
+    statements?: string[];
+    lieIndex?: number;
   };
 
   if (!userId) {
@@ -385,28 +392,58 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
   }
 
   try {
-    const mode = getLieDetectiveMode(state.lieDetectiveMode);
-    const difficulty = getDynamicDifficulty(state.lieDetectiveRevealHistory);
-
-    const generateParams: Parameters<typeof generateLieDetectiveStatements>[0] = {
-      userId,
-      displayName,
-      archetype,
-      interests,
-      mode,
-      difficulty,
-    };
-
-    // In V2 mode, read tags from session state
-    if (mode === 'v2') {
-      const tags = state.lieDetectiveV2Tags?.[userId];
-      if (!tags) {
-        return res.status(400).json({ error: 'Tags not submitted. Please submit tags first.' });
+    const isCustomSubmission = customStatementTexts !== undefined || lieIndex !== undefined;
+    let statementResult: Awaited<ReturnType<typeof generateLieDetectiveStatements>>;
+    if (isCustomSubmission) {
+      let customStatements;
+      try {
+        customStatements = buildCustomLieDetectiveStatements(customStatementTexts, lieIndex);
+      } catch (error) {
+        return res.status(400).json({
+          error: error instanceof Error ? error.message : 'Invalid custom statements',
+        });
       }
-      generateParams.tags = tags;
-    }
 
-    const statementResult = await generateLieDetectiveStatements(generateParams);
+      for (const statement of customStatements) {
+        const safetyResult = validateContentSafe(statement.text, 'lieDetectiveStatement');
+        if (!safetyResult.safe) {
+          return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
+        }
+      }
+
+      statementResult = {
+        data: customStatements,
+        meta: {
+          generatedAt: new Date().toISOString(),
+          fromCache: false,
+          provider: null,
+          fallbackUsed: false,
+          promptVersion: 'social-lie-detective-user-v1',
+        },
+      };
+    } else {
+      const mode = getLieDetectiveMode(state.lieDetectiveMode);
+      const difficulty = getDynamicDifficulty(state.lieDetectiveRevealHistory);
+
+      const generateParams: Parameters<typeof generateLieDetectiveStatements>[0] = {
+        userId,
+        displayName,
+        archetype,
+        interests,
+        mode,
+        difficulty,
+      };
+
+      if (mode === 'v2') {
+        const tags = state.lieDetectiveV2Tags?.[userId];
+        if (!tags) {
+          return res.status(400).json({ error: 'Tags not submitted. Please submit tags first.' });
+        }
+        generateParams.tags = tags;
+      }
+
+      statementResult = await generateLieDetectiveStatements(generateParams);
+    }
 
     // Persist server-only truth data (isLie + V2 is_ai/source_tag) in the separate lie-truths table.
     await setLieTruths(socialSessionId, userId, statementResult.data);
@@ -423,7 +460,7 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
     }
 
     state.lieDetectivePlayers = players;
-    state.lieDetectiveStatementsMeta = statementResult.meta;
+    state.lieDetectiveStatementsMeta = isCustomSubmission ? undefined : statementResult.meta;
     if (state.currentLieDetectivePlayerIndex === undefined) {
       state.currentLieDetectivePlayerIndex = 0;
     }
@@ -449,12 +486,12 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
 router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
   const { socialSessionId } = req.params;
   const voterId: string = req.session?.userId;
-  const { targetUserId, guessedStatementIndex } = req.body as {
+  const { targetUserId: clientTargetUserId, guessedStatementIndex } = req.body as {
     targetUserId: string;
     guessedStatementIndex: number;
   };
 
-  if (!voterId || !targetUserId || guessedStatementIndex === undefined || guessedStatementIndex === null) {
+  if (!voterId || !clientTargetUserId || guessedStatementIndex === undefined || guessedStatementIndex === null) {
     return res.status(400).json({ error: 'Authentication, targetUserId, and guessedStatementIndex are required' });
   }
 
@@ -467,6 +504,10 @@ router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
   }
 
   await runBotSimulationSafely(socialSessionId, state, 'lie-detective-vote');
+  const targetUserId = resolveLieDetectiveTargetUserId(
+    clientTargetUserId,
+    state.singleTest?.botPersonas,
+  );
 
   if (voterId === targetUserId) {
     return res.status(400).json({ error: 'Players cannot vote on their own statements' });
@@ -482,11 +523,18 @@ router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
   }
 
   if (state.currentLieDetectiveReveal?.targetUserId === targetUserId) {
+    const publicVotes = (state.votes || [])
+      .filter((v: LieDetectiveVote) => v.targetUserId === targetUserId)
+      .map((vote: LieDetectiveVote) => ({ ...vote, targetUserId: clientTargetUserId }));
     return res.json({
-      votes: (state.votes || []).filter((v: LieDetectiveVote) => v.targetUserId === targetUserId),
+      votes: publicVotes,
       isRevealed: true,
       lieIndex: state.currentLieDetectiveReveal.lieIndex,
-      reveal: state.currentLieDetectiveReveal,
+      reveal: {
+        ...state.currentLieDetectiveReveal,
+        targetUserId: clientTargetUserId,
+      },
+      state: await buildClientState(state, voterId),
     });
   }
 
@@ -552,11 +600,18 @@ router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
     }
   }
 
+  const publicTargetUserId = clientTargetUserId;
+  const publicVotes = votes
+    .filter((v: LieDetectiveVote) => v.targetUserId === targetUserId)
+    .map((vote) => ({ ...vote, targetUserId: publicTargetUserId }));
+  const publicReveal = reveal ? { ...reveal, targetUserId: publicTargetUserId } : reveal;
+
   return res.json({
-    votes: votes.filter((v: LieDetectiveVote) => v.targetUserId === targetUserId),
+    votes: publicVotes,
     isRevealed,
     lieIndex,
-    reveal,
+    reveal: publicReveal,
+    state: await buildClientState(state, voterId),
   });
 });
 // ---------------------------------------------------------------------------

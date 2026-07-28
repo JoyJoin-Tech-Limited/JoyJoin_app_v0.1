@@ -8,9 +8,30 @@ import {
 } from '../services/socialIcebreakerBotService';
 import { isSingleTestMode } from '../lib/isSingleTestMode';
 import { isSocialIcebreakerTestMode } from '../lib/isSocialIcebreakerTestMode';
+import { generateLieDetectiveStatements } from '../socialIcebreakerAIService';
 
 vi.mock('../lib/isSingleTestMode');
 vi.mock('../lib/isSocialIcebreakerTestMode');
+vi.mock('../socialIcebreakerAIService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../socialIcebreakerAIService')>();
+  return {
+    ...actual,
+    generateLieDetectiveStatements: vi.fn(async ({ displayName }: { displayName: string }) => ({
+      data: [
+        { index: 1, text: `${displayName} 的真实经历一`, isLie: false },
+        { index: 2, text: `${displayName} 的虚构经历`, isLie: true },
+        { index: 3, text: `${displayName} 的真实经历二`, isLie: false },
+      ],
+      meta: {
+        generatedAt: new Date().toISOString(),
+        fromCache: false,
+        provider: 'deepseek',
+        fallbackUsed: false,
+        promptVersion: 'social-lie-detective-v1',
+      },
+    })),
+  };
+});
 
 function makeState(overrides: Partial<SocialSessionState> = {}): SocialSessionState {
   return {
@@ -177,6 +198,10 @@ describe('socialIcebreakerBotService', () => {
         p.userId.startsWith('bot-user-'),
       );
       expect(botPlayers).toHaveLength(5);
+      expect(generateLieDetectiveStatements).toHaveBeenCalledTimes(5);
+      expect(generateLieDetectiveStatements).toHaveBeenCalledWith(
+        expect.objectContaining({ displayName: 'Bot 1', mode: 'v1' }),
+      );
       // All bots voted for the current player
       const votes = state.votes ?? [];
       const botVotes = votes.filter((v) => v.voterId.startsWith('bot-user-'));
@@ -197,6 +222,25 @@ describe('socialIcebreakerBotService', () => {
       await simulateBotsForSession('social_test', state);
       expect(state.lieDetectiveV2Tags).toBeDefined();
       expect(state.lieDetectiveV2Tags?.['bot-user-1']).toHaveLength(2);
+    });
+
+    it('falls back per bot when the approved AI generator rejects', async () => {
+      vi.mocked(generateLieDetectiveStatements).mockRejectedValueOnce(
+        new Error('provider unavailable before fallback'),
+      );
+      const state = makeState({
+        currentPhase: 'lie_detective',
+        singleTest: makeSingleTestState(true),
+        lieDetectivePlayers: [
+          { userId: 'host-user', displayName: 'Host', statements: [] },
+        ],
+        currentLieDetectivePlayerIndex: 0,
+      });
+
+      await expect(simulateBotsForSession('social_test', state)).resolves.toBe(true);
+
+      const botOne = state.lieDetectivePlayers?.find((player) => player.userId === 'bot-user-1');
+      expect(botOne?.statements).toHaveLength(3);
     });
 
     it('places a deterministic bid in auction', async () => {

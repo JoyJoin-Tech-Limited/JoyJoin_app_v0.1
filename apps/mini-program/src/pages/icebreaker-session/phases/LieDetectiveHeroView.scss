@@ -164,6 +164,76 @@ $ld-tint: $phase-accent-lie-tint;
     @include type-caption;
     color: $color-error;
   }
+
+  &__custom-form {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+    width: 100%;
+  }
+
+  &__custom-guide {
+    @include type-body;
+    color: $color-text-secondary;
+  }
+
+  &__custom-field {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__custom-field-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+  }
+
+  &__custom-label {
+    @include type-label;
+    color: $color-text-primary;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__lie-picker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    padding: 0 $spacing-md;
+    border: 2rpx solid rgba($ld-accent, 0.24);
+    border-radius: $radius-pill;
+    color: $color-text-secondary;
+    @include type-caption;
+
+    &:active {
+      background: rgba($ld-accent, 0.08);
+    }
+
+    &--selected {
+      border-color: rgba($ld-accent-deep, 0.72);
+      background: rgba($ld-accent, 0.12);
+      color: $ld-accent-deep;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  &__custom-input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 104rpx;
+    padding: $spacing-sm $spacing-md;
+    border: 2rpx solid rgba($ld-accent, 0.25);
+    border-radius: $radius-md;
+    background: $color-surface;
+    color: $color-text-primary;
+    @include type-body;
+
+    &--error {
+      border-color: $color-error;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

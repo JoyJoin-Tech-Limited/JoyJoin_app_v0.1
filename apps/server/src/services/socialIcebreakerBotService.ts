@@ -18,7 +18,10 @@ import {
   setLieTruths,
   getLieTruths,
 } from '../lib/socialIcebreakerStore';
-import { getLieDetectiveMode } from '../socialIcebreakerAIService';
+import {
+  generateLieDetectiveStatements,
+  getLieDetectiveMode,
+} from '../socialIcebreakerAIService';
 
 /**
  * Dedicated server-side bot simulation for single-test Social Icebreaker sessions.
@@ -26,7 +29,7 @@ import { getLieDetectiveMode } from '../socialIcebreakerAIService';
  * - Runs only when both single-test mode and social-icebreaker test mode are active
  *   AND the session explicitly opts in via singleTest.runBots.
  * - Deterministic per session/phase (seeded PRNG).
- * - No LLM calls; all bot actions are rule-based.
+ * - Bot Lie Detective sets use the approved AI service with its curated fallback.
  * - Idempotent: running twice on the same phase state produces the same result.
  */
 
@@ -290,31 +293,59 @@ async function simulateLieDetectiveBots(
   const players = state.lieDetectivePlayers ?? [];
   const botUserIds = new Set(bots.map((b) => b.userId));
   const participants = await listParticipants(socialSessionId);
-  const displayNameOf = (userId: string) =>
-    participants.find((p) => p.userId === userId)?.displayName ??
-    bots.find((b) => b.userId === userId)?.displayName ??
-    'Bot';
 
-  // 1. Ensure every bot has generated statements.
-  for (const bot of bots) {
+  // 1. Ensure every bot has generated statements. Generate missing sets in
+  // parallel so one degraded provider does not multiply the phase wait by the
+  // number of test bots.
+  const missingBots = bots.filter((bot) => {
     const existing = players.find((p) => p.userId === bot.userId);
-    if (!existing || !existing.statements || existing.statements.length === 0) {
-      const statements = pick(rng, BOT_LIE_DETECTIVE_STATEMENTS).map((s) => ({
-        ...s,
-      }));
-      const sanitized = statements.map((s) => ({ index: s.index, text: s.text }));
-
-      if (existing) {
-        existing.statements = sanitized;
-      } else {
-        players.push({
-          userId: bot.userId,
-          displayName: bot.displayName,
-          statements: sanitized,
+    return !existing?.statements?.length;
+  });
+  const generatedBotSets = await Promise.all(
+    missingBots.map(async (bot) => {
+      try {
+        return {
+          bot,
+          statements: (await generateLieDetectiveStatements({
+            userId: bot.userId,
+            displayName: bot.displayName,
+            archetype: bot.archetype,
+            mode: 'v1',
+          })).data,
+        };
+      } catch (error) {
+        logger.warn('[SocialIcebreaker] Bot lie-detective generation fell back', {
+          socialSessionId,
+          botId: bot.botId,
+          error: error instanceof Error ? error.message : String(error),
         });
+        return {
+          bot,
+          statements: pick(rng, BOT_LIE_DETECTIVE_STATEMENTS).map((statement) => ({
+            ...statement,
+          })),
+        };
       }
-      await setLieTruths(socialSessionId, bot.userId, statements);
+    }),
+  );
+
+  for (const { bot, statements: generatedStatements } of generatedBotSets) {
+    const existing = players.find((p) => p.userId === bot.userId);
+    const statements = generatedStatements.length === 3
+      ? generatedStatements
+      : pick(rng, BOT_LIE_DETECTIVE_STATEMENTS).map((s) => ({ ...s }));
+    const sanitized = statements.map((s) => ({ index: s.index, text: s.text }));
+
+    if (existing) {
+      existing.statements = sanitized;
+    } else {
+      players.push({
+        userId: bot.userId,
+        displayName: bot.displayName,
+        statements: sanitized,
+      });
     }
+    await setLieTruths(socialSessionId, bot.userId, statements);
   }
   state.lieDetectivePlayers = players;
 

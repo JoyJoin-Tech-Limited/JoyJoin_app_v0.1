@@ -347,7 +347,7 @@ These hardcoded plans remain as **absolute fallbacks** (tier 4 in the fallback c
 | `SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR` | Enable `group_mirror` phase | `false` |
 | `SOCIAL_ICEBREAKER_LLM_GAME_SELECTION` | Enable LLM enhancement in `compileAgentRunPlan()` | `false` |
 | `RUN_PLAN_TEMPLATES_ENABLED` | Enable template-driven compiler + 3×3 vibe grid UX (`深聊`/`均衡`/`暢玩`) | `false` |
-| `LIE_DETECTIVE_MODE` | `v1` (AI-fabricated) or `v2` (user-tag + AI fake) | `v1` |
+| `LIE_DETECTIVE_MODE` | `v1` (mini-program user-authored 2 facts + 1 lie; AI-compatible API fallback) or `v2` (user-tag + AI fake) | `v1` |
 
 ---
 

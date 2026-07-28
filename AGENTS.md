@@ -71,7 +71,7 @@ Always base implementation on the **current active codebase**, not legacy flows 
 - IcebreakerToolkit → use Social Icebreaker (`/api/social-icebreaker/*`) instead
 - ~~`standard`/`premium`/`bar` tier machine IDs → `breeze`/`glow`/`blaze`~~ — **WIRED 2026-05-05**: Server `/start` + `/set-tier`, mini-program tier selector, run plans active
 - **`标准局`/`Premium局`/`酒吧局` display names → `破冰局`/`畅聊局`/`狂欢局`** (see `docs/deliberations/2026-04-29-tier-naming-mascot-rebrand-consensus.md`)
-- **Lie Detective V1 (AI-fabricated 2 truths 1 lie) → V2 mode available** (`LIE_DETECTIVE_MODE=v2`): user writes 2 tags, AI expands + inserts 1 fake statement. V1 remains default. Design spec: `docs/icebreaker/icebreaker-system.md`
+- **Lie Detective V1 (user-authored 2 truths + 1 lie in mini-program; AI-compatible API fallback) → V2 mode available** (`LIE_DETECTIVE_MODE=v2`): user writes 2 tags, AI expands + inserts 1 fake statement. V1 remains default. Single-test bots generate their sets through the approved LLM service with curated fallback and use seeded random votes. Design spec: `docs/icebreaker/icebreaker-system.md`
 - Root `shared/` directory imports → use `packages/shared/src/` via `@joyjoin/shared` or `@shared/*`
 - `personalityMatchingV2.ts` → renamed to `personalityMatching.ts` (2026-05-07)
 - `archetypeRegistry.ts.bak` → deleted (stale backup, 2026-05-07)
