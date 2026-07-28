@@ -103,3 +103,22 @@ jobs:
             where c.relname = 'users_phone_number_unique'
               and c.relnamespace = 'public'::regnamespace;
             SQL
+
+            echo "Diagnostic: all users tables and indexes across schemas:"
+            run_psql -At <<'SQL'
+            select schemaname, tablename, indexname, indexdef
+            from pg_indexes
+            where tablename = 'users'
+            order by schemaname, indexname;
+            SQL
+
+            echo "Diagnostic: test ON CONFLICT upsert in rolled-back transaction..."
+            run_psql -v ON_ERROR_STOP=1 <<'SQL'
+            BEGIN;
+            INSERT INTO users (phone_number, display_name)
+            VALUES ('+8619999999999', 'diagnostic')
+            ON CONFLICT ("phone_number") DO UPDATE
+            SET display_name = EXCLUDED.display_name;
+            ROLLBACK;
+            SQL
+            echo "Diagnostic upsert succeeded."
