@@ -37,6 +37,11 @@ import { startFlashBackgroundJobs } from "../../services/flashScheduleService";
 import { reverseGeocodeCoordinate } from "./geo";
 
 const idParamSchema = z.string().uuid();
+const flashTestCoordinateSchema = z.object({
+  latitude: z.number().finite().min(-90).max(90),
+  longitude: z.number().finite().min(-180).max(180),
+  coordinateSystem: z.literal("gcj02"),
+});
 const deliveryRequestSchema = z.object({
   assignmentId: z.string().uuid(),
   answers: z.array(z.object({
@@ -80,7 +85,7 @@ function userId(req: Request, res: Response): string | null {
   return requireAuthenticatedUserId(req, res);
 }
 
-async function parseShenzhenCoordinate(body: unknown): Promise<
+async function parseShenzhenCoordinate(body: unknown, enforceShenzhenBoundary = true): Promise<
   | { success: true; data: { latitude: number; longitude: number; coordinateSystem: "gcj02"; district: string } }
   | { success: false; code: "FLASH_LOCATION_REQUIRED" | "FLASH_OUTSIDE_SHENZHEN" | "FLASH_LOCATION_UNAVAILABLE" }
 > {
@@ -88,6 +93,12 @@ async function parseShenzhenCoordinate(body: unknown): Promise<
   const value = body as Record<string, unknown>;
   if (typeof value.latitude !== "number" || typeof value.longitude !== "number") {
     return { success: false, code: "FLASH_LOCATION_REQUIRED" };
+  }
+  if (!enforceShenzhenBoundary) {
+    const parsed = flashTestCoordinateSchema.safeParse(value);
+    return parsed.success
+      ? { success: true, data: { ...parsed.data, district: "" } }
+      : { success: false, code: "FLASH_LOCATION_REQUIRED" };
   }
   if (
     value.latitude < FLASH_SHENZHEN_BOUNDS.minLatitude
@@ -111,6 +122,11 @@ async function parseShenzhenCoordinate(body: unknown): Promise<
   return { success: true, data: { ...parsed.data, district: resolved.district } };
 }
 
+async function shouldEnforceShenzhenBoundary(): Promise<boolean> {
+  if ((process.env.APP_MODE ?? "production") === "production") return true;
+  return getFeatureFlag("flashShenzhenLocationGateEnabled", true);
+}
+
 function sendCoordinateError(res: Response, code: "FLASH_LOCATION_REQUIRED" | "FLASH_OUTSIDE_SHENZHEN" | "FLASH_LOCATION_UNAVAILABLE") {
   const status = code === "FLASH_OUTSIDE_SHENZHEN" ? 403 : code === "FLASH_LOCATION_UNAVAILABLE" ? 503 : 400;
   return res.status(status).json({
@@ -132,7 +148,7 @@ export function registerAlangFlashRoutes(app: Express): void {
   app.post("/api/alang/flash/home", ...guards, geoEndpointLimiter, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
-    const coordinate = await parseShenzhenCoordinate(req.body);
+    const coordinate = await parseShenzhenCoordinate(req.body, await shouldEnforceShenzhenBoundary());
     if (!coordinate.success) return sendCoordinateError(res, coordinate.code);
     try {
       return res.json(await getFlashHome({
@@ -149,7 +165,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     if (!authenticatedUserId) return;
     const appearanceId = idParamSchema.safeParse(req.params.id);
     if (!appearanceId.success) return res.status(400).json({ code: "FLASH_APPEARANCE_NOT_FOUND", error: "无效的街头盲盒编号" });
-    const coordinate = await parseShenzhenCoordinate(req.body);
+    const coordinate = await parseShenzhenCoordinate(req.body, await shouldEnforceShenzhenBoundary());
     if (!coordinate.success) return sendCoordinateError(res, coordinate.code);
     try {
       return res.json(await locateFlashAppearance({
@@ -265,7 +281,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     if (!authenticatedUserId) return;
     const assignmentId = idParamSchema.safeParse(req.params.id);
     if (!assignmentId.success) return res.status(404).json({ code: "FLASH_TASK_NOT_FOUND", error: "没有找到这个委托" });
-    const coordinate = await parseShenzhenCoordinate(req.body);
+    const coordinate = await parseShenzhenCoordinate(req.body, await shouldEnforceShenzhenBoundary());
     if (!coordinate.success) return sendCoordinateError(res, coordinate.code);
     try {
       return res.json(await arriveAtFlashAssignment({
