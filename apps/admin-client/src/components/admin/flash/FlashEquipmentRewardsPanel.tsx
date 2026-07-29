@@ -30,8 +30,6 @@ import { useToast } from "@/hooks/ui/use-toast";
 import { fmtDateTimeShort } from "@/lib/dateUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FlashEmptyState, FlashErrorState, FlashListSkeleton } from "./FlashQueryState";
-import { FlashEquipmentAnalytics } from "./FlashEquipmentAnalytics";
-import { FlashEquipmentConsistency } from "./FlashEquipmentConsistency";
 
 type EquipmentItem = {
   id: string;
@@ -163,12 +161,10 @@ export function FlashEquipmentRewardsPanel({ canWrite }: { canWrite: boolean }) 
       </div>
 
       <Tabs defaultValue="catalog" className="space-y-4">
-        <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-5">
+        <TabsList className="grid h-auto w-full grid-cols-3">
           <TabsTrigger value="catalog" data-testid="tab-equipment-catalog">装备目录</TabsTrigger>
           <TabsTrigger value="pools" data-testid="tab-equipment-pools">装备池</TabsTrigger>
           <TabsTrigger value="activity" data-testid="tab-equipment-rewards">奖励流水</TabsTrigger>
-          <TabsTrigger value="analytics" data-testid="tab-equipment-analytics">数据分析</TabsTrigger>
-          <TabsTrigger value="consistency" data-testid="tab-equipment-consistency">一致性检查</TabsTrigger>
         </TabsList>
         <TabsContent value="catalog">
           <EquipmentCatalog canWrite={canWrite} items={items} />
@@ -191,12 +187,6 @@ export function FlashEquipmentRewardsPanel({ canWrite }: { canWrite: boolean }) 
           ) : (
             <RewardActivity entries={rewardsQuery.data?.entitlements ?? []} loading={rewardsQuery.isLoading} />
           )}
-        </TabsContent>
-        <TabsContent value="analytics">
-          <FlashEquipmentAnalytics />
-        </TabsContent>
-        <TabsContent value="consistency">
-          <FlashEquipmentConsistency />
         </TabsContent>
       </Tabs>
     </div>
