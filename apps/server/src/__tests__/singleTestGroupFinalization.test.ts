@@ -68,6 +68,14 @@ describe('single-test group finalization (单人调试局全链路)', () => {
     expect(blindBoxDeleteIndex).toBeGreaterThan(nullOutIndex);
   });
 
+  it('orphan-event cleanup never deletes an event still referenced by any group', () => {
+    // Regression: title-based orphan discovery can find an event referenced by a
+    // stale/cross-pool group. PostgreSQL must never receive DELETE for that row.
+    expect(serviceSource).toContain('referencedOrphanEventIds');
+    expect(serviceSource).toContain('inArray(eventPoolGroups.eventId, orphanEventCandidateIds)');
+    expect(serviceSource).toContain('!referencedOrphanEventIds.has(id)');
+  });
+
   it('reset deletes virtual-user notifications before deleting the virtual users', () => {
     // Regression: notifications.user_id and notifications.sent_by are NO ACTION
     // FKs. Leaving either behind makes POST /api/test/single-test/reset return 500.

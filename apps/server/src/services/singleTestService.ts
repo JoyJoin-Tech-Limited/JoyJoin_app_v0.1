@@ -886,9 +886,22 @@ async function cleanupSingleTestPoolRows(
       .select({ id: events.id })
       .from(events)
       .where(like(events.title, `${poolTitle} - 第%组`));
-    const orphanEventIds = orphanEventRows
+    const orphanEventCandidateIds = orphanEventRows
       .map((row: IdRow) => row.id)
       .filter((id: string) => !linkedEventIds.includes(id));
+    const referencedOrphanEventRows = orphanEventCandidateIds.length > 0
+      ? await conn
+        .select({ eventId: eventPoolGroups.eventId })
+        .from(eventPoolGroups)
+        .where(inArray(eventPoolGroups.eventId, orphanEventCandidateIds))
+      : [];
+    const referencedOrphanEventIds = new Set(
+      referencedOrphanEventRows
+        .map((row: { eventId: string | null }) => row.eventId)
+        .filter((id: string | null): id is string => Boolean(id)),
+    );
+    const orphanEventIds = orphanEventCandidateIds
+      .filter((id: string) => !referencedOrphanEventIds.has(id));
     if (orphanEventIds.length > 0) {
       await conn.delete(eventAttendance).where(inArray(eventAttendance.eventId, orphanEventIds));
       await conn.delete(events).where(inArray(events.id, orphanEventIds));
