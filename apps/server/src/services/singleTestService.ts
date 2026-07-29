@@ -26,6 +26,7 @@ import {
   preGenerationJobs,
   preGenerationResults,
   momentCardInteractions,
+  notifications,
   userInterests,
   venueTimeSlotBookings,
 } from "@shared/schema";
@@ -955,6 +956,9 @@ export async function cleanupSingleTestData(): Promise<{
         .where(or(inArray(matchHistory.user1Id, virtualUserIds), inArray(matchHistory.user2Id, virtualUserIds)));
       await tx.delete(eventAttendance).where(inArray(eventAttendance.userId, virtualUserIds));
       await tx.delete(userInterests).where(inArray(userInterests.userId, virtualUserIds));
+      await tx
+        .delete(notifications)
+        .where(or(inArray(notifications.userId, virtualUserIds), inArray(notifications.sentBy, virtualUserIds)));
       const deleted = await tx.delete(users).where(inArray(users.id, virtualUserIds)).returning({ id: users.id });
       deletedVirtualUsers = deleted.length;
     }

@@ -68,6 +68,17 @@ describe('single-test group finalization (单人调试局全链路)', () => {
     expect(blindBoxDeleteIndex).toBeGreaterThan(nullOutIndex);
   });
 
+  it('reset deletes virtual-user notifications before deleting the virtual users', () => {
+    // Regression: notifications.user_id and notifications.sent_by are NO ACTION
+    // FKs. Leaving either behind makes POST /api/test/single-test/reset return 500.
+    expect(serviceSource).toContain('notifications.userId');
+    expect(serviceSource).toContain('notifications.sentBy');
+    const notificationsDeleteIndex = serviceSource.indexOf('.delete(notifications)');
+    const usersDeleteIndex = serviceSource.indexOf('.delete(users).where(inArray(users.id, virtualUserIds))');
+    expect(notificationsDeleteIndex).toBeGreaterThan(-1);
+    expect(usersDeleteIndex).toBeGreaterThan(notificationsDeleteIndex);
+  });
+
   it('event_attendance schema declares the partial unique index required by the confirm upsert', () => {
     // Regression: without idx_event_attendance_blind_box_user the ON CONFLICT
     // upsert in attendanceRepo throws 42P10 and confirm-attendance 500s. The
