@@ -332,7 +332,7 @@ export default function IcebreakerSessionPage() {
 
   const phase: SessionPhase = session?.phase ?? 'waiting'
   // Latest-phase ref for timer callbacks (the topics backoff retry must not
-  // regenerate topics after the fuse already advanced the session).
+  // regenerate topics after the host already advanced the session).
   const phaseRef = useRef(phase)
   phaseRef.current = phase
 
@@ -541,7 +541,7 @@ export default function IcebreakerSessionPage() {
           })
           topicsRetryTimerRef.current = setTimeout(
             () => {
-              // The advance fuse may have moved the session out of warmup
+              // The host may have moved the session out of warmup
               // during the backoff window — never regenerate topics for a
               // phase that no longer displays them.
               if (phaseRef.current !== 'warmup' && phaseRef.current !== 'waiting') return
@@ -1427,8 +1427,6 @@ export default function IcebreakerSessionPage() {
           </View>
         )}
       </View>
-
-      {/* PR1 flow revamp — visible advance fuse (all players) + stall nudge (host) */}
 
       <PhaseIntroOverlay phase={phase} visible={showPhaseIntro} />
 

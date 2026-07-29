@@ -720,12 +720,13 @@ router.post('/:socialSessionId/auction/bid', async (req: any, res) => {
   const balances = { ...(state.auctionBalances || {}) };
   const available = balances[userId] ?? 0;
   const high = state.auctionHighBid;
+  const spendable = available + (high?.userId === userId ? high.amount : 0);
 
   if (high && amount <= high.amount) {
     return res.status(400).json({ error: 'Bid must be higher than the current high bid' });
   }
 
-  if (amount > available) {
+  if (amount > spendable) {
     return res.status(400).json({ error: 'Insufficient virtual coins for this bid' });
   }
 
@@ -735,7 +736,7 @@ router.post('/:socialSessionId/auction/bid', async (req: any, res) => {
     balances[high.userId] = (balances[high.userId] ?? 0) + high.amount;
   }
 
-  balances[userId] = available - amount;
+  balances[userId] = spendable - amount;
   state.auctionBalances = balances;
   state.auctionHighBid = { userId, amount };
 
@@ -801,7 +802,6 @@ router.post('/:socialSessionId/auction/close-lot', async (req: any, res) => {
 
   state.auctionRecapLines = lines.slice(0, 16);
   state.auctionHighBid = null;
-  state.auctionLotStartedAt = undefined;
 
   if (idx >= lots.length - 1) {
     state.auctionAllLotsClosed = true;

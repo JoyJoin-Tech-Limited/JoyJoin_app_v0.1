@@ -486,7 +486,7 @@ export interface SocialSessionState {
   autoAdvanceEnabled?: boolean;
   /** Timestamp (ms) when auto-advance should trigger. Set when adaptive engine signals advance_ready. */
   autoAdvanceScheduledAt?: number;
-  /** What scheduled the current auto-advance fuse — drives client copy and advance attribution. */
+  /** Legacy scheduling marker retained only so the server can scrub older sessions. */
   advanceFuseKind?: 'all_ready' | 'stall_recovery';
   /** Timestamp (ms) when the host was nudged about a stalled phase. */
   stallNudgeAt?: number;
@@ -498,7 +498,7 @@ export interface SocialSessionState {
   warmupTopics?: SocialTopic[];
   warmupTopicsMeta?: AIResponseMeta;
   /** Server-owned warmup generation lifecycle. 'generating' is written BEFORE
-   *  the LLM call so the stall detector can suspend nudges/fuses while the
+   *  the LLM call so recovery logic can distinguish waiting from a failed request while the
    *  host is waiting on the system rather than on people (2026-07-26). */
   warmupTopicsStatus?: 'idle' | 'generating' | 'ready' | 'failed';
   /** Timestamp (ms) when topic generation started. Stall suppression only
@@ -549,8 +549,6 @@ export interface SocialSessionState {
   auctionAllLotsClosed?: boolean;
   /** Server-written one-liners for recap LLM (bounded strings). */
   auctionRecapLines?: string[];
-  /** Timestamp (ms) when the current lot started; client syncs timer from this (D3) */
-  auctionLotStartedAt?: number;
   /** Persistent bid history across the whole auction phase (D5) */
   auctionBidHistory?: AuctionBidRecord[];
   // Quip Battle phase data

@@ -12,7 +12,6 @@ import {
   loadSessionLieTruths,
   savePhaseMetric,
 } from '../lib/socialIcebreakerStore';
-import { shouldAutoAdvance, getPhaseTimeoutMinutes } from '../xiaoyueAdaptiveEngine';
 import { logger } from '../lib/logger';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import { isCustomMode, computeSelectablePhases, generatePhaseSelectionId } from '../services/customModeService';
@@ -451,7 +450,7 @@ export function hasWarmupTurnCompleted(state: SocialSessionState): boolean {
 
 /**
  * Whether the current phase has reached its natural completion condition
- * (mirrors the manual /advance guards). Drives the fast all-ready fuse.
+ * (mirrors the manual /advance guards) for readiness reporting.
  */
 export function isPhaseNaturallyComplete(state: SocialSessionState): boolean {
   switch (state.currentPhase) {
@@ -547,7 +546,7 @@ export interface TransitionPhaseResult {
 }
 
 /**
- * Single pipeline for EVERY phase transition: host advance, auto fuse,
+ * Single pipeline for EVERY phase transition: host advance, early-end,
  * stall recovery, early-end, custom select/end. Owns completion bookkeeping,
  * dwell metrics, per-phase cleanup, bonus-gate pause, next-phase seeding
  * (speed-friending pairs, micro-challenge content), recap snapshot, and
@@ -593,7 +592,7 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
   cleanupPhaseStateForNextPhase(state, currentPhase);
 
   // O1: build the lie-detective V2 recap block on EVERY transition out of
-  // lie_detective (previously manual-/advance only; fuse/stall/early-end skipped it).
+  // lie_detective transition side effects.
   if (
     currentPhase === 'lie_detective' &&
     state.lieDetectiveRevealHistory &&
@@ -613,7 +612,7 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
   }
 
   // Bonus gate: advancing into mini_script for the first time pauses for the
-  // host+player vote. The fuse never auto-enters mini_script past this point.
+  // Host + player vote. Automation never enters mini_script past this point.
   if (
     targetPhase === 'mini_script' &&
     !opts.skipBonusGate &&
@@ -703,17 +702,6 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
   return { transitioned: true, nextPhase: targetPhase, pausedAtBonusGate: false, challenge, challengeMeta };
 }
 
-// ---------------------------------------------------------------------------
-// Auto-advance scheduling (all-ready fast fuse + stall nudge/recovery)
-// ---------------------------------------------------------------------------
-
-/** Visible all-ready fuse. Long enough for the phase's celebration beat to land. */
-const ALL_READY_FUSE_MS = 7_000;
-/** Test-mode fuse: longer so QA can observe the celebration before the flip. */
-const ALL_READY_FUSE_TEST_MODE_MS = 10_000;
-/** Grace period after the stall nudge before automation fires without the host. */
-const STALL_GRACE_MS = 75_000;
-
 /** Bound on stall suppression during warmup topic generation. Well beyond the
  *  6s LLM race + route overhead so a live /topics request is never nudged,
  *  but short enough that a wedged 'generating' state (server restart
@@ -730,27 +718,10 @@ export function isWarmupTopicsGenerating(state: SocialSessionState, now = Date.n
   return now - startedAt < WARMUP_GENERATING_STALL_SUPPRESS_MS;
 }
 
-function resolveFuseMs(state: SocialSessionState): number {
-  return isSingleTestMode() && state.singleTest?.isTestModeSkip
-    ? ALL_READY_FUSE_TEST_MODE_MS
-    : ALL_READY_FUSE_MS;
-}
-
 /**
- * Process auto-advance for a session if conditions are met.
- * Runs on every state read (including the client poll).
- *
- * Model (locked 2026-07-17):
- * - All-ready → short visible fuse (~7s prod / ~10s test), then advance via the
- *   unified pipeline (content generation, dwell metrics, recap snapshot included).
- * - Stall (adaptive advance_ready signal OR phase timeout) → host nudge first;
- *   auto-fire only after a further grace period if the host is also AFK.
- * - Bonus gate → the fuse pauses at the offer; it never auto-enters mini_script
- *   and never auto-skips the vote.
+ * Auto-advance is retired. Reads only scrub scheduling fields left by older
+ * clients; revealed/completed phases remain visible until the host advances.
  */
-/** In-flight fuse executions (sessionId:fuseAt) — prevents double transitionPhase. */
-const fuseExecutionsInFlight = new Set<string>();
-
 export async function processAutoAdvance(state: SocialSessionState): Promise<SocialSessionState> {
   // Countdown-driven advancement has been retired. Clear stale fuse state from
   // sessions created by older builds, but never move the phase.
@@ -765,141 +736,6 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
     await updateSession(state.socialSessionId, state);
   }
   return state;
-  if (state.autoAdvanceEnabled === true) {
-  if (state.currentPhase === 'recap' || (state.currentPhase as string) === 'ended') return state;
-  if (isCustomMode(state)) return state;
-
-  const now = Date.now();
-
-  // Execute a due fuse.
-  if (state.autoAdvanceScheduledAt && now >= state.autoAdvanceScheduledAt!) {
-    // Concurrent readers (poll + mutation routes) can both see the same due
-    // fuse before either persists the clear — the state store is
-    // last-writer-wins with no CAS. Claim the fuse in-process so
-    // transitionPhase (and its inline content generation) runs exactly once.
-    const fuseKey = `${state.socialSessionId}:${state.autoAdvanceScheduledAt!}`;
-    if (fuseExecutionsInFlight.has(fuseKey)) return state;
-    fuseExecutionsInFlight.add(fuseKey);
-    try {
-      // Re-verify against the persisted row before executing: a stale reader
-      // whose snapshot predates another executor's clear-persist could claim
-      // the same key after its finally released it. If the persisted fuse no
-      // longer matches ours, someone else already handled it.
-      const persisted = await getSessionWithExpiry(state.socialSessionId).catch(() => null);
-      if (persisted!.state && persisted!.state!.autoAdvanceScheduledAt !== state.autoAdvanceScheduledAt) {
-        return state;
-      }
-      const nextPhase = getNextEligiblePhase(state.currentPhase, state);
-      const gatePending =
-        nextPhase === 'mini_script' && !state.bonusGateAccepted && !state.bonusGateDeclined;
-      if (gatePending) {
-        state.autoAdvanceScheduledAt = undefined;
-        state.advanceFuseKind = undefined;
-        if (!state.bonusGateOffered) {
-          state.bonusGateOffered = true;
-          state.bonusGateFrameworkPreloading = true;
-        }
-        await updateSession(state.socialSessionId, state);
-        return state;
-      }
-      // R2: an all-ready fuse re-verifies completion at execution — a player may
-      // have un-readied (or a guard condition regressed) during the fuse window.
-      if (state.advanceFuseKind === 'all_ready' && !isPhaseNaturallyComplete(state)) {
-        state.autoAdvanceScheduledAt = undefined;
-        state.advanceFuseKind = undefined;
-        await updateSession(state.socialSessionId, state);
-        logger.info('[SocialIcebreaker] All-ready fuse cancelled (completion regressed)', {
-          sessionId: state.socialSessionId,
-          phase: state.currentPhase,
-        });
-        return state;
-      }
-      if (nextPhase !== state.currentPhase) {
-        const trigger: AdvanceTrigger =
-          state.advanceFuseKind === 'stall_recovery' ? 'stall_recovery' : 'auto_all_ready';
-        // R3: clear + persist the fuse BEFORE the transition so concurrent
-        // poll-driven reads cannot double-execute it.
-        state.autoAdvanceScheduledAt = undefined;
-        state.advanceFuseKind = undefined;
-        await updateSession(state.socialSessionId, state);
-        try {
-          await transitionPhase({ state, socialSessionId: state.socialSessionId, trigger });
-        } catch (error) {
-          // C1: transition failed after the clear persist — log and re-arm a
-          // short retry fuse so the session self-heals on a later poll instead
-          // of silently wedging on the pre-transition phase.
-          logger.error('[SocialIcebreaker] Fuse transition failed; re-arming retry fuse', {
-            sessionId: state.socialSessionId,
-            phase: state.currentPhase,
-            trigger,
-            error: String(error),
-          });
-          state.autoAdvanceScheduledAt = Date.now() + 15_000;
-          state.advanceFuseKind = trigger === 'stall_recovery' ? 'stall_recovery' : 'all_ready';
-          await updateSession(state.socialSessionId, state).catch(() => {});
-        }
-      } else {
-        state.autoAdvanceScheduledAt = undefined;
-        state.advanceFuseKind = undefined;
-        await updateSession(state.socialSessionId, state);
-      }
-      return state;
-    } finally {
-      fuseExecutionsInFlight.delete(fuseKey);
-    }
-  }
-
-  // Fuse already ticking — clients render the countdown from autoAdvanceScheduledAt.
-  if (state.autoAdvanceScheduledAt) return state;
-
-  // Fast path: everyone is ready → short, visible fuse.
-  if (isPhaseNaturallyComplete(state)) {
-    state.autoAdvanceScheduledAt = now + resolveFuseMs(state);
-    state.advanceFuseKind = 'all_ready';
-    await updateSession(state.socialSessionId, state);
-    logger.info('[SocialIcebreaker] All-ready fuse scheduled', {
-      sessionId: state.socialSessionId,
-      phase: state.currentPhase,
-      fuseAt: state.autoAdvanceScheduledAt,
-    });
-    return state;
-  }
-
-  // Stall path: host nudge first, auto-fire only after the grace period.
-  if (state.stallSuppressedForPhase === state.currentPhase) return state;
-
-  // Never nudge or fuse warmup while topics are generating — the host is
-  // waiting on the system, not on people.
-  if (isWarmupTopicsGenerating(state, now)) return state;
-
-  if (state.stallNudgeAt) {
-    if (now - state.stallNudgeAt! >= STALL_GRACE_MS) {
-      state.stallNudgeAt = undefined;
-      state.autoAdvanceScheduledAt = now + resolveFuseMs(state);
-      state.advanceFuseKind = 'stall_recovery';
-      await updateSession(state.socialSessionId, state);
-      logger.info('[SocialIcebreaker] Stall recovery fuse scheduled', {
-        sessionId: state.socialSessionId,
-        phase: state.currentPhase,
-        fuseAt: state.autoAdvanceScheduledAt,
-      });
-    }
-    return state;
-  }
-
-  const phaseElapsedMinutes = Math.max(0, (now - state.phaseStartedAt) / 60_000);
-  const timedOut = phaseElapsedMinutes >= getPhaseTimeoutMinutes(state.currentPhase, state);
-  if (shouldAutoAdvance(state) || timedOut) {
-    state.stallNudgeAt = now;
-    await updateSession(state.socialSessionId, state);
-    logger.info('[SocialIcebreaker] Stall nudge issued', {
-      sessionId: state.socialSessionId,
-      phase: state.currentPhase,
-      timedOut,
-    });
-  }
-
-  }
 }
 
 export async function resolveSession(

@@ -7,6 +7,35 @@ $au-deep: $phase-accent-auction-deep;
 .auction-hero {
   position: relative;
 
+  &__role-switch {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border: 2rpx dashed rgba($au-deep, 0.35);
+    border-radius: $radius-md;
+    background: rgba($au-accent, 0.08);
+  }
+
+  &__role-label,
+  &__role-help {
+    @include type-caption;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__role-label {
+    font-weight: $font-weight-semibold;
+    color: $au-deep;
+  }
+
+  &__role-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $spacing-sm;
+  }
+
   &__burst {
     position: absolute;
     inset: 0;
@@ -86,8 +115,24 @@ $au-deep: $phase-accent-auction-deep;
 
   &__high-bidder {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
     justify-content: center;
     margin-top: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    background: rgba($au-accent, 0.1);
+  }
+
+  &__high-bidder-label {
+    @include type-caption;
+    color: $color-text-secondary;
+  }
+
+  &__high-bidder-value {
+    @include type-body-emphasis;
+    color: $au-deep;
   }
 
   &__history {

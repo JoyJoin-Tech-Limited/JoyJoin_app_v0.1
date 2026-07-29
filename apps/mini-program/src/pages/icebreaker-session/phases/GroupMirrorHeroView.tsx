@@ -1,17 +1,16 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { View, Text } from '@tarojs/components'
 import Button from '../../../components/ui/Button'
 import { apiRequest } from '../../../lib/api/api'
 import { buildSocialPath } from '../icebreakerSessionModel'
-import { CelebrationOverlay } from '../overlays/CelebrationOverlay'
-import { CardFlip, IdentityReveal, ParticleBurst } from '../../../components/reveal'
+import { ParticleBurst } from '../../../components/reveal'
 import { TapReaction } from '../../../components/gesture'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
-import { PHASE_ACCENTS } from './phaseAccents'
 import { haptics } from '../../../lib/utils/haptics'
 import { getSystemReducedMotion } from '../../../lib/utils/accessibility'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
+import { buildGroupMirrorAnswerRows } from '../viewModels/phaseProgressionModels'
 import './GroupMirrorHeroView.scss'
 
 interface GroupMirrorHeroViewProps {
@@ -49,7 +48,7 @@ export function GroupMirrorHeroView({
   isHost,
   userId,
   questions = [],
-  answers: _answers = [],
+  answers = [],
   submittedUserIds = [],
   revealed = false,
   results,
@@ -64,88 +63,31 @@ export function GroupMirrorHeroView({
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
   const [voteMap, setVoteMap] = useState<Record<string, string>>({})
-  const [showResult, setShowResult] = useState(false)
-
   const [selectedReaction, setSelectedReaction] = useState<number | null>(null)
   const [reactionCounts, setReactionCounts] = useState<Record<number, number>>({})
-  const [flippedMap, setFlippedMap] = useState<Record<string, boolean>>({})
-  const [showIdentity, setShowIdentity] = useState(false)
   const [showBurst, setShowBurst] = useState(false)
-  const [burstKey, setBurstKey] = useState(0)
+  const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (revealed && results && results.length > 0) {
-      setShowResult(true)
-    }
-  }, [revealed, results])
-
-  // Signature wow: mirror flip-sync — result cards half-flip in sync,
-  // staggered, then the overall winner spotlight lands.
-  // RM: everything lands instantly (no stagger, no burst).
+  // One short firework on reveal. The wrapper unmounts after 900ms, leaving
+  // only the stable one-sided result cards.
   useEffect(() => {
     if (revealed && results && results.length > 0) {
       const reduced = getSystemReducedMotion()
       if (reduced) {
-        const instant: Record<string, boolean> = {}
-        results.forEach((r) => {
-          instant[r.questionId] = true
-        })
-        setFlippedMap(instant)
-        setShowIdentity(true)
         setShowBurst(false)
         return
       }
-
-      setFlippedMap({})
-      setShowIdentity(false)
-      setShowBurst(false)
-
-      const timers: ReturnType<typeof setTimeout>[] = []
-      results.forEach((r, index) => {
-        timers.push(setTimeout(() => {
-          setFlippedMap((prev) => ({ ...prev, [r.questionId]: true }))
-        }, index * 300))
-      })
-
-      const totalDelay = results.length * 300 + 400
-      timers.push(setTimeout(() => setShowIdentity(true), totalDelay))
-      timers.push(setTimeout(() => {
-        setShowBurst(true)
-        setBurstKey((k) => k + 1)
-      }, totalDelay + 300))
-
-      return () => {
-        timers.forEach(clearTimeout)
-      }
+      setShowBurst(true)
+      const timer = setTimeout(() => setShowBurst(false), 900)
+      return () => clearTimeout(timer)
     } else if (!revealed) {
-      setFlippedMap({})
-      setShowIdentity(false)
       setShowBurst(false)
+      setExpandedQuestionId(null)
     }
   }, [revealed, results])
 
   const hasSubmitted = userId ? submittedUserIds.includes(userId) : false
   const allSubmitted = submittedUserIds.length >= playerCount
-
-  const overallWinner = useMemo(() => {
-    if (!results || results.length === 0) return null
-    const agg = new Map<string, { displayName: string; totalVotes: number }>()
-    for (const r of results) {
-      const existing = agg.get(r.topTargetUserId)
-      if (existing) {
-        existing.totalVotes += r.voteCount
-      } else {
-        agg.set(r.topTargetUserId, { displayName: r.topTargetDisplayName, totalVotes: r.voteCount })
-      }
-    }
-    let top: { userId: string; displayName: string; totalVotes: number } | null = null
-    for (const [uid, data] of agg) {
-      if (!top || data.totalVotes > top.totalVotes) {
-        top = { userId: uid, displayName: data.displayName, totalVotes: data.totalVotes }
-      }
-    }
-    return top
-  }, [results])
 
   const handleGenerate = async () => {
     setIsGenerating(true)
@@ -230,24 +172,23 @@ export function GroupMirrorHeroView({
 
   // ── Revealed ──
   if (revealed && results) {
-    const topResult = results[0]
     return (
       <View className='group-mirror-hero'>
-        <CelebrationOverlay
-          visible={showResult}
-          frameKey='mirror_result'
-          title='群像揭晓'
-          subtitle={topResult ? `${topResult.topTargetDisplayName} · ${topResult.voteCount} 票` : undefined}
-          autoDismissMs={3000}
-          onDismiss={() => setShowResult(false)}
-        />
         {showBurst && (
           <View className='group-mirror-hero__burst'>
-            <ParticleBurst key={burstKey} trigger={showBurst} type='roses' count={50} spotlightColor={PHASE_ACCENTS.group_mirror?.accent} />
+            <ParticleBurst trigger type='confetti' count={24} />
           </View>
         )}
+        {expandedQuestionId ? (
+          <View
+            className='group-mirror-hero__detail-backdrop'
+            onClick={() => setExpandedQuestionId(null)}
+            aria-label='收起全部回答'
+          />
+        ) : null}
         <PhaseHeroCard
           phase='group_mirror'
+          className={expandedQuestionId ? 'group-mirror-hero__card--detail-open' : undefined}
           title='群像镜像 · 揭晓'
           statusText='看看大家眼中的彼此'
           actions={
@@ -258,42 +199,67 @@ export function GroupMirrorHeroView({
             ) : undefined
           }
         >
-          {overallWinner && (
-            <View className='group-mirror-hero__identity'>
-              <IdentityReveal
-                identity={overallWinner.displayName}
-                label='大家眼中的 TA'
-                revealed={showIdentity}
-                spotlightColor={PHASE_ACCENTS.group_mirror?.accentDeep ?? '#35755C'}
-                tone='warm'
-                warmAccent='rgba(95, 168, 143, 0.45)'
-              />
-            </View>
-          )}
-
           <View className='group-mirror-hero__results'>
-            {results.map((r) => (
-              <View key={r.questionId} className='group-mirror-hero__result-item'>
-                <CardFlip
-                  front={
-                    <View className='group-mirror-hero__card-front'>
+            {results.map((r) => {
+              const expanded = expandedQuestionId === r.questionId
+              const answerRows = buildGroupMirrorAnswerRows({
+                questionId: r.questionId,
+                answers,
+                participants,
+              })
+              return (
+                <View
+                  key={r.questionId}
+                  className={`group-mirror-hero__result-item ${
+                    expanded ? 'group-mirror-hero__result-item--expanded' : ''
+                  }`}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <View className='group-mirror-hero__result-question-row'>
+                    <View className='group-mirror-hero__result-question-copy'>
                       <Text className='group-mirror-hero__card-question'>{r.questionText}</Text>
-                      <Text className='group-mirror-hero__card-hint'>点击揭晓</Text>
                     </View>
-                  }
-                  back={
-                    <View className='group-mirror-hero__card-back'>
-                      <Text className='group-mirror-hero__card-winner'>{r.topTargetDisplayName}</Text>
-                      <Text className='group-mirror-hero__card-votes'>
-                        {r.voteCount} / {r.totalVotes} 票
+                    <Button
+                      variant='secondary'
+                      onClick={() => setExpandedQuestionId(expanded ? null : r.questionId)}
+                    >
+                      {expanded ? '收起' : '全部回答'}
+                    </Button>
+                  </View>
+                  <View className='group-mirror-hero__result-winner-row'>
+                    <View className='group-mirror-hero__result-winner-copy'>
+                      <Text className='group-mirror-hero__card-winner'>
+                        {r.topTargetDisplayName}
                       </Text>
+                      <Text className='group-mirror-hero__card-id'>ID: {r.topTargetUserId}</Text>
                     </View>
-                  }
-                  flipped={!!flippedMap[r.questionId]}
-                  duration={400}
-                />
-              </View>
-            ))}
+                    <Text className='group-mirror-hero__card-votes'>
+                      {r.voteCount} / {r.totalVotes} 票
+                    </Text>
+                  </View>
+                  {expanded ? (
+                    <View className='group-mirror-hero__answer-list'>
+                      {answerRows.map((row, index) => (
+                        <View
+                          key={`${r.questionId}-${row.targetUserId}-${index}`}
+                          className='group-mirror-hero__answer-row'
+                        >
+                          <Text className='group-mirror-hero__answer-voter'>
+                            {row.voterDisplayName}
+                          </Text>
+                          <View className='group-mirror-hero__answer-target'>
+                            <Text>{row.targetDisplayName}</Text>
+                            <Text className='group-mirror-hero__answer-id'>
+                              ID: {row.targetUserId}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              )
+            })}
           </View>
         </PhaseHeroCard>
       </View>
@@ -306,7 +272,7 @@ export function GroupMirrorHeroView({
       <PhaseHeroCard
         phase='group_mirror'
         title='群像镜像'
-        prompt='为每个问题选择最符合的人 · 投票是匿名的'
+        prompt='为每个问题选择最符合的人 · 揭晓后可查看每位成员的选择'
         statusText={
           hasSubmitted
             ? `已提交，等待其他人… ${submittedUserIds.length}/${playerCount}`

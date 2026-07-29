@@ -18,9 +18,56 @@ export function resolvePersonalityDiceChooseMode(
   return sessionMode ?? legacyAuthFeature ?? true
 }
 
-export function canShowAuctionBidControls(input: {
+export type AuctionPreviewRole = 'host' | 'guest'
+
+export function resolveAuctionRoleControls(input: {
   isHost: boolean
   isSingleTest: boolean
-}): boolean {
-  return !input.isHost || input.isSingleTest
+  previewRole: AuctionPreviewRole
+}): { canBid: boolean; canHostControl: boolean } {
+  if (!input.isHost) {
+    return { canBid: true, canHostControl: false }
+  }
+  if (!input.isSingleTest) {
+    return { canBid: false, canHostControl: true }
+  }
+  return input.previewRole === 'guest'
+    ? { canBid: true, canHostControl: false }
+    : { canBid: false, canHostControl: true }
+}
+
+interface GroupMirrorAnswerInput {
+  userId: string
+  displayName: string
+  questionId: string
+  targetUserId: string
+}
+
+interface GroupMirrorParticipantInput {
+  userId: string
+  displayName?: string
+}
+
+export function buildGroupMirrorAnswerRows(input: {
+  questionId: string
+  answers: GroupMirrorAnswerInput[]
+  participants: GroupMirrorParticipantInput[]
+}): Array<{
+  voterDisplayName: string
+  targetDisplayName: string
+  targetUserId: string
+}> {
+  const names = new Map(
+    input.participants.map((participant) => [
+      participant.userId,
+      participant.displayName?.trim() || '匿名成员',
+    ]),
+  )
+  return input.answers
+    .filter((answer) => answer.questionId === input.questionId)
+    .map((answer) => ({
+      voterDisplayName: answer.displayName?.trim() || '匿名成员',
+      targetDisplayName: names.get(answer.targetUserId) ?? '匿名成员',
+      targetUserId: answer.targetUserId,
+    }))
 }

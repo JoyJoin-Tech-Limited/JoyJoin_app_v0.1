@@ -5,16 +5,16 @@ import type { SocialSessionState } from '@shared/socialIcebreaker'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import Button from '../../../components/ui/Button'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
-import { CelebrationOverlay } from '../overlays/CelebrationOverlay'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import CardFlip from '../../../components/reveal/CardFlip'
-import IdentityReveal from '../../../components/reveal/IdentityReveal'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PhaseHeaderIcon } from '../phaseUtils'
-import { PHASE_ACCENTS } from './phaseAccents'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
-import { canShowAuctionBidControls } from '../viewModels/phaseProgressionModels'
+import {
+  resolveAuctionRoleControls,
+  type AuctionPreviewRole,
+} from '../viewModels/phaseProgressionModels'
 import './AuctionHeroView.scss'
 
 export interface AuctionBidRecordLocal {
@@ -75,11 +75,9 @@ export function AuctionHeroView({
 }: AuctionHeroViewProps) {
   const [bidText, setBidText] = useState('10')
   const [bidError, setBidError] = useState('')
-  const [showSold, setShowSold] = useState(false)
-  const [showLotSold, setShowLotSold] = useState(false)
-  const [lastLotResult, setLastLotResult] = useState<{ name: string; amount: number } | null>(null)
   const [showWinBurst, setShowWinBurst] = useState(false)
   const [outbidNotice, setOutbidNotice] = useState('')
+  const [previewRole, setPreviewRole] = useState<AuctionPreviewRole>('host')
 
   const lots = session.auctionLots ?? []
   const idx = session.auctionCurrentLotIndex ?? 0
@@ -92,7 +90,7 @@ export function AuctionHeroView({
   const prevIdxRef = useRef(idx)
   const prevHighRef = useRef(session.auctionHighBid)
   const outbidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const wonLotRef = useRef(false)
+  const winnerBurstTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const nameOf = useCallback(
     (uid: string) =>
@@ -100,31 +98,39 @@ export function AuctionHeroView({
     [session.joinedParticipants],
   )
 
-  // ── Lot change detection (hammer stamp fires via CelebrationOverlay) ──
+  const fireWinnerBurst = useCallback(() => {
+    setShowWinBurst(true)
+    if (winnerBurstTimerRef.current) clearTimeout(winnerBurstTimerRef.current)
+    winnerBurstTimerRef.current = setTimeout(() => {
+      setShowWinBurst(false)
+      winnerBurstTimerRef.current = undefined
+    }, 900)
+  }, [])
+
+  useEffect(() => () => {
+    if (winnerBurstTimerRef.current) clearTimeout(winnerBurstTimerRef.current)
+  }, [])
+
+  // A lot closes only when the host acts. Show one short firework and remove
+  // its canvas wrapper immediately afterwards.
   useEffect(() => {
     if (idx > prevIdxRef.current && prevIdxRef.current >= 0) {
       const prevHigh = prevHighRef.current
-      wonLotRef.current = prevHigh ? prevHigh.userId === currentUserId : false
-      // M1: capture the closed lot's winner before the server nulls auctionHighBid
-      setLastLotResult(prevHigh ? { name: nameOf(prevHigh.userId), amount: prevHigh.amount } : null)
-      setShowLotSold(true)
+      if (prevHigh?.userId === currentUserId) fireWinnerBurst()
       setBidText('10')
       setBidError('')
     }
     prevIdxRef.current = idx
-  }, [idx, currentUserId, nameOf])
+  }, [idx, currentUserId, fireWinnerBurst])
 
   // ── All-closed detection: the final lot's stamp fires here (no idx change) ──
   useEffect(() => {
     if (allClosed && !prevAllClosedRef.current) {
       const prevHigh = prevHighRef.current
-      wonLotRef.current = prevHigh ? prevHigh.userId === currentUserId : false
-      setLastLotResult(prevHigh ? { name: nameOf(prevHigh.userId), amount: prevHigh.amount } : null)
-      setShowLotSold(true)
-      setShowSold(true)
+      if (prevHigh?.userId === currentUserId) fireWinnerBurst()
     }
     prevAllClosedRef.current = allClosed
-  }, [allClosed, currentUserId, nameOf])
+  }, [allClosed, currentUserId, fireWinnerBurst])
 
   // ── Outbid notification ──
   useEffect(() => {
@@ -144,16 +150,6 @@ export function AuctionHeroView({
     }
   }, [session.auctionHighBid, currentUserId, nameOf])
 
-  // ── Win burst when current user is high bidder at lot close ──
-  useEffect(() => {
-    if (wonLotRef.current) {
-      wonLotRef.current = false
-      setShowWinBurst(true)
-      const t = setTimeout(() => setShowWinBurst(false), 2000)
-      return () => clearTimeout(t)
-    }
-  }, [idx])
-
   const bidHistory: AuctionBidRecordLocal[] = useMemo(() => {
     const history = session.auctionBidHistory || []
     return history
@@ -168,8 +164,32 @@ export function AuctionHeroView({
   }, [session.auctionBidHistory, idx, nameOf])
 
   const minBid = (high?.amount ?? 0) + 1
-  const showBidControls = canShowAuctionBidControls({ isHost, isSingleTest })
+  const roleControls = resolveAuctionRoleControls({ isHost, isSingleTest, previewRole })
+  const showBidControls = roleControls.canBid
   const canBid = balance >= minBid
+
+  const roleSwitcher = isHost && isSingleTest ? (
+    <View className='auction-hero__role-switch' aria-label='单人测试角色'>
+      <Text className='auction-hero__role-label'>测试视角</Text>
+      <View className='auction-hero__role-actions'>
+        <Button
+          variant={previewRole === 'host' ? 'primary' : 'secondary'}
+          onClick={() => setPreviewRole('host')}
+        >
+          主持人
+        </Button>
+        <Button
+          variant={previewRole === 'guest' ? 'primary' : 'secondary'}
+          onClick={() => setPreviewRole('guest')}
+        >
+          参与者
+        </Button>
+      </View>
+      <Text className='auction-hero__role-help'>
+        {previewRole === 'host' ? '主持人负责生成拍品与落槌' : '参与者使用 100 枚虚拟币出价'}
+      </Text>
+    </View>
+  ) : null
 
   const handleQuickBid = (amount: number) => {
     if (amount <= (high?.amount ?? 0)) {
@@ -234,14 +254,15 @@ export function AuctionHeroView({
   if (lots.length === 0) {
     return (
       <View className='auction-hero'>
+        {roleSwitcher}
         <PhaseHeroCard
           phase='auction'
           artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-auction.webp')}
           title='脑洞拍卖会'
           prompt='虚拟币竞拍，仅供娱乐。主持人生成竞拍条目后，大家按轮出价。'
-          statusText={isHost ? '生成竞拍条目后开拍' : '等待主持人生成竞拍条目…'}
+          statusText={roleControls.canHostControl ? '生成竞拍条目后开拍' : '等待主持人生成竞拍条目…'}
           actions={
-            isHost ? (
+            roleControls.canHostControl ? (
               <Button
                 variant='primary'
                 onClick={onGenerateLots}
@@ -261,14 +282,12 @@ export function AuctionHeroView({
   if (allClosed) {
     return (
       <View className='auction-hero'>
-        <CelebrationOverlay
-          visible={showSold}
-          frameKey='auction_sold'
-          title='拍卖圆满结束'
-          subtitle='所有竞拍条目均已成交'
-          autoDismissMs={3000}
-          onDismiss={() => setShowSold(false)}
-        />
+        {roleSwitcher}
+        {showWinBurst ? (
+          <View className='auction-hero__burst'>
+            <ParticleBurst trigger type='confetti' count={24} />
+          </View>
+        ) : null}
         <PhaseHeroCard
           phase='auction'
           artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-auction.webp')}
@@ -278,7 +297,7 @@ export function AuctionHeroView({
           doneCount={lots.length}
           totalCount={lots.length}
           actions={
-            isHost ? (
+            roleControls.canHostControl ? (
               <Button variant='primary' onClick={onAdvance} disabled={isAdvancing} loading={isAdvancing}>
                 {isAdvancing ? '切换中…' : '进入下一阶段 ›'}
               </Button>
@@ -291,9 +310,10 @@ export function AuctionHeroView({
 
   return (
     <View className='auction-hero'>
+      {roleSwitcher}
       {showWinBurst && (
         <View className='auction-hero__burst'>
-          <ParticleBurst trigger={showWinBurst} type='coins' count={45} />
+          <ParticleBurst trigger type='confetti' count={24} />
         </View>
       )}
 
@@ -302,16 +322,6 @@ export function AuctionHeroView({
           <Text className='auction-hero__outbid-text'>{outbidNotice}</Text>
         </View>
       ) : null}
-
-      {/* Signature wow: hammer stamp on lot close */}
-      <CelebrationOverlay
-        visible={showLotSold}
-        frameKey='auction_sold'
-        title='成交！'
-        subtitle={lastLotResult ? `${lastLotResult.name} 以 ${lastLotResult.amount} 币拍下` : '本标无人出价'}
-        autoDismissMs={2000}
-        onDismiss={() => setShowLotSold(false)}
-      />
 
       <PhaseHeroCard
         phase='auction'
@@ -385,7 +395,7 @@ export function AuctionHeroView({
                 </Button>
               </View>
             ) : null}
-            {isHost ? (
+            {roleControls.canHostControl ? (
               <Button
                 variant='secondary'
                 onClick={onCloseLot}
@@ -405,14 +415,10 @@ export function AuctionHeroView({
 
         {high && (
           <View className='auction-hero__high-bidder'>
-            <IdentityReveal
-              revealed
-              identity={`${nameOf(high.userId)} · ${high.amount}币`}
-              label='当前领先'
-              spotlightColor={PHASE_ACCENTS.auction?.accentDeep ?? '#8A651A'}
-              tone='warm'
-              warmAccent='rgba(201, 154, 60, 0.45)'
-            />
+            <Text className='auction-hero__high-bidder-label'>当前领先</Text>
+            <Text className='auction-hero__high-bidder-value'>
+              {nameOf(high.userId)} · {high.amount} 币
+            </Text>
           </View>
         )}
 

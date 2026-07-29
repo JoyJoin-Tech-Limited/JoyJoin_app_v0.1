@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  canShowAuctionBidControls,
+  buildGroupMirrorAnswerRows,
   getGenerationRetryDelayMs,
+  resolveAuctionRoleControls,
   resolvePersonalityDiceChooseMode,
 } from '../viewModels/phaseProgressionModels'
 
@@ -18,9 +19,48 @@ describe('phase progression models', () => {
     expect(getGenerationRetryDelayMs({ status: 'ready' })).toBeNull()
   })
 
-  it('lets the real host bid only in a single-test session', () => {
-    expect(canShowAuctionBidControls({ isHost: false, isSingleTest: false })).toBe(true)
-    expect(canShowAuctionBidControls({ isHost: true, isSingleTest: true })).toBe(true)
-    expect(canShowAuctionBidControls({ isHost: true, isSingleTest: false })).toBe(false)
+  it('lets a single-test host switch between host and guest role controls', () => {
+    expect(resolveAuctionRoleControls({ isHost: true, isSingleTest: true, previewRole: 'host' })).toEqual({
+      canBid: false,
+      canHostControl: true,
+    })
+    expect(resolveAuctionRoleControls({ isHost: true, isSingleTest: true, previewRole: 'guest' })).toEqual({
+      canBid: true,
+      canHostControl: false,
+    })
+    expect(resolveAuctionRoleControls({ isHost: false, isSingleTest: false, previewRole: 'host' })).toEqual({
+      canBid: true,
+      canHostControl: false,
+    })
+  })
+
+  it('builds Group Mirror detail rows with voter and selected member identities', () => {
+    expect(buildGroupMirrorAnswerRows({
+      questionId: 'q1',
+      answers: [
+        {
+          userId: 'voter-1',
+          displayName: 'Alice',
+          questionId: 'q1',
+          targetUserId: 'member-2',
+        },
+        {
+          userId: 'voter-2',
+          displayName: 'Bob',
+          questionId: 'q2',
+          targetUserId: 'member-1',
+        },
+      ],
+      participants: [
+        { userId: 'member-1', displayName: 'Carol' },
+        { userId: 'member-2', displayName: 'Dylan' },
+      ],
+    })).toEqual([
+      {
+        voterDisplayName: 'Alice',
+        targetDisplayName: 'Dylan',
+        targetUserId: 'member-2',
+      },
+    ])
   })
 })

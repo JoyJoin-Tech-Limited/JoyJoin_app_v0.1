@@ -226,7 +226,6 @@ function seedAuctionSession(
     state.auctionHighBid = overrides?.highBid ?? null;
     state.auctionAllLotsClosed = overrides?.allClosed ?? false;
     state.auctionRecapLines = [];
-    state.auctionLotStartedAt = Date.now();
     state.auctionBidHistory = [];
   }
   storeCtx.sessions.set(socialSessionId, state);
@@ -483,6 +482,29 @@ describe('POST /api/social-icebreaker/:id/auction/bid', () => {
     });
   });
 
+  it('lets the current high bidder raise their own bid using escrowed coins', async () => {
+    const id = 'social_auc-bid-self-raise';
+    seedAuctionSession(id, { lots: true, highBid: { userId: 'guest-1', amount: 50 } });
+    const state = storeCtx.sessions.get(id)!;
+    state.auctionBalances!['guest-1'] = AUCTION_STARTING_COINS - 50;
+    storeCtx.sessions.set(id, state);
+
+    await withServer(async (baseUrl) => {
+      const guestCookie = await login(baseUrl, 'guest-1');
+      const res = await fetch(`${baseUrl}/api/social-icebreaker/${id}/auction/bid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+        body: JSON.stringify({ amount: 60 }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json() as any;
+      expect(body.highBid).toEqual({ userId: 'guest-1', amount: 60 });
+      expect(body.balances['guest-1']).toBe(AUCTION_STARTING_COINS - 60);
+      expect(body.previousHighBidder).toBe('guest-1');
+    });
+  });
+
   it('outbids previous bidder and refunds their coins', async () => {
     const id = 'social_auc-bid-outbid';
     seedAuctionSession(id, { lots: true, highBid: { userId: 'guest-1', amount: 50 } });
@@ -649,7 +671,6 @@ describe('POST /api/social-icebreaker/:id/auction/close-lot', () => {
     // Set current to last lot
     const s = storeCtx.sessions.get(id)!;
     s.auctionCurrentLotIndex = 1;
-    s.auctionLotStartedAt = Date.now();
     storeCtx.sessions.set(id, s);
 
     await withServer(async (baseUrl) => {
@@ -664,7 +685,7 @@ describe('POST /api/social-icebreaker/:id/auction/close-lot', () => {
 
       const stored = storeCtx.sessions.get(id);
       expect(stored?.auctionAllLotsClosed).toBe(true);
-      expect(stored?.auctionLotStartedAt).toBeUndefined();
+      expect(stored?.autoAdvanceScheduledAt).toBeUndefined();
     });
   });
 

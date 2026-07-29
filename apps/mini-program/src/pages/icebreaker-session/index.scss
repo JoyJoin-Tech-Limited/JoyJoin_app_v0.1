@@ -27,22 +27,6 @@ $__gold-accent:  $color-landed-gold;
     position: relative;
   }
 
-  // ── PR1 flow revamp: visible advance fuse + stall nudge ─────────────
-  &__fuse-banner {
-    display: flex;
-    justify-content: center;
-    margin: $spacing-sm auto;
-    padding: $spacing-xs $spacing-md;
-    max-width: 560rpx;
-    border-radius: $radius-full;
-    background: rgba($color-primary, 0.08);
-  }
-
-  &__fuse-banner-text {
-    @include type-label;
-    color: $color-primary-dark;
-  }
-
   &__stall-nudge {
     display: flex;
     flex-direction: column;
