@@ -256,6 +256,14 @@ export async function ensureMatchingTestPool(testerUserId: string): Promise<stri
         .set({ dateTime: nextDinnerDateTime(), updatedAt: new Date() })
         .where(eq(eventPools.id, existing.id));
     }
+    // Reset the pool lifecycle so a fresh match run can commit. A previous run
+    // that formed 0 groups leaves status stuck at 'matching' (or a completed
+    // run leaves 'matched'), and the match CAS guard (active → matching)
+    // rejects any re-run while it is not 'active'.
+    await db
+      .update(eventPools)
+      .set({ status: "active", matchedAt: null, updatedAt: new Date() })
+      .where(eq(eventPools.id, existing.id));
     return existing.id;
   }
 
