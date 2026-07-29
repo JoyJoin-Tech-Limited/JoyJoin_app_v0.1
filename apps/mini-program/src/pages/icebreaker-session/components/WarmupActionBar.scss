@@ -8,11 +8,11 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  min-height: 176rpx; // 88rpx primary + 88rpx secondary
+  min-height: 88rpx;
 
   &__primary-wrap {
     height: 88rpx;
-    overflow: hidden;
+    overflow: visible;
   }
 
   &__primary {
@@ -24,11 +24,15 @@
     &--ready {
       background: rgba($color-success, 0.08) !important;
       color: $color-success !important;
-      border: none !important;
+      border: 2rpx solid rgba($color-success, 0.72) !important;
+      box-shadow: 0 0 0 6rpx rgba($color-success, 0.12);
+      animation:
+        warmup-action-enter 200ms cubic-bezier(0.22, 1, 0.36, 1) both,
+        warmup-ready-margin 1.8s ease-in-out 200ms infinite;
 
       &:active {
-        transform: none;
-        opacity: 1;
+        transform: scale(0.98);
+        opacity: 0.88;
       }
     }
 
@@ -115,6 +119,16 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes warmup-ready-margin {
+    0%,
+    100% {
+      box-shadow: 0 0 0 4rpx rgba($color-success, 0.1);
+    }
+    50% {
+      box-shadow: 0 0 0 10rpx rgba($color-success, 0.22);
     }
   }
 }

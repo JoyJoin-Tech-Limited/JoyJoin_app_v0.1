@@ -3063,6 +3063,132 @@ describe.sequential('social icebreaker routes', () => {
   });
 
   describe('single-test mode disclosure', () => {
+    it('lets the single-test host choose Lie Detective V2 before submissions start', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'single-test-lie-mode-host');
+        const sessionId = `session-single-test-lie-mode-${Date.now()}`;
+
+        vi.mocked(isSingleTestMode).mockReturnValue(true);
+        vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
+          version: 2,
+          groupId: sessionId,
+          isTestModeSkip: true,
+          runBots: false,
+          botPersonas: [],
+          bots: [],
+        });
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const socialSessionId = startBody.socialSessionId;
+        const state = await getSession(socialSessionId) as any;
+        state.currentPhase = 'lie_detective';
+        await updateSession(socialSessionId, state);
+
+        const modeResponse = await fetch(
+          `${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/mode`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({ mode: 'v2' }),
+          },
+        );
+        const modeBody = await modeResponse.json() as any;
+
+        expect(modeResponse.status).toBe(200);
+        expect(modeBody.state.lieDetectiveMode).toBe('v2');
+        expect((await getSession(socialSessionId))?.lieDetectiveMode).toBe('v2');
+      });
+    });
+
+    it('lets the host choose V2 after single-test bots have prefilled their statements', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'single-test-lie-mode-bot-host');
+        const sessionId = `session-single-test-lie-mode-bots-${Date.now()}`;
+
+        vi.mocked(isSingleTestMode).mockReturnValue(true);
+        vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
+          version: 2,
+          groupId: sessionId,
+          isTestModeSkip: true,
+          runBots: false,
+          botPersonas: [
+            { botId: 'bot-1', userId: 'virtual-user-1', displayName: 'Bot One', archetype: '社牛柯基' },
+          ],
+          bots: [
+            { botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' },
+          ],
+        });
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const state = await getSession(startBody.socialSessionId) as any;
+        state.currentPhase = 'lie_detective';
+        state.lieDetectivePlayers = [{
+          userId: 'virtual-user-1',
+          displayName: 'Bot One',
+          statements: [
+            { index: 1, text: 'Bot fact one' },
+            { index: 2, text: 'Bot fact two' },
+            { index: 3, text: 'Bot lie' },
+          ],
+        }];
+        await updateSession(startBody.socialSessionId, state);
+
+        const modeResponse = await fetch(
+          `${baseUrl}/api/social-icebreaker/${startBody.socialSessionId}/lie-detective/mode`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({ mode: 'v2' }),
+          },
+        );
+        const modeBody = await modeResponse.json() as any;
+
+        expect(modeResponse.status).toBe(200);
+        expect(modeBody.state.lieDetectiveMode).toBe('v2');
+      });
+    });
+
+    it('does not expose Lie Detective mode switching outside single-test mode', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'production-lie-mode-host');
+        const sessionId = `session-production-lie-mode-${Date.now()}`;
+
+        vi.mocked(isSingleTestMode).mockReturnValue(false);
+        vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue(null);
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const startBody = await startResponse.json() as any;
+        const state = await getSession(startBody.socialSessionId) as any;
+        state.currentPhase = 'lie_detective';
+        await updateSession(startBody.socialSessionId, state);
+
+        const modeResponse = await fetch(
+          `${baseUrl}/api/social-icebreaker/${startBody.socialSessionId}/lie-detective/mode`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({ mode: 'v2' }),
+          },
+        );
+
+        expect(modeResponse.status).toBe(404);
+      });
+    });
+
     it('accepts a human-authored two-facts-and-one-lie set without exposing the lie', async () => {
       await withServer(async (baseUrl) => {
         const hostUserId = 'single-test-custom-lie-host';

@@ -14,6 +14,7 @@ import { PhaseHeaderIcon } from '../phaseUtils'
 import { PHASE_ACCENTS } from './phaseAccents'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
+import { canShowAuctionBidControls } from '../viewModels/phaseProgressionModels'
 import './AuctionHeroView.scss'
 
 export interface AuctionBidRecordLocal {
@@ -35,6 +36,7 @@ interface AuctionHeroViewProps {
   isGeneratingLots: boolean
   isPlacingBid: boolean
   isClosingLot: boolean
+  isSingleTest?: boolean
   lotsMeta?: AIResponseMeta
 }
 
@@ -68,6 +70,7 @@ export function AuctionHeroView({
   isGeneratingLots,
   isPlacingBid,
   isClosingLot,
+  isSingleTest = false,
   lotsMeta,
 }: AuctionHeroViewProps) {
   const [bidText, setBidText] = useState('10')
@@ -165,7 +168,8 @@ export function AuctionHeroView({
   }, [session.auctionBidHistory, idx, nameOf])
 
   const minBid = (high?.amount ?? 0) + 1
-  const canBid = !isHost && balance >= minBid
+  const showBidControls = canShowAuctionBidControls({ isHost, isSingleTest })
+  const canBid = balance >= minBid
 
   const handleQuickBid = (amount: number) => {
     if (amount <= (high?.amount ?? 0)) {
@@ -321,7 +325,7 @@ export function AuctionHeroView({
         }
         actions={
           <>
-            {!isHost ? (
+            {showBidControls ? (
               <View className='auction-hero__bid-zone'>
                 <View className='auction-hero__quick-bids'>
                   <Button

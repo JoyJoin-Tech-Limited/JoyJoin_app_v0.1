@@ -74,6 +74,11 @@ import {
   getTopicsServerRetryDelayMs,
 } from './viewModels/warmupViewModels'
 import type { TopicsFailureKind, TopicsRecoveryState } from './viewModels/warmupViewModels'
+import {
+  getGenerationRetryDelayMs,
+  resolvePersonalityDiceChooseMode,
+  type GenerationPendingResponse,
+} from './viewModels/phaseProgressionModels'
 import { syncSocialActionResponse } from './socialActionSync'
 import './index.scss'
 
@@ -946,6 +951,10 @@ export default function IcebreakerSessionPage() {
     [performSocialAction],
   )
 
+  const handleSelectLieDetectiveTestMode = useCallback((mode: 'v1' | 'v2') => {
+    void performSocialAction('lie-mode', '/lie-detective/mode', { mode })
+  }, [performSocialAction])
+
   const handleCastVote = useCallback(
     (statementIndex: number) => {
       const targetPlayer = session?.lieDetectivePlayers?.[session.currentLieDetectivePlayerIndex ?? 0]
@@ -972,15 +981,57 @@ export default function IcebreakerSessionPage() {
     void performSocialAction('lie-next-player', '/lie-detective/next-player', {})
   }, [performSocialAction])
 
+  const diceGenerationRetryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const diceGenerationRetryCountRef = useRef(0)
+  const generateDiceChallengesRef = useRef<() => void>(() => {})
+
   const handleGenerateDiceChallenges = useCallback(() => {
-    void performSocialAction('dice-generate', '/personality-dice/generate', {
+    void performSocialAction<GenerationPendingResponse>('dice-generate', '/personality-dice/generate', {
       participants: participants.map((participant) => ({
         userId: participant.userId,
         displayName: participant.displayName ?? '匿名',
         archetype: participant.archetype,
       })),
+    }).then((response) => {
+      const retryDelay = getGenerationRetryDelayMs(response)
+      if (retryDelay === null) {
+        diceGenerationRetryCountRef.current = 0
+        return
+      }
+      if (diceGenerationRetryCountRef.current >= 8) {
+        diceGenerationRetryCountRef.current = 0
+        void Taro.showToast({ title: '生成仍在进行，请稍后再试', icon: 'none', duration: 2000 })
+        return
+      }
+      diceGenerationRetryCountRef.current += 1
+      if (diceGenerationRetryTimerRef.current) clearTimeout(diceGenerationRetryTimerRef.current)
+      diceGenerationRetryTimerRef.current = setTimeout(() => {
+        diceGenerationRetryTimerRef.current = undefined
+        if (phaseRef.current !== 'personality_dice') {
+          diceGenerationRetryCountRef.current = 0
+          return
+        }
+        generateDiceChallengesRef.current()
+      }, retryDelay)
     })
   }, [performSocialAction, participants])
+  generateDiceChallengesRef.current = handleGenerateDiceChallenges
+
+  useEffect(() => () => {
+    if (diceGenerationRetryTimerRef.current) {
+      clearTimeout(diceGenerationRetryTimerRef.current)
+      diceGenerationRetryTimerRef.current = undefined
+    }
+  }, [])
+
+  useEffect(() => {
+    if (phase === 'personality_dice') return
+    diceGenerationRetryCountRef.current = 0
+    if (diceGenerationRetryTimerRef.current) {
+      clearTimeout(diceGenerationRetryTimerRef.current)
+      diceGenerationRetryTimerRef.current = undefined
+    }
+  }, [phase])
 
   const handleCompleteDiceChallenge = useCallback((pass?: boolean) => {
     void performSocialAction('dice-complete', '/personality-dice/complete', { pass: pass === true })
@@ -1513,6 +1564,9 @@ export default function IcebreakerSessionPage() {
             onAdvance={handleAdvancePhase}
             isAdvancing={pendingAction === 'advance'}
             lieDetectiveMode={session.lieDetectiveMode ?? 'v1'}
+            isSingleTest={session.isTestModeSkip ?? false}
+            onSelectTestMode={handleSelectLieDetectiveTestMode}
+            isSelectingTestMode={pendingAction === 'lie-mode'}
             statementsMeta={session.lieDetectiveStatementsMeta}
             onSubmitTags={handleSubmitTags}
             isSubmittingTags={pendingAction === 'lie-submit-tags'}
@@ -1533,6 +1587,7 @@ export default function IcebreakerSessionPage() {
             lotsMeta={session.auctionLotsMeta}
             isPlacingBid={pendingAction === 'auction-bid'}
             isClosingLot={pendingAction === 'auction-close'}
+            isSingleTest={session.isTestModeSkip ?? false}
           />
         )}
 
@@ -1581,7 +1636,10 @@ export default function IcebreakerSessionPage() {
             onComplete={handleCompleteDiceChallenge}
             isGenerating={pendingAction === 'dice-generate'}
             isCompleting={pendingAction === 'dice-complete'}
-            chooseModeEnabled={features?.personalityDiceChooseMode ?? false}
+            chooseModeEnabled={resolvePersonalityDiceChooseMode(
+              session.personalityDiceChooseModeEnabled,
+              features?.personalityDiceChooseMode,
+            )}
             challengeGroups={session.personalityDiceChallengeGroups ?? []}
             selectedOption={session.diceSelectedOption ?? {}}
             onChoose={handleChooseDiceOption}

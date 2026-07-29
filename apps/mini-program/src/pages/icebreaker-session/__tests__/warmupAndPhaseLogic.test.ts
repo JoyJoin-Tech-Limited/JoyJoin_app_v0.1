@@ -298,27 +298,32 @@ describe('buildCTAState', () => {
   it('not ready: primary = 我准备好了', () => {
     const state = buildCTAState(false, false, false, false)
     expect(state.primary).toBe('我准备好了')
+    expect(state.primaryAction).toBe('toggle_ready')
     expect(state.secondaryVisible).toBe(false)
     expect(state.showCancel).toBe(false)
   })
 
-  it('ready but not everyone: primary = 已准备 with cancel', () => {
+  it('ready but not everyone: highlighted primary toggles ready off', () => {
     const state = buildCTAState(true, false, false, false)
-    expect(state.primary).toBe('已准备')
-    expect(state.showCancel).toBe(true)
+    expect(state.primary).toBe('已准备 · 点按取消')
+    expect(state.primaryAction).toBe('toggle_ready')
+    expect(state.showCancel).toBe(false)
   })
 
-  it('host, everyone ready, not last: primary = 已准备, secondary visible', () => {
+  it('host, everyone ready, not last: primary advances to the next topic', () => {
     const state = buildCTAState(true, true, true, false)
-    expect(state.primary).toBe('已准备')
-    expect(state.secondaryVisible).toBe(true)
+    expect(state.primary).toBe('进入下一题')
+    expect(state.primaryAction).toBe('next_topic')
+    expect(state.secondaryVisible).toBe(false)
+    expect(state.showCancel).toBe(true)
   })
 
   it('host, everyone ready, last: primary = 本轮结束', () => {
     const state = buildCTAState(true, true, true, true)
     expect(state.primary).toBe('本轮结束')
+    expect(state.primaryAction).toBe('advance_phase')
     expect(state.secondaryVisible).toBe(false)
-    expect(state.showCancel).toBe(false)
+    expect(state.showCancel).toBe(true)
   })
 })
 

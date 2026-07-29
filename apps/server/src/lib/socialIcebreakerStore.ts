@@ -841,9 +841,13 @@ export async function listPendingPreGenerationJobs(): Promise<
 export async function getInFlightJobForPhase(
   socialSessionId: string,
   phase: string,
-): Promise<{ id: string; status: string } | null> {
+): Promise<{ id: string; status: string; updatedAt?: Date } | null> {
   const rows = await db
-    .select({ id: preGenerationJobs.id, status: preGenerationJobs.status })
+    .select({
+      id: preGenerationJobs.id,
+      status: preGenerationJobs.status,
+      updatedAt: preGenerationJobs.updatedAt,
+    })
     .from(preGenerationJobs)
     .where(
       and(

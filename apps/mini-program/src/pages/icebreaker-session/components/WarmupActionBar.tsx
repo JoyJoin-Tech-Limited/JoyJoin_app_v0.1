@@ -33,10 +33,14 @@ export function WarmupActionBar({
   const isLoading = isUpdatingReady || isAdvancingTopic || isAdvancing
 
   const handlePrimary = () => {
-    if (isLoading || ctaState.primary === '已准备') return
+    if (isLoading) return
     haptics('medium')
-    if (ctaState.primary === '本轮结束') {
+    if (ctaState.primaryAction === 'advance_phase') {
       onAdvance()
+      return
+    }
+    if (ctaState.primaryAction === 'next_topic') {
+      onNextTopic()
       return
     }
     onToggleReady()
@@ -57,22 +61,24 @@ export function WarmupActionBar({
   const primaryButton = (
     <Button
       key={ctaState.primary}
-      variant={ctaState.primary === '我准备好了' || ctaState.primary === '本轮结束' ? 'primary' : 'secondary'}
+      variant={ctaState.primaryAction === 'toggle_ready' && isReady ? 'secondary' : 'primary'}
       className={`warmup-action__primary ${
-        ctaState.primary === '已准备' ? 'warmup-action__primary--ready' : ''
+        ctaState.primaryAction === 'toggle_ready' && isReady ? 'warmup-action__primary--ready' : ''
       }`}
       onClick={handlePrimary}
       disabled={isLoading}
       loading={isLoading}
     >
       <View className='warmup-action__primary-inner'>
-        {ctaState.primary === '已准备' && (
+        {ctaState.primaryAction === 'toggle_ready' && isReady && (
           <JoyJoinIcon emoji='✓' tier='status' size={24} />
         )}
         <Text className='warmup-action__primary-text'>{ctaState.primary}</Text>
       </View>
     </Button>
   )
+  const showSecondaryRegion =
+    ctaState.showCancel || ctaState.secondaryVisible || !isHost
 
   return (
     <View className='warmup-action'>
@@ -80,7 +86,7 @@ export function WarmupActionBar({
         {primaryButton}
       </View>
 
-      <View className='warmup-action__secondary'>
+      {showSecondaryRegion ? <View className='warmup-action__secondary'>
         {ctaState.showCancel && (
           <View
             className='warmup-action__cancel'
@@ -114,7 +120,7 @@ export function WarmupActionBar({
         {!isHost && everyoneReady && (
           <Text className='warmup-action__helper'>等主持人开始～</Text>
         )}
-      </View>
+      </View> : null}
     </View>
   )
 }

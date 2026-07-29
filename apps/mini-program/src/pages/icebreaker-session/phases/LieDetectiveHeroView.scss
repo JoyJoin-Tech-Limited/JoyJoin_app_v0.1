@@ -18,6 +18,27 @@ $ld-tint: $phase-accent-lie-tint;
 }
 
 .lie-detective-hero {
+  &__mode-test {
+    width: 100%;
+    padding: 20rpx;
+    border: 2rpx dashed rgba($color-primary, 0.42);
+    border-radius: 24rpx;
+    background: rgba($color-primary, 0.06);
+  }
+
+  &__mode-test-label {
+    display: block;
+    margin-bottom: 14rpx;
+    color: $color-text-secondary;
+    font-size: 24rpx;
+    text-align: center;
+  }
+
+  &__mode-test-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12rpx;
+  }
   &__statements {
     display: flex;
     flex-direction: column;

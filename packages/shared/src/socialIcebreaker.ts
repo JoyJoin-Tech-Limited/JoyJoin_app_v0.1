@@ -668,6 +668,8 @@ export interface SocialSessionState {
   xiaoyueAdaptiveSuggestion?: XiaoyueAdaptiveSuggestion;
   /** Lie detective mode: v1 = AI generates all 3 statements; v2 = players submit 2 tags, AI expands + inserts 1 fake. */
   lieDetectiveMode?: 'v1' | 'v2';
+  /** Server-owned Personality Dice renderer/generation contract. */
+  personalityDiceChooseModeEnabled?: boolean;
   /** V2: tag submissions per userId — each player submits exactly 2 tags. */
   lieDetectiveV2Tags?: Record<string, [string, string]>;
   /** V2: history of reveal correct-rates for dynamic difficulty calibration. */

@@ -54,9 +54,63 @@ import {
 } from './socialIcebreakerHelpers';
 import { shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
 import { recordVoteOptimistically } from '../lib/optimisticSync';
-import { runBotSimulationSafely } from '../services/socialIcebreakerBotService';
+import { getBots, runBotSimulationSafely } from '../services/socialIcebreakerBotService';
+import { isSingleTestMode } from '../lib/isSingleTestMode';
 
 const router = Router();
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/lie-detective/mode
+// Single-test-only selector for comparing V1 and V2 before submissions start.
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/lie-detective/mode', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  if (!isSingleTestMode()) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  const parsed = z.object({ mode: z.enum(['v1', 'v2']) }).safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Invalid Lie Detective mode' });
+  }
+
+  const { socialSessionId } = req.params;
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  if (!state.singleTest?.isTestModeSkip) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  if (!(await isHostAuthorized(state, userId, socialSessionId))) {
+    return res.status(403).json({ error: 'Only the host can select the test mode' });
+  }
+  if (state.currentPhase !== 'lie_detective') {
+    return res.status(400).json({ error: 'Not in lie_detective phase' });
+  }
+  const botUserIds = new Set(getBots(state).map((bot) => bot.userId));
+  const hasHumanSubmission =
+    (state.lieDetectivePlayers ?? []).some((player) => !botUserIds.has(player.userId)) ||
+    Object.keys(state.lieDetectiveV2Tags ?? {}).some((submittedUserId) => !botUserIds.has(submittedUserId));
+  if (hasHumanSubmission) {
+    return res.status(409).json({
+      error: 'Lie Detective mode is locked after submissions begin',
+      code: 'LIE_MODE_LOCKED',
+    });
+  }
+
+  state.lieDetectiveMode = parsed.data.mode;
+  await runBotSimulationSafely(socialSessionId, state, 'lie-detective-mode-select');
+  await updateSession(socialSessionId, state);
+
+  logger.info('[SocialIcebreaker] Single-test Lie Detective mode selected', {
+    socialSessionId,
+    userId,
+    mode: parsed.data.mode,
+  });
+  return res.json({ state: await buildClientState(state, userId) });
+});
 
 // ---------------------------------------------------------------------------
 // POST /api/social-icebreaker/:socialSessionId/micro-challenge/complete
@@ -323,7 +377,10 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
     return res.status(400).json({ error: 'Not in personality_dice phase' });
   }
 
-  const chooseModeEnabled = (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+  const chooseModeEnabled =
+    state.personalityDiceChooseModeEnabled ??
+    (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+  state.personalityDiceChooseModeEnabled = chooseModeEnabled;
 
   // ── Choose-Mode branch ──
   if (chooseModeEnabled) {
@@ -366,6 +423,7 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
         return res.status(202).json({
           status: 'generating',
           message: 'Dares are being prepared, please retry shortly',
+          retryAfterMs: 1200,
         });
       }
     } catch (preGenErr) {
@@ -438,6 +496,7 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
       return res.status(202).json({
         status: 'generating',
         message: 'Challenges are being prepared, please retry shortly',
+        retryAfterMs: 1200,
       });
     }
   } catch (preGenErr) {

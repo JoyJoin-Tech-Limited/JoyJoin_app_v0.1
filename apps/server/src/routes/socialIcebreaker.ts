@@ -499,6 +499,8 @@ router.post('/start', async (req: any, res) => {
     // Countdown-driven phase advancement is intentionally disabled. The host
     // decides when the table has had enough time to react and recap.
     autoAdvanceEnabled: false,
+    personalityDiceChooseModeEnabled:
+      (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true',
     ...(singleTestMeta ? { singleTest: singleTestMeta } : {}),
   };
 

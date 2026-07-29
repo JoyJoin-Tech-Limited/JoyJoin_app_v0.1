@@ -48,6 +48,9 @@ export interface LieDetectiveHeroViewProps {
   onAdvance: () => void
   isAdvancing: boolean
   lieDetectiveMode?: 'v1' | 'v2'
+  isSingleTest?: boolean
+  onSelectTestMode?: (mode: 'v1' | 'v2') => void
+  isSelectingTestMode?: boolean
   onSubmitTags?: (tags: [string, string]) => void
   isSubmittingTags?: boolean
   statementsMeta?: AIResponseMeta
@@ -73,6 +76,9 @@ export function LieDetectiveHeroView({
   onAdvance,
   isAdvancing,
   lieDetectiveMode = 'v1',
+  isSingleTest = false,
+  onSelectTestMode,
+  isSelectingTestMode = false,
   onSubmitTags,
   isSubmittingTags,
   statementsMeta,
@@ -177,6 +183,27 @@ export function LieDetectiveHeroView({
           totalCount={playerCount}
           actions={
             <>
+              {isSingleTest && isHost && !hasGeneratedStatements ? (
+                <View className='lie-detective-hero__mode-test'>
+                  <Text className='lie-detective-hero__mode-test-label'>调试模式 · 选择玩法</Text>
+                  <View className='lie-detective-hero__mode-test-actions'>
+                    <Button
+                      variant={isV2 ? 'secondary' : 'primary'}
+                      onClick={() => onSelectTestMode?.('v1')}
+                      disabled={isSelectingTestMode}
+                    >
+                      V1 自填三句话
+                    </Button>
+                    <Button
+                      variant={isV2 ? 'primary' : 'secondary'}
+                      onClick={() => onSelectTestMode?.('v2')}
+                      disabled={isSelectingTestMode}
+                    >
+                      V2 标签生成
+                    </Button>
+                  </View>
+                </View>
+              ) : null}
               {isV2 && !submitted ? (
                 <View className='lie-detective-hero__tag-form'>
                   <View className='lie-detective-hero__tag-field'>

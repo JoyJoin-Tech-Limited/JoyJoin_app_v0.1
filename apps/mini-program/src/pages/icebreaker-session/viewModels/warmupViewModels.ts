@@ -225,6 +225,7 @@ export function buildCelebrationLine(archetypeMixText?: string): string {
 
 export interface CTAState {
   primary: string
+  primaryAction: 'toggle_ready' | 'next_topic' | 'advance_phase'
   /** True when the host secondary "进入下一题 ›" should render. */
   secondaryVisible: boolean
   /** True when the small "取消" unlink row should render under the primary CTA. */
@@ -241,18 +242,38 @@ export function buildCTAState(
   isLastTopic: boolean,
 ): CTAState {
   if (everyoneReady && isHost && isLastTopic) {
-    return { primary: '本轮结束', secondaryVisible: false, showCancel: false }
+    return {
+      primary: '本轮结束',
+      primaryAction: 'advance_phase',
+      secondaryVisible: false,
+      showCancel: isReady,
+    }
   }
 
-  const secondaryVisible = everyoneReady && isHost && !isLastTopic
+  if (everyoneReady && isHost && !isLastTopic) {
+    return {
+      primary: '进入下一题',
+      primaryAction: 'next_topic',
+      secondaryVisible: false,
+      showCancel: isReady,
+    }
+  }
 
   if (isReady) {
-    // Cancel is hidden only when the host has the "next/end" authority available.
-    const showCancel = !(everyoneReady && isHost)
-    return { primary: '已准备', secondaryVisible, showCancel }
+    return {
+      primary: '已准备 · 点按取消',
+      primaryAction: 'toggle_ready',
+      secondaryVisible: false,
+      showCancel: false,
+    }
   }
 
-  return { primary: '我准备好了', secondaryVisible, showCancel: false }
+  return {
+    primary: '我准备好了',
+    primaryAction: 'toggle_ready',
+    secondaryVisible: false,
+    showCancel: false,
+  }
 }
 
 /** Generate the band-① caption: `{vibeLabel} · 约{duration}min`; custom → `自由局`. */

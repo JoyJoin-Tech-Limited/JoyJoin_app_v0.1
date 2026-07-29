@@ -137,9 +137,16 @@ export async function shouldSkipOnDemandGeneration(
   }
 
   const inFlight = await getInFlightJobForPhase(socialSessionId, phase);
-  if (inFlight) {
+  if (inFlight && isPreGenerationJobFresh(inFlight.updatedAt)) {
     return { skip: true, reason: 'in_flight' };
   }
 
   return { skip: false, reason: 'none' };
+}
+
+const PRE_GENERATION_RUNNING_FRESH_MS = 60_000;
+
+export function isPreGenerationJobFresh(updatedAt?: Date | null, now = Date.now()): boolean {
+  const updatedAtMs = updatedAt?.getTime() ?? Number.NaN;
+  return Number.isFinite(updatedAtMs) && now - updatedAtMs < PRE_GENERATION_RUNNING_FRESH_MS;
 }
