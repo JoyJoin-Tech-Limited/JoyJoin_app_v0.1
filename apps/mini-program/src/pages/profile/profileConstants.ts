@@ -3,6 +3,9 @@ import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 
 export const FIRST_EVENT_BADGE = MILESTONE_BADGES.firstEvent
 export const STREAK_3_BADGE = MILESTONE_BADGES.streak3
+// Profile is a main-package tab, so its always-visible artwork must not depend
+// on an Alang subpackage having already been downloaded on this device.
+export const PROFILE_STORY_ARTWORK_PATH = '/assets/lovart/alang-result-candidate.webp'
 
 export interface MilestoneConfig {
   key: string

@@ -74,6 +74,7 @@ await Promise.all(
 
 const bundledAlangAssets = new Set([
   'alang-event-card-placeholder.webp',
+  'alang-result-candidate.webp',
 ])
 
 await removeMatching(

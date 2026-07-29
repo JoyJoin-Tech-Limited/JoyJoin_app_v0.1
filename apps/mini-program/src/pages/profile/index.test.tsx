@@ -364,6 +364,14 @@ describe('Profile approved V4 layout', () => {
     expect(queryByTestId('profile-more-services')).toBeNull()
   })
 
+  it('renders story artwork eagerly from the main package', () => {
+    const { container } = render(<ProfilePage />)
+    const artwork = container.querySelector('.profile-page__story-image')
+
+    expect(artwork?.getAttribute('src')).toBe('/assets/lovart/alang-result-candidate.webp')
+    expect(artwork?.hasAttribute('lazyload')).toBe(false)
+  })
+
   it('shows a visible reason when the my-image subpackage does not open', async () => {
     state.navigateTo.mockImplementationOnce(({ fail }: { fail?: (error: Error) => void }) => {
       fail?.(new Error('subpackage unavailable'))

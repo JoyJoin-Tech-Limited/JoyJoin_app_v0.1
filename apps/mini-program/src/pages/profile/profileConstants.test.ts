@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import {
   getProfileCompletion,
@@ -8,6 +10,7 @@ import {
   isProfileV17Enabled,
   MILESTONES,
   ARCHETYPE_FAMILY_NAME,
+  PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
 import type { AuthUser } from '../../hooks/useAuth'
 
@@ -22,6 +25,16 @@ function makeUser(partial: Partial<AuthUser>): AuthUser {
 }
 
 describe('profileConstants', () => {
+  it('keeps the Profile story artwork in the main package', () => {
+    expect(PROFILE_STORY_ARTWORK_PATH).toMatch(/^\/assets\//)
+    expect(PROFILE_STORY_ARTWORK_PATH).not.toContain('/pages/alang/')
+    expect(existsSync(resolve(process.cwd(), 'src', PROFILE_STORY_ARTWORK_PATH.slice(1)))).toBe(true)
+    expect(readFileSync(resolve(process.cwd(), 'config/index.ts'), 'utf8'))
+      .toContain('dist/assets/lovart/alang-result-candidate.webp')
+    expect(readFileSync(resolve(process.cwd(), 'scripts/clean-cdn-assets.mjs'), 'utf8'))
+      .toContain("'alang-result-candidate.webp'")
+  })
+
   describe('isProfileV17Enabled', () => {
     it('keeps the production default enabled when the server omits the flag', () => {
       expect(isProfileV17Enabled(null)).toBe(true)

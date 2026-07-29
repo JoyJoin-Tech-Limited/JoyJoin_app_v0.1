@@ -280,6 +280,12 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/lovart/alang-result-placeholder.webp',
           to: 'dist/assets/lovart/alang-result-placeholder.webp',
         },
+        // Profile is a main-package tab and cannot read an Alang subpackage
+        // candidate until that subpackage has already been downloaded.
+        {
+          from: 'src/assets/lovart/alang-result-candidate.webp',
+          to: 'dist/assets/lovart/alang-result-candidate.webp',
+        },
         // Formal Flash runtime PNGs live with the Alang subpackage. The WebP
         // masters stay beside them for source-quality/package-integrity checks.
         {

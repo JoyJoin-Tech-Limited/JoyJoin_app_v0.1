@@ -19,7 +19,6 @@ import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { apiRequest } from '../../lib/api/api'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
-import { useAlangAssetSource } from '../../lib/alang/alangAssets'
 import { queryClient } from '../../lib/api/queryClient'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { fetchMyEquipment, type EquipmentItem, type EquipmentOutfit } from '../../lib/profile/equipmentApi'
@@ -37,6 +36,7 @@ import {
   getProfilePersonalityActionLabel,
   getProfileV17DataPolicy,
   isProfileV17Enabled,
+  PROFILE_STORY_ARTWORK_PATH,
 } from './profileConstants'
 
 const EMPTY_EQUIPMENT_OUTFIT: EquipmentOutfit = {
@@ -201,21 +201,17 @@ function ProfilePartnerVisual({
 }
 
 function ProfileStoryArtwork() {
-  const artwork = useAlangAssetSource('resultHero')
-
   return (
     <>
       <Image
         className='profile-page__story-image'
-        src={artwork.src}
+        src={PROFILE_STORY_ARTWORK_PATH}
         mode='aspectFill'
-        lazyLoad
         aria-hidden='true'
-        onError={artwork.onError}
       />
       <View className='profile-page__story-wash' />
       {/* Dev-only placeholder marker — never ships on user-facing builds. */}
-      {artwork.usingFallback && process.env.NODE_ENV !== 'production' && (
+      {process.env.NODE_ENV !== 'production' && (
         <Text className='profile-page__story-placeholder'>场景示意</Text>
       )}
     </>
