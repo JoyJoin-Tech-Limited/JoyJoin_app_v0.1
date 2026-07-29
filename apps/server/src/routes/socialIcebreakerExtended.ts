@@ -15,7 +15,6 @@ import { buildCachedAIMeta, buildFallbackAIMeta, type AIResponseMeta } from '@sh
 import {
   buildClientState,
   hasAllRosterParticipantsResponded,
-  getMicroChallengeDeadlineMs,
   incrementCommonGround,
   getCurrentLieDetectivePlayer,
   hydrateDerivedState,
@@ -25,7 +24,6 @@ import {
   ensureRecapSnapshot,
   transitionPhase,
   hasWarmupTurnCompleted,
-  isWarmupTurnExpired,
 } from './socialIcebreakerHelpers';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import {
@@ -118,8 +116,8 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
 
     if (!skipGuards) {
       const everyoneReady = hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCount);
-      if (!everyoneReady && !hasWarmupTurnCompleted(state) && !isWarmupTurnExpired(state)) {
-        return res.status(400).json({ error: 'Current speaker must finish or the timer must expire before advancing warmup' });
+      if (!everyoneReady && !hasWarmupTurnCompleted(state)) {
+        return res.status(400).json({ error: 'Current speaker must finish before advancing warmup' });
       }
 
       if ((state.warmupTopics || []).length === 0) {
@@ -131,12 +129,10 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
   }
 
   if (!skipGuards && currentPhase === 'micro_challenge') {
-    const challengeDeadlineMs = getMicroChallengeDeadlineMs(state);
     const everyoneCompleted = hasAllRosterParticipantsResponded(state.challengeCompletedBy, state.playerCount);
-    const timerExpired = challengeDeadlineMs !== null && Date.now() >= challengeDeadlineMs;
 
-    if (!everyoneCompleted && !timerExpired) {
-      return res.status(400).json({ error: 'Wait for everyone to finish or for the timer to expire' });
+    if (!everyoneCompleted) {
+      return res.status(400).json({ error: 'Wait for everyone to finish' });
     }
   }
 
@@ -672,7 +668,6 @@ router.post('/:socialSessionId/auction/generate-lots', async (req: any, res) => 
     state.auctionHighBid = null;
     state.auctionAllLotsClosed = false;
     state.auctionRecapLines = [];
-    state.auctionLotStartedAt = Date.now();
     state.auctionBidHistory = [];
     await updateSession(socialSessionId, state);
 
@@ -806,13 +801,12 @@ router.post('/:socialSessionId/auction/close-lot', async (req: any, res) => {
 
   state.auctionRecapLines = lines.slice(0, 16);
   state.auctionHighBid = null;
+  state.auctionLotStartedAt = undefined;
 
   if (idx >= lots.length - 1) {
     state.auctionAllLotsClosed = true;
-    state.auctionLotStartedAt = undefined;
   } else {
     state.auctionCurrentLotIndex = idx + 1;
-    state.auctionLotStartedAt = Date.now();
   }
 
   await updateSession(socialSessionId, state);

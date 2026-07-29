@@ -145,7 +145,7 @@ describe('isPhaseNaturallyComplete', () => {
   });
 });
 
-describe('processAutoAdvance — all-ready fast fuse', () => {
+describe.skip('processAutoAdvance — retired all-ready fast fuse', () => {
   it('schedules a short visible fuse (~7s) instead of the legacy 30s schedule', async () => {
     const before = Date.now();
     const state = makeState({
@@ -291,7 +291,7 @@ describe('processAutoAdvance — all-ready fast fuse', () => {
   });
 });
 
-describe('processAutoAdvance — stall path', () => {
+describe.skip('processAutoAdvance — retired stall path', () => {
   it('nudges the host first instead of silently scheduling an advance', async () => {
     const state = makeState({
       currentChallenge: { id: 'mc-1', title: 't', description: 'd', durationSeconds: 180, completionCTA: 'c' },
@@ -336,7 +336,7 @@ describe('processAutoAdvance — stall path', () => {
   });
 });
 
-describe('processAutoAdvance — warmup generating suppression (2026-07-26 出题卡死)', () => {
+describe.skip('processAutoAdvance — retired warmup stall machinery', () => {
   it('never nudges or fuses while warmup topics are generating', async () => {
     const state = makeState({
       currentPhase: 'warmup',
@@ -378,6 +378,41 @@ describe('processAutoAdvance — warmup generating suppression (2026-07-26 出�
     const result = await processAutoAdvance(state);
 
     expect(result.stallNudgeAt).toBeDefined();
+  });
+});
+
+describe('processAutoAdvance — countdown retirement', () => {
+  it('clears a legacy fuse without advancing a completed phase', async () => {
+    const state = makeState({
+      currentPhase: 'quip_battle',
+      quipBattleRevealed: true,
+      autoAdvanceEnabled: true,
+      autoAdvanceScheduledAt: Date.now() - 1_000,
+      advanceFuseKind: 'all_ready',
+    });
+
+    const result = await processAutoAdvance(state);
+
+    expect(result.currentPhase).toBe('quip_battle');
+    expect(result.autoAdvanceEnabled).toBe(false);
+    expect(result.autoAdvanceScheduledAt).toBeUndefined();
+    expect(result.advanceFuseKind).toBeUndefined();
+    expect(updateSessionMock).toHaveBeenCalledOnce();
+  });
+
+  it('does not schedule a fuse when Group Mirror is complete', async () => {
+    const state = makeState({
+      currentPhase: 'group_mirror',
+      groupMirrorRevealed: true,
+      autoAdvanceEnabled: true,
+    });
+
+    const result = await processAutoAdvance(state);
+
+    expect(result.currentPhase).toBe('group_mirror');
+    expect(result.autoAdvanceEnabled).toBe(false);
+    expect(result.autoAdvanceScheduledAt).toBeUndefined();
+    expect(updateSessionMock).toHaveBeenCalledOnce();
   });
 });
 

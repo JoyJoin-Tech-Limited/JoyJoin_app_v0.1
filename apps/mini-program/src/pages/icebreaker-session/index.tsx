@@ -36,7 +36,6 @@ import { apiVibeToClient, VIBE_TO_API, type VibeId } from '../../lib/vibeMapping
 import IcebreakerTierSelector from './components/IcebreakerTierSelector'
 import IcebreakerTierSheet, { type TierSheetSelection } from './components/IcebreakerTierSheet'
 import CustomModeSection from './components/CustomModeSection'
-import { AdvanceFuseBanner } from './components/AdvanceFuseBanner'
 import { useIcebreakerSessionAnalytics } from './useIcebreakerSessionAnalytics'
 import { MicroChallengeHeroView } from './phases/MicroChallengeHeroView'
 import { LieDetectiveHeroView } from './phases/LieDetectiveHeroView'
@@ -646,37 +645,6 @@ export default function IcebreakerSessionPage() {
 
   // PR1 flow revamp — stall nudge: host explicitly skips stragglers (force)
   // or suppresses stall automation for the rest of the phase.
-  const handleStallAdvance = useCallback(() => {
-    if (!session) {
-      return
-    }
-    socialIcebreakerAnalytics.track(
-      'stall_nudge_advance',
-      socialSessionId ?? undefined,
-      session.icebreakerSessionId,
-      session.currentPhase,
-      { playerCount },
-    )
-    void performSocialAction('advance', '/advance', {
-      currentPhase: session.currentPhase,
-      force: true,
-    })
-  }, [performSocialAction, session, socialSessionId, playerCount])
-
-  const handleStallDismiss = useCallback(() => {
-    if (!session) {
-      return
-    }
-    socialIcebreakerAnalytics.track(
-      'stall_nudge_dismiss',
-      socialSessionId ?? undefined,
-      session.icebreakerSessionId,
-      session.currentPhase,
-      { playerCount },
-    )
-    void performSocialAction('stall-dismiss', '/stall-nudge/dismiss', {})
-  }, [performSocialAction, session, socialSessionId, playerCount])
-
   const handleSelectCustomPhase = useCallback(
     async (selectedPhase: SocialIcebreakerPhase) => {
       if (!socialSessionId || !session?.phaseSelectionId) {
@@ -1410,17 +1378,6 @@ export default function IcebreakerSessionPage() {
       </View>
 
       {/* PR1 flow revamp — visible advance fuse (all players) + stall nudge (host) */}
-      {phase !== 'warmup' && (
-        <AdvanceFuseBanner
-          fuseAt={session?.autoAdvanceScheduledAt}
-          fuseKind={session?.advanceFuseKind}
-          stallNudgeAt={session?.stallNudgeAt}
-          isHost={isHost}
-          isActing={pendingAction !== null}
-          onStallAdvance={handleStallAdvance}
-          onStallDismiss={handleStallDismiss}
-        />
-      )}
 
       <PhaseIntroOverlay phase={phase} visible={showPhaseIntro} />
 
@@ -1503,17 +1460,6 @@ export default function IcebreakerSessionPage() {
             isAdvancing={pendingAction === 'advance'}
             topicsError={topicsError}
             topicsRecovery={topicsRecovery}
-            advancePrompt={
-              <AdvanceFuseBanner
-                fuseAt={session.autoAdvanceScheduledAt}
-                fuseKind={session.advanceFuseKind}
-                stallNudgeAt={session.stallNudgeAt}
-                isHost={isHost}
-                isActing={pendingAction !== null}
-                onStallAdvance={handleStallAdvance}
-                onStallDismiss={handleStallDismiss}
-              />
-            }
           />
         )}
 
@@ -1536,18 +1482,12 @@ export default function IcebreakerSessionPage() {
             completedBy={session.challengeCompletedBy ?? []}
             currentUserId={currentUserId}
             playerCount={playerCount}
-            phaseStartedAt={session.phaseStartedAt}
             onComplete={handleCompleteChallenge}
             isCompleting={pendingAction === 'micro-complete'}
             isHost={isHost}
             onAdvance={handleAdvancePhase}
             isAdvancing={pendingAction === 'advance'}
-            canAdvance={
-              new Set(session.challengeCompletedBy ?? []).size >= playerCount ||
-              (!!session.currentChallenge?.durationSeconds &&
-                Date.now() >=
-                  (session.phaseStartedAt ?? 0) + session.currentChallenge.durationSeconds * 1000)
-            }
+            canAdvance={new Set(session.challengeCompletedBy ?? []).size >= playerCount}
             advanceDisabledReason='还有小伙伴未完成'
           />
         )}

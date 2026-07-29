@@ -14,7 +14,7 @@ import './PhaseHeroCard.scss'
  *   A. header rail  — phase label + status chip
  *   B. hero zone    — ONE visual anchor (art band XOR 96rpx emblem) +
  *                     title (Alimama) + prompt + phase slot
- *   C. status zone  — ONE grammar: roster dots + one label line + countdown
+ *   C. status zone  — ONE grammar: roster dots + one label line
  *   D. action zone  — solid CTA + ghost link (margin-top: auto)
  *
  * Quiet warm surface + per-phase foil frame; art is a contained band
@@ -33,9 +33,6 @@ export interface PhaseHeroCardProps {
   /** Roster dots numerator/denominator. Omit both to hide dots. */
   doneCount?: number
   totalCount?: number
-  /** Mono countdown text (e.g. 剩余 2:30). */
-  countdownText?: string
-  countdownUrgent?: boolean
   /** Contained art band URL (CDN webp). Renders only when provided. */
   artUrl?: string
   actions?: ReactNode
@@ -51,8 +48,6 @@ export function PhaseHeroCard({
   statusText,
   doneCount,
   totalCount,
-  countdownText,
-  countdownUrgent,
   artUrl,
   actions,
   children,
@@ -109,9 +104,9 @@ export function PhaseHeroCard({
         {children ? <View className='phase-hero-card__slot'>{children}</View> : null}
       </View>
 
-      {statusText || showDots || countdownText ? <View className='phase-hero-card__divider' /> : null}
+      {statusText || showDots ? <View className='phase-hero-card__divider' /> : null}
 
-      {statusText || showDots || countdownText ? (
+      {statusText || showDots ? (
         <View className='phase-hero-card__status' role='status' aria-live='polite'>
           {showDots ? (
             <View className='phase-hero-card__status-dots' aria-hidden='true'>
@@ -125,15 +120,6 @@ export function PhaseHeroCard({
             </View>
           ) : null}
           {statusText ? <Text className='phase-hero-card__status-text'>{statusText}</Text> : null}
-          {countdownText ? (
-            <Text
-              className={`phase-hero-card__status-countdown${countdownUrgent ? ' phase-hero-card__status-countdown--urgent' : ''}`}
-              style={countdownUrgent && foil ? { color: foil.accentDeep } : undefined}
-              aria-hidden='true'
-            >
-              {countdownText}
-            </Text>
-          ) : null}
         </View>
       ) : null}
 

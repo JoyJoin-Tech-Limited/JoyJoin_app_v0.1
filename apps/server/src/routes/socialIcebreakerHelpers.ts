@@ -7,7 +7,6 @@ import type {
 import { migrateLegacySocialIcebreakerPhases, getNextEligiblePhase } from '@shared/socialIcebreaker';
 import {
   getSessionWithExpiry,
-  getParticipant,
   listParticipants,
   updateSession,
   loadSessionLieTruths,
@@ -196,11 +195,6 @@ export function getUniqueUserCount(userIds?: string[]): number {
 
 export function hasAllRosterParticipantsResponded(userIds: string[] | undefined, playerCount: number): boolean {
   return getUniqueUserCount(userIds) >= playerCount;
-}
-
-export function getMicroChallengeDeadlineMs(state: SocialSessionState): number | null {
-  if (!state.currentChallenge?.durationSeconds) return null;
-  return state.phaseStartedAt + state.currentChallenge.durationSeconds * 1000;
 }
 
 export function recapDisplayNameByUserId(
@@ -426,7 +420,8 @@ export function getCurrentLieDetectivePlayer(state: SocialSessionState): LieDete
 
 /**
  * Check if a user is authorized to perform host actions.
- * When autoAdvanceEnabled is true, any roster participant can trigger actions (democratized hosting).
+ * Phase transitions are host-owned. Countdown-driven democratized hosting was
+ * removed because it could advance while the table was still recapping.
  * When false, only the designated hostUserId can act (legacy mode).
  */
 export async function isHostAuthorized(
@@ -435,12 +430,6 @@ export async function isHostAuthorized(
   socialSessionId: string,
 ): Promise<boolean> {
   if (!userId) return false;
-  // Treat undefined as true for backward compatibility with sessions created
-  // before the autoAdvanceEnabled field was introduced.
-  if (state.autoAdvanceEnabled !== false) {
-    const participant = await getParticipant(socialSessionId, userId);
-    return !!participant;
-  }
   return state.hostUserId === userId;
 }
 
@@ -456,17 +445,8 @@ export type AdvanceTrigger =
   | 'custom_select'
   | 'custom_end';
 
-export const WARMUP_TURN_DURATION_SECONDS = 30;
-
 export function hasWarmupTurnCompleted(state: SocialSessionState): boolean {
   return !!state.warmupTurnUserId && (state.warmupReadyUserIds || []).includes(state.warmupTurnUserId);
-}
-
-export function isWarmupTurnExpired(state: SocialSessionState): boolean {
-  const turnStartedAt = state.warmupTurnStartedAt;
-  if (!turnStartedAt) return false;
-  const durationSeconds = state.warmupTurnDurationSeconds ?? WARMUP_TURN_DURATION_SECONDS;
-  return Date.now() - turnStartedAt >= durationSeconds * 1000;
 }
 
 /**
@@ -480,8 +460,7 @@ export function isPhaseNaturallyComplete(state: SocialSessionState): boolean {
       if (!topicsReady) return false;
       return (
         hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCount) ||
-        hasWarmupTurnCompleted(state) ||
-        isWarmupTurnExpired(state)
+        hasWarmupTurnCompleted(state)
       );
     }
     case 'micro_challenge':
@@ -773,19 +752,32 @@ function resolveFuseMs(state: SocialSessionState): number {
 const fuseExecutionsInFlight = new Set<string>();
 
 export async function processAutoAdvance(state: SocialSessionState): Promise<SocialSessionState> {
-  if (state.autoAdvanceEnabled !== true) return state;
+  // Countdown-driven advancement has been retired. Clear stale fuse state from
+  // sessions created by older builds, but never move the phase.
+  if (
+    state.autoAdvanceEnabled !== false ||
+    state.autoAdvanceScheduledAt !== undefined ||
+    state.advanceFuseKind !== undefined ||
+    state.stallNudgeAt !== undefined
+  ) {
+    clearAdvanceScheduling(state);
+    state.autoAdvanceEnabled = false;
+    await updateSession(state.socialSessionId, state);
+  }
+  return state;
+  if (state.autoAdvanceEnabled === true) {
   if (state.currentPhase === 'recap' || (state.currentPhase as string) === 'ended') return state;
   if (isCustomMode(state)) return state;
 
   const now = Date.now();
 
   // Execute a due fuse.
-  if (state.autoAdvanceScheduledAt && now >= state.autoAdvanceScheduledAt) {
+  if (state.autoAdvanceScheduledAt && now >= state.autoAdvanceScheduledAt!) {
     // Concurrent readers (poll + mutation routes) can both see the same due
     // fuse before either persists the clear — the state store is
     // last-writer-wins with no CAS. Claim the fuse in-process so
     // transitionPhase (and its inline content generation) runs exactly once.
-    const fuseKey = `${state.socialSessionId}:${state.autoAdvanceScheduledAt}`;
+    const fuseKey = `${state.socialSessionId}:${state.autoAdvanceScheduledAt!}`;
     if (fuseExecutionsInFlight.has(fuseKey)) return state;
     fuseExecutionsInFlight.add(fuseKey);
     try {
@@ -794,7 +786,7 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
       // the same key after its finally released it. If the persisted fuse no
       // longer matches ours, someone else already handled it.
       const persisted = await getSessionWithExpiry(state.socialSessionId).catch(() => null);
-      if (persisted?.state && persisted.state.autoAdvanceScheduledAt !== state.autoAdvanceScheduledAt) {
+      if (persisted!.state && persisted!.state!.autoAdvanceScheduledAt !== state.autoAdvanceScheduledAt) {
         return state;
       }
       const nextPhase = getNextEligiblePhase(state.currentPhase, state);
@@ -840,7 +832,7 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
             sessionId: state.socialSessionId,
             phase: state.currentPhase,
             trigger,
-            error: error instanceof Error ? error.message : String(error),
+            error: String(error),
           });
           state.autoAdvanceScheduledAt = Date.now() + 15_000;
           state.advanceFuseKind = trigger === 'stall_recovery' ? 'stall_recovery' : 'all_ready';
@@ -881,7 +873,7 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
   if (isWarmupTopicsGenerating(state, now)) return state;
 
   if (state.stallNudgeAt) {
-    if (now - state.stallNudgeAt >= STALL_GRACE_MS) {
+    if (now - state.stallNudgeAt! >= STALL_GRACE_MS) {
       state.stallNudgeAt = undefined;
       state.autoAdvanceScheduledAt = now + resolveFuseMs(state);
       state.advanceFuseKind = 'stall_recovery';
@@ -907,7 +899,7 @@ export async function processAutoAdvance(state: SocialSessionState): Promise<Soc
     });
   }
 
-  return state;
+  }
 }
 
 export async function resolveSession(
@@ -924,7 +916,7 @@ export async function resolveSession(
     return null;
   }
   const hydrated = hydrateDerivedState({ ...state });
-  // Process auto-advance on every state read so clients don't need to poll separately
+  // Retire any stale countdown/fuse state from sessions created by older builds.
   await processAutoAdvance(hydrated);
   return hydrated;
 }

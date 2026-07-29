@@ -112,10 +112,10 @@ const DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES = [...MVP_PHASES, 'personality_di
 | Phase | Emoji | CN Name | Timeout | Min Players | Key Mechanic |
 |-------|-------|---------|---------|-------------|--------------|
 | `warmup` | 🌅 | 话题卡 | 6–20 min | 2 | Mood-filtered topics, host navigates, all see same topic. **Vibe-aware duration:** 深聊 = 18–20 min with 6–7 cards + 3-tier prompts; 均衡 = 10–12 min with 5 cards; 暢玩 = 6–8 min with 4 cards. **UI (2026-07-16):** 4-band zero-scroll layout: slim host band, hero card slot (state machine: mood pick → generating → deal-flip), chrome-less presence strip, white action bar. CardFlip topic entrance is the single wow moment; archetype mix is woven into welcome copy and shown at the all-ready celebration; AIGC labels are a single quiet footer. ParticleBurst all-ready celebration. |
-| `micro_challenge` | ⚡ | 挑战 | 8–10 min | 2 | Timed group task, each player taps "done". Duration varies by vibe. |
+| `micro_challenge` | ⚡ | 挑战 | 8–10 min | 2 | Host-paced group task; each player taps "done", then the host advances after everyone finishes. |
 | `lie_detective` | 🕵️ | 侦探 | 12–25 min | 3 | Per-player AI statements, group votes on which is the lie. Duration varies by vibe. |
 | `undercover_word` | 🕵️‍♂️ | 谁是卧底 | 12–15 min | 3 | Hidden-role word deduction; AI generates word pairs, players describe and vote |
-| `auction` | 🎪 | 拍卖 | 16–30 min | 3 | Virtual-coin lots + English auction (AI lots when `SOCIAL_AUCTION_LLM_ENABLED=true`, else curated fallbacks). Server-synced timer, bid history, outbid notifications, archetype-aware lot generation. |
+| `auction` | 🎪 | 拍卖 | 16–30 min | 3 | Virtual-coin lots + host-closed English auction (AI lots when `SOCIAL_AUCTION_LLM_ENABLED=true`, else curated fallbacks). Bid history, outbid notifications, archetype-aware lot generation. |
 | `personality_dice` | 🎲 | 骰子 | 10–15 min | 2 | AI-generated archetype dares. When `PERSONALITY_DICE_CHOOSE_MODE_ENABLED=true`, each player receives 3 difficulty-tiered options (simple/medium/hard) and picks one. |
 | `group_mirror` | 🪞 | 群像镜像 | 14–15 min | 2 | Peer reflection voting; players nominate who best fits each question |
 | `quip_battle` | ⚔️ | 机智对决 | 10–15 min | 2 | Witty prompt responses; SwipeCard voting, best-of reel |
@@ -160,7 +160,7 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
 
   **Custom mode (`custom`)** — host-driven free-form flow (feature flag `SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED`, default `true`):
   - Available as a fourth tier option. No fixed run plan; host picks phases one-by one from a carousel.
-  - `autoAdvanceEnabled` is set to `false`; only the host can advance/end.
+  - `autoAdvanceEnabled` is set to `false`; only the host can advance/end. This host-paced rule also applies to preset tiers.
   - Server enters `phase_selection` between phases. Host chooses next phase via `POST /api/social-icebreaker/:socialSessionId/select-phase { phase, phaseSelectionId }`.
   - Host can end early from `phase_selection` or `recap` via `POST /api/social-icebreaker/:socialSessionId/end-session { phaseSelectionId? }`, generating a recap snapshot identical to normal advance.
   - Preset tiers can be re-selected from custom mode; custom data (selected phases, completed phases) is preserved but the fixed run plan takes over.
@@ -174,7 +174,6 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
     — Server sets `warmupTopicsStatus = 'generating'` + `warmupTopicsGeneratingAt` before any LLM work, and `warmupTopicsStatus = 'ready'` (or `'error'`) when generation finishes
     — All Social Icebreaker LLM calls are wrapped with `raceWithTimeout(ms, RACE_LLM_TIMEOUT_MS = 6000)` in `apps/server/src/socialIcebreakerAICore.ts`; this is a deterministic Promise.race hard bound, not just an AbortController signal. On timeout/error the generator returns a deterministic fallback and logs `fallbackUsed: true` / `evaluatorRejectionReason: 'timeout'` via `logAITrace`
     — The `/topics` endpoint **re-reads the latest session snapshot** after generation + merges only owned fields (`selectedMood`, `warmupTopics*`, `currentTopicIndex`, `warmupReadyUserIds`) — this eliminates the lost-update that previously clobbered concurrent ready writes
-    — While `warmupTopicsStatus === 'generating'`, the auto-advance stall machinery is suppressed for up to 30s so the host and players do not see a false "再等一会儿" nudge during generation
     — If topics generation fails on the client, the host sees an **error card** (Xiaoyue mascot, warm-rose #B83A5E copy, primary 重试 button, ≤2 auto-retries via `shouldRetryWarmupTopics`) instead of a phantom local fallback deck that would be swapped out by the next poll
   Any player → POST .../warmup/ready once they are comfortable moving on
     — Client updates **optimistic ready count** immediately (mirrors the self-ember), avoids the "ready tap → 6s spinner → nothing happened" UX
@@ -187,7 +186,7 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   Server auto-generates challenge on advance
   Each player → POST .../micro-challenge/complete
         │
-        ▼ Host calls POST .../advance after everyone finishes or the timer expires (skipped if <3 players)
+        ▼ Host calls POST .../advance after everyone finishes (skipped if <3 players)
 [LIE_DETECTIVE PHASE]
   V1 mini-program: each player writes 3 statements (2 facts + 1 lie) and POSTs them to
   .../lie-detective/generate; the server stores `isLie` separately. Legacy callers may omit
@@ -332,7 +331,7 @@ interface SocialSessionState {
   auctionHighBid?: { userId: string; amount: number } | null;
   auctionAllLotsClosed?: boolean;
   auctionRecapLines?: string[];
-  auctionLotStartedAt?: number;      // ms timestamp — server-synced lot timer
+  auctionLotStartedAt?: number;      // legacy compatibility only; no active countdown
   auctionBidHistory?: Array<{ userId: string; displayName: string; amount: number; at: number }>;
 
   // Recap

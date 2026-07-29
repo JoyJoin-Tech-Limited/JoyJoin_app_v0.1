@@ -2,7 +2,7 @@
 // Zone blueprint (locked 2026-07-17 UIUX review):
 //   A. header rail  — 48rpx accent emblem chip + phase label + status chip
 //   B. hero zone    — type-title + prompt + phase slot (flex: 1)
-//   C. status zone  — ONE grammar: roster dots + one type-label line + countdown
+//   C. status zone  — ONE grammar: roster dots + one type-label line
 //   D. action zone  — solid CTA + ghost link (margin-top: auto)
 // Foil colors ride inline from `phases/phaseAccents.ts` (getPhaseFoilStyle);
 // this mixin owns only the static shape. One `type-*` per zone — no raw
@@ -93,7 +93,7 @@
       margin-top: $spacing-md;
     }
 
-    // ONE status grammar: roster dots + one line + countdown. The legacy
+    // ONE status grammar: roster dots + one line. The legacy
     // helper-text captions below cards fold into this zone.
     &__status {
       display: flex;
@@ -126,17 +126,6 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-
-    &__status-countdown {
-      @include type-label;
-      font-family: $font-mono;
-      flex-shrink: 0;
-      color: $color-text-secondary;
-
-      &--urgent {
-        color: $color-text-primary;
-      }
     }
 
     &__actions {

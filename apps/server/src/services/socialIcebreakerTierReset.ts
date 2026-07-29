@@ -109,7 +109,7 @@ export async function resetSocialIcebreakerTier(
     }
     const runPlan = await compileForSession(state, newTier);
     state.runPlan = runPlan;
-    state.autoAdvanceEnabled = true;
+    state.autoAdvanceEnabled = false;
   }
 
   await updateSession(state.socialSessionId, state);

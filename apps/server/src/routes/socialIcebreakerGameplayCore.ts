@@ -47,7 +47,6 @@ import {
   buildClientState,
   hydrateDerivedState,
   hasAllRosterParticipantsResponded,
-  getMicroChallengeDeadlineMs,
   incrementCommonGround,
   getCurrentLieDetectivePlayer,
   resolveSession,

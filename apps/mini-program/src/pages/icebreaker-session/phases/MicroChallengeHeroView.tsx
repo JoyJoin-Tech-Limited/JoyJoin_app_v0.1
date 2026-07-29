@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { View, Text } from '@tarojs/components'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import Button from '../../../components/ui/Button'
@@ -15,41 +15,12 @@ import './MicroChallengeHeroView.scss'
 
 const TAP_TARGET = 5
 
-function formatRemaining(ms: number): string {
-  const totalSeconds = Math.max(0, Math.ceil(ms / 1000))
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
-}
-
-/** Memoized live countdown — ticks without re-rendering the parent card. */
-function useLiveCountdown(deadlineMs: number | null): { text?: string; urgent: boolean; expired: boolean } {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    if (deadlineMs === null) return
-    const timer = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(timer)
-  }, [deadlineMs])
-  return useMemo(() => {
-    if (deadlineMs === null) return { urgent: false, expired: false }
-    const remaining = deadlineMs - now
-    return {
-      // Numerals only — the mono countdown element carries no CJK glyphs.
-      text: remaining <= 0 ? undefined : formatRemaining(remaining),
-      urgent: remaining > 0 && remaining <= 30_000,
-      expired: remaining <= 0,
-    }
-  }, [deadlineMs, now])
-}
-
 export interface MicroChallengeHeroViewProps {
   challenge: { title: string; description: string; durationSeconds: number; completionCTA: string; visualHint?: string } | null
   challengeMeta?: AIResponseMeta
   completedBy: string[]
   currentUserId: string
   playerCount: number
-  /** Phase start timestamp (ms) — drives the live countdown. */
-  phaseStartedAt?: number
   onComplete: () => void
   isCompleting: boolean
   isHost?: boolean
@@ -65,7 +36,6 @@ export function MicroChallengeHeroView({
   completedBy,
   currentUserId,
   playerCount,
-  phaseStartedAt,
   onComplete,
   isCompleting,
   isHost,
@@ -90,12 +60,6 @@ export function MicroChallengeHeroView({
 
   const hasCompleted = optimisticCompletedBy.includes(currentUserId)
   const aigcEnabled = useAIGCLabelsEnabled()
-
-  const deadlineMs =
-    challenge?.durationSeconds && phaseStartedAt
-      ? phaseStartedAt + challenge.durationSeconds * 1000
-      : null
-  const countdown = useLiveCountdown(deadlineMs)
 
   const handleTap = useCallback(() => {
     if (hasCompleted || isCompleting) return
@@ -126,9 +90,7 @@ export function MicroChallengeHeroView({
     )
   }
 
-  const statusText = countdown.expired
-    ? '时间到'
-    : hasCompleted
+  const statusText = hasCompleted
       ? '你已完成，等待其他玩家'
       : isCompleting
         ? '提交中…'
@@ -152,8 +114,6 @@ export function MicroChallengeHeroView({
         statusText={statusText}
         doneCount={optimisticCompletedBy.length}
         totalCount={playerCount}
-        countdownText={countdown.text}
-        countdownUrgent={countdown.urgent}
         actions={
           <>
             {!hasCompleted ? (

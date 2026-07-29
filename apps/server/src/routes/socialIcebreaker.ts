@@ -92,7 +92,6 @@ import {
   hydrateDerivedState,
   getUniqueUserCount,
   hasAllRosterParticipantsResponded,
-  getMicroChallengeDeadlineMs,
   recapDisplayNameByUserId,
   buildLieDetectiveRecapHighlights,
   buildPersonalityDiceRecapLines,
@@ -497,7 +496,9 @@ router.post('/start', async (req: any, res) => {
     // full "everyone ready" warmup flow immediately.
     warmupReadyUserIds: singleTestMeta?.botPersonas?.map((p) => p.userId) ?? [],
     lieDetectiveCompletedUserIds: [],
-    autoAdvanceEnabled: resolvedTier !== 'custom',
+    // Countdown-driven phase advancement is intentionally disabled. The host
+    // decides when the table has had enough time to react and recap.
+    autoAdvanceEnabled: false,
     ...(singleTestMeta ? { singleTest: singleTestMeta } : {}),
   };
 

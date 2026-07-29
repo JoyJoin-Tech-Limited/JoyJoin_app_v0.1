@@ -38,8 +38,6 @@ interface AuctionHeroViewProps {
   lotsMeta?: AIResponseMeta
 }
 
-const LOT_DURATION_SECONDS = 30
-
 function lotEmoji(lot: { emoji?: string; title?: string }): string {
   if (lot.emoji) return lot.emoji
   const title = lot.title ?? ''
@@ -78,7 +76,6 @@ export function AuctionHeroView({
   const [showLotSold, setShowLotSold] = useState(false)
   const [lastLotResult, setLastLotResult] = useState<{ name: string; amount: number } | null>(null)
   const [showWinBurst, setShowWinBurst] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(LOT_DURATION_SECONDS)
   const [outbidNotice, setOutbidNotice] = useState('')
 
   const lots = session.auctionLots ?? []
@@ -87,12 +84,10 @@ export function AuctionHeroView({
   const high = session.auctionHighBid
   const balance = session.auctionBalances?.[currentUserId] ?? 0
   const allClosed = session.auctionAllLotsClosed ?? false
-  const lotStartedAt = session.auctionLotStartedAt
 
   const prevAllClosedRef = useRef(false)
   const prevIdxRef = useRef(idx)
   const prevHighRef = useRef(session.auctionHighBid)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const outbidTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wonLotRef = useRef(false)
 
@@ -101,25 +96,6 @@ export function AuctionHeroView({
       session.joinedParticipants?.find((p) => p.userId === uid)?.displayName ?? '匿名',
     [session.joinedParticipants],
   )
-
-  // ── Server-synced timer ──
-  useEffect(() => {
-    const tick = () => {
-      if (!lotStartedAt) {
-        setTimeLeft(LOT_DURATION_SECONDS)
-        return
-      }
-      const elapsed = Math.floor((Date.now() - lotStartedAt) / 1000)
-      const remaining = Math.max(0, LOT_DURATION_SECONDS - elapsed)
-      setTimeLeft(remaining)
-    }
-
-    tick()
-    timerRef.current = setInterval(tick, 1000)
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [lotStartedAt])
 
   // ── Lot change detection (hammer stamp fires via CelebrationOverlay) ──
   useEffect(() => {
@@ -188,10 +164,8 @@ export function AuctionHeroView({
       .reverse()
   }, [session.auctionBidHistory, idx, nameOf])
 
-  const timerUrgent = timeLeft <= 10 && timeLeft > 0
-  const timerExpired = timeLeft <= 0
   const minBid = (high?.amount ?? 0) + 1
-  const canBid = !isHost && !timerExpired && balance >= minBid
+  const canBid = !isHost && balance >= minBid
 
   const handleQuickBid = (amount: number) => {
     if (amount <= (high?.amount ?? 0)) {
@@ -341,19 +315,13 @@ export function AuctionHeroView({
         title={currentLot?.title ?? '竞拍中'}
         statusChip={`第 ${idx + 1} / ${lots.length} 标`}
         statusText={
-          timerExpired
-            ? isHost
-              ? '时间到，可以落槌了'
-              : '时间到，等待主持人落槌…'
-            : high
-              ? `当前最高 ${high.amount} 币 · 你的余额 ${balance} 币`
-              : `暂无出价 · 你的余额 ${balance} 币`
+          high
+            ? `当前最高 ${high.amount} 币 · 你的余额 ${balance} 币`
+            : `暂无出价 · 你的余额 ${balance} 币`
         }
-        countdownText={timerExpired ? undefined : `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}`}
-        countdownUrgent={timerUrgent}
         actions={
           <>
-            {!isHost && !timerExpired ? (
+            {!isHost ? (
               <View className='auction-hero__bid-zone'>
                 <View className='auction-hero__quick-bids'>
                   <Button
@@ -406,7 +374,7 @@ export function AuctionHeroView({
                     haptics('medium')
                     onPlaceBid(n)
                   }}
-                  disabled={isPlacingBid || timerExpired}
+                  disabled={isPlacingBid}
                   loading={isPlacingBid}
                 >
                   {isPlacingBid ? '提交中…' : '出价'}
@@ -420,7 +388,7 @@ export function AuctionHeroView({
                 disabled={isClosingLot}
                 loading={isClosingLot}
               >
-                {isClosingLot ? '处理中…' : timerExpired ? '时间到，落槌' : '关闭本标（落槌）'}
+                {isClosingLot ? '处理中…' : '关闭本标（落槌）'}
               </Button>
             ) : null}
           </>

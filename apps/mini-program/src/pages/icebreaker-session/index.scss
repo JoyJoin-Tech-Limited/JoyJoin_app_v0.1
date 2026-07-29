@@ -43,14 +43,6 @@ $__gold-accent:  $color-landed-gold;
     color: $color-primary-dark;
   }
 
-  &__fuse-banner-countdown {
-    // Numerals only in mono — the CJK stays in the system font.
-  }
-
-  &__fuse-banner-numeral {
-    font-family: $font-mono;
-  }
-
   &__stall-nudge {
     display: flex;
     flex-direction: column;

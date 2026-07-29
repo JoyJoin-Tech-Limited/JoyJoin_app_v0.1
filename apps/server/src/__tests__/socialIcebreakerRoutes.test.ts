@@ -2576,7 +2576,7 @@ describe.sequential('social icebreaker routes', () => {
         const createBody = await createResponse.json() as any;
         expect(createBody.state.eventTier).toBe('glow');
         expect(createBody.state.runPlan).toBeDefined();
-        expect(createBody.state.autoAdvanceEnabled).toBe(true);
+        expect(createBody.state.autoAdvanceEnabled).toBe(false);
 
         const resetResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
           method: 'POST',
@@ -2618,7 +2618,7 @@ describe.sequential('social icebreaker routes', () => {
         expect(resetBody.state.eventTier).toBe('breeze');
         expect(resetBody.state.vibe).toBe('chat');
         expect(resetBody.state.runPlan).toBeDefined();
-        expect(resetBody.state.autoAdvanceEnabled).toBe(true);
+        expect(resetBody.state.autoAdvanceEnabled).toBe(false);
         expect(resetBody.state.currentPhase).toBe('warmup');
         expect(resetBody.state.completedPhases).toEqual([]);
       });
