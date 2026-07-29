@@ -19,6 +19,7 @@ import RatingFace from '../../components/ui/RatingFace'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import Card from '../../components/ui/Card'
+import { buildEventFeedbackPayload } from './feedbackPayload'
 import './index.scss'
 
 interface MutualMatch {
@@ -90,7 +91,7 @@ export default function EventFeedbackPage() {
   }, [])
 
   const handleSubmit = useCallback(async () => {
-    if (!eventId || rating === 0 || isSubmitting) return
+    if (!eventId || isSubmitting) return
 
     setIsSubmitting(true)
     setError('')
@@ -99,11 +100,11 @@ export default function EventFeedbackPage() {
       const res = await apiRequest<{ mutualMatches?: MutualMatch[] }>({
         path: `/api/events/${encodeURIComponent(eventId)}/feedback`,
         method: 'POST',
-        data: {
+        data: buildEventFeedbackPayload({
           rating,
-          comment: comment.trim() || undefined,
+          comment,
           connections: selectedConnections,
-        },
+        }),
       })
       setMutualMatches(res.mutualMatches || [])
       setStep('revealed')

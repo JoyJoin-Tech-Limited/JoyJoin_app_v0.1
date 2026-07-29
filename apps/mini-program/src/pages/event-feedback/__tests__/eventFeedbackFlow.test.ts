@@ -20,6 +20,11 @@ describe('event-feedback flow polish (2026-07-28)', () => {
     expect(tsx).not.toContain('/api/events/${encodeURIComponent(eventId)}/participants')
   })
 
+  it('submits when the optional rating step was skipped', () => {
+    expect(tsx).toContain('buildEventFeedbackPayload')
+    expect(tsx).not.toContain('rating === 0 || isSubmitting')
+  })
+
   it('renders 1/2/3 progress dots on every interactive step', () => {
     expect(tsx).toContain('renderStepProgress')
     expect(tsx).toContain("renderStepProgress('rating')")
