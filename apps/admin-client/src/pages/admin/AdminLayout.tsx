@@ -93,6 +93,7 @@ export default function AdminLayout() {
                 <Route path="/admin" component={AdminDashboard} />
                 <Route path="/admin/dashboard" component={AdminDashboard} />
                 <Route path="/admin/users" component={AdminUsersPage} />
+                <Route path="/admin/subscription" component={AdminSubscriptionsPage} />
                 <Route path="/admin/subscriptions" component={AdminSubscriptionsPage} />
                 <Route path="/admin/pricing" component={AdminPricingPage} />
                 <Route path="/admin/coupons" component={AdminCouponsPage} />

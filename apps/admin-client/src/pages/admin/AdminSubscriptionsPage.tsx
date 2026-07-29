@@ -1,17 +1,20 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { AlertCircle, Crown, DollarSign, Plus, RefreshCw, TrendingUp, Users } from "lucide-react";
+import { differenceInDays, format, isValid } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -19,26 +22,119 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Crown, TrendingUp, DollarSign, Users, Plus, AlertCircle, RefreshCw } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { format, differenceInDays } from "date-fns";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/ui/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface Subscription {
-  id: string;
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone_number: string;
-  plan_type: string;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
-  auto_renew: boolean;
-  created_at: string;
+  id?: string;
+  user_id?: string;
+  userId?: string;
+  first_name?: string | null;
+  firstName?: string | null;
+  last_name?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phone_number?: string | null;
+  phoneNumber?: string | null;
+  plan_type?: string | null;
+  planType?: string | null;
+  start_date?: string | Date | null;
+  startDate?: string | Date | null;
+  end_date?: string | Date | null;
+  endDate?: string | Date | null;
+  is_active?: boolean | null;
+  isActive?: boolean | null;
+  auto_renew?: boolean | null;
+  autoRenew?: boolean | null;
+  created_at?: string | Date | null;
+  createdAt?: string | Date | null;
+}
+
+interface AdminUserOption {
+  id?: string;
+  firstName?: string | null;
+  first_name?: string | null;
+  lastName?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phoneNumber?: string | null;
+  phone_number?: string | null;
+}
+
+function subscriptionId(subscription: Subscription, index: number) {
+  return subscription.id ?? subscription.user_id ?? subscription.userId ?? `subscription-${index}`;
+}
+
+function planTypeOf(subscription: Subscription) {
+  return subscription.plan_type ?? subscription.planType ?? "monthly";
+}
+
+function isActiveFlag(subscription: Subscription) {
+  return Boolean(subscription.is_active ?? subscription.isActive);
+}
+
+function autoRenewOf(subscription: Subscription) {
+  return Boolean(subscription.auto_renew ?? subscription.autoRenew);
+}
+
+function startDateOf(subscription: Subscription) {
+  return subscription.start_date ?? subscription.startDate ?? null;
+}
+
+function endDateOf(subscription: Subscription) {
+  return subscription.end_date ?? subscription.endDate ?? null;
+}
+
+function toValidDate(value: string | Date | null | undefined) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return isValid(date) ? date : null;
+}
+
+function formatSubscriptionDate(value: string | Date | null | undefined) {
+  const date = toValidDate(value);
+  return date ? format(date, "yyyy/MM/dd") : "未设置";
+}
+
+function daysUntil(value: string | Date | null | undefined) {
+  const date = toValidDate(value);
+  return date ? differenceInDays(date, new Date()) : null;
+}
+
+function daysRemainingLabel(subscription: Subscription) {
+  const days = daysUntil(endDateOf(subscription));
+  return days === null ? "未设置" : `${days} 天`;
+}
+
+function userDisplayName(subscription: Subscription) {
+  const name = [
+    subscription.first_name ?? subscription.firstName,
+    subscription.last_name ?? subscription.lastName,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  return name || subscription.email || subscription.phone_number || subscription.phoneNumber || "未命名用户";
+}
+
+function userContact(subscription: Subscription) {
+  return subscription.email || subscription.phone_number || subscription.phoneNumber || "暂无联系方式";
+}
+
+function isCurrentlyActive(subscription: Subscription) {
+  const days = daysUntil(endDateOf(subscription));
+  return isActiveFlag(subscription) && (days === null || days > 0);
+}
+
+function userOptionLabel(user: AdminUserOption) {
+  const name = [user.firstName ?? user.first_name, user.lastName ?? user.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const contact = user.email ?? user.phoneNumber ?? user.phone_number ?? "暂无联系方式";
+  return `${name || "未命名用户"} - ${contact}`;
 }
 
 export default function AdminSubscriptionsPage() {
@@ -62,22 +158,25 @@ export default function AdminSubscriptionsPage() {
       if (filterStatus !== "all") {
         params.set("filter", filterStatus);
       }
+
       const query = params.toString();
       const response = await apiRequest(
         "GET",
         `/api/admin/subscriptions${query ? `?${query}` : ""}`,
       );
       const data = await response.json();
-      return Array.isArray(data) ? data : data?.subscriptions ?? [];
+      const rows = Array.isArray(data) ? data : data?.subscriptions;
+      return Array.isArray(rows) ? rows : [];
     },
   });
 
-  const { data: users = [] } = useQuery<any[]>({
+  const { data: rawUsers = [] } = useQuery<AdminUserOption[]>({
     queryKey: ["/api/admin/users"],
   });
+  const users = Array.isArray(rawUsers) ? rawUsers : [];
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       const response = await apiRequest("POST", "/api/admin/subscriptions", data);
       return await response.json();
     },
@@ -92,20 +191,21 @@ export default function AdminSubscriptionsPage() {
         description: "用户订阅已成功创建",
       });
     },
-    onError: (error: Error) => {
+    onError: (mutationError: Error) => {
       toast({
         title: "创建失败",
-        description: error.message || "无法创建订阅，请重试",
+        description: mutationError.message || "无法创建订阅，请重试",
         variant: "destructive",
       });
     },
   });
 
   const handleCreateSubscription = () => {
-    if (!selectedUserId || !planType || !durationMonths) {
+    const parsedDuration = Number.parseInt(durationMonths, 10);
+    if (!selectedUserId || !planType || !Number.isFinite(parsedDuration) || parsedDuration < 1) {
       toast({
         title: "信息不完整",
-        description: "请填写所有必填字段",
+        description: "请选择用户、套餐，并填写有效订阅时长",
         variant: "destructive",
       });
       return;
@@ -114,39 +214,41 @@ export default function AdminSubscriptionsPage() {
     createMutation.mutate({
       userId: selectedUserId,
       planType,
-      durationMonths: parseInt(durationMonths),
+      durationMonths: parsedDuration,
     });
   };
 
   const getStatusBadge = (subscription: Subscription) => {
-    const daysUntilExpiry = differenceInDays(new Date(subscription.end_date), new Date());
-    
-    if (!subscription.is_active) {
+    const daysUntilExpiry = daysUntil(endDateOf(subscription));
+
+    if (!isActiveFlag(subscription)) {
       return <Badge variant="secondary">已停用</Badge>;
     }
-    if (daysUntilExpiry < 0) {
+    if (daysUntilExpiry !== null && daysUntilExpiry < 0) {
       return <Badge variant="destructive">已过期</Badge>;
     }
-    if (daysUntilExpiry <= 7) {
+    if (daysUntilExpiry !== null && daysUntilExpiry <= 7) {
       return <Badge className="bg-amber-500">即将过期</Badge>;
     }
     return <Badge className="bg-green-500">活跃</Badge>;
   };
 
-  const getPlanLabel = (planType: string) => {
+  const getPlanLabel = (currentPlanType: string) => {
     const labels: Record<string, string> = {
       monthly: "月度会员 (¥98)",
       quarterly: "季度会员 (¥294)",
     };
-    return labels[planType] || planType;
+    return labels[currentPlanType] || currentPlanType;
   };
 
-  const totalRevenue = subscriptions.reduce((sum, sub) => {
-    const revenue = sub.plan_type === "monthly" ? 98 : sub.plan_type === "quarterly" ? 294 : 0;
+  const totalRevenue = subscriptions.reduce((sum, subscription) => {
+    const currentPlanType = planTypeOf(subscription);
+    const revenue =
+      currentPlanType === "monthly" ? 98 : currentPlanType === "quarterly" ? 294 : 0;
     return sum + revenue;
   }, 0);
 
-  const activeCount = subscriptions.filter((sub) => sub.is_active && differenceInDays(new Date(sub.end_date), new Date()) > 0).length;
+  const activeCount = subscriptions.filter(isCurrentlyActive).length;
 
   return (
     <div className="p-8 space-y-6">
@@ -207,10 +309,14 @@ export default function AdminSubscriptionsPage() {
         </Card>
       </div>
 
-      <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
+      <Tabs value={filterStatus} onValueChange={(value) => setFilterStatus(value as "all" | "active")}>
         <TabsList>
-          <TabsTrigger value="active" data-testid="filter-active">活跃订阅</TabsTrigger>
-          <TabsTrigger value="all" data-testid="filter-all">全部订阅</TabsTrigger>
+          <TabsTrigger value="active" data-testid="filter-active">
+            活跃订阅
+          </TabsTrigger>
+          <TabsTrigger value="all" data-testid="filter-all">
+            全部订阅
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -236,8 +342,8 @@ export default function AdminSubscriptionsPage() {
         </Card>
       ) : isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
+          {[1, 2, 3].map((index) => (
+            <Card key={index} className="animate-pulse">
               <CardHeader className="space-y-2">
                 <div className="h-4 bg-muted rounded w-3/4" />
                 <div className="h-3 bg-muted rounded w-1/2" />
@@ -253,50 +359,56 @@ export default function AdminSubscriptionsPage() {
         </div>
       ) : subscriptions.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            暂无订阅记录
-          </CardContent>
+          <CardContent className="py-12 text-center text-muted-foreground">暂无订阅记录</CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {subscriptions.map((subscription) => (
-            <Card key={subscription.id} data-testid={`card-subscription-${subscription.id}`}>
-              <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    {subscription.first_name} {subscription.last_name}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground truncate">{subscription.email}</p>
-                </div>
-                {getStatusBadge(subscription)}
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">套餐类型</span>
-                  <Badge variant="outline">{getPlanLabel(subscription.plan_type)}</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">开始日期</span>
-                  <span className="font-medium">{format(new Date(subscription.start_date), "yyyy/MM/dd")}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">结束日期</span>
-                  <span className="font-medium">{format(new Date(subscription.end_date), "yyyy/MM/dd")}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">剩余天数</span>
-                  <span className="font-medium">
-                    {differenceInDays(new Date(subscription.end_date), new Date())} 天
-                  </span>
-                </div>
-                {subscription.auto_renew && (
-                  <div className="pt-2 border-t">
-                    <Badge variant="secondary">自动续费</Badge>
+          {subscriptions.map((subscription, index) => {
+            const id = subscriptionId(subscription, index);
+
+            return (
+              <Card key={id} data-testid={`card-subscription-${id}`}>
+                <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-3">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      {userDisplayName(subscription)}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {userContact(subscription)}
+                    </p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  {getStatusBadge(subscription)}
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">套餐类型</span>
+                    <Badge variant="outline">{getPlanLabel(planTypeOf(subscription))}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">开始日期</span>
+                    <span className="font-medium">
+                      {formatSubscriptionDate(startDateOf(subscription))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">结束日期</span>
+                    <span className="font-medium">
+                      {formatSubscriptionDate(endDateOf(subscription))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">剩余天数</span>
+                    <span className="font-medium">{daysRemainingLabel(subscription)}</span>
+                  </div>
+                  {autoRenewOf(subscription) && (
+                    <div className="pt-2 border-t">
+                      <Badge variant="secondary">自动续费</Badge>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -315,11 +427,13 @@ export default function AdminSubscriptionsPage() {
                   <SelectValue placeholder="选择用户" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.firstName} {user.lastName} - {user.email}
-                    </SelectItem>
-                  ))}
+                  {users
+                    .filter((user) => user?.id)
+                    .map((user) => (
+                      <SelectItem key={user.id} value={user.id!}>
+                        {userOptionLabel(user)}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -345,17 +459,25 @@ export default function AdminSubscriptionsPage() {
                 min="1"
                 max="12"
                 value={durationMonths}
-                onChange={(e) => setDurationMonths(e.target.value)}
+                onChange={(event) => setDurationMonths(event.target.value)}
                 data-testid="input-duration"
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)} data-testid="button-cancel">
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateDialog(false)}
+              data-testid="button-cancel"
+            >
               取消
             </Button>
-            <Button onClick={handleCreateSubscription} disabled={createMutation.isPending} data-testid="button-submit-subscription">
+            <Button
+              onClick={handleCreateSubscription}
+              disabled={createMutation.isPending}
+              data-testid="button-submit-subscription"
+            >
               {createMutation.isPending ? "创建中..." : "创建订阅"}
             </Button>
           </DialogFooter>

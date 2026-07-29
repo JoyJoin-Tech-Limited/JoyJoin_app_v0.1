@@ -21,6 +21,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/admin/content": "内容管理",
   "/admin/notifications": "通知推送",
   "/admin/events": "活动管理",
+  "/admin/subscription": "订阅管理",
   "/admin/subscriptions": "订阅管理",
   "/admin/pricing": "定价管理",
   "/admin/coupons": "优惠券",

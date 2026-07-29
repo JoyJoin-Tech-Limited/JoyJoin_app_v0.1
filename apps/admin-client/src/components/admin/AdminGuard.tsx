@@ -15,6 +15,7 @@ const SUPER_ADMIN_ROUTES: string[] = [
   "/admin/outcome-analytics",
   "/admin/content",
   "/admin/notifications",
+  "/admin/subscription",
   "/admin/subscriptions",
   "/admin/pricing",
   "/admin/coupons",
