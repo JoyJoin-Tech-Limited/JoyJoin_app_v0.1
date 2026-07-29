@@ -11,7 +11,7 @@ export default function ExperienceDetail({ experience, onBack }: ExperienceDetai
   return (
     <View className={`experience-detail experience-detail--${experience.id}`}>
       <View className='experience-detail__header'>
-        <Button className='experience-detail__back' hoverClass='experience-detail__back--pressed' onClick={onBack}>
+        <Button className='experience-detail__back' hoverClass='experience-detail__back--pressed' onClick={onBack} ariaLabel='返回两种玩法'>
           <View className='experience-detail__back-icon' />
           <Text>两种玩法</Text>
         </Button>
@@ -24,17 +24,14 @@ export default function ExperienceDetail({ experience, onBack }: ExperienceDetai
             <FlowIcon name={experience.icon} active accent={experience.id === 'event' ? 'human' : 'city'} size='lg' />
             <View className='experience-detail__hero-copy'>
               <Text className='experience-detail__title'>{experience.title}</Text>
-              <Text className='experience-detail__subtitle'>{experience.headline}</Text>
+              <Text className='experience-detail__subtitle'>{experience.detail.heroSubtitle}</Text>
             </View>
           </View>
 
           <View className={`experience-detail__scene experience-detail__scene--${experience.id}`}>
             <View className='experience-detail__scene-copy'>
-              <Text className='experience-detail__scene-kicker'>
-                {experience.id === 'event' ? 'YOUR GROUP IS TAKING SHAPE' : 'A CLUE FOR TODAY'}
-              </Text>
               <Text className='experience-detail__scene-title'>
-                {experience.id === 'event' ? '报名后，我们开始认真组队' : '今天的城市，从一条线索开始'}
+                {experience.detail.sceneTitle}
               </Text>
             </View>
             <View className='experience-detail__scene-art'>
@@ -43,7 +40,6 @@ export default function ExperienceDetail({ experience, onBack }: ExperienceDetai
               <View className='experience-detail__scene-node experience-detail__scene-node--one' />
               <View className='experience-detail__scene-node experience-detail__scene-node--two' />
               <View className='experience-detail__scene-node experience-detail__scene-node--three' />
-              <View className='experience-detail__scene-beacon' />
               <View className='experience-detail__scene-spark experience-detail__scene-spark--one' />
               <View className='experience-detail__scene-spark experience-detail__scene-spark--two' />
             </View>
@@ -77,7 +73,7 @@ export default function ExperienceDetail({ experience, onBack }: ExperienceDetai
             ))}
           </View>
 
-          <Text className='experience-detail__closing'>{experience.closingCopy}</Text>
+          <Text className='experience-detail__closing'>{experience.detail.closing}</Text>
           <View className='experience-detail__bottom-safe' />
         </View>
       </ScrollView>

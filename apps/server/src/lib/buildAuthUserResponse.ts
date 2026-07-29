@@ -133,6 +133,8 @@ const [
     flashTaskRetryTestEnabledFlag,
     squadUnboxingPocketDeckEnabled,
     profileIdentityStageEnabled,
+    flowIntroEnabled,
+    flowLifecycleEnabled,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -161,6 +163,8 @@ const [
     getFeatureFlag('flashTaskRetryTestEnabled', false),
     getFeatureFlag('squadUnboxingPocketDeckEnabled', true),
     getFeatureFlag('profileIdentityStageEnabled', true),
+    getFeatureFlag('flowIntroEnabled', true),
+    getFeatureFlag('flowLifecycleEnabled', true),
   ]);
 
   // Never expose client debug surfaces in production, even if a stale
@@ -212,6 +216,8 @@ const [
         (process.env.APP_MODE ?? 'production') !== 'production' && flashTaskRetryTestEnabledFlag,
       squadUnboxingPocketDeckEnabled,
       profileIdentityStageEnabled,
+      flowIntroEnabled,
+      flowLifecycleEnabled,
     },
   };
 

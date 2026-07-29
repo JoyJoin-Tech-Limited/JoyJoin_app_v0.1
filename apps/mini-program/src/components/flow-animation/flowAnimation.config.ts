@@ -1,4 +1,11 @@
-import type { ExperienceDefinition, FlowStepDefinition } from './flowAnimation.types'
+import {
+  EXPERIENCE_DETAIL_COPY,
+  FLOW1_ENTRY_COPY,
+  FLOW2_NODE_COPY,
+  resolveFlow2NodeDescription,
+  type FlowLifecycleFacts,
+} from '@shared/copy/flowAnimationCopy'
+import type { ExperienceDefinition, FlowIconName, FlowAccent, FlowStepDefinition } from './flowAnimation.types'
 
 export const FLOW_ANIMATION_TIMING = {
   experienceRevealMs: 1_350,
@@ -6,44 +13,92 @@ export const FLOW_ANIMATION_TIMING = {
   progressTickMs: 80,
 } as const
 
+interface StepMeta {
+  id: string
+  icon: FlowIconName
+  accent: FlowAccent
+}
+
+const EVENT_STEP_META: readonly StepMeta[] = [
+  { id: 'discover', icon: 'activity-discovery', accent: 'human' },
+  { id: 'register', icon: 'activity-ticket', accent: 'human' },
+  { id: 'match', icon: 'ai-match', accent: 'brand' },
+  { id: 'offline', icon: 'offline-experience', accent: 'story' },
+] as const
+
+const STREET_STEP_META: readonly StepMeta[] = [
+  { id: 'clue', icon: 'explore-location', accent: 'city' },
+  { id: 'task', icon: 'street-task', accent: 'brand' },
+  { id: 'explore', icon: 'city-exploration', accent: 'city' },
+  { id: 'story', icon: 'city-story', accent: 'story' },
+] as const
+
+function buildSteps(
+  copy: readonly { title: string; description: string }[],
+  meta: readonly StepMeta[],
+): FlowStepDefinition[] {
+  return meta.map((m, index) => ({
+    id: m.id,
+    title: copy[index]?.title ?? '',
+    description: copy[index]?.description ?? '',
+    icon: m.icon,
+    accent: m.accent,
+  }))
+}
+
 export const EXPERIENCE_DEFINITIONS: readonly ExperienceDefinition[] = [
   {
     id: 'event',
-    eyebrow: '人与人',
-    title: '盲盒活动',
-    headline: '不是随机拼桌，是认真组一支合拍的小队',
-    description: '你挑活动，我们参考彼此的偏好组成小组',
+    eyebrow: FLOW1_ENTRY_COPY.event.eyebrow,
+    title: FLOW1_ENTRY_COPY.event.title,
+    bannerLine: FLOW1_ENTRY_COPY.event.bannerLine,
     icon: 'formal-blind-box',
-    closingCopy: '先有一件共同想做的事，认识彼此就自然多了',
-    steps: [
-      { id: 'discover', title: '挑一场想参加的', description: '先从你真正感兴趣的活动开始', icon: 'activity-discovery', accent: 'human' },
-      { id: 'register', title: '告诉我们你的偏好', description: '时间、兴趣和相处节奏，都会参与组队', icon: 'activity-ticket', accent: 'human' },
-      { id: 'match', title: '组成活动小组', description: '在活动规则内，把更合拍的人安排到一起', icon: 'ai-match', accent: 'brand' },
-      { id: 'offline', title: '到现场一起体验', description: '不用硬找话题，先一起把活动玩起来', icon: 'offline-experience', accent: 'story' },
-    ],
+    detail: {
+      heroSubtitle: EXPERIENCE_DETAIL_COPY.event.heroSubtitle,
+      sceneTitle: EXPERIENCE_DETAIL_COPY.event.sceneTitle,
+      closing: EXPERIENCE_DETAIL_COPY.event.closing,
+    },
+    steps: buildSteps(EXPERIENCE_DETAIL_COPY.event.steps, EVENT_STEP_META),
   },
   {
     id: 'street',
-    eyebrow: '人与城市',
-    title: '街头盲盒',
-    headline: '临时想出门，城市也有现成的玩法',
-    description: '从一条此刻可开启的线索出发，边走边发现',
+    eyebrow: FLOW1_ENTRY_COPY.street.eyebrow,
+    title: FLOW1_ENTRY_COPY.street.title,
+    bannerLine: FLOW1_ENTRY_COPY.street.bannerLine,
     icon: 'street-blind-box',
-    closingCopy: '不用等周末，也不用约齐人。想出门时，就换一种方式打开城市',
-    steps: [
-      { id: 'clue', title: '看看今天有什么', description: '从此刻可开启的城市线索里，挑一个顺眼的', icon: 'explore-location', accent: 'city' },
-      { id: 'task', title: '接到一件小任务', description: '不必准备很久，照着提示就能开始', icon: 'street-task', accent: 'brand' },
-      { id: 'explore', title: '边走边发现', description: '路程不必很远，也能重新看看熟悉的街道', icon: 'city-exploration', accent: 'city' },
-      { id: 'story', title: '留下这次发现', description: '完成之后，把这段经历收进你的城市故事', icon: 'city-story', accent: 'story' },
-    ],
+    detail: {
+      heroSubtitle: EXPERIENCE_DETAIL_COPY.street.heroSubtitle,
+      sceneTitle: EXPERIENCE_DETAIL_COPY.street.sceneTitle,
+      closing: EXPERIENCE_DETAIL_COPY.street.closing,
+    },
+    steps: buildSteps(EXPERIENCE_DETAIL_COPY.street.steps, STREET_STEP_META),
   },
 ] as const
 
-export const LIFECYCLE_STEPS: readonly FlowStepDefinition[] = [
-  { id: 'registered', title: '报名成功', description: '名额已经锁定，这次出发开始有了形状', icon: 'activity-ticket', accent: 'brand' },
-  { id: 'matching', title: 'AI 匹配', description: '活动条件、你的偏好与现场节奏，一起进入匹配', icon: 'ai-match', accent: 'brand' },
-  { id: 'grouped', title: '小组形成', description: '合适的人逐渐靠近，一场共同体验正在成形', icon: 'group-formed', accent: 'brand' },
-  { id: 'revealed', title: '活动揭晓', description: '时间、地点和出发提示，会在准备好后揭晓', icon: 'activity-reveal', accent: 'city' },
-  { id: 'offline', title: '线下体验', description: '从屏幕走进城市，和新伙伴完成一次真实见面', icon: 'offline-experience', accent: 'city' },
-  { id: 'story', title: '我的故事', description: '见过的人、走过的地方，会沉淀为城市记忆', icon: 'city-story', accent: 'story' },
+const LIFECYCLE_STEP_META: readonly StepMeta[] = [
+  { id: 'registered', icon: 'activity-ticket', accent: 'brand' },
+  { id: 'matching', icon: 'ai-match', accent: 'brand' },
+  { id: 'grouped', icon: 'group-formed', accent: 'brand' },
+  { id: 'revealed', icon: 'activity-reveal', accent: 'city' },
+  { id: 'offline', icon: 'offline-experience', accent: 'city' },
+  { id: 'story', icon: 'city-story', accent: 'story' },
 ] as const
+
+/** Builds the six lifecycle nodes with the just-registered pool's real facts
+ *  interpolated (client-side props only — never a fetch). Missing facts fall
+ *  back to designed generic copy via resolveFlow2NodeDescription. */
+export function buildLifecycleSteps(facts?: FlowLifecycleFacts | null): FlowStepDefinition[] {
+  return LIFECYCLE_STEP_META.map((meta, index) => {
+    const node = FLOW2_NODE_COPY[index]
+    return {
+      id: meta.id,
+      title: node?.title ?? '',
+      description: resolveFlow2NodeDescription(node?.description ?? '', facts),
+      icon: meta.icon,
+      accent: meta.accent,
+    }
+  })
+}
+
+/** Static no-facts variant (generic explainer fallback). */
+export const LIFECYCLE_STEPS: readonly FlowStepDefinition[] = buildLifecycleSteps()

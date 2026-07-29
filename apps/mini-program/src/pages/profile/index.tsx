@@ -3,7 +3,10 @@ import {
   getProfileShell,
   getUserGamificationInfo,
 } from '@shared/api'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import {
+  ARCHETYPE_BY_ID,
+} from '@shared/personality/archetypeNames'
+import { archetypeRegistry } from '@shared/personality'
 import { formatHSLAsRGBA, getArchetypeHSL, getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import type { PersonalStoryResponse } from '@joyjoin/shared/schema'
 import { useQuery } from '@tanstack/react-query'
@@ -15,6 +18,7 @@ import IdentityStageScene from '../../components/profile/IdentityStageScene'
 import PixelAvatarComposite from '../../components/profile/PixelAvatarComposite'
 import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { apiRequest } from '../../lib/api/api'
@@ -23,9 +27,10 @@ import { queryClient } from '../../lib/api/queryClient'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { fetchMyEquipment, type EquipmentItem, type EquipmentOutfit } from '../../lib/profile/equipmentApi'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
-import { getPixelEquipmentLayerUrl } from '../../lib/profile/pixelAvatarAssets'
+import { getPixelEquipmentThumbnailUrl } from '../../lib/profile/pixelAvatarAssets'
 import { haptics } from '../../lib/utils/haptics'
 import { localAsset } from '../../lib/utils/cdnAssets'
+import { logError, logInfo } from '../../lib/utils/logger'
 import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { shouldRefreshOnShow } from '../../lib/utils/showRefreshGate'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
@@ -78,8 +83,7 @@ function EquipmentPreviewArtwork({
       lazyLoad={false}
       aria-hidden='true'
       onError={() => {
-        console.error({
-          type: 'equipment_asset_error',
+        logError('profile:equipment_asset_error', {
           itemId: item.id,
           image,
         })
@@ -333,6 +337,12 @@ export default function ProfilePage() {
   const personalityActionLabel = getProfilePersonalityActionLabel(archetype)
   const storyChapterCount = personalStoryTeaserQuery.data?.story?.chapters?.length ?? 0
 
+  const archetypeTagline = useMemo(() => {
+    if (!archetype || !(archetype in archetypeRegistry)) return null
+    return archetypeRegistry[archetype as keyof typeof archetypeRegistry]?.narrative.tagline ?? null
+  }, [archetype])
+  const displayBio = bio || archetypeTagline || null
+
   // Entrance stagger: the `--entered` modifiers are driven by mounted state so
   // the CSS transitions actually play. Delays live in SCSS (stage 0ms → stats
   // 80ms → story 160ms) and are suppressed under prefers-reduced-motion.
@@ -373,14 +383,17 @@ export default function ProfilePage() {
     return { borderColor: formatHSLAsRGBA(hsl, 0.9) }
   }, [archetype])
 
-  const handleOpenPersonalityType = () => {
+  const handleOpenPersonalityType = (source: 'v17_card' | 'fallback_row') => {
     haptics('light')
-  
+    profileAnalytics.track('profile_personality_action_tap', { source })
+
     if (archetype) {
-      void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults })
+      void Taro.navigateTo({
+        url: `${MINI_PROGRAM_ROUTES.personalityTestResults}?source=profile`,
+      })
       return
     }
-  
+
     void Taro.navigateTo({
       url: `${MINI_PROGRAM_ROUTES.personalityTest}?source=profile`,
     })
@@ -431,11 +444,19 @@ export default function ProfilePage() {
             data-testid='profile-v4'
           >
             <IdentityStageScene absoluteAvatar={false}>
-              {/* Readable glass card for the identity copy (top-left) */}
-              <View className='profile-page__identity-copy-card'>
+              {/* Readable glass card for the identity copy (top-left).
+                  Whole card is the basic-profile hub: tap → 回看人格报告. */}
+              <View
+                className='profile-page__identity-copy-card'
+                hoverClass='profile-page__identity-copy-card--pressed'
+                onClick={() => { handleOpenPersonalityType('v17_card') }}
+                role='button'
+                aria-label={archetypeName ? `回看 ${archetypeName} 的人格测评报告` : '测测你的社交原型'}
+                data-testid='profile-identity-copy-card'
+              >
                 <View className='profile-page__identity-copy'>
-                  {/* Archetype circle icon is always rendered — it is the
-                      user's class emblem, independent of the pixel avatar. */}
+                  {/* Archetype circle icon is always rendered as the user's
+                      class mark, independent of the pixel avatar. */}
                   <View className='profile-page__identity-avatar' style={archetypeRingStyle}>
                     <ArchetypeHead
                       archetype={archetype}
@@ -461,7 +482,13 @@ export default function ProfilePage() {
                         <Text className='profile-page__identity-tag'>{genderLabel}</Text>
                       )}
                     </View>
-                    {bio && <Text className='profile-page__identity-bio'>{bio}</Text>}
+                    {displayBio && <Text className='profile-page__identity-bio'>{displayBio}</Text>}
+                    <View className='profile-page__identity-affordance' aria-hidden='true'>
+                      <Text className='profile-page__identity-affordance-text'>
+                        {archetypeName ? '回看报告' : '测测你的社交原型'}
+                      </Text>
+                      <View className='profile-page__identity-affordance-chevron' />
+                    </View>
                   </View>
                 </View>
               </View>
@@ -471,6 +498,10 @@ export default function ProfilePage() {
                 className={`profile-page__partner-visual${pixelAvatarEnabled ? '' : ' profile-page__partner-visual--no-entry'}`}
               >
                 <View className='profile-page__partner-platform' aria-hidden='true' />
+              <View
+                className='profile-page__partner-breath'
+                data-testid='profile-partner-breath'
+              >
                 <ProfilePartnerVisual
                   key={archetype ?? 'profile-partner-fallback'}
                   archetype={archetype}
@@ -482,23 +513,7 @@ export default function ProfilePage() {
                   itemsById={equipmentItemsById}
                   onRetryEquipment={() => { void equipmentQuery.refetch() }}
                 />
-                {/* Class emblem — only in pixel mode; pixel-off already shows
-                    the full-body archetype art as the visual itself. */}
-                {pixelAvatarEnabled && archetype && (
-                  <View
-                    className='profile-page__partner-emblem'
-                    style={archetypeRingStyle}
-                    aria-hidden='true'
-                    data-testid='profile-partner-emblem'
-                  >
-                    <ArchetypeHead
-                      archetype={archetype}
-                      size={56}
-                      variant='grid'
-                      fallbackText={displayName}
-                    />
-                  </View>
-                )}
+              </View>
               </View>
 
               {/* Readable glass card for growth stats (bottom-left) */}
@@ -552,13 +567,10 @@ export default function ProfilePage() {
                     Taro.navigateTo({
                       url: MINI_PROGRAM_ROUTES.myImage,
                       success: () => {
-                        console.info({ action: 'open_my_image', status: 'success' })
+                        logInfo('profile:open_my_image_success')
                       },
                       fail: (error) => {
-                        console.error({
-                          action: 'open_my_image',
-                          error,
-                        })
+                        logError('profile:open_my_image_fail', { error: String(error) })
                         void Taro.showToast({
                           title: '形象加载失败，请稍后重试',
                           icon: 'none',
@@ -649,7 +661,7 @@ export default function ProfilePage() {
               <View
                 className='profile-page__fallback-personality'
                 hoverClass='profile-page__fallback-personality--pressed'
-                onClick={handleOpenPersonalityType}
+                onClick={() => { handleOpenPersonalityType('fallback_row') }}
                 role='button'
                 aria-label={personalityActionLabel}
               >
@@ -700,12 +712,12 @@ export default function ProfilePage() {
             hoverClass='profile-page__stat--pressed'
             onClick={() => { haptics('light'); void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile }) }}
             role='button'
-            aria-label={`资料完成度 ${profileCompletion}%，去完善资料`}
+            aria-label={`资料完成度 ${profileCompletion}%，${profileCompletion >= 100 ? '查看资料' : '去完善资料'}`}
           >
             <JoyJoinIcon emoji='📄' tier='ui' size={40} className='profile-page__stat-icon' />
             <Text className='profile-page__stat-value'>{profileCompletion}%</Text>
             <Text className='profile-page__stat-label'>资料完成度</Text>
-            <Text className='profile-page__stat-caption'>去完善</Text>
+            <Text className='profile-page__stat-caption'>{profileCompletion >= 100 ? '查看资料' : '去完善'}</Text>
             <View className='profile-page__stat-progress'>
               <View
                 className='profile-page__stat-progress-bar'

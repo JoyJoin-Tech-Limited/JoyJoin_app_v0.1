@@ -120,6 +120,17 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  depth background. Env fallback: PROFILE_IDENTITY_STAGE_ENABLED
    *  (default: true). */
   profileIdentityStageEnabled: "PROFILE_IDENTITY_STAGE_ENABLED",
+  /** Per-flow kill gate for the Flow 1 dual-world intro overlay
+   *  (joyjoin-intro, shown once at profile-review completion). When false,
+   *  the overlay is suppressed entirely and users route straight to nextStep.
+   *  Env fallback: FLOW_INTRO_ENABLED (default: true). */
+  flowIntroEnabled: "FLOW_INTRO_ENABLED",
+  /** Per-flow kill gate for the Flow 2 blind-box lifecycle overlay
+   *  (blind-box-lifecycle, shown once after first pool registration). When
+   *  false, registration success skips the overlay and shows the standard
+   *  success toast + terminal state. Env fallback: FLOW_LIFECYCLE_ENABLED
+   *  (default: true). */
+  flowLifecycleEnabled: "FLOW_LIFECYCLE_ENABLED",
 };
 
 /**

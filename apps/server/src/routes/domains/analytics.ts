@@ -230,6 +230,24 @@ const ALLOWED_LANDING_EVENT_TYPES = new Set<LandingEventType>(
   LANDING_EVENT_TYPES,
 );
 
+const FLOW_EVENT_TYPES = [
+  "flow_view",
+  "flow_skip",
+  "flow_cta_tap",
+  "flow_banner_tap",
+  "flow_detail_open",
+  "flow_detail_back",
+  "flow_node_tap",
+  "flow_complete",
+  // D7 tripwire: a user who tapped the 街头盲盒 banner later hits an
+  // alang gate state. >25% gate-hit ratio → mandatory PM revisit.
+  "flow_street_gate_hit",
+] as const;
+
+type FlowEventType = (typeof FLOW_EVENT_TYPES)[number];
+
+const ALLOWED_FLOW_EVENT_TYPES = new Set<FlowEventType>(FLOW_EVENT_TYPES);
+
 const SOCIAL_ICEBREAKER_EVENT_TYPES = [
   "custom_mode_selected",
   "phase_picker_impression",
@@ -300,6 +318,7 @@ const PROFILE_EVENT_TYPES = [
   "profile_share_card_generated",
   "profile_share_card_error",
   "profile_view",
+  "profile_personality_action_tap",
 ] as const;
 
 type ProfileEventType = (typeof PROFILE_EVENT_TYPES)[number];
@@ -695,6 +714,54 @@ export function registerAnalyticsRoutes(app: Express): void {
       return res.status(200).json({ success: true });
     } catch (error) {
       logger.warn("landing analytics write failed (non-fatal)", {
+        request_id: req.requestId,
+        error: String(error),
+      });
+      return res.status(200).json({ success: false, error: "analytics write failed" });
+    }
+  });
+
+  /**
+   * POST /api/analytics/flow
+   *
+   * Flow-animation overlay instrumentation (joyjoin-intro + blind-box-lifecycle).
+   * Tracks: views, skips, banner taps (event/street split), detail opens,
+   * node tap-aheads, completions, CTA taps, and the D7 street gate-hit tripwire.
+   *
+   * Fire-and-forget. Always returns 200. Silent fail.
+   * Reuses discoverAnalyticsEvents table and discoverAnalyticsLimiter (120 req/min).
+   */
+  app.post("/api/analytics/flow", discoverAnalyticsLimiter, async (req: Request, res) => {
+    try {
+      const { eventType, metadata, timestamp } = req.body as {
+        eventType?: unknown;
+        metadata?: unknown;
+        timestamp?: unknown;
+      };
+
+      if (
+        typeof eventType !== "string" ||
+        !ALLOWED_FLOW_EVENT_TYPES.has(eventType as FlowEventType)
+      ) {
+        return res.status(200).json({ success: false, error: "invalid eventType" });
+      }
+
+      const normalizedMetadata = sanitizeMetadata(metadata);
+      const userId = req.session?.userId ?? null;
+      const sessionId = req.sessionID ?? null;
+
+      await insertAnalyticsEvent(discoverAnalyticsEvents, {
+        userId,
+        sessionId,
+        eventType,
+        poolId: null,
+        metadata: normalizedMetadata,
+        timestamp: parseTimestamp(timestamp),
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      logger.warn("flow analytics write failed (non-fatal)", {
         request_id: req.requestId,
         error: String(error),
       });

@@ -2,6 +2,7 @@ import React from 'react'
 import { fireEvent, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
+import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import ProfilePage from './index'
 
 const state = vi.hoisted(() => ({
@@ -427,21 +428,100 @@ describe('Profile approved V4 layout', () => {
     }))
   })
 
-  it('keeps the archetype circle icon visible in pixel mode and adds the class emblem', () => {
-    const { container, getByTestId, getAllByTestId } = render(<ProfilePage />)
+  it('keeps the archetype circle icon visible in pixel mode', () => {
+    const { container, getAllByTestId } = render(<ProfilePage />)
 
     // Request-4 regression lock: the circle icon renders even with the pixel
-    // avatar on, plus the class emblem on the avatar's bottom-right corner.
+    // avatar on. The corner class emblem was removed (2026-07-29) as redundant
+    // with this circle icon.
     expect(container.querySelector('.profile-page__identity-avatar')).toBeTruthy()
-    expect(getByTestId('profile-partner-emblem')).toBeTruthy()
-    expect(getAllByTestId('archetype-head').length).toBeGreaterThanOrEqual(2)
+    expect(container.querySelector('.profile-page__partner-emblem')).toBeNull()
+    expect(getAllByTestId('archetype-head').length).toBeGreaterThanOrEqual(1)
 
     // Pixel-on: grounded above the equipment bar — no --no-entry modifiers.
     expect(container.querySelector('.profile-page__partner-visual--no-entry')).toBeNull()
     expect(container.querySelector('.profile-page__growth-card--no-entry')).toBeNull()
   })
 
-  it('grounds the avatar on the stage floor without the emblem when the pixel avatar is off', () => {
+  it('opens the personality report when tapping the identity copy card', () => {
+    state.navigateTo.mockClear()
+    ;(profileAnalytics.track as ReturnType<typeof vi.fn>).mockClear()
+
+    const { getByTestId } = render(<ProfilePage />)
+    fireEvent.click(getByTestId('profile-identity-copy-card'))
+
+    expect(state.navigateTo).toHaveBeenCalledWith({
+      url: `${MINI_PROGRAM_ROUTES.personalityTestResults}?source=profile`,
+    })
+    expect(profileAnalytics.track).toHaveBeenCalledWith(
+      'profile_personality_action_tap',
+      { source: 'v17_card' },
+    )
+  })
+
+  it('shows the archetype tagline as a bio fallback and prompts to review the report', () => {
+    const { getByText } = render(<ProfilePage />)
+
+    expect(getByText('瞬间破冰的气氛点火手')).toBeTruthy()
+    expect(getByText('回看报告')).toBeTruthy()
+  })
+
+  it('prompts the personality test when no archetype exists', () => {
+    state.user = {
+      ...makeUser(true),
+      archetype: null,
+      primaryArchetype: null,
+    }
+    state.navigateTo.mockClear()
+    ;(profileAnalytics.track as ReturnType<typeof vi.fn>).mockClear()
+
+    const { getByText, getByTestId } = render(<ProfilePage />)
+    expect(getByText('测测你的社交原型')).toBeTruthy()
+
+    fireEvent.click(getByTestId('profile-identity-copy-card'))
+    expect(state.navigateTo).toHaveBeenCalledWith({
+      url: `${MINI_PROGRAM_ROUTES.personalityTest}?source=profile`,
+    })
+    expect(profileAnalytics.track).toHaveBeenCalledWith(
+      'profile_personality_action_tap',
+      { source: 'v17_card' },
+    )
+  })
+
+  it('uses a state-aware edit-profile caption on the completion stat card', () => {
+    state.queryStates.set('mini-program/shell/profile', {
+      data: { stats: { connectionsCount: 0 } },
+    })
+
+    const { getByText, rerender } = render(<ProfilePage />)
+    expect(getByText('去完善')).toBeTruthy()
+
+    state.user = { ...state.user, profileEssentialComplete: true, profileExtendedComplete: true }
+    state.queryStates.set('mini-program/shell/profile', {
+      data: { stats: { connectionsCount: 0 } },
+    })
+    rerender(<ProfilePage />)
+    expect(getByText('查看资料')).toBeTruthy()
+  })
+
+  it('emits the fallback-row analytics source when the compact personality action is used', () => {
+    state.user = makeUser(false)
+    state.navigateTo.mockClear()
+    ;(profileAnalytics.track as ReturnType<typeof vi.fn>).mockClear()
+
+    const { getByLabelText } = render(<ProfilePage />)
+    fireEvent.click(getByLabelText('查看人格结果'))
+
+    expect(state.navigateTo).toHaveBeenCalledWith({
+      url: `${MINI_PROGRAM_ROUTES.personalityTestResults}?source=profile`,
+    })
+    expect(profileAnalytics.track).toHaveBeenCalledWith(
+      'profile_personality_action_tap',
+      { source: 'fallback_row' },
+    )
+  })
+
+  it('grounds the avatar on the stage floor when the pixel avatar is off', () => {
     state.user = {
       ...makeUser(true),
       features: {
@@ -452,16 +532,21 @@ describe('Profile approved V4 layout', () => {
 
     const { container, queryByTestId } = render(<ProfilePage />)
 
-    // Circle icon still renders (request 4), but no emblem badge — pixel-off
-    // already shows the full-body archetype art as the visual itself.
+    // Circle icon still renders (request 4) in both pixel and non-pixel modes.
     expect(container.querySelector('.profile-page__identity-avatar')).toBeTruthy()
-    expect(queryByTestId('profile-partner-emblem')).toBeNull()
     expect(queryByTestId('profile-partner-equipment-entry')).toBeNull()
+    expect(queryByTestId('profile-partner-breath')).toBeTruthy()
 
     // No equipment bar → both the avatar and the growth card drop to the
     // stage floor via the --no-entry modifiers.
     expect(container.querySelector('.profile-page__partner-visual--no-entry')).toBeTruthy()
     expect(container.querySelector('.profile-page__growth-card--no-entry')).toBeTruthy()
+  })
+
+  it('wraps the partner avatar in a breathing animation layer', () => {
+    const { getByTestId } = render(<ProfilePage />)
+
+    expect(getByTestId('profile-partner-breath')).toBeTruthy()
   })
 
   it('renders the level plate with the current level and never mounts it on gamification error', () => {

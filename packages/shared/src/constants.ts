@@ -402,3 +402,12 @@ export function getConnectionPointRarity(text: string): 'common' | 'rare' | 'epi
   // Default fallback
   return 'common';
 }
+
+/**
+ * Platform-default event group size — the brand-level "4–6 人" format promise.
+ * Bound to the canonical event_pools.min_group_size / max_group_size defaults
+ * (packages/shared/src/schema/_definitions.ts — .default(4) / .default(6)).
+ * Individual pools may override 2–10; intro/format copy uses this default.
+ * Do NOT bind to the legacy matching_config table (5/10 — not the authority).
+ */
+export const DEFAULT_EVENT_GROUP_SIZE = { min: 4, max: 6 } as const;

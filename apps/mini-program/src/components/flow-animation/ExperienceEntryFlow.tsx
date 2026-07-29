@@ -1,6 +1,7 @@
-import { useState } from 'react'
 import { Button, Image, Text, View } from '@tarojs/components'
-import ExperienceDetail from './ExperienceDetail'
+import { FLOW1_HOME_COPY, getFlow1H1Line2 } from '@shared/copy/flowAnimationCopy'
+import { flowAnalytics } from '../../lib/analytics/flowAnalytics'
+import { haptics } from '../../lib/utils/haptics'
 import type { FlowArchetypeBackgrounds } from './FlowShell'
 import type { ExperienceDefinition } from './flowAnimation.types'
 
@@ -8,23 +9,32 @@ interface ExperienceEntryFlowProps {
   entries: readonly ExperienceDefinition[]
   revealProgress: number
   backgroundSources?: FlowArchetypeBackgrounds | null
-  initialDetailId?: ExperienceDefinition['id']
+  alangEnabled?: boolean
+  onOpenDetail: (id: ExperienceDefinition['id']) => void
 }
 
 export default function ExperienceEntryFlow({
   entries,
   revealProgress,
   backgroundSources,
-  initialDetailId,
+  alangEnabled = false,
+  onOpenDetail,
 }: ExperienceEntryFlowProps) {
-  const [detailId, setDetailId] = useState<ExperienceDefinition['id'] | null>(initialDetailId ?? null)
-  const detail = entries.find((entry) => entry.id === detailId)
+  const handleBannerTap = (entry: ExperienceDefinition) => {
+    haptics('light')
+    flowAnalytics.trackBannerTap(entry.id, alangEnabled)
+    flowAnalytics.trackDetailOpen(entry.id)
+    onOpenDetail(entry.id)
+  }
 
   return (
     <View className='experience-entry-flow'>
       <View className={`experience-entry-flow__intro ${revealProgress >= 0.12 ? 'experience-entry-flow__intro--visible' : ''}`}>
-        <Text className='experience-entry-flow__title'>探索你的城市体验</Text>
-        <Text className='experience-entry-flow__subtitle'>两种玩法，都值得打开：遇见合拍的人，也重新发现熟悉的城市</Text>
+        <Text className='experience-entry-flow__title'>
+          <Text className='experience-entry-flow__title-line'>{FLOW1_HOME_COPY.h1Line1}</Text>
+          <Text className='experience-entry-flow__title-line experience-entry-flow__title-line--nowrap'>{getFlow1H1Line2()}</Text>
+        </Text>
+        <Text className='experience-entry-flow__subtitle'>{FLOW1_HOME_COPY.fallbackSubline}</Text>
       </View>
 
       <View className='experience-entry-flow__entries'>
@@ -41,7 +51,7 @@ export default function ExperienceEntryFlow({
                 visible ? 'experience-banner--visible' : '',
               ].join(' ')}
               hoverClass='experience-banner--pressed'
-              onClick={() => setDetailId(entry.id)}
+              onClick={() => handleBannerTap(entry)}
               ariaLabel={`查看${entry.title}玩法`}
             >
               {backgroundSrc ? (
@@ -59,7 +69,7 @@ export default function ExperienceEntryFlow({
                 <View className='experience-banner__copy'>
                   <Text className='experience-banner__title'>{entry.title}</Text>
                   <Text className='experience-banner__eyebrow'>{entry.eyebrow}</Text>
-                  <Text className='experience-banner__dimension'>{entry.headline}</Text>
+                  <Text className='experience-banner__dimension'>{entry.bannerLine}</Text>
                 </View>
               </View>
 
@@ -71,8 +81,6 @@ export default function ExperienceEntryFlow({
           )
         })}
       </View>
-
-      {detail ? <ExperienceDetail experience={detail} onBack={() => setDetailId(null)} /> : null}
     </View>
   )
 }

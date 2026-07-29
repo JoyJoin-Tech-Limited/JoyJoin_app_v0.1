@@ -52,3 +52,26 @@ export {
   isExceptionFor,
 } from './exceptions.js';
 export type { OrangeWordEntry, RuleException } from './exceptions.js';
+
+// 🎬 Flow Animation (双世界入口 + 生命周期) — owner-approved 2026-07-29
+export {
+  FLOW1_HOME_COPY,
+  ARCHETYPE_SUBLINES,
+  getArchetypeSubline,
+  getFlow1H1Line2,
+  FLOW1_ENTRY_COPY,
+  EXPERIENCE_DETAIL_COPY,
+  FLOW2_FALLBACKS,
+  FLOW2_NODE_COPY,
+  getFlow2HeroStatus,
+  getFlow2HeroMeta,
+  resolveFlow2NodeDescription,
+  FLOW_SHELL_COPY,
+  getIdentityChipLabel,
+} from './flowAnimationCopy.js';
+export type {
+  FlowStepCopy,
+  ExperienceDetailCopy,
+  FlowLifecycleFacts,
+  Flow2NodeCopy,
+} from './flowAnimationCopy.js';

@@ -425,6 +425,14 @@
     left: 24rpx;
     max-width: 360rpx;
     padding: $spacing-sm $spacing-md;
+    transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.985);
+      background: linear-gradient(145deg, rgba($color-bg-tint-cream, 0.88), rgba($color-bg-tint-pink, 0.84));
+      box-shadow: 0 8rpx 22rpx rgba($color-text-primary, 0.10),
+        0 2rpx 6rpx rgba($color-text-primary, 0.05);
+    }
   }
 
   &__growth-card {
@@ -539,6 +547,30 @@
     text-overflow: ellipsis;
   }
 
+  &__identity-affordance {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 4rpx;
+    margin-top: $spacing-xs;
+  }
+
+  &__identity-affordance-text {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-normal;
+    color: $color-primary-dark;
+  }
+
+  &__identity-affordance-chevron {
+    width: 10rpx;
+    height: 10rpx;
+    border-top: 2rpx solid $color-primary-dark;
+    border-right: 2rpx solid $color-primary-dark;
+    transform: rotate(45deg);
+  }
+
   &__partner-visual {
     position: absolute;
     z-index: 3;
@@ -561,6 +593,28 @@
     }
   }
 
+  // Subtle breathing loop for the Profile-tab partner avatar.
+  // Kept transform-only for GPU safety; paused under reduced-motion.
+  &__partner-breath {
+    width: 100%;
+    height: 100%;
+    transform-origin: bottom center;
+    animation: profile-avatar-breath 3.6s ease-in-out infinite both;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  @keyframes profile-avatar-breath {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+    }
+    50% {
+      transform: translateY(-6rpx) scale(1.012);
+    }
+  }
+
   // Warm plaza platform grounding the avatar so it does not float on the scene.
   &__partner-platform {
     position: absolute;
@@ -572,36 +626,6 @@
     border-radius: 50%;
     background: radial-gradient(ellipse, rgba(255, 201, 130, 0.38) 0%, rgba(255, 201, 130, 0) 74%);
     box-shadow: 0 10rpx 26rpx rgba($color-text-primary, 0.16);
-  }
-
-  // Class emblem badge pinned to the avatar's bottom-right corner (pixel
-  // mode only). Ring colour follows the user's archetype via inline style.
-  &__partner-emblem {
-    position: absolute;
-    right: 8rpx;
-    bottom: 24rpx;
-    z-index: 4;
-    width: 64rpx;
-    height: 64rpx;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba($color-surface, 0.94);
-    border: 3rpx solid rgba($color-secondary, 0.9);
-    box-shadow: 0 4rpx 12rpx rgba($color-text-primary, 0.18);
-    overflow: hidden;
-
-    // Taro H5 drops dynamic inline rpx — keep the emblem bounded everywhere.
-    > .archetype-head {
-      width: 56rpx !important;
-      height: 56rpx !important;
-    }
-
-    .archetype-head__image {
-      width: 52rpx !important;
-      height: 52rpx !important;
-    }
   }
 
   &__partner-image {

@@ -435,6 +435,7 @@ export default function ProfileReviewPage() {
       if (
         userState.nextStep === 'discover'
         && shouldShowFlow('joyjoin-intro', user?.id)
+        && user?.features?.flowIntroEnabled !== false
       ) {
         setIsCelebrating(false)
         setIntroNextStep(userState.nextStep)
@@ -512,6 +513,7 @@ export default function ProfileReviewPage() {
       <JoyJoinIntroFlow
         userId={user?.id}
         archetypeId={archetype}
+        alangEnabled={user?.features?.alangEnabled ?? false}
         onComplete={handleIntroComplete}
       />
     )

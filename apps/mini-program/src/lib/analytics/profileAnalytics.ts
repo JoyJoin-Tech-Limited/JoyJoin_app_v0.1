@@ -28,6 +28,7 @@ const ProfileAnalyticsEventSchema = z.object({
     'identity_stage_fallback_static',
     'identity_stage_shown',
     'identity_stage_asset_error',
+    'profile_personality_action_tap',
   ]),
   metadata: z.record(z.unknown()).optional(),
   timestamp: z.number(),

@@ -48,6 +48,7 @@ export interface PixelEquipmentPlacement {
 
 export interface PixelEquipmentAsset {
   url: string
+  thumb?: string
   slot: PixelAvatarEquipmentSlot
   placement: PixelEquipmentPlacement
   /** Normalized visual depth used for restrained paper-doll parallax. */
@@ -65,6 +66,7 @@ export interface PixelAvatarScenePose {
 
 interface RawEquipmentAsset {
   layer?: unknown
+  thumb?: unknown
   placement?: unknown
   depth?: unknown
 }
@@ -313,9 +315,13 @@ export function getPixelEquipmentAsset(
     const placement = registeredAsset.placements?.[safeId]
     if (!placement || typeof registeredAsset.layer !== 'string') return null
     const layerPath = normalizeManifestPath(registeredAsset.layer, '')
+    const thumbPath = typeof registeredAsset.thumb === 'string'
+      ? normalizeManifestPath(registeredAsset.thumb, '')
+      : ''
     if (!layerPath) return null
     return {
-        url: cdnAsset(`/${layerPath}`),
+      url: cdnAsset(`/${layerPath}`),
+      thumb: thumbPath ? cdnAsset(`/${thumbPath}`) : undefined,
       slot,
       placement: normalizePlacement(placement, slot),
       depth: normalizeDepth(registeredAsset.depth, slot),
@@ -328,10 +334,14 @@ export function getPixelEquipmentAsset(
   const { slot } = parsed
   const manifestAsset = RAW_MANIFEST.archetypes?.[safeId]?.starter?.[slot]
   const layerPath = normalizeManifestPath(manifestAsset?.layer, '')
+  const thumbPath = typeof manifestAsset?.thumb === 'string'
+    ? normalizeManifestPath(manifestAsset.thumb, '')
+    : ''
   if (!layerPath) return null
 
   return {
     url: cdnAsset(`/${layerPath}`),
+    thumb: thumbPath ? cdnAsset(`/${thumbPath}`) : undefined,
     slot,
     placement: normalizePlacement(manifestAsset?.placement, slot),
     depth: normalizeDepth(manifestAsset?.depth, slot),
@@ -346,10 +356,13 @@ export function getPixelEquipmentLayerUrl(
   return getPixelEquipmentAsset(assetKey, archetypeId, frameId)?.url ?? null
 }
 
-/** Starter cards reuse the same tightly cropped transparent layer; no duplicate thumbnail file. */
+/** Square garment-only thumbnail for equipment slot art (e.g. Profile tab).
+ * Falls back to the full layer URL when no dedicated thumbnail exists. */
 export function getPixelEquipmentThumbnailUrl(
   assetKey: string,
   archetypeId?: string | null,
 ): string | null {
-  return getPixelEquipmentAsset(assetKey, archetypeId)?.url ?? null
+  return getPixelEquipmentAsset(assetKey, archetypeId)?.thumb
+    ?? getPixelEquipmentAsset(assetKey, archetypeId)?.url
+    ?? null
 }

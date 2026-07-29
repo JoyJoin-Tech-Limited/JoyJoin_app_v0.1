@@ -117,6 +117,24 @@ const ALLOWED_HEX_COLORS = new Set([
   '#A8C5DD',   // steel blue accent
   '#C4B5FD',   // light violet glow
   '#9ACD32',   // yellow-green player accent
+
+  // Alang street-blind-box NPC flash stage palette (pages/alang/flash.scss)
+  '#F8F3FF',   // soft stage mist
+  '#43345F',   // deep indigo shadow
+  '#2B2340',   // dark violet ground
+  '#171422',   // near-black edge
+  '#241934',   // warm violet shade
+  '#F3B565',   // amber glow
+  '#3A235E',   // rich violet mid
+  '#231736',   // dark plum
+  '#392551',   // dusty purple
+  '#6F4F8A',   // muted lavender
+  '#8CE6B1',   // mint accent
+  '#2F2342',   // deep violet
+  '#4A375F',   // muted purple brown
+  '#45A66C',   // jade green
+  '#171525',   // black-violet
+  '#11101D',   // ink black
 ])
 
 // Regex to find hex colors in SCSS

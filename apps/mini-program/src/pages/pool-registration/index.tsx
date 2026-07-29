@@ -44,6 +44,7 @@ import IntentCard from '../../components/intent/IntentCard'
 import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
 import BlindBoxFlow from '../../components/flow-animation/BlindBoxFlow'
 import { shouldShowFlow } from '../../components/flow-animation/FlowStorage'
+import { formatEventDateTime } from '../../lib/utils/eventDisplay'
 
 import {
   ALCOHOL_COMFORT_OPTIONS,
@@ -799,7 +800,7 @@ export default function PoolRegistrationPage() {
       setResumeContext(null)
       setRegistered(true)
       discoverAnalytics.track('registration_complete', poolId)
-      if (shouldShowFlow('blind-box-lifecycle', user?.id)) {
+      if (shouldShowFlow('blind-box-lifecycle', user?.id) && user?.features?.flowLifecycleEnabled !== false) {
         setShowBlindBoxFlow(true)
       } else {
         Taro.showToast({ title: '报名成功！', icon: 'success', duration: TOAST_DEFAULT_MS })
@@ -903,6 +904,12 @@ export default function PoolRegistrationPage() {
     return (
       <BlindBoxFlow
         userId={user?.id}
+        facts={{
+          title: pool.title,
+          dateLabel: formatEventDateTime(pool.dateTime),
+          district: poolArea,
+          typeLabel: eventType,
+        }}
         onSkip={() => setShowBlindBoxFlow(false)}
         onViewActivity={handleViewRegisteredActivity}
       />

@@ -22,13 +22,19 @@ export interface FlowStepDefinition {
   accent: FlowAccent
 }
 
+export interface ExperienceDetailContent {
+  heroSubtitle: string
+  sceneTitle: string
+  closing: string
+}
+
 export interface ExperienceDefinition {
   id: 'event' | 'street'
   eyebrow: string
   title: string
-  headline: string
-  description: string
+  /** Concrete one-line mechanics summary rendered on the banner. */
+  bannerLine: string
   icon: FlowIconName
+  detail: ExperienceDetailContent
   steps: readonly FlowStepDefinition[]
-  closingCopy: string
 }

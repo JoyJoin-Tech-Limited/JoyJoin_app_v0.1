@@ -125,6 +125,12 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** When false, the profile tab renders the existing static identity card
      *  without the HD-2D multi-plane depth background. Default: true. */
     profileIdentityStageEnabled?: boolean
+    /** Per-flow kill gate for the Flow 1 dual-world intro overlay
+     *  (joyjoin-intro at profile-review). Default: true. */
+    flowIntroEnabled?: boolean
+    /** Per-flow kill gate for the Flow 2 blind-box lifecycle overlay
+     *  (blind-box-lifecycle post-registration). Default: true. */
+    flowLifecycleEnabled?: boolean
   }
 }
 

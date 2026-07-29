@@ -20,6 +20,7 @@ const execFileAsync = promisify(execFile)
 
 const WIDTH = 512
 const HEIGHT = 768
+const THUMBNAIL_SIZE = 256
 const ARCHETYPE_IDS = [
   'corgi',
   'rooster',
@@ -341,15 +342,40 @@ async function writeHashedFile(relativeDirectory, stem, buffer) {
   return `assets/profile-pixel/v2/${relativePath.replaceAll('\\', '/')}`
 }
 
+async function encodeSquareThumbnail(raw, width, height) {
+  const { data, info } = await sharp(raw, { raw: { width, height, channels: 4 } })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  const bounds = alphaBounds(data, info.width, info.height)
+  if (!bounds || bounds.count < 120) {
+    throw new Error(`Thumbnail source is visually empty (${bounds?.count ?? 0} opaque pixels)`)
+  }
+  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
+    .extract({ left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height })
+    .resize({
+      width: THUMBNAIL_SIZE,
+      height: THUMBNAIL_SIZE,
+      fit: 'contain',
+      position: 'centre',
+      kernel: sharp.kernel.nearest,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .webp({ quality: 88, alphaQuality: 100, nearLossless: true, smartSubsample: true })
+    .toBuffer()
+}
+
 async function writeCroppedLayer(relativeDirectory, raw) {
   const bounds = alphaBounds(raw, WIDTH, HEIGHT)
   if (!bounds || bounds.count < 120) throw new Error(`${relativeDirectory} is visually empty`)
-  const buffer = await sharp(raw, { raw: { width: WIDTH, height: HEIGHT, channels: 4 } })
+  const layerBuffer = await sharp(raw, { raw: { width: WIDTH, height: HEIGHT, channels: 4 } })
     .extract({ left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height })
     .webp({ quality: 88, alphaQuality: 100, nearLossless: true, smartSubsample: true })
     .toBuffer()
+  const thumbBuffer = await encodeSquareThumbnail(raw, WIDTH, HEIGHT)
   return {
-    layer: await writeHashedFile(relativeDirectory, 'layer-v2', buffer),
+    layer: await writeHashedFile(relativeDirectory, 'layer-v2', layerBuffer),
+    thumb: await writeHashedFile(relativeDirectory, 'thumb-v2', thumbBuffer),
     placement: {
       left: bounds.left,
       top: bounds.top,
@@ -552,9 +578,11 @@ async function encodeFutureEquipmentSource(sourcePath, assetKey) {
   }
   const bounds = alphaBounds(data, info.width, info.height)
   if (!bounds || bounds.count < 120) throw new Error(`${assetKey} source is visually empty`)
-  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
+  const layerBuffer = await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
     .webp({ quality: 88, alphaQuality: 100, nearLossless: true, smartSubsample: true })
     .toBuffer()
+  const thumbBuffer = await encodeSquareThumbnail(data, info.width, info.height)
+  return { layer: layerBuffer, thumb: thumbBuffer }
 }
 
 async function buildFutureEquipmentItem(rawItem, existingKeys) {
@@ -585,7 +613,8 @@ async function buildFutureEquipmentItem(rawItem, existingKeys) {
   const relativeDirectory = path.join('equipment', 'catalog', ...segments.slice(1))
   return {
     slot: rawItem.slot,
-    layer: await writeHashedFile(relativeDirectory, 'layer-v2', encoded),
+    layer: await writeHashedFile(relativeDirectory, 'layer-v2', encoded.layer),
+    thumb: await writeHashedFile(relativeDirectory, 'thumb-v2', encoded.thumb),
     depth: rawItem.depth,
     placements,
   }
@@ -594,7 +623,7 @@ async function buildFutureEquipmentItem(rawItem, existingKeys) {
 function collectGeneratedAssetPaths(manifest) {
   return [...new Set([
     ...Object.values(manifest.archetypes).flatMap((archetype) => [archetype.body, archetype.fullStarter]),
-    ...Object.values(manifest.items).map((item) => item.layer),
+    ...Object.values(manifest.items).flatMap((item) => [item.layer, item.thumb]),
   ])].sort()
 }
 
@@ -690,7 +719,7 @@ async function main() {
     bodyAssetCount: ARCHETYPE_IDS.length,
     itemAssetCount: 0,
     sourceAssetCount: 0,
-    equipmentLayersDoubleAsThumbnails: true,
+    equipmentLayersDoubleAsThumbnails: false,
     parallaxSteps: [-2, -1, 0, 1, 2],
     archetypes: {},
     items: {},

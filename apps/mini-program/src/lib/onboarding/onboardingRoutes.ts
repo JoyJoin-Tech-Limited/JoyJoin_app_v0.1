@@ -285,6 +285,10 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
     network: 'all',
     packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT],
   },
+  [MINI_PROGRAM_PAGE_PATHS.profile]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_ROOT],
+  },
 } as const
 
 export function nextStepToMiniProgramRoute(step: OnboardingStep | string | undefined): string {

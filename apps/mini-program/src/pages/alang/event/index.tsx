@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
+import { flowAnalytics, takeStreetBannerTapped } from '../../../lib/analytics/flowAnalytics'
 import {
   getFlashApiErrorCode,
   getFlashLocationPermission,
@@ -225,6 +226,14 @@ export default function FlashHomePage() {
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: '街头盲盒' })
   }, [])
+
+  // D7 tripwire: attribute disabled-gate views back to street-banner demand.
+  useEffect(() => {
+    if (enabled) return
+    if (takeStreetBannerTapped()) {
+      flowAnalytics.trackStreetGateHit('disabled')
+    }
+  }, [enabled])
 
   useEffect(() => {
     if (!enabled || gate !== 'checking') return

@@ -36,6 +36,16 @@ $flow-line-inactive:   #D8D3DF;
 $flow-shadow-brand:    0 12rpx 36rpx rgba($color-primary, 0.16);
 $flow-accent-sky:      #A8C5DD;
 
+// Flow Animation scrim worlds. Gradient tints for the world-card art so it
+// reads as one continuous scene; keep them centralized.
+$flow-scrim-warm-top:    #FFFAF7;
+$flow-scrim-warm-mid:    #FFF7F1;
+$flow-scrim-warm-glow:   #FFB49F;
+$flow-scrim-warm-shadow: #2D2742;
+$flow-scrim-cool-top:    #F8FBFF;
+$flow-scrim-cool-shadow: #252A46;
+$flow-scrim-cool-glow:   #78C8FF;
+
 // Flow Animation archetype worlds. Keep character-specific palettes centralized
 // so the component only consumes semantic tokens.
 $flow-world-corgi-bg:              #F7E8DC;

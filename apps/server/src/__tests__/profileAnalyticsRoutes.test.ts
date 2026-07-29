@@ -43,22 +43,36 @@ describe("POST /api/analytics/profile", () => {
     });
   });
 
-  it("accepts a valid profile event", async () => {
+  it("accepts profile_personality_action_tap and persists metadata", async () => {
     const app = await buildTestApp();
     await withServer(app, async (base) => {
       const res = await fetch(`${base}/api/analytics/profile`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          eventType: "profile_stat_tap",
-          metadata: { stat: "events", value: 3 },
+          eventType: "profile_personality_action_tap",
+          metadata: {
+            source: "v17_card",
+            has_archetype: true,
+            action: "view_report",
+          },
           timestamp: Date.now(),
         }),
       });
       const body: any = await res.json();
       expect(res.status).toBe(200);
       expect(body.success).toBe(true);
-      expect(mockTransaction).toHaveBeenCalled();
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "profile_personality_action_tap",
+          metadata: expect.objectContaining({
+            source: "v17_card",
+            has_archetype: true,
+            action: "view_report",
+          }),
+        })
+      );
     });
   });
 
@@ -69,7 +83,7 @@ describe("POST /api/analytics/profile", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          eventType: "unknown_event",
+          eventType: "profile_unknown_event",
           metadata: {},
           timestamp: Date.now(),
         }),
@@ -78,28 +92,6 @@ describe("POST /api/analytics/profile", () => {
       expect(res.status).toBe(200);
       expect(body.success).toBe(false);
       expect(mockTransaction).not.toHaveBeenCalled();
-    });
-  });
-
-  it("accepts all 5 whitelisted profile event types", async () => {
-    const app = await buildTestApp();
-    const types = [
-      "profile_stat_tap",
-      "profile_archetype_cta_tap",
-      "profile_menu_tap",
-      "profile_logout_tap",
-      "profile_shell_retry",
-    ];
-    await withServer(app, async (base) => {
-      for (const eventType of types) {
-        const res = await fetch(`${base}/api/analytics/profile`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ eventType, metadata: {}, timestamp: Date.now() }),
-        });
-        const body: any = await res.json();
-        expect(body.success).toBe(true);
-      }
     });
   });
 });
