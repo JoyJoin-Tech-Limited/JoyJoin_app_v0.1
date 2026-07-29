@@ -32,7 +32,7 @@ import {
   userCoupons,
   matchHistory,
 } from "@shared/schema";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, isNull, sql } from "drizzle-orm";
 import { logger } from "./lib/logger";
 import { calculateAge } from "@shared/utils";
 import { getFeatureFlag } from "./lib/featureFlags";
@@ -1985,6 +1985,11 @@ export async function saveMatchResults(
         .where(eq(eventPools.id, poolId));
 
       // 5. 标记未匹配用户
+      // Only mark the truly stranded: registrations still pending AND not
+      // assigned to any group in step 2. With the operator-review gate enabled,
+      // step 2 leaves matched members at 'pending' too — without the
+      // assignedGroupId-IS-NULL guard this step would flip them to 'unmatched',
+      // wiping the group out of the 足迹 list and breaking confirm-attendance.
       await tx.update(eventPoolRegistrations)
         .set({
           matchStatus: "unmatched",
@@ -1993,7 +1998,8 @@ export async function saveMatchResults(
         .where(
           and(
             eq(eventPoolRegistrations.poolId, poolId),
-            eq(eventPoolRegistrations.matchStatus, "pending")
+            eq(eventPoolRegistrations.matchStatus, "pending"),
+            isNull(eventPoolRegistrations.assignedGroupId)
           )
         );
     });
