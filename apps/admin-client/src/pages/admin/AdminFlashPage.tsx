@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FlashScheduleTab } from "@/components/admin/flash/FlashScheduleTab";
+import { FlashEquipmentRewardsPanel } from "@/components/admin/flash/FlashEquipmentRewardsPanel";
 import {
   FlashLocationsPanel,
   FlashNpcPanel,
@@ -54,7 +55,10 @@ export default function AdminFlashPage() {
 
   const refreshAll = () =>
     queryClient.invalidateQueries({
-      predicate: (query) => String(query.queryKey[0] ?? "").startsWith("/api/admin/alang"),
+      predicate: (query) => {
+        const key = String(query.queryKey[0] ?? "");
+        return key.startsWith("/api/admin/alang") || key.startsWith("/api/admin/equipment");
+      },
     });
 
   const summaryCards = [
@@ -174,12 +178,13 @@ export default function AdminFlashPage() {
 
       <Tabs defaultValue="schedules" className="space-y-4">
         <div className="pb-1">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-3 xl:grid-cols-5">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-3 xl:grid-cols-6">
             <TabsTrigger value="schedules" data-testid="tab-flash-schedules">今日 / 次日排班</TabsTrigger>
             <TabsTrigger value="npcs" data-testid="tab-flash-npcs">NPC</TabsTrigger>
             <TabsTrigger value="encounter-locations" data-testid="tab-flash-locations">街头盲盒地点</TabsTrigger>
             <TabsTrigger value="task-destinations" data-testid="tab-flash-destinations">任务目的地</TabsTrigger>
             <TabsTrigger value="task-templates" data-testid="tab-flash-tasks">任务库</TabsTrigger>
+            <TabsTrigger value="equipment-rewards" data-testid="tab-flash-equipment-rewards">装备 / 奖励</TabsTrigger>
           </TabsList>
         </div>
 
@@ -201,6 +206,9 @@ export default function AdminFlashPage() {
         </TabsContent>
         <TabsContent value="task-templates" className="mt-0">
           <FlashTaskTemplatesPanel canWrite={canWrite} npcs={npcs} destinations={destinations} />
+        </TabsContent>
+        <TabsContent value="equipment-rewards" className="mt-0">
+          <FlashEquipmentRewardsPanel canWrite={canWrite} />
         </TabsContent>
       </Tabs>
     </div>

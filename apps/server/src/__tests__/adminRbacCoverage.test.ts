@@ -50,6 +50,7 @@ const ADMIN_ROUTE_FILES = [
   'apps/server/src/routes.ts',
   'apps/server/src/routes/domains/admin.ts',
   'apps/server/src/routes/domains/adminAlang.ts',
+  'apps/server/src/routes/domains/adminEquipment.ts',
   'apps/server/src/routes/domains/adminBilling.ts',
   'apps/server/src/routes/domains/adminEventManagement.ts',
   'apps/server/src/routes/domains/adminEventPools.ts',
