@@ -16,6 +16,8 @@ import {
   venues,
   venueTimeSlots,
   venueTimeSlotBookings,
+  poolAICopy,
+  poolMatchingLogs,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { logger } from "../lib/logger";
@@ -291,6 +293,76 @@ interface BotUser {
   archetype: string;
 }
 
+/**
+ * Give the tester a complete, bot-comparable profile so it can clear the
+ * matching quality gate (`minPairScore`) alongside the full-profile bots.
+ * Test-mode only. Fills only NULL fields (idempotent, never clobbers real
+ * data the tester may have set) and seeds a `user_interests` row.
+ */
+async function seedTesterCompleteProfile(testerUserId: string, botIndex: number): Promise<void> {
+  const industry = INDUSTRY_TIERS[botIndex % INDUSTRY_TIERS.length];
+  const [tester] = await db
+    .select({
+      birthdate: users.birthdate,
+      educationLevel: users.educationLevel,
+      lifeStage: users.lifeStage,
+      workMode: users.workMode,
+      industryCategory: users.industryCategory,
+      vibeVector: users.vibeVector,
+      intent: users.intent,
+      ageMatchPreference: users.ageMatchPreference,
+      tableVibePreference: users.tableVibePreference,
+      currentCity: users.currentCity,
+    })
+    .from(users)
+    .where(eq(users.id, testerUserId))
+    .limit(1);
+  if (!tester) return;
+
+  const updates: Record<string, unknown> = {};
+  if (!tester.birthdate) updates.birthdate = generateBirthdate();
+  if (!tester.educationLevel) updates.educationLevel = pick(EDUCATION_LEVELS);
+  if (!tester.lifeStage) updates.lifeStage = pick(LIFE_STAGES);
+  if (!tester.workMode) updates.workMode = pick(WORK_MODES);
+  if (!tester.intent) updates.intent = [pick(EVENT_INTENTS), pick(EVENT_INTENTS)];
+  if (!tester.ageMatchPreference) updates.ageMatchPreference = "相近";
+  if (!tester.tableVibePreference) updates.tableVibePreference = "轻松聊天";
+  if (!tester.currentCity) updates.currentCity = pick(CITIES);
+  if (!tester.industryCategory) {
+    updates.industryCategory = industry.category;
+    updates.industryCategoryLabel = industry.categoryLabel;
+    updates.industrySegmentNew = industry.segment;
+    updates.industrySegmentLabel = industry.segmentLabel;
+    updates.industryNiche = industry.niche;
+    updates.industryNicheLabel = industry.nicheLabel;
+    updates.industryRawInput = industry.nicheLabel;
+    updates.industrySource = "seed";
+    updates.industryConfidence = "0.95";
+  }
+  if (!tester.vibeVector) {
+    updates.vibeVector = {
+      energy: 50 + (botIndex % 40),
+      depth: 40 + (botIndex % 50),
+      play: 30 + (botIndex % 60),
+      structure: 20 + (botIndex % 70),
+    };
+  }
+  if (Object.keys(updates).length > 0) {
+    await db.update(users).set(updates).where(eq(users.id, testerUserId));
+  }
+
+  const interests = buildBotInterests(botIndex);
+  await db.delete(userInterests).where(eq(userInterests.userId, testerUserId));
+  await db.insert(userInterests).values({
+    userId: testerUserId,
+    totalHeat: interests.totalHeat,
+    totalSelections: interests.totalSelections,
+    categoryHeat: interests.categoryHeat,
+    selections: interests.selections,
+    topPriorities: interests.topPriorities,
+  });
+}
+
 export async function seedMatchingTestBots(
   poolId: string,
   testerUserId: string
@@ -445,12 +517,17 @@ export async function seedMatchingTestBots(
 
   // Register the tester as the final seat so the pool reaches minGroupSize and
   // `match` can run end-to-end without depending on wechatOpenId / mock payment
-  // / async fulfillment. Mirrors the bot registration payload.
+  // / async fulfillment. Mirrors the bot registration payload. Reset any prior
+  // tester registration first (a previous 0-group match marks candidates
+  // "unmatched"; without the reset the tester is stuck out of the candidate set).
   const [testerPool] = await db
     .select({ district: eventPools.district })
     .from(eventPools)
     .where(eq(eventPools.id, poolId))
     .limit(1);
+  await db
+    .delete(eventPoolRegistrations)
+    .where(and(eq(eventPoolRegistrations.poolId, poolId), eq(eventPoolRegistrations.userId, testerUserId)));
   await db
     .insert(eventPoolRegistrations)
     .values({
@@ -468,8 +545,11 @@ export async function seedMatchingTestBots(
       acceptPairs: true,
       kolComfortLevel: "comfortable",
       matchStatus: "pending",
-    })
-    .onConflictDoNothing();
+    });
+
+  // Ensure the tester has a complete, bot-comparable profile so the matching
+  // engine can score it above minPairScore and form a group.
+  await seedTesterCompleteProfile(testerUserId, botUsers.length);
 
   logger.info("[MatchingTest] bots seeded", { poolId, botCount: botUsers.length, testerUserId });
   return { botUsers };
@@ -703,6 +783,12 @@ export async function cleanupMatchingTestData(): Promise<{
         .where(inArray(eventPoolGroups.poolId, poolIds))
         .returning({ id: eventPoolGroups.id });
       result.deletedGroups = deletedGroups.length;
+
+      // Step 5.5: Delete pool-scoped child tables that FK-reference the pool
+      // (pool_ai_copy / pool_matching_logs), otherwise pool deletion violates
+      // the pool_ai_copy_pool_id_event_pools_id_fk constraint.
+      await tx.delete(poolAICopy).where(inArray(poolAICopy.poolId, poolIds));
+      await tx.delete(poolMatchingLogs).where(inArray(poolMatchingLogs.poolId, poolIds));
 
       // Step 6: Delete pools
       const deletedPools = await tx
