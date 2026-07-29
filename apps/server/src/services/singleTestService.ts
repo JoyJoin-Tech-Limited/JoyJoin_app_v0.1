@@ -1,4 +1,4 @@
-import { and, eq, inArray, like, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, like, or, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 import { db } from "../db";
@@ -356,14 +356,19 @@ export async function ensureVirtualUsers(): Promise<void> {
 }
 
 export async function ensureSingleTestPool(createdBy: string): Promise<string> {
+  // Deterministic canonical test pool: only manage pools already flagged as
+  // test pools, and always pick the oldest one. Without the isTestPool filter
+  // + ordering, same-title pools are adopted arbitrarily and the un-picked
+  // pools' registrations/groups/derived events leak across runs (the 足迹
+  // duplicate-cards bug).
   const [existing] = await db
     .select({ id: eventPools.id })
     .from(eventPools)
-    .where(eq(eventPools.title, SINGLE_TEST_POOL_TITLE))
+    .where(and(eq(eventPools.title, SINGLE_TEST_POOL_TITLE), eq(eventPools.isTestPool, true)))
+    .orderBy(asc(eventPools.createdAt))
     .limit(1);
 
   if (existing) {
-    await db.update(eventPools).set({ isTestPool: true }).where(eq(eventPools.id, existing.id));
     return existing.id;
   }
 
@@ -729,6 +734,12 @@ async function cleanupSingleTestPoolRows(
   deletedSocialSessions: number;
 }> {
   const conn = tx ?? db;
+  const [poolTitleRow] = await conn
+    .select({ title: eventPools.title })
+    .from(eventPools)
+    .where(eq(eventPools.id, poolId))
+    .limit(1);
+  const poolTitle = poolTitleRow?.title ?? "";
   const registrationRows = await conn
     .select({ id: eventPoolRegistrations.id })
     .from(eventPoolRegistrations)
@@ -861,6 +872,26 @@ async function cleanupSingleTestPoolRows(
       .delete(eventAttendance)
       .where(inArray(eventAttendance.blindBoxEventId, staleBlindBoxEventIds));
     await conn.delete(blindBoxEvents).where(inArray(blindBoxEvents.id, staleBlindBoxEventIds));
+  }
+
+  // Safety net: legacy `events` rows derived from this pool's matches
+  // (`<pool.title> - 第N组`) have no poolId column and leak when a run is
+  // interrupted before the group back-link is written. Sweep them by title so
+  // the 足迹 list never shows a stale `<pool> - 第N组` duplicate. Rows already
+  // removed via the group back-link are excluded to avoid touching the FK
+  // window twice.
+  if (poolTitle) {
+    const orphanEventRows = await conn
+      .select({ id: events.id })
+      .from(events)
+      .where(like(events.title, `${poolTitle} - 第%组`));
+    const orphanEventIds = orphanEventRows
+      .map((row: IdRow) => row.id)
+      .filter((id: string) => !linkedEventIds.includes(id));
+    if (orphanEventIds.length > 0) {
+      await conn.delete(eventAttendance).where(inArray(eventAttendance.eventId, orphanEventIds));
+      await conn.delete(events).where(inArray(events.id, orphanEventIds));
+    }
   }
 
   await conn.delete(poolAICopy).where(eq(poolAICopy.poolId, poolId));

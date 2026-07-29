@@ -1,4 +1,4 @@
-import { and, eq, inArray, like, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { db } from "../db";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
@@ -242,6 +242,7 @@ export async function ensureMatchingTestPool(testerUserId: string): Promise<stri
     })
     .from(eventPools)
     .where(and(eq(eventPools.title, MATCHING_TEST_POOL_TITLE), eq(eventPools.isTestPool, true)))
+    .orderBy(asc(eventPools.createdAt))
     .limit(1);
 
   if (existing) {
@@ -292,7 +293,7 @@ interface BotUser {
 
 export async function seedMatchingTestBots(
   poolId: string,
-  _testerUserId: string
+  testerUserId: string
 ): Promise<{ botUsers: BotUser[] }> {
   assertMatchingTestMode();
 
@@ -442,7 +443,35 @@ export async function seedMatchingTestBots(
     });
   }
 
-  logger.info("[MatchingTest] bots seeded", { poolId, botCount: botUsers.length });
+  // Register the tester as the final seat so the pool reaches minGroupSize and
+  // `match` can run end-to-end without depending on wechatOpenId / mock payment
+  // / async fulfillment. Mirrors the bot registration payload.
+  const [testerPool] = await db
+    .select({ district: eventPools.district })
+    .from(eventPools)
+    .where(eq(eventPools.id, poolId))
+    .limit(1);
+  await db
+    .insert(eventPoolRegistrations)
+    .values({
+      poolId,
+      userId: testerUserId,
+      budgetRange: [pick(BUDGET_RANGES)],
+      preferredLanguages: [pick(LANGUAGES), pick(LANGUAGES)],
+      eventIntent: [pick(EVENT_INTENTS)],
+      cuisinePreferences: [pick(CUISINE_PREFS), pick(CUISINE_PREFS)],
+      dietaryRestrictions: [],
+      tasteIntensity: ["不辣/清淡为主"],
+      preferenceStrictness: 50,
+      preferredDistricts: [testerPool?.district ?? pick(DISTRICTS["深圳"])],
+      genderCompositionPreference: "balanced",
+      acceptPairs: true,
+      kolComfortLevel: "comfortable",
+      matchStatus: "pending",
+    })
+    .onConflictDoNothing();
+
+  logger.info("[MatchingTest] bots seeded", { poolId, botCount: botUsers.length, testerUserId });
   return { botUsers };
 }
 

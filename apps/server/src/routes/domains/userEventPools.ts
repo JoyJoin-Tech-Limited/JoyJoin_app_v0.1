@@ -1,6 +1,6 @@
 import type { Express, Request } from "express";
 import { db } from "../../db";
-import { eq, and, desc, inArray, gt, sql } from "drizzle-orm";
+import { eq, and, desc, inArray, gt, sql, or, isNull } from "drizzle-orm";
 import {
   eventPools,
   eventPoolRegistrations,
@@ -143,6 +143,10 @@ export function registerUserEventPoolRoutes(app: Express): void {
       const whereClauses = [
         eq(eventPools.status, "active"),
         gt(eventPools.registrationDeadline, now),
+        // Test pools (single-test / matching-test) are internal tooling and must
+        // never surface in the public Discover feed. is_test_pool is nullable
+        // (default false), so keep both false and NULL rows and exclude only true.
+        or(eq(eventPools.isTestPool, false), isNull(eventPools.isTestPool)),
       ];
 
       if (city) {

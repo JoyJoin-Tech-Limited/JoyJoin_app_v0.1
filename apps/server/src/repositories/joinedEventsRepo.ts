@@ -11,7 +11,7 @@
  *   - Pool registrations are also "joined events" and must be included.
  */
 
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { events, eventAttendance, eventPools, eventPoolRegistrations, eventPoolGroups } from "@shared/schema";
 import type { JoinedEventSummary } from "@shared/api";
@@ -87,6 +87,10 @@ export function deriveLegacyDisplayStatus(
  */
 export async function getUserJoinedEventsSummary(userId: string): Promise<JoinedEventSummary[]> {
   // 1. Legacy events via eventAttendance (1 round-trip)
+  //    Exclude events that were derived from a pool match (`<pool> - 第N组`).
+  //    Those are a second, unservable representation of the same matched pool —
+  //    the pool branch below already covers them with a working event-detail id,
+  //    and the legacy `events.id` has no serving detail endpoint.
   const legacyRows = await db
     .select({
       id: events.id,
@@ -100,7 +104,8 @@ export async function getUserJoinedEventsSummary(userId: string): Promise<Joined
     })
     .from(eventAttendance)
     .innerJoin(events, eq(eventAttendance.eventId, events.id))
-    .where(eq(eventAttendance.userId, userId))
+    .leftJoin(eventPoolGroups, eq(eventPoolGroups.eventId, events.id))
+    .where(and(eq(eventAttendance.userId, userId), isNull(eventPoolGroups.id)))
     .orderBy(desc(events.dateTime));
 
   // 2. Pool events via eventPoolRegistrations (1 round-trip)
