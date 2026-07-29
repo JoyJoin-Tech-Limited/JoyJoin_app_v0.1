@@ -162,6 +162,39 @@ describe("formal Flash routes", () => {
     expect(mocks.getHome).not.toHaveBeenCalled();
   });
 
+  it("allows Shenzhen-external GPS when the admin restriction is off in staging", async () => {
+    vi.stubEnv("APP_MODE", "staging");
+    mocks.getFeatureFlag.mockImplementation(async (key: string) =>
+      key === "alangEnabled" ? true : key !== "flashShenzhenLocationGateEnabled"
+    );
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl);
+      const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
+        method: "POST",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify({ latitude: 31.2304, longitude: 121.4737, coordinateSystem: "gcj02" }),
+      });
+      expect(response.status).toBe(200);
+    });
+    expect(mocks.getHome).toHaveBeenCalled();
+    expect(mocks.reverseGeocode).not.toHaveBeenCalled();
+  });
+
+  it("keeps the Shenzhen restriction locked in production even when the admin flag is off", async () => {
+    vi.stubEnv("APP_MODE", "production");
+    mocks.getFeatureFlag.mockImplementation(async (key: string) => key === "alangEnabled");
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl);
+      const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
+        method: "POST",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify({ latitude: 31.2304, longitude: 121.4737, coordinateSystem: "gcj02" }),
+      });
+      expect(response.status).toBe(403);
+    });
+    expect(mocks.getHome).not.toHaveBeenCalled();
+  });
+
   it("rejects Hong Kong New Territories points that fall inside the old rectangle", async () => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl);
