@@ -23,7 +23,7 @@ interface FeatureFlagItem {
   updatedBy: string | null;
 }
 
-const DANGEROUS_FLAGS = ["onboardingForceSkip", "socialIcebreakerClientForceEnd"];
+const DANGEROUS_FLAGS = ["onboardingForceSkip", "socialIcebreakerClientForceEnd", "flashShenzhenLocationGateEnabled"];
 
 export default function AdminFeatureFlagsPage() {
   const { toast } = useToast();
@@ -87,8 +87,11 @@ export default function AdminFeatureFlagsPage() {
 
     const nextValue = !displayValue(flag);
 
-    // Dangerous flags need confirmation when enabling
-    if (DANGEROUS_FLAGS.includes(key) && nextValue === true) {
+    // The Flash location restriction is dangerous when disabling; other dangerous flags confirm on enable.
+    const needsConfirmation = key === "flashShenzhenLocationGateEnabled"
+      ? nextValue === false
+      : DANGEROUS_FLAGS.includes(key) && nextValue === true;
+    if (needsConfirmation) {
       setPendingToggle(key);
       return;
     }
@@ -123,6 +126,7 @@ export default function AdminFeatureFlagsPage() {
     onboardingForceSkip: "Onboarding 强制跳过（测试专用）",
     matchingLiveReveal: "匹配结果实时揭晓",
     socialIcebreakerClientForceEnd: "破冰会话客户端强制结束",
+    flashShenzhenLocationGateEnabled: "闪现深圳定位限制",
   };
 
   const flagDescriptions: Record<string, string> = {
@@ -131,9 +135,11 @@ export default function AdminFeatureFlagsPage() {
     onboardingForceSkip: "⚠️ 危险：开启后所有用户都会在 onboarding 页面看到「跳过」按钮",
     matchingLiveReveal: "开启后，用户在匹配状态页可实时看到桌友揭晓动画",
     socialIcebreakerClientForceEnd: "⚠️ 危险：开启后主持人可在客户端强制结束破冰会话",
+    flashShenzhenLocationGateEnabled: "开启时仅允许深圳 GPS；关闭后非生产环境可在深圳外测试。生产环境始终锁定。",
   };
 
   const pendingFlag = pendingToggle ? flags.find((f) => f.key === pendingToggle) : null;
+  const pendingDisablesLocationGate = pendingToggle === "flashShenzhenLocationGateEnabled";
 
   return (
     <div className="space-y-6">
@@ -235,7 +241,7 @@ export default function AdminFeatureFlagsPage() {
       <Dialog open={!!pendingToggle} onOpenChange={(open) => !open && setPendingToggle(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>确认开启危险开关</DialogTitle>
+            <DialogTitle>{pendingDisablesLocationGate ? "确认关闭定位限制" : "确认开启危险开关"}</DialogTitle>
             <DialogDescription>
               {pendingFlag
                 ? `你即将开启「${flagLabels[pendingFlag.key] ?? pendingFlag.key}」。${flagDescriptions[pendingFlag.key] ?? ""}`
@@ -247,7 +253,7 @@ export default function AdminFeatureFlagsPage() {
               取消
             </Button>
             <Button variant="destructive" onClick={confirmDangerousToggle}>
-              确认开启
+              {pendingDisablesLocationGate ? "确认关闭限制" : "确认开启"}
             </Button>
           </DialogFooter>
         </DialogContent>
