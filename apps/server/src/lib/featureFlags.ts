@@ -105,6 +105,8 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    * prototype and all formal Flash routes. Env fallback: ALANG_ENABLED
    * (default: false). */
   alangEnabled: "ALANG_ENABLED",
+  /** Shenzhen GPS restriction for formal Flash. Production remains locked. */
+  flashShenzhenLocationGateEnabled: "FLASH_SHENZHEN_LOCATION_GATE_ENABLED",
   /** Squad-unboxing pocket-deck collapse kill-switch. When false, the
    *  mini-program hides the "收起卡组" trigger and collapseDeck() is a no-op,
    *  so the deck stays in the fan phase. Users who previously collapsed stay
@@ -131,6 +133,7 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   equipmentRewardsEnabled: false,
   personalStoryEnabled: false,
   profileIdentityStageEnabled: true,
+  flashShenzhenLocationGateEnabled: true,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();
