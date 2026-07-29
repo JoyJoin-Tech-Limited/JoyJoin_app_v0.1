@@ -105,15 +105,19 @@ function generateBirthdate(minAge = 22, maxAge = 35): string {
 }
 
 function buildBotInterests(botIndex: number) {
-  const shuffled = shuffle(INTEREST_TAXONOMY.filter((i) => i.active));
-  const selections = shuffled.slice(0, 4 + (botIndex % 3)).map((interest, idx) => ({
+  // Shared deterministic core so every bot (and the tester) overlaps strongly
+  // and pair scores clear the minPairScore gate — fully random picks made
+  // jaccard ≈ 0 and the group could never form in matching-test. Heat/level
+  // still vary by botIndex for some diversity.
+  const core = INTEREST_TAXONOMY.filter((i) => i.active).slice(0, 6);
+  const selections = core.map((interest, idx) => ({
     topicId: interest.id,
     emoji: interest.riasec,
     label: interest.label,
     fullName: interest.label,
     category: interest.macroCategory,
     categoryId: interest.macroCategory,
-    level: idx < 2 ? 3 : idx < 3 ? 2 : 1,
+    level: idx < 2 ? 3 : idx < 4 ? 2 : 1,
     heat: idx < 2 ? 80 + (botIndex % 15) : 40 + (botIndex % 25),
   }));
 
