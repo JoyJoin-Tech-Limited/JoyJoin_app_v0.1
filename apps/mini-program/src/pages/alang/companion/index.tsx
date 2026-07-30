@@ -10,7 +10,7 @@ import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useAbandonFlashAssignment, useArriveAtFlashAssignment, useFlashAssignment, useRetryFlashAssignment } from '../../../lib/alang/useFlash'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
-import { COLOR_DANGER } from '../../../lib/utils/uiConstants'
+import { COLOR_DANGER, COLOR_PRIMARY } from '../../../lib/utils/uiConstants'
 import '../flash.scss'
 
 type ArrivalState = 'idle' | 'locating' | 'outside' | 'denied' | 'error'
@@ -122,7 +122,7 @@ export default function FlashTaskPage() {
       content: '会清除本轮到达和反馈进度，但保留同一个任务，方便重新验证完整链路。',
       confirmText: '从头复测',
       cancelText: '继续当前进度',
-      confirmColor: '#8B5CF6',
+      confirmColor: COLOR_PRIMARY,
     })
     if (!modal.confirm) return
     try {

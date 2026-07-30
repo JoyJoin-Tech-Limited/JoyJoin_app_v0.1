@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ScrollView, Text, Textarea, View } from '@tarojs/components'
 import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
+import { COLOR_PRIMARY } from '../../../lib/utils/uiConstants'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
@@ -74,7 +75,7 @@ export default function FlashFeedbackPage() {
       content: '会清除本轮到达和反馈进度，并回到任务起点。',
       confirmText: '从头复测',
       cancelText: '继续当前进度',
-      confirmColor: '#8B5CF6',
+      confirmColor: COLOR_PRIMARY,
     })
     if (!modal.confirm) return
     try {
