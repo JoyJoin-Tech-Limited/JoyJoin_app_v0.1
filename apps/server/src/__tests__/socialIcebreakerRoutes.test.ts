@@ -198,6 +198,29 @@ vi.mock('../socialIcebreakerAIService', () => ({
       },
     };
   }),
+  generatePersonalityDiceChallengeGroups: vi.fn().mockImplementation(async ({ participants }: { participants: Array<{ userId: string; displayName: string }> }) => ({
+    data: participants.map((participant) => ({
+      userId: participant.userId,
+      displayName: participant.displayName,
+      dominantTrait: 'A' as const,
+      options: (['easy', 'medium', 'hard'] as const).map((difficulty, optionIndex) => ({
+        userId: participant.userId,
+        displayName: participant.displayName,
+        dominantTrait: 'A' as const,
+        challengeTitle: `${participant.userId}-${optionIndex}`,
+        challengeBody: 'do thing',
+        challengeEmoji: '🎲',
+        difficulty,
+      })),
+    })),
+    meta: {
+      generatedAt: '2026-04-02T00:00:00.000Z',
+      fromCache: false,
+      provider: 'deepseek',
+      fallbackUsed: false,
+      promptVersion: 'social-personality-dice-v4',
+    },
+  })),
   generateAuctionLots: vi.fn().mockResolvedValue({
     data: [
       { id: 'lot_1', title: 'Test lot one', teaser: 'fun' },
@@ -1701,6 +1724,87 @@ describe.sequential('social icebreaker routes', () => {
         expect(completeBody.diceCompletedBy).toContain('pd-compat-guest');
         expect(completeBody.operationId).toBeNull();
       });
+    });
+
+    it('keeps choices editable until ready and returns one shared reveal order when everyone is ready', async () => {
+      const previousChooseMode = process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED;
+      process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED = 'true';
+      try {
+        await withServer(async (baseUrl) => {
+          const hostCookie = await login(baseUrl, 'pd-ready-host');
+          const guestCookie = await login(baseUrl, 'pd-ready-guest');
+          const socialSessionId = await advanceToPersonalityDice(baseUrl, hostCookie, guestCookie);
+          const participants = [
+            { userId: 'pd-ready-host', displayName: 'Host' },
+            { userId: 'pd-ready-guest', displayName: 'Guest' },
+          ];
+
+          const generateResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/personality-dice/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({ participants }),
+          });
+          expect(generateResponse.status).toBe(200);
+
+          const impersonationResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/personality-dice/choose`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+            body: JSON.stringify({ userId: 'pd-ready-host', optionIndex: 1 }),
+          });
+          expect(impersonationResponse.status).toBe(403);
+
+          for (const optionIndex of [0, 2]) {
+            const chooseResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/personality-dice/choose`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+              body: JSON.stringify({ userId: 'pd-ready-host', optionIndex }),
+            });
+            expect(chooseResponse.status).toBe(200);
+            expect((await chooseResponse.json() as any).diceCompletedBy).not.toContain('pd-ready-host');
+          }
+
+          for (const [cookie, userId, optionIndex] of [
+            [guestCookie, 'pd-ready-guest', 1],
+          ] as const) {
+            const chooseResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/personality-dice/choose`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', cookie },
+              body: JSON.stringify({ userId, optionIndex }),
+            });
+            expect(chooseResponse.status).toBe(200);
+          }
+
+          const hostReadyResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({ ready: true }),
+          });
+          expect((await hostReadyResponse.json() as any).allCompleted).toBe(false);
+
+          const hostCancelResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({ ready: false }),
+          });
+          expect((await hostCancelResponse.json() as any).diceCompletedBy).not.toContain('pd-ready-host');
+
+          await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({ ready: true }),
+          });
+          const guestReadyResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/personality-dice/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: guestCookie },
+            body: JSON.stringify({ ready: true }),
+          });
+          const guestReadyBody = await guestReadyResponse.json() as any;
+          expect(guestReadyBody.allCompleted).toBe(true);
+          expect(new Set(guestReadyBody.diceRevealOrder)).toEqual(new Set(participants.map((participant) => participant.userId)));
+        });
+      } finally {
+        process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED = previousChooseMode;
+      }
     });
   });
 

@@ -1035,6 +1035,10 @@ export default function IcebreakerSessionPage() {
     void performSocialAction('dice-complete', '/personality-dice/complete', { pass: pass === true })
   }, [performSocialAction])
 
+  const handleDiceReady = useCallback((ready: boolean) => {
+    void performSocialAction('dice-ready', '/personality-dice/complete', { ready })
+  }, [performSocialAction])
+
   const handleChooseDiceOption = useCallback((optionIndex: number) => {
     socialIcebreakerAnalytics.track(
       'dice_option_chosen',
@@ -1619,7 +1623,14 @@ export default function IcebreakerSessionPage() {
           <PersonalityDiceHeroView
             participants={participants}
             challenges={session.personalityDiceChallenges ?? []}
-            currentPlayerIndex={session.currentDicePlayerIndex ?? 0}
+            currentPlayerIndex={
+              resolvePersonalityDiceChooseMode(
+                session.personalityDiceChooseModeEnabled,
+                features?.personalityDiceChooseMode,
+              )
+                ? Math.max(0, participants.findIndex((participant) => participant.userId === currentUserId))
+                : (session.currentDicePlayerIndex ?? 0)
+            }
             completedBy={session.diceCompletedBy ?? []}
             passedBy={session.dicePassedBy ?? []}
             currentUserId={currentUserId}
@@ -1635,7 +1646,10 @@ export default function IcebreakerSessionPage() {
             challengeGroups={session.personalityDiceChallengeGroups ?? []}
             selectedOption={session.diceSelectedOption ?? {}}
             onChoose={handleChooseDiceOption}
+            onReady={handleDiceReady}
             isChoosing={pendingAction === 'dice-choose'}
+            isReadying={pendingAction === 'dice-ready'}
+            revealOrder={session.diceRevealOrder ?? []}
             challengesMeta={session.personalityDiceChallengesMeta}
             onAdvance={handleAdvancePhase}
           />

@@ -119,6 +119,34 @@ $pd-deep: $phase-accent-dice-deep;
     gap: $spacing-sm;
   }
 
+  &__reveal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $spacing-sm;
+  }
+
+  &__reveal-card {
+    min-width: 0;
+    padding: $spacing-sm;
+  }
+
+  &__reveal-identity {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__reveal-name {
+    @include type-body-emphasis;
+    color: $color-text-primary;
+  }
+
+  &__reveal-id {
+    @include type-caption;
+    color: $color-text-secondary;
+    overflow-wrap: anywhere;
+  }
+
   &__choose-card {
     position: relative;
     display: flex;

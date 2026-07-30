@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildGroupMirrorAnswerRows,
+  canChoosePersonalityDiceOption,
   getGenerationRetryDelayMs,
   resolveAuctionRoleControls,
   resolvePersonalityDiceChooseMode,
@@ -11,6 +12,13 @@ describe('phase progression models', () => {
     expect(resolvePersonalityDiceChooseMode(true, false)).toBe(true)
     expect(resolvePersonalityDiceChooseMode(false, true)).toBe(false)
     expect(resolvePersonalityDiceChooseMode(undefined, true)).toBe(true)
+  })
+
+  it('allows personality-dice reselection until ready, but not while locked or pending', () => {
+    expect(canChoosePersonalityDiceOption(false, false, 0, 2)).toBe(true)
+    expect(canChoosePersonalityDiceOption(true, false, 0, 2)).toBe(false)
+    expect(canChoosePersonalityDiceOption(false, true, 0, 2)).toBe(false)
+    expect(canChoosePersonalityDiceOption(false, false, 2, 2)).toBe(false)
   })
 
   it('retries accepted background generation responses using a bounded delay', () => {

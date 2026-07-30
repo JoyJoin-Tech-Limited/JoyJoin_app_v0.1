@@ -18,6 +18,15 @@ export function resolvePersonalityDiceChooseMode(
   return sessionMode ?? legacyAuthFeature ?? true
 }
 
+export function canChoosePersonalityDiceOption(
+  readOnly: boolean,
+  isChoosing: boolean,
+  selectedOptionIndex: number | undefined,
+  targetOptionIndex: number,
+): boolean {
+  return !readOnly && !isChoosing && selectedOptionIndex !== targetOptionIndex
+}
+
 export type AuctionPreviewRole = 'host' | 'guest'
 
 export function resolveAuctionRoleControls(input: {
