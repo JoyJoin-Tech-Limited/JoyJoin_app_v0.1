@@ -1,4 +1,4 @@
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { db } from "../db";
 import { eventPoolRegistrations, users, eventPools } from "@shared/schema";
 import type { PoolPersonaSnapshotResponse, PoolPersonaStateBand } from "@shared/api";
@@ -15,6 +15,8 @@ const THRESHOLDS = {
   demographicClusterMin: 3,
   fullSheetTotal: 16,
 } as const;
+
+export const ACTIVE_PERSONA_REGISTRATION_STATUSES = ["pending", "matched"];
 
 function calculateAge(birthdate: Date | string | null | undefined): number | null {
   if (!birthdate) return null;
@@ -152,7 +154,7 @@ export async function buildPoolPersonaSnapshot(
     .where(
       and(
         eq(eventPoolRegistrations.poolId, poolId),
-        eq(eventPoolRegistrations.matchStatus, "pending")
+        inArray(eventPoolRegistrations.matchStatus, ACTIVE_PERSONA_REGISTRATION_STATUSES)
       )
     )
     .orderBy(desc(eventPoolRegistrations.registeredAt));

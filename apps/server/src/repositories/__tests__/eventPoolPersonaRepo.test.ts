@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { determineStateBand } from '../eventPoolPersonaRepo'
+import {
+  ACTIVE_PERSONA_REGISTRATION_STATUSES,
+  determineStateBand,
+} from '../eventPoolPersonaRepo'
 import type { PoolPersonaSnapshotResponse } from '@shared/api'
 
 function makeDimension(
@@ -106,5 +109,11 @@ describe('determineStateBand', () => {
   it('does not return full if any dimension is missing', () => {
     const dimensions = [archetypeDisclosed, industryDisclosed, intentDisclosed, demographicsDisclosed[0]]
     expect(determineStateBand(20, dimensions)).toBe('clear')
+  })
+})
+
+describe('pool persona registration scope', () => {
+  it('includes every active registration shown by the pool card', () => {
+    expect(ACTIVE_PERSONA_REGISTRATION_STATUSES).toEqual(['pending', 'matched'])
   })
 })
