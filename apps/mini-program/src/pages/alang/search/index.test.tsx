@@ -61,7 +61,8 @@ describe('formal Flash radar', () => {
     render(<FlashRadarPage />)
 
     expect(screen.getByText((_, element) => (
-      element?.classList.contains('flash-radar__clue-meta')
+      element !== null
+      && element.classList.contains('flash-radar__clue-meta')
       && element.textContent?.startsWith('默默在宝安区') === true
     ))).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/%E[0-9A-F]{2}/i)
