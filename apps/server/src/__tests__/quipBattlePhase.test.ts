@@ -101,7 +101,7 @@ function submitVote(
   if (state.currentPhase !== 'quip_battle') {
     return { error: 'Not in quip_battle phase', status: 400 };
   }
-  if (!votes || !Array.isArray(votes) || votes.length === 0) {
+  if (!votes || !Array.isArray(votes)) {
     return { error: 'votes array required', status: 400 };
   }
   if (state.quipBattleVotedUserIds.includes(voterId)) {
@@ -241,9 +241,10 @@ describe('Quip Battle — pure logic', () => {
       expect(result.status).toBe(400);
     });
 
-    it('rejects empty votes', () => {
+    it('accepts empty votes as a completed vote', () => {
       const result = submitVote(seededState, 'guest-1', []);
-      expect(result.status).toBe(400);
+      expect(result.state!.quipBattleVotes).toHaveLength(0);
+      expect(result.state!.quipBattleVotedUserIds).toContain('guest-1');
     });
 
     it('rejects invalid answerId', () => {

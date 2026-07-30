@@ -2597,6 +2597,52 @@ describe.sequential('social icebreaker routes', () => {
       });
     });
 
+    it('accepts an empty quip battle vote set as a completed vote', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'qb-empty-vote-host');
+        const socialSessionId = await advanceToQuipBattle(baseUrl, hostCookie);
+
+        const voteResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/quip-battle/vote`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ votes: [] }),
+        });
+        const voteBody = await voteResponse.json() as any;
+
+        expect(voteResponse.status).toBe(200);
+        expect(voteBody).toMatchObject({ voted: true, totalVotes: 0 });
+        expect((await getSession(socialSessionId))?.quipBattleVotedUserIds).toContain('qb-empty-vote-host');
+      });
+    });
+
+    it('accepts votes for multiple answers under the same prompt', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'qb-multi-vote-host');
+        const socialSessionId = await advanceToQuipBattle(baseUrl, hostCookie);
+        const state = await getSession(socialSessionId);
+        if (!state) throw new Error('Expected quip battle session');
+        state.quipBattleAnswers = [
+          { userId: 'answer-1', displayName: 'Answer 1', promptId: 'prompt-1', answerText: 'A' },
+          { userId: 'answer-2', displayName: 'Answer 2', promptId: 'prompt-1', answerText: 'B' },
+        ];
+        await updateSession(socialSessionId, state);
+
+        const voteResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/quip-battle/vote`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({
+            votes: [
+              { answerId: 'answer-1::prompt-1', promptId: 'prompt-1' },
+              { answerId: 'answer-2::prompt-1', promptId: 'prompt-1' },
+            ],
+          }),
+        });
+
+        expect(voteResponse.status).toBe(200);
+        expect(await voteResponse.json()).toMatchObject({ voted: true, totalVotes: 2 });
+      });
+    });
+
     it('optimistic vote: same operationId twice is idempotent', async () => {
       await withServer(async (baseUrl) => {
         const hostCookie = await login(baseUrl, 'qb-vote-host');

@@ -1137,8 +1137,8 @@ router.post('/:socialSessionId/quip-battle/vote', async (req: any, res) => {
           promptId: v.promptId,
         }));
 
-        // Filter out duplicate votes by same voter for same prompt
-        const voteKey = (v: any) => `${v.voterId}::${v.promptId}`;
+        // Each answer is independently votable; only collapse retries of the same answer.
+        const voteKey = (v: any) => `${v.voterId}::${v.answerId}`;
         const voteMap = new Map<string, any>();
         for (const v of [...existingVotes, ...newVotes]) {
           voteMap.set(voteKey(v), v);
@@ -1173,8 +1173,8 @@ router.post('/:socialSessionId/quip-battle/vote', async (req: any, res) => {
     promptId: v.promptId,
   }));
 
-  // Filter out duplicate votes by same voter for same prompt
-  const voteKey = (v: any) => `${v.voterId}::${v.promptId}`;
+  // Each answer is independently votable; only collapse retries of the same answer.
+  const voteKey = (v: any) => `${v.voterId}::${v.answerId}`;
   const voteMap = new Map<string, any>();
   for (const v of [...existingVotes, ...newVotes]) {
     voteMap.set(voteKey(v), v);

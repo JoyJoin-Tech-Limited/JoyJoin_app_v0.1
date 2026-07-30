@@ -59,6 +59,27 @@ const REACTIONS = [
   { emoji: '🌹', label: '玫瑰' },
 ]
 
+export function buildQuipBattleVotingState(stackIndex: number, cardCount: number) {
+  const safeCardCount = Math.max(0, cardCount)
+  const viewedCount = Math.min(Math.max(0, stackIndex), safeCardCount)
+  const displayedCard = safeCardCount === 0
+    ? 0
+    : Math.min(viewedCount + 1, safeCardCount)
+
+  return {
+    canSubmit: viewedCount >= safeCardCount,
+    statusText: `卡片 ${displayedCard}/${safeCardCount}`,
+    viewedCount,
+  }
+}
+
+export function buildQuipBattleVotes(voteMap: Record<string, string>) {
+  return Object.entries(voteMap).map(([answerId, promptId]) => ({
+    answerId,
+    promptId,
+  }))
+}
+
 export function QuipBattleHeroView({
   socialSessionId,
   isHost,
@@ -173,14 +194,7 @@ export function QuipBattleHeroView({
 
   const handleVote = async () => {
     if (!userId) return
-    const votesToSubmit = Object.entries(voteMap)
-      .filter(([, answerId]) => answerId)
-      .map(([promptId, answerId]) => ({ promptId, answerId }))
-
-    if (votesToSubmit.length === 0) {
-      setError('先投一票再继续吧')
-      return
-    }
+    const votesToSubmit = buildQuipBattleVotes(voteMap)
 
     setVoting(true)
     setError('')
@@ -214,7 +228,7 @@ export function QuipBattleHeroView({
 
     setVoteMap((prev) => ({
       ...prev,
-      [current.prompt.id]: `${current.answer.userId}::${current.prompt.id}`,
+      [`${current.answer.userId}::${current.prompt.id}`]: current.prompt.id,
     }))
 
     setBurstTrigger(true)
@@ -262,9 +276,6 @@ export function QuipBattleHeroView({
       .sort((a, b) => (b.isWinner ? 1 : 0) - (a.isWinner ? 1 : 0) || b.voteCount - a.voteCount)
       .slice(0, 3)
   }, [revealed, results])
-
-  const votedPromptCount = Object.keys(voteMap).length
-  const totalPromptCount = prompts.length
 
   // ── Phase 1: submit answers ──
   if (!hasSubmitted && !revealed) {
@@ -328,6 +339,7 @@ export function QuipBattleHeroView({
   // ── Phase 2: voting (swipe stack) ──
   if (hasSubmitted && allSubmitted && !hasVoted && !revealed) {
     const currentCard = swipeStack[stackIndex]
+    const votingState = buildQuipBattleVotingState(stackIndex, swipeStack.length)
 
     return (
       <View className='quip-battle-hero'>
@@ -338,11 +350,11 @@ export function QuipBattleHeroView({
           phase='quip_battle'
           title='投票环节'
           prompt='右滑投票，左滑跳过'
-          statusText={`卡片 ${Math.min(stackIndex + 1, swipeStack.length)}/${swipeStack.length} · 已选 ${votedPromptCount}/${totalPromptCount} 题`}
-          doneCount={votedPromptCount}
-          totalCount={totalPromptCount}
+          statusText={votingState.statusText}
+          doneCount={votingState.viewedCount}
+          totalCount={swipeStack.length}
           actions={
-            <Button variant='primary' onClick={handleVote} disabled={voting || votedPromptCount === 0}>
+            <Button variant='primary' onClick={handleVote} disabled={voting || !votingState.canSubmit}>
               {voting ? '投票中…' : '提交投票'}
             </Button>
           }
@@ -359,7 +371,7 @@ export function QuipBattleHeroView({
             </View>
           ) : (
             <Text className='quip-battle-hero__stack-done'>
-              所有卡片已浏览，已为 {votedPromptCount} / {totalPromptCount} 个题目投票
+              所有卡片已浏览，可以提交投票
             </Text>
           )}
           {error ? <View className='quip-battle-hero__error' role='alert'><Text>{error}</Text></View> : null}
