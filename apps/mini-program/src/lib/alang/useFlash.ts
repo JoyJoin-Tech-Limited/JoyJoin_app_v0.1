@@ -10,6 +10,7 @@ import {
   fetchFlashPreferences,
   locateFlashAppearance,
   rerollFlashEncounter,
+  retryFlashAssignment,
   respondToFlashTaskOffer,
   submitFlashFeedback,
   updateFlashPreferences,
@@ -147,6 +148,18 @@ export function useAbandonFlashAssignment() {
     mutationFn: abandonFlashAssignment,
     onSuccess: (_response, assignmentId) => {
       queryClient.removeQueries({ queryKey: flashAssignmentQueryKey(assignmentId) })
+      markStale()
+    },
+  })
+}
+
+export function useRetryFlashAssignment() {
+  const queryClient = useQueryClient()
+  const markStale = useMarkFlashStateStale()
+  return useMutation({
+    mutationFn: retryFlashAssignment,
+    onSuccess: (response, assignmentId) => {
+      queryClient.setQueryData(flashAssignmentQueryKey(assignmentId), response)
       markStale()
     },
   })

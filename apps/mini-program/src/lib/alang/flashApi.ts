@@ -324,6 +324,14 @@ export async function abandonFlashAssignment(assignmentId: string): Promise<Flas
   return { canonicalScreen: 'home', assignmentId }
 }
 
+export async function retryFlashAssignment(assignmentId: string): Promise<FlashAssignmentView> {
+  const response = await apiRequest<SharedFlashAssignmentResponse>({
+    path: `/api/alang/flash/assignments/${assignmentId}/retry`,
+    method: 'POST',
+  })
+  return adaptFlashAssignmentDto(response)
+}
+
 export async function fetchFlashPreferences(): Promise<FlashPreferencesView> {
   return adaptPreferencesDto(await getFlashPreferencesRequest(apiRequest))
 }

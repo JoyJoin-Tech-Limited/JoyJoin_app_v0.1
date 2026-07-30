@@ -20,6 +20,7 @@
 - Staging bootstrap 固定保障南山区、福田区各至少 2 个 `approved + enabled` 安全地点：腾讯 suggestion 成功则采用同区 API 数据；失败会保留错误日志并使用 verified fallback seed，随后由部署 SQL 健康检查硬门验证覆盖数量。该降级只服务 staging 初始化，不放宽后台人工审批的腾讯反查要求。
 - 个性化默认关闭，总开关与人格、兴趣、宽泛行业、行政区、任务行为来源分别可控。拒绝定位则不能参加闪现，且绝不使用 IP 定位回退。
 - 当前正式代码由 `routes/domains/alangFlash.ts`、`services/flashService.ts`、`services/flashScheduleService.ts`、`repositories/flashRepo.ts`、`schema/flash.ts` 与后台 `/admin/alang` 共同承载。`alangEnabled` 默认关闭；数据库迁移、seed、逐条人工审核、深圳边界许可确认、readiness、staging 及微信真机验收完成前不得开启。
+- 链路复测使用 DB-backed `flashTaskRetryTestEnabled`（默认关闭）。仅 super admin 可在后台「功能开关」开启，且仅在 `APP_MODE != production` 时生效。开启后，任务进行页和反馈页均可把同一 active assignment 重置到 `accepted`，清除本轮到达、反馈、私密回复与交付状态，从任务起点复测；关闭后重试接口返回 `403 FLASH_TASK_RETRY_DISABLED`。生产环境即使误存为 true 也必须强制拒绝。
 
 旧阿浪故事状态机仍作为内部/兼容流程保留；下文涉及 5 米稳定到达、三轮旧剧情、archive 的条目仅描述旧 `missions/:slug` 流程，不得覆盖上述正式闪现契约。FUTURE 04 的“多 NPC 地图”仍不实现：正式版只提供当前在线列表与隐藏地点寻找，不新增探索地图。
 

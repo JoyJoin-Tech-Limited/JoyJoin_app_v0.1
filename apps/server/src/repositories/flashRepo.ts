@@ -1875,6 +1875,26 @@ export async function abandonFlashAssignment(assignmentId: string, userId: strin
   return row ?? null;
 }
 
+export async function retryFlashAssignment(assignmentId: string, userId: string, now: Date) {
+  const [row] = await db.update(flashTaskAssignments).set({
+    status: "accepted",
+    arrivedAt: null,
+    feedbackAnswers: [],
+    feedbackSubmittedAt: null,
+    deliveryEncounterId: null,
+    deliveredAt: null,
+    abandonedAt: null,
+    privateReply: null,
+    privateReplyDeleteAfter: null,
+    updatedAt: now,
+  }).where(and(
+    eq(flashTaskAssignments.id, assignmentId),
+    eq(flashTaskAssignments.userId, userId),
+    inArray(flashTaskAssignments.status, ["accepted", "arrived", "ready_to_deliver"]),
+  )).returning({ id: flashTaskAssignments.id });
+  return row ?? null;
+}
+
 export async function getFlashPreferences(userId: string, executor: DbExecutor = db) {
   const [preference] = await executor.select().from(flashUserPreferences)
     .where(eq(flashUserPreferences.userId, userId)).limit(1);

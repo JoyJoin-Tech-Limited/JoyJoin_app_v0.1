@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   arrive: vi.fn(),
   feedback: vi.fn(),
   abandon: vi.fn(),
+  retryTask: vi.fn(),
   getPreferences: vi.fn(),
   patchPreferences: vi.fn(),
   removeTag: vi.fn(),
@@ -51,6 +52,7 @@ vi.mock("../services/flashService", () => {
     arriveAtFlashAssignment: mocks.arrive,
     feedbackFlashAssignment: mocks.feedback,
     abandonFlashTask: mocks.abandon,
+    retryFlashTask: mocks.retryTask,
     getFlashPreferenceSettings: mocks.getPreferences,
     patchFlashPreferenceSettings: mocks.patchPreferences,
     removeFlashPreferenceTag: mocks.removeTag,
@@ -278,5 +280,51 @@ describe("formal Flash routes", () => {
       assignmentId,
       userId: "acting-user",
     }));
+  });
+
+  it("allows restarting the same task in non-production only when the admin flag is on", async () => {
+    vi.stubEnv("APP_MODE", "staging");
+    mocks.retryTask.mockResolvedValue({ canonicalScreen: "task", task: { id: assignmentId } });
+    mocks.getFeatureFlag.mockImplementation(async (key: string) =>
+      key === "flashTaskRetryTestEnabled" || key === "alangEnabled"
+    );
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl);
+      const response = await fetch(`${baseUrl}/api/alang/flash/assignments/${assignmentId}/retry`, {
+        method: "POST",
+        headers: { Cookie: cookie },
+      });
+      expect(response.status).toBe(200);
+    });
+    expect(mocks.retryTask).toHaveBeenCalledWith({ assignmentId, userId: "acting-user" });
+  });
+
+  it("rejects task restart when the admin retry flag is off", async () => {
+    vi.stubEnv("APP_MODE", "staging");
+    mocks.getFeatureFlag.mockImplementation(async (key: string) => key === "alangEnabled");
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl);
+      const response = await fetch(`${baseUrl}/api/alang/flash/assignments/${assignmentId}/retry`, {
+        method: "POST",
+        headers: { Cookie: cookie },
+      });
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toMatchObject({ code: "FLASH_TASK_RETRY_DISABLED" });
+    });
+    expect(mocks.retryTask).not.toHaveBeenCalled();
+  });
+
+  it("keeps task restart disabled in production even if the flag is on", async () => {
+    vi.stubEnv("APP_MODE", "production");
+    mocks.getFeatureFlag.mockResolvedValue(true);
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl);
+      const response = await fetch(`${baseUrl}/api/alang/flash/assignments/${assignmentId}/retry`, {
+        method: "POST",
+        headers: { Cookie: cookie },
+      });
+      expect(response.status).toBe(403);
+    });
+    expect(mocks.retryTask).not.toHaveBeenCalled();
   });
 });

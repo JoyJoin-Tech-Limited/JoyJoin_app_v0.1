@@ -32,6 +32,7 @@ import {
   removeFlashPreferenceTag,
   rerollFlashEncounterOffer,
   respondToFlashOffer,
+  retryFlashTask,
 } from "../../services/flashService";
 import { startFlashBackgroundJobs } from "../../services/flashScheduleService";
 import { reverseGeocodeCoordinate } from "./geo";
@@ -323,6 +324,31 @@ export function registerAlangFlashRoutes(app: Express): void {
     if (!assignmentId.success) return res.status(404).json({ code: "FLASH_TASK_NOT_FOUND", error: "没有找到这个委托" });
     try {
       return res.json(await abandonFlashTask({ assignmentId: assignmentId.data, userId: authenticatedUserId }));
+    } catch (error) {
+      return sendFlashError(res, error);
+    }
+  });
+
+  app.post("/api/alang/flash/assignments/:id/retry", ...guards, async (req, res) => {
+    const authenticatedUserId = userId(req, res);
+    if (!authenticatedUserId) return;
+    const assignmentId = idParamSchema.safeParse(req.params.id);
+    if (!assignmentId.success) {
+      return res.status(404).json({ code: "FLASH_TASK_NOT_FOUND", error: "没有找到这个任务" });
+    }
+    const enabled = (process.env.APP_MODE ?? "production") !== "production"
+      && await getFeatureFlag("flashTaskRetryTestEnabled", false);
+    if (!enabled) {
+      return res.status(403).json({
+        code: "FLASH_TASK_RETRY_DISABLED",
+        error: "任务复测模式未开启",
+      });
+    }
+    try {
+      return res.json(await retryFlashTask({
+        assignmentId: assignmentId.data,
+        userId: authenticatedUserId,
+      }));
     } catch (error) {
       return sendFlashError(res, error);
     }

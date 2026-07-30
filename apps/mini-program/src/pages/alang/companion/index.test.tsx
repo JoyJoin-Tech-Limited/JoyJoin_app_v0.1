@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   useAssignment: vi.fn(),
   arrive: vi.fn(),
   abandon: vi.fn(),
+  retryTask: vi.fn(),
   location: vi.fn(),
   openLocation: vi.fn(),
   refetch: vi.fn(),
@@ -36,6 +37,7 @@ vi.mock('../../../lib/alang/useFlash', () => ({
   useFlashAssignment: mocks.useAssignment,
   useArriveAtFlashAssignment: () => ({ mutateAsync: mocks.arrive, isPending: false }),
   useAbandonFlashAssignment: () => ({ mutateAsync: mocks.abandon, isPending: false }),
+  useRetryFlashAssignment: () => ({ mutateAsync: mocks.retryTask, isPending: false }),
 }))
 vi.mock('../../../lib/alang/flashApi', () => ({
   getOneShotFlashLocation: mocks.location,

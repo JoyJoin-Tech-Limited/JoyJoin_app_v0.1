@@ -130,6 +130,7 @@ const [
     aigcLabelsEnabled,
     matchingOperatorReviewEnabled,
     alangEnabled,
+    flashTaskRetryTestEnabledFlag,
     squadUnboxingPocketDeckEnabled,
     profileIdentityStageEnabled,
   ] = await Promise.all([
@@ -157,6 +158,7 @@ const [
     getFeatureFlag('aigcLabelsEnabled', false),
     getFeatureFlag('matchingOperatorReviewEnabled', false),
     getFeatureFlag('alangEnabled', false),
+    getFeatureFlag('flashTaskRetryTestEnabled', false),
     getFeatureFlag('squadUnboxingPocketDeckEnabled', true),
     getFeatureFlag('profileIdentityStageEnabled', true),
   ]);
@@ -206,6 +208,8 @@ const [
       aigcLabelsEnabled,
       matchingOperatorReviewEnabled,
       alangEnabled,
+      flashTaskRetryTestEnabled:
+        (process.env.APP_MODE ?? 'production') !== 'production' && flashTaskRetryTestEnabledFlag,
       squadUnboxingPocketDeckEnabled,
       profileIdentityStageEnabled,
     },

@@ -20,6 +20,7 @@ import { getFlashInvitationDefinition } from "@shared/alang/flashInvitationCatal
 
 import {
   abandonFlashAssignment,
+  retryFlashAssignment,
   acceptFlashAssignment,
   appendFlashEncounterAnswer,
   consumeFlashLocateBudget,
@@ -882,6 +883,21 @@ export async function abandonFlashTask(input: {
   const row = await abandonFlashAssignment(input.assignmentId, input.userId, input.now ?? new Date());
   if (!row) throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这个委托已经结束了");
   return { ok: true, canonicalScreen: "completed" };
+}
+
+export async function retryFlashTask(input: {
+  assignmentId: string;
+  userId: string;
+  now?: Date;
+}): Promise<FlashAssignmentResponse> {
+  const now = input.now ?? new Date();
+  const reset = await retryFlashAssignment(input.assignmentId, input.userId, now);
+  if (!reset) {
+    throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "当前任务不能重新开始");
+  }
+  const assignment = await getFlashAssignmentOwned(input.assignmentId, input.userId, now);
+  if (!assignment) throw new FlashServiceError("FLASH_TASK_NOT_FOUND", 404, "没有找到这个任务");
+  return assignmentResponse(assignment);
 }
 
 export async function getFlashPreferenceSettings(userId: string): Promise<FlashPreferenceDto> {

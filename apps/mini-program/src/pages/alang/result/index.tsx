@@ -6,7 +6,7 @@ import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
-import { useFlashAssignment, useSubmitFlashFeedback } from '../../../lib/alang/useFlash'
+import { useFlashAssignment, useRetryFlashAssignment, useSubmitFlashFeedback } from '../../../lib/alang/useFlash'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
 import '../flash.scss'
@@ -18,6 +18,7 @@ export default function FlashFeedbackPage() {
   const assignmentId = params.assignmentId ?? ''
   const { data, isLoading, isError, refetch } = useFlashAssignment(assignmentId, enabled && !!assignmentId)
   const submitMutation = useSubmitFlashFeedback()
+  const retryMutation = useRetryFlashAssignment()
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [privateReply, setPrivateReply] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -63,6 +64,29 @@ export default function FlashFeedbackPage() {
       setSubmitError(code === 'FLASH_INVALID_TASK_STATE'
         ? '任务状态刚刚变化了，重新读取后再确认一次。'
         : '反馈没有送到，内容还留在这里，可以再试一次。')
+    }
+  }
+
+  const handleRetryTask = async () => {
+    if (!assignmentId || retryMutation.isPending) return
+    const modal = await Taro.showModal({
+      title: '从头复测这个任务？',
+      content: '会清除本轮到达和反馈进度，并回到任务起点。',
+      confirmText: '从头复测',
+      cancelText: '继续当前进度',
+      confirmColor: '#8B5CF6',
+    })
+    if (!modal.confirm) return
+    try {
+      await retryMutation.mutateAsync(assignmentId)
+      setAnswers({})
+      setPrivateReply('')
+      setSubmitted(false)
+      await Taro.redirectTo({
+        url: `${MINI_PROGRAM_ROUTES.alangCompanion}?assignmentId=${encodeURIComponent(assignmentId)}`,
+      })
+    } catch {
+      Taro.showToast({ title: '复测没有启动，请确认后台开关仍开启', icon: 'none' })
     }
   }
 
@@ -112,6 +136,11 @@ export default function FlashFeedbackPage() {
             下次再遇见 {data.npc.name}，对话会先让你交付这项任务。角色今天下线也没关系。
           </Text>
           <View className='flash-feedback-success__actions'>
+            {user?.features?.flashTaskRetryTestEnabled ? (
+              <FlashButton variant='secondary' disabled={retryMutation.isPending} onClick={() => { void handleRetryTask() }}>
+                {retryMutation.isPending ? '正在重置…' : '从头复测本任务'}
+              </FlashButton>
+            ) : null}
             <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>回到街头盲盒</FlashButton>
           </View>
           <Text className='flash-feedback-success__note'>没有积分或奖品；这段经历会让下次见面更完整。</Text>
@@ -188,6 +217,11 @@ export default function FlashFeedbackPage() {
             <FlashButton disabled={!allAnswered || submitMutation.isPending} onClick={() => { void handleSubmit() }}>
               {submitMutation.isPending ? '正在收好…' : '保存，等下次交付'}
             </FlashButton>
+            {user?.features?.flashTaskRetryTestEnabled ? (
+              <FlashButton variant='secondary' disabled={retryMutation.isPending} onClick={() => { void handleRetryTask() }}>
+                {retryMutation.isPending ? '正在重置…' : '从头复测本任务'}
+              </FlashButton>
+            ) : null}
           </View>
         </View>
       </ScrollView>

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   useAuth: vi.fn(),
   useAssignment: vi.fn(),
   submit: vi.fn(),
+  retryTask: vi.fn(),
   refetch: vi.fn(),
   canonicalRedirect: vi.fn(),
 }))
@@ -15,6 +16,8 @@ vi.mock('@tarojs/taro', () => ({
     getCurrentInstance: () => ({ router: { params: { assignmentId: 'assignment-1' } } }),
     setNavigationBarTitle: vi.fn(),
     redirectTo: vi.fn(),
+    showToast: vi.fn(),
+    showModal: vi.fn().mockResolvedValue({ confirm: true }),
   },
 }))
 vi.mock('@tarojs/components', () => ({
@@ -34,6 +37,7 @@ vi.mock('../../../hooks/useAuth', () => ({ useAuth: mocks.useAuth }))
 vi.mock('../../../lib/alang/useFlash', () => ({
   useFlashAssignment: mocks.useAssignment,
   useSubmitFlashFeedback: () => ({ mutateAsync: mocks.submit, isPending: false }),
+  useRetryFlashAssignment: () => ({ mutateAsync: mocks.retryTask, isPending: false }),
 }))
 vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: mocks.canonicalRedirect }))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))

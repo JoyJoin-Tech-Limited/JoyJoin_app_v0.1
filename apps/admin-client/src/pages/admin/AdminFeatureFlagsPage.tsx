@@ -23,7 +23,7 @@ interface FeatureFlagItem {
   updatedBy: string | null;
 }
 
-const DANGEROUS_FLAGS = ["onboardingForceSkip", "socialIcebreakerClientForceEnd", "flashShenzhenLocationGateEnabled"];
+const DANGEROUS_FLAGS = ["onboardingForceSkip", "socialIcebreakerClientForceEnd", "flashShenzhenLocationGateEnabled", "flashTaskRetryTestEnabled"];
 
 export default function AdminFeatureFlagsPage() {
   const { toast } = useToast();
@@ -121,6 +121,7 @@ export default function AdminFeatureFlagsPage() {
   };
 
   const flagLabels: Record<string, string> = {
+    flashTaskRetryTestEnabled: "街头盲盒：允许同任务反复测试",
     restartOnboarding: "允许用户重启 onboarding",
     smartProfession: "智能职业理解 (SMART_PROFESSION_V1)",
     onboardingForceSkip: "Onboarding 强制跳过（测试专用）",
@@ -130,6 +131,7 @@ export default function AdminFeatureFlagsPage() {
   };
 
   const flagDescriptions: Record<string, string> = {
+    flashTaskRetryTestEnabled: "仅非生产环境生效。开启后，测试用户可在任务进行页或反馈页直接从头复测同一任务，不必先走到最终交付。",
     restartOnboarding: "开启后，已完成 onboarding 的用户可在设置中重置进度",
     smartProfession: "开启后，用户使用自由文本输入职业时会触发 AI 分类",
     onboardingForceSkip: "⚠️ 危险：开启后所有用户都会在 onboarding 页面看到「跳过」按钮",
@@ -216,6 +218,7 @@ export default function AdminFeatureFlagsPage() {
                         checked={current}
                         onCheckedChange={() => handleToggle(flag.key)}
                         disabled={isSaving}
+                        data-testid={`switch-feature-flag-${flag.key}`}
                       />
                     </div>
                   </div>

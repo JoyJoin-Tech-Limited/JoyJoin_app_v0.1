@@ -7,7 +7,7 @@ import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
 import { resolveFlashTaskCategory } from '../../../lib/alang/flashNpcAssets'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
-import { useAbandonFlashAssignment, useArriveAtFlashAssignment, useFlashAssignment } from '../../../lib/alang/useFlash'
+import { useAbandonFlashAssignment, useArriveAtFlashAssignment, useFlashAssignment, useRetryFlashAssignment } from '../../../lib/alang/useFlash'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
 import { COLOR_DANGER } from '../../../lib/utils/uiConstants'
@@ -23,6 +23,7 @@ export default function FlashTaskPage() {
   const { data, isLoading, isError, error, refetch } = useFlashAssignment(assignmentId, enabled && !!assignmentId)
   const arriveMutation = useArriveAtFlashAssignment()
   const abandonMutation = useAbandonFlashAssignment()
+  const retryMutation = useRetryFlashAssignment()
   const [arrivalState, setArrivalState] = useState<ArrivalState>('idle')
   const [distanceMeters, setDistanceMeters] = useState<number | null>(null)
 
@@ -111,6 +112,29 @@ export default function FlashTaskPage() {
       })
     } catch {
       Taro.showToast({ title: '地图没有打开，请稍后再试', icon: 'none' })
+    }
+  }
+
+  const handleRetryTask = async () => {
+    if (!assignmentId || retryMutation.isPending) return
+    const modal = await Taro.showModal({
+      title: '从头复测这个任务？',
+      content: '会清除本轮到达和反馈进度，但保留同一个任务，方便重新验证完整链路。',
+      confirmText: '从头复测',
+      cancelText: '继续当前进度',
+      confirmColor: '#8B5CF6',
+    })
+    if (!modal.confirm) return
+    try {
+      await retryMutation.mutateAsync(assignmentId)
+      setArrivalState('idle')
+      setDistanceMeters(null)
+      haptics('success')
+      await Taro.redirectTo({
+        url: `${MINI_PROGRAM_ROUTES.alangCompanion}?assignmentId=${encodeURIComponent(assignmentId)}`,
+      })
+    } catch {
+      Taro.showToast({ title: '复测没有启动，请确认后台开关仍开启', icon: 'none' })
     }
   }
 
@@ -211,6 +235,18 @@ export default function FlashTaskPage() {
             </View> : null}
 
           </View>
+
+          {user?.features?.flashTaskRetryTestEnabled ? (
+            <View className='flash-task__actions'>
+              <FlashButton
+                variant='secondary'
+                disabled={retryMutation.isPending}
+                onClick={() => { void handleRetryTask() }}
+              >
+                {retryMutation.isPending ? '正在重置…' : '从头复测本任务'}
+              </FlashButton>
+            </View>
+          ) : null}
 
           {isInvitation ? (
             <View className='flash-task__ready' role='status'>
