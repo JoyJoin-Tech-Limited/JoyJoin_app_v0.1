@@ -20,6 +20,7 @@ export default function FlashRadarPage() {
   const appearanceId = decodeFlashRouteParam(params.appearanceId)
   const npcName = decodeFlashRouteParam(params.npcName, '这位朋友')
   const districtName = decodeFlashRouteParam(params.districtName, '深圳')
+  const locationAddress = decodeFlashRouteParam(params.locationAddress)
   const endsAt = decodeFlashRouteParam(params.endsAt)
   const locateMutation = useLocateFlashAppearance()
   const [state, setState] = useState<LocateState>('idle')
@@ -106,6 +107,7 @@ export default function FlashRadarPage() {
             <Text className='flash-radar__clue-kicker'>ENCOUNTER SEARCH</Text>
             <Text className='flash-radar__clue-title'>今晚，去碰个运气</Text>
             <Text className='flash-radar__clue-meta'>{npcName}在{districtName} · {formatFlashRemainingTime(undefined, endsAt)}</Text>
+            {locationAddress ? <Text className='flash-radar__clue-address'>{locationAddress}</Text> : null}
             <Text className='flash-radar__clue-copy'>先到这个公共片区，再打开雷达寻找。真正找到以前，角色不会提前现身。</Text>
           </View>
 
@@ -131,7 +133,7 @@ export default function FlashRadarPage() {
           </View>
 
           <Text className='flash-radar__title'>到了你觉得对的附近，再确认一次</Text>
-          <Text className='flash-radar__copy'>我们不会给出角色的精确坐标。每次点击只读取一次你的位置，用来判断是否进入 50 米范围。</Text>
+          <Text className='flash-radar__copy'>我们不会给出角色的精确坐标。每次点击只读取一次你的位置，用来判断是否进入 100 米范围。</Text>
 
           {isPossiblyLate ? (
             <View className='flash-radar__warning' role='status'>

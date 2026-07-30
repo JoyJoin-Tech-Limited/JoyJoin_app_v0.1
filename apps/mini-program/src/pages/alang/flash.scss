@@ -386,6 +386,7 @@ page {
   &__clue-kicker { display: block; color: $color-primary; font-family: $font-mono; font-size: $font-size-2xs; font-weight: $font-weight-bold; letter-spacing: 3rpx; }
   &__clue-title { display: block; margin-top: 14rpx; font-family: $font-cn-display; font-size: $font-size-2xl; font-weight: $font-weight-black; }
   &__clue-meta { display: block; margin-top: 10rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; }
+  &__clue-address { display: block; max-width: 600rpx; margin: 14rpx auto 0; padding: 12rpx 24rpx; border-radius: $radius-pill; background: rgba($color-primary, 0.08); color: $color-primary-dark; font-size: $font-size-sm; line-height: 1.5; }
   &__clue-copy { display: block; margin: 18rpx auto 0; max-width: 580rpx; padding: 18rpx 22rpx; border-radius: $card-radius-sm; background: rgba($color-primary, 0.07); color: $color-primary-dark; font-size: $font-size-sm; line-height: $line-height-relaxed; }
   &__npc { display: flex; flex-direction: column; align-items: center; margin-top: 24rpx; }
   &__name { margin-top: 18rpx; font-family: $font-cn-display; font-size: $font-size-xl; font-weight: $font-weight-black; }

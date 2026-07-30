@@ -76,7 +76,7 @@ describe('formal Flash shared-contract adapter', () => {
           id: 'npc-1', slug: 'alang', name: '阿浪', species: '灰狼', personalitySummary: '好奇',
           inviteLine: '替我去看看？', themeColor: '#6E7891', avatarUrl: null,
         },
-        district: '南山区', endsAt: '2026-07-20T14:00:00+08:00', remainingMinutes: 90, canonicalScreen: 'radar',
+        district: '南山区', locationAddress: '南头古城开放公共街巷', endsAt: '2026-07-20T14:00:00+08:00', remainingMinutes: 90, canonicalScreen: 'radar',
       }],
       myTasks: [task], preferenceSummary: preference, canonicalScreen: 'home',
     }
@@ -84,7 +84,7 @@ describe('formal Flash shared-contract adapter', () => {
     expect(adaptFlashHomeDto(dto)).toMatchObject({
       onlineNpcs: [{
         appearanceId: 'appearance-1', name: '阿浪', animal: '灰狼', invitation: '替我去看看？',
-        districtName: '南山区', remainingSeconds: 5400,
+        districtName: '南山区', locationAddress: '南头古城开放公共街巷', remainingSeconds: 5400,
       }],
       myTasks: [{ assignmentId: task.id, destinationName: '南头古城' }],
       preferenceSummary: { personalizationEnabled: true, activeSourceCount: 3, tagCount: 0 },

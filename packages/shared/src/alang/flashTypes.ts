@@ -2,6 +2,9 @@ import { z } from "zod";
 
 export const FLASH_CITY = "深圳" as const;
 export const FLASH_COORDINATE_SYSTEM = "gcj02" as const;
+/** NPC encounter unlock radius. Kept separate from task-destination arrival. */
+export const FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS = 100;
+/** Accepted-task destination arrival radius. */
 export const FLASH_ARRIVAL_RADIUS_METERS = 50;
 export const FLASH_TASK_DURATION_DAYS = 7;
 export const FLASH_ENCOUNTER_TTL_HOURS = 24;
@@ -96,6 +99,8 @@ export type FlashOnlineNpcDto = {
     avatarUrl: string | null;
   };
   district: string;
+  /** Operator-reviewed public-area description; never includes coordinates. */
+  locationAddress?: string;
   endsAt: string;
   remainingMinutes: number;
   canonicalScreen: "radar";

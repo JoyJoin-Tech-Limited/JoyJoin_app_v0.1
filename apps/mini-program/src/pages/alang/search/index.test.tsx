@@ -18,6 +18,7 @@ vi.mock('@tarojs/taro', () => ({
       npcName: '%E9%BB%98%E9%BB%98',
       npcSlug: 'momo',
       districtName: '%E5%AE%9D%E5%AE%89%E5%8C%BA',
+      locationAddress: '%E5%AE%9D%E5%AE%89%E5%A3%B9%E6%96%B9%E5%9F%8E%E5%BC%80%E6%94%BE%E5%85%AC%E5%85%B1%E5%8C%BA%E5%9F%9F',
       endsAt: '2026-07-29T20%3A30%3A00%2B08%3A00',
     } } }),
     setNavigationBarTitle: vi.fn(),
@@ -65,13 +66,14 @@ describe('formal Flash radar', () => {
       && element.classList.contains('flash-radar__clue-meta')
       && element.textContent?.startsWith('默默在宝安区') === true
     ))).toBeInTheDocument()
+    expect(screen.getByText('宝安壹方城开放公共区域')).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/%E[0-9A-F]{2}/i)
   })
 
   it('never locates until the user explicitly taps and sends one snapshot', async () => {
     render(<FlashRadarPage />)
     expect(mocks.location).not.toHaveBeenCalled()
-    expect(screen.getByText('只读取一次你的位置，用来判断是否进入 50 米范围。', { exact: false })).toBeInTheDocument()
+    expect(screen.getByText('只读取一次你的位置，用来判断是否进入 100 米范围。', { exact: false })).toBeInTheDocument()
 
     fireEvent.click(screen.getByText('我到附近了'))
     await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledWith({

@@ -1,5 +1,6 @@
 import {
   FLASH_ARRIVAL_RADIUS_METERS,
+  FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS,
   FLASH_CITY,
   FLASH_ENCOUNTER_TTL_HOURS,
   type FlashAssignmentResponse,
@@ -287,6 +288,7 @@ export async function getFlashHome(input: {
         avatarUrl: row.avatarUrl,
       },
       district: row.district,
+      locationAddress: row.locationAddress,
       endsAt: row.shiftEndsAt.toISOString(),
       remainingMinutes: Math.max(0, Math.ceil((row.shiftEndsAt.getTime() - now.getTime()) / 60_000)),
       canonicalScreen: "radar" as const,
@@ -321,7 +323,7 @@ export async function locateFlashAppearance(input: {
     throw new FlashServiceError("FLASH_LOCATE_RATE_LIMITED", 429, "寻找得太频繁了，稍后再试");
   }
   const distanceMeters = alangHaversineDistanceMeters(input, appearance);
-  if (distanceMeters > FLASH_ARRIVAL_RADIUS_METERS) {
+  if (distanceMeters > FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS) {
     return {
       appearanceId: input.appearanceId,
       // Do not expose a distance band: repeated spoofed coordinates must not

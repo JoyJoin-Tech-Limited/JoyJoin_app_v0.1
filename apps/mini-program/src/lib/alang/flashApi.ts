@@ -16,6 +16,7 @@ import {
 } from '@shared/api'
 import {
   FLASH_ARRIVAL_RADIUS_METERS,
+  FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS,
   type FlashAssignmentResponse as SharedFlashAssignmentResponse,
   type FlashCoordinateRequest,
   type FlashEncounterResponse as SharedFlashEncounterResponse,
@@ -95,6 +96,7 @@ export function adaptFlashHomeDto(response: SharedFlashHomeResponse): FlashHomeV
       animal: online.npc.species,
       invitation: online.npc.inviteLine,
       districtName: online.district,
+      locationAddress: online.locationAddress,
       appearanceId: online.appearanceId,
       endsAt: online.endsAt,
       remainingSeconds: Math.max(0, online.remainingMinutes * 60),
@@ -119,7 +121,7 @@ export function adaptFlashLocateDto(response: SharedFlashLocateResponse): FlashL
   return {
     canonicalScreen: response.canonicalScreen,
     withinRange: response.arrived,
-    radiusMeters: FLASH_ARRIVAL_RADIUS_METERS,
+    radiusMeters: FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS,
     encounterId: response.encounterId ?? undefined,
     appearanceId: response.appearanceId,
   }

@@ -296,6 +296,7 @@ export default function FlashHomePage() {
       `npcName=${encodeURIComponent(npc.name)}`,
       `npcSlug=${encodeURIComponent(npc.slug)}`,
       `districtName=${encodeURIComponent(npc.districtName)}`,
+      npc.locationAddress ? `locationAddress=${encodeURIComponent(npc.locationAddress)}` : '',
       npc.endsAt ? `endsAt=${encodeURIComponent(npc.endsAt)}` : '',
     ].filter(Boolean).join('&')
     void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangSearch}?${params}` })

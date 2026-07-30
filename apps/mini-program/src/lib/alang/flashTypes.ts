@@ -36,6 +36,7 @@ export interface FlashNpcSummary {
   animal?: string
   invitation: string
   districtName: string
+  locationAddress?: string
   appearanceId: string
   endsAt?: string
   remainingSeconds?: number

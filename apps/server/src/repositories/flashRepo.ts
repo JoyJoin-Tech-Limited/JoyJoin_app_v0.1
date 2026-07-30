@@ -750,6 +750,7 @@ export async function listOnlineFlashAppearances(now: Date, executor: DbExecutor
       themeColor: flashNpcs.themeColor,
       avatarUrl: flashNpcs.avatarUrl,
       district: flashEncounterLocations.district,
+      locationAddress: flashEncounterLocations.address,
     })
     .from(flashShifts)
     .innerJoin(flashSchedulePlans, eq(flashShifts.planId, flashSchedulePlans.id))

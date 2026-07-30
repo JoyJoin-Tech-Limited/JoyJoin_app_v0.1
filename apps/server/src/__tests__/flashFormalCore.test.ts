@@ -13,6 +13,8 @@ import {
   isDestinationFreeFlashInvitation,
 } from "@shared/alang/flashInvitationCatalog";
 import {
+  FLASH_ARRIVAL_RADIUS_METERS,
+  FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS,
   FLASH_PERSONALIZATION_CONSENT_VERSION,
   flashCoordinateSchema,
   flashPreferenceUpdateSchema,
@@ -35,6 +37,13 @@ import {
   isLaterFlashDeliveryEncounter,
   syncEnabledPreferenceTags,
 } from "../services/flashService";
+
+describe("Flash geofence boundaries", () => {
+  it("keeps the NPC encounter radius independent from task-destination arrival", () => {
+    expect(FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS).toBe(100);
+    expect(FLASH_ARRIVAL_RADIUS_METERS).toBe(50);
+  });
+});
 
 const readyTaskCategoryCounts = Object.fromEntries(
   [...new Set(FLASH_TASK_SEEDS.map((task) => task.category))].map((category) => [category, 5]),
