@@ -19,7 +19,11 @@ import type { User } from "@shared/schema";
 import { formatAge } from "@shared/utils";
 import { getArchetypeFamily } from "@shared/archetypeColors";
 import { storage } from "../../storage";
-import { buildEventPoolRegistrationInsert, type EventPoolRegistrationPreferenceDNA } from "../../lib/eventPoolRegistration";
+import {
+  buildEventPoolRegistrationInsert,
+  isSessionPendingReferralCode,
+  type EventPoolRegistrationPreferenceDNA,
+} from "../../lib/eventPoolRegistration";
 import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
 import { eventCreditsRepo } from "../../repositories/eventCreditsRepo";
@@ -729,7 +733,15 @@ export function registerUserEventPoolRoutes(app: Express): void {
           }
           // If neither invitation nor referral, the code is invalid
           if (!referralCodeId) {
-            return res.status(400).json({ message: "Invalid code", code: "INVALID_CODE" });
+            if (isSessionPendingReferralCode(invitationCode, req.session?.pendingReferralCode)) {
+              logger.warn("Discarding stale pending referral during pool registration", {
+                poolId,
+                userId,
+              });
+              req.session.pendingReferralCode = undefined;
+            } else {
+              return res.status(400).json({ message: "Invalid code", code: "INVALID_CODE" });
+            }
           }
         }
       }

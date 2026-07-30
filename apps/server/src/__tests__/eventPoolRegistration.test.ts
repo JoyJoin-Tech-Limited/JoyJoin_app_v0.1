@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { buildEventPoolRegistrationInsert } from "../lib/eventPoolRegistration";
+import {
+  buildEventPoolRegistrationInsert,
+  isSessionPendingReferralCode,
+} from "../lib/eventPoolRegistration";
 
 describe("event pool registration insert helper", () => {
+  it("identifies a stale session referral so attribution cannot block registration", () => {
+    expect(isSessionPendingReferralCode(" stale-code ", "stale-code")).toBe(true);
+    expect(isSessionPendingReferralCode("explicit-code", "different-session-code")).toBe(false);
+    expect(isSessionPendingReferralCode("explicit-code", undefined)).toBe(false);
+  });
+
   it("keeps drinks-specific preferences when building insert values", () => {
     // Guards against regression: the registration route used to drop these fields before insert.
     const result = buildEventPoolRegistrationInsert({

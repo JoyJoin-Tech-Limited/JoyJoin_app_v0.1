@@ -37,6 +37,17 @@ export interface EventPoolRegistrationPreferenceDNA {
   kolComfort: string | null;
 }
 
+export function isSessionPendingReferralCode(
+  submittedCode: string,
+  pendingReferralCode: string | undefined,
+): boolean {
+  return (
+    typeof pendingReferralCode === "string" &&
+    pendingReferralCode.trim() !== "" &&
+    submittedCode.trim() === pendingReferralCode.trim()
+  );
+}
+
 export function buildEventPoolRegistrationInsert(input: {
   poolId: string;
   userId: string;
