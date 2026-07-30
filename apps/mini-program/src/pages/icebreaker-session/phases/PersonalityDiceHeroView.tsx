@@ -1,4 +1,4 @@
-import { View, Text } from '@tarojs/components'
+import { ScrollView, View, Text } from '@tarojs/components'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PersonalityDiceChallenge, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
@@ -13,7 +13,10 @@ import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { haptics } from '../../../lib/utils/haptics'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
-import { canChoosePersonalityDiceOption } from '../viewModels/phaseProgressionModels'
+import {
+  canChoosePersonalityDiceOption,
+  getPersonalityDiceCountdownSeconds,
+} from '../viewModels/phaseProgressionModels'
 import './PersonalityDiceHeroView.scss'
 
 function hslToHex(h: number, s: number, l: number): string {
@@ -55,6 +58,10 @@ export interface PersonalityDiceHeroViewProps {
   isChoosing?: boolean
   isReadying?: boolean
   revealOrder?: string[]
+  revealCountdownEndsAt?: number
+  revealReadyBy?: string[]
+  onRevealReady?: (ready: boolean) => void
+  isRevealReadying?: boolean
   challengesMeta?: AIResponseMeta
 }
 
@@ -80,6 +87,10 @@ export function PersonalityDiceHeroView({
   isChoosing = false,
   isReadying = false,
   revealOrder = [],
+  revealCountdownEndsAt,
+  revealReadyBy = [],
+  onRevealReady,
+  isRevealReadying = false,
   challengesMeta,
 }: PersonalityDiceHeroViewProps) {
   const currentChallenge = challenges[currentPlayerIndex] ?? null
@@ -95,6 +106,7 @@ export function PersonalityDiceHeroView({
   const [burstTrigger, setBurstTrigger] = useState(false)
   const [showReveal, setShowReveal] = useState(false)
   const [flipped, setFlipped] = useState(() => challenges.length > 0)
+  const [countdownNow, setCountdownNow] = useState(Date.now())
   const prevChallengesLenRef = useRef(0)
   const prevGroupsLenRef = useRef(0)
   const prevIsCompletingRef = useRef(false)
@@ -108,6 +120,16 @@ export function PersonalityDiceHeroView({
       if (burstTimerRef.current) clearTimeout(burstTimerRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!revealCountdownEndsAt || Date.now() >= revealCountdownEndsAt) return
+    const timer = setInterval(() => {
+      const now = Date.now()
+      setCountdownNow(now)
+      if (now >= revealCountdownEndsAt) clearInterval(timer)
+    }, 200)
+    return () => clearInterval(timer)
+  }, [revealCountdownEndsAt])
 
   const effectiveCompletedBy =
     pendingUserId && !passedBy.includes(pendingUserId) ? [...completedBy, pendingUserId] : completedBy
@@ -266,9 +288,24 @@ export function PersonalityDiceHeroView({
   }
 
   if (allCompleted && chooseModeEnabled && challengeGroups.length > 0) {
+    const countdownRemaining = getPersonalityDiceCountdownSeconds(revealCountdownEndsAt, countdownNow)
+    if (countdownRemaining > 0) {
+      return (
+        <View className='personality-dice-hero personality-dice-hero--countdown'>
+          <View className='personality-dice-hero__countdown'>
+            <Text className='personality-dice-hero__countdown-number'>{countdownRemaining}</Text>
+            <Text className='personality-dice-hero__countdown-label'>准备揭晓大家的选择</Text>
+          </View>
+        </View>
+      )
+    }
+
     const orderedGroups = (revealOrder.length > 0 ? revealOrder : challengeGroups.map((group) => group.userId))
       .map((userId) => challengeGroups.find((group) => group.userId === userId))
       .filter((group): group is PersonalityDiceChallengeGroup => Boolean(group))
+
+    const isRevealReady = revealReadyBy.includes(currentUserId)
+    const allRevealReady = challengeGroups.every((group) => revealReadyBy.includes(group.userId))
 
     return (
       <View className='personality-dice-hero'>
@@ -280,18 +317,12 @@ export function PersonalityDiceHeroView({
           artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-personality-dice.webp')}
           title='全员选择揭晓'
           prompt='挑战卡已打乱顺序，看看每个人今晚选了什么'
-          statusText='全员已准备'
+          statusText='选择已揭晓'
           doneCount={participants.length}
           totalCount={participants.length}
-          actions={
-            isHost && onAdvance ? (
-              <Button variant='primary' onClick={onAdvance}>
-                进入回顾
-              </Button>
-            ) : undefined
-          }
         >
-          <View className='personality-dice-hero__reveal-grid'>
+          <ScrollView scrollY className='personality-dice-hero__reveal-scroll'>
+            <View className='personality-dice-hero__reveal-list'>
             {orderedGroups.map((group) => {
               const option = group.options[selectedOption[group.userId]]
               if (!option) return null
@@ -299,7 +330,6 @@ export function PersonalityDiceHeroView({
                 <View key={group.userId} className='personality-dice-hero__choose-card personality-dice-hero__reveal-card'>
                   <View className='personality-dice-hero__reveal-identity'>
                     <Text className='personality-dice-hero__reveal-name'>{group.displayName}</Text>
-                    <Text className='personality-dice-hero__reveal-id'>ID: {group.userId}</Text>
                   </View>
                   <View className='personality-dice-hero__choose-card-top'>
                     <Chip
@@ -316,8 +346,29 @@ export function PersonalityDiceHeroView({
                 </View>
               )
             })}
-          </View>
+            </View>
+          </ScrollView>
         </PhaseHeroCard>
+        <View className='personality-dice-hero__fixed-action'>
+          {allRevealReady ? (
+            isHost && onAdvance ? (
+              <Button variant='primary' onClick={onAdvance}>进入下一游戏</Button>
+            ) : (
+              <Button variant='secondary' disabled>等待主持人进入下一游戏</Button>
+            )
+          ) : (
+            <Button
+              variant={isRevealReady ? 'secondary' : 'primary'}
+              onClick={() => onRevealReady?.(!isRevealReady)}
+              disabled={!onRevealReady || isRevealReadying}
+              loading={isRevealReadying}
+            >
+              {isRevealReady
+                ? `取消准备（${revealReadyBy.length}/${participants.length}）`
+                : `准备进入下一游戏（${revealReadyBy.length}/${participants.length}）`}
+            </Button>
+          )}
+        </View>
       </View>
     )
   }

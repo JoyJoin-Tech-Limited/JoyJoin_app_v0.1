@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildGroupMirrorAnswerRows,
   canChoosePersonalityDiceOption,
+  getPersonalityDiceCountdownSeconds,
   getGenerationRetryDelayMs,
   resolveAuctionRoleControls,
   resolvePersonalityDiceChooseMode,
@@ -19,6 +20,12 @@ describe('phase progression models', () => {
     expect(canChoosePersonalityDiceOption(true, false, 0, 2)).toBe(false)
     expect(canChoosePersonalityDiceOption(false, true, 0, 2)).toBe(false)
     expect(canChoosePersonalityDiceOption(false, false, 2, 2)).toBe(false)
+  })
+
+  it('counts down three synchronized seconds before revealing personality-dice choices', () => {
+    expect(getPersonalityDiceCountdownSeconds(4_000, 1_000)).toBe(3)
+    expect(getPersonalityDiceCountdownSeconds(4_000, 3_001)).toBe(1)
+    expect(getPersonalityDiceCountdownSeconds(4_000, 4_000)).toBe(0)
   })
 
   it('retries accepted background generation responses using a bounded delay', () => {

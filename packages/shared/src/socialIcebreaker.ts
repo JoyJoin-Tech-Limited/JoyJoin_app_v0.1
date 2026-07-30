@@ -564,6 +564,10 @@ export interface SocialSessionState {
   diceSelectedOption?: Record<string, number>;
   /** Stable server-generated userId order used once every player is ready. */
   diceRevealOrder?: string[];
+  /** Epoch milliseconds when the synchronized three-second reveal countdown ends. */
+  diceRevealCountdownEndsAt?: number;
+  /** Players ready to leave the reveal and continue to the next game. */
+  diceRevealReadyBy?: string[];
   // Auction phase (virtual coins; see payment-entitlement-authority if real value ever touches this)
   auctionLots?: AuctionLot[];
   auctionLotsMeta?: AIResponseMeta;

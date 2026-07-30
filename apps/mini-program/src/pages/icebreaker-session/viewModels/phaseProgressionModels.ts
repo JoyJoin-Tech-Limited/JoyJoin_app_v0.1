@@ -27,6 +27,14 @@ export function canChoosePersonalityDiceOption(
   return !readOnly && !isChoosing && selectedOptionIndex !== targetOptionIndex
 }
 
+export function getPersonalityDiceCountdownSeconds(
+  countdownEndsAt: number | undefined,
+  now: number,
+): number {
+  if (!countdownEndsAt) return 0
+  return Math.max(0, Math.ceil((countdownEndsAt - now) / 1000))
+}
+
 export type AuctionPreviewRole = 'host' | 'guest'
 
 export function resolveAuctionRoleControls(input: {

@@ -119,10 +119,39 @@ $pd-deep: $phase-accent-dice-deep;
     gap: $spacing-sm;
   }
 
-  &__reveal-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  &--countdown {
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__countdown {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: $spacing-sm;
+  }
+
+  &__countdown-number {
+    @include type-hero;
+    color: $pd-deep;
+  }
+
+  &__countdown-label {
+    @include type-subheading;
+    color: $color-text-secondary;
+  }
+
+  &__reveal-scroll {
+    max-height: 62vh;
+  }
+
+  &__reveal-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding-bottom: calc(#{$button-height} + #{$spacing-xl});
   }
 
   &__reveal-card {
@@ -141,10 +170,12 @@ $pd-deep: $phase-accent-dice-deep;
     color: $color-text-primary;
   }
 
-  &__reveal-id {
-    @include type-caption;
-    color: $color-text-secondary;
-    overflow-wrap: anywhere;
+  &__fixed-action {
+    position: fixed;
+    z-index: $z-tab-bar;
+    left: $spacing-md;
+    right: $spacing-md;
+    bottom: calc(env(safe-area-inset-bottom) + #{$spacing-md});
   }
 
   &__choose-card {

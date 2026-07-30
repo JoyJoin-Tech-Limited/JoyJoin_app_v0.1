@@ -1039,6 +1039,10 @@ export default function IcebreakerSessionPage() {
     void performSocialAction('dice-ready', '/personality-dice/complete', { ready })
   }, [performSocialAction])
 
+  const handleDiceRevealReady = useCallback((ready: boolean) => {
+    void performSocialAction('dice-reveal-ready', '/personality-dice/reveal-ready', { ready })
+  }, [performSocialAction])
+
   const handleChooseDiceOption = useCallback((optionIndex: number) => {
     socialIcebreakerAnalytics.track(
       'dice_option_chosen',
@@ -1650,6 +1654,10 @@ export default function IcebreakerSessionPage() {
             isChoosing={pendingAction === 'dice-choose'}
             isReadying={pendingAction === 'dice-ready'}
             revealOrder={session.diceRevealOrder ?? []}
+            revealCountdownEndsAt={session.diceRevealCountdownEndsAt}
+            revealReadyBy={session.diceRevealReadyBy ?? []}
+            onRevealReady={handleDiceRevealReady}
+            isRevealReadying={pendingAction === 'dice-reveal-ready'}
             challengesMeta={session.personalityDiceChallengesMeta}
             onAdvance={handleAdvancePhase}
           />

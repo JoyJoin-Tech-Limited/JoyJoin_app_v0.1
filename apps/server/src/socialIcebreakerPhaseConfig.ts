@@ -183,6 +183,9 @@ export function cleanupPhaseStateForNextPhase(
       state.currentDicePlayerIndex = undefined;
       state.diceCompletedBy = undefined;
       state.dicePassedBy = undefined;
+      state.diceRevealOrder = undefined;
+      state.diceRevealCountdownEndsAt = undefined;
+      state.diceRevealReadyBy = undefined;
       return;
     case 'mini_script':
       state.miniScriptFramework = undefined;

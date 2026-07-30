@@ -1801,6 +1801,30 @@ describe.sequential('social icebreaker routes', () => {
           const guestReadyBody = await guestReadyResponse.json() as any;
           expect(guestReadyBody.allCompleted).toBe(true);
           expect(new Set(guestReadyBody.diceRevealOrder)).toEqual(new Set(participants.map((participant) => participant.userId)));
+          expect(guestReadyBody.diceRevealCountdownEndsAt).toBeGreaterThan(Date.now());
+
+          const prematureAdvance = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({ currentPhase: 'personality_dice' }),
+          });
+          expect(prematureAdvance.status).toBe(409);
+
+          for (const cookie of [hostCookie, guestCookie]) {
+            const revealReadyResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/personality-dice/reveal-ready`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', cookie },
+              body: JSON.stringify({ ready: true }),
+            });
+            expect(revealReadyResponse.status).toBe(200);
+          }
+
+          const advanceResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/advance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({ currentPhase: 'personality_dice' }),
+          });
+          expect(advanceResponse.status).toBe(200);
         });
       } finally {
         process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED = previousChooseMode;

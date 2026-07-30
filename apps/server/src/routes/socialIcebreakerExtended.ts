@@ -139,6 +139,13 @@ router.post('/:socialSessionId/advance', async (req: any, res) => {
     }
   }
 
+  if (!skipGuards && currentPhase === 'personality_dice') {
+    const revealReady = hasAllRosterParticipantsResponded(state.diceRevealReadyBy, state.playerCount);
+    if (!state.diceRevealOrder?.length || !revealReady) {
+      return res.status(409).json({ error: 'Wait for everyone to prepare for the next game' });
+    }
+  }
+
   if (currentPhase === 'lie_detective') {
     if (!skipGuards) {
       const generatedPlayers = state.lieDetectivePlayers || [];

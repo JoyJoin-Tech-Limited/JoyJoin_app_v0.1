@@ -505,7 +505,9 @@ export function isPhaseNaturallyComplete(state: SocialSessionState): boolean {
         hasAllRosterParticipantsResponded(state.lieDetectiveCompletedUserIds, state.playerCount)
       );
     case 'personality_dice': {
-      const done = new Set([...(state.diceCompletedBy || []), ...(state.dicePassedBy || [])]);
+      const done = state.personalityDiceChooseModeEnabled && state.diceRevealOrder
+        ? new Set(state.diceRevealReadyBy || [])
+        : new Set([...(state.diceCompletedBy || []), ...(state.dicePassedBy || [])]);
       return done.size >= state.playerCount;
     }
     case 'auction':
@@ -539,7 +541,9 @@ function completionSnapshot(
       return { readyCount: getUniqueUserCount(state.lieDetectiveCompletedUserIds), totalCount };
     case 'personality_dice':
       return {
-        readyCount: new Set([...(state.diceCompletedBy || []), ...(state.dicePassedBy || [])]).size,
+        readyCount: state.personalityDiceChooseModeEnabled && state.diceRevealOrder
+          ? new Set(state.diceRevealReadyBy || []).size
+          : new Set([...(state.diceCompletedBy || []), ...(state.dicePassedBy || [])]).size,
         totalCount,
       };
     default:

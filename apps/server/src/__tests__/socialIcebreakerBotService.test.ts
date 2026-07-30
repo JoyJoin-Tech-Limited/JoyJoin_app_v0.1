@@ -5,6 +5,7 @@ import {
   simulateBotsForSession,
   createSeededRandom,
   getBots,
+  seedSingleTestBotsPersonalityDiceReady,
 } from '../services/socialIcebreakerBotService';
 import { isSingleTestMode } from '../lib/isSingleTestMode';
 import { isSocialIcebreakerTestMode } from '../lib/isSocialIcebreakerTestMode';
@@ -133,6 +134,38 @@ describe('socialIcebreakerBotService', () => {
       expect(bots).toHaveLength(5);
       expect(bots[0].userId).toBe('bot-user-1');
     });
+  });
+
+  it('seeds personality-dice bot choices and both ready gates even when bot simulation is disabled', () => {
+    const state = makeState({
+      currentPhase: 'personality_dice',
+      singleTest: makeSingleTestState(false),
+      personalityDiceChooseModeEnabled: true,
+      personalityDiceChallengeGroups: makeSingleTestState(false).botPersonas.map((bot) => ({
+        userId: bot.userId,
+        displayName: bot.displayName,
+        dominantTrait: 'A',
+        options: (['easy', 'medium', 'hard'] as const).map((difficulty) => ({
+          userId: bot.userId,
+          displayName: bot.displayName,
+          dominantTrait: 'A',
+          challengeTitle: difficulty,
+          challengeBody: difficulty,
+          challengeEmoji: '✨',
+          difficulty,
+        })),
+      })),
+    });
+
+    seedSingleTestBotsPersonalityDiceReady(state);
+
+    expect(Object.keys(state.diceSelectedOption ?? {})).toHaveLength(5);
+    expect(state.diceCompletedBy).toEqual(expect.arrayContaining([
+      'bot-user-1', 'bot-user-2', 'bot-user-3', 'bot-user-4', 'bot-user-5',
+    ]));
+    expect(state.diceRevealReadyBy).toEqual(expect.arrayContaining([
+      'bot-user-1', 'bot-user-2', 'bot-user-3', 'bot-user-4', 'bot-user-5',
+    ]));
   });
 
   describe('createSeededRandom', () => {

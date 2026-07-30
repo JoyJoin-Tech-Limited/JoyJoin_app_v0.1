@@ -74,6 +74,34 @@ export function seedSingleTestBotsWarmupReady(state: SocialSessionState): void {
   state.warmupReadyUserIds = [...ready];
 }
 
+/**
+ * Personality-dice bots are real single-test attendees, so they select a card
+ * and default to ready at both gates even when the optional simulation harness
+ * is disabled.
+ */
+export function seedSingleTestBotsPersonalityDiceReady(state: SocialSessionState): void {
+  const groups = state.personalityDiceChallengeGroups ?? [];
+  if (groups.length === 0) return;
+  const bots = getBots(state);
+  if (bots.length === 0) return;
+
+  state.diceSelectedOption = state.diceSelectedOption ?? {};
+  const selectionReady = new Set(state.diceCompletedBy ?? []);
+  const revealReady = new Set(state.diceRevealReadyBy ?? []);
+  for (const bot of bots) {
+    const group = groups.find((candidate) => candidate.userId === bot.userId);
+    if (!group) continue;
+    if (state.diceSelectedOption[bot.userId] === undefined) {
+      const mediumIndex = group.options.findIndex((option) => option.difficulty === 'medium');
+      state.diceSelectedOption[bot.userId] = mediumIndex >= 0 ? mediumIndex : 0;
+    }
+    selectionReady.add(bot.userId);
+    revealReady.add(bot.userId);
+  }
+  state.diceCompletedBy = [...selectionReady];
+  state.diceRevealReadyBy = [...revealReady];
+}
+
 /** Deterministic seeded PRNG. Returns floats in [0, 1). */
 function createSeededRandom(seed: string): () => number {
   let hash = 2166136261;
@@ -482,22 +510,7 @@ function simulatePersonalityDiceBots(
     (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
 
   if (chooseModeEnabled && state.personalityDiceChallengeGroups) {
-    state.diceSelectedOption = state.diceSelectedOption ?? {};
-    const completed = new Set(state.diceCompletedBy ?? []);
-    for (const bot of bots) {
-      const group = state.personalityDiceChallengeGroups!.find((g) => g.userId === bot.userId);
-      if (!group) continue;
-      if (state.diceSelectedOption![bot.userId] === undefined) {
-        // Deterministic choice: medium if available, otherwise first option.
-        const optionIndex =
-          group.options.findIndex((o) => o.difficulty === 'medium') >= 0
-            ? group.options.findIndex((o) => o.difficulty === 'medium')
-            : 0;
-        state.diceSelectedOption![bot.userId] = optionIndex;
-      }
-      completed.add(bot.userId);
-    }
-    state.diceCompletedBy = [...completed];
+    seedSingleTestBotsPersonalityDiceReady(state);
     return;
   }
 

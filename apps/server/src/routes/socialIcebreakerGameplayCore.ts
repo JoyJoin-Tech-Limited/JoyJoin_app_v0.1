@@ -54,7 +54,11 @@ import {
 } from './socialIcebreakerHelpers';
 import { shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
 import { recordVoteOptimistically } from '../lib/optimisticSync';
-import { getBots, runBotSimulationSafely } from '../services/socialIcebreakerBotService';
+import {
+  getBots,
+  runBotSimulationSafely,
+  seedSingleTestBotsPersonalityDiceReady,
+} from '../services/socialIcebreakerBotService';
 import { isSingleTestMode } from '../lib/isSingleTestMode';
 
 const router = Router();
@@ -386,6 +390,7 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
   if (chooseModeEnabled) {
     // Idempotent retry: if groups already exist, return them instead of regenerating
     if ((state.personalityDiceChallengeGroups || []).length > 0) {
+      seedSingleTestBotsPersonalityDiceReady(state);
       await runBotSimulationSafely(socialSessionId, state, 'personality-dice-cached-generate');
       await updateSession(socialSessionId, state);
       const cachedMeta = state.personalityDiceChallengesMeta
@@ -413,9 +418,12 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
           state.personalityDiceChallengesMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-personality-dice-v4');
           state.diceSelectedOption = {};
           state.diceRevealOrder = undefined;
+          state.diceRevealCountdownEndsAt = undefined;
+          state.diceRevealReadyBy = [];
           state.currentDicePlayerIndex = 0;
           state.diceCompletedBy = [];
           state.dicePassedBy = [];
+          seedSingleTestBotsPersonalityDiceReady(state);
           await runBotSimulationSafely(socialSessionId, state, 'personality-dice-pregenerated');
           await updateSession(socialSessionId, state);
           logger.info('Personality dice groups served from pre-generation', { socialSessionId });
@@ -448,12 +456,15 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
       state.personalityDiceChallengesMeta = groupResult.meta;
       state.diceSelectedOption = {};
       state.diceRevealOrder = undefined;
+      state.diceRevealCountdownEndsAt = undefined;
+      state.diceRevealReadyBy = [];
       state.currentDicePlayerIndex = 0;
       state.diceCompletedBy = [];
       state.dicePassedBy = [];
       await updateSession(socialSessionId, state);
 
-      // Bots choose their dares.
+      // Bots choose their dares and default to ready at both gates.
+      seedSingleTestBotsPersonalityDiceReady(state);
       await runBotSimulationSafely(socialSessionId, state, 'personality-dice-generate');
       await updateSession(socialSessionId, state);
 
@@ -694,6 +705,7 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
 
   // Choose mode keeps selection editable until the player explicitly readies.
   if (chooseModeEnabled && state.personalityDiceChallengeGroups) {
+    seedSingleTestBotsPersonalityDiceReady(state);
     const nextReady = ready !== false;
     if (nextReady && state.diceSelectedOption?.[userId] === undefined) {
       return res.status(400).json({ error: 'Choose a challenge before getting ready' });
@@ -712,8 +724,10 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
         [order[index], order[swapIndex]] = [order[swapIndex], order[index]];
       }
       state.diceRevealOrder = order;
+      state.diceRevealCountdownEndsAt = Date.now() + 3000;
     } else if (!allReady) {
       state.diceRevealOrder = undefined;
+      state.diceRevealCountdownEndsAt = undefined;
     }
     await updateSession(socialSessionId, state);
     return res.json({
@@ -721,6 +735,7 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
       diceCompletedBy: state.diceCompletedBy,
       dicePassedBy: state.dicePassedBy,
       diceRevealOrder: state.diceRevealOrder,
+      diceRevealCountdownEndsAt: state.diceRevealCountdownEndsAt,
       allCompleted: allReady,
     });
   }
@@ -829,6 +844,36 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
     allCompleted: allResponded,
     operationId: null,
   });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/social-icebreaker/:socialSessionId/personality-dice/reveal-ready
+// Second ready gate: everyone acknowledges the reveal before the host advances.
+// ---------------------------------------------------------------------------
+router.post('/:socialSessionId/personality-dice/reveal-ready', async (req: any, res) => {
+  const { socialSessionId } = req.params;
+  const userId: string = req.session?.userId;
+  const { ready } = req.body as { ready?: boolean };
+  if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+  if (state.currentPhase !== 'personality_dice') {
+    return res.status(400).json({ error: 'Not in personality_dice phase' });
+  }
+  if (!state.diceRevealOrder || !state.diceRevealCountdownEndsAt) {
+    return res.status(409).json({ error: 'Choices have not been revealed yet' });
+  }
+
+  seedSingleTestBotsPersonalityDiceReady(state);
+  const readySet = new Set(state.diceRevealReadyBy ?? []);
+  if (ready !== false) readySet.add(userId);
+  else readySet.delete(userId);
+  state.diceRevealReadyBy = [...readySet];
+  const groups = state.personalityDiceChallengeGroups ?? [];
+  const allReady = groups.length > 0 && groups.every((group) => readySet.has(group.userId));
+  await updateSession(socialSessionId, state);
+  return res.json({ ready: ready !== false, diceRevealReadyBy: state.diceRevealReadyBy, allReady });
 });
 
 // ---------------------------------------------------------------------------
