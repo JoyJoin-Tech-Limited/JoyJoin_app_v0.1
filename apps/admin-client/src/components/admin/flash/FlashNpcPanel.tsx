@@ -178,7 +178,7 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
                 <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
                   <span>1 班概率 <strong className="text-foreground">{npc.oneShiftProbability ?? 35}%</strong></span>
                   <span>2 班概率 <strong className="text-foreground">{npc.twoShiftProbability ?? 65}%</strong></span>
-                  <span>班次时长 <strong className="text-foreground">{npc.minShiftMinutes ?? 90}–{npc.maxShiftMinutes ?? 150} 分钟</strong></span>
+                  <span>班次时长 <strong className="text-foreground">{npc.minShiftMinutes ?? 180}–{npc.maxShiftMinutes ?? 300} 分钟</strong></span>
                   <span>最小间隔 <strong className="text-foreground">{npc.minGapMinutes ?? 90} 分钟</strong></span>
                 </div>
                 {canWrite && (
@@ -321,8 +321,8 @@ function NpcCreateDialog({
               eligibleWeekdays: values.eligibleWeekdays,
               oneShiftProbability: 35,
               twoShiftProbability: 65,
-              minShiftMinutes: 90,
-              maxShiftMinutes: 150,
+              minShiftMinutes: 180,
+              maxShiftMinutes: 300,
               minGapMinutes: 90,
               themeColor: values.themeColor,
               sortOrder: values.sortOrder,
@@ -411,8 +411,8 @@ const npcSchema = z.object({
   eligibleWeekdays: z.array(z.number().int().min(1).max(7)).min(1, "至少选择一个上线日"),
   oneShiftProbability: z.number().int().min(0).max(100),
   twoShiftProbability: z.number().int().min(0).max(100),
-  minShiftMinutes: z.number().int().min(90, "不能少于 90 分钟").max(150),
-  maxShiftMinutes: z.number().int().min(90).max(150, "不能超过 150 分钟"),
+  minShiftMinutes: z.number().int().min(180, "不能少于 180 分钟").max(300),
+  maxShiftMinutes: z.number().int().min(180).max(300, "不能超过 300 分钟"),
   minGapMinutes: z.number().int().min(90, "班次间隔至少 90 分钟").max(720),
   themeColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "请输入 6 位 HEX 颜色"),
   sortOrder: z.number().int().min(0).max(99),
@@ -450,8 +450,8 @@ function NpcEditorDialog({
       eligibleWeekdays: npc.eligibleWeekdays,
       oneShiftProbability: npc.oneShiftProbability ?? 35,
       twoShiftProbability: npc.twoShiftProbability ?? 65,
-      minShiftMinutes: npc.minShiftMinutes ?? 90,
-      maxShiftMinutes: npc.maxShiftMinutes ?? 150,
+      minShiftMinutes: npc.minShiftMinutes ?? 180,
+      maxShiftMinutes: npc.maxShiftMinutes ?? 300,
       minGapMinutes: npc.minGapMinutes ?? 90,
       themeColor: npc.themeColor || "#8B5CF6",
       sortOrder: npc.sortOrder ?? 0,
@@ -509,10 +509,10 @@ function NpcEditorDialog({
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <FlashFormField label="最短班次（分钟）" error={errors.minShiftMinutes?.message}>
-                <Input type="number" min={90} max={150} {...register("minShiftMinutes", { valueAsNumber: true })} />
+                <Input type="number" min={180} max={300} {...register("minShiftMinutes", { valueAsNumber: true })} />
               </FlashFormField>
               <FlashFormField label="最长班次（分钟）" error={errors.maxShiftMinutes?.message}>
-                <Input type="number" min={90} max={150} {...register("maxShiftMinutes", { valueAsNumber: true })} />
+                <Input type="number" min={180} max={300} {...register("maxShiftMinutes", { valueAsNumber: true })} />
               </FlashFormField>
               <FlashFormField label="最小间隔（分钟）" error={errors.minGapMinutes?.message}>
                 <Input type="number" min={90} max={720} {...register("minGapMinutes", { valueAsNumber: true })} />

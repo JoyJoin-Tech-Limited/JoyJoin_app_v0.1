@@ -66,8 +66,8 @@
     ],
     "oneShiftProbability": 35,
     "twoShiftProbability": 65,
-    "minShiftMinutes": 90,
-    "maxShiftMinutes": 150,
+    "minShiftMinutes": 180,
+    "maxShiftMinutes": 300,
     "minGapMinutes": 90
   },
   {
@@ -137,8 +137,8 @@
     ],
     "oneShiftProbability": 35,
     "twoShiftProbability": 65,
-    "minShiftMinutes": 90,
-    "maxShiftMinutes": 150,
+    "minShiftMinutes": 180,
+    "maxShiftMinutes": 300,
     "minGapMinutes": 90
   },
   {
@@ -208,8 +208,8 @@
     ],
     "oneShiftProbability": 35,
     "twoShiftProbability": 65,
-    "minShiftMinutes": 90,
-    "maxShiftMinutes": 150,
+    "minShiftMinutes": 180,
+    "maxShiftMinutes": 300,
     "minGapMinutes": 90
   },
   {
@@ -281,8 +281,8 @@
     ],
     "oneShiftProbability": 35,
     "twoShiftProbability": 65,
-    "minShiftMinutes": 90,
-    "maxShiftMinutes": 150,
+    "minShiftMinutes": 180,
+    "maxShiftMinutes": 300,
     "minGapMinutes": 90
   },
   {
@@ -352,8 +352,8 @@
     ],
     "oneShiftProbability": 35,
     "twoShiftProbability": 65,
-    "minShiftMinutes": 90,
-    "maxShiftMinutes": 150,
+    "minShiftMinutes": 180,
+    "maxShiftMinutes": 300,
     "minGapMinutes": 90
   }
 ]

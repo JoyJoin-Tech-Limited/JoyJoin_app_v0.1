@@ -111,8 +111,8 @@ const npcSeedSchema = z.object({
   eligibleWeekdays: z.array(z.number().int().min(1).max(7)).min(1),
   oneShiftProbability: z.number().int().min(0).max(100),
   twoShiftProbability: z.number().int().min(0).max(100),
-  minShiftMinutes: z.literal(90),
-  maxShiftMinutes: z.literal(150),
+  minShiftMinutes: z.literal(180),
+  maxShiftMinutes: z.literal(300),
   minGapMinutes: z.number().int().min(90),
   themeColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
 }).superRefine((npc, ctx) => {

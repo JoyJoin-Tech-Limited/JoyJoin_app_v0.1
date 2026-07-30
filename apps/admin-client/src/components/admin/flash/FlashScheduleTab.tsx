@@ -78,8 +78,8 @@ const shiftSchema = z
     if (start < 9 * 60 || end > 21 * 60) {
       context.addIssue({ code: "custom", path: ["endTime"], message: "班次需安排在 09:00–21:00" });
     }
-    if (duration < 90 || duration > 150) {
-      context.addIssue({ code: "custom", path: ["endTime"], message: "单个班次需为 90–150 分钟" });
+    if (duration < 180 || duration > 300) {
+      context.addIssue({ code: "custom", path: ["endTime"], message: "单个班次需为 3–5 小时" });
     }
   });
 
@@ -256,7 +256,7 @@ export function FlashScheduleTab({
         <CalendarClock className="h-4 w-4" aria-hidden="true" />
         <AlertTitle>排班只决定“什么时候可能遇见”</AlertTitle>
         <AlertDescription>
-          每位 NPC 在固定星期内随机出现 1–2 个班次；班次 90–150 分钟，时间落在 09:00–21:00，用户不会提前看到未来安排。
+          每位 NPC 在固定星期内随机出现 1–2 个班次；班次 3–5 小时，时间落在 09:00–21:00，用户不会提前看到未来安排。
         </AlertDescription>
       </Alert>
 
@@ -499,7 +499,7 @@ function ShiftEditorDialog({
       npcId: state.shift?.npcId ?? "",
       locationId: state.shift?.locationId ?? "",
       startTime: state.shift ? formatFlashTime(state.shift.startsAt) : "09:00",
-      endTime: state.shift ? formatFlashTime(state.shift.endsAt) : "10:30",
+      endTime: state.shift ? formatFlashTime(state.shift.endsAt) : "12:00",
     });
   }, [state, reset]);
 
@@ -513,7 +513,7 @@ function ShiftEditorDialog({
         <DialogHeader>
           <DialogTitle>{state?.shift ? "调整班次" : "新增人工班次"}</DialogTitle>
           <DialogDescription>
-            单个班次 90–150 分钟，只能落在 09:00–21:00。跨 NPC 的间隔与冲突会由服务端再次校验。
+            单个班次 3–5 小时，只能落在 09:00–21:00。跨 NPC 的间隔与冲突会由服务端再次校验。
           </DialogDescription>
         </DialogHeader>
 
@@ -571,12 +571,12 @@ function ShiftEditorDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="flash-shift-start">开始时间</Label>
-                <Input id="flash-shift-start" type="time" min="09:00" max="19:30" {...register("startTime")} />
+                <Input id="flash-shift-start" type="time" min="09:00" max="18:00" {...register("startTime")} />
                 {errors.startTime && <p className="text-xs text-destructive">{errors.startTime.message}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="flash-shift-end">结束时间</Label>
-                <Input id="flash-shift-end" type="time" min="10:30" max="21:00" {...register("endTime")} />
+                <Input id="flash-shift-end" type="time" min="12:00" max="21:00" {...register("endTime")} />
                 {errors.endTime && <p className="text-xs text-destructive">{errors.endTime.message}</p>}
               </div>
             </div>

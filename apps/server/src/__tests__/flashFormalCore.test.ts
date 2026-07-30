@@ -63,8 +63,8 @@ function npc(overrides: Record<string, unknown> = {}) {
     eligibleWeekdays: [1],
     oneShiftProbability: 35,
     twoShiftProbability: 65,
-    minShiftMinutes: 90,
-    maxShiftMinutes: 150,
+    minShiftMinutes: 180,
+    maxShiftMinutes: 300,
     minGapMinutes: 90,
     themeColor: "#64748B",
     avatarUrl: null,
@@ -437,7 +437,7 @@ describe("formal Flash scheduling", () => {
     expect(isoWeekdayForServiceDate("2026-07-19")).toBe(7); // Sunday
   });
 
-  it("creates one or two 90-150 minute shifts only on an eligible day", () => {
+  it("creates one or two 180-300 minute shifts only on an eligible day", () => {
     const locationRow = location();
     const generated = generateFlashScheduleDraft({
       serviceDate: "2026-07-20",
@@ -449,8 +449,8 @@ describe("formal Flash scheduling", () => {
     expect(generated.shifts.length).toBeLessThanOrEqual(2);
     for (const shift of generated.shifts) {
       const minutes = (shift.endsAt.getTime() - shift.startsAt.getTime()) / 60_000;
-      expect(minutes).toBeGreaterThanOrEqual(90);
-      expect(minutes).toBeLessThanOrEqual(150);
+      expect(minutes).toBeGreaterThanOrEqual(180);
+      expect(minutes).toBeLessThanOrEqual(300);
     }
     const validation = validateFlashScheduleDraft({
       serviceDate: "2026-07-20",
@@ -465,8 +465,8 @@ describe("formal Flash scheduling", () => {
     const npcRow = npc();
     const locationRow = location();
     const shifts = [
-      ["2026-07-20T09:00:00+08:00", "2026-07-20T10:30:00+08:00"],
-      ["2026-07-20T13:00:00+08:00", "2026-07-20T14:30:00+08:00"],
+      ["2026-07-20T09:00:00+08:00", "2026-07-20T12:00:00+08:00"],
+      ["2026-07-20T13:30:00+08:00", "2026-07-20T16:30:00+08:00"],
       ["2026-07-20T19:30:00+08:00", "2026-07-21T00:00:00+08:00"],
     ].map(([startsAt, endsAt]) => ({
       npcId: npcRow.id,

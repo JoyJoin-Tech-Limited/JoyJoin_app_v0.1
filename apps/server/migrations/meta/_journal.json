@@ -495,26 +495,33 @@
     {
       "idx": 70,
       "version": "7",
+      "when": 1785376800000,
+      "tag": "20260730020000_expand_flash_npc_shift_duration",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
       "when": 1778141820001,
       "tag": "add_attendance_status",
       "breakpoints": true
     },
     {
-      "idx": 71,
+      "idx": 72,
       "version": "7",
       "when": 1780992000000,
       "tag": "seed_venue_batch_and_co_20260608",
       "breakpoints": true
     },
     {
-      "idx": 72,
+      "idx": 73,
       "version": "7",
       "when": 1780395567634,
       "tag": "seed_venue_partners_20260602",
       "breakpoints": true
     },
     {
-      "idx": 73,
+      "idx": 74,
       "version": "7",
       "when": 1780395567634,
       "tag": "seed_venue_time_slots_20260602",

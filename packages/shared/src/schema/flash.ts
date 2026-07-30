@@ -76,8 +76,8 @@ export const flashNpcs = pgTable("flash_npcs", {
   eligibleWeekdays: integer("eligible_weekdays").array().notNull(),
   oneShiftProbability: integer("one_shift_probability").notNull().default(35),
   twoShiftProbability: integer("two_shift_probability").notNull().default(65),
-  minShiftMinutes: integer("min_shift_minutes").notNull().default(90),
-  maxShiftMinutes: integer("max_shift_minutes").notNull().default(150),
+  minShiftMinutes: integer("min_shift_minutes").notNull().default(180),
+  maxShiftMinutes: integer("max_shift_minutes").notNull().default(300),
   minGapMinutes: integer("min_gap_minutes").notNull().default(90),
   themeColor: varchar("theme_color", { length: 16 }).notNull(),
   avatarUrl: text("avatar_url"),
@@ -90,7 +90,7 @@ export const flashNpcs = pgTable("flash_npcs", {
   index("idx_flash_npcs_active_sort").on(table.isActive, table.sortOrder),
   check("ck_flash_npcs_weekdays", sql`cardinality(${table.eligibleWeekdays}) > 0 and ${table.eligibleWeekdays} <@ array[1,2,3,4,5,6,7]::integer[]`),
   check("ck_flash_npcs_shift_probability", sql`${table.oneShiftProbability} between 0 and 100 and ${table.twoShiftProbability} between 0 and 100 and ${table.oneShiftProbability} + ${table.twoShiftProbability} = 100`),
-  check("ck_flash_npcs_shift_duration", sql`${table.minShiftMinutes} between 90 and 150 and ${table.maxShiftMinutes} between ${table.minShiftMinutes} and 150 and ${table.minGapMinutes} >= 90`),
+  check("ck_flash_npcs_shift_duration", sql`${table.minShiftMinutes} between 180 and 300 and ${table.maxShiftMinutes} between ${table.minShiftMinutes} and 300 and ${table.minGapMinutes} >= 90`),
 ]);
 
 export const flashEncounterLocations = pgTable("flash_encounter_locations", {
