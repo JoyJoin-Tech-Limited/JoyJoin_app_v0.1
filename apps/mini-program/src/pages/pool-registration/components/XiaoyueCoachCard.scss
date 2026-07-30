@@ -31,40 +31,34 @@
   }
 
   &__mascot-wrap {
-    position: absolute;
-    top: -40rpx;
-    left: $spacing-md;
-    z-index: 2;
+    flex: 0 0 112rpx;
+    width: 112rpx;
+    height: 112rpx;
   }
 
   &__paper {
     position: relative;
     @include card-premium;
     padding: $spacing-lg;
-    padding-top: $spacing-xl;
     background: linear-gradient(180deg, $color-surface 0%, rgba($color-bg-tint-warm, 0.5) 100%);
     border: 2rpx solid rgba($color-primary, 0.08);
     overflow: hidden;
   }
 
-  &__tail {
-    position: absolute;
-    top: -16rpx;
-    left: 68rpx;
-    width: 32rpx;
-    height: 32rpx;
-    background: $color-surface;
-    border-left: 2rpx solid rgba($color-primary, 0.08);
-    border-top: 2rpx solid rgba($color-primary, 0.08);
-    transform: rotate(45deg);
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-height: 112rpx;
+    margin-bottom: $spacing-sm;
   }
 
   &__eyebrow {
     display: block;
+    flex: 1;
     @include type-caption;
     font-weight: $font-weight-semibold;
     color: rgba($color-primary-dark, 0.82);
-    margin-bottom: $spacing-xs;
   }
 
   &__title {

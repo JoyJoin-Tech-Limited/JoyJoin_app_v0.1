@@ -175,7 +175,6 @@ export default function PoolRegistrationPage() {
   const [showBudgetReaction, triggerBudgetReaction] = useReactionTimer()
   const [showIntentReaction, triggerIntentReaction, hideIntentReaction] = useReactionTimer()
   const [showDetailReaction, triggerDetailReaction] = useReactionTimer()
-  const [detailCelebration, setDetailCelebration] = useState(false)
   const staggerMounted = useStaggerMount()
 
   // Gate transient reactions so they only celebrate the first selection per step visit.
@@ -558,21 +557,15 @@ export default function PoolRegistrationPage() {
     [formState, eventType],
   )
 
-  const handleDetailCelebrateComplete = useCallback(() => {
-    setDetailCelebration(false)
-  }, [])
-
-  // Celebrate the first detail selection on Step 3 with a brief mascot celebrate state.
+  // Show the first Step 3 acknowledgement without changing the step-specific static pose.
   useEffect(() => {
     if (step !== STEP_DETAILS) return
     if (!anyDetailSelected) return
     if (detailCelebrateShownRef.current) return
-    if (reduceMotion) return
     detailCelebrateShownRef.current = true
-    setDetailCelebration(true)
     triggerDetailReaction()
     discoverAnalytics.track('registration_step_reaction_shown', poolId, { step: 'details' })
-  }, [step, anyDetailSelected, reduceMotion, poolId, triggerDetailReaction])
+  }, [step, anyDetailSelected, poolId, triggerDetailReaction])
 
   const successHighlights = useMemo(() => {
     const items = [selectedBudget, ...findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS).slice(0, 2)]
@@ -1052,6 +1045,7 @@ export default function PoolRegistrationPage() {
             userArchetype={user?.primaryArchetype ?? undefined}
             visible={staggerMounted}
             reduceMotion={reduceMotion}
+            spriteState='coach'
             footer={
               hasBudgetSelection ? (
                 <View className='pool-reg__completion-pill'>
@@ -1102,6 +1096,7 @@ export default function PoolRegistrationPage() {
             userArchetype={user?.primaryArchetype ?? undefined}
             visible={staggerMounted}
             reduceMotion={reduceMotion}
+            spriteState='curious'
             footer={
               hasIntentSelection ? (
                 <View className='pool-reg__completion-pill'>
@@ -1139,8 +1134,7 @@ export default function PoolRegistrationPage() {
             userArchetype={user?.primaryArchetype ?? undefined}
             visible={staggerMounted}
             reduceMotion={reduceMotion}
-            spriteState={detailCelebration ? 'celebrate' : 'coach'}
-            onSpriteComplete={handleDetailCelebrateComplete}
+            spriteState='listening'
             footer={
               anyDetailSelected ? (
                 <View className='pool-reg__completion-pill'>

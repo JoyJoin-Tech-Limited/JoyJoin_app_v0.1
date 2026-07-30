@@ -17,7 +17,6 @@ interface XiaoyueCoachCardProps {
   visible?: boolean
   reduceMotion?: boolean
   spriteState?: XiaoyueSpriteState
-  onSpriteComplete?: () => void
 }
 
 export default function XiaoyueCoachCard({
@@ -32,7 +31,6 @@ export default function XiaoyueCoachCard({
   visible = true,
   reduceMotion = false,
   spriteState = 'coach',
-  onSpriteComplete,
 }: XiaoyueCoachCardProps) {
   const archetypeTokens = useMemo(
     () => (userArchetype ? getArchetypeTokens(userArchetype) : null),
@@ -49,25 +47,24 @@ export default function XiaoyueCoachCard({
 
   return (
     <View className={rootClasses}>
-      <View className='xiaoyue-coach-card__mascot-wrap' aria-hidden='true'>
-        <XiaoyueSpriteAnimator
-          state={spriteState}
-          size='112rpx'
-          showGlow
-          autoPlay
-          transitionMs={300}
-          onComplete={onSpriteComplete}
-        />
-      </View>
-
       <View className='xiaoyue-coach-card__paper'>
-        <View className='xiaoyue-coach-card__tail' />
-        <Text
-          className='xiaoyue-coach-card__eyebrow'
-          style={archetypeTokens ? { color: archetypeTokens.primary } : undefined}
-        >
-          {eyebrow}
-        </Text>
+        <View className='xiaoyue-coach-card__header'>
+          <View className='xiaoyue-coach-card__mascot-wrap' aria-hidden='true'>
+            <XiaoyueSpriteAnimator
+              state={spriteState}
+              size='112rpx'
+              showGlow
+              autoPlay={false}
+              staticFrame={0}
+            />
+          </View>
+          <Text
+            className='xiaoyue-coach-card__eyebrow'
+            style={archetypeTokens ? { color: archetypeTokens.primary } : undefined}
+          >
+            {eyebrow}
+          </Text>
+        </View>
         <Text className='xiaoyue-coach-card__title'>{title}</Text>
         <Text className='xiaoyue-coach-card__copy'>{copy}</Text>
 
