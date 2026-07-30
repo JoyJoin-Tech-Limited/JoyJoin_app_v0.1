@@ -25,7 +25,6 @@ import {
   flashTaskAssignments,
   users,
 } from "@shared/schema";
-import type { FlashTaskSnapshot } from "@shared/schema/flash";
 import {
   personalStoryChapters,
   personalStoryExperienceSnapshotSchema,
@@ -224,41 +223,24 @@ async function listAlangExperienceSnapshots(
 export interface FlashStorySourceRow {
   assignmentId: string;
   deliveredAt: Date;
-  contentSnapshot: FlashTaskSnapshot;
-  feedbackAnswers: Array<{ promptId: string; optionId: string }> | null;
+  taskTitle: string | null;
+  npcName: string | null;
 }
 
 /**
  * Converts only server-owned, reviewed Flash data into story facts. The query
- * intentionally never selects privateReply, coordinates, addresses or raw
- * client prose, so those values cannot reach the LLM by accident.
+ * intentionally projects only the reviewed task title and NPC name. Feedback,
+ * private replies, coordinates, addresses and raw client prose therefore
+ * cannot reach the LLM by accident.
  */
 export function buildFlashStorySnapshot(
   row: FlashStorySourceRow,
 ): PersonalStoryExperienceSnapshot {
-  const feedbackOptionByKey = new Map<string, string>();
-  for (const prompt of row.contentSnapshot.feedbackPrompts ?? []) {
-    for (const option of prompt.options) {
-      feedbackOptionByKey.set(
-        `${prompt.id}:${option.id}`,
-        option.label,
-      );
-    }
-  }
-  const choices = (row.feedbackAnswers ?? [])
-    .map((answer) =>
-      cleanKeyword(
-        feedbackOptionByKey.get(`${answer.promptId}:${answer.optionId}`),
-        40,
-      ),
-    )
-    .filter((value): value is string => Boolean(value))
-    .slice(0, 12);
-  const storyBeat = cleanKeyword(row.contentSnapshot.title, 120);
-  const npcResponse = cleanKeyword(row.contentSnapshot.deliveryCopy, 160);
-  const publicLocation =
-    cleanKeyword(row.contentSnapshot.destination?.name, 80)
-    ?? cleanKeyword(row.contentSnapshot.destination?.district, 40);
+  const taskTitle = cleanKeyword(row.taskTitle, 32);
+  const activityType =
+    cleanKeyword(taskTitle ? `街头盲盒·${taskTitle}` : "街头盲盒", 40)
+    ?? "街头盲盒";
+  const npc = cleanKeyword(row.npcName, 20);
 
   return personalStoryExperienceSnapshotSchema.parse({
     sourceType: "flash",
@@ -266,14 +248,8 @@ export function buildFlashStorySnapshot(
     occurredAt: toIso(row.deliveredAt),
     keywords: {
       occurredOn: toDateOnly(row.deliveredAt),
-      activityType: "街头盲盒",
-      ...(publicLocation ? { location: publicLocation } : {}),
-      ...(cleanKeyword(row.contentSnapshot.npcName, 20)
-        ? { npc: cleanKeyword(row.contentSnapshot.npcName, 20) }
-        : {}),
-      ...(choices.length > 0 ? { choices } : {}),
-      ...(storyBeat ? { storyBeats: [storyBeat] } : {}),
-      ...(npcResponse ? { npcResponses: [npcResponse] } : {}),
+      activityType,
+      ...(npc ? { npc } : {}),
     },
   });
 }
@@ -285,8 +261,8 @@ async function listFlashExperienceSnapshots(
     .select({
       assignmentId: flashTaskAssignments.id,
       deliveredAt: flashTaskAssignments.deliveredAt,
-      contentSnapshot: flashTaskAssignments.contentSnapshot,
-      feedbackAnswers: flashTaskAssignments.feedbackAnswers,
+      taskTitle: sql<string | null>`${flashTaskAssignments.contentSnapshot}->>'title'`,
+      npcName: sql<string | null>`${flashTaskAssignments.contentSnapshot}->>'npcName'`,
     })
     .from(flashTaskAssignments)
     .where(
@@ -294,7 +270,6 @@ async function listFlashExperienceSnapshots(
         eq(flashTaskAssignments.userId, userId),
         eq(flashTaskAssignments.status, "delivered"),
         isNotNull(flashTaskAssignments.deliveredAt),
-        isNotNull(flashTaskAssignments.feedbackSubmittedAt),
       ),
     )) as Array<Omit<FlashStorySourceRow, "deliveredAt"> & { deliveredAt: Date }>;
 

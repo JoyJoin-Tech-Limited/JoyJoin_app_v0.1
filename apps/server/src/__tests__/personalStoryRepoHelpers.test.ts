@@ -26,6 +26,19 @@ function blindBoxEligibilityQuerySource(): string {
   return REPOSITORY_SOURCE.slice(start, end);
 }
 
+function flashEligibilityQuerySource(): string {
+  const start = REPOSITORY_SOURCE.indexOf(
+    "async function listFlashExperienceSnapshots",
+  );
+  const end = REPOSITORY_SOURCE.indexOf(
+    "async function listBlindBoxExperienceSnapshots",
+    start,
+  );
+  expect(start).toBeGreaterThanOrEqual(0);
+  expect(end).toBeGreaterThan(start);
+  return REPOSITORY_SOURCE.slice(start, end);
+}
+
 const {
   buildFlashStorySnapshot,
   createPersonalStoryLeaseToken,
@@ -40,31 +53,8 @@ describe("personal story repository boundaries", () => {
     const snapshot = buildFlashStorySnapshot({
       assignmentId: "assignment-1",
       deliveredAt: new Date("2026-07-28T10:00:00.000Z"),
-      contentSnapshot: {
-        templateVersion: 1,
-        code: "T01",
-        category: "城市探索",
-        title: "替阿浪把一句话带给栗子",
-        brief: "一件没有说完的小事",
-        instructions: "下次遇见栗子时，把话带给她。",
-        dialogueIntro: "今天反正都出来了。",
-        deliveryCopy: "原来你真的带到了。谢谢你。",
-        invitationType: "npc_message",
-        followUpTargetNpcSlug: "lizi",
-        followUpTargetNpcName: "栗子",
-        feedbackPrompts: [{
-          id: "result",
-          prompt: "后来怎么样了",
-          options: [
-            { id: "delivered", label: "我带到了" },
-            { id: "not-yet", label: "还没带到" },
-          ],
-        }],
-        npcName: "阿浪",
-        npcSlug: "alang",
-        destination: null,
-      },
-      feedbackAnswers: [{ promptId: "result", optionId: "delivered" }],
+      taskTitle: "替阿浪把一句话带给栗子",
+      npcName: "阿浪",
     });
 
     expect(snapshot).toEqual({
@@ -73,16 +63,27 @@ describe("personal story repository boundaries", () => {
       occurredAt: "2026-07-28T10:00:00.000Z",
       keywords: {
         occurredOn: "2026-07-28",
-        activityType: "街头盲盒",
+        activityType: "街头盲盒·替阿浪把一句话带给栗子",
         npc: "阿浪",
-        choices: ["我带到了"],
-        storyBeats: ["替阿浪把一句话带给栗子"],
-        npcResponses: ["原来你真的带到了。谢谢你。"],
       },
     });
     expect(JSON.stringify(snapshot)).not.toContain("privateReply");
     expect(JSON.stringify(snapshot)).not.toContain("latitude");
     expect(JSON.stringify(snapshot)).not.toContain("longitude");
+  });
+
+  it("admits only delivered Flash tasks and projects no response or location data", () => {
+    const source = flashEligibilityQuerySource();
+
+    expect(source).toContain('eq(flashTaskAssignments.status, "delivered")');
+    expect(source).toContain("isNotNull(flashTaskAssignments.deliveredAt)");
+    expect(source).toContain("eq(flashTaskAssignments.userId, userId)");
+    expect(source).toContain("taskTitle: sql<string | null>");
+    expect(source).toContain("npcName: sql<string | null>");
+    expect(source).not.toContain("contentSnapshot:");
+    expect(source).not.toContain("privateReply:");
+    expect(source).not.toContain("feedbackAnswers:");
+    expect(source).not.toContain("answers:");
   });
 
   it("admits a completed blind-box experience only with the acting user's strict participation proof", () => {
