@@ -24,7 +24,6 @@ import {
 } from '../../../components/alang/FlashUi'
 import '../flash.scss'
 
-const FLASH_INTRO_ACK_STORAGE_KEY = 'joyjoin_flash_intro_ack_v1'
 const FLASH_AMBIENT_BACKGROUND = '/pages/alang/assets/ui/flash-city-ambient-bg.png'
 const FLASH_EMPTY_ONLINE = '/pages/alang/assets/ui/flash-empty-online.png'
 const FLASH_EMPTY_TASKS = '/pages/alang/assets/ui/flash-empty-tasks.png'
@@ -42,49 +41,75 @@ function isLocationPermissionDenied(error: unknown): boolean {
   return /auth(?:orize)?\s*deny|permission\s*denied|user\s*deny/i.test(message)
 }
 
-function readIntroAcknowledgement(): boolean {
-  try {
-    return Taro.getStorageSync(FLASH_INTRO_ACK_STORAGE_KEY) === true
-  } catch {
-    return false
-  }
-}
-
-function rememberIntroAcknowledgement(): void {
-  try {
-    Taro.setStorageSync(FLASH_INTRO_ACK_STORAGE_KEY, true)
-  } catch {
-    // The disclosure remains visible again next time if storage is unavailable.
-  }
-}
-
 function FlashIntro({ onContinue }: { onContinue: () => void }) {
+  const [step, setStep] = useState(0)
+  const steps = [
+    {
+      eyebrow: '01 · 数字相遇',
+      title: '先认识一下街头盲盒',
+      description: '你会遇见不定时出现的数字动物角色。它们不是真人工作人员，也不会在现实里等你。',
+      note: '谁会出现、何时遇见，留一点惊喜。',
+      emoji: null,
+    },
+    {
+      eyebrow: '02 · 一次定位',
+      title: '定位只在此刻发生',
+      description: '你主动开启后，我们读取一次当前位置，用来显示在线角色并判断你是否到了附近。',
+      note: '不会在后台持续追踪，也不会用 IP 猜位置。',
+      emoji: '🧭',
+    },
+    {
+      eyebrow: '03 · 安全边界',
+      title: '决定权一直在你手里',
+      description: '任务不要求消费、拍照或打扰陌生人。去不去、进不进店，都由你自己决定。',
+      note: '街头盲盒不会订阅消息，也不会主动推送提醒。',
+      emoji: '🛡️',
+    },
+  ] as const
+  const current = steps[step]
+  const isLastStep = step === steps.length - 1
+
   return (
     <View className='flash-intro'>
-      <View className='flash-intro__mark' aria-hidden='true'>
-        <Image className='flash-intro__icon' src={FLASH_STREET_BOX_ICON} mode='aspectFill' />
+      <View className='flash-intro__progress' aria-label={`街头盲盒介绍，第 ${step + 1} 步，共 ${steps.length} 步`}>
+        {steps.map((item, index) => (
+          <View
+            key={item.eyebrow}
+            className={`flash-intro__progress-dot${index === step ? ' flash-intro__progress-dot--active' : ''}`}
+          />
+        ))}
       </View>
-      <Text className='flash-intro__title'>先说好，这是一场数字角色相遇</Text>
-      <Text className='flash-intro__lead'>
-        街头盲盒里遇到的动物都是数字叙事角色，不是真人工作人员，也不会在现实里等你。它们是谁，留给你碰见时再认识。
-      </Text>
-      <View className='flash-intro__rules'>
-        <View className='flash-intro__rule'>
-          <Text className='flash-intro__rule-index'>1</Text>
-          <Text className='flash-intro__rule-text'>你主动打开街头盲盒时，我们才申请一次定位，用来显示当前在线角色和判断是否到达附近。</Text>
+      <View className='flash-intro__stage'>
+        <View className={`flash-intro__visual flash-intro__visual--${step + 1}`} aria-hidden='true'>
+          {current.emoji ? (
+            <JoyJoinIcon emoji={current.emoji} tier='ui' size={92} className='flash-intro__visual-symbol' />
+          ) : (
+            <Image className='flash-intro__visual-image' src={FLASH_STREET_BOX_ICON} mode='aspectFit' />
+          )}
         </View>
-        <View className='flash-intro__rule'>
-          <Text className='flash-intro__rule-index'>2</Text>
-          <Text className='flash-intro__rule-text'>不开放定位就不能参加街头盲盒，但发现页和其他功能照常使用；这里不会用 IP 猜位置。</Text>
-        </View>
-        <View className='flash-intro__rule'>
-          <Text className='flash-intro__rule-index'>3</Text>
-          <Text className='flash-intro__rule-text'>任务不要求消费、拍照或打扰陌生人。去不去、进不进店，都由你决定。</Text>
+        <Text className='flash-intro__eyebrow'>{current.eyebrow}</Text>
+        <Text className='flash-intro__title'>{current.title}</Text>
+        <Text className='flash-intro__lead'>{current.description}</Text>
+        <View className='flash-intro__note'>
+          <Text className='flash-intro__note-mark'>✓</Text>
+          <Text className='flash-intro__note-text'>{current.note}</Text>
         </View>
       </View>
       <View className='flash-intro__actions'>
-        <FlashButton onClick={onContinue}>我知道了，开启定位</FlashButton>
-        <Text className='flash-intro__privacy'>街头盲盒不会订阅消息，也不会主动推送提醒。</Text>
+        <FlashButton onClick={isLastStep ? onContinue : () => setStep((value) => value + 1)}>
+          {isLastStep ? '我知道了，开启定位' : '下一步'}
+        </FlashButton>
+        {step > 0 && (
+          <View
+            className='flash-intro__back'
+            hoverClass='flash-intro__back--pressed'
+            onClick={() => setStep((value) => value - 1)}
+            role='button'
+            aria-label='返回上一步'
+          >
+            <Text className='flash-intro__back-text'>返回上一步</Text>
+          </View>
+        )}
       </View>
     </View>
   )
@@ -169,7 +194,7 @@ export default function FlashHomePage() {
     enabled && gate === 'ready' && pageVisible,
   )
 
-  const requestLocation = useCallback(async (rememberIntro = false) => {
+  const requestLocation = useCallback(async () => {
     if (locationActiveRef.current) return
     locationActiveRef.current = true
     const attempt = ++locationAttemptRef.current
@@ -183,7 +208,6 @@ export default function FlashHomePage() {
       }
       const snapshot = await getOneShotFlashLocation()
       if (attempt !== locationAttemptRef.current) return
-      if (rememberIntro) rememberIntroAcknowledgement()
       setLocation(snapshot)
       setGate('ready')
     } catch (error) {
@@ -194,13 +218,9 @@ export default function FlashHomePage() {
     }
   }, [])
 
-  const restoreGate = useCallback(async () => {
-    if (!readIntroAcknowledgement()) {
-      setGate('intro')
-      return
-    }
-    await requestLocation(false)
-  }, [requestLocation])
+  const restoreGate = useCallback(() => {
+    setGate('intro')
+  }, [])
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: '街头盲盒' })
@@ -260,8 +280,7 @@ export default function FlashHomePage() {
     try {
       const setting = await Taro.openSetting()
       if (setting.authSetting?.['scope.userLocation'] === true) {
-        rememberIntroAcknowledgement()
-        await requestLocation(false)
+        await requestLocation()
       } else {
         setGate('denied')
       }
@@ -298,7 +317,7 @@ export default function FlashHomePage() {
     )
   }
 
-  if (gate === 'intro') return <FlashIntro onContinue={() => { void requestLocation(true) }} />
+  if (gate === 'intro') return <FlashIntro onContinue={() => { void requestLocation() }} />
 
   if (gate === 'checking' || gate === 'locating') {
     return (
@@ -331,7 +350,7 @@ export default function FlashHomePage() {
           tone='error'
           title='这次没有拿到位置'
           description='定位响应超时或信号暂时不稳定。你可以重新检查权限并再试一次。'
-          action={() => { void restoreGate() }}
+          action={() => { void requestLocation() }}
           actionLabel='重新定位'
         />
       </View>

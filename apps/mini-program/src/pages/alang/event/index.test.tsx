@@ -59,6 +59,12 @@ const home = {
   preferenceSummary: { personalizationEnabled: true },
 }
 
+async function acceptFlashIntro() {
+  fireEvent.click(await screen.findByText('下一步'))
+  fireEvent.click(screen.getByText('下一步'))
+  fireEvent.click(screen.getByText('我知道了，开启定位'))
+}
+
 describe('formal Flash home', () => {
   it('keeps API error-code locals outside the async page component scope', () => {
     const source = readFileSync(path.join(process.cwd(), 'src/pages/alang/event/index.tsx'), 'utf8')
@@ -78,23 +84,30 @@ describe('formal Flash home', () => {
   })
 
   it('discloses digital NPCs before any location request', async () => {
-    mocks.getStorageSync.mockReturnValue(false)
     render(<FlashHomePage />)
     expect(mocks.location).not.toHaveBeenCalled()
     act(() => { mocks.didShow?.() })
 
-    expect(await screen.findByText('先说好，这是一场数字角色相遇')).toBeInTheDocument()
+    expect(await screen.findByText('先认识一下街头盲盒')).toBeInTheDocument()
     expect(screen.getByText(/不是真人工作人员/)).toBeInTheDocument()
-    expect(screen.getByText(/留给你碰见时再认识/)).toBeInTheDocument()
-    expect(screen.queryByText(/栗子、默默、拾柒和阿团/)).not.toBeInTheDocument()
+    expect(mocks.location).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByText('下一步'))
+    expect(screen.getByText('定位只在此刻发生')).toBeInTheDocument()
+    expect(screen.getByText(/不会在后台持续追踪/)).toBeInTheDocument()
+    expect(mocks.location).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByText('下一步'))
+    expect(screen.getByText('决定权一直在你手里')).toBeInTheDocument()
+    expect(screen.getByText(/不要求消费、拍照或打扰陌生人/)).toBeInTheDocument()
     expect(mocks.location).not.toHaveBeenCalled()
   })
 
   it('loads online NPCs and tasks only after one-shot location is available', async () => {
-    mocks.getStorageSync.mockReturnValue(true)
     render(<FlashHomePage />)
     expect(mocks.location).not.toHaveBeenCalled()
     act(() => { mocks.didShow?.() })
+    await acceptFlashIntro()
 
     expect(await screen.findByText('阿浪')).toBeInTheDocument()
     expect(document.querySelector("img[src='/pages/alang/assets/ui/flash-city-ambient-bg.png']")).toBeTruthy()
@@ -109,9 +122,9 @@ describe('formal Flash home', () => {
   })
 
   it('opens the radar with safe display metadata but no coordinates', async () => {
-    mocks.getStorageSync.mockReturnValue(true)
     render(<FlashHomePage />)
     act(() => { mocks.didShow?.() })
+    await acceptFlashIntro()
     fireEvent.click(await screen.findByRole('button', { name: /去找阿浪/ }))
 
     const url = mocks.navigateTo.mock.calls[0][0].url as string
@@ -129,7 +142,6 @@ describe('formal Flash home', () => {
   })
 
   it('starts from the active page lifecycle when auth resolves after the first show', async () => {
-    mocks.getStorageSync.mockReturnValue(true)
     mocks.useAuth.mockReturnValue({ user: undefined })
     const view = render(<FlashHomePage />)
 
@@ -139,21 +151,20 @@ describe('formal Flash home', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
     view.rerender(<FlashHomePage />)
 
+    await acceptFlashIntro()
     await waitFor(() => expect(mocks.location).toHaveBeenCalledTimes(1))
     expect(await screen.findByText('阿浪')).toBeInTheDocument()
   })
 
   it('starts from the mounted page when the native didShow callback is missed', async () => {
-    mocks.getStorageSync.mockReturnValue(true)
-
     render(<FlashHomePage />)
 
+    await acceptFlashIntro()
     await waitFor(() => expect(mocks.location).toHaveBeenCalledTimes(1))
     expect(await screen.findByText('阿浪')).toBeInTheDocument()
   })
 
   it('shows a retryable Shenzhen verification state when the server cannot verify location', async () => {
-    mocks.getStorageSync.mockReturnValue(true)
     mocks.useFlashHome.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -164,6 +175,7 @@ describe('formal Flash home', () => {
 
     render(<FlashHomePage />)
     act(() => { mocks.didShow?.() })
+    await acceptFlashIntro()
 
     expect(await screen.findByText('暂时无法确认你是否在深圳')).toBeInTheDocument()
     expect(screen.getByText(/可以稍后再试/)).toBeInTheDocument()
@@ -173,11 +185,11 @@ describe('formal Flash home', () => {
   })
 
   it('shows a retry action when one-shot location fails', async () => {
-    mocks.getStorageSync.mockReturnValue(true)
     mocks.location.mockRejectedValueOnce(new Error('getLocation:fail timeout'))
 
     render(<FlashHomePage />)
     act(() => { mocks.didShow?.() })
+    await acceptFlashIntro()
 
     expect(await screen.findByText('这次没有拿到位置')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '重新定位' }))
@@ -187,11 +199,13 @@ describe('formal Flash home', () => {
   })
 
   it('recovers from a suspended checking state after the page is hidden and shown', async () => {
-    mocks.getStorageSync.mockReturnValue(true)
     mocks.location.mockReturnValue(new Promise(() => undefined))
 
     render(<FlashHomePage />)
     act(() => { mocks.didShow?.() })
+    fireEvent.click(screen.getByText('下一步'))
+    fireEvent.click(screen.getByText('下一步'))
+    fireEvent.click(screen.getByText('我知道了，开启定位'))
     expect(screen.getByText('看看深圳哪里有角色在线…')).toBeInTheDocument()
     expect(document.querySelector('.flash-location-compiler-scope-v4')).toBeTruthy()
 
@@ -204,11 +218,13 @@ describe('formal Flash home', () => {
 
   it('leaves locating even when the page stays visible and the device API never settles', async () => {
     vi.useFakeTimers()
-    mocks.getStorageSync.mockReturnValue(true)
     mocks.location.mockReturnValue(new Promise(() => undefined))
 
     render(<FlashHomePage />)
     act(() => { mocks.didShow?.() })
+    fireEvent.click(screen.getByText('下一步'))
+    fireEvent.click(screen.getByText('下一步'))
+    fireEvent.click(screen.getByText('我知道了，开启定位'))
     expect(screen.getByText('看看深圳哪里有角色在线…')).toBeInTheDocument()
 
     await vi.advanceTimersByTimeAsync(12_000)
