@@ -14,7 +14,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tarojs/taro', () => ({
   default: {
     getCurrentInstance: () => ({ router: { params: {
-      appearanceId: 'appearance-1', npcName: '阿浪', npcSlug: 'alang', districtName: '南山区',
+      appearanceId: 'appearance-1',
+      npcName: '%E9%BB%98%E9%BB%98',
+      npcSlug: 'momo',
+      districtName: '%E5%AE%9D%E5%AE%89%E5%8C%BA',
+      endsAt: '2026-07-29T20%3A30%3A00%2B08%3A00',
     } } }),
     setNavigationBarTitle: vi.fn(),
     redirectTo: mocks.redirectTo,
@@ -37,7 +41,10 @@ vi.mock('../../../lib/alang/flashApi', () => ({
   getFlashLocationPermission: mocks.permission,
   getFlashApiErrorCode: (error: any) => error?.data?.code ?? null,
 }))
-vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: mocks.canonicalRedirect }))
+vi.mock('../../../lib/alang/flashNavigation', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../../lib/alang/flashNavigation')>(),
+  redirectToFlashCanonical: mocks.canonicalRedirect,
+}))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
 
 describe('formal Flash radar', () => {
@@ -48,6 +55,16 @@ describe('formal Flash radar', () => {
     mocks.permission.mockResolvedValue('granted')
     mocks.mutateAsync.mockResolvedValue({ canonicalScreen: 'radar', withinRange: false, distanceMeters: 83 })
     mocks.canonicalRedirect.mockResolvedValue(false)
+  })
+
+  it('renders decoded route metadata instead of URL-encoded text', () => {
+    render(<FlashRadarPage />)
+
+    expect(screen.getByText((_, element) => (
+      element?.classList.contains('flash-radar__clue-meta')
+      && element.textContent?.startsWith('默默在宝安区') === true
+    ))).toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/%E[0-9A-F]{2}/i)
   })
 
   it('never locates until the user explicitly taps and sends one snapshot', async () => {

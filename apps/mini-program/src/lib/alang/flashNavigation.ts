@@ -2,6 +2,22 @@ import Taro from '@tarojs/taro'
 import { MINI_PROGRAM_ROUTES } from '../onboarding/onboardingRoutes'
 import type { FlashCanonicalSnapshot } from './flashTypes'
 
+export function decodeFlashRouteParam(value: string | undefined, fallback = ''): string {
+  if (!value) return fallback
+
+  let decoded = value
+  while (true) {
+    try {
+      const next = decodeURIComponent(decoded)
+      if (next === decoded) break
+      decoded = next
+    } catch {
+      return /%[0-9a-f]{2}/i.test(decoded) ? fallback : decoded
+    }
+  }
+  return decoded
+}
+
 function query(path: string, params: Record<string, string | undefined>): string {
   const search = Object.entries(params)
     .filter((entry): entry is [string, string] => Boolean(entry[1]))

@@ -5,7 +5,7 @@ import { FlashButton, FlashFeatureClosed, FlashPageState, formatFlashRemainingTi
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
-import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
+import { decodeFlashRouteParam, redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useLocateFlashAppearance } from '../../../lib/alang/useFlash'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
@@ -17,10 +17,10 @@ export default function FlashRadarPage() {
   const { user } = useAuth()
   const enabled = shouldShowAlangEntry(user)
   const params = Taro.getCurrentInstance().router?.params ?? {}
-  const appearanceId = params.appearanceId ?? ''
-  const npcName = params.npcName ?? '这位朋友'
-  const districtName = params.districtName ?? '深圳'
-  const endsAt = params.endsAt ?? ''
+  const appearanceId = decodeFlashRouteParam(params.appearanceId)
+  const npcName = decodeFlashRouteParam(params.npcName, '这位朋友')
+  const districtName = decodeFlashRouteParam(params.districtName, '深圳')
+  const endsAt = decodeFlashRouteParam(params.endsAt)
   const locateMutation = useLocateFlashAppearance()
   const [state, setState] = useState<LocateState>('idle')
 

@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { getFlashCanonicalRoute } from './flashNavigation'
+import { decodeFlashRouteParam, getFlashCanonicalRoute } from './flashNavigation'
 
 describe('Flash canonical screen routing', () => {
+  it('decodes display parameters without throwing on malformed input', () => {
+    expect(decodeFlashRouteParam('%E9%BB%98%E9%BB%98')).toBe('默默')
+    expect(decodeFlashRouteParam('%25E5%258D%2597%25E5%25B1%25B1%25E5%258C%25BA')).toBe('南山区')
+    expect(decodeFlashRouteParam(
+      Array.from({ length: 5 }).reduce((value) => encodeURIComponent(value), '宝安区'),
+    )).toBe('宝安区')
+    expect(decodeFlashRouteParam('100%')).toBe('100%')
+    expect(decodeFlashRouteParam('%E9%BB', '这位朋友')).toBe('这位朋友')
+    expect(decodeFlashRouteParam(undefined)).toBe('')
+  })
+
   it('maps every recoverable server screen to the formal subpackage page', () => {
     expect(getFlashCanonicalRoute({ canonicalScreen: 'radar', appearanceId: 'a 1' }))
       .toBe('/pages/alang/search/index?appearanceId=a%201')
