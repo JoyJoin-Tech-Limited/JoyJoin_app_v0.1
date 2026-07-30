@@ -323,6 +323,27 @@ export interface XiaoyueAdaptiveSuggestion {
   generatedAt: string;
 }
 
+export type MomentHighlightAspect =
+  | 'participation'
+  | 'popularity'
+  | 'collaboration'
+  | 'memorable';
+
+export interface MomentHighlightItem {
+  aspect: MomentHighlightAspect;
+  title: string;
+  personDisplayName?: string;
+  evidence: string;
+  narrative: string;
+}
+
+export interface MomentHighlightsPanel {
+  headline: string;
+  overview: string;
+  highlights: MomentHighlightItem[];
+  closingLine: string;
+}
+
 /** Starting balance per player when auction lots are generated. */
 export const AUCTION_STARTING_COINS = 100;
 
@@ -494,6 +515,10 @@ export interface SocialSessionState {
   stallSuppressedForPhase?: SocialIcebreakerPhase;
   /** Trigger that caused the most recent phase transition (analytics attribution). */
   lastAdvanceTrigger?: 'host_tap' | 'auto_all_ready' | 'stall_recovery' | 'early_end_jump' | 'custom_select' | 'custom_end';
+  /** ISO timestamp written when the host deliberately interrupts the run and jumps to recap. */
+  endedEarlyAt?: string;
+  /** Playable phase that was interrupted; recap uses this for honest framing. */
+  interruptedAtPhase?: SocialIcebreakerPhase;
   // Per-phase data
   warmupTopics?: SocialTopic[];
   warmupTopicsMeta?: AIResponseMeta;
@@ -609,6 +634,10 @@ export interface SocialSessionState {
     recapSummary?: RecapSummary;
     medals?: Medal[];
     meta?: AIResponseMeta;
+    interrupted?: {
+      interrupted: true;
+      phase: SocialIcebreakerPhase;
+    };
     /** V2 lie-detective recap metrics (populated when reveal history exists). */
     lieDetectiveV2Stats?: {
       aiWinRate: number;
@@ -664,6 +693,7 @@ export interface SocialSessionState {
   xiaoyueSessionPackMeta?: AIResponseMeta;
   /** Xiaoyue Adaptive Suggestion — latest pulse-check-driven host nudge */
   xiaoyueAdaptiveSuggestion?: XiaoyueAdaptiveSuggestion;
+  xiaoyueAdaptiveSuggestionMeta?: AIResponseMeta;
   /** Lie detective mode: v1 = AI generates all 3 statements; v2 = players submit 2 tags, AI expands + inserts 1 fake. */
   lieDetectiveMode?: 'v1' | 'v2';
   /** Server-owned Personality Dice renderer/generation contract. */

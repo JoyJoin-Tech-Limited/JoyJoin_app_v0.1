@@ -11,8 +11,12 @@ import {
   isHostAuthorized,
   buildClientState,
 } from './socialIcebreakerHelpers';
-import { generateXiaoyueSessionPack } from '../socialIcebreakerAIService';
+import {
+  generateAdaptiveGameSuggestion,
+  generateXiaoyueSessionPack,
+} from '../socialIcebreakerAIService';
 import { generateXiaoyueAdaptiveSuggestion } from '../xiaoyueAdaptiveEngine';
+import { PHASE_CONFIG } from '@shared/socialIcebreaker';
 import { logger } from '../lib/logger';
 
 const router = Router();
@@ -111,12 +115,29 @@ router.post('/:socialSessionId/xiaoyue/adaptive-suggestion', async (req: Request
   }
 
   try {
-    const suggestion = generateXiaoyueAdaptiveSuggestion(state);
-    state.xiaoyueAdaptiveSuggestion = suggestion;
+    const fallback = generateXiaoyueAdaptiveSuggestion(state);
+    const result = await generateAdaptiveGameSuggestion({
+      phase: state.currentPhase,
+      phaseLabel: PHASE_CONFIG[state.currentPhase]?.name ?? state.currentPhase,
+      playerCount: state.playerCount,
+      signals: fallback.basedOnSignals,
+      fallback,
+      currentGameFacts: [
+        `已完成成员数：${state.challengeCompletedBy?.length ?? state.diceCompletedBy?.length ?? 0}`,
+        `当前话题序号：${(state.currentTopicIndex ?? 0) + 1}`,
+        `当前拍卖品序号：${(state.auctionCurrentLotIndex ?? 0) + 1}`,
+        `拍卖是否全部结束：${state.auctionAllLotsClosed === true ? '是' : '否'}`,
+        `已提交群像镜像答案：${state.groupMirrorSubmittedUserIds?.length ?? 0}`,
+        `当前活跃人数：${state.activePlayerCount ?? 0}`,
+      ],
+    });
+    state.xiaoyueAdaptiveSuggestion = result.data;
+    state.xiaoyueAdaptiveSuggestionMeta = result.meta;
     await updateSession(socialSessionId, state);
 
     return res.json({
-      suggestion,
+      suggestion: result.data,
+      meta: result.meta,
       state: await buildClientState(state, userId),
     });
   } catch (error) {

@@ -22,6 +22,7 @@ import {
   isHostAuthorized,
   recapDisplayNameByUserId,
   ensureRecapSnapshot,
+  waitForDeferredRecapSnapshot,
   transitionPhase,
   hasWarmupTurnCompleted,
 } from './socialIcebreakerHelpers';
@@ -316,6 +317,9 @@ router.post('/:socialSessionId/early-end', async (req: any, res) => {
     state.bonusGatePlayerSentiment = undefined;
   }
 
+  state.endedEarlyAt = new Date().toISOString();
+  state.interruptedAtPhase = state.currentPhase;
+
   await transitionPhase({
     state,
     socialSessionId,
@@ -323,6 +327,7 @@ router.post('/:socialSessionId/early-end', async (req: any, res) => {
     targetPhase: 'recap',
     countCurrentPhaseCompleted: false,
     skipBonusGate: true,
+    deferRecapSnapshot: true,
   });
 
   logger.info('[SocialIcebreaker] Session ended early by host', { socialSessionId, userId });
@@ -934,7 +939,11 @@ router.get('/:socialSessionId/recap', async (req: any, res) => {
     return res.status(403).json({ error: 'Not a participant in this session' });
   }
 
-  const state = await resolveSession(socialSessionId, res);
+  let state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  await waitForDeferredRecapSnapshot(socialSessionId);
+  state = await resolveSession(socialSessionId, res);
   if (!state) return;
 
   if (!state.recapSnapshot) {

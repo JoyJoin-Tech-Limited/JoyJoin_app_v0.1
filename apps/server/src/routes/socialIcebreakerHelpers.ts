@@ -397,6 +397,14 @@ export async function ensureRecapSnapshot(
       recapSummary: summaryResult.data,
       medals,
       meta: summaryResult.meta,
+      ...(state.endedEarlyAt && state.interruptedAtPhase
+        ? {
+            interrupted: {
+              interrupted: true as const,
+              phase: state.interruptedAtPhase,
+            },
+          }
+        : {}),
       ...buildRecapHighlights(state, roster),
     };
     if (persist) {
@@ -406,6 +414,30 @@ export async function ensureRecapSnapshot(
     logger.error('[SocialIcebreaker] Failed to generate recap snapshot:', { error: String(error) });
     // Continue without snapshot — consumers fall back to on-demand generation.
   }
+}
+
+const deferredRecapSnapshots = new Map<string, Promise<void>>();
+
+function scheduleDeferredRecapSnapshot(
+  sourceState: SocialSessionState,
+  socialSessionId: string,
+): void {
+  if (deferredRecapSnapshots.has(socialSessionId)) return;
+  const task = (async () => {
+    await ensureRecapSnapshot(sourceState, socialSessionId, false);
+    if (!sourceState.recapSnapshot) return;
+    const { state: latest } = await getSessionWithExpiry(socialSessionId);
+    if (!latest) return;
+    latest.recapSnapshot = sourceState.recapSnapshot;
+    await updateSession(socialSessionId, latest);
+  })().finally(() => {
+    deferredRecapSnapshots.delete(socialSessionId);
+  });
+  deferredRecapSnapshots.set(socialSessionId, task);
+}
+
+export async function waitForDeferredRecapSnapshot(socialSessionId: string): Promise<void> {
+  await deferredRecapSnapshots.get(socialSessionId);
 }
 
 export function incrementCommonGround(state: SocialSessionState): void {
@@ -535,6 +567,8 @@ export interface TransitionPhaseOptions {
   countCurrentPhaseCompleted?: boolean;
   /** Skip the bonus-gate pause (the host already resolved the gate). */
   skipBonusGate?: boolean;
+  /** Persist the recap transition before generating its AI snapshot. */
+  deferRecapSnapshot?: boolean;
 }
 
 export interface TransitionPhaseResult {
@@ -682,6 +716,13 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
 
   if (targetPhase === 'recap') {
     // R5: build from the pre-cleanup copy, then persist the live state.
+    if (opts.deferRecapSnapshot) {
+      // The recap screen immediately calls GET /recap, which runs the same
+      // coalesced snapshot pipeline. Deferring makes the phase change visible
+      // without waiting for an LLM round-trip while preserving pre-cleanup data.
+      scheduleDeferredRecapSnapshot(preCleanupState, socialSessionId);
+      return { transitioned: true, nextPhase: targetPhase, pausedAtBonusGate: false, challenge, challengeMeta };
+    }
     await ensureRecapSnapshot(preCleanupState, socialSessionId, false);
     if (preCleanupState.recapSnapshot && !state.recapSnapshot) {
       state.recapSnapshot = preCleanupState.recapSnapshot;

@@ -12,13 +12,16 @@ import type {
 import {
   getNextEligiblePhase,
   AUCTION_STARTING_COINS,
+  PHASE_CONFIG,
 } from '@shared/socialIcebreaker';
 import { getArchetypeHSL } from '@shared/archetypeColors';
 import type { UndercoverWordPair } from '@shared/undercoverWord';
 import {
   generateUndercoverWordPair,
   generateGroupMirrorQuestions,
+  generateMomentHighlights,
 } from '../socialIcebreakerAIService';
+import type { MomentHighlightsPanel } from '@shared/socialIcebreaker';
 import { buildCachedAIMeta, type AIResponseMeta } from '@shared/types/aiMeta';
 import {
   cleanupPhaseStateForNextPhase,
@@ -70,7 +73,91 @@ import {
 } from './socialIcebreakerHelpers';
 
 const router = Router();
-router.get('/:socialSessionId/moment-card', async (req: any, res) => {
+
+function buildMomentEvidence(
+  state: SocialSessionState,
+  roster: Array<{ userId: string; displayName: string }>,
+): string[] {
+  const nameOf = (userId: string) =>
+    roster.find((participant) => participant.userId === userId)?.displayName ?? '某位成员';
+  const participation = new Map<string, number>();
+  const add = (userId: string | undefined) => {
+    if (userId) participation.set(userId, (participation.get(userId) ?? 0) + 1);
+  };
+  state.challengeCompletedBy?.forEach(add);
+  state.diceCompletedBy?.forEach(add);
+  state.quipBattleAnswers?.forEach((answer) => add(answer.userId));
+  state.groupMirrorAnswers?.forEach((answer) => add(answer.userId));
+  state.auctionBidHistory?.forEach((bid) => add(bid.userId));
+  const evidence: string[] = [...participation.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([userId, count]) => `${nameOf(userId)}留下了${count}次可记录的参与动作`);
+
+  const selected = new Map<string, number>();
+  state.groupMirrorAnswers?.forEach((answer) =>
+    selected.set(answer.targetUserId, (selected.get(answer.targetUserId) ?? 0) + 1));
+  state.votes?.forEach((vote) =>
+    selected.set(vote.targetUserId, (selected.get(vote.targetUserId) ?? 0) + 1));
+  [...selected.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .forEach(([userId, count]) => evidence.push(`${nameOf(userId)}在投票或成员选择中被选中${count}次`));
+
+  state.auctionRecapLines?.slice(0, 4).forEach((line) => evidence.push(`拍卖：${line}`));
+  state.groupMirrorResults?.slice(0, 4).forEach((result) =>
+    evidence.push(`群像镜像“${result.questionText}”：${result.topTargetDisplayName}获得${result.voteCount}票`));
+  const snapshot = state.recapSnapshot;
+  snapshot?.medals?.slice(0, 6).forEach((medal) =>
+    evidence.push(`奖项“${medal.title}”：${medal.recipientDisplayName}，依据为${medal.description}`));
+  if (snapshot?.groupMirrorHighlights) {
+    evidence.push(
+      `群像镜像“${snapshot.groupMirrorHighlights.questionText}”：`
+      + `${snapshot.groupMirrorHighlights.topVotedDisplayName}获得${snapshot.groupMirrorHighlights.voteCount}票`,
+    );
+  }
+  if (snapshot?.microChallengeHighlights) {
+    evidence.push(
+      `微挑战由${snapshot.microChallengeHighlights.completedCount}/`
+      + `${snapshot.microChallengeHighlights.totalCount}位成员完成`,
+    );
+  }
+  if (snapshot?.personalityDiceHighlights) {
+    evidence.push(
+      `人格骰子完成率${Math.round(snapshot.personalityDiceHighlights.completionRate * 100)}%`,
+    );
+  }
+  state.recapSnapshot?.recapSummary?.moments?.slice(0, 4).forEach((moment) =>
+    evidence.push(`已生成回顾：${moment}`));
+  return evidence.slice(0, 30);
+}
+
+function buildFallbackMomentPanel(
+  state: SocialSessionState,
+  evidence: string[],
+): MomentHighlightsPanel {
+  const interrupted = state.endedEarlyAt && state.interruptedAtPhase;
+  const usable = evidence.length > 0 ? evidence : ['本局已完成的互动记录较少，暂时没有足够数据点名成员'];
+  const aspects = ['participation', 'popularity', 'collaboration', 'memorable'] as const;
+  const labels = ['积极参与', '成员印象', '一起完成', '今晚记忆'];
+  return {
+    headline: interrupted ? '中途收尾，也留下了这些高光' : '悦仔看见的今晚高光',
+    overview: interrupted
+      ? `这局在“${PHASE_CONFIG[state.interruptedAtPhase!]?.name ?? state.interruptedAtPhase}”中途收尾。以下内容只根据已经发生的互动整理，未完成的玩法不会被算作成绩。`
+      : '以下内容只根据本局已经发生的互动整理。悦仔会记录参与、成员选择和共同完成的片段，不给安静的成员贴标签。',
+    highlights: aspects.map((aspect, index) => ({
+      aspect,
+      title: labels[index],
+      evidence: usable[index % usable.length],
+      narrative: index < usable.length
+        ? `从记录来看，${usable[index]}。这是这一桌已经真实发生的片段，也让大家更容易记住彼此。`
+        : '这一维度暂时没有足够记录，悦仔选择留白，不用猜测代替真实互动。',
+    })),
+    closingLine: '高光不只属于最热闹的人，也属于每一次认真回应和接住彼此。',
+  };
+}
+
+router.get('/:socialSessionId/moment-card', momentCardLimiter, async (req: any, res) => {
   const { socialSessionId } = req.params;
 
   const userId = requireAuthenticatedUserId(req, res);
@@ -93,12 +180,16 @@ router.get('/:socialSessionId/moment-card', async (req: any, res) => {
 
   const roster = await listParticipants(socialSessionId);
 
-  const recapSummary = state.recapSnapshot?.recapSummary;
-  const medals = state.recapSnapshot?.medals ?? [];
+  const evidence = buildMomentEvidence(state, roster);
+  const result = await generateMomentHighlights({
+    playerCount: Math.max(state.playerCount, roster.length),
+    completedPhases: state.completedPhases,
+    interruptedAtPhase: state.interruptedAtPhase,
+    evidence,
+    fallback: buildFallbackMomentPanel(state, evidence),
+  });
 
-  const payload = buildMomentCardPayload(state, roster, recapSummary, medals);
-
-  return res.json({ payload });
+  return res.json({ panel: result.data, meta: result.meta });
 });
 
 // ---------------------------------------------------------------------------

@@ -409,6 +409,79 @@
   width: 100%;
 }
 
+.icebreaker__moment-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-lg;
+  background: rgba($color-text-primary, 0.3);
+}
+
+.icebreaker__moment-panel {
+  display: flex;
+  width: 100%;
+  max-height: calc(100% - 64rpx - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  flex-direction: column;
+  gap: $spacing-md;
+  overflow-y: auto;
+  padding: $spacing-lg;
+  border-radius: $card-radius-lg;
+  background: $color-surface;
+  box-shadow: $shadow-lg;
+}
+
+.icebreaker__moment-panel-title {
+  @include type-heading;
+  color: $color-primary-dark;
+}
+
+.icebreaker__moment-panel-overview,
+.icebreaker__moment-panel-narrative,
+.icebreaker__moment-panel-closing {
+  @include type-body;
+  color: $color-text-primary;
+  line-height: 1.65;
+}
+
+.icebreaker__moment-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.icebreaker__moment-panel-item {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-md;
+  border: 2rpx solid rgba($color-primary, 0.16);
+  border-radius: $radius-md;
+  background: $color-bg-tint-cream;
+}
+
+.icebreaker__moment-panel-item-title {
+  @include type-subheading;
+  color: $color-primary-dark;
+}
+
+.icebreaker__moment-panel-person {
+  @include type-label;
+  color: $color-archetype-fire;
+}
+
+.icebreaker__moment-panel-evidence {
+  @include type-caption;
+  color: $color-text-secondary;
+}
+
+.icebreaker__moment-panel-closing {
+  color: $color-primary-dark;
+  font-weight: $font-weight-semibold;
+}
+
 // ── Farewell bubble ──────────────────────────────────────────────
 .icebreaker__recap-farewell {
   width: 100%;

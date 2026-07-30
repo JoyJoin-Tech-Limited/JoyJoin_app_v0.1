@@ -216,7 +216,17 @@ describe('POST /api/social-icebreaker/:id/early-end', () => {
       expect(state.bonusGateDeclined).toBe(true);
       expect(state.bonusGatePlayerSentiment).toBeUndefined();
       expect(state.lastAdvanceTrigger).toBe('early_end_jump');
-      expect(state.recapSnapshot).toBeDefined();
+      expect(state.endedEarlyAt).toEqual(expect.any(String));
+      expect(state.interruptedAtPhase).toBe('auction');
+      const recapResponse = await fetch(`${baseUrl}/api/social-icebreaker/ee-4/recap`, {
+        headers: { cookie },
+      });
+      expect(recapResponse.status).toBe(200);
+      const completedState = storeCtx.sessions.get('ee-4')!;
+      expect(completedState.recapSnapshot?.interrupted).toEqual({
+        interrupted: true,
+        phase: 'auction',
+      });
     });
   });
 });

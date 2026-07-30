@@ -1144,10 +1144,10 @@ export default function IcebreakerSessionPage() {
           { playerCount },
         )
         const modalRes = await Taro.showModal({
-          title: '提前进入总结？',
-          content: '全桌会一起进入今晚的回顾，当前环节将跳过，之后不能再回来。',
-          confirmText: '进入总结',
-          cancelText: '再玩一会儿',
+          title: '确定要结束破冰环节吗？',
+          content: '确认后全桌会直接进入回顾，并标记为中途结束；已经发生的互动仍会照常整理。',
+          confirmText: '确认',
+          cancelText: '手滑了',
         })
         if (modalRes.confirm) {
           haptics('medium')
@@ -1158,7 +1158,7 @@ export default function IcebreakerSessionPage() {
             phase,
             { playerCount },
           )
-          void performSocialAction('early-end', '/early-end', {})
+          await performSocialAction('early-end', '/early-end', {})
         } else {
           socialIcebreakerAnalytics.track(
             'early_end_cancel',
@@ -1734,7 +1734,7 @@ export default function IcebreakerSessionPage() {
             socialSessionId={socialSessionId}
             recapMeta={recapQuery.data?.meta ?? null}
             phasesCompleted={(session.completedPhases ?? []).filter((p) => p !== 'phase_selection').length}
-            isEarlyEnd={session.lastAdvanceTrigger === 'early_end_jump'}
+            isEarlyEnd={Boolean(session.endedEarlyAt) || session.lastAdvanceTrigger === 'early_end_jump'}
           />
         )}
 

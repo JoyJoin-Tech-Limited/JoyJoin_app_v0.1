@@ -54,6 +54,8 @@ const ENABLE_PRO_MATCH_EXPLANATIONS =
 type SocialFunction =
   | 'generateWarmupTopics'
   | 'generateXiaoYueComment'
+  | 'generateXiaoyueAdaptiveSuggestion'
+  | 'generateMomentHighlights'
   | 'generateRecapSummary'
   | 'generateLieDetectiveStatements'
   | 'generateMicroChallenges'
@@ -104,6 +106,8 @@ type SocialFunctionRoutingPolicy = {
 const SOCIAL_FUNCTION_ROUTING: Record<SocialFunction, SocialFunctionRoutingPolicy> = {
   // ── Tier 0: Flash, no thinking — real-time comments / short text / fast ──
   generateXiaoYueComment: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateXiaoyueAdaptiveSuggestion: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateMomentHighlights: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
   generateRecapSummary: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
   generateWelcomeMessage: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
   generateClosingMessage: { preferredProvider: 'deepseek', deepseekTier: 'flash' },

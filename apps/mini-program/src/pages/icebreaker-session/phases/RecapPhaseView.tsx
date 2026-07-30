@@ -1,6 +1,8 @@
 import { View, Text, Image } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { AIResponseMeta, AIGCMeta } from '@shared/types/aiMeta'
+import type { MomentHighlightsPanel } from '@shared/socialIcebreaker'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
@@ -8,7 +10,6 @@ import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import { PhaseHeaderIcon } from '../phaseUtils'
 import { apiRequest } from '../../../lib/api/api'
 import { buildSocialPath } from '../icebreakerSessionModel'
-import MomentCardView from '../overlays/MomentCardView'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import IdentityReveal from '../../../components/reveal/IdentityReveal'
 import CardFlip from '../../../components/reveal/CardFlip'
@@ -91,20 +92,28 @@ function RecapAiFeedbackBar({
 }
 
 function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
-  const [showCard, setShowCard] = useState(false)
-  const [payload, setPayload] = useState<any>(null)
+  const [showPanel, setShowPanel] = useState(false)
+  const [panel, setPanel] = useState<MomentHighlightsPanel | null>(null)
+  const [panelMeta, setPanelMeta] = useState<AIResponseMeta | null>(null)
+  const [loading, setLoading] = useState(false)
+  const aigcEnabled = useAIGCLabelsEnabled()
 
   const handleOpen = async () => {
+    if (loading) return
+    setLoading(true)
     try {
-      const res = await apiRequest<any>({
+      const res = await apiRequest<{ panel?: MomentHighlightsPanel; meta?: AIResponseMeta }>({
         path: buildSocialPath(socialSessionId, '/moment-card'),
       })
-      if (res?.payload) {
-        setPayload(res.payload)
-        setShowCard(true)
+      if (res?.panel) {
+        setPanel(res.panel)
+        setPanelMeta(res.meta ?? null)
+        setShowPanel(true)
       }
     } catch {
-      // Silently fail — Moment Card is a bonus, not a blocker
+      void Taro.showToast({ title: '高光整理没成功，再试一次', icon: 'none' })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -115,24 +124,58 @@ function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
         <View className='icebreaker__recap-moment-cta-content'>
           <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
             <JoyJoinIcon emoji='✨' tier='reveal' size={28} />
-            <Text className='icebreaker__recap-moment-cta-title'>生成专属回忆卡</Text>
+            <Text className='icebreaker__recap-moment-cta-title'>生成本局高光</Text>
           </View>
           <Text className='icebreaker__recap-moment-cta-sub'>
-            保存今晚的专属记忆，分享给朋友
+            悦仔从参与、成员印象和合作片段里认真整理
           </Text>
         </View>
-        <Button variant='primary' className='icebreaker__recap-moment-cta-btn' onClick={handleOpen}>
-          生成
+        <Button
+          variant='primary'
+          className='icebreaker__recap-moment-cta-btn'
+          onClick={handleOpen}
+          loading={loading}
+          disabled={loading}
+          aria-label={loading ? '正在整理本局高光' : '生成本局高光'}
+        >
+          {loading ? '正在整理' : '生成高光'}
         </Button>
       </Card>
 
-      {payload && (
-        <MomentCardView
-          payload={payload}
-          visible={showCard}
-          onClose={() => setShowCard(false)}
-        />
-      )}
+      {panel && showPanel ? (
+        <View
+          className='icebreaker__moment-panel-backdrop'
+          onClick={() => setShowPanel(false)}
+        >
+          <View
+            className='icebreaker__moment-panel'
+            onClick={(event) => event.stopPropagation()}
+            role='dialog'
+            aria-modal='true'
+            aria-label={panel.headline}
+          >
+            <Text className='icebreaker__moment-panel-title'>{panel.headline}</Text>
+            <Text className='icebreaker__moment-panel-overview'>{panel.overview}</Text>
+            <View className='icebreaker__moment-panel-list'>
+              {panel.highlights.map((highlight, index) => (
+                <View className='icebreaker__moment-panel-item' key={`${highlight.aspect}-${index}`}>
+                  <Text className='icebreaker__moment-panel-item-title'>{highlight.title}</Text>
+                  {highlight.personDisplayName ? (
+                    <Text className='icebreaker__moment-panel-person'>{highlight.personDisplayName}</Text>
+                  ) : null}
+                  <Text className='icebreaker__moment-panel-evidence'>依据：{highlight.evidence}</Text>
+                  <Text className='icebreaker__moment-panel-narrative'>{highlight.narrative}</Text>
+                </View>
+              ))}
+            </View>
+            <Text className='icebreaker__moment-panel-closing'>{panel.closingLine}</Text>
+            {aigcEnabled ? (
+              <PhaseAigcRow meta={panelMeta ?? undefined} reason='AI 根据本局互动生成高光总结' />
+            ) : null}
+            <Button variant='primary' onClick={() => setShowPanel(false)}>看完了</Button>
+          </View>
+        </View>
+      ) : null}
     </>
   )
 }
@@ -287,7 +330,9 @@ export function RecapPhaseView({
         )}
         {typeof phasesCompleted === 'number' && phasesCompleted > 0 ? (
           <Text className='icebreaker__recap-subtitle'>
-            {isEarlyEnd ? `今晚玩了 ${phasesCompleted} 个环节，剩下的留到下次～` : `今晚玩了 ${phasesCompleted} 个环节`}
+            {isEarlyEnd
+              ? `本局在中途结束；已完成的 ${phasesCompleted} 个环节仍照常整理在下面。`
+              : `今晚玩了 ${phasesCompleted} 个环节`}
           </Text>
         ) : null}
         {summary?.closingLine ? (

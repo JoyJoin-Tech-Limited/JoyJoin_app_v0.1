@@ -10,6 +10,9 @@ import type {
   SocialTopicSafety,
   AuctionLot,
   XiaoyueSessionPack,
+  XiaoyueAdaptiveSuggestion,
+  MomentHighlightsPanel,
+  MomentHighlightAspect,
 } from '@shared/socialIcebreaker';
 import { auctionLotsLlmPayloadSchema, parseXiaoyueSessionPack } from '@shared/socialIcebreaker';
 import { selectPermissionLineForTopic } from '@shared/socialIcebreakerYuezaiCopy';
@@ -1326,6 +1329,156 @@ export async function generateRecapSummary(params: {
     const meta = buildFallbackAIMeta('llm_error', RECAP_SUMMARY_PROMPT_VERSION, aiCorrelationId);
     logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateRecapSummary', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion: meta.promptVersion, errorCode: meta.evaluatorRejectionReason });
     return attachAIGC({ data: getDefaultRecap(params), meta });
+  }
+}
+
+const ADAPTIVE_SUGGESTION_PROMPT_VERSION = 'social-adaptive-suggestion-v2';
+const MOMENT_HIGHLIGHTS_PROMPT_VERSION = 'social-moment-highlights-v2';
+
+function boundedText(value: unknown, maxLength: number, minLength = 1): string | null {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  return text.length >= minLength && text.length <= maxLength ? text : null;
+}
+
+export async function generateAdaptiveGameSuggestion(params: {
+  phase: string;
+  phaseLabel: string;
+  playerCount: number;
+  signals: XiaoyueAdaptiveSuggestion['basedOnSignals'];
+  fallback: XiaoyueAdaptiveSuggestion;
+  currentGameFacts: string[];
+}): Promise<AIServiceResult<XiaoyueAdaptiveSuggestion>> {
+  const aiCorrelationId = createAiCorrelationId();
+  const t0 = Date.now();
+  let provider: AIProvider | null = null;
+  let model = 'n/a';
+  try {
+    const selection = getClientForFunction('generateXiaoyueAdaptiveSuggestion');
+    provider = selection.provider;
+    model = selection.model;
+    const response = await raceWithTimeout(
+      selection.client.chat.completions.create({
+        model,
+        messages: [{
+          role: 'user',
+          content: `你是悦仔，正在协助主持人带领“${params.phaseLabel}”。请只根据下列实时事实给出一条具体、可立即执行、对陌生人友好的游戏建议，不改变规则或阶段。不要使用倒计时。\n实时事实：${JSON.stringify({
+            playerCount: params.playerCount,
+            signals: params.signals,
+            currentGameFacts: params.currentGameFacts.slice(0, 8),
+          })}\n仅返回 JSON：{"message":"40-100字的判断与建议","actionableHint":"20-60字的具体操作"}`,
+        }],
+        temperature: 0.7,
+        max_tokens: 220,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
+    const parsed = JSON.parse(extractJsonPayloadForParse(response.choices[0]?.message?.content ?? ''));
+    const message = boundedText(parsed?.message, 160, 20);
+    const actionableHint = boundedText(parsed?.actionableHint, 100, 10);
+    if (!message || !actionableHint) throw new Error('invalid_response_shape');
+    const data: XiaoyueAdaptiveSuggestion = {
+      ...params.fallback,
+      message,
+      actionableHint,
+      generatedAt: new Date().toISOString(),
+    };
+    const meta = buildLiveAIMeta(provider, ADAPTIVE_SUGGESTION_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateAdaptiveGameSuggestion', provider, model, latencyMs: Date.now() - t0, success: true, fallbackUsed: false, fromCache: false, promptVersion: ADAPTIVE_SUGGESTION_PROMPT_VERSION });
+    return attachAIGC({ data, meta });
+  } catch (error) {
+    const reason = isLLMTimeoutError(error) ? 'timeout' : 'llm_or_parse_error';
+    const meta = buildFallbackAIMeta(reason, ADAPTIVE_SUGGESTION_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateAdaptiveGameSuggestion', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: ADAPTIVE_SUGGESTION_PROMPT_VERSION, errorCode: reason });
+    return attachAIGC({ data: params.fallback, meta });
+  }
+}
+
+const MOMENT_ASPECTS = new Set<MomentHighlightAspect>([
+  'participation',
+  'popularity',
+  'collaboration',
+  'memorable',
+]);
+
+export function normalizeMomentHighlightsPayload(
+  payload: any,
+  evidence: string[],
+): MomentHighlightsPanel | null {
+  const headline = boundedText(payload?.headline, 80);
+  const overview = boundedText(payload?.overview, 260, 40);
+  const closingLine = boundedText(payload?.closingLine, 120);
+  if (!Array.isArray(payload?.highlights) || payload.highlights.length < 3) return null;
+  const highlights: MomentHighlightsPanel['highlights'] = [];
+  for (const item of payload.highlights.slice(0, 4)) {
+    if (!Array.isArray(item?.evidenceIds) || item.evidenceIds.length < 1 || item.evidenceIds.length > 3) {
+      return null;
+    }
+    const evidenceIds = item.evidenceIds as unknown[];
+    if (
+      new Set(evidenceIds).size !== evidenceIds.length
+      || evidenceIds.some((id) => !Number.isInteger(id) || Number(id) < 0 || Number(id) >= evidence.length)
+    ) {
+      return null;
+    }
+    const aspect = item?.aspect as MomentHighlightAspect;
+    const title = boundedText(item?.title, 60);
+    const narrative = boundedText(item?.narrative, 260, 24);
+    if (!MOMENT_ASPECTS.has(aspect) || !title || !narrative) return null;
+    highlights.push({
+      aspect,
+      title,
+      evidence: (evidenceIds as number[]).map((id) => evidence[id]).join('；'),
+      narrative,
+    });
+  }
+  if (!headline || !overview || !closingLine || highlights.length < 3) return null;
+  return { headline, overview, highlights, closingLine };
+}
+
+export async function generateMomentHighlights(params: {
+  playerCount: number;
+  completedPhases: string[];
+  interruptedAtPhase?: string;
+  evidence: string[];
+  fallback: MomentHighlightsPanel;
+}): Promise<AIServiceResult<MomentHighlightsPanel>> {
+  const aiCorrelationId = createAiCorrelationId();
+  const t0 = Date.now();
+  let provider: AIProvider | null = null;
+  let model = 'n/a';
+  try {
+    const numberedEvidence = params.evidence.slice(0, 30).map((text, id) => ({ id, text }));
+    const selection = getClientForFunction('generateMomentHighlights');
+    provider = selection.provider;
+    model = selection.model;
+    const response = await raceWithTimeout(
+      selection.client.chat.completions.create({
+        model,
+        messages: [{
+          role: 'user',
+          content: `你是悦仔，要把一场线下破冰整理成细致、温暖、可核验的文字高光面板。只能使用证据，不推断性格，不贬低或排名沉默成员。分别覆盖积极参与、受欢迎/被选择、合作贡献、难忘玩法；没有证据的维度要诚实说明。${params.interruptedAtPhase ? `本局在 ${params.interruptedAtPhase} 中途结束，措辞须明确“中途收尾”。` : ''}\n数据：${JSON.stringify({
+            playerCount: params.playerCount,
+            completedPhases: params.completedPhases,
+            evidence: numberedEvidence,
+          })}\n每项只能引用上面存在的证据编号，narrative 只能解释所引用证据，不得补充姓名、次数或事实。仅返回 JSON：{"headline":"标题","overview":"80-160字总览","highlights":[{"aspect":"participation|popularity|collaboration|memorable","title":"小标题","evidenceIds":[0],"narrative":"60-140字解读"}],"closingLine":"温暖收束"}；highlights 为 3-4 项。`,
+        }],
+        temperature: 0.65,
+        max_tokens: 900,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
+    const parsed = JSON.parse(extractJsonPayloadForParse(response.choices[0]?.message?.content ?? ''));
+    const data = normalizeMomentHighlightsPayload(parsed, params.evidence);
+    if (!data) throw new Error('invalid_or_ungrounded_response');
+    const meta = buildLiveAIMeta(provider, MOMENT_HIGHLIGHTS_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMomentHighlights', provider, model, latencyMs: Date.now() - t0, success: true, fallbackUsed: false, fromCache: false, promptVersion: MOMENT_HIGHLIGHTS_PROMPT_VERSION });
+    return attachAIGC({ data, meta });
+  } catch (error) {
+    const reason = isLLMTimeoutError(error) ? 'timeout' : 'llm_or_parse_error';
+    const meta = buildFallbackAIMeta(reason, MOMENT_HIGHLIGHTS_PROMPT_VERSION, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateMomentHighlights', provider, model, latencyMs: Date.now() - t0, success: false, fallbackUsed: true, fromCache: false, promptVersion: MOMENT_HIGHLIGHTS_PROMPT_VERSION, errorCode: reason });
+    return attachAIGC({ data: params.fallback, meta });
   }
 }
 
