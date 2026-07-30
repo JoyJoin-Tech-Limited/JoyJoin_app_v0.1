@@ -50,7 +50,9 @@ import {
   getLieDetectiveMode,
   getDynamicDifficulty,
   validateLieDetectiveV2Tags,
+  validateLieDetectiveTag,
   buildLieDetectiveV2RecapData,
+  generateLieDetectiveStatementFromTag,
   generateLieDetectiveStatements,
 } from '../socialIcebreakerAIService';
 import { getClientForFunction } from '../ai/socialModelRouter';
@@ -135,6 +137,46 @@ describe('validateLieDetectiveV2Tags', () => {
     if (result.valid) {
       expect(result.tags).toEqual(['爬山', '怕蟑螂']);
     }
+  });
+});
+
+describe('validateLieDetectiveTag', () => {
+  it('accepts and trims one label for assisted sentence generation', () => {
+    expect(validateLieDetectiveTag(' 旅游 ')).toEqual({ valid: true, tag: '旅游' });
+  });
+
+  it('rejects empty, overlong, and unsafe labels', () => {
+    expect(validateLieDetectiveTag(' ')).toMatchObject({ valid: false });
+    expect(validateLieDetectiveTag('a'.repeat(21))).toMatchObject({ valid: false });
+    expect(validateLieDetectiveTag('傻逼')).toMatchObject({ valid: false });
+  });
+});
+
+describe('generateLieDetectiveStatementFromTag', () => {
+  it('returns one editable fact sentence without assigning truth or lie', async () => {
+    const mockClient = {
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            choices: [{ message: { content: '“我曾经一个人去冰岛旅行。”' } }],
+          }),
+        },
+      },
+    };
+    vi.mocked(getClientForFunction).mockReturnValue({
+      client: mockClient as any,
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
+    const result = await generateLieDetectiveStatementFromTag({
+      tag: '旅游',
+      displayName: '小悦',
+    });
+
+    expect(result.data).toEqual({ text: '我曾经一个人去冰岛旅行。' });
+    expect(result.data).not.toHaveProperty('isLie');
+    expect(result.meta.promptVersion).toBe('social-lie-detective-tag-assist-v1');
   });
 });
 

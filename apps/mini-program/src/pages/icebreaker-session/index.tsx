@@ -944,16 +944,14 @@ export default function IcebreakerSessionPage() {
     })
   }, [performSocialAction, currentUserDisplayName, currentUserArchetype, currentUserInterests])
 
-  const handleSubmitTags = useCallback(
-    (tags: [string, string]) => {
-      void performSocialAction('lie-submit-tags', '/lie-detective/submit-tags', { tags })
-    },
-    [performSocialAction],
-  )
-
-  const handleSelectLieDetectiveTestMode = useCallback((mode: 'v1' | 'v2') => {
-    void performSocialAction('lie-mode', '/lie-detective/mode', { mode })
-  }, [performSocialAction])
+  const handleGenerateLieStatementFromTag = useCallback(async (tag: string) => {
+    const result = await performSocialAction<{ text: string }>(
+      'lie-tag-generate',
+      '/lie-detective/generate-from-tag',
+      { tag, displayName: currentUserDisplayName },
+    )
+    return result?.text ?? null
+  }, [performSocialAction, currentUserDisplayName])
 
   const handleCastVote = useCallback(
     (statementIndex: number) => {
@@ -1561,13 +1559,9 @@ export default function IcebreakerSessionPage() {
             isMovingNextPlayer={pendingAction === 'lie-next-player'}
             onAdvance={handleAdvancePhase}
             isAdvancing={pendingAction === 'advance'}
-            lieDetectiveMode={session.lieDetectiveMode ?? 'v1'}
-            isSingleTest={session.isTestModeSkip ?? false}
-            onSelectTestMode={handleSelectLieDetectiveTestMode}
-            isSelectingTestMode={pendingAction === 'lie-mode'}
             statementsMeta={session.lieDetectiveStatementsMeta}
-            onSubmitTags={handleSubmitTags}
-            isSubmittingTags={pendingAction === 'lie-submit-tags'}
+            onGenerateFromTag={handleGenerateLieStatementFromTag}
+            isGeneratingFromTag={pendingAction === 'lie-tag-generate'}
           />
         )}
 

@@ -18,27 +18,6 @@ $ld-tint: $phase-accent-lie-tint;
 }
 
 .lie-detective-hero {
-  &__mode-test {
-    width: 100%;
-    padding: 20rpx;
-    border: 2rpx dashed rgba($color-primary, 0.42);
-    border-radius: 24rpx;
-    background: rgba($color-primary, 0.06);
-  }
-
-  &__mode-test-label {
-    display: block;
-    margin-bottom: 14rpx;
-    color: $color-text-secondary;
-    font-size: 24rpx;
-    text-align: center;
-  }
-
-  &__mode-test-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12rpx;
-  }
   &__statements {
     display: flex;
     flex-direction: column;
@@ -149,33 +128,6 @@ $ld-tint: $phase-accent-lie-tint;
     color: $ld-accent-deep;
   }
 
-  // V2 tag form
-  &__tag-form {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-    width: 100%;
-  }
-
-  &__tag-field {
-    display: flex;
-    flex-direction: column;
-    gap: 8rpx;
-  }
-
-  &__tag-input {
-    width: 100%;
-    padding: $spacing-sm $spacing-md;
-    border-radius: $radius-md;
-    border: 2rpx solid rgba($ld-accent, 0.25);
-    background: $color-surface;
-    @include type-body;
-
-    &--error {
-      border-color: $color-error;
-    }
-  }
-
   &__tag-counter {
     @include type-micro;
     align-self: flex-end;
@@ -253,6 +205,49 @@ $ld-tint: $phase-accent-lie-tint;
 
     &--error {
       border-color: $color-error;
+    }
+  }
+
+  &__assist-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__assist-input {
+    box-sizing: border-box;
+    flex: 1;
+    min-width: 0;
+    min-height: 88rpx;
+    padding: 0 $spacing-md;
+    border: 2rpx solid rgba($ld-accent, 0.2);
+    border-radius: $radius-pill;
+    background: rgba($ld-tint, 0.45);
+    color: $color-text-primary;
+    @include type-caption;
+  }
+
+  &__assist-button {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    padding: 0 $spacing-md;
+    border-radius: $radius-pill;
+    background: $color-primary;
+    color: $color-text-white;
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+
+    &:active {
+      opacity: 0.82;
+    }
+
+    &--disabled {
+      opacity: 0.48;
     }
   }
 }

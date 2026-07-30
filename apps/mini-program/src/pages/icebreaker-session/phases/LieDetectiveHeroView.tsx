@@ -47,12 +47,8 @@ export interface LieDetectiveHeroViewProps {
   isMovingNextPlayer: boolean
   onAdvance: () => void
   isAdvancing: boolean
-  lieDetectiveMode?: 'v1' | 'v2'
-  isSingleTest?: boolean
-  onSelectTestMode?: (mode: 'v1' | 'v2') => void
-  isSelectingTestMode?: boolean
-  onSubmitTags?: (tags: [string, string]) => void
-  isSubmittingTags?: boolean
+  onGenerateFromTag: (tag: string) => Promise<string | null>
+  isGeneratingFromTag: boolean
   statementsMeta?: AIResponseMeta
 }
 
@@ -75,12 +71,8 @@ export function LieDetectiveHeroView({
   isMovingNextPlayer,
   onAdvance,
   isAdvancing,
-  lieDetectiveMode = 'v1',
-  isSingleTest = false,
-  onSelectTestMode,
-  isSelectingTestMode = false,
-  onSubmitTags,
-  isSubmittingTags,
+  onGenerateFromTag,
+  isGeneratingFromTag,
   statementsMeta,
 }: LieDetectiveHeroViewProps) {
   const everyoneGenerated = playerCount > 0 && players.length >= playerCount
@@ -88,7 +80,6 @@ export function LieDetectiveHeroView({
   const isOwnTurn = currentPlayer?.userId === currentUserId
   const hasVoted = myVoteIndex !== null
   const isRevealed = !!reveal
-  const isV2 = lieDetectiveMode === 'v2'
 
   // ── Signature wow: statement flip-to-reveal on vote completion ────────────
   const prevRevealedRef = useRef(false)
@@ -105,27 +96,10 @@ export function LieDetectiveHeroView({
     }
   }, [isRevealed])
 
-  // ── Tag input state (V2 only) ─────────────────────────────────────────────
-  const [tag1, setTag1] = useState('')
-  const [tag2, setTag2] = useState('')
+  const [assistTags, setAssistTags] = useState(['', '', ''])
+  const [generatingRow, setGeneratingRow] = useState<number | null>(null)
   const [customStatements, setCustomStatements] = useState(['', '', ''])
   const [customLieIndex, setCustomLieIndex] = useState<number | null>(null)
-
-  const tag1Trimmed = tag1.trim()
-  const tag2Trimmed = tag2.trim()
-
-  const tag1ValidLength = tag1Trimmed.length >= 2 && tag1Trimmed.length <= 20
-  const tag2ValidLength = tag2Trimmed.length >= 2 && tag2Trimmed.length <= 20
-  const tag1Profane = tag1Trimmed.length > 0 ? checkProfanity(tag1Trimmed) : false
-  const tag2Profane = tag2Trimmed.length > 0 ? checkProfanity(tag2Trimmed) : false
-
-  const canSubmitTags =
-    tag1ValidLength && tag2ValidLength && !tag1Profane && !tag2Profane && !isSubmittingTags
-
-  const handleTagSubmit = useCallback(() => {
-    if (!canSubmitTags || !onSubmitTags) return
-    onSubmitTags([tag1Trimmed, tag2Trimmed])
-  }, [canSubmitTags, onSubmitTags, tag1Trimmed, tag2Trimmed])
 
   const normalizedCustomStatements = customStatements.map((statement) => statement.trim())
   const hasDuplicateCustomStatements =
@@ -145,12 +119,29 @@ export function LieDetectiveHeroView({
     )
   }, [])
 
+  const updateAssistTag = useCallback((index: number, value: string) => {
+    setAssistTags((current) =>
+      current.map((tag, tagIndex) => tagIndex === index ? value : tag)
+    )
+  }, [])
+
+  const handleAssistGenerate = useCallback(async (index: number) => {
+    const tag = assistTags[index]?.trim()
+    if (!tag || tag.length > 20 || checkProfanity(tag) || isGeneratingFromTag) return
+    setGeneratingRow(index)
+    try {
+      const text = await onGenerateFromTag(tag)
+      if (text) updateCustomStatement(index, text)
+    } finally {
+      setGeneratingRow(null)
+    }
+  }, [assistTags, isGeneratingFromTag, onGenerateFromTag, updateCustomStatement])
+
   const handleCustomSubmit = useCallback(() => {
     if (!canSubmitCustomSet || customLieIndex === null) return
     onGenerateStatements(normalizedCustomStatements, customLieIndex)
   }, [canSubmitCustomSet, customLieIndex, normalizedCustomStatements, onGenerateStatements])
 
-  // ── Generation phase (V2 tag input / V1 generate) ─────────────────────────
   if (!everyoneGenerated) {
     const submitted = hasGeneratedStatements
     return (
@@ -158,105 +149,26 @@ export function LieDetectiveHeroView({
         <PhaseHeroCard
           phase='lie_detective'
           artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-lie-detective.webp')}
-          title={
-            isV2
-              ? submitted
-                ? '已提交，等待悦仔生成…'
-                : '写下关于你的两个标签'
-              : '等待所有玩家提交陈述…'
-          }
-          prompt={
-            isV2
-              ? submitted
-                ? undefined
-                : '悦仔会根据你的标签生成有趣的三句话，标签不会公开给其他玩家'
-              : undefined
-          }
+          title='等待所有玩家提交陈述…'
           statusText={
             submitted
-              ? isV2
-                ? '你的标签已提交，等待其他玩家完成'
-                : '你的陈述已提交，等待其他玩家完成'
+              ? '你的陈述已提交，等待其他玩家完成'
               : '提交后自动进入投票环节'
           }
           doneCount={players.length}
           totalCount={playerCount}
           actions={
             <>
-              {isSingleTest && isHost && !hasGeneratedStatements ? (
-                <View className='lie-detective-hero__mode-test'>
-                  <Text className='lie-detective-hero__mode-test-label'>调试模式 · 选择玩法</Text>
-                  <View className='lie-detective-hero__mode-test-actions'>
-                    <Button
-                      variant={isV2 ? 'secondary' : 'primary'}
-                      onClick={() => onSelectTestMode?.('v1')}
-                      disabled={isSelectingTestMode}
-                    >
-                      V1 自填三句话
-                    </Button>
-                    <Button
-                      variant={isV2 ? 'primary' : 'secondary'}
-                      onClick={() => onSelectTestMode?.('v2')}
-                      disabled={isSelectingTestMode}
-                    >
-                      V2 标签生成
-                    </Button>
-                  </View>
-                </View>
-              ) : null}
-              {isV2 && !submitted ? (
-                <View className='lie-detective-hero__tag-form'>
-                  <View className='lie-detective-hero__tag-field'>
-                    <Input
-                      className={`lie-detective-hero__tag-input${(!tag1ValidLength && tag1Trimmed.length > 0) || tag1Profane ? ' lie-detective-hero__tag-input--error' : ''}`}
-                      placeholder='比如：养猫、喜欢徒步'
-                      value={tag1}
-                      onInput={(e) => setTag1(e.detail.value)}
-                      maxlength={20}
-                      disabled={!!isSubmittingTags}
-                    />
-                    <Text className='lie-detective-hero__tag-counter'>{tag1Trimmed.length}/20</Text>
-                    {!tag1ValidLength && tag1Trimmed.length > 0 && (
-                      <Text className='lie-detective-hero__tag-error'>标签需要2-20个字</Text>
-                    )}
-                    {tag1Profane && (
-                      <Text className='lie-detective-hero__tag-error'>标签包含敏感词，请修改</Text>
-                    )}
-                  </View>
-                  <View className='lie-detective-hero__tag-field'>
-                    <Input
-                      className={`lie-detective-hero__tag-input${(!tag2ValidLength && tag2Trimmed.length > 0) || tag2Profane ? ' lie-detective-hero__tag-input--error' : ''}`}
-                      placeholder='比如：去过20个国家'
-                      value={tag2}
-                      onInput={(e) => setTag2(e.detail.value)}
-                      maxlength={20}
-                      disabled={!!isSubmittingTags}
-                    />
-                    <Text className='lie-detective-hero__tag-counter'>{tag2Trimmed.length}/20</Text>
-                    {!tag2ValidLength && tag2Trimmed.length > 0 && (
-                      <Text className='lie-detective-hero__tag-error'>标签需要2-20个字</Text>
-                    )}
-                    {tag2Profane && (
-                      <Text className='lie-detective-hero__tag-error'>标签包含敏感词，请修改</Text>
-                    )}
-                  </View>
-                  <Button
-                    variant='primary'
-                    onClick={handleTagSubmit}
-                    disabled={!canSubmitTags}
-                    loading={isSubmittingTags}
-                  >
-                    {isSubmittingTags ? '悦仔正在编假话…' : '提交标签'}
-                  </Button>
-                </View>
-              ) : null}
-              {!isV2 && !submitted ? (
+              {!submitted ? (
                 <View className='lie-detective-hero__custom-form'>
                   <Text className='lie-detective-hero__custom-guide'>
                     写下两句真话和一句谎言，再点选哪句是谎言。只有揭晓时才会公开答案。
                   </Text>
                   {customStatements.map((statement, index) => {
                     const trimmed = statement.trim()
+                    const assistTag = assistTags[index]?.trim() ?? ''
+                    const assistTagInvalid =
+                      assistTag.length > 20 || (assistTag.length > 0 && checkProfanity(assistTag))
                     const invalid =
                       trimmed.length > 0 &&
                       (trimmed.length < 2 || checkProfanity(trimmed))
@@ -276,13 +188,34 @@ export function LieDetectiveHeroView({
                         </View>
                         <Textarea
                           className={`lie-detective-hero__custom-input${invalid ? ' lie-detective-hero__custom-input--error' : ''}`}
-                          placeholder='写一件关于你、但不容易被猜中的事'
+                          placeholder='可以试试标签生成'
                           value={statement}
                           onInput={(event) => updateCustomStatement(index, event.detail.value)}
                           maxlength={80}
                           autoHeight
-                          disabled={isGeneratingStatements}
+                          disabled={isGeneratingStatements || generatingRow === index}
                         />
+                        <View className='lie-detective-hero__assist-row'>
+                          <Input
+                            className='lie-detective-hero__assist-input'
+                            placeholder='输入标签（e.g. 旅游）'
+                            value={assistTags[index]}
+                            onInput={(event) => updateAssistTag(index, event.detail.value)}
+                            maxlength={20}
+                            disabled={generatingRow === index}
+                          />
+                          <View
+                            className={`lie-detective-hero__assist-button${!assistTag || assistTagInvalid || isGeneratingFromTag ? ' lie-detective-hero__assist-button--disabled' : ''}`}
+                            role='button'
+                            aria-label={`根据第 ${index + 1} 个标签生成句子`}
+                            onClick={() => void handleAssistGenerate(index)}
+                          >
+                            <Text>{generatingRow === index ? '生成中…' : '标签生成'}</Text>
+                          </View>
+                        </View>
+                        {assistTagInvalid ? (
+                          <Text className='lie-detective-hero__tag-error'>请换一个 20 字以内的友好标签</Text>
+                        ) : null}
                         <Text className='lie-detective-hero__tag-counter'>{trimmed.length}/80</Text>
                       </View>
                     )
@@ -332,8 +265,8 @@ export function LieDetectiveHeroView({
     ? playerVotes.filter((v) => v.guessedStatementIndex === reveal.lieIndex).length
     : 0
   const correctRate = totalPlayerVotes > 0 ? correctPlayerVotes / totalPlayerVotes : 0
-  const showZeroMessage = isRevealed && correctRate === 0 && totalPlayerVotes > 0 && isV2
-  const showHundredMessage = isRevealed && correctRate === 1 && totalPlayerVotes > 0 && isV2
+  const showZeroMessage = isRevealed && correctRate === 0 && totalPlayerVotes > 0
+  const showHundredMessage = isRevealed && correctRate === 1 && totalPlayerVotes > 0
 
   const statusText = isRevealed
     ? hasVoted
@@ -359,7 +292,7 @@ export function LieDetectiveHeroView({
         totalCount={playerCount}
         actions={
           <>
-            {!hasGeneratedStatements && !isV2 ? (
+            {!hasGeneratedStatements ? (
               <Button
                 variant='primary'
                 onClick={() => onGenerateStatements()}
@@ -422,24 +355,14 @@ export function LieDetectiveHeroView({
               >
                 <View className='lie-detective-hero__statement-header'>
                   <Text className='lie-detective-hero__statement-index'>{stmt.index}</Text>
-                  {isRevealed && isLie && !isV2 && (
+                  {isRevealed && isLie && (
                     <Text className='lie-detective-hero__statement-tag lie-detective-hero__statement-tag--lie'>
                       谎言
                     </Text>
                   )}
-                  {isRevealed && !isLie && !isV2 && (
+                  {isRevealed && !isLie && (
                     <Text className='lie-detective-hero__statement-tag lie-detective-hero__statement-tag--truth'>
                       真话
-                    </Text>
-                  )}
-                  {isV2 && isRevealed && isLie && (
-                    <Text className='lie-detective-hero__statement-tag lie-detective-hero__statement-tag--ai'>
-                      悦仔写的
-                    </Text>
-                  )}
-                  {isV2 && isRevealed && !isLie && (
-                    <Text className='lie-detective-hero__statement-tag lie-detective-hero__statement-tag--user'>
-                      你写的
                     </Text>
                   )}
                 </View>

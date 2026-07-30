@@ -769,6 +769,72 @@ export function validateLieDetectiveV2Tags(tags: unknown): { valid: false; error
   return { valid: true, tags: [tags[0].trim(), tags[1].trim()] as [string, string] };
 }
 
+export function validateLieDetectiveTag(tag: unknown): { valid: false; error: string } | { valid: true; tag: string } {
+  if (typeof tag !== 'string') {
+    return { valid: false, error: '标签格式不正确' };
+  }
+  const trimmed = tag.trim();
+  if (trimmed.length < 1 || trimmed.length > 20) {
+    return { valid: false, error: '标签需要 1-20 个字' };
+  }
+  const safetyResult = validateContentSafe(trimmed, 'tag');
+  if (!safetyResult.safe) {
+    return { valid: false, error: safetyResult.violation?.message || '标签包含不合适的内容' };
+  }
+  return { valid: true, tag: trimmed };
+}
+
+export async function generateLieDetectiveStatementFromTag(params: {
+  tag: string;
+  displayName: string;
+}): Promise<AIServiceResult<{ text: string }>> {
+  const aiCorrelationId = createAiCorrelationId();
+  const promptVersion = 'social-lie-detective-tag-assist-v1';
+  const fallback = { text: `我曾经认真体验过一次和「${params.tag}」有关的事。` };
+
+  if (!isLieDetectiveLlmEnabled()) {
+    const meta = buildFallbackAIMeta('disabled', promptVersion, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveStatementFromTag', provider: null, model: 'n/a', latencyMs: 0, success: true, fallbackUsed: true, fromCache: false, promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return attachAIGC({ data: fallback, meta });
+  }
+
+  const { client, model, provider } = getClientForFunction('generateLieDetectiveStatements');
+  const t0 = Date.now();
+  try {
+    const response = await raceWithTimeout(
+      client.chat.completions.create({
+        model,
+        messages: [{
+          role: 'user',
+          content: `请根据标签「${params.tag}」写一句适合“谁是谎言侦探”游戏的第一人称事实陈述。只输出一句中文，不判断真假，不加引号或解释，控制在80字内。玩家昵称：${params.displayName}`,
+        }],
+        temperature: 0.8,
+        max_tokens: 120,
+      }),
+      RACE_LLM_TIMEOUT_MS,
+    );
+    const text = response.choices[0]?.message?.content?.trim().replace(/^["“]|["”]$/g, '');
+    const safetyResult = text ? validateContentSafe(text, 'lieDetectiveStatement') : null;
+    if (!text || text.length > 80 || !safetyResult?.safe) {
+      throw new Error('invalid_generated_statement');
+    }
+    const latencyMs = Date.now() - t0;
+    const meta = buildLiveAIMeta(provider, promptVersion, aiCorrelationId);
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveStatementFromTag', provider, model, latencyMs, success: true, fallbackUsed: false, fromCache: false, promptVersion });
+    return attachAIGC({ data: { text }, meta });
+  } catch (error) {
+    const latencyMs = Date.now() - t0;
+    const meta = buildFallbackAIMeta('llm_error', promptVersion, aiCorrelationId);
+    logger.warn('[SocialIcebreakerAI] tag-assisted statement generation fell back', {
+      provider,
+      latencyMs,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    logAITrace({ traceId: aiCorrelationId, domain: 'icebreaker', feature: 'generateLieDetectiveStatementFromTag', provider, model, latencyMs, success: false, fallbackUsed: true, fromCache: false, promptVersion, errorCode: meta.evaluatorRejectionReason });
+    return attachAIGC({ data: fallback, meta });
+  }
+}
+
 /** Build V2 recap data from reveal history. */
 export function buildLieDetectiveV2RecapData(
   history: Array<{ round: number; correctRate: number }>,

@@ -6,6 +6,8 @@ import {
   generateXiaoYueComment,
   generateAuctionLots,
   generateLieDetectiveStatements,
+  generateLieDetectiveStatementFromTag,
+  validateLieDetectiveTag,
   getCuratedWarmupTopics,
   getLieDetectiveMode,
   getDynamicDifficulty,
@@ -997,5 +999,30 @@ router.post('/:socialSessionId/force-end', async (req: any, res) => {
 
   logger.info('[SocialIcebreaker] Session force-ended by host', { socialSessionId, userId });
   return res.json({ ended: true, phase: 'ended' });
+});
+router.post('/:socialSessionId/lie-detective/generate-from-tag', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const { socialSessionId } = req.params;
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+  if (state.currentPhase !== 'lie_detective') {
+    return res.status(400).json({ error: 'Not in lie_detective phase' });
+  }
+  if (!(await getParticipant(socialSessionId, userId))) {
+    return res.status(403).json({ error: 'Not a participant in this session' });
+  }
+
+  const validation = validateLieDetectiveTag(req.body?.tag);
+  if (!validation.valid) {
+    return res.status(400).json({ error: validation.error });
+  }
+
+  const result = await generateLieDetectiveStatementFromTag({
+    tag: validation.tag,
+    displayName: typeof req.body?.displayName === 'string' ? req.body.displayName : '玩家',
+  });
+  return res.json({ text: result.data.text, meta: result.meta });
 });
 }
