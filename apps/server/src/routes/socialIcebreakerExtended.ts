@@ -40,7 +40,7 @@ import {
 import { logger } from '../lib/logger';
 import { getFeatureFlag } from '../lib/featureFlags';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
-import { simulateBotsForSession, runBotSimulationSafely } from '../services/socialIcebreakerBotService';
+import { getBots, simulateBotsForSession, runBotSimulationSafely } from '../services/socialIcebreakerBotService';
 import {
   buildCustomLieDetectiveStatements,
   resolveLieDetectiveTargetUserId,
@@ -459,7 +459,15 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
     if (existingPlayer >= 0) {
       players[existingPlayer].statements = sanitizedStatements;
     } else {
-      players.push({ userId, displayName, statements: sanitizedStatements });
+      const botUserIds = new Set(getBots(state).map((bot) => bot.userId));
+      const player = { userId, displayName, statements: sanitizedStatements };
+      if (botUserIds.size > 0 && !botUserIds.has(userId)) {
+        // Custom single-test mode eagerly prepares bots. Keep the real tester
+        // first without changing the established bot-ready lifecycle.
+        players.unshift(player);
+      } else {
+        players.push(player);
+      }
     }
 
     state.lieDetectivePlayers = players;

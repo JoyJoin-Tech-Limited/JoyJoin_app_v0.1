@@ -247,7 +247,8 @@ $ld-tint: $phase-accent-lie-tint;
     }
 
     &--disabled {
-      opacity: 0.48;
+      background: rgba($color-primary, 0.58);
+      color: $color-text-white;
     }
   }
 }

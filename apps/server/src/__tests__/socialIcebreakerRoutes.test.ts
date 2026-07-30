@@ -3351,6 +3351,71 @@ describe.sequential('social icebreaker routes', () => {
       });
     });
 
+    it('keeps the tester first while preserving eagerly prepared bots', async () => {
+      await withServer(async (baseUrl) => {
+        const hostUserId = 'single-test-human-first-host';
+        const botUserId = 'single-test-human-first-bot';
+        const hostCookie = await login(baseUrl, hostUserId);
+        const sessionId = `session-single-test-human-first-${Date.now()}`;
+
+        vi.mocked(isSingleTestMode).mockReturnValue(true);
+        vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
+          version: 2,
+          groupId: sessionId,
+          isTestModeSkip: true,
+          runBots: true,
+          botPersonas: [{
+            botId: 'bot-1',
+            userId: botUserId,
+            displayName: 'Bot One',
+            archetype: '社牛柯基',
+          }],
+          bots: [{ botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' }],
+        });
+
+        const startResponse = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+        const { socialSessionId } = await startResponse.json() as any;
+        const state = await getSession(socialSessionId) as any;
+        state.currentPhase = 'lie_detective';
+        state.playerCount = 2;
+        state.currentLieDetectivePlayerIndex = 0;
+        state.lieDetectivePlayers = [{
+          userId: botUserId,
+          displayName: 'Bot One',
+          statements: [
+            { index: 1, text: 'Bot fact one' },
+            { index: 2, text: 'Bot lie' },
+            { index: 3, text: 'Bot fact two' },
+          ],
+        }];
+        await updateSession(socialSessionId, state);
+
+        const generateResponse = await fetch(
+          `${baseUrl}/api/social-icebreaker/${socialSessionId}/lie-detective/generate`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({
+              displayName: 'Host',
+              statements: ['我去过冰岛', '我养过一只猫', '我会开飞机'],
+              lieIndex: 3,
+            }),
+          },
+        );
+        const storedState = await getSession(socialSessionId) as any;
+
+        expect(generateResponse.status).toBe(200);
+        expect(storedState.lieDetectivePlayers).toHaveLength(2);
+        expect(storedState.lieDetectivePlayers[0].userId).toBe(hostUserId);
+        expect(storedState.lieDetectivePlayers[1].userId).toBe(botUserId);
+        expect(storedState.lieDetectivePlayers[1].statements).toHaveLength(3);
+      });
+    });
+
     it('accepts a vote for the active bot using its client-visible masked id', async () => {
       await withServer(async (baseUrl) => {
         const hostCookie = await login(baseUrl, 'single-test-lie-vote-host');

@@ -188,7 +188,7 @@ export function LieDetectiveHeroView({
                         </View>
                         <Textarea
                           className={`lie-detective-hero__custom-input${invalid ? ' lie-detective-hero__custom-input--error' : ''}`}
-                          placeholder='可以试试标签生成'
+                          placeholder='输入一句话，或者试试标签生成'
                           value={statement}
                           onInput={(event) => updateCustomStatement(index, event.detail.value)}
                           maxlength={80}
@@ -198,7 +198,7 @@ export function LieDetectiveHeroView({
                         <View className='lie-detective-hero__assist-row'>
                           <Input
                             className='lie-detective-hero__assist-input'
-                            placeholder='输入标签（e.g. 旅游）'
+                            placeholder='用标签生成一句话，多点几次会有不同的思路'
                             value={assistTags[index]}
                             onInput={(event) => updateAssistTag(index, event.detail.value)}
                             maxlength={20}
