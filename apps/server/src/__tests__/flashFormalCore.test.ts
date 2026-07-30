@@ -461,6 +461,54 @@ describe("formal Flash scheduling", () => {
     expect(validation).toEqual({ valid: true, errors: [] });
   });
 
+  it("uses the 3-5 hour policy while a staging NPC row still has legacy duration values", () => {
+    const legacyNpc = npc({ minShiftMinutes: 90, maxShiftMinutes: 150 });
+    const locationRow = location();
+    const generated = generateFlashScheduleDraft({
+      serviceDate: "2026-07-20",
+      npcs: [legacyNpc],
+      locationsByNpc: new Map([[legacyNpc.id, [locationRow]]]),
+      seed: "legacy-duration-compatibility",
+    });
+
+    expect(generated.shifts.length).toBeGreaterThanOrEqual(1);
+    for (const shift of generated.shifts) {
+      const minutes = (shift.endsAt.getTime() - shift.startsAt.getTime()) / 60_000;
+      expect(minutes).toBeGreaterThanOrEqual(180);
+      expect(minutes).toBeLessThanOrEqual(300);
+    }
+
+    const validation = validateFlashScheduleDraft({
+      serviceDate: "2026-07-20",
+      shifts: [{
+        npcId: legacyNpc.id,
+        locationId: locationRow.id,
+        startsAt: new Date("2026-07-20T17:00:00+08:00"),
+        endsAt: new Date("2026-07-20T20:00:00+08:00"),
+        source: "manual",
+      }],
+      npcsById: new Map([[legacyNpc.id, legacyNpc]]),
+      locationsByNpc: new Map([[legacyNpc.id, [locationRow]]]),
+    });
+    expect(validation).toEqual({ valid: true, errors: [] });
+  });
+
+  it("can generate a five-hour shift that crosses a daypart boundary", () => {
+    const npcRow = npc({ minShiftMinutes: 300, maxShiftMinutes: 300 });
+    const locationRow = location();
+    const generated = generateFlashScheduleDraft({
+      serviceDate: "2026-07-20",
+      npcs: [npcRow],
+      locationsByNpc: new Map([[npcRow.id, [locationRow]]]),
+      seed: "five-hour-shift",
+    });
+
+    expect(generated.shifts).toHaveLength(1);
+    expect(
+      (generated.shifts[0].endsAt.getTime() - generated.shifts[0].startsAt.getTime()) / 60_000,
+    ).toBe(300);
+  });
+
   it("blocks a third NPC shift and any shift crossing the Shenzhen service date", () => {
     const npcRow = npc();
     const locationRow = location();

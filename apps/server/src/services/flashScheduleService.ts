@@ -25,6 +25,8 @@ import {
 
 const SHENZHEN_OFFSET_MS = 8 * 60 * 60 * 1000;
 const JOB_INTERVAL_MS = 15 * 60 * 1000;
+const FLASH_SHIFT_MIN_MINUTES = 180;
+const FLASH_SHIFT_MAX_MINUTES = 300;
 const DAYPARTS = [
   { key: "morning", start: 9 * 60, end: 13 * 60 },
   { key: "afternoon", start: 13 * 60, end: 17 * 60 },
@@ -49,6 +51,25 @@ export type FlashDraftValidation = {
   valid: boolean;
   errors: string[];
 };
+
+function effectiveShiftDurationRange(npc: SchedulingNpc): {
+  minShiftMinutes: number;
+  maxShiftMinutes: number;
+} {
+  if (
+    npc.minShiftMinutes < FLASH_SHIFT_MIN_MINUTES
+    || npc.maxShiftMinutes < FLASH_SHIFT_MIN_MINUTES
+  ) {
+    return {
+      minShiftMinutes: FLASH_SHIFT_MIN_MINUTES,
+      maxShiftMinutes: FLASH_SHIFT_MAX_MINUTES,
+    };
+  }
+  return {
+    minShiftMinutes: npc.minShiftMinutes,
+    maxShiftMinutes: npc.maxShiftMinutes,
+  };
+}
 
 function hashSeed(seed: string): number {
   let hash = 2166136261;
@@ -182,15 +203,17 @@ export function generateFlashScheduleDraft(input: {
     }
     const shiftCount = random() * 100 < npc.oneShiftProbability ? 1 : 2;
     let createdForNpc = 0;
+    const durationRange = effectiveShiftDurationRange(npc);
     for (let shiftIndex = 0; shiftIndex < shiftCount; shiftIndex += 1) {
-      const duration = npc.minShiftMinutes + Math.floor(random() * (npc.maxShiftMinutes - npc.minShiftMinutes + 1));
+      const duration = durationRange.minShiftMinutes
+        + Math.floor(random() * (durationRange.maxShiftMinutes - durationRange.minShiftMinutes + 1));
       const dayparts = shuffled([...DAYPARTS], random).sort((a, b) => (
         (daypartUse.get(a.key) ?? 0) - (daypartUse.get(b.key) ?? 0)
       ));
       let selected: FlashDraftShift | null = null;
       for (const daypart of dayparts) {
         for (let attempt = 0; attempt < 24; attempt += 1) {
-          const latestStart = Math.min(daypart.end, 21 * 60) - duration;
+          const latestStart = Math.min(daypart.end - 1, 21 * 60 - duration);
           if (latestStart < daypart.start) continue;
           const stepCount = Math.floor((latestStart - daypart.start) / 5);
           const startMinutes = daypart.start + Math.floor(random() * (stepCount + 1)) * 5;
@@ -245,8 +268,11 @@ export function validateFlashScheduleDraft(input: {
     }
     if (!npc || !npc.eligibleWeekdays.includes(weekday)) errors.push(`NPC_NOT_ELIGIBLE:${shift.npcId}`);
     if (!location) errors.push(`LOCATION_NOT_ALLOWED:${shift.locationId}`);
-    if (npc && (duration < npc.minShiftMinutes || duration > npc.maxShiftMinutes)) {
-      errors.push(`DURATION_OUT_OF_RANGE:${shift.npcId}`);
+    if (npc) {
+      const durationRange = effectiveShiftDurationRange(npc);
+      if (duration < durationRange.minShiftMinutes || duration > durationRange.maxShiftMinutes) {
+        errors.push(`DURATION_OUT_OF_RANGE:${shift.npcId}`);
+      }
     }
     if (start < 9 * 60 || end > 21 * 60 || end <= start) errors.push(`TIME_OUT_OF_RANGE:${shift.npcId}`);
     if (localDateString(shift.startsAt) !== input.serviceDate || localDateString(shift.endsAt) !== input.serviceDate) {
