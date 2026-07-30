@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   ACTIVE_PERSONA_REGISTRATION_STATUSES,
   determineStateBand,
+  resolvePersonaArchetypeLabel,
+  resolvePersonaIntentLabel,
 } from '../eventPoolPersonaRepo'
 import type { PoolPersonaSnapshotResponse } from '@shared/api'
+import { ALL_INTENT_VALUES, getIntentLabel } from '@shared/constants'
+import { ARCHETYPE_DEFINITIONS } from '@shared/personality/archetypeNames'
 
 function makeDimension(
   key: string,
@@ -115,5 +119,25 @@ describe('determineStateBand', () => {
 describe('pool persona registration scope', () => {
   it('includes every active registration shown by the pool card', () => {
     expect(ACTIVE_PERSONA_REGISTRATION_STATUSES).toEqual(['pending', 'matched'])
+  })
+})
+
+describe('pool persona display labels', () => {
+  it('uses the canonical Chinese archetype names shown in profile settings', () => {
+    for (const archetype of ARCHETYPE_DEFINITIONS) {
+      expect(resolvePersonaArchetypeLabel(archetype.id)).toBe(archetype.nameCn)
+    }
+    expect(resolvePersonaArchetypeLabel('机智狐')).toBe('寻宝狐')
+  })
+
+  it('uses the canonical Chinese intent labels shown in profile settings', () => {
+    for (const intent of ALL_INTENT_VALUES) {
+      expect(resolvePersonaIntentLabel(intent)).toBe(getIntentLabel(intent))
+    }
+  })
+
+  it('preserves unknown stored values instead of hiding them', () => {
+    expect(resolvePersonaArchetypeLabel('future_archetype')).toBe('future_archetype')
+    expect(resolvePersonaIntentLabel('future_intent')).toBe('future_intent')
   })
 })

@@ -2,6 +2,8 @@ import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { db } from "../db";
 import { eventPoolRegistrations, users, eventPools } from "@shared/schema";
 import type { PoolPersonaSnapshotResponse, PoolPersonaStateBand } from "@shared/api";
+import { getIntentLabel } from "@shared/constants";
+import { resolveArchetype as resolveCanonicalArchetype } from "@shared/personality/archetypeNames";
 import { logger } from "../lib/logger";
 
 const THRESHOLDS = {
@@ -74,8 +76,18 @@ function resolveIndustryLabel(user: typeof users.$inferSelect): string {
   );
 }
 
-function resolveArchetype(user: typeof users.$inferSelect): string | null {
-  return user.primaryArchetype || user.archetype || null;
+export function resolvePersonaArchetypeLabel(identifier: string): string {
+  const normalized = identifier.trim();
+  return resolveCanonicalArchetype(normalized)?.nameCn ?? normalized;
+}
+
+export function resolvePersonaIntentLabel(intent: string): string {
+  return getIntentLabel(intent.trim());
+}
+
+function resolveUserArchetypeLabel(user: typeof users.$inferSelect): string | null {
+  const identifier = user.primaryArchetype || user.archetype;
+  return identifier ? resolvePersonaArchetypeLabel(identifier) : null;
 }
 
 function resolveGenderLabel(gender: string | null | undefined): string {
@@ -161,7 +173,7 @@ export async function buildPoolPersonaSnapshot(
 
   const totalRegistrants = rows.length;
 
-  const archetypeCounts = countOccurrences(rows.map((r) => resolveArchetype(r.user)));
+  const archetypeCounts = countOccurrences(rows.map((r) => resolveUserArchetypeLabel(r.user)));
   const industryCounts = countOccurrences(rows.map((r) => resolveIndustryLabel(r.user)));
 
   const intentValues: string[] = [];
@@ -169,7 +181,7 @@ export async function buildPoolPersonaSnapshot(
     const intents = row.registration.eventIntent ?? row.user.intent ?? [];
     for (const intent of intents) {
       if (intent && intent.trim() !== "") {
-        intentValues.push(intent.trim());
+        intentValues.push(resolvePersonaIntentLabel(intent));
       }
     }
   }
@@ -181,7 +193,7 @@ export async function buildPoolPersonaSnapshot(
   const genderLabels = rows.map((r) => resolveGenderLabel(r.user.gender));
   const genderCounts = countOccurrences(genderLabels);
 
-  const archetypeTotal = archetypeCounts.size > 0 ? rows.filter((r) => resolveArchetype(r.user)).length : 0;
+  const archetypeTotal = archetypeCounts.size > 0 ? rows.filter((r) => resolveUserArchetypeLabel(r.user)).length : 0;
   const industryTotal = industryCounts.size > 0 ? rows.filter((r) => resolveIndustryLabel(r.user) !== "未知行业").length : 0;
   const intentTotal = intentValues.length;
   const ageTotal = ageCounts.size > 0 ? rows.filter((r) => calculateAge(r.user.birthdate) !== null).length : 0;
@@ -235,7 +247,7 @@ export async function buildPoolPersonaSnapshot(
   if (requestingUserId) {
     const requestingRow = rows.find((r) => r.user.id === requestingUserId);
     if (requestingRow) {
-      userArchetype = resolveArchetype(requestingRow.user);
+      userArchetype = resolveUserArchetypeLabel(requestingRow.user);
     }
   }
 
