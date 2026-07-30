@@ -22,6 +22,7 @@ import { storage } from "../../storage";
 import {
   buildEventPoolRegistrationInsert,
   isSessionPendingReferralCode,
+  resolveOptionalRegistrationAttribution,
   type EventPoolRegistrationPreferenceDNA,
 } from "../../lib/eventPoolRegistration";
 import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
@@ -701,47 +702,46 @@ export function registerUserEventPoolRoutes(app: Express): void {
           .where(eq(invitations.code, invitationCode))
           .limit(1);
 
-        if (invitation) {
-          // Check if invitation expired
-          if (invitation.expiresAt && new Date(invitation.expiresAt) < new Date()) {
-            return res.status(410).json({ message: "Invitation has expired" });
-          }
-
-          // Prevent self-invitation
-          if (invitation.inviterId === userId) {
-            return res.status(400).json({ message: "Cannot use your own invitation code", code: "SELF_INVITE" });
-          }
-
-          inviterId = invitation.inviterId;
-          invitationId = invitation.id;
-        } else {
+        let referral: { id: string; userId: string } | undefined;
+        if (!invitation) {
           // Not an invitation code — check if it's a referral code
-          const [referral] = await db
+          [referral] = await db
             .select({ id: referralCodes.id, userId: referralCodes.userId })
             .from(referralCodes)
             .where(eq(referralCodes.code, invitationCode))
             .limit(1);
 
-          if (referral) {
-            // Prevent self-referral
-            if (referral.userId === userId) {
-              return res.status(400).json({ message: "Cannot use your own referral code", code: "SELF_INVITE" });
-            }
+        }
 
-            referralCodeId = referral.id;
-            inviterId = referral.userId;
-          }
-          // If neither invitation nor referral, the code is invalid
-          if (!referralCodeId) {
-            if (isSessionPendingReferralCode(invitationCode, req.session?.pendingReferralCode)) {
-              logger.warn("Discarding stale pending referral during pool registration", {
-                poolId,
-                userId,
-              });
-              req.session.pendingReferralCode = undefined;
-            } else {
-              return res.status(400).json({ message: "Invalid code", code: "INVALID_CODE" });
-            }
+        const attribution = resolveOptionalRegistrationAttribution({
+          userId,
+          invitation,
+          referral,
+        });
+
+        if (attribution.kind === "invitation") {
+          invitationId = attribution.invitationId;
+          inviterId = attribution.inviterId;
+        } else if (attribution.kind === "referral") {
+          referralCodeId = attribution.referralCodeId;
+          inviterId = attribution.inviterId;
+        } else {
+          const source = isSessionPendingReferralCode(
+            invitationCode,
+            req.session?.pendingReferralCode,
+          )
+            ? "session"
+            : "request";
+
+          logger.warn("Discarding unusable attribution during pool registration", {
+            poolId,
+            userId,
+            reason: attribution.reason,
+            source,
+          });
+
+          if (source === "session") {
+            req.session.pendingReferralCode = undefined;
           }
         }
       }

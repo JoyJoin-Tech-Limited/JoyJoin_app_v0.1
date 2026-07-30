@@ -37,6 +37,61 @@ export interface EventPoolRegistrationPreferenceDNA {
   kolComfort: string | null;
 }
 
+type OptionalRegistrationAttribution =
+  | { kind: "invitation"; invitationId: string; inviterId: string }
+  | { kind: "referral"; referralCodeId: string; inviterId: string }
+  | {
+      kind: "discard";
+      reason: "expired_invitation" | "self_invitation" | "self_referral" | "invalid_code";
+    };
+
+export function resolveOptionalRegistrationAttribution(input: {
+  userId: string;
+  now?: Date;
+  invitation?: {
+    id: string;
+    inviterId: string;
+    expiresAt: Date | string | null;
+  } | null;
+  referral?: {
+    id: string;
+    userId: string;
+  } | null;
+}): OptionalRegistrationAttribution {
+  if (input.invitation) {
+    if (
+      input.invitation.expiresAt &&
+      new Date(input.invitation.expiresAt) < (input.now ?? new Date())
+    ) {
+      return { kind: "discard", reason: "expired_invitation" };
+    }
+
+    if (input.invitation.inviterId === input.userId) {
+      return { kind: "discard", reason: "self_invitation" };
+    }
+
+    return {
+      kind: "invitation",
+      invitationId: input.invitation.id,
+      inviterId: input.invitation.inviterId,
+    };
+  }
+
+  if (input.referral) {
+    if (input.referral.userId === input.userId) {
+      return { kind: "discard", reason: "self_referral" };
+    }
+
+    return {
+      kind: "referral",
+      referralCodeId: input.referral.id,
+      inviterId: input.referral.userId,
+    };
+  }
+
+  return { kind: "discard", reason: "invalid_code" };
+}
+
 export function isSessionPendingReferralCode(
   submittedCode: string,
   pendingReferralCode: string | undefined,
