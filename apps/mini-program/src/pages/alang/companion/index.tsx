@@ -1,7 +1,7 @@
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
-import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashPageState, formatFlashDueDate } from '../../../components/alang/FlashUi'
+import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState, formatFlashDueDate } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
@@ -169,6 +169,7 @@ export default function FlashTaskPage() {
 
   return (
     <View className='flash-page flash-task'>
+      <FlashNpcSceneBackdrop scene='task' />
       <ScrollView className='flash-page__scroll' scrollY>
         <View className='flash-page__content'>
           <View className='flash-task__chapter'>
@@ -189,7 +190,6 @@ export default function FlashTaskPage() {
             </View>
             <Text className='flash-task__category' style={{ color: category.text, backgroundColor: category.tint }}>{category.label}</Text>
             <Text className='flash-task__title'>{data.title}</Text>
-            <Text className='flash-task__description'>{data.description || data.shortBrief || '去附近走走，把你真实的感受带回来就好。'}</Text>
 
             {!isInvitation ? <View className='flash-task__place'>
               <Text className='flash-task__place-label'>要去的地方</Text>
@@ -210,21 +210,6 @@ export default function FlashTaskPage() {
               ) : null}
             </View> : null}
 
-            <View className='flash-task__rules'>
-              {isInvitation ? (
-                <>
-                  <Text>• 不需要定位、打卡或证明完成</Text>
-                  <Text>• 做一点、没开始或改变主意，都可以如实告诉角色</Text>
-                  <Text>• 只有之后再次遇见对应角色时，才会自然回访</Text>
-                </>
-              ) : (
-                <>
-              <Text>• 到附近 50 米内，主动点击一次「我已到达」</Text>
-              <Text>• 不要求消费、进店、拍照或与陌生人互动</Text>
-              <Text>• 到达后写一两项感受，下次遇见 {data.npc.name} 再交付</Text>
-                </>
-              )}
-            </View>
           </View>
 
           {isInvitation ? (
@@ -285,7 +270,6 @@ export default function FlashTaskPage() {
             </>
           )}
 
-          <Text className='flash-task__footnote'>任务不会预约角色加班，也不会因为临近截止而催促你。</Text>
         </View>
       </ScrollView>
     </View>

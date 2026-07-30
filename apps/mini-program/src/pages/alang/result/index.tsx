@@ -1,7 +1,7 @@
 import Taro from '@tarojs/taro'
 import { useEffect, useMemo, useState } from 'react'
 import { ScrollView, Text, Textarea, View } from '@tarojs/components'
-import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashPageState } from '../../../components/alang/FlashUi'
+import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
@@ -122,6 +122,7 @@ export default function FlashFeedbackPage() {
 
   return (
     <View className='flash-page flash-feedback'>
+      <FlashNpcSceneBackdrop scene='feedback' />
       <ScrollView className='flash-page__scroll' scrollY>
         <View className='flash-page__content'>
           <View className='flash-feedback__hero'>
@@ -174,7 +175,7 @@ export default function FlashFeedbackPage() {
                 onInput={(event) => setPrivateReply(event.detail.value.slice(0, 100))}
                 aria-label='给角色的私密回信，最多100字'
               />
-              <Text className='flash-feedback__privacy'>回信不用于用户画像、数据分析、个人故事或模型训练；交付后 30 天删除。</Text>
+              <Text className='flash-visually-hidden'>回信不用于用户画像、数据分析、个人故事或模型训练；交付后 30 天删除。</Text>
             </View>
           </View>
 

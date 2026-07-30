@@ -1,7 +1,7 @@
 import Taro from '@tarojs/taro'
 import { useEffect, useMemo, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
-import { FlashButton, FlashFeatureClosed, FlashPageState, formatFlashRemainingTime } from '../../../components/alang/FlashUi'
+import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState, formatFlashRemainingTime } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
@@ -19,6 +19,7 @@ export default function FlashRadarPage() {
   const params = Taro.getCurrentInstance().router?.params ?? {}
   const appearanceId = decodeFlashRouteParam(params.appearanceId)
   const npcName = decodeFlashRouteParam(params.npcName, '这位朋友')
+  const npcSlug = decodeFlashRouteParam(params.npcSlug)
   const districtName = decodeFlashRouteParam(params.districtName, '深圳')
   const locationAddress = decodeFlashRouteParam(params.locationAddress)
   const endsAt = decodeFlashRouteParam(params.endsAt)
@@ -101,39 +102,34 @@ export default function FlashRadarPage() {
 
   return (
     <View className='flash-page flash-radar'>
+      <FlashNpcSceneBackdrop scene='radar' />
       <ScrollView className='flash-page__scroll' scrollY>
         <View className='flash-page__content flash-radar__content'>
-          <View className='flash-radar__clue'>
-            <Text className='flash-radar__clue-kicker'>ENCOUNTER SEARCH</Text>
-            <Text className='flash-radar__clue-title'>今晚，去碰个运气</Text>
-            <Text className='flash-radar__clue-meta'>{npcName}在{districtName} · {formatFlashRemainingTime(undefined, endsAt)}</Text>
+          <View className='flash-radar__npc'>
+            <FlashNpcPortrait npc={{ slug: npcSlug, name: npcName }} size='large' />
+            <Text className='flash-radar__name'>{npcName}</Text>
+            <Text className='flash-radar__meta flash-radar__clue-meta'>{npcName}在{districtName} · {formatFlashRemainingTime(undefined, endsAt)}</Text>
             {locationAddress ? <Text className='flash-radar__clue-address'>{locationAddress}</Text> : null}
-            <Text className='flash-radar__clue-copy'>先到这个公共片区，再打开雷达寻找。真正找到以前，角色不会提前现身。</Text>
           </View>
 
           <View className='flash-radar__instrument' aria-label='隐藏位置雷达，不显示角色坐标'>
-            <View className='flash-radar__grid' />
+            <View className='flash-radar__paper-disc' />
             <View className='flash-radar__sweep' />
-            <View className='flash-radar__crosshair flash-radar__crosshair--horizontal' />
-            <View className='flash-radar__crosshair flash-radar__crosshair--vertical' />
             <View className='flash-radar__ring flash-radar__ring--outer' />
             <View className='flash-radar__ring flash-radar__ring--middle' />
             <View className='flash-radar__ring flash-radar__ring--inner' />
-            <View className='flash-radar__tick flash-radar__tick--north'><Text>N</Text></View>
-            <View className='flash-radar__tick flash-radar__tick--east'><Text>E</Text></View>
-            <View className='flash-radar__tick flash-radar__tick--south'><Text>S</Text></View>
-            <View className='flash-radar__tick flash-radar__tick--west'><Text>W</Text></View>
-            <View className='flash-radar__blip flash-radar__blip--one' />
-            <View className='flash-radar__blip flash-radar__blip--two' />
-            <View className='flash-radar__signal'><Text>?</Text></View>
-            <View className='flash-radar__instrument-status'>
-              <Text className='flash-radar__instrument-status-dot' />
-              <Text>{state === 'locating' ? '正在扫描' : '等待启动'}</Text>
+            <View className='flash-radar__track flash-radar__track--one' />
+            <View className='flash-radar__track flash-radar__track--two' />
+            <View className='flash-radar__track flash-radar__track--three' />
+            <View className='flash-radar__signal'>
+              <View className='flash-radar__signal-gem' />
+              <Text>{state === 'locating' ? '扫描中' : '寻迹中'}</Text>
             </View>
           </View>
 
-          <Text className='flash-radar__title'>到了你觉得对的附近，再确认一次</Text>
-          <Text className='flash-radar__copy'>我们不会给出角色的精确坐标。每次点击只读取一次你的位置，用来判断是否进入 100 米范围。</Text>
+          <Text className='flash-radar__title'>感觉走近了，就确认一次</Text>
+          <Text className='flash-radar__copy'>每次只确认一次当前位置。</Text>
+          <Text className='flash-visually-hidden'>只读取一次你的位置，用来判断是否进入 100 米范围。</Text>
 
           {isPossiblyLate ? (
             <View className='flash-radar__warning' role='status'>

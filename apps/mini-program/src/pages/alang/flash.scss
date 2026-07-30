@@ -736,3 +736,129 @@ page {
   .flash-radar__sweep { animation: none; }
   .flash-radar__signal { animation: none; }
 }
+
+// Street Blind Box paper-story scenes and current NPC headshots.
+.flash-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.flash-scene-backdrop {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+
+  &__image { width: 100%; height: 100%; transform: scale(1.02); }
+  &__veil {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(255, 249, 240, 0.18), rgba(255, 249, 240, 0.32) 58%, rgba(255, 249, 240, 0.48)),
+      linear-gradient(90deg, rgba(139, 92, 246, 0.08), rgba(255, 155, 133, 0.08));
+    backdrop-filter: blur(1rpx);
+  }
+}
+
+.flash-radar,
+.flash-task,
+.flash-feedback {
+  position: relative;
+  background: transparent;
+
+  .flash-page__scroll { position: relative; z-index: 1; }
+}
+
+.flash-npc-portrait {
+  overflow: hidden;
+  border: 5rpx solid rgba($color-surface, 0.94);
+  box-shadow: 0 12rpx 30rpx rgba(#2F2342, 0.18), 0 0 0 2rpx rgba($color-primary, 0.12);
+
+  &--small { width: 92rpx; height: 92rpx; }
+  &--medium { width: 132rpx; height: 132rpx; }
+  &--large { width: 208rpx; height: 208rpx; }
+  &__image { width: 100%; height: 100%; border-radius: $radius-circle; }
+}
+
+.flash-radar {
+  &__content { display: flex; flex-direction: column; align-items: center; }
+  &__npc {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 24rpx;
+    padding: 20rpx 38rpx;
+    border-radius: $card-radius-lg;
+    background: rgba($color-surface, 0.78);
+    box-shadow: $shadow-sm;
+    backdrop-filter: blur(8rpx);
+  }
+  &__name { margin-top: 18rpx; font-family: $font-cn-display; font-size: $font-size-xl; font-weight: $font-weight-black; }
+  &__meta { margin-top: 8rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; }
+  &__clue-address { max-width: 600rpx; margin-top: 14rpx; padding: 12rpx 24rpx; border-radius: $radius-pill; background: rgba($color-primary, 0.08); color: $color-primary-dark; font-size: $font-size-sm; line-height: 1.5; text-align: center; }
+  &__instrument {
+    position: relative;
+    width: 390rpx;
+    height: 390rpx;
+    margin-top: 30rpx;
+    overflow: hidden;
+    border: 6rpx solid rgba($color-surface, 0.86);
+    border-radius: $radius-circle;
+    background: rgba($color-surface, 0.48);
+    box-shadow: 0 18rpx 48rpx rgba(74, 52, 105, 0.2), inset 0 0 0 3rpx rgba($color-primary, 0.18);
+    backdrop-filter: blur(8rpx);
+  }
+  &__paper-disc { position: absolute; inset: 20rpx; border-radius: $radius-circle; background: radial-gradient(circle at 50% 48%, rgba($color-surface, 0.94) 0 18%, rgba($color-primary-light, 0.76) 19% 34%, rgba(168, 197, 221, 0.34) 35% 52%, rgba(255, 155, 133, 0.2) 53% 68%, rgba($color-surface, 0.5) 69%); }
+  &__sweep { position: absolute; top: 50%; left: 50%; width: 168rpx; height: 168rpx; transform-origin: 0 0; clip-path: polygon(0 0, 100% 10%, 74% 100%); background: linear-gradient(115deg, rgba($color-primary, 0.4), rgba($color-primary, 0)); animation: flash-radar-sweep 4.8s linear infinite; }
+  &__ring { position: absolute; border: 3rpx dashed rgba($color-primary, 0.34); border-radius: $radius-circle; }
+  &__ring--outer { inset: 38rpx; }
+  &__ring--middle { inset: 92rpx; border-style: solid; border-color: rgba(168, 197, 221, 0.62); }
+  &__ring--inner { inset: 142rpx; border-style: solid; border-color: rgba($color-primary, 0.38); }
+  &__track { position: absolute; width: 18rpx; height: 18rpx; border: 5rpx solid rgba($color-surface, 0.9); border-radius: $radius-circle; background: #FF9B85; box-shadow: 0 0 20rpx rgba(255, 155, 133, 0.78); }
+  &__track--one { top: 84rpx; left: 116rpx; }
+  &__track--two { top: 142rpx; right: 64rpx; width: 12rpx; height: 12rpx; background: $color-primary; }
+  &__track--three { right: 104rpx; bottom: 76rpx; width: 14rpx; height: 14rpx; background: #A8C5DD; }
+  &__signal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: flex;
+    width: 112rpx;
+    height: 112rpx;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transform: translate(-50%, -50%);
+    border: 5rpx solid rgba($color-surface, 0.9);
+    border-radius: 34rpx;
+    background: linear-gradient(145deg, $color-primary, #7650D6);
+    color: $color-text-white;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    box-shadow: $shadow-primary-soft;
+  }
+  &__signal-gem { width: 22rpx; height: 22rpx; margin-bottom: 6rpx; transform: rotate(45deg); border-radius: 5rpx; background: #FF9B85; box-shadow: 0 0 14rpx rgba(255, 155, 133, 0.72); }
+  &__title { margin-top: 26rpx; padding: 12rpx 24rpx 0; text-shadow: 0 2rpx 10rpx rgba($color-surface, 0.9); }
+  &__copy { margin-top: 8rpx; padding: 0 24rpx; font-size: $font-size-sm; }
+}
+
+.flash-task {
+  &__sender { margin-bottom: 22rpx; padding: 18rpx 22rpx; border-radius: $card-radius-lg; background: rgba($color-surface, 0.8); box-shadow: $shadow-sm; backdrop-filter: blur(8rpx); }
+  &__paper { border: 2rpx solid rgba($color-primary, 0.12); background: rgba($color-surface, 0.92); backdrop-filter: blur(10rpx); }
+}
+
+.flash-feedback {
+  &__hero { margin-bottom: 22rpx; padding: 18rpx 22rpx; border-radius: $card-radius-lg; background: rgba($color-surface, 0.8); box-shadow: $shadow-sm; backdrop-filter: blur(8rpx); }
+  &__form { border: 2rpx solid rgba($color-primary, 0.12); background: rgba($color-surface, 0.92); box-shadow: $shadow-md; backdrop-filter: blur(10rpx); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-radar__sweep { animation: none; transform: rotate(35deg); }
+}

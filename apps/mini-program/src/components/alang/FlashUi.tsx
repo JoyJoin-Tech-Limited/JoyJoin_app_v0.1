@@ -12,24 +12,26 @@ export function FlashNpcPortrait({
   size?: 'small' | 'medium' | 'large'
 }) {
   const theme = useMemo(() => resolveFlashNpcTheme(npc.slug, npc.name), [npc.name, npc.slug])
-  const [failed, setFailed] = useState(!theme.imageSrc)
+  const headshotSrc = theme.slug !== 'unknown'
+    ? `/pages/alang/assets/npcs/headshots/${theme.slug}.webp`
+    : ''
+  const [failed, setFailed] = useState(!headshotSrc)
 
   useEffect(() => {
-    setFailed(!theme.imageSrc)
-  }, [theme.imageSrc])
+    setFailed(!headshotSrc)
+  }, [headshotSrc])
 
   return (
     <View
-      className={`flash-npc-portrait flash-npc-portrait--${size}`}
+      className={`flash-npc-portrait flash-npc-portrait--${size} flash-npc-portrait--${theme.slug}`}
       style={{ backgroundColor: theme.tint }}
       aria-label={`${npc.name}的角色形象`}
     >
-      <View className='flash-npc-portrait__aura' style={{ borderColor: theme.accent }} />
       {!failed ? (
         <Image
           className='flash-npc-portrait__image'
-          src={theme.imageSrc}
-          mode='aspectFit'
+          src={headshotSrc}
+          mode='aspectFill'
           onError={() => setFailed(true)}
         />
       ) : (
@@ -37,11 +39,23 @@ export function FlashNpcPortrait({
           {theme.fallbackGlyph}
         </Text>
       )}
-      <Text className='flash-npc-portrait__identity' style={{ backgroundColor: theme.accent }}>
-        {npc.name.slice(0, 1)}
-      </Text>
-      <View className='flash-npc-portrait__spark flash-npc-portrait__spark--one' />
-      <View className='flash-npc-portrait__spark flash-npc-portrait__spark--two' />
+    </View>
+  )
+}
+
+export function FlashNpcSceneBackdrop({
+  scene,
+}: {
+  scene: 'radar' | 'task' | 'feedback'
+}) {
+  return (
+    <View className='flash-scene-backdrop' aria-hidden='true'>
+      <Image
+        className='flash-scene-backdrop__image'
+        src={`/pages/alang/assets/backgrounds/${scene}-paper-scene.png`}
+        mode='aspectFill'
+      />
+      <View className='flash-scene-backdrop__veil' />
     </View>
   )
 }
