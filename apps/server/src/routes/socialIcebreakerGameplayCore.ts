@@ -1103,11 +1103,26 @@ router.post('/:socialSessionId/quip-battle/vote', async (req: any, res) => {
     return res.status(400).json({ error: 'Not in quip_battle phase' });
   }
 
+  // Single-test client state replaces private bot user IDs with opaque bot IDs.
+  // Resolve only IDs from this session's persisted persona map before validation.
+  const botUserIdByBotId = new Map(
+    (state.singleTest?.botPersonas || []).map((persona) => [persona.botId, persona.userId]),
+  );
+  const normalizedVotes = votes.map((vote) => {
+    const promptSuffix = `::${vote.promptId}`;
+    if (!vote.answerId.endsWith(promptSuffix)) return vote;
+    const clientUserId = vote.answerId.slice(0, -promptSuffix.length);
+    const internalUserId = botUserIdByBotId.get(clientUserId);
+    return internalUserId
+      ? { ...vote, answerId: `${internalUserId}${promptSuffix}` }
+      : vote;
+  });
+
   // Validate answerIds against existing answers
   const validAnswerIds = new Set(
     (state.quipBattleAnswers || []).map((a: any) => `${a.userId}::${a.promptId}`)
   );
-  for (const v of votes) {
+  for (const v of normalizedVotes) {
     if (!validAnswerIds.has(v.answerId)) {
       return res.status(400).json({ error: `Invalid answerId: ${v.answerId}` });
     }
@@ -1119,7 +1134,7 @@ router.post('/:socialSessionId/quip-battle/vote', async (req: any, res) => {
         operationId,
         socialSessionId,
         phase: 'quip_battle',
-        vote: { voterId: userId, votes },
+        vote: { voterId: userId, votes: normalizedVotes },
       },
       async () => {
         const currentState = await getSession(socialSessionId);
@@ -1131,7 +1146,7 @@ router.post('/:socialSessionId/quip-battle/vote', async (req: any, res) => {
         if (!currentState) throw new Error('Session not found');
 
         const existingVotes = currentState.quipBattleVotes || [];
-        const newVotes = votes.map((v) => ({
+        const newVotes = normalizedVotes.map((v) => ({
           voterId: userId,
           answerId: v.answerId,
           promptId: v.promptId,
@@ -1167,7 +1182,7 @@ router.post('/:socialSessionId/quip-battle/vote', async (req: any, res) => {
   }
 
   const existingVotes = state.quipBattleVotes || [];
-  const newVotes = votes.map((v) => ({
+  const newVotes = normalizedVotes.map((v) => ({
     voterId: userId,
     answerId: v.answerId,
     promptId: v.promptId,

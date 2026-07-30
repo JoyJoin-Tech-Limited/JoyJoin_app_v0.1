@@ -2643,6 +2643,50 @@ describe.sequential('social icebreaker routes', () => {
       });
     });
 
+    it('accepts a single-test vote that references a masked bot answer id', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'qb-masked-bot-vote-host');
+        const socialSessionId = await advanceToQuipBattle(baseUrl, hostCookie);
+        const state = await getSession(socialSessionId);
+        if (!state) throw new Error('Expected quip battle session');
+        state.singleTest = {
+          version: 2,
+          groupId: 'qb-masked-bot-group',
+          isTestModeSkip: true,
+          runBots: false,
+          bots: [{ botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' }],
+          botPersonas: [{
+            botId: 'bot-1',
+            userId: 'internal-bot-user-1',
+            displayName: 'Bot One',
+            archetype: '社牛柯基',
+          }],
+        };
+        state.quipBattleAnswers = [{
+          userId: 'internal-bot-user-1',
+          displayName: 'Bot One',
+          promptId: 'prompt-1',
+          answerText: 'Bot answer',
+        }];
+        await updateSession(socialSessionId, state);
+
+        const voteResponse = await fetch(`${baseUrl}/api/social-icebreaker/${socialSessionId}/quip-battle/vote`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({
+            votes: [{ answerId: 'bot-1::prompt-1', promptId: 'prompt-1' }],
+          }),
+        });
+
+        expect(voteResponse.status).toBe(200);
+        expect((await getSession(socialSessionId))?.quipBattleVotes).toContainEqual({
+          voterId: 'qb-masked-bot-vote-host',
+          answerId: 'internal-bot-user-1::prompt-1',
+          promptId: 'prompt-1',
+        });
+      });
+    });
+
     it('optimistic vote: same operationId twice is idempotent', async () => {
       await withServer(async (baseUrl) => {
         const hostCookie = await login(baseUrl, 'qb-vote-host');
