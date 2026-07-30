@@ -478,6 +478,7 @@ function simulatePersonalityDiceBots(
   rng: () => number,
 ): void {
   const chooseModeEnabled =
+    state.personalityDiceChooseModeEnabled ??
     (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
 
   if (chooseModeEnabled && state.personalityDiceChallengeGroups) {

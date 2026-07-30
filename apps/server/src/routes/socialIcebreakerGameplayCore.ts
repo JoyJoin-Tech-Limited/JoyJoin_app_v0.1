@@ -386,6 +386,8 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
   if (chooseModeEnabled) {
     // Idempotent retry: if groups already exist, return them instead of regenerating
     if ((state.personalityDiceChallengeGroups || []).length > 0) {
+      await runBotSimulationSafely(socialSessionId, state, 'personality-dice-cached-generate');
+      await updateSession(socialSessionId, state);
       const cachedMeta = state.personalityDiceChallengesMeta
         ?? buildCachedAIMeta(new Date(state.phaseStartedAt).toISOString(), null, 'social-personality-dice-v4');
       const enrichedGroups = state.personalityDiceChallengeGroups!.map((g) => ({
@@ -410,9 +412,11 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
           state.personalityDiceChallengeGroups = preGenGroups;
           state.personalityDiceChallengesMeta = (result.aiMeta as unknown as AIResponseMeta | undefined) ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-personality-dice-v4');
           state.diceSelectedOption = {};
+          state.diceRevealOrder = undefined;
           state.currentDicePlayerIndex = 0;
           state.diceCompletedBy = [];
           state.dicePassedBy = [];
+          await runBotSimulationSafely(socialSessionId, state, 'personality-dice-pregenerated');
           await updateSession(socialSessionId, state);
           logger.info('Personality dice groups served from pre-generation', { socialSessionId });
           return res.json({ groups: preGenGroups, meta: state.personalityDiceChallengesMeta });
@@ -443,6 +447,7 @@ router.post('/:socialSessionId/personality-dice/generate', async (req: any, res)
       state.personalityDiceChallengeGroups = enrichedGroups;
       state.personalityDiceChallengesMeta = groupResult.meta;
       state.diceSelectedOption = {};
+      state.diceRevealOrder = undefined;
       state.currentDicePlayerIndex = 0;
       state.diceCompletedBy = [];
       state.dicePassedBy = [];
@@ -555,13 +560,15 @@ router.post('/:socialSessionId/personality-dice/choose', async (req: any, res) =
     return res.status(400).json({ error: 'optionIndex must be 0, 1, or 2' });
   }
 
-  const chooseModeEnabled = (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+  const state = await resolveSession(socialSessionId, res);
+  if (!state) return;
+
+  const chooseModeEnabled =
+    state.personalityDiceChooseModeEnabled ??
+    (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
   if (!chooseModeEnabled) {
     return res.status(400).json({ error: 'Choose-Your-Prompt mode is not enabled' });
   }
-
-  const state = await resolveSession(socialSessionId, res);
-  if (!state) return;
 
   await runBotSimulationSafely(socialSessionId, state, 'personality-dice-choose');
 
@@ -572,6 +579,9 @@ router.post('/:socialSessionId/personality-dice/choose', async (req: any, res) =
   const groups = state.personalityDiceChallengeGroups;
   if (!groups || groups.length === 0) {
     return res.status(400).json({ error: 'No challenge groups generated yet' });
+  }
+  if (targetUserId !== userId) {
+    return res.status(403).json({ error: 'Players can only choose their own challenge' });
   }
 
   // Find the group for this user
@@ -585,13 +595,8 @@ router.post('/:socialSessionId/personality-dice/choose', async (req: any, res) =
     return res.status(400).json({ error: 'Invalid option index for this group' });
   }
 
-  const alreadyChosen = state.diceSelectedOption?.[targetUserId] !== undefined;
-  if (alreadyChosen && !operationId) {
-    return res.status(409).json({
-      error: 'Already chosen',
-      chosenOptionIndex: state.diceSelectedOption![targetUserId],
-      selectedOption: { ...group.options[state.diceSelectedOption![targetUserId]], archetypeColor: getArchetypeHSL(group.options[state.diceSelectedOption![targetUserId]].archetype) },
-    });
+  if (state.diceCompletedBy?.includes(targetUserId)) {
+    return res.status(409).json({ error: 'Cancel ready before changing the challenge' });
   }
 
   if (operationId) {
@@ -605,22 +610,13 @@ router.post('/:socialSessionId/personality-dice/choose', async (req: any, res) =
       async () => {
         const currentState = await getSession(socialSessionId);
         if (!currentState) return false;
-        return currentState.diceSelectedOption?.[targetUserId] === undefined;
+        return !currentState.diceCompletedBy?.includes(targetUserId);
       },
       async () => {
         const currentState = await getSession(socialSessionId);
         if (!currentState) throw new Error('Session not found');
 
-        if (currentState.diceSelectedOption?.[targetUserId] !== undefined) return;
-
         currentState.diceSelectedOption = { ...(currentState.diceSelectedOption || {}), [targetUserId]: optionIndex };
-
-        const diceCompletedBy = currentState.diceCompletedBy || [];
-        if (!diceCompletedBy.includes(targetUserId)) {
-          diceCompletedBy.push(targetUserId);
-          currentState.diceCompletedBy = diceCompletedBy;
-        }
-
         await updateSession(socialSessionId, currentState);
       },
     );
@@ -642,7 +638,7 @@ router.post('/:socialSessionId/personality-dice/choose', async (req: any, res) =
       meta: freshState?.personalityDiceChallengesMeta ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-personality-dice-v4'),
       diceCompletedBy: freshDiceCompletedBy,
       dicePassedBy: freshDicePassedBy,
-      allChosen: freshDiceCompletedBy.length >= groups.length,
+      allChosen: Object.keys(freshState?.diceSelectedOption ?? {}).length >= groups.length,
       allCompleted: allResponded,
       operationId,
     });
@@ -651,12 +647,6 @@ router.post('/:socialSessionId/personality-dice/choose', async (req: any, res) =
   // Non-optimistic path
   state.diceSelectedOption = { ...(state.diceSelectedOption || {}), [targetUserId]: optionIndex };
 
-  const diceCompletedBy = state.diceCompletedBy || [];
-  if (!diceCompletedBy.includes(targetUserId)) {
-    diceCompletedBy.push(targetUserId);
-    state.diceCompletedBy = diceCompletedBy;
-  }
-
   await updateSession(socialSessionId, state);
 
   const responseSelectedOption: PersonalityDiceChallenge = {
@@ -664,6 +654,7 @@ router.post('/:socialSessionId/personality-dice/choose', async (req: any, res) =
     archetypeColor: getArchetypeHSL(group.options[optionIndex].archetype),
   };
 
+  const diceCompletedBy = state.diceCompletedBy || [];
   const allResponded = (diceCompletedBy.length + (state.dicePassedBy?.length ?? 0)) >= groups.length;
 
   return res.json({
@@ -671,7 +662,7 @@ router.post('/:socialSessionId/personality-dice/choose', async (req: any, res) =
     meta: state.personalityDiceChallengesMeta ?? buildCachedAIMeta(new Date().toISOString(), null, 'social-personality-dice-v4'),
     diceCompletedBy,
     dicePassedBy: state.dicePassedBy || [],
-    allChosen: diceCompletedBy.length >= groups.length,
+    allChosen: Object.keys(state.diceSelectedOption ?? {}).length >= groups.length,
     allCompleted: allResponded,
   });
 });
@@ -682,7 +673,7 @@ router.post('/:socialSessionId/personality-dice/choose', async (req: any, res) =
 router.post('/:socialSessionId/personality-dice/complete', async (req: any, res) => {
   const { socialSessionId } = req.params;
   const userId: string = req.session?.userId;
-  const { pass, operationId } = req.body as { pass?: boolean; operationId?: string };
+  const { pass, ready, operationId } = req.body as { pass?: boolean; ready?: boolean; operationId?: string };
 
   if (!userId) {
     return res.status(401).json({ error: 'Authentication required' });
@@ -697,25 +688,41 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
     return res.status(400).json({ error: 'Not in personality_dice phase' });
   }
 
-  const chooseModeEnabled = (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
+  const chooseModeEnabled =
+    state.personalityDiceChooseModeEnabled ??
+    (process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED ?? 'true').toLowerCase() === 'true';
 
-  // ── Choose-Mode branch: if user already chose, no-op ──
+  // Choose mode keeps selection editable until the player explicitly readies.
   if (chooseModeEnabled && state.personalityDiceChallengeGroups) {
-    const alreadyChosen = state.diceSelectedOption?.[userId] !== undefined;
-    if (alreadyChosen) {
-      const group = state.personalityDiceChallengeGroups.find((g) => g.userId === userId);
-      const optionIdx = state.diceSelectedOption![userId];
-      const chosenOption: PersonalityDiceChallenge | undefined = group?.options?.[optionIdx];
-      return res.json({
-        alreadyChosen: true,
-        diceCompletedBy: state.diceCompletedBy || [],
-        dicePassedBy: state.dicePassedBy || [],
-        selectedOption: chosenOption
-          ? { ...chosenOption, archetypeColor: getArchetypeHSL(chosenOption.archetype) }
-          : null,
-        allCompleted: ((state.diceCompletedBy || []).length + (state.dicePassedBy || []).length) >= (state.personalityDiceChallengeGroups?.length ?? 0),
-      });
+    const nextReady = ready !== false;
+    if (nextReady && state.diceSelectedOption?.[userId] === undefined) {
+      return res.status(400).json({ error: 'Choose a challenge before getting ready' });
     }
+    const completed = new Set(state.diceCompletedBy ?? []);
+    if (nextReady) completed.add(userId);
+    else completed.delete(userId);
+    state.diceCompletedBy = [...completed];
+    state.dicePassedBy = (state.dicePassedBy ?? []).filter((id) => id !== userId);
+
+    const allReady = state.personalityDiceChallengeGroups.every((group) => completed.has(group.userId));
+    if (allReady && !state.diceRevealOrder) {
+      const order = state.personalityDiceChallengeGroups.map((group) => group.userId);
+      for (let index = order.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [order[index], order[swapIndex]] = [order[swapIndex], order[index]];
+      }
+      state.diceRevealOrder = order;
+    } else if (!allReady) {
+      state.diceRevealOrder = undefined;
+    }
+    await updateSession(socialSessionId, state);
+    return res.json({
+      ready: nextReady,
+      diceCompletedBy: state.diceCompletedBy,
+      dicePassedBy: state.dicePassedBy,
+      diceRevealOrder: state.diceRevealOrder,
+      allCompleted: allReady,
+    });
   }
 
   if (operationId) {

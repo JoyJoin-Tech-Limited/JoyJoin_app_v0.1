@@ -562,6 +562,8 @@ export interface SocialSessionState {
   personalityDiceChallengeGroups?: PersonalityDiceChallengeGroup[];
   /** userId → chosen optionIndex (0|1|2) */
   diceSelectedOption?: Record<string, number>;
+  /** Stable server-generated userId order used once every player is ready. */
+  diceRevealOrder?: string[];
   // Auction phase (virtual coins; see payment-entitlement-authority if real value ever touches this)
   auctionLots?: AuctionLot[];
   auctionLotsMeta?: AIResponseMeta;

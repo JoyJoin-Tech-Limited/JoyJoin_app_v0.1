@@ -864,7 +864,7 @@ describe('Personality dice edge cases', () => {
       });
     });
 
-    it('writes selected option and marks user completed', async () => {
+    it('writes selected option without marking the user ready', async () => {
       const id = 'social_pd-choose-200';
       seedPersonalityDiceGroupsSession(id, { withGroups: true });
       await withServer(async (baseUrl) => {
@@ -877,15 +877,15 @@ describe('Personality dice edge cases', () => {
         expect(res.status).toBe(200);
         const body = await res.json() as any;
         expect(body.selectedOption).toBeDefined();
-        expect(body.diceCompletedBy).toContain('host-user');
+        expect(body.diceCompletedBy).not.toContain('host-user');
 
         const stored = storeCtx.sessions.get(id);
         expect(stored?.diceSelectedOption).toEqual({ 'host-user': 1 });
-        expect(stored?.diceCompletedBy).toContain('host-user');
+        expect(stored?.diceCompletedBy).not.toContain('host-user');
       });
     });
 
-    it('rejects duplicate choice (idempotency)', async () => {
+    it('rejects changing the choice while ready', async () => {
       const id = 'social_pd-choose-dupe';
       seedPersonalityDiceGroupsSession(id, {
         withGroups: true,
@@ -940,23 +940,21 @@ describe('Personality dice edge cases', () => {
       seenOps.clear();
     });
 
-    it('pass still works in choose mode', async () => {
-      const id = 'social_pd-comp-choose-pass';
+    it('rejects ready before the player chooses a challenge', async () => {
+      const id = 'social_pd-comp-choose-first';
       seedPersonalityDiceGroupsSession(id, { withGroups: true });
       await withServer(async (baseUrl) => {
         const guestCookie = await login(baseUrl, 'guest-1');
         const res = await fetch(`${baseUrl}/api/social-icebreaker/${id}/personality-dice/complete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', cookie: guestCookie },
-          body: JSON.stringify({ pass: true }),
+          body: JSON.stringify({ ready: true }),
         });
-        expect(res.status).toBe(200);
-        const body = await res.json() as any;
-        expect(body.dicePassedBy).toContain('guest-1');
+        expect(res.status).toBe(400);
       });
     });
 
-    it('complete after choose is no-op and returns chosen option', async () => {
+    it('toggles ready off after a player has chosen', async () => {
       const id = 'social_pd-comp-after-choose';
       seedPersonalityDiceGroupsSession(id, {
         withGroups: true,
@@ -968,11 +966,12 @@ describe('Personality dice edge cases', () => {
         const res = await fetch(`${baseUrl}/api/social-icebreaker/${id}/personality-dice/complete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', cookie: hostCookie },
-          body: JSON.stringify({}),
+          body: JSON.stringify({ ready: false }),
         });
         expect(res.status).toBe(200);
         const body = await res.json() as any;
-        expect(body.selectedOption).toBeDefined();
+        expect(body.ready).toBe(false);
+        expect(body.diceCompletedBy).not.toContain('host-user');
       });
     });
   });

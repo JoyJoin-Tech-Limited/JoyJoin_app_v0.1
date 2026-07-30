@@ -13,6 +13,7 @@ import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { haptics } from '../../../lib/utils/haptics'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
+import { canChoosePersonalityDiceOption } from '../viewModels/phaseProgressionModels'
 import './PersonalityDiceHeroView.scss'
 
 function hslToHex(h: number, s: number, l: number): string {
@@ -50,7 +51,10 @@ export interface PersonalityDiceHeroViewProps {
   challengeGroups?: PersonalityDiceChallengeGroup[]
   selectedOption?: Record<string, number>
   onChoose?: (optionIndex: number) => void
+  onReady?: (ready: boolean) => void
   isChoosing?: boolean
+  isReadying?: boolean
+  revealOrder?: string[]
   challengesMeta?: AIResponseMeta
 }
 
@@ -72,7 +76,10 @@ export function PersonalityDiceHeroView({
   challengeGroups = [],
   selectedOption = {},
   onChoose,
+  onReady,
   isChoosing = false,
+  isReadying = false,
+  revealOrder = [],
   challengesMeta,
 }: PersonalityDiceHeroViewProps) {
   const currentChallenge = challenges[currentPlayerIndex] ?? null
@@ -222,14 +229,16 @@ export function PersonalityDiceHeroView({
       <View className='personality-dice-hero__choose-cards'>
         {currentGroup.options.map((option, idx) => {
           const isSelected = mySelectedIdx === idx
-          const isDimmed = hasChosen && mySelectedIdx !== idx
+          const isDimmed = readOnly && hasChosen && mySelectedIdx !== idx
           const isLoading = isChoosing && !hasChosen && !readOnly
           return (
             <View
               key={idx}
               className={`personality-dice-hero__choose-card${isSelected ? ' personality-dice-hero__choose-card--selected personality-dice-hero__choose-card--settle' : ''}${isDimmed ? ' personality-dice-hero__choose-card--dimmed' : ''}${isLoading ? ' personality-dice-hero__choose-card--loading' : ''}`}
               onClick={() => {
-                if (!readOnly && !hasChosen) handleChooseWithSettle(idx)
+                if (canChoosePersonalityDiceOption(readOnly, isChoosing, mySelectedIdx, idx)) {
+                  handleChooseWithSettle(idx)
+                }
               }}
             >
               <View className='personality-dice-hero__choose-card-top'>
@@ -252,6 +261,63 @@ export function PersonalityDiceHeroView({
             </View>
           )
         })}
+      </View>
+    )
+  }
+
+  if (allCompleted && chooseModeEnabled && challengeGroups.length > 0) {
+    const orderedGroups = (revealOrder.length > 0 ? revealOrder : challengeGroups.map((group) => group.userId))
+      .map((userId) => challengeGroups.find((group) => group.userId === userId))
+      .filter((group): group is PersonalityDiceChallengeGroup => Boolean(group))
+
+    return (
+      <View className='personality-dice-hero'>
+        <View className='personality-dice-hero__burst'>
+          <ParticleBurst trigger type='confetti' count={50} />
+        </View>
+        <PhaseHeroCard
+          phase='personality_dice'
+          artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-personality-dice.webp')}
+          title='全员选择揭晓'
+          prompt='挑战卡已打乱顺序，看看每个人今晚选了什么'
+          statusText='全员已准备'
+          doneCount={participants.length}
+          totalCount={participants.length}
+          actions={
+            isHost && onAdvance ? (
+              <Button variant='primary' onClick={onAdvance}>
+                进入回顾
+              </Button>
+            ) : undefined
+          }
+        >
+          <View className='personality-dice-hero__reveal-grid'>
+            {orderedGroups.map((group) => {
+              const option = group.options[selectedOption[group.userId]]
+              if (!option) return null
+              return (
+                <View key={group.userId} className='personality-dice-hero__choose-card personality-dice-hero__reveal-card'>
+                  <View className='personality-dice-hero__reveal-identity'>
+                    <Text className='personality-dice-hero__reveal-name'>{group.displayName}</Text>
+                    <Text className='personality-dice-hero__reveal-id'>ID: {group.userId}</Text>
+                  </View>
+                  <View className='personality-dice-hero__choose-card-top'>
+                    <Chip
+                      label={DIFFICULTY_LABELS[option.difficulty] ?? option.difficulty}
+                      level={(option.difficulty === 'easy' ? 1 : option.difficulty === 'medium' ? 2 : 3) as 1 | 2 | 3}
+                      compact
+                    />
+                  </View>
+                  <View className='personality-dice-hero__choose-card-emoji'>
+                    <JoyJoinIcon emoji={option.challengeEmoji} size={40} />
+                  </View>
+                  <Text className='personality-dice-hero__choose-card-title'>{option.challengeTitle}</Text>
+                  <Text className='personality-dice-hero__choose-card-body'>{option.challengeBody}</Text>
+                </View>
+              )
+            })}
+          </View>
+        </PhaseHeroCard>
       </View>
     )
   }
@@ -386,6 +452,16 @@ export function PersonalityDiceHeroView({
                 <Text className='personality-dice-hero__status-badge-text'>已认怂</Text>
               </View>
             ) : null}
+            {hasContent && chooseModeEnabled && isMyChallenge && hasChosen(selectedOption[currentUserId]) && onReady ? (
+              <Button
+                variant={hasCompleted ? 'secondary' : 'primary'}
+                onClick={() => onReady(!hasCompleted)}
+                disabled={isReadying}
+                loading={isReadying}
+              >
+                {hasCompleted ? '取消准备' : '准备好了'}
+              </Button>
+            ) : null}
           </>
         }
       >
@@ -407,7 +483,7 @@ export function PersonalityDiceHeroView({
                 ? '选择一个挑战难度'
                 : '已选择挑战'}
             </Text>
-            {isMyChallenge && !hasResponded ? chooseCards(false) : chooseCards(true)}
+            {isMyChallenge ? chooseCards(hasCompleted) : chooseCards(true)}
           </View>
         ) : null}
 

@@ -258,10 +258,14 @@ describe('socialIcebreakerBotService', () => {
       expect(state.auctionBidHistory).toHaveLength(1);
     });
 
-    it('completes personality dice for all bots', async () => {
-      const state = makeState({
+    it('selects and readies personality-dice bots from the session mode even when the env flag is off', async () => {
+      const previousChooseMode = process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED;
+      process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED = 'false';
+      try {
+        const state = makeState({
         currentPhase: 'personality_dice',
         singleTest: makeSingleTestState(true),
+        personalityDiceChooseModeEnabled: true,
         personalityDiceChallengeGroups: [
           {
             userId: 'bot-user-1',
@@ -276,10 +280,13 @@ describe('socialIcebreakerBotService', () => {
           },
         ],
       });
-      const changed = await simulateBotsForSession('social_test', state);
-      expect(changed).toBe(true);
-      expect(state.diceSelectedOption?.['bot-user-1']).toBeDefined();
-      expect(state.diceCompletedBy).toContain('bot-user-1');
+        const changed = await simulateBotsForSession('social_test', state);
+        expect(changed).toBe(true);
+        expect(state.diceSelectedOption?.['bot-user-1']).toBeDefined();
+        expect(state.diceCompletedBy).toContain('bot-user-1');
+      } finally {
+        process.env.PERSONALITY_DICE_CHOOSE_MODE_ENABLED = previousChooseMode;
+      }
     });
 
     it('submits answers and votes for bots in quip_battle', async () => {
