@@ -679,3 +679,10 @@ grep -n "<key line>" <file>  # confirm the new content exists
 ```
 
 **Do not** skip this step, even for trivial one-liners. A false "success" wastes hours on phantom bugs that don't exist in source but appear in the stale build output. **This rule applies to all sessions, all agents, all edit calls — permanent.**
+
+## Street Blind Box NPC Catalog Override (2026-07-30)
+
+- The formal admin/product name is `街头盲盒运营`; `flash`, `/admin/alang`, and the separate `/admin/flash-ops` surface remain internal identifiers.
+- The NPC catalog is extensible: there is no five-NPC cap and no closed species allow-list.
+- The five built-in NPCs remain required seed content with their fixed weekdays. Additional NPCs are created inactive by operator/super_admin, receive operator-configured species, persona copy, structured dialogue, eligible weekdays, approved location links, and reviewed task links, and may be activated only after those runtime prerequisites are ready.
+- Readiness validates every active NPC rather than requiring exactly five active NPCs.

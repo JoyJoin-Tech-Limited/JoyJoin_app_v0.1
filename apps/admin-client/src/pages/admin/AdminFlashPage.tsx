@@ -67,7 +67,7 @@ export default function AdminFlashPage() {
     {
       label: "可用 NPC",
       value: counts?.activeNpcs ?? npcs.filter((npc) => npc.isActive).length,
-      hint: "固定 5 位动物角色",
+      hint: "支持持续扩展数字动物角色",
       icon: UsersRound,
     },
     {

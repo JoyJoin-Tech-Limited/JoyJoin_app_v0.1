@@ -3,7 +3,7 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Edit3, UserRound } from "lucide-react";
+import { Edit3, Plus, UserRound } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +44,7 @@ import { FlashEmptyState, FlashErrorState, FlashListSkeleton } from "./FlashQuer
 export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean; canSeed?: boolean }) {
   const { toast } = useToast();
   const [editing, setEditing] = useState<FlashNpc | null>(null);
+  const [creating, setCreating] = useState(false);
   const [pendingToggle, setPendingToggle] = useState<FlashNpc | null>(null);
   const query = useQuery<FlashCollectionResponse<FlashNpc>>({ queryKey: ["/api/admin/alang/npcs"] });
   const npcs = unpackFlashCollection(query.data);
@@ -81,6 +82,22 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
     onError: (error) => toast({ title: "NPC 没保存", description: describeFlashAdminError(error), variant: "destructive" }),
   });
 
+  const createMutation = useMutation({
+    mutationFn: async (payload: unknown) => {
+      const response = await apiRequest("POST", "/api/admin/alang/npcs", payload);
+      return response.json().catch(() => null);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/npcs"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/alang/overview"] }),
+      ]);
+      setCreating(false);
+      toast({ title: "NPC 草稿已创建", description: "关联已审核地点和任务后，再启用参与排班。" });
+    },
+    onError: (error) => toast({ title: "NPC 没创建", description: describeFlashAdminError(error), variant: "destructive" }),
+  });
+
   const toggleMutation = useMutation({
     mutationFn: async (npc: FlashNpc) => {
       const response = await apiRequest("PATCH", `/api/admin/alang/npcs/${npc.id}`, { isActive: !npc.isActive });
@@ -103,6 +120,14 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
   return (
     <div className="space-y-4">
       <FlashWriteHint canWrite={canWrite} />
+      {canWrite && (
+        <div className="flex justify-end">
+          <Button onClick={() => setCreating(true)} data-testid="button-create-flash-npc">
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            新增 NPC
+          </Button>
+        </div>
+      )}
       {npcs.length === 0 ? (
         <div className="space-y-3">
           <FlashEmptyState title="还没有 NPC" description="先初始化正式目录，再录入并关联深圳地点。任务会保持待审核，不会自动上线。" icon={UserRound} />
@@ -179,6 +204,12 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
         onClose={() => setEditing(null)}
         onSave={(values) => editing && saveMutation.mutate({ id: editing.id, payload: values })}
       />
+      <NpcCreateDialog
+        open={creating}
+        saving={createMutation.isPending}
+        onClose={() => setCreating(false)}
+        onSave={(values) => createMutation.mutate(values)}
+      />
 
       <AlertDialog open={!!pendingToggle} onOpenChange={(open) => !open && setPendingToggle(null)}>
         <AlertDialogContent>
@@ -202,6 +233,173 @@ export function FlashNpcPanel({ canWrite, canSeed = false }: { canWrite: boolean
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+const npcCreateSchema = z.object({
+  slug: z.string().trim().min(2, "请输入至少 2 位英文标识").max(40).regex(/^[a-z0-9-]+$/, "仅支持小写字母、数字和短横线"),
+  name: z.string().trim().min(1, "请输入名字").max(12, "名字请控制在 12 个字内"),
+  species: z.string().trim().min(1, "请输入动物品种").max(20, "动物品种过长"),
+  personalitySummary: z.string().trim().min(4, "请补充性格概述").max(160, "性格概述请控制在 160 个字内"),
+  inviteLine: z.string().trim().min(4, "请补充邀请语").max(120, "邀请语请控制在 120 个字内"),
+  voiceGuideText: z.string().trim().min(4, "至少填写一条角色设定要点"),
+  dialoguePrompt: z.string().trim().min(2, "请填写互动问题").max(80, "互动问题请控制在 80 个字内"),
+  dialogueOptionsText: z.string().trim().superRefine((value, context) => {
+    const options = value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+    if (options.length < 2 || options.length > 5) {
+      context.addIssue({ code: "custom", message: "请按行填写 2–5 个选项" });
+    }
+  }),
+  eligibleWeekdays: z.array(z.number().int().min(1).max(7)).min(1, "至少选择一个上线日"),
+  themeColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "请输入 6 位 HEX 颜色"),
+  sortOrder: z.number().int().min(0).max(99),
+});
+
+type NpcCreateValues = z.infer<typeof npcCreateSchema>;
+
+function NpcCreateDialog({
+  open,
+  saving,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  saving: boolean;
+  onClose: () => void;
+  onSave: (payload: unknown) => void;
+}) {
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<NpcCreateValues>({
+    resolver: zodResolver(npcCreateSchema),
+    defaultValues: {
+      slug: "",
+      name: "",
+      species: "",
+      personalitySummary: "",
+      inviteLine: "",
+      voiceGuideText: "",
+      dialoguePrompt: "",
+      dialogueOptionsText: "",
+      eligibleWeekdays: [],
+      themeColor: "#8B5CF6",
+      sortOrder: 10,
+    },
+  });
+
+  const close = () => {
+    reset();
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && close()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>新增数字动物 NPC</DialogTitle>
+          <DialogDescription>创建后还需要关联已审核地点和任务；未来排班不会公开给用户。</DialogDescription>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={handleSubmit((values) => {
+            const voiceGuide = values.voiceGuideText.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+            const optionLabels = values.dialogueOptionsText.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+            onSave({
+              slug: values.slug,
+              name: values.name,
+              species: values.species,
+              personalitySummary: values.personalitySummary,
+              inviteLine: values.inviteLine,
+              voiceGuide,
+              dialogueQuestions: [{
+                id: "opening",
+                prompt: values.dialoguePrompt,
+                options: optionLabels.map((label, index) => ({
+                  id: `option_${index + 1}`,
+                  label,
+                  tags: [],
+                })),
+              }],
+              eligibleWeekdays: values.eligibleWeekdays,
+              oneShiftProbability: 35,
+              twoShiftProbability: 65,
+              minShiftMinutes: 90,
+              maxShiftMinutes: 150,
+              minGapMinutes: 90,
+              themeColor: values.themeColor,
+              sortOrder: values.sortOrder,
+              isActive: false,
+            });
+          })}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FlashFormField label="英文标识" error={errors.slug?.message}>
+              <Input placeholder="例如 red-panda" {...register("slug")} />
+            </FlashFormField>
+            <FlashFormField label="名字" error={errors.name?.message}>
+              <Input {...register("name")} />
+            </FlashFormField>
+          </div>
+          <FlashFormField label="动物品种" error={errors.species?.message}>
+            <Input placeholder="例如 小熊猫" {...register("species")} />
+          </FlashFormField>
+          <FlashFormField label="性格概述" error={errors.personalitySummary?.message}>
+            <Textarea {...register("personalitySummary")} />
+          </FlashFormField>
+          <FlashFormField label="自然邀请语" error={errors.inviteLine?.message}>
+            <Textarea {...register("inviteLine")} />
+          </FlashFormField>
+          <FlashFormField label="角色设定要点（每行一条）" error={errors.voiceGuideText?.message}>
+            <Textarea rows={4} placeholder={"内在动力：……\n表达方式：……\n禁区：……"} {...register("voiceGuideText")} />
+          </FlashFormField>
+          <FlashFormField label="首次互动问题" error={errors.dialoguePrompt?.message}>
+            <Input {...register("dialoguePrompt")} />
+          </FlashFormField>
+          <FlashFormField label="互动选项（每行一个，2–5 个）" error={errors.dialogueOptionsText?.message}>
+            <Textarea rows={4} {...register("dialogueOptionsText")} />
+          </FlashFormField>
+          <Controller
+            name="eligibleWeekdays"
+            control={control}
+            render={({ field }) => (
+              <FlashFormField label="固定上线日" error={errors.eligibleWeekdays?.message}>
+                <div className="flex flex-wrap gap-2">
+                  {WEEKDAY_OPTIONS.map((option) => {
+                    const checked = field.value.includes(option.value);
+                    return (
+                      <label key={option.value} className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(next) => field.onChange(
+                            next
+                              ? [...field.value, option.value]
+                              : field.value.filter((day) => day !== option.value),
+                          )}
+                        />
+                        {option.label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </FlashFormField>
+            )}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FlashFormField label="主题色" error={errors.themeColor?.message}>
+              <div className="flex gap-2">
+                <Input type="color" className="w-14 p-1" {...register("themeColor")} />
+                <Input {...register("themeColor")} />
+              </div>
+            </FlashFormField>
+            <FlashFormField label="显示顺序" error={errors.sortOrder?.message}>
+              <Input type="number" min={0} max={99} {...register("sortOrder", { valueAsNumber: true })} />
+            </FlashFormField>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={close}>取消</Button>
+            <Button type="submit" loading={saving} data-testid="button-save-created-flash-npc">创建 NPC</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -142,7 +142,7 @@ export function evaluateFlashFeatureReadiness(
   }
   const blockers: string[] = [];
   if (!runtime.tencentMapConfigured) blockers.push("tencent_map_key_required");
-  if (counts.activeNpcs !== 5 || counts.canonicalNpcs !== 5) blockers.push("exactly_five_canonical_active_npcs_required");
+  if (counts.canonicalNpcs < 5) blockers.push("five_builtin_seed_npcs_required");
   if (counts.canonicalWeekdayNpcs !== 5) blockers.push("canonical_npc_weekdays_required");
   if (counts.schedulableNpcs !== counts.activeNpcs) blockers.push("all_active_npcs_require_approved_locations");
   if (counts.taskReadyNpcs !== counts.activeNpcs) blockers.push("all_active_npcs_require_ready_tasks");

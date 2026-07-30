@@ -190,9 +190,9 @@ export function getFlashReadinessItems(readiness?: FlashReadiness): FlashReadine
       label: "腾讯地图服务",
       detail: "服务端未配置腾讯地图密钥，地点无法完成深圳范围校验。",
     },
-    exactly_five_canonical_active_npcs_required: {
-      label: "固定 NPC",
-      detail: `已启用 ${formatCount(counts.canonicalNpcs, 5)} 位固定 NPC；请保持五位正式角色全部启用。`,
+    five_builtin_seed_npcs_required: {
+      label: "内置 NPC",
+      detail: `已启用 ${formatCount(counts.canonicalNpcs, 5)} 位内置 NPC；请保持首批五位角色全部启用。`,
     },
     canonical_npc_weekdays_required: {
       label: "NPC 上线日",

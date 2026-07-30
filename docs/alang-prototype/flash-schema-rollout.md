@@ -18,7 +18,7 @@
    `delivery_encounter_id` 及对应索引/外键；隐藏地点寻找预算使用
    `flash_locate_budgets`，按用户与班次唯一并仅保存计数/时间，不保存坐标。
 2. 先部署迁移，再部署仍保持 `ALANG_ENABLED=false` 的应用代码。
-3. 显式运行 `npm run seed:flash -w @joyjoin/server`。该命令只写入 5 个可用 NPC、
+3. 显式运行 `npm run seed:flash -w @joyjoin/server`。该命令只写入 5 个内置种子 NPC（仅作为初始目录，不构成数量上限）、
    30 个 `pending_review` / inactive 任务草案及 NPC—任务文案；不会写地点，也不会
    假装任务已被真人审核。
 4. 运营后台逐条审核任务，录入并批准深圳相遇地点、任务目的地、开放星期/时段，

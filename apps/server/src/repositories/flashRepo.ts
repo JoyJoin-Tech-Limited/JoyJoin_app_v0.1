@@ -197,10 +197,7 @@ export async function getFlashReadiness(executor: DbExecutor = db) {
         eq(flashEncounterLocations.isActive, true),
       ),
     )
-    .where(and(
-      eq(flashNpcs.isActive, true),
-      inArray(flashNpcs.slug, CANONICAL_FLASH_NPC_SLUGS),
-    ));
+    .where(eq(flashNpcs.isActive, true));
 
   const readyCategoryRows = await executor
     .select({
@@ -280,10 +277,7 @@ export async function getFlashReadiness(executor: DbExecutor = db) {
         eq(flashTaskTemplates.isActive, true),
       ),
     )
-    .where(and(
-      eq(flashNpcs.isActive, true),
-      inArray(flashNpcs.slug, CANONICAL_FLASH_NPC_SLUGS),
-    ));
+    .where(eq(flashNpcs.isActive, true));
 
   return {
     activeNpcs,

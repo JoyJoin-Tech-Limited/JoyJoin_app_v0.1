@@ -293,6 +293,12 @@ describe("formal Flash catalog", () => {
       schedulableNpcs: 5,
       taskReadyNpcs: 5,
     }, readyRuntime).ready).toBe(true);
+    expect(evaluateFlashFeatureReadiness(true, {
+      ...incomplete.counts,
+      activeNpcs: 6,
+      schedulableNpcs: 6,
+      taskReadyNpcs: 6,
+    }, readyRuntime).ready).toBe(true);
   });
 
   it("keeps the formal task catalog on the single six-category contract", () => {
@@ -341,7 +347,7 @@ describe("formal Flash catalog", () => {
       readyTaskCategoryCounts,
     };
     const replacedNpc = evaluateFlashFeatureReadiness(true, { ...readyCounts, canonicalNpcs: 4 }, readyRuntime);
-    expect(replacedNpc.blockers).toContain("exactly_five_canonical_active_npcs_required");
+    expect(replacedNpc.blockers).toContain("five_builtin_seed_npcs_required");
 
     const [category] = Object.keys(readyTaskCategoryCounts);
     const thinCategory = evaluateFlashFeatureReadiness(true, {

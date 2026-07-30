@@ -72,10 +72,9 @@ const SHENZHEN_DISTRICTS = [
   "大鹏新区",
 ] as const;
 
-const FLASH_ANIMAL_SPECIES = ["灰狼", "水獭", "兔狲", "乌鸦", "水豚"] as const;
-
 const uuidSchema = z.string().uuid();
 const hexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
+const animalSpeciesSchema = z.string().trim().min(1).max(20);
 const serviceDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
   const date = new Date(`${value}T12:00:00Z`);
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
@@ -96,7 +95,7 @@ const dialogueQuestionSchema = z.object({
 
 const npcPatchSchema = z.object({
   name: z.string().trim().min(1).max(12).optional(),
-  species: z.enum(FLASH_ANIMAL_SPECIES).optional(),
+  species: animalSpeciesSchema.optional(),
   personalitySummary: z.string().trim().min(4).max(160).optional(),
   inviteLine: z.string().trim().min(4).max(120).optional(),
   voiceGuide: z.array(z.string().trim().min(1).max(240)).min(1).max(12).optional(),
@@ -140,7 +139,7 @@ const locationFields = {
 const encounterLocationCreateSchema = z.object({
   ...locationFields,
   availabilityWindows: z.array(availabilityWindowSchema).min(1).max(21),
-  npcIds: z.array(uuidSchema).max(5).default([]),
+  npcIds: z.array(uuidSchema).max(100).default([]),
 }).strict().superRefine(validateApprovedEncounterLocation);
 
 const encounterLocationPatchSchema = z.object({
@@ -154,7 +153,7 @@ const encounterLocationPatchSchema = z.object({
   safetyNotes: locationFields.safetyNotes,
   isActive: z.boolean().optional(),
   availabilityWindows: z.array(availabilityWindowSchema).min(1).max(21).optional(),
-  npcIds: z.array(uuidSchema).max(5).optional(),
+  npcIds: z.array(uuidSchema).max(100).optional(),
 }).strict().refine((value) => Object.keys(value).length > 0, "至少提交一项修改");
 
 const taskDestinationCreateSchema = z.object({
@@ -203,7 +202,7 @@ const taskTemplateFields = {
   safetyNotes: z.string().trim().min(8).max(280),
   isHumanReviewed: z.boolean().default(false),
   isActive: z.boolean().default(false),
-  npcIds: z.array(uuidSchema).min(1).max(5),
+  npcIds: z.array(uuidSchema).min(1).max(100),
   destinationIds: z.array(uuidSchema).max(200).default([]),
 };
 
@@ -224,7 +223,7 @@ const taskTemplatePatchSchema = z.object({
   safetyNotes: taskTemplateFields.safetyNotes.optional(),
   isHumanReviewed: z.boolean().optional(),
   isActive: z.boolean().optional(),
-  npcIds: z.array(uuidSchema).min(1).max(5).optional(),
+  npcIds: z.array(uuidSchema).min(1).max(100).optional(),
   destinationIds: z.array(uuidSchema).max(200).optional(),
 }).strict().refine((value) => Object.keys(value).length > 0, "至少提交一项修改");
 
@@ -241,7 +240,7 @@ const scheduleShiftSchema = z.object({
 const scheduleUpdateSchema = z.object({
   expectedVersion: z.number().int().positive(),
   status: z.literal("draft").optional(),
-  shifts: z.array(scheduleShiftSchema).max(10),
+  shifts: z.array(scheduleShiftSchema).max(200),
 }).strict();
 
 const schedulePublishSchema = z.object({
@@ -757,7 +756,7 @@ export function registerAdminAlangRoutes(app: Express): void {
     const body = z.object({
       slug: z.string().trim().min(2).max(40).regex(/^[a-z0-9-]+$/),
       name: z.string().trim().min(1).max(12),
-      species: z.enum(FLASH_ANIMAL_SPECIES),
+      species: animalSpeciesSchema,
       personalitySummary: z.string().trim().min(4).max(160),
       inviteLine: z.string().trim().min(4).max(120),
       voiceGuide: z.array(z.string().trim().min(1).max(240)).min(1).max(12),
@@ -771,7 +770,7 @@ export function registerAdminAlangRoutes(app: Express): void {
       themeColor: hexColorSchema,
       avatarUrl: z.string().url().nullable().optional(),
       sortOrder: z.number().int().min(0).max(99).default(0),
-      isActive: z.boolean().default(true),
+      isActive: z.boolean().default(false),
     }).strict().superRefine((value, context) => {
       if (value.oneShiftProbability + value.twoShiftProbability !== 100) {
         context.addIssue({ code: z.ZodIssueCode.custom, path: ["twoShiftProbability"], message: "1 班与 2 班概率之和必须为 100" });
@@ -782,9 +781,6 @@ export function registerAdminAlangRoutes(app: Express): void {
     }).safeParse(req.body);
     if (!body.success) return void validationFailure(res, body.error);
     try {
-      if ((await listFlashNpcs()).length >= 5) {
-        throw new Error("FLASH_ADMIN_CONFLICT:正式版首批固定为 5 位动物 NPC");
-      }
       const created = await createFlashNpc(body.data as any);
       audit(req, "FLASH_NPC_CREATED", "flash_npc", created.id, undefined, safeNpcAudit(created));
       res.status(201).json(created);
