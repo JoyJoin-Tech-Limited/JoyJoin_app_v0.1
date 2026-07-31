@@ -1,0 +1,108 @@
+name: Cleanup Staging Single-Test Data
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: joyjoin-cvm-remote
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Delete duplicate 单人调试局 test pools and derived data (FK-safe order)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd ~/JoyJoin
+
+            exec 9>/var/lock/joyjoin-cvm-remote.lock
+            flock -n 9
+
+            test -f deployment/.env.staging
+            set -a
+            source deployment/.env.staging
+            set +a
+            : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+
+            run_psql() {
+              docker exec -i \
+                -e PGPASSWORD="$POSTGRES_PASSWORD" \
+                postgres-staging \
+                psql -h 127.0.0.1 -U joyjoin -d joyjoin_staging -v ON_ERROR_STOP=1 "$@"
+            }
+
+            database_name="$(run_psql -Atc 'select current_database()')"
+            test "$database_name" = 'joyjoin_staging'
+
+            echo "Pools before cleanup:"
+            run_psql -Atc "select id, event_type, is_test_pool, status from event_pools where title = '单人调试局'"
+
+            run_psql <<'SQL'
+            BEGIN;
+
+            CREATE TEMP TABLE _st_pools ON COMMIT DROP AS
+              SELECT id FROM event_pools WHERE title = '单人调试局';
+            CREATE TEMP TABLE _st_groups ON COMMIT DROP AS
+              SELECT id, event_id, blind_box_event_id FROM event_pool_groups
+              WHERE pool_id IN (SELECT id FROM _st_pools);
+            CREATE TEMP TABLE _st_sessions ON COMMIT DROP AS
+              SELECT id FROM social_icebreaker_sessions
+              WHERE icebreaker_session_id IN (SELECT id FROM _st_groups);
+
+            -- social icebreaker children
+            DELETE FROM pre_generation_results WHERE social_session_id IN (SELECT id FROM _st_sessions);
+            DELETE FROM pre_generation_jobs WHERE social_session_id IN (SELECT id FROM _st_sessions);
+            DELETE FROM social_icebreaker_miniscript_secrets WHERE social_session_id IN (SELECT id FROM _st_sessions);
+            DELETE FROM social_icebreaker_phase_metrics WHERE social_session_id IN (SELECT id FROM _st_sessions);
+            DELETE FROM social_icebreaker_phase_pulse_checks WHERE social_session_id IN (SELECT id FROM _st_sessions);
+            DELETE FROM moment_card_interactions WHERE social_session_id IN (SELECT id FROM _st_sessions);
+            DELETE FROM social_icebreaker_ai_feedback WHERE social_session_id IN (SELECT id FROM _st_sessions);
+            DELETE FROM social_icebreaker_lie_truths WHERE social_session_id IN (SELECT id FROM _st_sessions);
+            DELETE FROM social_icebreaker_participants WHERE social_session_id IN (SELECT id FROM _st_sessions);
+            DELETE FROM social_icebreaker_sessions WHERE id IN (SELECT id FROM _st_sessions);
+
+            -- group-scoped children
+            DELETE FROM venue_time_slot_bookings WHERE event_group_id IN (SELECT id FROM _st_groups);
+            DELETE FROM event_group_outcomes WHERE group_id IN (SELECT id FROM _st_groups);
+
+            -- derived events / blind_box_events + attendance (via group back-link)
+            UPDATE event_pool_groups SET event_id = NULL, blind_box_event_id = NULL WHERE id IN (SELECT id FROM _st_groups);
+            DELETE FROM event_attendance WHERE event_id IN (SELECT event_id FROM _st_groups WHERE event_id IS NOT NULL);
+            DELETE FROM event_attendance WHERE blind_box_event_id IN (SELECT blind_box_event_id FROM _st_groups WHERE blind_box_event_id IS NOT NULL);
+            DELETE FROM events WHERE id IN (SELECT event_id FROM _st_groups WHERE event_id IS NOT NULL);
+            DELETE FROM blind_box_events WHERE id IN (SELECT blind_box_event_id FROM _st_groups WHERE blind_box_event_id IS NOT NULL);
+
+            -- orphan derived events by title (no valid back-link)
+            DELETE FROM event_attendance WHERE event_id IN (SELECT id FROM events WHERE title LIKE '单人调试局 - 第%组');
+            DELETE FROM events WHERE title LIKE '单人调试局 - 第%组';
+
+            -- registration child rows then registrations
+            DELETE FROM event_credit_redemptions WHERE registration_id IN (
+              SELECT id FROM event_pool_registrations WHERE pool_id IN (SELECT id FROM _st_pools));
+            DELETE FROM invitation_uses WHERE pool_registration_id IN (
+              SELECT id FROM event_pool_registrations WHERE pool_id IN (SELECT id FROM _st_pools));
+            DELETE FROM event_pool_registrations WHERE pool_id IN (SELECT id FROM _st_pools);
+
+            -- groups, pool child tables, pools
+            DELETE FROM event_pool_groups WHERE pool_id IN (SELECT id FROM _st_pools);
+            DELETE FROM pool_ai_copy WHERE pool_id IN (SELECT id FROM _st_pools);
+            DELETE FROM pool_matching_logs WHERE pool_id IN (SELECT id FROM _st_pools);
+            DELETE FROM event_pools WHERE id IN (SELECT id FROM _st_pools);
+
+            COMMIT;
+            SQL
+
+            echo "Pools after cleanup:"
+            run_psql -Atc "select count(*) as remaining_single_test_pools from event_pools where title = '单人调试局'"
