@@ -527,7 +527,10 @@
 .bottom-zone {
   width: 100%;
   padding: 24rpx 32rpx 40rpx;
-  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+  // Reserve the legal row's 1.5x visual drop while keeping the CTA stack's
+  // flow height unchanged. This lets the retired test-login slot move both
+  // large actions down without allowing the agreement row to hit the safe area.
+  padding-bottom: calc(148rpx + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -642,33 +645,6 @@
   }
 }
 
-.landing-page__test-login-row {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  margin-top: 8rpx;
-}
-
-.landing-page__test-login-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 64rpx;
-  padding: 8rpx 24rpx;
-  transition: background 0.12s ease;
-  border-radius: 16rpx;
-
-  &--hover {
-    background: rgba($color-primary, 0.06);
-  }
-}
-
-.landing-page__test-login-link-text {
-  font-size: 24rpx;
-  color: $color-text-tertiary;
-  border-bottom: 1rpx dashed $color-text-tertiary;
-}
-
 .landing-page__legal-row {
   display: flex;
   align-items: center;
@@ -676,7 +652,9 @@
   min-height: 72rpx;
   padding: 0;
   margin-top: 8rpx;
+  margin-bottom: -108rpx;
   position: relative;
+  top: 108rpx;
 
   &.shake {
     animation: shake 0.4s ease;
@@ -1091,8 +1069,7 @@
 
   .landing-page__cta,
   .landing-page__login-btn,
-  .landing-page__auth-timeout-btn,
-  .landing-page__test-login-link {
+  .landing-page__auth-timeout-btn {
     transition: none !important;
   }
 

@@ -34,4 +34,16 @@ describe('mini-program landing page styles', () => {
     expect(landingPageStyleSource).toContain('legal-hint-in')
     expect(landingPageStyleSource).toContain('legal-hint-out')
   })
+
+  it('keeps test login retired and lowers the agreement row by 1.5x its height', () => {
+    expect(landingPageSource).not.toContain('测试账号登录')
+    expect(landingPageSource).not.toContain('TestLoginSheet')
+    expect(landingPageStyleSource).not.toContain('landing-page__test-login')
+    expect(landingPageStyleSource).toMatch(
+      /\.landing-page__legal-row\s*\{[\s\S]*?min-height:\s*72rpx;[\s\S]*?margin-bottom:\s*-108rpx;[\s\S]*?top:\s*108rpx;/,
+    )
+    expect(landingPageStyleSource).toContain(
+      'padding-bottom: calc(148rpx + env(safe-area-inset-bottom));',
+    )
+  })
 })
