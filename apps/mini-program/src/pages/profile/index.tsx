@@ -429,16 +429,6 @@ export default function ProfilePage() {
     <View className={`profile-page ${tabEntranceClass}`}>
       <View className='profile-page__nav' data-testid='profile-top-navigation'>
         <Text className='profile-page__nav-title'>我的</Text>
-        <View
-          className='profile-page__nav-settings'
-          hoverClass='profile-page__nav-settings--pressed'
-          onClick={handleOpenSettings}
-          role='button'
-          aria-label='打开个人设置'
-          data-testid='profile-top-settings'
-        >
-          <JoyJoinIcon emoji='⚙️' tier='ui' size={40} />
-        </View>
       </View>
       <ScrollView className='profile-page__scroll' scrollY enhanced showScrollbar={false}>
         {profileV17Enabled ? (
@@ -822,6 +812,21 @@ export default function ProfilePage() {
             </View>
           </View>
         )}
+
+        <View
+          className='profile-page__settings-entry'
+          hoverClass='profile-page__settings-entry--pressed'
+          onClick={handleOpenSettings}
+          role='button'
+          aria-label='打开个人设置'
+          data-testid='profile-settings-entry'
+        >
+          <View className='profile-page__settings-entry-icon' aria-hidden='true'>
+            <JoyJoinIcon emoji='⚙️' tier='ui' size={36} />
+          </View>
+          <Text className='profile-page__settings-entry-label'>设置与服务</Text>
+          <View className='profile-page__settings-entry-chevron' aria-hidden='true' />
+        </View>
 
         <View className='profile-page__spacer' />
       </ScrollView>

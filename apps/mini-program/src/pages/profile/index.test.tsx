@@ -406,13 +406,13 @@ describe('Profile approved V4 layout', () => {
     expect(state.navigateTo).not.toHaveBeenCalled()
   })
 
-  it('places settings in the top navigation, outside the partner card', () => {
+  it('places settings below the profile content, outside the top navigation', () => {
     const { getByTestId } = render(<ProfilePage />)
-    const settings = getByTestId('profile-top-settings')
-    const hero = getByTestId('profile-v4')
+    const settings = getByTestId('profile-settings-entry')
+    const story = getByTestId('profile-growth-archive')
 
-    expect(getByTestId('profile-top-navigation').contains(settings)).toBe(true)
-    expect(hero.contains(settings)).toBe(false)
+    expect(getByTestId('profile-top-navigation').contains(settings)).toBe(false)
+    expect(story.compareDocumentPosition(settings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     fireEvent.click(settings)
     expect(state.navigateTo).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.profileSettings })
@@ -423,7 +423,7 @@ describe('Profile approved V4 layout', () => {
     state.showToast.mockResolvedValueOnce(undefined)
     const { getByTestId } = render(<ProfilePage />)
 
-    fireEvent.click(getByTestId('profile-top-settings'))
+    fireEvent.click(getByTestId('profile-settings-entry'))
 
     await waitFor(() => expect(state.showToast).toHaveBeenCalledWith({
       title: '设置没有打开，请稍后再试',

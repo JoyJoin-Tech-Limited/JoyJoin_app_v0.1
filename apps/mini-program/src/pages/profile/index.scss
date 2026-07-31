@@ -59,27 +59,53 @@
     color: var(--profile-text-primary);
   }
 
-  &__nav-settings {
-    position: absolute;
-    right: 32rpx;
-    // 88rpx button in an 88rpx bar — fills the bar vertically, so it is
-    // optically centered against the nav title by construction.
-    bottom: 0;
-    width: $cta-min-tap;
-    height: $cta-min-tap;
+  &__settings-entry {
+    min-height: $cta-min-tap;
+    margin: 0 $container-padding $spacing-lg;
+    padding: $spacing-sm $spacing-md;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    background: rgba($color-surface, 0.94);
+    border: 1rpx solid var(--profile-divider);
+    border-radius: $card-radius-sm;
+    box-shadow: $shadow-card;
+    transition: transform 0.12s ease, background 0.12s ease;
+
+    &--pressed {
+      transform: scale(0.985);
+      background: var(--profile-primary-06);
+    }
+  }
+
+  &__settings-entry-icon {
+    width: 56rpx;
+    height: 56rpx;
+    flex-shrink: 0;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba($color-surface, 0.94);
-    border: 1rpx solid var(--profile-divider);
-    box-shadow: $shadow-sm;
-    transition: transform 0.12s ease, background 0.12s ease;
+    color: $color-primary-dark;
+    background: $color-primary-light;
+  }
 
-    &--pressed {
-      transform: scale(0.94);
-      background: var(--profile-primary-06);
-    }
+  &__settings-entry-label {
+    flex: 1;
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: var(--profile-text-primary);
+  }
+
+  &__settings-entry-chevron {
+    width: 12rpx;
+    height: 12rpx;
+    margin-right: 4rpx;
+    border-top: 3rpx solid $color-primary;
+    border-right: 3rpx solid $color-primary;
+    transform: rotate(45deg);
   }
 
   &__scroll {

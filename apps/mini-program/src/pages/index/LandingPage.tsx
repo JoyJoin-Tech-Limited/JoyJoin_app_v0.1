@@ -17,7 +17,6 @@ import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 import { landingAnalytics } from "../../lib/analytics/landingAnalytics"
 import { getSystemReducedMotion } from "../../lib/utils/accessibility"
 import { logWarn } from "../../lib/utils/logger"
-import TestLoginSheet from "../../components/dev/TestLoginSheet"
 import "./index.scss"
 
 /**
@@ -99,8 +98,6 @@ export default function MiniProgramLandingPage({
   const [lqipGone, setLqipGone] = useState(false)
   const [failedSprites, setFailedSprites] = useState<ReadonlySet<HeroSpriteKey>>(new Set())
   const [hasIncompleteSession, setHasIncompleteSession] = useState(false)
-  const [showTestLogin, setShowTestLogin] = useState(false)
-  const [envVersion, setEnvVersion] = useState<string | null>(null)
   const [isShortScreen, setIsShortScreen] = useState(false)
   const [reduceMotion] = useState(() => getSystemReducedMotion())
   const isMounted = useStaggerMount()
@@ -122,12 +119,6 @@ export default function MiniProgramLandingPage({
     const snapshot = readAnonymousAssessmentSession()
     setHasIncompleteSession(!!snapshot && !isAnonymousAssessmentSessionCompleted(snapshot))
     setIsShortScreen(readWindowHeightPx() < 640)
-    try {
-      const info = Taro.getAccountInfoSync()
-      setEnvVersion(info?.miniProgram?.envVersion ?? null)
-    } catch {
-      // Some Taro versions may throw — ignore.
-    }
     void Taro.getNetworkType()
       .then((res) => {
         networkTypeRef.current = res.networkType
@@ -506,24 +497,6 @@ export default function MiniProgramLandingPage({
           </Button>
         </View>
 
-        {/* Test login entry — visible only on 体验版 (temp) builds */}
-        {envVersion === 'trial' && (
-          <View className='landing-page__test-login-row'>
-            <View
-              className='landing-page__test-login-link'
-              onClick={() => {
-                hapticLight()
-                setShowTestLogin(true)
-              }}
-              hoverClass='landing-page__test-login-link--hover'
-              role='button'
-              aria-label='测试账号登录'
-            >
-              <Text className='landing-page__test-login-link-text'>测试账号登录</Text>
-            </View>
-          </View>
-        )}
-
         <View className={`landing-page__legal-row ${shakeLegal ? 'shake' : ''}`}>
           {showLegalHint && (
             <View key={legalHintSeq} className='landing-page__legal-hint' aria-hidden='true'>
@@ -621,10 +594,6 @@ export default function MiniProgramLandingPage({
         </View>
       )}
 
-      <TestLoginSheet
-        visible={showTestLogin}
-        onClose={() => setShowTestLogin(false)}
-      />
     </View>
   )
 }
