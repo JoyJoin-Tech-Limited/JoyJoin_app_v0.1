@@ -3,7 +3,7 @@ import Taro, { useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { ARCHETYPE_BY_ID, getArchetypeIndex } from '@shared/personality/archetypeNames'
 import { getArchetypeSkills } from '@shared/personality/archetypeSkills'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuth } from '../../../../hooks/useAuth'
@@ -65,6 +65,7 @@ import {
   getTraitEntries,
   getTopMatches,
   resolveResultErrorMessage,
+  resolveCurrentCanvasImage,
   shouldNearMiss,
   waitFor,
   type AnimationProfile,
@@ -215,7 +216,7 @@ export default function PersonalityTestResultsPage() {
   const isAnimatingRef = useRef(false)
   const analysisRequestedRef = useRef(false)
   const resultPreloadInitiatedRef = useRef(false)
-  const preResolvedImageRef = useRef<string>('')
+  const preResolvedImageRef = useRef<{ asset: string; path: string; width?: number; height?: number } | null>(null)
   const posterRetryRef = useRef(false)
   const handleGeneratePosterRef = useRef<(() => Promise<void>) | null>(null)
   // Guards the one-time forward of an authenticated archetype-holder who lands
@@ -390,13 +391,12 @@ export default function PersonalityTestResultsPage() {
   }, [displayArchetype])
   const archetypeRank = useMemo(() => {
     if (!displayArchetype) return undefined
-    const names = Object.keys(archetypeRegistry)
-    const idx = names.indexOf(displayArchetype)
-    if (idx === -1) {
+    const index = getArchetypeIndex(displayArchetype)
+    if (index === null) {
       logWarn('[PersonalityResults] Archetype not found in registry', { archetype: displayArchetype })
       return 1
     }
-    return Math.max(1, idx + 1)
+    return index
   }, [displayArchetype])
   const serialNumber = useMemo(() => {
     const sessionId = sessionSnapshot?.sessionId ?? 'unknown'
@@ -441,13 +441,20 @@ export default function PersonalityTestResultsPage() {
   // `Taro.getImageInfo` returns a temp file path that canvas.drawImage
   // can consume without a redundant network fetch.
   useEffect(() => {
-    if (!displayAsset || preResolvedImageRef.current) return
-    Taro.getImageInfo({ src: displayAsset })
-      .then((info) => {
-        if (info.path) {
-          preResolvedImageRef.current = info.path
+    if (!displayAsset || preResolvedImageRef.current?.asset === (displayArchetype ?? displayAsset)) return
+    let cancelled = false
+    resolveCurrentCanvasImage(
+      displayArchetype ?? displayAsset,
+      [displayAsset, visual.asset, visual.assetPng],
+      preResolvedImageRef.current,
+      Taro.getImageInfo,
+    )
+      .then((resolved) => {
+        if (!cancelled) {
+          preResolvedImageRef.current = resolved
           logInfo('[PersonalityResults] Archetype image pre-resolved for canvas', {
-            path: info.path.substring(0, 60),
+            asset: resolved.asset,
+            path: resolved.path.substring(0, 60),
           })
         }
       })
@@ -457,7 +464,8 @@ export default function PersonalityTestResultsPage() {
           error: String(err),
         })
       })
-  }, [displayAsset])
+    return () => { cancelled = true }
+  }, [displayArchetype, displayAsset, visual.asset, visual.assetPng])
 
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [xiaoyueAnalysis, setXiaoyueAnalysis] = useState<XiaoyueAnalysisResult | null>(null)
@@ -1478,6 +1486,18 @@ export default function PersonalityTestResultsPage() {
       // the CDN/main-package path.
       const canvasArchetypeAsset = visual.asset || displayAsset
 
+      // The reveal can transition between archetypes before the background
+      // preload finishes. Resolve the current asset at save time so both the
+      // outer poster and the centered collectible-card avatar use this exact
+      // result, never an earlier reel character.
+      const resolvedArchetypeImage = await resolveCurrentCanvasImage(
+        displayArchetype,
+        [displayAsset, canvasArchetypeAsset, visual.assetPng],
+        preResolvedImageRef.current,
+        Taro.getImageInfo,
+      )
+      preResolvedImageRef.current = resolvedArchetypeImage
+
       // Slice 4 (2026-07-19): canonical 命格卡 for the poster hero panel.
       // Fail-open: generation failure just means the poster uses raw archetype art.
       setGenerationPhase('正在绘制命格卡…')
@@ -1489,13 +1509,19 @@ export default function PersonalityTestResultsPage() {
       const mingCardImagePath = await generateMingCardImage({
         name: displayArchetypeName,
         badge: typicalityLabel?.prefix ?? '典型',
-        keywords: (xiaoyueAnalysis?.expressionTags ?? []).slice(0, 3),
+        // Keep collectible-card keywords on the same canonical archetype key
+        // as its character, skills, color, energy, rarity, and numbering.
+        keywords: visual.traits.slice(0, 3),
         blendLine: isDecisive === false && secondaryDisplayName
           ? `隐约有${secondaryDisplayName}的影子`
           : undefined,
         accent: accentColor,
         index: archetypeSequenceIndex >= 0 ? archetypeSequenceIndex + 1 : 1,
-        artImagePath: preResolvedImageRef.current || undefined,
+        artImagePath: resolvedArchetypeImage.path,
+        artImageSize: {
+          width: resolvedArchetypeImage.width || 480,
+          height: resolvedArchetypeImage.height || 480,
+        },
       }) ?? undefined
 
       const posterInput: PersonalitySharePosterInput = {
@@ -1507,7 +1533,7 @@ export default function PersonalityTestResultsPage() {
         accentSoft,
         archetypeAsset: canvasArchetypeAsset,
         archetypeAssetPng: visual.assetPng,
-        preResolvedImagePath: preResolvedImageRef.current || undefined,
+        preResolvedImagePath: resolvedArchetypeImage.path,
         mingCardImagePath,
         confidenceLabel: typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : undefined,
         rarityLabel:
@@ -1545,7 +1571,7 @@ export default function PersonalityTestResultsPage() {
             rarityPercentage: typeof visual.rarityPercentage === 'number' ? visual.rarityPercentage : 0,
             archetypeAsset: canvasArchetypeAsset,
             archetypeAssetPng: visual.assetPng,
-            preResolvedImagePath: preResolvedImageRef.current || undefined,
+            preResolvedImagePath: resolvedArchetypeImage.path,
             traitEntries: traitEntries.slice(0, 3).map(({ label, value }) => ({ label, value })),
             energyLevel,
             skillSet: skillSet

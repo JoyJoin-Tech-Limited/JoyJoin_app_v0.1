@@ -1,5 +1,6 @@
 
 import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { ARCHETYPE_CANONICAL_ORDER } from '@shared/personality/archetypeNames'
 import { questionsV4 } from '@shared/personality/questionsV4'
 import {
   hasAnonymousAssessmentResult,
@@ -20,20 +21,53 @@ export interface ResolvedResultState {
   topMatches: AnonymousAssessmentTopMatch[]
 }
 
-export const ARCHETYPE_SEQUENCE = [
-  'corgi',
-  'rooster',
-  'hamster_praise',
-  'fox',
-  'dolphin_calm',
-  'spider',
-  'koala',
-  'octopus',
-  'owl',
-  'elephant',
-  'turtle',
-  'cat',
-]
+export const ARCHETYPE_SEQUENCE = [...ARCHETYPE_CANONICAL_ORDER]
+
+export interface CanvasImageCacheEntry {
+  asset: string
+  path: string
+  width?: number
+  height?: number
+}
+
+/**
+ * Resolve the image used by poster canvases without allowing a path from a
+ * previously displayed archetype to leak into the current result.
+ */
+export async function resolveCurrentCanvasImage(
+  asset: string,
+  candidates: string[],
+  cached: CanvasImageCacheEntry | null,
+  resolveImage: (options: { src: string }) => Promise<{ path?: string; width?: number; height?: number }>,
+  timeoutMs = 5000,
+): Promise<CanvasImageCacheEntry> {
+  if (cached?.asset === asset && cached.path) return cached
+
+  for (const candidate of candidates.filter(Boolean)) {
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined
+    try {
+      const info = await Promise.race([
+        resolveImage({ src: candidate }),
+        new Promise<never>((_, reject) => {
+          timeoutHandle = setTimeout(() => reject(new Error(`Canvas image resolution timed out: ${candidate}`)), timeoutMs)
+        }),
+      ])
+      if (info.path) {
+        return {
+          asset,
+          path: info.path,
+          ...(info.width && info.height ? { width: info.width, height: info.height } : {}),
+        }
+      }
+    } catch {
+      // Try the next same-archetype format/source.
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle)
+    }
+  }
+
+  throw new Error(`Unable to resolve canvas image for archetype: ${asset}`)
+}
 
 export const TRAIT_LABELS: Array<{ key: string; label: string }> = [
   { key: 'A', label: '亲和力' },
