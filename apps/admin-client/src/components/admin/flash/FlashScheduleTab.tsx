@@ -45,6 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/ui/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -87,9 +88,12 @@ type ShiftFormValues = z.infer<typeof shiftSchema>;
 
 type ConfirmAction =
   | { kind: "generate"; date: string }
+  | { kind: "regenerate"; plan: FlashSchedulePlan }
   | { kind: "publish"; plan: FlashSchedulePlan }
   | { kind: "cancel"; plan: FlashSchedulePlan; shift: FlashShift }
   | null;
+
+type RegenerationPreview = FlashScheduleResponse & { generationSeed: string; previewDigest: string };
 
 interface FlashShiftWrite {
   id?: string;
@@ -161,6 +165,8 @@ export function FlashScheduleTab({
   const { toast } = useToast();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [editing, setEditing] = useState<{ plan: FlashSchedulePlan; shift: FlashShift | null } | null>(null);
+  const [regenerationPreview, setRegenerationPreview] = useState<RegenerationPreview | null>(null);
+  const [regenerationReason, setRegenerationReason] = useState("");
 
   const todayQuery = useQuery<FlashScheduleResponse>({
     queryKey: [`/api/admin/alang/schedules?date=${today}`],
@@ -204,6 +210,42 @@ export function FlashScheduleTab({
       toast({ title: "发布没成功", description: getMutationDescription(error), variant: "destructive" }),
   });
 
+  const previewRegenerationMutation = useMutation({
+    mutationFn: async (plan: FlashSchedulePlan) => {
+      const response = await apiRequest("POST", `/api/admin/alang/schedules/${plan.id}/regeneration-preview`, {
+        expectedVersion: plan.version,
+      });
+      return response.json() as Promise<RegenerationPreview>;
+    },
+    onSuccess: (preview) => {
+      setRegenerationPreview(preview);
+      setRegenerationReason("");
+    },
+    onError: (error) =>
+      toast({ title: "新排班没有生成", description: getMutationDescription(error), variant: "destructive" }),
+  });
+
+  const replacePublishedMutation = useMutation({
+    mutationFn: async ({ preview, reason }: { preview: RegenerationPreview; reason: string }) => {
+      if (!preview.plan) throw new Error("缺少待替换的排班");
+      const response = await apiRequest("POST", `/api/admin/alang/schedules/${preview.plan.id}/regenerate`, {
+        expectedVersion: preview.plan.version,
+        generationSeed: preview.generationSeed,
+        previewDigest: preview.previewDigest,
+        reason,
+      });
+      return response.json().catch(() => null);
+    },
+    onSuccess: async () => {
+      setRegenerationPreview(null);
+      setRegenerationReason("");
+      await invalidateSchedules();
+      toast({ title: "明日排班已重新生成", description: "新班次已一次性替换并立即生效。" });
+    },
+    onError: (error) =>
+      toast({ title: "排班没有替换", description: getMutationDescription(error), variant: "destructive" }),
+  });
+
   const updatePlanMutation = useMutation({
     mutationFn: async ({ planId, expectedVersion, status, shifts }: { planId: string; expectedVersion: number; status: string; shifts: FlashShiftWrite[] }) => {
       const response = await apiRequest("PUT", `/api/admin/alang/schedules/${planId}`, { expectedVersion, status, shifts });
@@ -229,6 +271,10 @@ export function FlashScheduleTab({
     }
     if (action.kind === "publish") {
       publishMutation.mutate(action.plan);
+      return;
+    }
+    if (action.kind === "regenerate") {
+      previewRegenerationMutation.mutate(action.plan);
       return;
     }
 
@@ -298,12 +344,14 @@ export function FlashScheduleTab({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setConfirmAction({ kind: "generate", date })}
-                        disabled={generateMutation.isPending || publishMutation.isPending}
+                        onClick={() => schedule.plan?.status === "published"
+                          ? setConfirmAction({ kind: "regenerate", plan: schedule.plan! })
+                          : setConfirmAction({ kind: "generate", date })}
+                        disabled={generateMutation.isPending || previewRegenerationMutation.isPending || publishMutation.isPending}
                         data-testid="button-flash-generate-draft"
                       >
                         <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
-                        {schedule.plan ? "重新生成" : "生成草案"}
+                        {schedule.plan?.status === "published" ? "重新生成" : schedule.plan ? "重新生成草案" : "生成草案"}
                       </Button>
                       {schedule.plan?.status === "draft" && (
                         <Button
@@ -329,7 +377,7 @@ export function FlashScheduleTab({
                     icon={CalendarClock}
                   />
                 ) : (
-                  schedule.shifts.map((shift) => (
+                  activeShifts.map((shift) => (
                     <div
                       key={shift.id}
                       className="rounded-xl border bg-background p-4 transition-colors hover:border-primary/30"
@@ -425,6 +473,92 @@ export function FlashScheduleTab({
         }}
       />
 
+      <Dialog
+        open={!!regenerationPreview}
+        onOpenChange={(open) => {
+          if (!open && !replacePublishedMutation.isPending) setRegenerationPreview(null);
+        }}
+      >
+        <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>预览新的明日排班</DialogTitle>
+            <DialogDescription>
+              这里还没有替换线上排班。确认后，新班次会一次性生效，原班次会保留为已取消记录。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1 md:grid-cols-2 md:overflow-hidden">
+            {[
+              { title: "当前已发布", shifts: normalizeSchedule(tomorrowQuery.data).shifts.filter((shift) => shift.status === "published") },
+              { title: "新生成预览", shifts: regenerationPreview?.shifts ?? [] },
+            ].map((column) => (
+              <section key={column.title} className="min-h-0 space-y-3 md:flex md:flex-col">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">{column.title}</h3>
+                  <Badge variant={column.title === "新生成预览" ? "default" : "outline"}>{column.shifts.length} 个班次</Badge>
+                </div>
+                <div className="space-y-3 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
+                  {column.shifts.map((shift) => (
+                    <div key={shift.id} className="rounded-xl border bg-muted/20 p-4">
+                      <div className="font-semibold">
+                        {shift.npc?.name || npcs.find((npc) => npc.id === shift.npcId)?.name || "未知 NPC"}
+                      </div>
+                      <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
+                        <span>{formatFlashTime(shift.startsAt)}–{formatFlashTime(shift.endsAt)}</span>
+                        <span>
+                          {shift.location?.district || locations.find((item) => item.id === shift.locationId)?.district || "未设置区域"}
+                          ·
+                          {shift.location?.name || locations.find((item) => item.id === shift.locationId)?.name || "未设置地点"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+
+          <div className="shrink-0 space-y-2 border-t pt-4">
+            <Label htmlFor="flash-regeneration-reason">重新生成原因</Label>
+            <Textarea
+              id="flash-regeneration-reason"
+              value={regenerationReason}
+              onChange={(event) => setRegenerationReason(event.target.value)}
+              maxLength={200}
+              placeholder="例如：NPC 分布不符合明日运营安排"
+              data-testid="input-flash-regeneration-reason"
+            />
+            <p className="text-xs text-muted-foreground">原因会写入管理员审计日志，至少填写 4 个字。</p>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => regenerationPreview?.plan && previewRegenerationMutation.mutate(regenerationPreview.plan)}
+              loading={previewRegenerationMutation.isPending}
+              disabled={replacePublishedMutation.isPending}
+              data-testid="button-preview-another-flash-schedule"
+            >
+              再生成一版
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => regenerationPreview && replacePublishedMutation.mutate({
+                preview: regenerationPreview,
+                reason: regenerationReason.trim(),
+              })}
+              loading={replacePublishedMutation.isPending}
+              disabled={regenerationReason.trim().length < 4 || previewRegenerationMutation.isPending}
+              data-testid="button-replace-published-flash-schedule"
+            >
+              确认替换已发布排班
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -433,14 +567,18 @@ export function FlashScheduleTab({
                 ? "确认发布这份排班？"
                 : confirmAction?.kind === "cancel"
                   ? "确认取消这个班次？"
-                  : "确认生成新的次日草案？"}
+                  : confirmAction?.kind === "regenerate"
+                    ? "重新生成已发布的明日排班？"
+                    : "确认生成新的次日草案？"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmAction?.kind === "publish"
                 ? "发布后班次会按时间自动上线，到点即结束；请先确认时间、NPC 与地点。"
                 : confirmAction?.kind === "cancel"
                   ? "取消后该 NPC 不会在这个班次上线，已经解锁的对话仍可继续完成。"
-                  : "新的随机草案会替换当前未发布草案；已发布排班不会被改动。"}
+                  : confirmAction?.kind === "regenerate"
+                    ? "系统会先生成一份新排班供你预览。只有再次确认后，才会替换当前已发布班次。"
+                    : "新的随机草案会替换当前未发布草案；已发布排班不会被改动。"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -450,7 +588,7 @@ export function FlashScheduleTab({
               className={confirmAction?.kind === "cancel" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : undefined}
               data-testid="button-confirm-flash-schedule-action"
             >
-              确认
+              {confirmAction?.kind === "regenerate" ? "生成预览" : "确认"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

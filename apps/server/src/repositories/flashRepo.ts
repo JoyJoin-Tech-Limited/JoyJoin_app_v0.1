@@ -2135,6 +2135,51 @@ export async function replaceFlashScheduleShifts(input: {
   });
 }
 
+export async function replacePublishedFlashSchedule(input: {
+  planId: string;
+  expectedVersion: number;
+  updatedBy: string;
+  shifts: Array<{ npcId: string; locationId: string; startsAt: Date; endsAt: Date; source?: "generated" | "fallback" | "manual" }>;
+  now: Date;
+  generationSeed: string;
+}) {
+  return db.transaction(async (tx: DbExecutor) => {
+    const [plan] = await tx.update(flashSchedulePlans).set({
+      version: sql`${flashSchedulePlans.version} + 1`,
+      updatedBy: input.updatedBy,
+      updatedAt: input.now,
+      generatedAt: input.now,
+      generationSeed: input.generationSeed,
+      source: "generated",
+    }).where(and(
+      eq(flashSchedulePlans.id, input.planId),
+      eq(flashSchedulePlans.version, input.expectedVersion),
+      eq(flashSchedulePlans.status, "published"),
+    )).returning();
+    if (!plan) return null;
+
+    await tx.update(flashShifts).set({
+      status: "cancelled",
+      version: sql`${flashShifts.version} + 1`,
+      updatedAt: input.now,
+    }).where(and(
+      eq(flashShifts.planId, input.planId),
+      eq(flashShifts.status, "published"),
+    ));
+
+    const shifts = await tx.insert(flashShifts).values(input.shifts.map((shift) => ({
+      planId: input.planId,
+      npcId: shift.npcId,
+      locationId: shift.locationId,
+      startsAt: shift.startsAt,
+      endsAt: shift.endsAt,
+      status: "published",
+      source: shift.source ?? "generated",
+    }))).returning();
+    return { plan, shifts };
+  });
+}
+
 type PublishFlashSchedulePlanInput = {
   planId: string;
   expectedVersion: number;

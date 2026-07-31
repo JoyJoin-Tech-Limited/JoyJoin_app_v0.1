@@ -4,7 +4,7 @@ import type {
   FlashNpc,
   FlashShift,
 } from "@shared/schema";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { getFeatureFlag } from "../lib/featureFlags";
 import { logger } from "../lib/logger";
@@ -20,6 +20,7 @@ import {
   purgeExpiredFlashLocateBudgets,
   purgeExpiredFlashPrivateReplies,
   runWithFlashScheduleAdvisoryLock,
+  replacePublishedFlashSchedule,
   replaceFlashScheduleShifts,
 } from "../repositories/flashRepo";
 
@@ -51,6 +52,17 @@ export type FlashDraftValidation = {
   valid: boolean;
   errors: string[];
 };
+
+export function flashSchedulePreviewDigest(shifts: FlashDraftShift[]): string {
+  const canonical = shifts.map((shift) => ({
+    npcId: shift.npcId,
+    locationId: shift.locationId,
+    startsAt: shift.startsAt.toISOString(),
+    endsAt: shift.endsAt.toISOString(),
+    source: shift.source,
+  }));
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
 
 function effectiveShiftDurationRange(npc: SchedulingNpc): {
   minShiftMinutes: number;
@@ -116,6 +128,14 @@ export function addServiceDays(serviceDate: string, days: number): string {
   const base = new Date(Date.UTC(year, month - 1, day, 12));
   base.setUTCDate(base.getUTCDate() + days);
   return `${base.getUTCFullYear()}-${String(base.getUTCMonth() + 1).padStart(2, "0")}-${String(base.getUTCDate()).padStart(2, "0")}`;
+}
+
+export function canRegeneratePublishedFlashSchedule(
+  plan: { status: string; serviceDate: string },
+  now = new Date(),
+): boolean {
+  return plan.status === "published"
+    && plan.serviceDate === addServiceDays(shenzhenDateString(now), 1);
 }
 
 function localDateAtMinutes(serviceDate: string, minutes: number): Date {
@@ -587,6 +607,118 @@ export async function generateOrReplaceFlashScheduleDraftForAdmin(
     validation,
     skippedNpcIds: generated.skippedNpcIds,
   };
+}
+
+export async function previewPublishedFlashScheduleRegenerationForAdmin(
+  planId: string,
+  expectedVersion: number,
+  now = new Date(),
+) {
+  const existing = await getFlashSchedulePlanById(planId);
+  if (!existing) return { ok: false as const, code: "FLASH_SCHEDULE_NOT_FOUND" as const };
+  if (!canRegeneratePublishedFlashSchedule(existing.plan, now)) {
+    return { ok: false as const, code: "FLASH_SCHEDULE_NOT_REGENERATABLE" as const };
+  }
+  if (existing.plan.version !== expectedVersion) {
+    return { ok: false as const, code: "FLASH_SCHEDULE_CAS_CONFLICT" as const };
+  }
+
+  const inputs = await listFlashSchedulingInputs();
+  const schedulingNpcs = inputs.npcs as SchedulingNpc[];
+  const locationsByNpc = buildFlashSchedulingContext(inputs);
+  const seed = `flash:${existing.plan.serviceDate}:admin-preview:${randomUUID()}`;
+  const generated = generateFlashScheduleDraft({
+    serviceDate: existing.plan.serviceDate,
+    npcs: schedulingNpcs,
+    locationsByNpc,
+    seed,
+  });
+  const validation = validateFlashScheduleDraft({
+    serviceDate: existing.plan.serviceDate,
+    shifts: generated.shifts,
+    npcsById: new Map<string, SchedulingNpc>(schedulingNpcs.map((npc) => [npc.id, npc])),
+    locationsByNpc,
+  });
+  if (!validation.valid || generated.shifts.length === 0) {
+    return {
+      ok: false as const,
+      code: "FLASH_SCHEDULE_INVALID" as const,
+      validation: {
+        valid: false,
+        errors: generated.shifts.length === 0
+          ? [...validation.errors, "NO_SAFE_SHIFTS"]
+          : validation.errors,
+      },
+    };
+  }
+  return {
+    ok: true as const,
+    plan: existing.plan,
+    generationSeed: seed,
+    previewDigest: flashSchedulePreviewDigest(generated.shifts),
+    shifts: generated.shifts.map((shift) => ({
+      ...shift,
+      id: randomUUID(),
+      planId: existing.plan.id,
+      status: "draft" as const,
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+    })),
+  };
+}
+
+export async function replacePublishedFlashScheduleForAdmin(input: {
+  planId: string;
+  expectedVersion: number;
+  actor: string;
+  generationSeed: string;
+  previewDigest: string;
+  now?: Date;
+}) {
+  const now = input.now ?? new Date();
+  const existing = await getFlashSchedulePlanById(input.planId);
+  if (!existing) return { ok: false as const, code: "FLASH_SCHEDULE_NOT_FOUND" as const };
+  if (!canRegeneratePublishedFlashSchedule(existing.plan, now)) {
+    return { ok: false as const, code: "FLASH_SCHEDULE_NOT_REGENERATABLE" as const };
+  }
+  if (existing.plan.version !== input.expectedVersion) {
+    return { ok: false as const, code: "FLASH_SCHEDULE_CAS_CONFLICT" as const };
+  }
+
+  const schedulingInputs = await listFlashSchedulingInputs();
+  const schedulingNpcs = schedulingInputs.npcs as SchedulingNpc[];
+  const locationsByNpc = buildFlashSchedulingContext(schedulingInputs);
+  const regenerated = generateFlashScheduleDraft({
+    serviceDate: existing.plan.serviceDate,
+    npcs: schedulingNpcs,
+    locationsByNpc,
+    seed: input.generationSeed,
+  });
+  const validation = validateFlashScheduleDraft({
+    serviceDate: existing.plan.serviceDate,
+    shifts: regenerated.shifts,
+    npcsById: new Map<string, SchedulingNpc>(schedulingNpcs.map((npc) => [npc.id, npc])),
+    locationsByNpc,
+  });
+  if (!validation.valid || regenerated.shifts.length === 0) {
+    return { ok: false as const, code: "FLASH_SCHEDULE_INVALID" as const, validation };
+  }
+  if (flashSchedulePreviewDigest(regenerated.shifts) !== input.previewDigest) {
+    return { ok: false as const, code: "FLASH_SCHEDULE_PREVIEW_STALE" as const };
+  }
+
+  const replaced = await replacePublishedFlashSchedule({
+    planId: input.planId,
+    expectedVersion: input.expectedVersion,
+    updatedBy: input.actor,
+    shifts: regenerated.shifts,
+    now,
+    generationSeed: input.generationSeed,
+  });
+  return replaced
+    ? { ok: true as const, plan: replaced.plan, shifts: replaced.shifts, validation }
+    : { ok: false as const, code: "FLASH_SCHEDULE_CAS_CONFLICT" as const };
 }
 
 export async function validateAndReplaceFlashScheduleDraftForAdmin(input: {

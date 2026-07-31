@@ -53,6 +53,8 @@ import {
 import {
   addServiceDays,
   generateOrReplaceFlashScheduleDraftForAdmin,
+  previewPublishedFlashScheduleRegenerationForAdmin,
+  replacePublishedFlashScheduleForAdmin,
   shenzhenDateString,
   validateAndReplaceFlashScheduleDraftForAdmin,
   validateFlashScheduleDraft,
@@ -245,6 +247,17 @@ const scheduleUpdateSchema = z.object({
 
 const schedulePublishSchema = z.object({
   expectedVersion: z.number().int().positive(),
+}).strict();
+
+const scheduleRegenerationPreviewSchema = z.object({
+  expectedVersion: z.number().int().positive(),
+}).strict();
+
+const scheduleRegenerationReplaceSchema = z.object({
+  expectedVersion: z.number().int().positive(),
+  generationSeed: z.string().trim().min(1).max(80),
+  previewDigest: z.string().regex(/^[a-f0-9]{64}$/),
+  reason: z.string().trim().min(4, "请填写重新生成原因").max(200),
 }).strict();
 
 function minutesFromTime(value: string): number {
@@ -1139,6 +1152,82 @@ export function registerAdminAlangRoutes(app: Express): void {
       res.json(await enrichSchedule(result));
     } catch (error) {
       routeFailure(req, res, "schedule generate failed", error);
+    }
+  });
+
+  app.post("/api/admin/alang/schedules/:id/regeneration-preview", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    const parsed = scheduleRegenerationPreviewSchema.safeParse(req.body);
+    if (!parsed.success) return void validationFailure(res, parsed.error);
+    try {
+      const preview = await previewPublishedFlashScheduleRegenerationForAdmin(
+        req.params.id,
+        parsed.data.expectedVersion,
+      );
+      if (!preview.ok) {
+        const status = preview.code === "FLASH_SCHEDULE_NOT_FOUND"
+          ? 404
+          : preview.code === "FLASH_SCHEDULE_INVALID"
+            ? 422
+            : 409;
+        return void res.status(status).json({
+          code: preview.code,
+          message: preview.code === "FLASH_SCHEDULE_INVALID"
+            ? "没有生成可安全发布的新排班，请检查 NPC 和地点配置"
+            : "这份排班当前不能重新生成，请刷新后再试",
+          errors: "validation" in preview ? preview.validation?.errors : undefined,
+        });
+      }
+      const enriched = await enrichSchedule({ plan: preview.plan, shifts: preview.shifts });
+      res.json({
+        ...enriched,
+        generationSeed: preview.generationSeed,
+        previewDigest: preview.previewDigest,
+      });
+    } catch (error) {
+      routeFailure(req, res, "schedule regeneration preview failed", error);
+    }
+  });
+
+  app.post("/api/admin/alang/schedules/:id/regenerate", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    const parsed = scheduleRegenerationReplaceSchema.safeParse(req.body);
+    if (!parsed.success) return void validationFailure(res, parsed.error);
+    try {
+      const before = await getFlashSchedulePlanById(req.params.id);
+      if (!before) throw new Error("FLASH_ADMIN_NOT_FOUND:没有找到排班");
+      const replaced = await replacePublishedFlashScheduleForAdmin({
+        planId: req.params.id,
+        expectedVersion: parsed.data.expectedVersion,
+        actor: getActingAdminId(req),
+        generationSeed: parsed.data.generationSeed,
+        previewDigest: parsed.data.previewDigest,
+      });
+      if (!replaced.ok) {
+        const status = replaced.code === "FLASH_SCHEDULE_NOT_FOUND"
+          ? 404
+          : replaced.code === "FLASH_SCHEDULE_INVALID"
+            ? 422
+            : 409;
+        return void res.status(status).json({
+          code: replaced.code,
+          message: replaced.code === "FLASH_SCHEDULE_INVALID"
+            ? "新排班没有通过安全校验"
+            : "排班状态已经变化，请刷新后重新生成",
+          errors: "validation" in replaced ? replaced.validation?.errors : undefined,
+        });
+      }
+      audit(req, "FLASH_SCHEDULE_REGENERATED", "flash_schedule", replaced.plan.id, {
+        version: before.plan.version,
+        shiftCount: before.shifts.filter((shift: any) => shift.status === "published").length,
+      }, {
+        version: replaced.plan.version,
+        shiftCount: replaced.shifts.length,
+      }, {
+        reason: parsed.data.reason,
+        serviceDate: replaced.plan.serviceDate,
+      });
+      res.json(await enrichSchedule({ plan: replaced.plan, shifts: replaced.shifts }));
+    } catch (error) {
+      routeFailure(req, res, "schedule regeneration replace failed", error);
     }
   });
 

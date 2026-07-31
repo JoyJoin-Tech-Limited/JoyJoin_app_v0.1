@@ -26,7 +26,9 @@ import {
   resolveFlashNpcMessageCheckpoint,
 } from "../repositories/flashRepo";
 import {
+  canRegeneratePublishedFlashSchedule,
   createSeededRandom,
+  flashSchedulePreviewDigest,
   generateFlashScheduleDraft,
   isoWeekdayForServiceDate,
   validateFlashScheduleDraft,
@@ -432,6 +434,29 @@ describe("formal Flash catalog", () => {
 });
 
 describe("formal Flash scheduling", () => {
+  it("only allows a published Shenzhen next-day plan to be regenerated", () => {
+    const now = new Date("2026-07-31T14:00:00+08:00");
+    expect(canRegeneratePublishedFlashSchedule({ status: "published", serviceDate: "2026-08-01" }, now)).toBe(true);
+    expect(canRegeneratePublishedFlashSchedule({ status: "draft", serviceDate: "2026-08-01" }, now)).toBe(false);
+    expect(canRegeneratePublishedFlashSchedule({ status: "published", serviceDate: "2026-07-31" }, now)).toBe(false);
+    expect(canRegeneratePublishedFlashSchedule({ status: "published", serviceDate: "2026-08-02" }, now)).toBe(false);
+  });
+
+  it("binds a regeneration preview digest to its exact generated shifts", () => {
+    const shifts = [{
+      npcId: "00000000-0000-4000-8000-000000000001",
+      locationId: "00000000-0000-4000-8000-000000000101",
+      startsAt: new Date("2026-08-01T09:00:00+08:00"),
+      endsAt: new Date("2026-08-01T12:00:00+08:00"),
+      source: "generated" as const,
+    }];
+    expect(flashSchedulePreviewDigest(shifts)).toBe(flashSchedulePreviewDigest(shifts.map((shift) => ({ ...shift }))));
+    expect(flashSchedulePreviewDigest(shifts)).not.toBe(flashSchedulePreviewDigest([{
+      ...shifts[0],
+      endsAt: new Date("2026-08-01T13:00:00+08:00"),
+    }]));
+  });
+
   it("uses ISO weekdays for Shenzhen calendar dates without UTC rollover", () => {
     expect(isoWeekdayForServiceDate("2026-07-20")).toBe(1); // Monday
     expect(isoWeekdayForServiceDate("2026-07-19")).toBe(7); // Sunday

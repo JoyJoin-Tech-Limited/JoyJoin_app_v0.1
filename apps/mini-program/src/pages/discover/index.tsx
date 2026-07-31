@@ -6,15 +6,11 @@ import {
   getEventPools,
   getMyPoolRegistrations,
   type EventPoolSummary,
-  reverseGeocode,
-  ipLocate,
 } from '@shared/api'
 import {
   shenzhenClusters,
   getDistrictById,
   getClusterById,
-  getClusterIdByDistrictName,
-  sortPoolsByProximity,
   type District,
 } from '@shared/districts'
 import { useAuth } from '../../hooks/useAuth'
@@ -152,10 +148,6 @@ function AuthenticatedDiscover({
   const lastGoodPoolsRef = useRef<EventPoolSummary[]>([])
 
   // ── Geo detection state ──
-  const [detectedClusterId, setDetectedClusterId] = useState<string | null>(null)
-  const [geoStatus, setGeoStatus] = useState<'idle' | 'locating' | 'success' | 'denied' | 'error'>('idle')
-  const hasAutoSetFilterRef = useRef(false)
-
   // ── Data fetching ──
   const {
     data: pools = [],
@@ -235,112 +227,7 @@ function AuthenticatedDiscover({
   })
 
   // ── Geo detection effect ──
-  // Asynchronously detect user location for proximity sorting.
-  // Does not block rendering — pools are shown immediately, then re-sorted.
-  useEffect(() => {
-    // Skip if user has an active manual selection
-    if (selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID) {
-      return
-    }
-
-    let cancelled = false
-
-    async function detectLocation() {
-      try {
-        setGeoStatus('locating')
-        const res = await Taro.getLocation({ type: 'gcj02' })
-        if (cancelled) return
-
-        const geo = await reverseGeocode(apiRequest, res.latitude, res.longitude)
-        if (cancelled) return
-
-        if (geo.success && geo.district) {
-          const clusterId = getClusterIdByDistrictName(geo.district)
-          if (clusterId) {
-            setDetectedClusterId(clusterId)
-            setGeoStatus('success')
-            discoverAnalytics.track('geo_detected', undefined, {
-              clusterId,
-              district: geo.district,
-              source: geo.source,
-            })
-            return
-          }
-        }
-        // District not recognized or API failed — fall through to error state
-        setGeoStatus('error')
-      } catch (err: any) {
-        if (cancelled) return
-        // User denied permission or location unavailable
-        // WeChat error messages vary by platform/version:
-        //   "getLocation:fail auth deny"
-        //   "getLocation:fail system permission denied"
-        //   "getLocation:fail no permission"
-        //   "getLocation:fail timeout"
-        const errMsg = String(err?.errMsg ?? err?.message ?? '').toLowerCase()
-        const isTimeout = errMsg.includes('timeout')
-        const isDenial = !isTimeout && (
-          errMsg.includes('deny') ||
-          errMsg.includes('auth') ||
-          errMsg.includes('permission') ||
-          errMsg.includes('no permission')
-        )
-        setGeoStatus(isDenial ? 'denied' : 'error')
-        discoverAnalytics.track('geo_failed', undefined, {
-          reason: isDenial ? 'denied' : isTimeout ? 'timeout' : 'error',
-          errMsg: err?.errMsg,
-        })
-
-        // GPS failed — try IP-based fallback for city-level location
-        try {
-          const ipGeo = await ipLocate(apiRequest)
-          if (cancelled) return
-          if (ipGeo.success && ipGeo.city) {
-            // IP locate only gives city-level; find first cluster in that city
-            const cityStr = ipGeo.city
-            const cluster = shenzhenClusters.find((c) =>
-              c.districts.some((d) => d.name.includes(cityStr) || cityStr.includes(d.name.replace(/区$/, '')))
-            )
-            if (cluster) {
-              setDetectedClusterId(cluster.id)
-              setGeoStatus('success')
-              discoverAnalytics.track('geo_detected', undefined, {
-                clusterId: cluster.id,
-                district: ipGeo.city + '(IP)',
-                source: ipGeo.source || 'tencent_ip',
-              })
-              return
-            }
-          }
-        } catch {
-          // IP fallback failed silently — keep current geoStatus
-        }
-      }
-    }
-
-    detectLocation()
-    return () => {
-      cancelled = true
-    }
-    // apiRequest and discoverAnalytics are stable singletons; selected states drive re-run
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCluster, selectedDistrict])
-
   // ── GPS auto-filter on first detection ──
-  // When GPS first succeeds and no manual filter is active, auto-set the
-  // district filter silently. Only runs once per session.
-  useEffect(() => {
-    if (!detectedClusterId || geoStatus !== 'success') return
-    if (hasAutoSetFilterRef.current) return
-    if (selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID) return
-
-    hasAutoSetFilterRef.current = true
-    onFilterSelect(detectedClusterId, ALL_DISTRICT_ID)
-    discoverAnalytics.track('geo_auto_filter', undefined, {
-      clusterId: detectedClusterId,
-    })
-  }, [detectedClusterId, geoStatus, selectedCluster, selectedDistrict, onFilterSelect])
-
   // ── Derived: districts for selected cluster ──
   const visibleDistricts = useMemo<District[]>(() => {
     if (selectedCluster === ALL_CLUSTER_ID) {
@@ -355,8 +242,7 @@ function AuthenticatedDiscover({
   // ── Derived: display pool list ──
   // Strategy:
   //   - Manual selection active → strict filter (respect user intent)
-  //   - No manual selection → show all pools sorted by proximity to detected cluster
-  //   - No GPS / detection failed → show all pools in server order (time-based)
+  //   - No manual selection → show all pools in server order
   const hasManualFilter = selectedCluster !== ALL_CLUSTER_ID || selectedDistrict !== ALL_DISTRICT_ID
 
   const displayPools = useMemo<EventPoolSummary[]>(() => {
@@ -381,17 +267,17 @@ function AuthenticatedDiscover({
       })
     }
 
-    // Relaxed mode: show all pools sorted by proximity
-    return sortPoolsByProximity(pools, detectedClusterId)
-  }, [pools, selectedCluster, selectedDistrict, visibleDistricts, detectedClusterId, hasManualFilter])
+    // Default mode: show all pools in server order
+    return pools
+  }, [pools, selectedCluster, selectedDistrict, visibleDistricts, hasManualFilter])
 
   // ── Empty-state auto-relaxation ──
   // When manual filter returns nothing, automatically fall back to all pools
-  // sorted by proximity, with a banner explaining the relaxation.
+  // in server order, with a banner explaining the relaxation.
   const isAutoRelaxed = hasManualFilter && displayPools.length === 0 && pools.length > 0
   const visiblePools = useMemo<EventPoolSummary[]>(
-    () => (isAutoRelaxed ? sortPoolsByProximity(pools, detectedClusterId) : displayPools),
-    [isAutoRelaxed, pools, detectedClusterId, displayPools],
+    () => (isAutoRelaxed ? pools : displayPools),
+    [isAutoRelaxed, pools, displayPools],
   )
 
   // Track auto-relaxation once per occurrence
@@ -466,9 +352,6 @@ function AuthenticatedDiscover({
     }
     return '切换区域'
   }, [selectedCluster, selectedDistrict])
-
-  // GPS denied / unknown → show neutral pill without city assumption
-  const isGeoUnknown = geoStatus === 'denied' || geoStatus === 'error'
 
   const handleRefresh = useCallback(() => {
     haptics('light')
@@ -576,7 +459,7 @@ function AuthenticatedDiscover({
           onClick={onOpenDrawer}
           hoverClass='discover-auth__location-pill--hover'
           role='button'
-          aria-label={`当前区域: ${hasManualFilter ? '深圳 · ' + locationPillLabel : isGeoUnknown ? '选择你的区域' : '深圳 · 切换区域'}, 点击切换`}
+          aria-label={`当前区域: ${hasManualFilter ? '深圳 · ' + locationPillLabel : '深圳 · 切换区域'}, 点击切换`}
         >
           <View className='discover-auth__location-pill-icon-slot' aria-hidden='true'>
             <Image
@@ -587,20 +470,11 @@ function AuthenticatedDiscover({
             />
           </View>
           <Text className='discover-auth__location-pill-text'>
-            {hasManualFilter ? `深圳 · ${locationPillLabel}` : isGeoUnknown ? '选择你的区域' : '深圳 · 切换区域'}
+            {hasManualFilter ? `深圳 · ${locationPillLabel}` : '深圳 · 切换区域'}
           </Text>
           <View className='discover-auth__location-pill-chevron' aria-hidden='true' />
         </View>
       </View>
-
-      {/* Geo status hint — shown when GPS-sorted and not manually filtered */}
-      {!hasManualFilter && detectedClusterId && geoStatus === 'success' && (
-        <View className='discover-auth__geo-hint'>
-          <Text className='discover-auth__geo-hint-text'>
-            为你优先展示{getClusterById(detectedClusterId)?.displayName ?? '附近'}的聚会
-          </Text>
-        </View>
-      )}
 
       {/* Alang NPC prototype card — server feature flag only */}
       <AlangDiscoverCard />
