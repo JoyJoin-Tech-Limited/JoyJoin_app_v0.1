@@ -605,7 +605,7 @@ export default function ProfilePage() {
                           const itemId = outfit?.[`${slot}ItemId`]
                           const item = itemId ? equipmentItemsById.get(itemId) : undefined
                           const artworkUrl = item && archetype
-                            ? getPixelEquipmentLayerUrl(item.assetKey, archetype)
+                            ? getPixelEquipmentThumbnailUrl(item.assetKey, archetype)
                             : null
                             return (
                             <View
