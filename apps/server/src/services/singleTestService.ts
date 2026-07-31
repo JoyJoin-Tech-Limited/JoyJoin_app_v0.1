@@ -972,6 +972,12 @@ export async function cleanupSingleTestData(): Promise<{
       await tx
         .delete(notifications)
         .where(or(inArray(notifications.userId, virtualUserIds), inArray(notifications.sentBy, virtualUserIds)));
+      // Delete the virtual users' pool registrations across ALL pools before
+      // deleting the users themselves. cleanupSingleTestPoolRows only clears the
+      // canonical 单人调试局 pool, so registrations in other pools (e.g. a 酒局
+      // test pool) would otherwise violate
+      // event_pool_registrations_user_id_users_id_fk on the user delete.
+      await tx.delete(eventPoolRegistrations).where(inArray(eventPoolRegistrations.userId, virtualUserIds));
       const deleted = await tx.delete(users).where(inArray(users.id, virtualUserIds)).returning({ id: users.id });
       deletedVirtualUsers = deleted.length;
     }
