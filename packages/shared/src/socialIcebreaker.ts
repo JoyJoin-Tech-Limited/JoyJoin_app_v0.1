@@ -919,13 +919,6 @@ export function getNextEligiblePhase(
     ? third
     : (!isLegacyCall ? second.playerCount : 0);
 
-  // Custom mode: host-driven picker. Warmup and every real phase lead back to
-  // the picker; the picker itself leads to recap if advanced (fallback only).
-  if (!isLegacyCall && second.eventTier === 'custom') {
-    if (current === 'phase_selection') return 'recap';
-    return 'phase_selection';
-  }
-
   // If state was passed and has a run plan, use the plan's segment order
   if (!isLegacyCall && second.runPlan?.segments?.length) {
     const planPhases = second.runPlan.segments.map((s) => s.phase);
@@ -940,6 +933,13 @@ export function getNextEligiblePhase(
       candidate = getNextPhase(candidate, planPhases);
     }
     return 'recap';
+  }
+
+  // Legacy custom sessions without a preselected run plan keep the host-driven
+  // picker between games.
+  if (!isLegacyCall && second.eventTier === 'custom') {
+    if (current === 'phase_selection') return 'recap';
+    return 'phase_selection';
   }
 
   // Legacy logic

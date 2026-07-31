@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import TierSelectorPage, { TIER_OPTIONS, VIBE_OPTIONS } from '../index'
 import { TIER_PRESETS } from '../../tierPresets'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 describe('TierSelectorPage', () => {
   it('exports a valid React component', () => {
@@ -35,12 +38,24 @@ describe('TierSelectorPage', () => {
     expect(recommended[0].id).toBe('deep-chat')
   })
 
-  it('advanced grid data structure supports 9 unique combos', () => {
+  it('keeps the legacy tier/vibe data valid for preset compatibility', () => {
     const combos = TIER_OPTIONS.flatMap((tier) =>
       VIBE_OPTIONS.map((vibe) => `${tier.id}-${vibe.id}`),
     )
     expect(combos).toHaveLength(9)
     expect(new Set(combos).size).toBe(9)
+  })
+
+  it('renders custom games instead of the old table and uses the requested empty-selection copy', () => {
+    const source = fs.readFileSync(
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../index.tsx'),
+      'utf8',
+    )
+
+    expect(source).toContain("'自定义游戏'")
+    expect(source).toContain("'至少选择一个游戏哦'")
+    expect(source).toContain("className='tier-selector__game-list'")
+    expect(source).not.toContain("className='tier-selector__advanced-grid'")
   })
 
   it('preset hover feedback class is configured', () => {

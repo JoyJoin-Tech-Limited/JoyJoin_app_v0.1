@@ -564,15 +564,83 @@
     }
   }
 
-  // ── Advanced grid (preserved original tier×vibe matrix) ─────────
-  &__advanced-grid {
-    margin-top: $spacing-md;
-    padding: $spacing-xs;
+  // ── Ordered custom game picker ──────────────────────────────────
+  &__game-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    margin-top: $spacing-xs;
+  }
+
+  &__game-row {
+    display: flex;
+    align-items: center;
+    min-height: 88rpx;
+    padding: $spacing-sm $spacing-md;
     background: $color-surface;
-    border-radius: $card-radius-sm;
     border: 2rpx solid $color-border;
-    box-shadow: $shadow-sm;
-    animation: tier-selector-fade-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+    border-radius: $card-radius-sm;
+    box-sizing: border-box;
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 180ms ease;
+
+    &--selected {
+      border-color: $color-success;
+      background: rgba($color-success, 0.08);
+      box-shadow: 0 2rpx 12rpx rgba($color-success, 0.12);
+    }
+
+    &--pressed {
+      transform: scale(0.98);
+    }
+  }
+
+  &__game-icon {
+    flex-shrink: 0;
+    margin-right: $spacing-sm;
+  }
+
+  &__game-copy {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-sm;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__game-title {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    white-space: nowrap;
+  }
+
+  &__game-duration {
+    font-size: $font-size-2xs;
+    color: $color-text-muted;
+    white-space: nowrap;
+  }
+
+  &__game-selection {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    flex-shrink: 0;
+    margin-left: $spacing-sm;
+  }
+
+  &__game-order {
+    @include flex-center;
+    width: 40rpx;
+    height: 40rpx;
+    border-radius: 50%;
+    background: rgba($color-text-secondary, 0.14);
+    color: $color-text-secondary;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    line-height: 1;
   }
 
   // ── Tier Vibe Preview (Batch C ceremony backdrop) ────────────────

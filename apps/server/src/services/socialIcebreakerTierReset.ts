@@ -1,5 +1,6 @@
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest';
+import type { IcebreakerRunPlan } from '@shared/phaseModule';
 import { cleanupPhaseStateForNextPhase } from '../socialIcebreakerPhaseConfig';
 import { compileForSession } from './runPlanService';
 import { seedSingleTestBotsWarmupReady } from './socialIcebreakerBotService';
@@ -27,6 +28,7 @@ export interface ResetSocialIcebreakerTierOptions {
   userId: string;
   resetSource: ResetTierSource;
   customModeEnabled: boolean;
+  customRunPlan?: IcebreakerRunPlan;
 }
 
 const VALID_VIBES: Array<'chat' | 'balanced' | 'game'> = ['chat', 'balanced', 'game'];
@@ -51,7 +53,7 @@ const VALID_VIBES: Array<'chat' | 'balanced' | 'game'> = ['chat', 'balanced', 'g
 export async function resetSocialIcebreakerTier(
   options: ResetSocialIcebreakerTierOptions,
 ): Promise<ResetTierResult> {
-  const { state, newTier, newVibe, userId, resetSource, customModeEnabled } = options;
+  const { state, newTier, newVibe, userId, resetSource, customModeEnabled, customRunPlan } = options;
 
   if (state.hostUserId !== userId) {
     return { reset: false, reason: 'not_host' };
@@ -68,7 +70,10 @@ export async function resetSocialIcebreakerTier(
   const resolvedVibe = newVibe && VALID_VIBES.includes(newVibe) ? newVibe : undefined;
   const willVibeChange = resolvedVibe !== undefined && resolvedVibe !== oldVibe;
 
-  if (oldTier === newTier && !willVibeChange) {
+  const runPlanChanged =
+    customRunPlan !== undefined &&
+    JSON.stringify(state.runPlan?.segments ?? []) !== JSON.stringify(customRunPlan.segments);
+  if (oldTier === newTier && !willVibeChange && !runPlanChanged) {
     return { reset: false, reason: 'same_tier' };
   }
 
@@ -100,7 +105,7 @@ export async function resetSocialIcebreakerTier(
   if (newTier === 'custom') {
     state.eventTier = 'custom';
     state.vibe = resolvedVibe ?? oldVibe ?? 'balanced';
-    state.runPlan = undefined;
+    state.runPlan = customRunPlan;
     state.autoAdvanceEnabled = false;
   } else {
     state.eventTier = newTier;

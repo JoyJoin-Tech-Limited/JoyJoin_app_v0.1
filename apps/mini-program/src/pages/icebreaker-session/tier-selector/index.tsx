@@ -19,6 +19,13 @@ import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import type { SocialStartResponse } from '../icebreakerSessionModel'
+import { PhaseHeaderIcon } from '../phaseUtils'
+import {
+  CUSTOM_GAME_OPTIONS,
+  getCustomSelectionSummary,
+  toggleCustomGameSelection,
+  type CustomGamePhase,
+} from './customGameSelection'
 import './index.scss'
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -144,6 +151,8 @@ function getStartFailureToast(err: unknown): string {
   if (code === 'SESSION_NOT_FOUND' || statusCode === 404) {
     return '没找到这场破冰，返回上一页重试'
   }
+  if (code === 'CUSTOM_GAMES_REQUIRED') return '至少选择一个游戏哦'
+  if (code === 'CUSTOM_GAME_UNAVAILABLE') return '有游戏暂未开放，换一个试试'
   if (statusCode === 401) return '登录状态失效了，重新进入试试'
   // A 5xx means the server itself failed — blame the service, not the network.
   if (typeof statusCode === 'number' && statusCode >= 500) return getErrorMessage('server')
@@ -172,6 +181,7 @@ function getPreviewAffirmation(tier: TierMachineId, vibe: VibeId): string {
 interface StoredSelection {
   tier: TierMachineId
   vibe: VibeId
+  selectedPhases?: CustomGamePhase[]
 }
 
 // ─── Component ────────────────────────────────────────────────────
@@ -191,6 +201,10 @@ export default function TierSelectorPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fadeKey, setFadeKey] = useState(0)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [selectedPhases, setSelectedPhases] = useState<CustomGamePhase[]>([])
+  const [availableGamePhases, setAvailableGamePhases] = useState<CustomGamePhase[]>(
+    CUSTOM_GAME_OPTIONS.map((game) => game.phase),
+  )
 
   const customModeEnabled = user?.features?.socialIcebreakerCustomModeEnabled ?? true
 
@@ -208,8 +222,33 @@ export default function TierSelectorPage() {
         const validVibes = VIBE_OPTIONS.map((v) => v.id)
         setSelectedVibe(validVibes.includes(stored.vibe) ? stored.vibe : 'balanced')
       }
+      if (stored?.selectedPhases) {
+        const validPhases = new Set(CUSTOM_GAME_OPTIONS.map((game) => game.phase))
+        setSelectedPhases(stored.selectedPhases.filter((phase) => validPhases.has(phase)))
+      }
     } catch {
       // Storage read failure is non-fatal
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    void apiRequest<{ phases: CustomGamePhase[] }>({
+      path: '/api/social-icebreaker/custom-games',
+      method: 'GET',
+    }).then(({ phases }) => {
+      if (!active) return
+      const known = new Set(CUSTOM_GAME_OPTIONS.map((game) => game.phase))
+      const available = phases.filter((phase) => known.has(phase))
+      setAvailableGamePhases(available)
+      setSelectedPhases((current) => current.filter((phase) => available.includes(phase)))
+    }).catch((err) => {
+      logError('tier-selector:custom-game-catalog-failed', {
+        message: err instanceof Error ? err.message : String(err),
+      })
+    })
+    return () => {
+      active = false
     }
   }, [])
 
@@ -251,11 +290,20 @@ export default function TierSelectorPage() {
     setShowAdvanced((prev) => {
       const next = !prev
       if (next) {
+        handleSelectCombo('custom', 'balanced')
         socialIcebreakerAnalytics.track('advanced_mode_opened', sessionId)
       }
       return next
     })
-  }, [sessionId])
+  }, [handleSelectCombo, sessionId])
+
+  const handleToggleCustomGame = useCallback((phase: CustomGamePhase) => {
+    setSelectedTier('custom')
+    setSelectedVibe('balanced')
+    setSelectedPhases((current) => toggleCustomGameSelection(current, phase))
+    setFadeKey((key) => key + 1)
+    if (!shouldReduceMotion) haptics('light')
+  }, [shouldReduceMotion])
 
   const handleStart = useCallback(async () => {
     if (isSubmitting) {
@@ -264,6 +312,11 @@ export default function TierSelectorPage() {
 
     if (!sessionId) {
       Taro.showToast({ title: '缺少会话信息', icon: 'none', duration: TOAST_MEDIUM_MS })
+      return
+    }
+
+    if (selectedTier === 'custom' && selectedPhases.length === 0) {
+      Taro.showToast({ title: '至少选择一个游戏哦', icon: 'none', duration: TOAST_MEDIUM_MS })
       return
     }
 
@@ -291,6 +344,7 @@ export default function TierSelectorPage() {
       Taro.setStorageSync(STORAGE_KEY, {
         tier: selectedTier,
         vibe: selectedVibe,
+        selectedPhases,
       } as StoredSelection)
 
       if (selectedTier === 'custom') {
@@ -310,6 +364,7 @@ export default function TierSelectorPage() {
               eventType: '活动',
               eventTier: selectedTier,
               vibe: selectedTier === 'custom' ? undefined : VIBE_TO_API[selectedVibe],
+              selectedPhases: selectedTier === 'custom' ? selectedPhases : undefined,
             },
           })
 
@@ -343,7 +398,7 @@ export default function TierSelectorPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, sessionId, displayName, selectedTier, selectedVibe])
+  }, [isSubmitting, sessionId, displayName, selectedTier, selectedVibe, selectedPhases])
 
   const yuezaiReaction = YUEZAI_REACTIONS[selectedTier][selectedVibe]
 
@@ -417,66 +472,54 @@ export default function TierSelectorPage() {
               hoverClass='tier-selector__advanced-toggle--pressed'
               hoverStartTime={0}
               hoverStayTime={100}
-              aria-label={showAdvanced ? '收起自定义选项' : '展开自定义时长和氛围选项'}
+              aria-label={showAdvanced ? '收起自定义游戏' : '展开自定义游戏'}
               role='button'
               aria-expanded={showAdvanced}
               aria-controls='tier-advanced-grid'
             >
               <Text className='tier-selector__advanced-toggle-text'>
-                {showAdvanced ? '收起自定义' : '自定义时长 / 氛围'}
+                {showAdvanced ? '收起自定义游戏' : '自定义游戏'}
               </Text>
               <View className={`tier-selector__advanced-toggle-arrow ${showAdvanced ? 'tier-selector__advanced-toggle-arrow--up' : ''}`} />
             </View>
 
             {showAdvanced && (
-              <View id='tier-advanced-grid' className='tier-selector__advanced-grid'>
-                {/* Header row */}
-                <View className='tier-selector__grid-row tier-selector__grid-row--header'>
-                  <View className='tier-selector__grid-corner' />
-                  {VIBE_OPTIONS.map((vibe) => (
-                    <View key={vibe.id} className='tier-selector__grid-col-header'>
-                      <Text className='tier-selector__grid-col-name'>{vibe.display}</Text>
-                      <Text className='tier-selector__grid-col-hint'>{vibe.hint}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Rows: one per tier */}
-                {TIER_OPTIONS.map((tier) => (
-                  <View key={tier.id} className='tier-selector__grid-row'>
-                    <View className='tier-selector__grid-row-header'>
-                      <Text className='tier-selector__grid-row-name'>
-                        {resolveTierDisplay(tier.id, { glowVariant: 'default' })}
-                      </Text>
-                      <Text className='tier-selector__grid-row-meta'>
-                        {tier.duration} · {tier.gameCount}
-                      </Text>
-                    </View>
-
-                    {VIBE_OPTIONS.map((vibe) => {
-                      const isActive = selectedTier === tier.id && selectedVibe === vibe.id
-                      return (
-                        <View
-                          key={vibe.id}
-                          className={`tier-selector__grid-cell ${isActive ? 'tier-selector__grid-cell--active' : ''}`}
-                          onClick={() => handleSelectCombo(tier.id, vibe.id)}
-                          hoverClass='tier-selector__grid-cell--pressed'
-                          hoverStartTime={0}
-                          hoverStayTime={200}
-                          aria-label={`${resolveTierDisplay(tier.id, { glowVariant: 'default' })} · ${vibe.display}`}
-                          role='button'
-                          aria-pressed={isActive}
-                        >
-                          {isActive && (
-                            <View className='tier-selector__grid-cell-check'>
-                              <JoyJoinIcon emoji='✓' size={20} />
-                            </View>
-                          )}
+              <View id='tier-advanced-grid' className='tier-selector__game-list'>
+                {CUSTOM_GAME_OPTIONS.filter((game) =>
+                  availableGamePhases.includes(game.phase),
+                ).map((game) => {
+                  const order = selectedPhases.indexOf(game.phase) + 1
+                  const isSelected = order > 0
+                  return (
+                    <View
+                      key={game.phase}
+                      className={`tier-selector__game-row ${isSelected ? 'tier-selector__game-row--selected' : ''}`}
+                      onClick={() => handleToggleCustomGame(game.phase)}
+                      hoverClass='tier-selector__game-row--pressed'
+                      hoverStartTime={0}
+                      hoverStayTime={120}
+                      role='checkbox'
+                      aria-checked={isSelected}
+                      aria-label={`${game.title}，预计${game.minutes}分钟${isSelected ? `，第${order}个` : ''}`}
+                    >
+                      <PhaseHeaderIcon
+                        phase={game.iconPhase}
+                        size={56}
+                        className='tier-selector__game-icon'
+                      />
+                      <View className='tier-selector__game-copy'>
+                        <Text className='tier-selector__game-title'>{game.title}</Text>
+                        <Text className='tier-selector__game-duration'>预计 {game.minutes} 分钟</Text>
+                      </View>
+                      {isSelected && (
+                        <View className='tier-selector__game-selection'>
+                          <JoyJoinIcon emoji='✓' size={20} />
+                          <Text className='tier-selector__game-order'>{order}</Text>
                         </View>
-                      )
-                    })}
-                  </View>
-                ))}
+                      )}
+                    </View>
+                  )
+                })}
               </View>
             )}
       </View>
@@ -486,11 +529,14 @@ export default function TierSelectorPage() {
         <View className='tier-selector__section'>
           <View
             className={`tier-selector__custom-card ${selectedTier === 'custom' ? 'tier-selector__custom-card--active' : ''}`}
-            onClick={() => handleSelectCombo('custom', 'balanced')}
+            onClick={() => {
+              handleSelectCombo('custom', 'balanced')
+              setShowAdvanced(true)
+            }}
             hoverClass='tier-selector__custom-card--pressed'
             hoverStartTime={0}
             hoverStayTime={200}
-            aria-label='自由局，时长和环节由你决定'
+            aria-label='自由局，游戏和顺序由你决定'
             role='button'
             aria-pressed={selectedTier === 'custom'}
           >
@@ -508,7 +554,7 @@ export default function TierSelectorPage() {
                 <Text className='tier-selector__custom-card-badge'>自由定制</Text>
               </View>
               <Text className='tier-selector__custom-card-tagline'>全场节奏，由你导演</Text>
-              <Text className='tier-selector__custom-card-meta'>时长和环节，都听你的</Text>
+              <Text className='tier-selector__custom-card-meta'>游戏和顺序，都听你的</Text>
             </View>
             {selectedTier === 'custom' && (
               <View className='tier-selector__custom-card-check'>
@@ -534,7 +580,9 @@ export default function TierSelectorPage() {
           {resolveTierDisplay(selectedTier, { glowVariant: 'default' })} · 这就是今晚的氛围
         </Text>
         <Text className='tier-selector__preview-affirmation'>
-          {getPreviewAffirmation(selectedTier, selectedVibe)}
+          {selectedTier === 'custom'
+            ? getCustomSelectionSummary(selectedPhases)
+            : getPreviewAffirmation(selectedTier, selectedVibe)}
         </Text>
       </View>
 

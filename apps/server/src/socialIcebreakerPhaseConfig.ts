@@ -126,9 +126,9 @@ export function getNextEligiblePhase(
   current: SocialIcebreakerPhase,
   state: SocialSessionState,
 ): SocialIcebreakerPhase {
-  // Custom mode: host-driven picker. Warmup and every real phase lead back to
-  // the picker; the picker itself leads to recap as a safe fallback.
-  if (isCustomMode(state)) {
+  // Legacy custom sessions without a preselected run plan use the host-driven
+  // picker. New custom sessions follow their run plan in tap order.
+  if (isCustomMode(state) && !state.runPlan?.segments?.length) {
     if (current === 'phase_selection') return 'recap';
     return 'phase_selection';
   }

@@ -2781,6 +2781,79 @@ describe.sequential('social icebreaker routes', () => {
       vi.mocked(getFeatureFlag).mockImplementation(async (_key: string, fallback = false) => fallback);
     });
 
+    it('returns only server-enabled custom games', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'custom-game-catalog-host');
+        const previousAuctionFlag = process.env.SOCIAL_ICEBREAKER_ENABLE_AUCTION;
+        process.env.SOCIAL_ICEBREAKER_ENABLE_AUCTION = 'false';
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/custom-games`, {
+          headers: { cookie: hostCookie },
+        }).finally(() => {
+          if (previousAuctionFlag === undefined) delete process.env.SOCIAL_ICEBREAKER_ENABLE_AUCTION;
+          else process.env.SOCIAL_ICEBREAKER_ENABLE_AUCTION = previousAuctionFlag;
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body.phases).toContain('micro_challenge');
+        expect(body.phases).not.toContain('auction');
+      });
+    });
+
+    it('rejects a disabled custom game with a stable machine code', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'custom-game-disabled-host');
+        const previousAuctionFlag = process.env.SOCIAL_ICEBREAKER_ENABLE_AUCTION;
+        process.env.SOCIAL_ICEBREAKER_ENABLE_AUCTION = 'false';
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({
+            sessionId: `session-custom-disabled-${Date.now()}`,
+            displayName: 'Host',
+            eventTier: 'custom',
+            selectedPhases: ['auction'],
+          }),
+        }).finally(() => {
+          if (previousAuctionFlag === undefined) delete process.env.SOCIAL_ICEBREAKER_ENABLE_AUCTION;
+          else process.env.SOCIAL_ICEBREAKER_ENABLE_AUCTION = previousAuctionFlag;
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(400);
+        expect(body.code).toBe('CUSTOM_GAME_UNAVAILABLE');
+      });
+    });
+
+    it('does not mutate an existing preset session when custom selection is empty', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'custom-game-empty-host');
+        const sessionId = `session-custom-empty-${Date.now()}`;
+        await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'glow', vibe: 'balanced' }),
+        });
+
+        const rejected = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host', eventTier: 'custom', selectedPhases: [] }),
+        });
+        const rejectedBody = await rejected.json() as any;
+        const rejoined = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({ sessionId, displayName: 'Host' }),
+        });
+        const rejoinedBody = await rejoined.json() as any;
+
+        expect(rejected.status).toBe(400);
+        expect(rejectedBody.code).toBe('CUSTOM_GAMES_REQUIRED');
+        expect(rejoinedBody.state.eventTier).toBe('glow');
+      });
+    });
+
     it('resets an existing glow session to custom when host sends eventTier: custom', async () => {
       await withServer(async (baseUrl) => {
         const hostCookie = await login(baseUrl, 'tier-reset-host');
@@ -2809,6 +2882,34 @@ describe.sequential('social icebreaker routes', () => {
         expect(resetBody.state.autoAdvanceEnabled).toBe(false);
         expect(resetBody.state.currentPhase).toBe('warmup');
         expect(resetBody.state.completedPhases).toEqual([]);
+      });
+    });
+
+    it('persists a selected custom game order as the session run plan', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'tier-custom-order-host');
+        const sessionId = `session-tier-custom-order-${Date.now()}`;
+
+        const response = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+          body: JSON.stringify({
+            sessionId,
+            displayName: 'Host',
+            eventTier: 'custom',
+            selectedPhases: ['personality_dice', 'micro_challenge', 'lie_detective'],
+          }),
+        });
+        const body = await response.json() as any;
+
+        expect(response.status).toBe(200);
+        expect(body.state.runPlan.segments.map((segment: any) => segment.phase)).toEqual([
+          'warmup',
+          'personality_dice',
+          'micro_challenge',
+          'lie_detective',
+          'recap',
+        ]);
       });
     });
 

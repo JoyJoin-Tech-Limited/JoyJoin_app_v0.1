@@ -48,6 +48,11 @@ import {
 import { DEFAULT_STANDARD_RUN_PLAN } from '@shared/phaseRegistry';
 import { getRunPlanForTier } from '@shared/socialIcebreakerRunPlans';
 import { compileForSession } from '../services/runPlanService';
+import {
+  buildCustomRunPlan,
+  CUSTOM_GAME_PHASES,
+  validateCustomGamePhases,
+} from '../services/customRunPlanService';
 import { type TierMachineId, resolveTierDisplay, LEGACY_TIER_MAP } from '@shared/socialIcebreakerTierManifest';
 import { socialIcebreakerAiFeedbackRepo } from '../repositories/socialIcebreakerAiFeedbackRepo';
 import { submitSocialIcebreakerAiFeedbackSchema } from '@shared/schema';
@@ -175,6 +180,7 @@ const startBodySchema = z.object({
   eventType: z.string().optional(),
   eventTier: z.string().optional(),
   vibe: z.string().optional(),
+  selectedPhases: z.array(z.enum(CUSTOM_GAME_PHASES as [string, ...string[]])).max(9).optional(),
 });
 
 const VALID_START_TIERS: TierMachineId[] = ['breeze', 'glow', 'blaze', 'custom'];
@@ -288,12 +294,27 @@ function scheduleStartBackgroundGeneration(params: {
   });
 }
 
+router.get('/custom-games', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const customModeEnabled = await getFeatureFlag('socialIcebreakerCustomModeEnabled', true);
+  if (!customModeEnabled) {
+    return res.json({ phases: [] });
+  }
+
+  const enabled = new Set(getServerEnabledPhases());
+  return res.json({
+    phases: CUSTOM_GAME_PHASES.filter((phase) => enabled.has(phase)),
+  });
+});
+
 router.post('/start', async (req: any, res) => {
   const parsedBody = startBodySchema.safeParse(req.body);
   if (!parsedBody.success) {
     return res.status(400).json({ error: 'Invalid request body' });
   }
-  const { sessionId, displayName, eventType, eventTier, vibe } = parsedBody.data;
+  const { sessionId, displayName, eventType, eventTier, vibe, selectedPhases } = parsedBody.data;
   const userId = requireAuthenticatedUserId(req, res);
   if (!userId) return;
 
@@ -380,6 +401,30 @@ router.post('/start', async (req: any, res) => {
     if (resolvedIncomingTier) {
       const resolvedIncomingVibe = resolveIncomingVibe(vibe);
       const customModeEnabled = await getFeatureFlag('socialIcebreakerCustomModeEnabled', true);
+      let customRunPlan: IcebreakerRunPlan | undefined;
+      if (
+        resolvedIncomingTier === 'custom' &&
+        state.hostUserId === userId &&
+        state.currentPhase === 'warmup' &&
+        selectedPhases !== undefined
+      ) {
+        if (!customModeEnabled) {
+          return res.status(400).json({ error: 'Custom mode is not enabled' });
+        }
+        const customValidation = validateCustomGamePhases(
+          selectedPhases as SocialIcebreakerPhase[],
+          getServerEnabledPhases(),
+        );
+        if (!customValidation.ok) {
+          return res.status(400).json({
+            error: 'Custom game selection is unavailable',
+            code: customValidation.reason === 'empty'
+              ? 'CUSTOM_GAMES_REQUIRED'
+              : 'CUSTOM_GAME_UNAVAILABLE',
+          });
+        }
+        customRunPlan = buildCustomRunPlan(customValidation.phases);
+      }
       const resetResult = await resetSocialIcebreakerTier({
         state,
         newTier: resolvedIncomingTier,
@@ -387,6 +432,7 @@ router.post('/start', async (req: any, res) => {
         userId,
         resetSource: '/start',
         customModeEnabled,
+        customRunPlan,
       });
       if (resetResult.reset) {
         tierResetOccurred = true;
@@ -395,6 +441,7 @@ router.post('/start', async (req: any, res) => {
         // stuck on slow staging databases.
         shouldPersist = false;
       }
+
     }
 
     // Recompile the run plan when the roster grows during warmup so that
@@ -453,6 +500,20 @@ router.post('/start', async (req: any, res) => {
     if (!customModeEnabled) {
       return res.status(400).json({ error: 'Custom mode is not enabled' });
     }
+    if (selectedPhases !== undefined) {
+      const customValidation = validateCustomGamePhases(
+        selectedPhases as SocialIcebreakerPhase[],
+        getServerEnabledPhases(),
+      );
+      if (!customValidation.ok) {
+        return res.status(400).json({
+          error: 'Custom game selection is unavailable',
+          code: customValidation.reason === 'empty'
+            ? 'CUSTOM_GAMES_REQUIRED'
+            : 'CUSTOM_GAME_UNAVAILABLE',
+        });
+      }
+    }
   }
 
   // Single-test mode: reject custom tier for bot-simulation sessions.
@@ -506,7 +567,26 @@ router.post('/start', async (req: any, res) => {
 
   let runPlan: IcebreakerRunPlan | undefined;
   if (resolvedTier === 'custom') {
-    newState.runPlan = undefined;
+    if (selectedPhases !== undefined) {
+      const customValidation = validateCustomGamePhases(
+        selectedPhases as SocialIcebreakerPhase[],
+        getServerEnabledPhases(),
+      );
+      if (!customValidation.ok) {
+        return res.status(400).json({
+          error: 'Custom game selection is unavailable',
+          code: customValidation.reason === 'empty'
+            ? 'CUSTOM_GAMES_REQUIRED'
+            : 'CUSTOM_GAME_UNAVAILABLE',
+        });
+      }
+      runPlan = buildCustomRunPlan(customValidation.phases);
+      newState.runPlan = runPlan;
+    } else {
+      // Backward compatibility for older clients that still use the
+      // between-round custom phase picker.
+      newState.runPlan = undefined;
+    }
   } else {
     runPlan = await compileForSession(newState, resolvedTier);
     newState.runPlan = runPlan;
@@ -544,6 +624,9 @@ router.post('/start', async (req: any, res) => {
       userId,
       tier: resolvedTier,
       vibe: newState.vibe,
+      selectedPhases: runPlan?.compilerId === 'custom-selection-v1'
+        ? runPlan.segments.map((segment) => segment.phase)
+        : undefined,
     });
   } catch (error) {
     if (!isUniqueConstraintError(error)) {
