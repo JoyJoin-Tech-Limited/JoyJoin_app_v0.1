@@ -3,7 +3,7 @@
 ## React.lazy Examples
 
 ```tsx
-// apps/user-client/src/App.tsx
+// archived/workspaces/user-client/src/App.tsx (archived web reference)
 const DiscoverPage = React.lazy(() => import("./pages/DiscoverPage"));
 const MatchingStatusPage = React.lazy(() => import("./pages/MatchingStatusPage"));
 

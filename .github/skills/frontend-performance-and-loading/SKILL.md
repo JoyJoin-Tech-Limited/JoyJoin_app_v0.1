@@ -26,8 +26,8 @@ placement or visual token decisions.
 
 ## Core rules
 
-1. **Keep non-critical routes lazy by default.** `App.tsx` is the reference for
-   route-level code splitting.
+1. **Keep non-critical routes lazy by default.** The archived web `App.tsx` is the
+   reference for route-level code splitting; the mini-program uses subpackages.
 2. **Separate loading strategy from component placement.** Use this skill for
    performance; use `frontend-component-architecture` for component location.
 3. **Gate prefetch work on real need.** Do not prefetch heavy assets or next-step
@@ -47,7 +47,7 @@ analysis steps, and LCP optimization checklists, see
 ## Current repo anchors
 
 - `docs/perf.md` — active web performance strategy
-- `apps/user-client/src/App.tsx` — route-level lazy loading reference
+- `archived/workspaces/user-client/src/App.tsx` — archived route-level lazy loading reference
 - `scripts/test-performance-fixes.sh` — lightweight verification style
 
 ## Quick examples
@@ -85,7 +85,7 @@ analysis steps, and LCP optimization checklists, see
 ## Related files
 
 - `docs/perf.md`
-- `apps/user-client/src/App.tsx`
+- `archived/workspaces/user-client/src/App.tsx`
 - `scripts/test-performance-fixes.sh`
 - `.github/skills/design-system-governance/references/frontend-excellence-thresholds.md`
 - [`references/performance-patterns.md`](./references/performance-patterns.md)

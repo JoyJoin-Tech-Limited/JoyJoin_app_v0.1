@@ -1,9 +1,9 @@
 ---
 name: viewport-zero-scroll
 description: >
-  Zero-scroll viewport policy for web and WeChat mini-program (launch priority): 100dvh shell,
-  no document/page scroll, no-scroll containers, ResponsiveSpacer (web + Taro), ScrollSentinel
-  (web dev), FormStepper (max 4 inputs per step). Trigger phrases: "zero scroll", "viewport lock",
+  Zero-scroll viewport policy for the WeChat mini-program (launch priority): 100dvh shell,
+  no document/page scroll, no-scroll containers, ResponsiveSpacer (Taro),
+  FormStepper (max 4 inputs per step). Trigger phrases: "zero scroll", "viewport lock",
   "mini-program layout", "Taro ScrollView", "100dvh", "ResponsiveSpacer", "collapseBelow".
 ---
 
@@ -42,7 +42,7 @@ Apply the same intent with renderer-native primitives:
 - Root `page` + `@include no-scroll-page-shell` from `_mixins.scss`
 - One explicit `ScrollView` per screen that needs it
 - `ResponsiveSpacer` in `apps/mini-program/src/components/ui/ResponsiveSpacer.tsx`
-- Same ≤4 text/numeric inputs per step rule as web
+- No more than 4 text/numeric inputs per step
 
 For detailed `ResponsiveSpacer` usage, `ScrollSentinel` setup, `FormStepper` rules,
 Taro `ScrollView` patterns, and SCSS mixin reference, see
@@ -58,10 +58,10 @@ Taro `ScrollView` patterns, and SCSS mixin reference, see
 
 ## Quick examples
 
-- **Onboarding step with 3 inputs and a bottom CTA** → Wrap in `.no-scroll-container`
-  (web) or `no-scroll-page-shell` (Taro), place `ResponsiveSpacer` between content
+- **Onboarding step with 3 inputs and a bottom CTA** → Wrap in `no-scroll-page-shell`
+  (Taro), place `ResponsiveSpacer` between content
   and CTA with `collapseBelow={640}`.
-- **Feed-style discover page** → Use `#jj-scroll-chassis` (web) or a single
+- **Feed-style discover page** → Use a single
   `ScrollView` (Taro) with a documented scroll-exception comment.
 
 ## Troubleshooting
@@ -82,12 +82,10 @@ Taro `ScrollView` patterns, and SCSS mixin reference, see
 
 ## Review checklist
 
-- [ ] **Web:** full-screen flow uses `.no-scroll-container` or documented inner scroll port
 - [ ] **Mini-program:** uses `viewport-min-height` / `no-scroll-page-shell` or documented `ScrollView`
 - [ ] No step presents > 4 text/numeric inputs without splitting steps
 - [ ] Short-viewport gaps use `ResponsiveSpacer` / `ResponsiveSpacer` (Taro) with `collapseBelow`
 - [ ] Feed-style pages document the scroll exception at the scroll root
-- [ ] **Launch:** sibling flows reviewed under platform coordination when layout changes
 
 ## Related files
 - `archived/workspaces/user-client/src/styles/viewport-lockdown.css`

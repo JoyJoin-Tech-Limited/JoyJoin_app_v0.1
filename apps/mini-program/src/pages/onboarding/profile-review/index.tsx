@@ -25,6 +25,7 @@ import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, fetchDiscoverShell, getUserState } from '../../../lib/api/api'
 import { getPrefetchEngine, injectDiscoverShellIntoCache } from '../../../lib/prefetchEngine'
+import { preloadFlowBannerBackgrounds } from '../../../lib/utils/routePreloadAssets'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
 import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes'
@@ -160,6 +161,14 @@ export default function ProfileReviewPage() {
       setBio((prev) => (prev === '' ? existingBio.slice(0, 100) : prev))
     }
   }, [isLoading, user?.bio])
+
+  // Preload Flow 1 per-archetype banner backgrounds during the analyzing window
+  // so the entrance peak never races the network.
+  useEffect(() => {
+    if (!isRevealReady && user?.primaryArchetype) {
+      preloadFlowBannerBackgrounds(user.primaryArchetype as string)
+    }
+  }, [isRevealReady, user?.primaryArchetype])
 
   // Claim (or re-fetch) the lifetime welcome coupon once the reveal animation finishes.
   useEffect(() => {

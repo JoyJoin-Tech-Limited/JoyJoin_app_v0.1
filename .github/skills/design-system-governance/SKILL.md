@@ -39,7 +39,7 @@ CSS custom properties bridge the design system and component code:
 - `--btn-primary-gradient` and `--btn-shadow-primary` are button-specific tokens
 - `--ring`, `--border`, `--background`, `--foreground` follow shadcn/ui convention
 - Tokens must be defined in the app's `index.css` (light + dark blocks), not inline
-- When adding a new token, add it to **both** apps' `index.css` files
+- When adding a new token, add it to the consuming app's `index.css` (light + dark blocks)
 
 ## Variant overview
 
@@ -80,7 +80,7 @@ documentation format, and platform-specific notes, see
 ## Review checklist
 
 - [ ] No hard-coded hex values — all colours reference CSS tokens
-- [ ] New tokens are in both `:root` and `.dark` in both app `index.css` files
+- [ ] New tokens are in both `:root` and `.dark` in the consuming app's `index.css`
 - [ ] New variants are in `packages/shared/src/ui/buttonVariants.ts`
 - [ ] Focus ring is visible and uses `--ring`
 - [ ] Touch target for primary CTAs is at least 44 px
@@ -92,6 +92,5 @@ documentation format, and platform-specific notes, see
 
 - `packages/shared/src/ui/Button.tsx`
 - `packages/shared/src/ui/buttonVariants.ts`
-- `apps/user-client/src/index.css`
 - `apps/admin-client/src/index.css`
 - [`references/token-guide.md`](./references/token-guide.md)

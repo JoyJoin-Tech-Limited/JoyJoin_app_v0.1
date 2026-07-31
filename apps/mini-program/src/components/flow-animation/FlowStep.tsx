@@ -14,6 +14,7 @@ interface FlowStepProps {
   step: FlowStepData
   active: boolean
   current?: boolean
+  traveling?: boolean
   compact?: boolean
   align?: 'left' | 'right' | 'center'
 }
@@ -22,6 +23,7 @@ export default function FlowStep({
   step,
   active,
   current = false,
+  traveling = false,
   compact = false,
   align = 'left',
 }: FlowStepProps) {
@@ -34,6 +36,7 @@ export default function FlowStep({
         accent={step.accent}
         active={active}
         current={current}
+        traveling={traveling}
         compact={compact}
         align={align}
       />

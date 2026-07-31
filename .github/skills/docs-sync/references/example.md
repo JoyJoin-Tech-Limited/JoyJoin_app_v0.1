@@ -9,7 +9,7 @@ A PR added a new onboarding step that allows users to upload a profile photo bef
 - New `nextStep` value: `'photo-upload'`
 - New `users` table flag: `hasCompletedPhotoUpload` (boolean, default false)
 - New POST endpoint: `POST /api/auth/complete-photo-upload`
-- New page component: `apps/user-client/src/features/onboarding/active/pages/PhotoUploadPage.tsx`
+- New page component: `apps/mini-program/src/pages/onboarding/photo-upload/index.tsx`
 - Updated `flow.ts` mapping: `'photo-upload'` → `/onboarding/photo-upload`
 - Updated `nextStep` computation in `apps/server/src/routes/domains/auth.ts`
 
@@ -36,7 +36,7 @@ All four categories have documentation and memory implications.
 | New `nextStep` value | — | `onboarding-state-architecture` SKILL.md | Active onboarding steps table |
 | New `users` column | — | `DEVELOPER_QUICK_REFERENCE.md` | Server-owned completion semantics |
 | New POST endpoint | — | `DEVELOPER_QUICK_REFERENCE.md` / `docs/api/` | Route table |
-| New page component | — | `apps/user-client/src/features/onboarding/README.md` | Module structure |
+| New page component | — | `apps/mini-program/README.md` | Module structure |
 
 ### Step 4 — Edits
 
@@ -99,7 +99,7 @@ Summary output:
 ### What this example avoids
 
 - ❌ Not touching `QUICK_REFERENCE.md` (legacy, superseded by `DEVELOPER_QUICK_REFERENCE.md`)
-- ❌ Not adding the step to `apps/user-client/src/legacy/onboarding/` — that directory is quarantined
+- ❌ Not adding the step to `archived/workspaces/user-client/src/legacy/onboarding/` — that directory is quarantined
 - ❌ Not reintroducing `hasCompletedRegistration` or any other deprecated identifier
 - ❌ Not documenting the internal Drizzle migration file — implementation detail, not a public surface
 - ❌ Not reformatting the entire onboarding step table — only the new row is added

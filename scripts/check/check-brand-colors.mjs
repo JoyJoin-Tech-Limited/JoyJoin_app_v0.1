@@ -135,6 +135,10 @@ const ALLOWED_HEX_COLORS = new Set([
   '#45A66C',   // jade green
   '#171525',   // black-violet
   '#11101D',   // ink black
+  '#FFFAF0',   // warm cream card face
+  '#F8EFFF',   // pale lilac card wash
+  '#573681',   // deep violet raised-edge shadow
+  '#7650D6',   // primary gradient deep stop
 ])
 
 // Regex to find hex colors in SCSS

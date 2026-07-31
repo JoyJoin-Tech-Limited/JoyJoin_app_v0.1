@@ -21,6 +21,7 @@ import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
+import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { apiRequest } from '../../lib/api/api'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { queryClient } from '../../lib/api/queryClient'
@@ -228,6 +229,7 @@ export default function ProfilePage() {
   const profileV17DataPolicy = getProfileV17DataPolicy(authUser)
   const pixelAvatarEnabled = profileV17Enabled
     && authUser?.features?.profilePixelAvatarEnabled === true
+  const deviceTier = useDeviceTier()
 
   useCustomTabBarSync({
     enabled: !authLoading,
@@ -383,20 +385,22 @@ export default function ProfilePage() {
     return { borderColor: formatHSLAsRGBA(hsl, 0.9) }
   }, [archetype])
 
-  const handleOpenPersonalityType = (source: 'v17_card' | 'fallback_row') => {
+  const handleOpenPersonalityType = async (source: 'v17_card' | 'fallback_row') => {
     haptics('light')
     profileAnalytics.track('profile_personality_action_tap', { source })
 
-    if (archetype) {
-      void Taro.navigateTo({
-        url: `${MINI_PROGRAM_ROUTES.personalityTestResults}?source=profile`,
+    const url = archetype
+      ? `${MINI_PROGRAM_ROUTES.personalityTestResults}?source=profile`
+      : `${MINI_PROGRAM_ROUTES.personalityTest}?source=profile`
+    try {
+      await Taro.navigateTo({ url })
+    } catch (error) {
+      logError('profile:open_personality_fail', { source, error: String(error) })
+      void Taro.showToast({
+        title: archetype ? '报告没有打开，请稍后再试' : '测评没有打开，请稍后再试',
+        icon: 'none',
       })
-      return
     }
-
-    void Taro.navigateTo({
-      url: `${MINI_PROGRAM_ROUTES.personalityTest}?source=profile`,
-    })
   }
 
   const handleOpenSettings = async () => {
@@ -449,7 +453,7 @@ export default function ProfilePage() {
               <View
                 className='profile-page__identity-copy-card'
                 hoverClass='profile-page__identity-copy-card--pressed'
-                onClick={() => { handleOpenPersonalityType('v17_card') }}
+                onClick={() => { void handleOpenPersonalityType('v17_card') }}
                 role='button'
                 aria-label={archetypeName ? `回看 ${archetypeName} 的人格测评报告` : '测测你的社交原型'}
                 data-testid='profile-identity-copy-card'
@@ -497,9 +501,12 @@ export default function ProfilePage() {
               <View
                 className={`profile-page__partner-visual${pixelAvatarEnabled ? '' : ' profile-page__partner-visual--no-entry'}`}
               >
-                <View className='profile-page__partner-platform' aria-hidden='true' />
+                <View
+                  className={`profile-page__partner-platform${deviceTier.isDegradation ? ' profile-page__partner-platform--no-pulse' : ''}`}
+                  aria-hidden='true'
+                />
               <View
-                className='profile-page__partner-breath'
+                className={`profile-page__partner-breath${deviceTier.isDegradation ? ' profile-page__partner-breath--no-breath' : ''}`}
                 data-testid='profile-partner-breath'
               >
                 <ProfilePartnerVisual
@@ -661,7 +668,7 @@ export default function ProfilePage() {
               <View
                 className='profile-page__fallback-personality'
                 hoverClass='profile-page__fallback-personality--pressed'
-                onClick={() => { handleOpenPersonalityType('fallback_row') }}
+                onClick={() => { void handleOpenPersonalityType('fallback_row') }}
                 role='button'
                 aria-label={personalityActionLabel}
               >

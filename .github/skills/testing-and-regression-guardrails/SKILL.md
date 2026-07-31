@@ -61,8 +61,8 @@ For CI script examples, invariant test templates, boundary test patterns, and wo
 
 ## Troubleshooting
 
-- **Test added to the wrong workspace** — Move it to `apps/server/src/__tests__/` for server logic, or `apps/user-client/src/…/__tests__/` for client hooks and flows.
-- **`npm run test -w @joyjoin/user-client` exits without running tests** — the user-client `test` script is a placeholder. Run Vitest directly: `npx vitest run --config apps/user-client/vitest.config.ts`.
+- **Test added to the wrong workspace** — Move it to `apps/server/src/__tests__/` for server logic, or `apps/mini-program/src/…/__tests__/` for client hooks and flows.
+- **Mini-program test coverage is thin** — `npm run test -w mini-program` has limited coverage; add focused Vitest tests under `apps/mini-program` when locking in client behaviour.
 - **Flaky test that only fails in CI** — Likely depends on `DATABASE_URL` or timing. Mock external dependencies and avoid unseeded DB state in unit tests.
 - **Guardrail check passes in CI but fails locally** — the local env has a legacy identifier or real `.env` file that is not tracked. Check `scripts/check-guardrails.mjs` for the exact assertion that failed.
 - **Invariant test passes even after a violation** — the test is reading a compiled/transpiled file instead of the TypeScript source. Point `fs.readFileSync` at the `.ts` source path, not `dist/`.

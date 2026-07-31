@@ -12,13 +12,13 @@ description: >
 
 ## Purpose
 
-The Sprint Contract is the central artifact of JoyJoin's Harness Engineering Framework for Tier 2+ tasks. It bridges the gap between high-level plans and testable implementation by defining what "done" looks like **before** the first file is edited.
+The Sprint Contract is the central Harness Engineering Framework artifact for Tier 2+ tasks: it defines what "done" looks like **before** the first file is edited.
 
 ## When to Use This Skill
 
-- **Before implementation:** The task is Tier 2 or Tier 3 and needs a contract.
-- **During negotiation:** Reviewing a draft contract for vagueness, missing edge cases, or pillar gaps.
-- **After implementation:** Evaluating the completed work against the contract's criteria with hard thresholds.
+- **Before implementation:** the task is Tier 2 or Tier 3 and needs a contract
+- **During negotiation:** reviewing a draft for vagueness, missing edge cases, or pillar gaps
+- **After implementation:** evaluating completed work against the contract's hard thresholds
 
 ## Contract Format
 
@@ -80,19 +80,16 @@ Contracts are stored at `.git/.orchestration/sprints/sprint-contract.{taskId}.md
 ## Writing a Good Contract
 
 ### Acceptance Criteria Rules
-- Every criterion must be **observable** (a test can prove it true or false).
-- Every criterion must have a **verification method** (command, test, MCP check).
+- Every criterion must be **observable** (a test can prove it true or false) with a **verification method** (command, test, MCP check).
 - Use **numbers, not adjectives**: "< 100ms" not "fast"; "≤50 items" not "reasonable".
 - Cover the **happy path, error path, and boundary conditions**.
 
 ### Pillar Criteria Rules
-- Include at least one criterion per **relevant** Harness pillar.
-- Skip pillars that genuinely don't apply (e.g., scalability for a copy change).
+- At least one criterion per **relevant** Harness pillar; skip pillars that genuinely don't apply (e.g., scalability for a copy change).
 - Link pillar criteria to specific file paths or patterns when possible.
 
 ### Out-of-Scope Rules
-- Be explicit about what is **not** included.
-- This prevents mid-implementation creep and sets reviewer expectations.
+- Be explicit about what is **not** included — prevents mid-implementation creep and sets reviewer expectations.
 
 ## Negotiation Protocol
 

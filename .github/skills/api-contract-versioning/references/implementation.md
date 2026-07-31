@@ -3,7 +3,7 @@
 ## Cross-platform type consumption
 
 Clients import DTOs via `@shared/api`:
-- **Web**: `apps/user-client/src/hooks/useAuth.ts` imports `AuthUserResponse`
+- **Web (archived)**: `archived/workspaces/user-client/src/hooks/useAuth.ts` imported `AuthUserResponse`
 - **Mini-program**: `apps/mini-program/src/lib/api/api.ts` imports `AuthUserResponse`
 - **Server**: `apps/server/src/routes.ts` imports DTOs and schemas from `@shared/schema` and `@shared/api`
 
@@ -36,7 +36,7 @@ There is no active breaking-version negotiation. All clients today speak the sam
 - **Renaming is breaking**: both server and all clients must update atomically
 - **Zod `.omit()` / `.pick()` / `.partial()`**: prefer these over redefining schemas to keep the contract close to the DB source of truth
 - **Normalizers live in `packages/shared/src/api/*.ts`**: when the server sends snake_case or ambiguous shapes, normalize to a strict client contract in the shared package, not inside each client
-- **Never duplicate types**: if a shape is used by both web and mini-program, it belongs in `packages/shared/src/api/<domain>.ts` (re-exported through `packages/shared/src/api.ts`) or `packages/shared/src/types/`
+- **Never duplicate types**: if a shape is used by both mini-program and admin-client, it belongs in `packages/shared/src/api/<domain>.ts` (re-exported through `packages/shared/src/api.ts`) or `packages/shared/src/types/`
 
 ## Zod schema examples
 
@@ -80,6 +80,6 @@ if (!parsed.success) {
 - `packages/shared/src/types/` — Domain-specific cross-cutting types
 - `apps/server/src/routes.ts` — Route composition root + `/api/v1/*` rewrite
 - `apps/mini-program/src/lib/api/api.ts` — Mini-program API transport + auth bootstrap
-- `apps/user-client/src/hooks/useAuth.ts` — Web auth/session type consumer
+- `archived/workspaces/user-client/src/hooks/useAuth.ts` — Archived web auth/session type consumer
 - `apps/server/src/routes/domains/eventGroupOutcomes.ts` — Example of Zod `safeParse` in domain route
 - `packages/shared/src/index.ts` — Shared package export barrel

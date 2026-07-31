@@ -67,7 +67,11 @@ describe('pixelAvatarAssets', () => {
         expect(asset?.depth).toBeGreaterThanOrEqual(0)
         expect(asset?.depth).toBeLessThanOrEqual(1)
         expect(getPixelEquipmentLayerUrl(assetKey, archetypeId, 'left-far')).toBe(asset?.url)
-        expect(getPixelEquipmentThumbnailUrl(assetKey, archetypeId)).toBe(asset?.url)
+        expect(getPixelEquipmentThumbnailUrl(assetKey, archetypeId)).toBe(asset?.thumb)
+        expect(asset?.thumb).toContain(
+          `/assets/profile-pixel/v2/equipment/starter/${archetypeId}/${slot}/thumb-v2.`,
+        )
+        expect(asset?.thumb).toMatch(/thumb-v2\.[a-f0-9]{12}\.webp/)
       }
     }
   })

@@ -16,7 +16,7 @@ import { getSpiderStarterGarmentSpec } from './spiderStarterGarments'
 /**
  * Equipment ↔ 3D mapping. The server outfit (item ids per slot) is the
  * authority; this module resolves each equipped item to a 3D descriptor keyed
- * by the SAME assetKey that drives the wardrobe thumbnail
+ * by the SAME assetKey that drives the wardrobe layer artwork
  * (`getPixelEquipmentLayerUrl`), so the card picture and the 3D group can never
  * drift apart.
  *

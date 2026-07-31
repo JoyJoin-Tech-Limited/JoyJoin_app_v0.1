@@ -56,7 +56,7 @@ Primary files:
 Boundary:
 - Bot profiles include full matching-compatible data (archetypes, `user_interests`, industry tiers) so `poolMatchingService` scores them identically to real users.
 - `finalizeTestPoolGroups()` creates real `events` / `blindBoxEvents` / `eventAttendance` / `venueTimeSlotBookings` for the test group so the post-match flow (event detail, confirm-attendance) works end-to-end.
-- Cleanup deletes all test pool registrations and icebreaker data but preserves `payments` records.
+- Cleanup uses `apps/server/src/lib/fkCascadeDelete.ts` (`cascadeDeleteByIds`) to discover non-`ON DELETE CASCADE` FK dependents from `pg_constraint` at runtime and delete transitive children deepest-first; this avoids the previous whack-a-mole of hand-enumerated child tables. It deletes all test pool registrations and icebreaker data but preserves `payments` records.
 - Startup sentinel crashes the server if `is_test_bot=true` rows exist in `APP_MODE=production`.
 
 Full guide: `docs/operations/test-mode-operations.md` §H

@@ -14,27 +14,20 @@ description: >
 
 **Purpose:** Fast, deterministic validation that a change or plan satisfies the 5 Harness Engineering Framework pillars before execution proceeds.
 
-This skill is a **bridge**, not a replacement for full deliberation. It provides a lightweight gate when:
-- A Harness deliberation transcript exists but was produced by an earlier version of the skill
-- A PR touches core engines and needs a rapid Harness sanity check
-- An implementation agent claims work is done and wants a structured engineering sign-off
-- A Supervisor needs to verify a plan satisfies pillars before routing to implementation
+A **bridge**, not a replacement for full deliberation. Use when a Harness deliberation transcript exists but needs re-checking, a PR touches core engines and needs a rapid sanity check, an implementation agent claims work is done and wants structured sign-off, or a Supervisor needs to verify a plan before routing.
 
 ---
 
 ## When to use this skill
 
-- "Run the harness gate on this plan"
-- "Harness sanity check this PR"
-- "Does this change pass the 5 pillars?"
-- "Engineering sign-off before merge"
+- "Run the harness gate on this plan" / "Harness sanity check this PR" / "Does this change pass the 5 pillars?" / "Engineering sign-off before merge"
 - Post-deliberation when the Moderator or Controller wants an independent verification
 
 ## When NOT to use this skill
 
 - The task needs full deliberation (use `harness-engineering-deliberation` instead)
 - The change is trivial and no pillar risk exists
-- A full `code-review` skill PR review is already planned (co-load this skill inside that review instead)
+- A full `code-review` PR review is already planned (co-load this skill inside that review instead)
 
 ---
 
@@ -50,7 +43,7 @@ Read one of:
 
 ### 2. Run the 5-pillar checklist
 
-Evaluate each pillar explicitly. The standard is `PASS` (no concerns), `CONCERN` (non-blocking but documented), or `FAIL` (blocking).
+Evaluate each pillar explicitly. Standard: `PASS` (no concerns), `CONCERN` (non-blocking, documented), `FAIL` (blocking).
 
 #### Reliability
 - [ ] Partial-failure paths are handled (retries, timeouts, circuit breakers)
@@ -124,11 +117,9 @@ Evaluate each pillar explicitly. The standard is `PASS` (no concerns), `CONCERN`
 
 ## Quick examples
 
-**User:** "Harness gate this payment webhook PR"
-→ Read diff. Check reliability (idempotency key present? retry with backoff?), security (signature verification? fail-closed?), observability (structured logs for each webhook event?). Verdict: GATE: PASS with CONCERN on observability — webhook timeout path not logged.
+**"Harness gate this payment webhook PR"** → Read diff. Reliability (idempotency key? retry with backoff?), security (signature verification? fail-closed?), observability (structured logs per event?). Verdict: GATE: PASS with CONCERN on observability — webhook timeout path not logged.
 
-**User:** "Does this cache layer change pass the pillars?"
-→ Read diff and deliberation transcript. Check scalability (TTL bounded? eviction policy?), reliability (cache stampede protection?), maintainability (placement in caching-strategy skill boundaries?). Verdict: GATE: BLOCK on reliability — no stampede protection documented.
+**"Does this cache layer change pass the pillars?"** → Read diff + transcript. Scalability (TTL bounded? eviction policy?), reliability (stampede protection?), maintainability (placement per caching-strategy skill?). Verdict: GATE: BLOCK on reliability — no stampede protection documented.
 
 ---
 

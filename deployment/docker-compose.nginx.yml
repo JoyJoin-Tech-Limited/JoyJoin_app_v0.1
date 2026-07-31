@@ -7,7 +7,7 @@ services:
       - .env.production
     environment:
       POSTGRES_USER: joyjoin
-      POSTGRES_PASSWORD: vSmunyGPdmgfM59B+i6b+Y5HIFLhvLat
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env.production}
       POSTGRES_DB: joyjoin
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -20,7 +20,12 @@ services:
         max-file: "5"
 
   granite-embedding:
-    image: ghcr.io/joyjoin-tech-limited/granite-embedding:latest
+    # 2026-07-31: built locally from deploy/granite-embedding instead of
+    # pulling ghcr.io (GHCR package is private and the CVM pull was denied).
+    # Source ships with the repo rsync, same pattern as joyjoin-api/admin.
+    build:
+      context: ../deploy/granite-embedding
+    image: granite-embedding:local
     container_name: joyjoin-granite-embedding
     ports:
       - "127.0.0.1:8000:8000"

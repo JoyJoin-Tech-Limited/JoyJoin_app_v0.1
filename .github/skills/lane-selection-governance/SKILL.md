@@ -13,7 +13,7 @@ description: >
 
 ## Purpose
 
-Prevent **lane drift**: using a lightweight direct-delivery micro-plan for a state-machine change, or forcing a full Harness chamber on a bounded UI tweak. This skill gives a deterministic 4-gate heuristic that any agent or contributor can apply in under 30 seconds.
+Prevent **lane drift**: lightweight direct delivery on a state-machine change, or a full Harness chamber on a bounded UI tweak. A deterministic 4-gate heuristic any agent can apply in under 30 seconds.
 
 ---
 
@@ -25,13 +25,13 @@ Apply these gates **in order**. Stop at the first match.
 
 **Use when ANY of the following is true:**
 
-- The task touches **auth, sessions, or trust boundaries** (new admin route, session store change, auth middleware, bypass login CLI).
-- The task touches **payments or entitlements** (WeChat Pay creation, verification, refund, event-pack credit logic).
-- The task modifies a **deterministic product authority** (matching engine, personality/archetype assignment, assessment scoring).
-- The task adds or modifies a **state machine with partial-failure risk** (icebreaker phase advances, registration session lifecycle, onboarding state transitions).
-- The task requires **database schema change + backfill** (new non-nullable column, unique constraint on existing data, column rename).
-- The task changes **real-time infrastructure** (WebSocket broadcast patterns, heartbeat/reconnect logic, room-based messaging).
-- The user explicitly says "harness this," "run through the full chamber," or "production harness review."
+- Touches **auth, sessions, or trust boundaries** (new admin route, session store change, auth middleware, bypass login CLI)
+- Touches **payments or entitlements** (WeChat Pay creation, verification, refund, event-pack credit logic)
+- Modifies a **deterministic product authority** (matching engine, personality/archetype assignment, assessment scoring)
+- Adds or modifies a **state machine with partial-failure risk** (icebreaker phase advances, registration session lifecycle, onboarding state transitions)
+- Requires **database schema change + backfill** (new non-nullable column, unique constraint on existing data, column rename)
+- Changes **real-time infrastructure** (WebSocket broadcast patterns, heartbeat/reconnect logic, room-based messaging)
+- User explicitly says "harness this," "run through the full chamber," or "production harness review"
 
 **HRC output:** Sprint Contract + PGE loop + Council + Harness Verification Gate (5 pillars) + risk acceptance signatures.
 
@@ -39,9 +39,9 @@ Apply these gates **in order**. Stop at the first match.
 
 **Use when ALL of the following are true:**
 
-- The task spans **>1 workspace** (e.g., server + mini-program, shared + web + admin).
-- The task has **UX or architecture trade-offs with no single obvious solution**.
-- The task does **NOT** touch auth, payments, matching, state machines, or DB migrations.
+- Spans **>1 workspace** (e.g., server + mini-program, shared + web + admin)
+- Has **UX or architecture trade-offs with no single obvious solution**
+- Does **NOT** touch auth, payments, matching, state machines, or DB migrations
 
 **DM output:** 3-perspective consensus (Architect + UX Visionary + Code Realist) + unified plan.
 
@@ -49,8 +49,8 @@ Apply these gates **in order**. Stop at the first match.
 
 **Use when ALL of the following are true:**
 
-- The scope is **broad or ambiguous** (no clear file list, multiple plausible solution shapes).
-- The task does **NOT** yet meet the HRC or DM criteria because discovery is missing.
+- Scope is **broad or ambiguous** (no clear file list, multiple plausible solution shapes)
+- Does **NOT** yet meet HRC or DM criteria because discovery is missing
 
 **Kickoff output:** Verified research brief + approval-first execution plan before implementation.
 
@@ -58,10 +58,10 @@ Apply these gates **in order**. Stop at the first match.
 
 **Use when ALL of the following are true:**
 
-- The task is **bounded** (affected files are known and <10).
-- The task stays **inside one skill-owned boundary**.
-- The task does **NOT** touch auth, payments, matching, state machines, DB migrations, or real-time infrastructure.
-- The path is straightforward (one specialist can own it end-to-end).
+- **Bounded** (affected files known and <10)
+- Stays **inside one skill-owned boundary**
+- Does **NOT** touch auth, payments, matching, state machines, DB migrations, or real-time infrastructure
+- Path is straightforward (one specialist can own it end-to-end)
 
 **Direct output:** Compact micro-plan + implementation + local validation (guardrails, tests, typecheck).
 
@@ -119,12 +119,7 @@ Full reference: [`docs/architecture/icebreaker-lane-selection.md`](../../../docs
 
 ## Agent wiring
 
-Load this skill in the planning phase for:
-
-- **Supervisor** — before routing to any specialist
-- **Planner** — before writing an approval-first execution plan
-- **Auto-Eval** — when auditing whether the right lane was used for a changeset
-- **code-review** — when checking if a PR of a given risk level was under-deliberated
+Load this skill in the planning phase for: **Supervisor** (before routing), **Planner** (before an approval-first plan), **Auto-Eval** (auditing lane choice for a changeset), **code-review** (checking if a PR was under-deliberated).
 
 ---
 

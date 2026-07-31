@@ -6,12 +6,21 @@ interface FlowProgressState {
   completed: boolean
 }
 
+interface UseFlowProgressOptions {
+  durationMs: number
+  shouldReduceMotion: boolean
+  /** When false, the progress stays at 0 until enabled becomes true. */
+  enabled?: boolean
+}
+
 export function useFlowProgress(
   durationMs: number,
   shouldReduceMotion: boolean,
+  enabled = true,
 ): FlowProgressState {
   const [progress, setProgress] = useState(shouldReduceMotion ? 1 : 0)
   const startTimeRef = useRef<number | null>(null)
+  const wasEnabledRef = useRef(enabled)
 
   useEffect(() => {
     if (shouldReduceMotion) {
@@ -19,7 +28,16 @@ export function useFlowProgress(
       return
     }
 
-    setProgress(0)
+    if (!enabled) {
+      setProgress(0)
+      return
+    }
+
+    // Reset only when transitioning from disabled to enabled.
+    if (!wasEnabledRef.current) {
+      setProgress(0)
+    }
+    wasEnabledRef.current = enabled
     startTimeRef.current = Date.now()
 
     const timer = setInterval(() => {
@@ -38,7 +56,7 @@ export function useFlowProgress(
       clearInterval(timer)
       startTimeRef.current = null
     }
-  }, [durationMs, shouldReduceMotion])
+  }, [durationMs, enabled, shouldReduceMotion])
 
   return {
     progress,

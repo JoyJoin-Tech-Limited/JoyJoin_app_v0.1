@@ -238,6 +238,7 @@ const FLOW_EVENT_TYPES = [
   "flow_detail_open",
   "flow_detail_back",
   "flow_node_tap",
+  "flow_tap_ahead",
   "flow_complete",
   // D7 tripwire: a user who tapped the 街头盲盒 banner later hits an
   // alang gate state. >25% gate-hit ratio → mandatory PM revisit.

@@ -81,6 +81,6 @@ In `development` (`NODE_ENV === 'development'`), both `getWechatOpenId` and `get
 - `apps/mini-program/src/lib/api/api.ts` — `Taro.request` wrapper
 - `apps/mini-program/src/hooks/auth/useWeChatLogin.ts` — Mini Program login hook
 - `apps/mini-program/src/pages/blind-box-payment/index.tsx` — `Taro.requestPayment` launch
-- `apps/user-client/src/hooks/useWeChatLogin.ts` — Web OAuth / `wx.login()` hybrid hook
+- `archived/workspaces/user-client/src/hooks/useWeChatLogin.ts` — Archived Web OAuth / `wx.login()` hybrid hook
 - `docs/PLATFORM_COORDINATION.md` — Cross-platform auth/payment coordination playbook
 - `docs/wechat-mini-program-reference.md` — Low-level WeChat API and rpx reference

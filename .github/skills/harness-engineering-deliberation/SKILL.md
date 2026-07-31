@@ -14,7 +14,7 @@ description: >
 
 # Harness Engineering Deliberation
 
-**Core rule:** The Harness deliberation chamber operates entirely **before** user-facing output. It is a **runtime layer** that governs how agents reach refined, pre-agreed decisions — not a replacement for direct delivery on trivial tasks.
+**Core rule:** The Harness deliberation chamber operates entirely **before** user-facing output — a **runtime layer** for refined, pre-agreed decisions, not a replacement for direct delivery on trivial tasks.
 
 Use it when:
 - Engineering quality must be **pre-validated** against the 5 Harness pillars
@@ -23,35 +23,17 @@ Use it when:
 - A **new public API** or breaking contract needs rigorous review
 - Explicit user request: "harness this," "production harness," "engineering quality gate"
 
-Do **not** use it for:
-- Single-domain bug fixes <50 lines
-- Copy, styling, or color changes
-- Documentation-only updates
-- Tasks where one specialist clearly owns the scope and no pillar risk exists
+Do **not** use it for: single-domain bug fixes <50 lines; copy/styling/color changes; documentation-only updates; tasks one specialist clearly owns with no pillar risk.
 
 ---
 
 ## The Harness Pipeline
 
-```
-Phase 0: Harness Initialization
-    ↓
-[Mode: pge-council]       [Mode: council-only]      [Mode: token-ring]
-    ↓                            ↓                         ↓
-Phase 1: PGE Loop         Skip to Phase 2           Phase 7: Token Ring
-    ↓                            ↓                         ↓
-Phase 2: Council Mode ←———→  Phase 2: Council    →→→   Phase 5b: Harness Gate
-    ↓                            ↓
-Phase 3: Peer Review           Phase 3: Peer Review
-    ↓                            ↓
-Phase 4: Roundtable            Phase 4: Roundtable
-    ↓                            ↓
-Phase 5a: Consensus (ACK-ALL)  Phase 5a: Consensus
-    ↓                            ↓
-Phase 5b: Harness Verification Gate (all modes)
-    ↓
-Phase 6: Final Output + Transcript Persistence
-```
+- **pge-council (default):** Phase 0 Init → Phase 1 PGE Loop → Phase 2 Council → Phase 3 Peer Review → Phase 4 Roundtable → Phase 5a Consensus (ACK-ALL) → Phase 5b Harness Gate → Phase 6 Final Output
+- **council-only:** Phase 0 → skip to Phase 2 → same as above
+- **token-ring:** Phase 0 → Phase 7 Token Ring → Phase 5b → Phase 6
+
+Phase 5b (Harness Verification Gate) and Phase 6 (Final Output + transcript persistence) run in **all modes**.
 
 ---
 
@@ -63,15 +45,11 @@ Phase 6: Final Output + Transcript Persistence
 | **Beta** | Principal Software Engineer / Backend Engineer | **Scalability** | Concurrency, N+1 avoidance, pagination, lock contention, horizontal scaling, memory/CPU bounds | Architecture with known scalability ceiling or performance cliff |
 | **Gamma** | Verifier / Launch Readiness Agent | **Security & Observability** | Fail-closed defaults, auth boundaries, secret handling, structured logging, metrics, alerts, audit trails | Architecture weakening trust boundaries or removing observability |
 
-**Note on Maintainability:** All three delegates assess maintainability/architecture fit, but Gamma (Security & Observability) carries primary veto authority on code placement and domain boundary violations.
+**Note on Maintainability:** All three delegates assess maintainability/architecture fit; Gamma carries primary veto authority on code placement and domain boundary violations.
 
 ### Veto override rule
 
-A veto can be overridden only with:
-- **2/3 consensus** (both non-vetoing delegates agree)
-- **Written justification** in the Harness transcript
-- **Risk acceptance signature** from the overriding party
-- **Documented mitigation** for the vetoed concern
+A veto can be overridden only with: **2/3 consensus** (both non-vetoing delegates agree) + **written justification** in the transcript + **risk acceptance signature** from the overriding party + **documented mitigation** for the vetoed concern.
 
 ---
 
@@ -86,17 +64,9 @@ A veto can be overridden only with:
 
 ### Phase 1 — PGE Loop (pge-council only)
 
-**Planner (Controller or Planner delegate):**
-- Create **Sprint Contract**: Goal + 3-point Acceptance Criteria + Technical Constraints
-
-**Generator (Alpha delegate):**
-- Execute Sprint Contract. Produce first-draft architectural proposal.
-
-**Evaluator (Gamma delegate):**
-- Compare draft against Acceptance Criteria.
-- `VERDICT: ACCEPT` or `VERDICT: REJECT - [reason]`
-- If `REJECT`, append feedback to Sprint Contract and loop back to Generator.
-- **Max iterations:** 3.
+- **Planner (Controller or Planner delegate):** create **Sprint Contract** — Goal + 3-point Acceptance Criteria + Technical Constraints
+- **Generator (Alpha):** execute the contract; produce first-draft architectural proposal
+- **Evaluator (Gamma):** compare draft against Acceptance Criteria → `VERDICT: ACCEPT` or `VERDICT: REJECT - [reason]`; on REJECT, append feedback to the contract and loop back to Generator. **Max iterations: 3**
 
 ### Phase 2 — Council Mode: Team Assembly
 
@@ -104,9 +74,7 @@ Spawn 3 delegates **in isolation**. Each returns a proposal JSON including `harn
 
 ### Phase 3 — Anonymous Peer Review
 
-Proposals stripped to X/Y/Z. Each delegate reviews 2 they did NOT write.
-
-**Required per critique:** 1 strength, 1 actionable weakness, 1 Harness pillar concern.
+Proposals stripped to X/Y/Z. Each delegate reviews 2 they did NOT write. **Required per critique:** 1 strength, 1 actionable weakness, 1 Harness pillar concern.
 
 ### Phase 4 — Roundtable
 
@@ -142,12 +110,10 @@ Any `CONCERN` or `FAIL` → return to Phase 4 with pillar as debate topic.
 
 **When to use:** Requirements are genuinely ambiguous; no Sprint Contract can be formed.
 
-**Protocol:**
-1. Token circulates Alpha → Beta → Gamma → Alpha.
-2. Each agent appends to token history with a `HarnessDeliberationState` delta.
-3. **Termination:** Full cycle with no changes = unanimous agreement.
-4. **Max cycles:** 5 rotations. If not converged, escalate to human.
-5. After convergence → Phase 5b → Phase 6.
+1. Token circulates Alpha → Beta → Gamma → Alpha; each agent appends a `HarnessDeliberationState` delta to token history
+2. **Termination:** full cycle with no changes = unanimous agreement
+3. **Max cycles:** 5 rotations; if not converged, escalate to human
+4. After convergence → Phase 5b → Phase 6
 
 ---
 
@@ -163,20 +129,15 @@ The **Harness Runtime Controller** auto-activates when any of these are true:
 | High blast radius + novelty | File not in existing track + >100 lines + touches ≥2 workspaces |
 | Explicit Harness request | Prompt contains "harness", "reliability", "scalability", "security review", "observability gap", "production harness" |
 
-**Anti-triggers:**
-- Single-file changes <50 lines
-- Test-only or docs-only changes
-- Copy or translation changes
+**Anti-triggers:** single-file changes <50 lines; test-only or docs-only changes; copy or translation changes.
 
 ---
 
 ## Quick Examples
 
-**User:** "Harness the best approach for real-time social icebreaker state sync"
-→ Controller selects `pge-council`. Planner creates Sprint Contract. Alpha proposes WS + polling hybrid. Beta questions concurrency under 1000+ concurrent rooms. Gamma requires structured trace logging per room. After 2 PGE iterations and 1 debate round, consensus: WS primary with polling fallback + per-room trace context + bounded room memory. Harness Gate: all 5 pillars PASS.
+**"Harness the best approach for real-time social icebreaker state sync"** → `pge-council`. Alpha proposes WS + polling hybrid; Beta questions concurrency under 1000+ rooms; Gamma requires per-room structured trace logging. After 2 PGE iterations + 1 debate round: WS primary with polling fallback + per-room trace context + bounded room memory. Gate: all 5 pillars PASS.
 
-**User:** "What should our caching strategy be? Requirements are unclear."
-→ Controller selects `token-ring`. Token circulates among Alpha (cache invalidation reliability), Beta (cache size scalability), Gamma (observability for cache misses). After 3 cycles, emergent consensus: Redis for hot paths with 5-minute TTL + structured cache-hit/miss metrics + stale-while-revalidate for non-critical reads. Harness Gate: all 5 pillars PASS.
+**"What should our caching strategy be? Requirements are unclear."** → `token-ring`. Token circulates among Alpha (invalidation reliability), Beta (cache size scalability), Gamma (miss observability). After 3 cycles: Redis hot paths, 5-min TTL, hit/miss metrics, stale-while-revalidate for non-critical reads. Gate: all 5 pillars PASS.
 
 ---
 
@@ -213,24 +174,23 @@ The **Harness Runtime Controller** auto-activates when any of these are true:
 
 | Skill | When to hand off |
 |-------|-----------------|
-| `first-principles-velocity` | Apply bottleneck analysis to deliberation scope; model tier selection |
-| `orchestration-turn-reporting` | Turn-summary JSON format for Controller and delegates |
-| `harness-verification-gate` | Post-deliberation or standalone rapid Harness sanity check |
-| `multi-agent-deliberation` | General-purpose architecture/design review when Harness pillars are not the primary concern |
-| `server-domain-architecture` | Alpha/Beta canonical reference for backend decisions |
-| `reliability-and-state-integrity` | Alpha's canonical reference for transactions, retries, idempotency |
-| `database-query-optimization` | Beta's canonical reference for N+1, pagination, index strategy |
-| `auth-session-and-safety-boundaries` | Gamma's canonical reference for security posture |
-| `platform-observability-and-ops` | Gamma's canonical reference for logging, metrics, tracing |
-| `code-review` | The Harness Framework review lens already embedded in PR reviews |
-| `testing-and-regression-guardrails` | Lock in Harness deliberation outcomes with invariant/regression tests |
+| `first-principles-velocity` | Bottleneck analysis; model tier selection |
+| `orchestration-turn-reporting` | Turn-summary JSON for Controller and delegates |
+| `harness-verification-gate` | Standalone rapid Harness re-check |
+| `multi-agent-deliberation` | General design review when Harness pillars aren't primary |
+| `server-domain-architecture` | Alpha/Beta canonical backend reference |
+| `reliability-and-state-integrity` | Alpha reference: transactions, retries, idempotency |
+| `database-query-optimization` | Beta reference: N+1, pagination, indexes |
+| `auth-session-and-safety-boundaries` | Gamma reference: security posture |
+| `platform-observability-and-ops` | Gamma reference: logging, metrics, tracing |
+| `code-review` | Harness lens already embedded in PR reviews |
+| `testing-and-regression-guardrails` | Lock outcomes in with invariant/regression tests |
 
 ## Canonical References
 
 - `.github/agents/harness-runtime-controller.agent.md`
 - `.github/skills/harness-verification-gate/SKILL.md`
 - `.github/skills/multi-agent-deliberation/SKILL.md`
-- `.github/skills/code-review/SKILL.md`
 - `.github/orchestration.yaml`
 - `.github/agents/manifest.json`
 - `scripts/orchestration/orchestration-supervisor.mjs`

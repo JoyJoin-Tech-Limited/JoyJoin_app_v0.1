@@ -6,9 +6,9 @@ user-invocable: true
 argument-hint: "Describe the visual asset or screen needed: type (mascot illustration / UI screen / marketing graphic / icon set), target platform (web/mini-program/both), emotional tone, any specific scene or layout requirements, and where it will be used in the product."
 agents: []
 handoffs:
-  - label: "Asset brief ready — route to web frontend implementation"
+  - label: "Asset brief ready — route to archived web reference consultation"
     agent: "Expert React Frontend Engineer"
-    prompt: "The design brief is ready (Lovart asset or Stitch screen). Implement the component or screen in apps/user-client, following asset placement, lazy loading, and import path rules from frontend-component-architecture."
+    prompt: "The design brief is ready (Lovart asset or Stitch screen). The web client is archived: consult archived/workspaces/user-client/ (read-only) only if historical web context is needed. Live user-facing implementation goes to the mini-program (Taro Mini-Program Frontend Engineer)."
   - label: "Asset brief ready — route to mini-program implementation"
     agent: "Taro Mini-Program Frontend Engineer"
     prompt: "The design brief is ready (Lovart asset or Stitch screen). Implement the mini-program component or page in apps/mini-program, following bundle size, format optimization, and subpackage rules from mini-program-frontend-excellence."

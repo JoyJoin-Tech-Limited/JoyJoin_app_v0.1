@@ -1,18 +1,19 @@
 skill: process-parity
 
 primary_ownership: >
-  Cross-platform parity discipline: ensuring changes in one client surface are reflected
-  correctly in sibling platforms. Mini-program is launch-primary; shared contracts first;
-  platform-idiomatic UI; explicit parity decisions.
+  Cross-surface parity discipline: ensuring changes in one client surface are reflected
+  correctly in sibling surfaces. The web client was archived 2026-05; live surfaces are
+  mini-program (launch-primary), admin-client, server, and shared. Shared contracts
+  first; surface-idiomatic UI; explicit parity decisions.
 
 use_when:
-  - adding a UI flow to web that must also exist in mini-program
-  - changing API contracts consumed by both web and mini-program
-  - modifying auth, payment, or onboarding logic that spans platforms
-  - auditing whether a feature gap exists between web and WeChat Mini Program
+  - adding a UI flow to one client that must also exist in another
+  - changing API contracts consumed by mini-program and admin-client
+  - modifying auth, payment, or onboarding logic that spans surfaces
+  - auditing whether a feature gap exists between mini-program and admin portal
 
 do_not_use_when:
-  - single-platform-only feature with explicit product exclusion
+  - single-surface-only feature with explicit product exclusion
   - backend-only change with no client impact
   - admin-only changes
 
@@ -21,10 +22,9 @@ strong_triggers:
   - platform parity
   - mini-program parity
   - sibling platform
-  - web and mini-program
   - parity audit
   - feature gap
-  - both platforms
+  - both surfaces
 
 owned_files: []
 
@@ -33,12 +33,12 @@ owned_paths: []
 owned_symbols:
   - Launch-primary (mini-program)
   - Shared contracts
-  - Platform-idiomatic UI
+  - Surface-idiomatic UI
   - Explicit parity decisions
 
 related_skills:
   - skill: platform-coordination-protocol
-    when: Sibling-platform review triggers and coordination rules
+    when: Sibling-surface review triggers and coordination rules
   - skill: mini-program-frontend-excellence
     when: Taro-specific UI quality
   - skill: frontend-component-architecture

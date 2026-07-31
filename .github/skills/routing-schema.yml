@@ -70,8 +70,8 @@
 #   - profileExtendedComplete
 #   - hasSeenProfileReview
 # owned_files:
-#   - apps/user-client/src/features/onboarding/**
-#   - apps/user-client/src/hooks/useAuth.ts
+#   - apps/mini-program/src/pages/onboarding/**
+#   - apps/mini-program/src/hooks/auth/useWeChatLogin.ts
 # owned_paths:
 #   - /onboarding/setup
 #   - /onboarding/extended

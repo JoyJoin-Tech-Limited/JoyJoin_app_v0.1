@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { FLOW_SHELL_COPY } from '@shared/copy/flowAnimationCopy'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { flowAnalytics } from '../../lib/analytics/flowAnalytics'
@@ -27,14 +27,17 @@ export default function JoyJoinPlayModeFlow({
   initialDetailId,
 }: JoyJoinPlayModeFlowProps) {
   const { shouldReduceMotion } = useMiniRevealMotion()
+  const [entranceDone, setEntranceDone] = useState(shouldReduceMotion)
   const { progress, completed } = useFlowProgress(
     FLOW_ANIMATION_TIMING.experienceRevealMs,
     shouldReduceMotion,
+    entranceDone,
   )
   const [detailId, setDetailId] = useState<ExperienceDefinition['id'] | null>(initialDetailId ?? null)
   const mountedAtRef = useRef(Date.now())
   const detailOpenedAtRef = useRef<number | null>(null)
   const detail = EXPERIENCE_DEFINITIONS.find((entry) => entry.id === detailId) ?? null
+  const handleEntranceResolve = useCallback(() => setEntranceDone(true), [])
 
   useEffect(() => {
     flowAnalytics.trackView('intro')
@@ -85,6 +88,7 @@ export default function JoyJoinPlayModeFlow({
         actionLabel={FLOW_SHELL_COPY.ctaExplore}
         actionVisible={progress >= 0.62}
         onAction={handleAction}
+        onEntranceResolve={handleEntranceResolve}
       >
         <ExperienceEntryFlow
           entries={EXPERIENCE_DEFINITIONS}
@@ -94,7 +98,7 @@ export default function JoyJoinPlayModeFlow({
           onOpenDetail={handleOpenDetail}
         />
       </FlowShell>
-      {detail ? <ExperienceDetail experience={detail} onBack={handleCloseDetail} /> : null}
+      {detail ? <ExperienceDetail experience={detail} archetypeId={archetypeId} onBack={handleCloseDetail} /> : null}
     </>
   )
 }

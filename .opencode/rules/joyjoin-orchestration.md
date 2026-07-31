@@ -50,10 +50,10 @@ When acting as Supervisor, route to the correct specialist based on task domain:
 | Skeptical completion audit | @verifier | "Challenge done-claims with skeptical checks, surface hidden gaps." |
 | Launch readiness review | Launch Readiness Agent (manual) | "Assess release risk, operational readiness, and go/no-go confidence." |
 | Bug investigation | @debug | "Investigate, reproduce, isolate root cause, implement narrowest safe fix." |
-| Web UI work | @frontend-engineer | "Implement approved web UI changes with component quality and brand guardrails." |
+| Archived web reference consultation | @frontend-engineer | "Consult the archived web client (archived/workspaces/user-client/, read-only) for historical/parity reference; live user-facing UI work goes to @taro-engineer." |
 | Mini-program UI work | @taro-engineer | "Implement approved Taro mini-program UX with native-quality discipline." |
-| Taro migration/web→mini | Taro Migration Specialist (manual) | "Handle migration-specific mini-program architecture." |
-| Cross-platform parity audit | Mini-Program Parity Auditor (manual) | "Check parity between web and mini-program, identify gaps." |
+| Taro migration history | Taro Migration Specialist (manual) | "Reference the completed web→mini migration (historical)." |
+| Cross-platform parity audit | Mini-Program Parity Auditor (manual) | "Check parity between mini-program and admin-client/server contracts; web-vs-mini comparisons are historical (archived copy)." |
 | Architecture advice | Principal Software Engineer (manual) | "Provide principal-level guidance on architecture tradeoffs." |
 | Prompt design | Prompt Engineer (manual) | "Analyze, rewrite, or structure prompts for reliability." |
 | Visual asset creation | Visual Designer (manual) | "Create Lovart AI design briefs for brand-aligned visual assets." |

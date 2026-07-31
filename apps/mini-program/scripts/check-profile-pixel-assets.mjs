@@ -12,11 +12,16 @@ const ASSET_ROOT = path.join(APP_ROOT, 'src')
 const V2_ROOT = process.env.PROFILE_PIXEL_BUILD_V2_ROOT
   ? path.resolve(process.env.PROFILE_PIXEL_BUILD_V2_ROOT)
   : path.join(ASSET_ROOT, 'assets', 'profile-pixel', 'v2')
+const STAGE_V2_ROOT = process.env.PROFILE_PIXEL_STAGE_V2_ROOT
+  ? path.resolve(process.env.PROFILE_PIXEL_STAGE_V2_ROOT)
+  : V2_ROOT
 const CDN_MANIFEST_PATH = process.env.PROFILE_PIXEL_CDN_MANIFEST_PATH
   ? path.resolve(process.env.PROFILE_PIXEL_CDN_MANIFEST_PATH)
   : path.join(__dirname, 'cdn-asset-manifest.json')
 const AVATAR_MANIFEST_PATH = path.join(V2_ROOT, 'avatar-assets-v2.json')
-const STAGE_MANIFEST_PATH = path.join(V2_ROOT, 'stage-assets-v1.json')
+const STAGE_MANIFEST_PATH = process.env.PROFILE_PIXEL_STAGE_MANIFEST_PATH
+  ? path.resolve(process.env.PROFILE_PIXEL_STAGE_MANIFEST_PATH)
+  : path.join(V2_ROOT, 'stage-assets-v1.json')
 const SOURCE_REGISTRY_PATH = path.join(
   process.env.PROFILE_PIXEL_SOURCE_ROOT
     ? path.resolve(process.env.PROFILE_PIXEL_SOURCE_ROOT)
@@ -25,6 +30,7 @@ const SOURCE_REGISTRY_PATH = path.join(
 )
 const CANVAS_WIDTH = 512
 const CANVAS_HEIGHT = 768
+const THUMBNAIL_SIZE = 256
 const LEGACY_MAX_BYTES = 64 * 1024
 const HASH_LENGTH = 12
 const PORTABLE_RELATIVE_PATH_LENGTH = 200
@@ -82,6 +88,11 @@ function assertSafeAssetKey(assetKey) {
 function resolveV2AssetPath(relativePath) {
   const prefix = 'assets/profile-pixel/v2/'
   return path.join(V2_ROOT, relativePath.slice(prefix.length))
+}
+
+function resolveStageV2AssetPath(relativePath) {
+  const prefix = 'assets/profile-pixel/v2/'
+  return path.join(STAGE_V2_ROOT, relativePath.slice(prefix.length))
 }
 
 function placementsEqual(actual, expected) {
@@ -234,7 +245,7 @@ async function main() {
   }
   async function inspectStageWebp(relativePath, label) {
     assertSafeV2Path(relativePath, label)
-    const absolutePath = resolveV2AssetPath(relativePath)
+    const absolutePath = resolveStageV2AssetPath(relativePath)
     const buffer = await fs.readFile(absolutePath)
     if (buffer.length === 0) throw new Error(`${relativePath} is empty`)
     const metadata = await sharp(buffer).metadata()
@@ -266,8 +277,8 @@ async function main() {
   if (avatarManifest.width !== CANVAS_WIDTH || avatarManifest.height !== CANVAS_HEIGHT) {
     throw new Error(`Avatar manifest canvas must be ${CANVAS_WIDTH}x${CANVAS_HEIGHT}`)
   }
-  if (avatarManifest.equipmentLayersDoubleAsThumbnails !== true) {
-    throw new Error('Avatar manifest must declare equipmentLayersDoubleAsThumbnails=true')
+  if (avatarManifest.equipmentLayersDoubleAsThumbnails !== false) {
+    throw new Error('Avatar manifest must declare equipmentLayersDoubleAsThumbnails=false when dedicated thumbnails exist')
   }
   if (!avatarManifest.items || typeof avatarManifest.items !== 'object' || Array.isArray(avatarManifest.items)) {
     throw new Error('Avatar manifest must include an item registry')
@@ -395,6 +406,12 @@ async function main() {
     if (typeof item.layer !== 'string' || !item.layer.startsWith(layerPrefix)) {
       throw new Error(`${assetKey} layer must live under ${layerPrefix}`)
     }
+    const thumbPrefix = assetKey.startsWith('equipment/starter/')
+      ? 'assets/profile-pixel/v2/equipment/starter/'
+      : `assets/profile-pixel/v2/equipment/catalog/${assetKey.split('/').slice(1).join('/')}/thumb-v2.`
+    if (typeof item.thumb !== 'string' || !item.thumb.startsWith(thumbPrefix)) {
+      throw new Error(`${assetKey} thumb must live under ${thumbPrefix}`)
+    }
     if (!assetKey.startsWith('equipment/starter/')) {
       const sourceItem = sourceItemsByKey.get(assetKey)
       if (
@@ -407,6 +424,7 @@ async function main() {
       }
     }
     expectedV2Paths.add(item.layer)
+    expectedV2Paths.add(item.thumb)
     let layer = inspectedLayers.get(item.layer)
     if (!layer) {
       layer = await inspectTransparentWebp(item.layer, {
@@ -416,6 +434,15 @@ async function main() {
       })
       inspectedLayers.set(item.layer, layer)
       totalBytes += layer.bytes
+    }
+    const thumb = await inspectTransparentWebp(item.thumb, {
+      maxWidth: THUMBNAIL_SIZE,
+      maxHeight: THUMBNAIL_SIZE,
+      label: `${assetKey} thumb`,
+    })
+    totalBytes += thumb.bytes
+    if (thumb.metadata.width !== thumb.metadata.height) {
+      throw new Error(`${assetKey} thumb must be square (${thumb.metadata.width}x${thumb.metadata.height})`)
     }
     for (const [archetypeId, placement] of placementEntries) {
       if (!SAFE_ARCHETYPE_IDS.has(archetypeId)) {

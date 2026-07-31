@@ -13,15 +13,13 @@ description: >
 
 ## Purpose
 
-The Task Creator is the **entry-point skill** for all implementation work. It transforms vague or specific user requests into **structured, actionable task metadata** that downstream agents can consume directly.
-
-**Key responsibility:** Auto-classify the harness tier and Sprint Contract requirement **before** any implementation begins.
+**Entry-point skill for all implementation work.** Transforms vague or specific user requests into **structured, actionable task metadata** for downstream agents. Key responsibility: auto-classify the harness tier and Sprint Contract requirement **before** any implementation begins.
 
 ## When to Use
 
 - User says "build", "fix", "add", "change", "refactor", "implement", "optimize", "audit", or "explore" anything
 - User describes a feature, bug, or improvement without explicit task structure
-- Before routing to any implementation specialist (Backend Engineer, Frontend Engineer, etc.)
+- Before routing to any implementation specialist
 - When the task scope is unclear and needs decomposition
 
 ## Output Format
@@ -39,10 +37,7 @@ See [`references/output-schema.md`](./references/output-schema.md) for the full 
 
 ### Step 1: Parse User Intent
 
-Extract from the user's request:
-- **Mission:** One sentence, plain language, no jargon
-- **Description:** Expanded context
-- **Implicit scope:** What files/workspaces are likely affected
+Extract: **Mission** (one sentence, plain language, no jargon), **Description** (expanded context), **Implicit scope** (likely affected files/workspaces).
 
 ### Step 2: Auto-Classify Harness Tier (MANDATORY)
 
@@ -54,16 +49,11 @@ node scripts/harness-auto-trigger.mjs \
   --proposed-files=<files-you-plan-to-touch>
 ```
 
-**Incorporate the result into task metadata.**
+Incorporate the result into task metadata.
 
 ### Step 3: Determine Affected Workspaces
 
-From file paths or domain knowledge:
-- `apps/server/` → `server`
-- `apps/user-client/` → `user-client`
-- `apps/admin-client/` → `admin-client`
-- `apps/mini-program/` → `mini-program`
-- `packages/shared/` → `shared`
+`apps/server/` → `server`; `apps/admin-client/` → `admin-client`; `apps/mini-program/` → `mini-program`; `packages/shared/` → `shared`.
 
 ### Step 4: Recommend Model Tiers
 
@@ -75,10 +65,7 @@ node scripts/select-model-tier.mjs \
 
 ### Step 5: Draft Acceptance Criteria
 
-Pre-fill 2–3 acceptance criteria based on:
-- The user's explicit requirements
-- The harness tier (Tier 2+ gets more detailed criteria)
-- The affected domain (API routes get HTTP criteria, UI gets visual criteria)
+Pre-fill 2–3 criteria based on: the user's explicit requirements, the harness tier (Tier 2+ gets more detail), the affected domain (API routes get HTTP criteria, UI gets visual criteria).
 
 ### Step 6: Determine Routing
 
@@ -93,13 +80,7 @@ Pre-fill 2–3 acceptance criteria based on:
 
 ## Integration with Supervisor
 
-**The Supervisor should load this skill on every task before routing.**
-
-When Supervisor receives a user request:
-1. Load `task-creator` skill
-2. Run the workflow above
-3. Use the output JSON for routing decisions
-4. Include the full task metadata in handoff prompts
+**The Supervisor should load this skill on every task before routing:** run the workflow above, use the output JSON for routing decisions, and include the full task metadata in handoff prompts.
 
 ### Supervisor Handoff Format
 
@@ -120,17 +101,11 @@ When routing to an implementation agent, include:
 
 ## Examples
 
-See [`references/examples.md`](./references/examples.md) for three worked examples:
-- Tier 1: Typo fix
-- Tier 2: New feature (CSV export)
-- Tier 3: Core engine change (matching algorithm)
+See [`references/examples.md`](./references/examples.md) for three worked examples: Tier 1 typo fix, Tier 2 new feature (CSV export), Tier 3 core engine change (matching algorithm).
 
 ## Cross-Platform Awareness
 
-When the task involves both web and mini-program:
-- Set `routing.lane` to `parity` or `both`
-- Include `Mini-Program Parity Auditor` in the workflow
-- Note `BOTH_REQUIRED` in the task metadata
+When the task spans multiple client surfaces (mini-program and admin-client): set `routing.lane` to `parity` or `both`, include `Mini-Program Parity Auditor` in the workflow, and note `BOTH_REQUIRED` in the task metadata.
 
 ## Related Skills
 

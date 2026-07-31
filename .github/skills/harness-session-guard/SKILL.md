@@ -12,8 +12,7 @@ description: >
 
 ## Purpose
 
-The Session Guard eliminates the need for manual script execution. It runs **automatically at the start of every implementation task** to:
-
+Runs **automatically at the start of every implementation task** to:
 1. Classify the task tier (1, 2, or 3) from natural language
 2. Detect if a Sprint Contract is required
 3. Announce the classification to the user
@@ -21,19 +20,9 @@ The Session Guard eliminates the need for manual script execution. It runs **aut
 
 ## When to Apply
 
-**Apply this guard at the very beginning of EVERY task that involves:**
-- Writing or modifying code
-- Creating new files
-- Refactoring existing code
-- Adding routes, components, pages, or features
-- Database schema or migration work
-- Cross-workspace changes
+**Apply at the very beginning of EVERY task that involves:** writing/modifying code, creating files, refactoring, adding routes/components/pages/features, DB schema or migration work, cross-workspace changes.
 
-**Skip this guard for:**
-- Questions and explanations (no code changes)
-- Documentation-only updates (no code changes)
-- Reading/debugging existing code without modifications
-- Running tests or commands
+**Skip for:** questions/explanations, documentation-only updates, read-only debugging, running tests or commands.
 
 ## How to Use (Agent Protocol)
 
@@ -47,12 +36,7 @@ node scripts/harness-auto-trigger.mjs \
   --proposed-files=<files-you-plan-to-touch>
 ```
 
-The script returns JSON with:
-- `tier`: 1, 2, or 3
-- `contractRequired`: true/false
-- `triggerWords`: which words triggered the classification
-- `action`: "PROCEED" or "PAUSE_FOR_CONTRACT"
-- `recommendedNextStep`: what to do next
+Script returns JSON: `tier` (1/2/3), `contractRequired` (bool), `triggerWords`, `action` ("PROCEED" | "PAUSE_FOR_CONTRACT"), `recommendedNextStep`.
 
 ### Step 2: Announce to User
 
@@ -66,18 +50,7 @@ The script returns JSON with:
 - Action: {proceed|pause for contract}
 ```
 
-**Examples:**
-
-**Tier 1 — proceed:**
-```
-🔍 Harness Classification
-- Tier: 1 (Direct Delivery)
-- Contract required: no
-- Triggered by: small fix indicator
-- Action: proceed with implementation, run gate after
-```
-
-**Tier 2 — pause:**
+**Example (Tier 2 — pause):**
 ```
 🔍 Harness Classification
 - Tier: 2 (Sprint Contract)
@@ -86,14 +59,7 @@ The script returns JSON with:
 - Action: pause for Sprint Contract negotiation
 ```
 
-**Tier 3 — schedule:**
-```
-🔍 Harness Classification
-- Tier: 3 (Full Harness Lane)
-- Contract required: yes + deliberation
-- Triggered by: "matching engine", core engine file
-- Action: schedule HRC deliberation before implementation
-```
+Tier 1 → proceed with implementation, run gate after. Tier 3 → schedule HRC deliberation before implementation.
 
 ### Step 3: Follow the Action
 
@@ -117,128 +83,48 @@ Then:
 1. Show the user the generated contract
 2. Ask them to review/amend acceptance criteria
 3. Update status to "accepted" when ready
-4. Call `node scripts/harness-contract-gate.mjs --task-id=<id>` to verify
+4. Run `node scripts/harness-contract-gate.mjs --task-id=<id>` to verify
 5. Only then begin implementation
 
-**If a contract already exists (e.g., resuming work):**
-```bash
-node scripts/harness-contract-gate.mjs --task-id=<id>
-```
-
-If `ok: true` → proceed.  
-If `ok: false` → show the user why and what to fix.
+**If a contract already exists (e.g., resuming work):** run the gate command above. `ok: true` → proceed; `ok: false` → show the user why and what to fix.
 
 ## Trigger Word Reference
 
-The auto-trigger recognizes these patterns:
-
 ### Tier 3 (Core Engine / Safety-Critical)
-- "matching engine", "matching algorithm", "personality system"
-- "archetype chemistry", "core engine"
+- "matching engine", "matching algorithm", "personality system", "archetype chemistry", "core engine"
 - "auth rewrite", "session middleware", "token rotation"
 - "payment flow", "WeChat Pay", "refund engine"
 - "major refactor", "restructure", "microservice", "sharding"
 
 ### Tier 2 (New Features / Multi-File)
-- "add a new route/endpoint/API/page/component"
-- "new route", "new page", "new component"
+- "add a new route/endpoint/API/page/component", "new route", "new page", "new component"
 - "schema change", "migration"
 - "UI flow", "state machine", "websocket"
 - "cross-workspace", "API contract"
 - "admin dashboard", "finance report"
 
 ### Tier 1 (Small Fixes)
-- "fix a typo", "fix copy", "fix text", "fix label"
-- "update copy", "update color", "update spacing"
+- "fix a typo", "fix copy", "fix text", "fix label", "update copy", "update color", "update spacing"
 - "adjust padding", "adjust margin"
 - "remove console.log", "remove unused"
 - "rename variable", "one-line fix", "quick fix"
 
 ## Edge Cases
 
-**User asks for something ambiguous:**
-> "Can you update the refund page?"
-
-This could be Tier 1 (copy change) or Tier 2 (new feature). **Ask for clarification:**
-> "Is this a copy/text change or are we adding new functionality?"
-
-**User says "quick fix" but files suggest Tier 2:**
-Trust the file patterns over the user's wording. If they say "quick fix" but want to touch `apps/server/src/routes/`, classify as Tier 2.
-
-**User is resuming work mid-session:**
-Check if a contract already exists in `.git/.orchestration/sprints/`. If yes, run the gate. If no, re-classify.
+- **Ambiguous request** (e.g., "update the refund page" — copy change or new feature?): ask for clarification before classifying.
+- **User says "quick fix" but files suggest Tier 2:** trust file patterns over wording. "Quick fix" touching `apps/server/src/routes/` → Tier 2.
+- **Resuming work mid-session:** check for an existing contract in `.git/.orchestration/sprints/`. If present, run the gate; if not, re-classify.
 
 ## Example Full Session Flow
 
 **User:** "Add a CSV export button to the admin finance page"
 
-**Agent (internal):**
-```bash
-node scripts/harness-auto-trigger.mjs \
-  --prompt="Add a CSV export button to the admin finance page" \
-  --proposed-files=apps/admin-client/src/pages/Finance.tsx,apps/server/src/routes/domains/refunds.ts
-```
-**Result:** tier=2, contractRequired=true, action=PAUSE_FOR_CONTRACT
-
-**Agent (to user):**
-```
-🔍 Harness Classification
-- Tier: 2 (Sprint Contract)
-- Contract required: yes
-- Triggered by: "admin finance page", file pattern: routes/, pages/
-- Action: pause for Sprint Contract negotiation
-
-I'll generate a Sprint Contract first. This ensures we agree on what "done" looks like before I start coding.
-```
-
-**Agent (generates contract, shows to user):**
-```
-Generated contract at .git/.orchestration/sprints/sprint-contract.finance-csv-20260423.md
-
-Key acceptance criteria:
-- AC-01: GET /api/admin/refunds/export returns 200 with Content-Type: text/csv
-- AC-02: Route rejects non-admin sessions with 403
-- AC-03: CSV includes headers: refund_id, payment_id, amount, status...
-
-Please review — any criteria to add, remove, or change?
-```
-
-**User:** "Looks good, but add a rate limit criterion"
-
-**Agent (updates contract, accepts):**
-```
-✅ Contract accepted. Running gate check...
-```
-
-**Agent (runs gate, then implements):**
-```bash
-node scripts/harness-contract-gate.mjs --task-id=finance-csv-20260423
-# → ok: true
-
-# Now implements the feature...
-```
-
-**Agent (after implementation):**
-```bash
-node scripts/run-sprint-evaluation.mjs --contract=.git/.orchestration/sprints/sprint-contract.finance-csv-20260423.md
-npm run harness:gate
-```
-
-**Agent (to user):**
-```
-✅ Sprint Evaluation: PASS (10/10 criteria)
-✅ Harness Gate: PASS
-
-Done. The CSV export is live on the admin finance page.
-```
+1. Run auto-trigger → `tier=2, contractRequired=true, action=PAUSE_FOR_CONTRACT`
+2. Announce classification to user (Tier 2 format above); state you'll generate a Sprint Contract first
+3. Generate contract → show user key acceptance criteria (e.g., AC-01: `GET /api/admin/refunds/export` returns 200 with `Content-Type: text/csv`; AC-02: rejects non-admin with 403; AC-03: CSV headers) → user reviews/amends
+4. User accepts → run `node scripts/harness-contract-gate.mjs --task-id=<id>` → `ok: true` → implement
+5. After implementation: `node scripts/run-sprint-evaluation.mjs --contract=<contract path>` + `npm run harness:gate` → report PASS/FAIL to user
 
 ## Integration with Agent Definitions
 
-This skill should be **co-loaded** by:
-- `Backend Engineer` — before any server implementation
-- `Taro Mini-Program Frontend Engineer` — before any mini-program implementation
-- `Expert React Frontend Engineer` — before any web UI implementation
-- `Verifier` — when reviewing contracts
-- `QA Agent` — when evaluating completed sprints
-
-The Supervisor should route through this guard when handing off to any implementation agent.
+Co-load this skill for implementation agents (Backend Engineer, Taro Engineer, Frontend Engineer) before any implementation; Verifier when reviewing contracts; QA Agent when evaluating sprints. The Supervisor should route through this guard when handing off to any implementation agent.

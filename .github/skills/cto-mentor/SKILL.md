@@ -10,25 +10,17 @@ description: >
 
 # CTO Mentor
 
-Turn completed work into a growth opportunity. After finishing a non-trivial
-task, offer the user a short, jargon-free mentor session framed around
-understanding — not just output.
+Turn completed work into a growth opportunity: a short, jargon-free mentor session framed around understanding — not just output.
 
 ## Rules
 
-- **Auto-nudge**: After completing any task that touched 2+ files or involved
-  a design decision, ask: "Want a quick mentor breakdown of what we just did?"
-- **Respect the no**: If user says no or ignores the nudge, move on. Don't
-  re-nudge for that task. Nudge at most once per 3 non-trivial tasks.
-- **Tone**: Warm, encouraging, zero condescension. Imagine a CTO who wants
-  you to grow, not someone proving they're smarter.
-- **Jargon gate**: Plain-language metaphor FIRST. Then optionally introduce
-  the technical term. If you can't explain it to a friend at a bar, rephrase.
-- **Honest about trade-offs**: No selling. If a decision was "good enough"
-  not "optimal", say so. If you cut a corner, own it.
-- **Max 3 concepts**: Do not dump everything. Pick the 2-3 ideas that carry
-  the most learning value.
-- **Duration**: Aim for a 2-3 minute read. Not a lecture.
+- **Auto-nudge**: After any task touching 2+ files or involving a design decision, ask: "Want a quick mentor breakdown of what we just did?" Max once per 3 non-trivial tasks.
+- **Respect the no**: If user declines or ignores, move on; don't re-nudge for that task.
+- **Tone**: Warm, encouraging, zero condescension — a CTO who wants you to grow.
+- **Jargon gate**: Plain-language metaphor FIRST, then optionally the technical term. If you can't explain it to a friend at a bar, rephrase.
+- **Honest about trade-offs**: No selling. If a decision was "good enough" not "optimal", say so. Own cut corners.
+- **Max 3 concepts**: Pick the 2-3 ideas with the most learning value.
+- **Duration**: 2-3 minute read. Not a lecture.
 
 ## Output Format (rigid)
 
@@ -70,7 +62,7 @@ understanding — not just output.
 - User has explicitly asked for a technical code review (use `code-review`)
 - The task was purely mechanical with no learning value
 
-## Quick examples
+## Quick example
 
 **After implementing JWT auth:**
 > **What we did & why**: Your app needed users to log in. We added JWT tokens so the server knows who's who without checking the database on every request — like a festival wristband.
@@ -83,30 +75,14 @@ understanding — not just output.
 >
 > **Next steps**: Study OWASP session management. Practice: add a logout that clears the cookie. Build: "Remember me" with longer expiry.
 
-**After fixing a race condition:**
-> **What we did & why**: Two users booking the last spot simultaneously — the database said yes to both. We added a row-level lock so only one wins.
->
-> **Key ideas**:
-> - Restaurant reservation: Pessimistic locking — "I'll hold this table while I check."
-> - Ticket counter: Atomic UPDATE — `UPDATE ... WHERE spots > 0` is one unbreakable action.
->
-> **Trade-offs**: Chose pessimistic lock over queue — simpler code, but slightly slower under extreme load (1000+ concurrent bookings).
->
-> **Next steps**: Study PostgreSQL row-level locking docs. Practice: write a test that fires 10 concurrent bookings and verifies only N succeed. Build: Add a waitlist for when spots are full.
+*(Race-condition fix example: row-level lock = "restaurant reservation" (pessimistic locking) + atomic `UPDATE ... WHERE spots > 0` = "ticket counter"; trade-off: simpler code but slower under 1000+ concurrent bookings.)*
 
 ## Troubleshooting
 
-**User seems overwhelmed**
-Drop to 1 concept. "The one idea worth remembering here is..."
-
-**Nothing worth teaching in this task**
-Skip the nudge entirely. Better silent than forcing a lesson.
-
-**User asks "but why didn't we do X?"**
-Explain the trade-off honestly. Add it to section 3 if it's a good point.
-
-**Auto-nudge feels spammy**
-Reduce frequency: max once per 3 non-trivial tasks. Let the user initiate after that.
+- **User seems overwhelmed** → drop to 1 concept: "The one idea worth remembering here is..."
+- **Nothing worth teaching** → skip the nudge entirely. Better silent than forcing a lesson.
+- **"But why didn't we do X?"** → explain the trade-off honestly; add it to section 3 if it's a good point.
+- **Auto-nudge feels spammy** → reduce frequency (max once per 3 non-trivial tasks); let the user initiate after that.
 
 ## Review checklist
 

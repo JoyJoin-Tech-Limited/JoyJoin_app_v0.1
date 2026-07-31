@@ -3,7 +3,7 @@
 ## Detailed Placement Decision Tree
 
 ```
-Is it used by both user-client and admin-client?
+Is it used by both mini-program and admin-client?
 ├─ Yes → packages/shared/src/ui/
 │   └─ Does it depend on app-specific routing/auth/API hooks?
 │       ├─ Yes → Split: primitive in shared, wrapper in app
@@ -16,7 +16,7 @@ Is it used by both user-client and admin-client?
 
 **Never:**
 - Import from `apps/*` into `packages/shared`
-- Import from `apps/user-client` into `apps/admin-client` or vice versa
+- Import from `apps/mini-program` into `apps/admin-client` or vice versa
 - Place app-specific page components inside `packages/shared`
 
 ## Shared Package Export Patterns
@@ -35,9 +35,9 @@ Consumers import via `@shared/ui/TagChip` or `@joyjoin/shared`.
 
 ## Thin Wrapper Examples
 
-### Web wrapper (user-client)
+### Web wrapper (admin-client)
 ```tsx
-// apps/user-client/src/components/ui/button.tsx
+// apps/admin-client/src/components/ui/button.tsx
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { buttonVariants } from "@shared/ui/buttonVariants";

@@ -163,6 +163,7 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
   - `autoAdvanceEnabled` is set to `false`; only the host can advance/end. This host-paced rule also applies to preset tiers.
   - Server enters `phase_selection` between phases. Host chooses next phase via `POST /api/social-icebreaker/:socialSessionId/select-phase { phase, phaseSelectionId }`.
   - Host can end early from `phase_selection` or `recap` via `POST /api/social-icebreaker/:socialSessionId/end-session { phaseSelectionId? }`, generating a recap snapshot identical to normal advance.
+  - **Phase-selection data is host-only (2026-07-31):** `sanitizeStateForClient` strips `phaseSelectionId` for non-host callers and `buildClientState` attaches `selectablePhases` only when the caller is the session host — players never receive the actionable nonce or the picker list. The mini-program `CustomModeSection` renders phase emblems via `JoyJoinIcon` (`tier='phase'`), never raw emoji. Route-level regression coverage: `apps/server/src/__tests__/socialIcebreakerCustomRoutes.test.ts` (16 tests: `/select-phase` + `/end-session` auth/phase/nonce guards, stale or unknown `phaseSelectionId` → 400, host-only sanitize unit cases).
   - Preset tiers can be re-selected from custom mode; custom data (selected phases, completed phases) is preserved but the fixed run plan takes over.
   - When switching from a preset tier to `custom`, the server clears `runPlan`, `completedPhases`,
     `phaseSelectionId`, and phase-specific ephemeral state, then advances from `warmup` into
@@ -751,6 +752,10 @@ const CLIENT_TO_API_VIBE = {
 **Lie Detective `isLie` leaking to client:**
 - The poll endpoint `GET /api/social-icebreaker/:socialSessionId` builds client state through `buildClientState()` and then returns `SocialSessionState` via `sanitizeStateForClient`
 - `isLie` is never stored on `SocialSessionState` (statements are sanitized on insert into `lieDetectivePlayers`), so it cannot be serialized to the client
+
+**Custom-mode phase-selection data leaking to players (2026-07-31):**
+- The same `buildClientState()` → `sanitizeStateForClient` path is the only serialization: `selectablePhases` is attached only when the caller is the session host, and `phaseSelectionId` is deleted for non-host callers
+- If a player can read the nonce or sees the picker list, verify no other route returns the raw stored session state
 
 **Phase not advancing:**
 - Verify caller is host (`hostUserId === userId`)

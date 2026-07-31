@@ -1,55 +1,16 @@
-import type { PropsWithChildren } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
 import { Button, Text, View } from '@tarojs/components'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { getDeepContrastArchetypeColor } from '@shared/archetypeColors'
+import { getIdentityChipLabel } from '@shared/copy/flowAnimationCopy'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
+import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
+import { isFlowCompanionArchetype, type FlowCompanionArchetype } from '../../lib/utils/flowBannerAssets'
+import { haptics } from '../../lib/utils/haptics'
+import { FLOW_ANIMATION_TIMING } from './flowAnimation.config'
 import BrandLogo from '../ui/BrandLogo'
 
-const FLOW_COMPANION_ARCHETYPES = [
-  'corgi',
-  'rooster',
-  'hamster_praise',
-  'fox',
-  'dolphin_calm',
-  'spider',
-  'koala',
-  'octopus',
-  'owl',
-  'elephant',
-  'turtle',
-  'cat',
-] as const
-type FlowCompanionArchetype = (typeof FLOW_COMPANION_ARCHETYPES)[number]
-export interface FlowArchetypeBackgrounds {
-  event: string
-  street: string
-}
-
-const makeBackgrounds = (archetype: FlowCompanionArchetype): FlowArchetypeBackgrounds => ({
-  event: cdnAsset(`/assets/lovart/flow-archetype-backgrounds/flow-banner-event-${archetype}-v2.webp`),
-  street: cdnAsset(`/assets/lovart/flow-archetype-backgrounds/flow-banner-street-${archetype}-v2.webp`),
-})
-
-const FLOW_ARCHETYPE_BACKGROUND_MAP: Record<FlowCompanionArchetype, FlowArchetypeBackgrounds> = {
-  corgi: makeBackgrounds('corgi'),
-  rooster: makeBackgrounds('rooster'),
-  hamster_praise: makeBackgrounds('hamster_praise'),
-  fox: makeBackgrounds('fox'),
-  dolphin_calm: makeBackgrounds('dolphin_calm'),
-  spider: makeBackgrounds('spider'),
-  koala: makeBackgrounds('koala'),
-  octopus: makeBackgrounds('octopus'),
-  owl: makeBackgrounds('owl'),
-  elephant: makeBackgrounds('elephant'),
-  turtle: makeBackgrounds('turtle'),
-  cat: makeBackgrounds('cat'),
-}
-
-export function resolveFlowArchetypeBackgrounds(
-  archetypeId?: string | null,
-): FlowArchetypeBackgrounds | null {
-  return FLOW_COMPANION_ARCHETYPES.includes(archetypeId as FlowCompanionArchetype)
-    ? FLOW_ARCHETYPE_BACKGROUND_MAP[archetypeId as FlowCompanionArchetype]
-    : null
-}
+export { resolveFlowArchetypeBackgrounds } from '../../lib/utils/flowBannerAssets'
+export type { FlowArchetypeBackgrounds } from '../../lib/utils/flowBannerAssets'
 
 interface FlowShellProps extends PropsWithChildren {
   title: string
@@ -59,6 +20,8 @@ interface FlowShellProps extends PropsWithChildren {
   actionLabel: string
   actionVisible: boolean
   onAction: () => void
+  /** Called once when the Flow 1 packed-box beat resolves into the settle phase. */
+  onEntranceResolve?: () => void
 }
 
 export default function FlowShell({
@@ -69,16 +32,60 @@ export default function FlowShell({
   actionLabel,
   actionVisible,
   onAction,
+  onEntranceResolve,
   children,
 }: FlowShellProps) {
-  const personalizedArchetype = FLOW_COMPANION_ARCHETYPES.includes(
-    archetypeId as FlowCompanionArchetype,
+  const { shouldReduceMotion } = useMiniRevealMotion()
+  const personalizedArchetype = isFlowCompanionArchetype(archetypeId) ? archetypeId : null
+
+  const shouldPlayEntrance = showGameBackground && !shouldReduceMotion
+  const [entrancePhase, setEntrancePhase] = useState<'box' | 'settle' | 'done'>(
+    shouldPlayEntrance ? 'box' : 'done',
   )
-    ? (archetypeId as FlowCompanionArchetype)
-    : null
+  const resolvedRef = useRef(!shouldPlayEntrance)
+
+  const fireResolve = useCallback(() => {
+    if (resolvedRef.current) return
+    resolvedRef.current = true
+    onEntranceResolve?.()
+  }, [onEntranceResolve])
+
+  const skipEntrance = useCallback(() => {
+    haptics('light')
+    fireResolve()
+    setEntrancePhase('done')
+  }, [fireResolve])
+
+  useEffect(() => {
+    if (entrancePhase !== 'box') return
+    const apexTimer = setTimeout(() => haptics('light'), FLOW_ANIMATION_TIMING.boxApexMs)
+    const settleTimer = setTimeout(() => {
+      fireResolve()
+      setEntrancePhase('settle')
+    }, FLOW_ANIMATION_TIMING.boxBeatMs)
+    const doneTimer = setTimeout(() => setEntrancePhase('done'), FLOW_ANIMATION_TIMING.entranceTotalMs)
+    return () => {
+      clearTimeout(apexTimer)
+      clearTimeout(settleTimer)
+      clearTimeout(doneTimer)
+    }
+  }, [entrancePhase, fireResolve])
+
+  const shellClass = useMemo(
+    () =>
+      [
+        'flow-shell',
+        showGameBackground && personalizedArchetype ? `flow-shell--personalized flow-shell--${personalizedArchetype}` : '',
+        `flow-shell--entrance-${entrancePhase}`,
+      ]
+        .filter(Boolean)
+        .join(' '),
+    [entrancePhase, personalizedArchetype, showGameBackground],
+  )
+
   return (
     <View
-      className={`flow-shell ${showGameBackground && personalizedArchetype ? `flow-shell--personalized flow-shell--${personalizedArchetype}` : ''}`}
+      className={shellClass}
       ariaLabel={title}
     >
       {showGameBackground && personalizedArchetype && <View className={`flow-shell__game-bg flow-shell__game-bg--${personalizedArchetype}`}>
@@ -102,7 +109,24 @@ export default function FlowShell({
         </View>
       </View>}
 
-      <View className='flow-shell__header'>
+      {entrancePhase === 'box' ? (
+        <View
+          className='flow-shell__entrance'
+          onClick={skipEntrance}
+          role='button'
+          ariaLabel='点击跳过开场动画'
+        >
+          <View className='flow-shell__entrance-bloom' aria-hidden='true' />
+          <View className='flow-shell__entrance-box' aria-hidden='true'>
+            <View className='flow-shell__entrance-lid' />
+            <View className='flow-shell__entrance-ribbon' />
+            <Text className='flow-shell__entrance-mark'>?</Text>
+          </View>
+          <Text className='flow-shell__entrance-hint'>轻触屏幕继续</Text>
+        </View>
+      ) : null}
+
+      <View className='flow-shell__header' aria-hidden={entrancePhase === 'box'}>
         <View className='flow-shell__identity'>
           <BrandLogo
             width={150}
@@ -111,6 +135,14 @@ export default function FlowShell({
           />
           <Text className='flow-shell__brand'>JoyJoin</Text>
           <Text className='flow-shell__title'>{title}</Text>
+          {personalizedArchetype ? (
+            <View
+              className='flow-shell__identity-chip'
+              style={{ color: getDeepContrastArchetypeColor(personalizedArchetype) }}
+            >
+              {getIdentityChipLabel(ARCHETYPE_BY_ID[personalizedArchetype]?.nameCn)}
+            </View>
+          ) : null}
         </View>
         <Button
           className='flow-shell__skip'
@@ -122,11 +154,11 @@ export default function FlowShell({
         </Button>
       </View>
 
-      <View className='flow-shell__canvas'>
+      <View className='flow-shell__canvas' aria-hidden={entrancePhase === 'box'}>
         {children}
       </View>
 
-      <View className={`flow-shell__action ${actionVisible ? 'flow-shell__action--visible' : ''}`}>
+      <View className={`flow-shell__action ${actionVisible ? 'flow-shell__action--visible' : ''}`} aria-hidden={entrancePhase === 'box'}>
         <Button
           className='flow-shell__primary'
           hoverClass='flow-shell__primary--pressed'

@@ -1,13 +1,18 @@
-import { Button, ScrollView, Text, View } from '@tarojs/components'
+import { Button, Image, ScrollView, Text, View } from '@tarojs/components'
+import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import FlowIcon from './icons/FlowIcon'
 import type { ExperienceDefinition } from './flowAnimation.types'
 
 interface ExperienceDetailProps {
   experience: ExperienceDefinition
+  archetypeId?: string | null
   onBack: () => void
 }
 
-export default function ExperienceDetail({ experience, onBack }: ExperienceDetailProps) {
+export default function ExperienceDetail({ experience, archetypeId, onBack }: ExperienceDetailProps) {
+  const validArchetype = archetypeId ? ARCHETYPE_ASSET_MAP[archetypeId] ?? null : null
+  const archetypeSrc = validArchetype?.webp ?? ''
+
   return (
     <View className={`experience-detail experience-detail--${experience.id}`}>
       <View className='experience-detail__header'>
@@ -29,19 +34,16 @@ export default function ExperienceDetail({ experience, onBack }: ExperienceDetai
           </View>
 
           <View className={`experience-detail__scene experience-detail__scene--${experience.id}`}>
+            {archetypeSrc ? (
+              <>
+                <Image className='experience-detail__scene-image' src={archetypeSrc} mode='aspectFill' lazyLoad={false} />
+                <View className='experience-detail__scene-scrim' />
+              </>
+            ) : null}
             <View className='experience-detail__scene-copy'>
               <Text className='experience-detail__scene-title'>
                 {experience.detail.sceneTitle}
               </Text>
-            </View>
-            <View className='experience-detail__scene-art'>
-              <View className='experience-detail__scene-path experience-detail__scene-path--one' />
-              <View className='experience-detail__scene-path experience-detail__scene-path--two' />
-              <View className='experience-detail__scene-node experience-detail__scene-node--one' />
-              <View className='experience-detail__scene-node experience-detail__scene-node--two' />
-              <View className='experience-detail__scene-node experience-detail__scene-node--three' />
-              <View className='experience-detail__scene-spark experience-detail__scene-spark--one' />
-              <View className='experience-detail__scene-spark experience-detail__scene-spark--two' />
             </View>
             <View className='experience-detail__scene-progress'>
               {experience.steps.map((step, index) => (

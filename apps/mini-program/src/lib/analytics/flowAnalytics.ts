@@ -13,6 +13,7 @@ export type FlowEventType =
   | 'flow_detail_open'
   | 'flow_detail_back'
   | 'flow_node_tap'
+  | 'flow_tap_ahead'
   | 'flow_complete'
   | 'flow_street_gate_hit'
 
@@ -73,6 +74,10 @@ class FlowAnalytics {
 
   trackNodeTap(flow: FlowKind, nodeId: string, nodeIndex: number): void {
     this.track('flow_node_tap', { flow, node_id: nodeId, node_index: nodeIndex })
+  }
+
+  trackTapAhead(flow: FlowKind): void {
+    this.track('flow_tap_ahead', { flow })
   }
 
   trackComplete(flow: FlowKind, dwellMs: number, tappedAhead: boolean, nodesActivated: number): void {

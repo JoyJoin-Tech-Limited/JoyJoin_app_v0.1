@@ -62,7 +62,7 @@ Load these when the task involves:
   "phaseGatesRespected": ["4+ players", "host-only sinHook", "phase === mini_script"],
   "parityNotes": {
     "miniProgram": "phaseViews in apps/mini-program/src/icebreaker-session/",
-    "web": "parity reference in apps/user-client"
+    "web": "historical parity reference in archived/workspaces/user-client/ (read-only; web client archived)"
   },
   "blockers": [],
   "nextSteps": "Handoff to Game Development Agent for Taro phaseViews implementation"

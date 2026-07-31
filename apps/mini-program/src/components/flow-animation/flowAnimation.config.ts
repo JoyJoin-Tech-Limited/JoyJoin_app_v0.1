@@ -8,8 +8,27 @@ import {
 import type { ExperienceDefinition, FlowIconName, FlowAccent, FlowStepDefinition } from './flowAnimation.types'
 
 export const FLOW_ANIMATION_TIMING = {
-  experienceRevealMs: 1_350,
-  lifecycleMs: 9_600,
+  /** Flow 1 entrance: packed-box beat + dual-banner settle. */
+  boxBeatMs: 1_200,
+  bannerSettleMs: 1_200,
+  entranceTotalMs: 2_400,
+  /** Flow 1 dual-banner / card reveal; starts as the box beat resolves (1.2s)
+   *  so entrance box beat + reveal settle land at ~2.4s total. */
+  experienceRevealMs: 1_200,
+  /** Flow 2 lifecycle dwell curve: 0.8s / 4×1.2s / 1.5s ≈ 7.1s. */
+  lifecycleStageDurationsMs: [800, 1_200, 1_200, 1_200, 1_200, 1_500] as const,
+  /** Haptic at box lid apex during Flow 1 entrance. */
+  boxApexMs: 550,
+  /** Flow 2 completion beat. */
+  glowSweepStartMs: 250,
+  glowSweepDurationMs: 600,
+  completionHapticMs: 850,
+  ctaCrossfadeStartMs: 950,
+  ctaCrossfadeDurationMs: 280,
+  /** Timeline traveling indicator. */
+  nodeTravelSettleMs: 300,
+  nodeRingFadeMs: 240,
+  /** Shared progress tick. */
   progressTickMs: 80,
 } as const
 

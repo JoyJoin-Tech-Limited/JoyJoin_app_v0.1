@@ -38,6 +38,9 @@ Core structure, ownership, and placement rules. Start here if you are new to the
 | [`process-systematic-debugging`](./process-systematic-debugging/SKILL.md) | Structured root-cause analysis: reproduce → isolate → hypothesize → verify |
 | [`process-verification-gate`](./process-verification-gate/SKILL.md) | Pre-ship Harness 5-pillar checklist (reliability, scalability, security, observability, maintainability) |
 | [`process-test-first`](./process-test-first/SKILL.md) | Red-green-refactor discipline for deterministic logic, bug fixes, and stateful workflows |
+| [`process-docs`](./process-docs/SKILL.md) | Documentation discipline: keep docs synchronized with code changes, audience-aware writing |
+| [`process-parity`](./process-parity/SKILL.md) | Cross-surface parity (mini-program ↔ admin-client ↔ server/shared); web client archived 2026-05 |
+| [`process-refactoring`](./process-refactoring/SKILL.md) | Safe incremental refactoring: extract, rename, split without behavior change |
 | [`websocket-realtime`](./websocket-realtime/SKILL.md) | WebSocket connection lifecycle, auth, room broadcasting, heartbeat/reconnect, rate limiting, HTTP polling boundaries |
 ---
 

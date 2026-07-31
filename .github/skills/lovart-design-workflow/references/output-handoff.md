@@ -46,7 +46,6 @@
 
 | Platform | Storage path | Notes |
 |----------|-------------|-------|
-| Web (user-client) | `apps/user-client/src/assets/lovart/` | Import via Vite asset pipeline |
 | Web (admin-client) | `apps/admin-client/src/assets/lovart/` | Rarely needed; admin is functional |
 | Mini-program | `apps/mini-program/src/assets/lovart/` | Watch bundle size; use subpackages for large assets |
 | Shared | `packages/shared/src/assets/lovart/` | Only for assets used by multiple apps |

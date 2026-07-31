@@ -34,7 +34,7 @@ When spawning parity auditors or React frontend engineers via the Agent tool, fo
 ## Repo Runtime Reality
 
 - `apps/mini-program` is a Taro 4 plus React 18 app compiled for the WeChat Mini Program runtime.
-- `apps/user-client` is the web reference source of truth for shared product intent, but mini-program implementation details must respect Taro and WeChat runtime constraints.
+- `archived/workspaces/user-client/` is the archived web reference (read-only) for shared product intent, but mini-program implementation details must respect Taro and WeChat runtime constraints.
 - Browser DOM tags, browser globals, and browser lifecycle assumptions do not transfer directly to Taro pages or components.
 - Duplicated auth, API, and payment flows require coordination using `docs/PLATFORM_COORDINATION.md`.
 
@@ -48,10 +48,10 @@ When spawning parity auditors or React frontend engineers via the Agent tool, fo
 
 ## When Not To Use This Agent
 
-- Do not use this as the primary agent for large-scale cloning of `apps/user-client` into `apps/mini-program` when the core task is migration planning or broad parity restoration.
+- Do not use this agent for migration planning — the web→mini-program migration is complete and the web client is archived.
 - Do not use this as the primary agent for route-by-route parity audits or backlog generation without implementation.
-- For web-source-of-truth browser UI work, use `Expert React Frontend Engineer`.
-- For broad migration or parity-first porting work, use `Taro Migration Specialist`.
+- For archived web reference lookups, use `Expert React Frontend Engineer` (read-only historical reference).
+- For questions about the completed web→mini-program migration, use `Taro Migration Specialist` (historical reference).
 - For comparison-only audits, use `Mini-Program Parity Auditor`.
 
 ## Harness Session Guard (auto-trigger)
@@ -83,7 +83,7 @@ When spawning parity auditors or React frontend engineers via the Agent tool, fo
 
 - Prefer Taro-native components and APIs over browser compatibility shims.
 - Keep implementation aligned with existing app patterns in `apps/mini-program` instead of forcing browser abstractions into Taro.
-- Preserve product intent, visible hierarchy, interaction states, and copy from the canonical web flow when relevant, but do not force exact browser mechanics where the platform differs.
+- Preserve product intent, visible hierarchy, interaction states, and copy from the archived web flow when relevant, but do not force exact browser mechanics where the platform differs.
 - Use `Taro.navigateTo`, `Taro.redirectTo`, `Taro.showToast`, storage APIs, and page lifecycle hooks where appropriate instead of browser navigation or DOM events.
 - Adapt styling to WXSS-safe patterns and mini-program rendering limits rather than copying browser CSS blindly.
 - **WeChat DevTools MCP:** For automated mini-program verification, use the **WeChat DevTools MCP server** (`wechat-devtools`) to launch the mini-program, navigate pages, inspect WXML structure, simulate taps, and capture screenshots. This is especially valuable for pixel-precision validation and pre-merge UI gate checks.
@@ -91,7 +91,7 @@ When spawning parity auditors or React frontend engineers via the Agent tool, fo
 - Do not use `dangerouslySetInnerHTML` for cross-end HTML in mini-program work; use `RichText` or structured `View`/`Text` composition.
 - When adding or replacing **images or icons**, check file size against [`taro-ui-framework.md`](../skills/mini-program-frontend-excellence/references/taro-ui-framework.md) §8. If over threshold, **flag** in review output and propose compression, SVG optimization, vector/CSS substitution, or subpackage/lazy routing so premium visuals do not regress load performance or package budget.
 - Use the repo's existing styling patterns by default. Do not introduce CSS-in-JS or a new styling system just because Taro can support it.
-- When a request depends on understanding the canonical web behavior, inspect `apps/user-client` directly or delegate to `Expert React Frontend Engineer`.
+- When a request depends on understanding historical web behavior, inspect `archived/workspaces/user-client/` (read-only) or delegate to `Expert React Frontend Engineer`.
 
 ## Mini-Program UI Delivery Workflow
 
@@ -116,8 +116,8 @@ For frontend UI tasks, use this sequence:
 When a request targets `apps/mini-program` but may affect duplicated business behavior:
 
 - Review `docs/PLATFORM_COORDINATION.md` before assuming the change is platform-local.
-- Inspect the sibling web surface for auth/session bootstrap, API wrapper, payment flow, or shared contract drift.
-- Treat mini-program payment intent flow as the strongest current reference for payment mechanics, but still review the matching web flow when shared behavior changes.
+- Inspect the sibling admin-client/server contracts (and the archived web copy only as historical reference) for auth/session bootstrap, API wrapper, payment flow, or shared contract drift.
+- Treat mini-program payment intent flow as the strongest current reference for payment mechanics; review the archived web flow only as historical context.
 - If the work is mostly renderer-local but the underlying behavior mapping is unclear, use `Mini-Program Parity Auditor` first.
 
 ## Frontend Excellence Notes
@@ -125,7 +125,7 @@ When a request targets `apps/mini-program` but may affect duplicated business be
 ### Platform Applicability
 
 - Primary surface: Taro mini-program in `apps/mini-program`.
-- Secondary surface: Web only for sibling-platform review, parity checks, or source-of-truth reference when the mini-program work mirrors an existing browser flow.
+- Secondary surface: archived web (`archived/workspaces/user-client/`, read-only) only for historical reference when the mini-program work mirrors an old browser flow.
 
 ### UI/UX & Aesthetic Guidance
 
@@ -136,7 +136,7 @@ When a request targets `apps/mini-program` but may affect duplicated business be
 ### Web-Specific Considerations
 
 - When checking sibling-platform parity, audit hover, `:focus-visible`, cursor behavior, and responsive breakpoint intent instead of assuming those browser affordances exist in Taro.
-- Use the browser implementation as the source of product intent, but not as a source of DOM or CSS portability assumptions.
+- Use the archived browser implementation as historical product-intent reference, but not as a source of DOM or CSS portability assumptions.
 
 ### Taro-Specific Considerations
 

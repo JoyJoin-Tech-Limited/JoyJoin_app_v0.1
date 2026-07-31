@@ -173,3 +173,17 @@ export function getContrastSafeArchetypeColor(archetype: string | null | undefin
   const l = Math.max(Math.min(hsl.l, 48), 25)
   return formatHSLAsRGBA({ h: hsl.h, s, l } as ArchetypeHSL, 1)
 }
+
+/**
+ * Deeper variant for small text on near-white surfaces (e.g. the Flow 1
+ * identity chip, font-size-2xs on rgba(white, 0.94)). The standard helper's
+ * L≤48 cap leaves warm/yellow hues (rooster, cat, corgi, fox, hamster) below
+ * the 4.5:1 small-text threshold on white; this variant caps L at 32 so every
+ * archetype hue family passes WCAG AA for small text.
+ */
+export function getDeepContrastArchetypeColor(archetype: string | null | undefined): string {
+  const hsl = getArchetypeHSL(archetype)
+  const s = Math.min(100, Math.max(hsl.s, 55))
+  const l = Math.max(Math.min(hsl.l, 32), 22)
+  return formatHSLAsRGBA({ h: hsl.h, s, l } as ArchetypeHSL, 1)
+}

@@ -650,6 +650,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
           minGroupSize: pool.minGroupSize,
           maxGroupSize: pool.maxGroupSize,
           targetGroups: pool.targetGroups,
+          isTestPool: pool.isTestPool,
         },
         registrationCountRow?.count ?? 0,
       );
@@ -862,60 +863,65 @@ export function registerUserEventPoolRoutes(app: Express): void {
         entitlementMode,
       });
 
-      // Fire-and-forget: if the pool just reached capacity, notify registered users
-      (async () => {
-        try {
-          const [{ count }] = await db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(eventPoolRegistrations)
-            .where(eq(eventPoolRegistrations.poolId, poolId));
-
-          const capacity = resolvePoolCapacity(pool);
-          if (count >= capacity) {
-            const registeredUserRows = await db
-              .select({ userId: eventPoolRegistrations.userId })
+      // Fire-and-forget: if the pool just reached capacity, notify registered users.
+      // Skipped for test-only pools (单人调试局 / matching-test), which sit at
+      // capacity by design — bots don't read notifications and the tester gets
+      // a meaningless "pool full" broadcast on every debug run.
+      if (!pool.isTestPool) {
+        (async () => {
+          try {
+            const [{ count }] = await db
+              .select({ count: sql<number>`count(*)::int` })
               .from(eventPoolRegistrations)
               .where(eq(eventPoolRegistrations.poolId, poolId));
 
-            const registeredUserIds: string[] = registeredUserRows.map((r: { userId: string }) => r.userId);
+            const capacity = resolvePoolCapacity(pool);
+            if (count >= capacity) {
+              const registeredUserRows = await db
+                .select({ userId: eventPoolRegistrations.userId })
+                .from(eventPoolRegistrations)
+                .where(eq(eventPoolRegistrations.poolId, poolId));
 
-            await Promise.all(
-              registeredUserIds.map((registeredUserId: string) =>
-                storage.createNotification({
-                  userId: registeredUserId,
-                  category: 'activities',
-                  type: 'pool_full',
-                  title: '活动池已满员',
-                  message: `「${pool.title}」报名已满，匹配即将开始`,
-                  relatedResourceId: poolId,
-                })
-              )
-            );
+              const registeredUserIds: string[] = registeredUserRows.map((r: { userId: string }) => r.userId);
 
-            wsService.broadcastToUsers(registeredUserIds, {
-              type: 'POOL_FULL',
-              data: {
+              await Promise.all(
+                registeredUserIds.map((registeredUserId: string) =>
+                  storage.createNotification({
+                    userId: registeredUserId,
+                    category: 'activities',
+                    type: 'pool_full',
+                    title: '活动池已满员',
+                    message: `「${pool.title}」报名已满，匹配即将开始`,
+                    relatedResourceId: poolId,
+                  })
+                )
+              );
+
+              wsService.broadcastToUsers(registeredUserIds, {
+                type: 'POOL_FULL',
+                data: {
+                  poolId,
+                  poolTitle: pool.title,
+                  totalRegistrations: count,
+                  capacity,
+                },
+                timestamp: new Date().toISOString(),
+              });
+
+              logger.info("Pool reached capacity; pool_full notifications sent", {
                 poolId,
-                poolTitle: pool.title,
-                totalRegistrations: count,
                 capacity,
-              },
-              timestamp: new Date().toISOString(),
-            });
-
-            logger.info("Pool reached capacity; pool_full notifications sent", {
+                totalRegistrations: count,
+              });
+            }
+          } catch (poolFullErr) {
+            logger.error("Failed to send pool_full notifications", {
               poolId,
-              capacity,
-              totalRegistrations: count,
+              error: poolFullErr instanceof Error ? poolFullErr.message : String(poolFullErr),
             });
           }
-        } catch (poolFullErr) {
-          logger.error("Failed to send pool_full notifications", {
-            poolId,
-            error: poolFullErr instanceof Error ? poolFullErr.message : String(poolFullErr),
-          });
-        }
-      })();
+        })();
+      }
 
       // Best-effort geolocation capture at pool registration.
       captureLocationSnapshot(req, "pool_registration", userId).catch(() => {});
@@ -1021,6 +1027,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
           minGroupSize: pool.minGroupSize,
           maxGroupSize: pool.maxGroupSize,
           targetGroups: pool.targetGroups,
+          isTestPool: pool.isTestPool,
         },
         registrationCountRow?.count ?? 0,
       );

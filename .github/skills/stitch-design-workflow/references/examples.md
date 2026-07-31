@@ -40,7 +40,7 @@ Mood: Celebratory, welcoming, warm, premium.
 Platform: Mobile web, 375×667px.
 ```
 
-**Result:** Stitch generates 2–4 screen variations. Pick the best, export to Figma for refinement, then implement in `apps/user-client/src/features/onboarding/...`.
+**Result:** Stitch generates 2–4 screen variations. Pick the best, export to Figma for refinement, then implement in `apps/mini-program/src/pages/onboarding/...`.
 
 ---
 
@@ -123,7 +123,7 @@ Mood: Calm, hopeful, inviting — not lonely or clinical.
 Platform: Mobile web and WeChat Mini Program, 375×667px.
 ```
 
-**Result:** Empty state concept for `apps/mini-program` and `apps/user-client` shared empty-state component.
+**Result:** Empty state concept for `apps/mini-program` (shared empty-state patterns live in `packages/shared`).
 
 ---
 

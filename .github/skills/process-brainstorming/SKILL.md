@@ -13,22 +13,22 @@ description: >
 
 ## Purpose
 
-Prevent premature convergence. When a task is ambiguous, force explicit divergent thinking **before** choosing a lane or writing code. This skill ensures brainstorming produces actionable options rather than open-ended speculation.
+Prevent premature convergence. When a task is ambiguous, force explicit divergent thinking **before** choosing a lane or writing code, producing actionable options rather than open-ended speculation.
 
 ---
 
 ## When to use this skill
 
 - The task has no single obvious solution
-- You are exploring a new feature direction, UX concept, or architecture approach
-- You need to evaluate 2+ plausible implementation strategies
+- Exploring a new feature direction, UX concept, or architecture approach
+- Evaluating 2+ plausible implementation strategies
 - The user says "I'm not sure how to build this" or "What are our options?"
 
 ## When NOT to use this skill
 
-- The task is bounded with a clear file and known fix (use direct delivery)
-- The task requires rigorous engineering validation (use HRC directly)
-- You are mid-implementation and need code review (use `code-review`)
+- Bounded task with a clear file and known fix (use direct delivery)
+- Task requires rigorous engineering validation (use HRC directly)
+- Mid-implementation code review (use `code-review`)
 
 ---
 
@@ -38,7 +38,7 @@ Prevent premature convergence. When a task is ambiguous, force explicit divergen
 
 Before generating options, list the hard constraints:
 
-1. **Auth / safety boundary** — does this touch user data, payments, or trust boundaries?
+1. **Auth / safety boundary** — user data, payments, trust boundaries?
 2. **Platform limits** — Taro/WeChat runtime constraints, browser compatibility
 3. **Deterministic authority** — matching engine, personality system, scoring rules
 4. **Latency / cost ceiling** — API response time, LLM token budget, build size
@@ -48,77 +48,54 @@ Before generating options, list the hard constraints:
 
 ### Step 2: Generate exactly 3 options
 
-Force at least 3 distinct approaches. Label each:
+Force 3 distinct approaches:
 
 | Option | Label | Description |
 |---|---|---|
-| A | **Conservative** | Uses only existing patterns, minimal risk, longest timeline |
-| B | **Balanced** | Introduces one new abstraction or pattern, moderate risk |
+| A | **Conservative** | Existing patterns only, minimal risk, longest timeline |
+| B | **Balanced** | One new abstraction or pattern, moderate risk |
 | C | **Aggressive** | Novel approach, highest upside, highest risk |
 
-For each option, specify:
-- Affected files/workspaces
-- Estimated complexity (files changed, tests needed)
-- Lane implication (Direct / DM / HRC)
+For each: affected files/workspaces, estimated complexity (files changed, tests needed), lane implication (Direct / DM / HRC).
 
 ### Step 3: Evaluate against JoyJoin lanes
 
-Map each option to the lane it would require:
-
-```
-Option A → Direct delivery (uses existing patterns)
-Option B → DM (new abstraction, cross-workspace impact)
-Option C → HRC (novel state machine or auth boundary)
-```
-
-If the highest-value option requires HRC but the user wants speed, explicitly flag the trade-off.
+Map each option to its required lane. If the highest-value option requires HRC but the user wants speed, explicitly flag the trade-off.
 
 ### Step 4: Recommend and handoff
 
 State a clear recommendation with justification:
 
 > **Recommended:** Option B (Balanced)
-> **Why:** Option A is too slow for the sprint goal; Option C introduces unmitigated partial-failure risk in the icebreaker state machine. Option B adds the needed abstraction without touching auth or matching.
+> **Why:** A is too slow for the sprint goal; C introduces unmitigated partial-failure risk in the icebreaker state machine. B adds the needed abstraction without touching auth or matching.
 > **Next step:** Run `Deliberation Moderator` for the cross-workspace architecture review.
 
 ---
 
-## Examples
-
-### Example 1: Ambiguous feature
+## Example
 
 **User:** "We need a better way to show pool card momentum."
 
-**Brainstorm output:**
-- Constraint: Must work in both web and mini-program; cannot add LLM calls to list route
-- Option A (Conservative): Static badge text based on registration count only
+- Constraint: must work in both web and mini-program; cannot add LLM calls to list route
+- Option A (Conservative): static badge text based on registration count only
 - Option B (Balanced): AI-generated headlines cached out-of-band, read from cache in list route
-- Option C (Aggressive): Real-time WebSocket updates to cards as users register
-- Recommendation: Option B → DM lane (cross-workspace: server cache + mini-program UI)
+- Option C (Aggressive): real-time WebSocket updates to cards as users register
+- Recommendation: B → DM lane (cross-workspace: server cache + mini-program UI)
 
-### Example 2: Architecture exploration
-
-**User:** "Should we move matching logic to a worker queue?"
-
-**Brainstorm output:**
-- Constraint: Matching is deterministic authority; must not introduce eventual consistency bugs
-- Option A: Keep synchronous, optimize queries
-- Option B: Async worker with immediate optimistic response + reconciliation
-- Option C: Full event-sourced matching pipeline
-- Recommendation: Option A for now; Option B needs HRC for partial-failure analysis
+*(Same shape for architecture explorations: e.g., "move matching to a worker queue?" → constraint: deterministic authority, no eventual-consistency bugs → A: keep synchronous, optimize queries; B: async worker + optimistic response; C: event-sourced pipeline → recommend A for now; B needs HRC.)*
 
 ---
 
 ## Troubleshooting
 
-**Brainstorming produces too many options**
-> Force exactly 3. Label them Conservative / Balanced / Aggressive. If you cannot find a third, state why and proceed with 2.
+**Too many options**
+> Force exactly 3 (Conservative / Balanced / Aggressive). If you cannot find a third, state why and proceed with 2.
 
 **All options seem equally good**
-> Apply the inversion test: "Which option fails worst if we guess wrong?" Pick the one with the most graceful failure mode.
+> Inversion test: "Which option fails worst if we guess wrong?" Pick the most graceful failure mode.
 
 **User wants to skip brainstorming and just build**
-> If the task is genuinely ambiguous, push back: "Before implementation, let's constrain the solution space so we don't rebuild." If the user insists, document the assumed constraints and proceed with direct delivery.
+> If genuinely ambiguous, push back: "Before implementation, let's constrain the solution space so we don't rebuild." If the user insists, document the assumed constraints and proceed with direct delivery.
 
 ---
 

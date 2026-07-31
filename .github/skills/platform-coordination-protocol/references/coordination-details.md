@@ -26,7 +26,6 @@ Today there is **no** dedicated shared payment/auth DTO module. `docs/PLATFORM_C
 3. Review the sibling platform file with the same business intent before finalizing the change
 4. If you touched `packages/shared/src/`, inspect both clients for consumers that could drift
 5. Validate with the smallest existing checks that cover the touched surfaces:
-   - `npm run typecheck -w @joyjoin/user-client`
    - `npm run check:clients`
    - `npm run build:weapp -w mini-program` when mini-program tooling is available
 6. Record in the PR why no sibling-platform change was needed if you keep the change local
@@ -51,14 +50,14 @@ Treat this classification as advisory only. If the heuristics and `docs/PLATFORM
 ## Platform boundaries
 
 - Keep truly shared types and utilities in `packages/shared/src/` rather than creating silent duplicate copies in client pages/hooks
-- Review both `apps/mini-program/src/lib/api/api.ts` and `apps/user-client/src/hooks/useAuth.ts` when auth/session semantics move
-- Review both payment pages when pricing assumptions, payment status handling, or post-payment behavior changes
-- Treat mini-program payment intent flow as the strongest current reference; web must be reviewed whenever payment assumptions move
+- Review `apps/mini-program/src/lib/api/api.ts` together with the shared auth/session types in `packages/shared/src/` when auth/session semantics move
+- Review the mini-program payment pages when pricing assumptions, payment status handling, or post-payment behavior changes
+- Treat the mini-program payment intent flow as the strongest current reference for payment behavior
 
 ## Common mistakes to avoid
 
-- Changing `apps/mini-program/src/lib/api/api.ts` or `apps/user-client/src/hooks/useAuth.ts` without checking the sibling auth flow
-- Editing duplicated payment behavior in only one of the two payment pages
+- Changing `apps/mini-program/src/lib/api/api.ts` without checking the shared auth/session types it consumes
+- Editing payment behavior in only one place when the same rule lives in shared code or the server
 - Assuming `packages/shared/src/` already contains dedicated payment/auth DTO modules when the playbook explicitly says it does not today
 - Treating web-only UI wiring as proof that payment or auth business rules are isolated
 - Skipping `docs/PLATFORM_COORDINATION.md` and relying on memory for cross-platform ownership
@@ -67,9 +66,6 @@ Treat this classification as advisory only. If the heuristics and `docs/PLATFORM
 
 - `docs/PLATFORM_COORDINATION.md` — canonical platform coordination playbook
 - `apps/mini-program/src/lib/api/api.ts` — current mini-program auth/API bootstrap surface
-- `apps/user-client/src/hooks/useAuth.ts` — current web auth/session bootstrap surface
-- `apps/user-client/src/lib/queryClient.ts` — current web API request wrapper
-- `apps/user-client/src/pages/BlindBoxPaymentPage.tsx` — current web payment flow
 - `apps/mini-program/src/pages/blind-box-payment/index.tsx` — current mini-program payment flow
 - `apps/mini-program/src/pages/payment-verification/index.tsx` — mini-program post-`requestPayment` verification
 - `apps/mini-program/src/hooks/auth/useWeChatLogin.ts` — mini-program WeChat login (`Taro.login` + `/api/auth/wechat/login`)

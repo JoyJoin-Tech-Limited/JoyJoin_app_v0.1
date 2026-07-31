@@ -697,6 +697,10 @@ async function validateStagedBuild(stagedRoot, stagedCdnManifestPath) {
       PROFILE_PIXEL_BUILD_V2_ROOT: stagedRoot,
       PROFILE_PIXEL_CDN_MANIFEST_PATH: stagedCdnManifestPath,
       PROFILE_PIXEL_SOURCE_ROOT: SOURCE_ROOT,
+      // Stage art is independently governed and lives in the real output
+      // root, not the staged generated tree.
+      PROFILE_PIXEL_STAGE_MANIFEST_PATH: path.join(OUTPUT_ROOT, 'stage-assets-v1.json'),
+      PROFILE_PIXEL_STAGE_V2_ROOT: OUTPUT_ROOT,
     },
     maxBuffer: 1024 * 1024,
   })
@@ -733,6 +737,7 @@ async function main() {
         manifest.items[`equipment/starter/${archetypeId}/${slot}/v1`] = {
           slot,
           layer: starter.layer,
+          thumb: starter.thumb,
           depth: starter.depth,
           placements: { [archetypeId]: starter.placement },
         }

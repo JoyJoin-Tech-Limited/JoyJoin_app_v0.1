@@ -15,7 +15,7 @@ Use the existing shared middleware where it exists, and avoid creating another o
 - All `/api/admin/*` routes must use `requireAdmin` middleware
 - Admin RBAC matrix is documented in `docs/admin-rbac-matrix.md`
 - Admin audit events must be logged via `apps/server/src/lib/adminAuditLogger.ts`
-- Admin-specific pages belong in `apps/admin-client`, not `apps/user-client`
+- Admin-specific pages belong in `apps/admin-client`, not `apps/mini-program`
 
 ## Typed request/session contracts
 
@@ -74,5 +74,4 @@ Do not relax `secure: true` for any production codepath.
 - `apps/server/src/routes.ts` — current local `requireAuth` usage
 - `apps/server/src/routes/domains/onboarding.ts` — domain-local `requireAuth` usage
 - `apps/server/src/lib/adminAuditLogger.ts` — audit logging
-- `apps/user-client/src/App.tsx` — client-side dev tools gate
 - `docs/admin-rbac-matrix.md` — admin permission matrix

@@ -362,7 +362,6 @@ export function getPixelEquipmentThumbnailUrl(
   assetKey: string,
   archetypeId?: string | null,
 ): string | null {
-  return getPixelEquipmentAsset(assetKey, archetypeId)?.thumb
-    ?? getPixelEquipmentAsset(assetKey, archetypeId)?.url
-    ?? null
+  const asset = getPixelEquipmentAsset(assetKey, archetypeId)
+  return asset?.thumb ?? asset?.url ?? null
 }

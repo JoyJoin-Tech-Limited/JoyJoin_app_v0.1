@@ -92,6 +92,12 @@ export function sanitizeStateForClient(
   // clients only need the aggregate count computed server-side or in UI.
   delete (sanitized as Partial<SocialSessionState>).bonusGatePlayerSentiment;
 
+  // The custom-mode phase-selection nonce is host-owned; only the host can
+  // act on it, so players never need it.
+  if (requestingUserId && sanitized.hostUserId !== requestingUserId) {
+    delete (sanitized as Partial<SocialSessionState>).phaseSelectionId;
+  }
+
   return sanitized;
 }
 
@@ -145,9 +151,10 @@ export async function buildClientState(
     return [];
   });
   const archetypeCtx = buildArchetypeContext(joinedParticipants.map((p) => ({ archetype: p.archetype })));
-  const withCustomExtras = isCustomMode(state)
-    ? { ...state, selectablePhases: computeSelectablePhases(state) }
-    : state;
+  const withCustomExtras =
+    isCustomMode(state) && requestingUserId === state.hostUserId
+      ? { ...state, selectablePhases: computeSelectablePhases(state) }
+      : state;
   const isTestMode = isSingleTestMode() && state.singleTest?.isTestModeSkip === true;
   const clientState = sanitizeStateForClient(
     {

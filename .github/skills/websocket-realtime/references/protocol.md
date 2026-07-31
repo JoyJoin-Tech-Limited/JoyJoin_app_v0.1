@@ -14,7 +14,7 @@
 
 ## Heartbeat & reconnect logic
 
-| Concern | Server | Web client | Mini-program client |
+| Concern | Server | Web client (archived) | Mini-program client |
 |---------|--------|-----------|---------------------|
 | **Heartbeat** | `ping()` every 30s; `terminate()` if no `pong` | App-level `PING` every 30s | App-level `PING` every 30s |
 | **Reconnect** | N/A | Exponential backoff: `min(1000 * 2^attempt, 30000)`, max 10 | Exponential backoff: `min(2000 * 2^attempt, 30000)`, max 5 |
@@ -41,10 +41,10 @@
 
 Mini-program uses singleton pattern in `apps/mini-program/src/lib/api/websocket.ts` with hook in `apps/mini-program/src/hooks/useWebSocket.ts`.
 
-Web client hooks:
-- `apps/user-client/src/hooks/useWebSocket.ts`
-- `apps/user-client/src/hooks/useIcebreakerWebSocket.ts`
-- `apps/user-client/src/hooks/useKingGameWebSocket.ts`
+Archived web client hooks (reference only):
+- `archived/workspaces/user-client/src/hooks/useWebSocket.ts`
+- `archived/workspaces/user-client/src/hooks/useIcebreakerWebSocket.ts`
+- `archived/workspaces/user-client/src/hooks/useKingGameWebSocket.ts`
 
 ## King Game privacy rules
 
@@ -55,8 +55,8 @@ Web client hooks:
 - `apps/server/src/wsService.ts`
 - `apps/server/src/eventBroadcast.ts`
 - `packages/shared/src/wsEvents.ts`
-- `apps/user-client/src/hooks/useWebSocket.ts`
-- `apps/user-client/src/hooks/useIcebreakerWebSocket.ts`
-- `apps/user-client/src/hooks/useKingGameWebSocket.ts`
+- `archived/workspaces/user-client/src/hooks/useWebSocket.ts`
+- `archived/workspaces/user-client/src/hooks/useIcebreakerWebSocket.ts`
+- `archived/workspaces/user-client/src/hooks/useKingGameWebSocket.ts`
 - `apps/mini-program/src/lib/api/websocket.ts`
 - `apps/mini-program/src/hooks/useWebSocket.ts`

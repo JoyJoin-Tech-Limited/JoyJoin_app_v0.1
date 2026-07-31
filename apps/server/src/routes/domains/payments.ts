@@ -343,6 +343,7 @@ async function resolveEventCheckout(
       minGroupSize: true,
       maxGroupSize: true,
       targetGroups: true,
+      isTestPool: true,
     },
   });
 
@@ -385,6 +386,7 @@ async function resolveEventCheckout(
       minGroupSize: pool.minGroupSize,
       maxGroupSize: pool.maxGroupSize,
       targetGroups: pool.targetGroups,
+      isTestPool: pool.isTestPool,
     },
     registrationCountRow?.count ?? 0,
   );

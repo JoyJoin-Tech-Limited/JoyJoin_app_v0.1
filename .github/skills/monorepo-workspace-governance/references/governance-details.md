@@ -5,7 +5,7 @@
 - `tsconfig.base.json` at the repo root defines shared `compilerOptions`
 - Root `tsconfig.json` is a solution-style file with `references` to each workspace
 - Each workspace extends `tsconfig.base.json` and adds workspace-specific settings
-- User-client and admin-client currently run `typecheck` against their workspace `tsconfig.json`; `tsconfig.node.json` exists for node-specific tooling and is not invoked by the current `typecheck` script
+- Admin-client currently runs `typecheck` against its workspace `tsconfig.json`; `tsconfig.node.json` exists for node-specific tooling and is not invoked by the current `typecheck` script
 
 ## Script normalization
 
@@ -34,7 +34,7 @@ Rules enforced by `scripts/check-guardrails.mjs`:
 - Each workspace declares its own `dependencies` and `devDependencies`
 - Cross-workspace shared code lives in `packages/shared` — not duplicated across apps
 - `packages/shared/package.json` declares `react` as a `peerDependency` and `@radix-ui/react-slot` + `lucide-react` as `dependencies` for shared UI exports
-- Admin-only code and dependencies belong in `apps/admin-client` — not imported into `apps/user-client`
+- Admin-only code and dependencies belong in `apps/admin-client` — not imported into `apps/mini-program`
 
 ## Adding a new dependency
 
@@ -47,7 +47,7 @@ Rules enforced by `scripts/check-guardrails.mjs`:
 
 - Adding a runtime dependency to the root `package.json`
 - Copying a package into multiple workspaces instead of sharing via `packages/shared`
-- Importing admin-client code into user-client (inflates the user bundle)
+- Importing admin-client code into the mini-program (inflates the user bundle)
 - Removing or renaming required root scripts without updating `check-guardrails.mjs`
 - Using the deprecated `shared/` root folder — use `packages/shared/src/` instead
 

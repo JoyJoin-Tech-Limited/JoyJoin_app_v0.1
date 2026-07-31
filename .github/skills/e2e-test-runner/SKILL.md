@@ -51,7 +51,7 @@ Use this skill when you are:
 
 ## MCP-assisted E2E testing
 
-- **Playwright MCP:** For browser-driven journey validation across `apps/user-client`, use the **Playwright MCP server** (`playwright`) to navigate routes, interact with forms, and capture screenshots. This is the fastest way to verify a critical path (e.g., onboarding → discovery → event registration) without writing a full test script.
+- **Playwright MCP:** For browser-driven journey validation against the live web surface (`apps/admin-client`), use the **Playwright MCP server** (`playwright`) to navigate routes, interact with forms, and capture screenshots. This is the fastest way to verify a critical path without writing a full test script.
 - **WeChat DevTools MCP:** For mini-program journey validation, use the **WeChat DevTools MCP server** (`wechat-devtools`) to automate page navigation, element interaction, and visual state checks within the WeChat runtime.
 
 ## Quick examples

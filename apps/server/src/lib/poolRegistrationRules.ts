@@ -4,6 +4,12 @@ type EventPoolAvailabilityInput = {
   minGroupSize: number | null;
   maxGroupSize: number | null;
   targetGroups: number | null;
+  /** Test-only pools (单人调试局 / matching-test) are exempt from the capacity
+   *  gate: single-test sessions register tester + bots, which fills the pool to
+   *  exactly maxGroupSize × targetGroups by design. The capacity rule still
+   *  applies to real event pools, where queues may exceed 6 and matching forms
+   *  groups of 4-6 per event. */
+  isTestPool?: boolean;
 };
 
 export type EventPoolAvailabilityResult =
@@ -61,7 +67,7 @@ export function describePoolRegistrationAvailability(
   const targetGroups = Math.max(pool.targetGroups ?? 1, 1);
   const capacity = maxGroupSize * targetGroups;
 
-  if (registrationCount >= capacity) {
+  if (pool.isTestPool !== true && registrationCount >= capacity) {
     return {
       allowed: false,
       status: 400,

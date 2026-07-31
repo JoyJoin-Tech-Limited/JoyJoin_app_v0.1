@@ -1,7 +1,7 @@
 ---
 name: frontend-component-architecture
 description: >
-  Structure frontend components correctly across packages/shared, apps/user-client, and
+  Structure frontend components correctly across packages/shared, apps/mini-program, and
   apps/admin-client — shared primitives, thin app wrappers, semantic correctness, and composition
   patterns. Use when creating, moving, or reviewing UI components. Trigger phrases: "where does
   this component go?", "should this be shared?", "wrap the shared Button", "is this semantically
@@ -26,15 +26,15 @@ features live in the appropriate app workspace only.
 | Layer | Location |
 |-------|----------|
 | Shared UI primitives | `packages/shared/src/ui/` |
-| User client components | `apps/user-client/src/components/` |
+| Mini-program components | `apps/mini-program/src/components/` |
 | Admin client components | `apps/admin-client/src/components/` |
-| Onboarding pages | `apps/user-client/src/features/onboarding/active/` |
-| General app pages | `apps/user-client/src/pages/` |
+| Onboarding pages | `apps/mini-program/src/pages/onboarding/` |
+| General app pages | `apps/mini-program/src/pages/` |
 
 ## Component placement rules
 
 **Put in `packages/shared/src/ui/` when:**
-- Used (or likely to be used) by both `user-client` and `admin-client`
+- Used (or likely to be used) by both `mini-program` and `admin-client`
 - Represents a design-system primitive (Button, Input, Card, Badge, etc.)
 - Has no dependency on app-specific routing, auth context, or API hooks
 
@@ -45,7 +45,7 @@ features live in the appropriate app workspace only.
 
 **Never:**
 - Import from `apps/*` into `packages/shared`
-- Import from `apps/user-client` into `apps/admin-client` or vice versa
+- Import from `apps/mini-program` into `apps/admin-client` or vice versa
 - Place app-specific page components inside `packages/shared`
 
 For the full decision tree, wrapper examples, loading-state patterns, and export
@@ -55,8 +55,8 @@ patterns, see [`references/placement-guide.md`](./references/placement-guide.md)
 
 **"Where should `TagChip` go?"**
 → Check whether `admin-client` would ever need it. If yes →
-  `packages/shared/src/ui/TagChip.tsx`. If only user-client →
-  `apps/user-client/src/components/`.
+  `packages/shared/src/ui/TagChip.tsx`. If only the mini-program →
+  `apps/mini-program/src/components/`.
 
 **"Render the shared `Button` as a `<Link>`"**
 → Use the `asChild` prop with Radix Slot so the `Button` renders as the router
@@ -64,11 +64,11 @@ patterns, see [`references/placement-guide.md`](./references/placement-guide.md)
 
 ## Troubleshooting
 
-**`packages/shared` is importing from `apps/user-client`**
+**`packages/shared` is importing from `apps/mini-program`**
 → Hard violation. Move the dependency into shared or accept duplication in the
    app workspace.
 
-**Duplicate component exists in both user-client and shared**
+**Duplicate component exists in both mini-program and shared**
 → Remove the app-local copy and import from shared. If a small difference exists,
    check whether `asChild` or a prop extension is sufficient.
 
@@ -92,6 +92,6 @@ patterns, see [`references/placement-guide.md`](./references/placement-guide.md)
 
 - `packages/shared/src/ui/Button.tsx`
 - `packages/shared/src/ui/buttonVariants.ts`
-- `apps/user-client/src/components/ui/button.tsx`
+- `apps/mini-program/src/components/ui/Button.tsx`
 - `apps/admin-client/src/components/ui/button.tsx`
 - [`references/placement-guide.md`](./references/placement-guide.md)

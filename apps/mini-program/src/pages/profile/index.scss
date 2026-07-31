@@ -616,6 +616,10 @@
   }
 
   // Warm plaza platform grounding the avatar so it does not float on the scene.
+  // Counter-pulse: the shadow shrinks + fades in phase with the avatar's breath
+  // lift (3.6s, same cycle) so the character reads as standing on the plaza
+  // rather than hovering. Every stop must re-assert translateX(-50%) because a
+  // keyframed transform replaces the base centering transform.
   &__partner-platform {
     position: absolute;
     left: 50%;
@@ -626,6 +630,26 @@
     border-radius: 50%;
     background: radial-gradient(ellipse, rgba(255, 201, 130, 0.38) 0%, rgba(255, 201, 130, 0) 74%);
     box-shadow: 0 10rpx 26rpx rgba($color-text-primary, 0.16);
+    animation: profile-avatar-platform-pulse 3.6s ease-in-out infinite;
+
+    &--no-pulse {
+      animation: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  @keyframes profile-avatar-platform-pulse {
+    0%, 100% {
+      transform: translateX(-50%) scaleX(1);
+      opacity: 1;
+    }
+    50% {
+      transform: translateX(-50%) scaleX(0.94);
+      opacity: 0.78;
+    }
   }
 
   &__partner-image {

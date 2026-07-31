@@ -9,7 +9,7 @@ Concrete implementation examples for the patterns described in `../SKILL.md`.
 A primary CTA (e.g. "Join Event", "Confirm Payment") should give the user a brief, satisfying signal that their action was received — not just a spinner.
 
 ```tsx
-// apps/user-client/src/components/PremiumCtaButton.tsx
+// apps/mini-program/src/components/PremiumCtaButton.tsx
 import * as React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -55,7 +55,7 @@ export function PremiumCtaButton({
 The first authenticated screen a user lands on after completing sign-up. Content should appear as a composed, intentional reveal rather than a hard DOM paint.
 
 ```tsx
-// apps/user-client/src/features/onboarding/active/OnboardingWelcome.tsx
+// apps/mini-program/src/pages/onboarding/OnboardingWelcome.tsx
 import * as React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -121,7 +121,7 @@ export function OnboardingWelcome() {
 An empty state (no matches yet, no events nearby, no connections) should feel like a warm invitation, not a failure.
 
 ```tsx
-// apps/user-client/src/components/EmptyState.tsx
+// apps/mini-program/src/components/EmptyState.tsx
 import * as React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 
@@ -208,7 +208,7 @@ export function SkeletonCard() {
 
 **With a custom shimmer (Tailwind extension):**
 ```css
-/* apps/user-client/src/index.css — add to @layer utilities */
+/* apps/mini-program/src/app.scss — add as a global utility */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }

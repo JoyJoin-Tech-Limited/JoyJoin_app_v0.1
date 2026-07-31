@@ -58,7 +58,7 @@ try {
 }
 ```
 
-## Web Client (`apps/user-client`)
+## Web Client (archived — `apps/user-client`, reference only)
 
 ### `apiRequest` helper (`lib/queryClient.ts`)
 

@@ -23,15 +23,15 @@ import { ResponsiveSpacer } from "@/components/ResponsiveSpacer";
 - `heightRpx` — spacer size in rpx
 - `collapseBelow` — px value from `Taro.getWindowInfo()` / `getSystemInfoSync()`
 
-## ScrollSentinel Setup
+## ScrollSentinel Setup (archived web client — reference only)
 
-**Location:** `apps/user-client/src/components/dev/ScrollSentinel.tsx`
+**Location:** `archived/workspaces/user-client/src/components/dev/ScrollSentinel.tsx`
 
 **Behaviour (dev only):**
 - Measures overflow vs `window.innerHeight` (preferring `#jj-scroll-chassis` when present)
 - Draws a red, semi-transparent band at the bottom of the viewport with an approximate overflow label
 
-**Agent rule:** Mount `<ScrollSentinel />` once in `App.tsx` during development (already wired next to the router shell).
+**Agent rule:** ScrollSentinel was mounted once in the archived web `App.tsx` during development; it is not active on any live surface today.
 
 **Mini-program:** ScrollSentinel is web-only today. Use WeChat DevTools layout / responsive preview and manual checks.
 
@@ -69,9 +69,9 @@ In `apps/mini-program/src/styles/_mixins.scss`:
 - `@mixin no-scroll-page-shell` — flex column, `overflow: hidden`, `height: 100%`
 - `@mixin page-gradient-bg` — brand gradient background
 
-## Web Shell Breakdown
+## Web Shell Breakdown (archived web client — reference only)
 
-**`apps/user-client/src/styles/viewport-lockdown.css`** (imported from `index.css`):
+**`archived/workspaces/user-client/src/styles/viewport-lockdown.css`** (imported from `index.css`):
 
 - `html` / `body` height chain using `100dvh` (with `100%` fallback)
 - `body { overflow: hidden; }` — document does not scroll

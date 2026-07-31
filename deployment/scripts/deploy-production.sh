@@ -199,6 +199,22 @@ upsert_private_key_from_base64() {
 }
 
 upsert_env_var "DATABASE_URL" "$DATABASE_URL"
+
+# POSTGRES_PASSWORD → deployment/.env (compose interpolation source; the
+# ${POSTGRES_PASSWORD:?} in docker-compose.nginx.yml is resolved from here).
+# Written RAW — .env feeds the compose interpolator only, so no $$ escaping.
+# Derived from DATABASE_URL so no credential is ever hardcoded in the repo.
+COMPOSE_ENV=~/JoyJoin/deployment/.env
+POSTGRES_PASSWORD="$(printf '%s' "$DATABASE_URL" | sed -nE 's|^postgres(ql)?://[^:]+:([^@]+)@.*|\2|p')"
+if [ -n "$POSTGRES_PASSWORD" ]; then
+  compose_tmp=$(mktemp)
+  grep -v '^POSTGRES_PASSWORD=' "$COMPOSE_ENV" > "$compose_tmp" || true
+  mv "$compose_tmp" "$COMPOSE_ENV"
+  printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD" >> "$COMPOSE_ENV"
+else
+  echo "❌ Could not extract POSTGRES_PASSWORD from DATABASE_URL" >&2
+  exit 1
+fi
 upsert_env_var "SESSION_SECRET" "$SESSION_SECRET"
 upsert_env_var "WECHAT_APPID" "$WECHAT_APPID"
 upsert_env_var "WECHAT_SECRET" "$WECHAT_SECRET"
@@ -436,11 +452,12 @@ cd ~/JoyJoin/deployment
 disk_guard
 retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --no-deps joyjoin-api joyjoin-admin
 
-echo "🐳 Starting granite-embedding (non-blocking)..."
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u x-access-token --password-stdin 2>/dev/null
-docker compose -f docker-compose.nginx.yml pull granite-embedding 2>/dev/null && \
-  docker compose -f docker-compose.nginx.yml up -d granite-embedding || \
-  echo "   ⚠️ granite-embedding skipped (image not available yet — will retry next deploy)"
+echo "🐳 Starting granite-embedding (built locally from deploy/granite-embedding, non-blocking)..."
+if docker compose -f docker-compose.nginx.yml up -d --build --no-deps granite-embedding; then
+  echo "   ✅ granite-embedding started"
+else
+  echo "   ⚠️ granite-embedding failed to build/start — semantic matching stays at 6D until next deploy"
+fi
 
 # --- 5) Health checks ---
 echo "🏥 Verifying service status..."

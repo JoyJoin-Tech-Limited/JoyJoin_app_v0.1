@@ -1,3 +1,12 @@
+---
+name: process-refactoring
+description: >
+  Safe incremental refactoring discipline: extract modules, rename identifiers,
+  split large components, migrate imports. Use when restructuring code without
+  changing behavior. Trigger phrases: refactor this, extract this module,
+  rename across files, split this component.
+---
+
 # Skill: Refactoring Discipline
 
 Apply safe, incremental refactoring patterns when restructuring code without changing behavior.

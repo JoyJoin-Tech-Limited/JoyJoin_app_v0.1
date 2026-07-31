@@ -20,7 +20,7 @@ description: >
 - Updating `apps/mini-program/src/lib/api/api.ts` or mini-program payment pages
 - Asking whether a shared package consumer also needs review
 
-See [`references/coordination-details.md`](references/coordination-details.md) for the full coordinated areas table, mini-program file map, web client api.ts patterns, auth flow comparison, and payment page parity checklist.
+See [`references/coordination-details.md`](references/coordination-details.md) for the archived web ↔ mini-program coordination table, mini-program file map, auth flow comparison, and payment page notes.
 
 ## Sibling review rules
 
@@ -35,15 +35,15 @@ Use scope labels **`MINI_PROGRAM_ONLY`**, **`WEB_ONLY`**, or **`BOTH_REQUIRED`**
 
 ## Quick examples
 
-**User says:** "I changed `apps/mini-program/src/pages/blind-box-payment/index.tsx` — do I need to touch web too?"
-**Apply this skill by:** Reading `docs/PLATFORM_COORDINATION.md`, reviewing `apps/user-client/src/pages/BlindBoxPaymentPage.tsx`, and deciding whether the change affects only mini-program runtime wiring or the shared payment behavior.
-**Result:** Duplicated payment logic is treated as `BOTH_REQUIRED` unless the change is clearly mini-program-only.
+**User says:** "I changed `apps/mini-program/src/pages/blind-box-payment/index.tsx` — do I need to touch anything else?"
+**Apply this skill by:** Reading `docs/PLATFORM_COORDINATION.md` and deciding whether the change affects only mini-program runtime wiring or payment behavior shared with the server and `packages/shared`.
+**Result:** Shared payment behavior is coordinated with the server/shared package; clearly mini-program-only wiring stays local.
 
 ---
 
-**User says:** "I updated `apps/user-client/src/hooks/useAuth.ts`."
-**Apply this skill by:** Comparing the auth/session assumptions against `apps/mini-program/src/lib/api/api.ts`, then checking whether the change also affects shared types or only web-side state wiring.
-**Result:** Auth/session drift is caught before one client silently diverges.
+**User says:** "I updated the auth handling in `apps/mini-program/src/lib/api/api.ts`."
+**Apply this skill by:** Comparing the auth/session assumptions against the shared types in `packages/shared/src/` and `docs/PLATFORM_COORDINATION.md`, then checking whether the change also affects shared types or only mini-program-side state wiring.
+**Result:** Auth/session drift is caught before the client silently diverges from the shared contract.
 
 ---
 
@@ -55,10 +55,10 @@ Use scope labels **`MINI_PROGRAM_ONLY`**, **`WEB_ONLY`**, or **`BOTH_REQUIRED`**
 
 - **This looks platform-specific, but the playbook lists it as duplicated logic** — trust `docs/PLATFORM_COORDINATION.md` first and treat it as `BOTH_REQUIRED` until you confirm only renderer wiring changed.
 - **I changed `packages/shared/src/` and I am not sure who consumes it** — inspect both clients for imports and review the duplicated auth/payment hotspots listed in the playbook before merging.
-- **The web and mini-program files differ a lot already** — compare business intent, not syntax. If the same user-facing rule changed on one side, review the sibling side even if the implementations are structurally different.
+- **The mini-program and shared/server implementations differ a lot already** — compare business intent, not syntax. If the same user-facing rule changed on one side, review the other side even if the implementations are structurally different.
 - **The mini-program build is unavailable in my environment** — run the shared checks that exist (`npm run typecheck -w @joyjoin/shared` or `npm run typecheck -w @joyjoin/server`) and note the mini-program validation gap in the PR.
 - **I cannot tell whether this is business logic or renderer wiring** — default to `BOTH_REQUIRED` and explain in the PR why you kept or skipped the sibling change.
-- **Payment behavior changed on one client but not the other** — treat mini-program payment intent flow as the strongest current reference. Review the sibling payment page whenever pricing assumptions, payment status handling, or post-payment behavior changes.
+- **Payment behavior changed in the mini-program** — treat the mini-program payment intent flow as the strongest current reference. Review shared payment types and the server payment routes whenever pricing assumptions, payment status handling, or post-payment behavior changes.
 
 ## Review checklist
 

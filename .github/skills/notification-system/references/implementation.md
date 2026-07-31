@@ -63,10 +63,9 @@ New notification types must map to one of these three categories.
 
 ## Frontend hooks
 
-- **Web:** `apps/user-client/src/hooks/useNotificationCounts.ts` — TanStack Query with 30s refetch
 - **Mini-program:** `apps/mini-program/src/hooks/useNotificationCounts.ts` — TanStack Query with 30s refetch, uses `@shared/api` helpers
 
-Both support `useMarkNotificationsAsRead()` which invalidates the count query on success.
+The hook also exposes `useMarkNotificationsAsRead()` which invalidates the count query on success.
 
 ## Admin broadcast endpoints
 
@@ -88,5 +87,4 @@ Both support `useMarkNotificationsAsRead()` which invalidates the count query on
 - `apps/server/src/wsService.ts`
 - `packages/shared/src/schema.ts` (`notifications` table, `NotificationCounts`)
 - `packages/shared/src/api.ts` (`getNotificationCounts`, `markNotificationsAsRead`)
-- `apps/user-client/src/hooks/useNotificationCounts.ts`
 - `apps/mini-program/src/hooks/useNotificationCounts.ts`

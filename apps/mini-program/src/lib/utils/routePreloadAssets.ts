@@ -1,4 +1,5 @@
 import { cdnAsset, localAsset } from './cdnAssets'
+import { getFlowBannerPreloadUrls } from './flowBannerAssets'
 import {
   BLIND_BOX_BODY_ASSET,
   BLIND_BOX_INTERIOR_ASSET,
@@ -280,4 +281,12 @@ export function preloadCustomAssets(assets: string[], context: string): void {
   setTimeout(() => {
     void preloadImagesWithDiagnostics(assets, context)
   }, 0)
+}
+
+/** Preload the Flow 1 per-archetype banner backgrounds during a window where
+ *  the archetype is known (e.g. profile-review analyzing). Fails silently. */
+export function preloadFlowBannerBackgrounds(archetypeId?: string | null): void {
+  const assets = getFlowBannerPreloadUrls(archetypeId)
+  if (assets.length === 0) return
+  preloadCustomAssets(assets, 'flow-banner-backgrounds')
 }

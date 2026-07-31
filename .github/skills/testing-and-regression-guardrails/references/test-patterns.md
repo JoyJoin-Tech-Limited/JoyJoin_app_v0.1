@@ -45,12 +45,11 @@ Lock in a fix to prevent re-introduction of a specific bug.
 ## Workspace assignment guide
 
 - `apps/server/src/__tests__/` — server unit and integration tests
-- `apps/user-client/src/features/onboarding/active/__tests__/` — onboarding flow tests
-- `apps/user-client/src/hooks/__tests__/` — hook tests
+- `apps/mini-program/src/**/__tests__/` — mini-program hook and flow tests (limited coverage)
 
 Current script reality:
 - `npm run test -w @joyjoin/server` runs the active server Vitest suite
-- `npm run test -w @joyjoin/user-client` is currently a placeholder script, even though `apps/user-client` contains active Vitest tests
+- `npm run test -w mini-program` has limited coverage
 - `@joyjoin/shared` and `@joyjoin/admin-client` currently use placeholder `test` scripts
 
 ## MCP-assisted verification
@@ -81,7 +80,7 @@ it('calculateInterestScoreAsync reads only from user_interests', async () => {
 - Deleting a test because it is inconvenient rather than wrong
 - Writing tests that only test the happy path for flows with known edge-case regressions
 - Skipping an invariant test because "everyone knows the rule" — written tests outlive memory
-- Adding a test to the wrong workspace (server tests in user-client, or vice versa)
+- Adding a test to the wrong workspace (server tests in the mini-program workspace, or vice versa)
 - Using `expect(true).toBe(true)` style no-op tests to pad coverage
 - Forgetting to mock `../repositories/usersRepo` when unit-testing code in `wechatAuth.ts`
 - Not mocking `../lib/socialIcebreakerStore` in icebreaker route integration tests — the store is PostgreSQL-backed and requires `DATABASE_URL`; integration tests must supply a full in-memory mock of all store functions

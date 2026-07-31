@@ -22,7 +22,7 @@ This repo's agents are available in `.opencode/agents/` and `.github/agents/`. K
 - **Researcher** → **Planner** — kickoff lane for broad/ambiguous work
 - **Backend Engineer** — server implementation in `apps/server`
 - **AI Engineer** — LLM-backed features
-- **Frontend Engineer** — web UI in `apps/user-client`
+- **Frontend Engineer** — archived web reference (`archived/workspaces/user-client/`, read-only historical/parity lookup); live user-facing UI is the Taro Engineer's mini-program
 - **Taro Engineer** — mini-program UI in `apps/mini-program`
 - **Verifier** — skeptical completion checks
 - **Auto-Eval** — dirty-worktree quality gate

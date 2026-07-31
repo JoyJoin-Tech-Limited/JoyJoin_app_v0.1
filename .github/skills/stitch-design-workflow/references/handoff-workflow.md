@@ -18,7 +18,7 @@ Stitch has a **350 generations/month** cap (Standard Mode). Use it wisely:
 2. **Design review** — Pick the best direction; note what works and what drifts from brand
 3. **Figma refinement** — Export winning screen to Figma; add pixel specs, component states, responsive breakpoints
 4. **Figma MCP read** (if configured) — Frontend engineer uses Figma MCP to read design tokens, component specs, and layout data directly from the Figma file
-5. **Engineering handoff** — Engineer implements in React (web) or Taro (mini-program) using `design-system-governance`, `mini-program-frontend-excellence`, and `frontend-component-architecture`
+5. **Engineering handoff** — Engineer implements in Taro (mini-program) or React (admin-client) using `design-system-governance`, `mini-program-frontend-excellence`, and `frontend-component-architecture`
 
 **Never skip Figma for production screens.** Stitch output is reference only.
 
@@ -55,5 +55,5 @@ Every Stitch design task should produce a brief:
 
 ## Export Plan
 - Figma export: [Yes/No]
-- Engineering handoff target: [apps/user-client/... or apps/mini-program/...]
+- Engineering handoff target: [apps/mini-program/... or apps/admin-client/...]
 ```

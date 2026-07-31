@@ -2,6 +2,7 @@ import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import type { SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 
 interface CustomModeSectionProps {
   isHost?: boolean
@@ -69,7 +70,7 @@ export function CustomModeSection({
           hoverClass={phase.disabled || isSelecting ? 'none' : 'custom-mode-section__btn--pressed'}
           onClick={() => handlePhaseTap(phase.phase, phase.disabled, phase.disabledReason)}
         >
-          <Text className='custom-mode-section__btn-emoji'>{phase.emoji}</Text>
+          <JoyJoinIcon emoji={phase.emoji} tier='phase' size={20} className='custom-mode-section__btn-emoji' />
           <Text className='custom-mode-section__btn-label'>{phase.name}</Text>
           {(phase.disabledReason || selectedPhase === phase.phase) && (
             <Text className='custom-mode-section__btn-hint'>

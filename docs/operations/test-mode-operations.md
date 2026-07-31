@@ -420,7 +420,7 @@ Matching-test mode lets one real tester pay ¥0.01 (staging) and register alongs
    ENABLE_MATCHING_TEST_MODE=true
    ```
 2. **Seed** — `POST /api/test/matching-test/start` → creates pool + 5 full-profile bots (includes archetypes, `user_interests`, industry tiers, registration preferences)
-3. **Tester registers** — Real user discovers pool in mini-program Discover, pays ¥0.01 via normal `POST /api/event-pools/:poolId/register-with-payment`
+3. **Tester registers** — Real user discovers pool in mini-program Discover, pays ¥0.01 via normal `POST /api/event-pools/:poolId/register-with-payment`. **Test pools are exempt from the capacity gate** (2026-07-31): seeding fills the pool to exactly `maxGroupSize × targetGroups` (6/6) by design, so `describePoolRegistrationAvailability` skips the `POOL_FULL` check when `event_pools.is_test_pool=true` — otherwise the tester would hit 「本场活动报名已满」. The pool_full notification/WS broadcast is also skipped for test pools. Real event pools keep the full capacity rule (queues may exceed 6; matching forms groups of 4-6). Regression lock: `apps/server/src/__tests__/poolRegistrationRules.test.ts`.
 4. **Matching fires** — Realtime `scanPoolAndMatch` auto-triggers after tester registration, OR manually call `POST /api/test/matching-test/{poolId}/match`
 5. **Group forms** — Tester + bots assigned to groups via production matching engine
 6. **Cleanup** — `POST /api/test/matching-test/cleanup` — deletes test pools, groups, registrations, icebreaker data, and bot users. Payment records preserved.
@@ -459,6 +459,7 @@ Re-seeding resets old bot registrations before inserting new ones.
 - Deletes bot `users` rows (filtered by `is_test_bot = true` and the matching-test phone prefix)
 - **Preserves** `payments` table records (tester's real WeChat Pay receipt)
 - Idempotent — safe to run multiple times
+- Uses catalog-driven FK cascade delete (2026-07-31, commit `675ac3624`): `apps/server/src/lib/fkCascadeDelete.ts::cascadeDeleteByIds()` discovers non-`ON DELETE CASCADE` foreign keys from `pg_constraint` at runtime and removes transitive dependents deepest-first, so new child tables added later do not cause cleanup FK violations.
 
 ### Key files
 
@@ -467,6 +468,7 @@ Re-seeding resets old bot registrations before inserting new ones.
 | `apps/server/src/services/matchingTestService.ts` | Core service: seed bots, create pool, cleanup |
 | `apps/server/src/routes/domains/matchingTest.ts` | Routes with Zod validation and `isMatchingTestMode()` gate |
 | `apps/server/src/lib/isSingleTestMode.ts` | `isMatchingTestMode()` double gate |
+| `apps/server/src/lib/fkCascadeDelete.ts` | Catalog-driven recursive FK cascade delete used by cleanup |
 | `apps/server/src/index.ts` | Startup sentinel (crashes if test-bot rows in production) |
 | `apps/server/src/routes.ts` | Route wiring |
 | `apps/server/migrations/0058_matching_test_markers.sql` | Adds `is_test_bot` and `is_test_pool` columns |
@@ -486,6 +488,7 @@ When starting a single-test session, the server creates a matching-test pool + b
 
 ### How it works
 
+- Test pools are exempt from the registration capacity gate (2026-07-31): `describePoolRegistrationAvailability` skips the `POOL_FULL` check when `event_pools.is_test_pool=true`, because single-test sessions register tester + 5 bots and fill the pool to exactly `maxGroupSize × targetGroups` (6/6) by design. Pool-full notifications/WS broadcasts are skipped for test pools. Real pools keep the full capacity rule.
 - The mini-program starts a single-test session via `POST /api/social-icebreaker/start` with the `singleTest` option; the session is marked `state.singleTest.isTestModeSkip = true`.
 - The disclosure overlay (`TestModeDisclosure`) pauses the host in `warmup` and explains that multi-player phases are skipped. The host must tap **查看总结** to advance to `recap` (or **重试** if the advance fails).
 - When `runBots: true` is passed, the server runs deterministic, seeded, LLM-free bot simulation for every multiplayer phase (`warmup`, `micro_challenge`, `lie_detective`, `auction`, `personality_dice`, `quip_battle`, `undercover_word`, `group_mirror`, `speed_friending`, `mini_script`) so the host sees populated phase state before the recap.
@@ -508,6 +511,8 @@ When starting a single-test session, the server creates a matching-test pool + b
 | `apps/server/src/services/singleTestService.ts` | Decides `runBots`, creates matching-test pool, finalizes group into `events`/`blindBoxEvents`/`eventAttendance`/`venueTimeSlotBookings`, propagates meta to client |
 | `apps/server/src/services/matchingTestService.ts` | Shared helpers reused by single-test finalization: `nextDinnerDateTime()`, `finalizeTestPoolGroups()` |
 | `apps/server/src/routes/domains/userEventPools.ts` | `POST /api/event-pools/:groupId/confirm-attendance` — prefers `group.blindBoxEventId` for single-test groups |
+| `apps/server/src/lib/poolRegistrationRules.ts` | Capacity gate — skips `POOL_FULL` for `is_test_pool=true` pools (all 3 register call sites thread `isTestPool`) |
+| `apps/server/src/lib/fkCascadeDelete.ts` | Catalog-driven recursive FK cascade delete used by single-test and matching-test cleanup |
 | `apps/server/src/services/socialIcebreakerSessionState.ts` | Session state shape and helpers |
 | `apps/mini-program/src/components/icebreaker/TestModeDisclosure.tsx` | Dismissible test-mode disclosure UI with ready hint, empty roster, error retry |
 | `apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.tsx` | Warmup view with persistent test-mode badge |
@@ -518,6 +523,8 @@ When starting a single-test session, the server creates a matching-test pool + b
 - `apps/server/src/routes/__tests__/singleTestMetaRunBots.test.ts`
 - `apps/server/src/routes/__tests__/socialIcebreakerClientState.test.ts`
 - `apps/server/src/__tests__/singleTestGroupFinalization.test.ts` — finalization into events/blindBoxEvents + confirm-attendance path
+- `apps/server/src/__tests__/poolRegistrationRules.test.ts` — test pools exempt from `POOL_FULL`; real pools still capped; deadline still enforced on test pools
+- `apps/server/src/__tests__/fkCascadeDeleteContract.test.ts` — catalog-driven recursive cascade delete covers test-cleanup dependents
 - `apps/server/src/__tests__/warmupTopicsTimeout.test.ts` — LLM hard-timeout invariant and fallback
 
 ### UX / a11y notes

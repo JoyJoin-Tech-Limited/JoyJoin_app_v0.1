@@ -1,3 +1,11 @@
+---
+name: process-docs
+description: >
+  Documentation discipline: keep docs synchronized with code changes. Use when
+  adding features needing docs, changing APIs/schema/architecture boundaries,
+  creating skills/agents/runbooks, or auditing docs for staleness.
+---
+
 # Skill: Documentation Discipline
 
 Keep docs synchronized with code changes and write docs that stay useful over time.

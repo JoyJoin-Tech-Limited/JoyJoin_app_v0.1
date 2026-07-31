@@ -192,7 +192,7 @@ When auditing `apps/mini-program`, add these checks:
 
 ## Web-specific Audit Addendum
 
-When auditing `apps/user-client` (reference/sandbox) or `apps/admin-client`:
+When auditing `apps/admin-client`:
 
 - [ ] Tailwind classes use token-based utilities, not arbitrary values (`text-[14px]`)
 - [ ] shadcn/ui components customized (radii, colors, shadows) — never generic default

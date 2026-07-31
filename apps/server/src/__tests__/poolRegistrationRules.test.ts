@@ -33,4 +33,39 @@ describe("pool registration rules", () => {
       code: "POOL_FULL",
     });
   });
+
+  it("blocks registration when a real pool exceeds capacity", () => {
+    const result = describePoolRegistrationAvailability(basePool, 7);
+
+    expect(result).toMatchObject({
+      allowed: false,
+      status: 400,
+      code: "POOL_FULL",
+    });
+  });
+
+  it("allows registration beyond capacity on test-only pools", () => {
+    const result = describePoolRegistrationAvailability(
+      { ...basePool, isTestPool: true },
+      6,
+    );
+
+    expect(result).toMatchObject({
+      allowed: true,
+    });
+  });
+
+  it("still enforces deadline on test-only pools", () => {
+    const result = describePoolRegistrationAvailability(
+      { ...basePool, isTestPool: true, registrationDeadline: "2024-01-01T00:00:00.000Z" },
+      6,
+      new Date("2024-02-01T00:00:00.000Z"),
+    );
+
+    expect(result).toMatchObject({
+      allowed: false,
+      status: 410,
+      code: "REGISTRATION_DEADLINE_PASSED",
+    });
+  });
 });

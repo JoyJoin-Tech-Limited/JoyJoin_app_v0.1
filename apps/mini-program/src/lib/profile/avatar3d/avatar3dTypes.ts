@@ -49,8 +49,8 @@ export const SPIDER_STARTER_GARMENT_KINDS: readonly SpiderStarterGarmentKind[] =
 
 /**
  * Resolved 3D descriptor for one inventory item. `assetKey` is kept verbatim so
- * the thumbnail (`getPixelEquipmentLayerUrl`) and the controlled 3D group always
- * agree on the same key — see equipment3dMapping.test.ts.
+ * the wardrobe artwork (`getPixelEquipmentLayerUrl`) and the controlled 3D group
+ * always agree on the same key — see equipment3dMapping.test.ts.
  */
 export interface Equipment3DDescriptor {
   slot: EquipmentSlot3D

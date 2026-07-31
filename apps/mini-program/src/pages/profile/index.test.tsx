@@ -15,6 +15,7 @@ const state = vi.hoisted(() => ({
   switchTab: vi.fn(),
   showToast: vi.fn(),
   equipmentRefetch: vi.fn(),
+  systemInfo: {} as Record<string, unknown>,
 }))
 
 vi.mock('@tarojs/taro', () => ({
@@ -24,6 +25,7 @@ vi.mock('@tarojs/taro', () => ({
     showActionSheet: vi.fn(),
     showToast: state.showToast,
     reLaunch: vi.fn(),
+    getSystemInfoSync: () => state.systemInfo,
   },
   useDidShow: vi.fn(),
   useDidHide: vi.fn(),
@@ -150,6 +152,7 @@ describe('Profile approved V4 layout', () => {
     state.enabledByKey.clear()
     state.storyState = { data: [] }
     state.storyEnabled = false
+    state.systemInfo = {}
     state.queryStates.set('mini-program/equipment/me', {
       data: {
         archetypeId: 'corgi',
@@ -219,7 +222,7 @@ describe('Profile approved V4 layout', () => {
 
     expect(equipmentArt).toHaveLength(4)
     equipmentArt.forEach((image) => {
-      expect(image.src).toMatch(/layer-v2\.[a-f0-9]{12}\.webp/)
+      expect(image.src).toMatch(/thumb-v2\.[a-f0-9]{12}\.webp/)
     })
   })
 
@@ -547,6 +550,45 @@ describe('Profile approved V4 layout', () => {
     const { getByTestId } = render(<ProfilePage />)
 
     expect(getByTestId('profile-partner-breath')).toBeTruthy()
+  })
+
+  it('gates the breathing animation off on degradation-tier devices', () => {
+    state.systemInfo = { benchmarkLevel: 10 }
+    const { container } = render(<ProfilePage />)
+
+    expect(container.querySelector('.profile-page__partner-breath--no-breath')).toBeTruthy()
+    expect(container.querySelector('.profile-page__partner-platform--no-pulse')).toBeTruthy()
+  })
+
+  it('shows a toast when the personality report does not open', async () => {
+    state.navigateTo.mockRejectedValueOnce(new Error('navigation failed'))
+    state.showToast.mockResolvedValueOnce(undefined)
+    const { getByTestId } = render(<ProfilePage />)
+
+    fireEvent.click(getByTestId('profile-identity-copy-card'))
+
+    await waitFor(() => expect(state.showToast).toHaveBeenCalledWith({
+      title: '报告没有打开，请稍后再试',
+      icon: 'none',
+    }))
+  })
+
+  it('shows a toast when the personality test entry does not open', async () => {
+    state.user = {
+      ...makeUser(true),
+      archetype: null,
+      primaryArchetype: null,
+    }
+    state.navigateTo.mockRejectedValueOnce(new Error('navigation failed'))
+    state.showToast.mockResolvedValueOnce(undefined)
+    const { getByTestId } = render(<ProfilePage />)
+
+    fireEvent.click(getByTestId('profile-identity-copy-card'))
+
+    await waitFor(() => expect(state.showToast).toHaveBeenCalledWith({
+      title: '测评没有打开，请稍后再试',
+      icon: 'none',
+    }))
   })
 
   it('renders the level plate with the current level and never mounts it on gamification error', () => {

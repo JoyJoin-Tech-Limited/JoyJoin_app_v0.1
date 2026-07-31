@@ -9,6 +9,7 @@ interface FlowNodeProps {
   accent?: FlowAccent
   active: boolean
   current?: boolean
+  traveling?: boolean
   compact?: boolean
   align?: 'left' | 'right' | 'center'
 }
@@ -20,6 +21,7 @@ export default function FlowNode({
   accent = 'brand',
   active,
   current = false,
+  traveling = false,
   compact = false,
   align = 'left',
 }: FlowNodeProps) {
@@ -29,6 +31,7 @@ export default function FlowNode({
         'flow-node',
         active ? 'flow-node--active' : '',
         current ? 'flow-node--current' : '',
+        traveling ? 'flow-node--traveling' : '',
         compact ? 'flow-node--compact' : '',
         `flow-node--${align}`,
       ].filter(Boolean).join(' ')}

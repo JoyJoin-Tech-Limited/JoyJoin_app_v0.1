@@ -12,7 +12,7 @@ description: >
 
 ## Purpose
 
-Lock in correctness before implementation. For deterministic logic, bug fixes, and stateful workflows, write the failing test first, then make it pass, then refactor. This skill is the cross-tool equivalent of TDD discipline.
+Lock in correctness before implementation: write the failing test first, make it pass, then refactor. TDD discipline, cross-tool.
 
 ---
 
@@ -39,10 +39,10 @@ Lock in correctness before implementation. For deterministic logic, bug fixes, a
 
 ### Step 1: Red — write the failing test
 
-1. **Identify the behavior** you want to enforce
-2. **Write the smallest test** that captures that behavior
-3. **Run the test** — confirm it fails for the right reason
-4. **Document the failure** — what error message or assertion fails?
+1. Identify the behavior to enforce
+2. Write the smallest test capturing it
+3. Run it — confirm it fails for the right reason
+4. Document the failure (error message / failed assertion)
 
 **Example:**
 ```ts
@@ -55,12 +55,8 @@ test('warmup advance requires all players ready', async () => {
 
 ### Step 2: Green — make it pass
 
-1. **Write the smallest code change** that makes the test pass
-2. **Do not refactor yet** — the goal is passing, not elegance
-3. **Run the test** — confirm green
-4. **Run existing tests** — no regressions
+Smallest code change that passes; do not refactor yet; confirm green; run existing tests for regressions.
 
-**Example:**
 ```ts
 if (!hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCount)) {
   throw new Error('All participants must be ready before advancing warmup');
@@ -69,9 +65,7 @@ if (!hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCou
 
 ### Step 3: Refactor — clean up
 
-1. **Improve readability** — naming, structure, duplication removal
-2. **Run all tests** — green after every refactor step
-3. **Stop when clean enough** — don't gold-plate
+Improve naming/structure/duplication; keep all tests green after every step; stop when clean enough — don't gold-plate.
 
 ---
 
@@ -91,16 +85,14 @@ if (!hasAllRosterParticipantsResponded(state.warmupReadyUserIds, state.playerCou
 
 If you skipped test-first, you **must** add a regression test:
 
-1. **Reproduce the bug** in a test (even after the fix)
-2. **Revert your fix temporarily** — confirm the test fails
-3. **Re-apply the fix** — confirm the test passes
-4. **Commit both** — the test and the fix in the same PR
+1. Reproduce the bug in a test (even after the fix)
+2. Revert your fix temporarily — confirm the test fails
+3. Re-apply the fix — confirm the test passes
+4. Commit test and fix in the same PR
 
 ---
 
-## Examples
-
-### Example 1: Bug fix with test-first
+## Example
 
 **Bug:** Pool card cache miss metric not incrementing.
 
@@ -118,28 +110,20 @@ test('records cache miss when no live headline exists', () => {
 
 **Refactor:** Extract metric recording into a helper function.
 
-### Example 2: State machine change
-
-**Task:** Add new advance guard for `auction` phase.
-
-**Red:** Write test for `auctionAllLotsClosed === false` → throws.
-
-**Green:** Add the guard condition.
-
-**Refactor:** Extract guard conditions into a `validatePhaseAdvance` helper.
+*(Same pattern for state-machine changes: red = test for e.g. `auctionAllLotsClosed === false` → throws; green = add guard; refactor = extract `validatePhaseAdvance` helper.)*
 
 ---
 
 ## Troubleshooting
 
 **Test is too large to write first**
-> Decompose. Write a test for the smallest sub-behavior. If even that is too large, the task may need to be split.
+> Decompose to the smallest sub-behavior. If even that is too large, split the task.
 
-**Existing tests are too slow to run red-green-refactor**
-> Run only the relevant test file during the loop. Run the full suite at the end.
+**Existing tests too slow for the loop**
+> Run only the relevant test file during the loop; run the full suite at the end.
 
 **Not sure what to assert**
-> Start with the observable symptom. If the bug is "returns wrong value," assert the correct value. If the bug is "crashes," assert it doesn't crash.
+> Start with the observable symptom: "returns wrong value" → assert the correct value; "crashes" → assert it doesn't crash.
 
 ---
 

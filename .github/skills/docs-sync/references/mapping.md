@@ -35,7 +35,7 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 | `.github/skills/design-system-governance/SKILL.md` | — | Update the token/variant/component reference if a new CVA variant or design token was added |
 | `.github/skills/frontend-component-architecture/SKILL.md` | — | Update shared primitive listing if a new primitive was added |
 | `docs/button-design.md` | — | If the change involves the `Button` primitive or `buttonVariants.ts` — add variant rationale |
-| `apps/user-client/src/components/ui/button.tsx` comments | — | Confirm re-export wrapper still documents the correct shared source |
+| `apps/admin-client/src/components/ui/button.tsx` comments | — | Confirm re-export wrapper still documents the correct shared source |
 
 **When to skip:** Purely internal implementation change (e.g. adding a className helper function used only inside the file) with no change to exported API.
 
@@ -44,11 +44,10 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 ## 2. Frontend app architecture changes
 
 **Source paths:**
-- `apps/user-client/src/App.tsx`
-- `apps/user-client/src/pages/`
-- `apps/user-client/src/components/`
-- `apps/user-client/src/hooks/`
-- `apps/user-client/src/features/`
+- `apps/mini-program/src/app.ts`
+- `apps/mini-program/src/pages/`
+- `apps/mini-program/src/components/`
+- `apps/mini-program/src/hooks/`
 - `apps/admin-client/src/`
 
 **Documentation targets:**
@@ -59,7 +58,7 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 | `docs/architecture/current-state.md` | — | Update authority chain descriptions if routing, auth gating, or feature ownership changed |
 | `.github/skills/frontend-component-architecture/SKILL.md` | — | Update placement rules or examples if component placement patterns changed |
 | `.github/skills/onboarding-state-architecture/SKILL.md` | Update if onboarding step list or auth router facts were cached | If changes touch `App.tsx` `AuthenticatedRouter` or onboarding pages — update authority chain, step table |
-| `apps/user-client/src/features/onboarding/README.md` | — | If onboarding feature structure changed — update module boundary description |
+| `apps/mini-program/README.md` | — | If onboarding feature structure changed — update module boundary description |
 
 **When to skip:** Adding a new page component without changing routing logic, hooks, or shared patterns.
 
@@ -127,8 +126,8 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 **Source paths:**
 - `apps/server/src/routes/domains/auth.ts`
 - `apps/server/src/routes/domains/onboarding.ts`
-- `apps/user-client/src/features/onboarding/active/`
-- `apps/user-client/src/hooks/useAuth.ts`
+- `apps/mini-program/src/pages/onboarding/`
+- `apps/mini-program/src/hooks/auth/useWeChatLogin.ts`
 
 **Documentation targets:**
 
@@ -174,7 +173,7 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 
 **Source paths:**
 - `apps/server/src/routes/socialIcebreaker.ts`
-- `apps/user-client/src/` icebreaker pages and hooks
+- `apps/mini-program/src/pages/icebreaker-session/` and related hooks
 
 **Documentation targets:**
 

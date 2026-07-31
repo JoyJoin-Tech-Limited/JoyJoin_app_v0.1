@@ -1415,294 +1415,6 @@
       "cdnPath": "assets/lovart/icebreaker/bands/band-speed-friending.webp"
     },
     {
-      "localPath": "assets/profile-pixel/v2/archetypes/cat/body-front-v2.5df6a8f70a1b.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/cat/body-front-v2.5df6a8f70a1b.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/cat/full-starter-v2.ab31cfee7029.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/cat/full-starter-v2.ab31cfee7029.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/corgi/body-front-v2.5c2a54dc465f.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/corgi/body-front-v2.5c2a54dc465f.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/corgi/full-starter-v2.23d1c0da23d7.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/corgi/full-starter-v2.23d1c0da23d7.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/dolphin_calm/body-front-v2.f6c7e7247e3d.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/dolphin_calm/body-front-v2.f6c7e7247e3d.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/dolphin_calm/full-starter-v2.d8065e0cff90.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/dolphin_calm/full-starter-v2.d8065e0cff90.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/elephant/body-front-v2.d0bd4b46eb07.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/elephant/body-front-v2.d0bd4b46eb07.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/elephant/full-starter-v2.6efbb041607f.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/elephant/full-starter-v2.6efbb041607f.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/fox/body-front-v2.69f998579064.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/fox/body-front-v2.69f998579064.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/fox/full-starter-v2.33d65c449748.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/fox/full-starter-v2.33d65c449748.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/hamster_praise/body-front-v2.59f92487d4c5.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/hamster_praise/body-front-v2.59f92487d4c5.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/hamster_praise/full-starter-v2.71221a906fe9.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/hamster_praise/full-starter-v2.71221a906fe9.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/koala/body-front-v2.9b56e1ad0ae2.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/koala/body-front-v2.9b56e1ad0ae2.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/koala/full-starter-v2.feaa4dfb402f.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/koala/full-starter-v2.feaa4dfb402f.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/octopus/body-front-v2.12e36f5d647c.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/octopus/body-front-v2.12e36f5d647c.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/octopus/full-starter-v2.b3a92133f99d.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/octopus/full-starter-v2.b3a92133f99d.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/owl/body-front-v2.4e3d0a530077.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/owl/body-front-v2.4e3d0a530077.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/owl/full-starter-v2.619584186994.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/owl/full-starter-v2.619584186994.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/rooster/body-front-v2.352f1154e7c5.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/rooster/body-front-v2.352f1154e7c5.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/rooster/full-starter-v2.62d1a68f40db.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/rooster/full-starter-v2.62d1a68f40db.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/spider/body-front-v2.cb3448756189.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/spider/body-front-v2.cb3448756189.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/spider/full-starter-v2.59d1d9d366fd.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/spider/full-starter-v2.59d1d9d366fd.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/turtle/body-front-v2.a2056ebbc4cb.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/turtle/body-front-v2.a2056ebbc4cb.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/archetypes/turtle/full-starter-v2.18f70577b2fd.webp",
-      "cdnPath": "assets/profile-pixel/v2/archetypes/turtle/full-starter-v2.18f70577b2fd.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/cat/accessory/layer-v2.5e2df665b0f5.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/cat/accessory/layer-v2.5e2df665b0f5.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/cat/bottom/layer-v2.57c0fab53264.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/cat/bottom/layer-v2.57c0fab53264.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/cat/shoes/layer-v2.498edd805216.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/cat/shoes/layer-v2.498edd805216.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/cat/top/layer-v2.11cd023c56c2.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/cat/top/layer-v2.11cd023c56c2.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/corgi/accessory/layer-v2.c705eb3a5a94.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/corgi/accessory/layer-v2.c705eb3a5a94.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/corgi/bottom/layer-v2.929477c3556e.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/corgi/bottom/layer-v2.929477c3556e.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/corgi/shoes/layer-v2.81d0ffcaf3f5.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/corgi/shoes/layer-v2.81d0ffcaf3f5.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/corgi/top/layer-v2.d663cc07deb5.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/corgi/top/layer-v2.d663cc07deb5.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/accessory/layer-v2.c836b7503905.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/accessory/layer-v2.c836b7503905.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/bottom/layer-v2.d6512eb0878d.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/bottom/layer-v2.d6512eb0878d.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/shoes/layer-v2.dce7199da2a6.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/shoes/layer-v2.dce7199da2a6.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/top/layer-v2.ec872d9c77a1.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/top/layer-v2.ec872d9c77a1.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/elephant/accessory/layer-v2.027e74dd04ef.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/elephant/accessory/layer-v2.027e74dd04ef.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/elephant/bottom/layer-v2.6f21b699005a.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/elephant/bottom/layer-v2.6f21b699005a.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/elephant/shoes/layer-v2.f51958bf4d03.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/elephant/shoes/layer-v2.f51958bf4d03.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/elephant/top/layer-v2.65d8b7782ec6.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/elephant/top/layer-v2.65d8b7782ec6.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/accessory/layer-v2.dd6f0338fd01.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/accessory/layer-v2.dd6f0338fd01.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/bottom/layer-v2.38722d5ae753.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/bottom/layer-v2.38722d5ae753.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/shoes/layer-v2.b3368c4f661c.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/shoes/layer-v2.b3368c4f661c.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/top/layer-v2.14e7110efa21.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/top/layer-v2.14e7110efa21.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/accessory/layer-v2.a634972023c3.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/accessory/layer-v2.a634972023c3.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/bottom/layer-v2.62153347972e.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/bottom/layer-v2.62153347972e.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/shoes/layer-v2.95b854733463.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/shoes/layer-v2.95b854733463.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/top/layer-v2.50f961f73787.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/top/layer-v2.50f961f73787.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/accessory/layer-v2.32477b53743a.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/accessory/layer-v2.32477b53743a.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/bottom/layer-v2.a7513ccbaca5.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/bottom/layer-v2.a7513ccbaca5.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/shoes/layer-v2.c999553c7bcd.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/shoes/layer-v2.c999553c7bcd.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/top/layer-v2.e17570bc4a7d.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/top/layer-v2.e17570bc4a7d.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/octopus/accessory/layer-v2.e463a816741c.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/octopus/accessory/layer-v2.e463a816741c.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/octopus/bottom/layer-v2.f48926a8f4b5.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/octopus/bottom/layer-v2.f48926a8f4b5.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/octopus/shoes/layer-v2.10bd1df1e09e.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/octopus/shoes/layer-v2.10bd1df1e09e.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/octopus/top/layer-v2.2e062c272cf1.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/octopus/top/layer-v2.2e062c272cf1.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/owl/accessory/layer-v2.9a7a82fdab0f.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/owl/accessory/layer-v2.9a7a82fdab0f.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/owl/bottom/layer-v2.db87b66ea8bc.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/owl/bottom/layer-v2.db87b66ea8bc.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/owl/shoes/layer-v2.3b17ce2b4721.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/owl/shoes/layer-v2.3b17ce2b4721.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/owl/top/layer-v2.d8d9db3aad69.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/owl/top/layer-v2.d8d9db3aad69.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/rooster/accessory/layer-v2.71db0abb97f9.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/rooster/accessory/layer-v2.71db0abb97f9.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/rooster/bottom/layer-v2.8378f569534c.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/rooster/bottom/layer-v2.8378f569534c.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/rooster/shoes/layer-v2.2be01d39ff9c.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/rooster/shoes/layer-v2.2be01d39ff9c.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/rooster/top/layer-v2.ae11ee4a66c4.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/rooster/top/layer-v2.ae11ee4a66c4.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/spider/accessory/layer-v2.0fa24d1f0359.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/spider/accessory/layer-v2.0fa24d1f0359.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/spider/bottom/layer-v2.03c19913cfd7.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/spider/bottom/layer-v2.03c19913cfd7.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/spider/shoes/layer-v2.22b046fc12c4.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/spider/shoes/layer-v2.22b046fc12c4.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/spider/top/layer-v2.638c3606222b.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/spider/top/layer-v2.638c3606222b.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/accessory/layer-v2.96d57dac9cd0.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/accessory/layer-v2.96d57dac9cd0.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/layer-v2.312570c8d80a.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/layer-v2.312570c8d80a.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/shoes/layer-v2.8276d24471e2.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/shoes/layer-v2.8276d24471e2.webp"
-    },
-    {
-      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/layer-v2.b68a1568c0a8.webp",
-      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/layer-v2.b68a1568c0a8.webp"
-    },
-    {
       "localPath": "assets/profile-pixel/v2/stage/far-bg-v1.webp",
       "cdnPath": "assets/profile-pixel/v2/stage/far-bg-v1.webp"
     },
@@ -1833,6 +1545,486 @@
     {
       "localPath": "assets/lovart/landing/sprite-glass.webp",
       "cdnPath": "assets/lovart/landing/sprite-glass.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/cat/body-front-v2.5df6a8f70a1b.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/cat/body-front-v2.5df6a8f70a1b.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/cat/full-starter-v2.ab31cfee7029.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/cat/full-starter-v2.ab31cfee7029.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/corgi/body-front-v2.5c2a54dc465f.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/corgi/body-front-v2.5c2a54dc465f.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/corgi/full-starter-v2.23d1c0da23d7.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/corgi/full-starter-v2.23d1c0da23d7.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/dolphin_calm/body-front-v2.f6c7e7247e3d.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/dolphin_calm/body-front-v2.f6c7e7247e3d.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/dolphin_calm/full-starter-v2.d8065e0cff90.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/dolphin_calm/full-starter-v2.d8065e0cff90.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/elephant/body-front-v2.d0bd4b46eb07.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/elephant/body-front-v2.d0bd4b46eb07.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/elephant/full-starter-v2.6efbb041607f.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/elephant/full-starter-v2.6efbb041607f.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/fox/body-front-v2.69f998579064.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/fox/body-front-v2.69f998579064.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/fox/full-starter-v2.33d65c449748.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/fox/full-starter-v2.33d65c449748.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/hamster_praise/body-front-v2.59f92487d4c5.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/hamster_praise/body-front-v2.59f92487d4c5.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/hamster_praise/full-starter-v2.71221a906fe9.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/hamster_praise/full-starter-v2.71221a906fe9.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/koala/body-front-v2.9b56e1ad0ae2.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/koala/body-front-v2.9b56e1ad0ae2.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/koala/full-starter-v2.feaa4dfb402f.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/koala/full-starter-v2.feaa4dfb402f.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/octopus/body-front-v2.12e36f5d647c.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/octopus/body-front-v2.12e36f5d647c.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/octopus/full-starter-v2.b3a92133f99d.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/octopus/full-starter-v2.b3a92133f99d.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/owl/body-front-v2.4e3d0a530077.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/owl/body-front-v2.4e3d0a530077.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/owl/full-starter-v2.619584186994.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/owl/full-starter-v2.619584186994.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/rooster/body-front-v2.352f1154e7c5.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/rooster/body-front-v2.352f1154e7c5.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/rooster/full-starter-v2.62d1a68f40db.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/rooster/full-starter-v2.62d1a68f40db.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/spider/body-front-v2.cb3448756189.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/spider/body-front-v2.cb3448756189.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/spider/full-starter-v2.59d1d9d366fd.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/spider/full-starter-v2.59d1d9d366fd.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/turtle/body-front-v2.a2056ebbc4cb.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/turtle/body-front-v2.a2056ebbc4cb.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/archetypes/turtle/full-starter-v2.18f70577b2fd.webp",
+      "cdnPath": "assets/profile-pixel/v2/archetypes/turtle/full-starter-v2.18f70577b2fd.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/cat/accessory/layer-v2.5e2df665b0f5.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/cat/accessory/layer-v2.5e2df665b0f5.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/cat/accessory/thumb-v2.a6d775a6797f.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/cat/accessory/thumb-v2.a6d775a6797f.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/cat/bottom/layer-v2.57c0fab53264.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/cat/bottom/layer-v2.57c0fab53264.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/cat/bottom/thumb-v2.d51d061403a8.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/cat/bottom/thumb-v2.d51d061403a8.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/cat/shoes/layer-v2.498edd805216.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/cat/shoes/layer-v2.498edd805216.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/cat/shoes/thumb-v2.433884bfe799.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/cat/shoes/thumb-v2.433884bfe799.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/cat/top/layer-v2.11cd023c56c2.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/cat/top/layer-v2.11cd023c56c2.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/cat/top/thumb-v2.bb1b67115b62.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/cat/top/thumb-v2.bb1b67115b62.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/corgi/accessory/layer-v2.c705eb3a5a94.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/corgi/accessory/layer-v2.c705eb3a5a94.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/corgi/accessory/thumb-v2.eee583dc291d.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/corgi/accessory/thumb-v2.eee583dc291d.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/corgi/bottom/layer-v2.929477c3556e.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/corgi/bottom/layer-v2.929477c3556e.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/corgi/bottom/thumb-v2.f7f720e7385f.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/corgi/bottom/thumb-v2.f7f720e7385f.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/corgi/shoes/layer-v2.81d0ffcaf3f5.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/corgi/shoes/layer-v2.81d0ffcaf3f5.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/corgi/shoes/thumb-v2.7a04af66c3eb.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/corgi/shoes/thumb-v2.7a04af66c3eb.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/corgi/top/layer-v2.d663cc07deb5.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/corgi/top/layer-v2.d663cc07deb5.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/corgi/top/thumb-v2.4385c4cab517.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/corgi/top/thumb-v2.4385c4cab517.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/accessory/layer-v2.c836b7503905.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/accessory/layer-v2.c836b7503905.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/accessory/thumb-v2.f72a32aceb73.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/accessory/thumb-v2.f72a32aceb73.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/bottom/layer-v2.d6512eb0878d.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/bottom/layer-v2.d6512eb0878d.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/bottom/thumb-v2.4411c213f3a9.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/bottom/thumb-v2.4411c213f3a9.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/shoes/layer-v2.dce7199da2a6.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/shoes/layer-v2.dce7199da2a6.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/shoes/thumb-v2.3dc927f115d9.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/shoes/thumb-v2.3dc927f115d9.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/top/layer-v2.ec872d9c77a1.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/top/layer-v2.ec872d9c77a1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/top/thumb-v2.ed987a6615c1.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/dolphin_calm/top/thumb-v2.ed987a6615c1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/elephant/accessory/layer-v2.027e74dd04ef.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/elephant/accessory/layer-v2.027e74dd04ef.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/elephant/accessory/thumb-v2.1266c010cd46.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/elephant/accessory/thumb-v2.1266c010cd46.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/elephant/bottom/layer-v2.6f21b699005a.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/elephant/bottom/layer-v2.6f21b699005a.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/elephant/bottom/thumb-v2.138396dd4ea6.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/elephant/bottom/thumb-v2.138396dd4ea6.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/elephant/shoes/layer-v2.f51958bf4d03.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/elephant/shoes/layer-v2.f51958bf4d03.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/elephant/shoes/thumb-v2.d652089deb05.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/elephant/shoes/thumb-v2.d652089deb05.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/elephant/top/layer-v2.65d8b7782ec6.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/elephant/top/layer-v2.65d8b7782ec6.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/elephant/top/thumb-v2.ef2fc43f4f78.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/elephant/top/thumb-v2.ef2fc43f4f78.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/accessory/layer-v2.dd6f0338fd01.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/accessory/layer-v2.dd6f0338fd01.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/accessory/thumb-v2.62650b248324.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/accessory/thumb-v2.62650b248324.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/bottom/layer-v2.38722d5ae753.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/bottom/layer-v2.38722d5ae753.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/bottom/thumb-v2.08399b16d1e8.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/bottom/thumb-v2.08399b16d1e8.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/shoes/layer-v2.b3368c4f661c.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/shoes/layer-v2.b3368c4f661c.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/shoes/thumb-v2.26aa6569f784.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/shoes/thumb-v2.26aa6569f784.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/top/layer-v2.14e7110efa21.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/top/layer-v2.14e7110efa21.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/fox/top/thumb-v2.0a1075e4b9bf.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/fox/top/thumb-v2.0a1075e4b9bf.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/accessory/layer-v2.a634972023c3.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/accessory/layer-v2.a634972023c3.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/accessory/thumb-v2.949bfea5522c.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/accessory/thumb-v2.949bfea5522c.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/bottom/layer-v2.62153347972e.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/bottom/layer-v2.62153347972e.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/bottom/thumb-v2.a278667eb994.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/bottom/thumb-v2.a278667eb994.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/shoes/layer-v2.95b854733463.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/shoes/layer-v2.95b854733463.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/shoes/thumb-v2.b2a91fb720f5.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/shoes/thumb-v2.b2a91fb720f5.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/top/layer-v2.50f961f73787.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/top/layer-v2.50f961f73787.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/top/thumb-v2.37b6e4cda5f1.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/hamster_praise/top/thumb-v2.37b6e4cda5f1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/accessory/layer-v2.32477b53743a.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/accessory/layer-v2.32477b53743a.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/accessory/thumb-v2.47f6756e429b.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/accessory/thumb-v2.47f6756e429b.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/bottom/layer-v2.a7513ccbaca5.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/bottom/layer-v2.a7513ccbaca5.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/bottom/thumb-v2.9243c4467058.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/bottom/thumb-v2.9243c4467058.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/shoes/layer-v2.c999553c7bcd.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/shoes/layer-v2.c999553c7bcd.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/shoes/thumb-v2.33cb53a30e34.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/shoes/thumb-v2.33cb53a30e34.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/top/layer-v2.e17570bc4a7d.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/top/layer-v2.e17570bc4a7d.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/koala/top/thumb-v2.6dfea7a94219.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/koala/top/thumb-v2.6dfea7a94219.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/octopus/accessory/layer-v2.e463a816741c.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/octopus/accessory/layer-v2.e463a816741c.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/octopus/accessory/thumb-v2.43d27b455e10.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/octopus/accessory/thumb-v2.43d27b455e10.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/octopus/bottom/layer-v2.f48926a8f4b5.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/octopus/bottom/layer-v2.f48926a8f4b5.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/octopus/bottom/thumb-v2.c3debd83cab9.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/octopus/bottom/thumb-v2.c3debd83cab9.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/octopus/shoes/layer-v2.10bd1df1e09e.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/octopus/shoes/layer-v2.10bd1df1e09e.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/octopus/shoes/thumb-v2.0b9287cc2d5d.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/octopus/shoes/thumb-v2.0b9287cc2d5d.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/octopus/top/layer-v2.2e062c272cf1.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/octopus/top/layer-v2.2e062c272cf1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/octopus/top/thumb-v2.ac2f05edf3e6.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/octopus/top/thumb-v2.ac2f05edf3e6.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/owl/accessory/layer-v2.9a7a82fdab0f.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/owl/accessory/layer-v2.9a7a82fdab0f.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/owl/accessory/thumb-v2.35942e13fdf1.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/owl/accessory/thumb-v2.35942e13fdf1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/owl/bottom/layer-v2.db87b66ea8bc.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/owl/bottom/layer-v2.db87b66ea8bc.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/owl/bottom/thumb-v2.046bb5e50564.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/owl/bottom/thumb-v2.046bb5e50564.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/owl/shoes/layer-v2.3b17ce2b4721.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/owl/shoes/layer-v2.3b17ce2b4721.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/owl/shoes/thumb-v2.dc4dbfa5b21a.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/owl/shoes/thumb-v2.dc4dbfa5b21a.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/owl/top/layer-v2.d8d9db3aad69.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/owl/top/layer-v2.d8d9db3aad69.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/owl/top/thumb-v2.91283ab2abc9.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/owl/top/thumb-v2.91283ab2abc9.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/rooster/accessory/layer-v2.71db0abb97f9.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/rooster/accessory/layer-v2.71db0abb97f9.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/rooster/accessory/thumb-v2.c8a872ff1245.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/rooster/accessory/thumb-v2.c8a872ff1245.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/rooster/bottom/layer-v2.8378f569534c.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/rooster/bottom/layer-v2.8378f569534c.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/rooster/bottom/thumb-v2.f8430507e7a1.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/rooster/bottom/thumb-v2.f8430507e7a1.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/rooster/shoes/layer-v2.2be01d39ff9c.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/rooster/shoes/layer-v2.2be01d39ff9c.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/rooster/shoes/thumb-v2.748871c5ca9d.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/rooster/shoes/thumb-v2.748871c5ca9d.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/rooster/top/layer-v2.ae11ee4a66c4.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/rooster/top/layer-v2.ae11ee4a66c4.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/rooster/top/thumb-v2.0b7ca43fdcc2.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/rooster/top/thumb-v2.0b7ca43fdcc2.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/spider/accessory/layer-v2.0fa24d1f0359.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/spider/accessory/layer-v2.0fa24d1f0359.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/spider/accessory/thumb-v2.247442d6a3cf.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/spider/accessory/thumb-v2.247442d6a3cf.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/spider/bottom/layer-v2.03c19913cfd7.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/spider/bottom/layer-v2.03c19913cfd7.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/spider/bottom/thumb-v2.ac5be2b06ad0.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/spider/bottom/thumb-v2.ac5be2b06ad0.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/spider/shoes/layer-v2.22b046fc12c4.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/spider/shoes/layer-v2.22b046fc12c4.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/spider/shoes/thumb-v2.23553d0cd45b.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/spider/shoes/thumb-v2.23553d0cd45b.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/spider/top/layer-v2.638c3606222b.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/spider/top/layer-v2.638c3606222b.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/spider/top/thumb-v2.d8fa7d163f2d.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/spider/top/thumb-v2.d8fa7d163f2d.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/accessory/layer-v2.96d57dac9cd0.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/accessory/layer-v2.96d57dac9cd0.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/accessory/thumb-v2.98ce5a3bbf50.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/accessory/thumb-v2.98ce5a3bbf50.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/layer-v2.312570c8d80a.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/layer-v2.312570c8d80a.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/thumb-v2.624412500466.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/bottom/thumb-v2.624412500466.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/shoes/layer-v2.8276d24471e2.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/shoes/layer-v2.8276d24471e2.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/shoes/thumb-v2.8af6ff213442.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/shoes/thumb-v2.8af6ff213442.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/layer-v2.b68a1568c0a8.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/layer-v2.b68a1568c0a8.webp"
+    },
+    {
+      "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/thumb-v2.ea8607544207.webp",
+      "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/thumb-v2.ea8607544207.webp"
     }
   ],
   "pendingAssets": [
