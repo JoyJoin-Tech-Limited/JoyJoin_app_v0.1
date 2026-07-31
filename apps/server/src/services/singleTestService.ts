@@ -978,6 +978,9 @@ export async function cleanupSingleTestData(): Promise<{
       // test pool) would otherwise violate
       // event_pool_registrations_user_id_users_id_fk on the user delete.
       await tx.delete(eventPoolRegistrations).where(inArray(eventPoolRegistrations.userId, virtualUserIds));
+      // Same for blind_box_events rows owned by virtual users
+      // (blind_box_events_user_id_users_id_fk).
+      await tx.delete(blindBoxEvents).where(inArray(blindBoxEvents.userId, virtualUserIds));
       const deleted = await tx.delete(users).where(inArray(users.id, virtualUserIds)).returning({ id: users.id });
       deletedVirtualUsers = deleted.length;
     }
