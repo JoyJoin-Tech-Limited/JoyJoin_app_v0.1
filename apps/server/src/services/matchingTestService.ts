@@ -26,6 +26,7 @@ import { ARCHETYPE_DEFINITIONS } from "@shared/personality/archetypeNames";
 import { INTEREST_TAXONOMY } from "@shared/interests";
 import { isMatchingTestMode } from "../lib/isSingleTestMode";
 import { parseEventDate } from "../venueAssignmentService";
+import { cascadeDeleteByIds } from "../lib/fkCascadeDelete";
 
 type DbTransaction = NodePgDatabase<typeof schema>;
 
@@ -829,17 +830,11 @@ export async function cleanupMatchingTestData(): Promise<{
     const allBotIds = botUserRows.map((b: { id: string }) => b.id);
 
     if (allBotIds.length > 0) {
-      await tx
-        .delete(matchHistory)
-        .where(or(inArray(matchHistory.user1Id, allBotIds), inArray(matchHistory.user2Id, allBotIds)));
-      await tx.delete(eventAttendance).where(inArray(eventAttendance.userId, allBotIds));
-      await tx.delete(userInterests).where(inArray(userInterests.userId, allBotIds));
-
-      const deletedBots = await tx
-        .delete(users)
-        .where(inArray(users.id, allBotIds))
-        .returning({ id: users.id });
-      result.deletedBots = deletedBots.length;
+      // Catalog-driven recursive cascade delete (see fkCascadeDelete): covers all
+      // non-cascade FK references to users.id, not just the three hand-picked
+      // tables that previously left registrations / blind_box_events / etc. behind.
+      await cascadeDeleteByIds(tx, "users", "id", allBotIds);
+      result.deletedBots = allBotIds.length;
     }
   });
 

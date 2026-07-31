@@ -48,6 +48,7 @@ import { isSingleTestMode } from "../lib/isSingleTestMode";
 import { isSocialIcebreakerTestMode } from "../lib/isSocialIcebreakerTestMode";
 import { cleanupBotFillUsers } from "./botFillService";
 import { finalizeTestPoolGroups, nextDinnerDateTime } from "./matchingTestService";
+import { cascadeDeleteByIds } from "../lib/fkCascadeDelete";
 
 type IdRow = { id: string };
 type DbTransaction = NodePgDatabase<typeof schema>;
@@ -964,25 +965,13 @@ export async function cleanupSingleTestData(): Promise<{
 
     let deletedVirtualUsers = 0;
     if (virtualUserIds.length > 0) {
-      await tx
-        .delete(matchHistory)
-        .where(or(inArray(matchHistory.user1Id, virtualUserIds), inArray(matchHistory.user2Id, virtualUserIds)));
-      await tx.delete(eventAttendance).where(inArray(eventAttendance.userId, virtualUserIds));
-      await tx.delete(userInterests).where(inArray(userInterests.userId, virtualUserIds));
-      await tx
-        .delete(notifications)
-        .where(or(inArray(notifications.userId, virtualUserIds), inArray(notifications.sentBy, virtualUserIds)));
-      // Delete the virtual users' pool registrations across ALL pools before
-      // deleting the users themselves. cleanupSingleTestPoolRows only clears the
-      // canonical 单人调试局 pool, so registrations in other pools (e.g. a 酒局
-      // test pool) would otherwise violate
-      // event_pool_registrations_user_id_users_id_fk on the user delete.
-      await tx.delete(eventPoolRegistrations).where(inArray(eventPoolRegistrations.userId, virtualUserIds));
-      // Same for blind_box_events rows owned by virtual users
-      // (blind_box_events_user_id_users_id_fk).
-      await tx.delete(blindBoxEvents).where(inArray(blindBoxEvents.userId, virtualUserIds));
-      const deleted = await tx.delete(users).where(inArray(users.id, virtualUserIds)).returning({ id: users.id });
-      deletedVirtualUsers = deleted.length;
+      // Catalog-driven recursive cascade delete: discovers every non-cascade FK
+      // to users.id from pg_constraint (direct + transitive) and deletes
+      // deepest-first, so no child table can be missed regardless of how the
+      // schema grows. Replaces the previous hand-enumerated deletes that kept
+      // hitting new FK violations (registrations, blind_box_events, ...).
+      await cascadeDeleteByIds(tx, "users", "id", virtualUserIds);
+      deletedVirtualUsers = virtualUserIds.length;
     }
 
     return {

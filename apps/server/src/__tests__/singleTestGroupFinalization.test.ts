@@ -76,15 +76,14 @@ describe('single-test group finalization (单人调试局全链路)', () => {
     expect(serviceSource).toContain('!referencedOrphanEventIds.has(id)');
   });
 
-  it('reset deletes virtual-user notifications before deleting the virtual users', () => {
-    // Regression: notifications.user_id and notifications.sent_by are NO ACTION
-    // FKs. Leaving either behind makes POST /api/test/single-test/reset return 500.
-    expect(serviceSource).toContain('notifications.userId');
-    expect(serviceSource).toContain('notifications.sentBy');
-    const notificationsDeleteIndex = serviceSource.indexOf('.delete(notifications)');
-    const usersDeleteIndex = serviceSource.indexOf('.delete(users).where(inArray(users.id, virtualUserIds))');
-    expect(notificationsDeleteIndex).toBeGreaterThan(-1);
-    expect(usersDeleteIndex).toBeGreaterThan(notificationsDeleteIndex);
+  it('reset cascade-deletes virtual users with all their FK references', () => {
+    // Regression: notifications.user_id/sent_by, eventPoolRegistrations.userId,
+    // blind_box_events.userId, and dozens of other NO ACTION FKs to users.id.
+    // Hand-enumerating them repeatedly missed tables and 500'd the reset. The
+    // reset must use the catalog-driven recursive cascade (fkCascadeDelete),
+    // which discovers all dependents from pg_constraint and deletes them before
+    // the users themselves.
+    expect(serviceSource).toContain('cascadeDeleteByIds(tx, "users", "id", virtualUserIds)');
   });
 
   it('event_attendance schema declares the partial unique index required by the confirm upsert', () => {
