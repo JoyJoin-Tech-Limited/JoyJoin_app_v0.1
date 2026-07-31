@@ -12,7 +12,6 @@ import {
 } from '@shared/personality/adaptiveEngine'
 import { questionsV4 } from '@shared/personality/questionsV4'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
-import type { XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import { useAuth } from '../../../hooks/useAuth'
 import { apiRequest } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
@@ -126,9 +125,6 @@ export default function PersonalityTestPage() {
   const [isPageExiting, setIsPageExiting] = useState(false)
   // Exit modifier passed to child surfaces: personality-test--exiting
   const [error, setError] = useState('')
-  const [spriteState, setSpriteState] = useState<XiaoyueSpriteState>('idle')
-  const [mascotAutoPlay, setMascotAutoPlay] = useState(false)
-  const sliderInteractionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [postAnswerCommentary, setPostAnswerCommentary] = useState<string | null>(null)
   const commentaryReceivedAtRef = useRef<number>(0)
   const [, setMilestonePulse] = useState(false)
@@ -491,13 +487,10 @@ export default function PersonalityTestPage() {
     setPostAnswerCommentary(null)
 
     const isMilestone = progress && isMilestoneQuestion(progress.answered)
-    const reactionState: XiaoyueSpriteState = isMilestone ? 'celebrate' : 'nod'
-
     if (isMilestone) {
       setMilestonePulse(true)
     }
 
-    setSpriteState(reactionState)
     lastAttemptedOptionRef.current = option
     setCurrentSelection(option)
 
@@ -521,23 +514,7 @@ export default function PersonalityTestPage() {
 
   const handleSliderChange = useCallback((value: number) => {
     setSliderValue(value)
-    setMascotAutoPlay(true)
-    if (sliderInteractionTimerRef.current) {
-      clearTimeout(sliderInteractionTimerRef.current)
-    }
-    sliderInteractionTimerRef.current = setTimeout(() => {
-      setMascotAutoPlay(false)
-    }, 400)
   }, [])
-
-  // When submitting ends while sprite is in 'thinking', return to idle and
-  // deactivate the interaction-driven mascot animation.
-  useEffect(() => {
-    if (!isSubmitting) {
-      setSpriteState((prev) => (prev === 'thinking' ? 'idle' : prev))
-      setMascotAutoPlay(false)
-    }
-  }, [isSubmitting])
 
   // Echo lifecycle: fade-out before unmount so the transition to the next
   // question doesn't feel like a hard cut.
@@ -601,10 +578,6 @@ export default function PersonalityTestPage() {
   // the user navigates away, preventing stale setState calls.
   useEffect(() => {
     return () => {
-      if (sliderInteractionTimerRef.current) {
-        clearTimeout(sliderInteractionTimerRef.current)
-        sliderInteractionTimerRef.current = null
-      }
     }
   }, [])
 
@@ -773,7 +746,6 @@ export default function PersonalityTestPage() {
       setError(message)
       analytics.errorOccurred('answer_failed', rawMessage)
       logError('[PersonalityTest] Failed to submit answer', { rawMessage, userMessage: message })
-      setSpriteState('idle')
     } finally {
       setIsSubmitting(false)
     }
@@ -953,8 +925,6 @@ export default function PersonalityTestPage() {
           isSkipping={isSkipping}
           skipsRemaining={skipsRemaining}
           error={error}
-          spriteState={spriteState}
-          mascotAutoPlay={mascotAutoPlay}
           postAnswerCommentary={postAnswerCommentary}
           shouldShowEcho={shouldShowEcho}
           isEchoExiting={isEchoExiting}

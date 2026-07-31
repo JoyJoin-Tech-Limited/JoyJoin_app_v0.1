@@ -3,7 +3,6 @@ import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Button from '../../../components/ui/Button'
 import SegmentedProgress from '../../../components/ui/SegmentedProgress'
 import TypewriterText from '../../../components/ui/TypewriterText'
-import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import MascotQuestionHeader from './MascotQuestionHeader'
 import PersonalityTestAnswerArea, { getNearestSliderOption } from './PersonalityTestAnswerArea'
 import QuestionTransition from './QuestionTransition'
@@ -26,20 +25,20 @@ function getQuestionType(question: AssessmentQuestion | null): AssessmentQuestio
   return question.questionType
 }
 
-function resolveMascotState(args: {
-  isLoading: boolean
-  isSubmitting: boolean
-  questionType: AssessmentQuestionType
-  isMilestone: boolean
-  isPostAnswerCommentary: boolean
-  isCelebration: boolean
-}): XiaoyueSpriteState {
-  if (args.isCelebration) return 'celebrate'
-  if (args.isPostAnswerCommentary) return 'nod'
-  if (args.isLoading || args.isSubmitting) return 'listening'
-  if (args.isMilestone) return 'surprised'
-  if (args.questionType === 'emoji_tap') return 'curious'
-  return 'idle'
+const QUESTION_MASCOT_POSES = [
+  PERSONALITY_TEST_QUESTION_EXPRESSION.choice,
+  PERSONALITY_TEST_QUESTION_EXPRESSION.slider,
+  PERSONALITY_TEST_QUESTION_EXPRESSION.acknowledged,
+  PERSONALITY_TEST_QUESTION_EXPRESSION.milestone,
+] as const
+
+/** Pick a varied pose per question while keeping it stable across re-renders. */
+export function getQuestionMascotPose(questionId: string): (typeof QUESTION_MASCOT_POSES)[number] {
+  let hash = 0
+  for (let index = 0; index < questionId.length; index += 1) {
+    hash = (hash * 31 + questionId.charCodeAt(index)) >>> 0
+  }
+  return QUESTION_MASCOT_POSES[hash % QUESTION_MASCOT_POSES.length]
 }
 
 function getSliderValueFromPreviousAnswer(previousAnswer: string | null, options: AssessmentOption[]): number {
@@ -64,8 +63,6 @@ interface PersonalityTestQuestionProps {
   isSkipping: boolean
   skipsRemaining: number
   error: string
-  spriteState: XiaoyueSpriteState
-  mascotAutoPlay: boolean
   postAnswerCommentary: string | null
   shouldShowEcho: boolean
   isEchoExiting: boolean
@@ -97,8 +94,6 @@ export default function PersonalityTestQuestion({
   isSkipping,
   skipsRemaining,
   error,
-  spriteState,
-  mascotAutoPlay,
   postAnswerCommentary,
   shouldShowEcho,
   isEchoExiting,
@@ -195,29 +190,15 @@ export default function PersonalityTestQuestion({
       <View className='personality-test__mascot-zone'>
         {currentQuestion ? (
           (() => {
-            const isMilestoneNow = progress ? isMilestoneQuestion(progress.answered) : false
-            const resolvedMascotState = resolveMascotState({
-              isLoading: isSubmitting,
-              isSubmitting,
-              questionType,
-              isMilestone: isMilestoneNow && !!postAnswerCommentary,
-              isPostAnswerCommentary: !!postAnswerCommentary,
-              isCelebration: false,
-            })
+            const pose = getQuestionMascotPose(currentQuestion.id)
             return (
               <View className='personality-test__mascot-row'>
                 <View className='personality-test__mascot-avatar'>
-                  <XiaoyueSpriteAnimator
-                    state={resolvedMascotState}
-                    size='152rpx'
-                    isLoading={isSubmitting}
-                    showGlow={false}
-                    autoPlay={mascotAutoPlay || resolvedMascotState !== 'idle'}
-                    transitionMs={0}
+                  <Image
+                    src={getXiaoyueExpressionAsset(pose)}
+                    mode='aspectFit'
                     className='personality-test__mascot-animator'
-                    // Freeze the mascot on passive question states so the user never
-                    // sees an eyes-closed/blink frame. Let reaction states animate.
-                    staticFrame={resolvedMascotState === 'idle' || resolvedMascotState === 'curious' ? 0 : undefined}
+                    aria-hidden='true'
                   />
                 </View>
                 <View
