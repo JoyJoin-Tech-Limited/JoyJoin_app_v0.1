@@ -89,14 +89,19 @@ export function seedSingleTestBotsPersonalityDiceReady(state: SocialSessionState
   const selectionReady = new Set(state.diceCompletedBy ?? []);
   const revealReady = new Set(state.diceRevealReadyBy ?? []);
   for (const bot of bots) {
-    const group = groups.find((candidate) => candidate.userId === bot.userId);
+    // Challenge groups may have been generated from the client-safe roster,
+    // where bots are identified by opaque botId rather than users.id.
+    const group = groups.find(
+      (candidate) => candidate.userId === bot.userId || candidate.userId === bot.botId,
+    );
     if (!group) continue;
-    if (state.diceSelectedOption[bot.userId] === undefined) {
+    const challengeUserId = group.userId;
+    if (state.diceSelectedOption[challengeUserId] === undefined) {
       const mediumIndex = group.options.findIndex((option) => option.difficulty === 'medium');
-      state.diceSelectedOption[bot.userId] = mediumIndex >= 0 ? mediumIndex : 0;
+      state.diceSelectedOption[challengeUserId] = mediumIndex >= 0 ? mediumIndex : 0;
     }
-    selectionReady.add(bot.userId);
-    revealReady.add(bot.userId);
+    selectionReady.add(challengeUserId);
+    revealReady.add(challengeUserId);
   }
   state.diceCompletedBy = [...selectionReady];
   state.diceRevealReadyBy = [...revealReady];

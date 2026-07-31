@@ -168,6 +168,36 @@ describe('socialIcebreakerBotService', () => {
     ]));
   });
 
+  it('seeds ready state when generated groups contain client-safe bot IDs', () => {
+    const singleTest = makeSingleTestState(false);
+    const state = makeState({
+      currentPhase: 'personality_dice',
+      singleTest,
+      personalityDiceChooseModeEnabled: true,
+      personalityDiceChallengeGroups: singleTest.botPersonas.map((bot) => ({
+        userId: bot.botId,
+        displayName: bot.displayName,
+        dominantTrait: 'A',
+        options: (['easy', 'medium', 'hard'] as const).map((difficulty) => ({
+          userId: bot.botId,
+          displayName: bot.displayName,
+          dominantTrait: 'A',
+          challengeTitle: difficulty,
+          challengeBody: difficulty,
+          challengeEmoji: '🎲',
+          difficulty,
+        })),
+      })),
+    });
+
+    seedSingleTestBotsPersonalityDiceReady(state);
+
+    const clientBotIds = singleTest.botPersonas.map((bot) => bot.botId);
+    expect(Object.keys(state.diceSelectedOption ?? {})).toEqual(expect.arrayContaining(clientBotIds));
+    expect(state.diceCompletedBy).toEqual(expect.arrayContaining(clientBotIds));
+    expect(state.diceRevealReadyBy).toEqual(expect.arrayContaining(clientBotIds));
+  });
+
   describe('createSeededRandom', () => {
     it('produces the same sequence for the same seed', () => {
       const rng1 = createSeededRandom('seed-a');
