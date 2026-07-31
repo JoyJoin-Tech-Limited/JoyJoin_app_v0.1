@@ -82,6 +82,7 @@ const ACTION_OPTIONS = [
   { value: "FLASH_SCHEDULE_DRAFT_GENERATED", label: "生成闪现排班草案" },
   { value: "FLASH_SCHEDULE_DRAFT_UPDATED", label: "更新闪现排班草案" },
   { value: "FLASH_SCHEDULE_PUBLISHED", label: "发布闪现排班" },
+  { value: "FLASH_SCHEDULE_REGENERATED", label: "重新生成已发布排班" },
   { value: "MATCHING_WEIGHTS_ACTIVATED", label: "激活匹配权重" },
   { value: "MATCHING_WEIGHTS_DISABLED", label: "禁用匹配权重" },
   { value: "MATCHING_WEIGHTS_ROLLED_BACK", label: "回滚匹配权重" },
