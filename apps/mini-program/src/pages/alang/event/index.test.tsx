@@ -121,6 +121,22 @@ describe('formal Flash home', () => {
     ))
   })
 
+  it('discards the one-shot location on hide and asks again on return', async () => {
+    render(<FlashHomePage />)
+    act(() => { mocks.didShow?.() })
+    await acceptFlashIntro()
+    await waitFor(() => expect(mocks.location).toHaveBeenCalledTimes(1))
+
+    act(() => {
+      mocks.didHide?.()
+      mocks.didShow?.()
+    })
+
+    expect(await screen.findByText('先认识一下街头盲盒')).toBeInTheDocument()
+    expect(mocks.location).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(mocks.useFlashHome).toHaveBeenLastCalledWith(null, false))
+  })
+
   it('opens the radar with safe display metadata but no coordinates', async () => {
     render(<FlashHomePage />)
     act(() => { mocks.didShow?.() })
@@ -208,12 +224,15 @@ describe('formal Flash home', () => {
     fireEvent.click(screen.getByText('我知道了，开启定位'))
     expect(screen.getByText('看看深圳哪里有角色在线…')).toBeInTheDocument()
     expect(document.querySelector('.flash-location-compiler-scope-v4')).toBeTruthy()
+    const locationCallsBeforeHide = mocks.location.mock.calls.length
 
-    mocks.didHide?.()
-    mocks.didShow?.()
+    act(() => {
+      mocks.didHide?.()
+      mocks.didShow?.()
+    })
 
-    expect(await screen.findByText('这次没有拿到位置')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '重新定位' })).toBeInTheDocument()
+    expect(await screen.findByText('先认识一下街头盲盒')).toBeInTheDocument()
+    expect(mocks.location).toHaveBeenCalledTimes(locationCallsBeforeHide)
   })
 
   it('leaves locating even when the page stays visible and the device API never settles', async () => {

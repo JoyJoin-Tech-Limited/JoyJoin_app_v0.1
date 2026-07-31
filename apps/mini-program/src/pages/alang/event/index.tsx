@@ -211,9 +211,9 @@ export default function FlashHomePage() {
       if (attempt !== locationAttemptRef.current) return
       setLocation(snapshot)
       setGate('ready')
-    } catch (error) {
+    } catch (locationError) {
       if (attempt !== locationAttemptRef.current) return
-      setGate(isLocationPermissionDenied(error) ? 'denied' : 'error')
+      setGate(isLocationPermissionDenied(locationError) ? 'denied' : 'error')
     } finally {
       if (attempt === locationAttemptRef.current) locationActiveRef.current = false
     }
@@ -252,11 +252,12 @@ export default function FlashHomePage() {
 
   useDidShow(() => {
     setPageVisible(true)
-    if (wasHiddenRef.current && (gate === 'checking' || gate === 'locating')) {
+    if (wasHiddenRef.current) {
       wasHiddenRef.current = false
       locationAttemptRef.current += 1
       locationActiveRef.current = false
-      setGate('error')
+      setLocation(null)
+      if (enabled) setGate('intro')
       return
     }
     wasHiddenRef.current = false
@@ -264,7 +265,6 @@ export default function FlashHomePage() {
       void restoreGate()
       return
     }
-    if (gate === 'ready' && location) void refetch()
   })
 
   useDidHide(() => {
@@ -272,6 +272,8 @@ export default function FlashHomePage() {
     locationAttemptRef.current += 1
     locationActiveRef.current = false
     setPageVisible(false)
+    setLocation(null)
+    if (enabled) setGate('intro')
   })
 
   useEffect(() => {
