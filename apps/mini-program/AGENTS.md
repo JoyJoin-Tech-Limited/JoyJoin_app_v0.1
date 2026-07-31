@@ -1,6 +1,6 @@
 # Mini-Program — Agent Onboarding Guide
 
-> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-07-01
+> Compact instructions for AI coding agents working on `apps/mini-program` (the WeChat Mini Program). Last updated: 2026-07-31
 
 ---
 
@@ -134,6 +134,8 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 
 ## 4. Asset loading strategy (HARD rules)
 
+> Full inventory + build pipelines: `docs/agent-context/mini-program-assets.md`. The rules below are the ones that must not be violated.
+
 - **Build-time CDN URL guarantee**: `config/index.ts` defaults `TARO_APP_CDN_BASE_URL` to `https://joyjoinapp.com/static` in production; CI workflow has the same fallback. Source code must use `cdnAsset()` / `localAsset()` helpers — never hardcode the CDN hostname.
 - **Two-tier brand font**: minimal Alimama subset (66KB) bundled; full font (621KB) loads from CDN with 500ms defer.
 - **Quicksand English font** (256KB) bundled and loaded on app launch.
@@ -252,27 +254,7 @@ npx miniprogram-ci upload \
 
 ## 12. Events / Footprint tab
 
-- **`FootprintOracleCard`** (`src/components/events/FootprintOracleCard.tsx`) — interactive event card for the "足迹" tab list. Wraps `EventSummaryCard` in a two-rail layout: left body carries the status pill, title, date/time/location; right rail carries a compact segmented countdown, group-size hint, price, or a "待公布" placeholder when none are available. Haptic feedback on tap; `hoverClass` pressed state; index-based entrance delay; reduced-motion/degradation tier disables entrance delay.
-- **`EventSummaryCard`** (`src/components/events/EventSummaryCard.tsx`) — shared presentational base for `FootprintOracleCard` and any read-only confirmation surfaces (e.g. pool-registration terminal states). Renders the same gradient shell, status pulse pill, segmented countdown, title, date/time/location meta, and corner vignette. Supports `interactive` prop to toggle tap affordances and `railMode` + `rightRail` props for the two-rail layout. Title clamps to 2 lines with `keep-all` word breaking to avoid 孤字.
-- **`EventCountdownClock`** (colocated in `EventSummaryCard.tsx`) — memoized segmented clock sub-component so the parent card does not re-render every second.
-- **`useEventCountdown`** (`src/hooks/useEventCountdown.ts`) — visibility-aware countdown hook returning `display`, structured `segments` (`days/hours/minutes/seconds/progress`), `isUrgent`, `hasStarted`, and `isLive`. Ticks are gated by in-viewport IntersectionObserver state, app hide/show lifecycle, `prefers-reduced-motion`, and `useDeviceTier().isDegradation`.
-- **Venue disclosure rule:** Venue location is hidden when status is `registered`/`pending`/`upcoming`; disclosed only for `confirmed` or `venue_unlocked`. The raw `matched` status means the group has been formed but the venue is still being assigned, and the server derives the user-facing `displayStatus` from `matchStatus`, `poolStatus`, `venueAssignmentStatus`, and `venueName`. Terminal pool states (`completed`/`cancelled`) override the registration-level status. The card always renders event type + city/district and only appends the venue name once unlocked.
-- **Two-rail accessibility:** The right rail itself is not `aria-hidden`; only the decorative `›` cue is hidden. `FootprintOracleCard` builds a `railAriaLabel` from the rail contents (countdown, group size, price) and appends it to the card's accessible name, so screen readers announce the same facts sighted users see.
-- **Corner vignette text overlap (2026-07-21):** The Lovart event-type vignette is no longer avoided by text layers — all content (title, meta, badge) may flow over the light (opacity 0.5) vignette for a visually balanced card. Non-rail vignette enlarged from 220→280rpx; rail mode vignette stays at 168×168rpx (inside the right rail). OracleCard (`--has-corner-stat`) reserves only 120rpx for the solid corner-stat badge on the topline; all other layers flow full-width. Squad-unboxing event-brief vignette: repositioned to `absolute` top-right, 112→160rpx, date text flows underneath.
-- **Terminal-state detection:** `FootprintOracleCard` consumes `isJoinedEventTerminal()` from `eventDisplay.ts` instead of maintaining its own status list.
-- **`formatEventDateTime`** (`src/lib/utils/eventDisplay.ts`) — renders `今天`/`明天`/`后天` prefixes for near-term event dates.
-- **`getSystemReducedMotion()`** (`src/lib/utils/accessibility.ts`) — canonical helper for reading the OS-level reduced-motion preference. Prefer this over duplicating `Taro.getSystemInfoSync()` reads.
-- **Accessibility:** The countdown clock uses `aria-live="polite"` for screen-reader announcements.
-
-## 13. Pool-registration terminal states
-
-- **`PoolRegistrationTerminalStates.tsx`** (`src/pages/pool-registration/components/PoolRegistrationTerminalStates.tsx`) owns the loading, empty/error, already-joined, and success states for pool registration.
-- **Already-joined and success screens** reuse `EventSummaryCard` so the event summary is visually identical to the "我的足迹" card.
-- **Read-only card mode:** terminal-state cards do not pass `interactive`, so they have no hover state, tap hint, or navigation.
-- **Scroll safety:** both terminal states wrap the centered card in `<ScrollView className='pool-reg__scroll'>` so the CTA and any follow-up content (e.g. `ChemistryMiniGrid`) remain reachable on short phones.
-- **Haptics:** primary CTAs (`去我的足迹查看状态`) use `haptics('medium')`; the secondary "开启匹配结果通知" button uses `haptics('light')`.
-- **Analytics:** terminal states emit `registration_terminal_state_view` on mount and `registration_terminal_cta_tap` / `registration_terminal_notify_tap` on tap.
-- **Notification button state:** the parent page (`pool-registration/index.tsx`) tracks `isEnablingNotifications` / `notificationsEnabled`; the button shows a loading spinner during the WeChat subscribe request and becomes disabled with "已开启提醒" after success.
+> Full component + rule reference: `docs/agent-context/mini-program-events.md` (FootprintOracleCard, EventSummaryCard, EventCountdownClock, useEventCountdown, venue disclosure, vignette layout, terminal-state detection, pool-registration terminal states). Non-negotiable: venue location is hidden until `displayStatus` is `confirmed`/`venue_unlocked`; countdown uses `aria-live="polite"`; terminal states stay reachable on short phones via `pool-reg__scroll`.
 
 ## 14. Discover / OracleCard
 
@@ -288,11 +270,7 @@ npx miniprogram-ci upload \
 
 ## 15. My-Image stage scene & subpackage WXSS guard (2026-07-21)
 
-- **`IdentityStageScene`** — stage wrapper for `PixelAvatar3D`/V2 paper doll: sunset street depth scene (`layerImageMode='aspectFill'`), CDN-first via `v2/stage/*.webp` + CDN manifest; total art failure degrades to children over the legacy grid backdrop.
-- **Subpackage WXSS splitting is a hard trap**: WeChat applies only the page's own WXSS + the `app.wxss` chain (`app.wxss` → `common.wxss`). Taro's chunk graph can move a component's rules into an unreachable chunk (e.g., V2 turntable/composite rules landed in `pages/profile-linked/three-avatar.wxss`, blanking the stage for all 11 non-spider archetypes). **Any component SCSS used by a `profile-linked` page MUST be `@use`d in the page SCSS.** CI gate: `npm run verify:subpackage-styles -w mini-program` asserts the required selectors in compiled page WXSS; runs in `taro-weapp-build.yml` after `check:package-size`.
-- **Percentage-height stage trap (2026-07-23)**: `IdentityStageScene` sizes itself with `height: 100%`, which never resolves against a host that only declares `min-height` — the scene collapses to 0 height and its `overflow: hidden` blanks the entire identity card (the Profile-tab blank-card bug). Stage hosts MUST set an explicit `height` next to `min-height` (pattern: `my-image__stage`); the component also carries `min-height: inherit` as component-level defense. The `verify:subpackage-styles` gate asserts both.
-- **Slot hotspots** — `PixelAvatarComposite` accepts `slotHotspots` + `onSlotTap`: placement-rect hit areas on the character, front frame only (off-front poses hide them). Tapping jacket/shoes on the character jumps to that wardrobe slot.
-- **Wardrobe slot tabs** show an equipped-state dot; equipment layers fade in on item change (240ms opacity transition, RM-suppressed).
-- **Layer extraction** — 48 starter layers derived by atlas character-difference from each archetype's `atlas-source.png` (2×3 dressed-stage grid). Coarse silhouette + head alignment; diff-bounds placement; hard fit gate ≤3% missed/≤5% extra. 12 per-archetype `fullStarter` approved full-dress illustrations (spider keeps V1). See `assets-source/profile-pixel-v2/README.md` for the full pipeline.
-- **Equipment thumbnails (2026-07-29)** — every equipment item now ships a dedicated square `thumb-v2` (256×256) alongside its `layer-v2`. The build script trims the layer to its alpha bounds and fits it onto a transparent square canvas; `getPixelEquipmentThumbnailUrl` returns the thumbnail (fallback: layer URL). Profile tab slot art uses thumbnails so wide diff-bounds crops no longer render as thread-like strips.
-- **`identity-stage__content` pointer-events removed (2026-07-29)** — the previous `pointer-events: none` + `> * { pointer-events: auto }` pattern on `IdentityStageScene.__content` swallowed taps on some WeChat builds. It is intentionally removed; children declare their own interactive targets and the decorative layers behind remain `pointer-events: none`.
+> Full reference (stage scene, WebGL 3D avatar, chunk routing, slot hotspots, equipment layers): `docs/agent-context/mini-program-profile.md`. Non-negotiable:
+> - **Subpackage WXSS splitting is a hard trap**: any component SCSS used by a `profile-linked` page MUST be `@use`d in the page SCSS. CI gate: `npm run verify:subpackage-styles -w mini-program`.
+> - **Percentage-height stage trap (2026-07-23)**: stage hosts MUST set an explicit `height` next to `min-height` (pattern: `my-image__stage`); `IdentityStageScene` carries `min-height: inherit` as defense.
+> - **`identity-stage__content` pointer-events removed (2026-07-29)**: children declare their own interactive targets; do not reintroduce the `pointer-events: none` wrapper pattern.
