@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { View, Text, Image } from '@tarojs/components'
+import { View, Text, Image, ScrollView } from '@tarojs/components'
 import { haptics } from '../../../lib/utils/haptics'
-import type { MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
+import {
+  MINI_SCRIPT_GENRES,
+  type MiniScriptGenre,
+  type MiniScriptStyle,
+} from '@shared/miniscriptStoryFramework'
 import {
   MINISCRIPT_CATALOG,
   SURPRISE_ME_CARD,
@@ -27,7 +32,7 @@ export function MiniScriptConfigModal({
   open,
   onClose,
   initialStyle = 'modern_urban',
-  initialGenres = [],
+  initialGenres = [...MINI_SCRIPT_GENRES],
   isSubmitting,
   onSubmit,
 }: MiniScriptConfigModalProps) {
@@ -215,11 +220,9 @@ export function MiniScriptConfigModal({
         </View>
 
         {/* Content */}
-        <View className='ms-modal__content'>
+        <ScrollView className='ms-modal__content' scrollY enhanced showScrollbar={false}>
           {/* Stage 1: Style Grid */}
-          <View
-            className={`ms-stage ms-stage--style${stage === 'genre' ? ' ms-stage--exited' : ''}`}
-          >
+          {stage === 'style' && <View className='ms-stage ms-stage--style'>
             <View className='ms-grid ms-grid--style'>
               {styleCards.map((card, index) => {
                 const isSurprise = card.key === SURPRISE_ME_CARD.key
@@ -230,18 +233,18 @@ export function MiniScriptConfigModal({
                 const mod = getCardModifier(card.key, index)
 
                 const thumbLoaded = loadedThumbs.has(card.key)
-                const thumbPath = !isSurprise ? (card as MiniscriptStyleCard).thumbnailPath : undefined
+                const posterPath = card.posterPath ? cdnAsset(card.posterPath) : undefined
 
                 return (
                   <View
                     key={card.key}
                     className={`ms-card ${mod}`}
+                    role='button'
+                    aria-label={`${label}，选择此剧本风格`}
                     onTouchStart={() => handlePressStart(card.key)}
-                    onTouchEnd={() => {
-                      handlePressEnd()
-                      handleSelectStyle(card.key)
-                    }}
+                    onTouchEnd={handlePressEnd}
                     onTouchCancel={handlePressEnd}
+                    onClick={() => handleSelectStyle(card.key)}
                   >
                     {/* Gradient background — fades out when thumbnail loads */}
                     <View
@@ -249,10 +252,10 @@ export function MiniScriptConfigModal({
                       style={{ background: gradient }}
                     />
                     {/* Thumbnail image — fades in when loaded */}
-                    {thumbPath && (
+                    {posterPath && (
                       <Image
                         className={`ms-card__thumb${thumbLoaded ? ' ms-card__thumb--loaded' : ''}`}
-                        src={thumbPath}
+                        src={posterPath}
                         mode='aspectFill'
                         lazyLoad
                         onLoad={() => {
@@ -275,12 +278,10 @@ export function MiniScriptConfigModal({
                 )
               })}
             </View>
-          </View>
+          </View>}
 
           {/* Stage 2: Genre Grid */}
-          <View
-            className={`ms-stage ms-stage--genre${stage === 'genre' ? ' ms-stage--active' : ''}`}
-          >
+          {stage === 'genre' && <View className='ms-stage ms-stage--genre'>
             <View className='ms-genre-header'>
               <Text className='ms-genre-header__title'>选择题材</Text>
               <Text className='ms-genre-header__hint'>可多选，为剧本注入情绪基调</Text>
@@ -295,12 +296,12 @@ export function MiniScriptConfigModal({
                   <View
                     key={card.key}
                     className={`ms-genre-card ${mod}`}
+                    role='button'
+                    aria-label={`${card.label}${isSelected ? '，已选择' : '，未选择'}`}
                     onTouchStart={() => handlePressStart(card.key)}
-                    onTouchEnd={() => {
-                      handlePressEnd()
-                      handleToggleGenre(card.key as MiniScriptGenre)
-                    }}
+                    onTouchEnd={handlePressEnd}
                     onTouchCancel={handlePressEnd}
+                    onClick={() => handleToggleGenre(card.key as MiniScriptGenre)}
                   >
                     <View
                       className='ms-genre-card__bg'
@@ -324,8 +325,8 @@ export function MiniScriptConfigModal({
                 )
               })}
             </View>
-          </View>
-        </View>
+          </View>}
+        </ScrollView>
 
         {/* Footer CTA */}
         <View className='ms-modal__footer'>

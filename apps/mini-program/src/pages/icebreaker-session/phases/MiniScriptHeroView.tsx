@@ -95,6 +95,7 @@ export function MiniScriptHeroView({
   const currentAct = session.miniScriptCurrentAct ?? 0
   const totalActs = framework?.act_flow.length ?? 0
   const solutionRevealed = session.miniScriptSolutionRevealed ?? false
+  const revealedSolution = session.miniScriptRevealedSolution
   const myVote = session.miniScriptVotes?.find((v) => v.userId === currentUserId)
   const allVotes = session.miniScriptVotes ?? []
   const readyMap = session.miniScriptPlayerReady ?? {}
@@ -235,7 +236,7 @@ export function MiniScriptHeroView({
         <PhaseHeroCard
           phase='mini_script'
           title='迷你剧本杀'
-          prompt={framework.premise}
+          prompt={isHost ? framework.premise : '剧本已生成，等待主持人分配角色。'}
           statusText={isHost ? '分配角色后开演' : '等待主持人分配角色…'}
           actions={
             isHost ? (
@@ -252,7 +253,16 @@ export function MiniScriptHeroView({
               </Button>
             ) : undefined
           }
-        />
+        >
+          {isHost ? (
+            <View className='miniscript-hero__section'>
+              <Text className='miniscript-hero__section-title'>主持人预览</Text>
+              <Text className='miniscript-hero__beat'>{framework.premise}</Text>
+              <Text className='miniscript-hero__beat'>角色：{framework.characters.map((role) => role.roleLabel).join('、')}</Text>
+              <Text className='miniscript-hero__beat'>幕次：{framework.act_flow.map((act) => act.title).join(' → ')}</Text>
+            </View>
+          ) : null}
+        </PhaseHeroCard>
       </View>
     )
   }
@@ -531,7 +541,18 @@ export function MiniScriptHeroView({
           <>
             <View className='miniscript-hero__section'>
               <Text className='miniscript-hero__section-title'>真相</Text>
-              <Text className='miniscript-hero__beat'>{framework.ending.resolutionSummary}</Text>
+              {revealedSolution ? (
+                <>
+                  <Text className='miniscript-hero__truth-label'>真相人物</Text>
+                  <Text className='miniscript-hero__beat'>{revealedSolution.who}</Text>
+                  <Text className='miniscript-hero__truth-label'>发生了什么</Text>
+                  <Text className='miniscript-hero__beat'>{revealedSolution.what}</Text>
+                  <Text className='miniscript-hero__truth-label'>背后原因</Text>
+                  <Text className='miniscript-hero__beat'>{revealedSolution.why}</Text>
+                </>
+              ) : (
+                <Text className='miniscript-hero__beat'>真相正在同步，请稍候。</Text>
+              )}
               <Text className='miniscript-hero__confession'>{framework.ending.confessionMechanic}</Text>
             </View>
             {voteSummary.length > 0 && (

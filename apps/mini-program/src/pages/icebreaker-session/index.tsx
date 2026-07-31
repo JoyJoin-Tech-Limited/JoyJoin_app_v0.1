@@ -1452,8 +1452,8 @@ export default function IcebreakerSessionPage() {
           socialSessionId={socialSessionId}
           isHost={isHost}
           playerCount={playerCount}
-          sentimentMap={session.bonusGatePlayerSentiment}
-          currentUserId={currentUserId}
+          sentimentSummary={session.bonusGateSentimentSummary}
+          ownSentiment={session.bonusGateOwnSentiment}
           onResponded={() => socialSessionQuery.refetch()}
         />
       )}

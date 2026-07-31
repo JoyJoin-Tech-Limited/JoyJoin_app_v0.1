@@ -363,8 +363,8 @@ $__gold-accent:  $color-landed-gold;
     position: relative;
     z-index: 1;
     width: 100%;
-    height: 90vh;
-    max-height: 90vh;
+    height: 100%;
+    max-height: 100%;
     background: $color-surface;
     border-radius: 32rpx 32rpx 0 0;
     padding: $spacing-md $spacing-lg 0;
@@ -452,8 +452,8 @@ $__gold-accent:  $color-landed-gold;
 
   &__content {
     flex: 1;
+    width: 100%;
     min-height: 0;
-    position: relative;
     overflow: hidden;
   }
 
@@ -479,30 +479,11 @@ $__gold-accent:  $color-landed-gold;
 // ─── Stage Containers ─────────────────────────────────────────────────────────
 
 .ms-stage {
-  position: absolute;
-  inset: 0;
   display: flex;
   flex-direction: column;
-
-  &--style {
-    transform: translateX(0);
-    transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  &--style.ms-stage--exited {
-    transform: translateX(-30%);
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  &--genre {
-    transform: translateX(100%);
-    transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  &--genre.ms-stage--active {
-    transform: translateX(0);
-  }
+  min-height: 100%;
+  padding-bottom: $spacing-md;
+  animation: ms-stage-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 // ─── Grids ────────────────────────────────────────────────────────────────────
@@ -510,13 +491,13 @@ $__gold-accent:  $color-landed-gold;
 .ms-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 20rpx;
+  gap: 16rpx;
   padding: 8rpx 0;
 
   &--style {
     // 2×4 grid: 7 styles + 1 Surprise Me
     .ms-card {
-      width: calc(50% - 10rpx);
+      width: calc(50% - 8rpx);
       aspect-ratio: 3 / 4;
     }
   }
@@ -524,7 +505,7 @@ $__gold-accent:  $color-landed-gold;
   &--genre {
     // 2×2 grid: 4 genres
     .ms-genre-card {
-      width: calc(50% - 10rpx);
+      width: calc(50% - 8rpx);
       aspect-ratio: 1 / 1;
     }
   }
@@ -776,6 +757,17 @@ $__gold-accent:  $color-landed-gold;
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes ms-stage-enter {
+  from {
+    opacity: 0;
+    transform: translateX(24rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 

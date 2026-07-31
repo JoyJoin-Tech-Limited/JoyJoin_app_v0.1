@@ -78,6 +78,18 @@ export function sanitizeStateForClient(
         return pub;
       });
     }
+
+    if (requestingUserId && sanitized.hostUserId !== requestingUserId) {
+      // Players receive only story material that has been reached in the
+      // server-owned progression. Future acts and the cast preview stay host-only.
+      framework.characters = [];
+      framework.act_flow = Array.isArray(framework.act_flow)
+        ? framework.act_flow.slice(0, sanitized.miniScriptCurrentAct ?? 0)
+        : [];
+      if (!sanitized.miniScriptRoleAssignments) {
+        framework.premise = '剧本已生成，等待主持人分配角色。';
+      }
+    }
     sanitized.miniScriptFramework = framework as SocialSessionState['miniScriptFramework'];
   }
 
@@ -88,8 +100,19 @@ export function sanitizeStateForClient(
       : {};
   }
 
-  // Strip individual bonus-gate sentiment votes to protect voter privacy;
-  // clients only need the aggregate count computed server-side or in UI.
+  // Preserve only the requesting player's own choice plus aggregate counts.
+  // The host can judge group interest without learning who voted which way.
+  if (sanitized.bonusGatePlayerSentiment) {
+    const sentiments = Object.values(sanitized.bonusGatePlayerSentiment);
+    sanitized.bonusGateSentimentSummary = {
+      wantCount: sentiments.filter((sentiment) => sentiment === 'want').length,
+      passCount: sentiments.filter((sentiment) => sentiment === 'pass').length,
+      responseCount: sentiments.length,
+    };
+    sanitized.bonusGateOwnSentiment = requestingUserId
+      ? sanitized.bonusGatePlayerSentiment[requestingUserId]
+      : undefined;
+  }
   delete (sanitized as Partial<SocialSessionState>).bonusGatePlayerSentiment;
 
   // The custom-mode phase-selection nonce is host-owned; only the host can

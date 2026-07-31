@@ -61,7 +61,12 @@ function stripFrameworkSecrets(
       return pub;
     }),
     act_flow: framework.act_flow,
-    ending: framework.ending,
+    ending: {
+      ...framework.ending,
+      // The structured solution and the narrative resolution stay server-only
+      // until the host explicitly reveals the truth.
+      resolutionSummary: '真相将在最终揭晓时公开。',
+    },
   };
 }
 
@@ -241,6 +246,7 @@ router.post('/assign-roles', async (req: any, res) => {
   state.miniScriptRevealedClueIds = [];
   state.miniScriptVotes = [];
   state.miniScriptSolutionRevealed = false;
+  state.miniScriptRevealedSolution = undefined;
 
   await updateSession(socialSessionId, state);
 
@@ -460,6 +466,7 @@ router.post('/reveal-solution', async (req: any, res) => {
 
   if (!state.miniScriptSolutionRevealed) {
     state.miniScriptSolutionRevealed = true;
+    state.miniScriptRevealedSolution = secrets.solution;
     await updateSession(socialSessionId, state);
 
     logger.info('[miniscript] solution revealed', {

@@ -117,9 +117,14 @@ describe('POST /api/miniscript/generate', () => {
       });
 
       expect(res.status).toBe(200);
-      const body = (await res.json()) as { premise: string; schemaVersion: number };
+      const body = (await res.json()) as {
+        premise: string;
+        schemaVersion: number;
+        ending: { resolutionSummary: string };
+      };
       expect(body.schemaVersion).toBe(2);
       expect(typeof body.premise).toBe('string');
+      expect(body.ending.resolutionSummary).toBe('真相将在最终揭晓时公开。');
 
       const after = testSessions.get(socialSessionId);
       expect(after?.miniScriptFramework?.premise).toBe(body.premise);

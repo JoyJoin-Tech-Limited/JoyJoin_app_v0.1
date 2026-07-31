@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import type { AIResponseMeta } from './types/aiMeta';
 import type { ArchetypeHSL } from './archetypeColors';
-import type { MiniScriptStoryFramework, MiniScriptStoryFrameworkPublic, MiniScriptVoteInput } from './miniscriptStoryFramework';
+import type { MiniScriptSolution, MiniScriptStoryFramework, MiniScriptStoryFrameworkPublic, MiniScriptVoteInput } from './miniscriptStoryFramework';
 export type { MiniScriptStoryFrameworkPublic } from './miniscriptStoryFramework';
 import type { IcebreakerRunPlan } from './phaseModule';
 import type { TierMachineId } from './socialIcebreakerTierManifest.js';
@@ -686,6 +686,8 @@ export interface SocialSessionState {
   miniScriptRevealedClues?: Array<{ clueId: string; text: string }>;
   miniScriptVotes?: MiniScriptVote[];
   miniScriptSolutionRevealed?: boolean;
+  /** Public only after the host reveals the solution. Absent before reveal. */
+  miniScriptRevealedSolution?: MiniScriptSolution;
   miniScriptPlayerReady?: Record<string, boolean>; // userId -> ready status
   miniScriptDeductionHints?: Array<{ stepNumber: number; conclusion: string }>;
   // Bonus gate — post-core-phase mini_script offer
@@ -693,6 +695,8 @@ export interface SocialSessionState {
   bonusGateAccepted?: boolean;
   bonusGateDeclined?: boolean;
   bonusGatePlayerSentiment?: Record<string, 'want' | 'pass'>;
+  bonusGateOwnSentiment?: 'want' | 'pass';
+  bonusGateSentimentSummary?: { wantCount: number; passCount: number; responseCount: number };
   bonusGateFrameworkPreloading?: boolean;
   /** Xiaoyue Session Pack — generated once at session start, read-only content kit */
   xiaoyueSessionPack?: XiaoyueSessionPack;

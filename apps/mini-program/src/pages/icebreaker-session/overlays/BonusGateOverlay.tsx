@@ -11,8 +11,8 @@ interface BonusGateOverlayProps {
   socialSessionId: string
   isHost: boolean
   playerCount: number
-  sentimentMap?: Record<string, 'want' | 'pass'>
-  currentUserId: string
+  sentimentSummary?: { wantCount: number; passCount: number; responseCount: number }
+  ownSentiment?: 'want' | 'pass'
   onResponded: () => void
 }
 
@@ -20,13 +20,13 @@ export default function BonusGateOverlay({
   socialSessionId,
   isHost,
   playerCount,
-  sentimentMap = {},
-  currentUserId,
+  sentimentSummary = { wantCount: 0, passCount: 0, responseCount: 0 },
+  ownSentiment,
   onResponded,
 }: BonusGateOverlayProps) {
   const [loading, setLoading] = useState(false)
-  const hasVoted = sentimentMap[currentUserId] !== undefined
-  const wantCount = Object.values(sentimentMap).filter((s) => s === 'want').length
+  const hasVoted = ownSentiment !== undefined
+  const wantCount = sentimentSummary.wantCount
 
   const handleHostRespond = async (accept: boolean) => {
     setLoading(true)
@@ -117,6 +117,37 @@ export default function BonusGateOverlay({
           <Text style={{ fontSize: '24rpx', color: '#6ee7b7', textAlign: 'center' }}>
             {wantCount}/{playerCount} 小伙伴想玩
           </Text>
+        )}
+
+        {isHost && !hasVoted && (
+          <View
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              gap: '24rpx',
+              width: '100%',
+              marginTop: '16rpx',
+            }}
+          >
+            <Button
+              variant='secondary'
+              className='flex-1'
+              onClick={() => handleSentiment('pass')}
+              disabled={loading}
+              loading={loading}
+            >
+              不想玩
+            </Button>
+            <Button
+              variant='primary'
+              className='flex-1'
+              onClick={() => handleSentiment('want')}
+              disabled={loading}
+              loading={loading}
+            >
+              想玩
+            </Button>
+          </View>
         )}
 
         {isHost ? (

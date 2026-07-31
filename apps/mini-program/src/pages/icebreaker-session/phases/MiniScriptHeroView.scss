@@ -290,6 +290,15 @@ $ms-deep: $phase-accent-miniscript-deep;
   &__confession {
     color: $ms-deep;
   }
+
+  &__truth-label {
+    @include type-caption;
+    display: block;
+    color: $ms-deep;
+    font-weight: $font-weight-semibold;
+    margin-top: $spacing-sm;
+    margin-bottom: $spacing-xs;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

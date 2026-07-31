@@ -191,6 +191,16 @@ export function cleanupPhaseStateForNextPhase(
       state.miniScriptFramework = undefined;
       state.miniScriptFrameworkGeneratedAt = undefined;
       state.miniScriptFrameworkGeneratedByUserId = undefined;
+      state.miniScriptRoleAssignments = undefined;
+      state.miniScriptPlayerRuntimeViews = undefined;
+      state.miniScriptCurrentAct = undefined;
+      state.miniScriptRevealedClueIds = undefined;
+      state.miniScriptRevealedClues = undefined;
+      state.miniScriptVotes = undefined;
+      state.miniScriptSolutionRevealed = undefined;
+      state.miniScriptRevealedSolution = undefined;
+      state.miniScriptPlayerReady = undefined;
+      state.miniScriptDeductionHints = undefined;
       return;
     case 'auction':
       state.auctionLots = undefined;

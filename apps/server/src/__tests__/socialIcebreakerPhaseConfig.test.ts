@@ -188,10 +188,22 @@ describe('social icebreaker phase configuration', () => {
     (state as { miniScriptFramework?: unknown }).miniScriptFramework = { schemaVersion: 1 };
     state.miniScriptFrameworkGeneratedAt = 1;
     state.miniScriptFrameworkGeneratedByUserId = 'host-1';
+    state.miniScriptRoleAssignments = { 'host-1': 0 };
+    state.miniScriptPlayerRuntimeViews = {
+      'host-1': { slotIndex: 0, roleLabel: '角色', sinHook: '钩子', alibi: '证明', secretAgenda: '秘密' },
+    };
+    state.miniScriptVotes = [{ userId: 'host-1', who: 'A', what: 'B', why: 'C', votedAt: 1 }];
+    state.miniScriptSolutionRevealed = true;
+    state.miniScriptRevealedSolution = { who: 'A', what: 'B', why: 'C' };
     cleanupPhaseStateForNextPhase(state, 'mini_script');
     expect(state.miniScriptFramework).toBeUndefined();
     expect(state.miniScriptFrameworkGeneratedAt).toBeUndefined();
     expect(state.miniScriptFrameworkGeneratedByUserId).toBeUndefined();
+    expect(state.miniScriptRoleAssignments).toBeUndefined();
+    expect(state.miniScriptPlayerRuntimeViews).toBeUndefined();
+    expect(state.miniScriptVotes).toBeUndefined();
+    expect(state.miniScriptSolutionRevealed).toBeUndefined();
+    expect(state.miniScriptRevealedSolution).toBeUndefined();
 
     state.auctionLots = [{ id: 'a', title: 'Lot' }];
     state.auctionBalances = { u1: 10 };

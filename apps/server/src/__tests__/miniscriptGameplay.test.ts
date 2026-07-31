@@ -386,6 +386,7 @@ describe('POST /api/miniscript/reveal-solution', () => {
 
       const after = testSessions.get(session.socialSessionId);
       expect(after?.miniScriptSolutionRevealed).toBe(true);
+      expect(after?.miniScriptRevealedSolution).toEqual(makeTestSecrets().solution);
     });
   });
 
