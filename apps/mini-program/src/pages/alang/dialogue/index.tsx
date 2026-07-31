@@ -355,6 +355,11 @@ export default function FlashDialoguePage() {
               </Text>
               {data.pendingDelivery.feedbackQuestions?.[0] ? (
                 <View className='flash-dialogue__choices'>
+                  <View className='flash-dialogue__choices-heading' aria-hidden='true'>
+                    <Text className='flash-dialogue__choices-spark flash-dialogue__choices-spark--purple'>✦</Text>
+                    <Text className='flash-dialogue__choices-title'>选择你的回应</Text>
+                    <Text className='flash-dialogue__choices-spark flash-dialogue__choices-spark--coral'>✦</Text>
+                  </View>
                   {data.pendingDelivery.feedbackQuestions[0].options.map((option) => (
                     <View
                       key={option.id}
@@ -370,7 +375,9 @@ export default function FlashDialoguePage() {
                       role='button'
                       aria-label={option.label}
                     >
-                      <Text>{option.label}</Text>
+                      <Text className='flash-dialogue__choice-spark flash-dialogue__choice-spark--purple' aria-hidden='true'>✦</Text>
+                      <Text className='flash-dialogue__choice-label'>{option.label}</Text>
+                      <Text className='flash-dialogue__choice-spark flash-dialogue__choice-spark--coral' aria-hidden='true'>✦</Text>
                     </View>
                   ))}
                 </View>
@@ -397,6 +404,11 @@ export default function FlashDialoguePage() {
               {data.openingLine ? <Text className='flash-dialogue__bubble'>{data.openingLine}</Text> : null}
               <Text className='flash-dialogue__question'>{question.text}</Text>
               <View className='flash-dialogue__choices'>
+                <View className='flash-dialogue__choices-heading' aria-hidden='true'>
+                  <Text className='flash-dialogue__choices-spark flash-dialogue__choices-spark--purple'>✦</Text>
+                  <Text className='flash-dialogue__choices-title'>选择你的回应</Text>
+                  <Text className='flash-dialogue__choices-spark flash-dialogue__choices-spark--coral'>✦</Text>
+                </View>
                 {question.options.map((option) => (
                   <View
                     key={option.id}
@@ -407,11 +419,12 @@ export default function FlashDialoguePage() {
                     aria-label={option.label}
                     aria-disabled={answerMutation.isPending}
                   >
-                    <Text>{option.label}</Text>
+                    <Text className='flash-dialogue__choice-spark flash-dialogue__choice-spark--purple' aria-hidden='true'>✦</Text>
+                    <Text className='flash-dialogue__choice-label'>{option.label}</Text>
+                    <Text className='flash-dialogue__choice-spark flash-dialogue__choice-spark--coral' aria-hidden='true'>✦</Text>
                   </View>
                 ))}
               </View>
-              <Text className='flash-dialogue__hint'>慢慢选，没有标准答案 ( ´ ▽ ` )</Text>
             </View>
           ) : offer && category ? (
             <View className='flash-dialogue__offer'>

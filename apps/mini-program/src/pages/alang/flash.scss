@@ -457,9 +457,79 @@ page {
   &__bubble { display: block; margin: 20rpx 0; padding: 22rpx 24rpx; border-radius: 8rpx $card-radius-sm $card-radius-sm $card-radius-sm; background: $color-bg-tint-purple; color: $color-text-primary-warm; font-size: $font-size-base; line-height: $line-height-relaxed; }
   &__question,
   &__delivery-title { display: block; margin: 24rpx 0; font-family: $font-cn-display; font-size: $font-size-lg; font-weight: $font-weight-black; line-height: $line-height-display; }
-  &__choices { display: flex; flex-direction: column; gap: 16rpx; }
-  &__choice { display: flex; align-items: center; min-height: 88rpx; padding: 18rpx 24rpx; border: 2rpx solid rgba($color-primary, 0.16); border-radius: $card-radius-sm; background: $color-bg-clean; color: $color-text-primary-warm; font-size: $font-size-base; box-sizing: border-box; }
-  &__choice--pressed { border-color: $color-primary; background: $color-primary-light; }
+  &__choices {
+    display: flex;
+    flex-direction: column;
+    gap: 18rpx;
+  }
+  &__choices-heading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18rpx;
+    margin: 2rpx 0 4rpx;
+  }
+  &__choices-title {
+    color: $color-text-primary-warm;
+    font-family: $font-cn-display;
+    font-size: $font-size-base;
+    font-weight: $font-weight-black;
+    letter-spacing: 2rpx;
+    text-shadow: 0 2rpx 8rpx rgba($color-surface, 0.9);
+  }
+  &__choices-spark,
+  &__choice-spark {
+    display: block;
+    flex: 0 0 auto;
+    line-height: 1;
+  }
+  &__choices-spark { font-size: $font-size-lg; }
+  &__choices-spark--purple,
+  &__choice-spark--purple { color: $color-primary; }
+  &__choices-spark--coral,
+  &__choice-spark--coral { color: $flow-accent-human; }
+  &__choice {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 108rpx;
+    padding: 20rpx 30rpx;
+    border: 5rpx solid rgba($color-primary, 0.88);
+    border-radius: 34rpx;
+    background:
+      linear-gradient(rgba(#fffaf0, 0.97), rgba(#fffaf0, 0.97)),
+      radial-gradient(circle at 18% 22%, rgba($color-primary, 0.06) 0 2rpx, transparent 3rpx);
+    box-shadow:
+      inset 0 0 0 3rpx rgba($color-surface, 0.96),
+      inset 0 0 0 5rpx rgba($flow-accent-human, 0.16),
+      0 8rpx 0 rgba(#573681, 0.2),
+      0 0 22rpx rgba($color-primary, 0.25);
+    color: $color-text-primary-warm;
+    box-sizing: border-box;
+    transition: opacity 160ms ease-out, transform 160ms ease-out, box-shadow 160ms ease-out;
+  }
+  &__choice-label {
+    display: block;
+    min-width: 0;
+    flex: 1;
+    padding: 0 18rpx;
+    color: $color-text-primary-warm;
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    line-height: $line-height-normal;
+    text-align: center;
+  }
+  &__choice-spark { font-size: $font-size-lg; }
+  &__choice--pressed {
+    border-color: $color-primary-dark;
+    background: #f8efff;
+    box-shadow:
+      inset 0 0 0 3rpx rgba($color-surface, 0.96),
+      0 3rpx 0 rgba(#573681, 0.16),
+      0 0 28rpx rgba($color-primary, 0.38);
+    transform: translateY(5rpx) scale(0.99);
+  }
   &__choice--disabled { opacity: 0.55; }
   &__hint,
   &__safety { display: block; margin-top: 18rpx; color: $color-text-tertiary-on-light; font-size: $font-size-xs; line-height: $line-height-relaxed; text-align: center; }
@@ -680,8 +750,7 @@ page {
   &__kicker-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
   &__kicker-copy { color: $color-text-secondary-on-light; font-size: $font-size-xs; font-weight: $font-weight-bold; }
   &__bubble { border: 2rpx solid rgba($color-primary, 0.12); }
-  &__choice { position: relative; min-height: 92rpx; padding-right: 52rpx; }
-  &__choice::after { content: '›'; position: absolute; right: 22rpx; color: $color-primary; font-size: $font-size-lg; font-weight: $font-weight-bold; }
+  &__choice { min-height: 108rpx; }
   &__progress-row { display: flex; align-items: center; gap: 18rpx; }
   &__progress-track { flex: 1; height: 8rpx; overflow: hidden; border-radius: $radius-pill; background: rgba($color-primary, 0.1); }
   &__progress-fill { height: 100%; border-radius: $radius-pill; background: $brand-gradient; transition: width 240ms ease-out; }

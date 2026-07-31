@@ -229,7 +229,10 @@ describe('formal Flash dialogue', () => {
   it('uses structured natural choices and never presents free text for matching', async () => {
     render(<FlashDialoguePage />)
     expect(screen.getByText('如果现在能随便逛逛，你更想去哪种地方？')).toBeInTheDocument()
-    expect(screen.getByText('慢慢选，没有标准答案 ( ´ ▽ ` )')).toBeInTheDocument()
+    expect(screen.getByText('选择你的回应')).toBeInTheDocument()
+    expect(screen.queryByText('慢慢选，没有标准答案 ( ´ ▽ ` )')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '安静一点的' })).toHaveClass('flash-dialogue__choice')
+    expect(screen.getByText('安静一点的')).toHaveClass('flash-dialogue__choice-label')
     expect(document.querySelector('textarea')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '安静一点的' }))
