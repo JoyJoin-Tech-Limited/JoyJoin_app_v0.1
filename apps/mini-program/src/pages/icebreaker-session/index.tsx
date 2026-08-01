@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import type { AtmosphereMood, SocialIcebreakerPhase, SocialSessionState, SocialTopic } from '@shared/socialIcebreaker'
@@ -12,6 +12,7 @@ import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../..
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
+import { usePageVisibility } from '../../hooks/usePageVisibility'
 import { logInfo, logWarn, logError } from '../../lib/utils/logger'
 import { haptics } from '../../lib/utils/haptics'
 import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerAnalytics'
@@ -275,15 +276,33 @@ export default function IcebreakerSessionPage() {
     currentUserDisplayName,
   ])
 
+  const { isPageVisible } = usePageVisibility()
+
   const socialSessionQuery = useQuery<SocialSessionState>({
     queryKey: ['mini-program', 'social-icebreaker-session', socialSessionId],
     queryFn: () => apiRequest<SocialSessionState>({ path: buildSocialPath(socialSessionId ?? '') }),
     enabled: !!socialSessionId && !authLoading,
-    refetchInterval: pendingAction ? false : POLL_SOCIAL_SESSION_MS,
+    refetchInterval: !isPageVisible || pendingAction ? false : POLL_SOCIAL_SESSION_MS,
     staleTime: 0,
     // F3: nothing reads isFetching — don't re-render the full tree on every
     // fetch start/settle (2 wasted reconciliations per 3s poll).
     notifyOnChangeProps: ['data', 'isError', 'error'],
+  })
+
+  // Re-show contract: while hidden the 3s poll is paused; on return, one
+  // silent invalidate refetches immediately so the session state is fresh
+  // (cached state paints synchronously in the meantime). Skip the first
+  // show (mount) to avoid duplicating the initial fetch.
+  const hasShownOnceRef = useRef(false)
+  useDidShow(() => {
+    if (!hasShownOnceRef.current) {
+      hasShownOnceRef.current = true
+      return
+    }
+    if (!socialSessionId) return
+    void queryClient.invalidateQueries({
+      queryKey: ['mini-program', 'social-icebreaker-session', socialSessionId],
+    })
   })
 
   const session = useMemo(() => {

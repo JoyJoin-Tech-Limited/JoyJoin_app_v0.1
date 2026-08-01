@@ -1,8 +1,6 @@
 import { CustomWrapper, Image, ScrollView, Text, View } from '@tarojs/components'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useRouter, useDidShow } from '@tarojs/taro'
-import { useQuery } from '@tanstack/react-query'
-import { getMyPoolRegistrations } from '@shared/api'
 import { getStatusLabel } from '@shared/features/matching-status'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import LoadingScreen from '../../components/loading/LoadingScreen'
@@ -30,8 +28,6 @@ import {
 import MatchHistorySection from './MatchHistorySection'
 import { useMatchingStatusController } from './useMatchingStatusController'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
-import { apiRequest } from '../../lib/api/api'
-import { REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
 import './index.scss'
 
 export default function MatchingStatusPage() {
@@ -55,6 +51,7 @@ export default function MatchingStatusPage() {
     finishLiveJourney,
     groupAnalysis,
     hasRevealed,
+    historicalMatches,
     handleBrowsePools: _handleBrowsePools,
     handleCancel: _handleCancel,
     handleContinueFromMembers,
@@ -122,24 +119,6 @@ export default function MatchingStatusPage() {
   const handleDismissLiveReveal = () => { haptics('light'); _handleDismissLiveReveal() }
   const switchToEventsTab = () => { haptics('light'); _switchToEventsTab() }
   const navigateBackOrEventsTab = () => { haptics('light'); _navigateBackOrEventsTab() }
-
-  const { data: allRegistrations } = useQuery({
-    queryKey: [...REGISTRATIONS_QUERY_KEY],
-    queryFn: () => getMyPoolRegistrations(apiRequest),
-    enabled: screenState.kind === 'ready' || screenState.kind === 'no-match' || screenState.kind === 'cancelled',
-    staleTime: 60_000,
-    refetchInterval: 30_000,
-  })
-
-  const historicalMatches = useMemo(() => {
-    if (!allRegistrations) return []
-    return allRegistrations.filter(
-      (r) =>
-        r.id !== registrationId &&
-        r.assignedGroupId != null &&
-        (r.matchStatus === 'matched' || r.matchStatus === 'completed'),
-    )
-  }, [allRegistrations, registrationId])
 
   const { isPrimary } = useDeviceTier()
   const enableAnimations = isPrimary && !shouldReduceMotion

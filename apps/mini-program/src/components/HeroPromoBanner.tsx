@@ -5,6 +5,7 @@ import { cdnAsset } from '../lib/utils/cdnAssets'
 import { useMiniRevealMotion } from '../hooks/useMiniRevealMotion'
 import { useStaggerMount } from '../hooks/useStaggerMount'
 import { useDeviceTier } from '../hooks/useDeviceTier'
+import { usePageVisibility } from '../hooks/usePageVisibility'
 import { discoverAnalytics } from '../lib/analytics/discoverAnalytics'
 import { haptics } from '../lib/utils/haptics'
 import './HeroPromoBanner.scss'
@@ -106,6 +107,7 @@ export default function HeroPromoBanner({
   const { shouldReduceMotion } = useMiniRevealMotion()
   const staggerMounted = useStaggerMount()
   const { isDegradation } = useDeviceTier()
+  const { isPageVisible } = usePageVisibility()
   const router = useRouter()
 
   // Server-driven kill switch lives in the auth payload as
@@ -290,7 +292,7 @@ export default function HeroPromoBanner({
         aria-hidden='true'
       />
       <View className='hero-promo-banner__overlay' aria-hidden='true' />
-      {idleAnimationsEnabled && isInView && (
+      {idleAnimationsEnabled && isInView && isPageVisible && (
         <View className='hero-promo-banner__sparkles' aria-hidden='true'>
           {sparkles.map((s, i) => (
             <View key={i} className={s.className} style={s.style} />
@@ -373,6 +375,7 @@ export default function HeroPromoBanner({
         shouldReduceMotion ? 'hero-promo-banner--reduce-motion' : '',
         isDegradation ? 'hero-promo-banner--degradation' : '',
         !isInView ? 'hero-promo-banner--offscreen' : '',
+        !isPageVisible ? 'hero-promo-banner--page-hidden' : '',
         className,
       ].filter(Boolean).join(' ')}
       role='region'

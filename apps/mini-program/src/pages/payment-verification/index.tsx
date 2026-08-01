@@ -7,6 +7,7 @@ import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import JoyJoinLoadingScreen from '../../components/loading/JoyJoinLoadingScreen'
 import { bustRegistrationCaches } from '../../lib/api/registrationCacheBust'
+import { REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
 import {
   isPoolRegistrationReturnContext,
   useMiniProgramPaymentFlowController,
@@ -47,7 +48,7 @@ export default function PaymentVerificationPage() {
     await bustRegistrationCaches(queryClient)
     await Promise.allSettled([
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'coupons'] }),
-      queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration'] }),
+      queryClient.invalidateQueries({ queryKey: [...REGISTRATIONS_QUERY_KEY] }),
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'shell/profile'] }),
     ])
   }, [queryClient])

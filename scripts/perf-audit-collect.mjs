@@ -168,6 +168,42 @@ function detectHardcodedPxInStyles(content, filePath) {
   return issues;
 }
 
+// ── Poll lifecycle detector (2026-08-01, P0) ─────────────────────
+// Every refetchInterval in mini-program source must be visibility-gated
+// (isPageVisible / isAppVisible). WeChat has no document.hidden, so
+// TanStack Query's refetchInterval auto-pause never fires — an un-gated
+// interval keeps polling while the page/app is hidden (battery + heat).
+// Pre-existing un-gated polls live in KNOWN_UN_GATED_POLLS as a ratchet:
+// the gate fails only on NEW un-gated intervals, never on the baseline.
+const KNOWN_UN_GATED_POLLS = new Set([
+  // Functional-form poll on squad-unboxing controller (pre-existing,
+  // separate surface, deferred to a later sprint).
+  'src/pages/squad-unboxing/useSquadUnboxingController.ts:249',
+  // Functional-form poll on profile-linked personal-story (pre-existing,
+  // parallel-session-owned surface, deferred).
+  'src/pages/profile-linked/personal-story/index.tsx:55',
+]);
+
+function detectUnGatedPolling(content, filePath) {
+  const issues = [];
+  if (!/\.(ts|tsx)$/.test(filePath)) return issues;
+  const rel = filePath.replace(/^apps\/mini-program\//, '');
+  const intervalRegex = /refetchInterval\s*:/g;
+  let m;
+  while ((m = intervalRegex.exec(content)) !== null) {
+    const line = content.slice(0, m.index).split('\n').length;
+    const after = content.slice(m.index, m.index + 200);
+    if (/\b(isPageVisible|isAppVisible)\b/.test(after)) continue;
+    if (KNOWN_UN_GATED_POLLS.has(`${rel}:${line}`)) continue;
+    issues.push({
+      file: filePath,
+      pattern: 'un-gated-refetch-interval',
+      detail: `refetchInterval at line ${line} is not gated on page/app visibility. WeChat has no document.hidden — the poll keeps running while the surface is hidden (battery/heat). Gate with \`isPageVisible ? <ms> : false\` (or \`isAppVisible\` for app-level hooks).`,
+    });
+  }
+  return issues;
+}
+
 const DETECTORS = [
   detectUncappedCanvasDPR,
   detectMissingReducedMotion,
@@ -177,6 +213,7 @@ const DETECTORS = [
   detectMissingLazyImport,
   detectMissingCleanup,
   detectHardcodedPxInStyles,
+  detectUnGatedPolling,
 ];
 
 // ── Subpackage audit ─────────────────────────────────────────────

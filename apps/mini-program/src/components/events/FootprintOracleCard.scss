@@ -156,6 +156,19 @@
     }
   }
 
+  // ── Page hidden (tab switch / page-stack navigation): pause loops ──
+  // useEventCountdown already freezes the clock digits on onHide; this
+  // extends the same conservation to the decorative CSS loops. Resume is
+  // frame-continuous (animation-play-state preserves negative delays).
+  &--page-hidden {
+    .footprint-oracle-card__matched-shimmer,
+    .footprint-oracle-card__pulse-dot--live,
+    .footprint-oracle-card__clock-started-dot,
+    .footprint-oracle-card__clock-progress-block--urgent {
+      animation-play-state: paused;
+    }
+  }
+
   // ── Event-type corner vignette ────────────────────────────────
   // Bleed the illustration to the card's content edge so it sits flush
   // with the shell instead of floating inside the padding. The light vignette

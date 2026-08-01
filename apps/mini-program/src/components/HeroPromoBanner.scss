@@ -469,6 +469,15 @@
       transform: scale(1.02) translate3d(0, 0, 0);
     }
   }
+
+  // ── Page hidden (tab switch / page-stack navigation): same pause ───
+  // WeChat keeps pages alive-but-hidden, so the IO-based --offscreen never
+  // fires on a hidden page — pause the CTA breathe explicitly on onHide.
+  &--page-hidden {
+    .hero-promo-banner__cta {
+      animation-play-state: paused;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -46,7 +46,9 @@ import {
 import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
+import { usePageVisibility } from '../../hooks/usePageVisibility'
 import { useWebSocket } from '../../hooks/useWebSocket'
+import { REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
 import { logError, logInfo, logWarn } from '../../lib/utils/logger'
 import {
   navigateBackOrEventsTab,
@@ -79,7 +81,7 @@ const LIVE_STAGE_DELAY_MS = 950
 const LIVE_STAGE_DELAY_REDUCED_MS = 140
 const MAX_SIMILAR_POOLS = 3
 const DANGER_COLOR = COLOR_DANGER
-const MATCH_COMPASS_REFETCH_INTERVAL_MS = 15_000
+const MATCH_COMPASS_REFETCH_INTERVAL_MS = 30_000
 
 function triggerLightHaptic() {
   if (typeof Taro.vibrateShort === 'function') {
@@ -111,6 +113,7 @@ export function useMatchingStatusController({
   const matchingLiveRevealEnabled = user?.features?.matchingLiveReveal ?? true
   const matchingPuzzlePreludeEnabled = user?.features?.matchingPuzzlePreludeEnabled ?? false
   const { shouldReduceMotion } = useMiniRevealMotion(routerParams)
+  const { isPageVisible } = usePageVisibility()
   const cachedAuthUser = queryClient.getQueryData<AuthUserResponse | null>(AUTH_QUERY_KEY)
   const { effectiveAuthUser, isAuthBootstrapPending } = resolveMatchingStatusAuthBootstrap({
     authUser: user,
@@ -137,18 +140,28 @@ export function useMatchingStatusController({
   const mountedRef = useRef(true)
 
   const {
-    data: registration,
+    data: allRegistrations,
     status: registrationQueryStatus,
     error: fetchError,
-  } = useQuery<PoolRegistrationSummary | undefined>({
-    queryKey: ['mini-program', 'pool-registration', registrationId],
-    queryFn: async () => {
-      const registrations = await getMyPoolRegistrations(apiRequest)
-      return registrations.find((item) => item.id === registrationId)
-    },
+  } = useQuery<PoolRegistrationSummary[]>({
+    queryKey: [...REGISTRATIONS_QUERY_KEY],
+    queryFn: () => getMyPoolRegistrations(apiRequest),
     enabled: Boolean(registrationId),
-    refetchInterval: REGISTRATION_REFETCH_INTERVAL_MS,
+    staleTime: 30_000,
+    refetchInterval: isPageVisible ? REGISTRATION_REFETCH_INTERVAL_MS : false,
   })
+
+  const registration = allRegistrations?.find((item) => item.id === registrationId)
+
+  const historicalMatches = useMemo(() => {
+    if (!allRegistrations) return []
+    return allRegistrations.filter(
+      (r) =>
+        r.id !== registrationId &&
+        r.assignedGroupId != null &&
+        (r.matchStatus === 'matched' || r.matchStatus === 'completed'),
+    )
+  }, [allRegistrations, registrationId])
 
   const matchStatus = registration?.matchStatus ?? 'pending'
 
@@ -166,7 +179,7 @@ export function useMatchingStatusController({
       matchCompassEnabled &&
       matchStatus === 'pending' &&
       Boolean(registration?.poolId),
-    refetchInterval: MATCH_COMPASS_REFETCH_INTERVAL_MS,
+    refetchInterval: isPageVisible ? MATCH_COMPASS_REFETCH_INTERVAL_MS : false,
     staleTime: 0,
   })
 
@@ -180,7 +193,7 @@ export function useMatchingStatusController({
         path: `/api/event-pools/${encodeURIComponent(registration?.poolId ?? '')}/group-fill`,
       }),
     enabled: hasResolvedAuthBootstrap && matchStatus === 'pending' && Boolean(registration?.poolId),
-    refetchInterval: POOL_GROUP_FILL_REFETCH_INTERVAL_MS,
+    refetchInterval: isPageVisible ? POOL_GROUP_FILL_REFETCH_INTERVAL_MS : false,
     staleTime: 0,
   })
 
@@ -236,7 +249,7 @@ export function useMatchingStatusController({
       Boolean(resolvedGroupId) &&
       (registration?.matchStatus === 'matched' || Boolean(matchedData?.groupId)),
     staleTime: GROUP_DETAILS_STALE_TIME_MS,
-    refetchInterval: GROUP_DETAILS_REFETCH_INTERVAL_MS,
+    refetchInterval: isPageVisible ? GROUP_DETAILS_REFETCH_INTERVAL_MS : false,
   })
 
   const { data: groupAnalysis } = useQuery({
@@ -247,7 +260,7 @@ export function useMatchingStatusController({
       Boolean(resolvedGroupId) &&
       (registration?.matchStatus === 'matched' || Boolean(matchedData?.groupId)),
     staleTime: GROUP_ANALYSIS_STALE_TIME_MS,
-    refetchInterval: GROUP_ANALYSIS_REFETCH_INTERVAL_MS,
+    refetchInterval: isPageVisible ? GROUP_ANALYSIS_REFETCH_INTERVAL_MS : false,
     retry: 1,
   })
 
@@ -442,7 +455,7 @@ export function useMatchingStatusController({
     }
 
     void queryClient.invalidateQueries({
-      queryKey: ['mini-program', 'pool-registration', registrationId],
+      queryKey: [...REGISTRATIONS_QUERY_KEY],
     })
   }, [queryClient, registration?.poolId, registrationId])
 
@@ -550,7 +563,7 @@ export function useMatchingStatusController({
     const poolId = registration?.poolId
     if (!poolId) {
       Taro.showToast({ title: '活动信息还在同步，请稍后再试', icon: 'none', duration: TOAST_DEFAULT_MS })
-      void queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration', registrationId] })
+      void queryClient.invalidateQueries({ queryKey: [...REGISTRATIONS_QUERY_KEY] })
       return
     }
     logInfo('[MatchingStatus] CTA tapped, opening event detail', { poolId, groupId: resolvedGroupId })
@@ -566,7 +579,7 @@ export function useMatchingStatusController({
   const handleStartSquadUnboxing = useCallback(() => {
     if (!resolvedGroupId) {
       Taro.showToast({ title: '小队信息还在同步，请稍后再试', icon: 'none', duration: TOAST_DEFAULT_MS })
-      void queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration', registrationId] })
+      void queryClient.invalidateQueries({ queryKey: [...REGISTRATIONS_QUERY_KEY] })
       return
     }
 
@@ -583,16 +596,16 @@ export function useMatchingStatusController({
   }, [])
 
   const invalidateRegistrationQuery = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration', registrationId] })
-  }, [queryClient, registrationId])
+    void queryClient.invalidateQueries({ queryKey: [...REGISTRATIONS_QUERY_KEY] })
+  }, [queryClient])
 
   const handleRetryLiveReveal = useCallback(() => {
     setLiveRevealError(null)
-    void queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-registration', registrationId] })
+    void queryClient.invalidateQueries({ queryKey: [...REGISTRATIONS_QUERY_KEY] })
     if (matchedData?.groupId) {
       void fetchLiveGroupDetails(matchedData.groupId)
     }
-  }, [queryClient, registrationId, matchedData, fetchLiveGroupDetails])
+  }, [queryClient, matchedData, fetchLiveGroupDetails])
 
   const handleDismissLiveReveal = useCallback(() => {
     setLiveRevealError(null)
@@ -637,6 +650,13 @@ export function useMatchingStatusController({
       return undefined
     }
 
+    // Freeze the countdown while the page is hidden: WeChat keeps tab pages
+    // alive-but-hidden, so an unmuted 1s decrement would re-render the hidden
+    // page every second. Re-show resets it via handleRefreshWaitingState.
+    if (!isPageVisible) {
+      return undefined
+    }
+
     if (refreshCountdown <= 0) {
       handleRefreshWaitingState()
       return undefined
@@ -647,7 +667,7 @@ export function useMatchingStatusController({
     }, 1000)
 
     return () => clearTimeout(timer)
-  }, [handleRefreshWaitingState, matchStatus, refreshCountdown, registration?.poolId])
+  }, [handleRefreshWaitingState, isPageVisible, matchStatus, refreshCountdown, registration?.poolId])
 
   useEffect(() => {
     if (matchStatus === 'pending') {
@@ -790,10 +810,7 @@ export function useMatchingStatusController({
         triggerLightHaptic()
 
         void queryClient.invalidateQueries({
-          queryKey: ['mini-program', 'pool-registration', registrationId],
-        })
-        void queryClient.invalidateQueries({
-          queryKey: ['mini-program', 'my-pool-registrations'],
+          queryKey: [...REGISTRATIONS_QUERY_KEY],
         })
         void queryClient.invalidateQueries({
           queryKey: ['mini-program', 'notification-counts'],
@@ -847,9 +864,8 @@ export function useMatchingStatusController({
         triggerLightHaptic()
 
         void queryClient.invalidateQueries({
-          queryKey: ['mini-program', 'pool-registration', registrationId],
+          queryKey: [...REGISTRATIONS_QUERY_KEY],
         })
-        void queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] })
         if (data.groupId) {
           void queryClient.invalidateQueries({
             queryKey: ['mini-program', 'pool-group', data.groupId],
@@ -930,6 +946,7 @@ export function useMatchingStatusController({
     newMemberJoined,
     newMemberArchetype,
     refreshCountdown,
+    historicalMatches,
     persistedThemeSummary,
     viewerPairSummaryByMemberId,
     viewerSpotlight,

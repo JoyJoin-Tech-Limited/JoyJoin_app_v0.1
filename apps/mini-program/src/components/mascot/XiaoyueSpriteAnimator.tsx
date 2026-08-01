@@ -5,6 +5,7 @@ import spritesheetManifest from '../../assets/mascot/xiaoyue-spritesheet-manifes
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { logWarn } from '../../lib/utils/logger'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
+import { usePageVisibility } from '../../hooks/usePageVisibility'
 import './XiaoyueSpriteAnimator.scss'
 
 const BASE_PATH = cdnAsset('/assets/mascot')
@@ -217,6 +218,7 @@ export default function XiaoyueSpriteAnimator({
 
   const [isAppVisible, setIsAppVisible] = useState(true)
   const isVisibleRef = useRef(true)
+  const { isPageVisible } = usePageVisibility()
 
   const [exitMeta, setExitMeta] = useState<SpriteStateMeta | null>(null)
   const [exitStaticFrame, setExitStaticFrame] = useState<number | undefined>(undefined)
@@ -231,10 +233,10 @@ export default function XiaoyueSpriteAnimator({
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingExitCleanupRef = useRef(false)
 
-  // App lifecycle listeners
+  // App lifecycle listeners. Visibility state drives isVisibleRef via the
+  // combined effect below; app-show also flushes any pending exit-meta cleanup.
   useEffect(() => {
     const handleAppShow = () => {
-      isVisibleRef.current = true
       setIsAppVisible(true)
 
       if (pendingExitCleanupRef.current) {
@@ -249,7 +251,6 @@ export default function XiaoyueSpriteAnimator({
       }
     }
     const handleAppHide = () => {
-      isVisibleRef.current = false
       setIsAppVisible(false)
     }
 
@@ -260,6 +261,28 @@ export default function XiaoyueSpriteAnimator({
       Taro.offAppHide(handleAppHide)
     }
   }, [])
+
+  // Combined app + page visibility. Page-level matters because WeChat keeps
+  // pages alive-but-hidden in the navigation stack and there is no
+  // document.hidden — onAppHide alone misses tab switches and page-stack
+  // navigation, so hidden sprites would keep stepping frames forever.
+  useEffect(() => {
+    isVisibleRef.current = isAppVisible && isPageVisible
+  }, [isAppVisible, isPageVisible])
+
+  // Page re-show may unblock an exit-meta cleanup that fired while hidden.
+  useEffect(() => {
+    if (!isPageVisible) return
+    if (!pendingExitCleanupRef.current) return
+    pendingExitCleanupRef.current = false
+    setExitMeta(null)
+    setExitStaticFrame(undefined)
+    setIsFading(false)
+    if (exitTimerRef.current) {
+      clearTimeout(exitTimerRef.current)
+      exitTimerRef.current = null
+    }
+  }, [isPageVisible])
 
   useEffect(() => {
     setSpriteError(false)
@@ -329,7 +352,7 @@ export default function XiaoyueSpriteAnimator({
           autoPlay={motionEnabled}
           loop={meta.loop}
           duration={meta.duration}
-          isAppVisible={isAppVisible}
+          isAppVisible={isAppVisible && isPageVisible}
           onError={() => {
             if (!spriteError) {
               logWarn('[XiaoyueSpriteAnimator] CDN sprite load failed — falling back', {

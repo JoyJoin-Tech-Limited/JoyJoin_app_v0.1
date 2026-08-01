@@ -6,6 +6,7 @@ import {
 } from '@shared/archetypeColors'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { useEventCountdown } from '../../hooks/useEventCountdown'
+import { usePageVisibility } from '../../hooks/usePageVisibility'
 import { getOracleCardCornerAsset } from '../discover/oracleCardAssets'
 import {
   formatEventDateTime,
@@ -330,6 +331,7 @@ function EventSummaryCard({
   const showCornerAsset = cornerAssetSrc && !effectiveDegradation && !isTerminal
 
   const [cornerLoadFailed, setCornerLoadFailed] = React.useState(false)
+  const { isPageVisible } = usePageVisibility()
 
   const computedAriaLabel = useMemo(
     () =>
@@ -356,6 +358,7 @@ function EventSummaryCard({
     railMode ? 'footprint-oracle-card--rail' : '',
     effectiveDegradation ? 'footprint-oracle-card--low-end' : '',
     reduceMotion ? 'footprint-oracle-card--reduced-motion' : '',
+    !isPageVisible ? 'footprint-oracle-card--page-hidden' : '',
     className,
   ]
     .filter(Boolean)
