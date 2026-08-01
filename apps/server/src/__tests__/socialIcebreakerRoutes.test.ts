@@ -2781,7 +2781,7 @@ describe.sequential('social icebreaker routes', () => {
       vi.mocked(getFeatureFlag).mockImplementation(async (_key: string, fallback = false) => fallback);
     });
 
-    it('returns only server-enabled custom games', async () => {
+    it('returns the full custom-game catalog regardless of preset rollout flags', async () => {
       await withServer(async (baseUrl) => {
         const hostCookie = await login(baseUrl, 'custom-game-catalog-host');
         const previousAuctionFlag = process.env.SOCIAL_ICEBREAKER_ENABLE_AUCTION;
@@ -2796,11 +2796,11 @@ describe.sequential('social icebreaker routes', () => {
 
         expect(response.status).toBe(200);
         expect(body.phases).toContain('micro_challenge');
-        expect(body.phases).not.toContain('auction');
+        expect(body.phases).toContain('auction');
       });
     });
 
-    it('rejects a disabled custom game with a stable machine code', async () => {
+    it('accepts a catalog game even when its preset rollout flag is disabled', async () => {
       await withServer(async (baseUrl) => {
         const hostCookie = await login(baseUrl, 'custom-game-disabled-host');
         const previousAuctionFlag = process.env.SOCIAL_ICEBREAKER_ENABLE_AUCTION;
@@ -2820,8 +2820,12 @@ describe.sequential('social icebreaker routes', () => {
         });
         const body = await response.json() as any;
 
-        expect(response.status).toBe(400);
-        expect(body.code).toBe('CUSTOM_GAME_UNAVAILABLE');
+        expect(response.status).toBe(200);
+        expect(body.state.runPlan.segments.map((segment: any) => segment.phase)).toEqual([
+          'warmup',
+          'auction',
+          'recap',
+        ]);
       });
     });
 

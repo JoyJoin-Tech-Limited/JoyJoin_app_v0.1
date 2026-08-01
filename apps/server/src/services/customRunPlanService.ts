@@ -26,16 +26,14 @@ export type CustomGameValidation =
 
 export function validateCustomGamePhases(
   phases: SocialIcebreakerPhase[],
-  enabledPhases: SocialIcebreakerPhase[] = CUSTOM_GAME_PHASES,
 ): CustomGameValidation {
   if (phases.length === 0) return { ok: false, reason: 'empty' };
   if (new Set(phases).size !== phases.length) return { ok: false, reason: 'duplicate' };
 
   const knownGames = new Set<SocialIcebreakerPhase>(CUSTOM_GAME_PHASES);
-  const enabled = new Set(enabledPhases);
   if (
     phases.some(
-      (phase) => NON_GAME_PHASES.has(phase) || !knownGames.has(phase) || !enabled.has(phase),
+      (phase) => NON_GAME_PHASES.has(phase) || !knownGames.has(phase),
     )
   ) {
     return { ok: false, reason: 'invalid' };

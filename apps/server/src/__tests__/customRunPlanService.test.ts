@@ -34,9 +34,9 @@ describe('custom run plan service', () => {
       ok: false,
       reason: 'invalid',
     });
-    expect(validateCustomGamePhases(['auction'], ['micro_challenge'])).toEqual({
-      ok: false,
-      reason: 'invalid',
+    expect(validateCustomGamePhases(['auction'])).toEqual({
+      ok: true,
+      phases: ['auction'],
     });
   });
 

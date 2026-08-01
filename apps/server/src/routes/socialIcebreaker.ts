@@ -303,10 +303,7 @@ router.get('/custom-games', async (req: any, res) => {
     return res.json({ phases: [] });
   }
 
-  const enabled = new Set(getServerEnabledPhases());
-  return res.json({
-    phases: CUSTOM_GAME_PHASES.filter((phase) => enabled.has(phase)),
-  });
+  return res.json({ phases: CUSTOM_GAME_PHASES });
 });
 
 router.post('/start', async (req: any, res) => {
@@ -413,7 +410,6 @@ router.post('/start', async (req: any, res) => {
         }
         const customValidation = validateCustomGamePhases(
           selectedPhases as SocialIcebreakerPhase[],
-          getServerEnabledPhases(),
         );
         if (!customValidation.ok) {
           return res.status(400).json({
@@ -503,7 +499,6 @@ router.post('/start', async (req: any, res) => {
     if (selectedPhases !== undefined) {
       const customValidation = validateCustomGamePhases(
         selectedPhases as SocialIcebreakerPhase[],
-        getServerEnabledPhases(),
       );
       if (!customValidation.ok) {
         return res.status(400).json({
@@ -570,7 +565,6 @@ router.post('/start', async (req: any, res) => {
     if (selectedPhases !== undefined) {
       const customValidation = validateCustomGamePhases(
         selectedPhases as SocialIcebreakerPhase[],
-        getServerEnabledPhases(),
       );
       if (!customValidation.ok) {
         return res.status(400).json({
