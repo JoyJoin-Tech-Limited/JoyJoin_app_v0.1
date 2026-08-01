@@ -47,6 +47,12 @@ import CityUnlockFeedCard from '../../components/discover/CityUnlockFeedCard'
 import CityPickerSheet from '../../components/discover/CityPickerSheet'
 import SingleTestBanner from '../../components/dev/SingleTestBanner'
 import AlangDiscoverCard from '../../components/alang/AlangDiscoverCard'
+import JoyJoinIntroFlow from '../../components/flow-animation/JoyJoinIntroFlow'
+import {
+  clearPendingFlow,
+  hasPendingFlow,
+  shouldShowFlow,
+} from '../../components/flow-animation/FlowStorage'
 import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
 
@@ -144,8 +150,25 @@ function AuthenticatedDiscover({
   const avatarUrl = (user as any)?.profileImageUrl || (user as any)?.wechatAvatarUrl || xiaoyueAsset
 
   const [avatarError, setAvatarError] = useState(false)
+  const [showPendingIntro, setShowPendingIntro] = useState(false)
   const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
   const lastGoodPoolsRef = useRef<EventPoolSummary[]>([])
+
+  const refreshPendingIntro = useCallback(() => {
+    if (authLoading || !user?.id) return
+
+    const pending = hasPendingFlow('joyjoin-intro', user.id)
+    const unseen = shouldShowFlow('joyjoin-intro', user.id)
+    const enabled = user.features?.flowIntroEnabled !== false
+    if (pending && (!unseen || !enabled)) {
+      clearPendingFlow('joyjoin-intro', user.id)
+    }
+
+    setShowPendingIntro(pending && unseen && enabled)
+  }, [authLoading, user])
+
+  useEffect(refreshPendingIntro, [refreshPendingIntro])
+  useDidShow(refreshPendingIntro)
 
   // ── Geo detection state ──
   // ── Data fetching ──
@@ -404,6 +427,20 @@ function AuthenticatedDiscover({
     (pool: EventPoolSummary) => pool.id,
     []
   )
+
+  if (showPendingIntro && user?.id) {
+    return (
+      <JoyJoinIntroFlow
+        userId={user.id}
+        archetypeId={userArchetype}
+        alangEnabled={user.features?.alangEnabled ?? false}
+        onComplete={() => {
+          clearPendingFlow('joyjoin-intro', user.id)
+          setShowPendingIntro(false)
+        }}
+      />
+    )
+  }
 
   // ── Render ──
   return (

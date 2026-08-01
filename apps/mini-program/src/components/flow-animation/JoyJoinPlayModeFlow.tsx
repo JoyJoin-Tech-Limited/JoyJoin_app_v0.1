@@ -15,7 +15,7 @@ interface JoyJoinPlayModeFlowProps {
   userId?: string | null
   archetypeId?: string | null
   alangEnabled?: boolean
-  onComplete: () => void
+  onComplete: () => void | Promise<void>
   initialDetailId?: 'event' | 'street'
 }
 
@@ -28,7 +28,7 @@ export default function JoyJoinPlayModeFlow({
 }: JoyJoinPlayModeFlowProps) {
   const { shouldReduceMotion } = useMiniRevealMotion()
   const [entranceDone, setEntranceDone] = useState(shouldReduceMotion)
-  const { progress, completed } = useFlowProgress(
+  const { progress } = useFlowProgress(
     FLOW_ANIMATION_TIMING.experienceRevealMs,
     shouldReduceMotion,
     entranceDone,
@@ -43,24 +43,18 @@ export default function JoyJoinPlayModeFlow({
     flowAnalytics.trackView('intro')
   }, [])
 
-  useEffect(() => {
-    if (completed) {
-      markFlowSeen('joyjoin-intro', userId)
-    }
-  }, [completed, userId])
-
-  const handleSkip = () => {
+  const handleSkip = async () => {
     haptics('light')
     flowAnalytics.trackSkip('intro', Date.now() - mountedAtRef.current)
+    await onComplete()
     markFlowSeen('joyjoin-intro', userId)
-    onComplete()
   }
 
-  const handleAction = () => {
+  const handleAction = async () => {
     haptics('medium')
     flowAnalytics.trackCtaTap('intro')
+    await onComplete()
     markFlowSeen('joyjoin-intro', userId)
-    onComplete()
   }
 
   const handleOpenDetail = (id: 'event' | 'street') => {

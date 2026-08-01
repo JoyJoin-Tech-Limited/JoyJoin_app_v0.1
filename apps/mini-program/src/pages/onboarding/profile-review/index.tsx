@@ -43,7 +43,11 @@ import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import WelcomeGiftCard from '../../../components/onboarding/WelcomeGiftCard'
 import ProfileReviewInviteCard from '../../../components/onboarding/ProfileReviewInviteCard'
 import JoyJoinIntroFlow from '../../../components/flow-animation/JoyJoinIntroFlow'
-import { shouldShowFlow } from '../../../components/flow-animation/FlowStorage'
+import {
+  clearPendingFlow,
+  markFlowPending,
+  shouldShowFlow,
+} from '../../../components/flow-animation/FlowStorage'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
@@ -423,6 +427,16 @@ export default function ProfileReviewPage() {
       logInfo('[ProfileReview] Completing profile review')
       await completeProfileReview(apiRequest, trimmedBio.length > 0 ? trimmedBio : undefined)
 
+      const shouldHandoffIntro =
+        Boolean(user?.id)
+        && shouldShowFlow('joyjoin-intro', user?.id)
+        && user?.features?.flowIntroEnabled !== false
+      if (shouldHandoffIntro && user?.id) {
+        // Persist before auth invalidation. A refreshed nextStep can make the
+        // onboarding route guard switch tabs before local React state commits.
+        markFlowPending('joyjoin-intro', user.id)
+      }
+
       setIsCelebrating(true)
       haptics('success')
 
@@ -443,13 +457,14 @@ export default function ProfileReviewPage() {
 
       if (
         userState.nextStep === 'discover'
-        && shouldShowFlow('joyjoin-intro', user?.id)
-        && user?.features?.flowIntroEnabled !== false
+        && shouldHandoffIntro
       ) {
         setIsCelebrating(false)
         setIntroNextStep(userState.nextStep)
         return
       }
+
+      clearPendingFlow('joyjoin-intro', user?.id)
 
       await navigateToMiniProgramNextStep(userState.nextStep, {
         mode: 'replace',
@@ -470,12 +485,13 @@ export default function ProfileReviewPage() {
 
   const handleIntroComplete = useCallback(async () => {
     const nextStep = introNextStep
-    setIntroNextStep(undefined)
     await navigateToMiniProgramNextStep(nextStep, {
       mode: 'replace',
       transition: { beforeNavigate: () => setIsPageExiting(true) },
     })
-  }, [introNextStep])
+    clearPendingFlow('joyjoin-intro', user?.id)
+    setIntroNextStep(undefined)
+  }, [introNextStep, user?.id])
 
   const getStageClassName = useCallback(
     (step: number) =>
