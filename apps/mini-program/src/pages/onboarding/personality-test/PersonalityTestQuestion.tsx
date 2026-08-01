@@ -25,20 +25,9 @@ function getQuestionType(question: AssessmentQuestion | null): AssessmentQuestio
   return question.questionType
 }
 
-const QUESTION_MASCOT_POSES = [
-  PERSONALITY_TEST_QUESTION_EXPRESSION.choice,
-  PERSONALITY_TEST_QUESTION_EXPRESSION.slider,
-  PERSONALITY_TEST_QUESTION_EXPRESSION.acknowledged,
-  PERSONALITY_TEST_QUESTION_EXPRESSION.milestone,
-] as const
-
-/** Pick a varied pose per question while keeping it stable across re-renders. */
-export function getQuestionMascotPose(questionId: string): (typeof QUESTION_MASCOT_POSES)[number] {
-  let hash = 0
-  for (let index = 0; index < questionId.length; index += 1) {
-    hash = (hash * 31 + questionId.charCodeAt(index)) >>> 0
-  }
-  return QUESTION_MASCOT_POSES[hash % QUESTION_MASCOT_POSES.length]
+/** Keep the original compact corgi pose stable across every question. */
+export function getQuestionMascotPose(_questionId: string): typeof PERSONALITY_TEST_QUESTION_EXPRESSION.choice {
+  return PERSONALITY_TEST_QUESTION_EXPRESSION.choice
 }
 
 function getSliderValueFromPreviousAnswer(previousAnswer: string | null, options: AssessmentOption[]): number {

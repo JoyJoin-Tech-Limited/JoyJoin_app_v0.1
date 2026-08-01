@@ -9,6 +9,7 @@
 .halfway-milestone {
   &__card {
     position: relative;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -81,6 +82,7 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 8rpx;
+    padding-top: 8rpx;
     text-align: left;
     z-index: 1;
     animation: halfway-text-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;

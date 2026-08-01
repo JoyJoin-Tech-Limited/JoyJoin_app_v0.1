@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { getQuestionMascotPose } from './PersonalityTestQuestion'
+import { PERSONALITY_TEST_QUESTION_EXPRESSION } from './visuals'
 
 describe('getQuestionMascotPose', () => {
-  it('keeps the pose stable for the same question', () => {
-    expect(getQuestionMascotPose('question-17')).toBe(getQuestionMascotPose('question-17'))
-  })
+  it('keeps the original compact curious pose for every question', () => {
+    const poses = Array.from({ length: 20 }, (_, index) => getQuestionMascotPose(`question-${index}`))
 
-  it('distributes question ids across multiple source poses', () => {
-    const poses = new Set(Array.from({ length: 20 }, (_, index) => getQuestionMascotPose(`question-${index}`)))
-    expect(poses.size).toBeGreaterThan(1)
+    expect(poses).toEqual(Array(20).fill(PERSONALITY_TEST_QUESTION_EXPRESSION.choice))
   })
 })
