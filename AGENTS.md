@@ -160,6 +160,11 @@ npm run simulate:gate                 # CI gate: generate + run centroids
 # Production: nginx serves /static/ from /var/www/cdn/ (alias directive).
 # Set CDN_RSYNC_PATH=/var/www/cdn for production uploads. The Express dev
 # server fallback (vite.ts: /static/ → ../server/static/) is local-dev only.
+# Gotchas (2026-07-31): every localPath in cdn-asset-manifest.json must exist
+# in src/ or dist/ (stale entries fail the upload), and the post-upload
+# verification jq must match avatar-assets-v2.json sourceAssetCount
+# (body+fullStarter+layer+thumb) whenever the build script changes the count.
+# Details: docs/agent-context/mini-program-assets.md.
 ```
 
 **Migration discipline (CVM PostgreSQL):**
