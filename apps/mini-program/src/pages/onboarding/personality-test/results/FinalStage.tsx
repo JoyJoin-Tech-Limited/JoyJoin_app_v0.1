@@ -70,6 +70,22 @@ interface FinalStageProps {
   posterError?: boolean
 }
 
+export function hasReadableXiaoyueCopy(value?: string | null): boolean {
+  return Boolean(value?.trim())
+}
+
+export function shouldShowXiaoyueUnavailableNotice({
+  xiaoyueAnalysis,
+  summary,
+  hiddenStrength,
+}: {
+  xiaoyueAnalysis?: FinalStageProps['xiaoyueAnalysis']
+  summary?: string | null
+  hiddenStrength?: string | null
+}): boolean {
+  return !xiaoyueAnalysis && !hasReadableXiaoyueCopy(summary) && !hasReadableXiaoyueCopy(hiddenStrength)
+}
+
 export default function FinalStage({
   displayArchetypeName,
   displayArchetypeId,
@@ -324,6 +340,11 @@ export default function FinalStage({
     const blend = xiaoyueAnalysis?.blendLine?.trim() ?? ''
     return why && blend ? blend : ''
   }, [xiaoyueAnalysis])
+  const showXiaoyueUnavailableNotice = shouldShowXiaoyueUnavailableNotice({
+    xiaoyueAnalysis,
+    summary,
+    hiddenStrength: visual.hiddenStrength,
+  })
 
   return (
     <>
@@ -465,11 +486,13 @@ export default function FinalStage({
                     </Text>
                   </View>
                 </View>
-                <View className='personality-results__xiaoyue-fallback-indicator'>
-                  <Text className='personality-results__xiaoyue-fallback-indicator-text'>
-                    悦仔的解读暂时不可用，先看看你的氛围卡吧
-                  </Text>
-                </View>
+                {showXiaoyueUnavailableNotice ? (
+                  <View className='personality-results__xiaoyue-fallback-indicator'>
+                    <Text className='personality-results__xiaoyue-fallback-indicator-text'>
+                      悦仔的解读暂时不可用，先看看你的氛围卡吧
+                    </Text>
+                  </View>
+                ) : null}
               </>
             )}
           </View>
