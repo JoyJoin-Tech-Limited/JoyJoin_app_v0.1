@@ -3386,6 +3386,54 @@ describe.sequential('social icebreaker routes', () => {
   });
 
   describe('single-test mode disclosure', () => {
+    it('creates a custom run plan for bot simulation when at least one game is selected', async () => {
+      await withServer(async (baseUrl) => {
+        const hostCookie = await login(baseUrl, 'single-test-custom-plan-host');
+        const sessionId = `session-single-test-custom-plan-${Date.now()}`;
+
+        vi.mocked(isSingleTestMode).mockReturnValue(true);
+        vi.mocked(getFeatureFlag).mockImplementation(async (_key: string, fallback = false) => fallback);
+        vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue({
+          version: 2,
+          groupId: sessionId,
+          isTestModeSkip: true,
+          runBots: true,
+          botPersonas: [
+            { botId: 'bot-1', userId: 'virtual-user-1', displayName: 'Bot One', archetype: '社牛柯基' },
+          ],
+          bots: [
+            { botId: 'bot-1', displayName: 'Bot One', archetype: '社牛柯基' },
+          ],
+        });
+
+        try {
+          const response = await fetch(`${baseUrl}/api/social-icebreaker/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', cookie: hostCookie },
+            body: JSON.stringify({
+              sessionId,
+              displayName: 'Host',
+              eventTier: 'custom',
+              selectedPhases: ['auction'],
+            }),
+          });
+          const body = await response.json() as any;
+
+          expect(response.status).toBe(200);
+          expect(body.state.runPlan.segments.map((segment: any) => segment.phase)).toEqual([
+            'warmup',
+            'auction',
+            'recap',
+          ]);
+          expect(body.state.singleTest.runBots).toBe(true);
+        } finally {
+          vi.mocked(isSingleTestMode).mockReturnValue(false);
+          vi.mocked(getFeatureFlag).mockImplementation(async (_key: string, fallback = false) => fallback);
+          vi.mocked(getSingleTestMetaForSessionStart).mockResolvedValue(null);
+        }
+      });
+    });
+
     it('lets the single-test host choose Lie Detective V2 before submissions start', async () => {
       await withServer(async (baseUrl) => {
         const hostCookie = await login(baseUrl, 'single-test-lie-mode-host');

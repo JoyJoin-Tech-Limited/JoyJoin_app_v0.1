@@ -511,15 +511,13 @@ router.post('/start', async (req: any, res) => {
     }
   }
 
-  // Single-test mode: reject custom tier for bot-simulation sessions.
+  // Single-test metadata is retained for custom and preset sessions alike so
+  // bot simulations can execute the same selected run plan as real groups.
   let singleTestMeta: import('@shared/socialIcebreaker').SingleTestState | null = null;
   if (isSingleTestMode()) {
     singleTestMeta = await getSingleTestMetaForSessionStart(sessionId);
   }
   const isBotSimulation = Boolean(singleTestMeta?.runBots);
-  if (isBotSimulation && resolvedTier === 'custom') {
-    return res.status(400).json({ error: 'Custom mode is not available in bot simulation' });
-  }
 
   if (!eventTier || !vibe) {
     logger.warn('Social icebreaker /start received missing tier/vibe, using defaults', {
