@@ -350,13 +350,12 @@ $__gold-accent:  $color-landed-gold;
   inset: 0;
   z-index: 200;
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   justify-content: center;
+  background: $color-surface;
 
   &__backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
+    display: none;
   }
 
   &__sheet {
@@ -365,22 +364,19 @@ $__gold-accent:  $color-landed-gold;
     width: 100%;
     height: 100%;
     max-height: 100%;
+    box-sizing: border-box;
     background: $color-surface;
-    border-radius: 32rpx 32rpx 0 0;
-    padding: $spacing-md $spacing-lg 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: calc($spacing-md + env(safe-area-inset-top)) $spacing-lg 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
 
   &__handle {
-    align-self: center;
-    width: 72rpx;
-    height: 8rpx;
-    border-radius: 999rpx;
-    background: rgba($color-text-primary, 0.12);
-    margin-bottom: $spacing-sm;
-    flex-shrink: 0;
+    display: none;
   }
 
   &__header {
@@ -534,6 +530,7 @@ $__gold-accent:  $color-landed-gold;
     }
   }
 
+  &:active,
   &--pressed {
     transform: scale(0.96) !important;
     transition-duration: 100ms;
@@ -651,6 +648,7 @@ $__gold-accent:  $color-landed-gold;
     transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
     opacity 200ms ease;
 
+  &:active,
   &--pressed {
     transform: scale(0.96);
     transition-duration: 100ms;

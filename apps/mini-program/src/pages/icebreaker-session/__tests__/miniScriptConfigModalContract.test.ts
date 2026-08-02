@@ -12,7 +12,17 @@ describe('MiniScriptConfigModal interaction and layout contract', () => {
   it('uses click activation rather than relying on touch-end selection', () => {
     expect(source).toContain('onClick={() => handleSelectStyle(card.key)}')
     expect(source).toContain('onClick={() => handleToggleGenre(card.key as MiniScriptGenre)}')
-    expect(source).not.toContain('onTouchEnd={() => {')
+    expect(source).toContain("hoverClass='ms-card--pressed'")
+    expect(source).toContain("hoverClass='ms-genre-card--pressed'")
+    expect(source).not.toContain('onTouchStart=')
+    expect(source).not.toContain('onTouchEnd=')
+    expect(source).not.toContain('onTouchCancel=')
+  })
+
+  it('escapes transformed and scrollable ancestors through the WeChat root portal', () => {
+    expect(source).toContain("import { View, Text, Image, ScrollView, RootPortal } from '@tarojs/components'")
+    expect(source).toContain('<RootPortal>')
+    expect(source).toContain('</RootPortal>')
   })
 
   it('puts the card grids in a vertical ScrollView and uses full poster art', () => {

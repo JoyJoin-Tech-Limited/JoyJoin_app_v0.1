@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { View, Text, Image, ScrollView } from '@tarojs/components'
+import { View, Text, Image, ScrollView, RootPortal } from '@tarojs/components'
 import { haptics } from '../../../lib/utils/haptics'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import {
@@ -40,7 +40,6 @@ export function MiniScriptConfigModal({
   const [selectedStyle, setSelectedStyle] = useState<MiniScriptStyle | null>(null)
   const [selectedGenres, setSelectedGenres] = useState<MiniScriptGenre[]>(() => [...initialGenres])
   const [liteMode, setLiteMode] = useState(false)
-  const [pressingKey, setPressingKey] = useState<string | null>(null)
   const [isEntering, setIsEntering] = useState(false)
   const [shuffleIndex, setShuffleIndex] = useState<number | null>(null)
   const [loadedThumbs, setLoadedThumbs] = useState<Set<string>>(new Set())
@@ -62,7 +61,6 @@ export function MiniScriptConfigModal({
       setSelectedStyle(null)
       setSelectedGenres([...initialGenres])
       setLiteMode(false)
-      setPressingKey(null)
       setShuffleIndex(null)
       // Trigger staggered entrance after mount
       requestAnimationFrame(() => {
@@ -83,14 +81,6 @@ export function MiniScriptConfigModal({
   }, [])
 
   const genreSet = useMemo(() => new Set(selectedGenres), [selectedGenres])
-
-  const handlePressStart = (key: string) => {
-    setPressingKey(key)
-  }
-
-  const handlePressEnd = () => {
-    setPressingKey(null)
-  }
 
   const handleSelectStyle = (key: string) => {
     if (key === SURPRISE_ME_CARD.key) {
@@ -162,9 +152,6 @@ export function MiniScriptConfigModal({
     if (isEntering) {
       mods.push(`ms-card--stagger-${Math.min(index, 7)}`)
     }
-    if (pressingKey === key) {
-      mods.push('ms-card--pressed')
-    }
     if (shuffleIndex !== null && styleCards[shuffleIndex]?.key === key) {
       mods.push('ms-card--shuffling')
     }
@@ -173,9 +160,6 @@ export function MiniScriptConfigModal({
 
   const getGenreModifier = (key: string) => {
     const mods: string[] = []
-    if (pressingKey === key) {
-      mods.push('ms-genre-card--pressed')
-    }
     if (genreSet.has(key as MiniScriptGenre)) {
       mods.push('ms-genre-card--selected')
     }
@@ -183,7 +167,8 @@ export function MiniScriptConfigModal({
   }
 
   return (
-    <View className='ms-modal'>
+    <RootPortal>
+      <View className='ms-modal'>
       <View className='ms-modal__backdrop' onClick={onClose} />
       <View className='ms-modal__sheet'>
         {/* Drag handle */}
@@ -239,11 +224,11 @@ export function MiniScriptConfigModal({
                   <View
                     key={card.key}
                     className={`ms-card ${mod}`}
+                    hoverClass='ms-card--pressed'
+                    hoverStartTime={0}
+                    hoverStayTime={120}
                     role='button'
                     aria-label={`${label}，选择此剧本风格`}
-                    onTouchStart={() => handlePressStart(card.key)}
-                    onTouchEnd={handlePressEnd}
-                    onTouchCancel={handlePressEnd}
                     onClick={() => handleSelectStyle(card.key)}
                   >
                     {/* Gradient background — fades out when thumbnail loads */}
@@ -296,11 +281,11 @@ export function MiniScriptConfigModal({
                   <View
                     key={card.key}
                     className={`ms-genre-card ${mod}`}
+                    hoverClass='ms-genre-card--pressed'
+                    hoverStartTime={0}
+                    hoverStayTime={120}
                     role='button'
                     aria-label={`${card.label}${isSelected ? '，已选择' : '，未选择'}`}
-                    onTouchStart={() => handlePressStart(card.key)}
-                    onTouchEnd={handlePressEnd}
-                    onTouchCancel={handlePressEnd}
                     onClick={() => handleToggleGenre(card.key as MiniScriptGenre)}
                   >
                     <View
@@ -356,6 +341,7 @@ export function MiniScriptConfigModal({
           )}
         </View>
       </View>
-    </View>
+      </View>
+    </RootPortal>
   )
 }
