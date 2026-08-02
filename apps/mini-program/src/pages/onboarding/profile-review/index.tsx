@@ -43,11 +43,7 @@ import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import WelcomeGiftCard from '../../../components/onboarding/WelcomeGiftCard'
 import ProfileReviewInviteCard from '../../../components/onboarding/ProfileReviewInviteCard'
 import JoyJoinIntroFlow from '../../../components/flow-animation/JoyJoinIntroFlow'
-import {
-  clearPendingFlow,
-  markFlowPending,
-  shouldShowFlow,
-} from '../../../components/flow-animation/FlowStorage'
+import { shouldShowFlow } from '../../../components/flow-animation/FlowStorage'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
@@ -431,16 +427,21 @@ export default function ProfileReviewPage() {
         Boolean(user?.id)
         && shouldShowFlow('joyjoin-intro', user?.id)
         && user?.features?.flowIntroEnabled !== false
-      if (shouldHandoffIntro && user?.id) {
-        // Persist before auth invalidation. A refreshed nextStep can make the
-        // onboarding route guard switch tabs before local React state commits.
-        markFlowPending('joyjoin-intro', user.id)
-      }
-
       setIsCelebrating(true)
       haptics('success')
 
       await new Promise((resolve) => setTimeout(resolve, 500))
+
+      if (shouldHandoffIntro) {
+        analytics.stepCompleted({
+          nextStep: 'discover',
+          hasArchetype: archetype !== '',
+          hasInterests: Boolean(interestsData?.totalSelections),
+        })
+        setIsCelebrating(false)
+        setIntroNextStep('discover')
+        return
+      }
 
       await invalidateAuth()
       const userState = await getUserState()
@@ -454,17 +455,6 @@ export default function ProfileReviewPage() {
       logInfo('[ProfileReview] Onboarding complete, routing from refreshed nextStep', {
         nextStep: userState.nextStep,
       })
-
-      if (
-        userState.nextStep === 'discover'
-        && shouldHandoffIntro
-      ) {
-        setIsCelebrating(false)
-        setIntroNextStep(userState.nextStep)
-        return
-      }
-
-      clearPendingFlow('joyjoin-intro', user?.id)
 
       await navigateToMiniProgramNextStep(userState.nextStep, {
         mode: 'replace',
@@ -484,14 +474,14 @@ export default function ProfileReviewPage() {
   }, [analytics, archetype, interestsData?.totalSelections, invalidateAuth, isSubmitting, user?.id])
 
   const handleIntroComplete = useCallback(async () => {
-    const nextStep = introNextStep
-    await navigateToMiniProgramNextStep(nextStep, {
+    await invalidateAuth()
+    const userState = await getUserState()
+    await navigateToMiniProgramNextStep(userState.nextStep, {
       mode: 'replace',
       transition: { beforeNavigate: () => setIsPageExiting(true) },
     })
-    clearPendingFlow('joyjoin-intro', user?.id)
     setIntroNextStep(undefined)
-  }, [introNextStep, user?.id])
+  }, [invalidateAuth])
 
   const getStageClassName = useCallback(
     (step: number) =>
