@@ -91,7 +91,13 @@ const DEFAULT_BLIND_BOX_COPY: NpcBlindBoxCopy = {
 }
 
 const OFFER_REVEAL_DELAY_MS = 480
-const ALANG_DIALOGUE_SCENE = '/pages/alang/assets/ui/flash-alang-dialogue-scene-v2.webp'
+const NPC_DIALOGUE_SCENES: Record<string, string> = {
+  alang: '/pages/alang/assets/ui/flash-alang-dialogue-paper-v1.webp',
+  lizi: '/pages/alang/assets/ui/flash-lizi-dialogue-paper-v1.webp',
+  momo: '/pages/alang/assets/ui/flash-momo-dialogue-paper-v1.webp',
+  shiqi: '/pages/alang/assets/ui/flash-shiqi-dialogue-paper-v1.webp',
+  atuan: '/pages/alang/assets/ui/flash-atuan-dialogue-paper-v1.webp',
+}
 
 function dialogueActionError(error: unknown, fallback: string): string {
   switch (getFlashApiErrorCode(error)) {
@@ -293,7 +299,8 @@ export default function FlashDialoguePage() {
   const offerPhase: OfferRevealPhase = offer && offerReveal?.templateId === offer.templateId
     ? offerReveal.phase
     : 'sealed'
-  const usesNarrativeScene = data.npc.slug === 'alang'
+  const dialogueScene = NPC_DIALOGUE_SCENES[data.npc.slug]
+  const usesNarrativeScene = Boolean(dialogueScene)
 
   return (
     <View className={`flash-page flash-dialogue${usesNarrativeScene ? ' flash-dialogue--scene' : ''}`}>
@@ -301,7 +308,7 @@ export default function FlashDialoguePage() {
         <View className='flash-page__content'>
           {usesNarrativeScene ? (
             <View className='flash-dialogue__scene'>
-              <Image className='flash-dialogue__scene-art' src={ALANG_DIALOGUE_SCENE} mode='aspectFill' />
+              <Image className='flash-dialogue__scene-art' src={dialogueScene} mode='aspectFill' />
               <View className='flash-dialogue__scene-shade' />
               <View className='flash-dialogue__scene-head'>
                 <Text className='flash-dialogue__chapter-index'>ENCOUNTER</Text>
@@ -521,7 +528,6 @@ export default function FlashDialoguePage() {
           )}
 
           {actionError ? <View className='flash-dialogue__error' role='alert'><Text>{actionError}</Text></View> : null}
-          <Text className='flash-dialogue__safety'>对话已解锁后可以聊完，不会因为角色下线突然中断。</Text>
         </View>
       </ScrollView>
     </View>

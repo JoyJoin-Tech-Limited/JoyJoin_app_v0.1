@@ -241,6 +241,25 @@ describe('formal Flash dialogue', () => {
     }))
   })
 
+  it.each([
+    ['alang', 'flash-alang-dialogue-paper-v1.webp'],
+    ['lizi', 'flash-lizi-dialogue-paper-v1.webp'],
+    ['momo', 'flash-momo-dialogue-paper-v1.webp'],
+    ['shiqi', 'flash-shiqi-dialogue-paper-v1.webp'],
+    ['atuan', 'flash-atuan-dialogue-paper-v1.webp'],
+  ])('uses the approved paper master for %s', (slug, expectedAsset) => {
+    mocks.useEncounter.mockReturnValue({
+      data: { ...questionEncounter, npc: { ...questionEncounter.npc, slug } },
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    const { container } = render(<FlashDialoguePage />)
+    const scene = container.querySelector('.flash-dialogue__scene-art')
+    expect(scene).toHaveAttribute('src', expect.stringContaining(expectedAsset))
+  })
+
   it('prioritizes delivery from the same NPC before a new conversation', async () => {
     mocks.useEncounter.mockReturnValue({
       data: {
