@@ -5,7 +5,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   CalendarClock,
-  AlertTriangle,
   Clock3,
   Edit3,
   MapPin,
@@ -95,17 +94,6 @@ type ConfirmAction =
   | null;
 
 type RegenerationPreview = FlashScheduleResponse & { generationSeed: string; previewDigest: string };
-type EmergencyAdjustmentPreview = FlashScheduleResponse & { previewDigest: string };
-
-interface EmergencyAdjustmentShiftWrite {
-  id: string;
-  npcId: string;
-  locationId: string;
-  startsAt: string;
-  endsAt: string;
-  source: "manual";
-}
-
 interface FlashShiftWrite {
   id?: string;
   npcId: string;
@@ -187,9 +175,6 @@ export function FlashScheduleTab({
     const timer = window.setInterval(() => setCurrentTime(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
-  const [emergencyPlan, setEmergencyPlan] = useState<FlashScheduleResponse | null>(null);
-  const [emergencyPreview, setEmergencyPreview] = useState<EmergencyAdjustmentPreview | null>(null);
-  const [emergencyReason, setEmergencyReason] = useState("");
 
   const todayQuery = useQuery<FlashScheduleResponse>({
     queryKey: [`/api/admin/alang/schedules?date=${today}`],
@@ -267,46 +252,6 @@ export function FlashScheduleTab({
     },
     onError: (error) =>
       toast({ title: "排班没有替换", description: getMutationDescription(error), variant: "destructive" }),
-  });
-
-  const previewEmergencyMutation = useMutation({
-    mutationFn: async ({ plan, shifts }: { plan: FlashSchedulePlan; shifts: EmergencyAdjustmentShiftWrite[] }) => {
-      const response = await apiRequest("POST", `/api/admin/alang/schedules/${plan.id}/emergency-adjustment-preview`, {
-        expectedVersion: plan.version,
-        shifts,
-      });
-      return response.json() as Promise<EmergencyAdjustmentPreview>;
-    },
-    onSuccess: setEmergencyPreview,
-    onError: (error) => toast({ title: "今日调整未通过校验", description: getMutationDescription(error), variant: "destructive" }),
-  });
-
-  const applyEmergencyMutation = useMutation({
-    mutationFn: async ({ preview, reason }: { preview: EmergencyAdjustmentPreview; reason: string }) => {
-      if (!preview.plan) throw new Error("缺少今日排班");
-      const response = await apiRequest("POST", `/api/admin/alang/schedules/${preview.plan.id}/emergency-adjust`, {
-        expectedVersion: preview.plan.version,
-        previewDigest: preview.previewDigest,
-        reason,
-        shifts: preview.shifts.map((shift) => ({
-          id: shift.id,
-          npcId: shift.npcId,
-          locationId: shift.locationId,
-          startsAt: shift.startsAt,
-          endsAt: shift.endsAt,
-          source: "manual",
-        })),
-      });
-      return response.json();
-    },
-    onSuccess: async () => {
-      setEmergencyPlan(null);
-      setEmergencyPreview(null);
-      setEmergencyReason("");
-      await invalidateSchedules();
-      toast({ title: "今日排班已紧急调整", description: "原班次身份保持不变，新地点与时间已立即生效。" });
-    },
-    onError: (error) => toast({ title: "今日排班调整失败", description: getMutationDescription(error), variant: "destructive" }),
   });
 
   const updatePlanMutation = useMutation({
@@ -435,22 +380,6 @@ export function FlashScheduleTab({
                       {schedule.plan ? `${scheduleSourceLabel(schedule.plan.source)} · ${activeShifts.length} 个有效班次` : "允许当天没有 NPC 出现"}
                     </CardDescription>
                   </div>
-
-                  {canWrite && label === "今天" && schedule.plan?.status === "published" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEmergencyPlan(schedule);
-                        setEmergencyPreview(null);
-                        setEmergencyReason("");
-                      }}
-                      data-testid="button-emergency-adjust-today-schedule"
-                    >
-                      <AlertTriangle className="mr-2 h-4 w-4" aria-hidden="true" />
-                      紧急调整今日
-                    </Button>
-                  )}
 
                   {canWrite && label === "明天" && (
                     <div className="flex flex-wrap gap-2">
@@ -589,26 +518,6 @@ export function FlashScheduleTab({
         }}
       />
 
-      <EmergencyScheduleDialog
-        schedule={emergencyPlan}
-        preview={emergencyPreview}
-        locations={locations}
-        reason={emergencyReason}
-        onReasonChange={setEmergencyReason}
-        onClose={() => {
-          if (applyEmergencyMutation.isPending) return;
-          setEmergencyPlan(null);
-          setEmergencyPreview(null);
-        }}
-        onPreview={(plan, shifts) => previewEmergencyMutation.mutate({ plan, shifts })}
-        onApply={() => emergencyPreview && applyEmergencyMutation.mutate({
-          preview: emergencyPreview,
-          reason: emergencyReason.trim(),
-        })}
-        previewing={previewEmergencyMutation.isPending}
-        applying={applyEmergencyMutation.isPending}
-      />
-
       <Dialog
         open={!!regenerationPreview}
         onOpenChange={(open) => {
@@ -730,156 +639,6 @@ export function FlashScheduleTab({
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
-}
-
-function EmergencyScheduleDialog({
-  schedule,
-  preview,
-  locations,
-  reason,
-  onReasonChange,
-  onClose,
-  onPreview,
-  onApply,
-  previewing,
-  applying,
-}: {
-  schedule: FlashScheduleResponse | null;
-  preview: EmergencyAdjustmentPreview | null;
-  locations: FlashEncounterLocation[];
-  reason: string;
-  onReasonChange: (value: string) => void;
-  onClose: () => void;
-  onPreview: (plan: FlashSchedulePlan, shifts: EmergencyAdjustmentShiftWrite[]) => void;
-  onApply: () => void;
-  previewing: boolean;
-  applying: boolean;
-}) {
-  const [locationId, setLocationId] = useState("");
-  const activeShifts = schedule?.shifts.filter((shift) => shift.status === "published") ?? [];
-  const sharedLocations = locations.filter((location) => (
-    location.isActive && location.approvalStatus === "approved" && location.city === "深圳"
-  ));
-
-  useEffect(() => {
-    if (!schedule) return;
-    const cocoPark = sharedLocations.find((location) => /coco\s*park|购物公园/i.test(`${location.name} ${location.address}`));
-    setLocationId(cocoPark?.id ?? "");
-  }, [schedule]);
-
-  const buildCoverageShifts = (): EmergencyAdjustmentShiftWrite[] => {
-    if (!schedule?.plan) return [];
-    const grouped = new Map<string, FlashShift[]>();
-    for (const shift of activeShifts) grouped.set(shift.npcId, [...(grouped.get(shift.npcId) ?? []), shift]);
-    const ordered: FlashShift[] = [];
-    const groups = [...grouped.values()];
-    for (const group of groups) if (group[0]) ordered.push(group[0]);
-    for (const group of groups) for (const shift of group.slice(1)) ordered.push(shift);
-    const slots = [["12:00", "15:00"], ["13:30", "16:30"], ["16:30", "19:30"], ["18:00", "21:00"]];
-    return ordered.map((shift, index) => {
-      const [start, end] = slots[index] ?? ["18:00", "21:00"];
-      return {
-        id: shift.id,
-        npcId: shift.npcId,
-        locationId,
-        startsAt: toShenzhenIso(schedule.plan!.serviceDate, start),
-        endsAt: toShenzhenIso(schedule.plan!.serviceDate, end),
-        source: "manual",
-      };
-    });
-  };
-
-  return (
-    <Dialog open={!!schedule} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>紧急调整今日已发布排班</DialogTitle>
-          <DialogDescription>
-            仅修改 {schedule?.plan?.serviceDate}。班次 ID 与用户进度保持不变，不影响后续自动排班。
-          </DialogDescription>
-        </DialogHeader>
-
-        {!preview ? (
-          <div className="space-y-4">
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-              <AlertTitle>这是线上即时变更</AlertTitle>
-              <AlertDescription>系统会把全部今日班次集中到同一审核地点，并调整为 12:00–21:00 连续覆盖；不会改写 NPC 的常规地点关联。</AlertDescription>
-            </Alert>
-            <div className="space-y-2">
-              <Label htmlFor="emergency-shared-location">统一地点</Label>
-              <Select value={locationId} onValueChange={setLocationId}>
-                <SelectTrigger id="emergency-shared-location" data-testid="select-emergency-shared-location">
-                  <SelectValue placeholder="选择已审核的深圳公共地点" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sharedLocations.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>{location.district} · {location.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {buildCoverageShifts().map((shift) => (
-                <div key={shift.id} className="rounded-xl border p-3 text-sm">
-                  <div className="font-medium">{activeShifts.find((item) => item.id === shift.id)?.npc?.name ?? "NPC"}</div>
-                  <div className="mt-1 text-muted-foreground">{formatFlashTime(shift.startsAt)}–{formatFlashTime(shift.endsAt)}</div>
-                </div>
-              ))}
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>取消</Button>
-              <Button
-                type="button"
-                onClick={() => schedule?.plan && onPreview(schedule.plan, buildCoverageShifts())}
-                disabled={!locationId}
-                loading={previewing}
-                data-testid="button-preview-emergency-schedule"
-              >
-                校验并预览
-              </Button>
-            </DialogFooter>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {preview.shifts.map((shift) => (
-                <div key={shift.id} className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm">
-                  <div className="font-medium">{shift.npc?.name ?? "NPC"}</div>
-                  <div className="mt-1 text-muted-foreground">{formatFlashTime(shift.startsAt)}–{formatFlashTime(shift.endsAt)}</div>
-                  <div className="text-muted-foreground">{shift.location?.district} · {shift.location?.name}</div>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="emergency-adjustment-reason">紧急调整原因</Label>
-              <Textarea
-                id="emergency-adjustment-reason"
-                value={reason}
-                onChange={(event) => onReasonChange(event.target.value)}
-                maxLength={200}
-                placeholder="例如：今日运营临时集中至 COCO Park"
-              />
-              <p className="text-xs text-muted-foreground">原因会写入管理员审计日志，至少填写 4 个字。</p>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onClose()}>取消</Button>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={onApply}
-                disabled={reason.trim().length < 4}
-                loading={applying}
-                data-testid="button-apply-emergency-schedule"
-              >
-                确认立即生效
-              </Button>
-            </DialogFooter>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }
 

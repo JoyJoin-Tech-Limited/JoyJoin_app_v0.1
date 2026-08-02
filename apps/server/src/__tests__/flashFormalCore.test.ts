@@ -26,12 +26,9 @@ import {
   resolveFlashNpcMessageCheckpoint,
 } from "../repositories/flashRepo";
 import {
-  canEmergencyAdjustPublishedFlashSchedule,
   canRegeneratePublishedFlashSchedule,
   canAdjustUpcomingFlashShift,
   createSeededRandom,
-  flashEmergencyAdjustmentDigest,
-  validateFlashCoverageWindow,
   flashSchedulePreviewDigest,
   generateFlashScheduleDraft,
   isoWeekdayForServiceDate,
@@ -447,59 +444,6 @@ describe("formal Flash scheduling", () => {
     expect(canAdjustUpcomingFlashShift(plan, { status: "published", startsAt: "2026-08-02T12:00:00+08:00" }, now)).toBe(false);
     expect(canAdjustUpcomingFlashShift({ ...plan, serviceDate: "2026-08-03" }, { status: "published", startsAt: "2026-08-03T15:00:00+08:00" }, now)).toBe(false);
     expect(canAdjustUpcomingFlashShift(plan, { status: "cancelled", startsAt: "2026-08-02T15:00:00+08:00" }, now)).toBe(false);
-  });
-
-  it("only allows emergency adjustment of today's published Shenzhen plan", () => {
-    const now = new Date("2026-08-01T01:30:00+08:00");
-    expect(canEmergencyAdjustPublishedFlashSchedule({ city: "深圳", status: "published", serviceDate: "2026-08-01" }, now)).toBe(true);
-    expect(canEmergencyAdjustPublishedFlashSchedule({ city: "广州", status: "published", serviceDate: "2026-08-01" }, now)).toBe(false);
-    expect(canEmergencyAdjustPublishedFlashSchedule({ city: "深圳", status: "draft", serviceDate: "2026-08-01" }, now)).toBe(false);
-    expect(canEmergencyAdjustPublishedFlashSchedule({ city: "深圳", status: "published", serviceDate: "2026-08-02" }, now)).toBe(false);
-  });
-
-  it("requires emergency shifts to continuously cover noon through 21:00", () => {
-    const covered = [
-      { startsAt: new Date("2026-08-01T12:00:00+08:00"), endsAt: new Date("2026-08-01T15:00:00+08:00") },
-      { startsAt: new Date("2026-08-01T13:30:00+08:00"), endsAt: new Date("2026-08-01T16:30:00+08:00") },
-      { startsAt: new Date("2026-08-01T16:30:00+08:00"), endsAt: new Date("2026-08-01T19:30:00+08:00") },
-      { startsAt: new Date("2026-08-01T18:00:00+08:00"), endsAt: new Date("2026-08-01T21:00:00+08:00") },
-    ];
-    expect(validateFlashCoverageWindow(covered, 12 * 60, 21 * 60)).toEqual([]);
-    expect(validateFlashCoverageWindow([covered[0], covered[3]], 12 * 60, 21 * 60)).toContain("COVERAGE_GAP");
-  });
-
-  it("binds an emergency adjustment preview to shift identity and exact placement", () => {
-    const shifts = [{
-      id: "00000000-0000-4000-8000-000000000201",
-      npcId: "00000000-0000-4000-8000-000000000001",
-      locationId: "00000000-0000-4000-8000-000000000101",
-      startsAt: new Date("2026-08-01T12:00:00+08:00"),
-      endsAt: new Date("2026-08-01T16:00:00+08:00"),
-      source: "manual" as const,
-    }];
-    expect(flashEmergencyAdjustmentDigest(shifts)).toBe(flashEmergencyAdjustmentDigest(shifts.map((shift) => ({ ...shift }))));
-    expect(flashEmergencyAdjustmentDigest(shifts)).not.toBe(flashEmergencyAdjustmentDigest([{
-      ...shifts[0],
-      id: "00000000-0000-4000-8000-000000000202",
-    }]));
-  });
-
-  it("allows same-location overlap only for an audited emergency adjustment", () => {
-    const npcA = npc({ id: "00000000-0000-4000-8000-000000000001" });
-    const npcB = npc({ id: "00000000-0000-4000-8000-000000000002" });
-    const sharedLocation = location();
-    const shifts = [
-      { npcId: npcA.id, locationId: sharedLocation.id, startsAt: new Date("2026-07-20T12:00:00+08:00"), endsAt: new Date("2026-07-20T15:00:00+08:00"), source: "manual" as const },
-      { npcId: npcB.id, locationId: sharedLocation.id, startsAt: new Date("2026-07-20T13:30:00+08:00"), endsAt: new Date("2026-07-20T16:30:00+08:00"), source: "manual" as const },
-    ];
-    const common = {
-      serviceDate: "2026-07-20",
-      shifts,
-      npcsById: new Map([[npcA.id, npcA], [npcB.id, npcB]]),
-      locationsByNpc: new Map([[npcA.id, [sharedLocation]], [npcB.id, [sharedLocation]]]),
-    };
-    expect(validateFlashScheduleDraft(common).errors).toContain(`LOCATION_OVERLAP:${sharedLocation.id}`);
-    expect(validateFlashScheduleDraft({ ...common, allowLocationOverlap: true })).toEqual({ valid: true, errors: [] });
   });
 
   it("only allows a published Shenzhen next-day plan to be regenerated", () => {

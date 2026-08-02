@@ -52,9 +52,7 @@ import {
 } from "../../repositories/flashRepo";
 import {
   addServiceDays,
-  applyPublishedFlashScheduleEmergencyAdjustmentForAdmin,
   generateOrReplaceFlashScheduleDraftForAdmin,
-  previewPublishedFlashScheduleEmergencyAdjustmentForAdmin,
   previewPublishedFlashScheduleRegenerationForAdmin,
   replacePublishedFlashScheduleForAdmin,
   shenzhenDateString,
@@ -270,25 +268,6 @@ const scheduleRegenerationReplaceSchema = z.object({
   generationSeed: z.string().trim().min(1).max(80),
   previewDigest: z.string().regex(/^[a-f0-9]{64}$/),
   reason: z.string().trim().min(4, "请填写重新生成原因").max(200),
-}).strict();
-
-const emergencyScheduleShiftSchema = z.object({
-  id: uuidSchema,
-  npcId: uuidSchema,
-  locationId: uuidSchema,
-  startsAt: z.string().datetime({ offset: true }),
-  endsAt: z.string().datetime({ offset: true }),
-  source: z.literal("manual").default("manual"),
-}).strict();
-
-const emergencySchedulePreviewSchema = z.object({
-  expectedVersion: z.number().int().positive(),
-  shifts: z.array(emergencyScheduleShiftSchema).min(1).max(20),
-}).strict();
-
-const emergencyScheduleApplySchema = emergencySchedulePreviewSchema.extend({
-  previewDigest: z.string().regex(/^[a-f0-9]{64}$/),
-  reason: z.string().trim().min(4, "请填写紧急调整原因").max(200),
 }).strict();
 
 function minutesFromTime(value: string): number {
@@ -667,14 +646,6 @@ function parseDraftShifts(shifts: z.infer<typeof scheduleShiftSchema>[]) {
     startsAt: new Date(shift.startsAt),
     endsAt: new Date(shift.endsAt),
     source: shift.source,
-  }));
-}
-
-function parseEmergencyShifts(shifts: z.infer<typeof emergencyScheduleShiftSchema>[]) {
-  return shifts.map((shift) => ({
-    ...shift,
-    startsAt: new Date(shift.startsAt),
-    endsAt: new Date(shift.endsAt),
   }));
 }
 
@@ -1224,74 +1195,6 @@ export function registerAdminAlangRoutes(app: Express): void {
       });
     } catch (error) {
       routeFailure(req, res, "schedule regeneration preview failed", error);
-    }
-  });
-
-  app.post("/api/admin/alang/schedules/:id/emergency-adjustment-preview", requireAdmin, requireOperatorOrAbove, async (req, res) => {
-    const parsed = emergencySchedulePreviewSchema.safeParse(req.body);
-    if (!parsed.success) return void validationFailure(res, parsed.error);
-    try {
-      const preview = await previewPublishedFlashScheduleEmergencyAdjustmentForAdmin({
-        planId: req.params.id,
-        expectedVersion: parsed.data.expectedVersion,
-        shifts: parseEmergencyShifts(parsed.data.shifts),
-      });
-      if (!preview.ok) {
-        const status = preview.code === "FLASH_SCHEDULE_NOT_FOUND" ? 404 : preview.code === "FLASH_SCHEDULE_INVALID" ? 422 : 409;
-        return void res.status(status).json({
-          code: preview.code,
-          message: preview.code === "FLASH_SCHEDULE_INVALID"
-            ? "紧急调整没有通过班次、NPC 与审核地点校验"
-            : "今日排班状态已经变化，请刷新后再试",
-          errors: "validation" in preview ? preview.validation?.errors : undefined,
-        });
-      }
-      res.json({
-        ...(await enrichSchedule({ plan: preview.plan, shifts: preview.shifts })),
-        previewDigest: preview.previewDigest,
-      });
-    } catch (error) {
-      routeFailure(req, res, "schedule emergency adjustment preview failed", error);
-    }
-  });
-
-  app.post("/api/admin/alang/schedules/:id/emergency-adjust", requireAdmin, requireOperatorOrAbove, async (req, res) => {
-    const parsed = emergencyScheduleApplySchema.safeParse(req.body);
-    if (!parsed.success) return void validationFailure(res, parsed.error);
-    try {
-      const before = await getFlashSchedulePlanById(req.params.id);
-      if (!before) throw new Error("FLASH_ADMIN_NOT_FOUND:没有找到今日排班");
-      const adjusted = await applyPublishedFlashScheduleEmergencyAdjustmentForAdmin({
-        planId: req.params.id,
-        expectedVersion: parsed.data.expectedVersion,
-        actor: getActingAdminId(req),
-        shifts: parseEmergencyShifts(parsed.data.shifts),
-        previewDigest: parsed.data.previewDigest,
-      });
-      if (!adjusted.ok) {
-        const status = adjusted.code === "FLASH_SCHEDULE_NOT_FOUND" ? 404 : adjusted.code === "FLASH_SCHEDULE_INVALID" ? 422 : 409;
-        return void res.status(status).json({
-          code: adjusted.code,
-          message: adjusted.code === "FLASH_SCHEDULE_INVALID"
-            ? "今日排班没有通过安全校验"
-            : "今日排班状态已经变化，请重新预览",
-          errors: "validation" in adjusted ? adjusted.validation?.errors : undefined,
-        });
-      }
-      audit(req, "FLASH_SCHEDULE_EMERGENCY_ADJUSTED", "flash_schedule", adjusted.plan.id, {
-        version: before.plan.version,
-        shifts: before.shifts.filter((shift: any) => shift.status === "published").map((shift: any) => ({
-          id: shift.id, locationId: shift.locationId, startsAt: shift.startsAt, endsAt: shift.endsAt,
-        })),
-      }, {
-        version: adjusted.plan.version,
-        shifts: adjusted.shifts.map((shift: any) => ({
-          id: shift.id, locationId: shift.locationId, startsAt: shift.startsAt, endsAt: shift.endsAt,
-        })),
-      }, { reason: parsed.data.reason, serviceDate: adjusted.plan.serviceDate });
-      res.json(await enrichSchedule({ plan: adjusted.plan, shifts: adjusted.shifts }));
-    } catch (error) {
-      routeFailure(req, res, "schedule emergency adjustment failed", error);
     }
   });
 

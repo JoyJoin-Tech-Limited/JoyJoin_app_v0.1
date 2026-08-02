@@ -14,14 +14,12 @@ import {
   getFlashSchedulePlanByDate,
   getFlashSchedulePlanById,
   isFlashSchemaReady,
-  listFlashEncounterLocations,
   listFlashSchedulingInputs,
   listRecentPublishedFlashPlans,
   publishFlashSchedulePlan,
   purgeExpiredFlashLocateBudgets,
   purgeExpiredFlashPrivateReplies,
   runWithFlashScheduleAdvisoryLock,
-  updatePublishedFlashScheduleInPlace,
   replacePublishedFlashSchedule,
   updateUpcomingFlashShift,
   replaceFlashScheduleShifts,
@@ -56,22 +54,8 @@ export type FlashDraftValidation = {
   errors: string[];
 };
 
-export type FlashEmergencyAdjustmentShift = FlashDraftShift & { id: string };
-
 export function flashSchedulePreviewDigest(shifts: FlashDraftShift[]): string {
   const canonical = shifts.map((shift) => ({
-    npcId: shift.npcId,
-    locationId: shift.locationId,
-    startsAt: shift.startsAt.toISOString(),
-    endsAt: shift.endsAt.toISOString(),
-    source: shift.source,
-  }));
-  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
-}
-
-export function flashEmergencyAdjustmentDigest(shifts: FlashEmergencyAdjustmentShift[]): string {
-  const canonical = shifts.map((shift) => ({
-    id: shift.id,
     npcId: shift.npcId,
     locationId: shift.locationId,
     startsAt: shift.startsAt.toISOString(),
@@ -166,15 +150,6 @@ export function canAdjustUpcomingFlashShift(
     && new Date(shift.startsAt).getTime() > now.getTime();
 }
 
-export function canEmergencyAdjustPublishedFlashSchedule(
-  plan: { city: string; status: string; serviceDate: string },
-  now = new Date(),
-): boolean {
-  return plan.city === "深圳"
-    && plan.status === "published"
-    && plan.serviceDate === shenzhenDateString(now);
-}
-
 function localDateAtMinutes(serviceDate: string, minutes: number): Date {
   const hours = Math.floor(minutes / 60);
   const minute = minutes % 60;
@@ -184,25 +159,6 @@ function localDateAtMinutes(serviceDate: string, minutes: number): Date {
 function localMinutes(date: Date): number {
   const local = new Date(date.getTime() + SHENZHEN_OFFSET_MS);
   return local.getUTCHours() * 60 + local.getUTCMinutes();
-}
-
-export function validateFlashCoverageWindow(
-  shifts: Array<{ startsAt: Date; endsAt: Date }>,
-  requiredStartMinutes: number,
-  requiredEndMinutes: number,
-): string[] {
-  const ordered = shifts
-    .map((shift) => ({ start: localMinutes(shift.startsAt), end: localMinutes(shift.endsAt) }))
-    .sort((left, right) => left.start - right.start);
-  if (!ordered.length || ordered[0].start > requiredStartMinutes) return ["COVERAGE_START_MISSING"];
-  let coveredUntil = requiredStartMinutes;
-  for (const shift of ordered) {
-    if (shift.end <= coveredUntil) continue;
-    if (shift.start > coveredUntil) return ["COVERAGE_GAP"];
-    coveredUntil = Math.max(coveredUntil, shift.end);
-    if (coveredUntil >= requiredEndMinutes) return [];
-  }
-  return ["COVERAGE_END_MISSING"];
 }
 
 function localDateString(date: Date): string {
@@ -329,7 +285,6 @@ export function validateFlashScheduleDraft(input: {
   shifts: FlashDraftShift[];
   npcsById: Map<string, SchedulingNpc>;
   locationsByNpc: Map<string, SchedulingLocation[]>;
-  allowLocationOverlap?: boolean;
 }): FlashDraftValidation {
   const errors: string[] = [];
   const weekday = isoWeekdayForServiceDate(input.serviceDate);
@@ -367,7 +322,7 @@ export function validateFlashScheduleDraft(input: {
     for (let right = left + 1; right < input.shifts.length; right += 1) {
       const a = input.shifts[left];
       const b = input.shifts[right];
-      if (!input.allowLocationOverlap && a.locationId === b.locationId && overlaps(a, b)) {
+      if (a.locationId === b.locationId && overlaps(a, b)) {
         errors.push(`LOCATION_OVERLAP:${a.locationId}`);
       }
       if (a.npcId === b.npcId) {
@@ -377,91 +332,6 @@ export function validateFlashScheduleDraft(input: {
     }
   }
   return { valid: errors.length === 0, errors: [...new Set(errors)] };
-}
-
-export async function previewPublishedFlashScheduleEmergencyAdjustmentForAdmin(input: {
-  planId: string;
-  expectedVersion: number;
-  shifts: FlashEmergencyAdjustmentShift[];
-  now?: Date;
-}) {
-  const now = input.now ?? new Date();
-  const existing = await getFlashSchedulePlanById(input.planId);
-  if (!existing) return { ok: false as const, code: "FLASH_SCHEDULE_NOT_FOUND" as const };
-  if (!canEmergencyAdjustPublishedFlashSchedule(existing.plan, now)) {
-    return { ok: false as const, code: "FLASH_SCHEDULE_NOT_EMERGENCY_ADJUSTABLE" as const };
-  }
-  if (existing.plan.version !== input.expectedVersion) {
-    return { ok: false as const, code: "FLASH_SCHEDULE_CAS_CONFLICT" as const };
-  }
-
-  const current = (existing.shifts as FlashShift[]).filter((shift) => shift.status === "published");
-  const currentById = new Map<string, FlashShift>(current.map((shift) => [shift.id, shift]));
-  const identityIsStable = input.shifts.length === current.length && input.shifts.every((shift) => (
-    currentById.get(shift.id)?.npcId === shift.npcId
-  ));
-  if (!identityIsStable) {
-    return { ok: false as const, code: "FLASH_SCHEDULE_SHIFT_SET_CHANGED" as const };
-  }
-
-  const schedulingInputs = await listFlashSchedulingInputs();
-  const schedulingNpcs = schedulingInputs.npcs as SchedulingNpc[];
-  const emergencyLocations = (await listFlashEncounterLocations() as FlashEncounterLocation[]).filter((location) => (
-    location.city === "深圳" && location.isActive && location.approvalStatus === "approved"
-  ));
-  const emergencyLocationRows: SchedulingLocation[] = emergencyLocations.map((location) => ({
-    id: location.id,
-    name: location.name,
-    district: location.district,
-    availabilityWindows: location.availabilityWindows,
-    weight: 1,
-  }));
-  const locationsByNpc = new Map(schedulingNpcs.map((npc) => [npc.id, emergencyLocationRows]));
-  const validation = validateFlashScheduleDraft({
-    serviceDate: existing.plan.serviceDate,
-    shifts: input.shifts,
-    npcsById: new Map(schedulingNpcs.map((npc) => [npc.id, npc])),
-    locationsByNpc,
-    allowLocationOverlap: true,
-  });
-  validation.errors.push(...validateFlashCoverageWindow(input.shifts, 12 * 60, 21 * 60));
-  validation.errors = [...new Set(validation.errors)];
-  validation.valid = validation.errors.length === 0;
-  if (!validation.valid) {
-    return { ok: false as const, code: "FLASH_SCHEDULE_INVALID" as const, validation };
-  }
-  return {
-    ok: true as const,
-    plan: existing.plan,
-    shifts: input.shifts,
-    previewDigest: flashEmergencyAdjustmentDigest(input.shifts),
-    validation,
-  };
-}
-
-export async function applyPublishedFlashScheduleEmergencyAdjustmentForAdmin(input: {
-  planId: string;
-  expectedVersion: number;
-  actor: string;
-  shifts: FlashEmergencyAdjustmentShift[];
-  previewDigest: string;
-  now?: Date;
-}) {
-  const preview = await previewPublishedFlashScheduleEmergencyAdjustmentForAdmin(input);
-  if (!preview.ok) return preview;
-  if (preview.previewDigest !== input.previewDigest) {
-    return { ok: false as const, code: "FLASH_SCHEDULE_PREVIEW_STALE" as const };
-  }
-  const updated = await updatePublishedFlashScheduleInPlace({
-    planId: input.planId,
-    expectedVersion: input.expectedVersion,
-    updatedBy: input.actor,
-    shifts: input.shifts,
-    now: input.now ?? new Date(),
-  });
-  return updated
-    ? { ok: true as const, plan: updated.plan, shifts: updated.shifts, validation: preview.validation }
-    : { ok: false as const, code: "FLASH_SCHEDULE_CAS_CONFLICT" as const };
 }
 
 export function buildFlashSchedulingContext(inputs: Awaited<ReturnType<typeof listFlashSchedulingInputs>>) {
