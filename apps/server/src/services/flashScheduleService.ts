@@ -23,6 +23,7 @@ import {
   runWithFlashScheduleAdvisoryLock,
   updatePublishedFlashScheduleInPlace,
   replacePublishedFlashSchedule,
+  updateUpcomingFlashShift,
   replaceFlashScheduleShifts,
 } from "../repositories/flashRepo";
 
@@ -152,6 +153,17 @@ export function canRegeneratePublishedFlashSchedule(
 ): boolean {
   return plan.status === "published"
     && plan.serviceDate === addServiceDays(shenzhenDateString(now), 1);
+}
+
+export function canAdjustUpcomingFlashShift(
+  plan: { status: string; serviceDate: string },
+  shift: { status: string; startsAt: Date | string },
+  now = new Date(),
+): boolean {
+  return (plan.status === "published" || plan.status === "draft")
+    && plan.serviceDate === shenzhenDateString(now)
+    && shift.status === plan.status
+    && new Date(shift.startsAt).getTime() > now.getTime();
 }
 
 export function canEmergencyAdjustPublishedFlashSchedule(
@@ -893,6 +905,79 @@ export async function validateAndReplaceFlashScheduleDraftForAdmin(input: {
   const refreshed = await getFlashSchedulePlanById(input.planId);
   return refreshed
     ? { ok: true as const, plan: refreshed.plan, shifts: refreshed.shifts, validation }
+    : { ok: false as const, code: "FLASH_SCHEDULE_NOT_FOUND" as const };
+}
+
+export async function updateUpcomingFlashShiftForAdmin(input: {
+  planId: string;
+  shiftId: string;
+  expectedVersion: number;
+  actor: string;
+  cancel?: boolean;
+  shift?: FlashDraftShift;
+  now?: Date;
+}) {
+  const now = input.now ?? new Date();
+  const existing = await getFlashSchedulePlanById(input.planId);
+  if (!existing) return { ok: false as const, code: "FLASH_SCHEDULE_NOT_FOUND" as const };
+  if (!(["draft", "published"] as string[]).includes(existing.plan.status) || existing.plan.serviceDate !== shenzhenDateString(now)) {
+    return { ok: false as const, code: "FLASH_SCHEDULE_NOT_TODAY" as const };
+  }
+  if (existing.plan.version !== input.expectedVersion) {
+    return { ok: false as const, code: "FLASH_SCHEDULE_CAS_CONFLICT" as const };
+  }
+  const target = existing.shifts.find((shift: any) => shift.id === input.shiftId);
+  if (!target || !canAdjustUpcomingFlashShift(existing.plan, target, now)) {
+    return { ok: false as const, code: "FLASH_SHIFT_ALREADY_STARTED" as const };
+  }
+  if (!input.cancel && (!input.shift || input.shift.startsAt.getTime() <= now.getTime())) {
+    return { ok: false as const, code: "FLASH_SHIFT_ALREADY_STARTED" as const };
+  }
+
+  if (!input.cancel && input.shift) {
+    const schedulingInputs = await listFlashSchedulingInputs();
+    const schedulingNpcs = schedulingInputs.npcs as SchedulingNpc[];
+    const locationsByNpc = buildFlashSchedulingContext(schedulingInputs);
+    const candidateShifts = existing.shifts
+      .filter((shift: any) => shift.status === existing.plan.status)
+      .map((shift: any) => shift.id === input.shiftId ? input.shift! : ({
+        npcId: shift.npcId,
+        locationId: shift.locationId,
+        startsAt: new Date(shift.startsAt),
+        endsAt: new Date(shift.endsAt),
+        source: shift.source,
+      }));
+    const validation = validateFlashScheduleDraft({
+      serviceDate: existing.plan.serviceDate,
+      shifts: candidateShifts,
+      npcsById: new Map<string, SchedulingNpc>(schedulingNpcs.map((npc) => [npc.id, npc])),
+      locationsByNpc,
+    });
+    if (!validation.valid) {
+      return { ok: false as const, code: "FLASH_SCHEDULE_INVALID" as const, validation };
+    }
+  }
+
+  try {
+    const updated = await updateUpcomingFlashShift({
+      planId: input.planId,
+      shiftId: input.shiftId,
+      expectedVersion: input.expectedVersion,
+      updatedBy: input.actor,
+      now,
+      cancel: input.cancel,
+      shift: input.shift,
+    });
+    if (!updated) return { ok: false as const, code: "FLASH_SCHEDULE_CAS_CONFLICT" as const };
+  } catch (error) {
+    if (error instanceof Error && error.message === "FLASH_UPCOMING_SHIFT_CONFLICT") {
+      return { ok: false as const, code: "FLASH_SHIFT_ALREADY_STARTED" as const };
+    }
+    throw error;
+  }
+  const refreshed = await getFlashSchedulePlanById(input.planId);
+  return refreshed
+    ? { ok: true as const, plan: refreshed.plan, shifts: refreshed.shifts }
     : { ok: false as const, code: "FLASH_SCHEDULE_NOT_FOUND" as const };
 }
 

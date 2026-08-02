@@ -59,6 +59,7 @@ import {
   replacePublishedFlashScheduleForAdmin,
   shenzhenDateString,
   validateAndReplaceFlashScheduleDraftForAdmin,
+  updateUpcomingFlashShiftForAdmin,
   validateFlashScheduleDraft,
 } from "../../services/flashScheduleService";
 import { getFlashFeatureReadiness } from "../../services/flashService";
@@ -250,6 +251,15 @@ const scheduleUpdateSchema = z.object({
 const schedulePublishSchema = z.object({
   expectedVersion: z.number().int().positive(),
 }).strict();
+
+const upcomingShiftUpdateSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("update"),
+    expectedVersion: z.number().int().positive(),
+    shift: scheduleShiftSchema.omit({ id: true, status: true }).extend({ status: z.literal("published").optional() }),
+  }).strict(),
+  z.object({ action: z.literal("cancel"), expectedVersion: z.number().int().positive() }).strict(),
+]);
 
 const scheduleRegenerationPreviewSchema = z.object({
   expectedVersion: z.number().int().positive(),
@@ -1361,6 +1371,54 @@ export function registerAdminAlangRoutes(app: Express): void {
       res.json(await enrichSchedule({ plan: updated.plan, shifts: updated.shifts }));
     } catch (error) {
       routeFailure(req, res, "schedule update failed", error);
+    }
+  });
+
+  app.patch("/api/admin/alang/schedules/:id/shifts/:shiftId", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    const parsed = upcomingShiftUpdateSchema.safeParse(req.body);
+    if (!parsed.success) return void validationFailure(res, parsed.error);
+    try {
+      const before = await getFlashSchedulePlanById(req.params.id);
+      const shiftBefore = before?.shifts.find((shift: any) => shift.id === req.params.shiftId);
+      const updated = await updateUpcomingFlashShiftForAdmin({
+        planId: req.params.id,
+        shiftId: req.params.shiftId,
+        expectedVersion: parsed.data.expectedVersion,
+        actor: getActingAdminId(req),
+        cancel: parsed.data.action === "cancel",
+        shift: parsed.data.action === "update" ? {
+          npcId: parsed.data.shift.npcId,
+          locationId: parsed.data.shift.locationId,
+          startsAt: new Date(parsed.data.shift.startsAt),
+          endsAt: new Date(parsed.data.shift.endsAt),
+          source: parsed.data.shift.source,
+        } : undefined,
+      });
+      if (!updated.ok) {
+        const status = updated.code === "FLASH_SCHEDULE_NOT_FOUND" ? 404 : updated.code === "FLASH_SCHEDULE_INVALID" ? 422 : 409;
+        return void res.status(status).json({
+          code: updated.code,
+          message: updated.code === "FLASH_SHIFT_ALREADY_STARTED"
+            ? "班次已经开始或已结束，不能再调整"
+            : updated.code === "FLASH_SCHEDULE_INVALID"
+              ? "调整后的班次没有通过安全校验"
+              : "排班状态已经变化，请刷新后重试",
+          errors: "validation" in updated ? updated.validation?.errors : undefined,
+        });
+      }
+      const shiftAfter = updated.shifts.find((shift: any) => shift.id === req.params.shiftId);
+      audit(
+        req,
+        parsed.data.action === "cancel" ? "FLASH_UPCOMING_SHIFT_CANCELLED" : "FLASH_UPCOMING_SHIFT_UPDATED",
+        "flash_shift",
+        req.params.shiftId,
+        shiftBefore ? { npcId: shiftBefore.npcId, locationId: shiftBefore.locationId, startsAt: shiftBefore.startsAt, endsAt: shiftBefore.endsAt, status: shiftBefore.status } : undefined,
+        shiftAfter ? { npcId: shiftAfter.npcId, locationId: shiftAfter.locationId, startsAt: shiftAfter.startsAt, endsAt: shiftAfter.endsAt, status: shiftAfter.status } : undefined,
+        { serviceDate: updated.plan.serviceDate },
+      );
+      res.json(await enrichSchedule({ plan: updated.plan, shifts: updated.shifts }));
+    } catch (error) {
+      routeFailure(req, res, "upcoming shift update failed", error);
     }
   });
 

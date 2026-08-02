@@ -154,6 +154,9 @@ function toShiftWrite(shift: FlashShift): FlashShiftWrite {
 }
 
 function getMutationDescription(error: unknown): string {
+  if (error instanceof Error && error.message.includes("FLASH_SHIFT_ALREADY_STARTED")) {
+    return "班次已经开始或已结束，不能再调整。";
+  }
   if (error instanceof Error && error.message.startsWith("409:")) {
     return "排班已被其他管理员修改，请刷新后再试。";
   }
@@ -178,6 +181,12 @@ export function FlashScheduleTab({
   const [editing, setEditing] = useState<{ plan: FlashSchedulePlan; shift: FlashShift | null } | null>(null);
   const [regenerationPreview, setRegenerationPreview] = useState<RegenerationPreview | null>(null);
   const [regenerationReason, setRegenerationReason] = useState("");
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [emergencyPlan, setEmergencyPlan] = useState<FlashScheduleResponse | null>(null);
   const [emergencyPreview, setEmergencyPreview] = useState<EmergencyAdjustmentPreview | null>(null);
   const [emergencyReason, setEmergencyReason] = useState("");
@@ -314,6 +323,35 @@ export function FlashScheduleTab({
       toast({ title: "排班没保存", description: getMutationDescription(error), variant: "destructive" }),
   });
 
+  const updateUpcomingShiftMutation = useMutation({
+    mutationFn: async ({ plan, shiftId, action, shift }: {
+      plan: FlashSchedulePlan;
+      shiftId: string;
+      action: "update" | "cancel";
+      shift?: FlashShiftWrite;
+    }) => {
+      const response = await apiRequest("PATCH", `/api/admin/alang/schedules/${plan.id}/shifts/${shiftId}`, {
+        action,
+        expectedVersion: plan.version,
+        ...(shift ? { shift: {
+          npcId: shift.npcId,
+          locationId: shift.locationId,
+          startsAt: shift.startsAt,
+          endsAt: shift.endsAt,
+          source: shift.source,
+        } } : {}),
+      });
+      return response.json().catch(() => null);
+    },
+    onSuccess: async () => {
+      await invalidateSchedules();
+      setEditing(null);
+      toast({ title: "今日排班已更新", description: "仅调整了尚未开始的班次。" });
+    },
+    onError: (error) =>
+      toast({ title: "今日排班未更新", description: getMutationDescription(error), variant: "destructive" }),
+  });
+
   const executeConfirmedAction = async () => {
     const action = confirmAction;
     setConfirmAction(null);
@@ -329,6 +367,11 @@ export function FlashScheduleTab({
     }
     if (action.kind === "regenerate") {
       previewRegenerationMutation.mutate(action.plan);
+      return;
+    }
+
+    if (action.plan.serviceDate === today) {
+      updateUpcomingShiftMutation.mutate({ plan: action.plan, shiftId: action.shift.id, action: "cancel" });
       return;
     }
 
@@ -374,7 +417,7 @@ export function FlashScheduleTab({
           }
 
           const schedule = normalizeSchedule(query.data);
-          const editable = canWrite && schedule.plan?.status === "draft";
+          const editable = canWrite && schedule.plan?.status === "draft" && date !== today;
           const activeShifts = schedule.shifts.filter((shift) => shift.status !== "cancelled");
 
           return (
@@ -471,27 +514,22 @@ export function FlashScheduleTab({
                             </span>
                           </div>
                         </div>
-                        {editable && shift.status !== "cancelled" && (
+                        {canWrite && schedule.plan && shift.status !== "cancelled" && (
                           <div className="flex shrink-0 gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setEditing({ plan: schedule.plan!, shift })}
-                              data-testid={`button-edit-shift-${shift.id}`}
-                            >
-                              <Edit3 className="mr-2 h-4 w-4" aria-hidden="true" />
-                              调整
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setConfirmAction({ kind: "cancel", plan: schedule.plan!, shift })}
-                              data-testid={`button-cancel-shift-${shift.id}`}
-                            >
-                              <XCircle className="mr-2 h-4 w-4" aria-hidden="true" />
-                              取消班次
-                            </Button>
+                            {(editable || (date === today && (schedule.plan.status === "draft" || schedule.plan.status === "published") && new Date(shift.startsAt).getTime() > currentTime)) ? (
+                              <>
+                                <Button variant="outline" size="sm" onClick={() => setEditing({ plan: schedule.plan!, shift })} data-testid={`button-edit-shift-${shift.id}`}>
+                                  <Edit3 className="mr-2 h-4 w-4" aria-hidden="true" />调整
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setConfirmAction({ kind: "cancel", plan: schedule.plan!, shift })} data-testid={`button-cancel-shift-${shift.id}`}>
+                                  <XCircle className="mr-2 h-4 w-4" aria-hidden="true" />取消班次
+                                </Button>
+                              </>
+                            ) : date === today && (schedule.plan.status === "draft" || schedule.plan.status === "published") ? (
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(shift.endsAt).getTime() > currentTime ? "进行中，无法调整" : "已结束，无法调整"}
+                              </span>
+                            ) : null}
                           </div>
                         )}
                       </div>
@@ -522,7 +560,7 @@ export function FlashScheduleTab({
         npcs={npcs}
         locations={locations}
         schedules={{ [today]: normalizeSchedule(todayQuery.data), [tomorrow]: normalizeSchedule(tomorrowQuery.data) }}
-        saving={updatePlanMutation.isPending}
+        saving={updatePlanMutation.isPending || updateUpcomingShiftMutation.isPending}
         onSave={(plan, shift, values) => {
           const schedule = plan.serviceDate === today
             ? normalizeSchedule(todayQuery.data)
@@ -536,6 +574,14 @@ export function FlashScheduleTab({
             status: "draft",
             source: "manual",
           };
+          if (plan.serviceDate === today && shift) {
+            if (new Date(nextShift.startsAt).getTime() <= Date.now()) {
+              toast({ title: "无法调整这个班次", description: "今日排班的新开始时间必须晚于当前时间。", variant: "destructive" });
+              return;
+            }
+            updateUpcomingShiftMutation.mutate({ plan, shiftId: shift.id, action: "update", shift: nextShift });
+            return;
+          }
           const shifts = shift
             ? schedule.shifts.map((item) => (item.id === shift.id ? nextShift : toShiftWrite(item)))
             : [...schedule.shifts.map(toShiftWrite), nextShift];

@@ -28,6 +28,7 @@ import {
 import {
   canEmergencyAdjustPublishedFlashSchedule,
   canRegeneratePublishedFlashSchedule,
+  canAdjustUpcomingFlashShift,
   createSeededRandom,
   flashEmergencyAdjustmentDigest,
   validateFlashCoverageWindow,
@@ -437,6 +438,17 @@ describe("formal Flash catalog", () => {
 });
 
 describe("formal Flash scheduling", () => {
+  it("allows only today's shifts that have not started to be adjusted", () => {
+    const now = new Date("2026-08-02T14:00:00+08:00");
+    const plan = { status: "published", serviceDate: "2026-08-02" };
+    expect(canAdjustUpcomingFlashShift(plan, { status: "published", startsAt: "2026-08-02T15:00:00+08:00" }, now)).toBe(true);
+    expect(canAdjustUpcomingFlashShift({ ...plan, status: "draft" }, { status: "draft", startsAt: "2026-08-02T15:00:00+08:00" }, now)).toBe(true);
+    expect(canAdjustUpcomingFlashShift(plan, { status: "published", startsAt: "2026-08-02T14:00:00+08:00" }, now)).toBe(false);
+    expect(canAdjustUpcomingFlashShift(plan, { status: "published", startsAt: "2026-08-02T12:00:00+08:00" }, now)).toBe(false);
+    expect(canAdjustUpcomingFlashShift({ ...plan, serviceDate: "2026-08-03" }, { status: "published", startsAt: "2026-08-03T15:00:00+08:00" }, now)).toBe(false);
+    expect(canAdjustUpcomingFlashShift(plan, { status: "cancelled", startsAt: "2026-08-02T15:00:00+08:00" }, now)).toBe(false);
+  });
+
   it("only allows emergency adjustment of today's published Shenzhen plan", () => {
     const now = new Date("2026-08-01T01:30:00+08:00");
     expect(canEmergencyAdjustPublishedFlashSchedule({ city: "深圳", status: "published", serviceDate: "2026-08-01" }, now)).toBe(true);

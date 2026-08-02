@@ -2180,6 +2180,50 @@ export async function replacePublishedFlashSchedule(input: {
   });
 }
 
+export async function updateUpcomingFlashShift(input: {
+  planId: string;
+  shiftId: string;
+  expectedVersion: number;
+  updatedBy: string;
+  now: Date;
+  cancel?: boolean;
+  shift?: { npcId: string; locationId: string; startsAt: Date; endsAt: Date; source?: "generated" | "fallback" | "manual" };
+}) {
+  return db.transaction(async (tx: DbExecutor) => {
+    const [plan] = await tx.update(flashSchedulePlans).set({
+      version: sql`${flashSchedulePlans.version} + 1`,
+      updatedBy: input.updatedBy,
+      updatedAt: input.now,
+      source: "manual",
+    }).where(and(
+      eq(flashSchedulePlans.id, input.planId),
+      eq(flashSchedulePlans.version, input.expectedVersion),
+      inArray(flashSchedulePlans.status, ["draft", "published"]),
+    )).returning();
+    if (!plan) return null;
+
+    const values = input.cancel
+      ? { status: "cancelled" as const, version: sql`${flashShifts.version} + 1`, updatedAt: input.now }
+      : {
+          npcId: input.shift!.npcId,
+          locationId: input.shift!.locationId,
+          startsAt: input.shift!.startsAt,
+          endsAt: input.shift!.endsAt,
+          source: input.shift!.source ?? "manual",
+          version: sql`${flashShifts.version} + 1`,
+          updatedAt: input.now,
+        };
+    const [shift] = await tx.update(flashShifts).set(values).where(and(
+      eq(flashShifts.id, input.shiftId),
+      eq(flashShifts.planId, input.planId),
+      eq(flashShifts.status, plan.status),
+      gt(flashShifts.startsAt, input.now),
+    )).returning();
+    if (!shift) throw new Error("FLASH_UPCOMING_SHIFT_CONFLICT");
+    return { plan, shift };
+  });
+}
+
 export async function updatePublishedFlashScheduleInPlace(input: {
   planId: string;
   expectedVersion: number;
