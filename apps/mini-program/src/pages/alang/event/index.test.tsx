@@ -60,9 +60,7 @@ const home = {
 }
 
 async function acceptFlashIntro() {
-  fireEvent.click(await screen.findByText('下一步'))
-  fireEvent.click(screen.getByText('下一步'))
-  fireEvent.click(screen.getByText('我知道了，开启定位'))
+  fireEvent.click(await screen.findByText('开启一次定位'))
 }
 
 describe('formal Flash home', () => {
@@ -83,23 +81,14 @@ describe('formal Flash home', () => {
     mocks.useFlashHome.mockReturnValue({ data: home, isLoading: false, isError: false, refetch: mocks.refetch })
   })
 
-  it('discloses digital NPCs before any location request', async () => {
+  it('renders the intro before any location request', async () => {
     render(<FlashHomePage />)
     expect(mocks.location).not.toHaveBeenCalled()
     act(() => { mocks.didShow?.() })
 
-    expect(await screen.findByText('先认识一下街头盲盒')).toBeInTheDocument()
-    expect(screen.getByText(/不是真人工作人员/)).toBeInTheDocument()
-    expect(mocks.location).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByText('下一步'))
-    expect(screen.getByText('定位只在此刻发生')).toBeInTheDocument()
-    expect(screen.getByText(/不会在后台持续追踪/)).toBeInTheDocument()
-    expect(mocks.location).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByText('下一步'))
-    expect(screen.getByText('决定权一直在你手里')).toBeInTheDocument()
-    expect(screen.getByText(/不要求消费、拍照或打扰陌生人/)).toBeInTheDocument()
+    expect(await screen.findByText('今天，会碰见谁呢？')).toBeInTheDocument()
+    expect(screen.getByText('开启一次定位')).toBeInTheDocument()
+    expect(screen.getByText('只读取这一次位置，不会后台追踪。')).toBeInTheDocument()
     expect(mocks.location).not.toHaveBeenCalled()
   })
 
@@ -132,7 +121,7 @@ describe('formal Flash home', () => {
       mocks.didShow?.()
     })
 
-    expect(await screen.findByText('先认识一下街头盲盒')).toBeInTheDocument()
+    expect(await screen.findByText('今天，会碰见谁呢？')).toBeInTheDocument()
     expect(mocks.location).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(mocks.useFlashHome).toHaveBeenLastCalledWith(null, false))
   })
@@ -219,9 +208,7 @@ describe('formal Flash home', () => {
 
     render(<FlashHomePage />)
     act(() => { mocks.didShow?.() })
-    fireEvent.click(screen.getByText('下一步'))
-    fireEvent.click(screen.getByText('下一步'))
-    fireEvent.click(screen.getByText('我知道了，开启定位'))
+    fireEvent.click(screen.getByText('开启一次定位'))
     expect(screen.getByText('看看深圳哪里有角色在线…')).toBeInTheDocument()
     expect(document.querySelector('.flash-location-compiler-scope-v4')).toBeTruthy()
     const locationCallsBeforeHide = mocks.location.mock.calls.length
@@ -231,7 +218,7 @@ describe('formal Flash home', () => {
       mocks.didShow?.()
     })
 
-    expect(await screen.findByText('先认识一下街头盲盒')).toBeInTheDocument()
+    expect(await screen.findByText('今天，会碰见谁呢？')).toBeInTheDocument()
     expect(mocks.location).toHaveBeenCalledTimes(locationCallsBeforeHide)
   })
 
@@ -241,9 +228,7 @@ describe('formal Flash home', () => {
 
     render(<FlashHomePage />)
     act(() => { mocks.didShow?.() })
-    fireEvent.click(screen.getByText('下一步'))
-    fireEvent.click(screen.getByText('下一步'))
-    fireEvent.click(screen.getByText('我知道了，开启定位'))
+    fireEvent.click(screen.getByText('开启一次定位'))
     expect(screen.getByText('看看深圳哪里有角色在线…')).toBeInTheDocument()
 
     await vi.advanceTimersByTimeAsync(12_000)

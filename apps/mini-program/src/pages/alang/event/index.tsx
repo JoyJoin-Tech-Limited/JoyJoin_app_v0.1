@@ -14,7 +14,6 @@ import { useFlashHome } from '../../../lib/alang/useFlash'
 import type { FlashLocationSnapshot, FlashNpcSummary, FlashTaskSummary } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
-import { FLASH_STREET_BOX_ICON } from '../../../lib/alang/flashNpcAssets'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import {
   FlashButton,
@@ -28,6 +27,7 @@ import '../flash.scss'
 const FLASH_AMBIENT_BACKGROUND = '/pages/alang/assets/ui/flash-city-ambient-bg.png'
 const FLASH_EMPTY_ONLINE = '/pages/alang/assets/ui/flash-empty-online.png'
 const FLASH_EMPTY_TASKS = '/pages/alang/assets/ui/flash-empty-tasks.png'
+const FLASH_INTRO_SCENE = '/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp'
 const FLASH_GATE_WATCHDOG_MS = 12_000
 const FLASH_LOCATION_RUNTIME_CONTRACT = 'flash-location-compiler-scope-v4'
 
@@ -43,74 +43,19 @@ function isLocationPermissionDenied(error: unknown): boolean {
 }
 
 function FlashIntro({ onContinue }: { onContinue: () => void }) {
-  const [step, setStep] = useState(0)
-  const steps = [
-    {
-      eyebrow: '01 · 数字相遇',
-      title: '先认识一下街头盲盒',
-      description: '你会遇见不定时出现的数字动物角色。它们不是真人工作人员，也不会在现实里等你。',
-      note: '谁会出现、何时遇见，留一点惊喜。',
-      emoji: null,
-    },
-    {
-      eyebrow: '02 · 一次定位',
-      title: '定位只在此刻发生',
-      description: '你主动开启后，我们读取一次当前位置，用来显示在线角色并判断你是否到了附近。',
-      note: '不会在后台持续追踪，也不会用 IP 猜位置。',
-      emoji: '🧭',
-    },
-    {
-      eyebrow: '03 · 安全边界',
-      title: '决定权一直在你手里',
-      description: '任务不要求消费、拍照或打扰陌生人。去不去、进不进店，都由你自己决定。',
-      note: '街头盲盒不会订阅消息，也不会主动推送提醒。',
-      emoji: '🛡️',
-    },
-  ] as const
-  const current = steps[step]
-  const isLastStep = step === steps.length - 1
-
   return (
     <View className='flash-intro'>
-      <View className='flash-intro__progress' aria-label={`街头盲盒介绍，第 ${step + 1} 步，共 ${steps.length} 步`}>
-        {steps.map((item, index) => (
-          <View
-            key={item.eyebrow}
-            className={`flash-intro__progress-dot${index === step ? ' flash-intro__progress-dot--active' : ''}`}
-          />
-        ))}
-      </View>
-      <View className='flash-intro__stage'>
-        <View className={`flash-intro__visual flash-intro__visual--${step + 1}`} aria-hidden='true'>
-          {current.emoji ? (
-            <JoyJoinIcon emoji={current.emoji} tier='ui' size={92} className='flash-intro__visual-symbol' />
-          ) : (
-            <Image className='flash-intro__visual-image' src={FLASH_STREET_BOX_ICON} mode='aspectFit' />
-          )}
+      <Image className='flash-intro__backdrop' src={FLASH_INTRO_SCENE} mode='aspectFill' aria-hidden='true' />
+      <View className='flash-intro__shade' aria-hidden='true' />
+      <View className='flash-intro__content'>
+        <View className='flash-intro__copy'>
+          <Text className='flash-intro__eyebrow'>SHENZHEN · NOW</Text>
+          <Text className='flash-intro__title'>今天，会碰见谁呢？</Text>
         </View>
-        <Text className='flash-intro__eyebrow'>{current.eyebrow}</Text>
-        <Text className='flash-intro__title'>{current.title}</Text>
-        <Text className='flash-intro__lead'>{current.description}</Text>
-        <View className='flash-intro__note'>
-          <Text className='flash-intro__note-mark'>✓</Text>
-          <Text className='flash-intro__note-text'>{current.note}</Text>
+        <View className='flash-intro__actions'>
+          <FlashButton onClick={onContinue}>开启一次定位</FlashButton>
+          <Text className='flash-intro__aside'>只读取这一次位置，不会后台追踪。</Text>
         </View>
-      </View>
-      <View className='flash-intro__actions'>
-        <FlashButton onClick={isLastStep ? onContinue : () => setStep((value) => value + 1)}>
-          {isLastStep ? '我知道了，开启定位' : '下一步'}
-        </FlashButton>
-        {step > 0 && (
-          <View
-            className='flash-intro__back'
-            hoverClass='flash-intro__back--pressed'
-            onClick={() => setStep((value) => value - 1)}
-            role='button'
-            aria-label='返回上一步'
-          >
-            <Text className='flash-intro__back-text'>返回上一步</Text>
-          </View>
-        )}
       </View>
     </View>
   )
