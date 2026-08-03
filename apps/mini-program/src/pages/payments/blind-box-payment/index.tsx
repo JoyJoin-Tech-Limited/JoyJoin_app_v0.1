@@ -11,26 +11,26 @@ import {
   type UserCouponSummary,
 } from '@shared/api'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
-import JoyButton from '../../components/ui/Button'
-import Card from '../../components/ui/Card'
-import FirstTimeCouponBanner from '../../components/FirstTimeCouponBanner'
-import { apiRequest } from '../../lib/api/api'
-import { useAuthGuard } from '../../hooks/useAuthGuard'
-import { logError, logWarn } from '../../lib/utils/logger'
-import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
+import JoyButton from '../../../components/ui/Button'
+import Card from '../../../components/ui/Card'
+import FirstTimeCouponBanner from '../../../components/FirstTimeCouponBanner'
+import { apiRequest } from '../../../lib/api/api'
+import { useAuthGuard } from '../../../hooks/useAuthGuard'
+import { logError, logWarn } from '../../../lib/utils/logger'
+import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import {
   buildPaymentVerificationUrl,
   type MiniProgramPaymentReturnContext,
   type MiniProgramPoolRegistrationReturnContext,
   type ReadyMiniProgramPendingOrder,
-} from '../../lib/payment/paymentPendingOrder'
+} from '../../../lib/payment/paymentPendingOrder'
 import {
   clearPendingOrderStorage,
   clearPaymentReturnContextStorage,
   persistPendingOrder,
   readStoredPaymentReturnContext,
   readStoredPendingOrder,
-} from '../../lib/payment/paymentPendingOrderStorage'
+} from '../../../lib/payment/paymentPendingOrderStorage'
 import {
   buildMiniProgramPaymentAmountSummary,
   buildMiniProgramPaymentCouponDisplayModel,
@@ -39,7 +39,7 @@ import {
   getMiniProgramPaymentPlanMeta,
   resolveMiniProgramPaymentPlans,
   type MiniProgramPaymentPlanKey,
-} from '../../lib/payment/paymentPageModel'
+} from '../../../lib/payment/paymentPageModel'
 
 // ─── Payment Ritual V2 Imports (Sprint 1: Foundation + Sprint 2: Polish) ───
 import RitualActAnticipation from './components/RitualActAnticipation'
@@ -60,8 +60,8 @@ import {
   trackAchievementShown,
   trackVerificationEnter,
 } from './lib/paymentRitualAnalytics'
-import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
-import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
+import { MILESTONE_BADGES } from '../../../lib/milestoneBadges'
+import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 
 import './index.scss'
 

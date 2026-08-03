@@ -3,7 +3,7 @@ import { memo, useEffect, useState } from 'react'
 import type { ArchetypeTheme } from '../lib/paymentRitualState'
 import { getActIICopy, getArchetypeValueProposition } from '../lib/paymentRitualCopy'
 import { trackAct2Reveal, trackArchetypeShown } from '../lib/paymentRitualAnalytics'
-import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
+import { CEREMONY_HEROES } from '../../../../lib/ceremonyHeroes'
 
 interface Props {
   archetype: string | null

@@ -1,6 +1,6 @@
 import { View, Text, Image } from '@tarojs/components'
 import { memo, useEffect, useRef, useState } from 'react'
-import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
+import { getXiaoyueExpressionAsset } from '../../../../lib/mascot/xiaoyueExpressions'
 import type { ArchetypeTheme, CommunityPulse } from '../lib/paymentRitualState'
 import { getActICopy, getEasterEggLine } from '../lib/paymentRitualCopy'
 import { trackAct1Complete } from '../lib/paymentRitualAnalytics'

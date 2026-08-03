@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import ParticleBurst from '../../../components/reveal/ParticleBurst'
-import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
+import ParticleBurst from '../../../../components/reveal/ParticleBurst'
+import { getXiaoyueExpressionAsset } from '../../../../lib/mascot/xiaoyueExpressions'
 import type { ArchetypeTheme } from '../lib/paymentRitualState'
 
 interface Props {

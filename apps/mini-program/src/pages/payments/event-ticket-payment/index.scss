@@ -2,8 +2,8 @@
 // Premium ticket-card layout with event banner, perforation divider, info grid,
 // coupon stub, barcode decoration, price card, upsell, and sticky CTA.
 
-@use '../../styles/variables' as *;
-@use '../../styles/mixins' as *;
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
 
 // ── Color aliases ──
 $ticket-text: $color-text-primary;

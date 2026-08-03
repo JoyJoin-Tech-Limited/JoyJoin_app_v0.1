@@ -1,10 +1,10 @@
 import { View, Text } from '@tarojs/components'
 import { memo, useCallback, useMemo } from 'react'
-import Card from '../../../components/ui/Card'
+import Card from '../../../../components/ui/Card'
 import type { ArchetypeTheme, RitualPlan } from '../lib/paymentRitualState'
 import { getActIIICopy, getSocialProofCopy, getStepAchievementCopy } from '../lib/paymentRitualCopy'
 import { trackPlanSelect } from '../lib/paymentRitualAnalytics'
-import { formatMiniProgramPaymentPrice } from '../../../lib/payment/paymentPageModel'
+import { formatMiniProgramPaymentPrice } from '../../../../lib/payment/paymentPageModel'
 
 interface Props {
   archetype: string | null

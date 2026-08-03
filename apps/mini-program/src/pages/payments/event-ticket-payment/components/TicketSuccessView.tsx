@@ -4,10 +4,10 @@ import Taro from '@tarojs/taro'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { EventPoolSummary } from '@shared/api'
 
-import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
-import { formatEventDateShort } from '../../../lib/utils/eventDisplay'
-import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
-import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
+import { CEREMONY_HEROES } from '../../../../lib/ceremonyHeroes'
+import { formatEventDateShort } from '../../../../lib/utils/eventDisplay'
+import { discoverAnalytics } from '../../../../lib/analytics/discoverAnalytics'
+import JoyJoinIcon from '../../../../components/ui/JoyJoinIcon'
 
 // Brand confetti palette — keep in sync with $color-primary, $color-secondary,
 // and $color-landed-gold in apps/mini-program/src/styles/_variables.scss.

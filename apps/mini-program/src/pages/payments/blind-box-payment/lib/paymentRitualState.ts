@@ -5,7 +5,7 @@
  * Sprint 1: Foundation (Acts I-III)
  */
 
-import type { MiniProgramPaymentPlanKey } from '../../../lib/payment/paymentPageModel'
+import type { MiniProgramPaymentPlanKey } from '../../../../lib/payment/paymentPageModel'
 
 // ─── Ritual Acts ───
 

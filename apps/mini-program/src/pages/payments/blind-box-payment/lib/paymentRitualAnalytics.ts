@@ -5,8 +5,8 @@
  * Sends to /api/analytics/payment (dedicated endpoint — not discover).
  */
 
-import { apiRequest } from '../../../lib/api/api'
-import { logWarn } from '../../../lib/utils/logger'
+import { apiRequest } from '../../../../lib/api/api'
+import { logWarn } from '../../../../lib/utils/logger'
 
 const EVENTS = {
   // Act I
