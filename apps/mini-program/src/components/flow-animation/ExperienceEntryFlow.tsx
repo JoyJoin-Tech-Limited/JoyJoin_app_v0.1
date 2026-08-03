@@ -66,10 +66,12 @@ export default function ExperienceEntryFlow({
                 </>
               ) : null}
               <View className='experience-banner__summary'>
-                <View className='experience-banner__copy'>
-                  <Text className='experience-banner__title'>{entry.title}</Text>
-                  <Text className='experience-banner__eyebrow'>{entry.eyebrow}</Text>
-                  <Text className='experience-banner__dimension'>{entry.bannerLine}</Text>
+                <View className='experience-banner__copy-panel'>
+                  <View className='experience-banner__copy'>
+                    <Text className='experience-banner__title'>{entry.title}</Text>
+                    <Text className='experience-banner__eyebrow'>{entry.eyebrow}</Text>
+                    <Text className='experience-banner__dimension'>{entry.bannerLine}</Text>
+                  </View>
                 </View>
               </View>
 
