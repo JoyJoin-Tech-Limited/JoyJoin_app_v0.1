@@ -42,7 +42,6 @@ import { getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
 const MIN_INTERESTS = 3
-const MAX_INTERESTS = 10
 
 const CATEGORY_ORDER: MacroCategory[] = ['food', 'play', 'sports', 'culture', 'life', 'growth']
 
@@ -248,10 +247,6 @@ export default function ExtendedDataPage() {
   const canSubmit = selectedCount >= MIN_INTERESTS
 
   const coachCopy = useMemo(() => {
-    if (selectedCount >= MAX_INTERESTS) {
-      return '兴趣库已经装得满满当当了～想换的话，先取消一项再选新的。'
-    }
-
     if (selectedCount === 0) {
       // Bet 1 人格在场: Xiaoyue narrates as the user's archetype (Tier A
       // voice matrix); Tier B step line is the unknown-archetype fallback.
@@ -272,10 +267,6 @@ export default function ExtendedDataPage() {
   }, [archetypeName, canSubmit, selectedCount, topPriorityCount, userArchetype])
 
   const footerCoachLine = useMemo(() => {
-    if (selectedCount >= MAX_INTERESTS) {
-      return '可以生成预览了，也可以再调整一下。'
-    }
-
     if (!canSubmit) {
       return archetypeName
         ? `再选 ${MIN_INTERESTS - selectedCount} 个，${archetypeName}的入场卡就能生成了～`
@@ -307,16 +298,6 @@ export default function ExtendedDataPage() {
     (topicId: string) => {
       const currentLevel = levelsById[topicId]
 
-      if (!currentLevel && selectedCount >= MAX_INTERESTS) {
-        analytics.validationFailed('interests', 'max-selection-reached')
-        Taro.showToast({
-          title: `最多选择 ${MAX_INTERESTS} 个兴趣`,
-          icon: 'none',
-          duration: TOAST_DEFAULT_MS,
-        })
-        return
-      }
-
       const nextLevels = { ...levelsById }
 
       if (!currentLevel) {
@@ -344,7 +325,7 @@ export default function ExtendedDataPage() {
         setPoppingCardId((current) => (current === topicId ? null : current))
       }, 200)
     },
-    [analytics, hasShownFirstSelectionHint, levelsById, selectedCount],
+    [hasShownFirstSelectionHint, levelsById, selectedCount],
   )
 
   const handleSubmit = useCallback(async () => {
