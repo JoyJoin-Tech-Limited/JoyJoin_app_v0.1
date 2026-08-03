@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Text, View } from '@tarojs/components'
+import './index.scss'
 import {
   FLOW_SHELL_COPY,
   getFlow2HeroMeta,

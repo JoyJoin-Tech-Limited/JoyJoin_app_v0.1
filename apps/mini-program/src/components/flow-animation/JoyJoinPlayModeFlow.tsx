@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { FLOW_SHELL_COPY } from '@shared/copy/flowAnimationCopy'
+import './index.scss'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { flowAnalytics } from '../../lib/analytics/flowAnalytics'
 import { haptics } from '../../lib/utils/haptics'

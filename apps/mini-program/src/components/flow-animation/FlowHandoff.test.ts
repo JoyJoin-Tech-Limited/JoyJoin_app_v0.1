@@ -6,6 +6,14 @@ const profileReviewSource = readFileSync(
   resolve(process.cwd(), 'src/pages/onboarding/profile-review/index.tsx'),
   'utf8',
 )
+const introFlowSource = readFileSync(
+  resolve(process.cwd(), 'src/components/flow-animation/JoyJoinPlayModeFlow.tsx'),
+  'utf8',
+)
+const lifecycleFlowSource = readFileSync(
+  resolve(process.cwd(), 'src/components/flow-animation/BlindBoxLifecycleFlow.tsx'),
+  'utf8',
+)
 describe('onboarding intro cross-page handoff', () => {
   it('keeps the intro handoff reachable from the completion ceremony', () => {
     const ceremonyComplete = profileReviewSource.indexOf('const handleCeremonyComplete')
@@ -17,5 +25,10 @@ describe('onboarding intro cross-page handoff', () => {
     // The intro handoff must short-circuit BEFORE the ceremony's direct
     // navigation so the intro flow renders instead of the redirect.
     expect(navigateIndex).toBeGreaterThan(introSetIndex)
+  })
+
+  it('bundles the shared flow visuals from every independently mounted flow root', () => {
+    expect(introFlowSource).toContain("import './index.scss'")
+    expect(lifecycleFlowSource).toContain("import './index.scss'")
   })
 })
