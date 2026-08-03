@@ -13,8 +13,8 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   extendedData: 'pages/onboarding/extended-data/index',
   profileReview: 'pages/onboarding/profile-review/index',
   welcomeBack: 'pages/onboarding/welcome-back/index',
-  blindBoxPayment: 'pages/blind-box-payment/index',
-  eventTicketPayment: 'pages/event-ticket-payment/index',
+  blindBoxPayment: 'pages/payments/blind-box-payment/index',
+  eventTicketPayment: 'pages/payments/event-ticket-payment/index',
   paymentVerification: 'pages/payment-verification/index',
   events: 'pages/events/index',
   connections: 'pages/connections/index',
@@ -142,8 +142,6 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.discover,
   MINI_PROGRAM_PAGE_PATHS.centerHub,
   MINI_PROGRAM_PAGE_PATHS.paymentVerification,
-  MINI_PROGRAM_PAGE_PATHS.blindBoxPayment,
-  MINI_PROGRAM_PAGE_PATHS.eventTicketPayment,
   MINI_PROGRAM_PAGE_PATHS.events,
   MINI_PROGRAM_PAGE_PATHS.connections,
   MINI_PROGRAM_PAGE_PATHS.profile,
@@ -218,6 +216,13 @@ export const MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES = [
   'index',
 ] as const
 
+export const MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT = 'pages/payments' as const
+
+export const MINI_PROGRAM_PAYMENTS_SUBPACKAGE_PAGES = [
+  'blind-box-payment/index',
+  'event-ticket-payment/index',
+] as const
+
 export const MINI_PROGRAM_SUBPACKAGES = [
   {
     root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
@@ -244,6 +249,10 @@ export const MINI_PROGRAM_SUBPACKAGES = [
     pages: MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES,
   },
   {
+    root: MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_PAYMENTS_SUBPACKAGE_PAGES,
+  },
+  {
     root: MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES,
   },
@@ -264,7 +273,11 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
   },
   [MINI_PROGRAM_PAGE_PATHS.eventDetail]: {
     network: 'all',
-    packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT, MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT],
+    packages: [
+      MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
+      MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
+      MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT,
+    ],
   },
   [MINI_PROGRAM_PAGE_PATHS.events]: {
     network: 'all',
@@ -280,6 +293,10 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
   [MINI_PROGRAM_PAGE_PATHS.matchingStatus]: {
     network: 'all',
     packages: [MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.poolRegistration]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT],
   },
   [MINI_PROGRAM_PAGE_PATHS.discover]: {
     network: 'all',

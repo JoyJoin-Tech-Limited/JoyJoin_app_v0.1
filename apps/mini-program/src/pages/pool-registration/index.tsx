@@ -788,7 +788,7 @@ export default function PoolRegistrationPage() {
         setResumeContext(nextResumeContext)
 
         Taro.navigateTo({
-          url: `/pages/event-ticket-payment/index?poolId=${encodeURIComponent(poolId)}`,
+          url: `${MINI_PROGRAM_ROUTES.eventTicketPayment}?poolId=${encodeURIComponent(poolId)}`,
         })
 
         return

@@ -553,7 +553,7 @@ describe('native custom tab bar behavior', () => {
 
   it.each([
     'pages/event-detail/index',
-    'pages/event-ticket-payment/index',
+    'pages/payments/event-ticket-payment/index',
   ])('keeps the tab bar hidden on %s', async (route) => {
     setupMocks()
     const component = await loadComponent()

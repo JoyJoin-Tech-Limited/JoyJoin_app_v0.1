@@ -119,7 +119,7 @@ describe('useCustomTabBarSync', () => {
   })
 
   it('does not set selected for non-tab routes such as event-detail and event-ticket-payment', async () => {
-    for (const route of ['pages/event-detail/index', 'pages/event-ticket-payment/index']) {
+    for (const route of ['pages/event-detail/index', 'pages/payments/event-ticket-payment/index']) {
       mockSetSelected.mockClear()
       mockSyncState.mockClear()
       ;(Taro as any).getCurrentInstance.mockReturnValue({ page: { route, getTabBar: mockGetTabBar } })

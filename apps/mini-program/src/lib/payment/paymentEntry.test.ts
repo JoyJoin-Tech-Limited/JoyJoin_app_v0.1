@@ -25,7 +25,7 @@ describe('mini-program payment entry — always navigates', () => {
 
     expect(mockNavigateTo).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: expect.stringContaining('/pages/blind-box-payment/index'),
+        url: expect.stringContaining('/pages/payments/blind-box-payment/index'),
       }),
     )
   })
@@ -52,7 +52,7 @@ describe('mini-program payment entry — always navigates', () => {
     // Should still navigate
     expect(mockNavigateTo).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: expect.stringContaining('/pages/blind-box-payment/index'),
+        url: expect.stringContaining('/pages/payments/blind-box-payment/index'),
       }),
     )
   })

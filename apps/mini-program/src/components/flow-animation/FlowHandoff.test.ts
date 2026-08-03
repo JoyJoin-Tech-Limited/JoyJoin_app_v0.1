@@ -6,12 +6,12 @@ const profileReviewSource = readFileSync(
   resolve(process.cwd(), 'src/pages/onboarding/profile-review/index.tsx'),
   'utf8',
 )
-const introFlowSource = readFileSync(
-  resolve(process.cwd(), 'src/components/flow-animation/JoyJoinPlayModeFlow.tsx'),
+const profileReviewScss = readFileSync(
+  resolve(process.cwd(), 'src/pages/onboarding/profile-review/index.scss'),
   'utf8',
 )
-const lifecycleFlowSource = readFileSync(
-  resolve(process.cwd(), 'src/components/flow-animation/BlindBoxLifecycleFlow.tsx'),
+const poolRegistrationScss = readFileSync(
+  resolve(process.cwd(), 'src/pages/pool-registration/index.scss'),
   'utf8',
 )
 describe('onboarding intro cross-page handoff', () => {
@@ -27,8 +27,11 @@ describe('onboarding intro cross-page handoff', () => {
     expect(navigateIndex).toBeGreaterThan(introSetIndex)
   })
 
-  it('bundles the shared flow visuals from every independently mounted flow root', () => {
-    expect(introFlowSource).toContain("import './index.scss'")
-    expect(lifecycleFlowSource).toContain("import './index.scss'")
+  it('bundles the shared flow visuals into every independently mounted page', () => {
+    // Subpackage WXSS guard (AGENTS §15): the page SCSS must @use the shared
+    // flow SCSS so the rules compile into the page WXSS itself — a
+    // component-level import alone can be chunked into an unreachable file.
+    expect(profileReviewScss).toContain("@use '../../../components/flow-animation/index.scss'")
+    expect(poolRegistrationScss).toContain("@use '../../components/flow-animation/index.scss'")
   })
 })

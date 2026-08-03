@@ -13,6 +13,8 @@ import {
   MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES,
   MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
   MINI_PROGRAM_PRELOAD_RULES,
+  MINI_PROGRAM_PAYMENTS_SUBPACKAGE_PAGES,
+  MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT,
   MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_PAGES,
   MINI_PROGRAM_PROFILE_LINKED_SUBPACKAGE_ROOT,
   MINI_PROGRAM_ROUTES,
@@ -56,6 +58,7 @@ describe('mini-program onboarding routes', () => {
       'pages/matching-status',
       'pages/pool-registration',
       'pages/squad-unboxing',
+      'pages/payments',
       'pages/alang',
     ])
   })
@@ -72,6 +75,8 @@ describe('mini-program onboarding routes', () => {
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/profile-linked/terms/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/profile-linked/settings/index')
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/alang/event/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/blind-box-payment/index')
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/event-ticket-payment/index')
     // D1: squad-unboxing left the main package — the tap-to-reveal revamp grew
     // the page past the 2 MB zip ceiling.
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/squad-unboxing/index')
@@ -102,6 +107,10 @@ describe('mini-program onboarding routes', () => {
         pages: MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES,
       },
       {
+        root: MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT,
+        pages: MINI_PROGRAM_PAYMENTS_SUBPACKAGE_PAGES,
+      },
+      {
         root: MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
         pages: MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES,
       },
@@ -124,7 +133,11 @@ describe('mini-program onboarding routes', () => {
       },
       'pages/event-detail/index': {
         network: 'all',
-        packages: [MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT, MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT],
+        packages: [
+          MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
+          MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
+          MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT,
+        ],
       },
       'pages/events/index': {
         network: 'all',
@@ -140,6 +153,10 @@ describe('mini-program onboarding routes', () => {
       'pages/matching-status/index': {
         network: 'all',
         packages: [MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT],
+      },
+      'pages/pool-registration/index': {
+        network: 'all',
+        packages: [MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT],
       },
       'pages/discover/index': {
         network: 'all',
