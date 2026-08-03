@@ -142,7 +142,7 @@ export const geoEndpointLimiter = createRateLimiter({
  */
 export const flashLocateEndpointLimiter = createRateLimiter({
   windowMs: 10 * 60 * 1000,
-  maxRequests: 6,
+  maxRequests: 360,
   keyPrefix: 'flash-locate',
   keyResolver: (req) => {
     const actor = (req as any).session?.userId || (req as any).user?.id || req.ip || 'anonymous';

@@ -36,6 +36,7 @@ import {
 } from "../services/flashScheduleService";
 import {
   calculateFlashCandidateWeight,
+  calculateFlashRadarFrame,
   evaluateFlashFeatureReadiness,
   isLaterFlashDeliveryEncounter,
   syncEnabledPreferenceTags,
@@ -43,8 +44,27 @@ import {
 
 describe("Flash geofence boundaries", () => {
   it("keeps the NPC encounter radius independent from task-destination arrival", () => {
-    expect(FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS).toBe(100);
+    expect(FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS).toBe(10);
     expect(FLASH_ARRIVAL_RADIUS_METERS).toBe(50);
+  });
+});
+
+describe("Flash live radar frame", () => {
+  it("returns distance, north-based bearing, and proximity", () => {
+    const north = calculateFlashRadarFrame(
+      { latitude: 22.5400, longitude: 113.9400 },
+      { latitude: 22.5410, longitude: 113.9400 },
+    );
+    expect(north.distanceMeters).toBeGreaterThan(100);
+    expect(north.targetBearingDegrees).toBe(0);
+    expect(north.proximityBand).toBe("far");
+
+    const arrived = calculateFlashRadarFrame(
+      { latitude: 22.5400, longitude: 113.9400 },
+      { latitude: 22.54005, longitude: 113.9400 },
+    );
+    expect(arrived.distanceMeters).toBeLessThanOrEqual(10);
+    expect(arrived.proximityBand).toBe("arrived");
   });
 });
 

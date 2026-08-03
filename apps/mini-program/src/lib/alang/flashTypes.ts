@@ -102,7 +102,9 @@ export interface FlashHomeView {
 export interface FlashLocateView {
   canonicalScreen: FlashCanonicalScreen
   withinRange: boolean
-  distanceMeters?: number
+  distanceMeters: number
+  targetBearingDegrees: number
+  proximityBand: 'far' | 'approaching' | 'near' | 'arrived'
   radiusMeters?: number
   encounterId?: string
   appearanceId?: string

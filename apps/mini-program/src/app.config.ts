@@ -31,10 +31,10 @@ export default defineAppConfig({
   lazyCodeLoading: 'requiredComponents',
   permission: {
     'scope.userLocation': {
-      desc: '用于查看当前在线角色并确认任务到达',
+      desc: '用于查看深圳在线数字角色，并在你主动开启雷达时提供前台实时距离和方向指引',
     },
   },
-  requiredPrivateInfos: ['getLocation'],
+  requiredPrivateInfos: ['getLocation', 'startLocationUpdate'],
   pages: [...MINI_PROGRAM_MAIN_PACKAGE_PAGES],
   subPackages: MINI_PROGRAM_SUBPACKAGES_CONFIG,
   preloadRule: MINI_PROGRAM_PRELOAD_RULE_CONFIG,

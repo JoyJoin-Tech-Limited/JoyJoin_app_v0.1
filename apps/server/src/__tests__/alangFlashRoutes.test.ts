@@ -248,7 +248,7 @@ describe("formal Flash routes", () => {
   it("returns a stable code when the local hidden-location guard is exhausted", async () => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl, "rate-budget-user");
-      for (let attempt = 0; attempt < 6; attempt += 1) {
+      for (let attempt = 0; attempt < 360; attempt += 1) {
         const response = await fetch(`${baseUrl}/api/alang/flash/appearances/${appearanceId}/locate`, {
           method: "POST",
           headers: { Cookie: cookie, "Content-Type": "application/json" },

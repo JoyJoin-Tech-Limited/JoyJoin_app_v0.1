@@ -814,7 +814,7 @@ export async function consumeFlashLocateBudget(input: {
   maxAttempts?: number;
 }, executor: DbExecutor = db): Promise<{ allowed: boolean; attemptCount: number; retryAfterSeconds: number }> {
   const windowMs = input.windowMs ?? 10 * 60 * 1000;
-  const maxAttempts = input.maxAttempts ?? 6;
+  const maxAttempts = input.maxAttempts ?? 360;
   const resetCutoff = new Date(input.now.getTime() - windowMs);
   const [row] = await executor.insert(flashLocateBudgets).values({
     userId: input.userId,

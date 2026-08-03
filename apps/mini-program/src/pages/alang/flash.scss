@@ -680,6 +680,85 @@ page {
   .flash-dialogue__blind-box--revealed { animation: none; }
 }
 
+/* Foreground live-radar additions. The server provides a north-based bearing;
+ * this pointer is rotated by the device-relative angle only. */
+.flash-radar {
+  &__pointer {
+    position: absolute;
+    z-index: 4;
+    top: 22rpx;
+    left: 50%;
+    width: 8rpx;
+    height: 174rpx;
+    margin-left: -4rpx;
+    transform-origin: 50% 174rpx;
+    border-radius: 999rpx;
+    background: linear-gradient(180deg, #ff9b85 0 42%, rgba(255, 155, 133, 0) 100%);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__pointer-tip {
+    width: 0;
+    height: 0;
+    margin: -16rpx 0 0 -12rpx;
+    border-right: 16rpx solid transparent;
+    border-bottom: 28rpx solid #ff9b85;
+    border-left: 16rpx solid transparent;
+  }
+
+  &__range-wave {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 112rpx;
+    height: 112rpx;
+    border: 3rpx solid rgba($color-primary, 0.42);
+    border-radius: 50%;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+
+  &__instrument--tracking &__range-wave--one { animation: flash-radar-live-wave 2.8s ease-out infinite; }
+  &__instrument--tracking &__range-wave--two { animation: flash-radar-live-wave 2.8s ease-out 1.4s infinite; }
+  &__instrument--near { box-shadow: 0 18rpx 48rpx rgba(255, 155, 133, 0.26); }
+  &__instrument--far &__pointer { opacity: 0.72; }
+
+  &__live-readout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 24rpx;
+    padding: 16rpx 32rpx;
+    border-radius: 24rpx;
+    background: rgba($color-surface, 0.88);
+    box-shadow: $shadow-sm;
+  }
+
+  &__distance {
+    color: $color-primary-dark;
+    font-family: $font-cn-display;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+  }
+
+  &__direction-copy {
+    margin-top: 8rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    text-align: center;
+  }
+}
+
+@keyframes flash-radar-live-wave {
+  0% { opacity: 0.72; transform: translate(-50%, -50%) scale(0.7); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.8); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-radar__pointer { transition: none; }
+  .flash-radar__range-wave { animation: none !important; }
+}
+
 // Street Blind Box V2 — warm urban storybook game skin.
 .flash-page {
   background:

@@ -3,7 +3,7 @@ import { z } from "zod";
 export const FLASH_CITY = "深圳" as const;
 export const FLASH_COORDINATE_SYSTEM = "gcj02" as const;
 /** NPC encounter unlock radius. Kept separate from task-destination arrival. */
-export const FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS = 100;
+export const FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS = 10;
 /** Accepted-task destination arrival radius. */
 export const FLASH_ARRIVAL_RADIUS_METERS = 50;
 export const FLASH_TASK_DURATION_DAYS = 7;
@@ -170,9 +170,12 @@ export type FlashHomeResponse = {
 
 export type FlashLocateResponse = {
   appearanceId: string;
-  /** Exact distance is intentionally omitted so the hidden NPC point cannot be triangulated. */
   signal: "searching" | "arrived";
   arrived: boolean;
+  distanceMeters: number;
+  /** Bearing clockwise from true north; the client combines it with compass heading. */
+  targetBearingDegrees: number;
+  proximityBand: "far" | "approaching" | "near" | "arrived";
   encounterId: string | null;
   canonicalScreen: "radar" | "dialogue" | "delivery" | "unavailable";
 };

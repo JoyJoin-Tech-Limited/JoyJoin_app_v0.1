@@ -302,6 +302,28 @@ export async function getFlashHome(input: {
   };
 }
 
+export function calculateFlashRadarFrame(
+  current: { latitude: number; longitude: number },
+  target: { latitude: number; longitude: number },
+): Pick<FlashLocateResponse, "distanceMeters" | "targetBearingDegrees" | "proximityBand"> {
+  const distanceMeters = Math.round(alangHaversineDistanceMeters(current, target));
+  const latitude1 = current.latitude * Math.PI / 180;
+  const latitude2 = target.latitude * Math.PI / 180;
+  const longitudeDelta = (target.longitude - current.longitude) * Math.PI / 180;
+  const y = Math.sin(longitudeDelta) * Math.cos(latitude2);
+  const x = Math.cos(latitude1) * Math.sin(latitude2)
+    - Math.sin(latitude1) * Math.cos(latitude2) * Math.cos(longitudeDelta);
+  const targetBearingDegrees = Math.round((Math.atan2(y, x) * 180 / Math.PI + 360) % 360);
+  const proximityBand = distanceMeters <= FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS
+    ? "arrived"
+    : distanceMeters <= 30
+      ? "near"
+      : distanceMeters <= 100
+        ? "approaching"
+        : "far";
+  return { distanceMeters, targetBearingDegrees, proximityBand };
+}
+
 export async function locateFlashAppearance(input: {
   userId: string;
   appearanceId: string;
@@ -323,14 +345,13 @@ export async function locateFlashAppearance(input: {
   if (!locateBudget.allowed) {
     throw new FlashServiceError("FLASH_LOCATE_RATE_LIMITED", 429, "寻找得太频繁了，稍后再试");
   }
-  const distanceMeters = alangHaversineDistanceMeters(input, appearance);
-  if (distanceMeters > FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS) {
+  const radarFrame = calculateFlashRadarFrame(input, appearance);
+  if (radarFrame.distanceMeters > FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS) {
     return {
       appearanceId: input.appearanceId,
-      // Do not expose a distance band: repeated spoofed coordinates must not
-      // become an oracle for the hidden encounter point.
       signal: "searching",
       arrived: false,
+      ...radarFrame,
       encounterId: null,
       canonicalScreen: "radar",
     };
@@ -352,6 +373,7 @@ export async function locateFlashAppearance(input: {
     appearanceId: input.appearanceId,
     signal: "arrived",
     arrived: true,
+    ...radarFrame,
     encounterId: encounter.id,
     canonicalScreen: pendingDelivery ? "delivery" : "dialogue",
   };

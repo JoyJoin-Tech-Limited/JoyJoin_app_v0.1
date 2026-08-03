@@ -5,13 +5,24 @@ import FlashRadarPage from './index'
 const mocks = vi.hoisted(() => ({
   useAuth: vi.fn(),
   mutateAsync: vi.fn(),
-  location: vi.fn(),
   permission: vi.fn(),
   redirectTo: vi.fn(),
   canonicalRedirect: vi.fn(),
+  startLocationUpdate: vi.fn(),
+  stopLocationUpdate: vi.fn(),
+  startCompass: vi.fn(),
+  stopCompass: vi.fn(),
+  onLocationChange: vi.fn(),
+  offLocationChange: vi.fn(),
+  onCompassChange: vi.fn(),
+  offCompassChange: vi.fn(),
+  locationChange: { current: null as null | ((value: any) => void) },
+  compassChange: { current: null as null | ((value: any) => void) },
+  didHide: { current: null as null | (() => void) },
 }))
 
 vi.mock('@tarojs/taro', () => ({
+  useDidHide: (callback: () => void) => { mocks.didHide.current = callback },
   default: {
     getCurrentInstance: () => ({ router: { params: {
       appearanceId: 'appearance-1',
@@ -25,6 +36,14 @@ vi.mock('@tarojs/taro', () => ({
     redirectTo: mocks.redirectTo,
     openSetting: vi.fn(),
     showToast: vi.fn(),
+    startLocationUpdate: mocks.startLocationUpdate,
+    stopLocationUpdate: mocks.stopLocationUpdate,
+    startCompass: mocks.startCompass,
+    stopCompass: mocks.stopCompass,
+    onLocationChange: mocks.onLocationChange,
+    offLocationChange: mocks.offLocationChange,
+    onCompassChange: mocks.onCompassChange,
+    offCompassChange: mocks.offCompassChange,
   },
 }))
 vi.mock('@tarojs/components', () => ({
@@ -38,7 +57,6 @@ vi.mock('../../../lib/alang/useFlash', () => ({
   useLocateFlashAppearance: () => ({ mutateAsync: mocks.mutateAsync, isPending: false }),
 }))
 vi.mock('../../../lib/alang/flashApi', () => ({
-  getOneShotFlashLocation: mocks.location,
   getFlashLocationPermission: mocks.permission,
   getFlashApiErrorCode: (error: any) => error?.data?.code ?? null,
 }))
@@ -48,65 +66,103 @@ vi.mock('../../../lib/alang/flashNavigation', async (importOriginal) => ({
 }))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
 
-describe('formal Flash radar', () => {
+async function startRadar() {
+  fireEvent.click(screen.getByText('开启实时雷达'))
+  await waitFor(() => expect(mocks.startLocationUpdate).toHaveBeenCalled())
+  await waitFor(() => expect(screen.getByText('雷达追踪中')).toBeInTheDocument())
+}
+
+function emitLocation() {
+  mocks.locationChange.current?.({ latitude: 22.54, longitude: 114.05, accuracy: 8 })
+}
+
+describe('formal Flash live radar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.locationChange.current = null
+    mocks.compassChange.current = null
+    mocks.didHide.current = null
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
-    mocks.location.mockResolvedValue({ latitude: 22.54, longitude: 114.05, accuracy: 10 })
     mocks.permission.mockResolvedValue('granted')
-    mocks.mutateAsync.mockResolvedValue({ canonicalScreen: 'radar', withinRange: false, distanceMeters: 83 })
+    mocks.startLocationUpdate.mockImplementation(({ success }: any) => success?.({ errMsg: 'ok' }))
+    mocks.startCompass.mockResolvedValue({ errMsg: 'ok' })
+    mocks.onLocationChange.mockImplementation((callback) => { mocks.locationChange.current = callback })
+    mocks.onCompassChange.mockImplementation((callback) => { mocks.compassChange.current = callback })
+    mocks.mutateAsync.mockResolvedValue({
+      canonicalScreen: 'radar',
+      withinRange: false,
+      distanceMeters: 83,
+      targetBearingDegrees: 90,
+      proximityBand: 'near',
+    })
     mocks.canonicalRedirect.mockResolvedValue(false)
   })
 
-  it('renders decoded route metadata instead of URL-encoded text', () => {
+  it('renders decoded public-area metadata without starting location', () => {
     render(<FlashRadarPage />)
-
-    expect(screen.getByText((_, element) => (
-      element !== null
-      && element.classList.contains('flash-radar__clue-meta')
-      && element.textContent?.startsWith('默默在宝安区') === true
-    ))).toBeInTheDocument()
+    expect(screen.getByText('默默')).toBeInTheDocument()
+    expect(screen.getByText(/在宝安区/)).toBeInTheDocument()
     expect(screen.getByText('宝安壹方城开放公共区域')).toBeInTheDocument()
-    expect(document.body.textContent).not.toMatch(/%E[0-9A-F]{2}/i)
+    expect(screen.getByText(/离开页面会立即停止定位/)).toBeInTheDocument()
+    expect(mocks.startLocationUpdate).not.toHaveBeenCalled()
   })
 
-  it('never locates until the user explicitly taps and sends one snapshot', async () => {
+  it('streams foreground frames and rotates the pointer relative to device heading', async () => {
     render(<FlashRadarPage />)
-    expect(mocks.location).not.toHaveBeenCalled()
-    expect(screen.getByText('只读取一次你的位置，用来判断是否进入 100 米范围。', { exact: false })).toBeInTheDocument()
+    await startRadar()
+    expect(mocks.onLocationChange).toHaveBeenCalled()
+    expect(mocks.onCompassChange).toHaveBeenCalled()
 
-    fireEvent.click(screen.getByText('我到附近了'))
-    await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledWith({
-      appearanceId: 'appearance-1',
-      location: { latitude: 22.54, longitude: 114.05, accuracy: 10 },
-    }))
-    expect(await screen.findByText(/不会显示角色的距离或方向/)).toBeInTheDocument()
-    expect(screen.queryByText(/83 米/)).not.toBeInTheDocument()
+    mocks.compassChange.current?.({ direction: 30, accuracy: 'high' })
+    emitLocation()
+
+    expect(await screen.findByText('83 米')).toBeInTheDocument()
+    expect(screen.getByTestId('flash-radar-pointer')).toHaveStyle({ transform: 'rotate(60deg)' })
+    expect(screen.getByTestId('flash-range-radar')).toHaveClass('flash-radar__instrument--near')
   })
 
-  it('treats an ended appearance as a normal dispersal, not a location failure', async () => {
+  it('stops location and compass when the page enters the background', async () => {
+    render(<FlashRadarPage />)
+    await startRadar()
+    mocks.didHide.current?.()
+    expect(mocks.stopLocationUpdate).toHaveBeenCalled()
+    expect(mocks.stopCompass).toHaveBeenCalled()
+    expect(mocks.offLocationChange).toHaveBeenCalled()
+    expect(mocks.offCompassChange).toHaveBeenCalled()
+  })
+
+  it('shows a found signal, stops tracking, then enters dialogue', async () => {
+    mocks.mutateAsync.mockResolvedValue({
+      canonicalScreen: 'dialogue',
+      withinRange: true,
+      distanceMeters: 7,
+      targetBearingDegrees: 15,
+      proximityBand: 'arrived',
+      encounterId: 'encounter-1',
+    })
+    mocks.canonicalRedirect.mockResolvedValue(true)
+    render(<FlashRadarPage />)
+    await startRadar()
+    emitLocation()
+
+    expect(await screen.findByText('找到了')).toBeInTheDocument()
+    expect(mocks.stopLocationUpdate).toHaveBeenCalled()
+    await waitFor(() => expect(mocks.canonicalRedirect).toHaveBeenCalled(), { timeout: 1200 })
+  })
+
+  it('stops and explains when the appearance ends during tracking', async () => {
     mocks.mutateAsync.mockRejectedValue({ data: { code: 'FLASH_APPEARANCE_ENDED' } })
     render(<FlashRadarPage />)
-    fireEvent.click(screen.getByText('我到附近了'))
-
+    await startRadar()
+    emitLocation()
     expect(await screen.findByText('刚好散场了')).toBeInTheDocument()
-    expect(screen.getByText(/不接受预约/)).toBeInTheDocument()
+    expect(mocks.stopLocationUpdate).toHaveBeenCalled()
   })
 
-  it('explains the shared hidden-location budget without requesting permissions again', async () => {
-    mocks.mutateAsync.mockRejectedValue({ data: { code: 'FLASH_LOCATE_RATE_LIMITED' } })
-    render(<FlashRadarPage />)
-    fireEvent.click(screen.getByText('我到附近了'))
-
-    expect(await screen.findByText('先歇一会儿再确认')).toBeInTheDocument()
-    expect(screen.getByText(/10 分钟内最多确认 6 次/)).toBeInTheDocument()
-    expect(mocks.permission).not.toHaveBeenCalled()
-  })
-
-  it('does not request location through a disabled deep link', () => {
+  it('does not start tracking through a disabled deep link', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashRadarPage />)
     expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
-    expect(mocks.location).not.toHaveBeenCalled()
+    expect(mocks.startLocationUpdate).not.toHaveBeenCalled()
   })
 })
