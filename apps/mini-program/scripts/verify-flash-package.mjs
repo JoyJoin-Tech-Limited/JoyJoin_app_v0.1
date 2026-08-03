@@ -11,6 +11,7 @@ const appJsonPath = resolve(distRoot, 'app.json')
 const manifestPath = resolve(distRoot, 'flash-build-manifest.json')
 const projectConfigPath = resolve(appRoot, 'project.config.json')
 const preupload = process.argv.includes('--preupload')
+const introSceneRelativePath = 'assets/illustrations/street-blind-box-onboarding-fullscreen-v7.webp'
 
 const flashRuntimeImages = [
   'pages/alang/assets/flash-city-encounter.png',
@@ -33,6 +34,7 @@ const flashRuntimeImages = [
 const requiredFiles = [
   'assets/illustrations/street-blind-box-entry.webp',
   'assets/illustrations/street-blind-box-entry.png',
+  introSceneRelativePath,
   'common.wxss',
   'pages/alang/event/index.js',
   'pages/alang/event/index.wxml',
@@ -120,6 +122,14 @@ if (!existsSync(projectConfigPath)) {
       'project.config.json packOptions.include must explicitly include all pages/alang PNG runtime assets',
     )
   }
+  const introSceneIsForcedIntoWxapkg = packIncludes.some(
+    (entry) => entry?.type === 'file' && entry?.value === introSceneRelativePath,
+  )
+  if (!introSceneIsForcedIntoWxapkg) {
+    failures.push(
+      `project.config.json packOptions.include must explicitly include ${introSceneRelativePath}`,
+    )
+  }
   if (projectConfig.setting?.ignoreUploadUnusedFiles !== false) {
     failures.push(
       'project.config.json setting.ignoreUploadUnusedFiles must be false; ' +
@@ -152,6 +162,18 @@ if (existsSync(runtimeIconPath) && statSync(runtimeIconPath).size > 0) {
     }
   } catch (error) {
     failures.push(`dist/${runtimeIconRelativePath} PNG decode failed: ${error.message}`)
+  }
+}
+
+const introScenePath = resolve(distRoot, introSceneRelativePath)
+if (existsSync(introScenePath) && statSync(introScenePath).size > 0) {
+  try {
+    const metadata = await sharp(introScenePath).metadata()
+    if (metadata.format !== 'webp' || !metadata.width || !metadata.height) {
+      failures.push(`dist/${introSceneRelativePath} is not a decodable WebP image`)
+    }
+  } catch (error) {
+    failures.push(`dist/${introSceneRelativePath} WebP decode failed: ${error.message}`)
   }
 }
 

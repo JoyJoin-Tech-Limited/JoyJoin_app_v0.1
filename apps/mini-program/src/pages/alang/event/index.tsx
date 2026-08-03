@@ -27,7 +27,7 @@ import '../flash.scss'
 const FLASH_AMBIENT_BACKGROUND = '/pages/alang/assets/ui/flash-city-ambient-bg.png'
 const FLASH_EMPTY_ONLINE = '/pages/alang/assets/ui/flash-empty-online.png'
 const FLASH_EMPTY_TASKS = '/pages/alang/assets/ui/flash-empty-tasks.png'
-const FLASH_INTRO_SCENE = '/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp'
+const FLASH_INTRO_SCENE = '/assets/illustrations/street-blind-box-onboarding-fullscreen-v7.webp'
 const FLASH_GATE_WATCHDOG_MS = 12_000
 const FLASH_LOCATION_RUNTIME_CONTRACT = 'flash-location-compiler-scope-v4'
 

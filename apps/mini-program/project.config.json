@@ -83,6 +83,10 @@
         "value": "pages/alang/assets/.*\\.png$"
       },
       {
+        "type": "file",
+        "value": "assets/illustrations/street-blind-box-onboarding-fullscreen-v7.webp"
+      },
+      {
         "type": "regexp",
         "value": "assets/icons/intent-icons/.*\\.webp$"
       },
