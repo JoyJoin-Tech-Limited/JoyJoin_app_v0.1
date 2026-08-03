@@ -6,8 +6,8 @@ const profileReviewSource = readFileSync(
   resolve(process.cwd(), 'src/pages/onboarding/profile-review/index.tsx'),
   'utf8',
 )
-const profileReviewScss = readFileSync(
-  resolve(process.cwd(), 'src/pages/onboarding/profile-review/index.scss'),
+const introFlowSource = readFileSync(
+  resolve(process.cwd(), 'src/components/flow-animation/JoyJoinPlayModeFlow.tsx'),
   'utf8',
 )
 const poolRegistrationScss = readFileSync(
@@ -28,10 +28,12 @@ describe('onboarding intro cross-page handoff', () => {
   })
 
   it('bundles the shared flow visuals into every independently mounted page', () => {
-    // Subpackage WXSS guard (AGENTS §15): the page SCSS must @use the shared
-    // flow SCSS so the rules compile into the page WXSS itself — a
-    // component-level import alone can be chunked into an unreachable file.
-    expect(profileReviewScss).toContain("@use '../../../components/flow-animation/index.scss'")
+    // Subpackage WXSS guard (AGENTS §15): the pool-registration page SCSS must
+    // @use the shared flow SCSS so the rules compile into the page WXSS itself.
     expect(poolRegistrationScss).toContain("@use '../../components/flow-animation/index.scss'")
+    // The onboarding profile-review flow renders through JoyJoinPlayModeFlow,
+    // which must keep its own stylesheet import so the overlay is not chunked
+    // into an unreachable file.
+    expect(introFlowSource).toContain("import './index.scss'")
   })
 })

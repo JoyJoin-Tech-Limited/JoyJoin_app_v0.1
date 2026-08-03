@@ -75,7 +75,7 @@ describe('route review follow-ups', () => {
     const adminPaymentPageSource = readRepoFile('apps/admin-client/src/pages/BlindBoxPaymentPage.tsx');
     const paymentsRoutesSource = readRepoFile('apps/server/src/routes/domains/payments.ts');
     const userAppSource = readRepoFile('apps/user-client/src/App.tsx');
-    const miniProgramPaymentPageSource = readRepoFile('apps/mini-program/src/pages/blind-box-payment/index.tsx');
+    const miniProgramPaymentPageSource = readRepoFile('apps/mini-program/src/pages/payments/blind-box-payment/index.tsx');
     const miniProgramPaymentPageModelSource = readRepoFile('apps/mini-program/src/lib/payment/paymentPageModel.ts');
 
     // User-client archived — skip assertions on missing files
