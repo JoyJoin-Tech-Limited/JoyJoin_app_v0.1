@@ -452,16 +452,19 @@ if [[ "$USE_GHCR_PULL" == "true" ]]; then
 
     # Cross-Pacific GHCR pulls can stall on a single large layer. docker pull
     # resumes already-downloaded layers, so re-invoking it is a cheap, safe
-    # retry that only re-fetches the incomplete layers.
+    # retry that only re-fetches the incomplete layers. Each attempt is
+    # time-boxed so one stalled pull cannot consume the whole deploy budget;
+    # docker keeps whatever layers completed before the timeout fired.
     pull_with_retry() {
         local image="$1"
         local attempt=1
-        local max_attempts=4
+        local max_attempts=6
+        local attempt_timeout=15m
         while (( attempt <= max_attempts )); do
-            if docker pull "$image"; then
+            if timeout --signal=TERM --kill-after=30s "$attempt_timeout" docker pull "$image"; then
                 return 0
             fi
-            echo "  docker pull $image failed (attempt $attempt/$max_attempts); retrying in 10s (completed layers are cached)."
+            echo "  docker pull $image failed/timed out (attempt $attempt/$max_attempts); retrying in 10s (completed layers are cached)."
             sleep 10
             attempt=$((attempt + 1))
         done
