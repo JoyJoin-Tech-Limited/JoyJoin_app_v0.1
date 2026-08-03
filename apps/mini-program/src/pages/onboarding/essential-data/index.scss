@@ -237,6 +237,23 @@
     &--wrap {
       flex-wrap: wrap;
     }
+
+    &--life-stage {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: $spacing-xs;
+
+      .essential-data__choice-chip {
+        min-width: 0;
+        padding-left: $spacing-xs;
+        padding-right: $spacing-xs;
+      }
+
+      .essential-data__choice-chip-text {
+        font-size: 24rpx;
+        white-space: nowrap;
+      }
+    }
   }
 
   &__choice-chip {

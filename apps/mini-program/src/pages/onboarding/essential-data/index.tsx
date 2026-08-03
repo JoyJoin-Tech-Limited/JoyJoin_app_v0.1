@@ -786,7 +786,7 @@ export default function EssentialDataPage() {
                 <Text className='essential-data__label'>
                   人生阶段<Text className='essential-data__required'>*</Text>
                 </Text>
-                <View className='essential-data__choice-row essential-data__choice-row--wrap'>
+                <View className='essential-data__choice-row essential-data__choice-row--life-stage'>
                   {LIFE_STAGE_OPTIONS.map((option) => {
                     const selected = lifeStage === option
                     return (
