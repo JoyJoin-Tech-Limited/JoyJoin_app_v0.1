@@ -31,7 +31,7 @@ export default defineAppConfig({
   lazyCodeLoading: 'requiredComponents',
   permission: {
     'scope.userLocation': {
-      desc: '用于查看深圳在线数字角色，并在你主动开启雷达时提供前台实时距离和方向指引',
+      desc: '用于查看在线数字角色与雷达实时距离指引',
     },
   },
   requiredPrivateInfos: ['getLocation', 'startLocationUpdate'],
