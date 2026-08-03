@@ -2,6 +2,7 @@ import type { QueryClient, QueryKey } from '@tanstack/react-query'
 import Taro from '@tarojs/taro'
 import { logInfo, logWarn } from '../utils/logger'
 import { POOLS_QUERY_KEY, JOINED_EVENTS_QUERY_KEY } from '../prefetchEngine'
+import { EQUIPMENT_ME_QUERY_KEY } from '../profile/equipmentQueryKeys'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Persistent Query Cache — Tier 2 Offline Support
@@ -34,6 +35,10 @@ const DEBOUNCE_MS = 2000 // 2s debounce on writes
 export const PERSISTED_QUERY_KEYS: QueryKey[] = [
   POOLS_QUERY_KEY,
   JOINED_EVENTS_QUERY_KEY,
+  // Equipment outfit + inventory: low-volatility, small payload, and the
+  // highest-value cold-start render (Profile pixel avatar) when the API is
+  // slow or unreachable.
+  EQUIPMENT_ME_QUERY_KEY,
 ]
 
 /** Pre-serialized whitelist for O(1) lookup in hot subscribe path (P1 perf). */

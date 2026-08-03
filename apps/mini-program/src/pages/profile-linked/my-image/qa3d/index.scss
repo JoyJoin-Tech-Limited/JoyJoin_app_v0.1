@@ -1,8 +1,7 @@
 @use '../../../../styles/variables' as *;
 @use '../../../../components/profile/PixelAvatar3D';
-// Same subpackage style-split guard as my-image: the V2 turntable fallback for
+// Same subpackage style-split guard as my-image: the V2 composite fallback for
 // non-spider archetypes must be compiled into this page's WXSS.
-@use '../../../../components/profile/PixelAvatarTurntable';
 @use '../../../../components/profile/PixelAvatarComposite';
 @use '../../../../components/profile/PixelAvatarFallback';
 

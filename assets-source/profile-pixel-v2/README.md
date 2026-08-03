@@ -53,6 +53,20 @@ are retained as a documented fallback: re-adding an archetype to
 their garment poses do not match the body (2026-07-21 incident: arm sticking out
 of the dolphin jacket, misaligned shoes).
 
+## Thumbnails (2026-08-01)
+
+Inventory/shop thumbnails are **garment-only product shots**, never crops of the
+worn layers. Worn layers intentionally re-paint body pixels at their seams
+(chin fur, belly, leg strands) so they composite seamlessly — that context
+reads as dirty scribble inside a small tile. The build derives each starter
+thumb from the isolated garment cell instead: the 2×2
+`equipment-sheet-source.png` for the nine dressed-stage archetypes (pose
+mismatch is irrelevant for a flat product shot), or the isolated garment
+cells of the canonical atlas for cat/elephant/turtle. Thumbs are chroma-keyed,
+tight-cropped, lanczos-downscaled into a 224px art window, and padded to a
+256px square. If an archetype ever lacks isolated art, the build falls back to
+the worn-layer crop for that thumb.
+
 Generated starter PNG layers and visual proof sheets are reproducible
 intermediates and are not committed.
 

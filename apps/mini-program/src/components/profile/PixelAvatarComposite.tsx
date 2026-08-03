@@ -6,11 +6,8 @@ import {
   PIXEL_AVATAR_EQUIPMENT_SLOTS,
   getPixelAvatarApprovedStarterLookUrl,
   getPixelAvatarBodyUrl,
-  getPixelAvatarScenePose,
   getPixelEquipmentAsset,
   normalizePixelArchetypeId,
-  normalizePixelAvatarFrameId,
-  type PixelAvatarFrameId,
   type PixelEquipmentAsset,
   type PixelEquipmentPlacement,
 } from '../../lib/profile/pixelAvatarAssets'
@@ -28,13 +25,11 @@ export interface PixelAvatarCompositeProps {
   archetypeId: string
   outfit: EquipmentOutfit
   itemsById: ReadonlyMap<string, EquipmentItem>
-  frameId?: PixelAvatarFrameId
   variant?: 'compact' | 'full'
   className?: string
   /**
    * Optional tap-to-slot hotspots over the character (placement-rect hit
-   * areas, from the open-source slot hit-rect pattern). Rendered only on the
-   * front frame — off-front poses hide them rather than misalign.
+   * areas, from the open-source slot hit-rect pattern).
    */
   slotHotspots?: PixelAvatarSlotHotspot[]
   onSlotTap?: (slot: EquipmentSlot) => void
@@ -52,20 +47,12 @@ function getOutfitItemId(outfit: EquipmentOutfit, slot: EquipmentSlot): string |
   return outfit[`${slot}ItemId` as keyof EquipmentOutfit] as string | null
 }
 
-function toPlacementStyle(
-  asset: PixelEquipmentAsset,
-  frameId: PixelAvatarFrameId,
-): CSSProperties {
-  const pose = getPixelAvatarScenePose(frameId)
-  const layerTranslateX = pose.yaw * asset.depth * 8
-  const layerTranslateY = Math.abs(pose.yaw) * asset.depth * 0.8
-
+function toPlacementStyle(asset: PixelEquipmentAsset): CSSProperties {
   return {
     left: `${(asset.placement.left / BODY_CANVAS_WIDTH) * 100}%`,
     top: `${(asset.placement.top / BODY_CANVAS_HEIGHT) * 100}%`,
     width: `${(asset.placement.width / BODY_CANVAS_WIDTH) * 100}%`,
     height: `${(asset.placement.height / BODY_CANVAS_HEIGHT) * 100}%`,
-    transform: `translate3d(${layerTranslateX}%, ${layerTranslateY}%, 0)`,
   }
 }
 
@@ -73,15 +60,12 @@ export function PixelAvatarComposite({
   archetypeId,
   outfit,
   itemsById,
-  frameId = 'front',
   variant = 'full',
   className = '',
   slotHotspots,
   onSlotTap,
 }: PixelAvatarCompositeProps) {
   const safeArchetypeId = normalizePixelArchetypeId(archetypeId)
-  const safeFrameId = normalizePixelAvatarFrameId(frameId)
-  const pose = getPixelAvatarScenePose(safeFrameId)
   const [bodySource, setBodySource] = useState<'primary' | 'base' | 'placeholder'>('primary')
   const [failedLayerIds, setFailedLayerIds] = useState<Set<string>>(new Set())
 
@@ -97,11 +81,11 @@ export function PixelAvatarComposite({
   const equippedLayers = useMemo<EquippedLayer[]>(() => {
     const layers: EquippedLayer[] = []
     for (const item of requestedItems) {
-      const asset = getPixelEquipmentAsset(item.assetKey, safeArchetypeId, safeFrameId)
+      const asset = getPixelEquipmentAsset(item.assetKey, safeArchetypeId)
       if (asset?.slot === item.slot) layers.push({ item, asset })
     }
     return layers
-  }, [requestedItems, safeArchetypeId, safeFrameId])
+  }, [requestedItems, safeArchetypeId])
 
   const resolvedItemIds = new Set(equippedLayers.map(({ item }) => item.id))
   const unresolvedItems = requestedItems.filter((item) => !resolvedItemIds.has(item.id))
@@ -148,20 +132,20 @@ export function PixelAvatarComposite({
   const fallbackCopy = archetypeId === safeArchetypeId ? '' : '，已使用默认形象'
   const accessibleLabel = `${archetypeName}像素形象${equipmentCopy}${failedAssetCopy}${unresolvedAssetCopy}；基础背心和安全短裤固定保留${fallbackCopy}`
   const bodyFallbackAccessibleLabel = `${archetypeName}像素形象；原始图片未加载，已显示不可脱基础背心和安全短裤的安全替代形象；装备图层已暂时隐藏${fallbackCopy}`
+  // The scene box mirrors the 2:3 body canvas and stays centered; equipment
+  // placement rects and the hotspot plane map 1:1 onto it.
   const sceneStyle: CSSProperties = {
-    transform: `perspective(900px) translate3d(${-50 + pose.translateXPercent}%, 0, 0) rotateY(${pose.yaw * 7}deg) scaleX(${pose.scaleX})`,
+    transform: 'translate3d(-50%, 0, 0)',
   }
 
   if (bodySource === 'placeholder') {
     return (
       <View
         className={`pixel-avatar-composite pixel-avatar-composite--${variant} ${className}`.trim()}
-        data-frame={safeFrameId}
         data-permanent-underwear='true'
       >
         <View
           className='pixel-avatar-composite__canvas'
-          data-frame={safeFrameId}
           data-permanent-underwear='true'
           role='img'
           aria-label={bodyFallbackAccessibleLabel}
@@ -187,18 +171,16 @@ export function PixelAvatarComposite({
   return (
     <View
       className={`pixel-avatar-composite pixel-avatar-composite--${variant} ${className}`.trim()}
-      data-frame={safeFrameId}
       data-permanent-underwear='true'
     >
       <View
         className='pixel-avatar-composite__canvas'
-        data-frame={safeFrameId}
         data-permanent-underwear='true'
         role='img'
         aria-label={accessibleLabel}
       >
         <View
-          className={`pixel-avatar-composite__scene pixel-avatar-composite__scene--${safeFrameId}`}
+          className='pixel-avatar-composite__scene'
           style={sceneStyle}
           aria-hidden='true'
         >
@@ -229,7 +211,7 @@ export function PixelAvatarComposite({
               src={asset.url}
               mode='scaleToFill'
               lazyLoad={false}
-              style={toPlacementStyle(asset, safeFrameId)}
+              style={toPlacementStyle(asset)}
               onError={() => setFailedLayerIds((current) => {
                 const next = new Set(current)
                 next.add(item.id)
@@ -242,7 +224,7 @@ export function PixelAvatarComposite({
         <Text className='pixel-avatar-composite__accessible-copy'>{accessibleLabel}</Text>
       </View>
 
-      {safeFrameId === 'front' && onSlotTap && slotHotspots && slotHotspots.length > 0 && (
+      {onSlotTap && slotHotspots && slotHotspots.length > 0 && (
         <View className='pixel-avatar-composite__hotspot-plane'>
           {slotHotspots.map(({ slot, label, placement }) => (
             <View

@@ -316,11 +316,11 @@ await fetch('/api/auth/wechat/login-with-test', {
 
 **Data Contract:**
 - Server field: `user.hasSeenProfileReview` (persisted to database)
-- API: `POST /api/onboarding/profile-review/complete` to mark as seen
+- API: `POST /api/profile-review/complete` to mark as seen
 
-**After Completion:**
+**After Completion (2026-08-01):**
 - `hasSeenProfileReview = true`
-- The page shows a brief "入场卡已确认" Xiaoyue celebration toast.
+- The completion moment plays the **UnboxingCeremony** overlay (halo → lid lift → 入场卡 rises with archetype headline + accentText tint; tap or 2.4s auto-advance) instead of the old toast — see `docs/agent-context/onboarding.md` for ceremony + BoxJourneySpine + voice matrix continuity details.
 - Navigate via **server-computed `nextStep`** using the route map:
   ```ts
   const NEXT_STEP_TO_PATH: Record<string, string> = {

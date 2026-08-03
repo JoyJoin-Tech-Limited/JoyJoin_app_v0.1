@@ -1,5 +1,8 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+// Subpackage WXSS guard (AGENTS §15): component SCSS must be @use'd in the
+// consuming page's SCSS or Taro's chunk graph can drop it.
+@use '../../../components/onboarding/BoxJourneySpine.scss' as *;
 
 .extended-data {
   --jj-heat-l1: #A78BFA;
@@ -38,15 +41,8 @@
     @include safe-area-inline($container-padding);
   }
 
-  &__eyebrow {
-    display: inline-flex;
-    align-items: center;
-    padding: 8rpx 16rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary-light, 0.92);
-    color: $color-primary;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
+  &__spine {
+    margin-bottom: $spacing-sm;
   }
 
   &__title {

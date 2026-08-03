@@ -206,6 +206,49 @@ $color-skill-cool: #7c3aed;
     &--landed {
       box-shadow: 0 22rpx 70rpx rgba($color-landed-gold, 0.18);
     }
+
+    /* Phase 3 (2026-08-01): rare-variant easter egg — 闪光 gold frame for
+       highly typical matches (典型 + high confidence). */
+    &--rare {
+      box-shadow: 0 22rpx 80rpx rgba($color-slot-gold, 0.32),
+        0 0 0 3rpx rgba($color-slot-gold, 0.55);
+    }
+  }
+
+  /* Phase 3: 闪光 sparkle stars overlaying the landed frame (rare variant). */
+  &__slot-sparkle {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    pointer-events: none;
+    z-index: 12;
+  }
+
+  &__slot-sparkle-star {
+    position: absolute;
+    top: 16%;
+    left: 12%;
+    width: 28rpx;
+    height: 28rpx;
+    background: radial-gradient(circle, $color-text-white 0%, rgba($color-slot-gold, 0.95) 45%, rgba($color-slot-gold, 0) 72%);
+    border-radius: 50%;
+    opacity: 0;
+    animation: slot-sparkle-twinkle 1.2s ease-out 0.05s forwards;
+
+    &--b {
+      top: 22%;
+      left: 82%;
+      width: 20rpx;
+      height: 20rpx;
+      animation-delay: 0.3s;
+    }
+
+    &--c {
+      top: 72%;
+      left: 8%;
+      width: 22rpx;
+      height: 22rpx;
+      animation-delay: 0.55s;
+    }
   }
 
   &__slot-rail {
@@ -245,6 +288,46 @@ $color-skill-cool: #7c3aed;
        in SlotStage.tsx and adjust this value together. */
     height: 600rpx;
     overflow: hidden;
+
+    /* Phase 2a (2026-08-01): anticipation reel-shudder. Transform-only,
+       compositor-safe; suppressed by tier gate (JS) + reduced-motion (below). */
+    &--shudder {
+      animation: slot-viewport-shudder 0.32s ease-in-out infinite;
+      will-change: transform;
+    }
+  }
+
+  /* Phase 2a (2026-08-01): light-chase comet orbiting the frame during spin.
+     The wrapper squashes X (frame is ~620×668rpx) and the inner orbit rotates,
+     producing an elliptical chase that tracks the rounded frame. Transforms +
+     opacity only (compositor-safe), pointer-transparent. */
+  &__slot-chase {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    pointer-events: none;
+    z-index: 8;
+    transform: scaleX(0.93);
+    transform-origin: center;
+  }
+
+  &__slot-chase-orbit {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    animation: slot-chase-orbit 1.1s linear infinite;
+    will-change: transform;
+  }
+
+  &__slot-chase-comet {
+    position: absolute;
+    top: 6rpx;
+    left: 50%;
+    width: 90rpx;
+    height: 14rpx;
+    margin-left: -45rpx;
+    border-radius: 999rpx;
+    background: linear-gradient(90deg, rgba($color-slot-gold, 0) 0%, rgba($color-slot-gold, 0.95) 55%, rgba(255, 255, 255, 0.95) 100%);
+    box-shadow: 0 0 18rpx rgba($color-slot-gold, 0.85);
+    opacity: 0.9;
   }
 
   &__slot-track {
@@ -402,6 +485,16 @@ $color-skill-cool: #7c3aed;
 
     &--pink {
       border-color: $color-burst-pink;
+      animation-delay: 0.3s;
+    }
+
+    /* Phase 3 rare variant: all-gold burst rings */
+    &--rare {
+      border-color: $color-slot-gold;
+    }
+
+    &--rare-b {
+      border-color: $color-slot-text;
       animation-delay: 0.3s;
     }
   }
@@ -793,6 +886,26 @@ $color-skill-cool: #7c3aed;
       }
     }
 
+    // --- Phase 3 rare variant: 闪光命定 gold badge ---
+    &--rare {
+      padding: 8rpx 16rpx;
+      background: linear-gradient(135deg, rgba($color-slot-gold, 0.2) 0%, rgba($color-slot-gold, 0.1) 100%);
+      border: 1rpx solid rgba($color-slot-gold, 0.65);
+      color: $color-slot-warm;
+      box-shadow: 0 2rpx 14rpx rgba($color-slot-gold, 0.3);
+
+      &::before {
+        content: '';
+        display: block;
+        width: 10rpx;
+        height: 10rpx;
+        margin-right: 8rpx;
+        background: radial-gradient(circle, $color-text-white 0%, $color-slot-gold 60%, rgba($color-slot-gold, 0) 100%);
+        border-radius: 50%;
+        box-shadow: 0 0 10rpx rgba($color-slot-gold, 0.9);
+      }
+    }
+
     // --- Nickname: hero gradient trophy ---
     &--nickname {
       background: linear-gradient(135deg, $color-primary-dark 0%, $color-primary 100%);
@@ -1014,6 +1127,25 @@ $color-skill-cool: #7c3aed;
   &__xiaoyue-fallback-indicator-text {
     font-size: $font-size-xs;
     color: $color-warning;
+    line-height: 1.4;
+  }
+
+  // ── Xiaoyue pending indicator (AI copy still generating) ──
+  &__xiaoyue-pending-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+    margin-top: 10rpx;
+    padding: 8rpx 14rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.06);
+    border: 1rpx solid rgba($color-primary, 0.1);
+    align-self: flex-start;
+  }
+
+  &__xiaoyue-pending-indicator-text {
+    font-size: $font-size-xs;
+    color: $color-primary;
     line-height: 1.4;
   }
 
@@ -2238,6 +2370,26 @@ $color-skill-cool: #7c3aed;
   100% { transform: scale(2.2); opacity: 0; }
 }
 
+/* Phase 2a (2026-08-01): anticipation shudder + light-chase orbit keyframes */
+@keyframes slot-viewport-shudder {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-3rpx); }
+  55% { transform: translateY(2rpx); }
+  80% { transform: translateY(-1rpx); }
+}
+
+@keyframes slot-chase-orbit {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Phase 3 (2026-08-01): rare-variant sparkle twinkle */
+@keyframes slot-sparkle-twinkle {
+  0% { opacity: 0; transform: scale(0.3); }
+  35% { opacity: 1; transform: scale(1.25); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+
 /* ── hero skeleton (matches actual hero card layout) ───────────────── */
 .personality-results__hero-skeleton {
   display: flex;
@@ -2395,6 +2547,21 @@ $color-skill-cool: #7c3aed;
     display: none;
   }
 
+  /* Phase 2a: secondary choreography suppressed under OS reduced-motion */
+  .personality-results__slot-viewport--shudder,
+  .personality-results__slot-chase-orbit {
+    animation: none !important;
+  }
+
+  .personality-results__slot-chase {
+    display: none;
+  }
+
+  /* Phase 3: rare sparkle suppressed under OS reduced-motion */
+  .personality-results__slot-sparkle {
+    display: none;
+  }
+
   .personality-results__slot-image,
   .personality-results__slot-name {
     animation: none !important;
@@ -2466,6 +2633,16 @@ $color-skill-cool: #7c3aed;
     opacity: 0.3;
   }
 
+  /* Phase 2a: low-end tier also drops the light-chase + shudder */
+  .personality-results__slot-viewport--shudder,
+  .personality-results__slot-chase-orbit {
+    animation: none !important;
+  }
+
+  .personality-results__slot-chase {
+    display: none;
+  }
+
   .personality-results__reveal-image {
     transition: opacity 0.32s ease, transform 0.32s ease !important;
   }
@@ -2482,6 +2659,11 @@ $color-skill-cool: #7c3aed;
   pointer-events: none;
   animation: slot-flash-fade 0.45s ease-out forwards;
   z-index: 6;
+
+  /* Phase 3 rare variant: warm gold flash instead of pure white */
+  &--rare {
+    background: radial-gradient(circle at 50% 45%, $color-slot-text 0%, $color-slot-gold 58%, rgba($color-slot-gold, 0.85) 100%);
+  }
 }
 
 .personality-results__slot-burst {
@@ -2492,6 +2674,22 @@ $color-skill-cool: #7c3aed;
   justify-content: center;
   pointer-events: none;
   z-index: 7;
+}
+
+/* ── Phase 2c (2026-08-01): WebGL land-moment overlay (B1 spike) ──
+   Full-screen takeover for ~2.5s at land time; any boot failure leaves
+   the CSS celebration path untouched. */
+.personality-results__webgl-land {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, rgba($color-slot-dark, 0.92) 0%, rgba($color-slot-dark, 0.98) 100%);
+}
+
+.personality-results__webgl-land-canvas {
+  width: 100%;
+  height: 100%;
 }
 
 @keyframes slot-flash-fade {
@@ -2517,6 +2715,19 @@ $color-skill-cool: #7c3aed;
   .personality-results__slot-flash {
     animation: none !important;
     opacity: 0 !important;
+  }
+
+  .personality-results__slot-viewport--shudder,
+  .personality-results__slot-chase-orbit {
+    animation: none !important;
+  }
+
+  .personality-results__slot-chase {
+    display: none;
+  }
+
+  .personality-results__slot-sparkle {
+    display: none;
   }
 
   .personality-results__hero-name-char {

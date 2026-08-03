@@ -19,12 +19,14 @@ import {
 import {
   getPixelEquipmentAsset,
   getPixelEquipmentLayerUrl,
+  getPixelEquipmentThumbnailUrl,
 } from '../../../lib/profile/pixelAvatarAssets'
+import { EQUIPMENT_ME_QUERY_KEY } from '../../../lib/profile/equipmentQueryKeys'
 import { haptics } from '../../../lib/utils/haptics'
 import { BRAND_COLORS } from '../../../styles/colors'
 import './index.scss'
 
-const EQUIPMENT_QUERY_KEY = ['mini-program', 'equipment', 'me'] as const
+const EQUIPMENT_QUERY_KEY = EQUIPMENT_ME_QUERY_KEY
 const EQUIPMENT_SHOP_QUERY_KEY = ['mini-program', 'equipment', 'shop'] as const
 
 const SLOT_ORDER: EquipmentSlot[] = ['top', 'bottom', 'shoes', 'accessory']
@@ -264,7 +266,7 @@ export default function MyImagePage() {
     console.error({
       type: 'equipment_asset_error',
       itemId: item.id,
-      image: data ? getPixelEquipmentLayerUrl(item.assetKey, data.archetypeId) : null,
+      image: data ? getPixelEquipmentThumbnailUrl(item.assetKey, data.archetypeId) : null,
     })
     setFailedArtworkKeys((current) => {
       if (current.has(failureKey)) return current
@@ -344,6 +346,10 @@ export default function MyImagePage() {
     )
   }
 
+  const revealArtworkUrl = drawResult
+    ? getPixelEquipmentThumbnailUrl(drawResult.item.assetKey, data.archetypeId)
+    : null
+
   return (
     <View className='my-image'>
       <ScrollView className='my-image__scroll' scrollY enhanced showScrollbar={false}>
@@ -353,7 +359,7 @@ export default function MyImagePage() {
             <View className='my-image__stage-scene'>
               <IdentityStageScene layerImageMode='aspectFill'>
                 <PixelAvatar3D
-                  className='my-image__turntable'
+                  className='my-image__avatar'
                   archetypeId={data.archetypeId}
                   outfit={draftOutfit}
                   itemsById={itemsById}
@@ -427,7 +433,7 @@ export default function MyImagePage() {
 
               <View className='my-image__section'>
                 <Text className='my-image__section-title'>搭配装备</Text>
-                <Text className='my-image__section-copy'>四类装备都可以自由穿脱，贴身基础内搭会一直保留。</Text>
+                <Text className='my-image__section-copy'>四类装备都可以自由穿脱，贴身基础内搭会一直保留；点角色身上的部位也能切换槽位。</Text>
                 <View className='my-image__slot-tabs'>
                   {SLOT_ORDER.map((slot) => (
                     <View
@@ -469,7 +475,7 @@ export default function MyImagePage() {
                   </View>
                   {slotInventory.map((entry) => {
                     const selected = getOutfitItemId(draftOutfit, activeSlot) === entry.item.id
-                    const artworkUrl = getPixelEquipmentLayerUrl(entry.item.assetKey, data.archetypeId)
+                    const artworkUrl = getPixelEquipmentThumbnailUrl(entry.item.assetKey, data.archetypeId)
                     const artworkFailed = failedArtworkKeys.has(getArtworkFailureKey(entry.item))
                     const artworkUnavailable = !artworkUrl
                     return (
@@ -518,7 +524,7 @@ export default function MyImagePage() {
                   <Text className='my-image__section-title'>最近获得</Text>
                   <ScrollView className='my-image__recent' scrollX enhanced showScrollbar={false}>
                     {recentItems.map((entry) => {
-                      const artworkUrl = getPixelEquipmentLayerUrl(entry.item.assetKey, data.archetypeId)
+                      const artworkUrl = getPixelEquipmentThumbnailUrl(entry.item.assetKey, data.archetypeId)
                       const artworkFailed = failedArtworkKeys.has(getArtworkFailureKey(entry.item))
                       return (
                         <View key={entry.id} className='my-image__recent-chip'>
@@ -562,7 +568,7 @@ export default function MyImagePage() {
               ) : (
                 <View className='my-image__shop-grid'>
                   {(shopQuery.data?.items ?? []).map((item) => {
-                    const artworkUrl = getPixelEquipmentLayerUrl(item.assetKey, data.archetypeId)
+                    const artworkUrl = getPixelEquipmentThumbnailUrl(item.assetKey, data.archetypeId)
                     const artworkFailed = failedArtworkKeys.has(getArtworkFailureKey(item))
                     const artworkUnavailable = !artworkUrl
                     const actionDisabled = item.owned || redeemMutation.isPending || artworkUnavailable
@@ -625,7 +631,11 @@ export default function MyImagePage() {
           <View className='my-image__reveal-burst' aria-hidden='true' />
           <View className='my-image__reveal-card'>
             <Text className='my-image__reveal-kicker'>{drawResult.guaranteed ? '第 4 抽新品保底' : '地点装备池'}</Text>
-            <View className={`my-image__reveal-item my-image__reveal-item--${drawResult.item.rarity}`}><Text>✦</Text></View>
+            <View className={`my-image__reveal-item my-image__reveal-item--${drawResult.item.rarity}`}>
+              {revealArtworkUrl
+                ? <Image className='my-image__reveal-art' src={revealArtworkUrl} mode='aspectFit' aria-hidden='true' />
+                : <Text>✦</Text>}
+            </View>
             <Text className='my-image__reveal-title'>{drawResult.item.name}</Text>
             <Text className='my-image__reveal-copy'>
               {drawResult.resultKind === 'new'

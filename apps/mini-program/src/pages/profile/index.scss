@@ -411,8 +411,13 @@
     // `min-height` (they fall back to `auto` → the scene collapses to 0 and
     // its overflow:hidden clips the whole identity card). Mirrors the proven
     // `my-image__stage` pattern (`height` + `min-height`).
-    height: 560rpx;
-    min-height: 560rpx;
+    // 728rpx: the left rail must fit the tallest identity card (name + up to
+    // 3 whole-pill tag rows + bio + affordance ≈ 333rpx) + 16rpx gap above
+    // the growth card (≈189rpx) and keep the 152rpx equipment-bar
+    // reservation — 24 + 333 + 16 + 189 + 152 = 714. The old 560rpx stage
+    // made the two cards overlap in render (text-on-text, 2026-08-01 audit).
+    height: 728rpx;
+    min-height: 728rpx;
     margin: $spacing-md $container-padding $spacing-lg;
     border-radius: $card-radius;
     overflow: hidden;
@@ -431,13 +436,37 @@
     }
   }
 
+  // Left rail: single layout owner for the two glass cards. Previously both
+  // were independently absolutely positioned in this column, so a tall
+  // identity card (wrapped tags + bio + affordance) painted over the growth
+  // card — rendered text-on-text overlap (2026-08-01 audit). As flex
+  // children they can never intersect; worst case (extreme content) the
+  // growth card simply flows past the rail's bottom edge, never under text.
+  &__identity-rail {
+    position: absolute;
+    z-index: 4;
+    top: 24rpx;
+    left: 24rpx;
+    // Coupled to the equipment bar below: bar bottom (16rpx) + bar min-height
+    // (112rpx) + 24rpx gap = 152rpx. Keep these three values in sync.
+    bottom: 152rpx;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16rpx;
+
+    // No equipment bar when the pixel avatar is off — drop to the stage
+    // floor so the avatar and the cards share the same grounded horizon.
+    &--no-entry {
+      bottom: 32rpx;
+    }
+  }
+
   // Readable warm-glass containers so text never sits bare on the HD-2D scene.
   // Brand tint family (cream → pink) with a landed-gold trim — echoes the
   // stage's rim-light/particle warmth instead of plain white.
   &__identity-copy-card,
   &__growth-card {
-    position: absolute;
-    z-index: 4;
     border-radius: 24rpx;
     background: linear-gradient(145deg, rgba($color-bg-tint-cream, 0.94), rgba($color-bg-tint-pink, 0.9));
     border: 1rpx solid rgba($color-landed-gold, 0.35);
@@ -447,8 +476,6 @@
   }
 
   &__identity-copy-card {
-    top: 24rpx;
-    left: 24rpx;
     max-width: 360rpx;
     padding: $spacing-sm $spacing-md;
     transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
@@ -462,20 +489,10 @@
   }
 
   &__growth-card {
-    left: 24rpx;
-    // Coupled to the equipment bar below: bar bottom (16rpx) + bar min-height
-    // (112rpx) + 24rpx gap = 152rpx. Keep these three values in sync.
-    bottom: 152rpx;
     // Explicit cap (was shrink-to-fit): shares the 638rpx bottom band with the
     // 352rpx partner visual — 24 + 280 + 352 + 8 = 664 ≤ 670rpx stage width.
     max-width: 280rpx;
     padding: $spacing-sm $spacing-md;
-
-    // No equipment bar when the pixel avatar is off — drop to the stage floor
-    // so the avatar and this card share the same grounded horizon.
-    &--no-entry {
-      bottom: 32rpx;
-    }
   }
 
   &__identity-copy {
@@ -554,6 +571,9 @@
     color: var(--profile-text-secondary);
     background: rgba($color-primary, 0.06);
     border: 1rpx solid rgba($color-primary, 0.08);
+    // Pills wrap as whole units — never mid-pill (CJK mid-word breaks leave
+    // 孤字 and made the card a full row taller than designed).
+    white-space: nowrap;
 
     &--primary {
       color: $color-primary-dark;
@@ -619,13 +639,22 @@
     }
   }
 
-  // Subtle breathing loop for the Profile-tab partner avatar.
-  // Kept transform-only for GPU safety; paused under reduced-motion.
+  // Breathing loop for the Profile-tab partner avatar. Same physiological
+  // curve as the identity-stage breath (inhale 28% → hold 38% → exhale 78% →
+  // rest), shared 5.6s period so the character breathes at one calm rate on
+  // every surface. Transform-only for GPU safety; paused under reduced-motion.
   &__partner-breath {
     width: 100%;
     height: 100%;
     transform-origin: bottom center;
-    animation: profile-avatar-breath 3.6s ease-in-out infinite both;
+    animation: profile-avatar-breath 5.6s ease-in-out infinite both;
+
+    // Degradation-tier devices skip the loop entirely (same pattern as
+    // &__partner-platform--no-pulse below); without this rule the class was
+    // applied but never matched anything.
+    &--no-breath {
+      animation: none;
+    }
 
     @media (prefers-reduced-motion: reduce) {
       animation: none;
@@ -636,14 +665,20 @@
     0%, 100% {
       transform: translateY(0) scale(1);
     }
-    50% {
+    28% {
       transform: translateY(-6rpx) scale(1.012);
+    }
+    38% {
+      transform: translateY(-6rpx) scale(1.012);
+    }
+    78% {
+      transform: translateY(-1rpx) scale(1.002);
     }
   }
 
   // Warm plaza platform grounding the avatar so it does not float on the scene.
-  // Counter-pulse: the shadow shrinks + fades in phase with the avatar's breath
-  // lift (3.6s, same cycle) so the character reads as standing on the plaza
+  // Counter-pulse: the shadow shrinks + fades as the avatar's inhale lifts it
+  // (same 5.6s breath curve) so the character reads as standing on the plaza
   // rather than hovering. Every stop must re-assert translateX(-50%) because a
   // keyframed transform replaces the base centering transform.
   &__partner-platform {
@@ -656,7 +691,7 @@
     border-radius: 50%;
     background: radial-gradient(ellipse, rgba(255, 201, 130, 0.38) 0%, rgba(255, 201, 130, 0) 74%);
     box-shadow: 0 10rpx 26rpx rgba($color-text-primary, 0.16);
-    animation: profile-avatar-platform-pulse 3.6s ease-in-out infinite;
+    animation: profile-avatar-platform-pulse 5.6s ease-in-out infinite;
 
     &--no-pulse {
       animation: none;
@@ -672,9 +707,17 @@
       transform: translateX(-50%) scaleX(1);
       opacity: 1;
     }
-    50% {
+    28% {
       transform: translateX(-50%) scaleX(0.94);
       opacity: 0.78;
+    }
+    38% {
+      transform: translateX(-50%) scaleX(0.94);
+      opacity: 0.78;
+    }
+    78% {
+      transform: translateX(-50%) scaleX(0.99);
+      opacity: 0.95;
     }
   }
 

@@ -149,6 +149,14 @@ const POOL_REGISTRATION_PRELOADS = [
   cdnAsset('/assets/ceremony/lovart-pool-registration-hero-drinks-20260702-v2.webp'),
   // Puzzle-pile particle — single tinted asset used for the persona pile animation.
   cdnAsset('/assets/lovart/lovart-particle-purple-20260701-v1.webp'),
+  // Pool-teaser strip node icons (flag-gated in the letter card; preloading is
+  // harmless when off — the session dedup skips them if center-hub already warmed).
+  cdnAsset('/assets/icons/flow-icons/flow-1.webp'),
+  cdnAsset('/assets/icons/flow-icons/flow-2.webp'),
+  cdnAsset('/assets/icons/flow-icons/flow-3.webp'),
+  cdnAsset('/assets/icons/flow-icons/flow-4.webp'),
+  cdnAsset('/assets/icons/flow-icons/flow-5.webp'),
+  cdnAsset('/assets/icons/flow-icons/flow-7.webp'),
 ]
 
 const REWARDS_PRELOADS = [

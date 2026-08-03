@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
@@ -302,6 +302,31 @@ describe('Profile approved V4 layout', () => {
     expect(container.querySelector('.pixel-avatar-composite__body')).toBeNull()
   })
 
+  it('falls back to the retry state when equipment sync stalls past the UI deadline', () => {
+    vi.useFakeTimers()
+    try {
+      state.queryStates.set('mini-program/equipment/me', {
+        data: undefined,
+        isLoading: true,
+        isError: false,
+      })
+
+      const { container, getByText, queryByText } = render(<ProfilePage />)
+
+      expect(getByText('装备同步中…')).toBeTruthy()
+
+      act(() => {
+        vi.advanceTimersByTime(8000)
+      })
+
+      expect(getByText('装备暂未同步')).toBeTruthy()
+      expect(queryByText('装备同步中…')).toBeNull()
+      expect(container.querySelector('.pixel-avatar-composite__body')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('offers retry after equipment sync fails without showing an empty outfit', () => {
     state.queryStates.set('mini-program/equipment/me', {
       data: undefined,
@@ -443,7 +468,7 @@ describe('Profile approved V4 layout', () => {
 
     // Pixel-on: grounded above the equipment bar — no --no-entry modifiers.
     expect(container.querySelector('.profile-page__partner-visual--no-entry')).toBeNull()
-    expect(container.querySelector('.profile-page__growth-card--no-entry')).toBeNull()
+    expect(container.querySelector('.profile-page__identity-rail--no-entry')).toBeNull()
   })
 
   it('opens the personality report when tapping the identity copy card', () => {
@@ -540,10 +565,10 @@ describe('Profile approved V4 layout', () => {
     expect(queryByTestId('profile-partner-equipment-entry')).toBeNull()
     expect(queryByTestId('profile-partner-breath')).toBeTruthy()
 
-    // No equipment bar → both the avatar and the growth card drop to the
+    // No equipment bar → both the avatar and the card rail drop to the
     // stage floor via the --no-entry modifiers.
     expect(container.querySelector('.profile-page__partner-visual--no-entry')).toBeTruthy()
-    expect(container.querySelector('.profile-page__growth-card--no-entry')).toBeTruthy()
+    expect(container.querySelector('.profile-page__identity-rail--no-entry')).toBeTruthy()
   })
 
   it('wraps the partner avatar in a breathing animation layer', () => {

@@ -93,7 +93,7 @@ Primary files:
 - `apps/server/src/prompts/craft.ts` — 9 canonical writing axioms (XIAOYUE_CRAFT_PRINCIPLES + XIAOYUE_CRAFT_LITE), versioned prompt module injected into all Xiaoyue LLM call sites. Axiom 9 added 2026-06-02 (对话感/conversational flow).
 - `apps/server/src/lib/writingCraftValidator.ts` — deterministic post-generation craft scoring (0-100) with context-aware thresholds: 70 for analysis/narrative, 55 for comment/coaching/lite. Rhythm, imagery, landing, and density checks skipped for short text.
 - `apps/server/src/lib/craftQualityGate.ts` — shared `generateWithCraftQuality()` utility wrapping inject → validate → retry (max 2) for any LLM call. New LLM surfaces should use this instead of inline retry.
-- `apps/server/src/xiaoyueAnalysisService.ts` — personality test result analysis using `generateWithCraftQuality()` with full principles and 2 retries.
+- `apps/server/src/xiaoyueAnalysisService.ts` — personality test result analysis using `generateWithCraftQuality()` with full principles and 1 retry. Reliability pass 2026-08-01: `max_tokens: 2500` + `reasoning_effort: 'low'` (DeepSeek V4 Flash is a reasoning model — `max_tokens: 500` previously burned the whole budget on reasoning tokens and produced empty content), in-flight dedup, and trait-score cache-key bucketing (nearest 10) so mid-test prefetch shares the 1h cache with the final call.
 - `apps/server/src/matchExplanationService.ts` — pair match explanations with XIAOYUE_CRAFT_LITE injection + non-blocking craft diagnostic.
 - `apps/server/src/ai/socialIcebreakerPrompts.ts` — craft injection into icebreaker comment, recap, and session-pack prompts.
 - `apps/server/src/ai/miniscriptPrompts.ts` — craft injection + 3 narrative golden rules (show-don't-tell, conflict-driven, cliffhanger).

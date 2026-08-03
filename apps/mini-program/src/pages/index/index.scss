@@ -235,6 +235,169 @@
 }
 
 /* ── Copy ──────────────────────────────────────────────────────────── */
+/* E3 盒子吐卡 (2026-07-31): zero-size runtime anchor at the box mouth.
+   The burst measures this via createSelectorQuery instead of hardcoding
+   coordinates, so the --short 0.85 stage scale resolves for free. */
+.hero-stage__box-mouth-anchor {
+  position: absolute;
+  left: 50%;
+  top: 400rpx;
+  width: 2rpx;
+  height: 2rpx;
+  pointer-events: none;
+}
+
+/* Mechanism strip: six archetype seats the box "deals" out, a dotted
+   connector, and the destination pin. Sits between hero-zone and hero-text
+   so the burst flight is a clean ~300rpx drop in front of the box. */
+.mechanism-strip {
+  width: 100%;
+  height: 120rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  pointer-events: none;
+}
+
+.mechanism-strip__seats {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.mechanism-strip__seat {
+  width: 96rpx;
+  height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0; // revealed by the burst settle (or statically in RM/low-end)
+  // The transition lives on the BASE rule so the tap-replay fly-back
+  // (removing --settled) animates back to the box mouth instead of
+  // teleporting. The initial from-application is invisible either way
+  // (seats are opacity 0 until settled).
+  transition:
+    transform 460ms cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 240ms ease-out;
+}
+
+// ArchetypeHead sizes itself via inline rpx (dropped by the H5 preview);
+// the !important SCSS class wins over the inline style in every runtime,
+// and the inner image is pinned to the circle for the same reason.
+.mechanism-strip__head {
+  width: 88rpx !important;
+  height: 88rpx !important;
+
+  .archetype-head__image {
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
+
+/* Settle: inline from-transform (box mouth) → identity, staggered 40ms
+   (delays apply only while settled; the fly-back is unstaggered). */
+.mechanism-strip--settled .mechanism-strip__seat {
+  opacity: 1;
+  animation: seat-bob 4s ease-in-out 2s infinite;
+}
+
+.mechanism-strip--settled .mechanism-strip__seat:nth-child(1) { transition-delay: 0ms; animation-delay: 2s; }
+.mechanism-strip--settled .mechanism-strip__seat:nth-child(2) { transition-delay: 40ms; animation-delay: 2.3s; }
+.mechanism-strip--settled .mechanism-strip__seat:nth-child(3) { transition-delay: 80ms; animation-delay: 2.6s; }
+.mechanism-strip--settled .mechanism-strip__seat:nth-child(4) { transition-delay: 120ms; animation-delay: 2.9s; }
+.mechanism-strip--settled .mechanism-strip__seat:nth-child(5) { transition-delay: 160ms; animation-delay: 3.2s; }
+.mechanism-strip--settled .mechanism-strip__seat:nth-child(6) { transition-delay: 200ms; animation-delay: 3.5s; }
+
+.mechanism-strip__connector {
+  width: 64rpx;
+  height: 0;
+  border-top: 2rpx dotted rgba($color-text-primary-warm, 0.4);
+  margin: 0 12rpx;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.mechanism-strip__pin {
+  width: 56rpx;
+  height: 56rpx;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: scale(0.5);
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.mechanism-caption {
+  font-size: 22rpx;
+  color: rgba($color-text-primary-warm, 0.65);
+  line-height: 1.4;
+  margin-top: 2rpx;
+  text-align: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  opacity: 0; // revealed by --entered caption fade
+}
+
+.landing-page--entered .mechanism-strip__connector {
+  animation: connector-draw 220ms ease-out 1180ms both;
+}
+
+.landing-page--entered .mechanism-strip__pin {
+  animation: pin-pop 300ms cubic-bezier(0.34, 1.3, 0.64, 1) 1240ms both;
+}
+
+.landing-page--entered .mechanism-caption {
+  animation: landing-rm-fade 320ms ease-out 1280ms both;
+}
+
+@keyframes connector-draw {
+  from { opacity: 0; transform: scaleX(0); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+
+@keyframes pin-pop {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes seat-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4rpx); }
+}
+
+@keyframes box-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-2.5deg); }
+  75% { transform: rotate(2.5deg); }
+}
+
+/* Converge flights: dice + cards are "the quiz going into the box".
+   Endpoints are the sprite-centre → box-mouth deltas on the 750rpx stage
+   (the --short 0.85 wrapper scale shrinks the flight proportionally). */
+@keyframes cards-converge {
+  from { opacity: 1; transform: translate(0, 0) scale(1) rotate(-10deg); }
+  to { opacity: 0; transform: translate(219rpx, 196rpx) scale(0.35) rotate(-10deg); }
+}
+
+@keyframes dice-converge {
+  from { opacity: 1; transform: translate(0, 0) scale(1) rotate(12deg); }
+  to { opacity: 0; transform: translate(-249rpx, -8rpx) scale(0.35) rotate(12deg); }
+}
+
+@keyframes underline-draw {
+  from { opacity: 0; transform: scaleX(0) rotate(-1deg); }
+  to { opacity: 0.55; transform: scaleX(1) rotate(-1deg); }
+}
+
+@keyframes mechanism-seat-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Copy ──────────────────────────────────────────────────────────── */
 .hero-text {
   display: flex;
   flex-direction: column;
@@ -274,6 +437,45 @@
   opacity: 0; // revealed by --entered stagger
 }
 
+/* E2 金线三连 (2026-07-31): the subtitle's three beats get a hand-drawn
+   gold underline drawn in sequence — the sentence parses as 3 steps, and
+   the persistent 55% strokes keep the mechanism legible for late scanners.
+   Gold (not the purple link colour) + no pressed state = no link affordance. */
+.subtitle__beat {
+  display: inline-block;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 4rpx;
+    bottom: -2rpx;
+    height: 4rpx;
+    border-radius: 4rpx;
+    background: rgba($color-landed-gold, 0.85);
+    transform: scaleX(0) rotate(-1deg);
+    transform-origin: left center;
+    opacity: 0;
+  }
+}
+
+.subtitle__beat--3 {
+  color: $color-primary-dark;
+}
+
+.landing-page--entered .subtitle__beat--1::after {
+  animation: underline-draw 240ms ease-out 900ms both;
+}
+
+.landing-page--entered .subtitle__beat--2::after {
+  animation: underline-draw 240ms ease-out 1040ms both;
+}
+
+.landing-page--entered .subtitle__beat--3::after {
+  animation: underline-draw 240ms ease-out 1180ms both;
+}
+
 /* ── Entrance choreography (0–1410ms) ──────────────────────────────── */
 // 1. Box lands (drop + settle bounce), then peek reveals Xiaoyue's head.
 //    (The --rm block below neutralises both animations via !important —
@@ -281,7 +483,8 @@
 .landing-page--entered .hero-stage__hero-img--in {
   animation:
     hero-land 480ms cubic-bezier(0.22, 1, 0.36, 1) both,
-    hero-peek 300ms ease-out 860ms both;
+    hero-peek 300ms ease-out 860ms both,
+    box-shake 220ms ease-in-out 780ms both;
 }
 
 // 2. Halo blooms at 300ms, then breathes with the box (idle, same phase).
@@ -296,13 +499,19 @@
   animation: hero-breathe 4s ease-in-out 1.4s infinite;
 }
 
-// 4. Floating sprites stagger in (100ms apart, slight overshoot).
+// 4. Floating sprites stagger in (100ms apart, slight overshoot). Under E3,
+//    dice + cards are "the quiz": they pop in, then converge into the box
+//    mouth (consumed by the box before it deals the table).
 .landing-page--entered .hero-stage__sprite--cards {
-  animation: sprite-in-cards 420ms cubic-bezier(0.34, 1.3, 0.64, 1) 500ms both;
+  animation:
+    sprite-in-cards 260ms ease-out 420ms both,
+    cards-converge 320ms ease-in 760ms both;
 }
 
 .landing-page--entered .hero-stage__sprite--dice {
-  animation: sprite-in-dice 420ms cubic-bezier(0.34, 1.3, 0.64, 1) 600ms both;
+  animation:
+    sprite-in-dice 260ms ease-out 500ms both,
+    dice-converge 320ms ease-in 840ms both;
 }
 
 .landing-page--entered .hero-stage__sprite--map-pin {
@@ -786,6 +995,8 @@
 // animation:none drops the entrance fill state so the fade-out can take over.
 .landing-page--exiting .brand-mark,
 .landing-page--exiting .hero-zone,
+.landing-page--exiting .mechanism-strip,
+.landing-page--exiting .mechanism-caption,
 .landing-page--exiting .hero-text,
 .landing-page--exiting .bottom-zone {
   animation: none;
@@ -968,6 +1179,42 @@
     margin-top: 8rpx;
   }
 
+  // E3 compact variant (mandatory — the full strip pushes the page 4rpx
+  // over the 1280rpx budget at the 640px breakpoint).
+  .mechanism-strip {
+    height: 88rpx;
+  }
+
+  .mechanism-strip__seat {
+    width: 64rpx;
+    height: 64rpx;
+  }
+
+  .mechanism-strip__head {
+    width: 56rpx !important;
+    height: 56rpx !important;
+  }
+
+  .mechanism-strip__connector {
+    width: 48rpx;
+    margin: 0 8rpx;
+    border-top-width: 1rpx;
+  }
+
+  .mechanism-strip__pin {
+    width: 44rpx;
+    height: 44rpx;
+  }
+
+  .mechanism-caption {
+    font-size: 20rpx;
+    margin-top: 0;
+  }
+
+  .hero-text {
+    margin-top: 12rpx;
+  }
+
   // One wrapper scale shrinks halo/hero/sprites/particles together — no
   // per-element geometry recalculation.
   .hero-stage__scale {
@@ -993,6 +1240,41 @@
 
   .hero-stage__particles {
     display: none !important;
+  }
+
+  // E3: no converge flight, no shake — dice/cards are consumed instantly;
+  // heads fade in place at their seats (60ms opacity-only stagger), and the
+  // connector/pin/caption land right after without the burst.
+  .hero-stage__sprite--dice,
+  .hero-stage__sprite--cards {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+
+  .mechanism-strip__seat {
+    animation: mechanism-seat-fade 300ms ease-out 500ms both !important;
+  }
+
+  .mechanism-strip__seat:nth-child(2) { animation-delay: 560ms !important; }
+  .mechanism-strip__seat:nth-child(3) { animation-delay: 620ms !important; }
+  .mechanism-strip__seat:nth-child(4) { animation-delay: 680ms !important; }
+  .mechanism-strip__seat:nth-child(5) { animation-delay: 740ms !important; }
+  .mechanism-strip__seat:nth-child(6) { animation-delay: 800ms !important; }
+
+  .mechanism-strip__connector {
+    animation: connector-draw 220ms ease-out 900ms both !important;
+  }
+
+  .mechanism-strip__pin {
+    animation: pin-pop 300ms ease-out 1000ms both !important;
+  }
+
+  .mechanism-caption {
+    animation: landing-rm-fade 320ms ease-out 1060ms both !important;
+  }
+
+  .subtitle__beat::after {
+    animation: underline-draw 240ms ease-out 1000ms both !important;
   }
 
   // Bloom (one-shot) stays; the 4s pulse idle is dropped.
@@ -1050,6 +1332,44 @@
     opacity: 1 !important;
   }
 
+  // E3: dice/cards are consumed by the box in the settled composition —
+  // keep them hidden (must follow the generic sprite rule to win).
+  .hero-stage__sprite--dice,
+  .hero-stage__sprite--cards {
+    opacity: 0 !important;
+  }
+
+  // E3/E2 static settled composition: strip, connector, pin, caption,
+  // and the persistent gold underlines render without any animation.
+  .mechanism-strip__seat {
+    opacity: 1 !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .mechanism-strip__connector {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .mechanism-strip__pin {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .mechanism-caption {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .subtitle__beat::after {
+    animation: none !important;
+    opacity: 0.55 !important;
+    transform: scaleX(1) rotate(-1deg) !important;
+  }
+
   .hero-stage__particles {
     display: none !important;
   }
@@ -1087,6 +1407,8 @@
   /* Exit transitions should be instant when reduced motion is preferred */
   &.landing-page--exiting .brand-mark,
   &.landing-page--exiting .hero-zone,
+  &.landing-page--exiting .mechanism-strip,
+  &.landing-page--exiting .mechanism-caption,
   &.landing-page--exiting .hero-text,
   &.landing-page--exiting .bottom-zone {
     opacity: 0 !important;

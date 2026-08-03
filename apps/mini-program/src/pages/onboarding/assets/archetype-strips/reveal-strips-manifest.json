@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "frame": {
+    "width": 384,
+    "height": 384,
+    "padding": 0
+  },
+  "states": {}
+}

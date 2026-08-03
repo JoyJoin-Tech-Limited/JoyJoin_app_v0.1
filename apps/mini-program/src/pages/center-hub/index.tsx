@@ -14,6 +14,7 @@ import Button from '../../components/ui/Button'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import PageMorphWrapper from '../../components/ui/PageMorphWrapper'
 import FootprintOracleCard from '../../components/events/FootprintOracleCard'
+import { CountdownTickProvider } from '../../hooks/useCountdownTick'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
@@ -165,16 +166,18 @@ function CenterHubContent({
       scrollWithAnimation
     >
       <Text className='center-hub__list-header'>你的活动</Text>
-      {events.map((event, index) => (
-        <View key={event.id} className='center-hub__card'>
-          <FootprintOracleCard
-            event={event}
-            index={index}
-            isDegradation={isDegradation}
-            onClick={handleEventTap}
-          />
-        </View>
-      ))}
+      <CountdownTickProvider>
+        {events.map((event, index) => (
+          <View key={event.id} className='center-hub__card'>
+            <FootprintOracleCard
+              event={event}
+              index={index}
+              isDegradation={isDegradation}
+              onClick={handleEventTap}
+            />
+          </View>
+        ))}
+      </CountdownTickProvider>
       <View className='center-hub__bottom-spacer' />
     </ScrollView>
   )

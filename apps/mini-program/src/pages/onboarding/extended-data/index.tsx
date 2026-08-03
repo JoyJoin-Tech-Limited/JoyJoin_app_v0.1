@@ -15,6 +15,8 @@ import {
   type MacroCategory,
 } from '@shared/interests'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { getOnboardingVoiceLine } from '@shared/copy/onboardingVoice'
+import { getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import { ARCHETYPE_BY_ID, type ArchetypeId } from '@shared/personality'
 import { CATEGORY_COLORS } from '@shared/ui/categoryColors'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
@@ -35,6 +37,7 @@ import Card from '../../../components/ui/Card'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
+import BoxJourneySpine from '../../../components/onboarding/BoxJourneySpine'
 import { getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
@@ -129,6 +132,7 @@ export default function ExtendedDataPage() {
   const { user } = useAuth()
   const userArchetype = (user?.archetype as ArchetypeId | undefined) ?? (user?.primaryArchetype as ArchetypeId | undefined)
   const archetypeName = userArchetype ? ARCHETYPE_BY_ID[userArchetype]?.nameCn : undefined
+  const archetypeAccent = userArchetype ? getContrastSafeArchetypeColor(userArchetype) : undefined
 
   usePreloadCategoryIcons(!isLoading)
   const invalidateAuth = useInvalidateAuth()
@@ -249,9 +253,9 @@ export default function ExtendedDataPage() {
     }
 
     if (selectedCount === 0) {
-      return archetypeName
-        ? `作为${archetypeName}，你的社交雷达本来就很灵。先点一个真正想聊的话题，再点同一项就能升温。`
-        : '先点一个真正想聊的话题，再点同一项就能升温。三档会成为你的必聊项。'
+      // Bet 1 人格在场: Xiaoyue narrates as the user's archetype (Tier A
+      // voice matrix); Tier B step line is the unknown-archetype fallback.
+      return getOnboardingVoiceLine('extended-interests', userArchetype)
     }
 
     if (!canSubmit) {
@@ -265,7 +269,7 @@ export default function ExtendedDataPage() {
     }
 
     return '画像已解锁！把最期待的兴趣升到必聊项，匹配会更精准。'
-  }, [archetypeName, canSubmit, selectedCount, topPriorityCount])
+  }, [archetypeName, canSubmit, selectedCount, topPriorityCount, userArchetype])
 
   const footerCoachLine = useMemo(() => {
     if (selectedCount >= MAX_INTERESTS) {
@@ -440,7 +444,13 @@ export default function ExtendedDataPage() {
   return (
     <View className={pageClassName}>
       <View className='extended-data__header extended-data__stage extended-data__stage--1'>
-        <Text className='extended-data__eyebrow'>Onboarding 3 / 4</Text>
+        {/* 装盒进度 spine (Bet 3) replaces the old "Onboarding 3 / 4"
+            eyebrow pill in place. */}
+        <BoxJourneySpine
+          step={2}
+          accentColor={archetypeAccent}
+          className='extended-data__spine'
+        />
         <Text className='extended-data__title'>把兴趣热度标出来</Text>
         <Text className='extended-data__subtitle'>
           轻点加入 → 再点升温 → 三档成为必聊项

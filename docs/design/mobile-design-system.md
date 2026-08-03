@@ -1,7 +1,7 @@
 # Mobile-First Design System
 
 > **Status:** Active web-mobile design-system reference — last verified 2026-04-11.
-> **Scope:** This document primarily describes the mobile-first browser implementation in `apps/user-client`. The repo also has an active Taro + React mini-program client in `apps/mini-program`; use `docs/reference/reference/PLATFORM_COORDINATION.md` for current cross-platform ownership and drift tracking.
+> **Scope:** This document primarily describes the mobile-first browser implementation in `apps/user-client`. The repo also has an active Taro + React mini-program client in `apps/mini-program`; use `docs/reference/PLATFORM_COORDINATION.md` for current cross-platform ownership and drift tracking.
 
 ## Overview
 
@@ -11,7 +11,7 @@ This document describes the mobile-first design system implementation for JoyJoi
 
 - ✅ **Mobile Web (PWA)**: Web reference design-system implementation (`apps/user-client`, React + Tailwind CSS)
 - 🟢 **Taro Mini Program**: Active sibling client (`apps/mini-program`) that shares design intent but requires explicit parity review
-- 📚 **Raw WeChat Reference**: Supplemental conversion guidance only in `docs/reference/reference/wechat-mini-program-reference.md`
+- 📚 **Raw WeChat Reference**: Supplemental conversion guidance only in `docs/reference/wechat-mini-program-reference.md`
 - 📱 **Native Mobile**: Future consideration (React Native)
 
 ## Design Principles
@@ -313,9 +313,9 @@ from-[#FAFAFA] via-[#FFF5F7] to-[#FFE4E1]
 
 Use these references in order:
 
-1. `docs/reference/reference/PLATFORM_COORDINATION.md` — current platform ownership, parity risks, and coordination rules
+1. `docs/reference/PLATFORM_COORDINATION.md` — current platform ownership, parity risks, and coordination rules
 2. `apps/mini-program/README.md` — active workspace entry point for the Taro client
-3. `docs/reference/reference/wechat-mini-program-reference.md` — supplemental raw WXML/WXSS translation guide retained for legacy design-reference purposes
+3. `docs/reference/wechat-mini-program-reference.md` — supplemental raw WXML/WXSS translation guide retained for legacy design-reference purposes
 
 The table below is a raw platform-concept translation reference, not the architecture of the current Taro implementation.
 
@@ -400,5 +400,5 @@ Before releasing:
 - `/apps/user-client/src/pages/MobileLandingPage.tsx` - Reference implementation
 - `/apps/mini-program/` - Active Taro mini-program client
 - `/apps/user-client/src/index.css` - Mobile CSS utilities
-- `/docs/reference/reference/PLATFORM_COORDINATION.md` - Active web/mini-program coordination playbook
-- `/docs/reference/reference/wechat-mini-program-reference.md` - Supplemental raw WeChat reference guide
+- `/docs/reference/PLATFORM_COORDINATION.md` - Active web/mini-program coordination playbook
+- `/docs/reference/wechat-mini-program-reference.md` - Supplemental raw WeChat reference guide

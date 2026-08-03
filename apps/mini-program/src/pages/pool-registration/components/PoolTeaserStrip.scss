@@ -1,0 +1,155 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+@use '../../../styles/reveal-motion' as *;
+
+.pool-teaser {
+  margin-bottom: $spacing-md;
+
+  &__divider {
+    height: 2rpx;
+    border-radius: 1rpx;
+    background: rgba($color-primary, 0.12);
+    margin-bottom: $spacing-md;
+    transform-origin: left center;
+  }
+
+  &__voice {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: $line-height-normal;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__nodes {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  &__node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-xs;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  &__node-icon {
+    width: 56rpx;
+    height: 56rpx;
+  }
+
+  &__node-icon-fallback {
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.12);
+  }
+
+  &__node-label {
+    font-size: $font-size-xs;
+    line-height: $line-height-snug;
+    color: $color-text-tertiary-on-light;
+    text-align: center;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // The closing beat — 收进故事 — gets a quiet rise in presence: breathing
+  // room plus medium weight so the emotional node lands last.
+  &__node--last {
+    margin-left: $spacing-xs;
+
+    .pool-teaser__node-label {
+      color: $color-text-secondary;
+      font-weight: $font-weight-medium;
+    }
+  }
+
+  &--enter {
+    .pool-teaser__divider {
+      animation: pool-teaser-divider-in 0.28s $ease-reveal-rise both;
+    }
+
+    .pool-teaser__voice {
+      animation: reveal-rise-in 0.32s $ease-reveal-rise both;
+      animation-delay: 0.16s;
+    }
+
+    .pool-teaser__node {
+      animation: pool-teaser-node-pop 0.24s $ease-reveal-pop both;
+    }
+
+    // Delays must live under --enter: the shorthand above resets
+    // animation-delay, and only this specificity wins the cascade.
+    .pool-teaser__node--delay-0 { animation-delay: 0.28s; }
+    .pool-teaser__node--delay-1 { animation-delay: 0.35s; }
+    .pool-teaser__node--delay-2 { animation-delay: 0.42s; }
+    .pool-teaser__node--delay-3 { animation-delay: 0.49s; }
+    .pool-teaser__node--delay-4 { animation-delay: 0.56s; }
+    .pool-teaser__node--delay-5 { animation-delay: 0.63s; }
+  }
+
+  &--idle {
+    .pool-teaser__divider,
+    .pool-teaser__voice,
+    .pool-teaser__node {
+      animation: none;
+      opacity: 0;
+      transform: none;
+    }
+  }
+
+  &--static {
+    .pool-teaser__divider,
+    .pool-teaser__voice,
+    .pool-teaser__node {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@keyframes pool-teaser-divider-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+// Subtle sibling of reveal-pop-settle (0.6→1.04) tuned for the small strip
+// surfaces: gentler travel, same overshoot family.
+@keyframes pool-teaser-node-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pool-teaser--enter {
+    .pool-teaser__divider,
+    .pool-teaser__voice,
+    .pool-teaser__node {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

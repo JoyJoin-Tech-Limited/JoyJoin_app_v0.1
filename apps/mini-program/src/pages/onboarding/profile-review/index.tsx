@@ -16,11 +16,13 @@ import { getIntentEmoji, getIntentLabel } from '@shared/constants'
 import { MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
 import { getIndustryDisplayLabel, getOccupationDisplayLabel } from '@shared/occupations'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { getOnboardingVoiceLine } from '@shared/copy/onboardingVoice'
 import { STALE_TIME_PROFILE_TAGLINE_MS, TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
 import AnalyzingAnimation from '../../../components/loading/AnalyzingAnimation'
 import InterestChipCloud from '../../../components/profile/InterestChipCloud'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { haptics } from '../../../lib/utils/haptics'
+import { getGenderLabel } from '../../../lib/utils/genderLabel'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, fetchDiscoverShell, getUserState } from '../../../lib/api/api'
@@ -42,6 +44,8 @@ import AIContentReportButton from '../../../components/ai-content/AIContentRepor
 import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import WelcomeGiftCard from '../../../components/onboarding/WelcomeGiftCard'
 import ProfileReviewInviteCard from '../../../components/onboarding/ProfileReviewInviteCard'
+import BoxJourneySpine from '../../../components/onboarding/BoxJourneySpine'
+import UnboxingCeremony from '../../../components/onboarding/UnboxingCeremony'
 import JoyJoinIntroFlow from '../../../components/flow-animation/JoyJoinIntroFlow'
 import { shouldShowFlow } from '../../../components/flow-animation/FlowStorage'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
@@ -126,6 +130,7 @@ export default function ProfileReviewPage() {
   const [couponAttempt, setCouponAttempt] = useState(0)
   const [isInviteCardVisible, setIsInviteCardVisible] = useState(false)
   const [introNextStep, setIntroNextStep] = useState<string | undefined>()
+  const [showCeremony, setShowCeremony] = useState(false)
   const hasTrackedInviteImpressionRef = useRef(false)
   const hasStagedDiscoverPrefetchRef = useRef(false)
   const isScrolledRef = useRef(false)
@@ -138,7 +143,7 @@ export default function ProfileReviewPage() {
     }
   }, [shouldReduceMotion])
 
-  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsCouponCardVisible, setIsInviteCardVisible)
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsCouponCardVisible, setIsInviteCardVisible, setShowCeremony)
 
   // Reset invite-card impression tracking when the user returns via swipe-back
   // so analytics accurately reflect each visit.
@@ -148,7 +153,9 @@ export default function ProfileReviewPage() {
   })
   const queryClient = useQueryClient()
   const { user, isLoading } = useAuthGuard({
-    suspendOnboardingRedirect: isSubmitting || isPageExiting,
+    // The ceremony overlay is a mid-navigation state: keep the onboarding
+    // redirect suspended so it cannot yank the user away before routing.
+    suspendOnboardingRedirect: isSubmitting || isPageExiting || showCeremony,
   })
   const invalidateAuth = useInvalidateAuth()
   const analytics = useOnboardingAnalytics('profile-review', { enabled: !isLoading })
@@ -331,7 +338,9 @@ export default function ProfileReviewPage() {
     user?.occupationId as string | undefined,
     typeof user?.industryCategoryLabel === 'string' ? user.industryCategoryLabel : '',
   )
-  const profileTags = [user?.gender as string | undefined, ageLabel, currentCity].filter(
+  // Never render the raw gender enum ('female') on the entry card — map to
+  // the canonical Chinese chip label; unknown/undisclosed drops out.
+  const profileTags = [getGenderLabel(user?.gender as string | undefined), ageLabel, currentCity].filter(
     (item): item is string => Boolean(item),
   )
   const intentLabels = Array.isArray(user?.intent)
@@ -389,7 +398,7 @@ export default function ProfileReviewPage() {
     ? '入场卡已确认！去遇见对味的人和局吧。'
     : topInterestLabels.length > 0
       ? `${getMascotDisplayName(user)}会按这张卡上的兴趣热量，挑最对味的局给你。`
-      : '先确认这张卡，悦仔再帮你筛合适的局。'
+      : getOnboardingVoiceLine('profile-review', archetype)
 
   const aiInsightLine =
     !isTaglineLoading && isTaglineError
@@ -423,43 +432,15 @@ export default function ProfileReviewPage() {
       logInfo('[ProfileReview] Completing profile review')
       await completeProfileReview(apiRequest, trimmedBio.length > 0 ? trimmedBio : undefined)
 
-      const shouldHandoffIntro =
-        Boolean(user?.id)
-        && shouldShowFlow('joyjoin-intro', user?.id)
-        && user?.features?.flowIntroEnabled !== false
       setIsCelebrating(true)
       haptics('success')
 
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      if (shouldHandoffIntro) {
-        analytics.stepCompleted({
-          nextStep: 'discover',
-          hasArchetype: archetype !== '',
-          hasInterests: Boolean(interestsData?.totalSelections),
-        })
-        setIsCelebrating(false)
-        setIntroNextStep('discover')
-        return
-      }
-
-      await invalidateAuth()
-      const userState = await getUserState()
-
-      analytics.stepCompleted({
-        nextStep: userState.nextStep ?? 'discover',
-        hasArchetype: archetype !== '',
-        hasInterests: Boolean(interestsData?.totalSelections),
-      })
-
-      logInfo('[ProfileReview] Onboarding complete, routing from refreshed nextStep', {
-        nextStep: userState.nextStep,
-      })
-
-      await navigateToMiniProgramNextStep(userState.nextStep, {
-        mode: 'replace',
-        transition: { beforeNavigate: () => setIsPageExiting(true) },
-      })
+      // Phase 3 completion ceremony (Bet 2, the "second box opening"):
+      // the sealed box opens and the entry card rises; routing continues in
+      // handleCeremonyComplete on tap or after the overlay's auto-advance.
+      setShowCeremony(true)
     } catch (err) {
       setIsPageExiting(false)
       setIsCelebrating(false)
@@ -471,7 +452,54 @@ export default function ProfileReviewPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, archetype, interestsData?.totalSelections, invalidateAuth, isSubmitting, user?.id])
+  }, [analytics, isSubmitting])
+
+  const handleCeremonyComplete = useCallback(async () => {
+    setShowCeremony(false)
+    // Keep the auth-guard redirect suspended through routing: between the
+    // ceremony's dismissal and beforeNavigate, invalidateAuth() flips
+    // nextStep to 'discover', which would otherwise let useAuthGuard fire
+    // its own switchTab and tear down the intro flow / double-navigate.
+    setIsPageExiting(true)
+
+    try {
+      await withTimeout(invalidateAuth(), QUERY_TIMEOUT_MS)
+      const userState = await withTimeout(getUserState(), QUERY_TIMEOUT_MS)
+
+      analytics.stepCompleted({
+        nextStep: userState.nextStep ?? 'discover',
+        hasArchetype: archetype !== '',
+        hasInterests: Boolean(interestsData?.totalSelections),
+      })
+
+      logInfo('[ProfileReview] Onboarding complete, routing from refreshed nextStep', {
+        nextStep: userState.nextStep,
+      })
+
+      if (
+        userState.nextStep === 'discover'
+        && shouldShowFlow('joyjoin-intro', user?.id)
+        && user?.features?.flowIntroEnabled !== false
+      ) {
+        setIsCelebrating(false)
+        setIntroNextStep(userState.nextStep)
+        return
+      }
+
+      await navigateToMiniProgramNextStep(userState.nextStep, {
+        mode: 'replace',
+        transition: { beforeNavigate: () => setIsPageExiting(true) },
+      })
+    } catch (err) {
+      setIsPageExiting(false)
+      setIsCelebrating(false)
+      const message = err instanceof Error ? err.message : getErrorMessage('operation-failed')
+      setError(message)
+      analytics.errorOccurred('complete_failed', message)
+      logError('[ProfileReview] Post-ceremony routing failed', { message })
+      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
+    }
+  }, [analytics, archetype, interestsData?.totalSelections, invalidateAuth, user?.id])
 
   const handleIntroComplete = useCallback(async () => {
     await invalidateAuth()
@@ -583,7 +611,13 @@ export default function ProfileReviewPage() {
           </View>
 
           <View className={`profile-review__hero ${getStageClassName(1)}`}>
-            <Text className='profile-review__eyebrow'>最后一步 · 入场卡预览</Text>
+            {/* 装盒进度 spine, sealed state (Bet 3): the box is packed and
+                ready to open — sets up the Phase 3 ceremony payload. */}
+            <BoxJourneySpine
+              step={3}
+              accentColor={visual?.accentText}
+              className='profile-review__spine'
+            />
             <Text className='profile-review__title'>
               你的 <Text className='profile-review__title-en'>JoyJoin</Text> 入场卡已就绪
             </Text>
@@ -750,7 +784,7 @@ export default function ProfileReviewPage() {
               <View className={`profile-review__section ${getStageClassName(6)}`}>
                 <View className='profile-review__section-label'>
                   <JoyJoinIcon emoji='🎯' tier='semantic' size={24} className='profile-review__section-label-icon' />
-                  <Text className='profile-review__section-label-text'>来这里想…</Text>
+                  <Text className='profile-review__section-label-text'>来这里想要什么</Text>
                 </View>
                 <View className='profile-review__intent-wrap'>
                   {intentLabels.map((item) => (
@@ -974,6 +1008,18 @@ export default function ProfileReviewPage() {
           {isCelebrating ? '入场卡已确认' : isSubmitting ? '正在完成…' : '确认并进入发现'}
         </Button>
       </View>
+
+      {/* Phase 3 completion ceremony: the "second box opening" — sealed box
+          opens, the entry card rises; tap or auto-advance routes onward. */}
+      <UnboxingCeremony
+        visible={showCeremony}
+        displayName={displayName}
+        archetypeName={visual?.name}
+        accentText={visual?.accentText}
+        onComplete={() => {
+          void handleCeremonyComplete()
+        }}
+      />
     </View>
   )
 }

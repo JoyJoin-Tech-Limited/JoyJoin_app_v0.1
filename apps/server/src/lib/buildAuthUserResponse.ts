@@ -135,6 +135,11 @@ const [
     profileIdentityStageEnabled,
     flowIntroEnabled,
     flowLifecycleEnabled,
+    poolTeaserEnabled,
+    personalitySlotProfileFast,
+    personalitySlotProfileDramatic,
+    webglRevealEnabled,
+    shareAnimatedClipEnabled,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -165,6 +170,11 @@ const [
     getFeatureFlag('profileIdentityStageEnabled', true),
     getFeatureFlag('flowIntroEnabled', true),
     getFeatureFlag('flowLifecycleEnabled', true),
+    getFeatureFlag('poolTeaserEnabled', false),
+    getFeatureFlag('personalitySlotProfileFast', false),
+    getFeatureFlag('personalitySlotProfileDramatic', false),
+    getFeatureFlag('webglRevealEnabled', false),
+    getFeatureFlag('shareAnimatedClipEnabled', false),
   ]);
 
   // Never expose client debug surfaces in production, even if a stale
@@ -196,6 +206,13 @@ const [
       runPlanTemplatesEnabled,
       promoBannerEnabled,
       personalitySlotAnimationEnabled,
+      /** K3 Phase 1+ timing-profile selection (dramatic wins over fast). */
+      personalitySlotProfileFast,
+      personalitySlotProfileDramatic,
+      /** K3 Phase 2c spike: WebGL land-moment stage (CSS celebration fallback). */
+      webglRevealEnabled,
+      /** K3 Phase 3 / B3: server-composed animated share clip. */
+      shareAnimatedClipEnabled,
       personalityShareEnabled,
       paymentsEnabled: paymentsEnabledFlag,
       personalityTestEchoEnabled,
@@ -218,6 +235,7 @@ const [
       profileIdentityStageEnabled,
       flowIntroEnabled,
       flowLifecycleEnabled,
+      poolTeaserEnabled,
     },
   };
 

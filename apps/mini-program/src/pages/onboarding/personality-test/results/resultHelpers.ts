@@ -133,13 +133,64 @@ const FAST_PROFILE: AnimationProfile = {
   bridgeMs: 150,
 }
 
-export function getAnimationProfile(): AnimationProfile {
+const DRAMATIC_PROFILE: AnimationProfile = {
+  ...DEFAULT_PROFILE,
+  slotAnticipationMs: 1400,
+  slotSpinMs: 3600,
+  slotSpinIntervalMs: 150,
+  slotHoldIntervalMs: 240,
+  slotSlowStepDelays: [120, 180, 240, 300, 360, 420, 480, 540, 600, 660],
+  slotNearMissMs: 520,
+  slotRevealPauseMs: 400,
+  revealSilhouetteMs: 700,
+  revealFillMs: 1000,
+  revealGlowMs: 680,
+  bridgeMs: 450,
+  flowSafetyTimeoutMs: 18000,
+}
+
+export type AnimationProfileName = 'baseline' | 'fast' | 'dramatic'
+
+const PROFILE_BY_NAME: Record<AnimationProfileName, AnimationProfile> = {
+  baseline: DEFAULT_PROFILE,
+  fast: FAST_PROFILE,
+  dramatic: DRAMATIC_PROFILE,
+}
+
+/**
+ * Resolve the slot animation timing profile.
+ *
+ * Precedence (K3 Phase 1+, 2026-08-01):
+ *  1. Web-sandbox query param `?animationProfile=` (design-audit:intentional —
+ *     mini-program has no `window`, so this branch never runs in production).
+ *  2. `profileName` — server-selected via the `personalitySlotProfileFast` /
+ *     `personalitySlotProfileDramatic` feature flags (dramatic wins, both
+ *     false = baseline).
+ *  3. Baseline default.
+ */
+export function getAnimationProfile(profileName: AnimationProfileName = 'baseline'): AnimationProfile {
   if (typeof window !== 'undefined') {
     const url = new URL(window.location.href) // design-audit:intentional — web sandbox only; mini-program skips this branch
-    const profileName = url.searchParams.get('animationProfile')
-    if (profileName === 'fast') return FAST_PROFILE
+    const sandboxName = url.searchParams.get('animationProfile')
+    if (sandboxName === 'fast' || sandboxName === 'dramatic') {
+      return PROFILE_BY_NAME[sandboxName]
+    }
   }
-  return DEFAULT_PROFILE
+  return PROFILE_BY_NAME[profileName]
+}
+
+/**
+ * Web-sandbox renderer override for the Phase 2c WebGL land-stage spike:
+ * `?renderer=webgl` forces the WebGL land moment (mirrors the
+ * `?animationProfile=` sandbox mechanism). Mini-program has no `window`,
+ * so production selection is purely the `webglRevealEnabled` feature flag.
+ */
+export function getSandboxRendererOverride(): 'webgl' | null {
+  if (typeof window !== 'undefined') {
+    const url = new URL(window.location.href) // design-audit:intentional — web sandbox only; mini-program skips this branch
+    return url.searchParams.get('renderer') === 'webgl' ? 'webgl' : null
+  }
+  return null
 }
 
 /** @deprecated Use AnimationProfile via getAnimationProfile() */

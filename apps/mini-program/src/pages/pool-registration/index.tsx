@@ -36,33 +36,23 @@ import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
 import LoadingScreen from '../../components/loading/LoadingScreen'
-import Button from '../../components/ui/Button'
-import Card from '../../components/ui/Card'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
-import StatusCard from '../../components/ui/StatusCard'
-import IntentCard from '../../components/intent/IntentCard'
 import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
 import BlindBoxFlow from '../../components/flow-animation/BlindBoxFlow'
 import { shouldShowFlow } from '../../components/flow-animation/FlowStorage'
 import { formatEventDateTime } from '../../lib/utils/eventDisplay'
 
 import {
-  ALCOHOL_COMFORT_OPTIONS,
-  BAR_THEME_OPTIONS,
   buildFallbackBrief,
   buildPreJoinVibeBriefPath,
-  DIETARY_OPTIONS,
   getBudgetOptions,
   getFlowStepLabels,
   INTENT_FLOW_OPTIONS,
-  LANGUAGE_OPTIONS,
   resolvePoolEventType,
   type PoolEventType,
 } from './flowConfig'
 import {
   buildFormStateFromDraft,
   buildRegistrationPayload,
-  buildSummaryItems,
   findLabels,
   getPoolRegistrationAdvanceBlocker,
   getPoolRegistrationSubmitBlocker,
@@ -73,11 +63,17 @@ import {
   type RegistrationFormState,
   type RegistrationStep,
 } from './poolRegistrationForm'
+import PoolRegistrationDetailsFields from './components/PoolRegistrationDetailsFields'
 import ChoiceCard from './components/ChoiceCard'
-import ChoiceChip from './components/ChoiceChip'
+import PoolRegistrationErrorCard from './components/PoolRegistrationErrorCard'
+import PoolRegistrationFooterBar from './components/PoolRegistrationFooterBar'
+import PoolRegistrationIntentGrid, { MAX_INTENTS } from './components/PoolRegistrationIntentGrid'
+import PoolRegistrationNewRegistrantBanner from './components/PoolRegistrationNewRegistrantBanner'
+import PoolRegistrationResumeCard from './components/PoolRegistrationResumeCard'
+import PoolRegistrationStepper from './components/PoolRegistrationStepper'
+import PoolRegistrationSummaryCard from './components/PoolRegistrationSummaryCard'
 import { getIntentFeedback } from './components/intentFeedback'
 import PoolRegistrationHeroPersonaSection from './components/PoolRegistrationHeroPersonaSection'
-import StepPill from './components/StepPill'
 import XiaoyueCoachCard from './components/XiaoyueCoachCard'
 import XiaoyueLetterCard from './components/XiaoyueLetterCard'
 import {
@@ -92,8 +88,6 @@ const STEP_BRIEF = 0
 const STEP_BUDGET = 1
 const STEP_INTENT = 2
 const STEP_DETAILS = 3
-
-const MAX_INTENTS = 3
 
 const TIER_COPY = {
   budgetStepHelper: '这是报名时最重要的节奏信号之一，悦仔会优先帮你避开预算预期完全不一样的组合。',
@@ -128,24 +122,6 @@ function getEntitlementCode(error: unknown): MiniProgramPaymentEntitlementCode |
   }
 
   return null
-}
-
-function getResumeNoticeCopy(
-  context: MiniProgramPoolRegistrationReturnContext,
-): { kicker: string; title: string; body: string } {
-  if (context.paymentStatus === 'paid') {
-    return {
-      kicker: '权益已到账',
-      title: '刚才那份报名偏好已经替你接回来',
-      body: '预算、期待和细节都已恢复，现在点下方按钮就能继续完成这场报名。',
-    }
-  }
-
-  return {
-    kicker: context.handoffCode === 'NO_AVAILABLE_EVENT_PACK_CREDITS' ? '次数已用完' : '偏好已保留',
-    title: '先开通权益，再回来继续报名',
-    body: '你刚填写的预算和偏好不会丢，完成支付确认后会自动回到这里继续。',
-  }
 }
 
 export default function PoolRegistrationPage() {
@@ -217,6 +193,7 @@ export default function PoolRegistrationPage() {
 
   // Aggregate persona snapshot for the pool (feature-flagged, kill-switch can disable)
   const personaSnapshotEnabled = user?.features?.personaSnapshotEnabled ?? true
+  const poolTeaserEnabled = user?.features?.poolTeaserEnabled === true
   const [personaSnapshotError, setPersonaSnapshotError] = useState(false)
   const {
     data: personaSnapshot,
@@ -371,6 +348,32 @@ export default function PoolRegistrationPage() {
       }
     },
   })
+
+  // Track pool teaser impression once per page mount — only when the strip is
+  // actually shown (flag on, step 0, letter past its skeleton state) and never
+  // on useDidShow re-entry.
+  const hasTrackedPoolTeaserImpressionRef = useRef(false)
+  const hasLoggedPoolTeaserHiddenRef = useRef(false)
+  useEffect(() => {
+    if (authLoading) return
+    // The strip only renders inside the Step 0 letter card — the Empty and
+    // AlreadyJoined terminal states short-circuit it, so gate impressions on
+    // the letter card actually being on screen.
+    if (!pool || poolError || alreadyRegistered) return
+    if (!poolTeaserEnabled) {
+      if (!hasLoggedPoolTeaserHiddenRef.current) {
+        hasLoggedPoolTeaserHiddenRef.current = true
+        logInfo('[PoolTeaser] hidden by flag', { poolId })
+      }
+      return
+    }
+    if (step !== STEP_BRIEF) return
+    if (briefLoading && !briefData) return
+    if (hasTrackedPoolTeaserImpressionRef.current) return
+    hasTrackedPoolTeaserImpressionRef.current = true
+    discoverAnalytics.track('pool_teaser_impression', poolId, { variant: 'in-letter' })
+    logInfo('[PoolTeaser] shown', { poolId })
+  }, [authLoading, pool, poolError, alreadyRegistered, poolTeaserEnabled, step, briefLoading, briefData, poolId])
 
   useEffect(() => {
     appliedReturnContextRef.current = 0
@@ -551,8 +554,6 @@ export default function PoolRegistrationPage() {
     return '继续填写'
   }, [step, hasBudgetSelection, hasIntentSelection, isRegistering, resumeContext?.paymentStatus])
 
-  const summaryItems = useMemo(() => buildSummaryItems(formState, eventType), [formState, eventType])
-
   const anyDetailSelected = useMemo(
     () => hasAnyDetailSelection(formState, eventType),
     [formState, eventType],
@@ -623,43 +624,6 @@ export default function PoolRegistrationPage() {
       }
     })
   }, [poolId])
-
-  // Memoize intent grid to prevent re-render on unrelated state changes
-  const intentGrid = useMemo(() => {
-    const isFlexibleActive = formState.eventIntent.includes(INTENT_FLEXIBLE_OPTION.value)
-    const explicitCount = formState.eventIntent.filter(
-      (item) => item !== INTENT_FLEXIBLE_OPTION.value,
-    ).length
-    const isCapReached = explicitCount >= MAX_INTENTS
-    return (
-      <View className='pool-reg__choice-grid'>
-        {INTENT_FLOW_OPTIONS.map((option) => {
-          const isExplicitlySelected = formState.eventIntent.includes(option.value)
-          const isFlexibleOption = option.value === INTENT_FLEXIBLE_OPTION.value
-          const isDimmed = isFlexibleActive && !isFlexibleOption && !isExplicitlySelected
-          const isDisabled = isCapReached && !isExplicitlySelected && !isFlexibleOption
-
-          return (
-            <IntentCard
-              key={option.value}
-              option={{
-                value: option.value,
-                label: option.label,
-                emoji: option.emoji,
-                subtitle: option.description,
-              }}
-              selected={isExplicitlySelected}
-              dimmed={isDimmed}
-              disabled={isDisabled}
-              onClick={() => handleIntentToggle(option.value)}
-              iconSize={48}
-              testId={`pool-reg-intent-${option.value}`}
-            />
-          )
-        })}
-      </View>
-    )
-  }, [formState.eventIntent, handleIntentToggle])
 
   const handleLanguageToggle = useCallback((value: string) => {
     setFormState((currentState) => ({
@@ -931,8 +895,6 @@ export default function PoolRegistrationPage() {
     )
   }
 
-  const resumeNotice = resumeContext ? getResumeNoticeCopy(resumeContext) : null
-
   return (
     <View className='pool-reg'>
       <ScrollView className='pool-reg__scroll' scrollY enhanced showScrollbar={false} scrollIntoView={scrollErrorId}>
@@ -944,22 +906,10 @@ export default function PoolRegistrationPage() {
           </View>
 
           {personaSnapshotEnabled && showNewRegistrantBanner && !isLoadingPersonaSnapshot && personaSnapshot ? (
-            <View className='pool-reg__persona-banner'>
-              <Text className='pool-reg__persona-banner-text'>
-                最近又新增了 {newRegistrantDelta} 位伙伴，画像已更新
-              </Text>
-              <View
-                className='pool-reg__persona-banner-close'
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowNewRegistrantBanner(false)
-                }}
-                hoverClass='pool-reg__persona-banner-close--active'
-                aria-label='关闭提示'
-              >
-                <Text className='pool-reg__persona-banner-close-text'>×</Text>
-              </View>
-            </View>
+            <PoolRegistrationNewRegistrantBanner
+              delta={newRegistrantDelta}
+              onClose={() => setShowNewRegistrantBanner(false)}
+            />
           ) : null}
 
           <PoolRegistrationHeroPersonaSection
@@ -988,48 +938,21 @@ export default function PoolRegistrationPage() {
             visible={staggerMounted}
             reduceMotion={reduceMotion}
             isLoading={briefLoading && !briefData}
+            teaser={{ enabled: poolTeaserEnabled }}
           />
         </>
       ) : null}
 
-      {resumeNotice ? (
-        <Card
-          className={[
-            'pool-reg__resume-card',
-            resumeContext?.paymentStatus === 'paid' ? 'pool-reg__resume-card--paid' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-        >
-          <Text className='pool-reg__resume-kicker'>{resumeNotice.kicker}</Text>
-          <Text className='pool-reg__resume-title'>{resumeNotice.title}</Text>
-          <Text className='pool-reg__resume-copy'>{resumeNotice.body}</Text>
-          <View className='pool-reg__resume-pills'>
-            {selectedBudget ? <Text className='pool-reg__resume-pill'>{selectedBudget}</Text> : null}
-            {formState.eventIntent.length > 0 ? (
-              <Text className='pool-reg__resume-pill'>{formState.eventIntent.length} 个期待</Text>
-            ) : null}
-            <Text className='pool-reg__resume-pill'>{eventType}</Text>
-          </View>
-        </Card>
+      {resumeContext ? (
+        <PoolRegistrationResumeCard
+          context={resumeContext}
+          selectedBudget={selectedBudget}
+          intentCount={formState.eventIntent.length}
+          eventType={eventType}
+        />
       ) : null}
 
-      {step > 0 ? (
-        <View className='pool-reg__stepper' role='list' aria-label='报名步骤'>
-          {stepLabels.map((label, index) => {
-            const stepIndex = index + 1
-            return (
-              <StepPill
-                key={label}
-                index={stepIndex}
-                label={label}
-                active={step === stepIndex}
-                complete={step > stepIndex}
-              />
-            )
-          })}
-        </View>
-      ) : null}
+      {step > 0 ? <PoolRegistrationStepper step={step} labels={stepLabels} /> : null}
 
       {showBudgetReaction && step === 1 ? (
         <XiaoyueChatBubble
@@ -1115,7 +1038,7 @@ export default function PoolRegistrationPage() {
               )
             }
           >
-            {intentGrid}
+            <PoolRegistrationIntentGrid selected={formState.eventIntent} onToggle={handleIntentToggle} />
           </XiaoyueCoachCard>
         </View>
       ) : null}
@@ -1153,182 +1076,40 @@ export default function PoolRegistrationPage() {
               )
             }
           >
-            <Card className='pool-reg__summary-card' role='group' aria-label='已选偏好（已锁定）'>
-              <View className='pool-reg__summary-header'>
-                <View className='pool-reg__summary-header-accent' aria-hidden='true' />
-                <Text className='pool-reg__summary-title'>已选好的偏好</Text>
-                <View className='pool-reg__summary-completed' aria-hidden='true'>
-                  <View className='pool-reg__summary-completed-dot' />
-                  <Text className='pool-reg__summary-completed-text'>已锁定</Text>
-                </View>
-              </View>
+            <PoolRegistrationSummaryCard formState={formState} eventType={eventType} />
 
-              <View className='pool-reg__summary-body'>
-                {summaryItems.map((item, index) => {
-                  const showChips =
-                    item.intentLabels && item.intentLabels.length > 0
-                      ? item.intentLabels
-                      : [item.value]
-
-                  return (
-                    <View key={item.label}>
-                      <View className='pool-reg__summary-row'>
-                        <View className='pool-reg__summary-row-icon' aria-hidden='true'>
-                          <JoyJoinIcon emoji={item.icon} tier={item.tier} size={28} />
-                        </View>
-                        <View className='pool-reg__summary-row-content'>
-                          <Text className='pool-reg__summary-row-label'>{item.label}</Text>
-                          <View className='pool-reg__summary-row-chips'>
-                            {showChips.map((label) => {
-                              const isEmpty = label === '未选择'
-                              return (
-                                <View
-                                  key={label}
-                                  className={[
-                                    'pool-reg__summary-chip',
-                                    isEmpty ? 'pool-reg__summary-chip--empty' : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                >
-                                  <Text className='pool-reg__summary-chip-text'>{label}</Text>
-                                </View>
-                              )
-                            })}
-                          </View>
-                        </View>
-                      </View>
-                      {index < summaryItems.length - 1 && (
-                        <View className='pool-reg__summary-divider' aria-hidden='true' />
-                      )}
-                    </View>
-                  )
-                })}
-              </View>
-            </Card>
-
-            <View className='pool-reg__field'>
-              <Text className='pool-reg__field-title'>愿意用什么语言开聊</Text>
-              <View className='pool-reg__chip-row'>
-                {LANGUAGE_OPTIONS.map((option) => (
-                  <ChoiceChip
-                    key={option.value}
-                    option={option}
-                    selected={formState.preferredLanguages.includes(option.value)}
-                    onClick={() => handleLanguageToggle(option.value)}
-                  />
-                ))}
-              </View>
-            </View>
-
-            {eventType === '酒局' ? (
-              <>
-                <View className='pool-reg__field'>
-                  <Text className='pool-reg__field-title'>更想去怎样的酒局</Text>
-                  <View className='pool-reg__chip-row'>
-                    {BAR_THEME_OPTIONS.map((option) => (
-                      <ChoiceChip
-                        key={option.value}
-                        option={option}
-                        selected={formState.barThemes.includes(option.value)}
-                        onClick={() => handleBarThemeToggle(option.value)}
-                      />
-                    ))}
-                  </View>
-                </View>
-
-                <View className='pool-reg__field'>
-                  <Text className='pool-reg__field-title'>喝酒舒适度</Text>
-                  <View className='pool-reg__choice-grid' role='radiogroup' aria-label='喝酒舒适度'>
-                    {ALCOHOL_COMFORT_OPTIONS.map((option) => (
-                      <ChoiceCard
-                        key={option.value}
-                        option={option}
-                        selected={formState.alcoholComfort === option.value}
-                        onClick={() => handleAlcoholComfortSelect(option.value)}
-                        compact
-                      />
-                    ))}
-                  </View>
-                </View>
-              </>
-            ) : (
-              <>
-                <View className='pool-reg__field'>
-                  <Text className='pool-reg__field-title'>需要避开什么</Text>
-                  <Text className='pool-reg__field-desc'>你的饮食要求会参与匹配，选好了大家吃起来更自在</Text>
-                  <View className='pool-reg__chip-row'>
-                    {DIETARY_OPTIONS.map((option) => (
-                      <ChoiceChip
-                        key={option.value}
-                        option={option}
-                        selected={formState.dietaryRestrictions.includes(option.value)}
-                        onClick={() => handleDietaryToggle(option.value)}
-                      />
-                    ))}
-                  </View>
-                </View>
-              </>
-            )}
+            <PoolRegistrationDetailsFields
+              eventType={eventType}
+              formState={formState}
+              onLanguageToggle={handleLanguageToggle}
+              onBarThemeToggle={handleBarThemeToggle}
+              onAlcoholComfortSelect={handleAlcoholComfortSelect}
+              onDietaryToggle={handleDietaryToggle}
+            />
           </XiaoyueCoachCard>
         </View>
       ) : null}
 
       {error ? (
-        <View
-          className={`pool-reg__error-wrap${reduceMotion ? ' pool-reg__error-wrap--reduce-motion' : ''}`}
-          role='alert'
-          aria-live='polite'
-          id='pool-reg-error-anchor'
-        >
-          <StatusCard
-            tone='error'
-            title='提交没成功'
-            description={error}
-            className='pool-reg__error-card'
-            heroSrc={getXiaoyueExpressionAsset('actionFailure')}
-            action={{
-              label: isRegistering ? '提交中…' : '重新提交',
-              onClick: handleRegister,
-              variant: 'primary',
-              disabled: isRegistering,
-              loading: isRegistering,
-            }}
-            footer={
-              <Text className='pool-reg__error-helper'>别担心，悦仔帮你再试一次就好～</Text>
-            }
-          />
-        </View>
+        <PoolRegistrationErrorCard
+          error={error}
+          isRegistering={isRegistering}
+          reduceMotion={reduceMotion}
+          onRetry={handleRegister}
+        />
       ) : null}
       </ScrollView>
 
-      <View className='pool-reg__footer'>
-        {step === 0 ? (
-          <Button
-            variant='brand'
-            className='pool-reg__submit pool-reg__submit--ceremony'
-            onClick={handleAdvance}
-            hoverClass='pool-reg__submit--active'
-          >
-            {eventType ? `入座这场${eventType}` : '开始我的报名'}
-          </Button>
-        ) : (
-          <View className='pool-reg__footer-actions'>
-            <Button variant='secondary' className='pool-reg__footer-btn' onClick={handleBack}>
-              上一步
-            </Button>
-            <Button
-              variant='primary'
-              className='pool-reg__footer-btn pool-reg__footer-btn--primary'
-              onClick={step === 3 ? handleRegister : handleAdvance}
-              disabled={advanceDisabled}
-              loading={step === 3 && isRegistering}
-            >
-              {advanceLabel}
-            </Button>
-          </View>
-        )}
-      </View>
+      <PoolRegistrationFooterBar
+        step={step}
+        eventType={eventType}
+        advanceLabel={advanceLabel}
+        advanceDisabled={advanceDisabled}
+        isRegistering={isRegistering}
+        onAdvance={handleAdvance}
+        onBack={handleBack}
+        onRegister={handleRegister}
+      />
     </View>
   )
 }

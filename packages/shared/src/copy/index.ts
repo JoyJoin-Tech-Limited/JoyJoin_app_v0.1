@@ -43,6 +43,14 @@ export {
   interpolatePattern,
 } from './mascotVoice.js';
 
+// 🟢 Onboarding Archetype Voice Matrix (Bet 1 人格在场, 2026-07-31)
+export {
+  ONBOARDING_VOICE_STEP_IDS,
+  ONBOARDING_VOICE_TABLES,
+  getOnboardingVoiceLine,
+} from './onboardingVoice.js';
+export type { OnboardingVoiceStepId } from './onboardingVoice.js';
+
 // 🟠 Orange Word Exceptions
 export {
   ORANGE_WORDS,

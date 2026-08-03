@@ -5,12 +5,12 @@ This document is the active architecture map for contributors working in the cur
 Use it together with:
 - `.github/copilot-instructions.md`
 - `DEVELOPER_QUICK_REFERENCE.md`
-- `docs/systems/systems/onboarding-flow.md`
-- `docs/ai/ai/ai-workflow-documentation-refresh.md` — when updating documentation across `docs/`, `.github/skills/`, and `.github/agents/` in one effort (scope tiers, validation)
+- `docs/systems/onboarding-flow.md`
+- `docs/ai/ai-workflow-documentation-refresh.md` — when updating documentation across `docs/`, `.github/skills/`, and `.github/agents/` in one effort (scope tiers, validation)
 
 ## Monorepo map
 
-- `apps/user-client` — user-facing React app
+- `apps/user-client` — former user-facing React app; **archived 2026-05** to `archived/workspaces/user-client/` (reference-only, not a live surface)
 - `apps/admin-client` — separate admin React app
 - `apps/mini-program` — WeChat Mini Program client (Taro 4 + React 18); **launch-primary** surface for the current track (see [`apps/mini-program/README.md`](../../apps/mini-program/README.md))
 - `apps/server` — Express API and operational backend
@@ -22,17 +22,11 @@ Use it together with:
 
 **Authority chain**
 1. `apps/server/src/routes/domains/auth.ts` computes and serves `nextStep` from `GET /api/auth/user`
-2. `apps/user-client/src/hooks/useAuth.ts` exposes that contract
-3. `apps/user-client/src/App.tsx` gates routes from `nextStep`
-4. `apps/user-client/src/features/onboarding/active/flow.ts` and `useOnboardingOrchestrator.ts` provide the canonical client mapping helpers
+2. `packages/shared/src/onboarding.ts` provides the canonical client mapping helpers (`nextStepToOnboardingStep`, `buildOnboardingProgress`)
+3. `apps/mini-program/src/lib/onboarding/onboardingRoutes.ts` maps steps to pages (see the mini-program paragraph below)
 
 **Active flow module**
-- `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx`
-- `apps/user-client/src/pages/PersonalityTestResultPage.tsx`
-- `apps/user-client/src/features/onboarding/active/pages/WeChatAuthGatePage.tsx`
-- `apps/user-client/src/features/onboarding/active/pages/EssentialDataPage.tsx`
-- `apps/user-client/src/features/onboarding/active/pages/ExtendedDataPage.tsx`
-- `apps/user-client/src/features/onboarding/active/pages/FinalProfileReviewPage.tsx`
+- `apps/mini-program/src/pages/onboarding/` — setup, extended, review, welcome-back, personality-test (see the mini-program paragraph below)
 
 **Active pre-auth route sequence**
 - `/personality-test` → `/personality-test/results` (inline WeChat login + anonymous answer import)
@@ -44,9 +38,8 @@ Use it together with:
 - Keep server-owned completion semantics aligned with the `users` table and `/api/auth/user` response.
 - **`profileExtendedComplete`** (auth response) is not the same gate as **`hasCompletedInterestsCarousel`** — extended-data step uses the carousel flag.
 - **`onboardingCheckpoint`** (optional on `users`) can let `auth.ts` advance `nextStep` forward for recovery when the checkpoint is ahead of the base step.
-- Legacy onboarding surfaces stay under `apps/user-client/src/legacy/onboarding/`.
 
-**Mini-program:** `apps/mini-program/src/pages/onboarding/` mirrors the value-first and post-auth steps; shared helpers live in `packages/shared/src/onboarding.ts`. **Personality test** UI: `pages/onboarding/personality-test/` (subpackage). **WeChat login:** returning users `pages/login` + `hooks/useWeChatLogin.ts` (`/api/auth/wechat/login`); first-time handoff from test results uses `authenticateMiniProgramUserWithTest` (`/api/auth/wechat/login-with-test`) inline on the results page. The standalone auth-gate page was removed in 2026-05. **Payments:** `pages/blind-box-payment`, `pages/payment-verification`, plus `lib/paymentPendingOrder*.ts` and `app.ts` pending-order resume — see [`docs/reference/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md).
+**Mini-program:** `apps/mini-program/src/pages/onboarding/` mirrors the value-first and post-auth steps; shared helpers live in `packages/shared/src/onboarding.ts`. **Personality test** UI: `pages/onboarding/personality-test/` (subpackage). **WeChat login:** returning users `pages/login` + `hooks/useWeChatLogin.ts` (`/api/auth/wechat/login`); first-time handoff from test results uses `authenticateMiniProgramUserWithTest` (`/api/auth/wechat/login-with-test`) inline on the results page. The standalone auth-gate page was removed in 2026-05. **Payments:** `pages/blind-box-payment`, `pages/payment-verification`, plus `lib/paymentPendingOrder*.ts` and `app.ts` pending-order resume — see [`docs/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md).
 
 **Mini-program landing page cold-start behavior (2026-06-08):**
 - `AutoLoginBridge` (rendered in `app.ts`) silently re-authenticates returning users via `wx.login` → `seedMiniProgramAuthSession()`. Retryable errors (transport, 500) reset the attempt guard so the next mount/foreground can retry; 401s are treated as expected (new user) and do not retry.
@@ -57,9 +50,6 @@ Use it together with:
 - **Authenticated discover routing (2026-06-13):** Returning authenticated users whose `nextStep === 'discover'` are treated as a valid continue state. The primary CTA label shows `进入发现页` and routes directly to Discover (`Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.discover })`) instead of pushing them through onboarding again.
 
 Primary files:
-- `apps/user-client/src/features/onboarding/README.md`
-- `apps/user-client/src/App.tsx`
-- `apps/user-client/src/hooks/useAuth.ts`
 - `apps/server/src/routes/domains/auth.ts`
 - `apps/server/src/routes/domains/onboarding.ts`
 - `packages/shared/src/onboarding.ts`
@@ -81,10 +71,8 @@ Primary files:
 - `packages/shared/src/types/aiMeta.ts`
 
 **Client surfaces**
-- `apps/user-client/src/pages/DiscoverPage.tsx`
-- `apps/user-client/src/pages/MatchingStatusPage.tsx`
-- `apps/user-client/src/components/matching/`
-- `apps/user-client/src/components/event-pool-registration/`
+- `apps/mini-program/src/pages/discover/`
+- `apps/mini-program/src/pages/pool-registration/`
 - `apps/mini-program/src/pages/matching-status/index.tsx`
 - `apps/mini-program/src/pages/squad-unboxing/index.tsx`
 - `apps/mini-program/src/pages/pool-group-detail/index.tsx`
@@ -95,7 +83,7 @@ Boundary:
 - `PoolForecastStrip` is deterministic client-side atmosphere guidance only; it does not participate in pair scoring or group formation.
 - Matching is not deadline-only: `poolRealtimeMatchingService.ts` supports registration-triggered realtime scans and scheduled scans via `scanPoolAndMatch`.
 - Post-match clients consume `PoolGroupMemberSummary` from `packages/shared/src/api.ts`; use `ageLabel` and the visibility flags instead of reconstructing exact age or other hidden profile fields client-side.
-- Browser blind-box checkout returns through `apps/user-client/src/pages/BlindBoxConfirmationPage.tsx` and `apps/admin-client/src/pages/BlindBoxConfirmationPage.tsx`; both pages poll `/api/payments/status/:wechatOrderId`, keep transient verification failures recoverable, and then hand off to `/events` or `/discover` after confirmation. (Web is reference-only; not shipping.)
+- Admin blind-box checkout returns through `apps/admin-client/src/pages/BlindBoxConfirmationPage.tsx`; it polls `/api/payments/status/:wechatOrderId`, keeps transient verification failures recoverable, and hands off to `/events` or `/discover` after confirmation. (The archived web path `archived/workspaces/user-client/src/pages/BlindBoxConfirmationPage.tsx` is reference-only; not shipping.)
 - Mini-program payment verification remains separate under `apps/mini-program/src/pages/payment-verification/index.tsx`; keep the JSAPI in-program payment flow there as the canonical launch-primary flow. The browser H5 confirmation path is reference-only.
 - Mini-program personality-test results live in `apps/mini-program/src/pages/onboarding/personality-test/results/index.tsx`; keep reveal replay, native share hooks, and the poster composition helper in `apps/mini-program/src/pages/onboarding/personality-test/results/sharePoster.ts` inside that Taro onboarding surface rather than moving them into server or shared runtime modules.
 
@@ -137,8 +125,6 @@ Canonical implementation and rollback notes: `docs/alang-prototype/implementatio
 - `apps/server/src/lib/momentCardRenderer.ts` — server-side Moment Card PNG renderer via `@napi-rs/canvas`; registers CJK fonts from common system paths on module load; logs warning if none found
 
 **Client hook/surfaces**
-- `apps/user-client/src/hooks/useSocialIcebreaker.ts`
-- `apps/user-client/src/pages/IcebreakerSessionPage.tsx`
 - `apps/mini-program/src/pages/icebreaker-session/index.tsx` — hosts `BonusGateOverlay` for the `mini_script` bonus vote gate
 - `apps/mini-program/src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx`
 
@@ -173,7 +159,7 @@ Boundary:
 Boundary:
 - If more than one app/runtime must agree on a contract, define it in `packages/shared`.
 - If code is runtime-specific, keep it in that app and import only the shared definitions.
-- `apps/user-client` is the active web sandbox and future web release surface; **`apps/mini-program` is the launch-primary WeChat client** for the current track. Shared business rules should not fork between them — use `packages/shared` and [`docs/reference/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md) when behaviour must align.
+- `apps/user-client` was archived to `archived/workspaces/user-client/` (2026-05); **`apps/mini-program` is the launch-primary client** for the current track, with `apps/admin-client` as the admin surface. Shared business rules must not fork — use `packages/shared` and [`docs/reference/PLATFORM_COORDINATION.md`](../reference/PLATFORM_COORDINATION.md) when behaviour must align.
 
 ### 5. Server domain ownership
 
@@ -214,12 +200,8 @@ Boundary:
 
 ## Where new files go
 
-### User client
-- Route-level page: `apps/user-client/src/pages/` unless it belongs to the active onboarding module
-- Active onboarding page/hook/flow utility: `apps/user-client/src/features/onboarding/active/`
-- Shared presentation component: `apps/user-client/src/components/`
-- Client hook or query adapter: `apps/user-client/src/hooks/`
-- Pure browser utility: `apps/user-client/src/lib/` or `apps/user-client/src/utils/`
+### Archived user client (reference-only)
+- `apps/user-client` was archived to `archived/workspaces/user-client/` in 2026-05. Do not place new code there; the launch-primary client is the mini-program section below.
 
 ### Mini Program (Taro — launch-primary)
 

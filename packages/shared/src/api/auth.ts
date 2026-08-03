@@ -71,6 +71,19 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     personalityShareEnabled?: boolean
     /** When false, skips the slot machine reveal animation and shows static result. */
     personalitySlotAnimationEnabled?: boolean
+    /** K3 Phase 1+ (2026-08-01): remote-selectable slot timing profile.
+     *  personalitySlotProfileDramatic wins over personalitySlotProfileFast;
+     *  both false/absent = baseline. */
+    personalitySlotProfileFast?: boolean
+    personalitySlotProfileDramatic?: boolean
+    /** K3 Phase 2c spike (2026-08-01): WebGL land-moment stage. When true and
+     *  celebration tier is full, the land moment plays a ~2.5s WebGL overlay
+     *  (any GL failure falls back to the CSS celebration). Default: false. */
+    webglRevealEnabled?: boolean
+    /** K3 Phase 3 / B3 (2026-08-01): server-composed animated share clip
+     *  (muted MP4 of the reveal moment). When false the share artifact stays
+     *  the static poster. Default: false. */
+    shareAnimatedClipEnabled?: boolean
     /** When false, hides the Hero Promo Banner entirely. Kill switch for the
      *  discover hero. Default: true. */
     promoBannerEnabled?: boolean
@@ -131,6 +144,9 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** Per-flow kill gate for the Flow 2 blind-box lifecycle overlay
      *  (blind-box-lifecycle post-registration). Default: true. */
     flowLifecycleEnabled?: boolean
+    /** When true, the pool-registration Step 0 letter shows the 悦仔-voiced
+     *  pre-registration teaser strip. Default: false (ships dark). */
+    poolTeaserEnabled?: boolean
   }
 }
 

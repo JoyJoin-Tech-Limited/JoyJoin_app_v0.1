@@ -70,39 +70,6 @@ describe('PixelAvatarComposite', () => {
     expect(container.querySelectorAll('.pixel-avatar-composite__layer')).toHaveLength(0)
   })
 
-  it('keeps the approved complete spider pose through pseudo-3D turntable frames', () => {
-    const spiderItems = new Map(SLOT_ORDER.map((slot) => {
-      const item = makeSpiderItem(slot)
-      return [item.id, item] as const
-    }))
-    const { container, rerender } = render(
-      <PixelAvatarComposite
-        archetypeId='spider'
-        outfit={makeOutfit()}
-        itemsById={spiderItems}
-        frameId='left-far'
-      />,
-    )
-
-    const approvedSrc = container.querySelector('.pixel-avatar-composite__body--approved-starter')
-      ?.getAttribute('src')
-    expect(approvedSrc).toContain('/profile-pixel/archetypes/spider/base-v1.webp')
-    expect(container.querySelectorAll('.pixel-avatar-composite__layer')).toHaveLength(0)
-
-    rerender(
-      <PixelAvatarComposite
-        archetypeId='spider'
-        outfit={makeOutfit()}
-        itemsById={spiderItems}
-        frameId='right-far'
-      />,
-    )
-
-    expect(container.querySelector('.pixel-avatar-composite__body--approved-starter'))
-      .toHaveAttribute('src', approvedSrc)
-    expect(container.querySelectorAll('.pixel-avatar-composite__layer')).toHaveLength(0)
-  })
-
   it('returns to independent spider layers as soon as one starter item is removed', () => {
     const spiderItems = new Map(SLOT_ORDER.map((slot) => {
       const item = makeSpiderItem(slot)
@@ -224,39 +191,6 @@ describe('PixelAvatarComposite', () => {
     expect(screen.getByRole('img')).toHaveAttribute('data-permanent-underwear', 'true')
   })
 
-  it('reuses the same raster files while moving the whole scene and depth layers together', () => {
-    const { container, rerender } = render(
-      <PixelAvatarComposite
-        archetypeId='corgi'
-        outfit={makeOutfit({ accessoryItemId: null })}
-        itemsById={itemsById}
-        frameId='left-far'
-      />,
-    )
-
-    const leftBodySrc = container.querySelector('.pixel-avatar-composite__body')?.getAttribute('src')
-    const leftTop = container.querySelector('.pixel-avatar-composite__layer--top') as HTMLElement
-    const leftTopSrc = leftTop.getAttribute('src')
-    const leftTransform = leftTop.style.transform
-    expect((container.querySelector('.pixel-avatar-composite__scene') as HTMLElement).style.transform)
-      .toContain('scaleX(0.9)')
-
-    rerender(
-      <PixelAvatarComposite
-        archetypeId='corgi'
-        outfit={makeOutfit({ accessoryItemId: null })}
-        itemsById={itemsById}
-        frameId='right-far'
-      />,
-    )
-
-    const rightTop = container.querySelector('.pixel-avatar-composite__layer--top') as HTMLElement
-    expect(container.querySelector('.pixel-avatar-composite__body')?.getAttribute('src')).toBe(leftBodySrc)
-    expect(rightTop.getAttribute('src')).toBe(leftTopSrc)
-    expect(rightTop.style.transform).not.toBe(leftTransform)
-    expect(screen.getByRole('img')).toHaveAttribute('data-frame', 'right-far')
-  })
-
   it('falls back to the product placeholder after both avatar sources fail', () => {
     const { container } = render(
       <PixelAvatarComposite
@@ -337,7 +271,7 @@ describe('PixelAvatarComposite', () => {
     expect(container.querySelector('.pixel-avatar-composite__body')).toBeInTheDocument()
   })
 
-  it('renders placement slot hotspots on the front frame and forwards taps', () => {
+  it('renders placement slot hotspots and forwards taps', () => {
     const onSlotTap = vi.fn()
     render(
       <PixelAvatarComposite
@@ -359,22 +293,5 @@ describe('PixelAvatarComposite', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '查看鞋子' }))
     expect(onSlotTap).toHaveBeenCalledWith('shoes')
-  })
-
-  it('hides slot hotspots off the front frame instead of misaligning them', () => {
-    render(
-      <PixelAvatarComposite
-        archetypeId='corgi'
-        outfit={makeOutfit({ accessoryItemId: null })}
-        itemsById={itemsById}
-        frameId='right-near'
-        onSlotTap={() => {}}
-        slotHotspots={[
-          { slot: 'top', label: '查看上装', placement: { left: 85, top: 194, width: 296, height: 290 } },
-        ]}
-      />,
-    )
-
-    expect(screen.queryByRole('button', { name: '查看上装' })).not.toBeInTheDocument()
   })
 })

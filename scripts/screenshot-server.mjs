@@ -777,6 +777,36 @@ register('squad-unboxing-revealed-allup', () => captureSquadUnboxingStoryReveale
 register('squad-unboxing-revealed-overflow', () => captureSquadUnboxingStoryRevealed('revealed-partial', { groupId: 'group-screenshot-009', waitChip: true }))
 register('squad-unboxing-revealed-pocketed', () => captureSquadUnboxingStoryPocketed())
 register('profile-review-welcome-coupon', captureProfileReview)
+
+// Completion ceremony (Phase 3 开盒仪式, 2026-07-31): tap the completion CTA,
+// then capture the UnboxingCeremony overlay once the lid has lifted and the
+// entry card has risen, but before the 2.4s auto-advance routes onward.
+async function captureProfileReviewCeremony() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      // motion=reduce fast-forwards the PAGE's own reveal (router param),
+      // but the ceremony reads OS-level reduced-motion only, so its lid-lift
+      // choreography still plays in the capture browser.
+      await page.goto(`${H5_BASE_URL}/#/pages/onboarding/profile-review/index?motion=reduce`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.waitForSelector('.profile-review__submit', { timeout: 15000 })
+      await page.waitForTimeout(600)
+      await page.click('.profile-review__submit')
+      // 500ms celebration beat + ceremony choreography (~1.5s) → settled
+      // overlay; still ahead of the 2.4s auto-advance.
+      await page.waitForSelector('.unboxing-ceremony__card', { timeout: 10000 })
+      await page.waitForTimeout(1600)
+      return screenshotViewport(page)
+    }
+  )
+}
+
+register('profile-review-ceremony', captureProfileReviewCeremony)
 register('matching-status-puzzle-prelude', captureMatchingStatusPuzzlePrelude)
 register('profile-v17', captureProfileV17)
 register('discover-alang-v17', captureDiscoverAlangV17)

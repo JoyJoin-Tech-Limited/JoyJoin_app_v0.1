@@ -53,6 +53,7 @@ import { registerAlangRoutes } from "./routes/domains/alang";
 import { registerAlangFlashRoutes } from "./routes/domains/alangFlash";
 import { registerEquipmentRoutes } from "./routes/domains/equipment";
 import { registerPersonalStoryRoutes } from "./routes/domains/personalStory";
+import { registerShareClipRoutes } from "./routes/domains/shareClip";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
 import { isTestMode } from "./auth/getAuthStrategy";
@@ -151,6 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAssessmentRoutes(app);
   registerAssessmentV4Routes(app);
   registerAssessmentResultRoutes(app);
+  registerShareClipRoutes(app);
   registerProfileRoutes(app);
   registerSocialRoutes(app);
   registerReferralRoutes(app);

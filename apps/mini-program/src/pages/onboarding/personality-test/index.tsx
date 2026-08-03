@@ -107,6 +107,14 @@ interface AssessmentAnswerResponse {
 // next question appears. Prevents the feedback from flashing by too fast.
 const COMMENTARY_MIN_DISPLAY_MS = 1400
 
+// Minimum answered questions before a mid-test Xiaoyue prefetch fires. The
+// server re-derives the profile from the session, so this only controls how
+// early the speculative LLM generation starts.
+const MID_TEST_PREFETCH_MIN_ANSWERS = 8
+// Mid-test prefetch throttle: refire only when the top archetype changed or
+// this much time has elapsed since the last attempt.
+const MID_TEST_PREFETCH_THROTTLE_MS = 30_000
+
 export default function PersonalityTestPage() {
   const auth = useAuth()
   const router = useRouter()
@@ -188,6 +196,9 @@ export default function PersonalityTestPage() {
   const questionHistoryRef = useRef<Array<{question: AssessmentQuestion; answer: string}>>([])
   // Anonymous engine state for client-side back + re-answer
   const anonymousEngineStateRef = useRef<ReturnType<typeof initializeEngineState> | null>(null)
+  // Mid-test Xiaoyue prefetch throttle state
+  const lastMidTestPrefetchAtRef = useRef(0)
+  const lastMidTestPrefetchArchetypeRef = useRef<string | null>(null)
   // Pending question update: hold next-question data until echo exit completes
   // so the user never sees new question text + old answer echo simultaneously.
   const pendingQuestionUpdateRef = useRef<{
@@ -738,6 +749,39 @@ export default function PersonalityTestPage() {
         question: result.nextQuestion ?? null,
         progress: result.progress ?? null,
         matches: result.currentMatches ?? [],
+      }
+
+      // Mid-test speculative prefetch: start the Xiaoyue LLM generation early
+      // so the result page lands on a cached analysis. The server re-derives
+      // the profile from the session, so no client-side score accumulation is
+      // needed and authenticated + anonymous flows behave identically.
+      const answeredCount = result.progress?.answered ?? 0
+      const topMatch = result.currentMatches?.[0]
+      if (
+        answeredCount >= MID_TEST_PREFETCH_MIN_ANSWERS &&
+        (topMatch?.confidence ?? 0) >= 0.7 &&
+        (topMatch?.archetype !== lastMidTestPrefetchArchetypeRef.current ||
+          Date.now() - lastMidTestPrefetchAtRef.current >= MID_TEST_PREFETCH_THROTTLE_MS)
+      ) {
+        lastMidTestPrefetchAtRef.current = Date.now()
+        lastMidTestPrefetchArchetypeRef.current = topMatch?.archetype ?? null
+        void apiRequest<{ prefetched: boolean; reason?: string }>({
+          path: '/api/xiaoyue/prefetch',
+          method: 'POST',
+          data: { sessionId: thisSessionId },
+        })
+          .then((res) => {
+            logInfo('[PersonalityTest] Mid-test Xiaoyue prefetch', {
+              answeredCount,
+              archetype: topMatch?.archetype,
+              prefetched: res.prefetched,
+              reason: res.reason,
+            })
+          })
+          .catch((err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err)
+            logWarn('[PersonalityTest] Mid-test Xiaoyue prefetch failed', { message })
+          })
       }
     } catch (err) {
       setIsPageExiting(false)

@@ -494,4 +494,4 @@ EMBEDDING_LOCAL_FALLBACK_ENABLED=false   # NEW：启用本地模型降级
 - `apps/server/data/occupation-vectors.json` — 164 个职业的预计算向量索引
 - `deploy/granite-embedding/` — Granite 97M embedding 服务器部署配置 (Docker + Python)
 - `packages/shared/src/schema.ts` — `userSemanticProfiles` 表定义
-- `docs/systems/systems/MATCHING_ALGORITHM_REFERENCE.md` — 匹配算法参考
+- `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` — 匹配算法参考

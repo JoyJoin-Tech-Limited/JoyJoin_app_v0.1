@@ -22,11 +22,13 @@ import { profileAnalytics } from '../../lib/analytics/profileAnalytics'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMiniPageGate } from '../../hooks/navigation/useMiniPageGate'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
+import { useSyncDeadline } from '../../hooks/useSyncDeadline'
 import { apiRequest } from '../../lib/api/api'
 import { MILESTONE_BADGES } from '../../lib/milestoneBadges'
 import { queryClient } from '../../lib/api/queryClient'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { fetchMyEquipment, type EquipmentItem, type EquipmentOutfit } from '../../lib/profile/equipmentApi'
+import { EQUIPMENT_ME_QUERY_KEY } from '../../lib/profile/equipmentQueryKeys'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import { getPixelEquipmentThumbnailUrl } from '../../lib/profile/pixelAvatarAssets'
 import { haptics } from '../../lib/utils/haptics'
@@ -173,7 +175,6 @@ function ProfilePartnerVisual({
           archetypeId={archetype}
           outfit={outfit ?? EMPTY_EQUIPMENT_OUTFIT}
           itemsById={itemsById}
-          frameId='front'
           variant='compact'
           className='profile-page__partner-pixel-composite'
         />
@@ -260,7 +261,7 @@ export default function ProfilePage() {
       void queryClient.invalidateQueries({ queryKey: ['mini-program', 'gamification'] })
     }
     if (profileV17DataPolicy.equipmentEnabled) {
-      void queryClient.invalidateQueries({ queryKey: ['mini-program', 'equipment', 'me'] })
+      void queryClient.invalidateQueries({ queryKey: EQUIPMENT_ME_QUERY_KEY })
     }
   })
 
@@ -284,11 +285,19 @@ export default function ProfilePage() {
     staleTime: 30_000,
   })
   const equipmentQuery = useQuery({
-    queryKey: ['mini-program', 'equipment', 'me'],
+    queryKey: EQUIPMENT_ME_QUERY_KEY,
     queryFn: fetchMyEquipment,
     enabled: !authLoading && !!authUser && profileV17DataPolicy.equipmentEnabled,
     staleTime: 30_000,
   })
+
+  // Hard UI deadline: a hung-but-reachable server can hold the request for the
+  // full timeout × retry window (30s+). Past the deadline with no cached data,
+  // fall back to the error state with a retry CTA instead of spinning forever.
+  // Manual retry bumps the nonce to open a fresh deadline window.
+  const [equipmentRetryNonce, setEquipmentRetryNonce] = useState(0)
+  const equipmentStalled = !equipmentQuery.data && !equipmentQuery.isError
+  const equipmentSyncExpired = useSyncDeadline(equipmentStalled, equipmentRetryNonce)
 
   // Lightweight chapter-count teaser for the story card title. Key is scoped
   // with `profile-teaser` so it never collides with the personal-story page
@@ -330,7 +339,7 @@ export default function ProfilePage() {
   const outfit = equipmentQuery.data?.outfit
   const equipmentState: 'ready' | 'loading' | 'error' = outfit
     ? 'ready'
-    : equipmentQuery.isError || (!!equipmentQuery.data && !equipmentQuery.isLoading)
+    : equipmentQuery.isError || equipmentSyncExpired || (!!equipmentQuery.data && !equipmentQuery.isLoading)
       ? 'error'
       : 'loading'
   const equippedCount = outfit
@@ -437,7 +446,14 @@ export default function ProfilePage() {
             style={identityStageFoilStyle}
             data-testid='profile-v4'
           >
-            <IdentityStageScene absoluteAvatar={false}>
+            {/* aspectFill: the stage is near-square since 2026-08-01 (728rpx
+                tall) — crop the wide street art instead of stretching it. */}
+            <IdentityStageScene absoluteAvatar={false} layerImageMode='aspectFill'>
+              {/* Left rail owns the vertical layout of both glass cards, so a
+                  tall identity card can never paint over the growth card. */}
+              <View
+                className={`profile-page__identity-rail${pixelAvatarEnabled ? '' : ' profile-page__identity-rail--no-entry'}`}
+              >
               {/* Readable glass card for the identity copy (top-left).
                   Whole card is the basic-profile hub: tap → 回看人格报告. */}
               <View
@@ -487,36 +503,8 @@ export default function ProfilePage() {
                 </View>
               </View>
 
-              {/* Avatar anchored on the plaza with a warm platform shadow */}
-              <View
-                className={`profile-page__partner-visual${pixelAvatarEnabled ? '' : ' profile-page__partner-visual--no-entry'}`}
-              >
-                <View
-                  className={`profile-page__partner-platform${deviceTier.isDegradation ? ' profile-page__partner-platform--no-pulse' : ''}`}
-                  aria-hidden='true'
-                />
-              <View
-                className={`profile-page__partner-breath${deviceTier.isDegradation ? ' profile-page__partner-breath--no-breath' : ''}`}
-                data-testid='profile-partner-breath'
-              >
-                <ProfilePartnerVisual
-                  key={archetype ?? 'profile-partner-fallback'}
-                  archetype={archetype}
-                  archetypeName={archetypeName}
-                  displayName={displayName}
-                  pixelEnabled={pixelAvatarEnabled}
-                  equipmentState={equipmentState}
-                  outfit={outfit}
-                  itemsById={equipmentItemsById}
-                  onRetryEquipment={() => { void equipmentQuery.refetch() }}
-                />
-              </View>
-              </View>
-
               {/* Readable glass card for growth stats (bottom-left) */}
-              <View
-                className={`profile-page__growth-card${pixelAvatarEnabled ? '' : ' profile-page__growth-card--no-entry'}`}
-              >
+              <View className='profile-page__growth-card'>
                 <View
                   className='profile-page__growth'
                   aria-label={gamificationQuery.isLoading
@@ -553,6 +541,36 @@ export default function ProfilePage() {
                     </View>
                   )}
                 </View>
+              </View>
+              </View>
+
+              {/* Avatar anchored on the plaza with a warm platform shadow */}
+              <View
+                className={`profile-page__partner-visual${pixelAvatarEnabled ? '' : ' profile-page__partner-visual--no-entry'}`}
+              >
+                <View
+                  className={`profile-page__partner-platform${deviceTier.isDegradation ? ' profile-page__partner-platform--no-pulse' : ''}`}
+                  aria-hidden='true'
+                />
+              <View
+                className={`profile-page__partner-breath${deviceTier.isDegradation ? ' profile-page__partner-breath--no-breath' : ''}`}
+                data-testid='profile-partner-breath'
+              >
+                <ProfilePartnerVisual
+                  key={archetype ?? 'profile-partner-fallback'}
+                  archetype={archetype}
+                  archetypeName={archetypeName}
+                  displayName={displayName}
+                  pixelEnabled={pixelAvatarEnabled}
+                  equipmentState={equipmentState}
+                  outfit={outfit}
+                  itemsById={equipmentItemsById}
+                  onRetryEquipment={() => {
+                    setEquipmentRetryNonce((nonce) => nonce + 1)
+                    void equipmentQuery.refetch()
+                  }}
+                />
+              </View>
               </View>
 
               {pixelAvatarEnabled && (

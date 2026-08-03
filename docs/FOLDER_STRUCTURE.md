@@ -245,11 +245,11 @@ apps/admin-client/
 apps/mini-program/
 ├── src/
 │   ├── pages/                     # Taro pages (one directory = one route)
-│   │   ├── index/                 # Landing / home
+│   │   ├── index/                 # Landing / home (+ mechanismBurst.ts hero mechanism offsets)
 │   │   ├── login/                 # Phone login
 │   │   ├── onboarding/            # Onboarding flow
 │   │   │   ├── onboarding/        # Main onboarding shell
-│   │   │   ├── essential-data/    # Basic profile (name, gender, city)
+│   │   │   ├── essential-data/    # Basic profile (name, gender, city) + stepIds.ts (canonical step ids)
 │   │   │   ├── extended-data/     # Extended profile (birth year, intent)
 │   │   │   ├── personality-test/  # V4 adaptive assessment
 │   │   │   │   └── results/       # Test results + inline WeChat login (auth-gate removed 2026-05)
@@ -281,6 +281,7 @@ apps/mini-program/
 │   │   ├── ui/                    # UI primitives (Button, Card, FormStepper, etc.)
 │   │   ├── loading/               # Loading states & animations
 │   │   ├── mascot/                # Archetype & Xiaoyue visuals
+│   │   ├── onboarding/            # BoxJourneySpine (装盒进度), UnboxingCeremony (completion overlay)
 │   │   ├── ConnectionPointPill/
 │   │   ├── GroupAnalysisSourceHint/
 │   │   └── VirtualList/
@@ -300,9 +301,9 @@ apps/mini-program/
 │   │   ├── matching/              # chemistryPayoff, groupDisplay, groupAnalysisDebug
 │   │   ├── mascot/                # xiaoyueExpressions, mascotDisplay
 │   │   ├── analytics/             # featureFlags
-│   │   └── utils/                 # logger, uiConstants, haptics, cdnAssets
+│   │   └── utils/                 # logger, uiConstants, haptics, cdnAssets, genderLabel (getGenderLabel)
 │   ├── providers/                 # React context providers
-│   ├── styles/                    # Global styles, SCSS
+│   ├── styles/                    # Global styles, SCSS (incl. _reveal-motion.scss shared reveal keyframes)
 │   ├── native-custom-tab-bar/     # WeChat native tab bar
 │   └── assets/                    # Static assets (CDN-first in production)
 │       ├── illustrations/         # Blind box Lovart illustrations
@@ -395,6 +396,7 @@ packages/shared/
 │   ├── ai/                        # Shared AI prompts & types
 │   │   └── onboarding.ts
 │   ├── copy/                       # Brand-governed copy modules
+│   │   ├── onboardingVoice.ts      # Tier A 12-archetype × 8-step voice matrix + Tier B fallback
 │   │   ├── errorBaselines.ts      # Error message factory functions
 │   │   ├── emptyStates.ts         # Empty state templates
 │   │   ├── mascotVoice.ts         # 悦仔常用句式库

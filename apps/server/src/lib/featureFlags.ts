@@ -25,6 +25,25 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   runPlanTemplatesEnabled: "RUN_PLAN_TEMPLATES_ENABLED",
   personalityShareEnabled: "PERSONALITY_SHARE_ENABLED",
   personalitySlotAnimationEnabled: "PERSONALITY_SLOT_ANIMATION_ENABLED",
+  /** K3 Phase 1+ (2026-08-01): remote-selectable slot timing profile.
+   *  personalitySlotProfileDramatic wins over personalitySlotProfileFast;
+   *  both false = baseline. Consumed by getAnimationProfile() in the
+   *  mini-program results page. */
+  personalitySlotProfileFast: "PERSONALITY_SLOT_PROFILE_FAST",
+  personalitySlotProfileDramatic: "PERSONALITY_SLOT_PROFILE_DRAMATIC",
+  /** K3 Phase 2c spike (2026-08-01): WebGL land-moment stage for the
+   *  personality reveal. When true (and celebration tier is full), the land
+   *  moment plays a ~2.5s WebGL overlay (dolly + bloom + GPU particles +
+   *  foil card) instead of the CSS celebration. Any GL failure falls back
+   *  to the CSS/ParticleBurst path. Default: false (spike not yet
+   *  device-verified). Env fallback: WEBGL_REVEAL_ENABLED. */
+  webglRevealEnabled: "WEBGL_REVEAL_ENABLED",
+  /** K3 Phase 3 / B3 (2026-08-01): server-composed animated share clip
+   *  (muted MP4 of the reveal moment, rendered via canvas frames + ffmpeg).
+   *  When false, POST /api/personality/share-clip returns 503 and the client
+   *  keeps the static poster as the share artifact. Default: false.
+   *  Env fallback: SHARE_ANIMATED_CLIP_ENABLED. */
+  shareAnimatedClipEnabled: "SHARE_ANIMATED_CLIP_ENABLED",
   /** When false, hides the Hero Promo Banner on discover entirely.
    *  Default: true. Use to A/B test banner variants or kill it during
    *  prom content audits. */
@@ -131,6 +150,10 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  success toast + terminal state. Env fallback: FLOW_LIFECYCLE_ENABLED
    *  (default: true). */
   flowLifecycleEnabled: "FLOW_LIFECYCLE_ENABLED",
+  /** Pool-registration Step 0 in-letter teaser strip (悦仔-voiced "what
+   *  happens after you join" node row inside XiaoyueLetterCard). Ships dark.
+   *  Env fallback: POOL_TEASER_ENABLED (default: false). */
+  poolTeaserEnabled: "POOL_TEASER_ENABLED",
 };
 
 /**

@@ -6,7 +6,7 @@
  * component's WXSS into a chunk the page never loads — WeChat applies only the
  * page's own WXSS plus the app.wxss chain. This regression blanked the
  * my-image stage for all 11 non-spider archetypes (2026-07-21): the V2
- * turntable/composite rules were chunked into the unreachable
+ * composite rules were chunked into the unreachable
  * `pages/profile-linked/three-avatar.wxss`.
  *
  * The fix is to `@use` the component SCSS inside the page SCSS so the rules
@@ -25,8 +25,10 @@ const DIST_ROOT = path.resolve(__dirname, '..', 'dist')
 
 const AVATAR_STAGE_SELECTORS = [
   'pixel-avatar-3d',
-  'pixel-avatar-turntable',
   'pixel-avatar-composite',
+  // The 3D boot failure / non-spider path renders the V2 composite inside
+  // this wrapper; if its rules are chunked away the fallback stage blanks.
+  'pixel-avatar-3d__fallback-stage',
   // PixelAvatarFallback.scss uses the `pixel-avatar` root class (not
   // `pixel-avatar-fallback`); `--pixel-fur` is its unique custom property.
   '--pixel-fur',
@@ -48,7 +50,7 @@ const REQUIREMENTS = [
     // overflow:hidden clips the entire identity card. The Profile stage must
     // keep an explicit `height` next to its `min-height`.
     page: 'pages/profile/index.wxss',
-    selectors: ['profile-page__identity-stage{position:relative;height:560rpx'],
+    selectors: ['profile-page__identity-stage{position:relative;height:728rpx'],
   },
   {
     // Zero-CSS regression (2026-07-26): SquadTableCard + the table-transition

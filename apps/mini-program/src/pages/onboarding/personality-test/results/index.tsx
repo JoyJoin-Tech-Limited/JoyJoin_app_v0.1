@@ -9,7 +9,7 @@ import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuth } from '../../../../hooks/useAuth'
 import { useSpriteReadiness } from '../../../../hooks/useSpriteReadiness'
 import { useOnboardingAnalytics } from '../../../../hooks/onboarding/useOnboardingAnalytics'
-import { apiRequest, authenticateMiniProgramUserWithTest, getUserState, type ApiError } from '../../../../lib/api/api'
+import { apiRequest, apiRequestBinary, authenticateMiniProgramUserWithTest, getUserState, type ApiError } from '../../../../lib/api/api'
 import {
   clearAnonymousAssessmentStorage,
   hasAnonymousAssessmentResult,
@@ -61,6 +61,7 @@ import {
   buildShareTitle,
   ECHO_WHISPER_ROTATE_STEPS,
   getAnimationProfile,
+  getSandboxRendererOverride,
   buildTypicalityLabel,
   getTraitEntries,
   getTopMatches,
@@ -69,6 +70,7 @@ import {
   shouldNearMiss,
   waitFor,
   type AnimationProfile,
+  type AnimationProfileName,
   type FlowStage,
   type ResolvedResultState,
   type RevealPhase,
@@ -78,6 +80,8 @@ import LoadingStage from './LoadingStage'
 import EmptyStage from './EmptyStage'
 import ErrorStage from './ErrorStage'
 import SlotStage from './SlotStage'
+import WebGLLandStage from './WebGLLandStage'
+import { getRevealStripPreloadUrl } from './ArchetypeRevealStrip'
 import RevealStage from './RevealStage'
 import BridgeStage from './BridgeStage'
 import FinalStage from './FinalStage'
@@ -129,6 +133,18 @@ export default function PersonalityTestResultsPage() {
 
   const personalityShareEnabled = auth.user?.features?.personalityShareEnabled ?? true
   const personalitySlotAnimationEnabled = auth.user?.features?.personalitySlotAnimationEnabled ?? true
+  // K3 Phase 1+ (2026-08-01): remote-selectable timing profile via feature
+  // flags — dramatic wins over fast; both false = baseline.
+  const personalitySlotProfileName: AnimationProfileName = auth.user?.features?.personalitySlotProfileDramatic
+    ? 'dramatic'
+    : auth.user?.features?.personalitySlotProfileFast
+      ? 'fast'
+      : 'baseline'
+  // Phase 2c spike (2026-08-01): WebGL land-moment stage. Flag-gated (default
+  // off) with a web-sandbox `?renderer=webgl` override; only runs on the full
+  // celebration tier, and any GL failure falls back to the CSS celebration.
+  const webglRevealRequested = (auth.user?.features?.webglRevealEnabled ?? false)
+    || getSandboxRendererOverride() === 'webgl'
 
   // Cleanup on page unload to prevent timer leaks and stale state updates
   useUnload(() => {
@@ -147,10 +163,22 @@ export default function PersonalityTestResultsPage() {
     [initialSnapshot, authUserResult],
   )
 
-  const hasCompletedReplay = Boolean(initialResolvedResult)
+  // A fresh local completion (snapshot with result but no resultSequenceCompletedAt)
+  // must still play the slot animation — only a watched sequence (replay) or an
+  // authenticated archetype-holder with no fresh local result skips it.
+  const hasFreshLocalCompletion = Boolean(
+    initialSnapshot?.result && !initialSnapshot.resultSequenceCompletedAt,
+  )
+  const hasCompletedReplay = Boolean(
+    (initialSnapshot?.resultSequenceCompletedAt && initialResolvedResult) ||
+      (authUserResult && !hasFreshLocalCompletion),
+  )
   const [sessionSnapshot, setSessionSnapshot] = useState<AnonymousAssessmentSessionSnapshot | null>(initialSnapshot)
   const [resultState, setResultState] = useState<ResolvedResultState | null>(initialResolvedResult)
   const [flowStage, setFlowStage] = useState<FlowStage>(hasCompletedReplay ? 'result' : 'loading')
+  // Phase 2c spike: WebGL land-moment overlay state machine
+  const [webglLandState, setWebglLandState] = useState<'idle' | 'active' | 'done' | 'fallback'>('idle')
+  const webglLandResolveRef = useRef<((outcome: 'complete' | 'fallback') => void) | null>(null)
   /**
    * OS-level reduced-motion (pre-ship pipeline blocker fix, 2026-07-19): the
    * `--reduce-motion` SCSS guards were dead code until this class wiring.
@@ -189,6 +217,9 @@ export default function PersonalityTestResultsPage() {
   const [sharePosterPath, setSharePosterPath] = useState('')
   const [squarePosterPath, setSquarePosterPath] = useState('')
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false)
+  // Phase 3 / B3 (2026-08-01): animated share clip state
+  const [isGeneratingClip, setIsGeneratingClip] = useState(false)
+  const shareAnimatedClipEnabled = auth.user?.features?.shareAnimatedClipEnabled ?? false
   const [posterError, setPosterError] = useState(false)
   const [generationPhase, setGenerationPhase] = useState('')
   const [completionMode, setCompletionMode] = useState<'replay' | 'animated' | null>(hasCompletedReplay ? 'replay' : null)
@@ -223,7 +254,13 @@ export default function PersonalityTestResultsPage() {
   // here with no local anonymous result (prevents an intro<->results loop).
   const forwardedAuthedRef = useRef(false)
 
-  const profileRef = useRef<AnimationProfile>(getAnimationProfile())
+  const profileRef = useRef<AnimationProfile>(getAnimationProfile(personalitySlotProfileName))
+
+  // Auth hydrates after mount — keep the profile ref in sync so a late
+  // `features` payload still selects the server-specified timing variant.
+  useEffect(() => {
+    profileRef.current = getAnimationProfile(personalitySlotProfileName)
+  }, [personalitySlotProfileName])
 
   const analytics = useOnboardingAnalytics('personality-test-results', {
     enabled: !auth.isLoading,
@@ -413,6 +450,16 @@ export default function PersonalityTestResultsPage() {
     () => buildTypicalityLabel(isDecisive, displayArchetypeName, visual.accentText),
     [isDecisive, displayArchetypeName, visual.accentText],
   )
+
+  // Phase 3 (2026-08-01): rare-variant easter egg — a highly typical match
+  // (典型 = decisive AND high-confidence) upgrades the land moment to the
+  // 闪光 treatment. Deterministic per result; no probability involved.
+  const isRareVariant = useMemo(() => {
+    const confidence = resultState?.result.archetypeConfidence
+      ?? sessionSnapshot?.result?.archetypeConfidence
+      ?? 0
+    return isDecisive === true && confidence >= 0.85
+  }, [isDecisive, resultState?.result.archetypeConfidence, sessionSnapshot?.result?.archetypeConfidence])
 
   const secondaryVisual = useMemo(
     () => (secondaryArchetypeId ? getArchetypeVisual(secondaryArchetypeId) : undefined),
@@ -980,6 +1027,15 @@ export default function PersonalityTestResultsPage() {
 
       const targetIndex = ARCHETYPE_SEQUENCE.indexOf(targetName)
       const safeTargetIndex = targetIndex >= 0 ? targetIndex : 0
+
+      // Phase 2b (2026-08-01): lazily prefetch ONLY the landed archetype's
+      // reveal strip as soon as the target is known (≈1.5s of slowing budget
+      // covers the CDN fetch on 4G). No-op when the archetype has no strip yet.
+      const stripPreloadUrl = getRevealStripPreloadUrl(ARCHETYPE_SEQUENCE[safeTargetIndex] ?? '')
+      if (stripPreloadUrl) {
+        void preloadImagesWithDiagnostics([stripPreloadUrl], 'personality-reveal-strip')
+      }
+
       const approachPositions = profile.slotSlowStepDelays.map((_, index) => (
         safeTargetIndex - profile.slotSlowStepDelays.length + index + 12
       ) % 12)
@@ -1038,6 +1094,18 @@ export default function PersonalityTestResultsPage() {
       })
       setShowSkipAnimation(false)
 
+      // Phase 3 (2026-08-01): rare-variant observability — track 闪光 easter-egg hits.
+      // Computed from the freshly-resolved result (not the render-closure memo,
+      // which may be stale inside this async flow).
+      const rareVariantHit = resolvedResult.result.isDecisive === true
+        && (resolvedResult.result.archetypeConfidence ?? 0) >= 0.85
+      if (rareVariantHit) {
+        analytics.interaction('slot_rare_variant', {
+          archetype: targetName,
+          archetypeConfidence: resolvedResult.result.archetypeConfidence,
+        })
+      }
+
       haptics('slotLand')
 
       await waitFor(profile.slotRevealPauseMs)
@@ -1062,6 +1130,36 @@ export default function PersonalityTestResultsPage() {
         return
       }
 
+      // Phase 2c (2026-08-01): WebGL land-moment overlay — flag-gated spike.
+      // Replaces the CSS reveal celebration when it completes; any failure
+      // falls back to the normal CSS reveal below (the flow can never strand).
+      let webglCelebrationDone = false
+      if (webglRevealRequested && tier === 'full' && webglLandState !== 'fallback') {
+        setWebglLandState('active')
+        const outcome = await new Promise<'complete' | 'fallback'>((resolve) => {
+          webglLandResolveRef.current = resolve
+          // Hard timeout — a hung GL pipeline must never strand the flow
+          const handle = setTimeout(() => {
+            webglLandResolveRef.current = null
+            resolve('fallback')
+          }, 6000)
+          timeoutHandlesRef.current.push(handle)
+        })
+        webglLandResolveRef.current = null
+        if (!mountedRef.current || nextRunId !== runIdRef.current) {
+          return
+        }
+        if (outcome === 'complete') {
+          webglCelebrationDone = true
+          setWebglLandState('done')
+          analytics.interaction('webgl_land_complete', { archetype: targetName })
+        } else {
+          setWebglLandState('fallback')
+          analytics.interaction('webgl_land_fallback', { archetype: targetName })
+        }
+      }
+
+      if (!webglCelebrationDone) {
       setFlowStage('reveal')
       setRevealPhase('silhouette')
       setPhaseText('先看轮廓...')
@@ -1089,6 +1187,7 @@ export default function PersonalityTestResultsPage() {
         if (!mountedRef.current || nextRunId !== runIdRef.current) {
           return
         }
+      }
       }
 
       // Bridge: skip if fetch already resolved (no dead air)
@@ -1660,6 +1759,88 @@ export default function PersonalityTestResultsPage() {
   // can call the most recent closure (with correct isGeneratingPoster state).
   handleGeneratePosterRef.current = handleGeneratePoster
 
+  /**
+   * Phase 3 / B3 (2026-08-01): animated share clip.
+   * POSTs the reveal identity to the server, which composes a muted MP4
+   * (canvas frames + ffmpeg) and returns the bytes; we write them to a temp
+   * file and save to the photo album. Any failure falls back to the static
+   * poster CTA (the button simply reports the clip is unavailable).
+   */
+  const handleGenerateClip = useCallback(async () => {
+    if (isGeneratingClip || !displayArchetype || !shareAnimatedClipEnabled) return
+
+    try {
+      const { networkType } = await Taro.getNetworkType()
+      if (networkType === 'none') {
+        void Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2500 })
+        return
+      }
+    } catch {
+      // network check best-effort
+    }
+
+    setIsGeneratingClip(true)
+    analytics.interaction('share_clip_generate_start', { primaryArchetype: displayArchetypeName })
+
+    try {
+      const archetypeNameCn = ARCHETYPE_BY_ID[displayArchetype]?.nameCn ?? displayArchetypeName
+      const mp4 = await apiRequestBinary({
+        path: '/api/personality/share-clip',
+        data: {
+          archetype: displayArchetype,
+          archetypeNameCn,
+          blendLine: shareLine?.slice(0, 48) || undefined,
+          archetypeImageUrl: displayAsset?.startsWith('https://joyjoinapp.com/static/')
+            ? displayAsset
+            : undefined,
+        },
+        timeout: 30000,
+      })
+
+      // Write MP4 bytes to a temp file, then save to the photo album
+      const filePath = `${Taro.env.USER_DATA_PATH}/joyjoin-share-clip-${Date.now()}.mp4`
+      const fs = Taro.getFileSystemManager()
+      await new Promise<void>((resolve, reject) => {
+        fs.writeFile({
+          filePath,
+          data: mp4,
+          success: () => resolve(),
+          fail: (err) => reject(new Error(err.errMsg ?? 'writeFile failed')),
+        })
+      })
+
+      await Taro.saveVideoToPhotosAlbum({ filePath })
+      haptics('success')
+      analytics.interaction('share_clip_save_success', { primaryArchetype: displayArchetypeName })
+      void Taro.showToast({ title: '动态短片已保存', icon: 'success', duration: 2000 })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      logWarn('[PersonalityResults] animated share clip failed', {
+        error: message,
+        primaryArchetype: displayArchetypeName,
+      })
+      analytics.interaction('share_clip_save_failed', {
+        error: message,
+        primaryArchetype: displayArchetypeName,
+      })
+      void Taro.showToast({
+        title: '动态短片暂时生成不了，先用静态卡面分享吧~',
+        icon: 'none',
+        duration: 2500,
+      })
+    } finally {
+      setIsGeneratingClip(false)
+    }
+  }, [
+    analytics,
+    displayArchetype,
+    displayArchetypeName,
+    displayAsset,
+    isGeneratingClip,
+    shareAnimatedClipEnabled,
+    shareLine,
+  ])
+
   const content = (() => {
     switch (flowStage) {
       case 'empty':
@@ -1683,6 +1864,7 @@ export default function PersonalityTestResultsPage() {
             progress={progress}
             phaseText={phaseText}
             celebrationTier={celebrationTier}
+            isRareVariant={isRareVariant}
           />
         )
       case 'reveal':
@@ -1738,11 +1920,15 @@ export default function PersonalityTestResultsPage() {
             isAuthenticated={auth.isAuthenticated}
             isLoggingIn={isLoggingIn}
             isDecisive={isDecisive}
+            isRareVariant={isRareVariant}
             secondaryDisplayName={secondaryDisplayName}
             xiaoyueAnalysis={xiaoyueAnalysis}
             isLoadingAnalysis={isLoadingAnalysis}
             personalityShareEnabled={personalityShareEnabled}
             posterError={posterError}
+            shareAnimatedClipEnabled={shareAnimatedClipEnabled}
+            isGeneratingClip={isGeneratingClip}
+            onGenerateClip={handleGenerateClip}
           />
         )
       case 'loading':
@@ -1788,6 +1974,21 @@ export default function PersonalityTestResultsPage() {
           className='personality-results__poster-canvas personality-results__poster-canvas--square'
           style={{ width: '750px', height: '750px' }}
           aria-hidden='true'
+        />
+      )}
+
+      {/* Phase 2c: WebGL land-moment overlay (spike, flag-gated) */}
+      {webglLandState === 'active' && (
+        <WebGLLandStage
+          accentColor={visual.accent}
+          durationMs={2500}
+          onComplete={() => {
+            webglLandResolveRef.current?.('complete')
+          }}
+          onFallback={(reason) => {
+            logWarn('[PersonalityResults] WebGL land stage fell back to CSS celebration', { reason })
+            webglLandResolveRef.current?.('fallback')
+          }}
         />
       )}
 

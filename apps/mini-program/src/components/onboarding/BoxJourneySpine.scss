@@ -1,0 +1,113 @@
+@use '../../styles/variables' as *;
+
+// BoxJourneySpine — 装盒进度 spine (2026-07-31, Phase 2 of the continuous
+// blind-box onboarding). Kept visually quiet (0.75 opacity) so it never
+// reads as a second progress bar next to FormStepper's segmented micro bar.
+// Subpackage WXSS trap: consuming pages MUST also @use this file.
+
+.box-journey-spine {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  height: 64rpx;
+  opacity: 0.75;
+  box-sizing: border-box;
+
+  &--short {
+    height: 52rpx;
+  }
+}
+
+.box-journey-spine__box {
+  position: relative;
+  width: 48rpx;
+  height: 48rpx;
+  flex-shrink: 0;
+  border: 2rpx solid rgba($color-text-primary-warm, 0.3);
+  border-radius: 10rpx;
+  box-sizing: border-box;
+  background: $color-surface;
+
+  .box-journey-spine--short & {
+    width: 40rpx;
+    height: 40rpx;
+  }
+}
+
+.box-journey-spine__box-fill {
+  position: absolute;
+  left: 4rpx;
+  right: 4rpx;
+  top: 4rpx;
+  bottom: 4rpx;
+  border-radius: 6rpx;
+  opacity: 0.8;
+  transform-origin: bottom center;
+  animation: box-journey-fill-in 300ms ease-out both;
+}
+
+// Keyframes own only `from`; the inline style owns the target scaleY, so
+// one animation serves all three fill levels.
+@keyframes box-journey-fill-in {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+.box-journey-spine__box-lid {
+  position: absolute;
+  left: -6rpx;
+  right: -6rpx;
+  top: -8rpx;
+  height: 10rpx;
+  border-radius: 5rpx;
+  background: $color-surface;
+  border: 2rpx solid rgba($color-text-primary-warm, 0.3);
+  box-sizing: border-box;
+  transform: rotate(-8deg) translateY(-2rpx);
+  transform-origin: left center;
+  transition: transform 240ms ease-out;
+
+  .box-journey-spine--step-3 & {
+    transform: rotate(0deg) translateY(0);
+  }
+}
+
+// Sealed state: landed-gold glow dot on the box corner (reuses the landing
+// halo language — the box is ready to be opened).
+.box-journey-spine__glow-dot {
+  position: absolute;
+  right: -8rpx;
+  top: -8rpx;
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 999rpx;
+  background: rgba($color-landed-gold, 0.9);
+  box-shadow: 0 0 12rpx rgba($color-landed-gold, 0.7);
+}
+
+.box-journey-spine__text {
+  font-size: 24rpx;
+  color: rgba($color-text-primary-warm, 0.72);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.box-journey-spine__fraction {
+  font-family: $font-cn-display;
+  color: rgba($color-text-primary-warm, 0.85);
+}
+
+.box-journey-spine__hint {
+  color: rgba($color-text-primary-warm, 0.5);
+}
+
+.box-journey-spine--rm {
+  .box-journey-spine__box-fill {
+    animation: none;
+  }
+
+  .box-journey-spine__box-lid {
+    transition: none;
+  }
+}

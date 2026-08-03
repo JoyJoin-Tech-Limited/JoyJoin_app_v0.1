@@ -162,7 +162,10 @@ packages/shared/src/copy/
 ├── emptyStates.ts     # Empty state templates
 ├── mascotVoice.ts     # 悦仔常用句式库
 ├── toneMap.ts         # Surface ↔ Tone mapping + allowed modes
-└── exceptions.ts      # 🟠 Orange-word framing templates
+├── exceptions.ts      # 🟠 Orange-word framing templates
+├── onboardingVoice.ts # Tier A 12-archetype × 8-step onboarding voice matrix + Tier B fallbacks (getOnboardingVoiceLine)
+├── flowAnimationCopy.ts # Flow-1/Flow-2 overlay copy deck (import via @shared/copy/flowAnimationCopy, not the barrel)
+└── poolTeaserCopy.ts    # Pool-registration flow teaser copy deck (import via @shared/copy/poolTeaserCopy, not the barrel)
 ```
 
 ### 5.2 Interface Design

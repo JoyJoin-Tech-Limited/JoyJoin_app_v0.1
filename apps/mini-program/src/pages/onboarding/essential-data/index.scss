@@ -1,5 +1,8 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+// Subpackage WXSS guard (AGENTS §15): component SCSS must be @use'd in the
+// consuming page's SCSS or Taro's chunk graph can drop it.
+@use '../../../components/onboarding/BoxJourneySpine.scss' as *;
 
 .essential-data {
   display: flex;
@@ -8,6 +11,11 @@
   @include page-gradient-bg;
   @include onboarding-page-exit-transition;
   @include onboarding-page-enter-transition;
+
+  &__spine {
+    padding: 0 $container-padding;
+    @include safe-area-inline($container-padding);
+  }
 
   &__scroll {
     flex: 1;

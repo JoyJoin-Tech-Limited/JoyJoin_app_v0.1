@@ -268,8 +268,8 @@ async function main() {
     }
   }
   if (avatarManifest.version !== 2) throw new Error('Avatar manifest version must be 2')
-  if (avatarManifest.renderer !== 'layered-paper-doll-parallax') {
-    throw new Error('Avatar manifest renderer must be layered-paper-doll-parallax')
+  if (avatarManifest.renderer !== 'layered-paper-doll') {
+    throw new Error('Avatar manifest renderer must be layered-paper-doll')
   }
   if (avatarManifest.permanentBaseUnderwear !== true) {
     throw new Error('Avatar manifest must declare permanentBaseUnderwear=true')

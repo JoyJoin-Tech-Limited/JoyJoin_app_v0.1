@@ -16,14 +16,6 @@ export const PIXEL_AVATAR_ARCHETYPE_IDS = [
   'cat',
 ] as const
 
-export const PIXEL_AVATAR_FRAME_IDS = [
-  'left-far',
-  'left-near',
-  'front',
-  'right-near',
-  'right-far',
-] as const
-
 export const PIXEL_AVATAR_EQUIPMENT_SLOTS = [
   'bottom',
   'shoes',
@@ -32,7 +24,6 @@ export const PIXEL_AVATAR_EQUIPMENT_SLOTS = [
 ] as const
 
 export type PixelAvatarArchetypeId = (typeof PIXEL_AVATAR_ARCHETYPE_IDS)[number]
-export type PixelAvatarFrameId = (typeof PIXEL_AVATAR_FRAME_IDS)[number]
 export type PixelAvatarEquipmentSlot = (typeof PIXEL_AVATAR_EQUIPMENT_SLOTS)[number]
 
 export interface PixelEquipmentPlacement {
@@ -51,17 +42,8 @@ export interface PixelEquipmentAsset {
   thumb?: string
   slot: PixelAvatarEquipmentSlot
   placement: PixelEquipmentPlacement
-  /** Normalized visual depth used for restrained paper-doll parallax. */
+  /** Normalized visual depth, retained as art metadata for future motion work. */
   depth: number
-}
-
-export interface PixelAvatarScenePose {
-  frameId: PixelAvatarFrameId
-  frameIndex: number
-  /** -1 (left) through 1 (right). This is a visual tilt, not a real camera yaw. */
-  yaw: number
-  scaleX: number
-  translateXPercent: number
 }
 
 interface RawEquipmentAsset {
@@ -108,44 +90,6 @@ const DEFAULT_DEPTHS: Record<PixelAvatarEquipmentSlot, number> = {
   shoes: 0.25,
   top: 0.55,
   accessory: 0.85,
-}
-
-const SCENE_POSES: Record<PixelAvatarFrameId, PixelAvatarScenePose> = {
-  'left-far': {
-    frameId: 'left-far',
-    frameIndex: 0,
-    yaw: -1,
-    scaleX: 0.9,
-    translateXPercent: -2.8,
-  },
-  'left-near': {
-    frameId: 'left-near',
-    frameIndex: 1,
-    yaw: -0.5,
-    scaleX: 0.96,
-    translateXPercent: -1.4,
-  },
-  front: {
-    frameId: 'front',
-    frameIndex: 2,
-    yaw: 0,
-    scaleX: 1,
-    translateXPercent: 0,
-  },
-  'right-near': {
-    frameId: 'right-near',
-    frameIndex: 3,
-    yaw: 0.5,
-    scaleX: 0.96,
-    translateXPercent: 1.4,
-  },
-  'right-far': {
-    frameId: 'right-far',
-    frameIndex: 4,
-    yaw: 1,
-    scaleX: 0.9,
-    translateXPercent: 2.8,
-  },
 }
 
 function isFiniteNumber(value: unknown): value is number {
@@ -202,20 +146,6 @@ export function normalizePixelArchetypeId(value?: string | null): PixelAvatarArc
     : 'cat'
 }
 
-export function isPixelAvatarFrameId(value: string): value is PixelAvatarFrameId {
-  return (PIXEL_AVATAR_FRAME_IDS as readonly string[]).includes(value)
-}
-
-export function normalizePixelAvatarFrameId(value?: string | null): PixelAvatarFrameId {
-  return value && isPixelAvatarFrameId(value) ? value : 'front'
-}
-
-export function getPixelAvatarScenePose(
-  frameId?: PixelAvatarFrameId | string | null,
-): PixelAvatarScenePose {
-  return SCENE_POSES[normalizePixelAvatarFrameId(frameId)]
-}
-
 export function getPixelAvatarBodyUrl(archetypeId?: string | null): string {
   const safeId = normalizePixelArchetypeId(archetypeId)
   const rawBody = RAW_MANIFEST.archetypes?.[safeId]?.body
@@ -256,17 +186,6 @@ export function getPixelAvatarApprovedStarterLookUrl(
   return fullStarterPath ? cdnAsset(`/${fullStarterPath}`) : null
 }
 
-/**
- * The five pseudo-3D stops reuse one approved front body asset. Scene transforms create the
- * restrained paper-doll tilt; this function intentionally does not imply real side views.
- */
-export function getPixelAvatarBodyFrameUrl(
-  archetypeId?: string | null,
-  _frameId: PixelAvatarFrameId = 'front',
-): string {
-  return getPixelAvatarBodyUrl(archetypeId)
-}
-
 export function normalizePixelEquipmentAssetKey(assetKey: string): string {
   const safeSegments = assetKey
     .split('/')
@@ -302,7 +221,6 @@ export function parseStarterPixelEquipmentAssetKey(assetKey: string): {
 export function getPixelEquipmentAsset(
   assetKey: string,
   archetypeId?: string | null,
-  _frameId: PixelAvatarFrameId = 'front',
 ): PixelEquipmentAsset | null {
   const safeId = normalizePixelArchetypeId(archetypeId)
   const trimmedKey = assetKey.trim().replace(/^\/+/, '')
@@ -351,9 +269,8 @@ export function getPixelEquipmentAsset(
 export function getPixelEquipmentLayerUrl(
   assetKey: string,
   archetypeId?: string | null,
-  frameId: PixelAvatarFrameId = 'front',
 ): string | null {
-  return getPixelEquipmentAsset(assetKey, archetypeId, frameId)?.url ?? null
+  return getPixelEquipmentAsset(assetKey, archetypeId)?.url ?? null
 }
 
 /** Square garment-only thumbnail for equipment slot art (e.g. Profile tab).

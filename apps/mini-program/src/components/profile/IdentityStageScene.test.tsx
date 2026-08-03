@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import IdentityStageScene, {
+  IDENTITY_STAGE_BREATH_MS,
   IDENTITY_STAGE_DRIFT_MS,
   IDENTITY_STAGE_ENTRANCE_MS,
   IDENTITY_STAGE_PARTICLE_COUNTS,
@@ -105,6 +106,7 @@ describe('IdentityStageScene named constants (AC-06)', () => {
     expect(IDENTITY_STAGE_DRIFT_MS).toBe(12000)
     expect(IDENTITY_STAGE_ENTRANCE_MS).toBe(500)
     expect(IDENTITY_STAGE_REVEAL_CAP_MS).toBe(1500)
+    expect(IDENTITY_STAGE_BREATH_MS).toBe(5600)
   })
 
   it('consumes both constants in the animation code', async () => {
@@ -144,9 +146,13 @@ describe('IdentityStageScene particle budget (AC-05)', () => {
     expect(scene).toHaveAttribute('data-motion', 'off')
     expect(container.querySelectorAll('.identity-stage__particle')).toHaveLength(0)
     expect(getScene(container).style.animation).toBe('')
+    expect((container.querySelector('.identity-stage__rim-light') as HTMLElement).style.animation).toBe('')
+    expect((container.querySelector('.identity-stage__halo') as HTMLElement).style.animation).toBe('')
+    expect((container.querySelector('.identity-stage__avatar') as HTMLElement).style.animation).toBe('')
+    expect((container.querySelector('.identity-stage__grade') as HTMLElement).style.animation).toBe('')
   })
 
-  it('enables the camera drift and rim breathing once a motion-capable tier resolves', async () => {
+  it('enables the camera drift and layered breathing once a motion-capable tier resolves', async () => {
     const { container } = renderScene()
 
     await waitFor(() => {
@@ -154,8 +160,31 @@ describe('IdentityStageScene particle budget (AC-05)', () => {
     })
     expect(getScene(container).style.animationPlayState).toBe('running')
     const rimLight = container.querySelector('.identity-stage__rim-light') as HTMLElement
-    expect(rimLight.style.animation).toContain('identity-stage-breathe')
+    expect(rimLight.style.animation).toContain(`identity-stage-breathe ${IDENTITY_STAGE_BREATH_MS}ms`)
+    const halo = container.querySelector('.identity-stage__halo') as HTMLElement
+    expect(halo.style.animation).toContain('identity-stage-halo-breathe')
+    const avatar = container.querySelector('.identity-stage__avatar') as HTMLElement
+    expect(avatar.style.animation).toContain('identity-stage-avatar-breath')
+    const grade = container.querySelector('.identity-stage__grade') as HTMLElement
+    expect(grade.style.animation).toContain('identity-stage-grade-drift')
     expect(screen.getByTestId('identity-stage-scene')).toHaveAttribute('data-motion', 'on')
+  })
+
+  it('never bobs the normal-flow content slot (absoluteAvatar=false)', async () => {
+    const { container } = render(
+      <IdentityStageScene absoluteAvatar={false}>
+        <Avatar />
+      </IdentityStageScene>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('identity-stage-scene')).toHaveAttribute('data-motion', 'on')
+    })
+    // Hero-card content (text, buttons) must not ride the breath bob.
+    expect(container.querySelector('.identity-stage__avatar')).toBeNull()
+    const content = container.querySelector('.identity-stage__content') as HTMLElement
+    expect(content).toBeTruthy()
+    expect(content.style.animation).toBe('')
   })
 
   it('keeps minimal and emergency tiers fully static', async () => {
@@ -298,8 +327,12 @@ describe('IdentityStageScene page lifecycle (REL-02)', () => {
       expect(getScene(container).style.animationPlayState).toBe('running')
     })
     const rimLight = container.querySelector('.identity-stage__rim-light') as HTMLElement
+    const halo = container.querySelector('.identity-stage__halo') as HTMLElement
+    const avatar = container.querySelector('.identity-stage__avatar') as HTMLElement
     const particle = container.querySelector('.identity-stage__particle') as HTMLElement
     expect(rimLight.style.animationPlayState).toBe('running')
+    expect(halo.style.animationPlayState).toBe('running')
+    expect(avatar.style.animationPlayState).toBe('running')
     expect(particle.style.animationPlayState).toBe('running')
 
     act(() => {
@@ -307,6 +340,8 @@ describe('IdentityStageScene page lifecycle (REL-02)', () => {
     })
     expect(getScene(container).style.animationPlayState).toBe('paused')
     expect(rimLight.style.animationPlayState).toBe('paused')
+    expect(halo.style.animationPlayState).toBe('paused')
+    expect(avatar.style.animationPlayState).toBe('paused')
     expect(particle.style.animationPlayState).toBe('paused')
 
     act(() => {
@@ -314,6 +349,8 @@ describe('IdentityStageScene page lifecycle (REL-02)', () => {
     })
     expect(getScene(container).style.animationPlayState).toBe('running')
     expect(rimLight.style.animationPlayState).toBe('running')
+    expect(halo.style.animationPlayState).toBe('running')
+    expect(avatar.style.animationPlayState).toBe('running')
     expect(particle.style.animationPlayState).toBe('running')
   })
 

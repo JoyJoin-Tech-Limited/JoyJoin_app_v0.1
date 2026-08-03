@@ -164,6 +164,15 @@ npm run simulate:gate                 # CI gate: generate + run centroids
 # in src/ or dist/ (stale entries fail the upload), and the post-upload
 # verification jq must match avatar-assets-v2.json sourceAssetCount
 # (body+fullStarter+layer+thumb) whenever the build script changes the count.
+# Gotchas (2026-08-01): nginx /static/ returns 404s with Cache-Control:
+# no-store via `error_page 404 = @static404` in /etc/nginx/conf.d/joyjoin.conf.
+# Before this, the `always` flag on the immutable Cache-Control add_header also
+# applied to error responses, so a transient 404 was cached immutable for a year
+# on that device (avatar_asset_error persisted for some testers). Keep 404s
+# non-cacheable; devices that cached a pre-fix 404 need a one-time WeChat cache
+# clear. Also: after regenerating assets with new content hashes (e.g.
+# build-profile-pixel-v2-assets.mjs), re-run the upload — otherwise new-hash
+# references 404 until the next CDN sync.
 # Details: docs/agent-context/mini-program-assets.md.
 ```
 

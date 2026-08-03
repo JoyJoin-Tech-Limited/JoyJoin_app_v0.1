@@ -327,6 +327,54 @@ export type OnboardingStep = AuthUserResponse['nextStep']
 export type UserState = AuthUserResponse
 
 /**
+ * Binary POST — for endpoints returning raw bytes (e.g. the animated share
+ * clip MP4). Mirrors apiRequest's URL/auth/timeout handling but returns an
+ * ArrayBuffer instead of parsed JSON.
+ */
+export async function apiRequestBinary(options: {
+  path: string
+  data?: unknown
+  timeout?: number
+}): Promise<ArrayBuffer> {
+  const requestUrl = buildApiUrl(options.path)
+  const sessionToken = getSessionToken()
+
+  let response
+  try {
+    response = await Taro.request<ArrayBuffer>({
+      url: requestUrl,
+      method: 'POST',
+      data: options.data,
+      responseType: 'arraybuffer',
+      enableCookie: true,
+      timeout: options.timeout ?? REQUEST_TIMEOUT_MS,
+      header: {
+        'content-type': 'application/json',
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+        ...(sessionToken ? { 'X-Session-Token': sessionToken } : {}),
+      },
+    })
+  } catch (error) {
+    throw createTransportApiError(requestUrl, error)
+  }
+
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    return response.data as ArrayBuffer
+  }
+
+  // Error bodies arrive as JSON text inside the arraybuffer — decode for the message
+  let message = `${DEFAULT_API_ERROR_PREFIX} ${response.statusCode}`
+  try {
+    const decoded = JSON.parse(new TextDecoder().decode(response.data as ArrayBuffer))
+    if (decoded?.message) message = decoded.message
+  } catch {
+    // keep generic message
+  }
+  throw createApiError(message, response.statusCode)
+}
+
+/**
  * Authenticate via WeChat Mini Program login (Taro.login → code2Session).
  * Establishes the authenticated session cookie for the follow-up auth bootstrap.
  * No web OAuth redirect is involved — this is mini-program-only.

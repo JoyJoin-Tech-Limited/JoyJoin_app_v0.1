@@ -1,0 +1,179 @@
+@use '../../styles/variables' as *;
+@use '../../styles/reveal-motion' as *;
+
+// UnboxingCeremony — completion payoff overlay (2026-07-31). Mirrors the
+// results-reveal language via the shared reveal-motion partial; the box art
+// is the squad-unboxing layered Lovart set (CDN). ≤200 lines of choreography:
+// halo bloom → lid lift → card rise → hint. RM tier: static card + 150ms
+// fade, no lid motion. Low-end: lid lift only, no halo idle.
+
+.unboxing-ceremony {
+  position: fixed;
+  inset: 0;
+  z-index: $z-modal;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: $color-dusk-cream;
+  background-image:
+    radial-gradient(ellipse at 50% 30%, rgba($color-primary, 0.08) 0%, transparent 70%),
+    linear-gradient(180deg, $color-dusk-cream 0%, $color-dusk-blush 26%, $color-dusk-mist 55%, $color-dusk-lavender 80%, $color-dusk-deep 100%);
+  animation: reveal-rise-in 240ms $ease-reveal-rise both;
+}
+
+.unboxing-ceremony__halo {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  width: 560rpx;
+  height: 440rpx;
+  margin-left: -280rpx;
+  background-image: radial-gradient(ellipse at center, rgba($color-landed-gold, 0.28) 0%, rgba($color-landed-gold, 0) 62%);
+  pointer-events: none;
+  animation: reveal-halo-bloom 420ms ease-out 260ms both;
+}
+
+.unboxing-ceremony__stage {
+  position: relative;
+  width: 400rpx;
+  height: 400rpx;
+  animation: reveal-pop-settle 480ms $ease-reveal-pop 120ms both;
+}
+
+.unboxing-ceremony__body,
+.unboxing-ceremony__lid,
+.unboxing-ceremony__interior {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 400rpx;
+  height: 400rpx;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.unboxing-ceremony__interior {
+  // Glow inside the box: revealed as the lid lifts.
+  opacity: 0;
+  animation: unboxing-interior-glow 400ms ease-out 700ms both;
+}
+
+.unboxing-ceremony__lid {
+  transform-origin: 50% 85%;
+  animation: unboxing-lid-lift 520ms $ease-reveal-rise 620ms both;
+}
+
+.unboxing-ceremony__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 40rpx;
+  padding: 32rpx 56rpx;
+  border-radius: 32rpx;
+  background: $color-surface;
+  box-shadow: $shadow-primary-soft;
+  animation: reveal-rise-in 380ms $ease-reveal-rise 1050ms both;
+  opacity: 0;
+}
+
+.unboxing-ceremony__eyebrow {
+  font-size: 22rpx;
+  color: rgba($color-text-primary-warm, 0.6);
+  letter-spacing: 4rpx;
+}
+
+// The archetype IS the payoff — display slot, archetype-tinted.
+.unboxing-ceremony__archetype {
+  margin-top: 12rpx;
+  font-family: $font-cn-display;
+  font-size: $font-size-3xl;
+  font-weight: 700;
+  color: $color-primary-dark;
+  line-height: 1.2;
+  max-width: 480rpx;
+}
+
+.unboxing-ceremony__name {
+  margin-top: 12rpx;
+  font-size: $font-size-base;
+  color: rgba($color-text-primary-warm, 0.72);
+  line-height: 1.4;
+  max-width: 480rpx;
+}
+
+.unboxing-ceremony__hint {
+  margin-top: 48rpx;
+  font-size: 24rpx;
+  color: rgba($color-text-primary-warm, 0.5);
+  animation: reveal-rise-in 320ms ease-out 1500ms both;
+  opacity: 0;
+}
+
+@keyframes unboxing-lid-lift {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  60% {
+    transform: translateY(-96rpx) rotate(-14deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(-140rpx) rotate(-18deg);
+    opacity: 0;
+  }
+}
+
+@keyframes unboxing-interior-glow {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+// ── Low-end: lid lift only, halo idle never runs (it is one-shot anyway);
+//    the interior glow step is skipped to cut one composited layer. ──
+.unboxing-ceremony--low-end {
+  .unboxing-ceremony__interior {
+    display: none;
+  }
+}
+
+// ── Reduced motion: static card + 150ms fade, no lid motion. ──
+.unboxing-ceremony--rm {
+  animation: unboxing-rm-fade 150ms ease-out both;
+
+  .unboxing-ceremony__halo,
+  .unboxing-ceremony__stage,
+  .unboxing-ceremony__lid,
+  .unboxing-ceremony__interior,
+  .unboxing-ceremony__card,
+  .unboxing-ceremony__hint {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .unboxing-ceremony__lid {
+    display: none;
+  }
+
+  .unboxing-ceremony__interior {
+    display: none;
+  }
+}
+
+@keyframes unboxing-rm-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

@@ -1,5 +1,9 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+// Subpackage WXSS guard (AGENTS §15): component SCSS must be @use'd in the
+// consuming page's SCSS or Taro's chunk graph can drop it.
+@use '../../../components/onboarding/BoxJourneySpine.scss' as *;
+@use '../../../components/onboarding/UnboxingCeremony.scss' as *;
 
 .profile-review {
   display: flex;
@@ -81,15 +85,11 @@
     text-align: center;
   }
 
-  &__eyebrow {
-    display: inline-flex;
-    align-items: center;
-    padding: $spacing-xs $spacing-sm;
-    border-radius: $radius-pill;
-    background: rgba($color-primary-light, 0.92);
-    color: $color-primary;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
+  // 装盒进度 spine replaces the eyebrow pill; the hero block is centered,
+  // so the spine centers too (left-aligned elsewhere per the spine spec).
+  &__spine {
+    justify-content: center;
+    margin-bottom: $spacing-sm;
   }
 
   &__title {

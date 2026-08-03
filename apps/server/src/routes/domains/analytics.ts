@@ -142,6 +142,7 @@ const DISCOVER_EVENT_TYPES = [
   "persona_snapshot_new_registrant_banner_shown",
   "persona_snapshot_state_band",
   "persona_snapshot_load_error",
+  "pool_teaser_impression",
 ] as const;
 
 type DiscoverEventType = (typeof DISCOVER_EVENT_TYPES)[number];
@@ -222,6 +223,7 @@ const LANDING_EVENT_TYPES = [
   "landing_cta_tap",
   "landing_hero_asset",
   "landing_dwell",
+  "landing_mechanism_replay",
 ] as const;
 
 type LandingEventType = (typeof LANDING_EVENT_TYPES)[number];

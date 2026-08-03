@@ -29,7 +29,7 @@ import { createAvatar3DSession, type Avatar3DSession } from '../../lib/profile/a
 import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { haptics } from '../../lib/utils/haptics'
 import { logWarn } from '../../lib/utils/logger'
-import PixelAvatarTurntable from './PixelAvatarTurntable'
+import PixelAvatarComposite from './PixelAvatarComposite'
 import type { PixelAvatarSlotHotspot } from './PixelAvatarComposite'
 import './PixelAvatar3D.scss'
 
@@ -53,7 +53,7 @@ export interface PixelAvatar3DProps {
    */
   onStatusChange?: (report: Avatar3DStatusReport) => void
   /**
-   * Optional tap-to-slot hotspots for the V2 turntable fallback (placement
+   * Optional tap-to-slot hotspots for the V2 composite fallback (placement
    * hit-rects on the character). Not wired into the WebGL spider surface.
    */
   slotHotspots?: PixelAvatarSlotHotspot[]
@@ -109,9 +109,10 @@ function nowMs(): number {
  * reset, and per-slot equipment garments driven by the authoritative outfit.
  *
  * Phase 1 scope: ONLY the spider persona boots WebGL. Every other archetype
- * renders the stable V2 turntable with an honest "3D 形象正在准备" notice —
+ * renders the stable front-view V2 composite with no steady-state notice —
  * they must never be swapped into a spider. WebGL boot failures (canvas
- * missing, context unavailable, init throw, context lost) also fall back with
+ * missing, context unavailable, init throw, context lost) fall back the same
+ * way but keep a gentle device-degradation notice, and every fallback carries
  * an explicit reason recorded for QA/diagnostics. Never a blank page.
  */
 export function PixelAvatar3D({
@@ -482,25 +483,32 @@ export function PixelAvatar3D({
   }, [publishYaw, startInertia, startResetAnimation])
 
   // -------------------------------------------------------------------------
-  // Fallback: stable V2 turntable + gentle notice. Never a blank page.
+  // Fallback: stable front-view V2 composite. Only genuine device degradation
+  // shows a notice — for non-spider personas the classic composite IS the
+  // canonical look, and a permanent "3D is coming" pill would only raise a
+  // question the UI can't answer. Never a blank page.
   // -------------------------------------------------------------------------
   if (status === 'fallback') {
-    const notice = fallbackReason === 'unsupported-archetype'
-      ? '该人格 3D 形象正在准备，先展示经典形象'
-      : '当前设备暂不支持 3D 预览，已切换为经典形象'
+    const notice = fallbackReason !== 'unsupported-archetype'
+      ? '当前设备暂不支持 3D 预览，已切换为经典形象'
+      : null
     return (
       <View className={`pixel-avatar-3d pixel-avatar-3d--${variant} pixel-avatar-3d--fallback ${className}`.trim()}>
-        <PixelAvatarTurntable
-          archetypeId={archetypeId}
-          outfit={outfit}
-          itemsById={itemsById}
-          variant={variant}
-          slotHotspots={slotHotspots}
-          onSlotTap={onSlotTap}
-        />
-        <View className='pixel-avatar-3d__fallback-note' role='note' aria-label={notice}>
-          <Text>{notice}</Text>
+        <View className='pixel-avatar-3d__fallback-stage'>
+          <PixelAvatarComposite
+            archetypeId={archetypeId}
+            outfit={outfit}
+            itemsById={itemsById}
+            variant={variant}
+            slotHotspots={slotHotspots}
+            onSlotTap={onSlotTap}
+          />
         </View>
+        {notice && (
+          <View className='pixel-avatar-3d__fallback-note' role='note' aria-label={notice}>
+            <Text>{notice}</Text>
+          </View>
+        )}
       </View>
     )
   }

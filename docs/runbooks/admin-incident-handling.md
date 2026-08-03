@@ -211,7 +211,7 @@ The venue will no longer appear as available for new events, but historical refe
    ```bash
    npm test -w @joyjoin/server -- src/__tests__/adminRbacCoverage.test.ts
    ```
-6. Refer to `docs/admin/admin/admin-rbac-matrix.md` for the full role requirement per endpoint.
+6. Refer to `docs/admin/admin-rbac-matrix.md` for the full role requirement per endpoint.
 7. The admin client globally redirects to `/admin/login` on `401`/`403` responses for any `/admin/*` route (handled by `apps/admin-client/src/lib/queryClient.ts`).
 
 ---
@@ -279,7 +279,7 @@ Run this checklist each day during internal beta.
 
 - [ ] Review admin account list for any accounts that should be disabled
 - [ ] Review data insights: `/admin/insights` (数据洞察)
-- [ ] Check abuse detection state (currently in-memory; resets on server restart — see `docs/product/product/launch-risks.md`)
+- [ ] Check abuse detection state (currently in-memory; resets on server restart — see `docs/product/launch-risks.md`)
 
 ---
 
@@ -303,11 +303,11 @@ UPDATE admin_accounts SET status = 'disabled' WHERE username = '<compromised>';
 ## 5. Open beta (self-serve) additions
 
 - **Untrusted users:** Prefer disabling or tightly scoping `viewer` accounts; mutating admin APIs require operator or above (see [`product/open-beta-wider.md`](../product/open-beta-wider.md)).
-- **Single replica:** If the cohort runs on **one** Node process, document that restarts reset in-memory rate limits and abuse soft counters (`docs/product/product/launch-risks.md` R-01/R-02); bans and DB-backed state still apply. Do **not** scale to multiple replicas without Redis/shared limits (see [`open-beta-single-replica.md`](./open-beta-single-replica.md)).
+- **Single replica:** If the cohort runs on **one** Node process, document that restarts reset in-memory rate limits and abuse soft counters (`docs/product/launch-risks.md` R-01/R-02); bans and DB-backed state still apply. Do **not** scale to multiple replicas without Redis/shared limits (see [`open-beta-single-replica.md`](./open-beta-single-replica.md)).
 - **Payments:** Payment incidents follow Finance escalation above; verify `PAYMENTS_ENABLED` and WeChat Pay env per [`product/LAUNCH_CONFIG.md`](../product/LAUNCH_CONFIG.md).
 - **Emergency auth:** See [`emergency-auth-surfaces.md`](./emergency-auth-surfaces.md) for debug flags and CLI bypass policy.
 
 ---
 
-*For RBAC role definitions and endpoint permissions, see [`docs/admin/admin/admin-rbac-matrix.md`](../admin/admin-rbac-matrix.md).*  
-*For known MVP limitations, see [`docs/product/product/launch-risks.md`](../product/launch-risks.md).*
+*For RBAC role definitions and endpoint permissions, see [`docs/admin/admin-rbac-matrix.md`](../admin/admin-rbac-matrix.md).*  
+*For known MVP limitations, see [`docs/product/launch-risks.md`](../product/launch-risks.md).*

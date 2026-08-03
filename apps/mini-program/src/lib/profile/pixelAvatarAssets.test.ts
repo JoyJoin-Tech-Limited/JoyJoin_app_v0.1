@@ -4,9 +4,7 @@ import {
   PIXEL_AVATAR_EQUIPMENT_SLOTS,
   getPixelAvatarApprovedStarterLookUrl,
   getPixelAvatarBaseUrl,
-  getPixelAvatarBodyFrameUrl,
   getPixelAvatarBodyUrl,
-  getPixelAvatarScenePose,
   getPixelEquipmentAsset,
   getPixelEquipmentLayerUrl,
   getPixelEquipmentThumbnailUrl,
@@ -22,8 +20,6 @@ describe('pixelAvatarAssets', () => {
     )
     expect(getPixelAvatarBodyUrl('corgi')).toMatch(/body-front-v2\.[a-f0-9]{12}\.webp/)
     expect(getPixelAvatarBaseUrl('corgi')).toBe(getPixelAvatarBodyUrl('corgi'))
-    expect(getPixelAvatarBodyFrameUrl('corgi', 'left-far'))
-      .toBe(getPixelAvatarBodyFrameUrl('corgi', 'right-far'))
   })
 
   it('falls back to a canonical archetype for unknown runtime values', () => {
@@ -56,7 +52,7 @@ describe('pixelAvatarAssets', () => {
     for (const archetypeId of PIXEL_AVATAR_ARCHETYPE_IDS) {
       for (const slot of PIXEL_AVATAR_EQUIPMENT_SLOTS) {
         const assetKey = `equipment/starter/${archetypeId}/${slot}/v1`
-        const asset = getPixelEquipmentAsset(assetKey, archetypeId, 'right-near')
+        const asset = getPixelEquipmentAsset(assetKey, archetypeId)
         expect(asset).toMatchObject({ slot })
         expect(asset?.url).toContain(
           `/assets/profile-pixel/v2/equipment/starter/${archetypeId}/${slot}/layer-v2.`,
@@ -66,7 +62,7 @@ describe('pixelAvatarAssets', () => {
         expect(asset?.placement.height).toBeGreaterThan(0)
         expect(asset?.depth).toBeGreaterThanOrEqual(0)
         expect(asset?.depth).toBeLessThanOrEqual(1)
-        expect(getPixelEquipmentLayerUrl(assetKey, archetypeId, 'left-far')).toBe(asset?.url)
+        expect(getPixelEquipmentLayerUrl(assetKey, archetypeId)).toBe(asset?.url)
         expect(getPixelEquipmentThumbnailUrl(assetKey, archetypeId)).toBe(asset?.thumb)
         expect(asset?.thumb).toContain(
           `/assets/profile-pixel/v2/equipment/starter/${archetypeId}/${slot}/thumb-v2.`,
@@ -79,15 +75,6 @@ describe('pixelAvatarAssets', () => {
   it('rejects starter layers that belong to another archetype and non-starter pool art', () => {
     expect(getPixelEquipmentAsset('equipment/starter/corgi/top/v1', 'cat')).toBeNull()
     expect(getPixelEquipmentAsset('equipment/pools/demo/rare-top/v1', 'corgi')).toBeNull()
-  })
-
-  it('provides symmetric five-stop paper-doll scene poses', () => {
-    expect(getPixelAvatarScenePose('front')).toMatchObject({ yaw: 0, scaleX: 1 })
-    expect(getPixelAvatarScenePose('left-far').yaw)
-      .toBe(-getPixelAvatarScenePose('right-far').yaw)
-    expect(getPixelAvatarScenePose('left-far').scaleX)
-      .toBe(getPixelAvatarScenePose('right-far').scaleX)
-    expect(getPixelAvatarScenePose('unknown').frameId).toBe('front')
   })
 
   it('serves the atlas-derived approved full-starter look for every archetype', () => {

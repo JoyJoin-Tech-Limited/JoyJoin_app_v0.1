@@ -26,8 +26,9 @@ import './IdentityStageScene.scss'
  * A warm-toned multi-plane depth scene that wraps the existing
  * `PixelAvatarComposite` identity card with zero functional diff:
  *
- *   far-bg (pre-baked blur art) → mid-bg → avatar (children)
- *     → rim-light (opacity breathing) → dust particles → warm grade overlay
+ *   far-bg (pre-baked blur art) → mid-bg → avatar (children, breath bob)
+ *     → rim-light (physiological breath) → halo (off-phase second breath)
+ *     → dust particles → warm grade (slow shimmer)
  *
  * Hard rules (contract AC-03..AC-07):
  * - Transform/opacity animation only. Blur is pre-baked into the far-bg art;
@@ -54,8 +55,26 @@ export const IDENTITY_STAGE_ENTRANCE_MS = 500
 /** A hung art layer may never delay the entrance reveal past this cap. */
 export const IDENTITY_STAGE_REVEAL_CAP_MS = 1500
 
-/** Rim-light opacity breathing loop (not contract-specified; kept gentle). */
-const IDENTITY_STAGE_RIM_BREATHE_MS = 4200
+/**
+ * Primary breath period (rim light + avatar bob). 5.6s ≈ 10.7 breaths/min —
+ * a calm resting rate. The keyframe curve is physiological, not sinusoidal:
+ * a quicker inhale (~28%), a short hold (~10%), a slow exhale (~40%), and a
+ * rest at the bottom so the motion reads as breathing, not pulsing.
+ */
+export const IDENTITY_STAGE_BREATH_MS = 5600
+
+/**
+ * Secondary halo period. 8.4s against the 5.6s primary makes the combined
+ * light field drift in and out of phase (LCM 16.8s), so the scene never
+ * settles into a metronome.
+ */
+const IDENTITY_STAGE_HALO_BREATHE_MS = 8400
+
+/** Very slow warm-grade shimmer — kills the static-postcard feel. */
+const IDENTITY_STAGE_GRADE_DRIFT_MS = 14000
+
+/** The body follows the light by a beat; simultaneous motion reads mechanical. */
+const IDENTITY_STAGE_AVATAR_BREATH_DELAY_MS = 150
 
 /** Particle budget per degradation tier (contract AC-05). */
 export const IDENTITY_STAGE_PARTICLE_COUNTS: Record<DegradationTier, number> = {
@@ -232,7 +251,30 @@ export function IdentityStageScene({
 
   const rimLightStyle: CSSProperties = motionEnabled
     ? {
-      animation: `identity-stage-breathe ${IDENTITY_STAGE_RIM_BREATHE_MS}ms ease-in-out infinite`,
+      animation: `identity-stage-breathe ${IDENTITY_STAGE_BREATH_MS}ms ease-in-out infinite`,
+      animationPlayState: playState,
+    }
+    : {}
+
+  const haloStyle: CSSProperties = motionEnabled
+    ? {
+      animation: `identity-stage-halo-breathe ${IDENTITY_STAGE_HALO_BREATHE_MS}ms ease-in-out infinite`,
+      animationPlayState: playState,
+    }
+    : {}
+
+  const avatarBreathStyle: CSSProperties = motionEnabled
+    ? {
+      animation:
+        `identity-stage-avatar-breath ${IDENTITY_STAGE_BREATH_MS}ms ease-in-out ` +
+        `${IDENTITY_STAGE_AVATAR_BREATH_DELAY_MS}ms infinite`,
+      animationPlayState: playState,
+    }
+    : {}
+
+  const gradeStyle: CSSProperties = motionEnabled
+    ? {
+      animation: `identity-stage-grade-drift ${IDENTITY_STAGE_GRADE_DRIFT_MS}ms ease-in-out infinite`,
       animationPlayState: playState,
     }
     : {}
@@ -278,12 +320,13 @@ export function IdentityStageScene({
           )}
 
           {absoluteAvatar ? (
-            <View className='identity-stage__avatar'>{children}</View>
+            <View className='identity-stage__avatar' style={avatarBreathStyle}>{children}</View>
           ) : (
             <View className='identity-stage__content'>{children}</View>
           )}
 
           <View className='identity-stage__rim-light' style={rimLightStyle} aria-hidden='true' />
+          <View className='identity-stage__halo' style={haloStyle} aria-hidden='true' />
 
           {IDENTITY_STAGE_PARTICLE_SPECS.slice(0, particleCount).map((spec, index) => (
             <View
@@ -301,7 +344,7 @@ export function IdentityStageScene({
             />
           ))}
 
-          <View className='identity-stage__grade' aria-hidden='true' />
+          <View className='identity-stage__grade' style={gradeStyle} aria-hidden='true' />
         </View>
       </View>
     </View>

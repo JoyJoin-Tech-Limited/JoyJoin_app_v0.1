@@ -39,7 +39,9 @@ WORKDIR /app
 
 # CJK fonts for headless canvas rendering (moment-card PNG). Without these,
 # Chinese text renders as boxes (see lib/momentCardRenderer.ts font scan).
-RUN apk add --no-cache font-noto-cjk && fc-cache -f
+# ffmpeg for the animated share-clip composition (lib/shareClipRenderer.ts,
+# feature-flagged SHARE_ANIMATED_CLIP_ENABLED).
+RUN apk add --no-cache font-noto-cjk ffmpeg && fc-cache -f
 
 ENV NODE_ENV=production
 ENV PORT=5000

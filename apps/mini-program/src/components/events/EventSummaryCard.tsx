@@ -5,7 +5,8 @@ import {
   ARCHETYPE_FAMILY_GRADIENTS,
 } from '@shared/archetypeColors'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
-import { useEventCountdown } from '../../hooks/useEventCountdown'
+import { computeCountdownResult } from '../../hooks/useEventCountdown'
+import { useCountdownTickValue } from '../../hooks/useCountdownTick'
 import { usePageVisibility } from '../../hooks/usePageVisibility'
 import { getOracleCardCornerAsset } from '../discover/oracleCardAssets'
 import {
@@ -75,8 +76,11 @@ function formatClockPair(value: number): string {
 }
 
 // ─── Segmented Clock Component ─────────────────────────────────
-// Self-contained: owns its countdown hook so the parent card does not
-// re-render every second.
+// Self-contained countdown leaf. The list path derives its readout from the
+// page-level shared ticker (CountdownTickProvider) so N cards share ONE
+// interval instead of owning N timers. Outside a provider it renders a
+// static readout computed at render time (no ticking) — same behavior as the
+// reduced-motion/low-end static readout path.
 
 interface EventCountdownClockProps {
   target: string | null
@@ -95,12 +99,30 @@ const EventCountdownClock = React.memo(function EventCountdownClock({
   clockId,
   compact = false,
 }: EventCountdownClockProps) {
-  const { display, segments, isUrgent, hasStarted, isLive } = useEventCountdown({
-    target,
-    enabled,
-    urgentThresholdMinutes: 60,
-    elementId: clockId,
-  })
+  const tickValue = useCountdownTickValue()
+  const { isDegradation } = useDeviceTier()
+  const { isPageVisible } = usePageVisibility()
+  // Memoized: getSystemInfoSync is synchronous + deprecated; the clock
+  // re-renders every second per card — an unmemoized read taxes the JS thread.
+  const reduceMotion = useMemo(() => getSystemReducedMotion(), [])
+
+  // Live gating: motion enabled, primary-tier device, page visible, valid target.
+  const live = Boolean(target) && enabled && !isDegradation && !reduceMotion && isPageVisible
+
+  // While not live (hidden, reduced-motion, low-end, no provider) the readout
+  // FREEZES at the last live value — identical to the pre-P2 hook, where the
+  // per-card interval simply stopped and left a static "paused" readout.
+  const frozenNowRef = useRef<number>(Date.now())
+  const tickNow = tickValue?.now
+  if (live && tickNow != null) {
+    frozenNowRef.current = tickNow
+  }
+  const now = live && tickNow != null ? tickNow : frozenNowRef.current
+
+  const { display, segments, isUrgent, hasStarted, isLive } = useMemo(
+    () => computeCountdownResult(target, enabled, now, 60, live),
+    [target, enabled, now, live],
+  )
 
   // Track previous segment values to pulse only the digit group that changed.
   const prevSegmentsRef = useRef(segments)

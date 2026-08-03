@@ -819,6 +819,15 @@ if ! docker compose -f "$COMPOSE_FILE" up \
     -d --no-deps --no-build --force-recreate joyjoin-admin-staging; then
     exit 1
 fi
+# 2026-07-31: staging's own granite-embedding (local build from
+# deploy/granite-embedding). Non-blocking — embeddings degrade gracefully.
+# Service name is granite-embedding-staging: it shares the compose project with
+# production's docker-compose.nginx.yml, so a plain `granite-embedding` name
+# would make this `up` recreate the production container.
+if ! docker compose -f "$COMPOSE_FILE" up \
+    -d --no-deps --build granite-embedding-staging; then
+    echo "   ⚠️ granite-embedding-staging failed to build/start — semantic embeddings stay degraded until next deploy"
+fi
 if ! sudo systemctl reload-or-restart nginx; then
     exit 1
 fi

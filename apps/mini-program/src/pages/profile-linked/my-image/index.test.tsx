@@ -262,7 +262,7 @@ describe('MyImagePage', () => {
     expect(screen.getByRole('button', { name: '保存形象' })).toHaveAttribute('aria-disabled', 'true')
     expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
     expect(container.querySelector<HTMLImageElement>('.my-image__item-art')?.src)
-      .toMatch(/layer-v2\.[a-f0-9]{12}\.webp/)
+      .toMatch(/thumb-v2\.[a-f0-9]{12}\.webp/)
     expect(screen.getByText('基础内搭不可脱')).toBeInTheDocument()
     expect(container.querySelector('.pixel-avatar')).toBeNull()
   })
@@ -481,6 +481,9 @@ describe('MyImagePage', () => {
 
     await waitFor(() => expect(mocks.drawEquipmentEntitlement.mock.calls[0]?.[0]).toBe('entitlement-1'))
     expect(await screen.findByRole('dialog', { name: '装备抽取结果' })).toBeInTheDocument()
+    // The reveal card shows the drawn garment's product shot, not a glyph.
+    const revealArt = document.querySelector<HTMLImageElement>('.my-image__reveal-art')
+    expect(revealArt?.src).toMatch(/thumb-v2\.[a-f0-9]{12}\.webp/)
   })
 
   it('redeems with a generated idempotency key and never invokes payment', async () => {
@@ -534,11 +537,14 @@ describe('MyImagePage', () => {
     expect(screen.getByRole('button', { name: '保存形象' })).toHaveAttribute('aria-disabled', 'true')
   })
 
-  it('shows the honest 3D-preparing notice for non-spider personas (no WebGL boot)', async () => {
+  it('shows the V2 composite with no steady-state 3D notice for non-spider personas (no WebGL boot)', async () => {
     renderPage()
 
-    // cat persona: the 3D gate falls back synchronously to the V2 turntable.
-    expect(await screen.findByText('该人格 3D 形象正在准备，先展示经典形象')).toBeInTheDocument()
+    // cat persona: the 3D gate falls back synchronously to the V2 composite,
+    // which is the canonical look — no permanent 3D-preparing pill.
+    await screen.findByText('星夜夹克')
+    expect(screen.queryByText('该人格 3D 形象正在准备，先展示经典形象')).toBeNull()
+    expect(document.querySelector('.pixel-avatar-3d__fallback-note')).toBeNull()
     expect(document.querySelector('canvas')).toBeNull()
   })
 

@@ -598,7 +598,10 @@ jobs:
             write_if_nonempty "DEBUG_AUTH" "$DEBUG_AUTH"
             write_if_nonempty "ENABLE_MATCHER_V2" "$ENABLE_MATCHER_V2"
             write_if_nonempty "ENABLE_SEMANTIC_SIMILARITY" "$ENABLE_SEMANTIC_SIMILARITY"
-            write_if_nonempty "EMBEDDING_BASE_URL" "$EMBEDDING_BASE_URL"
+            # EMBEDDING_BASE_URL is a shared GitHub var with production, so it can
+            # never point at staging's own container. Always override with the
+            # staging granite-embedding service (docker-compose.staging.yml).
+            write_env_value "EMBEDDING_BASE_URL" "http://joyjoin-granite-embedding-staging:8000/v1"
             write_if_nonempty "EMBEDDING_MODEL" "$EMBEDDING_MODEL"
             write_if_nonempty "ENABLE_ADAPTIVE_WEIGHTS" "$ENABLE_ADAPTIVE_WEIGHTS"
             write_if_nonempty "LOG_LEVEL" "$LOG_LEVEL"

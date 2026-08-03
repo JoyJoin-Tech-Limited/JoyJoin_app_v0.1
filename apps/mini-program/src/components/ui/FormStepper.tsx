@@ -15,6 +15,9 @@ export interface FormStepperProps {
   showBack?: boolean
   /** Optional custom header content */
   headerContent?: React.ReactNode
+  /** Archetype accent for filled segments (Bet 1 tinted chrome); brand
+      primary when absent. */
+  accentColor?: string
 }
 
 /**
@@ -33,6 +36,7 @@ export default function FormStepper({
   onBack,
   showBack = true,
   headerContent,
+  accentColor,
 }: FormStepperProps) {
   const label = stepLabels[currentStep] ?? `步骤 ${currentStep + 1}`
 
@@ -65,6 +69,11 @@ export default function FormStepper({
                   i <= currentStep ? 'form-stepper__segment--filled' : '',
                   i === currentStep ? 'form-stepper__segment--active' : '',
                 ].filter(Boolean).join(' ')}
+                style={
+                  i <= currentStep && accentColor
+                    ? { background: accentColor }
+                    : undefined
+                }
               />
             ))}
           </View>

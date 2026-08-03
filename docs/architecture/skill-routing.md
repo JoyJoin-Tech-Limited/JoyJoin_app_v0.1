@@ -15,7 +15,7 @@ The JoyJoin skill routing system ensures that the right repo skill is loaded at 
 
 > **Note:** `.agents/skills/` is an OpenCode-specific mirror containing a subset (62 skills) of the canonical `.github/skills/` tree. See `skill-taxonomy.md` for the canonical classification.
 
-**Large coordinated refreshes** (product docs + skills + agents together): follow [`docs/ai/ai/ai-workflow-documentation-refresh.md`](../ai/ai-workflow-documentation-refresh.md) for scope tiers, lanes, and `npm run orchestration:validate` when orchestration or routing metadata changes.
+**Large coordinated refreshes** (product docs + skills + agents together): follow [`docs/ai/ai-workflow-documentation-refresh.md`](../ai/ai-workflow-documentation-refresh.md) for scope tiers, lanes, and `npm run orchestration:validate` when orchestration or routing metadata changes.
 
 ---
 
@@ -100,8 +100,8 @@ strong_triggers:
   - hasSeenProfileReview
 
 owned_files:
-  - apps/user-client/src/features/onboarding/
-  - apps/user-client/src/hooks/useAuth.ts
+  - apps/mini-program/src/pages/onboarding/
+  - apps/mini-program/src/lib/onboarding/
 
 owned_paths:
   - /onboarding/setup
@@ -110,8 +110,8 @@ owned_paths:
 
 owned_symbols:
   - nextStep
-  - useOnboardingOrchestrator
-  - AuthenticatedRouter
+  - nextStepToOnboardingStep
+  - buildOnboardingProgress
 
 related_skills:
   - skill: reliability-and-state-integrity
@@ -238,11 +238,11 @@ node scripts/skill-router.mjs "Add a nextStep rule after profile review"
 
 # With file context
 node scripts/skill-router.mjs "Fix this component" \
-  --files "apps/user-client/src/components/matching/NoMatchScreen.tsx"
+  --files "apps/mini-program/src/pages/matching-status/index.tsx"
 
 # With symbol context
 node scripts/skill-router.mjs "Refactor this hook" \
-  --symbols "useOnboardingOrchestrator"
+  --symbols "nextStepToOnboardingStep"
 ```
 
 ---

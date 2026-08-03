@@ -111,6 +111,9 @@ const analysisResponseSchema = z.object({
 
 const analysisCache = new Map<string, { result: Omit<XiaoyueAnalysisResult, 'cached'>; timestamp: number }>();
 const CACHE_TTL = 1000 * 60 * 60;
+/** In-flight generation promises keyed by cache key — dedupes concurrent
+ *  prefetch + direct calls so the same profile never burns two LLM runs. */
+const inFlightAnalysis = new Map<string, Promise<XiaoyueAnalysisResult>>();
 
 const traitLabels: Record<keyof ArchetypeAnalysisInput['traitScores'], string> = {
   affinity: '亲和力',
@@ -391,7 +394,13 @@ function getCacheKey(input: ArchetypeAnalysisInput): string {
     .slice(0, 2)
     .map((item) => `${item.archetype}:${Math.round(item.score)}`)
     .join('|');
-  return `${input.archetype}_${input.secondaryArchetype ?? 'none'}_${confidenceBand}_${topArchetypesKey}_${Object.values(input.traitScores).map((value) => normalizeTraitScore(value)).join('_')}_v${XIAOYUE_PERSONA_PROMPT_VERSION}_${XIAOYUE_CRAFT_PROMPT_VERSION}`;
+  // Bucket normalized trait scores to the nearest 10 so a mid-test prefetch
+  // (replayed from a session with fewer answers) hits the same cache entry as
+  // the final completion-time call when the profile has only drifted slightly.
+  const traitBucketKey = Object.values(input.traitScores)
+    .map((value) => Math.round(normalizeTraitScore(value) / 10) * 10)
+    .join('_');
+  return `${input.archetype}_${input.secondaryArchetype ?? 'none'}_${confidenceBand}_${topArchetypesKey}_${traitBucketKey}_v${XIAOYUE_PERSONA_PROMPT_VERSION}_${XIAOYUE_CRAFT_PROMPT_VERSION}`;
 }
 
 function buildAnalysisPrompt(input: ArchetypeAnalysisInput): string {
@@ -561,6 +570,25 @@ export async function generateXiaoyueAnalysis(
     return hit;
   }
 
+  const inFlight = inFlightAnalysis.get(cacheKey);
+  if (inFlight) {
+    logger.info('[XiaoyueAnalysis] Reusing in-flight generation', { archetype: input.archetype });
+    return inFlight;
+  }
+
+  const running = runAnalysisGeneration(input, cacheKey);
+  inFlightAnalysis.set(cacheKey, running);
+  try {
+    return await running;
+  } finally {
+    inFlightAnalysis.delete(cacheKey);
+  }
+}
+
+async function runAnalysisGeneration(
+  input: ArchetypeAnalysisInput,
+  cacheKey: string
+): Promise<XiaoyueAnalysisResult> {
   const systemBase = `${XIAOYUE_PERSONA}\n\n${GENDER_NEUTRAL}`;
   const fallback = buildFallbackAnalysisPayload(input);
 
@@ -578,7 +606,11 @@ export async function generateXiaoyueAnalysis(
             { role: 'user', content: userPrompt },
           ],
           temperature: 0.7,
-          max_tokens: 500,
+          // deepseek-v4-flash reasons by default; an unchecked chain burns
+          // 1100+ tokens and stretches generation past 20s. 'low' collapses
+          // reasoning to ~30 tokens — measured 2.4s total, full content.
+          reasoning_effort: 'low',
+          max_tokens: 2500,
           response_format: { type: 'json_object' },
         });
         return response.choices[0]?.message?.content?.trim() || '';
@@ -589,6 +621,10 @@ export async function generateXiaoyueAnalysis(
       },
       context: 'analysis',
       extractText: (r: Omit<XiaoyueAnalysisResult, 'cached'>) => r.analysis,
+      // Cap retries at 1: each LLM round-trip is ~3-7s, and two extra retries
+      // can push a cold generation past the client's 15s request timeout
+      // (measured 20s on a retried run). The template fallback is the floor.
+      maxRetries: 1,
       fallback,
     });
 

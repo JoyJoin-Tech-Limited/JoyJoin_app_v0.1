@@ -37,6 +37,9 @@ import type { IntentCardOption } from '../../../components/intent/IntentCard'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import FormStepper from '../../../components/ui/FormStepper'
+import BoxJourneySpine from '../../../components/onboarding/BoxJourneySpine'
+import { getOnboardingVoiceLine, type OnboardingVoiceStepId } from '@shared/copy/onboardingVoice'
+import type { EssentialDataStepId } from './stepIds'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import ProfessionChatOverlay from '../../../components/ProfessionChatOverlay'
 import ContentBlockedError from '../../../components/ContentBlockedError'
@@ -52,54 +55,51 @@ const BIRTH_YEAR_RANGE = Array.from(
 )
 
 interface StepConfig {
-  id: string
+  id: EssentialDataStepId
   title: string
   subtitle: string
-  mascotMessage: string
   mascotPose: 'thinking' | 'casual' | 'pointing'
 }
 
+// Coach-bubble copy lives in the archetype voice matrix
+// (packages/shared/src/copy/onboardingVoice.ts) — Tier A per-archetype
+// lines with Tier B step defaults. STEP_CONFIG ids map 1:1 onto
+// `essential-${id}` voice step keys (guarded by essentialDataVoiceMap.test).
 const STEP_CONFIG: StepConfig[] = [
   {
     id: 'displayName',
     title: '大家怎么称呼你？',
     subtitle: '这是大家在活动中看到的名字',
-    mascotMessage: '嘿！给自己起个响亮的名字吧，活动中大家会这么叫你~',
     mascotPose: 'casual',
   },
   {
     id: 'genderBirthday',
     title: '基本信息',
     subtitle: '帮助匹配更合适的活动',
-    mascotMessage: '帮你找到年龄相近、聊得来的朋友！',
     mascotPose: 'pointing',
   },
   {
     id: 'professionalProfile',
     title: '你的职业身份',
     subtitle: '学历+行业一起搞定',
-    mascotMessage: '学历+行业一起搞定，说不定能遇到同行大佬！',
     mascotPose: 'pointing',
   },
   {
     id: 'lifeStage',
     title: '你现在处于哪个阶段？',
     subtitle: '相同人生阶段的人更容易聊到一起',
-    mascotMessage: '告诉我你现在的人生阶段，我帮你匹配同频的朋友~',
     mascotPose: 'thinking',
   },
   {
     id: 'location',
     title: '你从哪来，在哪混？',
     subtitle: '老乡见老乡，两眼泪汪汪',
-    mascotMessage: '老乡见老乡，配桌优先排！',
     mascotPose: 'casual',
   },
   {
     id: 'intent',
     title: '这次聚会，你最想……',
     subtitle: '选得越准，同桌的人越对味',
-    mascotMessage: '最后一个问题！选完之后我就知道该把你安排在哪桌了',
     mascotPose: 'casual',
   },
 ]
@@ -561,20 +561,35 @@ export default function EssentialDataPage() {
 
   return (
     <View className={pageClass}>
+      {/* 装盒进度 spine: the macro journey (Bet 3) — FormStepper below it
+          owns the micro steps inside this page. */}
+      <BoxJourneySpine
+        step={1}
+        accentColor={accentColor || undefined}
+        className='essential-data__spine'
+      />
       <FormStepper
         currentStep={currentStep}
         totalSteps={TOTAL_STEPS}
         stepLabels={STEP_CONFIG.map((s) => s.title)}
         onBack={handleBack}
         showBack={currentStep > 0}
+        accentColor={accentColor || undefined}
       />
 
       <ScrollView className='essential-data__scroll' scrollY enhanced showScrollbar={false}>
         <View className='essential-data__shell'>
-          {/* Xiaoyue coaching bubble */}
+          {/* Xiaoyue coaching bubble — narrates as the user's archetype
+              (Bet 1 人格在场, Tier A voice matrix with Tier B fallback) */}
           <View className='essential-data__stage essential-data__stage--1'>
             <XiaoyueChatBubble
-              content={mascotReaction || stepConfig.mascotMessage}
+              content={
+                mascotReaction ||
+                getOnboardingVoiceLine(
+                  `essential-${stepConfig.id}` as OnboardingVoiceStepId,
+                  userArchetype,
+                )
+              }
               pose={stepConfig.mascotPose}
               horizontal
               showGlow

@@ -183,3 +183,13 @@ export const momentCardLimiter = createRateLimiter({
   maxRequests: 5,
   keyPrefix: 'mc',
 });
+
+/**
+ * Animated share-clip limiter — canvas frames + ffmpeg are significantly
+ * heavier than a single PNG. Allow 2 requests per minute per user.
+ */
+export const shareClipLimiter = createRateLimiter({
+  windowMs: 60000,
+  maxRequests: 2,
+  keyPrefix: 'sclip',
+});

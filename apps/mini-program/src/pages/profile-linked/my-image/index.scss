@@ -3,11 +3,10 @@
 // the page WXSS as well, so WeChat never falls back to the canvas 300x150
 // default when common-component styles are split into another package.
 @use '../../../components/profile/PixelAvatar3D';
-// The V2 turntable fallback chain (non-spider archetypes) hits the same
+// The V2 composite fallback chain (non-spider archetypes) hits the same
 // subpackage style split: its rules were chunked into the unreachable
 // `pages/profile-linked/three-avatar.wxss`, leaving the stage unstyled and
 // blank for 11/12 archetypes. Compile them into the page WXSS explicitly.
-@use '../../../components/profile/PixelAvatarTurntable';
 @use '../../../components/profile/PixelAvatarComposite';
 @use '../../../components/profile/PixelAvatarFallback';
 // The HD-2D identity stage wraps the avatar on this page; same split guard.
@@ -69,8 +68,8 @@
   }
 
   // HD-2D identity stage backdrop (far/mid street art + rim light + warm
-  // grade). Fills the stage; the turntable keeps its 16rpx inset inside, so
-  // the character stands on the scene rather than touching the card edge.
+  // grade). Fills the stage; the avatar keeps a 16rpx inset inside, so the
+  // character stands on the scene rather than touching the card edge.
   // When the scene art is unavailable the scene degrades to children only and
   // the grid above becomes the visible backdrop again.
   &__stage-scene {
@@ -79,7 +78,7 @@
     inset: 0;
   }
 
-  &__turntable {
+  &__avatar {
     position: absolute;
     z-index: 2;
     top: 16rpx;
@@ -94,8 +93,12 @@
   &__base-note {
     position: absolute;
     z-index: 6;
-    bottom: 112rpx;
-    left: 24rpx;
+    // Top-left corner: the bottom band belongs to the 3D-fallback notice pill
+    // (non-spider personas) — a bottom-left chip collided with it (rendered
+    // overlap measured 2026-08-01). The top-left corner stays over empty
+    // scene art because the character is centered.
+    top: 28rpx;
+    left: 28rpx;
     display: inline-flex;
     min-height: 48rpx;
     box-sizing: border-box;
@@ -403,14 +406,20 @@
       background: $color-border;
       color: $color-text-secondary;
     }
+    // Display-case tile: a soft pedestal glow under the garment, so the
+    // product-shot thumbnail reads as a exhibited piece, not a flat sticker.
     &--common {
       border: 1rpx solid rgba($color-primary, 0.12);
-      background: $color-surface;
+      background:
+        radial-gradient(ellipse 92% 70% at 50% 92%, rgba($color-primary, 0.1), rgba($color-primary, 0) 70%),
+        linear-gradient(180deg, $color-surface 0%, $color-bg-tint-purple 100%);
       color: $color-primary-dark;
     }
     &--rare {
-      border: 1rpx solid rgba($color-amber, 0.26);
-      background: rgba($color-landed-gold, 0.16);
+      border: 1rpx solid rgba($color-amber, 0.3);
+      background:
+        radial-gradient(ellipse 92% 70% at 50% 92%, rgba($color-amber, 0.2), rgba($color-amber, 0) 72%),
+        linear-gradient(180deg, rgba($color-landed-gold, 0.08) 0%, rgba($color-landed-gold, 0.2) 100%);
       box-shadow: 0 8rpx 22rpx rgba($color-amber, 0.16);
       color: $color-primary-dark;
     }
@@ -418,8 +427,10 @@
 
   &__item-art {
     display: block;
+    box-sizing: border-box;
     width: 100%;
     height: 100%;
+    padding: 6rpx;
     image-rendering: pixelated;
   }
 
@@ -729,6 +740,15 @@
     &--rare { background: linear-gradient(145deg, $color-amber, $color-landed-gold); box-shadow: 0 18rpx 55rpx rgba($color-amber, 0.36); }
   }
 
+  // The drawn garment itself is the ceremony — the thumb pops in over the
+  // rarity pedestal a beat after the card lands.
+  &__reveal-art {
+    width: 84%;
+    height: 84%;
+    image-rendering: pixelated;
+    animation: my-image-reveal-pop 520ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both;
+  }
+
   &__reveal-title {
     margin-top: 26rpx;
     color: $color-text-primary;
@@ -766,6 +786,10 @@
   from { opacity: 0; transform: translateY(44rpx) scale(0.9); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+@keyframes my-image-reveal-pop {
+  from { opacity: 0; transform: scale(0.55); }
+  to { opacity: 1; transform: scale(1); }
+}
 
 @media (max-height: 700px) {
   .my-image__stage { min-height: 500rpx; height: 500rpx; }
@@ -775,5 +799,6 @@
 @media (prefers-reduced-motion: reduce) {
   .my-image__loading-dot,
   .my-image__reveal-burst,
-  .my-image__reveal-card { animation: none; }
+  .my-image__reveal-card,
+  .my-image__reveal-art { animation: none; }
 }

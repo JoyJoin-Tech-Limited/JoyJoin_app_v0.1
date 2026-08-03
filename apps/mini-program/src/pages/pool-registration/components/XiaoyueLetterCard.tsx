@@ -5,6 +5,7 @@ import { ARCHETYPE_BY_ID } from '@shared/personality'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import XiaoyueSpriteAnimator from '../../../components/mascot/XiaoyueSpriteAnimator'
 import MatchPromiseChip from './MatchPromiseChip'
+import PoolTeaserStrip from './PoolTeaserStrip'
 import { stripEmojis } from '../../../lib/utils/emojiGuard'
 import './XiaoyueLetterCard.scss'
 
@@ -19,6 +20,7 @@ interface XiaoyueLetterCardProps {
   visible: boolean
   reduceMotion: boolean
   isLoading?: boolean
+  teaser?: { enabled: boolean }
 }
 
 export default function XiaoyueLetterCard({
@@ -32,6 +34,7 @@ export default function XiaoyueLetterCard({
   visible,
   reduceMotion,
   isLoading = false,
+  teaser,
 }: XiaoyueLetterCardProps) {
   const archetypeTokens = useMemo(
     () => (userArchetype ? getArchetypeTokens(userArchetype) : null),
@@ -122,6 +125,10 @@ export default function XiaoyueLetterCard({
               <MatchPromiseChip key={`reason-${index}-${reason}`} reason={reason} index={index} animate={visible && !reduceMotion} />
             ))}
           </View>
+        ) : null}
+
+        {teaser?.enabled === true ? (
+          <PoolTeaserStrip animate={visible && !reduceMotion} />
         ) : null}
 
         <View className='xiaoyue-letter-card__trust-seal' aria-label={trustLabel}>

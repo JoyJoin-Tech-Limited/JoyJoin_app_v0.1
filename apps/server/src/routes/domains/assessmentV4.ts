@@ -7,6 +7,7 @@ import { determineSubtype, generateInsights } from "./assessment";
 import type { ArchetypeName } from "../../archetypeConfig";
 import { ARCHETYPE_NAMES } from "../../archetypeConfig";
 import { prefetchAnalysisIfReady } from "../../xiaoyueAnalysisService";
+import { restoreEngineState } from "../../lib/assessmentEngineState";
 import { annotateOptionsWithCommentary } from "@shared/personality";
 import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
 import { shellCache } from "../../lib/shellCache";
@@ -97,34 +98,6 @@ function shuffleOptions(options: any[]): any[] {
 function annotatedShuffleOptions(questionId: string, options: any[]): any[] {
   const annotated = annotateOptionsWithCommentary(questionId, options);
   return shuffleOptions(annotated);
-}
-
-async function restoreEngineState(session: any, assessmentConfig: any) {
-  const {
-    questionsV4,
-    initializeEngineState,
-    processAnswer,
-  } = await import('@shared/personality');
-
-  const answers = await storage.getAssessmentAnswers(session.id);
-  let engineState = initializeEngineState(assessmentConfig);
-
-  // Rehydrate skip state so swapped questions (and their variants) stay excluded
-  // when the engine is rebuilt from stored answers.
-  const skippedIds: string[] = (session.skippedQuestionIds as string[]) || [];
-  for (const skippedId of skippedIds) {
-    engineState.skippedQuestionIds.add(skippedId);
-  }
-  engineState.skipCount = session.skipCount || 0;
-
-  for (const answer of answers) {
-    const q = questionsV4.find((quest: any) => quest.id === answer.questionId);
-    if (q) {
-      engineState = processAnswer(engineState, q, answer.selectedOption);
-    }
-  }
-
-  return { engineState, answers };
 }
 
 export function registerAssessmentV4Routes(app: Express): void {

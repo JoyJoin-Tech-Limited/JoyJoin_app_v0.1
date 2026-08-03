@@ -355,7 +355,12 @@
   $scale: 0.986
 ) {
   opacity: 1;
-  transform: translate3d(0, 0, 0) scale(1);
+  // `transform: none` (not translate3d(0,0,0) scale(1)): any non-none static
+  // transform on the page root makes it a containing block for position:fixed
+  // descendants in web runtimes, mis-centering full-screen overlays in the
+  // H5 preview. Transitions interpolate none ↔ matrix fine, and WeChat always
+  // treats fixed as viewport-relative.
+  transform: none;
   transform-origin: center top;
   transition:
     opacity $duration ease,
@@ -373,9 +378,13 @@
   $shift-x: 18rpx,
   $scale: 0.986
 ) {
-  opacity: 0;
-  transform: translate3d($shift-x, 0, 0) scale($scale);
-  animation: joy-onboarding-enter $duration cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  // End-state statics + backwards fill: the keyframes drive the entrance,
+  // then the computed style falls back to `transform: none` so the page root
+  // never becomes a fixed-position containing block after the animation
+  // (forwards fill would leave an identity matrix behind in web runtimes).
+  opacity: 1;
+  transform: none;
+  animation: joy-onboarding-enter $duration cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 @keyframes joy-onboarding-enter {
@@ -385,7 +394,13 @@
   }
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
+    // `none` (not translate3d(0,0,0) scale(1)): a lingering non-none
+    // transform with `forwards` fill makes the page root a containing block
+    // for position:fixed descendants in web runtimes, which mis-centers
+    // full-screen overlays (e.g. UnboxingCeremony) in the H5 preview.
+    // WeChat always treats fixed as viewport-relative, so this is a no-op
+    // there.
+    transform: none;
   }
 }
 

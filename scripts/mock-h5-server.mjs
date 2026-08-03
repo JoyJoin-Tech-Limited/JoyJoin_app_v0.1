@@ -807,6 +807,11 @@ app.post('/api/onboarding/profile-review/complete', (req, res) => {
   res.json({ success: true, nextStep: 'discover' })
 })
 
+// Active path used by packages/shared/src/api/profile.ts completeProfileReview
+app.post('/api/profile-review/complete', (req, res) => {
+  res.json({ success: true, nextStep: 'discover' })
+})
+
 // Pricing plans
 app.get('/api/payments/ritual-context', (req, res) => {
   res.json(MOCK_PRICING)

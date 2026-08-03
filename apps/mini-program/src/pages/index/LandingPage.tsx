@@ -5,6 +5,7 @@ import { CDN_BASE_URL, cdnAsset, localAsset } from "../../lib/utils/cdnAssets"
 import { loadBrandDisplayFont } from "../../lib/utils/brandFont"
 import Button from "../../components/ui/Button"
 import BrandLogo from "../../components/ui/BrandLogo"
+import ArchetypeHead from "../../components/mascot/ArchetypeHead"
 import { useStaggerMount } from "../../hooks/useStaggerMount"
 import { useDeviceTier } from "../../hooks/useDeviceTier"
 import { ResponsiveSpacer } from "../../components/ui/ResponsiveSpacer"
@@ -17,6 +18,7 @@ import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 import { landingAnalytics } from "../../lib/analytics/landingAnalytics"
 import { getSystemReducedMotion } from "../../lib/utils/accessibility"
 import { logWarn } from "../../lib/utils/logger"
+import { computeBurstOffsets, type BurstOffset, type BurstRect } from "./mechanismBurst"
 import "./index.scss"
 
 /**
@@ -41,6 +43,17 @@ const HERO_SPRITES = [
 type HeroSpriteKey = (typeof HERO_SPRITES)[number]['key']
 type HeroState = 'loading' | 'ready' | 'fallback'
 type LandingCtaType = 'new' | 'continue' | 'discover'
+
+/**
+ * E3 盒子吐卡 (mechanism-first landing, 2026-07-31): six canonical archetype
+ * grid heads burst out of the box mouth and land as a "table row" strip,
+ * enacting 答题 → 攒一桌 → 线下见 instead of telling it. The set is fixed
+ * (not rotated) so screenshot review + the asset-check gate stay stable.
+ * Grid heads are bundled locally (pool-registration seats) — zero new
+ * package weight; the strip pin reuses the already-fetched CDN sprite.
+ */
+const MECHANISM_HEADS = ['corgi', 'fox', 'rooster', 'koala', 'cat', 'dolphin_calm'] as const
+const MAP_PIN_SPRITE_SRC = HERO_SPRITES.find((s) => s.key === 'map-pin')!.src
 
 const HERO_SRC_TYPE: 'local' | 'cdn' = CDN_BASE_URL ? 'cdn' : 'local'
 
@@ -89,6 +102,9 @@ export default function MiniProgramLandingPage({
 }: MiniProgramLandingPageProps) {
   const router = useRouter()
   const invitationCode = router.params.invitationCode ?? ''
+  // Dev/screenshot review: ?freeze=burst pins the heads at the box mouth
+  // (mid-burst state) so H5 capture can review the choreography frozen.
+  const freezeBurst = router.params.freeze === 'burst'
   const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [shakeLegal, setShakeLegal] = useState(false)
@@ -102,6 +118,14 @@ export default function MiniProgramLandingPage({
   const [reduceMotion] = useState(() => getSystemReducedMotion())
   const isMounted = useStaggerMount()
   const { isDegradation } = useDeviceTier()
+  // E3 burst: per-seat "from" offsets (box mouth → seat) measured at runtime.
+  // null = not measured / measurement failed (heads then fade in place via
+  // the --settled class). burstSettled flips the seats from the inline
+  // from-transform to identity through the CSS transition.
+  const [burstFrom, setBurstFrom] = useState<ReadonlyArray<BurstOffset> | null>(null)
+  const [burstSettled, setBurstSettled] = useState(false)
+  const burstSeqRef = useRef(0)
+  const burstTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([])
 
   const { handleWeChatLogin, isLoggingIn } = useWeChatLogin({
     referralCode: invitationCode || undefined,
@@ -143,8 +167,90 @@ export default function MiniProgramLandingPage({
       if (navSafetyTimeoutRef.current) {
         clearTimeout(navSafetyTimeoutRef.current)
       }
+      burstTimersRef.current.forEach((timer) => clearTimeout(timer))
     }
   }, [])
+
+  // E3 盒子吐卡: measure the box-mouth anchor + seat rects once the entrance
+  // settles, then hand the flight to a CSS transition (inline "from"
+  // transform → identity). Runs on the --entered clock; RM/low-end tiers
+  // never measure (their CSS renders the settled composition statically).
+  // boundingClientRect returns post-transform coordinates, so the --short
+  // 0.85 stage scale is handled for free.
+  const mechanismAnimated = !reduceMotion && !isDegradation
+
+  const measureMechanismBurst = async (mode: 'settle' | 'freeze') => {
+    const seq = ++burstSeqRef.current
+    try {
+      const [mouth, seats] = await new Promise<[
+        BurstRect | null,
+        BurstRect[] | null,
+      ]>((resolve) => {
+        Taro.createSelectorQuery()
+          .select('#box-mouth-anchor')
+          .boundingClientRect()
+          .selectAll('.mechanism-strip__seat')
+          .boundingClientRect()
+          .exec((res) => {
+            resolve([
+              (res?.[0] as BurstRect) ?? null,
+              (res?.[1] as BurstRect[]) ?? null,
+            ])
+          })
+      })
+      if (!mouth || !seats || seats.length === 0) {
+        throw new Error('mechanism rects unavailable')
+      }
+      const from = computeBurstOffsets(mouth, seats)
+      if (seq !== burstSeqRef.current) return
+      setBurstFrom(from)
+      setBurstSettled(false)
+      if (mode === 'settle') {
+        const timer = setTimeout(() => {
+          if (seq === burstSeqRef.current) setBurstSettled(true)
+        }, 80)
+        burstTimersRef.current.push(timer)
+      }
+    } catch (err) {
+      if (seq !== burstSeqRef.current) return
+      logWarn('[LandingPage] mechanism measure failed; fading heads in place', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+      setBurstFrom(null)
+      setBurstSettled(true)
+    }
+  }
+
+  // Tap-the-box replay: heads fly back into the mouth (transition reverses
+  // to the cached from-offsets) and burst again. User-triggered, so it is
+  // free under the passive-time budget.
+  const handleMechanismReplay = () => {
+    if (!mechanismAnimated || freezeBurst || !burstSettled || !burstFrom) return
+    hapticLight()
+    landingAnalytics.trackMechanismReplay({
+      dwellMs: Date.now() - mountedAtRef.current,
+    })
+    setBurstSettled(false)
+    const timer = setTimeout(() => setBurstSettled(true), 620)
+    burstTimersRef.current.push(timer)
+  }
+
+  useEffect(() => {
+    if (!isMounted || heroState !== 'ready' || !mechanismAnimated) return
+    const timer = setTimeout(() => {
+      void measureMechanismBurst(freezeBurst ? 'freeze' : 'settle')
+    }, 520)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMounted, heroState, mechanismAnimated, freezeBurst])
+
+  // Hero fallback swaps the box for the bundled mascot — the "out of the
+  // box" metaphor no longer reads, so settle the strip immediately (heads
+  // fade in place) instead of leaving it hidden forever. Skipped under
+  // freeze=burst so the review frame stays frozen.
+  useEffect(() => {
+    if (heroState === 'fallback' && !freezeBurst) setBurstSettled(true)
+  }, [heroState, freezeBurst])
 
   const hapticLight = () => {
     try {
@@ -343,10 +449,14 @@ export default function MiniProgramLandingPage({
           <BrandLogo size='md' className='landing-page__brand-logo' />
         </View>
 
-        {/* Hero stage: glowing blind box + peeking Xiaoyue + floating elements */}
+        {/* Hero stage: glowing blind box + peeking Xiaoyue + floating elements.
+            Tapping the stage replays the E3 burst (user-triggered delight). */}
         <View className='hero-zone'>
-          <View className='hero-stage'>
+          <View className='hero-stage' onClick={handleMechanismReplay}>
             <View className='hero-stage__scale'>
+              {/* Zero-size anchor at the box mouth — the E3 burst measures
+                  this at runtime instead of hardcoding rpx coordinates. */}
+              <View id='box-mouth-anchor' className='hero-stage__box-mouth-anchor' aria-hidden='true' />
               <View className='hero-stage__halo' aria-hidden='true'>
                 <View className='hero-stage__halo-core' />
               </View>
@@ -414,10 +524,62 @@ export default function MiniProgramLandingPage({
           </View>
         </View>
 
-        {/* Copy: mystery headline + one-line mechanism */}
+        {/* E3 mechanism strip: the box "deals" a table — six archetype seats
+            burst from the box mouth into a row, then a connector draws to the
+            destination pin. Settled state is a legible static composition. */}
+        <View
+          className={`mechanism-strip${burstSettled ? ' mechanism-strip--settled' : ''}`}
+          aria-hidden='true'
+        >
+          <View className='mechanism-strip__seats'>
+            {MECHANISM_HEADS.map((key, index) => {
+              const from = !burstSettled && burstFrom ? burstFrom[index] : undefined
+              const seatStyle: Record<string, string> = {}
+              if (from) {
+                seatStyle.transform = `translate(${from.dx}px, ${from.dy}px) scale(0.3)`
+                // freeze=burst is a review frame: keep the frozen heads
+                // visible at the mouth (otherwise the capture shows an
+                // empty strip).
+                seatStyle.opacity = freezeBurst ? '1' : '0'
+              }
+              return (
+                <View key={key} className='mechanism-strip__seat' style={seatStyle}>
+                  {/* className sizing (SCSS) wins over ArchetypeHead's inline
+                      rpx, which the H5 preview drops (BrandLogo pattern). */}
+                  <ArchetypeHead
+                    archetype={key}
+                    size={isShortScreen ? 56 : 88}
+                    variant='grid'
+                    fallback='none'
+                    className='mechanism-strip__head'
+                  />
+                </View>
+              )
+            })}
+          </View>
+          <View className='mechanism-strip__connector' />
+          {!failedSprites.has('map-pin') && (
+            <Image
+              className='mechanism-strip__pin'
+              src={MAP_PIN_SPRITE_SRC}
+              mode='aspectFit'
+              lazyLoad={false}
+            />
+          )}
+        </View>
+        <Text className='mechanism-caption' aria-hidden='true'>
+          ① 答小题 · ② 攒一桌 · ③ 见真人
+        </Text>
+
+        {/* Copy: mystery headline + one-line mechanism. The subtitle's three
+            beats carry the E2 gold-underline cascade (drawn in sequence). */}
         <View className='hero-text'>
           <Text className='headline'>这座城市，为你<Text className='headline--accent'>藏了一局</Text></Text>
-          <Text className='subtitle'>答几道小题，悦仔替你攒一桌聊得来的人，线下见</Text>
+          <Text className='subtitle'>
+            <Text className='subtitle__beat subtitle__beat--1'>答几道小题，</Text>
+            <Text className='subtitle__beat subtitle__beat--2'>悦仔替你攒一桌聊得来的人，</Text>
+            <Text className='subtitle__beat subtitle__beat--3'>线下见</Text>
+          </Text>
         </View>
 
         {/* Dynamic spacer: disappears on short phones so the fixed CTA stays reachable */}

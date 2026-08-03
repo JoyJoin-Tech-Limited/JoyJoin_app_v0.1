@@ -48,7 +48,7 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`../apps/mini-program/README.md`](../apps/mini-program/README.md) — Taro mini-program (launch-primary): layout, tab bar, subpackages
 - [`mobile-design-system.md`](./mobile-design-system.md)
 - [`MOBILE_UI_IMPLEMENTATION_SUMMARY.md`](./architecture/implementation-summaries/MOBILE_UI_IMPLEMENTATION_SUMMARY.md)
-- [`button-design.md`](./button-design.md)
+- [`design/button-design.md`](./design/button-design.md)
 - [`reference/ui-matching-reveal-improvements.md`](./reference/ui-matching-reveal-improvements.md)
 
 ### Ops and maintainers
@@ -65,6 +65,7 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 
 - [`architecture/current-state.md`](./architecture/current-state.md)
 - [`architecture/skill-routing.md`](./architecture/skill-routing.md)
+- [`agent-context/`](./agent-context/) — domain briefs for agent onboarding (canonical source for `AGENTS.md` §6)
 
 ### Onboarding and auth
 
@@ -76,7 +77,7 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 
 - [`systems/PERSONALITY_TEST_SYSTEM.md`](./systems/PERSONALITY_TEST_SYSTEM.md) — V4 engine + web vs mini-program client surfaces
 - [`systems/MATCHING_ALGORITHM_REFERENCE.md`](./systems/MATCHING_ALGORITHM_REFERENCE.md)
-- [`icebreaker-system.md`](./icebreaker-system.md)
+- [`icebreaker/icebreaker-system.md`](./icebreaker/icebreaker-system.md)
 - [`matching-reveal-implementation-summary.md`](./matching-reveal-implementation-summary.md)
 
 ### Venue and location services

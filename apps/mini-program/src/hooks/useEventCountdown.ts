@@ -49,6 +49,62 @@ function pad2(value: number): string {
 const DEFAULT_URGENT_THRESHOLD_MINUTES = 60
 const PROGRESS_HORIZON_MS = 7 * 24 * 60 * 60 * 1000
 
+export interface CountdownComputedResult {
+  /** Formatted countdown label, or null when hidden. */
+  display: string | null
+  /** Structured segments for segmented-clock UI. */
+  segments: CountdownSegments | null
+  /** True when remaining time is within the urgent threshold. */
+  isUrgent: boolean
+  /** True when the target has passed (event is in-progress or started). */
+  hasStarted: boolean
+  /** True when the live ticker is actively ticking (motion enabled, in viewport, app visible). */
+  isLive: boolean
+}
+
+/**
+ * Pure countdown derivation shared by `useEventCountdown` and the
+ * `EventCountdownClock` leaf in the list path (P2 contract D2).
+ *
+ * Deterministic given `now` — the caller controls ticking, so N clock leaves
+ * can derive identical readouts from a single shared tick without owning
+ * timers themselves.
+ */
+export function computeCountdownResult(
+  target: string | null | undefined,
+  enabled: boolean,
+  now: number,
+  urgentThresholdMinutes: number,
+  isLive: boolean,
+): CountdownComputedResult {
+  const parsedTarget = parseTarget(target)
+  if (!parsedTarget || !enabled) {
+    return { display: null, segments: null, isUrgent: false, hasStarted: false, isLive: false }
+  }
+
+  const diff = parsedTarget.getTime() - now
+  const hasStarted = diff <= 0
+
+  if (hasStarted) {
+    return {
+      display: '进行中',
+      segments: null,
+      isUrgent: false,
+      hasStarted,
+      isLive: false,
+    }
+  }
+
+  const urgentThresholdMs = urgentThresholdMinutes * 60 * 1000
+  return {
+    display: formatLedCountdown(diff),
+    segments: computeSegments(diff),
+    isUrgent: diff <= urgentThresholdMs,
+    hasStarted,
+    isLive,
+  }
+}
+
 function computeSegments(diffMs: number): CountdownSegments {
   const totalSeconds = Math.max(0, Math.floor(diffMs / 1000))
   const days = Math.floor(totalSeconds / 86400)
@@ -128,41 +184,17 @@ export function useEventCountdown(options: UseEventCountdownOptions): UseEventCo
   }, [])
 
   // Pure, memoized display result derived from props, tick, and live state.
-  const result = useMemo(() => {
-    if (!parsedTarget || !options.enabled) {
-      return {
-        display: null,
-        segments: null,
-        isUrgent: false,
-        hasStarted: false,
-        isLive: false,
-      }
-    }
-
-    const now = Date.now()
-    const diff = parsedTarget.getTime() - now
-    const hasStarted = diff <= 0
-
-    if (hasStarted) {
-      return {
-        display: '进行中',
-        segments: null,
-        isUrgent: false,
-        hasStarted,
-        isLive: false,
-      }
-    }
-
-    const isLive = shouldTick && isInViewport && isAppVisible
-    const urgentThresholdMs = urgentThresholdMinutes * 60 * 1000
-    return {
-      display: formatLedCountdown(diff),
-      segments: computeSegments(diff),
-      isUrgent: diff <= urgentThresholdMs,
-      hasStarted,
-      isLive,
-    }
-  }, [parsedTarget, options.enabled, shouldTick, isInViewport, isAppVisible, tick, urgentThresholdMinutes])
+  const result = useMemo(
+    () =>
+      computeCountdownResult(
+        options.target,
+        Boolean(options.enabled),
+        Date.now(),
+        urgentThresholdMinutes,
+        shouldTick && isInViewport && isAppVisible,
+      ),
+    [options.target, options.enabled, urgentThresholdMinutes, shouldTick, isInViewport, isAppVisible, tick],
+  )
 
   const { display, segments, isUrgent, hasStarted, isLive } = result
 

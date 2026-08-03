@@ -15,6 +15,7 @@ import { consumeTabEntrance } from '../../lib/utils/tabEntranceState'
 import { shouldRefreshOnShow } from '../../lib/utils/showRefreshGate'
 import { preloadRouteAssets, preloadPredictiveAssets } from '../../lib/utils/routePreloadAssets'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
+import { CountdownTickProvider } from '../../hooks/useCountdownTick'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import Card from '../../components/ui/Card'
 import StatusCard from '../../components/ui/StatusCard'
@@ -240,18 +241,20 @@ export default function EventsPage() {
             }}
           />
         ) : displayEvents.length > 0 ? (
-          <CustomWrapper>
-            {displayEvents.map((event, index) => (
-              <View key={String(event.id)} className='events-page__card'>
-                <FootprintOracleCard
-                  event={event}
-                  index={index}
-                  onClick={handleEventTap}
-                  isDegradation={isDegradation}
-                />
-              </View>
-            ))}
-          </CustomWrapper>
+          <CountdownTickProvider>
+            <CustomWrapper>
+              {displayEvents.map((event, index) => (
+                <View key={String(event.id)} className='events-page__card'>
+                  <FootprintOracleCard
+                    event={event}
+                    index={index}
+                    onClick={handleEventTap}
+                    isDegradation={isDegradation}
+                  />
+                </View>
+              ))}
+            </CustomWrapper>
+          </CountdownTickProvider>
         ) : (
           <StatusCard
             className='events-page__empty-state'

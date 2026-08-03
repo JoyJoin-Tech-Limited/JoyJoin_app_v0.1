@@ -21,6 +21,9 @@ const execFileAsync = promisify(execFile)
 const WIDTH = 512
 const HEIGHT = 768
 const THUMBNAIL_SIZE = 256
+// Transparent inset baked into every thumbnail so garments float inside their
+// tile instead of touching the tile edge (256 - 2*16 = 224px art window).
+const THUMBNAIL_PADDING = 16
 const ARCHETYPE_IDS = [
   'corgi',
   'rooster',
@@ -37,6 +40,32 @@ const ARCHETYPE_IDS = [
 ]
 const SLOT_ORDER = ['top', 'bottom', 'shoes', 'accessory']
 const SLOT_DEPTH = { bottom: 0.35, shoes: 0.25, top: 0.55, accessory: 0.85 }
+// Isolated garment art for thumbnails. Thumbs must be clean garment-only
+// product shots — the worn layers intentionally re-paint body pixels at their
+// seams (chin fur, belly, leg strands) so they composite seamlessly, which
+// reads as dirty scribble inside a small inventory tile.
+//
+// Two source layouts exist:
+// - Dressed-stage archetypes keep a 2x2 `equipment-sheet-source.png` chroma
+//   sheet: [top, bottom] / [shoes, accessory]. The sheets are NOT fitted to
+//   the body (that is exactly why layers come from the atlas diff), but as
+//   flat product shots they are the approved garment renders.
+// - ISOLATED_TARGETS archetypes (cat, elephant, turtle) have no sheet; their
+//   canonical `atlas-source.png` is a 3x2 grid with isolated garment cells at
+//   [top, bottom] on row 0 (cols 1-2) and [shoes, accessory] on row 1 (cols 0-1).
+const ISOLATED_SHEET_CELL = {
+  top: [0, 0],
+  bottom: [1, 0],
+  shoes: [0, 1],
+  accessory: [1, 1],
+}
+const ISOLATED_ATLAS_IDS = new Set(['cat', 'elephant', 'turtle'])
+const ISOLATED_ATLAS_CELL = {
+  top: [1, 0],
+  bottom: [2, 0],
+  shoes: [0, 1],
+  accessory: [1, 1],
+}
 const HASH_LENGTH = 12
 const PORTABLE_RELATIVE_PATH_LENGTH = 200
 const PORTABLE_SEGMENT_LENGTH = 64
@@ -342,7 +371,7 @@ async function writeHashedFile(relativeDirectory, stem, buffer) {
   return `assets/profile-pixel/v2/${relativePath.replaceAll('\\', '/')}`
 }
 
-async function encodeSquareThumbnail(raw, width, height) {
+async function encodeSquareThumbnail(raw, width, height, kernel = sharp.kernel.nearest) {
   const { data, info } = await sharp(raw, { raw: { width, height, channels: 4 } })
     .ensureAlpha()
     .raw()
@@ -351,18 +380,70 @@ async function encodeSquareThumbnail(raw, width, height) {
   if (!bounds || bounds.count < 120) {
     throw new Error(`Thumbnail source is visually empty (${bounds?.count ?? 0} opaque pixels)`)
   }
+  const artWindow = THUMBNAIL_SIZE - THUMBNAIL_PADDING * 2
   return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
     .extract({ left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height })
     .resize({
-      width: THUMBNAIL_SIZE,
-      height: THUMBNAIL_SIZE,
+      width: artWindow,
+      height: artWindow,
       fit: 'contain',
       position: 'centre',
-      kernel: sharp.kernel.nearest,
+      kernel,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .extend({
+      top: THUMBNAIL_PADDING,
+      bottom: THUMBNAIL_PADDING,
+      left: THUMBNAIL_PADDING,
+      right: THUMBNAIL_PADDING,
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     })
     .webp({ quality: 88, alphaQuality: 100, nearLossless: true, smartSubsample: true })
     .toBuffer()
+}
+
+/**
+ * Isolated garment-only art for thumbnails (see the ISOLATED_* notes above).
+ * Returns null when the archetype has no isolated source so callers can fall
+ * back to the worn-layer crop.
+ */
+async function readIsolatedGarmentRaw(archetypeId, slot) {
+  const usesAtlas = ISOLATED_ATLAS_IDS.has(archetypeId)
+  const sourcePath = path.join(
+    SOURCE_ROOT,
+    archetypeId,
+    usesAtlas ? 'atlas-source.png' : 'equipment-sheet-source.png',
+  )
+  const [col, row] = (usesAtlas ? ISOLATED_ATLAS_CELL : ISOLATED_SHEET_CELL)[slot]
+  let metadata
+  try {
+    metadata = await sharp(sourcePath).metadata()
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null
+    throw error
+  }
+  if (!metadata.width || !metadata.height) {
+    throw new Error(`Unreadable isolated garment source: ${sourcePath}`)
+  }
+  const cols = usesAtlas ? 3 : 2
+  const cellWidth = Math.floor(metadata.width / cols)
+  const cellHeight = Math.floor(metadata.height / 2)
+  // Inset the cell so a neighbouring cell's garment can never bleed in.
+  const inset = 6
+  const extracted = await sharp(sourcePath)
+    .extract({
+      left: col * cellWidth + inset,
+      top: row * cellHeight + inset,
+      width: cellWidth - inset * 2,
+      height: cellHeight - inset * 2,
+    })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  const keyed = hasUsefulTransparency(extracted.data)
+    ? extracted.data
+    : removeChroma(extracted.data, extracted.info.width, extracted.info.height)
+  return { data: keyed, width: extracted.info.width, height: extracted.info.height }
 }
 
 async function writeCroppedLayer(relativeDirectory, raw) {
@@ -372,10 +453,8 @@ async function writeCroppedLayer(relativeDirectory, raw) {
     .extract({ left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height })
     .webp({ quality: 88, alphaQuality: 100, nearLossless: true, smartSubsample: true })
     .toBuffer()
-  const thumbBuffer = await encodeSquareThumbnail(raw, WIDTH, HEIGHT)
   return {
     layer: await writeHashedFile(relativeDirectory, 'layer-v2', layerBuffer),
-    thumb: await writeHashedFile(relativeDirectory, 'thumb-v2', thumbBuffer),
     placement: {
       left: bounds.left,
       top: bounds.top,
@@ -383,6 +462,21 @@ async function writeCroppedLayer(relativeDirectory, raw) {
       height: bounds.height,
     },
   }
+}
+
+/**
+ * Starter thumbnails come from the isolated garment sheet/atlas cell (clean
+ * product shots). Large chroma-sheet cells (~600px) downscale to the 224px
+ * art window with lanczos3 — nearest-neighbour decimation at a non-integer
+ * ratio shreds the pixel-art outlines. Falls back to the worn-layer crop
+ * (also lanczos3) if an archetype ever ships without isolated art.
+ */
+async function writeStarterThumb(relativeDirectory, archetypeId, slot, layerRaw) {
+  const isolated = await readIsolatedGarmentRaw(archetypeId, slot)
+  const thumbBuffer = isolated
+    ? await encodeSquareThumbnail(isolated.data, isolated.width, isolated.height, sharp.kernel.lanczos3)
+    : await encodeSquareThumbnail(layerRaw, WIDTH, HEIGHT, sharp.kernel.lanczos3)
+  return writeHashedFile(relativeDirectory, 'thumb-v2', thumbBuffer)
 }
 
 async function readStarterLayerRaw(archetypeId, slot) {
@@ -447,10 +541,10 @@ async function buildArchetype(archetypeId) {
     starter: {},
   }
   for (const slot of SLOT_ORDER) {
-    const asset = await writeCroppedLayer(
-      `equipment/starter/${archetypeId}/${slot}`,
-      await readStarterLayerRaw(archetypeId, slot),
-    )
+    const relativeDirectory = `equipment/starter/${archetypeId}/${slot}`
+    const layerRaw = await readStarterLayerRaw(archetypeId, slot)
+    const asset = await writeCroppedLayer(relativeDirectory, layerRaw)
+    asset.thumb = await writeStarterThumb(relativeDirectory, archetypeId, slot, layerRaw)
     manifest.starter[slot] = { ...asset, depth: SLOT_DEPTH[slot] }
   }
   // Approved fully dressed look (single illustration of the complete starter
@@ -716,7 +810,7 @@ async function main() {
   activeOutputRoot = stagedRoot
   const manifest = {
     version: 2,
-    renderer: 'layered-paper-doll-parallax',
+    renderer: 'layered-paper-doll',
     permanentBaseUnderwear: true,
     width: WIDTH,
     height: HEIGHT,
@@ -724,7 +818,6 @@ async function main() {
     itemAssetCount: 0,
     sourceAssetCount: 0,
     equipmentLayersDoubleAsThumbnails: false,
-    parallaxSteps: [-2, -1, 0, 1, 2],
     archetypes: {},
     items: {},
   }

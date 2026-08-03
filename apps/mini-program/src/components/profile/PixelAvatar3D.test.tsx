@@ -187,13 +187,18 @@ beforeEach(() => {
 })
 
 describe('PixelAvatar3D — archetype gate (spider only)', () => {
-  it('never boots WebGL for a non-spider archetype: V2 turntable + honest notice, synchronously', () => {
+  it('never boots WebGL for a non-spider archetype: V2 composite, no steady-state notice, synchronously', () => {
     const onStatusChange = vi.fn()
     const { container } = renderAvatar({ archetypeId: 'cat', onStatusChange })
 
     // Synchronous — the gate short-circuits before any async canvas query.
-    expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
-    expect(screen.getByText('该人格 3D 形象正在准备，先展示经典形象')).toBeInTheDocument()
+    const fallbackStage = container.querySelector('.pixel-avatar-3d__fallback-stage')
+    expect(fallbackStage).toBeTruthy()
+    expect(fallbackStage?.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
+    // The classic composite is the canonical look for non-spider personas —
+    // no permanent "3D is coming" pill.
+    expect(screen.queryByText('该人格 3D 形象正在准备，先展示经典形象')).toBeNull()
+    expect(container.querySelector('.pixel-avatar-3d__fallback-note')).toBeNull()
     expect(mocks.queryAvatarCanvas).not.toHaveBeenCalled()
     expect(mocks.createAvatar3DSession).not.toHaveBeenCalled()
     expect(onStatusChange).toHaveBeenCalledWith({ status: 'fallback', reason: 'unsupported-archetype' })
@@ -204,11 +209,11 @@ describe('PixelAvatar3D — archetype gate (spider only)', () => {
   })
 
   it.each(['corgi', 'owl', 'dolphin_calm', 'fox'] as const)(
-    'keeps %s on the V2 turntable without touching WebGL',
+    'keeps %s on the V2 composite without touching WebGL',
     (archetypeId) => {
       const { container } = renderAvatar({ archetypeId })
       expect(container.querySelector('.pixel-avatar-composite__body')).toBeTruthy()
-      expect(screen.getByText('该人格 3D 形象正在准备，先展示经典形象')).toBeInTheDocument()
+      expect(container.querySelector('.pixel-avatar-3d__fallback-note')).toBeNull()
       expect(mocks.queryAvatarCanvas).not.toHaveBeenCalled()
     },
   )
@@ -222,7 +227,7 @@ describe('PixelAvatar3D — archetype gate (spider only)', () => {
 })
 
 describe('PixelAvatar3D — WebGL fallback (spider on incapable environment)', () => {
-  it('falls back to the stable V2 turntable with a gentle notice when the canvas node is missing', async () => {
+  it('falls back to the stable V2 composite with a gentle notice when the canvas node is missing', async () => {
     mocks.queryAvatarCanvas.mockResolvedValue(null)
     const { container } = renderAvatar()
 

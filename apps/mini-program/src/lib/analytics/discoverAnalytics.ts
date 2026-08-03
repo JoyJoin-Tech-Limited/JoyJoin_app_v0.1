@@ -67,6 +67,7 @@ export type DiscoverAnalyticsEventType =
   | 'persona_snapshot_new_registrant_banner_shown'
   | 'persona_snapshot_state_band'
   | 'persona_snapshot_load_error'
+  | 'pool_teaser_impression'
 
 export interface DiscoverAnalyticsEvent {
   eventType: DiscoverAnalyticsEventType
