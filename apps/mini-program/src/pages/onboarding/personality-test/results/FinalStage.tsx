@@ -53,6 +53,9 @@ interface FinalStageProps {
   isAuthenticated?: boolean
   isLoggingIn?: boolean
   isDecisive?: boolean
+  /** Phase 3 (2026-08-01): rare-variant easter egg — highly typical match
+   *  shows the 闪光 badge on the hero card. */
+  isRareVariant?: boolean
   secondaryDisplayName?: string
   xiaoyueAnalysis?: {
     headline: string
@@ -67,6 +70,9 @@ interface FinalStageProps {
   } | null
   isLoadingAnalysis?: boolean
   personalityShareEnabled?: boolean
+  shareAnimatedClipEnabled?: boolean
+  isGeneratingClip?: boolean
+  onGenerateClip?: () => void
   posterError?: boolean
 }
 
@@ -114,10 +120,14 @@ export default function FinalStage({
   isAuthenticated,
   isLoggingIn,
   isDecisive,
+  isRareVariant = false,
   secondaryDisplayName,
   xiaoyueAnalysis,
   isLoadingAnalysis,
   personalityShareEnabled = true,
+  shareAnimatedClipEnabled = false,
+  isGeneratingClip = false,
+  onGenerateClip,
   posterError = false,
 }: FinalStageProps) {
   const [heroImgError, setHeroImgError] = useState(false)
@@ -273,6 +283,11 @@ export default function FinalStage({
     onGeneratePoster()
   }, [onGeneratePoster])
 
+  const handleClipPress = useCallback(() => {
+    haptics('medium')
+    onGenerateClip?.()
+  }, [onGenerateClip])
+
   const activeVariant = variants?.[selectedVariantIndex ?? 0]
   const cardBackground = activeVariant
     ? `linear-gradient(160deg, ${activeVariant.accentSoft} 0%, ${CARD_GRADIENT_MID} 50%, rgba(255, 255, 255, 0.98) 100%)`
@@ -400,6 +415,14 @@ export default function FinalStage({
             ) : null}
             {typeof visual.rarityPercentage === 'number' ? (
               <Text className={`personality-results__hero-badge personality-results__hero-badge--rarity ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>稀有度 {Math.round(visual.rarityPercentage)}%</Text>
+            ) : null}
+            {isRareVariant ? (
+              <Text
+                className={`personality-results__hero-badge personality-results__hero-badge--rare ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}
+                aria-label='闪光命定'
+              >
+                闪光命定
+              </Text>
             ) : null}
             {visual.nickname ? (
               <Text className={`personality-results__hero-badge personality-results__hero-badge--nickname ${badgesVisible ? 'personality-results__hero-badge--visible' : ''}`}>{visual.nickname}</Text>
@@ -622,6 +645,17 @@ export default function FinalStage({
                     : sharePosterPath
                       ? '分享卡片'
                       : '保存我的氛围卡'}
+                </Button>
+              )}
+              {shareAnimatedClipEnabled && onGenerateClip && (
+                <Button
+                  variant='secondary'
+                  onClick={handleClipPress}
+                  disabled={isGeneratingClip}
+                  loading={isGeneratingClip}
+                  hoverClass='joy-button--active'
+                >
+                  {isGeneratingClip ? '正在合成动态短片…' : '生成动态分享短片'}
                 </Button>
               )}
             </View>

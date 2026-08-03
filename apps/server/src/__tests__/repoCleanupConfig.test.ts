@@ -68,6 +68,6 @@ describe('repo cleanup config follow-ups', () => {
     expect(serverReadme).toContain('apps/server/src/routes/domains/');
     expect(serverReadme).toContain('apps/server/src/repositories/');
     expect(architectureMap).toContain('apps/server/src/routes/domains/auth.ts');
-    expect(architectureMap).toContain('apps/user-client/src/features/onboarding/active/');
+    expect(architectureMap).toContain('apps/mini-program/src/lib/onboarding/onboardingRoutes.ts');
   });
 });

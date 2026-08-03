@@ -743,8 +743,24 @@ page {
 
   &__direction-copy {
     margin-top: 8rpx;
-    color: $color-text-secondary;
+    color: $color-text-secondary-on-light;
     font-size: $font-size-sm;
+    text-align: center;
+  }
+
+  &__address {
+    margin-top: 8rpx;
+    color: $color-text-tertiary-on-light;
+    font-size: $font-size-sm;
+    text-align: center;
+  }
+
+  &__signal-label {
+    display: block;
+    margin-top: 8rpx;
+    color: $color-text-white;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
     text-align: center;
   }
 }

@@ -7,11 +7,15 @@ const profileReviewSource = readFileSync(
   'utf8',
 )
 describe('onboarding intro cross-page handoff', () => {
-  it('renders the intro before auth invalidation can redirect the page', () => {
-    const renderIndex = profileReviewSource.indexOf("setIntroNextStep('discover')")
-    const invalidationIndex = profileReviewSource.indexOf('await invalidateAuth()')
+  it('keeps the intro handoff reachable from the completion ceremony', () => {
+    const ceremonyComplete = profileReviewSource.indexOf('const handleCeremonyComplete')
+    const introSetIndex = profileReviewSource.indexOf('setIntroNextStep(userState.nextStep)')
+    const navigateIndex = profileReviewSource.indexOf('await navigateToMiniProgramNextStep(userState.nextStep')
 
-    expect(renderIndex).toBeGreaterThan(-1)
-    expect(invalidationIndex).toBeGreaterThan(renderIndex)
+    expect(ceremonyComplete).toBeGreaterThan(-1)
+    expect(introSetIndex).toBeGreaterThan(ceremonyComplete)
+    // The intro handoff must short-circuit BEFORE the ceremony's direct
+    // navigation so the intro flow renders instead of the redirect.
+    expect(navigateIndex).toBeGreaterThan(introSetIndex)
   })
 })
