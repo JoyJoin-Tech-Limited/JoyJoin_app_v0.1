@@ -182,7 +182,6 @@ export default function ProfileReviewPage() {
     if (!isRevealReady || !user || isCouponLoading || welcomeCoupon) return
 
     let cancelled = false
-    let visibilityTimer: ReturnType<typeof setTimeout> | null = null
     setIsCouponLoading(true)
     setCouponError(false)
 
@@ -195,10 +194,6 @@ export default function ProfileReviewPage() {
           discountValue: coupon.discountValue,
           isNewlyAwarded: coupon.isNewlyAwarded,
         })
-        // Small delay so the card enters after the profile card stagger.
-        visibilityTimer = setTimeout(() => {
-          if (!cancelled) setIsCouponCardVisible(true)
-        }, 200)
       })
       .catch((err) => {
         if (cancelled) return
@@ -214,9 +209,17 @@ export default function ProfileReviewPage() {
 
     return () => {
       cancelled = true
-      if (visibilityTimer) clearTimeout(visibilityTimer)
     }
   }, [isRevealReady, user, analytics, welcomeCoupon, couponAttempt])
+
+  // Reveal after the coupon is committed to state. Keeping this timer separate
+  // prevents the fetch effect's welcomeCoupon dependency cleanup from cancelling
+  // it and leaving a full-height but transparent gift card in the layout.
+  useEffect(() => {
+    if (!welcomeCoupon || shouldReduceMotion) return
+    const timer = setTimeout(() => setIsCouponCardVisible(true), 200)
+    return () => clearTimeout(timer)
+  }, [welcomeCoupon, shouldReduceMotion])
 
   // Replay the gift-card entrance animation when the user swipes back to this page.
   useDidShow(() => {
