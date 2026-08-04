@@ -67,9 +67,9 @@ vi.mock('../../../lib/alang/flashNavigation', async (importOriginal) => ({
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
 
 async function startRadar() {
-  fireEvent.click(screen.getByText('开启实时雷达'))
+  fireEvent.click(screen.getByText('开启雷达'))
   await waitFor(() => expect(mocks.startLocationUpdate).toHaveBeenCalled())
-  await waitFor(() => expect(screen.getByText('雷达追踪中')).toBeInTheDocument())
+  await waitFor(() => expect(screen.getAllByText('追踪中').length).toBeGreaterThan(0))
 }
 
 function emitLocation() {
@@ -103,7 +103,7 @@ describe('formal Flash live radar', () => {
     expect(screen.getByText('默默')).toBeInTheDocument()
     expect(screen.getByText(/在宝安区/)).toBeInTheDocument()
     expect(screen.getByText('宝安壹方城开放公共区域')).toBeInTheDocument()
-    expect(screen.getByText(/离开页面会立即停止定位/)).toBeInTheDocument()
+    expect(screen.getByText('开启雷达')).toBeInTheDocument()
     expect(mocks.startLocationUpdate).not.toHaveBeenCalled()
   })
 

@@ -245,49 +245,39 @@ export default function FlashRadarPage() {
           {radarFrame ? (
             <View className='flash-radar__live-readout' role='status'>
               <Text className='flash-radar__distance'>{radarFrame.distanceMeters} 米</Text>
-              <Text className='flash-radar__direction-copy'>雷达上的珊瑚色亮点就是目标方向，朝亮点方向前进</Text>
             </View>
-          ) : (
-            <>
-              <Text className='flash-radar__title'>到附近后，开启实时雷达</Text>
-              <Text className='flash-radar__copy'>雷达只在此页前台运行；离开页面会立即停止定位。</Text>
-            </>
-          )}
+          ) : null}
           <Text className='flash-visually-hidden'>开启后持续读取前台位置与设备方向，用于显示到隐藏目标点的实时距离和方向。</Text>
 
           {isPossiblyLate ? (
             <View className='flash-radar__warning' role='status'>
-              <Text>可能有点来不及了，但去不去还是你决定。角色到点会正常离开。</Text>
+              <Text>即将结束</Text>
             </View>
           ) : null}
 
           {state === 'ended' ? (
             <View className='flash-radar__result' role='status'>
               <Text className='flash-radar__result-title'>刚好散场了</Text>
-              <Text className='flash-radar__result-copy'>角色到点就会离开，不接受预约，也不会为这次寻找延长时间。</Text>
               <FlashButton variant='secondary' onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>看看还有谁在线</FlashButton>
             </View>
           ) : null}
 
           {state === 'denied' ? (
             <View className='flash-radar__result flash-radar__result--error' role='alert'>
-              <Text className='flash-radar__result-title'>定位权限没有打开</Text>
-              <Text className='flash-radar__result-copy'>拒绝定位就无法使用实时雷达，我们也不会改用 IP 定位。</Text>
+              <Text className='flash-radar__result-title'>需要定位权限</Text>
               <FlashButton variant='secondary' onClick={() => { void handleOpenSetting() }}>打开定位设置</FlashButton>
             </View>
           ) : null}
 
           {state === 'rate_limited' ? (
             <View className='flash-radar__result flash-radar__result--error' role='alert'>
-              <Text className='flash-radar__result-title'>雷达请求太频繁了</Text>
-              <Text className='flash-radar__result-copy'>实时雷达已自动停止。稍后重新开启即可。</Text>
+              <Text className='flash-radar__result-title'>稍后再试</Text>
             </View>
           ) : null}
 
           {state === 'error' ? (
             <View className='flash-radar__result flash-radar__result--error' role='alert'>
-              <Text className='flash-radar__result-title'>雷达连接中断</Text>
-              <Text className='flash-radar__result-copy'>定位信号或网络可能暂时不稳定，可以重新开启。</Text>
+              <Text className='flash-radar__result-title'>连接中断</Text>
             </View>
           ) : null}
 
@@ -296,13 +286,13 @@ export default function FlashRadarPage() {
               disabled={state === 'locating' || state === 'tracking' || state === 'inside'}
               onClick={() => { void startLiveRadar() }}
             >
-              {state === 'locating' ? '正在连接雷达…' : state === 'tracking' ? '雷达追踪中' : '开启实时雷达'}
+              {state === 'locating' ? '连接中…' : state === 'tracking' ? '追踪中' : '开启雷达'}
             </FlashButton>
             {state === 'tracking' ? (
               <FlashButton variant='secondary' onClick={() => stopLiveRadar()}>停止雷达</FlashButton>
             ) : null}
             <FlashButton variant='quiet' onClick={() => { stopLiveRadar(); void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>
-              先不去了
+              返回
             </FlashButton>
           </View>
         </View>
