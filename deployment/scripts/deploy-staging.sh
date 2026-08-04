@@ -827,9 +827,15 @@ fi
 # Service name is granite-embedding-staging: it shares the compose project with
 # production's docker-compose.nginx.yml, so a plain `granite-embedding` name
 # would make this `up` recreate the production container.
-if ! docker compose -f "$COMPOSE_FILE" up \
-    -d --no-deps --build granite-embedding-staging; then
-    echo "   ⚠️ granite-embedding-staging failed to build/start — semantic embeddings stay degraded until next deploy"
+if docker image inspect granite-embedding:staging >/dev/null 2>&1; then
+    if ! docker compose -f "$COMPOSE_FILE" up \
+        -d --no-deps --no-build granite-embedding-staging; then
+        echo "   ⚠️ granite-embedding-staging failed to start — semantic embeddings stay degraded until next deploy"
+    fi
+elif ! timeout --signal=TERM --kill-after=30s 5m \
+    docker compose -f "$COMPOSE_FILE" up \
+        -d --no-deps --build granite-embedding-staging; then
+    echo "   ⚠️ granite-embedding-staging initial build/start exceeded its optional budget — semantic embeddings stay degraded until next deploy"
 fi
 if ! sudo systemctl reload-or-restart nginx; then
     exit 1
