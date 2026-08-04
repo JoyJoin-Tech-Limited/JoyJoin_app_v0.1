@@ -273,7 +273,7 @@ await fetch('/api/auth/wechat/login-with-test', {
     - Level 1 = 感兴趣 (heat 3)
     - Level 2 = 很热衷 (heat 10)
     - Level 3 = 必聊项 (heat 25)
-  - **3–10 selections required** (enforced on both client and server: `POST /api/user/interests` returns 400 if `totalSelections < 3`)
+  - **Min 3 selections required** (server enforces: `POST /api/user/interests` returns 400 if `totalSelections < 3`). **No maximum** — users may select as many interests as they like (product decision 2026-08-03).
 - **Archetype-aware coaching:** Xiaoyue guidance and the footer "heat story" pill personalize around the user's archetype result from Step 1.
 - **Milestone feedback:** Centered celebration toasts fire when the user crosses ≥3 selections, sets the first L3 / 必聊项, or selects topics from all 6 macro categories.
 - **Category icons:** `JoyJoinIcon tier="category"` renders bundled proprietary icons (`src/assets/icons/category-icons/`); `usePreloadCategoryIcons` pre-warms them before the grid renders.
@@ -303,7 +303,7 @@ await fetch('/api/auth/wechat/login-with-test', {
   - **Profile mini-cards** —家乡、关系状态、学历、职业、行业 rendered with brand-colored dot indicators.
   - **Intent chips** — top social intents labeled with `JoyJoinIcon` (`tier='intent'`) and Chinese text. Intent icons are pre-warmed by `usePreloadIntentIcons` before grids render.
   - **Interest heat map** — `InterestHeatMap` stats + `InterestChipCloud` dominant-category chips.
-- **Invite teaser card** — after the welcome-coupon request settles (success or error), a warm secondary card (`ProfileReviewInviteCard`) appears below the gift card with Lovart `invite-teaser.webp` art, Xiaoyue copy, and a tap CTA to Discover. Tapping completes onboarding. Card reveal also triggers a predictive `GET /api/shell/discover` prefetch via `PrefetchEngine` so the Discover tab renders from cache. Analytics: `profile_review_invite_impression`, `profile_review_invite_tap`, `profile_review_discover_prefetch_hit`.
+- **Radar summary card** — after the welcome-coupon request settles (success or error), a display-only profile summary card (`ProfileReviewInviteCard`) appears below the gift card: full-bleed Lovart `invite-teaser.webp` banner with a "kindred radar" overlay (user archetype centered, 4 satellite archetypes popping in) and a data-filled summary line (archetype · top interest · intent). It has no tap interaction — the floating primary CTA is the only completion path. Card reveal still triggers a predictive `GET /api/shell/discover` prefetch via `PrefetchEngine` so the Discover tab renders from cache. Analytics: `profile_review_invite_impression`, `profile_review_discover_prefetch_hit` (`profile_review_invite_tap` retired 2026-08-03).
 - **Floating CTA** — pill-shaped "确认并进入发现" button anchored above the safe area; gains elevation when the page is scrolled.
 - **Motion gating** — all entrance animations, shimmer, and CTA transitions respect `@media (prefers-reduced-motion: reduce)`; the JS `useMiniRevealMotion().shouldReduceMotion` flag suppresses the poster shimmer at runtime.
 

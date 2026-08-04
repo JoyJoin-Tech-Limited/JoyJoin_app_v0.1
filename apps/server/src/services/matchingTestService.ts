@@ -353,6 +353,7 @@ async function seedTesterCompleteProfile(testerUserId: string, botIndex: number)
     updates.industryConfidence = "0.95";
   }
   if (!tester.vibeVector) {
+    // NOTE: matching no longer reads vibeVector (dead branch removed 2026-08); kept for bot profile realism only.
     updates.vibeVector = {
       energy: 50 + (botIndex % 40),
       depth: 40 + (botIndex % 50),
@@ -445,6 +446,7 @@ export async function seedMatchingTestBots(
         hasCompletedPersonalityTest: true,
         hasCompletedRegistration: true,
         isTestBot: true,
+        // NOTE: matching no longer reads vibeVector (dead branch removed 2026-08); kept for bot profile realism only.
         vibeVector: {
           energy: 50 + (i % 40),
           depth: 40 + (i % 50),
@@ -478,6 +480,7 @@ export async function seedMatchingTestBots(
           industrySource: "seed",
           industryConfidence: "0.95",
           isTestBot: true,
+          // NOTE: matching no longer reads vibeVector (dead branch removed 2026-08); kept for bot profile realism only.
           vibeVector: {
             energy: 50 + (i % 40),
             depth: 40 + (i % 50),

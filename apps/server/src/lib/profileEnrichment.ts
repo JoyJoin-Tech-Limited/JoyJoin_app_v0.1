@@ -21,6 +21,7 @@ const ALLOWED_EVENT_INTENTS = new Set<string>([
   "discussion",
   "fun",
   "explore",
+  "romance",
   "flexible",
 ]);
 

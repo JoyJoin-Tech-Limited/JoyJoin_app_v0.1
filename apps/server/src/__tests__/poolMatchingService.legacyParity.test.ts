@@ -98,18 +98,13 @@ function makeUser(
     userIntent: null,
     cuisinePreferences: null,
     dietaryRestrictions: null,
-    tasteIntensity: null,
     barThemes: null,
     alcoholComfort: null,
     eventType: "饭局",
     ageMatchPreference: null,
     tableVibePreference: null,
-    vibeVector: null,
     preferenceStrictness: null,
-    preferredDistricts: null,
     genderCompositionPreference: null,
-    acceptPairs: null,
-    kolComfortLevel: null,
     ...overrides,
   };
 }

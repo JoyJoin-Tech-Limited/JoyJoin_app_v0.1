@@ -45,7 +45,8 @@ import {
   buildCustomLieDetectiveStatements,
   resolveLieDetectiveTargetUserId,
 } from '../lib/lieDetectiveSubmission';
-import { validateContentSafe, contentViolationResponse } from '../lib/contentSafety';
+import { validateContentSafeAsync, contentViolationResponse } from '../lib/contentSafety';
+import { recordViolation } from '../abuseDetection';
 
 export function registerExtendedRoutes(router: Router): void {
 
@@ -415,9 +416,10 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
       }
 
       for (const statement of customStatements) {
-        const safetyResult = validateContentSafe(statement.text, 'lieDetectiveStatement');
-        if (!safetyResult.safe) {
-          return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
+        const safetyResult = await validateContentSafeAsync(statement.text, 'lieDetectiveStatement', { userId });
+        if (!safetyResult.safe && safetyResult.violation) {
+          await recordViolation(userId, safetyResult.violation.type, safetyResult.violation.severity);
+          return res.status(400).json(contentViolationResponse(safetyResult.violation).body);
         }
       }
 

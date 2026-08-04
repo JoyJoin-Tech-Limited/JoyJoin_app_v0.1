@@ -1623,6 +1623,9 @@ export function registerUserEventPoolRoutes(app: Express): void {
         const interestsByUserId = new Map(
           memberInterestsRows.map((row) => [row.userId, row] as const)
         );
+        const registrationByUserId = new Map<string, { eventIntent?: string[] | null }>(
+          groupRegistrations.map((r: any) => [r.userId as string, r] as const)
+        );
 
         // Build MatchMember[] using the same field mapping as the existing handler
         const members = memberProfiles.map((m: any) => {
@@ -1659,6 +1662,8 @@ export function registerUserEventPoolRoutes(app: Express): void {
             industryCategoryLabel: m.industryCategoryLabel,
             interestsWithHeat,
             interestSignals: interestSignalsByUserId.get(m.id) ?? null,
+            intent: m.intent ?? null,
+            eventIntent: registrationByUserId.get(m.id)?.eventIntent ?? null,
           };
         });
 
@@ -1679,6 +1684,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
           chemistryScore: number;
           sharedInterests?: string[];
           connectionPoints?: string[];
+          sharedHighlights?: string[];
           introAngle?: string;
         }) => ({
           pairKey: pe.pairKey,
@@ -1686,6 +1692,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
           chemistryScore: pe.chemistryScore,
           sharedInterests: pe.sharedInterests ?? [],
           connectionPoints: pe.connectionPoints ?? [],
+          sharedHighlights: pe.sharedHighlights ?? [],
           ...(pe.introAngle ? { introAngle: pe.introAngle } : {}),
         });
 

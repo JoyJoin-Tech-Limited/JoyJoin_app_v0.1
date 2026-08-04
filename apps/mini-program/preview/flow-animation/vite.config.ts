@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 
 const previewRoot = __dirname
 const miniProgramRoot = path.resolve(previewRoot, '../..')
+const repoRoot = path.resolve(miniProgramRoot, '../..')
 const brandLogoPath = path.resolve(miniProgramRoot, 'src/components/ui/BrandLogo.tsx')
 
 export default defineConfig({
@@ -29,6 +30,7 @@ export default defineConfig({
       { find: '@tarojs/components', replacement: path.resolve(previewRoot, 'taro-components.tsx') },
       { find: '@tarojs/taro', replacement: path.resolve(previewRoot, 'taro.ts') },
       { find: brandLogoPath, replacement: path.resolve(previewRoot, 'BrandLogo.tsx') },
+      { find: '@shared', replacement: path.resolve(repoRoot, 'packages/shared/src') },
     ],
   },
   server: {

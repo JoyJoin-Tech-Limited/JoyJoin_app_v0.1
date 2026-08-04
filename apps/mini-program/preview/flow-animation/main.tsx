@@ -6,6 +6,17 @@ import '../../src/components/flow-animation/index.scss'
 import './preview.scss'
 
 type PreviewMode = 'flow1' | 'event' | 'street' | 'flow2'
+const getInitialMode = (): PreviewMode => {
+  const raw = new URLSearchParams(window.location.search).get('mode')
+  if (raw === 'event' || raw === 'street' || raw === 'flow2') return raw
+  return 'flow1'
+}
+const showToolbar = new URLSearchParams(window.location.search).get('notoolbar') !== '1'
+const getInitialArchetype = (): string => {
+  const raw = new URLSearchParams(window.location.search).get('archetype')
+  const valid = ['corgi','rooster','hamster_praise','fox','dolphin_calm','spider','koala','octopus','owl','elephant','turtle','cat']
+  return raw && valid.includes(raw) ? raw : 'corgi'
+}
 const ARCHETYPES = [
   ['corgi', '社牛柯基'], ['rooster', '小太阳鸡'], ['hamster_praise', '夸夸仓鼠'],
   ['fox', '寻宝狐'], ['dolphin_calm', '机灵海豚'], ['spider', '人脉蛛'],
@@ -14,9 +25,9 @@ const ARCHETYPES = [
 ] as const
 
 function PreviewApp() {
-  const [mode, setMode] = useState<PreviewMode>('flow1')
+  const [mode, setMode] = useState<PreviewMode>(getInitialMode())
   const [replayKey, setReplayKey] = useState(0)
-  const [archetypeId, setArchetypeId] = useState('corgi')
+  const [archetypeId, setArchetypeId] = useState(getInitialArchetype())
 
   const show = (nextMode: PreviewMode) => {
     setMode(nextMode)
@@ -43,7 +54,7 @@ function PreviewApp() {
         />
       )}
 
-      <nav className="preview-toolbar" aria-label="Flow Preview 控制">
+      {showToolbar ? <nav className="preview-toolbar" aria-label="Flow Preview 控制">
         <select
           className="preview-toolbar__select"
           value={archetypeId}
@@ -61,7 +72,7 @@ function PreviewApp() {
         <button className={mode === 'street' ? 'is-active' : ''} onClick={() => show('street')}>街头盲盒详情</button>
         <button className={mode === 'flow2' ? 'is-active' : ''} onClick={() => show('flow2')}>Flow 2</button>
         <button onClick={() => setReplayKey((value) => value + 1)}>重新播放</button>
-      </nav>
+      </nav> : null}
     </main>
   )
 }

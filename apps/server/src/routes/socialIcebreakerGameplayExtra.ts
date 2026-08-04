@@ -46,7 +46,8 @@ import { buildMomentCardPayload } from '../lib/momentCardPayload';
 import { renderMomentCardToPng } from '../lib/momentCardRenderer';
 import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
-import { validateContentSafe, contentViolationResponse } from '../lib/contentSafety';
+import { validateContentSafeAsync, contentViolationResponse } from '../lib/contentSafety';
+import { recordViolation } from '../abuseDetection';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import { momentCardLimiter } from '../rateLimiter';
 import { shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
@@ -748,10 +749,11 @@ router.post('/:socialSessionId/group-mirror/submit', async (req: any, res) => {
         if (!currentState) throw new Error('Session not found');
 
         const existingAnswers = currentState.groupMirrorAnswers || [];
-        const newAnswers = answers.map((a) => {
+        const newAnswers = await Promise.all(answers.map(async (a) => {
           const reason = (a.reasonText || '').slice(0, 100);
-          const safetyResult = validateContentSafe(reason, 'reason');
-          if (!safetyResult.safe && safetyResult.violation?.severity === 'severe') {
+          const safetyResult = await validateContentSafeAsync(reason, 'reason', { userId });
+          if (!safetyResult.safe && safetyResult.violation) {
+            await recordViolation(userId, safetyResult.violation.type, safetyResult.violation.severity);
             throw new Error(`Content violation: ${safetyResult.violation.message || 'inappropriate content'}`);
           }
           return {
@@ -761,7 +763,7 @@ router.post('/:socialSessionId/group-mirror/submit', async (req: any, res) => {
             targetUserId: a.targetUserId,
             reasonText: reason,
           };
-        });
+        }));
 
         const answerMap = new Map<string, typeof newAnswers[0]>();
         for (const a of existingAnswers) {
@@ -789,9 +791,10 @@ router.post('/:socialSessionId/group-mirror/submit', async (req: any, res) => {
 
   for (const a of answers) {
     const reason = (a.reasonText || '').slice(0, 100);
-    const safetyResult = validateContentSafe(reason, 'reason');
-    if (!safetyResult.safe && safetyResult.violation?.severity === 'severe') {
-      return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
+    const safetyResult = await validateContentSafeAsync(reason, 'reason', { userId });
+    if (!safetyResult.safe && safetyResult.violation) {
+      await recordViolation(userId, safetyResult.violation.type, safetyResult.violation.severity);
+      return res.status(400).json(contentViolationResponse(safetyResult.violation).body);
     }
   }
 

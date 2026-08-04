@@ -4,6 +4,7 @@ import { logAITrace } from "../../lib/aiTraceLogger";
 import { logger } from "../../lib/logger";
 import { requireAuthenticatedUserId } from "../../lib/requestAuth";
 import { eventGroupOutcomesRepo } from "../../repositories/eventGroupOutcomesRepo";
+import { deriveMatchHistoryAndRefreshCalibration } from "../../services/matchHistoryDerivation";
 
 const GROUP_OUTCOME_ROUTE = "/api/event-pools/:poolId/group-outcome";
 const DUPLICATE_SUBMISSION_STRATEGY = "replace";
@@ -102,6 +103,17 @@ export function registerEventGroupOutcomeRoutes(app: Express): void {
       reqLogger.info("Stored event group outcome submission", {
         groupId,
         duplicateSubmissionStrategy: DUPLICATE_SUBMISSION_STRATEGY,
+      });
+
+      // Post-commit side effect (Magnetism Engine Phase 0 / W1+W3): derive
+      // match_history pair rows for this group and accumulate archetype-pair
+      // feedback stats. Fire-and-forget — a derivation failure must never
+      // fail the user's outcome submission.
+      deriveMatchHistoryAndRefreshCalibration(groupId).catch((error) => {
+        reqLogger.error("Match history derivation failed after outcome submission", {
+          groupId,
+          error: error instanceof Error ? error.message : String(error),
+        });
       });
 
       logAITrace({

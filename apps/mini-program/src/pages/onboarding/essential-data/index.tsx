@@ -489,6 +489,7 @@ export default function EssentialDataPage() {
       discussion: '想深聊？我会帮你匹配也愿意倾听的人。',
       fun: '开心优先，别想太多。',
       explore: '尝鲜体验，悦仔会帮你挑一个有趣的方向。',
+      romance: '这份期待，悦仔会悄悄记在心里。',
       flexible: '交给悦仔安排，放心。',
     }),
     [],

@@ -974,12 +974,10 @@ export default function ProfileReviewPage() {
           <ProfileReviewInviteCard
             visible={isInviteCardVisible}
             reduceMotion={shouldReduceMotion}
-            disabled={isSubmitting || isCelebrating}
-            busy={isSubmitting}
-            onTap={() => {
-              analytics.interaction('profile_review_invite_tap')
-              handleComplete()
-            }}
+            archetypeId={archetype}
+            displayName={displayName}
+            topInterestLabel={topInterestLabels[0] ?? null}
+            intentLabel={intentLabels[0]?.label ?? null}
             className='profile-review__invite-card'
           />
 

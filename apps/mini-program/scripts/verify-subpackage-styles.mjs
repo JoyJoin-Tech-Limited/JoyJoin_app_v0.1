@@ -69,6 +69,19 @@ const REQUIREMENTS = [
     page: 'common.wxss',
     selectors: ['.identity-stage{position:relative;width:100%;height:100%;min-height:inherit'],
   },
+  {
+    // Zero-CSS regression (2026-08-03): the JoyJoinIntroFlow overlay
+    // (FlowShell / ExperienceEntryFlow / ExperienceDetail) was only styled in
+    // the H5 preview harness — no real page @use'd flow-animation/index.scss,
+    // so the entire intro flow rendered with default WeChat chrome on device.
+    page: 'pages/onboarding/profile-review/index.wxss',
+    selectors: [
+      '.flow-shell{',
+      'flow-shell__skip{',
+      'experience-banner__title{',
+      '.experience-detail{',
+    ],
+  },
 ]
 
 let failed = false

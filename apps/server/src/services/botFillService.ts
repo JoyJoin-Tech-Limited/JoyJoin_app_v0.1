@@ -146,6 +146,7 @@ export async function fillBotsForTesting(params: {
         industryConfidence: "0.95",
         hasCompletedProfileSetup: true,
         hasCompletedPersonalityTest: true,
+        // NOTE: matching no longer reads vibeVector (dead branch removed 2026-08); kept for bot profile realism only.
         vibeVector: {
           energy: 55 + (globalIndex % 20),
           depth: 50 + (globalIndex % 25),

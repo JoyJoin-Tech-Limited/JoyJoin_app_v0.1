@@ -517,6 +517,11 @@ export default function MyImagePage() {
                     )
                   })}
                 </View>
+                {slotInventory.length === 0 && (
+                  <View className='my-image__empty-slot' role='status'>
+                    <Text>这个部位还没有获得装备</Text>
+                  </View>
+                )}
               </View>
 
               {recentItems.length > 0 && (

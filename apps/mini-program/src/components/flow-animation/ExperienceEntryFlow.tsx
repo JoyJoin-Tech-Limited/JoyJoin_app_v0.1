@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { Button, Image, Text, View } from '@tarojs/components'
-import { FLOW1_HOME_COPY, getFlow1H1Line2 } from '@shared/copy/flowAnimationCopy'
+import { FLOW1_HOME_COPY, FLOW_SHELL_COPY, getArchetypeSubline, getFlow1H1Line2 } from '@shared/copy/flowAnimationCopy'
 import { flowAnalytics } from '../../lib/analytics/flowAnalytics'
 import { haptics } from '../../lib/utils/haptics'
 import type { FlowArchetypeBackgrounds } from './FlowShell'
@@ -8,6 +9,7 @@ import type { ExperienceDefinition } from './flowAnimation.types'
 interface ExperienceEntryFlowProps {
   entries: readonly ExperienceDefinition[]
   revealProgress: number
+  archetypeId?: string | null
   backgroundSources?: FlowArchetypeBackgrounds | null
   alangEnabled?: boolean
   onOpenDetail: (id: ExperienceDefinition['id']) => void
@@ -16,15 +18,24 @@ interface ExperienceEntryFlowProps {
 export default function ExperienceEntryFlow({
   entries,
   revealProgress,
+  archetypeId,
   backgroundSources,
   alangEnabled = false,
   onOpenDetail,
 }: ExperienceEntryFlowProps) {
+  // World art that failed to load is dropped (art + scrim) so the copy stays
+  // legible on the plain banner panel instead of floating over a broken image.
+  const [failedWorldIds, setFailedWorldIds] = useState<ReadonlySet<string>>(new Set())
+
   const handleBannerTap = (entry: ExperienceDefinition) => {
     haptics('light')
     flowAnalytics.trackBannerTap(entry.id, alangEnabled)
     flowAnalytics.trackDetailOpen(entry.id)
     onOpenDetail(entry.id)
+  }
+
+  const handleWorldError = (id: ExperienceDefinition['id']) => {
+    setFailedWorldIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)))
   }
 
   return (
@@ -34,13 +45,14 @@ export default function ExperienceEntryFlow({
           <Text className='experience-entry-flow__title-line'>{FLOW1_HOME_COPY.h1Line1}</Text>
           <Text className='experience-entry-flow__title-line experience-entry-flow__title-line--nowrap'>{getFlow1H1Line2()}</Text>
         </Text>
-        <Text className='experience-entry-flow__subtitle'>{FLOW1_HOME_COPY.fallbackSubline}</Text>
+        <Text className='experience-entry-flow__subtitle'>{getArchetypeSubline(archetypeId)}</Text>
       </View>
 
       <View className='experience-entry-flow__entries'>
         {entries.map((entry, index) => {
           const visible = revealProgress >= (index === 0 ? 0.32 : 0.48)
           const backgroundSrc = backgroundSources?.[entry.id]
+          const worldSrc = failedWorldIds.has(entry.id) ? undefined : backgroundSrc
 
           return (
             <Button
@@ -54,13 +66,14 @@ export default function ExperienceEntryFlow({
               onClick={() => handleBannerTap(entry)}
               ariaLabel={`查看${entry.title}玩法`}
             >
-              {backgroundSrc ? (
+              {worldSrc ? (
                 <>
                   <Image
                     className={`experience-banner__world experience-banner__world--${entry.id}`}
-                    src={backgroundSrc}
+                    src={worldSrc}
                     mode='aspectFill'
                     lazyLoad={false}
+                    onError={() => handleWorldError(entry.id)}
                   />
                   <View className={`experience-banner__world-scrim experience-banner__world-scrim--${entry.id}`} />
                 </>
@@ -76,7 +89,7 @@ export default function ExperienceEntryFlow({
               </View>
 
               <View className='experience-banner__footer'>
-                <Text className='experience-banner__link'>进入看看</Text>
+                <Text className='experience-banner__link'>{FLOW_SHELL_COPY.bannerEnter}</Text>
                 <View className='experience-banner__arrow' />
               </View>
             </Button>

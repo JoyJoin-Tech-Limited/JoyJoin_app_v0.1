@@ -40,6 +40,26 @@ describe("validateContentSafe", () => {
     const result = validateContentSafe("傻逼", "industryRawInput");
     expect(result.violation!.field).toBe("industryRawInput");
   });
+
+  it("returns safe=false for English profanity", () => {
+    const result = validateContentSafe("you are a fuck", "displayName");
+    expect(result.safe).toBe(false);
+    expect(result.code).toBe("CONTENT_VIOLATION");
+    expect(result.violation!.type).toBe("harassment");
+    expect(result.violation!.severity).toBe("warning");
+    expect(result.violation!.matchedKeywords).toContain("fuck");
+  });
+
+  it("returns safe=false for star-obfuscated profanity", () => {
+    const result = validateContentSafe("f**k this", "bio");
+    expect(result.safe).toBe(false);
+    expect(result.violation!.matchedKeywords).toContain("fuck");
+  });
+
+  it("returns safe=true for legit words that contain profanity fragments", () => {
+    const result = validateContentSafe("今天考试得了A，pass了", "bio");
+    expect(result.safe).toBe(true);
+  });
 });
 
 describe("contentViolationResponse", () => {

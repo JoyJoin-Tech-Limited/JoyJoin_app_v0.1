@@ -42,6 +42,17 @@ import { getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
 const MIN_INTERESTS = 3
+// No maximum selection count (product decision 2026-08-03): users may select
+// as many interests as they like. The server likewise enforces only the min.
+
+// Per-tap coachmark copy keyed by the level the tap just reached.
+// Copy budget: ≤10 chars so the anchored bubble stays clear of card edges.
+const TAP_HINT_COPY: Record<InterestSelectionLevel, string> = {
+  1: '再点一次增强热度',
+  2: '再点一次设为必聊项',
+  3: '已是必聊项，再点可取消',
+}
+const TAP_HINT_DURATION_MS = 1800
 
 const CATEGORY_ORDER: MacroCategory[] = ['food', 'play', 'sports', 'culture', 'life', 'growth']
 
@@ -119,12 +130,19 @@ export default function ExtendedDataPage() {
   const [error, setError] = useState('')
 
   useResetOnShow(setIsPageExiting, setIsSubmitting)
-  const [showFirstSelectionHint, setShowFirstSelectionHint] = useState(false)
-  const [hasShownFirstSelectionHint, setHasShownFirstSelectionHint] = useState(false)
+  const [tapHint, setTapHint] = useState<{ topicId: string; level: InterestSelectionLevel; message: string } | null>(null)
   const [poppingCardId, setPoppingCardId] = useState<string | null>(null)
   const [milestone, setMilestone] = useState<'unlocked' | 'first-priority' | 'all-categories' | null>(null)
   const poppingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const milestoneTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const tapHintTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // L2/L3 hints show once per session (keyed `l2`/`l3`); the L1 discovery hint
+  // may repeat on up to 3 distinct cards (keyed `l1:<topicId>`).
+  const seenTapHintsRef = useRef<Set<string>>(new Set())
+  const l1HintCountRef = useRef(0)
+  // Once any card reaches L2, the user has demonstrated the heat gesture —
+  // permanently suppress the L1 "tap again" hint for this session.
+  const hasReachedLevel2Ref = useRef(false)
   const { isLoading } = useAuthGuard({
     suspendOnboardingRedirect: isSubmitting || isPageExiting,
   })
@@ -139,24 +157,15 @@ export default function ExtendedDataPage() {
   const { saveCheckpoint } = useOnboardingCheckpoint()
 
   useEffect(() => {
-    if (!showFirstSelectionHint) {
-      return undefined
-    }
-
-    const timer = setTimeout(() => {
-      setShowFirstSelectionHint(false)
-    }, 2200)
-
-    return () => clearTimeout(timer)
-  }, [showFirstSelectionHint])
-
-  useEffect(() => {
     return () => {
       if (poppingTimeoutRef.current) {
         clearTimeout(poppingTimeoutRef.current)
       }
       if (milestoneTimeoutRef.current) {
         clearTimeout(milestoneTimeoutRef.current)
+      }
+      if (tapHintTimeoutRef.current) {
+        clearTimeout(tapHintTimeoutRef.current)
       }
     }
   }, [])
@@ -302,10 +311,6 @@ export default function ExtendedDataPage() {
 
       if (!currentLevel) {
         nextLevels[topicId] = 1
-        if (selectedCount === 0 && !hasShownFirstSelectionHint) {
-          setShowFirstSelectionHint(true)
-          setHasShownFirstSelectionHint(true)
-        }
       } else if (currentLevel === 1) {
         nextLevels[topicId] = 2
       } else if (currentLevel === 2) {
@@ -324,8 +329,42 @@ export default function ExtendedDataPage() {
         poppingTimeoutRef.current = null
         setPoppingCardId((current) => (current === topicId ? null : current))
       }, 200)
+
+      const reachedLevel = nextLevels[topicId]
+      if (reachedLevel === 2 || reachedLevel === 3) {
+        hasReachedLevel2Ref.current = true
+      }
+
+      // Anchored per-tap guidance. L2/L3 hints show once per session; the L1
+      // discovery hint may repeat on up to 3 distinct cards until the user
+      // reaches L2 anywhere. The L3 hint is suppressed when this tap also
+      // fires the first-priority milestone toast (contradictory messages).
+      if (tapHintTimeoutRef.current) {
+        clearTimeout(tapHintTimeoutRef.current)
+        tapHintTimeoutRef.current = null
+      }
+      const milestoneFiresOnThisTap = reachedLevel === 3 && topPriorityCount === 0
+      let hintKey: string | null = null
+      if (reachedLevel === 1 && !hasReachedLevel2Ref.current && l1HintCountRef.current < 3) {
+        hintKey = `l1:${topicId}`
+      } else if ((reachedLevel === 2 || reachedLevel === 3) && !milestoneFiresOnThisTap) {
+        hintKey = `l${reachedLevel}`
+      }
+      if (hintKey != null && reachedLevel != null && !seenTapHintsRef.current.has(hintKey)) {
+        seenTapHintsRef.current.add(hintKey)
+        if (reachedLevel === 1) {
+          l1HintCountRef.current += 1
+        }
+        setTapHint({ topicId, level: reachedLevel, message: TAP_HINT_COPY[reachedLevel] })
+        tapHintTimeoutRef.current = setTimeout(() => {
+          tapHintTimeoutRef.current = null
+          setTapHint(null)
+        }, TAP_HINT_DURATION_MS)
+      } else {
+        setTapHint(null)
+      }
     },
-    [hasShownFirstSelectionHint, levelsById, selectedCount],
+    [analytics, levelsById, topPriorityCount],
   )
 
   const handleSubmit = useCallback(async () => {
@@ -523,9 +562,13 @@ export default function ExtendedDataPage() {
                   </View>
 
                   <View className='extended-data__interest-grid'>
-                    {items.map((item) => {
+                    {items.map((item, itemIndex) => {
                       const level = levelsById[item.id]
                       const levelMeta = getInterestLevelMeta(level)
+                      // Grid is 2-column: first-row cards render the bubble
+                      // below so it is not clipped by the category header.
+                      const isFirstRow = itemIndex < 2
+                      const showTapHint = tapHint?.topicId === item.id
 
                       return (
                         <View
@@ -534,6 +577,7 @@ export default function ExtendedDataPage() {
                             'extended-data__interest-card',
                             level ? `extended-data__interest-card--level-${level}` : '',
                             poppingCardId === item.id ? 'extended-data__interest-card--popping' : '',
+                            showTapHint ? 'extended-data__interest-card--hint' : '',
                           ]
                             .filter(Boolean)
                             .join(' ')}
@@ -544,6 +588,25 @@ export default function ExtendedDataPage() {
                           hoverClass='extended-data__interest-card--pressed'
                           hoverStayTime={100}
                         >
+                          {showTapHint ? (
+                            <View
+                              className={[
+                                'extended-data__coachmark',
+                                isFirstRow ? 'extended-data__coachmark--below' : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              aria-live='polite'
+                              role='status'
+                            >
+                              <View
+                                className={`extended-data__coachmark-dot extended-data__coachmark-dot--level-${tapHint.level}`}
+                                aria-hidden='true'
+                              />
+                              <Text className='extended-data__coachmark-text'>{tapHint.message}</Text>
+                              <View className='extended-data__coachmark-arrow' aria-hidden='true' />
+                            </View>
+                          ) : null}
                           <View className='extended-data__interest-card-top'>
                             <Text className='extended-data__interest-label'>{item.label}</Text>
                             {level ? <InterestTierIndicator level={level} /> : null}
@@ -561,13 +624,6 @@ export default function ExtendedDataPage() {
           )}
         </View>
       </ScrollView>
-
-      {showFirstSelectionHint ? (
-        <View className='extended-data__hint-toast' aria-live='polite' role='status'>
-          <JoyJoinIcon emoji='✨' size={28} className='extended-data__hint-toast-icon' />
-          <Text className='extended-data__hint-toast-text'>第一个同好信号已点亮，再点同一项就能升温。</Text>
-        </View>
-      ) : null}
 
       {milestone ? (
         <View className='extended-data__milestone-toast' aria-live='polite' role='status'>

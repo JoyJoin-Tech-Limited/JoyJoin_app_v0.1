@@ -7,6 +7,7 @@ import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { requireAuth } from "../../middleware/auth";
 import { storage } from "../../storage";
 import { notifyAbuseReport } from "../../lib/wecomNotifications";
+import { MATCHING_THRESHOLD_FALLBACKS } from "../../lib/matchingThresholds";
 import { users } from "@shared/schema";
 
 export function registerMatchingAdminRoutes(app: Express): void {
@@ -205,26 +206,8 @@ export function registerMatchingAdminRoutes(app: Express): void {
         .limit(1);
       
       if (!activeConfig) {
-        // Return default config if none exists
-        return res.json({
-          highCompatibilityThreshold: 85,
-          mediumCompatibilityThreshold: 70,
-          lowCompatibilityThreshold: 55,
-          timeDecayEnabled: true,
-          timeDecayRate: 5,
-          minThresholdAfterDecay: 50,
-          minGroupSizeForMatch: 4,
-          optimalGroupSize: 6,
-          scanIntervalMinutes: 60,
-          predictiveRerankEnabled: false,
-          predictiveRerankExposurePercent: 50,
-          predictiveRerankMaxPositionShift: 2,
-          predictiveRerankConfidenceThreshold: 70,
-          predictiveRerankAutoDisableEnabled: true,
-          predictiveRerankMinShadowExperiments: 10,
-          predictiveRerankAutoDisabledAt: null,
-          predictiveRerankAutoDisabledReason: null,
-        });
+        // Return default config if none exists (single source: lib/matchingThresholds)
+        return res.json({ ...MATCHING_THRESHOLD_FALLBACKS });
       }
       
       res.json(activeConfig);
@@ -249,9 +232,9 @@ export function registerMatchingAdminRoutes(app: Express): void {
       const [newConfig] = await db
         .insert(matchingThresholds)
         .values({
-          highCompatibilityThreshold: req.body.highCompatibilityThreshold || 85,
-          mediumCompatibilityThreshold: req.body.mediumCompatibilityThreshold || 70,
-          lowCompatibilityThreshold: req.body.lowCompatibilityThreshold || 55,
+          highCompatibilityThreshold: req.body.highCompatibilityThreshold || MATCHING_THRESHOLD_FALLBACKS.highCompatibilityThreshold,
+          mediumCompatibilityThreshold: req.body.mediumCompatibilityThreshold || MATCHING_THRESHOLD_FALLBACKS.mediumCompatibilityThreshold,
+          lowCompatibilityThreshold: req.body.lowCompatibilityThreshold || MATCHING_THRESHOLD_FALLBACKS.lowCompatibilityThreshold,
           timeDecayEnabled: req.body.timeDecayEnabled ?? true,
           timeDecayRate: req.body.timeDecayRate || 5,
           minThresholdAfterDecay: req.body.minThresholdAfterDecay || 50,

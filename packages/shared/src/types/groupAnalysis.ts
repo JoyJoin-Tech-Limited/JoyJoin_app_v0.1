@@ -69,6 +69,14 @@ export interface PairExplanation {
   connectionPointsWithRarity?: ConnectionPointWithRarity[];
 
   /**
+   * Deterministic shared highlights — concrete shared facts (共同必聊项 / 共同活动意图 /
+   * 同乡) computed server-side without an LLM call. Clients render these above the
+   * LLM prose when non-empty. Optional for backward compatibility with cached
+   * payloads generated before pair-explanation-v3.
+   */
+  sharedHighlights?: string[];
+
+  /**
    * One short icebreaker line — how to open the conversation naturally (≤24 chars typical).
    * Optional; populated when the pair-explanation prompt returns structured JSON.
    */

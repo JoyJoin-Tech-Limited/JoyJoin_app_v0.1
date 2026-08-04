@@ -197,7 +197,7 @@ export async function recordTokenUsage(userId: string, tokensUsed: number): Prom
   }
 }
 
-async function recordViolation(userId: string, violationType: ViolationType, severity: 'warning' | 'severe'): Promise<void> {
+export async function recordViolation(userId: string, violationType: ViolationType, severity: 'warning' | 'severe'): Promise<void> {
   const user = await db.select({ violationCount: users.violationCount })
     .from(users)
     .where(eq(users.id, userId))

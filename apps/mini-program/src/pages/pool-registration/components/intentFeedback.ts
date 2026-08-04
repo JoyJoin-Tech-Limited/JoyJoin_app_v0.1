@@ -24,6 +24,7 @@ const SINGLE_FEEDBACK: Record<string, string> = {
   discussion: '悦仔会优先帮你匹配也愿意深聊的桌友。',
   fun: '先别想太多，开心就是这次最重要的 KPI。',
   explore: '尝鲜体验，悦仔会帮你挑一个有趣的方向。',
+  romance: '这份期待，悦仔会悄悄记在心里。',
   flexible: FLEXIBLE_ONLY_FEEDBACK,
 }
 

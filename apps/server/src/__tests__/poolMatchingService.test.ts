@@ -22,6 +22,7 @@ const {
     updateWhereQueue: [] as any[],
     poolRow: { id: 'pool-1', title: 'Test Pool', eventType: '饭局', city: '上海', district: '徐汇', dateTime: new Date(), createdBy: 'host-1' } as any | null,
     registrations: [] as any[],
+    matchHistoryRows: [] as any[],
     throwCouponsSelect: false,
     transactionImpl: vi.fn(),
   },
@@ -94,6 +95,9 @@ vi.mock('../db', () => ({
               then: (resolve: (v: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
                 Promise.resolve(row ? [row] : []).then(resolve, reject),
             };
+          }
+          if (table === matchHistoryTable) {
+            return makeAwaitable(mockState.matchHistoryRows);
           }
           if (table === couponsTable && mockState.throwCouponsSelect) {
             throw new Error('coupon lookup failed');
@@ -172,6 +176,7 @@ const {
   runGreedyPoolMatchingCore,
   matchEventPool,
   calculateGroupDiversity,
+  calculatePairScore,
   classifyDisclosedGender,
   countDisclosedGenders,
   groupSatisfiesGenderFloor,
@@ -193,6 +198,7 @@ describe('poolMatchingService', () => {
     mockState.updateWhereQueue.length = 0;
     mockState.poolRow = { id: 'pool-1', title: 'Test Pool', eventType: '饭局', city: '上海', district: '徐汇', dateTime: new Date(), createdBy: 'host-1' };
     mockState.registrations = [];
+    mockState.matchHistoryRows = [];
     mockState.throwCouponsSelect = false;
     mockState.transactionImpl.mockReset();
     (getFeatureFlag as ReturnType<typeof vi.fn>).mockImplementation((key: string, defaultValue: boolean) => {
@@ -305,18 +311,13 @@ function makeGenderUser(
     userIntent: null,
     cuisinePreferences: null,
     dietaryRestrictions: null,
-    tasteIntensity: null,
     barThemes: null,
     alcoholComfort: null,
     eventType: '饭局',
     ageMatchPreference: null,
     tableVibePreference: null,
-    vibeVector: null,
     preferenceStrictness: null,
-    preferredDistricts: null,
     genderCompositionPreference: null,
-    acceptPairs: null,
-    kolComfortLevel: null,
     ...overrides,
   };
 }
@@ -792,6 +793,188 @@ describe('matchEventPool threads pool gender config into the core (AC-12)', () =
     const groups = await matchEventPool('pool-impossible');
 
     // No 4-6 member subset of 5M/1F can reach 2 disclosed females.
+    expect(groups).toHaveLength(0);
+  });
+});
+
+describe('mutual romance tension bonus (2026-08-03)', () => {
+  // Empty interests for both users → interest dimension falls back to the
+  // neutral 70; no DB access needed.
+  const emptyInterestsCache = new Map([
+    ['a', { topics: [], heatMap: {} }],
+    ['b', { topics: [], heatMap: {} }],
+  ]) as any;
+
+  it('adds +5 only when BOTH users indicated romance', async () => {
+    const romanceA = makeGenderUser('a', '女性', { eventIntent: ['romance'] });
+    const romanceB = makeGenderUser('b', '男性', { eventIntent: ['romance'] });
+    // Baseline uses `friends` — unlike `fun` it carries no life-stage
+    // dampening, so the pair differs ONLY by the romance bonus.
+    const plainA = makeGenderUser('a', '女性', { eventIntent: ['friends'] });
+    const plainB = makeGenderUser('b', '男性', { eventIntent: ['friends'] });
+
+    const mutual = await calculatePairScore(romanceA, romanceB, emptyInterestsCache);
+    const baseline = await calculatePairScore(plainA, plainB, emptyInterestsCache);
+
+    expect(mutual - baseline).toBe(5);
+  });
+
+  it('never boosts one-sided romance', async () => {
+    const romanceA = makeGenderUser('a', '女性', { eventIntent: ['romance'] });
+    const plainB = makeGenderUser('b', '男性', { eventIntent: ['friends'] });
+    // Control: same zero-overlap intent pairing with a modulation-neutral
+    // value — identical dimensions, so any difference would be a romance leak.
+    const controlA = makeGenderUser('a', '女性', { eventIntent: ['discussion'] });
+
+    const oneSided = await calculatePairScore(romanceA, plainB, emptyInterestsCache);
+    const control = await calculatePairScore(controlA, plainB, emptyInterestsCache);
+
+    expect(oneSided).toBe(control);
+  });
+
+  it('stays capped at 100', async () => {
+    const romanceA = makeGenderUser('a', '女性', { eventIntent: ['romance'] });
+    const romanceB = makeGenderUser('b', '男性', { eventIntent: ['romance'] });
+
+    const score = await calculatePairScore(romanceA, romanceB, emptyInterestsCache);
+    expect(score).toBeLessThanOrEqual(100);
+  });
+
+  it('reads romance from the registration eventIntent first, user profile second', async () => {
+    const profileOnlyA = makeGenderUser('a', '女性', {
+      eventIntent: null,
+      userIntent: ['romance'],
+    });
+    const profileOnlyB = makeGenderUser('b', '男性', {
+      eventIntent: null,
+      userIntent: ['romance'],
+    });
+    const plainA = makeGenderUser('a', '女性', { eventIntent: null, userIntent: ['friends'] });
+    const plainB = makeGenderUser('b', '男性', { eventIntent: null, userIntent: ['friends'] });
+
+    const mutual = await calculatePairScore(profileOnlyA, profileOnlyB, emptyInterestsCache);
+    const baseline = await calculatePairScore(plainA, plainB, emptyInterestsCache);
+
+    expect(mutual - baseline).toBe(5);
+  });
+});
+
+describe('match history never-meet sentinel (MATCH_NEVER_MEET_SENTINEL, default OFF)', () => {
+  const emptyInterestsCache = new Map([
+    ['a', { topics: [], heatMap: {} }],
+    ['b', { topics: [], heatMap: {} }],
+  ]) as any;
+
+  const historyLookup = (wouldMeetAgain: boolean | null) =>
+    new Map<string, { wouldMeetAgain: boolean | null }>([['a|b', { wouldMeetAgain }]]);
+
+  it('scores normally with the flag OFF even when history says wouldMeetAgain=false', async () => {
+    const a = makeGenderUser('a', '女性');
+    const b = makeGenderUser('b', '男性');
+
+    const withHistory = await calculatePairScore(
+      a, b, emptyInterestsCache, undefined, undefined, false, undefined, undefined,
+      historyLookup(false), false,
+    );
+    // Baseline uses the same explicit legacy path (semanticSimilarityEnabled=false)
+    // so the comparison isolates the history effect.
+    const noHistory = await calculatePairScore(a, b, emptyInterestsCache, undefined, undefined, false);
+
+    expect(withHistory).toBeGreaterThanOrEqual(0);
+    expect(withHistory).toBe(noHistory);
+  });
+
+  it('returns the -1 hard-skip sentinel with the flag ON when history says wouldMeetAgain=false', async () => {
+    const a = makeGenderUser('a', '女性');
+    const b = makeGenderUser('b', '男性');
+
+    const score = await calculatePairScore(
+      a, b, emptyInterestsCache, undefined, undefined, false, undefined, undefined,
+      historyLookup(false), true,
+    );
+
+    expect(score).toBe(-1);
+  });
+
+  it('keeps the +5 re-match boost unconditional (applies with the flag OFF)', async () => {
+    const a = makeGenderUser('a', '女性');
+    const b = makeGenderUser('b', '男性');
+
+    const boosted = await calculatePairScore(
+      a, b, emptyInterestsCache, undefined, undefined, false, undefined, undefined,
+      historyLookup(true), false,
+    );
+    const baseline = await calculatePairScore(a, b, emptyInterestsCache, undefined, undefined, false);
+
+    expect(boosted - baseline).toBe(5);
+  });
+});
+
+describe('matchEventPool threads the never-meet sentinel flag (read once per run)', () => {
+  function seedFourUserPool() {
+    const users = [
+      makeGenderUser('m1', '男性'),
+      makeGenderUser('m2', '男性'),
+      makeGenderUser('f1', '女性'),
+      makeGenderUser('f2', '女性'),
+    ];
+    mockState.registrations = users;
+    for (const u of users) {
+      mockState.userInterestsByUserId.set(u.userId, {
+        userId: u.userId,
+        selections: [
+          { topicId: 't1', heat: 25 },
+          { topicId: 't2', heat: 10 },
+        ],
+      });
+    }
+    mockState.poolRow = {
+      id: 'pool-sentinel',
+      title: 'Sentinel Pool',
+      eventType: '饭局',
+      city: '深圳',
+      dateTime: new Date(),
+      createdBy: 'host-1',
+      minGroupSize: 4,
+      maxGroupSize: 6,
+      targetGroups: 1,
+    };
+    // Every pairwise combination reports wouldMeetAgain=false.
+    const ids = users.map((u) => u.userId);
+    mockState.matchHistoryRows = [];
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const [user1Id, user2Id] = [ids[i], ids[j]].sort();
+        mockState.matchHistoryRows.push({ user1Id, user2Id, wouldMeetAgain: false });
+      }
+    }
+  }
+
+  function mockSentinelFlag(enabled: boolean) {
+    (getFeatureFlag as ReturnType<typeof vi.fn>).mockImplementation((key: string, defaultValue: boolean) => {
+      if (key === 'matchingOperatorReviewEnabled') return Promise.resolve(false);
+      if (key === 'matchNeverMeetSentinel') return Promise.resolve(enabled);
+      return Promise.resolve(defaultValue);
+    });
+  }
+
+  it('flag OFF (default): wouldMeetAgain=false pairs score normally and still form groups', async () => {
+    seedFourUserPool();
+    mockSentinelFlag(false);
+
+    const groups = await matchEventPool('pool-sentinel');
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].members).toHaveLength(4);
+    expect(getFeatureFlag).toHaveBeenCalledWith('matchNeverMeetSentinel', false);
+  });
+
+  it('flag ON: the -1 sentinel hard-skips every flagged pair, so no group forms', async () => {
+    seedFourUserPool();
+    mockSentinelFlag(true);
+
+    const groups = await matchEventPool('pool-sentinel');
+
     expect(groups).toHaveLength(0);
   });
 });

@@ -58,18 +58,13 @@ function buildSyntheticUsers(count: number): UserWithProfile[] {
       userIntent: ['networking'],
       cuisinePreferences: [],
       dietaryRestrictions: [],
-      tasteIntensity: [],
       barThemes: [],
       alcoholComfort: [],
       eventType: '饭局',
       ageMatchPreference: null,
       tableVibePreference: null,
-      vibeVector: null,
       preferenceStrictness: null,
-      preferredDistricts: null,
       genderCompositionPreference: null,
-      acceptPairs: null,
-      kolComfortLevel: null,
     });
   }
   return users;

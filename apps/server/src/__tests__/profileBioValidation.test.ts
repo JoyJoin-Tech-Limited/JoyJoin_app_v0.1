@@ -33,12 +33,18 @@ vi.mock("../userSemanticProfileService", () => ({
   queueSemanticProfileRecompute: mockQueueSemanticProfileRecompute,
 }));
 
-const mockValidateContentSafe = vi.fn();
+const mockValidateContentSafeAsync = vi.fn();
 const mockContentViolationResponse = vi.fn();
 
 vi.mock("../lib/contentSafety", () => ({
-  validateContentSafe: mockValidateContentSafe,
+  validateContentSafeAsync: mockValidateContentSafeAsync,
   contentViolationResponse: mockContentViolationResponse,
+}));
+
+const mockRecordViolation = vi.fn();
+
+vi.mock("../abuseDetection", () => ({
+  recordViolation: mockRecordViolation,
 }));
 
 const mockLoggerInfo = vi.fn();
@@ -95,7 +101,7 @@ function cookieHeader(response: Response) {
 describe("PATCH /api/profile bio validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockValidateContentSafe.mockReturnValue({ safe: true });
+    mockValidateContentSafeAsync.mockResolvedValue({ safe: true });
     mockUpdateFullProfile.mockResolvedValue({ id: "user-123", bio: "persisted" });
   });
 
@@ -126,7 +132,7 @@ describe("PATCH /api/profile bio validation", () => {
       const callArg = mockUpdateFullProfile.mock.calls[0][1];
       expect(callArg.bio).toBe("喜欢轻松聊天");
 
-      expect(mockValidateContentSafe).toHaveBeenCalledWith("喜欢轻松聊天", "bio");
+      expect(mockValidateContentSafeAsync).toHaveBeenCalledWith("喜欢轻松聊天", "bio", { userId: "user-123" });
     });
   });
 
@@ -149,7 +155,7 @@ describe("PATCH /api/profile bio validation", () => {
       expect(callArg.bio).toBeNull();
       const body = (await res.json()) as { bio: null };
       expect(body.bio).toBeNull();
-      expect(mockValidateContentSafe).not.toHaveBeenCalledWith(expect.anything(), "bio");
+      expect(mockValidateContentSafeAsync).not.toHaveBeenCalledWith(expect.anything(), "bio", expect.anything());
     });
   });
 
@@ -172,7 +178,7 @@ describe("PATCH /api/profile bio validation", () => {
       expect(callArg.bio).toBeNull();
       const body = (await res.json()) as { bio: null };
       expect(body.bio).toBeNull();
-      expect(mockValidateContentSafe).not.toHaveBeenCalledWith(expect.anything(), "bio");
+      expect(mockValidateContentSafeAsync).not.toHaveBeenCalledWith(expect.anything(), "bio", expect.anything());
     });
   });
 
@@ -241,7 +247,7 @@ describe("PATCH /api/profile bio validation", () => {
   });
 
   it("rejects a bio that fails content-safety filtering", async () => {
-    mockValidateContentSafe.mockImplementation((value: string, field: string) => {
+    mockValidateContentSafeAsync.mockImplementation(async (value: string, field: string) => {
       if (field === "bio" && value.includes("blocked")) {
         return {
           safe: false,
@@ -287,6 +293,7 @@ describe("PATCH /api/profile bio validation", () => {
       const body = (await res.json()) as { code: string };
       expect(body.code).toBe("CONTENT_VIOLATION");
       expect(mockUpdateFullProfile).not.toHaveBeenCalled();
+      expect(mockRecordViolation).toHaveBeenCalledWith("user-123", "harassment", "warning");
     });
   });
 

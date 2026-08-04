@@ -60,6 +60,88 @@ const sensitiveWordLists: Record<ViolationType, { keywords: string[]; severity: 
   }
 };
 
+/**
+ * Leet-speak / obfuscation character map applied before regex-based profanity
+ * matching: 4→a, @→a, 8→b, 3→e, 0→o, 5→s, $→s, 7→t. `1` is ambiguous (d1ck→dick,
+ * s1ut→slut) so it is normalized twice — once to `i`, once to `l` — and a
+ * keyword matches if either normalization triggers.
+ */
+const LEET_MAP: Record<string, string> = {
+  '4': 'a', '@': 'a', '8': 'b', '3': 'e', '0': 'o', '5': 's', '$': 's', '7': 't',
+};
+
+const ONE_AS_VARIANTS = ['i', 'l'] as const;
+
+function normalizeObfuscated(text: string, oneAs: 'i' | 'l'): string {
+  let out = text.toLowerCase();
+  for (const [leet, plain] of Object.entries(LEET_MAP)) {
+    out = out.split(leet).join(plain);
+  }
+  return out.split('1').join(oneAs);
+}
+
+/**
+ * Builds a separator-tolerant profanity regex: letters of the base word may be
+ * separated by any non-alphabetic character or digit (f**k, f u c k, f.u.c.k),
+ * letters may repeat (fucck), and listed optional letters (usually vowels) may
+ * be omitted entirely so star-forms match: f**k, sh*t, b*tch, c*nt, d*ck.
+ * Word-boundary guards prevent false positives inside legit words
+ * (class / pass / assessment / sit / duck / dan).
+ */
+function obfuscatedPattern(base: string, suffixes: string[] = [], optionalLetters: string[] = []): RegExp {
+  const letters = base.split('');
+  const core = letters.map((letter, index) => {
+    const isLast = index === letters.length - 1;
+    const skippable = optionalLetters.includes(letter) && !isLast;
+    return skippable
+      ? `[\\W0-9]*(?:${letter}+)?[\\W0-9]*`
+      : `[\\W0-9]*${letter}+`;
+  }).join('');
+  const suffix = suffixes.length > 0 ? `(?:${suffixes.join('|')})?` : '';
+  return new RegExp(`\\b${core}${suffix}\\b`, 'i');
+}
+
+interface ObfuscatedWord {
+  base: string;
+  suffixes: string[];
+  optionalLetters?: string[];
+}
+
+/**
+ * English profanity + pinyin abuse (exact-substring Chinese keywords live in
+ * `sensitiveWordLists` above; these cover Latin-script and obfuscated variants).
+ * The last letter of every base stays required so `dan`/`sit`/`duck` are safe.
+ */
+const OBSCENE_WORD_BASES: ObfuscatedWord[] = [
+  { base: 'fuck', suffixes: ['s', 'ing', 'ed', 'er', 'ers', 'head', 'face', 'you'], optionalLetters: ['u', 'c'] },
+  { base: 'fuk', suffixes: ['s', 'ing', 'ed', 'er'], optionalLetters: ['u'] },
+  { base: 'fxck', suffixes: ['s', 'ing', 'ed', 'er'] },
+  { base: 'shit', suffixes: ['s', 'ty', 'head', 'hole'], optionalLetters: ['i'] },
+  { base: 'bitch', suffixes: ['es', 'ing', 'y', 'er'], optionalLetters: ['i'] },
+  { base: 'ass', suffixes: ['es', 'hole', 'holes', 'hat', 'hats', 'wipe'] },
+  { base: 'cunt', suffixes: ['s'], optionalLetters: ['u'] },
+  { base: 'dick', suffixes: ['s', 'head', 'heads', 'face'], optionalLetters: ['i'] },
+  { base: 'pussy', suffixes: [], optionalLetters: ['u'] },
+  { base: 'whore', suffixes: ['s'], optionalLetters: ['o'] },
+  { base: 'slut', suffixes: ['s', 'ty'], optionalLetters: ['u'] },
+  { base: 'nigger', suffixes: ['s'] },
+  { base: 'nigga', suffixes: ['s'] },
+  { base: 'fag', suffixes: ['s', 'got', 'gots'] },
+  { base: 'retard', suffixes: ['s', 'ed'] },
+  { base: 'damn', suffixes: ['ed', 'ing'] },
+  { base: 'motherfucker', suffixes: ['s'] },
+  { base: 'caonima', suffixes: [] },
+  { base: 'cnm', suffixes: [] },
+  { base: 'wcnm', suffixes: [] },
+  { base: 'nmsl', suffixes: [] },
+  { base: 'shabi', suffixes: [] },
+];
+
+const OBSCENE_PATTERNS: { pattern: RegExp; display: string }[] = OBSCENE_WORD_BASES.map(({ base, suffixes, optionalLetters }) => ({
+  pattern: obfuscatedPattern(base, suffixes, optionalLetters),
+  display: base,
+}));
+
 export function filterContent(text: string): ContentFilterResult {
   const lowerText = text.toLowerCase();
   const matchedKeywords: string[] = [];
@@ -75,6 +157,19 @@ export function filterContent(text: string): ContentFilterResult {
           violationType = type;
         }
       }
+    }
+  }
+
+  const normalizedVariants = ONE_AS_VARIANTS.map((oneAs) => normalizeObfuscated(lowerText, oneAs));
+  const profanityHits = OBSCENE_PATTERNS
+    .filter(({ pattern }) => normalizedVariants.some((normalized) => pattern.test(normalized)))
+    .map(({ display }) => display);
+
+  if (profanityHits.length > 0) {
+    matchedKeywords.push(...profanityHits);
+    if (highestSeverity === 'none') {
+      highestSeverity = sensitiveWordLists.harassment.severity;
+      violationType = 'harassment';
     }
   }
 

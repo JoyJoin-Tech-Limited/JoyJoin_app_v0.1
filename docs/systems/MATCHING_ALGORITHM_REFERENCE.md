@@ -2,6 +2,8 @@
 
 > **Status:** Living document — last updated 2026-07-09  
 > **Scope:** Covers all three matching layers: (1) Personality archetype assignment, (2) Pair compatibility scoring, (3) Group formation.
+>
+> **命名（2026-08-03）：** 匹配算法系统的内部工程名称为 **磁场引擎（Magnetism Engine）**；配对分 = **同频指数（Resonance Index）**；后置加成族 = **缘分加成**（双向 romance +5 子名 **引力加成**）；用户侧可视化为同频雷达。桥接线：磁场是看不见的因，同频是遇见时的果，缘分是算不出来的那一部分。命名体系、 uplift 路线图与命名纪律见 [`MAGNETISM_ENGINE.md`](./MAGNETISM_ENGINE.md)。代码标识符不重命名。
 
 ---
 
@@ -242,20 +244,15 @@ preserves the exact legacy 6-dimensional formula.
 #### 3.2.1 Chemistry Score (性格化学反应) — 26% (7D) / 28% (6D)
 
 - **Archetype compatibility** (70%): Reads from the **12×12 Chemistry Matrix** (`archetypeChemistry.ts`), weighted blend of primary (70%) + secondary cross (15% × 2).
-- **vibeVector similarity** (30%): 5D continuous personality vector cosine similarity (`{energy, conversation_style, initiative, novelty, humor}` each 0–1). Falls back to pure archetype scoring when vibeVector data is missing.
+  (The former vibeVector 5D cosine blend was removed 2026-08: it was a dead branch — no production
+  writer of `users.vibeVector`, and bot/test writers used mismatched keys. Chemistry is now the
+  archetype blend only.)
 
 ```typescript
-archetypeScore =
+chemistry =
   CHEMISTRY_MATRIX[primary1][primary2]   × 0.70
 + CHEMISTRY_MATRIX[primary1][secondary2] × 0.15
 + CHEMISTRY_MATRIX[secondary1][primary2] × 0.15
-
-vibeSim = cosineSimilarity(vibeVector1, vibeVector2)  // 0–1
-vibeScore = vibeSim × 100
-
-chemistry = hasVibe
-  ? archetypeScore × 0.70 + vibeScore × 0.30
-  : archetypeScore  // fallback when vibeVector missing
 ```
 
 #### 3.2.2 Interest Score (兴趣重叠度) — 28%
@@ -276,7 +273,7 @@ heatBonus += 3   // both have any heat > 0
 interestScore = min(100, baseScore + heatBonus)
 ```
 
-Heat levels: `5` (level 1 / casual), `10` (level 2 / active), `25` (level 3 / passionate)
+Heat levels: `3` (level 1 / casual), `10` (level 2 / active), `25` (level 3 / passionate)
 
 Default when one or both users have no interest data:
 - Both missing → 70 (neutral)
@@ -300,8 +297,8 @@ Average of up to 3 sub-signals (equal weight per present factor):
 
 | Sub-signal | Source | Notes |
 |-----------|--------|-------|
-| Life stage affinity | `LIFE_STAGE_AFFINITY` 7×7 matrix | Asymmetric — averaged both directions |
-| Education affinity | Ordinal distance (`EDUCATION_ORDINAL`) | Same level = 100, each step apart = −20 |
+| Life stage affinity | `LIFE_STAGE_AFFINITY` 5×5 matrix | Asymmetric — averaged both directions |
+| Education affinity | Ordinal distance (`EDUCATION_ORDINAL`) | Piecewise: distance 0/1/2/≥3 → 100/75/50/25 |
 | Hometown affinity | `hometownRegionCity` matching | Only when **both** users opt in (`hometownAffinityOptin = true`) |
 | Age preference affinity | `ageMatchPreference` | Same = 100, "都可以" compatible = 75, complementary ("偏年轻"+"偏成熟") = 70, conflicting = 40 |
 | Table vibe affinity | `tableVibePreference` | Same = 100, compatible (light_fun+natural_chat) = 75, deep_talk+natural_chat = 65, clash (deep_talk+light_fun) = 30 |
@@ -444,6 +441,10 @@ When `matchHistory` records exist for a user pair:
 
 This operates as a pre-filter and post-bonus alongside the 6D/7D weighted scoring. It does not change dimension weights.
 
+### 3.2.9 Mutual Romance Tension Bonus (2026-08-03)
+
+When **both** pair members indicated the `romance` intent (via `eventIntent` → `userIntent` fallback), a flat **+5 bonus** is applied to the pair score — post-weight additive, capped at 100, same pattern as the `wouldMeetAgain` bonus. One-sided romance receives nothing; dimension weights are unchanged. Rationale: JoyJoin is activity-first but not romance-blind — mutual romantic openness is allowed to add "一点浪漫张力" without turning the pipeline into a dating matcher. Decision trail: `docs/deliberations/2026-08-03-romance-intent-option-reinstatement.md`.
+
 ### 3.3 Adaptive Weights (Feature-Flagged Thompson Sampling)
 
 > Active only when `ENABLE_ADAPTIVE_WEIGHTS=true`. Disabled path uses static weights from §3.1.
@@ -474,6 +475,35 @@ This operates as a pre-filter and post-bonus alongside the 6D/7D weighted scorin
 **Cache key:** Pair score caches include `|adaptive` segment only when custom weights are active, preserving backward compatibility with pre-populated caches.
 
 **Rollback:** Set `ENABLE_ADAPTIVE_WEIGHTS=false`, restart server. No DB migration required.
+
+### 3.4 Weight Profile V2 (Feature-Flagged, 2026-08-03 惊艳开局包)
+
+**Flag:** `magnetismWeightProfileV2Enabled` (env `MAGNETISM_WEIGHT_PROFILE_V2_ENABLED`, default `false`). When off, v1 tables are used and scoring is byte-identical to before. Adaptive `customWeights` and Match Compass strictness weights still short-circuit ahead of the default table; partial `customWeights` missing-key fallbacks stay pinned to **v1** values (the bandit was tuned against v1).
+
+| Dimension | 6D v1 | 6D v2 | 7D v1 | 7D v2 | Rationale |
+|---|---|---|---|---|---|
+| chemistry | 28 | **20** | 26 | **19** | Hand-authored prior without empirical validation (Finkel et al. 2012) |
+| interest | 28 | **32** | 26 | **30** | Strongest evidence leg (Montoya et al. 2008, r=.47) + 搭子 precision |
+| socialAffinity | 20 | **23** | 19 | **21** | Homophily (McPherson et al. 2001) |
+| backgroundDiversity | 15 | 15 | 14 | 14 | Optimal-distinctiveness "spice", unchanged |
+| preference | 5 | 5 | 5 | 5 | Unchanged |
+| language | 4 | **5** | 4 | **5** | Dialect/Mandarin comfort hygiene factor |
+| semanticSimilarity | — | — | 6 | 6 | Unchanged |
+
+Both v2 tables sum to 100 (test-locked in `matchingWeightProfiles.test.ts`). Pair-score cache keys gain a `|v2` segment when active so v1/v2 runs never cross-read.
+
+### 3.5 Group Composition Rules (Feature-Flagged, 2026-08-03 惊艳开局包)
+
+**Flag:** `magnetismGroupRulesEnabled` (env `MAGNETISM_GROUP_RULES_ENABLED`, default `false`). When off, formation is behavior-identical. Theory-first rules (no data dependency); see `docs/systems/MAGNETISM_ENGINE.md` for the psychological grounding.
+
+- **R1 无孤立者 (no-isolate)** — commit gate: every member must have ≥1 intra-group pair score ≥ 60 (the system's existing "compatible" bar). Groups failing are rejected and members released (standard release path).
+- **R2 能量编排 (energizer presence)** — commit gate: ≥1 member with `ARCHETYPE_ENERGY ≥ 75` (corgi 95 / rooster 90 / hamster_praise 85 / fox 82 / dolphin_calm 75). Pool-level exemption: skipped entirely when no eligible user in the pool qualifies (prevents zero-formation deadlock).
+- **R3 话题锚点 (topic anchor)** — commit gate, skipped when any member has empty interests (cold-start safety): pass if some macro category has ≥1 topic from EVERY member, OR some single topic is shared by ≥ ⌈n/2⌉ members (any heat).
+- **R4 新奇分散 (novelty dispersion)** — expansion ranking only: a candidate with `explore` intent joining a group that already has an explore-intent member gets −8 to their ranking score (argmax nudge, not a ban; cached pair scores untouched).
+
+**Enforcement points (2026-08-03 fix):** R1–R3 are evaluated by `magnetismRulesSatisfiedFor()` in `runGreedyPoolMatchingCore` at the formation commit gate **and again in all three §4.5 redistribution phases** — every candidate placement into an existing group (fill / absorb-singleton-overflow) and every remainder-group commit is checked before acceptance. Redistribution itself runs only when `hasExplicitCustomWeights || allowOverflow` (adaptive weights or Match Compass strictness ≤ 0); when the flag is off the helper returns `true` unconditionally, so default behavior is byte-identical.
+
+Validation: synthetic-pool dual-run (rules on vs off, fresh caches) in `magnetismDualRun.test.ts`; promotion gate = formation-rate regression ≤15% with 100% rule conformance.
 
 ---
 
@@ -622,6 +652,8 @@ After the greedy formation completes, some users may remain unmatched (stranded)
 - Allow one member overflow (up to `maxGroupSize + 1`) to absorb the stranded user(s).
 - This prevents leaving users unmatched while keeping group sizes reasonable.
 
+> **Feature-gate interactions:** when `magnetismGroupRulesEnabled` is on, every Phase 1/Phase 3 placement and every Phase 2 commit is additionally checked against R1–R3 via `magnetismRulesSatisfiedFor()` (§3.5) — a placement that would break a rule is rejected and the stranded user stays in the pool. Hard-mode gender floors (§4.2.1) are likewise re-checked here, so redistribution can never bypass a commit gate the main pass enforces.
+
 **Rationale:** The adaptive-weights path can produce different group boundaries than the static-weight path, sometimes leaving high-quality users stranded. The redistribution pass is a safety net — it does not lower the quality threshold (min score 50) but allows flexible group sizing to capture good matches that the initial greedy pass missed.
 
 ### 4.6 Operator Review Gate (Feature-Flagged)
@@ -663,7 +695,7 @@ Score bands:
 | 30–49 | 需要磨合 (Challenging) |
 | 0–29 | 差异较大 (High conflict risk) |
 
-### 5.2 Life Stage Affinity Matrix (7×7, Asymmetric)
+### 5.2 Life Stage Affinity Matrix (5×5, Asymmetric)
 
 **Location:** `LIFE_STAGE_AFFINITY` constant in `poolMatchingService.ts`  
 
@@ -888,7 +920,7 @@ After `poolMatchingService.ts` forms groups deterministically, the predictive re
 | **MatcherV2** | The archetype assignment algorithm using weighted Manhattan distance + veto rules |
 | **primaryArchetype** | The top-matching archetype for a user (used at 70% weight in chemistry) |
 | **secondaryArchetype** | The second-best archetype (used at 15% weight in chemistry cross-scoring) |
-| **Heat level** | Interest intensity: level 1 (heat=5), level 2 (heat=10), level 3 (heat=25) |
+| **Heat level** | Interest intensity: level 1 (heat=3), level 2 (heat=10), level 3 (heat=25) |
 | **Life stage** | User's `lifeStage` value — the "人生阶段" used in social affinity scoring. `workMode` is retained as a read-only fallback during the migration period. |
 | **Hard constraint** | Pre-filter rule that excludes a user from a pool entirely (e.g. budget mismatch) |
 | **Soft signal** | Scoring dimension that influences rank but never blocks a match (e.g. language, preference) |

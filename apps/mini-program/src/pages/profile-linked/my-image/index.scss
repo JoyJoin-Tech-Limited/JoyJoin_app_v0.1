@@ -340,6 +340,31 @@
     gap: 16rpx;
   }
 
+  &__empty-slot {
+    margin-top: 40rpx;
+    padding: 24rpx;
+    text-align: center;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    line-height: $line-height-relaxed;
+    opacity: 0;
+    transform: translateY(12rpx);
+    animation: my-image-empty-slot-fade-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+    @media (prefers-reduced-motion: reduce) {
+      opacity: 1;
+      transform: none;
+      animation: none;
+    }
+  }
+
+  @keyframes my-image-empty-slot-fade-in {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   &__item-card,
   &__shop-item {
     position: relative;

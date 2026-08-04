@@ -22,6 +22,7 @@
     "seed:mock-data": "node --env-file=../../.env --import tsx/esm src/scripts/generate-mock-data.ts",
     "seed:flash": "node --env-file=../../.env --import tsx/esm src/scripts/seed-flash-catalog.ts",
     "check:flash-readiness": "node --env-file=../../.env --import tsx/esm src/scripts/check-flash-readiness.ts",
+    "backfill:match-history": "node --env-file=../../.env --import tsx/esm src/scripts/backfill-match-history.ts",
     "benchmark:matching-stress": "tsx src/benchmarks/matchingStressSimulation.cli.ts"
   },
   "dependencies": {

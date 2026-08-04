@@ -19,6 +19,10 @@ import { eq, and } from "drizzle-orm";
 import { matchEventPool, saveMatchResults } from "./poolMatchingService";
 import type { MatchGroup, SaveMatchResultsOptions } from "./poolMatchingService";
 import { logger } from "./lib/logger";
+import {
+  getMatchingThresholdConfig,
+  type MatchingThresholdsConfig,
+} from "./lib/matchingThresholds";
 import { notifyLowRegistration } from "./lib/wecomNotifications";
 import {
   countMatchingShadowExperimentPools,
@@ -39,41 +43,6 @@ interface ScanResult {
   usersMatched: number;
   avgGroupScore: number;
   currentThreshold: number;
-}
-
-/**
- * 获取当前激活的匹配阈值配置
- */
-async function getActiveThresholds() {
-  const [config] = await db
-    .select()
-    .from(matchingThresholds)
-    .where(eq(matchingThresholds.isActive, true))
-    .limit(1);
-
-  // 如果没有配置，返回默认值
-  if (!config) {
-    return {
-      highCompatibilityThreshold: 82,
-      mediumCompatibilityThreshold: 67,
-      lowCompatibilityThreshold: 52,
-      timeDecayEnabled: true,
-      timeDecayRate: 5,
-      minThresholdAfterDecay: 50,
-      minGroupSizeForMatch: 4,
-      optimalGroupSize: 6,
-      predictiveRerankEnabled: false,
-      predictiveRerankExposurePercent: 50,
-      predictiveRerankMaxPositionShift: 2,
-      predictiveRerankConfidenceThreshold: 70,
-      predictiveRerankAutoDisableEnabled: true,
-      predictiveRerankMinShadowExperiments: 10,
-      predictiveRerankAutoDisabledAt: null,
-      predictiveRerankAutoDisabledReason: null,
-    };
-  }
-
-  return config;
 }
 
 async function persistPredictiveRerankAutoDisable(reason: string) {
@@ -99,17 +68,17 @@ async function persistPredictiveRerankAutoDisable(reason: string) {
 function calculateDecayedThreshold(
   baseThreshold: number,
   hoursUntilEvent: number,
-  config: Awaited<ReturnType<typeof getActiveThresholds>>
+  config: MatchingThresholdsConfig
 ): number {
   if (!config.timeDecayEnabled) {
     return baseThreshold;
   }
 
   const daysUntilEvent = hoursUntilEvent / 24;
-  const decay = Math.floor(daysUntilEvent + 1 / 86400) * (config.timeDecayRate || 5);
+  const decay = Math.floor(daysUntilEvent + 1 / 86400) * config.timeDecayRate;
   const decayedThreshold = Math.max(
     baseThreshold - decay,
-    config.minThresholdAfterDecay || 50
+    config.minThresholdAfterDecay
   );
 
   return decayedThreshold;
@@ -121,7 +90,7 @@ function calculateDecayedThreshold(
 function evaluateMatchQuality(
   groups: MatchGroup[],
   currentThreshold: number,
-  config: Awaited<ReturnType<typeof getActiveThresholds>>
+  config: MatchingThresholdsConfig
 ): { shouldMatch: boolean; reason: string } {
   if (groups.length === 0) {
     return { shouldMatch: false, reason: "无法形成任何小组" };
@@ -133,7 +102,7 @@ function evaluateMatchQuality(
   );
 
   // 高兼容性：立即匹配
-  if (avgScore >= (config.highCompatibilityThreshold || 85)) {
+  if (avgScore >= config.highCompatibilityThreshold) {
     return {
       shouldMatch: true,
       reason: `高兼容性匹配（平均分${avgScore}≥${config.highCompatibilityThreshold}），立即成局`,
@@ -197,7 +166,7 @@ export async function scanPoolAndMatch(
   let pendingUsersCount = pendingRegistrations.length;
 
   // 3. 获取当前匹配配置
-  let config = await getActiveThresholds();
+  let config = await getMatchingThresholdConfig();
 
   // 4. 计算距离活动开始的小时数
   const now = new Date();
@@ -209,7 +178,7 @@ export async function scanPoolAndMatch(
 
   // 5. 计算当前阈值（考虑时间衰减）
   const currentThreshold = calculateDecayedThreshold(
-    config.mediumCompatibilityThreshold || 70,
+    config.mediumCompatibilityThreshold,
     hoursUntilEvent,
     config
   );
@@ -325,7 +294,7 @@ export async function scanPoolAndMatch(
           runtimeAutoDisableReason
         ) {
           await persistPredictiveRerankAutoDisable(runtimeAutoDisableReason);
-          config = await getActiveThresholds();
+          config = await getMatchingThresholdConfig();
         }
       }
 

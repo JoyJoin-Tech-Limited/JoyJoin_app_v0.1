@@ -6,7 +6,8 @@ import { reports, users } from "@shared/schema";
 import { requireAuth } from "../../middleware/auth";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { createRateLimiter } from "../../rateLimiter";
-import { validateContentSafe } from "../../lib/contentSafety";
+import { validateContentSafeAsync } from "../../lib/contentSafety";
+import { recordViolation } from "../../abuseDetection";
 import { logger } from "../../lib/logger";
 import {
   AI_CONTENT_REPORT_CATEGORY,
@@ -41,16 +42,17 @@ export function registerReportRoutes(app: Express): void {
 
       const { category, description, relatedEventId, reportedUserId } = parsed.data;
 
-      const safety = validateContentSafe(description, "reportDescription");
+      const userId = req.session.userId as string;
+
+      const safety = await validateContentSafeAsync(description, "reportDescription", { userId });
       if (!safety.safe) {
+        await recordViolation(userId, safety.violation!.type, safety.violation!.severity);
         return res.status(400).json({
           message: safety.violation?.message ?? "内容包含不当用语，请修改后重试",
           code: "CONTENT_VIOLATION",
           violation: safety.violation,
         });
       }
-
-      const userId = req.session.userId as string;
 
       const [report] = await db
         .insert(reports)

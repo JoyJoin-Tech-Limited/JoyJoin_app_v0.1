@@ -22,7 +22,7 @@ import { getCalibratedChemistryScore } from './archetypeChemistryCalibration';
 import { db } from './db';
 import { eventPoolGroups } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS, DISCUSSION_STYLE_LABELS, getConnectionPointRarity } from '@shared/constants';
+import { WORK_MODE_LABELS, RELATIONSHIP_MATCH_LABELS, DISCUSSION_STYLE_LABELS, getConnectionPointRarity, getIntentLabel } from '@shared/constants';
 import type { MatchExplanationContract, GroupAnalysisContract, OverallChemistry } from '@shared/groupAnalysis';
 import type { ConnectionPointWithRarity } from '@shared/types/groupAnalysis';
 import type { AIProvider } from '@shared/types/aiMeta';
@@ -44,7 +44,7 @@ const API_CONFIG = {
 };
 
 const GROUP_ANALYSIS_PROMPT_VERSION = 'group-analysis-v1';
-const PAIR_EXPLANATION_PROMPT_VERSION = 'pair-explanation-v2';
+const PAIR_EXPLANATION_PROMPT_VERSION = 'pair-explanation-v3';
 const GROUP_ICEBREAKERS_PROMPT_VERSION = 'group-icebreakers-v1';
 
 // ============ 重试与并发控制 ============
@@ -120,6 +120,10 @@ export interface MatchMember {
   industryCategory?: string | null;   // Category code for matching (e.g. "tech")
   industryCategoryLabel?: string | null; // Human-readable label for display (e.g. "科技互联网")
   interestsWithHeat?: Array<{ topicId: string; heatLevel: number }> | null;
+  /** 用户档案默认活动意图（users.intent），可含 "flexible" */
+  intent?: string[] | null;
+  /** 本次活动意图（eventPoolRegistrations.eventIntent），优先于档案默认意图 */
+  eventIntent?: string[] | null;
   /** Optional interest signal boost data (from user_interest_signals table) */
   interestSignals?: Array<{
     interestKey: string;
@@ -137,6 +141,7 @@ export interface MatchExplanation extends MatchExplanationContract {
   sharedInterests: string[]; // 共同兴趣
   connectionPoints: string[]; // 连接点（同乡、同行业等）
   connectionPointsWithRarity?: ConnectionPointWithRarity[]; // 带稀有度的连接点
+  sharedHighlights: string[]; // 确定性共同亮点（必聊项/共同意图/同乡），无则 []
   introAngle?: string;
 }
 
@@ -317,8 +322,8 @@ async function loadCachedPairExplanations(
       const expectedPairCount = calculatePairCount(members.length);
 
       // Schema-version gate: reject old caches (lazy invalidation)
-      if (typeof cached.schemaVersion !== 'number' || cached.schemaVersion < 2) {
-        logger.info(`[MatchExplanation] Cache invalidated for group ${groupId}: schemaVersion=${cached.schemaVersion ?? 'missing'} < 2`);
+      if (typeof cached.schemaVersion !== 'number' || cached.schemaVersion < 3) {
+        logger.info(`[MatchExplanation] Cache invalidated for group ${groupId}: schemaVersion=${cached.schemaVersion ?? 'missing'} < 3`);
         return null;
       }
 
@@ -382,7 +387,7 @@ async function savePairExplanationsCache(
       ...(exp.introAngle ? { introAngle: normalizePairExplanationText(exp.introAngle) } : {}),
     }));
     const cache: PairExplanationsCache = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       memberHash: generateMemberHash(members),
       pairCount: safeExplanations.length,
       generatedAt: new Date().toISOString(),
@@ -646,6 +651,74 @@ function findConnectionPoints(member1: MatchMember, member2: MatchMember): Conne
 }
 
 /**
+ * 提取确定性的「共同亮点」—— 最多 3 条具体共同事实的一句话描述，
+ * 与 LLM 散文解释一同展示（感知相似性：具体共同事实比抽象分数更能拉近距离）。
+ *
+ * 优先级：共同必聊项 → 共同活动意图 → 同乡。
+ * 与 findConnectionPoints 去重：连接点已覆盖的内容（如同乡、已点名的兴趣）这里不重复。
+ * 只读取 MatchMember 上已有的数据（兴趣档位、意图、家乡均在生成调用路径中装配），
+ * 不读取 user_interest_signals —— 保持确定性数据边界。
+ */
+
+/** 必聊项档位：三档兴趣（heat=25，见 INTEREST_HEAT_BY_LEVEL）。heatLevel 字段承载的是档位 1–3。 */
+const MUST_CHAT_HEAT_LEVEL = 3;
+const MAX_SHARED_HIGHLIGHTS = 3;
+
+/** 有效活动意图：本次活动意图优先，回退到档案默认意图；空数组表示无明确偏好。 */
+function getEffectiveMemberIntent(member: MatchMember): string[] {
+  if (Array.isArray(member.eventIntent) && member.eventIntent.length > 0) return member.eventIntent;
+  if (Array.isArray(member.intent) && member.intent.length > 0) return member.intent;
+  return [];
+}
+
+function findSharedSignalHighlights(
+  member1: MatchMember,
+  member2: MatchMember,
+  existingConnectionPoints: string[] = []
+): string[] {
+  const highlights: string[] = [];
+
+  // 1. 共同必聊项（双方都标到三档的话题，最多拼 2 个标签）
+  const mustChatA = new Set(
+    (member1.interestsWithHeat ?? [])
+      .filter(i => i.heatLevel >= MUST_CHAT_HEAT_LEVEL)
+      .map(i => i.topicId)
+  );
+  if (mustChatA.size > 0) {
+    const sharedLabels = (member2.interestsWithHeat ?? [])
+      .filter(i => i.heatLevel >= MUST_CHAT_HEAT_LEVEL && mustChatA.has(i.topicId))
+      .map(i => getInterestById(i.topicId)?.label ?? i.topicId)
+      // 连接点已点名的话题不重复讲述
+      .filter(label => !existingConnectionPoints.some(text => text.includes(label)))
+      .slice(0, 2);
+    if (sharedLabels.length > 0) {
+      highlights.push(`你们都把${sharedLabels.join('、')}标成了必聊项`);
+    }
+  }
+
+  // 2. 共同活动意图（有效意图交集；「随缘」表示无明确偏好，不参与）
+  const intentsA = getEffectiveMemberIntent(member1).filter(v => v !== 'flexible');
+  if (intentsA.length > 0) {
+    const sharedIntents = getEffectiveMemberIntent(member2)
+      .filter(v => v !== 'flexible' && intentsA.includes(v))
+      .slice(0, 2);
+    if (sharedIntents.length > 0) {
+      highlights.push(`你们这次都想${sharedIntents.map(getIntentLabel).join('、')}`);
+    }
+  }
+
+  // 3. 同乡（仅当连接点未覆盖时补充，避免与「同乡（…）」「老乡+同行（…）」重复）
+  if (
+    member1.hometown && member2.hometown && member1.hometown === member2.hometown &&
+    !existingConnectionPoints.some(text => text.includes(member1.hometown as string))
+  ) {
+    highlights.push(`你们都是${member1.hometown}人`);
+  }
+
+  return highlights.slice(0, MAX_SHARED_HIGHLIGHTS);
+}
+
+/**
  * 生成配对键（排序后的用户ID组合）
  */
 function getPairKey(userId1: string, userId2: string): string {
@@ -782,7 +855,7 @@ export function normalizePairExplanationText(
 }
 
 /**
- * Parse pair-explanation LLM output: `pair-explanation-v2` expects a single JSON object;
+ * Parse pair-explanation LLM output: `pair-explanation-v3` expects a single JSON object;
  * legacy plain-text responses remain supported. The returned explanation is always
  * plain text — never a serialized/truncated JSON wrapper.
  *
@@ -835,6 +908,7 @@ async function generatePairExplanationWithMetadata(
   const sharedInterests = findSharedInterests(member1.interestsTop, member2.interestsTop);
   const connectionPointsWithRarity = findConnectionPoints(member1, member2);
   const connectionPoints = connectionPointsWithRarity.map(cp => cp.text);
+  const sharedHighlights = findSharedSignalHighlights(member1, member2, connectionPoints);
 
   // 构建提示词（结构化 JSON：主解释 + 开场角度）
   const prompt = `你是一个社交活动的匹配分析师。请用2-3句温暖、正面的话语解释为什么这两位参与者可能会聊得来。
@@ -854,6 +928,7 @@ ${member2.socialStyle ? `- 社交风格: ${member2.socialStyle}` : ''}
 化学反应分数: ${chemistryScore}/100
 ${sharedInterests.length > 0 ? `共同兴趣: ${sharedInterests.join('、')}` : ''}
 ${connectionPoints.length > 0 ? `连接点: ${connectionPoints.join('、')}` : ''}
+${sharedHighlights.length > 0 ? `共同亮点: ${sharedHighlights.join('；')}` : ''}
 
 ${XIAOYUE_CRAFT_LITE}
 
@@ -938,6 +1013,7 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
           sharedInterests,
           connectionPoints,
           connectionPointsWithRarity,
+          sharedHighlights,
           ...(fb.introAngle ? { introAngle: fb.introAngle } : {}),
         },
         providerUsed: null,
@@ -954,6 +1030,7 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
         sharedInterests,
         connectionPoints,
         connectionPointsWithRarity,
+        sharedHighlights,
         ...(parsed.introAngle ? { introAngle: parsed.introAngle } : {}),
       },
       providerUsed: provider,
@@ -1032,6 +1109,7 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
               sharedInterests,
               connectionPoints,
               connectionPointsWithRarity,
+              sharedHighlights,
               ...(fb.introAngle ? { introAngle: fb.introAngle } : {}),
             },
             providerUsed: null,
@@ -1048,6 +1126,7 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
             sharedInterests,
             connectionPoints,
             connectionPointsWithRarity,
+            sharedHighlights,
             ...(fbParsed.introAngle ? { introAngle: fbParsed.introAngle } : {}),
           },
           providerUsed: 'deepseek',
@@ -1094,6 +1173,7 @@ explanation 为正文；introAngle 为两人见面时如何开口的一句提示
         sharedInterests,
         connectionPoints,
         connectionPointsWithRarity,
+        sharedHighlights,
         ...(fb.introAngle ? { introAngle: fb.introAngle } : {}),
       },
       providerUsed: null,
@@ -1845,6 +1925,7 @@ export const matchExplanationService = {
   generateIceBreakers,
   findSharedInterests,
   findConnectionPoints,
+  findSharedSignalHighlights,
   getPairExplanationForUser,
   normalizePairExplanationText,
 };

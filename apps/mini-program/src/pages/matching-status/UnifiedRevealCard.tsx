@@ -97,6 +97,17 @@ export default function UnifiedRevealCard({
         {spotlight ? `你和 ${spotlight.memberName} 最容易先聊开` : headline}
       </Text>
 
+      {spotlight && spotlight.sharedHighlights.length > 0 ? (
+        <View className='unified-reveal__highlights'>
+          {spotlight.sharedHighlights.map((line, index) => (
+            <View key={`highlight-${index}-${line}`} className='unified-reveal__highlight'>
+              <Text className='unified-reveal__highlight-dot'>•</Text>
+              <Text className='unified-reveal__highlight-text'>{line}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       <Text className='unified-reveal__body'>{body}</Text>
 
       {subtitle ? (

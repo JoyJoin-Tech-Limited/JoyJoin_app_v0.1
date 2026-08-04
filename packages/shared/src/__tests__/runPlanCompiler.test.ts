@@ -249,18 +249,41 @@ describe('runPlanCompiler', () => {
   });
 
   describe('energy arc ordering', () => {
-    it('places rising before peak in glow', () => {
+    it('places group_mirror in the wind-down slot (falling arc), not as opener', () => {
       const plan = compileAgentRunPlan(makeCtx('glow', WITH_GROUP_MIRROR));
       const phases = plan.segments.map((s) => s.phase);
-      const lieIdx = phases.indexOf('lie_detective');
-      const pdIdx = phases.indexOf('personality_dice');
-      const gmIdx = phases.indexOf('group_mirror');
-      // group_mirror = warmup (1), personality_dice = rising (2), lie_detective = peak (3)
-      // Energy arc sort would place: gm < pd < lie
-      // But category spacing swaps pd and lie because gm and pd are both 'creative'
-      // Result after spacing: gm < lie < pd
-      expect(gmIdx).toBeLessThan(lieIdx);
-      expect(lieIdx).toBeLessThan(pdIdx);
+      // group_mirror = falling (4), personality_dice = rising (2), lie_detective = peak (3)
+      // Energy arc sort places: pd < lie < gm; categories (creative/deduction/creative)
+      // need no spacing swap, so the arc order survives intact.
+      expect(phases).toEqual([
+        'warmup',
+        'micro_challenge',
+        'personality_dice',
+        'lie_detective',
+        'group_mirror',
+        'recap',
+      ]);
+    });
+
+    it('never places a warmup-arc phase in the non-core block', () => {
+      // Regression guard for the group_mirror 'warmup' mistag (fixed 2026-08-03):
+      // a warmup-tagged non-core phase would open the post-micro_challenge block.
+      for (const tier of ['breeze', 'glow', 'blaze'] as const) {
+        const plan = compileAgentRunPlan(makeCtx(tier, ALL_ENABLED));
+        const nonCore = plan.segments.slice(2, -1);
+        for (const seg of nonCore) {
+          expect(getEnergyArc(seg.phase)).not.toBe('warmup');
+        }
+      }
+    });
+
+    it('never places a peak-arc phase before position 3', () => {
+      for (const tier of ['breeze', 'glow', 'blaze'] as const) {
+        const plan = compileAgentRunPlan(makeCtx(tier, ALL_ENABLED));
+        for (const seg of plan.segments.slice(0, 2)) {
+          expect(getEnergyArc(seg.phase)).not.toBe('peak');
+        }
+      }
     });
   });
 
@@ -504,6 +527,25 @@ function getCategory(phase: SocialIcebreakerPhase): string {
     group_mirror: 'creative',
     mini_script: 'narrative',
     recap: 'conversation',
+  };
+  return map[phase] ?? 'unknown';
+}
+
+function getEnergyArc(phase: SocialIcebreakerPhase): string {
+  // Inline energy-arc lookup mirroring PHASE_REGISTRY (same convention as getCategory)
+  const map: Record<SocialIcebreakerPhase, string> = {
+    warmup: 'warmup',
+    micro_challenge: 'rising',
+    lie_detective: 'peak',
+    auction: 'peak',
+    personality_dice: 'rising',
+    quip_battle: 'rising',
+    undercover_word: 'peak',
+    group_mirror: 'falling',
+    mini_script: 'peak',
+    recap: 'falling',
+    speed_friending: 'rising',
+    phase_selection: 'warmup',
   };
   return map[phase] ?? 'unknown';
 }

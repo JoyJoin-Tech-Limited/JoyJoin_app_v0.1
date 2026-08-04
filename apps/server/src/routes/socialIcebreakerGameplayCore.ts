@@ -41,7 +41,8 @@ import {
   invalidatePreGenerationForSession,
 } from '../lib/socialIcebreakerStore';
 import { logger } from '../lib/logger';
-import { validateContentSafe, contentViolationResponse } from '../lib/contentSafety';
+import { validateContentSafeAsync, contentViolationResponse } from '../lib/contentSafety';
+import { recordViolation } from '../abuseDetection';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
 import {
   buildClientState,
@@ -1013,10 +1014,11 @@ router.post('/:socialSessionId/quip-battle/submit', async (req: any, res) => {
         if (!currentState) throw new Error('Session not found');
 
         const existingAnswers = currentState.quipBattleAnswers || [];
-        const newAnswers = answers.map((a) => {
+        const newAnswers = await Promise.all(answers.map(async (a) => {
           const text = (a.answerText || '').slice(0, 100);
-          const safetyResult = validateContentSafe(text, 'answerText');
-          if (!safetyResult.safe && safetyResult.violation?.severity === 'severe') {
+          const safetyResult = await validateContentSafeAsync(text, 'answerText', { userId });
+          if (!safetyResult.safe && safetyResult.violation) {
+            await recordViolation(userId, safetyResult.violation.type, safetyResult.violation.severity);
             throw new Error(`Content violation: ${safetyResult.violation.message || 'inappropriate content'}`);
           }
           return {
@@ -1025,7 +1027,7 @@ router.post('/:socialSessionId/quip-battle/submit', async (req: any, res) => {
             promptId: a.promptId,
             answerText: text,
           };
-        });
+        }));
         currentState.quipBattleAnswers = [...existingAnswers, ...newAnswers];
 
         const submittedUserIds = currentState.quipBattleSubmittedUserIds || [];
@@ -1051,9 +1053,10 @@ router.post('/:socialSessionId/quip-battle/submit', async (req: any, res) => {
 
   for (const a of answers) {
     const text = (a.answerText || '').slice(0, 100);
-    const safetyResult = validateContentSafe(text, 'answerText');
-    if (!safetyResult.safe && safetyResult.violation?.severity === 'severe') {
-      return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
+    const safetyResult = await validateContentSafeAsync(text, 'answerText', { userId });
+    if (!safetyResult.safe && safetyResult.violation) {
+      await recordViolation(userId, safetyResult.violation.type, safetyResult.violation.severity);
+      return res.status(400).json(contentViolationResponse(safetyResult.violation).body);
     }
   }
 

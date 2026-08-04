@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { ARCHETYPE_CANONICAL_ORDER } from '@shared/personality/archetypeNames'
 import {
   ARCHETYPE_SUBLINES,
+  EXPERIENCE_DETAIL_COPY,
+  FLOW1_ENTRY_COPY,
   FLOW2_FALLBACKS,
   FLOW2_NODE_COPY,
+  FLOW_SHELL_COPY,
   getArchetypeSubline,
   getFlow1H1Line2,
   getFlow2HeroMeta,
@@ -83,12 +86,27 @@ describe('flow-animation copy binding', () => {
     expect(revealNode?.description).not.toMatch(/\{/)
   })
 
+  it('locks the 2026-08-03 revamp copy (eyebrows, chrome keys, de-echoed detail lines)', () => {
+    // Eyebrows disambiguate the two 盲盒 modes.
+    expect(FLOW1_ENTRY_COPY.event.eyebrow).toBe('和新朋友同桌')
+    expect(FLOW1_ENTRY_COPY.street.eyebrow).toBe('一个人也能玩')
+    // Shell chrome keys consumed by FlowShell / ExperienceEntryFlow / ExperienceDetail.
+    expect(FLOW_SHELL_COPY.ctaExplore).toBe('去看看有什么局')
+    expect(FLOW_SHELL_COPY.bannerEnter).toBe('进入看看')
+    expect(FLOW_SHELL_COPY.detailBack).toBe('两种玩法')
+    expect(FLOW_SHELL_COPY.skip).toBe('跳过')
+    // Detail copy de-echoed (no 认真凑×2, no 发现×2).
+    expect(EXPERIENCE_DETAIL_COPY.event.sceneTitle).toBe('报名之后，悦仔就开始为你留座了')
+    expect(EXPERIENCE_DETAIL_COPY.street.steps[1].description).toBe('照着提示就能开始，随时出发')
+    expect(EXPERIENCE_DETAIL_COPY.street.steps[3].title).toBe('留下这一程')
+  })
+
   it('resolves identity chip labels within the glyph budget', () => {
-    expect(getIdentityChipLabel('社牛柯基')).toBe('社牛柯基的玩法地图')
-    expect(getIdentityChipLabel('好奇猫头鹰')).toBe('好奇猫头鹰的玩法地图')
-    expect(getIdentityChipLabel('好奇猫头鹰').length).toBeLessThanOrEqual(12)
-    expect(getIdentityChipLabel(null)).toBe('你的玩法地图')
-    expect(getIdentityChipLabel('  ')).toBe('你的玩法地图')
+    expect(getIdentityChipLabel('社牛柯基')).toBe('社牛柯基·地图')
+    expect(getIdentityChipLabel('好奇猫头鹰')).toBe('好奇猫头鹰·地图')
+    expect(getIdentityChipLabel('好奇猫头鹰').length).toBeLessThanOrEqual(10)
+    expect(getIdentityChipLabel(null)).toBe('你的地图')
+    expect(getIdentityChipLabel('  ')).toBe('你的地图')
   })
 
   it('resolves node description templates directly', () => {

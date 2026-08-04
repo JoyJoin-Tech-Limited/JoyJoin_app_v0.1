@@ -91,20 +91,22 @@
       radial-gradient(ellipse 40% 30% at 78% 22%, rgba($color-burst-pink, 0.16), rgba($color-burst-pink, 0) 70%);
   }
 
-  // Secondary light field, offset past the stage edges so its slow swell never
-  // reveals a hard rim. Its 8.4s period drifts against the 5.6s primary
-  // breath, which keeps the light alive instead of metronomic.
+  // Secondary light field. The radial gradients are sized so their soft fade
+  // reaches the stage edge while the color is already transparent, avoiding a
+  // hard rim without needing to bleed past the stage's overflow:hidden clip.
+  // Its 8.4s period drifts against the 5.6s primary breath, which keeps the
+  // light alive instead of metronomic.
   &__halo {
     position: absolute;
-    inset: -8%;
+    inset: 0;
     pointer-events: none;
     opacity: 0.3;
-    // Largest paint surface of the four animated layers (~116% of stage with
-    // two radial gradients) — guarantee compositor promotion.
+    // Largest paint surface of the animated light layers — guarantee
+    // compositor promotion.
     will-change: transform, opacity;
     background:
-      radial-gradient(ellipse 72% 42% at 22% 10%, rgba($color-burst-pink, 0.2), rgba($color-burst-pink, 0) 70%),
-      radial-gradient(ellipse 78% 40% at 78% 96%, rgba($color-landed-gold, 0.24), rgba($color-landed-gold, 0) 72%);
+      radial-gradient(ellipse 84% 52% at 18% 12%, rgba($color-burst-pink, 0.2), rgba($color-burst-pink, 0) 68%),
+      radial-gradient(ellipse 92% 52% at 84% 98%, rgba($color-landed-gold, 0.24), rgba($color-landed-gold, 0) 70%);
   }
 
   &__particle {

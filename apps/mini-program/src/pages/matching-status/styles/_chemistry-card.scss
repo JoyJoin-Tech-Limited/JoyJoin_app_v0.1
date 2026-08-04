@@ -156,6 +156,33 @@
       color: $color-text-secondary;
     }
 
+    // Deterministic shared highlights (共同点) — rendered above the LLM prose body
+    &__highlights {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-xs;
+      margin-top: $spacing-sm;
+    }
+
+    &__highlight {
+      display: flex;
+      align-items: flex-start;
+      gap: $spacing-xs;
+    }
+
+    &__highlight-dot {
+      font-size: $font-size-base;
+      line-height: 1.6;
+      color: $color-primary;
+      flex-shrink: 0;
+    }
+
+    &__highlight-text {
+      font-size: $font-size-sm;
+      line-height: 1.6;
+      color: $color-text-primary;
+    }
+
     &__subtitle {
       display: block;
       margin-top: $spacing-sm;

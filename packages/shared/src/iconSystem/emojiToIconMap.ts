@@ -134,6 +134,7 @@ export const INTENT_MAP: Record<string, IconMapping> = {
   '💬': { assetKey: 'intent-discussion', tier: 'intent', size: 48, fallbackEmoji: '💬' },
   '🎉': { assetKey: 'intent-fun', tier: 'intent', size: 48, fallbackEmoji: '🎉' },
   '🎯': { assetKey: 'intent-explore', tier: 'intent', size: 48, fallbackEmoji: '🎯' },
+  '💗': { assetKey: 'intent-romance', tier: 'intent', size: 48, fallbackEmoji: '💗' },
   '🎲': { assetKey: 'intent-flexible', tier: 'intent', size: 48, fallbackEmoji: '🎲' },
 }
 

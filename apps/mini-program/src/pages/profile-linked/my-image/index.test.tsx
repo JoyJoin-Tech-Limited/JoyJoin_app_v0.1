@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EquipmentMeResponse } from '../../../lib/profile/equipmentApi'
 import MyImagePage from './index'
@@ -76,6 +76,56 @@ vi.mock('../../../lib/utils/haptics', () => ({
 
 vi.mock('../../../components/mascot/ArchetypeHead', () => ({
   default: () => <div>avatar fallback</div>,
+}))
+
+vi.mock('../../../components/profile/PixelAvatar3D', () => ({
+  default: function MockPixelAvatar3D({
+    archetypeId,
+    outfit,
+    itemsById,
+    className = '',
+    onStatusChange,
+  }: any) {
+    const slots = ['top', 'bottom', 'shoes', 'accessory'] as const
+    useEffect(() => {
+      onStatusChange?.({ status: 'ready' })
+    }, [onStatusChange])
+
+    const equippedItems = slots
+      .map((slot) => ({ slot, itemId: outfit[`${slot}ItemId`] }))
+      .filter(({ itemId }) => itemId && itemsById?.has(itemId))
+      .map(({ slot, itemId }) => ({ slot, item: itemsById.get(itemId) }))
+
+    const visibleLayers = equippedItems.filter(({ item }) =>
+      item.assetKey?.startsWith(`equipment/starter/${archetypeId}/`),
+    )
+    const unresolvedCount = equippedItems.length - visibleLayers.length
+
+    return (
+      <div className={`pixel-avatar-composite pixel-avatar-composite--full ${className}`.trim()}>
+        <div className='pixel-avatar-composite__canvas'>
+          <div className='pixel-avatar-composite__scene'>
+            <div className='pixel-avatar-composite__body' />
+            {visibleLayers.map(({ slot }) => (
+              <div
+                key={slot}
+                className={`pixel-avatar-composite__layer pixel-avatar-composite__layer--${slot}`}
+              />
+            ))}
+          </div>
+        </div>
+        {unresolvedCount > 0 && (
+          <div
+            className='pixel-avatar-composite__asset-warning pixel-avatar-composite__asset-warning--status'
+            role='status'
+            aria-label={`${unresolvedCount}件装备素材准备中`}
+          >
+            <span>装备素材准备中</span>
+          </div>
+        )}
+      </div>
+    )
+  },
 }))
 
 const topItem = {

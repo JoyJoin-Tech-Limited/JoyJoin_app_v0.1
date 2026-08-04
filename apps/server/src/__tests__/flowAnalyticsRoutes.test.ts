@@ -135,6 +135,40 @@ describe("POST /api/analytics/flow", () => {
     });
   });
 
+  it("accepts flow_detail_cta_tap (detail forward CTA) and persists key fields", async () => {
+    const app = await buildTestApp();
+    await withServer(app, async (base) => {
+      const res = await fetch(`${base}/api/analytics/flow`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventType: "flow_detail_cta_tap",
+          metadata: {
+            flow: "intro",
+            experience: "event",
+            appSurface: "mini-program",
+            runtime: "taro",
+          },
+          timestamp: Date.now(),
+        }),
+      });
+      const body: any = await res.json();
+      expect(res.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "flow_detail_cta_tap",
+          poolId: null,
+          metadata: expect.objectContaining({
+            flow: "intro",
+            experience: "event",
+          }),
+        }),
+      );
+    });
+  });
+
   it("accepts flow_street_gate_hit (D7 tripwire) and persists key fields", async () => {
     const app = await buildTestApp();
     await withServer(app, async (base) => {

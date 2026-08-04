@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
 import { Button, Text, View } from '@tarojs/components'
 import { getDeepContrastArchetypeColor } from '@shared/archetypeColors'
-import { getIdentityChipLabel } from '@shared/copy/flowAnimationCopy'
+import { FLOW_SHELL_COPY, getIdentityChipLabel } from '@shared/copy/flowAnimationCopy'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { isFlowCompanionArchetype, type FlowCompanionArchetype } from '../../lib/utils/flowBannerAssets'
@@ -14,8 +14,14 @@ export type { FlowArchetypeBackgrounds } from '../../lib/utils/flowBannerAssets'
 
 interface FlowShellProps extends PropsWithChildren {
   title: string
+  /** When false, the header title text is not rendered (e.g. Flow 1's title
+   *  duplicates the H1 below it). Default true. */
+  showTitle?: boolean
   showGameBackground?: boolean
   archetypeId?: string | null
+  /** 'box' (default) plays the packed-box entrance beat; 'cut' skips it — used
+   *  by Flow 1, which always follows the UnboxingCeremony's own box moment. */
+  entranceMode?: 'box' | 'cut'
   onSkip: () => void
   actionLabel: string
   actionVisible: boolean
@@ -26,8 +32,10 @@ interface FlowShellProps extends PropsWithChildren {
 
 export default function FlowShell({
   title,
+  showTitle = true,
   showGameBackground = false,
   archetypeId,
+  entranceMode = 'box',
   onSkip,
   actionLabel,
   actionVisible,
@@ -38,7 +46,7 @@ export default function FlowShell({
   const { shouldReduceMotion } = useMiniRevealMotion()
   const personalizedArchetype = isFlowCompanionArchetype(archetypeId) ? archetypeId : null
 
-  const shouldPlayEntrance = showGameBackground && !shouldReduceMotion
+  const shouldPlayEntrance = showGameBackground && !shouldReduceMotion && entranceMode !== 'cut'
   const [entrancePhase, setEntrancePhase] = useState<'box' | 'settle' | 'done'>(
     shouldPlayEntrance ? 'box' : 'done',
   )
@@ -49,6 +57,16 @@ export default function FlowShell({
     resolvedRef.current = true
     onEntranceResolve?.()
   }, [onEntranceResolve])
+
+  // entranceMode='cut' starts resolved (resolvedRef is already true, so
+  // fireResolve would no-op) but the parent still gates useFlowProgress on
+  // this signal — fire it exactly once on mount.
+  const cutResolveFiredRef = useRef(false)
+  useEffect(() => {
+    if (entranceMode !== 'cut' || cutResolveFiredRef.current) return
+    cutResolveFiredRef.current = true
+    onEntranceResolve?.()
+  }, [entranceMode, onEntranceResolve])
 
   const skipEntrance = useCallback(() => {
     haptics('light')
@@ -77,10 +95,13 @@ export default function FlowShell({
         'flow-shell',
         showGameBackground && personalizedArchetype ? `flow-shell--personalized flow-shell--${personalizedArchetype}` : '',
         `flow-shell--entrance-${entrancePhase}`,
+        // Cut mode keeps the shell chrome stagger (see the --entrance-cut CSS
+        // block); reduced motion skips it so nothing is stuck at opacity 0.
+        entranceMode === 'cut' && !shouldReduceMotion ? 'flow-shell--entrance-cut' : '',
       ]
         .filter(Boolean)
         .join(' '),
-    [entrancePhase, personalizedArchetype, showGameBackground],
+    [entranceMode, entrancePhase, personalizedArchetype, shouldReduceMotion, showGameBackground],
   )
 
   return (
@@ -129,12 +150,12 @@ export default function FlowShell({
       <View className='flow-shell__header' aria-hidden={entrancePhase === 'box'}>
         <View className='flow-shell__identity'>
           <BrandLogo
-            width={150}
-            height={150}
+            width={96}
+            height={96}
             className='flow-shell__logo'
           />
           <Text className='flow-shell__brand'>JoyJoin</Text>
-          <Text className='flow-shell__title'>{title}</Text>
+          {showTitle ? <Text className='flow-shell__title'>{title}</Text> : null}
           {personalizedArchetype ? (
             <View
               className='flow-shell__identity-chip'
@@ -150,7 +171,7 @@ export default function FlowShell({
           onClick={onSkip}
           ariaLabel='跳过流程介绍'
         >
-          跳过
+          {FLOW_SHELL_COPY.skip}
         </Button>
       </View>
 

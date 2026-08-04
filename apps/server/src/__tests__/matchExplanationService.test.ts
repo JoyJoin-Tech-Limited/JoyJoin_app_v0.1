@@ -401,6 +401,139 @@ describe('matchExplanationService', () => {
     });
   });
 
+  describe('findSharedSignalHighlights', () => {
+    const mustChatMember = (
+      userId: string,
+      overrides: Partial<MatchMember> = {}
+    ): MatchMember => ({
+      userId,
+      displayName: userId,
+      archetype: 'corgi',
+      interestsWithHeat: [
+        { topicId: 'hotpot', heatLevel: 3 },
+        { topicId: 'reading', heatLevel: 1 },
+      ],
+      ...overrides,
+    });
+
+    it('should surface a shared 必聊项 (both at level 3 / heat 25)', () => {
+      const highlights = matchExplanationService.findSharedSignalHighlights(
+        mustChatMember('user-a'),
+        mustChatMember('user-b')
+      );
+      expect(highlights).toContain('你们都把火锅标成了必聊项');
+    });
+
+    it('should join up to 2 shared 必聊项 labels in one line', () => {
+      const memberA = mustChatMember('user-a', {
+        interestsWithHeat: [
+          { topicId: 'hotpot', heatLevel: 3 },
+          { topicId: 'escape_room', heatLevel: 3 },
+        ],
+      });
+      const memberB = mustChatMember('user-b', {
+        interestsWithHeat: [
+          { topicId: 'escape_room', heatLevel: 3 },
+          { topicId: 'hotpot', heatLevel: 3 },
+        ],
+      });
+      const highlights = matchExplanationService.findSharedSignalHighlights(memberA, memberB);
+      expect(highlights).toContain('你们都把密室、火锅标成了必聊项');
+    });
+
+    it('should not treat sub-level-3 interests as 必聊项', () => {
+      const memberA = mustChatMember('user-a', {
+        interestsWithHeat: [{ topicId: 'hotpot', heatLevel: 2 }],
+      });
+      const memberB = mustChatMember('user-b', {
+        interestsWithHeat: [{ topicId: 'hotpot', heatLevel: 2 }],
+      });
+      const highlights = matchExplanationService.findSharedSignalHighlights(memberA, memberB);
+      expect(highlights.some(h => h.includes('必聊项'))).toBe(false);
+    });
+
+    it('should return empty array when nothing is shared', () => {
+      const memberA: MatchMember = { userId: 'user-a', displayName: '甲', archetype: 'corgi' };
+      const memberB: MatchMember = { userId: 'user-b', displayName: '乙', archetype: 'koala' };
+      expect(matchExplanationService.findSharedSignalHighlights(memberA, memberB)).toEqual([]);
+    });
+
+    it('should cap at 3 highlights in priority order (必聊项 → intent → hometown)', () => {
+      const memberA = mustChatMember('user-a', { intent: ['friends'], hometown: '广州' });
+      const memberB = mustChatMember('user-b', { intent: ['friends'], hometown: '广州' });
+      const highlights = matchExplanationService.findSharedSignalHighlights(memberA, memberB, []);
+      expect(highlights).toEqual([
+        '你们都把火锅标成了必聊项',
+        '你们这次都想交新朋友',
+        '你们都是广州人',
+      ]);
+      expect(highlights.length).toBeLessThanOrEqual(3);
+    });
+
+    it('should skip hometown when connection points already cover it', () => {
+      const memberA: MatchMember = { userId: 'user-a', displayName: '甲', archetype: 'corgi', hometown: '深圳' };
+      const memberB: MatchMember = { userId: 'user-b', displayName: '乙', archetype: 'koala', hometown: '深圳' };
+      const highlights = matchExplanationService.findSharedSignalHighlights(
+        memberA,
+        memberB,
+        ['同乡（深圳）']
+      );
+      expect(highlights.some(h => h.includes('深圳'))).toBe(false);
+    });
+
+    it('should drop 必聊项 labels already named by a connection point', () => {
+      const highlights = matchExplanationService.findSharedSignalHighlights(
+        mustChatMember('user-a'),
+        mustChatMember('user-b'),
+        ['火锅同款聊法（随便聊聊）']
+      );
+      expect(highlights.some(h => h.includes('火锅'))).toBe(false);
+    });
+
+    it('should resolve intent values to Chinese labels via getIntentLabel', () => {
+      const memberA: MatchMember = { userId: 'user-a', displayName: '甲', archetype: 'corgi', intent: ['discussion'] };
+      const memberB: MatchMember = { userId: 'user-b', displayName: '乙', archetype: 'koala', intent: ['discussion', 'fun'] };
+      const highlights = matchExplanationService.findSharedSignalHighlights(memberA, memberB);
+      expect(highlights).toContain('你们这次都想深度交流');
+    });
+
+    it('should prefer eventIntent over profile intent and ignore flexible', () => {
+      const memberA: MatchMember = {
+        userId: 'user-a',
+        displayName: '甲',
+        archetype: 'corgi',
+        intent: ['friends'],
+        eventIntent: ['explore'],
+      };
+      const memberB: MatchMember = {
+        userId: 'user-b',
+        displayName: '乙',
+        archetype: 'koala',
+        intent: ['friends'],
+        eventIntent: ['flexible', 'explore'],
+      };
+      const highlights = matchExplanationService.findSharedSignalHighlights(memberA, memberB);
+      expect(highlights).toEqual(['你们这次都想尝鲜体验']);
+    });
+
+    it('should not emit an intent line when the only shared intent is flexible', () => {
+      const memberA: MatchMember = { userId: 'user-a', displayName: '甲', archetype: 'corgi', intent: ['flexible'] };
+      const memberB: MatchMember = { userId: 'user-b', displayName: '乙', archetype: 'koala', intent: ['flexible'] };
+      expect(matchExplanationService.findSharedSignalHighlights(memberA, memberB)).toEqual([]);
+    });
+
+    it('should populate sharedHighlights on generatePairExplanation results', async () => {
+      const explanation = await matchExplanationService.generatePairExplanation(
+        mustChatMember('user-a', { intent: ['friends'] }),
+        mustChatMember('user-b', { intent: ['friends'] })
+      );
+      expect(explanation.sharedHighlights).toEqual([
+        '你们都把火锅标成了必聊项',
+        '你们这次都想交新朋友',
+      ]);
+    });
+  });
+
   describe('generatePairExplanation', () => {
     it('should generate explanation with required fields', async () => {
       const explanation = await matchExplanationService.generatePairExplanation(
@@ -703,7 +836,7 @@ describe('matchExplanationService', () => {
         expect(logger.warn).toHaveBeenCalledWith(
           RECOVERY_MESSAGE,
           expect.objectContaining({
-            promptVersion: 'pair-explanation-v2',
+            promptVersion: 'pair-explanation-v3',
             kind,
             recoveredLength: expect.any(Number),
           }),
@@ -814,7 +947,7 @@ describe('matchExplanationService', () => {
     it('should restore provider and fallbackUsed from cache metadata on cache hit', async () => {
       vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
         pairExplanationsCache: {
-          schemaVersion: 2,
+          schemaVersion: 3,
           memberHash: 'user-1,user-2',
           pairCount: 1,
           generatedAt: freshCacheTimestamp(),
@@ -884,6 +1017,44 @@ describe('matchExplanationService', () => {
       expect(analysis.fromCache).toBe(false);
       expect(['minimax', 'deepseek', null]).toContain(analysis.provider);
       expect(typeof analysis.fallbackUsed).toBe('boolean');
+    });
+
+    it('should reject schemaVersion 2 caches (pre-sharedHighlights) and regenerate', async () => {
+      vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
+        pairExplanationsCache: {
+          schemaVersion: 2,
+          memberHash: 'user-1,user-2',
+          pairCount: 1,
+          generatedAt: freshCacheTimestamp(),
+          explanations: [{
+            pairKey: 'user-1-user-2',
+            explanation: 'v2 缓存配对解释',
+            chemistryScore: 80,
+            sharedInterests: ['美食'],
+            connectionPoints: ['同乡（深圳）'],
+          }],
+          provider: 'deepseek',
+          fallbackUsed: false,
+        },
+        iceBreakersCache: {
+          memberHash: 'user-1,user-2',
+          eventType: '饭局',
+          generatedAt: freshCacheTimestamp(),
+          topics: ['缓存破冰 1', '缓存破冰 2'],
+          provider: null,
+          fallbackUsed: true,
+        },
+      } as any);
+
+      const analysis = await matchExplanationService.generateGroupAnalysis(
+        'group-v2-cache',
+        [mockMember1, mockMember2],
+        '饭局'
+      );
+
+      // v2 rows predate sharedHighlights → lazily invalidated, regenerated fresh
+      expect(analysis.fromCache).toBe(false);
+      expect(analysis.pairExplanations[0]?.explanation).not.toBe('v2 缓存配对解释');
     });
 
     it('should set fallbackUsed=false when LLM returns valid ice-breakers', async () => {
@@ -1000,7 +1171,7 @@ describe('matchExplanationService', () => {
     it('logs generateGroupAnalysis success=true for cached responses with unknown provider but no fallback', async () => {
       vi.mocked(db.query.eventPoolGroups.findFirst).mockResolvedValue({
         pairExplanationsCache: {
-          schemaVersion: 2,
+          schemaVersion: 3,
           memberHash: 'user-1,user-2',
           pairCount: 1,
           generatedAt: freshCacheTimestamp(),
@@ -1085,6 +1256,7 @@ describe('matchExplanationService', () => {
         chemistryScore: 80,
         sharedInterests: [],
         connectionPoints: [],
+        sharedHighlights: [],
       })),
     });
 

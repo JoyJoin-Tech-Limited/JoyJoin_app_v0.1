@@ -37,12 +37,18 @@ vi.mock("../db", () => ({
   },
 }));
 
-const mockValidateContentSafe = vi.fn();
+const mockValidateContentSafeAsync = vi.fn();
 const mockContentViolationResponse = vi.fn();
 
 vi.mock("../lib/contentSafety", () => ({
-  validateContentSafe: mockValidateContentSafe,
+  validateContentSafeAsync: mockValidateContentSafeAsync,
   contentViolationResponse: mockContentViolationResponse,
+}));
+
+const mockRecordViolation = vi.fn();
+
+vi.mock("../abuseDetection", () => ({
+  recordViolation: mockRecordViolation,
 }));
 
 const mockLoggerInfo = vi.fn();
@@ -103,7 +109,7 @@ function cookieHeader(response: Response) {
 describe("POST /api/profile-review/complete bio handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockValidateContentSafe.mockReturnValue({ safe: true });
+    mockValidateContentSafeAsync.mockResolvedValue({ safe: true });
   });
 
   it("returns 401 for unauthenticated requests", async () => {
@@ -129,7 +135,7 @@ describe("POST /api/profile-review/complete bio handling", () => {
       });
 
       expect(res.status).toBe(200);
-      expect(mockValidateContentSafe).toHaveBeenCalledWith("喜欢轻松聊天", "bio");
+      expect(mockValidateContentSafeAsync).toHaveBeenCalledWith("喜欢轻松聊天", "bio", { userId: "user-123" });
       const infoLog = mockLoggerInfo.mock.calls.find(
         (call) => call[0] === "[Onboarding] Profile review completed",
       );
@@ -150,7 +156,7 @@ describe("POST /api/profile-review/complete bio handling", () => {
       });
 
       expect(res.status).toBe(200);
-      expect(mockValidateContentSafe).not.toHaveBeenCalled();
+      expect(mockValidateContentSafeAsync).not.toHaveBeenCalled();
       const infoLog = mockLoggerInfo.mock.calls.find(
         (call) => call[0] === "[Onboarding] Profile review completed",
       );
@@ -175,12 +181,12 @@ describe("POST /api/profile-review/complete bio handling", () => {
       const body = (await res.json()) as { message: string; field: string };
       expect(body.message).toContain("100");
       expect(body.field).toBe("bio");
-      expect(mockValidateContentSafe).not.toHaveBeenCalled();
+      expect(mockValidateContentSafeAsync).not.toHaveBeenCalled();
     });
   });
 
   it("rejects a bio that fails content-safety filtering", async () => {
-    mockValidateContentSafe.mockImplementation((value: string, field: string) => {
+    mockValidateContentSafeAsync.mockImplementation(async (value: string, field: string) => {
       if (field === "bio" && value.includes("blocked")) {
         return {
           safe: false,
@@ -225,6 +231,7 @@ describe("POST /api/profile-review/complete bio handling", () => {
       expect(res.status).toBe(400);
       const body = (await res.json()) as { code: string };
       expect(body.code).toBe("CONTENT_VIOLATION");
+      expect(mockRecordViolation).toHaveBeenCalledWith("user-123", "harassment", "warning");
     });
   });
 });

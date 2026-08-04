@@ -1,6 +1,6 @@
 # Icebreaker System — Complete Reference
 
-**Last Updated:** 2026-07-26
+**Last Updated:** 2026-08-03
 
 > ⭐ **CANONICAL FLOW:** The Social Icebreaker is the **primary and default in-event icebreaking experience** for JoyJoin matched groups. When building any feature that relates to icebreaking or in-event social facilitation, you MUST integrate with or extend the Social Icebreaker. Do NOT build new standalone icebreaking UIs.
 
@@ -769,3 +769,55 @@ const CLIENT_TO_API_VIBE = {
 **playerCount wrong:**
 - `playerCount` reflects the persisted joined roster in `socialIcebreakerParticipants`
 - `activePlayerCount` and `joinedParticipants[*].isActive` are derived from `lastSeenAt` heartbeats within the active presence window
+
+---
+
+## §8 — Phase Curve Audit (2026-08-03, 磁场引擎 P4)
+
+Audit of tier run plans + `runPlanCompiler.ts` against two principles: **(1) Aron (1997) progressive self-disclosure** (light → deep pacing) and **(2) face-protection for mainland-China social norms** (no losers, no forced personal disclosure, no singling-out in early phases). Audit-first pass: only metadata/ordering fixes were applied; larger design changes are listed as backlog.
+
+### Tier verdicts (static plans, `socialIcebreakerRunPlans.ts`)
+
+| Tier | Order | Verdict |
+|------|-------|---------|
+| BREEZE 破冰局 | warmup → micro_challenge → lie_detective → recap | **PASS.** Peak (lie_detective) at position 3, gentle close. No early spotlight. |
+| GLOW 畅聊局 | warmup → micro_challenge → lie_detective → personality_dice → group_mirror → recap | **PASS after fix.** Arc and cool-down were correct; group_mirror segment metadata (weight 3 / playful) contradicted its wind-down role — aligned to weight 1 / gentle. |
+| BLAZE 狂欢局 | warmup → micro_challenge → lie_detective → personality_dice → auction → quip_battle → group_mirror → recap | **PASS after fix.** Peak-heavy middle (positions 3–6, ~57 of 90 min) is intentional for the tier; same group_mirror metadata alignment. |
+
+### Compiler path (`runPlanCompiler.ts`)
+
+- `CORE_PHASES` (warmup, micro_challenge) are hard-pinned to positions 1–2 and `recap` to last by `validateRunPlan`; no peak-arc phase can open a compiled plan. ✔
+- **Fixed bug:** group_mirror carried `energyArc: 'warmup'`, so `ENERGY_ARC_ORDER` (warmup=1) made `sortByEnergyArc` place it **first in the non-core block** — e.g. Glow with `SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR` compiled to `warmup → micro_challenge → group_mirror → lie_detective → personality_dice → recap`. An anonymous perception-voting phase ("how the group sees you") at minute ~16, before any shared experience, violated progressive disclosure. Fix: `phaseRegistry.ts` group_mirror `energyArc: 'warmup' → 'falling'`; it now lands in the wind-down slot before recap, matching both static plans. Glow now compiles to `warmup → micro_challenge → personality_dice → lie_detective → group_mirror → recap`.
+- Template path (`resolveTemplateSlots` / `TEMPLATE_DEFAULTS`) is slot-ordered, not arc-sorted; group_mirror appears only in later `deep_chat`/`flexible` slots (deep_chat breeze places it after 28 core minutes) — acceptable, no change.
+- Regression guards added in `packages/shared/src/__tests__/runPlanCompiler.test.ts`: no warmup-arc phase in the non-core block; no peak-arc phase before position 3.
+
+### Face-protection findings per phase
+
+| Phase | Mechanic check | Finding |
+|-------|---------------|---------|
+| warmup (pos 1) | Group topic cards; `pass_ok`; per-topic `permissionLine` opt-out whisper; deck has `depthLevel` 1–3 with intentional brave-but-safe final card | **PASS.** Note: `getFallbackTopics` shuffles the deck, so a depth-3 reflective topic can surface first in fallback mode (the repair path pins the brave card last; the natural path does not order by depth) — backlog. |
+| micro_challenge (pos 2) | Group-oriented challenges (find commonalities, co-invent an idea); completion-tracked, no voting, no losers | **PASS.** c2 "用3个词形容右边的人" / c5 "30秒不为人知" are mild, positive-framed, self-selected content. |
+| lie_detective (pos 3+) | Self-authored disclosure (V1: user writes own 2 truths + 1 lie; V2: user writes 2 tags, AI expands); advance guard requires every roster player to author statements (`canBeSkipped: false`, `participation: full`) | **PASS with findings.** Position 3+ is correct Aron pacing, and authorship keeps disclosure user-controlled. **Votes are not anonymous:** `state.votes` (voterId + guessedStatementIndex) is broadcast in client state via `buildClientState`/`sanitizeStateForClient` pre-reveal, and the reveal response returns per-voter `publicVotes` — backlog. |
+| personality_dice (pos 3–4) | Explicit pass route (`dicePassedBy`); pass counts toward phase completion so passers never block; choose-mode lets players pick challenge difficulty (`diceSelectedOption`); `participation: pass_ok` | **PASS.** Best-in-catalog opt-out design. |
+| auction (blaze, pos 5–6) | Virtual coins only; lots are opt-in fun prompts (bid = volunteer); outbid auto-refunds; recap copy is winner-only ("由X以N虚拟币拍下" / "流拍（无人出价）") | **PASS.** Being outbid reads as "didn't get the prize", never public failure. Late-phase only, flag-gated. |
+| group_mirror (intended late) | Anonymous perception voting; questions flattering/neutral; results expose only top-voted + count (no bottom ranking) | **PASS after fix** (metadata). Data-layer note: `groupMirrorAnswers` carries voter→target attribution in broadcast client state, contradicting the "匿名投票" copy — backlog. |
+| quip_battle (blaze/templates) | Parallel written answers (introvert-friendly); results are winner-only per prompt, no loser ranking | **PASS.** Minor: answers carry displayName in payload during voting — backlog (low priority). |
+| undercover_word (blaze, flag default off) | 谁是卧底: one hidden odd-one-out is publicly identified at reveal (`caught` + name in recap) | **NOTE.** The only loser-adjacent mechanic in the catalog; acceptable as a late, opt-in, peak-arc phase. Keep out of early positions; monitor reveal copy tone. |
+| mini_script (flag-gated, not in default plans) | Roleplay with assigned roles + votes | **NOTE.** Late position when enabled; out of default-path scope for this audit. |
+| recap (final) | falling arc, `observe_ok`, medals/highlights celebration | **PASS.** |
+
+### Fixes applied (this pass)
+
+1. `packages/shared/src/phaseRegistry.ts` — group_mirror `energyArc: 'warmup' → 'falling'` (with comment). No weight change (`energyArcToWeight` maps both to 1; `customRunPlanService` maps both to 1); no other `energyArc` consumers exist in mini-program or server.
+2. `packages/shared/src/socialIcebreakerRunPlans.ts` — GLOW + BLAZE group_mirror segments `energyWeight 3 → 1`, `tone 'playful' → 'gentle'` (matches registry tone and compiler output for falling).
+3. `packages/shared/src/__tests__/runPlanCompiler.test.ts` — replaced the test that pinned the old opener placement; added two structural arc guards.
+
+### Backlog (explicitly NOT done in this pass)
+
+1. **Self-disclosure-depth field on `PhaseModule`** — no explicit depth metadata exists (only `energyArc`/`energyWeight`/`tone`). Add e.g. `disclosureDepth: 1–3` so compilation can enforce light→deep independent of energy.
+2. **Warmup deck depth ordering** — sort fallback (and LLM-normalized) topic decks by `depthLevel` ascending so the brave/reflective card cannot open the phase (repair path already pins it last; natural path shuffles).
+3. **Lie-detective vote anonymity** — strip or aggregate `state.votes` in `sanitizeStateForClient` until reveal (mirror the `bonusGatePlayerSentiment` aggregate pattern); reconsider per-voter `publicVotes` in the reveal response.
+4. **Group-mirror answer attribution** — remove voter→target pairs from broadcast client state (`groupMirrorAnswers`); keep only aggregates + the requester's own answer, matching the "匿名投票" copy.
+5. **Quip-battle answer authorship during voting** — evaluate hiding `displayName` on answers until results are revealed.
+6. **Undercover-word reveal framing** — loser-adjacent by design; consider softening reveal/recap copy ("被找出" → celebration framing) if tester feedback flags face concerns.
+7. **Forced lie_detective authorship** — every roster player must author statements to advance; consider a pass/skip affordance for players unwilling to self-disclose (currently host can only skip the whole phase in custom mode).

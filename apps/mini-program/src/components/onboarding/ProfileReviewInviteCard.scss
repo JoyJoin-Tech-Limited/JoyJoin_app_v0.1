@@ -1,5 +1,8 @@
 @use '../../styles/variables' as *;
 
+// Full-bleed Lovart banner + "kindred radar" summary card.
+// Layer stack (bottom → top): __bg (banner image) → __scrim (legibility
+// gradient) → __radar (orbit visual) → __copy (summary text).
 .profile-review-invite-card {
   position: relative;
   display: flex;
@@ -11,49 +14,39 @@
   transform: translateY(24rpx) scale(0.98);
   transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-  // Single warm tint keeps the card quiet below the archetype-themed poster.
-  background: $color-bg-tint-cream;
-  box-shadow: 0 12rpx 36rpx rgba($color-primary, 0.06), 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
-  border: 2rpx solid rgba($color-secondary, 0.12);
-  padding: $spacing-sm $spacing-md;
-  min-height: 176rpx;
+  // Collapsed until reveal: no blank hole between the gift card and the CTA
+  // while the card waits for its entrance (overflow:hidden clips contents).
+  min-height: 0;
+  padding: 0 $spacing-md;
+  border: 2rpx solid transparent;
+  background: transparent;
+  box-shadow: none;
 
   &--visible {
     opacity: 1;
     transform: translateY(0) scale(1);
-
-    &.profile-review-invite-card--pressed {
-      transform: translateY(0) scale(0.98);
-    }
+    min-height: 320rpx;
+    padding: $spacing-md;
+    border-color: rgba($color-secondary, 0.12);
+    background: $color-bg-tint-cream;
+    box-shadow: 0 12rpx 36rpx rgba($color-primary, 0.06), 0 4rpx 12rpx rgba(0, 0, 0, 0.03);
   }
 
   &--reduce-motion {
     transition: none;
     opacity: 1;
     transform: none;
-
-    &.profile-review-invite-card--pressed {
-      transform: none;
-    }
-  }
-
-  &--disabled {
-    opacity: 0.55;
   }
 }
 
-.profile-review-invite-card__art {
-  position: relative;
-  flex: 0 0 auto;
-  width: 176rpx;
-  height: 144rpx;
-  border-radius: $card-radius-sm;
+// ── Banner background ──────────────────────────────────────────────────────
+.profile-review-invite-card__bg {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
-  background: rgba($color-surface, 0.72);
-  margin-right: $spacing-md;
 }
 
-.profile-review-invite-card__art-shimmer {
+.profile-review-invite-card__bg-shimmer {
   position: absolute;
   inset: 0;
   background: linear-gradient(
@@ -65,31 +58,176 @@
   animation: invite-art-shimmer 1.6s ease-in-out infinite;
 }
 
-.profile-review-invite-card__art-fallback {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba($color-bg-tint-pink, 0.35);
-}
-
-.profile-review-invite-card__image {
+.profile-review-invite-card__bg-image {
   width: 100%;
   height: 100%;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.4s ease;
 
   &--loaded {
     opacity: 1;
   }
 }
 
+// Left-weighted scrim keeps the copy legible over the full-bleed art while
+// letting the banner breathe on the radar side. rgba() only — WXSS has no
+// hsla().
+.profile-review-invite-card__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 252, 247, 0.92) 0%,
+    rgba(255, 252, 247, 0.72) 48%,
+    rgba(255, 252, 247, 0.34) 100%
+  );
+}
+
+// ── Kindred radar ──────────────────────────────────────────────────────────
+.profile-review-invite-card__radar {
+  position: absolute;
+  right: 24rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 264rpx;
+  height: 264rpx;
+}
+
+.profile-review-invite-card__radar-disc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba($color-primary, 0.06) 100%);
+  border: 4rpx solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8rpx 28rpx rgba($color-primary, 0.12);
+}
+
+.profile-review-invite-card__radar-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2rpx dashed rgba($color-primary, 0.28);
+
+  &--outer {
+    inset: 14rpx;
+  }
+
+  &--inner {
+    inset: 58rpx;
+  }
+}
+
+.profile-review-invite-card__radar-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(rgba($color-primary, 0.16) 0%, transparent 18%);
+  animation: invite-radar-sweep 4.5s linear infinite;
+}
+
+.profile-review-invite-card__radar-wave {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2rpx solid rgba($color-primary, 0.3);
+  opacity: 0;
+  animation: invite-radar-wave 2.8s ease-out infinite;
+
+  &--one {
+    animation-delay: 0s;
+  }
+
+  &--two {
+    animation-delay: 1.4s;
+  }
+}
+
+.profile-review-invite-card__radar-satellite {
+  position: absolute;
+  width: 56rpx;
+  height: 56rpx;
+  margin-left: -28rpx;
+  margin-top: -28rpx;
+  opacity: 0;
+  transform: scale(0.4);
+}
+
+// Pop-in only runs once the card itself is visible, so the stagger never
+// fires behind a hidden card.
+.profile-review-invite-card--visible .profile-review-invite-card__radar-satellite {
+  animation: invite-radar-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.profile-review-invite-card__radar-satellite-float {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4rpx 14rpx rgba($color-primary, 0.14);
+  animation: invite-radar-float 3.2s ease-in-out infinite alternate;
+}
+
+.profile-review-invite-card__radar-satellite-icon {
+  width: 100%;
+  height: 100%;
+}
+
+.profile-review-invite-card__radar-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profile-review-invite-card__radar-center-ring {
+  position: relative;
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  background: $color-surface;
+  border: 4rpx solid rgba($color-primary, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // Expanding ping ring. Transform + opacity only (no box-shadow spread) so
+  // the infinite pulse composites instead of repainting every frame.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2rpx solid rgba($color-primary, 0.4);
+    animation: invite-radar-pulse 1.8s ease-out infinite;
+    pointer-events: none;
+  }
+}
+
+.profile-review-invite-card__radar-center-icon {
+  width: 88rpx;
+  height: 88rpx;
+}
+
+.profile-review-invite-card__radar-center-name {
+  margin-top: 8rpx;
+  padding: 2rpx 14rpx;
+  border-radius: $radius-pill;
+  font-size: 20rpx;
+  line-height: 1.5;
+  font-weight: $font-weight-semibold;
+  white-space: nowrap;
+}
+
+// ── Copy zone ──────────────────────────────────────────────────────────────
 .profile-review-invite-card__copy {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  flex: 1;
+  max-width: 380rpx;
   min-width: 0;
 }
 
@@ -109,41 +247,39 @@
   flex-shrink: 0;
 }
 
+.profile-review-invite-card__kicker {
+  font-size: $font-size-xs;
+  line-height: $line-height-display;
+  color: $color-text-secondary-on-light;
+  letter-spacing: 2rpx;
+}
+
 .profile-review-invite-card__title {
-  font-size: $font-size-base;
+  font-size: $font-size-md;
   line-height: $line-height-display;
   font-weight: $font-weight-bold;
   color: $color-text-primary;
   font-family: $font-cn-display;
   word-break: keep-all;
+  margin-bottom: $spacing-xs;
 }
 
-.profile-review-invite-card__body {
+.profile-review-invite-card__summary {
   font-size: $font-size-sm;
   line-height: $line-height-relaxed;
-  color: $color-text-secondary;
-  margin-bottom: $spacing-xs;
+  color: $color-text-secondary-on-light;
   word-break: break-word;
   overflow-wrap: break-word;
+  margin-bottom: 4rpx;
 }
 
-.profile-review-invite-card__hint {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  align-self: flex-start;
-  padding: 4rpx $spacing-sm;
-  border-radius: $radius-pill;
-  background: rgba($color-primary, 0.08);
-}
-
-.profile-review-invite-card__hint-text {
+.profile-review-invite-card__tagline {
   font-size: $font-size-xs;
-  line-height: $line-height-display;
-  color: $color-primary;
-  font-weight: $font-weight-medium;
+  line-height: $line-height-relaxed;
+  color: $color-text-tertiary-on-light;
 }
 
+// ── Keyframes (transform/opacity/box-shadow only) ─────────────────────────
 @keyframes invite-art-shimmer {
   0%,
   100% {
@@ -157,45 +293,178 @@
   }
 }
 
+@keyframes invite-radar-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes invite-radar-wave {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.25);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes invite-radar-pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+@keyframes invite-radar-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes invite-radar-float {
+  from {
+    transform: translateY(-4rpx);
+  }
+
+  to {
+    transform: translateY(4rpx);
+  }
+}
+
+// ── Reduced motion: calm static radar, copy always fully readable ─────────
 @media (prefers-reduced-motion: reduce) {
   .profile-review-invite-card {
     transition: none;
     opacity: 1;
     transform: none;
-
-    &.profile-review-invite-card--pressed {
-      transform: none;
-    }
   }
 
-  .profile-review-invite-card__art-shimmer {
+  .profile-review-invite-card__bg-shimmer {
     animation: none;
     opacity: 0.6;
   }
 
-  .profile-review-invite-card__image {
+  .profile-review-invite-card__bg-image {
     opacity: 1;
     transition: none;
   }
-}
 
-// Tight fallback for narrow screens.
-@media (max-width: 360px) {
-  .profile-review-invite-card {
-    padding: $spacing-xs $spacing-sm;
+  .profile-review-invite-card__radar-sweep,
+  .profile-review-invite-card__radar-wave {
+    animation: none;
+    display: none;
   }
 
-  .profile-review-invite-card__art {
-    width: 144rpx;
-    height: 120rpx;
-    margin-right: $spacing-sm;
+  .profile-review-invite-card__radar-center-ring {
+    animation: none;
+
+    &::after {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
+  .profile-review-invite-card__radar-satellite {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .profile-review-invite-card__radar-satellite-float {
+    animation: none;
+  }
+}
+
+// The JS-driven --reduce-motion modifier mirrors the media query so the
+// static fallback also applies when only the in-app/system flag is set.
+.profile-review-invite-card--reduce-motion {
+  .profile-review-invite-card__radar-sweep,
+  .profile-review-invite-card__radar-wave {
+    animation: none;
+    display: none;
+  }
+
+  .profile-review-invite-card__radar-center-ring {
+    animation: none;
+
+    &::after {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
+  .profile-review-invite-card__radar-satellite {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .profile-review-invite-card__radar-satellite-float {
+    animation: none;
+  }
+}
+
+// ── Tight fallback for narrow screens ──────────────────────────────────────
+@media (max-width: 360px) {
+  .profile-review-invite-card {
+    padding: $spacing-sm;
+  }
+
+  .profile-review-invite-card__scrim {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 252, 247, 0.95) 0%,
+      rgba(255, 252, 247, 0.78) 48%,
+      rgba(255, 252, 247, 0.4) 100%
+    );
+  }
+
+  .profile-review-invite-card__radar {
+    width: 224rpx;
+    height: 224rpx;
+    right: 16rpx;
+  }
+
+  .profile-review-invite-card__radar-satellite {
+    width: 48rpx;
+    height: 48rpx;
+    margin-left: -24rpx;
+    margin-top: -24rpx;
+  }
+
+  .profile-review-invite-card__radar-center-ring {
+    width: 88rpx;
+    height: 88rpx;
+  }
+
+  .profile-review-invite-card__radar-center-icon {
+    width: 72rpx;
+    height: 72rpx;
+  }
+
+  .profile-review-invite-card__copy {
+    max-width: 320rpx;
   }
 
   .profile-review-invite-card__title {
-    font-size: $font-size-sm;
+    font-size: $font-size-base;
   }
 
-  .profile-review-invite-card__body {
+  .profile-review-invite-card__summary {
     font-size: $font-size-xs;
   }
 }

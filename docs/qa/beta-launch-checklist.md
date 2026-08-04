@@ -16,7 +16,7 @@
 | O-03 | Personality test V4 — adaptive 8–16 questions, archetype assigned | 🔴 Critical | `assessmentV4.test.ts` + manual |
 | O-04 | Archetype result screen — sprite animation renders, canvas poster generates, sharing works | 🟠 High | `docs/qa/mini-program-personality-card-sharing-smoke.md` |
 | O-05 | Essential data — 5-step FormStepper: displayName → gender/birthYear → education/occupation/workMode/relationship → city/hometown → intent (max 3) | 🔴 Critical | Manual DevTools |
-| O-06 | Extended data — 3-tier interest carousel, min 3 max 10 selections, 5 categories | 🟠 High | Manual DevTools |
+| O-06 | Extended data — 3-tier interest carousel, min 3 selections (no max), 6 categories | 🟠 High | Manual DevTools |
 | O-07 | Profile review — read-only summary with archetype, tagline, readiness checklist, profile grid, intent chips, interest heat summary | 🔴 Critical | Manual DevTools |
 | O-08 | "确认并进入发现" CTA navigates to `/discover` on completion | 🔴 Critical | Manual DevTools |
 | O-09 | `complete-onboarding` + `complete-personality-test` endpoints save state correctly | 🔴 Critical | `completeOnboardingRoutes.test.ts` (15 tests) |

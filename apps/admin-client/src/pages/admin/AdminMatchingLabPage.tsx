@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { Sliders, TestTube2, Zap, Save, RotateCcw, Play, Users, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { Sliders, TestTube2, Zap, Play, Users, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import FieldInfoTooltip from "@/components/discover/FieldInfoTooltip";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
@@ -151,34 +151,6 @@ export default function AdminMatchingLabPage() {
 
   const allUsers = usersResponse?.users || [];
 
-  // 保存配置
-  const saveConfigMutation = useMutation({
-    mutationFn: (newConfig: MatchingConfig) =>
-      fetch("/api/matching/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(newConfig),
-      }).then((r) => {
-        if (!r.ok) throw new Error("Failed to save config");
-        return r.json();
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/matching/config"] });
-      toast({
-        title: "配置保存成功",
-        description: "匹配算法权重已更新",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "保存失败",
-        description: "无法保存配置，请重试",
-        variant: "destructive",
-      });
-    },
-  });
-
   // 运行测试场景
   const runTestMutation = useMutation({
     mutationFn: ({ userIds, config: testConfig }: { userIds: string[]; config: MatchingConfig }) =>
@@ -212,26 +184,6 @@ export default function AdminMatchingLabPage() {
 
   const handleWeightChange = (key: keyof MatchingConfig, value: number) => {
     setConfig({ ...config, [key]: value });
-  };
-
-  const handleSave = () => {
-    if (totalWeight !== 100) {
-      toast({
-        title: "权重总和必须为100%",
-        description: `当前总和: ${totalWeight}%`,
-        variant: "destructive",
-      });
-      return;
-    }
-    saveConfigMutation.mutate(config);
-  };
-
-  const handleReset = () => {
-    if (currentConfig) {
-      setConfig(currentConfig);
-    } else {
-      setConfig(DEFAULT_CONFIG);
-    }
   };
 
   const handleRunTest = () => {
@@ -503,8 +455,8 @@ export default function AdminMatchingLabPage() {
                     <Sliders className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle>算法权重配置</CardTitle>
-                    <CardDescription>调整5个维度的权重 (总和必须为100%)</CardDescription>
+                    <CardTitle>算法权重配置（已弃用 · 仅实验室预览）</CardTitle>
+                    <CardDescription>旧版实验权重，仅供下方测试场景预览使用</CardDescription>
                   </div>
                 </div>
                 <Badge variant={totalWeight === 100 ? "default" : "destructive"} data-testid="badge-total-weight">
@@ -513,6 +465,17 @@ export default function AdminMatchingLabPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* DEPRECATED: 保存入口已移除（POST /api/matching/config 返回 410）。
+                  这些滑杆只影响本页"测试场景"的预览结果，不影响线上匹配。 */}
+              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 text-xs text-amber-800 space-y-1">
+                <p className="font-semibold">此配置已弃用，不影响线上匹配</p>
+                <p>
+                  这里的 5 维旧版权重仅用于本页测试场景的预览计算。线上匹配阈值请在
+                  「匹配配置」(/admin/matching-config) 调整；自适应权重由服务端
+                  /api/admin/evolution/weights 管理。
+                </p>
+              </div>
+
               {/* 性格化学反应权重 */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -624,29 +587,6 @@ export default function AdminMatchingLabPage() {
                 <p className="text-xs text-muted-foreground">
                   语言偏好和文化背景的匹配度
                 </p>
-              </div>
-
-              <Separator />
-
-              {/* 操作按钮 */}
-              <div className="flex gap-2 pt-2">
-                <Button
-                  onClick={handleSave}
-                  disabled={totalWeight !== 100 || saveConfigMutation.isPending}
-                  className="flex-1"
-                  data-testid="button-save-config"
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  保存配置
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleReset}
-                  data-testid="button-reset-config"
-                >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  重置
-                </Button>
               </div>
             </CardContent>
           </Card>

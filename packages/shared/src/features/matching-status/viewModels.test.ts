@@ -225,6 +225,35 @@ describe('composeUnifiedReveal', () => {
     expect(result.spotlight?.rarityTier).toBe('rare')
   })
 
+  it('carries sharedHighlights from the pair when present', () => {
+    const spotlightWithHighlights = {
+      ...baseSpotlight,
+      pair: {
+        ...baseSpotlight.pair,
+        sharedHighlights: ['你们都把火锅标成了必聊项', '你们这次都想交新朋友'],
+      } satisfies PairExplanation,
+    }
+
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: spotlightWithHighlights,
+    })
+
+    expect(result.spotlight?.sharedHighlights).toEqual([
+      '你们都把火锅标成了必聊项',
+      '你们这次都想交新朋友',
+    ])
+  })
+
+  it('defaults sharedHighlights to [] for legacy payloads without the field', () => {
+    const result = composeUnifiedReveal({
+      chemistryPayoff: baseChemistryPayoff,
+      viewerSpotlight: baseSpotlight,
+    })
+
+    expect(result.spotlight?.sharedHighlights).toEqual([])
+  })
+
   it('computes common rarity tier when only common exists', () => {
     const spotlightCommon = {
       ...baseSpotlight,

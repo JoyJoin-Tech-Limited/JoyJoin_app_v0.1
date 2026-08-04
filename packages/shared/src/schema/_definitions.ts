@@ -624,7 +624,7 @@ export const matchingThresholds = pgTable("matching_thresholds", {
   // 阈值配置
   highCompatibilityThreshold: integer("high_compatibility_threshold").default(85), // 高兼容性立即匹配阈值
   mediumCompatibilityThreshold: integer("medium_compatibility_threshold").default(70), // 中等兼容性等待阈值
-  lowCompatibilityThreshold: integer("low_compatibility_threshold").default(55), // 最低可接受阈值
+  lowCompatibilityThreshold: integer("low_compatibility_threshold").default(55), // 最低可接受阈值 — NOTE: currently not consumed by matching (Phase 1 will wire or remove)
   
   // 时间衰减配置
   timeDecayEnabled: boolean("time_decay_enabled").default(true), // 是否启用时间衰减
@@ -633,7 +633,7 @@ export const matchingThresholds = pgTable("matching_thresholds", {
   
   // 组局配置
   minGroupSizeForMatch: integer("min_group_size_for_match").default(4), // 最小成局人数
-  optimalGroupSize: integer("optimal_group_size").default(6), // 最优组局人数
+  optimalGroupSize: integer("optimal_group_size").default(6), // 最优组局人数 — NOTE: currently not consumed by matching (Phase 1 will wire or remove)
   
   // 扫描频率
   scanIntervalMinutes: integer("scan_interval_minutes").default(60), // 定时扫描间隔（分钟）
@@ -1169,7 +1169,7 @@ export const registerUserSchema = z.object({
   seniority: z.enum(SENIORITY_OPTIONS).optional(), // Deprecated
   
   // Event intent (default, can be overridden per event) - multiple selections allowed
-  intent: z.array(z.enum(["networking", "friends", "discussion", "fun", "explore", "flexible"])).min(1, "请至少选择一个活动意图"),
+  intent: z.array(z.enum(["networking", "friends", "discussion", "fun", "explore", "romance", "flexible"])).min(1, "请至少选择一个活动意图"),
   
   // Culture & Language - Required for matching algorithm
   hometownRegionCity: z.string().min(1, "请选择家乡"),

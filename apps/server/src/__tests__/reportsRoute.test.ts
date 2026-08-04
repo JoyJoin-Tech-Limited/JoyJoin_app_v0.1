@@ -81,10 +81,16 @@ vi.mock("../adminAuth", () => ({
   requireOperatorOrAbove: (_req: any, _res: any, next: any) => next(),
 }));
 
-const mockValidateContentSafe = vi.fn();
+const mockValidateContentSafeAsync = vi.fn();
 
 vi.mock("../lib/contentSafety", () => ({
-  validateContentSafe: mockValidateContentSafe,
+  validateContentSafeAsync: mockValidateContentSafeAsync,
+}));
+
+const mockRecordViolation = vi.fn();
+
+vi.mock("../abuseDetection", () => ({
+  recordViolation: mockRecordViolation,
 }));
 
 const mockLoggerInfo = vi.fn();
@@ -149,7 +155,7 @@ function cookieHeader(response: Response) {
 describe("POST /api/reports", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockValidateContentSafe.mockReturnValue({ safe: true });
+    mockValidateContentSafeAsync.mockResolvedValue({ safe: true });
   });
 
   it("returns 401 for unauthenticated requests", async () => {
@@ -181,7 +187,7 @@ describe("POST /api/reports", () => {
   });
 
   it("returns 400 when description fails content safety", async () => {
-    mockValidateContentSafe.mockReturnValue({
+    mockValidateContentSafeAsync.mockImplementation(async () => ({
       safe: false,
       violation: {
         type: "harassment",
@@ -190,7 +196,7 @@ describe("POST /api/reports", () => {
         message: "内容包含不当用语",
         matchedKeywords: ["傻逼"],
       },
-    });
+    }));
 
     await withServer(async (baseUrl) => {
       const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
@@ -205,7 +211,8 @@ describe("POST /api/reports", () => {
       expect(res.status).toBe(400);
       const body = (await res.json()) as { code: string };
       expect(body.code).toBe("CONTENT_VIOLATION");
-      expect(mockValidateContentSafe).toHaveBeenCalledWith("你这个傻逼", "reportDescription");
+      expect(mockValidateContentSafeAsync).toHaveBeenCalledWith("你这个傻逼", "reportDescription", { userId: "user-123" });
+      expect(mockRecordViolation).toHaveBeenCalledWith("user-123", "harassment", "warning");
     });
   });
 

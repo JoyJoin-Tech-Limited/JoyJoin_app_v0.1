@@ -52,6 +52,20 @@ User-facing product copy must use the following compliant terms. Internal techni
 
 > New docs, UI copy, and notifications must not reintroduce `会员` or `membership` as user-facing product terms.
 
+### Terminology: 磁场引擎 matching engine naming (2026-08-03)
+
+The matching algorithm system carries an internal engineering brand. These are **internal/documentation vocabulary** — user-facing copy must NOT use 磁场引擎/算法/权重/评分 mechanism words (🔴 copy rules).
+
+| Term | English | Refers to |
+|------|---------|-----------|
+| 磁场引擎 | Magnetism Engine | The matching algorithm system (L1 filters → 6D/7D pair scoring → greedy group formation → outcome calibration) |
+| 同频指数 | Resonance Index | Pair score 0–100 (user-facing allowed) |
+| 同频雷达 | Kindred Radar | User-facing radar visualization (already shipped) |
+| 缘分加成 | Serendipity Bonus | Post-weight bonus family (e.g. wouldMeetAgain +5) |
+| 引力加成 | Gravity Bonus | Mutual-romance +5 bonus (mutual-only) |
+
+> Do not use 「心动信号」(dating-show collision) or 「磁力引擎」(Kuaishou ad platform). Full naming system + uplift roadmap: `docs/systems/MAGNETISM_ENGINE.md`.
+
 ### Connection Model (Canonical)
 
 Direct messaging is **not** the canonical continuation model for JoyJoin. The structured connection system is:
@@ -114,6 +128,16 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Visual status:** 阿浪专属人物、区域横幅、找到后场景和结果场景正式图仍为 `awaiting-approved-art`；当前 bundled 图均明确标注“场景示意”，不得宣称正式阿浪美术已完成。Profile 使用经产品授权自主设计的 12 个 512×768 透明 V4 动物像素角色并从 CDN 加载，基础角色已包含初始服装，图片失败时回退到 character-only 角色。未获批的装备 raster 不产生任何可见伪层；穿搭状态仍由服务端保存，正式分层装备美术继续等待审批。
 - **Canonical implementation docs:** `docs/alang-prototype/repository-audit.md`、`implementation-map.md`、`assets-required.md`。
 
+**51. Flow 1 Intro Overlay Revamp — "JoyJoin Play Mode"** *(2026-08-03)*
+- **Scope:** Mini-program onboarding final step (`apps/mini-program/src/pages/onboarding/profile-review/index.tsx`), shown once per user after the `UnboxingCeremony` completes.
+- **Component stack:** `FlowShell` (with `entranceMode='cut'`) → `ExperienceEntryFlow` → `ExperienceDetail`. The shell skips the packed-box entrance beat because the ceremony already delivered the box metaphor.
+- **Content:** Explains event vs street play modes with archetype-personalized copy from `packages/shared/src/copy/flowAnimationCopy.ts` (`getArchetypeSubline(archetypeId)`). World banner art uses bundled Lovart assets with CDN fallback; detail page gains a bottom forward CTA that completes the flow and routes to Discover.
+- **Gating:** DB-backed feature flag `flowIntroEnabled` (env `FLOW_INTRO_ENABLED`, default `true`) from `GET /api/auth/user` `features`; seen-state key `joyjoin_flow_seen:v2:joyjoin-intro:<userId>` persisted via `FlowStorage.ts`. When disabled or already seen, the user proceeds straight to Discover.
+- **Reduced motion:** `prefers-reduced-motion` collapses all entrance choreography to near-instant fades and disables continuous ambient loops; haptics and the forward CTA remain usable.
+- **Analytics:** client events `flow_view`, `flow_skip`, `flow_cta_tap`, `flow_banner_tap`, `flow_detail_open`, `flow_detail_back`, `flow_node_tap`, `flow_tap_ahead`, `flow_complete`; dedicated detail-CTA event `flow_detail_cta_tap` is emitted instead of `flow_cta_tap` to keep the shell CTA metric clean. Server whitelist in `apps/server/src/routes/domains/analytics.ts`.
+- **Kill switch / rollback:** disable `flowIntroEnabled` if completion telemetry regresses or app-kill rate exceeds ~3%.
+- **Canonical docs:** `docs/agent-context/flow-animation.md`, `docs/agent-context/onboarding.md`.
+
 **50. Operator Review Gate for Matching** *(2026-07-09)*
 - **Scope:** Server-side matching review gate and admin review queue.
 - **Feature flag:** `matchingOperatorReviewEnabled` (DB-backed, env `MATCHING_OPERATOR_REVIEW_ENABLED`, default `true`). When enabled, `poolMatchingService.ts` holds formed groups in a pending operator-review state instead of immediately revealing matches to users.
@@ -139,11 +163,11 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Zero-discount guard:** percentage coupons (e.g., `WELCOME50`) that would compute a zero-cent discount under `TEST_PAYMENT_PRICE_IN_CENTS=1` pricing are dropped from the payment payload before `POST /api/event-pools/:id/register-with-payment`, preventing server-side rejection of the order.
 - **Analytics:** `ticket_tail_image_impression`, `ticket_tail_image_load_error`.
 
-**47. ProfileReviewInviteCard — Discover Invitation Teaser on Profile Review** *(2026-06-30)*
+**47. ProfileReviewInviteCard — Discover Invitation Teaser on Profile Review** *(2026-06-30; redesigned 2026-08-03)*
 - **Scope:** Mini-program onboarding final step (`apps/mini-program/src/pages/onboarding/profile-review/index.tsx`).
-- **Component:** `apps/mini-program/src/components/onboarding/ProfileReviewInviteCard.tsx` renders a warm invitation teaser below the welcome gift card after the coupon request settles. Uses Lovart illustration `apps/mini-program/src/assets/lovart/profile-review/invite-teaser.webp` with CDN-first loading, local fallback, and `BrandLogo` final fallback. Supports reduced-motion, disabled/busy states, and `haptics('heavy')` on tap.
-- **Behavior:** Tapping the card calls the same completion path as the primary CTA and routes to Discover. Card reveal triggers a predictive `GET /api/shell/discover` prefetch via the existing `PrefetchEngine`, warming the Discover tab cache before navigation.
-- **Analytics:** `profile_review_invite_impression`, `profile_review_invite_tap`, and `profile_review_discover_prefetch_hit` (with `poolCount`).
+- **Component:** `apps/mini-program/src/components/onboarding/ProfileReviewInviteCard.tsx` renders a display-only profile summary card below the welcome gift card after the coupon request settles. Full-bleed Lovart illustration `apps/mini-program/src/assets/lovart/profile-review/invite-teaser.webp` with CDN-first loading and local fallback. A "kindred radar" overlay centers the user's archetype and pops in four satellite archetypes around it; summary line shows archetype · top interest · intent. Supports reduced-motion entrance and ambient radar sweep.
+- **Behavior:** The card is **display-only** — it does not complete onboarding. The floating primary CTA remains the sole completion path. Card reveal triggers a predictive `GET /api/shell/discover` prefetch via the existing `PrefetchEngine`, warming the Discover tab cache before navigation.
+- **Analytics:** `profile_review_invite_impression` and `profile_review_discover_prefetch_hit` (with `poolCount`). `profile_review_invite_tap` was retired 2026-08-03 because the card no longer has a tap action.
 
 **46. WelcomeGiftCard — Lifetime Welcome Coupon on Profile Review** 🎁 *(2026-06-30)*
 - **Scope:** Mini-program onboarding final step (`apps/mini-program/src/pages/onboarding/profile-review/index.tsx`) and server coupon award.

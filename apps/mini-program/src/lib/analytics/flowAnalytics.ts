@@ -12,6 +12,7 @@ export type FlowEventType =
   | 'flow_banner_tap'
   | 'flow_detail_open'
   | 'flow_detail_back'
+  | 'flow_detail_cta_tap'
   | 'flow_node_tap'
   | 'flow_tap_ahead'
   | 'flow_complete'
@@ -70,6 +71,12 @@ class FlowAnalytics {
 
   trackDetailBack(experience: FlowBannerId, dwellMs: number): void {
     this.track('flow_detail_back', { flow: 'intro', experience, dwell_ms: dwellMs })
+  }
+
+  /** Fired by the detail page's forward CTA — kept separate from trackCtaTap
+   *  so the shell CTA metric only counts the entry-screen button. */
+  trackDetailCtaTap(experience: FlowBannerId): void {
+    this.track('flow_detail_cta_tap', { flow: 'intro', experience })
   }
 
   trackNodeTap(flow: FlowKind, nodeId: string, nodeIndex: number): void {

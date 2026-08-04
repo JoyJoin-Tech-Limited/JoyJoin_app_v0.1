@@ -18,7 +18,8 @@ import {
   getMiniScriptSecrets,
   listParticipants,
 } from '../../lib/socialIcebreakerStore';
-import { validateContentSafe, contentViolationResponse } from '../../lib/contentSafety';
+import { validateContentSafeAsync, contentViolationResponse } from '../../lib/contentSafety';
+import { recordViolation } from '../../abuseDetection';
 import { requireAuthenticatedUserId } from '../../lib/requestAuth';
 import { generateMiniScriptFrameworkWithMeta } from '../../lib/miniscriptAgent';
 import { MINISCRIPT_GENERATION_PROMPT_VERSION } from '../../ai/miniscriptPrompts';
@@ -381,9 +382,10 @@ router.post('/vote', async (req: any, res) => {
   // Content-filter free-text fields
   for (const field of [vote.who, vote.what, vote.why]) {
     if (field) {
-      const safetyResult = validateContentSafe(field, 'vote');
-      if (!safetyResult.safe && safetyResult.violation?.severity === 'severe') {
-        return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
+      const safetyResult = await validateContentSafeAsync(field, 'vote', { userId });
+      if (!safetyResult.safe && safetyResult.violation) {
+        await recordViolation(userId, safetyResult.violation.type, safetyResult.violation.severity);
+        return res.status(400).json(contentViolationResponse(safetyResult.violation).body);
       }
     }
   }

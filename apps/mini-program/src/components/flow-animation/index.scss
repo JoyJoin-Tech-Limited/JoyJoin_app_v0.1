@@ -1,4 +1,6 @@
 @use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+@use '../../styles/reveal-motion' as *;
 
 .flow-shell {
   position: fixed;
@@ -36,14 +38,14 @@
   }
 
   &__title {
-    color: $color-text-secondary;
+    color: $color-text-secondary-on-light;
     font-size: $font-size-xs;
   }
 
   &__identity-chip {
     flex: 0 0 auto;
     display: inline-block;
-    max-width: 200rpx;
+    max-width: 300rpx;
     padding: 4rpx 16rpx;
     border: 1rpx solid currentColor;
     border-radius: 999rpx;
@@ -62,11 +64,9 @@
     min-height: 88rpx;
     margin: 0;
     padding: 0 24rpx;
-    border: 1rpx solid rgba($color-primary, 0.14);
-    border-radius: 999rpx;
-    color: $color-primary-dark;
-    background: rgba($color-surface, 0.94);
-    box-shadow: 0 8rpx 20rpx rgba($color-primary, 0.1);
+    border: 0;
+    color: $color-text-secondary-on-light;
+    background: transparent;
     font-weight: $font-weight-semibold;
     font-size: $font-size-sm;
     line-height: 86rpx;
@@ -94,7 +94,7 @@
     height: 96rpx;
     opacity: 0;
     transform: translateY(12rpx);
-    transition: opacity 300ms ease-out, transform 300ms ease-out;
+    transition: opacity 300ms $ease-reveal-rise, transform 300ms $ease-reveal-rise;
     pointer-events: none;
 
     &--visible {
@@ -105,28 +105,48 @@
   }
 
   &__primary {
+    position: relative;
     width: 100%;
     height: 88rpx;
     margin: 0;
     border: 0;
-    border-radius: 28rpx;
+    border-radius: 32rpx;
     color: $color-text-white;
-    background: $color-primary;
-    box-shadow: 0 14rpx 30rpx rgba($color-primary, 0.28);
-    font-family: $font-cn-display;
+    background: $color-primary-dark;
+    box-shadow: 0 14rpx 30rpx rgba($color-primary-dark, 0.28);
+    @include type-brand-cta-label;
     font-size: $font-size-md;
-    font-weight: $font-weight-semibold;
     line-height: 88rpx;
+    overflow: hidden;
     transition: opacity 150ms ease-out, transform 150ms ease-out;
 
     &::after {
       border: 0;
     }
 
+    // One-shot sheen as the CTA arrives — the "your map is ready, go" beat.
+    // Runs exactly once (1 iteration, both fill parks it off-canvas), same
+    // run-twice-then-stop philosophy as the profile-review poster shimmer.
+    &::before {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 40%;
+      background: linear-gradient(110deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+      content: '';
+      pointer-events: none;
+      transform: translateX(-160%);
+    }
+
     &--pressed {
       opacity: 0.88;
       transform: scale(0.99);
     }
+  }
+
+  &__action--visible &__primary::before {
+    animation: flow-cta-sheen 900ms $ease-reveal-rise 350ms 1 both;
   }
 }
 
@@ -165,7 +185,7 @@
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 20rpx;
+  gap: $spacing-sm;
   color: $color-text-muted;
 
   &--center {
@@ -306,11 +326,13 @@
   &__intro {
     flex: 0 0 auto;
     padding: 18rpx 4rpx 28rpx;
-    opacity: 0;
-    transform: translateY(12rpx);
-    transition: opacity 420ms ease-out, transform 420ms ease-out;
+  }
 
-    &--visible {
+  // The --visible gate on __intro reveals the children with a per-line
+  // stagger (0ms / 90ms / 180ms) instead of fading the whole block at once.
+  &__intro--visible {
+    .experience-entry-flow__title-line,
+    .experience-entry-flow__subtitle {
       opacity: 1;
       transform: translateY(0);
     }
@@ -324,26 +346,34 @@
   &__title {
     color: $color-text-primary;
     font-family: $font-cn-display;
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-bold;
-    letter-spacing: 2rpx;
-    line-height: 1.4;
+    font-size: $font-size-3xl;
+    font-weight: $font-weight-black;
+    letter-spacing: 0;
+    // Display headline carve-out: 1.25 vs the 1.4 display floor (documented exception).
+    line-height: 1.25;
   }
 
   &__title-line {
     display: block;
+    opacity: 0;
+    transform: translateY(12rpx);
+    transition: opacity 360ms $ease-reveal-rise, transform 360ms $ease-reveal-rise;
 
     &--nowrap {
       white-space: nowrap;
+      transition-delay: 90ms;
     }
   }
 
   &__subtitle {
     margin-top: 16rpx;
-    color: $color-text-secondary;
+    color: $color-text-secondary-on-light;
     font-size: $font-size-base;
     letter-spacing: 0.8rpx;
     line-height: 1.6;
+    opacity: 0;
+    transform: translateY(12rpx);
+    transition: opacity 360ms $ease-reveal-rise 180ms, transform 360ms $ease-reveal-rise 180ms;
   }
 
   &__entries {
@@ -351,7 +381,7 @@
     flex: 1;
     min-height: 0;
     flex-direction: column;
-    gap: 20rpx;
+    gap: $spacing-sm;
   }
 }
 
@@ -370,9 +400,7 @@
   text-align: left;
   opacity: 0;
   transform: translateY(18rpx);
-  transition: flex 380ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 420ms ease-out, transform 420ms ease-out,
-    box-shadow 280ms ease-out;
+  transition: opacity 420ms $ease-reveal-rise, transform 420ms $ease-reveal-rise;
 
   &::after {
     position: absolute;
@@ -495,11 +523,62 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .flow-shell *,
-  .flow-shell *::before,
-  .flow-shell *::after {
+  // WeChat pipeline note: universal selectors (`.flow-shell *`) are stripped
+  // from WXSS by the Taro CSS pipeline (0 survive anywhere in dist/), so this
+  // kill list enumerates every animated/transitioned class explicitly. Keep
+  // it in sync when adding motion to these subtrees. Selectors for elements
+  // that never mount under reduced motion (box entrance overlay, settle/cut
+  // phase chrome) are intentionally omitted.
+  .flow-shell__logo,
+  .flow-shell__brand,
+  .flow-shell__action--visible .flow-shell__primary::before,
+  .experience-banner--visible::after,
+  .experience-banner--visible .experience-banner__world,
+  .flow-node__marker,
+  .flow-node--current::before,
+  .flow-timeline--teacher-pulse::after,
+  .flow-lifecycle__glow-sweep,
+  .jj-flow-icon--ai-match.jj-flow-icon--active,
+  // The detail overlay lives outside .flow-shell — its enter/stagger/
+  // scene-fade animations must die for reduced-motion users too.
+  .experience-detail,
+  .experience-detail__scene-image,
+  .experience-detail__scene-progress-line,
+  .experience-detail__step,
+  .experience-detail__line {
     animation: none !important;
+  }
+
+  .flow-shell__skip,
+  .flow-shell__action,
+  .flow-shell__primary,
+  .flow-progress-line__active,
+  .flow-node__marker,
+  .flow-node__dot,
+  .flow-node__label,
+  .flow-node__detail,
+  .experience-entry-flow__title-line,
+  .experience-entry-flow__subtitle,
+  .experience-banner,
+  .jj-flow-icon,
+  .experience-detail__back {
     transition-duration: 1ms !important;
+  }
+
+  // These elements reveal ONLY via a forwards-fill animation from a hidden
+  // base state — once animations die they must be forced visible, or reduced-
+  // motion users get blank content.
+  .flow-shell__logo,
+  .flow-shell__brand,
+  .experience-detail__step,
+  .experience-detail__scene-image {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .experience-detail__scene-progress-line,
+  .experience-detail__line {
+    transform: none !important;
   }
 }
 
@@ -607,16 +686,12 @@
     z-index: 0 !important;
     overflow: hidden;
     background:
-      radial-gradient(circle at 84% 19%, var(--world-glow, rgba($flow-brand-light, 0.24)), transparent 25%),
-      radial-gradient(circle at 12% 72%, var(--world-glow-soft, rgba($flow-accent-city, 0.1)), transparent 25%);
+      radial-gradient(circle at 84% 19%, rgba($flow-brand-light, 0.24), transparent 25%),
+      radial-gradient(circle at 12% 72%, rgba($flow-accent-city, 0.1), transparent 25%);
     pointer-events: none;
   }
 
   &--personalized {
-    .flow-shell__game-bg {
-      background: none;
-    }
-
     .flow-shell__game-bg::after {
       display: none;
     }
@@ -641,8 +716,7 @@
     .flow-shell__skip {
       align-self: flex-start;
       margin-top: 0;
-      color: $flow-brand-primary;
-      background: rgba($flow-surface-primary, 0.92);
+      color: $color-text-secondary-on-light;
     }
 
     .flow-shell__canvas {
@@ -665,7 +739,7 @@
     }
 
     .experience-entry-flow__entries {
-      gap: 20rpx;
+      gap: $spacing-sm;
       transform: none;
     }
 
@@ -864,12 +938,12 @@
   &__logo {
     flex: 0 0 auto;
     opacity: 0;
-    animation: flow-logo-enter 360ms ease-out forwards;
+    animation: flow-logo-enter 360ms $ease-reveal-rise forwards;
   }
 
   &__brand {
     opacity: 0;
-    animation: flow-logo-enter 360ms 60ms ease-out forwards;
+    animation: flow-logo-enter 360ms 60ms $ease-reveal-rise forwards;
   }
 
   &__entrance {
@@ -951,7 +1025,7 @@
     color: $color-text-secondary;
     font-size: $font-size-sm;
     opacity: 0;
-    animation: flow-logo-enter 400ms 900ms ease-out forwards;
+    animation: flow-logo-enter 400ms 900ms $ease-reveal-rise forwards;
   }
 
   &--entrance-settle &__entrance {
@@ -973,23 +1047,73 @@
 
   &--entrance-settle &__header {
     opacity: 0;
-    animation: flow-header-enter 540ms 120ms ease-out forwards;
+    animation: flow-header-enter 540ms 120ms $ease-reveal-rise forwards;
   }
 
   &--entrance-settle &__canvas {
     opacity: 0;
-    animation: flow-canvas-enter 540ms 280ms ease-out forwards;
+    animation: flow-canvas-enter 540ms 280ms $ease-reveal-rise forwards;
   }
 
   &--entrance-settle &__action {
     opacity: 0;
-    animation: flow-action-enter 400ms 520ms ease-out forwards;
+    animation: flow-action-enter 400ms 520ms $ease-reveal-rise forwards;
   }
 
   &--entrance-done &__header,
   &--entrance-done &__canvas,
   &--entrance-done &__action {
     opacity: 1;
+  }
+
+  // entranceMode='cut' (Flow 1, which always follows the UnboxingCeremony's
+  // own box moment): the box beat is skipped but the shell chrome still
+  // staggers in. Mirrors the settle-phase keyframes — box mode must NOT get
+  // these, or they would replay when the phase flips settle → done. The class
+  // is only added when reduced motion is off (FlowShell.tsx), so the
+  // prefers-reduced-motion kill switch never strands these at opacity 0.
+  &--entrance-cut &__header {
+    opacity: 0;
+    animation: flow-header-enter 540ms 120ms $ease-reveal-rise forwards;
+  }
+
+  &--entrance-cut &__canvas {
+    opacity: 0;
+    animation: flow-canvas-enter 540ms 280ms $ease-reveal-rise forwards;
+  }
+
+  &--entrance-cut &__action {
+    opacity: 0;
+    animation: flow-action-enter 400ms 520ms $ease-reveal-rise forwards;
+  }
+}
+
+// Personalized shell world tints (2026-08-03): each archetype gets a quiet
+// two-stop wash over $flow-bg-primary, built from its centralized
+// $flow-world-* palette (_variables.scss). Static classes only — no CSS
+// custom properties (WXSS-unsafe). Specificity (0,2,0) beats the base
+// .flow-shell__game-bg gradient; the --personalized branch no longer blanks
+// the game-bg so these tints are what actually shows.
+$flow-world-tints: (
+  ('corgi', $flow-world-corgi-bg, $flow-world-corgi-accent),
+  ('rooster', $flow-world-rooster-bg, $flow-world-rooster-accent),
+  ('hamster_praise', $flow-world-hamster-praise-bg, $flow-world-hamster-praise-accent),
+  ('fox', $flow-world-fox-bg, $flow-world-fox-accent),
+  ('dolphin_calm', $flow-world-dolphin-calm-bg, $flow-world-dolphin-calm-accent),
+  ('spider', $flow-world-spider-bg, $flow-world-spider-accent),
+  ('koala', $flow-world-koala-bg, $flow-world-koala-accent),
+  ('octopus', $flow-world-octopus-bg, $flow-world-octopus-accent),
+  ('owl', $flow-world-owl-bg, $flow-world-owl-accent),
+  ('elephant', $flow-world-elephant-bg, $flow-world-elephant-accent),
+  ('turtle', $flow-world-turtle-bg, $flow-world-turtle-accent),
+  ('cat', $flow-world-cat-bg, $flow-world-cat-accent),
+);
+
+@each $id, $bg, $accent in $flow-world-tints {
+  .flow-shell--#{$id} .flow-shell__game-bg {
+    background:
+      radial-gradient(circle at 84% 19%, rgba($accent, 0.2), transparent 26%),
+      radial-gradient(circle at 12% 72%, rgba($bg, 0.9), transparent 30%);
   }
 }
 
@@ -1010,7 +1134,7 @@
     align-items: stretch;
     flex: 1 1 0;
     min-height: 0;
-    gap: 20rpx;
+    gap: $spacing-sm;
   }
 }
 
@@ -1037,22 +1161,32 @@
     top: 0;
     right: 0;
     bottom: 0;
-    left: 42%;
+    left: 30%;
     z-index: 0;
-    width: 62%;
+    // left 30% + width 70% lands the art flush on the card's right edge —
+    // 74% let the transformed rect spill ~5px past the viewport on 375px.
+    width: 70%;
     height: 100%;
     opacity: 0.96;
-    filter: saturate(0.94) contrast(0.96);
 
     &--event {
       transform: scale(1.04);
-      transform-origin: 64% center;
+      // Right-origin keeps the ken-burns zoom anchored to the card edge so
+      // the scaled rect never crosses the viewport boundary.
+      transform-origin: right center;
     }
 
     &--street {
       transform: scale(1.04);
-      transform-origin: 62% center;
+      transform-origin: right center;
     }
+  }
+
+  // Ken-burns settle: the one crafted micro-interaction on the banners. The
+  // `to` frame matches the static scale(1.04) on --event/--street exactly so
+  // the fill hands off seamlessly.
+  &--visible &__world {
+    animation: banner-world-settle 1.6s $ease-reveal-rise both;
   }
 
   &__world-scrim {
@@ -1062,14 +1196,14 @@
 
     &--event {
       background:
-        linear-gradient(90deg, rgba($flow-scrim-warm-top, 0.99) 0 38%, rgba($flow-scrim-warm-top, 0.72) 54%, rgba($flow-scrim-warm-top, 0.04) 76%),
+        linear-gradient(90deg, rgba($flow-scrim-warm-top, 0.98) 0 30%, rgba($flow-scrim-warm-top, 0.6) 52%, rgba($flow-scrim-warm-top, 0.05) 78%),
         linear-gradient(90deg, rgba($flow-scrim-warm-mid, 0.16), rgba($flow-scrim-warm-glow, 0.04));
       box-shadow: inset 6rpx 0 0 rgba($flow-accent-human, 0.56);
     }
 
     &--street {
       background:
-        linear-gradient(90deg, rgba($flow-scrim-cool-top, 0.99) 0 38%, rgba($flow-scrim-cool-top, 0.72) 54%, rgba($flow-scrim-cool-top, 0.04) 76%),
+        linear-gradient(90deg, rgba($flow-scrim-cool-top, 0.98) 0 30%, rgba($flow-scrim-cool-top, 0.6) 52%, rgba($flow-scrim-cool-top, 0.05) 78%),
         linear-gradient(90deg, rgba($flow-scrim-cool-top, 0.12), rgba($flow-scrim-cool-glow, 0.04));
       box-shadow: inset 6rpx 0 0 rgba($flow-accent-city, 0.62);
     }
@@ -1130,16 +1264,12 @@
     align-items: center;
     width: 100%;
     padding: 16rpx 24rpx;
-    border: 1rpx solid rgba($flow-brand-primary, 0.1);
-    border-radius: 24rpx;
     box-sizing: border-box;
-    background: rgba($flow-surface-primary, 0.88);
-    box-shadow: 0 10rpx 24rpx rgba($color-text-primary, 0.07);
   }
 
   &__title {
     margin-top: 0;
-    color: $flow-brand-primary;
+    color: $color-primary-dark;
     font-family: $font-cn-display;
     font-size: $font-size-lg;
     font-weight: $font-weight-bold;
@@ -1174,27 +1304,22 @@
     z-index: 3;
     right: 24rpx;
     bottom: 22rpx;
-    min-width: 152rpx;
-    min-height: 48rpx;
-    padding: 0 18rpx;
-    border: 0;
-    border-radius: 999rpx;
-    background: $color-primary;
-    box-shadow: 0 10rpx 24rpx rgba($color-primary, 0.26);
-    justify-content: center;
+    min-height: 88rpx;
+    align-items: center;
   }
 
   &__link {
-    color: $color-text-white;
+    color: $color-primary-dark;
     font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
     letter-spacing: 1rpx;
   }
 
   &__arrow {
     width: 14rpx;
     height: 14rpx;
-    border-top: 3rpx solid $color-text-white;
-    border-right: 3rpx solid $color-text-white;
+    border-top: 3rpx solid $color-primary-dark;
+    border-right: 3rpx solid $color-primary-dark;
     transform: rotate(45deg);
   }
 }
@@ -1277,7 +1402,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex: 0 0 80rpx;
+    // Contains an 88rpx back button — the row must be at least as tall.
+    flex: 0 0 88rpx;
   }
 
   &__back {
@@ -1351,7 +1477,7 @@
 
   &__subtitle {
     margin-top: 6rpx;
-    color: $color-text-secondary;
+    color: $color-text-secondary-on-light;
     font-size: $font-size-base;
     line-height: 1.6;
   }
@@ -1410,7 +1536,7 @@
     width: 100%;
     height: 100%;
     opacity: 0;
-    animation: experience-scene-image-fade 500ms ease-out 200ms forwards;
+    animation: experience-scene-image-fade 500ms $ease-reveal-rise 200ms forwards;
   }
 
   &__scene-scrim {
@@ -1463,7 +1589,7 @@
     background: rgba($flow-brand-primary, 0.25);
     transform: scaleX(0);
     transform-origin: left;
-    animation: experience-progress-line 380ms 420ms ease-out forwards;
+    animation: experience-progress-line 380ms 420ms $ease-reveal-rise forwards;
   }
 
   &__step {
@@ -1479,7 +1605,7 @@
     box-shadow: none;
     opacity: 0;
     transform: translateY(12rpx);
-    animation: experience-step-enter 360ms ease-out forwards;
+    animation: experience-step-enter 360ms $ease-reveal-rise forwards;
   }
 
   &__step-icon {
@@ -1516,7 +1642,7 @@
 
   &__step-description {
     margin-top: 4rpx;
-    color: $color-text-secondary;
+    color: $color-text-secondary-on-light;
     font-size: $font-size-xs;
     line-height: 1.6;
   }
@@ -1532,7 +1658,7 @@
     background: $flow-brand-primary;
     transform: scaleY(0);
     transform-origin: top;
-    animation: experience-line-grow 280ms 250ms ease-out forwards;
+    animation: experience-line-grow 280ms 250ms $ease-reveal-rise forwards;
   }
 
   &__closing {
@@ -1547,6 +1673,13 @@
 
   &__bottom-safe {
     flex: 0 0 24rpx;
+  }
+
+  // Bottom forward-CTA row — reuses .flow-shell__primary for the button itself.
+  // (The detail root padding already reserves the bottom safe area.)
+  &__action {
+    flex: 0 0 auto;
+    padding: 16rpx 0 24rpx;
   }
 }
 
@@ -2054,6 +2187,22 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+// The `to` frame must match the static transform on
+// .experience-banner__world--event/--street (scale(1.04)) so the `both` fill
+// hands off to the resting state without a jump.
+@keyframes banner-world-settle {
+  from { transform: scale(1.1); }
+  to { transform: scale(1.04); }
+}
+
+// One-shot CTA sheen: the 40%-wide highlight starts parked at translateX(-160%)
+// and must clear the button (100% / 40% = 250%); 400% parks it fully off-canvas
+// so the `both` fill never leaves a residue.
+@keyframes flow-cta-sheen {
+  from { transform: translateX(-160%); }
+  to { transform: translateX(400%); }
+}
+
 @keyframes experience-step-enter {
   to { opacity: 1; transform: translateY(0); }
 }
@@ -2123,8 +2272,8 @@
     }
 
     .experience-entry-flow__title {
-      font-size: 40rpx;
-      // Extreme-height carve-out: 1.3 vs the 1.4 display floor (documented exception).
+      font-size: 44rpx;
+      // Extreme-height carve-out: a hair airier than the 1.25 display base.
       line-height: 1.3;
     }
 
@@ -2173,13 +2322,14 @@
     }
 
     .flow-shell__action {
-      height: 78rpx;
+      height: auto;
     }
 
     .flow-shell__primary {
-      height: 72rpx;
+      // Never shrink the primary CTA below the 88rpx tap floor.
+      height: 88rpx;
       border-radius: 24rpx;
-      line-height: 72rpx;
+      line-height: 88rpx;
     }
   }
 
@@ -2229,7 +2379,7 @@
     }
 
     .experience-entry-flow__title {
-      font-size: 34rpx;
+      font-size: 38rpx;
       line-height: 1.3;
     }
 
@@ -2266,13 +2416,14 @@
     }
 
     .flow-shell__action {
-      height: 70rpx;
+      height: auto;
     }
 
     .flow-shell__primary {
-      height: 64rpx;
+      // Never shrink the primary CTA below the 88rpx tap floor.
+      height: 88rpx;
       font-size: 25rpx;
-      line-height: 64rpx;
+      line-height: 88rpx;
     }
   }
 }

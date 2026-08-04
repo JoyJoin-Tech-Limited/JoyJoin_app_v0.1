@@ -22,6 +22,9 @@ export default defineConfig({
     },
     env: {
       RUN_PLAN_TEMPLATES_ENABLED: 'false',
+      // Tier-1 msgSecCheck stays off in unit tests (no network); the wrapper's
+      // own tests mock featureFlags and wechatMsgSecCheck directly.
+      CONTENT_MODERATION_MSGSECCHECK_ENABLED: 'false',
     },
   },
 });

@@ -488,6 +488,7 @@ export function registerBlindBoxEventRoutes(app: Express): void {
               (s) => ({ topicId: s.topicId, heatLevel: s.level ?? 1 })
             )
           : null;
+        const attendee = matchedAttendees.find((a: any) => a.userId === m.id);
         return {
           userId: m.id,
           displayName: m.displayName || '神秘嘉宾',
@@ -503,6 +504,8 @@ export function registerBlindBoxEventRoutes(app: Express): void {
           industryCategory: m.industryCategory,
           industryCategoryLabel: m.industryCategoryLabel,
           interestsWithHeat,
+          intent: m.intent ?? null,
+          eventIntent: Array.isArray(attendee?.eventIntent) ? attendee.eventIntent : null,
         };
       });
 

@@ -11,7 +11,8 @@ import { queueSemanticProfileRecompute } from "../../userSemanticProfileService"
 import { normalizeProfileInterests, getInterestById, validateTelemetry } from "@shared/interests";
 import { updateProfileSchema, updatePersonalitySchema, updateFullProfileSchema } from "@shared/schema";
 import { logger } from "../../lib/logger";
-import { validateContentSafe, contentViolationResponse } from "../../lib/contentSafety";
+import { validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
+import { recordViolation } from "../../abuseDetection";
 
 const interestSelectionSchema = z.object({
   topicId: z.string(),
@@ -128,8 +129,9 @@ export function registerProfileRoutes(app: Express): void {
 
       const displayName = result.data.displayName;
       if (displayName) {
-        const safetyResult = validateContentSafe(displayName, "displayName");
+        const safetyResult = await validateContentSafeAsync(displayName, "displayName", { userId });
         if (!safetyResult.safe) {
+          await recordViolation(userId, safetyResult.violation!.type, safetyResult.violation!.severity);
           return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
         }
       }
@@ -553,8 +555,9 @@ export function registerProfileRoutes(app: Express): void {
         occupationId: profileData.occupationId,
       })) {
         if (typeof value === 'string' && value.trim().length > 0) {
-          const safetyResult = validateContentSafe(value, field);
+          const safetyResult = await validateContentSafeAsync(value, field, { userId });
           if (!safetyResult.safe) {
+            await recordViolation(userId, safetyResult.violation!.type, safetyResult.violation!.severity);
             return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
           }
         }

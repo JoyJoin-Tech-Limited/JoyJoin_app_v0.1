@@ -49,17 +49,18 @@ export function getArchetypeSubline(archetypeId?: string | null): string {
   return (archetypeId && ARCHETYPE_SUBLINES[archetypeId]) || FLOW1_HOME_COPY.fallbackSubline;
 }
 
-// ─── Flow 1 · Banners (titles/eyebrows unchanged by design) ───
+// ─── Flow 1 · Banners ───
+// Eyebrows disambiguate the two 盲盒 modes at a glance (2026-08-03 revamp).
 
 export const FLOW1_ENTRY_COPY = {
   event: {
-    eyebrow: '人与人',
+    eyebrow: '和新朋友同桌',
     title: '盲盒活动',
     /** Concrete mechanics: 选活动 → 凑成一桌 → 线下. */
     bannerLine: '挑一场活动，凑成一桌，线下见',
   },
   street: {
-    eyebrow: '人与城市',
+    eyebrow: '一个人也能玩',
     title: '街头盲盒',
     /** Invitation/story framing ONLY — no availability, schedule, or NPC-presence claims. */
     bannerLine: '一条线索引路，把城市走成故事',
@@ -83,7 +84,7 @@ export interface ExperienceDetailCopy {
 export const EXPERIENCE_DETAIL_COPY: Record<'event' | 'street', ExperienceDetailCopy> = {
   event: {
     heroSubtitle: '不是随机拼桌，是认真凑一桌合拍的人',
-    sceneTitle: '报名之后，悦仔开始认真凑这一桌',
+    sceneTitle: '报名之后，悦仔就开始为你留座了',
     closing: '先有一件共同想做的事，认识彼此就自然多了',
     steps: [
       { title: '挑一场想参加的', description: '先从你真正感兴趣的活动开始' },
@@ -98,9 +99,9 @@ export const EXPERIENCE_DETAIL_COPY: Record<'event' | 'street', ExperienceDetail
     closing: '不用约齐人，一个人也能把城市走成故事',
     steps: [
       { title: '挑一条顺眼的线索', description: '每条线索背后，都是一封城市的邀请' },
-      { title: '接到一件小任务', description: '不必准备很久，照着提示就能开始' },
+      { title: '接到一件小任务', description: '照着提示就能开始，随时出发' },
       { title: '边走边发现', description: '路程不必很远，也能重新看看熟悉的街道' },
-      { title: '留下这次发现', description: '完成之后，把这段经历收进你的城市故事' },
+      { title: '留下这一程', description: '完成之后，把这段经历收进你的城市故事' },
     ],
   },
 };
@@ -176,13 +177,15 @@ export function resolveFlow2NodeDescription(template: string, facts?: FlowLifecy
 export const FLOW_SHELL_COPY = {
   flow1Title: '先看看怎么玩',
   flow2Title: '这次出发，正在一步步发生',
-  identityChipFallback: '你的玩法地图',
+  identityChipFallback: '你的地图',
   skip: '跳过',
-  ctaExplore: '开始探索',
+  bannerEnter: '进入看看',
+  detailBack: '两种玩法',
+  ctaExplore: '去看看有什么局',
   ctaViewActivity: '查看我的活动',
 } as const;
 
 export function getIdentityChipLabel(archetypeNameCn?: string | null): string {
   const name = archetypeNameCn?.trim();
-  return name ? `${name}的玩法地图` : FLOW_SHELL_COPY.identityChipFallback;
+  return name ? `${name}·地图` : FLOW_SHELL_COPY.identityChipFallback;
 }

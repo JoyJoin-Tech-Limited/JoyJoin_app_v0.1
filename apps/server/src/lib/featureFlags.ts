@@ -120,6 +120,29 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  approve or reject the formed groups. Default: true. Env fallback:
    *  MATCHING_OPERATOR_REVIEW_ENABLED. */
   matchingOperatorReviewEnabled: "MATCHING_OPERATOR_REVIEW_ENABLED",
+  /** Magnetism Engine Phase 0 / W2: hard-skip (-1 sentinel) for pairs whose
+   *  match_history says either member would NOT meet again. Policy-pending
+   *  (docs/systems/MAGNETISM_ENGINE.md §7) — default false so writing real
+   *  match_history rows activates only the +5 re-match boost, which stays
+   *  unconditional. Env fallback: MATCH_NEVER_MEET_SENTINEL (default: false). */
+  matchNeverMeetSentinel: "MATCH_NEVER_MEET_SENTINEL",
+  /** Magnetism Engine 惊艳开局包 / P1: group-composition rules at the commit
+   *  gate (no-isolate ≥60 strong tie, energizer presence with pool-level
+   *  exemption, topic anchor with cold-start skip) + explore-intent
+   *  dispersion nudge during expansion. Default false until test-pool
+   *  dual-run validation. Env fallback: MAGNETISM_GROUP_RULES_ENABLED. */
+  magnetismGroupRulesEnabled: "MAGNETISM_GROUP_RULES_ENABLED",
+  /** Magnetism Engine 惊艳开局包 / P2: weight profile v2 (chemistry 28→20,
+   *  interest 28→32, socialAffinity 20→23, language 4→5; 7D analogous).
+   *  Theory-ranked rebalance, flag-gated; v1 stays default until validated.
+   *  Env fallback: MAGNETISM_WEIGHT_PROFILE_V2_ENABLED. */
+  magnetismWeightProfileV2Enabled: "MAGNETISM_WEIGHT_PROFILE_V2_ENABLED",
+  /** Magnetism Engine Phase 0 / W3: gate the chemistry-calibration READ path.
+   *  The stats writer went live with match_history derivation (Phase 0), but
+   *  calibrated deltas are a Phase-3 activation — keep scoring on the
+   *  hand-authored matrix until shadow evidence + operator sign-off.
+   *  Env fallback: MATCH_CHEMISTRY_CALIBRATION_ENABLED (default: false). */
+  matchChemistryCalibrationEnabled: "MATCH_CHEMISTRY_CALIBRATION_ENABLED",
   /** Alang/Flash digital-NPC kill-switch. When false, hides the legacy Alang
    * prototype and all formal Flash routes. Env fallback: ALANG_ENABLED
    * (default: false). */
@@ -154,6 +177,11 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  happens after you join" node row inside XiaoyueLetterCard). Ships dark.
    *  Env fallback: POOL_TEASER_ENABLED (default: false). */
   poolTeaserEnabled: "POOL_TEASER_ENABLED",
+  /** Tier-1 semantic content moderation via WeChat msgSecCheck. When on,
+   *  user-input text that passes the deterministic Tier-0 filter is also
+   *  checked by msgSecCheck (fail-open). Env fallback:
+   *  CONTENT_MODERATION_MSGSECCHECK_ENABLED (default: false). */
+  contentModerationMsgSecCheckEnabled: "CONTENT_MODERATION_MSGSECCHECK_ENABLED",
 };
 
 /**
@@ -164,6 +192,16 @@ export const FLAG_ENV_MAP: Record<string, string> = {
  */
 export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   matchingOperatorReviewEnabled: true,
+  /** Sentinel policy-pending — see FLAG_ENV_MAP note. Explicitly off so the
+   *  admin toggle UI and listFeatureFlags() show a stable default. */
+  matchNeverMeetSentinel: false,
+  /** Chemistry calibration read path is Phase-3 scope — Phase 0 only
+   *  accumulates stats. Explicitly off; see FLAG_ENV_MAP note. */
+  matchChemistryCalibrationEnabled: false,
+  /** 惊艳开局包 P1/P2 — both default off until test-pool dual-run
+   *  validation; see FLAG_ENV_MAP notes and docs/systems/MAGNETISM_ENGINE.md. */
+  magnetismGroupRulesEnabled: false,
+  magnetismWeightProfileV2Enabled: false,
   profileRedesignEnabled: true,
   profilePixelAvatarEnabled: false,
   equipmentRewardsEnabled: false,
@@ -171,6 +209,11 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   profileIdentityStageEnabled: true,
   flashShenzhenLocationGateEnabled: true,
   flashTaskRetryTestEnabled: false,
+  /** Tier-1 semantic moderation (WeChat msgSecCheck) is ON by default. The
+   *  check is budget-bounded (see CONTENT_MODERATION_TIER1_BUDGET_MS) and
+   *  fails open, so latency is bounded regardless. Ops can still disable via
+   *  env CONTENT_MODERATION_MSGSECCHECK_ENABLED=false or an admin toggle. */
+  contentModerationMsgSecCheckEnabled: true,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

@@ -61,6 +61,41 @@ export const SEMANTIC_PAIR_SCORE_WEIGHTS: PairScoreWeights = {
   semanticSimilarity: 0.06,
 };
 
+/**
+ * 磁场引擎 惊艳开局包 P2 — weight profile v2 (flag-gated, v1 stays default).
+ * Theory-ranked rebalance rationale:
+ *   - chemistry 28→20: hand-authored archetype prior, not evidence-validated —
+ *     downweighted (Finkel 2012: self-reported compatibility matching barely
+ *     predicts relationship outcomes).
+ *   - interest 28→32 / socialAffinity 20→23: strongest evidence legs —
+ *     actual-similarity effects (Montoya 2008) and homophily (McPherson 2001).
+ *   - backgroundDiversity 15 / preference 5: unchanged (exploration + scene fit).
+ *   - language 4→5: hygiene factor bump — a language mismatch is a hard
+ *     conversation blocker even though Mandarin coverage limits discrimination.
+ */
+export const LEGACY_PAIR_SCORE_WEIGHTS_V2: PairScoreWeights = {
+  chemistry: 0.20,
+  interest: 0.32,
+  socialAffinity: 0.23,
+  backgroundDiversity: 0.15,
+  preference: 0.05,
+  language: 0.05,
+};
+
+/**
+ * 7D analogue of LEGACY_PAIR_SCORE_WEIGHTS_V2 — same theory-ranked rebalance
+ * with the semanticSimilarity leg held at 6 (see LEGACY_PAIR_SCORE_WEIGHTS_V2).
+ */
+export const SEMANTIC_PAIR_SCORE_WEIGHTS_V2: PairScoreWeights = {
+  chemistry: 0.19,
+  interest: 0.30,
+  socialAffinity: 0.21,
+  backgroundDiversity: 0.14,
+  preference: 0.05,
+  language: 0.05,
+  semanticSimilarity: 0.06,
+};
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -252,12 +287,16 @@ export function calculateWeightedPairScore(
   },
   enableSemanticSimilarity = isSemanticSimilarityEnabled(),
   customWeights?: RuntimeMatchingWeights,
+  useWeightProfileV2 = false,
 ): number {
   let weights: PairScoreWeights;
   if (customWeights) {
     // Support both naming conventions: chemistry / chemistryWeight.
     // Missing keys fall back to the corresponding default so a partial
     // custom-weights object does not silently zero out a dimension.
+    // Fallbacks are pinned to the v1 LEGACY table regardless of
+    // useWeightProfileV2 — adaptive weights were tuned against v1, so the
+    // profile flag must not shift the baseline under a partial override.
     const getWeight = (
       short: keyof AdaptivePairScoreWeights,
       long: `${typeof short}Weight`,
@@ -275,9 +314,11 @@ export function calculateWeightedPairScore(
       language: getWeight('language', 'languageWeight', LEGACY_PAIR_SCORE_WEIGHTS.language),
     };
   } else {
+    // Default-table resolution: v2 tables only when the profile flag is active;
+    // strictness/adaptive overrides short-circuit above exactly as before.
     weights = enableSemanticSimilarity
-      ? SEMANTIC_PAIR_SCORE_WEIGHTS
-      : LEGACY_PAIR_SCORE_WEIGHTS;
+      ? (useWeightProfileV2 ? SEMANTIC_PAIR_SCORE_WEIGHTS_V2 : SEMANTIC_PAIR_SCORE_WEIGHTS)
+      : (useWeightProfileV2 ? LEGACY_PAIR_SCORE_WEIGHTS_V2 : LEGACY_PAIR_SCORE_WEIGHTS);
   }
 
   const total =

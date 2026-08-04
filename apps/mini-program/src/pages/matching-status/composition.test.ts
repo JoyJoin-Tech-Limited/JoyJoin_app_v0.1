@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 const pageSource = readFileSync(new URL('./index.tsx', import.meta.url), 'utf8')
 const sectionsSource = readFileSync(new URL('./MatchingStatusSections.tsx', import.meta.url), 'utf8')
 const controllerSource = readFileSync(new URL('./useMatchingStatusController.ts', import.meta.url), 'utf8')
+const revealCardSource = readFileSync(new URL('./UnifiedRevealCard.tsx', import.meta.url), 'utf8')
 
 describe('matching-status page composition', () => {
   it('delegates the largest waiting and reveal branches to local sections', () => {
@@ -55,5 +56,19 @@ describe('matching-status page composition', () => {
     expect(controllerSource).toContain('getMatchingStatusScreenState(')
     expect(controllerSource).toContain('resolveMatchingStatusAuthBootstrap(')
     expect(controllerSource).not.toContain('MATCH_PROGRESS_UPDATE')
+  })
+
+  it('renders deterministic shared highlights above the LLM prose, hidden when empty', () => {
+    // Guarded by a non-empty check so legacy payloads (no sharedHighlights) render nothing
+    expect(revealCardSource).toContain('spotlight.sharedHighlights.length > 0')
+    expect(revealCardSource).toContain("className='unified-reveal__highlights'")
+    expect(revealCardSource).toContain("className='unified-reveal__highlight-text'")
+    // Highlights block must sit between the headline and the prose body
+    const headlineIndex = revealCardSource.indexOf("className='unified-reveal__headline'")
+    const highlightsIndex = revealCardSource.indexOf("className='unified-reveal__highlights'")
+    const bodyIndex = revealCardSource.indexOf("className='unified-reveal__body'")
+    expect(headlineIndex).toBeGreaterThanOrEqual(0)
+    expect(highlightsIndex).toBeGreaterThan(headlineIndex)
+    expect(bodyIndex).toBeGreaterThan(highlightsIndex)
   })
 })

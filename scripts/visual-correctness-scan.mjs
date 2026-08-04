@@ -274,6 +274,34 @@ function measureInPage(maxPerCheck) {
   // ── 6. Text-on-text overlap (high-precision heuristic) ──
   // Two visible text elements whose boxes intersect substantially, neither
   // containing the other, with different content — almost always a collision bug.
+  //
+  // Occlusion guard: a modal/overlay layer (fixed/absolute + explicit z-index
+  // + opaque background) fully covers lower layers, so a geometric
+  // intersection with a covered element is NOT a visible collision. Without
+  // this guard every legitimate overlay page (e.g. ExperienceDetail over
+  // FlowShell) fails the gate with false blocking violations.
+  function opaqueLayerOf(el) {
+    let node = el.parentElement
+    while (node && node !== document.body) {
+      const s = getComputedStyle(node)
+      if ((s.position === 'fixed' || s.position === 'absolute') && s.zIndex !== 'auto') {
+        const z = parseInt(s.zIndex, 10)
+        if (!Number.isNaN(z)) {
+          const bg = parseRGB(s.backgroundColor)
+          return { node, z, opaque: Boolean(bg && bg.a >= 0.95) }
+        }
+      }
+      node = node.parentElement
+    }
+    return null
+  }
+
+  function occludedByHigherLayer(lower, higher) {
+    const lz = opaqueLayerOf(lower)
+    const hz = opaqueLayerOf(higher)
+    return Boolean(lz && hz && lz.node !== hz.node && lz.z < hz.z && hz.opaque)
+  }
+
   const sample = textEls.slice(0, 400)
   for (let i = 0; i < sample.length; i++) {
     for (let j = i + 1; j < sample.length; j++) {
@@ -292,6 +320,9 @@ function measureInPage(maxPerCheck) {
       if (minArea <= 0) continue
       // require a meaningful overlap of the smaller element's text box
       if (inter / minArea > 0.4 && iy > 6 && ix > 6) {
+        // Skip pairs where one side is painted over by the other's opaque,
+        // higher-z overlay — real for stacked modals, not a collision.
+        if (occludedByHigherLayer(a.el, b.el) || occludedByHigherLayer(b.el, a.el)) continue
         push({
           check: 'text-on-text-overlap',
           severity: 'blocking',

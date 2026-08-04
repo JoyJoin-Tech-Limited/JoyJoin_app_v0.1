@@ -4,7 +4,7 @@ import { venueMatchingService } from "../../venueMatchingService";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { requireAuth } from "../../middleware/auth";
 import { storage } from "../../storage";
-import { calculateUserMatchScore, matchUsersToGroups, validateWeights, DEFAULT_WEIGHTS, type MatchingWeights } from "../../userMatchingService";
+import { calculateUserMatchScore, matchUsersToGroups, DEFAULT_WEIGHTS, type MatchingWeights } from "../../userMatchingService";
 import type { User } from "@shared/schema";
 
 export function registerMatchingConfigRoutes(app: Express): void {
@@ -166,61 +166,28 @@ export function registerMatchingConfigRoutes(app: Express): void {
   });
   
   // Update matching configuration (Admin only)
+  // DEPRECATED (Phase-0 W7, 2026-08-03): this legacy endpoint writes the
+  // `matching_config` row consumed ONLY by the lab/legacy userMatchingService —
+  // it never affected the live pool-matching pipeline (poolMatchingService),
+  // which made it an admin trap. It now returns 410 Gone. Live controls:
+  // - thresholds: PUT /api/admin/matching-thresholds (admin UI: 匹配配置 /admin/matching-config)
+  // - adaptive weights: /api/admin/evolution/weights* (aiServices.ts)
   app.post("/api/matching/config", requireAdmin, requireOperatorOrAbove, async (req, res) => {
-    try {
-      
-      const config = req.body;
-      
-      const normalizedLanguageWeight =
-        config.languageWeight ??
-        ((config.cultureWeight ?? 0) + (config.conversationSignatureWeight ?? 0));
-
-      // Translate legacy admin payload keys to the active 6-dimension vocabulary.
-      // Legacy key                               → Active vocabulary key
-      // personalityWeight                        → chemistryWeight
-      // interestsWeight                          → interestWeight
-      // intentWeight                             → preferenceWeight
-      // backgroundWeight                         → backgroundDiversityWeight
-      // cultureWeight + conversationSignatureWeight → languageWeight
-      // (no legacy source)                       → socialAffinityWeight (default 0 for validation pass-through)
-      const weightsForValidation: MatchingWeights = {
-        chemistryWeight: config.chemistryWeight ?? config.personalityWeight ?? 0,
-        interestWeight: config.interestWeight ?? config.interestsWeight ?? 0,
-        preferenceWeight: config.preferenceWeight ?? config.intentWeight ?? 0,
-        backgroundDiversityWeight: config.backgroundDiversityWeight ?? config.backgroundWeight ?? 0,
-        languageWeight: normalizedLanguageWeight,
-        socialAffinityWeight: config.socialAffinityWeight ?? 0,
-      };
-
-      const configForStorage = {
-        configName: config.configName,
-        personalityWeight: weightsForValidation.chemistryWeight,
-        interestsWeight: weightsForValidation.interestWeight,
-        intentWeight: weightsForValidation.preferenceWeight,
-        backgroundWeight: weightsForValidation.backgroundDiversityWeight,
-        cultureWeight: weightsForValidation.languageWeight,
-        minGroupSize: config.minGroupSize,
-        maxGroupSize: config.maxGroupSize,
-        preferredGroupSize: config.preferredGroupSize,
-        maxSameArchetypeRatio: config.maxSameArchetypeRatio,
-        minChemistryScore: config.minChemistryScore,
-        notes: config.notes,
-        createdBy: config.createdBy,
-      };
-
-      // 验证权重
-      const validation = validateWeights(weightsForValidation);
-      
-      if (!validation.valid) {
-        return res.status(400).json({ message: validation.error });
-      }
-      
-      const updatedConfig = await storage.updateMatchingConfig(configForStorage);
-      res.json(updatedConfig);
-    } catch (error) {
-      logger.error("Error updating matching config", { error: String(error) });
-      res.status(500).json({ message: "Failed to update matching config" });
-    }
+    logger.warn("Deprecated POST /api/matching/config called (returns 410)", {
+      data: { adminId: (req as any).adminAccount?.id ?? (req.session as any)?.userId ?? "unknown" },
+    });
+    res.status(410).json({
+      message:
+        "POST /api/matching/config is deprecated and no longer accepts updates. " +
+        "This legacy config only fed the matching lab and never affected live pool matching. " +
+        "Use PUT /api/admin/matching-thresholds for live matching thresholds, " +
+        "or the /api/admin/evolution/weights endpoints for adaptive weights.",
+      deprecated: true,
+      replacementEndpoints: [
+        "PUT /api/admin/matching-thresholds",
+        "GET/POST /api/admin/evolution/weights",
+      ],
+    });
   });
   
   // Test matching scenario (Admin only - for algorithm tuning)

@@ -227,6 +227,9 @@ export const INTENT_OPTIONS = [
   { value: "discussion", label: "深度交流", subtitle: "走心的对话", emoji: "💬", iconHint: "MessageCircle" },
   { value: "fun", label: "轻松娱乐", subtitle: "开心就好", emoji: "🎉", iconHint: "PartyPopper" },
   { value: "explore", label: "尝鲜体验", subtitle: "试试新玩法", emoji: "🎯", iconHint: "Compass" },
+  // Activity-first framing: acknowledges the motivation without promising a dating outcome.
+  // See docs/deliberations/2026-08-03-romance-intent-option-reinstatement.md
+  { value: "romance", label: "浪漫邂逅", subtitle: "在好玩的活动里，遇见心动", emoji: "💗", iconHint: "Heart" },
 ] as const;
 
 export const INTENT_FLEXIBLE_OPTION = {

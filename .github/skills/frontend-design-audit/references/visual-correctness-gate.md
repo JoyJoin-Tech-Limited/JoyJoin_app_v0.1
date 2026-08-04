@@ -94,6 +94,8 @@ elements substantially collide, and only flags clipping when content is genuinel
 skips intentional patterns (ellipsis, line-clamp → advisory) and unmeasurable backgrounds
 (gradients/images → contrast skipped, not flagged).
 
+**Occlusion guard (2026-08-03):** The scanner treats a text-on-text overlap as benign when a higher-z opaque overlay (fixed/absolute + explicit z-index + ≥95% opaque background) fully covers the lower layer. This prevents false blocking violations for legitimate full-screen overlays (e.g. `ExperienceDetail` over `FlowShell`) while still catching real collisions.
+
 ---
 
 ## Layer 2 — Vision reviewer

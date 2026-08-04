@@ -11,6 +11,7 @@ const routeMocks = vi.hoisted(() => {
   return {
     getGroupMembershipContext: vi.fn(),
     upsertEventGroupOutcome: vi.fn(),
+    deriveMatchHistoryAndRefreshCalibration: vi.fn(),
     logAITrace: vi.fn(),
     loggerChild: vi.fn(() => ({
       info: loggerInfo,
@@ -26,6 +27,10 @@ vi.mock("../repositories/eventGroupOutcomesRepo", () => ({
     getGroupMembershipContext: routeMocks.getGroupMembershipContext,
     upsertEventGroupOutcome: routeMocks.upsertEventGroupOutcome,
   },
+}));
+
+vi.mock("../services/matchHistoryDerivation", () => ({
+  deriveMatchHistoryAndRefreshCalibration: routeMocks.deriveMatchHistoryAndRefreshCalibration,
 }));
 
 vi.mock("../lib/aiTraceLogger", () => ({
@@ -90,6 +95,16 @@ describe("event group outcome routes", () => {
   beforeEach(() => {
     routeMocks.getGroupMembershipContext.mockReset();
     routeMocks.upsertEventGroupOutcome.mockReset();
+    routeMocks.deriveMatchHistoryAndRefreshCalibration.mockReset();
+    // Fire-and-forget derivation: the route calls .catch on the returned
+    // promise, so the mock must resolve (never undefined).
+    routeMocks.deriveMatchHistoryAndRefreshCalibration.mockResolvedValue({
+      groupId: "group-1",
+      status: "derived",
+      pairCount: 1,
+      insertedCount: 1,
+      updatedCount: 0,
+    });
     routeMocks.logAITrace.mockReset();
     routeMocks.loggerChild.mockClear();
     routeMocks.loggerInfo.mockClear();
@@ -126,6 +141,7 @@ describe("event group outcome routes", () => {
 
       expect(response.status).toBe(400);
       expect(routeMocks.getGroupMembershipContext).not.toHaveBeenCalled();
+      expect(routeMocks.deriveMatchHistoryAndRefreshCalibration).not.toHaveBeenCalled();
       await expect(response.json()).resolves.toMatchObject({
         message: "Invalid group outcome submission",
       });
@@ -241,6 +257,8 @@ describe("event group outcome routes", () => {
           success: true,
         }),
       );
+      // W1: successful submissions trigger fire-and-forget match-history derivation.
+      expect(routeMocks.deriveMatchHistoryAndRefreshCalibration).toHaveBeenCalledWith("group-1");
     });
   });
 

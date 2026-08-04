@@ -35,6 +35,7 @@ import {
 import { eq, and, inArray, isNull, sql } from "drizzle-orm";
 import { logger } from "./lib/logger";
 import { calculateAge } from "@shared/utils";
+import { INTEREST_TAXONOMY } from "@shared/interests";
 import { getFeatureFlag } from "./lib/featureFlags";
 import { ARCHETYPE_ENERGY } from "./archetypeChemistry";
 import type { ArchetypeName } from "./archetypeConfig";
@@ -99,9 +100,8 @@ export interface UserWithProfile {
   preferredLanguages: string[] | null;
   eventIntent: string[] | null;  // ✅ RENAMED from socialGoals - 本次活动社交目的
   userIntent: string[] | null;   // 用户档案默认社交偏好（fallback when eventIntent empty）
-  cuisinePreferences: string[] | null;
+  cuisinePreferences: string[] | null;  // consumed post-match by venueAssignmentService.calculateCuisineMatch
   dietaryRestrictions: string[] | null;
-  tasteIntensity: string[] | null;
   
   // 酒局特有偏好
   barThemes: string[] | null;  // 酒吧主题偏好
@@ -113,14 +113,10 @@ export interface UserWithProfile {
   // New matching signals
   ageMatchPreference: string | null;
   tableVibePreference: string | null;
-  vibeVector: Record<string, number> | null;
-  
+
   // Match Compass preferences
   preferenceStrictness: number | null;
-  preferredDistricts: string[] | null;
   genderCompositionPreference: string | null;
-  acceptPairs: boolean | null;
-  kolComfortLevel: string | null;
 }
 
 export interface MatchGroup {
@@ -253,31 +249,11 @@ export function pairMeetsDealbreakers(
 }
 
 /**
- * Calculate vibe vector cosine similarity (0-1) from 5D personality vectors.
- */
-function calculateVibeVectorSimilarity(
-  v1: Record<string, number> | null,
-  v2: Record<string, number> | null,
-): number {
-  if (!v1 || !v2) return 0;
-  const keys = ['energy', 'conversation_style', 'initiative', 'novelty', 'humor'];
-  let dot = 0, norm1 = 0, norm2 = 0;
-  for (const k of keys) {
-    const a = typeof v1[k] === 'number' ? v1[k] : 0;
-    const b = typeof v2[k] === 'number' ? v2[k] : 0;
-    dot += a * b;
-    norm1 += a * a;
-    norm2 += b * b;
-  }
-  if (norm1 === 0 || norm2 === 0) return 0;
-  return dot / (Math.sqrt(norm1) * Math.sqrt(norm2));
-}
-
-/**
  * 计算两个用户之间的性格化学反应分数 (0-100)
- * 考虑主角色（70%）和次要角色的交叉兼容性（各15%，共30%）+ vibeVector 5D similarity (30%)
+ * 考虑主角色（70%）和次要角色的交叉兼容性（各15%，共30%）
+ * (vibeVector blend removed 2026-08: dead branch — no production writer of users.vibeVector)
  */
-function calculateChemistryScore(
+export function calculateChemistryScore(
   user1: UserWithProfile,
   user2: UserWithProfile,
   chemistryCalibrationMap?: ChemistryCalibrationMap,
@@ -297,13 +273,7 @@ function calculateChemistryScore(
   const crossChemistry1 = crossChemistry1Raw * 0.15;
   const crossChemistry2 = crossChemistry2Raw * 0.15;
 
-  const archetypeScore = primaryChemistry + crossChemistry1 + crossChemistry2;
-
-  // vibeVector 5D continuous personality similarity (30% weight)
-  const vibeSim = calculateVibeVectorSimilarity(user1.vibeVector, user2.vibeVector);
-  const vibeScore = vibeSim * 100;
-  const hasVibe = user1.vibeVector && user2.vibeVector;
-  const score = hasVibe ? archetypeScore * 0.7 + vibeScore * 0.3 : archetypeScore;
+  const score = primaryChemistry + crossChemistry1 + crossChemistry2;
 
   // Temporary debug log for Phase 0 verification (OBS-01)
   if (primaryChemistryRaw === 50) {
@@ -465,7 +435,7 @@ function calculateInterestScore(user1: UserWithProfile, user2: UserWithProfile):
  * 计算语言沟通兼容性 (0-100)
  * ✅ UPDATED: Uses preferredLanguages from event registration
  */
-function calculateLanguageScore(user1: UserWithProfile, user2: UserWithProfile): number {
+export function calculateLanguageScore(user1: UserWithProfile, user2: UserWithProfile): number {
   const langs1 = user1.preferredLanguages || [];
   const langs2 = user2.preferredLanguages || [];
   
@@ -497,7 +467,7 @@ function getEffectiveIntent(user: UserWithProfile): string[] {
  */
 const DEFAULT_PREFERENCE_SCORE = 70; // Default compatibility when no preference data available
 
-function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile): number {
+export function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile): number {
   let score = 0;
   let factors = 0;
   
@@ -556,7 +526,7 @@ function calculatePreferenceScore(user1: UserWithProfile, user2: UserWithProfile
  * 计算同乡亲和力分数 (0-100)
  * 仅当双方都启用同乡匹配时生效
  */
-function calculateHometownAffinityScore(user1: UserWithProfile, user2: UserWithProfile): number {
+export function calculateHometownAffinityScore(user1: UserWithProfile, user2: UserWithProfile): number {
   // 仅当双方都启用同乡匹配且都有家乡信息时才计算
   if (!user1.hometownAffinityOptin || !user2.hometownAffinityOptin) {
     return 0; // 未启用，返回0（不参与加分）
@@ -619,7 +589,7 @@ const LIFE_STAGE_AFFINITY: Record<string, Record<string, number>> = {
  * Uses asymmetric aspiration matrix averaged both directions.
  * Intent modulation: networking boosts cross-stage affinity, fun dampens it.
  */
-function calculateLifeStageAffinity(user1: UserWithProfile, user2: UserWithProfile): number {
+export function calculateLifeStageAffinity(user1: UserWithProfile, user2: UserWithProfile): number {
   if (!user1.lifeStage || !user2.lifeStage) return NEUTRAL_LIFE_STAGE_SCORE;
 
   const baseForward = LIFE_STAGE_AFFINITY[user1.lifeStage]?.[user2.lifeStage] ?? NEUTRAL_LIFE_STAGE_SCORE;
@@ -661,7 +631,7 @@ const EDUCATION_ORDINAL: Record<string, number> = {
  * AFFINITY model: same or nearby education level = higher score (学历同频度).
  * This is NOT a diversity signal — closer levels score better.
  */
-function calculateEducationAffinityScore(edu1: string, edu2: string): number {
+export function calculateEducationAffinityScore(edu1: string, edu2: string): number {
   const ord1 = EDUCATION_ORDINAL[edu1] ?? -1;
   const ord2 = EDUCATION_ORDINAL[edu2] ?? -1;
   if (ord1 === -1 || ord2 === -1) return 50; // unknown level → neutral
@@ -758,7 +728,7 @@ function calculateSocialAffinityScore(user1: UserWithProfile, user2: UserWithPro
 const DIVERSITY_DIFFERENT_SCORE = 70;
 const DIVERSITY_SAME_SCORE = 30;
 
-function calculateBackgroundDiversityScore(user1: UserWithProfile, user2: UserWithProfile): number {
+export function calculateBackgroundDiversityScore(user1: UserWithProfile, user2: UserWithProfile): number {
   let score = 0;
   let factors = 0;
 
@@ -778,11 +748,40 @@ function calculateBackgroundDiversityScore(user1: UserWithProfile, user2: UserWi
 }
 
 /**
+ * Mutual romance tension bonus: applied post-weight (additive, capped at 100)
+ * only when BOTH pair members indicated `romance` intent. Kept deliberately
+ * small — a nudge ("一点浪漫张力"), not a pipeline override. One-sided
+ * romance receives nothing.
+ */
+const MUTUAL_ROMANCE_TENSION_BONUS = 5;
+
+/**
+ * Pair-score cache key — single source of truth for the precompute loop and
+ * any post-hoc cache lookup (e.g. the 磁场引擎 R1 commit gate). The key embeds
+ * the weight mode (`semantic`/`legacy`), `|adaptive` (custom weights), and
+ * `|v2` (magnetismWeightProfileV2Enabled) so runs with different scoring
+ * configs sharing a cache cannot cross-contaminate scores.
+ */
+function pairScoreCacheKey(
+  userId1: string,
+  userId2: string,
+  semanticSimilarityEnabled: boolean,
+  customWeights?: MatchingWeights,
+  useWeightProfileV2 = false,
+): string {
+  const sortedUserIds = userId1 < userId2 ? `${userId1}|${userId2}` : `${userId2}|${userId1}`;
+  return `${semanticSimilarityEnabled ? "semantic" : "legacy"}${customWeights ? "|adaptive" : ""}${useWeightProfileV2 ? "|v2" : ""}|${sortedUserIds}`;
+}
+
+/**
  * 计算两个用户的配对兼容性分数 (0-100)
- * 
+ *
  * ✅ ACTIVE 匹配权重配置:
  * - Legacy path (default, 6维度): chemistry 28 / interest 28 / socialAffinity 20 / backgroundDiversity 15 / preference 5 / language 4
  * - Flagged path (ENABLE_SEMANTIC_SIMILARITY=true, 7维度): chemistry 26 / interest 26 / socialAffinity 19 / backgroundDiversity 14 / preference 5 / language 4 / semanticSimilarity 6
+ * - Weight profile v2 (magnetismWeightProfileV2Enabled, default OFF): swaps the default tables for
+ *   LEGACY/SEMANTIC_PAIR_SCORE_WEIGHTS_V2 (chemistry 20 / interest 32 / socialAffinity 23 / … / language 5;
+ *   7D: 19/30/21/14/5/5 + semantic 6). Strictness/adaptive customWeights still short-circuit above it.
  * 
  * Note — Language (4%): 普通话覆盖率高，语言维度区分力有限，保留为轻量兼容信号。
  * Note — Preference (5%): 目前酒吧/饭店活动场景分化有限，保留为轻量场景适配信号。
@@ -797,14 +796,20 @@ export async function calculatePairScore(
   chemistryCalibrationMap?: ChemistryCalibrationMap,
   customWeights?: MatchingWeights,
   matchHistoryLookup?: Map<string, { wouldMeetAgain: boolean | null }>,
+  matchNeverMeetSentinelEnabled = false,
+  useWeightProfileV2 = false,
 ): Promise<number> {
   const sortedUserIds = user1.userId < user2.userId
     ? `${user1.userId}|${user2.userId}`
     : `${user2.userId}|${user1.userId}`;
-  const cacheKey = `${semanticSimilarityEnabled ? "semantic" : "legacy"}${customWeights ? "|adaptive" : ""}|${sortedUserIds}`;
+  const cacheKey = pairScoreCacheKey(user1.userId, user2.userId, semanticSimilarityEnabled, customWeights, useWeightProfileV2);
 
   const history = matchHistoryLookup?.get(sortedUserIds);
-  if (history?.wouldMeetAgain === false) return -1;
+  // -1 hard-skip sentinel is gated behind the matchNeverMeetSentinel flag
+  // (default OFF — policy-pending, see docs/systems/MAGNETISM_ENGINE.md §7).
+  // The +5 re-match boost below stays unconditional. The flag is read once
+  // per matching run in matchEventPool and threaded in — never per pair.
+  if (matchNeverMeetSentinelEnabled && history?.wouldMeetAgain === false) return -1;
 
   if (pairScoreCache?.has(cacheKey)) {
     return pairScoreCache.get(cacheKey)!;
@@ -830,8 +835,11 @@ export async function calculatePairScore(
     language,
     semanticSimilarity,
   };
-  const legacyScore = calculateWeightedPairScore(dimensions, false);
-  let result = calculateWeightedPairScore(dimensions, semanticSimilarityEnabled, customWeights);
+  // legacyScore uses the same weight profile as the main score so the
+  // semantic-uplift metric (result - legacyScore) isolates the semantic
+  // dimension instead of conflating it with the profile switch.
+  const legacyScore = calculateWeightedPairScore(dimensions, false, undefined, useWeightProfileV2);
+  let result = calculateWeightedPairScore(dimensions, semanticSimilarityEnabled, customWeights, useWeightProfileV2);
 
   if (semanticSimilarityEnabled && typeof semanticSimilarity === "number" && !customWeights) {
     observeSemanticSimilarityMetrics(semanticSimilarity, result - legacyScore);
@@ -839,6 +847,18 @@ export async function calculatePairScore(
 
   if (history?.wouldMeetAgain === true) {
     result = Math.min(100, result + 5);
+  }
+
+  // Mutual romance tension bonus: when BOTH users indicated `romance` intent,
+  // allow a small deterministic nudge — one-sided romance never boosts the
+  // pair, and weight tables are untouched (post-weight additive, like the
+  // wouldMeetAgain bonus above). Product decision 2026-08-03:
+  // docs/deliberations/2026-08-03-romance-intent-option-reinstatement.md
+  if (
+    getEffectiveIntent(user1).includes("romance") &&
+    getEffectiveIntent(user2).includes("romance")
+  ) {
+    result = Math.min(100, result + MUTUAL_ROMANCE_TENSION_BONUS);
   }
 
   pairScoreCache?.set(cacheKey, result);
@@ -858,6 +878,8 @@ async function calculateGroupPairScore(
   chemistryCalibrationMap?: ChemistryCalibrationMap,
   customWeights?: MatchingWeights,
   matchHistoryLookup?: Map<string, { wouldMeetAgain: boolean | null }>,
+  matchNeverMeetSentinelEnabled = false,
+  useWeightProfileV2 = false,
 ): Promise<number> {
   if (members.length < 2) return 0;
   
@@ -876,6 +898,8 @@ async function calculateGroupPairScore(
         chemistryCalibrationMap,
         customWeights,
         matchHistoryLookup,
+        matchNeverMeetSentinelEnabled,
+        useWeightProfileV2,
       );
       // Skip anti-repetition sentinel (-1) pairs — they should not contaminate the average
       if (pairScore >= 0) {
@@ -966,13 +990,11 @@ export function calculateGroupDiversity(
  * Source for energy values: ARCHETYPE_ENERGY in apps/server/src/archetypeChemistry.ts
  * DB column: energy_balance (integer) in event_pool_groups table
  */
-function calculateEnergyBalance(members: UserWithProfile[]): number {
+export function calculateEnergyBalance(members: UserWithProfile[]): number {
   if (members.length < 2) return 50;
 
   // Look up energy for each member's primary archetype; default to 60 (mid) if unknown
-  const energyLevels = members.map(m => 
-    ARCHETYPE_ENERGY[m.archetype as keyof typeof ARCHETYPE_ENERGY] ?? 60
-  );
+  const energyLevels = members.map(userArchetypeEnergy);
 
   const avgEnergy = energyLevels.reduce((sum, e) => sum + e, 0) / energyLevels.length;
 
@@ -1139,6 +1161,134 @@ export function groupHasExactGenderBalance(members: UserWithProfile[]): boolean 
   return male > 0 && male === female;
 }
 
+// ── 磁场引擎 惊艳开局包 (P1): group-composition rules ─────────────────────
+// Four rules behind the magnetismGroupRulesEnabled flag (MAGNETISM_GROUP_RULES_ENABLED).
+// R1–R3 are commit gates on the FINAL group composition; R4 is a ranking-only
+// nudge during expansion. Everything below is inert when the flag is off.
+
+/** R1 无孤立者: every member needs ≥1 intra-group pair score at/above this. */
+export const MAGNETISM_STRONG_TIE_THRESHOLD = 60;
+/** R2 能量编排: a committed group needs ≥1 member at/above this archetype energy. */
+export const MAGNETISM_ENERGIZER_THRESHOLD = 75;
+/** R4 新奇分散: ranking penalty for an explore-intent candidate joining a group that already has an explorer. */
+export const MAGNETISM_EXPLORE_RANKING_PENALTY = 8;
+
+/**
+ * Archetype energy lookup shared by R2 and calculateEnergyBalance.
+ * Missing/unknown archetype defaults to 60 (mid) — same as calculateEnergyBalance.
+ */
+export function userArchetypeEnergy(user: UserWithProfile): number {
+  return ARCHETYPE_ENERGY[user.archetype as keyof typeof ARCHETYPE_ENERGY] ?? 60;
+}
+
+/**
+ * R1 无孤立者 (no isolated member): every member must have ≥1 intra-group pair
+ * score ≥ threshold. Pair scores are supplied by the caller via `getPairScore`
+ * so the greedy core can serve them from its precomputed cache.
+ */
+export async function groupSatisfiesStrongTieRule(
+  members: UserWithProfile[],
+  getPairScore: (user1: UserWithProfile, user2: UserWithProfile) => Promise<number>,
+  threshold: number = MAGNETISM_STRONG_TIE_THRESHOLD,
+): Promise<boolean> {
+  for (const member of members) {
+    let hasStrongTie = false;
+    for (const other of members) {
+      if (other.userId === member.userId) continue;
+      if ((await getPairScore(member, other)) >= threshold) {
+        hasStrongTie = true;
+        break;
+      }
+    }
+    if (!hasStrongTie) return false;
+  }
+  return true;
+}
+
+/**
+ * R2 能量编排 (energy choreography): the group must contain ≥1 energizer
+ * (archetype energy ≥ threshold). The pool-level exemption (no energizer among
+ * eligible users → rule skipped) is decided once per run by the caller.
+ */
+export function groupHasEnergizer(
+  members: UserWithProfile[],
+  threshold: number = MAGNETISM_ENERGIZER_THRESHOLD,
+): boolean {
+  return members.some(m => userArchetypeEnergy(m) >= threshold);
+}
+
+// topicId → macroCategory lookup for R3, built once from the canonical taxonomy.
+const INTEREST_TOPIC_MACRO_CATEGORY = new Map<string, string>();
+for (const interest of INTEREST_TAXONOMY) {
+  INTEREST_TOPIC_MACRO_CATEGORY.set(interest.id, interest.macroCategory);
+}
+
+/**
+ * R3 话题锚点 (topic anchor): a committed group must share conversation fuel.
+ * Cold-start safety: if ANY member's interestsCache entry is missing or empty,
+ * the rule is skipped (returns true). Otherwise the group passes when EITHER
+ *   (a) some macro category has ≥1 topic from EVERY member, OR
+ *   (b) some single topicId is shared by ≥ ⌈n/2⌉ members (any heat).
+ */
+export function groupHasTopicAnchor(
+  members: UserWithProfile[],
+  interestsCache: UserInterestsCache,
+): boolean {
+  const memberTopics: string[][] = [];
+  for (const m of members) {
+    const entry = interestsCache.get(m.userId);
+    if (!entry || entry.topics.length === 0) return true; // cold-start → skip rule
+    memberTopics.push(entry.topics);
+  }
+  if (memberTopics.length === 0) return true;
+
+  // (a) a macro category in which every member carries ≥1 topic
+  let sharedCategories: Set<string> | null = null;
+  for (const topics of memberTopics) {
+    const categories = new Set<string>();
+    for (const topic of topics) {
+      const category = INTEREST_TOPIC_MACRO_CATEGORY.get(topic);
+      if (category) categories.add(category);
+    }
+    if (sharedCategories === null) {
+      sharedCategories = categories;
+    } else {
+      sharedCategories = new Set<string>([...sharedCategories].filter((c: string) => categories.has(c)));
+    }
+    if (sharedCategories.size === 0) break;
+  }
+  if (sharedCategories && sharedCategories.size > 0) return true;
+
+  // (b) one concrete topic shared by ≥ ⌈n/2⌉ members
+  const required = Math.ceil(memberTopics.length / 2);
+  const topicMemberCounts = new Map<string, number>();
+  for (const topics of memberTopics) {
+    for (const topic of new Set(topics)) {
+      topicMemberCounts.set(topic, (topicMemberCounts.get(topic) ?? 0) + 1);
+    }
+  }
+  for (const count of topicMemberCounts.values()) {
+    if (count >= required) return true;
+  }
+  return false;
+}
+
+/**
+ * R4 新奇分散 (novelty dispersion): ranking-only nudge during group expansion.
+ * An explore-intent candidate joining a group that already has an explorer is
+ * penalised for the argmax ONLY — cached pair scores and the admission
+ * threshold never see the adjustment (nudge, not ban).
+ */
+export function adjustScoreForNoveltyDispersion(
+  candidate: UserWithProfile,
+  groupMembers: UserWithProfile[],
+  avgScore: number,
+): number {
+  if (!getEffectiveIntent(candidate).includes("explore")) return avgScore;
+  const groupHasExplorer = groupMembers.some(m => getEffectiveIntent(m).includes("explore"));
+  return groupHasExplorer ? avgScore - MAGNETISM_EXPLORE_RANKING_PENALTY : avgScore;
+}
+
 /**
  * In-memory greedy pool matching (same algorithm as `matchEventPool` after eligibility + caches).
  * Exported for stress benchmarks and tests — **not** an HTTP entrypoint.
@@ -1155,6 +1305,9 @@ export async function runGreedyPoolMatchingCore(
   customWeights?: MatchingWeights,
   matchHistoryLookup?: Map<string, { wouldMeetAgain: boolean | null }>,
   strictness: number = 50,
+  matchNeverMeetSentinelEnabled = false,
+  useWeightProfileV2 = false,
+  magnetismGroupRulesEnabled = false,
 ): Promise<MatchGroup[]> {
   // 4. 贪婪分组算法（优先处理邀请关系）
   const groups: MatchGroup[] = [];
@@ -1225,6 +1378,8 @@ export async function runGreedyPoolMatchingCore(
         chemistryCalibrationMap,
         formationWeights,
         matchHistoryLookup,
+        matchNeverMeetSentinelEnabled,
+        useWeightProfileV2,
       );
 
       // Check if this pair has an invitation relationship
@@ -1250,6 +1405,37 @@ export async function runGreedyPoolMatchingCore(
   // 按分数降序排序（邀请关系会自动排在前面因为有加分）
   pairScores.sort((a, b) => b.score - a.score);
 
+  // ── 磁场引擎 惊艳开局包 (P1) group-composition rules ──
+  // R2 pool-level exemption, computed once per run: when NO eligible user is
+  // an energizer, R2 can never pass — skip the rule instead of rejecting
+  // every group. Forced false when the flag is off (rule inert).
+  const poolHasEnergizer =
+    magnetismGroupRulesEnabled &&
+    eligibleUsers.some(u => userArchetypeEnergy(u) >= MAGNETISM_ENERGIZER_THRESHOLD);
+
+  // R1 pair-score lookup: served from the precomputed cache (every eligible
+  // pair was scored above). A cache miss should not happen; fall back to
+  // calculatePairScore defensively (it re-caches) rather than crashing.
+  const getCachedPairScore = (user1: UserWithProfile, user2: UserWithProfile): Promise<number> => {
+    const cached = pairScoreCache.get(
+      pairScoreCacheKey(user1.userId, user2.userId, semanticSimilarityEnabled, formationWeights, useWeightProfileV2),
+    );
+    if (cached !== undefined) return Promise.resolve(cached);
+    return calculatePairScore(
+      user1,
+      user2,
+      interestsCache,
+      pairScoreCache,
+      semanticProfileCache,
+      semanticSimilarityEnabled,
+      chemistryCalibrationMap,
+      formationWeights,
+      matchHistoryLookup,
+      matchNeverMeetSentinelEnabled,
+      useWeightProfileV2,
+    );
+  };
+
   // 贪婪组建小组
   for (const pair of pairScores) {
     if (used.has(pair.user1.userId) || used.has(pair.user2.userId)) continue;
@@ -1263,6 +1449,9 @@ export async function runGreedyPoolMatchingCore(
     while (groupMembers.length < targetGroupSize) {
       let bestCandidate: UserWithProfile | null = null;
       let bestScore = 0;
+      // True pair-score average of bestCandidate (pre-R4 nudge) — the admission
+      // gate uses this, never the ranking-adjusted score.
+      let bestAvgScore = 0;
 
       for (const candidate of eligibleUsers as UserWithProfile[]) {
         if (used.has(candidate.userId)) continue;
@@ -1291,18 +1480,30 @@ export async function runGreedyPoolMatchingCore(
             semanticSimilarityEnabled,
             chemistryCalibrationMap,
             formationWeights,
-          matchHistoryLookup,
+            matchHistoryLookup,
+            matchNeverMeetSentinelEnabled,
+            useWeightProfileV2,
           );
         }
         const avgScore = totalScore / groupMembers.length;
 
-        if (avgScore > bestScore) {
-          bestScore = avgScore;
+        // R4 新奇分散 (flag-gated): an explore-intent candidate is nudged down
+        // in the ranking when the forming group already has an explorer. The
+        // adjustment affects ONLY the argmax — cached pair scores are never
+        // mutated and the admission gate below still uses the true avgScore
+        // (nudge, not ban).
+        const rankingScore = magnetismGroupRulesEnabled
+          ? adjustScoreForNoveltyDispersion(candidate, groupMembers, avgScore)
+          : avgScore;
+
+        if (rankingScore > bestScore) {
+          bestScore = rankingScore;
+          bestAvgScore = avgScore;
           bestCandidate = candidate;
         }
       }
 
-      if (bestCandidate && bestScore >= minPairScore) { // 最低质量门槛（Match Compass可调节）
+      if (bestCandidate && bestAvgScore >= minPairScore) { // 最低质量门槛（Match Compass可调节）
         groupMembers.push(bestCandidate);
         used.add(bestCandidate.userId);
       } else {
@@ -1327,8 +1528,29 @@ export async function runGreedyPoolMatchingCore(
       });
     }
 
+    // 磁场引擎 惊艳开局包 (P1) commit gates — R1 无孤立者 / R2 能量编排 / R3 话题锚点.
+    // Evaluated only for groups that would otherwise commit (size + gender floor
+    // pass); rejections fall through to the existing release path below.
+    let magnetismRulesSatisfied = true;
+    if (magnetismGroupRulesEnabled && groupMembers.length >= minGroupSize && genderFloorSatisfied) {
+      const strongTieSatisfied = await groupSatisfiesStrongTieRule(groupMembers, getCachedPairScore);
+      // R2 is skipped entirely when the pool has no energizer (see above).
+      const energizerSatisfied = !poolHasEnergizer || groupHasEnergizer(groupMembers);
+      const topicAnchorSatisfied = groupHasTopicAnchor(groupMembers, interestsCache);
+      magnetismRulesSatisfied = strongTieSatisfied && energizerSatisfied && topicAnchorSatisfied;
+      if (!magnetismRulesSatisfied) {
+        logger.info("[Pool Matching] group rejected by magnetism group rules", {
+          poolId: poolIdForLog,
+          memberCount: groupMembers.length,
+          strongTieSatisfied,
+          energizerSatisfied,
+          topicAnchorSatisfied,
+        });
+      }
+    }
+
     // 只保留达到最小人数且满足性别下限的小组
-    if (groupMembers.length >= minGroupSize && genderFloorSatisfied) {
+    if (groupMembers.length >= minGroupSize && genderFloorSatisfied && magnetismRulesSatisfied) {
       const avgPairScore = await calculateGroupPairScore(
         groupMembers,
         interestsCache,
@@ -1338,6 +1560,8 @@ export async function runGreedyPoolMatchingCore(
         chemistryCalibrationMap,
         formationWeights,
         matchHistoryLookup,
+        matchNeverMeetSentinelEnabled,
+        useWeightProfileV2,
       );
       // E: Compute true chemistry-only average (distinct from avgPairScore)
       const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap);
@@ -1370,6 +1594,29 @@ export async function runGreedyPoolMatchingCore(
     }
   }
 
+  // 磁场引擎 惊艳开局包 (P1): R1/R2/R3 are commit gates in the greedy loop,
+  // but the H4 redistribution pass below also changes final group composition
+  // (absorption adds members, Phase 2 forms whole groups). Those paths must
+  // respect the same rules — otherwise an absorbed or remainder member could
+  // be stranded with no strong tie. Inert when the flag is off (returns true),
+  // so default redistribution behavior is unchanged.
+  const magnetismRulesSatisfiedFor = async (members: UserWithProfile[]): Promise<boolean> => {
+    if (!magnetismGroupRulesEnabled) return true;
+    const strongTieSatisfied = await groupSatisfiesStrongTieRule(members, getCachedPairScore);
+    const energizerSatisfied = !poolHasEnergizer || groupHasEnergizer(members);
+    const topicAnchorSatisfied = groupHasTopicAnchor(members, interestsCache);
+    if (!strongTieSatisfied || !energizerSatisfied || !topicAnchorSatisfied) {
+      logger.info("[Pool Matching] redistribution candidate rejected by magnetism group rules", {
+        poolId: poolIdForLog,
+        memberCount: members.length,
+        strongTieSatisfied,
+        energizerSatisfied,
+        topicAnchorSatisfied,
+      });
+    }
+    return strongTieSatisfied && energizerSatisfied && topicAnchorSatisfied;
+  };
+
   // H4: Redistribution pass for stranded users (behind adaptive-weights or Match Compass relaxed flag)
   // Only run when adaptive weights are explicitly enabled or allowOverflow is true — this is an experimental
   // quality-of-life improvement that needs real-world calibration.
@@ -1401,7 +1648,9 @@ export async function runGreedyPoolMatchingCore(
               semanticSimilarityEnabled,
               chemistryCalibrationMap,
               formationWeights,
-            matchHistoryLookup,
+              matchHistoryLookup,
+              matchNeverMeetSentinelEnabled,
+              useWeightProfileV2,
             );
           }
           const avgScore = totalScore / group.members.length;
@@ -1426,6 +1675,12 @@ export async function runGreedyPoolMatchingCore(
             });
             continue;
           }
+          // 磁场引擎 (P1): absorption must not break the commit rules — an
+          // absorbed member still needs a strong tie (R1) and the group must
+          // keep its topic anchor (R3). R2 is monotonic under absorption.
+          if (!(await magnetismRulesSatisfiedFor([...bestGroup.members, stranded]))) {
+            continue;
+          }
           bestGroup.members.push(stranded);
           used.add(stranded.userId);
           // Recalculate group stats
@@ -1437,7 +1692,9 @@ export async function runGreedyPoolMatchingCore(
             semanticSimilarityEnabled,
             chemistryCalibrationMap,
             formationWeights,
-          matchHistoryLookup,
+            matchHistoryLookup,
+            matchNeverMeetSentinelEnabled,
+            useWeightProfileV2,
           );
           bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
           bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members, genderBalanceMode, genderBalanceBonusPoints);
@@ -1471,7 +1728,7 @@ export async function runGreedyPoolMatchingCore(
             minFemaleCount,
             minMaleCount,
           });
-        } else {
+        } else if (await magnetismRulesSatisfiedFor(stillStranded)) {
           const avgPairScore = await calculateGroupPairScore(
             stillStranded,
             interestsCache,
@@ -1480,7 +1737,9 @@ export async function runGreedyPoolMatchingCore(
             semanticSimilarityEnabled,
             chemistryCalibrationMap,
             formationWeights,
-          matchHistoryLookup,
+            matchHistoryLookup,
+            matchNeverMeetSentinelEnabled,
+            useWeightProfileV2,
           );
           const avgChemistryScore = calculateGroupChemistryScore(stillStranded, chemistryCalibrationMap);
           const diversity = calculateGroupDiversity(stillStranded, genderBalanceMode, genderBalanceBonusPoints);
@@ -1502,6 +1761,14 @@ export async function runGreedyPoolMatchingCore(
           groups.push(newGroup);
           stillStranded.forEach(u => used.add(u.userId));
           logger.info(`[Pool Matching] Formed remainder group with ${stillStranded.length} users`);
+        } else {
+          // 磁场引擎 (P1): remainder group did not pass commit rules — members
+          // stay unmatched here so Phase-3 absorption can still place them into
+          // compliant existing groups (Rule-gated under the flag only).
+          logger.info("[Pool Matching] H4 phase-2 remainder group rejected by magnetism group rules", {
+            poolId: poolIdForLog,
+            memberCount: stillStranded.length,
+          });
         }
       }
 
@@ -1531,7 +1798,9 @@ export async function runGreedyPoolMatchingCore(
                 semanticSimilarityEnabled,
                 chemistryCalibrationMap,
                 formationWeights,
-              matchHistoryLookup,
+                matchHistoryLookup,
+                matchNeverMeetSentinelEnabled,
+                useWeightProfileV2,
               );
             }
             const avgScore = totalScore / group.members.length;
@@ -1555,6 +1824,10 @@ export async function runGreedyPoolMatchingCore(
               });
               continue;
             }
+            // 磁场引擎 (P1): same rule gate as Phase-1 absorption.
+            if (!(await magnetismRulesSatisfiedFor([...bestGroup.members, stranded]))) {
+              continue;
+            }
             bestGroup.members.push(stranded);
             used.add(stranded.userId);
             bestGroup.avgPairScore = await calculateGroupPairScore(
@@ -1565,7 +1838,9 @@ export async function runGreedyPoolMatchingCore(
               semanticSimilarityEnabled,
               chemistryCalibrationMap,
               formationWeights,
-            matchHistoryLookup,
+              matchHistoryLookup,
+              matchNeverMeetSentinelEnabled,
+              useWeightProfileV2,
             );
             bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
             bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members, genderBalanceMode, genderBalanceBonusPoints);
@@ -1632,7 +1907,6 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       userIntent: users.intent,
       cuisinePreferences: eventPoolRegistrations.cuisinePreferences,
       dietaryRestrictions: eventPoolRegistrations.dietaryRestrictions,
-      tasteIntensity: eventPoolRegistrations.tasteIntensity,
       gender: users.gender,
       birthdate: users.birthdate,
       // ✅ UPDATED: Use 3-tier industry classification
@@ -1652,12 +1926,8 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       alcoholComfort: eventPoolRegistrations.alcoholComfort,
       ageMatchPreference: users.ageMatchPreference,
       tableVibePreference: users.tableVibePreference,
-      vibeVector: users.vibeVector,
       preferenceStrictness: eventPoolRegistrations.preferenceStrictness,
-      preferredDistricts: eventPoolRegistrations.preferredDistricts,
       genderCompositionPreference: eventPoolRegistrations.genderCompositionPreference,
-      acceptPairs: eventPoolRegistrations.acceptPairs,
-      kolComfortLevel: eventPoolRegistrations.kolComfortLevel,
     })
     .from(eventPoolRegistrations)
     .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
@@ -1696,7 +1966,13 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   const semanticProfileCache = semanticSimilarityEnabled
     ? buildSemanticProfileCache(eligibleUsers, interestsCache)
     : undefined;
-  const chemistryCalibrationMap = await getArchetypePairCalibrationMap();
+  // Chemistry calibration read path is gated: Phase 0 only accumulates stats
+  // (writer is live via match_history derivation); calibrated deltas activate
+  // in Phase 3 after shadow evidence + operator sign-off.
+  const chemistryCalibrationEnabled = await getFeatureFlag("matchChemistryCalibrationEnabled", false);
+  const chemistryCalibrationMap = chemistryCalibrationEnabled
+    ? await getArchetypePairCalibrationMap()
+    : undefined;
 
   // In-memory pair score cache for this run
   const pairScoreCache = new Map<string, number>();
@@ -1722,6 +1998,23 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
       matchHistoryLookup.set(key, { wouldMeetAgain: row.wouldMeetAgain });
     }
   }
+
+  // Magnetism Engine Phase 0 / W2: read the never-meet sentinel flag ONCE per
+  // run (calculatePairScore is a hot path — no per-pair flag lookups) and
+  // thread it through. Default OFF: the -1 hard-skip is policy-pending; the
+  // +5 re-match boost is unconditional.
+  const matchNeverMeetSentinelEnabled = await getFeatureFlag("matchNeverMeetSentinel", false);
+
+  // Magnetism Engine 惊艳开局包 / P2: weight profile v2 — read ONCE per run and
+  // threaded through (calculatePairScore is a hot path — no per-pair flag
+  // lookups). Default OFF: v1 tables remain the scoring default until test-pool
+  // dual-run validation. Strictness/adaptive overrides are unaffected.
+  const useWeightProfileV2 = await getFeatureFlag("magnetismWeightProfileV2Enabled", false);
+
+  // Magnetism Engine 惊艳开局包 / P1: group-composition rules (R1 无孤立者 /
+  // R2 能量编排 / R3 话题锚点 / R4 新奇分散) — read ONCE per run and threaded
+  // into the greedy core like the flags above. Default OFF.
+  const magnetismGroupRulesEnabled = await getFeatureFlag("magnetismGroupRulesEnabled", false);
   
   // 3.6 获取邀请关系 (invitation relationships)
   // Batch query all invitation uses for registrations in this pool, then join in memory.
@@ -1782,6 +2075,9 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     customWeights,
     matchHistoryLookup,
     effectiveStrictness,
+    matchNeverMeetSentinelEnabled,
+    useWeightProfileV2,
+    magnetismGroupRulesEnabled,
   );
 }
 

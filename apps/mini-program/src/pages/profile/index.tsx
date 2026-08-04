@@ -294,9 +294,11 @@ export default function ProfilePage() {
   // Hard UI deadline: a hung-but-reachable server can hold the request for the
   // full timeout × retry window (30s+). Past the deadline with no cached data,
   // fall back to the error state with a retry CTA instead of spinning forever.
-  // Manual retry bumps the nonce to open a fresh deadline window.
+  // Manual retry bumps the nonce to start a fresh deadline interval.
   const [equipmentRetryNonce, setEquipmentRetryNonce] = useState(0)
-  const equipmentStalled = !equipmentQuery.data && !equipmentQuery.isError
+  // isLoading is true only while actively fetching with no cached data, so the
+  // deadline starts exactly when the request begins and resets on each retry.
+  const equipmentStalled = equipmentQuery.isLoading
   const equipmentSyncExpired = useSyncDeadline(equipmentStalled, equipmentRetryNonce)
 
   // Lightweight chapter-count teaser for the story card title. Key is scoped

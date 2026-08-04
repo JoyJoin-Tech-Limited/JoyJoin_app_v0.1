@@ -12,7 +12,7 @@ import { intentOptions } from "@/lib/userFieldMappings";
 import { useEffect } from "react";
 
 const intentSchema = z.object({
-  intent: z.array(z.enum(["networking", "friends", "discussion", "fun", "explore", "flexible"])).min(1, "请至少选择一个活动意图"),
+  intent: z.array(z.enum(["networking", "friends", "discussion", "fun", "explore", "romance", "flexible"])).min(1, "请至少选择一个活动意图"),
 });
 
 type IntentForm = z.infer<typeof intentSchema>;
@@ -55,7 +55,7 @@ export default function EditIntentPage() {
   });
 
   // Toggle intent selection with flexible exclusivity logic
-  const toggleIntent = (intentValue: "networking" | "friends" | "discussion" | "fun" | "explore" | "flexible") => {
+  const toggleIntent = (intentValue: "networking" | "friends" | "discussion" | "fun" | "explore" | "romance" | "flexible") => {
     const current = form.watch("intent") || [];
     
     if (intentValue === "flexible") {

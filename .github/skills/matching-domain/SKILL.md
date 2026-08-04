@@ -11,6 +11,8 @@ description: >
 
 **Core rule:** Matching is deterministic, server-owned, and bounded. `calculateInterestScoreAsync()` reads only `user_interests`. AI explanation and enrichment are separate layers that must not feed back into deterministic scores.
 
+**Naming (2026-08-03):** the matching system's internal engineering name is **磁场引擎 (Magnetism Engine)**; pair score = 同频指数 (Resonance Index); post-weight bonus family = 缘分加成 (mutual-romance +5 = 引力加成). Full naming system + uplift roadmap: `docs/systems/MAGNETISM_ENGINE.md`. No code identifier renames.
+
 ## When to use this skill
 
 - Modifying pool matching logic or pair scoring weights

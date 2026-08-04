@@ -1,7 +1,8 @@
 import type { Express, Request } from "express";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
-import { validateContentSafe, contentViolationResponse } from "../../lib/contentSafety";
+import { validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
+import { recordViolation } from "../../abuseDetection";
 import { db } from "../../db";
 import { eq } from "drizzle-orm";
 import { onboardingAnalytics, userInterests, users } from "@shared/schema";
@@ -66,8 +67,9 @@ export function registerOnboardingRoutes(app: Express): void {
       }
 
       if (bio.length > 0) {
-        const safetyResult = validateContentSafe(bio, "bio");
+        const safetyResult = await validateContentSafeAsync(bio, "bio", { userId });
         if (!safetyResult.safe) {
+          await recordViolation(userId, safetyResult.violation!.type, safetyResult.violation!.severity);
           return res.status(400).json(contentViolationResponse(safetyResult.violation!).body);
         }
       }

@@ -165,7 +165,10 @@ export const PHASE_REGISTRY: Record<SocialIcebreakerPhase, PhaseModule> = {
     durationMinutes: 10,
     minPlayers: 2,
     category: 'creative',
-    energyArc: 'warmup',
+    // Late wind-down (anonymous perception-voting about the group), not an
+    // opener: needs social observation time to be meaningful. 'falling' keeps
+    // sortByEnergyArc from placing it first among non-core phases (2026-08-03).
+    energyArc: 'falling',
     requiresGeneration: true,
     generationLeadTimeMinutes: 60,
     canBeSkipped: true,

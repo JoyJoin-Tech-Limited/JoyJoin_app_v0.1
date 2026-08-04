@@ -120,9 +120,6 @@ export function registerMatchCompassRoutes(app: Express): void {
           userId,
           gender: user?.gender ?? null,
           genderCompositionPreference: registration.genderCompositionPreference,
-          preferredDistricts: registration.preferredDistricts,
-          acceptPairs: registration.acceptPairs,
-          kolComfortLevel: registration.kolComfortLevel,
           preferenceStrictness: strictness,
           birthdate: user?.birthdate ?? null,
           industryNiche: user?.industryNiche ?? null,
@@ -141,13 +138,11 @@ export function registerMatchCompassRoutes(app: Express): void {
           userIntent: user?.intent ?? null,
           cuisinePreferences: registration.cuisinePreferences,
           dietaryRestrictions: registration.dietaryRestrictions,
-          tasteIntensity: registration.tasteIntensity,
           barThemes: registration.barThemes,
           alcoholComfort: registration.alcoholComfort,
           eventType: pool.eventType,
           ageMatchPreference: user?.ageMatchPreference ?? null,
           tableVibePreference: user?.tableVibePreference ?? null,
-          vibeVector: (user?.vibeVector as Record<string, number>) ?? null,
         };
 
         // Batch load all candidate users and registrations to avoid N+1
@@ -183,9 +178,6 @@ export function registerMatchCompassRoutes(app: Express): void {
             userId: other.userId,
             gender: otherUser.gender ?? null,
             genderCompositionPreference: otherReg?.genderCompositionPreference ?? null,
-            preferredDistricts: otherReg?.preferredDistricts ?? null,
-            acceptPairs: otherReg?.acceptPairs ?? null,
-            kolComfortLevel: otherReg?.kolComfortLevel ?? null,
             preferenceStrictness: coerceStrictness(otherReg?.preferenceStrictness),
             birthdate: otherUser.birthdate ?? null,
             industryNiche: otherUser.industryNiche ?? null,
@@ -204,13 +196,11 @@ export function registerMatchCompassRoutes(app: Express): void {
             userIntent: otherUser.intent ?? null,
             cuisinePreferences: otherReg?.cuisinePreferences ?? null,
             dietaryRestrictions: otherReg?.dietaryRestrictions ?? null,
-            tasteIntensity: otherReg?.tasteIntensity ?? null,
             barThemes: otherReg?.barThemes ?? null,
             alcoholComfort: otherReg?.alcoholComfort ?? null,
             eventType: pool.eventType,
             ageMatchPreference: otherUser.ageMatchPreference ?? null,
             tableVibePreference: otherUser.tableVibePreference ?? null,
-            vibeVector: (otherUser.vibeVector as Record<string, number>) ?? null,
           };
 
           if (

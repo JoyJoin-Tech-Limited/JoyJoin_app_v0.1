@@ -39,6 +39,8 @@ Primary files:
 - `apps/server/src/poolRealtimeMatchingService.ts`
 - `apps/server/src/matchExplanationService.ts`
 - `apps/server/src/archetypeChemistry.ts`
+- `apps/server/src/services/matchHistoryDerivation.ts` — derives `match_history` pair rows from submitted `event_group_outcomes` (post-submission trigger + backfill) and refreshes archetype-pair feedback stats
+- `apps/server/src/repositories/matchHistoryRepo.ts` — `match_history` persistence; idempotent pair sync serialized by a `FOR UPDATE` group-row lock
 
 Boundary:
 - Deterministic matching reads canonical user/profile inputs and `user_interests` data.
@@ -185,7 +187,8 @@ Primary files:
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
 - `apps/server/src/lib/featureFlags.ts` — DB-backed feature flag resolver with env fallback and short-lived cache
-- `apps/server/src/lib/contentSafety.ts` — shared validation helper `validateContentSafe()` for field-level content filtering
+- `apps/server/src/lib/contentSafety.ts` — shared validation helpers `validateContentSafe()` (deterministic filter) and `validateContentSafeAsync()` (Tier 0 → WeChat msgSecCheck Tier 1, budget-bounded fail-open with background enforcement)
+- `apps/server/src/lib/wechatMsgSecCheck.ts` — WeChat msgSecCheck v2 client: 110-min token cache with single-flight refresh, fire-and-forget token warm-up, label→ViolationType mapping, `87014`+`suggest=risky` verdicts
 - `apps/server/src/lib/captureLocationSnapshot.ts` — captures IP-based location snapshots on login, onboarding completion, and pool registration
 - `apps/server/src/services/ipGeolocationService.ts` — IP geolocation resolution and admin heatmap rollups
 - `apps/server/src/repositories/userLocationRepo.ts` — domain data access for user location snapshots and aggregation queries
@@ -282,7 +285,7 @@ Key endpoints:
 
 Use these folders by responsibility:
 - `/middleware` — cross-cutting HTTP concerns
-- `/lib` — focused helpers and invariants used across domains (includes `contentSafety.ts` — `validateContentSafe()` for field-level content filtering)
+- `/lib` — focused helpers and invariants used across domains (includes `contentSafety.ts` — `validateContentSafe()` / `validateContentSafeAsync()` field-level filtering; `wechatMsgSecCheck.ts` — Tier-1 msgSecCheck client with token cache + warm-up)
 - `/services`, `/ai`, `/analytics`, `/inference`, `/gossip`, `/utils` — domain support modules
 - `/test-utils` — shared test helpers and fixtures (e.g., `withServer` lifecycle helper for integration tests)
 - `/__tests__` — automated tests

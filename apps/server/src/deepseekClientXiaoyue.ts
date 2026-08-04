@@ -493,6 +493,7 @@ function validateAndNormalizeInfo(
     "discussion",
     "fun",
     "explore",
+    "romance",
     "flexible",
   ];
   if (info.intent && Array.isArray(info.intent)) {

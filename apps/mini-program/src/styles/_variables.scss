@@ -31,6 +31,9 @@ $flow-border-subtle:   rgba($color-primary, 0.14);
 $flow-brand-primary:   $color-primary;
 $flow-brand-light:     $color-brand-lavender;
 $flow-accent-human:    #FF9B85;
+// Documented deviation from brand sky ($flow-accent-sky #A8C5DD): the street
+// accent is a vivid sky blue because it renders as thin 6rpx edge bars and
+// low-alpha gradient hints — the muted brand sky reads gray at that weight.
 $flow-accent-city:     #69B9F5;
 $flow-line-inactive:   #D8D3DF;
 $flow-shadow-brand:    0 12rpx 36rpx rgba($color-primary, 0.16);

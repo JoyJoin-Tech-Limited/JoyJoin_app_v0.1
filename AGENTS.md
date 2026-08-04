@@ -271,7 +271,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 | Events / footprint / pool-registration | `docs/agent-context/mini-program-events.md` |
 | Profession input overlay | `docs/agent-context/profession-overlay.md` |
 | Cross-cutting mini-program patterns | `docs/agent-context/mini-program-patterns.md` |
-| Flow-animation overlays (intro + blind-box lifecycle) | `docs/agent-context/flow-animation.md` |
+| Flow-animation overlays (intro + blind-box lifecycle) | `docs/agent-context/flow-animation.md` (Flow 1 intro revamp 2026-08-03) |
 
 **Onboarding is server-driven:** `GET /api/auth/user` returns `nextStep`. Client never computes its own position.
 
@@ -330,6 +330,8 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 - Page-level loading/empty/error state blocks must include centering safety (`min-height`, `flex: 1`, or `@include scroll-view-centered-state`)
 - No inline emoji in `apps/mini-program/` TS/TSX (use `JoyJoinIcon` or CSS/text; server/admin files are exempt — the scanner reads full staged-file content, not the diff)
 - **BEM class coverage (2026-07-27):** every static `__`-containing class referenced in mini-program TS/TSX must be defined in some stylesheet under `src` (`scripts/check/check-class-coverage.mjs`, which compiles every non-partial SCSS so nesting/mixins/interpolation are fully expanded). Regression guard for the 2026-07-26 SquadTableCard zero-CSS incident and the `match-compass` mixin-namespace mismatch it caught. Legacy orphans live in `scripts/check/class-coverage-baseline.json` as a ratchet — the gate fails only on NEW orphans; after fixing baseline entries regenerate with `node scripts/check/check-class-coverage.mjs --write-baseline`. Any new component MUST ship its CSS in the same PR.
+- **Subpackage style-splitting regression gate (2026-08-03):** Taro/Vite can chunk a component's WXSS into a subpackage page that never loads it, blanking the UI on device (2026-07-21 my-image stage, 2026-08-03 flow-animation intro). `apps/mini-program/scripts/verify-subpackage-styles.mjs` runs after `npm run build:weapp` and fails if required selectors are missing from the owning page WXSS. Fix: `@use` the component SCSS inside the page SCSS so the rules compile into the page chunk.
+- **Rendered-Truth Visual Gate occlusion guard (2026-08-03):** `scripts/visual-correctness-scan.mjs` now treats text-on-text overlap as benign when a higher-z opaque overlay (fixed/absolute + explicit z-index + ≥95% opaque background) fully covers the lower layer. This removes false blocking violations for legitimate overlay pages such as `ExperienceDetail` over `FlowShell` while still catching real collisions.
 
 **Never commit:** `.env`, secrets, or generated build artifacts.
 

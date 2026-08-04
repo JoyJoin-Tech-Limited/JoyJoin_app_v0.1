@@ -104,6 +104,8 @@ export interface UnifiedRevealSpotlight {
   chemistryScore: number | null
   connectionPointsWithRarity: { text: string; rarity: 'common' | 'rare' | 'epic' }[]
   rarityTier: 'common' | 'rare' | 'epic'
+  /** Deterministic shared highlights (共同点 one-liners); [] when absent/legacy payload */
+  sharedHighlights: string[]
 }
 
 export interface UnifiedRevealTokens {
@@ -463,6 +465,7 @@ export function composeUnifiedReveal(params: {
         chemistryScore: viewerSpotlight.pair.chemistryScore ?? null,
         connectionPointsWithRarity: rawPoints,
         rarityTier,
+        sharedHighlights: viewerSpotlight.pair.sharedHighlights ?? [],
       }
     : null
 

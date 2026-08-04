@@ -239,6 +239,9 @@ const FLOW_EVENT_TYPES = [
   "flow_banner_tap",
   "flow_detail_open",
   "flow_detail_back",
+  // Detail page forward CTA (2026-08-03) — distinct from the shell CTA so the
+  // two buttons never share one metric.
+  "flow_detail_cta_tap",
   "flow_node_tap",
   "flow_tap_ahead",
   "flow_complete",

@@ -73,6 +73,9 @@ export function registerMatchExplanationRoutes(app: Express): void {
       const interestsByUserId = new Map(
         memberInterestsRows.map((row) => [row.userId, row] as const)
       );
+      const registrationByUserId = new Map<string, { eventIntent?: string[] | null }>(
+        groupMembers.map((r: any) => [r.userId as string, r] as const)
+      );
 
       const matchMembers = members.map((m: any) => {
         const interestRow = interestsByUserId.get(m.id);
@@ -97,6 +100,8 @@ export function registerMatchExplanationRoutes(app: Express): void {
           industryCategoryLabel: m.industryCategoryLabel,
           interestsWithHeat,
           interestSignals: interestSignalsByUserId.get(m.id) ?? null,
+          intent: m.intent ?? null,
+          eventIntent: registrationByUserId.get(m.id)?.eventIntent ?? null,
         };
       });
 
@@ -443,6 +448,9 @@ export function registerMatchExplanationRoutes(app: Express): void {
           where: sql`${users.id} = ANY(${memberIds})`,
         });
         const interestSignalsByUserId = await loadInterestSignalsByUserIds(memberIds);
+        const registrationByUserId = new Map<string, { eventIntent?: string[] | null }>(
+          groupMembers.map((r: any) => [r.userId as string, r] as const)
+        );
 
         const matchMembers = members.map((m: any) => ({
           userId: m.id,
@@ -459,6 +467,8 @@ export function registerMatchExplanationRoutes(app: Express): void {
           industryCategory: m.industryCategory,
           industryCategoryLabel: m.industryCategoryLabel,
           interestSignals: interestSignalsByUserId.get(m.id) ?? null,
+          intent: m.intent ?? null,
+          eventIntent: registrationByUserId.get(m.id)?.eventIntent ?? null,
         }));
 
         const analysis = await matchExplanationService.generateGroupAnalysis(

@@ -25,6 +25,12 @@ export interface MatchExplanationContract {
   connectionPoints: string[];
   /** Connection points with rarity tiers (additive field for enriched rendering). */
   connectionPointsWithRarity?: import('./types/groupAnalysis').ConnectionPointWithRarity[];
+  /**
+   * Deterministic shared highlights (必聊项 / 共同意图 / 同乡 one-liners),
+   * computed server-side without an LLM call. Optional for backward
+   * compatibility with cached payloads generated before pair-explanation-v3.
+   */
+  sharedHighlights?: string[];
   /** Optional one-line conversation opener suggestion (match intelligence layer). */
   introAngle?: string;
 }

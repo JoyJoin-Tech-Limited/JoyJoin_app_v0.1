@@ -73,12 +73,24 @@ export default function JoyJoinPlayModeFlow({
     setDetailId(null)
   }
 
+  const handleDetailEnterApp = async () => {
+    if (!detail) return
+    haptics('medium')
+    // Dedicated detail-CTA event — deliberately NOT trackCtaTap so the shell
+    // CTA metric stays clean.
+    flowAnalytics.trackDetailCtaTap(detail.id)
+    await onComplete()
+    markFlowSeen('joyjoin-intro', userId)
+  }
+
   return (
     <>
       <FlowShell
         title={FLOW_SHELL_COPY.flow1Title}
+        showTitle={false}
         showGameBackground
         archetypeId={archetypeId}
+        entranceMode='cut'
         onSkip={handleSkip}
         actionLabel={FLOW_SHELL_COPY.ctaExplore}
         actionVisible={progress >= 0.62}
@@ -88,12 +100,13 @@ export default function JoyJoinPlayModeFlow({
         <ExperienceEntryFlow
           entries={EXPERIENCE_DEFINITIONS}
           revealProgress={progress}
+          archetypeId={archetypeId}
           backgroundSources={resolveFlowArchetypeBackgrounds(archetypeId)}
           alangEnabled={alangEnabled}
           onOpenDetail={handleOpenDetail}
         />
       </FlowShell>
-      {detail ? <ExperienceDetail experience={detail} archetypeId={archetypeId} onBack={handleCloseDetail} /> : null}
+      {detail ? <ExperienceDetail experience={detail} archetypeId={archetypeId} onBack={handleCloseDetail} onEnterApp={handleDetailEnterApp} /> : null}
     </>
   )
 }
