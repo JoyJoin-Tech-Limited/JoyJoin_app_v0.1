@@ -706,6 +706,40 @@ page {
     border-left: 16rpx solid transparent;
   }
 
+  &__target-orbit {
+    position: absolute;
+    z-index: 6;
+    inset: 28rpx;
+    pointer-events: none;
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__target-dot,
+  &__target-pulse {
+    position: absolute;
+    top: -2rpx;
+    left: 50%;
+    border-radius: 50%;
+    transform: translateX(-50%);
+  }
+
+  &__target-dot {
+    z-index: 2;
+    width: 34rpx;
+    height: 34rpx;
+    border: 6rpx solid $color-surface;
+    background: #ff9b85;
+    box-shadow: 0 0 0 4rpx rgba(139, 92, 246, 0.56), 0 0 30rpx rgba(255, 155, 133, 0.96);
+  }
+
+  &__target-pulse {
+    width: 46rpx;
+    height: 46rpx;
+    margin-top: -6rpx;
+    border: 4rpx solid rgba(255, 155, 133, 0.88);
+    animation: flash-radar-target-pulse 1.6s ease-out infinite;
+  }
+
   &__range-wave {
     position: absolute;
     top: 50%;
@@ -770,8 +804,15 @@ page {
   100% { opacity: 0; transform: translate(-50%, -50%) scale(2.8); }
 }
 
+@keyframes flash-radar-target-pulse {
+  0% { opacity: 0.9; transform: translateX(-50%) scale(0.72); }
+  100% { opacity: 0; transform: translateX(-50%) scale(1.75); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .flash-radar__pointer { transition: none; }
+  .flash-radar__target-orbit { transition: none; }
+  .flash-radar__target-pulse { animation: none; opacity: 0.5; }
   .flash-radar__range-wave { animation: none !important; }
 }
 

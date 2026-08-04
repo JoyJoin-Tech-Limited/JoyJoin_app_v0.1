@@ -118,6 +118,7 @@ describe('formal Flash live radar', () => {
 
     expect(await screen.findByText('83 米')).toBeInTheDocument()
     expect(screen.getByTestId('flash-radar-pointer')).toHaveStyle({ transform: 'rotate(60deg)' })
+    expect(screen.getByTestId('flash-radar-target')).toHaveStyle({ transform: 'rotate(60deg)' })
     expect(screen.getByTestId('flash-range-radar')).toHaveClass('flash-radar__instrument--near')
   })
 

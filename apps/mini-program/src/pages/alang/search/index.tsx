@@ -216,14 +216,25 @@ export default function FlashRadarPage() {
             <View className='flash-radar__range-wave flash-radar__range-wave--one' />
             <View className='flash-radar__range-wave flash-radar__range-wave--two' />
             {radarFrame ? (
-              <View
-                className='flash-radar__pointer'
-                data-testid='flash-radar-pointer'
-                style={{ transform: `rotate(${relativeBearing}deg)` }}
-                aria-hidden='true'
-              >
-                <View className='flash-radar__pointer-tip' />
-              </View>
+              <>
+                <View
+                  className='flash-radar__pointer'
+                  data-testid='flash-radar-pointer'
+                  style={{ transform: `rotate(${relativeBearing}deg)` }}
+                  aria-hidden='true'
+                >
+                  <View className='flash-radar__pointer-tip' />
+                </View>
+                <View
+                  className='flash-radar__target-orbit'
+                  data-testid='flash-radar-target'
+                  style={{ transform: `rotate(${relativeBearing}deg)` }}
+                  aria-label='目标方向'
+                >
+                  <View className='flash-radar__target-pulse' />
+                  <View className='flash-radar__target-dot' />
+                </View>
+              </>
             ) : null}
             <View className='flash-radar__signal'>
               <View className='flash-radar__signal-gem' />
@@ -234,7 +245,7 @@ export default function FlashRadarPage() {
           {radarFrame ? (
             <View className='flash-radar__live-readout' role='status'>
               <Text className='flash-radar__distance'>{radarFrame.distanceMeters} 米</Text>
-              <Text className='flash-radar__direction-copy'>转动手机，让箭头朝向正上方，然后沿箭头方向前进</Text>
+              <Text className='flash-radar__direction-copy'>雷达上的珊瑚色亮点就是目标方向，朝亮点方向前进</Text>
             </View>
           ) : (
             <>
