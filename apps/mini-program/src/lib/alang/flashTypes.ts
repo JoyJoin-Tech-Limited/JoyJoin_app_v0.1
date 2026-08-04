@@ -41,6 +41,7 @@ export interface FlashNpcSummary {
   endsAt?: string
   remainingSeconds?: number
   themeKey?: string
+  avatarUrl?: string
 }
 
 export interface FlashNpcReference {
@@ -49,6 +50,7 @@ export interface FlashNpcReference {
   name: string
   animal?: string
   themeKey?: string
+  avatarUrl?: string
 }
 
 export interface FlashFeedbackOption {

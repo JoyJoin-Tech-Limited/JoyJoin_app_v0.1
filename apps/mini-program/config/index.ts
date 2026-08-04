@@ -315,6 +315,18 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp',
         },
         {
+          from: 'src/pages/alang/assets/backgrounds/radar-paper-scene.webp',
+          to: 'dist/pages/alang/assets/backgrounds/radar-paper-scene.webp',
+        },
+        {
+          from: 'src/pages/alang/assets/backgrounds/task-paper-scene.webp',
+          to: 'dist/pages/alang/assets/backgrounds/task-paper-scene.webp',
+        },
+        {
+          from: 'src/pages/alang/assets/backgrounds/feedback-paper-scene.webp',
+          to: 'dist/pages/alang/assets/backgrounds/feedback-paper-scene.webp',
+        },
+        {
           from: 'src/pages/alang/assets/flash-city-encounter.webp',
           to: 'dist/pages/alang/assets/flash-city-encounter.webp',
         },

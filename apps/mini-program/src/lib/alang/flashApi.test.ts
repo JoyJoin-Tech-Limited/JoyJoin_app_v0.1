@@ -74,7 +74,7 @@ describe('formal Flash shared-contract adapter', () => {
         appearanceId: 'appearance-1',
         npc: {
           id: 'npc-1', slug: 'alang', name: '阿浪', species: '灰狼', personalitySummary: '好奇',
-          inviteLine: '替我去看看？', themeColor: '#6E7891', avatarUrl: null,
+          inviteLine: '替我去看看？', themeColor: '#6E7891', avatarUrl: 'https://joyjoinapp.com/static/flash/alang.webp',
         },
         district: '南山区', locationAddress: '南头古城开放公共街巷', endsAt: '2026-07-20T14:00:00+08:00', remainingMinutes: 90, canonicalScreen: 'radar',
       }],
@@ -85,6 +85,7 @@ describe('formal Flash shared-contract adapter', () => {
       onlineNpcs: [{
         appearanceId: 'appearance-1', name: '阿浪', animal: '灰狼', invitation: '替我去看看？',
         districtName: '南山区', locationAddress: '南头古城开放公共街巷', remainingSeconds: 5400,
+        avatarUrl: 'https://joyjoinapp.com/static/flash/alang.webp',
       }],
       myTasks: [{ assignmentId: task.id, destinationName: '南头古城' }],
       preferenceSummary: { personalizationEnabled: true, activeSourceCount: 3, tagCount: 0 },
@@ -112,7 +113,7 @@ describe('formal Flash shared-contract adapter', () => {
       id: 'encounter-1',
       npc: {
         id: 'npc-1', slug: 'lizi', name: '栗子', species: '水獭', personalitySummary: '热情',
-        themeColor: '#C77D58', avatarUrl: null,
+        themeColor: '#C77D58', avatarUrl: 'https://joyjoinapp.com/static/flash/lizi.webp',
       },
       expiresAt: '2026-07-21T12:00:00+08:00', status: 'offered', pendingDelivery: null,
       questionPosition: { current: 1, total: 2 },
@@ -131,6 +132,7 @@ describe('formal Flash shared-contract adapter', () => {
       currentQuestion: { id: 'q1', text: '更想去哪里？' },
       taskOffer: { title: '替我看看那家店', invitation: '我一直没去过，可以替我看看吗？' },
       canReroll: true,
+      npc: { avatarUrl: 'https://joyjoinapp.com/static/flash/lizi.webp' },
       deliveryMessage: '你真的去了呀，谢谢你替我看见那一小块地方。',
     })
   })

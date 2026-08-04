@@ -14,24 +14,24 @@ const preupload = process.argv.includes('--preupload')
 const introSceneRelativePath = 'pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp'
 const npcHeadshotRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
   .map((slug) => `pages/alang/assets/npcs/headshots/${slug}.webp`)
+const flashSceneRelativePaths = ['radar', 'task', 'feedback']
+  .map((scene) => `pages/alang/assets/backgrounds/${scene}-paper-scene.webp`)
+const flashDialogueRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
+  .map((slug) => `pages/alang/assets/ui/flash-${slug}-dialogue-paper-v1.webp`)
 
 const flashRuntimeImages = [
-  'pages/alang/assets/flash-city-encounter.png',
+  'pages/alang/assets/flash-city-encounter.webp',
   'pages/alang/assets/street-blind-box-icon.png',
-  'pages/alang/assets/npcs/alang.png',
-  'pages/alang/assets/npcs/lizi.png',
-  'pages/alang/assets/npcs/momo.png',
-  'pages/alang/assets/npcs/shiqi.png',
-  'pages/alang/assets/npcs/atuan.png',
   'pages/alang/assets/ui/flash-city-ambient-bg.png',
   'pages/alang/assets/ui/flash-empty-online.png',
   'pages/alang/assets/ui/flash-empty-tasks.png',
-  'pages/alang/assets/ui/flash-alang-dialogue-scene-v2.webp',
   ...npcHeadshotRelativePaths,
-  'pages/alang/assets/candidates/alang-event-card-candidate.png',
-  'pages/alang/assets/candidates/alang-found-scene-candidate.png',
-  'pages/alang/assets/candidates/alang-companion-atmosphere-candidate.png',
-  'pages/alang/assets/candidates/alang-result-candidate.png',
+  ...flashSceneRelativePaths,
+  ...flashDialogueRelativePaths,
+  'pages/alang/assets/candidates/alang-event-card-candidate.webp',
+  'pages/alang/assets/candidates/alang-found-scene-candidate.webp',
+  'pages/alang/assets/candidates/alang-companion-atmosphere-candidate.webp',
+  'pages/alang/assets/candidates/alang-result-candidate.webp',
 ]
 
 const requiredFiles = [
@@ -131,6 +131,14 @@ if (!existsSync(projectConfigPath)) {
   if (!npcHeadshotsAreForcedIntoWxapkg) {
     failures.push(
       'project.config.json packOptions.include must explicitly include all Flash NPC WebP headshots',
+    )
+  }
+  const sceneBackgroundsAreForcedIntoWxapkg = packIncludes.some(
+    (entry) => entry?.type === 'regexp' && entry?.value === 'pages/alang/assets/backgrounds/.*\\.webp$',
+  )
+  if (!sceneBackgroundsAreForcedIntoWxapkg) {
+    failures.push(
+      'project.config.json packOptions.include must explicitly include all Flash scene backgrounds',
     )
   }
   const introSceneIsForcedIntoWxapkg = packIncludes.some(

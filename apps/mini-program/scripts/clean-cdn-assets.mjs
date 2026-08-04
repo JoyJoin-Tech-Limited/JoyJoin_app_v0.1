@@ -103,13 +103,15 @@ await Promise.all([
   removeByName(assetsDir, '.DS_Store'),
   // Keep only Alang assets referenced by runtime code. Source-quality WebP
   // alternates remain under src/, but must not consume subpackage headroom.
-  removeMatchingFrom(alangAssetsDir, 'npcs', (name) => name.endsWith('.webp')),
-  removeMatchingFrom(alangAssetsDir, 'candidates', (name) => name.endsWith('.webp')),
+  removeMatchingFrom(alangAssetsDir, 'npcs', (name) => name.endsWith('.webp') || name.endsWith('.png')),
+  removeMatchingFrom(alangAssetsDir, 'candidates', (name) => name.endsWith('.png')),
+  removeMatchingFrom(alangAssetsDir, '', (name) => name === 'flash-city-encounter.png'),
   removeMatchingFrom(
     alangAssetsDir,
     'ui',
     (name) => ['flash-city-ambient-bg.webp', 'flash-empty-online.webp', 'flash-empty-tasks.webp'].includes(name),
   ),
+  removeMatchingFrom(alangAssetsDir, 'ui', (name) => name === 'flash-alang-dialogue-scene-v2.webp'),
 ])
 
 console.log('Cleaned CDN-only assets from dist/assets.')

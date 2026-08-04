@@ -70,6 +70,7 @@ function adaptTaskDto(task: FlashTaskDto): FlashTaskSummary {
       id: task.npc.id,
       slug: task.npc.slug,
       name: task.npc.name,
+      avatarUrl: task.npc.avatarUrl ?? undefined,
     },
     title: task.title,
     category: task.category,
@@ -101,6 +102,7 @@ export function adaptFlashHomeDto(response: SharedFlashHomeResponse): FlashHomeV
       endsAt: online.endsAt,
       remainingSeconds: Math.max(0, online.remainingMinutes * 60),
       themeKey: online.npc.slug,
+      avatarUrl: online.npc.avatarUrl ?? undefined,
     })),
     myTasks: response.myTasks.map(adaptTaskDto),
     preferenceSummary: {
@@ -142,6 +144,7 @@ export function adaptFlashEncounterDto(response: SharedFlashEncounterResponse): 
       name: response.npc.name,
       animal: response.npc.species,
       themeKey: response.npc.slug,
+      avatarUrl: response.npc.avatarUrl ?? undefined,
     },
     currentQuestion: response.question
       ? {

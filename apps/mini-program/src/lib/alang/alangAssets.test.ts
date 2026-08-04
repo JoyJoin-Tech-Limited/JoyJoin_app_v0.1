@@ -8,7 +8,7 @@ describe('Alang candidate asset manifest', () => {
     for (const asset of Object.values(ALANG_ASSET_MANIFEST)) {
       expect(asset.approvalStatus).toBe('awaiting-approved-art')
       expect(asset.fallbackPath).toMatch(
-        /^\/pages\/alang\/assets\/candidates\/.+-candidate\.png$/,
+        /^\/pages\/alang\/assets\/candidates\/.+-candidate\.webp$/,
       )
     }
   })

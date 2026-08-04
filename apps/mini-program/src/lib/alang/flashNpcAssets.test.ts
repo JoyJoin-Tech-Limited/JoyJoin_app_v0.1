@@ -40,19 +40,18 @@ describe('Flash NPC asset registry', () => {
   })
 
   it('maps every formal NPC to its governed local portrait', () => {
-    expect(Object.values(flashNpcAssets).map(({ name, animal, imageSrc }) => ({ name, animal, imageSrc })))
+    expect(Object.values(flashNpcAssets).map(({ name, animal }) => ({ name, animal })))
       .toEqual([
-        { name: '阿浪', animal: '灰狼', imageSrc: '/pages/alang/assets/npcs/alang.png' },
-        { name: '栗子', animal: '水獭', imageSrc: '/pages/alang/assets/npcs/lizi.png' },
-        { name: '默默', animal: '兔狲', imageSrc: '/pages/alang/assets/npcs/momo.png' },
-        { name: '拾柒', animal: '乌鸦', imageSrc: '/pages/alang/assets/npcs/shiqi.png' },
-        { name: '阿团', animal: '水豚', imageSrc: '/pages/alang/assets/npcs/atuan.png' },
+        { name: '阿浪', animal: '灰狼' },
+        { name: '栗子', animal: '水獭' },
+        { name: '默默', animal: '兔狲' },
+        { name: '拾柒', animal: '乌鸦' },
+        { name: '阿团', animal: '水豚' },
       ])
   })
 
   it('falls back to a character glyph instead of inventing CSS animal art', () => {
     expect(resolveFlashNpcTheme('future-friend', '小栖')).toMatchObject({
-      imageSrc: '',
       fallbackGlyph: '小',
     })
   })
