@@ -344,6 +344,12 @@ jobs:
                unzip -q compiledResult.zip -d compiled-check && \
                grep -R -a -q 'flash-location-compiler-scope-v4' compiled-check && \
                ! grep -R -a -E -q 'var L=[^;]*getFlashApiErrorCode' compiled-check && \
+               find compiled-check -type f -path '*/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp' -size +0c -print -quit | grep -q . && \
+               find compiled-check -type f -path '*/pages/alang/assets/npcs/headshots/alang.webp' -size +0c -print -quit | grep -q . && \
+               find compiled-check -type f -path '*/pages/alang/assets/npcs/headshots/lizi.webp' -size +0c -print -quit | grep -q . && \
+               find compiled-check -type f -path '*/pages/alang/assets/npcs/headshots/momo.webp' -size +0c -print -quit | grep -q . && \
+               find compiled-check -type f -path '*/pages/alang/assets/npcs/headshots/shiqi.webp' -size +0c -print -quit | grep -q . && \
+               find compiled-check -type f -path '*/pages/alang/assets/npcs/headshots/atuan.webp' -size +0c -print -quit | grep -q . && \
                timeout --signal=TERM --kill-after=30s 14m nice -n 10 env NODE_OPTIONS='--dns-result-order=ipv4first' NPM_CONFIG_CACHE='$REMOTE_DIR/.npm-cache' NPM_CONFIG_UPDATE_NOTIFIER='false' npx --yes miniprogram-ci@2.1.31 upload \
                  --appid wx5a038ee6dee12032 \
                  --pp dist \

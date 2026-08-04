@@ -84,7 +84,11 @@
       },
       {
         "type": "file",
-        "value": "assets/illustrations/street-blind-box-onboarding-fullscreen-v7.webp"
+        "value": "pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp"
+      },
+      {
+        "type": "regexp",
+        "value": "pages/alang/assets/npcs/headshots/.*\\.webp$"
       },
       {
         "type": "regexp",

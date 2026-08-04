@@ -3,7 +3,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const assetsDir = path.resolve(__dirname, '..', 'dist', 'assets')
+const distDir = path.resolve(__dirname, '..', 'dist')
+const assetsDir = path.join(distDir, 'assets')
+const alangAssetsDir = path.join(distDir, 'pages', 'alang', 'assets')
 
 async function exists(targetPath) {
   try {
@@ -18,8 +20,8 @@ async function removePath(relativePath) {
   await fs.rm(path.join(assetsDir, relativePath), { force: true, recursive: true })
 }
 
-async function removeMatching(relativeDir, predicate) {
-  const dir = path.join(assetsDir, relativeDir)
+async function removeMatchingFrom(rootDir, relativeDir, predicate) {
+  const dir = path.join(rootDir, relativeDir)
   if (!(await exists(dir))) return
 
   const entries = await fs.readdir(dir, { withFileTypes: true })
@@ -28,6 +30,10 @@ async function removeMatching(relativeDir, predicate) {
       .filter((entry) => predicate(entry.name, entry))
       .map((entry) => fs.rm(path.join(dir, entry.name), { force: true, recursive: true })),
   )
+}
+
+async function removeMatching(relativeDir, predicate) {
+  return removeMatchingFrom(assetsDir, relativeDir, predicate)
 }
 
 async function removeByName(rootDir, fileName) {
@@ -95,6 +101,15 @@ await Promise.all([
   removeMatching('icons/archetype-glyphs', (name) => /^archetype-.*-glyph(@2x)?\.png$/.test(name)),
   removeMatching('miniscript', (name) => name.endsWith('-hero.webp')),
   removeByName(assetsDir, '.DS_Store'),
+  // Keep only Alang assets referenced by runtime code. Source-quality WebP
+  // alternates remain under src/, but must not consume subpackage headroom.
+  removeMatchingFrom(alangAssetsDir, 'npcs', (name) => name.endsWith('.webp')),
+  removeMatchingFrom(alangAssetsDir, 'candidates', (name) => name.endsWith('.webp')),
+  removeMatchingFrom(
+    alangAssetsDir,
+    'ui',
+    (name) => ['flash-city-ambient-bg.webp', 'flash-empty-online.webp', 'flash-empty-tasks.webp'].includes(name),
+  ),
 ])
 
 console.log('Cleaned CDN-only assets from dist/assets.')

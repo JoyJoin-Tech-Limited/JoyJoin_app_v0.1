@@ -11,7 +11,9 @@ const appJsonPath = resolve(distRoot, 'app.json')
 const manifestPath = resolve(distRoot, 'flash-build-manifest.json')
 const projectConfigPath = resolve(appRoot, 'project.config.json')
 const preupload = process.argv.includes('--preupload')
-const introSceneRelativePath = 'assets/illustrations/street-blind-box-onboarding-fullscreen-v7.webp'
+const introSceneRelativePath = 'pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp'
+const npcHeadshotRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
+  .map((slug) => `pages/alang/assets/npcs/headshots/${slug}.webp`)
 
 const flashRuntimeImages = [
   'pages/alang/assets/flash-city-encounter.png',
@@ -25,6 +27,7 @@ const flashRuntimeImages = [
   'pages/alang/assets/ui/flash-empty-online.png',
   'pages/alang/assets/ui/flash-empty-tasks.png',
   'pages/alang/assets/ui/flash-alang-dialogue-scene-v2.webp',
+  ...npcHeadshotRelativePaths,
   'pages/alang/assets/candidates/alang-event-card-candidate.png',
   'pages/alang/assets/candidates/alang-found-scene-candidate.png',
   'pages/alang/assets/candidates/alang-companion-atmosphere-candidate.png',
@@ -120,6 +123,14 @@ if (!existsSync(projectConfigPath)) {
   if (!flashRuntimeImagesAreForcedIntoWxapkg) {
     failures.push(
       'project.config.json packOptions.include must explicitly include all pages/alang PNG runtime assets',
+    )
+  }
+  const npcHeadshotsAreForcedIntoWxapkg = packIncludes.some(
+    (entry) => entry?.type === 'regexp' && entry?.value === 'pages/alang/assets/npcs/headshots/.*\\.webp$',
+  )
+  if (!npcHeadshotsAreForcedIntoWxapkg) {
+    failures.push(
+      'project.config.json packOptions.include must explicitly include all Flash NPC WebP headshots',
     )
   }
   const introSceneIsForcedIntoWxapkg = packIncludes.some(
