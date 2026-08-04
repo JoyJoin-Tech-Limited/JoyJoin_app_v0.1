@@ -111,11 +111,13 @@ export function MiniScriptConfigModal({
       return
     }
 
+    haptics('light')
     setSelectedStyle(key as MiniScriptStyle)
     setStage('genre')
   }
 
   const handleToggleGenre = (key: MiniScriptGenre) => {
+    haptics('light')
     setSelectedGenres((current) => {
       const next = new Set(current)
       if (next.has(key)) {
@@ -224,12 +226,6 @@ export function MiniScriptConfigModal({
                   <View
                     key={card.key}
                     className={`ms-card ${mod}`}
-                    hoverClass='ms-card--pressed'
-                    hoverStartTime={0}
-                    hoverStayTime={120}
-                    role='button'
-                    aria-label={`${label}，选择此剧本风格`}
-                    onClick={() => handleSelectStyle(card.key)}
                   >
                     {/* Gradient background — fades out when thumbnail loads */}
                     <View
@@ -259,6 +255,17 @@ export function MiniScriptConfigModal({
                     )}
                     {/* Selection glow ring (child element, not box-shadow) */}
                     <View className='ms-card__glow' />
+                    {/* Native Image can swallow bubbling taps in RootPortal + ScrollView.
+                        Keep one explicit top-layer target as the event authority. */}
+                    <View
+                      className='ms-card__hit-target'
+                      hoverClass='ms-card__hit-target--pressed'
+                      hoverStartTime={0}
+                      hoverStayTime={120}
+                      role='button'
+                      aria-label={`${label}，选择此剧本风格`}
+                      onClick={() => handleSelectStyle(card.key)}
+                    />
                   </View>
                 )
               })}
@@ -281,12 +288,6 @@ export function MiniScriptConfigModal({
                   <View
                     key={card.key}
                     className={`ms-genre-card ${mod}`}
-                    hoverClass='ms-genre-card--pressed'
-                    hoverStartTime={0}
-                    hoverStayTime={120}
-                    role='button'
-                    aria-label={`${card.label}${isSelected ? '，已选择' : '，未选择'}`}
-                    onClick={() => handleToggleGenre(card.key as MiniScriptGenre)}
                   >
                     <View
                       className='ms-genre-card__bg'
@@ -305,6 +306,15 @@ export function MiniScriptConfigModal({
                     <View
                       className='ms-genre-card__glow'
                       style={{ borderColor: card.accentColor }}
+                    />
+                    <View
+                      className='ms-genre-card__hit-target'
+                      hoverClass='ms-genre-card__hit-target--pressed'
+                      hoverStartTime={0}
+                      hoverStayTime={120}
+                      role='button'
+                      aria-label={`${card.label}${isSelected ? '，已选择' : '，未选择'}`}
+                      onClick={() => handleToggleGenre(card.key as MiniScriptGenre)}
                     />
                   </View>
                 )

@@ -109,6 +109,10 @@ const ICEBREAKER_PRELOAD_ASSETS = [...SPRITE_SHEET_ASSETS, ...ICEBREAKER_PHASE_E
 // patient backoff retry ride through the flap instead of staring at a dead
 // shimmer (2026-07-28 502 incident).
 const TOPICS_REQUEST_TIMEOUT_MS = 8000
+// The MiniScript server pipeline has a 32s hard bound (generation + optional
+// validation + catalog fallback). The generic 5s dev / 15s production timeout
+// aborted valid generations before the server could persist them.
+const MINISCRIPT_GENERATION_TIMEOUT_MS = 35_000
 const SKIPPED_ACTION_TOAST_INTERVAL_MS = 1500
 const TOPICS_SKIP_RETRY_MAX = 5
 const TOPICS_SKIP_RETRY_DELAY_MS = 700
@@ -1284,6 +1288,7 @@ export default function IcebreakerSessionPage() {
         await apiRequest({
           path: '/api/miniscript/generate',
           method: 'POST',
+          timeout: MINISCRIPT_GENERATION_TIMEOUT_MS,
           data: {
             socialSessionId,
             playerCount: session.playerCount,
