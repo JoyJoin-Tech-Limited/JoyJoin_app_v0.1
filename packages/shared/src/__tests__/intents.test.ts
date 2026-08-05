@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { toggleIntentValue, INTENT_FLEXIBLE_OPTION } from '../constants'
+import { toggleIntentValue, INTENT_OPTIONS, INTENT_FLEXIBLE_OPTION } from '../constants'
 
 describe('toggleIntentValue', () => {
   const flexible = INTENT_FLEXIBLE_OPTION.value
 
-  it('adds an explicit intent when under the cap', () => {
+  it('adds an explicit intent', () => {
     expect(toggleIntentValue([], 'friends')).toEqual(['friends'])
   })
 
@@ -12,9 +12,21 @@ describe('toggleIntentValue', () => {
     expect(toggleIntentValue(['friends', 'fun'], 'friends')).toEqual(['fun'])
   })
 
-  it('blocks adding an explicit intent when the cap is reached and returns null', () => {
+  it('allows selecting beyond the old cap by default (no cap)', () => {
+    const fiveOfSix = INTENT_OPTIONS.slice(0, -1).map((option) => option.value)
+    expect(fiveOfSix).toHaveLength(5)
+    const next = toggleIntentValue(fiveOfSix.slice(0, 4), fiveOfSix[4])
+    expect(next).toEqual(fiveOfSix)
+  })
+
+  it('collapses to flexible when every explicit intent is selected', () => {
+    const allExplicit = INTENT_OPTIONS.map((option) => option.value)
+    const current = allExplicit.slice(0, -1)
+    expect(toggleIntentValue(current, allExplicit[allExplicit.length - 1])).toEqual([flexible])
+  })
+
+  it('blocks adding an explicit intent when a custom cap is reached and returns null', () => {
     const current = ['friends', 'networking', 'discussion']
-    expect(toggleIntentValue(current, 'fun')).toBeNull()
     expect(toggleIntentValue(current, 'fun', { maxExplicit: 3 })).toBeNull()
   })
 

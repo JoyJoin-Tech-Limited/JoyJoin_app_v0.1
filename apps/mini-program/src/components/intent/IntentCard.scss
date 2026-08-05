@@ -5,8 +5,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: $spacing-xs;
-  min-height: 176rpx;
+  gap: $spacing-sm;
+  min-height: 280rpx;
   padding: $spacing-md;
   text-align: center;
   background: $color-bg;
@@ -61,7 +61,7 @@
   }
 
   &__icon {
-    margin-bottom: 4rpx;
+    margin-bottom: 8rpx;
   }
 
   &__label {
@@ -77,6 +77,7 @@
     color: $color-text-tertiary;
     text-align: center;
     line-height: $line-height-normal;
+    max-width: 100%;
   }
 
   &__check {

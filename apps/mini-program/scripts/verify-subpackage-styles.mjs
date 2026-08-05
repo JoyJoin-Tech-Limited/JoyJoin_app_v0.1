@@ -82,6 +82,20 @@ const REQUIREMENTS = [
       '.experience-detail{',
     ],
   },
+  {
+    // Pool-registration mascot section (2026-08-05): the dedicated 悦仔 row
+    // for Steps 1–3 lives in the pool-registration subpackage page — its SCSS
+    // is @use'd by the page SCSS and must reach the page WXSS, or the mascot
+    // row renders unstyled on device (same subpackage style-splitting trap as
+    // the my-image stage and squad-unboxing incidents).
+    page: 'pages/pool-registration/index.wxss',
+    selectors: [
+      'pool-reg-mascot{',
+      'pool-reg-mascot__mascot-wrap{',
+      'pool-reg-mascot__bubble{',
+      'pool-reg-mascot__bubble-text{',
+    ],
+  },
 ]
 
 let failed = false

@@ -36,7 +36,7 @@ export default function IntentCard({
   dimmed = false,
   disabled = false,
   onClick,
-  iconSize = 48,
+  iconSize = 144,
   className = '',
   testId,
 }: IntentCardProps) {

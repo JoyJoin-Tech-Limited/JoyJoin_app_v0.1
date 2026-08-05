@@ -1,6 +1,7 @@
 @use '../../styles/variables' as *;
 @use '../../components/flow-animation/index.scss' as *;
 @use '../../styles/mixins' as *;
+@use './components/PoolRegistrationMascotSection.scss' as *;
 
 .pool-reg {
   @include page-gradient-bg;
@@ -399,6 +400,45 @@
     font-weight: $font-weight-semibold;
     color: rgba($color-primary-dark, 0.84);
     margin-bottom: $spacing-xs;
+  }
+
+  // Slim unpaid resume notice: single line, check icon + chill copy, zero
+  // paid-entitlement terminology (contract AC-13). The handoffCode
+  // distinction stays in the return context for the payment page only.
+  &__resume-notice {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__resume-check {
+    flex-shrink: 0;
+    width: 28rpx;
+    height: 28rpx;
+    border-radius: 999rpx;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &::after {
+      content: '';
+      width: 12rpx;
+      height: 7rpx;
+      border-left: 3rpx solid $color-text-white;
+      border-bottom: 3rpx solid $color-text-white;
+      transform: rotate(-45deg);
+      margin-top: -2rpx;
+    }
+  }
+
+  &__resume-notice-text {
+    flex: 1;
+    min-width: 0;
+    @include type-body;
+    color: $color-text-primary;
+    line-height: $line-height-relaxed;
+    word-break: keep-all;
   }
 
   &__resume-title {
@@ -1110,30 +1150,6 @@
     }
   }
 
-  &__step-coach {
-    margin-bottom: $spacing-md;
-
-    &--no-avatar {
-      // When the coach card below already owns the mascot, the reaction bubble
-      // hides its avatar. Give the remaining mascot generous headroom so the
-      // bubble and the coach-card mascot don't feel crowded/overlapping.
-      margin-bottom: $spacing-xl;
-      // Subtle pop-in so the "收到" feedback feels responsive even without the mascot avatar.
-      animation: pool-reg-step-coach-pop 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-  }
-
-  @keyframes pool-reg-step-coach-pop {
-    from {
-      opacity: 0;
-      transform: translateY(-8rpx) scale(0.98);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
   @keyframes pool-reg-step-in {
     from {
       opacity: 0;
@@ -1201,9 +1217,6 @@
       animation: none;
     }
     &__step-pill--complete &__step-index {
-      animation: none;
-    }
-    &__step-coach--no-avatar {
       animation: none;
     }
   }

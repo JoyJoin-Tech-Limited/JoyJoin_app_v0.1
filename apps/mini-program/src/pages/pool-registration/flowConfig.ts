@@ -124,3 +124,39 @@ export function buildFallbackBrief(input: {
     ],
   }
 }
+
+/**
+ * Step-intro bubble copy for the dedicated mascot section (Steps 1–3).
+ * Copy-owner sign-off pending — see sprint contract AC-09.
+ */
+export function getMascotStepIntro(step: number): string {
+  if (step === 2) return '这次最想收获什么？可以多选，选全了就交给悦仔'
+  if (step === 3) return '最后补几个细节，都可以留空'
+  return '先定个预算区间，悦仔帮你挑合拍的桌友'
+}
+
+/**
+ * Reaction bubble line shown while the one-shot nod plays. Reuses the
+ * previously approved reaction copy verbatim; flexible-only selections reuse
+ * the approved flexible feedback line.
+ */
+export function getStepReactionLine(
+  step: number,
+  input: { selectedBudget?: string; intents?: string[] },
+): string {
+  if (step === 1) {
+    return input.selectedBudget
+      ? `收到！${input.selectedBudget} 的预算，悦仔按这个区间帮你配对`
+      : '收到！悦仔会按这个预算帮你配对'
+  }
+  if (step === 2) {
+    const intents = input.intents ?? []
+    if (intents.includes(INTENT_FLEXIBLE_OPTION.value)) {
+      return '没问题，把期待交给悦仔，我来帮你挑一个舒服的组合。'
+    }
+    return intents.length > 0
+      ? `收到！${intents.length} 个期待，悦仔按这个方向帮你匹配`
+      : '收到！悦仔会按这些期待帮你匹配'
+  }
+  return '收到，悦仔记下了'
+}

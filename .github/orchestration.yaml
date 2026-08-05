@@ -872,6 +872,21 @@
         "recommended_extensions": []
       }
     },
+    "Film Master": {
+      "file": ".github/agents/film-master.agent.md",
+      "portfolio_role": "cinematic-direction",
+      "orchestration_status": "audited-support",
+      "current_tools": [
+        "read",
+        "search",
+        "edit"
+      ],
+      "tooling_assessment": {
+        "status": "sufficient",
+        "summary": "Cinematic direction is concept- and artifact-first: read/search for brand context, edit for storyboard and prompt deliverables in-repo; no runtime tooling needed.",
+        "recommended_extensions": []
+      }
+    },
     "Game Development Agent": {
       "file": ".github/agents/game-development-agent.agent.md",
       "portfolio_role": "icebreaker-template-implementation",
@@ -1507,6 +1522,15 @@
       "first-principles-velocity",
       "code-review",
       "testing-and-regression-guardrails"
+    ],
+    "Film Master": [
+      "orchestration-turn-reporting",
+      "first-principles-velocity",
+      "cinematic-storyboard",
+      "joyjoin-brand-guidelines",
+      "lovart-design-workflow",
+      "wow-elements",
+      "draft-prd"
     ],
     "Game Design Agent": [
       "orchestration-turn-reporting",

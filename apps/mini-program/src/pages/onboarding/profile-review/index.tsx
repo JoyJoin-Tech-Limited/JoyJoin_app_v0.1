@@ -795,7 +795,7 @@ export default function ProfileReviewPage() {
                       <JoyJoinIcon
                         emoji={item.emoji}
                         tier='intent'
-                        size={24}
+                        size={36}
                         className='profile-review__intent-chip-icon'
                       />
                       <Text className='profile-review__intent-chip-text'>{item.label}</Text>

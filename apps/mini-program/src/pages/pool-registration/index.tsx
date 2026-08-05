@@ -8,7 +8,7 @@ import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
 import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION, toggleIntentValue } from '@shared/constants'
 
 import { useStaggerMount } from '../../hooks/useStaggerMount'
-import { useReactionTimer } from '../../hooks/useReactionTimer'
+import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { apiRequest, type ApiError } from '../../lib/api/api'
@@ -36,8 +36,8 @@ import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
 import LoadingScreen from '../../components/loading/LoadingScreen'
-import XiaoyueChatBubble from '../../components/mascot/XiaoyueChatBubble'
 import BlindBoxFlow from '../../components/flow-animation/BlindBoxFlow'
+import type { XiaoyueSpriteState } from '../../components/mascot/XiaoyueSpriteAnimator'
 import { shouldShowFlow } from '../../components/flow-animation/FlowStorage'
 import { formatEventDateTime } from '../../lib/utils/eventDisplay'
 
@@ -46,6 +46,8 @@ import {
   buildPreJoinVibeBriefPath,
   getBudgetOptions,
   getFlowStepLabels,
+  getMascotStepIntro,
+  getStepReactionLine,
   INTENT_FLOW_OPTIONS,
   resolvePoolEventType,
   type PoolEventType,
@@ -67,7 +69,8 @@ import PoolRegistrationDetailsFields from './components/PoolRegistrationDetailsF
 import ChoiceCard from './components/ChoiceCard'
 import PoolRegistrationErrorCard from './components/PoolRegistrationErrorCard'
 import PoolRegistrationFooterBar from './components/PoolRegistrationFooterBar'
-import PoolRegistrationIntentGrid, { MAX_INTENTS } from './components/PoolRegistrationIntentGrid'
+import PoolRegistrationIntentGrid from './components/PoolRegistrationIntentGrid'
+import PoolRegistrationMascotSection from './components/PoolRegistrationMascotSection'
 import PoolRegistrationNewRegistrantBanner from './components/PoolRegistrationNewRegistrantBanner'
 import PoolRegistrationResumeCard from './components/PoolRegistrationResumeCard'
 import PoolRegistrationStepper from './components/PoolRegistrationStepper'
@@ -149,9 +152,11 @@ export default function PoolRegistrationPage() {
   // Scroll-to-error anchor — set when error appears, cleared so it doesn't re-scroll on re-render
   const [scrollErrorId, setScrollErrorId] = useState('')
   const [resumeContext, setResumeContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
-  const [showBudgetReaction, triggerBudgetReaction] = useReactionTimer()
-  const [showIntentReaction, triggerIntentReaction, hideIntentReaction] = useReactionTimer()
-  const [showDetailReaction, triggerDetailReaction] = useReactionTimer()
+  // One-shot mascot reaction (nod + reaction bubble) — driven by the mascot
+  // section's state machine; the page only flips this flag. Reset on
+  // swipe-back so a hidden page never re-shows a stale reaction.
+  const [reacting, setReacting] = useState(false)
+  useResetOnShow(setReacting)
   const staggerMounted = useStaggerMount()
 
   // Gate transient reactions so they only celebrate the first selection per step visit.
@@ -383,9 +388,7 @@ export default function PoolRegistrationPage() {
     const userIntent = user?.intent
     const initialIntent =
       Array.isArray(userIntent) && userIntent.length > 0
-        ? userIntent
-            .filter((intent) => ALL_INTENT_VALUES.includes(intent as (typeof ALL_INTENT_VALUES)[number]))
-            .slice(0, MAX_INTENTS)
+        ? userIntent.filter((intent) => ALL_INTENT_VALUES.includes(intent as (typeof ALL_INTENT_VALUES)[number]))
         : []
 
     setFormState({
@@ -495,8 +498,22 @@ export default function PoolRegistrationPage() {
   const hasIntentSelection = formState.eventIntent.length > 0
   const canSubmit = hasBudgetSelection && hasIntentSelection
 
+  // Mascot section drives: per-step base sprite state + reaction bubble line.
+  const mascotBaseState = useMemo<XiaoyueSpriteState>(() => {
+    if (step === STEP_BUDGET) return 'coach'
+    if (step === STEP_INTENT) return 'curious'
+    return 'listening'
+  }, [step])
+  const mascotReactionLine = useMemo(
+    () => getStepReactionLine(step, { selectedBudget, intents: formState.eventIntent }),
+    [step, selectedBudget, formState.eventIntent],
+  )
+
   // Reset per-step reaction gates whenever the user navigates into a step.
+  // Any in-flight nod reaction is also cancelled so the mascot never shows a
+  // stale reaction on a newly entered step.
   useEffect(() => {
+    setReacting(false)
     if (step === STEP_BUDGET) {
       budgetReactionShownRef.current = false
     }
@@ -511,17 +528,17 @@ export default function PoolRegistrationPage() {
   // Brief celebratory Xiaoyue reaction when the user makes their first intent selection
   useEffect(() => {
     if (!hasIntentSelection) {
-      hideIntentReaction()
+      setReacting(false)
       return
     }
     if (intentReactionShownRef.current) return
     intentReactionShownRef.current = true
-    triggerIntentReaction()
+    setReacting(true)
     discoverAnalytics.track('registration_step_reaction_shown', poolId, {
       step: 'intent',
       count: formState.eventIntent.length,
     })
-  }, [hasIntentSelection, hideIntentReaction, triggerIntentReaction, poolId, formState.eventIntent.length])
+  }, [hasIntentSelection, poolId, formState.eventIntent.length])
 
   // Reward haptic when the form becomes submittable for the first time.
   useEffect(() => {
@@ -565,9 +582,9 @@ export default function PoolRegistrationPage() {
     if (!anyDetailSelected) return
     if (detailCelebrateShownRef.current) return
     detailCelebrateShownRef.current = true
-    triggerDetailReaction()
+    setReacting(true)
     discoverAnalytics.track('registration_step_reaction_shown', poolId, { step: 'details' })
-  }, [step, anyDetailSelected, poolId, triggerDetailReaction])
+  }, [step, anyDetailSelected, poolId])
 
   const successHighlights = useMemo(() => {
     const items = [selectedBudget, ...findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS).slice(0, 2)]
@@ -576,6 +593,8 @@ export default function PoolRegistrationPage() {
 
   const handleBudgetSelect = useCallback(
     (value: string) => {
+      const isDeselect =
+        eventType === '酒局' ? formState.barBudgetRange?.[0] === value : formState.budgetRange?.[0] === value
       setFormState((currentState) =>
         eventType === '酒局'
           ? {
@@ -589,27 +608,30 @@ export default function PoolRegistrationPage() {
               barBudgetRange: undefined,
             },
       )
+      // Deselecting cancels any reaction so the CTA never sits disabled under
+      // an active reaction (contract AC-04).
+      if (isDeselect) {
+        setReacting(false)
+        return
+      }
       if (!budgetReactionShownRef.current) {
         budgetReactionShownRef.current = true
-        triggerBudgetReaction()
+        setReacting(true)
         discoverAnalytics.track('registration_step_reaction_shown', poolId, {
           step: 'budget',
           value,
         })
       }
     },
-    [eventType, triggerBudgetReaction, poolId],
+    [eventType, formState.barBudgetRange, formState.budgetRange, poolId],
   )
 
   const handleIntentToggle = useCallback((value: string) => {
     setFormState((currentState) => {
-      const nextIntent = toggleIntentValue(currentState.eventIntent, value, { maxExplicit: MAX_INTENTS })
+      // No selection cap: every explicit intent is selectable; picking them
+      // all auto-collapses to 随缘 (toggleIntentValue contract).
+      const nextIntent = toggleIntentValue(currentState.eventIntent, value)
       if (!nextIntent) {
-        Taro.showToast({
-          title: `最多选择 ${MAX_INTENTS} 个期待`,
-          icon: 'none',
-          duration: TOAST_DEFAULT_MS,
-        })
         return currentState
       }
 
@@ -954,14 +976,15 @@ export default function PoolRegistrationPage() {
 
       {step > 0 ? <PoolRegistrationStepper step={step} labels={stepLabels} /> : null}
 
-      {showBudgetReaction && step === 1 ? (
-        <XiaoyueChatBubble
-          content={selectedBudget ? `收到！${selectedBudget} 的预算，悦仔按这个区间帮你配对` : '收到！悦仔会按这个预算帮你配对'}
-          pose='casual'
-          horizontal
-          showGlow
-          hideAvatar
-          className='pool-reg__step-coach pool-reg__step-coach--no-avatar'
+      {step >= STEP_BUDGET && step <= STEP_DETAILS ? (
+        <PoolRegistrationMascotSection
+          step={step}
+          spriteState={mascotBaseState}
+          bubbleContent={reacting ? mascotReactionLine : getMascotStepIntro(step)}
+          reacting={reacting}
+          visible={staggerMounted}
+          reduceMotion={reduceMotion}
+          onNodComplete={() => setReacting(false)}
         />
       ) : null}
 
@@ -975,7 +998,6 @@ export default function PoolRegistrationPage() {
             userArchetype={user?.primaryArchetype ?? undefined}
             visible={staggerMounted}
             reduceMotion={reduceMotion}
-            spriteState='coach'
             footer={
               hasBudgetSelection ? (
                 <View className='pool-reg__completion-pill'>
@@ -1001,21 +1023,6 @@ export default function PoolRegistrationPage() {
         </View>
       ) : null}
 
-      {showIntentReaction && step === 2 ? (
-        <XiaoyueChatBubble
-          content={
-            formState.eventIntent.length > 0
-              ? `收到！${formState.eventIntent.length} 个期待，悦仔按这个方向帮你匹配`
-              : '收到！悦仔会按这些期待帮你匹配'
-          }
-          pose='casual'
-          horizontal
-          showGlow
-          hideAvatar
-          className='pool-reg__step-coach pool-reg__step-coach--no-avatar'
-        />
-      ) : null}
-
       {step === 2 ? (
         <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}${reduceMotion ? ' pool-reg__step-content--reduce-motion' : ''}`}>
           <XiaoyueCoachCard
@@ -1026,7 +1033,6 @@ export default function PoolRegistrationPage() {
             userArchetype={user?.primaryArchetype ?? undefined}
             visible={staggerMounted}
             reduceMotion={reduceMotion}
-            spriteState='curious'
             footer={
               hasIntentSelection ? (
                 <View className='pool-reg__completion-pill'>
@@ -1043,17 +1049,6 @@ export default function PoolRegistrationPage() {
         </View>
       ) : null}
 
-      {showDetailReaction && step === 3 ? (
-        <XiaoyueChatBubble
-          content='收到，悦仔记下了'
-          pose='casual'
-          horizontal
-          showGlow
-          hideAvatar
-          className='pool-reg__step-coach pool-reg__step-coach--no-avatar'
-        />
-      ) : null}
-
       {step === 3 ? (
         <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}${reduceMotion ? ' pool-reg__step-content--reduce-motion' : ''}`}>
           <XiaoyueCoachCard
@@ -1064,7 +1059,6 @@ export default function PoolRegistrationPage() {
             userArchetype={user?.primaryArchetype ?? undefined}
             visible={staggerMounted}
             reduceMotion={reduceMotion}
-            spriteState='listening'
             footer={
               anyDetailSelected ? (
                 <View className='pool-reg__completion-pill'>

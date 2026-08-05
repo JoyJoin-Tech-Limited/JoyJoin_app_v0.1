@@ -539,7 +539,7 @@ export default function EssentialDataPage() {
               dimmed={isDimmed}
               disabled={isDisabled}
               onClick={() => toggleIntent(option.value)}
-              iconSize={48}
+              iconSize={144}
               testId={`essential-intent-${option.value}`}
             />
           )

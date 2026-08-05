@@ -71,6 +71,7 @@ These agents are still part of the active portfolio, but they are not in the v1 
 | `Lie Detective Icebreaker Agent` | `lie_detective` secrecy (`isLie`), votes/reveals, `social-lie-detective-v1` | [`lie-detective-icebreaker-agent.agent.md`](./lie-detective-icebreaker-agent.agent.md) |
 | `Personality Dice Icebreaker Agent` | `personality_dice` roster-sized challenges, `social-personality-dice-v1`, tone/safety | [`personality-dice-icebreaker-agent.agent.md`](./personality-dice-icebreaker-agent.agent.md) |
 | `Visual Designer` | Brand-aligned visual asset creation via Lovart AI Design Agent — mascot illustrations, UI mockups, marketing materials, icon sets | [`visual-designer.agent.md`](./visual-designer.agent.md) |
+| `Film Master` | Nolan-level cinematic direction for JoyJoin — logline + 导演阐述, 五维分镜 tables, Lovart key-frame briefs, and Seedance 2.0 prompts. **Working methodology:** `cinematic-storyboard` skill | [`film-master.agent.md`](./film-master.agent.md) |
 
 See [`../ORCHESTRATION.md`](../ORCHESTRATION.md) for the broader portfolio audit, linked skills, and the tooling sufficiency recommendations for each of these agents.
 

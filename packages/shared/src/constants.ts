@@ -263,19 +263,23 @@ export function getIntentEmoji(intent: string): string {
 }
 
 /**
- * Toggles an intent value in the current selection, respecting the max selection
- * cap and the special "flexible" option. Flexible means no strong preference, so
- * it is mutually exclusive with explicit intents.
+ * Toggles an intent value in the current selection. Flexible means no strong
+ * preference, so it is mutually exclusive with explicit intents.
  *
- * Returns `null` when the toggle is blocked by the cap (caller should show
- * feedback). Returns the updated array on success.
+ * By default there is no selection cap: users may pick as many explicit
+ * intents as they want. Selecting EVERY explicit option collapses the
+ * selection to flexible ("I'm up for anything") automatically.
+ *
+ * An explicit `maxExplicit` still blocks additions past the cap (returns
+ * `null` — callers should surface feedback). Returns the updated array on
+ * success.
  */
 export function toggleIntentValue(
   current: string[],
   value: string,
   options: { maxExplicit?: number; flexibleValue?: string } = {},
 ): string[] | null {
-  const { maxExplicit = 3, flexibleValue = INTENT_FLEXIBLE_OPTION.value } = options;
+  const { maxExplicit = Number.POSITIVE_INFINITY, flexibleValue = INTENT_FLEXIBLE_OPTION.value } = options;
 
   // Deselecting is always allowed.
   if (current.includes(value)) {
@@ -293,7 +297,15 @@ export function toggleIntentValue(
     return null;
   }
 
-  return [...withoutFlexible, value];
+  const next = [...withoutFlexible, value];
+
+  // Selecting every explicit option means "I'm up for anything" — collapse to
+  // flexible automatically.
+  if (INTENT_OPTIONS.every((option) => next.includes(option.value))) {
+    return [flexibleValue];
+  }
+
+  return next;
 }
 
 // ============ 契合点系统 ============

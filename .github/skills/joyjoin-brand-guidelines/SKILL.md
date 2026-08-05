@@ -19,8 +19,10 @@ description: >
 
 ## Brand Essence
 
-JoyJoin is an AI-powered social mini app for curated 4-6 person offline gatherings.
-It should feel: warm, friendly, playful, surprising, premium but approachable.
+JoyJoin is a **盲盒式城市体验平台** — an AI-powered social mini app for curated 4-6 person
+offline gatherings and 街头盲盒 street encounters (2026-08-05 positioning: the city is the
+playground; every experience opens like a surprise box). It should feel: warm, friendly,
+playful, surprising, premium but approachable.
 
 **Core idea:** Not awkward chatting. Not random socializing. A carefully planned
 small-group gathering that feels like opening a surprise box.

@@ -884,7 +884,7 @@ export default function EditProfilePage() {
                         aria-label={`${option.label}${option.subtitle ? `：${option.subtitle}` : ''}${isDisabled ? '（已达上限）' : ''}`}
                       >
                         {option.emoji != null ? (
-                          <JoyJoinIcon emoji={option.emoji} tier='intent' size={36} className='edit-profile__intent-icon' />
+                          <JoyJoinIcon emoji={option.emoji} tier='intent' size={54} className='edit-profile__intent-icon' />
                         ) : null}
                         <View className='edit-profile__intent-text'>
                           <Text className='edit-profile__intent-label'>{option.label}</Text>

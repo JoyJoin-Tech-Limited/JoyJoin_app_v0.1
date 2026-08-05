@@ -1,0 +1,148 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// PoolRegistrationMascotSection — single 悦仔 mascot row above Steps 1–3
+// content: mascot-left (160rpx) + speech bubble-right (max 520rpx).
+// Motion discipline (contract AC-05/AC-06/PERF-02): transform/opacity only;
+// one-shot entry pop+rise; breathing-only idle; no layout-property animation.
+
+.pool-reg-mascot {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+  opacity: 1;
+  box-sizing: border-box;
+
+  &--hidden {
+    opacity: 0;
+  }
+
+  // One-shot entry (forward step navigation only): mascot pop + bubble rise.
+  &--enter &__mascot-wrap {
+    animation: pool-reg-mascot-pop 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &--enter &__bubble {
+    animation: pool-reg-mascot-bubble-in 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__mascot-wrap {
+    flex-shrink: 0;
+    width: 160rpx;
+    height: 160rpx;
+    // Idle = breathing only (translateY, GPU-safe). The sprite animator's own
+    // loop handles the base-state frames; nothing else moves continuously.
+    animation: pool-reg-mascot-breathe 2.4s ease-in-out infinite alternate;
+  }
+
+  &__portrait {
+    width: 180rpx;
+    height: 180rpx;
+    margin: -10rpx;
+    border-radius: 50%;
+  }
+
+  &__bubble {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    max-width: 520rpx;
+    box-sizing: border-box;
+    padding: $spacing-md;
+    background: $color-surface;
+    border: 2rpx solid rgba($color-primary, 0.14);
+    border-radius: 24rpx;
+    box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+    opacity: 1;
+
+    // Bubble swap (reaction): old out 120ms (opacity transition), then the new
+    // content mounts with the 160ms rise animation below.
+    &--out {
+      transition: opacity 0.12s ease;
+      opacity: 0;
+    }
+
+    &--enter {
+      animation: pool-reg-mascot-bubble-in 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    // 12rpx left tail pointing at the mascot.
+    &--tail::before {
+      content: '';
+      position: absolute;
+      left: -12rpx;
+      top: 32rpx;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 12rpx 14rpx 12rpx 0;
+      border-color: transparent rgba($color-primary, 0.14) transparent transparent;
+    }
+
+    &--tail::after {
+      content: '';
+      position: absolute;
+      left: -9rpx;
+      top: 33rpx;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 11rpx 12rpx 11rpx 0;
+      border-color: transparent $color-surface transparent transparent;
+    }
+  }
+
+  &__bubble-text {
+    display: block;
+    @include type-body;
+    color: $color-text-primary;
+    line-height: $line-height-relaxed;
+    word-break: keep-all;
+  }
+}
+
+@keyframes pool-reg-mascot-pop {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pool-reg-mascot-bubble-in {
+  from {
+    transform: translateY(8rpx);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pool-reg-mascot-breathe {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-4rpx);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pool-reg-mascot {
+    &--enter &__mascot-wrap,
+    &--enter &__bubble,
+    &__mascot-wrap {
+      animation: none;
+    }
+
+    &__bubble {
+      transition: none;
+    }
+  }
+}

@@ -128,6 +128,7 @@ Guidance for adding crafted, brand-aligned micro-interactions and premium emotio
 | [`frontend-hook-engine`](./frontend-hook-engine/SKILL.md) | Screen-level Seven Deadly Sins UI diagnosis for CTA hierarchy, state design, interaction clarity, and build-ready component/state plans |
 | [`wow-elements`](./wow-elements/SKILL.md) | Crafted micro-interactions, completion moments, empty/loading state polish, motion principles, accessibility guardrails, review checklist |
 | [`lovart-design-workflow`](./lovart-design-workflow/SKILL.md) | Lovart AI Design Agent prompt generation, brand-aligned visual asset briefs, and design-to-code handoff for illustrations, mockups, marketing graphics, and icons |
+| [`cinematic-storyboard`](./cinematic-storyboard/SKILL.md) | 自研电影分镜技术 — 五维分镜法 (Narrative/Visual/Camera/Rhythm/Sound), storyboard tables, Lovart key-frame scene briefs → Seedance 2.0 / 即梦 video prompts; brand-injected, mascot-consistent. **Executed by the Film Master agent** (`.github/agents/film-master.agent.md`) |
 
 ---
 

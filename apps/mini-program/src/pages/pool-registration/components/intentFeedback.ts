@@ -1,6 +1,6 @@
 import { INTENT_FLOW_OPTIONS } from '../flowConfig'
 
-const EMPTY_FEEDBACK = '先选 1–3 个期待方向，悦仔好知道怎么帮你配。'
+const EMPTY_FEEDBACK = '先选几个期待方向，或者直接选随缘。'
 const FLEXIBLE_ONLY_FEEDBACK = '没问题，把期待交给悦仔，我来帮你挑一个舒服的组合。'
 
 const COMBO_FEEDBACK: Record<string, string> = {

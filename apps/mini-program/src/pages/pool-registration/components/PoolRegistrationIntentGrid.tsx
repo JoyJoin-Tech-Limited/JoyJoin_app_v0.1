@@ -4,8 +4,6 @@ import IntentCard from '../../../components/intent/IntentCard'
 import { INTENT_FLOW_OPTIONS } from '../flowConfig'
 import { INTENT_FLEXIBLE_OPTION } from '@shared/constants'
 
-export const MAX_INTENTS = 3
-
 interface PoolRegistrationIntentGridProps {
   selected: string[]
   onToggle: (value: string) => void
@@ -13,8 +11,6 @@ interface PoolRegistrationIntentGridProps {
 
 function PoolRegistrationIntentGrid({ selected, onToggle }: PoolRegistrationIntentGridProps) {
   const isFlexibleActive = selected.includes(INTENT_FLEXIBLE_OPTION.value)
-  const explicitCount = selected.filter((item) => item !== INTENT_FLEXIBLE_OPTION.value).length
-  const isCapReached = explicitCount >= MAX_INTENTS
 
   return (
     <View className='pool-reg__choice-grid'>
@@ -22,7 +18,6 @@ function PoolRegistrationIntentGrid({ selected, onToggle }: PoolRegistrationInte
         const isExplicitlySelected = selected.includes(option.value)
         const isFlexibleOption = option.value === INTENT_FLEXIBLE_OPTION.value
         const isDimmed = isFlexibleActive && !isFlexibleOption && !isExplicitlySelected
-        const isDisabled = isCapReached && !isExplicitlySelected && !isFlexibleOption
 
         return (
           <IntentCard
@@ -35,9 +30,8 @@ function PoolRegistrationIntentGrid({ selected, onToggle }: PoolRegistrationInte
             }}
             selected={isExplicitlySelected}
             dimmed={isDimmed}
-            disabled={isDisabled}
             onClick={() => onToggle(option.value)}
-            iconSize={48}
+            iconSize={144}
             testId={`pool-reg-intent-${option.value}`}
           />
         )

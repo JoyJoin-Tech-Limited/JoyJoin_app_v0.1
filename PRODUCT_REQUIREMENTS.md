@@ -91,9 +91,14 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-07-20)
+## 🆕 Recent Updates (Last updated: 2026-08-05)
 
 ### 2026 Milestones (June–July 2026)
+
+**55. 平台定位升级｜盲盒式城市体验平台** *(2026-08-05)*
+- **Product override:** 平台定位从"兴趣活动驱动的轻社交"升格为**盲盒式城市体验平台** — 城市是游乐场,4-6 人社交局与街头盲盒街头邂逅是两种"开盒"方式。盲盒惊喜感(「像开盲盒一样,不知道会遇到谁」)从品牌情感签名升格为平台级定位与创意母题。
+- **Mission:** 把城市变成盲盒 — 低压力、惊喜式线下体验,共同兴趣自然带来真实连接。定位 rationale 见 §Product Vision。Research grounding: `docs/proposals/joyjoin-city-go-research-synthesis.md`。
+- **Propagation:** `PRODUCT_REQUIREMENTS.md` §Product Vision、`joyjoin-brand-guidelines`(Brand Essence)、`cinematic-storyboard`(brand-injection 产品定位)、Film Master agent(Product & Brand Grounding)。用户可见 copy 规范不变:不新增"盲盒"作为付费/功能承诺词,盲盒仅作为体验与创意语言。
 
 **54. 街头盲盒正式版｜深圳数字动物 NPC 与人工审核任务库** *(2026-07-30; current override)*
 - **Scope:** Discover 静态入口 + `pages/alang` 正式街头盲盒页面 + `/api/alang/flash/*` + 后台 `/admin/alang`。旧 `missions/:slug` 阿浪故事流程仅兼容保留，不再定义正式街头盲盒。
@@ -325,7 +330,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 **39. Intent Icon Wiring + Shared Selection Logic** 🎯 *(2026-06-17)*
 - **Icon wiring:** Pool registration, onboarding `essential-data`, profile-review, and edit-profile now render intent options through `JoyJoinIcon tier="intent"`. `intent` remains out of `CDN_ICON_TIERS` so assets resolve from the bundled `src/assets/icons/intent-icons/` (no runtime `require()` in subpackages). `usePreloadIntentIcons` pre-warms the bundled set before the grid renders.
-- **Shared selection logic:** New `toggleIntentValue(selected, value, { maxExplicit })` helper in `packages/shared/src/constants.ts` centralizes the `MAX_INTENTS=3` cap and `随缘`/flexible coexistence rules. It returns `null` when the cap would be exceeded, letting callers surface haptic + toast feedback. Covered by 8 unit tests in `packages/shared/src/__tests__/intents.test.ts`. Used by pool-registration, onboarding `essential-data`, and edit-profile.
+- **Shared selection logic:** `toggleIntentValue(selected, value, { maxExplicit })` helper in `packages/shared/src/constants.ts` centralizes `随缘`/flexible coexistence rules. **Uncapped by default** (2026-08-05): users may pick any number of explicit intents; selecting every explicit option auto-collapses the selection to `随缘`. Callers that still enforce a limit pass `{ maxExplicit: N }` explicitly (profile surfaces keep `MAX_INTENTS=3`); it returns `null` when an explicit cap would be exceeded. Covered by unit tests in `packages/shared/src/__tests__/intents.test.ts`. Used by pool-registration, onboarding `essential-data`, and edit-profile.
 - **Reusable component:** `apps/mini-program/src/components/intent/IntentCard.tsx` is the single component for intent selection cards. It renders the Lovart icon, label/subtitle, selected checkmark, disabled/dimmed states, `haptics('light')`, and accessible `aria-pressed`/`aria-disabled`/`aria-label` attributes. Token-based muted colors replace opacity-only dimming for accessible contrast.
 - **Copy update:** Edit-profile intent field label changed from「社交意图」to「社交期待」; each option shows a 36rpx `JoyJoinIcon` left of the label with disabled/dimmed states.
 - **Completion feedback:** Pool-registration shows a muted completion pill "已经选满 3 个期待，先聚焦这些方向" when the explicit-intent cap is reached.
@@ -387,7 +392,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Dynamic event count:** Profile page replaced hardcoded "3" with live `joinedEvents.length` from the composite shell.
 - **Birth year range fix:** Edit-profile birth year picker now starts from `currentYear - 18` descending to 1950, and correctly reads from `birthdate` fallback.
 - **Industry English input:** Switched from server embedding search to local `searchOccupations` with pinyin/English/keyword support for instant, offline-friendly industry selection.
-- **Intent multi-select + 随缘:** 随缘 ("go with the flow") now coexists with other intent selections; unselected options use token-based muted colors for clear visual hierarchy. Cards are disabled when the explicit-intent cap (`MAX_INTENTS=3`) is reached, with `aria-disabled` and focus-ring treatment.
+- **Intent multi-select + 随缘:** 随缘 ("go with the flow") is mutually exclusive with explicit intent selections (selecting 随缘 clears them); unselected options use token-based muted colors for clear visual hierarchy. **No selection cap on pool-registration (2026-08-05):** users may pick any number of explicit intents, and selecting every explicit option auto-collapses the selection to 随缘. Profile surfaces (`essential-data`, `edit-profile`) keep their explicit 3-cap with `aria-disabled` and focus-ring treatment.
 - **我的足迹 back button + alignment:** Conditional back button via `getCurrentPages().length > 1`; title centered.
 - **Android logo fix:** `BrandLogo.tsx` uses local `/assets/joyjoin-logo.webp`; native tab bar uses optimized `joyjoin-logo-tab.png` (19KB vs 596KB) to stay within the 2MB package budget.
 - **Interest intensity in settings:** Edit-profile now shows 3-tier level badges (已加入/升温中/高热) with tap-to-cycle `1→2→3→off` intensity control, protected behind a loading guard.
@@ -577,11 +582,13 @@ JoyJoin is an interest-first light social platform (兴趣活动驱动的轻社�
 
 ### Mission Statement
 
-Create joyful, low-pressure offline activity groups where shared interests naturally lead to real human connection.
+把城市变成盲盒 — every curated 社交局 and every 街头盲盒 encounter opens like a surprise box, creating joyful, low-pressure offline experiences where shared interests naturally lead to real human connection.
 
 ### Product Positioning
 
-JoyJoin is **兴趣活动驱动的轻社交** — not a pure signup tool, not a romance-seeking app. Activities are the primary container; natural connection is the valued outcome.
+JoyJoin is a **盲盒式城市体验平台** — 兴趣活动驱动的轻社交. The city is the playground; curated 4-6 人社交局 and 街头盲盒 street encounters are the two ways to "open the box". Not a pure signup tool, not a romance-seeking app. Activities are the primary container; natural connection is the valued outcome.
+
+> **Positioning rationale (2026-08-05):** the surprise-box feeling (「像开盲盒一样，不知道会遇到谁」) was previously framed as the brand's emotional signature; it is now elevated to platform-level positioning. Research grounding: `docs/proposals/joyjoin-city-go-research-synthesis.md` (serendipity & spontaneity themes). All new copy, creative direction, and storyboards should treat 盲盒/揭晓 as the platform's native cinematic motif.
 
 ### Target Users
 
