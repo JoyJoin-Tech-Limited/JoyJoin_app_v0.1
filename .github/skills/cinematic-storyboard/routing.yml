@@ -1,0 +1,68 @@
+skill: cinematic-storyboard
+category: ai-runtime
+
+primary_ownership: >
+  JoyJoin 自研电影分镜技术 (Cinematic Storyboard Technique / 五维分镜法) — turning
+  any idea into a professional storyboard table plus Lovart key-frame briefs and
+  Seedance 2.0 / 即梦 AI video prompts, kept inside the JoyJoin brand system.
+
+use_when:
+  - user asks for 分镜, storyboard, or 电影分镜 for a JoyJoin video
+  - user asks to write a video script or AI video prompt (Seedance / 即梦)
+  - creating brand videos, marketing shorts, event teasers, feature announcements
+  - mascot-led brand stories (社牛柯基 Xiaoyue as protagonist)
+  - 街头盲盒 (Flash NPC) promo videos
+  - social media video content for 小红书 / 抖音 / 视频号
+  - producing Lovart 分镜场景图 (key-frame stills) for character/scene consistency
+  - internal motion spec handoff to flow-animation / wow-elements
+  - full direction requests (导演阐述 + 分镜表 + Lovart briefs + Seedance 提示词) route to the Film Master agent
+
+do_not_use_when:
+  - static illustration briefs without video intent (use lovart-design-workflow)
+  - mini-program micro-interactions (use wow-elements)
+  - writing the story or script itself (use draft-prd / xiaoyue-writing-craft)
+  - runtime LLM calls in server code (use llm-runtime-safety-and-integration)
+  - motion implementation specs for flow overlays (use flow-animation)
+
+strong_triggers:
+  - 分镜
+  - storyboard
+  - 电影分镜
+  - 五维分镜法
+  - 写一个视频脚本
+  - Seedance
+  - Seedance 提示词
+  - 即梦
+  - 营销短片分镜
+  - 分镜场景图
+  - video storyboard prompt
+  - video script
+  - mascot video
+  - 街头盲盒 promo
+  - film master
+
+owned_files:
+  - .github/skills/cinematic-storyboard/**
+  - .github/agents/film-master.agent.md
+
+owned_paths:
+  - /cinematic-storyboard
+
+owned_symbols:
+  - Film Master
+  - CinematicStoryboard
+  - five-dimension method
+
+related_skills:
+  - skill: lovart-design-workflow
+    when: key-frame stills and character/scene reference images are needed for the storyboard
+  - skill: wow-elements
+    when: handing off motion specs or reviewing animated moments for emotional resonance
+  - skill: flow-animation
+    when: internal motion specs feed mini-program flow overlay implementation
+  - skill: draft-prd
+    when: the underlying story, script, or product message needs shaping first
+  - skill: xiaoyue-writing-craft
+    when: mascot-led narrative copy needs to be written
+  - skill: joyjoin-brand-guidelines
+    when: video output must comply with JoyJoin brand identity and tone
