@@ -17,7 +17,7 @@ describe('Flash artwork rendering contract', () => {
         <FlashNpcPortrait npc={{ slug, name: slug }} />,
       )
       expect(container.querySelector('img')?.getAttribute('src'))
-        .toBe(`/pages/alang/assets/npcs/headshots/${slug}.webp`)
+        .toBe(`/pages/alang/assets/npcs/headshots/${slug}.jpg`)
       unmount()
     }
   })
@@ -44,7 +44,7 @@ describe('Flash artwork rendering contract', () => {
     (scene) => {
       const { container } = render(<FlashNpcSceneBackdrop scene={scene} />)
       expect(container.querySelector('img')?.getAttribute('src'))
-        .toBe(`/pages/alang/assets/backgrounds/${scene}-paper-scene.webp`)
+        .toBe(`/pages/alang/assets/backgrounds/${scene}-paper-scene.jpg`)
     },
   )
 })

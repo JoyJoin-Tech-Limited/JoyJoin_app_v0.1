@@ -242,11 +242,11 @@ describe('formal Flash dialogue', () => {
   })
 
   it.each([
-    ['alang', 'flash-alang-dialogue-paper-v1.webp'],
-    ['lizi', 'flash-lizi-dialogue-paper-v1.webp'],
-    ['momo', 'flash-momo-dialogue-paper-v1.webp'],
-    ['shiqi', 'flash-shiqi-dialogue-paper-v1.webp'],
-    ['atuan', 'flash-atuan-dialogue-paper-v1.webp'],
+    ['alang', 'flash-alang-dialogue-paper-v1.jpg'],
+    ['lizi', 'flash-lizi-dialogue-paper-v1.jpg'],
+    ['momo', 'flash-momo-dialogue-paper-v1.jpg'],
+    ['shiqi', 'flash-shiqi-dialogue-paper-v1.jpg'],
+    ['atuan', 'flash-atuan-dialogue-paper-v1.jpg'],
   ])('uses the approved paper master for %s', (slug, expectedAsset) => {
     mocks.useEncounter.mockReturnValue({
       data: { ...questionEncounter, npc: { ...questionEncounter.npc, slug } },

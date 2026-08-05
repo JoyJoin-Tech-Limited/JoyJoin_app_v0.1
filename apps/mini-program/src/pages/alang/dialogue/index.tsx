@@ -92,11 +92,11 @@ const DEFAULT_BLIND_BOX_COPY: NpcBlindBoxCopy = {
 
 const OFFER_REVEAL_DELAY_MS = 480
 const NPC_DIALOGUE_SCENES: Record<string, string> = {
-  alang: '/pages/alang/assets/ui/flash-alang-dialogue-paper-v1.webp',
-  lizi: '/pages/alang/assets/ui/flash-lizi-dialogue-paper-v1.webp',
-  momo: '/pages/alang/assets/ui/flash-momo-dialogue-paper-v1.webp',
-  shiqi: '/pages/alang/assets/ui/flash-shiqi-dialogue-paper-v1.webp',
-  atuan: '/pages/alang/assets/ui/flash-atuan-dialogue-paper-v1.webp',
+  alang: '/pages/alang/assets/ui/flash-alang-dialogue-paper-v1.jpg',
+  lizi: '/pages/alang/assets/ui/flash-lizi-dialogue-paper-v1.jpg',
+  momo: '/pages/alang/assets/ui/flash-momo-dialogue-paper-v1.jpg',
+  shiqi: '/pages/alang/assets/ui/flash-shiqi-dialogue-paper-v1.jpg',
+  atuan: '/pages/alang/assets/ui/flash-atuan-dialogue-paper-v1.jpg',
 }
 
 function dialogueActionError(error: unknown, fallback: string): string {

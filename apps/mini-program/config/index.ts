@@ -311,28 +311,24 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/assets/illustrations/street-blind-box-entry.png',
         },
         {
-          from: 'src/assets/illustrations/street-blind-box-onboarding-fullscreen-v7.webp',
-          to: 'dist/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp',
+          from: 'src/assets/illustrations/street-blind-box-onboarding-fullscreen-v7.jpg',
+          to: 'dist/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg',
         },
         {
-          from: 'src/pages/alang/assets/backgrounds/radar-paper-scene.webp',
-          to: 'dist/pages/alang/assets/backgrounds/radar-paper-scene.webp',
+          from: 'src/pages/alang/assets/backgrounds/radar-paper-scene.jpg',
+          to: 'dist/pages/alang/assets/backgrounds/radar-paper-scene.jpg',
         },
         {
-          from: 'src/pages/alang/assets/backgrounds/task-paper-scene.webp',
-          to: 'dist/pages/alang/assets/backgrounds/task-paper-scene.webp',
+          from: 'src/pages/alang/assets/backgrounds/task-paper-scene.jpg',
+          to: 'dist/pages/alang/assets/backgrounds/task-paper-scene.jpg',
         },
         {
-          from: 'src/pages/alang/assets/backgrounds/feedback-paper-scene.webp',
-          to: 'dist/pages/alang/assets/backgrounds/feedback-paper-scene.webp',
+          from: 'src/pages/alang/assets/backgrounds/feedback-paper-scene.jpg',
+          to: 'dist/pages/alang/assets/backgrounds/feedback-paper-scene.jpg',
         },
         {
-          from: 'src/pages/alang/assets/flash-city-encounter.webp',
-          to: 'dist/pages/alang/assets/flash-city-encounter.webp',
-        },
-        {
-          from: 'src/pages/alang/assets/flash-city-encounter.png',
-          to: 'dist/pages/alang/assets/flash-city-encounter.png',
+          from: 'src/pages/alang/assets/flash-city-encounter.jpg',
+          to: 'dist/pages/alang/assets/flash-city-encounter.jpg',
         },
         {
           from: 'src/pages/alang/assets/street-blind-box-icon.png',

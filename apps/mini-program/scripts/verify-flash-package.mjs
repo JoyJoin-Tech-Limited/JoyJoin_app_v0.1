@@ -11,16 +11,16 @@ const appJsonPath = resolve(distRoot, 'app.json')
 const manifestPath = resolve(distRoot, 'flash-build-manifest.json')
 const projectConfigPath = resolve(appRoot, 'project.config.json')
 const preupload = process.argv.includes('--preupload')
-const introSceneRelativePath = 'pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp'
+const introSceneRelativePath = 'pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg'
 const npcHeadshotRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
-  .map((slug) => `pages/alang/assets/npcs/headshots/${slug}.webp`)
+  .map((slug) => `pages/alang/assets/npcs/headshots/${slug}.jpg`)
 const flashSceneRelativePaths = ['radar', 'task', 'feedback']
-  .map((scene) => `pages/alang/assets/backgrounds/${scene}-paper-scene.webp`)
+  .map((scene) => `pages/alang/assets/backgrounds/${scene}-paper-scene.jpg`)
 const flashDialogueRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
-  .map((slug) => `pages/alang/assets/ui/flash-${slug}-dialogue-paper-v1.webp`)
+  .map((slug) => `pages/alang/assets/ui/flash-${slug}-dialogue-paper-v1.jpg`)
 
 const flashRuntimeImages = [
-  'pages/alang/assets/flash-city-encounter.webp',
+  'pages/alang/assets/flash-city-encounter.jpg',
   'pages/alang/assets/street-blind-box-icon.png',
   'pages/alang/assets/ui/flash-city-ambient-bg.png',
   'pages/alang/assets/ui/flash-empty-online.png',
@@ -28,10 +28,10 @@ const flashRuntimeImages = [
   ...npcHeadshotRelativePaths,
   ...flashSceneRelativePaths,
   ...flashDialogueRelativePaths,
-  'pages/alang/assets/candidates/alang-event-card-candidate.webp',
-  'pages/alang/assets/candidates/alang-found-scene-candidate.webp',
-  'pages/alang/assets/candidates/alang-companion-atmosphere-candidate.webp',
-  'pages/alang/assets/candidates/alang-result-candidate.webp',
+  'pages/alang/assets/candidates/alang-event-card-candidate.jpg',
+  'pages/alang/assets/candidates/alang-found-scene-candidate.jpg',
+  'pages/alang/assets/candidates/alang-companion-atmosphere-candidate.jpg',
+  'pages/alang/assets/candidates/alang-result-candidate.jpg',
 ]
 
 const requiredFiles = [
@@ -125,28 +125,12 @@ if (!existsSync(projectConfigPath)) {
       'project.config.json packOptions.include must explicitly include all pages/alang PNG runtime assets',
     )
   }
-  const npcHeadshotsAreForcedIntoWxapkg = packIncludes.some(
-    (entry) => entry?.type === 'regexp' && entry?.value === 'pages/alang/assets/npcs/headshots/.*\\.webp$',
+  const flashRuntimeJpgsAreForcedIntoWxapkg = packIncludes.some(
+    (entry) => entry?.type === 'regexp' && entry?.value === 'pages/alang/assets/.*\\.jpg$',
   )
-  if (!npcHeadshotsAreForcedIntoWxapkg) {
+  if (!flashRuntimeJpgsAreForcedIntoWxapkg) {
     failures.push(
-      'project.config.json packOptions.include must explicitly include all Flash NPC WebP headshots',
-    )
-  }
-  const sceneBackgroundsAreForcedIntoWxapkg = packIncludes.some(
-    (entry) => entry?.type === 'regexp' && entry?.value === 'pages/alang/assets/backgrounds/.*\\.webp$',
-  )
-  if (!sceneBackgroundsAreForcedIntoWxapkg) {
-    failures.push(
-      'project.config.json packOptions.include must explicitly include all Flash scene backgrounds',
-    )
-  }
-  const introSceneIsForcedIntoWxapkg = packIncludes.some(
-    (entry) => entry?.type === 'file' && entry?.value === introSceneRelativePath,
-  )
-  if (!introSceneIsForcedIntoWxapkg) {
-    failures.push(
-      `project.config.json packOptions.include must explicitly include ${introSceneRelativePath}`,
+      'project.config.json packOptions.include must explicitly include all pages/alang JPG runtime assets',
     )
   }
   if (projectConfig.setting?.ignoreUploadUnusedFiles !== false) {
@@ -188,11 +172,11 @@ const introScenePath = resolve(distRoot, introSceneRelativePath)
 if (existsSync(introScenePath) && statSync(introScenePath).size > 0) {
   try {
     const metadata = await sharp(introScenePath).metadata()
-    if (metadata.format !== 'webp' || !metadata.width || !metadata.height) {
-      failures.push(`dist/${introSceneRelativePath} is not a decodable WebP image`)
+    if (metadata.format !== 'jpeg' || !metadata.width || !metadata.height) {
+      failures.push(`dist/${introSceneRelativePath} is not a decodable JPEG image`)
     }
   } catch (error) {
-    failures.push(`dist/${introSceneRelativePath} WebP decode failed: ${error.message}`)
+    failures.push(`dist/${introSceneRelativePath} JPEG decode failed: ${error.message}`)
   }
 }
 
@@ -203,7 +187,7 @@ for (const relativePath of flashRuntimeImages) {
   flashRuntimeImageBytes += statSync(absolutePath).size
   try {
     const metadata = await sharp(absolutePath).metadata()
-    const expectedFormat = relativePath.endsWith('.webp') ? 'webp' : 'png'
+    const expectedFormat = relativePath.endsWith('.jpg') ? 'jpeg' : relativePath.endsWith('.webp') ? 'webp' : 'png'
     if (metadata.format !== expectedFormat || !metadata.width || !metadata.height) {
       failures.push(`dist/${relativePath} is not a decodable ${expectedFormat.toUpperCase()} image`)
     }

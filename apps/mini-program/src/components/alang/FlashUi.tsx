@@ -13,7 +13,7 @@ export function FlashNpcPortrait({
 }) {
   const theme = useMemo(() => resolveFlashNpcTheme(npc.slug, npc.name), [npc.name, npc.slug])
   const headshotSrc = theme.slug !== 'unknown'
-    ? `/pages/alang/assets/npcs/headshots/${theme.slug}.webp`
+    ? `/pages/alang/assets/npcs/headshots/${theme.slug}.jpg`
     : npc.avatarUrl?.trim() ?? ''
   const [failed, setFailed] = useState(!headshotSrc)
 
@@ -52,7 +52,7 @@ export function FlashNpcSceneBackdrop({
     <View className='flash-scene-backdrop' aria-hidden='true'>
       <Image
         className='flash-scene-backdrop__image'
-        src={`/pages/alang/assets/backgrounds/${scene}-paper-scene.webp`}
+        src={`/pages/alang/assets/backgrounds/${scene}-paper-scene.jpg`}
         mode='aspectFill'
       />
       <View className='flash-scene-backdrop__veil' />
