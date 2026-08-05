@@ -15,6 +15,10 @@ import type { FlashLocationSnapshot, FlashNpcSummary, FlashTaskSummary } from '.
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
+import flashIntroScene from '../assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg'
+import flashAmbientBackground from '../assets/ui/flash-city-ambient-bg.png'
+import flashEmptyOnline from '../assets/ui/flash-empty-online.png'
+import flashEmptyTasks from '../assets/ui/flash-empty-tasks.png'
 import {
   FlashButton,
   FlashNpcPortrait,
@@ -24,10 +28,10 @@ import {
 } from '../../../components/alang/FlashUi'
 import '../flash.scss'
 
-const FLASH_AMBIENT_BACKGROUND = '/pages/alang/assets/ui/flash-city-ambient-bg.png'
-const FLASH_EMPTY_ONLINE = '/pages/alang/assets/ui/flash-empty-online.png'
-const FLASH_EMPTY_TASKS = '/pages/alang/assets/ui/flash-empty-tasks.png'
-const FLASH_INTRO_SCENE = '/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg'
+const FLASH_AMBIENT_BACKGROUND = flashAmbientBackground
+const FLASH_EMPTY_ONLINE = flashEmptyOnline
+const FLASH_EMPTY_TASKS = flashEmptyTasks
+const FLASH_INTRO_SCENE = flashIntroScene
 const FLASH_GATE_WATCHDOG_MS = 12_000
 const FLASH_LOCATION_RUNTIME_CONTRACT = 'flash-location-compiler-scope-v4'
 

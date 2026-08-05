@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { cdnAsset, localAsset } from '../utils/cdnAssets'
+import { cdnAsset } from '../utils/cdnAssets'
+import eventHeroFallback from '../../pages/alang/assets/candidates/alang-event-card-candidate.jpg'
+import foundSceneFallback from '../../pages/alang/assets/candidates/alang-found-scene-candidate.jpg'
+import companionFallback from '../../pages/alang/assets/candidates/alang-companion-atmosphere-candidate.jpg'
+import resultHeroFallback from '../../pages/alang/assets/candidates/alang-result-candidate.jpg'
 
 export const ALANG_ASSET_MANIFEST = {
   eventHero: {
@@ -17,7 +21,7 @@ export const ALANG_ASSET_MANIFEST = {
     approver: 'product + visual owner',
     approvalStatus: 'awaiting-approved-art',
     cdnPath: '/assets/alang/alang-event-card-hero.webp',
-    fallbackPath: '/pages/alang/assets/candidates/alang-event-card-candidate.jpg',
+    fallbackPath: eventHeroFallback,
   },
   foundScene: {
     assetId: 'alang-found-scene-v1',
@@ -34,7 +38,7 @@ export const ALANG_ASSET_MANIFEST = {
     approver: 'product + visual owner',
     approvalStatus: 'awaiting-approved-art',
     cdnPath: '/assets/alang/alang-found-scene.webp',
-    fallbackPath: '/pages/alang/assets/candidates/alang-found-scene-candidate.jpg',
+    fallbackPath: foundSceneFallback,
   },
   companionAtmosphere: {
     assetId: 'alang-companion-atmosphere-v1',
@@ -51,7 +55,7 @@ export const ALANG_ASSET_MANIFEST = {
     approver: 'product + visual owner',
     approvalStatus: 'awaiting-approved-art',
     cdnPath: '/assets/alang/alang-companion-bg.webp',
-    fallbackPath: '/pages/alang/assets/candidates/alang-companion-atmosphere-candidate.jpg',
+    fallbackPath: companionFallback,
   },
   resultHero: {
     assetId: 'alang-result-hero-v1',
@@ -68,7 +72,7 @@ export const ALANG_ASSET_MANIFEST = {
     approver: 'product + visual owner',
     approvalStatus: 'awaiting-approved-art',
     cdnPath: '/assets/alang/alang-result-hero.webp',
-    fallbackPath: '/pages/alang/assets/candidates/alang-result-candidate.jpg',
+    fallbackPath: resultHeroFallback,
   },
 } as const
 
@@ -95,7 +99,7 @@ export function useAlangAssetSource(assetId: AlangAssetId) {
   }, [])
 
   return {
-    src: usingFallback ? localAsset(asset.fallbackPath) : cdnAsset(asset.cdnPath),
+    src: usingFallback ? asset.fallbackPath : cdnAsset(asset.cdnPath),
     onError,
     usingFallback,
     asset,

@@ -8,8 +8,9 @@ export type FlashNpcTheme = {
   ink: string
 }
 
-export const FLASH_UNIVERSAL_ART = '/pages/alang/assets/flash-city-encounter.jpg'
-export const FLASH_STREET_BOX_ICON = '/assets/illustrations/street-blind-box-entry.png'
+import flashStreetBoxIcon from '../../assets/illustrations/street-blind-box-entry.png'
+
+export const FLASH_STREET_BOX_ICON = flashStreetBoxIcon
 
 const npcThemes: FlashNpcTheme[] = [
   {

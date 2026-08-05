@@ -311,7 +311,7 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/assets/illustrations/street-blind-box-entry.png',
         },
         {
-          from: 'src/assets/illustrations/street-blind-box-onboarding-fullscreen-v7.jpg',
+          from: 'src/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg',
           to: 'dist/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg',
         },
         {
@@ -477,7 +477,12 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
     mini: {
       imageUrlLoaderOption: {
         limit: 0, // 强制禁止将任何图片转为 Base64，全部使用真实路径
-        esModule: false // 确保 Taro 正确处理图片路径
+        esModule: true, // Asset imports use ESM default exports across Taro/Vite.
+        // Taro 4.2 only strips `sourceDir` with POSIX separators. Normalize
+        // explicitly so Windows worktrees and Linux CI emit identical paths.
+        name: (id: string) => path
+          .relative(path.resolve(__dirname, '..', 'src'), id)
+          .replace(/\\/g, '/'),
       },
       compiler: {
         type: 'vite',

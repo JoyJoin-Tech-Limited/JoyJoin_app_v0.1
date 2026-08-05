@@ -1,8 +1,31 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Image, Text, View } from '@tarojs/components'
-import { FLASH_UNIVERSAL_ART, resolveFlashNpcTheme, resolveFlashTaskCategory } from '../../lib/alang/flashNpcAssets'
+import { resolveFlashNpcTheme, resolveFlashTaskCategory } from '../../lib/alang/flashNpcAssets'
 import type { FlashNpcReference, FlashTaskSummary } from '../../lib/alang/flashTypes'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
+import flashUniversalArt from '../../pages/alang/assets/flash-city-encounter.jpg'
+import alangHeadshot from '../../pages/alang/assets/npcs/headshots/alang.jpg'
+import liziHeadshot from '../../pages/alang/assets/npcs/headshots/lizi.jpg'
+import momoHeadshot from '../../pages/alang/assets/npcs/headshots/momo.jpg'
+import shiqiHeadshot from '../../pages/alang/assets/npcs/headshots/shiqi.jpg'
+import atuanHeadshot from '../../pages/alang/assets/npcs/headshots/atuan.jpg'
+import radarScene from '../../pages/alang/assets/backgrounds/radar-paper-scene.jpg'
+import taskScene from '../../pages/alang/assets/backgrounds/task-paper-scene.jpg'
+import feedbackScene from '../../pages/alang/assets/backgrounds/feedback-paper-scene.jpg'
+
+const NPC_HEADSHOTS: Record<string, string> = {
+  alang: alangHeadshot,
+  lizi: liziHeadshot,
+  momo: momoHeadshot,
+  shiqi: shiqiHeadshot,
+  atuan: atuanHeadshot,
+}
+
+const SCENE_BACKGROUNDS = {
+  radar: radarScene,
+  task: taskScene,
+  feedback: feedbackScene,
+} as const
 
 export function FlashNpcPortrait({
   npc,
@@ -13,7 +36,7 @@ export function FlashNpcPortrait({
 }) {
   const theme = useMemo(() => resolveFlashNpcTheme(npc.slug, npc.name), [npc.name, npc.slug])
   const headshotSrc = theme.slug !== 'unknown'
-    ? `/pages/alang/assets/npcs/headshots/${theme.slug}.jpg`
+    ? NPC_HEADSHOTS[theme.slug] ?? ''
     : npc.avatarUrl?.trim() ?? ''
   const [failed, setFailed] = useState(!headshotSrc)
 
@@ -52,7 +75,7 @@ export function FlashNpcSceneBackdrop({
     <View className='flash-scene-backdrop' aria-hidden='true'>
       <Image
         className='flash-scene-backdrop__image'
-        src={`/pages/alang/assets/backgrounds/${scene}-paper-scene.jpg`}
+        src={SCENE_BACKGROUNDS[scene]}
         mode='aspectFill'
       />
       <View className='flash-scene-backdrop__veil' />
@@ -104,7 +127,7 @@ export function FlashPageState({
 }) {
   return (
     <View className={`flash-state flash-state--${tone}`} role={tone === 'error' ? 'alert' : 'status'}>
-      <Image className='flash-state__art' src={FLASH_UNIVERSAL_ART} mode='aspectFill' />
+      <Image className='flash-state__art' src={flashUniversalArt} mode='aspectFill' />
       {tone === 'error' ? (
         <Text className='flash-state__mark' aria-hidden='true'>…</Text>
       ) : (

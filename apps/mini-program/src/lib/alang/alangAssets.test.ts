@@ -8,14 +8,15 @@ describe('Alang candidate asset manifest', () => {
     for (const asset of Object.values(ALANG_ASSET_MANIFEST)) {
       expect(asset.approvalStatus).toBe('awaiting-approved-art')
       expect(asset.fallbackPath).toMatch(
-        /^\/pages\/alang\/assets\/candidates\/.+-candidate\.jpg$/,
+        /\/pages\/alang\/assets\/candidates\/.+-candidate\.jpg$/,
       )
     }
   })
 
   it('ships every candidate inside the Alang subpackage', () => {
     for (const asset of Object.values(ALANG_ASSET_MANIFEST)) {
-      const sourcePath = resolve(process.cwd(), 'src', asset.fallbackPath.slice(1))
+      const relativePath = asset.fallbackPath.replace(/^\/src\//, '').replace(/^\//, '')
+      const sourcePath = resolve(process.cwd(), 'src', relativePath)
       expect(existsSync(sourcePath), sourcePath).toBe(true)
     }
   })

@@ -18,6 +18,11 @@ import type { FlashCanonicalSnapshot } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { getSystemReducedMotion } from '../../../lib/utils/accessibility'
 import { haptics } from '../../../lib/utils/haptics'
+import alangDialogueScene from '../assets/ui/flash-alang-dialogue-paper-v1.jpg'
+import liziDialogueScene from '../assets/ui/flash-lizi-dialogue-paper-v1.jpg'
+import momoDialogueScene from '../assets/ui/flash-momo-dialogue-paper-v1.jpg'
+import shiqiDialogueScene from '../assets/ui/flash-shiqi-dialogue-paper-v1.jpg'
+import atuanDialogueScene from '../assets/ui/flash-atuan-dialogue-paper-v1.jpg'
 import '../flash.scss'
 
 type OfferRevealPhase = 'sealed' | 'drawing' | 'revealed'
@@ -92,11 +97,11 @@ const DEFAULT_BLIND_BOX_COPY: NpcBlindBoxCopy = {
 
 const OFFER_REVEAL_DELAY_MS = 480
 const NPC_DIALOGUE_SCENES: Record<string, string> = {
-  alang: '/pages/alang/assets/ui/flash-alang-dialogue-paper-v1.jpg',
-  lizi: '/pages/alang/assets/ui/flash-lizi-dialogue-paper-v1.jpg',
-  momo: '/pages/alang/assets/ui/flash-momo-dialogue-paper-v1.jpg',
-  shiqi: '/pages/alang/assets/ui/flash-shiqi-dialogue-paper-v1.jpg',
-  atuan: '/pages/alang/assets/ui/flash-atuan-dialogue-paper-v1.jpg',
+  alang: alangDialogueScene,
+  lizi: liziDialogueScene,
+  momo: momoDialogueScene,
+  shiqi: shiqiDialogueScene,
+  atuan: atuanDialogueScene,
 }
 
 function dialogueActionError(error: unknown, fallback: string): string {
