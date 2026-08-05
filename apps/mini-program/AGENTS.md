@@ -187,6 +187,7 @@ Canonical CDN base URL for all phases: `https://joyjoinapp.com/static`.
 - **Size cap**: 75KB total (UTF-8 byte count).
 - **False-freshness guard**: hydration passes `{ updatedAt: entry.timestamp }` to `queryClient.setQueryData` so TanStack Query knows the true data age.
 - **Mutation-triggered eviction**: call `evictPersistedQuery(key)` after any mutation that changes persisted data.
+- **Registration-mutating flows must bust query caches (2026-07-31):** after any successful registration/payment/single-test action, call `bustRegistrationCaches(queryClient)` from `lib/api/registrationCacheBust.ts` (invalidates pools, `REGISTRATIONS_QUERY_KEY`, joined events, shells, auth + evicts persisted keys). The shared `REGISTRATIONS_QUERY_KEY` carries `staleTime: 30s` — `SingleTestBanner` (single-test `/start`/`/reset`) missed this and the freshly-created tester registration stayed invisible on matching-status for up to 30s.
 - **Multi-user safety**: `clearPersistentCache()` inside `clearMiniProgramAuthSession({ mode: 'hard' })` (logout).
 - **Never** inline `Taro.setStorageSync` calls in page components — go through `persistentCache.ts`.
 

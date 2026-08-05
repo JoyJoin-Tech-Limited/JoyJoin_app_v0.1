@@ -275,7 +275,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 
 **Onboarding is server-driven:** `GET /api/auth/user` returns `nextStep`. Client never computes its own position.
 
-**Matching:** `poolMatchingService.ts` is deterministic authority. 6D scoring; optional 7th semantic dimension behind `ENABLE_SEMANTIC_SIMILARITY`. AI may enrich explanations but must not redefine scoring. Details: `docs/agent-context/matching-domain.md`. Registration capacity gate (`poolRegistrationRules.ts`) skips `POOL_FULL` for `is_test_pool=true` test pools (tester + 5 bots fill 6/6 by design); real pools keep the full capacity rule.
+**Matching:** `poolMatchingService.ts` is deterministic authority. 6D scoring; optional 7th semantic dimension behind `ENABLE_SEMANTIC_SIMILARITY`. AI may enrich explanations but must not redefine scoring. Details: `docs/agent-context/matching-domain.md`. Registration capacity gate (`poolRegistrationRules.ts`) skips `POOL_FULL` for `is_test_pool=true` test pools (tester + 5 bots fill 6/6 by design); real pools keep the full capacity rule. Client: single-test `/start`/`/reset` (`SingleTestBanner`) must bust registration caches — shared `REGISTRATIONS_QUERY_KEY` has `staleTime: 30s`, so without `bustRegistrationCaches` the fresh registration looks missing on matching-status.
 
 **Social Icebreaker:** Primary in-event flow is `/icebreaker/:sessionId` → Social Icebreaker. Host-paced (no auto-advance), PhaseHeroCard views, all icebreaker LLM calls wrapped in 6s `raceWithTimeout` hard bound. Details: `docs/agent-context/social-icebreaker.md`.
 

@@ -475,7 +475,7 @@ Re-seeding resets old bot registrations before inserting new ones.
 
 ### Limitations
 
-- No mini-program UI entry point yet — tester must know the pool ID to find it in Discover
+- Matching-test pools are seeded via API and surface in Discover (or via the dev `SingleTestBanner` for the single-test variant — see §I); registration-cache bust after `/start` makes the new pool card appear immediately.
 - Single tester at a time (not designed for concurrent multi-tester test events)
 
 ---
@@ -489,6 +489,7 @@ When starting a single-test session, the server creates a matching-test pool + b
 ### How it works
 
 - Test pools are exempt from the registration capacity gate (2026-07-31): `describePoolRegistrationAvailability` skips the `POOL_FULL` check when `event_pools.is_test_pool=true`, because single-test sessions register tester + 5 bots and fill the pool to exactly `maxGroupSize × targetGroups` (6/6) by design. Pool-full notifications/WS broadcasts are skipped for test pools. Real pools keep the full capacity rule.
+- **Mini-program entry + registration-cache bust (2026-07-31):** the dev banner `SingleTestBanner` (创建调试局, Discover page, dev builds only) calls `POST /api/test/single-test/start` then navigates to matching-status. The server registers the tester as a side effect of `/start`, so the banner runs `bustRegistrationCaches(queryClient)` (shared `REGISTRATIONS_QUERY_KEY` carries `staleTime: 30s` — without the bust the fresh registration stays invisible on matching-status for up to 30s, showing a "not registered"/error state). `/reset` busts the same caches. This mirrors the invalidation done by payment-verification / pool-registration / event-ticket-payment flows.
 - The mini-program starts a single-test session via `POST /api/social-icebreaker/start` with the `singleTest` option; the session is marked `state.singleTest.isTestModeSkip = true`.
 - The disclosure overlay (`TestModeDisclosure`) pauses the host in `warmup` and explains that multi-player phases are skipped. The host must tap **查看总结** to advance to `recap` (or **重试** if the advance fails).
 - When `runBots: true` is passed, the server runs deterministic, seeded, LLM-free bot simulation for every multiplayer phase (`warmup`, `micro_challenge`, `lie_detective`, `auction`, `personality_dice`, `quip_battle`, `undercover_word`, `group_mirror`, `speed_friending`, `mini_script`) so the host sees populated phase state before the recap.
@@ -515,6 +516,7 @@ When starting a single-test session, the server creates a matching-test pool + b
 | `apps/server/src/lib/fkCascadeDelete.ts` | Catalog-driven recursive FK cascade delete used by single-test and matching-test cleanup |
 | `apps/server/src/services/socialIcebreakerSessionState.ts` | Session state shape and helpers |
 | `apps/mini-program/src/components/icebreaker/TestModeDisclosure.tsx` | Dismissible test-mode disclosure UI with ready hint, empty roster, error retry |
+| `apps/mini-program/src/components/dev/SingleTestBanner.tsx` | 创建调试局 entry (Discover, dev-only) → `/api/test/single-test/start` + `bustRegistrationCaches` on start/reset |
 | `apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.tsx` | Warmup view with persistent test-mode badge |
 
 ### Regression tests
