@@ -186,6 +186,9 @@ jobs:
             if [ -S "$SSH_CONTROL_PATH" ]; then
               ssh -S "$SSH_CONTROL_PATH" -O exit "$CVM" >/dev/null 2>&1 || true
             fi
+            if [ -n "${FRESHNESS_MONITOR_PID:-}" ]; then
+              kill "$FRESHNESS_MONITOR_PID" >/dev/null 2>&1 || true
+            fi
             rm -f "$SSH_KEY_FILE" "$KNOWN_HOSTS_FILE" \
               "${SSH_PASSPHRASE_FILE:-}" "${SSH_ASKPASS_FILE:-}"
             if [ -n "$BUNDLE_PARTS_DIR" ] && [ -d "$BUNDLE_PARTS_DIR" ]; then
@@ -458,7 +461,30 @@ jobs:
           mkdir -- "$remote_parts_dir"
           REMOTE_BUNDLE_PREFLIGHT
 
-          echo "Uploading $BUNDLE_PART_COUNT image chunks over at most four independent SSH connections..."
+          # Main can advance while the multi-minute cross-Pacific transfer is in
+          # flight. Poll freshness during the upload so a stale candidate aborts
+          # early instead of burning the full transfer and failing the
+          # pre-switch freshness gate below.
+          STALE_FLAG="$RUNNER_TEMP/stale-candidate-flag"
+          rm -f "$STALE_FLAG"
+          freshness_monitor() {
+            local stale_flag="$1"
+            while true; do
+              sleep 90
+              if ! git fetch --no-tags origin main >/dev/null 2>&1; then
+                continue
+              fi
+              if ! node scripts/verify-deployment-freshness.mjs \
+                "$GITHUB_SHA" "$(git rev-parse origin/main)" >/dev/null 2>&1; then
+                touch "$stale_flag"
+                return 0
+              fi
+            done
+          }
+          freshness_monitor "$STALE_FLAG" &
+          FRESHNESS_MONITOR_PID=$!
+
+          echo "Uploading $BUNDLE_PART_COUNT image chunks over at most six independent SSH connections..."
           upload_failed=0
           upload_pids=()
           for bundle_part in "${BUNDLE_PARTS[@]}"; do
@@ -466,19 +492,23 @@ jobs:
               part_name=$(basename "$bundle_part")
               echo "Uploading $part_name..."
               run_transport_with_backoff 20m rsync \
-                -a --checksum --partial --inplace --timeout=180 --bwlimit=2048 \
+                -a --checksum --partial --inplace --timeout=300 --bwlimit=4096 \
                 -e "$RSYNC_SSH_PARALLEL" \
                 "$bundle_part" "$CVM:$REMOTE_BUNDLE_PARTS/$part_name"
             ) &
             upload_pids+=("$!")
 
-            if (( ${#upload_pids[@]} >= 4 )); then
+            if (( ${#upload_pids[@]} >= 6 )); then
               for upload_pid in "${upload_pids[@]}"; do
                 if ! wait "$upload_pid"; then
                   upload_failed=1
                 fi
               done
               upload_pids=()
+              if [ -f "$STALE_FLAG" ]; then
+                echo "::error::Stale staging candidate detected during image transfer; aborting upload"
+                exit 1
+              fi
               if (( upload_failed != 0 )); then
                 break
               fi
@@ -490,6 +520,10 @@ jobs:
             fi
           done
           upload_pids=()
+          if [ -f "$STALE_FLAG" ]; then
+            echo "::error::Stale staging candidate detected during image transfer; aborting upload"
+            exit 1
+          fi
           if (( upload_failed != 0 )); then
             echo "::error::One or more staging image chunks failed to upload"
             exit 1

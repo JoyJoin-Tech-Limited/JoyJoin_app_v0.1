@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SingleTestBanner from './SingleTestBanner'
@@ -43,7 +44,11 @@ describe('SingleTestBanner', () => {
       })),
     })
 
-    render(<SingleTestBanner />)
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <SingleTestBanner />
+      </QueryClientProvider>,
+    )
     fireEvent.click(screen.getByText('创建调试局'))
 
     await waitFor(() => expect(openSquadUnboxingMock).toHaveBeenCalledWith('group-1'))
