@@ -1,9 +1,11 @@
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { haptics } from '../../lib/utils/haptics'
 import { apiRequest, type ApiError } from '../../lib/api/api'
 import { openSquadUnboxing } from '../../lib/navigation/matchingNavigation'
+import { bustRegistrationCaches } from '../../lib/api/registrationCacheBust'
 import './SingleTestBanner.scss'
 
 interface SingleTestBannerProps {
@@ -60,6 +62,7 @@ function logSingleTestError(action: string, err: unknown) {
 }
 
 export default function SingleTestBanner({ className = '' }: SingleTestBannerProps) {
+  const queryClient = useQueryClient()
   const [loading, setLoading] = useState(false)
   const [resetting, setResetting] = useState(false)
   const isBusy = loading || resetting
@@ -78,6 +81,11 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
           path: '/api/test/single-test/start',
         }),
       )
+      // The server registers the tester into the new pool as a side effect of
+      // /start. Bust registration caches so the matching-status page (shared
+      // REGISTRATIONS_QUERY_KEY, staleTime 30s) doesn't show the fresh
+      // registration as missing for up to 30s after navigation.
+      await bustRegistrationCaches(queryClient)
       Taro.showToast({ title: `调试局已创建，共${result.bots.length + 1}人`, icon: 'none' })
       openSquadUnboxing(result.groupId)
     } catch (err: unknown) {
@@ -86,7 +94,7 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
     } finally {
       setLoading(false)
     }
-  }, [isBusy])
+  }, [isBusy, queryClient])
 
   const handleReset = useCallback(async () => {
     if (isBusy) {
@@ -102,6 +110,8 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
           path: '/api/test/single-test/reset',
         }),
       )
+      // Reset deletes the tester's registrations + test pools server-side.
+      await bustRegistrationCaches(queryClient)
       Taro.showToast({ title: '测试数据已重置', icon: 'success' })
     } catch (err: unknown) {
       logSingleTestError('reset', err)
@@ -109,7 +119,7 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
     } finally {
       setResetting(false)
     }
-  }, [isBusy])
+  }, [isBusy, queryClient])
 
   return (
     <View className={`single-test-banner ${className}`}>
