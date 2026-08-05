@@ -41,6 +41,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Probe the GHCR read token via env (secrets are not available in `if`).
+      # While GHCR_TOKEN exists, the CVM pulls images directly and the rsync
+      # tar bundle (below) is skipped.
+      - name: Determine staging image delivery path
+        id: delivery-mode
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          if [ -n "${GHCR_TOKEN:-}" ]; then
+            echo "ghcr_active=true" >> "$GITHUB_OUTPUT"
+            echo "GHCR_TOKEN present: CVM will pull staging images from GHCR."
+          else
+            echo "ghcr_active=false" >> "$GITHUB_OUTPUT"
+            echo "GHCR_TOKEN absent: falling back to the rsync image bundle."
+          fi
+
       - name: Build and push staging API image
         uses: docker/build-push-action@v6
         with:
@@ -68,7 +84,7 @@ jobs:
       # a fallback for environments without GHCR_TOKEN, so the bundle steps are
       # skipped entirely once that secret exists.
       - name: Bundle prebuilt staging images
-        if: ${{ secrets.GHCR_TOKEN == '' }}
+        if: steps.delivery-mode.outputs.ghcr_active == 'false'
         run: |
           set -euo pipefail
           docker tag \
@@ -85,7 +101,7 @@ jobs:
           sha256sum "$RUNNER_TEMP/joyjoin-staging-images.tar.gz"
 
       - name: Preserve prebuilt staging images
-        if: ${{ secrets.GHCR_TOKEN == '' }}
+        if: steps.delivery-mode.outputs.ghcr_active == 'false'
         uses: actions/upload-artifact@v4.6.2
         with:
           name: joyjoin-staging-images-${{ github.sha }}
@@ -140,8 +156,19 @@ jobs:
           command_timeout: 1m
           script: printf 'deployment-ssh-ready\n'
 
+      - name: Determine staging image delivery path
+        id: delivery-mode
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          if [ -n "${GHCR_TOKEN:-}" ]; then
+            echo "ghcr_active=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ghcr_active=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Restore prebuilt staging images
-        if: ${{ secrets.GHCR_TOKEN == '' }}
+        if: steps.delivery-mode.outputs.ghcr_active == 'false'
         uses: actions/download-artifact@v4.3.0
         with:
           name: joyjoin-staging-images-${{ github.sha }}
