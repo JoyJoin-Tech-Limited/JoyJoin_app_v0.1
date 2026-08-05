@@ -223,7 +223,7 @@ jobs:
             echo "No push build found for $HEAD_SHA; using this run's artifact (fallback rebuild)."
           fi
 
-      - uses: actions/download-artifact@v4.6.2
+      - uses: actions/download-artifact@v4.3.0
         with:
           name: taro-weapp-dist
           path: apps/mini-program/dist
