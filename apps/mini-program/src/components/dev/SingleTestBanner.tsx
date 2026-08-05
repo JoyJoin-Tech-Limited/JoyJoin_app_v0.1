@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro'
 import { useCallback, useState } from 'react'
 import { haptics } from '../../lib/utils/haptics'
 import { apiRequest, type ApiError } from '../../lib/api/api'
+import { openSquadUnboxing } from '../../lib/navigation/matchingNavigation'
 import './SingleTestBanner.scss'
 
 interface SingleTestBannerProps {
@@ -78,9 +79,7 @@ export default function SingleTestBanner({ className = '' }: SingleTestBannerPro
         }),
       )
       Taro.showToast({ title: `调试局已创建，共${result.bots.length + 1}人`, icon: 'none' })
-      await Taro.navigateTo({
-        url: `/pages/matching-status/index?registrationId=${encodeURIComponent(result.registrationId)}`,
-      })
+      openSquadUnboxing(result.groupId)
     } catch (err: unknown) {
       logSingleTestError('start', err)
       Taro.showToast({ title: getErrorTitle('启动失败', err), icon: 'none' })
