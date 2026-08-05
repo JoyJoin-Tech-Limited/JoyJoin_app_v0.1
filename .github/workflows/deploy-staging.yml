@@ -63,11 +63,12 @@ jobs:
           cache-from: type=gha,scope=joyjoin-staging-admin
           cache-to: type=gha,mode=max,scope=joyjoin-staging-admin
 
-      # The CVM historically could not reliably pull large layer blobs from
-      # GHCR across the Pacific, so images are ALSO delivered as an rsync'd
-      # tar bundle (deploy-staging.sh prefers the bundle when STAGING_API_IMAGE
-      # is unset). GHCR push is kept as a registry-side backup only.
+      # GHCR is the primary delivery path: the CVM pulls the sha-tagged images
+      # with a read-only PAT (GHCR_TOKEN). The rsync tar bundle remains only as
+      # a fallback for environments without GHCR_TOKEN, so the bundle steps are
+      # skipped entirely once that secret exists.
       - name: Bundle prebuilt staging images
+        if: ${{ secrets.GHCR_TOKEN == '' }}
         run: |
           set -euo pipefail
           docker tag \
@@ -84,6 +85,7 @@ jobs:
           sha256sum "$RUNNER_TEMP/joyjoin-staging-images.tar.gz"
 
       - name: Preserve prebuilt staging images
+        if: ${{ secrets.GHCR_TOKEN == '' }}
         uses: actions/upload-artifact@v4.6.2
         with:
           name: joyjoin-staging-images-${{ github.sha }}
@@ -139,6 +141,7 @@ jobs:
           script: printf 'deployment-ssh-ready\n'
 
       - name: Restore prebuilt staging images
+        if: ${{ secrets.GHCR_TOKEN == '' }}
         uses: actions/download-artifact@v4.3.0
         with:
           name: joyjoin-staging-images-${{ github.sha }}
@@ -151,6 +154,10 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
           STAGING_IMAGE_BUNDLE: ${{ runner.temp }}/joyjoin-staging-images.tar.gz
+          # GHCR delivery is active only when GHCR_TOKEN exists; otherwise the
+          # deploy falls back to the rsync bundle path below.
+          STAGING_API_IMAGE: ${{ secrets.GHCR_TOKEN != '' && format('ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:{0}', github.sha) || '' }}
+          STAGING_ADMIN_IMAGE: ${{ secrets.GHCR_TOKEN != '' && format('ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:{0}', github.sha) || '' }}
         run: |
           set -euo pipefail
 
@@ -368,6 +375,12 @@ jobs:
             -e "$RSYNC_SSH" \
             deployment/ "$CVM:~/JoyJoin/deployment/"
 
+          # GHCR delivery active (STAGING_API_IMAGE set): the CVM pulls the
+          # images itself in deploy-staging.sh, so skip the multi-chunk rsync
+          # bundle upload that historically dominated the ~40-minute transfer.
+          if [[ -n "${STAGING_API_IMAGE:-}" && -n "${STAGING_ADMIN_IMAGE:-}" ]]; then
+            echo "::notice::GHCR image delivery is active (STAGING_API_IMAGE set); skipping the rsync bundle upload"
+          else
           # Check capacity before writing the bundle. The reserve covers the
           # compressed upload, Docker's expanded layers, and 2 GiB of emergency
           # headroom. Cleanup is deliberately bounded: never containers,
@@ -590,6 +603,7 @@ jobs:
           REMOTE_BUNDLE_COMMIT
           REMOTE_BUNDLE_TEMP=""
           REMOTE_BUNDLE_PARTS=""
+          fi
 
       - name: Encode multiline secrets for SSH transport
         env:
@@ -704,9 +718,13 @@ jobs:
           APP_MODE: staging
           TEST_PAYMENT_PRICE_IN_CENTS: 1
           DEPLOY_SOURCE_SHA: ${{ github.sha }}
-          # Images are built off-host and delivered as an rsync'd tar bundle;
-          # deploy-staging.sh loads it (STAGING_API_IMAGE unset => bundle path).
-          # GHCR push remains a registry-side backup only.
+          # Images are built off-host and delivered to the CVM either via GHCR
+          # (sha-tagged refs below + GHCR_TOKEN for the read-only pull) or,
+          # when GHCR_TOKEN is absent, as an rsync'd tar bundle (the deploy
+          # script falls back to it).
+          STAGING_API_IMAGE: ${{ secrets.GHCR_TOKEN != '' && format('ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:{0}', github.sha) || '' }}
+          STAGING_ADMIN_IMAGE: ${{ secrets.GHCR_TOKEN != '' && format('ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:{0}', github.sha) || '' }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -719,7 +737,7 @@ jobs:
           # docker load, container switch, and readiness gate.
           timeout: 120s
           command_timeout: 45m
-          envs: STAGING_DATABASE_URL,STAGING_SESSION_SECRET,STAGING_ADMIN_CREATE_SECRET_KEY,STAGING_POSTGRES_PASSWORD,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,ALANG_ENABLED,PROFILE_PIXEL_AVATAR_ENABLED,EQUIPMENT_REWARDS_ENABLED,PERSONAL_STORY_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,CREATIVE_AI_PERSONAL_STORY_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,RESTART_ONBOARDING_ENABLED,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,APP_MODE,TEST_PAYMENT_PRICE_IN_CENTS,MOCK_PAYMENTS,DEPLOY_SOURCE_SHA
+          envs: STAGING_DATABASE_URL,STAGING_SESSION_SECRET,STAGING_ADMIN_CREATE_SECRET_KEY,STAGING_POSTGRES_PASSWORD,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,ALANG_ENABLED,PROFILE_PIXEL_AVATAR_ENABLED,EQUIPMENT_REWARDS_ENABLED,PERSONAL_STORY_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,CREATIVE_AI_PERSONAL_STORY_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,RESTART_ONBOARDING_ENABLED,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,APP_MODE,TEST_PAYMENT_PRICE_IN_CENTS,MOCK_PAYMENTS,DEPLOY_SOURCE_SHA,STAGING_API_IMAGE,STAGING_ADMIN_IMAGE,GHCR_TOKEN
           script: |
             set -euo pipefail
             umask 077
