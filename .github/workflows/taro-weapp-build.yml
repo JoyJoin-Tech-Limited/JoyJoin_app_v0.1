@@ -69,6 +69,7 @@ jobs:
         id: push-build-check
         if: github.event_name == 'workflow_run'
         env:
+          GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
@@ -209,6 +210,7 @@ jobs:
         id: artifact-source
         if: github.event_name == 'workflow_run'
         env:
+          GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
@@ -226,6 +228,7 @@ jobs:
           name: taro-weapp-dist
           path: apps/mini-program/dist
           run-id: ${{ steps.artifact-source.outputs.run_id || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Upload to WeChat Mini Program via CVM
         timeout-minutes: 25
