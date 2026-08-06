@@ -24,4 +24,10 @@ describe('MiniScript PM privacy and reveal contract', () => {
     expect(source).toContain('发生了什么')
     expect(source).toContain('背后原因')
   })
+
+  it('keeps reveal disabled until every assigned player has voted', () => {
+    expect(source).toContain('const allAssignedPlayersVoted')
+    expect(source).toContain('disabled={isRevealingSolution || !allAssignedPlayersVoted}')
+    expect(source).toContain("allAssignedPlayersVoted ? '揭晓真相' : '等待全员投票'")
+  })
 })

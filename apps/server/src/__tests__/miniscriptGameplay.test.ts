@@ -36,6 +36,7 @@ vi.mock('../lib/socialIcebreakerStore', () => ({
 }));
 
 const { default: miniscriptRouter } = await import('../routes/domains/miniscript');
+const { sanitizeStateForClient } = await import('../routes/socialIcebreakerHelpers');
 
 function createApp() {
   const app = express();
@@ -168,7 +169,12 @@ describe('POST /api/miniscript/assign-roles', () => {
       });
 
       expect(res.status).toBe(200);
-      const body = (await res.json()) as { roleAssignments: Record<string, number>; currentAct: number };
+      const body = (await res.json()) as {
+        roleAssignments: Record<string, number>;
+        playerRuntimeViews: Record<string, unknown>;
+        readyMap: Record<string, boolean>;
+        currentAct: number;
+      };
       expect(body.currentAct).toBe(0);
       expect(Object.keys(body.roleAssignments)).toHaveLength(4);
 
@@ -177,11 +183,14 @@ describe('POST /api/miniscript/assign-roles', () => {
       expect(body.roleAssignments['p1']).toBe(1);
       expect(body.roleAssignments['p2']).toBe(2);
       expect(body.roleAssignments['p3']).toBe(3);
+      expect(Object.keys(body.playerRuntimeViews)).toEqual(['host-user']);
+      expect(body.readyMap).toEqual({ 'host-user': true });
 
       const after = testSessions.get(session.socialSessionId);
       expect(after?.miniScriptRoleAssignments).toEqual(body.roleAssignments);
       expect(after?.miniScriptCurrentAct).toBe(0);
       expect(after?.miniScriptSolutionRevealed).toBe(false);
+      expect(after?.miniScriptPlayerReady).toEqual({ 'host-user': true });
     });
   });
 
@@ -362,6 +371,34 @@ describe('POST /api/miniscript/vote', () => {
 });
 
 describe('POST /api/miniscript/reveal-solution', () => {
+  it('rejects reveal until roles, every act, and every assigned-player vote are complete', async () => {
+    testSessions.clear();
+    testMiniScriptSecrets.clear();
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login/host-user`, { method: 'POST' });
+      const cookie = cookieHeader(loginRes);
+      const session = makeTestSession();
+      testSessions.set(session.socialSessionId, session);
+      testMiniScriptSecrets.set(session.socialSessionId, makeTestSecrets());
+
+      const reveal = () => fetch(`${baseUrl}/api/miniscript/reveal-solution`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({ socialSessionId: session.socialSessionId }),
+      });
+
+      expect((await reveal()).status).toBe(400);
+
+      session.miniScriptRoleAssignments = { 'host-user': 0, p1: 1, p2: 2, p3: 3 };
+      session.miniScriptCurrentAct = session.miniScriptFramework!.act_flow.length - 1;
+      expect((await reveal()).status).toBe(400);
+
+      session.miniScriptCurrentAct = session.miniScriptFramework!.act_flow.length;
+      session.miniScriptVotes = [{ userId: 'host-user', who: 'A', what: 'B', why: 'C', votedAt: Date.now() }];
+      expect((await reveal()).status).toBe(400);
+    });
+  });
+
   it('reveals solution to host only', async () => {
     testSessions.clear();
     testMiniScriptSecrets.clear();
@@ -370,6 +407,11 @@ describe('POST /api/miniscript/reveal-solution', () => {
       const cookie = cookieHeader(loginRes);
 
       const session = makeTestSession();
+      session.miniScriptRoleAssignments = { 'host-user': 0, p1: 1, p2: 2, p3: 3 };
+      session.miniScriptCurrentAct = session.miniScriptFramework!.act_flow.length;
+      session.miniScriptVotes = Object.keys(session.miniScriptRoleAssignments).map((userId) => ({
+        userId, who: 'A', what: 'B', why: 'C', votedAt: Date.now(),
+      }));
       testSessions.set(session.socialSessionId, session);
       testMiniScriptSecrets.set(session.socialSessionId, makeTestSecrets());
 
@@ -398,6 +440,11 @@ describe('POST /api/miniscript/reveal-solution', () => {
       const cookie = cookieHeader(loginRes);
 
       const session = makeTestSession();
+      session.miniScriptRoleAssignments = { 'host-user': 0, p1: 1, p2: 2, p3: 3 };
+      session.miniScriptCurrentAct = session.miniScriptFramework!.act_flow.length;
+      session.miniScriptVotes = Object.keys(session.miniScriptRoleAssignments).map((userId) => ({
+        userId, who: 'A', what: 'B', why: 'C', votedAt: Date.now(),
+      }));
       testSessions.set(session.socialSessionId, session);
       testMiniScriptSecrets.set(session.socialSessionId, makeTestSecrets());
 
@@ -480,6 +527,97 @@ describe('POST /api/miniscript/ready', () => {
       });
 
       expect(res.status).toBe(400);
+    });
+  });
+});
+
+describe('five-client Mini Script journey', () => {
+  it('runs host + four players through assignment, acts, editable voting, reveal, and privacy views', async () => {
+    testSessions.clear();
+    testMiniScriptSecrets.clear();
+
+    await withServer(async (baseUrl) => {
+      const userIds = ['host-user', 'p1', 'p2', 'p3', 'p4'];
+      const cookies = new Map<string, string>();
+      for (const userId of userIds) {
+        const login = await fetch(`${baseUrl}/__test__/login/${userId}`, { method: 'POST' });
+        cookies.set(userId, cookieHeader(login));
+      }
+
+      const state = makeTestSession();
+      state.playerCount = 5;
+      state.joinedParticipants!.push({
+        userId: 'p4', displayName: 'Player4',
+        joinedAt: new Date('2026-01-01T00:04:00Z').toISOString(),
+        lastSeenAt: new Date('2026-01-01T00:04:00Z').toISOString(),
+        isActive: true,
+      });
+      state.miniScriptFramework!.characters.push({
+        slotIndex: 4, roleLabel: '访客', sinHook: '好奇', alibi: '在前台登记',
+      });
+      const secrets = makeTestSecrets();
+      secrets.playerKnowledge.push({
+        slotIndex: 4, knownFacts: ['听见了杯子声'], secretAgenda: '找回遗失的笔', truthfulAlibi: '在前台',
+      });
+      testSessions.set(state.socialSessionId, state);
+      testMiniScriptSecrets.set(state.socialSessionId, secrets);
+
+      const post = (userId: string, path: string, body: Record<string, unknown>) => fetch(
+        `${baseUrl}/api/miniscript/${path}`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', cookie: cookies.get(userId)! },
+          body: JSON.stringify({ socialSessionId: state.socialSessionId, ...body }),
+        },
+      );
+
+      const assignmentResponse = await post('host-user', 'assign-roles', {});
+      expect(assignmentResponse.status).toBe(200);
+      const assignmentBody = await assignmentResponse.json() as {
+        playerRuntimeViews: Record<string, unknown>;
+        readyMap: Record<string, boolean>;
+      };
+      expect(Object.keys(assignmentBody.playerRuntimeViews)).toEqual(['host-user']);
+      expect(assignmentBody.readyMap).toEqual({ 'host-user': true });
+
+      for (const userId of userIds) {
+        const clientState = sanitizeStateForClient(testSessions.get(state.socialSessionId)!, userId);
+        expect(Object.keys(clientState.miniScriptPlayerRuntimeViews ?? {})).toEqual([userId]);
+        expect(clientState.miniScriptRevealedSolution).toBeUndefined();
+      }
+
+      for (const userId of userIds.slice(1)) {
+        expect((await post(userId, 'ready', { ready: true })).status).toBe(200);
+      }
+      expect(Object.values(testSessions.get(state.socialSessionId)!.miniScriptPlayerReady ?? {}).filter(Boolean)).toHaveLength(5);
+
+      for (let targetAct = 1; targetAct <= state.miniScriptFramework!.act_flow.length; targetAct += 1) {
+        expect((await post('host-user', 'reveal-act', { targetAct })).status).toBe(200);
+      }
+
+      for (const [index, userId] of userIds.slice(0, 4).entries()) {
+        expect((await post(userId, 'vote', {
+          vote: { who: `角色${index}`, what: `行为${index}`, why: `理由${index}` },
+        })).status).toBe(200);
+      }
+      expect((await post('host-user', 'reveal-solution', {})).status).toBe(400);
+
+      expect((await post('p1', 'vote', {
+        vote: { who: '改票角色', what: '改票行为', why: '改票理由' },
+      })).status).toBe(200);
+      expect(testSessions.get(state.socialSessionId)!.miniScriptVotes).toHaveLength(4);
+
+      expect((await post('p4', 'vote', {
+        vote: { who: '角色4', what: '行为4', why: '理由4' },
+      })).status).toBe(200);
+      const revealResponse = await post('host-user', 'reveal-solution', {});
+      expect(revealResponse.status).toBe(200);
+
+      for (const userId of userIds) {
+        const clientState = sanitizeStateForClient(testSessions.get(state.socialSessionId)!, userId);
+        expect(clientState.miniScriptRevealedSolution).toEqual(secrets.solution);
+        expect(Object.keys(clientState.miniScriptPlayerRuntimeViews ?? {})).toEqual([userId]);
+      }
     });
   });
 });

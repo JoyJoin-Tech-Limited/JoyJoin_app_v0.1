@@ -98,6 +98,10 @@ export function MiniScriptHeroView({
   const revealedSolution = session.miniScriptRevealedSolution
   const myVote = session.miniScriptVotes?.find((v) => v.userId === currentUserId)
   const allVotes = session.miniScriptVotes ?? []
+  const assignedPlayerIds = Object.keys(session.miniScriptRoleAssignments ?? {})
+  const voterIds = new Set(allVotes.map((vote) => vote.userId))
+  const allAssignedPlayersVoted = assignedPlayerIds.length > 0
+    && assignedPlayerIds.every((userId) => voterIds.has(userId))
   const readyMap = session.miniScriptPlayerReady ?? {}
   const isReady = readyMap[currentUserId] ?? false
   const readyCount = Object.values(readyMap).filter(Boolean).length
@@ -403,10 +407,12 @@ export function MiniScriptHeroView({
               <Button
                 variant='primary'
                 onClick={handleRevealSolutionConfirm}
-                disabled={isRevealingSolution}
+                disabled={isRevealingSolution || !allAssignedPlayersVoted}
                 loading={isRevealingSolution}
               >
-                {isRevealingSolution ? '揭晓中…' : '揭晓真相'}
+                {isRevealingSolution
+                  ? '揭晓中…'
+                  : allAssignedPlayersVoted ? '揭晓真相' : '等待全员投票'}
               </Button>
             ) : null}
             {isHost && solutionRevealed ? (

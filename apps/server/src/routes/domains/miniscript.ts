@@ -32,6 +32,15 @@ import { runBotSimulationSafely } from '../../services/socialIcebreakerBotServic
 
 const router = Router();
 
+type MiniScriptGenerationResult = {
+  framework: MiniScriptStoryFrameworkPublic;
+  aiResponseMeta: Awaited<ReturnType<typeof generateMiniScriptFrameworkWithMeta>>['aiResponseMeta'];
+};
+
+// Collapse same-session double taps into one model call. The entry is removed
+// after success or failure, so retries remain possible and memory stays bounded.
+const generationInFlight = new Map<string, Promise<MiniScriptGenerationResult>>();
+
 function hydrateMiniScriptState(state: SocialSessionState): SocialSessionState {
   return { ...state };
 }
@@ -132,28 +141,39 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
   }
 
   try {
-    const roster = await listParticipants(socialSessionId);
-    const { framework, aiResponseMeta } = await generateMiniScriptFrameworkWithMeta({
-      playerCount: session.playerCount,
-      style,
-      genres,
-      lite: lite ?? false,
-      roster,
-    });
+    let generation = generationInFlight.get(socialSessionId);
+    if (!generation) {
+      generation = (async () => {
+        const roster = await listParticipants(socialSessionId);
+        const { framework, aiResponseMeta } = await generateMiniScriptFrameworkWithMeta({
+          playerCount: session.playerCount,
+          style,
+          genres,
+          lite: lite ?? false,
+          roster,
+        });
 
-    // Slice 4: extract and persist secrets BEFORE storing framework on session state
-    const secrets = extractSecrets(framework);
-    await setMiniScriptSecrets(socialSessionId, secrets);
+        const secrets = extractSecrets(framework);
+        await setMiniScriptSecrets(socialSessionId, secrets);
 
-    // Store public-safe framework only
-    const publicFramework = stripFrameworkSecrets(framework);
-    session.miniScriptFramework = publicFramework;
-    session.miniScriptFrameworkGeneratedAt = Date.now();
-    session.miniScriptFrameworkGeneratedByUserId = userId;
+        const publicFramework = stripFrameworkSecrets(framework);
+        session.miniScriptFramework = publicFramework;
+        session.miniScriptFrameworkGeneratedAt = Date.now();
+        session.miniScriptFrameworkGeneratedByUserId = userId;
+        await updateSession(socialSessionId, session);
 
-    await updateSession(socialSessionId, session);
+        return { framework: publicFramework, aiResponseMeta };
+      })();
+      generationInFlight.set(socialSessionId, generation);
+      void generation.finally(() => {
+        if (generationInFlight.get(socialSessionId) === generation) {
+          generationInFlight.delete(socialSessionId);
+        }
+      }).catch(() => undefined);
+    }
 
-    return res.json({ ...publicFramework, meta: aiResponseMeta });
+    const { framework, aiResponseMeta } = await generation;
+    return res.json({ ...framework, meta: aiResponseMeta });
   } catch (error) {
     logger.error('[miniscript] generate failed', { error, socialSessionId });
     return res.status(500).json({ error: 'GENERATION_FAILED' });
@@ -165,6 +185,14 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
 const assignRolesBodySchema = z.object({
   socialSessionId: z.string().min(1),
 });
+
+function ownRuntimeView(
+  views: Record<string, MiniScriptPlayerRuntimeView> | undefined,
+  userId: string,
+): Record<string, MiniScriptPlayerRuntimeView> {
+  const own = views?.[userId];
+  return own ? { [userId]: own } : {};
+}
 
 router.post('/assign-roles', async (req: any, res) => {
   const userId = requireAuthenticatedUserId(req, res);
@@ -199,7 +227,8 @@ router.post('/assign-roles', async (req: any, res) => {
   if (state.miniScriptRoleAssignments && Object.keys(state.miniScriptRoleAssignments).length > 0) {
     return res.json({
       roleAssignments: state.miniScriptRoleAssignments,
-      playerRuntimeViews: state.miniScriptPlayerRuntimeViews,
+      playerRuntimeViews: ownRuntimeView(state.miniScriptPlayerRuntimeViews, userId),
+      readyMap: state.miniScriptPlayerReady ?? {},
       currentAct: state.miniScriptCurrentAct ?? 0,
     });
   }
@@ -215,10 +244,10 @@ router.post('/assign-roles', async (req: any, res) => {
   const participants = await listParticipants(socialSessionId);
   const characterCount = state.miniScriptFramework.characters.length;
 
-  if (participants.length > characterCount) {
+  if (participants.length !== characterCount) {
     return res.status(400).json({
-      error: 'TOO_MANY_PLAYERS',
-      message: `This script supports ${characterCount} characters, but ${participants.length} players joined.`,
+      error: 'PLAYER_COUNT_MISMATCH',
+      message: `This script requires ${characterCount} players, but ${participants.length} are present.`,
     });
   }
 
@@ -248,6 +277,7 @@ router.post('/assign-roles', async (req: any, res) => {
   state.miniScriptVotes = [];
   state.miniScriptSolutionRevealed = false;
   state.miniScriptRevealedSolution = undefined;
+  state.miniScriptPlayerReady = { [userId]: true };
 
   await updateSession(socialSessionId, state);
 
@@ -260,7 +290,8 @@ router.post('/assign-roles', async (req: any, res) => {
 
   return res.json({
     roleAssignments,
-    playerRuntimeViews,
+    playerRuntimeViews: ownRuntimeView(playerRuntimeViews, userId),
+    readyMap: state.miniScriptPlayerReady,
     currentAct: 0,
   });
 });
@@ -458,6 +489,33 @@ router.post('/reveal-solution', async (req: any, res) => {
 
   if (state.currentPhase !== 'mini_script') {
     return res.status(400).json({ error: 'WRONG_PHASE' });
+  }
+
+  if (!state.miniScriptSolutionRevealed) {
+    if (!state.miniScriptFramework) {
+      return res.status(400).json({ error: 'FRAMEWORK_NOT_GENERATED' });
+    }
+
+    const assignments = state.miniScriptRoleAssignments;
+    if (!assignments || Object.keys(assignments).length !== state.playerCount) {
+      return res.status(400).json({ error: 'ROLES_NOT_ASSIGNED' });
+    }
+
+    const totalActs = state.miniScriptFramework.act_flow.length;
+    if ((state.miniScriptCurrentAct ?? 0) < totalActs) {
+      return res.status(400).json({ error: 'NOT_ALL_ACTS_REVEALED' });
+    }
+
+    const voters = new Set((state.miniScriptVotes ?? []).map((vote) => vote.userId));
+    const missingVoters = Object.keys(assignments).filter(
+      (assignedUserId) => !voters.has(assignedUserId),
+    );
+    if (missingVoters.length > 0) {
+      return res.status(400).json({
+        error: 'WAITING_FOR_VOTES',
+        remaining: missingVoters.length,
+      });
+    }
   }
 
   // Idempotent: return cached solution if already revealed

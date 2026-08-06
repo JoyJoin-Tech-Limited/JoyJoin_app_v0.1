@@ -183,4 +183,50 @@ describe('POST /api/miniscript/generate', () => {
       expect(testSessions.get(socialSessionId)?.miniScriptFrameworkGeneratedAt).toBe(generatedAtAfterFirst);
     });
   });
+
+  it('collapses concurrent double-click generation into one framework', async () => {
+    testSessions.clear();
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login/host-user`, { method: 'POST' });
+      const cookie = cookieHeader(loginRes);
+      const socialSessionId = 'social-test-concurrent';
+      testSessions.set(socialSessionId, {
+        socialSessionId,
+        icebreakerSessionId: 'ice-concurrent',
+        currentPhase: 'mini_script',
+        hostUserId: 'host-user',
+        hostDisplayName: 'Host',
+        playerCount: 4,
+        phaseStartedAt: Date.now(),
+        sessionStartedAt: Date.now(),
+        completedPhases: [],
+        enabledPhases: ['mini_script', 'recap'],
+      });
+
+      const generate = (style: 'modern_urban' | 'medieval') => fetch(
+        `${baseUrl}/api/miniscript/generate`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', cookie },
+          body: JSON.stringify({
+            socialSessionId,
+            playerCount: 4,
+            style,
+            genres: ['light_reasoning'],
+          }),
+        },
+      );
+
+      const [firstResponse, secondResponse] = await Promise.all([
+        generate('modern_urban'),
+        generate('medieval'),
+      ]);
+      expect(firstResponse.status).toBe(200);
+      expect(secondResponse.status).toBe(200);
+      const first = await firstResponse.json() as { style: string; premise: string };
+      const second = await secondResponse.json() as { style: string; premise: string };
+      expect(second).toMatchObject({ style: first.style, premise: first.premise });
+      expect(testSessions.get(socialSessionId)?.miniScriptFramework?.style).toBe(first.style);
+    });
+  });
 });
