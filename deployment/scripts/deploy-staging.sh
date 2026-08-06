@@ -458,8 +458,11 @@ if [[ "$USE_GHCR_PULL" == "true" ]]; then
     pull_with_retry() {
         local image="$1"
         local attempt=1
-        local max_attempts=6
-        local attempt_timeout=15m
+        # Two images are pulled sequentially inside the SSH action's 45-minute
+        # command timeout. Keep the combined worst-case pull budget below that
+        # ceiling so deployment and rollback still have time to finish.
+        local max_attempts=3
+        local attempt_timeout=5m
         while (( attempt <= max_attempts )); do
             if timeout --signal=TERM --kill-after=30s "$attempt_timeout" docker pull "$image"; then
                 return 0
