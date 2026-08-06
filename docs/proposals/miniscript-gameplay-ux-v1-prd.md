@@ -397,7 +397,7 @@ function filterFrameworkForPlayer(
 | D1 | Add 4 new fields to `SocialSessionState` + Zod/TS types | Backend | Yes |
 | D1b | Add bonus-gate fields to `SocialSessionState` (`bonusGateOffered`, `bonusGateAccepted`, `bonusGateDeclined`, `bonusGatePlayerSentiment`, `bonusGateFrameworkPreloading`) | Backend | Yes |
 | D2 | New routes: `POST .../miniscript/start`, `POST .../miniscript/next-act`, `POST .../miniscript/reveal` (or generic act-advance route) | Backend | Yes |
-| D2b | Bonus gate routes: `POST .../social-icebreaker/:id/bonus/respond`, `POST .../social-icebreaker/:id/bonus/sentiment` | Backend | Yes |
+| D2b | Bonus gate routes: `POST /api/miniscript/bonus/respond`, `POST /api/miniscript/bonus/sentiment` (top-level `/api/miniscript/*` family, `socialSessionId` in body; implemented 2026-08-06 — not the session-scoped `/:id/...` alias) | Backend | Yes |
 | D3 | Update `buildClientState` / `sanitizeStateForClient` to per-player framework filtering | Backend | Yes |
 | D3b | Ensure `sanitizeStateForClient` strips `bonusGatePlayerSentiment` to protect voter privacy | Backend | Yes |
 | D4 | Update `MiniScriptPhaseView` (Taro) with role card, act panel, clue panel, host CTAs | Mini-program FE | Yes |
@@ -470,7 +470,7 @@ For the Harness Runtime Controller deliberation, the following are **decision-re
 - [x] New session state fields listed (`miniScriptPlayerAssignments`, `miniScriptCurrentAct`, `miniScriptGameState`, `miniScriptSolutionRevealed`, `miniScriptActsCompleted`)
 - [x] Bonus gate state fields listed (`bonusGateOffered`, `bonusGateAccepted`, `bonusGateDeclined`, `bonusGatePlayerSentiment`, `bonusGateFrameworkPreloading`)
 - [x] New API routes identified (`/miniscript/start`, `/miniscript/next-act`, `/miniscript/reveal`)
-- [x] Bonus gate routes identified (`/social-icebreaker/:id/bonus/respond`, `/social-icebreaker/:id/bonus/sentiment`)
+- [x] Bonus gate routes identified (`/api/miniscript/bonus/respond`, `/api/miniscript/bonus/sentiment`; corrected 2026-08-06 — the whole mini-script surface is top-level `/api/miniscript/*`, never `/social-icebreaker/:id/...`)
 - [x] Genre scope for v1 decided (`light_reasoning` + `absurd_comedy`)
 - [x] Advance guard rules specified
 - [x] Cleanup rules specified

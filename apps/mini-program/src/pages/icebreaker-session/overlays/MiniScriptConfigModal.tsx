@@ -178,32 +178,46 @@ export function MiniScriptConfigModal({
 
         {/* Header */}
         <View className='ms-modal__header'>
-          {stage === 'style' ? (
-            <>
-              <Text className='ms-modal__title'>选择剧本风格</Text>
-              <Text className='ms-modal__subtitle'>今晚，你们想走进哪个世界？</Text>
-            </>
-          ) : (
-            <View className='ms-modal__hero-pill'>
-              {selectedStyleCard && (
-                <>
-                  <View
-                    className='ms-modal__hero-thumb'
-                    style={{ background: getStyleGradient(selectedStyleCard) }}
-                  >
-                    <View className='ms-modal__hero-icon' />
-                  </View>
-                  <View className='ms-modal__hero-text'>
-                    <Text className='ms-modal__hero-label'>{selectedStyleCard.label}</Text>
-                    <Text className='ms-modal__hero-hint'>再选一种或多种题材</Text>
-                  </View>
-                </>
-              )}
-              <View className='ms-modal__back-btn' onClick={handleBackToStyle}>
-                <Text>重选</Text>
+          <View className='ms-modal__header-main'>
+            {stage === 'style' ? (
+              <>
+                <Text className='ms-modal__title'>选择剧本风格</Text>
+                <Text className='ms-modal__subtitle'>今晚，你们想走进哪个世界？</Text>
+              </>
+            ) : (
+              <View className='ms-modal__hero-pill'>
+                {selectedStyleCard && (
+                  <>
+                    <View
+                      className='ms-modal__hero-thumb'
+                      style={{ background: getStyleGradient(selectedStyleCard) }}
+                    >
+                      <View className='ms-modal__hero-icon' />
+                    </View>
+                    <View className='ms-modal__hero-text'>
+                      <Text className='ms-modal__hero-label'>{selectedStyleCard.label}</Text>
+                      <Text className='ms-modal__hero-hint'>再选一种或多种题材</Text>
+                    </View>
+                  </>
+                )}
+                <View className='ms-modal__back-btn' onClick={handleBackToStyle}>
+                  <Text>重选</Text>
+                </View>
               </View>
-            </View>
-          )}
+            )}
+          </View>
+          <View
+            className='ms-modal__close'
+            hoverClass='ms-modal__close--pressed'
+            hoverStartTime={0}
+            hoverStayTime={120}
+            role='button'
+            aria-label='关闭'
+            onClick={() => {
+              haptics('light')
+              onClose()
+            }}
+          />
         </View>
 
         {/* Content */}

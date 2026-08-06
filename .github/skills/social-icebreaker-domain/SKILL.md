@@ -36,8 +36,9 @@ POST /advance   → host-driven phase transition
 POST /:id/set-tier → host changes tier/vibe while still in warmup
 GET /recap      → AI summary + medals
 GET /:id/moment-card.png → server-rendered shareable PNG (feature-flagged)
-POST /:id/bonus/respond  → host accepts/declines mini_script bonus gate
-POST /:id/bonus/sentiment → player votes want/pass on bonus gate
+POST /api/miniscript/bonus/respond  → host accepts/declines mini_script bonus gate
+POST /api/miniscript/bonus/sentiment → player votes want/pass on bonus gate
+POST /api/miniscript/* (generate, assign-roles, reveal-act, vote, reveal-solution, ready) → the full mini_script phase surface lives at TOP-LEVEL `/api/miniscript/*` with `socialSessionId` in the body — NOT under `/:id/...` (2026-08-06; client enforced by `miniscriptClientPathContract.test.ts`)
 TTL sweep (5m)  → deletes expired sessions (6h lifetime)
 ```
 

@@ -274,7 +274,11 @@ Base: `/api/social-icebreaker`
 | `POST` | `/:id/ai-feedback` | Rate AI content | Any |
 | `POST` | `/:id/set-tier` | Change tier (warmup only) | Host |
 
-Mini-script has its own top-level route: `POST /api/miniscript/generate`.
+Mini-script lives at top-level routes with `socialSessionId` in the request body (mounted in `routes/domains/icebreaker.ts` → `routes/domains/miniscript.ts`; canonical since 2026-08-06 — never the session-scoped `/:id/...` alias):
+- `POST /api/miniscript/generate` — host generates the story framework (idempotent; client 35s timeout vs 32s server hard bound)
+- `POST /api/miniscript/assign-roles` / `reveal-act` / `reveal-solution` — host-only progression
+- `POST /api/miniscript/vote` / `ready` — any player self-state
+- `POST /api/miniscript/bonus/respond` / `bonus/sentiment` — bonus gate resolution
 
 ---
 

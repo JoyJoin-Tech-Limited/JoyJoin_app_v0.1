@@ -229,13 +229,13 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
         ▼ Host calls POST .../advance
 [BONUS GATE] (when next phase would be `mini_script` and `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` is true)
   Server pauses advancement and offers bonus gate to host + players
-  Host → POST .../bonus/respond { accept: boolean }
-  Players → POST .../bonus/sentiment { sentiment: 'want' | 'pass' }
+  Host → POST /api/miniscript/bonus/respond { accept: boolean }
+  Players → POST /api/miniscript/bonus/sentiment { sentiment: 'want' | 'pass' }
   If accepted → enter [MINI_SCRIPT]; if declined → skip to [RECAP]
         │
         ▼ Host calls POST .../advance
 [MINI_SCRIPT] (when `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` or legacy `_BETA` true)
-  Host → POST /api/miniscript/generate (see miniscript routes)
+  Host → POST /api/miniscript/generate (see miniscript routes below)
   Players → CardFlip role reveal, TapReaction clue voting, IdentityReveal act transitions
         │
         ▼ Host calls POST .../advance
@@ -397,11 +397,19 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 | `POST` | `/api/social-icebreaker/:socialSessionId/lie-detective/next-player` | host | Advance to the next player after the current reveal resolves |
 | `GET` | `/api/social-icebreaker/:socialSessionId/recap` | any | Generates AI recap summary |
 | `GET` | `/api/social-icebreaker/:socialSessionId/moment-card.png` | any | Server-rendered shareable Moment Card PNG (feature-flagged: `SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER`; rate-limited: 5 req/min per user) |
-| `POST` | `/api/social-icebreaker/:socialSessionId/bonus/respond` | host | Host accepts or declines the bonus `mini_script` offer |
-| `POST` | `/api/social-icebreaker/:socialSessionId/bonus/sentiment` | any | Player votes `want` or `pass` on the bonus `mini_script` offer |
+| `POST` | `/api/miniscript/bonus/respond` | host | Host accepts or declines the bonus `mini_script` offer |
+| `POST` | `/api/miniscript/bonus/sentiment` | any | Player votes `want` or `pass` on the bonus `mini_script` offer |
+| `POST` | `/api/miniscript/generate` | host | Generate the story framework (style/genres/lite); idempotent; 32s hard bound with client 35s timeout |
+| `POST` | `/api/miniscript/assign-roles` | host | Round-robin role assignment by join order (idempotent) |
+| `POST` | `/api/miniscript/reveal-act` | host | Reveal next act + its clues + deduction hints (sequential) |
+| `POST` | `/api/miniscript/vote` | any | Submit/replace a consensus vote (content-filtered) |
+| `POST` | `/api/miniscript/reveal-solution` | host | Reveal the truth once all acts revealed + all assigned players voted |
+| `POST` | `/api/miniscript/ready` | any | Toggle own role-card readiness |
 | `POST` | `/api/social-icebreaker/:socialSessionId/early-end` | host | Jump to recap early without counting the current phase as completed; routes through `transitionPhase()` |
 | `POST` | `/api/social-icebreaker/:socialSessionId/end-session` | host | End a custom-mode session early |
 | `POST` | `/api/social-icebreaker/:socialSessionId/select-phase` | host | Select the next phase in custom mode (`phase_selection`) |
+
+The mini-script family above (bonus + generate + actions) is mounted in `apps/server/src/routes/domains/miniscript.ts` at top-level `/api/miniscript/*` (wired via `registerIcebreakerRoutes` in `routes/domains/icebreaker.ts`), with `socialSessionId` read from the request body. These routes intentionally do NOT use the `/api/social-icebreaker/:id/...` prefix; the mini-program client must post to `/api/miniscript/*` (regression-guarded by `miniscriptClientPathContract.test.ts`, 2026-08-06).
 
 ### Frontend Surfaces
 

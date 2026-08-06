@@ -14,7 +14,8 @@ description: >-
 - **4–6 players** roster gate on server; **host-only** `POST /api/miniscript/generate`.
 - **No violence / death**; low-stakes mishap tone only; worker output **JSON only** for machine parse.
 - **mini-program first:** Taro `phaseViews` + session page own the primary UX; web parity follows.
-- **Bonus gate:** `mini_script` is preceded by a host+player vote gate. When the session would advance into `mini_script`, the server sets `bonusGateOffered=true` and pauses. Host calls `POST /api/social-icebreaker/:id/bonus/respond` to accept/decline; players call `POST .../bonus/sentiment` to vote `want`/`pass`.
+- **Bonus gate:** `mini_script` is preceded by a host+player vote gate. When the session would advance into `mini_script`, the server sets `bonusGateOffered=true` and pauses. Host calls `POST /api/miniscript/bonus/respond` to accept/decline; players call `POST /api/miniscript/bonus/sentiment` to vote `want`/`pass`.
+- **Route surface (canonical, 2026-08-06):** the entire mini-script API lives at top-level `/api/miniscript/*` (mounted in `routes/domains/icebreaker.ts`), with `socialSessionId` read from the request **body** — NOT under `/api/social-icebreaker/:id/...`. Client actions: `POST /api/miniscript/generate` (host), `/assign-roles` (host), `/reveal-act` (host), `/vote` (any), `/reveal-solution` (host), `/ready` (any), plus the two bonus routes above. Do not reintroduce session-scoped aliases; the client must post to `/api/miniscript/*` (enforced by `miniscriptClientPathContract.test.ts`).
 
 ## References (progressive disclosure)
 

@@ -382,6 +382,48 @@ $__gold-accent:  $color-landed-gold;
   &__header {
     flex-shrink: 0;
     margin-bottom: $spacing-sm;
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+  }
+
+  &__header-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__close {
+    position: relative;
+    flex-shrink: 0;
+    width: 88rpx;
+    height: 88rpx;
+    margin: -8rpx -16rpx 0 0;
+    border-radius: 50%;
+    transition: background 0.12s ease;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 28rpx;
+      height: 4rpx;
+      border-radius: 2rpx;
+      background: $color-text-secondary;
+    }
+
+    &::before {
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    &--pressed {
+      background: rgba($color-primary, 0.08);
+    }
   }
 
   &__title {

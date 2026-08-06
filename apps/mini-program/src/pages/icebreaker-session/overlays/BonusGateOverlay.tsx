@@ -32,7 +32,7 @@ export default function BonusGateOverlay({
     setLoading(true)
     try {
       await apiRequest({
-        path: `/api/social-icebreaker/${socialSessionId}/bonus/respond`,
+        path: '/api/miniscript/bonus/respond',
         method: 'POST',
         data: { socialSessionId, accept },
       })
@@ -49,7 +49,7 @@ export default function BonusGateOverlay({
     setLoading(true)
     try {
       await apiRequest({
-        path: `/api/social-icebreaker/${socialSessionId}/bonus/sentiment`,
+        path: '/api/miniscript/bonus/sentiment',
         method: 'POST',
         data: { socialSessionId, sentiment },
       })

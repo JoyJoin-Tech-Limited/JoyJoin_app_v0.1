@@ -470,7 +470,9 @@ export default function IcebreakerSessionPage() {
 
       try {
         const response = await apiRequest<T>({
-          path: buildSocialPath(socialSessionId, suffix),
+          // Full `/api/...` paths (mini-script family) bypass the session-scoped
+          // buildSocialPath alias — those routes live at the top level.
+          path: suffix.startsWith('/api/') ? suffix : buildSocialPath(socialSessionId, suffix),
           method: 'POST',
           data,
           timeout: options?.timeoutMs,
@@ -637,24 +639,37 @@ export default function IcebreakerSessionPage() {
   }, [performSocialAction])
 
   const handleAssignRoles = useCallback(() => {
-    void performSocialAction('miniscript-assign-roles', '/miniscript/assign-roles', {})
-  }, [performSocialAction])
+    void performSocialAction('miniscript-assign-roles', '/api/miniscript/assign-roles', {
+      socialSessionId,
+    })
+  }, [performSocialAction, socialSessionId])
 
   const handleRevealAct = useCallback((targetAct: number) => {
-    void performSocialAction('miniscript-reveal-act', '/miniscript/reveal-act', { targetAct })
-  }, [performSocialAction])
+    void performSocialAction('miniscript-reveal-act', '/api/miniscript/reveal-act', {
+      socialSessionId,
+      targetAct,
+    })
+  }, [performSocialAction, socialSessionId])
 
   const handleVote = useCallback((vote: MiniScriptVoteInput) => {
-    void performSocialAction('miniscript-vote', '/miniscript/vote', { vote })
-  }, [performSocialAction])
+    void performSocialAction('miniscript-vote', '/api/miniscript/vote', {
+      socialSessionId,
+      vote,
+    })
+  }, [performSocialAction, socialSessionId])
 
   const handleRevealSolution = useCallback(() => {
-    void performSocialAction('miniscript-reveal-solution', '/miniscript/reveal-solution', {})
-  }, [performSocialAction])
+    void performSocialAction('miniscript-reveal-solution', '/api/miniscript/reveal-solution', {
+      socialSessionId,
+    })
+  }, [performSocialAction, socialSessionId])
 
   const handleMiniScriptReady = useCallback((ready: boolean) => {
-    void performSocialAction('miniscript-ready', '/miniscript/ready', { ready })
-  }, [performSocialAction])
+    void performSocialAction('miniscript-ready', '/api/miniscript/ready', {
+      socialSessionId,
+      ready,
+    })
+  }, [performSocialAction, socialSessionId])
 
   const handleAdvancePhase = useCallback(() => {
     if (!session) {

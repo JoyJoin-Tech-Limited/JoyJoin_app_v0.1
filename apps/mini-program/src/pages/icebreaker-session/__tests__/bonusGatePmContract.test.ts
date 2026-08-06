@@ -15,4 +15,11 @@ describe('BonusGateOverlay PM contract', () => {
     expect(source).toContain("onClick={() => handleHostRespond(true)}")
     expect(source).toContain('sentimentSummary.wantCount')
   })
+
+  it('posts to the mounted /api/miniscript/bonus/* routes, never the session-scoped alias', () => {
+    expect(source).toContain("path: '/api/miniscript/bonus/respond'")
+    expect(source).toContain("path: '/api/miniscript/bonus/sentiment'")
+    expect(source).not.toContain('bonus/respond`')
+    expect(source).not.toContain('bonus/sentiment`')
+  })
 })

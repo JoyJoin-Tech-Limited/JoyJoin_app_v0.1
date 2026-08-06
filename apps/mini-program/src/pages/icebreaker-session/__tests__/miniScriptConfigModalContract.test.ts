@@ -48,6 +48,13 @@ describe('MiniScriptConfigModal interaction and layout contract', () => {
     expect(source).toContain('initialGenres = [...MINI_SCRIPT_GENRES]')
   })
 
+  it('offers an always-visible dismiss button (backdrop is display:none)', () => {
+    expect(source).toContain("className='ms-modal__close'")
+    expect(source).toContain("aria-label='关闭'")
+    expect(source).toContain("onClick={() => {\n              haptics('light')\n              onClose()\n            }}")
+    expect(styles).toMatch(/&__close\s*\{[\s\S]*?width:\s*88rpx;[\s\S]*?height:\s*88rpx;/)
+  })
+
   it('allows the server-side generation pipeline to finish before timing out', () => {
     expect(sessionSource).toContain('const MINISCRIPT_GENERATION_TIMEOUT_MS = 35_000')
     expect(sessionSource).toMatch(/path:\s*'\/api\/miniscript\/generate',[\s\S]*?timeout:\s*MINISCRIPT_GENERATION_TIMEOUT_MS/)
