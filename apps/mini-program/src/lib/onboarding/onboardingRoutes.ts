@@ -1,6 +1,7 @@
 import type { OnboardingStep } from '../api/api'
+import { MASCOT_SIZE } from '../mascot/mascotSizes'
 
-export const ONBOARDING_MASCOT_SIZE = '200rpx'
+export const ONBOARDING_MASCOT_SIZE = MASCOT_SIZE.lg
 
 export const MINI_PROGRAM_PAGE_PATHS = {
   discover: 'pages/discover/index',

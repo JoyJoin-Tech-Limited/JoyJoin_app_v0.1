@@ -1,10 +1,9 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import { useMemo } from 'react'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import Button from '../../../components/ui/Button'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
+import ArchetypeSpritesheet from '../personality-test/results/ArchetypeSpritesheet'
 import {
-  getArchetypeVisual,
   getIntroStaticAsset,
   getIntroStaticFallbackAsset,
 } from './visuals'
@@ -68,15 +67,6 @@ export default function PersonalityTestIntro({
   ]
     .filter(Boolean)
     .join(' ')
-
-  const introTeasers = useMemo(
-    () =>
-      INTRO_ARCHETYPE_TEASERS.map((item) => ({
-        ...item,
-        visual: getArchetypeVisual(item.archetype),
-      })),
-    [],
-  )
 
   const introCoachLine = hasStoredIncompleteSession
     ? '进度还在，继续答几分钟就能完成。'
@@ -184,16 +174,16 @@ export default function PersonalityTestIntro({
               showScrollbar={false}
             >
               <View className='personality-test__intro-tease-list'>
-                {introTeasers.map((item) => (
+                {INTRO_ARCHETYPE_TEASERS.map((item) => (
                   <View
                     key={item.archetype}
                     className='personality-test__intro-tease-card'
                   >
                     <View className='personality-test__intro-tease-avatar-wrap'>
-                      <Image
+                      <ArchetypeSpritesheet
+                        archetype={item.archetype}
+                        size='124rpx'
                         className='personality-test__intro-tease-avatar'
-                        src={item.visual.asset}
-                        mode='aspectFit'
                       />
                     </View>
                     <Text className='personality-test__intro-tease-name'>

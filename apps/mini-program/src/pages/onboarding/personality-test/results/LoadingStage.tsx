@@ -27,9 +27,17 @@ export default function LoadingStage({ phaseText }: LoadingStageProps) {
             <View className='personality-results__hero-skeleton-badge' />
             <View className='personality-results__hero-skeleton-badge' />
           </View>
-          <View className='personality-results__hero-skeleton-cta' />
         </View>
         <View className='personality-results__hero-skeleton-art' />
+        {/* Xiaoyue bubble row — mirrors the hero card's 悦仔 section */}
+        <View className='personality-results__hero-skeleton-xiaoyue'>
+          <View className='personality-results__hero-skeleton-xiaoyue-avatar' />
+          <View className='personality-results__hero-skeleton-xiaoyue-bubble'>
+            <View className='personality-results__hero-skeleton-line personality-results__hero-skeleton-line--short' />
+            <View className='personality-results__hero-skeleton-line' />
+            <View className='personality-results__hero-skeleton-line personality-results__hero-skeleton-line--wide' />
+          </View>
+        </View>
       </View>
 
       <Image

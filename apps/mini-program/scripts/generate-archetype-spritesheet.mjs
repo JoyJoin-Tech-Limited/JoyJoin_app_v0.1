@@ -27,6 +27,17 @@ const CDN_OUTPUT_DIR = path.join(ROOT, 'src/assets/personality/archetypes')
 const LOCAL_OUTPUT_DIR = path.join(ROOT, 'src/pages/onboarding/assets/archetypes')
 
 const THUMB_SIZE = 120
+/**
+ * Art fill size inside the thumb. Source PNGs ship with ~14% transparent
+ * padding on every side, so a plain cover-resize leaves the character
+ * floating in ~42% empty space inside the circular slot-card mask.
+ * Trimming to the alpha bbox and scaling it to THUMB_FILL (≈92% of the
+ * cell) makes the icons read as intact full-bleed portraits. Verified
+ * against all 12 archetypes: zero art is clipped by the 60px inscribed
+ * circle at fills ≤112px.
+ */
+const THUMB_FILL = 110
+const TRIM_ALPHA_THRESHOLD = 10
 const PADDING = 4
 const COLS = 3
 const ROWS = 4
@@ -91,8 +102,61 @@ async function main() {
       continue
     }
 
-    const resized = await sharp(inputPng)
-      .resize(THUMB_SIZE, THUMB_SIZE, { fit: 'cover', position: 'center' })
+    // Trim transparent margins so the character fills the circular mask
+    // instead of floating in empty space (source art ships with ~14%
+    // padding on every side).
+    const { data, info } = await sharp(inputPng)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+
+    let minX = info.width
+    let minY = info.height
+    let maxX = -1
+    let maxY = -1
+    for (let y = 0; y < info.height; y += 1) {
+      for (let x = 0; x < info.width; x += 1) {
+        const alpha = data[(y * info.width + x) * 4 + 3]
+        if (alpha > TRIM_ALPHA_THRESHOLD) {
+          if (x < minX) minX = x
+          if (x > maxX) maxX = x
+          if (y < minY) minY = y
+          if (y > maxY) maxY = y
+        }
+      }
+    }
+
+    const bboxW = maxX - minX + 1
+    const bboxH = maxY - minY + 1
+    const artScale = THUMB_FILL / Math.max(bboxW, bboxH)
+    const artW = Math.max(1, Math.round(bboxW * artScale))
+    const artH = Math.max(1, Math.round(bboxH * artScale))
+
+    const trimmed = await sharp(inputPng)
+      .extract({ left: minX, top: minY, width: bboxW, height: bboxH })
+      .resize(artW, artH, { fit: 'fill' })
+      .toBuffer()
+
+    // Center the trimmed art on a transparent 120×120 thumb so the cell
+    // grid (cellSize 128, thumbSize 120, padding 4) stays byte-identical
+    // in shape — the manifest mapping and ArchetypeSpritesheet crop math
+    // do not need to change.
+    const resized = await sharp({
+      create: {
+        width: THUMB_SIZE,
+        height: THUMB_SIZE,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    })
+      .composite([
+        {
+          input: trimmed,
+          left: Math.floor((THUMB_SIZE - artW) / 2),
+          top: Math.floor((THUMB_SIZE - artH) / 2),
+        },
+      ])
+      .png()
       .toBuffer()
 
     const col = i % COLS

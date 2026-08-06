@@ -217,6 +217,21 @@ $radius-full:      100rpx; // Fully rounded pill / floating action.
 $radius-circle:    50%;     // Perfect circles (mascot fallback, badges, spinners).
 $input-height:     88rpx;
 
+// ─── Speech-bubble (mascot coaching bubbles) ──────────────────────
+// Single dialect for all tailed mascot bubbles (XiaoyueChatBubble +
+// PoolRegistrationMascotSection). The personality-test quiz bubble is a
+// documented exception: accent-border + corner-notch commentary style, no tail.
+$bubble-radius:       24rpx;
+$bubble-padding:      24rpx;
+$bubble-border-width: 2rpx;
+$bubble-border-color: rgba($color-primary, 0.14);
+$bubble-shadow:       0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+// Bubble-top-anchored tail: lands 24–43% of avatar height across 1–3 line
+// bubbles under center alignment — inside the chibi face/neck zone. Do not
+// stack per-size tail classes on top of centering (bubble-height-dependent
+// offset). Measured: 1-line bubble ≈ 43%, 2-line ≈ 33%, 3-line ≈ 24%.
+$bubble-tail-top:     32rpx;
+
 // ─── Picker Shell ────────────────────────────────────────────────
 $picker-shell-height:       1100rpx;
 $picker-shell-mascot-size:  56rpx;

@@ -44,9 +44,10 @@ describe('flow-animation copy binding', () => {
   })
 
   it('resolves Flow 2 hero templates with real facts and designed fallbacks', () => {
-    expect(getFlow2HeroStatus({ title: '周五火锅局' })).toBe('你的周五火锅局，正在一步步成形')
-    expect(getFlow2HeroStatus(null)).toBe(`你的${FLOW2_FALLBACKS.heroTitle}，正在一步步成形`)
-    expect(getFlow2HeroStatus({ title: '  ' })).toBe(`你的${FLOW2_FALLBACKS.heroTitle}，正在一步步成形`)
+    // 2026-08-03 revamp: the vague process word 「一步步」 was dropped.
+    expect(getFlow2HeroStatus({ title: '周五火锅局' })).toBe('你的周五火锅局，正在成形')
+    expect(getFlow2HeroStatus(null)).toBe(`你的${FLOW2_FALLBACKS.heroTitle}，正在成形`)
+    expect(getFlow2HeroStatus({ title: '  ' })).toBe(`你的${FLOW2_FALLBACKS.heroTitle}，正在成形`)
 
     expect(getFlow2HeroMeta({ dateLabel: '明天 · 周六 19:00', district: '福田区', typeLabel: '饭局' }))
       .toBe('明天 · 周六 19:00 · 福田区 · 饭局')
@@ -67,8 +68,8 @@ describe('flow-animation copy binding', () => {
       expect(step.description).not.toMatch(/\{(TITLE|TYPE|DISTRICT)\}/)
     }
     expect(withFacts[0].description).toContain('周五火锅局')
-    expect(withFacts[1].title).toBe('悦仔组局')
-    expect(withFacts[2].title).toBe('这桌成形')
+    expect(withFacts[1].title).toBe('等待同频桌友')
+    expect(withFacts[2].title).toBe('桌友到齐')
     expect(withFacts[4].description).toContain('南山区')
 
     const generic = buildLifecycleSteps()

@@ -84,6 +84,17 @@ const SlotCard = memo(function SlotCard({
       className={`personality-results__slot-card personality-results__slot-card--${slotPhase}${isActive ? ' personality-results__slot-card--active' : ''}`}
       style={activeStyle}
     >
+      {!isActive ? (
+        /* Queued cards carry their archetype's hue at low opacity so the
+           reel reads as a family of colourful cards, not washed white */
+        <View
+          className='personality-results__slot-card-tint'
+          aria-hidden='true'
+          style={{
+            background: `linear-gradient(150deg, ${itemVisual.accentBorder} 0%, rgba(255, 255, 255, 0) 62%)`,
+          }}
+        />
+      ) : null}
       {useRevealStrip ? (
         <ArchetypeRevealStrip
           archetype={archetype}

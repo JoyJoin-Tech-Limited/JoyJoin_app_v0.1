@@ -12,6 +12,12 @@
  *
  * 「4–6」 en-dash is U+2013 between halfwidth digits and must render as one
  * non-breaking unit (component wraps it in a nowrap element).
+ *
+ * 2026-08-05 (copy-owner sync, value-first revision): Flow 2 node titles
+ * 悦仔组局→等待同频桌友 and 这桌成形→桌友到齐 (mirror the pool-registration
+ * teaser nodes); dropped the vague process word 「一步步」 from the hero status
+ * (「正在一步步成形」→「正在成形」) and the Flow 2 shell title (「正在一步步发生」→
+ * 「正在成形」) — same principle as the teaser voice-line revision.
  */
 
 import { DEFAULT_EVENT_GROUP_SIZE } from '../constants.js';
@@ -136,8 +142,8 @@ export interface Flow2NodeCopy {
 
 export const FLOW2_NODE_COPY: readonly Flow2NodeCopy[] = [
   { id: 'registered', title: '报名成功', description: '{TITLE}的名额已锁定，出发有了形状' },
-  { id: 'matching', title: '悦仔组局', description: '你的偏好和{TYPE}的节奏，都会为这一桌作数' },
-  { id: 'grouped', title: '这桌成形', description: '合适的人逐渐靠近，一场共同体验正在成形' },
+  { id: 'matching', title: '等待同频桌友', description: '你的偏好和{TYPE}的节奏，都会为这一桌作数' },
+  { id: 'grouped', title: '桌友到齐', description: '合适的人逐渐靠近，一场共同体验正在成形' },
   // Node 4 stays deliberately unbound — binding date/district here would
   // contradict the 待公布 fallbacks in the hero meta line.
   { id: 'revealed', title: '活动揭晓', description: '时间、地点和出发提示，会在准备好后揭晓' },
@@ -152,7 +158,7 @@ function pick(value: string | null | undefined, fallback: string): string {
 }
 
 export function getFlow2HeroStatus(facts?: FlowLifecycleFacts | null): string {
-  return `你的${pick(facts?.title, FLOW2_FALLBACKS.heroTitle)}，正在一步步成形`;
+  return `你的${pick(facts?.title, FLOW2_FALLBACKS.heroTitle)}，正在成形`;
 }
 
 export function getFlow2HeroMeta(facts?: FlowLifecycleFacts | null): string {
@@ -176,7 +182,7 @@ export function resolveFlow2NodeDescription(template: string, facts?: FlowLifecy
 
 export const FLOW_SHELL_COPY = {
   flow1Title: '先看看怎么玩',
-  flow2Title: '这次出发，正在一步步发生',
+  flow2Title: '这次出发，正在成形',
   identityChipFallback: '你的地图',
   skip: '跳过',
   bannerEnter: '进入看看',

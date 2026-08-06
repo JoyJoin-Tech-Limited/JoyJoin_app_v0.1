@@ -975,6 +975,9 @@
   }
 
   &__speech-bubble {
+    // Quiz commentary dialect — DOCUMENTED EXCEPTION to the shared speech-bubble
+    // tokens: accent left border + corner notch (no pointer tail), because the
+    // bubble faces the answer buttons below, not the mascot. Do not unify.
     position: relative;
     flex: 0 1 auto;
     min-width: 0;
