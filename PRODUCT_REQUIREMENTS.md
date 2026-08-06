@@ -46,7 +46,9 @@ User-facing product copy must use the following compliant terms. Internal techni
 | 会员状态 | 权益状态 |
 | 开通会员 | 开通权益 |
 | 会员续费 | 续期 |
-| 月度会员 / 季度会员 | 月度权益方案 / 季度权益方案 |
+| 月度会员 / 季度会员 | 悦聚月卡 / 悦聚季卡（权益方案档位，见 §3.1 命名规范） |
+| 活动礼包 / 月度活动礼包 / 季度活动礼包 | 悦聚卡（悦聚月卡 / 悦聚季卡） |
+| 单次票 / 单次体验 | 单场局票 |
 | 会员价 | 权益价 / 专享价 |
 | membership | 权益方案 (in user-facing text) |
 
@@ -574,7 +576,7 @@ JoyJoin is an interest-first light social platform (兴趣活动驱动的轻社�
 - **Blind Box Experience:** Gamified event discovery with surprise reveals
 - **In-Event Social Experience:** Social Icebreaker multi-phase group facilitation (话题卡 → 挑战 → 侦探 → 回顾) as the core in-event engagement tool
 - **Data-Driven Insights:** Comprehensive feedback system to refine group composition and event quality
-- **权益 (Membership Benefits) System:** ¥98/month or ¥294/3-month 权益方案 with WeChat Pay integration (user-facing copy must use `权益`, not `会员`)
+- **权益 (Membership Benefits) System:** 悦聚卡（¥98/月 6 场、¥294/季 18 场）+ 连局包（3 场 ¥211 / 6 场 ¥370）+ 单场局票（¥88）with WeChat Pay integration (user-facing copy must use `权益`, not `会员`; 展示名见 brand-copy-strategy §3.1)
 
 ---
 
@@ -1195,11 +1197,17 @@ Note: The gentle banner (CityUnlockBanner) was removed in 2026-06-10. GPS auto-f
 
 #### 权益方案 Tiers
 
-| 方案 | Price | Duration | Benefits |
-|------|-------|----------|----------|
-| **月度权益方案** | ¥98 | 30 days | Unlimited blind box events, priority matching |
-| **季度权益方案** | ¥294 | 90 days | 15% discount, exclusive quarterly events |
-| **单次票** | ¥148 | Per event | No commitment, standard price |
+> **定价策略（2026-08-05 对齐）：** 价格与档位以 DB `pricing_settings` 为源（admin `/admin/pricing` 可改），以下为当前策略与代码兜底值（`apps/server/src/routes/domains/payments.ts`）。展示名遵循 `docs/copy/brand-copy-strategy.md` §3.1「悦聚卡」家族；**权益 = 场次包，非无限次**。
+
+| 权益方案 | 展示名 | Price | 场次 / 时长 | 兜底价（cents） |
+|----------|--------|-------|-------------|-----------------|
+| 月度权益方案 | 悦聚月卡 | ¥98 | 6 场 / 30 天 | 9800 |
+| 季度权益方案 | 悦聚季卡 | ¥294 | 18 场 / 90 天 | 29400 |
+| 3 次包 | 三连局包 | ¥211 | 3 场 / 90 天 | 21100 |
+| 6 次包 | 六连局包 | ¥370 | 6 场 / 90 天 | 37000 |
+| 单场局票 | 单场局票 | ¥88 | 单场 | 8800 |
+
+> ⚠️ 已修正的历史漂移：旧版本节写"月度 ¥98 无限次""季度 15% 折扣""单次票 ¥148"——代码实际为场次包（6/18/3/6 场）、无 15% 折扣逻辑、单场 ¥88。客户端场次按 planType key 派生（`blind-box-payment/index.tsx`），价格取 DB；客户端兜底价（¥128/¥268）与服务端兜底（¥98/¥294）不一致属遗留，已通过种子脚本 `apps/server/migrations/seed_pricing_plans_20260805.sql`（补齐 5 行 DB 定价，含「悦聚」家族展示名）与兜底代码对齐（`paymentPageModel.ts` ¥128/¥268→¥98/¥294，删除虚构划线价）双重消除——本地、staging、生产（2026-08-05）均已应用并验证，`/api/pricing` 线上返回新名。
 
 #### Payment Integration - WeChat Pay (v3 Signed API)
 
@@ -2359,7 +2367,7 @@ CREATE TABLE event_templates (
      description: "围绕一本书展开深度讨论，分享观点与启发",
      defaultMaxAttendees: 8,
      priceMember: 8800,
-     priceNonMember: 12800,
+     priceNonMember: 8800,
      preferredArchetypes: ["探索者", "挑战者", "智者"],
      preferredVenueCategories: ["cafe", "coworking"],
      requiredVenueFeatures: ["wifi", "quiet"]

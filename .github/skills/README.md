@@ -114,6 +114,7 @@ Planning artifacts and scoping help before implementation begins.
 |-------|---------------|
 | [`draft-prd`](./draft-prd/SKILL.md) | Product requirements drafts, user stories, scope boundaries, measurable success metrics, and proposal framing |
 | [`pm-sin-mapper`](./pm-sin-mapper/SKILL.md) | Structured Seven Deadly Sins product diagnosis for feature ideas, funnels, activation gaps, and PM-ready recommendations with Brainstorm / Execute / Debug outputs |
+| [`commercialization-genius`](./commercialization-genius/SKILL.md) | **商业化小天才** — commercial decisions (pricing, entitlement tiers, monetization, growth) through a distilled first-principles CEO lens adapted to China mainland, with 北上广深 tier-1 city judgments; outputs 7-section CEO decision memos grounded in repo canon |
 
 ---
 
@@ -226,6 +227,7 @@ Skills for writing, reviewing, auditing, and maintaining skills and code quality
 | Can a player advance the icebreaker phase? | `social-icebreaker-domain` (no — host only) |
 | How do I draft a PRD or feature brief? | `draft-prd` |
 | How do I run a product sin-mapping review on a funnel or feature idea? | `pm-sin-mapper` |
+| How do I make a pricing, entitlement, or monetization decision (商业化建议)? | `commercialization-genius` |
 | How do I audit a screen for CTA hierarchy, states, or UI conversion risk? | `frontend-hook-engine` |
 | How do I run a smoke test or end-to-end journey check? | `e2e-test-runner` |
 | How do I benchmark before and after a performance change? | `performance-benchmark` |

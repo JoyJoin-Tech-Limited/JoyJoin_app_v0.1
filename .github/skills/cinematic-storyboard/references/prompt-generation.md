@@ -36,6 +36,65 @@
 
 > 详细品牌参数与 Lovart 语法走 `lovart-design-workflow`，此处只给分镜视角的简写。
 
+### 写实层增强（DSLR 质感）——现实层人像/场景必加
+
+真人角色与写实场景的关键帧，在 prompt **结尾**追加以下 DSLR 质感块，显著降低
+"AI 感"（AI 生成写实人像最常死于磨皮与过度渲染）：
+
+```
+Photographed with a Canon SL3 with 17-85mm lens. No text overlays.
+Maintain consistency and fine pores so the image appears more like
+traditional DSLR photography and photorealistic. Avoid Airbrushed look
+and CGI Retouch.
+```
+
+中文等效（Lovart 中文对话时使用）：
+
+```
+佳能SL3相机配17-85mm镜头拍摄，无文字叠加，保持细节一致与细腻毛孔，
+呈现传统单反摄影的真实质感，避免磨皮感和CGI修图感
+```
+
+**使用规则：**
+- 仅用于**现实层**（真人角色、城市实拍、产品道具）——mascot 插画/3D clay 层**不加**
+  （会破坏手办质感，悦仔等 clay 角色反而需要保留指纹纹理感）
+- 放在 prompt 结尾，与 Never 红线不冲突（它替换"过度磨皮"类负面词）
+- 写实人像关键帧（如主角启哲）**必须带**，场景类可带可不带（视氛围需求）
+
+### 角色参考图模板（多视图转面图）——角色一致性核心
+
+当角色贯穿全片、一致性要求最高时，**先出单视图锚定版并验收**，然后把该图上传给
+Lovart，粘贴以下转面图 prompt，生成 7 面板角色表（上排 4 个全身：正面/左侧面/右
+侧面/背面；下排 3 个特写：正面/左/右肖像）：
+
+```
+Create a professional character reference sheet based strictly on the uploaded
+reference image. Use a clean, neutral plain background and present the sheet as
+a technical model turnaround while matching the exact visual style of the
+reference (same realism level, rendering approach, texture, color treatment,
+and overall aesthetic). Arrange the composition into two horizontal rows.
+Top row: four full-body standing views placed side-by-side in this order:
+front view, left profile view (facing left), right profile view (facing right),
+back view. Bottom row: three highly detailed close-up portraits aligned beneath
+the full-body row in this order: front portrait, left profile portrait (facing
+left), right profile portrait (facing right). Maintain perfect identity
+consistency across every panel. Keep the subject in a relaxed A-pose and with
+consistent scale and alignment between views, accurate anatomy, and clear
+silhouette; ensure even spacing and clean panel separation, with uniform framing
+and consistent head height across the full-body lineup and consistent facial
+scale across the portraits. Lighting should be consistent across all panels
+(same direction, intensity, and softness), with natural, controlled shadows
+that preserve detail without dramatic mood shifts. Output a crisp,
+print-ready reference sheet look, sharp details.
+```
+
+**使用规则：**
+- **使用前提**：先有已验收的单视图锚定版（如启哲 3 变体选中的那张），上传后再发本 prompt
+- **适用角色**：贯穿全片的真人主角（启哲）与 mascot（悦仔）；只出现 3 秒的客串角色不必
+- **产物用途**：转面图表成为 Seedance 参考位的核心锚（`@图片X 作为角色形象参考`），
+  一致性锁定最强、有效期最长
+- 现实层角色在 prompt 结尾追加 DSLR 质感块；3D clay 层（悦仔）不加
+
 ---
 
 ## 阶段二：Seedance 提示词生成
@@ -82,6 +141,33 @@ X-Y秒：[镜头运动]，[画面内容]，[主体动作]，[光影/特效]
 3. 动作描述具体：主体做什么、怎么动、光影如何变化
 4. 多模态引用一律 `@素材名 + 用途`
 5. 视频延长：写明"将@视频1 延长 Xs"，生成长度选"新增部分"时长
+
+### 电影机质感块（IMAX/大画幅）——视频生成必加
+
+视频 prompt 的【整体】段追加以下电影机质感块，把输出从"AI 视频感"拉向
+"影院级"（与静态层的 DSLR 块对应：DSLR=关键帧，IMAX=成片）：
+
+```
+Cinematic IMAX 65mm large-format look, 2.39:1 widescreen framing,
+shallow depth of field with natural bokeh, subtle film grain, high
+dynamic range, natural light priority, steady gimbal camera work,
+photorealistic skin texture with fine pores, no CGI gloss.
+```
+
+中文等效（即梦/中文提示词时使用）：
+
+```
+IMAX 65mm 大画幅电影质感，2.39:1 宽银幕构图，浅景深自然虚化，
+轻微胶片颗粒，高动态范围光比，自然光优先，稳定器级运镜，
+写实皮肤纹理细腻毛孔，无 CGI 光泽感
+```
+
+**使用规则：**
+- 放进【整体描述】段，与分镜段（运镜/动作）分工：质感块定"画质气质"，分镜段定"镜头行为"
+- 仅用于**现实层/写实段**——插画风、3D clay、mascot 动画段不加（会破坏风格层）
+- **比例适配**：2.39:1 宽银幕仅用于横屏品牌片（16:9 平台）；竖屏 9:16 改用
+  "大画幅竖构图质感"（IMAX 质感的垂直构图版，不写 2.39:1）
+- 大场面/城市空镜/上帝视角段必须带；室内喜剧段可降为"电影级写实"不带 IMAX（防止压过台词节奏）
 
 ---
 

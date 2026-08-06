@@ -66,6 +66,7 @@ Always base implementation on the **current active codebase**, not legacy flows 
 - `/chats` surface, DM UI → replaced by `/connections`
 - `圈子` nav label → `连接`
 - `会员/VIP会员` copy → `权益`
+- **`月度会员`/`季度会员`/`活动礼包`/`单次票`/`单次体验` display names → `悦聚月卡`/`悦聚季卡`/`三连局包`/`六连局包`/`单场局票`** ("悦聚卡" family; see `docs/copy/brand-copy-strategy.md` §3.1; pricing is DB-driven via `pricing_settings`, seed: `apps/server/migrations/seed_pricing_plans_20260805.sql`)
 - `/guide` as core onboarding → removed; active steps: `/onboarding/setup` → `/onboarding/extended` → `/onboarding/review` → `/discover`
 - **Xiaoyue chat-based onboarding is deprecated** — mascot character only (visuals, loading, empty states). Chat registration inline handlers removed from routes.ts in 2026-05-01 refactoring; only `routes/domains/xiaoyue.ts` remains (AI analysis, unwired).
 - IcebreakerToolkit → use Social Icebreaker (`/api/social-icebreaker/*`) instead
@@ -126,6 +127,9 @@ npm run guardrails                    # env, secrets, legacy identifiers, import
 npm run dep-check                     # verify root has no deps
 npm run check:full                    # guardrails + lint + tests + build
 npm run harness:gate                  # 5-pillar quality gate
+
+# Auto-refund pipeline smoke (end-to-end vs dev DB; self-cleaning)
+npm run smoke:auto-refund -w @joyjoin/server   # 场次未成行 refunds: Trigger A cancel + Trigger B unmatched, credits restore, idempotency
 
 # Personality test simulation (accuracy validation)
 npm run simulate:personas:generate    # generate boundary personas + centroids

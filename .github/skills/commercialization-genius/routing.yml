@@ -1,0 +1,70 @@
+skill: commercialization-genius
+category: internal
+
+primary_ownership: >
+  JoyJoin commercial decisions — pricing, entitlement design, monetization
+  paths, acquisition/Growth, feature tradeoffs, and go-to-market — delivered
+  as 7-section CEO decision memos grounded in repo canon and China tier-1
+  city (北上广深) market insight.
+
+use_when:
+  - user asks how to monetize a feature, raise or set a price, or design entitlement tiers
+  - user asks for commercialization strategy or growth/monetization advice on the product
+  - user asks which monetization experiment to run first or how to prioritize revenue work
+  - user asks for a commercial decision memo on pricing, paywall, event packs, or premium tiers
+  - user asks how a current AI trend should change our monetization model
+  - user asks for China mainland or 北上广深 market judgments on pricing and acquisition
+
+do_not_use_when:
+  - task is implementing payment creation, verification, refunds, or entitlement mechanics (use payment-entitlement-authority)
+  - task is writing a PRD, feature brief, or backlog artifact (use draft-prd)
+  - task is diagnosing funnel drop-off, activation, or user-experience confusion (use pm-sin-mapper)
+  - task is instrumenting analytics events or KPI dashboards (use analytics-tracking)
+  - task is rolling out a feature flag or kill switch mechanics (use feature-flags-launch-config)
+
+strong_triggers:
+  - 商业化
+  - 变现
+  - 定价
+  - 涨价
+  - 价格
+  - 付费墙
+  - paywall
+  - monetiz
+  - commercializ
+  - unit economics
+  - LTV
+  - CAC
+  - 获客成本
+  - 怎么赚钱
+  - 盈利
+  - 商业模式
+  - 权益方案怎么定
+  - 北上广深
+  - 一线城市
+  - go to market
+  - GTM
+
+owned_files:
+  - docs/copy/brand-copy-strategy.md
+
+owned_paths: []
+
+owned_symbols:
+  - TEST_PAYMENT_PRICE_IN_CENTS
+  - PAYMENTS_ENABLED
+  - event_pack
+
+related_skills:
+  - skill: payment-entitlement-authority
+    when: the memo's pricing/entitlement decision moves into payment implementation, refunds, or entitlement gating
+  - skill: draft-prd
+    when: a commercial decision is being turned into a feature brief or PRD
+  - skill: pm-sin-mapper
+    when: the question is diagnosing why users drop off or churn rather than choosing a commercial path
+  - skill: analytics-tracking
+    when: the memo names metrics that need instrumentation or existing KPI dashboards
+  - skill: feature-flags-launch-config
+    when: a recommended monetization experiment needs a flag or staged rollout
+  - skill: joyjoin-brand-guidelines
+    when: the memo touches user-facing copy, naming, or 权益 terminology

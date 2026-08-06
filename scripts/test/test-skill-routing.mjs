@@ -62,6 +62,12 @@ function assertEqual(actual, expected, msg) {
   }
 }
 
+function assertNotEqual(actual, expected, msg) {
+  if (actual === expected) {
+    throw new Error(msg ?? `Expected ${JSON.stringify(actual)} to differ from ${JSON.stringify(expected)}`);
+  }
+}
+
 /**
  * @param {unknown[]} arr
  * @param {unknown} item
@@ -600,6 +606,39 @@ test('plain-language product confusion → pm-sin-mapper', () => {
 test('plain-language onboarding confusion override → pm-sin-mapper', () => {
   const r = routeSkill({ ask: 'Users are abandoning onboarding in week one. What feels unnecessary, and what should we simplify first?' });
   assertEqual(r.primary_skill, 'pm-sin-mapper');
+});
+
+// ---- Commercialization genius ----
+console.log('\nCommercialization genius scenarios:');
+
+test('how to monetize a feature → commercialization-genius', () => {
+  const r = routeSkill({ ask: '这个功能该怎么变现，先做哪个商业化方向？' });
+  assertEqual(r.primary_skill, 'commercialization-genius');
+});
+
+test('pricing decision → commercialization-genius', () => {
+  const r = routeSkill({ ask: '定价怎么定？社交局要不要涨价，权益方案怎么分层？' });
+  assertEqual(r.primary_skill, 'commercialization-genius');
+});
+
+test('China tier-1 city market judgment → commercialization-genius', () => {
+  const r = routeSkill({ ask: '北上广深怎么打？一线城市的付费意愿和获客成本差异怎么处理？' });
+  assertEqual(r.primary_skill, 'commercialization-genius');
+});
+
+test('unit economics question → commercialization-genius', () => {
+  const r = routeSkill({ ask: 'Our CAC is way above LTV. How should we fix the unit economics of the paywall?' });
+  assertEqual(r.primary_skill, 'commercialization-genius');
+});
+
+test('AI trend impact on monetization → commercialization-genius', () => {
+  const r = routeSkill({ ask: 'How should current AI trends change how we commercialize the product and set the paywall?' });
+  assertEqual(r.primary_skill, 'commercialization-genius');
+});
+
+test('payment implementation stays with payment-entitlement-authority → not commercialization-genius', () => {
+  const r = routeSkill({ ask: 'Implement the refund webhook verification and entitlement gating for event packs' });
+  assertNotEqual(r.primary_skill, 'commercialization-genius');
 });
 
 // ---- Monorepo workspace governance ----
