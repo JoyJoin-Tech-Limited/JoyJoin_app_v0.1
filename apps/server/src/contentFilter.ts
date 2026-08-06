@@ -13,7 +13,7 @@ export interface ContentFilterResult {
   message?: string;
 }
 
-const sensitiveWordLists: Record<ViolationType, { keywords: string[]; severity: 'warning' | 'severe' }> = {
+export const sensitiveWordLists: Record<ViolationType, { keywords: string[]; severity: 'warning' | 'severe' }> = {
   political: {
     keywords: [
       '共产党', '国民党', '习近平', '毛泽东', '六四', '天安门', '法轮功', 
@@ -94,8 +94,8 @@ function obfuscatedPattern(base: string, suffixes: string[] = [], optionalLetter
     const isLast = index === letters.length - 1;
     const skippable = optionalLetters.includes(letter) && !isLast;
     return skippable
-      ? `[\\W0-9]*(?:${letter}+)?[\\W0-9]*`
-      : `[\\W0-9]*${letter}+`;
+      ? `[\\W0-9_]*(?:${letter}+)?[\\W0-9_]*`
+      : `[\\W0-9_]*${letter}+`;
   }).join('');
   const suffix = suffixes.length > 0 ? `(?:${suffixes.join('|')})?` : '';
   return new RegExp(`\\b${core}${suffix}\\b`, 'i');
@@ -112,7 +112,7 @@ interface ObfuscatedWord {
  * `sensitiveWordLists` above; these cover Latin-script and obfuscated variants).
  * The last letter of every base stays required so `dan`/`sit`/`duck` are safe.
  */
-const OBSCENE_WORD_BASES: ObfuscatedWord[] = [
+export const OBSCENE_WORD_BASES: ObfuscatedWord[] = [
   { base: 'fuck', suffixes: ['s', 'ing', 'ed', 'er', 'ers', 'head', 'face', 'you'], optionalLetters: ['u', 'c'] },
   { base: 'fuk', suffixes: ['s', 'ing', 'ed', 'er'], optionalLetters: ['u'] },
   { base: 'fxck', suffixes: ['s', 'ing', 'ed', 'er'] },

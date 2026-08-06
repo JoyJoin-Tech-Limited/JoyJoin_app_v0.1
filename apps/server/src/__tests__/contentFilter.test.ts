@@ -9,6 +9,7 @@ describe("filterContent — English profanity + obfuscation", () => {
     "f*ck",
     "f u c k",
     "f.u.c.k",
+    "f_u_c_k",
     "fucck",
     "f*cking",
     "fucked",
