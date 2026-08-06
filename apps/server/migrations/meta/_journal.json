@@ -509,19 +509,26 @@
     {
       "idx": 72,
       "version": "7",
+      "when": 1786000047118,
+      "tag": "seed_pricing_plans_20260805",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
       "when": 1780992000000,
       "tag": "seed_venue_batch_and_co_20260608",
       "breakpoints": true
     },
     {
-      "idx": 73,
+      "idx": 74,
       "version": "7",
       "when": 1780395567634,
       "tag": "seed_venue_partners_20260602",
       "breakpoints": true
     },
     {
-      "idx": 74,
+      "idx": 75,
       "version": "7",
       "when": 1780395567634,
       "tag": "seed_venue_time_slots_20260602",
