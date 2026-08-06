@@ -228,19 +228,19 @@ export const pricingSettings = pgTable("pricing_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
   // 套餐类型标识
-  planType: varchar("plan_type").notNull().unique(), // "monthly", "quarterly", "event_single"
+  planType: varchar("plan_type").notNull().unique(), // "monthly", "quarterly", "event_single", "pack_3", "pack_6"
   
   // 显示信息
-  displayName: varchar("display_name").notNull(), // "月度会员", "季度会员", "单次活动"
-  displayNameEn: varchar("display_name_en"), // "Monthly", "Quarterly", "Single Event"
+  displayName: varchar("display_name").notNull(), // "悦聚月卡", "悦聚季卡", "单场局票"
+  displayNameEn: varchar("display_name_en"), // "YueJu Monthly", "YueJu Quarterly", "Single Pass"
   description: text("description"), // 套餐描述
   
   // 价格（单位：分）
-  priceInCents: integer("price_in_cents").notNull(), // ¥199 = 19900
+  priceInCents: integer("price_in_cents").notNull(), // ¥98 = 9800
   originalPriceInCents: integer("original_price_in_cents"), // 原价，用于显示划线价
   
-  // 有效期（天数，仅订阅套餐）
-  durationDays: integer("duration_days"), // 30, 90, null for single events
+  // 有效期（天数，订阅与连局包套餐）
+  durationDays: integer("duration_days"), // 30, 90 (monthly/quarterly/packs), null for single events
   
   // 排序和状态
   sortOrder: integer("sort_order").default(0), // 排序顺序

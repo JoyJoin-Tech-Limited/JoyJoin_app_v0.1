@@ -29,6 +29,18 @@ vi.mock("../repositories/paymentsRepo", () => ({
       Object.assign(payment, updates);
       return payment;
     }),
+    claimPaymentForRefund: vi.fn(async (id: string) => {
+      const payment = payments.find((entry) => entry.id === id);
+      if (payment?.status !== "completed") return false;
+      payment.status = "refund_pending";
+      return true;
+    }),
+    releasePaymentRefundClaim: vi.fn(async (id: string) => {
+      const payment = payments.find((entry) => entry.id === id);
+      if (payment?.status === "refund_pending") {
+        payment.status = "completed";
+      }
+    }),
     recordCouponUsage: vi.fn(),
     updateSubscription: vi.fn(async (id: string, updates: Record<string, unknown>) => ({ id, ...updates })),
   },
@@ -64,6 +76,7 @@ import { PaymentService } from "../paymentService";
 import { eventCreditsRepo } from "../repositories/eventCreditsRepo";
 import { paymentFulfillmentRepo } from "../repositories/paymentFulfillmentRepo";
 import { paymentsRepo } from "../repositories/paymentsRepo";
+import { refundAttemptsRepo } from "../repositories/refundAttemptsRepo";
 
 const originalFetch = global.fetch;
 const envSnapshot = { ...process.env };
@@ -414,6 +427,64 @@ describe.skip("PaymentService", () => {
     );
 
     expect(global.fetch).not.toHaveBeenCalled();
+    // The atomic claim was released so a later run can retry.
+    expect(payments[0].status).toBe("completed");
+    expect(paymentsRepo.releasePaymentRefundClaim).toHaveBeenCalledWith("payment-pack-1");
+  });
+
+  it("rejects a second refund claim on the same payment (concurrent double-refund guard)", async () => {
+    payments.push({
+      id: "payment-claim-1",
+      userId: "user-10",
+      paymentType: "event",
+      relatedId: "pool-x",
+      finalAmount: 3000,
+      discountAmount: 0,
+      wechatOrderId: "JJ_CLAIM_001",
+      status: "completed",
+    });
+
+    global.fetch = vi.fn();
+
+    const service = new PaymentService();
+    // First run claims and proceeds to WeChat.
+    await service.createRefund("payment-claim-1", "First run");
+    expect(payments[0].status).toBe("refund_pending");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    // A concurrent second run must be rejected by the atomic claim.
+    await expect(service.createRefund("payment-claim-1", "Second run")).rejects.toThrow(
+      "Can only refund completed payments",
+    );
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("releases the claim and records a failed attempt when WeChat rejects the refund", async () => {
+    payments.push({
+      id: "payment-claim-fail",
+      userId: "user-11",
+      paymentType: "event",
+      relatedId: "pool-y",
+      finalAmount: 3000,
+      discountAmount: 0,
+      wechatOrderId: "JJ_CLAIM_FAIL_001",
+      status: "completed",
+    });
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: vi.fn().mockResolvedValue("refund rejected"),
+    } as any);
+
+    const service = new PaymentService();
+    await expect(service.createRefund("payment-claim-fail", "Run")).rejects.toThrow();
+
+    expect(payments[0].status).toBe("completed");
+    expect(paymentsRepo.releasePaymentRefundClaim).toHaveBeenCalledWith("payment-claim-fail");
+    expect(refundAttemptsRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentId: "payment-claim-fail", status: "failed" }),
+    );
   });
 });
 

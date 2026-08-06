@@ -18,6 +18,7 @@
     "admin:create": "node --env-file=../../.env --import tsx/esm src/cli/createAdminAccount.ts",
     "user:create": "node --env-file=../../.env --import tsx/esm src/cli/createUserAccount.ts",
     "user:bypass": "node --env-file=../../.env --import tsx/esm src/cli/bypassLogin.ts",
+    "smoke:auto-refund": "node --env-file=../../.env --import tsx/esm src/scripts/smoke-auto-refund.ts",
     "seed:test-data": "node --env-file=../../.env --import tsx/esm src/scripts/seed-test-data.ts",
     "seed:mock-data": "node --env-file=../../.env --import tsx/esm src/scripts/generate-mock-data.ts",
     "seed:flash": "node --env-file=../../.env --import tsx/esm src/scripts/seed-flash-catalog.ts",

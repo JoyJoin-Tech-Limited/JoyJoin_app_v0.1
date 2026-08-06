@@ -419,6 +419,10 @@ export function registerAdminEventPoolRoutes(app: Express): void {
               const [adminAccountRecord] = await db.select({ displayName: adminAccounts.displayName }).from(adminAccounts).where(eq(adminAccounts.id, adminId));
               const adminName = adminUserRecord?.displayName || adminAccountRecord?.displayName || adminId;
               const totalReg = pool.totalRegistrations || 0;
+              // Resolve the flag first so the cancel alert reports the real
+              // refund state (2026-08-05 review NIT-10).
+              const { getFeatureFlag } = await import("../../lib/featureFlags");
+              const autoRefundEnabled = await getFeatureFlag("autoRefundEnabled", true);
               await notifyPoolCancelled({
                 poolTitle: pool.title,
                 poolDate: pool.dateTime ? new Date(pool.dateTime).toLocaleString("zh-CN") : "待定",
@@ -430,9 +434,14 @@ export function registerAdminEventPoolRoutes(app: Express): void {
                 revenueImpact: (pool.price || 0) * totalReg * 100,
                 cancellationReason: "管理后台操作",
                 adminName: adminName,
-                autoRefund: false,
-                usersNotified: false,
+                autoRefund: autoRefundEnabled,
+                usersNotified: autoRefundEnabled,
               });
+
+              // Auto-refund pipeline (2026-08-05): refund every paid
+              // registration; results land in a separate WeCom summary.
+              const { refundPoolCancellation } = await import("../../services/autoRefundService");
+              await refundPoolCancellation(pool.id, pool.title);
             } catch (notifyErr) {
               logger.warn("Failed to send pool cancellation WeCom notification", { error: String(notifyErr) });
             }

@@ -53,7 +53,7 @@ async function reconcileUserCreditCache(tx: DatabaseLike, userId: string): Promi
   const [summary] = await tx
     .select({
       totalCredits: sql<number>`coalesce(sum(${eventCreditGrants.remainingCredits}), 0)::int`,
-      nextExpiry: sql<Date | null>`min(${eventCreditGrants.expiresAt})`,
+      nextExpiry: sql<Date | null>`min(${eventCreditGrants.expiresAt})::timestamp`,
     })
     .from(eventCreditGrants)
     .where(
@@ -65,11 +65,17 @@ async function reconcileUserCreditCache(tx: DatabaseLike, userId: string): Promi
       ),
     );
 
+  // The node-postgres session may return the min() result as a string when it
+  // comes from a raw sql fragment (no column type mapping) — normalize before
+  // writing into the users.eventCreditsExpiry timestamp column (2026-08-05
+  // smoke: value.toISOString is not a function).
+  const nextExpiry = summary?.nextExpiry ? new Date(summary.nextExpiry) : null;
+
   await tx
     .update(users)
     .set({
       eventCredits: summary?.totalCredits ?? 0,
-      eventCreditsExpiry: summary?.nextExpiry ?? null,
+      eventCreditsExpiry: nextExpiry,
       updatedAt: now,
     })
     .where(eq(users.id, userId));
@@ -249,6 +255,60 @@ export const eventCreditsRepo = {
       .returning({ id: users.id });
 
     return Boolean(updatedUser);
+  },
+
+  /**
+   * Reverses a single consumed credit redemption (场次未成行 auto-refund).
+   * Idempotent and concurrency-safe: the DELETE is the atomic claim (unique
+   * per registrationId), so two concurrent runs cannot both restore a credit
+   * (2026-08-05 review P0-2 — delete-first, then grant +1 inside the same
+   * transaction). Skips grants already refunded at the pack level. Returns
+   * true when a credit was restored.
+   */
+  async reverseRedemptionForRegistration(
+    tx: DatabaseLike,
+    params: { registrationId: string },
+  ): Promise<boolean> {
+    const [deleted] = await tx
+      .delete(eventCreditRedemptions)
+      .where(eq(eventCreditRedemptions.registrationId, params.registrationId))
+      .returning({ id: eventCreditRedemptions.id, grantId: eventCreditRedemptions.grantId, userId: eventCreditRedemptions.userId });
+
+    if (!deleted) {
+      return false;
+    }
+
+    const [grant] = await tx
+      .select({ refundedAt: eventCreditGrants.refundedAt, expiresAt: eventCreditGrants.expiresAt })
+      .from(eventCreditGrants)
+      .where(eq(eventCreditGrants.id, deleted.grantId))
+      .limit(1);
+
+    if (grant?.refundedAt) {
+      // Pack-level refund won the race — nothing to restore.
+      return false;
+    }
+
+    // Expired grant: a restored credit on an expired grant is invisible to
+    // consumption and cache reconciliation — extend expiry so the credit is
+    // actually usable again (2026-08-05 review CONCERN-5).
+    const now = getNow();
+    const expiresAt =
+      grant?.expiresAt && grant.expiresAt.getTime() <= now.getTime()
+        ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+        : grant?.expiresAt ?? null;
+
+    await tx
+      .update(eventCreditGrants)
+      .set({
+        remainingCredits: sql`${eventCreditGrants.remainingCredits} + 1`,
+        expiresAt,
+        updatedAt: now,
+      })
+      .where(eq(eventCreditGrants.id, deleted.grantId));
+
+    await reconcileUserCreditCache(tx, deleted.userId);
+    return true;
   },
 
   async getRefundBlockerCount(tx: DatabaseLike, paymentId: string): Promise<number> {

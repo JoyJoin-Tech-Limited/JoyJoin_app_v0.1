@@ -235,8 +235,8 @@ export default function AdminSubscriptionsPage() {
 
   const getPlanLabel = (currentPlanType: string) => {
     const labels: Record<string, string> = {
-      monthly: "月度会员 (¥98)",
-      quarterly: "季度会员 (¥294)",
+      monthly: "悦聚月卡 (¥98)",
+      quarterly: "悦聚季卡 (¥294)",
     };
     return labels[currentPlanType] || currentPlanType;
   };
@@ -445,8 +445,8 @@ export default function AdminSubscriptionsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="monthly">月度会员 (¥98/月)</SelectItem>
-                  <SelectItem value="quarterly">季度会员 (¥294/3月)</SelectItem>
+                  <SelectItem value="monthly">悦聚月卡 (¥98/月)</SelectItem>
+                  <SelectItem value="quarterly">悦聚季卡 (¥294/3月)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

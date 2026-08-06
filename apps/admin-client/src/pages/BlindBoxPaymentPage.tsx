@@ -69,16 +69,13 @@ function buildBrowserPaymentConfirmationUrl(orderId: string): string | null {
   return url.toString();
 }
 
-// Default fallback prices (used while loading or if API fails)
-const DEFAULT_SINGLE_PRICE = 8800; // ¥88.00 in cents (原价)
-const DEFAULT_PACK3_PRICE = 21100; // ¥211.00 for 3 events (原价¥264, 约¥70/次, 8折)
-const DEFAULT_PACK6_PRICE = 37000; // ¥370.00 for 6 events (原价¥528, 约¥62/次, 7折)
-const DEFAULT_VIP_MONTHLY_PRICE = 12800; // ¥128.00 VIP monthly
-const DEFAULT_VIP_QUARTERLY_PRICE = 26800; // ¥268.00 VIP quarterly (约¥89/月, 省¥116)
-
-// Original prices for savings calculation
-const ORIGINAL_PACK3_PRICE = 26400; // ¥264 = ¥88 x 3
-const ORIGINAL_PACK6_PRICE = 52800; // ¥528 = ¥88 x 6
+// Default fallback prices (used while loading or if API fails) — canonical values
+// from pricing_settings (seed_pricing_plans_20260805.sql); no invented anchor prices
+const DEFAULT_SINGLE_PRICE = 8800; // ¥88.00 in cents (单场局票)
+const DEFAULT_PACK3_PRICE = 21100; // ¥211.00 for 3 events (三连局包, 约¥70/次)
+const DEFAULT_PACK6_PRICE = 37000; // ¥370.00 for 6 events (六连局包, 约¥62/次)
+const DEFAULT_VIP_MONTHLY_PRICE = 9800; // ¥98.00 (悦聚月卡, 6 场/30 天)
+const DEFAULT_VIP_QUARTERLY_PRICE = 29400; // ¥294.00 (悦聚季卡, 18 场/90 天)
 
 export default function BlindBoxPaymentPage() {
   const [, setLocation] = useLocation();
@@ -140,13 +137,13 @@ export default function BlindBoxPaymentPage() {
   const VIP_MONTHLY_PRICE = vipMonthlyPricing ? vipMonthlyPricing.price * 100 : DEFAULT_VIP_MONTHLY_PRICE;
   const VIP_QUARTERLY_PRICE = vipQuarterlyPricing ? vipQuarterlyPricing.price * 100 : DEFAULT_VIP_QUARTERLY_PRICE;
   
-  // Original prices from API or fallback to calculated values
-  const PACK3_ORIGINAL = pack3Pricing?.originalPrice 
-    ? pack3Pricing.originalPrice * 100 
-    : ORIGINAL_PACK3_PRICE;
-  const PACK6_ORIGINAL = pack6Pricing?.originalPrice 
-    ? pack6Pricing.originalPrice * 100 
-    : ORIGINAL_PACK6_PRICE;
+  // Original prices from API or fallback to the plan price itself (no savings shown)
+  const PACK3_ORIGINAL = pack3Pricing?.originalPrice
+    ? pack3Pricing.originalPrice * 100
+    : PACK3_PRICE;
+  const PACK6_ORIGINAL = pack6Pricing?.originalPrice
+    ? pack6Pricing.originalPrice * 100
+    : PACK6_PRICE;
   
   // Calculate per-event prices for display
   const PACK3_PER_EVENT = Math.round(PACK3_PRICE / 3);
@@ -362,7 +359,7 @@ export default function BlindBoxPaymentPage() {
       if (!supportsEventPacks && (selectedPlan === "pack3" || selectedPlan === "pack6")) {
         toast({
           title: "次数包暂未开放",
-          description: "当前支付页仅支持单次体验和活动礼包购买",
+          description: "当前支付页仅支持单场局票和悦聚卡购买",
           variant: "destructive",
         });
         setSelectedPlan("single");
@@ -405,8 +402,8 @@ export default function BlindBoxPaymentPage() {
         toast({
           title: "礼包购买成功！",
           description: effectivePlan === "vip_quarterly" 
-            ? "季度活动礼包已激活，享3个月无限活动 + 专属权益" 
-            : "月度活动礼包已激活，尽情参加本月所有悦聚活动吧！",
+            ? "悦聚季卡已激活，享 18 场局 + 专属权益" 
+            : "悦聚月卡已激活，6 场局说走就走",
         });
         
         queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -557,7 +554,7 @@ export default function BlindBoxPaymentPage() {
                 </div>
                 <div className="flex-1">
                   <p className="font-bold text-pink-700 dark:text-pink-300">首单专享5折</p>
-                  <p className="text-xs text-pink-600 dark:text-pink-400">新用户专属优惠券已自动发放，单次票可享半价</p>
+                  <p className="text-xs text-pink-600 dark:text-pink-400">新用户专属优惠券已自动发放，单场局票可享半价</p>
                 </div>
                 <Badge className="bg-gradient-to-r from-pink-500 to-orange-500 text-white border-0 shrink-0">
                   -50%
@@ -591,10 +588,10 @@ export default function BlindBoxPaymentPage() {
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Ticket className="h-3 w-3" />
-                {supportsEventPacks ? "次数包 · 90天有效" : "单次体验"}
+                {supportsEventPacks ? "次数包 · 90天有效" : "单场局票"}
               </p>
               <div className="grid gap-3">
-                {/* 单次票 */}
+                {/* 单场局票 */}
                 <motion.div whileTap={{ scale: 0.98 }}>
                   <Card 
                     className={`p-4 border-2 hover-elevate cursor-pointer relative transition-all ${
@@ -615,7 +612,7 @@ export default function BlindBoxPaymentPage() {
                           )}
                         </div>
                         <div>
-                          <h4 className="font-bold">单次体验票</h4>
+                          <h4 className="font-bold">单场局票</h4>
                           <p className="text-xs text-muted-foreground">零门槛尝鲜，体验AI精准匹配</p>
                         </div>
                       </div>
@@ -629,7 +626,7 @@ export default function BlindBoxPaymentPage() {
 
                 {supportsEventPacks && (
                   <>
-                {/* 3次包 - 推荐 8折 */}
+                {/* 三连局包 */}
                 <motion.div whileTap={{ scale: 0.98 }}>
                   <Card 
                     className={`p-4 border-2 hover-elevate cursor-pointer relative transition-all ${
@@ -663,7 +660,7 @@ export default function BlindBoxPaymentPage() {
                           )}
                         </div>
                         <div>
-                          <h4 className="font-bold">入门3次包</h4>
+                          <h4 className="font-bold">三连局包</h4>
                           <p className="text-xs text-muted-foreground">
                             约{currencySymbol}{(PACK3_PER_EVENT / 100).toFixed(0)}/次
                           </p>
@@ -675,14 +672,16 @@ export default function BlindBoxPaymentPage() {
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="text-xs text-muted-foreground line-through">{currencySymbol}{(PACK3_ORIGINAL / 100).toFixed(0)}</div>
+                        {PACK3_ORIGINAL > PACK3_PRICE && (
+                          <div className="text-xs text-muted-foreground line-through">{currencySymbol}{(PACK3_ORIGINAL / 100).toFixed(0)}</div>
+                        )}
                         <div className="text-xl font-bold text-primary">{currencySymbol}{(PACK3_PRICE / 100).toFixed(0)}</div>
                       </div>
                     </div>
                   </Card>
                 </motion.div>
 
-                {/* 6次包 - 超值 7折 半年有效 */}
+                {/* 六连局包 */}
                 <motion.div whileTap={{ scale: 0.98 }}>
                   <Card 
                     className={`p-4 border-2 hover-elevate cursor-pointer relative transition-all ${
@@ -715,7 +714,7 @@ export default function BlindBoxPaymentPage() {
                           )}
                         </div>
                         <div>
-                          <h4 className="font-bold">超值6次包</h4>
+                          <h4 className="font-bold">六连局包</h4>
                           <p className="text-xs text-muted-foreground">
                             约{currencySymbol}{(PACK6_PER_EVENT / 100).toFixed(0)}/次
                           </p>
@@ -728,7 +727,9 @@ export default function BlindBoxPaymentPage() {
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="text-xs text-muted-foreground line-through">{currencySymbol}{(PACK6_ORIGINAL / 100).toFixed(0)}</div>
+                        {PACK6_ORIGINAL > PACK6_PRICE && (
+                          <div className="text-xs text-muted-foreground line-through">{currencySymbol}{(PACK6_ORIGINAL / 100).toFixed(0)}</div>
+                        )}
                         <div className="text-xl font-bold text-green-600">{currencySymbol}{(PACK6_PRICE / 100).toFixed(0)}</div>
                       </div>
                     </div>
@@ -743,7 +744,7 @@ export default function BlindBoxPaymentPage() {
             <div className="space-y-2 pt-2">
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Crown className="h-3 w-3" />
-                活动礼包 · 专属权益
+                悦聚卡 · 专属权益
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {/* 月度VIP */}
@@ -766,9 +767,9 @@ export default function BlindBoxPaymentPage() {
                   >
                     <div className="flex flex-col items-center text-center gap-1">
                       <Crown className="h-5 w-5 text-amber-500" />
-                      <h4 className="font-bold text-sm">月度活动礼包</h4>
+                      <h4 className="font-bold text-sm">悦聚月卡</h4>
                       <div className="text-lg font-bold">{currencySymbol}{(VIP_MONTHLY_PRICE / 100).toFixed(0)}</div>
-                      <p className="text-xs text-muted-foreground">无限活动</p>
+                      <p className="text-xs text-muted-foreground">6 场局 / 30 天</p>
                     </div>
                   </Card>
                 </motion.div>
@@ -792,13 +793,15 @@ export default function BlindBoxPaymentPage() {
                     data-testid="card-vip-quarterly"
                   >
                     <div className="absolute -top-2 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-amber-500 text-white border-0 text-xs">
-                        省¥{(VIP_QUARTERLY_SAVINGS / 100).toFixed(0)}
-                      </Badge>
+                      {VIP_QUARTERLY_SAVINGS > 0 && (
+                        <Badge className="bg-amber-500 text-white border-0 text-xs">
+                          省¥{(VIP_QUARTERLY_SAVINGS / 100).toFixed(0)}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex flex-col items-center text-center gap-1">
                       <Crown className="h-5 w-5 text-amber-500" />
-                      <h4 className="font-bold text-sm">季度活动礼包</h4>
+                      <h4 className="font-bold text-sm">悦聚季卡</h4>
                       <div className="text-lg font-bold">{currencySymbol}{(VIP_QUARTERLY_PRICE / 100).toFixed(0)}</div>
                       <p className="text-xs text-muted-foreground">约{currencySymbol}{Math.round(VIP_QUARTERLY_PRICE / 300)}/月</p>
                     </div>
@@ -871,7 +874,7 @@ export default function BlindBoxPaymentPage() {
             </motion.div>
           )}
 
-          {/* Promo Code & Available Coupons - 仅单次票支持 */}
+          {/* Promo Code & Available Coupons - 仅单场局票支持 */}
           {supportsCoupons && !appliedCoupon && selectedPlan === "single" && (
             <Collapsible open={promoOpen} onOpenChange={setPromoOpen}>
               <CollapsibleTrigger className="w-full" data-testid="button-promo-toggle">
@@ -1000,11 +1003,11 @@ export default function BlindBoxPaymentPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {selectedPlan === "single" && "单次体验"}
-                  {selectedPlan === "pack3" && "入门3次包"}
-                  {selectedPlan === "pack6" && "超值6次包"}
-                  {selectedPlan === "vip_monthly" && "月度活动礼包"}
-                  {selectedPlan === "vip_quarterly" && "季度活动礼包"}
+                  {selectedPlan === "single" && "单场局票"}
+                  {selectedPlan === "pack3" && "三连局包"}
+                  {selectedPlan === "pack6" && "六连局包"}
+                  {selectedPlan === "vip_monthly" && "悦聚月卡"}
+                  {selectedPlan === "vip_quarterly" && "悦聚季卡"}
                 </span>
                 <span>
                   {currencySymbol}{(basePrice / 100).toFixed(0)}
@@ -1054,10 +1057,10 @@ export default function BlindBoxPaymentPage() {
                   <>
                     <SiWechat className="h-5 w-5 mr-2" />
                     {effectivePlan === "single" && "微信支付"}
-                    {effectivePlan === "pack3" && "微信支付 · 购买3次包"}
-                    {effectivePlan === "pack6" && "微信支付 · 购买6次包"}
-                    {effectivePlan === "vip_monthly" && "微信支付 · 购买月度活动礼包"}
-                    {effectivePlan === "vip_quarterly" && "微信支付 · 购买季度活动礼包"}
+                    {effectivePlan === "pack3" && "微信支付 · 购买三连局包"}
+                    {effectivePlan === "pack6" && "微信支付 · 购买六连局包"}
+                    {effectivePlan === "vip_monthly" && "微信支付 · 购买悦聚月卡"}
+                    {effectivePlan === "vip_quarterly" && "微信支付 · 购买悦聚季卡"}
                   </>
                 )}
               </Button>
@@ -1065,9 +1068,9 @@ export default function BlindBoxPaymentPage() {
 
             {/* 说明文字 */}
             <div className="text-xs text-center text-muted-foreground space-y-1">
-              {effectivePlan === "pack3" && <p><Package className="inline h-3 w-3 mr-1" />3次包90天内有效，可用于任意活动</p>}
-              {effectivePlan === "pack6" && <p><Package className="inline h-3 w-3 mr-1" />6次包半年内有效，可用于任意活动</p>}
-              {isVIP && <p><Crown className="inline h-3 w-3 mr-1" />VIP期间无限参与所有活动 + 每月携友特权</p>}
+              {effectivePlan === "pack3" && <p><Package className="inline h-3 w-3 mr-1" />三连局包 90 天内有效，可用于任意活动</p>}
+              {effectivePlan === "pack6" && <p><Package className="inline h-3 w-3 mr-1" />六连局包 90 天内有效，可用于任意活动</p>}
+              {isVIP && <p><Crown className="inline h-3 w-3 mr-1" />悦聚卡权益期内畅享对应场次局 + 专属权益</p>}
               {effectivePlan === "single" && <p><Sparkles className="inline h-3 w-3 mr-1" />支付后立即进入匹配队列</p>}
               <p className="flex items-center justify-center gap-2">
                 <Shield className="h-3 w-3" />

@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { logger } from "./lib/logger";
 
 /**
  * Subscription Management Service
@@ -30,7 +31,7 @@ export class SubscriptionService {
    * Runs every hour to check for expired subscriptions
    */
   startExpiryChecker(intervalMs: number = 60 * 60 * 1000): void {
-    console.log("[Subscription] Starting expiry checker...");
+    logger.info("[Subscription] Starting expiry checker...");
     
     // Run immediately on startup
     this.checkExpiredSubscriptions();
@@ -48,7 +49,7 @@ export class SubscriptionService {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
-      console.log("[Subscription] Expiry checker stopped");
+      logger.info("[Subscription] Expiry checker stopped");
     }
   }
   
@@ -57,7 +58,7 @@ export class SubscriptionService {
    */
   async checkExpiredSubscriptions(): Promise<void> {
     try {
-      console.log("[Subscription] Checking for expired subscriptions...");
+      logger.info("[Subscription] Checking for expired subscriptions...");
       
       const activeSubscriptions = await storage.getActiveSubscriptions();
       const now = new Date();
@@ -78,13 +79,13 @@ export class SubscriptionService {
             userId: subscription.userId,
             category: "activities",
             type: "subscription_expired",
-            title: "活动礼包已过期",
-            message: "您的JoyJoin活动礼包已过期。再次购买以继续享受礼包权益！",
+            title: "悦聚卡已过期",
+            message: "您的悦聚卡已过期。再次购买以继续享受权益！",
             relatedResourceId: subscription.id,
           });
           
           expiredCount++;
-          console.log(`[Subscription] Expired subscription ${subscription.id} for user ${subscription.userId}`);
+          logger.info(`[Subscription] Expired subscription ${subscription.id} for user ${subscription.userId}`);
         }
         
         // Check if subscription is expiring soon (within 3 days)
@@ -96,23 +97,23 @@ export class SubscriptionService {
             userId: subscription.userId,
             category: "activities",
             type: "subscription_expiring",
-            title: "活动礼包即将过期",
-            message: `您的JoyJoin活动礼包将在 ${this.formatDaysRemaining(now, endDate)} 后过期。再次购买以继续享受权益！`,
+            title: "悦聚卡即将过期",
+            message: `您的悦聚卡将在 ${this.formatDaysRemaining(now, endDate)} 后过期。再次购买以继续享受权益！`,
             relatedResourceId: subscription.id,
           });
           
           expiringCount++;
-          console.log(`[Subscription] Subscription ${subscription.id} expiring soon for user ${subscription.userId}`);
+          logger.info(`[Subscription] Subscription ${subscription.id} expiring soon for user ${subscription.userId}`);
         }
       }
       
       if (expiredCount > 0 || expiringCount > 0) {
-        console.log(`[Subscription] Processed ${expiredCount} expired and ${expiringCount} expiring subscriptions`);
+        logger.info(`[Subscription] Processed ${expiredCount} expired and ${expiringCount} expiring subscriptions`);
       } else {
-        console.log("[Subscription] No expired or expiring subscriptions found");
+        logger.info("[Subscription] No expired or expiring subscriptions found");
       }
     } catch (error) {
-      console.error("[Subscription] Error checking expired subscriptions:", error);
+      logger.error("[Subscription] Error checking expired subscriptions:", { error: error instanceof Error ? error.message : String(error) });
     }
   }
   
@@ -167,7 +168,7 @@ export class SubscriptionService {
       status: "cancelled",
     });
     
-    console.log(`[Subscription] Cancelled subscription ${subscriptionId}, reason: ${reason || "N/A"}`);
+    logger.info(`[Subscription] Cancelled subscription ${subscriptionId}, reason: ${reason || "N/A"}`);
   }
   
   /**
@@ -175,8 +176,8 @@ export class SubscriptionService {
    * Returns the payment details for WeChat Pay checkout
    * 
    * Display labels (shown in UI):
-   *   monthly  → "月度活动礼包" (one-time goods purchase, not a subscription)
-   *   quarterly → "季度活动礼包"
+   *   monthly  → "悦聚月卡" (one-time goods purchase, not a subscription)
+   *   quarterly → "悦聚季卡"
    */
   async renewSubscription(userId: string, planType: "monthly" | "quarterly"): Promise<any> {
     // Get the user's current subscription
@@ -202,11 +203,11 @@ export class SubscriptionService {
       paymentId: null, // Will be set by payment webhook
     });
     
-    console.log(`[Subscription] Created pending ${planType} renewal for user ${userId}`);
+    logger.info(`[Subscription] Created pending ${planType} renewal for user ${userId}`);
     
     const displayLabels: Record<string, string> = {
-      monthly: "月度活动礼包",
-      quarterly: "季度活动礼包",
+      monthly: "悦聚月卡",
+      quarterly: "悦聚季卡",
     };
 
     // Return subscription ID for payment creation

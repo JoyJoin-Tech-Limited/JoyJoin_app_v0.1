@@ -293,4 +293,19 @@ export async function executePostMatchCommitSideEffects(
       }
     })();
   });
+
+  // 9. 场次未成行自动退款 (Auto-refund for unmatched paid registrations,
+  // 2026-08-05 pipeline — fire-and-forget; the service never throws and is
+  // idempotent, so both saveMatchResults and operator-review approval paths
+  // can safely trigger it).
+  void (async () => {
+    try {
+      const { refundUnmatchedRegistrations } = await import("../services/autoRefundService");
+      await refundUnmatchedRegistrations(poolId, pool?.title || "未知活动");
+    } catch (error) {
+      logger.error(`[Pool Matching] ⚠️ Auto-refund for unmatched registrations failed:`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  })();
 }

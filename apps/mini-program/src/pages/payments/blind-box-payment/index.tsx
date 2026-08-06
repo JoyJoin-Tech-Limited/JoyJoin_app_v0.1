@@ -1097,13 +1097,13 @@ export default function BlindBoxPaymentPage() {
       <View className='payment-page__summary-card'>
         <Text className='payment-page__summary-label'>可用优惠</Text>
         <Text className='payment-page__summary-value'>{couponCount} 张</Text>
-        <Text className='payment-page__summary-note'>支持专属权益与活动次数包</Text>
+        <Text className='payment-page__summary-note'>支持专属权益与连局包</Text>
       </View>
 
       <View className='payment-page__section-heading'>
         <Text className='payment-page__section-title'>选一个更适合你的权益方式</Text>
         <Text className='payment-page__section-copy'>
-          常参加选专属权益更省心，按次参加可以选活动次数包。
+          常参加选专属权益更省心，按次参加可以选连局包。
         </Text>
       </View>
 

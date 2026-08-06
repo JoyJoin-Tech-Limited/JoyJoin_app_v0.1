@@ -687,13 +687,19 @@ export class PaymentService {
       throw new Error("Payment not found");
     }
 
-    if (payment.status !== "completed") {
+    // Atomic claim (2026-08-05, auto-refund pipeline review P0-1): only one
+    // run may transition completed → refund_pending. This serializes
+    // concurrent refund triggers (admin cancel ∥ matching commit) so the
+    // WeChat refund call below can never be issued twice for one payment.
+    const claimed = await paymentsRepo.claimPaymentForRefund(payment.id);
+    if (!claimed) {
       throw new Error("Can only refund completed payments");
     }
 
     if (payment.paymentType === "event_pack") {
       const blockerCount = await eventCreditsRepo.getRefundBlockerCountForPayment(payment.id);
       if (blockerCount > 0) {
+        await paymentsRepo.releasePaymentRefundClaim(payment.id);
         throw new Error("Cannot refund an event pack after any of its credits have been used");
       }
     }
@@ -717,10 +723,6 @@ export class PaymentService {
         },
       });
 
-      await paymentsRepo.updatePayment(payment.id, {
-        status: "refund_pending",
-      });
-
       await refundAttemptsRepo.create({
         paymentId: payment.id,
         status: "pending",
@@ -730,7 +732,11 @@ export class PaymentService {
         initiatedBy,
       });
     } catch (error) {
-      // Record failed refund attempt for audit trail
+      // Record failed refund attempt for audit trail, then release the claim
+      // so a later run can retry cleanly. The conditional revert is safe
+      // against a racing REFUND.SUCCESS webhook (that path already moved the
+      // row to refunded, so the revert no-ops).
+      await paymentsRepo.releasePaymentRefundClaim(payment.id);
       await refundAttemptsRepo.create({
         paymentId: payment.id,
         status: "failed",
@@ -935,10 +941,10 @@ export class PaymentService {
   }
 
   private getPaymentDescription(paymentType: CreatePaymentParams["paymentType"]): string {
-    if (paymentType === "event_pack") return "JoyJoin活动次数包";
-    if (paymentType === "event_bundle") return "JoyJoin月度活动礼包";
-    if (paymentType === "subscription") return "JoyJoin活动礼包";
-    return "JoyJoin活动报名";
+    if (paymentType === "event_pack") return "悦聚连局包";
+    if (paymentType === "event_bundle") return "悦聚月卡";
+    if (paymentType === "subscription") return "悦聚卡";
+    return "悦聚活动报名";
   }
 
   private mapTradeState(tradeState: string): string {

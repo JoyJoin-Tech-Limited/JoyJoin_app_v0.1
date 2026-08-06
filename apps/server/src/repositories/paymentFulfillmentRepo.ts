@@ -41,22 +41,22 @@ export interface FinalizeRefundedPaymentResult {
 const subscriptionNotification = {
   category: "activities",
   type: "subscription_activated",
-  title: "会员订阅成功",
-  message: "您的JoyJoin会员已激活，开始探索精彩活动吧！",
+  title: "悦聚卡已激活",
+  message: "您的悦聚卡已激活，开始探索精彩活动吧！",
 };
 
 const bundleNotification = {
   category: "activities",
   type: "subscription_activated",
-  title: "悦聚月度礼包已激活",
-  message: "您的本月活动礼包已生效，尽情参加本月所有悦聚活动吧！",
+  title: "悦聚月卡已激活",
+  message: "您的悦聚月卡已生效，期待和你见面！",
 };
 
 const eventPackNotification = {
   category: "activities",
   type: "event_pack_credited",
-  title: "活动次数包已到账",
-  message: "活动次数包已生效，可直接报名活动盲盒。",
+  title: "连局包已到账",
+  message: "连局包已生效，可直接报名活动盲盒。",
 };
 
 const eventNotification = {

@@ -1,6 +1,6 @@
 // Audit logging is performed by the calling route handlers via adminAuditLogger
 import { db } from "../db";
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, and } from "drizzle-orm";
 import { subscriptions, coupons, payments } from "@shared/schema";
 
 interface CreateSubscriptionData {
@@ -55,6 +55,10 @@ export interface PaymentsRepository {
   getCompletedCount(userId: string): Promise<number>;
   createPayment(data: any): Promise<any>;
   updatePayment(id: string, updates: any): Promise<any>;
+  /** Atomic claim: completed → refund_pending iff still completed (returns true when claimed). */
+  claimPaymentForRefund(paymentId: string): Promise<boolean>;
+  /** Conditional revert: refund_pending → completed iff still refund_pending (safe against a racing REFUND webhook). */
+  releasePaymentRefundClaim(paymentId: string): Promise<void>;
 }
 
 export const paymentsRepo: PaymentsRepository = {
@@ -313,6 +317,20 @@ export const paymentsRepo: PaymentsRepository = {
       .where(eq(payments.id, id))
       .returning();
     return result;
+  },
+
+  async claimPaymentForRefund(paymentId: string): Promise<boolean> {
+    const rows = await db.update(payments)
+      .set({ status: "refund_pending" })
+      .where(and(eq(payments.id, paymentId), eq(payments.status, "completed")))
+      .returning({ id: payments.id });
+    return rows.length > 0;
+  },
+
+  async releasePaymentRefundClaim(paymentId: string): Promise<void> {
+    await db.update(payments)
+      .set({ status: "completed" })
+      .where(and(eq(payments.id, paymentId), eq(payments.status, "refund_pending")));
   },
 
   async getAllPayments(): Promise<any[]> {

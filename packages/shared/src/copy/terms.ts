@@ -9,6 +9,7 @@ export type CanonicalTermId =
   | 'ju' | 'poBingJu' | 'changLiaoJu' | 'kuangHuanJu'
   | 'zhuo' | 'zhuoYou'
   | 'quanYi'
+  | 'yueJuKa' | 'lianJuBao' | 'danChangJuPiao'
   | 'lianJie'
   | 'yueZai'
   | 'faXian';
@@ -63,6 +64,24 @@ export const TERMINOLOGY_TABLE: Record<string, TermEntry> = {
     alternate: null,
     legacy: ['会员', 'VIP', '会员/VIP会员'],
     note: 'Subscription/entitlement label',
+  },
+  yueJuKa: {
+    canonical: '悦聚卡',
+    alternate: null,
+    legacy: ['活动礼包', '月度活动礼包', '季度活动礼包'],
+    note: 'Entitlement pass family display name: 悦聚月卡/悦聚季卡 (see docs/copy/brand-copy-strategy.md §3.1)',
+  },
+  lianJuBao: {
+    canonical: '连局包',
+    alternate: null,
+    legacy: ['活动包', '3次活动包', '6次活动包'],
+    note: 'Event pack display name: 三连局包/六连局包',
+  },
+  danChangJuPiao: {
+    canonical: '单场局票',
+    alternate: null,
+    legacy: ['单次票', '单次体验'],
+    note: 'Single-event ticket display name',
   },
   lianJie: {
     canonical: '连接',

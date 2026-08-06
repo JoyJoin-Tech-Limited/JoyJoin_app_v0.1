@@ -554,16 +554,45 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 // ── Loading State ──
 .ticket-loading {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4)
   min-height: 100vh;
   min-height: 100dvh;
 
+  &__mascot {
+    width: 140rpx;
+    height: 140rpx;
+    margin-bottom: 24rpx;
+  }
+
   &__text {
     font-family: $font-ui;
     font-size: $font-size-base;
     color: $ticket-text-subtle;
+  }
+
+  &__dots {
+    display: flex;
+    gap: 12rpx;
+    margin-top: 24rpx;
+  }
+
+  &__dot {
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.5);
+    animation: ticket-loading-dot 1.2s ease-in-out infinite;
+
+    &:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.3s;
+    }
   }
 
   &__back {
@@ -575,6 +604,18 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
       font-size: $font-size-sm;
       color: $color-primary;
     }
+  }
+}
+
+@keyframes ticket-loading-dot {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-6rpx);
   }
 }
 
@@ -925,6 +966,11 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
 
 // ── Reduced Motion ──
 @media (prefers-reduced-motion: reduce) {
+  .ticket-loading__dot {
+    animation: none;
+    opacity: 0.6;
+  }
+
   .ticket-verifying__dot {
     animation: none;
     opacity: 0.6;
@@ -1164,12 +1210,162 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12rpx;
   margin: 24rpx 32rpx 0;
+
+  &__mascot {
+    width: 72rpx;
+    height: 72rpx;
+    flex-shrink: 0;
+  }
+
+  &__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2rpx;
+  }
+
+  &__line {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
 
   &__text {
     font-family: $font-ui;
     font-size: $font-size-xs;
     color: $ticket-text-muted;
+  }
+}
+
+// Quiet factual seat signal (Wave 1) — deliberately muted, no urgency styling.
+.ticket-card__seat-line {
+  display: block;
+  margin: 4rpx 0 0;
+  font-family: $font-ui;
+  font-size: $font-size-xs;
+  color: $ticket-text-muted;
+}
+
+// Continuity subtitle under the choices header (Wave 1).
+.ticket-card__section-sub {
+  display: block;
+  margin: 4rpx 0 12rpx;
+  font-family: $font-ui;
+  font-size: $font-size-xs;
+  color: $ticket-text-muted;
+  line-height: $line-height-normal;
+}
+
+// Soft inline note after the first pay cancel (anti-nag).
+.ticket-cancel-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16rpx 32rpx 0;
+  padding: 12rpx 20rpx;
+  border-radius: 16rpx;
+  background: rgba($color-primary, 0.07);
+  border: 1rpx solid rgba($color-primary, 0.14);
+
+  &__text {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $color-primary-dark;
+  }
+}
+
+// Cancel-retention sheet (second cancel, once per session).
+.ticket-cancel-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: $z-modal;
+  display: flex;
+  align-items: flex-end;
+
+  &__mask {
+    position: absolute;
+    inset: 0;
+    background: $color-overlay;
+  }
+
+  &__panel {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 40rpx 40rpx 48rpx;
+    background: $color-surface;
+    border-radius: 32rpx 32rpx 0 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    @include safe-area-bottom-padding(padding-bottom, 48rpx);
+  }
+
+  &__mascot {
+    width: 120rpx;
+    height: 120rpx;
+    margin-bottom: 16rpx;
+  }
+
+  &__title {
+    font-family: $font-ui;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__body {
+    margin-top: 8rpx;
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $ticket-text-muted;
+    text-align: center;
+    line-height: $line-height-relaxed;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 16rpx;
+    margin-top: 32rpx;
+    width: 100%;
+  }
+
+  &__btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 96rpx;
+    border-radius: 24rpx;
+    transition: opacity 0.12s ease, transform 0.12s ease;
+
+    &--primary {
+      background: $color-primary;
+      box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.3);
+    }
+
+    &--ghost {
+      background: rgba($color-surface, 0.96);
+      border: 2rpx solid $color-border;
+    }
+
+    &--pressed {
+      opacity: 0.9;
+      transform: scale(0.98);
+    }
+  }
+
+  &__btn-text {
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-text-white;
+  }
+
+  &__btn--ghost &__btn-text {
+    color: $color-text-primary;
   }
 }
 

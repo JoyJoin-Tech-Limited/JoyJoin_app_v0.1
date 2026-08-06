@@ -127,17 +127,17 @@ export default function AdminPricingPage() {
 
   const getPlanTypeLabel = (planType: string) => {
     const labels: Record<string, string> = {
-      event_single: "单次活动",
-      vip_monthly: "VIP月度",
-      vip_quarterly: "VIP季度",
-      pack_3: "3次套餐",
-      pack_6: "6次套餐",
+      monthly: "悦聚月卡",
+      quarterly: "悦聚季卡",
+      event_single: "单场局票",
+      pack_3: "三连局包",
+      pack_6: "六连局包",
     };
     return labels[planType] || planType;
   };
 
   const getPlanIcon = (planType: string) => {
-    if (planType.includes("vip")) return Star;
+    if (planType === "monthly" || planType === "quarterly") return Star;
     if (planType.includes("pack")) return Package;
     return DollarSign;
   };

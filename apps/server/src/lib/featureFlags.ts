@@ -15,6 +15,9 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   restartOnboarding: "RESTART_ONBOARDING_ENABLED",
   smartProfession: "SMART_PROFESSION_V1_ENABLED",
   onboardingForceSkip: "ONBOARDING_FORCE_SKIP_ENABLED",
+  /** Auto-refund pipeline (2026-08-05): 场次未成行 → refunds + credit
+   *  restoration. Default true; kill switch for money movement. */
+  autoRefundEnabled: "AUTO_REFUND_ENABLED",
   matchingLiveReveal: "MATCHING_LIVE_REVEAL_ENABLED",
   socialIcebreakerClientForceEnd: "SOCIAL_ICEBREAKER_CLIENT_FORCE_END",
   /** Controls BOTH the template-driven run plan compiler (server) AND the 3×3 vibe grid UX (client).
@@ -182,6 +185,13 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  checked by msgSecCheck (fail-open). Env fallback:
    *  CONTENT_MODERATION_MSGSECCHECK_ENABLED (default: false). */
   contentModerationMsgSecCheckEnabled: "CONTENT_MODERATION_MSGSECCHECK_ENABLED",
+  /** Severe-tier fail-closed content moderation (decision-table rows 2/3 of
+   *  content-mod-s1). When false, warning-tier Tier-0 violations are allowed
+   *  through (still logged, NOT escalated) as an emergency rollback; the
+   *  severe tier stays unconditionally blocking regardless of this flag.
+   *  Read fail-closed: callers must use getFeatureFlag(key, true). Env
+   *  fallback: CONTENT_MODERATION_SEVERE_FAIL_CLOSED_ENABLED (default: true). */
+  contentModerationSevereFailClosedEnabled: "CONTENT_MODERATION_SEVERE_FAIL_CLOSED_ENABLED",
 };
 
 /**
@@ -192,6 +202,8 @@ export const FLAG_ENV_MAP: Record<string, string> = {
  */
 export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   matchingOperatorReviewEnabled: true,
+  /** Auto-refund pipeline (2026-08-05) — default ON; ops kill switch. */
+  autoRefundEnabled: true,
   /** Sentinel policy-pending — see FLAG_ENV_MAP note. Explicitly off so the
    *  admin toggle UI and listFeatureFlags() show a stable default. */
   matchNeverMeetSentinel: false,
@@ -214,6 +226,10 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  fails open, so latency is bounded regardless. Ops can still disable via
    *  env CONTENT_MODERATION_MSGSECCHECK_ENABLED=false or an admin toggle. */
   contentModerationMsgSecCheckEnabled: true,
+  /** Severe-tier fail-closed moderation — default ON. When disabled, only
+   *  warning-tier Tier-0 violations are let through (logged, not escalated);
+   *  the severe tier remains unconditionally blocking. */
+  contentModerationSevereFailClosedEnabled: true,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

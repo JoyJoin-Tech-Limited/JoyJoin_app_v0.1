@@ -550,7 +550,7 @@ export default function AdminDataInsightsPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between mt-1">
-                    <span className="text-muted-foreground">单次活动收入</span>
+                    <span className="text-muted-foreground">单场局票收入</span>
                     <span className="font-medium">
                       ¥{insights.monetization.revenueBreakdown.singleEvent.toLocaleString()}
                     </span>

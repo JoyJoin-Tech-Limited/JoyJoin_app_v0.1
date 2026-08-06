@@ -1,4 +1,5 @@
 import { notifyCriticalMarkdown, notifyOpsMarkdown, buildAdminUrl } from "../wecomNotifier";
+import type { AutoRefundSummary } from "../../services/autoRefundService";
 
 export interface PoolCancelledPayload {
   poolTitle: string;
@@ -38,6 +39,41 @@ export async function notifyPoolCancelled(payload: PoolCancelledPayload): Promis
   lines.push("", `[查看活动详情 →](${buildAdminUrl(`/admin/pools/${payload.poolId}`)})`);
 
   await notifyCriticalMarkdown("⛔ 活动池已取消 🚨", lines);
+}
+
+/** Auto-refund run summary (2026-08-05 auto-refund pipeline). */
+export async function notifyAutoRefundSummary(
+  poolId: string,
+  summary: AutoRefundSummary,
+): Promise<void> {
+  const lines: string[] = [
+    `**原因：** ${summary.reason === "pool_cancelled" ? "活动取消" : "场次未成行（未匹配）"}`,
+    `**已退报名费：** ${summary.refundedPayments} 笔`,
+    `**已退活动次数：** ${summary.refundedCredits} 笔`,
+    `**跳过：** ${summary.skippedRefunds} 笔`,
+  ];
+
+  if (summary.failedRefunds.length > 0) {
+    lines.push(
+      "",
+      `⚠️ **退款失败 ${summary.failedRefunds.length} 笔，需人工处理：**`,
+      ...summary.failedRefunds.slice(0, 10).map(
+        (failure) =>
+          `- ${failure.paymentId ? `支付 ${failure.paymentId}` : `报名 ${failure.registrationId}`}：${failure.reason}`,
+      ),
+    );
+    if (summary.failedRefunds.length > 10) {
+      lines.push(`- …等共 ${summary.failedRefunds.length} 笔`);
+    }
+  }
+
+  lines.push("", `[查看活动详情 →](${buildAdminUrl(`/admin/pools/${poolId}`)})`);
+
+  if (summary.failedRefunds.length > 0) {
+    await notifyCriticalMarkdown("💸 自动退款完成（含失败项）", lines);
+  } else {
+    await notifyOpsMarkdown("💸 自动退款完成", lines);
+  }
 }
 
 export interface LowRegistrationPayload {

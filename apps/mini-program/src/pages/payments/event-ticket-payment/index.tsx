@@ -22,6 +22,7 @@ import type { MiniProgramPoolRegistrationReturnContext } from '../../../lib/paym
 import { bustRegistrationCaches } from '../../../lib/api/registrationCacheBust'
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import { getEventTicketTailAsset } from '../../../lib/eventTicketTailAssets'
+import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { useLoadingDeadline } from '../../../hooks/useLoadingDeadline'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
@@ -171,6 +172,20 @@ export default function EventTicketPaymentPage() {
   const [poolId, setPoolId] = useState<string>('')
   const [returnContext, setReturnContext] = useState<MiniProgramPoolRegistrationReturnContext | null>(null)
   const [payment, setPayment] = useState<PaymentState>({ status: 'idle' })
+  // Cancel-retention (Wave 1, 2026-08-05): first cancel shows a soft inline
+  // note; the second cancel surfaces the retention sheet. Anti-nag — the
+  // sheet dismisses once and stays dismissed for the session, and the counter
+  // intentionally survives useResetOnShow re-shows (one-shot per page visit).
+  const [cancelCount, setCancelCount] = useState(0)
+  const [cancelSheetDismissed, setCancelSheetDismissed] = useState(false)
+  const cancelRetentionShownRef = useRef(false)
+
+  // Fire the retention-sheet impression once, when it first becomes visible.
+  useEffect(() => {
+    if (cancelCount < 2 || cancelSheetDismissed || cancelRetentionShownRef.current) return
+    cancelRetentionShownRef.current = true
+    discoverAnalytics.track('pay_cancel_retention_shown', undefined, { poolId })
+  }, [cancelCount, cancelSheetDismissed, poolId])
   const [selectedPlan, setSelectedPlan] = useState<'single' | 'pack_3' | 'pack_6'>('single')
   const [showCouponDetail, setShowCouponDetail] = useState(false)
   const [isPageReady, setIsPageReady] = useState(false)
@@ -572,6 +587,7 @@ export default function EventTicketPaymentPage() {
             wechatOrderId: result.wechatOrderId,
           })
           setPayment({ status: 'idle' })
+          setCancelCount((count) => count + 1)
         } else {
           logError('[EventTicketPayment] WeChat Pay failed', payErr)
           discoverAnalytics.track('pay_fail', undefined, {
@@ -673,8 +689,19 @@ export default function EventTicketPaymentPage() {
     }
 
     return (
-      <View className='ticket-loading'>
-        <Text className='ticket-loading__text'>加载中…</Text>
+      <View className='ticket-loading' role='status' aria-live='polite' aria-busy='true'>
+        <Image
+          className='ticket-loading__mascot'
+          src={getXiaoyueExpressionAsset('loadingSystem')}
+          mode='aspectFit'
+          ariaLabel='加载中'
+        />
+        <Text className='ticket-loading__text'>正在准备你的票…</Text>
+        <View className='ticket-loading__dots'>
+          <View className='ticket-loading__dot' />
+          <View className='ticket-loading__dot' />
+          <View className='ticket-loading__dot' />
+        </View>
       </View>
     )
   }
@@ -751,6 +778,10 @@ export default function EventTicketPaymentPage() {
   const showCouponStamp = Boolean(bestCoupon && discountAmount > 0 && couponAppliedAt > 0)
   const couponStampAnimated = showCouponStamp && !shouldReduceMotion && !deviceTier.isDegradation
 
+  // Quiet factual seat signal (Wave 1, 2026-08-05) — mirrors the OracleCard
+  // corner badge data source; deliberately unstyled/urgency-free.
+  const seatCount = pool.registrationCount ?? pool.currentParticipants ?? 0
+
   return (
     <View className='ticket-page'>
       <ScrollView className='ticket-scroll' scrollY>
@@ -803,6 +834,11 @@ export default function EventTicketPaymentPage() {
               </View>
             </View>
 
+            {/* Quiet factual seat signal — no urgency styling (Wave 1) */}
+            {seatCount > 0 ? (
+              <Text className='ticket-card__seat-line'>已有 {seatCount} 人入座</Text>
+            ) : null}
+
             {/* Choices */}
             {choiceChips.length > 0 && (
               <View className='ticket-card__section ticket-card__section--choices'>
@@ -810,6 +846,7 @@ export default function EventTicketPaymentPage() {
                   <View className='ticket-card__section-accent' />
                   <Text className='ticket-card__section-label'>这次想怎么聚</Text>
                 </View>
+                <Text className='ticket-card__section-sub'>悦仔把你的预算、期待和细节都备好了</Text>
                 <View className='ticket-card__chips'>
                   {choiceChips.map((chip, idx) => (
                     <View
@@ -982,7 +1019,7 @@ export default function EventTicketPaymentPage() {
               </View>
               <View className='ticket-plan-card__body'>
                 <View className='ticket-plan-card__top'>
-                  <Text className='ticket-plan-card__title'>单次体验</Text>
+                  <Text className='ticket-plan-card__title'>单场局票</Text>
                   <Text className='ticket-plan-card__price'>{formatPrice(singlePrice)}</Text>
                 </View>
                 <Text className='ticket-plan-card__desc'>先体验一场，合适再续杯</Text>
@@ -1083,7 +1120,16 @@ export default function EventTicketPaymentPage() {
 
         {/* ── Trust & Policy ── */}
         <View className='ticket-trust-row'>
-          <Text className='ticket-trust-row__text'>微信支付 · 安全加密</Text>
+          <Image
+            className='ticket-trust-row__mascot'
+            src={getXiaoyueExpressionAsset('paymentTrust')}
+            mode='aspectFit'
+            aria-hidden='true'
+          />
+          <View className='ticket-trust-row__copy'>
+            <Text className='ticket-trust-row__line'>有悦仔在，这场局会好好办</Text>
+            <Text className='ticket-trust-row__text'>微信支付 · 安全加密</Text>
+          </View>
         </View>
         <View
           className='ticket-refund-link'
@@ -1100,7 +1146,7 @@ export default function EventTicketPaymentPage() {
 
         {/* ── Abandon link ── */}
         <View className='ticket-abandon' hoverClass='ticket-abandon--pressed' onClick={handleBack}>
-          <Text>稍后再报名，已保存你的选择</Text>
+          <Text>稍后再报名</Text>
         </View>
 
         {/* Spacer for sticky CTA */}
@@ -1109,6 +1155,13 @@ export default function EventTicketPaymentPage() {
 
       {/* ── Sticky CTA ── */}
       <View className='ticket-footer'>
+        {/* Soft inline note after the first cancel — in the sticky footer so
+            it is never below the fold (2026-08-05 audit NIT-5). */}
+        {cancelCount >= 1 && cancelCount < 2 ? (
+          <View className='ticket-cancel-note' role='status' aria-live='polite'>
+            <Text className='ticket-cancel-note__text'>你的选择已保存，随时回来继续</Text>
+          </View>
+        ) : null}
         {payment.status === 'failed' ? (
           <View className='ticket-cta ticket-cta--retry' hoverClass='ticket-cta--pressed' onClick={handleRetry}>
             <Text className='ticket-cta__text'>重试支付</Text>
@@ -1150,6 +1203,55 @@ export default function EventTicketPaymentPage() {
           discoverAnalytics.track('ticket_inclusion_sheet_close', undefined, { poolId })
         }}
       />
+
+      {/* ── Cancel retention sheet (second cancel, once per session) ── */}
+      {cancelCount >= 2 && !cancelSheetDismissed ? (
+        <View className='ticket-cancel-sheet'>
+          <View
+            className='ticket-cancel-sheet__mask'
+            role='button'
+            aria-label='关闭'
+            onClick={() => {
+              setCancelSheetDismissed(true)
+              discoverAnalytics.track('pay_cancel_retention_dismiss', undefined, { poolId })
+            }}
+          />
+          <View className='ticket-cancel-sheet__panel' role='dialog' aria-modal='true' aria-label='报名信息已保存'>
+            <Image
+              className='ticket-cancel-sheet__mascot'
+              src={getXiaoyueExpressionAsset('paymentTrust')}
+              mode='aspectFit'
+              aria-hidden='true'
+            />
+            <Text className='ticket-cancel-sheet__title'>报名信息已保存</Text>
+            <Text className='ticket-cancel-sheet__body'>你的预算、期待和细节都在，回来就能继续。</Text>
+            <View className='ticket-cancel-sheet__actions'>
+              <View
+                className='ticket-cancel-sheet__btn ticket-cancel-sheet__btn--primary'
+                hoverClass='ticket-cancel-sheet__btn--pressed'
+                onClick={() => {
+                  setCancelSheetDismissed(true)
+                  discoverAnalytics.track('pay_cancel_retention_tap', undefined, { poolId })
+                  haptics('light')
+                  void handlePay()
+                }}
+              >
+                <Text className='ticket-cancel-sheet__btn-text'>去支付</Text>
+              </View>
+              <View
+                className='ticket-cancel-sheet__btn ticket-cancel-sheet__btn--ghost'
+                hoverClass='ticket-cancel-sheet__btn--pressed'
+                onClick={() => {
+                  setCancelSheetDismissed(true)
+                  discoverAnalytics.track('pay_cancel_retention_dismiss', undefined, { poolId })
+                }}
+              >
+                <Text className='ticket-cancel-sheet__btn-text'>稍后再说</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   )
 }

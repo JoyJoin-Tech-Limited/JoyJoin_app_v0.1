@@ -1352,7 +1352,10 @@ export const eventTemplates = pgTable("event_templates", {
   maxParticipants: integer("max_participants").default(10),
   
   // Pricing (for future premium events)
-  customPrice: integer("custom_price"), // null = use default pricing (权益用户免费/标准价¥68)
+  // custom_price is DORMANT: written only via legacyStorageRepo/adminEventManagement
+  // and never read in the checkout path (payments.ts reads pricing_settings
+  // event_single, default ¥88 = 8800). Do not rely on it for settlement.
+  customPrice: integer("custom_price"),
   
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
