@@ -85,8 +85,9 @@ import { buildMomentCardPayload } from '../lib/momentCardPayload';
 import { renderMomentCardToPng } from '../lib/momentCardRenderer';
 import { curateMedals } from '../lib/medalCuration';
 import { logger } from '../lib/logger';
-import { validateContentSafe, contentViolationResponse } from '../lib/contentSafety';
 import { requireAuthenticatedUserId } from '../lib/requestAuth';
+import { validateContentSafeAsync, contentViolationResponse } from '../lib/contentSafety';
+import { recordViolation } from '../abuseDetection';
 import { getFeatureFlag } from '../lib/featureFlags';
 import { startSocialIcebreakerSweep } from '../lib/socialIcebreakerSweep';
 import { momentCardLimiter } from '../rateLimiter';
@@ -314,6 +315,17 @@ router.post('/start', async (req: any, res) => {
   const { sessionId, displayName, eventType, eventTier, vibe, selectedPhases } = parsedBody.data;
   const userId = requireAuthenticatedUserId(req, res);
   if (!userId) return;
+
+  // Content-moderation gate (S6): displayName must be validated BEFORE it is
+  // persisted on either path (rejoin upsertParticipant or new-session
+  // createSession / hostDisplayName).
+  if (displayName && displayName.trim().length > 0) {
+    const safety = await validateContentSafeAsync(displayName, 'icebreakerDisplayName', { userId });
+    if (!safety.safe && safety.violation) {
+      await recordViolation(userId, safety.violation.type, safety.violation.severity);
+      return res.status(400).json(contentViolationResponse(safety.violation).body);
+    }
+  }
 
   if (!sessionId) {
     return res.status(400).json({ error: 'sessionId is required' });

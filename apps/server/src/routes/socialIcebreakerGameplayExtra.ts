@@ -391,6 +391,14 @@ router.post('/:socialSessionId/undercover-word/describe', async (req: any, res) 
   if (!userId) return res.status(401).json({ error: 'Authentication required' });
   if (!text || text.trim().length === 0) return res.status(400).json({ error: 'Description required' });
 
+  // Content-moderation gate (S5): validate BEFORE the description is written
+  // to session state (either the optimistic path or the direct path below).
+  const safety = await validateContentSafeAsync(text, 'undercoverDescribe', { userId });
+  if (!safety.safe && safety.violation) {
+    await recordViolation(userId, safety.violation.type, safety.violation.severity);
+    return res.status(400).json(contentViolationResponse(safety.violation).body);
+  }
+
   const state = await resolveSession(socialSessionId, res);
   if (!state) return;
 

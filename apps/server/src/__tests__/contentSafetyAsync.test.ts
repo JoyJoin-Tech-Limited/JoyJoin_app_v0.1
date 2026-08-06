@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const mockGetFeatureFlag = vi.fn();
 vi.mock("../lib/featureFlags", () => ({
   getFeatureFlag: mockGetFeatureFlag,
+  getFeatureFlagSync: vi.fn(() => true),
 }));
 
 const mockCheckTextWithMsgSecCheck = vi.fn();

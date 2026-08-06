@@ -9,6 +9,8 @@ import { requireAuth } from "../../middleware/auth";
 import { logger } from "../../lib/logger";
 import { storage } from "../../storage";
 import { shellCache } from "../../lib/shellCache";
+import { validateContentSafe, validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
+import { recordViolation } from "../../abuseDetection";
 
 function firstNonEmptyString(...values: Array<string | null | undefined>): string | undefined {
   for (const value of values) {
@@ -270,6 +272,47 @@ export function registerSocialRoutes(app: Express): void {
 
       if (!result.success) {
         return res.status(400).json({ error: result.error });
+      }
+
+      // Content-moderation gate (S1): per-field SYNC tier-0 checks (zero
+      // network), then ONE tier-1 check on the concatenated text (single
+      // 250ms budget, single WeChat call). On violation: block 400 +
+      // recordViolation EXACTLY ONCE.
+      const feedbackData: any = result.data;
+      const feedbackTextFields: string[] = [];
+      for (const candidate of [
+        feedbackData.feedback,
+        feedbackData.atmosphereNote,
+        feedbackData.improvementOther,
+        feedbackData.conversationNotes,
+        feedbackData.futurePreferencesOther,
+        feedbackData.additionalMatchPoints,
+      ]) {
+        if (typeof candidate === "string" && candidate.trim().length > 0) {
+          feedbackTextFields.push(candidate);
+        }
+      }
+      const attendeeTraits = feedbackData.attendeeTraits ?? {};
+      for (const trait of Object.values(attendeeTraits)) {
+        const note = (trait as any)?.improvementNote;
+        if (typeof note === "string" && note.trim().length > 0) {
+          feedbackTextFields.push(note);
+        }
+      }
+      for (const fieldText of feedbackTextFields) {
+        const syncResult = validateContentSafe(fieldText, "eventFeedback");
+        if (!syncResult.safe && syncResult.violation) {
+          await recordViolation(userId, syncResult.violation.type, syncResult.violation.severity);
+          return res.status(400).json(contentViolationResponse(syncResult.violation).body);
+        }
+      }
+      const concatenatedFeedback = feedbackTextFields.join("\n");
+      if (concatenatedFeedback.trim().length > 0) {
+        const asyncResult = await validateContentSafeAsync(concatenatedFeedback, "eventFeedback", { userId });
+        if (!asyncResult.safe && asyncResult.violation) {
+          await recordViolation(userId, asyncResult.violation.type, asyncResult.violation.severity);
+          return res.status(400).json(contentViolationResponse(asyncResult.violation).body);
+        }
       }
 
       const { wechatContactId } = req.body;

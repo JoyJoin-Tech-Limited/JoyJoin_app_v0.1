@@ -9,17 +9,28 @@ import { storage } from "../../storage";
 import { notifyAbuseReport } from "../../lib/wecomNotifications";
 import { MATCHING_THRESHOLD_FALLBACKS } from "../../lib/matchingThresholds";
 import { users } from "@shared/schema";
+import { chatReportSubmissionLimiter } from "../../rateLimiter";
+import { validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
+import { recordViolation } from "../../abuseDetection";
 
 export function registerMatchingAdminRoutes(app: Express): void {
   // ============ CHAT REPORTS & MODERATION ROUTES ============
   
   // POST /api/chat-reports - User creates a report
-  app.post("/api/chat-reports", requireAuth, async (req, res) => {
+  app.post("/api/chat-reports", requireAuth, chatReportSubmissionLimiter, async (req, res) => {
     try {
       const session = req.session as any;
       const userId = session.userId;
       
       const validatedData = insertChatReportSchema.parse(req.body);
+
+      // Content-moderation gate (S4): description must be validated BEFORE the
+      // report is persisted (createChatReport below).
+      const safety = await validateContentSafeAsync(validatedData.description ?? "", "chatReportDescription", { userId });
+      if (!safety.safe && safety.violation) {
+        await recordViolation(userId, safety.violation.type, safety.violation.severity);
+        return res.status(400).json(contentViolationResponse(safety.violation).body);
+      }
       
       const report = await storage.createChatReport(validatedData);
       

@@ -9,6 +9,8 @@ import * as schema from "@shared/schema";
 import { eq, and, sql, gt } from "drizzle-orm";
 import { broadcastAttendanceStatusUpdated, broadcastPoolRegistrationAdded } from "../../eventBroadcast";
 import { logger } from "../../lib/logger";
+import { validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
+import { recordViolation } from "../../abuseDetection";
 import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
 
 const patchPreferencesSchema = z.object({
@@ -291,6 +293,17 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         normalizedEstimatedLateMinutes = estimatedLateMinutes;
       }
       // 'confirmed' uses no auxiliary fields
+
+      // Content-moderation gate (S3): absentReason must be validated BEFORE
+      // it is persisted (updateAttendanceStatus below) and BEFORE it is
+      // broadcast over WebSocket — ordering is a reliability requirement.
+      if (normalizedAbsentReason) {
+        const safety = await validateContentSafeAsync(normalizedAbsentReason, "absentReason", { userId });
+        if (!safety.safe && safety.violation) {
+          await recordViolation(userId, safety.violation.type, safety.violation.severity);
+          return res.status(400).json(contentViolationResponse(safety.violation).body);
+        }
+      }
 
       await storage.updateAttendanceStatus(eventId, userId, normalizedStatus, normalizedEstimatedLateMinutes, normalizedAbsentReason);
 

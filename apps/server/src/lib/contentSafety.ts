@@ -3,7 +3,7 @@ import { db } from "../db";
 import { contentFilterLogs, users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
-import { getFeatureFlag } from "./featureFlags";
+import { getFeatureFlag, getFeatureFlagSync } from "./featureFlags";
 import { checkTextWithMsgSecCheck, warmWechatAccessToken, WechatRiskVerdict } from "./wechatMsgSecCheck";
 import { recordViolation } from "../abuseDetection";
 
@@ -43,7 +43,24 @@ export function validateContentSafe(text: string, field: string): ContentSafetyR
     source: "tier0" as const,
   };
 
+  // Tier-0 detection + logging are UNCONDITIONAL (the log row below is written
+  // even when the warning tier is rolled back to allow-through, so the
+  // emergency rollback stays observable).
   createContentViolationLog(violation, text);
+
+  // Decision-table rows 2/3: the warning tier blocks by default but can be
+  // rolled back via `contentModerationSevereFailClosedEnabled`. The severe
+  // tier (row 1) is UNCONDITIONAL — no flag weakens it. Sync read (5s cache +
+  // env), fail-closed fallback `true` — deliberately NOT the hardcoded `false`
+  // fallback pattern used for the msgSecCheck flag.
+  if (
+    violation.severity === "warning" &&
+    !getFeatureFlagSync("contentModerationSevereFailClosedEnabled", true)
+  ) {
+    // Row 3: ALLOW + log only — NO recordViolation (the route only escalates
+    // when `safe === false`).
+    return { safe: true };
+  }
 
   return {
     safe: false,
@@ -86,7 +103,16 @@ export async function validateContentSafeAsync(
 
   const tier0 = validateContentSafe(trimmed, field);
   if (!tier0.safe) {
+    // Row 1 (severe — unconditional) or row 2 (warning — fail-closed ON).
     return tier0;
+  }
+
+  // LOCKED control flow (content-mod-s1 Q3): Tier-1 is consulted ONLY when
+  // Tier-0 is clean. A warning-tier text allowed through by the row-3
+  // rollback (`contentModerationSevereFailClosedEnabled` OFF) is NOT Tier-0
+  // clean — return ALLOW without consulting Tier-1.
+  if (filterContent(trimmed).isViolation) {
+    return { safe: true };
   }
 
   const tier1Enabled = await getFeatureFlag("contentModerationMsgSecCheckEnabled", false);
@@ -254,3 +280,30 @@ export function createContentViolationLog(
       logger.warn("Failed to write content filter log", { error: String(err) });
     });
 }
+
+/**
+ * Startup visibility for the emergency-rollback state: when
+ * `contentModerationSevereFailClosedEnabled` is OFF, warning-tier violations
+ * are ALLOWED through (logged, not escalated) and that state must be loud.
+ * Fire-and-forget at module init; fail-closed read (fallback `true`).
+ */
+export function warnIfSevereFailClosedDisabled(): void {
+  try {
+    void Promise.resolve(getFeatureFlag("contentModerationSevereFailClosedEnabled", true))
+      .then((enabled) => {
+        if (!enabled) {
+          logger.warn(
+            "[contentSafety] contentModerationSevereFailClosedEnabled is OFF — warning-tier violations are ALLOWED (logged, not escalated); severe-tier blocking is unaffected",
+          );
+        }
+      })
+      .catch(() => {
+        // Flag lookup failure is fail-closed by the `true` fallback — nothing
+        // to warn about beyond the flag resolver's own log.
+      });
+  } catch {
+    // Never let a startup check take down the process.
+  }
+}
+
+warnIfSevereFailClosedDisabled();

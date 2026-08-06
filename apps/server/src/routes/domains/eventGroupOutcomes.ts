@@ -5,6 +5,8 @@ import { logger } from "../../lib/logger";
 import { requireAuthenticatedUserId } from "../../lib/requestAuth";
 import { eventGroupOutcomesRepo } from "../../repositories/eventGroupOutcomesRepo";
 import { deriveMatchHistoryAndRefreshCalibration } from "../../services/matchHistoryDerivation";
+import { validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
+import { recordViolation } from "../../abuseDetection";
 
 const GROUP_OUTCOME_ROUTE = "/api/event-pools/:poolId/group-outcome";
 const DUPLICATE_SUBMISSION_STRATEGY = "replace";
@@ -89,6 +91,17 @@ export function registerEventGroupOutcomeRoutes(app: Express): void {
         });
       }
 
+      // Content-moderation gate (S2): free-text signal must be validated
+      // BEFORE it is persisted (upsert below).
+      const freeTextSignal = normalizeFreeTextSignal(payload.freeTextSignal);
+      if (freeTextSignal) {
+        const safety = await validateContentSafeAsync(freeTextSignal, "groupOutcomeFreeText", { userId });
+        if (!safety.safe && safety.violation) {
+          await recordViolation(userId, safety.violation.type, safety.violation.severity);
+          return res.status(400).json(contentViolationResponse(safety.violation).body);
+        }
+      }
+
       const { outcome } = await eventGroupOutcomesRepo.upsertEventGroupOutcome({
           poolId: req.params.poolId,
           groupId,
@@ -97,7 +110,7 @@ export function registerEventGroupOutcomeRoutes(app: Express): void {
           wouldMeetAgain: payload.wouldMeetAgain,
           connectionRadar: payload.connectionRadar,
           icebreakerRatings: payload.icebreakerRatings,
-          freeTextSignal: normalizeFreeTextSignal(payload.freeTextSignal),
+          freeTextSignal,
         });
 
       reqLogger.info("Stored event group outcome submission", {

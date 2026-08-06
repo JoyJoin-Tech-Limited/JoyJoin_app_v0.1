@@ -294,6 +294,18 @@ router.post('/:socialSessionId/lie-detective/submit-tags', async (req: any, res)
     return res.status(400).json({ error: validation.error });
   }
 
+  // Content-moderation gate (S8, defense-in-depth): the downstream AI
+  // statement generator filters tags, but the route must not rely on it —
+  // validate every submitted tag BEFORE it is stored in session state.
+  for (const tag of validation.tags) {
+    if (!tag || tag.trim().length === 0) continue;
+    const safety = await validateContentSafeAsync(tag, 'lieDetectiveTag', { userId });
+    if (!safety.safe && safety.violation) {
+      await recordViolation(userId, safety.violation.type, safety.violation.severity);
+      return res.status(400).json(contentViolationResponse(safety.violation).body);
+    }
+  }
+
   // Store tags in session state
   state.lieDetectiveV2Tags = state.lieDetectiveV2Tags || {};
   state.lieDetectiveV2Tags[userId] = validation.tags;

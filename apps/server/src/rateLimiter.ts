@@ -193,3 +193,14 @@ export const shareClipLimiter = createRateLimiter({
   maxRequests: 2,
   keyPrefix: 'sclip',
 });
+
+/**
+ * Chat-report submission limiter — bounds abuse-report flooding. Same shape
+ * as the reports-domain limiter (routes/domains/reports.ts): 5 submissions
+ * per user per 5 minutes.
+ */
+export const chatReportSubmissionLimiter = createRateLimiter({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  maxRequests: 5, // 5 reports per user per window
+  keyPrefix: 'chatReports',
+});

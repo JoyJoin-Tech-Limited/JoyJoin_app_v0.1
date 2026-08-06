@@ -15,6 +15,8 @@ import { usersRepo } from "../../repositories/usersRepo";
 import { pricingRepo } from "../../repositories/pricingRepo";
 import { subscriptionService } from "../../subscriptionService";
 import { storage } from "../../storage";
+import { validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
+import { recordViolation } from "../../abuseDetection";
 import { requireAuth } from "../../middleware/auth";
 import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { db } from "../../db";
@@ -528,6 +530,15 @@ export function registerPaymentRoutes(app: Express): void {
       const subscription = await storage.getUserSubscription(userId);
       if (!subscription) {
         return res.status(404).json({ message: "No active subscription found" });
+      }
+
+      // Content-moderation gate (S7): cancellation reason must be validated
+      // BEFORE it is persisted (cancelSubscription below).
+      const cancelReason = typeof req.body?.reason === "string" ? req.body.reason : "";
+      const safety = await validateContentSafeAsync(cancelReason, "subscriptionCancelReason", { userId });
+      if (!safety.safe && safety.violation) {
+        await recordViolation(userId, safety.violation.type, safety.violation.severity);
+        return res.status(400).json(contentViolationResponse(safety.violation).body);
       }
 
       await subscriptionService.cancelSubscription(subscription.id, req.body.reason);

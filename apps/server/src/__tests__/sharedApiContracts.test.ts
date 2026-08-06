@@ -52,8 +52,8 @@ describe('shared API coupon normalization', () => {
       {
         id: 'monthly-plan',
         planType: 'monthly',
-        name: '月度活动礼包',
-        nameEn: 'Monthly Joy Bundle',
+        name: '悦聚月卡',
+        nameEn: 'YueJu Monthly',
         price: '128',
         originalPrice: '168',
         durationDays: '30',
@@ -62,7 +62,7 @@ describe('shared API coupon normalization', () => {
       {
         id: 'vip-quarterly-plan',
         planType: 'vip_quarterly',
-        displayName: '季度活动礼包',
+        displayName: '悦聚季卡',
         price: 268,
         isFeatured: true,
       },
@@ -80,8 +80,8 @@ describe('shared API coupon normalization', () => {
       {
         id: 'monthly-plan',
         planType: 'monthly',
-        displayName: '月度活动礼包',
-        displayNameEn: 'Monthly Joy Bundle',
+        displayName: '悦聚月卡',
+        displayNameEn: 'YueJu Monthly',
         description: undefined,
         price: 128,
         originalPrice: 168,
@@ -92,7 +92,7 @@ describe('shared API coupon normalization', () => {
       {
         id: 'vip-quarterly-plan',
         planType: 'vip_quarterly',
-        displayName: '季度活动礼包',
+        displayName: '悦聚季卡',
         displayNameEn: undefined,
         description: undefined,
         price: 268,
