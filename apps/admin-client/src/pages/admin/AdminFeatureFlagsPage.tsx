@@ -23,7 +23,7 @@ interface FeatureFlagItem {
   updatedBy: string | null;
 }
 
-const DANGEROUS_FLAGS = ["onboardingForceSkip", "socialIcebreakerClientForceEnd", "flashShenzhenLocationGateEnabled", "flashTaskRetryTestEnabled"];
+const DANGEROUS_FLAGS = ["onboardingForceSkip", "socialIcebreakerClientForceEnd", "flashShenzhenLocationGateEnabled", "flashTaskRetryTestEnabled", "flashAnyLocationArrivalTestEnabled"];
 
 export default function AdminFeatureFlagsPage() {
   const { toast } = useToast();
@@ -121,6 +121,7 @@ export default function AdminFeatureFlagsPage() {
   };
 
   const flagLabels: Record<string, string> = {
+    flashAnyLocationArrivalTestEnabled: "街头盲盒：任意地点到达测试",
     flashTaskRetryTestEnabled: "街头盲盒：允许同任务反复测试",
     restartOnboarding: "允许用户重启 onboarding",
     smartProfession: "智能职业理解 (SMART_PROFESSION_V1)",
@@ -135,6 +136,7 @@ export default function AdminFeatureFlagsPage() {
   };
 
   const flagDescriptions: Record<string, string> = {
+    flashAnyLocationArrivalTestEnabled: "仅非生产环境生效。开启后，测试用户可在任意有效位置完成 NPC 到达、任务到达与当前相遇交付，完整体验街头盲盒链路；生产环境始终强制关闭。",
     flashTaskRetryTestEnabled: "仅非生产环境生效。开启后，测试用户可在任务进行页或反馈页直接从头复测同一任务，不必先走到最终交付。",
     restartOnboarding: "开启后，已完成 onboarding 的用户可在设置中重置进度",
     smartProfession: "开启后，用户使用自由文本输入职业时会触发 AI 分类",

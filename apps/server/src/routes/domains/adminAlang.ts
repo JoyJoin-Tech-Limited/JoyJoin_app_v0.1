@@ -9,7 +9,7 @@ import {
   type FlashTaskSeed,
 } from "@shared/alang/flashCatalog";
 import { isDestinationFreeFlashInvitation } from "@shared/alang/flashInvitationCatalog";
-import { featureFlags, type FlashAvailabilityWindow, type FlashFeedbackPrompt } from "@shared/schema";
+import type { FlashAvailabilityWindow, FlashFeedbackPrompt } from "@shared/schema";
 
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { db } from "../../db";
@@ -17,7 +17,6 @@ import { logAdminAudit, type AdminAuditAction } from "../../lib/adminAuditLogger
 import { getActingAdminId } from "../../lib/getActingAdminId";
 import { isCanonicalFlashNpcSlug, matchesCanonicalFlashNpcWeekdays } from "../../lib/flashNpcPolicy";
 import { logger } from "../../lib/logger";
-import { getFeatureFlag, refreshFeatureFlag } from "../../lib/featureFlags";
 import {
   reverseGeocodeCoordinate,
   TencentMapValidationError,
@@ -727,48 +726,6 @@ export function registerAdminAlangRoutes(app: Express): void {
       });
     } catch (error) {
       routeFailure(req, res, "overview failed", error);
-    }
-  });
-
-  app.get("/api/admin/alang/test-arrival", requireAdmin, async (_req, res) => {
-    const available = (process.env.APP_MODE ?? "production") !== "production";
-    const configured = await getFeatureFlag("flashAnyLocationArrivalTestEnabled", false);
-    res.json({ available, enabled: available && configured });
-  });
-
-  app.put("/api/admin/alang/test-arrival", requireAdmin, requireOperatorOrAbove, async (req, res) => {
-    const parsed = z.object({ enabled: z.boolean() }).strict().safeParse(req.body);
-    if (!parsed.success) return void validationFailure(res, parsed.error);
-    if ((process.env.APP_MODE ?? "production") === "production") {
-      return void res.status(403).json({
-        code: "FLASH_TEST_ARRIVAL_PRODUCTION_FORBIDDEN",
-        message: "生产环境不允许跳过实际到达校验",
-      });
-    }
-    try {
-      const key = "flashAnyLocationArrivalTestEnabled";
-      const before = await getFeatureFlag(key, false);
-      const adminId = getActingAdminId(req);
-      await db.insert(featureFlags).values({
-        key,
-        value: String(parsed.data.enabled),
-        description: "街头盲盒非生产环境任意地点到达测试",
-        updatedBy: adminId,
-      }).onConflictDoUpdate({
-        target: featureFlags.key,
-        set: {
-          value: String(parsed.data.enabled),
-          description: "街头盲盒非生产环境任意地点到达测试",
-          updatedAt: new Date(),
-          updatedBy: adminId,
-        },
-      });
-      await refreshFeatureFlag(key);
-      audit(req, "FEATURE_FLAG_UPDATED", "feature_flag", key,
-        { enabled: before }, { enabled: parsed.data.enabled });
-      res.json({ available: true, enabled: parsed.data.enabled });
-    } catch (error) {
-      routeFailure(req, res, "test arrival toggle failed", error);
     }
   });
 
