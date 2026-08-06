@@ -42,19 +42,21 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Probe the GHCR read token via env (secrets are not available in `if`).
-      # While GHCR_TOKEN exists, the CVM pulls images directly and the rsync
-      # tar bundle (below) is skipped.
+      # GHCR is used only while STAGING_GHCR_ENABLED (repo variable) is "true"
+      # AND GHCR_TOKEN exists. Set STAGING_GHCR_ENABLED=false to ride the
+      # reliable rsync bundle path (e.g. during GHCR pull flakiness from the CVM).
       - name: Determine staging image delivery path
         id: delivery-mode
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          STAGING_GHCR_ENABLED: ${{ vars.STAGING_GHCR_ENABLED }}
         run: |
-          if [ -n "${GHCR_TOKEN:-}" ]; then
+          if [ "${STAGING_GHCR_ENABLED:-true}" = "true" ] && [ -n "${GHCR_TOKEN:-}" ]; then
             echo "ghcr_active=true" >> "$GITHUB_OUTPUT"
-            echo "GHCR_TOKEN present: CVM will pull staging images from GHCR."
+            echo "GHCR enabled: CVM will pull staging images from GHCR."
           else
             echo "ghcr_active=false" >> "$GITHUB_OUTPUT"
-            echo "GHCR_TOKEN absent: falling back to the rsync image bundle."
+            echo "GHCR disabled or token absent: falling back to the rsync image bundle."
           fi
 
       - name: Build and push staging API image
@@ -160,8 +162,9 @@ jobs:
         id: delivery-mode
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          STAGING_GHCR_ENABLED: ${{ vars.STAGING_GHCR_ENABLED }}
         run: |
-          if [ -n "${GHCR_TOKEN:-}" ]; then
+          if [ "${STAGING_GHCR_ENABLED:-true}" = "true" ] && [ -n "${GHCR_TOKEN:-}" ]; then
             echo "ghcr_active=true" >> "$GITHUB_OUTPUT"
           else
             echo "ghcr_active=false" >> "$GITHUB_OUTPUT"
