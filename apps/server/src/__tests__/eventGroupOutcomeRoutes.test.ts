@@ -12,6 +12,8 @@ const routeMocks = vi.hoisted(() => {
     getGroupMembershipContext: vi.fn(),
     upsertEventGroupOutcome: vi.fn(),
     deriveMatchHistoryAndRefreshCalibration: vi.fn(),
+    validateContentSafeAsync: vi.fn(),
+    recordViolation: vi.fn(),
     logAITrace: vi.fn(),
     loggerChild: vi.fn(() => ({
       info: loggerInfo,
@@ -31,6 +33,15 @@ vi.mock("../repositories/eventGroupOutcomesRepo", () => ({
 
 vi.mock("../services/matchHistoryDerivation", () => ({
   deriveMatchHistoryAndRefreshCalibration: routeMocks.deriveMatchHistoryAndRefreshCalibration,
+}));
+
+vi.mock("../lib/contentSafety", () => ({
+  validateContentSafeAsync: routeMocks.validateContentSafeAsync,
+  contentViolationResponse: vi.fn(),
+}));
+
+vi.mock("../abuseDetection", () => ({
+  recordViolation: routeMocks.recordViolation,
 }));
 
 vi.mock("../lib/aiTraceLogger", () => ({
@@ -105,6 +116,9 @@ describe("event group outcome routes", () => {
       insertedCount: 1,
       updatedCount: 0,
     });
+    routeMocks.validateContentSafeAsync.mockReset();
+    routeMocks.validateContentSafeAsync.mockResolvedValue({ safe: true });
+    routeMocks.recordViolation.mockReset();
     routeMocks.logAITrace.mockReset();
     routeMocks.loggerChild.mockClear();
     routeMocks.loggerInfo.mockClear();
