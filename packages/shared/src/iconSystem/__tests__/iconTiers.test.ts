@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CDN_ICON_TIERS } from '../emojiToIconMap.js'
+import { CDN_ICON_TIERS, getIconMapping } from '../emojiToIconMap.js'
 
 describe('icon tier invariants', () => {
   it('keeps intent and category icons bundled locally (not CDN)', () => {
@@ -17,6 +17,14 @@ describe('icon tier invariants', () => {
     const localTiers = ['mood', 'status', 'intent', 'category', 'semantic']
     for (const tier of localTiers) {
       expect(CDN_ICON_TIERS.has(tier as any)).toBe(false)
+    }
+  })
+
+  it('maps server-provided icebreaker topic emojis to JoyJoin icons', () => {
+    for (const emoji of ['🐘', '🛡️', '🍻', '📰']) {
+      const mapping = getIconMapping(emoji)
+      expect(mapping, `${emoji} should not fall back to native emoji`).toBeDefined()
+      expect(mapping?.assetKey).toBeTruthy()
     }
   })
 })

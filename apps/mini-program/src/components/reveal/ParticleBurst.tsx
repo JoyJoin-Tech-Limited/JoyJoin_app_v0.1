@@ -181,7 +181,9 @@ export default function ParticleBurst({
   const isReduced = reducedMotion ?? REDUCED_MOTION
   const canvasIdRef = useRef(`particle-burst-${Math.random().toString(36).slice(2, 9)}`)
   const rafRef = useRef<number | undefined>(undefined)
+  const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const particlesRef = useRef<Particle[]>([])
+  const [isActive, setIsActive] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
   const emojiTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -198,10 +200,23 @@ export default function ParticleBurst({
     const canvasId = canvasIdRef.current
     const ctx = Taro.createCanvasContext(canvasId)
     if (!ctx) return
+    setIsActive(true)
 
     // WeChat canvas dimensions are in px; use fixed logical size
     const W = 300
     const H = 300
+
+    const finish = () => {
+      ctx.clearRect(0, 0, W, H)
+      ctx.draw()
+      particlesRef.current = []
+      rafRef.current = undefined
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current)
+        safetyTimeoutRef.current = undefined
+      }
+      setIsActive(false)
+    }
 
     const originX = origin.x * W
     const originY = origin.y * H
@@ -215,16 +230,22 @@ export default function ParticleBurst({
       if (alive) {
         rafRef.current = RAF(loop)
       } else {
-        // Clear canvas after animation ends
-        ctx.clearRect(0, 0, W, H)
-        ctx.draw()
-        rafRef.current = undefined
+        finish()
       }
     }
 
     if (rafRef.current !== undefined) {
       CAF(rafRef.current)
     }
+    if (safetyTimeoutRef.current) {
+      clearTimeout(safetyTimeoutRef.current)
+    }
+    safetyTimeoutRef.current = setTimeout(() => {
+      if (rafRef.current !== undefined) {
+        CAF(rafRef.current)
+      }
+      finish()
+    }, 2200)
     rafRef.current = RAF(loop)
   }, [type, clampedCount, origin.x, origin.y, spotlightColor, isReduced])
 
@@ -241,6 +262,11 @@ export default function ParticleBurst({
         clearTimeout(emojiTimeoutRef.current)
         emojiTimeoutRef.current = undefined
       }
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current)
+        safetyTimeoutRef.current = undefined
+      }
+      setIsActive(false)
     }
   }, [trigger, runBurst])
 
@@ -257,7 +283,7 @@ export default function ParticleBurst({
   }
 
   return (
-    <View className='reveal-particle-burst'>
+    <View className={`reveal-particle-burst ${isActive ? 'reveal-particle-burst--active' : 'reveal-particle-burst--idle'}`}>
       <Canvas
         canvasId={canvasIdRef.current}
         className='reveal-particle-burst__canvas'

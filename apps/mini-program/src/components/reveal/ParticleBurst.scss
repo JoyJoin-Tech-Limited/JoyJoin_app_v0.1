@@ -10,6 +10,16 @@
   justify-content: center;
   pointer-events: none;
 
+  &--idle {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  &--active {
+    opacity: 1;
+    visibility: visible;
+  }
+
   &__canvas {
     width: 300rpx;
     height: 300rpx;

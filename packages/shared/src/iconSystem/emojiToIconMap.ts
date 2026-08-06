@@ -112,6 +112,17 @@ export const PHASE_EMBLEM_MAP: Record<string, IconMapping> = {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// ICEBREAKER DYNAMIC EMOJIS — Server-provided topic/challenge metadata
+// ═══════════════════════════════════════════════════════════════════
+
+export const ICEBREAKER_DYNAMIC_ICON_MAP: Record<string, IconMapping> = {
+  '🐘': { assetKey: 'reveal-exact-archetype', tier: 'reveal', size: 48, fallbackEmoji: '🐘' },
+  '🛡️': { assetKey: 'icon-lock', tier: 'ui', size: 48, fallbackEmoji: '🛡️', tint: '#8B5CF6' },
+  '🍻': { assetKey: 'intent-fun', tier: 'intent', size: 48, fallbackEmoji: '🍻' },
+  '📰': { assetKey: 'phase-topic-card', tier: 'phase', size: 48, fallbackEmoji: '📰' },
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // CATEGORY ICONS — Category tier (interest category labels)
 // ═══════════════════════════════════════════════════════════════════
 
@@ -237,6 +248,7 @@ export const EMOJI_TO_ICON_MAP: Record<string, IconMapping> = {
   ...MOOD_ICON_MAP,
   ...CHEMISTRY_BADGE_MAP,
   ...PHASE_EMBLEM_MAP,
+  ...ICEBREAKER_DYNAMIC_ICON_MAP,
   ...STATUS_ICON_MAP,
 }
 
