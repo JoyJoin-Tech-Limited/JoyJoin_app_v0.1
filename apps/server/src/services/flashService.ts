@@ -331,6 +331,7 @@ export async function locateFlashAppearance(input: {
   longitude: number;
   contextDistrict: string;
   now?: Date;
+  forceArrivalForTesting?: boolean;
 }): Promise<FlashLocateResponse> {
   const now = input.now ?? new Date();
   const appearance = await getLiveFlashAppearance(input.appearanceId, now);
@@ -346,7 +347,7 @@ export async function locateFlashAppearance(input: {
     throw new FlashServiceError("FLASH_LOCATE_RATE_LIMITED", 429, "寻找得太频繁了，稍后再试");
   }
   const radarFrame = calculateFlashRadarFrame(input, appearance);
-  if (radarFrame.distanceMeters > FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS) {
+  if (!input.forceArrivalForTesting && radarFrame.distanceMeters > FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS) {
     return {
       appearanceId: input.appearanceId,
       signal: "searching",
@@ -365,8 +366,14 @@ export async function locateFlashAppearance(input: {
     expiresAt: new Date(now.getTime() + FLASH_ENCOUNTER_TTL_HOURS * 60 * 60 * 1000),
   });
   if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 409, "这次相遇没有解锁成功");
-  const pendingCandidate = await getPendingFlashDelivery(input.userId, appearance.npcId, appearance.npcSlug);
-  const pendingDelivery = isLaterFlashDeliveryEncounter(pendingCandidate, encounter)
+  const pendingCandidate = await getPendingFlashDelivery(
+    input.userId,
+    appearance.npcId,
+    appearance.npcSlug,
+    undefined,
+    input.forceArrivalForTesting ? encounter.id : undefined,
+  );
+  const pendingDelivery = (input.forceArrivalForTesting || isLaterFlashDeliveryEncounter(pendingCandidate, encounter))
     ? pendingCandidate
     : null;
   return {
@@ -552,6 +559,7 @@ export async function getFlashEncounter(input: {
   encounterId: string;
   userId: string;
   now?: Date;
+  allowSameEncounterDeliveryForTesting?: boolean;
 }): Promise<FlashEncounterResponse> {
   const now = input.now ?? new Date();
   await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
@@ -598,8 +606,14 @@ export async function getFlashEncounter(input: {
     if (!refreshed) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 404, "没有找到这次相遇");
     encounter = refreshed;
   }
-  const pendingCandidate = await getPendingFlashDelivery(input.userId, encounter.npcId, encounter.npcSlug);
-  const pendingDelivery = isLaterFlashDeliveryEncounter(pendingCandidate, encounter)
+  const pendingCandidate = await getPendingFlashDelivery(
+    input.userId,
+    encounter.npcId,
+    encounter.npcSlug,
+    undefined,
+    input.allowSameEncounterDeliveryForTesting ? encounter.id : undefined,
+  );
+  const pendingDelivery = (input.allowSameEncounterDeliveryForTesting || isLaterFlashDeliveryEncounter(pendingCandidate, encounter))
     ? pendingCandidate
     : null;
   const questionRow = encounter.status === "dialogue"
@@ -791,6 +805,7 @@ export async function arriveAtFlashAssignment(input: {
   latitude: number;
   longitude: number;
   now?: Date;
+  forceArrivalForTesting?: boolean;
 }): Promise<FlashAssignmentResponse & { distanceMeters: number; arrived: boolean }> {
   const now = input.now ?? new Date();
   const assignment = await getFlashAssignmentOwned(input.assignmentId, input.userId, now);
@@ -800,7 +815,7 @@ export async function arriveAtFlashAssignment(input: {
   const target = (assignment.contentSnapshot as FlashTaskSnapshot).destination;
   if (!target) throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这个邀请不需要定位确认");
   const distanceMeters = alangHaversineDistanceMeters(input, target);
-  if (distanceMeters > FLASH_ARRIVAL_RADIUS_METERS) {
+  if (!input.forceArrivalForTesting && distanceMeters > FLASH_ARRIVAL_RADIUS_METERS) {
     return { ...assignmentResponse(assignment), distanceMeters: Math.round(distanceMeters), arrived: false };
   }
   const arrived = await markFlashAssignmentArrived(input.assignmentId, input.userId, now);
@@ -848,12 +863,19 @@ export async function deliverFlashTaskToNpc(input: {
   userId: string;
   answers?: Array<{ promptId: string; optionId: string }>;
   now?: Date;
+  allowSameEncounterDeliveryForTesting?: boolean;
 }): Promise<FlashEncounterResponse> {
   const now = input.now ?? new Date();
   const encounter = await getFlashEncounterOwned(input.encounterId, input.userId);
   if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 404, "没有找到这次相遇");
   if (encounter.expiresAt <= now) throw new FlashServiceError("FLASH_ENCOUNTER_EXPIRED", 410, "这次对话已经结束了");
-  const pending = await getPendingFlashDelivery(input.userId, encounter.npcId, encounter.npcSlug);
+  const pending = await getPendingFlashDelivery(
+    input.userId,
+    encounter.npcId,
+    encounter.npcSlug,
+    undefined,
+    input.allowSameEncounterDeliveryForTesting ? encounter.id : undefined,
+  );
   if (!pending || pending.id !== input.assignmentId) {
     throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这件委托现在不能交付");
   }
@@ -881,9 +903,15 @@ export async function deliverFlashTaskToNpc(input: {
     deliveryEncounterUnlockedAt: encounter.unlockedAt,
     now,
     privateReplyDeleteAfter: flashPrivateReplyDeliveryDeadline(now),
+    allowSameEncounterForTesting: input.allowSameEncounterDeliveryForTesting,
   });
   if (!delivered) throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这件委托已经交付过了");
-  const response = await getFlashEncounter({ encounterId: input.encounterId, userId: input.userId, now });
+  const response = await getFlashEncounter({
+    encounterId: input.encounterId,
+    userId: input.userId,
+    now,
+    allowSameEncounterDeliveryForTesting: input.allowSameEncounterDeliveryForTesting,
+  });
   const snapshot = pending.contentSnapshot as FlashTaskSnapshot;
   return {
     ...response,

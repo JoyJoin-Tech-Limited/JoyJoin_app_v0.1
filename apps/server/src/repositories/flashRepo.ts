@@ -1471,12 +1471,14 @@ export async function getPendingFlashDelivery(
   npcId: string,
   npcSlug?: string,
   executor: DbExecutor = db,
+  sourceEncounterIdForTesting?: string,
 ) {
   const rows = await executor
     .select({
       id: flashTaskAssignments.id,
       contentSnapshot: flashTaskAssignments.contentSnapshot,
       feedbackAnswers: flashTaskAssignments.feedbackAnswers,
+      encounterId: flashTaskAssignments.encounterId,
     })
     .from(flashTaskAssignments)
     .where(and(
@@ -1485,7 +1487,9 @@ export async function getPendingFlashDelivery(
     ))
     .orderBy(asc(flashTaskAssignments.createdAt))
     .limit(10);
-  const row = rows.find((candidate: any) => {
+  const row = rows.find((candidate: any) =>
+    sourceEncounterIdForTesting && candidate.encounterId === sourceEncounterIdForTesting
+  ) ?? rows.find((candidate: any) => {
     const snapshot = candidate.contentSnapshot as FlashTaskSnapshot;
     if (snapshot.invitationType !== "life_invitation" && snapshot.invitationType !== "npc_message") {
       return false;
@@ -1739,6 +1743,7 @@ export async function deliverFlashAssignment(input: {
   deliveryEncounterUnlockedAt: Date;
   now: Date;
   privateReplyDeleteAfter: Date;
+  allowSameEncounterForTesting?: boolean;
 }) {
   return db.transaction(async (tx: DbExecutor) => {
     const owned = await getFlashAssignmentOwned(input.assignmentId, input.userId, input.now, tx);
@@ -1751,12 +1756,12 @@ export async function deliverFlashAssignment(input: {
     const atMessageSource = isNpcMessage
       && Boolean(targetOutcome)
       && snapshot.npcSlug === input.npcSlug;
-    const canDeliverHere = isNpcMessage
+    const canDeliverHere = input.allowSameEncounterForTesting || (isNpcMessage
       ? atMessageTarget || atMessageSource
-      : owned?.npcId === input.npcId;
+      : owned?.npcId === input.npcId);
     if (!owned || !canDeliverHere) return null;
 
-    if (atMessageTarget) {
+    if (!input.allowSameEncounterForTesting && atMessageTarget) {
       const optionId = input.answers?.[0]?.optionId;
       if (
         input.answers?.length !== 1
@@ -1777,7 +1782,7 @@ export async function deliverFlashAssignment(input: {
       return recorded ? { ...recorded, outcome: "target_recorded" as const } : null;
     }
 
-    if (atMessageSource && targetOutcome === "skip_message") {
+    if (!input.allowSameEncounterForTesting && atMessageSource && targetOutcome === "skip_message") {
       const optionId = input.answers?.[0]?.optionId;
       if (
         input.answers?.length !== 1
@@ -1811,7 +1816,7 @@ export async function deliverFlashAssignment(input: {
       return null;
     }
 
-    if (atMessageSource && (
+    if (!input.allowSameEncounterForTesting && atMessageSource && (
       input.answers?.length !== 1
       || input.answers[0]?.promptId !== FLASH_NPC_MESSAGE_SOURCE_DELIVERED_PROMPT.id
       || input.answers[0]?.optionId !== "report_delivered"
@@ -1833,8 +1838,10 @@ export async function deliverFlashAssignment(input: {
       eq(flashTaskAssignments.id, input.assignmentId),
       eq(flashTaskAssignments.userId, input.userId),
       inArray(flashTaskAssignments.status, ["accepted", "ready_to_deliver"]),
-      ne(flashTaskAssignments.encounterId, input.encounterId),
-      isNpcMessage
+      input.allowSameEncounterForTesting
+        ? undefined
+        : ne(flashTaskAssignments.encounterId, input.encounterId),
+      isNpcMessage && !input.allowSameEncounterForTesting
         ? and(
           isNotNull(flashTaskAssignments.feedbackSubmittedAt),
           lte(flashTaskAssignments.feedbackSubmittedAt, input.deliveryEncounterUnlockedAt),

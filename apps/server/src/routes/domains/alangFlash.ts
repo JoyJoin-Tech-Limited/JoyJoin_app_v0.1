@@ -128,6 +128,11 @@ async function shouldEnforceShenzhenBoundary(): Promise<boolean> {
   return getFeatureFlag("flashShenzhenLocationGateEnabled", true);
 }
 
+async function isAnyLocationArrivalTestEnabled(): Promise<boolean> {
+  if ((process.env.APP_MODE ?? "production") === "production") return false;
+  return getFeatureFlag("flashAnyLocationArrivalTestEnabled", false);
+}
+
 function sendCoordinateError(res: Response, code: "FLASH_LOCATION_REQUIRED" | "FLASH_OUTSIDE_SHENZHEN" | "FLASH_LOCATION_UNAVAILABLE") {
   const status = code === "FLASH_OUTSIDE_SHENZHEN" ? 403 : code === "FLASH_LOCATION_UNAVAILABLE" ? 503 : 400;
   return res.status(status).json({
@@ -166,7 +171,11 @@ export function registerAlangFlashRoutes(app: Express): void {
     if (!authenticatedUserId) return;
     const appearanceId = idParamSchema.safeParse(req.params.id);
     if (!appearanceId.success) return res.status(400).json({ code: "FLASH_APPEARANCE_NOT_FOUND", error: "无效的街头盲盒编号" });
-    const coordinate = await parseShenzhenCoordinate(req.body, await shouldEnforceShenzhenBoundary());
+    const forceArrivalForTesting = await isAnyLocationArrivalTestEnabled();
+    const coordinate = await parseShenzhenCoordinate(
+      req.body,
+      forceArrivalForTesting ? false : await shouldEnforceShenzhenBoundary(),
+    );
     if (!coordinate.success) return sendCoordinateError(res, coordinate.code);
     try {
       return res.json(await locateFlashAppearance({
@@ -175,6 +184,7 @@ export function registerAlangFlashRoutes(app: Express): void {
         latitude: coordinate.data.latitude,
         longitude: coordinate.data.longitude,
         contextDistrict: coordinate.data.district,
+        forceArrivalForTesting,
       }));
     } catch (error) {
       // Never log the request body or raw coordinate.
@@ -189,7 +199,11 @@ export function registerAlangFlashRoutes(app: Express): void {
     const encounterId = idParamSchema.safeParse(req.params.id);
     if (!encounterId.success) return res.status(404).json({ code: "FLASH_ENCOUNTER_NOT_FOUND", error: "没有找到这次相遇" });
     try {
-      return res.json(await getFlashEncounter({ encounterId: encounterId.data, userId: authenticatedUserId }));
+      return res.json(await getFlashEncounter({
+        encounterId: encounterId.data,
+        userId: authenticatedUserId,
+        allowSameEncounterDeliveryForTesting: await isAnyLocationArrivalTestEnabled(),
+      }));
     } catch (error) {
       return sendFlashError(res, error);
     }
@@ -259,6 +273,7 @@ export function registerAlangFlashRoutes(app: Express): void {
         assignmentId: body.data.assignmentId,
         userId: authenticatedUserId,
         answers: body.data.answers,
+        allowSameEncounterDeliveryForTesting: await isAnyLocationArrivalTestEnabled(),
       }));
     } catch (error) {
       return sendFlashError(res, error);
@@ -282,7 +297,11 @@ export function registerAlangFlashRoutes(app: Express): void {
     if (!authenticatedUserId) return;
     const assignmentId = idParamSchema.safeParse(req.params.id);
     if (!assignmentId.success) return res.status(404).json({ code: "FLASH_TASK_NOT_FOUND", error: "没有找到这个委托" });
-    const coordinate = await parseShenzhenCoordinate(req.body, await shouldEnforceShenzhenBoundary());
+    const forceArrivalForTesting = await isAnyLocationArrivalTestEnabled();
+    const coordinate = await parseShenzhenCoordinate(
+      req.body,
+      forceArrivalForTesting ? false : await shouldEnforceShenzhenBoundary(),
+    );
     if (!coordinate.success) return sendCoordinateError(res, coordinate.code);
     try {
       return res.json(await arriveAtFlashAssignment({
@@ -290,6 +309,7 @@ export function registerAlangFlashRoutes(app: Express): void {
         userId: authenticatedUserId,
         latitude: coordinate.data.latitude,
         longitude: coordinate.data.longitude,
+        forceArrivalForTesting,
       }));
     } catch (error) {
       // Never log the request body or raw coordinate.

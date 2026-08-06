@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { BookOpenCheck, CalendarClock, CheckCircle2, MapPinned, RefreshCw, Store, UsersRound } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { BookOpenCheck, CalendarClock, CheckCircle2, MapPinned, RefreshCw, ShieldCheck, Store, UsersRound } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FlashScheduleTab } from "@/components/admin/flash/FlashScheduleTab";
 import { FlashEquipmentRewardsPanel } from "@/components/admin/flash/FlashEquipmentRewardsPanel";
@@ -15,6 +16,7 @@ import {
   FlashTaskTemplatesPanel,
 } from "@/components/admin/flash/FlashCatalogPanels";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { useToast } from "@/hooks/ui/use-toast";
 import {
   type FlashEncounterLocation,
   type FlashNpc,
@@ -25,7 +27,7 @@ import {
   getShenzhenDatePair,
   unpackFlashCollection,
 } from "@/lib/flashAdmin";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 type CollectionResponse<T> =
   | T[]
@@ -33,6 +35,7 @@ type CollectionResponse<T> =
 
 export default function AdminFlashPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const canWrite = canWriteFlashAdmin(user?.adminRole);
   const datePair = getShenzhenDatePair();
 
@@ -46,6 +49,27 @@ export default function AdminFlashPage() {
   });
   const destinationsQuery = useQuery<CollectionResponse<FlashTaskDestination>>({
     queryKey: ["/api/admin/alang/task-destinations"],
+  });
+  const testArrivalQuery = useQuery<{ available: boolean; enabled: boolean }>({
+    queryKey: ["/api/admin/alang/test-arrival"],
+  });
+  const testArrivalMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const response = await apiRequest("PUT", "/api/admin/alang/test-arrival", { enabled });
+      return response.json() as Promise<{ available: boolean; enabled: boolean }>;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["/api/admin/alang/test-arrival"], data);
+      toast({
+        title: data.enabled ? "任意地点测试已开启" : "实际到达校验已恢复",
+        description: data.enabled
+          ? "小程序可在当前位置直接判定到达，完整体验相遇与任务链路。"
+          : "小程序将重新按实际距离判断是否到达。",
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "测试开关更新失败", description: error.message, variant: "destructive" });
+    },
   });
 
   const npcs = unpackFlashCollection(npcsQuery.data);
@@ -128,6 +152,51 @@ export default function AdminFlashPage() {
           <AlertDescription>viewer 可以检查排班与内容，但不能生成、发布、审核或修改。</AlertDescription>
         </Alert>
       )}
+
+      <Card className="border-primary/20 bg-primary/[0.03]">
+        <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="rounded-xl bg-primary/10 p-2 text-primary">
+              <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="font-semibold">任意地点到达测试</p>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                开启后，小程序在任意位置都可直接显示已到达，并继续体验 NPC 对话、接取任务、到达反馈和后续交付。仅非生产环境生效。
+              </p>
+              {testArrivalQuery.data?.available === false ? (
+                <p className="mt-2 text-xs font-medium text-muted-foreground">当前为生产环境，此测试能力已被服务端强制关闭。</p>
+              ) : testArrivalQuery.data?.enabled ? (
+                <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-300">测试模式正在生效，请完成体验后及时关闭。</p>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 self-end sm:self-center">
+            <span className="text-sm font-medium">
+              {testArrivalQuery.isLoading
+                ? "读取中"
+                : testArrivalQuery.data?.available === false
+                  ? "生产环境不可用"
+                  : testArrivalQuery.data?.enabled ? "已开启" : "已关闭"}
+            </span>
+            <Switch
+              checked={testArrivalQuery.data?.enabled ?? false}
+              disabled={
+                !canWrite
+                || testArrivalQuery.isLoading
+                || testArrivalMutation.isPending
+                || testArrivalQuery.data?.available === false
+              }
+              onCheckedChange={(enabled) => {
+                if (enabled && !window.confirm("开启后，所有当前测试用户都可在任意地点直接判定到达。确认开启吗？")) return;
+                testArrivalMutation.mutate(enabled);
+              }}
+              aria-label="任意地点到达测试"
+              data-testid="switch-flash-any-location-arrival-test"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {readiness?.ready ? (
         <Alert className="border-emerald-200 bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/20">

@@ -97,6 +97,8 @@ describe("formal Flash routes", () => {
     mocks.getHome.mockResolvedValue({ canonicalScreen: "home", onlineNpcs: [], myTasks: [] });
     mocks.locate.mockResolvedValue({ canonicalScreen: "radar", arrived: false });
     mocks.arrive.mockResolvedValue({ canonicalScreen: "task", arrived: false });
+    mocks.getEncounter.mockResolvedValue({ canonicalScreen: "dialogue" });
+    mocks.deliver.mockResolvedValue({ canonicalScreen: "completed" });
   });
 
   afterEach(() => {
@@ -195,6 +197,47 @@ describe("formal Flash routes", () => {
       expect(response.status).toBe(403);
     });
     expect(mocks.getHome).not.toHaveBeenCalled();
+  });
+
+  it("passes the non-production any-location override through the complete arrival and delivery chain", async () => {
+    vi.stubEnv("APP_MODE", "staging");
+    mocks.getFeatureFlag.mockImplementation(async (key: string) =>
+      key === "alangEnabled" || key === "flashAnyLocationArrivalTestEnabled"
+    );
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl);
+      const headers = { Cookie: cookie, "Content-Type": "application/json" };
+      const remoteCoordinate = { latitude: 31.2304, longitude: 121.4737, coordinateSystem: "gcj02" };
+      expect((await fetch(`${baseUrl}/api/alang/flash/appearances/${appearanceId}/locate`, {
+        method: "POST", headers, body: JSON.stringify(remoteCoordinate),
+      })).status).toBe(200);
+      expect((await fetch(`${baseUrl}/api/alang/flash/assignments/${assignmentId}/arrive`, {
+        method: "POST", headers, body: JSON.stringify(remoteCoordinate),
+      })).status).toBe(200);
+      expect((await fetch(`${baseUrl}/api/alang/flash/encounters/${appearanceId}`, { headers })).status).toBe(200);
+      expect((await fetch(`${baseUrl}/api/alang/flash/encounters/${appearanceId}/deliver`, {
+        method: "POST", headers, body: JSON.stringify({ assignmentId }),
+      })).status).toBe(200);
+    });
+    expect(mocks.locate).toHaveBeenCalledWith(expect.objectContaining({ forceArrivalForTesting: true }));
+    expect(mocks.arrive).toHaveBeenCalledWith(expect.objectContaining({ forceArrivalForTesting: true }));
+    expect(mocks.getEncounter).toHaveBeenCalledWith(expect.objectContaining({ allowSameEncounterDeliveryForTesting: true }));
+    expect(mocks.deliver).toHaveBeenCalledWith(expect.objectContaining({ allowSameEncounterDeliveryForTesting: true }));
+  });
+
+  it("never enables the any-location arrival override in production", async () => {
+    vi.stubEnv("APP_MODE", "production");
+    mocks.getFeatureFlag.mockResolvedValue(true);
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl);
+      const response = await fetch(`${baseUrl}/api/alang/flash/appearances/${appearanceId}/locate`, {
+        method: "POST",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify(validCoordinate),
+      });
+      expect(response.status).toBe(200);
+    });
+    expect(mocks.locate).toHaveBeenCalledWith(expect.objectContaining({ forceArrivalForTesting: false }));
   });
 
   it("rejects Hong Kong New Territories points that fall inside the old rectangle", async () => {
