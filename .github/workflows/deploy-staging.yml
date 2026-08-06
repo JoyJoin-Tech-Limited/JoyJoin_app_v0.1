@@ -184,10 +184,10 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
           STAGING_IMAGE_BUNDLE: ${{ runner.temp }}/joyjoin-staging-images.tar.gz
-          # GHCR delivery is active only when GHCR_TOKEN exists; otherwise the
-          # deploy falls back to the rsync bundle path below.
-          STAGING_API_IMAGE: ${{ secrets.GHCR_TOKEN != '' && format('ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:{0}', github.sha) || '' }}
-          STAGING_ADMIN_IMAGE: ${{ secrets.GHCR_TOKEN != '' && format('ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:{0}', github.sha) || '' }}
+          # Keep the selected delivery mode consistent through transfer and
+          # remote deployment; a token alone must not reactivate GHCR.
+          STAGING_API_IMAGE: ${{ steps.delivery-mode.outputs.ghcr_active == 'true' && format('ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:{0}', github.sha) || '' }}
+          STAGING_ADMIN_IMAGE: ${{ steps.delivery-mode.outputs.ghcr_active == 'true' && format('ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:{0}', github.sha) || '' }}
         run: |
           set -euo pipefail
 
@@ -749,11 +749,10 @@ jobs:
           TEST_PAYMENT_PRICE_IN_CENTS: 1
           DEPLOY_SOURCE_SHA: ${{ github.sha }}
           # Images are built off-host and delivered to the CVM either via GHCR
-          # (sha-tagged refs below + GHCR_TOKEN for the read-only pull) or,
-          # when GHCR_TOKEN is absent, as an rsync'd tar bundle (the deploy
-          # script falls back to it).
-          STAGING_API_IMAGE: ${{ secrets.GHCR_TOKEN != '' && format('ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:{0}', github.sha) || '' }}
-          STAGING_ADMIN_IMAGE: ${{ secrets.GHCR_TOKEN != '' && format('ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:{0}', github.sha) || '' }}
+          # (sha-tagged refs below + GHCR_TOKEN for the read-only pull) or as
+          # an rsync'd tar bundle when the selected delivery mode is disabled.
+          STAGING_API_IMAGE: ${{ steps.delivery-mode.outputs.ghcr_active == 'true' && format('ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:{0}', github.sha) || '' }}
+          STAGING_ADMIN_IMAGE: ${{ steps.delivery-mode.outputs.ghcr_active == 'true' && format('ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:{0}', github.sha) || '' }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         uses: appleboy/ssh-action@v1.0.3
         with:
