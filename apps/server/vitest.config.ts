@@ -17,6 +17,12 @@ export default defineConfig({
     exclude: ['node_modules', 'dist'],
     testTimeout: 15000,
     hookTimeout: 120000,
+    // Cap parallel forks: spawning one fork per core on dev machines (16+ cores)
+    // saturates the box and produces intermittent suite-wide timeouts (e.g.
+    // alangResetRoute/socialIcebreaker route assertions flipping status). CI
+    // runners expose <=4 cores, so this matches CI behaviour locally.
+    maxWorkers: 4,
+    minWorkers: 1,
     coverage: {
       reporter: ['text', 'json', 'html'],
     },
