@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  check,
   index,
   jsonb,
   pgTable,
@@ -1583,7 +1584,25 @@ export const contentFilterLogs = pgTable("content_filter_logs", {
   inputPreview: varchar("input_preview", { length: 200 }),
   source: varchar("source", { length: 128 }),
   createdAt: timestamp("created_at").defaultNow(),
-});
+
+  // Review overlay (S2 moderation queue) — additive nullable/default only, no backfill.
+  // Existing rows read 'pending' / false via column defaults.
+  reviewStatus: varchar("review_status", { length: 16 }).notNull().default("pending"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  missFlag: boolean("miss_flag").notNull().default(false),
+  reviewNote: text("review_note"),
+}, (table) => [
+  // Defense-in-depth DB CHECK; mirrors the DO-block in the 0073 migration so
+  // db:push / db:verify see no drift. Primary enforcement is the shared Zod
+  // union + TS union (repo varchar-not-pgEnum pattern).
+  check(
+    "content_filter_logs_review_status_check",
+    sql`${table.reviewStatus} IN ('pending','reviewed','dismissed','actioned')`,
+  ),
+  // Ops-queue query index (GET /api/admin/content-filter/logs filters by review_status).
+  index("idx_content_filter_logs_review_status").on(table.reviewStatus),
+]);
 
 // Content Management table - Unified table for all platform content
 export const contents = pgTable("contents", {

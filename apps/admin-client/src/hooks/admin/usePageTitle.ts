@@ -14,6 +14,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/admin/matching-reviews": "匹配审核",
   "/admin/feedback": "反馈管理",
   "/admin/moderation": "用户举报",
+  "/admin/content-filter": "内容审核日志",
   "/admin/interaction-logs": "连接日志",
   "/admin/insights": "数据洞察",
   "/admin/outcome-analytics": "Outcome 分析",

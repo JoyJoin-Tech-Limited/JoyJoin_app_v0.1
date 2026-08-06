@@ -43,3 +43,12 @@ export {
 } from './apiShell.js'
 
 export { type AdminUserDto, type AdminProfileCompleteness, getCanonicalDisplayName } from './api/adminUser.js'
+export {
+  ContentFilterReviewStatuses,
+  type ContentFilterReviewStatus,
+  contentFilterLogReviewSchema,
+  type ContentFilterLogReviewBody,
+  type AdminContentFilterLogRow,
+  type AdminContentFilterLogsQuery,
+  type AdminContentFilterLogReviewResponse,
+} from './api/adminContentFilter.js'

@@ -28,6 +28,7 @@ const AdminOutcomeAnalyticsPage = lazy(() => import("@/pages/admin/AdminOutcomeA
 const AdminIcebreakerAiFeedbackPage = lazy(() => import("@/pages/admin/AdminIcebreakerAiFeedbackPage"));
 const AdminContentPage = lazy(() => import("@/pages/admin/AdminContentPage"));
 const AdminModerationPage = lazy(() => import("@/pages/admin/AdminModerationPage"));
+const AdminContentFilterLogsPage = lazy(() => import("@/pages/admin/AdminContentFilterLogsPage"));
 const AdminMatchingLabPage = lazy(() => import("@/pages/admin/AdminMatchingLabPage"));
 const AdminNotificationsPage = lazy(() => import("@/pages/admin/AdminNotificationsPage"));
 const AdminReportsPage = lazy(() => import("@/pages/admin/AdminReportsPage"));
@@ -110,6 +111,7 @@ export default function AdminLayout() {
                 <Route path="/admin/content" component={AdminContentPage} />
                 <Route path="/admin/notifications" component={AdminNotificationsPage} />
                 <Route path="/admin/moderation" component={AdminModerationPage} />
+                <Route path="/admin/content-filter" component={AdminContentFilterLogsPage} />
                 <Route path="/admin/reports" component={AdminReportsPage} />
                 <Route path="/admin/interaction-logs" component={AdminInteractionLogsPage} />
                 <Route path="/admin/matching" component={AdminMatchingLabPage} />

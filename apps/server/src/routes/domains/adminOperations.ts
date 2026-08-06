@@ -6,6 +6,10 @@ import { validateContentSafe, contentViolationResponse } from "../../lib/content
 import { db } from "../../db";
 import { contentFilterLogs, users } from "@shared/schema";
 import { eq, desc, and, sql, gte, lte } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+import { logAdminAudit } from "../../lib/adminAuditLogger";
+import { getActingAdminId } from "../../lib/getActingAdminId";
+import { contentFilterLogReviewSchema, ContentFilterReviewStatuses } from "@shared/api";
 
 export function registerAdminOperationsRoutes(app: Express): void {
   // ============ ADMIN FEEDBACK MANAGEMENT ============
@@ -289,6 +293,8 @@ export function registerAdminOperationsRoutes(app: Express): void {
         violationType,
         severity,
         field,
+        reviewStatus,
+        missFlag,
         from,
         to,
         page = '1',
@@ -300,11 +306,28 @@ export function registerAdminOperationsRoutes(app: Express): void {
       if (violationType) conditions.push(eq(contentFilterLogs.violationType, violationType));
       if (severity) conditions.push(eq(contentFilterLogs.severity, severity));
       if (field) conditions.push(eq(contentFilterLogs.field, field));
+      if (reviewStatus) {
+        // Validate against the shared union (single source of truth for allowed values)
+        if (!(ContentFilterReviewStatuses as readonly string[]).includes(reviewStatus)) {
+          return res.status(400).json({ message: "Invalid reviewStatus filter" });
+        }
+        conditions.push(eq(contentFilterLogs.reviewStatus, reviewStatus));
+      }
+      if (missFlag !== undefined) {
+        if (missFlag !== 'true' && missFlag !== 'false') {
+          return res.status(400).json({ message: "Invalid missFlag filter (expected 'true' or 'false')" });
+        }
+        conditions.push(eq(contentFilterLogs.missFlag, missFlag === 'true'));
+      }
       if (from) conditions.push(gte(contentFilterLogs.createdAt, new Date(from)));
       if (to) conditions.push(lte(contentFilterLogs.createdAt, new Date(to)));
 
       const limit = Math.min(Math.max(parseInt(pageSize, 10) || 20, 1), 100);
       const offset = (Math.max(parseInt(page, 10) || 1, 1) - 1) * limit;
+
+      // Reviewer displayName needs an aliased users join — a second plain
+      // leftJoin(users, ...) throws `Alias "users" is already used in this query`.
+      const reviewer = alias(users, "reviewer");
 
       const [rows, countResult] = await Promise.all([
         db.select({
@@ -318,9 +341,16 @@ export function registerAdminOperationsRoutes(app: Express): void {
           inputPreview: contentFilterLogs.inputPreview,
           source: contentFilterLogs.source,
           createdAt: contentFilterLogs.createdAt,
+          reviewStatus: contentFilterLogs.reviewStatus,
+          reviewedBy: contentFilterLogs.reviewedBy,
+          reviewedAt: contentFilterLogs.reviewedAt,
+          missFlag: contentFilterLogs.missFlag,
+          reviewNote: contentFilterLogs.reviewNote,
+          reviewedByDisplayName: reviewer.displayName,
         })
         .from(contentFilterLogs)
         .leftJoin(users, eq(contentFilterLogs.userId, users.id))
+        .leftJoin(reviewer, eq(contentFilterLogs.reviewedBy, reviewer.id))
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(contentFilterLogs.createdAt))
         .limit(limit)
@@ -339,6 +369,106 @@ export function registerAdminOperationsRoutes(app: Express): void {
     } catch (error) {
       logger.error("Error fetching content filter logs", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch content filter logs" });
+    }
+  });
+
+  // PATCH /api/admin/content-filter/logs/:id — moderation review overlay (S2)
+  // Operator+ only. Effective changes are audit-logged with before/after
+  // snapshots; identical repeat PATCH is a true no-op (changed:false, no audit).
+  app.patch("/api/admin/content-filter/logs/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      const parsed = contentFilterLogReviewSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid review payload",
+          details: parsed.error.flatten(),
+        });
+      }
+      const { reviewStatus, missFlag, note } = parsed.data;
+      const noteValue = (note ?? "").trim();
+
+      // Fetch current row (minimal shape for comparison + audit before-state)
+      const [existing] = await db
+        .select({
+          id: contentFilterLogs.id,
+          reviewStatus: contentFilterLogs.reviewStatus,
+          missFlag: contentFilterLogs.missFlag,
+          reviewNote: contentFilterLogs.reviewNote,
+        })
+        .from(contentFilterLogs)
+        .where(eq(contentFilterLogs.id, id));
+
+      if (!existing) {
+        return res.status(404).json({ message: "Content filter log not found" });
+      }
+
+      const nextStatus = reviewStatus ?? existing.reviewStatus;
+      const nextMiss = missFlag ?? existing.missFlag;
+      // Effective change = status change, missFlag toggle, or a NEW non-empty
+      // note (a repeat PATCH with the same stored note is a true no-op — AC5).
+      const effective =
+        nextStatus !== existing.reviewStatus ||
+        nextMiss !== existing.missFlag ||
+        (noteValue.length > 0 && noteValue !== (existing.reviewNote ?? ""));
+
+      if (effective) {
+        await db
+          .update(contentFilterLogs)
+          .set({
+            reviewStatus: nextStatus,
+            missFlag: nextMiss,
+            // Note replaces prior note only when a new one is provided;
+            // status-only changes keep the existing rationale.
+            reviewNote: noteValue.length > 0 ? noteValue : existing.reviewNote,
+            reviewedBy: getActingAdminId(req),
+            reviewedAt: new Date(),
+          })
+          .where(eq(contentFilterLogs.id, id));
+
+        logAdminAudit({
+          action: 'CONTENT_FILTER_LOG_REVIEWED',
+          adminId: getActingAdminId(req),
+          adminRole: (req as any).adminRole,
+          targetEntityType: 'content_filter_log',
+          targetEntityId: id,
+          before: { reviewStatus: existing.reviewStatus, missFlag: existing.missFlag },
+          after: { reviewStatus: nextStatus, missFlag: nextMiss },
+          context: noteValue.length > 0 ? { note: noteValue } : undefined,
+        });
+      }
+
+      // Full row snapshot for the response (same shape as the GET rows).
+      const reviewer = alias(users, "reviewer");
+      const [row] = await db
+        .select({
+          id: contentFilterLogs.id,
+          userId: contentFilterLogs.userId,
+          displayName: users.displayName,
+          field: contentFilterLogs.field,
+          violationType: contentFilterLogs.violationType,
+          severity: contentFilterLogs.severity,
+          matchedKeywords: contentFilterLogs.matchedKeywords,
+          inputPreview: contentFilterLogs.inputPreview,
+          source: contentFilterLogs.source,
+          createdAt: contentFilterLogs.createdAt,
+          reviewStatus: contentFilterLogs.reviewStatus,
+          reviewedBy: contentFilterLogs.reviewedBy,
+          reviewedAt: contentFilterLogs.reviewedAt,
+          missFlag: contentFilterLogs.missFlag,
+          reviewNote: contentFilterLogs.reviewNote,
+          reviewedByDisplayName: reviewer.displayName,
+        })
+        .from(contentFilterLogs)
+        .leftJoin(users, eq(contentFilterLogs.userId, users.id))
+        .leftJoin(reviewer, eq(contentFilterLogs.reviewedBy, reviewer.id))
+        .where(eq(contentFilterLogs.id, id));
+
+      res.json({ changed: effective, row });
+    } catch (error) {
+      logger.error("Error reviewing content filter log", { error: String(error) });
+      res.status(500).json({ message: "Failed to review content filter log" });
     }
   });
 }

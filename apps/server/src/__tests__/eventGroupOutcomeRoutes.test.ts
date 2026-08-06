@@ -5,8 +5,12 @@ import session from "express-session";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const routeMocks = vi.hoisted(() => {
-  const loggerInfo = vi.fn();
-  const loggerError = vi.fn();
+  // Explicit signature matching lib/logger's Logger interface (info/error take
+  // a message plus optional structured context). Annotating the bare vi.fn()
+  // stubs keeps the mock assignable under stricter mock-typing inference.
+  const loggerInfo = vi.fn<(message: string, ctx?: Record<string, unknown>) => void>();
+  const loggerError = vi.fn<(message: string, ctx?: Record<string, unknown>) => void>();
+  const loggerWarn = vi.fn();
 
   return {
     getGroupMembershipContext: vi.fn(),
@@ -18,9 +22,11 @@ const routeMocks = vi.hoisted(() => {
     loggerChild: vi.fn(() => ({
       info: loggerInfo,
       error: loggerError,
+      warn: loggerWarn,
     })),
     loggerInfo,
     loggerError,
+    loggerWarn,
   };
 });
 
@@ -51,6 +57,9 @@ vi.mock("../lib/aiTraceLogger", () => ({
 vi.mock("../lib/logger", () => ({
   logger: {
     child: routeMocks.loggerChild,
+    info: routeMocks.loggerInfo,
+    error: routeMocks.loggerError,
+    warn: routeMocks.loggerWarn,
   },
 }));
 
@@ -123,6 +132,7 @@ describe("event group outcome routes", () => {
     routeMocks.loggerChild.mockClear();
     routeMocks.loggerInfo.mockClear();
     routeMocks.loggerError.mockClear();
+    routeMocks.loggerWarn.mockClear();
   });
 
   it("requires authentication for submissions", async () => {

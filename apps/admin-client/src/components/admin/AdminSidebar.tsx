@@ -72,6 +72,7 @@ const reviewTuneItems: NavItem[] = [
   { title: "匹配审核", url: "/admin/matching-reviews", icon: ClipboardCheck, roles: SUPER_OPERATOR },
   { title: "反馈管理", url: "/admin/feedback", icon: MessageSquare, roles: SUPER_OPERATOR },
   { title: "用户举报", url: "/admin/moderation", icon: Flag, roles: SUPER_OPERATOR },
+  { title: "内容审核日志", url: "/admin/content-filter", icon: ShieldCheck, roles: SUPER_OPERATOR },
   { title: "聊天举报", url: "/admin/reports", icon: ReceiptText, roles: SUPER_OPERATOR },
   { title: "匹配实验室", url: "/admin/matching", icon: FlaskConical, roles: SUPER_ONLY },
   { title: "匹配配置", url: "/admin/matching-config", icon: Settings, roles: SUPER_ONLY },

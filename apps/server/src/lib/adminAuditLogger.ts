@@ -44,6 +44,8 @@ export const ADMIN_AUDIT_ACTIONS = [
   'USER_UNBANNED',
   'USER_DATA_DELETED',
   'USER_DETAIL_VIEWED',
+  // Content filter log review (S2 moderation queue)
+  'CONTENT_FILTER_LOG_REVIEWED',
   // Points / coins
   'ADMIN_POINTS_ADJUSTED',
   // Attendance
