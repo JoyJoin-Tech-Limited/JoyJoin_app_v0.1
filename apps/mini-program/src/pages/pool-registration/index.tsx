@@ -1040,7 +1040,7 @@ export default function PoolRegistrationPage() {
                   <Text className='pool-reg__completion-text'>期待已收到，可以继续了</Text>
                 </View>
               ) : (
-                <Text className='pool-reg__helper'>至少选择 1 个期待方向后，悦仔就能把你的社交画像和预算一起跑匹配了。</Text>
+                <Text className='pool-reg__helper'>至少选择 1 个期待方向后，悦仔才能帮你挑出同频的桌友。</Text>
               )
             }
           >

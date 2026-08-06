@@ -1,6 +1,7 @@
 import { View, Image, Text } from '@tarojs/components'
 import { useState, useMemo } from 'react'
 import { cdnAsset, useCdnFirstSrc } from '@/lib/utils/cdnAssets'
+import { MASCOT_SIZE_RPX } from '@/lib/mascot/mascotSizes'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import ArchetypeHead from '../ArchetypeHead'
@@ -38,7 +39,14 @@ export interface XiaoyueEmptyStateProps {
   archetypeAsMainVisual?: boolean
 }
 
-const SIZE_MAP = { sm: 160, md: 200, lg: 240 }
+// Ramp-derived, values intentionally identical to the pre-ramp literals
+// (160 / 200 / 240). Local 'sm' maps to ramp 'md' — the naming offset is
+// historical and must not be "fixed" (it would change rendered pixels).
+const SIZE_MAP = {
+  sm: MASCOT_SIZE_RPX.md,
+  md: MASCOT_SIZE_RPX.lg,
+  lg: MASCOT_SIZE_RPX.xl,
+}
 
 const EMOTION_MAP: Record<XiaoyueEmptyStateEmotion, string> = {
   coaching: 'xiaoyue-coach-guide',
@@ -86,6 +94,7 @@ export default function XiaoyueEmptyState({
   )
 
   const archetypeTokens = useMemo(() => getArchetypeTokens(archetypeId), [archetypeId])
+  const haloDim = Math.round(dim * 1.4)
   const haloStyle = useMemo(() => {
     const background = archetypeId
       ? archetypeTokens.background
@@ -94,11 +103,13 @@ export default function XiaoyueEmptyState({
       ? archetypeTokens.surface
       : '#EDE9FE' // brand-primary-light fallback
     return {
+      width: `${haloDim}rpx`,
+      height: `${haloDim}rpx`,
       background: `radial-gradient(circle, ${background} 0%, ${surface} 70%, transparent 100%)`,
       filter: disableBlur ? 'none' : undefined,
       opacity: disableBlur ? 0.5 : undefined,
     }
-  }, [archetypeId, archetypeTokens, disableBlur])
+  }, [archetypeId, archetypeTokens, disableBlur, haloDim])
 
   return (
     <View className={classNames('xiaoyue-empty-state', showCelebrationBadge && 'xiaoyue-empty-state--celebration')}>

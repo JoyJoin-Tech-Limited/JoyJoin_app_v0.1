@@ -44,6 +44,7 @@ export default function PoolTeaserStrip({ animate }: PoolTeaserStripProps) {
       <View className='pool-teaser__divider' aria-hidden='true' />
       <Text className='pool-teaser__voice'>{POOL_TEASER_VOICE_LINE}</Text>
       <View className='pool-teaser__nodes' role='group' ariaLabel='入座之后的流程'>
+        <View className='pool-teaser__track' aria-hidden='true' />
         {POOL_TEASER_NODES.map((node, index) => {
           const isLast = index === POOL_TEASER_NODES.length - 1
           return (
@@ -80,6 +81,9 @@ export default function PoolTeaserStrip({ animate }: PoolTeaserStripProps) {
           )
         })}
       </View>
+      {/* Closing beat (2026-08-05 polish): fades in after the sweep completes,
+          turning the decorative strip into a hand-over moment. */}
+      <Text className='pool-teaser__closing'>接下来交给悦仔，到日子见。</Text>
     </View>
   )
 }

@@ -16,6 +16,13 @@
     transform: translateY(20rpx);
     animation: xiaoyue-letter-card-enter 0.38s $ease-reveal-rise forwards;
     animation-delay: 0.12s;
+
+    // Seal press: the mascot stamp settles onto the letter with a single
+    // press-and-release as the card finishes rising (transform-only, one-shot,
+    // reduced-motion-safe via the media block below).
+    & &__mascot-wrap {
+      animation: xiaoyue-letter-seal-press 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+    }
   }
 
   &--visible {
@@ -39,7 +46,7 @@
   // ─── Header: mascot left, title block right ───────────────────────
   &__header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: $spacing-md;
     margin-bottom: $spacing-sm;
   }
@@ -48,7 +55,6 @@
     width: 120rpx;
     height: 120rpx;
     flex-shrink: 0;
-    margin-top: -$spacing-sm;
 
     &--skeleton {
       margin-top: 0;
@@ -187,6 +193,23 @@
   }
 }
 
+// Stamp press-and-release: 0%→1 idle, 35% pressed (0.94), 65% overshoot (1.04),
+// 100% settled. The gentle overshoot reads as "sealed", not bouncy.
+@keyframes xiaoyue-letter-seal-press {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(0.94);
+  }
+  65% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 @keyframes xiaoyue-letter-card-shimmer {
   0%,
   100% {
@@ -202,6 +225,10 @@
     animation: none;
     opacity: 1;
     transform: none;
+
+    & &__mascot-wrap {
+      animation: none;
+    }
   }
 
   .xiaoyue-letter-card__skeleton-line {

@@ -23,12 +23,28 @@
   }
 
   &__nodes {
+    position: relative;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
   }
 
+  // Sleek left-to-right progress track: draws beneath the icons in sync with
+  // the node light-up sweep (2026-08-05, Phase 3 redesign).
+  &__track {
+    position: absolute;
+    top: 28rpx;
+    left: 8.3%;
+    right: 8.3%;
+    height: 4rpx;
+    border-radius: 2rpx;
+    background: rgba($color-primary, 0.18);
+    transform-origin: left center;
+    will-change: transform;
+  }
+
   &__node {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -71,6 +87,19 @@
     }
   }
 
+  // Hand-over closing line (2026-08-05 polish): hidden until the sweep
+  // finishes (~1.15s), then fades in. Static/idle states render it plainly.
+  &__closing {
+    display: block;
+    margin-top: $spacing-sm;
+    font-size: $font-size-xs;
+    line-height: $line-height-normal;
+    color: $color-primary-dark;
+    font-weight: $font-weight-medium;
+    text-align: center;
+    opacity: 0;
+  }
+
   &--enter {
     .pool-teaser__divider {
       animation: pool-teaser-divider-in 0.28s $ease-reveal-rise both;
@@ -81,26 +110,46 @@
       animation-delay: 0.16s;
     }
 
+    // One-by-one left-to-right light-up: each node illuminates after the
+    // previous one settles (0.24s node + 0.16s step). The track draws over
+    // the same window (0.8s from 0.24s → ends with node 6 at 1.04s) so the
+    // sweep reads as a single left-to-right motion (2026-08-05 audit NIT-2).
+    .pool-teaser__track {
+      animation: pool-teaser-track-draw 0.8s $ease-reveal-rise 0.24s both;
+    }
+
     .pool-teaser__node {
-      animation: pool-teaser-node-pop 0.24s $ease-reveal-pop both;
+      animation: pool-teaser-node-light 0.24s $ease-reveal-pop both;
+    }
+
+    .pool-teaser__closing {
+      animation: reveal-rise-in 0.3s $ease-reveal-rise 1.15s both;
     }
 
     // Delays must live under --enter: the shorthand above resets
     // animation-delay, and only this specificity wins the cascade.
-    .pool-teaser__node--delay-0 { animation-delay: 0.28s; }
-    .pool-teaser__node--delay-1 { animation-delay: 0.35s; }
-    .pool-teaser__node--delay-2 { animation-delay: 0.42s; }
-    .pool-teaser__node--delay-3 { animation-delay: 0.49s; }
-    .pool-teaser__node--delay-4 { animation-delay: 0.56s; }
-    .pool-teaser__node--delay-5 { animation-delay: 0.63s; }
+    .pool-teaser__node--delay-0 { animation-delay: 0.24s; }
+    .pool-teaser__node--delay-1 { animation-delay: 0.40s; }
+    .pool-teaser__node--delay-2 { animation-delay: 0.56s; }
+    .pool-teaser__node--delay-3 { animation-delay: 0.72s; }
+    .pool-teaser__node--delay-4 { animation-delay: 0.88s; }
+    .pool-teaser__node--delay-5 { animation-delay: 1.04s; }
   }
 
   &--idle {
     .pool-teaser__divider,
     .pool-teaser__voice,
-    .pool-teaser__node {
+    .pool-teaser__closing {
       animation: none;
       opacity: 0;
+      transform: none;
+    }
+
+    // Ghosted "off" state — the sweep lights these up one by one.
+    .pool-teaser__track,
+    .pool-teaser__node {
+      animation: none;
+      opacity: 0.35;
       transform: none;
     }
   }
@@ -108,7 +157,9 @@
   &--static {
     .pool-teaser__divider,
     .pool-teaser__voice,
-    .pool-teaser__node {
+    .pool-teaser__track,
+    .pool-teaser__node,
+    .pool-teaser__closing {
       animation: none;
       opacity: 1;
       transform: none;
@@ -125,16 +176,27 @@
   }
 }
 
-// Subtle sibling of reveal-pop-settle (0.6→1.04) tuned for the small strip
-// surfaces: gentler travel, same overshoot family.
-@keyframes pool-teaser-node-pop {
+// The draw-line mirrors divider-in but on the node track (transform/opacity
+// only, GPU-safe).
+@keyframes pool-teaser-track-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+// One-by-one light-up: nodes sit ghosted (0.35) and illuminate with a gentle
+// overshoot — same easing family as the old node-pop, but sequential.
+@keyframes pool-teaser-node-light {
   0% {
-    opacity: 0;
-    transform: scale(0.9);
+    opacity: 0.35;
+    transform: scale(0.96);
   }
   70% {
     opacity: 1;
-    transform: scale(1.02);
+    transform: scale(1.03);
   }
   100% {
     opacity: 1;
@@ -146,7 +208,9 @@
   .pool-teaser--enter {
     .pool-teaser__divider,
     .pool-teaser__voice,
-    .pool-teaser__node {
+    .pool-teaser__track,
+    .pool-teaser__node,
+    .pool-teaser__closing {
       animation: none;
       opacity: 1;
       transform: none;

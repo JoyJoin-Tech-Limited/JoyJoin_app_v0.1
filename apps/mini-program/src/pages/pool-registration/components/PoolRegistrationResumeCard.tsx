@@ -2,7 +2,7 @@ import { View, Text } from '@tarojs/components'
 import Card from '../../../components/ui/Card'
 import type { MiniProgramPoolRegistrationReturnContext } from '../../../lib/payment/paymentPendingOrder'
 
-const UNPAID_NOTICE = '你的选择已经帮你留好了，确认后继续加入这场局。'
+const UNPAID_NOTICE = '选择已留好，确认后继续加入这场局。'
 
 function getPaidNoticeCopy(
   context: MiniProgramPoolRegistrationReturnContext,

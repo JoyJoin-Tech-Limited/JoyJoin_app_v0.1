@@ -122,7 +122,7 @@ export function PoolRegistrationAlreadyJoined({
             />
             <Text className='pool-reg__already-title'>你已经加入这场{eventType}了</Text>
             <Text className='pool-reg__already-text'>
-              你的预算和社交期待已经在匹配引擎里跑着了，有结果会第一时间通知你。
+              你的预算和期待已经收到，悦仔正在帮你挑同频的桌友，有结果会第一时间通知你。
             </Text>
             <EventSummaryCard
               className='pool-reg__terminal-card'

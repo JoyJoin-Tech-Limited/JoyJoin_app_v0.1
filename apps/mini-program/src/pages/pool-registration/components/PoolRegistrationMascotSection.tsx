@@ -2,17 +2,22 @@ import { Image, Text, View } from '@tarojs/components'
 import { useEffect, useRef, useState } from 'react'
 import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
-import { getXiaoyueExpressionAsset, type XiaoyueExpressionId } from '../../../lib/mascot/xiaoyueExpressions'
+import { MASCOT_SIZE } from '../../../lib/mascot/mascotSizes'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import './PoolRegistrationMascotSection.scss'
 
 /**
  * Reduced-motion portrait fallback per step base state (CDN-primary; the
  * section hides the mascot wrap entirely if the portrait cannot load).
+ *
+ * Lovart Xiaoyue portrait set v1 (2026-08-05): coach / curious / listening.
+ * Masters live in `assets-source/lovart/xiaoyue-portraits/`; shipped WebP in
+ * `src/assets/personality/xiaoyue/`.
  */
-const PORTRAIT_BY_SPRITE_STATE: Partial<Record<XiaoyueSpriteState, XiaoyueExpressionId>> = {
-  coach: 'coachGuide',
-  curious: 'testCurious',
-  listening: 'testListening',
+const PORTRAIT_URL_BY_SPRITE_STATE: Partial<Record<XiaoyueSpriteState, string>> = {
+  coach: cdnAsset('/assets/personality/xiaoyue/lovart-mascot-xiaoyue-coach-20260805-v1.webp'),
+  curious: cdnAsset('/assets/personality/xiaoyue/lovart-mascot-xiaoyue-curious-20260805-v1.webp'),
+  listening: cdnAsset('/assets/personality/xiaoyue/lovart-mascot-xiaoyue-listening-20260805-v1.webp'),
 }
 
 const BUBBLE_SWAP_OUT_MS = 120
@@ -133,32 +138,36 @@ export default function PoolRegistrationMascotSection({
   }, [spriteState])
 
   const effectiveSpriteState: XiaoyueSpriteState = reacting && !motionDisabled ? 'nod' : spriteState
-  const portraitId = PORTRAIT_BY_SPRITE_STATE[spriteState] ?? 'coachGuide'
+  const portraitUrl = PORTRAIT_URL_BY_SPRITE_STATE[spriteState] ?? PORTRAIT_URL_BY_SPRITE_STATE.coach ?? ''
 
   const rootClass = [
     'pool-reg-mascot',
     visible ? '' : 'pool-reg-mascot--hidden',
     entryTone === 'enter' ? 'pool-reg-mascot--enter' : '',
+    // Kill the breathing wrapper in reduced/degraded motion — the CSS media
+    // query alone is unreliable in the WeChat runtime (2026-08-05 audit P0-1).
+    motionDisabled ? 'pool-reg-mascot--motion-off' : '',
+    portraitFailed ? 'pool-reg-mascot--no-mascot' : '',
   ]
     .filter(Boolean)
     .join(' ')
 
   return (
     <View className={rootClass}>
-      <View className='pool-reg-mascot__mascot-wrap' aria-hidden='true'>
+      <View className={['pool-reg-mascot__mascot-wrap', portraitFailed ? 'pool-reg-mascot__mascot-wrap--collapsed' : ''].filter(Boolean).join(' ')} aria-hidden='true'>
         {motionDisabled ? (
           portraitFailed ? null : (
             <Image
               className='pool-reg-mascot__portrait'
               mode='aspectFit'
-              src={getXiaoyueExpressionAsset(portraitId)}
+              src={portraitUrl}
               onError={() => setPortraitFailed(true)}
             />
           )
         ) : (
           <XiaoyueSpriteAnimator
             state={effectiveSpriteState}
-            size='160rpx'
+            size={MASCOT_SIZE.md}
             autoPlay={visible}
             onComplete={() => onNodCompleteRef.current?.()}
           />
@@ -170,6 +179,7 @@ export default function PoolRegistrationMascotSection({
           'pool-reg-mascot__bubble--tail',
           bubblePhase === 'out' ? 'pool-reg-mascot__bubble--out' : '',
           entryTone === 'enter' ? 'pool-reg-mascot__bubble--enter' : '',
+          portraitFailed ? 'pool-reg-mascot__bubble--full' : '',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -177,7 +187,9 @@ export default function PoolRegistrationMascotSection({
         aria-live='polite'
         aria-atomic='true'
       >
-        <Text className='pool-reg-mascot__bubble-text'>{displayedContent}</Text>
+        <Text key={displayedContent} className='pool-reg-mascot__bubble-text'>
+          {displayedContent}
+        </Text>
       </View>
     </View>
   )

@@ -27,6 +27,23 @@
     animation: pool-reg-mascot-bubble-in 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
+  // Reduced/degraded motion: no breathing, no entry motion (JS-driven class —
+  // the CSS media query alone is unreliable in the WeChat runtime).
+  &--motion-off &__mascot-wrap {
+    animation: none;
+  }
+
+  // Same JS gate for the keyed bubble-text mount animation (degradation tier
+  // without OS reduce-motion would otherwise replay the 160ms rise on swaps).
+  &--motion-off &__bubble-text {
+    animation: none;
+  }
+
+  // Portrait asset failure: mascot wrap collapses, bubble takes the row.
+  &--no-mascot &__bubble {
+    max-width: 100%;
+  }
+
   &__mascot-wrap {
     flex-shrink: 0;
     width: 160rpx;
@@ -34,12 +51,15 @@
     // Idle = breathing only (translateY, GPU-safe). The sprite animator's own
     // loop handles the base-state frames; nothing else moves continuously.
     animation: pool-reg-mascot-breathe 2.4s ease-in-out infinite alternate;
+
+    &--collapsed {
+      display: none;
+    }
   }
 
   &__portrait {
-    width: 180rpx;
-    height: 180rpx;
-    margin: -10rpx;
+    width: 160rpx;
+    height: 160rpx;
     border-radius: 50%;
   }
 
@@ -49,11 +69,11 @@
     min-width: 0;
     max-width: 520rpx;
     box-sizing: border-box;
-    padding: $spacing-md;
+    padding: $bubble-padding;
     background: $color-surface;
-    border: 2rpx solid rgba($color-primary, 0.14);
-    border-radius: 24rpx;
-    box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+    border: $bubble-border-width solid $bubble-border-color;
+    border-radius: $bubble-radius;
+    box-shadow: $bubble-shadow;
     opacity: 1;
 
     // Bubble swap (reaction): old out 120ms (opacity transition), then the new
@@ -67,24 +87,29 @@
       animation: pool-reg-mascot-bubble-in 0.16s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
+    // Portrait failure: bubble takes the full row (paired with --no-mascot).
+    &--full {
+      max-width: 100%;
+    }
+
     // 12rpx left tail pointing at the mascot.
     &--tail::before {
       content: '';
       position: absolute;
       left: -12rpx;
-      top: 32rpx;
+      top: $bubble-tail-top;
       width: 0;
       height: 0;
       border-style: solid;
       border-width: 12rpx 14rpx 12rpx 0;
-      border-color: transparent rgba($color-primary, 0.14) transparent transparent;
+      border-color: transparent $bubble-border-color transparent transparent;
     }
 
     &--tail::after {
       content: '';
       position: absolute;
       left: -9rpx;
-      top: 33rpx;
+      top: $bubble-tail-top + 1rpx;
       width: 0;
       height: 0;
       border-style: solid;
@@ -99,6 +124,9 @@
     color: $color-text-primary;
     line-height: $line-height-relaxed;
     word-break: keep-all;
+    // Keyed remount on content swap → mount animation = the 160ms "new in"
+    // beat promised by the bubble-swap spec (2026-08-05 audit P0-2).
+    animation: pool-reg-mascot-bubble-in 0.16s cubic-bezier(0.22, 1, 0.36, 1);
   }
 }
 
@@ -137,7 +165,8 @@
   .pool-reg-mascot {
     &--enter &__mascot-wrap,
     &--enter &__bubble,
-    &__mascot-wrap {
+    &__mascot-wrap,
+    &__bubble-text {
       animation: none;
     }
 

@@ -40,7 +40,7 @@
   &__mascot {
     position: relative;
     z-index: 1;
-    border-radius: $card-radius;
+    border-radius: $radius-circle;
     overflow: hidden;
     animation: mascot-breathe 3s ease-in-out 0.55s infinite;
 

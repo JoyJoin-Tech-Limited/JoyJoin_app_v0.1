@@ -2,6 +2,7 @@ import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useMemo } from 'react'
 import { getXiaoyueExpressionAsset, XIAOYUE_EXPRESSION_TO_SPRITE_STATE, type XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
+import { MASCOT_SIZE } from '../../lib/mascot/mascotSizes'
 import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from './XiaoyueSpriteAnimator'
 import './XiaoyueChatBubble.scss'
 
@@ -49,10 +50,10 @@ export interface XiaoyueChatBubbleProps {
 /**
  * XiaoyueChatBubble — animated mascot coaching bubble for onboarding.
  *
- * Pixel specs:
+ * Pixel specs (shared speech-bubble tokens in _variables.scss):
  * - Avatar size: 96rpx (horizontal), 120rpx (vertical), overridable via avatarSize prop
- * - Bubble radius: 24rpx
- * - Bubble padding: 24rpx
+ * - Bubble radius: 24rpx (=$bubble-radius), padding 24rpx (=$bubble-padding)
+ * - Bubble border: 2rpx solid rgba($color-primary, 0.14) (=$bubble-border-*)
  * - Glow ring: 4rpx border, pulsing opacity 0.3→0.6
  * - Stagger: 80ms per sentence
  */
@@ -86,7 +87,9 @@ export default function XiaoyueChatBubble({
   }, [])
   const effectiveStaggerDelay = prefersReducedMotion ? 0 : staggerDelay
 
-  const resolvedAvatarSize = avatarSize ?? (wide ? '120rpx' : '96rpx')
+  // 120rpx is not on the mascot size ramp — intentional legacy value for the
+  // wide/vertical stacked layout; do not move it onto the ramp.
+  const resolvedAvatarSize = avatarSize ?? (wide ? '120rpx' : MASCOT_SIZE.sm)
 
   const layoutClass = wide
     ? 'xiaoyue-chat-bubble--wide'
@@ -94,9 +97,13 @@ export default function XiaoyueChatBubble({
       ? 'xiaoyue-chat-bubble--horizontal'
       : 'xiaoyue-chat-bubble--vertical'
 
+  // Large horizontal avatars (>=152rpx, i.e. onboarding lg+) sit at the
+  // bubble's natural center (mascot head zone) instead of top-aligned.
+  const centerAvatar = horizontal && !wide && !hideAvatar && parseInt(resolvedAvatarSize, 10) >= 152
+
   return (
     <View
-      className={`xiaoyue-chat-bubble ${layoutClass} ${hideAvatar ? 'xiaoyue-chat-bubble--no-avatar' : ''} ${className}`}
+      className={`xiaoyue-chat-bubble ${layoutClass} ${hideAvatar ? 'xiaoyue-chat-bubble--no-avatar' : ''} ${centerAvatar ? 'xiaoyue-chat-bubble--center-avatar' : ''} ${className}`}
       role='status'
       aria-live='polite'
       aria-atomic='true'
