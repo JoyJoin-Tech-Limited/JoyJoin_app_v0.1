@@ -189,7 +189,18 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: npm ci
+        timeout-minutes: 9
+        run: |
+          set -euo pipefail
+          for attempt in 1 2; do
+            echo "Mini-program dependency install attempt $attempt/2"
+            if timeout --signal=TERM --kill-after=30s 4m npm ci --prefer-offline --no-audit --no-fund; then
+              exit 0
+            fi
+            echo "::warning::Mini-program dependency install attempt $attempt timed out or failed"
+          done
+          echo "::error::Mini-program dependency install failed after 2 bounded attempts"
+          exit 1
       - name: Run tests
         run: npm run test --workspace=mini-program
 
