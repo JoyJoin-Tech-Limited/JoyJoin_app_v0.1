@@ -525,9 +525,23 @@ router.post('/start', async (req: any, res) => {
 
   // Single-test metadata is retained for custom and preset sessions alike so
   // bot simulations can execute the same selected run plan as real groups.
+  // Guarded like the access check above: a failing single-test lookup must
+  // still produce a response — an uncaught throw becomes an unhandled
+  // rejection (Express 4 does not forward async-handler rejections), hanging
+  // the request until the client times out and misreports it as a network
+  // problem. Fall back to a session without bot metadata.
   let singleTestMeta: import('@shared/socialIcebreaker').SingleTestState | null = null;
   if (isSingleTestMode()) {
-    singleTestMeta = await getSingleTestMetaForSessionStart(sessionId);
+    try {
+      singleTestMeta = await getSingleTestMetaForSessionStart(sessionId);
+    } catch (singleTestErr) {
+      logger.error('[SocialIcebreaker] single-test metadata lookup failed', {
+        sessionId,
+        userId,
+        error: singleTestErr instanceof Error ? singleTestErr.message : String(singleTestErr),
+      });
+      singleTestMeta = null;
+    }
   }
   const isBotSimulation = Boolean(singleTestMeta?.runBots);
 

@@ -7,7 +7,7 @@ import express from 'express';
 import http from 'http';
 import type { Socket } from 'net';
 
-const READY_TIMEOUT_MS = 5000;
+const READY_TIMEOUT_MS = 10000;
 const READY_PROBE_INITIAL_INTERVAL_MS = 25;
 const READY_PROBE_MAX_INTERVAL_MS = 100;
 const READY_FETCH_TIMEOUT_MS = 100;

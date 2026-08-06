@@ -28,7 +28,12 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../lib/featureFlags", () => ({ getFeatureFlag: mocks.getFeatureFlag }));
 vi.mock("../lib/logger", () => ({
-  logger: { warn: mocks.loggerWarn, error: vi.fn(), info: vi.fn() },
+  logger: {
+    warn: mocks.loggerWarn,
+    error: vi.fn(),
+    info: vi.fn(),
+    child: vi.fn(() => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn() })),
+  },
 }));
 vi.mock("../services/flashScheduleService", () => ({ startFlashBackgroundJobs: vi.fn() }));
 vi.mock("../routes/domains/geo", () => ({ reverseGeocodeCoordinate: mocks.reverseGeocode }));

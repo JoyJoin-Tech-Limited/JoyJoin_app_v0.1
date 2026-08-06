@@ -19,9 +19,12 @@ export default defineConfig({
     hookTimeout: 120000,
     // Cap parallel forks: spawning one fork per core on dev machines (16+ cores)
     // saturates the box and produces intermittent suite-wide timeouts (e.g.
-    // alangResetRoute/socialIcebreaker route assertions flipping status). CI
-    // runners expose <=4 cores, so this matches CI behaviour locally.
-    maxWorkers: 4,
+    // alangResetRoute/socialIcebreaker route assertions flipping status).
+    // GitHub-hosted ubuntu-latest runners expose 2 vCPUs, so cap at 2 workers
+    // to avoid oversubscribing CI runners — 4 workers on 2 cores produced
+    // rotating random failures (eventGroupOutcomeRoutes 500s, micro-challenge,
+    // alang, simulation tests) across otherwise-identical runs.
+    maxWorkers: 2,
     minWorkers: 1,
     coverage: {
       reporter: ['text', 'json', 'html'],
