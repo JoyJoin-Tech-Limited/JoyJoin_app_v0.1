@@ -38,9 +38,14 @@ vi.mock("../db", () => ({
         })),
       })),
     })),
-    insert: vi.fn(() => ({
+    // Only content-filter-log inserts are counted; the feedback route has
+    // real fire-and-forget side-effect inserts (shadow-feedback calibration)
+    // that must not pollute the log-row assertion.
+    insert: vi.fn((table: unknown) => ({
       values: (values: Record<string, unknown>) => {
-        logRows.push(values);
+        if (table === contentFilterLogs) {
+          logRows.push(values);
+        }
         return { execute: vi.fn(() => Promise.resolve()) };
       },
     })),
@@ -59,6 +64,8 @@ vi.mock("../lib/logger", () => ({
     child: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() })),
   },
 }));
+
+import { contentFilterLogs } from "@shared/schema";
 
 const storageCtx = vi.hoisted(() => ({
   createEventFeedback: vi.fn(),
@@ -212,7 +219,9 @@ describe("POST /api/events/:eventId/feedback content moderation (S1)", () => {
       expect(calledText).toContain("大家聊得挺好");
       expect(calledText).toContain("可以多分享一些见闻");
       // Exactly ONE tier-1 log row.
-      expect(logRows).toHaveLength(1);
+      if (logRows.length !== 1) {
+        throw new Error(`Expected exactly 1 log row, got ${logRows.length}: ${JSON.stringify(logRows)}`);
+      }
       expect(logRows[0].source).toBe("tier1:eventFeedback");
       // recordViolation exactly once (no double-count).
       expect(mockRecordViolation).toHaveBeenCalledTimes(1);
