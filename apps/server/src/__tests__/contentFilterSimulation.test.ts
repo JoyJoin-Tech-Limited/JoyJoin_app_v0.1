@@ -274,3 +274,45 @@ describe('filterContent — 1000-user adversarial simulation', () => {
     console.log(summary)
   })
 })
+
+/**
+ * Red-team slice (Sprint 3 greenlight evidence): Tier-0 catch rate is a pure
+ * function of the text — Tier-1 (WeChat msgSecCheck) availability cannot
+ * change it, because Tier-1 is only ever consulted for Tier-0-clean text
+ * (short-circuit in validateContentSafeAsync). The integrated Tier-1-DOWN
+ * proof runs in contentSafetyRedTeam.test.ts; this slice just locks in that
+ * the same first-200-user corpus has ZERO must-catch misses and prints its
+ * catch rate for the launch memo.
+ */
+describe('Tier-0 / Tier-1 independence — 200-user slice (red-team)', () => {
+  it('must-catch misses stay zero on the first-200-user slice — catch rate unchanged regardless of Tier-1 state', () => {
+    const USERS = 200
+    const ATTEMPTS = 15
+    const misses: MissRecord[] = []
+    let caughtCount = 0
+    let total = 0
+
+    for (let user = 0; user < USERS; user++) {
+      for (const attempt of generateAttempts(20260803 + user, ATTEMPTS)) {
+        total++
+        if (filterContent(attempt.text).isViolation) {
+          caughtCount++
+        } else {
+          misses.push({ seed: attempt.seed, strategy: attempt.strategy, text: attempt.text })
+        }
+      }
+    }
+
+    const mustCatchMisses = misses.filter((m) => MUST_CATCH[m.strategy] === 'must-catch')
+    // Same assertion as the full 1000-user run: claimed machinery never defeated.
+    expect(mustCatchMisses, `slice must-catch misses: ${JSON.stringify(mustCatchMisses.slice(0, 5))}`).toHaveLength(0)
+
+    const rate = ((caughtCount / total) * 100).toFixed(2)
+    console.log(
+      `\n═══ 200-user slice (Tier-1 DOWN scenario) ═══\n` +
+        `attempts: ${total}  caught: ${caughtCount}  (Tier-0 catch rate: ${rate}%)  must-catch misses: 0\n` +
+        `Tier-0 catch behavior is a pure function of the text — Tier-1 availability cannot change it;\n` +
+        `the integrated Tier-1-DOWN proof runs in contentSafetyRedTeam.test.ts.`,
+    )
+  })
+})

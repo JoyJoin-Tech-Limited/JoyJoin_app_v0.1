@@ -23,7 +23,11 @@ export interface ContentSafetyResult {
   };
 }
 
-export function validateContentSafe(text: string, field: string): ContentSafetyResult {
+export function validateContentSafe(
+  text: string,
+  field: string,
+  severeFailClosed?: boolean,
+): ContentSafetyResult {
   if (!text || text.trim().length === 0) {
     return { safe: true };
   }
@@ -50,13 +54,18 @@ export function validateContentSafe(text: string, field: string): ContentSafetyR
 
   // Decision-table rows 2/3: the warning tier blocks by default but can be
   // rolled back via `contentModerationSevereFailClosedEnabled`. The severe
-  // tier (row 1) is UNCONDITIONAL — no flag weakens it. Sync read (5s cache +
-  // env), fail-closed fallback `true` — deliberately NOT the hardcoded `false`
-  // fallback pattern used for the msgSecCheck flag.
-  if (
-    violation.severity === "warning" &&
-    !getFeatureFlagSync("contentModerationSevereFailClosedEnabled", true)
-  ) {
+  // tier (row 1) is UNCONDITIONAL — no flag weakens it.
+  //
+  // When `severeFailClosed` is passed (async request path), it is the value
+  // resolved ONCE per request through the DB-backed async `getFeatureFlag`
+  // (5s LRU), so an /admin/feature-flags toggle takes effect on the hot path
+  // without an env+restart. When absent (pure-sync paths — admin broadcast,
+  // AI services), fall back to the sync read (5s cache + env). Both default to
+  // fail-closed `true` — deliberately NOT the hardcoded `false` fallback
+  // pattern used for the msgSecCheck flag.
+  const failClosed =
+    severeFailClosed ?? getFeatureFlagSync("contentModerationSevereFailClosedEnabled", true);
+  if (violation.severity === "warning" && !failClosed) {
     // Row 3: ALLOW + log only — NO recordViolation (the route only escalates
     // when `safe === false`).
     return { safe: true };
@@ -101,7 +110,15 @@ export async function validateContentSafeAsync(
     return { safe: true };
   }
 
-  const tier0 = validateContentSafe(trimmed, field);
+  // DB-backed resolution ONCE per request (5s LRU makes it cheap): the sync
+  // getFeatureFlagSync read never queries the DB (cache → env → default), so
+  // without this an /admin/feature-flags toggle on
+  // `contentModerationSevereFailClosedEnabled` would be a silent no-op on the
+  // hot path until env+restart. The resolved value is threaded into the sync
+  // filter as a parameter — no double read, no race between two lookups.
+  const severeFailClosed = await getFeatureFlag("contentModerationSevereFailClosedEnabled", true);
+
+  const tier0 = validateContentSafe(trimmed, field, severeFailClosed);
   if (!tier0.safe) {
     // Row 1 (severe — unconditional) or row 2 (warning — fail-closed ON).
     return tier0;
@@ -130,7 +147,7 @@ export async function validateContentSafeAsync(
       logger.warn("[contentSafety] Tier-1 skipped: no openid available, failing open", { field });
       return null;
     }
-    return checkTextWithMsgSecCheck(trimmed, openid);
+    return checkTextWithMsgSecCheck(trimmed, openid, { field, userId: opts.userId });
   })();
 
   let verdict: WechatRiskVerdict | null = null;
@@ -273,7 +290,7 @@ export function createContentViolationLog(
       source:
         violation.source === "tier1"
           ? (meta?.route ? `tier1:${meta.route}` : "tier1")
-          : (meta?.route ?? null),
+          : (meta?.route ?? violation.source ?? null),
     })
     .execute()
     .catch((err: unknown) => {

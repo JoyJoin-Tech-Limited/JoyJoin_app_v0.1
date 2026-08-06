@@ -15,20 +15,6 @@ const VIOLATION_THRESHOLDS = {
   PERM_BAN_COUNT: 5
 };
 
-export async function recordTokenUsage(userId: string, tokensUsed: number): Promise<void> {
-  const user = await db.select({ dailyTokenUsed: users.dailyTokenUsed })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  
-  if (user.length) {
-    const newTotal = (user[0].dailyTokenUsed || 0) + tokensUsed;
-    await db.update(users)
-      .set({ dailyTokenUsed: newTotal })
-      .where(eq(users.id, userId));
-  }
-}
-
 export async function recordViolation(userId: string, violationType: ViolationType, severity: 'warning' | 'severe'): Promise<void> {
   const user = await db.select({ violationCount: users.violationCount })
     .from(users)

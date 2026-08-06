@@ -33,9 +33,18 @@ vi.mock("../db", () => ({
   db: {
     select: vi.fn(() => ({
       from: vi.fn(() => ({
-        where: vi.fn(() => ({
-          limit: vi.fn(() => Promise.resolve([{ wechatOpenId: "openid-test" }])),
-        })),
+        where: vi.fn(() => {
+          // Support BOTH call shapes exercised on the feedback path:
+          //  1. .where().limit()        — user lookups (storage.getUser)
+          //  2. .where() WITHOUT .limit — gamificationService.awardXPAndCoins
+          //     destructures `const [user] = await db.select().from(users).where(...)`,
+          //     so the where() result itself must be an iterable promise, not an
+          //     object that only becomes one after .limit() is chained.
+          const rows = [{ wechatOpenId: "openid-test" }];
+          const pending = Promise.resolve(rows) as Promise<typeof rows> & { limit: unknown };
+          pending.limit = vi.fn(() => Promise.resolve(rows));
+          return pending;
+        }),
       })),
     })),
     // Only content-filter-log inserts are counted; the feedback route has

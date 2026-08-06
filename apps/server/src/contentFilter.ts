@@ -199,39 +199,3 @@ export function filterContent(text: string): ContentFilterResult {
   };
 }
 
-export function detectGibberish(text: string): boolean {
-  if (text.length < 3) return false;
-  
-  const repeatedCharPattern = /(.)\1{4,}/;
-  if (repeatedCharPattern.test(text)) return true;
-  
-  const randomCharsPattern = /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{10,}$/;
-  if (randomCharsPattern.test(text) && !/\s/.test(text)) {
-    const uniqueChars = new Set(text.toLowerCase()).size;
-    if (uniqueChars < text.length * 0.3) return true;
-  }
-  
-  const keyboardSmashPattern = /[asdfghjkl]{5,}|[qwertyuiop]{5,}|[zxcvbnm]{5,}/i;
-  if (keyboardSmashPattern.test(text)) return true;
-  
-  return false;
-}
-
-export function detectRepetition(text: string): boolean {
-  const words = text.split(/\s+/).filter(w => w.length > 0);
-  if (words.length < 3) return false;
-  
-  const wordCounts = new Map<string, number>();
-  for (const word of words) {
-    const lower = word.toLowerCase();
-    wordCounts.set(lower, (wordCounts.get(lower) || 0) + 1);
-  }
-  
-  for (const [, count] of Array.from(wordCounts)) {
-    if (count >= 5 && count / words.length > 0.5) {
-      return true;
-    }
-  }
-  
-  return false;
-}

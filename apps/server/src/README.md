@@ -177,7 +177,7 @@ Primary files:
 - `apps/server/src/routes/domains/adminEventPools.ts` — CRUD, venue hints, time slot validation, archive/deletion for event pools
 - `apps/server/src/routes/domains/venues.ts` — venue CRUD, onboarding lifecycle, deals, time slots, data quality
 - `apps/server/src/repositories/venuesRepo.ts` — canonical venue data access; maps raw PostgreSQL `snake_case` rows to camelCase API contract
-- `apps/server/src/routes/domains/adminOperations.ts` — content filter log admin endpoint (`GET /api/admin/content-filter/logs`), admin notification broadcast/send with content safety gating
+- `apps/server/src/routes/domains/adminOperations.ts` — content filter log admin endpoints (`GET /api/admin/content-filter/logs` — userId/violationType/severity/field/date-range + `reviewStatus`/`missFlag` filters, reviewer displayName; `PATCH /api/admin/content-filter/logs/:id` — operator+ review overlay: `reviewStatus` pending/reviewed/dismissed/actioned + `missFlag` 误伤 + note, idempotent, audit-logged `CONTENT_FILTER_LOG_REVIEWED`), admin notification broadcast/send with content safety gating
 - `apps/server/src/routes/domains/adminMatchingReview.ts` — operator review queue for formed match groups: list pools, list groups, approve, reject
 - `apps/server/src/lib/matchingPostMatchEffects.ts` — shared post-match side-effect runner used by auto-match and admin approval
 - `apps/server/src/routes/domains/adminGeolocation.ts` — `GET /api/admin/geolocation/heatmap`, `POST /api/admin/geolocation/rollup` — location snapshot analytics, gated by `requireSuperAdmin`
@@ -187,7 +187,7 @@ Primary files:
 - `apps/server/src/adminAuth.ts`
 - `apps/server/src/lib/adminAuditLogger.ts`
 - `apps/server/src/lib/featureFlags.ts` — DB-backed feature flag resolver with env fallback and short-lived cache
-- `apps/server/src/lib/contentSafety.ts` — shared validation helpers `validateContentSafe()` (deterministic filter) and `validateContentSafeAsync()` (Tier 0 → WeChat msgSecCheck Tier 1, budget-bounded fail-open with background enforcement)
+- `apps/server/src/lib/contentSafety.ts` — shared validation helpers `validateContentSafe()` (deterministic filter) and `validateContentSafeAsync()` (Tier 0 → WeChat msgSecCheck Tier 1, budget-bounded fail-open with background enforcement). Decision-table policy (2026-08-06): severe-tier hits block unconditionally; warning-tier blocking is gated by `contentModerationSevereFailClosedEnabled` (default true — OFF = emergency ALLOW+log rollback with startup warning, fail-closed read); Tier-1 consulted only when Tier-0 clean. `checkUserAbuse` removed 2026-08-06 — `recordViolation` is the single enforcement path
 - `apps/server/src/lib/wechatMsgSecCheck.ts` — WeChat msgSecCheck v2 client: 110-min token cache with single-flight refresh, fire-and-forget token warm-up, label→ViolationType mapping, `87014`+`suggest=risky` verdicts
 - `apps/server/src/lib/captureLocationSnapshot.ts` — captures IP-based location snapshots on login, onboarding completion, and pool registration
 - `apps/server/src/services/ipGeolocationService.ts` — IP geolocation resolution and admin heatmap rollups
@@ -195,7 +195,7 @@ Primary files:
 
 Boundary:
 - All `/api/admin/*` routes must enforce admin middleware.
-- `GET /api/admin/content-filter/logs` is gated at operator+ level; pagination + filtering by userId/violationType/severity/field/date range.
+- `GET /api/admin/content-filter/logs` and `PATCH /api/admin/content-filter/logs/:id` are gated at operator+ level; GET supports pagination + filtering by userId/violationType/severity/field/date range and reviewStatus/missFlag; PATCH is audit-logged with action `CONTENT_FILTER_LOG_REVIEWED`.
 
 ### Match Compass (preference tuning)
 

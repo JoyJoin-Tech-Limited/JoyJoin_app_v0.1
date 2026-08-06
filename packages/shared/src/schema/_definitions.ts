@@ -1593,9 +1593,10 @@ export const contentFilterLogs = pgTable("content_filter_logs", {
   missFlag: boolean("miss_flag").notNull().default(false),
   reviewNote: text("review_note"),
 }, (table) => [
-  // Defense-in-depth DB CHECK; mirrors the DO-block in the 0073 migration so
-  // db:push / db:verify see no drift. Primary enforcement is the shared Zod
-  // union + TS union (repo varchar-not-pgEnum pattern).
+  // Defense-in-depth DB CHECK; mirrors the DO-block in the
+  // 0076_content_filter_logs_review migration so db:push / db:verify see no
+  // drift. Primary enforcement is the shared Zod union + TS union
+  // (repo varchar-not-pgEnum pattern).
   check(
     "content_filter_logs_review_status_check",
     sql`${table.reviewStatus} IN ('pending','reviewed','dismissed','actioned')`,

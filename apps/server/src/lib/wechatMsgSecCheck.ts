@@ -171,13 +171,36 @@ async function callMsgSecCheck(
   };
 }
 
+export interface MsgSecCheckContext {
+  /** Which product field was checked (e.g. 'bio', 'eventFeedback'). */
+  field?: string;
+  /** JoyJoin user id (when known) for audit attribution. */
+  userId?: string;
+}
+
 /**
  * Run one msgSecCheck request with a single token-refresh retry for
  * token-invalid errcodes. Returns null on any non-blocking failure (fail-open).
  */
-export async function checkTextWithMsgSecCheck(content: string, openid: string): Promise<WechatRiskVerdict | null> {
+export async function checkTextWithMsgSecCheck(
+  content: string,
+  openid: string,
+  ctx: MsgSecCheckContext = {},
+): Promise<WechatRiskVerdict | null> {
   const trimmed = content.trim();
-  if (!trimmed || trimmed.length > 5000) return null;
+  if (!trimmed) return null;
+  if (trimmed.length > 5000) {
+    // WeChat caps msgSecCheck content at 5000 chars; the check is skipped
+    // (fail-open) — log it loudly so the audit trail can distinguish
+    // "skipped: too long" from "clean".
+    logger.warn("[msgSecCheck] Tier-1 skipped: content exceeds 5000-char limit, failing open", {
+      field: ctx.field,
+      userId: ctx.userId,
+      openid,
+      length: trimmed.length,
+    });
+    return null;
+  }
 
   let token = await getWechatAccessToken();
   if (!token) return null;

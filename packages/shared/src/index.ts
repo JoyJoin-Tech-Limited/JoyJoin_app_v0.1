@@ -49,6 +49,7 @@ export * from './eventDetail';
 export * from './groupAnalysis';
 export * from './api';
 export * from './api/adminUser';
+export * from './api/adminContentFilter';
 export * from './iconSystem';
 export * from './onboarding';
 export * from './archetypeColors';

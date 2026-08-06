@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,29 +44,16 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/ui/use-toast";
 import { fmtDateTimeShort } from "@/lib/dateUtils";
 import EmptyState from "@/components/admin/EmptyState";
+import type {
+  AdminContentFilterLogRow,
+  AdminContentFilterLogReviewResponse,
+  ContentFilterLogReviewBody,
+  ContentFilterReviewStatus,
+} from "@joyjoin/shared/api/adminContentFilter";
 
-/* ─────────────────────────── types (locked contract) ─────────────────────────── */
+/* ──────────────────── types (shared DTO contract) ──────────────────── */
 
-type ReviewStatus = "pending" | "reviewed" | "dismissed" | "actioned";
-type Severity = "warning" | "severe";
-type FilterSource = "tier0" | "tier1";
-
-interface ContentFilterLog {
-  id: string;
-  userId: string;
-  field: string;
-  violationType: string;
-  severity: Severity;
-  matchedKeywords: string[];
-  inputPreview: string;
-  source: FilterSource;
-  createdAt: string;
-  displayName: string | null;
-  reviewedByDisplayName?: string | null;
-  reviewStatus: ReviewStatus;
-  missFlag: boolean;
-  reviewNote?: string | null;
-}
+type ContentFilterLog = AdminContentFilterLogRow;
 
 interface ContentFilterLogsResponse {
   rows: ContentFilterLog[];
@@ -75,12 +62,6 @@ interface ContentFilterLogsResponse {
   pageSize: number;
 }
 
-type UpdateLogPayload = {
-  reviewStatus?: ReviewStatus;
-  missFlag?: boolean;
-  note?: string;
-};
-
 /* ─────────────────────────── constants / maps ─────────────────────────── */
 
 const PAGE_SIZE = 20;
@@ -88,7 +69,7 @@ const NOTE_MAX_LENGTH = 500;
 const MAX_KEYWORD_CHIPS = 3;
 
 const REVIEW_STATUS_MAP: Record<
-  ReviewStatus,
+  ContentFilterReviewStatus,
   { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
 > = {
   pending: { label: "待处理", variant: "secondary" },
@@ -110,7 +91,7 @@ const VIOLATION_TYPE_LABELS: Record<string, string> = Object.fromEntries(
   VIOLATION_TYPE_OPTIONS.map((o) => [o.value, o.label])
 );
 
-function severityBadge(severity: Severity) {
+function severityBadge(severity: string) {
   if (severity === "severe") {
     return { label: "严重", variant: "destructive" as const, className: "" };
   }
@@ -122,10 +103,17 @@ function severityBadge(severity: Severity) {
   };
 }
 
-const SOURCE_MAP: Record<FilterSource, { label: string; variant: "default" | "secondary" | "outline" }> = {
-  tier0: { label: "基础规则", variant: "secondary" },
-  tier1: { label: "AI 模型", variant: "outline" },
-};
+function resolveSourceMeta(source: string | null): { label: string; variant: "default" | "secondary" | "outline" } {
+  if (source === "tier0") {
+    return { label: "基础规则", variant: "secondary" };
+  }
+  if (source === "tier1" || source?.startsWith("tier1:")) {
+    return { label: "AI 模型", variant: "outline" };
+  }
+  // Legacy rows may carry null / unknown source values — render a visible 未知
+  // badge instead of an empty one.
+  return { label: "未知", variant: "outline" };
+}
 
 function truncate(str: string, max: number): string {
   return str.length > max ? `${str.slice(0, max)}…` : str;
@@ -182,7 +170,7 @@ export default function AdminContentFilterLogsPage() {
   });
 
   const updateLogMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateLogPayload }) =>
+    mutationFn: ({ id, data }: { id: string; data: ContentFilterLogReviewBody }) =>
       apiRequest("PATCH", `/api/admin/content-filter/logs/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/content-filter/logs"] });
@@ -196,6 +184,16 @@ export default function AdminContentFilterLogsPage() {
 
   const rows = data?.rows ?? [];
   const totalPages = data ? Math.max(1, Math.ceil(data.total / (data.pageSize || PAGE_SIZE))) : 1;
+  const errorMessage = error instanceof Error ? error.message : "";
+
+  // If the dataset shrank (filters, other admins acting on rows) and the current
+  // page is now out of range, clamp back to the last valid page instead of
+  // showing a misleading "暂无内容审核记录" empty state.
+  useEffect(() => {
+    if (data && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [data, page, totalPages]);
 
   const resetToFirstPage = () => setPage(1);
 
@@ -215,7 +213,7 @@ export default function AdminContentFilterLogsPage() {
     setNoteDraft("");
   };
 
-  const handleSetReviewStatus = (log: ContentFilterLog, status: ReviewStatus) => {
+  const handleSetReviewStatus = (log: ContentFilterLog, status: ContentFilterReviewStatus) => {
     updateLogMutation.mutate({ id: log.id, data: { reviewStatus: status } });
   };
 
@@ -226,6 +224,16 @@ export default function AdminContentFilterLogsPage() {
   const handleSaveNote = async () => {
     if (!selectedLog) return;
     const note = noteDraft.trim();
+    if (note === "") {
+      // The server Zod refine rejects an all-empty PATCH (at least one field
+      // required) and never clears notes — it only replaces them when non-empty.
+      // Surface that contract up front instead of a 400 → destructive toast.
+      toast({
+        title: "备注已清空，未保存",
+        description: "服务端不支持清空备注，如需修改请直接输入新内容",
+      });
+      return;
+    }
     try {
       await updateLogMutation.mutateAsync({ id: selectedLog.id, data: { note } });
       setSelectedLog((prev) => (prev ? { ...prev, reviewNote: note } : prev));
@@ -234,11 +242,29 @@ export default function AdminContentFilterLogsPage() {
     }
   };
 
-  const handleDialogSetReviewStatus = async (status: ReviewStatus) => {
+  const handleDialogSetReviewStatus = async (status: ContentFilterReviewStatus) => {
     if (!selectedLog) return;
     try {
-      await updateLogMutation.mutateAsync({ id: selectedLog.id, data: { reviewStatus: status } });
-      setSelectedLog((prev) => (prev ? { ...prev, reviewStatus: status } : prev));
+      const res = await updateLogMutation.mutateAsync({ id: selectedLog.id, data: { reviewStatus: status } });
+      // The PATCH returns { changed, row } with the fresh row incl. reviewer
+      // identity — merge it so the dialog's 审核人 doesn't stay stale until reopen.
+      let freshRow: AdminContentFilterLogRow | null = null;
+      try {
+        const body = (await res.json()) as AdminContentFilterLogReviewResponse;
+        freshRow = body?.row ?? null;
+      } catch {
+        // response body is best-effort; the local snapshot below still applies
+      }
+      setSelectedLog((prev) =>
+        prev
+          ? {
+              ...prev,
+              reviewStatus: status,
+              reviewedByDisplayName: freshRow?.reviewedByDisplayName ?? prev.reviewedByDisplayName,
+              reviewedAt: freshRow?.reviewedAt ?? prev.reviewedAt,
+            }
+          : prev
+      );
     } catch {
       // error toast handled by mutation onError
     }
@@ -253,6 +279,11 @@ export default function AdminContentFilterLogsPage() {
       // error toast handled by mutation onError
     }
   };
+
+  // Derived badge metadata for the open detail dialog — reuses the same helpers
+  // as the table rows so the two surfaces can't drift apart.
+  const dialogSeverityMeta = selectedLog ? severityBadge(selectedLog.severity) : null;
+  const dialogSourceMeta = selectedLog ? resolveSourceMeta(selectedLog.source) : null;
 
   const renderPaginationItems = () => {
     const items: React.ReactNode[] = [];
@@ -491,17 +522,29 @@ export default function AdminContentFilterLogsPage() {
                     </TableRow>
                   ))
                 ) : error ? (
-                  <TableRow>
-                    <TableCell colSpan={11} className="py-12 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <span className="text-sm text-destructive">加载失败，请重试</span>
-                        <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-retry-logs">
-                          <RefreshCw className="h-3 w-3 mr-1" />
-                          重试
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  errorMessage.includes("403") ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="py-12 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <span className="text-sm text-muted-foreground">
+                            无权限查看内容审核日志，请联系管理员开通运营权限
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={11} className="py-12 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <span className="text-sm text-destructive">加载失败，请重试</span>
+                          <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-retry-logs">
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            重试
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
                 ) : rows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={11}>
@@ -516,7 +559,7 @@ export default function AdminContentFilterLogsPage() {
                   rows.map((log) => {
                     const statusMeta = REVIEW_STATUS_MAP[log.reviewStatus] || REVIEW_STATUS_MAP.pending;
                     const sevMeta = severityBadge(log.severity);
-                    const sourceMeta = SOURCE_MAP[log.source] || { label: log.source, variant: "outline" as const };
+                    const sourceMeta = resolveSourceMeta(log.source);
                     const canMarkReviewed = log.reviewStatus !== "reviewed" && log.reviewStatus !== "actioned";
                     const canDismiss = log.reviewStatus !== "dismissed" && log.reviewStatus !== "actioned";
                     return (
@@ -527,7 +570,7 @@ export default function AdminContentFilterLogsPage() {
                         <TableCell>
                           <div className="font-medium text-sm">{log.displayName || "未知用户"}</div>
                           <div className="text-xs text-muted-foreground font-mono">
-                            {truncate(String(log.userId), 12)}
+                            {truncate(log.userId || "—", 12)}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -552,7 +595,7 @@ export default function AdminContentFilterLogsPage() {
                         <TableCell>
                           <span
                             className="block max-w-[240px] truncate text-sm text-muted-foreground"
-                            title={log.inputPreview}
+                            title={log.inputPreview || undefined}
                             data-testid={`text-preview-${log.id}`}
                           >
                             {log.inputPreview || "—"}
@@ -672,7 +715,7 @@ export default function AdminContentFilterLogsPage() {
                 <div>
                   <p className="text-muted-foreground mb-1">用户</p>
                   <p className="font-medium">{selectedLog.displayName || "未知用户"}</p>
-                  <p className="text-xs text-muted-foreground font-mono">{selectedLog.userId}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{selectedLog.userId || "—"}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground mb-1">时间</p>
@@ -688,15 +731,17 @@ export default function AdminContentFilterLogsPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground mb-1">严重程度</p>
-                  <Badge variant={severityBadge(selectedLog.severity).variant}>
-                    {severityBadge(selectedLog.severity).label}
-                  </Badge>
+                  {dialogSeverityMeta && (
+                    <Badge variant={dialogSeverityMeta.variant} className={dialogSeverityMeta.className || undefined}>
+                      {dialogSeverityMeta.label}
+                    </Badge>
+                  )}
                 </div>
                 <div>
                   <p className="text-muted-foreground mb-1">来源</p>
-                  <Badge variant={SOURCE_MAP[selectedLog.source]?.variant || "outline"}>
-                    {SOURCE_MAP[selectedLog.source]?.label || selectedLog.source}
-                  </Badge>
+                  {dialogSourceMeta && (
+                    <Badge variant={dialogSourceMeta.variant}>{dialogSourceMeta.label}</Badge>
+                  )}
                 </div>
               </div>
 

@@ -318,7 +318,8 @@ describe("contentSafety red-team: Tier-1 outage chaos (content-mod-s1)", () => {
 
     // Representative must-catch machinery from the sim corpus (real lists):
     // exact Chinese (severe + warning), English exact, leet, separators,
-    // repetition, vowel-drop, casemix, zero-width, combining marks, pinyin.
+    // emoji separators, repetition, vowel-drop, casemix, zero-width,
+    // combining marks, pinyin.
     const corpus: Array<{ text: string; label: string }> = [
       { text: "共产党", label: "zh-severe-exact" },
       { text: "约炮", label: "zh-severe-exact-2" },
@@ -332,6 +333,7 @@ describe("contentSafety red-team: Tier-1 outage chaos (content-mod-s1)", () => {
       { text: "5h17", label: "en-leet" },
       { text: "sh1t", label: "en-leet-2" },
       { text: "f.u.c.k", label: "en-separators" },
+      { text: "f\u{1F600}u\u{1F600}c\u{1F600}k", label: "en-emoji-separator" },
       { text: "fuuuuck", label: "en-repeat" },
       { text: "fck", label: "en-vowel-drop" },
       { text: "FuCk", label: "en-casemix" },

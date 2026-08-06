@@ -40,9 +40,12 @@ strong_triggers:
   - conversation turns
   - gibberish detection
   - repetition detection
-  - checkUserAbuse
+  - checkUserAbuse (removed 2026-08-06 — use recordViolation)
   - filterContent
   - recordViolation
+  - validateContentSafe
+  - validateContentSafeAsync
+  - contentModerationSevereFailClosedEnabled
   - createRateLimiter
   - aiEndpointLimiter
   - authEndpointLimiter
@@ -66,9 +69,11 @@ owned_paths:
   - /api/admin/users/*/unban
 
 owned_symbols:
-  - checkUserAbuse
+  - checkUserAbuse (removed 2026-08-06)
   - filterContent
   - recordViolation
+  - validateContentSafe
+  - validateContentSafeAsync
   - recordTokenUsage
   - detectGibberish
   - detectRepetition

@@ -23,6 +23,8 @@
     "./interests": "./src/interests.ts",
     "./api": "./src/api.ts",
     "./adminUser": "./src/api/adminUser.ts",
+    "./api/adminContentFilter": "./src/api/adminContentFilter.ts",
+    "./adminContentFilter": "./src/api/adminContentFilter.ts",
     "./onboarding": "./src/onboarding.ts",
     "./hongKongTime": "./src/hongKongTime.ts",
     "./centerTabRouting": "./src/centerTabRouting.ts",

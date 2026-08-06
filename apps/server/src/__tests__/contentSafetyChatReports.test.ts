@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 /**
  * S4 — POST /api/chat-reports content-moderation gate on `description` +
  * chat-report submission rate limiter (5 req / 5 min, keyPrefix chatReports):
- * severe → 400 + recordViolation exactly once; benign → 201; 6th rapid
+ * severe → 400 + recordViolation exactly once; benign → 200; 6th rapid
  * submission → 429.
  */
 

@@ -150,6 +150,29 @@ describe("wechatMsgSecCheck", () => {
       expect(await checkTextWithMsgSecCheck("   ", "openid-1")).toBeNull();
       expect(fetchMock).not.toHaveBeenCalled();
     });
+
+    it("skips (fail-open) >5000-char content with an explicit warn log, no msgSecCheck call", async () => {
+      const { logger } = await import("../lib/logger");
+      const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+
+      const longText = "x".repeat(5001);
+      const verdict = await checkTextWithMsgSecCheck(longText, "openid-1", {
+        field: "bio",
+        userId: "u1",
+      });
+
+      expect(verdict).toBeNull();
+      // The WeChat client is never invoked for over-limit content.
+      expect(fetchMock).not.toHaveBeenCalled();
+      // The skip is loud: audit trail distinguishes "skipped: too long" from "clean".
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("5000-char limit"),
+        expect.objectContaining({ length: 5001, field: "bio", userId: "u1" }),
+      );
+      warnSpy.mockRestore();
+    });
   });
 
   describe("warmWechatAccessToken", () => {

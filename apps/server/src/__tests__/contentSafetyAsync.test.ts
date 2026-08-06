@@ -67,6 +67,43 @@ describe("validateContentSafeAsync", () => {
     expect(mockCheckTextWithMsgSecCheck).not.toHaveBeenCalled();
   });
 
+  // ─── Admin-DB-style toggle (F2): the flag is resolved through the DB-backed
+  // async getFeatureFlag on the hot path, so a /admin/feature-flags toggle
+  // takes effect without env+restart. `mockGetFeatureFlag` here simulates the
+  // DB row (per-key), unlike the env-var toggles in the decision-table suite.
+  it("DB toggle OFF: warning keyword → ALLOW + log row + no recordViolation + no tier-1 consult", async () => {
+    mockGetFeatureFlag.mockImplementation(async (key: string) => {
+      if (key === "contentModerationSevereFailClosedEnabled") return false;
+      return true;
+    });
+
+    const result = await validateContentSafeAsync("傻逼", "bio", { userId: "u1", openid: "o1" });
+
+    expect(result.safe).toBe(true);
+    // Detection + logging stay unconditional (emergency-rollback visibility).
+    expect(mockInsert).toHaveBeenCalled();
+    // Row 3: ALLOW with no escalation.
+    expect(mockRecordViolation).not.toHaveBeenCalled();
+    // LOCKED control flow: warning-tier text allowed by row 3 is not Tier-0
+    // clean → Tier-1 is never consulted.
+    expect(mockCheckTextWithMsgSecCheck).not.toHaveBeenCalled();
+  });
+
+  it("DB toggle OFF: severe keyword still BLOCKS (row 1 is unconditional)", async () => {
+    mockGetFeatureFlag.mockImplementation(async (key: string) => {
+      if (key === "contentModerationSevereFailClosedEnabled") return false;
+      return true;
+    });
+
+    const result = await validateContentSafeAsync("恐怖袭击", "bio", { userId: "u1", openid: "o1" });
+
+    expect(result.safe).toBe(false);
+    expect(result.code).toBe("CONTENT_VIOLATION");
+    expect(result.violation!.source).toBe("tier0");
+    expect(result.violation!.severity).toBe("severe");
+    expect(mockCheckTextWithMsgSecCheck).not.toHaveBeenCalled();
+  });
+
   it("skips tier 1 when the feature flag is off", async () => {
     mockGetFeatureFlag.mockResolvedValue(false);
 
@@ -97,7 +134,10 @@ describe("validateContentSafeAsync", () => {
 
     const result = await validateContentSafeAsync("clean text", "bio", { userId: "u1" });
     expect(result.safe).toBe(true);
-    expect(mockCheckTextWithMsgSecCheck).toHaveBeenCalledWith("clean text", "openid-db");
+    expect(mockCheckTextWithMsgSecCheck).toHaveBeenCalledWith("clean text", "openid-db", {
+      field: "bio",
+      userId: "u1",
+    });
   });
 
   it("fails open when the openid lookup errors", async () => {

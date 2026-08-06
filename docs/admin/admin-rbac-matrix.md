@@ -100,8 +100,8 @@ Reference for which admin portal pages map to which API endpoints and which role
 | `/admin/notifications` | List notifications | GET | `/api/admin/notifications` | `requireAdmin` |
 | `/admin/notifications` | Broadcast ⚠️ | POST | `/api/admin/notifications/broadcast` | `requireAdmin` |
 | `/admin/notifications` | Send notification | POST | `/api/admin/notifications/send` | `requireAdmin` |
-| `/admin/content-filter-logs` | Content filter logs | GET | `/api/admin/content-filter/logs` | `requireAdmin` + `requireOperatorOrAbove` (viewer 403) |
-| `/admin/content-filter-logs` | Review content filter log ⚠️ | PATCH | `/api/admin/content-filter/logs/:id` | `requireAdmin` + `requireOperatorOrAbove` (viewer 403); audit-logged (`CONTENT_FILTER_LOG_REVIEWED`) |
+| `/admin/content-filter` | Content filter logs | GET | `/api/admin/content-filter/logs` | `requireAdmin` + `requireOperatorOrAbove` (viewer 403); supports `reviewStatus`/`missFlag` filters |
+| `/admin/content-filter` | Review content filter log ⚠️ | PATCH | `/api/admin/content-filter/logs/:id` | `requireAdmin` + `requireOperatorOrAbove` (viewer 403); audit-logged (`CONTENT_FILTER_LOG_REVIEWED`), idempotent |
 
 ---
 
