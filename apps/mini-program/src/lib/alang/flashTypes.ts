@@ -104,6 +104,11 @@ export interface FlashHomeView {
 export interface FlashLocateView {
   canonicalScreen: FlashCanonicalScreen
   withinRange: boolean
+  destination: {
+    latitude: number
+    longitude: number
+    coordinateSystem: 'gcj02'
+  }
   distanceMeters: number
   targetBearingDegrees: number
   proximityBand: 'far' | 'approaching' | 'near' | 'arrived'

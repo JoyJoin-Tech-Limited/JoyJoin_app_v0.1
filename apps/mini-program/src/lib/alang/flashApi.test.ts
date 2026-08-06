@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FlashAssignmentResponse, FlashHomeResponse, FlashPreferenceDto } from '@shared/alang/flashTypes'
 import {
   adaptFlashHomeDto,
+  adaptFlashLocateDto,
   adaptFlashAssignmentDto,
   adaptFlashEncounterDto,
   fetchFlashHome,
@@ -64,6 +65,25 @@ describe('formal Flash shared-contract adapter', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useRealTimers()
+  })
+
+  it('preserves the active appearance destination and live distance', () => {
+    const view = adaptFlashLocateDto({
+      appearanceId: 'appearance-1',
+      destination: { latitude: 22.5432, longitude: 114.0578, coordinateSystem: 'gcj02' },
+      distanceMeters: 83,
+      targetBearingDegrees: 91,
+      proximityBand: 'near',
+      signal: 'searching',
+      arrived: false,
+      encounterId: null,
+      canonicalScreen: 'radar',
+    })
+    expect(view).toMatchObject({
+      distanceMeters: 83,
+      destination: { latitude: 22.5432, longitude: 114.0578, coordinateSystem: 'gcj02' },
+      withinRange: false,
+    })
   })
 
   it('adapts the canonical nested home DTO into renderer-only view data', () => {

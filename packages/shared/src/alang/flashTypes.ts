@@ -170,6 +170,12 @@ export type FlashHomeResponse = {
 
 export type FlashLocateResponse = {
   appearanceId: string;
+  /** Fixed, operator-approved destination for this currently active appearance. */
+  destination: {
+    latitude: number;
+    longitude: number;
+    coordinateSystem: typeof FLASH_COORDINATE_SYSTEM;
+  };
   signal: "searching" | "arrived";
   arrived: boolean;
   distanceMeters: number;

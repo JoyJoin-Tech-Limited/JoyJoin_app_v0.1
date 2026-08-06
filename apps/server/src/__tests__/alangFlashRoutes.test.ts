@@ -95,7 +95,17 @@ describe("formal Flash routes", () => {
     mocks.getFeatureFlag.mockResolvedValue(true);
     mocks.assertReady.mockResolvedValue(undefined);
     mocks.getHome.mockResolvedValue({ canonicalScreen: "home", onlineNpcs: [], myTasks: [] });
-    mocks.locate.mockResolvedValue({ canonicalScreen: "radar", arrived: false });
+    mocks.locate.mockResolvedValue({
+      appearanceId,
+      destination: { latitude: 22.5432, longitude: 114.0578, coordinateSystem: "gcj02" },
+      distanceMeters: 83,
+      targetBearingDegrees: 91,
+      proximityBand: "near",
+      signal: "searching",
+      canonicalScreen: "radar",
+      arrived: false,
+      encounterId: null,
+    });
     mocks.arrive.mockResolvedValue({ canonicalScreen: "task", arrived: false });
     mocks.getEncounter.mockResolvedValue({ canonicalScreen: "dialogue" });
     mocks.deliver.mockResolvedValue({ canonicalScreen: "completed" });
@@ -286,6 +296,24 @@ describe("formal Flash routes", () => {
     expect(JSON.stringify(mocks.loggerWarn.mock.calls)).not.toContain(String(validCoordinate.latitude));
     expect(JSON.stringify(mocks.loggerWarn.mock.calls)).not.toContain(String(validCoordinate.longitude));
     expect(mocks.locate).toHaveBeenCalledWith(expect.objectContaining({ contextDistrict: "南山区" }));
+  });
+
+  it("returns the fixed approved destination while the selected appearance is live", async () => {
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, "map-navigation-user");
+      const response = await fetch(`${baseUrl}/api/alang/flash/appearances/${appearanceId}/locate`, {
+        method: "POST",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify(validCoordinate),
+      });
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        appearanceId,
+        destination: { latitude: 22.5432, longitude: 114.0578, coordinateSystem: "gcj02" },
+        distanceMeters: 83,
+        canonicalScreen: "radar",
+      });
+    });
   });
 
   it("returns a stable code when the local hidden-location guard is exhausted", async () => {
