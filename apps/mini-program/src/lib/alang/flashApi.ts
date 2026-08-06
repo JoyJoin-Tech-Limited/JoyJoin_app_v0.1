@@ -123,6 +123,7 @@ export function adaptFlashLocateDto(response: SharedFlashLocateResponse): FlashL
   return {
     canonicalScreen: response.canonicalScreen,
     withinRange: response.arrived,
+    destination: response.destination,
     distanceMeters: response.distanceMeters,
     targetBearingDegrees: response.targetBearingDegrees,
     proximityBand: response.proximityBand,

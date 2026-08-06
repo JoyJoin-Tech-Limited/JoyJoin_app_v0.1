@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FlashRadarPage from './index'
 
 const mocks = vi.hoisted(() => ({
   useAuth: vi.fn(),
   mutateAsync: vi.fn(),
+  getWalkingRoute: vi.fn(),
   permission: vi.fn(),
   redirectTo: vi.fn(),
   canonicalRedirect: vi.fn(),
@@ -51,7 +52,10 @@ vi.mock('@tarojs/components', () => ({
   Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
   ScrollView: ({ children, scrollY: _scrollY, ...props }: any) => <div {...props}>{children}</div>,
   Image: ({ mode: _mode, onError: _onError, ...props }: any) => <img {...props} />,
+  Map: (props: any) => <div data-testid='native-map' data-markers={JSON.stringify(props.markers)} data-polyline={JSON.stringify(props.polyline)} />,
 }))
+vi.mock('@shared/api', () => ({ getWalkingRoute: mocks.getWalkingRoute }))
+vi.mock('../../../lib/api/api', () => ({ apiRequest: vi.fn() }))
 vi.mock('../../../hooks/useAuth', () => ({ useAuth: mocks.useAuth }))
 vi.mock('../../../lib/alang/useFlash', () => ({
   useLocateFlashAppearance: () => ({ mutateAsync: mocks.mutateAsync, isPending: false }),
@@ -66,17 +70,16 @@ vi.mock('../../../lib/alang/flashNavigation', async (importOriginal) => ({
 }))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
 
-async function startRadar() {
-  fireEvent.click(screen.getByText('开启雷达'))
+async function startNavigation() {
   await waitFor(() => expect(mocks.startLocationUpdate).toHaveBeenCalled())
-  await waitFor(() => expect(screen.getAllByText('追踪中').length).toBeGreaterThan(0))
+  await waitFor(() => expect(screen.getByText('地图引导中')).toBeInTheDocument())
 }
 
 function emitLocation() {
   mocks.locationChange.current?.({ latitude: 22.54, longitude: 114.05, accuracy: 8 })
 }
 
-describe('formal Flash live radar', () => {
+describe('formal Flash map navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.locationChange.current = null
@@ -91,51 +94,66 @@ describe('formal Flash live radar', () => {
     mocks.mutateAsync.mockResolvedValue({
       canonicalScreen: 'radar',
       withinRange: false,
+      destination: { latitude: 22.541, longitude: 114.052, coordinateSystem: 'gcj02' },
       distanceMeters: 83,
       targetBearingDegrees: 90,
       proximityBand: 'near',
     })
+    mocks.getWalkingRoute.mockResolvedValue({
+      success: true,
+      distanceMeters: 820,
+      durationSeconds: 600,
+      polyline: [
+        { latitude: 22.54, longitude: 114.05 },
+        { latitude: 22.541, longitude: 114.052 },
+      ],
+      source: 'tencent',
+    })
     mocks.canonicalRedirect.mockResolvedValue(false)
   })
 
-  it('renders decoded public-area metadata without starting location', () => {
+  it('renders decoded public-area metadata and starts map navigation immediately', async () => {
     render(<FlashRadarPage />)
     expect(screen.getByText('默默')).toBeInTheDocument()
     expect(screen.getByText(/在宝安区/)).toBeInTheDocument()
     expect(screen.getByText('宝安壹方城开放公共区域')).toBeInTheDocument()
-    expect(screen.getByText('开启雷达')).toBeInTheDocument()
-    expect(mocks.startLocationUpdate).not.toHaveBeenCalled()
+    await waitFor(() => expect(mocks.startLocationUpdate).toHaveBeenCalled())
   })
 
-  it('streams foreground frames and rotates the pointer relative to device heading', async () => {
+  it('shows the fixed NPC marker and walking route from the current location', async () => {
     render(<FlashRadarPage />)
-    await startRadar()
+    await startNavigation()
     expect(mocks.onLocationChange).toHaveBeenCalled()
-    expect(mocks.onCompassChange).toHaveBeenCalled()
-
-    mocks.compassChange.current?.({ direction: 30, accuracy: 'high' })
     emitLocation()
 
     expect(await screen.findByText('83 米')).toBeInTheDocument()
-    expect(screen.getByTestId('flash-radar-pointer')).toHaveStyle({ transform: 'rotate(60deg)' })
-    expect(screen.getByTestId('flash-radar-target')).toHaveStyle({ transform: 'rotate(60deg)' })
-    expect(screen.getByTestId('flash-range-radar')).toHaveClass('flash-radar__instrument--near')
+    expect(await screen.findByText('步行约 10 分钟 · 820 米')).toBeInTheDocument()
+    expect(screen.getByTestId('native-map').getAttribute('data-markers')).toContain('22.541')
+    expect(screen.getByTestId('native-map').getAttribute('data-polyline')).toContain('114.052')
   })
 
-  it('stops location and compass when the page enters the background', async () => {
+  it('keeps the destination marker available when the walking route provider is unavailable', async () => {
+    mocks.getWalkingRoute.mockResolvedValue({ success: false, code: 'MAP_NO_ROUTE' })
     render(<FlashRadarPage />)
-    await startRadar()
+    await startNavigation()
+    emitLocation()
+    expect(await screen.findByText('步行路线暂时没有加载，可先按地图终点方向前往。')).toBeInTheDocument()
+    expect(screen.getByTestId('native-map').getAttribute('data-markers')).toContain('22.541')
+  })
+
+  it('stops location when the page enters the background', async () => {
+    render(<FlashRadarPage />)
+    await startNavigation()
     mocks.didHide.current?.()
     expect(mocks.stopLocationUpdate).toHaveBeenCalled()
-    expect(mocks.stopCompass).toHaveBeenCalled()
     expect(mocks.offLocationChange).toHaveBeenCalled()
-    expect(mocks.offCompassChange).toHaveBeenCalled()
   })
 
   it('shows a found signal, stops tracking, then enters dialogue', async () => {
     mocks.mutateAsync.mockResolvedValue({
       canonicalScreen: 'dialogue',
       withinRange: true,
+      destination: { latitude: 22.541, longitude: 114.052, coordinateSystem: 'gcj02' },
       distanceMeters: 7,
       targetBearingDegrees: 15,
       proximityBand: 'arrived',
@@ -143,18 +161,17 @@ describe('formal Flash live radar', () => {
     })
     mocks.canonicalRedirect.mockResolvedValue(true)
     render(<FlashRadarPage />)
-    await startRadar()
+    await startNavigation()
     emitLocation()
 
-    expect(await screen.findByText('找到了')).toBeInTheDocument()
-    expect(mocks.stopLocationUpdate).toHaveBeenCalled()
     await waitFor(() => expect(mocks.canonicalRedirect).toHaveBeenCalled(), { timeout: 1200 })
+    expect(mocks.stopLocationUpdate).toHaveBeenCalled()
   })
 
   it('stops and explains when the appearance ends during tracking', async () => {
     mocks.mutateAsync.mockRejectedValue({ data: { code: 'FLASH_APPEARANCE_ENDED' } })
     render(<FlashRadarPage />)
-    await startRadar()
+    await startNavigation()
     emitLocation()
     expect(await screen.findByText('刚好散场了')).toBeInTheDocument()
     expect(mocks.stopLocationUpdate).toHaveBeenCalled()

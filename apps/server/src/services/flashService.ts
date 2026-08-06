@@ -350,6 +350,11 @@ export async function locateFlashAppearance(input: {
   if (!input.forceArrivalForTesting && radarFrame.distanceMeters > FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS) {
     return {
       appearanceId: input.appearanceId,
+      destination: {
+        latitude: appearance.latitude,
+        longitude: appearance.longitude,
+        coordinateSystem: "gcj02",
+      },
       signal: "searching",
       arrived: false,
       ...radarFrame,
@@ -378,6 +383,11 @@ export async function locateFlashAppearance(input: {
     : null;
   return {
     appearanceId: input.appearanceId,
+    destination: {
+      latitude: appearance.latitude,
+      longitude: appearance.longitude,
+      coordinateSystem: "gcj02",
+    },
     signal: "arrived",
     arrived: true,
     ...radarFrame,
