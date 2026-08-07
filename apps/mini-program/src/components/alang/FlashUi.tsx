@@ -196,7 +196,7 @@ export function FlashFeatureClosed() {
   return (
     <View className='flash-page'>
       <FlashPageState
-        title='闪现正在准备下一次见面'
+        title='街头盲盒正在准备下一次见面'
         description='这项体验暂时没有开放，过些时候再来看看。'
       />
     </View>
@@ -204,20 +204,20 @@ export function FlashFeatureClosed() {
 }
 
 export function FlashTaskCategoryBadge({
-  category,
+  category: categoryName,
   className = '',
 }: {
   category: string
   className?: string
 }) {
-  const theme = resolveFlashTaskCategory(category)
+  const category = resolveFlashTaskCategory(categoryName)
   return (
     <View
       className={`flash-task-category${className ? ` ${className}` : ''}`}
-      style={{ color: theme.accent, backgroundColor: theme.tint }}
+      style={{ color: category.text, backgroundColor: category.tint }}
     >
-      <Image className='flash-task-category__icon' src={theme.iconSrc} mode='aspectFit' />
-      <Text className='flash-task-category__label'>{theme.label}</Text>
+      <Image className='flash-task-category__icon' src={category.iconSrc} mode='aspectFit' />
+      <Text className='flash-task-category__label'>{category.label}</Text>
     </View>
   )
 }

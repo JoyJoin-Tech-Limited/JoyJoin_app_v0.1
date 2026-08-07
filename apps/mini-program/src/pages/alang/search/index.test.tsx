@@ -170,7 +170,7 @@ describe('formal Flash map navigation', () => {
   it('does not start tracking through a disabled deep link', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashMapPage />)
-    expect(screen.getByText('闪现正在准备下一次见面')).toBeInTheDocument()
+    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
     expect(mocks.startLocationUpdate).not.toHaveBeenCalled()
   })
 })

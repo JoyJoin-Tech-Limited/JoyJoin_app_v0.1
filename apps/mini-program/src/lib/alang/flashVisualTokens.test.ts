@@ -86,6 +86,8 @@ describe('Flash readable color tokens', () => {
     expect(preferencesSource).not.toContain("color='#")
     expect(platformControlSources).not.toContain("confirmColor: '#")
     expect(badgeConsumers).not.toContain('color: category.accent')
-    expect(badgeConsumers.match(/color: category\.text/g)).toHaveLength(3)
+    // Dialogue and task cards share FlashTaskCategoryBadge, so the centralized
+    // renderer plus the companion view are the two intentional consumers.
+    expect(badgeConsumers.match(/color: category\.text/g)).toHaveLength(2)
   })
 })

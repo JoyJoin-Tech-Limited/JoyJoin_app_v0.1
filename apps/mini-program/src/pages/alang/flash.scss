@@ -81,7 +81,7 @@ page {
   &__lead {
     display: block;
     margin-top: 12rpx;
-    color: $color-text-secondary;
+    color: $color-text-secondary-on-light;
     font-size: $font-size-base;
     line-height: $line-height-relaxed;
   }
@@ -105,7 +105,7 @@ page {
 
   &__section-meta,
   &__link {
-    color: $color-text-secondary;
+    color: $color-text-secondary-on-light;
     font-size: $font-size-sm;
   }
 
@@ -136,7 +136,7 @@ page {
   }
 
   &__notice-text {
-    color: $color-text-secondary;
+    color: $color-text-secondary-on-light;
     font-size: $font-size-sm;
     line-height: $line-height-relaxed;
   }
@@ -232,7 +232,7 @@ page {
   &--quiet {
     background: transparent;
 
-    .flash-button__text { color: $color-text-secondary; }
+    .flash-button__text { color: $color-text-secondary-on-light; }
   }
 
   &--danger {
@@ -287,7 +287,7 @@ page {
   &__description {
     max-width: 560rpx;
     margin: 14rpx 0 28rpx;
-    color: $color-text-secondary;
+    color: $color-text-secondary-on-light;
     font-size: $font-size-base;
     line-height: $line-height-relaxed;
   }
@@ -318,9 +318,9 @@ page {
   &__body { flex: 1; min-width: 0; }
   &__name-row { display: flex; align-items: center; gap: 12rpx; }
   &__name { font-family: $font-cn-display; font-size: $font-size-lg; font-weight: $font-weight-black; }
-  &__online { color: $color-success; font-size: $font-size-xs; font-weight: $font-weight-bold; }
+  &__online { color: $color-success-text-on-light; font-size: $font-size-xs; font-weight: $font-weight-bold; }
   &__invite { display: -webkit-box; margin-top: 8rpx; overflow: hidden; color: $color-text-primary-warm; font-size: $font-size-base; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-  &__meta { display: block; margin-top: 10rpx; color: $color-text-secondary; font-size: $font-size-sm; }
+  &__meta { display: block; margin-top: 10rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; }
   &__arrow { color: $color-primary; font-size: $font-size-2xl; }
 }
 
@@ -359,9 +359,9 @@ page {
   &__body { flex: 1; min-width: 0; padding: 22rpx 16rpx 22rpx 24rpx; }
   &__topline { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
   &__category { padding: 5rpx 14rpx; border-radius: $radius-pill; font-size: $font-size-xs; font-weight: $font-weight-bold; }
-  &__status { color: $color-text-tertiary; font-size: $font-size-xs; }
+  &__status { color: $color-text-tertiary-on-light; font-size: $font-size-xs; }
   &__title { display: block; margin-top: 12rpx; color: $color-text-primary-warm; font-size: $font-size-md; font-weight: $font-weight-bold; line-height: 1.4; }
-  &__meta { display: block; margin-top: 8rpx; color: $color-text-secondary; font-size: $font-size-sm; }
+  &__meta { display: block; margin-top: 8rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; }
   &__arrow { align-self: center; padding-right: 24rpx; color: $color-primary; font-size: $font-size-xl; }
 }
 
@@ -441,20 +441,20 @@ page {
 
   &__image { width: 220rpx; height: 180rpx; margin-bottom: 18rpx; }
   &__title { display: block; color: $color-text-primary-warm; font-size: $font-size-md; font-weight: $font-weight-bold; text-align: center; }
-  &__copy { display: block; margin-top: 10rpx; color: $color-text-secondary; font-size: $font-size-sm; line-height: $line-height-relaxed; text-align: center; }
+  &__copy { display: block; margin-top: 10rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; line-height: $line-height-relaxed; text-align: center; }
 }
 
 .flash-radar {
   &__content { display: flex; flex-direction: column; align-items: center; }
   &__npc { display: flex; flex-direction: column; align-items: center; margin-top: 24rpx; padding: 20rpx 38rpx; border-radius: $card-radius-lg; background: rgba($color-surface, 0.76); box-shadow: $shadow-sm; backdrop-filter: blur(8rpx); }
   &__name { margin-top: 18rpx; font-family: $font-cn-display; font-size: $font-size-xl; font-weight: $font-weight-black; }
-  &__meta { margin-top: 8rpx; color: $color-text-secondary; font-size: $font-size-sm; }
+  &__meta { margin-top: 8rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; }
   &__address { max-width: 600rpx; margin-top: 14rpx; padding: 12rpx 24rpx; border-radius: $radius-pill; background: rgba($color-primary, 0.08); color: $color-primary-dark; font-size: $font-size-sm; line-height: 1.5; text-align: center; }
   &__map-shell { position: relative; width: 100%; height: 600rpx; margin-top: 32rpx; overflow: hidden; border: 6rpx solid rgba($color-surface, 0.88); border-radius: $card-radius-lg; background: rgba($color-surface, 0.72); box-shadow: 0 18rpx 48rpx rgba(74, 52, 105, 0.2); box-sizing: border-box; }
   &__map { width: 100%; height: 100%; }
   &__map-loading { display: flex; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; padding: 48rpx; box-sizing: border-box; text-align: center; }
   &__map-loading-title { color: $color-text-primary-warm; font-family: $font-cn-display; font-size: $font-size-lg; font-weight: $font-weight-black; }
-  &__map-loading-copy { margin-top: 16rpx; color: $color-text-secondary; font-size: $font-size-sm; line-height: $line-height-relaxed; }
+  &__map-loading-copy { margin-top: 16rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; line-height: $line-height-relaxed; }
   &__instrument { position: relative; width: 390rpx; height: 390rpx; margin-top: 30rpx; overflow: hidden; border: 6rpx solid rgba($color-surface, 0.82); border-radius: $radius-circle; background: rgba($color-surface, 0.48); box-shadow: 0 18rpx 48rpx rgba(74, 52, 105, 0.2), inset 0 0 0 3rpx rgba($color-primary, 0.18); backdrop-filter: blur(8rpx); }
   &__paper-disc { position: absolute; inset: 20rpx; border-radius: $radius-circle; background: radial-gradient(circle at 50% 48%, rgba($color-surface, 0.94) 0 18%, rgba($color-primary-light, 0.76) 19% 34%, rgba(168, 197, 221, 0.34) 35% 52%, rgba(255, 155, 133, 0.2) 53% 68%, rgba($color-surface, 0.5) 69%); }
   &__sweep { position: absolute; top: 50%; left: 50%; width: 168rpx; height: 168rpx; transform: rotate(35deg); transform-origin: 0 0; opacity: 0.2; clip-path: polygon(0 0, 100% 10%, 74% 100%); background: linear-gradient(115deg, rgba($color-primary, 0.46), rgba($color-primary, 0)); }
@@ -508,12 +508,12 @@ page {
   &__instrument--denied &__signal,
   &__instrument--ended &__signal,
   &__instrument--rate_limited &__signal,
-  &__instrument--error &__signal { background: rgba($color-surface, 0.94); color: $color-text-secondary; box-shadow: $shadow-sm; }
+  &__instrument--error &__signal { background: rgba($color-surface, 0.94); color: $color-text-secondary-on-light; box-shadow: $shadow-sm; }
   &__title { margin-top: 26rpx; padding: 12rpx 24rpx 0; font-family: $font-cn-display; font-size: $font-size-lg; font-weight: $font-weight-black; text-align: center; text-shadow: 0 2rpx 10rpx rgba($color-surface, 0.9); }
-  &__copy { margin-top: 8rpx; padding: 0 24rpx; color: $color-text-secondary; font-size: $font-size-sm; line-height: $line-height-relaxed; text-align: center; }
+  &__copy { margin-top: 8rpx; padding: 0 24rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; line-height: $line-height-relaxed; text-align: center; }
   &__live-readout { display: flex; flex-direction: column; align-items: center; margin-top: 24rpx; padding: 16rpx 32rpx; border-radius: $card-radius; background: rgba($color-surface, 0.88); box-shadow: $shadow-sm; }
   &__distance { color: $color-primary-dark; font-family: $font-cn-display; font-size: $font-size-2xl; font-weight: $font-weight-black; line-height: $line-height-display; }
-  &__direction-copy { max-width: 560rpx; margin-top: 8rpx; color: $color-text-secondary; font-size: $font-size-sm; line-height: $line-height-relaxed; text-align: center; }
+  &__direction-copy { max-width: 560rpx; margin-top: 8rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; line-height: $line-height-relaxed; text-align: center; }
   &__route-meta { margin-top: 8rpx; color: $color-primary-dark; font-size: $font-size-sm; font-weight: $font-weight-bold; }
   &__route-fallback { max-width: 560rpx; margin-top: 16rpx; color: $color-amber-700; font-size: $font-size-xs; line-height: $line-height-relaxed; text-align: center; }
   &__warning,
@@ -521,7 +521,7 @@ page {
   &__result { background: $color-surface; color: $color-text-primary-warm; box-shadow: $shadow-sm; }
   &__result--error { background: rgba($color-error, 0.06); }
   &__result-title { display: block; font-size: $font-size-md; font-weight: $font-weight-bold; }
-  &__result-copy { display: block; margin: 8rpx 0 18rpx; color: $color-text-secondary; }
+  &__result-copy { display: block; margin: 8rpx 0 18rpx; color: $color-text-secondary-on-light; }
   &__actions { width: 100%; margin-top: 34rpx; }
   &__actions .flash-button + .flash-button { margin-top: 12rpx; }
 }
@@ -680,7 +680,7 @@ page {
     z-index: 1;
     display: block;
     margin-top: 12rpx;
-    color: $color-text-secondary;
+    color: $color-text-secondary-on-light;
     font-size: $font-size-sm;
     animation: flash-offer-paper-content 260ms 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
@@ -689,7 +689,7 @@ page {
     z-index: 1;
     display: block;
     margin-top: 16rpx;
-    color: $color-text-tertiary;
+    color: $color-text-tertiary-on-light;
     font-size: $font-size-xs;
     line-height: $line-height-relaxed;
     animation: flash-offer-paper-content 260ms 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -894,7 +894,7 @@ page {
 .flash-dialogue__story-action,
 .flash-dialogue__story-closing,
 .flash-dialogue__fragment-fact {
-  color: $color-text-secondary;
+  color: $color-text-secondary-on-light;
   font-size: $font-size-base;
   line-height: 1.65;
 }
@@ -929,7 +929,7 @@ page {
 }
 
 .flash-story-fragment-card__meta {
-  color: $color-text-tertiary;
+  color: $color-text-tertiary-on-light;
   font-size: $font-size-xs;
 }
 
@@ -940,7 +940,7 @@ page {
 }
 
 .flash-story-fragment-card__fact {
-  color: $color-text-secondary;
+  color: $color-text-secondary-on-light;
   font-size: $font-size-sm;
   line-height: 1.6;
 }
@@ -974,48 +974,48 @@ page {
   &__sender { display: flex; align-items: center; gap: 20rpx; padding: 18rpx 22rpx; margin-bottom: 22rpx; border-radius: $card-radius-lg; background: rgba($color-surface, 0.76); box-shadow: $shadow-sm; backdrop-filter: blur(8rpx); }
   &__sender-copy { display: flex; flex-direction: column; gap: 8rpx; }
   &__sender-label { color: $color-text-primary-warm; font-size: $font-size-md; font-weight: $font-weight-bold; }
-  &__due { color: $color-text-secondary; font-size: $font-size-sm; }
+  &__due { color: $color-text-secondary-on-light; font-size: $font-size-sm; }
   &__paper { padding: 32rpx; border: 2rpx solid rgba($color-primary, 0.12); border-radius: $card-radius-lg; background: rgba($color-surface, 0.9); box-shadow: $shadow-md; backdrop-filter: blur(10rpx); }
   &__category { display: inline-flex; padding: 6rpx 16rpx; border-radius: $radius-pill; font-size: $font-size-xs; font-weight: $font-weight-bold; }
   &__title { display: block; margin-top: 22rpx; font-family: $font-cn-display; font-size: $font-size-xl; font-weight: $font-weight-black; line-height: $line-height-display; }
-  &__description { display: block; margin-top: 16rpx; color: $color-text-secondary; font-size: $font-size-base; line-height: $line-height-relaxed; }
+  &__description { display: block; margin-top: 16rpx; color: $color-text-secondary-on-light; font-size: $font-size-base; line-height: $line-height-relaxed; }
   &__place { margin-top: 30rpx; padding: 24rpx; border-radius: $card-radius-sm; background: $color-bg-tint-warm; }
   &__place-label { display: block; color: $color-amber-700; font-size: $font-size-xs; font-weight: $font-weight-bold; }
   &__place-name { display: block; margin-top: 8rpx; color: $color-text-primary-warm; font-size: $font-size-md; font-weight: $font-weight-bold; }
-  &__place-address { display: block; margin-top: 6rpx; color: $color-text-secondary; font-size: $font-size-sm; line-height: $line-height-relaxed; }
+  &__place-address { display: block; margin-top: 6rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; line-height: $line-height-relaxed; }
   &__place-map { display: inline-flex; align-items: center; min-height: 88rpx; margin-top: 10rpx; color: $color-primary-dark; font-size: $font-size-sm; font-weight: $font-weight-bold; line-height: 1.4; }
-  &__rules { display: flex; flex-direction: column; gap: 10rpx; margin-top: 28rpx; color: $color-text-secondary; font-size: $font-size-sm; line-height: $line-height-relaxed; }
+  &__rules { display: flex; flex-direction: column; gap: 10rpx; margin-top: 28rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; line-height: $line-height-relaxed; }
   &__ready,
   &__arrival-state { margin-top: 24rpx; padding: 26rpx; border-radius: $card-radius; background: $color-surface; box-shadow: $shadow-sm; }
   &__ready-title,
   &__arrival-title { display: block; font-size: $font-size-md; font-weight: $font-weight-bold; }
   &__ready-copy,
-  &__arrival-copy { display: block; margin: 10rpx 0 22rpx; color: $color-text-secondary; font-size: $font-size-sm; line-height: $line-height-relaxed; }
+  &__arrival-copy { display: block; margin: 10rpx 0 22rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; line-height: $line-height-relaxed; }
   &__arrival-state--error { background: rgba($color-error, 0.06); }
   &__actions { margin-top: 28rpx; }
   &__actions .flash-button + .flash-button { margin-top: 12rpx; }
-  &__footnote { display: block; margin-top: 22rpx; color: $color-text-tertiary; font-size: $font-size-xs; line-height: $line-height-relaxed; text-align: center; }
+  &__footnote { display: block; margin-top: 22rpx; color: $color-text-tertiary-on-light; font-size: $font-size-xs; line-height: $line-height-relaxed; text-align: center; }
 }
 
 .flash-feedback {
   &__hero { display: flex; align-items: center; gap: 22rpx; padding: 18rpx 22rpx; margin-bottom: 22rpx; border-radius: $card-radius-lg; background: rgba($color-surface, 0.76); box-shadow: $shadow-sm; backdrop-filter: blur(8rpx); }
   &__hero-copy { flex: 1; }
-  &__eyebrow { display: block; color: $color-success; font-size: $font-size-xs; font-weight: $font-weight-bold; }
+  &__eyebrow { display: block; color: $color-success-text-on-light; font-size: $font-size-xs; font-weight: $font-weight-bold; }
   &__title { display: block; margin-top: 8rpx; font-family: $font-cn-display; font-size: $font-size-lg; font-weight: $font-weight-black; line-height: $line-height-display; }
   &__form { padding: 30rpx; border: 2rpx solid rgba($color-primary, 0.12); border-radius: $card-radius-lg; background: rgba($color-surface, 0.9); box-shadow: $shadow-md; backdrop-filter: blur(10rpx); }
   &__prompt + &__prompt { margin-top: 36rpx; padding-top: 32rpx; border-top: 1rpx solid $color-divider; }
   &__prompt-number { display: block; color: $color-primary; font-family: $font-mono; font-size: $font-size-xs; font-weight: $font-weight-bold; }
   &__prompt-title { display: block; margin-top: 8rpx; color: $color-text-primary-warm; font-size: $font-size-md; font-weight: $font-weight-bold; line-height: 1.5; }
   &__options { display: flex; flex-wrap: wrap; gap: 14rpx; margin-top: 18rpx; }
-  &__option { display: flex; align-items: center; justify-content: center; min-height: 88rpx; padding: 14rpx 22rpx; border: 2rpx solid $color-border; border-radius: $radius-pill; background: $color-bg-clean; color: $color-text-secondary; font-size: $font-size-sm; box-sizing: border-box; }
+  &__option { display: flex; align-items: center; justify-content: center; min-height: 88rpx; padding: 14rpx 22rpx; border: 2rpx solid $color-border; border-radius: $radius-pill; background: $color-bg-clean; color: $color-text-secondary-on-light; font-size: $font-size-sm; box-sizing: border-box; }
   &__option--selected { border-color: $color-primary; background: $color-primary-light; color: $color-primary-dark; font-weight: $font-weight-bold; }
   &__option--pressed { opacity: 0.75; }
   &__reply { margin-top: 38rpx; padding-top: 32rpx; border-top: 1rpx solid $color-divider; }
   &__reply-head { display: flex; align-items: center; justify-content: space-between; }
   &__reply-title { color: $color-text-primary-warm; font-size: $font-size-md; font-weight: $font-weight-bold; }
-  &__reply-count { color: $color-text-tertiary; font-family: $font-mono; font-size: $font-size-xs; }
+  &__reply-count { color: $color-text-tertiary-on-light; font-family: $font-mono; font-size: $font-size-xs; }
   &__textarea { width: 100%; min-height: 190rpx; margin-top: 16rpx; padding: 20rpx; border-radius: $card-radius-sm; background: $color-bg-warm-mid; color: $color-text-primary-warm; font-family: $font-ui; font-size: $font-size-base; line-height: $line-height-relaxed; box-sizing: border-box; }
-  &__privacy { display: block; margin-top: 12rpx; color: $color-text-tertiary; font-size: $font-size-2xs; line-height: $line-height-relaxed; }
+  &__privacy { display: block; margin-top: 12rpx; color: $color-text-tertiary-on-light; font-size: $font-size-2xs; line-height: $line-height-relaxed; }
   &__error { display: block; margin-top: 18rpx; padding: 18rpx 22rpx; border-radius: $card-radius-sm; background: rgba($color-error, 0.06); color: $color-error; font-size: $font-size-sm; line-height: $line-height-relaxed; }
   &__actions { margin-top: 26rpx; }
 }
@@ -1029,9 +1029,9 @@ page {
 
   &__content { display: flex; flex-direction: column; align-items: center; text-align: center; }
   &__title { margin-top: 30rpx; font-family: $font-cn-display; font-size: $font-size-2xl; font-weight: $font-weight-black; line-height: $line-height-display; }
-  &__copy { margin-top: 16rpx; color: $color-text-secondary; font-size: $font-size-base; line-height: $line-height-relaxed; }
+  &__copy { margin-top: 16rpx; color: $color-text-secondary-on-light; font-size: $font-size-base; line-height: $line-height-relaxed; }
   &__actions { width: 100%; margin-top: 36rpx; }
-  &__note { margin-top: 20rpx; color: $color-text-tertiary; font-size: $font-size-xs; line-height: $line-height-relaxed; }
+  &__note { margin-top: 20rpx; color: $color-text-tertiary-on-light; font-size: $font-size-xs; line-height: $line-height-relaxed; }
 }
 
 .flash-preferences {
@@ -1042,14 +1042,14 @@ page {
   &__row { border-top: 1rpx solid $color-divider; }
   &__row-copy { flex: 1; min-width: 0; }
   &__row-title { display: block; color: $color-text-primary-warm; font-size: $font-size-base; font-weight: $font-weight-bold; }
-  &__row-description { display: block; margin-top: 6rpx; color: $color-text-secondary; font-size: $font-size-xs; line-height: $line-height-relaxed; }
-  &__consent { display: block; margin-top: 8rpx; color: $color-text-tertiary; font-size: $font-size-2xs; line-height: $line-height-relaxed; }
+  &__row-description { display: block; margin-top: 6rpx; color: $color-text-secondary-on-light; font-size: $font-size-xs; line-height: $line-height-relaxed; }
+  &__consent { display: block; margin-top: 8rpx; color: $color-text-tertiary-on-light; font-size: $font-size-2xs; line-height: $line-height-relaxed; }
   &__sources--disabled { opacity: 0.48; }
   &__tags { display: flex; flex-direction: column; gap: 14rpx; }
   &__tag { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; min-height: 92rpx; padding: 16rpx 22rpx; border-radius: $card-radius-sm; background: $color-surface; box-shadow: $shadow-sm; box-sizing: border-box; }
   &__tag-copy { flex: 1; min-width: 0; }
   &__tag-label { display: block; color: $color-text-primary-warm; font-size: $font-size-base; font-weight: $font-weight-bold; }
-  &__tag-source { display: block; margin-top: 4rpx; color: $color-text-tertiary; font-size: $font-size-xs; }
+  &__tag-source { display: block; margin-top: 4rpx; color: $color-text-tertiary-on-light; font-size: $font-size-xs; }
   &__tag-delete { display: flex; align-items: center; justify-content: center; min-width: 88rpx; min-height: 88rpx; color: $color-error; font-size: $font-size-sm; text-align: center; }
 }
 
