@@ -6,9 +6,36 @@ export type FlashNpcTheme = {
   accent: string
   tint: string
   ink: string
+  imageSrc?: string
+  portraitSrc?: string
+  dialogueSceneSrc?: string
 }
 
 import flashStreetBoxIcon from '../../assets/illustrations/street-blind-box-entry.png'
+import alangImage from '../../pages/alang/assets/npcs/alang.png'
+import atuanImage from '../../pages/alang/assets/npcs/atuan.png'
+import liziImage from '../../pages/alang/assets/npcs/lizi.png'
+import momoImage from '../../pages/alang/assets/npcs/momo.png'
+import shiqiImage from '../../pages/alang/assets/npcs/shiqi.png'
+import alangPortrait from '../../pages/alang/assets/npcs/headshots/alang.jpg'
+import atuanPortrait from '../../pages/alang/assets/npcs/headshots/atuan.jpg'
+import liziPortrait from '../../pages/alang/assets/npcs/headshots/lizi.jpg'
+import momoPortrait from '../../pages/alang/assets/npcs/headshots/momo.jpg'
+import shiqiPortrait from '../../pages/alang/assets/npcs/headshots/shiqi.jpg'
+import alangDialogueScene from '../../pages/alang/assets/ui/flash-alang-dialogue-paper-v1.jpg'
+import atuanDialogueScene from '../../pages/alang/assets/ui/flash-atuan-dialogue-paper-v1.jpg'
+import liziDialogueScene from '../../pages/alang/assets/ui/flash-lizi-dialogue-paper-v1.jpg'
+import momoDialogueScene from '../../pages/alang/assets/ui/flash-momo-dialogue-paper-v1.jpg'
+import shiqiDialogueScene from '../../pages/alang/assets/ui/flash-shiqi-dialogue-paper-v1.jpg'
+
+const categoryCultureIcon = '/assets/icons/category-icons/category-culture.webp'
+const categoryEntertainmentIcon = '/assets/icons/category-icons/category-entertainment.webp'
+const categoryGrowthIcon = '/assets/icons/category-icons/category-growth.webp'
+const categoryLifeIcon = '/assets/icons/category-icons/category-life.webp'
+const categoryLifestyleIcon = '/assets/icons/category-icons/category-lifestyle.webp'
+const categoryPlayIcon = '/assets/icons/category-icons/category-play.webp'
+const categorySocialIcon = '/assets/icons/category-icons/category-social.webp'
+const categorySportsIcon = '/assets/icons/category-icons/category-sports.webp'
 
 export const FLASH_STREET_BOX_ICON = flashStreetBoxIcon
 
@@ -21,6 +48,9 @@ const npcThemes: FlashNpcTheme[] = [
     accent: '#64748B',
     tint: '#F0F2F7',
     ink: '#3E4658',
+    imageSrc: alangImage,
+    portraitSrc: alangPortrait,
+    dialogueSceneSrc: alangDialogueScene,
   },
   {
     slug: 'lizi',
@@ -30,6 +60,9 @@ const npcThemes: FlashNpcTheme[] = [
     accent: '#F97360',
     tint: '#FFF2E9',
     ink: '#70402B',
+    imageSrc: liziImage,
+    portraitSrc: liziPortrait,
+    dialogueSceneSrc: liziDialogueScene,
   },
   {
     slug: 'momo',
@@ -39,6 +72,9 @@ const npcThemes: FlashNpcTheme[] = [
     accent: '#829AB1',
     tint: '#F3F0EC',
     ink: '#48433F',
+    imageSrc: momoImage,
+    portraitSrc: momoPortrait,
+    dialogueSceneSrc: momoDialogueScene,
   },
   {
     slug: 'shiqi',
@@ -48,6 +84,9 @@ const npcThemes: FlashNpcTheme[] = [
     accent: '#5B5266',
     tint: '#F1EFF8',
     ink: '#37324D',
+    imageSrc: shiqiImage,
+    portraitSrc: shiqiPortrait,
+    dialogueSceneSrc: shiqiDialogueScene,
   },
   {
     slug: 'atuan',
@@ -57,6 +96,9 @@ const npcThemes: FlashNpcTheme[] = [
     accent: '#8DA399',
     tint: '#F0F5EC',
     ink: '#43543A',
+    imageSrc: atuanImage,
+    portraitSrc: atuanPortrait,
+    dialogueSceneSrc: atuanDialogueScene,
   },
 ]
 
@@ -115,6 +157,21 @@ export const flashTaskCategories = {
   small_kindness: { label: '微小善意', accent: '#C99A3C', text: '#76520F', tint: '#FAF4E4' },
 } as const
 
+const flashTaskCategoryIcons: Record<keyof typeof flashTaskCategories, string> = {
+  city_departure: categoryLifeIcon,
+  culture_entertainment: categoryEntertainmentIcon,
+  body_movement: categorySportsIcon,
+  long_delayed_wish: categoryGrowthIcon,
+  relationship_connection: categorySocialIcon,
+  npc_message: categorySocialIcon,
+  shop_exploration: categoryLifestyleIcon,
+  city_observation: categoryLifeIcon,
+  social_courage: categorySocialIcon,
+  solo_relaxation: categoryPlayIcon,
+  culture_discovery: categoryCultureIcon,
+  small_kindness: categoryLifeIcon,
+}
+
 export function resolveFlashTaskCategory(category: string) {
   const normalized = category.trim().toLowerCase()
   const aliases: Record<string, keyof typeof flashTaskCategories> = {
@@ -131,6 +188,9 @@ export function resolveFlashTaskCategory(category: string) {
     '文化发现': 'culture_discovery',
     '微小善意': 'small_kindness',
   }
-  return flashTaskCategories[(aliases[category] ?? normalized) as keyof typeof flashTaskCategories]
-    ?? { label: category || '城市任务', accent: '#8B5CF6', text: '#5B34A8', tint: '#F5F0FF' }
+  const categoryKey = (aliases[category] ?? normalized) as keyof typeof flashTaskCategories
+  const resolved = flashTaskCategories[categoryKey]
+  return resolved
+    ? { ...resolved, iconSrc: flashTaskCategoryIcons[categoryKey] }
+    : { label: category || '城市任务', accent: '#8B5CF6', text: '#5B34A8', tint: '#F5F0FF', iconSrc: categoryLifeIcon }
 }

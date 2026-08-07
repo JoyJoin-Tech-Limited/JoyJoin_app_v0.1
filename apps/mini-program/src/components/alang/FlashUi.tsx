@@ -2,18 +2,25 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Image, Text, View } from '@tarojs/components'
 import { resolveFlashNpcTheme, resolveFlashTaskCategory } from '../../lib/alang/flashNpcAssets'
 import type { FlashNpcReference, FlashTaskSummary } from '../../lib/alang/flashTypes'
+import radarScene from '../../pages/alang/assets/backgrounds/radar-paper-scene.jpg'
+import taskScene from '../../pages/alang/assets/backgrounds/task-paper-scene.jpg'
+import feedbackScene from '../../pages/alang/assets/backgrounds/feedback-paper-scene.jpg'
+
+const FLASH_SCENE_BACKGROUNDS = {
+  radar: radarScene,
+  task: taskScene,
+  feedback: feedbackScene,
+} as const
 
 export function FlashNpcPortrait({
   npc,
   size = 'medium',
 }: {
-  npc: Pick<FlashNpcReference, 'slug' | 'name'>
+  npc: Pick<FlashNpcReference, 'slug' | 'name' | 'avatarUrl'>
   size?: 'small' | 'medium' | 'large'
 }) {
   const theme = useMemo(() => resolveFlashNpcTheme(npc.slug, npc.name), [npc.name, npc.slug])
-  const headshotSrc = theme.imageSrc
-    ? theme.imageSrc.replace('/assets/npcs/', '/assets/npcs/headshots/')
-    : ''
+  const headshotSrc = theme.portraitSrc ?? npc.avatarUrl?.trim() ?? ''
   const [failed, setFailed] = useState(!headshotSrc)
 
   useEffect(() => {
@@ -47,11 +54,9 @@ export function FlashNpcSceneBackdrop({
 }: {
   scene: 'radar' | 'task' | 'feedback'
 }) {
-  const sceneSrc = `/pages/alang/assets/backgrounds/${scene}-paper-scene.png`
-
   return (
     <View className='flash-scene-backdrop' aria-hidden='true'>
-      <Image className='flash-scene-backdrop__image' src={sceneSrc} mode='aspectFill' />
+      <Image className='flash-scene-backdrop__image' src={FLASH_SCENE_BACKGROUNDS[scene]} mode='aspectFill' />
       <View className='flash-scene-backdrop__veil' />
     </View>
   )
@@ -77,11 +82,12 @@ export function FlashNpcDialogueScene({
   motion?: { ambient: 'none' | 'breathe' | 'drift'; blinkAssetUrl?: string; blinkIntervalSeconds?: number }
 }) {
   const theme = useMemo(() => resolveFlashNpcTheme(npc.slug, npc.name), [npc.name, npc.slug])
-  const [failed, setFailed] = useState(!theme.dialogueSceneSrc)
+  const dialogueSceneSrc = theme.dialogueSceneSrc ?? ''
+  const [failed, setFailed] = useState(!dialogueSceneSrc)
 
   useEffect(() => {
-    setFailed(!theme.dialogueSceneSrc)
-  }, [theme.dialogueSceneSrc])
+    setFailed(!dialogueSceneSrc)
+  }, [dialogueSceneSrc])
 
   return (
     <View
@@ -92,7 +98,7 @@ export function FlashNpcDialogueScene({
       {!failed ? (
         <Image
           className='flash-dialogue-scene__image'
-          src={theme.dialogueSceneSrc}
+          src={dialogueSceneSrc}
           mode='aspectFill'
           onError={() => setFailed(true)}
         />

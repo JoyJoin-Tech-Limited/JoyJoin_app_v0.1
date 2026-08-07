@@ -49,6 +49,7 @@ export interface FlashNpcReference {
   name: string
   animal?: string
   themeKey?: string
+  avatarUrl?: string
 }
 
 export interface FlashFeedbackOption {
