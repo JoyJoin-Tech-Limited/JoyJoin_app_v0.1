@@ -32,15 +32,13 @@ vi.mock("../lib/wechatMsgSecCheck", () => ({
 vi.mock("../db", () => ({
   db: {
     select: vi.fn(() => ({
-      from: vi.fn(() => ({
+      from: vi.fn((table: unknown) => ({
         where: vi.fn(() => {
-          // Support BOTH call shapes exercised on the feedback path:
-          //  1. .where().limit()        — user lookups (storage.getUser)
-          //  2. .where() WITHOUT .limit — gamificationService.awardXPAndCoins
-          //     destructures `const [user] = await db.select().from(users).where(...)`,
-          //     so the where() result itself must be an iterable promise, not an
-          //     object that only becomes one after .limit() is chained.
-          const rows = [{ wechatOpenId: "openid-test" }];
+          // Resolve the canonical-event-id probe first: the feedback route now
+          // resolves /api/events/:eventId/feedback through resolveCanonicalEventId,
+          // whose direct events.id probe must hit so the original test semantics
+          // (eventId straight through) are preserved.
+          const rows = table === events ? [{ id: "event-1" }] : [{ wechatOpenId: "openid-test" }];
           const pending = Promise.resolve(rows) as Promise<typeof rows> & { limit: unknown };
           pending.limit = vi.fn(() => Promise.resolve(rows));
           return pending;
@@ -74,7 +72,7 @@ vi.mock("../lib/logger", () => ({
   },
 }));
 
-import { contentFilterLogs } from "@shared/schema";
+import { contentFilterLogs, events } from "@shared/schema";
 
 const storageCtx = vi.hoisted(() => ({
   createEventFeedback: vi.fn(),

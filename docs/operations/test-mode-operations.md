@@ -486,6 +486,8 @@ Social Icebreaker test mode lets staff/internal users start a Social Icebreaker 
 
 When starting a single-test session, the server creates a matching-test pool + bot registrations, runs the production matching engine, and then **finalizes the group into real `events` / `blindBoxEvents` / `eventAttendance` / venue time-slot bookings** so that later surfaces (event detail, `POST /api/event-pools/:groupId/confirm-attendance`) behave exactly like a real matched group. Confirm-attendance prefers `group.blindBoxEventId` when available, so the single-test path no longer returns 409 `ATTENDANCE_NOT_READY` after matching.
 
+**Post-event feedback now works end-to-end (2026-08-07):** because squad-unboxing redirects to `event-detail?id=${blindBoxEventId}`, the feedback page submits `POST /api/events/{blindBoxEventId}/feedback` — a `blind_box_events` id that used to be inserted straight into the `events.id`-FK'd `event_feedback.event_id`, causing 500 `Failed to create feedback` (`event_feedback_event_id_events_id_fk`). The route canonicalizes via `resolveCanonicalEventId` (`apps/server/src/lib/resolveCanonicalEventId.ts`, three id families). Same path applies to every real matched group once it exists, not just test mode.
+
 ### How it works
 
 - Test pools are exempt from the registration capacity gate (2026-07-31): `describePoolRegistrationAvailability` skips the `POOL_FULL` check when `event_pools.is_test_pool=true`, because single-test sessions register tester + 5 bots and fill the pool to exactly `maxGroupSize × targetGroups` (6/6) by design. Pool-full notifications/WS broadcasts are skipped for test pools. Real pools keep the full capacity rule.
@@ -512,6 +514,7 @@ When starting a single-test session, the server creates a matching-test pool + b
 | `apps/server/src/services/singleTestService.ts` | Decides `runBots`, creates matching-test pool, finalizes group into `events`/`blindBoxEvents`/`eventAttendance`/`venueTimeSlotBookings`, propagates meta to client |
 | `apps/server/src/services/matchingTestService.ts` | Shared helpers reused by single-test finalization: `nextDinnerDateTime()`, `finalizeTestPoolGroups()` |
 | `apps/server/src/routes/domains/userEventPools.ts` | `POST /api/event-pools/:groupId/confirm-attendance` — prefers `group.blindBoxEventId` for single-test groups |
+| `apps/server/src/lib/resolveCanonicalEventId.ts` | Resolves `events.id` / `blind_box_events.id` / `event_pools.id` → canonical `events.id`; used by `POST /api/events/:eventId/feedback` so blind-box ids don't violate `event_feedback_event_id_events_id_fk` |
 | `apps/server/src/lib/poolRegistrationRules.ts` | Capacity gate — skips `POOL_FULL` for `is_test_pool=true` pools (all 3 register call sites thread `isTestPool`) |
 | `apps/server/src/lib/fkCascadeDelete.ts` | Catalog-driven recursive FK cascade delete used by single-test and matching-test cleanup |
 | `apps/server/src/services/socialIcebreakerSessionState.ts` | Session state shape and helpers |
@@ -527,6 +530,7 @@ When starting a single-test session, the server creates a matching-test pool + b
 - `apps/server/src/__tests__/singleTestGroupFinalization.test.ts` — finalization into events/blindBoxEvents + confirm-attendance path
 - `apps/server/src/__tests__/poolRegistrationRules.test.ts` — test pools exempt from `POOL_FULL`; real pools still capped; deadline still enforced on test pools
 - `apps/server/src/__tests__/fkCascadeDeleteContract.test.ts` — catalog-driven recursive cascade delete covers test-cleanup dependents
+- `apps/server/src/__tests__/resolveCanonicalEventId.test.ts` — three id families resolve to canonical `events.id`; unresolvable → null (route 404)
 - `apps/server/src/__tests__/warmupTopicsTimeout.test.ts` — LLM hard-timeout invariant and fallback
 
 ### UX / a11y notes
