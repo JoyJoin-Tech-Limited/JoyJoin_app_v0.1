@@ -163,6 +163,14 @@ const DISCOVER_EVENT_TYPES = [
   "persona_snapshot_state_band",
   "persona_snapshot_load_error",
   "pool_teaser_impression",
+  "duo_card_impression",
+  "duo_segment_select",
+  "duo_info_sheet_open",
+  "duo_info_sheet_close",
+  "duo_share_trigger",
+  "duo_status_update",
+  "duo_banner_impression",
+  "duo_success_view",
 ] as const;
 
 type DiscoverEventType = (typeof DISCOVER_EVENT_TYPES)[number];

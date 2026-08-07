@@ -204,7 +204,7 @@ describe("POST /api/events/:eventId/feedback content moderation (S1)", () => {
       expect(response.status).toBe(200);
       expect(storageCtx.createEventFeedback).toHaveBeenCalledWith(
         "tester-1",
-        expect.objectContaining({ eventId: "pool-1", feedback: "A warm evening" }),
+        expect.objectContaining({ eventId: "event-1", feedback: "A warm evening" }),
       );
     });
   });
