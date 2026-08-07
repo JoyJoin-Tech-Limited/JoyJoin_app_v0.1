@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
-import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
+import { getFlashApiErrorCode, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useFlashHome, useFlashStoryFragments } from '../../../lib/alang/useFlash'
 import type { FlashLocationSnapshot, FlashNpcSummary } from '../../../lib/alang/flashTypes'
@@ -27,6 +27,15 @@ const FLASH_EMPTY_ONLINE = flashEmptyOnline
 const FLASH_LOCATION_TIMEOUT_MS = 12_000
 
 type GateState = 'checking' | 'intro' | 'locating' | 'ready' | 'denied' | 'error'
+
+function isLocationPermissionDenied(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const candidate = error as { errMsg?: unknown; message?: unknown }
+  const message = [candidate.errMsg, candidate.message]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ')
+  return /auth(?:orize)?\s*deny|permission\s*denied|user\s*deny/i.test(message)
+}
 
 function FlashIntro({ onContinue }: { onContinue: () => void }) {
   return (
@@ -92,18 +101,14 @@ export default function FlashHomePage() {
     const attempt = ++locationAttemptRef.current
     setGate('locating')
     try {
-      const permission = await getFlashLocationPermission()
-      if (attempt !== locationAttemptRef.current) return
-      if (permission === 'denied') {
-        setGate('denied')
-        return
-      }
       const snapshot = await getOneShotFlashLocation()
       if (attempt !== locationAttemptRef.current) return
       setLocation(snapshot)
       setGate('ready')
-    } catch {
-      if (attempt === locationAttemptRef.current) setGate('error')
+    } catch (error) {
+      if (attempt === locationAttemptRef.current) {
+        setGate(isLocationPermissionDenied(error) ? 'denied' : 'error')
+      }
     } finally {
       if (attempt === locationAttemptRef.current) locationActiveRef.current = false
     }

@@ -97,6 +97,16 @@ describe('formal Flash home', () => {
     }
   })
 
+  it('shows the permission action when native location reports user denial', async () => {
+    mocks.location.mockRejectedValue({ errMsg: 'getLocation:fail auth deny' })
+    render(<FlashHomePage />)
+
+    fireEvent.click(await screen.findByText('看看谁在附近'))
+
+    expect(await screen.findByText('需要定位，才能参加闪现')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '打开定位设置' })).toBeInTheDocument()
+  })
+
   it('loads online NPCs and story fragments only after the user accepts the disclosure', async () => {
     render(<FlashHomePage />)
 
