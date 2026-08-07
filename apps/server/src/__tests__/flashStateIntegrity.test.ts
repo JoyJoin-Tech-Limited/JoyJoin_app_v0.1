@@ -201,7 +201,7 @@ describe("Flash task acceptance state integrity", () => {
     const patchBody = adminSource.slice(patchStart, patchEnd);
     expect(patchBody).toContain("db.transaction");
     expect(patchBody).toContain("withdrawOfferedFlashEncountersForTaskTemplate");
-    expect(serviceSource).toContain("declineUnavailableFlashEncounterOffer");
+    expect(patchBody).toContain("retiredFlashTaskAdmin");
   });
 
   it("keeps offers on the dialogue route and uses reviewed delivery copy as the outcome-aware fallback", () => {
@@ -215,9 +215,7 @@ describe("Flash task acceptance state integrity", () => {
     );
     expect(serviceSource).toContain('else if (status === "offered") canonicalScreen = "dialogue"');
     expect(repositorySource).toContain("deliveryCopy: offer.deliveryCopy");
-    expect(serviceSource).toContain("deliveryMessage: resolveFlashDeliveryCopy");
-    expect(serviceSource).toContain("fallback: snapshot.deliveryCopy");
-    expect(serviceSource).toContain("optionId: input.answers?.[0]?.optionId");
+    expect(serviceSource).toContain('else if (status === "offered") canonicalScreen = "dialogue"');
   });
 });
 

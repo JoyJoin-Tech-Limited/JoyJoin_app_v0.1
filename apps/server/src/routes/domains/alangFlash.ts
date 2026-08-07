@@ -1,7 +1,6 @@
 import type { Express, NextFunction, Request, Response } from "express";
 import { z } from "zod";
 import {
-  FLASH_CITY,
   FLASH_SHENZHEN_BOUNDS,
   flashAcceptRequestSchema,
   flashAnswerRequestSchema,
@@ -11,6 +10,10 @@ import {
 } from "@shared/alang/flashTypes";
 
 import { getFeatureFlag } from "../../lib/featureFlags";
+import {
+  isFlashShenzhenBoundaryReady,
+  isWithinFlashShenzhenBoundary,
+} from "../../lib/flashShenzhenBoundary";
 import { logger } from "../../lib/logger";
 import { requireAuthenticatedUserId } from "../../lib/requestAuth";
 import { requireAuth } from "../../middleware/auth";
@@ -27,6 +30,7 @@ import {
   getFlashEncounter,
   getFlashHome,
   getFlashPreferenceSettings,
+  getFlashStoryFragments,
   locateFlashAppearance,
   patchFlashPreferenceSettings,
   removeFlashPreferenceTag,
@@ -35,7 +39,6 @@ import {
   retryFlashTask,
 } from "../../services/flashService";
 import { startFlashBackgroundJobs } from "../../services/flashScheduleService";
-import { reverseGeocodeCoordinate } from "./geo";
 
 const idParamSchema = z.string().uuid();
 const flashTestCoordinateSchema = z.object({
@@ -46,20 +49,16 @@ const flashTestCoordinateSchema = z.object({
 const deliveryRequestSchema = z.object({
   assignmentId: z.string().uuid(),
   answers: z.array(z.object({
-    promptId: z.string().min(1).max(80),
-    optionId: z.string().min(1).max(80),
+    promptId: z.string().min(1),
+    optionId: z.string().min(1),
   }).strict()).max(2).optional(),
 }).strict();
-const SHENZHEN_DISTRICTS = new Set([
-  "南山区", "福田区", "罗湖区", "宝安区", "龙岗区",
-  "盐田区", "龙华区", "坪山区", "光明区", "大鹏新区",
-]);
 
 function sendFlashError(res: Response, error: unknown): Response {
   if (error instanceof FlashServiceError) {
     return res.status(error.status).json({ code: error.code, error: error.message });
   }
-  return res.status(500).json({ code: "FLASH_INTERNAL_ERROR", error: "街头盲盒暂时走神了，请稍后再试" });
+  return res.status(500).json({ code: "FLASH_INTERNAL_ERROR", error: "闪现暂时走神了，请稍后再试" });
 }
 
 function logSafeRouteFailure(req: Request, resourceId: string | null, error: unknown): void {
@@ -73,7 +72,7 @@ function logSafeRouteFailure(req: Request, resourceId: string | null, error: unk
 async function requireFlashReady(_req: Request, res: Response, next: NextFunction) {
   try {
     if (!(await getFeatureFlag("alangEnabled", false))) {
-      return res.status(503).json({ code: "FLASH_DISABLED", error: "街头盲盒暂时休息中" });
+      return res.status(503).json({ code: "FLASH_DISABLED", error: "闪现暂时休息中" });
     }
     await assertFlashRuntimeReady();
     return next();
@@ -86,41 +85,32 @@ function userId(req: Request, res: Response): string | null {
   return requireAuthenticatedUserId(req, res);
 }
 
-async function parseShenzhenCoordinate(body: unknown, enforceShenzhenBoundary = true): Promise<
-  | { success: true; data: { latitude: number; longitude: number; coordinateSystem: "gcj02"; district: string } }
-  | { success: false; code: "FLASH_LOCATION_REQUIRED" | "FLASH_OUTSIDE_SHENZHEN" | "FLASH_LOCATION_UNAVAILABLE" }
-> {
+function parseShenzhenCoordinate(body: unknown, enforceShenzhenBoundary = true):
+  | { success: true; data: { latitude: number; longitude: number; coordinateSystem: "gcj02" } }
+  | { success: false; code: "FLASH_LOCATION_REQUIRED" | "FLASH_OUTSIDE_SHENZHEN" } {
   if (!body || typeof body !== "object") return { success: false, code: "FLASH_LOCATION_REQUIRED" };
   const value = body as Record<string, unknown>;
   if (typeof value.latitude !== "number" || typeof value.longitude !== "number") {
     return { success: false, code: "FLASH_LOCATION_REQUIRED" };
   }
-  if (!enforceShenzhenBoundary) {
-    const parsed = flashTestCoordinateSchema.safeParse(value);
-    return parsed.success
-      ? { success: true, data: { ...parsed.data, district: "" } }
-      : { success: false, code: "FLASH_LOCATION_REQUIRED" };
-  }
-  if (
+  if (enforceShenzhenBoundary && (
     value.latitude < FLASH_SHENZHEN_BOUNDS.minLatitude
     || value.latitude > FLASH_SHENZHEN_BOUNDS.maxLatitude
     || value.longitude < FLASH_SHENZHEN_BOUNDS.minLongitude
     || value.longitude > FLASH_SHENZHEN_BOUNDS.maxLongitude
-  ) {
+  )) {
     return { success: false, code: "FLASH_OUTSIDE_SHENZHEN" };
   }
-  const parsed = flashCoordinateSchema.safeParse(value);
-  if (!parsed.success) return { success: false, code: "FLASH_LOCATION_REQUIRED" };
-  // Flash coordinates are one-shot: bypass the generic geocoder cache so the
-  // raw user position is discarded when this request completes.
-  const resolved = await reverseGeocodeCoordinate(parsed.data, { cache: false });
-  if (resolved.source !== "tencent") {
-    return { success: false, code: "FLASH_LOCATION_UNAVAILABLE" };
-  }
-  if (resolved.city !== FLASH_CITY || !resolved.district || !SHENZHEN_DISTRICTS.has(resolved.district)) {
+  if (enforceShenzhenBoundary && (
+    !isFlashShenzhenBoundaryReady()
+    || !isWithinFlashShenzhenBoundary(value.latitude, value.longitude)
+  )) {
     return { success: false, code: "FLASH_OUTSIDE_SHENZHEN" };
   }
-  return { success: true, data: { ...parsed.data, district: resolved.district } };
+  const parsed = (enforceShenzhenBoundary ? flashCoordinateSchema : flashTestCoordinateSchema).safeParse(value);
+  return parsed.success
+    ? { success: true, data: parsed.data }
+    : { success: false, code: "FLASH_LOCATION_REQUIRED" };
 }
 
 async function shouldEnforceShenzhenBoundary(): Promise<boolean> {
@@ -133,15 +123,17 @@ async function isAnyLocationArrivalTestEnabled(): Promise<boolean> {
   return getFeatureFlag("flashAnyLocationArrivalTestEnabled", false);
 }
 
-function sendCoordinateError(res: Response, code: "FLASH_LOCATION_REQUIRED" | "FLASH_OUTSIDE_SHENZHEN" | "FLASH_LOCATION_UNAVAILABLE") {
-  const status = code === "FLASH_OUTSIDE_SHENZHEN" ? 403 : code === "FLASH_LOCATION_UNAVAILABLE" ? 503 : 400;
-  return res.status(status).json({
+function sendCoordinateError(res: Response, code: "FLASH_LOCATION_REQUIRED" | "FLASH_OUTSIDE_SHENZHEN") {
+  return res.status(code === "FLASH_OUTSIDE_SHENZHEN" ? 403 : 400).json({
     code,
-    error: code === "FLASH_OUTSIDE_SHENZHEN"
-      ? "街头盲盒目前只在深圳开放"
-      : code === "FLASH_LOCATION_UNAVAILABLE"
-        ? "暂时无法确认你是否在深圳，请稍后再试"
-        : "需要定位权限才能参加街头盲盒",
+    error: code === "FLASH_OUTSIDE_SHENZHEN" ? "闪现目前只在深圳开放" : "需要定位权限才能参加闪现",
+  });
+}
+
+function retiredFlashTaskFlow(_req: Request, res: Response) {
+  return res.status(410).json({
+    code: "FLASH_TASK_FLOW_RETIRED",
+    error: "旧任务链已经结束，请从在线角色进入当前故事",
   });
 }
 
@@ -154,12 +146,10 @@ export function registerAlangFlashRoutes(app: Express): void {
   app.post("/api/alang/flash/home", ...guards, geoEndpointLimiter, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
-    const coordinate = await parseShenzhenCoordinate(req.body, await shouldEnforceShenzhenBoundary());
+    const coordinate = parseShenzhenCoordinate(req.body, await shouldEnforceShenzhenBoundary());
     if (!coordinate.success) return sendCoordinateError(res, coordinate.code);
     try {
-      return res.json(await getFlashHome({
-        userId: authenticatedUserId,
-      }));
+      return res.json(await getFlashHome({ userId: authenticatedUserId, ...coordinate.data }));
     } catch (error) {
       logSafeRouteFailure(req, null, error);
       return sendFlashError(res, error);
@@ -170,9 +160,9 @@ export function registerAlangFlashRoutes(app: Express): void {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const appearanceId = idParamSchema.safeParse(req.params.id);
-    if (!appearanceId.success) return res.status(400).json({ code: "FLASH_APPEARANCE_NOT_FOUND", error: "无效的街头盲盒编号" });
+    if (!appearanceId.success) return res.status(400).json({ code: "FLASH_APPEARANCE_NOT_FOUND", error: "无效的闪现编号" });
     const forceArrivalForTesting = await isAnyLocationArrivalTestEnabled();
-    const coordinate = await parseShenzhenCoordinate(
+    const coordinate = parseShenzhenCoordinate(
       req.body,
       forceArrivalForTesting ? false : await shouldEnforceShenzhenBoundary(),
     );
@@ -181,10 +171,8 @@ export function registerAlangFlashRoutes(app: Express): void {
       return res.json(await locateFlashAppearance({
         userId: authenticatedUserId,
         appearanceId: appearanceId.data,
-        latitude: coordinate.data.latitude,
-        longitude: coordinate.data.longitude,
-        contextDistrict: coordinate.data.district,
         forceArrivalForTesting,
+        ...coordinate.data,
       }));
     } catch (error) {
       // Never log the request body or raw coordinate.
@@ -209,6 +197,16 @@ export function registerAlangFlashRoutes(app: Express): void {
     }
   });
 
+  app.get("/api/alang/flash/story/fragments", ...guards, async (req, res) => {
+    const authenticatedUserId = userId(req, res);
+    if (!authenticatedUserId) return;
+    try {
+      return res.json(await getFlashStoryFragments(authenticatedUserId));
+    } catch (error) {
+      return sendFlashError(res, error);
+    }
+  });
+
   app.post("/api/alang/flash/encounters/:id/answer", ...guards, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
@@ -228,7 +226,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/alang/flash/encounters/:id/reroll", ...guards, async (req, res) => {
+  app.post("/api/alang/flash/encounters/:id/reroll", ...guards, retiredFlashTaskFlow, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const encounterId = idParamSchema.safeParse(req.params.id);
@@ -240,7 +238,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/alang/flash/encounters/:id/accept", ...guards, async (req, res) => {
+  app.post("/api/alang/flash/encounters/:id/accept", ...guards, retiredFlashTaskFlow, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const encounterId = idParamSchema.safeParse(req.params.id);
@@ -259,7 +257,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/alang/flash/encounters/:id/deliver", ...guards, async (req, res) => {
+  app.post("/api/alang/flash/encounters/:id/deliver", ...guards, retiredFlashTaskFlow, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const encounterId = idParamSchema.safeParse(req.params.id);
@@ -270,17 +268,17 @@ export function registerAlangFlashRoutes(app: Express): void {
     try {
       return res.json(await deliverFlashTaskToNpc({
         encounterId: encounterId.data,
-        assignmentId: body.data.assignmentId,
-        userId: authenticatedUserId,
-        answers: body.data.answers,
-        allowSameEncounterDeliveryForTesting: await isAnyLocationArrivalTestEnabled(),
-      }));
+          assignmentId: body.data.assignmentId,
+          userId: authenticatedUserId,
+          answers: body.data.answers,
+          allowSameEncounterDeliveryForTesting: await isAnyLocationArrivalTestEnabled(),
+        }));
     } catch (error) {
       return sendFlashError(res, error);
     }
   });
 
-  app.get("/api/alang/flash/assignments/:id", ...guards, async (req, res) => {
+  app.get("/api/alang/flash/assignments/:id", ...guards, retiredFlashTaskFlow, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const assignmentId = idParamSchema.safeParse(req.params.id);
@@ -292,13 +290,13 @@ export function registerAlangFlashRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/alang/flash/assignments/:id/arrive", ...guards, geoEndpointLimiter, async (req, res) => {
+  app.post("/api/alang/flash/assignments/:id/arrive", ...guards, retiredFlashTaskFlow, geoEndpointLimiter, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const assignmentId = idParamSchema.safeParse(req.params.id);
     if (!assignmentId.success) return res.status(404).json({ code: "FLASH_TASK_NOT_FOUND", error: "没有找到这个委托" });
     const forceArrivalForTesting = await isAnyLocationArrivalTestEnabled();
-    const coordinate = await parseShenzhenCoordinate(
+    const coordinate = parseShenzhenCoordinate(
       req.body,
       forceArrivalForTesting ? false : await shouldEnforceShenzhenBoundary(),
     );
@@ -307,9 +305,8 @@ export function registerAlangFlashRoutes(app: Express): void {
       return res.json(await arriveAtFlashAssignment({
         assignmentId: assignmentId.data,
         userId: authenticatedUserId,
-        latitude: coordinate.data.latitude,
-        longitude: coordinate.data.longitude,
         forceArrivalForTesting,
+        ...coordinate.data,
       }));
     } catch (error) {
       // Never log the request body or raw coordinate.
@@ -318,7 +315,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/alang/flash/assignments/:id/feedback", ...guards, async (req, res) => {
+  app.post("/api/alang/flash/assignments/:id/feedback", ...guards, retiredFlashTaskFlow, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const assignmentId = idParamSchema.safeParse(req.params.id);
@@ -337,7 +334,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/alang/flash/assignments/:id/abandon", ...guards, async (req, res) => {
+  app.post("/api/alang/flash/assignments/:id/abandon", ...guards, retiredFlashTaskFlow, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const assignmentId = idParamSchema.safeParse(req.params.id);
@@ -349,7 +346,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/alang/flash/assignments/:id/retry", ...guards, async (req, res) => {
+  app.post("/api/alang/flash/assignments/:id/retry", ...guards, retiredFlashTaskFlow, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const assignmentId = idParamSchema.safeParse(req.params.id);

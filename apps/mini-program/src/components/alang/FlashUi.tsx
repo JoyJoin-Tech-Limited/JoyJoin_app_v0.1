@@ -2,42 +2,18 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Image, Text, View } from '@tarojs/components'
 import { resolveFlashNpcTheme, resolveFlashTaskCategory } from '../../lib/alang/flashNpcAssets'
 import type { FlashNpcReference, FlashTaskSummary } from '../../lib/alang/flashTypes'
-import JoyJoinIcon from '../ui/JoyJoinIcon'
-import flashUniversalArt from '../../pages/alang/assets/flash-city-encounter.jpg'
-import alangHeadshot from '../../pages/alang/assets/npcs/headshots/alang.jpg'
-import liziHeadshot from '../../pages/alang/assets/npcs/headshots/lizi.jpg'
-import momoHeadshot from '../../pages/alang/assets/npcs/headshots/momo.jpg'
-import shiqiHeadshot from '../../pages/alang/assets/npcs/headshots/shiqi.jpg'
-import atuanHeadshot from '../../pages/alang/assets/npcs/headshots/atuan.jpg'
-import radarScene from '../../pages/alang/assets/backgrounds/radar-paper-scene.jpg'
-import taskScene from '../../pages/alang/assets/backgrounds/task-paper-scene.jpg'
-import feedbackScene from '../../pages/alang/assets/backgrounds/feedback-paper-scene.jpg'
-
-const NPC_HEADSHOTS: Record<string, string> = {
-  alang: alangHeadshot,
-  lizi: liziHeadshot,
-  momo: momoHeadshot,
-  shiqi: shiqiHeadshot,
-  atuan: atuanHeadshot,
-}
-
-const SCENE_BACKGROUNDS = {
-  radar: radarScene,
-  task: taskScene,
-  feedback: feedbackScene,
-} as const
 
 export function FlashNpcPortrait({
   npc,
   size = 'medium',
 }: {
-  npc: Pick<FlashNpcReference, 'slug' | 'name' | 'avatarUrl'>
+  npc: Pick<FlashNpcReference, 'slug' | 'name'>
   size?: 'small' | 'medium' | 'large'
 }) {
   const theme = useMemo(() => resolveFlashNpcTheme(npc.slug, npc.name), [npc.name, npc.slug])
-  const headshotSrc = theme.slug !== 'unknown'
-    ? NPC_HEADSHOTS[theme.slug] ?? ''
-    : npc.avatarUrl?.trim() ?? ''
+  const headshotSrc = theme.imageSrc
+    ? theme.imageSrc.replace('/assets/npcs/', '/assets/npcs/headshots/')
+    : ''
   const [failed, setFailed] = useState(!headshotSrc)
 
   useEffect(() => {
@@ -54,7 +30,7 @@ export function FlashNpcPortrait({
         <Image
           className='flash-npc-portrait__image'
           src={headshotSrc}
-          mode='aspectFill'
+          mode='aspectFit'
           onError={() => setFailed(true)}
         />
       ) : (
@@ -71,14 +47,79 @@ export function FlashNpcSceneBackdrop({
 }: {
   scene: 'radar' | 'task' | 'feedback'
 }) {
+  const sceneSrc = `/pages/alang/assets/backgrounds/${scene}-paper-scene.png`
+
   return (
     <View className='flash-scene-backdrop' aria-hidden='true'>
-      <Image
-        className='flash-scene-backdrop__image'
-        src={SCENE_BACKGROUNDS[scene]}
-        mode='aspectFill'
-      />
+      <Image className='flash-scene-backdrop__image' src={sceneSrc} mode='aspectFill' />
       <View className='flash-scene-backdrop__veil' />
+    </View>
+  )
+}
+
+export function FlashNpcDialogueScene({
+  npc,
+  speech,
+  intro,
+  compact = false,
+  spacious = false,
+  choicesEmbedded = false,
+  deliveryEmbedded = false,
+  motion,
+}: {
+  npc: Pick<FlashNpcReference, 'slug' | 'name' | 'animal'>
+  speech: string
+  intro?: string
+  compact?: boolean
+  spacious?: boolean
+  choicesEmbedded?: boolean
+  deliveryEmbedded?: boolean
+  motion?: { ambient: 'none' | 'breathe' | 'drift'; blinkAssetUrl?: string; blinkIntervalSeconds?: number }
+}) {
+  const theme = useMemo(() => resolveFlashNpcTheme(npc.slug, npc.name), [npc.name, npc.slug])
+  const [failed, setFailed] = useState(!theme.dialogueSceneSrc)
+
+  useEffect(() => {
+    setFailed(!theme.dialogueSceneSrc)
+  }, [theme.dialogueSceneSrc])
+
+  return (
+    <View
+      className={`flash-dialogue-scene${compact ? ' flash-dialogue-scene--compact' : ''}${spacious ? ' flash-dialogue-scene--spacious' : ''}${choicesEmbedded ? ' flash-dialogue-scene--choices' : ''}${deliveryEmbedded ? ' flash-dialogue-scene--delivery' : ''}${motion?.ambient && motion.ambient !== 'none' ? ` flash-dialogue-scene--${motion.ambient}` : ''}`}
+      style={{ backgroundColor: theme.tint }}
+      aria-label={`${npc.name}正在和你说话`}
+    >
+      {!failed ? (
+        <Image
+          className='flash-dialogue-scene__image'
+          src={theme.dialogueSceneSrc}
+          mode='aspectFill'
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <View className='flash-dialogue-scene__fallback'>
+          <FlashNpcPortrait npc={npc} size='large' />
+        </View>
+      )}
+      {motion?.blinkAssetUrl ? (
+        <Image
+          className='flash-dialogue-scene__blink-frame'
+          src={motion.blinkAssetUrl}
+          mode='aspectFill'
+          style={{ '--flash-blink-duration': `${Math.max(3, motion.blinkIntervalSeconds ?? 6)}s` } as any}
+          aria-hidden='true'
+        />
+      ) : null}
+      <View className='flash-dialogue-scene__shade' aria-hidden='true' />
+      <View className='flash-dialogue-scene__identity'>
+        <Text className='flash-dialogue-scene__name'>{npc.name}</Text>
+        <Text className='flash-dialogue-scene__animal'>{npc.animal ?? theme.animal}</Text>
+      </View>
+      <View className='flash-dialogue-scene__bubble' role='status'>
+        {intro ? <Text className='flash-dialogue-scene__intro'>{intro}</Text> : null}
+        <Text className='flash-dialogue-scene__speech'>{speech}</Text>
+        <View className='flash-dialogue-scene__bubble-tail' aria-hidden='true' />
+      </View>
     </View>
   )
 }
@@ -127,17 +168,15 @@ export function FlashPageState({
 }) {
   return (
     <View className={`flash-state flash-state--${tone}`} role={tone === 'error' ? 'alert' : 'status'}>
-      <Image className='flash-state__art' src={flashUniversalArt} mode='aspectFill' />
-      {tone === 'error' ? (
-        <Text className='flash-state__mark' aria-hidden='true'>…</Text>
-      ) : (
-        <JoyJoinIcon
-          className='flash-state__mark'
-          emoji='✨'
-          tier='reveal'
-          size={48}
+      <View className='flash-state__mark' aria-hidden='true'>
+        <Image
+          className='flash-state__mark-image'
+          src={tone === 'error'
+            ? '/assets/icons/status-icons/status-warning.webp'
+            : '/assets/icons/status-icons/status-waiting.webp'}
+          mode='aspectFit'
         />
-      )}
+      </View>
       <Text className='flash-state__title'>{title}</Text>
       {description ? <Text className='flash-state__description'>{description}</Text> : null}
       {action && actionLabel ? (
@@ -151,9 +190,28 @@ export function FlashFeatureClosed() {
   return (
     <View className='flash-page'>
       <FlashPageState
-        title='街头盲盒正在准备下一次见面'
+        title='闪现正在准备下一次见面'
         description='这项体验暂时没有开放，过些时候再来看看。'
       />
+    </View>
+  )
+}
+
+export function FlashTaskCategoryBadge({
+  category,
+  className = '',
+}: {
+  category: string
+  className?: string
+}) {
+  const theme = resolveFlashTaskCategory(category)
+  return (
+    <View
+      className={`flash-task-category${className ? ` ${className}` : ''}`}
+      style={{ color: theme.accent, backgroundColor: theme.tint }}
+    >
+      <Image className='flash-task-category__icon' src={theme.iconSrc} mode='aspectFit' />
+      <Text className='flash-task-category__label'>{theme.label}</Text>
     </View>
   )
 }
@@ -229,15 +287,9 @@ export function FlashTaskCard({
       data-assignment-id={assignmentId}
     >
       <View className='flash-task-card__accent' style={{ backgroundColor: category.accent }} />
-      <Text className='flash-task-card__chapter'>SIDE QUEST</Text>
-      <View className='flash-task-card__portrait'>
-        <FlashNpcPortrait npc={task.npc} size='small' />
-      </View>
       <View className='flash-task-card__body'>
         <View className='flash-task-card__topline'>
-          <Text className='flash-task-card__category' style={{ color: category.text, backgroundColor: category.tint }}>
-            {category.label}
-          </Text>
+          <FlashTaskCategoryBadge category={task.category} className='flash-task-card__category' />
           <Text className='flash-task-card__status'>{statusCopy(task.status)}</Text>
         </View>
         <Text className='flash-task-card__title'>{task.title}</Text>

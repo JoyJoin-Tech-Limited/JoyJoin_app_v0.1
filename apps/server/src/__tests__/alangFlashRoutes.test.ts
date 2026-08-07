@@ -22,21 +22,14 @@ const mocks = vi.hoisted(() => ({
   getPreferences: vi.fn(),
   patchPreferences: vi.fn(),
   removeTag: vi.fn(),
-  reverseGeocode: vi.fn(),
   loggerWarn: vi.fn(),
 }));
 
 vi.mock("../lib/featureFlags", () => ({ getFeatureFlag: mocks.getFeatureFlag }));
 vi.mock("../lib/logger", () => ({
-  logger: {
-    warn: mocks.loggerWarn,
-    error: vi.fn(),
-    info: vi.fn(),
-    child: vi.fn(() => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn() })),
-  },
+  logger: { warn: mocks.loggerWarn, error: vi.fn(), info: vi.fn() },
 }));
 vi.mock("../services/flashScheduleService", () => ({ startFlashBackgroundJobs: vi.fn() }));
-vi.mock("../routes/domains/geo", () => ({ reverseGeocodeCoordinate: mocks.reverseGeocode }));
 vi.mock("../services/flashService", () => {
   class FlashServiceError extends Error {
     constructor(public code: string, public status: number, message: string) {
@@ -91,12 +84,10 @@ async function login(baseUrl: string, user = "acting-user") {
 describe("formal Flash routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.reverseGeocode.mockImplementation(async ({ latitude, longitude }) => {
-      if (latitude === validCoordinate.latitude && longitude === validCoordinate.longitude) {
-        return { success: true, city: "深圳", district: "南山区", source: "tencent" };
-      }
-      return { success: true, city: latitude < 22.6 ? "香港" : latitude > 22.78 ? "惠州" : "东莞", district: "", source: "tencent" };
-    });
+    vi.stubEnv(
+      "FLASH_SHENZHEN_BOUNDARY_APPROVED_SHA256",
+      "b691faa581d9330e6dc738dcd11421958ca2d4ddea271b656a56237f9fa6fb0b",
+    );
     mocks.getFeatureFlag.mockResolvedValue(true);
     mocks.assertReady.mockResolvedValue(undefined);
     mocks.getHome.mockResolvedValue({ canonicalScreen: "home", onlineNpcs: [], myTasks: [] });
@@ -107,7 +98,7 @@ describe("formal Flash routes", () => {
       targetBearingDegrees: 91,
       proximityBand: "near",
       signal: "searching",
-      canonicalScreen: "radar",
+      canonicalScreen: "map",
       arrived: false,
       encounterId: null,
     });
@@ -148,23 +139,11 @@ describe("formal Flash routes", () => {
       });
       expect(response.status).toBe(200);
     });
-    expect(mocks.getHome).toHaveBeenCalledWith({ userId: "acting-user" });
-    expect(mocks.reverseGeocode).toHaveBeenCalledWith(validCoordinate, { cache: false });
-  });
-
-  it("fails closed without mislabelling the user when Tencent verification is unavailable", async () => {
-    mocks.reverseGeocode.mockResolvedValue({ success: false, city: "深圳", district: "南山区", source: "bounds", code: "MAP_TIMEOUT" });
-    await withServer(async (baseUrl) => {
-      const cookie = await login(baseUrl);
-      const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
-        method: "POST",
-        headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify(validCoordinate),
-      });
-      expect(response.status).toBe(503);
-      await expect(response.json()).resolves.toMatchObject({ code: "FLASH_LOCATION_UNAVAILABLE" });
-    });
-    expect(mocks.getHome).not.toHaveBeenCalled();
+    expect(mocks.getHome).toHaveBeenCalledWith(expect.objectContaining({
+      userId: "acting-user",
+      latitude: validCoordinate.latitude,
+      longitude: validCoordinate.longitude,
+    }));
   });
 
   it("rejects an out-of-Shenzhen coordinate before service access", async () => {
@@ -173,7 +152,7 @@ describe("formal Flash routes", () => {
       const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
         method: "POST",
         headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: 31.2304, longitude: 121.4737 }),
+        body: JSON.stringify({ latitude: 31.2304, longitude: 121.4737, coordinateSystem: "gcj02" }),
       });
       expect(response.status).toBe(403);
       await expect(response.json()).resolves.toMatchObject({ code: "FLASH_OUTSIDE_SHENZHEN" });
@@ -181,7 +160,7 @@ describe("formal Flash routes", () => {
     expect(mocks.getHome).not.toHaveBeenCalled();
   });
 
-  it("allows Shenzhen-external GPS when the admin restriction is off in staging", async () => {
+  it("allows an out-of-Shenzhen coordinate when the admin gate is off in staging", async () => {
     vi.stubEnv("APP_MODE", "staging");
     mocks.getFeatureFlag.mockImplementation(async (key: string) =>
       key === "alangEnabled" ? true : key !== "flashShenzhenLocationGateEnabled"
@@ -196,10 +175,9 @@ describe("formal Flash routes", () => {
       expect(response.status).toBe(200);
     });
     expect(mocks.getHome).toHaveBeenCalled();
-    expect(mocks.reverseGeocode).not.toHaveBeenCalled();
   });
 
-  it("keeps the Shenzhen restriction locked in production even when the admin flag is off", async () => {
+  it("keeps the Shenzhen boundary locked in production even when the admin gate is off", async () => {
     vi.stubEnv("APP_MODE", "production");
     mocks.getFeatureFlag.mockImplementation(async (key: string) => key === "alangEnabled");
     await withServer(async (baseUrl) => {
@@ -207,14 +185,14 @@ describe("formal Flash routes", () => {
       const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
         method: "POST",
         headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: 31.2304, longitude: 121.4737, coordinateSystem: "gcj02" }),
+        body: JSON.stringify({ latitude: 31.2304, longitude: 121.4737 }),
       });
       expect(response.status).toBe(403);
     });
     expect(mocks.getHome).not.toHaveBeenCalled();
   });
 
-  it("passes the non-production any-location override through the complete arrival and delivery chain", async () => {
+  it("keeps story arrival testing available while retired task endpoints stay closed", async () => {
     vi.stubEnv("APP_MODE", "staging");
     mocks.getFeatureFlag.mockImplementation(async (key: string) =>
       key === "alangEnabled" || key === "flashAnyLocationArrivalTestEnabled"
@@ -228,16 +206,20 @@ describe("formal Flash routes", () => {
       })).status).toBe(200);
       expect((await fetch(`${baseUrl}/api/alang/flash/assignments/${assignmentId}/arrive`, {
         method: "POST", headers, body: JSON.stringify(remoteCoordinate),
+      })).status).toBe(410);
+      expect((await fetch(`${baseUrl}/api/alang/flash/encounters/${appearanceId}`, {
+        headers,
       })).status).toBe(200);
-      expect((await fetch(`${baseUrl}/api/alang/flash/encounters/${appearanceId}`, { headers })).status).toBe(200);
       expect((await fetch(`${baseUrl}/api/alang/flash/encounters/${appearanceId}/deliver`, {
-        method: "POST", headers, body: JSON.stringify({ assignmentId }),
-      })).status).toBe(200);
+        method: "POST",
+        headers,
+        body: JSON.stringify({ assignmentId }),
+      })).status).toBe(410);
     });
     expect(mocks.locate).toHaveBeenCalledWith(expect.objectContaining({ forceArrivalForTesting: true }));
-    expect(mocks.arrive).toHaveBeenCalledWith(expect.objectContaining({ forceArrivalForTesting: true }));
+    expect(mocks.arrive).not.toHaveBeenCalled();
     expect(mocks.getEncounter).toHaveBeenCalledWith(expect.objectContaining({ allowSameEncounterDeliveryForTesting: true }));
-    expect(mocks.deliver).toHaveBeenCalledWith(expect.objectContaining({ allowSameEncounterDeliveryForTesting: true }));
+    expect(mocks.deliver).not.toHaveBeenCalled();
   });
 
   it("never enables the any-location arrival override in production", async () => {
@@ -261,7 +243,7 @@ describe("formal Flash routes", () => {
       const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
         method: "POST",
         headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: 22.495, longitude: 114.139, coordinateSystem: "gcj02" }),
+        body: JSON.stringify({ latitude: 22.495, longitude: 114.139 }),
       });
       expect(response.status).toBe(403);
       await expect(response.json()).resolves.toMatchObject({ code: "FLASH_OUTSIDE_SHENZHEN" });
@@ -279,7 +261,7 @@ describe("formal Flash routes", () => {
       const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
         method: "POST",
         headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude, longitude, coordinateSystem: "gcj02" }),
+        body: JSON.stringify({ latitude, longitude }),
       });
       expect(response.status).toBe(403);
       await expect(response.json()).resolves.toMatchObject({ code: "FLASH_OUTSIDE_SHENZHEN" });
@@ -300,7 +282,6 @@ describe("formal Flash routes", () => {
     });
     expect(JSON.stringify(mocks.loggerWarn.mock.calls)).not.toContain(String(validCoordinate.latitude));
     expect(JSON.stringify(mocks.loggerWarn.mock.calls)).not.toContain(String(validCoordinate.longitude));
-    expect(mocks.locate).toHaveBeenCalledWith(expect.objectContaining({ contextDistrict: "南山区" }));
   });
 
   it("returns the fixed approved destination while the selected appearance is live", async () => {
@@ -316,12 +297,12 @@ describe("formal Flash routes", () => {
         appearanceId,
         destination: { latitude: 22.5432, longitude: 114.0578, coordinateSystem: "gcj02" },
         distanceMeters: 83,
-        canonicalScreen: "radar",
+        canonicalScreen: "map",
       });
     });
   });
 
-  it("returns a stable code when the local hidden-location guard is exhausted", async () => {
+  it("supports the live-map cadence and returns a stable code when its guard is exhausted", async () => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl, "rate-budget-user");
       for (let attempt = 0; attempt < 360; attempt += 1) {
@@ -342,7 +323,7 @@ describe("formal Flash routes", () => {
     });
   });
 
-  it("scopes task arrival to the session user and ignores client identity", async () => {
+  it("returns 410 for retired task arrival", async () => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl);
       const response = await fetch(`${baseUrl}/api/alang/flash/assignments/${assignmentId}/arrive`, {
@@ -350,15 +331,13 @@ describe("formal Flash routes", () => {
         headers: { Cookie: cookie, "Content-Type": "application/json" },
         body: JSON.stringify({ ...validCoordinate, userId: "victim-user" }),
       });
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(410);
+      await expect(response.json()).resolves.toMatchObject({ code: "FLASH_TASK_FLOW_RETIRED" });
     });
-    expect(mocks.arrive).toHaveBeenCalledWith(expect.objectContaining({
-      assignmentId,
-      userId: "acting-user",
-    }));
+    expect(mocks.arrive).not.toHaveBeenCalled();
   });
 
-  it("allows restarting the same task in non-production only when the admin flag is on", async () => {
+  it("keeps retired task restart closed even when the old test flag is on", async () => {
     vi.stubEnv("APP_MODE", "staging");
     mocks.retryTask.mockResolvedValue({ canonicalScreen: "task", task: { id: assignmentId } });
     mocks.getFeatureFlag.mockImplementation(async (key: string) =>
@@ -370,9 +349,10 @@ describe("formal Flash routes", () => {
         method: "POST",
         headers: { Cookie: cookie },
       });
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(410);
+      await expect(response.json()).resolves.toMatchObject({ code: "FLASH_TASK_FLOW_RETIRED" });
     });
-    expect(mocks.retryTask).toHaveBeenCalledWith({ assignmentId, userId: "acting-user" });
+    expect(mocks.retryTask).not.toHaveBeenCalled();
   });
 
   it("rejects task restart when the admin retry flag is off", async () => {
@@ -384,8 +364,8 @@ describe("formal Flash routes", () => {
         method: "POST",
         headers: { Cookie: cookie },
       });
-      expect(response.status).toBe(403);
-      await expect(response.json()).resolves.toMatchObject({ code: "FLASH_TASK_RETRY_DISABLED" });
+      expect(response.status).toBe(410);
+      await expect(response.json()).resolves.toMatchObject({ code: "FLASH_TASK_FLOW_RETIRED" });
     });
     expect(mocks.retryTask).not.toHaveBeenCalled();
   });
@@ -399,7 +379,7 @@ describe("formal Flash routes", () => {
         method: "POST",
         headers: { Cookie: cookie },
       });
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(410);
     });
     expect(mocks.retryTask).not.toHaveBeenCalled();
   });

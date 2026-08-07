@@ -18,21 +18,21 @@ import '../flash.scss'
 type LocateState = 'idle' | 'locating' | 'tracking' | 'inside' | 'denied' | 'ended' | 'rate_limited' | 'error'
 
 const FOUND_REVEAL_MS = 420
-const RADAR_FRAME_INTERVAL_MS = 2_000
+const MAP_FRAME_INTERVAL_MS = 2_000
 
-const RADAR_STATUS: Record<LocateState, { label: string; assistiveLabel: string }> = {
-  idle: { label: '待开启', assistiveLabel: '实时雷达尚未开启' },
+const MAP_STATUS: Record<LocateState, { label: string; assistiveLabel: string }> = {
+  idle: { label: '待开启', assistiveLabel: '地图引导尚未开启' },
   locating: { label: '连接中', assistiveLabel: '正在开启前台持续定位和方向传感器' },
-  tracking: { label: '追踪中', assistiveLabel: '实时雷达正在根据位置和朝向指引目标点' },
+  tracking: { label: '引导中', assistiveLabel: '地图正在根据当前位置指引目标点' },
   inside: { label: '找到了', assistiveLabel: '已经到达隐藏目标点附近' },
   denied: { label: '未连接', assistiveLabel: '定位权限未开启' },
   ended: { label: '已散场', assistiveLabel: '本次闪现已经结束' },
-  rate_limited: { label: '稍后再试', assistiveLabel: '实时雷达请求暂时已达安全上限' },
-  error: { label: '连接中断', assistiveLabel: '实时雷达暂时无法继续' },
+  rate_limited: { label: '稍后再试', assistiveLabel: '地图定位请求暂时已达安全上限' },
+  error: { label: '连接中断', assistiveLabel: '地图引导暂时无法继续' },
 }
 
 type LocationChangeHandler = Parameters<typeof Taro.onLocationChange>[0]
-export default function FlashRadarPage() {
+export default function FlashMapPage() {
   const { user } = useAuth()
   const enabled = shouldShowAlangEntry(user)
   const params = Taro.getCurrentInstance().router?.params ?? {}
@@ -44,11 +44,11 @@ export default function FlashRadarPage() {
   const endsAt = decodeFlashRouteParam(params.endsAt)
   const locateMutation = useLocateFlashAppearance()
   const [state, setState] = useState<LocateState>('idle')
-  const [radarFrame, setRadarFrame] = useState<FlashLocateView | null>(null)
+  const [mapFrame, setMapFrame] = useState<FlashLocateView | null>(null)
   const [currentLocation, setCurrentLocation] = useState<FlashLocationSnapshot | null>(null)
   const [walkingRoute, setWalkingRoute] = useState<WalkingRouteSuccessResponse | null>(null)
   const [routeUnavailable, setRouteUnavailable] = useState(false)
-  const radarStatus = RADAR_STATUS[state]
+  const mapStatus = MAP_STATUS[state]
   const trackingRef = useRef(false)
   const requestInFlightRef = useRef(false)
   const lastFrameAtRef = useRef(0)
@@ -66,7 +66,7 @@ export default function FlashRadarPage() {
     void Taro.setNavigationBarTitle({ title: `寻找${npcName}` })
   }, [npcName])
 
-  const stopLiveRadar = useCallback((resetState = true) => {
+  const stopMapGuidance = useCallback((resetState = true) => {
     trackingRef.current = false
     requestInFlightRef.current = false
     if (locationHandlerRef.current) Taro.offLocationChange(locationHandlerRef.current)
@@ -75,8 +75,8 @@ export default function FlashRadarPage() {
     if (resetState) setState('idle')
   }, [])
 
-  const handleRadarFailure = useCallback(async (error: unknown) => {
-    stopLiveRadar(false)
+  const handleMapFailure = useCallback(async (error: unknown) => {
+    stopMapGuidance(false)
     const code = getFlashApiErrorCode(error)
     if (code === 'FLASH_APPEARANCE_ENDED' || code === 'FLASH_APPEARANCE_NOT_FOUND' || code === 'NOT_FOUND') {
       setState('ended')
@@ -88,26 +88,26 @@ export default function FlashRadarPage() {
     }
     const permission = await getFlashLocationPermission()
     setState(permission === 'denied' ? 'denied' : 'error')
-  }, [stopLiveRadar])
+  }, [stopMapGuidance])
 
-  const submitRadarFrame = useCallback(async (location: FlashLocationSnapshot) => {
+  const submitMapFrame = useCallback(async (location: FlashLocationSnapshot) => {
     if (!trackingRef.current || !appearanceId || requestInFlightRef.current) return
     const now = Date.now()
-    if (now - lastFrameAtRef.current < RADAR_FRAME_INTERVAL_MS) return
+    if (now - lastFrameAtRef.current < MAP_FRAME_INTERVAL_MS) return
     lastFrameAtRef.current = now
     requestInFlightRef.current = true
     try {
       const response = await locateMutation.mutateAsync({ appearanceId, location })
       if (!trackingRef.current) return
       setCurrentLocation(location)
-      setRadarFrame(response)
+      setMapFrame(response)
       if (response.canonicalScreen === 'unavailable') {
-        stopLiveRadar(false)
+        stopMapGuidance(false)
         setState('ended')
         return
       }
       if (response.withinRange) {
-        stopLiveRadar(false)
+        stopMapGuidance(false)
         setState('inside')
         haptics('success')
         await new Promise((resolve) => setTimeout(resolve, FOUND_REVEAL_MS))
@@ -138,23 +138,23 @@ export default function FlashRadarPage() {
       }
       setState('tracking')
     } catch (error) {
-      await handleRadarFailure(error)
+      await handleMapFailure(error)
     } finally {
       requestInFlightRef.current = false
     }
-  }, [appearanceId, handleRadarFailure, locateMutation, stopLiveRadar])
+  }, [appearanceId, handleMapFailure, locateMutation, stopMapGuidance])
 
-  const startLiveRadar = useCallback(async () => {
+  const startMapGuidance = useCallback(async () => {
     if (!enabled || !appearanceId || trackingRef.current) return
     setState('locating')
-    setRadarFrame(null)
+    setMapFrame(null)
     setWalkingRoute(null)
     setRouteUnavailable(false)
     lastFrameAtRef.current = 0
     lastRouteAtRef.current = 0
 
     const locationHandler: LocationChangeHandler = (location) => {
-      void submitRadarFrame({
+      void submitMapFrame({
         latitude: location.latitude,
         longitude: location.longitude,
         accuracy: location.accuracy,
@@ -170,25 +170,25 @@ export default function FlashRadarPage() {
       trackingRef.current = true
       setState('tracking')
     } catch (error) {
-      await handleRadarFailure(error)
+      await handleMapFailure(error)
     }
-  }, [appearanceId, enabled, handleRadarFailure, submitRadarFrame])
+  }, [appearanceId, enabled, handleMapFailure, submitMapFrame])
 
   useEffect(() => {
     if (!enabled || !appearanceId || didAutoStartRef.current) return
     didAutoStartRef.current = true
-    void startLiveRadar()
-  }, [appearanceId, enabled, startLiveRadar])
+    void startMapGuidance()
+  }, [appearanceId, enabled, startMapGuidance])
 
-  const mapMarkers = useMemo<NonNullable<MapProps['markers']>>(() => radarFrame ? [{
+  const mapMarkers = useMemo<NonNullable<MapProps['markers']>>(() => mapFrame ? [{
     id: 1,
-    latitude: radarFrame.destination.latitude,
-    longitude: radarFrame.destination.longitude,
+    latitude: mapFrame.destination.latitude,
+    longitude: mapFrame.destination.longitude,
     title: `${npcName}在这里`,
     iconPath: '/assets/icons/ui/icon-location.webp',
     width: 36,
     height: 36,
-  }] : [], [npcName, radarFrame])
+  }] : [], [npcName, mapFrame])
 
   const mapPolyline = useMemo<NonNullable<MapProps['polyline']>>(() => walkingRoute ? [{
     points: walkingRoute.polyline,
@@ -208,8 +208,8 @@ export default function FlashRadarPage() {
     }
   }
 
-  useDidHide(() => stopLiveRadar())
-  useEffect(() => () => stopLiveRadar(false), [stopLiveRadar])
+  useDidHide(() => stopMapGuidance())
+  useEffect(() => () => stopMapGuidance(false), [stopMapGuidance])
 
   if (!enabled) return <FlashFeatureClosed />
 
@@ -238,12 +238,12 @@ export default function FlashRadarPage() {
             {locationAddress ? <Text className='flash-radar__address'>{locationAddress}</Text> : null}
           </View>
 
-          <View className='flash-radar__map-shell' data-testid='flash-navigation-map' aria-label={radarStatus.assistiveLabel}>
-            {radarFrame && currentLocation ? (
+          <View className='flash-radar__map-shell' data-testid='flash-navigation-map' aria-label={mapStatus.assistiveLabel}>
+            {mapFrame && currentLocation ? (
               <Map
                 className='flash-radar__map'
-                latitude={(currentLocation.latitude + radarFrame.destination.latitude) / 2}
-                longitude={(currentLocation.longitude + radarFrame.destination.longitude) / 2}
+                latitude={(currentLocation.latitude + mapFrame.destination.latitude) / 2}
+                longitude={(currentLocation.longitude + mapFrame.destination.longitude) / 2}
                 scale={16}
                 showLocation
                 markers={mapMarkers}
@@ -258,62 +258,71 @@ export default function FlashRadarPage() {
             )}
           </View>
 
-          {radarFrame ? (
+          {mapFrame ? (
             <View className='flash-radar__live-readout' role='status'>
-              <Text className='flash-radar__distance'>{radarFrame.distanceMeters} 米</Text>
+              <Text className='flash-radar__distance'>{mapFrame.distanceMeters} 米</Text>
               <Text className='flash-radar__direction-copy'>沿地图路线前往{npcName}本次固定出现点</Text>
               {walkingRoute ? (
                 <Text className='flash-radar__route-meta'>步行约 {Math.max(1, Math.ceil(walkingRoute.durationSeconds / 60))} 分钟 · {walkingRoute.distanceMeters} 米</Text>
               ) : null}
               {routeUnavailable ? <Text className='flash-radar__route-fallback'>步行路线暂时没有加载，可先按地图终点方向前往。</Text> : null}
             </View>
-          ) : null}
+          ) : (
+            <>
+              <Text className='flash-radar__title'>正在获取前往出现点的路线</Text>
+              <Text className='flash-radar__copy'>地图只在此页前台更新；离开页面会立即停止定位。</Text>
+            </>
+          )}
           <Text className='flash-visually-hidden'>页面会读取前台位置，用于显示到本次固定出现点的地图路线并确认到达。</Text>
 
           {isPossiblyLate ? (
             <View className='flash-radar__warning' role='status'>
-              <Text>即将结束</Text>
+              <Text>可能有点来不及了，但去不去还是你决定。角色到点会正常离开。</Text>
             </View>
           ) : null}
 
           {state === 'ended' ? (
             <View className='flash-radar__result' role='status'>
               <Text className='flash-radar__result-title'>刚好散场了</Text>
+              <Text className='flash-radar__result-copy'>角色到点就会离开，不接受预约，也不会为这次寻找延长时间。</Text>
               <FlashButton variant='secondary' onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>看看还有谁在线</FlashButton>
             </View>
           ) : null}
 
           {state === 'denied' ? (
             <View className='flash-radar__result flash-radar__result--error' role='alert'>
-              <Text className='flash-radar__result-title'>需要定位权限</Text>
+              <Text className='flash-radar__result-title'>定位权限没有打开</Text>
+              <Text className='flash-radar__result-copy'>拒绝定位就无法显示地图路线，我们也不会改用 IP 定位。</Text>
               <FlashButton variant='secondary' onClick={() => { void handleOpenSetting() }}>打开定位设置</FlashButton>
             </View>
           ) : null}
 
           {state === 'rate_limited' ? (
             <View className='flash-radar__result flash-radar__result--error' role='alert'>
-              <Text className='flash-radar__result-title'>稍后再试</Text>
+              <Text className='flash-radar__result-title'>位置更新太频繁了</Text>
+              <Text className='flash-radar__result-copy'>地图定位已自动停止。稍后重新开启即可。</Text>
             </View>
           ) : null}
 
           {state === 'error' ? (
             <View className='flash-radar__result flash-radar__result--error' role='alert'>
-              <Text className='flash-radar__result-title'>连接中断</Text>
+              <Text className='flash-radar__result-title'>地图定位中断</Text>
+              <Text className='flash-radar__result-copy'>定位信号或网络可能暂时不稳定，可以重新开启。</Text>
             </View>
           ) : null}
 
           <View className='flash-radar__actions'>
             <FlashButton
               disabled={state === 'locating' || state === 'tracking' || state === 'inside'}
-              onClick={() => { void startLiveRadar() }}
+              onClick={() => { void startMapGuidance() }}
             >
               {state === 'locating' ? '正在打开地图…' : state === 'tracking' ? '地图引导中' : '重新打开地图'}
             </FlashButton>
             {state === 'tracking' ? (
-              <FlashButton variant='secondary' onClick={() => stopLiveRadar()}>停止地图引导</FlashButton>
+              <FlashButton variant='secondary' onClick={() => stopMapGuidance()}>停止地图引导</FlashButton>
             ) : null}
-            <FlashButton variant='quiet' onClick={() => { stopLiveRadar(); void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>
-              返回
+            <FlashButton variant='quiet' onClick={() => { stopMapGuidance(); void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>
+              先不去了
             </FlashButton>
           </View>
         </View>

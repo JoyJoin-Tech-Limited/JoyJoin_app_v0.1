@@ -33,6 +33,7 @@ import type {
   FlashAssignmentView,
   FlashCanonicalSnapshot,
   FlashEncounterView,
+  FlashStoryFragmentView,
   FlashHomeView,
   FlashLocationSnapshot,
   FlashLocateView,
@@ -40,17 +41,12 @@ import type {
   FlashTaskSummary,
 } from './flashTypes'
 
-export const FLASH_SETTING_TIMEOUT_MS = 3_000
-export const FLASH_LOCATION_TIMEOUT_MS = 8_000
-
-export class FlashDeviceApiTimeoutError extends Error {
-  readonly code: 'FLASH_SETTING_TIMEOUT' | 'FLASH_LOCATION_TIMEOUT'
-
-  constructor(code: FlashDeviceApiTimeoutError['code']) {
-    super(code)
-    this.name = 'FlashDeviceApiTimeoutError'
-    this.code = code
-  }
+export async function fetchFlashStoryFragments(): Promise<FlashStoryFragmentView[]> {
+  const response = await apiRequest<{ fragments: FlashStoryFragmentView[] }>({
+    path: '/api/alang/flash/story/fragments',
+    method: 'GET',
+  })
+  return response.fragments
 }
 
 function toCoordinate(location: FlashLocationSnapshot): FlashCoordinateRequest {
@@ -70,10 +66,11 @@ function adaptTaskDto(task: FlashTaskDto): FlashTaskSummary {
       id: task.npc.id,
       slug: task.npc.slug,
       name: task.npc.name,
-      avatarUrl: task.npc.avatarUrl ?? undefined,
     },
     title: task.title,
     category: task.category,
+    invitationType: task.invitationType,
+    followUpTargetNpc: task.followUpTargetNpc,
     status: task.status,
     dueAt: task.expiresAt,
     destinationName: task.destination?.name,
@@ -102,7 +99,6 @@ export function adaptFlashHomeDto(response: SharedFlashHomeResponse): FlashHomeV
       endsAt: online.endsAt,
       remainingSeconds: Math.max(0, online.remainingMinutes * 60),
       themeKey: online.npc.slug,
-      avatarUrl: online.npc.avatarUrl ?? undefined,
     })),
     myTasks: response.myTasks.map(adaptTaskDto),
     preferenceSummary: {
@@ -145,7 +141,6 @@ export function adaptFlashEncounterDto(response: SharedFlashEncounterResponse): 
       name: response.npc.name,
       animal: response.npc.species,
       themeKey: response.npc.slug,
-      avatarUrl: response.npc.avatarUrl ?? undefined,
     },
     currentQuestion: response.question
       ? {
@@ -179,15 +174,19 @@ export function adaptFlashEncounterDto(response: SharedFlashEncounterResponse): 
       ? {
           assignmentId: response.pendingDelivery.id,
           taskTitle: response.pendingDelivery.title,
-          completedAt: response.pendingDelivery.feedbackSubmittedAt ?? undefined,
           invitationType: response.pendingDelivery.invitationType,
           followUpTargetNpc: response.pendingDelivery.followUpTargetNpc,
-          feedbackQuestions: response.pendingDelivery.followUpPrompts,
+          feedbackQuestions: (response.pendingDelivery.followUpPrompts ?? []).map((prompt) => ({
+            id: prompt.id,
+            promptId: prompt.id,
+            prompt: prompt.prompt,
+            options: prompt.options,
+          })),
+          completedAt: response.pendingDelivery.feedbackSubmittedAt ?? undefined,
         }
       : null,
-    deliveryMessage: response.deliveryMessage ?? undefined,
+    storyEpisode: response.storyEpisode ?? null,
     conversationExpiresAt: response.expiresAt,
-    message: response.message ?? undefined,
   }
 }
 
@@ -198,14 +197,14 @@ export function adaptFlashAssignmentDto(response: SharedFlashAssignmentResponse)
     canonicalScreen: response.canonicalScreen,
     assignmentId: task.id,
     description: task.instructions,
-    invitationType: task.invitationType,
-    followUpTargetNpc: task.followUpTargetNpc,
     destinationAddress: task.destination?.address,
     destination: task.destination ? {
       latitude: task.destination.latitude,
       longitude: task.destination.longitude,
     } : undefined,
-    arrivalInstructions: '到达地点附近 50 米内，主动点击一次「我已到达」。',
+    arrivalInstructions: task.invitationType === 'destination_exploration'
+      ? '到达地点附近 50 米内，主动点击一次「我已到达」。'
+      : '不用证明，也不用打卡。下次遇见角色时，再聊聊后来怎么样。',
     feedbackQuestions: response.feedbackPrompts.map((prompt) => ({
       id: prompt.id,
       promptId: prompt.id,
@@ -214,6 +213,14 @@ export function adaptFlashAssignmentDto(response: SharedFlashAssignmentResponse)
     })),
     radiusMeters: FLASH_ARRIVAL_RADIUS_METERS,
   }
+}
+
+export async function retryFlashAssignment(assignmentId: string): Promise<FlashAssignmentView> {
+  const response = await apiRequest<SharedFlashAssignmentResponse>({
+    path: `/api/alang/flash/assignments/${assignmentId}/retry`,
+    method: 'POST',
+  })
+  return adaptFlashAssignmentDto(response)
 }
 
 function adaptPreferencesDto(response: FlashPreferenceDto): FlashPreferencesView {
@@ -331,14 +338,6 @@ export async function abandonFlashAssignment(assignmentId: string): Promise<Flas
   return { canonicalScreen: 'home', assignmentId }
 }
 
-export async function retryFlashAssignment(assignmentId: string): Promise<FlashAssignmentView> {
-  const response = await apiRequest<SharedFlashAssignmentResponse>({
-    path: `/api/alang/flash/assignments/${assignmentId}/retry`,
-    method: 'POST',
-  })
-  return adaptFlashAssignmentDto(response)
-}
-
 export async function fetchFlashPreferences(): Promise<FlashPreferencesView> {
   return adaptPreferencesDto(await getFlashPreferencesRequest(apiRequest))
 }
@@ -349,66 +348,28 @@ export async function updateFlashPreferences(update: FlashPreferenceUpdateReques
 
 export function getOneShotFlashLocation(): Promise<FlashLocationSnapshot> {
   return new Promise((resolve, reject) => {
-    let settled = false
-    const finish = <T>(callback: (value: T) => void, value: T) => {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      callback(value)
-    }
-    const timer = setTimeout(() => {
-      finish(reject, new FlashDeviceApiTimeoutError('FLASH_LOCATION_TIMEOUT'))
-    }, FLASH_LOCATION_TIMEOUT_MS)
-
     Taro.getLocation({
       type: 'gcj02',
       success: (result: { latitude: number; longitude: number; accuracy?: number }) => {
-        finish(resolve, {
+        resolve({
           latitude: result.latitude,
           longitude: result.longitude,
           accuracy: result.accuracy,
         })
       },
-      fail: (error) => finish(reject, error),
+      fail: reject,
     })
   })
 }
 
-export async function getFlashLocationPermission(): Promise<'granted' | 'denied' | 'unknown' | 'timeout'> {
+export async function getFlashLocationPermission(): Promise<'granted' | 'denied' | 'unknown'> {
   try {
-    const setting = await new Promise<Taro.getSetting.SuccessCallbackResult>((resolve, reject) => {
-      let settled = false
-      const finish = <T>(callback: (value: T) => void, value: T) => {
-        if (settled) return
-        settled = true
-        clearTimeout(timer)
-        callback(value)
-      }
-      const timer = setTimeout(() => {
-        finish(reject, new FlashDeviceApiTimeoutError('FLASH_SETTING_TIMEOUT'))
-      }, FLASH_SETTING_TIMEOUT_MS)
-      try {
-        const operation = Taro.getSetting({
-          success: (result) => finish(resolve, result),
-          fail: (error) => finish(reject, error),
-        })
-        const promiseLike = operation as Partial<PromiseLike<Taro.getSetting.SuccessCallbackResult>> | undefined
-        if (typeof promiseLike?.then === 'function') {
-          promiseLike.then(
-            (result) => finish(resolve, result),
-            (error) => finish(reject, error),
-          )
-        }
-      } catch (error) {
-        finish(reject, error)
-      }
-    })
+    const setting = await Taro.getSetting()
     const value = setting.authSetting?.['scope.userLocation']
     if (value === true) return 'granted'
     if (value === false) return 'denied'
     return 'unknown'
-  } catch (error) {
-    if (error instanceof FlashDeviceApiTimeoutError) return 'timeout'
+  } catch {
     return 'unknown'
   }
 }

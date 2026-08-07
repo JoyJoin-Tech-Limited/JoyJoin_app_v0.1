@@ -540,6 +540,13 @@
       "when": 1780395567634,
       "tag": "seed_venue_time_slots_20260602",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1786064400000,
+      "tag": "20260807010000_flash_story_season",
+      "breakpoints": true
     }
   ]
 }

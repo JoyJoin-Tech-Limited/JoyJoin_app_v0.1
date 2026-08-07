@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import FlashRadarPage from './index'
+import FlashMapPage from './index'
 
 const mocks = vi.hoisted(() => ({
   useAuth: vi.fn(),
@@ -11,14 +11,9 @@ const mocks = vi.hoisted(() => ({
   canonicalRedirect: vi.fn(),
   startLocationUpdate: vi.fn(),
   stopLocationUpdate: vi.fn(),
-  startCompass: vi.fn(),
-  stopCompass: vi.fn(),
   onLocationChange: vi.fn(),
   offLocationChange: vi.fn(),
-  onCompassChange: vi.fn(),
-  offCompassChange: vi.fn(),
   locationChange: { current: null as null | ((value: any) => void) },
-  compassChange: { current: null as null | ((value: any) => void) },
   didHide: { current: null as null | (() => void) },
 }))
 
@@ -39,12 +34,8 @@ vi.mock('@tarojs/taro', () => ({
     showToast: vi.fn(),
     startLocationUpdate: mocks.startLocationUpdate,
     stopLocationUpdate: mocks.stopLocationUpdate,
-    startCompass: mocks.startCompass,
-    stopCompass: mocks.stopCompass,
     onLocationChange: mocks.onLocationChange,
     offLocationChange: mocks.offLocationChange,
-    onCompassChange: mocks.onCompassChange,
-    offCompassChange: mocks.offCompassChange,
   },
 }))
 vi.mock('@tarojs/components', () => ({
@@ -83,16 +74,13 @@ describe('formal Flash map navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.locationChange.current = null
-    mocks.compassChange.current = null
     mocks.didHide.current = null
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
     mocks.permission.mockResolvedValue('granted')
     mocks.startLocationUpdate.mockImplementation(({ success }: any) => success?.({ errMsg: 'ok' }))
-    mocks.startCompass.mockResolvedValue({ errMsg: 'ok' })
     mocks.onLocationChange.mockImplementation((callback) => { mocks.locationChange.current = callback })
-    mocks.onCompassChange.mockImplementation((callback) => { mocks.compassChange.current = callback })
     mocks.mutateAsync.mockResolvedValue({
-      canonicalScreen: 'radar',
+      canonicalScreen: 'map',
       withinRange: false,
       destination: { latitude: 22.541, longitude: 114.052, coordinateSystem: 'gcj02' },
       distanceMeters: 83,
@@ -113,15 +101,16 @@ describe('formal Flash map navigation', () => {
   })
 
   it('renders decoded public-area metadata and starts map navigation immediately', async () => {
-    render(<FlashRadarPage />)
+    render(<FlashMapPage />)
     expect(screen.getByText('默默')).toBeInTheDocument()
     expect(screen.getByText(/在宝安区/)).toBeInTheDocument()
     expect(screen.getByText('宝安壹方城开放公共区域')).toBeInTheDocument()
+    expect(screen.getByText(/地图只在此页前台更新/)).toBeInTheDocument()
     await waitFor(() => expect(mocks.startLocationUpdate).toHaveBeenCalled())
   })
 
   it('shows the fixed NPC marker and walking route from the current location', async () => {
-    render(<FlashRadarPage />)
+    render(<FlashMapPage />)
     await startNavigation()
     expect(mocks.onLocationChange).toHaveBeenCalled()
     emitLocation()
@@ -134,15 +123,16 @@ describe('formal Flash map navigation', () => {
 
   it('keeps the destination marker available when the walking route provider is unavailable', async () => {
     mocks.getWalkingRoute.mockResolvedValue({ success: false, code: 'MAP_NO_ROUTE' })
-    render(<FlashRadarPage />)
+    render(<FlashMapPage />)
     await startNavigation()
     emitLocation()
+
     expect(await screen.findByText('步行路线暂时没有加载，可先按地图终点方向前往。')).toBeInTheDocument()
     expect(screen.getByTestId('native-map').getAttribute('data-markers')).toContain('22.541')
   })
 
   it('stops location when the page enters the background', async () => {
-    render(<FlashRadarPage />)
+    render(<FlashMapPage />)
     await startNavigation()
     mocks.didHide.current?.()
     expect(mocks.stopLocationUpdate).toHaveBeenCalled()
@@ -160,7 +150,7 @@ describe('formal Flash map navigation', () => {
       encounterId: 'encounter-1',
     })
     mocks.canonicalRedirect.mockResolvedValue(true)
-    render(<FlashRadarPage />)
+    render(<FlashMapPage />)
     await startNavigation()
     emitLocation()
 
@@ -170,7 +160,7 @@ describe('formal Flash map navigation', () => {
 
   it('stops and explains when the appearance ends during tracking', async () => {
     mocks.mutateAsync.mockRejectedValue({ data: { code: 'FLASH_APPEARANCE_ENDED' } })
-    render(<FlashRadarPage />)
+    render(<FlashMapPage />)
     await startNavigation()
     emitLocation()
     expect(await screen.findByText('刚好散场了')).toBeInTheDocument()
@@ -179,8 +169,8 @@ describe('formal Flash map navigation', () => {
 
   it('does not start tracking through a disabled deep link', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
-    render(<FlashRadarPage />)
-    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
+    render(<FlashMapPage />)
+    expect(screen.getByText('闪现正在准备下一次见面')).toBeInTheDocument()
     expect(mocks.startLocationUpdate).not.toHaveBeenCalled()
   })
 })

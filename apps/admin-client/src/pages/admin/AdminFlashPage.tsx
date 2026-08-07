@@ -9,6 +9,7 @@ import { FlashScheduleTab } from "@/components/admin/flash/FlashScheduleTab";
 import { FlashEquipmentRewardsPanel } from "@/components/admin/flash/FlashEquipmentRewardsPanel";
 import { FlashOperationsAnalytics } from "@/components/admin/flash/FlashOperationsAnalytics";
 import { FlashOperationsConsistency } from "@/components/admin/flash/FlashOperationsConsistency";
+import { FlashStoryPanel } from "@/components/admin/flash/FlashStoryPanel";
 import {
   FlashLocationsPanel,
   FlashNpcPanel,
@@ -182,7 +183,7 @@ export default function AdminFlashPage() {
 
       <Tabs defaultValue="schedules" className="space-y-4">
         <div className="pb-1">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-8">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-9">
             <TabsTrigger value="schedules" data-testid="tab-flash-schedules">今日 / 次日排班</TabsTrigger>
             <TabsTrigger value="npcs" data-testid="tab-flash-npcs">NPC</TabsTrigger>
             <TabsTrigger value="encounter-locations" data-testid="tab-flash-locations">街头盲盒地点</TabsTrigger>
@@ -191,6 +192,7 @@ export default function AdminFlashPage() {
             <TabsTrigger value="equipment-rewards" data-testid="tab-flash-equipment-rewards">装备 / 奖励</TabsTrigger>
             <TabsTrigger value="consistency" data-testid="tab-flash-consistency">一致性检查</TabsTrigger>
             <TabsTrigger value="analytics" data-testid="tab-flash-analytics">数据分析</TabsTrigger>
+            <TabsTrigger value="story" data-testid="tab-flash-story">第一季故事</TabsTrigger>
           </TabsList>
         </div>
 
@@ -212,6 +214,9 @@ export default function AdminFlashPage() {
         </TabsContent>
         <TabsContent value="task-templates" className="mt-0">
           <FlashTaskTemplatesPanel canWrite={canWrite} npcs={npcs} destinations={destinations} />
+        </TabsContent>
+        <TabsContent value="story" className="mt-0">
+          <FlashStoryPanel canWrite={canWrite} />
         </TabsContent>
         <TabsContent value="equipment-rewards" className="mt-0">
           <FlashEquipmentRewardsPanel canWrite={canWrite} />

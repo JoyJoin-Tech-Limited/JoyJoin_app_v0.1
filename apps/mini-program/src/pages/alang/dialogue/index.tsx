@@ -1,10 +1,9 @@
 import Taro from '@tarojs/taro'
-import { useEffect, useRef, useState } from 'react'
-import { Image, ScrollView, Text, View } from '@tarojs/components'
-import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashPageState } from '../../../components/alang/FlashUi'
+import { useEffect, useState } from 'react'
+import { ScrollView, Text, View } from '@tarojs/components'
+import { FlashButton, FlashFeatureClosed, FlashNpcDialogueScene, FlashPageState, FlashTaskCategoryBadge } from '../../../components/alang/FlashUi'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
-import { resolveFlashTaskCategory } from '../../../lib/alang/flashNpcAssets'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import {
@@ -16,93 +15,8 @@ import {
 } from '../../../lib/alang/useFlash'
 import type { FlashCanonicalSnapshot } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
-import { getSystemReducedMotion } from '../../../lib/utils/accessibility'
 import { haptics } from '../../../lib/utils/haptics'
-import alangDialogueScene from '../assets/ui/flash-alang-dialogue-paper-v1.jpg'
-import liziDialogueScene from '../assets/ui/flash-lizi-dialogue-paper-v1.jpg'
-import momoDialogueScene from '../assets/ui/flash-momo-dialogue-paper-v1.jpg'
-import shiqiDialogueScene from '../assets/ui/flash-shiqi-dialogue-paper-v1.jpg'
-import atuanDialogueScene from '../assets/ui/flash-atuan-dialogue-paper-v1.jpg'
 import '../flash.scss'
-
-type OfferRevealPhase = 'sealed' | 'drawing' | 'revealed'
-
-interface NpcBlindBoxCopy {
-  intro: string
-  draw: string
-  drawing: string
-  reveal: string
-  accept: string
-  reroll: string
-  flashes: [string, string, string]
-}
-
-const NPC_BLIND_BOX_COPY: Record<string, NpcBlindBoxCopy> = {
-  alang: {
-    intro: '你今天像是把同一天过了很多遍。给我一下，你不用选，我替你换个今晚。',
-    draw: '让阿浪替我抽',
-    drawing: '阿浪正在替你换个今晚',
-    reveal: '阿浪替你抽到了',
-    accept: '收下这个今晚',
-    reroll: '再信你一次',
-    flashes: ['今晚别那么懂事', '把今天抢回来', '允许计划之外发生'],
-  },
-  lizi: {
-    intro: '今天先别照旧过。你不用挑，我替你拆一件能让日子亮一点的事。',
-    draw: '让栗子替我拆',
-    drawing: '栗子正在翻找今天的小惊喜',
-    reveal: '栗子替你拆到了',
-    accept: '把这份惊喜收好',
-    reroll: '再拆最后一次',
-    flashes: ['给今天加一点甜', '去碰见一点开心', '让普通日子亮起来'],
-  },
-  momo: {
-    intro: '你不用想一个正确答案。让我替你留一小段，只属于今天的安静。',
-    draw: '让默默替我抽',
-    drawing: '默默正在替你留一小段时间',
-    reveal: '默默替你留下了',
-    accept: '把这段时间收下',
-    reroll: '再听你一次',
-    flashes: ['不用向谁解释', '把声音调小一点', '给自己留一点空白'],
-  },
-  shiqi: {
-    intro: '今天的剧情有点太好猜了。别选，让我从计划外替你抽一条支线。',
-    draw: '让拾柒替我抽',
-    drawing: '拾柒正在改写今天的支线',
-    reveal: '拾柒替你翻到了',
-    accept: '接住这条支线',
-    reroll: '再偏航一次',
-    flashes: ['从计划外开始', '换一种剧情', '给偶然留个位置'],
-  },
-  atuan: {
-    intro: '今天还没有坏掉。你先别费力想怎么办，我替你抽一件能把它救回来一点的事。',
-    draw: '让阿团替我抽',
-    drawing: '阿团正在替你把今天接住',
-    reveal: '阿团替你抽到了',
-    accept: '今天就从这里开始',
-    reroll: '再轻一点',
-    flashes: ['先照顾好自己', '让今天暖回来', '不用一下子变好'],
-  },
-}
-
-const DEFAULT_BLIND_BOX_COPY: NpcBlindBoxCopy = {
-  intro: '今天不用什么都自己决定。让我替你从城市里抽一件值得期待的事。',
-  draw: '让它替我抽',
-  drawing: '正在替你打开今天的盲盒',
-  reveal: '今天替你抽到了',
-  accept: '收下这件事',
-  reroll: '再信一次',
-  flashes: ['换一种过法', '去见一点新鲜的', '让今天有点不一样'],
-}
-
-const OFFER_REVEAL_DELAY_MS = 480
-const NPC_DIALOGUE_SCENES: Record<string, string> = {
-  alang: alangDialogueScene,
-  lizi: liziDialogueScene,
-  momo: momoDialogueScene,
-  shiqi: shiqiDialogueScene,
-  atuan: atuanDialogueScene,
-}
 
 function dialogueActionError(error: unknown, fallback: string): string {
   switch (getFlashApiErrorCode(error)) {
@@ -134,16 +48,7 @@ export default function FlashDialoguePage() {
   const offerMutation = useRespondToFlashTaskOffer()
   const deliverMutation = useDeliverFlashTask()
   const [actionError, setActionError] = useState('')
-  const [deliveryReply, setDeliveryReply] = useState<{ message: string; canContinue: boolean } | null>(null)
-  const [reducedMotion] = useState(() => getSystemReducedMotion())
-  const [offerReveal, setOfferReveal] = useState<{ templateId: string; phase: OfferRevealPhase } | null>(null)
-  const offerRevealTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const clearOfferRevealTimer = () => {
-    if (!offerRevealTimer.current) return
-    clearTimeout(offerRevealTimer.current)
-    offerRevealTimer.current = null
-  }
+  const [fragmentRevealed, setFragmentRevealed] = useState(false)
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: data?.npc?.name ? `和${data.npc.name}聊聊` : '角色对话' })
@@ -154,13 +59,9 @@ export default function FlashDialoguePage() {
     void redirectToFlashCanonical(data, MINI_PROGRAM_ROUTES.alangDialogue)
   }, [data, enabled])
 
-  useEffect(() => () => clearOfferRevealTimer(), [])
-
   useEffect(() => {
-    const templateId = data?.taskOffer?.templateId
-    clearOfferRevealTimer()
-    setOfferReveal(templateId ? { templateId, phase: 'sealed' } : null)
-  }, [data?.taskOffer?.templateId])
+    setFragmentRevealed(false)
+  }, [data?.storyEpisode?.id])
 
   const applyResponse = async (response: FlashCanonicalSnapshot) => {
     const redirected = await redirectToFlashCanonical(response, MINI_PROGRAM_ROUTES.alangDialogue)
@@ -190,16 +91,8 @@ export default function FlashDialoguePage() {
     if (!enabled || deliverMutation.isPending) return
     setActionError('')
     try {
-      const response = await deliverMutation.mutateAsync({
-        encounterId,
-        assignmentId,
-        ...(answers ? { answers } : {}),
-      })
+      const response = await deliverMutation.mutateAsync({ encounterId, assignmentId, answers })
       haptics('success')
-      setDeliveryReply({
-        message: response.deliveryMessage || '好，我记住了。下次碰见，我们再接着聊。',
-        canContinue: Boolean(response.currentQuestion),
-      })
       await applyResponse(response)
     } catch (error) {
       if (getFlashApiErrorCode(error) === 'FLASH_ENCOUNTER_EXPIRED') {
@@ -212,7 +105,6 @@ export default function FlashDialoguePage() {
 
   const reroll = async () => {
     if (!enabled || rerollMutation.isPending) return
-    clearOfferRevealTimer()
     setActionError('')
     try {
       haptics('light')
@@ -233,26 +125,6 @@ export default function FlashDialoguePage() {
     } catch (error) {
       setActionError(dialogueActionError(error, accepted ? '任务没有接稳，再点一次就好。' : '这次选择没有送到，请再试一下。'))
     }
-  }
-
-  const revealOffer = (templateId: string) => {
-    if (offerReveal?.templateId === templateId && offerReveal.phase !== 'sealed') return
-    clearOfferRevealTimer()
-    setActionError('')
-    haptics('light')
-    setOfferReveal({ templateId, phase: 'drawing' })
-
-    const finishReveal = () => {
-      offerRevealTimer.current = null
-      setOfferReveal({ templateId, phase: 'revealed' })
-      haptics('success')
-    }
-
-    if (reducedMotion) {
-      finishReveal()
-      return
-    }
-    offerRevealTimer.current = setTimeout(finishReveal, OFFER_REVEAL_DELAY_MS)
   }
 
   if (!enabled) return <FlashFeatureClosed />
@@ -299,79 +171,95 @@ export default function FlashDialoguePage() {
 
   const question = data.currentQuestion
   const offer = data.taskOffer
-  const category = offer ? resolveFlashTaskCategory(offer.category) : null
-  const offerCopy = NPC_BLIND_BOX_COPY[data.npc.slug] ?? DEFAULT_BLIND_BOX_COPY
-  const offerPhase: OfferRevealPhase = offer && offerReveal?.templateId === offer.templateId
-    ? offerReveal.phase
-    : 'sealed'
-  const dialogueScene = NPC_DIALOGUE_SCENES[data.npc.slug]
-  const usesNarrativeScene = Boolean(dialogueScene)
+  const story = data.storyEpisode
+  const storySettled = Boolean(story && (fragmentRevealed || !story.fragment))
+  const sceneSpeech = story
+    ? (story.response ?? story.discovery)
+    : data.pendingDelivery
+    ? (data.pendingDelivery.feedbackQuestions?.[0]?.prompt
+      ?? (data.pendingDelivery.invitationType ? '后来怎么样了？' : '你真的去过了？那先把这件事讲给我听吧。'))
+    : question
+      ? question.text
+      : offer
+        ? offer.invitation
+        : data.message || '今天先聊到这里吧，下次再碰见的时候再继续。'
 
   return (
-    <View className={`flash-page flash-dialogue${usesNarrativeScene ? ' flash-dialogue--scene' : ''}`}>
+    <View className='flash-page flash-dialogue'>
       <ScrollView className='flash-page__scroll' scrollY>
         <View className='flash-page__content'>
-          {usesNarrativeScene ? (
-            <View className='flash-dialogue__scene'>
-              <Image className='flash-dialogue__scene-art' src={dialogueScene} mode='aspectFill' />
-              <View className='flash-dialogue__scene-shade' />
-              <View className='flash-dialogue__scene-head'>
-                <Text className='flash-dialogue__chapter-index'>ENCOUNTER</Text>
-                <View className='flash-dialogue__chapter-line' />
-                <Text className='flash-dialogue__chapter-state'>故事进行中</Text>
-              </View>
-              <View className='flash-dialogue__scene-nameplate'>
-                <Text className='flash-dialogue__scene-name'>{data.npc.name}</Text>
-                <Text className='flash-dialogue__scene-role'>{data.npc.animal ?? '数字动物角色'} · 城市旅人</Text>
-              </View>
-            </View>
-          ) : (
-            <>
-              <View className='flash-dialogue__chapter'>
-                <Text className='flash-dialogue__chapter-index'>ENCOUNTER</Text>
-                <View className='flash-dialogue__chapter-line' />
-                <Text className='flash-dialogue__chapter-state'>故事进行中</Text>
-              </View>
-              <View className='flash-dialogue__host'>
-                <View className='flash-dialogue__host-halo' />
-                <FlashNpcPortrait npc={data.npc} size='large' />
-                <View className='flash-dialogue__nameplate'>
-                  <Text className='flash-dialogue__name'>{data.npc.name}</Text>
-                  <Text className='flash-dialogue__animal'>{data.npc.animal ?? '数字动物角色'} · 城市旅人</Text>
-                </View>
-              </View>
-            </>
-          )}
+          <FlashNpcDialogueScene
+            npc={data.npc}
+            speech={sceneSpeech}
+            intro={story?.opening ?? (question ? data.openingLine : undefined)}
+            compact={Boolean(offer)}
+            spacious={!offer}
+            choicesEmbedded={Boolean(question || offer || data.pendingDelivery?.feedbackQuestions?.[0])}
+            deliveryEmbedded={Boolean(data.pendingDelivery?.feedbackQuestions?.[0])}
+            motion={story?.motion}
+          />
 
-          {deliveryReply ? (
-            <View className='flash-dialogue__delivery-success' role='status'>
-              <Text className='flash-dialogue__kicker'>STORY UPDATED · 这件事有了回音</Text>
-              <Text className='flash-dialogue__bubble'>{deliveryReply.message}</Text>
-              <FlashButton onClick={() => setDeliveryReply(null)}>
-                {deliveryReply.canContinue ? '再聊两句' : '收好这次见面'}
-              </FlashButton>
+          {story ? (
+            <View className='flash-dialogue__story' data-testid='flash-story-episode'>
+              <View className='flash-dialogue__story-heading'>
+                <Text className='flash-dialogue__kicker'>{story.seasonTitle} · 第 {story.phase} 幕</Text>
+                <Text className='flash-dialogue__story-title'>{story.title}</Text>
+                <Text className='flash-dialogue__story-progress'>已收集 {story.progress.completedTotal}/{story.progress.total} 个故事碎片</Text>
+              </View>
+              {!story.response ? (
+                <View className='flash-dialogue__conversation flash-dialogue__conversation--embedded'>
+                  <Text className='flash-dialogue__story-action'>{story.action}</Text>
+                  {question ? (
+                    <View className='flash-dialogue__choices'>
+                      {question.options.map((option) => (
+                        <View
+                          key={option.id}
+                          className={`flash-dialogue__choice${answerMutation.isPending ? ' flash-dialogue__choice--disabled' : ''}`}
+                          hoverClass={answerMutation.isPending ? '' : 'flash-dialogue__choice--pressed'}
+                          onClick={() => { void answer(question.id, option.id) }}
+                          role='button'
+                          aria-label={option.label}
+                        >
+                          <Text className='flash-dialogue__choice-mark' aria-hidden='true'>·</Text>
+                          <Text className='flash-dialogue__choice-text'>{option.label}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              ) : (
+                <View className='flash-dialogue__story-result' aria-live='polite'>
+                  {!fragmentRevealed && story.fragment ? (
+                    <View className='flash-dialogue__fragment-sealed'>
+                      <Text className='flash-dialogue__fragment-sealed-mark' aria-hidden='true'>◇</Text>
+                      <Text className='flash-dialogue__story-closing'>{story.response}</Text>
+                      <FlashButton onClick={() => { haptics('success'); setFragmentRevealed(true) }}>揭开这块故事碎片</FlashButton>
+                    </View>
+                  ) : null}
+                  {fragmentRevealed && story.fragment ? (
+                    <View className={`flash-dialogue__fragment flash-dialogue__fragment--${story.fragment.category}`}>
+                      <Text className='flash-dialogue__fragment-label'>新故事碎片</Text>
+                      <Text className='flash-dialogue__fragment-title'>{story.fragment.title}</Text>
+                      <Text className='flash-dialogue__fragment-fact'>{story.fragment.fact}</Text>
+                    </View>
+                  ) : null}
+                  {storySettled && story.closing ? <Text className='flash-dialogue__story-closing'>{story.closing}</Text> : null}
+                  {storySettled ? <><Text className='flash-dialogue__story-progress'>本幕 {story.progress.completedInPhase}/{story.progress.totalInPhase} · 全季 {story.progress.completedTotal}/{story.progress.total}</Text><FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>{story.progress.completedTotal >= story.progress.total ? '收好这一季' : '收好碎片，继续寻找'}</FlashButton></> : null}
+                </View>
+              )}
             </View>
           ) : data.pendingDelivery ? (
-            <View className='flash-dialogue__delivery'>
+            <View className={`flash-dialogue__delivery${data.pendingDelivery.feedbackQuestions?.[0] ? ' flash-dialogue__delivery--embedded' : ''}`}>
               <Text className='flash-dialogue__kicker'>
                 {data.pendingDelivery.invitationType === 'npc_message'
                   ? '有句话到了这里'
                   : data.pendingDelivery.invitationType === 'life_invitation'
-                    ? '前阵子聊的那件事'
+                    ? '上次接住的那件事'
                     : '上次托你的事'}
               </Text>
               <Text className='flash-dialogue__delivery-title'>{data.pendingDelivery.taskTitle}</Text>
-              <Text className='flash-dialogue__bubble'>
-                {data.pendingDelivery.feedbackQuestions?.[0]?.prompt
-                  ?? (data.pendingDelivery.invitationType ? '后来怎么样了？' : '你真的去过了？那先把这件事讲给我听吧。')}
-              </Text>
               {data.pendingDelivery.feedbackQuestions?.[0] ? (
                 <View className='flash-dialogue__choices'>
-                  <View className='flash-dialogue__choices-heading' aria-hidden='true'>
-                    <Text className='flash-dialogue__choices-spark flash-dialogue__choices-spark--purple'>✦</Text>
-                    <Text className='flash-dialogue__choices-title'>选择你的回应</Text>
-                    <Text className='flash-dialogue__choices-spark flash-dialogue__choices-spark--coral'>✦</Text>
-                  </View>
                   {data.pendingDelivery.feedbackQuestions[0].options.map((option) => (
                     <View
                       key={option.id}
@@ -387,9 +275,8 @@ export default function FlashDialoguePage() {
                       role='button'
                       aria-label={option.label}
                     >
-                      <Text className='flash-dialogue__choice-spark flash-dialogue__choice-spark--purple' aria-hidden='true'>✦</Text>
-                      <Text className='flash-dialogue__choice-label'>{option.label}</Text>
-                      <Text className='flash-dialogue__choice-spark flash-dialogue__choice-spark--coral' aria-hidden='true'>✦</Text>
+                      <Text className='flash-dialogue__choice-mark' aria-hidden='true'>✦</Text>
+                      <Text className='flash-dialogue__choice-text'>{option.label}</Text>
                     </View>
                   ))}
                 </View>
@@ -403,24 +290,9 @@ export default function FlashDialoguePage() {
               )}
             </View>
           ) : question ? (
-            <View className='flash-dialogue__conversation'>
-              <View className='flash-dialogue__progress-row'>
-                <Text className='flash-dialogue__progress'>DIALOGUE · {question.position ?? (data.answeredQuestionCount ?? 0) + 1}/{question.total ?? 2}</Text>
-                <View className='flash-dialogue__progress-track'>
-                  <View
-                    className='flash-dialogue__progress-fill'
-                    style={{ width: `${Math.min(100, ((question.position ?? (data.answeredQuestionCount ?? 0) + 1) / (question.total ?? 2)) * 100)}%` }}
-                  />
-                </View>
-              </View>
-              {data.openingLine ? <Text className='flash-dialogue__bubble'>{data.openingLine}</Text> : null}
-              <Text className='flash-dialogue__question'>{question.text}</Text>
+            <View className='flash-dialogue__conversation flash-dialogue__conversation--embedded'>
+              <Text className='flash-dialogue__progress'>聊两句 · {question.position ?? (data.answeredQuestionCount ?? 0) + 1}/{question.total ?? 2}</Text>
               <View className='flash-dialogue__choices'>
-                <View className='flash-dialogue__choices-heading' aria-hidden='true'>
-                  <Text className='flash-dialogue__choices-spark flash-dialogue__choices-spark--purple'>✦</Text>
-                  <Text className='flash-dialogue__choices-title'>选择你的回应</Text>
-                  <Text className='flash-dialogue__choices-spark flash-dialogue__choices-spark--coral'>✦</Text>
-                </View>
                 {question.options.map((option) => (
                   <View
                     key={option.id}
@@ -431,103 +303,65 @@ export default function FlashDialoguePage() {
                     aria-label={option.label}
                     aria-disabled={answerMutation.isPending}
                   >
-                    <Text className='flash-dialogue__choice-spark flash-dialogue__choice-spark--purple' aria-hidden='true'>✦</Text>
-                    <Text className='flash-dialogue__choice-label'>{option.label}</Text>
-                    <Text className='flash-dialogue__choice-spark flash-dialogue__choice-spark--coral' aria-hidden='true'>✦</Text>
+                    <Text className='flash-dialogue__choice-mark' aria-hidden='true'>✦</Text>
+                    <Text className='flash-dialogue__choice-text'>{option.label}</Text>
                   </View>
                 ))}
               </View>
+              <Text className='flash-dialogue__hint'>慢慢选，没有标准答案 ( ´ ▽ ` )</Text>
             </View>
-          ) : offer && category ? (
-            <View className='flash-dialogue__offer'>
-              {offerPhase === 'sealed' ? (
-                <View className='flash-dialogue__blind-box flash-dialogue__blind-box--sealed'>
-                  <View className='flash-dialogue__kicker-row'>
-                    <Text className='flash-dialogue__kicker'>MYSTERY QUEST</Text>
-                    <Text className='flash-dialogue__kicker-copy'>这次不让你选</Text>
-                  </View>
-                  <Text className='flash-dialogue__blind-box-intro'>{offerCopy.intro}</Text>
-                  <View className='flash-dialogue__blind-box-visual' aria-hidden='true'>
-                    <View className='flash-dialogue__blind-box-ray flash-dialogue__blind-box-ray--one' />
-                    <View className='flash-dialogue__blind-box-ray flash-dialogue__blind-box-ray--two' />
-                    <View className='flash-dialogue__blind-box-lid' />
-                    <View className='flash-dialogue__blind-box-body'>
-                      <Text className='flash-dialogue__blind-box-mark'>?</Text>
-                    </View>
-                  </View>
-                  <FlashButton
-                    ariaLabel={offerCopy.draw}
-                    onClick={() => revealOffer(offer.templateId)}
-                  >
-                    {offerCopy.draw}
-                  </FlashButton>
-                  <Text className='flash-dialogue__blind-box-note'>这一件已经替你选好了，打开前不会偷偷换答案。</Text>
-                </View>
-              ) : offerPhase === 'drawing' ? (
-                <View className='flash-dialogue__blind-box flash-dialogue__blind-box--drawing' role='status'>
-                  <Text className='flash-dialogue__kicker'>正在打开城市盲盒</Text>
-                  <Text className='flash-dialogue__blind-box-drawing-title'>{offerCopy.drawing}</Text>
-                  <View className='flash-dialogue__blind-box-reel' aria-hidden='true'>
-                    <View className='flash-dialogue__blind-box-reel-track'>
-                      {offerCopy.flashes.map((line) => (
-                        <Text key={line} className='flash-dialogue__blind-box-reel-line'>{line}</Text>
-                      ))}
-                    </View>
-                  </View>
-                  <View className='flash-dialogue__blind-box-pulse' aria-hidden='true'>
-                    <View className='flash-dialogue__blind-box-pulse-core' />
-                  </View>
-                </View>
-              ) : (
-                <View className='flash-dialogue__blind-box flash-dialogue__blind-box--revealed' role='status'>
-                  <Text className='flash-dialogue__kicker'>{offerCopy.reveal}</Text>
-                  <Text className='flash-dialogue__bubble'>{offer.invitation}</Text>
-                  <View className='flash-dialogue__offer-card'>
-                    <Text className='flash-dialogue__offer-category' style={{ color: category.text, backgroundColor: category.tint }}>
-                      {category.label}
-                    </Text>
-                    <Text className='flash-dialogue__offer-title'>{offer.title}</Text>
-                    {offer.destinationName ? (
-                      <Text className='flash-dialogue__offer-place'>{offer.districtName ? `${offer.districtName} · ` : ''}{offer.destinationName}</Text>
-                    ) : null}
-                    <Text className='flash-dialogue__offer-rule'>
-                      {offer.invitationType === 'npc_message'
-                        ? `以后遇见${offer.followUpTargetNpc?.name ?? '它'}时再决定要不要说；忘了也没关系。`
-                        : offer.invitationType === 'life_invitation'
-                          ? '如果现在来得及，就从今天开始。下次再碰见，它会记得听你讲后来。'
-                          : '到附近点击到达即可；不要求消费，也不要求进店。'}
-                    </Text>
-                  </View>
-                  <View className='flash-dialogue__offer-actions'>
-                    <FlashButton
-                      disabled={offerMutation.isPending || rerollMutation.isPending}
-                      onClick={() => { void respondToOffer(true) }}
+          ) : offer ? (
+            <View className='flash-dialogue__offer flash-dialogue__offer--embedded'>
+              <Text className='flash-dialogue__kicker'>有件小事想拜托你</Text>
+              <View
+                key={offer.templateId}
+                className='flash-dialogue__offer-paper'
+                data-testid='flash-task-reveal'
+                aria-live='polite'
+              >
+                <View className='flash-dialogue__offer-fold flash-dialogue__offer-fold--top' aria-hidden='true' />
+                <View className='flash-dialogue__offer-fold flash-dialogue__offer-fold--bottom' aria-hidden='true' />
+                <View className='flash-dialogue__offer-paper-heading'>
+                  <FlashTaskCategoryBadge category={offer.category} className='flash-dialogue__offer-category' />
+                  {data.canReroll && (data.rerollsRemaining ?? 1) > 0 ? (
+                    <View
+                      className={`flash-dialogue__reroll${rerollMutation.isPending ? ' flash-dialogue__reroll--disabled' : ''}`}
+                      hoverClass={rerollMutation.isPending ? '' : 'flash-dialogue__reroll--pressed'}
+                      onClick={() => { void reroll() }}
+                      role='button'
+                      aria-label='换一个小邀请'
+                      aria-disabled={rerollMutation.isPending}
                     >
-                      {offerMutation.isPending ? '正在替你收好…' : offerCopy.accept}
-                    </FlashButton>
-                    {data.canReroll && (data.rerollsRemaining ?? 1) > 0 ? (
-                      <FlashButton
-                        variant='secondary'
-                        disabled={offerMutation.isPending || rerollMutation.isPending}
-                        onClick={() => { void reroll() }}
-                      >
-                        {rerollMutation.isPending ? '正在重新抽取…' : offerCopy.reroll}
-                      </FlashButton>
-                    ) : null}
-                    <FlashButton
-                      variant='quiet'
-                      disabled={offerMutation.isPending || rerollMutation.isPending}
-                      onClick={() => { void respondToOffer(false) }}
-                    >
-                      这次真的不合适
-                    </FlashButton>
-                  </View>
+                      <Text className='flash-dialogue__reroll-mark' aria-hidden='true'>◇</Text>
+                      <Text className='flash-dialogue__reroll-text'>
+                        {rerollMutation.isPending ? '正在展开…' : '换一个'}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
-              )}
+                <Text className='flash-dialogue__offer-title'>{offer.title}</Text>
+                {offer.destinationName ? (
+                  <Text className='flash-dialogue__offer-place'>{offer.districtName ? `${offer.districtName} · ` : ''}{offer.destinationName}</Text>
+                ) : null}
+                <Text className='flash-dialogue__offer-rule'>
+                  {offer.invitationType === 'npc_message'
+                    ? `以后遇见${offer.followUpTargetNpc?.name ?? '它'}时再决定要不要说；忘了也没关系。`
+                    : offer.invitationType === 'life_invitation'
+                      ? '不用打卡，也不用证明。下次见面时，再聊聊后来怎么样。'
+                      : '到附近点击到达即可；不要求消费，也不要求进店。'}
+                </Text>
+              </View>
+              <View className='flash-dialogue__offer-actions'>
+                <FlashButton disabled={offerMutation.isPending} onClick={() => { void respondToOffer(true) }}>
+                  {offerMutation.isPending ? '正在收好邀请…' : '好，我想试试看'}
+                </FlashButton>
+                <FlashButton variant='quiet' disabled={offerMutation.isPending} onClick={() => { void respondToOffer(false) }}>
+                  今天先不了
+                </FlashButton>
+              </View>
             </View>
           ) : (
             <View className='flash-dialogue__conversation'>
-              <Text className='flash-dialogue__bubble'>{data.message || '今天先聊到这里吧，下次再碰见的时候再继续。'}</Text>
               <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>回到闪现</FlashButton>
             </View>
           )}

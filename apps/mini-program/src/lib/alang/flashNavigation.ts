@@ -29,6 +29,11 @@ function query(path: string, params: Record<string, string | undefined>): string
 export function getFlashCanonicalRoute(snapshot: FlashCanonicalSnapshot): string | null {
   const screen = snapshot.canonicalScreen?.trim().toLowerCase().replace(/^flash[_-]/, '')
   switch (screen) {
+    case 'map':
+      return snapshot.appearanceId
+        ? query(MINI_PROGRAM_ROUTES.alangSearch, { appearanceId: snapshot.appearanceId })
+        : MINI_PROGRAM_ROUTES.alangEvent
+    // Compatibility for cached snapshots from versions that called this page radar.
     case 'radar':
     case 'search':
       return snapshot.appearanceId

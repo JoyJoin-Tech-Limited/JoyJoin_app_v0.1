@@ -8,6 +8,7 @@ import {
   fetchFlashEncounter,
   fetchFlashHome,
   fetchFlashPreferences,
+  fetchFlashStoryFragments,
   locateFlashAppearance,
   rerollFlashEncounter,
   retryFlashAssignment,
@@ -22,6 +23,17 @@ export const FLASH_HOME_QUERY_KEY = [...FLASH_QUERY_ROOT, 'home'] as const
 export const flashEncounterQueryKey = (id: string) => [...FLASH_QUERY_ROOT, 'encounter', id] as const
 export const flashAssignmentQueryKey = (id: string) => [...FLASH_QUERY_ROOT, 'assignment', id] as const
 export const FLASH_PREFERENCES_QUERY_KEY = [...FLASH_QUERY_ROOT, 'preferences'] as const
+export const FLASH_STORY_FRAGMENTS_QUERY_KEY = [...FLASH_QUERY_ROOT, 'story-fragments'] as const
+
+export function useFlashStoryFragments(enabled = true) {
+  return useQuery({
+    queryKey: FLASH_STORY_FRAGMENTS_QUERY_KEY,
+    queryFn: fetchFlashStoryFragments,
+    enabled,
+    staleTime: 30_000,
+    retry: 1,
+  })
+}
 
 export function useFlashHome(location: FlashLocationSnapshot | null, enabled = true) {
   return useQuery({

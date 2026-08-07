@@ -1,34 +1,40 @@
 # 街头盲盒正式版（多 NPC）｜阿浪 V1.7 — Active Implementation Map
 
-> 当前版本：2026-07-26
+> 当前版本：2026-07-20
 > 产品基准：`JoyJoin_Master_PRD_V1.7_Codex执行版_强调Mockup未完全落地.docx`
 > Scope ID：`FLASH-FORMAL-V1` + `ALANG-V17-VISUAL-ALIGNMENT`
 
-## 0. 街头盲盒正式版当前权威（2026-07-30 覆盖）
+## 0. 街头盲盒正式版当前权威（2026-08-07 覆盖）
 
-- 正式入口仍位于 Discover，但入口是静态卡片：不预取在线列表、不申请定位、不推送。正式页面为 `pages/alang/event`，同页展示“现在在线”和“我的任务”。
+### 2026-08-07 叙事链路覆盖
+
+- 在线列表、直接地图、排班、10 米服务端到达判定和“用户选择谁就只遇见谁”保持不变；到达后的正式链路改为第一季《没有名字的旧物》。旧随机任务、换任务、目的地、反馈和跨次交付不再从用户端或 Admin 主导航进入，但原表与历史记录保留只读兼容，不做破坏性删除。
+- 第一季固定 3 幕 × 5 位 NPC，共 15 个已审核故事单元。用户在同一幕内可按实际上线顺序完成五位角色；五个单元全部完成后服务端原子推进下一幕。每个单元只可结算一次，并解锁一块 `object/past/relationship/key` 故事碎片。
+- 新状态由 `flash_story_seasons`、`flash_story_episodes`、`flash_story_fragments`、`flash_user_story_progress`、`flash_user_story_episodes`、`flash_user_story_fragments` 承载；`flash_encounters.story_episode_id` 固化相遇时的内容单元。旧 `flash_task_*` 表不删除，避免破坏历史数据。
+- Admin `/admin/alang` 的正式内容入口改为“第一季故事”：可编辑单元、设置轻微呼吸/漂移、填写经审核的眨眼帧地址、逐单元审核并发布。发布门槛是正好 15 个启用且已审核单元；写操作继续要求 operator+、内容版本 CAS 和管理员审计。
+- 动画只增强角色生命感，不参与状态机。无正式眨眼帧时不生成假眼皮；`prefers-reduced-motion` 下呼吸、漂移、眨眼和碎片入场全部静止。
+- readiness 现要求：已发布故事季 1 个、已审核故事单元 15 个、覆盖至少 5 位 NPC、所有 active NPC 有批准相遇地点，以及深圳边界资产与许可通过。旧 30 条任务、任务目的地和关联数量不再是正式开放门槛。
+
+- 正式入口仍位于 Discover，但入口是静态卡片：不预取在线列表、不申请定位、不推送。正式页面为 `pages/alang/event`，同页展示“现在在线”和“我的故事碎片”。
 - NPC 目录支持持续新增数字动物角色，不设 5 位数量上限，也不使用封闭物种名单。内置种子首批为阿浪（灰狼，周二/四/五）、栗子（水獭，周一/三/六）、默默（兔狲，周三/五/日）、拾柒（乌鸦，周二/六/日）、阿团（水豚，周一/四/日）；新增角色由 operator/super_admin 配置动物品种、人设、互动问题和固定上线日。现场没有真人 NPC。
 - 每个符合固定星期的 NPC 随机生成 1–2 个班次，单班 180–300 分钟（3–5 小时），范围 09:00–21:00，同 NPC 班次间隔至少 90 分钟；生成器按上午/下午/晚上均衡空档，无法生成安全班次时允许 0 班且不展示占位。
-- 次日草案由服务端生成，后台可编辑；未人工改动且仍通过校验的草案可自动发布。相遇地点、任务目的地和行政区分别建模，正式页面不显示未来排班。
-- 搜索会下发并展示 admin 审核后的公共区域地址文案，但不下发隐藏地点坐标、路线、精确距离或距离档位。用户每次主动点击只读取一次 GCJ-02；服务端使用固定版本、带来源与校验和的 DataV.GeoAtlas 深圳行政区 GCJ-02 边界拒绝香港及周边城市点，边界文件不进入 Taro 包，再以 100 米为 NPC 相遇权威。按用户 + appearance 的 10 分钟 6 次预算由 PostgreSQL 原子计数并跨实例共享，不保存坐标。班次到点即结束；已解锁对话可继续 24 小时。已接受任务的目的地到达仍使用独立的 50 米权威。
-- 对话最多 2 个结构化问题，随后从人工审核任务库随机给出任务，每次相遇可换 1 次。正式库为 6 类 × 5 条共 30 条；运行时不调用 LLM。已完成模板按 `max(5%, 0.35^n)` 降权。
-- **2026-07-28 任务体验覆盖：**30 条旧“到地点验收”任务改为 25 条无惩罚生活邀请 + 5 条数字 NPC 传话。每条生活邀请只归属 1 位符合人设的 NPC，并要求用户现在完成一个安全的最小动作；涉及户外时只在时间、天气和环境合适的条件下当天出发。电影任务直接使用用户已有想看片单或旧喜欢，不调用推荐系统。下一次真实解锁对应 NPC 时，服务端按用户选择的结果返回不同的人设回应。NPC 传话必须经过两段真实相遇：目标 NPC 只提供“帮它把话带到 / 这次先不带”；若已带话，来源 NPC 下次只显示“我带到了”，若未带话则只显示“还没带到 / 我不想带”。“还没带到”保留任务并重新等待目标 NPC，“我不想带”结束任务。目标 NPC 的即时回应和来源 NPC 的收尾回应均按具体故事预审、版本化，不使用运行时 LLM。任何结果都不扣分、不发奖励、不影响匹配或正式人格，不要求拍照、定位、消费或证明。目录同步会停用内置任务遗留的错误跨 NPC 关联，避免五位 NPC 共用同一任务。
-- 邀请内容的确定性安全库是产品权威；个性化只在用户已同意的来源内调整权重。未来 AI 只能在审核骨架内选择或润色，不能自由生成危险、医疗、酒精、陌生人互动、强制消费或高压力任务；模型失败必须回退到审核内容。
-- 用户最多同时持有 3 个任务、同 NPC 最多 1 个。未到达任务 7 天结束；提交反馈后进入 `ready_to_deliver` 并保留到之后一次同 NPC 相遇，交付必须使用不同且晚于反馈的新 encounter。
-- 新生活邀请和 NPC 传话不要求目的地到达、进店、消费、拍照、扫码、评价或任何证明；下一次符合对象的 NPC 相遇仅做无惩罚回访。旧目的地任务 DTO 保留兼容读取，但不再由内置 30 条目录产生。
+- 次日草案由服务端生成，后台可编辑；未人工改动且仍通过校验的草案可自动发布。相遇地点与行政区分别建模，正式页面不显示未来排班。
+- 用户进入具体在线 NPC 的寻找页后，小程序自动以前台 `startLocationUpdate` 获取当前位置；每 2 秒最多向服务端提交一帧 GCJ-02 位置。仅当该次出现仍在线时，服务端返回本次固定审核点、精确距离、北向方位和接近档位；客户端显示用户位置、NPC Marker，并复用腾讯步行路线代理绘制路线。路线最多每 30 秒刷新一次。离开页面、进入后台、主动停止、班次结束或到达后必须立即停止定位；班次结束后旧深链不得重新取得终点。服务端使用固定版本、带来源与校验和的 DataV.GeoAtlas 深圳行政区 GCJ-02 边界拒绝香港及周边城市点，边界文件不进入 Taro 包，以 10 米为 NPC 相遇权威；用户原始坐标和轨迹不持久化、不写日志/分析/URL。用户 + appearance 的 10 分钟 360 帧预算由 PostgreSQL 原子计数并跨实例共享。不设置同时到达人数上限；地点安全由审核、班次失效和运营下线控制。已解锁对话可继续 24 小时。已接受任务的目的地到达仍使用独立的 50 米权威。
+- 每个故事单元最多 1 个结构化选择；选择只改变本单元的回应，不制造分支结局。完成后固定解锁该单元的事实碎片。运行时不调用 LLM。
+- 旧生活邀请、NPC 传话、任务目的地与交付状态机仅保留历史数据兼容；正式用户端不再展示或创建这些任务，Admin 主导航也不再提供其编辑入口。
 - Admin 闪现地点提供深圳城市公共空间运营模板：具体店铺和酒吧不得作为点位名称，只使用其所在的开放街区、外围广场、公共连廊、公共阅读区或商场公共空间。模板只预填运营文案与 NPC 建议，不携带可直接上线的坐标；运营必须重新通过腾讯地图选点、深圳行政区校验和人工安全审核。商场、书城或文化空间闭店闭馆后停用，不承诺永久免费或全天开放。
 - Staging bootstrap 固定保障南山区、福田区各至少 2 个 `approved + enabled` 安全地点：腾讯 suggestion 成功则采用同区 API 数据；失败会保留错误日志并使用 verified fallback seed，随后由部署 SQL 健康检查硬门验证覆盖数量。该降级只服务 staging 初始化，不放宽后台人工审批的腾讯反查要求。
-- 个性化默认关闭，总开关与人格、兴趣、宽泛行业、行政区、任务行为来源分别可控。拒绝定位则不能参加闪现，且绝不使用 IP 定位回退。
+- 拒绝定位则不能参加闪现，且绝不使用 IP 定位回退。故事解锁不读取人格、兴趣、行业或任务行为标签。
 - 当前正式代码由 `routes/domains/alangFlash.ts`、`services/flashService.ts`、`services/flashScheduleService.ts`、`repositories/flashRepo.ts`、`schema/flash.ts` 与后台 `/admin/alang` 共同承载。`alangEnabled` 默认关闭；数据库迁移、seed、逐条人工审核、深圳边界许可确认、readiness、staging 及微信真机验收完成前不得开启。
-- 链路复测使用 DB-backed `flashTaskRetryTestEnabled`（默认关闭）。仅 super admin 可在后台「功能开关」开启，且仅在 `APP_MODE != production` 时生效。开启后，任务进行页和反馈页均可把同一 active assignment 重置到 `accepted`，清除本轮到达、反馈、私密回复与交付状态，从任务起点复测；关闭后重试接口返回 `403 FLASH_TASK_RETRY_DISABLED`。生产环境即使误存为 true 也必须强制拒绝。
-- 异地到达复测使用 DB-backed `flashAnyLocationArrivalTestEnabled`（默认关闭）。super_admin 可在 `/admin/feature-flags` 的“街头盲盒：任意地点到达测试”开关控制；仅 `APP_MODE != production` 时生效。开启后，任意有效 GCJ-02 坐标可绕过 NPC 相遇与兼容目的地任务的距离门槛，并允许当前测试 encounter 完成交付，无需等待后续班次。生产环境无条件强制关闭；管理员变更写入审计，GPS 不进入审计载荷。
+- 链路复测使用 DB-backed `flashTaskRetryTestEnabled`（默认关闭）。仅 super admin 可在 `/admin/alang` 开启；且仅在 `APP_MODE != production` 时生效。开启后，任务进行页和反馈页均可把同一 active assignment 重置到 `accepted`，清除本轮到达、反馈、私密回复与交付状态，从任务起点复测；关闭后重试接口返回 `403 FLASH_TASK_RETRY_DISABLED`。生产环境即使误存为 true 也必须强制拒绝。
+- 异地到达复测使用 DB-backed `flashAnyLocationArrivalTestEnabled`（默认关闭）。operator+ 可在 `/admin/alang` 的“任意地点到达测试”开关控制；仅 `APP_MODE != production` 时生效。开启后，任意有效 GCJ-02 坐标同时绕过 NPC 相遇的 10 米门槛和兼容目的地任务的 50 米门槛；反馈后允许在当前测试 encounter 完成交付，无需等待同 NPC 的后续班次，但仍复用正式对话、接取、反馈与交付状态机。生产环境无论数据库值如何都强制关闭；管理员变更写入审计，GPS 不进入审计载荷。
 
 旧阿浪故事状态机仍作为内部/兼容流程保留；下文涉及 5 米稳定到达、三轮旧剧情、archive 的条目仅描述旧 `missions/:slug` 流程，不得覆盖上述正式闪现契约。FUTURE 04 的“多 NPC 地图”仍不实现：正式版只提供当前在线列表与隐藏地点寻找，不新增探索地图。
 
 ## L1. 旧阿浪 V1.7 视觉参考边界
 
 - ACTIVE 03：现有 Discover 闪现入口落为紧凑单 NPC 卡，不新增一级 Tab。
-- ACTIVE 05：寻找页落为区域提示、静态雷达/真实距离信号、找到后说明和用户-only 辅助地图。
+- ACTIVE 05：寻找页直接展示本次固定出现点、用户位置、前台实时距离与步行路线；10 米到达仍由服务端判定。
 - APPROVED TARGET 06：“我的”落为身份舞台、真实潮流值/活动/连接/资料完成度、个人连续故事入口和设置；像素伙伴形象只用于新版 Profile。
 - ACTIVE 07 只提供视觉语气参考。按 2026-07-15 产品决定，“我的故事”不再是阿浪/活动档案列表，而是仅本人可见、由真实经历按时间追加的连续故事。
 - FUTURE 04 多 NPC 地图仍不实现。FUTURE 08 的 Word 完整方案不照搬；2026-07-15 产品决定仅授权新版 Profile 的“我的形象”最小闭环：12 人格像素伙伴、四槽穿脱、显式保存、活动装备池、碎片和碎片商店。
@@ -121,7 +127,7 @@ Discover 卡
 
 1. `MissionContent` 返回客户端前删除 `meta.defaultTargetLocation`、`meta.defaultCompanionEndLocation` 和所有 `node.gpsTrigger`。
 2. `routeDestination` 只在 `companion/arrived/closing/result/completed` 阶段返回。
-3. 搜索页的原生 Map 只接收用户当前位置；不得传目标 marker、搜索圈或 polyline。
+3. 搜索页的原生 Map 可接收仍在线的本次固定出现点 Marker 与腾讯步行路线 polyline；班次结束后不得重新披露终点。
 4. 本地 `jj_alang_config_*` 只在 `appMode=test` 时读取；生产/普通 staging 忽略旧调试缓存。
 5. Public GPS 的 `targetOverride` 只在服务端严格 single-test gate 下生效。
 6. 生产环境即使误留 `ENABLE_SINGLE_TEST_MODE=true`，`/api/auth/user` 也不会下发客户端 test marker；复测 Reset 返回 403，其他 Alang Debug API 继续按安全策略隐藏为 404。
@@ -225,8 +231,7 @@ Discover 卡
 - API：`GET /api/personal-story`、`POST /api/personal-story/update`、`GET /api/personal-story/update-status`；身份只来自登录会话。
 - 事实源只有两类：非 Debug 且 completed 的阿浪档案；严格完成的真实盲盒。盲盒以本人的 group outcome 锁定分组，并额外要求本人已匹配、活动池与分组均非测试/未取消、活动时间已过，以及该活动本人的 `event_feedback.completedAt` 非空；group outcome 单独不足以证明完成参加。反馈文本/分数、姓名、GPS、聊天和客户端自由文本都不进入提示词。
 - 用户只提交“更新故事”；服务端按经历发生时间从旧到新建立 durable job。一次真实经历对应一章，章节以 source 唯一约束追加，旧章节不覆盖、不删除。
-- 标题固定为 `日期 · 活动类型`。DeepSeek 是首选，MiniMax 使用现有客户端做运行时回退；模型每次只编排一章，输出带 `factIds` 的结构化 paragraphs/clauses，只能选择服务端批准的小说化开篇、连接和收束样式。服务端要求全部待写事实恰好使用一次、保持时间顺序，并拒绝任何自由正文、未知实体/数字、地点、日期或语义错配；首选模型返回非空但无效时也会继续尝试回退模型。两家均失败或均被拒绝时不插入替代章，已存在章节继续可读，下一次更新从缺失经历继续。
-- 正式街头盲盒仅在任务已交付且用户已提交结构化回访反馈后进入“我的故事”；仅使用审核过的任务标题、NPC、交付回应、反馈选项标签及可公开目的地区域，不读取私密回复、用户坐标、隐藏相遇坐标或地址。正式多人盲盒仍要求本人真实匹配、活动已结束且本人反馈完成，故事可使用活动类型、同行动物、公开地点和结构化氛围标签。
+- 标题固定为 `日期 · 活动类型`。MiniMax 是首选，DeepSeek 使用现有客户端做运行时回退；模型每次只编排一章，输出带 `factIds` 的结构化 paragraphs/clauses，只能选择服务端批准的连接短语。服务端要求全部待写事实恰好使用一次、保持时间顺序，并拒绝任何自由正文、未知实体/数字/地点/日期或语义错配；MiniMax 返回非空但无效时也会继续尝试 DeepSeek。两家均失败或均被拒绝时不插入替代章，已存在章节继续可读，下一次更新从缺失经历继续。
 - `personalStoryEnabled=false` 时 Profile/阿浪结果不进入私人连续故事，服务端在访问新故事表前关闭整个 surface：GET 返回 503、POST 返回 403、status 返回 disabled。只有开关为 `true`、故事表已迁移且 AI provider 暂不可用时，已存在章节仍可由 GET 读取；更新返回 503，不覆盖或删除历史。
 - 页面不显示“已生成/待续写”统计，不退化为活动流水账，不分享，只有进入页面后才展示章节状态。
 
@@ -268,13 +273,13 @@ npm run test -w mini-program -- --run src/pages/alang src/lib/alang src/componen
 | --- | --- | --- | --- | --- |
 | `V17-REF-01` | 执行 ACTIVE 03/05 + APPROVED 06；ACTIVE 07 数据模型和 Profile-only 形象按产品决定覆盖；不实现 FUTURE 04，不恢复 REMOVED 09 | 本文范围边界、现有路由/Tab | 文档映射、路由测试 | **PASS**：阿浪正式美术仍待审批 |
 | `V17-UI-03` | Discover 单 NPC 紧凑入口、3 个说明 chip、单 CTA | `AlangDiscoverCard.tsx/.scss` | 组件测试 + `discover-alang-v17` 780×1688 全页截图 | **F3（已截图）**：目标卡区域无 Class A 阻断；正式阿浪图和微信真机仍阻断 F4 |
-| `V17-UI-05` | 区域提示 → 雷达/距离 → 找到后说明；地图只显示用户 | `pages/alang/search/` | 定向测试 + `alang-search-v17` 780×1688 截图 | **F3（已截图）**：H5 结构通过；正式区域/找到后图、原生 Map 与定位真机仍阻断 F4 |
+| `V17-UI-05` | 固定出现点地图 → 步行路线/距离 → 10 米到达 | `pages/alang/search/` | 定向测试 + 微信真机地图验收 | **IMPLEMENTED / F4 PENDING**：契约与 H5 结构测试通过；原生 Map、路线和定位仍需微信真机验收 |
 | `V17-UI-06` | “我的”暖白身份舞台、透明像素伙伴、真实潮流值/统计、故事与形象入口、齿轮独立设置页 | `pages/profile/`、`pages/profile-linked/settings/` | 数据策略/Profile/设置/装备测试 + `profile-v17` 同尺寸截图 | **F3（待本轮真机复验）**：已移除紫色赛博背景和主页服务列表；12 张 CDN 基础角色已逐项返回 200。微信 TabBar、安全区、staging flags 与多机型真机仍阻断 F4 |
 | `V17-UI-07` | 仅本人可见的真实经历连续故事；手动更新、一次一章、历史保留 | `pages/profile-linked/personal-story/`、`/api/personal-story*` | Mini/Server personal-story 专项测试 + `personal-story-v17` 780×1688 截图 | **F3（最新复截图）**：主要视觉层级通过；真实 provider/staging 与多机型真机仍阻断 F4 |
 | `V17-UI-08-OVERRIDE` | 12 人格像素形象、四槽穿脱/保存、活动装备池、保底、碎片商店 | `pages/profile-linked/my-image/`、`/api/equipment/*` | Mini/Server equipment 专项测试 + `my-image-v17` 780×1688 截图 | **F3（最新复截图）**：clipping-aware 扫描为 0 个阻断项；此前 sticky 保存栏与下装/鞋履标签的 2 处报告是滚动视口裁切误报。基础人物自带初始服装；未发布单品不显示伪造覆盖层，正式四槽分层 raster 仍待审批，设备验收未完成，因此不得提升为 F4 |
-| `V17-AI-01` | DeepSeek 主、MiniMax 回退；结构化事实约束叙事，不虚构 | personal-story generation service/worker | provider/schema/grounding/worker tests | PASS |
+| `V17-AI-01` | MiniMax 主、DeepSeek 回退；结构化事实约束叙事，不虚构 | personal-story generation service/worker | provider/schema/grounding/worker tests | PASS |
 | `V17-GEO-01` | 复用现有腾讯地图接入，不新增 SDK/provider/Key | `routes/domains/geo.ts`、`api/geo.ts` | `geoRoutes.test.ts` | PASS |
-| `V17-SEC-01` | 搜索阶段隐藏目标，陪伴阶段才披露路线终点 | `alangDisclosure.ts`、`alangTargetResolver.ts` | disclosure/target resolver tests | PASS |
+| `V17-SEC-01` | 正式闪现仅在班次在线时披露本次审核点；旧剧情仍按阶段披露 | `flashService.ts`、`alangDisclosure.ts`、`alangTargetResolver.ts` | Flash 定向测试 + 旧流程 disclosure 测试 | PASS / 真机待验收 |
 | `V17-ARRIVE-01` | 服务端固定 5 米并要求稳定读数 | `alangGeoFence.ts`、`constants.ts` | geofence/content tests | PASS |
 | `V17-STATE-01` | 页面断点由服务端 `stage/currentNodeId` 恢复 | Alang 各阶段页、`useAlangMission.ts` | mini-program Alang tests | PASS |
 | `V17-ARCHIVE-01` | 先展示结果，再由用户主动收录 | `result/index.tsx`、`POST .../complete` | result/server tests | PASS |

@@ -41,7 +41,6 @@ export interface FlashNpcSummary {
   endsAt?: string
   remainingSeconds?: number
   themeKey?: string
-  avatarUrl?: string
 }
 
 export interface FlashNpcReference {
@@ -50,7 +49,6 @@ export interface FlashNpcReference {
   name: string
   animal?: string
   themeKey?: string
-  avatarUrl?: string
 }
 
 export interface FlashFeedbackOption {
@@ -118,7 +116,6 @@ export interface FlashLocateView {
   assignmentId?: string
   npc?: FlashNpcReference
   message?: string
-  deliveryMessage?: string
 }
 
 export interface FlashDialogueOption {
@@ -173,7 +170,34 @@ export interface FlashEncounterView {
   conversationExpiresAt?: string
   shiftEndsAt?: string
   message?: string
-  deliveryMessage?: string
+  storyEpisode?: {
+    id: string
+    code: string
+    seasonTitle: string
+    phase: number
+    title: string
+    objectCode: string
+    opening: string
+    action: string
+    discovery: string
+    response: string | null
+    closing: string | null
+    motion: { ambient: 'none' | 'breathe' | 'drift'; blinkAssetUrl?: string; blinkIntervalSeconds?: number }
+    fragment: { id: string; category: 'object' | 'past' | 'relationship' | 'key'; title: string; fact: string; assetUrl: string | null } | null
+    progress: { completedInPhase: number; totalInPhase: number; completedTotal: number; total: number }
+  } | null
+}
+
+export interface FlashStoryFragmentView {
+  id: string
+  code: string
+  category: 'object' | 'past' | 'relationship' | 'key'
+  title: string
+  fact: string
+  assetUrl: string | null
+  unlockedAt: string
+  episodeTitle: string
+  npcName: string
 }
 
 export interface FlashAssignmentView extends FlashTaskSummary {

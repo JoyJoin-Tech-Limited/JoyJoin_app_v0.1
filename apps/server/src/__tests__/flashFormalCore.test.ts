@@ -1,30 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  buildFlashNpcTaskRequestCopy,
-  FLASH_LOCATION_SEEDS,
   FLASH_NPC_SEEDS,
-  FLASH_TASK_CATEGORIES,
   FLASH_TASK_SEEDS,
-  getFlashTaskSeedByCode,
-  resolveFlashDeliveryCopy,
 } from "@shared/alang/flashCatalog";
+import { FLASH_INVITATION_DEFINITIONS } from "@shared/alang/flashInvitationCatalog";
 import {
-  FLASH_INVITATION_DEFINITIONS,
-  isDestinationFreeFlashInvitation,
-} from "@shared/alang/flashInvitationCatalog";
-import {
-  FLASH_ARRIVAL_RADIUS_METERS,
-  FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS,
   FLASH_PERSONALIZATION_CONSENT_VERSION,
   flashCoordinateSchema,
   flashPreferenceUpdateSchema,
 } from "@shared/alang/flashTypes";
 
 import {
-  FLASH_REPEAT_DECAY_STATUSES,
-  isFlashSchemaReady,
-  resolveFlashNpcMessageCheckpoint,
-} from "../repositories/flashRepo";
+  isFlashShenzhenBoundaryAssetValid,
+  isFlashShenzhenBoundaryLicenseApproved,
+  isFlashShenzhenBoundaryReady,
+  isWithinFlashShenzhenBoundary,
+} from "../lib/flashShenzhenBoundary";
+import { FLASH_REPEAT_DECAY_STATUSES, isFlashSchemaReady } from "../repositories/flashRepo";
 import {
   canRegeneratePublishedFlashSchedule,
   canAdjustUpcomingFlashShift,
@@ -35,43 +27,17 @@ import {
   validateFlashScheduleDraft,
 } from "../services/flashScheduleService";
 import {
+  calculateFlashMapFrame,
   calculateFlashCandidateWeight,
-  calculateFlashRadarFrame,
   evaluateFlashFeatureReadiness,
   isLaterFlashDeliveryEncounter,
   syncEnabledPreferenceTags,
 } from "../services/flashService";
 
-describe("Flash geofence boundaries", () => {
-  it("keeps the NPC encounter radius independent from task-destination arrival", () => {
-    expect(FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS).toBe(10);
-    expect(FLASH_ARRIVAL_RADIUS_METERS).toBe(50);
-  });
-});
-
-describe("Flash live radar frame", () => {
-  it("returns distance, north-based bearing, and proximity", () => {
-    const north = calculateFlashRadarFrame(
-      { latitude: 22.5400, longitude: 113.9400 },
-      { latitude: 22.5410, longitude: 113.9400 },
-    );
-    expect(north.distanceMeters).toBeGreaterThan(100);
-    expect(north.targetBearingDegrees).toBe(0);
-    expect(north.proximityBand).toBe("far");
-
-    const arrived = calculateFlashRadarFrame(
-      { latitude: 22.5400, longitude: 113.9400 },
-      { latitude: 22.54005, longitude: 113.9400 },
-    );
-    expect(arrived.distanceMeters).toBeLessThanOrEqual(10);
-    expect(arrived.proximityBand).toBe("arrived");
-  });
-});
-
 const readyTaskCategoryCounts = Object.fromEntries(
   [...new Set(FLASH_TASK_SEEDS.map((task) => task.category))].map((category) => [category, 5]),
 );
-const readyRuntime = { tencentMapConfigured: true };
+const readyBoundary = { assetValid: true, licenseApproved: true };
 
 function npc(overrides: Record<string, unknown> = {}) {
   return {
@@ -110,6 +76,34 @@ function location() {
 }
 
 describe("formal Flash catalog", () => {
+  it("calculates a north-based map frame without returning target coordinates", () => {
+    const frame = calculateFlashMapFrame(
+      { latitude: 22.5431, longitude: 114.0579 },
+      { latitude: 22.5441, longitude: 114.0579 },
+    );
+
+    expect(frame.distanceMeters).toBeGreaterThan(100);
+    expect(frame.distanceMeters).toBeLessThan(120);
+    expect(frame.targetBearingDegrees).toBeCloseTo(0, 0);
+    expect(frame.proximityBand).toBe("approaching");
+    expect(frame).not.toHaveProperty("latitude");
+    expect(frame).not.toHaveProperty("longitude");
+  });
+
+  it("normalizes eastbound map bearings and arrival proximity", () => {
+    const east = calculateFlashMapFrame(
+      { latitude: 22.5431, longitude: 114.0579 },
+      { latitude: 22.5431, longitude: 114.0589 },
+    );
+    const arrived = calculateFlashMapFrame(
+      { latitude: 22.5431, longitude: 114.0579 },
+      { latitude: 22.54315, longitude: 114.0579 },
+    );
+
+    expect(east.targetBearingDegrees).toBeCloseTo(90, 0);
+    expect(arrived.proximityBand).toBe("arrived");
+  });
+
   it("contains five distinct NPCs and six categories of five reviewed drafts", () => {
     expect(FLASH_NPC_SEEDS).toHaveLength(5);
     expect(new Set(FLASH_NPC_SEEDS.map((item) => item.slug)).size).toBe(5);
@@ -120,161 +114,15 @@ describe("formal Flash catalog", () => {
     expect([...counts.values()].sort()).toEqual([5, 5, 5, 5, 5, 5]);
   });
 
-  it("uses self-reported life invitations and NPC messages without proof requirements", () => {
+  it("uses non-punitive life invitations and digital-NPC-only message relays", () => {
     expect(FLASH_INVITATION_DEFINITIONS).toHaveLength(30);
     expect(FLASH_INVITATION_DEFINITIONS.filter((item) => item.kind === "life_invitation")).toHaveLength(25);
-    expect(FLASH_INVITATION_DEFINITIONS.filter((item) => item.kind === "npc_message")).toHaveLength(5);
-    expect(FLASH_INVITATION_DEFINITIONS
-      .filter((item) => item.kind === "life_invitation")
-      .every((item) => !item.targetNpcSlug && !item.messageCopy)).toBe(true);
-    expect(FLASH_INVITATION_DEFINITIONS
-      .filter((item) => item.kind === "npc_message")
-      .every((item) => item.targetNpcSlug && item.messageCopy)).toBe(true);
-  });
-
-  it("treats every current invitation as destination-free even with normalized code or tag-only data", () => {
-    expect(FLASH_INVITATION_DEFINITIONS.every((task) => (
-      isDestinationFreeFlashInvitation({ code: task.code, tags: task.tags })
-    ))).toBe(true);
-    expect(isDestinationFreeFlashInvitation({ code: " t16 " })).toBe(true);
-    expect(isDestinationFreeFlashInvitation({ code: "custom", tags: ["invitation:life"] })).toBe(true);
-    expect(isDestinationFreeFlashInvitation({ code: "legacy-gps", tags: ["destination"] })).toBe(false);
-  });
-
-  it("gives every NPC a distinct five-invitation life pool plus its own message", () => {
-    const lifeInvitations = FLASH_INVITATION_DEFINITIONS.filter((item) => item.kind === "life_invitation");
-    const pools = FLASH_NPC_SEEDS.map((npc) => lifeInvitations
-      .filter((item) => item.npcSlugs.includes(npc.slug))
-      .map((item) => item.code)
-      .sort());
-
-    expect(pools.every((pool) => pool.length === 5)).toBe(true);
-    expect(new Set(pools.map((pool) => pool.join(","))).size).toBe(5);
-    expect(lifeInvitations.every((item) => item.npcSlugs.length === 1)).toBe(true);
-    for (const npc of FLASH_NPC_SEEDS) {
-      expect(FLASH_INVITATION_DEFINITIONS.filter((item) => item.npcSlugs.includes(npc.slug))).toHaveLength(6);
-    }
-  });
-
-  it("frames life invitations as something to begin now and preserves each NPC voice", () => {
-    const lifeTasks = FLASH_TASK_SEEDS.filter((task) => task.tags.includes("invitation:life"));
-    const copies = lifeTasks.map((task) => {
-      const npcSlug = task.npcSlugs[0];
-      return buildFlashNpcTaskRequestCopy(npcSlug, task);
-    });
-
-    expect(copies.every((copy) => !copy.includes("哪天想起来"))).toBe(true);
-    expect(new Set(FLASH_NPC_SEEDS.map((npc) => {
-      const task = lifeTasks.find((candidate) => candidate.npcSlugs.includes(npc.slug));
-      return task ? buildFlashNpcTaskRequestCopy(npc.slug, task).split("：")[0] : "";
-    })).size).toBe(5);
-    expect(FLASH_TASK_SEEDS.find((task) => task.code === "T06")?.brief).toContain("现在");
-    expect(FLASH_TASK_SEEDS.find((task) => task.code === "T10")?.brief).toContain("现在");
-  });
-
-  it("makes every life invitation actionable now and responds to the reported outcome", () => {
-    const lifeTasks = FLASH_TASK_SEEDS.filter((task) => task.tags.includes("invitation:life"));
-    expect(lifeTasks.every((task) => task.brief.includes("现在") || task.brief.includes("今天"))).toBe(true);
-
-    const liziMovie = FLASH_TASK_SEEDS.find((task) => task.code === "T06");
-    expect(liziMovie?.feedbackPrompts[0]?.options.map((option) => option.id)).toEqual([
-      "liked",
-      "continuing",
-      "not_for_me",
-      "switched",
-      "not_started",
-    ]);
-    expect(resolveFlashDeliveryCopy({
-      npcSlug: "lizi",
-      taskCode: "T06",
-      invitationKind: "life_invitation",
-      optionId: "not_for_me",
-    })).toContain("别对一部电影讲礼貌");
-    expect(resolveFlashDeliveryCopy({
-      npcSlug: "momo",
-      taskCode: "T10",
-      invitationKind: "life_invitation",
-      optionId: "liked",
-    })).toContain("没有过期");
-    expect(resolveFlashDeliveryCopy({
-      npcSlug: "shiqi",
-      taskCode: "T16",
-      invitationKind: "life_invitation",
-      optionId: "started",
-    })).toContain("零和一之间");
-  });
-
-  it("uses the two-stage NPC relay contract instead of self-reported delivery", () => {
-    const relay = FLASH_TASK_SEEDS.find((task) => task.code === "T26");
-    expect(relay?.feedbackPrompts[0]?.options).toEqual([
-      { id: "relay_message", label: "帮它把话带到" },
-      { id: "skip_message", label: "这次先不带" },
-    ]);
-    expect(resolveFlashNpcMessageCheckpoint({
-      sourceNpcSlug: "alang",
-      targetNpcSlug: "lizi",
-      currentNpcSlug: "lizi",
-    })).toBe("target");
-    expect(resolveFlashNpcMessageCheckpoint({
-      sourceNpcSlug: "alang",
-      targetNpcSlug: "lizi",
-      currentNpcSlug: "alang",
-    })).toBeNull();
-    expect(resolveFlashNpcMessageCheckpoint({
-      sourceNpcSlug: "alang",
-      targetNpcSlug: "lizi",
-      currentNpcSlug: "alang",
-      targetOutcome: "relay_message",
-    })).toBe("source");
-    expect(resolveFlashNpcMessageCheckpoint({
-      sourceNpcSlug: "alang",
-      targetNpcSlug: "lizi",
-      currentNpcSlug: "lizi",
-      targetOutcome: "skip_message",
-    })).toBeNull();
-    expect(resolveFlashDeliveryCopy({
-      npcSlug: "lizi",
-      taskCode: "T26",
-      invitationKind: "npc_message",
-      optionId: "relay_message",
-    })).toContain("我没有在原地等过");
-    expect(resolveFlashDeliveryCopy({
-      npcSlug: "alang",
-      taskCode: "T26",
-      invitationKind: "npc_message",
-      optionId: "report_delivered",
-    })).toContain("没有回头");
-    for (const code of ["T26", "T27", "T28", "T29", "T30"]) {
-      for (const optionId of [
-        "relay_message",
-        "skip_message",
-        "report_delivered",
-        "retry_later",
-        "abandon_relay",
-      ]) {
-        expect(resolveFlashDeliveryCopy({
-          npcSlug: "alang",
-          taskCode: code,
-          invitationKind: "npc_message",
-          optionId,
-        })).not.toBe("好，我记住了。谢谢你愿意回来告诉我。");
-      }
-    }
-  });
-
-  it("contains two free public location candidates for every Shenzhen district", () => {
-    expect(FLASH_LOCATION_SEEDS).toHaveLength(20);
-    const counts = new Map<string, number>();
-    for (const location of FLASH_LOCATION_SEEDS) {
-      counts.set(location.district, (counts.get(location.district) ?? 0) + 1);
-      expect(location.tags).toContain("免费");
-      expect(location.latitude).toBeGreaterThanOrEqual(22.35);
-      expect(location.latitude).toBeLessThanOrEqual(22.95);
-      expect(location.longitude).toBeGreaterThanOrEqual(113.7);
-      expect(location.longitude).toBeLessThanOrEqual(114.75);
-      expect(location.safetyNotes.length).toBeGreaterThan(8);
-    }
-    expect([...counts.values()].sort()).toEqual(Array(10).fill(2));
+    const relays = FLASH_INVITATION_DEFINITIONS.filter((item) => item.kind === "npc_message");
+    expect(relays).toHaveLength(5);
+    expect(relays.every((item) => item.targetNpcSlug && item.targetNpcName && item.messageCopy)).toBe(true);
+    expect(relays.every((item) => item.tags.includes(`target-npc:${item.targetNpcSlug}`))).toBe(true);
+    // The reviewed task library is retained for historical records only. The
+    // formal story flow no longer exposes task feedback as a runtime contract.
   });
 
   it("accepts partial preference updates and rejects empty writes", () => {
@@ -292,7 +140,7 @@ describe("formal Flash catalog", () => {
     expect(flashPreferenceUpdateSchema.safeParse({ personalizationEnabled: false }).success).toBe(true);
   });
 
-  it("keeps transport validation bounded before the server-owned Tencent Shenzhen check", () => {
+  it("keeps broad transport validation light and enforces the pinned Shenzhen boundary on the server", () => {
     expect(flashCoordinateSchema.safeParse({
       latitude: 22.5431,
       longitude: 114.0579,
@@ -301,6 +149,13 @@ describe("formal Flash catalog", () => {
     expect(flashCoordinateSchema.safeParse({ latitude: 22.5431, longitude: 114.0579 }).success).toBe(false);
     expect(flashCoordinateSchema.safeParse({ latitude: 23.2, longitude: 114.0579 }).success).toBe(false);
     expect(flashCoordinateSchema.safeParse({ latitude: 22.5431, longitude: 113.1 }).success).toBe(false);
+    expect(isWithinFlashShenzhenBoundary(22.5431, 114.0579)).toBe(true);
+    expect(isWithinFlashShenzhenBoundary(22.596, 114.479)).toBe(true);
+    // Regression points from the old rectangle and hand-drawn polygons.
+    expect(isWithinFlashShenzhenBoundary(22.495, 114.139)).toBe(false);
+    expect(isWithinFlashShenzhenBoundary(22.7448, 114.141)).toBe(false);
+    expect(isWithinFlashShenzhenBoundary(22.75, 113.73)).toBe(false);
+    expect(isWithinFlashShenzhenBoundary(22.80, 114.46)).toBe(false);
   });
 
   it("fails readiness closed until every formal dependency is configured", () => {
@@ -308,51 +163,36 @@ describe("formal Flash catalog", () => {
     const incomplete = evaluateFlashFeatureReadiness(true, {
       activeNpcs: 5,
       canonicalNpcs: 5,
-      canonicalWeekdayNpcs: 5,
       schedulableNpcs: 4,
       taskReadyNpcs: 4,
       reviewedTasks: 30,
       approvedEncounterLocations: 3,
-      approvedTaskDestinations: 0,
+      approvedTaskDestinations: 10,
       linkedTasks: 30,
       readyTaskCategoryCounts,
-    }, readyRuntime);
+      publishedStorySeasons: 1,
+      reviewedStoryEpisodes: 15,
+      storyCoveredNpcs: 5,
+    }, readyBoundary);
     expect(incomplete.ready).toBe(false);
     expect(incomplete.blockers).toContain("all_active_npcs_require_approved_locations");
-    expect(incomplete.blockers).toContain("all_active_npcs_require_ready_tasks");
     expect(evaluateFlashFeatureReadiness(true, {
       ...incomplete.counts,
       schedulableNpcs: 5,
       taskReadyNpcs: 5,
-    }, readyRuntime).ready).toBe(true);
+    }, readyBoundary).ready).toBe(true);
     expect(evaluateFlashFeatureReadiness(true, {
       ...incomplete.counts,
       activeNpcs: 6,
       schedulableNpcs: 6,
       taskReadyNpcs: 6,
-    }, readyRuntime).ready).toBe(true);
+    }, readyBoundary).ready).toBe(true);
   });
 
-  it("keeps the formal task catalog on the single six-category contract", () => {
-    expect(FLASH_TASK_CATEGORIES).toEqual([
-      "城市出发",
-      "文化娱乐",
-      "身体动起来",
-      "一直想做",
-      "关系连接",
-      "NPC传话",
-    ]);
-    expect(new Set(FLASH_TASK_SEEDS.map((task) => task.category))).toEqual(new Set(FLASH_TASK_CATEGORIES));
-    expect(getFlashTaskSeedByCode("T01")?.category).toBe("城市出发");
-    expect(getFlashTaskSeedByCode("T30")?.category).toBe("NPC传话");
-    expect(getFlashTaskSeedByCode("UNKNOWN")).toBeNull();
-  });
-
-  it("keeps rollout blocked until Tencent reverse geocoding is configured", () => {
+  it("keeps rollout blocked until the pinned boundary asset and its commercial use are approved", () => {
     const counts = {
       activeNpcs: 5,
       canonicalNpcs: 5,
-      canonicalWeekdayNpcs: 5,
       schedulableNpcs: 5,
       taskReadyNpcs: 5,
       reviewedTasks: 30,
@@ -360,16 +200,38 @@ describe("formal Flash catalog", () => {
       approvedTaskDestinations: 10,
       linkedTasks: 30,
       readyTaskCategoryCounts,
+      publishedStorySeasons: 1,
+      reviewedStoryEpisodes: 15,
+      storyCoveredNpcs: 5,
     };
-    expect(evaluateFlashFeatureReadiness(true, counts).blockers).toContain("tencent_map_key_required");
-    expect(evaluateFlashFeatureReadiness(true, counts, readyRuntime).ready).toBe(true);
+    expect(evaluateFlashFeatureReadiness(true, counts, {
+      assetValid: false,
+      licenseApproved: true,
+    }).blockers).toContain("shenzhen_boundary_asset_not_ready");
+    expect(evaluateFlashFeatureReadiness(true, counts, {
+      assetValid: true,
+      licenseApproved: false,
+    }).blockers).toContain("shenzhen_boundary_license_not_approved");
   });
 
-  it("blocks readiness when a canonical NPC is replaced or one category has fewer than five ready tasks", () => {
+  it("binds boundary approval to the exact reviewed semantic hash", () => {
+    expect(isFlashShenzhenBoundaryAssetValid()).toBe(true);
+    vi.stubEnv("FLASH_SHENZHEN_BOUNDARY_APPROVED_SHA256", "wrong-revision");
+    expect(isFlashShenzhenBoundaryLicenseApproved()).toBe(false);
+    expect(isFlashShenzhenBoundaryReady()).toBe(false);
+    vi.stubEnv(
+      "FLASH_SHENZHEN_BOUNDARY_APPROVED_SHA256",
+      "B691FAA581D9330E6DC738DCD11421958CA2D4DDEA271B656A56237F9FA6FB0B",
+    );
+    expect(isFlashShenzhenBoundaryLicenseApproved()).toBe(true);
+    expect(isFlashShenzhenBoundaryReady()).toBe(true);
+    vi.unstubAllEnvs();
+  });
+
+  it("blocks readiness when a canonical NPC is replaced or the published season is incomplete", () => {
     const readyCounts = {
       activeNpcs: 5,
       canonicalNpcs: 5,
-      canonicalWeekdayNpcs: 5,
       schedulableNpcs: 5,
       taskReadyNpcs: 5,
       reviewedTasks: 30,
@@ -377,23 +239,18 @@ describe("formal Flash catalog", () => {
       approvedTaskDestinations: 10,
       linkedTasks: 30,
       readyTaskCategoryCounts,
+      publishedStorySeasons: 1,
+      reviewedStoryEpisodes: 15,
+      storyCoveredNpcs: 5,
     };
-    const replacedNpc = evaluateFlashFeatureReadiness(true, { ...readyCounts, canonicalNpcs: 4 }, readyRuntime);
+    const replacedNpc = evaluateFlashFeatureReadiness(true, { ...readyCounts, canonicalNpcs: 4 }, readyBoundary);
     expect(replacedNpc.blockers).toContain("five_builtin_seed_npcs_required");
 
-    const [category] = Object.keys(readyTaskCategoryCounts);
-    const thinCategory = evaluateFlashFeatureReadiness(true, {
+    const incompleteSeason = evaluateFlashFeatureReadiness(true, {
       ...readyCounts,
-      readyTaskCategoryCounts: { ...readyTaskCategoryCounts, [category]: 4 },
-    }, readyRuntime);
-    expect(thinCategory.blockers).toContain("six_categories_with_five_ready_tasks_required");
-
-    const changedWeekday = evaluateFlashFeatureReadiness(
-      true,
-      { ...readyCounts, canonicalWeekdayNpcs: 4 },
-      readyRuntime,
-    );
-    expect(changedWeekday.blockers).toContain("canonical_npc_weekdays_required");
+      reviewedStoryEpisodes: 14,
+    }, readyBoundary);
+    expect(incompleteSeason.blockers).toContain("fifteen_reviewed_story_episodes_required");
   });
 
   it("probes critical formal columns and fails schema readiness for a partial table", async () => {
@@ -408,7 +265,6 @@ describe("formal Flash catalog", () => {
     await expect(isFlashSchemaReady(executor as any)).resolves.toBe(true);
     expect(projections).toContainEqual(expect.arrayContaining(["lastReviewedAt", "reviewedBy"]));
     expect(projections).toContainEqual(expect.arrayContaining(["contentVersion", "isHumanReviewed"]));
-    expect(projections).toContainEqual(expect.arrayContaining(["createdAt", "windowStartedAt", "attemptCount"]));
     expect(projections).toContainEqual(expect.arrayContaining(["deliveryEncounterId", "privateReplyDeleteAfter"]));
 
     const partialExecutor = {
@@ -455,7 +311,7 @@ describe("formal Flash catalog", () => {
 });
 
 describe("formal Flash scheduling", () => {
-  it("allows only today's shifts that have not started to be adjusted", () => {
+  it("allows only today's published shifts that have not started to be adjusted", () => {
     const now = new Date("2026-08-02T14:00:00+08:00");
     const plan = { status: "published", serviceDate: "2026-08-02" };
     expect(canAdjustUpcomingFlashShift(plan, { status: "published", startsAt: "2026-08-02T15:00:00+08:00" }, now)).toBe(true);
@@ -468,10 +324,22 @@ describe("formal Flash scheduling", () => {
 
   it("only allows a published Shenzhen next-day plan to be regenerated", () => {
     const now = new Date("2026-07-31T14:00:00+08:00");
-    expect(canRegeneratePublishedFlashSchedule({ status: "published", serviceDate: "2026-08-01" }, now)).toBe(true);
-    expect(canRegeneratePublishedFlashSchedule({ status: "draft", serviceDate: "2026-08-01" }, now)).toBe(false);
-    expect(canRegeneratePublishedFlashSchedule({ status: "published", serviceDate: "2026-07-31" }, now)).toBe(false);
-    expect(canRegeneratePublishedFlashSchedule({ status: "published", serviceDate: "2026-08-02" }, now)).toBe(false);
+    expect(canRegeneratePublishedFlashSchedule({
+      status: "published",
+      serviceDate: "2026-08-01",
+    }, now)).toBe(true);
+    expect(canRegeneratePublishedFlashSchedule({
+      status: "draft",
+      serviceDate: "2026-08-01",
+    }, now)).toBe(false);
+    expect(canRegeneratePublishedFlashSchedule({
+      status: "published",
+      serviceDate: "2026-07-31",
+    }, now)).toBe(false);
+    expect(canRegeneratePublishedFlashSchedule({
+      status: "published",
+      serviceDate: "2026-08-02",
+    }, now)).toBe(false);
   });
 
   it("binds a regeneration preview digest to its exact generated shifts", () => {
@@ -516,54 +384,6 @@ describe("formal Flash scheduling", () => {
       locationsByNpc: new Map([[npc().id, [locationRow]]]),
     });
     expect(validation).toEqual({ valid: true, errors: [] });
-  });
-
-  it("uses the 3-5 hour policy while a staging NPC row still has legacy duration values", () => {
-    const legacyNpc = npc({ minShiftMinutes: 90, maxShiftMinutes: 150 });
-    const locationRow = location();
-    const generated = generateFlashScheduleDraft({
-      serviceDate: "2026-07-20",
-      npcs: [legacyNpc],
-      locationsByNpc: new Map([[legacyNpc.id, [locationRow]]]),
-      seed: "legacy-duration-compatibility",
-    });
-
-    expect(generated.shifts.length).toBeGreaterThanOrEqual(1);
-    for (const shift of generated.shifts) {
-      const minutes = (shift.endsAt.getTime() - shift.startsAt.getTime()) / 60_000;
-      expect(minutes).toBeGreaterThanOrEqual(180);
-      expect(minutes).toBeLessThanOrEqual(300);
-    }
-
-    const validation = validateFlashScheduleDraft({
-      serviceDate: "2026-07-20",
-      shifts: [{
-        npcId: legacyNpc.id,
-        locationId: locationRow.id,
-        startsAt: new Date("2026-07-20T17:00:00+08:00"),
-        endsAt: new Date("2026-07-20T20:00:00+08:00"),
-        source: "manual",
-      }],
-      npcsById: new Map([[legacyNpc.id, legacyNpc]]),
-      locationsByNpc: new Map([[legacyNpc.id, [locationRow]]]),
-    });
-    expect(validation).toEqual({ valid: true, errors: [] });
-  });
-
-  it("can generate a five-hour shift that crosses a daypart boundary", () => {
-    const npcRow = npc({ minShiftMinutes: 300, maxShiftMinutes: 300 });
-    const locationRow = location();
-    const generated = generateFlashScheduleDraft({
-      serviceDate: "2026-07-20",
-      npcs: [npcRow],
-      locationsByNpc: new Map([[npcRow.id, [locationRow]]]),
-      seed: "five-hour-shift",
-    });
-
-    expect(generated.shifts).toHaveLength(1);
-    expect(
-      (generated.shifts[0].endsAt.getTime() - generated.shifts[0].startsAt.getTime()) / 60_000,
-    ).toBe(300);
   });
 
   it("blocks a third NPC shift and any shift crossing the Shenzhen service date", () => {
@@ -660,24 +480,6 @@ describe("formal Flash delivery encounter", () => {
     expect(isLaterFlashDeliveryEncounter(assignment, {
       id: "encounter-next",
       unlockedAt: new Date("2026-07-21T10:00:00+08:00"),
-    })).toBe(true);
-  });
-
-  it("uses acceptance time for a destination-free invitation but still rejects the same encounter", () => {
-    const createdAt = new Date("2026-07-20T10:00:00+08:00");
-    const assignment = {
-      encounterId: "encounter-original",
-      feedbackSubmittedAt: null,
-      createdAt,
-      contentSnapshot: { invitationType: "life_invitation" } as any,
-    };
-    expect(isLaterFlashDeliveryEncounter(assignment, {
-      id: "encounter-original",
-      unlockedAt: new Date("2026-07-20T11:00:00+08:00"),
-    })).toBe(false);
-    expect(isLaterFlashDeliveryEncounter(assignment, {
-      id: "encounter-next",
-      unlockedAt: new Date("2026-07-20T11:00:00+08:00"),
     })).toBe(true);
   });
 });

@@ -3,25 +3,19 @@ import { z } from "zod";
 
 import {
   FLASH_DELIVERY_COPY_BY_NPC,
-  FLASH_LOCATION_SEEDS,
-  FLASH_TASK_CATEGORIES,
   buildFlashNpcTaskRequestCopy,
   type FlashTaskSeed,
 } from "@shared/alang/flashCatalog";
-import { isDestinationFreeFlashInvitation } from "@shared/alang/flashInvitationCatalog";
-import type { FlashAvailabilityWindow, FlashFeedbackPrompt } from "@shared/schema";
+import { featureFlags, type FlashAvailabilityWindow, type FlashFeedbackPrompt } from "@shared/schema";
 
-import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
+import { requireAdmin, requireOperatorOrAbove, requireSuperAdmin } from "../../adminAuth";
 import { db } from "../../db";
 import { logAdminAudit, type AdminAuditAction } from "../../lib/adminAuditLogger";
 import { getActingAdminId } from "../../lib/getActingAdminId";
 import { isCanonicalFlashNpcSlug, matchesCanonicalFlashNpcWeekdays } from "../../lib/flashNpcPolicy";
 import { logger } from "../../lib/logger";
-import {
-  reverseGeocodeCoordinate,
-  TencentMapValidationError,
-  type TencentMapValidationErrorCategory,
-} from "./geo";
+import { getFeatureFlag, refreshFeatureFlag } from "../../lib/featureFlags";
+import { reverseGeocodeCoordinate, TencentMapValidationError } from "./geo";
 import {
   createFlashEncounterLocation,
   createFlashNpc,
@@ -42,7 +36,6 @@ import {
   replaceFlashNpcTaskLinks,
   replaceFlashTaskDestinationLinks,
   seedBuiltinFlashCatalog,
-  seedBuiltinFlashLocations,
   updateFlashEncounterLocation,
   updateFlashNpc,
   updateFlashTaskDestination,
@@ -50,6 +43,12 @@ import {
   withdrawActiveFlashAssignmentsForDestination,
   withdrawOfferedFlashEncountersForTaskTemplate,
 } from "../../repositories/flashRepo";
+import {
+  listFlashStoryAdmin,
+  publishFlashStorySeason,
+  reviewFlashStoryEpisode,
+  updateFlashStoryEpisode,
+} from "../../repositories/flashStoryRepo";
 import {
   addServiceDays,
   generateOrReplaceFlashScheduleDraftForAdmin,
@@ -75,6 +74,14 @@ const SHENZHEN_DISTRICTS = [
   "大鹏新区",
 ] as const;
 
+const TASK_CATEGORIES = [
+  "城市出发",
+  "文化娱乐",
+  "身体动起来",
+  "一直想做",
+  "关系连接",
+  "NPC传话",
+] as const;
 const uuidSchema = z.string().uuid();
 const hexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 const animalSpeciesSchema = z.string().trim().min(1).max(20);
@@ -83,6 +90,47 @@ const serviceDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value)
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }, "日期无效");
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+
+const storyContentSchema = z.object({
+  opening: z.string().trim().min(1).max(240),
+  action: z.string().trim().min(1).max(300),
+  discovery: z.string().trim().min(1).max(300),
+  question: z.object({
+    id: z.string().trim().min(1).max(80),
+    prompt: z.string().trim().min(1).max(100),
+    options: z.array(z.object({
+      id: z.string().trim().min(1).max(80),
+      label: z.string().trim().min(1).max(60),
+      tags: z.array(z.string()).max(10).default([]),
+    })).min(2).max(3),
+  }),
+  responseByOption: z.record(z.string(), z.string().trim().min(1).max(240)),
+  closing: z.string().trim().min(1).max(300),
+}).strict();
+
+const storyMotionSchema = z.object({
+  ambient: z.enum(["none", "breathe", "drift"]),
+  blinkAssetUrl: z.string().url().optional(),
+  blinkIntervalSeconds: z.number().int().min(3).max(20).optional(),
+}).strict().superRefine((value, ctx) => {
+  if (value.blinkIntervalSeconds && !value.blinkAssetUrl) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["blinkAssetUrl"], message: "启用眨眼前必须上传审核过的眨眼帧" });
+  }
+});
+
+const storyEpisodePatchSchema = z.object({
+  expectedVersion: z.number().int().positive(),
+  title: z.string().trim().min(1).max(120).optional(),
+  content: storyContentSchema.optional(),
+  motion: storyMotionSchema.optional(),
+  isActive: z.boolean().optional(),
+  fragment: z.object({
+    category: z.enum(["object", "past", "relationship", "key"]),
+    title: z.string().trim().min(1).max(120),
+    fact: z.string().trim().min(1).max(300),
+    assetUrl: z.string().url().nullable().optional(),
+  }).strict().optional(),
+}).strict();
 
 const dialogueOptionSchema = z.object({
   id: z.string().trim().min(1).max(80),
@@ -134,7 +182,7 @@ const locationFields = {
   address: z.string().trim().min(4).max(160),
   latitude: z.number().finite().min(22.35).max(22.95),
   longitude: z.number().finite().min(113.7).max(114.75),
-  approvalStatus: z.enum(["draft", "approved", "rejected"]).default("draft"),
+  approvalStatus: z.enum(["draft", "pending_review", "approved", "rejected"]).default("draft"),
   safetyNotes: z.string().trim().max(240).nullable().optional(),
   isActive: z.boolean().default(true),
 };
@@ -192,7 +240,7 @@ const feedbackPromptSchema = z.object({
 
 const taskTemplateFields = {
   code: z.string().trim().min(2).max(24).regex(/^[A-Za-z0-9_-]+$/),
-  category: z.enum(FLASH_TASK_CATEGORIES),
+  category: z.enum(TASK_CATEGORIES),
   title: z.string().trim().min(2).max(40),
   brief: z.string().trim().min(4).max(160),
   instructions: z.string().trim().min(6).max(280),
@@ -256,7 +304,10 @@ const upcomingShiftUpdateSchema = z.discriminatedUnion("action", [
     expectedVersion: z.number().int().positive(),
     shift: scheduleShiftSchema.omit({ id: true, status: true }).extend({ status: z.literal("published").optional() }),
   }).strict(),
-  z.object({ action: z.literal("cancel"), expectedVersion: z.number().int().positive() }).strict(),
+  z.object({
+    action: z.literal("cancel"),
+    expectedVersion: z.number().int().positive(),
+  }).strict(),
 ]);
 
 const scheduleRegenerationPreviewSchema = z.object({
@@ -309,7 +360,6 @@ async function verifyApprovedShenzhenCoordinate(value: {
     latitude: value.latitude,
     longitude: value.longitude,
   }, {
-    cache: false,
     failClosed: true,
     requestId,
     purpose: "flash-location-approval",
@@ -320,27 +370,6 @@ async function verifyApprovedShenzhenCoordinate(value: {
   if (resolved.city?.replace(/市$/, "") !== "深圳" || resolved.district !== value.district) {
     throw new Error(`FLASH_ADMIN_INVALID:坐标反查结果为${resolved.city ?? "未知城市"} ${resolved.district ?? "未知区"}，与深圳 ${value.district}不一致`);
   }
-}
-
-async function verifyBuiltinLocationSeed(location: (typeof FLASH_LOCATION_SEEDS)[number]): Promise<void> {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    try {
-      await verifyApprovedShenzhenCoordinate({
-        approvalStatus: "approved",
-        isActive: true,
-        district: location.district,
-        latitude: location.latitude,
-        longitude: location.longitude,
-      });
-      return;
-    } catch (error) {
-      lastError = error;
-      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 350 * attempt));
-    }
-  }
-  const detail = lastError instanceof Error ? lastError.message.replace(/^FLASH_ADMIN_INVALID:/, "") : "地图校验失败";
-  throw new Error(`FLASH_ADMIN_INVALID:${location.name}：${detail}`);
 }
 
 function normalizeFeedbackPrompts(prompts: z.infer<typeof feedbackPromptSchema>[]): FlashFeedbackPrompt[] {
@@ -413,6 +442,13 @@ function audit(
   });
 }
 
+function retiredFlashTaskAdmin(_req: any, res: any) {
+  return res.status(410).json({
+    code: "FLASH_TASK_FLOW_RETIRED",
+    error: "旧任务库已转为历史只读，请在第一季故事中维护正式内容",
+  });
+}
+
 function validationFailure(res: any, error: z.ZodError) {
   return res.status(400).json({
     code: "FLASH_ADMIN_INVALID_INPUT",
@@ -423,11 +459,7 @@ function validationFailure(res: any, error: z.ZodError) {
 
 function routeFailure(req: any, res: any, label: string, error: unknown) {
   if (error instanceof TencentMapValidationError) {
-    const responseByCategory: Record<TencentMapValidationErrorCategory, {
-      status: number;
-      code: string;
-      message: string;
-    }> = {
+    const response = {
       RATE_LIMIT_QPS: {
         status: 429,
         code: "FLASH_ADMIN_MAP_QPS_LIMIT_REACHED",
@@ -445,76 +477,49 @@ function routeFailure(req: any, res: any, label: string, error: unknown) {
       },
       KEY_NOT_ENABLED: {
         status: 503,
-        code: "FLASH_ADMIN_MAP_WEBSERVICE_NOT_ENABLED",
+        code: "FLASH_ADMIN_MAP_KEY_NOT_ENABLED",
         message: "腾讯地图 WebService 未开启",
       },
       PERMISSION_ERROR: {
         status: 503,
-        code: "FLASH_ADMIN_MAP_PERMISSION_ERROR",
+        code: "FLASH_ADMIN_MAP_PERMISSION",
         message: "腾讯地图权限配置异常",
       },
       SIGNATURE_ERROR: {
         status: 503,
-        code: "FLASH_ADMIN_MAP_SIGNATURE_ERROR",
+        code: "FLASH_ADMIN_MAP_SIGNATURE",
         message: "腾讯地图签名配置异常",
       },
       REQUEST_ERROR: {
-        status: 502,
-        code: "FLASH_ADMIN_MAP_REQUEST_ERROR",
-        message: "腾讯地图请求参数异常",
+        status: 400,
+        code: "FLASH_ADMIN_MAP_INVALID_PARAMETERS",
+        message: "腾讯地图拒绝了校验参数，请检查地点坐标后重试",
       },
       NETWORK_ERROR: {
         status: 503,
-        code: "FLASH_ADMIN_MAP_NETWORK_ERROR",
+        code: "FLASH_ADMIN_MAP_NETWORK",
         message: "腾讯地图服务连接失败",
       },
       UPSTREAM_UNKNOWN: {
         status: 502,
-        code: "FLASH_ADMIN_MAP_UPSTREAM_UNKNOWN",
-        message: "腾讯地图返回未知错误，请联系管理员检查服务日志",
+        code: "FLASH_ADMIN_MAP_UPSTREAM",
+        message: "腾讯地图返回未识别错误，请按请求编号查询服务端诊断日志",
       },
-    };
-    const mapped = responseByCategory[error.category];
-    logger.error(`[FlashAdmin] ${label}`, {
-      requestId: error.requestId ?? req.requestId,
-      provider: error.provider,
+    }[error.category];
+    return res.status(response.status).json({
+      code: response.code,
       category: error.category,
-      httpStatus: error.httpStatus,
-      tencentStatus: error.tencentStatus,
-      tencentMessage: error.tencentMessage,
-      adminId: getActingAdminId(req),
-    });
-    return res.status(mapped.status).json({
-      code: mapped.code,
-      category: error.category,
-      message: mapped.message,
+      message: response.message,
     });
   }
   const message = error instanceof Error ? error.message : String(error);
-  const databaseError = error as { code?: string; constraint?: string; stack?: string };
-  logger.error(`[FlashAdmin] ${label}`, {
-    error: message,
-    errorCode: databaseError?.code,
-    constraint: databaseError?.constraint,
-    requestId: req.requestId,
-    adminId: getActingAdminId(req),
-  });
+  logger.error(`[FlashAdmin] ${label}`, { error: message, adminId: getActingAdminId(req) });
   if (message.startsWith("FLASH_ADMIN_")) {
     const [code, statusText] = message.split(":", 2);
     const status = code.includes("NOT_FOUND") ? 404 : code.includes("CONFLICT") ? 409 : 400;
     return res.status(status).json({ code, message: statusText || "操作没有完成" });
   }
-  if (databaseError?.code === "23505") {
-    return res.status(409).json({ code: "FLASH_ADMIN_CONFLICT", message: "任务编号或关联记录已存在，请刷新后重试" });
-  }
-  if (["23503", "23514", "22P02"].includes(databaseError?.code ?? "")) {
-    return res.status(400).json({ code: "FLASH_ADMIN_INVALID", message: "任务数据或关联项已经失效，请刷新后重新选择" });
-  }
-  return res.status(500).json({
-    code: "FLASH_ADMIN_FAILED",
-    message: "操作没有完成，请稍后再试",
-    requestId: req.requestId,
-  });
+  return res.status(500).json({ code: "FLASH_ADMIN_FAILED", message: "操作没有完成，请稍后再试" });
 }
 
 async function enrichedNpcs(executor: any = db) {
@@ -668,10 +673,6 @@ async function assertTaskCanActivate(taskId: string, executor: any = db) {
   if (!npcLinks.some((link: any) => link.taskTemplateId === taskId && link.isActive)) {
     throw new Error("FLASH_ADMIN_CONFLICT:任务至少需要关联一位 NPC");
   }
-  // The reviewed built-in life invitations and digital-NPC relay stories are
-  // intentionally destination-free. Legacy destination_exploration templates
-  // retain the approved-destination activation requirement.
-  if (isDestinationFreeFlashInvitation({ code: task.code, tags: task.tags })) return;
   const readyDestinationIds = new Set(destinations
     .filter((destination: any) => destination.isActive && destination.approvalStatus === "approved")
     .map((destination: any) => destination.id));
@@ -729,37 +730,59 @@ export function registerAdminAlangRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/admin/alang/catalog/seed", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+  app.get("/api/admin/alang/test-arrival", requireAdmin, async (_req, res) => {
+    const available = (process.env.APP_MODE ?? "production") !== "production";
+    const configured = await getFeatureFlag("flashAnyLocationArrivalTestEnabled", false);
+    res.json({ available, enabled: available && configured });
+  });
+
+  app.put("/api/admin/alang/test-arrival", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    const parsed = z.object({ enabled: z.boolean() }).strict().safeParse(req.body);
+    if (!parsed.success) return void validationFailure(res, parsed.error);
+    if ((process.env.APP_MODE ?? "production") === "production") {
+      return void res.status(403).json({
+        code: "FLASH_TEST_ARRIVAL_PRODUCTION_FORBIDDEN",
+        message: "生产环境不允许跳过实际到达校验",
+      });
+    }
     try {
-      if (process.env.APP_MODE !== "staging") {
-        res.status(403).json({ code: "FLASH_SEED_STAGING_ONLY", message: "正式目录初始化仅允许在 staging 执行" });
-        return;
-      }
+      const key = "flashAnyLocationArrivalTestEnabled";
+      const before = await getFeatureFlag(key, false);
+      const adminId = getActingAdminId(req);
+      await db.insert(featureFlags).values({
+        key,
+        value: String(parsed.data.enabled),
+        description: "街头盲盒非生产环境任意地点到达测试",
+        updatedBy: adminId,
+      }).onConflictDoUpdate({
+        target: featureFlags.key,
+        set: {
+          value: String(parsed.data.enabled),
+          description: "街头盲盒非生产环境任意地点到达测试",
+          updatedAt: new Date(),
+          updatedBy: adminId,
+        },
+      });
+      await refreshFeatureFlag(key);
+      audit(req, "FEATURE_FLAG_UPDATED", "feature_flag", key,
+        { enabled: before }, { enabled: parsed.data.enabled });
+      res.json({ available: true, enabled: parsed.data.enabled });
+    } catch (error) {
+      routeFailure(req, res, "test arrival toggle failed", error);
+    }
+  });
+
+  app.post("/api/admin/alang/catalog/seed", requireAdmin, requireSuperAdmin, async (req, res) => {
+    try {
       const readiness = await getFlashFeatureReadiness();
       if (!readiness.schemaReady) {
         res.status(503).json({ code: "FLASH_SCHEMA_NOT_READY", message: "请先完成并核验数据库迁移" });
         return;
       }
-      const verifiedLocationKeys = new Set<string>();
-      const verificationFailures: Array<{ name: string; district: string }> = [];
-      for (const location of FLASH_LOCATION_SEEDS) {
-        try {
-          await verifyBuiltinLocationSeed(location);
-          verifiedLocationKeys.add(`${location.district}:${location.name}`);
-        } catch {
-          verificationFailures.push({ name: location.name, district: location.district });
-        }
-      }
-      const catalog = await seedBuiltinFlashCatalog();
-      const locations = await seedBuiltinFlashLocations(getActingAdminId(req), verifiedLocationKeys);
-      const result = { ...catalog, ...locations, verificationFailures };
+      const result = await seedBuiltinFlashCatalog();
       audit(req, "FLASH_CATALOG_SEEDED", "flash_catalog", "builtin-v1", undefined, {
         npcCount: result.npcCount,
         taskCount: result.taskCount,
-        encounterCount: result.encounterCount,
-        destinationCount: result.destinationCount,
-        approvedLocationCount: result.approvedLocationCount,
-        draftLocationCount: result.draftLocationCount,
       });
       res.json(result);
     } catch (error) {
@@ -882,14 +905,14 @@ export function registerAdminAlangRoutes(app: Express): void {
       const actor = getActingAdminId(req);
       const locations = await enrichedEncounterLocations();
       const current = locations.find((location: any) => location.id === req.params.id);
-      if (!current) throw new Error("FLASH_ADMIN_NOT_FOUND:没有找到街头盲盒地点");
+      if (!current) throw new Error("FLASH_ADMIN_NOT_FOUND:没有找到闪现地点");
       const reviewBoundFields = ["name", "district", "address", "latitude", "longitude", "availabilityWindows", "safetyNotes", "npcIds"] as const;
       const reviewBoundContentChanged = reviewBoundFields.some((key) => parsed.data[key] !== undefined);
       const requiresFreshReview = current.approvalStatus === "approved" && reviewBoundContentChanged;
       const valuesWithReview = {
         ...parsed.data,
         ...(requiresFreshReview ? {
-          approvalStatus: "draft" as const,
+          approvalStatus: "pending_review" as const,
           isActive: false,
           lastReviewedAt: null,
           reviewedBy: null,
@@ -910,7 +933,7 @@ export function registerAdminAlangRoutes(app: Express): void {
       const { npcIds, ...values } = valuesWithReview;
       const updated = await db.transaction(async (tx: any) => {
         const row = await updateFlashEncounterLocation(req.params.id, values as any, tx);
-        if (!row) throw new Error("FLASH_ADMIN_NOT_FOUND:没有找到街头盲盒地点");
+        if (!row) throw new Error("FLASH_ADMIN_NOT_FOUND:没有找到闪现地点");
         if (npcIds) await replaceFlashNpcLocationLinks(row.id, npcIds, tx);
         return row;
       });
@@ -932,7 +955,7 @@ export function registerAdminAlangRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/admin/alang/task-destinations", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+  app.post("/api/admin/alang/task-destinations", requireAdmin, requireOperatorOrAbove, retiredFlashTaskAdmin, async (req, res) => {
     const parsed = taskDestinationCreateSchema.safeParse(req.body);
     if (!parsed.success) return void validationFailure(res, parsed.error);
     try {
@@ -951,7 +974,7 @@ export function registerAdminAlangRoutes(app: Express): void {
     }
   });
 
-  app.patch("/api/admin/alang/task-destinations/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+  app.patch("/api/admin/alang/task-destinations/:id", requireAdmin, requireOperatorOrAbove, retiredFlashTaskAdmin, async (req, res) => {
     const parsed = taskDestinationPatchSchema.safeParse(req.body);
     if (!parsed.success) return void validationFailure(res, parsed.error);
     try {
@@ -1013,7 +1036,7 @@ export function registerAdminAlangRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/admin/alang/task-templates", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+  app.post("/api/admin/alang/task-templates", requireAdmin, requireOperatorOrAbove, retiredFlashTaskAdmin, async (req, res) => {
     const parsed = taskTemplateCreateSchema.safeParse(req.body);
     if (!parsed.success) return void validationFailure(res, parsed.error);
     if (parsed.data.isHumanReviewed) {
@@ -1057,7 +1080,7 @@ export function registerAdminAlangRoutes(app: Express): void {
     }
   });
 
-  app.patch("/api/admin/alang/task-templates/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+  app.patch("/api/admin/alang/task-templates/:id", requireAdmin, requireOperatorOrAbove, retiredFlashTaskAdmin, async (req, res) => {
     const parsed = taskTemplatePatchSchema.safeParse(req.body);
     if (!parsed.success) return void validationFailure(res, parsed.error);
     try {
@@ -1070,7 +1093,6 @@ export function registerAdminAlangRoutes(app: Express): void {
         throw new Error("FLASH_ADMIN_CONFLICT:请先保存内容修改，再重新打开并核对各 NPC 的最终话术后审核");
       }
       const reviewed = isHumanReviewed ?? (contentChanged ? false : current.isHumanReviewed);
-      const now = new Date();
       const updated = await db.transaction(async (tx: any) => {
         const desiredActive = contentChanged && !reviewed ? false : isActive;
         const row = await updateFlashTaskTemplate(req.params.id, expectedContentVersion, {
@@ -1082,7 +1104,7 @@ export function registerAdminAlangRoutes(app: Express): void {
             isHumanReviewed: reviewed,
             reviewStatus: reviewed ? "active" : "pending_review",
             reviewedBy: reviewed ? actor : null,
-            reviewedAt: reviewed ? now : null,
+            reviewedAt: reviewed ? new Date() : null,
           } : {}),
           ...(desiredActive !== undefined ? { isActive: desiredActive } : {}),
         } as any, tx);
@@ -1106,7 +1128,7 @@ export function registerAdminAlangRoutes(app: Express): void {
         }
         if (destinationIds) await replaceFlashTaskDestinationLinks(row.id, destinationIds, tx);
         if ((desiredActive ?? current.isActive) === true) await assertTaskCanActivate(row.id, tx);
-        const withdrawnOfferCount = await withdrawOfferedFlashEncountersForTaskTemplate(row.id, now, tx);
+        const withdrawnOfferCount = await withdrawOfferedFlashEncountersForTaskTemplate(row.id, new Date(), tx);
         return { row, withdrawnOfferCount };
       });
       const final = (await enrichedTaskTemplates()).find((task: any) => task.id === req.params.id);
@@ -1368,6 +1390,53 @@ export function registerAdminAlangRoutes(app: Express): void {
       res.json(await enrichSchedule(result));
     } catch (error) {
       routeFailure(req, res, "schedule publish failed", error);
+    }
+  });
+
+  app.get("/api/admin/alang/story", requireAdmin, async (_req, res) => {
+    try {
+      res.json(await listFlashStoryAdmin());
+    } catch (error) {
+      routeFailure(_req, res, "story list failed", error);
+    }
+  });
+
+  app.patch("/api/admin/alang/story/episodes/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    const parsed = storyEpisodePatchSchema.safeParse(req.body);
+    if (!parsed.success) return void validationFailure(res, parsed.error);
+    const { expectedVersion, fragment, ...values } = parsed.data;
+    try {
+      const before = (await listFlashStoryAdmin()).episodes.find((item: any) => item.episode.id === req.params.id)?.episode;
+      const updated = await updateFlashStoryEpisode(req.params.id, expectedVersion, values, fragment);
+      if (!updated) return void res.status(409).json({ code: "FLASH_STORY_VERSION_CONFLICT", error: "内容已被其他人修改，请刷新后再试" });
+      audit(req, "FLASH_STORY_EPISODE_UPDATED", "flash_story_episode", updated.id, before, updated);
+      res.json(updated);
+    } catch (error) {
+      routeFailure(req, res, "story episode update failed", error);
+    }
+  });
+
+  app.post("/api/admin/alang/story/episodes/:id/review", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    const parsed = z.object({ expectedVersion: z.number().int().positive() }).strict().safeParse(req.body);
+    if (!parsed.success) return void validationFailure(res, parsed.error);
+    try {
+      const updated = await reviewFlashStoryEpisode(req.params.id, parsed.data.expectedVersion);
+      if (!updated) return void res.status(409).json({ code: "FLASH_STORY_VERSION_CONFLICT", error: "内容版本已变化，请刷新后重新审核" });
+      audit(req, "FLASH_STORY_EPISODE_REVIEWED", "flash_story_episode", updated.id, undefined, { contentVersion: updated.contentVersion });
+      res.json(updated);
+    } catch (error) {
+      routeFailure(req, res, "story episode review failed", error);
+    }
+  });
+
+  app.post("/api/admin/alang/story/seasons/:id/publish", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      const published = await publishFlashStorySeason(req.params.id, getActingAdminId(req));
+      if (!published) return void res.status(409).json({ code: "FLASH_STORY_INCOMPLETE", error: "必须正好有 15 个启用且已审核的故事单元才能发布" });
+      audit(req, "FLASH_STORY_SEASON_PUBLISHED", "flash_story_season", published.id, undefined, { version: published.version });
+      res.json(published);
+    } catch (error) {
+      routeFailure(req, res, "story season publish failed", error);
     }
   });
 }

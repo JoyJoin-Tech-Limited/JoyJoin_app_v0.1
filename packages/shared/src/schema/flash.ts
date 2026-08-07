@@ -38,18 +38,17 @@ export type FlashAvailabilityWindow = {
 
 export type FlashTaskSnapshot = {
   templateVersion: number;
+  invitationType?: "destination_exploration" | "life_invitation" | "npc_message";
+  followUpTargetNpcSlug?: string;
+  followUpTargetNpcName?: string;
+  messageCopy?: string;
+  deliveryCopy?: string;
   code: string;
   category: string;
   title: string;
   brief: string;
   instructions: string;
   dialogueIntro: string;
-  /** NPC-specific acknowledgement captured with the accepted task version. */
-  deliveryCopy?: string;
-  invitationType?: "destination_exploration" | "life_invitation" | "npc_message";
-  followUpTargetNpcSlug?: string;
-  followUpTargetNpcName?: string;
-  messageCopy?: string;
   feedbackPrompts: FlashFeedbackPrompt[];
   npcName: string;
   npcSlug: string;
@@ -62,6 +61,21 @@ export type FlashTaskSnapshot = {
     longitude: number;
     coordinateSystem: "gcj02";
   } | null;
+};
+
+export type FlashStoryContent = {
+  opening: string;
+  action: string;
+  discovery: string;
+  question: FlashDialogueQuestion;
+  responseByOption: Record<string, string>;
+  closing: string;
+};
+
+export type FlashStoryMotion = {
+  ambient: "none" | "breathe" | "drift";
+  blinkAssetUrl?: string;
+  blinkIntervalSeconds?: number;
 };
 
 export const flashNpcs = pgTable("flash_npcs", {
@@ -115,7 +129,7 @@ export const flashEncounterLocations = pgTable("flash_encounter_locations", {
   check("ck_flash_encounter_locations_city", sql`${table.city} = '深圳'`),
   check("ck_flash_encounter_locations_coordinate_system", sql`${table.coordinateSystem} = 'gcj02'`),
   check("ck_flash_encounter_locations_bounds", sql`${table.latitude} between 22.35 and 22.95 and ${table.longitude} between 113.7 and 114.75`),
-  check("ck_flash_encounter_locations_approval", sql`${table.approvalStatus} in ('draft', 'approved', 'rejected')`),
+  check("ck_flash_encounter_locations_approval", sql`${table.approvalStatus} in ('draft', 'pending_review', 'approved', 'rejected')`),
   check("ck_flash_encounter_locations_availability", sql`jsonb_typeof(${table.availabilityWindows}) = 'array' and jsonb_array_length(${table.availabilityWindows}) > 0`),
 ]);
 
@@ -130,8 +144,6 @@ export const flashNpcLocationLinks = pgTable("flash_npc_location_links", {
 }, (table) => [
   uniqueIndex("uq_flash_npc_location_link").on(table.npcId, table.locationId),
   index("idx_flash_npc_location_active").on(table.npcId, table.isActive),
-  index("idx_flash_npc_location_location").on(table.locationId),
-  check("ck_flash_npc_location_weight", sql`${table.weight} > 0`),
 ]);
 
 export const flashSchedulePlans = pgTable("flash_schedule_plans", {
@@ -204,7 +216,7 @@ export const flashTaskDestinations = pgTable("flash_task_destinations", {
   check("ck_flash_task_destinations_city", sql`${table.city} = '深圳'`),
   check("ck_flash_task_destinations_coordinate_system", sql`${table.coordinateSystem} = 'gcj02'`),
   check("ck_flash_task_destinations_bounds", sql`${table.latitude} between 22.35 and 22.95 and ${table.longitude} between 113.7 and 114.75`),
-  check("ck_flash_task_destinations_approval", sql`${table.approvalStatus} in ('draft', 'approved', 'rejected')`),
+  check("ck_flash_task_destinations_approval", sql`${table.approvalStatus} in ('draft', 'pending_review', 'approved', 'rejected')`),
 ]);
 
 export const flashTaskTemplates = pgTable("flash_task_templates", {
@@ -236,7 +248,6 @@ export const flashTaskTemplates = pgTable("flash_task_templates", {
   check("ck_flash_task_templates_review_status", sql`${table.reviewStatus} in ('draft', 'pending_review', 'active', 'suspended')`),
   check("ck_flash_task_templates_safety", sql`${table.safetyLevel} in ('L1', 'L2')`),
   check("ck_flash_task_templates_duration", sql`${table.durationDays} = 7`),
-  check("ck_flash_task_templates_base_weight", sql`${table.baseWeight} > 0`),
 ]);
 
 export const flashNpcTaskLinks = pgTable("flash_npc_task_links", {
@@ -252,8 +263,6 @@ export const flashNpcTaskLinks = pgTable("flash_npc_task_links", {
 }, (table) => [
   uniqueIndex("uq_flash_npc_task_link").on(table.npcId, table.taskTemplateId),
   index("idx_flash_npc_task_active").on(table.npcId, table.isActive),
-  index("idx_flash_npc_task_template").on(table.taskTemplateId),
-  check("ck_flash_npc_task_weight", sql`${table.weight} > 0`),
 ]);
 
 export const flashTaskDestinationLinks = pgTable("flash_task_destination_links", {
@@ -267,8 +276,66 @@ export const flashTaskDestinationLinks = pgTable("flash_task_destination_links",
 }, (table) => [
   uniqueIndex("uq_flash_task_destination_link").on(table.taskTemplateId, table.destinationId),
   index("idx_flash_task_destination_active").on(table.taskTemplateId, table.isActive),
-  index("idx_flash_task_destination_destination").on(table.destinationId),
-  check("ck_flash_task_destination_weight", sql`${table.weight} > 0`),
+]);
+
+export const flashStorySeasons = pgTable("flash_story_seasons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 60 }).notNull(),
+  title: varchar("title", { length: 120 }).notNull(),
+  premise: text("premise").notNull(),
+  status: varchar("status", { length: 24 }).notNull().default("draft"),
+  version: integer("version").notNull().default(1),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  publishedBy: varchar("published_by", { length: 120 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("uq_flash_story_seasons_code").on(table.code),
+  index("idx_flash_story_seasons_status").on(table.status, table.publishedAt),
+  check("ck_flash_story_seasons_status", sql`${table.status} in ('draft', 'published', 'archived')`),
+  check("ck_flash_story_seasons_version", sql`${table.version} > 0`),
+]);
+
+export const flashStoryEpisodes = pgTable("flash_story_episodes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  seasonId: varchar("season_id").notNull().references(() => flashStorySeasons.id, { onDelete: "cascade" }),
+  npcId: varchar("npc_id").notNull().references(() => flashNpcs.id),
+  code: varchar("code", { length: 80 }).notNull(),
+  phase: integer("phase").notNull(),
+  sortOrder: integer("sort_order").notNull(),
+  title: varchar("title", { length: 120 }).notNull(),
+  objectCode: varchar("object_code", { length: 60 }).notNull(),
+  content: jsonb("content").notNull().$type<FlashStoryContent>(),
+  motion: jsonb("motion").notNull().default(sql`'{"ambient":"breathe"}'::jsonb`).$type<FlashStoryMotion>(),
+  reviewStatus: varchar("review_status", { length: 24 }).notNull().default("draft"),
+  contentVersion: integer("content_version").notNull().default(1),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("uq_flash_story_episode_code").on(table.seasonId, table.code),
+  uniqueIndex("uq_flash_story_episode_phase_npc").on(table.seasonId, table.phase, table.npcId),
+  index("idx_flash_story_episode_runtime").on(table.seasonId, table.phase, table.isActive, table.reviewStatus),
+  check("ck_flash_story_episode_phase", sql`${table.phase} between 1 and 3`),
+  check("ck_flash_story_episode_review", sql`${table.reviewStatus} in ('draft', 'reviewed')`),
+  check("ck_flash_story_episode_version", sql`${table.contentVersion} > 0`),
+]);
+
+export const flashStoryFragments = pgTable("flash_story_fragments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  episodeId: varchar("episode_id").notNull().references(() => flashStoryEpisodes.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 80 }).notNull(),
+  category: varchar("category", { length: 24 }).notNull(),
+  title: varchar("title", { length: 120 }).notNull(),
+  fact: text("fact").notNull(),
+  assetUrl: text("asset_url"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("uq_flash_story_fragment_code").on(table.code),
+  index("idx_flash_story_fragment_episode").on(table.episodeId, table.sortOrder),
+  check("ck_flash_story_fragment_category", sql`${table.category} in ('object', 'past', 'relationship', 'key')`),
 ]);
 
 export const flashEncounters = pgTable("flash_encounters", {
@@ -276,6 +343,7 @@ export const flashEncounters = pgTable("flash_encounters", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   shiftId: varchar("shift_id").notNull().references(() => flashShifts.id),
   npcId: varchar("npc_id").notNull().references(() => flashNpcs.id),
+  storyEpisodeId: varchar("story_episode_id").references(() => flashStoryEpisodes.id),
   status: varchar("status", { length: 24 }).notNull().default("dialogue"),
   answers: jsonb("answers").notNull().default("[]").$type<Array<{ questionId: string; optionId: string; tags: string[] }>>(),
   currentQuestionIndex: integer("current_question_index").notNull().default(0),
@@ -292,14 +360,48 @@ export const flashEncounters = pgTable("flash_encounters", {
 }, (table) => [
   uniqueIndex("uq_flash_encounter_user_shift").on(table.userId, table.shiftId),
   index("idx_flash_encounters_user_status").on(table.userId, table.status),
-  index("idx_flash_encounters_shift").on(table.shiftId),
-  index("idx_flash_encounters_npc").on(table.npcId),
-  index("idx_flash_encounters_offered_task").on(table.offeredTaskTemplateId),
-  index("idx_flash_encounters_offered_destination").on(table.offeredDestinationId),
-  index("idx_flash_encounters_first_offered_task").on(table.firstOfferedTaskTemplateId),
   index("idx_flash_encounters_expiry").on(table.expiresAt),
   check("ck_flash_encounters_status", sql`${table.status} in ('dialogue', 'offered', 'accepted', 'declined', 'completed', 'expired')`),
-  check("ck_flash_encounters_reroll_count", sql`${table.rerollCount} between 0 and 1`),
+]);
+
+export const flashUserStoryProgress = pgTable("flash_user_story_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  seasonId: varchar("season_id").notNull().references(() => flashStorySeasons.id, { onDelete: "cascade" }),
+  currentPhase: integer("current_phase").notNull().default(1),
+  status: varchar("status", { length: 24 }).notNull().default("active"),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("uq_flash_user_story_progress").on(table.userId, table.seasonId),
+  index("idx_flash_user_story_progress_status").on(table.userId, table.status),
+  check("ck_flash_user_story_phase", sql`${table.currentPhase} between 1 and 3`),
+  check("ck_flash_user_story_status", sql`${table.status} in ('active', 'completed')`),
+]);
+
+export const flashUserStoryEpisodes = pgTable("flash_user_story_episodes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  episodeId: varchar("episode_id").notNull().references(() => flashStoryEpisodes.id, { onDelete: "cascade" }),
+  encounterId: varchar("encounter_id").notNull().references(() => flashEncounters.id),
+  selectedOptionId: varchar("selected_option_id", { length: 80 }).notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("uq_flash_user_story_episode").on(table.userId, table.episodeId),
+  uniqueIndex("uq_flash_user_story_encounter").on(table.encounterId),
+  index("idx_flash_user_story_episode_user").on(table.userId, table.completedAt),
+]);
+
+export const flashUserStoryFragments = pgTable("flash_user_story_fragments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  fragmentId: varchar("fragment_id").notNull().references(() => flashStoryFragments.id, { onDelete: "cascade" }),
+  episodeId: varchar("episode_id").notNull().references(() => flashStoryEpisodes.id, { onDelete: "cascade" }),
+  unlockedAt: timestamp("unlocked_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("uq_flash_user_story_fragment").on(table.userId, table.fragmentId),
+  index("idx_flash_user_story_fragments_user").on(table.userId, table.unlockedAt),
 ]);
 
 // Shared, coordinate-free probing budget for hidden encounter locations.
@@ -315,7 +417,6 @@ export const flashLocateBudgets = pgTable("flash_locate_budgets", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("uq_flash_locate_budget_user_shift").on(table.userId, table.shiftId),
-  index("idx_flash_locate_budget_shift").on(table.shiftId),
   index("idx_flash_locate_budget_cleanup").on(table.updatedAt),
   check("ck_flash_locate_budget_count", sql`${table.attemptCount} >= 1`),
 ]);
@@ -327,7 +428,7 @@ export const flashTaskAssignments = pgTable("flash_task_assignments", {
   encounterId: varchar("encounter_id").notNull().references(() => flashEncounters.id),
   deliveryEncounterId: varchar("delivery_encounter_id").references(() => flashEncounters.id),
   taskTemplateId: varchar("task_template_id").notNull().references(() => flashTaskTemplates.id),
-  destinationId: varchar("destination_id").references(() => flashTaskDestinations.id),
+  destinationId: varchar("destination_id").notNull().references(() => flashTaskDestinations.id),
   status: varchar("status", { length: 32 }).notNull().default("accepted"),
   contentSnapshot: jsonb("content_snapshot").notNull().$type<FlashTaskSnapshot>(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -347,15 +448,10 @@ export const flashTaskAssignments = pgTable("flash_task_assignments", {
     .on(table.userId, table.npcId)
     .where(sql`${table.status} in ('accepted', 'arrived', 'ready_to_deliver')`),
   index("idx_flash_assignments_user_status").on(table.userId, table.status),
-  index("idx_flash_assignments_npc").on(table.npcId),
-  index("idx_flash_assignments_task_template").on(table.taskTemplateId),
-  index("idx_flash_assignments_destination").on(table.destinationId),
   index("idx_flash_assignments_delivery_encounter").on(table.deliveryEncounterId),
   index("idx_flash_assignments_expiry").on(table.expiresAt),
   index("idx_flash_assignments_private_reply_cleanup").on(table.privateReplyDeleteAfter),
   check("ck_flash_assignments_status", sql`${table.status} in ('accepted', 'arrived', 'ready_to_deliver', 'delivered', 'expired', 'abandoned', 'withdrawn')`),
-  check("ck_flash_assignments_private_reply_length", sql`${table.privateReply} is null or char_length(${table.privateReply}) <= 100`),
-  check("ck_flash_assignments_private_reply_retention", sql`(${table.privateReply} is null and ${table.privateReplyDeleteAfter} is null) or (${table.privateReply} is not null and ${table.privateReplyDeleteAfter} is not null)`),
 ]);
 
 export const flashUserPreferences = pgTable("flash_user_preferences", {
@@ -400,8 +496,6 @@ export const flashNpcRelationships = pgTable("flash_npc_relationships", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("uq_flash_npc_relationship").on(table.userId, table.npcId),
-  index("idx_flash_npc_relationships_npc").on(table.npcId),
-  check("ck_flash_npc_relationships_counts", sql`${table.completedCount} >= 0 and ${table.encounterCount} >= 0`),
 ]);
 
 export const insertFlashNpcSchema = createInsertSchema(flashNpcs).omit({ id: true, createdAt: true, updatedAt: true });
@@ -410,6 +504,8 @@ export const insertFlashTaskDestinationSchema = createInsertSchema(flashTaskDest
 export const insertFlashTaskTemplateSchema = createInsertSchema(flashTaskTemplates).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertFlashSchedulePlanSchema = createInsertSchema(flashSchedulePlans).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertFlashShiftSchema = createInsertSchema(flashShifts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFlashStorySeasonSchema = createInsertSchema(flashStorySeasons).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFlashStoryEpisodeSchema = createInsertSchema(flashStoryEpisodes).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type FlashNpc = typeof flashNpcs.$inferSelect;
 export type FlashEncounterLocation = typeof flashEncounterLocations.$inferSelect;
@@ -420,6 +516,9 @@ export type FlashTaskTemplate = typeof flashTaskTemplates.$inferSelect;
 export type FlashEncounter = typeof flashEncounters.$inferSelect;
 export type FlashLocateBudget = typeof flashLocateBudgets.$inferSelect;
 export type FlashTaskAssignment = typeof flashTaskAssignments.$inferSelect;
+export type FlashStorySeason = typeof flashStorySeasons.$inferSelect;
+export type FlashStoryEpisode = typeof flashStoryEpisodes.$inferSelect;
+export type FlashStoryFragment = typeof flashStoryFragments.$inferSelect;
 export type FlashUserPreference = typeof flashUserPreferences.$inferSelect;
 export type FlashUserTaskTag = typeof flashUserTaskTags.$inferSelect;
 

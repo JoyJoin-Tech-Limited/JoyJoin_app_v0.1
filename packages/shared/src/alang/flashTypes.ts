@@ -1,8 +1,9 @@
 import { z } from "zod";
+import type { FlashFeedbackPrompt } from "../schema/flash.js";
 
 export const FLASH_CITY = "深圳" as const;
 export const FLASH_COORDINATE_SYSTEM = "gcj02" as const;
-/** NPC encounter unlock radius. Kept separate from task-destination arrival. */
+/** NPC encounter unlock radius for the foreground map flow. */
 export const FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS = 10;
 /** Accepted-task destination arrival radius. */
 export const FLASH_ARRIVAL_RADIUS_METERS = 50;
@@ -20,6 +21,8 @@ export const FLASH_SHENZHEN_BOUNDS = {
 
 export const flashCanonicalScreenSchema = z.enum([
   "home",
+  "map",
+  /** @deprecated Accepted only when parsing snapshots from older clients. */
   "radar",
   "dialogue",
   "task",
@@ -103,7 +106,42 @@ export type FlashOnlineNpcDto = {
   locationAddress?: string;
   endsAt: string;
   remainingMinutes: number;
-  canonicalScreen: "radar";
+  canonicalScreen: "map";
+  story?: {
+    phase: number;
+    state: "available" | "completed_in_phase" | "season_completed";
+    episodeTitle: string | null;
+  } | null;
+};
+
+export type FlashStoryFragmentDto = {
+  id: string;
+  code: string;
+  category: "object" | "past" | "relationship" | "key";
+  title: string;
+  fact: string;
+  assetUrl: string | null;
+};
+
+export type FlashStoryEpisodeDto = {
+  id: string;
+  code: string;
+  seasonTitle: string;
+  phase: number;
+  title: string;
+  objectCode: string;
+  opening: string;
+  action: string;
+  discovery: string;
+  closing: string | null;
+  response: string | null;
+  motion: {
+    ambient: "none" | "breathe" | "drift";
+    blinkAssetUrl?: string;
+    blinkIntervalSeconds?: number;
+  };
+  fragment: FlashStoryFragmentDto | null;
+  progress: { completedInPhase: number; totalInPhase: number; completedTotal: number; total: number };
 };
 
 export type FlashTaskDestinationDto = {
@@ -126,11 +164,7 @@ export type FlashTaskDto = {
   instructions: string;
   invitationType?: "destination_exploration" | "life_invitation" | "npc_message";
   followUpTargetNpc?: { slug: string; name: string } | null;
-  followUpPrompts?: Array<{
-    id: string;
-    prompt: string;
-    options: Array<{ id: string; label: string }>;
-  }>;
+  followUpPrompts?: FlashFeedbackPrompt[];
   destination: FlashTaskDestinationDto | null;
   status: "accepted" | "arrived" | "ready_to_deliver" | "delivered" | "expired" | "abandoned" | "withdrawn";
   expiresAt: string;
@@ -176,14 +210,13 @@ export type FlashLocateResponse = {
     longitude: number;
     coordinateSystem: typeof FLASH_COORDINATE_SYSTEM;
   };
-  signal: "searching" | "arrived";
-  arrived: boolean;
   distanceMeters: number;
-  /** Bearing clockwise from true north; the client combines it with compass heading. */
   targetBearingDegrees: number;
   proximityBand: "far" | "approaching" | "near" | "arrived";
+  signal: "searching" | "arrived";
+  arrived: boolean;
   encounterId: string | null;
-  canonicalScreen: "radar" | "dialogue" | "delivery" | "unavailable";
+  canonicalScreen: "map" | "dialogue" | "delivery" | "unavailable";
 };
 
 export type FlashTaskOfferDto = {
@@ -219,10 +252,7 @@ export type FlashEncounterResponse = {
   question: FlashDialogueQuestionDto | null;
   questionPosition: { current: number; total: number } | null;
   offer: FlashTaskOfferDto | null;
-  /** Present only on the successful delivery response; never sourced from private reply text. */
-  deliveryMessage?: string | null;
-  /** Optional server-owned recovery/closing copy for non-interactive states. */
-  message?: string | null;
+  storyEpisode?: FlashStoryEpisodeDto | null;
   canonicalScreen: FlashCanonicalScreen;
 };
 
@@ -242,7 +272,6 @@ export type FlashReadinessResponse = {
   counts: {
     activeNpcs: number;
     canonicalNpcs: number;
-    canonicalWeekdayNpcs: number;
     schedulableNpcs: number;
     taskReadyNpcs: number;
     reviewedTasks: number;
@@ -250,6 +279,9 @@ export type FlashReadinessResponse = {
     approvedTaskDestinations: number;
     linkedTasks: number;
     readyTaskCategoryCounts: Record<string, number>;
+    publishedStorySeasons?: number;
+    reviewedStoryEpisodes?: number;
+    storyCoveredNpcs?: number;
   };
   blockers: string[];
 };
@@ -259,7 +291,6 @@ export type FlashApiErrorCode =
   | "FLASH_SCHEMA_NOT_READY"
   | "FLASH_CATALOG_NOT_READY"
   | "FLASH_LOCATION_REQUIRED"
-  | "FLASH_LOCATION_UNAVAILABLE"
   | "FLASH_OUTSIDE_SHENZHEN"
   | "FLASH_APPEARANCE_NOT_FOUND"
   | "FLASH_APPEARANCE_ENDED"
@@ -267,6 +298,7 @@ export type FlashApiErrorCode =
   | "FLASH_NOT_ARRIVED"
   | "FLASH_ENCOUNTER_NOT_FOUND"
   | "FLASH_ENCOUNTER_EXPIRED"
+  | "FLASH_STORY_NOT_AVAILABLE"
   | "FLASH_INVALID_DIALOGUE_OPTION"
   | "FLASH_REROLL_ALREADY_USED"
   | "FLASH_TASK_LIMIT_REACHED"

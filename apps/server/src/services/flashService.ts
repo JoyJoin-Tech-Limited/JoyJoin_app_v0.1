@@ -15,7 +15,6 @@ import {
 } from "@shared/alang/flashTypes";
 import { alangHaversineDistanceMeters } from "@shared/alang/testPointValidation";
 import type { FlashTaskSnapshot } from "@shared/schema";
-import { FLASH_TASK_SEEDS, resolveFlashDeliveryCopy } from "@shared/alang/flashCatalog";
 import { getFlashInvitationDefinition } from "@shared/alang/flashInvitationCatalog";
 
 import {
@@ -25,7 +24,6 @@ import {
   appendFlashEncounterAnswer,
   consumeFlashLocateBudget,
   declineFlashEncounter,
-  declineUnavailableFlashEncounterOffer,
   deleteFlashUserTag,
   deliverFlashAssignment,
   expireFlashEncounterIfNeeded,
@@ -55,9 +53,17 @@ import {
   updateFlashPreferences,
 } from "../repositories/flashRepo";
 import {
-  flashPrivateReplyDeliveryDeadline,
-  flashPrivateReplyPendingDeadline,
-} from "../lib/flashPrivacyPolicy";
+  completeFlashStoryEpisode,
+  ensureFlashStoryEpisodeForEncounter,
+  getCompletedFlashStorySeason,
+  getFlashStoryEncounterState,
+  getFlashStoryReadiness,
+  listFlashUserStoryFragments,
+} from "../repositories/flashStoryRepo";
+import {
+  isFlashShenzhenBoundaryAssetValid,
+  isFlashShenzhenBoundaryLicenseApproved,
+} from "../lib/flashShenzhenBoundary";
 
 export class FlashServiceError extends Error {
   constructor(
@@ -70,25 +76,39 @@ export class FlashServiceError extends Error {
   }
 }
 
+type MapCoordinate = { latitude: number; longitude: number };
+
+export function calculateFlashMapFrame(
+  current: MapCoordinate,
+  target: MapCoordinate,
+): Pick<FlashLocateResponse, "distanceMeters" | "targetBearingDegrees" | "proximityBand"> {
+  const distanceMeters = Math.max(0, Math.round(alangHaversineDistanceMeters(current, target)));
+  const currentLatitude = current.latitude * Math.PI / 180;
+  const targetLatitude = target.latitude * Math.PI / 180;
+  const longitudeDelta = (target.longitude - current.longitude) * Math.PI / 180;
+  const y = Math.sin(longitudeDelta) * Math.cos(targetLatitude);
+  const x = Math.cos(currentLatitude) * Math.sin(targetLatitude)
+    - Math.sin(currentLatitude) * Math.cos(targetLatitude) * Math.cos(longitudeDelta);
+  const targetBearingDegrees = Math.round((Math.atan2(y, x) * 180 / Math.PI + 360) % 360);
+  const proximityBand = distanceMeters <= FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS
+    ? "arrived"
+    : distanceMeters <= 100
+      ? "near"
+      : distanceMeters <= 300
+        ? "approaching"
+        : "far";
+  return { distanceMeters, targetBearingDegrees, proximityBand };
+}
+
 export function isLaterFlashDeliveryEncounter(
-  assignment: {
-    encounterId: string;
-    feedbackSubmittedAt: Date | null;
-    createdAt?: Date;
-    contentSnapshot?: FlashTaskSnapshot;
-  } | null,
+  assignment: { encounterId: string; feedbackSubmittedAt: Date | null } | null,
   encounter: { id: string; unlockedAt: Date },
 ): boolean {
-  const invitation = assignment?.contentSnapshot?.invitationType === "life_invitation"
-    || assignment?.contentSnapshot?.invitationType === "npc_message";
-  const checkpoint = invitation
-    ? assignment?.feedbackSubmittedAt ?? assignment?.createdAt
-    : assignment?.feedbackSubmittedAt;
   return Boolean(
     assignment
     && assignment.encounterId !== encounter.id
-    && checkpoint
-    && checkpoint <= encounter.unlockedAt,
+    && assignment.feedbackSubmittedAt
+    && assignment.feedbackSubmittedAt <= encounter.unlockedAt,
   );
 }
 
@@ -106,14 +126,14 @@ const DEFAULT_PREFERENCES = {
 export type UserPreferenceState = typeof DEFAULT_PREFERENCES;
 
 type FlashReadinessCounts = FlashReadinessResponse["counts"];
-type FlashRuntimeReadiness = {
-  tencentMapConfigured: boolean;
+type FlashBoundaryReadiness = {
+  assetValid: boolean;
+  licenseApproved: boolean;
 };
 
 const EMPTY_FLASH_READINESS_COUNTS: FlashReadinessCounts = {
   activeNpcs: 0,
   canonicalNpcs: 0,
-  canonicalWeekdayNpcs: 0,
   schedulableNpcs: 0,
   taskReadyNpcs: 0,
   reviewedTasks: 0,
@@ -121,18 +141,17 @@ const EMPTY_FLASH_READINESS_COUNTS: FlashReadinessCounts = {
   approvedTaskDestinations: 0,
   linkedTasks: 0,
   readyTaskCategoryCounts: {},
+  publishedStorySeasons: 0,
+  reviewedStoryEpisodes: 0,
+  storyCoveredNpcs: 0,
 };
 
-const REQUIRED_FLASH_TASK_CATEGORIES = [...new Set(FLASH_TASK_SEEDS.map((task) => task.category))];
-const BLOCKED_FLASH_RUNTIME: FlashRuntimeReadiness = { tencentMapConfigured: false };
-const FLASH_READINESS_CACHE_TTL_MS = 5_000;
-let flashReadinessCache: { value: FlashReadinessResponse; expiresAt: number } | null = null;
-let flashReadinessInFlight: Promise<FlashReadinessResponse> | null = null;
+const BLOCKED_FLASH_BOUNDARY: FlashBoundaryReadiness = { assetValid: false, licenseApproved: false };
 
 export function evaluateFlashFeatureReadiness(
   schemaReady: boolean,
   counts: FlashReadinessCounts = EMPTY_FLASH_READINESS_COUNTS,
-  runtime: FlashRuntimeReadiness = BLOCKED_FLASH_RUNTIME,
+  boundary: FlashBoundaryReadiness = BLOCKED_FLASH_BOUNDARY,
 ): FlashReadinessResponse {
   if (!schemaReady) {
     return {
@@ -143,44 +162,34 @@ export function evaluateFlashFeatureReadiness(
     };
   }
   const blockers: string[] = [];
-  if (!runtime.tencentMapConfigured) blockers.push("tencent_map_key_required");
+  if (!boundary.assetValid) blockers.push("shenzhen_boundary_asset_not_ready");
+  if (!boundary.licenseApproved) blockers.push("shenzhen_boundary_license_not_approved");
   if (counts.canonicalNpcs < 5) blockers.push("five_builtin_seed_npcs_required");
-  if (counts.canonicalWeekdayNpcs !== 5) blockers.push("canonical_npc_weekdays_required");
   if (counts.schedulableNpcs !== counts.activeNpcs) blockers.push("all_active_npcs_require_approved_locations");
-  if (counts.taskReadyNpcs !== counts.activeNpcs) blockers.push("all_active_npcs_require_ready_tasks");
-  if (counts.reviewedTasks < 30) blockers.push("thirty_human_reviewed_tasks_required");
   if (counts.approvedEncounterLocations < 1) blockers.push("approved_encounter_location_required");
-  if (counts.linkedTasks < 30) blockers.push("all_tasks_require_active_npc_links");
-  if (REQUIRED_FLASH_TASK_CATEGORIES.some((category) => (counts.readyTaskCategoryCounts[category] ?? 0) < 5)) {
-    blockers.push("six_categories_with_five_ready_tasks_required");
-  }
+  if ((counts.publishedStorySeasons ?? 0) !== 1) blockers.push("one_published_story_season_required");
+  if ((counts.reviewedStoryEpisodes ?? 0) !== 15) blockers.push("fifteen_reviewed_story_episodes_required");
+  if ((counts.storyCoveredNpcs ?? 0) < 5) blockers.push("five_story_npcs_required");
   return { schemaReady: true, ready: blockers.length === 0, counts, blockers };
 }
 
-async function loadFlashFeatureReadiness(): Promise<FlashReadinessResponse> {
+export async function getFlashFeatureReadiness(): Promise<FlashReadinessResponse> {
   const schemaReady = await isFlashSchemaReady();
   if (!schemaReady) return evaluateFlashFeatureReadiness(false);
+  const [catalogCounts, storyCounts] = await Promise.all([getFlashReadiness(), getFlashStoryReadiness()]);
   return evaluateFlashFeatureReadiness(
     true,
-    await getFlashReadiness(),
-    { tencentMapConfigured: Boolean(process.env.TENCENT_MAP_KEY?.trim()) },
+    {
+      ...catalogCounts,
+      publishedStorySeasons: storyCounts.publishedSeasons,
+      reviewedStoryEpisodes: storyCounts.reviewedEpisodes,
+      storyCoveredNpcs: storyCounts.coveredNpcs,
+    },
+    {
+      assetValid: isFlashShenzhenBoundaryAssetValid(),
+      licenseApproved: isFlashShenzhenBoundaryLicenseApproved(),
+    },
   );
-}
-
-export async function getFlashFeatureReadiness(): Promise<FlashReadinessResponse> {
-  if (process.env.NODE_ENV === "test") return loadFlashFeatureReadiness();
-  const now = Date.now();
-  if (flashReadinessCache && flashReadinessCache.expiresAt > now) return flashReadinessCache.value;
-  if (flashReadinessInFlight) return flashReadinessInFlight;
-  flashReadinessInFlight = loadFlashFeatureReadiness()
-    .then((value) => {
-      flashReadinessCache = { value, expiresAt: Date.now() + FLASH_READINESS_CACHE_TTL_MS };
-      return value;
-    })
-    .finally(() => {
-      flashReadinessInFlight = null;
-    });
-  return flashReadinessInFlight;
 }
 
 export async function assertFlashRuntimeReady(): Promise<void> {
@@ -253,12 +262,13 @@ function taskDto(row: any): FlashTaskDto {
 
 export async function getFlashHome(input: {
   userId: string;
+  latitude: number;
+  longitude: number;
   now?: Date;
 }): Promise<FlashHomeResponse> {
   const now = input.now ?? new Date();
-  const [appearances, assignments, preference, resumable] = await Promise.all([
+  const [appearances, preference, resumable] = await Promise.all([
     listOnlineFlashAppearances(now),
-    listUserFlashAssignments(input.userId, now),
     getFlashPreferences(input.userId),
     getLatestResumableFlashEncounter(input.userId, now),
   ]);
@@ -292,36 +302,16 @@ export async function getFlashHome(input: {
       locationAddress: row.locationAddress,
       endsAt: row.shiftEndsAt.toISOString(),
       remainingMinutes: Math.max(0, Math.ceil((row.shiftEndsAt.getTime() - now.getTime()) / 60_000)),
-      canonicalScreen: "radar" as const,
+      canonicalScreen: "map" as const,
     })),
-    myTasks: assignments.map(taskDto),
+    // Legacy assignments remain in storage for audit/history, but the formal
+    // story flow no longer exposes or creates task cards.
+    myTasks: [],
     preferenceSummary: preferenceDto(preference),
     canonicalScreen: resume?.canonicalScreen ?? "home",
     encounterId: resume?.id ?? null,
-    assignmentId: resume?.pendingDelivery?.id ?? null,
+    assignmentId: null,
   };
-}
-
-export function calculateFlashRadarFrame(
-  current: { latitude: number; longitude: number },
-  target: { latitude: number; longitude: number },
-): Pick<FlashLocateResponse, "distanceMeters" | "targetBearingDegrees" | "proximityBand"> {
-  const distanceMeters = Math.round(alangHaversineDistanceMeters(current, target));
-  const latitude1 = current.latitude * Math.PI / 180;
-  const latitude2 = target.latitude * Math.PI / 180;
-  const longitudeDelta = (target.longitude - current.longitude) * Math.PI / 180;
-  const y = Math.sin(longitudeDelta) * Math.cos(latitude2);
-  const x = Math.cos(latitude1) * Math.sin(latitude2)
-    - Math.sin(latitude1) * Math.cos(latitude2) * Math.cos(longitudeDelta);
-  const targetBearingDegrees = Math.round((Math.atan2(y, x) * 180 / Math.PI + 360) % 360);
-  const proximityBand = distanceMeters <= FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS
-    ? "arrived"
-    : distanceMeters <= 30
-      ? "near"
-      : distanceMeters <= 100
-        ? "approaching"
-        : "far";
-  return { distanceMeters, targetBearingDegrees, proximityBand };
 }
 
 export async function locateFlashAppearance(input: {
@@ -329,7 +319,6 @@ export async function locateFlashAppearance(input: {
   appearanceId: string;
   latitude: number;
   longitude: number;
-  contextDistrict: string;
   now?: Date;
   forceArrivalForTesting?: boolean;
 }): Promise<FlashLocateResponse> {
@@ -346,8 +335,8 @@ export async function locateFlashAppearance(input: {
   if (!locateBudget.allowed) {
     throw new FlashServiceError("FLASH_LOCATE_RATE_LIMITED", 429, "寻找得太频繁了，稍后再试");
   }
-  const radarFrame = calculateFlashRadarFrame(input, appearance);
-  if (!input.forceArrivalForTesting && radarFrame.distanceMeters > FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS) {
+  const mapFrame = calculateFlashMapFrame(input, appearance);
+  if (!input.forceArrivalForTesting && mapFrame.distanceMeters > FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS) {
     return {
       appearanceId: input.appearanceId,
       destination: {
@@ -355,32 +344,28 @@ export async function locateFlashAppearance(input: {
         longitude: appearance.longitude,
         coordinateSystem: "gcj02",
       },
+      ...mapFrame,
       signal: "searching",
       arrived: false,
-      ...radarFrame,
       encounterId: null,
-      canonicalScreen: "radar",
+      canonicalScreen: "map",
     };
   }
 
   const encounter = await getOrCreateFlashEncounter({
     userId: input.userId,
     appearance,
-    contextDistrict: input.contextDistrict,
+    contextDistrict: appearance.district,
     now,
     expiresAt: new Date(now.getTime() + FLASH_ENCOUNTER_TTL_HOURS * 60 * 60 * 1000),
   });
   if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 409, "这次相遇没有解锁成功");
-  const pendingCandidate = await getPendingFlashDelivery(
-    input.userId,
-    appearance.npcId,
-    appearance.npcSlug,
-    undefined,
-    input.forceArrivalForTesting ? encounter.id : undefined,
-  );
-  const pendingDelivery = (input.forceArrivalForTesting || isLaterFlashDeliveryEncounter(pendingCandidate, encounter))
-    ? pendingCandidate
-    : null;
+  await ensureFlashStoryEpisodeForEncounter({
+    encounterId: encounter.id,
+    userId: input.userId,
+    npcId: appearance.npcId,
+    now,
+  });
   return {
     appearanceId: input.appearanceId,
     destination: {
@@ -388,11 +373,11 @@ export async function locateFlashAppearance(input: {
       longitude: appearance.longitude,
       coordinateSystem: "gcj02",
     },
+    ...mapFrame,
     signal: "arrived",
     arrived: true,
-    ...radarFrame,
     encounterId: encounter.id,
-    canonicalScreen: pendingDelivery ? "delivery" : "dialogue",
+    canonicalScreen: "dialogue",
   };
 }
 
@@ -552,12 +537,12 @@ async function chooseFlashOffer(encounter: Awaited<ReturnType<typeof getFlashEnc
       calculatedWeight: calculateFlashCandidateWeight({
         baseWeight: candidate.baseWeight,
         npcWeight: candidate.npcWeight,
-        destinationWeight: candidate.destinationLinkWeight ?? 100,
-        candidateTags: [...candidate.tags, ...(candidate.destinationTags ?? [])],
+        destinationWeight: candidate.destinationLinkWeight,
+        candidateTags: [...candidate.tags, ...candidate.destinationTags],
         answerTags,
         userTagLabels,
         completionCount: completionCounts.get(candidate.taskTemplateId) ?? 0,
-        destinationDistrict: candidate.destinationDistrict ?? "",
+        destinationDistrict: candidate.destinationDistrict,
         contextDistrict: encounter.contextDistrict,
         useDistrict: preference.personalizationEnabled && preference.useDistrict,
       }),
@@ -573,49 +558,95 @@ export async function getFlashEncounter(input: {
 }): Promise<FlashEncounterResponse> {
   const now = input.now ?? new Date();
   await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
-  let encounter = await getFlashEncounterOwned(input.encounterId, input.userId);
+  const encounter = await getFlashEncounterOwned(input.encounterId, input.userId);
   if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 404, "没有找到这次相遇");
-  let offer: FlashEncounterResponse["offer"] = null;
-  let recoveryMessage: string | null = null;
-  // A task or relationship can be withdrawn after it was offered. Resolve the
-  // current authority and conservatively close the exact stale offer so home
-  // recovery never keeps returning an unusable encounter.
-  for (let attempt = 0; attempt < 2 && encounter.status === "offered" && !offer; attempt += 1) {
-    const taskTemplateId = encounter.offeredTaskTemplateId;
-    const destinationId = encounter.offeredDestinationId;
-    const row = taskTemplateId
-      ? await getFlashTaskOffer({ npcId: encounter.npcId, taskTemplateId, destinationId })
-      : null;
-    if (row) {
-      const invitation = getFlashInvitationDefinition(row.code);
-      offer = {
-        templateId: row.taskTemplateId,
-        code: row.code,
-        category: row.category,
-        title: row.title,
-        brief: row.brief,
-        requestCopy: row.requestCopy,
-        invitationType: invitation?.kind ?? "destination_exploration",
-        followUpTargetNpc: invitation?.targetNpcSlug && invitation.targetNpcName
-          ? { slug: invitation.targetNpcSlug, name: invitation.targetNpcName }
-          : null,
-        destinationPreview: invitation ? null : { name: row.destinationName!, district: row.destinationDistrict! },
-        canReroll: encounter.rerollCount === 0,
-      };
-      break;
-    }
-    const declined = await declineUnavailableFlashEncounterOffer({
-      encounterId: encounter.id,
-      userId: input.userId,
-      taskTemplateId,
-      destinationId,
-      now,
-    });
-    if (declined) recoveryMessage = "刚才那件事临时收回了。今天先聊到这里，下次见面再听我说一件新的吧。";
-    const refreshed = await getFlashEncounterOwned(input.encounterId, input.userId);
-    if (!refreshed) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 404, "没有找到这次相遇");
-    encounter = refreshed;
+  const storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
+  if (storyState) {
+    const content = storyState.episode.content;
+    const selectedOptionId = storyState.completion?.selectedOptionId ?? null;
+    return {
+      id: encounter.id,
+      npc: {
+        id: encounter.npcId,
+        slug: encounter.npcSlug,
+        name: encounter.npcName,
+        species: encounter.species,
+        personalitySummary: encounter.personalitySummary,
+        themeColor: encounter.themeColor,
+        avatarUrl: encounter.avatarUrl,
+      },
+      expiresAt: encounter.expiresAt.toISOString(),
+      status: storyState.completion ? "completed" : "dialogue",
+      pendingDelivery: null,
+      question: storyState.completion ? null : {
+        id: content.question.id,
+        prompt: content.question.prompt,
+        options: content.question.options.map((option: { id: string; label: string }) => ({ id: option.id, label: option.label })),
+      },
+      questionPosition: storyState.completion ? null : { current: 1, total: 1 },
+      offer: null,
+      storyEpisode: {
+        id: storyState.episode.id,
+        code: storyState.episode.code,
+        seasonTitle: storyState.seasonTitle,
+        phase: storyState.episode.phase,
+        title: storyState.episode.title,
+        objectCode: storyState.episode.objectCode,
+        opening: content.opening,
+        action: content.action,
+        discovery: content.discovery,
+        response: selectedOptionId ? content.responseByOption[selectedOptionId] ?? null : null,
+        closing: storyState.completion ? content.closing : null,
+        motion: storyState.episode.motion,
+        fragment: storyState.completion && storyState.fragment ? {
+          id: storyState.fragment.id,
+          code: storyState.fragment.code,
+          category: storyState.fragment.category as "object" | "past" | "relationship" | "key",
+          title: storyState.fragment.title,
+          fact: storyState.fragment.fact,
+          assetUrl: storyState.fragment.assetUrl,
+        } : null,
+        progress: {
+          completedInPhase: storyState.completedInPhase,
+          totalInPhase: 5,
+          completedTotal: storyState.completedTotal,
+          total: 15,
+        },
+      },
+      canonicalScreen: "dialogue",
+    };
   }
+  const completedSeason = await getCompletedFlashStorySeason(input.userId);
+  if (completedSeason) {
+    return {
+      id: encounter.id,
+      npc: { id: encounter.npcId, slug: encounter.npcSlug, name: encounter.npcName, species: encounter.species, personalitySummary: encounter.personalitySummary, themeColor: encounter.themeColor, avatarUrl: encounter.avatarUrl },
+      expiresAt: encounter.expiresAt.toISOString(),
+      status: "completed",
+      pendingDelivery: null,
+      question: null,
+      questionPosition: null,
+      offer: null,
+      storyEpisode: {
+        id: `${completedSeason.season.id}-finale`,
+        code: "season-finale",
+        seasonTitle: completedSeason.season.title,
+        phase: 3,
+        title: "旧物都有了去向",
+        objectCode: "old-key",
+        opening: "交换箱重新合上了。",
+        action: "五件旧物已经被认领、处理或重新交给重要的人。",
+        discovery: "那把没有锁孔的旧钥匙仍留在夹层里。",
+        response: "你收齐了这一季的十五块故事碎片。",
+        closing: "第一季到这里结束。钥匙属于谁，会在下一段故事里继续。",
+        motion: { ambient: "breathe" },
+        fragment: null,
+        progress: { completedInPhase: 5, totalInPhase: 5, completedTotal: 15, total: 15 },
+      },
+      canonicalScreen: "dialogue",
+    };
+  }
+  throw new FlashServiceError("FLASH_STORY_NOT_AVAILABLE", 409, "这次旧相遇已经结束，请从当前在线角色重新开始");
   const pendingCandidate = await getPendingFlashDelivery(
     input.userId,
     encounter.npcId,
@@ -626,14 +657,42 @@ export async function getFlashEncounter(input: {
   const pendingDelivery = (input.allowSameEncounterDeliveryForTesting || isLaterFlashDeliveryEncounter(pendingCandidate, encounter))
     ? pendingCandidate
     : null;
+  let offer = null;
+  if (encounter.status === "offered" && encounter.offeredTaskTemplateId && encounter.offeredDestinationId) {
+    const row = await getFlashTaskOffer({
+      npcId: encounter.npcId,
+      taskTemplateId: encounter.offeredTaskTemplateId,
+      destinationId: encounter.offeredDestinationId,
+    });
+    if (row) {
+      const invitation = getFlashInvitationDefinition(row.code);
+      const targetNpcSlug = invitation?.targetNpcSlug;
+      const targetNpcName = invitation?.targetNpcName;
+      const followUpTargetNpc = targetNpcSlug && targetNpcName
+        ? { slug: targetNpcSlug, name: targetNpcName }
+        : null;
+      const invitationType: "destination_exploration" | "life_invitation" | "npc_message" =
+        invitation?.kind ?? "destination_exploration";
+      offer = {
+        templateId: row.taskTemplateId,
+        code: row.code,
+        category: row.category,
+        title: row.title,
+        brief: row.brief,
+        requestCopy: row.requestCopy,
+        invitationType,
+        followUpTargetNpc,
+        destinationPreview: invitation ? null : { name: row.destinationName, district: row.destinationDistrict },
+        canReroll: encounter.rerollCount === 0,
+      };
+    }
+  }
   const questionRow = encounter.status === "dialogue"
     ? encounter.dialogueQuestions[encounter.currentQuestionIndex] ?? null
     : null;
   const status = encounter.status as FlashEncounterResponse["status"];
   let canonicalScreen: FlashCanonicalScreen = "dialogue";
   if (pendingDelivery) canonicalScreen = "delivery";
-  // The offer still belongs to the dialogue page. There is no assignment id
-  // until acceptance succeeds, so routing it as a task would bounce home.
   else if (status === "offered") canonicalScreen = "dialogue";
   else if (status === "accepted") canonicalScreen = "completed";
   else if (["declined", "completed"].includes(status)) canonicalScreen = "completed";
@@ -662,7 +721,7 @@ export async function getFlashEncounter(input: {
       total: Math.min(2, encounter.dialogueQuestions.length),
     } : null,
     offer,
-    message: recoveryMessage,
+    storyEpisode: null,
     canonicalScreen,
   };
 }
@@ -681,8 +740,27 @@ export async function answerFlashEncounter(input: {
     await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
     throw new FlashServiceError("FLASH_ENCOUNTER_EXPIRED", 410, "这次对话已经结束了");
   }
-  const pendingDelivery = await getPendingFlashDelivery(input.userId, encounter.npcId, encounter.npcSlug);
-  if (isLaterFlashDeliveryEncounter(pendingDelivery, encounter)) {
+  const storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
+  if (storyState) {
+    if (storyState.completion) {
+      return getFlashEncounter({ encounterId: input.encounterId, userId: input.userId, now });
+    }
+    const question = storyState.episode.content.question;
+    const option = question.options.find((candidate: { id: string }) => candidate.id === input.optionId);
+    if (question.id !== input.questionId || !option) {
+      throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这个选择已经失效，请刷新后再选一次");
+    }
+    await completeFlashStoryEpisode({
+      encounterId: input.encounterId,
+      userId: input.userId,
+      episodeId: storyState.episode.id,
+      optionId: option.id,
+      now,
+    });
+    return getFlashEncounter({ encounterId: input.encounterId, userId: input.userId, now });
+  }
+  throw new FlashServiceError("FLASH_STORY_NOT_AVAILABLE", 409, "这次旧相遇已经结束，请从当前在线角色重新开始");
+  if (await getPendingFlashDelivery(input.userId, encounter.npcId, encounter.npcSlug)) {
     throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "先把上次的委托交给它吧");
   }
   if (encounter.status !== "dialogue") {
@@ -747,6 +825,16 @@ export async function rerollFlashEncounterOffer(input: {
   return getFlashEncounter({ encounterId: input.encounterId, userId: input.userId, now });
 }
 
+export async function getFlashStoryFragments(userId: string) {
+  const fragments = await listFlashUserStoryFragments(userId);
+  return {
+    fragments: fragments.map((fragment: any) => ({
+      ...fragment,
+      unlockedAt: fragment.unlockedAt.toISOString(),
+    })),
+  };
+}
+
 function assignmentResponse(row: any): FlashAssignmentResponse {
   const snapshot = row.contentSnapshot as FlashTaskSnapshot;
   return {
@@ -772,10 +860,44 @@ export async function respondToFlashOffer(input: {
   }
   if (
     encounter.status !== "offered"
+    || !encounter.offeredTaskTemplateId
+    || !encounter.offeredDestinationId
     || encounter.expiresAt <= now
   ) {
     throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这个委托已经失效了");
   }
+  const offer = await getFlashTaskOffer({
+    npcId: encounter.npcId,
+    taskTemplateId: encounter.offeredTaskTemplateId,
+    destinationId: encounter.offeredDestinationId,
+  });
+  if (!offer) throw new FlashServiceError("FLASH_NO_TASK_AVAILABLE", 409, "这个委托暂时不能接取");
+  const invitation = getFlashInvitationDefinition(offer.code);
+  const snapshot: FlashTaskSnapshot = {
+    templateVersion: offer.contentVersion,
+    invitationType: invitation?.kind ?? "destination_exploration",
+    followUpTargetNpcSlug: invitation?.targetNpcSlug,
+    followUpTargetNpcName: invitation?.targetNpcName,
+    messageCopy: invitation?.messageCopy,
+    code: offer.code,
+    category: offer.category,
+    title: offer.title,
+    brief: offer.brief,
+    instructions: offer.instructions,
+    dialogueIntro: offer.requestCopy,
+    feedbackPrompts: offer.feedbackPrompts,
+    npcName: encounter.npcName,
+    npcSlug: encounter.npcSlug,
+    destination: {
+      name: offer.destinationName,
+      city: "深圳",
+      district: offer.destinationDistrict,
+      address: offer.destinationAddress,
+      latitude: offer.destinationLatitude,
+      longitude: offer.destinationLongitude,
+      coordinateSystem: "gcj02",
+    },
+  };
   const result = await acceptFlashAssignment({
     userId: input.userId,
     encounterId: input.encounterId,
@@ -788,13 +910,13 @@ export async function respondToFlashOffer(input: {
     if (result.reason === "npc_limit") {
       throw new FlashServiceError("FLASH_NPC_TASK_LIMIT_REACHED", 409, "你已经有这个角色的一件委托了");
     }
-    if (result.reason === "offer_unavailable") {
-      return getFlashEncounter({ encounterId: input.encounterId, userId: input.userId, now });
-    }
     throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这个委托已经处理过了");
   }
   const assignment = await getFlashAssignmentOwned(result.assignmentId, input.userId, now);
   if (!assignment) throw new FlashServiceError("FLASH_TASK_NOT_FOUND", 404, "没有找到刚接下的委托");
+  if (invitation) {
+    return assignmentResponse(assignment);
+  }
   return assignmentResponse(assignment);
 }
 
@@ -823,7 +945,7 @@ export async function arriveAtFlashAssignment(input: {
   if (assignment.status === "expired") throw new FlashServiceError("FLASH_TASK_EXPIRED", 410, "这个委托已经过期了");
   if (assignment.status !== "accepted") throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "当前不能再次确认到达");
   const target = (assignment.contentSnapshot as FlashTaskSnapshot).destination;
-  if (!target) throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这个邀请不需要定位确认");
+  if (!target) throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这个旧任务没有地图目的地");
   const distanceMeters = alangHaversineDistanceMeters(input, target);
   if (!input.forceArrivalForTesting && distanceMeters > FLASH_ARRIVAL_RADIUS_METERS) {
     return { ...assignmentResponse(assignment), distanceMeters: Math.round(distanceMeters), arrived: false };
@@ -858,7 +980,9 @@ export async function feedbackFlashAssignment(input: {
     userId: input.userId,
     answers: input.answers,
     privateReply: input.privateReply,
-    privateReplyDeleteAfter: flashPrivateReplyPendingDeadline(now, input.privateReply),
+    privateReplyDeleteAfter: input.privateReply
+      ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+      : null,
     now,
   });
   if (!saved) throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "反馈已经提交过了");
@@ -889,20 +1013,6 @@ export async function deliverFlashTaskToNpc(input: {
   if (!pending || pending.id !== input.assignmentId) {
     throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这件委托现在不能交付");
   }
-  const prompts = (pending.contentSnapshot as FlashTaskSnapshot).feedbackPrompts;
-  const invitationType = (pending.contentSnapshot as FlashTaskSnapshot).invitationType;
-  const answers = input.answers ?? [];
-  const answerByPrompt = new Map(answers.map((answer) => [answer.promptId, answer.optionId]));
-  const validAnswers = prompts.length > 0
-    && prompts.every((prompt) => {
-      const selected = answerByPrompt.get(prompt.id);
-      return selected && prompt.options.some((option) => option.id === selected);
-    })
-    && answers.length === prompts.length
-    && answers.every((answer) => prompts.some((prompt) => prompt.id === answer.promptId));
-  if (invitationType && !validAnswers) {
-    throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 400, "请选择这次见面的真实结果");
-  }
   const delivered = await deliverFlashAssignment({
     assignmentId: input.assignmentId,
     encounterId: input.encounterId,
@@ -912,27 +1022,16 @@ export async function deliverFlashTaskToNpc(input: {
     answers: input.answers,
     deliveryEncounterUnlockedAt: encounter.unlockedAt,
     now,
-    privateReplyDeleteAfter: flashPrivateReplyDeliveryDeadline(now),
+    privateReplyDeleteAfter: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
     allowSameEncounterForTesting: input.allowSameEncounterDeliveryForTesting,
   });
   if (!delivered) throw new FlashServiceError("FLASH_INVALID_TASK_STATE", 409, "这件委托已经交付过了");
-  const response = await getFlashEncounter({
+  return getFlashEncounter({
     encounterId: input.encounterId,
     userId: input.userId,
     now,
     allowSameEncounterDeliveryForTesting: input.allowSameEncounterDeliveryForTesting,
   });
-  const snapshot = pending.contentSnapshot as FlashTaskSnapshot;
-  return {
-    ...response,
-    deliveryMessage: resolveFlashDeliveryCopy({
-      npcSlug: encounter.npcSlug,
-      taskCode: snapshot.code,
-      invitationKind: snapshot.invitationType,
-      optionId: input.answers?.[0]?.optionId,
-      fallback: snapshot.deliveryCopy,
-    }),
-  };
 }
 
 export async function abandonFlashTask(input: {
