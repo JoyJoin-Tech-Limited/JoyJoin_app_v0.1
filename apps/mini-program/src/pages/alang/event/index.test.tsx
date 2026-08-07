@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import Taro from '@tarojs/taro'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FlashHomePage from './index'
 
@@ -105,6 +106,21 @@ describe('formal Flash home', () => {
 
     expect(await screen.findByText('需要定位，才能参加闪现')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '打开定位设置' })).toBeInTheDocument()
+  })
+
+  it('recovers instead of throwing when the native location API is unavailable', async () => {
+    const originalGetLocation = Taro.getLocation
+    ;(Taro as unknown as { getLocation?: unknown }).getLocation = undefined
+
+    try {
+      render(<FlashHomePage />)
+      fireEvent.click(await screen.findByRole('button', { name: '进入标准剧情' }))
+
+      expect(await screen.findByText('这次没有拿到位置')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '重新定位' })).toBeInTheDocument()
+    } finally {
+      ;(Taro as unknown as { getLocation: typeof originalGetLocation }).getLocation = originalGetLocation
+    }
   })
 
   it('loads online NPCs and story fragments only after the user accepts the disclosure', async () => {
