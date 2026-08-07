@@ -425,7 +425,7 @@ page {
     display: block;
     max-width: 620rpx;
     margin-top: 16rpx;
-    color: $color-text-secondary;
+    color: $color-text-secondary-on-light;
     font-size: $font-size-sm;
     line-height: $line-height-relaxed;
   }
@@ -484,7 +484,7 @@ page {
   &__mode-title { display: block; margin-top: 10rpx; color: $color-text-white; font-family: $font-cn-display; font-size: $font-size-xl; font-weight: $font-weight-black; }
   &__mode-description { display: block; max-width: 560rpx; margin-top: 12rpx; color: rgba($color-text-white, 0.82); font-size: $font-size-sm; line-height: 1.6; }
   &__mode-action { display: block; margin-top: 22rpx; color: $color-text-white; font-size: $font-size-base; font-weight: $font-weight-bold; }
-  &__aside { display: block; margin: 24rpx 16rpx 0; color: $color-text-secondary; font-size: $font-size-xs; line-height: $line-height-relaxed; text-align: center; }
+  &__aside { display: block; margin: 24rpx 16rpx 0; color: $color-text-secondary-on-light; font-size: $font-size-xs; line-height: $line-height-relaxed; text-align: center; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1054,14 +1054,14 @@ page {
 
 .flash-dialogue__echo-copy {
   margin-top: 8rpx;
-  color: $color-text-secondary;
+  color: $color-text-secondary-on-light;
   font-size: $font-size-sm;
   line-height: $line-height-relaxed;
 }
 
 .flash-dialogue__ai-note {
   margin-bottom: 16rpx;
-  color: $color-text-secondary;
+  color: $color-text-secondary-on-light;
   font-size: $font-size-2xs;
 }
 

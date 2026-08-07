@@ -394,7 +394,7 @@ export const paymentFulfillmentRepo = {
                   .set({ totalAcceptances: sql`COALESCE(total_acceptances, 0) + 1` })
                   .where(eq(invitations.id, attribution.invitationId));
               }
-            } else {
+            } else if (attribution.kind === "discard") {
               logger.warn("Discarding unusable invitation during payment fulfillment", {
                 payment_id: updatedPayment.id,
                 pool_id: updatedPayment.relatedId,

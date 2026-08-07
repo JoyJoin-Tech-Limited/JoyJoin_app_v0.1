@@ -167,8 +167,8 @@ export function registerDuoRoutes(app: Express): void {
           .from(invitationUses)
           .where(eq(invitationUses.invitationId, ownInvite.id));
         const registrationIds = uses
-          .map((use) => use.poolRegistrationId)
-          .filter((id): id is string => Boolean(id));
+          .map((use: { poolRegistrationId: string | null }) => use.poolRegistrationId)
+          .filter((id: string | null): id is string => Boolean(id));
 
         if (registrationIds.length > 0) {
           const [inviteeRegistration] = await db
@@ -214,7 +214,7 @@ export function registerDuoRoutes(app: Express): void {
         .orderBy(asc(invitations.createdAt));
 
       const consumed = consumedRows.find(
-        (row) => ownRegistration && row.usePoolRegistrationId === ownRegistration.id,
+        (row: { usePoolRegistrationId: string | null }) => ownRegistration && row.usePoolRegistrationId === ownRegistration.id,
       );
 
       if (consumed) {
