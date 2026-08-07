@@ -1,0 +1,267 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// 双人成行 card — 附录 H surface language: flat tint only (no border, no
+// shadow), one volume below the 小信 letter card. Height budgets (A'-10):
+// collapsed ≤104rpx, expanded ≤256rpx, waiting ≤200rpx, bound ≤148rpx.
+.pool-reg-duo {
+  margin-bottom: $spacing-md;
+  padding: $spacing-md;
+  border-radius: $card-radius;
+  background: rgba($color-primary, 0.05);
+  box-sizing: border-box;
+  // Bound flip: tint fades purple → green (animation moment ②, 300ms).
+  transition: background 300ms ease;
+
+  &--bound {
+    background: rgba($color-success, 0.08);
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    min-height: 56rpx;
+
+    &--bound {
+      justify-content: flex-start;
+      min-height: 40rpx;
+    }
+  }
+
+  &__title-wrap {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    flex-shrink: 0;
+  }
+
+  &__title {
+    @include type-body-emphasis;
+  }
+
+  // Pure-CSS circle-question glyph (A'-4) — 24rpx circle, 48rpx hit area via
+  // transparent padding. No new image asset (E' CSS-only glyph rule).
+  &__info-hit {
+    @include flex-center;
+    width: 48rpx;
+    height: 48rpx;
+    margin: -12rpx 0;
+    border-radius: 50%;
+
+    &--active {
+      background: rgba($color-text-tertiary, 0.08);
+    }
+  }
+
+  &__info-glyph {
+    @include flex-center;
+    width: 24rpx;
+    height: 24rpx;
+    border-radius: 50%;
+    border: 1rpx solid rgba($color-text-tertiary, 0.4);
+  }
+
+  &__info-glyph-text {
+    font-size: 18rpx;
+    line-height: 1;
+    color: $color-text-tertiary;
+  }
+
+  // Floating-thumb segmented (A'-8): compact 240×56rpx track, white pill
+  // thumb slides 200ms on the page-standard curve.
+  &__segmented {
+    position: relative;
+    display: flex;
+    width: 240rpx;
+    height: 56rpx;
+    padding: 6rpx;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.08);
+    box-sizing: border-box;
+    flex-shrink: 0;
+
+    &--locked {
+      opacity: 0.55;
+    }
+  }
+
+  &__segmented-thumb {
+    position: absolute;
+    top: 6rpx;
+    left: 6rpx;
+    width: calc(50% - 6rpx);
+    height: calc(100% - 12rpx);
+    border-radius: 999rpx;
+    background: $color-surface;
+    box-shadow: $shadow-sm;
+    transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+
+    &--duo {
+      transform: translateX(100%);
+    }
+
+    &--static {
+      transition: none;
+    }
+  }
+
+  &__segment {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    @include flex-center;
+
+    &--active .pool-reg-duo__segment-text {
+      color: $color-primary-dark;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  &__segment-text {
+    @include type-label;
+    color: $color-text-secondary;
+  }
+
+  // Expansion region — animation moment ① pairs with the thumb slide; the
+  // 240ms fade-slide-up reuses the shared keyframes (E' zero new keyframes).
+  &__expand {
+    margin-top: $spacing-sm;
+    animation: fade-slide-up 240ms cubic-bezier(0.22, 1, 0.36, 1);
+
+    &--static {
+      animation: none;
+    }
+  }
+
+  &__share-btn {
+    width: 100%;
+  }
+
+  &__waiting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+  }
+
+  &__waiting-text {
+    @include type-label;
+    flex: 1;
+  }
+
+  // Compact secondary action inside the ≤56rpx waiting row; overrides the
+  // default joy-button min-height (44pt tap floor) to stay within the A'-10
+  // ≤200rpx waiting budget.
+  &__again-btn {
+    min-height: 56rpx;
+    height: 56rpx;
+    padding: 0 $spacing-md;
+    font-size: $font-size-xs;
+    flex-shrink: 0;
+  }
+
+  // Bound row: CSS check pops once (moment ②), reusing pool-reg-check-pop.
+  &__check {
+    width: 32rpx;
+    height: 32rpx;
+    border-radius: 999rpx;
+    background: $color-success;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    animation: pool-reg-check-pop 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+
+    &::after {
+      content: '';
+      width: 14rpx;
+      height: 8rpx;
+      border-left: 3rpx solid $color-text-white;
+      border-bottom: 3rpx solid $color-text-white;
+      transform: rotate(-45deg);
+      margin-top: -3rpx;
+    }
+
+    &--static {
+      animation: none;
+    }
+  }
+
+  &__bound-text {
+    @include type-body;
+    color: $color-success-text-on-light;
+    font-weight: $font-weight-medium;
+    flex: 1;
+    @include text-truncate;
+  }
+
+  &__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__skeleton-line {
+    height: 24rpx;
+    border-radius: 8rpx;
+    background: $color-divider;
+    animation: pool-reg-shimmer 1.5s ease-in-out infinite;
+
+    &--medium {
+      width: 70%;
+    }
+
+    &--short {
+      width: 40%;
+    }
+  }
+
+  // Local non-blocking error row (spec A.4): never blocks registration.
+  &__error {
+    margin-top: $spacing-sm;
+    padding: $spacing-xs $spacing-md;
+    border-radius: 24rpx;
+    background: rgba($color-text-tertiary, 0.06);
+    transition: background 0.12s ease;
+
+    &--active {
+      background: rgba($color-text-tertiary, 0.1);
+    }
+  }
+
+  &__error-text {
+    font-size: 24rpx;
+    color: $color-text-tertiary;
+    text-align: center;
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pool-reg-duo {
+    transition: none;
+
+    &__segmented-thumb {
+      transition: none;
+    }
+
+    &__expand {
+      animation: none;
+    }
+
+    &__check {
+      animation: none;
+    }
+
+    &__skeleton-line {
+      animation: none;
+      opacity: 0.4;
+    }
+
+    &__error {
+      transition: none;
+    }
+  }
+}

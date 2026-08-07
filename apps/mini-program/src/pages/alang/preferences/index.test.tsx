@@ -46,19 +46,18 @@ describe('Flash personalization preferences', () => {
 
   it('records explicit consent when personalization is enabled', async () => {
     render(<FlashPreferencesPage />)
-    fireEvent.click(screen.getByRole('checkbox', { name: '个性化任务开关' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: '专属剧情开关' }))
     await waitFor(() => expect(mocks.update).toHaveBeenCalledWith({
       personalizationEnabled: true,
-      consentVersion: 'flash-personalization-v1',
+      consentVersion: 'flash-story-personalization-v1',
     }))
   })
 
-  it('deletes a visible task tag through the shared deleteTagIds field', async () => {
+  it('does not expose retired task-tag controls in the formal story settings', () => {
     render(<FlashPreferencesPage />)
-    fireEvent.click(screen.getByRole('button', { name: '删除任务标签安静空间' }))
-    await waitFor(() => expect(mocks.update).toHaveBeenCalledWith({
-      deleteTagIds: ['11111111-1111-4111-8111-111111111111'],
-    }))
+    expect(screen.queryByText('当前任务标签')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /删除任务标签/ })).not.toBeInTheDocument()
+    expect(screen.getByText(/只影响街头盲盒接下来的对白表达/)).toBeInTheDocument()
   })
 
   it('fails closed before reading preferences when the feature is disabled', () => {

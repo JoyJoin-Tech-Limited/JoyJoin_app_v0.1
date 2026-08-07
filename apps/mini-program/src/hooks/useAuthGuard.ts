@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro'
 import { useAuth, type NextStepType } from './useAuth'
 import { navigateToMiniProgramNextStep } from '../lib/onboarding/onboardingNavigation'
 import { MINI_PROGRAM_ROUTES, nextStepToMiniProgramRoute } from '../lib/onboarding/onboardingRoutes'
+import { capturePendingDuoContext } from '../lib/duo/duoContext'
 
 /**
  * Map a server-driven nextStep to the corresponding mini-program page route.
@@ -46,7 +47,21 @@ export function useAuthGuard(options?: {
     if (auth.isLoading) return
 
     if (!auth.isAuthenticated) {
-      Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
+      // Cold-start invite fix (spec §G.2): reLaunch drops the current page's
+      // query string, so capture the invite context into storage first (it is
+      // replayed after login/onboarding via navigateToMiniProgramNextStep) and
+      // forward invitationCode to the login page for referral attribution.
+      const currentPages = Taro.getCurrentPages()
+      const currentOptions = (currentPages[currentPages.length - 1] as { options?: Record<string, string> } | undefined)?.options ?? {}
+      capturePendingDuoContext({
+        poolId: currentOptions.id,
+        invitationCode: currentOptions.invitationCode,
+        duo: currentOptions.duo === '1',
+      })
+      const loginQuery = currentOptions.invitationCode
+        ? `?invitationCode=${encodeURIComponent(currentOptions.invitationCode)}`
+        : ''
+      Taro.reLaunch({ url: `${MINI_PROGRAM_ROUTES.login}${loginQuery}` })
       return
     }
 
@@ -71,9 +86,11 @@ export function useAuthGuard(options?: {
       // Strip leading slash for comparison since currentRoute doesn't have one
       const expectedRouteBare = expectedRoute.replace(/^\//, '')
 
-      // If user is done with onboarding but on an onboarding page, send to discover
+      // If user is done with onboarding but on an onboarding page, send to
+      // discover — routed through the shared helper so a pending duo/invite
+      // context replays to pool-registration instead (spec §C.4-3).
       if (auth.nextStep === 'discover') {
-        Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover })
+        void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'root' })
         return
       }
 

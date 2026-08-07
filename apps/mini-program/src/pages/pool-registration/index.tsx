@@ -1,5 +1,5 @@
 import { View, Text, ScrollView } from '@tarojs/components'
-import Taro, { useDidShow, useRouter } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter, useShareAppMessage } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getEventPool, getMyPoolRegistrations, registerForPool, getPoolPersonaSnapshot, type EventPoolSummary, type PoolRegistrationSummary, type PoolPersonaSnapshotResponse } from '@shared/api'
@@ -27,7 +27,14 @@ import {
 } from '../../lib/payment/paymentPendingOrderStorage'
 
 import { haptics } from '../../lib/utils/haptics'
-import { logInfo, logError } from '../../lib/utils/logger'
+import { logInfo, logError, logWarn } from '../../lib/utils/logger'
+import { createDuoInvite, getDuoStatus, getDuoInviteInfo, type DuoStatusResponse, type DuoInviteInfoResponse } from '../../lib/api/duo'
+import {
+  buildDuoSharePath,
+  readDuoShareTimestamp,
+  writeDuoShareTimestamp,
+} from '../../lib/duo/duoContext'
+import { resolveDuoCardState } from '../../lib/duo/duoState'
 import { usePreloadIntentIcons } from '../../hooks/usePreloadIntentIcons'
 import { useLoadingDeadline } from '../../hooks/useLoadingDeadline'
 import { AUTH_QUERY_KEY } from '../../lib/api/authSession'
@@ -75,10 +82,14 @@ import PoolRegistrationNewRegistrantBanner from './components/PoolRegistrationNe
 import PoolRegistrationResumeCard from './components/PoolRegistrationResumeCard'
 import PoolRegistrationStepper from './components/PoolRegistrationStepper'
 import PoolRegistrationSummaryCard from './components/PoolRegistrationSummaryCard'
+import RegistrationConfirmModal from './components/RegistrationConfirmModal'
 import { getIntentFeedback } from './components/intentFeedback'
 import PoolRegistrationHeroPersonaSection from './components/PoolRegistrationHeroPersonaSection'
 import XiaoyueCoachCard from './components/XiaoyueCoachCard'
 import XiaoyueLetterCard from './components/XiaoyueLetterCard'
+import PoolRegistrationDuoCard from './components/PoolRegistrationDuoCard'
+import PoolRegistrationDuoBanner from './components/PoolRegistrationDuoBanner'
+import DuoInfoSheet from './components/DuoInfoSheet'
 import {
   PoolRegistrationLoading,
   PoolRegistrationEmpty,
@@ -131,6 +142,8 @@ export default function PoolRegistrationPage() {
   const router = useRouter()
   const poolId = router.params.id ?? ''
   const invitationCode = router.params.invitationCode ?? ''
+  // duo=1 marks the share-card duo invite context (spec §C.4 routing contract)
+  const isDuoInvite = router.params.duo === '1'
   const { user, isLoading: authLoading } = useAuthGuard()
 
   const resolvedInvitationCode = invitationCode || user?.pendingReferralCode || ''
@@ -156,7 +169,29 @@ export default function PoolRegistrationPage() {
   // section's state machine; the page only flips this flag. Reset on
   // swipe-back so a hidden page never re-shows a stale reaction.
   const [reacting, setReacting] = useState(false)
-  useResetOnShow(setReacting)
+  // Confirmation modal gate — reset on swipe-back so a hidden page never
+  // re-shows a stale modal over the new top-of-stack page.
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  // Duo info sheet (双人成行玩法说明) — mutually exclusive with the confirm
+  // modal (B'-5); both transient overlays reset on swipe-back.
+  const [isDuoSheetOpen, setIsDuoSheetOpen] = useState(false)
+  useResetOnShow(setReacting, setShowConfirmModal, setIsDuoSheetOpen)
+
+  // ─── 双人成行 (duo registration) state ─────────────────────────────
+  // Local segmented selection; restored to 'duo' when a share timestamp or a
+  // server waiting/bound state exists. Bound is ALWAYS server-derived.
+  const [duoMode, setDuoMode] = useState<'solo' | 'duo'>(() =>
+    poolId && readDuoShareTimestamp(poolId) !== null ? 'duo' : 'solo',
+  )
+  const [duoCode, setDuoCode] = useState('')
+  const [duoShared, setDuoShared] = useState(() => poolId !== '' && readDuoShareTimestamp(poolId) !== null)
+  const [isCreatingDuoInvite, setIsCreatingDuoInvite] = useState(false)
+  const [duoStatusError, setDuoStatusError] = useState(false)
+  const [duoInviteInvalid, setDuoInviteInvalid] = useState(false)
+  const prevDuoServerStateRef = useRef<string | null>(null)
+  const hasTrackedDuoCardImpressionRef = useRef(false)
+  const hasTrackedDuoBannerImpressionRef = useRef(false)
+  const duoInvalidToastShownRef = useRef(false)
   const staggerMounted = useStaggerMount()
 
   // Gate transient reactions so they only celebrate the first selection per step visit.
@@ -227,6 +262,65 @@ export default function PoolRegistrationPage() {
     staleTime: 30_000,
   })
 
+  // Duo status (双人成行): non-blocking by design — a failure only downgrades
+  // the card to its local error row, never the page (spec §E 不阻断原则).
+  const {
+    data: duoStatus,
+    isLoading: isDuoStatusLoading,
+    refetch: refetchDuoStatus,
+  } = useQuery<DuoStatusResponse | null>({
+    queryKey: ['mini-program', 'duo-status', poolId],
+    queryFn: async () => {
+      try {
+        const status = await getDuoStatus(apiRequest, poolId)
+        setDuoStatusError(false)
+        return status
+      } catch (err) {
+        setDuoStatusError(true)
+        logWarn('[PoolRegistration] Failed to load duo status', {
+          poolId,
+          message: err instanceof Error ? err.message : String(err),
+        })
+        return null
+      }
+    },
+    enabled: !!poolId && !authLoading,
+    staleTime: 15_000,
+  })
+
+  // Invitee-side duo invite lookup (duo=1 share-card landings). 404/410 marks
+  // the code invalid → one-time toast, banner hidden, code dropped from the
+  // payload; transport failures stay silent (spec §C.2 坏码不阻断报名).
+  const { data: duoInviteInfo } = useQuery<DuoInviteInfoResponse | null>({
+    queryKey: ['mini-program', 'duo-invite', invitationCode],
+    queryFn: async () => {
+      try {
+        return await getDuoInviteInfo(apiRequest, invitationCode)
+      } catch (err) {
+        const statusCode = (err as ApiError | undefined)?.statusCode
+        if (statusCode === 404 || statusCode === 410) {
+          setDuoInviteInvalid(true)
+        } else {
+          logWarn('[PoolRegistration] Duo invite lookup failed', {
+            poolId,
+            message: err instanceof Error ? err.message : String(err),
+          })
+        }
+        return null
+      }
+    },
+    enabled: isDuoInvite && !!invitationCode && !authLoading,
+    staleTime: 5 * 60 * 1000,
+    retry: 0,
+  })
+
+  const showDuoBanner =
+    isDuoInvite &&
+    !duoInviteInvalid &&
+    !!duoInviteInfo &&
+    duoInviteInfo.status === 'active' &&
+    duoInviteInfo.poolId === poolId
+
   // Track persona snapshot impression once
   const hasTrackedPersonaImpressionRef = useRef(false)
   useEffect(() => {
@@ -242,6 +336,53 @@ export default function PoolRegistrationPage() {
       dimensionCount: personaSnapshot.dimensions.filter((d) => d.disclosed).length,
     })
   }, [personaSnapshot, poolId])
+
+  // ─── Duo effects ───────────────────────────────────────────────────
+  // Sync the segmented selection + fire duo_status_update on server state
+  // transitions. Entering `bound` triggers the one-shot success haptic
+  // (animation moment ②, ref-guarded) — but only on an observed transition,
+  // not when the page first loads already-bound.
+  useEffect(() => {
+    const nextState = duoStatus?.state
+    if (!nextState) return
+    if (nextState === 'waiting' || nextState === 'bound') {
+      setDuoMode('duo')
+    }
+    const prevState = prevDuoServerStateRef.current
+    if (prevState !== null && prevState !== nextState) {
+      discoverAnalytics.track('duo_status_update', poolId, { from: prevState, to: nextState })
+      if (nextState === 'bound' && prevState !== 'bound') {
+        haptics('success')
+      }
+    }
+    prevDuoServerStateRef.current = nextState
+  }, [duoStatus?.state, poolId])
+
+  // Invalid/expired duo code: one-time toast + drop the code from the
+  // registration payload; the flow continues as a normal solo registration.
+  useEffect(() => {
+    if (!duoInviteInvalid || duoInvalidToastShownRef.current) return
+    duoInvalidToastShownRef.current = true
+    Taro.showToast({ title: '这张邀请卡过期啦，自己来也很好玩', icon: 'none', duration: TOAST_LONG_MS })
+    setFormState((currentState) => ({ ...currentState, invitationCode: undefined }))
+  }, [duoInviteInvalid])
+
+  // Duo card impression: once per mount, only while Step 0 is on screen.
+  useEffect(() => {
+    if (step !== STEP_BRIEF || authLoading || !pool) return
+    if (hasTrackedDuoCardImpressionRef.current) return
+    hasTrackedDuoCardImpressionRef.current = true
+    discoverAnalytics.track('duo_card_impression', poolId)
+  }, [step, authLoading, pool, poolId])
+
+  // Duo banner impression: once per mount while the banner is visible.
+  useEffect(() => {
+    if (!showDuoBanner || hasTrackedDuoBannerImpressionRef.current) return
+    hasTrackedDuoBannerImpressionRef.current = true
+    discoverAnalytics.track('duo_banner_impression', poolId, {
+      inviterName: duoInviteInfo?.inviter.displayName,
+    })
+  }, [showDuoBanner, poolId, duoInviteInfo?.inviter.displayName])
 
   // Surface a "new registrant" micro-banner when count grew meaningfully since last view
   const MIN_BANNER_DELTA = 3
@@ -487,6 +628,29 @@ export default function PoolRegistrationPage() {
     }
 
     applyStoredReturnContext()
+    // Duo state is host-agnostic (the friend may register from another
+    // device), so re-pull it every time the page re-surfaces (A'-9).
+    void refetchDuoStatus()
+  })
+
+  // Share contract (spec §A.5): the duo share card carries id + invitationCode
+  // + duo=1. WeChat has no share-completion callback, so the share-panel
+  // trigger time is persisted per pool to restore the waiting row on
+  // re-entry; the bound state always comes from the server.
+  useShareAppMessage(() => {
+    if (duoCode) {
+      writeDuoShareTimestamp(poolId, Date.now())
+      setDuoShared(true)
+      discoverAnalytics.track('duo_share_trigger', poolId)
+      return {
+        title: `这场${eventType}，我想和你一起去`,
+        path: buildDuoSharePath(poolId, duoCode),
+      }
+    }
+    return {
+      title: pool?.title ?? `这场${eventType}，一起来`,
+      path: `/pages/pool-registration/index?id=${encodeURIComponent(poolId)}`,
+    }
   })
 
   const brief = briefData ?? fallbackBrief
@@ -782,6 +946,8 @@ export default function PoolRegistrationPage() {
       })
       await registerForPool(apiRequest, poolId, payload)
       await bustRegistrationCaches(queryClient, { poolId })
+      // Refresh duo state so the success page reflects a fresh binding.
+      void queryClient.invalidateQueries({ queryKey: ['mini-program', 'duo-status', poolId] })
       clearPaymentReturnContextStorage()
       setResumeContext(null)
       setRegistered(true)
@@ -842,6 +1008,112 @@ export default function PoolRegistrationPage() {
     step,
     user?.id,
   ])
+  // Step-3 CTA opens the animated confirmation modal instead of submitting
+  // directly; the modal's confirm action then runs handleRegister unchanged.
+  const handleConfirmCta = useCallback(() => {
+    const submitBlocker = getPoolRegistrationSubmitBlocker({
+      hasBudgetSelection,
+      hasIntentSelection,
+    })
+    if (submitBlocker) {
+      Taro.showToast({ title: submitBlocker, icon: 'none', duration: TOAST_LONG_MS })
+      return
+    }
+    discoverAnalytics.track('registration_confirm_shown', poolId)
+    // Overlay mutual exclusion (B'-5): never show both overlays at once.
+    setIsDuoSheetOpen(false)
+    setShowConfirmModal(true)
+  }, [hasBudgetSelection, hasIntentSelection, poolId])
+
+  const handleConfirmModalConfirm = useCallback(() => {
+    discoverAnalytics.track('registration_confirm_confirmed', poolId)
+    setShowConfirmModal(false)
+    void handleRegister()
+  }, [handleRegister, poolId])
+
+  const handleConfirmModalCancel = useCallback(() => {
+    setShowConfirmModal(false)
+  }, [])
+
+  // ─── Duo handlers ──────────────────────────────────────────────────
+  // Select 2人: optimistic expand + idempotent invite creation; failure rolls
+  // the segmented back to 1人 with a toast (spec §A.5). Selecting 1人 back
+  // pre-share is local-only — the server code is retained but harmless.
+  const handleDuoSelectMode = useCallback(
+    async (nextMode: 'solo' | 'duo') => {
+      if (nextMode === duoMode) return
+      discoverAnalytics.track('duo_segment_select', poolId, { mode: nextMode })
+      if (nextMode === 'solo') {
+        setDuoMode('solo')
+        return
+      }
+      haptics('light')
+      setDuoMode('duo')
+      if (duoCode || isCreatingDuoInvite) return
+      setIsCreatingDuoInvite(true)
+      try {
+        const created = await createDuoInvite(apiRequest, poolId)
+        setDuoCode(created.code)
+        void refetchDuoStatus()
+      } catch (err) {
+        setDuoMode('solo')
+        const message = resolveMessage(err, 'submit-failed')
+        logWarn('[PoolRegistration] Duo invite creation failed', { poolId, message })
+        Taro.showToast({ title: message, icon: 'none', duration: TOAST_LONG_MS })
+      } finally {
+        setIsCreatingDuoInvite(false)
+      }
+    },
+    [duoMode, duoCode, isCreatingDuoInvite, poolId, refetchDuoStatus],
+  )
+
+  const handleOpenDuoSheet = useCallback(() => {
+    // Overlay mutual exclusion (B'-5): info sheets are bottom sheets, decision
+    // modals are centred dialogs, at most one visible at a time.
+    setShowConfirmModal(false)
+    setIsDuoSheetOpen(true)
+    discoverAnalytics.track('duo_info_sheet_open', poolId)
+  }, [poolId])
+
+  const handleCloseDuoSheet = useCallback(() => {
+    setIsDuoSheetOpen(false)
+    discoverAnalytics.track('duo_info_sheet_close', poolId)
+  }, [poolId])
+
+  const handleDuoRetry = useCallback(() => {
+    setDuoStatusError(false)
+    void refetchDuoStatus()
+  }, [refetchDuoStatus])
+
+  const duoCardState = useMemo(
+    () =>
+      resolveDuoCardState({
+        isLoading: isDuoStatusLoading && !duoStatus && !duoStatusError,
+        isError: duoStatusError,
+        serverState: duoStatus?.state,
+        mode: duoMode,
+        hasShared: duoShared,
+      }),
+    [isDuoStatusLoading, duoStatus, duoStatusError, duoMode, duoShared],
+  )
+
+  // Success-page duo variant (spec §C.3/C'-2): bound → duo title + body;
+  // inviter still waiting → extra success pill.
+  const successDuo = useMemo(() => {
+    if (duoStatus?.state === 'bound') {
+      return {
+        partnerName: duoStatus.friendDisplayName || duoInviteInfo?.inviter.displayName || '朋友',
+        bound: true,
+      }
+    }
+    if (duoStatus?.state === 'waiting' || (duoShared && duoCode)) {
+      return {
+        partnerName: duoStatus?.friendDisplayName || '朋友',
+        bound: false,
+      }
+    }
+    return undefined
+  }, [duoStatus?.state, duoStatus?.friendDisplayName, duoInviteInfo?.inviter.displayName, duoShared, duoCode])
 
   const isPageLoading = authLoading || isLoading || isLoadingMyRegistrations
   const { isStale: isPageLoadingStale } = useLoadingDeadline(isPageLoading, 8000)
@@ -882,6 +1154,11 @@ export default function PoolRegistrationPage() {
         eventType={eventType}
         poolArea={poolArea}
         poolDateTime={pool.dateTime}
+        duoPartnerName={
+          duoStatus?.state === 'bound'
+            ? duoStatus.friendDisplayName || duoInviteInfo?.inviter.displayName
+            : undefined
+        }
       />
     )
   }
@@ -910,6 +1187,7 @@ export default function PoolRegistrationPage() {
         highlights={successHighlights}
         pool={pool}
         userArchetype={user?.primaryArchetype ?? null}
+        duo={successDuo}
         onEnableNotifications={handleEnableMatchNotifications}
         isEnablingNotifications={isEnablingNotifications}
         notificationsEnabled={notificationsEnabled}
@@ -962,7 +1240,24 @@ export default function PoolRegistrationPage() {
             isLoading={briefLoading && !briefData}
             teaser={{ enabled: poolTeaserEnabled }}
           />
+          {/* 双人成行 (spec §A/附录 H): collapsed single-row entry after the
+              letter card — the letter stays the emotional hero of Step 0. */}
+          <PoolRegistrationDuoCard
+            state={duoCardState}
+            mode={duoMode}
+            isCreatingInvite={isCreatingDuoInvite}
+            partnerName={duoStatus?.friendDisplayName || duoInviteInfo?.inviter.displayName}
+            reduceMotion={reduceMotion}
+            onSelectMode={(nextMode) => { void handleDuoSelectMode(nextMode) }}
+            onOpenInfo={handleOpenDuoSheet}
+            onRetry={handleDuoRetry}
+          />
         </>
+      ) : null}
+
+      {/* Invitee duo context banner — persistent across steps 0–3 (spec §C.1). */}
+      {showDuoBanner ? (
+        <PoolRegistrationDuoBanner inviterName={duoInviteInfo?.inviter.displayName ?? '朋友'} />
       ) : null}
 
       {resumeContext ? (
@@ -1102,8 +1397,23 @@ export default function PoolRegistrationPage() {
         isRegistering={isRegistering}
         onAdvance={handleAdvance}
         onBack={handleBack}
-        onRegister={handleRegister}
+        onRegister={handleConfirmCta}
       />
+
+      <RegistrationConfirmModal
+        visible={showConfirmModal}
+        dateTimeLabel={poolDateTimeLabel}
+        area={poolArea}
+        highlights={successHighlights}
+        isRegistering={isRegistering}
+        reduceMotion={reduceMotion}
+        onConfirm={handleConfirmModalConfirm}
+        onCancel={handleConfirmModalCancel}
+      />
+
+      {isDuoSheetOpen ? (
+        <DuoInfoSheet reduceMotion={reduceMotion} onClose={handleCloseDuoSheet} />
+      ) : null}
     </View>
   )
 }

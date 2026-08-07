@@ -3,9 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
-import { getFlashApiErrorCode, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
-import { useFlashHome, useFlashStoryFragments } from '../../../lib/alang/useFlash'
+import { useFlashHome, useFlashStoryFragments, useUpdateFlashPreferences } from '../../../lib/alang/useFlash'
 import type { FlashLocationSnapshot, FlashNpcSummary } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
@@ -25,8 +24,20 @@ const FLASH_INTRO_SCENE = flashIntroScene
 const FLASH_AMBIENT_BACKGROUND = flashAmbientBackground
 const FLASH_EMPTY_ONLINE = flashEmptyOnline
 const FLASH_LOCATION_TIMEOUT_MS = 12_000
+const FLASH_STORY_CONSENT_VERSION = 'flash-story-personalization-v1'
 
 type GateState = 'checking' | 'intro' | 'locating' | 'ready' | 'denied' | 'error'
+
+function getEntryApiErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== 'object') return null
+  const data = (error as { data?: unknown }).data
+  if (data && typeof data === 'object') {
+    const record = data as Record<string, unknown>
+    if (typeof record.code === 'string') return record.code
+    if (typeof record.error === 'string' && /^[A-Z0-9_]+$/.test(record.error)) return record.error
+  }
+  return null
+}
 
 function isLocationPermissionDenied(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false
@@ -37,20 +48,57 @@ function isLocationPermissionDenied(error: unknown): boolean {
   return /auth(?:orize)?\s*deny|permission\s*denied|user\s*deny/i.test(message)
 }
 
-function FlashIntro({ onContinue }: { onContinue: () => void }) {
+function getEntryLocation(): Promise<FlashLocationSnapshot> {
+  if (typeof Taro.getLocation !== 'function') {
+    return Promise.reject(new Error('WECHAT_LOCATION_API_UNAVAILABLE'))
+  }
+  return new Promise((resolve, reject) => {
+    Taro.getLocation({
+      type: 'gcj02',
+      success: (result) => {
+        resolve({
+          latitude: result.latitude,
+          longitude: result.longitude,
+          accuracy: result.accuracy,
+        })
+      },
+      fail: reject,
+    })
+  })
+}
+
+function FlashIntro({ busy, onSelect }: { busy: boolean; onSelect: (mode: 'personalized' | 'standard') => void }) {
   return (
     <View className='flash-intro'>
-      <Image className='flash-intro__backdrop' src={FLASH_INTRO_SCENE} mode='aspectFill' aria-hidden='true' />
-      <View className='flash-intro__shade' aria-hidden='true' />
       <View className='flash-intro__content'>
         <View className='flash-intro__copy'>
-          <Text className='flash-intro__eyebrow'>SHENZHEN · NOW</Text>
-          <Text className='flash-intro__title'>今天，会碰见谁呢？</Text>
+          <Text className='flash-intro__eyebrow'>YOUR PARALLEL UNIVERSE</Text>
+          <Text className='flash-intro__title'>这一次，故事想怎样认识你？</Text>
+          <Text className='flash-intro__lead'>两个模式都拥有完整剧情、选择后果和个人结局。它们都是虚构的数字动物 NPC，并非现场真人。</Text>
         </View>
-        <View className='flash-intro__actions'>
-          <FlashButton onClick={onContinue}>看看谁在附近</FlashButton>
-          <Text className='flash-intro__aside'>先读取当前位置；选中角色后，地图会在前台持续更新位置，离开页面立即停止。</Text>
+        <View className='flash-intro__modes'>
+          <View className={`flash-intro__mode${busy ? ' flash-intro__mode--disabled' : ''}`} hoverClass={busy ? '' : 'flash-intro__mode--pressed'} role='button' aria-label='开启更专属的剧情' onClick={() => { if (!busy) onSelect('personalized') }}>
+            <Image className='flash-intro__mode-bg' src={FLASH_INTRO_SCENE} mode='aspectFill' aria-hidden='true' />
+            <View className='flash-intro__mode-shade' aria-hidden='true' />
+            <View className='flash-intro__mode-copy'>
+              <Text className='flash-intro__mode-kicker'>AI · 专属宇宙</Text>
+              <Text className='flash-intro__mode-title'>更专属的剧情</Text>
+              <Text className='flash-intro__mode-description'>参考你已填写的人格、兴趣与宽泛职业领域，并结合当时环境和此前选择来回应你。点击进入即表示同意本次专属剧情使用这些信息。</Text>
+              <Text className='flash-intro__mode-action'>{busy ? '正在开启…' : '进入专属剧情  →'}</Text>
+            </View>
+          </View>
+          <View className={`flash-intro__mode${busy ? ' flash-intro__mode--disabled' : ''}`} hoverClass={busy ? '' : 'flash-intro__mode--pressed'} role='button' aria-label='进入标准剧情' onClick={() => { if (!busy) onSelect('standard') }}>
+            <Image className='flash-intro__mode-bg flash-intro__mode-bg--standard' src={FLASH_INTRO_SCENE} mode='aspectFill' aria-hidden='true' />
+            <View className='flash-intro__mode-shade flash-intro__mode-shade--standard' aria-hidden='true' />
+            <View className='flash-intro__mode-copy'>
+              <Text className='flash-intro__mode-kicker'>不读取个人画像</Text>
+              <Text className='flash-intro__mode-title'>标准剧情</Text>
+              <Text className='flash-intro__mode-description'>不使用人格、兴趣或职业信息。你的每次选择依然会改变过程、回声和最终结局。</Text>
+              <Text className='flash-intro__mode-action'>{busy ? '请稍候…' : '进入标准剧情  →'}</Text>
+            </View>
+          </View>
         </View>
+        <Text className='flash-intro__aside'>选择后才会申请一次定位，用于查看当前在线角色；可在街头盲盒设置中随时更改个性化授权。</Text>
       </View>
     </View>
   )
@@ -94,6 +142,7 @@ export default function FlashHomePage() {
     enabled && gate === 'ready' && pageVisible,
   )
   const fragmentsQuery = useFlashStoryFragments(enabled && gate === 'ready' && pageVisible)
+  const modeMutation = useUpdateFlashPreferences()
 
   const requestLocation = useCallback(async () => {
     if (locationActiveRef.current) return
@@ -101,7 +150,7 @@ export default function FlashHomePage() {
     const attempt = ++locationAttemptRef.current
     setGate('locating')
     try {
-      const snapshot = await getOneShotFlashLocation()
+      const snapshot = await getEntryLocation()
       if (attempt !== locationAttemptRef.current) return
       setLocation(snapshot)
       setGate('ready')
@@ -113,6 +162,24 @@ export default function FlashHomePage() {
       if (attempt === locationAttemptRef.current) locationActiveRef.current = false
     }
   }, [])
+
+  const selectStoryMode = useCallback(async (mode: 'personalized' | 'standard') => {
+    try {
+      const personalized = mode === 'personalized'
+      await modeMutation.mutateAsync({
+        personalizationEnabled: personalized,
+        usePersonality: personalized,
+        useInterests: personalized,
+        useIndustry: personalized,
+        useDistrict: false,
+        useTaskBehavior: false,
+        consentVersion: personalized ? FLASH_STORY_CONSENT_VERSION : undefined,
+      })
+      await requestLocation()
+    } catch {
+      Taro.showToast({ title: '剧情模式没有保存成功，请再试一次', icon: 'none' })
+    }
+  }, [modeMutation, requestLocation])
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: '街头盲盒' })
@@ -189,7 +256,7 @@ export default function FlashHomePage() {
     )
   }
 
-  if (gate === 'intro') return <FlashIntro onContinue={() => { void requestLocation() }} />
+  if (gate === 'intro') return <FlashIntro busy={modeMutation.isPending} onSelect={(mode) => { void selectStoryMode(mode) }} />
 
   if (gate === 'checking' || gate === 'locating') {
     return (
@@ -230,7 +297,7 @@ export default function FlashHomePage() {
   }
 
   if (isError) {
-    const code = getFlashApiErrorCode(error)
+    const code = getEntryApiErrorCode(error)
     const outsideShenzhen = code === 'FLASH_OUTSIDE_SHENZHEN'
     const contentUnavailable = code === 'FLASH_DISABLED'
       || code === 'FLASH_SCHEMA_NOT_READY'

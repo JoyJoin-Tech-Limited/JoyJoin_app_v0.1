@@ -28,6 +28,9 @@ type StoryEpisode = {
     discovery: string;
     question: { id: string; prompt: string; options: Array<{ id: string; label: string; tags: string[] }> };
     responseByOption: Record<string, string>;
+    effectsByOption?: Record<string, Array<{ dimension: "trust" | "attachment" | "intervention" | "truth"; delta: number; flag?: string }>>;
+    echoByFlag?: Record<string, string>;
+    personalizedFallbackByOption?: Record<string, string>;
     closing: string;
   };
   motion: { ambient: "none" | "breathe" | "drift"; blinkAssetUrl?: string; blinkIntervalSeconds?: number };
@@ -137,6 +140,12 @@ export function FlashStoryPanel({ canWrite }: { canWrite: boolean }) {
                     setDraft({ ...editing, content: { ...editing.content, question: { ...editing.content.question, options } } });
                   }} /></div>
                 ))}
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                {editing.content.question.options.map((option, index) => {
+                  const effect = editing.content.effectsByOption?.[option.id]?.[0] ?? { dimension: (["intervention", "truth", "trust"] as const)[index] ?? "trust", delta: 2 };
+                  return <div key={option.id} className="space-y-2 rounded-lg border p-3"><Label>选项 {index + 1} 的宇宙影响</Label><Select disabled={!canWrite} value={effect.dimension} onValueChange={(dimension: typeof effect.dimension) => setDraft({ ...editing, content: { ...editing.content, effectsByOption: { ...editing.content.effectsByOption, [option.id]: [{ ...effect, dimension }] } } })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="trust">信任</SelectItem><SelectItem value="attachment">留恋</SelectItem><SelectItem value="intervention">介入</SelectItem><SelectItem value="truth">求真</SelectItem></SelectContent></Select><Input disabled={!canWrite} type="number" min={-3} max={3} value={effect.delta} onChange={(event) => setDraft({ ...editing, content: { ...editing.content, effectsByOption: { ...editing.content.effectsByOption, [option.id]: [{ ...effect, delta: Number(event.target.value) }] } } })} /><Label>专属模式审核回退</Label><Textarea disabled={!canWrite} rows={3} value={editing.content.personalizedFallbackByOption?.[option.id] ?? editing.content.responseByOption[option.id] ?? ""} onChange={(event) => setDraft({ ...editing, content: { ...editing.content, personalizedFallbackByOption: { ...editing.content.personalizedFallbackByOption, [option.id]: event.target.value } } })} /></div>;
+                })}
               </div>
               <div className="grid gap-3 md:grid-cols-3">
                 {editing.content.question.options.map((option, index) => (

@@ -868,6 +868,10 @@ export async function calculatePairScore(
 /**
  * 计算小组内所有成员的平均配对兼容性分数
  * 包含默认 6D，或启用特性开关后的 7D（额外包含 semanticSimilarity）
+ *
+ * `excludePairKeys` (sorted "userA|userB" keys) are skipped entirely — used by
+ * 双人成行 duo matching so the duo-internal pair never inflates group quality
+ * metrics. Default undefined preserves legacy behavior for all other callers.
  */
 async function calculateGroupPairScore(
   members: UserWithProfile[],
@@ -880,6 +884,7 @@ async function calculateGroupPairScore(
   matchHistoryLookup?: Map<string, { wouldMeetAgain: boolean | null }>,
   matchNeverMeetSentinelEnabled = false,
   useWeightProfileV2 = false,
+  excludePairKeys?: Set<string>,
 ): Promise<number> {
   if (members.length < 2) return 0;
   
@@ -888,6 +893,12 @@ async function calculateGroupPairScore(
   
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
+      if (
+        excludePairKeys &&
+        excludePairKeys.has([members[i].userId, members[j].userId].sort().join('|'))
+      ) {
+        continue;
+      }
       const pairScore = await calculatePairScore(
         members[i],
         members[j],
@@ -1308,6 +1319,10 @@ export async function runGreedyPoolMatchingCore(
   matchNeverMeetSentinelEnabled = false,
   useWeightProfileV2 = false,
   magnetismGroupRulesEnabled = false,
+  // 双人成行 (duo registration, 2026-08-07): hard atomic units. Each pair must
+  // be placed into the SAME group occupying 2 seats, with MAX 1 duo per group.
+  // Trailing optional param — default [] keeps zero-duo pools byte-identical.
+  duoPairs: Array<{ inviterId: string; inviteeId: string }> = [],
 ): Promise<MatchGroup[]> {
   // 4. 贪婪分组算法（优先处理邀请关系）
   const groups: MatchGroup[] = [];
@@ -1337,6 +1352,35 @@ export async function runGreedyPoolMatchingCore(
       mode: genderBalanceMode,
       minFemaleCount,
       minMaleCount,
+    });
+  }
+
+  // ── 双人成行 (duo) atomic units ─────────────────────────────────────────
+  // FALLBACK DECISION SITE (LOCKED 2026-08-07, variant A 整组顺延): a duo is a
+  // hard atomic unit — both members are admitted together or not at all, and
+  // MAX 1 duo per group is enforced at admission time. A duo that cannot be
+  // placed without violating the quality gates or the duo cap stays unmatched
+  // TOGETHER and flows into the existing unmatched → 场次未成行 auto-refund /
+  // 顺延 pipeline (lib/matchingPostMatchEffects.ts §9 + autoRefundService).
+  // Never split a duo across groups. To swap fallback semantics later, change
+  // the guards marked [DUO] below and the fallback copy slot in the spec.
+  const duoPartnerOf = new Map<string, string>();
+  const duoInternalPairKeys = new Set<string>();
+  for (const duo of duoPairs) {
+    duoPartnerOf.set(duo.inviterId, duo.inviteeId);
+    duoPartnerOf.set(duo.inviteeId, duo.inviterId);
+    duoInternalPairKeys.add([duo.inviterId, duo.inviteeId].sort().join('|'));
+  }
+  const isDuoInternalPair = (userAId: string, userBId: string): boolean =>
+    duoInternalPairKeys.has([userAId, userBId].sort().join('|'));
+  // Exclusion set for group-quality metrics (duo-internal pair must not
+  // inflate avgPairScore). Undefined when the pool has no duos → zero change.
+  const duoQualityExclusions = duoInternalPairKeys.size > 0 ? duoInternalPairKeys : undefined;
+
+  if (duoPairs.length > 0) {
+    logger.info("[Pool Matching] duo atomic units active", {
+      poolId: poolIdForLog,
+      duoCount: duoPairs.length,
     });
   }
 
@@ -1436,6 +1480,32 @@ export async function runGreedyPoolMatchingCore(
     );
   };
 
+  // [DUO] R1 无孤立者 for duo members: the duo-internal pair never counts as a
+  // strong tie — each duo member must satisfy R1 against the REST of the group
+  // individually. Inert when the pool has no duos.
+  const getR1PairScore = duoInternalPairKeys.size === 0
+    ? getCachedPairScore
+    : async (user1: UserWithProfile, user2: UserWithProfile): Promise<number> =>
+        isDuoInternalPair(user1.userId, user2.userId) ? -1 : getCachedPairScore(user1, user2);
+
+  // [DUO] Count distinct duo units already inside a forming group (a unit =
+  // both partners present). Used for the MAX 1 duo per group admission cap.
+  const countDuoUnits = (members: UserWithProfile[]): number => {
+    if (duoPartnerOf.size === 0) return 0;
+    const memberIds = new Set(members.map((m) => m.userId));
+    let units = 0;
+    const seen = new Set<string>();
+    for (const id of memberIds) {
+      const partnerId = duoPartnerOf.get(id);
+      if (partnerId && memberIds.has(partnerId) && !seen.has(id) && !seen.has(partnerId)) {
+        units++;
+        seen.add(id);
+        seen.add(partnerId);
+      }
+    }
+    return units;
+  };
+
   // 贪婪组建小组
   for (const pair of pairScores) {
     if (used.has(pair.user1.userId) || used.has(pair.user2.userId)) continue;
@@ -1445,9 +1515,34 @@ export async function runGreedyPoolMatchingCore(
     used.add(pair.user1.userId);
     used.add(pair.user2.userId);
 
+    // [DUO] Atomic seed: if a seed member belongs to a duo, the partner is
+    // force-included in the SAME group. If the partner cannot fit (capacity)
+    // the seed is abandoned and BOTH members stay unmatched together.
+    let duoSeedFits = true;
+    if (duoPartnerOf.size > 0) {
+      for (const seedMember of [pair.user1, pair.user2]) {
+        const partnerId = duoPartnerOf.get(seedMember.userId);
+        if (!partnerId || used.has(partnerId)) continue;
+        const partner = eligibleUsers.find((u) => u.userId === partnerId);
+        if (partner && groupMembers.length < maxGroupSize) {
+          groupMembers.push(partner);
+          used.add(partner.userId);
+        } else {
+          duoSeedFits = false;
+        }
+      }
+    }
+    if (!duoSeedFits) {
+      groupMembers.forEach((m) => used.delete(m.userId));
+      continue;
+    }
+
     // 继续添加成员直到达到目标人数
     while (groupMembers.length < targetGroupSize) {
       let bestCandidate: UserWithProfile | null = null;
+      // [DUO] When the best candidate belongs to a duo, its partner is admitted
+      // in the same step (atomic unit occupying 2 seats).
+      let bestCandidatePartner: UserWithProfile | null = null;
       let bestScore = 0;
       // True pair-score average of bestCandidate (pre-R4 nudge) — the admission
       // gate uses this, never the ranking-adjusted score.
@@ -1456,36 +1551,66 @@ export async function runGreedyPoolMatchingCore(
       for (const candidate of eligibleUsers as UserWithProfile[]) {
         if (used.has(candidate.userId)) continue;
 
+        // [DUO] Resolve the candidate's duo partner and enforce the admission
+        // guards at the same hook point as the capacity check:
+        //   - MAX 1 duo per group (group already contains a duo unit)
+        //   - atomic capacity: the unit needs 2 seats
+        //   - partner must be available (unused)
+        let candidatePartner: UserWithProfile | null = null;
+        if (duoPartnerOf.size > 0) {
+          const partnerId = duoPartnerOf.get(candidate.userId);
+          if (partnerId) {
+            if (countDuoUnits(groupMembers) >= 1) continue; // duo cap
+            if (groupMembers.length + 2 > maxGroupSize) continue; // unit needs 2 seats
+            const partner = eligibleUsers.find((u) => u.userId === partnerId);
+            if (!partner || used.has(partner.userId)) continue;
+            candidatePartner = partner;
+          }
+        }
+
         // Match Compass: apply dealbreakers during group expansion too (strictness < 50)
+        // [DUO] the partner must independently pass dealbreakers vs the group.
         if (isStrictnessEnabled && effectiveStrictness < 50) {
           let passesDealbreakers = true;
-          for (const member of groupMembers) {
-            if (!pairMeetsDealbreakers(candidate, member, effectiveStrictness)) {
-              passesDealbreakers = false;
-              break;
+          for (const unitMember of candidatePartner ? [candidate, candidatePartner] : [candidate]) {
+            for (const member of groupMembers) {
+              if (!pairMeetsDealbreakers(unitMember, member, effectiveStrictness)) {
+                passesDealbreakers = false;
+                break;
+              }
             }
+            if (!passesDealbreakers) break;
           }
           if (!passesDealbreakers) continue;
         }
 
         // 计算候选人与当前小组成员的平均分数 (uses cached pair scores)
-        let totalScore = 0;
-        for (const member of groupMembers) {
-          totalScore += await calculatePairScore(
-            candidate,
-            member,
-            interestsCache,
-            pairScoreCache,
-            semanticProfileCache,
-            semanticSimilarityEnabled,
-            chemistryCalibrationMap,
-            formationWeights,
-            matchHistoryLookup,
-            matchNeverMeetSentinelEnabled,
-            useWeightProfileV2,
-          );
-        }
-        const avgScore = totalScore / groupMembers.length;
+        const scoreAgainstGroup = async (user: UserWithProfile): Promise<number> => {
+          let totalScore = 0;
+          for (const member of groupMembers) {
+            totalScore += await calculatePairScore(
+              user,
+              member,
+              interestsCache,
+              pairScoreCache,
+              semanticProfileCache,
+              semanticSimilarityEnabled,
+              chemistryCalibrationMap,
+              formationWeights,
+              matchHistoryLookup,
+              matchNeverMeetSentinelEnabled,
+              useWeightProfileV2,
+            );
+          }
+          return totalScore / groupMembers.length;
+        };
+
+        // [DUO] Unit-to-group score = mean of BOTH duo members' averages
+        // (mean of both directions); solo candidates keep the legacy average.
+        const candidateAvg = await scoreAgainstGroup(candidate);
+        const avgScore = candidatePartner
+          ? (candidateAvg + (await scoreAgainstGroup(candidatePartner))) / 2
+          : candidateAvg;
 
         // R4 新奇分散 (flag-gated): an explore-intent candidate is nudged down
         // in the ranking when the forming group already has an explorer. The
@@ -1500,12 +1625,19 @@ export async function runGreedyPoolMatchingCore(
           bestScore = rankingScore;
           bestAvgScore = avgScore;
           bestCandidate = candidate;
+          bestCandidatePartner = candidatePartner;
         }
       }
 
       if (bestCandidate && bestAvgScore >= minPairScore) { // 最低质量门槛（Match Compass可调节）
         groupMembers.push(bestCandidate);
         used.add(bestCandidate.userId);
+        // [DUO] Atomic admission: partner joins in the same step — a duo can
+        // never be split across groups by the greedy loop.
+        if (bestCandidatePartner) {
+          groupMembers.push(bestCandidatePartner);
+          used.add(bestCandidatePartner.userId);
+        }
       } else {
         break; // 没有合适的候选人
       }
@@ -1533,7 +1665,9 @@ export async function runGreedyPoolMatchingCore(
     // pass); rejections fall through to the existing release path below.
     let magnetismRulesSatisfied = true;
     if (magnetismGroupRulesEnabled && groupMembers.length >= minGroupSize && genderFloorSatisfied) {
-      const strongTieSatisfied = await groupSatisfiesStrongTieRule(groupMembers, getCachedPairScore);
+      // [DUO] R1 uses getR1PairScore so the duo-internal pair never counts as
+      // a strong tie — each duo member individually needs a non-duo strong tie.
+      const strongTieSatisfied = await groupSatisfiesStrongTieRule(groupMembers, getR1PairScore);
       // R2 is skipped entirely when the pool has no energizer (see above).
       const energizerSatisfied = !poolHasEnergizer || groupHasEnergizer(groupMembers);
       const topicAnchorSatisfied = groupHasTopicAnchor(groupMembers, interestsCache);
@@ -1562,6 +1696,8 @@ export async function runGreedyPoolMatchingCore(
         matchHistoryLookup,
         matchNeverMeetSentinelEnabled,
         useWeightProfileV2,
+        // [DUO] duo-internal pair excluded from group quality metrics
+        duoQualityExclusions,
       );
       // E: Compute true chemistry-only average (distinct from avgPairScore)
       const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap);
@@ -1602,7 +1738,8 @@ export async function runGreedyPoolMatchingCore(
   // so default redistribution behavior is unchanged.
   const magnetismRulesSatisfiedFor = async (members: UserWithProfile[]): Promise<boolean> => {
     if (!magnetismGroupRulesEnabled) return true;
-    const strongTieSatisfied = await groupSatisfiesStrongTieRule(members, getCachedPairScore);
+    // [DUO] R1 excludes duo-internal ties (same wrapper as the commit gate).
+    const strongTieSatisfied = await groupSatisfiesStrongTieRule(members, getR1PairScore);
     const energizerSatisfied = !poolHasEnergizer || groupHasEnergizer(members);
     const topicAnchorSatisfied = groupHasTopicAnchor(members, interestsCache);
     if (!strongTieSatisfied || !energizerSatisfied || !topicAnchorSatisfied) {
@@ -1631,6 +1768,10 @@ export async function runGreedyPoolMatchingCore(
       // Phase 1: Try to place each stranded user into the best existing group
       // that has room (below maxGroupSize).
       for (const stranded of strandedUsers) {
+        // [DUO] FALLBACK (variant A): duo members are never absorbed solo —
+        // placing one without the partner would split the atomic unit. Both
+        // stay unmatched together (顺延 pipeline).
+        if (duoPartnerOf.has(stranded.userId)) continue;
         let bestGroup: MatchGroup | null = null;
         let bestScore = -1;
 
@@ -1695,6 +1836,7 @@ export async function runGreedyPoolMatchingCore(
             matchHistoryLookup,
             matchNeverMeetSentinelEnabled,
             useWeightProfileV2,
+            duoQualityExclusions,
           );
           bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
           bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members, genderBalanceMode, genderBalanceBonusPoints);
@@ -1712,7 +1854,17 @@ export async function runGreedyPoolMatchingCore(
       // Phase 2: If there are still stranded users, try to form a new group
       // from the remainders (only if enough to meet minGroupSize).
       let stillStranded = eligibleUsers.filter(u => !used.has(u.userId));
-      if (stillStranded.length >= minGroupSize) {
+      // [DUO] MAX 1 duo per group also caps remainder groups: a remainder set
+      // containing 2+ duo units is not formed (all stay unmatched, 顺延).
+      const phase2DuoCapSatisfied = countDuoUnits(stillStranded) <= 1;
+      if (!phase2DuoCapSatisfied) {
+        logger.info("[Pool Matching] H4 phase-2 remainder group blocked by duo cap", {
+          poolId: poolIdForLog,
+          memberCount: stillStranded.length,
+          duoUnits: countDuoUnits(stillStranded),
+        });
+      }
+      if (stillStranded.length >= minGroupSize && phase2DuoCapSatisfied) {
         // D6 Phase-2 floor check: a remainder group that cannot satisfy the
         // hard-mode floor is NOT formed — members stay unmatched (per D2).
         const phase2FloorSatisfied =
@@ -1740,6 +1892,7 @@ export async function runGreedyPoolMatchingCore(
             matchHistoryLookup,
             matchNeverMeetSentinelEnabled,
             useWeightProfileV2,
+            duoQualityExclusions,
           );
           const avgChemistryScore = calculateGroupChemistryScore(stillStranded, chemistryCalibrationMap);
           const diversity = calculateGroupDiversity(stillStranded, genderBalanceMode, genderBalanceBonusPoints);
@@ -1781,6 +1934,8 @@ export async function runGreedyPoolMatchingCore(
       stillStranded = eligibleUsers.filter(u => !used.has(u.userId));
       if (stillStranded.length > 0 && stillStranded.length < minGroupSize) {
         for (const stranded of stillStranded) {
+          // [DUO] FALLBACK (variant A): same no-solo-absorption rule as Phase 1.
+          if (duoPartnerOf.has(stranded.userId)) continue;
           let bestGroup: MatchGroup | null = null;
           let bestScore = -1;
 
@@ -1841,6 +1996,7 @@ export async function runGreedyPoolMatchingCore(
               matchHistoryLookup,
               matchNeverMeetSentinelEnabled,
               useWeightProfileV2,
+              duoQualityExclusions,
             );
             bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
             bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members, genderBalanceMode, genderBalanceBonusPoints);
@@ -2036,15 +2192,30 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
   const invitationById = new Map(relatedInvitations.map((inv: any) => [inv.id, inv]));
 
   // Build invitation map: inviteeUserId -> inviterUserId
+  // 双人成行 (2026-08-07): duo-scoped invitations (invitationType='duo' AND
+  // poolId = this pool) become HARD atomic units in the greedy core — they no
+  // longer take the +20 soft boost. Legacy event-scoped invitation rows keep
+  // the legacy +20 path unchanged.
   const invitationPairs: Array<{inviterId: string, inviteeId: string}> = [];
+  const duoPairs: Array<{inviterId: string, inviteeId: string}> = [];
   for (const inviteUse of allInviteUses) {
     if (!(inviteUse as any).invitationId) continue;
     const invitation = invitationById.get((inviteUse as any).invitationId);
     if (!invitation) continue;
     const inviter = eligibleUsers.find((u) => u.userId === (invitation as any).inviterId);
     const invitee = eligibleUsers.find((u) => u.registrationId === (inviteUse as any).poolRegistrationId);
+    // Both users must be registered (eligible) in THIS pool — a duo never
+    // binds a user outside the pool.
     if (inviter && invitee && inviter.userId !== invitee.userId) {
-      invitationPairs.push({ inviterId: inviter.userId, inviteeId: invitee.userId });
+      const pair = { inviterId: inviter.userId, inviteeId: invitee.userId };
+      const isDuoScoped =
+        (invitation as any).invitationType === "duo" &&
+        (invitation as any).poolId === poolId;
+      if (isDuoScoped) {
+        duoPairs.push(pair);
+      } else {
+        invitationPairs.push(pair);
+      }
     }
   }
 
@@ -2078,6 +2249,7 @@ export async function matchEventPool(poolId: string): Promise<MatchGroup[]> {
     matchNeverMeetSentinelEnabled,
     useWeightProfileV2,
     magnetismGroupRulesEnabled,
+    duoPairs,
   );
 }
 

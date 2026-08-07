@@ -1,6 +1,8 @@
 import { View, Image, Text } from '@tarojs/components'
 import { useState, useCallback } from 'react'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import { useSdAvatarEnabled } from '../../hooks/useSdAvatarEnabled'
+import SDAvatar from './SDAvatar'
 import './ArchetypeHead.scss'
 
 /**
@@ -16,6 +18,13 @@ import './ArchetypeHead.scss'
  * Assets:
  *   head variant — assets/icons/archetype/archetype-{key}-head.webp
  *   grid variant — assets/icons/archetype-grid/archetype-{key}-grid.webp
+ *   sd variant   — SD pixel sprite via <SDAvatar> (sd-avatar/v1 family);
+ *                  only when the viewer's sdAvatarEnabled feature flag is on
+ *                  AND size >= 40rpx, otherwise falls back to head behaviour.
+ *
+ * Circular import note: SDAvatar renders ArchetypeHead for fallback='head'
+ * and ArchetypeHead renders SDAvatar for variant='sd'. Both references are
+ * render-time only, so the ESM live bindings resolve safely.
  */
 
 interface ArchetypeHeadProps {
@@ -24,8 +33,12 @@ interface ArchetypeHeadProps {
   fallback?: 'initial' | 'none'
   fallbackText?: string
   className?: string
-  variant?: 'head' | 'grid'
+  variant?: 'head' | 'grid' | 'sd'
 }
+
+/** SD sprites read as full characters; below this rpx size the head crop
+ * stays more legible, so small slots keep the existing head behaviour. */
+const SD_VARIANT_MIN_SIZE_RPX = 40
 
 const HEAD_PATHS: Record<string, string> = {
   corgi: localAsset('/assets/icons/archetype/archetype-corgi-head.webp'),
@@ -104,6 +117,7 @@ export default function ArchetypeHead({
   className = '',
   variant = 'head',
 }: ArchetypeHeadProps) {
+  const sdAvatarEnabled = useSdAvatarEnabled()
   const paths = variant === 'grid' ? GRID_PATHS : HEAD_PATHS
   const localSrc = archetype ? paths[archetype] : undefined
   const sizeStr = `${size}rpx`
@@ -121,6 +135,23 @@ export default function ArchetypeHead({
   const handleCdnError = useCallback(() => {
     setHasCdnError(true)
   }, [])
+
+  // SD pixel sprite variant: full-character chibi sprite for 40rpx+
+  // roster/list slots, gated by the server-owned sdAvatarEnabled flag.
+  // SDAvatar's own 'head' fallback re-enters this component with the default
+  // 'head' variant on total asset failure, so behaviour below is unchanged
+  // whenever the flag is off or the slot is too small.
+  if (variant === 'sd' && sdAvatarEnabled && size >= SD_VARIANT_MIN_SIZE_RPX) {
+    return (
+      <SDAvatar
+        archetype={archetype}
+        size={size}
+        fallback={fallback === 'none' ? 'none' : 'head'}
+        fallbackText={fallbackText}
+        className={className}
+      />
+    )
+  }
 
   if (!localSrc || (hasLocalError && hasCdnError)) {
     if (fallback === 'none') return null

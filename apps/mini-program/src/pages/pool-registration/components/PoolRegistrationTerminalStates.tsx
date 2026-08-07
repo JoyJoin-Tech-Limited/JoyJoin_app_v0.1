@@ -85,6 +85,8 @@ interface AlreadyJoinedStateProps {
   eventType: PoolEventType
   poolArea: string
   poolDateTime?: string | null
+  /** Set when the user's duo is bound (spec §D boundary matrix). */
+  duoPartnerName?: string
 }
 
 export function PoolRegistrationAlreadyJoined({
@@ -93,6 +95,7 @@ export function PoolRegistrationAlreadyJoined({
   eventType,
   poolArea,
   poolDateTime,
+  duoPartnerName,
 }: AlreadyJoinedStateProps) {
   useEffect(() => {
     discoverAnalytics.track('registration_terminal_state_view', poolId, {
@@ -124,6 +127,9 @@ export function PoolRegistrationAlreadyJoined({
             <Text className='pool-reg__already-text'>
               你的预算和期待已经收到，悦仔正在帮你挑同频的桌友，有结果会第一时间通知你。
             </Text>
+            {duoPartnerName ? (
+              <Text className='pool-reg__already-text'>你和 {duoPartnerName} 的双人成行已生效</Text>
+            ) : null}
             <EventSummaryCard
               className='pool-reg__terminal-card'
               title={poolTitle}
@@ -152,6 +158,8 @@ interface SuccessStateProps {
   highlights: string[]
   pool: EventPoolSummary
   userArchetype: string | null
+  /** Duo variant (spec §C.3/C'-2): bound → duo title + body; waiting → extra pill. */
+  duo?: { partnerName: string; bound: boolean }
   onEnableNotifications: () => void
   isEnablingNotifications?: boolean
   notificationsEnabled?: boolean
@@ -163,6 +171,7 @@ export function PoolRegistrationSuccess({
   highlights,
   pool,
   userArchetype,
+  duo,
   onEnableNotifications,
   isEnablingNotifications = false,
   notificationsEnabled = false,
@@ -171,7 +180,10 @@ export function PoolRegistrationSuccess({
     discoverAnalytics.track('registration_terminal_state_view', poolId, {
       variant: 'success',
     })
-  }, [poolId])
+    if (duo) {
+      discoverAnalytics.track('duo_success_view', poolId, { bound: duo.bound })
+    }
+  }, [poolId, duo])
 
   const handleEnableNotifications = () => {
     if (isEnablingNotifications || notificationsEnabled) return
@@ -202,7 +214,14 @@ export function PoolRegistrationSuccess({
               src={CEREMONY_HEROES.poolRegistrationSuccess}
               ariaLabel='已加入活动池'
             />
-            <Text className='pool-reg__success-title'>已加入这场{eventType}</Text>
+            <Text className='pool-reg__success-title'>
+              {duo?.bound ? '双人成行已就位' : `已加入这场${eventType}`}
+            </Text>
+            {duo?.bound ? (
+              <Text className='pool-reg__success-text'>
+                已和 {duo.partnerName} 组成双人，悦仔会安排同桌。
+              </Text>
+            ) : null}
             <Text className='pool-reg__success-text'>
               我们会按照你刚刚填写的预算、社交期待和偏好完成匹配，有结果会第一时间通知你。
             </Text>
@@ -218,13 +237,16 @@ export function PoolRegistrationSuccess({
             >
               {notificationsEnabled ? '已开启提醒' : '开启匹配结果通知'}
             </Button>
-            {highlights.length > 0 ? (
+            {highlights.length > 0 || (duo && !duo.bound) ? (
               <View className='pool-reg__success-pills'>
                 {highlights.map((item) => (
                   <Text key={item} className='pool-reg__success-pill'>
                     {item}
                   </Text>
                 ))}
+                {duo && !duo.bound ? (
+                  <Text className='pool-reg__success-pill'>等 {duo.partnerName} 报名，你们就是同桌</Text>
+                ) : null}
               </View>
             ) : null}
             <EventSummaryCard

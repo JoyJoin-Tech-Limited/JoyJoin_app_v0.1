@@ -85,6 +85,11 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   /** Profile-only pixel companion stage. Kept independent from the V1.7
    * layout rollback so art can be disabled without reverting Profile data. */
   profilePixelAvatarEnabled: "PROFILE_PIXEL_AVATAR_ENABLED",
+  /** SD pixel avatar sprites (集结房间 chibi family) in 40rpx+ roster/list
+   * slots via ArchetypeHead variant='sd'. Default false while the Lovart art
+   * is pending (manifest currently holds synthesized placeholders).
+   * Env fallback: SD_AVATAR_ENABLED (default: false). */
+  sdAvatarEnabled: "SD_AVATAR_ENABLED",
   /** Server-authoritative equipment economy switch. No payment path exists. */
   equipmentRewardsEnabled: "EQUIPMENT_REWARDS_ENABLED",
   /** Private append-only personal story generation and reading surface. */
@@ -157,6 +162,7 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   /** Non-production QA escape hatch for completing the formal Flash arrival
    * and delivery chain from any valid GCJ-02 coordinate. */
   flashAnyLocationArrivalTestEnabled: "FLASH_ANY_LOCATION_ARRIVAL_TEST_ENABLED",
+  flashPersonalizedStoryEnabled: "FLASH_PERSONALIZED_STORY_ENABLED",
   /** Squad-unboxing pocket-deck collapse kill-switch. When false, the
    *  mini-program hides the "收起卡组" trigger and collapseDeck() is a no-op,
    *  so the deck stays in the fan phase. Users who previously collapsed stay
@@ -219,12 +225,16 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   magnetismWeightProfileV2Enabled: false,
   profileRedesignEnabled: true,
   profilePixelAvatarEnabled: false,
+  /** SD pixel avatar sprites ship dark until the real Lovart art replaces
+   * the synthesized placeholders (docs/design/sd-pixel-avatar-style-guide.md). */
+  sdAvatarEnabled: false,
   equipmentRewardsEnabled: false,
   personalStoryEnabled: false,
   profileIdentityStageEnabled: true,
   flashShenzhenLocationGateEnabled: true,
   flashTaskRetryTestEnabled: false,
   flashAnyLocationArrivalTestEnabled: false,
+  flashPersonalizedStoryEnabled: false,
   /** Tier-1 semantic moderation (WeChat msgSecCheck) is ON by default. The
    *  check is budget-bounded (see CONTENT_MODERATION_TIER1_BUDGET_MS) and
    *  fails open, so latency is bounded regardless. Ops can still disable via

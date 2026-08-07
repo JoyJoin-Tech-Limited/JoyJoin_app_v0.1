@@ -2033,6 +2033,198 @@
     {
       "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/thumb-v2.ebc56861d1b8.webp",
       "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/thumb-v2.ebc56861d1b8.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/cat/sprite-32-v1.ef660d1ae774.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/cat/sprite-32-v1.ef660d1ae774.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/cat/sprite-48-v1.207b1d694a85.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/cat/sprite-48-v1.207b1d694a85.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/cat/sprite-64-v1.6dca14e491ef.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/cat/sprite-64-v1.6dca14e491ef.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/cat/sprite-96-v1.a3b43d02d5b2.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/cat/sprite-96-v1.a3b43d02d5b2.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/corgi/sprite-32-v1.a79d2dc4110c.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/corgi/sprite-32-v1.a79d2dc4110c.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/corgi/sprite-48-v1.745b6d874548.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/corgi/sprite-48-v1.745b6d874548.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/corgi/sprite-64-v1.2f0d2a66702f.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/corgi/sprite-64-v1.2f0d2a66702f.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/corgi/sprite-96-v1.84e42842819b.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/corgi/sprite-96-v1.84e42842819b.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/dolphin_calm/sprite-32-v1.d0fad7a653a6.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/dolphin_calm/sprite-32-v1.d0fad7a653a6.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/dolphin_calm/sprite-48-v1.27340904d737.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/dolphin_calm/sprite-48-v1.27340904d737.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/dolphin_calm/sprite-64-v1.0911bbd10efd.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/dolphin_calm/sprite-64-v1.0911bbd10efd.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/dolphin_calm/sprite-96-v1.9522cfe599bb.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/dolphin_calm/sprite-96-v1.9522cfe599bb.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/elephant/sprite-32-v1.d76d5c6f74ee.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/elephant/sprite-32-v1.d76d5c6f74ee.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/elephant/sprite-48-v1.4dbca6962835.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/elephant/sprite-48-v1.4dbca6962835.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/elephant/sprite-64-v1.e7f5d485c305.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/elephant/sprite-64-v1.e7f5d485c305.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/elephant/sprite-96-v1.d5d7aa55f403.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/elephant/sprite-96-v1.d5d7aa55f403.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/fox/sprite-32-v1.7ab853f86831.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/fox/sprite-32-v1.7ab853f86831.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/fox/sprite-48-v1.86aec33e66d6.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/fox/sprite-48-v1.86aec33e66d6.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/fox/sprite-64-v1.9e8c7b40f31b.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/fox/sprite-64-v1.9e8c7b40f31b.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/fox/sprite-96-v1.caac2fb0804a.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/fox/sprite-96-v1.caac2fb0804a.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/hamster_praise/sprite-32-v1.738a5f935417.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/hamster_praise/sprite-32-v1.738a5f935417.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/hamster_praise/sprite-48-v1.bc53f0ec87d9.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/hamster_praise/sprite-48-v1.bc53f0ec87d9.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/hamster_praise/sprite-64-v1.f94b51c66ae8.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/hamster_praise/sprite-64-v1.f94b51c66ae8.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/hamster_praise/sprite-96-v1.a355e73ff5d7.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/hamster_praise/sprite-96-v1.a355e73ff5d7.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/koala/sprite-32-v1.b645a859861a.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/koala/sprite-32-v1.b645a859861a.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/koala/sprite-48-v1.cef2d27259e0.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/koala/sprite-48-v1.cef2d27259e0.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/koala/sprite-64-v1.08674ac272bc.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/koala/sprite-64-v1.08674ac272bc.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/koala/sprite-96-v1.e0ec53b322a4.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/koala/sprite-96-v1.e0ec53b322a4.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/octopus/sprite-32-v1.a0ecc8b44c68.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/octopus/sprite-32-v1.a0ecc8b44c68.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/octopus/sprite-48-v1.7361a04971dd.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/octopus/sprite-48-v1.7361a04971dd.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/octopus/sprite-64-v1.99e68697a370.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/octopus/sprite-64-v1.99e68697a370.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/octopus/sprite-96-v1.e47b11ae5022.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/octopus/sprite-96-v1.e47b11ae5022.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/owl/sprite-32-v1.21618e7c5938.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/owl/sprite-32-v1.21618e7c5938.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/owl/sprite-48-v1.62e2da63c6d3.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/owl/sprite-48-v1.62e2da63c6d3.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/owl/sprite-64-v1.2422e655dd24.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/owl/sprite-64-v1.2422e655dd24.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/owl/sprite-96-v1.181117d43aa5.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/owl/sprite-96-v1.181117d43aa5.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/rooster/sprite-32-v1.ec602193dfa7.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/rooster/sprite-32-v1.ec602193dfa7.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/rooster/sprite-48-v1.6b8420104bf0.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/rooster/sprite-48-v1.6b8420104bf0.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/rooster/sprite-64-v1.1233b86f360e.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/rooster/sprite-64-v1.1233b86f360e.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/rooster/sprite-96-v1.96539aac567b.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/rooster/sprite-96-v1.96539aac567b.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/spider/sprite-32-v1.7a71db203f95.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/spider/sprite-32-v1.7a71db203f95.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/spider/sprite-48-v1.40b33a07457c.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/spider/sprite-48-v1.40b33a07457c.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/spider/sprite-64-v1.2b227081ebea.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/spider/sprite-64-v1.2b227081ebea.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/spider/sprite-96-v1.ee5373a5ebc4.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/spider/sprite-96-v1.ee5373a5ebc4.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/turtle/sprite-32-v1.7b1c90637442.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/turtle/sprite-32-v1.7b1c90637442.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/turtle/sprite-48-v1.12a145c9b176.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/turtle/sprite-48-v1.12a145c9b176.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/turtle/sprite-64-v1.76d4ab1fc764.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/turtle/sprite-64-v1.76d4ab1fc764.webp"
+    },
+    {
+      "localPath": "assets/sd-avatar/v1/archetypes/turtle/sprite-96-v1.f6d9516ab91f.webp",
+      "cdnPath": "assets/sd-avatar/v1/archetypes/turtle/sprite-96-v1.f6d9516ab91f.webp"
     }
   ],
   "pendingAssets": [

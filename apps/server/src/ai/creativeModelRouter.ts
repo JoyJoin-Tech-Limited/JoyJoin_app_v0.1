@@ -28,13 +28,15 @@ export type CreativeFunction =
   | 'generateSocialTags'
   | 'generateThemeLLM'
   | 'generateEventThemeTitle'
-  | 'generatePersonalNovelChapter';
+  | 'generatePersonalNovelChapter'
+  | 'generateFlashPersonalizedDialogue';
 
 const CREATIVE_FUNCTION_ENV_OVERRIDES: Record<CreativeFunction, string> = {
   generateSocialTags: 'CREATIVE_AI_TAGS_PROVIDER',
   generateThemeLLM: 'CREATIVE_AI_THEME_PROVIDER',
   generateEventThemeTitle: 'CREATIVE_AI_TITLE_PROVIDER',
   generatePersonalNovelChapter: 'CREATIVE_AI_PERSONAL_STORY_PROVIDER',
+  generateFlashPersonalizedDialogue: 'CREATIVE_AI_FLASH_STORY_PROVIDER',
 };
 
 function parseProviderOverride(rawValue: string | undefined): AIProvider | null {

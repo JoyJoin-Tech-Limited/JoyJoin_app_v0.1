@@ -107,6 +107,9 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     profileRedesignEnabled?: boolean
     /** Enables the Profile-only pixel avatar stage and My Image entry. */
     profilePixelAvatarEnabled?: boolean
+    /** Enables the SD pixel avatar sprites (集结房间 chibi family) in 40rpx+
+     *  roster/list slots via ArchetypeHead variant='sd'. Default: false. */
+    sdAvatarEnabled?: boolean
     /** Enables equipment draws, fragments and the fragment-only shop. */
     equipmentRewardsEnabled?: boolean
     /** Enables the private, append-only AI personal story surface. */

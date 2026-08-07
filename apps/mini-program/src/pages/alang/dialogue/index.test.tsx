@@ -11,13 +11,14 @@ const mocks = vi.hoisted(() => ({
   offer: vi.fn(),
   refetch: vi.fn(),
   canonicalRedirect: vi.fn(),
+  redirectTo: vi.fn(),
 }))
 
 vi.mock('@tarojs/taro', () => ({
   default: {
     getCurrentInstance: () => ({ router: { params: { encounterId: 'encounter-1' } } }),
     setNavigationBarTitle: vi.fn(),
-    redirectTo: vi.fn(),
+    redirectTo: mocks.redirectTo,
   },
 }))
 vi.mock('@tarojs/components', () => ({
@@ -142,5 +143,23 @@ describe('formal Flash dialogue', () => {
     render(<FlashDialoguePage />)
     expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
     expect(mocks.useEncounter).toHaveBeenCalledWith('encounter-1', false)
+  })
+
+  it('redirects a completed season into the dedicated finale ceremony', async () => {
+    mocks.useEncounter.mockReturnValue({
+      data: {
+        ...questionEncounter,
+        status: 'completed',
+        currentQuestion: null,
+        storyEpisode: { code: 'season-finale', title: '守桥的人' },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+    render(<FlashDialoguePage />)
+    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledWith({
+      url: '/pages/alang/finale/index?encounterId=encounter-1',
+    }))
   })
 })

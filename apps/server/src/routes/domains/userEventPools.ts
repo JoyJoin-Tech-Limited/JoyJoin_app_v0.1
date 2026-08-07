@@ -716,6 +716,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
 
         const attribution = resolveOptionalRegistrationAttribution({
           userId,
+          poolId,
           invitation,
           referral,
         });
@@ -1079,6 +1080,9 @@ export function registerUserEventPoolRoutes(app: Express): void {
         barThemes: validatedData.barThemes ?? [],
         alcoholComfort: validatedData.alcoholComfort ?? [],
         barBudgetRange: validatedData.barBudgetRange ?? [],
+        // 双人成行: duo/invitation codes must survive the payment hop so the
+        // fulfillment path can bind the invitee (write invitation_uses).
+        invitationCode: invitationCode ?? null,
       };
 
       // Create WeChat Pay prepay via payment service

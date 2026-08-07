@@ -11,7 +11,7 @@ import { storage } from "../../storage";
 import { shellCache } from "../../lib/shellCache";
 import { validateContentSafe, validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
 import { recordViolation } from "../../abuseDetection";
-import { resolveCanonicalFeedbackEventId } from "../../repositories/eventFeedbackRepo";
+import { resolveCanonicalEventId } from "../../lib/resolveCanonicalEventId";
 
 function firstNonEmptyString(...values: Array<string | null | undefined>): string | undefined {
   for (const value of values) {
@@ -266,15 +266,21 @@ export function registerSocialRoutes(app: Express): void {
     try {
       const userId = req.session.userId;
       const routeEventId = req.params.eventId;
-      const eventId = await resolveCanonicalFeedbackEventId(routeEventId, userId);
-      if (!eventId) {
+      // The mini-program can arrive with any of the three event id families
+      // (events.id, blind_box_events.id via squad-unboxing redirect, or
+      // event_pools.id). event_feedback/connections FKs reference events.id,
+      // so the raw id must be canonicalized before insert — otherwise a
+      // blind-box id violates event_feedback_event_id_events_id_fk (single-test
+      // 局 flow). Mirrors the participants route's family resolution.
+      const canonicalEventId = await resolveCanonicalEventId(routeEventId, userId);
+      if (!canonicalEventId) {
         logger.warn("Feedback event could not be resolved", { routeEventId, userId });
         return res.status(404).json({ message: "未找到对应的活动" });
       }
       const result = insertEventFeedbackSchema.safeParse({
         ...req.body,
         feedback: req.body.feedback ?? req.body.comment,
-        eventId,
+        eventId: canonicalEventId,
       });
 
       if (!result.success) {
@@ -330,12 +336,35 @@ export function registerSocialRoutes(app: Express): void {
         }
       }
 
-      const feedback = await storage.createEventFeedback(userId, result.data);
+      // G1 (2026-08-07 audit): the balanced layer must actually pay out.
+      // Any 5-dimension field present ⇒ deep feedback (50xp/50coins) + the
+      // has_deep_feedback flag; otherwise the base reward (20xp/20coins).
+      // Mirrors the UI promise "完成可得 +30 积分" (50 − 20 = 30).
+      const hasDeepFeedback = [
+        feedbackData.atmosphereScore,
+        feedbackData.atmosphereNote,
+        feedbackData.venueStyleRating,
+        feedbackData.connectionStatus,
+        feedbackData.improvementOther,
+      ].some((v) => v !== undefined && v !== null && v !== "") ||
+        (feedbackData.connectionRadar && typeof feedbackData.connectionRadar === 'object' && Object.keys(feedbackData.connectionRadar).length > 0) ||
+        (feedbackData.improvementAreas && Array.isArray(feedbackData.improvementAreas) && feedbackData.improvementAreas.length > 0) ||
+        (feedbackData.attendeeTraits && typeof feedbackData.attendeeTraits === 'object' && Object.keys(feedbackData.attendeeTraits).length > 0);
+
+      const feedback = await storage.createEventFeedback(userId, {
+        ...result.data,
+        ...(hasDeepFeedback ? { hasDeepFeedback: true, deepFeedbackCompletedAt: new Date() } : {}),
+      });
 
       try {
         const { awardXPAndCoins } = await import('../../gamificationService');
-        const xpResult = await awardXPAndCoins(userId, 'feedback_basic', eventId, feedback.id);
-        logger.info(`[Gamification] Awarded basic feedback XP to user ${userId}`, { xpResult });
+        const xpResult = await awardXPAndCoins(
+          userId,
+          hasDeepFeedback ? 'feedback_deep' : 'feedback_basic',
+          canonicalEventId,
+          feedback.id
+        );
+        logger.info(`[Gamification] Awarded ${hasDeepFeedback ? 'deep' : 'basic'} feedback XP to user ${userId}`, { xpResult });
       } catch (xpError) {
         logger.error("Error awarding feedback XP", { error: String(xpError) });
       }
@@ -347,7 +376,7 @@ export function registerSocialRoutes(app: Express): void {
             continue;
           }
           try {
-            await storage.upsertConnection(eventId, userId, selectedUserId);
+            await storage.upsertConnection(canonicalEventId, userId, selectedUserId);
             shellCache.invalidateUser(userId);
             shellCache.invalidateUser(selectedUserId);
           } catch (connError) {
@@ -362,7 +391,7 @@ export function registerSocialRoutes(app: Express): void {
 
       const MUTUAL_MATCH_NOTIFICATION_WINDOW_MS = 60_000;
       try {
-        const freshMutualRows = await storage.getMutualConnections(eventId, userId);
+        const freshMutualRows = await storage.getMutualConnections(canonicalEventId, userId);
         for (const conn of freshMutualRows) {
           const otherUserId = conn.userAId === userId ? conn.userBId : conn.userAId;
           const isNew = conn.revealedAt && (Date.now() - new Date(conn.revealedAt).getTime()) < MUTUAL_MATCH_NOTIFICATION_WINDOW_MS;
@@ -375,7 +404,7 @@ export function registerSocialRoutes(app: Express): void {
                   and(
                     eq(schema.notifications.userId, otherUserId),
                     eq(schema.notifications.type, 'mutual_match'),
-                    eq(schema.notifications.relatedResourceId, eventId)
+                    eq(schema.notifications.relatedResourceId, canonicalEventId)
                   )
                 )
                 .limit(1);
@@ -386,7 +415,7 @@ export function registerSocialRoutes(app: Express): void {
                   type: 'mutual_match',
                   title: '🎉 新的双向匹配',
                   message: `你和一位参与者互相选择了对方！查看Ta的微信号吧`,
-                  relatedResourceId: eventId,
+                  relatedResourceId: canonicalEventId,
                 });
               }
             } catch (notifError) {
@@ -398,7 +427,7 @@ export function registerSocialRoutes(app: Express): void {
         logger.error(`[Connections] Failed to process mutual match notifications`, { error: String(notifLoopError) });
       }
 
-      const mutualConnectionRows = await storage.getMutualConnections(eventId, userId);
+      const mutualConnectionRows = await storage.getMutualConnections(canonicalEventId, userId);
       const mutualMatches = await Promise.all(
         mutualConnectionRows.map(async (conn: any) => {
           const otherUserId = conn.userAId === userId ? conn.userBId : conn.userAId;
@@ -417,7 +446,7 @@ export function registerSocialRoutes(app: Express): void {
       const responsePayload = { ...feedback, mutualMatches };
       const shadowRecommendationInput = {
         source: 'event_feedback',
-        eventId,
+        eventId: canonicalEventId,
         feedbackId: feedback.id,
         userId,
         wouldMeetAgain:
@@ -443,7 +472,7 @@ export function registerSocialRoutes(app: Express): void {
           .then(({ matchingWeightsService }) => matchingWeightsService.recordShadowRecommendation(shadowRecommendationInput))
           .catch((shadowError) => {
             logger.error('Failed to record shadow recommendation from event_feedback', {
-              eventId,
+              eventId: canonicalEventId,
               feedbackId: feedback.id,
               userId,
               error: String(shadowError),

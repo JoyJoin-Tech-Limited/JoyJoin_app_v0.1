@@ -2,7 +2,7 @@ import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useDidShow, useShareAppMessage } from '@tarojs/taro'
 import { useMemo, useState, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getReferralStats, type ReferralStatsResponse } from '@shared/api'
+import { getReferralStats, getMyPoolRegistrations, type ReferralStatsResponse, type PoolRegistrationSummary } from '@shared/api'
 import { apiRequest } from '../../../lib/api/api'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useAuth } from '../../../hooks/useAuth'
@@ -23,8 +23,15 @@ const REWARD_TIERS = [
   { count: 5, reward: '免费月卡 ×1', emoji: '🏆' },
 ]
 
-function buildReferralMiniProgramPath(code: string): string {
-  return `/pages/pool-registration/index?invitationCode=${encodeURIComponent(code)}`
+function buildReferralMiniProgramPath(code: string, poolId?: string): string {
+  // Dead-link fix (spec §G.1): include the pool id whenever the inviter has an
+  // active registration, so a logged-in invitee lands on that pool instead of
+  // the PoolRegistrationEmpty error page.
+  const base = '/pages/pool-registration/index'
+  const query = poolId
+    ? `id=${encodeURIComponent(poolId)}&invitationCode=${encodeURIComponent(code)}`
+    : `invitationCode=${encodeURIComponent(code)}`
+  return `${base}?${query}`
 }
 
 export default function InvitePage() {
@@ -44,6 +51,15 @@ export default function InvitePage() {
     enabled: !authLoading,
   })
 
+  // Active registration drives the share path's pool id (spec §G.1).
+  const { data: myRegistrations } = useQuery<PoolRegistrationSummary[]>({
+    queryKey: ['mini-program', 'my-pool-registrations'],
+    queryFn: () => getMyPoolRegistrations(apiRequest),
+    enabled: !authLoading,
+    staleTime: 30_000,
+  })
+  const activeSharePoolId = myRegistrations?.[0]?.poolId
+
   usePageTTI({ pageName: 'invite', ready: !authLoading && !isLoading })
 
   useDidShow(() => {
@@ -52,7 +68,7 @@ export default function InvitePage() {
 
   useShareAppMessage(() => {
     const code = stats?.referralCode || (user as any)?.referralCode || ''
-    const path = code ? buildReferralMiniProgramPath(code) : '/pages/index/index'
+    const path = code ? buildReferralMiniProgramPath(code, activeSharePoolId) : '/pages/index/index'
     return {
       title: '和我一起加入 JoyJoin，遇见同频的人',
       path,
@@ -74,7 +90,7 @@ export default function InvitePage() {
   const invitedCount = stats?.successfulInvites ?? 0
   const platformTotal = stats?.platformTotal ?? 0
   const inviteLink = stats?.inviteLink ?? ''
-  const miniProgramPath = referralCode !== '—' ? buildReferralMiniProgramPath(referralCode) : ''
+  const miniProgramPath = referralCode !== '—' ? buildReferralMiniProgramPath(referralCode, activeSharePoolId) : ''
   const nextTier = REWARD_TIERS.find((tier) => invitedCount < tier.count)
 
   const inviteCopy = useMemo(() => {
@@ -124,15 +140,6 @@ export default function InvitePage() {
       data: linkToCopy,
       success: () => Taro.showToast({ title: '已复制链接', icon: 'success' }),
     })
-  }
-
-  const handleShareToWeChat = () => {
-    haptics('light')
-    if (!miniProgramPath) {
-      Taro.showToast({ title: '邀请信息暂不可用', icon: 'none' })
-      return
-    }
-    Taro.showShareMenu({ withShareTicket: true })
   }
 
   const handleCopyInviteText = () => {
@@ -202,7 +209,16 @@ export default function InvitePage() {
           <Text className='invite-page__link-label'>专属邀请链接</Text>
           <Text className='invite-page__link-value'>{miniProgramPath || '当前先使用邀请码邀请好友加入'}</Text>
           <View className='invite-page__link-actions'>
-            <Button variant='primary' className='invite-page__link-btn' onClick={handleShareToWeChat} aria-label='分享给微信好友'>
+            {/* Real share button (spec §G.3): openType='share' actually opens
+                the forward panel; the old Taro.showShareMenu call could not. */}
+            <Button
+              variant='primary'
+              className='invite-page__link-btn'
+              openType='share'
+              disabled={!miniProgramPath}
+              onClick={() => haptics('light')}
+              aria-label='分享给微信好友'
+            >
               分享给微信好友
             </Button>
             <Button variant='secondary' className='invite-page__link-btn' onClick={handleCopyLink} aria-label='复制邀请链接'>
