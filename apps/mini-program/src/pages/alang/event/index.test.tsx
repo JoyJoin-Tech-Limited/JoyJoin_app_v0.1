@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   useAuth: vi.fn(),
   useFlashHome: vi.fn(),
   useFlashStoryFragments: vi.fn(),
-  permission: vi.fn(),
   location: vi.fn(),
   navigateTo: vi.fn(),
   refetch: vi.fn(),
@@ -21,6 +20,9 @@ vi.mock('@tarojs/taro', () => ({
     redirectTo: vi.fn(),
     openSetting: vi.fn(),
     showToast: vi.fn(),
+    getLocation: vi.fn((options: { success: (value: unknown) => void; fail: (error: unknown) => void }) => {
+      void mocks.location().then(options.success, options.fail)
+    }),
   },
   useDidShow: vi.fn((callback: () => void) => { mocks.didShow = callback }),
   useDidHide: vi.fn((callback: () => void) => { mocks.didHide = callback }),
@@ -32,10 +34,6 @@ vi.mock('@tarojs/components', () => ({
   Image: ({ mode: _mode, onError: _onError, ...props }: any) => <img {...props} />,
 }))
 vi.mock('../../../hooks/useAuth', () => ({ useAuth: mocks.useAuth }))
-vi.mock('../../../lib/alang/flashApi', () => ({
-  getFlashLocationPermission: mocks.permission,
-  getOneShotFlashLocation: mocks.location,
-}))
 vi.mock('../../../lib/alang/useFlash', () => ({
   useFlashHome: mocks.useFlashHome,
   useFlashStoryFragments: mocks.useFlashStoryFragments,
@@ -57,7 +55,6 @@ describe('formal Flash home', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
-    mocks.permission.mockResolvedValue('granted')
     mocks.location.mockResolvedValue({ latitude: 22.54, longitude: 114.05, accuracy: 12 })
     mocks.useFlashHome.mockReturnValue({ data: home, isLoading: false, isError: false, refetch: mocks.refetch })
     mocks.useFlashStoryFragments.mockReturnValue({ data: [{

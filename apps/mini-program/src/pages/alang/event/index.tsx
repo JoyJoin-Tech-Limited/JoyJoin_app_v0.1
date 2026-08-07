@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
-import { getFlashApiErrorCode, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useFlashHome, useFlashStoryFragments } from '../../../lib/alang/useFlash'
 import type { FlashLocationSnapshot, FlashNpcSummary } from '../../../lib/alang/flashTypes'
@@ -28,6 +27,17 @@ const FLASH_LOCATION_TIMEOUT_MS = 12_000
 
 type GateState = 'checking' | 'intro' | 'locating' | 'ready' | 'denied' | 'error'
 
+function getEntryApiErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== 'object') return null
+  const data = (error as { data?: unknown }).data
+  if (data && typeof data === 'object') {
+    const record = data as Record<string, unknown>
+    if (typeof record.code === 'string') return record.code
+    if (typeof record.error === 'string' && /^[A-Z0-9_]+$/.test(record.error)) return record.error
+  }
+  return null
+}
+
 function isLocationPermissionDenied(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false
   const candidate = error as { errMsg?: unknown; message?: unknown }
@@ -35,6 +45,25 @@ function isLocationPermissionDenied(error: unknown): boolean {
     .filter((value): value is string => typeof value === 'string')
     .join(' ')
   return /auth(?:orize)?\s*deny|permission\s*denied|user\s*deny/i.test(message)
+}
+
+function getEntryLocation(): Promise<FlashLocationSnapshot> {
+  if (typeof Taro.getLocation !== 'function') {
+    return Promise.reject(new Error('WECHAT_LOCATION_API_UNAVAILABLE'))
+  }
+  return new Promise((resolve, reject) => {
+    Taro.getLocation({
+      type: 'gcj02',
+      success: (result) => {
+        resolve({
+          latitude: result.latitude,
+          longitude: result.longitude,
+          accuracy: result.accuracy,
+        })
+      },
+      fail: reject,
+    })
+  })
 }
 
 function FlashIntro({ onContinue }: { onContinue: () => void }) {
@@ -101,7 +130,7 @@ export default function FlashHomePage() {
     const attempt = ++locationAttemptRef.current
     setGate('locating')
     try {
-      const snapshot = await getOneShotFlashLocation()
+      const snapshot = await getEntryLocation()
       if (attempt !== locationAttemptRef.current) return
       setLocation(snapshot)
       setGate('ready')
@@ -230,7 +259,7 @@ export default function FlashHomePage() {
   }
 
   if (isError) {
-    const code = getFlashApiErrorCode(error)
+    const code = getEntryApiErrorCode(error)
     const outsideShenzhen = code === 'FLASH_OUTSIDE_SHENZHEN'
     const contentUnavailable = code === 'FLASH_DISABLED'
       || code === 'FLASH_SCHEMA_NOT_READY'
