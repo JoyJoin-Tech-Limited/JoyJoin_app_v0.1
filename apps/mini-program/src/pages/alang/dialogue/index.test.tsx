@@ -138,11 +138,11 @@ describe('formal Flash dialogue', () => {
     }))
   })
 
-  it('does not fetch a disabled deep link', () => {
+  it('loads a formal deep link when the legacy Alang flag is disabled', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashDialoguePage />)
-    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
-    expect(mocks.useEncounter).toHaveBeenCalledWith('encounter-1', false)
+    expect(screen.getByText('如果现在能随便逛逛，你更想去哪种地方？')).toBeInTheDocument()
+    expect(mocks.useEncounter).toHaveBeenCalledWith('encounter-1', true)
   })
 
   it('redirects a completed season into the dedicated finale ceremony', async () => {

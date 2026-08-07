@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
   shouldShowAlangDebugTools,
   shouldShowAlangEntry,
+  shouldShowStreetBlindBoxEntry,
 } from './alangAccess'
 
 describe('Alang access gates', () => {
+  it('keeps the formal Street Blind Box entry enabled independently of legacy Alang', () => {
+    expect(shouldShowStreetBlindBoxEntry()).toBe(true)
+  })
+
   it('shows product entry points in staging when alangEnabled is true', () => {
     // appMode is a single-test marker, so staging without single-test mode is
     // represented as "production" in the client-safe auth response.

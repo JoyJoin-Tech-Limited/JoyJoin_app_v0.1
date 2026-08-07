@@ -24,8 +24,8 @@
 - 旧生活邀请、NPC 传话、任务目的地与交付状态机仅保留历史数据兼容；正式用户端不再展示或创建这些任务，Admin 主导航也不再提供其编辑入口。
 - Admin 闪现地点提供深圳城市公共空间运营模板：具体店铺和酒吧不得作为点位名称，只使用其所在的开放街区、外围广场、公共连廊、公共阅读区或商场公共空间。模板只预填运营文案与 NPC 建议，不携带可直接上线的坐标；运营必须重新通过腾讯地图选点、深圳行政区校验和人工安全审核。商场、书城或文化空间闭店闭馆后停用，不承诺永久免费或全天开放。
 - Staging bootstrap 固定保障南山区、福田区各至少 2 个 `approved + enabled` 安全地点：腾讯 suggestion 成功则采用同区 API 数据；失败会保留错误日志并使用 verified fallback seed，随后由部署 SQL 健康检查硬门验证覆盖数量。该降级只服务 staging 初始化，不放宽后台人工审批的腾讯反查要求。
-- 拒绝定位则不能参加闪现，且绝不使用 IP 定位回退。故事解锁不读取人格、兴趣、行业或任务行为标签。
-- 当前正式代码由 `routes/domains/alangFlash.ts`、`services/flashService.ts`、`services/flashScheduleService.ts`、`repositories/flashRepo.ts`、`schema/flash.ts` 与后台 `/admin/alang` 共同承载。`alangEnabled` 默认关闭；数据库迁移、seed、逐条人工审核、深圳边界许可确认、readiness、staging 及微信真机验收完成前不得开启。
+- 拒绝定位则不能参加街头盲盒，且绝不使用 IP 定位回退。标准剧情不读取人格、兴趣或行业；用户在入口明确选择专属剧情并同意后，关键对白可参考其已填写的人格、兴趣和宽泛职业领域。两种模式都不读取旧任务行为标签。
+- 当前正式代码由 `routes/domains/alangFlash.ts`、`services/flashService.ts`、`services/flashScheduleService.ts`、`repositories/flashRepo.ts`、`schema/flash.ts` 与后台 `/admin/alang` 共同承载。街头盲盒正式入口默认开放，不受旧 `alangEnabled` 控制；运行时仍须通过数据库迁移、发布季内容、深圳边界许可和 readiness 校验。`alangEnabled` 只保留给旧阿浪原型与非生产 Debug 工具。
 - 链路复测使用 DB-backed `flashTaskRetryTestEnabled`（默认关闭）。仅 super admin 可在 `/admin/alang` 开启；且仅在 `APP_MODE != production` 时生效。开启后，任务进行页和反馈页均可把同一 active assignment 重置到 `accepted`，清除本轮到达、反馈、私密回复与交付状态，从任务起点复测；关闭后重试接口返回 `403 FLASH_TASK_RETRY_DISABLED`。生产环境即使误存为 true 也必须强制拒绝。
 - 异地到达复测使用 DB-backed `flashAnyLocationArrivalTestEnabled`（默认关闭）。operator+ 可在 `/admin/alang` 的“任意地点到达测试”开关控制；仅 `APP_MODE != production` 时生效。开启后，任意有效 GCJ-02 坐标同时绕过 NPC 相遇的 10 米门槛和兼容目的地任务的 50 米门槛；反馈后允许在当前测试 encounter 完成交付，无需等待同 NPC 的后续班次，但仍复用正式对话、接取、反馈与交付状态机。生产环境无论数据库值如何都强制关闭；管理员变更写入审计，GPS 不进入审计载荷。
 
@@ -157,7 +157,7 @@ Discover 卡
 
 ### 回滚
 
-1. 关闭 DB-backed `alangEnabled`（或 `ALANG_ENABLED=false`）可立即隐藏入口并使 Alang API fail closed。
+1. DB-backed `alangEnabled`（或 `ALANG_ENABLED=false`）只隐藏旧阿浪原型并使旧 mission API fail closed；正式街头盲盒不读取此开关，内容下线通过归档发布季完成。
 2. 新增 progress 点位列允许为空，回滚应用版本不要求删列；不得用 demo 坐标批量回填旧测试 progress。
 3. Geo 新接口是现有 `/api/geo` 的增量扩展；回滚应用版本不需要回滚数据库。
 4. 旧 JSON 兼容读取必须保留到确认生产数据完成自然更新后，不能先删除。

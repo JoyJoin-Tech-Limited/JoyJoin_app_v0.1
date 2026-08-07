@@ -167,10 +167,11 @@ describe('formal Flash home', () => {
     expect(url).not.toContain('114.05')
   })
 
-  it('fails closed when the server feature flag is disabled', () => {
+  it('offers the formal story modes when the legacy Alang flag is disabled', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashHomePage />)
-    expect(screen.getByText('闪现正在准备下一次见面')).toBeInTheDocument()
+    expect(screen.getByText('更专属的剧情')).toBeInTheDocument()
+    expect(screen.getByText('标准剧情')).toBeInTheDocument()
     expect(mocks.location).not.toHaveBeenCalled()
   })
 })

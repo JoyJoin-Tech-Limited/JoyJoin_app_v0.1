@@ -59,10 +59,10 @@ describe('AlangDiscoverCard formal entry', () => {
     })
   })
 
-  it('fails closed when the server flag is disabled', () => {
+  it('remains visible when the legacy Alang flag is disabled', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<AlangDiscoverCard />)
 
-    expect(screen.queryByText('街头盲盒')).not.toBeInTheDocument()
+    expect(screen.getByText('街头盲盒')).toBeInTheDocument()
   })
 })

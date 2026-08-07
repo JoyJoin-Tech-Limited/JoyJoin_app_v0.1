@@ -167,10 +167,10 @@ describe('formal Flash map navigation', () => {
     expect(mocks.stopLocationUpdate).toHaveBeenCalled()
   })
 
-  it('does not start tracking through a disabled deep link', () => {
+  it('starts the formal map through a deep link when the legacy Alang flag is disabled', async () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashMapPage />)
-    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
-    expect(mocks.startLocationUpdate).not.toHaveBeenCalled()
+    expect(screen.getByText('正在获取前往出现点的路线')).toBeInTheDocument()
+    await waitFor(() => expect(mocks.startLocationUpdate).toHaveBeenCalled())
   })
 })

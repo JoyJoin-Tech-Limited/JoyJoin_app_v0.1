@@ -1,8 +1,7 @@
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
-import { useAuth } from '../../../hooks/useAuth'
-import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
+import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useFlashHome, useFlashStoryFragments, useUpdateFlashPreferences } from '../../../lib/alang/useFlash'
 import type { FlashLocationSnapshot, FlashNpcSummary } from '../../../lib/alang/flashTypes'
@@ -130,8 +129,7 @@ function OnlineNpcCard({ npc, onClick }: { npc: FlashNpcSummary; onClick: () => 
 }
 
 export default function FlashHomePage() {
-  const { user } = useAuth()
-  const enabled = shouldShowAlangEntry(user)
+  const enabled = shouldShowStreetBlindBoxEntry()
   const [gate, setGate] = useState<GateState>('checking')
   const [location, setLocation] = useState<FlashLocationSnapshot | null>(null)
   const [pageVisible, setPageVisible] = useState(true)

@@ -11,7 +11,12 @@ export type AlangAccessUser = {
   features?: AlangFeatureFlags
 }
 
-/** Product entry points are controlled only by the server-resolved feature flag. */
+/** 街头盲盒是正式、默认开放的产品；内部 alang 路径不代表旧原型门禁。 */
+export function shouldShowStreetBlindBoxEntry(): boolean {
+  return true
+}
+
+/** Legacy Alang prototype entry points remain controlled by the old flag. */
 export function shouldShowAlangEntry(
   user: AlangAccessUser | null | undefined,
 ): boolean {

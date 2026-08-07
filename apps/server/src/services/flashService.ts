@@ -822,7 +822,7 @@ export async function answerFlashEncounter(input: {
       ? intentResult.intent.renderKind as "template" | "ai" | "fallback"
       : "template";
     let promptVersion: string | null = intentResult.state === "ready" ? intentResult.intent.promptVersion : null;
-    if (intentResult.state === "claimed" && storyState.universeRun?.mode === "personalized" && await getFeatureFlag("flashPersonalizedStoryEnabled")) {
+    if (intentResult.state === "claimed" && storyState.universeRun?.mode === "personalized") {
       const preference = effectivePreference(await getFlashPreferences(input.userId));
       if (preference.personalizationEnabled && preference.consentVersion === FLASH_STORY_PERSONALIZATION_CONSENT_VERSION) {
         const [personality, interests, industry] = await Promise.all([

@@ -1,7 +1,6 @@
 import Taro from '@tarojs/taro'
 import { Image, Text, View } from '@tarojs/components'
-import { useAuth } from '../../hooks/useAuth'
-import { shouldShowAlangEntry } from '../../lib/alang/alangAccess'
+import { shouldShowStreetBlindBoxEntry } from '../../lib/alang/alangAccess'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { alangEvents } from '../../lib/alang/alangAnalytics'
 import { haptics } from '../../lib/utils/haptics'
@@ -13,8 +12,7 @@ import './AlangDiscoverCard.scss'
  * Flash subpackage, or request location before the user explicitly enters.
  */
 export default function AlangDiscoverCard() {
-  const { user } = useAuth()
-  if (!shouldShowAlangEntry(user)) return null
+  if (!shouldShowStreetBlindBoxEntry()) return null
 
   const handleTap = async () => {
     haptics('light')

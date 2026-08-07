@@ -60,10 +60,10 @@ describe('Flash personalization preferences', () => {
     expect(screen.getByText(/只影响街头盲盒接下来的对白表达/)).toBeInTheDocument()
   })
 
-  it('fails closed before reading preferences when the feature is disabled', () => {
+  it('loads formal preferences when the legacy Alang flag is disabled', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashPreferencesPage />)
-    expect(mocks.usePreferences).toHaveBeenCalledWith(false)
-    expect(screen.getByText('街头盲盒正在准备下一次见面')).toBeInTheDocument()
+    expect(mocks.usePreferences).toHaveBeenCalledWith(true)
+    expect(screen.getByText('更专属的剧情')).toBeInTheDocument()
   })
 })

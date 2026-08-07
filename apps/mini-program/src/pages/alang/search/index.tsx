@@ -4,8 +4,7 @@ import { Map, ScrollView, Text, View } from '@tarojs/components'
 import type { MapProps } from '@tarojs/components'
 import { getWalkingRoute, type WalkingRouteSuccessResponse } from '@shared/api'
 import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState, formatFlashRemainingTime } from '../../../components/alang/FlashUi'
-import { useAuth } from '../../../hooks/useAuth'
-import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
+import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode, getFlashLocationPermission } from '../../../lib/alang/flashApi'
 import { decodeFlashRouteParam, redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useLocateFlashAppearance } from '../../../lib/alang/useFlash'
@@ -33,8 +32,7 @@ const MAP_STATUS: Record<LocateState, { label: string; assistiveLabel: string }>
 
 type LocationChangeHandler = Parameters<typeof Taro.onLocationChange>[0]
 export default function FlashMapPage() {
-  const { user } = useAuth()
-  const enabled = shouldShowAlangEntry(user)
+  const enabled = shouldShowStreetBlindBoxEntry()
   const params = Taro.getCurrentInstance().router?.params ?? {}
   const appearanceId = decodeFlashRouteParam(params.appearanceId)
   const npcName = decodeFlashRouteParam(params.npcName, '这位朋友')

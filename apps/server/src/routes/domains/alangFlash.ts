@@ -71,9 +71,6 @@ function logSafeRouteFailure(req: Request, resourceId: string | null, error: unk
 
 async function requireFlashReady(_req: Request, res: Response, next: NextFunction) {
   try {
-    if (!(await getFeatureFlag("alangEnabled", false))) {
-      return res.status(503).json({ code: "FLASH_DISABLED", error: "闪现暂时休息中" });
-    }
     await assertFlashRuntimeReady();
     return next();
   } catch (error) {

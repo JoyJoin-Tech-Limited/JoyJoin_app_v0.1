@@ -2,8 +2,7 @@ import Taro from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { FlashButton, FlashFeatureClosed, FlashNpcDialogueScene, FlashPageState, FlashTaskCategoryBadge } from '../../../components/alang/FlashUi'
-import { useAuth } from '../../../hooks/useAuth'
-import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
+import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import {
@@ -40,8 +39,7 @@ function dialogueActionError(error: unknown, fallback: string): string {
 }
 
 export default function FlashDialoguePage() {
-  const { user } = useAuth()
-  const enabled = shouldShowAlangEntry(user)
+  const enabled = shouldShowStreetBlindBoxEntry()
   const params = Taro.getCurrentInstance().router?.params ?? {}
   const encounterId = params.encounterId ?? ''
   const { data, isLoading, isError, error, refetch } = useFlashEncounter(encounterId, enabled && !!encounterId)

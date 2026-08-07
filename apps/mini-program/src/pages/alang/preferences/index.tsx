@@ -3,8 +3,7 @@ import { useEffect, useState } from 'react'
 import { ScrollView, Switch, Text, View } from '@tarojs/components'
 import { FLASH_STORY_PERSONALIZATION_CONSENT_VERSION } from '@shared/alang/flashTypes'
 import { FlashFeatureClosed, FlashPageState } from '../../../components/alang/FlashUi'
-import { useAuth } from '../../../hooks/useAuth'
-import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
+import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { useFlashPreferences, useUpdateFlashPreferences } from '../../../lib/alang/useFlash'
 import type { FlashPreferencesView, FlashPreferenceUpdate } from '../../../lib/alang/flashTypes'
 import { COLOR_PRIMARY } from '../../../lib/utils/uiConstants'
@@ -28,8 +27,7 @@ const sourceRows: Array<{
 ]
 
 export default function FlashPreferencesPage() {
-  const { user } = useAuth()
-  const enabled = shouldShowAlangEntry(user)
+  const enabled = shouldShowStreetBlindBoxEntry()
   const { data, isLoading, isError, refetch } = useFlashPreferences(enabled)
   const updateMutation = useUpdateFlashPreferences()
   const [draft, setDraft] = useState<FlashPreferencesView | null>(null)

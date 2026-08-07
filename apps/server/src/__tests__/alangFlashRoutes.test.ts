@@ -146,6 +146,21 @@ describe("formal Flash routes", () => {
     }));
   });
 
+  it("does not gate the formal Street Blind Box routes on legacy alangEnabled", async () => {
+    mocks.getFeatureFlag.mockResolvedValue(false);
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl);
+      const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
+        method: "POST",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify(validCoordinate),
+      });
+      expect(response.status).toBe(200);
+    });
+    expect(mocks.assertReady).toHaveBeenCalled();
+    expect(mocks.getHome).toHaveBeenCalled();
+  });
+
   it("rejects an out-of-Shenzhen coordinate before service access", async () => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl);
