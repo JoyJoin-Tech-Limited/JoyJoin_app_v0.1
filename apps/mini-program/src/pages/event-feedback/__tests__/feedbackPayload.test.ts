@@ -8,7 +8,7 @@ describe('buildEventFeedbackPayload', () => {
       comment: '',
       connections: [],
     })).toEqual({
-      comment: undefined,
+      feedback: undefined,
       connections: [],
     })
   })
@@ -20,7 +20,7 @@ describe('buildEventFeedbackPayload', () => {
       connections: ['user-2'],
     })).toEqual({
       rating: 4,
-      comment: '很开心',
+      feedback: '很开心',
       connections: ['user-2'],
     })
   })

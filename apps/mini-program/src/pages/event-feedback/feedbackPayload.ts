@@ -11,7 +11,7 @@ export function buildEventFeedbackPayload({
 }: EventFeedbackPayloadInput) {
   return {
     ...(rating > 0 ? { rating } : {}),
-    comment: comment.trim() || undefined,
+    feedback: comment.trim() || undefined,
     connections,
   }
 }

@@ -65,6 +65,10 @@ vi.mock("../abuseDetection", () => ({
   recordViolation: mockRecordViolation,
 }));
 
+vi.mock("../repositories/eventFeedbackRepo", () => ({
+  resolveCanonicalFeedbackEventId: vi.fn(async (eventId: string) => eventId),
+}));
+
 vi.mock("../lib/logger", () => ({
   logger: {
     info: vi.fn(),
@@ -181,8 +185,29 @@ describe("POST /api/events/:eventId/feedback content moderation (S1)", () => {
 
       expect(response.status).toBe(200);
       expect(storageCtx.createEventFeedback).toHaveBeenCalledTimes(1);
+      expect(storageCtx.createEventFeedback).toHaveBeenCalledWith(
+        "tester-1",
+        expect.objectContaining({ eventId: "event-1" }),
+      );
       expect(mockRecordViolation).not.toHaveBeenCalled();
       expect(logRows).toHaveLength(0);
+    });
+  });
+
+  it("maps the mini-program comment field into persisted feedback text", async () => {
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl, "tester-1");
+      const response = await fetch(`${baseUrl}/api/events/pool-1/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", cookie },
+        body: JSON.stringify(buildFeedbackPayload({ comment: "A warm evening" })),
+      });
+
+      expect(response.status).toBe(200);
+      expect(storageCtx.createEventFeedback).toHaveBeenCalledWith(
+        "tester-1",
+        expect.objectContaining({ eventId: "pool-1", feedback: "A warm evening" }),
+      );
     });
   });
 

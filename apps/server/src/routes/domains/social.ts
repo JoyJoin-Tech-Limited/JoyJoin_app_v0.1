@@ -11,6 +11,7 @@ import { storage } from "../../storage";
 import { shellCache } from "../../lib/shellCache";
 import { validateContentSafe, validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
 import { recordViolation } from "../../abuseDetection";
+import { resolveCanonicalFeedbackEventId } from "../../repositories/eventFeedbackRepo";
 
 function firstNonEmptyString(...values: Array<string | null | undefined>): string | undefined {
   for (const value of values) {
@@ -264,9 +265,15 @@ export function registerSocialRoutes(app: Express): void {
   app.post('/api/events/:eventId/feedback', requireAuth, async (req: any, res) => {
     try {
       const userId = req.session.userId;
-      const { eventId } = req.params;
+      const routeEventId = req.params.eventId;
+      const eventId = await resolveCanonicalFeedbackEventId(routeEventId, userId);
+      if (!eventId) {
+        logger.warn("Feedback event could not be resolved", { routeEventId, userId });
+        return res.status(404).json({ message: "未找到对应的活动" });
+      }
       const result = insertEventFeedbackSchema.safeParse({
         ...req.body,
+        feedback: req.body.feedback ?? req.body.comment,
         eventId,
       });
 
