@@ -129,6 +129,38 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     );
   });
 
+  it('keeps the requested style and creates one role per player in catalog fallback', async () => {
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'false';
+    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
+    const { framework } = await generateMiniScriptFrameworkWithMeta({
+      playerCount: 5,
+      style: 'ancient_chinese',
+      genres: ['light_reasoning'],
+    });
+
+    expect(framework.style).toBe('ancient_chinese');
+    expect(framework.genres).toEqual(['light_reasoning']);
+    expect(framework.characters).toHaveLength(5);
+    expect(framework.playerKnowledge).toHaveLength(5);
+    expect(framework.characters.map((character) => character.slotIndex)).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it('reports real generation stages to the caller', async () => {
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'false';
+    const onProgress = vi.fn();
+    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
+
+    await generateMiniScriptFrameworkWithMeta({
+      playerCount: 4,
+      style: 'modern_urban',
+      genres: ['light_reasoning'],
+      onProgress,
+    });
+
+    expect(onProgress).toHaveBeenCalledWith('generating', 15);
+    expect(onProgress).toHaveBeenCalledWith('fallback', 86);
+  });
+
   it('accepts valid model JSON + validation when both enabled', async () => {
     process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
     process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED = 'true';

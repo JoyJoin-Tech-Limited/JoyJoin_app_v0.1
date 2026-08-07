@@ -8,6 +8,8 @@ import {
 import {
   miniScriptGenerateRequestSchema,
   miniScriptVoteSchema,
+  type MiniScriptGenerationStage,
+  type MiniScriptGenerationStatus,
   type MiniScriptStoryFramework,
   type MiniScriptStoryFrameworkPublic,
 } from '@shared/miniscriptStoryFramework';
@@ -40,6 +42,29 @@ type MiniScriptGenerationResult = {
 // Collapse same-session double taps into one model call. The entry is removed
 // after success or failure, so retries remain possible and memory stays bounded.
 const generationInFlight = new Map<string, Promise<MiniScriptGenerationResult>>();
+const generationStatuses = new Map<string, MiniScriptGenerationStatus>();
+const GENERATION_ESTIMATE_MS = 32_000;
+const GENERATION_STATUS_TTL_MS = 60_000;
+
+function setGenerationStatus(
+  socialSessionId: string,
+  stage: MiniScriptGenerationStage,
+  progress: number,
+) {
+  const previous = generationStatuses.get(socialSessionId);
+  generationStatuses.set(socialSessionId, {
+    stage,
+    progress,
+    startedAt: previous?.startedAt ?? Date.now(),
+    updatedAt: Date.now(),
+    estimatedTotalMs: GENERATION_ESTIMATE_MS,
+  });
+}
+
+function expireGenerationStatus(socialSessionId: string) {
+  const timer = setTimeout(() => generationStatuses.delete(socialSessionId), GENERATION_STATUS_TTL_MS);
+  timer.unref?.();
+}
 
 function hydrateMiniScriptState(state: SocialSessionState): SocialSessionState {
   return { ...state };
@@ -81,6 +106,42 @@ function stripFrameworkSecrets(
 }
 
 // ─── POST /generate ──────────────────────────────────────────────────────────
+
+router.get('/generation-status', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const socialSessionId = typeof req.query.socialSessionId === 'string'
+    ? req.query.socialSessionId
+    : '';
+  if (!socialSessionId) {
+    return res.status(400).json({ error: 'INVALID_SESSION_ID' });
+  }
+
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+  if (!state) {
+    return res.status(expired ? 410 : 404).json({
+      error: expired ? 'SESSION_EXPIRED' : 'Social session not found',
+    });
+  }
+  if (userId !== state.hostUserId) {
+    return res.status(403).json({ error: 'HOST_ONLY' });
+  }
+
+  const status = generationStatuses.get(socialSessionId);
+  if (status) return res.json(status);
+  if (state.miniScriptFramework) {
+    const completedAt = state.miniScriptFrameworkGeneratedAt ?? Date.now();
+    return res.json({
+      stage: 'complete',
+      progress: 100,
+      startedAt: completedAt,
+      updatedAt: completedAt,
+      estimatedTotalMs: GENERATION_ESTIMATE_MS,
+    } satisfies MiniScriptGenerationStatus);
+  }
+  return res.status(404).json({ error: 'GENERATION_NOT_STARTED' });
+});
 
 router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
   const userId = requireAuthenticatedUserId(req, res);
@@ -143,6 +204,7 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
   try {
     let generation = generationInFlight.get(socialSessionId);
     if (!generation) {
+      setGenerationStatus(socialSessionId, 'queued', 5);
       generation = (async () => {
         const roster = await listParticipants(socialSessionId);
         const { framework, aiResponseMeta } = await generateMiniScriptFrameworkWithMeta({
@@ -151,8 +213,10 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
           genres,
           lite: lite ?? false,
           roster,
+          onProgress: (stage, progress) => setGenerationStatus(socialSessionId, stage, progress),
         });
 
+        setGenerationStatus(socialSessionId, 'persisting', 92);
         const secrets = extractSecrets(framework);
         await setMiniScriptSecrets(socialSessionId, secrets);
 
@@ -161,6 +225,9 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
         session.miniScriptFrameworkGeneratedAt = Date.now();
         session.miniScriptFrameworkGeneratedByUserId = userId;
         await updateSession(socialSessionId, session);
+
+        setGenerationStatus(socialSessionId, 'complete', 100);
+        expireGenerationStatus(socialSessionId);
 
         return { framework: publicFramework, aiResponseMeta };
       })();
@@ -175,6 +242,8 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
     const { framework, aiResponseMeta } = await generation;
     return res.json({ ...framework, meta: aiResponseMeta });
   } catch (error) {
+    setGenerationStatus(socialSessionId, 'failed', 100);
+    expireGenerationStatus(socialSessionId);
     logger.error('[miniscript] generate failed', { error, socialSessionId });
     return res.status(500).json({ error: 'GENERATION_FAILED' });
   }

@@ -33,6 +33,26 @@ export const miniScriptGenerateRequestSchema = z.object({
 
 export type MiniScriptGenerateRequest = z.infer<typeof miniScriptGenerateRequestSchema>;
 
+export const MINI_SCRIPT_GENERATION_STAGES = [
+  'queued',
+  'generating',
+  'validating',
+  'fallback',
+  'persisting',
+  'complete',
+  'failed',
+] as const;
+
+export type MiniScriptGenerationStage = (typeof MINI_SCRIPT_GENERATION_STAGES)[number];
+
+export type MiniScriptGenerationStatus = {
+  stage: MiniScriptGenerationStage;
+  progress: number;
+  startedAt: number;
+  updatedAt: number;
+  estimatedTotalMs: number;
+};
+
 // ─── v2 Schema Components ─────────────────────────────────────────────────────
 
 const miniScriptClueSchema = z.object({

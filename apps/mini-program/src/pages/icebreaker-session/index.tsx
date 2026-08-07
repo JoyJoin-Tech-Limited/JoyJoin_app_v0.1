@@ -5,7 +5,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import type { AtmosphereMood, SocialIcebreakerPhase, SocialSessionState, SocialTopic } from '@shared/socialIcebreaker'
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
-import type { MiniScriptGenre, MiniScriptStyle, MiniScriptVoteInput } from '@shared/miniscriptStoryFramework'
+import type {
+  MiniScriptGenerationStatus,
+  MiniScriptGenre,
+  MiniScriptStyle,
+  MiniScriptVoteInput,
+} from '@shared/miniscriptStoryFramework'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../../lib/utils/uiConstants'
@@ -155,6 +160,7 @@ export default function IcebreakerSessionPage() {
   const [pendingAction, setPendingAction] = useState<string | null>(null)
   const [miniScriptModalOpen, setMiniScriptModalOpen] = useState(false)
   const [miniScriptSubmitting, setMiniScriptSubmitting] = useState(false)
+  const [miniScriptGenerationStatus, setMiniScriptGenerationStatus] = useState<MiniScriptGenerationStatus | null>(null)
   const [dismissedSuggestionAt, setDismissedSuggestionAt] = useState<string | null>(null)
   const [showPhaseIntro, setShowPhaseIntro] = useState(false)
   const [phaseToast, setPhaseToast] = useState<{ visible: boolean; text: ReactNode }>({ visible: false, text: '' })
@@ -1299,6 +1305,22 @@ export default function IcebreakerSessionPage() {
       }
 
       setMiniScriptSubmitting(true)
+      const startedAt = Date.now()
+      setMiniScriptGenerationStatus({
+        stage: 'queued',
+        progress: 5,
+        startedAt,
+        updatedAt: startedAt,
+        estimatedTotalMs: 32_000,
+      })
+      const refreshGenerationStatus = () => {
+        void apiRequest<MiniScriptGenerationStatus>({
+          path: `/api/miniscript/generation-status?socialSessionId=${encodeURIComponent(socialSessionId)}`,
+          timeout: 3000,
+        }).then(setMiniScriptGenerationStatus).catch(() => undefined)
+      }
+      const progressTimer = setInterval(refreshGenerationStatus, 800)
+      refreshGenerationStatus()
       try {
         await apiRequest({
           path: '/api/miniscript/generate',
@@ -1312,8 +1334,18 @@ export default function IcebreakerSessionPage() {
             lite: payload.lite,
           },
         })
-        await socialSessionQuery.refetch()
+        setMiniScriptGenerationStatus((current) => ({
+          stage: 'complete',
+          progress: 100,
+          startedAt: current?.startedAt ?? startedAt,
+          updatedAt: Date.now(),
+          estimatedTotalMs: current?.estimatedTotalMs ?? 32_000,
+        }))
+        await new Promise((resolve) => setTimeout(resolve, 400))
         setMiniScriptModalOpen(false)
+        // The POST has already persisted the framework. Keep the modal from
+        // blocking on a second network round-trip; polling will also reconcile.
+        void socialSessionQuery.refetch()
         Taro.showToast({ title: '剧本已生成', icon: 'success', duration: TOAST_DEFAULT_MS })
       } catch (error) {
         const message = getErrorText(error, '生成没成功')
@@ -1324,6 +1356,7 @@ export default function IcebreakerSessionPage() {
           duration: TOAST_MEDIUM_MS,
         })
       } finally {
+        clearInterval(progressTimer)
         setMiniScriptSubmitting(false)
       }
     },
@@ -1657,6 +1690,7 @@ export default function IcebreakerSessionPage() {
               open={miniScriptModalOpen}
               onClose={() => setMiniScriptModalOpen(false)}
               isSubmitting={miniScriptSubmitting}
+              generationStatus={miniScriptGenerationStatus}
               onSubmit={submitMiniScriptGenerate}
             />
           </>

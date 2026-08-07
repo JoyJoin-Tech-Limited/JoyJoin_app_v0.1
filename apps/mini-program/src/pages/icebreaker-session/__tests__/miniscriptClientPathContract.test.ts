@@ -10,6 +10,10 @@ const bonusGateSource = readFileSync(
   resolve(process.cwd(), 'src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx'),
   'utf8',
 )
+const configModalSource = readFileSync(
+  resolve(process.cwd(), 'src/pages/icebreaker-session/overlays/MiniScriptConfigModal.tsx'),
+  'utf8',
+)
 
 // The server mounts the whole mini-script surface under `/api/miniscript/*`
 // (domains/icebreaker.ts -> domains/miniscript.ts), with socialSessionId read
@@ -44,6 +48,25 @@ describe('MiniScript client-server path contract', () => {
     expect(indexSource).not.toContain("'/miniscript/vote'")
     expect(indexSource).not.toContain("'/miniscript/reveal-solution'")
     expect(indexSource).not.toContain("'/miniscript/ready'")
+  })
+
+  it('closes the generation modal before refreshing session state', () => {
+    const submitStart = indexSource.indexOf('const submitMiniScriptGenerate')
+    const submitEnd = indexSource.indexOf('// PR1', submitStart)
+    const submitSource = indexSource.slice(submitStart, submitEnd)
+    const closeIndex = submitSource.indexOf('setMiniScriptModalOpen(false)')
+    const refetchIndex = submitSource.indexOf('socialSessionQuery.refetch()')
+
+    expect(closeIndex).toBeGreaterThan(-1)
+    expect(refetchIndex).toBeGreaterThan(closeIndex)
+    expect(submitSource).not.toContain('await socialSessionQuery.refetch()')
+  })
+
+  it('polls real server progress and renders a determinate generation bar', () => {
+    expect(indexSource).toContain("path: `/api/miniscript/generation-status?socialSessionId=")
+    expect(configModalSource).toContain("role='progressbar'")
+    expect(configModalSource).toContain('aria-valuenow={progress}')
+    expect(configModalSource).toContain('estimatedTotalMs')
   })
 
   it('posts bonus-gate responses to the mounted /api/miniscript/bonus/* routes', () => {

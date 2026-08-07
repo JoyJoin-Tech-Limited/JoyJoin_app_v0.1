@@ -61,12 +61,12 @@ function getCatalogFallback(params: {
 }): MiniScriptStoryFramework {
   const exact = findCatalogEntry(params.style, params.genres);
   if (exact) {
-    return adaptCatalogEntry(exact.framework, params.playerCount);
+    return adaptCatalogEntry(exact.framework, params);
   }
 
   const random = getRandomCatalogEntry(params.style, params.genres);
   if (random) {
-    return adaptCatalogEntry(random.framework, params.playerCount);
+    return adaptCatalogEntry(random.framework, params);
   }
 
   // Ultimate fallback: generic v2 stub
@@ -79,24 +79,46 @@ function getCatalogFallback(params: {
  */
 function adaptCatalogEntry(
   framework: MiniScriptStoryFramework,
-  playerCount: number
+  params: {
+    playerCount: number;
+    style: MiniScriptStyle;
+    genres: MiniScriptGenre[];
+  },
 ): MiniScriptStoryFramework {
-  const n = Math.min(6, Math.max(4, playerCount));
-  if (framework.characters.length === n) return framework;
-
-  const chars = framework.characters.slice(0, n);
-  const knowledge = framework.playerKnowledge.slice(0, n);
-
-  // Re-index slotIndices
-  chars.forEach((c, i) => {
-    c.slotIndex = i;
+  const n = Math.min(6, Math.max(4, params.playerCount));
+  const chars = Array.from({ length: n }, (_, slotIndex) => {
+    const source = framework.characters[slotIndex % framework.characters.length]!;
+    return {
+      ...source,
+      slotIndex,
+      roleLabel: slotIndex < framework.characters.length
+        ? source.roleLabel
+        : `${source.roleLabel}·新客`,
+    };
   });
-  knowledge.forEach((k, i) => {
-    k.slotIndex = i;
+  const knowledge = Array.from({ length: n }, (_, slotIndex) => {
+    const source = framework.playerKnowledge[slotIndex % framework.playerKnowledge.length]!;
+    return {
+      ...source,
+      slotIndex,
+      knownFacts: [...source.knownFacts],
+    };
   });
+  const config = getGameModeConfig(params.genres);
 
   return {
     ...framework,
+    style: params.style,
+    genres: params.genres,
+    gameModeConfig: {
+      clueCountRange: config.clueCountRange,
+      hasRedHerrings: config.hasRedHerrings,
+      hasHiddenAgendas: config.hasHiddenAgendas,
+      votingStyle: config.votingStyle,
+      winCondition: config.winCondition,
+      targetPlayMinutes: config.targetPlayMinutes,
+      difficulty: config.difficulty,
+    },
     characters: chars,
     playerKnowledge: knowledge,
   };
@@ -402,6 +424,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   genres: MiniScriptGenre[];
   lite?: boolean;
   roster?: Array<{ archetype?: string }>;
+  onProgress?: (stage: 'generating' | 'validating' | 'fallback', progress: number) => void;
 }): Promise<{
   framework: MiniScriptStoryFramework;
   meta: GenerateMiniScriptFrameworkMeta;
@@ -411,6 +434,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   const promptVersion = MINISCRIPT_GENERATION_PROMPT_VERSION;
   const tAll = Date.now();
   const config = getGameModeConfig(params.genres);
+  params.onProgress?.('generating', 15);
 
   const emitTrace = (fields: {
     provider: AIProvider;
@@ -436,6 +460,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
 
   // ── LLM disabled → immediate catalog fallback ──────────────────────────────
   if (!isMiniscriptLlmEnabled()) {
+    params.onProgress?.('fallback', 86);
     const framework = getCatalogFallback(params);
     emitTrace({ provider: null, success: true, fallbackUsed: true, errorCode: 'llm_disabled' });
     return {
@@ -463,6 +488,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
 
   if (!pass1.ok || !pass1.framework) {
     clearTimeout(timer);
+    params.onProgress?.('fallback', 86);
     const framework = getCatalogFallback(params);
     emitTrace({
       provider: pass1.provider ?? null,
@@ -491,6 +517,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   const withAuthority = applyHostAuthority(pass1.framework, params);
   if (!withAuthority) {
     clearTimeout(timer);
+    params.onProgress?.('fallback', 86);
     const framework = getCatalogFallback(params);
     emitTrace({
       provider: pass1.provider!,
@@ -513,6 +540,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
 
   // ── Pass 2: Validate (optional, gated by env) ──────────────────────────────
   if (isValidationEnabled()) {
+    params.onProgress?.('validating', 70);
     const pass2 = await validateMiniScriptFramework({
       draft: withAuthority,
       config,
@@ -520,6 +548,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
 
     if (!pass2.valid) {
       clearTimeout(timer);
+      params.onProgress?.('fallback', 86);
       const framework = getCatalogFallback(params);
       emitTrace({
         provider: pass1.provider!,
@@ -549,6 +578,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
 
     // Validation passed
     clearTimeout(timer);
+    params.onProgress?.('validating', 88);
 
     if (pass1.deepSeekRecoveryUsed) {
       recordAIProviderRecoveryMetric({ domain: 'miniscript', feature: 'generateMiniScriptFramework' });

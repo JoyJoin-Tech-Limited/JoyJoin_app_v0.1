@@ -4,6 +4,7 @@ import { haptics } from '../../../lib/utils/haptics'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import {
   MINI_SCRIPT_GENRES,
+  type MiniScriptGenerationStatus,
   type MiniScriptGenre,
   type MiniScriptStyle,
 } from '@shared/miniscriptStoryFramework'
@@ -22,6 +23,7 @@ export type MiniScriptConfigModalProps = {
   initialStyle?: MiniScriptStyle
   initialGenres?: MiniScriptGenre[]
   isSubmitting: boolean
+  generationStatus: MiniScriptGenerationStatus | null
   onSubmit: (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[]; lite?: boolean }) => void
 }
 
@@ -34,6 +36,7 @@ export function MiniScriptConfigModal({
   initialStyle = 'modern_urban',
   initialGenres = [...MINI_SCRIPT_GENRES],
   isSubmitting,
+  generationStatus,
   onSubmit,
 }: MiniScriptConfigModalProps) {
   const [stage, setStage] = useState<PickerStage>('style')
@@ -43,6 +46,7 @@ export function MiniScriptConfigModal({
   const [isEntering, setIsEntering] = useState(false)
   const [shuffleIndex, setShuffleIndex] = useState<number | null>(null)
   const [loadedThumbs, setLoadedThumbs] = useState<Set<string>>(new Set())
+  const [clockNow, setClockNow] = useState(Date.now())
   const shuffleTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Build style cards: 7 styles + 1 Surprise Me
@@ -79,6 +83,13 @@ export function MiniScriptConfigModal({
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (!isSubmitting) return
+    setClockNow(Date.now())
+    const timer = setInterval(() => setClockNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [isSubmitting])
 
   const genreSet = useMemo(() => new Set(selectedGenres), [selectedGenres])
 
@@ -147,6 +158,64 @@ export function MiniScriptConfigModal({
 
   if (!open) {
     return null
+  }
+
+  if (isSubmitting) {
+    const progress = Math.max(0, Math.min(100, generationStatus?.progress ?? 5))
+    const startedAt = generationStatus?.startedAt ?? clockNow
+    const elapsedSeconds = Math.max(0, Math.floor((clockNow - startedAt) / 1000))
+    const remainingSeconds = Math.max(
+      0,
+      Math.ceil(((generationStatus?.estimatedTotalMs ?? 32_000) - (clockNow - startedAt)) / 1000),
+    )
+    const stageCopy = {
+      queued: '正在整理你选择的世界设定',
+      generating: '正在编织人物关系与故事线',
+      validating: '正在检查线索是否完整可玩',
+      fallback: '正在启用备用故事，马上完成',
+      persisting: '正在封存角色秘密与线索',
+      complete: '剧本准备好了',
+      failed: '生成遇到问题',
+    }[generationStatus?.stage ?? 'queued']
+
+    return (
+      <RootPortal>
+        <View className='ms-generation'>
+          <View className='ms-generation__card'>
+            <Image
+              className='ms-generation__mascot'
+              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
+              mode='aspectFit'
+            />
+            <Text className='ms-generation__eyebrow'>悦仔正在创作</Text>
+            <Text className='ms-generation__title'>迷你剧本生成中</Text>
+            <Text className='ms-generation__stage'>{stageCopy}</Text>
+            <View
+              className='ms-generation__track'
+              role='progressbar'
+              aria-label='剧本生成进度'
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progress}
+            >
+              <View
+                className='ms-generation__fill'
+                style={{ transform: `scaleX(${progress / 100})` }}
+              />
+            </View>
+            <View className='ms-generation__metrics'>
+              <Text className='ms-generation__percent'>{progress}%</Text>
+              <Text className='ms-generation__time'>
+                {generationStatus?.stage === 'complete'
+                  ? `完成 · 用时 ${elapsedSeconds} 秒`
+                  : `已等待 ${elapsedSeconds} 秒 · 预计还需约 ${remainingSeconds} 秒`}
+              </Text>
+            </View>
+            <Text className='ms-generation__hint'>请保持页面开启，完成后会自动进入剧本</Text>
+          </View>
+        </View>
+      </RootPortal>
+    )
   }
 
   const getCardModifier = (key: string, index: number) => {

@@ -799,14 +799,16 @@ export function findCatalogEntry(
  * Used as ultimate fallback when no exact match exists.
  */
 export function getRandomCatalogEntry(
-  _style: MiniScriptStyle,
+  style: MiniScriptStyle,
   genres: MiniScriptGenre[]
 ): CatalogEntry | undefined {
-  const candidates = CATALOG_ENTRIES.filter((entry) =>
-    entry.genres.some((g) => genres.includes(g))
+  const sameStyle = CATALOG_ENTRIES.filter((entry) => entry.style === style);
+  const candidates = sameStyle.filter((entry) =>
+    entry.genres.some((g) => genres.includes(g)),
   );
-  if (candidates.length === 0) return undefined;
-  return candidates[Math.floor(Math.random() * candidates.length)];
+  const pool = candidates.length > 0 ? candidates : sameStyle;
+  if (pool.length === 0) return undefined;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 export function getCatalogEntryById(id: string): CatalogEntry | undefined {

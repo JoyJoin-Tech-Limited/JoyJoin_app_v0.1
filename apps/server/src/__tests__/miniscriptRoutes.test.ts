@@ -128,6 +128,13 @@ describe('POST /api/miniscript/generate', () => {
 
       const after = testSessions.get(socialSessionId);
       expect(after?.miniScriptFramework?.premise).toBe(body.premise);
+
+      const statusRes = await fetch(
+        `${baseUrl}/api/miniscript/generation-status?socialSessionId=${socialSessionId}`,
+        { headers: { cookie } },
+      );
+      expect(statusRes.status).toBe(200);
+      expect(await statusRes.json()).toMatchObject({ stage: 'complete', progress: 100 });
     });
   });
 
