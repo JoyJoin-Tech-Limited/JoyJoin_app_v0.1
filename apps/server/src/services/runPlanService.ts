@@ -3,7 +3,7 @@
 import type { SocialSessionState, SocialIcebreakerPhase } from '@shared/socialIcebreaker';
 import { PHASE_ORDER } from '@shared/socialIcebreaker';
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest';
-import type { IcebreakerRunPlan } from '@shared/phaseModule';
+import type { IcebreakerRunPlan, PhaseSegment } from '@shared/phaseModule';
 import { createRunPlan } from '@shared/phaseModule';
 import { compileAgentRunPlan, resolveTemplateSlots, TEMPLATE_DEFAULTS } from '@shared/runPlanCompiler';
 import type { TemplateVibeId, RunPlanTemplate } from '@shared/runPlanCompiler';
@@ -16,6 +16,47 @@ import { logger } from '../lib/logger';
 
 const RUN_PLAN_COMPILE_BUDGET_MS =
   process.env.NODE_ENV === 'test' ? 25 : 2500;
+
+const MINI_SCRIPT_BONUS_MINUTES = 25;
+
+/**
+ * The mini_script bonus phase is feature-flagged (`SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`)
+ * and intentionally excluded from every run-plan source (hardcoded tier fallbacks,
+ * template slots, agent compiler). Without a plan entry, `getNextEligiblePhase` is
+ * plan-driven and never returns `mini_script` — the phase (and its bonus-gate pause)
+ * is permanently unreachable in preset-tier sessions, single-test 调试局 included
+ * (2026-08-07).
+ *
+ * When the flag is on (reflected in `enabledPhases`) and the roster meets the
+ * 4-player minimum, splice a bonus segment in immediately before `recap` so the
+ * host+player bonus gate fires on advance into it, exactly as designed.
+ */
+export function appendMiniScriptBonusSegment(
+  plan: IcebreakerRunPlan,
+  enabledPhases: SocialIcebreakerPhase[],
+  playerCount: number,
+): IcebreakerRunPlan {
+  if (!enabledPhases.includes('mini_script')) return plan;
+  if (playerCount < 4) return plan;
+  if (plan.segments.some((s) => s.phase === 'mini_script')) return plan;
+
+  const recapIndex = plan.segments.findIndex((s) => s.phase === 'recap');
+  const insertAt = recapIndex >= 0 ? recapIndex : plan.segments.length;
+  const bonus: PhaseSegment = {
+    phase: 'mini_script',
+    allocatedMinutes: MINI_SCRIPT_BONUS_MINUTES,
+    energyWeight: 1,
+    participation: 'full',
+    tone: 'playful',
+    rationale: 'feature-flagged mini_script bonus appended before recap',
+  };
+  const segments = [...plan.segments.slice(0, insertAt), bonus, ...plan.segments.slice(insertAt)];
+  return {
+    ...plan,
+    segments,
+    totalMinutes: segments.reduce((sum, s) => sum + s.allocatedMinutes, 0),
+  };
+}
 
 function getFallbackRunPlan(tier: TierMachineId): IcebreakerRunPlan {
   return getRunPlanForTier(tier) ?? BREEZE_RUN_PLAN;
@@ -107,10 +148,12 @@ export async function compileForSession(
   const enabledPhases: SocialIcebreakerPhase[] = basePhases.includes('recap') ? basePhases : [...basePhases, 'recap'];
   const playerCount = state.playerCount ?? 1;
 
-  return compileForSessionWithinBudget(state, tier, {
+  const plan = await compileForSessionWithinBudget(state, tier, {
     enabledPhases,
     playerCount,
   });
+
+  return appendMiniScriptBonusSegment(plan, enabledPhases, playerCount);
 }
 
 async function compileForSessionWithinBudget(

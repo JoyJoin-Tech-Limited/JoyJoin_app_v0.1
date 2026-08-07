@@ -79,11 +79,12 @@ export function getPhaseListForTier(tier: string): SocialIcebreakerPhase[] {
 }
 
 /**
- * NOTE: mini_script (迷你剧本杀) is intentionally excluded from default run plans.
+ * NOTE: mini_script (迷你剧本杀) is intentionally excluded from these hardcoded plans.
  *
- * It is a feature-flagged phase (`SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`) that
- * adds ~20-25 min of narrative-driven roleplay. When enabled, the server can
- * optionally swap it in place of `group_mirror` in the Glow plan, or extend
- * Blaze with it as a premium variant. Default hardcoded plans stay predictable
- * so hosts always know what to expect.
+ * It is a feature-flagged phase (`SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`) that adds
+ * ~25 min of narrative-driven roleplay. `compileForSession()` (runPlanService.ts)
+ * appends a `mini_script` bonus segment immediately before `recap` for every
+ * plan source (templates, agent compiler, and these fallbacks) whenever the flag
+ * is on and the roster meets the 4-player minimum — the bonus-gate pause then
+ * fires on advance into it (2026-08-07).
  */
