@@ -35,4 +35,22 @@ describe("fk cascade delete contract", () => {
     expect(singleTest).not.toContain("delete(eventPoolRegistrations).where(inArray(eventPoolRegistrations.userId, virtualUserIds))");
     expect(matchingTest).not.toContain("delete(eventAttendance).where(inArray(eventAttendance.userId, allBotIds))");
   });
+
+  it("is used for admin user-data deletion instead of a hand-maintained table list", () => {
+    const adminUsers = readRepoFile("apps/server/src/routes/domains/adminUsers.ts");
+
+    // Regression guard for schema drift in DELETE /api/admin/users/:id/data:
+    // newly added user foreign keys must be discovered from PostgreSQL rather
+    // than requiring this endpoint to be updated table by table.
+    expect(adminUsers).toContain('cascadeDeleteByIds(tx, "users", "id", [userId])');
+    expect(adminUsers).toContain("if (user.isAdmin)");
+    // These current schema columns intentionally have no FK, so catalog
+    // discovery cannot see them and they require explicit privacy cleanup.
+    expect(adminUsers).toContain("DELETE FROM social_icebreaker_participants WHERE user_id");
+    expect(adminUsers).toContain("DELETE FROM social_icebreaker_lie_truths WHERE user_id");
+    expect(adminUsers).toContain("DELETE FROM social_icebreaker_sessions WHERE host_user_id");
+    expect(adminUsers).toContain("DELETE FROM industry_ai_logs WHERE user_id");
+    expect(adminUsers).not.toContain("DELETE FROM event_attendance WHERE user_id");
+    expect(adminUsers).not.toContain("UPDATE moderation_logs SET admin_id = NULL");
+  });
 });

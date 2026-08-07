@@ -10,7 +10,7 @@ import { logger } from "./logger";
  * the next reset. This helper discovers dependents from pg_constraint at runtime
  * (so newly added tables are covered automatically) and deletes deepest-first.
  *
- * Safety model (intended for TEST-MODE cleanup only):
+ * Safety model (for explicit destructive cleanup paths only):
  *   - Root ids must be UUIDs (validated) — they are inlined into DELETE/SELECT
  *     statements, so format validation is the injection guard.
  *   - Only NON-cascade FKs are followed; `ON DELETE CASCADE` relations are left
