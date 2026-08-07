@@ -227,7 +227,7 @@ export default function FlashHomePage() {
   }
 
   return (
-    <View className='flash-page'>
+    <View className='flash-page flash-map-direct-flow-v1'>
       <ScrollView className='flash-page__scroll' scrollY>
         <View className='flash-page__content'>
           <View className='flash-page__hero'>

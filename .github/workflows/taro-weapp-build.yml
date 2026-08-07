@@ -157,8 +157,8 @@ jobs:
           unzip -q compiledResult.zip -d compiled-check
           echo 'Compiled Street Blind Box assets:'
           find compiled-check -type f -path '*/pages/alang/assets/*' -print | sort
-          grep -R -a -q 'flash-location-compiler-scope-v4' compiled-check || {
-            echo '::error::Compiled Flash location contract marker is missing'
+          grep -R -a -q 'flash-map-direct-flow-v1' compiled-check || {
+            echo '::error::Compiled Flash direct-map flow contract marker is missing'
             exit 1
           }
           ! grep -R -a -E -q 'var L=[^;]*getFlashApiErrorCode' compiled-check || {
