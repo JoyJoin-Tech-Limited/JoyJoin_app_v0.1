@@ -316,3 +316,27 @@ jobs:
           while IFS= read -r asset_path; do
             curl "${CURL_OPTIONS[@]}" "https://joyjoinapp.com/static/${asset_path}"
           done < "$V2_PATHS_FILE"
+
+          # SD pixel avatar sprites (new parallel family, 2026-08-07): verify
+          # every manifest-listed sprite independently of the profile-pixel
+          # checks above. Tolerant of partial coverage — the manifest may
+          # legitimately hold a subset of archetypes (or placeholders) while
+          # the Lovart art is still landing; it only asserts internal
+          # consistency (path count == sourceAssetCount, at least one
+          # archetype present).
+          SD_PATHS_FILE=$(mktemp "$RUNNER_TEMP/sd-avatar-paths-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.XXXXXX")
+          trap 'rm -f -- "$V2_PATHS_FILE" "$SD_PATHS_FILE"' EXIT
+          jq -er '
+            . as $manifest
+            | [.archetypes[] | .["96"], .["64"], .["48"], .["32"]]
+            | unique as $paths
+            | if (($paths | length) == $manifest.sourceAssetCount and ($paths | length) >= 4)
+              then $paths[]
+              else error("SD avatar asset path count does not match sourceAssetCount")
+              end
+          ' apps/mini-program/src/assets/sd-avatar/v1/sd-avatar-assets-v1.json > "$SD_PATHS_FILE"
+
+          test -s "$SD_PATHS_FILE"
+          while IFS= read -r asset_path; do
+            curl "${CURL_OPTIONS[@]}" "https://joyjoinapp.com/static/${asset_path}"
+          done < "$SD_PATHS_FILE"

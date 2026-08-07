@@ -334,12 +334,35 @@ export function registerSocialRoutes(app: Express): void {
         }
       }
 
-      const feedback = await storage.createEventFeedback(userId, result.data);
+      // G1 (2026-08-07 audit): the balanced layer must actually pay out.
+      // Any 5-dimension field present ⇒ deep feedback (50xp/50coins) + the
+      // has_deep_feedback flag; otherwise the base reward (20xp/20coins).
+      // Mirrors the UI promise "完成可得 +30 积分" (50 − 20 = 30).
+      const hasDeepFeedback = [
+        feedbackData.atmosphereScore,
+        feedbackData.atmosphereNote,
+        feedbackData.venueStyleRating,
+        feedbackData.connectionStatus,
+        feedbackData.improvementOther,
+      ].some((v) => v !== undefined && v !== null && v !== "") ||
+        (feedbackData.connectionRadar && typeof feedbackData.connectionRadar === 'object' && Object.keys(feedbackData.connectionRadar).length > 0) ||
+        (feedbackData.improvementAreas && Array.isArray(feedbackData.improvementAreas) && feedbackData.improvementAreas.length > 0) ||
+        (feedbackData.attendeeTraits && typeof feedbackData.attendeeTraits === 'object' && Object.keys(feedbackData.attendeeTraits).length > 0);
+
+      const feedback = await storage.createEventFeedback(userId, {
+        ...result.data,
+        ...(hasDeepFeedback ? { hasDeepFeedback: true, deepFeedbackCompletedAt: new Date() } : {}),
+      });
 
       try {
         const { awardXPAndCoins } = await import('../../gamificationService');
-        const xpResult = await awardXPAndCoins(userId, 'feedback_basic', canonicalEventId, feedback.id);
-        logger.info(`[Gamification] Awarded basic feedback XP to user ${userId}`, { xpResult });
+        const xpResult = await awardXPAndCoins(
+          userId,
+          hasDeepFeedback ? 'feedback_deep' : 'feedback_basic',
+          canonicalEventId,
+          feedback.id
+        );
+        logger.info(`[Gamification] Awarded ${hasDeepFeedback ? 'deep' : 'basic'} feedback XP to user ${userId}`, { xpResult });
       } catch (xpError) {
         logger.error("Error awarding feedback XP", { error: String(xpError) });
       }

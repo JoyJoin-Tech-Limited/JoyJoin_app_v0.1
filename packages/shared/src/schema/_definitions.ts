@@ -1640,11 +1640,15 @@ export const invitations = pgTable("invitations", {
   // 邀请人信息
   inviterId: varchar("inviter_id").notNull().references(() => users.id),
   
-  // 关联活动
-  eventId: varchar("event_id").notNull().references(() => blindBoxEvents.id),
+  // 关联活动 (legacy event-scoped invitations; nullable since 2026-08-07 —
+  // pool-scoped 双人成行 duo invitations carry poolId instead)
+  eventId: varchar("event_id").references(() => blindBoxEvents.id),
+  
+  // 关联活动池 (双人成行 duo invitations are pool-scoped, not event-scoped)
+  poolId: varchar("pool_id").references(() => eventPools.id),
   
   // 邀请类型
-  invitationType: varchar("invitation_type").default("pre_match"), // pre_match (匹配前壮胆邀请) | post_match (匹配后补位邀请)
+  invitationType: varchar("invitation_type").default("pre_match"), // pre_match (匹配前壮胆邀请) | post_match (匹配后补位邀请) | duo (双人成行 pool-scoped)
   
   // 状态统计
   totalClicks: integer("total_clicks").default(0), // 链接点击次数
@@ -1654,8 +1658,11 @@ export const invitations = pgTable("invitations", {
   
   // 元数据
   createdAt: timestamp("created_at").defaultNow(),
-  expiresAt: timestamp("expires_at"), // 邀请链接过期时间（默认为活动开始时间）
-});
+  expiresAt: timestamp("expires_at"), // 邀请链接过期时间（默认为活动开始时间；duo 邀请 = 所在池的 preference_lock_at）
+}, (table) => [
+  // Duo invite idempotency + duo-status lookups by pool
+  index("idx_invitations_pool_id").on(table.poolId),
+]);
 
 // Invitation Uses table - 邀请使用记录
 export const invitationUses = pgTable("invitation_uses", {

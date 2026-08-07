@@ -85,6 +85,11 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   /** Profile-only pixel companion stage. Kept independent from the V1.7
    * layout rollback so art can be disabled without reverting Profile data. */
   profilePixelAvatarEnabled: "PROFILE_PIXEL_AVATAR_ENABLED",
+  /** SD pixel avatar sprites (集结房间 chibi family) in 40rpx+ roster/list
+   * slots via ArchetypeHead variant='sd'. Default false while the Lovart art
+   * is pending (manifest currently holds synthesized placeholders).
+   * Env fallback: SD_AVATAR_ENABLED (default: false). */
+  sdAvatarEnabled: "SD_AVATAR_ENABLED",
   /** Server-authoritative equipment economy switch. No payment path exists. */
   equipmentRewardsEnabled: "EQUIPMENT_REWARDS_ENABLED",
   /** Private append-only personal story generation and reading surface. */
@@ -220,6 +225,9 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   magnetismWeightProfileV2Enabled: false,
   profileRedesignEnabled: true,
   profilePixelAvatarEnabled: false,
+  /** SD pixel avatar sprites ship dark until the real Lovart art replaces
+   * the synthesized placeholders (docs/design/sd-pixel-avatar-style-guide.md). */
+  sdAvatarEnabled: false,
   equipmentRewardsEnabled: false,
   personalStoryEnabled: false,
   profileIdentityStageEnabled: true,

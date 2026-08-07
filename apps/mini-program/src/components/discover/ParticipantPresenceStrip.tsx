@@ -180,6 +180,7 @@ export default React.memo(function ParticipantPresenceStrip({
                     <ArchetypeHead
                       archetype={archetype}
                       size={COIN_SIZE}
+                      variant='sd'
                       fallback='initial'
                       fallbackText={archetype.charAt(0).toUpperCase()}
                     />

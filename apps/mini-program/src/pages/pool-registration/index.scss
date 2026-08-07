@@ -2,6 +2,12 @@
 @use '../../components/flow-animation/index.scss' as *;
 @use '../../styles/mixins' as *;
 @use './components/PoolRegistrationMascotSection.scss' as *;
+@use './components/RegistrationConfirmModal.scss' as *;
+// 双人成行 components: @use'd into the page SCSS so their rules compile into
+// the pool-registration subpackage page WXSS (subpackage style-splitting gate).
+@use './components/PoolRegistrationDuoCard.scss' as *;
+@use './components/DuoInfoSheet.scss' as *;
+@use './components/PoolRegistrationDuoBanner.scss' as *;
 
 .pool-reg {
   @include page-gradient-bg;

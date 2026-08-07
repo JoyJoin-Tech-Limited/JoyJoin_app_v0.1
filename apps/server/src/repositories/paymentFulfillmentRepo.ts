@@ -3,6 +3,8 @@ import {
   coupons,
   eventPoolRegistrations,
   eventPools,
+  invitations,
+  invitationUses,
   notifications,
   payments,
   subscriptions,
@@ -14,6 +16,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "../db";
 import { eventCreditsRepo } from "./eventCreditsRepo";
 import { resolveEffectivePreferenceDNA } from "../lib/matchCompass";
+import { resolveOptionalRegistrationAttribution } from "../lib/eventPoolRegistration";
 import { logger } from "../lib/logger"; 
 import { users } from "@shared/schema";
 
@@ -109,6 +112,11 @@ function normalizeEventRegistrationPayload(payload: unknown) {
     barThemes: toStringArray(source.barThemes),
     alcoholComfort: toStringArray(source.alcoholComfort),
     barBudgetRange: toStringArray(source.barBudgetRange),
+    // 双人成行: optional invitation/duo code carried over the payment hop.
+    invitationCode:
+      typeof source.invitationCode === "string" && source.invitationCode.trim() !== ""
+        ? source.invitationCode.trim()
+        : null,
   };
 }
 
@@ -343,6 +351,58 @@ export const paymentFulfillmentRepo = {
               updatedAt: new Date(),
             })
             .where(eq(eventPools.id, updatedPayment.relatedId));
+
+          // 双人成行 / invitation binding over the payment hop: the invitee
+          // presented a code at register-with-payment time; mirror the
+          // invitation_uses write from POST /api/event-pools/:id/register so
+          // duo pairs bind for paid invitees too. Guards match that route
+          // (expiry, self-invite, duo pool-scope, dedup). Referral codes stay
+          // untouched (they are not carried over the payment hop today).
+          const invitationCode = eventRegistrationPayload?.invitationCode;
+          if (invitationCode) {
+            const [invitation] = await tx
+              .select()
+              .from(invitations)
+              .where(eq(invitations.code, invitationCode))
+              .limit(1);
+
+            const attribution = resolveOptionalRegistrationAttribution({
+              userId: updatedPayment.userId,
+              poolId: updatedPayment.relatedId,
+              invitation: invitation ?? null,
+            });
+
+            if (attribution.kind === "invitation") {
+              const [existingUse] = await tx
+                .select({ id: invitationUses.id })
+                .from(invitationUses)
+                .where(and(
+                  eq(invitationUses.invitationId, attribution.invitationId),
+                  eq(invitationUses.inviteeId, updatedPayment.userId),
+                ))
+                .limit(1);
+
+              if (!existingUse) {
+                await tx.insert(invitationUses).values({
+                  invitationId: attribution.invitationId,
+                  inviteeId: updatedPayment.userId,
+                  poolRegistrationId: inserted[0].id,
+                });
+
+                await tx
+                  .update(invitations)
+                  .set({ totalAcceptances: sql`COALESCE(total_acceptances, 0) + 1` })
+                  .where(eq(invitations.id, attribution.invitationId));
+              }
+            } else {
+              logger.warn("Discarding unusable invitation during payment fulfillment", {
+                payment_id: updatedPayment.id,
+                pool_id: updatedPayment.relatedId,
+                user_id: updatedPayment.userId,
+                reason: attribution.reason,
+              });
+            }
+          }
         } else {
           logger.warn("Event registration insert skipped by conflict; payment fulfilled without incrementing pool count", {
             payment_id: updatedPayment.id,

@@ -1,6 +1,7 @@
 import Taro from '@tarojs/taro'
 import type { OnboardingStep } from '../api/api'
 import { MINI_PROGRAM_ROUTES, nextStepToMiniProgramRoute } from './onboardingRoutes'
+import { buildDuoSharePath, consumePendingDuoContext } from '../duo/duoContext'
 
 export type MiniProgramNavigationMode = 'replace' | 'root'
 export type MiniProgramNavigationAction = 'switchTab' | 'redirectTo' | 'reLaunch'
@@ -89,6 +90,20 @@ export function navigateToMiniProgramNextStep(
     transition?: MiniProgramRouteTransition
   },
 ): Promise<void> {
+  // Pending duo/invite replay (spec §C.4-3): when onboarding completes
+  // (nextStep = discover) with a captured pool invite context, land the user
+  // on that pool's registration page instead of discover. Context is consumed
+  // exactly once; a pool-less plain referral keeps default discover routing
+  // (attribution already happened at login via pendingReferralCode).
+  if (step === 'discover') {
+    const pendingDuo = consumePendingDuoContext()
+    if (pendingDuo?.poolId) {
+      const poolRoute = pendingDuo.duo
+        ? buildDuoSharePath(pendingDuo.poolId, pendingDuo.invitationCode)
+        : `/pages/pool-registration/index?id=${encodeURIComponent(pendingDuo.poolId)}&invitationCode=${encodeURIComponent(pendingDuo.invitationCode)}`
+      return navigateToMiniProgramRoute(poolRoute, { ...options, mode: 'root' })
+    }
+  }
   return navigateToMiniProgramRoute(nextStepToMiniProgramRoute(step), options)
 }
 

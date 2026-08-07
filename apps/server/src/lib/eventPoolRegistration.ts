@@ -42,16 +42,21 @@ type OptionalRegistrationAttribution =
   | { kind: "referral"; referralCodeId: string; inviterId: string }
   | {
       kind: "discard";
-      reason: "expired_invitation" | "self_invitation" | "self_referral" | "invalid_code";
+      reason: "expired_invitation" | "self_invitation" | "self_referral" | "invalid_code" | "pool_mismatch";
     };
 
 export function resolveOptionalRegistrationAttribution(input: {
   userId: string;
   now?: Date;
+  /** Pool being registered into — duo invitations are pool-scoped. */
+  poolId?: string;
   invitation?: {
     id: string;
     inviterId: string;
     expiresAt: Date | string | null;
+    /** 双人成行 duo invitations carry poolId + invitationType='duo'. */
+    invitationType?: string | null;
+    poolId?: string | null;
   } | null;
   referral?: {
     id: string;
@@ -68,6 +73,17 @@ export function resolveOptionalRegistrationAttribution(input: {
 
     if (input.invitation.inviterId === input.userId) {
       return { kind: "discard", reason: "self_invitation" };
+    }
+
+    // Duo invitations bind only within their own pool — a duo code presented
+    // while registering a different pool must not write invitation_uses.
+    if (
+      input.invitation.invitationType === "duo" &&
+      input.invitation.poolId &&
+      input.poolId &&
+      input.invitation.poolId !== input.poolId
+    ) {
+      return { kind: "discard", reason: "pool_mismatch" };
     }
 
     return {

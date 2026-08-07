@@ -213,6 +213,7 @@ export function MatchingStatusDetailSections({
                       <ArchetypeHead
                         archetype={member.archetype}
                         size={56}
+                        variant='sd'
                         fallbackText={member.displayName ?? undefined}
                       />
                     </View>
@@ -496,6 +497,7 @@ export function MatchingStatusLiveOverlay({
                         <ArchetypeHead
                           archetype={member.archetype}
                           size={52}
+                          variant='sd'
                           fallbackText={member.displayName ?? undefined}
                         />
                       </View>

@@ -2,6 +2,9 @@
 @use '../../styles/mixins' as *;
 
 .event-feedback {
+  // vh fallback before dvh (2026-08-07 audit G7): older WKWebView/X5 runtimes
+  // drop the whole rule when dvh is unsupported, collapsing the flex column.
+  min-height: 100vh;
   min-height: 100dvh;
   background: $color-bg-gradient;
   padding: $container-padding;
@@ -15,7 +18,10 @@
   }
 
   &__success-scroll {
-    height: 100dvh;
+    // Same bounded-port pattern as __deep-scroll: flex:1 + min-height:0 inside
+    // the dvh flex column (the design-audit gate rejects a bare full-height rule).
+    flex: 1;
+    min-height: 0;
     padding: $container-padding;
   }
 
@@ -45,9 +51,11 @@
   }
 
   &__success-title {
+    @include font-cn-display;
     display: block;
     font-size: $font-size-xl;
     font-weight: $font-weight-black;
+    line-height: $line-height-display;
     color: $color-text-primary;
   }
 
@@ -114,7 +122,7 @@
     font-size: $font-size-md;
     font-weight: $font-weight-bold;
     color: $color-primary;
-    font-family: monospace;
+    font-family: $font-mono;
   }
 
   &__match-wechat-hint {
@@ -135,9 +143,11 @@
   }
 
   &__title {
+    @include font-cn-display;
     display: block;
     font-size: $font-size-2xl;
     font-weight: $font-weight-black;
+    line-height: $line-height-display;
     color: $color-text-primary;
     margin-bottom: $spacing-xs;
   }
@@ -184,6 +194,7 @@
     display: block;
     font-size: $font-size-md;
     font-weight: $font-weight-bold;
+    line-height: 1.4;
     color: $color-text-primary;
     margin-bottom: $spacing-xs;
   }
@@ -191,6 +202,7 @@
   &__card-hint {
     display: block;
     font-size: $font-size-sm;
+    line-height: 1.5;
     color: $color-text-muted;
     margin-bottom: $spacing-md;
   }
@@ -259,6 +271,26 @@
     padding: $spacing-lg 0;
   }
 
+  // G3 (2026-08-07 audit): participants fetch failure is now a real error
+  // state with retry — never the silent empty copy.
+  &__participants-error {
+    @include flex-center;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding: $spacing-lg 0;
+    text-align: center;
+  }
+
+  &__participants-error-text {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__participants-retry {
+    @include button-secondary;
+    min-width: 200rpx;
+  }
+
   // ─── Textarea ─────────────────────────────────────────────────────────────
   &__textarea {
     box-sizing: border-box;
@@ -301,6 +333,419 @@
       opacity: 0.5;
     }
   }
+
+  &__submit-secondary {
+    @include button-secondary;
+  }
+
+  // Ghost back button (2026-08-07 audit G2): quiet tertiary affordance so
+  // deep-screen entries survive an in-flow back without a native pop.
+  &__submit-ghost {
+    @include button-secondary;
+    opacity: 0.72;
+
+    &[disabled] {
+      opacity: 0.4;
+    }
+  }
+
+  // Two-button footer row (invite card + deep screens): all buttons flex 1.
+  &__footer-row {
+    display: flex;
+    gap: $spacing-md;
+
+    .event-feedback__submit,
+    .event-feedback__submit-secondary,
+    .event-feedback__submit-ghost {
+      flex: 1;
+      width: auto;
+      min-width: 0;
+    }
+  }
+
+  // ─── Invite card (optional upgrade) ─────────────────────────────────────
+  &__invite {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-md;
+    text-align: center;
+    padding: $spacing-xl 0;
+    animation: event-feedback-invite-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  &__invite-icon {
+    width: 128rpx;
+    height: 128rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.08);
+    @include flex-center;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__invite-title {
+    @include font-cn-display;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    line-height: $line-height-display;
+    color: $color-text-primary;
+  }
+
+  &__invite-text {
+    font-size: $font-size-base;
+    line-height: $line-height-relaxed;
+    color: $color-text-secondary;
+    max-width: 520rpx;
+  }
+
+  &__invite-reward {
+    display: inline-flex;
+    align-items: center;
+    gap: 8rpx;
+    padding: $spacing-sm $spacing-lg;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.08);
+    margin-top: $spacing-sm;
+  }
+
+  &__invite-reward-text {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+  }
+
+  // ─── Deep layer progress (label + 2 quiet dots, distinct from 1/2/3) ────
+  &__deep-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    margin-top: $spacing-md;
+  }
+
+  &__deep-progress-label {
+    font-size: $font-size-2xs;
+    letter-spacing: 2rpx;
+    color: $color-text-muted;
+  }
+
+  &__deep-progress-dots {
+    display: flex;
+    gap: 12rpx;
+  }
+
+  &__deep-progress-dot {
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.18);
+    transition: background-color 0.2s ease;
+
+    &--active {
+      background: $color-primary;
+    }
+  }
+
+  // ─── Deep layer scroll port ──────────────────────────────────────────────
+  // Scroll-exception (viewport-zero-scroll): deep screens are inherently
+  // variable-length (radar rows, attendee cards, recipe list); the CTA stays
+  // bottom-anchored by the flex footer outside this port.
+  &__deep-scroll {
+    flex: 1;
+    min-height: 0;
+  }
+
+  // ─── Shared 1-5 dot scale (thermometer + radar, 灯格 visual language) ─────
+  &__scale {
+    display: flex;
+    flex-direction: column;
+
+    &--compact {
+      .event-feedback__scale-dot {
+        height: 80rpx;
+
+        &::after {
+          width: 24rpx;
+          height: 24rpx;
+        }
+      }
+    }
+  }
+
+  &__scale-dots {
+    display: flex;
+  }
+
+  &__scale-dot {
+    position: relative;
+    flex: 1;
+    height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &::after {
+      content: '';
+      width: 32rpx;
+      height: 32rpx;
+      border-radius: 50%;
+      background: $color-border;
+      transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+    }
+
+    &--lit::after {
+      background: $color-primary;
+      box-shadow: 0 0 0 8rpx rgba($color-primary, 0.14);
+      animation: event-feedback-dot-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    }
+
+    &--pressed::after {
+      transform: scale(0.78);
+    }
+  }
+
+  &__scale-labels {
+    display: flex;
+  }
+
+  &__scale-label {
+    flex: 1;
+    text-align: center;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    transition: color 0.2s ease;
+
+    &--active {
+      color: $color-primary;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  // ─── 氛围温度计 ──────────────────────────────────────────────────────────
+  &__thermo {
+    margin-top: $spacing-sm;
+  }
+
+  &__thermo-track {
+    position: relative;
+    height: 12rpx;
+    border-radius: 6rpx;
+    background: $color-border;
+    overflow: hidden;
+  }
+
+  &__thermo-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    border-radius: 6rpx;
+    background: linear-gradient(90deg, $color-brand-lavender, $color-primary);
+    // G8 (2026-08-07 audit): width → scaleX so the fill animates on the
+    // compositor instead of layout+paint each frame.
+    transform-origin: left center;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  // ─── 连接雷达 ─────────────────────────────────────────────────────────────
+  &__radar {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__radar-row {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__radar-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: $spacing-sm;
+  }
+
+  &__radar-label {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+
+  &__radar-hint {
+    font-size: $font-size-2xs;
+    color: $color-text-muted;
+  }
+
+  // ─── Selectable pills (venue style + connection status) ───────────────────
+  &__select-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+    // G5 (2026-08-07 audit): 72rpx fell below the 88rpx tap-target floor.
+    min-height: 88rpx;
+    padding: 0 $spacing-sm;
+    border-radius: $radius-pill;
+    border: 2rpx solid $color-border;
+    background: $color-surface;
+    transition: transform 0.1s ease, border-color 0.2s ease, background-color 0.2s ease;
+
+    &--selected {
+      border-color: $color-primary;
+      background: rgba($color-primary, 0.08);
+    }
+
+    &--pressed {
+      transform: scale(0.96);
+    }
+  }
+
+  &__select-pill-label {
+    font-size: $font-size-sm;
+    line-height: 1.3;
+    color: $color-text-primary;
+  }
+
+  &__select-pill-check {
+    width: 24rpx;
+    height: 24rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    color: $color-surface;
+    font-size: 14rpx;
+    @include flex-center;
+  }
+
+  &__venue-row {
+    display: flex;
+    gap: $spacing-sm;
+  }
+
+  &__status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: $spacing-sm;
+  }
+
+  // ─── Attendee impressions (deep screen B) ─────────────────────────────────
+  &__attendee {
+    padding: $spacing-md 0;
+    border-bottom: 1rpx solid $color-divider;
+    animation: event-feedback-chip-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+
+    &:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+  }
+
+  &__attendee-head {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__attendee-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__attendee-name {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+  }
+
+  &__attendee-hint {
+    display: block;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  &__attendee-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  // ─── Improvement areas (recipe list) ──────────────────────────────────────
+  &__improve-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__improve-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 88rpx;
+    padding: 0 $spacing-md;
+    border-radius: $card-radius-sm;
+    border: 2rpx solid $color-border;
+    background: $color-bg;
+    transition: border-color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
+    animation: event-feedback-chip-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+
+    &--selected {
+      border-color: $color-primary;
+      background: rgba($color-primary, 0.06);
+    }
+
+    &--disabled {
+      opacity: 0.4;
+    }
+
+    &--pressed {
+      transform: scale(0.98);
+    }
+  }
+
+  &__improve-label {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+  }
+
+  &__improve-check {
+    width: 32rpx;
+    height: 32rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    color: $color-surface;
+    font-size: 20rpx;
+    @include flex-center;
+  }
+
+  // ─── Deep layer single-line inputs ────────────────────────────────────────
+  &__deep-input,
+  &__attendee-note {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    height: $input-height;
+    padding: 0 $spacing-md;
+    border: 2rpx solid $color-border;
+    border-radius: $card-radius-sm;
+    font-size: $font-size-base;
+    color: $color-text-primary;
+    background: $color-bg;
+  }
+
+  &__deep-input {
+    margin-top: $spacing-sm;
+  }
+
+  &__card-title--spaced {
+    margin-top: $spacing-lg;
+  }
 }
 
 // C5 — Ceremony hero entrance: scale + fade-in (matches Batch C brief)
@@ -327,6 +772,42 @@
   }
 }
 
+// Invite card entrance (2026-08-07): soft rise + settle.
+@keyframes event-feedback-invite-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// 灯格 lighting up (thermometer + radar share this pop).
+@keyframes event-feedback-dot-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// Tag chip / recipe item pop-in (staggered via inline animation-delay).
+@keyframes event-feedback-chip-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10rpx) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .event-feedback__success-hero {
     animation: none;
@@ -335,6 +816,23 @@
 
   .event-feedback__header,
   .event-feedback__card {
+    animation: none;
+  }
+
+  .event-feedback__invite {
+    animation: none;
+  }
+
+  .event-feedback__scale-dot--lit::after {
+    animation: none;
+  }
+
+  .event-feedback__thermo-fill {
+    transition: none;
+  }
+
+  .event-feedback__attendee,
+  .event-feedback__improve-item {
     animation: none;
   }
 }

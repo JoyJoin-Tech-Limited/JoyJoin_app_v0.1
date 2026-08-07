@@ -554,6 +554,13 @@
       "when": 1780395567634,
       "tag": "seed_venue_time_slots_20260602",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1786084584189,
+      "tag": "0077_duo_invitations_pool_scope",
+      "breakpoints": true
     }
   ]
 }

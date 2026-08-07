@@ -20,10 +20,10 @@ $qb-deep: $phase-accent-quip-deep;
   position: relative;
 
   &__burst {
+    // Cover the whole voting card so the confetti fountain has room to arc
+    // and fall — a small centred box clips the burst into a glitchy trickle.
     position: absolute;
-    top: 40%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    inset: 0;
     z-index: 20;
     pointer-events: none;
   }

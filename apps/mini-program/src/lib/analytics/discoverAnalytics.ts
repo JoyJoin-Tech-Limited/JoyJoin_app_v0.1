@@ -6,6 +6,8 @@ export type DiscoverAnalyticsEventType =
   | 'pool_card_tap'
   | 'pool_card_impression'
   | 'registration_start'
+  | 'registration_confirm_shown'
+  | 'registration_confirm_confirmed'
   | 'registration_complete'
   | 'registration_abandoned'
   | 'registration_intent_toggled'
@@ -71,6 +73,14 @@ export type DiscoverAnalyticsEventType =
   | 'persona_snapshot_state_band'
   | 'persona_snapshot_load_error'
   | 'pool_teaser_impression'
+  | 'duo_card_impression'
+  | 'duo_segment_select'
+  | 'duo_info_sheet_open'
+  | 'duo_info_sheet_close'
+  | 'duo_share_trigger'
+  | 'duo_status_update'
+  | 'duo_banner_impression'
+  | 'duo_success_view'
 
 export interface DiscoverAnalyticsEvent {
   eventType: DiscoverAnalyticsEventType

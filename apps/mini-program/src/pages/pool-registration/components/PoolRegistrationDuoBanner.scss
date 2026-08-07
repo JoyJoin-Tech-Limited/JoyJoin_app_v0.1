@@ -1,0 +1,26 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// Invitee duo context banner — same flat-tint surface language as the duo
+// card (C'-1): rgba(primary, 0.08), no border, no close button, ≤88rpx.
+.pool-reg-duo-banner {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-sm;
+  padding: $spacing-xs $spacing-md;
+  border-radius: 24rpx;
+  background: rgba($color-primary, 0.08);
+  box-sizing: border-box;
+
+  &__icon {
+    flex-shrink: 0;
+  }
+
+  &__text {
+    flex: 1;
+    @include type-label;
+    color: $color-primary-dark;
+    @include text-truncate;
+  }
+}

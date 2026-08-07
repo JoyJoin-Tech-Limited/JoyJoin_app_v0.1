@@ -1153,11 +1153,16 @@ page {
 }
 
 .flash-task {
+  &__chapter { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-bottom: 14rpx; padding: 0 6rpx; }
+  &__chapter-label { color: $color-primary; font-family: $font-mono; font-size: $font-size-2xs; font-weight: $font-weight-bold; letter-spacing: 0.14em; text-transform: uppercase; }
+  &__chapter-count { color: $color-text-tertiary-on-light; font-size: $font-size-xs; }
   &__sender { display: flex; align-items: center; gap: 20rpx; padding: 18rpx 22rpx; margin-bottom: 22rpx; border-radius: $card-radius-lg; background: rgba($color-surface, 0.76); box-shadow: $shadow-sm; backdrop-filter: blur(8rpx); }
   &__sender-copy { display: flex; flex-direction: column; gap: 8rpx; }
   &__sender-label { color: $color-text-primary-warm; font-size: $font-size-md; font-weight: $font-weight-bold; }
   &__due { color: $color-text-secondary-on-light; font-size: $font-size-sm; }
-  &__paper { padding: 32rpx; border: 2rpx solid rgba($color-primary, 0.12); border-radius: $card-radius-lg; background: rgba($color-surface, 0.9); box-shadow: $shadow-md; backdrop-filter: blur(10rpx); }
+  &__paper { position: relative; padding: 32rpx 32rpx 32rpx 44rpx; border: 2rpx solid rgba($color-primary, 0.12); border-radius: $card-radius-lg; background: rgba($color-surface, 0.9); box-shadow: $shadow-md; backdrop-filter: blur(10rpx); }
+  &__paper-binding { position: absolute; top: 50%; left: 14rpx; display: flex; flex-direction: column; gap: 10rpx; transform: translateY(-50%); }
+  &__paper-binding View { width: 4rpx; height: 18rpx; border-radius: 4rpx; background: rgba($color-primary, 0.28); }
   &__category { display: inline-flex; padding: 6rpx 16rpx; border-radius: $radius-pill; font-size: $font-size-xs; font-weight: $font-weight-bold; }
   &__title { display: block; margin-top: 22rpx; font-family: $font-cn-display; font-size: $font-size-xl; font-weight: $font-weight-black; line-height: $line-height-display; }
   &__description { display: block; margin-top: 16rpx; color: $color-text-secondary-on-light; font-size: $font-size-base; line-height: $line-height-relaxed; }
@@ -1169,6 +1174,7 @@ page {
   &__rules { display: flex; flex-direction: column; gap: 10rpx; margin-top: 28rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; line-height: $line-height-relaxed; }
   &__ready,
   &__arrival-state { margin-top: 24rpx; padding: 26rpx; border-radius: $card-radius; background: $color-surface; box-shadow: $shadow-sm; }
+  &__ready-kicker { display: block; margin-bottom: 8rpx; color: $color-success-text-on-light; font-family: $font-mono; font-size: $font-size-2xs; font-weight: $font-weight-bold; letter-spacing: 0.14em; text-transform: uppercase; }
   &__ready-title,
   &__arrival-title { display: block; font-size: $font-size-md; font-weight: $font-weight-bold; }
   &__ready-copy,

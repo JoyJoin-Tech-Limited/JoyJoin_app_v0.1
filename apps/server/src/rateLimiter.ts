@@ -204,3 +204,16 @@ export const chatReportSubmissionLimiter = createRateLimiter({
   maxRequests: 5, // 5 reports per user per window
   keyPrefix: 'chatReports',
 });
+
+/**
+ * Public duo-invite lookup limiter (GET /api/duo-invites/:code). The endpoint
+ * is unauthenticated so it can render the share landing banner, but it leaks
+ * an inviter's display name per valid code — budget by client IP.
+ */
+export const duoInviteLookupLimiter = createRateLimiter({
+  windowMs: 60000,
+  maxRequests: 30,
+  keyPrefix: 'duo-lookup',
+  keyResolver: (req) => req.ip || req.socket.remoteAddress || 'anonymous',
+  errorCode: 'DUO_LOOKUP_RATE_LIMITED',
+});

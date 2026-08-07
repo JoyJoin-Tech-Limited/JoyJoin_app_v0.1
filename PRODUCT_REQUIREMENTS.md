@@ -1550,6 +1550,33 @@ Active server files:
 
 **Web Reference:** `apps/user-client/src/pages/EventFeedbackFlow.tsx`, `apps/user-client/src/pages/DeepFeedbackFlow.tsx`
 
+> **Current mini-program note (2026-08-07):** the shipped flow is the compact
+> 3-step essential loop **plus an optional 5-dimension balanced layer**
+> (`均衡反馈`). The detailed two-tier design below describes the archived
+> web-reference flow and must not be used to reconstruct the mini-program.
+>
+> **Active flow** (`apps/mini-program/src/pages/event-feedback/`):
+> 1. **今晚这局怎么样？** — `RatingFace` 1–5 emoji score (skippable)
+> 2. **想继续了解谁？** — multi-select connections; mutual picks reveal WeChat IDs
+> 3. **还有什么想说的？** — optional free text (wire key `feedback`, content-safety screened)
+> 4. **Invite card（可选升级）** — 「再花 30 秒聊聊这场局,完成可得 +30 积分」;
+>    跳过 = 直接提交（纯 3 步 payload）
+> 5. **均衡反馈屏 A「这场局的氛围」** — 氛围温度计（1–5:尴尬/平淡/舒适/热烈/完美）+
+>    连接雷达（topicResonance/personalityMatch/backgroundDiversity/overallFit 各 1–5）+
+>    场地印象（like/neutral/dislike）+ 散场之后（已交换联系方式/有但还没联系/没有但很愉快/没有不太合适）
+> 6. **均衡反馈屏 B「参与者与建议」** — 参与者印象（仅对 connections 步选中的人显示,特质标签 max 3/人 + 悄悄话）+
+>    改进建议（预设配方卡 max 3 + 自定义）
+>
+> **Rewards (wired 2026-08-07):** base flow = `feedback_basic` (20xp/20coins);
+> any balanced-layer field present = `feedback_deep` (50xp/50coins) +
+> `has_deep_feedback`/`deep_feedback_completed_at` written（`apps/server/src/routes/domains/social.ts`）。
+> **Payload contract:** `insertEventFeedbackSchema`
+> (`packages/shared/src/schema/_definitions.ts`) — unknown keys are Zod-stripped,
+> so the client wire keys are drift-gated by `feedbackPayload.test.ts` against the schema.
+> Event id families are canonicalized via `resolveCanonicalEventId` before insert.
+> **Analytics:** `feedback_invite_seen` / `feedback_deep_engaged` / `feedback_deep_submitted`
+> land in `discover_analytics_events` (allowlist in `apps/server/src/routes/domains/analytics.ts`).
+
 #### Two-Tier Feedback Architecture
 
 **Tier 1: Basic Feedback (Required)**

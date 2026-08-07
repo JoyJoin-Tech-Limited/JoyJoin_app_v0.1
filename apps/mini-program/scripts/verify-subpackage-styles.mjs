@@ -97,6 +97,13 @@ const REQUIREMENTS = [
       'pool-reg-mascot__bubble-text{',
       'pool-teaser__track{',
       'pool-teaser-node-light',
+      // 双人成行 (2026-08-07): duo card / info sheet / invitee banner SCSS is
+      // @use'd by the page SCSS and must reach the page WXSS.
+      'pool-reg-duo{',
+      'pool-reg-duo__segmented{',
+      'pool-reg-duo__segmented-thumb{',
+      'pool-reg-duo-banner{',
+      'duo-info-sheet__surface{',
     ],
   },
 ]
