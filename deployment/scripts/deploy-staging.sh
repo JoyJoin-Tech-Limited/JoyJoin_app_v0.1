@@ -845,10 +845,24 @@ if ! sudo systemctl reload-or-restart nginx; then
 fi
 
 echo "🏥 Step 8: Verify database readiness, Admin content, and public routing..."
-MAX_HEALTH_CHECK_ATTEMPTS="${MAX_HEALTH_CHECK_ATTEMPTS:-10}"
+# A cold staging API start can exceed 50 seconds while Node loads the full
+# route graph on the small shared CVM. Keep the checks bounded, but allow up to
+# three minutes before rolling back a candidate that may still be starting.
+MAX_HEALTH_CHECK_ATTEMPTS="${MAX_HEALTH_CHECK_ATTEMPTS:-36}"
 HEALTH_CHECK_RETRY_DELAY_SECONDS="${HEALTH_CHECK_RETRY_DELAY_SECONDS:-5}"
 HEALTH_CHECK_CONNECT_TIMEOUT_SECONDS="${HEALTH_CHECK_CONNECT_TIMEOUT_SECONDS:-4}"
 HEALTH_CHECK_MAX_TIME_SECONDS="${HEALTH_CHECK_MAX_TIME_SECONDS:-12}"
+
+report_candidate_api_failure() {
+    echo "Candidate staging API did not become ready; capturing bounded diagnostics before rollback."
+    docker ps -a \
+        --filter 'name=^/joyjoin-api-staging$' \
+        --format 'container={{.Names}} status={{.Status}} image={{.Image}}' || true
+    docker inspect \
+        --format 'state={{.State.Status}} running={{.State.Running}} restarting={{.State.Restarting}} exit_code={{.State.ExitCode}} oom_killed={{.State.OOMKilled}} error={{json .State.Error}}' \
+        joyjoin-api-staging || true
+    timeout 20s docker logs --tail 200 joyjoin-api-staging 2>&1 || true
+}
 
 retry_health_check() {
     local url=$1
@@ -872,8 +886,11 @@ retry_health_check() {
     return 1
 }
 
-if ! retry_health_check "http://127.0.0.1:5001/api/readyz" "Staging API readiness (local)" || \
-   ! retry_health_check "https://staging.joyjoinapp.com/api/readyz" "Staging API readiness (public)" || \
+if ! retry_health_check "http://127.0.0.1:5001/api/readyz" "Staging API readiness (local)"; then
+    report_candidate_api_failure
+    exit 1
+fi
+if ! retry_health_check "https://staging.joyjoinapp.com/api/readyz" "Staging API readiness (public)" || \
    ! retry_health_check "http://127.0.0.1:3002/" "Staging Admin content (local)" || \
    ! retry_health_check "https://staging.admin.joyjoinapp.com/" "Staging Admin content (public)"; then
     exit 1
