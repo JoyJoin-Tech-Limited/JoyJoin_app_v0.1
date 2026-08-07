@@ -73,14 +73,34 @@ describe('formal Flash home', () => {
     render(<FlashHomePage />)
 
     expect(await screen.findByText('今天，会碰见谁呢？')).toBeInTheDocument()
-    expect(screen.getByText('开启一次定位')).toBeInTheDocument()
+    expect(screen.getByText('看看谁在附近')).toBeInTheDocument()
+    expect(screen.getByText('先读取当前位置；选中角色后，地图会在前台持续更新位置，离开页面立即停止。')).toBeInTheDocument()
+    expect(document.querySelector("img[src*='street-blind-box-onboarding-fullscreen-v7.jpg']")).toBeTruthy()
     expect(mocks.location).not.toHaveBeenCalled()
+  })
+
+  it('recovers with a retry action when WeChat location never responds', async () => {
+    vi.useFakeTimers()
+    mocks.location.mockImplementation(() => new Promise(() => undefined))
+
+    try {
+      render(<FlashHomePage />)
+      fireEvent.click(screen.getByText('看看谁在附近'))
+      await act(async () => { await Promise.resolve() })
+
+      expect(screen.getByText('看看深圳哪里有角色在线…')).toBeInTheDocument()
+      act(() => { vi.advanceTimersByTime(12_000) })
+      expect(screen.getByText('这次没有拿到位置')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '重新定位' })).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('loads online NPCs and story fragments only after the user accepts the disclosure', async () => {
     render(<FlashHomePage />)
 
-    fireEvent.click(await screen.findByText('开启一次定位'))
+    fireEvent.click(await screen.findByText('看看谁在附近'))
     expect(await screen.findByText('阿浪')).toBeInTheDocument()
     expect(screen.getByText('南山区 · 还在 1 小时')).toBeInTheDocument()
     expect(screen.getByText('双人座位图')).toBeInTheDocument()
@@ -89,7 +109,7 @@ describe('formal Flash home', () => {
       { latitude: 22.54, longitude: 114.05, accuracy: 12 },
       true,
     ))
-    expect(document.querySelector("img[src='/pages/alang/assets/ui/flash-city-ambient-bg.webp']")).toBeTruthy()
+    expect(document.querySelector("img[src*='flash-city-ambient-bg.png']")).toBeTruthy()
   })
 
   it('discards the location when the page is hidden and asks again on return', async () => {
@@ -103,7 +123,7 @@ describe('formal Flash home', () => {
       mocks.didShow?.()
     })
 
-    expect(await screen.findByRole('button', { name: '开启一次定位' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '看看谁在附近' })).toBeInTheDocument()
     expect(mocks.location).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(mocks.useFlashHome).toHaveBeenLastCalledWith(null, false))
   })
@@ -118,15 +138,15 @@ describe('formal Flash home', () => {
     })
     render(<FlashHomePage />)
 
-    fireEvent.click(await screen.findByText('开启一次定位'))
+    fireEvent.click(await screen.findByText('看看谁在附近'))
     expect(await screen.findByText('这会儿没有谁出来晃荡')).toBeInTheDocument()
-    expect(document.querySelector("img[src='/pages/alang/assets/ui/flash-empty-online.webp']")).toBeTruthy()
+    expect(document.querySelector("img[src*='flash-empty-online.png']")).toBeTruthy()
     expect(screen.getByText('故事还没有翻开')).toBeInTheDocument()
   })
 
   it('opens the map with safe display metadata but no coordinates in the URL', async () => {
     render(<FlashHomePage />)
-    fireEvent.click(await screen.findByText('开启一次定位'))
+    fireEvent.click(await screen.findByText('看看谁在附近'))
     fireEvent.click(await screen.findByRole('button', { name: /去找阿浪/ }))
 
     const url = mocks.navigateTo.mock.calls[0][0].url as string

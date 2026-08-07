@@ -152,6 +152,9 @@ export interface FlashReadinessCounts {
   approvedTaskDestinations?: number;
   linkedTasks?: number;
   readyTaskCategoryCounts?: Record<string, number>;
+  publishedStorySeasons?: number;
+  reviewedStoryEpisodes?: number;
+  storyCoveredNpcs?: number;
 }
 
 export interface FlashReadiness {
@@ -178,8 +181,6 @@ export function getFlashReadinessItems(readiness?: FlashReadiness): FlashReadine
   if (!readiness || readiness.ready) return [];
   const counts = readiness.counts ?? {};
   const formatCount = (value: number | undefined, target: number) => `${value ?? 0}/${target}`;
-  const categoryCounts = Object.values(counts.readyTaskCategoryCounts ?? {});
-  const completeCategories = categoryCounts.filter((count) => count >= 5).length;
 
   const messages: Record<string, Omit<FlashReadinessItem, "code">> = {
     schema_not_ready: {
@@ -189,6 +190,14 @@ export function getFlashReadinessItems(readiness?: FlashReadiness): FlashReadine
     tencent_map_key_required: {
       label: "腾讯地图服务",
       detail: "服务端未配置腾讯地图密钥，地点无法完成深圳范围校验。",
+    },
+    shenzhen_boundary_asset_not_ready: {
+      label: "深圳服务范围文件",
+      detail: "服务范围文件缺失或校验失败；请先部署并核验当前版本的深圳边界文件。",
+    },
+    shenzhen_boundary_license_not_approved: {
+      label: "深圳服务范围授权",
+      detail: "深圳边界数据的授权记录尚未确认；请由负责人完成合规确认。",
     },
     five_builtin_seed_npcs_required: {
       label: "内置 NPC",
@@ -202,29 +211,21 @@ export function getFlashReadinessItems(readiness?: FlashReadiness): FlashReadine
       label: "NPC 地点绑定",
       detail: `已完成 ${formatCount(counts.schedulableNpcs, counts.activeNpcs ?? 5)} 位；每位启用 NPC 都要绑定已审核且启用的街头盲盒地点。`,
     },
-    all_active_npcs_require_ready_tasks: {
-      label: "NPC 任务覆盖",
-      detail: `已完成 ${formatCount(counts.taskReadyNpcs, counts.activeNpcs ?? 5)} 位；每位启用 NPC 都需要可用任务。`,
-    },
-    thirty_human_reviewed_tasks_required: {
-      label: "人工审核任务",
-      detail: `已完成 ${formatCount(counts.reviewedTasks, 30)} 条；请在「任务库」逐条确认内容并启用。`,
-    },
     approved_encounter_location_required: {
       label: "街头盲盒地点",
       detail: "至少需要一个经过腾讯地图校验、人工审核并启用的地点。",
     },
-    approved_task_destination_required: {
-      label: "任务目的地",
-      detail: "至少需要一个经过腾讯地图校验、人工审核并启用的任务目的地。",
+    one_published_story_season_required: {
+      label: "第一季发布状态",
+      detail: `已发布 ${formatCount(counts.publishedStorySeasons, 1)} 季；请在「第一季故事」完成审核并发布唯一的当前故事季。`,
     },
-    all_tasks_require_active_npc_links: {
-      label: "任务 NPC 绑定",
-      detail: `已完成 ${formatCount(counts.linkedTasks, 30)} 条；每条任务都要绑定至少一个已启用的数字 NPC。`,
+    fifteen_reviewed_story_episodes_required: {
+      label: "第一季故事单元",
+      detail: `已审核 ${formatCount(counts.reviewedStoryEpisodes, 15)} 个；第一季的 15 个故事单元需要全部通过人工审核。`,
     },
-    six_categories_with_five_ready_tasks_required: {
-      label: "任务分类覆盖",
-      detail: `已有 ${formatCount(completeCategories, 6)} 个分类达到 5 条可用任务；请补齐六类任务。`,
+    five_story_npcs_required: {
+      label: "第一季角色覆盖",
+      detail: `已覆盖 ${formatCount(counts.storyCoveredNpcs, 5)} 位；第一季需要包含五位正式 NPC。`,
     },
   };
 

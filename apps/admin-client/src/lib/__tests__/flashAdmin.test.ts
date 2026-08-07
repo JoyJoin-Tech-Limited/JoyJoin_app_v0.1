@@ -31,23 +31,36 @@ describe("flashAdmin helpers", () => {
       schemaReady: true,
       ready: false,
       blockers: [
-        "thirty_human_reviewed_tasks_required",
-        "all_tasks_require_active_npc_links",
+        "one_published_story_season_required",
+        "fifteen_reviewed_story_episodes_required",
+        "five_story_npcs_required",
+        "shenzhen_boundary_license_not_approved",
       ],
       counts: {
-        reviewedTasks: 12,
-        linkedTasks: 8,
+        publishedStorySeasons: 0,
+        reviewedStoryEpisodes: 12,
+        storyCoveredNpcs: 4,
       },
     })).toEqual([
       {
-        code: "thirty_human_reviewed_tasks_required",
-        label: "人工审核任务",
-        detail: "已完成 12/30 条；请在「任务库」逐条确认内容并启用。",
+        code: "one_published_story_season_required",
+        label: "第一季发布状态",
+        detail: "已发布 0/1 季；请在「第一季故事」完成审核并发布唯一的当前故事季。",
       },
       {
-        code: "all_tasks_require_active_npc_links",
-        label: "任务 NPC 绑定",
-        detail: "已完成 8/30 条；每条任务都要绑定至少一个已启用的数字 NPC。",
+        code: "fifteen_reviewed_story_episodes_required",
+        label: "第一季故事单元",
+        detail: "已审核 12/15 个；第一季的 15 个故事单元需要全部通过人工审核。",
+      },
+      {
+        code: "five_story_npcs_required",
+        label: "第一季角色覆盖",
+        detail: "已覆盖 4/5 位；第一季需要包含五位正式 NPC。",
+      },
+      {
+        code: "shenzhen_boundary_license_not_approved",
+        label: "深圳服务范围授权",
+        detail: "深圳边界数据的授权记录尚未确认；请由负责人完成合规确认。",
       },
     ]);
   });

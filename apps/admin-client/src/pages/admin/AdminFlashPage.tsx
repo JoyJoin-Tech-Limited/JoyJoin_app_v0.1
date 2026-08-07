@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { BookOpenCheck, CalendarClock, CheckCircle2, MapPinned, RefreshCw, Store, UsersRound } from "lucide-react";
+import { BookOpenCheck, CalendarClock, CheckCircle2, MapPinned, RefreshCw, UsersRound } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +13,6 @@ import { FlashStoryPanel } from "@/components/admin/flash/FlashStoryPanel";
 import {
   FlashLocationsPanel,
   FlashNpcPanel,
-  FlashTaskTemplatesPanel,
 } from "@/components/admin/flash/FlashCatalogPanels";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { useToast } from "@/hooks/ui/use-toast";
@@ -21,7 +20,6 @@ import {
   type FlashEncounterLocation,
   type FlashNpc,
   type FlashOverview,
-  type FlashTaskDestination,
   canWriteFlashAdmin,
   getFlashReadinessItems,
   getShenzhenDatePair,
@@ -31,7 +29,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 
 type CollectionResponse<T> =
   | T[]
-  | { items?: T[]; data?: T[]; npcs?: T[]; locations?: T[]; destinations?: T[]; templates?: T[] };
+  | { items?: T[]; data?: T[]; npcs?: T[]; locations?: T[] };
 
 export default function AdminFlashPage() {
   const { user } = useAuth();
@@ -47,13 +45,8 @@ export default function AdminFlashPage() {
   const locationsQuery = useQuery<CollectionResponse<FlashEncounterLocation>>({
     queryKey: ["/api/admin/alang/encounter-locations"],
   });
-  const destinationsQuery = useQuery<CollectionResponse<FlashTaskDestination>>({
-    queryKey: ["/api/admin/alang/task-destinations"],
-  });
-
   const npcs = unpackFlashCollection(npcsQuery.data);
   const locations = unpackFlashCollection(locationsQuery.data);
-  const destinations = unpackFlashCollection(destinationsQuery.data);
   const counts = overviewQuery.data?.counts;
   const readiness = overviewQuery.data?.readiness;
   const readinessItems = getFlashReadinessItems(readiness);
@@ -80,15 +73,15 @@ export default function AdminFlashPage() {
       icon: MapPinned,
     },
     {
-      label: "任务目的地",
-      value: counts?.approvedTaskDestinations ?? destinations.filter((item) => item.isActive && item.approvalStatus === "approved").length,
-      hint: "无消费也能完成",
-      icon: Store,
+      label: "已发布故事季",
+      value: readiness?.counts.publishedStorySeasons ?? 0,
+      hint: "当前只开放第一季",
+      icon: BookOpenCheck,
     },
     {
-      label: "人工已审任务",
-      value: counts?.activeTaskTemplates ?? counts?.reviewedTasks ?? 0,
-      hint: "目标至少 30 个",
+      label: "已审核故事单元",
+      value: readiness?.counts.reviewedStoryEpisodes ?? 0,
+      hint: "第一季目标 15 个",
       icon: BookOpenCheck,
     },
     {
@@ -109,7 +102,7 @@ export default function AdminFlashPage() {
           </div>
           <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">街头盲盒运营</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            管理 NPC 的次日随机草案、固定上线日、两类地点与人工审核任务库。这里不会发送推送，也不会公开未来排班。
+            管理 NPC、街头盲盒地点、当日排班与第一季故事。故事内容完成审核并发布后，才会进入正式流程。
           </p>
         </div>
         <Button
@@ -137,7 +130,7 @@ export default function AdminFlashPage() {
           <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
           <AlertTitle>街头盲盒目录已就绪</AlertTitle>
           <AlertDescription>
-            正式 NPC、地点和任务均已通过发布检查。请继续确认当日排班已生成并发布。
+            正式 NPC、地点和第一季故事均已通过发布检查。请继续确认当日排班已生成并发布。
           </AlertDescription>
         </Alert>
       ) : readinessItems.length > 0 ? (
@@ -183,16 +176,14 @@ export default function AdminFlashPage() {
 
       <Tabs defaultValue="schedules" className="space-y-4">
         <div className="pb-1">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-9">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-7">
             <TabsTrigger value="schedules" data-testid="tab-flash-schedules">今日 / 次日排班</TabsTrigger>
             <TabsTrigger value="npcs" data-testid="tab-flash-npcs">NPC</TabsTrigger>
             <TabsTrigger value="encounter-locations" data-testid="tab-flash-locations">街头盲盒地点</TabsTrigger>
-            <TabsTrigger value="task-destinations" data-testid="tab-flash-destinations">任务目的地</TabsTrigger>
-            <TabsTrigger value="task-templates" data-testid="tab-flash-tasks">任务库</TabsTrigger>
+            <TabsTrigger value="story" data-testid="tab-flash-story">第一季故事</TabsTrigger>
             <TabsTrigger value="equipment-rewards" data-testid="tab-flash-equipment-rewards">装备 / 奖励</TabsTrigger>
             <TabsTrigger value="consistency" data-testid="tab-flash-consistency">一致性检查</TabsTrigger>
             <TabsTrigger value="analytics" data-testid="tab-flash-analytics">数据分析</TabsTrigger>
-            <TabsTrigger value="story" data-testid="tab-flash-story">第一季故事</TabsTrigger>
           </TabsList>
         </div>
 
@@ -208,12 +199,6 @@ export default function AdminFlashPage() {
         <TabsContent value="npcs" className="mt-0"><FlashNpcPanel canWrite={canWrite} canSeed={canWrite} /></TabsContent>
         <TabsContent value="encounter-locations" className="mt-0">
           <FlashLocationsPanel canWrite={canWrite} kind="encounter" npcs={npcs} />
-        </TabsContent>
-        <TabsContent value="task-destinations" className="mt-0">
-          <FlashLocationsPanel canWrite={canWrite} kind="destination" npcs={npcs} />
-        </TabsContent>
-        <TabsContent value="task-templates" className="mt-0">
-          <FlashTaskTemplatesPanel canWrite={canWrite} npcs={npcs} destinations={destinations} />
         </TabsContent>
         <TabsContent value="story" className="mt-0">
           <FlashStoryPanel canWrite={canWrite} />

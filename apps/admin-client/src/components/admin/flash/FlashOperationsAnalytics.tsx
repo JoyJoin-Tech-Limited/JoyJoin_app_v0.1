@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { BookOpenCheck, CalendarClock, MapPinned, Store, UsersRound } from "lucide-react";
+import { BookOpenCheck, CalendarClock, MapPinned, UsersRound } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FlashOverview } from "@/lib/flashAdmin";
@@ -24,8 +24,8 @@ export function FlashOperationsAnalytics() {
   const metrics = [
     { label: "可用 NPC", value: counts.activeNpcs ?? 0, hint: "当前启用的数字动物", icon: UsersRound },
     { label: "可排班地点", value: counts.activeEncounterLocations ?? 0, hint: "启用且审核通过", icon: MapPinned },
-    { label: "任务目的地", value: counts.approvedTaskDestinations ?? 0, hint: "启用且审核通过", icon: Store },
-    { label: "人工已审任务", value: counts.activeTaskTemplates ?? 0, hint: "可进入随机任务库", icon: BookOpenCheck },
+    { label: "已发布故事季", value: query.data.readiness?.counts.publishedStorySeasons ?? 0, hint: "当前正式故事季", icon: BookOpenCheck },
+    { label: "已审核故事单元", value: query.data.readiness?.counts.reviewedStoryEpisodes ?? 0, hint: "第一季共 15 个", icon: BookOpenCheck },
     { label: "今日已发布班次", value: todayPublished, hint: `次日草案 ${nextDraftShifts} 个班次`, icon: CalendarClock },
   ];
 
@@ -34,7 +34,7 @@ export function FlashOperationsAnalytics() {
       <div>
         <h3 className="text-lg font-semibold">街头盲盒运营数据分析</h3>
         <p className="mt-1 text-sm leading-6 text-muted-foreground">
-          汇总 NPC、地点、任务、排班和装备奖励。目录与排班展示当前运行状态；装备奖励使用真实历史流水。
+          汇总 NPC、地点、第一季故事、排班和装备奖励。目录与排班展示当前运行状态；装备奖励使用真实历史流水。
         </p>
       </div>
 

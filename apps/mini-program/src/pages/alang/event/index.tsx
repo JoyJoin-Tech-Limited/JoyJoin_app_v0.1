@@ -1,5 +1,5 @@
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangEntry } from '../../../lib/alang/alangAccess'
@@ -9,6 +9,9 @@ import { useFlashHome, useFlashStoryFragments } from '../../../lib/alang/useFlas
 import type { FlashLocationSnapshot, FlashNpcSummary } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
+import flashIntroScene from '../assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg'
+import flashAmbientBackground from '../assets/ui/flash-city-ambient-bg.png'
+import flashEmptyOnline from '../assets/ui/flash-empty-online.png'
 import {
   FlashButton,
   FlashNpcPortrait,
@@ -18,9 +21,10 @@ import {
 import '../flash.scss'
 
 const FLASH_INFO_ICON = '/assets/icons/status-icons/status-info.webp'
-const FLASH_INTRO_SCENE = '/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp'
-const FLASH_AMBIENT_BACKGROUND = '/pages/alang/assets/ui/flash-city-ambient-bg.webp'
-const FLASH_EMPTY_ONLINE = '/pages/alang/assets/ui/flash-empty-online.webp'
+const FLASH_INTRO_SCENE = flashIntroScene
+const FLASH_AMBIENT_BACKGROUND = flashAmbientBackground
+const FLASH_EMPTY_ONLINE = flashEmptyOnline
+const FLASH_LOCATION_TIMEOUT_MS = 12_000
 
 type GateState = 'checking' | 'intro' | 'locating' | 'ready' | 'denied' | 'error'
 
@@ -35,8 +39,8 @@ function FlashIntro({ onContinue }: { onContinue: () => void }) {
           <Text className='flash-intro__title'>今天，会碰见谁呢？</Text>
         </View>
         <View className='flash-intro__actions'>
-          <FlashButton onClick={onContinue}>开启一次定位</FlashButton>
-          <Text className='flash-intro__aside'>这次只用来查看在线角色；选定角色后会直接打开前台地图。</Text>
+          <FlashButton onClick={onContinue}>看看谁在附近</FlashButton>
+          <Text className='flash-intro__aside'>先读取当前位置；选中角色后，地图会在前台持续更新位置，离开页面立即停止。</Text>
         </View>
       </View>
     </View>
@@ -74,6 +78,8 @@ export default function FlashHomePage() {
   const [gate, setGate] = useState<GateState>('checking')
   const [location, setLocation] = useState<FlashLocationSnapshot | null>(null)
   const [pageVisible, setPageVisible] = useState(true)
+  const locationAttemptRef = useRef(0)
+  const locationActiveRef = useRef(false)
   const { data, isLoading, isError, error, refetch } = useFlashHome(
     location,
     enabled && gate === 'ready' && pageVisible,
@@ -81,14 +87,25 @@ export default function FlashHomePage() {
   const fragmentsQuery = useFlashStoryFragments(enabled && gate === 'ready' && pageVisible)
 
   const requestLocation = useCallback(async () => {
+    if (locationActiveRef.current) return
+    locationActiveRef.current = true
+    const attempt = ++locationAttemptRef.current
     setGate('locating')
     try {
+      const permission = await getFlashLocationPermission()
+      if (attempt !== locationAttemptRef.current) return
+      if (permission === 'denied') {
+        setGate('denied')
+        return
+      }
       const snapshot = await getOneShotFlashLocation()
+      if (attempt !== locationAttemptRef.current) return
       setLocation(snapshot)
       setGate('ready')
     } catch {
-      const permission = await getFlashLocationPermission()
-      setGate(permission === 'denied' ? 'denied' : 'error')
+      if (attempt === locationAttemptRef.current) setGate('error')
+    } finally {
+      if (attempt === locationAttemptRef.current) locationActiveRef.current = false
     }
   }, [])
 
@@ -106,9 +123,21 @@ export default function FlashHomePage() {
 
   useDidHide(() => {
     setPageVisible(false)
+    locationAttemptRef.current += 1
+    locationActiveRef.current = false
     setLocation(null)
     if (enabled) setGate('intro')
   })
+
+  useEffect(() => {
+    if (gate !== 'locating') return undefined
+    const timer = setTimeout(() => {
+      locationAttemptRef.current += 1
+      locationActiveRef.current = false
+      setGate('error')
+    }, FLASH_LOCATION_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [gate])
 
   useEffect(() => {
     if (!pageVisible || gate !== 'ready' || !location) return undefined
@@ -162,7 +191,7 @@ export default function FlashHomePage() {
       <View className='flash-page'>
         <FlashPageState
           title={gate === 'checking' ? '正在打开闪现…' : '看看深圳哪里有角色在线…'}
-          description='这次只读取当前位置；选定角色后会直接打开地图并开始前台定位。'
+          description='正在读取当前位置。选中角色后，地图会在前台持续更新距离和方向。'
         />
       </View>
     )
@@ -173,7 +202,7 @@ export default function FlashHomePage() {
       <View className='flash-page'>
         <FlashPageState
           title='需要定位，才能参加闪现'
-          description='我们不会用 IP 猜你的位置。打开后先查看当前在线角色；选定角色后地图会再次明确提示定位用途。'
+          description='我们不会用 IP 猜你的位置。允许后可以查看附近角色；进入地图后只会在前台持续更新位置。'
           action={() => { void openLocationSettings() }}
           actionLabel='打开定位设置'
         />
@@ -187,7 +216,7 @@ export default function FlashHomePage() {
         <FlashPageState
           tone='error'
           title='这次没有拿到位置'
-          description='可能是定位信号或网络暂时不稳定。你可以稍后再试。'
+          description='定位响应超时，或当前信号不稳定。你可以检查系统定位权限后再试。'
           action={() => { void requestLocation() }}
           actionLabel='重新定位'
         />

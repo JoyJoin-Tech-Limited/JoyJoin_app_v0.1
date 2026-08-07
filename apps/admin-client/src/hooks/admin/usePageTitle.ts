@@ -6,7 +6,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/admin/dashboard": "数据看板",
   "/admin/users": "用户管理",
   "/admin/event-pools": "活动池管理",
-  "/admin/flash-ops": "闪现运营",
+  "/admin/flash-ops": "街头盲盒运营",
   "/admin/venues": "场地管理",
   "/admin/matching": "匹配实验室",
   "/admin/matching-config": "匹配配置",

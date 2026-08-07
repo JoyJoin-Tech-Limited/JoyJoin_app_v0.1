@@ -1,7 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminGuard } from "@/components/admin/AdminGuard";
-import { Route, Switch, useLocation, Link } from "wouter";
+import { Redirect, Route, Switch, useLocation, Link } from "wouter";
 import { lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { usePageTitle, getPageTitle } from "@/hooks/admin/usePageTitle";
@@ -43,7 +43,6 @@ const AdminAccountsPage = lazy(() => import("@/pages/admin/AdminAccountsPage"));
 const AdminAuditLogsPage = lazy(() => import("@/pages/admin/AdminAuditLogsPage"));
 const AdminFeatureFlagsPage = lazy(() => import("@/pages/admin/AdminFeatureFlagsPage"));
 const AdminFlashPage = lazy(() => import("@/pages/admin/AdminFlashPage"));
-const AdminFlashOpsPage = lazy(() => import("@/pages/admin/AdminFlashOpsPage"));
 
 export default function AdminLayout() {
   const { user } = useAuth();
@@ -102,7 +101,7 @@ export default function AdminLayout() {
                 <Route path="/admin/templates" component={AdminEventTemplatesPage} />
                 <Route path="/admin/events" component={AdminEventsPage} />
                 <Route path="/admin/event-pools" component={AdminEventPoolsPage} />
-                <Route path="/admin/flash-ops" component={AdminFlashOpsPage} />
+                <Route path="/admin/flash-ops"><Redirect to="/admin/alang" /></Route>
                 <Route path="/admin/finance" component={AdminFinancePage} />
                 <Route path="/admin/insights" component={AdminDataInsightsPage} />
                 <Route path="/admin/outcome-analytics" component={AdminOutcomeAnalyticsPage} />
