@@ -17,6 +17,12 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 import { users } from "./_definitions.js";
+import type {
+  FlashChoiceEffect,
+  FlashStoryEndingCode,
+  FlashStoryMode,
+  FlashUniverseVector,
+} from "../alang/parallelUniverse.js";
 
 export type FlashDialogueQuestion = {
   id: string;
@@ -69,7 +75,27 @@ export type FlashStoryContent = {
   discovery: string;
   question: FlashDialogueQuestion;
   responseByOption: Record<string, string>;
+  effectsByOption?: Record<string, FlashChoiceEffect[]>;
+  echoByFlag?: Record<string, string>;
+  personalizedFallbackByOption?: Record<string, string>;
   closing: string;
+};
+
+export type FlashStoryReleaseManifest = {
+  season: { id: string; code: string; title: string; version: number };
+  episodes: Array<{
+    id: string;
+    code: string;
+    npcId: string;
+    phase: number;
+    title: string;
+    objectCode: string;
+    contentVersion: number;
+    content: FlashStoryContent;
+    fragment: { id: string; code: string; category: string; title: string; fact: string; assetUrl?: string | null };
+  }>;
+  endings: Array<{ code: FlashStoryEndingCode; title: string; summary: string }>;
+  endingRulesVersion: string;
 };
 
 export type FlashStoryMotion = {
@@ -345,6 +371,50 @@ export const flashStoryFragments = pgTable("flash_story_fragments", {
   check("ck_flash_story_fragment_category", sql`${table.category} in ('object', 'past', 'relationship', 'key')`),
 ]);
 
+export const flashStoryReleaseSnapshots = pgTable("flash_story_release_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  seasonId: varchar("season_id").notNull().references(() => flashStorySeasons.id),
+  revision: integer("revision").notNull(),
+  manifestHash: varchar("manifest_hash", { length: 64 }).notNull(),
+  manifest: jsonb("manifest").notNull().$type<FlashStoryReleaseManifest>(),
+  status: varchar("status", { length: 24 }).notNull().default("published"),
+  publishedBy: varchar("published_by", { length: 120 }),
+  publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("uq_flash_story_release_revision").on(table.seasonId, table.revision),
+  index("idx_flash_story_release_hash").on(table.manifestHash),
+  index("idx_flash_story_release_current").on(table.status, table.publishedAt),
+  uniqueIndex("uq_flash_story_one_current").on(table.status).where(sql`${table.status} = 'published'`),
+  check("ck_flash_story_release_revision", sql`${table.revision} > 0`),
+  check("ck_flash_story_release_status", sql`${table.status} in ('published', 'superseded')`),
+]);
+
+export const flashStoryUniverseRuns = pgTable("flash_story_universe_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  releaseSnapshotId: varchar("release_snapshot_id").notNull().references(() => flashStoryReleaseSnapshots.id),
+  mode: varchar("mode", { length: 24 }).notNull().$type<FlashStoryMode>(),
+  universeVector: jsonb("universe_vector").notNull().$type<FlashUniverseVector>(),
+  flags: text("flags").array().notNull().default(sql`array[]::text[]`),
+  echoQueue: jsonb("echo_queue").notNull().default(sql`'[]'::jsonb`).$type<Array<{ flag: string; copy: string; sourceEpisodeCode: string }>>(),
+  endingCode: varchar("ending_code", { length: 40 }).$type<FlashStoryEndingCode>(),
+  status: varchar("status", { length: 24 }).notNull().default("active"),
+  stateVersion: integer("state_version").notNull().default(1),
+  consentVersion: varchar("consent_version", { length: 40 }),
+  consentedAt: timestamp("consented_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("uq_flash_story_universe_user_release").on(table.userId, table.releaseSnapshotId),
+  index("idx_flash_story_universe_resume").on(table.userId, table.status, table.updatedAt),
+  check("ck_flash_story_universe_mode", sql`${table.mode} in ('standard', 'personalized')`),
+  check("ck_flash_story_universe_status", sql`${table.status} in ('active', 'completed')`),
+  check("ck_flash_story_universe_state_version", sql`${table.stateVersion} > 0`),
+  check("ck_flash_story_universe_consent", sql`(${table.mode} = 'standard' and ${table.consentVersion} is null and ${table.consentedAt} is null) or (${table.mode} = 'personalized' and ${table.consentVersion} is not null and ${table.consentedAt} is not null)`),
+]);
+
 export const flashEncounters = pgTable("flash_encounters", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -381,6 +451,7 @@ export const flashUserStoryProgress = pgTable("flash_user_story_progress", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   seasonId: varchar("season_id").notNull().references(() => flashStorySeasons.id, { onDelete: "cascade" }),
+  universeRunId: varchar("universe_run_id").references(() => flashStoryUniverseRuns.id),
   currentPhase: integer("current_phase").notNull().default(1),
   status: varchar("status", { length: 24 }).notNull().default("active"),
   completedAt: timestamp("completed_at", { withTimezone: true }),
@@ -398,12 +469,46 @@ export const flashUserStoryEpisodes = pgTable("flash_user_story_episodes", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   episodeId: varchar("episode_id").notNull().references(() => flashStoryEpisodes.id, { onDelete: "cascade" }),
   encounterId: varchar("encounter_id").notNull().references(() => flashEncounters.id),
+  universeRunId: varchar("universe_run_id").references(() => flashStoryUniverseRuns.id),
   selectedOptionId: varchar("selected_option_id", { length: 80 }).notNull(),
+  effectSnapshot: jsonb("effect_snapshot").notNull().default(sql`'[]'::jsonb`).$type<FlashChoiceEffect[]>(),
+  echoSnapshot: text("echo_snapshot"),
+  responseSnapshot: text("response_snapshot"),
+  renderKind: varchar("render_kind", { length: 24 }).notNull().default("template"),
+  promptVersion: varchar("prompt_version", { length: 80 }),
   completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("uq_flash_user_story_episode").on(table.userId, table.episodeId),
   uniqueIndex("uq_flash_user_story_encounter").on(table.encounterId),
   index("idx_flash_user_story_episode_user").on(table.userId, table.completedAt),
+  index("idx_flash_user_story_episode_run").on(table.universeRunId, table.completedAt),
+  check("ck_flash_user_story_render_kind", sql`${table.renderKind} in ('template', 'ai', 'fallback')`),
+]);
+
+export const flashStoryChoiceIntents = pgTable("flash_story_choice_intents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  encounterId: varchar("encounter_id").notNull().references(() => flashEncounters.id, { onDelete: "cascade" }),
+  episodeId: varchar("episode_id").notNull().references(() => flashStoryEpisodes.id, { onDelete: "cascade" }),
+  questionId: varchar("question_id", { length: 80 }).notNull(),
+  optionId: varchar("option_id", { length: 80 }).notNull(),
+  status: varchar("status", { length: 24 }).notNull().default("pending"),
+  leaseToken: varchar("lease_token", { length: 80 }),
+  leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  responseSnapshot: text("response_snapshot"),
+  renderKind: varchar("render_kind", { length: 24 }),
+  promptVersion: varchar("prompt_version", { length: 80 }),
+  lastErrorCode: varchar("last_error_code", { length: 80 }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("uq_flash_story_choice_intent_encounter").on(table.encounterId),
+  uniqueIndex("uq_flash_story_choice_intent_episode").on(table.userId, table.episodeId),
+  index("idx_flash_story_choice_intent_recovery").on(table.status, table.leaseExpiresAt),
+  check("ck_flash_story_choice_intent_status", sql`${table.status} in ('pending', 'generating', 'completed')`),
+  check("ck_flash_story_choice_intent_render_kind", sql`${table.renderKind} is null or ${table.renderKind} in ('template', 'ai', 'fallback')`),
 ]);
 
 export const flashUserStoryFragments = pgTable("flash_user_story_fragments", {
@@ -411,6 +516,7 @@ export const flashUserStoryFragments = pgTable("flash_user_story_fragments", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   fragmentId: varchar("fragment_id").notNull().references(() => flashStoryFragments.id, { onDelete: "cascade" }),
   episodeId: varchar("episode_id").notNull().references(() => flashStoryEpisodes.id, { onDelete: "cascade" }),
+  fragmentSnapshot: jsonb("fragment_snapshot").$type<FlashStoryReleaseManifest["episodes"][number]["fragment"]>(),
   unlockedAt: timestamp("unlocked_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("uq_flash_user_story_fragment").on(table.userId, table.fragmentId),

@@ -3,6 +3,7 @@ import {
   FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS,
   FLASH_CITY,
   FLASH_ENCOUNTER_TTL_HOURS,
+  FLASH_STORY_PERSONALIZATION_CONSENT_VERSION,
   type FlashAssignmentResponse,
   type FlashCanonicalScreen,
   type FlashEncounterResponse,
@@ -16,6 +17,7 @@ import {
 import { alangHaversineDistanceMeters } from "@shared/alang/testPointValidation";
 import type { FlashTaskSnapshot } from "@shared/schema";
 import { getFlashInvitationDefinition } from "@shared/alang/flashInvitationCatalog";
+import { FLASH_STORY_ENDING_COPY, type FlashStoryEndingCode } from "@joyjoin/shared/alang/parallelUniverse";
 
 import {
   abandonFlashAssignment,
@@ -58,12 +60,21 @@ import {
   getCompletedFlashStorySeason,
   getFlashStoryEncounterState,
   getFlashStoryReadiness,
+  getFlashStoryEndingRecap,
+  getReadyFlashStoryChoiceIntent,
   listFlashUserStoryFragments,
+  finalizeFlashStoryChoiceIntent,
+  prepareFlashStoryChoiceIntent,
 } from "../repositories/flashStoryRepo";
+import {
+  generateFlashPersonalizedResponse,
+  type FlashPersonalizationContext,
+} from "./flashPersonalizedNarrativeService";
 import {
   isFlashShenzhenBoundaryAssetValid,
   isFlashShenzhenBoundaryLicenseApproved,
 } from "../lib/flashShenzhenBoundary";
+import { getFeatureFlag } from "../lib/featureFlags";
 
 export class FlashServiceError extends Error {
   constructor(
@@ -142,6 +153,7 @@ const EMPTY_FLASH_READINESS_COUNTS: FlashReadinessCounts = {
   linkedTasks: 0,
   readyTaskCategoryCounts: {},
   publishedStorySeasons: 0,
+  currentStoryReleases: 0,
   reviewedStoryEpisodes: 0,
   storyCoveredNpcs: 0,
 };
@@ -168,6 +180,7 @@ export function evaluateFlashFeatureReadiness(
   if (counts.schedulableNpcs !== counts.activeNpcs) blockers.push("all_active_npcs_require_approved_locations");
   if (counts.approvedEncounterLocations < 1) blockers.push("approved_encounter_location_required");
   if ((counts.publishedStorySeasons ?? 0) !== 1) blockers.push("one_published_story_season_required");
+  if ((counts.currentStoryReleases ?? 0) !== 1) blockers.push("one_current_story_release_required");
   if ((counts.reviewedStoryEpisodes ?? 0) !== 15) blockers.push("fifteen_reviewed_story_episodes_required");
   if ((counts.storyCoveredNpcs ?? 0) < 5) blockers.push("five_story_npcs_required");
   return { schemaReady: true, ready: blockers.length === 0, counts, blockers };
@@ -182,6 +195,7 @@ export async function getFlashFeatureReadiness(): Promise<FlashReadinessResponse
     {
       ...catalogCounts,
       publishedStorySeasons: storyCounts.publishedSeasons,
+      currentStoryReleases: storyCounts.currentReleases,
       reviewedStoryEpisodes: storyCounts.reviewedEpisodes,
       storyCoveredNpcs: storyCounts.coveredNpcs,
     },
@@ -360,11 +374,14 @@ export async function locateFlashAppearance(input: {
     expiresAt: new Date(now.getTime() + FLASH_ENCOUNTER_TTL_HOURS * 60 * 60 * 1000),
   });
   if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 409, "这次相遇没有解锁成功");
+  const storyPreference = effectivePreference(await getFlashPreferences(input.userId));
   await ensureFlashStoryEpisodeForEncounter({
     encounterId: encounter.id,
     userId: input.userId,
     npcId: appearance.npcId,
     now,
+    mode: storyPreference.personalizationEnabled ? "personalized" : "standard",
+    consentVersion: storyPreference.consentVersion,
   });
   return {
     appearanceId: input.appearanceId,
@@ -560,8 +577,29 @@ export async function getFlashEncounter(input: {
   await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
   const encounter = await getFlashEncounterOwned(input.encounterId, input.userId);
   if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 404, "没有找到这次相遇");
-  const storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
-  if (storyState) {
+  let storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
+  if (storyState && !storyState.completion) {
+    const intent = await getReadyFlashStoryChoiceIntent(input.userId, storyState.episode.id);
+    const option = intent
+      ? storyState.episode.content.question.options.find((candidate: { id: string }) => candidate.id === intent.optionId)
+      : null;
+    if (intent && option && intent.responseSnapshot && intent.renderKind) {
+      await completeFlashStoryEpisode({
+        encounterId: intent.encounterId,
+        userId: input.userId,
+        episodeId: storyState.episode.id,
+        optionId: intent.optionId,
+        configuredEffects: storyState.episode.content.effectsByOption?.[intent.optionId],
+        responseSnapshot: intent.responseSnapshot,
+        renderKind: intent.renderKind as "template" | "ai" | "fallback",
+        promptVersion: intent.promptVersion,
+        now,
+      });
+      storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
+    }
+  }
+  const completedSeason = await getCompletedFlashStorySeason(input.userId);
+  if (storyState && !completedSeason) {
     const content = storyState.episode.content;
     const selectedOptionId = storyState.completion?.selectedOptionId ?? null;
     return {
@@ -595,7 +633,12 @@ export async function getFlashEncounter(input: {
         opening: content.opening,
         action: content.action,
         discovery: content.discovery,
-        response: selectedOptionId ? content.responseByOption[selectedOptionId] ?? null : null,
+        response: selectedOptionId
+          ? storyState.completion?.responseSnapshot ?? content.responseByOption[selectedOptionId] ?? null
+          : null,
+        echo: storyState.completion?.echoSnapshot ?? null,
+        storyMode: storyState.universeRun?.mode ?? "standard",
+        renderKind: storyState.completion?.renderKind ?? "template",
         closing: storyState.completion ? content.closing : null,
         motion: storyState.episode.motion,
         fragment: storyState.completion && storyState.fragment ? {
@@ -616,8 +659,10 @@ export async function getFlashEncounter(input: {
       canonicalScreen: "dialogue",
     };
   }
-  const completedSeason = await getCompletedFlashStorySeason(input.userId);
   if (completedSeason) {
+    const endingCode = (completedSeason.run?.endingCode ?? "parallel_mixed") as FlashStoryEndingCode;
+    const recap = completedSeason.run ? await getFlashStoryEndingRecap(input.userId, completedSeason.run.id) : null;
+    const ending = recap?.ending ?? FLASH_STORY_ENDING_COPY[endingCode];
     return {
       id: encounter.id,
       npc: { id: encounter.npcId, slug: encounter.npcSlug, name: encounter.npcName, species: encounter.species, personalitySummary: encounter.personalitySummary, themeColor: encounter.themeColor, avatarUrl: encounter.avatarUrl },
@@ -632,13 +677,17 @@ export async function getFlashEncounter(input: {
         code: "season-finale",
         seasonTitle: completedSeason.season.title,
         phase: 3,
-        title: "旧物都有了去向",
+        title: ending.title,
         objectCode: "old-key",
         opening: "交换箱重新合上了。",
         action: "五件旧物已经被认领、处理或重新交给重要的人。",
         discovery: "那把没有锁孔的旧钥匙仍留在夹层里。",
-        response: "你收齐了这一季的十五块故事碎片。",
-        closing: "第一季到这里结束。钥匙属于谁，会在下一段故事里继续。",
+        response: ending.summary,
+        ending: recap ? { code: endingCode, vector: recap.vector, highlights: recap.highlights } : null,
+        closing: "这是你抵达的宇宙。相同的旧物，在另一条时间线里，也许会得到不同的回答。",
+        echo: null,
+        storyMode: completedSeason.run?.mode ?? "standard",
+        renderKind: "template",
         motion: { ambient: "breathe" },
         fragment: null,
         progress: { completedInPhase: 5, totalInPhase: 5, completedTotal: 15, total: 15 },
@@ -750,11 +799,79 @@ export async function answerFlashEncounter(input: {
     if (question.id !== input.questionId || !option) {
       throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这个选择已经失效，请刷新后再选一次");
     }
+    const intentResult = await prepareFlashStoryChoiceIntent({
+      encounterId: input.encounterId,
+      userId: input.userId,
+      episodeId: storyState.episode.id,
+      questionId: question.id,
+      optionId: option.id,
+      now,
+    });
+    if (intentResult.state === "conflict") {
+      throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 409, "这次相遇已经记录了另一个选择");
+    }
+    if (intentResult.state === "pending") {
+      throw new FlashServiceError("FLASH_STORY_GENERATION_PENDING", 409, "正在整理这条时间线，请稍后再试");
+    }
+    const templateResponse = storyState.episode.content.responseByOption[option.id] ?? storyState.episode.content.closing;
+    const baseResponse = storyState.universeRun?.mode === "personalized"
+      ? storyState.episode.content.personalizedFallbackByOption?.[option.id] ?? templateResponse
+      : templateResponse;
+    let responseSnapshot = intentResult.state === "ready" ? intentResult.intent.responseSnapshot! : baseResponse;
+    let renderKind: "template" | "ai" | "fallback" = intentResult.state === "ready"
+      ? intentResult.intent.renderKind as "template" | "ai" | "fallback"
+      : "template";
+    let promptVersion: string | null = intentResult.state === "ready" ? intentResult.intent.promptVersion : null;
+    if (intentResult.state === "claimed" && storyState.universeRun?.mode === "personalized" && await getFeatureFlag("flashPersonalizedStoryEnabled")) {
+      const preference = effectivePreference(await getFlashPreferences(input.userId));
+      if (preference.personalizationEnabled && preference.consentVersion === FLASH_STORY_PERSONALIZATION_CONSENT_VERSION) {
+        const [personality, interests, industry] = await Promise.all([
+          preference.usePersonality ? getFlashUserPersonalitySignal(input.userId) : Promise.resolve(null),
+          preference.useInterests ? getFlashUserInterestSignal(input.userId) : Promise.resolve(null),
+          preference.useIndustry ? getFlashUserIndustrySignal(input.userId) : Promise.resolve(null),
+        ]);
+        const hour = now.getHours();
+        const configuredWeather = process.env.FLASH_WEATHER_CONTEXT;
+        const weather = (["clear", "cloudy", "rain", "hot", "cool"] as const)
+          .find((value) => value === configuredWeather) ?? null;
+        const context: FlashPersonalizationContext = {
+          archetype: personality?.primaryArchetype ?? null,
+          interests: extractInterestTags(interests?.interestSelections).map((item) => item.label).slice(0, 3),
+          broadIndustry: industry?.industryCategoryLabel ?? industry?.industryCategory ?? null,
+          weather,
+          timeBand: hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening",
+          echo: storyState.universeRun.echoQueue?.[0]?.copy ?? null,
+        };
+        const generated = await generateFlashPersonalizedResponse({ baseResponse, npcName: encounter.npcName, context });
+        responseSnapshot = generated.response;
+        renderKind = generated.renderKind;
+        promptVersion = generated.promptVersion;
+      } else {
+        renderKind = "fallback";
+      }
+    }
+    if (intentResult.state === "claimed") {
+      const finalized = await finalizeFlashStoryChoiceIntent({
+        intentId: intentResult.intent.id,
+        leaseToken: intentResult.leaseToken,
+        responseSnapshot,
+        renderKind,
+        promptVersion,
+        now: new Date(),
+      });
+      if (!finalized) {
+        throw new FlashServiceError("FLASH_STORY_GENERATION_PENDING", 409, "这条时间线正在由另一次请求完成");
+      }
+    }
     await completeFlashStoryEpisode({
       encounterId: input.encounterId,
       userId: input.userId,
       episodeId: storyState.episode.id,
       optionId: option.id,
+      configuredEffects: storyState.episode.content.effectsByOption?.[option.id],
+      responseSnapshot,
+      renderKind,
+      promptVersion,
       now,
     });
     return getFlashEncounter({ encounterId: input.encounterId, userId: input.userId, now });

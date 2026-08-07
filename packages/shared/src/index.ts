@@ -59,6 +59,7 @@ export * from './hongKongTime';
 export * from './centerTabRouting';
 export * from './legal/joyjoinTermsZh';
 export * from './alang/flashTypes';
+export * from './alang/parallelUniverse';
 
 export * from './miniscriptCatalog';
 export * from './miniscriptStoryFramework';

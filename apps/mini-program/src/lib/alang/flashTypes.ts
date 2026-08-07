@@ -182,6 +182,14 @@ export interface FlashEncounterView {
     action: string
     discovery: string
     response: string | null
+    echo?: string | null
+    storyMode?: 'standard' | 'personalized'
+    renderKind?: 'template' | 'ai' | 'fallback'
+    ending?: {
+      code: string
+      vector: { trust: number; attachment: number; intervention: number; truth: number }
+      highlights: Array<{ episodeTitle: string; optionLabel: string }>
+    } | null
     closing: string | null
     motion: { ambient: 'none' | 'breathe' | 'drift'; blinkAssetUrl?: string; blinkIntervalSeconds?: number }
     fragment: { id: string; category: 'object' | 'past' | 'relationship' | 'key'; title: string; fact: string; assetUrl: string | null } | null
@@ -251,4 +259,5 @@ export type FlashCanonicalSnapshot = Partial<{
   encounterId: string
   appearanceId: string
   assignmentId: string
+  storyEpisode: FlashEncounterView['storyEpisode']
 }>

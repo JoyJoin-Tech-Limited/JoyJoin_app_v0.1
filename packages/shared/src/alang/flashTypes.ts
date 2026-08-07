@@ -12,6 +12,7 @@ export const FLASH_ENCOUNTER_TTL_HOURS = 24;
 export const FLASH_MAX_ACTIVE_TASKS = 3;
 export const FLASH_MAX_ACTIVE_TASKS_PER_NPC = 1;
 export const FLASH_PERSONALIZATION_CONSENT_VERSION = "flash-personalization-v1" as const;
+export const FLASH_STORY_PERSONALIZATION_CONSENT_VERSION = "flash-story-personalization-v1" as const;
 export const FLASH_SHENZHEN_BOUNDS = {
   minLatitude: 22.35,
   maxLatitude: 22.95,
@@ -67,13 +68,16 @@ export const flashPreferenceUpdateSchema = z.object({
   useIndustry: z.boolean().optional(),
   useDistrict: z.boolean().optional(),
   useTaskBehavior: z.boolean().optional(),
-  consentVersion: z.literal(FLASH_PERSONALIZATION_CONSENT_VERSION).optional(),
+  consentVersion: z.enum([FLASH_PERSONALIZATION_CONSENT_VERSION, FLASH_STORY_PERSONALIZATION_CONSENT_VERSION]).optional(),
   deleteTagIds: z.array(z.string().uuid()).max(100).optional(),
 }).superRefine((value, ctx) => {
   if (!Object.keys(value).some((key) => key !== "consentVersion")) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "At least one preference field is required" });
   }
-  if (value.personalizationEnabled === true && value.consentVersion !== FLASH_PERSONALIZATION_CONSENT_VERSION) {
+  if (value.personalizationEnabled === true && ![
+    FLASH_PERSONALIZATION_CONSENT_VERSION,
+    FLASH_STORY_PERSONALIZATION_CONSENT_VERSION,
+  ].includes(value.consentVersion as typeof FLASH_PERSONALIZATION_CONSENT_VERSION)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["consentVersion"],
@@ -135,6 +139,14 @@ export type FlashStoryEpisodeDto = {
   discovery: string;
   closing: string | null;
   response: string | null;
+  echo?: string | null;
+  storyMode?: "standard" | "personalized";
+  renderKind?: "template" | "ai" | "fallback";
+  ending?: {
+    code: string;
+    vector: { trust: number; attachment: number; intervention: number; truth: number };
+    highlights: Array<{ episodeTitle: string; optionLabel: string }>;
+  } | null;
   motion: {
     ambient: "none" | "breathe" | "drift";
     blinkAssetUrl?: string;
@@ -280,6 +292,7 @@ export type FlashReadinessResponse = {
     linkedTasks: number;
     readyTaskCategoryCounts: Record<string, number>;
     publishedStorySeasons?: number;
+    currentStoryReleases?: number;
     reviewedStoryEpisodes?: number;
     storyCoveredNpcs?: number;
   };
@@ -299,6 +312,7 @@ export type FlashApiErrorCode =
   | "FLASH_ENCOUNTER_NOT_FOUND"
   | "FLASH_ENCOUNTER_EXPIRED"
   | "FLASH_STORY_NOT_AVAILABLE"
+  | "FLASH_STORY_GENERATION_PENDING"
   | "FLASH_INVALID_DIALOGUE_OPTION"
   | "FLASH_REROLL_ALREADY_USED"
   | "FLASH_TASK_LIMIT_REACHED"

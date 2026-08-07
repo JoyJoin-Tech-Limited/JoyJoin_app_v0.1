@@ -171,6 +171,7 @@ describe("formal Flash catalog", () => {
       linkedTasks: 30,
       readyTaskCategoryCounts,
       publishedStorySeasons: 1,
+      currentStoryReleases: 1,
       reviewedStoryEpisodes: 15,
       storyCoveredNpcs: 5,
     }, readyBoundary);
@@ -201,6 +202,7 @@ describe("formal Flash catalog", () => {
       linkedTasks: 30,
       readyTaskCategoryCounts,
       publishedStorySeasons: 1,
+      currentStoryReleases: 1,
       reviewedStoryEpisodes: 15,
       storyCoveredNpcs: 5,
     };
@@ -240,6 +242,7 @@ describe("formal Flash catalog", () => {
       linkedTasks: 30,
       readyTaskCategoryCounts,
       publishedStorySeasons: 1,
+      currentStoryReleases: 1,
       reviewedStoryEpisodes: 15,
       storyCoveredNpcs: 5,
     };

@@ -9,6 +9,7 @@ import {
   fetchFlashHome,
   fetchFlashPreferences,
   fetchFlashStoryFragments,
+  getFlashApiErrorCode,
   locateFlashAppearance,
   rerollFlashEncounter,
   retryFlashAssignment,
@@ -86,6 +87,8 @@ export function useAnswerFlashEncounter() {
   const markStale = useMarkFlashStateStale()
   return useMutation({
     mutationFn: answerFlashEncounter,
+    retry: (failureCount, error) => failureCount < 4 && getFlashApiErrorCode(error) === 'FLASH_STORY_GENERATION_PENDING',
+    retryDelay: 1_600,
     onSuccess: (response, input) => {
       queryClient.setQueryData(flashEncounterQueryKey(input.encounterId), response)
       markStale()

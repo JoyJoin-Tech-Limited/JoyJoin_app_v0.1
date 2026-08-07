@@ -32,6 +32,8 @@ function dialogueActionError(error: unknown, fallback: string): string {
       return '这个回答已经变化了，重新读取后再选一次。'
     case 'FLASH_INVALID_TASK_STATE':
       return '状态刚刚发生了变化，任务和对话进度都没有丢。'
+    case 'FLASH_STORY_GENERATION_PENDING':
+      return '这条时间线还在收拢，稍后点同一个选择就会继续，不会重复结算。'
     default:
       return fallback
   }
@@ -55,6 +57,10 @@ export default function FlashDialoguePage() {
   }, [data?.npc?.name])
 
   useEffect(() => {
+    if (data?.storyEpisode?.code === 'season-finale') {
+      void Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}` })
+      return
+    }
     if (!enabled || !data?.canonicalScreen || data.status === 'expired') return
     void redirectToFlashCanonical(data, MINI_PROGRAM_ROUTES.alangDialogue)
   }, [data, enabled])
@@ -64,6 +70,10 @@ export default function FlashDialoguePage() {
   }, [data?.storyEpisode?.id])
 
   const applyResponse = async (response: FlashCanonicalSnapshot) => {
+    if ('storyEpisode' in response && response.storyEpisode?.code === 'season-finale') {
+      await Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}` })
+      return
+    }
     const redirected = await redirectToFlashCanonical(response, MINI_PROGRAM_ROUTES.alangDialogue)
     if (!redirected && !('npc' in response)) await refetch()
   }
@@ -172,6 +182,9 @@ export default function FlashDialoguePage() {
   const question = data.currentQuestion
   const offer = data.taskOffer
   const story = data.storyEpisode
+  if (story?.code === 'season-finale') {
+    return <View className='flash-page'><FlashPageState title='正在展开你的平行宇宙…' description='十五次选择已经收拢成一个只属于你的结局。' /></View>
+  }
   const storySettled = Boolean(story && (fragmentRevealed || !story.fragment))
   const sceneSpeech = story
     ? (story.response ?? story.discovery)
@@ -229,6 +242,15 @@ export default function FlashDialoguePage() {
                 </View>
               ) : (
                 <View className='flash-dialogue__story-result' aria-live='polite'>
+                  {story.echo ? (
+                    <View className='flash-dialogue__echo' data-testid='flash-story-echo'>
+                      <Text className='flash-dialogue__echo-label'>来自另一段选择的回声</Text>
+                      <Text className='flash-dialogue__echo-copy'>{story.echo}</Text>
+                    </View>
+                  ) : null}
+                  {story.storyMode === 'personalized' ? (
+                    <Text className='flash-dialogue__ai-note'>专属剧情 · {story.renderKind === 'ai' ? 'AI 编排' : '审核内容回退'}</Text>
+                  ) : null}
                   {!fragmentRevealed && story.fragment ? (
                     <View className='flash-dialogue__fragment-sealed'>
                       <Text className='flash-dialogue__fragment-sealed-mark' aria-hidden='true'>◇</Text>

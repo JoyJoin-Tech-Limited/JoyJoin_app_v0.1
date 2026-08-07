@@ -105,6 +105,13 @@ const storyContentSchema = z.object({
     })).min(2).max(3),
   }),
   responseByOption: z.record(z.string(), z.string().trim().min(1).max(240)),
+  effectsByOption: z.record(z.string(), z.array(z.object({
+    dimension: z.enum(["trust", "attachment", "intervention", "truth"]),
+    delta: z.number().int().min(-3).max(3),
+    flag: z.string().trim().min(1).max(80).optional(),
+  }).strict()).min(1).max(4)).optional(),
+  echoByFlag: z.record(z.string(), z.string().trim().min(1).max(180)).optional(),
+  personalizedFallbackByOption: z.record(z.string(), z.string().trim().min(1).max(300)).optional(),
   closing: z.string().trim().min(1).max(300),
 }).strict();
 
