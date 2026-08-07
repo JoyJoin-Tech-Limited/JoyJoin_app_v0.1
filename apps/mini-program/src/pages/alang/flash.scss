@@ -1,5 +1,7 @@
 @import '../../styles/variables';
 
+$flash-radar-found: #9ACD32;
+
 page {
   background: $color-bg-warm-to;
 }
@@ -490,10 +492,10 @@ page {
   &__instrument--outside &__signal-gem { background: #A8C5DD; box-shadow: 0 0 14rpx rgba(168, 197, 221, 0.64); }
   &__instrument--inside { box-shadow: 0 18rpx 48rpx rgba(154, 205, 50, 0.24), inset 0 0 0 3rpx rgba(154, 205, 50, 0.42); }
   &__instrument--inside &__sweep { opacity: 0; }
-  &__instrument--inside &__ring { border-color: rgba($color-brand-green, 0.58); }
-  &__instrument--inside &__range-wave--one { border-color: rgba($color-brand-green, 0.7); animation: flash-radar-found-wave 420ms ease-out both; }
+  &__instrument--inside &__ring { border-color: rgba($flash-radar-found, 0.58); }
+  &__instrument--inside &__range-wave--one { border-color: rgba($flash-radar-found, 0.7); animation: flash-radar-found-wave 420ms ease-out both; }
   &__instrument--inside &__track { opacity: 0.2; }
-  &__instrument--inside &__signal { background: $color-brand-green; box-shadow: 0 10rpx 32rpx rgba(154, 205, 50, 0.34); animation: flash-radar-found-signal 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  &__instrument--inside &__signal { background: $flash-radar-found; box-shadow: 0 10rpx 32rpx rgba(154, 205, 50, 0.34); animation: flash-radar-found-signal 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
   &__instrument--inside &__signal-gem { background: $color-surface; box-shadow: 0 0 16rpx rgba($color-surface, 0.82); }
   &__instrument--denied &__sweep,
   &__instrument--ended &__sweep,
