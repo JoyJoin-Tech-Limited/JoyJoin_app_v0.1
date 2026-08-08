@@ -3,11 +3,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
-import { useFlashHome, useFlashStoryFragments, useUpdateFlashPreferences } from '../../../lib/alang/useFlash'
+import { useFlashHome, useFlashStoryFragments } from '../../../lib/alang/useFlash'
+import { updateFlashPreferences } from '../../../lib/alang/flashApi'
 import type { FlashLocationSnapshot, FlashNpcSummary } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
-import flashIntroScene from '../assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg'
+import personalizedPaperWorld from '../assets/onboarding/parallel-personalized-paper-world-v1.webp'
+import standardPaperWorld from '../assets/onboarding/parallel-standard-paper-world-v1.webp'
 import flashAmbientBackground from '../assets/ui/flash-city-ambient-bg.png'
 import flashEmptyOnline from '../assets/ui/flash-empty-online.png'
 import {
@@ -19,7 +21,8 @@ import {
 import '../flash.scss'
 
 const FLASH_INFO_ICON = '/assets/icons/status-icons/status-info.webp'
-const FLASH_INTRO_SCENE = flashIntroScene
+const FLASH_PERSONALIZED_SCENE = personalizedPaperWorld
+const FLASH_STANDARD_SCENE = standardPaperWorld
 const FLASH_AMBIENT_BACKGROUND = flashAmbientBackground
 const FLASH_EMPTY_ONLINE = flashEmptyOnline
 const FLASH_LOCATION_TIMEOUT_MS = 12_000
@@ -77,7 +80,7 @@ function FlashIntro({ busy, onSelect }: { busy: boolean; onSelect: (mode: 'perso
         </View>
         <View className='flash-intro__modes'>
           <View className={`flash-intro__mode${busy ? ' flash-intro__mode--disabled' : ''}`} hoverClass={busy ? '' : 'flash-intro__mode--pressed'} role='button' aria-label='开启更专属的剧情' onClick={() => { if (!busy) onSelect('personalized') }}>
-            <Image className='flash-intro__mode-bg' src={FLASH_INTRO_SCENE} mode='aspectFill' aria-hidden='true' />
+            <Image className='flash-intro__mode-bg' src={FLASH_PERSONALIZED_SCENE} mode='aspectFill' aria-hidden='true' />
             <View className='flash-intro__mode-shade' aria-hidden='true' />
             <View className='flash-intro__mode-copy'>
               <Text className='flash-intro__mode-kicker'>AI · 专属宇宙</Text>
@@ -87,7 +90,7 @@ function FlashIntro({ busy, onSelect }: { busy: boolean; onSelect: (mode: 'perso
             </View>
           </View>
           <View className={`flash-intro__mode${busy ? ' flash-intro__mode--disabled' : ''}`} hoverClass={busy ? '' : 'flash-intro__mode--pressed'} role='button' aria-label='进入标准剧情' onClick={() => { if (!busy) onSelect('standard') }}>
-            <Image className='flash-intro__mode-bg flash-intro__mode-bg--standard' src={FLASH_INTRO_SCENE} mode='aspectFill' aria-hidden='true' />
+            <Image className='flash-intro__mode-bg flash-intro__mode-bg--standard' src={FLASH_STANDARD_SCENE} mode='aspectFill' aria-hidden='true' />
             <View className='flash-intro__mode-shade flash-intro__mode-shade--standard' aria-hidden='true' />
             <View className='flash-intro__mode-copy'>
               <Text className='flash-intro__mode-kicker'>不读取个人画像</Text>
@@ -133,6 +136,7 @@ export default function FlashHomePage() {
   const [gate, setGate] = useState<GateState>('checking')
   const [location, setLocation] = useState<FlashLocationSnapshot | null>(null)
   const [pageVisible, setPageVisible] = useState(true)
+  const [modeSaving, setModeSaving] = useState(false)
   const locationAttemptRef = useRef(0)
   const locationActiveRef = useRef(false)
   const { data, isLoading, isError, error, refetch } = useFlashHome(
@@ -140,7 +144,6 @@ export default function FlashHomePage() {
     enabled && gate === 'ready' && pageVisible,
   )
   const fragmentsQuery = useFlashStoryFragments(enabled && gate === 'ready' && pageVisible)
-  const modeMutation = useUpdateFlashPreferences()
 
   const requestLocation = useCallback(async () => {
     if (locationActiveRef.current) return
@@ -162,9 +165,11 @@ export default function FlashHomePage() {
   }, [])
 
   const selectStoryMode = useCallback(async (mode: 'personalized' | 'standard') => {
+    if (modeSaving) return
+    setModeSaving(true)
     try {
       const personalized = mode === 'personalized'
-      await modeMutation.mutateAsync({
+      await updateFlashPreferences({
         personalizationEnabled: personalized,
         usePersonality: personalized,
         useInterests: personalized,
@@ -176,8 +181,10 @@ export default function FlashHomePage() {
       await requestLocation()
     } catch {
       Taro.showToast({ title: '剧情模式没有保存成功，请再试一次', icon: 'none' })
+    } finally {
+      setModeSaving(false)
     }
-  }, [modeMutation, requestLocation])
+  }, [modeSaving, requestLocation])
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: '街头盲盒' })
@@ -254,7 +261,7 @@ export default function FlashHomePage() {
     )
   }
 
-  if (gate === 'intro') return <FlashIntro busy={modeMutation.isPending} onSelect={(mode) => { void selectStoryMode(mode) }} />
+  if (gate === 'intro') return <FlashIntro busy={modeSaving} onSelect={(mode) => { void selectStoryMode(mode) }} />
 
   if (gate === 'checking' || gate === 'locating') {
     return (

@@ -39,7 +39,9 @@ vi.mock('../../../hooks/useAuth', () => ({ useAuth: mocks.useAuth }))
 vi.mock('../../../lib/alang/useFlash', () => ({
   useFlashHome: mocks.useFlashHome,
   useFlashStoryFragments: mocks.useFlashStoryFragments,
-  useUpdateFlashPreferences: () => ({ mutateAsync: mocks.updatePreferences, isPending: false }),
+}))
+vi.mock('../../../lib/alang/flashApi', () => ({
+  updateFlashPreferences: mocks.updatePreferences,
 }))
 vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: vi.fn() }))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
@@ -137,6 +139,26 @@ describe('formal Flash home', () => {
       true,
     ))
     expect(document.querySelector("img[src*='flash-city-ambient-bg.png']")).toBeTruthy()
+  })
+
+  it('uses two dedicated paper-story backgrounds instead of reusing the street scene', async () => {
+    render(<FlashHomePage />)
+
+    await screen.findByText('YOUR PARALLEL UNIVERSE')
+    const modeCards = document.querySelectorAll('.flash-intro__mode')
+    expect(modeCards[0]).toContainElement(document.querySelector("img[src*='parallel-personalized-paper-world-v1.webp']"))
+    expect(modeCards[1]).toContainElement(document.querySelector("img[src*='parallel-standard-paper-world-v1.webp']"))
+    expect(document.querySelector("img[src*='street-blind-box-onboarding-fullscreen-v7.jpg']")).toBeNull()
+  })
+
+  it('does not depend on a mutation mutateAsync method when selecting a story mode', async () => {
+    render(<FlashHomePage />)
+
+    await screen.findByText('YOUR PARALLEL UNIVERSE')
+    fireEvent.click(document.querySelectorAll('.flash-intro__mode')[1])
+
+    await waitFor(() => expect(mocks.updatePreferences).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(mocks.location).toHaveBeenCalledTimes(1))
   })
 
   it('discards the location when the page is hidden and asks again on return', async () => {
