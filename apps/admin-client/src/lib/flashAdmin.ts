@@ -131,6 +131,19 @@ export interface FlashScheduleResponse {
   shifts: FlashShift[];
 }
 
+export interface FlashManualHold {
+  appearanceId: string;
+  startedAt: string;
+  npc: Pick<FlashNpc, "id" | "slug" | "name">;
+  location: Pick<FlashEncounterLocation, "id" | "name" | "district" | "address">;
+}
+
+export interface FlashManualHoldStatus {
+  available: boolean;
+  schemaReady: boolean;
+  activeHolds: FlashManualHold[];
+}
+
 export interface FlashOverviewCounts {
   activeNpcs?: number;
   activeEncounterLocations?: number;

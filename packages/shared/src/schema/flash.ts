@@ -200,25 +200,46 @@ export const flashSchedulePlans = pgTable("flash_schedule_plans", {
 
 export const flashShifts = pgTable("flash_shifts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  planId: varchar("plan_id").notNull().references(() => flashSchedulePlans.id, { onDelete: "cascade" }),
+  planId: varchar("plan_id").references(() => flashSchedulePlans.id, { onDelete: "cascade" }),
   npcId: varchar("npc_id").notNull().references(() => flashNpcs.id),
   locationId: varchar("location_id").notNull().references(() => flashEncounterLocations.id),
   startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
-  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+  endsAt: timestamp("ends_at", { withTimezone: true }),
   status: varchar("status", { length: 24 }).notNull().default("draft"),
   source: varchar("source", { length: 24 }).notNull().default("generated"),
+  availabilityMode: varchar("availability_mode", { length: 24 }).notNull().default("scheduled"),
+  manualHoldStartedBy: varchar("manual_hold_started_by", { length: 120 }),
+  manualHoldStoppedBy: varchar("manual_hold_stopped_by", { length: 120 }),
   version: integer("version").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
-  index("idx_flash_shifts_live").on(table.status, table.startsAt, table.endsAt),
+  index("idx_flash_shifts_live").on(table.status, table.availabilityMode, table.startsAt, table.endsAt),
   index("idx_flash_shifts_plan").on(table.planId),
   index("idx_flash_shifts_npc_time").on(table.npcId, table.startsAt),
   index("idx_flash_shifts_location_time").on(table.locationId, table.startsAt),
-  check("ck_flash_shifts_time", sql`${table.endsAt} > ${table.startsAt}`),
+  uniqueIndex("uq_flash_shifts_active_manual_hold_npc")
+    .on(table.npcId)
+    .where(sql`${table.availabilityMode} = 'manual_hold' and ${table.status} = 'published'`),
+  check("ck_flash_shifts_time", sql`(
+    (${table.availabilityMode} = 'scheduled'
+      and ${table.planId} is not null
+      and ${table.endsAt} is not null
+      and ${table.endsAt} > ${table.startsAt})
+    or
+    (${table.availabilityMode} = 'manual_hold'
+      and ${table.planId} is null
+      and ${table.source} = 'manual'
+      and ${table.manualHoldStartedBy} is not null
+      and (
+        (${table.status} = 'published' and ${table.endsAt} is null)
+        or (${table.status} = 'cancelled' and ${table.endsAt} is not null and ${table.endsAt} >= ${table.startsAt})
+      ))
+  )`),
   check("ck_flash_shifts_version", sql`${table.version} > 0`),
   check("ck_flash_shifts_status", sql`${table.status} in ('draft', 'published', 'cancelled')`),
   check("ck_flash_shifts_source", sql`${table.source} in ('generated', 'fallback', 'manual')`),
+  check("ck_flash_shifts_availability_mode", sql`${table.availabilityMode} in ('scheduled', 'manual_hold')`),
 ]);
 
 export const flashTaskDestinations = pgTable("flash_task_destinations", {

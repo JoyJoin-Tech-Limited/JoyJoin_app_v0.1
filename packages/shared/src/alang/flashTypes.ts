@@ -108,8 +108,9 @@ export type FlashOnlineNpcDto = {
   district: string;
   /** Operator-reviewed public-area description; never includes coordinates. */
   locationAddress?: string;
-  endsAt: string;
-  remainingMinutes: number;
+  endsAt?: string | null;
+  remainingMinutes?: number | null;
+  availabilityMode?: "scheduled" | "manual_hold";
   canonicalScreen: "map";
   story?: {
     phase: number;

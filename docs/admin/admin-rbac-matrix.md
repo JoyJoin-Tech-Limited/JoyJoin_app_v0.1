@@ -145,6 +145,18 @@ Reference for which admin portal pages map to which API endpoints and which role
 
 ---
 
+## Street Blind Box Operations
+
+| Admin Page | Action | Method | Endpoint | Required Middleware |
+|------------|--------|--------|----------|---------------------|
+| `/admin/alang` | Read manual hold status | GET | `/api/admin/alang/manual-holds` | `requireAdmin` |
+| `/admin/alang` | Start staging manual hold | POST | `/api/admin/alang/manual-holds/start` | `requireAdmin` + `requireOperatorOrAbove` |
+| `/admin/alang` | Stop staging manual hold | POST | `/api/admin/alang/manual-holds/:appearanceId/stop` | `requireAdmin` + `requireOperatorOrAbove` |
+
+> Start/stop are staging-only operational writes. Production and missing `APP_MODE` fail closed. Successful operations emit `FLASH_MANUAL_HOLD_STARTED` / `FLASH_MANUAL_HOLD_STOPPED`; audit payloads contain IDs and safe labels only, never coordinates.
+
+---
+
 ## Analytics & Matching Lab
 
 | Admin Page | Action | Method | Endpoint | Required Middleware |

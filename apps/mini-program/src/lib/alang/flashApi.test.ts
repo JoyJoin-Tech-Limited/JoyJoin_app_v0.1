@@ -96,6 +96,30 @@ describe('formal Flash shared-contract adapter', () => {
     })
   })
 
+  it('preserves a manual hold without inventing an end time or countdown', () => {
+    const dto: FlashHomeResponse = {
+      serverNow: '2026-08-08T15:00:00Z', city: '深圳', digitalNpcDisclosure: '数字叙事角色',
+      encounterId: null, assignmentId: null,
+      onlineNpcs: [{
+        appearanceId: 'manual-appearance-1',
+        npc: {
+          id: 'npc-1', slug: 'shiqi', name: '拾柒', species: '黑猫', personalitySummary: '安静',
+          inviteLine: '来找我。', themeColor: '#8B5CF6', avatarUrl: null,
+        },
+        district: '南山区', locationAddress: '深圳人才公园开放公共区域',
+        endsAt: null, remainingMinutes: null, availabilityMode: 'manual_hold', canonicalScreen: 'map',
+      }],
+      myTasks: [], preferenceSummary: preference, canonicalScreen: 'home',
+    }
+
+    expect(adaptFlashHomeDto(dto).onlineNpcs[0]).toMatchObject({
+      appearanceId: 'manual-appearance-1',
+      availabilityMode: 'manual_hold',
+      endsAt: undefined,
+      remainingSeconds: undefined,
+    })
+  })
+
   it('sends home coordinates only in a POST body under the shared contract', async () => {
     const dto: FlashHomeResponse = {
       serverNow: '2026-07-20T12:00:00+08:00', city: '深圳', digitalNpcDisclosure: '数字叙事角色',

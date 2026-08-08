@@ -89,6 +89,10 @@ Boundary:
 
 ### 2a. 闪现 NPC｜阿浪 + Profile V1.7
 
+**Street Blind Box formal runtime (2026-08-08)**
+- `apps/server/src/routes/domains/alangFlash.ts`, `services/flashService.ts`, `services/flashScheduleService.ts`, and `repositories/flashRepo.ts` own the separate `/api/alang/flash/*` multi-NPC flow. The server emits `canonicalScreen="map"`; the formal first season is 3 acts × 5 NPC story episodes, with 10 m server-owned arrival and no client-visible hidden coordinates or future schedules.
+- Staging formal-flow QA can create a plan-less `flash_shifts.availability_mode='manual_hold'` row through operator+ `/api/admin/alang/manual-holds*` endpoints. Active holds have no `ends_at` and remain online until explicitly stopped. Only exact `APP_MODE=staging` includes these rows in public responses; production and missing mode ignore and reject them. Start/stop are audited without coordinates.
+
 **Authority chain**
 1. `apps/server/src/routes/domains/alang.ts` owns mission transitions, GPS reports, completion, and archive identity.
 2. `apps/server/src/lib/alang/alangDisclosure.ts` removes all search/trigger coordinates and releases `routeDestination` only from the companion stage onward; `alangTargetResolver.ts` supplies the same canonical endpoint to route display and GPS.

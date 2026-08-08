@@ -128,6 +128,7 @@ An isolated staging API can run on the same production host:
 - Set `PAYMENTS_ENABLED=true` and `MOCK_PAYMENTS=false` for real WeChat Pay test charges, or `MOCK_PAYMENTS=true` for instantly-paid mock orders
 - `WECHAT_PAY_PLATFORM_CERT` supports raw PEM or base64-encoded PEM; staging deploy validates it and aborts on invalid keys
 - If a paid order is not fulfilled by webhook, the client falls back to `POST /api/payments/:wechatOrderId/reconcile`
+- Street Blind Box formal-flow QA may use `/admin/alang` to start a staging-only manual NPC hold with no automatic end time. Apply `20260808010000_flash_manual_hold.sql` first; operator+ must explicitly stop the hold after testing. Production and missing `APP_MODE` fail closed.
 
 See `deployment/README.md` and `docs/operations/test-mode-operations.md` §G for full setup.
 

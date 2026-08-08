@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FlashScheduleTab } from "@/components/admin/flash/FlashScheduleTab";
+import { FlashManualHoldPanel } from "@/components/admin/flash/FlashManualHoldPanel";
 import { FlashEquipmentRewardsPanel } from "@/components/admin/flash/FlashEquipmentRewardsPanel";
 import { FlashOperationsAnalytics } from "@/components/admin/flash/FlashOperationsAnalytics";
 import { FlashOperationsConsistency } from "@/components/admin/flash/FlashOperationsConsistency";
@@ -173,6 +174,8 @@ export default function AdminFlashPage() {
           </Card>
         ))}
       </div>
+
+      <FlashManualHoldPanel canWrite={canWrite} npcs={npcs} locations={locations} />
 
       <Tabs defaultValue="schedules" className="space-y-4">
         <div className="pb-1">

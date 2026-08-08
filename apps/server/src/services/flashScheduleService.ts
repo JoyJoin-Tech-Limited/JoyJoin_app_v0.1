@@ -360,6 +360,10 @@ function buildFallbackDraft(input: {
   const weekday = isoWeekdayForServiceDate(input.serviceDate);
   const result: FlashDraftShift[] = [];
   for (const oldShift of input.prior.shifts) {
+    // Plan-owned schedule rows always have an end time. Plan-less manual holds
+    // are intentionally excluded by the repository, but keep this guard at the
+    // type boundary so a malformed row cannot enter schedule regeneration.
+    if (!oldShift.endsAt) continue;
     const npc = input.npcsById.get(oldShift.npcId);
     if (!npc?.eligibleWeekdays.includes(weekday)) continue;
     const oldStart = localMinutes(oldShift.startsAt);

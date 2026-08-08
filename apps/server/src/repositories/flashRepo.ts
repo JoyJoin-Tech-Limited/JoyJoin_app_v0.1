@@ -81,7 +81,12 @@ export async function isFlashSchemaReady(executor: DbExecutor = db): Promise<boo
       }).from(flashEncounterLocations).limit(0),
       executor.select({ id: flashNpcLocationLinks.id, updatedAt: flashNpcLocationLinks.updatedAt }).from(flashNpcLocationLinks).limit(0),
       executor.select({ id: flashSchedulePlans.id }).from(flashSchedulePlans).limit(0),
-      executor.select({ id: flashShifts.id }).from(flashShifts).limit(0),
+      executor.select({
+        id: flashShifts.id,
+        availabilityMode: flashShifts.availabilityMode,
+        manualHoldStartedBy: flashShifts.manualHoldStartedBy,
+        manualHoldStoppedBy: flashShifts.manualHoldStoppedBy,
+      }).from(flashShifts).limit(0),
       executor.select({
         id: flashTaskDestinations.id,
         lastReviewedAt: flashTaskDestinations.lastReviewedAt,
@@ -736,11 +741,35 @@ export function listFlashNpcTaskLinks(executor: DbExecutor = db) {
   }).from(flashNpcTaskLinks).orderBy(asc(flashNpcTaskLinks.taskTemplateId));
 }
 
-export async function listOnlineFlashAppearances(now: Date, executor: DbExecutor = db) {
+function flashAppearanceLiveCondition(now: Date, includeManualHolds: boolean) {
+  const scheduled = and(
+    eq(flashShifts.availabilityMode, "scheduled"),
+    eq(flashSchedulePlans.city, "深圳"),
+    eq(flashSchedulePlans.status, "published"),
+    isNotNull(flashShifts.endsAt),
+    gt(flashShifts.endsAt, now),
+  );
+  if (!includeManualHolds) return scheduled;
+  return or(
+    scheduled,
+    and(
+      eq(flashShifts.availabilityMode, "manual_hold"),
+      isNull(flashShifts.planId),
+      isNull(flashShifts.endsAt),
+    ),
+  );
+}
+
+export async function listOnlineFlashAppearances(
+  now: Date,
+  executor: DbExecutor = db,
+  options: { includeManualHolds?: boolean } = {},
+) {
   return executor
     .select({
       appearanceId: flashShifts.id,
       shiftEndsAt: flashShifts.endsAt,
+      availabilityMode: flashShifts.availabilityMode,
       npcId: flashNpcs.id,
       npcSlug: flashNpcs.slug,
       npcName: flashNpcs.name,
@@ -753,27 +782,31 @@ export async function listOnlineFlashAppearances(now: Date, executor: DbExecutor
       locationAddress: flashEncounterLocations.address,
     })
     .from(flashShifts)
-    .innerJoin(flashSchedulePlans, eq(flashShifts.planId, flashSchedulePlans.id))
+    .leftJoin(flashSchedulePlans, eq(flashShifts.planId, flashSchedulePlans.id))
     .innerJoin(flashNpcs, eq(flashShifts.npcId, flashNpcs.id))
     .innerJoin(flashEncounterLocations, eq(flashShifts.locationId, flashEncounterLocations.id))
     .where(and(
-      eq(flashSchedulePlans.city, "深圳"),
-      eq(flashSchedulePlans.status, "published"),
       eq(flashShifts.status, "published"),
       eq(flashNpcs.isActive, true),
       eq(flashEncounterLocations.isActive, true),
       eq(flashEncounterLocations.approvalStatus, "approved"),
       lte(flashShifts.startsAt, now),
-      gt(flashShifts.endsAt, now),
+      flashAppearanceLiveCondition(now, options.includeManualHolds === true),
     ));
 }
 
-export async function getLiveFlashAppearance(appearanceId: string, now: Date, executor: DbExecutor = db) {
+export async function getLiveFlashAppearance(
+  appearanceId: string,
+  now: Date,
+  executor: DbExecutor = db,
+  options: { includeManualHolds?: boolean } = {},
+) {
   const [row] = await executor
     .select({
       appearanceId: flashShifts.id,
       startsAt: flashShifts.startsAt,
       endsAt: flashShifts.endsAt,
+      availabilityMode: flashShifts.availabilityMode,
       npcId: flashNpcs.id,
       npcSlug: flashNpcs.slug,
       npcName: flashNpcs.name,
@@ -789,21 +822,154 @@ export async function getLiveFlashAppearance(appearanceId: string, now: Date, ex
       longitude: flashEncounterLocations.longitude,
     })
     .from(flashShifts)
-    .innerJoin(flashSchedulePlans, eq(flashShifts.planId, flashSchedulePlans.id))
+    .leftJoin(flashSchedulePlans, eq(flashShifts.planId, flashSchedulePlans.id))
     .innerJoin(flashNpcs, eq(flashShifts.npcId, flashNpcs.id))
     .innerJoin(flashEncounterLocations, eq(flashShifts.locationId, flashEncounterLocations.id))
     .where(and(
       eq(flashShifts.id, appearanceId),
-      eq(flashSchedulePlans.status, "published"),
       eq(flashShifts.status, "published"),
       eq(flashNpcs.isActive, true),
       eq(flashEncounterLocations.isActive, true),
       eq(flashEncounterLocations.approvalStatus, "approved"),
       lte(flashShifts.startsAt, now),
-      gt(flashShifts.endsAt, now),
+      flashAppearanceLiveCondition(now, options.includeManualHolds === true),
     ))
     .limit(1);
   return row ?? null;
+}
+
+export async function listActiveFlashManualHolds(executor: DbExecutor = db) {
+  return executor.select({
+    appearanceId: flashShifts.id,
+    startsAt: flashShifts.startsAt,
+    startedBy: flashShifts.manualHoldStartedBy,
+    npcId: flashNpcs.id,
+    npcSlug: flashNpcs.slug,
+    npcName: flashNpcs.name,
+    locationId: flashEncounterLocations.id,
+    locationName: flashEncounterLocations.name,
+    district: flashEncounterLocations.district,
+    locationAddress: flashEncounterLocations.address,
+  }).from(flashShifts)
+    .innerJoin(flashNpcs, eq(flashShifts.npcId, flashNpcs.id))
+    .innerJoin(flashEncounterLocations, eq(flashShifts.locationId, flashEncounterLocations.id))
+    .where(and(
+      eq(flashShifts.availabilityMode, "manual_hold"),
+      eq(flashShifts.status, "published"),
+      isNull(flashShifts.endsAt),
+    ))
+    .orderBy(asc(flashShifts.startsAt));
+}
+
+export type StartFlashManualHoldResult =
+  | { ok: true; created: boolean; hold: Awaited<ReturnType<typeof listActiveFlashManualHolds>>[number] }
+  | { ok: false; code: "FLASH_MANUAL_HOLD_NOT_ELIGIBLE" | "FLASH_MANUAL_HOLD_SCHEDULED_CONFLICT" | "FLASH_MANUAL_HOLD_LOCATION_CONFLICT" };
+
+export async function startFlashManualHold(input: {
+  npcId: string;
+  locationId: string;
+  actorId: string;
+  now: Date;
+}): Promise<StartFlashManualHoldResult> {
+  return db.transaction(async (tx: DbExecutor) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('flash_manual_hold'), hashtext(${input.npcId}))`);
+
+    const existing = (await listActiveFlashManualHolds(tx)).find((hold: any) => hold.npcId === input.npcId);
+    if (existing) {
+      if (existing.locationId !== input.locationId) {
+        return { ok: false as const, code: "FLASH_MANUAL_HOLD_LOCATION_CONFLICT" as const };
+      }
+      return { ok: true as const, created: false, hold: existing };
+    }
+
+    const [eligible] = await tx.select({ id: flashNpcLocationLinks.id })
+      .from(flashNpcLocationLinks)
+      .innerJoin(flashNpcs, eq(flashNpcLocationLinks.npcId, flashNpcs.id))
+      .innerJoin(flashEncounterLocations, eq(flashNpcLocationLinks.locationId, flashEncounterLocations.id))
+      .where(and(
+        eq(flashNpcLocationLinks.npcId, input.npcId),
+        eq(flashNpcLocationLinks.locationId, input.locationId),
+        eq(flashNpcLocationLinks.isActive, true),
+        eq(flashNpcs.isActive, true),
+        eq(flashEncounterLocations.city, "深圳"),
+        eq(flashEncounterLocations.isActive, true),
+        eq(flashEncounterLocations.approvalStatus, "approved"),
+      ))
+      .limit(1);
+    if (!eligible) return { ok: false as const, code: "FLASH_MANUAL_HOLD_NOT_ELIGIBLE" as const };
+
+    const [scheduled] = await tx.select({ id: flashShifts.id })
+      .from(flashShifts)
+      .innerJoin(flashSchedulePlans, eq(flashShifts.planId, flashSchedulePlans.id))
+      .where(and(
+        eq(flashShifts.npcId, input.npcId),
+        eq(flashShifts.availabilityMode, "scheduled"),
+        eq(flashShifts.status, "published"),
+        eq(flashSchedulePlans.status, "published"),
+        lte(flashShifts.startsAt, input.now),
+        isNotNull(flashShifts.endsAt),
+        gt(flashShifts.endsAt, input.now),
+      ))
+      .limit(1);
+    if (scheduled) return { ok: false as const, code: "FLASH_MANUAL_HOLD_SCHEDULED_CONFLICT" as const };
+
+    const [inserted] = await tx.insert(flashShifts).values({
+      planId: null,
+      npcId: input.npcId,
+      locationId: input.locationId,
+      startsAt: input.now,
+      endsAt: null,
+      status: "published",
+      source: "manual",
+      availabilityMode: "manual_hold",
+      manualHoldStartedBy: input.actorId,
+    }).onConflictDoNothing().returning({ id: flashShifts.id });
+
+    const hold = (await listActiveFlashManualHolds(tx)).find((item: any) => item.npcId === input.npcId);
+    if (!hold) throw new Error("FLASH_MANUAL_HOLD_INSERT_CONFLICT");
+    return { ok: true as const, created: Boolean(inserted), hold };
+  });
+}
+
+export async function stopFlashManualHold(input: {
+  appearanceId: string;
+  actorId: string;
+  now: Date;
+}) {
+  return db.transaction(async (tx: DbExecutor) => {
+    const [candidate] = await tx.select({ npcId: flashShifts.npcId })
+      .from(flashShifts)
+      .where(and(
+        eq(flashShifts.id, input.appearanceId),
+        eq(flashShifts.availabilityMode, "manual_hold"),
+        eq(flashShifts.status, "published"),
+        isNull(flashShifts.endsAt),
+      ))
+      .limit(1);
+    if (!candidate) return null;
+
+    // Start and stop serialize on the same NPC key so a concurrent pair cannot
+    // report success for a state that the other transaction already replaced.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('flash_manual_hold'), hashtext(${candidate.npcId}))`);
+    const before = (await listActiveFlashManualHolds(tx))
+      .find((hold: any) => hold.appearanceId === input.appearanceId);
+    if (!before) return null;
+
+    const [stopped] = await tx.update(flashShifts).set({
+      status: "cancelled",
+      endsAt: input.now,
+      manualHoldStoppedBy: input.actorId,
+      version: sql`${flashShifts.version} + 1`,
+      updatedAt: input.now,
+    }).where(and(
+      eq(flashShifts.id, input.appearanceId),
+      eq(flashShifts.availabilityMode, "manual_hold"),
+      eq(flashShifts.status, "published"),
+      isNull(flashShifts.endsAt),
+    )).returning({ id: flashShifts.id });
+    if (!stopped) return null;
+    return { ...before, endsAt: input.now, stoppedBy: input.actorId };
+  });
 }
 
 export async function consumeFlashLocateBudget(input: {
