@@ -70,10 +70,6 @@ import {
   generateFlashPersonalizedResponse,
   type FlashPersonalizationContext,
 } from "./flashPersonalizedNarrativeService";
-import {
-  isFlashShenzhenBoundaryAssetValid,
-  isFlashShenzhenBoundaryLicenseApproved,
-} from "../lib/flashShenzhenBoundary";
 import { getFeatureFlag } from "../lib/featureFlags";
 
 export class FlashServiceError extends Error {
@@ -137,10 +133,6 @@ const DEFAULT_PREFERENCES = {
 export type UserPreferenceState = typeof DEFAULT_PREFERENCES;
 
 type FlashReadinessCounts = FlashReadinessResponse["counts"];
-type FlashBoundaryReadiness = {
-  assetValid: boolean;
-  licenseApproved: boolean;
-};
 
 const EMPTY_FLASH_READINESS_COUNTS: FlashReadinessCounts = {
   activeNpcs: 0,
@@ -158,12 +150,9 @@ const EMPTY_FLASH_READINESS_COUNTS: FlashReadinessCounts = {
   storyCoveredNpcs: 0,
 };
 
-const BLOCKED_FLASH_BOUNDARY: FlashBoundaryReadiness = { assetValid: false, licenseApproved: false };
-
 export function evaluateFlashFeatureReadiness(
   schemaReady: boolean,
   counts: FlashReadinessCounts = EMPTY_FLASH_READINESS_COUNTS,
-  boundary: FlashBoundaryReadiness = BLOCKED_FLASH_BOUNDARY,
 ): FlashReadinessResponse {
   if (!schemaReady) {
     return {
@@ -174,8 +163,6 @@ export function evaluateFlashFeatureReadiness(
     };
   }
   const blockers: string[] = [];
-  if (!boundary.assetValid) blockers.push("shenzhen_boundary_asset_not_ready");
-  if (!boundary.licenseApproved) blockers.push("shenzhen_boundary_license_not_approved");
   if (counts.canonicalNpcs < 5) blockers.push("five_builtin_seed_npcs_required");
   if (counts.schedulableNpcs !== counts.activeNpcs) blockers.push("all_active_npcs_require_approved_locations");
   if (counts.approvedEncounterLocations < 1) blockers.push("approved_encounter_location_required");
@@ -198,10 +185,6 @@ export async function getFlashFeatureReadiness(): Promise<FlashReadinessResponse
       currentStoryReleases: storyCounts.currentReleases,
       reviewedStoryEpisodes: storyCounts.reviewedEpisodes,
       storyCoveredNpcs: storyCounts.coveredNpcs,
-    },
-    {
-      assetValid: isFlashShenzhenBoundaryAssetValid(),
-      licenseApproved: isFlashShenzhenBoundaryLicenseApproved(),
     },
   );
 }

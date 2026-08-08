@@ -182,7 +182,7 @@ describe("formal Flash routes", () => {
     expect(mocks.getHome).toHaveBeenCalled();
   });
 
-  it("rejects an out-of-Shenzhen coordinate before service access", async () => {
+  it("allows a remote coordinate and leaves encounter eligibility to approved-location distance", async () => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl);
       const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
@@ -190,10 +190,9 @@ describe("formal Flash routes", () => {
         headers: { Cookie: cookie, "Content-Type": "application/json" },
         body: JSON.stringify({ latitude: 31.2304, longitude: 121.4737, coordinateSystem: "gcj02" }),
       });
-      expect(response.status).toBe(403);
-      await expect(response.json()).resolves.toMatchObject({ code: "FLASH_OUTSIDE_SHENZHEN" });
+      expect(response.status).toBe(200);
     });
-    expect(mocks.getHome).not.toHaveBeenCalled();
+    expect(mocks.getHome).toHaveBeenCalled();
   });
 
   it("allows an out-of-Shenzhen coordinate when the admin gate is off in staging", async () => {
@@ -213,7 +212,7 @@ describe("formal Flash routes", () => {
     expect(mocks.getHome).toHaveBeenCalled();
   });
 
-  it("keeps the Shenzhen boundary locked in production even when the admin gate is off", async () => {
+  it("accepts a valid coordinate in production and relies on approved encounter distance", async () => {
     vi.stubEnv("APP_MODE", "production");
     mocks.getFeatureFlag.mockImplementation(async (key: string) => key === "alangEnabled");
     await withServer(async (baseUrl) => {
@@ -221,11 +220,11 @@ describe("formal Flash routes", () => {
       const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
         method: "POST",
         headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: 31.2304, longitude: 121.4737 }),
+        body: JSON.stringify({ latitude: 31.2304, longitude: 121.4737, coordinateSystem: "gcj02" }),
       });
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(200);
     });
-    expect(mocks.getHome).not.toHaveBeenCalled();
+    expect(mocks.getHome).toHaveBeenCalled();
   });
 
   it("keeps story arrival testing available while retired task endpoints stay closed", async () => {
@@ -273,36 +272,34 @@ describe("formal Flash routes", () => {
     expect(mocks.locate).toHaveBeenCalledWith(expect.objectContaining({ forceArrivalForTesting: false }));
   });
 
-  it("rejects Hong Kong New Territories points that fall inside the old rectangle", async () => {
+  it("does not use the old city polygon as an entry gate", async () => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl);
       const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
         method: "POST",
         headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: 22.495, longitude: 114.139 }),
+        body: JSON.stringify({ latitude: 22.495, longitude: 114.139, coordinateSystem: "gcj02" }),
       });
-      expect(response.status).toBe(403);
-      await expect(response.json()).resolves.toMatchObject({ code: "FLASH_OUTSIDE_SHENZHEN" });
+      expect(response.status).toBe(200);
     });
-    expect(mocks.getHome).not.toHaveBeenCalled();
+    expect(mocks.getHome).toHaveBeenCalled();
   });
 
   it.each([
     ["Dongguan Fenggang", 22.7448, 114.141],
     ["Dongguan Humen", 22.75, 113.73],
     ["Huizhou Huiyang", 22.80, 114.46],
-  ])("rejects neighbouring-city point %s before service access", async (_label, latitude, longitude) => {
+  ])("accepts neighbouring-city point %s while approved-location distance remains authoritative", async (_label, latitude, longitude) => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl);
       const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
         method: "POST",
         headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude, longitude }),
+        body: JSON.stringify({ latitude, longitude, coordinateSystem: "gcj02" }),
       });
-      expect(response.status).toBe(403);
-      await expect(response.json()).resolves.toMatchObject({ code: "FLASH_OUTSIDE_SHENZHEN" });
+      expect(response.status).toBe(200);
     });
-    expect(mocks.getHome).not.toHaveBeenCalled();
+    expect(mocks.getHome).toHaveBeenCalled();
   });
 
   it("does not put raw GPS into safe failure logs", async () => {

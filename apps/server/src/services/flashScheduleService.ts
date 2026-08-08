@@ -6,7 +6,6 @@ import type {
 } from "@shared/schema";
 import { createHash, randomUUID } from "node:crypto";
 
-import { getFeatureFlag } from "../lib/featureFlags";
 import { logger } from "../lib/logger";
 import {
   createFlashScheduleDraft,
@@ -869,9 +868,7 @@ export function startFlashBackgroundJobs(intervalMs = JOB_INTERVAL_MS): void {
     if (!(await isFlashSchemaReady())) return;
     try {
       await runFlashMaintenanceJob();
-      if (await getFeatureFlag("alangEnabled", false)) {
-        await runFlashScheduleAutomation();
-      }
+      await runFlashScheduleAutomation();
     } catch (error) {
       logger.error("[FlashJobs] background tick failed", {
         code: "FLASH_JOB_FAILED",

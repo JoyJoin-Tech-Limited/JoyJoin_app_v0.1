@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   FLASH_NPC_SEEDS,
   FLASH_TASK_SEEDS,
@@ -37,7 +38,6 @@ import {
 const readyTaskCategoryCounts = Object.fromEntries(
   [...new Set(FLASH_TASK_SEEDS.map((task) => task.category))].map((category) => [category, 5]),
 );
-const readyBoundary = { assetValid: true, licenseApproved: true };
 
 function npc(overrides: Record<string, unknown> = {}) {
   return {
@@ -76,6 +76,12 @@ function location() {
 }
 
 describe("formal Flash catalog", () => {
+  it("keeps formal schedule automation independent from the legacy Alang flag", () => {
+    const source = readFileSync(new URL("../services/flashScheduleService.ts", import.meta.url), "utf8");
+    const backgroundJobs = source.slice(source.indexOf("export function startFlashBackgroundJobs"));
+    expect(backgroundJobs).toContain("await runFlashScheduleAutomation()");
+    expect(backgroundJobs).not.toContain('getFeatureFlag("alangEnabled"');
+  });
   it("calculates a north-based map frame without returning target coordinates", () => {
     const frame = calculateFlashMapFrame(
       { latitude: 22.5431, longitude: 114.0579 },
@@ -174,23 +180,23 @@ describe("formal Flash catalog", () => {
       currentStoryReleases: 1,
       reviewedStoryEpisodes: 15,
       storyCoveredNpcs: 5,
-    }, readyBoundary);
+    });
     expect(incomplete.ready).toBe(false);
     expect(incomplete.blockers).toContain("all_active_npcs_require_approved_locations");
     expect(evaluateFlashFeatureReadiness(true, {
       ...incomplete.counts,
       schedulableNpcs: 5,
       taskReadyNpcs: 5,
-    }, readyBoundary).ready).toBe(true);
+    }).ready).toBe(true);
     expect(evaluateFlashFeatureReadiness(true, {
       ...incomplete.counts,
       activeNpcs: 6,
       schedulableNpcs: 6,
       taskReadyNpcs: 6,
-    }, readyBoundary).ready).toBe(true);
+    }).ready).toBe(true);
   });
 
-  it("keeps rollout blocked until the pinned boundary asset and its commercial use are approved", () => {
+  it("bases rollout on approved encounter locations instead of a city boundary license", () => {
     const counts = {
       activeNpcs: 5,
       canonicalNpcs: 5,
@@ -206,14 +212,16 @@ describe("formal Flash catalog", () => {
       reviewedStoryEpisodes: 15,
       storyCoveredNpcs: 5,
     };
-    expect(evaluateFlashFeatureReadiness(true, counts, {
-      assetValid: false,
-      licenseApproved: true,
-    }).blockers).toContain("shenzhen_boundary_asset_not_ready");
-    expect(evaluateFlashFeatureReadiness(true, counts, {
-      assetValid: true,
-      licenseApproved: false,
-    }).blockers).toContain("shenzhen_boundary_license_not_approved");
+    expect(evaluateFlashFeatureReadiness(true, counts)).toMatchObject({ ready: true, blockers: [] });
+
+    expect(evaluateFlashFeatureReadiness(true, {
+      ...counts,
+      approvedEncounterLocations: 0,
+      schedulableNpcs: 0,
+    }).blockers).toEqual(expect.arrayContaining([
+      "all_active_npcs_require_approved_locations",
+      "approved_encounter_location_required",
+    ]));
   });
 
   it("binds boundary approval to the exact reviewed semantic hash", () => {
@@ -246,13 +254,13 @@ describe("formal Flash catalog", () => {
       reviewedStoryEpisodes: 15,
       storyCoveredNpcs: 5,
     };
-    const replacedNpc = evaluateFlashFeatureReadiness(true, { ...readyCounts, canonicalNpcs: 4 }, readyBoundary);
+    const replacedNpc = evaluateFlashFeatureReadiness(true, { ...readyCounts, canonicalNpcs: 4 });
     expect(replacedNpc.blockers).toContain("five_builtin_seed_npcs_required");
 
     const incompleteSeason = evaluateFlashFeatureReadiness(true, {
       ...readyCounts,
       reviewedStoryEpisodes: 14,
-    }, readyBoundary);
+    });
     expect(incompleteSeason.blockers).toContain("fifteen_reviewed_story_episodes_required");
   });
 
