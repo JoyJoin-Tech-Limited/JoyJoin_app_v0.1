@@ -223,6 +223,12 @@ if (existsSync(flashEntryPath)) {
         'the cross-chunk updateFlashPreferences wrapper is unsafe in WeChat AppService',
     )
   }
+  if (/yield\s+\w+\.apiRequest\(\{path:"\/api\/alang\/flash\/preferences"/.test(flashEntrySource)) {
+    failures.push(
+      'dist/pages/alang/event/index.js must not lower story-mode selection through a generator helper; ' +
+        'WeChat AppService fails before the handler catch boundary on real devices',
+    )
+  }
   for (const staleWebpName of [
     'parallel-personalized-paper-world-v1.webp',
     'parallel-standard-paper-world-v1.webp',

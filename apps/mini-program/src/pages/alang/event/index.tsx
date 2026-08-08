@@ -145,49 +145,60 @@ export default function FlashHomePage() {
   )
   const fragmentsQuery = useFlashStoryFragments(enabled && gate === 'ready' && pageVisible)
 
-  const requestLocation = useCallback(async () => {
-    if (locationActiveRef.current) return
+  const requestLocation = useCallback((): Promise<void> => {
+    if (locationActiveRef.current) return Promise.resolve()
     locationActiveRef.current = true
     const attempt = ++locationAttemptRef.current
     setGate('locating')
-    try {
-      const snapshot = await getEntryLocation()
-      if (attempt !== locationAttemptRef.current) return
-      setLocation(snapshot)
-      setGate('ready')
-    } catch (error) {
-      if (attempt === locationAttemptRef.current) {
-        setGate(isLocationPermissionDenied(error) ? 'denied' : 'error')
-      }
-    } finally {
-      if (attempt === locationAttemptRef.current) locationActiveRef.current = false
-    }
+    return getEntryLocation()
+      .then((snapshot) => {
+        if (attempt !== locationAttemptRef.current) return
+        setLocation(snapshot)
+        setGate('ready')
+      })
+      .catch((error: unknown) => {
+        if (attempt === locationAttemptRef.current) {
+          setGate(isLocationPermissionDenied(error) ? 'denied' : 'error')
+        }
+      })
+      .finally(() => {
+        if (attempt === locationAttemptRef.current) locationActiveRef.current = false
+      })
   }, [])
 
-  const selectStoryMode = useCallback(async (mode: 'personalized' | 'standard') => {
+  const selectStoryMode = useCallback((mode: 'personalized' | 'standard') => {
     if (modeSaving) return
     setModeSaving(true)
+    const personalized = mode === 'personalized'
+    let preferenceRequest: Promise<unknown>
     try {
-      const personalized = mode === 'personalized'
-      await apiRequest({
+      preferenceRequest = apiRequest({
         path: '/api/alang/flash/preferences',
         method: 'PUT',
         data: {
-        personalizationEnabled: personalized,
-        usePersonality: personalized,
-        useInterests: personalized,
-        useIndustry: personalized,
-        useDistrict: false,
-        useTaskBehavior: false,
-        consentVersion: personalized ? FLASH_STORY_CONSENT_VERSION : undefined,
+          personalizationEnabled: personalized,
+          usePersonality: personalized,
+          useInterests: personalized,
+          useIndustry: personalized,
+          useDistrict: false,
+          useTaskBehavior: false,
+          consentVersion: personalized ? FLASH_STORY_CONSENT_VERSION : undefined,
         },
       })
-      await requestLocation()
     } catch {
       Taro.showToast({ title: '剧情模式没有保存成功，请再试一次', icon: 'none' })
-    } finally {
       setModeSaving(false)
+      return
     }
+
+    void preferenceRequest
+      .then(() => requestLocation())
+      .catch(() => {
+        Taro.showToast({ title: '剧情模式没有保存成功，请再试一次', icon: 'none' })
+      })
+      .finally(() => {
+        setModeSaving(false)
+      })
   }, [modeSaving, requestLocation])
 
   useEffect(() => {
