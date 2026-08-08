@@ -123,6 +123,27 @@ describe("formal Flash routes", () => {
     expect(mocks.getHome).not.toHaveBeenCalled();
   });
 
+  it("allows authenticated preference updates before the Flash catalog is ready", async () => {
+    mocks.assertReady.mockRejectedValue(new Error("catalog not ready"));
+    mocks.patchPreferences.mockResolvedValue({ personalizationEnabled: false, tags: [] });
+
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl);
+      const response = await fetch(`${baseUrl}/api/alang/flash/preferences`, {
+        method: "PUT",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify({ personalizationEnabled: false }),
+      });
+
+      expect(response.status).toBe(200);
+    });
+
+    expect(mocks.patchPreferences).toHaveBeenCalledWith(expect.objectContaining({
+      userId: "acting-user",
+      update: expect.objectContaining({ personalizationEnabled: false }),
+    }));
+  });
+
   it("accepts home coordinates only in POST body and trusts the session user", async () => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl);

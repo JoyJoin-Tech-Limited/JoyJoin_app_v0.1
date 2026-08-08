@@ -78,6 +78,18 @@ async function requireFlashReady(_req: Request, res: Response, next: NextFunctio
   }
 }
 
+function sendFlashDisabled(res: Response): Response {
+  return res.status(503).json({ code: "FLASH_DISABLED", error: "闪现暂时休息中" });
+}
+
+async function requireFlashEnabled(_req: Request, res: Response, next: NextFunction) {
+  try {
+    return (await getFeatureFlag("alangEnabled", false)) ? next() : sendFlashDisabled(res);
+  } catch (error) {
+    return sendFlashError(res, error);
+  }
+}
+
 function userId(req: Request, res: Response): string | null {
   return requireAuthenticatedUserId(req, res);
 }
@@ -138,6 +150,7 @@ export function registerAlangFlashRoutes(app: Express): void {
   if (process.env.NODE_ENV !== "test") startFlashBackgroundJobs();
 
   const guards = [requireAuth, requireFlashReady] as const;
+  const preferenceGuards = [requireAuth, requireFlashEnabled] as const;
 
   // Coordinates stay in a JSON body so reverse proxies never place them in URL logs.
   app.post("/api/alang/flash/home", ...guards, geoEndpointLimiter, async (req, res) => {
@@ -368,7 +381,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/alang/flash/preferences", ...guards, async (req, res) => {
+  app.get("/api/alang/flash/preferences", ...preferenceGuards, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     try {
@@ -378,7 +391,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     }
   });
 
-  app.put("/api/alang/flash/preferences", ...guards, async (req, res) => {
+  app.put("/api/alang/flash/preferences", ...preferenceGuards, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const body = flashPreferenceUpdateSchema.safeParse(req.body);
@@ -390,7 +403,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     }
   });
 
-  app.delete("/api/alang/flash/preferences/tags/:id", ...guards, async (req, res) => {
+  app.delete("/api/alang/flash/preferences/tags/:id", ...preferenceGuards, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const tagId = idParamSchema.safeParse(req.params.id);
