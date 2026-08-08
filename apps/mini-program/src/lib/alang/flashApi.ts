@@ -96,8 +96,11 @@ export function adaptFlashHomeDto(response: SharedFlashHomeResponse): FlashHomeV
       districtName: online.district,
       locationAddress: online.locationAddress,
       appearanceId: online.appearanceId,
-      endsAt: online.endsAt,
-      remainingSeconds: Math.max(0, online.remainingMinutes * 60),
+      endsAt: online.endsAt ?? undefined,
+      remainingSeconds: typeof online.remainingMinutes === 'number'
+        ? Math.max(0, online.remainingMinutes * 60)
+        : undefined,
+      availabilityMode: online.availabilityMode ?? 'scheduled',
       themeKey: online.npc.slug,
     })),
     myTasks: response.myTasks.map(adaptTaskDto),

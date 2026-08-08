@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Map, ScrollView, Text, View } from '@tarojs/components'
 import type { MapProps } from '@tarojs/components'
 import { getWalkingRoute, type WalkingRouteSuccessResponse } from '@shared/api'
-import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState, formatFlashRemainingTime } from '../../../components/alang/FlashUi'
+import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState, formatFlashAvailability } from '../../../components/alang/FlashUi'
 import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode, getFlashLocationPermission } from '../../../lib/alang/flashApi'
 import { decodeFlashRouteParam, redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
@@ -40,6 +40,7 @@ export default function FlashMapPage() {
   const districtName = decodeFlashRouteParam(params.districtName, '深圳')
   const locationAddress = decodeFlashRouteParam(params.locationAddress)
   const endsAt = decodeFlashRouteParam(params.endsAt)
+  const availabilityMode = decodeFlashRouteParam(params.availabilityMode) === 'manual_hold' ? 'manual_hold' : 'scheduled'
   const locateMutation = useLocateFlashAppearance()
   const [state, setState] = useState<LocateState>('idle')
   const [mapFrame, setMapFrame] = useState<FlashLocateView | null>(null)
@@ -55,10 +56,10 @@ export default function FlashMapPage() {
   const locationHandlerRef = useRef<LocationChangeHandler | null>(null)
 
   const isPossiblyLate = useMemo(() => {
-    if (!endsAt) return false
+    if (availabilityMode === 'manual_hold' || !endsAt) return false
     const remaining = new Date(endsAt).getTime() - Date.now()
     return Number.isFinite(remaining) && remaining > 0 && remaining <= 15 * 60 * 1000
-  }, [endsAt])
+  }, [availabilityMode, endsAt])
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: `寻找${npcName}` })
@@ -232,7 +233,7 @@ export default function FlashMapPage() {
           <View className='flash-radar__npc'>
             <FlashNpcPortrait npc={{ slug: npcSlug, name: npcName }} size='large' />
             <Text className='flash-radar__name'>{npcName}</Text>
-            <Text className='flash-radar__meta'>在{districtName} · {formatFlashRemainingTime(undefined, endsAt)}</Text>
+            <Text className='flash-radar__meta'>在{districtName} · {formatFlashAvailability(availabilityMode, undefined, endsAt)}</Text>
             {locationAddress ? <Text className='flash-radar__address'>{locationAddress}</Text> : null}
           </View>
 

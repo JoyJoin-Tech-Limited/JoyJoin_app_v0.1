@@ -109,6 +109,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Tasks:** 30 条人工审核任务，6 类各 5 条，按 NPC 人设与用户可选偏好抽取；每次相遇最多 2 个结构化问题、任务随机、允许换 1 次。最多同时 3 件、同 NPC 1 件、未完成 7 天；已完成模板按 `max(5%, 0.35^n)` 降权。
 - **Completion/delivery:** 目的地 50 米到达即可，进店、消费、拍照、扫码、评价或打扰他人均非要求。反馈后任务保留，必须在之后一次同 NPC encounter 交付；不提供积分、奖品或门店权益。
 - **Non-production arrival testing (2026-08-06):** Admin `/admin/feature-flags` 提供“街头盲盒：任意地点到达测试”开关。仅 super_admin 可修改且写入审计；仅 `APP_MODE != production` 生效。开启时任意有效 GCJ-02 坐标可通过 NPC 相遇与兼容目的地任务到达校验，并可在当前测试 encounter 完成交付；其余环节仍走正式状态机。生产环境强制关闭。
+- **Staging formal-flow availability testing (2026-08-08):** operator+ 可在 `/admin/alang` 为一位已启用 NPC 和已审核绑定地点创建独立 `manual_hold`。该出现没有自动结束时间，用户端不得伪造倒计时，只有管理员显式下线才结束；正式 10 米服务端到达、前台定位和故事结算保持不变。能力仅在 `APP_MODE=staging` 生效，production 与缺失 `APP_MODE` 均强制拒绝并忽略 hold。
 - **Privacy:** 原始用户坐标不落库、不入日志/URL/query key；可选 100 字回信不进入画像、分析、故事、LLM 或后台列表，交付 30 天后清除。个性化总开关及人格、兴趣、宽泛行业、行政区、任务行为来源均默认关闭并可撤回。
 - **Operations:** 相遇地点和任务目的地分库；批准前必须由服务端腾讯地图反查深圳及行政区。危险目的地撤回会事务性撤回未完成任务。内容版本 CAS、operator+ 写权限、管理员审计、次日草案编辑/发布/readiness 均由服务端约束。
 - **Rollout:** `alangEnabled` 默认关闭。先完成真实 PostgreSQL 只读核对和 additive migration，再 seed 草案、逐条人工审核、readiness、staging/微信真机验证，最后小流量开启。Canonical docs: `docs/alang-prototype/implementation-map.md`、`flash-formal-privacy-and-safety.md`、`flash-schema-rollout.md`。

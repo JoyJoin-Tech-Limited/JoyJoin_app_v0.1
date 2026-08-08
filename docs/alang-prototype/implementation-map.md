@@ -28,6 +28,7 @@
 - 当前正式代码由 `routes/domains/alangFlash.ts`、`services/flashService.ts`、`services/flashScheduleService.ts`、`repositories/flashRepo.ts`、`schema/flash.ts` 与后台 `/admin/alang` 共同承载。街头盲盒正式入口默认开放，不受旧 `alangEnabled` 控制；运行时须通过数据库迁移、故事发布快照、已审核相遇地点和 readiness 校验。`alangEnabled` 只保留给旧阿浪原型与非生产 Debug 工具。
 - 链路复测使用 DB-backed `flashTaskRetryTestEnabled`（默认关闭）。仅 super admin 可在 `/admin/alang` 开启；且仅在 `APP_MODE != production` 时生效。开启后，任务进行页和反馈页均可把同一 active assignment 重置到 `accepted`，清除本轮到达、反馈、私密回复与交付状态，从任务起点复测；关闭后重试接口返回 `403 FLASH_TASK_RETRY_DISABLED`。生产环境即使误存为 true 也必须强制拒绝。
 - 异地到达复测使用 DB-backed `flashAnyLocationArrivalTestEnabled`（默认关闭）。operator+ 可在 `/admin/alang` 的“任意地点到达测试”开关控制；仅 `APP_MODE != production` 时生效。开启后，任意有效 GCJ-02 坐标同时绕过 NPC 相遇的 10 米门槛和兼容目的地任务的 50 米门槛；反馈后允许在当前测试 encounter 完成交付，无需等待同 NPC 的后续班次，但仍复用正式对话、接取、反馈与交付状态机。生产环境无论数据库值如何都强制关闭；管理员变更写入审计，GPS 不进入审计载荷。
+- Staging 正式版 QA 可由 operator+ 在 `/admin/alang` 创建 `manual_hold` 出现：该记录不属于正式日排班，`plan_id/ends_at` 均为空，只有显式“下线”才写入结束时间并移出在线列表。每位 NPC 同时最多一个活动 hold；NPC、地点及绑定仍须启用/审核通过，已有正式在线班次时拒绝重复开启。若 hold 持续到后续正式班次开始，staging 在线列表由 hold 覆盖同 NPC 的 scheduled 卡片但不修改排班数据；显式下线后 scheduled 卡片自动恢复。`APP_MODE=staging` 是唯一运行许可，production 与缺失 `APP_MODE` 都强制拒绝并忽略数据库中的 hold。开始/停止分别写 `FLASH_MANUAL_HOLD_STARTED/STOPPED` 审计且不包含坐标；用户端显示“测试期间在线”，不得伪造倒计时。该能力不放宽 10 米到达、前台定位、故事结算或未来排班隐私规则。
 
 旧阿浪故事状态机仍作为内部/兼容流程保留；下文涉及 5 米稳定到达、三轮旧剧情、archive 的条目仅描述旧 `missions/:slug` 流程，不得覆盖上述正式闪现契约。FUTURE 04 的“多 NPC 地图”仍不实现：正式版只提供当前在线列表与隐藏地点寻找，不新增探索地图。
 

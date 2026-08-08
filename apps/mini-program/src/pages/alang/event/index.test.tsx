@@ -148,6 +148,30 @@ describe('formal Flash home', () => {
     expect(document.querySelector("img[src*='flash-city-ambient-bg.png']")).toBeTruthy()
   })
 
+  it('shows an honest manual-hold label and sends the mode to the map', async () => {
+    mocks.useFlashHome.mockReturnValue({
+      data: {
+        ...home,
+        onlineNpcs: [{
+          ...home.onlineNpcs[0],
+          endsAt: undefined,
+          remainingSeconds: undefined,
+          availabilityMode: 'manual_hold',
+        }],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+    render(<FlashHomePage />)
+
+    fireEvent.click(await screen.findByRole('button', { name: '进入标准剧情' }))
+    expect(await screen.findByText('南山区 · 测试期间在线')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /去找阿浪/ }))
+    expect(mocks.navigateTo.mock.calls[0][0].url).toContain('availabilityMode=manual_hold')
+    expect(mocks.navigateTo.mock.calls[0][0].url).not.toContain('endsAt=')
+  })
+
   it('uses two dedicated paper-story backgrounds instead of reusing the street scene', async () => {
     render(<FlashHomePage />)
 

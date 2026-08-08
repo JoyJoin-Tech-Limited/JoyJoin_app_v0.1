@@ -31,7 +31,9 @@ import {
   calculateFlashMapFrame,
   calculateFlashCandidateWeight,
   evaluateFlashFeatureReadiness,
+  isFlashManualHoldRuntimeAvailable,
   isLaterFlashDeliveryEncounter,
+  preferManualFlashAppearances,
   syncEnabledPreferenceTags,
 } from "../services/flashService";
 
@@ -76,6 +78,26 @@ function location() {
 }
 
 describe("formal Flash catalog", () => {
+  it("fails closed for manual holds outside the explicit staging runtime", () => {
+    expect(isFlashManualHoldRuntimeAvailable("staging")).toBe(true);
+    expect(isFlashManualHoldRuntimeAvailable("production")).toBe(false);
+    expect(isFlashManualHoldRuntimeAvailable("development")).toBe(false);
+    expect(isFlashManualHoldRuntimeAvailable(undefined)).toBe(false);
+  });
+
+  it("lets a staging manual hold override a later live schedule card for the same NPC", () => {
+    const appearances = preferManualFlashAppearances([
+      { appearanceId: "scheduled-same", npcId: "npc-1", availabilityMode: "scheduled" },
+      { appearanceId: "manual-same", npcId: "npc-1", availabilityMode: "manual_hold" },
+      { appearanceId: "scheduled-other", npcId: "npc-2", availabilityMode: "scheduled" },
+    ]);
+
+    expect(appearances.map((appearance) => appearance.appearanceId)).toEqual([
+      "manual-same",
+      "scheduled-other",
+    ]);
+  });
+
   it("keeps formal schedule automation independent from the legacy Alang flag", () => {
     const source = readFileSync(new URL("../services/flashScheduleService.ts", import.meta.url), "utf8");
     const backgroundJobs = source.slice(source.indexOf("export function startFlashBackgroundJobs"));

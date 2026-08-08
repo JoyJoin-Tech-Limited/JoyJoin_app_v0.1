@@ -258,6 +258,15 @@ export function formatFlashRemainingTime(remainingSeconds?: number, endsAt?: str
   return rest ? `还在 ${hours} 小时 ${rest} 分` : `还在 ${hours} 小时`
 }
 
+export function formatFlashAvailability(
+  availabilityMode?: 'scheduled' | 'manual_hold',
+  remainingSeconds?: number,
+  endsAt?: string,
+): string {
+  if (availabilityMode === 'manual_hold') return '测试期间在线'
+  return formatFlashRemainingTime(remainingSeconds, endsAt)
+}
+
 export function formatFlashDueDate(dueAt?: string): string {
   if (!dueAt) return '接下来的 7 天都可以去'
   const due = new Date(dueAt)

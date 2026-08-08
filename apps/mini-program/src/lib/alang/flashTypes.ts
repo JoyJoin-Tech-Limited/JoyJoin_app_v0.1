@@ -40,6 +40,7 @@ export interface FlashNpcSummary {
   appearanceId: string
   endsAt?: string
   remainingSeconds?: number
+  availabilityMode?: 'scheduled' | 'manual_hold'
   themeKey?: string
 }
 

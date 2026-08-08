@@ -14,6 +14,15 @@
 
 内容回滚应归档当前季；新增表和旧任务历史都保留。不得为了回滚删除故事表、任务表或用户进度。旧 `alangEnabled` 不控制正式街头盲盒。
 
+## 2026-08-08 staging 手动保持在线
+
+1. 只读核对 staging 的 `flash_shifts` 列、约束、索引与活动 hold 数量；人工执行可重复迁移 `20260808010000_flash_manual_hold.sql`。
+2. 迁移先放宽 `plan_id/ends_at` 的 NOT NULL，只允许 `availability_mode='manual_hold'` 的 plan-less 活动记录没有结束时间，并建立“每位 NPC 最多一个活动 hold”的 partial unique index。既有 scheduled 行保持原约束。
+3. 核验迁移后再部署应用。旧应用使用排班 inner join，会在兼容窗口内忽略 plan-less hold；不得先部署新代码后补迁移。
+4. operator+ 仅在 `/admin/alang` 选择已启用 NPC 及其已审核、已绑定地点并确认上线。开始/停止均写管理员审计；审计不得包含 GPS 或地点坐标。
+5. 验收 `APP_MODE=staging` 下用户在线列表显示“测试期间在线”，定位仍由正式 10 米服务端判定；同时验证 production 与缺失 `APP_MODE` 返回 403 且不会读取 manual hold。
+6. 测试期间不设置自动下线时间。收到显式下线指令后调用 stop；回滚应用前也必须先停止所有活动 hold。新增列和索引可保留，不做紧急收缩迁移。
+
 ## 旧任务链上线记录（历史兼容）
 
 正式闪现使用独立的 `flash_*` 表，不复用、改名或删除旧阿浪原型的

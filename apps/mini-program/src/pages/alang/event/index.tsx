@@ -16,7 +16,7 @@ import {
   FlashButton,
   FlashNpcPortrait,
   FlashPageState,
-  formatFlashRemainingTime,
+  formatFlashAvailability,
 } from '../../../components/alang/FlashUi'
 import '../flash.scss'
 
@@ -113,7 +113,7 @@ function OnlineNpcCard({ npc, onClick }: { npc: FlashNpcSummary; onClick: () => 
       hoverClass='flash-online-card--pressed'
       onClick={onClick}
       role='button'
-      aria-label={`去找${npc.name}，${npc.districtName}，${formatFlashRemainingTime(npc.remainingSeconds, npc.endsAt)}`}
+      aria-label={`去找${npc.name}，${npc.districtName}，${formatFlashAvailability(npc.availabilityMode, npc.remainingSeconds, npc.endsAt)}`}
     >
       <FlashNpcPortrait npc={npc} />
       <View className='flash-online-card__body'>
@@ -123,7 +123,7 @@ function OnlineNpcCard({ npc, onClick }: { npc: FlashNpcSummary; onClick: () => 
         </View>
         <Text className='flash-online-card__invite'>{npc.invitation}</Text>
         <Text className='flash-online-card__meta'>
-          {npc.districtName} · {formatFlashRemainingTime(npc.remainingSeconds, npc.endsAt)}
+          {npc.districtName} · {formatFlashAvailability(npc.availabilityMode, npc.remainingSeconds, npc.endsAt)}
         </Text>
       </View>
       <Text className='flash-online-card__arrow' aria-hidden='true'>›</Text>
@@ -264,6 +264,7 @@ export default function FlashHomePage() {
       `districtName=${encodeURIComponent(npc.districtName)}`,
       npc.locationAddress ? `locationAddress=${encodeURIComponent(npc.locationAddress)}` : '',
       npc.endsAt ? `endsAt=${encodeURIComponent(npc.endsAt)}` : '',
+      npc.availabilityMode ? `availabilityMode=${encodeURIComponent(npc.availabilityMode)}` : '',
     ].filter(Boolean).join('&')
     void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangSearch}?${params}` })
   }
@@ -410,7 +411,7 @@ export default function FlashHomePage() {
 
           <View className='flash-page__notice'>
             <Image className='flash-page__notice-mark' src={FLASH_INFO_ICON} mode='aspectFit' />
-            <Text className='flash-page__notice-text'>这里没有真人 NPC，也不会推送催你出门。到点后角色会正常离开，去不去由你决定。</Text>
+            <Text className='flash-page__notice-text'>这里没有真人 NPC，也不会推送催你出门。角色结束本次闪现后会正常离开，去不去由你决定。</Text>
           </View>
         </View>
       </ScrollView>

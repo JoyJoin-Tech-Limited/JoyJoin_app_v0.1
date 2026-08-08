@@ -342,6 +342,8 @@ https://staging.admin.joyjoinapp.com
 
 The staging admin portal proxies `/api/*` to the staging API, so any event created there appears in the 体验版 when `TARO_APP_API_BASE_URL=https://staging.joyjoinapp.com`.
 
+For Street Blind Box formal-flow QA, apply `apps/server/migrations/20260808010000_flash_manual_hold.sql` to `postgres-staging` before deploying the compatible API/Admin build. An operator or super admin can then use `/admin/alang` → “测试期间手动在线” to select an active NPC and one of its approved bound encounter locations. The hold has no automatic end time and the mini-program shows “测试期间在线”; return to the same panel and explicitly stop it only when QA is finished. Exact `APP_MODE=staging` is required—production and a missing mode both reject start/stop and ignore any such row.
+
 ### Verifying test pricing
 
 After logging into the 体验版, start any paid flow (event registration, subscription, event pack). With `MOCK_PAYMENTS=false`, the price should show ¥0.01 and create a real WeChat Pay order for ¥0.01; webhook fulfillment still runs normally against the staging database. With `MOCK_PAYMENTS=true`, the flow completes instantly without a real WeChat Pay call.

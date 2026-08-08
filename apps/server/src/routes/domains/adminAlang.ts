@@ -60,6 +60,12 @@ import {
   validateFlashScheduleDraft,
 } from "../../services/flashScheduleService";
 import { getFlashFeatureReadiness } from "../../services/flashService";
+import {
+  FlashManualHoldError,
+  getFlashManualHoldStatus,
+  startFlashManualHoldForAdmin,
+  stopFlashManualHoldForAdmin,
+} from "../../services/flashManualHoldService";
 
 const SHENZHEN_DISTRICTS = [
   "南山区",
@@ -326,6 +332,11 @@ const scheduleRegenerationReplaceSchema = z.object({
   generationSeed: z.string().trim().min(1).max(80),
   previewDigest: z.string().regex(/^[a-f0-9]{64}$/),
   reason: z.string().trim().min(4, "请填写重新生成原因").max(200),
+}).strict();
+
+const manualHoldStartSchema = z.object({
+  npcId: uuidSchema,
+  locationId: uuidSchema,
 }).strict();
 
 function minutesFromTime(value: string): number {
@@ -776,6 +787,70 @@ export function registerAdminAlangRoutes(app: Express): void {
       res.json({ available: true, enabled: parsed.data.enabled });
     } catch (error) {
       routeFailure(req, res, "test arrival toggle failed", error);
+    }
+  });
+
+  app.get("/api/admin/alang/manual-holds", requireAdmin, async (req, res) => {
+    try {
+      res.json(await getFlashManualHoldStatus());
+    } catch (error) {
+      routeFailure(req, res, "manual hold status failed", error);
+    }
+  });
+
+  app.post("/api/admin/alang/manual-holds/start", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    const parsed = manualHoldStartSchema.safeParse(req.body);
+    if (!parsed.success) return void validationFailure(res, parsed.error);
+    try {
+      const actorId = getActingAdminId(req);
+      const result = await startFlashManualHoldForAdmin({
+        ...parsed.data,
+        actorId,
+      });
+      audit(req, "FLASH_MANUAL_HOLD_STARTED", "flash_shift", result.hold.appearanceId, undefined, {
+        availabilityMode: "manual_hold",
+        npcId: result.hold.npc.id,
+        npcName: result.hold.npc.name,
+        locationId: result.hold.location.id,
+        locationName: result.hold.location.name,
+        created: result.created,
+      });
+      res.status(result.created ? 201 : 200).json(result);
+    } catch (error) {
+      if (error instanceof FlashManualHoldError) {
+        return void res.status(error.status).json({ code: error.code, message: error.message });
+      }
+      routeFailure(req, res, "manual hold start failed", error);
+    }
+  });
+
+  app.post("/api/admin/alang/manual-holds/:appearanceId/stop", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    const parsed = uuidSchema.safeParse(req.params.appearanceId);
+    if (!parsed.success) return void validationFailure(res, parsed.error);
+    try {
+      const result = await stopFlashManualHoldForAdmin({
+        appearanceId: parsed.data,
+        actorId: getActingAdminId(req),
+      });
+      if (result.stopped && result.hold) {
+        audit(req, "FLASH_MANUAL_HOLD_STOPPED", "flash_shift", result.hold.appearanceId, {
+          availabilityMode: "manual_hold",
+          npcId: result.hold.npc.id,
+          locationId: result.hold.location.id,
+          active: true,
+        }, {
+          availabilityMode: "manual_hold",
+          npcId: result.hold.npc.id,
+          locationId: result.hold.location.id,
+          active: false,
+        });
+      }
+      res.json(result);
+    } catch (error) {
+      if (error instanceof FlashManualHoldError) {
+        return void res.status(error.status).json({ code: error.code, message: error.message });
+      }
+      routeFailure(req, res, "manual hold stop failed", error);
     }
   });
 

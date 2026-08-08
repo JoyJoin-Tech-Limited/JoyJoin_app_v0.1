@@ -83,6 +83,26 @@ export class FlashServiceError extends Error {
   }
 }
 
+/** Manual availability holds are a staging operations tool, never a production fallback. */
+export function isFlashManualHoldRuntimeAvailable(appMode = process.env.APP_MODE): boolean {
+  return appMode === "staging";
+}
+
+export function preferManualFlashAppearances<
+  T extends { npcId: string; availabilityMode: string },
+>(appearances: T[]): T[] {
+  const heldNpcIds = new Set(
+    appearances
+      .filter((appearance) => appearance.availabilityMode === "manual_hold")
+      .map((appearance) => appearance.npcId),
+  );
+  if (heldNpcIds.size === 0) return appearances;
+  return appearances.filter((appearance) => (
+    appearance.availabilityMode === "manual_hold"
+    || !heldNpcIds.has(appearance.npcId)
+  ));
+}
+
 type MapCoordinate = { latitude: number; longitude: number };
 
 export function calculateFlashMapFrame(
@@ -264,16 +284,21 @@ export async function getFlashHome(input: {
   now?: Date;
 }): Promise<FlashHomeResponse> {
   const now = input.now ?? new Date();
-  const [appearances, preference, resumable] = await Promise.all([
-    listOnlineFlashAppearances(now),
+  const includeManualHolds = isFlashManualHoldRuntimeAvailable();
+  const [onlineAppearances, preference, resumable] = await Promise.all([
+    listOnlineFlashAppearances(now, undefined, { includeManualHolds }),
     getFlashPreferences(input.userId),
     getLatestResumableFlashEncounter(input.userId, now),
   ]);
+  const appearances = includeManualHolds
+    ? preferManualFlashAppearances(onlineAppearances)
+    : onlineAppearances;
   // Never let home-list ordering become a relative-distance oracle for hidden
   // encounter points. The one-shot coordinate is used only by the route's
   // Shenzhen participation gate; the list itself is ordered by time/name.
   appearances.sort((left: any, right: any) => (
-    left.shiftEndsAt.getTime() - right.shiftEndsAt.getTime()
+    (left.shiftEndsAt?.getTime() ?? Number.MAX_SAFE_INTEGER)
+    - (right.shiftEndsAt?.getTime() ?? Number.MAX_SAFE_INTEGER)
     || left.npcName.localeCompare(right.npcName, "zh-CN")
   ));
   const resume = resumable
@@ -297,8 +322,11 @@ export async function getFlashHome(input: {
       },
       district: row.district,
       locationAddress: row.locationAddress,
-      endsAt: row.shiftEndsAt.toISOString(),
-      remainingMinutes: Math.max(0, Math.ceil((row.shiftEndsAt.getTime() - now.getTime()) / 60_000)),
+      endsAt: row.shiftEndsAt?.toISOString() ?? null,
+      remainingMinutes: row.shiftEndsAt
+        ? Math.max(0, Math.ceil((row.shiftEndsAt.getTime() - now.getTime()) / 60_000))
+        : null,
+      availabilityMode: row.availabilityMode === "manual_hold" ? "manual_hold" as const : "scheduled" as const,
       canonicalScreen: "map" as const,
     })),
     // Legacy assignments remain in storage for audit/history, but the formal
@@ -320,7 +348,9 @@ export async function locateFlashAppearance(input: {
   forceArrivalForTesting?: boolean;
 }): Promise<FlashLocateResponse> {
   const now = input.now ?? new Date();
-  const appearance = await getLiveFlashAppearance(input.appearanceId, now);
+  const appearance = await getLiveFlashAppearance(input.appearanceId, now, undefined, {
+    includeManualHolds: isFlashManualHoldRuntimeAvailable(),
+  });
   if (!appearance) {
     throw new FlashServiceError("FLASH_APPEARANCE_ENDED", 410, "这次闪现已经结束了");
   }
