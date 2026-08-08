@@ -18,6 +18,10 @@ const flashSceneRelativePaths = ['radar', 'task', 'feedback']
   .map((scene) => `pages/alang/assets/backgrounds/${scene}-paper-scene.jpg`)
 const flashDialogueRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
   .map((slug) => `pages/alang/assets/ui/flash-${slug}-dialogue-paper-v1.jpg`)
+const flashStoryModeBackgrounds = [
+  'pages/alang/assets/onboarding/parallel-personalized-paper-world-v1.jpg',
+  'pages/alang/assets/onboarding/parallel-standard-paper-world-v1.jpg',
+]
 
 const flashRuntimeImages = [
   'pages/alang/assets/flash-city-encounter.jpg',
@@ -28,6 +32,7 @@ const flashRuntimeImages = [
   ...npcHeadshotRelativePaths,
   ...flashSceneRelativePaths,
   ...flashDialogueRelativePaths,
+  ...flashStoryModeBackgrounds,
   'pages/alang/assets/candidates/alang-event-card-candidate.jpg',
   'pages/alang/assets/candidates/alang-found-scene-candidate.jpg',
   'pages/alang/assets/candidates/alang-companion-atmosphere-candidate.jpg',
@@ -207,6 +212,25 @@ if (
   !readFileSync(commonStylesPath, 'utf8').includes('.flash-page')
 ) {
   failures.push('dist/common.wxss does not contain the shared Flash page styles')
+}
+
+const flashEntryPath = resolve(distRoot, 'pages/alang/event/index.js')
+if (existsSync(flashEntryPath)) {
+  const flashEntrySource = readFileSync(flashEntryPath, 'utf8')
+  if (flashEntrySource.includes('updateFlashPreferences')) {
+    failures.push(
+      'dist/pages/alang/event/index.js must call apiRequest directly; ' +
+        'the cross-chunk updateFlashPreferences wrapper is unsafe in WeChat AppService',
+    )
+  }
+  for (const staleWebpName of [
+    'parallel-personalized-paper-world-v1.webp',
+    'parallel-standard-paper-world-v1.webp',
+  ]) {
+    if (flashEntrySource.includes(staleWebpName)) {
+      failures.push(`dist/pages/alang/event/index.js still references unsupported ${staleWebpName}`)
+    }
+  }
 }
 
 if (failures.length) {

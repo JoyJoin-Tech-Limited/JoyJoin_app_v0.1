@@ -4,12 +4,12 @@ import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useFlashHome, useFlashStoryFragments } from '../../../lib/alang/useFlash'
-import { updateFlashPreferences } from '../../../lib/alang/flashApi'
+import { apiRequest } from '../../../lib/api/api'
 import type { FlashLocationSnapshot, FlashNpcSummary } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
-import personalizedPaperWorld from '../assets/onboarding/parallel-personalized-paper-world-v1.webp'
-import standardPaperWorld from '../assets/onboarding/parallel-standard-paper-world-v1.webp'
+import personalizedPaperWorld from '../assets/onboarding/parallel-personalized-paper-world-v1.jpg'
+import standardPaperWorld from '../assets/onboarding/parallel-standard-paper-world-v1.jpg'
 import flashAmbientBackground from '../assets/ui/flash-city-ambient-bg.png'
 import flashEmptyOnline from '../assets/ui/flash-empty-online.png'
 import {
@@ -169,7 +169,10 @@ export default function FlashHomePage() {
     setModeSaving(true)
     try {
       const personalized = mode === 'personalized'
-      await updateFlashPreferences({
+      await apiRequest({
+        path: '/api/alang/flash/preferences',
+        method: 'PUT',
+        data: {
         personalizationEnabled: personalized,
         usePersonality: personalized,
         useInterests: personalized,
@@ -177,6 +180,7 @@ export default function FlashHomePage() {
         useDistrict: false,
         useTaskBehavior: false,
         consentVersion: personalized ? FLASH_STORY_CONSENT_VERSION : undefined,
+        },
       })
       await requestLocation()
     } catch {

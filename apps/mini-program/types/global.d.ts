@@ -5,7 +5,6 @@ declare module '*.png';
 declare module '*.gif';
 declare module '*.jpg';
 declare module '*.jpeg';
-declare module '*.webp';
 declare module '*.svg';
 declare module '*.css';
 declare module '*.less';
@@ -29,4 +28,3 @@ declare namespace NodeJS {
     TARO_APP_WECHAT_SUBSCRIBE_TMPL_IDS?: string
   }
 }
-

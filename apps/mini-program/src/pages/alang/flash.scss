@@ -495,10 +495,10 @@ page {
   position: relative;
   min-height: 100vh;
   overflow: hidden;
-  color: #fffaf3;
+  color: #fffaf0;
   background:
-    radial-gradient(circle at 50% -10%, rgba(157, 122, 255, 0.38), transparent 42%),
-    linear-gradient(180deg, #171229 0%, #24193a 55%, #3a2542 100%);
+    radial-gradient(circle at 50% -10%, rgba(167, 139, 250, 0.38), transparent 42%),
+    linear-gradient(180deg, #171323 0%, #241934 55%, #392551 100%);
 }
 
 .flash-finale__glow {
@@ -514,7 +514,7 @@ page {
   animation: flash-finale-breathe 4s ease-in-out infinite;
 }
 
-.flash-finale__scroll { height: 100vh; }
+.flash-finale__scroll { min-height: 100dvh; }
 
 .flash-finale__hero,
 .flash-finale__card,
@@ -536,7 +536,7 @@ page {
 
 .flash-finale__eyebrow,
 .flash-finale__section-kicker {
-  color: #d9c5ff;
+  color: #ddd6fe;
   font-size: 22rpx;
   font-weight: 700;
   letter-spacing: 4rpx;
@@ -556,14 +556,14 @@ page {
 }
 
 .flash-finale__choice { display: flex; gap: 24rpx; padding-top: 32rpx; }
-.flash-finale__choice-index { color: #f4d89b; font-size: 24rpx; font-weight: 800; }
+.flash-finale__choice-index { color: #fde68a; font-size: 24rpx; font-weight: 800; }
 .flash-finale__choice-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 10rpx; }
 .flash-finale__choice-episode { color: rgba(255, 250, 243, 0.62); font-size: 24rpx; }
 .flash-finale__choice-label { font-size: 30rpx; font-weight: 650; line-height: 1.55; }
 .flash-finale__dimension { margin-top: 32rpx; }
 .flash-finale__dimension-meta { display: flex; justify-content: space-between; margin-bottom: 12rpx; color: rgba(255, 250, 243, 0.82); font-size: 26rpx; }
 .flash-finale__dimension-track { height: 12rpx; overflow: hidden; border-radius: 999rpx; background: rgba(255, 255, 255, 0.1); }
-.flash-finale__dimension-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #9d7aff, #f4d89b); }
+.flash-finale__dimension-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #a78bfa, #fde68a); }
 
 .flash-finale__alternate { padding: 44rpx 40rpx; border-radius: 32rpx; background: rgba(17, 11, 30, 0.38); }
 .flash-finale__alternate-title { display: block; font-size: 32rpx; font-weight: 750; }

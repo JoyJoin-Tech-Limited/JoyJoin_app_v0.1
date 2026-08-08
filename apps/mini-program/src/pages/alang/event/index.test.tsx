@@ -40,8 +40,11 @@ vi.mock('../../../lib/alang/useFlash', () => ({
   useFlashHome: mocks.useFlashHome,
   useFlashStoryFragments: mocks.useFlashStoryFragments,
 }))
+vi.mock('../../../lib/api/api', () => ({
+  apiRequest: mocks.updatePreferences,
+}))
 vi.mock('../../../lib/alang/flashApi', () => ({
-  updateFlashPreferences: mocks.updatePreferences,
+  updateFlashPreferences: undefined,
 }))
 vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: vi.fn() }))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
@@ -133,7 +136,11 @@ describe('formal Flash home', () => {
     expect(screen.getByText('南山区 · 还在 1 小时')).toBeInTheDocument()
     expect(screen.getByText('双人座位图')).toBeInTheDocument()
     expect(mocks.location).toHaveBeenCalledTimes(1)
-    expect(mocks.updatePreferences).toHaveBeenCalledWith(expect.objectContaining({ personalizationEnabled: false }))
+    expect(mocks.updatePreferences).toHaveBeenCalledWith(expect.objectContaining({
+      path: '/api/alang/flash/preferences',
+      method: 'PUT',
+      data: expect.objectContaining({ personalizationEnabled: false }),
+    }))
     await waitFor(() => expect(mocks.useFlashHome).toHaveBeenLastCalledWith(
       { latitude: 22.54, longitude: 114.05, accuracy: 12 },
       true,
@@ -146,18 +153,38 @@ describe('formal Flash home', () => {
 
     await screen.findByText('YOUR PARALLEL UNIVERSE')
     const modeCards = document.querySelectorAll('.flash-intro__mode')
-    expect(modeCards[0]).toContainElement(document.querySelector("img[src*='parallel-personalized-paper-world-v1.webp']"))
-    expect(modeCards[1]).toContainElement(document.querySelector("img[src*='parallel-standard-paper-world-v1.webp']"))
+    expect(modeCards[0]).toContainElement(document.querySelector("img[src*='parallel-personalized-paper-world-v1.jpg']"))
+    expect(modeCards[1]).toContainElement(document.querySelector("img[src*='parallel-standard-paper-world-v1.jpg']"))
+    expect(document.querySelector("img[src$='.webp']")).toBeNull()
     expect(document.querySelector("img[src*='street-blind-box-onboarding-fullscreen-v7.jpg']")).toBeNull()
   })
 
-  it('does not depend on a mutation mutateAsync method when selecting a story mode', async () => {
+  it('does not depend on a cross-chunk preference wrapper when selecting a story mode', async () => {
     render(<FlashHomePage />)
 
     await screen.findByText('YOUR PARALLEL UNIVERSE')
     fireEvent.click(document.querySelectorAll('.flash-intro__mode')[1])
 
     await waitFor(() => expect(mocks.updatePreferences).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(mocks.location).toHaveBeenCalledTimes(1))
+  })
+
+  it('stays on mode selection and allows retry when preference saving fails', async () => {
+    mocks.updatePreferences.mockRejectedValueOnce(new Error('network unavailable'))
+    render(<FlashHomePage />)
+
+    await screen.findByText('YOUR PARALLEL UNIVERSE')
+    const standardMode = document.querySelectorAll('.flash-intro__mode')[1]
+    fireEvent.click(standardMode)
+
+    await waitFor(() => expect(Taro.showToast).toHaveBeenCalledWith(expect.objectContaining({ icon: 'none' })))
+    expect(mocks.location).not.toHaveBeenCalled()
+    expect(document.querySelectorAll('.flash-intro__mode')).toHaveLength(2)
+
+    mocks.updatePreferences.mockResolvedValueOnce({})
+    fireEvent.click(standardMode)
+
+    await waitFor(() => expect(mocks.updatePreferences).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(mocks.location).toHaveBeenCalledTimes(1))
   })
 
