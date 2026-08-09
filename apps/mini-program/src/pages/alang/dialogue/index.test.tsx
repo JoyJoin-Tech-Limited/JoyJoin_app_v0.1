@@ -51,6 +51,54 @@ const questionEncounter = {
   taskOffer: null,
 }
 
+const storyEncounter = {
+  ...questionEncounter,
+  npc: { id: 'npc-shiqi', slug: 'shiqi', name: '拾柒', animal: '乌鸦' },
+  currentQuestion: {
+    id: 's1-p1-shiqi-choice',
+    text: '你想先注意哪一件事？',
+    position: 1,
+    total: 1,
+    options: [
+      { id: 'notice-action', label: '它刚才做的动作' },
+      { id: 'notice-object', label: '这件旧物留下的痕迹' },
+      { id: 'notice-relationship', label: '它没有直接说出的关系' },
+    ],
+  },
+  storyEpisode: {
+    id: 'episode-shiqi-1',
+    code: 's1-p1-shiqi',
+    seasonTitle: '没有名字的旧物',
+    phase: 1,
+    title: '一本一次也没用过的出门册',
+    objectCode: 'outing-book',
+    opening: '拾柒把空白盖章区逐页对着光看。',
+    action: '她统计重复圈选的项目，但没有替主人删掉任何一项。',
+    discovery: '主人不是没有计划，而是每次快出发时又增加一个新选择。',
+    response: null,
+    closing: null,
+    motion: { ambient: 'none' as const },
+    fragment: null,
+    progress: { completedInPhase: 0, totalInPhase: 5, completedTotal: 3, total: 15 },
+  },
+}
+
+const answeredStoryEncounter = {
+  ...storyEncounter,
+  currentQuestion: null,
+  storyEpisode: {
+    ...storyEncounter.storyEpisode,
+    response: '你注意到了它怎样处理，而不是只听它解释。',
+    closing: '拾柒把出门册合上，像是替那次迟到的出发留了一盏灯。',
+    fragment: {
+      category: 'object' as const,
+      title: '迟到的出发',
+      fact: '这本册子不是没被想起，只是每次出发前都多了一个舍不得删掉的选择。',
+    },
+    progress: { completedInPhase: 1, totalInPhase: 5, completedTotal: 4, total: 15 },
+  },
+}
+
 describe('formal Flash dialogue', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -72,6 +120,78 @@ describe('formal Flash dialogue', () => {
     await waitFor(() => expect(mocks.answer).toHaveBeenCalledWith({
       encounterId: 'encounter-1', questionId: 'q1', optionId: 'quiet',
     }))
+  })
+
+  it('keeps story choices inside one animated scene and naturalizes already-seeded copy', async () => {
+    mocks.useEncounter.mockReturnValue({
+      data: storyEncounter,
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+    mocks.answer.mockResolvedValue(storyEncounter)
+
+    render(<FlashDialoguePage />)
+
+    const stage = screen.getByTestId('flash-story-stage')
+    const choicePanel = screen.getByTestId('flash-story-choice-panel')
+    expect(stage).toContainElement(choicePanel)
+    expect(stage.querySelector('.flash-page__scroll')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('拾柒正在和你说话')).toHaveClass('flash-dialogue-scene--breathe')
+
+    expect(screen.queryByText('它刚才做的动作')).not.toBeInTheDocument()
+    expect(screen.queryByText('这件旧物留下的痕迹')).not.toBeInTheDocument()
+    expect(screen.queryByText('它没有直接说出的关系')).not.toBeInTheDocument()
+    expect(screen.getByText('你最想接着问哪一句？')).toBeInTheDocument()
+
+    expect(screen.getByText('我想看看：旧物还留下了什么？')).toBeInTheDocument()
+    expect(screen.getByText('等等，这件旧物和谁有关？')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '我想问：你为什么这样做？' }))
+    await waitFor(() => expect(mocks.answer).toHaveBeenCalledWith({
+      encounterId: 'encounter-1',
+      questionId: 's1-p1-shiqi-choice',
+      optionId: 'notice-action',
+    }))
+  })
+
+  it('keeps the answer and fragment reveal inside the same story stage', () => {
+    mocks.useEncounter.mockReturnValue({
+      data: answeredStoryEncounter,
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    render(<FlashDialoguePage />)
+
+    const stage = screen.getByTestId('flash-story-stage')
+    expect(stage.querySelector('.flash-page__scroll')).not.toBeInTheDocument()
+    expect(screen.queryByText('你注意到了它怎样处理，而不是只听它解释。')).not.toBeInTheDocument()
+    expect(screen.getByText('你先留意了那个动作。有时候，动作比解释更诚实。')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '揭开这块故事碎片' }))
+
+    expect(stage).toContainElement(screen.getByText('迟到的出发'))
+    expect(stage).toContainElement(screen.getByText('这本册子不是没被想起，只是每次出发前都多了一个舍不得删掉的选择。'))
+    expect(stage).toContainElement(screen.getByRole('button', { name: '收好碎片，继续寻找' }))
+  })
+
+  it('shows an in-scene retry message when a story answer cannot be sent', async () => {
+    mocks.useEncounter.mockReturnValue({
+      data: storyEncounter,
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+    mocks.answer.mockRejectedValueOnce(new Error('offline'))
+
+    render(<FlashDialoguePage />)
+    fireEvent.click(screen.getByRole('button', { name: '我想问：你为什么这样做？' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(screen.getByTestId('flash-story-stage')).toContainElement(alert)
+    expect(alert).toHaveTextContent('刚才那句话没有送到，再选一次就好。')
   })
 
   it('prioritizes delivery from the same NPC before a new conversation', async () => {

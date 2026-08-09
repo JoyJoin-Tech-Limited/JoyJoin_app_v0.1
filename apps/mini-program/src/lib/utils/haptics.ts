@@ -15,8 +15,21 @@ const SLOT_HAPTIC_MAP: Record<Extract<HapticType, 'slotTick' | 'slotLand' | 'car
   cardReveal: { type: 'heavy', count: 2 },
 }
 
-function canVibrate(): boolean {
-  return Taro.canIUse('vibrateShort') || Taro.canIUse('vibrateLong')
+type VibrateApi = 'vibrateShort' | 'vibrateLong'
+
+function canUseVibrateApi(apiName: VibrateApi): boolean {
+  const api = apiName === 'vibrateShort' ? Taro.vibrateShort : Taro.vibrateLong
+  if (typeof api !== 'function') return false
+
+  // Some WeChat/Taro runtime bundles expose vibration but omit canIUse.
+  // Feature detection must never make an optional effect block a primary CTA.
+  if (typeof Taro.canIUse !== 'function') return true
+
+  try {
+    return Taro.canIUse(apiName)
+  } catch {
+    return true
+  }
 }
 
 /**
@@ -29,13 +42,17 @@ function canVibrate(): boolean {
  *   haptics('success') // step completed successfully
  */
 export function haptics(type: HapticType) {
-  if (!canVibrate()) return
-
   try {
     if (type === 'warning') {
-      Taro.vibrateLong()
+      if (canUseVibrateApi('vibrateLong')) {
+        Taro.vibrateLong()
+      } else if (canUseVibrateApi('vibrateShort')) {
+        Taro.vibrateShort({ type: 'heavy' })
+      }
       return
     }
+
+    if (!canUseVibrateApi('vibrateShort')) return
 
     if (type === 'slotTick' || type === 'slotLand' || type === 'cardReveal') {
       const config = SLOT_HAPTIC_MAP[type]

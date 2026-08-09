@@ -3,6 +3,7 @@
 $flash-radar-found: #9ACD32;
 
 page {
+  height: 100%;
   background: $color-bg-warm-to;
 }
 
@@ -254,6 +255,20 @@ page {
       linear-gradient(180deg, rgba(255, 249, 240, 0.18), rgba(255, 249, 240, 0.32) 58%, rgba(255, 249, 240, 0.48)),
       linear-gradient(90deg, rgba(137, 91, 214, 0.08), rgba(255, 159, 116, 0.08));
     backdrop-filter: blur(1rpx);
+  }
+
+  &__label {
+    position: absolute;
+    top: calc(env(safe-area-inset-top) + 24rpx);
+    right: 24rpx;
+    z-index: 1;
+    padding: 8rpx 16rpx;
+    border: 1rpx solid rgba(255, 255, 255, 0.58);
+    border-radius: $radius-pill;
+    color: rgba(61, 43, 82, 0.72);
+    background: rgba(255, 255, 255, 0.72);
+    font-size: $font-size-xs;
+    line-height: 1.2;
   }
 }
 
@@ -977,6 +992,214 @@ page {
   &__error { display: block; margin-top: 20rpx; color: $color-error; font-size: $font-size-sm; line-height: $line-height-relaxed; text-align: center; }
 }
 
+.flash-dialogue--story {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.flash-dialogue__story-stage {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+
+  .flash-dialogue-scene {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .flash-dialogue-scene .flash-dialogue-scene__identity {
+    top: 46%;
+    bottom: auto;
+  }
+
+  .flash-dialogue-scene__bubble {
+    top: 32rpx;
+    animation: flash-story-bubble-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+.flash-dialogue__story-ambient {
+  position: absolute;
+  z-index: 2;
+  top: 128rpx;
+  right: -144rpx;
+  width: 400rpx;
+  height: 640rpx;
+  border-radius: $radius-circle;
+  background: radial-gradient(circle, rgba($color-surface, 0.2), rgba($color-primary, 0.08) 44%, transparent 72%);
+  opacity: 0.18;
+  pointer-events: none;
+  transform: translateX(-24rpx) scale(1.02);
+  animation: flash-story-ambient-drift 7s ease-in-out infinite;
+}
+
+.flash-dialogue__story-index {
+  position: absolute;
+  z-index: 4;
+  top: 32rpx;
+  right: 24rpx;
+  display: flex;
+  min-width: 144rpx;
+  padding: 16rpx;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  border: 2rpx solid rgba($color-surface, 0.5);
+  border-radius: $radius-pill;
+  background: rgba($color-text-primary, 0.66);
+  box-sizing: border-box;
+}
+
+.flash-dialogue__story-index-phase,
+.flash-dialogue__story-index-count {
+  color: rgba($color-surface, 0.9);
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+}
+
+.flash-dialogue__story-index-count {
+  color: $color-surface;
+  font-family: $font-en-brand;
+}
+
+.flash-dialogue__story-panel {
+  position: absolute;
+  z-index: 5;
+  right: 24rpx;
+  bottom: calc(16rpx + env(safe-area-inset-bottom));
+  left: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: 24rpx;
+  overflow: hidden;
+  border: 2rpx solid rgba($color-surface, 0.42);
+  border-radius: 32rpx;
+  background: linear-gradient(155deg, rgba($color-text-primary, 0.94), rgba($color-text-primary-warm, 0.9));
+  box-shadow: 0 16rpx 40rpx rgba($color-text-primary, 0.28), inset 0 0 0 2rpx rgba($color-surface, 0.08);
+  box-sizing: border-box;
+  animation: flash-story-panel-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.flash-dialogue__story-panel-season,
+.flash-dialogue__story-panel-title,
+.flash-dialogue__story-panel-action,
+.flash-dialogue__story-panel-prompt,
+.flash-dialogue__story-panel-closing,
+.flash-dialogue__story-panel-progress,
+.flash-dialogue__story-panel-unavailable {
+  display: block;
+}
+
+.flash-dialogue__story-panel-season {
+  color: rgba($color-surface, 0.68);
+  font-size: $font-size-2xs;
+  font-weight: $font-weight-bold;
+  letter-spacing: 2rpx;
+}
+
+.flash-dialogue__story-panel-title {
+  color: $color-surface;
+  font-family: $font-cn-display;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-black;
+  line-height: 1.4;
+}
+
+.flash-dialogue__story-panel-action,
+.flash-dialogue__story-panel-closing,
+.flash-dialogue__story-panel-unavailable {
+  color: rgba($color-surface, 0.72);
+  font-size: $font-size-xs;
+  line-height: $line-height-relaxed;
+}
+
+.flash-dialogue__story-panel-prompt {
+  margin-top: 4rpx; // Optical separation from the narrative line above.
+  color: $color-surface;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  line-height: 1.4;
+}
+
+.flash-dialogue__story-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  margin-top: 8rpx;
+}
+
+.flash-dialogue__story-panel .flash-dialogue__story-choice {
+  min-height: 88rpx;
+  padding: 16rpx 24rpx 16rpx 56rpx;
+  border: 2rpx solid rgba($color-primary, 0.56);
+  border-radius: 24rpx;
+  background: rgba($color-bg-clean, 0.94);
+  box-shadow: 0 8rpx 24rpx rgba($color-text-primary, 0.2), inset 0 0 0 2rpx rgba($color-surface, 0.46);
+  font-size: $font-size-sm;
+  animation: flash-story-choice-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.flash-dialogue__story-panel .flash-dialogue__story-choice:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.flash-dialogue__story-panel .flash-dialogue__story-choice:nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.flash-dialogue__story-panel .flash-dialogue__choice-mark {
+  left: 20rpx;
+  font-size: $font-size-lg;
+}
+
+.flash-dialogue__story-panel--result {
+  gap: 16rpx;
+}
+
+.flash-dialogue__story-panel-progress {
+  color: rgba($color-surface, 0.68);
+  font-size: $font-size-2xs;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.flash-dialogue__story-panel--result .flash-dialogue__echo {
+  margin-bottom: 0;
+  background: rgba($color-surface, 0.1);
+}
+
+.flash-dialogue__story-panel--result .flash-dialogue__echo-label,
+.flash-dialogue__story-panel--result .flash-dialogue__echo-copy,
+.flash-dialogue__story-panel--result .flash-dialogue__ai-note {
+  color: rgba($color-surface, 0.78);
+}
+
+.flash-dialogue__story-panel--result .flash-dialogue__fragment {
+  padding: 20rpx 24rpx; // 20rpx is an optical compacting exception for the short-screen result state.
+}
+
+.flash-dialogue__story-error {
+  position: absolute;
+  z-index: 6;
+  top: 416rpx;
+  right: 24rpx;
+  left: 24rpx;
+  padding: 16rpx 24rpx;
+  border: 2rpx solid rgba($color-error, 0.72);
+  border-radius: 16rpx;
+  color: $color-text-primary-warm;
+  background: rgba($color-bg-clean, 0.96);
+  box-shadow: $shadow-sm;
+  font-size: $font-size-xs;
+  line-height: $line-height-relaxed;
+  text-align: center;
+}
+
 .flash-dialogue-scene {
   position: relative;
   height: 100dvh;
@@ -1258,7 +1481,7 @@ page {
 
 @keyframes flash-story-breathe {
   0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-4rpx) scale(1.008); }
+  50% { transform: translateY(-6rpx) scale(1.012); }
 }
 
 @keyframes flash-story-drift {
@@ -1279,6 +1502,26 @@ page {
 @keyframes flash-story-sealed-pulse {
   0%, 100% { opacity: 0.55; transform: scale(0.92); }
   50% { opacity: 1; transform: scale(1.06); }
+}
+
+@keyframes flash-story-bubble-in {
+  from { opacity: 0; transform: translateY(12rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes flash-story-panel-in {
+  from { opacity: 0; transform: translateY(16rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes flash-story-choice-in {
+  from { opacity: 0; transform: translateY(12rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes flash-story-ambient-drift {
+  0%, 100% { opacity: 0.18; transform: translateX(-24rpx) scale(1.02); }
+  50% { opacity: 0.3; transform: translateX(24rpx) scale(1.06); }
 }
 
 .flash-task {
@@ -1428,6 +1671,10 @@ page {
   .flash-dialogue-scene--breathe .flash-dialogue-scene__image,
   .flash-dialogue-scene--drift .flash-dialogue-scene__image,
   .flash-dialogue-scene__blink-frame,
+  .flash-dialogue__story-stage .flash-dialogue-scene__bubble,
+  .flash-dialogue__story-ambient,
+  .flash-dialogue__story-panel,
+  .flash-dialogue__story-choice,
   .flash-dialogue__fragment-sealed-mark,
   .flash-dialogue__fragment {
     animation: none;
