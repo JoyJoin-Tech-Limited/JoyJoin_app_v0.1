@@ -18,6 +18,7 @@ import {
   FlashPageState,
   formatFlashAvailability,
 } from '../../../components/alang/FlashUi'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import '../flash.scss'
 
 const FLASH_INFO_ICON = '/assets/icons/status-icons/status-info.webp'
@@ -157,6 +158,19 @@ export default function FlashHomePage() {
     void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangSearch}?${params}` })
   }
 
+  const openStoryPreferences = async () => {
+    try {
+      haptics('light')
+    } catch {
+      // Optional device feedback must never block the settings destination.
+    }
+    try {
+      await Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangPreferences })
+    } catch {
+      void Taro.showToast({ title: '暂时打不开，请稍后再试', icon: 'none' })
+    }
+  }
+
   if (!enabled) {
     return (
       <View className='flash-page'>
@@ -224,6 +238,28 @@ export default function FlashHomePage() {
               <Text className='flash-page__eyebrow'>SHENZHEN · NOW</Text>
               <Text className='flash-page__title'>今天，会碰见谁呢？</Text>
               <Text className='flash-page__lead'>他们不会一直在线。看见想聊的，就去附近碰碰运气。</Text>
+            </View>
+          </View>
+
+          <View className='flash-page__preferences-row'>
+            <View
+              className='flash-page__preferences-entry'
+              hoverClass='flash-page__preferences-entry--pressed'
+              onClick={() => { void openStoryPreferences() }}
+              role='button'
+              aria-label={`打开剧情偏好，当前${data.preferenceSummary.personalizationEnabled ? '已开启专属剧情' : '为标准剧情'}`}
+              data-testid='flash-story-preferences-entry'
+            >
+              <View className='flash-page__preferences-icon' aria-hidden='true'>
+                <JoyJoinIcon emoji='⚙️' tier='ui' size={36} />
+              </View>
+              <View className='flash-page__preferences-copy'>
+                <Text className='flash-page__preferences-title'>剧情偏好</Text>
+                <Text className='flash-page__preferences-status'>
+                  {data.preferenceSummary.personalizationEnabled ? '专属剧情已开启' : '当前为标准剧情'}
+                </Text>
+              </View>
+              <View className='flash-page__preferences-chevron' aria-hidden='true' />
             </View>
           </View>
 

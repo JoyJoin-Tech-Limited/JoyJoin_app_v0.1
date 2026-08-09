@@ -90,6 +90,70 @@ page {
     margin-top: 36rpx;
   }
 
+  &__preferences-row {
+    display: flex;
+    justify-content: flex-end;
+    margin: 16rpx 8rpx 0;
+  }
+
+  &__preferences-entry {
+    display: flex;
+    min-height: 88rpx;
+    padding: 8rpx 24rpx 8rpx 16rpx;
+    align-items: center;
+    gap: 16rpx;
+    border: 2rpx solid rgba($color-primary, 0.16);
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.92);
+    box-shadow: $shadow-sm;
+    box-sizing: border-box;
+    transition: opacity 180ms ease-out, transform 180ms ease-out;
+  }
+
+  &__preferences-entry--pressed {
+    opacity: 0.82;
+    transform: scale(0.98);
+  }
+
+  &__preferences-icon {
+    display: flex;
+    width: 64rpx;
+    height: 64rpx;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-circle;
+    background: $color-primary-light;
+  }
+
+  &__preferences-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+
+  &__preferences-title {
+    color: $color-text-primary-warm;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    line-height: 1.4;
+  }
+
+  &__preferences-status {
+    color: $color-text-tertiary-on-light;
+    font-size: $font-size-xs;
+    line-height: 1.4;
+  }
+
+  &__preferences-chevron {
+    width: 12rpx;
+    height: 12rpx;
+    margin-left: 4rpx;
+    border-top: 3rpx solid $color-primary;
+    border-right: 3rpx solid $color-primary;
+    transform: rotate(45deg);
+  }
+
   &__section-head {
     display: flex;
     align-items: center;
@@ -1369,7 +1433,10 @@ page {
     animation: none;
   }
   .flash-button,
-  .flash-dialogue__reroll { transition: none; }
+  .flash-dialogue__reroll,
+  .flash-page__preferences-entry { transition: none; }
+
+  .flash-page__preferences-entry--pressed { transform: none; }
 
   .flash-dialogue__offer-paper,
   .flash-dialogue__offer-paper-heading,

@@ -101,6 +101,33 @@ describe('formal Street Blind Box home', () => {
     expect(mocks.updatePreferences).not.toHaveBeenCalled()
   })
 
+  it('keeps story personalization reopenable from the home settings entry', async () => {
+    mocks.getStorage.mockReturnValue('flash-intro-v1')
+    render(<FlashHomePage />)
+
+    const settingsEntry = await screen.findByRole('button', {
+      name: '打开剧情偏好，当前已开启专属剧情',
+    })
+    expect(screen.getByText('专属剧情已开启')).toBeInTheDocument()
+
+    fireEvent.click(settingsEntry)
+    await waitFor(() => expect(mocks.navigateTo).toHaveBeenCalledWith({
+      url: '/pages/alang/preferences/index',
+    }))
+  })
+
+  it('shows a recovery message when story preferences cannot open', async () => {
+    mocks.getStorage.mockReturnValue('flash-intro-v1')
+    mocks.navigateTo.mockRejectedValueOnce(new Error('subpackage unavailable'))
+    render(<FlashHomePage />)
+
+    fireEvent.click(await screen.findByTestId('flash-story-preferences-entry'))
+    await waitFor(() => expect(Taro.showToast).toHaveBeenCalledWith({
+      title: '暂时打不开，请稍后再试',
+      icon: 'none',
+    }))
+  })
+
   it('does not re-show the introduction after backgrounding in the same visit', async () => {
     render(<FlashHomePage />)
     fireEvent.click(await screen.findByRole('button', { name: '进入标准剧情' }))
