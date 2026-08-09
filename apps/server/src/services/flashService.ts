@@ -212,10 +212,10 @@ export async function getFlashFeatureReadiness(): Promise<FlashReadinessResponse
 export async function assertFlashRuntimeReady(): Promise<void> {
   const readiness = await getFlashFeatureReadiness();
   if (!readiness.schemaReady) {
-    throw new FlashServiceError("FLASH_SCHEMA_NOT_READY", 503, "闪现正在准备中");
+    throw new FlashServiceError("FLASH_SCHEMA_NOT_READY", 503, "街头盲盒正在准备中");
   }
   if (!readiness.ready) {
-    throw new FlashServiceError("FLASH_CATALOG_NOT_READY", 503, "闪现内容仍在审核中");
+    throw new FlashServiceError("FLASH_CATALOG_NOT_READY", 503, "街头盲盒内容仍在审核中");
   }
 }
 
@@ -279,8 +279,6 @@ function taskDto(row: any): FlashTaskDto {
 
 export async function getFlashHome(input: {
   userId: string;
-  latitude: number;
-  longitude: number;
   now?: Date;
 }): Promise<FlashHomeResponse> {
   const now = input.now ?? new Date();
@@ -294,8 +292,8 @@ export async function getFlashHome(input: {
     ? preferManualFlashAppearances(onlineAppearances)
     : onlineAppearances;
   // Never let home-list ordering become a relative-distance oracle for hidden
-  // encounter points. The one-shot coordinate is used only by the route's
-  // Shenzhen participation gate; the list itself is ordered by time/name.
+  // encounter points. The home list never receives a coordinate and is ordered
+  // only by time/name.
   appearances.sort((left: any, right: any) => (
     (left.shiftEndsAt?.getTime() ?? Number.MAX_SAFE_INTEGER)
     - (right.shiftEndsAt?.getTime() ?? Number.MAX_SAFE_INTEGER)
@@ -307,7 +305,7 @@ export async function getFlashHome(input: {
   return {
     serverNow: now.toISOString(),
     city: FLASH_CITY,
-    digitalNpcDisclosure: "闪现中的角色都是虚构的数字动物 NPC，现场没有真人工作人员。",
+    digitalNpcDisclosure: "街头盲盒中的角色都是虚构的数字动物 NPC，现场没有真人工作人员。",
     onlineNpcs: appearances.map((row: any) => ({
       appearanceId: row.appearanceId,
       npc: {
@@ -352,7 +350,7 @@ export async function locateFlashAppearance(input: {
     includeManualHolds: isFlashManualHoldRuntimeAvailable(),
   });
   if (!appearance) {
-    throw new FlashServiceError("FLASH_APPEARANCE_ENDED", 410, "这次闪现已经结束了");
+    throw new FlashServiceError("FLASH_APPEARANCE_ENDED", 410, "这次相遇已经结束了");
   }
   const locateBudget = await consumeFlashLocateBudget({
     userId: input.userId,

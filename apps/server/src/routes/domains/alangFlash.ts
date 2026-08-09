@@ -52,7 +52,7 @@ function sendFlashError(res: Response, error: unknown): Response {
   if (error instanceof FlashServiceError) {
     return res.status(error.status).json({ code: error.code, error: error.message });
   }
-  return res.status(500).json({ code: "FLASH_INTERNAL_ERROR", error: "闪现暂时走神了，请稍后再试" });
+  return res.status(500).json({ code: "FLASH_INTERNAL_ERROR", error: "街头盲盒暂时走神了，请稍后再试" });
 }
 
 function logSafeRouteFailure(req: Request, resourceId: string | null, error: unknown): void {
@@ -73,7 +73,7 @@ async function requireFlashReady(_req: Request, res: Response, next: NextFunctio
 }
 
 function sendFlashDisabled(res: Response): Response {
-  return res.status(503).json({ code: "FLASH_DISABLED", error: "闪现暂时休息中" });
+  return res.status(503).json({ code: "FLASH_DISABLED", error: "街头盲盒暂时休息中" });
 }
 
 async function requireFlashEnabled(_req: Request, res: Response, next: NextFunction) {
@@ -110,7 +110,7 @@ async function isAnyLocationArrivalTestEnabled(): Promise<boolean> {
 function sendCoordinateError(res: Response, code: "FLASH_LOCATION_REQUIRED" | "FLASH_OUTSIDE_SHENZHEN") {
   return res.status(code === "FLASH_OUTSIDE_SHENZHEN" ? 403 : 400).json({
     code,
-    error: code === "FLASH_OUTSIDE_SHENZHEN" ? "闪现目前只在深圳开放" : "需要定位权限才能参加闪现",
+    error: code === "FLASH_OUTSIDE_SHENZHEN" ? "街头盲盒目前只在深圳开放" : "需要定位权限才能参加街头盲盒",
   });
 }
 
@@ -128,13 +128,13 @@ export function registerAlangFlashRoutes(app: Express): void {
   const preferenceGuards = [requireAuth, requireFlashEnabled] as const;
 
   // Coordinates stay in a JSON body so reverse proxies never place them in URL logs.
+  // The home list is deliberately location-free. GPS starts only after the
+  // user selects an NPC and explicitly opens the foreground map.
   app.post("/api/alang/flash/home", ...guards, geoEndpointLimiter, async (req, res) => {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
-    const coordinate = parseEncounterCoordinate(req.body);
-    if (!coordinate.success) return sendCoordinateError(res, coordinate.code);
     try {
-      return res.json(await getFlashHome({ userId: authenticatedUserId, ...coordinate.data }));
+      return res.json(await getFlashHome({ userId: authenticatedUserId }));
     } catch (error) {
       logSafeRouteFailure(req, null, error);
       return sendFlashError(res, error);
@@ -145,7 +145,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const appearanceId = idParamSchema.safeParse(req.params.id);
-    if (!appearanceId.success) return res.status(400).json({ code: "FLASH_APPEARANCE_NOT_FOUND", error: "无效的闪现编号" });
+    if (!appearanceId.success) return res.status(400).json({ code: "FLASH_APPEARANCE_NOT_FOUND", error: "无效的相遇编号" });
     const forceArrivalForTesting = await isAnyLocationArrivalTestEnabled();
     const coordinate = parseEncounterCoordinate(req.body);
     if (!coordinate.success) return sendCoordinateError(res, coordinate.code);

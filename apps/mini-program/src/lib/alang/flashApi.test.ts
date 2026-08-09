@@ -120,20 +120,18 @@ describe('formal Flash shared-contract adapter', () => {
     })
   })
 
-  it('sends home coordinates only in a POST body under the shared contract', async () => {
+  it('loads the home list without sending a location payload', async () => {
     const dto: FlashHomeResponse = {
       serverNow: '2026-07-20T12:00:00+08:00', city: '深圳', digitalNpcDisclosure: '数字叙事角色',
       encounterId: null, assignmentId: null,
       onlineNpcs: [], myTasks: [], preferenceSummary: preference, canonicalScreen: 'home',
     }
     mocks.apiRequest.mockResolvedValue(dto)
-    await fetchFlashHome({ latitude: 22.5431, longitude: 114.0579, accuracy: 18 })
+    await fetchFlashHome()
 
     expect(mocks.apiRequest).toHaveBeenCalledWith({
       path: '/api/alang/flash/home', method: 'POST',
-      data: { latitude: 22.5431, longitude: 114.0579, coordinateSystem: 'gcj02' },
     })
-    expect(mocks.apiRequest.mock.calls[0][0].path).not.toMatch(/22\.5431|114\.0579/)
   })
 
   it('adapts canonical encounter question/offer field names', () => {

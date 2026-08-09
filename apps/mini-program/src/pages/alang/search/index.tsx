@@ -3,9 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Map, ScrollView, Text, View } from '@tarojs/components'
 import type { MapProps } from '@tarojs/components'
 import { getWalkingRoute, type WalkingRouteSuccessResponse } from '@shared/api'
-import { FlashButton, FlashFeatureClosed, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState, formatFlashAvailability } from '../../../components/alang/FlashUi'
+import { FlashButton, FlashFeatureClosed, FlashLocationDisclosure, FlashNpcPortrait, FlashNpcSceneBackdrop, FlashPageState, formatFlashAvailability } from '../../../components/alang/FlashUi'
 import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
-import { getFlashApiErrorCode, getFlashLocationPermission } from '../../../lib/alang/flashApi'
+import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
 import { decodeFlashRouteParam, redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useLocateFlashAppearance } from '../../../lib/alang/useFlash'
 import type { FlashLocationSnapshot, FlashLocateView } from '../../../lib/alang/flashTypes'
@@ -14,18 +14,18 @@ import { haptics } from '../../../lib/utils/haptics'
 import { apiRequest } from '../../../lib/api/api'
 import '../flash.scss'
 
-type LocateState = 'idle' | 'locating' | 'tracking' | 'inside' | 'denied' | 'ended' | 'rate_limited' | 'error'
+type LocateState = 'consent' | 'idle' | 'locating' | 'tracking' | 'inside' | 'denied' | 'ended' | 'rate_limited' | 'error'
 
-const FOUND_REVEAL_MS = 420
 const MAP_FRAME_INTERVAL_MS = 2_000
 
 const MAP_STATUS: Record<LocateState, { label: string; assistiveLabel: string }> = {
+  consent: { label: '待确认', assistiveLabel: '等待确认前台定位用途' },
   idle: { label: '待开启', assistiveLabel: '地图引导尚未开启' },
-  locating: { label: '连接中', assistiveLabel: '正在开启前台持续定位和方向传感器' },
+  locating: { label: '连接中', assistiveLabel: '正在开启前台持续定位' },
   tracking: { label: '引导中', assistiveLabel: '地图正在根据当前位置指引目标点' },
   inside: { label: '找到了', assistiveLabel: '已经到达隐藏目标点附近' },
   denied: { label: '未连接', assistiveLabel: '定位权限未开启' },
-  ended: { label: '已散场', assistiveLabel: '本次闪现已经结束' },
+  ended: { label: '已散场', assistiveLabel: '本次相遇已经结束' },
   rate_limited: { label: '稍后再试', assistiveLabel: '地图定位请求暂时已达安全上限' },
   error: { label: '连接中断', assistiveLabel: '地图引导暂时无法继续' },
 }
@@ -42,7 +42,7 @@ export default function FlashMapPage() {
   const endsAt = decodeFlashRouteParam(params.endsAt)
   const availabilityMode = decodeFlashRouteParam(params.availabilityMode) === 'manual_hold' ? 'manual_hold' : 'scheduled'
   const locateMutation = useLocateFlashAppearance()
-  const [state, setState] = useState<LocateState>('idle')
+  const [state, setState] = useState<LocateState>('consent')
   const [mapFrame, setMapFrame] = useState<FlashLocateView | null>(null)
   const [currentLocation, setCurrentLocation] = useState<FlashLocationSnapshot | null>(null)
   const [walkingRoute, setWalkingRoute] = useState<WalkingRouteSuccessResponse | null>(null)
@@ -52,7 +52,6 @@ export default function FlashMapPage() {
   const requestInFlightRef = useRef(false)
   const lastFrameAtRef = useRef(0)
   const lastRouteAtRef = useRef(0)
-  const didAutoStartRef = useRef(false)
   const locationHandlerRef = useRef<LocationChangeHandler | null>(null)
 
   const isPossiblyLate = useMemo(() => {
@@ -109,7 +108,6 @@ export default function FlashMapPage() {
         stopMapGuidance(false)
         setState('inside')
         haptics('success')
-        await new Promise((resolve) => setTimeout(resolve, FOUND_REVEAL_MS))
         const redirected = await redirectToFlashCanonical(response, MINI_PROGRAM_ROUTES.alangSearch)
         if (!redirected && response.encounterId) {
           await Taro.redirectTo({
@@ -159,25 +157,20 @@ export default function FlashMapPage() {
         accuracy: location.accuracy,
       })
     }
-    locationHandlerRef.current = locationHandler
-    Taro.onLocationChange(locationHandler)
-
     try {
       await new Promise<void>((resolve, reject) => {
         Taro.startLocationUpdate({ type: 'gcj02', success: () => resolve(), fail: reject })
       })
       trackingRef.current = true
+      locationHandlerRef.current = locationHandler
+      Taro.onLocationChange(locationHandler)
       setState('tracking')
+      const initialLocation = await getOneShotFlashLocation()
+      await submitMapFrame(initialLocation)
     } catch (error) {
       await handleMapFailure(error)
     }
   }, [appearanceId, enabled, handleMapFailure, submitMapFrame])
-
-  useEffect(() => {
-    if (!enabled || !appearanceId || didAutoStartRef.current) return
-    didAutoStartRef.current = true
-    void startMapGuidance()
-  }, [appearanceId, enabled, startMapGuidance])
 
   const mapMarkers = useMemo<NonNullable<MapProps['markers']>>(() => mapFrame ? [{
     id: 1,
@@ -201,7 +194,11 @@ export default function FlashMapPage() {
   const handleOpenSetting = async () => {
     try {
       const setting = await Taro.openSetting()
-      setState(setting.authSetting?.['scope.userLocation'] === true ? 'idle' : 'denied')
+      if (setting.authSetting?.['scope.userLocation'] === true) {
+        await startMapGuidance()
+      } else {
+        setState('denied')
+      }
     } catch {
       Taro.showToast({ title: '设置没有打开，请稍后再试', icon: 'none' })
     }
@@ -216,11 +213,27 @@ export default function FlashMapPage() {
     return (
       <View className='flash-page'>
         <FlashPageState
-          title='这次闪现已经散场了'
-          description='入口信息不完整，回到闪现页看看还有谁在线。'
+          title='这次相遇已经散场了'
+          description='入口信息不完整，回到街头盲盒看看还有谁在线。'
           action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}
-          actionLabel='返回闪现'
+          actionLabel='返回街头盲盒'
         />
+      </View>
+    )
+  }
+
+  if (state === 'consent') {
+    return (
+      <View className='flash-page'>
+        {/* Privacy details must keep both choices reachable on short phones. */}
+        <ScrollView className='flash-page__scroll' scrollY>
+          <FlashLocationDisclosure
+            title={`打开前台定位，开始找${npcName}？`}
+            allowLabel='允许定位并打开地图'
+            onAllow={() => { void startMapGuidance() }}
+            onDecline={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}
+          />
+        </ScrollView>
       </View>
     )
   }

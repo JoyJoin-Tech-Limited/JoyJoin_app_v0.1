@@ -201,12 +201,10 @@ export function alangDebugMockArrival(
 
 export function getFlashHome(
   api: ApiTransport,
-  coordinate: FlashCoordinateRequest,
 ): Promise<FlashHomeResponse> {
   return api<FlashHomeResponse>({
     path: "/api/alang/flash/home",
     method: "POST",
-    data: coordinate,
   });
 }
 

@@ -36,13 +36,13 @@ export function useFlashStoryFragments(enabled = true) {
   })
 }
 
-export function useFlashHome(location: FlashLocationSnapshot | null, enabled = true) {
+export function useFlashHome(enabled = true) {
   return useQuery({
-    // Raw coordinates must never enter Query keys, devtools snapshots, URLs,
-    // or persisted caches. They stay in component memory and the POST body.
+    // Home is intentionally location-free. GPS starts only after the user
+    // selects a character and explicitly opens the foreground map.
     queryKey: FLASH_HOME_QUERY_KEY,
-    queryFn: () => fetchFlashHome(location as FlashLocationSnapshot),
-    enabled: enabled && !!location,
+    queryFn: fetchFlashHome,
+    enabled,
     staleTime: 0,
     retry: 1,
   })

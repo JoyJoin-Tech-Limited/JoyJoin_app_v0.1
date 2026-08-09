@@ -192,6 +192,49 @@ export function FlashPageState({
   )
 }
 
+export function FlashLocationDisclosure({
+  title,
+  allowLabel,
+  onAllow,
+  onDecline,
+  busy = false,
+}: {
+  title: string
+  allowLabel: string
+  onAllow: () => void
+  onDecline: () => void
+  busy?: boolean
+}) {
+  return (
+    <View className='flash-location-consent' role='dialog' aria-label='定位使用说明'>
+      <View className='flash-location-consent__mark' aria-hidden='true'>
+        <Image
+          className='flash-location-consent__mark-image'
+          src='/assets/icons/ui/icon-location.webp'
+          mode='aspectFit'
+        />
+      </View>
+      <Text className='flash-location-consent__eyebrow'>仅在你主动寻找时开启</Text>
+      <Text className='flash-location-consent__title'>{title}</Text>
+      <Text className='flash-location-consent__lead'>
+        允许后会立即打开地图，并只在这个页面位于前台时持续更新你与角色出现点的距离和路线。
+      </Text>
+      <View className='flash-location-consent__details'>
+        <Text className='flash-location-consent__detail'>离开地图、切到后台或到达后，会立即停止定位</Text>
+        <Text className='flash-location-consent__detail'>原始坐标不保存、不形成行动轨迹，也不会改用 IP 定位</Text>
+        <Text className='flash-location-consent__detail'>拒绝定位只影响街头盲盒，不影响 JoyJoin 其他功能</Text>
+      </View>
+      <View className='flash-location-consent__actions'>
+        <FlashButton disabled={busy} onClick={onAllow} ariaLabel={allowLabel}>
+          {busy ? '正在打开定位…' : allowLabel}
+        </FlashButton>
+        <FlashButton disabled={busy} variant='quiet' onClick={onDecline}>暂不开启</FlashButton>
+      </View>
+      <Text className='flash-location-consent__footnote'>点击允许后，微信仍会按系统权限状态向你确认。</Text>
+    </View>
+  )
+}
+
 export function FlashFeatureClosed() {
   return (
     <View className='flash-page'>

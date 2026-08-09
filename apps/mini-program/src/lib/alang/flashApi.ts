@@ -242,8 +242,8 @@ function adaptPreferencesDto(response: FlashPreferenceDto): FlashPreferencesView
   }
 }
 
-export async function fetchFlashHome(location: FlashLocationSnapshot): Promise<FlashHomeView> {
-  return adaptFlashHomeDto(await getFlashHomeRequest(apiRequest, toCoordinate(location)))
+export async function fetchFlashHome(): Promise<FlashHomeView> {
+  return adaptFlashHomeDto(await getFlashHomeRequest(apiRequest))
 }
 
 export async function locateFlashAppearance(

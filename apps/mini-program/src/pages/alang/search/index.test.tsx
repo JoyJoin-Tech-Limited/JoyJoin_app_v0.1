@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FlashMapPage from './index'
 
@@ -7,7 +7,9 @@ const mocks = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
   getWalkingRoute: vi.fn(),
   permission: vi.fn(),
+  getOneShotLocation: vi.fn(),
   redirectTo: vi.fn(),
+  openSetting: vi.fn(),
   canonicalRedirect: vi.fn(),
   startLocationUpdate: vi.fn(),
   stopLocationUpdate: vi.fn(),
@@ -30,7 +32,7 @@ vi.mock('@tarojs/taro', () => ({
     } } }),
     setNavigationBarTitle: vi.fn(),
     redirectTo: mocks.redirectTo,
-    openSetting: vi.fn(),
+    openSetting: mocks.openSetting,
     showToast: vi.fn(),
     startLocationUpdate: mocks.startLocationUpdate,
     stopLocationUpdate: mocks.stopLocationUpdate,
@@ -53,6 +55,7 @@ vi.mock('../../../lib/alang/useFlash', () => ({
 }))
 vi.mock('../../../lib/alang/flashApi', () => ({
   getFlashLocationPermission: mocks.permission,
+  getOneShotFlashLocation: mocks.getOneShotLocation,
   getFlashApiErrorCode: (error: any) => error?.data?.code ?? null,
 }))
 vi.mock('../../../lib/alang/flashNavigation', async (importOriginal) => ({
@@ -62,8 +65,9 @@ vi.mock('../../../lib/alang/flashNavigation', async (importOriginal) => ({
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
 
 async function startNavigation() {
+  const allowButton = screen.queryByRole('button', { name: '允许定位并打开地图' })
+  if (allowButton) fireEvent.click(allowButton)
   await waitFor(() => expect(mocks.startLocationUpdate).toHaveBeenCalled())
-  await waitFor(() => expect(screen.getByText('地图引导中')).toBeInTheDocument())
 }
 
 function emitLocation() {
@@ -77,6 +81,8 @@ describe('formal Flash map navigation', () => {
     mocks.didHide.current = null
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
     mocks.permission.mockResolvedValue('granted')
+    mocks.openSetting.mockResolvedValue({ authSetting: { 'scope.userLocation': true } })
+    mocks.getOneShotLocation.mockResolvedValue({ latitude: 22.54, longitude: 114.05, accuracy: 8 })
     mocks.startLocationUpdate.mockImplementation(({ success }: any) => success?.({ errMsg: 'ok' }))
     mocks.onLocationChange.mockImplementation((callback) => { mocks.locationChange.current = callback })
     mocks.mutateAsync.mockResolvedValue({
@@ -100,13 +106,36 @@ describe('formal Flash map navigation', () => {
     mocks.canonicalRedirect.mockResolvedValue(false)
   })
 
-  it('renders decoded public-area metadata and starts map navigation immediately', async () => {
+  it('renders decoded metadata and asks before starting foreground GPS', async () => {
     render(<FlashMapPage />)
+    expect(await screen.findByText('打开前台定位，开始找默默？')).toBeInTheDocument()
+    expect(mocks.startLocationUpdate).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '允许定位并打开地图' }))
     expect(screen.getByText('默默')).toBeInTheDocument()
     expect(screen.getByText(/在宝安区/)).toBeInTheDocument()
     expect(screen.getByText('宝安壹方城开放公共区域')).toBeInTheDocument()
     expect(screen.getByText(/地图只在此页前台更新/)).toBeInTheDocument()
     await waitFor(() => expect(mocks.startLocationUpdate).toHaveBeenCalled())
+  })
+
+  it('returns home without touching GPS when the user declines', async () => {
+    render(<FlashMapPage />)
+
+    fireEvent.click(await screen.findByRole('button', { name: '暂不开启' }))
+    expect(mocks.startLocationUpdate).not.toHaveBeenCalled()
+    expect(mocks.redirectTo).toHaveBeenCalledWith({ url: expect.stringContaining('/pages/alang/event/index') })
+  })
+
+  it('submits an initial frame so a stationary device cannot stay on the loading map', async () => {
+    render(<FlashMapPage />)
+    await startNavigation()
+
+    await waitFor(() => expect(mocks.getOneShotLocation).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledWith({
+      appearanceId: 'appearance-1',
+      location: { latitude: 22.54, longitude: 114.05, accuracy: 8 },
+    }))
+    expect(await screen.findByText('83 米')).toBeInTheDocument()
   })
 
   it('shows the fixed NPC marker and walking route from the current location', async () => {
@@ -139,6 +168,49 @@ describe('formal Flash map navigation', () => {
     expect(mocks.offLocationChange).toHaveBeenCalled()
   })
 
+  it('recovers through WeChat settings after location was denied', async () => {
+    mocks.permission.mockResolvedValue('denied')
+    mocks.startLocationUpdate.mockImplementationOnce(({ fail }: any) => fail?.({ errMsg: 'auth deny' }))
+    render(<FlashMapPage />)
+    await startNavigation()
+
+    expect(await screen.findByText('定位权限没有打开')).toBeInTheDocument()
+    mocks.startLocationUpdate.mockImplementation(({ success }: any) => success?.({ errMsg: 'ok' }))
+    fireEvent.click(screen.getByRole('button', { name: '打开定位设置' }))
+
+    await waitFor(() => expect(mocks.openSetting).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(mocks.startLocationUpdate).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalled())
+  })
+
+  it('stops cleanly when the initial location frame fails', async () => {
+    mocks.getOneShotLocation.mockRejectedValueOnce(new Error('location timeout'))
+    render(<FlashMapPage />)
+    await startNavigation()
+
+    expect(await screen.findByText('地图定位中断')).toBeInTheDocument()
+    expect(mocks.stopLocationUpdate).toHaveBeenCalled()
+    expect(mocks.offLocationChange).toHaveBeenCalled()
+  })
+
+  it('explains locate rate limits without continuing to track', async () => {
+    mocks.mutateAsync.mockRejectedValueOnce({ data: { code: 'FLASH_LOCATE_RATE_LIMITED' } })
+    render(<FlashMapPage />)
+    await startNavigation()
+
+    expect(await screen.findByText('位置更新太频繁了')).toBeInTheDocument()
+    expect(mocks.stopLocationUpdate).toHaveBeenCalled()
+  })
+
+  it('shows a retryable interruption when the locate API is unavailable', async () => {
+    mocks.mutateAsync.mockRejectedValueOnce(new Error('network unavailable'))
+    render(<FlashMapPage />)
+    await startNavigation()
+
+    expect(await screen.findByText('地图定位中断')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '重新打开地图' })).toBeInTheDocument()
+  })
+
   it('shows a found signal, stops tracking, then enters dialogue', async () => {
     mocks.mutateAsync.mockResolvedValue({
       canonicalScreen: 'dialogue',
@@ -167,10 +239,10 @@ describe('formal Flash map navigation', () => {
     expect(mocks.stopLocationUpdate).toHaveBeenCalled()
   })
 
-  it('starts the formal map through a deep link when the legacy Alang flag is disabled', async () => {
+  it('still requires explicit GPS consent when the legacy Alang flag is disabled', async () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashMapPage />)
-    expect(screen.getByText('正在获取前往出现点的路线')).toBeInTheDocument()
-    await waitFor(() => expect(mocks.startLocationUpdate).toHaveBeenCalled())
+    expect(await screen.findByText('打开前台定位，开始找默默？')).toBeInTheDocument()
+    expect(mocks.startLocationUpdate).not.toHaveBeenCalled()
   })
 })

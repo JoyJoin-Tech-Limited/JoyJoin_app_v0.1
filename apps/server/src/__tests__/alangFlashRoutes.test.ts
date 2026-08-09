@@ -144,7 +144,7 @@ describe("formal Flash routes", () => {
     }));
   });
 
-  it("accepts home coordinates only in POST body and trusts the session user", async () => {
+  it("loads the home list without coordinates and trusts the session user", async () => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl);
       const queryResponse = await fetch(
@@ -156,15 +156,11 @@ describe("formal Flash routes", () => {
       const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
         method: "POST",
         headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ ...validCoordinate, userId: "victim-user" }),
+        body: JSON.stringify({ userId: "victim-user" }),
       });
       expect(response.status).toBe(200);
     });
-    expect(mocks.getHome).toHaveBeenCalledWith(expect.objectContaining({
-      userId: "acting-user",
-      latitude: validCoordinate.latitude,
-      longitude: validCoordinate.longitude,
-    }));
+    expect(mocks.getHome).toHaveBeenCalledWith({ userId: "acting-user" });
   });
 
   it("does not gate the formal Street Blind Box routes on legacy alangEnabled", async () => {
@@ -174,7 +170,6 @@ describe("formal Flash routes", () => {
       const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
         method: "POST",
         headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify(validCoordinate),
       });
       expect(response.status).toBe(200);
     });
@@ -182,49 +177,17 @@ describe("formal Flash routes", () => {
     expect(mocks.getHome).toHaveBeenCalled();
   });
 
-  it("allows a remote coordinate and leaves encounter eligibility to approved-location distance", async () => {
+  it("does not parse or retain coordinate-like fields sent to the home list", async () => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl);
       const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
         method: "POST",
         headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: 31.2304, longitude: 121.4737, coordinateSystem: "gcj02" }),
+        body: JSON.stringify({ latitude: "not-a-coordinate", longitude: null }),
       });
       expect(response.status).toBe(200);
     });
-    expect(mocks.getHome).toHaveBeenCalled();
-  });
-
-  it("allows an out-of-Shenzhen coordinate when the admin gate is off in staging", async () => {
-    vi.stubEnv("APP_MODE", "staging");
-    mocks.getFeatureFlag.mockImplementation(async (key: string) =>
-      key === "alangEnabled" ? true : key !== "flashShenzhenLocationGateEnabled"
-    );
-    await withServer(async (baseUrl) => {
-      const cookie = await login(baseUrl);
-      const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
-        method: "POST",
-        headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: 31.2304, longitude: 121.4737, coordinateSystem: "gcj02" }),
-      });
-      expect(response.status).toBe(200);
-    });
-    expect(mocks.getHome).toHaveBeenCalled();
-  });
-
-  it("accepts a valid coordinate in production and relies on approved encounter distance", async () => {
-    vi.stubEnv("APP_MODE", "production");
-    mocks.getFeatureFlag.mockImplementation(async (key: string) => key === "alangEnabled");
-    await withServer(async (baseUrl) => {
-      const cookie = await login(baseUrl);
-      const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
-        method: "POST",
-        headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: 31.2304, longitude: 121.4737, coordinateSystem: "gcj02" }),
-      });
-      expect(response.status).toBe(200);
-    });
-    expect(mocks.getHome).toHaveBeenCalled();
+    expect(mocks.getHome).toHaveBeenCalledWith({ userId: "acting-user" });
   });
 
   it("keeps story arrival testing available while retired task endpoints stay closed", async () => {
@@ -270,36 +233,6 @@ describe("formal Flash routes", () => {
       expect(response.status).toBe(200);
     });
     expect(mocks.locate).toHaveBeenCalledWith(expect.objectContaining({ forceArrivalForTesting: false }));
-  });
-
-  it("does not use the old city polygon as an entry gate", async () => {
-    await withServer(async (baseUrl) => {
-      const cookie = await login(baseUrl);
-      const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
-        method: "POST",
-        headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: 22.495, longitude: 114.139, coordinateSystem: "gcj02" }),
-      });
-      expect(response.status).toBe(200);
-    });
-    expect(mocks.getHome).toHaveBeenCalled();
-  });
-
-  it.each([
-    ["Dongguan Fenggang", 22.7448, 114.141],
-    ["Dongguan Humen", 22.75, 113.73],
-    ["Huizhou Huiyang", 22.80, 114.46],
-  ])("accepts neighbouring-city point %s while approved-location distance remains authoritative", async (_label, latitude, longitude) => {
-    await withServer(async (baseUrl) => {
-      const cookie = await login(baseUrl);
-      const response = await fetch(`${baseUrl}/api/alang/flash/home`, {
-        method: "POST",
-        headers: { Cookie: cookie, "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude, longitude, coordinateSystem: "gcj02" }),
-      });
-      expect(response.status).toBe(200);
-    });
-    expect(mocks.getHome).toHaveBeenCalled();
   });
 
   it("does not put raw GPS into safe failure logs", async () => {

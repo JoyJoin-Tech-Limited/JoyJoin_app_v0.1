@@ -31,10 +31,10 @@ export default defineAppConfig({
   lazyCodeLoading: 'requiredComponents',
   permission: {
     'scope.userLocation': {
-      desc: '用于查看在线数字角色与雷达实时距离指引',
+      desc: '用于在街头盲盒地图页显示实时距离与路线；离开页面后立即停止',
     },
   },
-  requiredPrivateInfos: ['getLocation', 'startLocationUpdate'],
+  requiredPrivateInfos: ['getLocation', 'startLocationUpdate', 'onLocationChange'],
   pages: [...MINI_PROGRAM_MAIN_PACKAGE_PAGES],
   subPackages: MINI_PROGRAM_SUBPACKAGES_CONFIG,
   preloadRule: MINI_PROGRAM_PRELOAD_RULE_CONFIG,
