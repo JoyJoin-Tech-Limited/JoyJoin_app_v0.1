@@ -1157,6 +1157,11 @@ page {
   font-size: $font-size-lg;
 }
 
+.flash-dialogue__story-panel--choices {
+  // Choice branch state marker; base panel layout and glass styling apply.
+  position: absolute;
+}
+
 .flash-dialogue__story-panel--result {
   gap: 16rpx;
 }

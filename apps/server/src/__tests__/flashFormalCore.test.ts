@@ -79,10 +79,13 @@ function location() {
 
 describe("formal Flash catalog", () => {
   it("fails closed for manual holds outside the explicit staging runtime", () => {
+    const originalAppMode = process.env.APP_MODE;
+    delete process.env.APP_MODE;
     expect(isFlashManualHoldRuntimeAvailable("staging")).toBe(true);
     expect(isFlashManualHoldRuntimeAvailable("production")).toBe(false);
     expect(isFlashManualHoldRuntimeAvailable("development")).toBe(false);
     expect(isFlashManualHoldRuntimeAvailable(undefined)).toBe(false);
+    process.env.APP_MODE = originalAppMode;
   });
 
   it("lets a staging manual hold override a later live schedule card for the same NPC", () => {

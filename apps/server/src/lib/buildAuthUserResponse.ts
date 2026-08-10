@@ -123,6 +123,7 @@ const [
     profileRedesignEnabled,
     profilePixelAvatarEnabled,
     sdAvatarEnabled,
+    gatheringRoomEnabled,
     equipmentRewardsEnabled,
     personalStoryEnabled,
     oracleCardCornerStatEnabled,
@@ -141,6 +142,7 @@ const [
     personalitySlotProfileDramatic,
     webglRevealEnabled,
     shareAnimatedClipEnabled,
+    duoRegistrationEnabled,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -159,6 +161,7 @@ const [
     getFeatureFlag('profileRedesignEnabled', true),
     getFeatureFlag('profilePixelAvatarEnabled', false),
     getFeatureFlag('sdAvatarEnabled', false),
+    getFeatureFlag('gatheringRoomEnabled', false),
     getFeatureFlag('equipmentRewardsEnabled', false),
     getFeatureFlag('personalStoryEnabled', false),
     getFeatureFlag('oracleCardCornerStatEnabled', true),
@@ -177,6 +180,7 @@ const [
     getFeatureFlag('personalitySlotProfileDramatic', false),
     getFeatureFlag('webglRevealEnabled', false),
     getFeatureFlag('shareAnimatedClipEnabled', false),
+    getFeatureFlag('duoRegistrationEnabled', true),
   ]);
 
   // Never expose client debug surfaces in production, even if a stale
@@ -225,6 +229,8 @@ const [
       profilePixelAvatarEnabled,
       /** SD pixel avatar sprites in roster/list slots (variant='sd'). */
       sdAvatarEnabled,
+      /** Gathering room (集结房间) entry CTAs + room page. */
+      gatheringRoomEnabled,
       equipmentRewardsEnabled,
       personalStoryEnabled,
       oracleCardCornerStatEnabled,
@@ -240,6 +246,7 @@ const [
       flowIntroEnabled,
       flowLifecycleEnabled,
       poolTeaserEnabled,
+      duoRegistrationEnabled,
     },
   };
 

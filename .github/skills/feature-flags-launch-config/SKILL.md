@@ -50,6 +50,7 @@ These flags are resolved via `apps/server/src/lib/featureFlags.ts` (DB source of
 | `squadUnboxingDragRevealEnabled` | `SQUAD_UNBOXING_DRAG_REVEAL_ENABLED` | Drag-to-reveal ribbon on squad unboxing (default `true`) |
 | `socialIcebreakerCustomModeEnabled` | `SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED` | Custom-mode (`自由局`) icebreaker tier selection (default `true`) |
 | `profileRedesignEnabled` | `PROFILE_REDESIGN_ENABLED` | Redesigned Profile tab UI including milestones and day-0 nudge (default `true`) |
+| `duoRegistrationEnabled` | `DUO_REGISTRATION_ENABLED` | 双人成行 duo registration kill-switch (default `true`) |
 
 ### Env-only feature gates
 

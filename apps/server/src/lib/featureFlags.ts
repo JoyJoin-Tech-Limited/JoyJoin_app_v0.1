@@ -73,6 +73,11 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  When false, POST /api/event-pools/:id/register returns 503.
    *  Env fallback: REGISTRATION_ENABLED (default: true). */
   registrationEnabled: "REGISTRATION_ENABLED",
+  /** 双人成行 (duo registration) kill-switch. When false, the mini-program
+   *  hides the duo card/banner and POST /api/pools/:id/duo-invites returns 503.
+   *  Existing duo codes and bound pairs continue to work. Env fallback:
+   *  DUO_REGISTRATION_ENABLED (default: true). */
+  duoRegistrationEnabled: "DUO_REGISTRATION_ENABLED",
   /** When false, creation of and tier changes to the custom Social Icebreaker
    *  mode are rejected. Existing preset-tier sessions are unaffected.
    *  Env fallback: SOCIAL_ICEBREAKER_CUSTOM_MODE_ENABLED (default: true). */
@@ -90,6 +95,11 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    * is pending (manifest currently holds synthesized placeholders).
    * Env fallback: SD_AVATAR_ENABLED (default: false). */
   sdAvatarEnabled: "SD_AVATAR_ENABLED",
+  /** Gathering room (集结房间): pixel-scene pre-event waiting room for matched
+   *  groups — entry CTAs + the room page. Ships dark until the room art and
+   *  the presence WS flow are device-verified.
+   *  Env fallback: GATHERING_ROOM_ENABLED (default: false). */
+  gatheringRoomEnabled: "GATHERING_ROOM_ENABLED",
   /** Server-authoritative equipment economy switch. No payment path exists. */
   equipmentRewardsEnabled: "EQUIPMENT_REWARDS_ENABLED",
   /** Private append-only personal story generation and reading surface. */
@@ -212,6 +222,8 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   matchingOperatorReviewEnabled: true,
   /** Auto-refund pipeline (2026-08-05) — default ON; ops kill switch. */
   autoRefundEnabled: true,
+  /** 双人成行 — default ON; ships enabled. */
+  duoRegistrationEnabled: true,
   /** Sentinel policy-pending — see FLAG_ENV_MAP note. Explicitly off so the
    *  admin toggle UI and listFeatureFlags() show a stable default. */
   matchNeverMeetSentinel: false,
@@ -227,6 +239,8 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   /** SD pixel avatar sprites ship dark until the real Lovart art replaces
    * the synthesized placeholders (docs/design/sd-pixel-avatar-style-guide.md). */
   sdAvatarEnabled: false,
+  /** Gathering room ships dark until room art + presence flow are verified. */
+  gatheringRoomEnabled: false,
   equipmentRewardsEnabled: false,
   personalStoryEnabled: false,
   profileIdentityStageEnabled: true,
