@@ -130,19 +130,44 @@ function OverlayGame({ props, phase, goal, success }: { props: FlashStoryMicroGa
 function PrivacyGame({ props, phase, goal, success }: { props: FlashStoryMicroGameProps; phase: number; goal: string; success: string }) {
   const signals = useGameSignals(props)
   const required = phase === 1 ? ['name', 'time'] : phase === 2 ? ['time', 'habit'] : ['time', 'habit', 'route']
-  const [covered, setCovered] = useState<string[]>(props.completed ? required : [])
-  const toggle = (id: string) => { if (props.disabled || props.completed) return; signals.start(); setCovered((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]) }
-  const confirm = () => {
+  const visibleCards = [
+    { id: 'city', label: '城市里的普通细节', answer: 'keep' as const },
+    ...required.map((id) => ({
+      id,
+      label: { name: '能认出对方的名字', time: '见面的具体时间', habit: '固定活动规律', route: '个人行动路线' }[id] ?? id,
+      answer: 'cover' as const,
+    })),
+  ]
+  const completedDecisions = Object.fromEntries(visibleCards.map((card) => [card.id, card.answer])) as Record<string, 'keep' | 'cover'>
+  const [decisions, setDecisions] = useState<Record<string, 'keep' | 'cover'>>(props.completed ? completedDecisions : {})
+  const [feedback, setFeedback] = useState('逐张判断：普通城市细节留下，能指向具体人物的信息遮住。')
+  const decide = (id: string, answer: 'keep' | 'cover') => {
+    if (props.disabled || props.completed || decisions[id]) return
     signals.start()
-    if (required.every((item) => covered.includes(item)) && !covered.includes('city')) signals.solve()
-    else { signals.mistake(); setCovered([]) }
+    const card = visibleCards.find((item) => item.id === id)
+    if (!card || card.answer !== answer) {
+      signals.mistake()
+      setFeedback(card?.answer === 'cover' ? '这条会指向具体的人，应该遮住。' : '这只是普通城市细节，可以留下。')
+      return
+    }
+    const next = { ...decisions, [id]: answer }
+    setDecisions(next)
+    if (visibleCards.every((item) => next[item.id] === item.answer)) {
+      setFeedback('该留下的细节和该保护的边界已经分开。')
+      signals.solve()
+      return
+    }
+    setFeedback(`这张处理好了，还剩 ${visibleCards.length - Object.keys(next).length} 张。`)
   }
-  const cards = [['city', '城市细节'], ['name', '名字'], ['time', '具体时间'], ['habit', '活动规律'], ['route', '个人路线']]
   return <View className='flash-story-game flash-story-game--privacy' data-testid='flash-story-microgame'>
-    <Text className='flash-story-game__eyebrow'>旧物小试 · 观察卡</Text><Text className='flash-story-game__title'>留下细节，收起边界</Text><Text className='flash-story-game__instruction'>{goal}</Text>
-    <View className='flash-story-game__privacy-grid'>{cards.map(([id, label]) => <View key={id} role='button' aria-label={`${covered.includes(id) ? '取消遮住' : '遮住'}${label}`} aria-pressed={covered.includes(id)} className={covered.includes(id) ? 'is-covered' : ''} onClick={() => toggle(id)}><Text>{label}</Text></View>)}</View>
-    <View role='button' aria-label='确认保留范围' onClick={confirm}><Text>这样留下</Text></View>
-    <View className='flash-story-game__feedback' role='status'><Text>{props.completed ? success : '遮住越界信息，城市细节可以留下。'}</Text></View>
+    <Text className='flash-story-game__eyebrow'>旧物小试 · 观察卡</Text><Text className='flash-story-game__title'>哪些能留下，哪些要遮住？</Text><Text className='flash-story-game__instruction'>{goal}</Text>
+    <View className='flash-story-game__privacy-list'>{visibleCards.map((card) => <View key={card.id} className={`flash-story-game__privacy-card${decisions[card.id] ? ' is-decided' : ''}`}>
+      <Text className='flash-story-game__privacy-label'>{card.label}</Text>
+      <View className='flash-story-game__privacy-actions'>
+        {(['keep', 'cover'] as const).map((answer) => <View key={answer} role='button' aria-label={`${card.label}：${answer === 'keep' ? '留下' : '遮住'}`} aria-pressed={decisions[card.id] === answer} className={decisions[card.id] === answer ? 'is-selected' : ''} onClick={() => decide(card.id, answer)}><Text>{answer === 'keep' ? '留下' : '遮住'}</Text></View>)}
+      </View>
+    </View>)}</View>
+    <View className='flash-story-game__feedback' role='status'><Text>{props.completed ? success : feedback}</Text></View>
   </View>
 }
 

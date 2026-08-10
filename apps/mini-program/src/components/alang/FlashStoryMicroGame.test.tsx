@@ -22,7 +22,7 @@ describe('FlashStoryMicroGame strategies', () => {
       ['s1-p1-lizi', 'dry-markers', '.flash-story-game__swatches'],
       ['s1-p1-momo', 'route-book', '.flash-story-game__pathline'],
       ['s1-p2-lizi', 'outing-book', '.flash-story-game__paper-stack'],
-      ['s1-p2-shiqi', 'observation-cards', '.flash-story-game__privacy-grid'],
+      ['s1-p2-shiqi', 'observation-cards', '.flash-story-game__privacy-list'],
     ]
     for (const [episodeCode, objectCode, selector] of cases) {
       const view = render(<FlashStoryMicroGame episodeCode={episodeCode} objectCode={objectCode} onSolved={vi.fn()} />)
@@ -68,10 +68,21 @@ describe('FlashStoryMicroGame strategies', () => {
 
   it('covers private fields while leaving city detail visible', () => {
     const { onSolved } = renderGame('s1-p2-shiqi', 'observation-cards')
-    fireEvent.click(screen.getByRole('button', { name: '遮住具体时间' }))
-    fireEvent.click(screen.getByRole('button', { name: '遮住活动规律' }))
-    fireEvent.click(screen.getByRole('button', { name: '确认保留范围' }))
+    fireEvent.click(screen.getByRole('button', { name: '城市里的普通细节：留下' }))
+    fireEvent.click(screen.getByRole('button', { name: '见面的具体时间：遮住' }))
+    fireEvent.click(screen.getByRole('button', { name: '固定活动规律：遮住' }))
     expect(onSolved).toHaveBeenCalledTimes(1)
+  })
+
+  it('explains a wrong privacy choice without erasing completed cards', () => {
+    const { onSolved, onFirstMistake } = renderGame('s1-p2-shiqi', 'observation-cards')
+    fireEvent.click(screen.getByRole('button', { name: '城市里的普通细节：遮住' }))
+    expect(screen.getByRole('status')).toHaveTextContent('可以留下')
+    expect(onFirstMistake).toHaveBeenCalledTimes(1)
+    expect(onSolved).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: '城市里的普通细节：留下' }))
+    expect(screen.getByRole('button', { name: '城市里的普通细节：留下' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('does not submit a wrong move and only asks for help once', () => {
