@@ -2,9 +2,11 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import { parse as parseCookie } from 'cookie';
 import { unsign } from 'cookie-signature';
-import type { WSMessage } from '@shared/wsEvents';
+import type { WSMessage, RoomPokeData } from '@shared/wsEvents';
+import { ROOM_POKE_EMOJIS } from '@shared/wsEvents';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
+import { logger } from './lib/logger';
 
 interface AuthenticatedWebSocket extends WebSocket {
   userId?: string;
@@ -13,6 +15,11 @@ interface AuthenticatedWebSocket extends WebSocket {
   messageTimestamps?: number[];
   isBlocked?: boolean;
   blockedUntil?: number;
+  // Gathering room presence: userId this socket joined rooms with (may differ
+  // from ws.userId for cookie-unauthenticated sockets that joined via
+  // message.userId), and the event rooms it currently occupies.
+  presenceUserId?: string;
+  presenceEventIds?: Set<string>;
 }
 
 interface RateLimitConfig {
@@ -27,10 +34,28 @@ const RATE_LIMIT_CONFIG: RateLimitConfig = {
   blockDurationMs: 60000,
 };
 
+// Gathering room (集结房间) presence tuning. Env-overridable so tests can
+// shrink the timings; production uses the defaults.
+// - Leave grace: mini-program clients disconnect on background (useDidHide)
+//   and reconnect on foreground, so a member is only broadcast as LEFT after
+//   this much time without any socket rejoining.
+// - Poke throttle: per-sender minimum interval between ROOM_POKE relays,
+//   layered on top of the generic per-socket rate limit above.
+const ROOM_LEAVE_GRACE_MS = Number(process.env.ROOM_LEAVE_GRACE_MS) || 5000;
+const ROOM_POKE_MIN_INTERVAL_MS = Number(process.env.ROOM_POKE_MIN_INTERVAL_MS) || 2000;
+
 class WebSocketService {
   private wss: WebSocketServer | null = null;
   private clients: Map<string, Set<AuthenticatedWebSocket>> = new Map();
   private eventRooms: Map<string, Set<AuthenticatedWebSocket>> = new Map();
+  // Gathering room presence (ephemeral — never persisted):
+  // eventId → userId → live sockets. A user stays "present" during the leave
+  // grace window even with zero sockets.
+  private roomPresence: Map<string, Map<string, Set<AuthenticatedWebSocket>>> = new Map();
+  // `${eventId}:${userId}` → pending ROOM_MEMBER_LEFT grace timer
+  private leaveGraceTimers: Map<string, NodeJS.Timeout> = new Map();
+  // `${eventId}:${userId}` → last ROOM_POKE relay timestamp (ms)
+  private lastPokeAt: Map<string, number> = new Map();
 
   initialize(server: Server) {
     this.wss = new WebSocketServer({ server, path: '/ws' });
@@ -66,7 +91,7 @@ class WebSocketService {
         }
       }
 
-      console.log(`[WS] New client connected${ws.authenticated ? ` (user: ${ws.userId})` : ''}`);
+      logger.info(`[WS] New client connected${ws.authenticated ? ` (user: ${ws.userId})` : ''}`);
 
       // 心跳检测
       ws.on('pong', () => {
@@ -78,7 +103,7 @@ class WebSocketService {
           const message: WSMessage = JSON.parse(data.toString());
           this.handleMessage(ws, message);
         } catch (error) {
-          console.error('[WS] Error parsing message:', error);
+          logger.error('[WS] Error parsing message', { error: error instanceof Error ? error.message : String(error) });
         }
       });
 
@@ -87,7 +112,7 @@ class WebSocketService {
       });
 
       ws.on('error', (error) => {
-        console.error('[WS] WebSocket error:', error);
+        logger.error('[WS] WebSocket error', { error: error instanceof Error ? error.message : String(error) });
         
         // Log WebSocket error
         fetch(`http://localhost:${process.env.PORT || '5001'}/api/v1/interaction-logs`, {
@@ -101,7 +126,7 @@ class WebSocketService {
             metadata: { error: error.message, stack: error.stack },
           }),
         }).catch(err => {
-          console.error('[WS] Failed to log error:', err);
+          logger.error('[WS] Failed to log error', { error: err instanceof Error ? err.message : String(err) });
           // Error already logged, no need to throw
         });
       });
@@ -123,7 +148,7 @@ class WebSocketService {
       clearInterval(interval);
     });
 
-    console.log('[WS] WebSocket server initialized');
+    logger.info('[WS] WebSocket server initialized');
   }
 
   private checkRateLimit(ws: AuthenticatedWebSocket): boolean {
@@ -149,7 +174,7 @@ class WebSocketService {
     if (ws.messageTimestamps.length >= RATE_LIMIT_CONFIG.maxMessages) {
       ws.isBlocked = true;
       ws.blockedUntil = now + RATE_LIMIT_CONFIG.blockDurationMs;
-      console.warn(`[WS] Rate limit exceeded for user ${ws.userId}, blocking for ${RATE_LIMIT_CONFIG.blockDurationMs}ms`);
+      logger.warn(`[WS] Rate limit exceeded for user ${ws.userId}, blocking for ${RATE_LIMIT_CONFIG.blockDurationMs}ms`);
       
       this.sendToClient(ws, {
         type: 'RATE_LIMITED',
@@ -175,7 +200,7 @@ class WebSocketService {
     // Validate userId: if authenticated via session, message.userId must match
     const userId = ws.userId || message.userId;
     if (ws.userId && message.userId && message.userId !== ws.userId) {
-      console.warn(`[WS] User ID mismatch in ${message.type}: ws=${ws.userId}, msg=${message.userId}`);
+      logger.warn(`[WS] User ID mismatch in ${message.type}: ws=${ws.userId}, msg=${message.userId}`);
       return;
     }
 
@@ -191,18 +216,35 @@ class WebSocketService {
         }
         if (message.eventId) {
           this.subscribeToEvent(ws, message.eventId);
+          if (userId) {
+            this.trackRoomJoin(ws, message.eventId, userId);
+          }
         }
-        console.log(`[WS] User ${userId} joined event ${message.eventId}`);
+        logger.info(`[WS] User ${userId} joined event ${message.eventId}`);
         break;
 
       case 'USER_LEFT':
         if (message.eventId) {
           this.unsubscribeFromEvent(ws, message.eventId);
+          this.trackRoomLeave(ws, message.eventId);
         }
         break;
 
+      case 'ROOM_POKE':
+        // ROOM_POKE must come from a socket that has joined the room with the
+        // same userId it claims in the message. For authenticated sockets this
+        // means message.userId === ws.userId; for cookie-less sockets it means
+        // message.userId === ws.presenceUserId. Silently drop spoofed pokes.
+        if (ws.authenticated) {
+          if (message.userId !== ws.userId) return;
+        } else if (message.userId !== ws.presenceUserId) {
+          return;
+        }
+        this.handleRoomPoke(message, userId);
+        break;
+
       default:
-        console.log(`[WS] Received message type: ${message.type}`);
+        logger.info(`[WS] Received message type: ${message.type}`);
     }
   }
 
@@ -216,7 +258,14 @@ class WebSocketService {
     this.eventRooms.forEach((clients) => {
       clients.delete(ws);
     });
-    console.log('[WS] Client disconnected');
+    // Gathering room presence: drop the socket from every room it occupied;
+    // ROOM_MEMBER_LEFT fires only after the grace timer expires.
+    if (ws.presenceEventIds) {
+      for (const eventId of [...ws.presenceEventIds]) {
+        this.trackRoomLeave(ws, eventId);
+      }
+    }
+    logger.info('[WS] Client disconnected');
     
     // Log disconnection (fire and forget with proper error handling)
     fetch(`http://localhost:${process.env.PORT || '5001'}/api/v1/interaction-logs`, {
@@ -229,7 +278,7 @@ class WebSocketService {
         message: 'WebSocket client disconnected',
       }),
     }).catch(err => {
-      console.error('[WS] Failed to log disconnection:', err);
+      logger.error('[WS] Failed to log disconnection', { error: err instanceof Error ? err.message : String(err) });
       // Error already logged, no need to throw
     });
   }
@@ -268,6 +317,148 @@ class WebSocketService {
     }
   }
 
+  // ============ 集结房间 (Gathering Room) presence — ephemeral, in-memory only ============
+
+  /**
+   * Track a socket joining an event room for presence purposes.
+   * - Replies to the joining socket with ROOM_PRESENCE_STATE (full snapshot,
+   *   so late joiners see everyone already present).
+   * - Broadcasts ROOM_MEMBER_ENTERED to the whole room (including the
+   *   joiner's own sockets — clients dedupe by userId against the snapshot).
+   * - A rejoin inside the leave-grace window cancels the pending
+   *   ROOM_MEMBER_LEFT and stays silent (flap tolerance).
+   */
+  private trackRoomJoin(ws: AuthenticatedWebSocket, eventId: string, userId: string) {
+    ws.presenceUserId = userId;
+    if (!ws.presenceEventIds) {
+      ws.presenceEventIds = new Set();
+    }
+    ws.presenceEventIds.add(eventId);
+
+    let room = this.roomPresence.get(eventId);
+    if (!room) {
+      room = new Map();
+      this.roomPresence.set(eventId, room);
+    }
+
+    const graceKey = `${eventId}:${userId}`;
+    const pendingTimer = this.leaveGraceTimers.get(graceKey);
+    const hadPendingLeave = pendingTimer !== undefined;
+    if (pendingTimer) {
+      clearTimeout(pendingTimer);
+      this.leaveGraceTimers.delete(graceKey);
+    }
+
+    let sockets = room.get(userId);
+    const wasPresent = sockets !== undefined && sockets.size > 0;
+    if (!sockets) {
+      sockets = new Set();
+      room.set(userId, sockets);
+    }
+    sockets.add(ws);
+
+    // Snapshot first so the joiner can dedupe its own ENTERED broadcast.
+    this.sendToClient(ws, {
+      type: 'ROOM_PRESENCE_STATE',
+      eventId,
+      data: { eventId, presentUserIds: [...room.keys()] },
+      timestamp: new Date().toISOString(),
+    });
+
+    if (!wasPresent && !hadPendingLeave) {
+      this.broadcastToEvent(eventId, {
+        type: 'ROOM_MEMBER_ENTERED',
+        eventId,
+        data: { eventId, userId },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  /**
+   * Drop a socket from a room's presence set. When the user's last socket
+   * leaves, start the grace timer instead of broadcasting immediately —
+   * mini-program background/foreground switches reconnect within seconds.
+   */
+  private trackRoomLeave(ws: AuthenticatedWebSocket, eventId: string) {
+    ws.presenceEventIds?.delete(eventId);
+    const userId = ws.presenceUserId;
+    if (!userId) return;
+
+    const room = this.roomPresence.get(eventId);
+    const sockets = room?.get(userId);
+    if (!room || !sockets) return;
+
+    sockets.delete(ws);
+    if (sockets.size === 0) {
+      this.scheduleRoomLeave(eventId, userId);
+    }
+  }
+
+  private scheduleRoomLeave(eventId: string, userId: string) {
+    const graceKey = `${eventId}:${userId}`;
+    if (this.leaveGraceTimers.has(graceKey)) return;
+
+    const timer = setTimeout(() => {
+      this.leaveGraceTimers.delete(graceKey);
+      const room = this.roomPresence.get(eventId);
+      const sockets = room?.get(userId);
+      // Rejoined during the grace window (timer not yet cancelled) — stay silent.
+      if (sockets && sockets.size > 0) return;
+      if (room) {
+        room.delete(userId);
+        if (room.size === 0) {
+          this.roomPresence.delete(eventId);
+        }
+      }
+      this.lastPokeAt.delete(graceKey);
+      this.broadcastToEvent(eventId, {
+        type: 'ROOM_MEMBER_LEFT',
+        eventId,
+        data: { eventId, userId },
+        timestamp: new Date().toISOString(),
+      });
+    }, ROOM_LEAVE_GRACE_MS);
+    // Never keep the Node process alive for a presence timer.
+    if (typeof timer.unref === 'function') {
+      timer.unref();
+    }
+    this.leaveGraceTimers.set(graceKey, timer);
+  }
+
+  /**
+   * Relay a ROOM_POKE to the event room. Validates the sender is present in
+   * the room, the emoji is whitelisted (string keys, never emoji glyphs), and
+   * throttles to one poke per sender per ROOM_POKE_MIN_INTERVAL_MS.
+   * Validation/throttle failures are silently dropped — presence UX must
+   * never error loudly. No persistence.
+   */
+  private handleRoomPoke(message: WSMessage, userId: string | undefined) {
+    const eventId = message.eventId;
+    const targetUserId = message.data?.targetUserId;
+    const emoji = message.data?.emoji;
+
+    if (!userId || !eventId) return;
+    if (typeof targetUserId !== 'string' || targetUserId.length === 0) return;
+    if (typeof emoji !== 'string' || !(ROOM_POKE_EMOJIS as readonly string[]).includes(emoji)) return;
+
+    const senderSockets = this.roomPresence.get(eventId)?.get(userId);
+    if (!senderSockets || senderSockets.size === 0) return;
+
+    const pokeKey = `${eventId}:${userId}`;
+    const now = Date.now();
+    if (now - (this.lastPokeAt.get(pokeKey) ?? 0) < ROOM_POKE_MIN_INTERVAL_MS) return;
+    this.lastPokeAt.set(pokeKey, now);
+
+    const data: RoomPokeData = { eventId, fromUserId: userId, targetUserId, emoji: emoji as RoomPokeData['emoji'], ts: now };
+    this.broadcastToEvent(eventId, {
+      type: 'ROOM_POKE',
+      eventId,
+      data,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   private sendToClient(ws: AuthenticatedWebSocket, message: WSMessage) {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message));
@@ -281,7 +472,7 @@ class WebSocketService {
       userClients.forEach((ws) => {
         this.sendToClient(ws, message);
       });
-      console.log(`[WS] Broadcast to user ${userId}: ${message.type}`);
+      logger.info(`[WS] Broadcast to user ${userId}: ${message.type}`);
     }
   }
 
@@ -292,7 +483,7 @@ class WebSocketService {
       room.forEach((ws) => {
         this.sendToClient(ws, message);
       });
-      console.log(`[WS] Broadcast to event ${eventId}: ${message.type} to ${room.size} clients`);
+      logger.info(`[WS] Broadcast to event ${eventId}: ${message.type} to ${room.size} clients`);
     }
   }
 
@@ -309,7 +500,7 @@ class WebSocketService {
       const authWs = ws as AuthenticatedWebSocket;
       this.sendToClient(authWs, message);
     });
-    console.log(`[WS] Global broadcast: ${message.type} to ${this.wss?.clients.size} clients`);
+    logger.info(`[WS] Global broadcast: ${message.type} to ${this.wss?.clients.size} clients`);
   }
 
   // 获取连接统计

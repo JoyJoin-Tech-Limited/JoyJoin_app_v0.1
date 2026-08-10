@@ -403,6 +403,17 @@ export const paymentFulfillmentRepo = {
               });
             }
           }
+
+          // Mirror the free-registration realtime matching trigger so a paid
+          // invitee (or any paid registration) can close a pool and bind a duo.
+          const { scanPoolAndMatch } = await import("../poolRealtimeMatchingService");
+          scanPoolAndMatch(updatedPayment.relatedId, "realtime", "payment_fulfillment").catch((err: any) => {
+            logger.error("Realtime matching trigger failed after payment fulfillment", {
+              payment_id: updatedPayment.id,
+              pool_id: updatedPayment.relatedId,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          });
         } else {
           logger.warn("Event registration insert skipped by conflict; payment fulfilled without incrementing pool count", {
             payment_id: updatedPayment.id,

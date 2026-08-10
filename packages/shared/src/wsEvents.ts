@@ -27,7 +27,12 @@ export type WSEventType =
   | "SOCIAL_PULSE_VOTE"
   | "SOCIAL_LIE_VOTE"
   // Attendance status events
-  | "ATTENDANCE_STATUS_UPDATED";
+  | "ATTENDANCE_STATUS_UPDATED"
+  // Gathering room (集结房间) presence events
+  | "ROOM_PRESENCE_STATE"
+  | "ROOM_MEMBER_ENTERED"
+  | "ROOM_MEMBER_LEFT"
+  | "ROOM_POKE";
 
 export interface WSMessage {
   type: WSEventType;
@@ -171,4 +176,41 @@ export interface AttendanceStatusUpdatedData {
   status: 'pending' | 'confirmed' | 'late' | 'absent';
   estimatedLateMinutes?: number | null;
   absentReason?: string | null;
+}
+
+// ============ 集结房间 (Gathering Room) 事件数据 ============
+
+/** Allowed poke emoji keys. Clients must render CSS/icon badges, never raw
+ *  emoji glyphs (mini-program guardrail). */
+export const ROOM_POKE_EMOJIS = ['wave', 'hi-five', 'drink'] as const;
+export type RoomPokeEmoji = (typeof ROOM_POKE_EMOJIS)[number];
+
+/** server → joining client: authoritative presence snapshot for the room.
+ *  Sent immediately after USER_JOINED; always apply before entered/left. */
+export interface RoomPresenceStateData {
+  eventId: string;
+  presentUserIds: string[];
+}
+
+/** server → room: a member entered the room (broadcast INCLUDES the entering
+ *  user's own sockets — clients dedupe against the snapshot/state). */
+export interface RoomMemberEnteredData {
+  eventId: string;
+  userId: string;
+}
+
+/** server → room: a member left (after the server-side 5s disconnect grace).
+ *  Authoritative — remove immediately. */
+export interface RoomMemberLeftData {
+  eventId: string;
+  userId: string;
+}
+
+/** client → server AND server → room: a poke from one member to another. */
+export interface RoomPokeData {
+  eventId: string;
+  fromUserId: string;
+  targetUserId: string;
+  emoji: RoomPokeEmoji;
+  ts: number;
 }

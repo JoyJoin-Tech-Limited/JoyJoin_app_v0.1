@@ -1662,6 +1662,19 @@ export const invitations = pgTable("invitations", {
 }, (table) => [
   // Duo invite idempotency + duo-status lookups by pool
   index("idx_invitations_pool_id").on(table.poolId),
+  // One active duo invite per inviter per pool (idempotency contract, spec §A.5).
+  uniqueIndex("idx_invitations_duo_pool_inviter")
+    .on(table.inviterId, table.poolId)
+    .where(sql`${table.invitationType} = 'duo'`),
+  // Duo invitations must be pool-scoped; legacy types must be event-scoped.
+  check(
+    "invitations_scope_check",
+    sql`(
+      (${table.invitationType} = 'duo' AND ${table.poolId} IS NOT NULL)
+      OR
+      (${table.invitationType} <> 'duo' AND ${table.eventId} IS NOT NULL)
+    )`,
+  ),
 ]);
 
 // Invitation Uses table - 邀请使用记录

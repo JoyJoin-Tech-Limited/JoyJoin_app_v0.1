@@ -110,6 +110,9 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** Enables the SD pixel avatar sprites (集结房间 chibi family) in 40rpx+
      *  roster/list slots via ArchetypeHead variant='sd'. Default: false. */
     sdAvatarEnabled?: boolean
+    /** Enables the gathering room (集结房间): entry CTAs on pool-group-detail /
+     *  squad-unboxing and the room page itself. Default: false. */
+    gatheringRoomEnabled?: boolean
     /** Enables equipment draws, fragments and the fragment-only shop. */
     equipmentRewardsEnabled?: boolean
     /** Enables the private, append-only AI personal story surface. */
@@ -150,6 +153,8 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** When true, the pool-registration Step 0 letter shows the 悦仔-voiced
      *  pre-registration teaser strip. Default: false (ships dark). */
     poolTeaserEnabled?: boolean
+    /** 双人成行 (duo registration) kill-switch. Default: true. */
+    duoRegistrationEnabled?: boolean
   }
 }
 

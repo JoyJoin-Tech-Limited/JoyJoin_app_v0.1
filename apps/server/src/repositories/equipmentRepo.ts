@@ -1058,10 +1058,84 @@ export async function redeemEquipmentShopItem(options: {
   });
 }
 
+export interface RoomEquipmentLook {
+  userId: string;
+  outfit: OutfitSummary;
+  equippedItems: EquipmentItemSummary[];
+}
+
+/**
+ * Batched read for the gathering room: resolve the current outfit and equipped
+ * item details for a list of member userIds without N+1 queries.
+ */
+export async function getEquipmentLooksForUsers(userIds: string[]): Promise<RoomEquipmentLook[]> {
+  if (userIds.length === 0) return [];
+
+  const outfits = await db
+    .select({
+      userId: userEquipmentOutfits.userId,
+      topItemId: userEquipmentOutfits.topItemId,
+      bottomItemId: userEquipmentOutfits.bottomItemId,
+      shoesItemId: userEquipmentOutfits.shoesItemId,
+      accessoryItemId: userEquipmentOutfits.accessoryItemId,
+      version: userEquipmentOutfits.version,
+    })
+    .from(userEquipmentOutfits)
+    .where(inArray(userEquipmentOutfits.userId, userIds));
+
+  const outfitByUserId = new Map<string, typeof outfits[number]>(
+    outfits.map((row: any) => [row.userId, row]),
+  );
+
+  const itemIds = new Set<string>();
+  for (const row of outfits) {
+    for (const slot of EQUIPMENT_SLOTS) {
+      const itemId = row[`${slot}ItemId` as keyof typeof row];
+      if (itemId) itemIds.add(itemId);
+    }
+  }
+
+  const items = itemIds.size > 0
+    ? await db
+        .select()
+        .from(equipmentItems)
+        .where(inArray(equipmentItems.id, [...itemIds]))
+    : [];
+  const itemById = new Map(
+    items.map((row: any) => [row.id, itemSummary(row)] as [string, EquipmentItemSummary]),
+  );
+
+  return userIds.map((userId) => {
+    const outfitRow = outfitByUserId.get(userId);
+    const outfit: OutfitSummary = outfitRow
+      ? {
+          topItemId: outfitRow.topItemId ?? null,
+          bottomItemId: outfitRow.bottomItemId ?? null,
+          shoesItemId: outfitRow.shoesItemId ?? null,
+          accessoryItemId: outfitRow.accessoryItemId ?? null,
+          version: outfitRow.version,
+        }
+      : { topItemId: null, bottomItemId: null, shoesItemId: null, accessoryItemId: null, version: 1 };
+
+    const equippedItems = EQUIPMENT_SLOTS
+      .map((slot) => outfit[`${slot}ItemId` as keyof OutfitSummary])
+      .filter((itemId): itemId is string => !!itemId)
+      .map((itemId) => itemById.get(itemId))
+      .filter((item): item is EquipmentItemSummary => !!item);
+
+    return {
+      userId,
+      outfit,
+      equippedItems,
+    };
+  });
+}
+
 export const equipmentRepository = {
   ensureInitialEquipment,
   reconcileEquipmentEntitlements,
   getEquipmentMe,
+  getEquipmentLooksForUsers,
   saveEquipmentOutfit,
   drawEquipmentEntitlement,
   getEquipmentPool,
