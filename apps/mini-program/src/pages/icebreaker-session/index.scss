@@ -121,7 +121,48 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__phase-shell {
-    animation: icebreaker-phase-in 0.24s ease both;
+    animation: icebreaker-phase-in 0.18s cubic-bezier(0.2, 0, 0.2, 1) both;
+    transition: opacity 0.12s ease, transform 0.12s ease;
+  }
+
+  &__phase-shell--syncing {
+    opacity: 0.94;
+    transform: translateY(4rpx);
+    pointer-events: none;
+  }
+
+  &__flow-sync {
+    position: sticky;
+    top: calc(112rpx + env(safe-area-inset-top));
+    z-index: 18;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    gap: 10rpx;
+    max-width: calc(100vw - 96rpx);
+    margin: -4rpx auto 16rpx;
+    padding: 12rpx 22rpx;
+    border: 1rpx solid rgba($color-primary, 0.18);
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.92);
+    box-shadow: 0 14rpx 34rpx rgba($color-primary, 0.12);
+    backdrop-filter: blur(14rpx);
+    animation: icebreaker-flow-sync-in 0.16s ease both;
+  }
+
+  &__flow-sync-dot {
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 999rpx;
+    background: $color-primary;
+    box-shadow: 0 0 0 8rpx rgba($color-primary, 0.12);
+  }
+
+  &__flow-sync-text {
+    font-size: 24rpx;
+    font-weight: 600;
+    line-height: 1.2;
+    color: $color-text-primary;
   }
 
   // ── Error State ───────────────────────────────────────────────
@@ -971,7 +1012,18 @@ $__gold-accent:  $color-landed-gold;
 @keyframes icebreaker-phase-in {
   from {
     opacity: 0;
-    transform: translateY(12rpx);
+    transform: translateY(8rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes icebreaker-flow-sync-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8rpx);
   }
   to {
     opacity: 1;
@@ -1001,6 +1053,10 @@ $__gold-accent:  $color-landed-gold;
     animation: none;
     opacity: 1;
     transform: translateX(-50%);
+  }
+
+  .icebreaker__flow-sync {
+    animation: none;
   }
 }
 

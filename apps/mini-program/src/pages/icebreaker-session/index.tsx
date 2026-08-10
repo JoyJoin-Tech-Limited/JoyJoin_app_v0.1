@@ -695,7 +695,7 @@ export default function IcebreakerSessionPage() {
   // PR1 flow revamp — stall nudge: host explicitly skips stragglers (force)
   // or suppresses stall automation for the rest of the phase.
   const handleSelectCustomPhase = useCallback(
-    async (selectedPhase: SocialIcebreakerPhase) => {
+    (selectedPhase: SocialIcebreakerPhase) => {
       if (!socialSessionId || !session?.phaseSelectionId) {
         return
       }
@@ -704,42 +704,42 @@ export default function IcebreakerSessionPage() {
         return
       }
 
-      setPendingAction('select-phase')
-
-      try {
-        await apiRequest({
-          path: `/api/social-icebreaker/${socialSessionId}/select-phase`,
-          method: 'POST',
-          data: { phase: selectedPhase, phaseSelectionId: session.phaseSelectionId },
-        })
-        await socialSessionQuery.refetch()
-      } catch (err: unknown) {
-        logError('[IcebreakerSession] Select custom phase failed', { socialSessionId, selectedPhase, err })
-        socialIcebreakerAnalytics.track(
-          'select_phase_failed',
-          socialSessionId,
-          session?.icebreakerSessionId,
-          selectedPhase,
-          {
-            phaseSelectionId: session?.phaseSelectionId,
-            playerCount,
-            error: err instanceof Error ? err.message : 'unknown',
+      void performSocialAction<{ state?: SocialSessionState }>(
+        'select-phase',
+        '/select-phase',
+        { phase: selectedPhase, phaseSelectionId: session.phaseSelectionId },
+        {
+          suppressErrorToast: true,
+          onError: (err) => {
+            logError('[IcebreakerSession] Select custom phase failed', { socialSessionId, selectedPhase, err })
+            socialIcebreakerAnalytics.track(
+              'select_phase_failed',
+              socialSessionId,
+              session?.icebreakerSessionId,
+              selectedPhase,
+              {
+                phaseSelectionId: session?.phaseSelectionId,
+                playerCount,
+                error: err instanceof Error ? err.message : 'unknown',
+              },
+            )
           },
-        )
-        void Taro.showToast({
-          title: '选择没成功，再试试',
-          icon: 'none',
-          duration: 2000,
-        })
-      } finally {
-        setPendingAction(null)
-      }
+        },
+      ).then((result) => {
+        if (result === null) {
+          void Taro.showToast({
+            title: '选择没成功，再试试',
+            icon: 'none',
+            duration: 2000,
+          })
+        }
+      })
     },
-    [socialSessionId, session, socialSessionQuery, pendingAction, playerCount],
+    [performSocialAction, socialSessionId, session, pendingAction, playerCount],
   )
 
   const handleEndCustomSession = useCallback(
-    async () => {
+    () => {
       if (!socialSessionId || !session?.phaseSelectionId) {
         return
       }
@@ -760,49 +760,52 @@ export default function IcebreakerSessionPage() {
         },
       )
 
-      setPendingAction('end-session')
-
-      try {
-        await apiRequest({
-          path: `/api/social-icebreaker/${socialSessionId}/end-session`,
-          method: 'POST',
-          data: { phaseSelectionId: session.phaseSelectionId },
-        })
-        socialIcebreakerAnalytics.track(
-          'custom_session_completed',
-          socialSessionId,
-          session.icebreakerSessionId,
-          undefined,
-          {
-            playerCount,
-            completedPhases: session.completedPhases,
+      void performSocialAction<{ state?: SocialSessionState }>(
+        'end-session',
+        '/end-session',
+        { phaseSelectionId: session.phaseSelectionId },
+        {
+          suppressErrorToast: true,
+          onError: (err) => {
+            logError('[IcebreakerSession] End custom session failed', { socialSessionId, err })
+            socialIcebreakerAnalytics.track(
+              'end_party_failed',
+              socialSessionId,
+              session?.icebreakerSessionId,
+              undefined,
+              {
+                phaseSelectionId: session?.phaseSelectionId,
+                playerCount,
+                completedCount: session?.completedPhases?.length ?? 0,
+                error: err instanceof Error ? err.message : 'unknown',
+              },
+            )
           },
-        )
-        await socialSessionQuery.refetch()
-      } catch (err: unknown) {
-        logError('[IcebreakerSession] End custom session failed', { socialSessionId, err })
-        socialIcebreakerAnalytics.track(
-          'end_party_failed',
-          socialSessionId,
-          session?.icebreakerSessionId,
-          undefined,
-          {
-            phaseSelectionId: session?.phaseSelectionId,
-            playerCount,
-            completedCount: session?.completedPhases?.length ?? 0,
-            error: err instanceof Error ? err.message : 'unknown',
-          },
-        )
-        void Taro.showToast({
-          title: '结束派对没成功，再试试',
-          icon: 'none',
-          duration: 2000,
-        })
-      } finally {
-        setPendingAction(null)
-      }
+        },
+      ).then((result) => {
+        if (result === null) {
+          void Taro.showToast({
+            title: '结束派对没成功，再试试',
+            icon: 'none',
+            duration: 2000,
+          })
+          return
+        }
+        if (result) {
+          socialIcebreakerAnalytics.track(
+            'custom_session_completed',
+            socialSessionId,
+            session.icebreakerSessionId,
+            undefined,
+            {
+              playerCount,
+              completedPhases: session.completedPhases,
+            },
+          )
+        }
+      })
     },
-    [socialSessionId, session, socialSessionQuery, pendingAction, playerCount],
+    [performSocialAction, socialSessionId, session, pendingAction, playerCount],
   )
 
   const [topicsError, setTopicsError] = useState(false)
@@ -864,18 +867,22 @@ export default function IcebreakerSessionPage() {
         vibe,
       })
 
-      setPendingAction('set-tier')
-
-      try {
-        await apiRequest({
-          path: `/api/social-icebreaker/${socialSessionId}/set-tier`,
-          method: 'POST',
-          data: {
-            tier,
-            vibe: tier === 'custom' ? undefined : VIBE_TO_API[vibe],
+      const result = await performSocialAction<{ state?: SocialSessionState }>(
+        'set-tier',
+        '/set-tier',
+        {
+          tier,
+          vibe: tier === 'custom' ? undefined : VIBE_TO_API[vibe],
+        },
+        {
+          suppressErrorToast: true,
+          onError: (err) => {
+            logError('[IcebreakerSession] Set tier failed', { error: err })
           },
-        })
+        },
+      )
 
+      if (result) {
         socialIcebreakerAnalytics.track(
           'icebreaker_session_tier_changed',
           socialSessionId,
@@ -889,25 +896,23 @@ export default function IcebreakerSessionPage() {
             playerCount,
           },
         )
-
-        await socialSessionQuery.refetch()
-        Taro.showToast({
+        void Taro.showToast({
           title: `已切换为${tier === 'custom' ? '自由局' : '新模式'}`,
           icon: 'success',
           duration: TOAST_DEFAULT_MS,
         })
-      } catch (err: unknown) {
-        logError('[IcebreakerSession] Set tier failed', { error: err })
+        return
+      }
+
+      if (result === null) {
         void Taro.showToast({
           title: '切换没成功，再试试',
           icon: 'none',
           duration: 2000,
         })
-      } finally {
-        setPendingAction(null)
       }
     },
-    [socialSessionId, session, socialSessionQuery, pendingAction, phase, playerCount],
+    [performSocialAction, socialSessionId, session, pendingAction, phase, playerCount],
   )
 
   const handleConfirmTierSwitch = useCallback(
@@ -1475,6 +1480,23 @@ export default function IcebreakerSessionPage() {
     !!currentPlayer &&
     !!session.currentLieDetectiveReveal &&
     (session.currentLieDetectivePlayerIndex ?? 0) < (session.lieDetectivePlayers?.length ?? 0) - 1
+  const flowSyncCopy = useMemo(() => {
+    switch (pendingAction) {
+      case 'start':
+        return '正在进入破冰局…'
+      case 'advance':
+        return '正在进入下一环节…'
+      case 'select-phase':
+        return '正在同步玩法…'
+      case 'set-tier':
+        return '正在切换模式…'
+      case 'end-session':
+        return '正在整理本局…'
+      default:
+        return null
+    }
+  }, [pendingAction])
+  const phaseShellClass = `icebreaker__phase-shell${flowSyncCopy ? ' icebreaker__phase-shell--syncing' : ''}`
 
   return (
     <ScrollView
@@ -1519,6 +1541,13 @@ export default function IcebreakerSessionPage() {
         </View>
       )}
 
+      {flowSyncCopy && (
+        <View className='icebreaker__flow-sync'>
+          <View className='icebreaker__flow-sync-dot' />
+          <Text className='icebreaker__flow-sync-text'>{flowSyncCopy}</Text>
+        </View>
+      )}
+
       {session?.bonusGateOffered && !session?.bonusGateAccepted && !session?.bonusGateDeclined && socialSessionId && (
         <BonusGateOverlay
           socialSessionId={socialSessionId}
@@ -1530,7 +1559,7 @@ export default function IcebreakerSessionPage() {
         />
       )}
 
-      <View className='icebreaker__phase-shell' key={phase}>
+      <View className={phaseShellClass} key={phase}>
         {phase === 'waiting' && (
           <>
             <WaitingPhase
