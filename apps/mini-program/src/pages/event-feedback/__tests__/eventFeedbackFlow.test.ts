@@ -225,4 +225,13 @@ describe('event-feedback balanced layer (均衡反馈, 2026-08-07)', () => {
     expect(tsx).toContain('onError={() => setHeroFailed(true)}')
     expect(tsx).toContain('onError={() => setMascotFailed(true)}')
   })
+
+  it('renders participant avatar images with a safe archetype fallback', () => {
+    expect(tsx).toContain("className='event-feedback__participant-avatar'")
+    expect(tsx).toContain('src={participant.avatarUrl}')
+    expect(tsx).toContain('onError={() => setImageFailed(true)}')
+    expect(tsx).toContain('<ParticipantAvatar participant={p} name={participantName} />')
+    expect(scss).toContain('&__participant-avatar')
+    expect(scss).toContain('border-radius: 50%')
+  })
 })

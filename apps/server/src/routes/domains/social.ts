@@ -72,6 +72,16 @@ export function registerSocialRoutes(app: Express): void {
         displayName: string;
         firstName: string | null;
         archetype: string | null;
+        avatarUrl: string | null;
+      };
+      type ParticipantUserRow = {
+        id: string;
+        displayName: string | null;
+        firstName: string | null;
+        lastName: string | null;
+        archetype: string | null;
+        profileImageUrl: string | null;
+        wechatAvatarUrl: string | null;
       };
       const seen = new Set<string>();
       const participants: ParticipantRow[] = [];
@@ -99,13 +109,35 @@ export function registerSocialRoutes(app: Express): void {
         const attendees = Array.isArray(blindBoxEvent.matchedAttendees)
           ? (blindBoxEvent.matchedAttendees as Array<{ userId?: string; displayName?: string; archetype?: string | null }>)
           : [];
+        const attendeeIds = attendees.flatMap((attendee) => attendee?.userId ? [attendee.userId] : []);
+        const attendeeUsers: ParticipantUserRow[] = attendeeIds.length > 0
+          ? await db
+              .select({
+                id: schema.users.id,
+                displayName: schema.users.displayName,
+                firstName: schema.users.firstName,
+                lastName: schema.users.lastName,
+                archetype: schema.users.archetype,
+                profileImageUrl: schema.users.profileImageUrl,
+                wechatAvatarUrl: schema.users.wechatAvatarUrl,
+              })
+              .from(schema.users)
+              .where(inArray(schema.users.id, attendeeIds))
+          : [];
+        const attendeeUsersById = new Map(attendeeUsers.map((attendee) => [attendee.id, attendee]));
         for (const attendee of attendees) {
           if (!attendee?.userId) continue;
+          const attendeeUser = attendeeUsersById.get(attendee.userId);
           push({
             id: attendee.userId,
-            displayName: attendee.displayName?.trim() || '参与者',
-            firstName: null,
-            archetype: attendee.archetype ?? null,
+            displayName: attendeeUser
+              ? getEventChatDisplayName(attendeeUser)
+              : attendee.displayName?.trim() || '参与者',
+            firstName: attendeeUser?.firstName ?? null,
+            archetype: attendeeUser?.archetype ?? attendee.archetype ?? null,
+            avatarUrl: attendeeUser
+              ? firstNonEmptyString(attendeeUser.profileImageUrl, attendeeUser.wechatAvatarUrl) ?? null
+              : null,
           });
         }
         return res.json(participants);
@@ -146,6 +178,8 @@ export function registerSocialRoutes(app: Express): void {
             firstName: schema.users.firstName,
             lastName: schema.users.lastName,
             archetype: schema.users.archetype,
+            profileImageUrl: schema.users.profileImageUrl,
+            wechatAvatarUrl: schema.users.wechatAvatarUrl,
           })
           .from(schema.eventPoolRegistrations)
           .innerJoin(schema.users, eq(schema.eventPoolRegistrations.userId, schema.users.id))
@@ -162,6 +196,7 @@ export function registerSocialRoutes(app: Express): void {
             displayName: getEventChatDisplayName(row),
             firstName: row.firstName ?? null,
             archetype: row.archetype ?? null,
+            avatarUrl: firstNonEmptyString(row.profileImageUrl, row.wechatAvatarUrl) ?? null,
           });
         }
         return res.json(participants);
@@ -175,6 +210,8 @@ export function registerSocialRoutes(app: Express): void {
           firstName: schema.users.firstName,
           lastName: schema.users.lastName,
           archetype: schema.users.archetype,
+          profileImageUrl: schema.users.profileImageUrl,
+          wechatAvatarUrl: schema.users.wechatAvatarUrl,
         })
         .from(schema.eventAttendance)
         .innerJoin(schema.users, eq(schema.eventAttendance.userId, schema.users.id))
@@ -191,6 +228,7 @@ export function registerSocialRoutes(app: Express): void {
           displayName: getEventChatDisplayName(row),
           firstName: row.firstName ?? null,
           archetype: row.archetype ?? null,
+          avatarUrl: firstNonEmptyString(row.profileImageUrl, row.wechatAvatarUrl) ?? null,
         });
       }
       return res.json(participants);

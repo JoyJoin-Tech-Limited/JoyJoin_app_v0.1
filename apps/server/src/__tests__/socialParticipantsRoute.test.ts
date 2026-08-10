@@ -67,6 +67,13 @@ describe('GET /api/events/:eventId/participants (feedback mutual-contact roster)
     expect(handler).toContain('seen.has(row.id)');
   });
 
+  it('returns the approved profile or WeChat avatar for each tablemate', () => {
+    expect(handler).toContain('profileImageUrl: schema.users.profileImageUrl');
+    expect(handler).toContain('wechatAvatarUrl: schema.users.wechatAvatarUrl');
+    expect(handler).toContain('firstNonEmptyString(row.profileImageUrl, row.wechatAvatarUrl)');
+    expect(handler).toContain('firstNonEmptyString(attendeeUser.profileImageUrl, attendeeUser.wechatAvatarUrl)');
+  });
+
   it('stays privacy-minimal — no age, industry, or WeChat id in the payload', () => {
     expect(handler).not.toContain('wechatContactId');
     expect(handler).not.toContain('topInterests');

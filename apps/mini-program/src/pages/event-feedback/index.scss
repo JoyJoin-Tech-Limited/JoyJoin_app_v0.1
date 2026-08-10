@@ -242,6 +242,13 @@
     }
   }
 
+  &__participant-avatar {
+    width: 80rpx;
+    height: 80rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.08);
+  }
+
   &__participant-name {
     font-size: $font-size-sm;
     color: $color-text-primary;

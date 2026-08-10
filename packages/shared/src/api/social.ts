@@ -10,6 +10,8 @@ export interface EventParticipantSummary {
   displayName: string
   firstName: string | null
   archetype: string | null
+  /** Approved profile image, falling back to the user's WeChat avatar. */
+  avatarUrl?: string | null
 }
 
 /**

@@ -204,6 +204,31 @@ function SelectPill({
   )
 }
 
+function ParticipantAvatar({ participant, name }: { participant: EventParticipantSummary; name: string }) {
+  const [imageFailed, setImageFailed] = useState(false)
+
+  if (!participant.avatarUrl || imageFailed) {
+    return (
+      <ArchetypeHead
+        archetype={participant.archetype}
+        size={80}
+        fallbackText={name}
+      />
+    )
+  }
+
+  return (
+    <Image
+      className='event-feedback__participant-avatar'
+      src={participant.avatarUrl}
+      mode='aspectFill'
+      ariaLabel={`${name}的头像`}
+      lazyLoad
+      onError={() => setImageFailed(true)}
+    />
+  )
+}
+
 /** 均衡反馈 layer progress — a label + 2 quiet dots, distinct from the base 1/2/3. */
 function renderDeepProgress(current: Extract<FeedbackStep, 'deep-atmosphere' | 'deep-people'>) {
   const activeIndex = DEEP_STEP_ORDER.indexOf(current)
@@ -583,11 +608,7 @@ export default function EventFeedbackPage() {
                     aria-pressed={isSelected}
                     aria-label={`选择${participantName}`}
                   >
-                    <ArchetypeHead
-                      archetype={p.archetype}
-                      size={80}
-                      fallbackText={p.displayName || p.firstName || undefined}
-                    />
+                    <ParticipantAvatar participant={p} name={participantName} />
                     <Text className='event-feedback__participant-name'>
                       {participantName}
                     </Text>
