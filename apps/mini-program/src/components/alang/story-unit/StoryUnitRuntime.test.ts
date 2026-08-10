@@ -116,4 +116,15 @@ describe('StoryUnitRuntime', () => {
     expect(reconciled.stage).toBe('OBJECT_SUCCESS')
     expect(reconciled.choice).toEqual({ ...choice, label: '更新后的审核文案' })
   })
+
+  it('enters a terminal local divergence without becoming a completed object', () => {
+    let state = storyUnitReducer(createStoryUnitState(STORY_UNIT_ID), { type: 'ENTER' })
+    state = storyUnitReducer(state, { type: 'START_INTERACTION', choice })
+    state = storyUnitReducer(state, { type: 'OBJECT_DIVERGED', copy: '这条时间线暂时断开了。' })
+
+    expect(state.stage).toBe('OBJECT_DIVERGED')
+    expect(state.companionEvent).toBe('FIRST_MISTAKE')
+    expect(state.divergenceCopy).toBe('这条时间线暂时断开了。')
+    expect(storyUnitReducer(state, { type: 'OBJECT_ALIGNED' })).toEqual(state)
+  })
 })

@@ -11,6 +11,7 @@ export type StoryUnitStage =
   | 'INIT'
   | 'NPC_INTRO'
   | 'OBJECT_INTERACTION'
+  | 'OBJECT_DIVERGED'
   | 'OBJECT_SUCCESS'
   | 'NPC_RESPONSE'
   | 'COMPLETED'
@@ -35,6 +36,7 @@ export interface StoryUnitState {
   stage: StoryUnitStage
   choice: StoryUnitChoice | null
   companionEvent: NPCResponseEvent
+  divergenceCopy: string | null
   analyticsSent: FlashStoryUnitAnalyticsEvent[]
 }
 
@@ -42,6 +44,7 @@ export type StoryUnitAction =
   | { type: 'ENTER' }
   | { type: 'START_INTERACTION'; choice: StoryUnitChoice }
   | { type: 'FIRST_MISTAKE' }
+  | { type: 'OBJECT_DIVERGED'; copy: string }
   | { type: 'OBJECT_ALIGNED' }
   | { type: 'RESPONSE_RECEIVED' }
   | { type: 'COMPLETE' }
@@ -51,6 +54,7 @@ const STAGES: StoryUnitStage[] = [
   'INIT',
   'NPC_INTRO',
   'OBJECT_INTERACTION',
+  'OBJECT_DIVERGED',
   'OBJECT_SUCCESS',
   'NPC_RESPONSE',
   'COMPLETED',
@@ -66,6 +70,7 @@ export function createStoryUnitState(unitId: FlashStoryUnitId): StoryUnitState {
     stage: 'INIT',
     choice: null,
     companionEvent: 'INTRO',
+    divergenceCopy: null,
     analyticsSent: [],
   }
 }
@@ -108,6 +113,7 @@ export function restoreStoryUnitState(unitId: FlashStoryUnitId, value: unknown):
     stage: candidate.stage,
     choice: isChoice(candidate.choice) ? candidate.choice : null,
     companionEvent: candidate.companionEvent,
+    divergenceCopy: typeof candidate.divergenceCopy === 'string' ? candidate.divergenceCopy : null,
     analyticsSent: [...new Set(analyticsSent)],
   }
 }
@@ -143,6 +149,10 @@ export function storyUnitReducer(state: StoryUnitState, action: StoryUnitAction)
     case 'FIRST_MISTAKE':
       return state.stage === 'OBJECT_INTERACTION' && state.companionEvent !== 'FIRST_MISTAKE'
         ? { ...state, companionEvent: 'FIRST_MISTAKE' }
+        : state
+    case 'OBJECT_DIVERGED':
+      return state.stage === 'OBJECT_INTERACTION' && action.copy.trim().length > 0
+        ? { ...state, stage: 'OBJECT_DIVERGED', companionEvent: 'FIRST_MISTAKE', divergenceCopy: action.copy }
         : state
     case 'OBJECT_ALIGNED':
       return state.stage === 'OBJECT_INTERACTION'

@@ -10,9 +10,9 @@ vi.mock('@tarojs/components', () => ({
 afterEach(cleanup)
 
 function renderGame(episodeCode: string, objectCode: string) {
-  const onSolved = vi.fn(); const onFirstMistake = vi.fn(); const onInteractionStart = vi.fn()
-  render(<FlashStoryMicroGame episodeCode={episodeCode} objectCode={objectCode} onSolved={onSolved} onFirstMistake={onFirstMistake} onInteractionStart={onInteractionStart} />)
-  return { onSolved, onFirstMistake, onInteractionStart }
+  const onSolved = vi.fn(); const onFirstMistake = vi.fn(); const onInteractionStart = vi.fn(); const onDiverged = vi.fn()
+  render(<FlashStoryMicroGame episodeCode={episodeCode} objectCode={objectCode} onSolved={onSolved} onFirstMistake={onFirstMistake} onInteractionStart={onInteractionStart} onDiverged={onDiverged} />)
+  return { onSolved, onFirstMistake, onInteractionStart, onDiverged }
 }
 
 describe('FlashStoryMicroGame strategies', () => {
@@ -74,15 +74,13 @@ describe('FlashStoryMicroGame strategies', () => {
     expect(onSolved).toHaveBeenCalledTimes(1)
   })
 
-  it('explains a wrong privacy choice without erasing completed cards', () => {
-    const { onSolved, onFirstMistake } = renderGame('s1-p2-shiqi', 'observation-cards')
+  it('turns a wrong privacy choice into a visible divergent timeline without settling', () => {
+    const { onSolved, onFirstMistake, onDiverged } = renderGame('s1-p2-shiqi', 'observation-cards')
     fireEvent.click(screen.getByRole('button', { name: '城市里的普通细节：遮住' }))
-    expect(screen.getByRole('status')).toHaveTextContent('可以留下')
+    expect(screen.getByRole('status')).toHaveTextContent('这次好像接不回去了')
     expect(onFirstMistake).toHaveBeenCalledTimes(1)
+    expect(onDiverged).toHaveBeenCalledWith(expect.stringContaining('接不回去了'))
     expect(onSolved).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByRole('button', { name: '城市里的普通细节：留下' }))
-    expect(screen.getByRole('button', { name: '城市里的普通细节：留下' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('does not submit a wrong move and only asks for help once', () => {

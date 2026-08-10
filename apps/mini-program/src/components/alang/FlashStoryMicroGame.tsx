@@ -8,6 +8,7 @@ export interface FlashStoryMicroGameProps {
   onSolved: () => void
   onInteractionStart?: () => void
   onFirstMistake?: () => void
+  onDiverged?: (copy: string) => void
   completed?: boolean
   disabled?: boolean
 }
@@ -16,6 +17,7 @@ function useGameSignals(props: FlashStoryMicroGameProps) {
   const started = useRef(false)
   const mistaken = useRef(false)
   const solved = useRef(Boolean(props.completed))
+  const diverged = useRef(false)
   useEffect(() => { solved.current = Boolean(props.completed) }, [props.completed])
   return {
     start() {
@@ -27,6 +29,15 @@ function useGameSignals(props: FlashStoryMicroGameProps) {
       if (mistaken.current) return
       mistaken.current = true
       props.onFirstMistake?.()
+    },
+    diverge(copy: string) {
+      if (diverged.current || solved.current || props.disabled) return
+      diverged.current = true
+      if (!mistaken.current) {
+        mistaken.current = true
+        props.onFirstMistake?.()
+      }
+      props.onDiverged?.(copy)
     },
     solve() {
       if (solved.current || props.disabled) return
@@ -146,8 +157,11 @@ function PrivacyGame({ props, phase, goal, success }: { props: FlashStoryMicroGa
     signals.start()
     const card = visibleCards.find((item) => item.id === id)
     if (!card || card.answer !== answer) {
-      signals.mistake()
-      setFeedback(card?.answer === 'cover' ? '这条会指向具体的人，应该遮住。' : '这只是普通城市细节，可以留下。')
+      const copy = card?.answer === 'cover'
+        ? '卡片上的人物痕迹被留了下来。阿团看了一会儿，说：这条时间线好像走偏了。'
+        : '城市里最后一点能辨认方向的细节也被遮住了。阿团轻声说：这次好像接不回去了。'
+      setFeedback(copy)
+      signals.diverge(copy)
       return
     }
     const next = { ...decisions, [id]: answer }

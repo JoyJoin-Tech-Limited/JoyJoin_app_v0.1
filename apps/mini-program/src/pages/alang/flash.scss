@@ -1758,6 +1758,11 @@ page {
 .flash-story-game__privacy-actions { display: flex; flex: 0 0 auto; gap: 8rpx; }
 .flash-story-game__privacy-actions > view, .flash-story-game__privacy-actions > div { display: flex; min-width: 88rpx; min-height: 88rpx; padding: 8rpx 12rpx; align-items: center; justify-content: center; border: 2rpx solid rgba($color-primary, .35); border-radius: 16rpx; color: $color-primary-dark; background: $color-surface; box-sizing: border-box; font-size: $font-size-2xs; font-weight: $font-weight-bold; }
 .flash-story-game__privacy-actions .is-selected { color: $color-surface; border-color: $color-primary; background: $color-primary; }
+.flash-story-divergence { display: flex; padding: 24rpx; flex-direction: column; gap: 16rpx; border: 2rpx solid rgba($color-primary, .28); border-radius: 24rpx; background: linear-gradient(145deg, $color-bg-tint-purple, $color-bg-tint-cream); }
+.flash-story-divergence__eyebrow { color: $color-primary-dark; font-size: $font-size-2xs; font-weight: $font-weight-bold; letter-spacing: 2rpx; }
+.flash-story-divergence__title { color: $color-text-primary-warm; font-family: $font-cn-display; font-size: $font-size-base; font-weight: $font-weight-black; line-height: 1.4; }
+.flash-story-divergence__copy, .flash-story-divergence__hint { color: $color-text-secondary-on-light; font-size: $font-size-xs; line-height: $line-height-relaxed; }
+.flash-story-divergence__hint { padding-top: 16rpx; border-top: 2rpx solid rgba($color-primary, .14); }
 .flash-story-game__paper-stack { position: relative; height: 160rpx; border-radius: 18rpx; background: $color-bg-tint-cream; }
 .flash-story-game__paper-stack > view, .flash-story-game__paper-stack > div { position: absolute; top: 28rpx; left: calc(50% - 120rpx); width: 240rpx; height: 100rpx; border: 2rpx solid rgba($color-primary, .35); border-radius: 14rpx; background: rgba($color-surface, .72); transition: transform 180ms ease; }
 .flash-story-game__paper-stack > view:nth-child(2), .flash-story-game__paper-stack > div:nth-child(2) { transform: translateX(-30rpx); }.flash-story-game__paper-stack > view:nth-child(3), .flash-story-game__paper-stack > div:nth-child(3) { transform: translateX(30rpx); }

@@ -125,6 +125,15 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     emit('object_complete')
     void onSubmit(runtime.choice)
   }
+  const divergeObject = (copy: string) => {
+    if (runtime.stage !== 'OBJECT_INTERACTION') return
+    transition({ type: 'OBJECT_DIVERGED', copy })
+  }
+  const leaveDivergedTimeline = () => {
+    if (runtime.stage !== 'OBJECT_DIVERGED') return
+    try { Taro.removeStorageSync(storageKey) } catch { /* fail-open */ }
+    onContinue()
+  }
   const retrySubmit = () => {
     if (!runtime.choice || runtime.stage !== 'OBJECT_SUCCESS') return
     if (submitState !== 'retry' && !(restoredSolvedRef.current && submitState === 'idle')) return
@@ -132,7 +141,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   }
 
   const showResult = serverSettled
-  const showGame = !showResult && (runtime.stage === 'OBJECT_INTERACTION' || runtime.stage === 'OBJECT_SUCCESS')
+  const showGame = !showResult && (runtime.stage === 'OBJECT_INTERACTION' || runtime.stage === 'OBJECT_DIVERGED' || runtime.stage === 'OBJECT_SUCCESS')
   const speech = resolveNPCResponse(definition.unitId, runtime.companionEvent, {
     intro: story.opening,
     success: showResult ? story.response : definition.success,
@@ -179,10 +188,18 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                       <Text className='flash-dialogue__user-turn-name'>你</Text>
                       <Text className='flash-dialogue__user-turn-copy'>{runtime.choice?.label}</Text>
                     </View>
-                    {definition.unitId === 's1-p1-shiqi' ? (
+                    {runtime.stage === 'OBJECT_DIVERGED' ? (
+                      <View className='flash-story-divergence' role='status'>
+                        <Text className='flash-story-divergence__eyebrow'>另一条时间线</Text>
+                        <Text className='flash-story-divergence__title'>这次没有接回原来的故事</Text>
+                        <Text className='flash-story-divergence__copy'>{runtime.divergenceCopy}</Text>
+                        <Text className='flash-story-divergence__hint'>没有碎片被结算。下次再遇见，可以从这里重新试一次。</Text>
+                        <FlashButton variant='quiet' onClick={leaveDivergedTimeline}>先回到街头盲盒</FlashButton>
+                      </View>
+                    ) : definition.unitId === 's1-p1-shiqi' ? (
                       <ShiqiOutbookInteraction completed={runtime.stage === 'OBJECT_SUCCESS'} disabled={submitState === 'submitting'} mistakeAcknowledged={runtime.companionEvent === 'FIRST_MISTAKE'} onInteractionStart={() => emit('object_interaction_start')} onFirstMistake={() => transition({ type: 'FIRST_MISTAKE' })} onComplete={completeObject} />
                     ) : (
-                      <FlashStoryMicroGame episodeCode={definition.unitId} objectCode={definition.objectCode} completed={runtime.stage === 'OBJECT_SUCCESS'} disabled={submitState === 'submitting'} onInteractionStart={() => emit('object_interaction_start')} onFirstMistake={() => transition({ type: 'FIRST_MISTAKE' })} onSolved={completeObject} />
+                      <FlashStoryMicroGame episodeCode={definition.unitId} objectCode={definition.objectCode} completed={runtime.stage === 'OBJECT_SUCCESS'} disabled={submitState === 'submitting'} onInteractionStart={() => emit('object_interaction_start')} onFirstMistake={() => transition({ type: 'FIRST_MISTAKE' })} onDiverged={divergeObject} onSolved={completeObject} />
                     )}
                     {submitState === 'submitting' ? <View className='flash-dialogue__story-settling' role='status'><Text>旧物已经整理好，正在收下这次回应…</Text></View> : null}
                     {runtime.stage === 'OBJECT_SUCCESS' && (submitState === 'retry' || (restoredSolvedRef.current && submitState === 'idle')) ? <FlashButton variant='quiet' onClick={retrySubmit}>重新送出</FlashButton> : null}
