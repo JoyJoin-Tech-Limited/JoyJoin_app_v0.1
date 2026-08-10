@@ -23,6 +23,7 @@ import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHin
 import AIGCLabel from '../../components/ai-content/AIGCLabel'
 import AIContentReportButton from '../../components/ai-content/AIContentReportButton'
 import { useAIGCLabelsEnabled } from '../../hooks/useAIGCLabelsEnabled'
+import { openGatheringRoom } from '../../lib/navigation/matchingNavigation'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/utils/uiConstants'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
@@ -87,6 +88,7 @@ export default function PoolGroupDetailPage() {
   })
 
   const aigcLabelsEnabled = useAIGCLabelsEnabled()
+  const gatheringRoomEnabled = currentUser?.features?.gatheringRoomEnabled ?? false
   const prevVenueStatusRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -410,7 +412,19 @@ export default function PoolGroupDetailPage() {
       </Card>
 
       <View className='pool-group-detail__actions'>
-        <Button onClick={() => Taro.navigateTo({ url: `/pages/icebreaker-session/tier-selector/index?sessionId=${encodeURIComponent(group.id)}` })}>
+        {gatheringRoomEnabled ? (
+          <Button onClick={() => {
+            haptics('light')
+            openGatheringRoom(groupId)
+          }}
+          >
+            进入集结房间
+          </Button>
+        ) : null}
+        <Button
+          variant={gatheringRoomEnabled ? 'secondary' : 'primary'}
+          onClick={() => Taro.navigateTo({ url: `/pages/icebreaker-session/tier-selector/index?sessionId=${encodeURIComponent(group.id)}` })}
+        >
           开始破冰
         </Button>
         <Button

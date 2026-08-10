@@ -4,6 +4,8 @@ import {
   MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
   MINI_PROGRAM_FEATURES_SUBPACKAGE_PAGES,
   MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
+  MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_PAGES,
+  MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT,
   MINI_PROGRAM_MAIN_PACKAGE_PAGES,
   MINI_PROGRAM_MATCHING_SUBPACKAGE_PAGES,
   MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT,
@@ -58,6 +60,7 @@ describe('mini-program onboarding routes', () => {
       'pages/matching-status',
       'pages/pool-registration',
       'pages/squad-unboxing',
+      'pages/gathering-room',
       'pages/payments',
       'pages/alang',
     ])
@@ -107,6 +110,10 @@ describe('mini-program onboarding routes', () => {
         pages: MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES,
       },
       {
+        root: MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT,
+        pages: MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_PAGES,
+      },
+      {
         root: MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT,
         pages: MINI_PROGRAM_PAYMENTS_SUBPACKAGE_PAGES,
       },
@@ -129,7 +136,14 @@ describe('mini-program onboarding routes', () => {
       },
       'pages/squad-unboxing/index': {
         network: 'all',
-        packages: [MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT],
+        packages: [
+          MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
+          MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT,
+        ],
+      },
+      'pages/pool-group-detail/index': {
+        network: 'all',
+        packages: [MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT],
       },
       'pages/event-detail/index': {
         network: 'all',

@@ -79,6 +79,10 @@ Distinct from L1 user filters — these are per-pool group-formation controls on
 - Floors are hard-mode-only. Undisclosed gender counts toward neither floor.
 - Full spec: `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` §4.2.1. Decision trail: Sprint Contract `sprint_20260714_gender_ratio_enforcement`.
 
+## Duo atomic units (双人成行)
+
+Bound duos are hard atomic units: they consume 2 seats, a group may contain at most one duo, the duo's unit score is the mean of both members' scores, the internal duo pair is excluded from group-quality metrics, and R1 must hold per member. If a duo cannot be placed, the variant A fallback keeps the duo unmatched together and routes them into the 场次未成行 auto-refund pipeline. Full details: `docs/systems/MATCHING_ALGORITHM_REFERENCE.md` §4.2.2 and `docs/design/duo-registration-spec-20260807.md`.
+
 ## Execution safety
 
 - Pool matching must not run concurrently for the same pool — use an execution guard

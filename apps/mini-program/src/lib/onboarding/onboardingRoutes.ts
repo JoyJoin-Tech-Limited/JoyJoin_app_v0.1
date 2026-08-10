@@ -30,6 +30,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   matchingStatus: 'pages/matching-status/index',
   squadUnboxing: 'pages/squad-unboxing/index',
   poolGroupDetail: 'pages/pool-group-detail/index',
+  gatheringRoom: 'pages/gathering-room/index',
   centerTabEmpty: 'pages/center-tab-empty/index',
   icebreakerSession: 'pages/icebreaker-session/index',
   tierSelector: 'pages/icebreaker-session/tier-selector/index',
@@ -77,6 +78,7 @@ export const MINI_PROGRAM_ROUTES = {
   matchingStatus: `/${MINI_PROGRAM_PAGE_PATHS.matchingStatus}`,
   squadUnboxing: `/${MINI_PROGRAM_PAGE_PATHS.squadUnboxing}`,
   poolGroupDetail: `/${MINI_PROGRAM_PAGE_PATHS.poolGroupDetail}`,
+  gatheringRoom: `/${MINI_PROGRAM_PAGE_PATHS.gatheringRoom}`,
   centerTabEmpty: `/${MINI_PROGRAM_PAGE_PATHS.centerTabEmpty}`,
   icebreakerSession: `/${MINI_PROGRAM_PAGE_PATHS.icebreakerSession}`,
   tierSelector: `/${MINI_PROGRAM_PAGE_PATHS.tierSelector}`,
@@ -220,6 +222,12 @@ export const MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES = [
   'index',
 ] as const
 
+export const MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT = 'pages/gathering-room' as const
+
+export const MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_PAGES = [
+  'index',
+] as const
+
 export const MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT = 'pages/payments' as const
 
 export const MINI_PROGRAM_PAYMENTS_SUBPACKAGE_PAGES = [
@@ -253,6 +261,10 @@ export const MINI_PROGRAM_SUBPACKAGES = [
     pages: MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES,
   },
   {
+    root: MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_PAGES,
+  },
+  {
     root: MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_PAYMENTS_SUBPACKAGE_PAGES,
   },
@@ -273,7 +285,14 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
   },
   [MINI_PROGRAM_PAGE_PATHS.squadUnboxing]: {
     network: 'all',
-    packages: [MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT],
+    packages: [
+      MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
+      MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT,
+    ],
+  },
+  [MINI_PROGRAM_PAGE_PATHS.poolGroupDetail]: {
+    network: 'all',
+    packages: [MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT],
   },
   [MINI_PROGRAM_PAGE_PATHS.eventDetail]: {
     network: 'all',

@@ -28,6 +28,8 @@ import {
 import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
 import { eventCreditsRepo } from "../../repositories/eventCreditsRepo";
+import { attendanceRepo } from "../../repositories/attendanceRepo";
+import { equipmentRepository } from "../../repositories/equipmentRepo";
 import { buildPoolPersonaSnapshot } from "../../repositories/eventPoolPersonaRepo";
 import { loadInterestSignalsByUserIds } from "./helpers";
 import { recordPoolCardCopyCache } from "../../middleware/metrics";
@@ -37,7 +39,7 @@ import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
 import { getFeatureFlag, getFeatureFlagSync } from "../../lib/featureFlags";
 import { shellCache } from "../../lib/shellCache";
 import { computeOracleCardFields } from "../../lib/oracleCardComputation";
-import { broadcastAttendanceStatusUpdated } from "../../eventBroadcast";
+import { broadcastAttendanceStatusUpdated, broadcastUserConfirmed } from "../../eventBroadcast";
 import { wsService } from "../../wsService";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
@@ -1389,6 +1391,11 @@ export function registerUserEventPoolRoutes(app: Express): void {
           registrationId: id,
         });
 
+        // 0) 清理该报名记录上的双人成行 / 邀请使用记录，避免 FK 约束导致删除失败
+        await db
+          .delete(invitationUses)
+          .where(eq(invitationUses.poolRegistrationId, id));
+
         // 1) 删除当前用户在这个报名记录上的 row
         let deletedRegistrations = await db
           .delete(eventPoolRegistrations)
@@ -1566,6 +1573,145 @@ export function registerUserEventPoolRoutes(app: Express): void {
       } catch (error) {
         console.error("Error fetching pool group details:", error);
         res.status(500).json({ message: "Failed to fetch group details" });
+      }
+    });
+
+    // Gathering room (集结房间) state — pre-event page data for matched members.
+    // Membership verification is identical to GET /api/pool-groups/:groupId above.
+    // Response shape conforms to GatheringRoomStateResponse (@shared/api/gatheringRoom).
+    app.get("/api/pool-groups/:groupId/room-state", requireAuth, async (req, res) => {
+      try {
+        const groupId = req.params.groupId;
+        const userId = getAuthenticatedUserId(req);
+        if (!userId) {
+          return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        if (!(await getFeatureFlag("gatheringRoomEnabled", false))) {
+          return res.status(503).json({
+            message: "集结房间暂未开放",
+            code: "GATHERING_ROOM_DISABLED",
+          });
+        }
+
+        // Get group info
+        const group = await db.query.eventPoolGroups.findFirst({
+          where: (groups: any, { eq }: any) => eq(groups.id, groupId),
+        });
+
+        if (!group) {
+          return res.status(404).json({ message: "Group not found" });
+        }
+
+        // Get pool info (kept for 404 parity with the group details route)
+        const pool = await db.query.eventPools.findFirst({
+          where: (pools: any, { eq }: any) => eq(pools.id, group.poolId),
+        });
+
+        if (!pool) {
+          return res.status(404).json({ message: "Event pool not found" });
+        }
+
+        // Check if user is in this group
+        const userRegistration = await db.query.eventPoolRegistrations.findFirst({
+          where: (regs: any, { eq, and }: any) => and(
+            eq(regs.assignedGroupId, groupId),
+            eq(regs.userId, userId)
+          ),
+        });
+
+        if (!userRegistration) {
+          return res.status(403).json({ message: "You are not a member of this group" });
+        }
+
+        // Resolve group → runtime blind box event. Prefer the group's own
+        // blind_box_events link (written at match commit); fall back to the
+        // pool-level lookup exactly like confirm-attendance does.
+        let blindBoxEventId: string | null = group.blindBoxEventId ?? null;
+        if (!blindBoxEventId && group.poolId) {
+          const linkedEvent = await db
+            .select({ id: blindBoxEvents.id })
+            .from(blindBoxEvents)
+            .where(eq(blindBoxEvents.poolId, group.poolId))
+            .limit(1);
+          if (linkedEvent.length > 0) {
+            blindBoxEventId = linkedEvent[0].id;
+          }
+        }
+
+        // Group members come from pool registrations (the group authority),
+        // not from blind_box_events.matched_attendees.
+        const members = await db
+          .select({
+            userId: users.id,
+            displayName: users.displayName,
+            // V4 users + matching-test bots only populate primary_archetype;
+            // legacy rows only have archetype (nameCn). Coalesce so both work.
+            archetype: sql<string | null>`coalesce(${users.primaryArchetype}, ${users.archetype})`,
+            topInterests: users.interestsRankedTop3,
+            birthdate: users.birthdate,
+            industryNicheLabel: users.industryNicheLabel,
+            ageVisible: users.ageVisibility,
+            industryVisible: users.workVisibility,
+          })
+          .from(eventPoolRegistrations)
+          .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
+          .where(eq(eventPoolRegistrations.assignedGroupId, groupId));
+
+        // Attendance is keyed off event_attendance per member (not the
+        // matched_attendees join) so a member who confirmed always reports
+        // 'confirmed'. No event yet → everyone is 'pending'.
+        const statusByUserId = new Map<string, string>();
+        if (blindBoxEventId) {
+          const rows = await attendanceRepo.getAttendanceStatuses(
+            blindBoxEventId,
+            members.map((m: (typeof members)[number]) => m.userId),
+          );
+          for (const row of rows) {
+            statusByUserId.set(row.userId, row.status);
+          }
+        }
+
+        // Equipped looks come from the existing avatar/equipment system so the
+        // room reuses the same outfits users curate on their profile.
+        const equipmentLooks = await equipmentRepository.getEquipmentLooksForUsers(
+          members.map((m: (typeof members)[number]) => m.userId),
+        );
+        const equipmentByUserId = new Map(equipmentLooks.map((look) => [look.userId, look]));
+
+        const memberStates = members.map((member: (typeof members)[number]) => {
+          const ageVisible = member.ageVisible !== 'hide_all';
+          const industryVisible = member.industryVisible !== 'hide_all';
+          const equipment = equipmentByUserId.get(member.userId);
+          return {
+            userId: member.userId,
+            displayName: member.displayName,
+            archetype: member.archetype,
+            attendanceStatus: statusByUserId.get(member.userId) ?? 'pending',
+            topInterests: member.topInterests,
+            // Visibility semantics identical to the group details route;
+            // ageLabel/industryNicheLabel are populated only when visible
+            // (GatheringRoomMember contract).
+            ageVisible,
+            industryVisible,
+            ageLabel: ageVisible ? formatAge(member.birthdate, member.ageVisible ?? 'hide_all') : null,
+            industryNicheLabel: industryVisible ? member.industryNicheLabel : null,
+            outfit: equipment?.outfit ?? null,
+            equippedItems: equipment?.equippedItems ?? [],
+          };
+        });
+
+        res.json({
+          groupId,
+          blindBoxEventId,
+          totalParticipants: memberStates.length,
+          confirmedCount: memberStates.filter((m: (typeof memberStates)[number]) => m.attendanceStatus === 'confirmed').length,
+          eventDateTime: pool.dateTime ? pool.dateTime.toISOString() : null,
+          members: memberStates,
+        });
+      } catch (error) {
+        logger.error("Error fetching gathering room state:", { error: String(error), groupId: req.params.groupId });
+        res.status(500).json({ message: "Failed to fetch room state" });
       }
     });
 
@@ -1793,6 +1939,31 @@ export function registerUserEventPoolRoutes(app: Express): void {
         const user = await storage.getUser(userId);
         const displayName = getUserDisplayName(user);
         broadcastAttendanceStatusUpdated(blindBoxEventId, userId, displayName, 'confirmed');
+
+        // Broadcast USER_CONFIRMED so the gathering room can celebrate the
+        // all-confirmed moment and refresh its attendance header. Counts are
+        // computed from the group + event_attendance table (source of truth).
+        try {
+          const memberRows = await db
+            .select({ userId: eventPoolRegistrations.userId })
+            .from(eventPoolRegistrations)
+            .where(eq(eventPoolRegistrations.assignedGroupId, groupId));
+          const attendanceRows = await attendanceRepo.getAttendanceStatuses(
+            blindBoxEventId,
+            memberRows.map((m: { userId: string }) => m.userId),
+          );
+          const confirmedCount = attendanceRows.filter((r) => r.status === 'confirmed').length;
+          const totalParticipants = group.memberCount ?? memberRows.length;
+
+          broadcastUserConfirmed(blindBoxEventId, userId, displayName, confirmedCount, totalParticipants);
+        } catch (broadcastErr) {
+          logger.error('[ConfirmAttendance] Failed to broadcast USER_CONFIRMED', {
+            error: broadcastErr instanceof Error ? broadcastErr.message : String(broadcastErr),
+            groupId,
+            blindBoxEventId,
+            userId,
+          });
+        }
 
         res.json({ success: true, blindBoxEventId, attendanceStatus: 'confirmed' });
       } catch (error) {

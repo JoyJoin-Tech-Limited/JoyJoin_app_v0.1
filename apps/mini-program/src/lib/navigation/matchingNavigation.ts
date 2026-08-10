@@ -79,6 +79,42 @@ export function replaceWithSquadUnboxing(groupId: string): void {
   })
 }
 
+/** Canonical URL for the gathering room (集结房间) page. */
+export function buildGatheringRoomUrl(groupId: string): string {
+  return `/pages/gathering-room/index?groupId=${encodeURIComponent(groupId)}`
+}
+
+export function openGatheringRoom(groupId: string): void {
+  const url = buildGatheringRoomUrl(groupId)
+  logInfo('[Navigation] openGatheringRoom', { groupId, url })
+  Taro.navigateTo({
+    url,
+    fail: (err) => {
+      logWarn('[Navigation] navigateTo gathering-room failed', { error: err })
+      Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+    },
+  })
+}
+
+/** Post-confirm handoff from squad-unboxing: replace so back never returns to a spent reveal. */
+export function replaceWithGatheringRoom(groupId: string): void {
+  const url = buildGatheringRoomUrl(groupId)
+  logInfo('[Navigation] replaceWithGatheringRoom', { groupId, url })
+  Taro.redirectTo({
+    url,
+    fail: (err) => {
+      logWarn('[Navigation] redirectTo gathering-room failed, falling back to navigateTo', { error: err })
+      Taro.navigateTo({
+        url,
+        fail: (navErr) => {
+          logWarn('[Navigation] navigateTo fallback for gathering-room failed', { error: navErr })
+          Taro.showToast({ title: '跳转失败，请重试', icon: 'none', duration: 2000 })
+        },
+      })
+    },
+  })
+}
+
 export function switchToEventsTab(): void {
   Taro.switchTab({ url: '/pages/events/index' })
 }

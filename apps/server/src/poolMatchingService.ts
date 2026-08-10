@@ -68,12 +68,6 @@ import { executePostMatchCommitSideEffects } from "./lib/matchingPostMatchEffect
 
 
 
-
-
-
-
-
-
 export interface UserWithProfile {
   userId: string;
   registrationId: string;
@@ -930,12 +924,19 @@ async function calculateGroupPairScore(
 function calculateGroupChemistryScore(
   members: UserWithProfile[],
   chemistryCalibrationMap?: ChemistryCalibrationMap,
+  excludePairKeys?: Set<string>,
 ): number {
   if (members.length < 2) return 0;
   let total = 0;
   let count = 0;
   for (let i = 0; i < members.length; i++) {
     for (let j = i + 1; j < members.length; j++) {
+      if (
+        excludePairKeys &&
+        excludePairKeys.has([members[i].userId, members[j].userId].sort().join('|'))
+      ) {
+        continue;
+      }
       total += calculateChemistryScore(members[i], members[j], chemistryCalibrationMap);
       count++;
     }
@@ -1355,15 +1356,9 @@ export async function runGreedyPoolMatchingCore(
     });
   }
 
-  // ── 双人成行 (duo) atomic units ─────────────────────────────────────────
-  // FALLBACK DECISION SITE (LOCKED 2026-08-07, variant A 整组顺延): a duo is a
-  // hard atomic unit — both members are admitted together or not at all, and
-  // MAX 1 duo per group is enforced at admission time. A duo that cannot be
-  // placed without violating the quality gates or the duo cap stays unmatched
-  // TOGETHER and flows into the existing unmatched → 场次未成行 auto-refund /
-  // 顺延 pipeline (lib/matchingPostMatchEffects.ts §9 + autoRefundService).
-  // Never split a duo across groups. To swap fallback semantics later, change
-  // the guards marked [DUO] below and the fallback copy slot in the spec.
+  // ── 双人成行 (duo) atomic units: variant A 整组顺延 (spec §D.3) ───────────
+  // Duo = hard atomic unit: both members together or unmatched together.
+  // MAX 1 duo per group. Fallback semantics live in guards marked [DUO].
   const duoPartnerOf = new Map<string, string>();
   const duoInternalPairKeys = new Set<string>();
   for (const duo of duoPairs) {
@@ -1516,13 +1511,19 @@ export async function runGreedyPoolMatchingCore(
     used.add(pair.user2.userId);
 
     // [DUO] Atomic seed: if a seed member belongs to a duo, the partner is
-    // force-included in the SAME group. If the partner cannot fit (capacity)
-    // the seed is abandoned and BOTH members stay unmatched together.
+    // force-included in the SAME group. The seed is abandoned (BOTH members
+    // stay unmatched together) when the partner cannot fit (capacity), or when
+    // the seed pair links members of TWO different duos — MAX 1 duo per group
+    // holds from the very first seat.
     let duoSeedFits = true;
     if (duoPartnerOf.size > 0) {
       for (const seedMember of [pair.user1, pair.user2]) {
         const partnerId = duoPartnerOf.get(seedMember.userId);
         if (!partnerId || used.has(partnerId)) continue;
+        if (countDuoUnits(groupMembers) >= 1) { // duo cap at seed time
+          duoSeedFits = false;
+          break;
+        }
         const partner = eligibleUsers.find((u) => u.userId === partnerId);
         if (partner && groupMembers.length < maxGroupSize) {
           groupMembers.push(partner);
@@ -1700,7 +1701,7 @@ export async function runGreedyPoolMatchingCore(
         duoQualityExclusions,
       );
       // E: Compute true chemistry-only average (distinct from avgPairScore)
-      const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap);
+      const avgChemistryScore = calculateGroupChemistryScore(groupMembers, chemistryCalibrationMap, duoQualityExclusions);
       const diversity = calculateGroupDiversity(groupMembers, genderBalanceMode, genderBalanceBonusPoints);
       const communicationBalance = calculateEnergyBalance(groupMembers);
       const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
@@ -1838,7 +1839,7 @@ export async function runGreedyPoolMatchingCore(
             useWeightProfileV2,
             duoQualityExclusions,
           );
-          bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
+          bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap, duoQualityExclusions);
           bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members, genderBalanceMode, genderBalanceBonusPoints);
           bestGroup.communicationBalance = calculateEnergyBalance(bestGroup.members);
           bestGroup.overallScore = Math.round(
@@ -1894,7 +1895,7 @@ export async function runGreedyPoolMatchingCore(
             useWeightProfileV2,
             duoQualityExclusions,
           );
-          const avgChemistryScore = calculateGroupChemistryScore(stillStranded, chemistryCalibrationMap);
+          const avgChemistryScore = calculateGroupChemistryScore(stillStranded, chemistryCalibrationMap, duoQualityExclusions);
           const diversity = calculateGroupDiversity(stillStranded, genderBalanceMode, genderBalanceBonusPoints);
           const communicationBalance = calculateEnergyBalance(stillStranded);
           const overall = Math.round((avgPairScore * 0.6) + (diversity * 0.25) + (communicationBalance * 0.15));
@@ -1998,7 +1999,7 @@ export async function runGreedyPoolMatchingCore(
               useWeightProfileV2,
               duoQualityExclusions,
             );
-            bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap);
+            bestGroup.avgChemistryScore = calculateGroupChemistryScore(bestGroup.members, chemistryCalibrationMap, duoQualityExclusions);
             bestGroup.diversityScore = calculateGroupDiversity(bestGroup.members, genderBalanceMode, genderBalanceBonusPoints);
             bestGroup.communicationBalance = calculateEnergyBalance(bestGroup.members);
             bestGroup.overallScore = Math.round(
