@@ -1,8 +1,8 @@
-# Lovart Brief — 集结房间像素场景（gathering room，分层交付）
+# Lovart Brief — 集结房间像素场景（gathering room）
 
 > 日期：2026-08-07
-> 状态：Phase A · 场景首稿。与 SD 形象验证 pilot（octopus）并行开工。
-> 绑定规范：`docs/design/sd-pixel-avatar-style-guide.md`（T1–T7 令牌引用该文档）。产品背景：`docs/product/gathering-room-prd.md`。
+> 状态：Phase A · 已交付（2026-08-10）。运行时不再新建 SD 像素形象，角色层直接复用现有 V2 纸娃娃 + 装备体系；场景交付为单张合成 WebP，MVP 不需要分层动画。
+> 绑定规范：场景美术仍遵循 `docs/design/sd-pixel-avatar-style-guide.md` 的 T1–T7 视觉令牌（色板、描边、光照、网格）。产品背景：`docs/product/gathering-room-prd.md`。
 
 ## Goal
 
@@ -31,13 +31,8 @@
 - **光影：** 全场只有桌上方那盏暖主灯一个光源（T4）：灯下最亮，向四周渐暗；每件家具 1 个椭圆投影 + 受光侧 1px 高光；禁止复杂 shading。灯光光锥作为**独立图层**交付（见下）
 - **描边：** 1px 彩色描边（基色同色相明度 30%），禁止纯黑（T2）
 - **用色：** 整体 ≤32 色（T1）
-- **Export format:** **分层 PNG（透明底），不按整图交付**——运行时是 layered-Image 合成：
-  1. `room-far-wall-floor-v1.png` —— 远墙 + 地板（含墙脚线；最底层）
-  2. `room-table-v1.png` —— 6 人桌 + 桌布（独立层，桌面朝上区域保持干净——逐日演化覆盖层：订位卡 → 餐具，由代码叠加在桌面上）
-  3. `room-door-v1.png` —— 门（独立层，支持开门动画的帧替换）
-  4. `room-window-night-v1.png` —— 夜景窗（独立层，夜空可后续做时间状态变体）
-  5. `room-lamp-cone-v1.png` —— 灯光光锥（最上层，半透明暖色渐变，盖在角色之上营造「灯下」感）
-- **File-size budget:** 单层 ≤ 60 KB，合计 ≤ 250 KB
+- **Export format:** 单张合成 WebP（不透明背景，750×960 px，≈82 KB）——运行时直接作为背景层，角色（V2 纸娃娃 + 装备）由代码浮层叠加。分层 PNG（门、窗、灯罩）仅在未来需要开门动画/时间状态变体/换肤时才拆分，MVP 不需要。
+- **File-size budget:** 单张 ≤ 200 KB
 
 ## 演化与换肤的结构约束
 
@@ -48,8 +43,10 @@
 
 Upload these reference images to Lovart ChatCanvas before generating:
 
-1. **角色风格帧（必传）：** 已验收的 `sd-avatar-octopus-master-v1.png` —— 场景与角色共享描边规则、光影方向、色板克制；场景的像素颗粒度必须与角色一致（同一 16px 网格体系）。
+1. **角色风格帧（必传）：** 现有 V2 纸娃娃风格帧（`assets-source/profile-pixel-v2/<archetype>/atlas-source.png`，如 corgi）—— 场景与角色共享描边规则、光影方向、色板克制；场景的像素颗粒度必须与 V2 角色一致。
 2. **氛围口述锚点：** 深夜食堂式的暖木小店——但去掉所有文字招牌与日式杂物堆叠，只留暖光、木纹、留白。
+
+> **形象策略变更（2026-08-10）：** 集结房间不再新建 SD 像素形象，直接复用现有 V2 纸娃娃 + 装备体系。场景只需保证「空位留给角色」即可，无需绘制角色。
 
 ## Prompt Draft (for Lovart ChatCanvas)
 
@@ -83,10 +80,11 @@ Style: soft premium doujin pixel art, matching the reference character sprite's 
 
 ## Export Requirements
 
-- **File naming:** 如上 5 层 + `room-composite-preview-v1.png`（合成预览，仅供评审）
+- **Source file naming:** `room-composite-v1.png`
+- **Runtime asset:** `room-composite-v1.webp`（750×960 px，≤100 KB，registered in `cdn-asset-manifest.json` and bundled locally under `src/assets/gathering-room/`）
 - **Save location:** `assets-source/gathering-room/`
-- **交付说明（随资产附 README 或在交付消息中写明）：** 桌面矩形坐标（像素）、6 个座位锚点坐标、门轴侧（开门动画铰链）、灯中心点坐标
-- **运行时接入：** 集结房间实现期注册 CDN manifest + layered-Image 合成；本 brief 只交付源资产，不改运行时代码
+- **交付说明（随资产附 README 或在交付消息中写明）：** 桌面矩形坐标（像素）、6 个座位锚点坐标、灯中心点坐标（供代码对齐角色站位）
+- **运行时接入：** 集结房间实现期注册 CDN manifest + 单张背景图；本 brief 已随 2026-08-10 实现落地，后续皮肤/动画变体另行立项
 
 ## Review Checklist
 
@@ -103,5 +101,5 @@ Style: soft premium doujin pixel art, matching the reference character sprite's 
 
 ## Downstream handoff
 
-- **集结房间前端：** 分层结构与座位锚点交给房间实现（layered-Image 合成 + 角色层插入桌层与光锥层之间）。
+- **集结房间前端：** 座位锚点交给房间实现；MVP 使用单张合成背景 + 角色浮层，如需未来开门/换肤动画再回退到分层合成。
 - **Phase 2 皮肤：** 换肤时沿用本图层结构与锚点，仅替换美术；皮肤 brief 另行立项（破冰局 / 畅聊局 / 狂欢局三档）。

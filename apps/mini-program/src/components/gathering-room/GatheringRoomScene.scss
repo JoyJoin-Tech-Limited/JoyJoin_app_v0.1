@@ -1,0 +1,468 @@
+@use 'sass:color';
+@use '../../styles/variables' as *;
+
+// GatheringRoomScene — 集结房间 stage styles.
+//
+// Placeholder room art behind the ROOM_ART_READY switch in the component:
+// warm-wood palette anchored to the design-system tokens from style guide T1.
+// When the layered pixel art lands, the placeholder layers below are replaced
+// by <Image> layers; the character layer (.gathering-room-scene__seat) and
+// all motion rules stay untouched.
+//
+// Motion: transform/opacity only. Loops pause under --paused (page hidden).
+
+$room-wall: $color-bg-warm-to;
+$room-wall-line: $color-bg-warm-mid;
+$room-floor: color.mix($flow-accent-human, $color-bg-warm-mid, 35%);
+$room-floor-line: color.mix($flow-accent-human, $color-bg-warm-mid, 55%);
+$room-wood: color.mix($flow-accent-human, $color-text-primary-warm, 55%);
+$room-wood-dark: color.mix($flow-accent-human, $color-text-primary-warm, 40%);
+$room-coral: $flow-accent-human;
+$room-night: $flow-scrim-cool-shadow;
+$room-night-star: $color-glow-gold-hot;
+$room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
+
+.gathering-room-scene {
+  position: relative;
+  width: 100%;
+  height: 960rpx;
+  max-height: 100%;
+  overflow: hidden;
+  background: $room-floor;
+  animation: gathering-room-scene-fade-in 360ms ease-out;
+
+  &__layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    &--composite {
+      z-index: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    &--far-wall-floor {
+      z-index: 0;
+    }
+
+    &--door {
+      z-index: 1;
+    }
+
+    &--window-night {
+      z-index: 1;
+    }
+
+    &--table {
+      z-index: 2;
+    }
+
+    // Lamp cone renders above the character layer (z-index 3 on __seat).
+    &--lamp-cone {
+      z-index: 4;
+    }
+  }
+
+  // ── Layer 1: far wall + floor ──────────────────────────────────────────
+  &__wall {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 34%;
+    background: linear-gradient(180deg, $room-wall 0%, $room-wall-line 100%);
+    border-bottom: 4rpx solid $room-wood;
+  }
+
+  &__floor {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 34%;
+    bottom: 0;
+    background: repeating-linear-gradient(
+      180deg,
+      $room-floor 0,
+      $room-floor 64rpx,
+      $room-floor-line 64rpx,
+      $room-floor-line 68rpx
+    );
+  }
+
+  // ── Layer 3: door (back wall, right) ───────────────────────────────────
+  &__door-frame {
+    position: absolute;
+    left: 78%;
+    top: 6%;
+    width: 120rpx;
+    height: 240rpx;
+    background: $room-wood-dark;
+    border-radius: 12rpx 12rpx 0 0;
+  }
+
+  &__door-panel {
+    position: absolute;
+    inset: 8rpx;
+    background: linear-gradient(180deg, $room-wood 0%, $room-wood-dark 100%);
+    border-radius: 8rpx 8rpx 0 0;
+  }
+
+  // ── Layer 4: night window (back wall, left) ────────────────────────────
+  &__window-frame {
+    position: absolute;
+    left: 10%;
+    top: 7%;
+    width: 200rpx;
+    height: 176rpx;
+    background: $room-wood;
+    border-radius: 16rpx;
+    padding: 10rpx;
+  }
+
+  &__window-sky {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, $room-night 0%, $flow-scrim-cool-shadow 100%);
+    border-radius: 10rpx;
+    overflow: hidden;
+  }
+
+  &__window-star {
+    position: absolute;
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: $radius-circle;
+    background: $room-night-star;
+
+    &--a { left: 22%; top: 28%; }
+    &--b { left: 58%; top: 18%; }
+    &--c { left: 74%; top: 52%; }
+  }
+
+  // ── Layer 2: six-seat table ────────────────────────────────────────────
+  &__layer--table {
+    inset: auto;
+    transform: translate(-50%, -50%);
+  }
+
+  &__table {
+    position: relative;
+    width: 420rpx;
+    height: 300rpx;
+    border-radius: $radius-circle;
+    background: $room-wood-dark;
+    box-shadow: 0 24rpx 40rpx rgba($color-text-primary-warm, 0.28);
+  }
+
+  &__table-cloth {
+    position: absolute;
+    inset: 14rpx;
+    border-radius: $radius-circle;
+    background: radial-gradient(closest-side, $flow-scrim-warm-glow 0%, $room-coral 78%);
+  }
+
+  &__seat-marker {
+    position: absolute;
+    width: 44rpx;
+    height: 30rpx;
+    border-radius: $radius-circle;
+    background: $room-wood;
+    border: 4rpx solid $room-wood-dark;
+
+    // Six markers around the table rim (matches SEAT_ANCHORS in the component)
+    &--0 { left: 22%; top: -18rpx; }
+    &--1 { right: 22%; top: -18rpx; }
+    &--2 { left: -26rpx; top: 44%; }
+    &--3 { right: -26rpx; top: 44%; }
+    &--4 { left: 24%; bottom: -18rpx; }
+    &--5 { right: 24%; bottom: -18rpx; }
+  }
+
+  // ── Character layer ────────────────────────────────────────────────────
+  &__seat {
+    position: absolute;
+    z-index: 3;
+    transform: translate(-50%, -88%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  &__seat-body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
+
+    &--absent {
+      opacity: 0.38;
+    }
+
+    &--present {
+      opacity: 1;
+      animation: gathering-room-breathe 5600ms ease-in-out infinite;
+    }
+
+    &--confirmed {
+      opacity: 1;
+    }
+
+    &--entering {
+      animation: gathering-room-look-up 700ms ease-out both;
+    }
+
+    &--door-entry {
+      animation: gathering-room-door-entry 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    &--pressed {
+      opacity: 0.7;
+      transform: scale(0.94);
+    }
+  }
+
+  &__avatar {
+    // V2 pixel avatar is a 2:3 paper doll; keep the same visual footprint as
+    // the previous 96rpx square SD sprite by sizing the wrapper explicitly.
+    display: block;
+    width: 96rpx;
+    height: 144rpx;
+    line-height: 0;
+  }
+
+  &__confirmed-badge {
+    position: absolute;
+    top: -12rpx;
+    right: -28rpx;
+    padding: 4rpx 14rpx;
+    border-radius: $radius-pill;
+    background: $color-success;
+    box-shadow: 0 4rpx 10rpx rgba($color-success, 0.3);
+  }
+
+  &__confirmed-badge-text {
+    font-size: $font-size-2xs;
+    line-height: 1.4;
+    color: $color-surface;
+  }
+
+  &__poke-badge {
+    position: absolute;
+    top: -56rpx;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8rpx 20rpx;
+    border-radius: $radius-pill;
+    background: $color-surface;
+    box-shadow: 0 8rpx 20rpx rgba($color-text-primary, 0.16);
+    white-space: nowrap;
+    animation: gathering-room-poke-float 2000ms ease-out both;
+  }
+
+  &__poke-badge-text {
+    max-width: 240rpx;
+    font-size: $font-size-xs;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__name-card {
+    margin-top: 8rpx;
+    padding: 6rpx 20rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.85);
+    border: 2rpx solid $room-wall-line;
+  }
+
+  &__name-card-text {
+    max-width: 160rpx;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // ── Layer 5: lamp cone ─────────────────────────────────────────────────
+  &__lamp {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  &__lamp-cord {
+    width: 6rpx;
+    height: 56rpx;
+    background: $room-wood-dark;
+  }
+
+  &__lamp-shade {
+    width: 120rpx;
+    height: 64rpx;
+    border-radius: 0 0 60rpx 60rpx;
+    background: linear-gradient(180deg, $color-primary 0%, $color-primary-dark 100%);
+    box-shadow: 0 10rpx 24rpx rgba($color-primary, 0.35);
+  }
+
+  &__lamp-glow {
+    position: absolute;
+    left: 50%;
+    top: 100rpx;
+    width: 640rpx;
+    height: 640rpx;
+    transform: translateX(-50%);
+    border-radius: $radius-circle;
+    background: radial-gradient(closest-side, $room-lamp-glow 0%, rgba($color-glow-gold-hot, 0) 72%);
+  }
+
+  // ── First-arriver banner ───────────────────────────────────────────────
+  &__first-arriver {
+    position: absolute;
+    left: 50%;
+    top: 40rpx;
+    transform: translateX(-50%);
+    max-width: 600rpx;
+    padding: 14rpx 32rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.92);
+    border: 2rpx solid $room-wall-line;
+    box-shadow: 0 10rpx 28rpx rgba($color-text-primary-warm, 0.14);
+  }
+
+  &__first-arriver-text {
+    max-width: 536rpx;
+    font-size: $font-size-sm;
+    line-height: 1.5;
+    color: $color-text-primary;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // ── All-confirmed celebration ──────────────────────────────────────────
+  &__celebration {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  &__celebration-glow {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 900rpx;
+    height: 900rpx;
+    transform: translate(-50%, -50%);
+    border-radius: $radius-circle;
+    background: radial-gradient(closest-side, rgba($color-glow-gold-hot, 0.45) 0%, rgba($color-glow-gold-hot, 0) 70%);
+    animation: gathering-room-celebration-glow 2400ms ease-out both;
+  }
+
+  &__celebration-sparkle {
+    position: absolute;
+    width: 14rpx;
+    height: 14rpx;
+    border-radius: $radius-circle;
+    background: $room-coral;
+    box-shadow: 0 0 12rpx rgba($room-coral, 0.8);
+    animation: gathering-room-sparkle 1400ms ease-out both;
+  }
+
+  &__celebration-card {
+    position: relative;
+    padding: 20rpx 48rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.95);
+    border: 2rpx solid $room-coral;
+    box-shadow: 0 16rpx 40rpx rgba($color-text-primary-warm, 0.2);
+    animation: gathering-room-celebration-pop 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__celebration-text {
+    max-width: 480rpx;
+    font-size: $font-size-md;
+    color: $color-text-primary;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // ── Pause switch (page hidden) ─────────────────────────────────────────
+  &--paused {
+    .gathering-room-scene__seat-body,
+    .gathering-room-scene__celebration-glow,
+    .gathering-room-scene__celebration-sparkle,
+    .gathering-room-scene__poke-badge {
+      animation-play-state: paused;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gathering-room-scene {
+    animation: none;
+  }
+}
+
+@keyframes gathering-room-scene-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes gathering-room-breathe {
+  0%, 100% { transform: translateY(0); }
+  28% { transform: translateY(-8rpx); }
+  38% { transform: translateY(-8rpx); }
+  78% { transform: translateY(0); }
+}
+
+@keyframes gathering-room-look-up {
+  0% { transform: translateY(0); }
+  30% { transform: translateY(-16rpx); }
+  60% { transform: translateY(3rpx); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes gathering-room-door-entry {
+  0% { transform: translate(120rpx, -220rpx); opacity: 0; }
+  40% { opacity: 1; }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+
+@keyframes gathering-room-poke-float {
+  0% { transform: translateX(-50%) translateY(12rpx); opacity: 0; }
+  15% { transform: translateX(-50%) translateY(0); opacity: 1; }
+  75% { transform: translateX(-50%) translateY(-24rpx); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(-40rpx); opacity: 0; }
+}
+
+@keyframes gathering-room-celebration-glow {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+@keyframes gathering-room-celebration-pop {
+  0% { opacity: 0; transform: translateY(24rpx) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes gathering-room-sparkle {
+  0% { opacity: 0; transform: translateY(16rpx) scale(0.4); }
+  35% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-60rpx) scale(0.6); }
+}
