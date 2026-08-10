@@ -20,7 +20,10 @@ export function resolveDuoInviteExpiry(pool: {
   dateTime: Date | string;
 }): Date {
   const lock = pool.preferenceLockAt ? new Date(pool.preferenceLockAt) : null;
-  return lock ?? new Date(pool.dateTime);
+  if (lock && !isNaN(lock.getTime())) {
+    return lock;
+  }
+  return new Date(pool.dateTime);
 }
 
 /** Mini-program share path carried by the WeChat share card (spec §A.5). */

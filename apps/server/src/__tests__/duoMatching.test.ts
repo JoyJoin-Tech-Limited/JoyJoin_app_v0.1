@@ -165,6 +165,52 @@ describe('runGreedyPoolMatchingCore — 双人成行 duo atomic units', () => {
     expect(groupOf(groups, 'u4')).toBeUndefined();
   });
 
+  it('never seeds a group containing TWO different duos (cap holds from the first seat)', async () => {
+    const users = ['u1', 'u2', 'u3', 'u4', 's1', 's2'].map((id) => makeUser(id));
+    const ids = users.map((u) => u.userId);
+    // The cross-duo pair (u1,u3) is the TOP seed candidate — a naive atomic
+    // seed would force-add both partners and commit a 2-duo group.
+    const cache = buildPairScoreCache(ids, (a, b) => {
+      const key = [a, b].sort().join('|');
+      if (key === 'u1|u3') return 98;
+      if (key === 'u1|u2' || key === 'u3|u4') return 95;
+      return 90;
+    });
+
+    const groups = await runGreedyPoolMatchingCore(
+      users,
+      { minGroupSize: 4, maxGroupSize: 6, targetGroups: 10 },
+      new Map(),
+      cache,
+      undefined,
+      false,
+      undefined,
+      [],
+      undefined,
+      undefined,
+      50,
+      false,
+      false,
+      false,
+      [...DUO('u1', 'u2'), ...DUO('u3', 'u4')],
+    );
+
+    // Invariant: no committed group ever contains members of both duos.
+    for (const group of groups) {
+      const memberIds = new Set(group.members.map((m) => m.userId));
+      const duoCount =
+        (memberIds.has('u1') && memberIds.has('u2') ? 1 : 0) +
+        (memberIds.has('u3') && memberIds.has('u4') ? 1 : 0);
+      expect(duoCount).toBeLessThanOrEqual(1);
+    }
+    // The first duo commits with the solos; the second stays unmatched together.
+    expect(groups.length).toBe(1);
+    expect(groupOf(groups, 'u1')).toBe(groups[0]);
+    expect(groupOf(groups, 'u2')).toBe(groups[0]);
+    expect(groupOf(groups, 'u3')).toBeUndefined();
+    expect(groupOf(groups, 'u4')).toBeUndefined();
+  });
+
   it('keeps an unplaceable duo unmatched TOGETHER when the quality gate fails', async () => {
     const users = ['u1', 'u2', 's1', 's2', 's3', 's4'].map((id) => makeUser(id));
     const ids = users.map((u) => u.userId);

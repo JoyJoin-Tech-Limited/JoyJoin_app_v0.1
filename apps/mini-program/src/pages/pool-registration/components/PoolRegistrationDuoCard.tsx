@@ -88,7 +88,7 @@ export default function PoolRegistrationDuoCard({
           className='pool-reg-duo__info-hit'
           hoverClass='pool-reg-duo__info-hit--active'
           onClick={onOpenInfo}
-          aria-role='button'
+          role='button'
           aria-label='玩法说明'
         >
           <View className='pool-reg-duo__info-glyph' aria-hidden='true'>
@@ -121,7 +121,7 @@ export default function PoolRegistrationDuoCard({
           className='pool-reg-duo__error'
           hoverClass='pool-reg-duo__error--active'
           onClick={onRetry}
-          aria-role='button'
+          role='button'
         >
           <Text className='pool-reg-duo__error-text'>双人状态没刷出来，点我重试</Text>
         </View>

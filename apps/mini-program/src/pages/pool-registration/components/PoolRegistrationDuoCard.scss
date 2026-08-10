@@ -200,12 +200,12 @@
   &__skeleton {
     display: flex;
     flex-direction: column;
-    gap: $spacing-sm;
+    gap: $spacing-xs;
   }
 
   &__skeleton-line {
-    height: 24rpx;
-    border-radius: 8rpx;
+    height: 20rpx;
+    border-radius: 6rpx;
     background: $color-divider;
     animation: pool-reg-shimmer 1.5s ease-in-out infinite;
 

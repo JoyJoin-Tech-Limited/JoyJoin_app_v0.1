@@ -18,17 +18,20 @@
 import type { Express } from "express";
 import { randomBytes } from "crypto";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "../../db";
 import {
   eventPools,
   eventPoolRegistrations,
   invitations,
   invitationUses,
+  referralCodes,
   users,
 } from "@shared/schema";
 import { requireAuth } from "../../middleware/auth";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { logger } from "../../lib/logger";
+import { getFeatureFlag } from "../../lib/featureFlags";
 import { duoInviteLookupLimiter } from "../../rateLimiter";
 import {
   DUO_INVITATION_TYPE,
@@ -46,13 +49,23 @@ export function registerDuoRoutes(app: Express): void {
       if (!userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
-      const poolId = req.params.id;
+      const poolIdParse = z.string().uuid().safeParse(req.params.id);
+      if (!poolIdParse.success) {
+        return res.status(400).json({ message: "Invalid pool id" });
+      }
+      const poolId = poolIdParse.data;
+
+      if (!(await getFeatureFlag("duoRegistrationEnabled", true))) {
+        return res.status(503).json({ message: "Duo registration is temporarily disabled" });
+      }
 
       const [pool] = await db
         .select({
           id: eventPools.id,
           dateTime: eventPools.dateTime,
           preferenceLockAt: eventPools.preferenceLockAt,
+          status: eventPools.status,
+          registrationDeadline: eventPools.registrationDeadline,
         })
         .from(eventPools)
         .where(eq(eventPools.id, poolId))
@@ -60,6 +73,13 @@ export function registerDuoRoutes(app: Express): void {
 
       if (!pool) {
         return res.status(404).json({ message: "Event pool not found" });
+      }
+
+      if (pool.status !== "active") {
+        return res.status(409).json({ message: "This event pool is no longer open for registration" });
+      }
+      if (pool.registrationDeadline && new Date(pool.registrationDeadline) < new Date()) {
+        return res.status(409).json({ message: "Registration deadline has passed" });
       }
 
       const findExistingCode = async () => {
@@ -82,16 +102,20 @@ export function registerDuoRoutes(app: Express): void {
         return res.json({ code: existingCode, sharePath: buildDuoSharePath(poolId, existingCode) });
       }
 
-      let code: string | undefined;
-      for (let attempt = 0; attempt < 3 && !code; attempt++) {
-        const candidate = randomBytes(4).toString("hex");
-        const [collision] = await db
-          .select({ id: invitations.id })
-          .from(invitations)
-          .where(eq(invitations.code, candidate))
-          .limit(1);
-        if (collision) continue;
+      // Batch-probe candidates to avoid N+1 DB round-trips.
+      const candidates = Array.from({ length: 5 }, () => randomBytes(6).toString("hex"));
+      const [existingInvitations, existingReferrals] = await Promise.all([
+        db.select({ code: invitations.code }).from(invitations).where(inArray(invitations.code, candidates)),
+        db.select({ code: referralCodes.code }).from(referralCodes).where(inArray(referralCodes.code, candidates)),
+      ]);
+      const taken = new Set([
+        ...existingInvitations.map((r: { code: string }) => r.code),
+        ...existingReferrals.map((r: { code: string }) => r.code),
+      ]);
+      const candidate = candidates.find((c) => !taken.has(c));
 
+      let code: string | undefined;
+      if (candidate) {
         try {
           await db.insert(invitations).values({
             code: candidate,
@@ -103,8 +127,8 @@ export function registerDuoRoutes(app: Express): void {
           });
           code = candidate;
         } catch (error) {
-          // Lost a race (concurrent request created this user's invite, or a
-          // code collision slipped past the pre-check) — loop re-checks below.
+          // Lost a race (concurrent request created this user's invite, or the
+          // partial unique index blocked a duplicate). Re-check for the raced row.
           logger.warn("Duo invite insert failed; re-checking for a raced row", {
             poolId,
             userId,
@@ -135,7 +159,11 @@ export function registerDuoRoutes(app: Express): void {
       if (!userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
-      const poolId = req.params.id;
+      const poolIdParse = z.string().uuid().safeParse(req.params.id);
+      if (!poolIdParse.success) {
+        return res.status(400).json({ message: "Invalid pool id" });
+      }
+      const poolId = poolIdParse.data;
 
       // Current user's registration in this pool (either role needs this).
       const [ownRegistration] = await db
@@ -258,7 +286,11 @@ export function registerDuoRoutes(app: Express): void {
   // Mirrors the 404/410 semantics of GET /api/invitations/:code (referrals.ts).
   app.get("/api/duo-invites/:code", duoInviteLookupLimiter, async (req, res) => {
     try {
-      const { code } = req.params;
+      const codeParse = z.string().regex(/^[a-f0-9]{12}$/).safeParse(req.params.code);
+      if (!codeParse.success) {
+        return res.status(404).json({ message: "Invitation not found or expired", status: "invalid" });
+      }
+      const { code } = { code: codeParse.data };
 
       const [invitation] = await db
         .select({

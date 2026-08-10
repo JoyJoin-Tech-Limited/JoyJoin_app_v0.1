@@ -23,6 +23,7 @@
     background: $color-surface;
     border-radius: 32rpx 32rpx 0 0;
     max-height: calc(100vh - 220rpx);
+    max-height: calc(100dvh - 220rpx);
     display: flex;
     flex-direction: column;
     padding-bottom: env(safe-area-inset-bottom);
@@ -80,6 +81,10 @@
     display: flex;
     flex-direction: column;
     gap: 12rpx;
+  }
+
+  &__listitem {
+    display: block;
   }
 
   &__item {

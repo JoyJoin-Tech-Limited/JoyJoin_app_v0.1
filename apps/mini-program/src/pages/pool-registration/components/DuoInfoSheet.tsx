@@ -45,24 +45,30 @@ export default function DuoInfoSheet({ reduceMotion, onClose }: DuoInfoSheetProp
           <View className='duo-info-sheet__section'>
             <Text className='duo-info-sheet__section-title'>为什么做</Text>
             <View className='duo-info-sheet__items' role='list'>
-              <Text className='duo-info-sheet__item'>
-                一个人开新桌有点慌？带个熟人，悦仔帮你们留座。
-              </Text>
+              <View className='duo-info-sheet__listitem' role='listitem'>
+                <Text className='duo-info-sheet__item'>
+                  一个人开新桌有点慌？带个熟人，悦仔帮你们留座。
+                </Text>
+              </View>
             </View>
           </View>
 
           <View className='duo-info-sheet__section'>
             <Text className='duo-info-sheet__section-title'>注意事项</Text>
             <View className='duo-info-sheet__items' role='list'>
-              <Text className='duo-info-sheet__item'>
-                每桌最多一对双人，先成队先得。
-              </Text>
+              <View className='duo-info-sheet__listitem' role='listitem'>
+                <Text className='duo-info-sheet__item'>
+                  每桌最多一对双人，先成队先得。
+                </Text>
+              </View>
               {/* FALLBACK 槽位（spec §B / B'-2）— owner 定稿为变体 A（整组顺延）。
                   若匹配侧 fallback 语义改为「拆散+补偿券」，此行必须同步替换为
                   变体 B：如果同桌实在排不开，悦仔送上一张补偿券。 */}
-              <Text className='duo-info-sheet__item'>
-                如果同桌实在排不开，你们一起顺延到下一局。
-              </Text>
+              <View className='duo-info-sheet__listitem' role='listitem'>
+                <Text className='duo-info-sheet__item'>
+                  如果同桌实在排不开，你们一起顺延到下一局。
+                </Text>
+              </View>
             </View>
           </View>
 

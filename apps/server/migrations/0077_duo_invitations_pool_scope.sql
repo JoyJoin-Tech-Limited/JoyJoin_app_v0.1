@@ -17,4 +17,23 @@ DO $$ BEGIN
       ON DELETE no action ON UPDATE no action;
   END IF;
 END $$;--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "idx_invitations_pool_id" ON "invitations" USING btree ("pool_id");
+CREATE INDEX IF NOT EXISTS "idx_invitations_pool_id" ON "invitations" USING btree ("pool_id");--> statement-breakpoint
+-- 4. Duo invite idempotency: one active duo code per inviter per pool.
+CREATE UNIQUE INDEX IF NOT EXISTS "idx_invitations_duo_pool_inviter"
+  ON "invitations" ("inviter_id", "pool_id")
+  WHERE "invitation_type" = 'duo';--> statement-breakpoint
+-- 5. Scope check: duo invites must be pool-scoped; legacy invites event-scoped.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'invitations_scope_check' AND conrelid = 'invitations'::regclass
+  ) THEN
+    ALTER TABLE "invitations" ADD CONSTRAINT "invitations_scope_check"
+      CHECK (
+        ("invitation_type" = 'duo' AND "pool_id" IS NOT NULL)
+        OR
+        ("invitation_type" <> 'duo' AND "event_id" IS NOT NULL)
+      );
+  END IF;
+END $$;
