@@ -5,6 +5,11 @@ import { db } from "../../db";
 import { participationExperimentEvents, discoverAnalyticsEvents, paymentRitualEvents } from "@shared/schema";
 import { socialIcebreakerAnalyticsEventSchema } from "@shared/api";
 import { createRateLimiter } from "../../rateLimiter";
+import {
+  FLASH_STORY_ANALYTICS_EVENTS,
+  isFlashStoryUnitId,
+  type FlashStoryAnalyticsEvent,
+} from "@shared/alang/flashStorySeason";
 
 const participationAnalyticsLimiter = createRateLimiter({
   windowMs: 60_000,
@@ -40,6 +45,13 @@ const eventsAnalyticsLimiter = createRateLimiter({
   windowMs: 60_000,
   maxRequests: 120,
   keyPrefix: "events-analytics",
+});
+
+const flashStoryAnalyticsLimiter = createRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 600,
+  keyPrefix: "flash-story-analytics",
+  keyResolver: () => "anonymous",
 });
 
 /**
@@ -372,6 +384,7 @@ const EVENTS_EVENT_TYPES = [
 type EventsEventType = (typeof EVENTS_EVENT_TYPES)[number];
 
 const ALLOWED_EVENTS_EVENT_TYPES = new Set<EventsEventType>(EVENTS_EVENT_TYPES);
+const ALLOWED_FLASH_STORY_EVENT_TYPES = new Set<FlashStoryAnalyticsEvent>(FLASH_STORY_ANALYTICS_EVENTS);
 
 const MAX_METADATA_BYTES = 4_096;
 const MAX_POOL_ID_LENGTH = 120;
@@ -415,6 +428,34 @@ export function registerAnalyticsRoutes(app: Express): void {
         error: String(error),
       });
       res.status(500).send("# Error generating metrics\n");
+    }
+  });
+
+  /** Deidentified, enum-only and fail-open Street Blind Box story events. */
+  app.post("/api/analytics/flash-story", flashStoryAnalyticsLimiter, async (req: Request, res) => {
+    try {
+      const { eventType, unitId } = req.body as { eventType?: unknown; unitId?: unknown };
+      if (
+        typeof eventType !== "string"
+        || !ALLOWED_FLASH_STORY_EVENT_TYPES.has(eventType as FlashStoryAnalyticsEvent)
+        || typeof unitId !== "string"
+        || !isFlashStoryUnitId(unitId)
+      ) return res.status(200).json({ success: false, error: "invalid story event" });
+      await insertAnalyticsEvent(discoverAnalyticsEvents, {
+        userId: null,
+        sessionId: null,
+        eventType,
+        poolId: null,
+        metadata: { unitId },
+        timestamp: new Date(),
+      });
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      logger.warn("flash story analytics write failed (non-fatal)", {
+        request_id: req.requestId,
+        error: error instanceof Error ? error.name : "unknown",
+      });
+      return res.status(200).json({ success: false, error: "analytics write failed" });
     }
   });
 

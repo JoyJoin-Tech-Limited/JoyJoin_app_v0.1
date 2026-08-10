@@ -1,9 +1,12 @@
 import Taro from '@tarojs/taro'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
+import { getFlashStoryUnitDefinition } from '@shared/alang/flashStorySeason'
+import { FlashStoryUnit } from '../../../components/alang/story-unit/FlashStoryUnit'
 import { FlashButton, FlashFeatureClosed, FlashNpcDialogueScene, FlashPageState, FlashTaskCategoryBadge } from '../../../components/alang/FlashUi'
 import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
+import { getApiErrorStatusCode, isTransportApiError } from '../../../lib/api/authSession'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import {
   useAnswerFlashEncounter,
@@ -78,6 +81,16 @@ function storyResponseText(text: string): string {
   return LEGACY_STORY_RESPONSE_COPY[text] ?? text
 }
 
+type StorySubmitState = 'idle' | 'submitting' | 'retry' | 'terminal'
+
+function classifyStorySubmitFailure(error: unknown): 'retry' | 'refresh' | 'exit' {
+  const code = getFlashApiErrorCode(error)
+  const status = getApiErrorStatusCode(error)
+  if (code === 'FLASH_STORY_GENERATION_PENDING' || isTransportApiError(error) || status === undefined || status >= 500) return 'retry'
+  if (code === 'FLASH_INVALID_DIALOGUE_OPTION' || status === 400 || status === 409) return 'refresh'
+  return 'exit'
+}
+
 export default function FlashDialoguePage() {
   const enabled = shouldShowStreetBlindBoxEntry()
   const params = Taro.getCurrentInstance().router?.params ?? {}
@@ -89,6 +102,8 @@ export default function FlashDialoguePage() {
   const deliverMutation = useDeliverFlashTask()
   const [actionError, setActionError] = useState('')
   const [fragmentRevealed, setFragmentRevealed] = useState(false)
+  const [storySubmitState, setStorySubmitState] = useState<StorySubmitState>('idle')
+  const storySubmitInFlightRef = useRef(false)
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: data?.npc?.name ? `和${data.npc.name}聊聊` : '角色对话' })
@@ -105,6 +120,9 @@ export default function FlashDialoguePage() {
 
   useEffect(() => {
     setFragmentRevealed(false)
+    setStorySubmitState('idle')
+    setActionError('')
+    storySubmitInFlightRef.current = false
   }, [data?.storyEpisode?.id])
 
   const applyResponse = async (response: FlashCanonicalSnapshot) => {
@@ -129,6 +147,33 @@ export default function FlashDialoguePage() {
         return
       }
       setActionError(dialogueActionError(caughtError, '刚才那句话没有送到，再选一次就好。'))
+    }
+  }
+
+  const submitStoryChoice = async (choice: { questionId: string; optionId: string; label: string }) => {
+    if (!enabled || storySubmitInFlightRef.current) return
+    const payload = { encounterId, questionId: choice.questionId, optionId: choice.optionId }
+    storySubmitInFlightRef.current = true
+    setStorySubmitState('submitting')
+    setActionError('')
+    try {
+      const response = await answerMutation.mutateAsync(payload)
+      haptics('success')
+      await applyResponse(response)
+      setStorySubmitState('idle')
+    } catch (caughtError) {
+      const disposition = classifyStorySubmitFailure(caughtError)
+      if (disposition === 'retry') {
+        setStorySubmitState('retry')
+        setActionError('旧物已经整理好，不用重玩。重新送出这句话就好。')
+      } else {
+        setStorySubmitState('terminal')
+        setActionError(disposition === 'refresh' ? '故事状态刚刚变化，正在重新接上。' : '这次见面已经结束。')
+        await refetch()
+        if (disposition === 'exit') await Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent })
+      }
+    } finally {
+      storySubmitInFlightRef.current = false
     }
   }
 
@@ -225,6 +270,33 @@ export default function FlashDialoguePage() {
   }
 
   if (story) {
+    const unitDefinition = getFlashStoryUnitDefinition(story.code)
+    if (unitDefinition) {
+      const unitMotion = story.motion.ambient === 'none' && SHIQI_LEGACY_STATIC_EPISODES.has(story.code)
+        ? { ...story.motion, ambient: 'breathe' as const }
+        : story.motion
+      const unitPosition = Math.min(story.progress.total, story.progress.completedTotal + (story.response ? 0 : 1))
+      return (
+        <FlashStoryUnit
+          key={`${encounterId}:${story.id}`}
+          encounterId={encounterId}
+          npc={data.npc}
+          story={story}
+          question={question}
+          motion={unitMotion}
+          storyPosition={unitPosition}
+          submitState={storySubmitState}
+          submitError={actionError}
+          onSubmit={submitStoryChoice}
+          onContinue={() => {
+            const url = story.progress.completedTotal >= story.progress.total
+              ? `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}`
+              : MINI_PROGRAM_ROUTES.alangEvent
+            void Taro.redirectTo({ url })
+          }}
+        />
+      )
+    }
     const storySettled = fragmentRevealed || !story.fragment
     const motion = story.motion.ambient === 'none' && SHIQI_LEGACY_STATIC_EPISODES.has(story.code)
       ? { ...story.motion, ambient: 'breathe' as const }

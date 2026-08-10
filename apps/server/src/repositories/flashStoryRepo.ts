@@ -136,9 +136,13 @@ export async function getCurrentFlashStoryRelease(executor: DbExecutor = db) {
   return release ?? null;
 }
 
-export async function getActiveFlashUniverseRun(userId: string, executor: DbExecutor = db) {
+export async function getActiveFlashUniverseRun(userId: string, releaseSnapshotId?: string, executor: DbExecutor = db) {
   const [run] = await executor.select().from(flashStoryUniverseRuns)
-    .where(and(eq(flashStoryUniverseRuns.userId, userId), eq(flashStoryUniverseRuns.status, "active")))
+    .where(and(
+      eq(flashStoryUniverseRuns.userId, userId),
+      eq(flashStoryUniverseRuns.status, "active"),
+      releaseSnapshotId ? eq(flashStoryUniverseRuns.releaseSnapshotId, releaseSnapshotId) : undefined,
+    ))
     .orderBy(desc(flashStoryUniverseRuns.updatedAt))
     .limit(1);
   return run ?? null;
@@ -155,7 +159,9 @@ async function ensureFlashUniverseRun(input: {
   if (input.mode === "personalized" && input.consentVersion !== FLASH_STORY_PERSONALIZATION_CONSENT_VERSION) {
     return null;
   }
-  const existing = await getActiveFlashUniverseRun(input.userId, input.executor);
+  const release = await getCurrentFlashStoryRelease(input.executor);
+  if (!release) return null;
+  const existing = await getActiveFlashUniverseRun(input.userId, release.id, input.executor);
   if (existing) {
     if (existing.mode === input.mode) return existing;
     const [updated] = await input.executor.update(flashStoryUniverseRuns).set({
@@ -168,10 +174,8 @@ async function ensureFlashUniverseRun(input: {
       eq(flashStoryUniverseRuns.id, existing.id),
       eq(flashStoryUniverseRuns.stateVersion, existing.stateVersion),
     )).returning();
-    return updated ?? await getActiveFlashUniverseRun(input.userId, input.executor);
+    return updated ?? await getActiveFlashUniverseRun(input.userId, release.id, input.executor);
   }
-  const release = await getCurrentFlashStoryRelease(input.executor);
-  if (!release) return null;
   const [created] = await input.executor.insert(flashStoryUniverseRuns).values({
     userId: input.userId,
     releaseSnapshotId: release.id,
@@ -258,7 +262,17 @@ export async function ensureFlashStoryEpisodeForEncounter(input: {
         eq(flashUserStoryProgress.userId, input.userId),
         eq(flashUserStoryProgress.seasonId, season.id),
       )).limit(1);
-    if (!progress || progress.status === "completed") return { season, progress, episode: null, alreadyCompleted: true };
+    if (!progress || progress.status === "completed") {
+      await tx.update(flashEncounters).set({
+        status: "completed",
+        completedAt: input.now,
+        updatedAt: input.now,
+      }).where(and(
+        eq(flashEncounters.id, input.encounterId),
+        eq(flashEncounters.userId, input.userId),
+      ));
+      return { season, progress, episode: null, alreadyCompleted: true };
+    }
 
     const [episode] = await tx.select().from(flashStoryEpisodes)
       .where(and(
@@ -277,7 +291,12 @@ export async function ensureFlashStoryEpisodeForEncounter(input: {
         eq(flashUserStoryEpisodes.episodeId, episode.id),
       )).limit(1);
 
-    await tx.update(flashEncounters).set({
+    await tx.update(flashEncounters).set(completed ? {
+      storyEpisodeId: episode.id,
+      status: "completed",
+      completedAt: input.now,
+      updatedAt: input.now,
+    } : {
       storyEpisodeId: episode.id,
       updatedAt: input.now,
     }).where(and(
@@ -342,7 +361,7 @@ export async function getFlashStoryEncounterState(encounterId: string, userId: s
   };
 }
 
-export async function getCompletedFlashStorySeason(userId: string, executor: DbExecutor = db) {
+export async function getCompletedFlashStorySeason(userId: string, seasonId?: string, executor: DbExecutor = db) {
   const [row] = await executor.select({ season: flashStorySeasons, progress: flashUserStoryProgress, run: flashStoryUniverseRuns })
     .from(flashUserStoryProgress)
     .innerJoin(flashStorySeasons, eq(flashUserStoryProgress.seasonId, flashStorySeasons.id))
@@ -350,6 +369,7 @@ export async function getCompletedFlashStorySeason(userId: string, executor: DbE
     .where(and(
       eq(flashUserStoryProgress.userId, userId),
       eq(flashUserStoryProgress.status, "completed"),
+      seasonId ? eq(flashUserStoryProgress.seasonId, seasonId) : undefined,
     )).limit(1);
   return row ?? null;
 }
@@ -395,7 +415,29 @@ export async function completeFlashStoryEpisode(input: {
     // Serialize all story completions for one user so two different NPC
     // encounters cannot both miss the fifth-completion phase transition.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${input.userId}:flash-story`}))`);
-    const [progress] = await tx.select().from(flashUserStoryProgress).where(eq(flashUserStoryProgress.userId, input.userId)).limit(1);
+    const [episode] = await tx.select().from(flashStoryEpisodes)
+      .where(eq(flashStoryEpisodes.id, input.episodeId)).limit(1);
+    if (!episode) return null;
+    const [encounter] = await tx.select({ id: flashEncounters.id }).from(flashEncounters).where(and(
+      eq(flashEncounters.id, input.encounterId),
+      eq(flashEncounters.userId, input.userId),
+      eq(flashEncounters.storyEpisodeId, input.episodeId),
+    )).limit(1);
+    if (!encounter) return null;
+    const [existing] = await tx.select().from(flashUserStoryEpisodes).where(and(
+      eq(flashUserStoryEpisodes.userId, input.userId),
+      eq(flashUserStoryEpisodes.episodeId, input.episodeId),
+    )).limit(1);
+    if (existing) {
+      await tx.update(flashEncounters).set({ status: "completed", updatedAt: input.now })
+        .where(and(eq(flashEncounters.id, input.encounterId), eq(flashEncounters.userId, input.userId)));
+      return { created: false };
+    }
+    const [progress] = await tx.select().from(flashUserStoryProgress).where(and(
+      eq(flashUserStoryProgress.userId, input.userId),
+      eq(flashUserStoryProgress.seasonId, episode.seasonId),
+    )).limit(1);
+    if (!progress || progress.status !== "active" || progress.currentPhase !== episode.phase) return null;
     const [run] = progress?.universeRunId
       ? await tx.select().from(flashStoryUniverseRuns).where(eq(flashStoryUniverseRuns.id, progress.universeRunId)).limit(1)
       : [];
@@ -414,10 +456,6 @@ export async function completeFlashStoryEpisode(input: {
       promptVersion: input.promptVersion ?? null,
       completedAt: input.now,
     }).onConflictDoNothing({ target: [flashUserStoryEpisodes.userId, flashUserStoryEpisodes.episodeId] }).returning();
-
-    const [episode] = await tx.select().from(flashStoryEpisodes)
-      .where(eq(flashStoryEpisodes.id, input.episodeId)).limit(1);
-    if (!episode) return null;
 
     if (created) {
       if (run) {
@@ -460,7 +498,7 @@ export async function completeFlashStoryEpisode(input: {
         eq(flashStoryEpisodes.seasonId, episode.seasonId),
         eq(flashStoryEpisodes.phase, episode.phase),
       ));
-    if (Number(phaseCount?.value ?? 0) >= 5) {
+    if (Number(phaseCount?.value ?? 0) === 5) {
       await tx.update(flashUserStoryProgress).set({
         currentPhase: episode.phase === 3 ? 3 : episode.phase + 1,
         status: episode.phase === 3 ? "completed" : "active",

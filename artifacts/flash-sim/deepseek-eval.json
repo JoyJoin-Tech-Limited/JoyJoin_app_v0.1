@@ -1,0 +1,22 @@
+{
+  "status": "blocked",
+  "provider": "DeepSeek",
+  "baseHost": "api.deepseek.com",
+  "requestedModel": "deepseek-v4-flash",
+  "modelVerified": false,
+  "smokeStatus": 401,
+  "credential": {
+    "present": true,
+    "looksPlaceholder": true,
+    "valueRecorded": false
+  },
+  "runtimeIntegration": false,
+  "formalContentWritten": false,
+  "reason": "No valid local credential was available. Candidate generation and role-play evaluation were not fabricated.",
+  "pricingVerifiedAt": "2026-08-10",
+  "pricingConclusion": "The official API pricing page lists token charges. The unauthenticated 401 smoke could not verify that the repository-configured deepseek-v4-flash model exists or is free.",
+  "officialSources": [
+    "https://api-docs.deepseek.com/quick_start/pricing/",
+    "https://api-docs.deepseek.com/api/list-models"
+  ]
+}
