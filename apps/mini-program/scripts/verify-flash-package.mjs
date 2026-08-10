@@ -18,8 +18,7 @@ const flashSceneRelativePaths = ['radar', 'task', 'feedback']
   .map((scene) => `pages/alang/assets/backgrounds/${scene}-paper-scene.jpg`)
 const flashDialogueRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
   .map((slug) => `pages/alang/assets/ui/flash-${slug}-dialogue-paper-v1.jpg`)
-const flashStoryModeBackgrounds = [
-  'pages/alang/assets/onboarding/parallel-personalized-paper-world-v1.jpg',
+const flashReviewedStoryBackgrounds = [
   'pages/alang/assets/onboarding/parallel-standard-paper-world-v1.jpg',
 ]
 
@@ -32,7 +31,7 @@ const flashRuntimeImages = [
   ...npcHeadshotRelativePaths,
   ...flashSceneRelativePaths,
   ...flashDialogueRelativePaths,
-  ...flashStoryModeBackgrounds,
+  ...flashReviewedStoryBackgrounds,
   'pages/alang/assets/candidates/alang-event-card-candidate.jpg',
   'pages/alang/assets/candidates/alang-found-scene-candidate.jpg',
   'pages/alang/assets/candidates/alang-companion-atmosphere-candidate.jpg',

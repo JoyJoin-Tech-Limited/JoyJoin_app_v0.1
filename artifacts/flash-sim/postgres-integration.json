@@ -1,0 +1,76 @@
+{
+  "databaseName": "joyjoin_flash_story_test_1786329746299_69248c",
+  "cleaned": true,
+  "postgresVersion": "16.14",
+  "roleCanCreateDatabase": true,
+  "migration": {
+    "baselineRows": 15,
+    "updatedRows": 15,
+    "secondRunChanges": 0,
+    "partialBaselineRejected": true,
+    "partialBaselineRowsChanged": 0,
+    "operatorDriftPreserved": true,
+    "candidatesRemainDraft": true
+  },
+  "runtime": {
+    "episodes": 15,
+    "fragments": 15,
+    "phaseEvidence": [
+      {
+        "phase": 1,
+        "completions": 5,
+        "currentPhase": 2,
+        "status": "active"
+      },
+      {
+        "phase": 2,
+        "completions": 5,
+        "currentPhase": 3,
+        "status": "active"
+      },
+      {
+        "phase": 3,
+        "completions": 5,
+        "currentPhase": 3,
+        "status": "completed"
+      }
+    ],
+    "lostResponseReplay": true,
+    "concurrentFifthExactlyOnce": true,
+    "differentOptionRaceExactlyOnce": true,
+    "repeatedNpcReturnsHome": true,
+    "crossUserWrites": 0
+  },
+  "virtualUsers": {
+    "users": 100,
+    "episodes": 1500,
+    "fragments": 1500,
+    "completedUsers": 100,
+    "completedRuns": 100,
+    "phaseAdvances": 300,
+    "seasonFinales": 100,
+    "nonNullEndingCodes": 100,
+    "phaseEvidence": [
+      {
+        "phase": 1,
+        "usersAtBoundary": 100,
+        "completions": 500
+      },
+      {
+        "phase": 2,
+        "usersAtBoundary": 100,
+        "completions": 500
+      },
+      {
+        "phase": 3,
+        "usersAtBoundary": 100,
+        "completions": 500
+      }
+    ],
+    "lostResponseReplays": 300,
+    "sameUnitDoubleTaps": 300,
+    "distinctNpcBoundaryRaces": 300,
+    "crossUserAttackRejected": true,
+    "crossUserWrites": 0
+  }
+}

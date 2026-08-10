@@ -1,15 +1,14 @@
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
 import { hasAcknowledgedFlashIntro, markFlashIntroAcknowledged } from '../../../lib/alang/flashExperienceStorage'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
-import { useFlashHome, useFlashStoryFragments, useUpdateFlashPreferences } from '../../../lib/alang/useFlash'
+import { useFlashHome, useFlashStoryFragments } from '../../../lib/alang/useFlash'
 import type { FlashNpcSummary } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
-import personalizedPaperWorld from '../assets/onboarding/parallel-personalized-paper-world-v1.jpg'
 import standardPaperWorld from '../assets/onboarding/parallel-standard-paper-world-v1.jpg'
 import flashAmbientBackground from '../assets/ui/flash-city-ambient-bg.png'
 import flashEmptyOnline from '../assets/ui/flash-empty-online.png'
@@ -18,50 +17,37 @@ import {
   FlashPageState,
   formatFlashAvailability,
 } from '../../../components/alang/FlashUi'
-import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import '../flash.scss'
 
 const FLASH_INFO_ICON = '/assets/icons/status-icons/status-info.webp'
-const FLASH_PERSONALIZED_SCENE = personalizedPaperWorld
 const FLASH_STANDARD_SCENE = standardPaperWorld
 const FLASH_AMBIENT_BACKGROUND = flashAmbientBackground
 const FLASH_EMPTY_ONLINE = flashEmptyOnline
-const FLASH_STORY_CONSENT_VERSION = 'flash-story-personalization-v1'
 
 type GateState = 'checking' | 'intro' | 'ready'
 
-function FlashIntro({ busy, onSelect }: { busy: boolean; onSelect: (mode: 'personalized' | 'standard') => void }) {
+function FlashIntro({ onContinue }: { onContinue: () => void }) {
   return (
     <View className='flash-intro'>
       <View className='flash-intro__content'>
         <View className='flash-intro__copy'>
-          <Text className='flash-intro__eyebrow'>YOUR PARALLEL UNIVERSE</Text>
-          <Text className='flash-intro__title'>这一次，故事想怎样认识你？</Text>
-          <Text className='flash-intro__lead'>两个模式都拥有完整剧情、选择后果和个人结局。它们都是虚构的数字动物 NPC，并非现场真人。</Text>
+          <Text className='flash-intro__eyebrow'>A REVIEWED STORY</Text>
+          <Text className='flash-intro__title'>这一季，只让旧物慢慢开口</Text>
+          <Text className='flash-intro__lead'>十五段剧情都经过人工审核，不读取人格、兴趣或职业，也不由 AI 临场续写。它们都是虚构的数字动物 NPC，并非现场真人。</Text>
         </View>
         <View className='flash-intro__modes'>
-          <View className={`flash-intro__mode${busy ? ' flash-intro__mode--disabled' : ''}`} hoverClass={busy ? '' : 'flash-intro__mode--pressed'} role='button' aria-label='开启更专属的剧情' onClick={() => { if (!busy) onSelect('personalized') }}>
-            <Image className='flash-intro__mode-bg' src={FLASH_PERSONALIZED_SCENE} mode='aspectFill' aria-hidden='true' />
-            <View className='flash-intro__mode-shade' aria-hidden='true' />
-            <View className='flash-intro__mode-copy'>
-              <Text className='flash-intro__mode-kicker'>AI · 专属宇宙</Text>
-              <Text className='flash-intro__mode-title'>更专属的剧情</Text>
-              <Text className='flash-intro__mode-description'>参考你已填写的人格、兴趣与宽泛职业领域，并结合当时环境和此前选择来回应你。点击进入即表示同意本次专属剧情使用这些信息。</Text>
-              <Text className='flash-intro__mode-action'>{busy ? '正在开启…' : '进入专属剧情  →'}</Text>
-            </View>
-          </View>
-          <View className={`flash-intro__mode${busy ? ' flash-intro__mode--disabled' : ''}`} hoverClass={busy ? '' : 'flash-intro__mode--pressed'} role='button' aria-label='进入标准剧情' onClick={() => { if (!busy) onSelect('standard') }}>
+          <View className='flash-intro__mode' hoverClass='flash-intro__mode--pressed' role='button' aria-label='进入没有名字的旧物' onClick={onContinue}>
             <Image className='flash-intro__mode-bg flash-intro__mode-bg--standard' src={FLASH_STANDARD_SCENE} mode='aspectFill' aria-hidden='true' />
             <View className='flash-intro__mode-shade flash-intro__mode-shade--standard' aria-hidden='true' />
             <View className='flash-intro__mode-copy'>
-              <Text className='flash-intro__mode-kicker'>不读取个人画像</Text>
-              <Text className='flash-intro__mode-title'>标准剧情</Text>
-              <Text className='flash-intro__mode-description'>不使用人格、兴趣或职业信息。你的每次选择依然会改变过程、回声和最终结局。</Text>
-              <Text className='flash-intro__mode-action'>{busy ? '请稍候…' : '进入标准剧情  →'}</Text>
+              <Text className='flash-intro__mode-kicker'>人工审核 · 固定回应</Text>
+              <Text className='flash-intro__mode-title'>《没有名字的旧物》</Text>
+              <Text className='flash-intro__mode-description'>你的回应会接上对应的审核对白，并解锁一块固定事实碎片；定位只会在你主动寻找角色时开启。</Text>
+              <Text className='flash-intro__mode-action'>收下第一条线索  →</Text>
             </View>
           </View>
         </View>
-        <Text className='flash-intro__aside'>首次选择只决定故事如何使用你的资料；选定角色后，地图页会单独说明定位用途。</Text>
+        <Text className='flash-intro__aside'>选定角色后，地图页会单独说明定位用途；故事过程不会读取你的个人画像。</Text>
       </View>
     </View>
   )
@@ -98,26 +84,11 @@ export default function FlashHomePage() {
   const [pageVisible, setPageVisible] = useState(true)
   const { data, isLoading, isError, error, refetch } = useFlashHome(enabled && gate === 'ready' && pageVisible)
   const fragmentsQuery = useFlashStoryFragments(enabled && gate === 'ready' && pageVisible)
-  const modeMutation = useUpdateFlashPreferences()
 
-  const selectStoryMode = useCallback(async (mode: 'personalized' | 'standard') => {
-    try {
-      const personalized = mode === 'personalized'
-      await modeMutation.mutateAsync({
-        personalizationEnabled: personalized,
-        usePersonality: personalized,
-        useInterests: personalized,
-        useIndustry: personalized,
-        useDistrict: false,
-        useTaskBehavior: false,
-        consentVersion: personalized ? FLASH_STORY_CONSENT_VERSION : undefined,
-      })
-      markFlashIntroAcknowledged()
-      setGate('ready')
-    } catch {
-      Taro.showToast({ title: '剧情模式没有保存成功，请再试一次', icon: 'none' })
-    }
-  }, [modeMutation])
+  const continueReviewedStory = () => {
+    markFlashIntroAcknowledged()
+    setGate('ready')
+  }
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: '街头盲盒' })
@@ -158,19 +129,6 @@ export default function FlashHomePage() {
     void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangSearch}?${params}` })
   }
 
-  const openStoryPreferences = async () => {
-    try {
-      haptics('light')
-    } catch {
-      // Optional device feedback must never block the settings destination.
-    }
-    try {
-      await Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangPreferences })
-    } catch {
-      void Taro.showToast({ title: '暂时打不开，请稍后再试', icon: 'none' })
-    }
-  }
-
   if (!enabled) {
     return (
       <View className='flash-page'>
@@ -179,7 +137,7 @@ export default function FlashHomePage() {
     )
   }
 
-  if (gate === 'intro') return <FlashIntro busy={modeMutation.isPending} onSelect={(mode) => { void selectStoryMode(mode) }} />
+  if (gate === 'intro') return <FlashIntro onContinue={continueReviewedStory} />
 
   if (gate === 'checking') {
     return (
@@ -238,28 +196,6 @@ export default function FlashHomePage() {
               <Text className='flash-page__eyebrow'>SHENZHEN · NOW</Text>
               <Text className='flash-page__title'>今天，会碰见谁呢？</Text>
               <Text className='flash-page__lead'>他们不会一直在线。看见想聊的，就去附近碰碰运气。</Text>
-            </View>
-          </View>
-
-          <View className='flash-page__preferences-row'>
-            <View
-              className='flash-page__preferences-entry'
-              hoverClass='flash-page__preferences-entry--pressed'
-              onClick={() => { void openStoryPreferences() }}
-              role='button'
-              aria-label={`打开剧情偏好，当前${data.preferenceSummary.personalizationEnabled ? '已开启专属剧情' : '为标准剧情'}`}
-              data-testid='flash-story-preferences-entry'
-            >
-              <View className='flash-page__preferences-icon' aria-hidden='true'>
-                <JoyJoinIcon emoji='⚙️' tier='ui' size={36} />
-              </View>
-              <View className='flash-page__preferences-copy'>
-                <Text className='flash-page__preferences-title'>剧情偏好</Text>
-                <Text className='flash-page__preferences-status'>
-                  {data.preferenceSummary.personalizationEnabled ? '专属剧情已开启' : '当前为标准剧情'}
-                </Text>
-              </View>
-              <View className='flash-page__preferences-chevron' aria-hidden='true' />
             </View>
           </View>
 

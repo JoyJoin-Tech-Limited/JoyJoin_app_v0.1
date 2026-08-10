@@ -1,7 +1,7 @@
 import Taro from '@tarojs/taro'
 
 export const FLASH_INTRO_ACK_STORAGE_KEY = 'jj_flash_intro_ack'
-export const FLASH_INTRO_ACK_VERSION = 'flash-intro-v1'
+export const FLASH_INTRO_ACK_VERSION = 'flash-intro-reviewed-story-v2'
 
 export function hasAcknowledgedFlashIntro(): boolean {
   try {
@@ -16,6 +16,6 @@ export function markFlashIntroAcknowledged(): void {
     Taro.setStorageSync(FLASH_INTRO_ACK_STORAGE_KEY, FLASH_INTRO_ACK_VERSION)
   } catch {
     // A failed convenience marker safely re-shows the introduction next time.
-    // Server preferences and WeChat permission state remain authoritative.
+    // Location permission and server story state remain authoritative.
   }
 }

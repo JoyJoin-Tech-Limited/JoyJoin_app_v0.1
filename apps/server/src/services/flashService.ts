@@ -3,7 +3,6 @@ import {
   FLASH_ENCOUNTER_ARRIVAL_RADIUS_METERS,
   FLASH_CITY,
   FLASH_ENCOUNTER_TTL_HOURS,
-  FLASH_STORY_PERSONALIZATION_CONSENT_VERSION,
   type FlashAssignmentResponse,
   type FlashCanonicalScreen,
   type FlashEncounterResponse,
@@ -66,11 +65,6 @@ import {
   finalizeFlashStoryChoiceIntent,
   prepareFlashStoryChoiceIntent,
 } from "../repositories/flashStoryRepo";
-import {
-  generateFlashPersonalizedResponse,
-  type FlashPersonalizationContext,
-} from "./flashPersonalizedNarrativeService";
-import { getFeatureFlag } from "../lib/featureFlags";
 
 export class FlashServiceError extends Error {
   constructor(
@@ -385,14 +379,15 @@ export async function locateFlashAppearance(input: {
     expiresAt: new Date(now.getTime() + FLASH_ENCOUNTER_TTL_HOURS * 60 * 60 * 1000),
   });
   if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 409, "这次相遇没有解锁成功");
-  const storyPreference = effectivePreference(await getFlashPreferences(input.userId));
-  await ensureFlashStoryEpisodeForEncounter({
+  // Formal story releases are reviewed deterministic content. Encounter start
+  // must not read profile signals or create personalized runtime story paths.
+  const storyAssignment = await ensureFlashStoryEpisodeForEncounter({
     encounterId: encounter.id,
     userId: input.userId,
     npcId: appearance.npcId,
     now,
-    mode: storyPreference.personalizationEnabled ? "personalized" : "standard",
-    consentVersion: storyPreference.consentVersion,
+    mode: "standard",
+    consentVersion: null,
   });
   return {
     appearanceId: input.appearanceId,
@@ -405,7 +400,7 @@ export async function locateFlashAppearance(input: {
     signal: "arrived",
     arrived: true,
     encounterId: encounter.id,
-    canonicalScreen: "dialogue",
+    canonicalScreen: storyAssignment?.alreadyCompleted ? "completed" : "dialogue",
   };
 }
 
@@ -583,6 +578,7 @@ export async function getFlashEncounter(input: {
   userId: string;
   now?: Date;
   allowSameEncounterDeliveryForTesting?: boolean;
+  preferCurrentCompletedEpisode?: boolean;
 }): Promise<FlashEncounterResponse> {
   const now = input.now ?? new Date();
   await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
@@ -595,22 +591,24 @@ export async function getFlashEncounter(input: {
       ? storyState.episode.content.question.options.find((candidate: { id: string }) => candidate.id === intent.optionId)
       : null;
     if (intent && option && intent.responseSnapshot && intent.renderKind) {
+      const reviewedResponse = storyState.episode.content.responseByOption[intent.optionId]
+        ?? storyState.episode.content.closing;
       await completeFlashStoryEpisode({
         encounterId: intent.encounterId,
         userId: input.userId,
         episodeId: storyState.episode.id,
         optionId: intent.optionId,
         configuredEffects: storyState.episode.content.effectsByOption?.[intent.optionId],
-        responseSnapshot: intent.responseSnapshot,
-        renderKind: intent.renderKind as "template" | "ai" | "fallback",
-        promptVersion: intent.promptVersion,
+        responseSnapshot: reviewedResponse,
+        renderKind: "template",
+        promptVersion: null,
         now,
       });
       storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
     }
   }
-  const completedSeason = await getCompletedFlashStorySeason(input.userId);
-  if (storyState && !completedSeason) {
+  const completedSeason = await getCompletedFlashStorySeason(input.userId, storyState?.episode.seasonId);
+  if (storyState && (!completedSeason || input.preferCurrentCompletedEpisode)) {
     const content = storyState.episode.content;
     const selectedOptionId = storyState.completion?.selectedOptionId ?? null;
     return {
@@ -645,11 +643,11 @@ export async function getFlashEncounter(input: {
         action: content.action,
         discovery: content.discovery,
         response: selectedOptionId
-          ? storyState.completion?.responseSnapshot ?? content.responseByOption[selectedOptionId] ?? null
+          ? content.responseByOption[selectedOptionId] ?? content.closing
           : null,
         echo: storyState.completion?.echoSnapshot ?? null,
         storyMode: storyState.universeRun?.mode ?? "standard",
-        renderKind: storyState.completion?.renderKind ?? "template",
+        renderKind: "template",
         closing: storyState.completion ? content.closing : null,
         motion: storyState.episode.motion,
         fragment: storyState.completion && storyState.fragment ? {
@@ -803,7 +801,12 @@ export async function answerFlashEncounter(input: {
   const storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
   if (storyState) {
     if (storyState.completion) {
-      return getFlashEncounter({ encounterId: input.encounterId, userId: input.userId, now });
+      return getFlashEncounter({
+        encounterId: input.encounterId,
+        userId: input.userId,
+        now,
+        preferCurrentCompletedEpisode: true,
+      });
     }
     const question = storyState.episode.content.question;
     const option = question.options.find((candidate: { id: string }) => candidate.id === input.optionId);
@@ -824,43 +827,12 @@ export async function answerFlashEncounter(input: {
     if (intentResult.state === "pending") {
       throw new FlashServiceError("FLASH_STORY_GENERATION_PENDING", 409, "正在整理这条时间线，请稍后再试");
     }
-    const templateResponse = storyState.episode.content.responseByOption[option.id] ?? storyState.episode.content.closing;
-    const baseResponse = storyState.universeRun?.mode === "personalized"
-      ? storyState.episode.content.personalizedFallbackByOption?.[option.id] ?? templateResponse
-      : templateResponse;
-    let responseSnapshot = intentResult.state === "ready" ? intentResult.intent.responseSnapshot! : baseResponse;
-    let renderKind: "template" | "ai" | "fallback" = intentResult.state === "ready"
-      ? intentResult.intent.renderKind as "template" | "ai" | "fallback"
-      : "template";
-    let promptVersion: string | null = intentResult.state === "ready" ? intentResult.intent.promptVersion : null;
-    if (intentResult.state === "claimed" && storyState.universeRun?.mode === "personalized") {
-      const preference = effectivePreference(await getFlashPreferences(input.userId));
-      if (preference.personalizationEnabled && preference.consentVersion === FLASH_STORY_PERSONALIZATION_CONSENT_VERSION) {
-        const [personality, interests, industry] = await Promise.all([
-          preference.usePersonality ? getFlashUserPersonalitySignal(input.userId) : Promise.resolve(null),
-          preference.useInterests ? getFlashUserInterestSignal(input.userId) : Promise.resolve(null),
-          preference.useIndustry ? getFlashUserIndustrySignal(input.userId) : Promise.resolve(null),
-        ]);
-        const hour = now.getHours();
-        const configuredWeather = process.env.FLASH_WEATHER_CONTEXT;
-        const weather = (["clear", "cloudy", "rain", "hot", "cool"] as const)
-          .find((value) => value === configuredWeather) ?? null;
-        const context: FlashPersonalizationContext = {
-          archetype: personality?.primaryArchetype ?? null,
-          interests: extractInterestTags(interests?.interestSelections).map((item) => item.label).slice(0, 3),
-          broadIndustry: industry?.industryCategoryLabel ?? industry?.industryCategory ?? null,
-          weather,
-          timeBand: hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening",
-          echo: storyState.universeRun.echoQueue?.[0]?.copy ?? null,
-        };
-        const generated = await generateFlashPersonalizedResponse({ baseResponse, npcName: encounter.npcName, context });
-        responseSnapshot = generated.response;
-        renderKind = generated.renderKind;
-        promptVersion = generated.promptVersion;
-      } else {
-        renderKind = "fallback";
-      }
-    }
+    // The reviewed release snapshot is the sole runtime response authority,
+    // including for legacy runs previously marked as personalized.
+    const responseSnapshot = storyState.episode.content.responseByOption[option.id]
+      ?? storyState.episode.content.closing;
+    const renderKind = "template" as const;
+    const promptVersion = null;
     if (intentResult.state === "claimed") {
       const finalized = await finalizeFlashStoryChoiceIntent({
         intentId: intentResult.intent.id,
@@ -885,7 +857,12 @@ export async function answerFlashEncounter(input: {
       promptVersion,
       now,
     });
-    return getFlashEncounter({ encounterId: input.encounterId, userId: input.userId, now });
+    return getFlashEncounter({
+      encounterId: input.encounterId,
+      userId: input.userId,
+      now,
+      preferCurrentCompletedEpisode: true,
+    });
   }
   throw new FlashServiceError("FLASH_STORY_NOT_AVAILABLE", 409, "这次旧相遇已经结束，请从当前在线角色重新开始");
   if (await getPendingFlashDelivery(input.userId, encounter.npcId, encounter.npcSlug)) {

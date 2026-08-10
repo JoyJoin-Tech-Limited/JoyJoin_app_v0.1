@@ -6,7 +6,6 @@ import FlashHomePage from './index'
 const mocks = vi.hoisted(() => ({
   useFlashHome: vi.fn(),
   useFlashStoryFragments: vi.fn(),
-  updatePreferences: vi.fn(),
   navigateTo: vi.fn(),
   refetch: vi.fn(),
   getStorage: vi.fn(),
@@ -36,10 +35,6 @@ vi.mock('@tarojs/components', () => ({
 vi.mock('../../../lib/alang/useFlash', () => ({
   useFlashHome: mocks.useFlashHome,
   useFlashStoryFragments: mocks.useFlashStoryFragments,
-  useUpdateFlashPreferences: () => ({
-    mutateAsync: mocks.updatePreferences,
-    isPending: false,
-  }),
 }))
 vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: vi.fn() }))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
@@ -59,7 +54,6 @@ describe('formal Street Blind Box home', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getStorage.mockReturnValue(undefined)
-    mocks.updatePreferences.mockResolvedValue({})
     mocks.useFlashHome.mockReturnValue({ data: home, isLoading: false, isError: false, refetch: mocks.refetch })
     mocks.useFlashStoryFragments.mockReturnValue({ data: [{
       id: 'fragment-1', code: 'fragment-1', category: 'object', title: '双人座位图',
@@ -70,67 +64,38 @@ describe('formal Street Blind Box home', () => {
     mocks.didHide = undefined
   })
 
-  it('shows story-mode introduction before loading the location-free home', async () => {
+  it('shows the reviewed-story disclosure before loading the location-free home', async () => {
     render(<FlashHomePage />)
 
-    expect(await screen.findByText('这一次，故事想怎样认识你？')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '开启更专属的剧情' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '进入标准剧情' })).toBeInTheDocument()
+    expect(await screen.findByText('这一季，只让旧物慢慢开口')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '进入没有名字的旧物' })).toBeInTheDocument()
+    expect(screen.getByText(/不读取人格、兴趣或职业/)).toBeInTheDocument()
+    expect(screen.queryByText('更专属的剧情')).not.toBeInTheDocument()
     expect(mocks.useFlashHome).toHaveBeenLastCalledWith(false)
   })
 
-  it('saves the selection, marks the introduction acknowledged, and loads home without GPS', async () => {
+  it('acknowledges the disclosure and loads home without GPS or a preference write', async () => {
     render(<FlashHomePage />)
 
-    fireEvent.click(await screen.findByRole('button', { name: '进入标准剧情' }))
+    fireEvent.click(await screen.findByRole('button', { name: '进入没有名字的旧物' }))
     expect(await screen.findByText('阿浪')).toBeInTheDocument()
-    expect(mocks.updatePreferences).toHaveBeenCalledWith(expect.objectContaining({
-      personalizationEnabled: false,
-    }))
-    expect(mocks.setStorage).toHaveBeenCalledWith('jj_flash_intro_ack', 'flash-intro-v1')
+    expect(mocks.setStorage).toHaveBeenCalledWith('jj_flash_intro_ack', 'flash-intro-reviewed-story-v2')
     await waitFor(() => expect(mocks.useFlashHome).toHaveBeenLastCalledWith(true))
     expect((Taro as unknown as { getLocation?: unknown }).getLocation).toBeUndefined()
   })
 
   it('skips the introduction on later opens', async () => {
-    mocks.getStorage.mockReturnValue('flash-intro-v1')
+    mocks.getStorage.mockReturnValue('flash-intro-reviewed-story-v2')
     render(<FlashHomePage />)
 
     expect(await screen.findByText('阿浪')).toBeInTheDocument()
-    expect(screen.queryByText('这一次，故事想怎样认识你？')).not.toBeInTheDocument()
-    expect(mocks.updatePreferences).not.toHaveBeenCalled()
-  })
-
-  it('keeps story personalization reopenable from the home settings entry', async () => {
-    mocks.getStorage.mockReturnValue('flash-intro-v1')
-    render(<FlashHomePage />)
-
-    const settingsEntry = await screen.findByRole('button', {
-      name: '打开剧情偏好，当前已开启专属剧情',
-    })
-    expect(screen.getByText('专属剧情已开启')).toBeInTheDocument()
-
-    fireEvent.click(settingsEntry)
-    await waitFor(() => expect(mocks.navigateTo).toHaveBeenCalledWith({
-      url: '/pages/alang/preferences/index',
-    }))
-  })
-
-  it('shows a recovery message when story preferences cannot open', async () => {
-    mocks.getStorage.mockReturnValue('flash-intro-v1')
-    mocks.navigateTo.mockRejectedValueOnce(new Error('subpackage unavailable'))
-    render(<FlashHomePage />)
-
-    fireEvent.click(await screen.findByTestId('flash-story-preferences-entry'))
-    await waitFor(() => expect(Taro.showToast).toHaveBeenCalledWith({
-      title: '暂时打不开，请稍后再试',
-      icon: 'none',
-    }))
+    expect(screen.queryByText('这一季，只让旧物慢慢开口')).not.toBeInTheDocument()
+    expect(screen.queryByText('专属剧情已开启')).not.toBeInTheDocument()
   })
 
   it('does not re-show the introduction after backgrounding in the same visit', async () => {
     render(<FlashHomePage />)
-    fireEvent.click(await screen.findByRole('button', { name: '进入标准剧情' }))
+    fireEvent.click(await screen.findByRole('button', { name: '进入没有名字的旧物' }))
     expect(await screen.findByText('阿浪')).toBeInTheDocument()
 
     act(() => {
@@ -138,21 +103,20 @@ describe('formal Street Blind Box home', () => {
       mocks.didShow?.()
     })
 
-    expect(screen.queryByText('这一次，故事想怎样认识你？')).not.toBeInTheDocument()
+    expect(screen.queryByText('这一季，只让旧物慢慢开口')).not.toBeInTheDocument()
   })
 
-  it('keeps the introduction available when preference saving fails', async () => {
-    mocks.updatePreferences.mockRejectedValueOnce(new Error('network unavailable'))
+  it('does not strand the current visit when the local acknowledgement cannot persist', async () => {
+    mocks.setStorage.mockImplementationOnce(() => { throw new Error('storage unavailable') })
     render(<FlashHomePage />)
 
-    fireEvent.click(await screen.findByRole('button', { name: '进入标准剧情' }))
-    await waitFor(() => expect(Taro.showToast).toHaveBeenCalledWith(expect.objectContaining({ icon: 'none' })))
-    expect(mocks.setStorage).not.toHaveBeenCalled()
-    expect(screen.getByText('这一次，故事想怎样认识你？')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: '进入没有名字的旧物' }))
+    expect(await screen.findByText('阿浪')).toBeInTheDocument()
+    expect(mocks.setStorage).toHaveBeenCalled()
   })
 
   it('preserves manual-hold labels and forwards the mode to the map', async () => {
-    mocks.getStorage.mockReturnValue('flash-intro-v1')
+    mocks.getStorage.mockReturnValue('flash-intro-reviewed-story-v2')
     mocks.useFlashHome.mockReturnValue({
       data: {
         ...home,
@@ -169,17 +133,17 @@ describe('formal Street Blind Box home', () => {
     expect(mocks.navigateTo.mock.calls[0][0].url).toContain('availabilityMode=manual_hold')
   })
 
-  it('uses dedicated paper-story backgrounds for the first introduction', async () => {
+  it('uses the reviewed paper-story background for the first introduction', async () => {
     render(<FlashHomePage />)
 
-    await screen.findByText('YOUR PARALLEL UNIVERSE')
+    await screen.findByText('A REVIEWED STORY')
     const modeCards = document.querySelectorAll('.flash-intro__mode')
-    expect(modeCards[0]).toContainElement(document.querySelector("img[src*='parallel-personalized-paper-world-v1.jpg']"))
-    expect(modeCards[1]).toContainElement(document.querySelector("img[src*='parallel-standard-paper-world-v1.jpg']"))
+    expect(modeCards).toHaveLength(1)
+    expect(modeCards[0]).toContainElement(document.querySelector("img[src*='parallel-standard-paper-world-v1.jpg']"))
   })
 
   it('opens the map with display metadata but no coordinates in the URL', async () => {
-    mocks.getStorage.mockReturnValue('flash-intro-v1')
+    mocks.getStorage.mockReturnValue('flash-intro-reviewed-story-v2')
     render(<FlashHomePage />)
     fireEvent.click(await screen.findByRole('button', { name: /去找阿浪/ }))
 

@@ -96,12 +96,19 @@ export function FlashNpcDialogueScene({
       aria-label={`${npc.name}正在和你说话`}
     >
       {!failed ? (
-        <Image
-          className='flash-dialogue-scene__image'
-          src={dialogueSceneSrc}
-          mode='aspectFill'
-          onError={() => setFailed(true)}
-        />
+        <>
+          <Image
+            className='flash-dialogue-scene__image'
+            src={dialogueSceneSrc}
+            mode='aspectFill'
+            onError={() => setFailed(true)}
+          />
+          {motion?.ambient === 'breathe' ? (
+            <View className='flash-dialogue-scene__breath-window' aria-hidden='true'>
+              <Image className='flash-dialogue-scene__breath-layer' src={dialogueSceneSrc} mode='aspectFill' />
+            </View>
+          ) : null}
+        </>
       ) : (
         <View className='flash-dialogue-scene__fallback'>
           <FlashNpcPortrait npc={npc} size='large' />
@@ -112,7 +119,7 @@ export function FlashNpcDialogueScene({
           className='flash-dialogue-scene__blink-frame'
           src={motion.blinkAssetUrl}
           mode='aspectFill'
-          style={{ '--flash-blink-duration': `${Math.max(3, motion.blinkIntervalSeconds ?? 6)}s` } as any}
+          style={{ '--flash-blink-duration': `${Math.min(20, Math.max(3, motion.blinkIntervalSeconds ?? 6))}s` } as any}
           aria-hidden='true'
         />
       ) : null}

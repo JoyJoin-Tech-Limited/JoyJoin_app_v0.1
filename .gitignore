@@ -68,6 +68,7 @@ tmp/
 # Reproducible profile paper-doll derivatives (source atlases + scripts are canonical)
 /assets-source/profile-pixel-v2/generated-starter-layers/
 /agent_tmp/
+/artifacts/flash-sim/traces.ndjson
 mockups/
 screenshots/
 /assets-source/avatar\ module/

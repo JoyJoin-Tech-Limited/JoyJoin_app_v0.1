@@ -1,0 +1,110 @@
+{
+  "seed": "flash-sim-v3:2026-08-10",
+  "users": 100,
+  "attemptedUnits": 1500,
+  "completedClientJourneys": 1500,
+  "clientDeadEnds": 0,
+  "payloadIntegrityChecks": 1500,
+  "runtimeLlmCallSites": 0,
+  "scenarioCoverage": {
+    "reducer_invalid_transition_noop": 250,
+    "reducer_first_mistake": 250,
+    "restore_interaction_checkpoint": 250,
+    "restore_solved_checkpoint": 250,
+    "restore_invalid_version_reset": 250,
+    "reconcile_reviewed_label": 250
+  },
+  "choiceCoverage": {
+    "s1-p1-alang": {
+      "s1-p1-alang-cooperate-a": 50,
+      "s1-p1-alang-cooperate-b": 50
+    },
+    "s1-p1-lizi": {
+      "s1-p1-lizi-cooperate-b": 50,
+      "s1-p1-lizi-cooperate-a": 50
+    },
+    "s1-p1-shiqi": {
+      "s1-p1-shiqi-cooperate-a": 50,
+      "s1-p1-shiqi-cooperate-b": 50
+    },
+    "s1-p1-momo": {
+      "s1-p1-momo-cooperate-b": 50,
+      "s1-p1-momo-cooperate-a": 50
+    },
+    "s1-p1-atuan": {
+      "s1-p1-atuan-cooperate-a": 50,
+      "s1-p1-atuan-cooperate-b": 50
+    },
+    "s1-p2-lizi": {
+      "s1-p2-lizi-cooperate-a": 50,
+      "s1-p2-lizi-cooperate-b": 50
+    },
+    "s1-p2-alang": {
+      "s1-p2-alang-cooperate-b": 50,
+      "s1-p2-alang-cooperate-a": 50
+    },
+    "s1-p2-atuan": {
+      "s1-p2-atuan-cooperate-b": 50,
+      "s1-p2-atuan-cooperate-a": 50
+    },
+    "s1-p2-shiqi": {
+      "s1-p2-shiqi-cooperate-b": 50,
+      "s1-p2-shiqi-cooperate-a": 50
+    },
+    "s1-p2-momo": {
+      "s1-p2-momo-cooperate-a": 50,
+      "s1-p2-momo-cooperate-b": 50
+    },
+    "s1-p3-shiqi": {
+      "s1-p3-shiqi-cooperate-a": 50,
+      "s1-p3-shiqi-cooperate-b": 50
+    },
+    "s1-p3-lizi": {
+      "s1-p3-lizi-cooperate-b": 50,
+      "s1-p3-lizi-cooperate-a": 50
+    },
+    "s1-p3-momo": {
+      "s1-p3-momo-cooperate-b": 50,
+      "s1-p3-momo-cooperate-a": 50
+    },
+    "s1-p3-alang": {
+      "s1-p3-alang-cooperate-a": 50,
+      "s1-p3-alang-cooperate-b": 50
+    },
+    "s1-p3-atuan": {
+      "s1-p3-atuan-cooperate-a": 50,
+      "s1-p3-atuan-cooperate-b": 50
+    }
+  },
+  "npcCompletion": {
+    "alang": 300,
+    "lizi": 300,
+    "shiqi": 300,
+    "momo": 300,
+    "atuan": 300
+  },
+  "phaseCompletion": {
+    "1": 500,
+    "2": 500,
+    "3": 500
+  },
+  "unitCompletion": {
+    "s1-p1-alang": 100,
+    "s1-p1-lizi": 100,
+    "s1-p1-shiqi": 100,
+    "s1-p1-momo": 100,
+    "s1-p1-atuan": 100,
+    "s1-p2-lizi": 100,
+    "s1-p2-alang": 100,
+    "s1-p2-atuan": 100,
+    "s1-p2-shiqi": 100,
+    "s1-p2-momo": 100,
+    "s1-p3-shiqi": 100,
+    "s1-p3-lizi": 100,
+    "s1-p3-momo": 100,
+    "s1-p3-alang": 100,
+    "s1-p3-atuan": 100
+  },
+  "seasonReachabilityProxy": 1,
+  "digest": "82a91515e1ec996608c9f2f8d997c02429e1def62adc933f14177d5bda7a9578"
+}

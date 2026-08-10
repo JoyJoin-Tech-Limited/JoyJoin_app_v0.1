@@ -229,7 +229,7 @@ export type FlashLocateResponse = {
   signal: "searching" | "arrived";
   arrived: boolean;
   encounterId: string | null;
-  canonicalScreen: "map" | "dialogue" | "delivery" | "unavailable";
+  canonicalScreen: "map" | "dialogue" | "delivery" | "completed" | "unavailable";
 };
 
 export type FlashTaskOfferDto = {
