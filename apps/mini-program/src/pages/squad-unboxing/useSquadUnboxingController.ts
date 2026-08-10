@@ -16,7 +16,7 @@ import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { haptics } from '../../lib/utils/haptics'
 import { logError, logInfo } from '../../lib/utils/logger'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/utils/uiConstants'
-import { openPoolGroupDetail, switchToEventsTab } from '../../lib/navigation/matchingNavigation'
+import { openPoolGroupDetail, replaceWithGatheringRoom, switchToEventsTab } from '../../lib/navigation/matchingNavigation'
 import { squadUnboxingAnalytics, type SquadUnboxingEventType } from '../../lib/analytics/squadUnboxingAnalytics'
 import {
   buildPairKeyMemberMap,
@@ -127,6 +127,12 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   // pocketed — the persisted-state restore (deckPhase init + groupId-change
   // effect) intentionally does NOT consult this flag (no forced re-fan).
   const pocketDeckEnabled = currentUser?.features?.squadUnboxingPocketDeckEnabled ?? true
+
+  /** 集结房间 (2026-08-09): post-confirm secondary entry. When the flag is on,
+   *  the confirm-attendance success redirect hands off to the gathering room
+   *  instead of event-detail/pool-group-detail (those stay reachable from the
+   *  events tab). Flag off: redirect logic is byte-identical to before. */
+  const gatheringRoomEnabled = currentUser?.features?.gatheringRoomEnabled ?? false
 
   const storyMode = process.env.TARO_APP_ENABLE_STORY_MODE === 'true'
   const storyName = routerParams['__story']
@@ -297,6 +303,10 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current)
       redirectTimerRef.current = setTimeout(() => {
         redirectTimerRef.current = null
+        if (gatheringRoomEnabled) {
+          replaceWithGatheringRoom(groupId)
+          return
+        }
         if (response.blindBoxEventId) {
           Taro.redirectTo({ url: `/pages/event-detail/index?id=${response.blindBoxEventId}` })
           return

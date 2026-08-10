@@ -1,12 +1,13 @@
 import { eventAttendance, users, events } from "@shared/schema";
 import { db } from "../db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { logAdminAudit } from "../lib/adminAuditLogger";
 
 export interface AttendanceRepository {
   getAttendanceStatus(eventId: string, userId: string): Promise<{ status: string; estimatedLateMinutes?: number | null; absentReason?: string | null } | null>;
   updateAttendanceStatus(eventId: string, userId: string, status: string, estimatedLateMinutes?: number | null, absentReason?: string | null): Promise<void>;
   getEventAttendanceSummary(eventId: string): Promise<Array<{ userId: string; displayName: string; archetype: string | null; status: string; estimatedLateMinutes: number | null; absentReason: string | null; }>>;
+  getAttendanceStatuses(eventId: string, userIds: string[]): Promise<Array<{ userId: string; status: string }>>;
   adminOverrideAttendanceStatus(eventId: string, userId: string, status: string, adminId: string): Promise<void>;
 }
 
@@ -62,6 +63,30 @@ export const attendanceRepo: AttendanceRepository = {
       WHERE bbe.id = ${eventId}
     `);
     return result.rows as any[];
+  },
+
+  /**
+   * Per-user attendance statuses for an arbitrary member list, keyed off
+   * event_attendance directly (sibling of getEventAttendanceSummary, which is
+   * keyed off blind_box_events.matched_attendees). Used by the gathering-room
+   * room-state endpoint whose member list comes from pool registrations —
+   * a group member who confirmed but is absent from matchedAttendees must
+   * still report 'confirmed'. Members without a row are simply omitted;
+   * callers default them to 'pending'.
+   */
+  async getAttendanceStatuses(eventId: string, userIds: string[]): Promise<Array<{ userId: string; status: string }>> {
+    if (userIds.length === 0) return [];
+    const rows = await db
+      .select({
+        userId: eventAttendance.userId,
+        status: eventAttendance.attendanceStatus,
+      })
+      .from(eventAttendance)
+      .where(and(
+        eq(eventAttendance.blindBoxEventId, eventId),
+        inArray(eventAttendance.userId, userIds),
+      ));
+    return rows.map((row: (typeof rows)[number]) => ({ userId: row.userId, status: row.status ?? 'pending' }));
   },
 
   async adminOverrideAttendanceStatus(eventId: string, userId: string, status: string, adminId: string): Promise<void> {

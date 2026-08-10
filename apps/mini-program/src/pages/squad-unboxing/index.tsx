@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Image, Canvas } from '@tarojs/components'
-import Taro, { useRouter, useDidShow } from '@tarojs/taro'
+import Taro, { useRouter, useDidShow, useShareAppMessage } from '@tarojs/taro'
 import { useEffect, useCallback, useMemo, useRef, useState } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { normalizeMatchingCopy } from '@shared/features/matching-status'
@@ -223,6 +223,22 @@ export default function SquadUnboxingPage() {
       setHeaderReady(false)
     }
     hasShownRef.current = true
+  })
+
+  // Native WeChat share (top-right menu / 转发). The callback fires only when
+  // the user actually opens the share sheet, so the track call inside it
+  // measures real share intent — the toast-only 截图 CTA stays on
+  // `squad_unboxing_share_poster_tap`. Path lands recipients on the app entry
+  // (groupId is opaque; no PII in the payload).
+  useShareAppMessage(() => {
+    squadUnboxingAnalytics.track('squad_unboxing_card_shared', {
+      groupId,
+      screen: 'squad-unboxing',
+    })
+    return {
+      title: '我在 JoyJoin 开出了这周的同频桌友',
+      path: '/pages/index/index?source=squad-unboxing-share',
+    }
   })
 
   useEffect(() => {

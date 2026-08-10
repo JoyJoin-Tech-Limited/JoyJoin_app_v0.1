@@ -15,6 +15,7 @@ export type SquadUnboxingEventType =
   | 'squad_unboxing_confirm_attendance_success'
   | 'squad_unboxing_confirm_attendance_error'
   | 'squad_unboxing_share_poster_tap'
+  | 'squad_unboxing_card_shared'
   | 'squad_unboxing_bubble_reveal_complete'
   | 'squad_unboxing_box_open_milestone'
   | 'squad_unboxing_ready_dwell'

@@ -1,15 +1,23 @@
-@use '../../styles/variables' as *;
-@use '../../styles/mixins' as *;
-
 .reveal-particle-burst {
   position: relative;
-  // Fill positioned wrappers (e.g. `inset: 0` overlay); fall back to the
-  // legacy 300rpx box when the wrapper carries no explicit size.
-  width: 100%;
-  height: 100%;
-  min-width: 300rpx;
-  min-height: 300rpx;
+  // Legacy default: a fixed 300rpx centred square. Keeps backwards-compatible
+  // sizing for wrappers that rely on the component's intrinsic size.
+  width: 300rpx;
+  height: 300rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
+
+  // Full-bleed variant: used when the wrapper has an explicit size (e.g.
+  // `position:absolute; inset:0`). The canvas is centred and measured in px,
+  // then capped to avoid high-DPR memory kills.
+  &--fill {
+    width: 100%;
+    height: 100%;
+    min-width: 300rpx;
+    min-height: 300rpx;
+  }
 
   &--idle {
     opacity: 0;
@@ -26,16 +34,39 @@
     height: 100%;
   }
 
-  // Reduced motion — static emoji
+  // Reduced motion — static emoji flash, centred even inside `inset:0` wrappers
   &--reduced {
+    position: absolute;
+    top: 50%;
+    left: 50%;
     width: 160rpx;
     height: 160rpx;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   &__emoji {
-    font-size: 80rpx;
-    line-height: 1;
-    animation: reveal-particle-emoji-fade 1s ease forwards;
+    width: 80rpx;
+    height: 80rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &::before {
+      font-size: 80rpx;
+      line-height: 1;
+      content: '✨';
+    }
+
+    &--coins::before {
+      content: '🎉';
+    }
+
+    &--roses::before {
+      content: '🌹';
+    }
   }
 }
 
@@ -55,5 +86,15 @@
   100% {
     opacity: 0;
     transform: scale(0.9);
+  }
+}
+
+// Respect system reduced-motion preference for the emoji flash, even though
+// this component only renders the emoji when reduced motion is already active.
+@media (prefers-reduced-motion: reduce) {
+  .reveal-particle-burst__emoji::before {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }

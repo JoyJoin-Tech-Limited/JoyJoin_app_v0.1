@@ -4,7 +4,7 @@
 > Event union: `apps/mini-program/src/lib/analytics/squadUnboxingAnalytics.ts`.
 > Server whitelist: `apps/server/src/routes/domains/analytics.ts`
 > (`squadUnboxingAnalyticsRoutes.test.ts` locks the accepted set).
-> Last updated: 2026-07-24 (table-card poster events added, wow pass).
+> Last updated: 2026-08-07 (native share event `squad_unboxing_card_shared` added).
 
 ## 1. Primary funnel (first visit)
 
@@ -31,6 +31,14 @@ completion (single-fire)   squad_unboxing_all_revealed { flippedByTap, flippedBy
         ▼
 attendance CTA             squad_unboxing_confirm_attendance_tap
                            → squad_unboxing_confirm_attendance_success | _error
+        │
+        ▼
+share (native 转发)        squad_unboxing_card_shared { groupId, screen }
+                           • fires inside `useShareAppMessage` — i.e. only when
+                             the user actually opens the WeChat share sheet
+                             from the reveal page (top-right menu). The share
+                             card title is 「我在 JoyJoin 开出了这周的同频桌友」
+                             and the path lands recipients on `/pages/index/index?source=squad-unboxing-share`.
 ```
 
 `squad_unboxing_all_revealed` fires **exactly once per session** — on whichever
@@ -47,7 +55,7 @@ wall-clock from deal-settle to completion, not animation time.
 | `squad_unboxing_scroll_depth` | Scroll-depth buckets (reset per groupId) |
 | `squad_unboxing_tonights_table_view` | Event-brief chapter impression |
 | `squad_unboxing_connection_story_expand` / `_collapse` | Connection-story chips in the analysis chapter |
-| `squad_unboxing_share_poster_tap` | 截图保存记忆 CTA (toast-based; superseded by the 桌卡 poster pipeline below) |
+| `squad_unboxing_share_poster_tap` | 截图保存记忆 CTA (toast-based; superseded by the 桌卡 poster pipeline below). The toast itself points users at the native 转发 menu — that follow-through is measured by `squad_unboxing_card_shared` in the primary funnel above. |
 | `squad_unboxing_analysis_retry_tap` | Group-analysis fetch retry |
 | `squad_unboxing_ready_hero_fallback` | Composed-hero image fell back (CDN → bundled → gradient) |
 | `squad_unboxing_ready_dwell` | `{ dwellMs, groupId, screen }` | Dwell time (ms) the user spent in `ready` state before opening the box — measures anticipation time. Fired on `box_tap`/`reveal`/`drag`; source field in payload. |
@@ -102,9 +110,10 @@ rows (focus-dismiss) as distinct semantics.
   (`lib/analytics/squadUnboxingAnalytics.ts`).
 - Server whitelist accepts the three tap-to-reveal events
   (`reveal_all_tap`, `card_flip`, `all_revealed`) plus `card_detail_dismiss`,
-  the two pocket-deck events (`deck_collapse`, `deck_reopen`), and the three
+  the two pocket-deck events (`deck_collapse`, `deck_reopen`), the three
   table-card poster events (`table_card_tap`, `table_card_saved`,
-  `table_card_save_failed`), and rejects unknown types
+  `table_card_save_failed`), and the native share event (`card_shared`), and
+  rejects unknown types
   (`apps/server/src/__tests__/squadUnboxingAnalyticsRoutes.test.ts`).
 - `all_revealed` single-fire semantics (both completion paths, no re-entry
   fire) are unit-tested in `squadFlipState.test.ts`.

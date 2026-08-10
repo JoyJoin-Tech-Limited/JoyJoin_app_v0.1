@@ -4,6 +4,10 @@ import { logger } from "../../lib/logger";
 import { db } from "../../db";
 import { participationExperimentEvents, discoverAnalyticsEvents, paymentRitualEvents } from "@shared/schema";
 import { socialIcebreakerAnalyticsEventSchema } from "@shared/api";
+import {
+  GATHERING_ROOM_ANALYTICS_EVENT_TYPES,
+  type GatheringRoomAnalyticsEventType,
+} from "@shared/api";
 import { createRateLimiter } from "../../rateLimiter";
 import {
   FLASH_STORY_ANALYTICS_EVENTS,
@@ -238,6 +242,7 @@ const SQUAD_UNBOXING_EVENT_TYPES = [
   "squad_unboxing_confirm_attendance_success",
   "squad_unboxing_confirm_attendance_error",
   "squad_unboxing_share_poster_tap",
+  "squad_unboxing_card_shared",
   "squad_unboxing_bubble_reveal_complete",
   "squad_unboxing_box_open_milestone",
   "squad_unboxing_ready_dwell",
@@ -385,6 +390,13 @@ type EventsEventType = (typeof EVENTS_EVENT_TYPES)[number];
 
 const ALLOWED_EVENTS_EVENT_TYPES = new Set<EventsEventType>(EVENTS_EVENT_TYPES);
 const ALLOWED_FLASH_STORY_EVENT_TYPES = new Set<FlashStoryAnalyticsEvent>(FLASH_STORY_ANALYTICS_EVENTS);
+
+// Gathering room (集结房间) event types are defined in
+// packages/shared/src/api/gatheringRoom.ts so the mini-program client SDK and
+// this whitelist share one canonical list.
+const ALLOWED_GATHERING_ROOM_EVENT_TYPES = new Set<GatheringRoomAnalyticsEventType>(
+  GATHERING_ROOM_ANALYTICS_EVENT_TYPES,
+);
 
 const MAX_METADATA_BYTES = 4_096;
 const MAX_POOL_ID_LENGTH = 120;
@@ -932,6 +944,59 @@ export function registerAnalyticsRoutes(app: Express): void {
       return res.status(200).json({ success: true });
     } catch (error) {
       logger.warn("events analytics write failed (non-fatal)", {
+        request_id: req.requestId,
+        error: String(error),
+      });
+      return res.status(200).json({ success: false, error: "analytics write failed" });
+    }
+  });
+
+  /**
+   * POST /api/analytics/gathering-room
+   *
+   * Gathering room (集结房间) presence-page instrumentation.
+   * Tracks: room_entered, room_poke, room_confirm_attendance,
+   * room_all_present (canonical list in @shared/api/gatheringRoom).
+   *
+   * Fire-and-forget. Always returns 200. Silent fail.
+   * Reuses discoverAnalyticsEvents table and discoverAnalyticsLimiter (120 req/min).
+   */
+  app.post("/api/analytics/gathering-room", discoverAnalyticsLimiter, async (req: Request, res) => {
+    try {
+      const { eventType, poolId, metadata, timestamp } = req.body as {
+        eventType?: unknown;
+        poolId?: unknown;
+        metadata?: unknown;
+        timestamp?: unknown;
+      };
+
+      if (
+        typeof eventType !== "string" ||
+        !ALLOWED_GATHERING_ROOM_EVENT_TYPES.has(eventType as GatheringRoomAnalyticsEventType)
+      ) {
+        return res.status(200).json({ success: false, error: "invalid eventType" });
+      }
+
+      const normalizedPoolId =
+        typeof poolId === "string" && poolId.length > 0 && poolId.length <= MAX_POOL_ID_LENGTH
+          ? poolId
+          : null;
+      const normalizedMetadata = sanitizeMetadata(metadata);
+      const userId = req.session?.userId ?? null;
+      const sessionId = req.sessionID ?? null;
+
+      await insertAnalyticsEvent(discoverAnalyticsEvents, {
+        userId,
+        sessionId,
+        eventType,
+        poolId: normalizedPoolId,
+        metadata: normalizedMetadata,
+        timestamp: parseTimestamp(timestamp),
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      logger.warn("gathering room analytics write failed (non-fatal)", {
         request_id: req.requestId,
         error: String(error),
       });

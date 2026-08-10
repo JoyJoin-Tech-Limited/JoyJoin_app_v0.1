@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { View, Text, Canvas } from '@tarojs/components'
+import { View, Canvas } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import './ParticleBurst.scss'
 
@@ -19,12 +19,14 @@ const RAF = (Taro as any).requestAnimationFrame ?? requestAnimationFrame
 const CAF = (Taro as any).cancelAnimationFrame ?? cancelAnimationFrame
 
 /** Hard cap on simultaneously-live particles so rapid re-triggers stay cheap. */
-const MAX_LIVE_PARTICLES = 160
+const MAX_LIVE_PARTICLES = 120
 /** Force-clear the canvas this long after the last burst, even if a particle lingers. */
 const SAFETY_TIMEOUT_MS = 2500
+/** Cap the CSS pixel size of a full-bleed canvas to avoid high-DPR memory kills. */
+const MAX_CANVAS_CSS_PX = 420
 
 // Brand-aligned palettes per burst type
-const PALETTES: Record<string, string[]> = {
+const PALETTES: Record<'confetti' | 'coins' | 'roses', string[]> = {
   confetti: [
     '#8B5CF6', // primary
     '#FF6B9D', // secondary
@@ -180,15 +182,22 @@ export interface ParticleBurstProps {
   spotlightColor?: string
   /** Override reduced-motion detection for testing */
   reducedMotion?: boolean
+  /**
+   * Fill the wrapper with the canvas. Use only when the wrapper has an explicit
+   * size (e.g. `position:absolute; inset:0`). Defaults to false, which keeps
+   * the legacy 300rpx centred square for backwards compatibility.
+   */
+  fill?: boolean
 }
 
 /**
  * ParticleBurst — celebration confetti/coin/rose burst.
  *
- * Fills its wrapper (100% × 100%, min 300rpx) and measures the real rendered
- * canvas size in px before drawing — the WeChat canvas coordinate space equals
- * its CSS px size, so assuming a fixed logical size clips the burst.
  * Canvas-based fountain emission with gravity, flutter, and decay.
+ * Measures the real rendered canvas size in px before drawing — the WeChat
+ * canvas coordinate space equals its CSS px size, so assuming a fixed logical
+ * size clips the burst. When `fill` is true the canvas fills its wrapper but
+ * its CSS pixel size is capped to avoid high-DPR memory kills.
  * Reduced motion: static emoji flash.
  */
 export default function ParticleBurst({
@@ -198,11 +207,12 @@ export default function ParticleBurst({
   origin = { x: 0.5, y: 0.5 },
   spotlightColor,
   reducedMotion,
+  fill = false,
 }: ParticleBurstProps) {
   const isReduced = reducedMotion ?? REDUCED_MOTION
   const canvasIdRef = useRef(`particle-burst-${Math.random().toString(36).slice(2, 9)}`)
   const ctxRef = useRef<Taro.CanvasContext | null>(null)
-  const sizeRef = useRef<{ w: number; h: number } | null>(null)
+  const lastSizeRef = useRef<{ w: number; h: number } | null>(null)
   const rafRef = useRef<number | undefined>(undefined)
   const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const particlesRef = useRef<Particle[]>([])
@@ -210,24 +220,26 @@ export default function ParticleBurst({
   const mountedRef = useRef(true)
   const [isActive, setIsActive] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
+  const [canvasStyle, setCanvasStyle] = useState<{ width: string; height: string } | undefined>(undefined)
   const emojiTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const clampedCount = Math.min(Math.max(count, 10), 60)
 
+  /**
+   * Measure the canvas element. We re-measure on every burst so layout changes
+   * (keyboard, orientation, parent resize) never leave us drawing to stale dims.
+   * In fill mode the returned size is capped to MAX_CANVAS_CSS_PX to avoid
+   * allocating an unbounded backing store on high-DPR devices.
+   */
   const measureCanvas = useCallback((): Promise<{ w: number; h: number }> => {
-    if (sizeRef.current) return Promise.resolve(sizeRef.current)
-
     const fallback = () => {
-      // Component min size is 300rpx ≈ windowWidth * 300 / 750 px
       let px = 300
       try {
         px = Math.round((Taro.getSystemInfoSync().windowWidth * 300) / 750)
       } catch {
         // keep default
       }
-      const size = { w: px, h: px }
-      sizeRef.current = size
-      return size
+      return { w: px, h: px }
     }
 
     return new Promise((resolve) => {
@@ -243,8 +255,17 @@ export default function ParticleBurst({
           .exec((res) => {
             const rect = res?.[0]
             if (rect && rect.width > 0 && rect.height > 0) {
-              const size = { w: rect.width, h: rect.height }
-              sizeRef.current = size
+              let w = rect.width
+              let h = rect.height
+              if (fill) {
+                const maxDim = Math.max(w, h)
+                if (maxDim > MAX_CANVAS_CSS_PX) {
+                  const ratio = MAX_CANVAS_CSS_PX / maxDim
+                  w *= ratio
+                  h *= ratio
+                }
+              }
+              const size = { w: Math.round(w), h: Math.round(h) }
               resolve(size)
             } else {
               resolve(fallback())
@@ -254,10 +275,10 @@ export default function ParticleBurst({
         resolve(fallback())
       }
     })
-  }, [])
+  }, [fill])
 
   const finish = useCallback(() => {
-    const { w, h } = sizeRef.current ?? { w: 0, h: 0 }
+    const { w, h } = lastSizeRef.current ?? { w: 0, h: 0 }
     if (ctxRef.current && w > 0 && h > 0) {
       ctxRef.current.clearRect(0, 0, w, h)
       ctxRef.current.draw()
@@ -286,6 +307,9 @@ export default function ParticleBurst({
       }
       const ctx = ctxRef.current
       if (!ctx) return
+
+      lastSizeRef.current = { w, h }
+      setCanvasStyle({ width: `${w}px`, height: `${h}px` })
 
       const scale = Math.min(Math.max(w / 320, 0.8), 2.2)
       const originX = origin.x * w
@@ -352,22 +376,22 @@ export default function ParticleBurst({
 
   if (isReduced) {
     return (
-      <View className='reveal-particle-burst reveal-particle-burst--reduced'>
+      <View className={`reveal-particle-burst reveal-particle-burst--reduced ${fill ? 'reveal-particle-burst--fill' : ''}`}>
         {showEmoji && (
-          <Text className='reveal-particle-burst__emoji'>
-            {type === 'roses' ? '🌹' : type === 'coins' ? '🎉' : '✨'}
-          </Text>
+          <View className={`reveal-particle-burst__emoji reveal-particle-burst__emoji--${type}`} />
         )}
       </View>
     )
   }
 
   return (
-    <View className={`reveal-particle-burst ${isActive ? 'reveal-particle-burst--active' : 'reveal-particle-burst--idle'}`}>
+    <View className={`reveal-particle-burst ${fill ? 'reveal-particle-burst--fill' : ''} ${isActive ? 'reveal-particle-burst--active' : 'reveal-particle-burst--idle'}`}>
       <Canvas
         id={canvasIdRef.current}
         canvasId={canvasIdRef.current}
         className='reveal-particle-burst__canvas'
+        style={canvasStyle}
+        aria-hidden='true'
       />
     </View>
   )
