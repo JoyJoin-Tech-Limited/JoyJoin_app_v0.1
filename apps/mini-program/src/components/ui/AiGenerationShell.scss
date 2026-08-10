@@ -1,0 +1,384 @@
+@use '../../styles/variables' as *;
+
+// Reusable AI-generation waiting/confirmation shell.
+// Supports centered overlay modal and inline card modes.
+
+.ai-gen-shell {
+  &--overlay {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: $z-modal;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $color-overlay;
+    animation: ai-gen-shell-backdrop-in 200ms ease-out;
+  }
+
+  &--inline {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: $spacing-md 0;
+  }
+
+  &__card {
+    position: relative;
+    width: 624rpx;
+    max-width: 86%;
+    background: $color-surface;
+    border-radius: $card-radius;
+    padding: 44rpx 40rpx 36rpx;
+    box-sizing: border-box;
+    box-shadow: $shadow-lg;
+    animation: ai-gen-shell-card-pop 320ms cubic-bezier(0.22, 1, 0.36, 1);
+
+    &--static {
+      animation: none;
+    }
+  }
+
+  &__close {
+    position: absolute;
+    top: 8rpx;
+    right: 8rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80rpx;
+    height: 80rpx;
+    border-radius: 50%;
+    transition: background 120ms ease;
+    z-index: 1;
+
+    &--pressed {
+      background: $color-bg;
+    }
+  }
+
+  &__close-icon {
+    font-family: $font-ui;
+    font-size: $font-size-xl;
+    color: $color-text-tertiary;
+    line-height: 1;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+
+    &--error,
+    &--success {
+      padding: 16rpx 0 8rpx;
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 24rpx;
+    margin-bottom: 32rpx;
+  }
+
+  &__header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__mascot {
+    width: 120rpx;
+    height: 120rpx;
+    flex-shrink: 0;
+
+    &--breathing {
+      animation: ai-gen-shell-mascot-breathe 2.4s ease-in-out infinite;
+    }
+
+    &--success,
+    &--error {
+      width: 144rpx;
+      height: 144rpx;
+      margin-bottom: 24rpx;
+    }
+
+    &--success {
+      animation: ai-gen-shell-success-pop 480ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+  }
+
+  &__title {
+    display: block;
+    font-family: $font-cn-display;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary-warm;
+    line-height: $line-height-display;
+  }
+
+  &__subtitle {
+    display: block;
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+  }
+
+  &__steps {
+    display: flex;
+    flex-direction: column;
+    gap: 20rpx;
+    margin-bottom: 32rpx;
+  }
+
+  &__step {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24rpx;
+    padding: 16rpx 20rpx;
+    border-radius: $card-radius-sm;
+    background: $color-bg;
+    transition: background 200ms ease, opacity 200ms ease;
+
+    &--active {
+      background: rgba($color-primary, 0.08);
+    }
+
+    &--pending {
+      opacity: 0.7;
+    }
+
+    &--completed {
+      background: rgba($color-primary, 0.06);
+    }
+  }
+
+  &__step-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__step-label {
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary-warm;
+    line-height: $line-height-normal;
+  }
+
+  &__step-description {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    line-height: $line-height-normal;
+  }
+
+  &__step-indicator {
+    position: relative;
+    width: 40rpx;
+    height: 40rpx;
+    flex-shrink: 0;
+  }
+
+  &__step-check {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: $color-primary;
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 240ms ease, transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 46%;
+      left: 50%;
+      width: 14rpx;
+      height: 8rpx;
+      border-left: 3rpx solid $color-text-white;
+      border-bottom: 3rpx solid $color-text-white;
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+  }
+
+  &__step-dot {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 4rpx solid rgba($color-primary, 0.3);
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 200ms ease, transform 200ms ease;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 12rpx;
+      height: 12rpx;
+      border-radius: 50%;
+      background: $color-primary;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  &__step--completed &__step-check {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  &__step--active &__step-dot {
+    opacity: 1;
+    transform: scale(1);
+    animation: ai-gen-shell-dot-pulse 1.6s ease-in-out infinite;
+  }
+
+  &__step--pending &__step-dot {
+    opacity: 0.6;
+    transform: scale(1);
+    border-color: rgba($color-primary, 0.2);
+
+    &::after {
+      background: rgba($color-primary, 0.3);
+    }
+  }
+
+  &__progress-wrap {
+    margin-bottom: 8rpx;
+  }
+
+  &__progress {
+    height: 6rpx;
+    border-radius: 3rpx;
+    background: rgba($color-primary, 0.12);
+    overflow: hidden;
+    margin-bottom: 12rpx;
+  }
+
+  &__progress-fill {
+    width: 100%;
+    height: 100%;
+    border-radius: 3rpx;
+    background: $color-primary;
+    transform-origin: left center;
+    transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 0 8rpx rgba($color-primary, 0.35);
+    will-change: transform;
+  }
+
+  &__progress-hint {
+    display: block;
+    text-align: center;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 16rpx;
+    margin-top: 8rpx;
+  }
+
+  &__cta {
+    height: 96rpx;
+    border-radius: 48rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__text-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 64rpx;
+    transition: opacity 120ms ease;
+
+    &--pressed {
+      opacity: 0.7;
+    }
+  }
+
+  &__text-action-label {
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-gen-shell {
+    &--overlay {
+      animation: none;
+    }
+
+    &__card {
+      animation: none;
+    }
+
+    &__mascot--breathing {
+      animation: none;
+    }
+
+    &__step-check,
+    &__step-dot {
+      transition: none;
+      animation: none;
+    }
+
+    &__progress-fill {
+      transition: none;
+    }
+
+    &__mascot--success {
+      animation: none;
+    }
+  }
+}
+
+@keyframes ai-gen-shell-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ai-gen-shell-card-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes ai-gen-shell-mascot-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+@keyframes ai-gen-shell-dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.08); }
+}
+
+@keyframes ai-gen-shell-success-pop {
+  0% { opacity: 0; transform: scale(0.8); }
+  60% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}

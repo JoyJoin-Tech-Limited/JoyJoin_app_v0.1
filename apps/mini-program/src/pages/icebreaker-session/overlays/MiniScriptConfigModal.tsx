@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Image, ScrollView, RootPortal } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import { haptics } from '../../../lib/utils/haptics'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import {
@@ -16,6 +17,21 @@ import {
   type MiniscriptStyleCard,
 } from '@shared/miniscriptCatalog'
 import Button from '../../../components/ui/Button'
+import AiGenerationShell from '../../../components/ui/AiGenerationShell'
+
+function getMiniScriptShellPhase(status: MiniScriptGenerationStatus | null) {
+  if (!status) return 'generating'
+  if (status.stage === 'complete') return 'success'
+  if (status.stage === 'failed') return 'error'
+  return 'generating'
+}
+
+const MINI_SCRIPT_GENERATION_STEPS = [
+  { label: '构思故事背景', description: '根据风格与题材搭建世界观' },
+  { label: '塑造角色与任务', description: '让每个人都有秘密与动机' },
+  { label: '串联剧情与线索', description: '把角色和事件编织成可玩的剧本' },
+  { label: '保存剧本', description: '把完整故事写入本场活动' },
+]
 
 export type MiniScriptConfigModalProps = {
   open: boolean
@@ -46,7 +62,6 @@ export function MiniScriptConfigModal({
   const [isEntering, setIsEntering] = useState(false)
   const [shuffleIndex, setShuffleIndex] = useState<number | null>(null)
   const [loadedThumbs, setLoadedThumbs] = useState<Set<string>>(new Set())
-  const [clockNow, setClockNow] = useState(Date.now())
   const shuffleTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Build style cards: 7 styles + 1 Surprise Me
@@ -83,13 +98,6 @@ export function MiniScriptConfigModal({
       }
     }
   }, [])
-
-  useEffect(() => {
-    if (!isSubmitting) return
-    setClockNow(Date.now())
-    const timer = setInterval(() => setClockNow(Date.now()), 1000)
-    return () => clearInterval(timer)
-  }, [isSubmitting])
 
   const genreSet = useMemo(() => new Set(selectedGenres), [selectedGenres])
 
@@ -156,65 +164,47 @@ export function MiniScriptConfigModal({
     ? MINISCRIPT_CATALOG.styles.find((s) => s.key === selectedStyle)
     : null
 
+  const reduceMotion = useMemo(() => {
+    try {
+      return !!(Taro.getSystemInfoSync() as unknown as { reduceMotion?: boolean }).reduceMotion
+    } catch {
+      return false
+    }
+  }, [])
+
   if (!open) {
     return null
   }
 
-  if (isSubmitting) {
-    const progress = Math.max(0, Math.min(100, generationStatus?.progress ?? 5))
-    const startedAt = generationStatus?.startedAt ?? clockNow
-    const elapsedSeconds = Math.max(0, Math.floor((clockNow - startedAt) / 1000))
-    const remainingSeconds = Math.max(
-      0,
-      Math.ceil(((generationStatus?.estimatedTotalMs ?? 32_000) - (clockNow - startedAt)) / 1000),
-    )
-    const stageCopy = {
-      queued: '正在整理你选择的世界设定',
-      generating: '正在编织人物关系与故事线',
-      validating: '正在检查线索是否完整可玩',
-      fallback: '正在启用备用故事，马上完成',
-      persisting: '正在封存角色秘密与线索',
-      complete: '剧本准备好了',
-      failed: '生成遇到问题',
-    }[generationStatus?.stage ?? 'queued']
+  const showGenerationShell =
+    isSubmitting || generationStatus?.stage === 'failed' || generationStatus?.stage === 'complete'
 
+  if (showGenerationShell) {
     return (
-      <RootPortal>
-        <View className='ms-generation'>
-          <View className='ms-generation__card'>
-            <Image
-              className='ms-generation__mascot'
-              src={cdnAsset('/assets/personality/xiaoyue/xiaoyue-coach-guide.webp')}
-              mode='aspectFit'
-            />
-            <Text className='ms-generation__eyebrow'>悦仔正在创作</Text>
-            <Text className='ms-generation__title'>迷你剧本生成中</Text>
-            <Text className='ms-generation__stage'>{stageCopy}</Text>
-            <View
-              className='ms-generation__track'
-              role='progressbar'
-              aria-label='剧本生成进度'
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={progress}
-            >
-              <View
-                className='ms-generation__fill'
-                style={{ transform: `scaleX(${progress / 100})` }}
-              />
-            </View>
-            <View className='ms-generation__metrics'>
-              <Text className='ms-generation__percent'>{progress}%</Text>
-              <Text className='ms-generation__time'>
-                {generationStatus?.stage === 'complete'
-                  ? `完成 · 用时 ${elapsedSeconds} 秒`
-                  : `已等待 ${elapsedSeconds} 秒 · 预计还需约 ${remainingSeconds} 秒`}
-              </Text>
-            </View>
-            <Text className='ms-generation__hint'>请保持页面开启，完成后会自动进入剧本</Text>
-          </View>
-        </View>
-      </RootPortal>
+      <AiGenerationShell
+        visible
+        phase={getMiniScriptShellPhase(generationStatus)}
+        title='正在生成剧本…'
+        subtitle='根据你选的风格与题材，悦仔正在创作专属故事'
+        steps={MINI_SCRIPT_GENERATION_STEPS}
+        progress={generationStatus?.progress ?? 5}
+        progressLabel='剧本生成进度'
+        estimatedTotalMs={generationStatus?.estimatedTotalMs ?? 32_000}
+        successTitle='剧本已生成'
+        successSubtitle='准备进入角色分配'
+        errorTitle='生成遇到一点状况'
+        errorDescription='网络或服务器有点忙，稍后再试试？'
+        retryLabel='重试'
+        cancelLabel='返回'
+        onRetry={
+          selectedStyle
+            ? () => onSubmit({ style: selectedStyle, genres: selectedGenres, lite: liteMode })
+            : undefined
+        }
+        onCancel={onClose}
+        reduceMotion={reduceMotion}
+        mascotExpression='coachGuide'
+      />
     )
   }
 

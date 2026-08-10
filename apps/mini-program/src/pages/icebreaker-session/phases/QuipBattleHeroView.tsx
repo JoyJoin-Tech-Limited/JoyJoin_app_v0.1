@@ -344,7 +344,7 @@ export function QuipBattleHeroView({
     return (
       <View className='quip-battle-hero'>
         <View className='quip-battle-hero__burst'>
-          <ParticleBurst trigger={burstTrigger} type='confetti' count={30} />
+          <ParticleBurst trigger={burstTrigger} type='confetti' count={30} fill />
         </View>
         <PhaseHeroCard
           phase='quip_battle'

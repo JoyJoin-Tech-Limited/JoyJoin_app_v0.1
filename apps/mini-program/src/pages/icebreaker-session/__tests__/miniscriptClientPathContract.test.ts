@@ -14,6 +14,14 @@ const configModalSource = readFileSync(
   resolve(process.cwd(), 'src/pages/icebreaker-session/overlays/MiniScriptConfigModal.tsx'),
   'utf8',
 )
+const shellSource = readFileSync(
+  resolve(process.cwd(), 'src/components/ui/AiGenerationShell.tsx'),
+  'utf8',
+)
+const generationHookSource = readFileSync(
+  resolve(process.cwd(), 'src/pages/icebreaker-session/hooks/useMiniScriptGeneration.ts'),
+  'utf8',
+)
 
 // The server mounts the whole mini-script surface under `/api/miniscript/*`
 // (domains/icebreaker.ts -> domains/miniscript.ts), with socialSessionId read
@@ -38,7 +46,7 @@ describe('MiniScript client-server path contract', () => {
     expect(indexSource).toMatch(
       /performSocialAction\('miniscript-ready', '\/api\/miniscript\/ready', \{\s*socialSessionId,\s*ready,/,
     )
-    expect(indexSource).toContain("path: '/api/miniscript/generate'")
+    expect(generationHookSource).toContain("path: '/api/miniscript/generate'")
   })
 
   it('never sends mini-script actions through the session-scoped social-icebreaker path', () => {
@@ -50,23 +58,24 @@ describe('MiniScript client-server path contract', () => {
     expect(indexSource).not.toContain("'/miniscript/ready'")
   })
 
-  it('closes the generation modal before refreshing session state', () => {
-    const submitStart = indexSource.indexOf('const submitMiniScriptGenerate')
-    const submitEnd = indexSource.indexOf('// PR1', submitStart)
+  it('closes the generation modal and refreshes session state without blocking', () => {
+    // The hook initiates a non-blocking refetch inside the generation pipeline.
+    expect(generationHookSource).toContain('void refetchSession()')
+    expect(generationHookSource).not.toContain('await refetchSession()')
+    // The page closes the modal after the generation hook reports success.
+    const submitStart = indexSource.indexOf('const handleMiniScriptSubmit')
+    const submitEnd = indexSource.indexOf('const handleMiniScriptModalClose', submitStart)
     const submitSource = indexSource.slice(submitStart, submitEnd)
-    const closeIndex = submitSource.indexOf('setMiniScriptModalOpen(false)')
-    const refetchIndex = submitSource.indexOf('socialSessionQuery.refetch()')
-
-    expect(closeIndex).toBeGreaterThan(-1)
-    expect(refetchIndex).toBeGreaterThan(closeIndex)
-    expect(submitSource).not.toContain('await socialSessionQuery.refetch()')
+    expect(submitSource).toContain('const success = await submitMiniScriptGenerate(payload)')
+    expect(submitSource).toContain('setMiniScriptModalOpen(false)')
   })
 
   it('polls real server progress and renders a determinate generation bar', () => {
-    expect(indexSource).toContain("path: `/api/miniscript/generation-status?socialSessionId=")
-    expect(configModalSource).toContain("role='progressbar'")
-    expect(configModalSource).toContain('aria-valuenow={progress}')
-    expect(configModalSource).toContain('estimatedTotalMs')
+    expect(generationHookSource).toContain("path: `/api/miniscript/generation-status?socialSessionId=")
+    expect(configModalSource).toContain('AiGenerationShell')
+    expect(shellSource).toContain("role='progressbar'")
+    expect(shellSource).toContain('aria-valuenow={safeProgress}')
+    expect(shellSource).toContain('estimatedTotalMs')
   })
 
   it('posts bonus-gate responses to the mounted /api/miniscript/bonus/* routes', () => {

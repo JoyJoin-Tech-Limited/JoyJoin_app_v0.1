@@ -15,6 +15,10 @@ const sessionSource = readFileSync(
   resolve(process.cwd(), 'src/pages/icebreaker-session/index.tsx'),
   'utf8',
 )
+const generationHookSource = readFileSync(
+  resolve(process.cwd(), 'src/pages/icebreaker-session/hooks/useMiniScriptGeneration.ts'),
+  'utf8',
+)
 
 describe('MiniScriptConfigModal interaction and layout contract', () => {
   it('uses click activation rather than relying on touch-end selection', () => {
@@ -56,7 +60,7 @@ describe('MiniScriptConfigModal interaction and layout contract', () => {
   })
 
   it('allows the server-side generation pipeline to finish before timing out', () => {
-    expect(sessionSource).toContain('const MINISCRIPT_GENERATION_TIMEOUT_MS = 35_000')
-    expect(sessionSource).toMatch(/path:\s*'\/api\/miniscript\/generate',[\s\S]*?timeout:\s*MINISCRIPT_GENERATION_TIMEOUT_MS/)
+    expect(generationHookSource).toContain('const MINISCRIPT_GENERATION_TIMEOUT_MS = 35_000')
+    expect(generationHookSource).toMatch(/path:\s*'\/api\/miniscript\/generate',[\s\S]*?timeout:\s*MINISCRIPT_GENERATION_TIMEOUT_MS/)
   })
 })

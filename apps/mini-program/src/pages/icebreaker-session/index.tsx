@@ -6,12 +6,11 @@ import { getErrorMessage } from '@shared/copy/errorBaselines'
 import type { AtmosphereMood, SocialIcebreakerPhase, SocialSessionState, SocialTopic } from '@shared/socialIcebreaker'
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import type {
-  MiniScriptGenerationStatus,
   MiniScriptGenre,
   MiniScriptStyle,
   MiniScriptVoteInput,
 } from '@shared/miniscriptStoryFramework'
-import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
+import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS, TOAST_DEFAULT_MS } from '../../lib/utils/uiConstants'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
@@ -32,6 +31,7 @@ import XiaoyueSessionShell from '../../components/mascot/XiaoyueSessionShell'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
+import AiGenerationShell from '../../components/ui/AiGenerationShell'
 import {
   FallbackPhaseView,
   RecapPhaseView,
@@ -39,9 +39,10 @@ import {
   WarmupPhaseView,
 } from './phaseViews'
 import { apiVibeToClient, VIBE_TO_API, type VibeId } from '../../lib/vibeMapping'
-import IcebreakerTierSelector from './components/IcebreakerTierSelector'
 import IcebreakerTierSheet, { type TierSheetSelection } from './components/IcebreakerTierSheet'
 import CustomModeSection from './components/CustomModeSection'
+import WaitingPhase from './components/WaitingPhase'
+import { getPhaseToastText } from './phaseToastText'
 import { useIcebreakerSessionAnalytics } from './useIcebreakerSessionAnalytics'
 import { MicroChallengeHeroView } from './phases/MicroChallengeHeroView'
 import { LieDetectiveHeroView } from './phases/LieDetectiveHeroView'
@@ -56,6 +57,7 @@ import { PhaseIntroOverlay } from './overlays/PhaseIntroOverlay'
 import { IcebreakerToolSelector } from './overlays/IcebreakerToolSelector'
 import { MiniScriptConfigModal } from './overlays/MiniScriptConfigModal'
 import BonusGateOverlay from './overlays/BonusGateOverlay'
+import { useMiniScriptGeneration } from './hooks/useMiniScriptGeneration'
 import {
   buildSocialPath,
   deriveParticipants,
@@ -88,20 +90,6 @@ import {
 import { syncSocialActionResponse } from './socialActionSync'
 import './index.scss'
 
-function getPhaseToastText(phase: string): ReactNode {
-  const texts: Record<string, ReactNode> = {
-    lie_detective: <>真相只有一个！<JoyJoinIcon emoji='🕵️' tier='phase' size={24} /></>,
-    auction: <>竞拍开始，准备好你的虚拟币！<JoyJoinIcon emoji='💰' size={24} /></>,
-    personality_dice: <>人格骰子，看看今天的运势！<JoyJoinIcon emoji='🎲' tier='phase' size={24} /></>,
-    quip_battle: <>接梗大战，接得住吗？<JoyJoinIcon emoji='😏' size={24} /></>,
-    undercover_word: <>谁是卧底？小心别暴露！<JoyJoinIcon emoji='🕵️' tier='phase' size={24} /></>,
-    speed_friending: <>快速交友，认识新伙伴！<JoyJoinIcon emoji='🤝' size={24} /></>,
-    group_mirror: <>团队镜像，看看大家的默契！<JoyJoinIcon emoji='🪞' size={24} /></>,
-    recap: <>精彩回顾，今天真开心！<JoyJoinIcon emoji='🎉' tier='reaction' size={24} /></>,
-  }
-  return texts[phase] || '新阶段开始啦！'
-}
-
 // ─── Component ────────────────────────────────────────────────────
 
 // F1: hoisted — a stable reference keeps usePreloadCdnIcons' effect from
@@ -114,10 +102,6 @@ const ICEBREAKER_PRELOAD_ASSETS = [...SPRITE_SHEET_ASSETS, ...ICEBREAKER_PHASE_E
 // patient backoff retry ride through the flap instead of staring at a dead
 // shimmer (2026-07-28 502 incident).
 const TOPICS_REQUEST_TIMEOUT_MS = 8000
-// The MiniScript server pipeline has a 32s hard bound (generation + optional
-// validation + catalog fallback). The generic 5s dev / 15s production timeout
-// aborted valid generations before the server could persist them.
-const MINISCRIPT_GENERATION_TIMEOUT_MS = 35_000
 const SKIPPED_ACTION_TOAST_INTERVAL_MS = 1500
 const TOPICS_SKIP_RETRY_MAX = 5
 const TOPICS_SKIP_RETRY_DELAY_MS = 700
@@ -159,8 +143,6 @@ export default function IcebreakerSessionPage() {
   const [bootstrapError, setBootstrapError] = useState<string | null>(null)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
   const [miniScriptModalOpen, setMiniScriptModalOpen] = useState(false)
-  const [miniScriptSubmitting, setMiniScriptSubmitting] = useState(false)
-  const [miniScriptGenerationStatus, setMiniScriptGenerationStatus] = useState<MiniScriptGenerationStatus | null>(null)
   const [dismissedSuggestionAt, setDismissedSuggestionAt] = useState<string | null>(null)
   const [showPhaseIntro, setShowPhaseIntro] = useState(false)
   const [phaseToast, setPhaseToast] = useState<{ visible: boolean; text: ReactNode }>({ visible: false, text: '' })
@@ -1303,70 +1285,32 @@ export default function IcebreakerSessionPage() {
     Taro.switchTab({ url: '/pages/connections/index' })
   }, [socialSessionId, session?.icebreakerSessionId, phase, playerCount])
 
-  const submitMiniScriptGenerate = useCallback(
-    async (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[]; lite?: boolean }) => {
-      if (!socialSessionId || !session) {
-        return
-      }
+  const {
+    isSubmitting: miniScriptSubmitting,
+    generationStatus: miniScriptGenerationStatus,
+    submitGenerate: submitMiniScriptGenerate,
+    resetGeneration: resetMiniScriptGeneration,
+  } = useMiniScriptGeneration({
+    socialSessionId,
+    playerCount,
+    refetchSession: socialSessionQuery.refetch,
+  })
 
-      setMiniScriptSubmitting(true)
-      const startedAt = Date.now()
-      setMiniScriptGenerationStatus({
-        stage: 'queued',
-        progress: 5,
-        startedAt,
-        updatedAt: startedAt,
-        estimatedTotalMs: 32_000,
-      })
-      const refreshGenerationStatus = () => {
-        void apiRequest<MiniScriptGenerationStatus>({
-          path: `/api/miniscript/generation-status?socialSessionId=${encodeURIComponent(socialSessionId)}`,
-          timeout: 3000,
-        }).then(setMiniScriptGenerationStatus).catch(() => undefined)
-      }
-      const progressTimer = setInterval(refreshGenerationStatus, 800)
-      refreshGenerationStatus()
-      try {
-        await apiRequest({
-          path: '/api/miniscript/generate',
-          method: 'POST',
-          timeout: MINISCRIPT_GENERATION_TIMEOUT_MS,
-          data: {
-            socialSessionId,
-            playerCount: session.playerCount,
-            style: payload.style,
-            genres: payload.genres,
-            lite: payload.lite,
-          },
-        })
-        setMiniScriptGenerationStatus((current) => ({
-          stage: 'complete',
-          progress: 100,
-          startedAt: current?.startedAt ?? startedAt,
-          updatedAt: Date.now(),
-          estimatedTotalMs: current?.estimatedTotalMs ?? 32_000,
-        }))
-        await new Promise((resolve) => setTimeout(resolve, 400))
+  const handleMiniScriptSubmit = useCallback(
+    async (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[]; lite?: boolean }) => {
+      const success = await submitMiniScriptGenerate(payload)
+      if (success) {
         setMiniScriptModalOpen(false)
-        // The POST has already persisted the framework. Keep the modal from
-        // blocking on a second network round-trip; polling will also reconcile.
-        void socialSessionQuery.refetch()
-        Taro.showToast({ title: '剧本已生成', icon: 'success', duration: TOAST_DEFAULT_MS })
-      } catch (error) {
-        const message = getErrorText(error, '生成没成功')
-        logError('[IcebreakerSession] MiniScript generate failed', { socialSessionId, message })
-        Taro.showToast({
-          title: message.length > 14 ? '生成没成功' : message,
-          icon: 'none',
-          duration: TOAST_MEDIUM_MS,
-        })
-      } finally {
-        clearInterval(progressTimer)
-        setMiniScriptSubmitting(false)
+        resetMiniScriptGeneration()
       }
     },
-    [socialSessionId, session, socialSessionQuery],
+    [submitMiniScriptGenerate, resetMiniScriptGeneration],
   )
+
+  const handleMiniScriptModalClose = useCallback(() => {
+    setMiniScriptModalOpen(false)
+    resetMiniScriptGeneration()
+  }, [resetMiniScriptGeneration])
 
   // PR1 壳层 (calm-by-default): once a session is live, a failed 3s poll no longer
   // routes to the full-page error — the sync-loss dot + reconnect toast own that state.
@@ -1695,7 +1639,12 @@ export default function IcebreakerSessionPage() {
         {phase === 'mini_script' && session && (
           <>
             {isHost && session.enabledPhases?.includes('mini_script') ? (
-              <IcebreakerToolSelector onOpenMiniScript={() => setMiniScriptModalOpen(true)} />
+              <IcebreakerToolSelector
+                onOpenMiniScript={() => {
+                  resetMiniScriptGeneration()
+                  setMiniScriptModalOpen(true)
+                }}
+              />
             ) : null}
             <MiniScriptHeroView
               session={session}
@@ -1717,10 +1666,10 @@ export default function IcebreakerSessionPage() {
             />
             <MiniScriptConfigModal
               open={miniScriptModalOpen}
-              onClose={() => setMiniScriptModalOpen(false)}
+              onClose={handleMiniScriptModalClose}
               isSubmitting={miniScriptSubmitting}
               generationStatus={miniScriptGenerationStatus}
-              onSubmit={submitMiniScriptGenerate}
+              onSubmit={handleMiniScriptSubmit}
             />
           </>
         )}
@@ -1875,59 +1824,4 @@ export default function IcebreakerSessionPage() {
   )
 }
 
-function WaitingPhase({
-  playerCount,
-  hostName,
-  isHost,
-  currentTier,
-  currentVibe,
-  canChangeTier,
-  onChangeTier,
-  onAdvance,
-}: {
-  playerCount: number
-  hostName?: string
-  isHost: boolean
-  currentTier: TierMachineId
-  currentVibe?: VibeId
-  canChangeTier: boolean
-  onChangeTier: () => void
-  onAdvance: () => void
-}) {
-  return (
-    <View className='icebreaker__waiting'>
-      <Card className='icebreaker__waiting-card'>
-        <Image
-          src={localAsset('/assets/icons/status-icons/status-waiting.webp')}
-          style={{ width: '80rpx', height: '80rpx' }}
-          lazyLoad
-          className='icebreaker__waiting-emoji'
-        />
-        <Text className='icebreaker__waiting-title'>等待更多玩家加入…</Text>
-        <Text className='icebreaker__waiting-count'>
-          当前 {playerCount} 人已加入
-        </Text>
-        {hostName && (
-          <Text className='icebreaker__waiting-host'>
-            主持人：{hostName}
-          </Text>
-        )}
-        <View className='icebreaker__waiting-tier'>
-          <IcebreakerTierSelector
-            currentTier={currentTier}
-            currentVibe={currentVibe}
-            isHost={isHost}
-            canChange={canChangeTier}
-            disabledHint='热身已开始，模式不可更换'
-            onChangeRequest={onChangeTier}
-          />
-        </View>
-      </Card>
-      {isHost && (
-        <Button variant='primary' className='icebreaker__start-btn' onClick={onAdvance}>
-          开始破冰
-        </Button>
-      )}
-    </View>
-  )
-}
+
