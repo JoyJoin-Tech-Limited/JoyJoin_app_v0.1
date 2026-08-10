@@ -235,6 +235,7 @@ GET /api/social-icebreaker/:socialSessionId  (poll every 3s)
         │
         ▼ Host calls POST .../advance
 [MINI_SCRIPT] (when `SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT` or legacy `_BETA` true)
+  Host opens the mini-script config modal and chooses style/genre; the client shows `AiGenerationShell` while `POST /api/miniscript/generate` runs (32 s hard bound; shell surfaces progress, step text, and a completion CTA)
   Host → POST /api/miniscript/generate (see miniscript routes below)
   Players → CardFlip role reveal, TapReaction clue voting, IdentityReveal act transitions
         │

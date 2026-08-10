@@ -226,6 +226,26 @@ Primary files:
 - `apps/server/src/wechatAuth.ts` — both login endpoints accept `referralCode` for attribution
 - `apps/server/src/routes/domains/userEventPools.ts` — invitation code lookup, self-referral guard, dedup guard, referral conversion recording
 
+### 双人成行 Duo Registration (2026-08-07)
+
+Pool-scoped duo invites reuse the `invitations` / `invitation_uses` track (`invitations.poolId` + `invitationType='duo'`, expiry = pool `preference_lock_at` fallback `date_time`). At matching time a bound duo is a hard atomic unit (2 seats, unit score = mean of both members, MAX 1 duo per group, duo-internal pair excluded from group quality metrics); an unplaceable duo stays unmatched together (variant A 整组顺延 → existing auto-refund pipeline).
+
+Primary files:
+- `apps/server/src/routes/domains/duo.ts` — `POST /api/pools/:id/duo-invites` (idempotent), `GET /api/pools/:id/duo-status`, `GET /api/duo-invites/:code` (public, rate-limited)
+- `apps/server/src/lib/duoInvites.ts` — expiry/share-path/state-machine helpers
+- `apps/server/src/poolMatchingService.ts` — duo atomic-unit grouping (`[DUO]` guards + fallback decision site comment)
+
+### Gathering room (集结房间, 2026-08-10)
+
+Pre-event online anteroom for one matched pool group. Server exposes `GET /api/pool-groups/:groupId/room-state` (member attendance, top interests, V2 outfit/equipped items, event date/time) and emits `ROOM_*` WS presence events via the shared WebSocket service. Attendance remains the DB-backed source of truth (`event_attendance`); presence is ephemeral with 5 s leave grace and 2 s poke throttle.
+
+Primary files:
+- `apps/server/src/routes/domains/userEventPools.ts` — `GET /api/pool-groups/:groupId/room-state` and reuse of existing `POST /api/pool-groups/:groupId/confirm-attendance`
+- `apps/server/src/repositories/equipmentRepo.ts` — `getEquipmentLooksForUsers` batch resolves V2 outfit/equipped items
+- `apps/server/src/wsService.ts` — `ROOM_PRESENCE_STATE`, `ROOM_MEMBER_ENTERED`, `ROOM_MEMBER_LEFT`, `ROOM_POKE`
+- `packages/shared/src/wsEvents.ts` — WS event contracts
+- `packages/shared/src/api/gatheringRoom.ts` — `GatheringRoomStateResponse` DTO and analytics event whitelist
+
 ### Pool Persona Snapshot
 
 Aggregate, anonymized preview of current registrants rendered as a "persona 拼图卡" on the first screen of pool registration.

@@ -30,6 +30,7 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 - `src/pages/login/index.tsx` + `src/hooks/auth/useWeChatLogin.ts` — returning-user WeChat login
 - `src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling
 - `src/pages/event-ticket-payment/` — paid event-ticket registration with ceremony success/verifying states; event-type tail illustration v2 full-bleed footer vignette with 4 s load-timeout fallback to barcode; zero-discount coupon skip when test price is ¥0.01
+- `src/pages/gathering-room/` — pre-event online anteroom for matched groups; renders V2 `PixelAvatarComposite` avatars with equipped outfits over the delivered `room-composite-v1.webp` scene, ephemeral WS presence, and attendance confirmation. Gated by `gatheringRoomEnabled`.
 - `src/components/HeroPromoBanner.tsx` — top-of-discover hero promo banner (full-bleed Lovart illustration + glass copy panel + breathing CTA + 5 sparkles). Kill switch via `user.features.promoBannerEnabled` (env `PROMO_BANNER_ENABLED`)
 - `src/pages/alang/` + `src/lib/alang/` — 街头盲盒正式多 NPC 子包，同时保留旧阿浪兼容页。正式入口读取 `/api/alang/flash/*` 在线列表，选中角色后直接进入前台地图，服务端以 10 米为到达权威并按 3 幕 × 5 NPC 故事链恢复状态；隐藏地点坐标和未来排班不进入客户端。Staging `manual_hold` 没有倒计时，显示“测试期间在线”，仅管理员显式下线才结束。旧 config/debug 仍为 strict single-test，正式阿浪美术仍为 `awaiting-approved-art`。
 - `src/components/onboarding/WelcomeGiftCard.tsx` — premium welcome-coupon card rendered on first profile-review view; calls `GET /api/user/welcome-coupon`, displays the Lovart coupon illustration + dynamic discount badge (`悦仔见面礼`), and routes to Discover on tap. Reduced-motion and skeleton loading states supported.
@@ -74,6 +75,7 @@ src/
 │   ├── matching-status/
 │   ├── squad-unboxing/    # Subpackage: match reveal (subpackage since 2026-07-14)
 │   ├── pool-group-detail/
+│   ├── gathering-room/    # Subpackage: pre-event online anteroom for matched groups
 │   ├── icebreaker-session/
 │   ├── alang/               # Subpackage: event, search, dialogue, companion, result/archive; config/debug test-only
 │   └── profile-linked/      # Subpackage: edit-profile, rewards, invite, terms (preloaded from profile)

@@ -605,6 +605,17 @@ Four previously inert `event_pools` columns are now live. `genderRestriction="�
 - Operator surface: admin portal pool create/edit (`性别平衡` section). POST (`insertEventPoolSchema.extend`) and PATCH (`updateEventPoolSchema`) enforce identical enum/int-range validation; PATCH changes are audit-logged (`admin_audit_logs`).
 - Decision trail: Sprint Contract `sprint_20260714_gender_ratio_enforcement` (`.git/.orchestration/sprints/`).
 
+### 4.2.2 Duo Atomic Units (双人成行)
+
+A bound duo (two users linked by a `duo` invitation in the same pool) is treated as a single hard atomic unit during group formation:
+
+- **Two seats:** a duo consumes 2 of the group's capacity slots.
+- **One per group:** a formed group may contain at most one bound duo.
+- **Mean unit score:** when scoring the duo against existing members, the duo's pair score is the mean of each member's individual pair score with the candidate.
+- **Internal pair excluded:** the pair score between the two duo members is **not** counted in `avgPairScore` or other group-quality metrics.
+- **R1 per member:** when `magnetismGroupRulesEnabled` is active, R1 (no isolate with a ≥60 strong tie) is checked for each member independently.
+- **Variant A fallback:** if a bound duo cannot be placed into any group, the entire duo stays unmatched together and enters the existing 场次未成行 auto-refund pipeline. Duos are never split to fill groups.
+
 ### 4.3 Pool Configuration Parameters
 
 | Parameter | Field | Description |

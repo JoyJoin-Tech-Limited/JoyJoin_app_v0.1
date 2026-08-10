@@ -45,4 +45,6 @@
 
 **Lie Detective V2:** `LIE_DETECTIVE_MODE=v2` enables user-tag-based gameplay (user writes 2 tags, AI expands + inserts 1 fake). V1 remains default. Host-choosable toggle, all tiers. Design: `docs/proposals/spot-the-bot-game-design.md`.
 
+**Long-running AI generation UI:** Any client-side trigger of a multi-second AI call (e.g., `POST /api/miniscript/generate`) should render the reusable `AiGenerationShell` (`apps/mini-program/src/components/ui/AiGenerationShell.tsx`) instead of a bare spinner or inline skeleton. It communicates progress, active step, mascot state, and a completion CTA so users understand they are waiting for generation.
+
 **Boost plan:** All 10 phases must reach composite ≥8.0 (agent may select any phase — none deferred). 11-week roadmap in `.git/.orchestration/plans/boost-all-games-to-8.md`. Shared infra: Reveal Engine, Gesture Kit, Context Injector, Optimistic Sync.

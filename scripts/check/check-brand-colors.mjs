@@ -139,6 +139,21 @@ const ALLOWED_HEX_COLORS = new Set([
   '#F8EFFF',   // pale lilac card wash
   '#573681',   // deep violet raised-edge shadow
   '#7650D6',   // primary gradient deep stop
+
+  // Gathering room (集结房间) placeholder scene palette — warm-wood room tones
+  // behind the ROOM_ART_READY switch; the three brand anchors (#F5F1E8 wall,
+  // #FF9B85 tablecloth, #8B5CF6 lampshade) come from the frozen style guide T1
+  // (docs/design/sd-pixel-avatar-style-guide.md). Removed when real art lands.
+  '#F5F1E8',   // warm beige wall (brand anchor)
+  '#E4D9C4',   // wall base line
+  '#D9BE97',   // warm wood floor
+  '#CBAE85',   // floor plank line
+  '#A9825A',   // wood frame
+  '#8F6B45',   // dark wood
+  '#1E2A4A',   // night sky
+  '#2E3D63',   // night sky horizon
+  '#FFE9B8',   // night window star
+  '#FFB49F',   // tablecloth lit centre
 ])
 
 // Regex to find hex colors in SCSS

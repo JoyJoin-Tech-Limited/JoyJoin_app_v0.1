@@ -106,6 +106,20 @@ const REQUIREMENTS = [
       'duo-info-sheet__surface{',
     ],
   },
+  {
+    // Gathering room (集结房间, 2026-08-09): the room page is its own subpackage;
+    // the scene SCSS is @use'd by the page SCSS and must reach the page WXSS
+    // or the pixel room renders unstyled on device (same style-splitting trap
+    // as the my-image stage and squad-unboxing incidents).
+    page: 'pages/gathering-room/index.wxss',
+    selectors: [
+      'gathering-room-scene{',
+      'gathering-room-scene__table{',
+      'gathering-room-scene__seat{',
+      'gathering-room__action-bar{',
+      'gathering-room__sheet{',
+    ],
+  },
 ]
 
 let failed = false

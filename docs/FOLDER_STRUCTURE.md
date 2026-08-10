@@ -77,6 +77,7 @@ apps/server/
 │   │       ├── geo.ts             # Geolocation & venue APIs
 │   │       ├── demo.ts            # Demo / dev-only routes
 │   │       ├── devTools.ts        # Development utilities
+│   │       ├── duo.ts             # 双人成行 duo invites
 │   │       ├── helpers.ts         # Route helpers
 │   │       └── xiaoyue.ts         # Xiaoyue mascot AI (analysis only)
 │   ├── repositories/              # Data access layer (NEW CODE GOES HERE)
@@ -104,6 +105,7 @@ apps/server/
 │   │   ├── poolRegistrationRules.ts
 │   │   ├── profileEnrichment.ts
 │   │   ├── venueDataQuality.ts
+│   │   ├── duoInvites.ts          # 双人成行 duo invitation helpers
 │   │   ├── miniscriptAgent.ts
 │   │   ├── miniscriptCatalog.ts
 │   │   ├── miniscriptValidator.ts
@@ -257,6 +259,7 @@ apps/mini-program/
 │   │   ├── events/                # Event listing
 │   │   ├── event-detail/          # Single event view
 │   │   ├── pool-registration/     # Pool sign-up flow
+│   │   │   └── components/        # PoolRegistrationDuoCard, PoolRegistrationDuoBanner, DuoInfoSheet (双人成行 UI)
 │   │   ├── matching-status/       # Match results & group reveal
 │   │   │   └── styles/            # SCSS partials (consolidated)
 │   │   ├── pool-group-detail/     # Post-match group details
@@ -290,6 +293,7 @@ apps/mini-program/
 │   │   ├── payment/               # usePaymentCoupon
 │   │   ├── navigation/            # useJoyJoinNavigation, useMiniPageGate
 │   │   ├── onboarding/            # useOnboardingCheckpoint, useOnboardingAnalytics
+│   │   ├── useDuoRegistration.ts  # 双人成行 duo invitation state
 │   │   └── usePageTTI.ts          # Time-to-first-interactive instrumentation (cold ≤2000 ms, warm ≤800 ms)
 │   ├── lib/                       # API client, utilities
 │   │   ├── api/                   # api.ts, authSession, websocket, queryClient, persistentCache

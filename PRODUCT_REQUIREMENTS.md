@@ -93,9 +93,19 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-08-05)
+## 🆕 Recent Updates (Last updated: 2026-08-10)
 
 ### 2026 Milestones (June–July 2026)
+
+**56. Gathering Room (集结房间) — Pre-event Online Anteroom** 🏠 *(2026-08-10)*
+- **Purpose:** 把匹配成功到活动开始之间的沉默等待变成「期待等待」——同局 4–6 人提前几天「走进」同一间暖木小店，看到彼此的 V2 像素形象（带装备）陆续落座。
+- **Client surface:** 独立子包 `pages/gathering-room/index`，入口为 `pool-group-detail` 的主 CTA 与 `squad-unboxing` 确认出席后的跳转；整体由 `gatheringRoomEnabled`（env `GATHERING_ROOM_ENABLED`，default `false`）闸门控制。
+- **Avatar strategy:** 不复用 SD chibi 方案，直接渲染现有 V2 `PixelAvatarComposite` + 成员已装备 outfit/items，让装备体系的社交价值在同桌语境中最大化。
+- **Room art:** 单张合成 WebP `room-composite-v1.webp`（750×960 px，82 KB）已落地，`ROOM_ART_READY = true`；CSS 占位房间仅作为资源失败时的降级兜底。
+- **State model:** 三态在场——`未现身`（名牌占位）→ `在场`（WS ephemeral presence）→ `已确认出席`（复用现有 `POST /api/pool-groups/:groupId/confirm-attendance`，持久入座）。WS presence 支持 5 s leave grace、2 s poke throttle；服务端权威为 `event_attendance`。
+- **API/contract:** `GET /api/pool-groups/:groupId/room-state`（`apps/server/src/routes/domains/userEventPools.ts`）返回成员出席状态、topInterests、V2 outfit/equippedItems 与 `eventDateTime`；WS 事件类型 `ROOM_*` 定义于 `packages/shared/src/wsEvents.ts`。
+- **Analytics:** `room_entered`, `room_poke`, `room_confirm_attendance`, `room_all_present`（whitelist 双端同步）。
+- **Canonical docs:** `docs/product/gathering-room-prd.md`, `docs/agent-context/gathering-room.md`, `docs/design/lovart-brief-gathering-room.md`.
 
 **55. 平台定位升级｜盲盒式城市体验平台** *(2026-08-05)*
 - **Product override:** 平台定位从"兴趣活动驱动的轻社交"升格为**盲盒式城市体验平台** — 城市是游乐场,4-6 人社交局与街头盲盒街头邂逅是两种"开盒"方式。盲盒惊喜感(「像开盲盒一样,不知道会遇到谁」)从品牌情感签名升格为平台级定位与创意母题。

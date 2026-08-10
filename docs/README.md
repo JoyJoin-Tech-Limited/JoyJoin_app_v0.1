@@ -49,6 +49,7 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`mobile-design-system.md`](./mobile-design-system.md)
 - [`MOBILE_UI_IMPLEMENTATION_SUMMARY.md`](./architecture/implementation-summaries/MOBILE_UI_IMPLEMENTATION_SUMMARY.md)
 - [`design/button-design.md`](./design/button-design.md)
+- [`design/sd-pixel-avatar-style-guide.md`](./design/sd-pixel-avatar-style-guide.md) — SD pixel avatar style guide (no longer used for gathering room; retained for future compact-avatar contexts); Lovart briefs: [sd-avatar cat](./design/lovart-brief-sd-avatar-cat.md), [octopus](./design/lovart-brief-sd-avatar-octopus.md), [rooster](./design/lovart-brief-sd-avatar-rooster.md), [gathering room](./design/lovart-brief-gathering-room.md)
 - [`reference/ui-matching-reveal-improvements.md`](./reference/ui-matching-reveal-improvements.md)
 
 ### Ops and maintainers
@@ -78,6 +79,7 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`systems/PERSONALITY_TEST_SYSTEM.md`](./systems/PERSONALITY_TEST_SYSTEM.md) — V4 engine + web vs mini-program client surfaces
 - [`systems/MATCHING_ALGORITHM_REFERENCE.md`](./systems/MATCHING_ALGORITHM_REFERENCE.md)
 - [`icebreaker/icebreaker-system.md`](./icebreaker/icebreaker-system.md)
+- [`product/gathering-room-prd.md`](./product/gathering-room-prd.md) — 集结房间 (gathering room) PRD: pre-event online anteroom for matched groups
 - [`matching-reveal-implementation-summary.md`](./matching-reveal-implementation-summary.md)
 
 ### Venue and location services

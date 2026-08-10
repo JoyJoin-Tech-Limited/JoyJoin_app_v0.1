@@ -33,9 +33,10 @@ apps/server/src/
 ```
 
 - **routes.ts** — mounts domain routers; avoid inline handlers
-- **routes/domains/** — each domain owns its handlers, validation, and service calls
+- **routes/domains/** — each domain owns its handlers, validation, and service calls; e.g., `routes/domains/duo.ts` owns the 双人成行 duo invite endpoints
 - **repositories/** — new queries live here; prefer plain TS functions with `db`/`tx`
 - **storage.ts** — compatibility facade; do not add new logic
+- **lib/duoInvites.ts** — shared 双人成行 helpers reused by registration and matching
 
 For the domain ownership table, `storage.ts` deprecation notes, new-domain
 onboarding checklist, and MCP integration guidance, see

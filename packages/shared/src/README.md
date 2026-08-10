@@ -10,6 +10,7 @@ This package holds contracts and logic that are intentionally shared across mult
 - `packages/shared/src/eventDetail.ts` — event detail contract surface
 - `packages/shared/src/types/` — stable shared types, including AI metadata
 - `packages/shared/src/schema/_definitions.ts` — Drizzle table definitions, including `contentFilterLogs` (content_filter_logs table for auditable content violation records)
+- The `invitations` schema supports pool-scoped duo invites via `poolId` with `invitationType='duo'` (`eventId` nullable); see `apps/server/src/lib/duoInvites.ts` and `docs/design/duo-registration-spec-20260807.md`. Auth responses expose `features.duoRegistrationEnabled` (default `true`).
 
 ### Shared product vocabularies and constants
 - `packages/shared/src/constants.ts` — canonical intent/options constants and `toggleIntentValue()` helper for multi-select cap logic

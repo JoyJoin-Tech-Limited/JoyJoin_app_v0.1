@@ -76,6 +76,7 @@ Primary files:
 - `apps/mini-program/src/pages/matching-status/index.tsx`
 - `apps/mini-program/src/pages/squad-unboxing/index.tsx`
 - `apps/mini-program/src/pages/pool-group-detail/index.tsx`
+- `apps/mini-program/src/pages/gathering-room/index.tsx` — pre-event online anteroom for matched groups; gated by `gatheringRoomEnabled`, uses `GET /api/pool-groups/:groupId/room-state` and `ROOM_*` WS events
 
 Boundary:
 - Deterministic scores come from active server matching rules, not client heuristics.
