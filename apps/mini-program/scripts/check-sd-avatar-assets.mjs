@@ -4,7 +4,7 @@
  *
  * Validates the SD pixel avatar sprite family:
  *   - sd-avatar-assets-v1.json manifest shape (version 1, renderer sd-sprite,
- *     sizes exactly [96, 64, 48, 32])
+ *     sizes exactly [128, 96, 64, 48, 32])
  *   - every sprite file exists, is an RGBA WebP of exactly its tier size,
  *     has transparent background + visible pixels, and its 12-char sha256
  *     content-hash filename matches the file bytes
@@ -41,7 +41,7 @@ const CDN_MANIFEST_PATH = process.env.SD_AVATAR_CDN_MANIFEST_PATH
 const MANIFEST_PATH = path.join(BUILD_ROOT, 'sd-avatar-assets-v1.json')
 const REQUIRE_REAL_ART = process.argv.includes('--require-real-art')
 
-const SIZES = [96, 64, 48, 32]
+const SIZES = [128, 96, 64, 48, 32]
 const HASH_LENGTH = 12
 const PATH_PREFIX = 'assets/sd-avatar/v1/'
 const ARCHETYPE_IDS = [

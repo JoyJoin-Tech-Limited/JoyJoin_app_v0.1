@@ -3,14 +3,14 @@
  * build-sd-avatar-assets.mjs
  *
  * Builds the SD pixel avatar sprite family (集结房间 / small-avatar slots):
- * finished front-view chibi sprites per archetype, exported at the four
- * frozen integer sizes 96 / 64 / 48 / 32 px (style guide T6 —
+ * finished front-view chibi sprites per archetype, exported at the five
+ * frozen integer sizes 128 / 96 / 64 / 48 / 32 px (style guide T6 —
  * docs/design/sd-pixel-avatar-style-guide.md).
  *
  * Inputs (per archetype, under assets-source/sd-pixel-avatars/<id>/):
  *   - Preferred: hand-cleaned pre-scaled exports
- *       sd-avatar-<id>-{96,64,48,32}-v1.png   (used verbatim, PNG -> WebP only)
- *   - Fallback:  sd-avatar-<id>-master-v1.png (128x128) downscaled with
+ *       sd-avatar-<id>-{128,96,64,48,32}-v1.png (used verbatim, PNG -> WebP only)
+ *   - Fallback:  sd-avatar-<id>-master-v1.png (128x128) downscaled/upscaled with
  *     nearest-neighbour (pixel art — never lanczos) and flagged
  *     needsHandCleanup: true in the manifest.
  *   - Placeholder mode (SD_AVATAR_ALLOW_PLACEHOLDER=1): when an archetype has
@@ -47,7 +47,7 @@ let activeOutputRoot = OUTPUT_ROOT
 const execFileAsync = promisify(execFile)
 
 const MASTER_SIZE = 128
-const SIZES = [96, 64, 48, 32]
+const SIZES = [128, 96, 64, 48, 32]
 const HASH_LENGTH = 12
 const ALLOW_PLACEHOLDER = process.env.SD_AVATAR_ALLOW_PLACEHOLDER === '1'
 

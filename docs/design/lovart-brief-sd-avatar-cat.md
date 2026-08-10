@@ -1,7 +1,7 @@
 # Lovart Brief — SD 像素形象 · 小透明猫（cat，易混簇基线）
 
 > 日期：2026-08-07
-> 状态：Phase A · 第三张验证图。猫是 12 原型里翻译难度最低的（基线锚点），但它同时承担**易混簇并排验证**：cat / fox / corgi 三者并排必须 3 秒可区分。
+> 状态：Phase A · 第三张验证图（2026-08-10 起不再用于集结房间；集结房间角色层改复用 V2 纸娃娃 + 装备体系）。猫是 12 原型里翻译难度最低的（基线锚点），但它同时承担**易混簇并排验证**：cat / fox / corgi 三者并排必须 3 秒可区分。
 > 绑定规范：`docs/design/sd-pixel-avatar-style-guide.md`（T1–T7 令牌引用该文档）。风格锚点：已验收的 octopus 风格帧。
 
 ## Goal
@@ -20,7 +20,7 @@
 ## Asset Specifications
 
 - **Type:** character-sprite (pixel art)
-- **Platform:** mini-program（集结房间视口 + 分享物料）
+- **Platform:** mini-program（未来紧凑头像/全局图标场景 + 分享物料）
 - **Master canvas:** 128 × 128 px，透明背景；角色身高 100–130px（T3）
 - **比例：** 二头身 SD，正面朝向（T5）
 - **描边：** 1px 彩色描边，基色同色相明度 30%，禁止纯黑（T2）
@@ -70,7 +70,7 @@ Style: soft premium doujin pixel art, matching the reference octopus sprite exac
 
 - **File naming:** `sd-avatar-cat-{96|64|48|32}-v1.png`；并排对比图 `sd-cluster-cat-fox-corgi-48-compare-v1.png`
 - **Save location:** `assets-source/sd-pixel-avatars/cat/`
-- **运行时接入：** 集结房间实现期再注册 CDN manifest；本 brief 只交付源资产
+- **运行时接入：** 如未来启用 SD 头像，再注册 CDN manifest；本 brief 只交付源资产（集结房间 2026-08-10 已改复用 V2 纸娃娃）。
 - **Downscale discipline:** 4 档逐档手工修像素；48/32px 档耳朵三角与额头条纹必须仍可辨（条纹在 32px 档可减到 1 道，不能糊成灰斑）
 
 ## Review Checklist

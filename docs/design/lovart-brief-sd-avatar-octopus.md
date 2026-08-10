@@ -1,12 +1,12 @@
 # Lovart Brief — SD 像素形象 · 脑洞章鱼（octopus，风格验证 pilot）
 
 > 日期：2026-08-07
-> 状态：Phase A · 风格帧验证 pilot。这是 SD 像素形象体系的**第一张图**，风格帧验收通过后其余原型才开工。
+> 状态：Phase A · 风格帧验证 pilot（2026-08-10 起不再用于集结房间；集结房间角色层改复用 V2 纸娃娃 + 装备体系）。本图仍是 SD 像素形象体系的第一张风格验证帧，验收通过后其余原型才开工。
 > 绑定规范：`docs/design/sd-pixel-avatar-style-guide.md`（下称「风格规范」，T1–T7 令牌编号引用该文档）。本 brief 与风格规范冲突时，以风格规范为准。
 
 ## Goal
 
-为 12 原型中的**脑洞章鱼（octopus）**绘制一张正面朝向的 SD 像素形象（sprite），用于集结房间内入座/在场展示。章鱼是全体系最难的一张（触手符号化 + 二头身比例 + 彩色描边三重承压），作为风格验证 pilot：它过验收，体系成立。
+为 12 原型中的**脑洞章鱼（octopus）**绘制一张正面朝向的 SD 像素形象（sprite），用于未来可能启用的紧凑头像 / 全局图标场景（原定为集结房间，2026-08-10 已切换为复用 V2 纸娃娃）。章鱼是全体系最难的一张（触手符号化 + 二头身比例 + 彩色描边三重承压），作为风格验证 pilot：它过验收，体系成立。
 
 ## Brand Parameters
 
@@ -20,7 +20,7 @@
 ## Asset Specifications
 
 - **Type:** character-sprite (pixel art)
-- **Platform:** mini-program（集结房间视口 + 分享物料）
+- **Platform:** mini-program（未来紧凑头像/全局图标场景 + 分享物料）
 - **Master canvas:** 128 × 128 px，透明背景；角色身高 **~130px 顶格**（风格规范 T3 上限；触手展开宽度不超过 canvas）
 - **比例：** 二头身 SD，头部约占身高 1/2；正面朝向（T5）
 - **描边：** 全部 1px 彩色描边，描边色 = 基色同色相、明度 30%（粉鲑色 → 描边 ≈ `hsl(3, 40%, 30%)`），**禁止纯黑**（T2）
@@ -60,7 +60,7 @@ Style: soft premium doujin pixel art — cozy and refined, NOT hardcore game-ass
 
 - **File naming:** `sd-avatar-octopus-{96|64|48|32}-v1.png`（4 档各一）
 - **Save location:** `assets-source/sd-pixel-avatars/octopus/`（master 128px 源文件同目录留存，命名 `sd-avatar-octopus-master-v1.png`）
-- **运行时接入：** 集结房间实现期再注册进 CDN manifest；本 brief 只交付源资产，不改任何运行时代码
+- **运行时接入：** 如未来启用 SD 头像，再注册进 CDN manifest；本 brief 只交付源资产，不改任何运行时代码（集结房间 2026-08-10 已改复用 V2 纸娃娃）。
 - **Downscale discipline:** 4 档由 master 逐档降采样后**手工修像素**（重点：48/32px 档的眼睛高光点与触手末端必须仍是干净像素簇），禁止直接交付机器缩放稿
 
 ## 风格帧验收标准（Style-frame Acceptance）

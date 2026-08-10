@@ -1,14 +1,14 @@
 import { View, Image, Text } from '@tarojs/components'
 import { useState, useCallback } from 'react'
 import { getSdAvatarAsset } from '../../lib/profile/sdAvatarAssets'
-import ArchetypeHead from './ArchetypeHead'
+import ArchetypeHeadRenderer from './ArchetypeHeadRenderer'
 import './SDAvatar.scss'
 
 /**
  * SDAvatar — SD pixel sprite avatar for the 12 JoyJoin archetypes.
  *
  * Renders the finished front-view chibi sprite (集结房间 SD 形象) at the
- * frozen integer size buckets 96/64/48/32px (style guide T6). Used in
+ * frozen integer size buckets 128/96/64/48/32px (style guide T6). Used in
  * 40rpx+ roster/list slots via `ArchetypeHead variant='sd'` once the
  * `sdAvatarEnabled` feature flag is on.
  *
@@ -17,9 +17,8 @@ import './SDAvatar.scss'
  * the requested fallback. WeChat downscales the bucket asset to the display
  * size; no @2x/@3x suffixes are used (avoids the @3x@3x double-suffix bug).
  *
- * Circular import note: SDAvatar renders ArchetypeHead for fallback='head'
- * and ArchetypeHead renders SDAvatar for variant='sd'. Both references are
- * render-time only, so the ESM live bindings resolve safely.
+ * The head fallback uses ArchetypeHeadRenderer (not ArchetypeHead) to avoid
+ * the circular import where ArchetypeHead variant='sd' renders SDAvatar.
  */
 
 interface SDAvatarProps {
@@ -87,9 +86,10 @@ export default function SDAvatar({
     if (fallback === 'none') return null
     if (fallback === 'head') {
       return (
-        <ArchetypeHead
+        <ArchetypeHeadRenderer
           archetype={archetype}
           size={size}
+          variant='head'
           fallback='initial'
           fallbackText={fallbackText}
           className={className}

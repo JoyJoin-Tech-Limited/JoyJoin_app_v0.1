@@ -6,7 +6,7 @@ import { cdnAsset, localAsset } from '../utils/cdnAssets'
  * (集结房间 / small-avatar roster slots).
  *
  * The SD family is a NEW parallel asset family: finished front-view chibi
- * sprites per archetype at the four frozen integer sizes 96 / 64 / 48 / 32px
+ * sprites per archetype at the five frozen integer sizes 128 / 96 / 64 / 48 / 32px
  * (style guide T6 — docs/design/sd-pixel-avatar-style-guide.md). It does not
  * replace the V2 paper doll or the ArchetypeHead head crops.
  *
@@ -14,7 +14,7 @@ import { cdnAsset, localAsset } from '../utils/cdnAssets'
  * exactly like the ArchetypeHead head assets.
  */
 
-export const SD_AVATAR_SIZES = [32, 48, 64, 96] as const
+export const SD_AVATAR_SIZES = [32, 48, 64, 96, 128] as const
 export type SdAvatarSize = (typeof SD_AVATAR_SIZES)[number]
 
 export const SD_AVATAR_ARCHETYPE_IDS = [
@@ -72,24 +72,19 @@ function normalizeManifestPath(value: unknown): string {
 /**
  * Pick the sprite bucket for a requested display size in rpx.
  *
- * Same dpr assumption as ArchetypeHead (240px source for 120rpx display):
- * at the standard 2x device pixel ratio 1rpx == 1 device pixel, so the
- * requested rpx maps directly onto the 32/48/64/96px buckets. Nearest bucket
- * wins; ties round UP so WeChat only ever downscales (never upscales) the
- * pixel art — non-integer upscale blurs the 1px coloured outlines (T6).
+ * We never want WeChat to upscale a pixel-art sprite: upscaling a 1px coloured
+ * outline (style guide T2/T6) makes it blurry. So we pick the smallest bucket
+ * whose source pixel count is >= the requested display rpx. This guarantees
+ * WeChat downscales (or renders 1:1) at standard 1x; higher-DPR screens may
+ * still see slight softening unless a 2x bucket exists, but upscaling is
+ * avoided. Sizes above 128 fall back to the 128 bucket.
  */
 export function pickSdAvatarBucket(requestedRpx: number): SdAvatarSize {
   const target = Number.isFinite(requestedRpx) ? Math.max(0, requestedRpx) : 0
-  let best: SdAvatarSize = SD_AVATAR_SIZES[0]
-  let bestDistance = Number.POSITIVE_INFINITY
   for (const bucket of SD_AVATAR_SIZES) {
-    const distance = Math.abs(bucket - target)
-    if (distance < bestDistance || (distance === bestDistance && bucket > best)) {
-      best = bucket
-      bestDistance = distance
-    }
+    if (bucket >= target) return bucket
   }
-  return best
+  return SD_AVATAR_SIZES[SD_AVATAR_SIZES.length - 1]
 }
 
 /**
