@@ -34,9 +34,9 @@ const CONE_TARGET_PATTERNS = [
 ]
 
 const ALLOWED_PATH_PREFIXES = [
-  join('lib', 'profile', 'avatar3d'),
-  join('components', 'profile', 'PixelAvatar3D'),
-  join('pages', 'profile-linked'),
+  'lib/profile/avatar3d',
+  'components/profile/PixelAvatar3D',
+  'pages/profile-linked',
 ]
 
 const TEST_FILE_RE = /\.(test|spec)\.(ts|tsx|js|jsx)$/
