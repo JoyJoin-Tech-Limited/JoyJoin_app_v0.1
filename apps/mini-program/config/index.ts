@@ -70,6 +70,10 @@ if (MINI_PROGRAM_NODE_ENV === 'production' && !MINI_PROGRAM_CDN_BASE_URL) {
  * (chunkFileNames stays '[name].js'). Subpackage → main-package requires are
  * allowed by WeChat; main → subpackage is forbidden, so nothing outside this
  * cone may import these modules — keep it that way when adding imports.
+ * Enforced by `npm run check:avatar3d-import-cone`
+ * (scripts/check-avatar3d-import-cone.mjs), wired into build:weapp
+ * (2026-08-11; regression: the K3 WebGL spike imported three from the
+ * onboarding results page and blanked 原型揭晓 on device with wx://not-found).
  */
 const AVATAR_3D_CHUNK_NAME = 'pages/profile-linked/three-avatar'
 // Mirrored from @tarojs/helper dist/constants.js (Taro 4.2) — inlined so this

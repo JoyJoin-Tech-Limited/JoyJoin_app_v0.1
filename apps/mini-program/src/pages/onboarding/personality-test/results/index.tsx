@@ -61,7 +61,6 @@ import {
   buildShareTitle,
   ECHO_WHISPER_ROTATE_STEPS,
   getAnimationProfile,
-  getSandboxRendererOverride,
   buildTypicalityLabel,
   getTraitEntries,
   getTopMatches,
@@ -80,7 +79,6 @@ import LoadingStage from './LoadingStage'
 import EmptyStage from './EmptyStage'
 import ErrorStage from './ErrorStage'
 import SlotStage from './SlotStage'
-import WebGLLandStage from './WebGLLandStage'
 import { getRevealStripPreloadUrl } from './ArchetypeRevealStrip'
 import RevealStage from './RevealStage'
 import BridgeStage from './BridgeStage'
@@ -140,11 +138,6 @@ export default function PersonalityTestResultsPage() {
     : auth.user?.features?.personalitySlotProfileFast
       ? 'fast'
       : 'baseline'
-  // Phase 2c spike (2026-08-01): WebGL land-moment stage. Flag-gated (default
-  // off) with a web-sandbox `?renderer=webgl` override; only runs on the full
-  // celebration tier, and any GL failure falls back to the CSS celebration.
-  const webglRevealRequested = (auth.user?.features?.webglRevealEnabled ?? false)
-    || getSandboxRendererOverride() === 'webgl'
 
   // Cleanup on page unload to prevent timer leaks and stale state updates
   useUnload(() => {
@@ -176,9 +169,6 @@ export default function PersonalityTestResultsPage() {
   const [sessionSnapshot, setSessionSnapshot] = useState<AnonymousAssessmentSessionSnapshot | null>(initialSnapshot)
   const [resultState, setResultState] = useState<ResolvedResultState | null>(initialResolvedResult)
   const [flowStage, setFlowStage] = useState<FlowStage>(hasCompletedReplay ? 'result' : 'loading')
-  // Phase 2c spike: WebGL land-moment overlay state machine
-  const [webglLandState, setWebglLandState] = useState<'idle' | 'active' | 'done' | 'fallback'>('idle')
-  const webglLandResolveRef = useRef<((outcome: 'complete' | 'fallback') => void) | null>(null)
   /**
    * OS-level reduced-motion (pre-ship pipeline blocker fix, 2026-07-19): the
    * `--reduce-motion` SCSS guards were dead code until this class wiring.
@@ -1130,36 +1120,6 @@ export default function PersonalityTestResultsPage() {
         return
       }
 
-      // Phase 2c (2026-08-01): WebGL land-moment overlay — flag-gated spike.
-      // Replaces the CSS reveal celebration when it completes; any failure
-      // falls back to the normal CSS reveal below (the flow can never strand).
-      let webglCelebrationDone = false
-      if (webglRevealRequested && tier === 'full' && webglLandState !== 'fallback') {
-        setWebglLandState('active')
-        const outcome = await new Promise<'complete' | 'fallback'>((resolve) => {
-          webglLandResolveRef.current = resolve
-          // Hard timeout — a hung GL pipeline must never strand the flow
-          const handle = setTimeout(() => {
-            webglLandResolveRef.current = null
-            resolve('fallback')
-          }, 6000)
-          timeoutHandlesRef.current.push(handle)
-        })
-        webglLandResolveRef.current = null
-        if (!mountedRef.current || nextRunId !== runIdRef.current) {
-          return
-        }
-        if (outcome === 'complete') {
-          webglCelebrationDone = true
-          setWebglLandState('done')
-          analytics.interaction('webgl_land_complete', { archetype: targetName })
-        } else {
-          setWebglLandState('fallback')
-          analytics.interaction('webgl_land_fallback', { archetype: targetName })
-        }
-      }
-
-      if (!webglCelebrationDone) {
       setFlowStage('reveal')
       setRevealPhase('silhouette')
       setPhaseText('先看轮廓...')
@@ -1187,7 +1147,6 @@ export default function PersonalityTestResultsPage() {
         if (!mountedRef.current || nextRunId !== runIdRef.current) {
           return
         }
-      }
       }
 
       // Bridge: skip if fetch already resolved (no dead air)
@@ -1974,21 +1933,6 @@ export default function PersonalityTestResultsPage() {
           className='personality-results__poster-canvas personality-results__poster-canvas--square'
           style={{ width: '750px', height: '750px' }}
           aria-hidden='true'
-        />
-      )}
-
-      {/* Phase 2c: WebGL land-moment overlay (spike, flag-gated) */}
-      {webglLandState === 'active' && (
-        <WebGLLandStage
-          accentColor={visual.accent}
-          durationMs={2500}
-          onComplete={() => {
-            webglLandResolveRef.current?.('complete')
-          }}
-          onFallback={(reason) => {
-            logWarn('[PersonalityResults] WebGL land stage fell back to CSS celebration', { reason })
-            webglLandResolveRef.current?.('fallback')
-          }}
         />
       )}
 

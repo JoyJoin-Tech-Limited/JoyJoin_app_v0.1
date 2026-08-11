@@ -179,20 +179,6 @@ export function getAnimationProfile(profileName: AnimationProfileName = 'baselin
   return PROFILE_BY_NAME[profileName]
 }
 
-/**
- * Web-sandbox renderer override for the Phase 2c WebGL land-stage spike:
- * `?renderer=webgl` forces the WebGL land moment (mirrors the
- * `?animationProfile=` sandbox mechanism). Mini-program has no `window`,
- * so production selection is purely the `webglRevealEnabled` feature flag.
- */
-export function getSandboxRendererOverride(): 'webgl' | null {
-  if (typeof window !== 'undefined') {
-    const url = new URL(window.location.href) // design-audit:intentional — web sandbox only; mini-program skips this branch
-    return url.searchParams.get('renderer') === 'webgl' ? 'webgl' : null
-  }
-  return null
-}
-
 /** @deprecated Use AnimationProfile via getAnimationProfile() */
 export const SLOT_ANTICIPATION_MS = DEFAULT_PROFILE.slotAnticipationMs
 /** @deprecated Use AnimationProfile via getAnimationProfile() */
