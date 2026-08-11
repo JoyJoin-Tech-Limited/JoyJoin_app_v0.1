@@ -56,26 +56,26 @@ describe('FlashStoryUnit choice persistence', () => {
 
     render(<FlashStoryUnit encounterId='enc-atuan' npc={atuanNpc as any} story={atuanStory as any} question={atuanQuestion as any} motion={story.motion as any} storyPosition={5} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
 
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('……还是少了一张')
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('你好，我叫阿团')
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('第一次见面')
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('原本有六张，现在只剩五张')
     expect(screen.queryByText('哪些能留下，哪些要遮住？')).not.toBeInTheDocument()
     expect(screen.getByTestId('flash-story-choice-panel')).not.toHaveTextContent('五张没有送出去的观察卡')
-    fireEvent.click(screen.getByRole('button', { name: '需要我帮你回忆一下吗？' }))
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('你居然没有先问我写了什么')
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('如果是你捡到了，会怎么做')
-    expect(screen.getByTestId('flash-story-choice-panel')).not.toHaveTextContent('如果是你捡到了，会怎么做')
-    expect(screen.queryByText('需要我帮你回忆一下吗？')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '我会先确认，那个人会不会因此受伤。' }))
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('你会先看谁可能受伤')
-    expect(screen.queryByText('我会先确认，那个人会不会因此受伤。')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '你最后一次在哪里见到它？' }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('就在那盏绿灯下面')
+    expect(screen.queryByText('你最后一次在哪里见到它？')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '先确认卡上的人不会被打扰。' }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('卡丢了可以再写')
+    expect(screen.queryByText('先确认卡上的人不会被打扰。')).not.toBeInTheDocument()
     expect(submit).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: '所以，第六张卡写了谁？' }))
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('这个问题，今天先不回答')
-    fireEvent.click(screen.getByRole('button', { name: '好，下次见。' }))
+    fireEvent.click(screen.getByRole('button', { name: '卡上写的是你的朋友吗？' }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('他叫默默')
+    fireEvent.click(screen.getByRole('button', { name: '明白了。我们先把能做的做好。' }))
 
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({
       questionId: 's1-p1-atuan-response-v2',
       optionId: 'atuan-b',
-      label: '需要我帮你回忆一下吗？',
+      label: '你最后一次在哪里见到它？',
     }))
   })
 
@@ -86,13 +86,14 @@ describe('FlashStoryUnit choice persistence', () => {
       objectCode: 'seat-plan',
       title: '阿团认领座位图',
       questionId: 's1-p2-atuan-response-v2',
-      openingChoice: '你其实早就知道要留给谁了，对吗？',
-      openingReply: '知道该照顾谁，和承认自己为什么这么在意，是两回事',
-      followUpChoice: '如果他还是想坐远一点呢？',
-      followUpReply: '距离应该由坐在那里的人决定',
-      hookChoice: '所以你怕的不是位置不对，是他知道你想靠近？',
-      hookReply: '承认自己想靠近他，难一点',
-      closingChoice: '那这次，别再把图收回去了。',
+      openingContext: '又见面了。上次谢谢你，那张卡后来找回来了',
+      openingChoice: '你这次为什么愿意给我看？',
+      openingReply: '因为上次你帮我时没有乱翻卡片',
+      followUpChoice: '如果他只愿意坐远一点，也没关系吧？',
+      followUpReply: '图是我的邀请，不是他的座位规定',
+      hookChoice: '你是想邀请默默坐在你旁边，对吗？',
+      hookReply: '我想和他并肩坐一会儿',
+      closingChoice: '那就把你的意思也写在图上。',
     },
     {
       phase: 3,
@@ -100,13 +101,14 @@ describe('FlashStoryUnit choice persistence', () => {
       objectCode: 'seat-plan',
       title: '座位图写上了名字',
       questionId: 's1-p3-atuan-response-v2',
-      openingChoice: '如果他的答案不是你想要的呢？',
-      openingReply: '不想让这张图变成一道必须答对的题',
-      followUpChoice: '也告诉他，不接受不会失去你这个朋友。',
-      followUpReply: '靠近不该拿关系做交换',
-      hookChoice: '那你现在准备好把图交给他了吗？',
-      hookReply: '不替他回答，也不催他回答',
-      closingChoice: '去吧，我在这里等你的后续。',
+      openingContext: '上次分别后，我把那句话写上去了',
+      openingChoice: '如果默默不接受呢？',
+      openingReply: '朋友不应该因为拒绝一次邀请',
+      followUpChoice: '也告诉他，不接受不会影响你们做朋友。',
+      followUpReply: '我想让他先安心',
+      hookChoice: '那你准备怎么开口？',
+      hookReply: '这张图是我为我们画的',
+      closingChoice: '很好，就这样告诉他。',
     },
   ])('gives Atuan phase $phase the same complete conversational rhythm as phase one', ({
     phase,
@@ -114,6 +116,7 @@ describe('FlashStoryUnit choice persistence', () => {
     objectCode,
     title,
     questionId,
+    openingContext,
     openingChoice,
     openingReply,
     followUpChoice,
@@ -145,6 +148,7 @@ describe('FlashStoryUnit choice persistence', () => {
 
     expect(screen.queryByTestId('atuan-story-dialogue')).not.toBeInTheDocument()
     expect(screen.getByTestId('flash-story-choice-panel')).not.toHaveTextContent(title)
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent(openingContext)
     fireEvent.click(screen.getByRole('button', { name: openingChoice }))
     expect(screen.getByTestId('npc-speech')).toHaveTextContent(openingReply)
     expect(submit).not.toHaveBeenCalled()
