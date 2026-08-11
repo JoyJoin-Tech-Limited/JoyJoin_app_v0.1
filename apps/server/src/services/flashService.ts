@@ -895,8 +895,7 @@ export async function answerFlashEncounter(input: {
       });
     }
     const content = storyState.episode.content as { v?: number } | null;
-    const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
-    if (v2Enabled && content?.v === 2) {
+    if (content?.v === 2 && await getFeatureFlag("flashStoryV2Enabled", false)) {
       const advance = await advanceFlashV2Run({
         encounterId: input.encounterId,
         userId: input.userId,
