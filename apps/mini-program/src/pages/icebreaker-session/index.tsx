@@ -1424,7 +1424,7 @@ export default function IcebreakerSessionPage() {
     !!currentPlayer &&
     !!session.currentLieDetectiveReveal &&
     (session.currentLieDetectivePlayerIndex ?? 0) < (session.lieDetectivePlayers?.length ?? 0) - 1
-  const flowSyncCopy = useMemo(() => {
+  const flowSyncCopy = (() => {
     switch (pendingAction) {
       case 'start':
         return '正在进入破冰局…'
@@ -1439,7 +1439,7 @@ export default function IcebreakerSessionPage() {
       default:
         return null
     }
-  }, [pendingAction])
+  })()
   const phaseShellClass = `icebreaker__phase-shell${flowSyncCopy ? ' icebreaker__phase-shell--syncing' : ''}`
 
   return (
@@ -1823,5 +1823,4 @@ export default function IcebreakerSessionPage() {
     </ScrollView>
   )
 }
-
 

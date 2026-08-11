@@ -36,4 +36,10 @@ describe('icebreaker host action flow', () => {
     expect(source).toContain('正在同步玩法')
     expect(source).toContain('icebreaker__phase-shell--syncing')
   })
+
+  it('does not declare hooks after the loading and error early returns', () => {
+    const postEarlyReturnRender = source.slice(source.indexOf('const phaseHeader ='))
+
+    expect(postEarlyReturnRender).not.toMatch(/\buse(?:Memo|Callback|Effect|State|Ref)\s*\(/)
+  })
 })
