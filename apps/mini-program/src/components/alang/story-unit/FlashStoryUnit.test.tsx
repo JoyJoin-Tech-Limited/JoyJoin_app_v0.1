@@ -17,13 +17,6 @@ vi.mock('../FlashUi', () => ({
   FlashButton: ({ children, onClick }: any) => <button onClick={onClick}>{children}</button>,
   FlashNpcDialogueScene: ({ speech }: any) => <div data-testid='npc-speech'>{speech}</div>,
 }))
-vi.mock('../FlashStoryMicroGame', () => ({
-  FlashStoryMicroGame: ({ onInteractionStart, onSolved, onDiverged }: any) => <div>
-    <button onClick={() => { onInteractionStart?.(); onSolved() }}>完成旧物</button>
-    <button onClick={() => { onInteractionStart?.(); onDiverged('这条线走偏了。') }}>让时间线走偏</button>
-  </div>,
-}))
-vi.mock('./ShiqiOutbookInteraction', () => ({ ShiqiOutbookInteraction: () => null }))
 vi.mock('../../../lib/analytics/flashStoryAnalytics', () => ({ flashStoryAnalytics: { track: vi.fn() } }))
 
 const npc = { id: 'npc-lizi', slug: 'lizi', name: '栗子', species: '松鼠', personalitySummary: '', themeColor: '#000', avatarUrl: null }
@@ -90,13 +83,11 @@ describe('FlashStoryUnit choice persistence', () => {
     const firstSubmit = vi.fn().mockResolvedValue(undefined)
     const first = render(<FlashStoryUnit encounterId='enc-1' npc={npc as any} story={story as any} question={question as any} motion={story.motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={firstSubmit} onContinue={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: question.options[1].label }))
-    fireEvent.click(screen.getByRole('button', { name: '完成旧物' }))
     expect(firstSubmit).toHaveBeenCalledWith(expect.objectContaining({ optionId: question.options[1].id, questionId: question.id }))
     first.unmount()
 
     const retrySubmit = vi.fn().mockResolvedValue(undefined)
     render(<FlashStoryUnit encounterId='enc-1' npc={npc as any} story={story as any} question={question as any} motion={story.motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={retrySubmit} onContinue={vi.fn()} />)
-    expect(screen.getByText(question.options[1].label)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '重新送出' }))
     expect(retrySubmit).toHaveBeenCalledWith(expect.objectContaining({ optionId: question.options[1].id, questionId: question.id }))
   })
@@ -123,21 +114,13 @@ describe('FlashStoryUnit choice persistence', () => {
     }))
   })
 
-  it('shows a recoverable divergent timeline without submitting or settling the episode', () => {
+  it('submits a story choice directly without inserting a minigame or divergent timeline', () => {
     const submit = vi.fn().mockResolvedValue(undefined)
-    const onContinue = vi.fn()
-    render(<FlashStoryUnit encounterId='enc-1' npc={npc as any} story={story as any} question={question as any} motion={story.motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={submit} onContinue={onContinue} />)
+    render(<FlashStoryUnit encounterId='enc-1' npc={npc as any} story={story as any} question={question as any} motion={story.motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
 
     fireEvent.click(screen.getByRole('button', { name: question.options[0].label }))
-    fireEvent.click(screen.getByRole('button', { name: '让时间线走偏' }))
-
-    expect(screen.getByText('另一条时间线')).toBeInTheDocument()
-    expect(screen.getByText('这条线走偏了。')).toBeInTheDocument()
-    expect(screen.getByText(/没有碎片被结算/)).toBeInTheDocument()
-    expect(submit).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByRole('button', { name: '先回到街头盲盒' }))
-    expect(onContinue).toHaveBeenCalledTimes(1)
-    expect(storage.has('joyjoin_flash_story_unit_v2_s1-p1-lizi_enc-1_episode-lizi-1')).toBe(false)
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ optionId: question.options[0].id, questionId: question.id }))
+    expect(screen.queryByTestId('flash-story-microgame')).not.toBeInTheDocument()
+    expect(screen.queryByText('另一条时间线')).not.toBeInTheDocument()
   })
 })

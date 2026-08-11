@@ -171,7 +171,7 @@ export default function FlashDialoguePage() {
       const disposition = classifyStorySubmitFailure(caughtError)
       if (disposition === 'retry') {
         setStorySubmitState('retry')
-        setActionError('旧物已经整理好，不用重玩。重新送出这句话就好。')
+        setActionError('这句话没有送出去，再试一次就好。')
       } else {
         setStorySubmitState('terminal')
         setActionError(disposition === 'refresh' ? '故事状态刚刚变化，正在重新接上。' : '这次见面已经结束。')

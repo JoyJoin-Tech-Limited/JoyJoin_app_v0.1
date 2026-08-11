@@ -1765,58 +1765,8 @@ page {
   gap: 12rpx;
 }
 .atuan-first-dialogue { display: flex; flex-direction: column; gap: 8rpx; }
-.flash-dialogue__user-turn { display: flex; max-width: 88%; margin: 8rpx 0 12rpx auto; padding: 16rpx 20rpx; align-items: flex-end; flex-direction: column; gap: 4rpx; border-radius: 24rpx 24rpx 6rpx 24rpx; color: $color-surface; background: linear-gradient(145deg, rgba($color-primary, .92), rgba($color-primary-dark, .94)); }
-.flash-dialogue__user-turn-name { font-size: $font-size-2xs; opacity: .7; }
-.flash-dialogue__user-turn-copy { font-size: $font-size-sm; font-weight: $font-weight-bold; line-height: 1.5; }
 .flash-dialogue__story-settling { color: rgba($color-surface, .78); font-size: $font-size-xs; text-align: center; }
-
-.flash-story-game, .shiqi-outbook { display: flex; margin-top: 6rpx; padding: 20rpx; flex-direction: column; gap: 14rpx; overflow: hidden; border: 2rpx solid rgba($color-primary-light, .44); border-radius: 24rpx; background: rgba($color-bg-clean, .98); box-sizing: border-box; }
-.flash-story-game__eyebrow, .shiqi-outbook__eyebrow { display: block; color: $color-primary-dark; font-size: $font-size-2xs; font-weight: $font-weight-bold; letter-spacing: 2rpx; }
-.flash-story-game__title, .shiqi-outbook__title { display: block; color: $color-text-primary; font-family: $font-cn-display; font-size: $font-size-base; font-weight: $font-weight-black; line-height: 1.4; }
-.flash-story-game__instruction, .shiqi-outbook__instruction { display: block; color: $color-text-secondary-on-light; font-size: $font-size-xs; line-height: 1.55; }
-.flash-story-game__feedback, .shiqi-outbook__status { display: block; min-height: 52rpx; padding: 10rpx 14rpx; border-radius: 14rpx; color: $color-text-secondary-on-light; background: $color-bg-tint-cream; box-sizing: border-box; font-size: $font-size-2xs; text-align: center; }
-.flash-story-game__controls, .flash-story-game__caps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10rpx; }
-.flash-story-game__controls > view, .flash-story-game__controls > div, .flash-story-game__caps > view, .flash-story-game__caps > div, .flash-story-game--privacy > view[role='button'] { display: flex; min-height: 88rpx; padding: 10rpx; align-items: center; justify-content: center; border: 2rpx solid rgba($color-primary, .35); border-radius: 16rpx; color: $color-primary-dark; background: $color-bg-tint-purple; box-sizing: border-box; font-size: $font-size-2xs; font-weight: $font-weight-bold; }
-
-.flash-story-game__chairs { display: flex; height: 150rpx; align-items: flex-end; justify-content: center; background: linear-gradient(to bottom, transparent 72%, rgba($color-text-tertiary-on-light, .12) 72%); transition: gap 180ms ease; }
-.flash-story-game__chairs--0 { gap: 12rpx; }.flash-story-game__chairs--1 { gap: 72rpx; }.flash-story-game__chairs--2 { gap: 140rpx; }
-.flash-story-game__chair { width: 82rpx; height: 96rpx; border: 4rpx solid $color-primary; border-radius: 18rpx 18rpx 8rpx 8rpx; background: rgba($color-primary, .08); }
-.flash-story-game__swatches, .flash-story-game__pathline, .flash-story-game__privacy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10rpx; }
-.flash-story-game__swatch, .flash-story-game__pathline > view, .flash-story-game__pathline > div, .flash-story-game__privacy-grid > view, .flash-story-game__privacy-grid > div { display: flex; min-height: 88rpx; padding: 10rpx; align-items: center; justify-content: center; border: 2rpx dashed rgba($color-primary, .35); border-radius: 16rpx; color: $color-text-secondary-on-light; background: $color-surface; box-sizing: border-box; font-size: $font-size-2xs; text-align: center; }
-.flash-story-game__swatch.is-paired, .flash-story-game__pathline .is-visited, .flash-story-game__privacy-grid .is-covered { border-style: solid; border-color: $color-primary; color: $color-primary-dark; background: $color-bg-tint-purple; }
-.flash-story-game__privacy-list { display: flex; flex-direction: column; gap: 12rpx; }
-.flash-story-game__privacy-card { display: flex; min-height: 112rpx; padding: 16rpx; align-items: center; justify-content: space-between; gap: 16rpx; border: 2rpx solid rgba($color-primary, .2); border-radius: 18rpx; background: $color-surface; box-sizing: border-box; }
-.flash-story-game__privacy-card.is-decided { border-color: rgba($color-primary, .55); background: $color-bg-tint-purple; }
-.flash-story-game__privacy-label { min-width: 0; flex: 1; color: $color-text-primary-warm; font-size: $font-size-xs; font-weight: $font-weight-bold; line-height: 1.4; }
-.flash-story-game__privacy-actions { display: flex; flex: 0 0 auto; gap: 8rpx; }
-.flash-story-game__privacy-actions > view, .flash-story-game__privacy-actions > div { display: flex; min-width: 88rpx; min-height: 88rpx; padding: 8rpx 12rpx; align-items: center; justify-content: center; border: 2rpx solid rgba($color-primary, .35); border-radius: 16rpx; color: $color-primary-dark; background: $color-surface; box-sizing: border-box; font-size: $font-size-2xs; font-weight: $font-weight-bold; }
-.flash-story-game__privacy-actions .is-selected { color: $color-surface; border-color: $color-primary; background: $color-primary; }
-.flash-story-divergence { display: flex; padding: 24rpx; flex-direction: column; gap: 16rpx; border: 2rpx solid rgba($color-primary, .28); border-radius: 24rpx; background: linear-gradient(145deg, $color-bg-tint-purple, $color-bg-tint-cream); }
-.flash-story-divergence__eyebrow { color: $color-primary-dark; font-size: $font-size-2xs; font-weight: $font-weight-bold; letter-spacing: 2rpx; }
-.flash-story-divergence__title { color: $color-text-primary-warm; font-family: $font-cn-display; font-size: $font-size-base; font-weight: $font-weight-black; line-height: 1.4; }
-.flash-story-divergence__copy, .flash-story-divergence__hint { color: $color-text-secondary-on-light; font-size: $font-size-xs; line-height: $line-height-relaxed; }
-.flash-story-divergence__hint { padding-top: 16rpx; border-top: 2rpx solid rgba($color-primary, .14); }
-.flash-story-game__paper-stack { position: relative; height: 160rpx; border-radius: 18rpx; background: $color-bg-tint-cream; }
-.flash-story-game__paper-stack > view, .flash-story-game__paper-stack > div { position: absolute; top: 28rpx; left: calc(50% - 120rpx); width: 240rpx; height: 100rpx; border: 2rpx solid rgba($color-primary, .35); border-radius: 14rpx; background: rgba($color-surface, .72); transition: transform 180ms ease; }
-.flash-story-game__paper-stack > view:nth-child(2), .flash-story-game__paper-stack > div:nth-child(2) { transform: translateX(-30rpx); }.flash-story-game__paper-stack > view:nth-child(3), .flash-story-game__paper-stack > div:nth-child(3) { transform: translateX(30rpx); }
-.flash-story-game__paper-stack--0 > view:nth-child(2), .flash-story-game__paper-stack--0 > div:nth-child(2), .flash-story-game__paper-stack--2 > view:nth-child(3), .flash-story-game__paper-stack--2 > div:nth-child(3) { transform: translateX(0); }
-
-.shiqi-outbook__heading { display: flex; flex-direction: column; gap: 8rpx; }
-.shiqi-outbook__desk { position: relative; height: 300rpx; overflow: hidden; border-radius: 20rpx; background: $color-bg-tint-cream; }
-.shiqi-outbook__paper { position: absolute; top: 40rpx; right: 40rpx; bottom: 40rpx; left: 40rpx; border: 2rpx solid rgba($color-text-tertiary-on-light, .24); border-radius: 16rpx; background: rgba($color-surface, .76); box-shadow: $shadow-sm; }
-.shiqi-outbook__paper--under { border-style: dashed; opacity: .65; }.shiqi-outbook__paper--top { z-index: 2; border-color: rgba($color-primary, .4); will-change: transform; }
-.shiqi-outbook__route { position: absolute; left: 48rpx; width: 300rpx; height: 8rpx; border-radius: $radius-pill; transform-origin: left center; }.shiqi-outbook__paper--under .shiqi-outbook__route { background: rgba($color-text-tertiary-on-light, .3); }.shiqi-outbook__paper--top .shiqi-outbook__route { background: rgba($color-primary, .78); }
-.shiqi-outbook__route--one { top: 58rpx; transform: rotate(4deg); }.shiqi-outbook__route--two { top: 112rpx; width: 260rpx; transform: rotate(-3deg); }.shiqi-outbook__route--three { top: 166rpx; width: 280rpx; transform: rotate(2deg); }
-.shiqi-outbook__paper-note { position: absolute; right: 18rpx; bottom: 12rpx; color: $color-text-tertiary-on-light; font-size: $font-size-2xs; }.shiqi-outbook__grip { position: absolute; top: 12rpx; right: 12rpx; padding: 8rpx 14rpx; border-radius: $radius-pill; color: $color-primary-dark; background: $color-bg-tint-purple; font-size: $font-size-2xs; }.shiqi-outbook__target { position: absolute; z-index: 3; top: 22rpx; left: 22rpx; width: 42rpx; height: 42rpx; border-top: 4rpx solid rgba($color-primary, .6); border-left: 4rpx solid rgba($color-primary, .6); pointer-events: none; }
-.shiqi-outbook__reduced-action { display: flex; min-height: 88rpx; align-items: center; justify-content: center; border-radius: 20rpx; color: $color-primary-dark; background: $color-bg-tint-purple; font-weight: $font-weight-bold; }
-.shiqi-outbook__reduced-action--pressed { opacity: .78; }
-
-@media (prefers-reduced-motion: reduce) {
-  .flash-story-game *, .shiqi-outbook__paper--top, .shiqi-outbook--aligned .shiqi-outbook__paper--top { animation: none !important; transition: none !important; }
-}
 
 @media screen and (max-height: 700px) {
   .flash-dialogue__story-panel-scroll { max-height: 650rpx; }
-  .flash-story-game, .shiqi-outbook { padding: 14rpx; gap: 10rpx; }
-  .shiqi-outbook__desk { height: 250rpx; }
 }

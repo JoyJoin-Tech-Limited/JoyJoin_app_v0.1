@@ -37,11 +37,6 @@ vi.mock('../../../lib/alang/useFlash', () => ({
 }))
 vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: mocks.canonicalRedirect }))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
-vi.mock('../../../components/alang/story-unit/ShiqiOutbookInteraction', () => ({
-  ShiqiOutbookInteraction: ({ onInteractionStart, onComplete }: any) => (
-    <button onClick={() => { onInteractionStart?.(); onComplete() }}>完成旧物</button>
-  ),
-}))
 
 const questionEncounter = {
   canonicalScreen: 'dialogue',
@@ -148,7 +143,6 @@ describe('formal Flash dialogue', () => {
     expect(screen.getByText('我先看三条短线，不猜它们代表谁。')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '我先看三条短线，不猜它们代表谁。' }))
-    fireEvent.click(screen.getByRole('button', { name: '完成旧物' }))
     await waitFor(() => expect(mocks.answer).toHaveBeenCalledWith({
       encounterId: 'encounter-1',
       questionId: 's1-p1-shiqi-response-v2',
@@ -207,11 +201,10 @@ describe('formal Flash dialogue', () => {
 
     render(<FlashDialoguePage />)
     fireEvent.click(screen.getByRole('button', { name: '我和你一起对齐纸页，不替主人删选项。' }))
-    fireEvent.click(screen.getByRole('button', { name: '完成旧物' }))
 
     const alert = await screen.findByRole('alert')
     expect(screen.getByTestId('flash-story-stage')).toContainElement(alert)
-    expect(alert).toHaveTextContent('旧物已经整理好，不用重玩。重新送出这句话就好。')
+    expect(alert).toHaveTextContent('这句话没有送出去，再试一次就好。')
     expect(screen.getByRole('button', { name: '重新送出' })).toBeInTheDocument()
   })
 

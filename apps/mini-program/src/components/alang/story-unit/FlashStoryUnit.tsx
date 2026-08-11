@@ -5,7 +5,6 @@ import { getFlashStoryUnitDefinition, type FlashStoryUnitId } from '@shared/alan
 import type { FlashDialogueQuestion, FlashEncounterView, FlashNpcReference } from '../../../lib/alang/flashTypes'
 import { flashStoryAnalytics, type FlashStoryAnalyticsEventType } from '../../../lib/analytics/flashStoryAnalytics'
 import { FlashButton, FlashNpcDialogueScene } from '../FlashUi'
-import { FlashStoryMicroGame } from '../FlashStoryMicroGame'
 import {
   AtuanFirstEncounterDialogue,
   EMPTY_ATUAN_DIALOGUE_STATE,
@@ -13,7 +12,6 @@ import {
   resolveAtuanSpeech,
   type AtuanDialogueState,
 } from './AtuanFirstEncounterDialogue'
-import { ShiqiOutbookInteraction } from './ShiqiOutbookInteraction'
 import { resolveNPCResponse } from './NPCResponseResolver'
 import {
   createStoryUnitState,
@@ -52,6 +50,14 @@ function loadInitialState(
     const reconciled = reconcileStoryUnitState(unitId, restored, question)
     if (restored.stage !== 'INIT' && reconciled.stage === 'INIT') Taro.removeStorageSync(storageKey)
     restored = reconciled
+    if (unitId !== 's1-p1-atuan' && (restored.stage === 'OBJECT_INTERACTION' || restored.stage === 'OBJECT_DIVERGED')) {
+      restored = {
+        ...createStoryUnitState(unitId),
+        stage: 'NPC_INTRO',
+        analyticsSent: restored.analyticsSent,
+      }
+      Taro.setStorageSync(storageKey, restored)
+    }
   } catch {
     // Local recovery is a hint; the server remains completion authority.
   }
@@ -126,22 +132,15 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const startInteraction = (choice: StoryUnitChoice) => {
     if (runtime.stage !== 'NPC_INTRO') return
     transition({ type: 'START_INTERACTION', choice })
-    if (definition.unitId === 's1-p1-atuan') emit('object_interaction_start')
+    if (definition.unitId !== 's1-p1-atuan') {
+      transition({ type: 'OBJECT_ALIGNED' })
+      void onSubmit(choice)
+    }
   }
-  const completeObject = () => {
+  const completeAtuanDialogue = () => {
     if (!runtime.choice || runtime.stage !== 'OBJECT_INTERACTION') return
     transition({ type: 'OBJECT_ALIGNED' })
-    emit('object_complete')
     void onSubmit(runtime.choice)
-  }
-  const divergeObject = (copy: string) => {
-    if (runtime.stage !== 'OBJECT_INTERACTION') return
-    transition({ type: 'OBJECT_DIVERGED', copy })
-  }
-  const leaveDivergedTimeline = () => {
-    if (runtime.stage !== 'OBJECT_DIVERGED') return
-    try { Taro.removeStorageSync(storageKey) } catch { /* fail-open */ }
-    onContinue()
   }
   const retrySubmit = () => {
     if (!runtime.choice || runtime.stage !== 'OBJECT_SUCCESS') return
@@ -151,7 +150,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
 
   const showResult = serverSettled
   const isAtuanFirstEncounter = definition.unitId === 's1-p1-atuan'
-  const showGame = !showResult && (runtime.stage === 'OBJECT_INTERACTION' || runtime.stage === 'OBJECT_DIVERGED' || runtime.stage === 'OBJECT_SUCCESS')
+  const showCharacterDialogue = isAtuanFirstEncounter && !showResult && runtime.stage === 'OBJECT_INTERACTION'
   const defaultSpeech = resolveNPCResponse(definition.unitId, runtime.companionEvent, {
     intro: story.opening,
     success: showResult ? story.response : definition.success,
@@ -162,7 +161,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
 
   return (
     <View className='flash-page flash-dialogue flash-dialogue--story'>
-      <View className={`flash-dialogue__story-stage${showResult ? ' flash-dialogue__story-stage--result' : ' flash-dialogue__story-stage--question'}${showGame ? ' flash-dialogue__story-stage--game' : ''}${isAtuanFirstEncounter && !showResult ? ' flash-dialogue__story-stage--character-dialogue' : ''}`} data-testid='flash-story-stage' data-story-unit-stage={runtime.stage} data-story-unit-id={definition.unitId}>
+      <View className={`flash-dialogue__story-stage${showResult ? ' flash-dialogue__story-stage--result' : ' flash-dialogue__story-stage--question'}${isAtuanFirstEncounter && !showResult ? ' flash-dialogue__story-stage--character-dialogue' : ''}`} data-testid='flash-story-stage' data-story-unit-stage={runtime.stage} data-story-unit-id={definition.unitId}>
         <FlashNpcDialogueScene npc={npc} speech={speech} spacious choicesEmbedded={!showResult} motion={motion} />
         <View className='flash-dialogue__story-ambient' aria-hidden='true' />
         {!isAtuanFirstEncounter || showResult ? (
@@ -208,33 +207,15 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                   ) : <Text className='flash-dialogue__story-panel-unavailable'>这句话暂时没接上，返回后再试一次。</Text>
                 ) : (
                   <>
-                    {!isAtuanFirstEncounter ? (
-                      <View className='flash-dialogue__user-turn' aria-label={`你说：${runtime.choice?.label ?? ''}`}>
-                        <Text className='flash-dialogue__user-turn-name'>你</Text>
-                        <Text className='flash-dialogue__user-turn-copy'>{runtime.choice?.label}</Text>
-                      </View>
-                    ) : null}
-                    {runtime.stage === 'OBJECT_DIVERGED' ? (
-                      <View className='flash-story-divergence' role='status'>
-                        <Text className='flash-story-divergence__eyebrow'>另一条时间线</Text>
-                        <Text className='flash-story-divergence__title'>这次没有接回原来的故事</Text>
-                        <Text className='flash-story-divergence__copy'>{runtime.divergenceCopy}</Text>
-                        <Text className='flash-story-divergence__hint'>没有碎片被结算。下次再遇见，可以从这里重新试一次。</Text>
-                        <FlashButton variant='quiet' onClick={leaveDivergedTimeline}>先回到街头盲盒</FlashButton>
-                      </View>
-                    ) : definition.unitId === 's1-p1-atuan' && runtime.choice ? (
+                    {showCharacterDialogue && runtime.choice ? (
                       <AtuanFirstEncounterDialogue
                         state={atuanDialogue}
                         disabled={submitState === 'submitting'}
                         onStateChange={setAtuanDialogue}
-                        onComplete={completeObject}
+                        onComplete={completeAtuanDialogue}
                       />
-                    ) : definition.unitId === 's1-p1-shiqi' ? (
-                      <ShiqiOutbookInteraction completed={runtime.stage === 'OBJECT_SUCCESS'} disabled={submitState === 'submitting'} mistakeAcknowledged={runtime.companionEvent === 'FIRST_MISTAKE'} onInteractionStart={() => emit('object_interaction_start')} onFirstMistake={() => transition({ type: 'FIRST_MISTAKE' })} onComplete={completeObject} />
-                    ) : (
-                      <FlashStoryMicroGame episodeCode={definition.unitId} objectCode={definition.objectCode} completed={runtime.stage === 'OBJECT_SUCCESS'} disabled={submitState === 'submitting'} onInteractionStart={() => emit('object_interaction_start')} onFirstMistake={() => transition({ type: 'FIRST_MISTAKE' })} onDiverged={divergeObject} onSolved={completeObject} />
-                    )}
-                    {submitState === 'submitting' ? <View className='flash-dialogue__story-settling' role='status'><Text>{isAtuanFirstEncounter ? '正在记住这次见面…' : '旧物已经整理好，正在收下这次回应…'}</Text></View> : null}
+                    ) : null}
+                    {submitState === 'submitting' ? <View className='flash-dialogue__story-settling' role='status'><Text>{isAtuanFirstEncounter ? '正在记住这次见面…' : '正在接住这句话…'}</Text></View> : null}
                     {runtime.stage === 'OBJECT_SUCCESS' && (submitState === 'retry' || (restoredSolvedRef.current && submitState === 'idle')) ? <FlashButton variant='quiet' onClick={retrySubmit}>重新送出</FlashButton> : null}
                   </>
                 )}
