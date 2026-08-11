@@ -152,13 +152,8 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.profile,
   MINI_PROGRAM_PAGE_PATHS.login,
   MINI_PROGRAM_PAGE_PATHS.eventDetail,
-  MINI_PROGRAM_PAGE_PATHS.eventFeedback,
-  MINI_PROGRAM_PAGE_PATHS.eventCoordination,
   MINI_PROGRAM_PAGE_PATHS.poolGroupDetail,
-  MINI_PROGRAM_PAGE_PATHS.centerTabEmpty,
-  MINI_PROGRAM_PAGE_PATHS.cityUnlock,
 ] as const
-
 export const MINI_PROGRAM_PROFILE_LINKED_PACKAGE_PAGE_PATHS = [
   MINI_PROGRAM_PAGE_PATHS.editProfile,
   MINI_PROGRAM_PAGE_PATHS.profileSettings,
@@ -235,6 +230,30 @@ export const MINI_PROGRAM_PAYMENTS_SUBPACKAGE_PAGES = [
   'event-ticket-payment/index',
 ] as const
 
+export const MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_ROOT = 'pages/event-feedback' as const
+
+export const MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_PAGES = [
+  'index',
+] as const
+
+export const MINI_PROGRAM_CITY_UNLOCK_SUBPACKAGE_ROOT = 'pages/city-unlock' as const
+
+export const MINI_PROGRAM_CITY_UNLOCK_SUBPACKAGE_PAGES = [
+  'index',
+] as const
+
+export const MINI_PROGRAM_EVENT_COORDINATION_SUBPACKAGE_ROOT = 'pages/event-coordination' as const
+
+export const MINI_PROGRAM_EVENT_COORDINATION_SUBPACKAGE_PAGES = [
+  'index',
+] as const
+
+export const MINI_PROGRAM_CENTER_TAB_EMPTY_SUBPACKAGE_ROOT = 'pages/center-tab-empty' as const
+
+export const MINI_PROGRAM_CENTER_TAB_EMPTY_SUBPACKAGE_PAGES = [
+  'index',
+] as const
+
 export const MINI_PROGRAM_SUBPACKAGES = [
   {
     root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
@@ -271,6 +290,22 @@ export const MINI_PROGRAM_SUBPACKAGES = [
   {
     root: MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES,
+  },
+  {
+    root: MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_PAGES,
+  },
+  {
+    root: MINI_PROGRAM_CITY_UNLOCK_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_CITY_UNLOCK_SUBPACKAGE_PAGES,
+  },
+  {
+    root: MINI_PROGRAM_EVENT_COORDINATION_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_EVENT_COORDINATION_SUBPACKAGE_PAGES,
+  },
+  {
+    root: MINI_PROGRAM_CENTER_TAB_EMPTY_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_CENTER_TAB_EMPTY_SUBPACKAGE_PAGES,
   },
 ] as const
 
