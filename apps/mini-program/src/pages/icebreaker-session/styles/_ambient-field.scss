@@ -1,0 +1,160 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// S2 mood-anchored ambient field (2026-08-11) — session-page shell backdrop.
+// @use'd by pages/icebreaker-session/index.scss so the rules compile into the
+// page WXSS (subpackage style-splitting guard). Runtime-gated by
+// icebreakerMoodFieldEnabled (default false) — flag off renders none of these
+// elements, so the rules match nothing.
+//
+// Budgeted glass (playbook §3.1): STATIC pre-rendered gradient layers only —
+// no blur filter anywhere on the field. All motion is transform/opacity.
+// Mood anchoring (§3.4): waiting = cool violet-indigo derivative of Primary
+// Purple + Sky Blue; reveal = Warm Coral bloom. The field is the POCKET-state
+// signal surface (§10 ruling 4). ONE reduced-motion block collapses drift +
+// bloom to a 150ms opacity crossfade (phase-motion precedent).
+// ═══════════════════════════════════════════════════════════════════════════
+
+@use '../../../styles/variables' as *;
+
+.icebreaker__field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.icebreaker__field-layer {
+  position: absolute;
+  // Overscan so the drift never exposes an edge.
+  inset: -6%;
+  pointer-events: none;
+  transition: opacity 600ms ease, transform 600ms ease;
+
+  &--base {
+    // Self-contained neutral base — the same warm beige the page paints when
+    // the flag is off, so the field never reads as a background regression.
+    background: $color-bg-warm-to;
+  }
+
+  &--cool {
+    // Waiting: cool, serene violet-indigo (Primary Purple + Sky Blue wash).
+    background: linear-gradient(
+      168deg,
+      rgba($color-primary, 0.16) 0%,
+      rgba($flow-accent-sky, 0.20) 52%,
+      rgba($flow-accent-sky, 0.10) 100%
+    );
+    animation: mood-field-drift 26s ease-in-out infinite alternate;
+  }
+
+  &--warm {
+    // Connection / reveal: Warm Coral family, gathering toward the table.
+    background:
+      radial-gradient(circle at 50% 38%, rgba($flow-accent-human, 0.34) 0%, rgba($flow-accent-human, 0.12) 46%, rgba($flow-accent-human, 0) 74%),
+      linear-gradient(180deg, rgba($flow-accent-human, 0.06) 0%, rgba($flow-accent-human, 0.14) 100%);
+    transform-origin: 50% 42%;
+  }
+}
+
+// Reveal bloom (zone 4): one ~2s group moment — the coral field swells and
+// settles, timed with the S1 group Reveal haptic and the「一起揭晓」fragment.
+.icebreaker--field-reveal .icebreaker__field-layer--warm {
+  animation: mood-field-bloom 2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+// Locked L3-grade fragments (spec §5): hairline, dimmed, never a reading task.
+.icebreaker__field-fragment {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(200rpx + env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-normal;
+  letter-spacing: 8rpx;
+  color: rgba($color-text-primary, 0.42);
+  pointer-events: none;
+  animation: mood-field-fragment-in 480ms ease both;
+}
+
+// Content floats above the field.
+.icebreaker--mood-field .icebreaker__inner {
+  position: relative;
+  z-index: 1;
+}
+
+// RM paint-order fix (Verifier follow-up, 2026-08-11): the phase shell's
+// entrance animation is stripped under reduced-motion (animation: none → no
+// retained transform → no stacking context), which would let the field's
+// opaque base layer paint over the entire phase UI for RM users. Give the
+// shell its own stacking above the field, scoped to the flag so flag-off
+// paint order is untouched. The `__inner` z-1 rule above already covers the
+// normal path; this is the explicit guarantee for the RM path.
+.icebreaker--mood-field .icebreaker__phase-shell {
+  position: relative;
+  z-index: 1;
+}
+
+// Field-state tempo: waiting shifts arrive slower (calmer), active tracks the
+// poll cadence. (Also the concrete rules for the root state classes.)
+.icebreaker--field-waiting .icebreaker__field-layer {
+  transition-duration: 900ms;
+}
+
+.icebreaker--field-active .icebreaker__field-layer {
+  transition-duration: 600ms;
+}
+
+@keyframes mood-field-drift {
+  from {
+    transform: translate3d(-1.5%, -1%, 0);
+  }
+  to {
+    transform: translate3d(1.5%, 1%, 0);
+  }
+}
+
+@keyframes mood-field-bloom {
+  0% {
+    transform: scale(0.96);
+  }
+  35% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes mood-field-fragment-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// ONE reduced-motion block for the whole field: drift and bloom collapse to a
+// 150ms opacity crossfade; layers keep their computed opacities. The
+// state-qualified selectors repeat here so RM always outranks the tempo rules
+// above (equal specificity, later in the file).
+@media (prefers-reduced-motion: reduce) {
+  .icebreaker__field-layer,
+  .icebreaker--field-waiting .icebreaker__field-layer,
+  .icebreaker--field-active .icebreaker__field-layer,
+  .icebreaker--field-reveal .icebreaker__field-layer {
+    animation: none;
+    transition-duration: 150ms;
+  }
+
+  .icebreaker--field-reveal .icebreaker__field-layer--warm {
+    animation: none;
+    transform: none;
+  }
+
+  .icebreaker__field-fragment {
+    animation-duration: 150ms;
+    animation-timing-function: ease-out;
+  }
+}

@@ -11,6 +11,10 @@ import { stripEmojis } from '../../../lib/utils/emojiGuard'
 import { PHASE_ACCENTS } from './phaseAccents'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
+import {
+  GLANCE_L2_FRAMING_MICRO_CHALLENGE,
+  GLANCE_L2_HINT_MICRO_CHALLENGE,
+} from '../viewModels/glanceStackModel'
 import './MicroChallengeHeroView.scss'
 
 const TAP_TARGET = 5
@@ -28,6 +32,8 @@ export interface MicroChallengeHeroViewProps {
   isAdvancing?: boolean
   canAdvance?: boolean
   advanceDisabledReason?: string
+  /** S3 glance-stack pilot (flag-gated): L1 emblem + L2 script + L3 peek. */
+  glanceStackEnabled?: boolean
 }
 
 export function MicroChallengeHeroView({
@@ -43,6 +49,7 @@ export function MicroChallengeHeroView({
   isAdvancing,
   canAdvance,
   advanceDisabledReason,
+  glanceStackEnabled = false,
 }: MicroChallengeHeroViewProps) {
   const [optimisticCompletedBy, setOptimisticCompletedBy] = useState<string[]>(completedBy)
   const [localTapCount, setLocalTapCount] = useState(0)
@@ -114,8 +121,15 @@ export function MicroChallengeHeroView({
         statusText={statusText}
         doneCount={optimisticCompletedBy.length}
         totalCount={playerCount}
+        glanceMode={glanceStackEnabled}
+        l2Framing={glanceStackEnabled ? GLANCE_L2_FRAMING_MICRO_CHALLENGE : undefined}
         actions={
           <>
+            {/* S3: the ACT-pairing hint (locked spec §3.3 fragment) sits with
+                the ACT target, quiet — never inside the L3 peek. */}
+            {glanceStackEnabled && !hasCompleted ? (
+              <Text className='micro-challenge-hero__act-hint'>{GLANCE_L2_HINT_MICRO_CHALLENGE}</Text>
+            ) : null}
             {!hasCompleted ? (
               <TapRhythm
                 onTap={handleTap}

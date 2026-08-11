@@ -10,13 +10,20 @@ const FADE_OUT_START_MS = 1200
  *
  * Shows the phase icon at 160rpx with a dramatic fade-in/scale-up animation,
  * holds for ~1.2s, then fades out. Total duration ~1.6s.
+ *
+ * S4 (2026-08-11): `mode='field'` suppresses the screen-swap overlay on the
+ * glance-stack pilot surfaces — the mood field cross-fades underneath the
+ * conversation instead (zone 5: no "screens"). Overlay mode stays the default
+ * and serves every non-pilot phase unchanged.
  */
 export function PhaseIntroOverlay({
   phase,
   visible,
+  mode = 'overlay',
 }: {
   phase: SessionPhase
   visible: boolean
+  mode?: 'overlay' | 'field'
 }) {
   const [show, setShow] = useState(false)
   const [fadingOut, setFadingOut] = useState(false)
@@ -49,7 +56,7 @@ export function PhaseIntroOverlay({
     }
   }, [visible])
 
-  if (!show) return null
+  if (!show || mode === 'field') return null
 
   return (
     <View

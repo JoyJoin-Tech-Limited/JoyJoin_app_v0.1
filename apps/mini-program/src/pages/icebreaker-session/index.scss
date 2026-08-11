@@ -1,6 +1,18 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
 
+// S10 gyro-parallax spike (2026-08-11): rules-bearing partial compiled into
+// the page WXSS so subpackage style-splitting cannot chunk it away.
+@use './styles/gyro-parallax-spike';
+
+// S2 mood-anchored ambient field (2026-08-11): same subpackage-splitting
+// guard — the field layer/fragment rules must land in the page WXSS.
+@use './styles/ambient-field';
+
+// S3 glance-stack pilot + S8 handshake ritual + S4 pilot motion (2026-08-11):
+// same guard — every glance/ritual rule must land in the page WXSS.
+@use './styles/glance-stack';
+
 // ── Local colour tokens (guardrails-compliant) ─────────────────
 $__dark-indigo-1: rgba($color-primary-dark, 0.95);
 $__dark-indigo-2: rgba($color-primary, 0.85);

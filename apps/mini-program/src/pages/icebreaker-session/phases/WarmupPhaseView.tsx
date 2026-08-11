@@ -13,6 +13,10 @@ import { WarmupCardSlot } from '../components/WarmupCardSlot'
 import { WarmupPresenceStrip } from '../components/WarmupPresenceStrip'
 import { WarmupActionBar } from '../components/WarmupActionBar'
 import { WarmupCelebrationOverlay } from '../components/WarmupCelebrationOverlay'
+import { GyroParallaxSpike } from '../spike/GyroParallaxSpike'
+import { HandshakeRitual } from '../components/HandshakeRitual'
+import { GlancePeek } from '../components/GlancePeek'
+import { isHandshakeRitualGateOpen } from '../viewModels/glanceStackModel'
 import type { SessionParticipant } from '../phaseUtils'
 import {
   buildWelcomeSegments,
@@ -61,6 +65,11 @@ interface WarmupPhaseViewProps {
   warmupDataReady?: boolean
   /** Shared advance status/prompt, placed directly below the topic card. */
   advancePrompt?: ReactNode
+  /** S3 glance-stack pilot (flag-gated): ritual gate + L3 demotions. */
+  glanceStackEnabled?: boolean
+  /** S8: fired once when the host's ritual tap ends the opening — the page
+   *  fires the first Nudge (S1 grammar) alongside. */
+  onRitualStart?: () => void
 }
 
 export function WarmupPhaseView({
@@ -93,6 +102,8 @@ export function WarmupPhaseView({
   onAigcFeedbackTap,
   warmupDataReady = true,
   advancePrompt,
+  glanceStackEnabled = false,
+  onRitualStart,
 }: WarmupPhaseViewProps) {
   const isReady = readyUserIds.includes(currentUserId)
   const everyoneReady = participants.length > 0 && readyUserIds.length >= participants.length
@@ -359,6 +370,26 @@ export function WarmupPhaseView({
   const celebrationLine = buildCelebrationLine(archetypeMixText)
   const hostUserId = participants.find((p) => p.isHost)?.userId ?? currentUserId
 
+  // ── S8 Handshake Bridge (glance pilot) ─────────────────────────
+  // The session's first content gates on the spoken ritual: the host's
+  // single touch ends it locally; other devices release on the
+  // poll-observed start signal (topics / generating / selectedMood). A
+  // rejoining device (topics already dealt) never sees the ritual.
+  const [ritualDoneLocal, setRitualDoneLocal] = useState(false)
+  const ritualGateOpen =
+    glanceStackEnabled &&
+    !ritualDoneLocal &&
+    isHandshakeRitualGateOpen({
+      topicCount: topics.length,
+      warmupTopicsStatus: isGeneratingTopics ? 'generating' : undefined,
+      topicsError,
+      selectedMood,
+    })
+  const handleRitualStart = useCallback(() => {
+    setRitualDoneLocal(true)
+    onRitualStart?.()
+  }, [onRitualStart])
+
   return (
     <View className='icebreaker__warmup'>
       {isTestMode && (
@@ -369,36 +400,49 @@ export function WarmupPhaseView({
         </View>
       )}
 
+      {ritualGateOpen ? (
+        <HandshakeRitual
+          isHost={isHost}
+          vibe={vibe}
+          tier={currentTier}
+          onStart={handleRitualStart}
+        />
+      ) : (
+        <>
       <WarmupWelcomeBand welcomeSegments={welcomeSegments} caption={caption} />
 
-      <View
-        className={`warmup-card-slot-outer ${
-          topicEntering ? 'warmup-card-slot-outer--entering' : ''
-        }`}
-      >
-        <WarmupCardSlot
-          state={cardState}
-          topics={topics}
-          currentIndex={currentIndex}
-          selectedMood={selectedMood}
-          vibe={vibe}
-          isFlipped={topicFlipped}
-          reduceMotion={reduceMotion}
-          isDeepPromptExpanded={deepPromptExpanded}
-          isHost={isHost}
-          onGenerateTopics={onGenerateTopics}
-          onRetry={handleRetry}
-          onToggleDeepPrompt={handleToggleDeepPrompt}
-          onFeedbackTap={handleAigcFeedback}
-          warmupTopicsMeta={warmupTopicsMeta}
-          participants={participants}
-          readyUserIds={readyUserIds}
-          currentUserId={currentUserId}
-          selfReadyOptimistic={selfReadyOptimistic}
-          warmupDataReady={warmupDataReady}
-          topicsRecovery={topicsRecovery}
-        />
-      </View>
+      {/* S10 gyro-parallax spike (2026-08-11): no-op fragment unless
+          GYRO_PARALLAX_SPIKE_ENABLED is flipped for device measurement. */}
+      <GyroParallaxSpike reduceMotion={reduceMotion}>
+        <View
+          className={`warmup-card-slot-outer ${
+            topicEntering ? 'warmup-card-slot-outer--entering' : ''
+          }`}
+        >
+          <WarmupCardSlot
+            state={cardState}
+            topics={topics}
+            currentIndex={currentIndex}
+            selectedMood={selectedMood}
+            vibe={vibe}
+            isFlipped={topicFlipped}
+            reduceMotion={reduceMotion}
+            isDeepPromptExpanded={deepPromptExpanded}
+            isHost={isHost}
+            onGenerateTopics={onGenerateTopics}
+            onRetry={handleRetry}
+            onToggleDeepPrompt={handleToggleDeepPrompt}
+            onFeedbackTap={handleAigcFeedback}
+            warmupTopicsMeta={warmupTopicsMeta}
+            participants={participants}
+            readyUserIds={readyUserIds}
+            currentUserId={currentUserId}
+            selfReadyOptimistic={selfReadyOptimistic}
+            warmupDataReady={warmupDataReady}
+            topicsRecovery={topicsRecovery}
+          />
+        </View>
+      </GyroParallaxSpike>
 
       {/* P1 — in topic_card the ember rim carries per-member presence, so the
           strip slims to a compact count-only row (no duplicate avatar row).
@@ -415,6 +459,20 @@ export function WarmupPhaseView({
             </Text>
           </View>
         </View>
+      ) : glanceStackEnabled ? (
+        // S3 demotion (spec §4.1 warmup row): the avatar strip is L3 context
+        // — the compact count is the glanceable trigger, the strip lives
+        // behind hold-to-peek.
+        <GlancePeek summary={`${optimisticReadyCount}/${participants.length}`}>
+          <WarmupPresenceStrip
+            participants={participants}
+            readyUserIds={readyUserIds}
+            hostUserId={hostUserId}
+            currentUserId={currentUserId}
+            readyCount={readyUserIds.length}
+            totalCount={participants.length}
+          />
+        </GlancePeek>
       ) : (
         <WarmupPresenceStrip
           participants={participants}
@@ -439,6 +497,8 @@ export function WarmupPhaseView({
           onNextTopic={onNextTopic}
           onAdvance={onAdvance}
         />
+      )}
+        </>
       )}
 
       <WarmupCelebrationOverlay

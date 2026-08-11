@@ -18,7 +18,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { usePageVisibility } from '../../hooks/usePageVisibility'
 import { logInfo, logWarn, logError } from '../../lib/utils/logger'
-import { haptics } from '../../lib/utils/haptics'
+import { haptics, socialHaptics } from '../../lib/utils/haptics'
 import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerAnalytics'
 import {
   usePreloadCdnIcons,
@@ -58,6 +58,13 @@ import { IcebreakerToolSelector } from './overlays/IcebreakerToolSelector'
 import { MiniScriptConfigModal } from './overlays/MiniScriptConfigModal'
 import BonusGateOverlay from './overlays/BonusGateOverlay'
 import { useMiniScriptGeneration } from './hooks/useMiniScriptGeneration'
+import {
+  SENSORY_EVENT_HAPTIC_PATTERNS,
+  useSessionSensoryEvents,
+  type SessionSensoryEvent,
+} from './hooks/useSessionSensoryEvents'
+import { useKeepScreenOn } from './hooks/useKeepScreenOn'
+import { MOOD_FIELD_BLOOM_MS, deriveMoodField } from './viewModels/ambientFieldModel'
 import {
   buildSocialPath,
   deriveParticipants,
@@ -138,6 +145,15 @@ export default function IcebreakerSessionPage() {
   const currentUserArchetype = getUserArchetype(currentUser)
   const currentUserInterests = getUserInterests(currentUser)
   const features = user?.features
+  // S1 haptic grammar: server-owned flag (default off) gates every
+  // social-pattern firing on this page — detector events AND action Confirm.
+  const hapticGrammarEnabled = features?.icebreakerHapticGrammarEnabled ?? false
+  // S2 mood field: server-owned flag (default off) gates the ambient field,
+  // its reveal bloom, and the keep-screen-on POCKET posture.
+  const moodFieldEnabled = features?.icebreakerMoodFieldEnabled ?? false
+  // S3 glance-stack pilot (warmup + micro_challenge): L1/L2/L3 stack, S8
+  // handshake ritual, S4 pilot motion. Default off.
+  const glanceStackEnabled = features?.icebreakerGlanceStackEnabled ?? false
   const [socialSessionId, setSocialSessionId] = useState<string | null>(null)
   const [bootstrapState, setBootstrapState] = useState<SocialSessionState | null>(null)
   const [bootstrapError, setBootstrapError] = useState<string | null>(null)
@@ -270,6 +286,11 @@ export default function IcebreakerSessionPage() {
 
   const { isPageVisible } = usePageVisibility()
 
+  // S2 / playbook §10 ruling 4: POCKET is screen-on, face-down, app
+  // foreground — hold the screen awake while the field is live on this page;
+  // released on hide/unmount so the rest of the app is unaffected.
+  useKeepScreenOn(moodFieldEnabled && isPageVisible)
+
   const socialSessionQuery = useQuery<SocialSessionState>({
     queryKey: ['mini-program', 'social-icebreaker-session', socialSessionId],
     queryFn: () => apiRequest<SocialSessionState>({ path: buildSocialPath(socialSessionId ?? '') }),
@@ -396,6 +417,67 @@ export default function IcebreakerSessionPage() {
 
   useIcebreakerSessionAnalytics({ session, phase, socialSessionId, playerCount, isHost })
 
+  // S1 + S2 share the sensory-event stream: state transitions from the
+  // existing 3s poll become typed events. Haptic patterns stay gated on the
+  // S1 flag alone; S2's reveal bloom keys off the same detector (its
+  // reveal_appeared event) instead of re-deriving transitions. No new
+  // subscriptions; the event → pattern mapping is config (§10 ruling 3).
+  const [fieldRevealActive, setFieldRevealActive] = useState(false)
+  const fieldBloomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const triggerFieldBloom = useCallback(() => {
+    if (fieldBloomTimerRef.current) {
+      clearTimeout(fieldBloomTimerRef.current)
+    }
+    setFieldRevealActive(true)
+    fieldBloomTimerRef.current = setTimeout(() => {
+      setFieldRevealActive(false)
+      fieldBloomTimerRef.current = null
+    }, MOOD_FIELD_BLOOM_MS)
+  }, [])
+  useEffect(
+    () => () => {
+      if (fieldBloomTimerRef.current) {
+        clearTimeout(fieldBloomTimerRef.current)
+      }
+    },
+    [],
+  )
+  const handleSensoryEvent = useCallback(
+    (event: SessionSensoryEvent) => {
+      if (hapticGrammarEnabled) {
+        socialHaptics(SENSORY_EVENT_HAPTIC_PATTERNS[event.kind])
+      }
+      if (moodFieldEnabled && event.kind === 'reveal_appeared') {
+        triggerFieldBloom()
+      }
+    },
+    [hapticGrammarEnabled, moodFieldEnabled, triggerFieldBloom],
+  )
+  useSessionSensoryEvents({
+    session,
+    currentUserId,
+    enabled: hapticGrammarEnabled || moodFieldEnabled,
+    onEvent: handleSensoryEvent,
+  })
+
+  // S2 field model: one memoized derivation per poll snapshot. Null when the
+  // flag is off — the page renders exactly today's flat warm background.
+  const moodField = useMemo(
+    () =>
+      moodFieldEnabled && session
+        ? deriveMoodField(session, { revealActive: fieldRevealActive })
+        : null,
+    [moodFieldEnabled, session, fieldRevealActive],
+  )
+
+  // S8: the host's ritual tap fires the session's first Nudge (S1 grammar)
+  // when its flag is on — pacing reads as ritual, not admin work.
+  const handleRitualStart = useCallback(() => {
+    if (hapticGrammarEnabled) {
+      socialHaptics('socialNudge')
+    }
+  }, [hapticGrammarEnabled])
+
   // Phase intro overlay: trigger when entering a playable phase (not initial load).
   // Future refactor: extract into useSessionPhase() hook to reduce God-component size.
   useEffect(() => {
@@ -477,6 +559,12 @@ export default function IcebreakerSessionPage() {
             })
           },
         })
+        // S1: Confirm fires on the success path of every mutating action, so
+        // a felt "land" replaces visual verification. Flag-gated; failure and
+        // skipped-action paths stay silent.
+        if (hapticGrammarEnabled) {
+          socialHaptics('socialConfirm')
+        }
         return response
       } catch (error) {
         const message = getErrorText(error, '操作没成功，再试试')
@@ -502,7 +590,7 @@ export default function IcebreakerSessionPage() {
         setPendingAction((current) => (current === actionKey ? null : current))
       }
     },
-    [applySocialSessionState, socialSessionId, pendingAction, socialSessionQuery.refetch],
+    [applySocialSessionState, hapticGrammarEnabled, socialSessionId, pendingAction, socialSessionQuery.refetch],
   )
 
   const topicsSkipRetryRef = useRef(0)
@@ -1444,12 +1532,32 @@ export default function IcebreakerSessionPage() {
 
   return (
     <ScrollView
-      className={`icebreaker${phase === 'warmup' ? ' icebreaker--warmup' : ''}`}
+      className={`icebreaker${phase === 'warmup' ? ' icebreaker--warmup' : ''}${moodField ? ` icebreaker--mood-field icebreaker--field-${moodField.state}` : ''}`}
       scrollY={phase !== 'warmup'}
       enhanced
       showScrollbar={false}
       enableFlex={phase === 'warmup'}
     >
+      {/* S2 ambient mood field: static gradient layers cross-faded by the
+          derived model (opacity/scale inline — WeChat drops hsla(); computed
+          rgba/opacities ride inline per the phaseAccents pattern). Rendered
+          only when icebreakerMoodFieldEnabled is on. */}
+      {moodField && (
+        <View className='icebreaker__field' aria-hidden='true'>
+          <View className='icebreaker__field-layer icebreaker__field-layer--base' />
+          <View
+            className='icebreaker__field-layer icebreaker__field-layer--cool'
+            style={{ opacity: moodField.coolOpacity }}
+          />
+          <View
+            className='icebreaker__field-layer icebreaker__field-layer--warm'
+            style={{ opacity: moodField.warmOpacity, transform: `scale(${moodField.warmScale})` }}
+          />
+          {moodField.fragment && (
+            <Text className='icebreaker__field-fragment'>{moodField.fragment}</Text>
+          )}
+        </View>
+      )}
       {/* scroll-view padding is unsupported in WeChat — pad the inner wrapper. */}
       <View className='icebreaker__inner'>
       <View className='icebreaker__header-wrap'>
@@ -1472,7 +1580,11 @@ export default function IcebreakerSessionPage() {
         )}
       </View>
 
-      <PhaseIntroOverlay phase={phase} visible={showPhaseIntro} />
+      <PhaseIntroOverlay
+        phase={phase}
+        visible={showPhaseIntro}
+        mode={glanceStackEnabled && (phase === 'warmup' || phase === 'micro_challenge') ? 'field' : 'overlay'}
+      />
 
       {phaseToast.visible && (
         <View className='icebreaker__phase-toast'>
@@ -1515,6 +1627,7 @@ export default function IcebreakerSessionPage() {
               canChangeTier={canChangeTier}
               onChangeTier={() => setIsTierSheetOpen(true)}
               onAdvance={handleAdvancePhase}
+              glanceMode={glanceStackEnabled}
             />
             {isHost && !session?.xiaoyueSessionPack && (
               <Button
@@ -1560,6 +1673,8 @@ export default function IcebreakerSessionPage() {
             isAdvancing={pendingAction === 'advance'}
             topicsError={topicsError}
             topicsRecovery={topicsRecovery}
+            glanceStackEnabled={glanceStackEnabled}
+            onRitualStart={handleRitualStart}
           />
         )}
 
@@ -1589,6 +1704,7 @@ export default function IcebreakerSessionPage() {
             isAdvancing={pendingAction === 'advance'}
             canAdvance={new Set(session.challengeCompletedBy ?? []).size >= playerCount}
             advanceDisabledReason='还有小伙伴未完成'
+            glanceStackEnabled={glanceStackEnabled}
           />
         )}
 

@@ -5,6 +5,7 @@ import type { VibeId } from '../../../lib/vibeMapping'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
 import IcebreakerTierSelector from './IcebreakerTierSelector'
+import { GLANCE_L1_WORD_WAITING } from '../viewModels/glanceStackModel'
 
 export interface WaitingPhaseProps {
   playerCount: number
@@ -15,6 +16,9 @@ export interface WaitingPhaseProps {
   canChangeTier: boolean
   onChangeTier: () => void
   onAdvance: () => void
+  /** S3 glance-stack pilot (flag-gated): L1 word「等人齐」+ sequenced 悦仔
+   *  cameo; count/host line demotes to a hairline fragment. */
+  glanceMode?: boolean
 }
 
 export default function WaitingPhase({
@@ -26,7 +30,44 @@ export default function WaitingPhase({
   canChangeTier,
   onChangeTier,
   onAdvance,
+  glanceMode = false,
 }: WaitingPhaseProps) {
+  // S3 glance treatment (spec §1.1 row 1): one L1 word + the waiting cameo.
+  // The tier selector (host tool) and start CTA (ACT) stay pinned (§4.2).
+  if (glanceMode) {
+    return (
+      <View className='icebreaker__waiting'>
+        <View className='icebreaker__waiting-l1'>
+          <Image
+            src={localAsset('/assets/mascot/xiaoyue-waiting.webp')}
+            mode='aspectFit'
+            lazyLoad
+            className='icebreaker__waiting-cameo'
+          />
+          <Text className='icebreaker__waiting-l1-word'>{GLANCE_L1_WORD_WAITING}</Text>
+          <Text className='icebreaker__waiting-l3'>
+            {`当前 ${playerCount} 人已加入${hostName ? ` · 主持人：${hostName}` : ''}`}
+          </Text>
+        </View>
+        <View className='icebreaker__waiting-tier'>
+          <IcebreakerTierSelector
+            currentTier={currentTier}
+            currentVibe={currentVibe}
+            isHost={isHost}
+            canChange={canChangeTier}
+            disabledHint='热身已开始，模式不可更换'
+            onChangeRequest={onChangeTier}
+          />
+        </View>
+        {isHost && (
+          <Button variant='primary' className='icebreaker__start-btn' onClick={onAdvance}>
+            开始破冰
+          </Button>
+        )}
+      </View>
+    )
+  }
+
   return (
     <View className='icebreaker__waiting'>
       <Card className='icebreaker__waiting-card'>

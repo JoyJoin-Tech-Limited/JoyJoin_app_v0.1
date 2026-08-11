@@ -1,0 +1,345 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// S3 three-layer glance stack pilot + S8 Handshake Bridge + S4 pilot motion
+// (2026-08-11). @use'd by pages/icebreaker-session/index.scss so every rule
+// compiles into the page WXSS (subpackage style-splitting guard). All gated
+// behind icebreakerGlanceStackEnabled (default false) — flag off renders none
+// of these elements.
+//
+// Locked rules: brand-role typography only (font-cn-display L1 words /
+// font-ui L2+L3 — no CJK variable font); transform/opacity-only motion;
+// entrances cubic-bezier(0.22, 1, 0.36, 1); NO elastic overshoot (brand
+// referee); no blur on field-scale surfaces; ONE reduced-motion block
+// collapsing everything to the 150ms opacity crossfade pattern.
+// ═══════════════════════════════════════════════════════════════════════════
+
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// ─── L1 · Signal ────────────────────────────────────────────────────────────
+// One massive emblem, decodable from silhouette in a one-heartbeat glance.
+// 240rpx is the current max sanctioned emblem display size (PhaseHeaderIcon
+// docs; spec §8 Q1 upscale question stays with the design lead).
+.phase-hero-card--glance {
+  align-items: center;
+  text-align: center;
+}
+
+.phase-hero-card__l1 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+  animation: glance-l1-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.phase-hero-card__l1-emblem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 280rpx;
+  height: 280rpx;
+  border-radius: 50%;
+  border-width: 1rpx;
+  border-style: solid;
+  border-color: transparent;
+}
+
+// Canonical phase label as hairline identity caption (L1 zone, not a layer).
+.phase-hero-card__l1-label {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  letter-spacing: 6rpx;
+}
+
+// ─── L2 · Script ────────────────────────────────────────────────────────────
+// Reader-facing, quiet contrast (spec §3.2): below L1's saturation, above
+// L3's hairline; font-ui only — display faces are banned from body copy.
+.phase-hero-card__l2 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+}
+
+.phase-hero-card__l2-framing {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-normal;
+  letter-spacing: 2rpx;
+  color: $color-text-muted;
+}
+
+.phase-hero-card__l2-title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  line-height: 1.35;
+  color: rgba($color-text-primary, 0.88);
+}
+
+.phase-hero-card__l2-prompt {
+  font-size: $font-size-base;
+  font-weight: $font-weight-normal;
+  line-height: 1.55;
+  color: rgba($color-text-primary, 0.72);
+  white-space: pre-line;
+}
+
+// ─── L3 · Context (hold-to-peek) ────────────────────────────────────────────
+.glance-peek {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-top: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+}
+
+.glance-peek__trigger {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-normal;
+  letter-spacing: 4rpx;
+  color: rgba($color-text-primary, 0.42);
+}
+
+.glance-peek--open .glance-peek__trigger {
+  color: rgba($color-text-primary, 0.6);
+}
+
+.glance-peek__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs 0;
+  animation: glance-peek-in 150ms ease-out both;
+}
+
+.phase-hero-card__l3-chip,
+.phase-hero-card__l3-text {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-normal;
+  letter-spacing: 2rpx;
+  color: rgba($color-text-primary, 0.55);
+}
+
+// ACT-pairing hint (locked fragment「做完了点一下」) — quiet, beside the ACT
+// target, never behind the peek.
+.micro-challenge-hero__act-hint {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-normal;
+  letter-spacing: 3rpx;
+  color: rgba($color-text-primary, 0.5);
+  text-align: center;
+}
+
+// L3 zone wrapper on the glance card — the peek inside owns the hairline
+// treatment; the wrapper just keeps it centered under the ACT zone.
+.phase-hero-card__l3 {
+  align-self: center;
+}
+
+// ─── S4 pilot motion ────────────────────────────────────────────────────────
+// Confirmations land with weight — a compress-settle, never an overshoot
+// (brand referee: no elastic bounce). Scoped to the glance pilot card so the
+// legacy pop keeps serving the other phases.
+.phase-hero-card--glance .phase-hero-card__complete-badge {
+  animation: glance-land 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes glance-l1-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes glance-land {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes glance-peek-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// ─── S8 Handshake Bridge (warmup opening ritual) ────────────────────────────
+// Behavioral-cell opening (ruling 1): one word, one cameo, one host touch.
+// The 悦仔 cameo owns the waiting moment and yields at the host tap (locked
+// sequenced handoff) — the beat overlay carries no mascot.
+.handshake-ritual {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  text-align: center;
+}
+
+.handshake-ritual__cameo {
+  width: 160rpx;
+  height: 160rpx;
+}
+
+.handshake-ritual__word {
+  @include font-cn-display;
+  font-size: 88rpx;
+  font-weight: $font-weight-bold;
+  letter-spacing: 12rpx;
+  color: $color-text-primary;
+  animation: handshake-word-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.handshake-ritual__hint {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-normal;
+  letter-spacing: 4rpx;
+  color: rgba($color-text-primary, 0.45);
+}
+
+.handshake-ritual__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-top: $spacing-lg;
+  width: 100%;
+}
+
+.handshake-ritual__cta {
+  min-width: 400rpx;
+}
+
+.handshake-ritual__ghost {
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-normal;
+  color: $color-text-muted;
+}
+
+.handshake-ritual__alt {
+  margin-top: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-normal;
+  letter-spacing: 2rpx;
+  color: rgba($color-text-primary, 0.5);
+}
+
+// The spoken-ritual beat: a full-screen, reading-free group moment.
+.handshake-beat {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-bg-warm-to;
+}
+
+.handshake-beat__text {
+  @include font-cn-display;
+  font-size: 120rpx;
+  font-weight: $font-weight-bold;
+  letter-spacing: 10rpx;
+  color: $color-text-primary;
+  text-align: center;
+  padding: 0 $container-padding;
+  animation: handshake-beat-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes handshake-word-in {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes handshake-beat-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// ─── waiting surface glance treatment (spec §1.1 row 1) ─────────────────────
+.icebreaker__waiting-l1 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.icebreaker__waiting-l1-word {
+  @include font-cn-display;
+  font-size: 88rpx;
+  font-weight: $font-weight-bold;
+  letter-spacing: 12rpx;
+  color: $color-text-primary;
+  animation: handshake-word-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.icebreaker__waiting-cameo {
+  width: 160rpx;
+  height: 160rpx;
+}
+
+.icebreaker__waiting-l3 {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-normal;
+  letter-spacing: 3rpx;
+  color: rgba($color-text-primary, 0.45);
+}
+
+// ─── ONE reduced-motion block for the whole glance stack ────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .phase-hero-card__l1,
+  .handshake-ritual__word,
+  .handshake-beat__text,
+  .icebreaker__waiting-l1-word {
+    animation-duration: 150ms;
+    animation-timing-function: ease-out;
+    animation-name: none;
+    opacity: 1;
+  }
+
+  .phase-hero-card--glance .phase-hero-card__complete-badge {
+    animation-duration: 150ms;
+    animation-timing-function: ease-out;
+    animation-name: none;
+    opacity: 1;
+  }
+
+  .glance-peek__content {
+    animation-duration: 150ms;
+  }
+}

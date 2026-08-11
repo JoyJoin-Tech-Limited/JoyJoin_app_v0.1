@@ -1,0 +1,35 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// S10 gyro-parallax spike (2026-08-11) — warmup hero card wrapper.
+// @use'd by pages/icebreaker-session/index.scss so the rules are compiled
+// into the page WXSS (subpackage style-splitting guard). Runtime-gated by
+// GYRO_PARALLAX_SPIKE_ENABLED (default false) — when the spike is off the
+// wrapper is not rendered and these rules match nothing.
+// Transform-only motion (perspective + rotateX/rotateY inline); no layout
+// properties are animated, so no layout thrash. The 150ms ease-out matches
+// the personality-card tilt precedent.
+// ═══════════════════════════════════════════════════════════════════════════
+
+.gyro-parallax {
+  // Replicates warmup-card-slot-outer's flex positioning so the wrapper is
+  // layout-neutral in the zero-scroll 4-band warmup column.
+  flex: 1;
+  min-height: 480rpx;
+  display: flex;
+  flex-direction: column;
+  transform-style: preserve-3d;
+  will-change: transform;
+
+  &--tracking {
+    transition: transform 150ms ease-out;
+  }
+}
+
+// Reduced-motion collapse: the component renders children without the
+// wrapper under RM, so this block is belt-and-braces for any inline style
+// that could outlive a mid-session RM toggle.
+@media (prefers-reduced-motion: reduce) {
+  .gyro-parallax {
+    transition: none !important;
+    transform: none !important;
+  }
+}
