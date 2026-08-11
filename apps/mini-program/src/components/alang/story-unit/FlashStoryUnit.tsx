@@ -1,11 +1,18 @@
 import Taro from '@tarojs/taro'
-import { useCallback, useEffect, useReducer, useRef } from 'react'
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { getFlashStoryUnitDefinition, type FlashStoryUnitId } from '@shared/alang/flashStorySeason'
 import type { FlashDialogueQuestion, FlashEncounterView, FlashNpcReference } from '../../../lib/alang/flashTypes'
 import { flashStoryAnalytics, type FlashStoryAnalyticsEventType } from '../../../lib/analytics/flashStoryAnalytics'
 import { FlashButton, FlashNpcDialogueScene } from '../FlashUi'
 import { FlashStoryMicroGame } from '../FlashStoryMicroGame'
+import {
+  AtuanFirstEncounterDialogue,
+  EMPTY_ATUAN_DIALOGUE_STATE,
+  getAtuanOpeningOption,
+  resolveAtuanSpeech,
+  type AtuanDialogueState,
+} from './AtuanFirstEncounterDialogue'
 import { ShiqiOutbookInteraction } from './ShiqiOutbookInteraction'
 import { resolveNPCResponse } from './NPCResponseResolver'
 import {
@@ -66,6 +73,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     undefined,
     () => loadInitialState(definition.unitId, storageKey, serverSettled, question),
   )
+  const [atuanDialogue, setAtuanDialogue] = useState<AtuanDialogueState>(EMPTY_ATUAN_DIALOGUE_STATE)
   const runtimeRef = useRef(runtime)
   const emittedRef = useRef(new Set<FlashStoryAnalyticsEventType>(runtime.analyticsSent))
   const restoredSolvedRef = useRef(runtime.stage === 'OBJECT_SUCCESS')
@@ -118,6 +126,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const startInteraction = (choice: StoryUnitChoice) => {
     if (runtime.stage !== 'NPC_INTRO') return
     transition({ type: 'START_INTERACTION', choice })
+    if (definition.unitId === 's1-p1-atuan') emit('object_interaction_start')
   }
   const completeObject = () => {
     if (!runtime.choice || runtime.stage !== 'OBJECT_INTERACTION') return
@@ -142,10 +151,16 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
 
   const showResult = serverSettled
   const showGame = !showResult && (runtime.stage === 'OBJECT_INTERACTION' || runtime.stage === 'OBJECT_DIVERGED' || runtime.stage === 'OBJECT_SUCCESS')
-  const speech = resolveNPCResponse(definition.unitId, runtime.companionEvent, {
+  const defaultSpeech = resolveNPCResponse(definition.unitId, runtime.companionEvent, {
     intro: story.opening,
     success: showResult ? story.response : definition.success,
   })
+  const speech = definition.unitId === 's1-p1-atuan' && !showResult
+    ? resolveAtuanSpeech(runtime.choice, atuanDialogue)
+    : defaultSpeech
+  const storyAction = definition.unitId === 's1-p1-atuan'
+    ? '阿团把五张卡数了两遍，始终没有抬头。'
+    : story.action
 
   return (
     <View className='flash-page flash-dialogue flash-dialogue--story'>
@@ -163,23 +178,28 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
               <View className='flash-dialogue__story-panel-content'>
                 <Text className='flash-dialogue__story-panel-season'>{story.seasonTitle}</Text>
                 <Text className='flash-dialogue__story-panel-title'>{story.title}</Text>
-                <Text className='flash-dialogue__story-action'>{story.action}</Text>
+                <Text className='flash-dialogue__story-action'>{storyAction}</Text>
                 {runtime.stage === 'INIT' || runtime.stage === 'NPC_INTRO' ? (
                   question?.options.length ? (
                     <View className='flash-dialogue__story-choices' aria-label={question.text}>
-                      {question.options.map((option) => (
-                        <View
-                          key={option.id}
-                          className='flash-dialogue__choice flash-dialogue__story-choice'
-                          hoverClass='flash-dialogue__choice--pressed'
-                          onClick={() => startInteraction({ questionId: question.id, optionId: option.id, label: option.label })}
-                          role='button'
-                          aria-label={option.label}
-                        >
-                          <Text className='flash-dialogue__choice-mark' aria-hidden='true'>·</Text>
-                          <Text className='flash-dialogue__choice-text'>{option.label}</Text>
-                        </View>
-                      ))}
+                      {question.options.map((option, index) => {
+                        const label = definition.unitId === 's1-p1-atuan'
+                          ? getAtuanOpeningOption(index).label
+                          : option.label
+                        return (
+                          <View
+                            key={option.id}
+                            className='flash-dialogue__choice flash-dialogue__story-choice'
+                            hoverClass='flash-dialogue__choice--pressed'
+                            onClick={() => startInteraction({ questionId: question.id, optionId: option.id, label })}
+                            role='button'
+                            aria-label={label}
+                          >
+                            <Text className='flash-dialogue__choice-mark' aria-hidden='true'>·</Text>
+                            <Text className='flash-dialogue__choice-text'>{label}</Text>
+                          </View>
+                        )
+                      })}
                     </View>
                   ) : <Text className='flash-dialogue__story-panel-unavailable'>这句话暂时没接上，返回后再试一次。</Text>
                 ) : (
@@ -196,6 +216,14 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                         <Text className='flash-story-divergence__hint'>没有碎片被结算。下次再遇见，可以从这里重新试一次。</Text>
                         <FlashButton variant='quiet' onClick={leaveDivergedTimeline}>先回到街头盲盒</FlashButton>
                       </View>
+                    ) : definition.unitId === 's1-p1-atuan' && runtime.choice ? (
+                      <AtuanFirstEncounterDialogue
+                        choice={runtime.choice}
+                        state={atuanDialogue}
+                        disabled={submitState === 'submitting'}
+                        onStateChange={setAtuanDialogue}
+                        onComplete={completeObject}
+                      />
                     ) : definition.unitId === 's1-p1-shiqi' ? (
                       <ShiqiOutbookInteraction completed={runtime.stage === 'OBJECT_SUCCESS'} disabled={submitState === 'submitting'} mistakeAcknowledged={runtime.companionEvent === 'FIRST_MISTAKE'} onInteractionStart={() => emit('object_interaction_start')} onFirstMistake={() => transition({ type: 'FIRST_MISTAKE' })} onComplete={completeObject} />
                     ) : (

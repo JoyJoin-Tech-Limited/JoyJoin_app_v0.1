@@ -41,6 +41,46 @@ afterEach(cleanup)
 beforeEach(() => storage.clear())
 
 describe('FlashStoryUnit choice persistence', () => {
+  it('turns Atuan phase one into a responsive conversation with no keep-or-cover quiz', () => {
+    const submit = vi.fn().mockResolvedValue(undefined)
+    const atuanNpc = { ...npc, id: 'npc-atuan', slug: 'atuan', name: '阿团', species: '水豚' }
+    const atuanStory = {
+      ...story,
+      id: 'episode-atuan-1',
+      code: 's1-p1-atuan',
+      title: '五张没有送出去的观察卡',
+      objectCode: 'observation-cards',
+    }
+    const atuanQuestion = {
+      ...question,
+      id: 's1-p1-atuan-response-v2',
+      options: [
+        { id: 'atuan-a', label: '旧系统选项一' },
+        { id: 'atuan-b', label: '旧系统选项二' },
+        { id: 'atuan-c', label: '旧系统选项三' },
+      ],
+    }
+
+    render(<FlashStoryUnit encounterId='enc-atuan' npc={atuanNpc as any} story={atuanStory as any} question={atuanQuestion as any} motion={story.motion as any} storyPosition={5} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
+
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('……还是少了一张')
+    expect(screen.queryByText('哪些能留下，哪些要遮住？')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '需要我帮你回忆一下吗？' }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('你居然没有先问我写了什么')
+    fireEvent.click(screen.getByRole('button', { name: '我会先确认，那个人会不会因此受伤。' }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('你不是只守规矩')
+    expect(submit).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '下次见面，你得把后半句告诉我。' }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('如果你还认得那盏绿灯')
+    fireEvent.click(screen.getByRole('button', { name: '先聊到这里' }))
+
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: 's1-p1-atuan-response-v2',
+      optionId: 'atuan-b',
+      label: '需要我帮你回忆一下吗？',
+    }))
+  })
+
   it('submits a non-first reviewed option and restores that exact payload after process death', async () => {
     const firstSubmit = vi.fn().mockResolvedValue(undefined)
     const first = render(<FlashStoryUnit encounterId='enc-1' npc={npc as any} story={story as any} question={question as any} motion={story.motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={firstSubmit} onContinue={vi.fn()} />)
