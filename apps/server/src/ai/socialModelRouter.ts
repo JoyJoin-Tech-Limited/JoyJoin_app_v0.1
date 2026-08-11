@@ -185,7 +185,10 @@ export interface ClientSelection {
   reasoningEffort?: 'high' | 'max';
 }
 
-type DeepSeekChatCompletionCreateParams = OpenAI.Chat.ChatCompletionCreateParams & {
+type DeepSeekChatCompletionCreateParams = Omit<
+  OpenAI.Chat.ChatCompletionCreateParamsNonStreaming,
+  'reasoning_effort' | 'thinking'
+> & {
   thinking?: NonNullable<ClientSelection['thinkingExtraBody']>['thinking'];
   reasoning_effort?: 'high' | 'max' | 'medium';
 };
@@ -332,7 +335,10 @@ export async function callSocialAI(
     }
 
     try {
-      const response = await deepseekSelection.client.chat.completions.create(requestPayload);
+      // DeepSeek supports "max" and top-level thinking fields beyond the OpenAI SDK contract.
+      const response = await deepseekSelection.client.chat.completions.create(
+        requestPayload as unknown as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming,
+      );
       const providerLatencyMs = Date.now() - start;
       const message = response.choices[0]?.message;
       const content = message?.content ?? '';
