@@ -180,7 +180,9 @@ describe('formal Flash map navigation', () => {
       title: '地图没有打开，请稍后再试',
       icon: 'none',
     }))
-    expect(screen.getByRole('button', { name: '地图引导中' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '打开腾讯地图导航' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '地图引导中' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '停止地图引导' })).not.toBeInTheDocument()
     expect(mocks.stopLocationUpdate).not.toHaveBeenCalled()
   })
 
@@ -236,13 +238,15 @@ describe('formal Flash map navigation', () => {
     expect(mocks.stopLocationUpdate).toHaveBeenCalled()
   })
 
-  it('shows a retryable interruption when the locate API is unavailable', async () => {
+  it('keeps only the exit action when the destination is not available', async () => {
     mocks.mutateAsync.mockRejectedValueOnce(new Error('network unavailable'))
     render(<FlashMapPage />)
     await startNavigation()
 
     expect(await screen.findByText('地图定位中断')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '重新打开地图' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '先不去了' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '重新打开地图' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '停止地图引导' })).not.toBeInTheDocument()
   })
 
   it('shows a found signal, stops tracking, then enters dialogue', async () => {

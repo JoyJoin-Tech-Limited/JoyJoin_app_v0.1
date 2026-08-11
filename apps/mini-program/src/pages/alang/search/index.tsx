@@ -345,16 +345,6 @@ export default function FlashMapPage() {
                 打开腾讯地图导航
               </FlashButton>
             ) : null}
-            <FlashButton
-              variant={mapFrame ? 'secondary' : 'primary'}
-              disabled={state === 'locating' || state === 'tracking' || state === 'inside'}
-              onClick={() => { void startMapGuidance() }}
-            >
-              {state === 'locating' ? '正在打开地图…' : state === 'tracking' ? '地图引导中' : '重新打开地图'}
-            </FlashButton>
-            {state === 'tracking' ? (
-              <FlashButton variant='secondary' onClick={() => stopMapGuidance()}>停止地图引导</FlashButton>
-            ) : null}
             <FlashButton variant='quiet' onClick={() => { stopMapGuidance(); void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>
               先不去了
             </FlashButton>
