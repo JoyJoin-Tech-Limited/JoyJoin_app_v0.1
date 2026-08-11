@@ -33,6 +33,19 @@ const discoverAnalyticsLimiter = createRateLimiter({
   keyPrefix: "discover-analytics",
 });
 
+/**
+ * Dedicated bucket for POST /api/analytics/interaction (M0 interaction-latency
+ * telemetry). Split from discoverAnalyticsLimiter (C-4 pre-ship finding): a
+ * saturated shared bucket silently 429'd all six consumers; interaction
+ * telemetry is high-frequency (client worst case ~5-10 events/min) so it gets
+ * its own budget at 2x the shared limit with ample margin.
+ */
+const interactionAnalyticsLimiter = createRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 240,
+  keyPrefix: "interaction-analytics",
+});
+
 const profileAnalyticsLimiter = createRateLimiter({
   windowMs: 60_000,
   maxRequests: 120,
@@ -662,6 +675,64 @@ export function registerAnalyticsRoutes(app: Express): void {
       return res.status(200).json({ success: true });
     } catch (error) {
       logger.warn("auth analytics write failed (non-fatal)", {
+        request_id: req.requestId,
+        error: String(error),
+      });
+      return res.status(200).json({ success: false, error: "analytics write failed" });
+    }
+  });
+
+  /**
+   * POST /api/analytics/interaction
+   *
+   * Baseline tap→feedback interaction latency instrumentation (performance
+   * plan M0). Clients report perceived interaction latency as `interaction_*`
+   * events with `metadata: { durationMs: number, ... }`.
+   *
+   * Event names are open-ended (`interaction_*`), so unlike the closed
+   * allow-lists above, the guard is a prefix check: any arbitrary
+   * `interaction_*` eventType is accepted while junk is still rejected.
+   *
+   * Fire-and-forget. Always returns 200. Silent fail.
+   * Reuses the discoverAnalyticsEvents table with a DEDICATED
+   * interactionAnalyticsLimiter (240 req/min) so interaction telemetry cannot
+   * starve the shared discover bucket (C-4 pre-ship finding).
+   */
+  app.post("/api/analytics/interaction", interactionAnalyticsLimiter, async (req: Request, res) => {
+    try {
+      const { eventType, metadata, timestamp } = req.body as {
+        eventType?: unknown;
+        metadata?: unknown;
+        timestamp?: unknown;
+      };
+
+      // Cap eventType at 60 chars (N-1 pre-ship finding): the column is
+      // varchar(80), so an oversized name used to fail at the INSERT and log a
+      // warn per hit. Reject it here with the same invalid-eventType guard shape.
+      if (
+        typeof eventType !== "string" ||
+        !eventType.startsWith("interaction_") ||
+        eventType.length > 60
+      ) {
+        return res.status(200).json({ success: false, error: "invalid eventType" });
+      }
+
+      const normalizedMetadata = sanitizeMetadata(metadata);
+      const userId = req.session?.userId ?? null;
+      const sessionId = req.sessionID ?? null;
+
+      await insertAnalyticsEvent(discoverAnalyticsEvents, {
+        userId,
+        sessionId,
+        eventType,
+        poolId: null,
+        metadata: normalizedMetadata,
+        timestamp: parseTimestamp(timestamp),
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      logger.warn("interaction analytics write failed (non-fatal)", {
         request_id: req.requestId,
         error: String(error),
       });

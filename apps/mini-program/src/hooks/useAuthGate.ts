@@ -5,6 +5,7 @@ import { AUTH_QUERY_KEY } from '../lib/api/authSession'
 import { haptics } from '../lib/utils/haptics'
 import { logInfo, logWarn } from '../lib/utils/logger'
 import { authAnalytics } from '../lib/analytics/authAnalytics'
+import { interactionLatency } from '../lib/analytics/interactionLatency'
 import type { UseAuthResult } from './useAuth'
 
 /**
@@ -89,12 +90,17 @@ export function useAuthGate(auth: UseAuthResult | undefined): UseAuthGateResult 
     }
 
     if (!isChecking || isOffline) {
+      // Interaction-latency baseline: gate resolved (auth settled or skipped).
+      const gateStart = gateStartedAtRef.current
+      if (gateStart !== null) {
+        interactionLatency.trackInteraction('cold_start_route', gateStart)
+      }
       setGateTimedOut(false)
       gateStartedAtRef.current = null
       return
     }
 
-    gateStartedAtRef.current = Date.now()
+    gateStartedAtRef.current = interactionLatency.startInteraction()
     const t = setTimeout(() => {
       logWarn('[IndexGate] Auth revalidation exceeded visible gate ceiling', {
         timeoutMs: INDEX_GATE_TIMEOUT_MS,
