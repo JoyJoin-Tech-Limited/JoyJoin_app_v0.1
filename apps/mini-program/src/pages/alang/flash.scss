@@ -1764,7 +1764,7 @@ page {
   margin-top: 0;
   gap: 12rpx;
 }
-.atuan-first-dialogue { display: flex; flex-direction: column; gap: 8rpx; }
+.atuan-story-dialogue { display: flex; flex-direction: column; gap: 8rpx; }
 .flash-dialogue__story-settling { color: rgba($color-surface, .78); font-size: $font-size-xs; text-align: center; }
 
 @media screen and (max-height: 700px) {

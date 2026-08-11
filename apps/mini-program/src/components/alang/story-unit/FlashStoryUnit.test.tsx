@@ -79,6 +79,93 @@ describe('FlashStoryUnit choice persistence', () => {
     }))
   })
 
+  it.each([
+    {
+      phase: 2,
+      code: 's1-p2-atuan',
+      objectCode: 'seat-plan',
+      title: '阿团认领座位图',
+      questionId: 's1-p2-atuan-response-v2',
+      openingChoice: '你其实早就知道要留给谁了，对吗？',
+      openingReply: '知道该照顾谁，和承认自己为什么这么在意，是两回事',
+      followUpChoice: '如果他还是想坐远一点呢？',
+      followUpReply: '距离应该由坐在那里的人决定',
+      hookChoice: '所以你怕的不是位置不对，是他知道你想靠近？',
+      hookReply: '承认自己想靠近他，难一点',
+      closingChoice: '那这次，别再把图收回去了。',
+    },
+    {
+      phase: 3,
+      code: 's1-p3-atuan',
+      objectCode: 'seat-plan',
+      title: '座位图写上了名字',
+      questionId: 's1-p3-atuan-response-v2',
+      openingChoice: '如果他的答案不是你想要的呢？',
+      openingReply: '不想让这张图变成一道必须答对的题',
+      followUpChoice: '也告诉他，不接受不会失去你这个朋友。',
+      followUpReply: '靠近不该拿关系做交换',
+      hookChoice: '那你现在准备好把图交给他了吗？',
+      hookReply: '不替他回答，也不催他回答',
+      closingChoice: '去吧，我在这里等你的后续。',
+    },
+  ])('gives Atuan phase $phase the same complete conversational rhythm as phase one', ({
+    phase,
+    code,
+    objectCode,
+    title,
+    questionId,
+    openingChoice,
+    openingReply,
+    followUpChoice,
+    followUpReply,
+    hookChoice,
+    hookReply,
+    closingChoice,
+  }) => {
+    const submit = vi.fn().mockResolvedValue(undefined)
+    const atuanNpc = { ...npc, id: 'npc-atuan', slug: 'atuan', name: '阿团', species: '水豚' }
+    const atuanStory = {
+      ...story,
+      id: `episode-atuan-${phase}`,
+      code,
+      phase,
+      title,
+      objectCode,
+    }
+    const atuanQuestion = {
+      ...question,
+      id: questionId,
+      options: [
+        { id: `${code}-a`, label: '服务端旧选项一' },
+        { id: `${code}-b`, label: '服务端旧选项二' },
+      ],
+    }
+
+    render(<FlashStoryUnit encounterId={`enc-atuan-${phase}`} npc={atuanNpc as any} story={atuanStory as any} question={atuanQuestion as any} motion={story.motion as any} storyPosition={phase * 5} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
+
+    expect(screen.queryByTestId('atuan-story-dialogue')).not.toBeInTheDocument()
+    expect(screen.getByTestId('flash-story-choice-panel')).not.toHaveTextContent(title)
+    fireEvent.click(screen.getByRole('button', { name: openingChoice }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent(openingReply)
+    expect(submit).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: followUpChoice }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent(followUpReply)
+    expect(screen.queryByText(followUpChoice)).not.toBeInTheDocument()
+    expect(submit).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: hookChoice }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent(hookReply)
+    expect(submit).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: closingChoice }))
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId,
+      optionId: `${code}-b`,
+      label: openingChoice,
+    }))
+  })
+
   it('submits a non-first reviewed option and restores that exact payload after process death', async () => {
     const firstSubmit = vi.fn().mockResolvedValue(undefined)
     const first = render(<FlashStoryUnit encounterId='enc-1' npc={npc as any} story={story as any} question={question as any} motion={story.motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={firstSubmit} onContinue={vi.fn()} />)
