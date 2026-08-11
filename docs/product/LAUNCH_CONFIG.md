@@ -40,7 +40,7 @@ middleware) may still fail to initialize if required variables like
 
 | Posture | Keys / env | Behaviour |
 | --- | --- | --- |
-| **Recommended (production)** | `MINIMAX_API_KEY` **and** `DEEPSEEK_API_KEY` | [`socialModelRouter`](../apps/server/src/ai/socialModelRouter.ts): MiniMax-first for most social functions; DeepSeek fallback on failure; MiniScript framework JSON can recover via DeepSeek `json_object` if MiniMax returns unusable JSON. Optional: `MINIMAX_MODEL`, `MINIMAX_BASE_URL`, `SOCIAL_AI_PROVIDER` (`hybrid` default; `minimax` or `deepseek` force). |
+| **Recommended (production)** | `MINIMAX_API_KEY` **and** `DEEPSEEK_API_KEY` | [`socialModelRouter`](../apps/server/src/ai/socialModelRouter.ts): DeepSeek-first for all social functions (flash tier, thinking disabled — see [`AI_MODEL_ROUTING_STRATEGY.md`](../ai/AI_MODEL_ROUTING_STRATEGY.md) for the 2026-08-11 reasoning-by-default fix); MiniMax is an explicit override via `SOCIAL_AI_PROVIDER=minimax` and provides creative-routing failover. Optional: `MINIMAX_MODEL`, `MINIMAX_BASE_URL`, `SOCIAL_AI_PROVIDER` (`hybrid` default; `minimax` or `deepseek` force). |
 | **Degraded (MiniMax-only)** | `MINIMAX_API_KEY` set, **no** `DEEPSEEK_API_KEY` | Router falls back to DeepSeek only where required (e.g. `analyzeComplexSemantics`) may **throw** if DeepSeek is missing; MiniScript has **no** DeepSeek recovery path—orchestrator may use deterministic stub after LLM failure. |
 
 See also: [`AI_FEATURE_INVENTORY.md`](./AI_FEATURE_INVENTORY.md), [`production-ai-surfaces.md`](../.github/skills/social-icebreaker-domain/references/production-ai-surfaces.md), [Icebreaker AI observability (Prometheus / alerts)](./ops/icebreaker-ai-observability.md).

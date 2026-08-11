@@ -18,7 +18,7 @@
 |----------|----------------|--------|
 | `SOCIAL_AI_PROVIDER` | `hybrid`, `minimax`, `deepseek` | Social icebreaker + match-intelligence style routing in `socialModelRouter`. |
 | `MINIMAX_API_KEY`, `MINIMAX_MODEL`, `MINIMAX_BASE_URL` | — | MiniMax client (`minimaxClient.ts`). |
-| `DEEPSEEK_API_KEY` | — | DeepSeek chat fallback / primary per function. |
+| `DEEPSEEK_API_KEY` | — | DeepSeek primary for most social/creative functions (flash tier, thinking disabled by default); missing key degrades surfaces to curated fallbacks. |
 
 ## Creative (event theme, etc.)
 
