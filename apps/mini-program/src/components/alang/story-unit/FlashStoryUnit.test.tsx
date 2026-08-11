@@ -65,14 +65,19 @@ describe('FlashStoryUnit choice persistence', () => {
 
     expect(screen.getByTestId('npc-speech')).toHaveTextContent('……还是少了一张')
     expect(screen.queryByText('哪些能留下，哪些要遮住？')).not.toBeInTheDocument()
+    expect(screen.getByTestId('flash-story-choice-panel')).not.toHaveTextContent('五张没有送出去的观察卡')
     fireEvent.click(screen.getByRole('button', { name: '需要我帮你回忆一下吗？' }))
     expect(screen.getByTestId('npc-speech')).toHaveTextContent('你居然没有先问我写了什么')
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('如果是你捡到了，会怎么做')
+    expect(screen.getByTestId('flash-story-choice-panel')).not.toHaveTextContent('如果是你捡到了，会怎么做')
+    expect(screen.queryByText('需要我帮你回忆一下吗？')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '我会先确认，那个人会不会因此受伤。' }))
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('你不是只守规矩')
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('你会先看谁可能受伤')
+    expect(screen.queryByText('我会先确认，那个人会不会因此受伤。')).not.toBeInTheDocument()
     expect(submit).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: '下次见面，你得把后半句告诉我。' }))
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('如果你还认得那盏绿灯')
-    fireEvent.click(screen.getByRole('button', { name: '先聊到这里' }))
+    fireEvent.click(screen.getByRole('button', { name: '所以，第六张卡写了谁？' }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('这个问题，今天先不回答')
+    fireEvent.click(screen.getByRole('button', { name: '好，下次见。' }))
 
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({
       questionId: 's1-p1-atuan-response-v2',

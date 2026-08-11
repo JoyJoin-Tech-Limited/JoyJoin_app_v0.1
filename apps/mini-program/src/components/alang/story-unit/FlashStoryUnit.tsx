@@ -150,35 +150,39 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   }
 
   const showResult = serverSettled
+  const isAtuanFirstEncounter = definition.unitId === 's1-p1-atuan'
   const showGame = !showResult && (runtime.stage === 'OBJECT_INTERACTION' || runtime.stage === 'OBJECT_DIVERGED' || runtime.stage === 'OBJECT_SUCCESS')
   const defaultSpeech = resolveNPCResponse(definition.unitId, runtime.companionEvent, {
     intro: story.opening,
     success: showResult ? story.response : definition.success,
   })
-  const speech = definition.unitId === 's1-p1-atuan' && !showResult
-    ? resolveAtuanSpeech(runtime.choice, atuanDialogue)
+  const speech = isAtuanFirstEncounter && !showResult
+    ? resolveAtuanSpeech(runtime.choice?.label ?? null, atuanDialogue)
     : defaultSpeech
-  const storyAction = definition.unitId === 's1-p1-atuan'
-    ? '阿团把五张卡数了两遍，始终没有抬头。'
-    : story.action
 
   return (
     <View className='flash-page flash-dialogue flash-dialogue--story'>
-      <View className={`flash-dialogue__story-stage${showResult ? ' flash-dialogue__story-stage--result' : ' flash-dialogue__story-stage--question'}${showGame ? ' flash-dialogue__story-stage--game' : ''}`} data-testid='flash-story-stage' data-story-unit-stage={runtime.stage} data-story-unit-id={definition.unitId}>
+      <View className={`flash-dialogue__story-stage${showResult ? ' flash-dialogue__story-stage--result' : ' flash-dialogue__story-stage--question'}${showGame ? ' flash-dialogue__story-stage--game' : ''}${isAtuanFirstEncounter && !showResult ? ' flash-dialogue__story-stage--character-dialogue' : ''}`} data-testid='flash-story-stage' data-story-unit-stage={runtime.stage} data-story-unit-id={definition.unitId}>
         <FlashNpcDialogueScene npc={npc} speech={speech} spacious choicesEmbedded={!showResult} motion={motion} />
         <View className='flash-dialogue__story-ambient' aria-hidden='true' />
-        <View className='flash-dialogue__story-index' aria-label={`第 ${story.phase} 幕，故事 ${storyPosition} 共 ${story.progress.total}`}>
-          <Text className='flash-dialogue__story-index-phase'>第 {story.phase} 幕</Text>
-          <Text className='flash-dialogue__story-index-count'>{storyPosition}/{story.progress.total}</Text>
-        </View>
+        {!isAtuanFirstEncounter || showResult ? (
+          <View className='flash-dialogue__story-index' aria-label={`第 ${story.phase} 幕，故事 ${storyPosition} 共 ${story.progress.total}`}>
+            <Text className='flash-dialogue__story-index-phase'>第 {story.phase} 幕</Text>
+            <Text className='flash-dialogue__story-index-count'>{storyPosition}/{story.progress.total}</Text>
+          </View>
+        ) : null}
 
         {!showResult ? (
-          <View className='flash-dialogue__story-panel flash-dialogue__story-panel--choices' data-testid='flash-story-choice-panel'>
+          <View className={`flash-dialogue__story-panel flash-dialogue__story-panel--choices${isAtuanFirstEncounter ? ' flash-dialogue__story-panel--character-dialogue' : ''}`} data-testid='flash-story-choice-panel'>
             <ScrollView className='flash-dialogue__story-panel-scroll' scrollY>
               <View className='flash-dialogue__story-panel-content'>
-                <Text className='flash-dialogue__story-panel-season'>{story.seasonTitle}</Text>
-                <Text className='flash-dialogue__story-panel-title'>{story.title}</Text>
-                <Text className='flash-dialogue__story-action'>{storyAction}</Text>
+                {!isAtuanFirstEncounter ? (
+                  <>
+                    <Text className='flash-dialogue__story-panel-season'>{story.seasonTitle}</Text>
+                    <Text className='flash-dialogue__story-panel-title'>{story.title}</Text>
+                    <Text className='flash-dialogue__story-action'>{story.action}</Text>
+                  </>
+                ) : null}
                 {runtime.stage === 'INIT' || runtime.stage === 'NPC_INTRO' ? (
                   question?.options.length ? (
                     <View className='flash-dialogue__story-choices' aria-label={question.text}>
@@ -204,10 +208,12 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                   ) : <Text className='flash-dialogue__story-panel-unavailable'>这句话暂时没接上，返回后再试一次。</Text>
                 ) : (
                   <>
-                    <View className='flash-dialogue__user-turn' aria-label={`你说：${runtime.choice?.label ?? ''}`}>
-                      <Text className='flash-dialogue__user-turn-name'>你</Text>
-                      <Text className='flash-dialogue__user-turn-copy'>{runtime.choice?.label}</Text>
-                    </View>
+                    {!isAtuanFirstEncounter ? (
+                      <View className='flash-dialogue__user-turn' aria-label={`你说：${runtime.choice?.label ?? ''}`}>
+                        <Text className='flash-dialogue__user-turn-name'>你</Text>
+                        <Text className='flash-dialogue__user-turn-copy'>{runtime.choice?.label}</Text>
+                      </View>
+                    ) : null}
                     {runtime.stage === 'OBJECT_DIVERGED' ? (
                       <View className='flash-story-divergence' role='status'>
                         <Text className='flash-story-divergence__eyebrow'>另一条时间线</Text>
@@ -218,7 +224,6 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                       </View>
                     ) : definition.unitId === 's1-p1-atuan' && runtime.choice ? (
                       <AtuanFirstEncounterDialogue
-                        choice={runtime.choice}
                         state={atuanDialogue}
                         disabled={submitState === 'submitting'}
                         onStateChange={setAtuanDialogue}
@@ -229,7 +234,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                     ) : (
                       <FlashStoryMicroGame episodeCode={definition.unitId} objectCode={definition.objectCode} completed={runtime.stage === 'OBJECT_SUCCESS'} disabled={submitState === 'submitting'} onInteractionStart={() => emit('object_interaction_start')} onFirstMistake={() => transition({ type: 'FIRST_MISTAKE' })} onDiverged={divergeObject} onSolved={completeObject} />
                     )}
-                    {submitState === 'submitting' ? <View className='flash-dialogue__story-settling' role='status'><Text>旧物已经整理好，正在收下这次回应…</Text></View> : null}
+                    {submitState === 'submitting' ? <View className='flash-dialogue__story-settling' role='status'><Text>{isAtuanFirstEncounter ? '正在记住这次见面…' : '旧物已经整理好，正在收下这次回应…'}</Text></View> : null}
                     {runtime.stage === 'OBJECT_SUCCESS' && (submitState === 'retry' || (restoredSolvedRef.current && submitState === 'idle')) ? <FlashButton variant='quiet' onClick={retrySubmit}>重新送出</FlashButton> : null}
                   </>
                 )}
