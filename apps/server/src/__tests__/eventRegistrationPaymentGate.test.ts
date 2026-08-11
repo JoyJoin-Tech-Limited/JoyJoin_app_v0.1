@@ -12,11 +12,16 @@ function readRepoFile(relativePath: string): string {
 
 describe("event registration payment gate", () => {
   it("does not let staging single-test mode bypass event payment entitlements", () => {
-    const source = readRepoFile("apps/server/src/routes/domains/userEventPools.ts");
+    const gateSource = readRepoFile("apps/server/src/routes/domains/userEventPools.ts");
+    const entitlementSource = readRepoFile("apps/server/src/lib/entitlement.ts");
 
-    expect(source).not.toContain("isSingleTestMode()");
-    expect(source).toContain('(process.env.APP_MODE ?? "production") === "test"');
-    expect(source).toContain("Staging single-test mode must still exercise the real payment path.");
+    expect(gateSource).not.toContain("isSingleTestMode()");
+    // The APP_MODE=test gate literal now lives in the shared entitlement
+    // helper (single source of truth — Sprint Contract m4-optimistic-registration
+    // AC-1); the route must delegate to it so the semantics cannot drift.
+    expect(entitlementSource).toContain('(process.env.APP_MODE ?? "production") === "test"');
+    expect(entitlementSource).toContain("Staging single-test mode must still exercise the real payment path.");
+    expect(gateSource).toContain("resolveEntitlementMode");
   });
 
   it("counts only active registrations when deciding whether a pool is full", () => {

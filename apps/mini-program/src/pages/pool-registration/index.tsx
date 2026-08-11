@@ -4,20 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getEventPool, getMyPoolRegistrations, registerForPool, getPoolPersonaSnapshot, type EventPoolSummary, type PoolRegistrationSummary, type PoolPersonaSnapshotResponse } from '@shared/api'
 import type { PreJoinVibeBrief } from '@shared/ai/onboarding'
-import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
 import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION, toggleIntentValue } from '@shared/constants'
 
 import { useStaggerMount } from '../../hooks/useStaggerMount'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
-import { apiRequest, type ApiError } from '../../lib/api/api'
+import { apiRequest } from '../../lib/api/api'
 import { bustRegistrationCaches } from '../../lib/api/registrationCacheBust'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
+import { interactionLatency } from '../../lib/analytics/interactionLatency'
+import { useOptimisticRegistration, getEntitlementCode, resolveMessage } from '../../hooks/useOptimisticRegistration'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 import {
   buildPoolRegistrationPaymentReturnContext,
-  type MiniProgramPaymentEntitlementCode,
   type MiniProgramPoolRegistrationReturnContext,
 } from '../../lib/payment/paymentPendingOrder'
 import {
@@ -99,37 +99,6 @@ const STEP_DETAILS = 3
 
 const TIER_COPY = {
   budgetStepHelper: '这是报名时最重要的节奏信号之一，悦仔会优先帮你避开预算预期完全不一样的组合。',
-}
-
-function resolveMessage(error: unknown, fallbackCode: ErrorCode): string {
-  const apiError = error as ApiError | undefined
-  if (apiError?.data && typeof apiError.data === 'object' && !Array.isArray(apiError.data)) {
-    const code = (apiError.data as { code?: unknown }).code
-    if (typeof code === 'string') {
-      return getErrorMessage(code as ErrorCode) ?? getErrorMessage(fallbackCode)
-    }
-  }
-  if (error instanceof Error && error.message) {
-    const mapped = getErrorMessage(error.message as ErrorCode)
-    if (mapped !== error.message) {
-      return mapped
-    }
-  }
-  return getErrorMessage(fallbackCode)
-}
-
-function getEntitlementCode(error: unknown): MiniProgramPaymentEntitlementCode | null {
-  const data = (error as ApiError | undefined)?.data
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    return null
-  }
-
-  const code = (data as { code?: unknown }).code
-  if (code === 'NO_ACTIVE_ENTITLEMENT' || code === 'NO_AVAILABLE_EVENT_PACK_CREDITS') {
-    return code
-  }
-
-  return null
 }
 
 export default function PoolRegistrationPage() {
@@ -780,6 +749,23 @@ export default function PoolRegistrationPage() {
       },
     })
   }, [poolId])
+  // M4 (AC-4): optimistic registration machinery lives in
+  // useOptimisticRegistration — wiring, celebratedRef/handledErrorRef guards,
+  // entitlement handoff, and success side-effects. The page keeps the AC-2
+  // gate branching below.
+  const { registerOptimistically } = useOptimisticRegistration({
+    poolId,
+    poolTitle: pool?.title,
+    poolArea,
+    eventType,
+    step,
+    registered,
+    user,
+    setRegistered,
+    setError,
+    setResumeContext,
+    setShowBlindBoxFlow,
+  })
   const handleRegister = useCallback(async () => {
     if (!poolId || isRegistering) return
 
@@ -793,6 +779,16 @@ export default function PoolRegistrationPage() {
     }
 
     const payload = buildRegistrationPayload(formState, eventType)
+
+    const t0 = interactionLatency.startInteraction()
+
+    // AC-2 gate: entitlement-known users (subscription / event_pack / test)
+    // take the optimistic path with its own busy state; null/undefined keeps
+    // the byte-identical await → entitlement-403 → payment handoff path below.
+    if (user?.entitlementMode != null) {
+      registerOptimistically(payload, t0)
+      return
+    }
 
     setIsRegistering(true)
     setError('')
@@ -811,6 +807,8 @@ export default function PoolRegistrationPage() {
       void queryClient.invalidateQueries({ queryKey: ['mini-program', 'duo-status', poolId] })
       clearPaymentReturnContextStorage()
       setResumeContext(null)
+      // Interaction-latency baseline: registration succeeded, UI flips to success.
+      interactionLatency.trackInteraction('registration_submit', t0)
       setRegistered(true)
       discoverAnalytics.track('registration_complete', poolId)
       if (shouldShowFlow('blind-box-lifecycle', user?.id) && user?.features?.flowLifecycleEnabled !== false) {
@@ -859,6 +857,7 @@ export default function PoolRegistrationPage() {
   }, [
     eventType,
     formState,
+    registerOptimistically,
     hasBudgetSelection,
     hasIntentSelection,
     isRegistering,
@@ -867,6 +866,7 @@ export default function PoolRegistrationPage() {
     poolId,
     queryClient,
     step,
+    user?.entitlementMode,
     user?.id,
   ])
   // Step-3 CTA opens the animated confirmation modal instead of submitting

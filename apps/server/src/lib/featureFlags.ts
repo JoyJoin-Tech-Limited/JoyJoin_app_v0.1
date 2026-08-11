@@ -170,6 +170,23 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  v1 content keeps the flat-content path unchanged. Disable via env
    *  FLASH_STORY_V2_ENABLED=false for instant rollback. */
   flashStoryV2Enabled: "FLASH_STORY_V2_ENABLED",
+  /** Social Icebreaker five-pattern social haptic grammar (Nudge / Your-turn /
+   *  Confirm / Reveal / Celebration) fired from session-state transitions on
+   *  the session page. Ships dark until the field protocols (playbook §5)
+   *  validate pattern distinguishability and learnability.
+   *  Env fallback: ICEBREAKER_HAPTIC_GRAMMAR_ENABLED (default: false). */
+  icebreakerHapticGrammarEnabled: "ICEBREAKER_HAPTIC_GRAMMAR_ENABLED",
+  /** Social Icebreaker mood-anchored ambient color field (S2): waiting/active/
+   *  reveal field on the session page shell + Taro.setKeepScreenOn POCKET
+   *  posture. Ships dark until the §5 squint/perf field protocols pass.
+   *  Env fallback: ICEBREAKER_MOOD_FIELD_ENABLED (default: false). */
+  icebreakerMoodFieldEnabled: "ICEBREAKER_MOOD_FIELD_ENABLED",
+  /** Social Icebreaker three-layer glance stack (L1/L2/L3) pilot on warmup +
+   *  micro_challenge, bundling the S8 Handshake Bridge opening ritual and S4
+   *  weighted motion on those pilot surfaces. Ships dark until the Wave-3
+   *  squint/eyes-up field protocols pass.
+   *  Env fallback: ICEBREAKER_GLANCE_STACK_ENABLED (default: false). */
+  icebreakerGlanceStackEnabled: "ICEBREAKER_GLANCE_STACK_ENABLED",
   /** Squad-unboxing pocket-deck collapse kill-switch. When false, the
    *  mini-program hides the "收起卡组" trigger and collapseDeck() is a no-op,
    *  so the deck stays in the fan phase. Users who previously collapsed stay
@@ -239,6 +256,12 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   sdAvatarEnabled: false,
   /** Gathering room ships dark until room art + presence flow are verified. */
   gatheringRoomEnabled: false,
+  /** Haptic grammar ships dark until the playbook §5 field protocols pass. */
+  icebreakerHapticGrammarEnabled: false,
+  /** Mood field ships dark until the §5 squint/perf field protocols pass. */
+  icebreakerMoodFieldEnabled: false,
+  /** Glance-stack pilot ships dark until the Wave-3 field protocols pass. */
+  icebreakerGlanceStackEnabled: false,
   equipmentRewardsEnabled: false,
   personalStoryEnabled: false,
   profileIdentityStageEnabled: true,

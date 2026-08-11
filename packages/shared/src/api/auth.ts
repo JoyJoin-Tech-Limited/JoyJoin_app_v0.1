@@ -26,11 +26,21 @@ export type SensitiveAuthUserField = (typeof SENSITIVE_AUTH_USER_FIELD_NAMES)[nu
 
 export type SanitizedAuthUser = Omit<User, SensitiveAuthUserField>
 
+/**
+ * Server-resolved pool-registration entitlement signal, computed EXACTLY like
+ * the registration gate (`apps/server/src/lib/entitlement.ts`): subscription
+ * first (credit read short-circuited), else event-pack credits > 0, else null;
+ * APP_MODE=test → literal 'test' (skips both reads).
+ */
+export type EntitlementMode = 'subscription' | 'event_pack' | 'test' | null
+
 export interface AuthUserResponse extends SanitizedAuthUser {
   /** APP_MODE — 'production' (WeChat OAuth) or 'test' (local phone login). */
   appMode?: 'production' | 'test'
   /** Server-authoritative marker for non-production single-test tools. */
   singleTestMode?: boolean
+  /** Entitlement signal for optimistic pool registration (null = no entitlement). */
+  entitlementMode?: EntitlementMode
   nextStep: OnboardingNextStep
   profileEssentialComplete: boolean
   profileExtendedComplete: boolean
@@ -109,6 +119,18 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     /** Enables the gathering room (集结房间): entry CTAs on pool-group-detail /
      *  squad-unboxing and the room page itself. Default: false. */
     gatheringRoomEnabled?: boolean
+    /** Enables the Social Icebreaker five-pattern social haptic grammar
+     *  (Nudge/Your-turn/Confirm/Reveal/Celebration) fired from session-state
+     *  transitions. Default: false. */
+    icebreakerHapticGrammarEnabled?: boolean
+    /** Enables the Social Icebreaker mood-anchored ambient color field
+     *  (waiting/active/reveal field on the session page shell + hold-screen-on
+     *  POCKET posture). Default: false. */
+    icebreakerMoodFieldEnabled?: boolean
+    /** Enables the Social Icebreaker three-layer glance stack (L1/L2/L3) pilot
+     *  on warmup + micro_challenge, bundling the Handshake Bridge opening
+     *  ritual and S4 weighted motion on those surfaces. Default: false. */
+    icebreakerGlanceStackEnabled?: boolean
     /** Enables equipment draws, fragments and the fragment-only shop. */
     equipmentRewardsEnabled?: boolean
     /** Enables the private, append-only AI personal story surface. */

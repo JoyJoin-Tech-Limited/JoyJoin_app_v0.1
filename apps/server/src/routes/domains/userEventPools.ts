@@ -27,6 +27,7 @@ import {
 } from "../../lib/eventPoolRegistration";
 import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
 import { describePoolRegistrationAvailability } from "../../lib/poolRegistrationRules";
+import { resolveEntitlementMode } from "../../lib/entitlement";
 import { eventCreditsRepo } from "../../repositories/eventCreditsRepo";
 import { attendanceRepo } from "../../repositories/attendanceRepo";
 import { equipmentRepository } from "../../repositories/equipmentRepo";
@@ -664,24 +665,14 @@ export function registerUserEventPoolRoutes(app: Express): void {
         });
       }
 
-      // ── Unit/integration test bypass ─────────────────────────────────
-      // Only APP_MODE=test may bypass entitlement storage because local test
-      // databases may omit `subscriptions` and `event_credit_grants`.
-      // Staging single-test mode must still exercise the real payment path.
-      const isTestMode = (process.env.APP_MODE ?? "production") === "test";
-      let subscription: any;
-      let availableEventCredits: number;
-      let entitlementMode: string | null;
-
-      if (isTestMode) {
-        subscription = undefined;
-        availableEventCredits = 0;
-        entitlementMode = "test";
-      } else {
-        subscription = await storage.getUserSubscription(userId);
-        availableEventCredits = subscription ? 0 : await eventCreditsRepo.getAvailableCreditCount(userId);
-        entitlementMode = subscription ? "subscription" : availableEventCredits > 0 ? "event_pack" : null;
-      }
+      // ── Entitlement gate ─────────────────────────────────────────────
+      // Single source of truth: resolveEntitlementMode() (lib/entitlement.ts)
+      // mirrors these semantics verbatim for the auth-response signal.
+      // APP_MODE=test bypasses entitlement storage because local test DBs may
+      // omit `subscriptions` and `event_credit_grants`; staging single-test
+      // mode must still exercise the real payment path.
+      const { mode: entitlementMode, availableEventCredits } =
+        await resolveEntitlementMode(userId);
 
       if (!entitlementMode) {
         return res.status(403).json({ 
@@ -1155,7 +1146,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         session?.userId ||
         session?.user?.id;
 
-      console.log("[MyPoolRegistrations] identity debug:", {
+      logger.info("[MyPoolRegistrations] identity debug:", {
         hasReqUser: !!reqUser,
         hasSession: !!session,
         sessionUserId: session?.userId,
@@ -1164,11 +1155,11 @@ export function registerUserEventPoolRoutes(app: Express): void {
       });
 
       if (!userId) {
-        console.error("[MyPoolRegistrations] No user on request/session");
+        logger.error("[MyPoolRegistrations] No user on request/session");
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      console.log("[MyPoolRegistrations] fetching registrations for userId:", userId);
+      logger.info("[MyPoolRegistrations] fetching registrations for userId:", { userId });
 
       const registrations = await db
         .select({
@@ -1205,7 +1196,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         .where(eq(eventPoolRegistrations.userId, userId))
         .orderBy(desc(eventPoolRegistrations.registeredAt));
 
-      console.log("[MyPoolRegistrations] base registrations count:", registrations.length);
+      logger.info("[MyPoolRegistrations] base registrations count:", { count: registrations.length });
 
       const registrationIds = (registrations as any[]).map((registration: any) => registration.id);
       const registrationPoolIds = Array.from(
@@ -1356,11 +1347,11 @@ export function registerUserEventPoolRoutes(app: Express): void {
         };
       });
 
-      console.log("[MyPoolRegistrations] enriched registrations:", enrichedRegistrations);
+      logger.info("[MyPoolRegistrations] enriched registrations:", { enrichedRegistrations });
 
       res.json(enrichedRegistrations);
     } catch (error) {
-      console.error("Error fetching user pool registrations:", error);
+      logger.error("Error fetching user pool registrations:", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch registrations" });
     }
   });
@@ -1369,7 +1360,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
     // 取消盲盒报名（从活动池中移除当前用户的报名记录）
     app.delete('/api/pool-registrations/:id', requireAuth, async (req: any, res) => {
       try {
-        console.log('[MyPoolRegistrationsCancel] route hit for /api/pool-registrations/:id', {
+        logger.info('[MyPoolRegistrationsCancel] route hit for /api/pool-registrations/:id', {
           method: req.method,
           originalUrl: req.originalUrl,
           params: req.params,
@@ -1382,11 +1373,11 @@ export function registerUserEventPoolRoutes(app: Express): void {
         const { id } = req.params;
 
         if (!userId) {
-          console.error('[MyPoolRegistrationsCancel] No userId in session');
+          logger.error('[MyPoolRegistrationsCancel] No userId in session');
           return res.status(401).json({ message: 'Unauthorized' });
         }
 
-        console.log('[MyPoolRegistrationsCancel] attempting to delete registration', {
+        logger.info('[MyPoolRegistrationsCancel] attempting to delete registration', {
           userId,
           registrationId: id,
         });
@@ -1408,7 +1399,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
           .returning();
 
         if (deletedRegistrations.length === 0) {
-          console.warn('[MyPoolRegistrationsCancel] no registration found to delete', {
+          logger.warn('[MyPoolRegistrationsCancel] no registration found to delete', {
             userId,
             registrationId: id,
           });
@@ -1417,7 +1408,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
           });
         }
 
-        console.log('[MyPoolRegistrationsCancel] deleted registrations:', {
+        logger.info('[MyPoolRegistrationsCancel] deleted registrations:', {
           count: deletedRegistrations.length,
           ids: deletedRegistrations.map((r: any) => r.id),
           poolIds: deletedRegistrations.map((r: any) => r.poolId),
@@ -1436,14 +1427,14 @@ export function registerUserEventPoolRoutes(app: Express): void {
           }
         }
 
-        console.log('[MyPoolRegistrationsCancel] updated pools after deletion');
+        logger.info('[MyPoolRegistrationsCancel] updated pools after deletion');
 
         return res.json({
           ok: true,
           cancelledRegistrationIds: (deletedRegistrations as any[]).map((r: any) => r.id),
         });
       } catch (error) {
-        console.error('[MyPoolRegistrationsCancel] error while cancelling registration', error);
+        logger.error('[MyPoolRegistrationsCancel] error while cancelling registration', { error: String(error) });
         return res.status(500).json({ message: 'Failed to cancel pool registration' });
       }
     });
@@ -1571,7 +1562,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
           members: memberSummaries,
         });
       } catch (error) {
-        console.error("Error fetching pool group details:", error);
+        logger.error("Error fetching pool group details:", { error: String(error) });
         res.status(500).json({ message: "Failed to fetch group details" });
       }
     });
@@ -1976,7 +1967,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         const stats = await storage.getFinanceStats();
         res.json(stats);
       } catch (error) {
-        console.error("Error fetching finance stats:", error);
+        logger.error("Error fetching finance stats:", { error: String(error) });
         res.status(500).json({ message: "Failed to fetch finance stats" });
       }
     });
@@ -1990,7 +1981,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
           : await storage.getAllPayments();
         res.json(payments);
       } catch (error) {
-        console.error("Error fetching payments:", error);
+        logger.error("Error fetching payments:", { error: String(error) });
         res.status(500).json({ message: "Failed to fetch payments" });
       }
     });
@@ -2001,7 +1992,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         const commissions = await storage.getVenueCommissions();
         res.json(commissions);
       } catch (error) {
-        console.error("Error fetching commissions:", error);
+        logger.error("Error fetching commissions:", { error: String(error) });
         res.status(500).json({ message: "Failed to fetch commissions" });
       }
     });
@@ -2012,7 +2003,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         const stats = await storage.getModerationStats();
         res.json(stats);
       } catch (error) {
-        console.error("Error fetching moderation stats:", error);
+        logger.error("Error fetching moderation stats:", { error: String(error) });
         res.status(500).json({ message: "Failed to fetch moderation stats" });
       }
     });
@@ -2026,7 +2017,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
           : await storage.getAllReports();
         res.json(reports);
       } catch (error) {
-        console.error("Error fetching reports:", error);
+        logger.error("Error fetching reports:", { error: String(error) });
         res.status(500).json({ message: "Failed to fetch reports" });
       }
     });
@@ -2038,7 +2029,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         const report = await storage.updateReportStatus(req.params.id, status, adminNotes);
         res.json(report);
       } catch (error) {
-        console.error("Error updating report:", error);
+        logger.error("Error updating report:", { error: String(error) });
         res.status(500).json({ message: "Failed to update report" });
       }
     });
@@ -2056,7 +2047,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         });
         res.json(log);
       } catch (error) {
-        console.error("Error creating moderation log:", error);
+        logger.error("Error creating moderation log:", { error: String(error) });
         res.status(500).json({ message: "Failed to create moderation log" });
       }
     });
@@ -2067,7 +2058,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         const logs = await storage.getModerationLogs();
         res.json(logs);
       } catch (error) {
-        console.error("Error fetching moderation logs:", error);
+        logger.error("Error fetching moderation logs:", { error: String(error) });
         res.status(500).json({ message: "Failed to fetch moderation logs" });
       }
     });
@@ -2078,7 +2069,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         const insights = await storage.getInsightsData();
         res.json(insights);
       } catch (error) {
-        console.error("Error fetching insights:", error);
+        logger.error("Error fetching insights:", { error: String(error) });
         res.json(createEmptyInsightsData());
       }
     });
@@ -2090,7 +2081,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
         const funnelData = await getRegistrationFunnelData();
         res.json(funnelData);
       } catch (error) {
-        console.error("Error fetching registration funnel data:", error);
+        logger.error("Error fetching registration funnel data:", { error: String(error) });
         res.status(500).json({ message: "Failed to fetch registration funnel data" });
       }
     });

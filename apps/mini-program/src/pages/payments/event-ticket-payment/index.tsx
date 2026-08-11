@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { registerForPoolWithPayment, getEventPool, getUserCoupons, type UserCouponSummary, reconcilePayment } from '@shared/api'
-import { getIntentLabel } from '@shared/constants'
+import { registerForPoolWithPayment, getEventPool, getUserCoupons, reconcilePayment } from '@shared/api'
 import { useAuth } from '../../../hooks/useAuth'
 import { apiRequest } from '../../../lib/api/api'
 import { logInfo, logError } from '../../../lib/utils/logger'
@@ -27,10 +26,23 @@ import { useLoadingDeadline } from '../../../hooks/useLoadingDeadline'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
+import { interactionLatency } from '../../../lib/analytics/interactionLatency'
 import StatusCard from '../../../components/ui/StatusCard'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import TicketSuccessView from './components/TicketSuccessView'
 import IcebreakerInclusionSheet from '../../../components/event-ticket-payment/IcebreakerInclusionSheet'
+import TicketOrderSkeleton, { getTicketCtaLabel } from '../../../components/payments/TicketOrderSkeleton'
+import {
+  calculateDiscount,
+  calculateSavings,
+  findWelcomeCoupon,
+  formatBudgetLabel,
+  formatDateTimeLabel,
+  formatPrice,
+  getBestCoupon,
+  getDisplayLabel,
+  type PricingPlan,
+} from './ticketHelpers'
 import './index.scss'
 
 const TOAST_DURATION = 2000
@@ -45,120 +57,6 @@ interface PaymentState {
   paymentId?: string
   wechatOrderId?: string
   error?: string
-}
-
-interface PricingPlan {
-  planType: string
-  priceInCents: number
-  originalPriceInCents?: number | null
-}
-
-function formatPrice(cents: number): string {
-  return `¥${(cents / 100).toFixed(0)}`
-}
-
-function formatBudgetLabel(budget: string): string {
-  if (!budget || budget.startsWith('¥')) return budget
-  return `¥${budget}`
-}
-
-function calculateSavings(singlePrice: number, packPrice: number, count: number): number {
-  return singlePrice * count - packPrice
-}
-
-function getBestCoupon(coupons: UserCouponSummary[], originalAmount: number): UserCouponSummary | null {
-  const available = coupons.filter((c) => c.status === 'available' && !c.isUsed)
-  if (!available.length) return null
-  let best: UserCouponSummary | null = null
-  let bestDiscount = 0
-  for (const c of available) {
-    const discountType = c.discountType
-    const discountValue = c.discountValue ?? 0
-    let d = 0
-    if (discountType === 'percentage') {
-      d = Math.floor(originalAmount * (discountValue / 100))
-    } else if (discountType === 'fixed_amount') {
-      d = Math.min(originalAmount, discountValue)
-    }
-    if (d > bestDiscount) {
-      best = c
-      bestDiscount = d
-    }
-  }
-  return best
-}
-
-function findWelcomeCoupon(coupons: UserCouponSummary[]): UserCouponSummary | null {
-  const welcomes = coupons.filter((c) => {
-    const code = c.code?.toUpperCase?.() ?? ''
-    return code.startsWith('WELCOME') && c.status === 'available' && !c.isUsed
-  })
-  if (!welcomes.length) return null
-  // Prefer the highest-value welcome coupon (e.g. WELCOME50 > WELCOME40).
-  return welcomes.reduce((best, c) => {
-    const bestValue = best.discountValue ?? 0
-    const currentValue = c.discountValue ?? 0
-    return currentValue > bestValue ? c : best
-  }, welcomes[0])
-}
-
-function calculateDiscount(coupon: UserCouponSummary | null, originalAmount: number): number {
-  if (!coupon) return 0
-  const discountType = coupon.discountType
-  const discountValue = coupon.discountValue ?? 0
-  if (discountType === 'percentage') {
-    return Math.floor(originalAmount * (discountValue / 100))
-  }
-  if (discountType === 'fixed_amount') {
-    return Math.min(originalAmount, discountValue)
-  }
-  return 0
-}
-
-// Localized display labels for registration draft values.
-// Mirrors the most common option sets without importing across app boundaries.
-const DIETARY_LABELS: Record<string, string> = {
-  none: '无限制',
-  vegetarian: '素食',
-  halal: '清真',
-  seafood_allergy: '海鲜过敏',
-}
-
-const LANGUAGE_LABELS: Record<string, string> = {
-  粤语: '粤语',
-  普通话: '普通话',
-  英语: '英文交流',
-  English: '英文交流',
-}
-
-const ALCOHOL_LABELS: Record<string, string> = {
-  可以喝酒: '可以喝酒',
-  微醺就好: '微醺就好',
-  无酒精: '无酒精',
-}
-
-function getDisplayLabel(value: string, category: 'intent' | 'language' | 'dietary' | 'alcohol' | 'other'): string {
-  if (!value) return value
-  if (category === 'intent') {
-    return getIntentLabel(value)
-  }
-  if (category === 'language') {
-    return LANGUAGE_LABELS[value] ?? value
-  }
-  if (category === 'dietary') {
-    return DIETARY_LABELS[value] ?? value
-  }
-  if (category === 'alcohol') {
-    return ALCOHOL_LABELS[value] ?? value
-  }
-  return value
-}
-
-function formatDateTimeLabel(dateTime?: string | null): string {
-  if (!dateTime) return ''
-  const d = new Date(dateTime)
-  if (Number.isNaN(d.getTime())) return dateTime
-  return d.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', weekday: 'short' })
 }
 
 export default function EventTicketPaymentPage() {
@@ -539,6 +437,8 @@ export default function EventTicketPaymentPage() {
       return
     }
 
+    const t0 = interactionLatency.startInteraction()
+
     try {
       haptics('medium')
       setPayment({ status: 'creating' })
@@ -563,6 +463,8 @@ export default function EventTicketPaymentPage() {
         wechatOrderId: result.wechatOrderId,
       })
 
+      // Interaction-latency baseline: order created, UI transitions to paying.
+      interactionLatency.trackInteraction('payment_order_create', t0)
       setPayment({ status: 'paying', paymentId: result.paymentId, wechatOrderId: result.wechatOrderId })
 
       try {
@@ -990,6 +892,13 @@ export default function EventTicketPaymentPage() {
         </View>
 
         {/* ── Plan Selector ── */}
+        {/* Tier-M wait (M1): while the order is being created, replace the
+            interactive plan/price block with a branded skeleton mirroring
+            the real card — opacity-pulse shapes + honest staged copy. */}
+        {payment.status === 'creating' ? (
+          <TicketOrderSkeleton />
+        ) : (
+        <>
         <View className='ticket-plan-section'>
           <View className='ticket-plan-section__header'>
             <View className='ticket-plan-section__header-accent' />
@@ -1117,6 +1026,8 @@ export default function EventTicketPaymentPage() {
             <Text className='ticket-price-summary__value ticket-price-summary__value--total'>{formatPrice(finalPrice)}</Text>
           </View>
         </View>
+        </>
+        )}
 
         {/* ── Trust & Policy ── */}
         <View className='ticket-trust-row'>
@@ -1174,9 +1085,7 @@ export default function EventTicketPaymentPage() {
           >
             <View className='ticket-cta__content'>
               <Text className='ticket-cta__text'>
-                {isPaying
-                  ? payment.status === 'creating' ? '准备中…' : '支付中…'
-                  : `立即锁定席位 · ${formatPrice(finalPrice)}`}
+                {getTicketCtaLabel(isPaying, payment.status === 'creating', formatPrice(finalPrice))}
               </Text>
               {!isPaying && discountAmount > 0 && (
                 <View className='ticket-cta__badge'>

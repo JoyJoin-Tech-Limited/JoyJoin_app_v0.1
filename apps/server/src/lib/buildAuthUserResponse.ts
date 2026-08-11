@@ -15,6 +15,7 @@ import type { ArchetypeAnalysisInput } from "../xiaoyueAnalysisService";
 import { storage } from "../storage";
 import { logger } from "./logger";
 import { computeOnboardingNextStep } from "./computeOnboardingNextStep";
+import { resolveEntitlementMode } from "./entitlement";
 import { getFeatureFlag } from "./featureFlags";
 import { isSingleTestMode } from "./isSingleTestMode";
 
@@ -124,6 +125,9 @@ const [
     profilePixelAvatarEnabled,
     sdAvatarEnabled,
     gatheringRoomEnabled,
+    icebreakerHapticGrammarEnabled,
+    icebreakerMoodFieldEnabled,
+    icebreakerGlanceStackEnabled,
     equipmentRewardsEnabled,
     personalStoryEnabled,
     oracleCardCornerStatEnabled,
@@ -142,6 +146,7 @@ const [
     personalitySlotProfileDramatic,
     shareAnimatedClipEnabled,
     duoRegistrationEnabled,
+    entitlementMode,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
     getFeatureFlag('smartProfession', true),
@@ -161,6 +166,9 @@ const [
     getFeatureFlag('profilePixelAvatarEnabled', false),
     getFeatureFlag('sdAvatarEnabled', false),
     getFeatureFlag('gatheringRoomEnabled', false),
+    getFeatureFlag('icebreakerHapticGrammarEnabled', false),
+    getFeatureFlag('icebreakerMoodFieldEnabled', false),
+    getFeatureFlag('icebreakerGlanceStackEnabled', false),
     getFeatureFlag('equipmentRewardsEnabled', false),
     getFeatureFlag('personalStoryEnabled', false),
     getFeatureFlag('oracleCardCornerStatEnabled', true),
@@ -179,6 +187,20 @@ const [
     getFeatureFlag('personalitySlotProfileDramatic', false),
     getFeatureFlag('shareAnimatedClipEnabled', false),
     getFeatureFlag('duoRegistrationEnabled', true),
+    // Server-resolved entitlement signal (pool-registration gate semantics via
+    // lib/entitlement.ts), joined into the flag batch so the cold-start auth
+    // hot path resolves it in parallel (N-7 pre-ship finding). Fail-open: a
+    // null signal only disables client-side optimism — the registration gate
+    // itself remains the authorization authority (fail-closed there).
+    resolveEntitlementMode(userId)
+      .then((r) => r.mode)
+      .catch((e) => {
+        logger.warn('Entitlement mode lookup failed (non-critical)', {
+          userId,
+          error: e instanceof Error ? e.message : String(e),
+        });
+        return null;
+      }),
   ]);
 
   // Never expose client debug surfaces in production, even if a stale
@@ -191,6 +213,7 @@ const [
     ...sanitizeAuthUser(user),
     appMode,
     singleTestMode,
+    entitlementMode,
     nextStep,
     profileEssentialComplete,
     profileExtendedComplete,
@@ -227,6 +250,12 @@ const [
       sdAvatarEnabled,
       /** Gathering room (集结房间) entry CTAs + room page. */
       gatheringRoomEnabled,
+      /** Social Icebreaker social haptic grammar (ships dark). */
+      icebreakerHapticGrammarEnabled,
+      /** Social Icebreaker mood-anchored ambient field (ships dark). */
+      icebreakerMoodFieldEnabled,
+      /** Social Icebreaker glance-stack pilot (ships dark). */
+      icebreakerGlanceStackEnabled,
       equipmentRewardsEnabled,
       personalStoryEnabled,
       oracleCardCornerStatEnabled,
