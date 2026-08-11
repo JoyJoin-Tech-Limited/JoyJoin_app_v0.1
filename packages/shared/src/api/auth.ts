@@ -76,10 +76,6 @@ export interface AuthUserResponse extends SanitizedAuthUser {
      *  both false/absent = baseline. */
     personalitySlotProfileFast?: boolean
     personalitySlotProfileDramatic?: boolean
-    /** K3 Phase 2c spike (2026-08-01): WebGL land-moment stage. When true and
-     *  celebration tier is full, the land moment plays a ~2.5s WebGL overlay
-     *  (any GL failure falls back to the CSS celebration). Default: false. */
-    webglRevealEnabled?: boolean
     /** K3 Phase 3 / B3 (2026-08-01): server-composed animated share clip
      *  (muted MP4 of the reveal moment). When false the share artifact stays
      *  the static poster. Default: false. */

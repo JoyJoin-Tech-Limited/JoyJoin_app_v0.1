@@ -27,9 +27,10 @@ const SRC_ROOT = resolve(fileURLToPath(new URL('../src', import.meta.url)))
 
 const CONE_TARGET_PATTERNS = [
   // `from 'three'` / `from 'three/examples/jsm/...'` / `require('three...')`
-  /(?:from\s+|require\(\s*)['"](?:three(?:\/[^'"]*)?)['"]/,
+  // / dynamic `import('three')` / bare side-effect `import 'three'`
+  /(?:from\s+|require\(\s*|import\(\s*|import\s+)['"](?:three(?:\/[^'"]*)?)['"]/,
   // any specifier containing the avatar3d lib path or the PixelAvatar3D component
-  /(?:from\s+|require\(\s*)['"][^'"]*(?:avatar3d|PixelAvatar3D)[^'"]*['"]/,
+  /(?:from\s+|require\(\s*|import\(\s*|import\s+)['"][^'"]*(?:avatar3d|PixelAvatar3D)[^'"]*['"]/,
 ]
 
 const ALLOWED_PATH_PREFIXES = [

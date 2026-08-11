@@ -34,13 +34,6 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  mini-program results page. */
   personalitySlotProfileFast: "PERSONALITY_SLOT_PROFILE_FAST",
   personalitySlotProfileDramatic: "PERSONALITY_SLOT_PROFILE_DRAMATIC",
-  /** K3 Phase 2c spike (2026-08-01): WebGL land-moment stage for the
-   *  personality reveal. When true (and celebration tier is full), the land
-   *  moment plays a ~2.5s WebGL overlay (dolly + bloom + GPU particles +
-   *  foil card) instead of the CSS celebration. Any GL failure falls back
-   *  to the CSS/ParticleBurst path. Default: false (spike not yet
-   *  device-verified). Env fallback: WEBGL_REVEAL_ENABLED. */
-  webglRevealEnabled: "WEBGL_REVEAL_ENABLED",
   /** K3 Phase 3 / B3 (2026-08-01): server-composed animated share clip
    *  (muted MP4 of the reveal moment, rendered via canvas frames + ffmpeg).
    *  When false, POST /api/personality/share-clip returns 503 and the client

@@ -140,7 +140,6 @@ const [
     poolTeaserEnabled,
     personalitySlotProfileFast,
     personalitySlotProfileDramatic,
-    webglRevealEnabled,
     shareAnimatedClipEnabled,
     duoRegistrationEnabled,
   ] = await Promise.all([
@@ -178,7 +177,6 @@ const [
     getFeatureFlag('poolTeaserEnabled', false),
     getFeatureFlag('personalitySlotProfileFast', false),
     getFeatureFlag('personalitySlotProfileDramatic', false),
-    getFeatureFlag('webglRevealEnabled', false),
     getFeatureFlag('shareAnimatedClipEnabled', false),
     getFeatureFlag('duoRegistrationEnabled', true),
   ]);
@@ -215,8 +213,6 @@ const [
       /** K3 Phase 1+ timing-profile selection (dramatic wins over fast). */
       personalitySlotProfileFast,
       personalitySlotProfileDramatic,
-      /** K3 Phase 2c spike: WebGL land-moment stage (CSS celebration fallback). */
-      webglRevealEnabled,
       /** K3 Phase 3 / B3: server-composed animated share clip. */
       shareAnimatedClipEnabled,
       personalityShareEnabled,

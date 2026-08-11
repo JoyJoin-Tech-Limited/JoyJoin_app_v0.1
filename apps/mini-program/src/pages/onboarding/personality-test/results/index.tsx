@@ -9,7 +9,7 @@ import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { useAuth } from '../../../../hooks/useAuth'
 import { useSpriteReadiness } from '../../../../hooks/useSpriteReadiness'
 import { useOnboardingAnalytics } from '../../../../hooks/onboarding/useOnboardingAnalytics'
-import { apiRequest, apiRequestBinary, authenticateMiniProgramUserWithTest, getUserState, type ApiError } from '../../../../lib/api/api'
+import { apiRequest, authenticateMiniProgramUserWithTest, getUserState, type ApiError } from '../../../../lib/api/api'
 import {
   clearAnonymousAssessmentStorage,
   hasAnonymousAssessmentResult,
@@ -23,7 +23,6 @@ import {
 import { seedMiniProgramAuthSession } from '../../../../lib/api/authSession'
 import { getDegradationTier, type DegradationTier } from '../../../../lib/utils/frameBudget'
 import { haptics } from '../../../../lib/utils/haptics'
-import { getMascotDisplayName } from '../../../../lib/mascot/mascotDisplay'
 import { logError, logInfo, logWarn } from '../../../../lib/utils/logger'
 import { useUnload } from '../../../../hooks/useUnload'
 import { useDeviceTier } from '../../../../hooks/useDeviceTier'
@@ -40,17 +39,12 @@ import {
 } from '../visuals'
 import { getArchetypeCardVariants } from '../archetypeVariants'
 import {
-  generatePersonalitySharePoster,
   PERSONALITY_SHARE_POSTER_CANVAS_ID,
-  type PersonalitySharePosterInput,
 } from './sharePoster'
 import {
-  generatePersonalitySquarePoster,
   PERSONALITY_SQUARE_CANVAS_ID,
-  type PersonalitySquarePosterInput,
 } from '../../../../lib/utils/momentsPosterFactory'
 import {
-  generateMingCardImage,
   MING_CARD_CANVAS_ID,
 } from '../../../../lib/utils/mingCardImage'
 import {
@@ -83,6 +77,7 @@ import { getRevealStripPreloadUrl } from './ArchetypeRevealStrip'
 import RevealStage from './RevealStage'
 import BridgeStage from './BridgeStage'
 import FinalStage from './FinalStage'
+import { useResultShareActions } from './useResultShareActions'
 import './index.scss'
 
 interface XiaoyueAnalysisResult {
@@ -146,9 +141,6 @@ export default function PersonalityTestResultsPage() {
     mountedRef.current = false
   })
   const initialSnapshot = useMemo(() => readAnonymousAssessmentSession(), [])
-  // new update to authenticated user result state
-  // const initialResolvedResult = useMemo(() => buildResolvedResultState(initialSnapshot), [initialSnapshot])
-  // const hasCompletedReplay = Boolean(initialSnapshot?.resultSequenceCompletedAt && initialResolvedResult)
   const authUserResult = useMemo(() => buildAuthUserResultState(auth.user), [auth.user])
 
   const initialResolvedResult = useMemo(
@@ -204,29 +196,9 @@ export default function PersonalityTestResultsPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const retryCountRef = useRef(0)
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [sharePosterPath, setSharePosterPath] = useState('')
-  const [squarePosterPath, setSquarePosterPath] = useState('')
-  const [isGeneratingPoster, setIsGeneratingPoster] = useState(false)
-  // Phase 3 / B3 (2026-08-01): animated share clip state
-  const [isGeneratingClip, setIsGeneratingClip] = useState(false)
   const shareAnimatedClipEnabled = auth.user?.features?.shareAnimatedClipEnabled ?? false
-  const [posterError, setPosterError] = useState(false)
-  const [generationPhase, setGenerationPhase] = useState('')
   const [completionMode, setCompletionMode] = useState<'replay' | 'animated' | null>(hasCompletedReplay ? 'replay' : null)
-  const [cardNickname] = useState('')
-  const [selectedVariantIndex] = useState(0)
   const [showSkipAnimation, setShowSkipAnimation] = useState(false)
-
-  // Invalidate stale poster when user changes card personalization
-  useEffect(() => {
-    if (sharePosterPath) {
-      setSharePosterPath('')
-    }
-    if (squarePosterPath) {
-      setSquarePosterPath('')
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVariantIndex, cardNickname])
 
   const mountedRef = useRef(false)
   const runIdRef = useRef(0)
@@ -238,8 +210,6 @@ export default function PersonalityTestResultsPage() {
   const analysisRequestedRef = useRef(false)
   const resultPreloadInitiatedRef = useRef(false)
   const preResolvedImageRef = useRef<{ asset: string; path: string; width?: number; height?: number } | null>(null)
-  const posterRetryRef = useRef(false)
-  const handleGeneratePosterRef = useRef<(() => Promise<void>) | null>(null)
   // Guards the one-time forward of an authenticated archetype-holder who lands
   // here with no local anonymous result (prevents an intro<->results loop).
   const forwardedAuthedRef = useRef(false)
@@ -384,11 +354,6 @@ export default function PersonalityTestResultsPage() {
   // Use resultStateRef as a synchronous fallback so the slot target and the
   // result page never diverge during the animation flow. React state updates
   // are batched; the ref is updated immediately in runResultFlow.
-  // const displayArchetype = resultState?.result.primaryArchetype
-  //   ?? resultStateRef.current?.result.primaryArchetype
-  //   ?? sessionSnapshot?.result?.primaryArchetype
-  //   ?? topMatches[0]?.archetype
-  //   ?? null
   const displayArchetype = resultState?.result.primaryArchetype
     ?? resultStateRef.current?.result.primaryArchetype
     ?? sessionSnapshot?.result?.primaryArchetype
@@ -503,6 +468,40 @@ export default function PersonalityTestResultsPage() {
       })
     return () => { cancelled = true }
   }, [displayArchetype, displayAsset, visual.asset, visual.assetPng])
+
+  const {
+    sharePosterPath,
+    isGeneratingPoster,
+    isGeneratingClip,
+    posterError,
+    generationPhase,
+    selectedVariantIndex,
+    clearSharePoster,
+    handleGeneratePoster,
+    handleGenerateClip,
+  } = useResultShareActions({
+    displayArchetype,
+    displayArchetypeName,
+    displayAsset,
+    visual,
+    variants,
+    shareLine,
+    summary,
+    traitEntries,
+    topMatches,
+    skillSet,
+    typicalityLabel,
+    energyLevel,
+    archetypeRank,
+    serialNumber,
+    isDecisive,
+    secondaryDisplayName,
+    deviceTier,
+    shareAnimatedClipEnabled,
+    analytics,
+    user: auth.user,
+    preResolvedImageRef,
+  })
 
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [xiaoyueAnalysis, setXiaoyueAnalysis] = useState<XiaoyueAnalysisResult | null>(null)
@@ -751,7 +750,7 @@ export default function PersonalityTestResultsPage() {
       setSlotDisplay({ reelIndex: 0, progress: 0 })
       setRevealPhase('silhouette')
       setSlotPhase('anticipation')
-      setSharePosterPath('')
+      clearSharePoster()
 
       if (!latestSnapshot?.sessionId) {
         logWarn('[PersonalityResults] Missing anonymous session id')
@@ -1189,7 +1188,7 @@ export default function PersonalityTestResultsPage() {
     } finally {
       isAnimatingRef.current = false
     }
-  }, [analytics, auth.isAuthenticated, displayArchetypeName, fetchResult, personalitySlotAnimationEnabled, sessionSnapshot?.result, topMatches])
+  }, [analytics, auth.isAuthenticated, displayArchetypeName, fetchResult, personalitySlotAnimationEnabled, sessionSnapshot?.result, topMatches, clearSharePoster])
 
   /**
    * Start the result animation after critical assets are confirmed ready.
@@ -1308,23 +1307,9 @@ export default function PersonalityTestResultsPage() {
     runIdRef.current += 1
     flowInitiatedRef.current = false
 
-    // Authenticated users who already have an archetype cannot retest through the
-    // anonymous device flow — reLaunching to the test intro would bounce them
-    // right back here (the intro redirects archetype-holders to results). Route
-    // them forward to their real destination instead of looping.
-    // dont need to check for the authenticated user result state
-    // const existingArchetype = auth.user?.primaryArchetype ?? auth.user?.archetype ?? null
-    // if (auth.isAuthenticated && existingArchetype) {
-    //   analytics.interaction('restart_forwarded_authenticated', { nextStep: auth.nextStep ?? null })
-    //   void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'root' })
-    //   return
-    // }
-
     analytics.stepAbandoned('restart')
     clearAnonymousAssessmentStorage()
-    setSharePosterPath('')
-    // Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.personalityTest })
-    // new relanuch update for the authenticated user result state
+    clearSharePoster()
     Taro.reLaunch({
       url: `${MINI_PROGRAM_ROUTES.personalityTest}?mode=restart`,
     }).catch(() => {
@@ -1332,7 +1317,7 @@ export default function PersonalityTestResultsPage() {
       // User can manually navigate back.
       void Taro.showToast({ title: '请手动返回重新测试', icon: 'none', duration: 2000 })
     })
-  }, [analytics, auth.isAuthenticated, auth.user, auth.nextStep])
+  }, [analytics, auth.isAuthenticated, auth.user, auth.nextStep, clearSharePoster])
 
   const handleSkipAnimation = useCallback(() => {
     runIdRef.current += 1
@@ -1422,383 +1407,6 @@ export default function PersonalityTestResultsPage() {
     }
   }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, displayArchetypeName, isLoggingIn, analytics, queryClient])
 
-  /**
-   * Present a frictionless action sheet for sharing the generated poster.
-   * Options: save to album, share to friends, or preview.
-   */
-  const presentShareOptions = useCallback(async (posterPath: string, momentsPath?: string) => {
-    const taroWithShareImageMenu = Taro as typeof Taro & {
-      showShareImageMenu?: (options: { path: string }) => Promise<unknown>
-    }
-    const hasNativeShareMenu = typeof taroWithShareImageMenu.showShareImageMenu === 'function'
-    const hasMoments = Boolean(momentsPath)
-
-    const itemList = [
-      '保存到相册',
-      ...(hasNativeShareMenu ? ['分享给朋友'] : []),
-      ...(hasMoments ? ['保存朋友圈卡片'] : []),
-      '预览海报',
-    ]
-
-    let tapIndex: number
-    try {
-      const res = await Taro.showActionSheet({ itemList })
-      tapIndex = res.tapIndex
-    } catch {
-      analytics.interaction('share_action_dismissed', { primaryArchetype: displayArchetypeName })
-      return
-    }
-
-    // Map tapIndex back to action, accounting for dynamic itemList
-    const saveIdx = 0
-    const shareIdx = hasNativeShareMenu ? 1 : -1
-    const momentsIdx = hasMoments ? (hasNativeShareMenu ? 2 : 1) : -1
-    const previewIdx = itemList.length - 1
-
-    const saveToAlbum = async (filePath: string, label: string) => {
-      try {
-        const settingRes = await Taro.getSetting()
-        const authKey = 'scope.writePhotosAlbum' as const
-        const hasAuth = settingRes.authSetting[authKey] as boolean | undefined
-
-        if (hasAuth === false) {
-          analytics.interaction('share_save_permission_denied', { primaryArchetype: displayArchetypeName })
-          const { confirm } = await Taro.showModal({
-            title: '需要相册权限',
-            content: '保存卡片到相册需要您授权访问相册。',
-            confirmText: '去设置',
-            cancelText: '取消',
-          })
-          if (confirm) {
-            await Taro.openSetting()
-          }
-          return
-        }
-
-        await Taro.saveImageToPhotosAlbum({ filePath })
-        haptics('success')
-        analytics.interaction('share_save_success', { option: label, primaryArchetype: displayArchetypeName })
-        void Taro.showToast({ title: `${label}已保存`, icon: 'success', duration: 2000 })
-      } catch (saveErr) {
-        const error = String(saveErr)
-        logError('[PersonalityResults] Save to album failed', { error, option: label, primaryArchetype: displayArchetypeName })
-        analytics.interaction('share_save_failed', { error, option: label, primaryArchetype: displayArchetypeName })
-        void Taro.showToast({
-          title: `${getMascotDisplayName(auth.user)}没能把卡片存进相册，可能需要你授权一下~`,
-          icon: 'none',
-          duration: 2500,
-        })
-      }
-    }
-
-    if (tapIndex === saveIdx) {
-      haptics('medium')
-      await saveToAlbum(posterPath, '氛围卡')
-    } else if (tapIndex === shareIdx) {
-      haptics('light')
-      analytics.interaction('share_action_selected', { option: 'share', primaryArchetype: displayArchetypeName })
-      await taroWithShareImageMenu.showShareImageMenu!({ path: posterPath })
-    } else if (tapIndex === momentsIdx) {
-      haptics('medium')
-      analytics.interaction('share_action_selected', { option: 'moments', primaryArchetype: displayArchetypeName })
-      await saveToAlbum(momentsPath!, '朋友圈卡片')
-    } else if (tapIndex === previewIdx) {
-      haptics('light')
-      analytics.interaction('share_action_selected', { option: 'preview', primaryArchetype: displayArchetypeName })
-      const urls = momentsPath ? [posterPath, momentsPath] : [posterPath]
-      await Taro.previewImage({ current: posterPath, urls })
-    }
-  }, [analytics, displayArchetypeName, auth.user])
-
-  const handleGeneratePoster = useCallback(async () => {
-    if (isGeneratingPoster || !displayArchetype) {
-      return
-    }
-
-    // Offline pre-check — poster generation requires CDN images
-    try {
-      const { networkType } = await Taro.getNetworkType()
-      if (networkType === 'none') {
-        void Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2500 })
-        return
-      }
-    } catch {
-      // getNetworkType may fail on some devices — proceed anyway
-    }
-
-    setIsGeneratingPoster(true)
-    setPosterError(false)
-    setGenerationPhase('准备素材中…')
-
-    try {
-      const selectedVariant = variants[selectedVariantIndex]
-      const accentColor = selectedVariant?.accentColor ?? (visual.accent || '#8B5CF6')
-      const accentSoft = selectedVariant?.accentSoft ?? visual.accentSoft
-
-      // Canvas drawImage requires a network-resolvable URL. The local
-      // subpackage path (/pages/onboarding/assets/...) works for <Image>
-      // preloading but is not guaranteed to resolve inside canvas. Prefer
-      // the CDN asset for canvas drawing; fall back to the local bundled
-      // path only when the CDN asset is missing.
-      // `displayAsset` is the subpackage local WebP; `visual.asset` is
-      // the CDN/main-package path.
-      const canvasArchetypeAsset = visual.asset || displayAsset
-
-      // The reveal can transition between archetypes before the background
-      // preload finishes. Resolve the current asset at save time so both the
-      // outer poster and the centered collectible-card avatar use this exact
-      // result, never an earlier reel character.
-      const resolvedArchetypeImage = await resolveCurrentCanvasImage(
-        displayArchetype,
-        [displayAsset, canvasArchetypeAsset, visual.assetPng],
-        preResolvedImageRef.current,
-        Taro.getImageInfo,
-      )
-      preResolvedImageRef.current = resolvedArchetypeImage
-
-      // Slice 4 (2026-07-19): canonical 命格卡 for the poster hero panel.
-      // Fail-open: generation failure just means the poster uses raw archetype art.
-      setGenerationPhase('正在绘制命格卡…')
-      const archetypeSequenceIndex = ARCHETYPE_SEQUENCE.indexOf(displayArchetype)
-      if (archetypeSequenceIndex < 0) {
-        // Canonical-order drift guard (review concern C2) — never print a wrong set number silently.
-        logWarn('[PersonalityResults] displayArchetype missing from ARCHETYPE_SEQUENCE; card footer falls back to No.01', { archetype: displayArchetype })
-      }
-      const mingCardImagePath = await generateMingCardImage({
-        name: displayArchetypeName,
-        badge: typicalityLabel?.prefix ?? '典型',
-        // Keep collectible-card keywords on the same canonical archetype key
-        // as its character, skills, color, energy, rarity, and numbering.
-        keywords: visual.traits.slice(0, 3),
-        blendLine: isDecisive === false && secondaryDisplayName
-          ? `隐约有${secondaryDisplayName}的影子`
-          : undefined,
-        accent: accentColor,
-        index: archetypeSequenceIndex >= 0 ? archetypeSequenceIndex + 1 : 1,
-        artImagePath: resolvedArchetypeImage.path,
-        artImageSize: {
-          width: resolvedArchetypeImage.width || 480,
-          height: resolvedArchetypeImage.height || 480,
-        },
-      }) ?? undefined
-
-      const posterInput: PersonalitySharePosterInput = {
-        archetype: displayArchetypeName,
-        nickname: cardNickname || visual.nickname || displayArchetypeName,
-        tagline: visual.tagline || visual.description || summary,
-        shareLine,
-        accentColor,
-        accentSoft,
-        archetypeAsset: canvasArchetypeAsset,
-        archetypeAssetPng: visual.assetPng,
-        preResolvedImagePath: resolvedArchetypeImage.path,
-        mingCardImagePath,
-        confidenceLabel: typicalityLabel ? `${typicalityLabel.prefix}${typicalityLabel.name}` : undefined,
-        rarityLabel:
-          typeof visual.rarityPercentage === 'number'
-            ? `稀有度 ${Math.round(visual.rarityPercentage)}%`
-            : undefined,
-        activeSkillTitle: skillSet?.activeSkill.name ?? '瞬间点亮全场',
-        activeSkillEffect: skillSet?.activeSkill.shortEffect ?? '把陌生局迅速带到更舒服的节奏。',
-        passiveSkillTitle: skillSet?.passiveSkill.name ?? '气场持续发光',
-        passiveSkillEffect: skillSet?.passiveSkill.shortEffect ?? '不用刻意用力，也会让人想靠近你。',
-        topMatches: topMatches.map((match) => ({
-          archetype: match.archetype,
-          score: Number(match.score) || 0,
-        })),
-        traitEntries: traitEntries.map(({ label, value }) => ({ label, value })),
-        subtitle: visual.nickname || displayArchetypeName,
-        energyLevel,
-        archetypeRank,
-        serialNumber,
-      }
-
-      setGenerationPhase('正在渲染全息卡面…')
-      const nextPosterPath = await generatePersonalitySharePoster(posterInput)
-      setSharePosterPath(nextPosterPath)
-
-      // Generate square Moments poster (best-effort; degrades on low-end devices)
-      let nextSquarePath: string | undefined
-      if (!deviceTier.isDegradation) {
-        try {
-          const squareInput: PersonalitySquarePosterInput = {
-            archetype: displayArchetypeName,
-            subtitle: visual.nickname || displayArchetypeName,
-            tagline: visual.tagline || visual.description || summary,
-            shareLine,
-            rarityPercentage: typeof visual.rarityPercentage === 'number' ? visual.rarityPercentage : 0,
-            archetypeAsset: canvasArchetypeAsset,
-            archetypeAssetPng: visual.assetPng,
-            preResolvedImagePath: resolvedArchetypeImage.path,
-            traitEntries: traitEntries.slice(0, 3).map(({ label, value }) => ({ label, value })),
-            energyLevel,
-            skillSet: skillSet
-              ? { activeSkill: { name: skillSet.activeSkill.name }, passiveSkill: { name: skillSet.passiveSkill.name } }
-              : undefined,
-            archetypeRank,
-            serialNumber,
-          }
-          setGenerationPhase('正在生成朋友圈卡片…')
-          nextSquarePath = await generatePersonalitySquarePoster(squareInput)
-          setSquarePosterPath(nextSquarePath)
-        } catch (squareErr) {
-          logWarn('[PersonalityResults] Square poster generation failed, degrading to portrait-only', {
-            error: squareErr instanceof Error ? squareErr.message : String(squareErr),
-          })
-        }
-      }
-
-      haptics('success')
-      logInfo('[PersonalityResults] Poster generated', {
-        primaryArchetype: displayArchetypeName,
-        variant: selectedVariant?.name,
-        hasMoments: Boolean(nextSquarePath),
-      })
-      void Taro.showToast({ title: '氛围卡已生成', icon: 'success', duration: 1500 })
-
-      // Present frictionless sharing options
-      await presentShareOptions(nextPosterPath, nextSquarePath)
-    } catch (error) {
-      const message = error instanceof Error && error.message ? error.message : '海报没生成成功，稍后再试'
-      const isTransientError = error instanceof Error && /timeout|network|offline|abort|failed to fetch/i.test(error.message)
-
-      // Auto-retry once on transient (network/timeout) errors before surfacing to user
-      if (isTransientError && !posterRetryRef.current) {
-        posterRetryRef.current = true
-        logWarn('[PersonalityResults] Poster generation failed with transient error, auto-retrying', {
-          message,
-          primaryArchetype: displayArchetypeName,
-        })
-        void Taro.showToast({ title: '正在重试...', icon: 'loading', duration: 1200 })
-        // Reset state so the retry callback can re-enter generation
-        setIsGeneratingPoster(false)
-        setGenerationPhase('')
-        setTimeout(() => {
-          handleGeneratePosterRef.current?.()
-        }, 1500)
-        return
-      }
-
-      posterRetryRef.current = false
-      haptics('warning')
-      analytics.errorOccurred('poster_generation_failed', message)
-      logError('[PersonalityResults] Failed to generate poster', {
-        message,
-        primaryArchetype: displayArchetypeName,
-      })
-      void Taro.showToast({ title: '卡片生成遇到小状况，再试试~', icon: 'none', duration: 2500 })
-      setPosterError(true)
-    } finally {
-      setIsGeneratingPoster(false)
-      setGenerationPhase('')
-    }
-  }, [
-    analytics,
-    archetypeRank,
-    cardNickname,
-    deviceTier.isDegradation,
-    displayArchetype,
-    displayArchetypeName,
-    displayAsset,
-    energyLevel,
-    isGeneratingPoster,
-    presentShareOptions,
-    selectedVariantIndex,
-    serialNumber,
-    shareLine,
-    skillSet,
-    summary,
-    topMatches,
-    traitEntries,
-    typicalityLabel,
-    variants,
-    visual,
-  ])
-  // Keep a ref to the latest handleGeneratePoster so the retry timeout
-  // can call the most recent closure (with correct isGeneratingPoster state).
-  handleGeneratePosterRef.current = handleGeneratePoster
-
-  /**
-   * Phase 3 / B3 (2026-08-01): animated share clip.
-   * POSTs the reveal identity to the server, which composes a muted MP4
-   * (canvas frames + ffmpeg) and returns the bytes; we write them to a temp
-   * file and save to the photo album. Any failure falls back to the static
-   * poster CTA (the button simply reports the clip is unavailable).
-   */
-  const handleGenerateClip = useCallback(async () => {
-    if (isGeneratingClip || !displayArchetype || !shareAnimatedClipEnabled) return
-
-    try {
-      const { networkType } = await Taro.getNetworkType()
-      if (networkType === 'none') {
-        void Taro.showToast({ title: '网络好像断了，请检查连接后再试', icon: 'none', duration: 2500 })
-        return
-      }
-    } catch {
-      // network check best-effort
-    }
-
-    setIsGeneratingClip(true)
-    analytics.interaction('share_clip_generate_start', { primaryArchetype: displayArchetypeName })
-
-    try {
-      const archetypeNameCn = ARCHETYPE_BY_ID[displayArchetype]?.nameCn ?? displayArchetypeName
-      const mp4 = await apiRequestBinary({
-        path: '/api/personality/share-clip',
-        data: {
-          archetype: displayArchetype,
-          archetypeNameCn,
-          blendLine: shareLine?.slice(0, 48) || undefined,
-          archetypeImageUrl: displayAsset?.startsWith('https://joyjoinapp.com/static/')
-            ? displayAsset
-            : undefined,
-        },
-        timeout: 30000,
-      })
-
-      // Write MP4 bytes to a temp file, then save to the photo album
-      const filePath = `${Taro.env.USER_DATA_PATH}/joyjoin-share-clip-${Date.now()}.mp4`
-      const fs = Taro.getFileSystemManager()
-      await new Promise<void>((resolve, reject) => {
-        fs.writeFile({
-          filePath,
-          data: mp4,
-          success: () => resolve(),
-          fail: (err) => reject(new Error(err.errMsg ?? 'writeFile failed')),
-        })
-      })
-
-      await Taro.saveVideoToPhotosAlbum({ filePath })
-      haptics('success')
-      analytics.interaction('share_clip_save_success', { primaryArchetype: displayArchetypeName })
-      void Taro.showToast({ title: '动态短片已保存', icon: 'success', duration: 2000 })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      logWarn('[PersonalityResults] animated share clip failed', {
-        error: message,
-        primaryArchetype: displayArchetypeName,
-      })
-      analytics.interaction('share_clip_save_failed', {
-        error: message,
-        primaryArchetype: displayArchetypeName,
-      })
-      void Taro.showToast({
-        title: '动态短片暂时生成不了，先用静态卡面分享吧~',
-        icon: 'none',
-        duration: 2500,
-      })
-    } finally {
-      setIsGeneratingClip(false)
-    }
-  }, [
-    analytics,
-    displayArchetype,
-    displayArchetypeName,
-    displayAsset,
-    isGeneratingClip,
-    shareAnimatedClipEnabled,
-    shareLine,
-  ])
 
   const content = (() => {
     switch (flowStage) {
