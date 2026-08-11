@@ -163,15 +163,6 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     transition({ type: 'OBJECT_ALIGNED' })
     void onSubmit(runtime.choice)
   }
-  const divergeObject = (copy: string) => {
-    if (runtime.stage !== 'OBJECT_INTERACTION') return
-    transition({ type: 'OBJECT_DIVERGED', copy })
-  }
-  const leaveDivergedTimeline = () => {
-    if (runtime.stage !== 'OBJECT_DIVERGED') return
-    try { Taro.removeStorageSync(storageKey) } catch { /* fail-open */ }
-    onContinue()
-  }
   const retrySubmit = () => {
     if (!runtime.choice || runtime.stage !== 'OBJECT_SUCCESS') return
     if (submitState !== 'retry' && !(restoredSolvedRef.current && submitState === 'idle')) return
@@ -252,21 +243,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                   ) : <Text className='flash-dialogue__story-panel-unavailable'>这句话暂时没接上，返回后再试一次。</Text>
                 ) : (
                   <>
-                    {!isAtuanStory ? (
-                      <View className='flash-dialogue__user-turn' aria-label={`你说：${runtime.choice?.label ?? ''}`}>
-                        <Text className='flash-dialogue__user-turn-name'>你</Text>
-                        <Text className='flash-dialogue__user-turn-copy'>{runtime.choice?.label}</Text>
-                      </View>
-                    ) : null}
-                    {runtime.stage === 'OBJECT_DIVERGED' ? (
-                      <View className='flash-story-divergence' role='status'>
-                        <Text className='flash-story-divergence__eyebrow'>另一条时间线</Text>
-                        <Text className='flash-story-divergence__title'>这次没有接回原来的故事</Text>
-                        <Text className='flash-story-divergence__copy'>{runtime.divergenceCopy}</Text>
-                        <Text className='flash-story-divergence__hint'>没有碎片被结算。下次再遇见，可以从这里重新试一次。</Text>
-                        <FlashButton variant='quiet' onClick={leaveDivergedTimeline}>先回到街头盲盒</FlashButton>
-                      </View>
-                    ) : definition.unitId === 's1-p1-atuan' && runtime.choice && runtime.atuanFirstAct ? (
+                    {definition.unitId === 's1-p1-atuan' && runtime.choice && runtime.atuanFirstAct ? (
                       <AtuanFirstEncounterDialogue
                         encounterId={encounterId}
                         progress={runtime.atuanFirstAct}

@@ -6,10 +6,10 @@ import { spawnSync } from 'node:child_process';
 export const ORCHESTRATION_VERSION = 1;
 export const MANIFEST_RELATIVE_PATH = path.join('.github', 'orchestration.yaml');
 export const CONTEXT_EXAMPLE_RELATIVE_PATH = path.join('.github', 'orchestration-context.example.json');
-export const RUNTIME_DIR_RELATIVE_PATH = path.join('.git', '.orchestration');
-export const RUNTIME_CONTEXT_RELATIVE_PATH = path.join(RUNTIME_DIR_RELATIVE_PATH, 'context.json');
-export const RUNTIME_EVENT_LOG_RELATIVE_PATH = path.join(RUNTIME_DIR_RELATIVE_PATH, 'events.jsonl');
-export const LOOP_STATE_RELATIVE_PATH = path.join(RUNTIME_DIR_RELATIVE_PATH, 'loop-state.json');
+export const RUNTIME_DIR_RELATIVE_PATH = path.posix.join('.git', '.orchestration');
+export const RUNTIME_CONTEXT_RELATIVE_PATH = path.posix.join(RUNTIME_DIR_RELATIVE_PATH, 'context.json');
+export const RUNTIME_EVENT_LOG_RELATIVE_PATH = path.posix.join(RUNTIME_DIR_RELATIVE_PATH, 'events.jsonl');
+export const LOOP_STATE_RELATIVE_PATH = path.posix.join(RUNTIME_DIR_RELATIVE_PATH, 'loop-state.json');
 export const SKILLS_RELATIVE_PATH = path.join('.github', 'skills');
 
 const MAX_BUFFER_BYTES = 10 * 1024 * 1024;

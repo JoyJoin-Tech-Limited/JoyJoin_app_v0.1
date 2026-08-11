@@ -323,7 +323,6 @@ export async function callSocialAI(
       // @ts-expect-error - DeepSeek-specific top-level extension (extra_body is not serialized by the SDK)
       requestPayload.thinking = deepseekSelection.thinkingExtraBody.thinking;
       if (deepseekSelection.thinkingExtraBody.reasoning_effort) {
-        // @ts-expect-error - DeepSeek-specific top-level extension
         requestPayload.reasoning_effort = deepseekSelection.thinkingExtraBody.reasoning_effort;
       }
     }

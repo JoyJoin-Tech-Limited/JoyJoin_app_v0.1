@@ -1856,6 +1856,8 @@ page {
     animation: atuan-interactable-rest 2.4s ease-in-out infinite;
   }
 
+  &__cutout--atuan { animation-delay: 0ms; }
+
   &__cutout--bag {
     filter:
       brightness(1.04)
@@ -1877,6 +1879,9 @@ page {
 
     &--pressed { opacity: 0.96; }
   }
+
+  &__detail--atuan { background: rgba($color-primary-dark, 0.04); }
+  &__detail--bag { background: rgba($flow-world-fox-dark, 0.08); }
 
   &__detail-shade {
     position: absolute;
@@ -1929,7 +1934,7 @@ page {
     height: 330rpx;
     border: 2rpx solid rgba(113, 76, 40, 0.2);
     border-radius: 20rpx 20rpx 34rpx 34rpx;
-    background: linear-gradient(100deg, #b57d42 0%, #d7a667 45%, #bc8449 100%);
+    background: linear-gradient(100deg, $flow-world-fox-dark 0%, $flow-world-fox-accent 45%, $flow-world-corgi-dark 100%);
     box-shadow: 0 28rpx 54rpx rgba($color-text-primary, 0.28);
 
     &::before {
@@ -2068,6 +2073,7 @@ page {
     pointer-events: auto;
     animation: atuan-action-card-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
 
+    &--catch { animation-delay: 0ms; }
     &--bag { animation-delay: 90ms; }
     &--pressed { opacity: 0.86; transform: translateY(4rpx) scale(0.985); }
   }

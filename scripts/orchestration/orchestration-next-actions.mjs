@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { RUNTIME_DIR_RELATIVE_PATH } from './orchestration-lib.mjs';
 
-export const NEXT_ACTIONS_ARTIFACT_RELATIVE_PATH = path.join(RUNTIME_DIR_RELATIVE_PATH, 'next-actions.json');
+export const NEXT_ACTIONS_ARTIFACT_RELATIVE_PATH = path.posix.join(RUNTIME_DIR_RELATIVE_PATH, 'next-actions.json');
 
 const ROUTING_PRIMARY_LIMIT = 3;
 const ROUTING_OVERFLOW_LIMIT = 2;
