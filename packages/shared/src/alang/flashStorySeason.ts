@@ -57,3 +57,20 @@ export function isFlashStoryUnitId(value: string): value is FlashStoryUnitId {
 export function getFlashStoryUnitDefinition(value: string): FlashStoryUnitDefinition | null {
   return isFlashStoryUnitId(value) ? UNIT_BY_ID.get(value) ?? null : null
 }
+
+/**
+ * Story episode v2 pilot whitelist. Only these units route through the v2
+ * state-driven node engine; all other units keep the v1 flat-content +
+ * dedicated-interaction path (FlashStoryUnit). Expanded after pilot QA.
+ */
+export const FLASH_V2_PILOT_UNIT_IDS: readonly string[] = [
+  "s1-p1-alang",
+  "s1-p2-alang",
+  "s1-p3-alang",
+  "s1-p1-shiqi",
+  "s1-p3-shiqi",
+]
+
+export function isFlashV2PilotUnitId(value: string): boolean {
+  return FLASH_V2_PILOT_UNIT_IDS.includes(value)
+}

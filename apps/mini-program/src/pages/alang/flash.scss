@@ -2832,7 +2832,18 @@ page {
 }
 
 .flash-dialogue__story-panel--v2 {
-  gap: 20rpx;
+  gap: 12rpx;
+  max-height: calc(100vh - 300rpx);
+}
+
+.flash-story-v2__scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.flash-story-v2__continue {
+  padding-top: 4rpx;
+  border-top: 2rpx solid rgba($color-surface, 0.16);
 }
 
 .flash-story-v2__segments {

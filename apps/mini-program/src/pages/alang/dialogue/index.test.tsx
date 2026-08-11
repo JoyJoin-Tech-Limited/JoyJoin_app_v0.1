@@ -298,4 +298,94 @@ describe('formal Flash dialogue', () => {
       url: '/pages/alang/finale/index?encounterId=encounter-1',
     }))
   })
+
+  it('renders the v2 node stage when storyV2 is present on a non-dedicated unit', () => {
+    mocks.useEncounter.mockReturnValue({
+      data: {
+        ...questionEncounter,
+        npc: { id: 'npc-alang', slug: 'alang', name: '阿浪', animal: '灰狼' },
+        currentQuestion: null,
+        storyEpisode: {
+          id: 'episode-alang-1',
+          code: 's1-p1-alang',
+          seasonTitle: '没有名字的旧物',
+          phase: 1,
+          title: '一张画了两把椅子的图',
+          objectCode: 'seat-plan',
+          opening: '',
+          action: '',
+          discovery: '',
+          response: null,
+          closing: null,
+          motion: { ambient: 'none' as const },
+          fragment: null,
+          progress: { completedInPhase: 0, totalInPhase: 5, completedTotal: 0, total: 15 },
+          storyV2: {
+            nodeId: 'n3_choice',
+            type: 'choice',
+            segments: [{ text: '你想先注意哪一件事？' }],
+            choices: [
+              { id: 'ask-changes', text: '这张图改了不止一次。' },
+              { id: 'flip-paper', text: '把纸翻过来' },
+            ],
+            next: null,
+            unlockFragment: null,
+          },
+        },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+    render(<FlashDialoguePage />)
+    const stage = document.querySelector('[data-testid="flash-story-v2-stage"]')
+    expect(stage).toBeTruthy()
+    expect(screen.getByText('这张图改了不止一次。')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('这张图改了不止一次。'))
+    expect(mocks.answer).toHaveBeenCalledWith({
+      encounterId: 'encounter-1',
+      questionId: 'n3_choice',
+      optionId: 'ask-changes',
+    })
+  })
+
+  it('keeps non-pilot units (with dedicated interactions) on the v1 path even when storyV2 is present', () => {
+    mocks.useEncounter.mockReturnValue({
+      data: {
+        ...questionEncounter,
+        npc: { id: 'npc-lizi', slug: 'lizi', name: '栗子', animal: '水獭' },
+        currentQuestion: null,
+        storyEpisode: {
+          id: 'episode-lizi-1',
+          code: 's1-p1-lizi',
+          seasonTitle: '没有名字的旧物',
+          phase: 1,
+          title: '五支已经写不出的彩笔',
+          objectCode: 'dry-markers',
+          opening: '栗子把五支彩笔按颜色排开。',
+          action: '她逐支试写，又检查了笔帽与笔身不一致的地方。',
+          discovery: '这些笔不是用来画画的。',
+          response: null,
+          closing: null,
+          motion: { ambient: 'none' as const },
+          fragment: null,
+          progress: { completedInPhase: 0, totalInPhase: 5, completedTotal: 0, total: 15 },
+          storyV2: {
+            nodeId: 'n3_choice',
+            type: 'choice',
+            segments: [{ text: '你想先注意哪一件事？' }],
+            choices: [{ id: 'ask-caps', text: '笔帽怎么不配对？' }],
+            next: null,
+            unlockFragment: null,
+          },
+        },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+    render(<FlashDialoguePage />)
+    expect(document.querySelector('[data-testid="flash-story-v2-stage"]')).toBeNull()
+    expect(screen.getByText('栗子把五支彩笔按颜色排开。')).toBeInTheDocument()
+  })
 })

@@ -75,17 +75,29 @@ import {
   advanceFlashV2Node,
 } from "../repositories/flashStoryRepo";
 import { getFeatureFlag } from "../lib/featureFlags";
+import { isFlashV2PilotUnitId } from "@joyjoin/shared/alang/flashStorySeason";
 import {
   advanceStoryNode as advanceV2StoryNode,
   enterStoryEpisode as enterV2StoryEpisode,
   getStoryNodeView as getV2StoryNodeView,
 } from "./flashStoryEngine";
 
+function resolveV2ClosureResponse(content: unknown): string | null {
+  const v2 = content as { nodes?: Record<string, { type?: string; segments?: Array<{ text?: string }>; variants?: Array<{ when?: unknown; segments?: Array<{ text?: string }> }> }> } | null;
+  if (!v2?.nodes) return null;
+  const closure = Object.values(v2.nodes).find((node) => node?.type === "closure");
+  if (!closure) return null;
+  const defaultVariant = closure.variants?.find((variant) => variant.when === "default");
+  const segments = defaultVariant?.segments ?? closure.segments ?? [];
+  return segments.map((segment) => segment.text ?? "").join("");
+}
+
 async function buildFlashStoryV2View(
   storyState: NonNullable<Awaited<ReturnType<typeof getFlashStoryEncounterState>>>,
 ): Promise<FlashStoryV2ViewDto | null> {
   const content = storyState.episode.content as { v?: number; start?: string; nodes?: Record<string, unknown> } | null;
   if (content?.v !== 2) return null;
+  if (!isFlashV2PilotUnitId(storyState.episode.code)) return null;
   const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
   if (!v2Enabled) return null;
   const run = storyState.universeRun;
@@ -895,7 +907,8 @@ export async function answerFlashEncounter(input: {
       });
     }
     const content = storyState.episode.content as { v?: number } | null;
-    if (content?.v === 2 && await getFeatureFlag("flashStoryV2Enabled", false)) {
+    const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
+    if (v2Enabled && content?.v === 2 && isFlashV2PilotUnitId(storyState.episode.code)) {
       const advance = await advanceFlashV2Run({
         encounterId: input.encounterId,
         userId: input.userId,
@@ -914,7 +927,7 @@ export async function answerFlashEncounter(input: {
           episodeId: storyState.episode.id,
           optionId: input.optionId,
           configuredEffects: [],
-          responseSnapshot: null,
+          responseSnapshot: resolveV2ClosureResponse(storyState.episode.content),
           renderKind: "template",
           promptVersion: null,
           now,
@@ -1056,7 +1069,7 @@ export async function advanceFlashV2Story(input: {
   }
   const content = storyState.episode.content as { v?: number } | null;
   const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
-  if (!v2Enabled || content?.v !== 2) {
+  if (!v2Enabled || content?.v !== 2 || !isFlashV2PilotUnitId(storyState.episode.code)) {
     throw new FlashServiceError("FLASH_V2_NOT_AVAILABLE", 409, "当前故事不需要继续推进");
   }
   const advance = await advanceFlashV2Node({
@@ -1075,7 +1088,7 @@ export async function advanceFlashV2Story(input: {
       episodeId: storyState.episode.id,
       optionId: "advance",
       configuredEffects: [],
-      responseSnapshot: null,
+      responseSnapshot: resolveV2ClosureResponse(storyState.episode.content),
       renderKind: "template",
       promptVersion: null,
       now,

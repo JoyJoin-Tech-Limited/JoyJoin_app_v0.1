@@ -5,6 +5,7 @@ import { FlashStoryV2Stage } from './FlashStoryV2Stage'
 vi.mock('@tarojs/components', () => ({
   View: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
   Text: ({ children, ...props }: React.HTMLAttributes<HTMLSpanElement>) => <span {...props}>{children}</span>,
+  ScrollView: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
 }))
 
 vi.mock('./FlashUi', () => ({
@@ -63,7 +64,7 @@ describe('FlashStoryV2Stage', () => {
     expect(onChoice).toHaveBeenCalledWith('b')
   })
 
-  it('marks dialogue segments with a speaker class and hides continue on terminal nodes', () => {
+  it('marks dialogue segments with a speaker class and hides continue on ending nodes', () => {
     const { container, queryByRole } = render(
       <FlashStoryV2Stage
         npc={npc}
@@ -80,6 +81,28 @@ describe('FlashStoryV2Stage', () => {
     )
     expect(container.querySelector('.flash-story-v2__segment--dialogue')).toBeTruthy()
     expect(queryByRole('button')).toBeNull()
+  })
+
+  it('shows a continue button on closure nodes so the user can finish the unit', () => {
+    const onContinue = vi.fn()
+    const { getByRole } = render(
+      <FlashStoryV2Stage
+        npc={npc}
+        segments={[{ text: '他把图按原来的折痕收好，准备放回交换箱。' }]}
+        choices={[]}
+        isChoice={false}
+        isTerminal={false}
+        seasonTitle='没有名字的旧物'
+        phase={1}
+        busy={false}
+        onChoice={vi.fn()}
+        onContinue={onContinue}
+      />,
+    )
+    const button = getByRole('button')
+    expect(button).toBeTruthy()
+    fireEvent.click(button)
+    expect(onContinue).toHaveBeenCalledTimes(1)
   })
 
   it('disables interactions while busy', () => {

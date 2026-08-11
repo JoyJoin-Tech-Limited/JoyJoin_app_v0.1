@@ -77,3 +77,16 @@
 - `alangEnabled` 只控制旧阿浪原型和 Debug，不影响正式街头盲盒；正式内容紧急下线应归档当前发布季，后台维护任务仍会清理到期
   私信与任务，不依赖功能开关。
 - 回滚应用代码时保留新增表；不要删除表或清空用户任务。旧服务不会访问它们。
+
+## 2026-08-11 story episode v2（试点白名单）
+
+1. 只读核对后应用迁移 `20260811010000_flash_story_episode_v2.sql`（幂等，仅给
+   `flash_story_universe_runs` 加 `current_node`/`node_path`/`v2_state` 三列，可空，无数据回写）。
+2. `flashStoryV2Enabled` 默认 true；因 v1 内容 `content.v` 无 2 字段，未应用试点内容前
+   v2 引擎不会激活任何单元（v1 全路径不变），flag 开是安全的。
+3. 试点内容（5 单元：alang p1-p3 + shiqi p1/p3）走 `20260811020000_flash_story_v2_pilot.sql`，
+   **部署 gate：先 staging 体验版走查**（逐屏节奏、callback 回响、钩子悬念、碎片解锁、v1 回归）
+   通过后再应用。全季内容资产 `apps/server/src/data/flashStoryPilot/v2-season1.json`
+   （12 非 atuan 单元）在试点验收后生成新 SQL 启用。
+4. 回滚：`FLASH_STORY_V2_ENABLED=false` 即时回到 v1 路径；中途 v2 用户遗留的
+   `universe_runs` 状态可接受（不触发 v1 路径读取）。不得删除 v2 三列。

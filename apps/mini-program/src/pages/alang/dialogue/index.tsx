@@ -1,7 +1,7 @@
 import Taro from '@tarojs/taro'
 import { useEffect, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
-import { getFlashStoryUnitDefinition } from '@shared/alang/flashStorySeason'
+import { getFlashStoryUnitDefinition, isFlashV2PilotUnitId } from '@shared/alang/flashStorySeason'
 import type { AtuanFirstActSubmission } from '@shared/alang/atuanFirstAct'
 import { FlashStoryUnit } from '../../../components/alang/story-unit/FlashStoryUnit'
 import { FlashStoryV2Stage } from '../../../components/alang/FlashStoryV2Stage'
@@ -297,7 +297,7 @@ export default function FlashDialoguePage() {
   }
 
   if (story) {
-    const v2View = story.storyV2
+    const v2View = isFlashV2PilotUnitId(story.code) ? story.storyV2 : null
     if (v2View) {
       return (
         <View className='flash-page flash-dialogue flash-dialogue--story'>
@@ -306,7 +306,7 @@ export default function FlashDialoguePage() {
             segments={v2View.segments}
             choices={v2View.choices}
             isChoice={v2View.type === 'choice'}
-            isTerminal={v2View.type === 'closure' || v2View.type === 'ending'}
+            isTerminal={v2View.type === 'ending'}
             seasonTitle={story.seasonTitle}
             phase={story.phase}
             busy={answerMutation.isPending || advanceMutation.isPending}

@@ -565,40 +565,33 @@
     {
       "idx": 80,
       "version": "7",
-      "when": 1786417200000,
-      "tag": "20260811030000_flash_story_v2_season1",
-      "breakpoints": true
-    },
-    {
-      "idx": 81,
-      "version": "7",
       "when": 1778141820001,
       "tag": "add_attendance_status",
       "breakpoints": true
     },
     {
-      "idx": 82,
+      "idx": 81,
       "version": "7",
       "when": 1786000047118,
       "tag": "seed_pricing_plans_20260805",
       "breakpoints": true
     },
     {
-      "idx": 83,
+      "idx": 82,
       "version": "7",
       "when": 1780992000000,
       "tag": "seed_venue_batch_and_co_20260608",
       "breakpoints": true
     },
     {
-      "idx": 84,
+      "idx": 83,
       "version": "7",
       "when": 1780395567634,
       "tag": "seed_venue_partners_20260602",
       "breakpoints": true
     },
     {
-      "idx": 85,
+      "idx": 84,
       "version": "7",
       "when": 1780395567634,
       "tag": "seed_venue_time_slots_20260602",
