@@ -907,8 +907,11 @@ export async function answerFlashEncounter(input: {
       });
     }
     const content = storyState.episode.content as { v?: number } | null;
-    const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
-    if (v2Enabled && content?.v === 2 && isFlashV2PilotUnitId(storyState.episode.code)) {
+    if (
+      content?.v === 2
+      && isFlashV2PilotUnitId(storyState.episode.code)
+      && await getFeatureFlag("flashStoryV2Enabled", false)
+    ) {
       const advance = await advanceFlashV2Run({
         encounterId: input.encounterId,
         userId: input.userId,
