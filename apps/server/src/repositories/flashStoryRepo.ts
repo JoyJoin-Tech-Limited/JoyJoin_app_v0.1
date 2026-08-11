@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, asc, count, desc, eq, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   flashEncounters,
   flashNpcs,
@@ -25,6 +25,11 @@ import {
 } from "@joyjoin/shared/alang/parallelUniverse";
 
 import { db } from "../db";
+import {
+  hasCompletedPriorNpcPhases,
+  isFlashStorySeasonComplete,
+  selectNextNpcStoryEpisode,
+} from "../lib/flashStoryProgression";
 
 type DbExecutor = typeof db | any;
 
@@ -274,36 +279,46 @@ export async function ensureFlashStoryEpisodeForEncounter(input: {
       return { season, progress, episode: null, alreadyCompleted: true };
     }
 
-    const [episode] = await tx.select().from(flashStoryEpisodes)
+    const episodes = await tx.select().from(flashStoryEpisodes)
       .where(and(
         eq(flashStoryEpisodes.seasonId, season.id),
         eq(flashStoryEpisodes.npcId, input.npcId),
-        eq(flashStoryEpisodes.phase, progress.currentPhase),
         eq(flashStoryEpisodes.reviewStatus, "reviewed"),
         eq(flashStoryEpisodes.isActive, true),
-      )).limit(1);
-    if (!episode) return { season, progress, episode: null, alreadyCompleted: false };
-
-    const [completed] = await tx.select({ id: flashUserStoryEpisodes.id })
+      )).orderBy(asc(flashStoryEpisodes.phase));
+    if (!episodes.length) return { season, run, progress, episode: null, alreadyCompleted: false };
+    const completedEpisodes = await tx.select({ episodeId: flashUserStoryEpisodes.episodeId })
       .from(flashUserStoryEpisodes)
       .where(and(
         eq(flashUserStoryEpisodes.userId, input.userId),
-        eq(flashUserStoryEpisodes.episodeId, episode.id),
-      )).limit(1);
+        inArray(flashUserStoryEpisodes.episodeId, episodes.map((episode: any) => episode.id)),
+      ));
+    const episode = selectNextNpcStoryEpisode(
+      episodes,
+      new Set(completedEpisodes.map((completed: any) => completed.episodeId)),
+    );
+    if (!episode) {
+      await tx.update(flashEncounters).set({
+        status: "completed",
+        completedAt: input.now,
+        updatedAt: input.now,
+      }).where(and(
+        eq(flashEncounters.id, input.encounterId),
+        eq(flashEncounters.userId, input.userId),
+      ));
+      return { season, run, progress, episode: null, alreadyCompleted: true };
+    }
 
-    await tx.update(flashEncounters).set(completed ? {
+    await tx.update(flashEncounters).set({
       storyEpisodeId: episode.id,
-      status: "completed",
-      completedAt: input.now,
-      updatedAt: input.now,
-    } : {
-      storyEpisodeId: episode.id,
+      status: "dialogue",
+      completedAt: null,
       updatedAt: input.now,
     }).where(and(
       eq(flashEncounters.id, input.encounterId),
       eq(flashEncounters.userId, input.userId),
     ));
-    return { season, run, progress, episode, alreadyCompleted: Boolean(completed) };
+    return { season, run, progress, episode, alreadyCompleted: false };
   });
 }
 
@@ -437,7 +452,16 @@ export async function completeFlashStoryEpisode(input: {
       eq(flashUserStoryProgress.userId, input.userId),
       eq(flashUserStoryProgress.seasonId, episode.seasonId),
     )).limit(1);
-    if (!progress || progress.status !== "active" || progress.currentPhase !== episode.phase) return null;
+    if (!progress || progress.status !== "active") return null;
+    const completedNpcPhases = await tx.select({ phase: flashStoryEpisodes.phase })
+      .from(flashUserStoryEpisodes)
+      .innerJoin(flashStoryEpisodes, eq(flashUserStoryEpisodes.episodeId, flashStoryEpisodes.id))
+      .where(and(
+        eq(flashUserStoryEpisodes.userId, input.userId),
+        eq(flashStoryEpisodes.seasonId, episode.seasonId),
+        eq(flashStoryEpisodes.npcId, episode.npcId),
+      ));
+    if (!hasCompletedPriorNpcPhases(episode.phase, completedNpcPhases.map((row: any) => row.phase))) return null;
     const [run] = progress?.universeRunId
       ? await tx.select().from(flashStoryUniverseRuns).where(eq(flashStoryUniverseRuns.id, progress.universeRunId)).limit(1)
       : [];
@@ -491,13 +515,21 @@ export async function completeFlashStoryEpisode(input: {
       }
     }
 
-    const [phaseCount] = await tx.select({ value: count() }).from(flashUserStoryEpisodes)
+    const [[phaseCount], [totalCount]] = await Promise.all([
+      tx.select({ value: count() }).from(flashUserStoryEpisodes)
       .innerJoin(flashStoryEpisodes, eq(flashUserStoryEpisodes.episodeId, flashStoryEpisodes.id))
       .where(and(
         eq(flashUserStoryEpisodes.userId, input.userId),
         eq(flashStoryEpisodes.seasonId, episode.seasonId),
         eq(flashStoryEpisodes.phase, episode.phase),
-      ));
+      )),
+      tx.select({ value: count() }).from(flashUserStoryEpisodes)
+        .innerJoin(flashStoryEpisodes, eq(flashUserStoryEpisodes.episodeId, flashStoryEpisodes.id))
+        .where(and(
+          eq(flashUserStoryEpisodes.userId, input.userId),
+          eq(flashStoryEpisodes.seasonId, episode.seasonId),
+        )),
+    ]);
     if (Number(phaseCount?.value ?? 0) === 5) {
       await tx.update(flashUserStoryProgress).set({
         currentPhase: episode.phase === 3 ? 3 : episode.phase + 1,
@@ -509,7 +541,7 @@ export async function completeFlashStoryEpisode(input: {
         eq(flashUserStoryProgress.seasonId, episode.seasonId),
         eq(flashUserStoryProgress.currentPhase, episode.phase),
       ));
-      if (episode.phase === 3 && run) {
+      if (isFlashStorySeasonComplete(Number(totalCount?.value ?? 0)) && run) {
         const [latestRun] = await tx.select().from(flashStoryUniverseRuns).where(eq(flashStoryUniverseRuns.id, run.id)).limit(1);
         await tx.update(flashStoryUniverseRuns).set({
           status: "completed",
