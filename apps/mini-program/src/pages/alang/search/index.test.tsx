@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   getOneShotLocation: vi.fn(),
   redirectTo: vi.fn(),
   openSetting: vi.fn(),
+  openLocation: vi.fn(),
+  showToast: vi.fn(),
   canonicalRedirect: vi.fn(),
   startLocationUpdate: vi.fn(),
   stopLocationUpdate: vi.fn(),
@@ -33,7 +35,8 @@ vi.mock('@tarojs/taro', () => ({
     setNavigationBarTitle: vi.fn(),
     redirectTo: mocks.redirectTo,
     openSetting: mocks.openSetting,
-    showToast: vi.fn(),
+    openLocation: mocks.openLocation,
+    showToast: mocks.showToast,
     startLocationUpdate: mocks.startLocationUpdate,
     stopLocationUpdate: mocks.stopLocationUpdate,
     onLocationChange: mocks.onLocationChange,
@@ -82,6 +85,7 @@ describe('formal Flash map navigation', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
     mocks.permission.mockResolvedValue('granted')
     mocks.openSetting.mockResolvedValue({ authSetting: { 'scope.userLocation': true } })
+    mocks.openLocation.mockResolvedValue({ errMsg: 'openLocation:ok' })
     mocks.getOneShotLocation.mockResolvedValue({ latitude: 22.54, longitude: 114.05, accuracy: 8 })
     mocks.startLocationUpdate.mockImplementation(({ success }: any) => success?.({ errMsg: 'ok' }))
     mocks.onLocationChange.mockImplementation((callback) => { mocks.locationChange.current = callback })
@@ -148,6 +152,36 @@ describe('formal Flash map navigation', () => {
     expect(await screen.findByText('步行约 10 分钟 · 820 米')).toBeInTheDocument()
     expect(screen.getByTestId('native-map').getAttribute('data-markers')).toContain('22.541')
     expect(screen.getByTestId('native-map').getAttribute('data-polyline')).toContain('114.052')
+  })
+
+  it('opens the fixed destination in the WeChat native Tencent map page', async () => {
+    render(<FlashMapPage />)
+    await startNavigation()
+
+    fireEvent.click(await screen.findByRole('button', { name: '打开腾讯地图导航' }))
+
+    expect(mocks.openLocation).toHaveBeenCalledWith({
+      latitude: 22.541,
+      longitude: 114.052,
+      name: '默默出现点',
+      address: '宝安壹方城开放公共区域',
+      scale: 16,
+    })
+  })
+
+  it('keeps in-page guidance running and explains when the native map cannot open', async () => {
+    mocks.openLocation.mockRejectedValueOnce(new Error('openLocation failed'))
+    render(<FlashMapPage />)
+    await startNavigation()
+
+    fireEvent.click(await screen.findByRole('button', { name: '打开腾讯地图导航' }))
+
+    await waitFor(() => expect(mocks.showToast).toHaveBeenCalledWith({
+      title: '地图没有打开，请稍后再试',
+      icon: 'none',
+    }))
+    expect(screen.getByRole('button', { name: '地图引导中' })).toBeInTheDocument()
+    expect(mocks.stopLocationUpdate).not.toHaveBeenCalled()
   })
 
   it('keeps the destination marker available when the walking route provider is unavailable', async () => {

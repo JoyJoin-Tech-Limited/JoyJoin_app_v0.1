@@ -204,6 +204,22 @@ export default function FlashMapPage() {
     }
   }
 
+  const handleOpenNativeNavigation = useCallback(async () => {
+    if (!mapFrame) return
+    try {
+      haptics('light')
+      await Taro.openLocation({
+        latitude: mapFrame.destination.latitude,
+        longitude: mapFrame.destination.longitude,
+        name: `${npcName}出现点`,
+        address: locationAddress || `${districtName}公共区域`,
+        scale: 16,
+      })
+    } catch {
+      Taro.showToast({ title: '地图没有打开，请稍后再试', icon: 'none' })
+    }
+  }, [districtName, locationAddress, mapFrame, npcName])
+
   useDidHide(() => stopMapGuidance())
   useEffect(() => () => stopMapGuidance(false), [stopMapGuidance])
 
@@ -324,7 +340,13 @@ export default function FlashMapPage() {
           ) : null}
 
           <View className='flash-radar__actions'>
+            {mapFrame ? (
+              <FlashButton onClick={() => { void handleOpenNativeNavigation() }}>
+                打开腾讯地图导航
+              </FlashButton>
+            ) : null}
             <FlashButton
+              variant={mapFrame ? 'secondary' : 'primary'}
               disabled={state === 'locating' || state === 'tracking' || state === 'inside'}
               onClick={() => { void startMapGuidance() }}
             >
