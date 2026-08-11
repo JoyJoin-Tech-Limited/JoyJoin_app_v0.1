@@ -185,6 +185,11 @@ export interface ClientSelection {
   reasoningEffort?: 'high' | 'max';
 }
 
+type DeepSeekChatCompletionCreateParams = OpenAI.Chat.ChatCompletionCreateParams & {
+  thinking?: NonNullable<ClientSelection['thinkingExtraBody']>['thinking'];
+  reasoning_effort?: 'high' | 'max' | 'medium';
+};
+
 /**
  * Returns the appropriate AI client, model, and provider for a given social function.
  * Respects SOCIAL_AI_PROVIDER env var (hybrid | minimax | deepseek) with automatic
@@ -312,7 +317,7 @@ export async function callSocialAI(
   if (routedSelection?.provider === 'deepseek' || !routedSelection) {
     const start = Date.now();
 
-    const requestPayload: OpenAI.Chat.ChatCompletionCreateParams = {
+    const requestPayload: DeepSeekChatCompletionCreateParams = {
       model: modelName,
       messages,
       temperature,
@@ -320,7 +325,6 @@ export async function callSocialAI(
     };
 
     if (deepseekSelection.thinkingExtraBody) {
-      // @ts-expect-error - DeepSeek-specific top-level extension (extra_body is not serialized by the SDK)
       requestPayload.thinking = deepseekSelection.thinkingExtraBody.thinking;
       if (deepseekSelection.thinkingExtraBody.reasoning_effort) {
         requestPayload.reasoning_effort = deepseekSelection.thinkingExtraBody.reasoning_effort;
