@@ -238,6 +238,23 @@ describe("Flash private reply retention", () => {
   });
 });
 
+describe("Flash story-path state integrity", () => {
+  it("locks and validates the choice before storing the first-act path", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../repositories/flashStoryRepo.ts", import.meta.url)),
+      "utf8",
+    );
+    const start = source.indexOf("export async function prepareFlashStoryChoiceIntent");
+    const end = source.indexOf("export async function getReadyFlashStoryChoiceIntent", start);
+    const body = source.slice(start, end);
+
+    expect(body.indexOf("pg_advisory_xact_lock")).toBeGreaterThanOrEqual(0);
+    expect(body.indexOf("classifyFlashChoiceIntent")).toBeGreaterThan(body.indexOf("pg_advisory_xact_lock"));
+    expect(body.indexOf("tx.update(flashEncounters)")).toBeGreaterThan(body.indexOf("classifyFlashChoiceIntent"));
+    expect(body.indexOf("tx.update(flashEncounters)")).toBeLessThan(body.indexOf("if (!intent)"));
+  });
+});
+
 describe("Flash canonical NPC weekday policy", () => {
   it("compares sorted weekdays and rejects any canonical drift", () => {
     expect(isCanonicalFlashNpcSlug("alang")).toBe(true);

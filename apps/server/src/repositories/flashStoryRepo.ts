@@ -45,10 +45,17 @@ export async function prepareFlashStoryChoiceIntent(input: {
   episodeId: string;
   questionId: string;
   optionId: string;
+  storyAnswers?: Array<{ questionId: string; optionId: string; tags: string[] }>;
   now: Date;
 }) {
   return db.transaction(async (tx: DbExecutor) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${input.encounterId}:flash-story-choice`}))`);
+    const [encounter] = await tx.select({ answers: flashEncounters.answers }).from(flashEncounters).where(and(
+      eq(flashEncounters.id, input.encounterId),
+      eq(flashEncounters.userId, input.userId),
+      eq(flashEncounters.storyEpisodeId, input.episodeId),
+    )).limit(1);
+    if (!encounter) return { state: "conflict" as const, intent: null };
     await tx.insert(flashStoryChoiceIntents).values({
       userId: input.userId,
       encounterId: input.encounterId,
@@ -66,6 +73,21 @@ export async function prepareFlashStoryChoiceIntent(input: {
     const action = classifyFlashChoiceIntent({ stored: intent ?? null, ...input });
     if (action === "conflict") {
       return { state: "conflict" as const, intent: intent ?? null };
+    }
+    if (input.storyAnswers?.length) {
+      const existingAnswers = encounter.answers ?? [];
+      const existingStoryAnswers = existingAnswers.filter(
+        (answer: { questionId: string; optionId: string; tags: string[] }) => answer.tags.includes("story_path"),
+      );
+      if (existingStoryAnswers.length && stableHash(existingStoryAnswers) !== stableHash(input.storyAnswers)) {
+        return { state: "conflict" as const, intent: intent ?? null };
+      }
+      if (!existingStoryAnswers.length) {
+        await tx.update(flashEncounters).set({
+          answers: [...existingAnswers, ...input.storyAnswers],
+          updatedAt: input.now,
+        }).where(and(eq(flashEncounters.id, input.encounterId), eq(flashEncounters.userId, input.userId)));
+      }
     }
     if (!intent) throw new Error("FLASH_STORY_CHOICE_INTENT_INSERT_FAILED");
     if (action === "ready") {

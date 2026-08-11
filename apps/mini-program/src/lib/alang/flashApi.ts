@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import type { AtuanFirstActSubmission } from '@shared/alang/atuanFirstAct'
 import {
   abandonFlashTask as abandonFlashTaskRequest,
   answerFlashEncounter as answerFlashEncounterRequest,
@@ -268,18 +269,20 @@ export async function answerFlashEncounter(input: {
   encounterId: string
   questionId: string
   optionId: string
+  storyPath?: AtuanFirstActSubmission
   replay?: boolean
 }): Promise<FlashEncounterView> {
   if (input.replay) {
     return adaptFlashEncounterDto(await apiRequest<SharedFlashEncounterResponse>({
       path: `/api/alang/flash/encounters/${input.encounterId}/answer?replay=1`,
       method: 'POST',
-      data: { questionId: input.questionId, optionId: input.optionId },
+      data: { questionId: input.questionId, optionId: input.optionId, storyPath: input.storyPath },
     }))
   }
   return adaptFlashEncounterDto(await answerFlashEncounterRequest(apiRequest, input.encounterId, {
     questionId: input.questionId,
     optionId: input.optionId,
+    storyPath: input.storyPath,
   }))
 }
 

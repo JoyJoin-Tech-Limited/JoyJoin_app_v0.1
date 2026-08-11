@@ -34,7 +34,7 @@ afterEach(cleanup)
 beforeEach(() => storage.clear())
 
 describe('FlashStoryUnit choice persistence', () => {
-  it('turns Atuan phase one into a responsive conversation with no keep-or-cover quiz', () => {
+  it('plays Atuan phase one as anomaly, investigation, reversal, decision, and named ending', () => {
     const submit = vi.fn().mockResolvedValue(undefined)
     const atuanNpc = { ...npc, id: 'npc-atuan', slug: 'atuan', name: '阿团', species: '水豚' }
     const atuanStory = {
@@ -50,32 +50,36 @@ describe('FlashStoryUnit choice persistence', () => {
       options: [
         { id: 'atuan-a', label: '旧系统选项一' },
         { id: 'atuan-b', label: '旧系统选项二' },
-        { id: 'atuan-c', label: '旧系统选项三' },
       ],
     }
 
     render(<FlashStoryUnit encounterId='enc-atuan' npc={atuanNpc as any} story={atuanStory as any} question={atuanQuestion as any} motion={story.motion as any} storyPosition={5} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
 
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('你好，我叫阿团')
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('第一次见面')
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('原本有六张，现在只剩五张')
-    expect(screen.queryByText('哪些能留下，哪些要遮住？')).not.toBeInTheDocument()
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('多了一张')
     expect(screen.getByTestId('flash-story-choice-panel')).not.toHaveTextContent('五张没有送出去的观察卡')
-    fireEvent.click(screen.getByRole('button', { name: '你最后一次在哪里见到它？' }))
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('就在那盏绿灯下面')
-    expect(screen.queryByText('你最后一次在哪里见到它？')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '先确认卡上的人不会被打扰。' }))
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('卡丢了可以再写')
-    expect(screen.queryByText('先确认卡上的人不会被打扰。')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '先按纸张和笔迹，排出这些卡出现的顺序。' }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('先看痕迹')
+    expect(screen.getByText(/第七张纸更新/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '有人捡到以后，把它悄悄放回来了。' }))
     expect(submit).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: '卡上写的是你的朋友吗？' }))
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('他叫默默')
-    fireEvent.click(screen.getByRole('button', { name: '明白了。我们先把能做的做好。' }))
+    fireEvent.click(screen.getByRole('button', { name: '看看卡片背面留下了什么' }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('丢掉的旧稿')
+    fireEvent.click(screen.getByRole('button', { name: '把卡还给你，不替你翻开。' }))
+    expect(screen.getByTestId('npc-speech')).toHaveTextContent('没有人偷走任何东西')
+    fireEvent.click(screen.getByRole('button', { name: '收好这个结局' }))
 
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({
       questionId: 's1-p1-atuan-response-v2',
-      optionId: 'atuan-b',
-      label: '你最后一次在哪里见到它？',
+      optionId: 'atuan-a',
+      label: '先按纸张和笔迹，排出这些卡出现的顺序。',
+      storyPath: expect.objectContaining({
+        version: 'atuan-first-act-v1',
+        anomalyId: 'extra_card',
+        investigationId: 'trace_order',
+        hypothesisId: 'returned',
+        decisionId: 'return_unread',
+        endingId: 'no_one_stole',
+      }),
     }))
   })
 
@@ -168,6 +172,25 @@ describe('FlashStoryUnit choice persistence', () => {
       optionId: `${code}-b`,
       label: openingChoice,
     }))
+  })
+
+  it('restores Atuan first-act progress after the page is recreated', () => {
+    const submit = vi.fn().mockResolvedValue(undefined)
+    const atuanNpc = { ...npc, id: 'npc-atuan', slug: 'atuan', name: '阿团', species: '水豚' }
+    const atuanStory = { ...story, id: 'episode-atuan-1', code: 's1-p1-atuan', objectCode: 'observation-cards' }
+    const atuanQuestion = { ...question, id: 's1-p1-atuan-response-v2', options: [
+      { id: 'atuan-a', label: '旧系统选项一' },
+      { id: 'atuan-b', label: '旧系统选项二' },
+    ] }
+    const first = render(<FlashStoryUnit encounterId='enc-atuan' npc={atuanNpc as any} story={atuanStory as any} question={atuanQuestion as any} motion={story.motion as any} storyPosition={5} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: '先按纸张和笔迹，排出这些卡出现的顺序。' }))
+    fireEvent.click(screen.getByRole('button', { name: '有人捡到以后，把它悄悄放回来了。' }))
+    first.unmount()
+
+    render(<FlashStoryUnit encounterId='enc-atuan' npc={atuanNpc as any} story={atuanStory as any} question={atuanQuestion as any} motion={story.motion as any} storyPosition={5} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: '看看卡片背面留下了什么' })).toBeInTheDocument()
+    expect(screen.getByText(/第七张纸更新/)).toBeInTheDocument()
   })
 
   it('submits a non-first reviewed option and restores that exact payload after process death', async () => {

@@ -2,6 +2,7 @@ import Taro from '@tarojs/taro'
 import { useEffect, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { getFlashStoryUnitDefinition } from '@shared/alang/flashStorySeason'
+import type { AtuanFirstActSubmission } from '@shared/alang/atuanFirstAct'
 import { FlashStoryUnit } from '../../../components/alang/story-unit/FlashStoryUnit'
 import { FlashButton, FlashFeatureClosed, FlashNpcDialogueScene, FlashPageState, FlashTaskCategoryBadge } from '../../../components/alang/FlashUi'
 import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
@@ -151,12 +152,13 @@ export default function FlashDialoguePage() {
     }
   }
 
-  const submitStoryChoice = async (choice: { questionId: string; optionId: string; label: string }) => {
+  const submitStoryChoice = async (choice: { questionId: string; optionId: string; label: string; storyPath?: AtuanFirstActSubmission }) => {
     if (!enabled || storySubmitInFlightRef.current) return
     const payload = {
       encounterId,
       questionId: choice.questionId,
       optionId: choice.optionId,
+      ...(choice.storyPath ? { storyPath: choice.storyPath } : {}),
       ...(replay ? { replay: true } : {}),
     }
     storySubmitInFlightRef.current = true

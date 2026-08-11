@@ -51,6 +51,7 @@
     "./alang/flashCatalog": "./src/alang/flashCatalog.ts",
     "./alang/flashStorySeason": "./src/alang/flashStorySeason.ts",
     "./alang/flashStoryUnitRuntime": "./src/alang/flashStoryUnitRuntime.ts",
+    "./alang/atuanFirstAct": "./src/alang/atuanFirstAct.ts",
     "./miniscriptStoryFramework": "./src/miniscriptStoryFramework.ts",
     "./miniscriptCatalog": "./src/miniscriptCatalog.ts",
     "./miniscriptGameModes": "./src/miniscriptGameModes.ts",

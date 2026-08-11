@@ -4,6 +4,7 @@ import {
   FLASH_CITY,
   FLASH_ENCOUNTER_TTL_HOURS,
   type FlashAssignmentResponse,
+  type FlashAnswerRequest,
   type FlashCanonicalScreen,
   type FlashEncounterResponse,
   type FlashHomeResponse,
@@ -17,6 +18,11 @@ import { alangHaversineDistanceMeters } from "@shared/alang/testPointValidation"
 import type { FlashTaskSnapshot } from "@shared/schema";
 import { getFlashInvitationDefinition } from "@shared/alang/flashInvitationCatalog";
 import { FLASH_STORY_ENDING_COPY, type FlashStoryEndingCode } from "@joyjoin/shared/alang/parallelUniverse";
+import {
+  atuanFirstActStoryAnswers,
+  getAtuanFirstActInvestigation,
+  validateAtuanFirstActSubmission,
+} from "@joyjoin/shared/alang/atuanFirstAct";
 
 import {
   abandonFlashAssignment,
@@ -581,6 +587,7 @@ export async function getFlashEncounter(input: {
   preferCurrentCompletedEpisode?: boolean;
   allowStoryReplay?: boolean;
   replayOptionId?: string;
+  replayResponseSnapshot?: string;
 }): Promise<FlashEncounterResponse> {
   const now = input.now ?? new Date();
   await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
@@ -593,8 +600,9 @@ export async function getFlashEncounter(input: {
       ? storyState.episode.content.question.options.find((candidate: { id: string }) => candidate.id === intent.optionId)
       : null;
     if (intent && option && intent.responseSnapshot && intent.renderKind) {
-      const reviewedResponse = storyState.episode.content.responseByOption[intent.optionId]
-        ?? storyState.episode.content.closing;
+      const reviewedResponse = intent.renderKind === "template" && intent.responseSnapshot
+        ? intent.responseSnapshot
+        : storyState.episode.content.responseByOption[intent.optionId] ?? storyState.episode.content.closing;
       await completeFlashStoryEpisode({
         encounterId: intent.encounterId,
         userId: input.userId,
@@ -648,7 +656,11 @@ export async function getFlashEncounter(input: {
         action: content.action,
         discovery: content.discovery,
         response: selectedOptionId
-          ? content.responseByOption[selectedOptionId] ?? content.closing
+          ? input.allowStoryReplay
+            ? input.replayResponseSnapshot ?? content.responseByOption[selectedOptionId] ?? content.closing
+            : storyState.completion?.renderKind === "template" && storyState.completion.responseSnapshot
+              ? storyState.completion.responseSnapshot
+              : content.responseByOption[selectedOptionId] ?? content.closing
           : null,
         echo: input.allowStoryReplay ? null : storyState.completion?.echoSnapshot ?? null,
         storyMode: storyState.universeRun?.mode ?? "standard",
@@ -795,6 +807,7 @@ export async function answerFlashEncounter(input: {
   userId: string;
   questionId: string;
   optionId: string;
+  storyPath?: FlashAnswerRequest["storyPath"];
   now?: Date;
   allowStoryReplay?: boolean;
 }): Promise<FlashEncounterResponse> {
@@ -813,12 +826,26 @@ export async function answerFlashEncounter(input: {
       if (question.id !== input.questionId || !option) {
         throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这个选择已经失效，请刷新后再选一次");
       }
+      let replayResponseSnapshot = storyState.episode.content.responseByOption[option.id]
+        ?? storyState.episode.content.closing;
+      if (input.storyPath) {
+        if (storyState.episode.code !== "s1-p1-atuan") {
+          throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这条故事轨迹不属于当前相遇");
+        }
+        const validatedPath = validateAtuanFirstActSubmission(input.encounterId, input.storyPath);
+        const optionIndex = question.options.findIndex((candidate: { id: string }) => candidate.id === option.id);
+        if (!validatedPath || validatedPath.submission.investigationId !== getAtuanFirstActInvestigation(optionIndex).id) {
+          throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这条故事轨迹已经失效，请重新进入相遇");
+        }
+        replayResponseSnapshot = validatedPath.outcome.responseCopy;
+      }
       return getFlashEncounter({
         encounterId: input.encounterId,
         userId: input.userId,
         now,
         allowStoryReplay: true,
         replayOptionId: option.id,
+        replayResponseSnapshot,
       });
     }
     if (storyState.completion) {
@@ -834,12 +861,28 @@ export async function answerFlashEncounter(input: {
     if (question.id !== input.questionId || !option) {
       throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这个选择已经失效，请刷新后再选一次");
     }
+    let storyAnswers: Array<{ questionId: string; optionId: string; tags: string[] }> | undefined;
+    let reviewedResponse = storyState.episode.content.responseByOption[option.id]
+      ?? storyState.episode.content.closing;
+    if (input.storyPath) {
+      if (storyState.episode.code !== "s1-p1-atuan") {
+        throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这条故事轨迹不属于当前相遇");
+      }
+      const validatedPath = validateAtuanFirstActSubmission(input.encounterId, input.storyPath);
+      const optionIndex = question.options.findIndex((candidate: { id: string }) => candidate.id === option.id);
+      if (!validatedPath || validatedPath.submission.investigationId !== getAtuanFirstActInvestigation(optionIndex).id) {
+        throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这条故事轨迹已经失效，请重新进入相遇");
+      }
+      storyAnswers = atuanFirstActStoryAnswers(validatedPath.submission);
+      reviewedResponse = validatedPath.outcome.responseCopy;
+    }
     const intentResult = await prepareFlashStoryChoiceIntent({
       encounterId: input.encounterId,
       userId: input.userId,
       episodeId: storyState.episode.id,
       questionId: question.id,
       optionId: option.id,
+      storyAnswers,
       now,
     });
     if (intentResult.state === "conflict") {
@@ -850,8 +893,7 @@ export async function answerFlashEncounter(input: {
     }
     // The reviewed release snapshot is the sole runtime response authority,
     // including for legacy runs previously marked as personalized.
-    const responseSnapshot = storyState.episode.content.responseByOption[option.id]
-      ?? storyState.episode.content.closing;
+    const responseSnapshot = reviewedResponse;
     const renderKind = "template" as const;
     const promptVersion = null;
     if (intentResult.state === "claimed") {

@@ -4,6 +4,12 @@ import {
   type FlashStoryAnalyticsEvent,
   type FlashStoryUnitId,
 } from './flashStorySeason'
+import {
+  atuanFirstActSubmissionSchema,
+  restoreAtuanFirstActProgress,
+  type AtuanFirstActProgress,
+  type AtuanFirstActSubmission,
+} from './atuanFirstAct'
 
 export const STORY_UNIT_VERSION = 2 as const
 
@@ -23,6 +29,7 @@ export interface StoryUnitChoice {
   questionId: string
   optionId: string
   label: string
+  storyPath?: AtuanFirstActSubmission
 }
 
 export interface StoryUnitQuestionSnapshot {
@@ -37,15 +44,17 @@ export interface StoryUnitState {
   choice: StoryUnitChoice | null
   companionEvent: NPCResponseEvent
   divergenceCopy: string | null
+  atuanFirstAct: AtuanFirstActProgress | null
   analyticsSent: FlashStoryUnitAnalyticsEvent[]
 }
 
 export type StoryUnitAction =
   | { type: 'ENTER' }
-  | { type: 'START_INTERACTION'; choice: StoryUnitChoice }
+  | { type: 'START_INTERACTION'; choice: StoryUnitChoice; atuanFirstAct?: AtuanFirstActProgress }
   | { type: 'FIRST_MISTAKE' }
   | { type: 'OBJECT_DIVERGED'; copy: string }
-  | { type: 'OBJECT_ALIGNED' }
+  | { type: 'OBJECT_ALIGNED'; choice?: StoryUnitChoice }
+  | { type: 'ATUAN_FIRST_ACT_UPDATED'; progress: AtuanFirstActProgress }
   | { type: 'RESPONSE_RECEIVED' }
   | { type: 'COMPLETE' }
   | { type: 'ANALYTIC_RECORDED'; event: FlashStoryUnitAnalyticsEvent }
@@ -71,6 +80,7 @@ export function createStoryUnitState(unitId: FlashStoryUnitId): StoryUnitState {
     choice: null,
     companionEvent: 'INTRO',
     divergenceCopy: null,
+    atuanFirstAct: null,
     analyticsSent: [],
   }
 }
@@ -78,7 +88,9 @@ export function createStoryUnitState(unitId: FlashStoryUnitId): StoryUnitState {
 function isChoice(value: unknown): value is StoryUnitChoice {
   if (!value || typeof value !== 'object') return false
   const choice = value as Partial<StoryUnitChoice>
-  return typeof choice.questionId === 'string'
+  const pathIsValid = choice.storyPath === undefined || atuanFirstActSubmissionSchema.safeParse(choice.storyPath).success
+  return pathIsValid
+    && typeof choice.questionId === 'string'
     && choice.questionId.length > 0
     && typeof choice.optionId === 'string'
     && choice.optionId.length > 0
@@ -86,7 +98,7 @@ function isChoice(value: unknown): value is StoryUnitChoice {
     && choice.label.length > 0
 }
 
-export function restoreStoryUnitState(unitId: FlashStoryUnitId, value: unknown): StoryUnitState {
+export function restoreStoryUnitState(unitId: FlashStoryUnitId, value: unknown, encounterId?: string): StoryUnitState {
   const fallback = createStoryUnitState(unitId)
   if (!value || typeof value !== 'object') return fallback
   const candidate = value as Partial<StoryUnitState>
@@ -106,14 +118,29 @@ export function restoreStoryUnitState(unitId: FlashStoryUnitId, value: unknown):
   const analyticsSent = Array.isArray(candidate.analyticsSent)
     ? candidate.analyticsSent.filter((event): event is FlashStoryUnitAnalyticsEvent => ANALYTICS_EVENTS.includes(event))
     : []
+  const choice = isChoice(candidate.choice) ? candidate.choice : null
+  const atuanFirstAct = unitId === 's1-p1-atuan' && encounterId
+    ? restoreAtuanFirstActProgress(encounterId, candidate.atuanFirstAct)
+    : null
+
+  // V2 snapshots created before the first-act loop have no path progress.
+  // Reset those active snapshots instead of dropping the user into a half-old,
+  // half-new interaction after an app update.
+  if (
+    unitId === 's1-p1-atuan'
+    && candidate.stage !== 'INIT'
+    && candidate.stage !== 'NPC_INTRO'
+    && !atuanFirstAct
+  ) return fallback
 
   return {
     unitId,
     version: STORY_UNIT_VERSION,
     stage: candidate.stage,
-    choice: isChoice(candidate.choice) ? candidate.choice : null,
+    choice,
     companionEvent: candidate.companionEvent,
     divergenceCopy: typeof candidate.divergenceCopy === 'string' ? candidate.divergenceCopy : null,
+    atuanFirstAct,
     analyticsSent: [...new Set(analyticsSent)],
   }
 }
@@ -144,7 +171,13 @@ export function storyUnitReducer(state: StoryUnitState, action: StoryUnitAction)
       return state.stage === 'INIT' ? { ...state, stage: 'NPC_INTRO' } : state
     case 'START_INTERACTION':
       return state.stage === 'NPC_INTRO'
-        ? { ...state, stage: 'OBJECT_INTERACTION', choice: action.choice, companionEvent: 'INTRO' }
+        ? {
+            ...state,
+            stage: 'OBJECT_INTERACTION',
+            choice: action.choice,
+            atuanFirstAct: action.atuanFirstAct ?? null,
+            companionEvent: 'INTRO',
+          }
         : state
     case 'FIRST_MISTAKE':
       return state.stage === 'OBJECT_INTERACTION' && state.companionEvent !== 'FIRST_MISTAKE'
@@ -156,7 +189,11 @@ export function storyUnitReducer(state: StoryUnitState, action: StoryUnitAction)
         : state
     case 'OBJECT_ALIGNED':
       return state.stage === 'OBJECT_INTERACTION'
-        ? { ...state, stage: 'OBJECT_SUCCESS', companionEvent: 'SUCCESS' }
+        ? { ...state, stage: 'OBJECT_SUCCESS', choice: action.choice ?? state.choice, companionEvent: 'SUCCESS' }
+        : state
+    case 'ATUAN_FIRST_ACT_UPDATED':
+      return state.unitId === 's1-p1-atuan' && state.stage === 'OBJECT_INTERACTION'
+        ? { ...state, atuanFirstAct: action.progress }
         : state
     case 'RESPONSE_RECEIVED':
       return state.stage === 'OBJECT_SUCCESS'

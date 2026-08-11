@@ -1,4 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  createAtuanFirstActProgress,
+  resolveAtuanFirstActOutcome,
+  toAtuanFirstActSubmission,
+} from "@joyjoin/shared/alang/atuanFirstAct";
 
 const mocks = vi.hoisted(() => ({
   completeStoryEpisode: vi.fn(),
@@ -263,6 +268,98 @@ describe("formal Flash story runtime policy", () => {
     expectNoPersonalizationRuntimeCalls();
   });
 
+  it("validates and persists the complete reviewed Atuan first-act path", async () => {
+    const initial = storyState();
+    initial.episode.code = "s1-p1-atuan";
+    initial.episode.content.question = {
+      id: "first-look",
+      prompt: "你先怎么调查？",
+      options: [
+        { id: "notice-lines", label: "先看痕迹" },
+        { id: "protect-boundary", label: "先守边界" },
+      ],
+    };
+    const progress = createAtuanFirstActProgress(encounter.id, "trace_order");
+    const outcome = resolveAtuanFirstActOutcome(encounter.id, {
+      ...progress,
+      hypothesisId: "returned",
+      reversalRevealed: true,
+      decisionId: "return_unread",
+    });
+    const storyPath = toAtuanFirstActSubmission(outcome.progress);
+    const completed = {
+      ...initial,
+      completion: {
+        selectedOptionId: "notice-lines",
+        responseSnapshot: outcome.responseCopy,
+        renderKind: "template" as const,
+        promptVersion: null,
+        echoSnapshot: null,
+      },
+      completedInPhase: 1,
+      completedTotal: 1,
+    };
+    mocks.getStoryEncounterState
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(completed);
+
+    const result = await answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "first-look",
+      optionId: "notice-lines",
+      storyPath,
+      now,
+    });
+
+    expect(mocks.prepareChoiceIntent).toHaveBeenCalledWith(expect.objectContaining({
+      storyAnswers: expect.arrayContaining([
+        expect.objectContaining({ questionId: "atuan-first-act:ending", optionId: storyPath.endingId }),
+      ]),
+    }));
+    expect(mocks.finalizeChoiceIntent).toHaveBeenCalledWith(expect.objectContaining({
+      responseSnapshot: outcome.responseCopy,
+    }));
+    expect(mocks.completeStoryEpisode).toHaveBeenCalledWith(expect.objectContaining({
+      responseSnapshot: outcome.responseCopy,
+    }));
+    expect(result.storyEpisode?.response).toBe(outcome.responseCopy);
+  });
+
+  it("rejects a forged Atuan ending before preparing a choice intent", async () => {
+    const initial = storyState();
+    initial.episode.code = "s1-p1-atuan";
+    initial.episode.content.question = {
+      id: "first-look",
+      prompt: "你先怎么调查？",
+      options: [
+        { id: "notice-lines", label: "先看痕迹" },
+        { id: "protect-boundary", label: "先守边界" },
+      ],
+    };
+    mocks.getStoryEncounterState.mockResolvedValue(initial);
+    const progress = createAtuanFirstActProgress(encounter.id, "trace_order");
+    const storyPath = toAtuanFirstActSubmission({
+      ...progress,
+      hypothesisId: "returned",
+      reversalRevealed: true,
+      decisionId: "return_unread",
+    });
+
+    await expect(answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "first-look",
+      optionId: "notice-lines",
+      storyPath: { ...storyPath, endingId: "wrong_ink" },
+      now,
+    })).rejects.toMatchObject({ code: "FLASH_INVALID_DIALOGUE_OPTION", status: 400 });
+
+    expect(mocks.prepareChoiceIntent).not.toHaveBeenCalled();
+    expect(mocks.finalizeChoiceIntent).not.toHaveBeenCalled();
+    expect(mocks.completeStoryEpisode).not.toHaveBeenCalled();
+  });
+
   it("returns the completed snapshot without settling again when a committed response was lost", async () => {
     mocks.getStoryEncounterState.mockResolvedValue(storyState(reviewedOptionResponse));
 
@@ -384,5 +481,42 @@ describe("formal Flash story runtime policy", () => {
     }));
     expect(result.storyEpisode?.response).toBe(reviewedClosing);
     expectNoPersonalizationRuntimeCalls();
+  });
+
+  it("replays an Atuan first-act path with its newly chosen ending and no settlement writes", async () => {
+    const completed = storyState(reviewedOptionResponse);
+    completed.episode.code = "s1-p1-atuan";
+    completed.episode.content.question = {
+      id: "first-look",
+      prompt: "你先怎么调查？",
+      options: [
+        { id: "notice-lines", label: "先看痕迹" },
+        { id: "protect-boundary", label: "先守边界" },
+      ],
+    };
+    mocks.getStoryEncounterState.mockResolvedValue(completed);
+    const progress = createAtuanFirstActProgress(encounter.id, "protect_boundary");
+    const outcome = resolveAtuanFirstActOutcome(encounter.id, {
+      ...progress,
+      hypothesisId: "miscounted",
+      reversalRevealed: true,
+      decisionId: "ask_first",
+    });
+
+    const result = await answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "first-look",
+      optionId: "protect-boundary",
+      storyPath: toAtuanFirstActSubmission(outcome.progress),
+      now,
+      allowStoryReplay: true,
+    });
+
+    expect(result.isReplay).toBe(true);
+    expect(result.storyEpisode?.response).toBe(outcome.responseCopy);
+    expect(mocks.prepareChoiceIntent).not.toHaveBeenCalled();
+    expect(mocks.finalizeChoiceIntent).not.toHaveBeenCalled();
+    expect(mocks.completeStoryEpisode).not.toHaveBeenCalled();
   });
 });

@@ -2,13 +2,20 @@ import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { getFlashStoryUnitDefinition, type FlashStoryUnitId } from '@shared/alang/flashStorySeason'
+import {
+  createAtuanFirstActProgress,
+  getAtuanFirstActInvestigation,
+  type AtuanFirstActSubmission,
+} from '@shared/alang/atuanFirstAct'
 import type { FlashDialogueQuestion, FlashEncounterView, FlashNpcReference } from '../../../lib/alang/flashTypes'
 import { flashStoryAnalytics, type FlashStoryAnalyticsEventType } from '../../../lib/analytics/flashStoryAnalytics'
 import { FlashButton, FlashNpcDialogueScene } from '../FlashUi'
 import {
+  AtuanFirstEncounterDialogue,
   AtuanStoryDialogue,
   EMPTY_ATUAN_DIALOGUE_STATE,
   getAtuanOpeningOption,
+  resolveAtuanFirstActSpeech,
   resolveAtuanSpeech,
   type AtuanDialogueState,
 } from './AtuanFirstEncounterDialogue'
@@ -40,13 +47,14 @@ export interface FlashStoryUnitProps {
 
 function loadInitialState(
   unitId: FlashStoryUnitId,
+  encounterId: string,
   storageKey: string,
   serverSettled: boolean,
   question?: FlashDialogueQuestion | null,
 ): StoryUnitState {
   let restored = createStoryUnitState(unitId)
   try {
-    restored = restoreStoryUnitState(unitId, Taro.getStorageSync(storageKey))
+    restored = restoreStoryUnitState(unitId, Taro.getStorageSync(storageKey), encounterId)
     const reconciled = reconcileStoryUnitState(unitId, restored, question)
     if (restored.stage !== 'INIT' && reconciled.stage === 'INIT') Taro.removeStorageSync(storageKey)
     restored = reconciled
@@ -77,7 +85,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const [runtime, dispatch] = useReducer(
     storyUnitReducer,
     undefined,
-    () => loadInitialState(definition.unitId, storageKey, serverSettled, question),
+    () => loadInitialState(definition.unitId, encounterId, storageKey, serverSettled, question),
   )
   const [atuanDialogue, setAtuanDialogue] = useState<AtuanDialogueState>(EMPTY_ATUAN_DIALOGUE_STATE)
   const runtimeRef = useRef(runtime)
@@ -131,11 +139,24 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
 
   const startInteraction = (choice: StoryUnitChoice) => {
     if (runtime.stage !== 'NPC_INTRO') return
-    transition({ type: 'START_INTERACTION', choice })
-    if (definition.npcSlug !== 'atuan') {
+    const optionIndex = question?.options.findIndex((item) => item.id === choice.optionId) ?? 0
+    const atuanFirstAct = definition.unitId === 's1-p1-atuan'
+      ? createAtuanFirstActProgress(encounterId, getAtuanFirstActInvestigation(optionIndex).id)
+      : undefined
+    transition({ type: 'START_INTERACTION', choice, atuanFirstAct })
+    if (definition.unitId === 's1-p1-atuan') {
+      emit('object_interaction_start')
+    } else if (definition.npcSlug !== 'atuan') {
       transition({ type: 'OBJECT_ALIGNED' })
       void onSubmit(choice)
     }
+  }
+  const completeAtuanFirstAct = (storyPath: AtuanFirstActSubmission) => {
+    if (!runtime.choice || runtime.stage !== 'OBJECT_INTERACTION') return
+    const settledChoice = { ...runtime.choice, storyPath }
+    transition({ type: 'OBJECT_ALIGNED', choice: settledChoice })
+    emit('object_complete')
+    void onSubmit(settledChoice)
   }
   const completeAtuanDialogue = () => {
     if (!runtime.choice || runtime.stage !== 'OBJECT_INTERACTION') return
@@ -155,9 +176,11 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     intro: story.opening,
     success: showResult ? story.response : definition.success,
   })
-  const speech = isAtuanStory && !showResult
-    ? resolveAtuanSpeech(definition.unitId, runtime.choice?.label ?? null, atuanDialogue)
-    : defaultSpeech
+  const speech = definition.unitId === 's1-p1-atuan' && !showResult
+    ? resolveAtuanFirstActSpeech(encounterId, runtime.choice, runtime.atuanFirstAct)
+    : isAtuanStory && !showResult
+      ? resolveAtuanSpeech(definition.unitId, runtime.choice?.label ?? null, atuanDialogue)
+      : defaultSpeech
 
   return (
     <View className='flash-page flash-dialogue flash-dialogue--story'>
@@ -186,8 +209,10 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                   question?.options.length ? (
                     <View className='flash-dialogue__story-choices' aria-label={question.text}>
                       {question.options.map((option, index) => {
-                        const label = isAtuanStory
-                          ? getAtuanOpeningOption(definition.unitId, index).label
+                        const label = definition.unitId === 's1-p1-atuan'
+                          ? getAtuanFirstActInvestigation(index).label
+                          : isAtuanStory
+                            ? getAtuanOpeningOption(definition.unitId, index).label
                           : option.label
                         return (
                           <View
@@ -207,7 +232,16 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                   ) : <Text className='flash-dialogue__story-panel-unavailable'>这句话暂时没接上，返回后再试一次。</Text>
                 ) : (
                   <>
-                    {showCharacterDialogue && runtime.choice ? (
+                    {definition.unitId === 's1-p1-atuan' && runtime.choice && runtime.atuanFirstAct ? (
+                      <AtuanFirstEncounterDialogue
+                        encounterId={encounterId}
+                        choice={runtime.choice}
+                        progress={runtime.atuanFirstAct}
+                        disabled={submitState === 'submitting'}
+                        onStateChange={(progress) => transition({ type: 'ATUAN_FIRST_ACT_UPDATED', progress })}
+                        onComplete={completeAtuanFirstAct}
+                      />
+                    ) : showCharacterDialogue && runtime.choice ? (
                       <AtuanStoryDialogue
                         unitId={definition.unitId}
                         state={atuanDialogue}

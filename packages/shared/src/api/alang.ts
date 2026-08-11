@@ -11,6 +11,7 @@ import type {
 import { ALANG_TEST_COORDINATE_SYSTEM } from "../alang/testPointValidation.js";
 import type {
   FlashAcceptRequest,
+  FlashAnswerRequest,
   FlashAssignmentResponse,
   FlashCoordinateRequest,
   FlashEncounterResponse,
@@ -233,7 +234,7 @@ export function getFlashEncounter(
 export function answerFlashEncounter(
   api: ApiTransport,
   encounterId: string,
-  data: { questionId: string; optionId: string },
+  data: FlashAnswerRequest,
 ): Promise<FlashEncounterResponse> {
   return api<FlashEncounterResponse>({
     path: `/api/alang/flash/encounters/${encounterId}/answer`,

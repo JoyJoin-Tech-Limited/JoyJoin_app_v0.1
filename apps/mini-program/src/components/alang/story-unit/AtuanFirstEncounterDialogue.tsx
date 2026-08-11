@@ -1,5 +1,17 @@
 import { Text, View } from '@tarojs/components'
 import type { FlashStoryUnitId } from '@shared/alang/flashStorySeason'
+import {
+  ATUAN_FIRST_ACT_DECISIONS,
+  ATUAN_FIRST_ACT_HYPOTHESES,
+  getAtuanFirstActAnomaly,
+  resolveAtuanFirstActOutcome,
+  selectAtuanFirstActAnomaly,
+  toAtuanFirstActSubmission,
+  type AtuanFirstActProgress,
+  type AtuanFirstActSubmission,
+} from '@shared/alang/atuanFirstAct'
+import { FlashButton } from '../FlashUi'
+import type { StoryUnitChoice } from './StoryUnitRuntime'
 
 interface AtuanDialogueOption {
   id: string
@@ -101,6 +113,32 @@ interface AtuanStoryDialogueProps {
   onComplete: () => void
 }
 
+export function resolveAtuanFirstActSpeech(
+  encounterId: string,
+  choice: StoryUnitChoice | null,
+  progress: AtuanFirstActProgress | null,
+): string {
+  const anomaly = progress
+    ? getAtuanFirstActAnomaly(progress.anomalyId)
+    : selectAtuanFirstActAnomaly(encounterId)
+  if (!choice || !progress) return anomaly.opening
+  if (progress.decisionId) return resolveAtuanFirstActOutcome(encounterId, progress).responseCopy
+  if (progress.reversalRevealed) return anomaly.reversal
+  if (progress.hypothesisId) return '阿团没有急着反驳：“先把卡翻过来。我们只看这次变化留下的痕迹。”'
+  return progress.investigationId === 'trace_order'
+    ? '阿团把卡边对齐：“好。先看痕迹，不急着猜是谁。”'
+    : '阿团按住卡背：“你先问边界。那我们只看正面留下的东西。”'
+}
+
+interface AtuanFirstEncounterDialogueProps {
+  encounterId: string
+  choice: StoryUnitChoice
+  progress: AtuanFirstActProgress
+  disabled?: boolean
+  onStateChange: (state: AtuanFirstActProgress) => void
+  onComplete: (submission: AtuanFirstActSubmission) => void
+}
+
 export function AtuanStoryDialogue({
   unitId,
   state,
@@ -157,6 +195,104 @@ export function AtuanStoryDialogue({
           </View>
         </View>
       )}
+    </View>
+  )
+}
+
+export function AtuanFirstEncounterDialogue({
+  encounterId,
+  choice,
+  progress,
+  disabled = false,
+  onStateChange,
+  onComplete,
+}: AtuanFirstEncounterDialogueProps) {
+  const anomaly = getAtuanFirstActAnomaly(progress.anomalyId)
+  const clue = anomaly.clues[progress.investigationId]
+  const hypothesisLabel = ATUAN_FIRST_ACT_HYPOTHESES.find((item) => item.id === progress.hypothesisId)?.label ?? ''
+  const decisionLabel = ATUAN_FIRST_ACT_DECISIONS.find((item) => item.id === progress.decisionId)?.label ?? ''
+  const ending = progress.decisionId ? resolveAtuanFirstActOutcome(encounterId, progress).ending : null
+
+  return (
+    <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue'>
+      {!progress.hypothesisId ? (
+        <>
+          <Text className='flash-dialogue__story-panel-prompt'>{clue}</Text>
+          <Text className='flash-dialogue__story-panel-prompt'>你觉得更像哪种情况？</Text>
+          <View className='flash-dialogue__story-choices'>
+            {ATUAN_FIRST_ACT_HYPOTHESES.map((option) => (
+              <View
+                key={option.id}
+                className='flash-dialogue__choice flash-dialogue__story-choice'
+                hoverClass={disabled ? '' : 'flash-dialogue__choice--pressed'}
+                onClick={() => { if (!disabled) onStateChange({ ...progress, hypothesisId: option.id }) }}
+                role='button'
+                aria-label={option.label}
+                aria-disabled={disabled}
+              >
+                <Text className='flash-dialogue__choice-mark' aria-hidden='true'>·</Text>
+                <Text className='flash-dialogue__choice-text'>{option.label}</Text>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : (
+        <>
+          <Text className='flash-dialogue__story-panel-prompt'>{clue}</Text>
+          <View className='flash-dialogue__user-turn' aria-label={`你说：${hypothesisLabel}`}>
+            <Text className='flash-dialogue__user-turn-name'>你</Text>
+            <Text className='flash-dialogue__user-turn-copy'>{hypothesisLabel}</Text>
+          </View>
+          {!progress.reversalRevealed ? (
+            <View className='flash-dialogue__story-choices'>
+              <View
+                className='flash-dialogue__choice flash-dialogue__story-choice'
+                hoverClass={disabled ? '' : 'flash-dialogue__choice--pressed'}
+                onClick={() => { if (!disabled) onStateChange({ ...progress, reversalRevealed: true }) }}
+                role='button'
+                aria-label='看看卡片背面留下了什么'
+                aria-disabled={disabled}
+              >
+                <Text className='flash-dialogue__choice-mark' aria-hidden='true'>·</Text>
+                <Text className='flash-dialogue__choice-text'>看看卡片背面留下了什么</Text>
+              </View>
+            </View>
+          ) : !progress.decisionId ? (
+            <>
+              <Text className='flash-dialogue__story-panel-prompt'>{anomaly.reversal}</Text>
+              <Text className='flash-dialogue__story-panel-prompt'>现在，你准备怎么处理这张卡？</Text>
+              <View className='flash-dialogue__story-choices'>
+                {ATUAN_FIRST_ACT_DECISIONS.map((option) => (
+                  <View
+                    key={option.id}
+                    className='flash-dialogue__choice flash-dialogue__story-choice'
+                    hoverClass={disabled ? '' : 'flash-dialogue__choice--pressed'}
+                    onClick={() => { if (!disabled) onStateChange({ ...progress, decisionId: option.id }) }}
+                    role='button'
+                    aria-label={option.label}
+                    aria-disabled={disabled}
+                  >
+                    <Text className='flash-dialogue__choice-mark' aria-hidden='true'>·</Text>
+                    <Text className='flash-dialogue__choice-text'>{option.label}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : (
+            <>
+              <View className='flash-dialogue__user-turn' aria-label={`你说：${decisionLabel}`}>
+                <Text className='flash-dialogue__user-turn-name'>你</Text>
+                <Text className='flash-dialogue__user-turn-copy'>{decisionLabel}</Text>
+              </View>
+              {ending ? <Text className='flash-dialogue__story-panel-prompt'>本次抵达：{ending.title}</Text> : null}
+              <FlashButton disabled={disabled} onClick={() => onComplete(toAtuanFirstActSubmission(progress))}>
+                {disabled ? '正在收下这次见面…' : '收好这个结局'}
+              </FlashButton>
+            </>
+          )}
+        </>
+      )}
+      <View className='sr-only' aria-label={`这次调查从“${choice.label}”开始`} />
     </View>
   )
 }

@@ -79,6 +79,17 @@ describe('StoryUnitRuntime', () => {
     expect(restoreStoryUnitState(STORY_UNIT_ID, null)).toEqual(createStoryUnitState(STORY_UNIT_ID))
   })
 
+  it('resets an active legacy Atuan snapshot that has no first-act progress', () => {
+    expect(restoreStoryUnitState('s1-p1-atuan', {
+      unitId: 's1-p1-atuan',
+      version: 2,
+      stage: 'OBJECT_INTERACTION',
+      choice,
+      companionEvent: 'INTRO',
+      analyticsSent: ['story_start'],
+    }, 'enc-atuan')).toEqual(createStoryUnitState('s1-p1-atuan'))
+  })
+
   it('drops a recovered payload whose reviewed question or option changed', () => {
     const restored = restoreStoryUnitState(STORY_UNIT_ID, {
       unitId: STORY_UNIT_ID,
