@@ -22,7 +22,7 @@ import type {
   PoolRegistrationAddedData,
 } from '@shared/wsEvents'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
 import {
   buildWaitingSeats,
   DEFAULT_MAX_GROUP_SIZE,
@@ -44,6 +44,8 @@ import {
   type UnifiedRevealTokens,
 } from '@shared/features/matching-status'
 import { apiRequest } from '../../lib/api/api'
+import { interactionLatency } from '../../lib/analytics/interactionLatency'
+import { useOptimisticMutation } from '../../hooks/useOptimisticMutation'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { usePageVisibility } from '../../hooks/usePageVisibility'
@@ -87,6 +89,35 @@ function triggerLightHaptic() {
   if (typeof Taro.vibrateShort === 'function') {
     void Taro.vibrateShort({ type: 'light' }).catch(() => undefined)
   }
+}
+
+/** Shared lock copy — used verbatim by the client pre-lock guard and the
+ *  optimistic-rollback toast when the server rejects a mid-edit save. */
+const MATCH_COMPASS_LOCKED_TOAST = '偏好已锁定，距离活动开始不足 24 小时，可在「足迹」查看最新状态'
+
+/** Server rejects the PATCH with `{ code: "preferences_locked" }` when the
+ *  preference window closed between render and save. */
+function isCompassLockedError(error: unknown): boolean {
+  const candidate = error as { code?: unknown; data?: { code?: unknown } } | null
+  return candidate?.code === 'preferences_locked' || candidate?.data?.code === 'preferences_locked'
+}
+
+/** getErrorMessage resolves unknown codes to this generic fallback string —
+ *  used to detect "no mapping exists" without duplicating the ErrorCode union. */
+const ERROR_CODE_GENERIC_FALLBACK = '出了点问题，稍后再试'
+
+/** Copy-governed rollback toast for the compass save: non-locked server
+ *  errors carrying a known baseline error code (ApiError.data.code, the same
+ *  field preferences_locked arrives on) map through getErrorMessage; anything
+ *  unknown falls back to the shared submit-failed baseline. */
+function resolveCompassRollbackMessage(error: unknown): string {
+  const candidate = error as { code?: unknown; data?: { code?: unknown } } | null
+  const code = candidate?.code ?? candidate?.data?.code
+  if (typeof code === 'string') {
+    const mapped = getErrorMessage(code as ErrorCode)
+    if (mapped !== ERROR_CODE_GENERIC_FALLBACK) return mapped
+  }
+  return getErrorMessage('submit-failed')
 }
 
 export interface UseMatchingStatusControllerArgs {
@@ -897,30 +928,54 @@ export function useMatchingStatusController({
 
   const stageTemperature = getTemperatureCopy(matchedData?.temperatureLevel)
 
+  // M3: shared optimistic mutation (M2 hook) — instant UI flip on save,
+  // server stays source of truth (rollback + eviction + invalidate owned by
+  // the hook). Dedupe coalesces slider storms (AC-4), no extra debouncing.
+  const compassSaveMutation = useOptimisticMutation<UpdateMatchCompassPreferencesRequest, unknown>({
+    mutationFn: (patch) => {
+      if (!registration?.id) {
+        return Promise.reject(new Error('缺少报名信息'))
+      }
+      return updateMatchCompassPreferences(apiRequest, registration.id, patch)
+    },
+    queryKeys: [['mini-program', 'match-compass', registration?.poolId ?? '']],
+    // Patch fields are a subset of MatchCompassResponse; spread preserves
+    // isLocked / lockAt / temperature / counts untouched by the request.
+    optimisticUpdate: (patch, prev) => ({
+      ...(prev as MatchCompassResponse | undefined),
+      ...patch,
+    }),
+    // Server truth refresh after settle (success or failure).
+    onSettledInvalidate: [['mini-program', 'match-compass', registration?.poolId ?? '']],
+    // Lock-transition mapping: server rejects with preferences_locked when the
+    // window closed mid-edit; other server errors with a known baseline code
+    // get their mapped copy; everything else uses the shared submit-failed copy.
+    rollbackMessage: (error) =>
+      isCompassLockedError(error) ? MATCH_COMPASS_LOCKED_TOAST : resolveCompassRollbackMessage(error),
+  })
+
   const handleUpdateMatchCompass = useCallback(
-    async (patch: UpdateMatchCompassPreferencesRequest) => {
+    (patch: UpdateMatchCompassPreferencesRequest) => {
       if (!registration?.poolId || !matchCompass || matchCompass.isLocked) {
         Taro.showToast({
-          title: '偏好已锁定，距离活动开始不足 24 小时，可在「足迹」查看最新状态',
+          title: MATCH_COMPASS_LOCKED_TOAST,
           icon: 'none',
           duration: TOAST_DEFAULT_MS,
         })
         return
       }
 
-      try {
-        await updateMatchCompassPreferences(apiRequest, registration.id, patch)
-        void queryClient.invalidateQueries({
-          queryKey: ['mini-program', 'match-compass', registration.poolId],
-        })
-        triggerLightHaptic()
-      } catch (error) {
-        const message = error instanceof Error ? error.message : '保存失败'
-        logError('[MatchCompass] Update failed', { message, patch })
-        Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
-      }
+      const t0 = interactionLatency.startInteraction()
+
+      void compassSaveMutation.mutate(patch).catch(() => {
+        // Failure UX (rollback + toast) is owned by useOptimisticMutation.
+      })
+      // M0 feedback mark moves to the optimistic apply — perceived feedback
+      // is instant by design (wait-tier S). Haptic fires with the state flip.
+      interactionLatency.trackInteraction('compass_save', t0)
+      triggerLightHaptic()
     },
-    [matchCompass, queryClient, registration?.poolId]
+    [matchCompass, registration?.poolId, compassSaveMutation],
   )
 
   return {

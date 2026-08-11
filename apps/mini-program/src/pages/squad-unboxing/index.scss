@@ -2956,6 +2956,62 @@ $fan-rotations: (
     opacity: 0.35;
   }
 
+  // Tier-S wait (M1): branded 锁定中 anticipation — pulsing CSS seat-mark
+  // (pure shape, zero assets) + text flip. Opacity-pulse only; the mark is a
+  // static shape under reduce-motion.
+  &__confirm-btn-wait {
+    @include flex-center;
+    gap: $spacing-xs;
+  }
+
+  &__confirm-btn-wait-icon {
+    position: relative;
+    width: 28rpx;
+    height: 28rpx;
+    border: 3rpx solid rgba($color-surface, 0.92);
+    border-radius: $radius-md;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 10rpx;
+      height: 10rpx;
+      border-radius: $radius-pill;
+      background: $color-surface;
+      transform: translate(-50%, -50%);
+      animation: squad-unboxing-lock-pulse 1.2s ease-in-out infinite;
+    }
+  }
+
+  &__confirm-btn-wait-text {
+    color: $color-surface;
+  }
+
+  &--reduce-motion &__confirm-btn-wait-icon::after {
+    animation: none;
+    opacity: 1;
+  }
+
+  // Q1-4: the shared Button's disabled dim (joy-button[disabled], opacity
+  // .45) must not grey the branded 锁定中 chip — the wait state carries its
+  // own contrast (white-on-purple). Equal specificity → page chunk wins.
+  &__confirm-btn[disabled] {
+    opacity: 1;
+  }
+
+  @keyframes squad-unboxing-lock-pulse {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+
+    50% {
+      opacity: 1;
+    }
+  }
+
   // Return thread (2026-07-24 full-marks, user-sat angle 5): one quiet line
   // seeding the post-event loop under the CTA.
   &__return-thread {

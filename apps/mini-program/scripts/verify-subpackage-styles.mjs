@@ -120,6 +120,36 @@ const REQUIREMENTS = [
       'gathering-room__sheet{',
     ],
   },
+  {
+    // S10 gyro-parallax spike (2026-08-11): the wrapper rules are @use'd by
+    // the page SCSS and must reach the page WXSS even though the runtime flag
+    // defaults off — CSS presence is independent of the module-local gate.
+    // S2 mood field (2026-08-11): same guard for the ambient-field layers and
+    // the hairline fragment — flag (icebreakerMoodFieldEnabled) defaults off,
+    // but the rules must exist in the page WXSS for flag-on to work on device.
+    page: 'pages/icebreaker-session/index.wxss',
+    selectors: [
+      'gyro-parallax{',
+      'gyro-parallax--tracking{',
+      'icebreaker__field{',
+      'icebreaker__field-layer--cool{',
+      'icebreaker__field-layer--warm{',
+      'icebreaker__field-fragment{',
+      // S2 RM paint-order fix (2026-08-11): under reduced-motion the phase
+      // shell loses its entrance transform (its only stacking context), so
+      // the field's opaque base layer would paint over the phase UI. This
+      // scoped stacking rule is the fix — it must reach the page WXSS.
+      '.icebreaker--mood-field .icebreaker__phase-shell{position:relative',
+      // S3 glance-stack pilot + S8 handshake ritual (2026-08-11): same guard —
+      // the L1/L2/L3 card zones, the hold-to-peek, and the ritual surface are
+      // @use'd via styles/_glance-stack.scss and must reach the page WXSS.
+      'phase-hero-card__l1{',
+      'glance-peek__trigger{',
+      'handshake-ritual{',
+      'handshake-beat{',
+      'icebreaker__waiting-l1-word{',
+    ],
+  },
 ]
 
 let failed = false

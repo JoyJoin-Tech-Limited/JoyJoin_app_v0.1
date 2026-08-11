@@ -345,6 +345,19 @@
     @include button-secondary;
   }
 
+  // Tier-S wait (M1): instant 已提交 flip — one soft pop, no spinner. The
+  // opacity-pulse of the pop keeps it quiet; static under reduce-motion.
+  &__submit--submitted {
+    animation: event-feedback-submitted-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  // Q1-1 (P0-class): the [disabled] dim (opacity .5, (0,2,0)) must not eat
+  // the 已提交 flip — the submitted button reads as CONFIRMED, not inactive.
+  // Equal specificity → later source order wins.
+  &__submit--submitted[disabled] {
+    opacity: 1;
+  }
+
   // Ghost back button (2026-08-07 audit G2): quiet tertiary affordance so
   // deep-screen entries survive an in-flow back without a native pop.
   &__submit-ghost {
@@ -755,6 +768,18 @@
   }
 }
 
+// Tier-S wait (M1): one soft pop when the button flips to 已提交.
+@keyframes event-feedback-submitted-pop {
+  from {
+    opacity: 0.6;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 // C5 — Ceremony hero entrance: scale + fade-in (matches Batch C brief)
 @keyframes event-feedback-hero-enter {
   from {
@@ -817,6 +842,12 @@
 
 @media (prefers-reduced-motion: reduce) {
   .event-feedback__success-hero {
+    animation: none;
+    opacity: 1;
+  }
+
+  .event-feedback__submit--submitted,
+  .event-feedback__submit--submitted[disabled] {
     animation: none;
     opacity: 1;
   }

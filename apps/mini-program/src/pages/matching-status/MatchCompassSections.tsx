@@ -51,14 +51,6 @@ const TABLE_VIBE_OPTIONS = ['轻松聊天', '深度交流', '游戏互动', '不
 
 // ── Helpers ───────────────────────────────────────────────────────
 
-function triggerHaptic() {
-  if (typeof Taro.vibrateShort === 'function') {
-    // Console assertion for testability (AC-14)
-    console.assert(true, '[MatchCompass] vibrateShort triggered')
-    void Taro.vibrateShort({ type: 'light' }).catch(() => undefined)
-  }
-}
-
 function useDebouncedCallback<T extends (...args: never[]) => void>(
   callback: T,
   delay: number
@@ -97,7 +89,9 @@ interface StrictnessChipsProps {
 function StrictnessChips({ value, onChange, shouldReduceMotion }: StrictnessChipsProps) {
   const handleSelect = useCallback(
     (chipValue: number) => {
-      triggerHaptic()
+      // Q1-2: the optimistic-apply haptic in useMatchingStatusController is
+      // the single save feedback (fires same tick as the chip save applies);
+      // no chip-local haptic here to avoid doubling.
       onChange(chipValue)
     },
     [onChange]
@@ -405,7 +399,7 @@ function DetailModal({ mode, initialValue, onSave, onClose, shouldReduceMotion }
 
   const handleSave = () => {
     if (selected) {
-      triggerHaptic()
+      // Q1-2: controller-level optimistic-apply haptic covers the save.
       onSave(selected)
     }
     scheduleClose(onClose)

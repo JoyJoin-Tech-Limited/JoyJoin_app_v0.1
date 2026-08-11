@@ -15,9 +15,10 @@ import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { haptics } from '../../lib/utils/haptics'
 import { logError, logInfo } from '../../lib/utils/logger'
-import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/utils/uiConstants'
+import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_MEDIUM_MS, COLOR_DANGER } from '../../lib/utils/uiConstants'
 import { openPoolGroupDetail, replaceWithGatheringRoom, switchToEventsTab } from '../../lib/navigation/matchingNavigation'
 import { squadUnboxingAnalytics, type SquadUnboxingEventType } from '../../lib/analytics/squadUnboxingAnalytics'
+import { interactionLatency } from '../../lib/analytics/interactionLatency'
 import {
   buildPairKeyMemberMap,
   computeActionDockState,
@@ -275,8 +276,8 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   const pool = poolGroup?.pool
 
   const confirmAttendanceMutation = useMutation({
-    mutationFn: () => confirmPoolGroupAttendance(apiRequest, groupId),
-    onSuccess: async (response) => {
+    mutationFn: (_t0?: number) => confirmPoolGroupAttendance(apiRequest, groupId),
+    onSuccess: (response, t0) => {
       logInfo('[SquadUnboxing] Attendance confirmed', {
         groupId,
         blindBoxEventId: response.blindBoxEventId,
@@ -289,15 +290,14 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       })
 
       haptics('success')
+      // Interaction-latency baseline: seat locked, success overlay appears.
+      interactionLatency.trackInteraction('seat_lock_confirm', t0 ?? Date.now())
       setShowSuccessOverlay(true)
+      // Q1-3: the success overlay (title + subtitle) is the single confirm
+      // channel — no duplicate toast mirroring it. Haptic + overlay are the
+      // completion punctuation.
 
-      await Taro.showToast({
-        title: '座位已锁定 · 解锁新羁绊',
-        icon: 'none',
-        duration: TOAST_SHORT_MS,
-      })
-
-      // Allow the success overlay/toast to register before redirecting. The
+      // Allow the success overlay to register before redirecting. The
       // timer is tracked so a backgrounded/unmounted page never fires a stale
       // redirect.
       if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current)
@@ -742,7 +742,8 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
       groupId,
       screen: 'squad-unboxing',
     })
-    confirmAttendanceMutation.mutate()
+    const t0 = interactionLatency.startInteraction()
+    confirmAttendanceMutation.mutate(t0)
   }, [confirmAttendanceMutation, groupId, isSubmitting])
 
   const handleSharePosterTap = useCallback(() => {

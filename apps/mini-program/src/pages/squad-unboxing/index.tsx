@@ -1381,9 +1381,21 @@ export default function SquadUnboxingPage() {
               ].filter(Boolean).join(' ')}
               onClick={handleConfirmAttendance}
               disabled={isSubmitting || confirmAttendanceMutation.isPending || showSuccessOverlay}
-              loading={isSubmitting || confirmAttendanceMutation.isPending}
             >
-              {showSuccessOverlay ? '座位已锁定' : isSubmitting ? '确认中…' : allCardsUp ? '确认出席 · 锁定座位' : '确认出席'}
+              {showSuccessOverlay ? (
+                '座位已锁定'
+              ) : isSubmitting || confirmAttendanceMutation.isPending ? (
+                // Tier-S wait (M1): branded 锁定中 anticipation chip — pulsing
+                // seat-mark + text flip, no raw spinner.
+                <View className='squad-unboxing__confirm-btn-wait'>
+                  <View className='squad-unboxing__confirm-btn-wait-icon' aria-hidden='true' />
+                  <Text className='squad-unboxing__confirm-btn-wait-text'>锁定中</Text>
+                </View>
+              ) : allCardsUp ? (
+                '确认出席 · 锁定座位'
+              ) : (
+                '确认出席'
+              )}
             </Button>
             {/* Return thread (2026-07-24 full-marks, user-sat angle 5): one
                 quiet line seeding the post-event loop — the screen otherwise

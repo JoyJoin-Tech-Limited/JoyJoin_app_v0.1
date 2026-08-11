@@ -273,6 +273,9 @@ export default function EventFeedbackPage() {
   const [improvementAreas, setImprovementAreas] = useState<string[]>([])
   const [improvementOther, setImprovementOther] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  // Tier-S wait (M1): optimistic 已提交 flip shown the instant the user taps —
+  // the POST runs in the background; on error the button reverts.
+  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
   // C5 — Fires success haptic only once per revealed-entry (ref guard prevents re-fire on re-render)
   const revealedHapticFiredRef = useRef(false)
@@ -356,6 +359,7 @@ export default function EventFeedbackPage() {
     if (!eventId || isSubmitting) return
 
     setIsSubmitting(true)
+    setSubmitted(true)
     setError('')
     try {
       logInfo('[EventFeedback] Submitting', { eventId, rating, connections: selectedConnections.length })
@@ -408,6 +412,7 @@ export default function EventFeedbackPage() {
       const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
       setError(message)
       logError('[EventFeedback] Submit failed', { message })
+      setSubmitted(false)
       setIsSubmitting(false)
     }
   }, [
@@ -663,16 +668,15 @@ export default function EventFeedbackPage() {
         <View className='event-feedback__footer'>
           <View className='event-feedback__footer-row'>
             <Button
-              className='event-feedback__submit-secondary'
+              className={`event-feedback__submit-secondary${submitted ? ' event-feedback__submit--submitted' : ''}`}
               onClick={() => {
                 haptics('light')
                 handleSubmit()
               }}
               disabled={isSubmitting}
-              loading={isSubmitting}
               ariaLabel='直接提交反馈'
             >
-              直接提交
+              {submitted ? '已提交' : '直接提交'}
             </Button>
             <Button
               className='event-feedback__submit'
@@ -790,16 +794,15 @@ export default function EventFeedbackPage() {
               上一步
             </Button>
             <Button
-              className='event-feedback__submit-secondary'
+              className={`event-feedback__submit-secondary${submitted ? ' event-feedback__submit--submitted' : ''}`}
               onClick={() => {
                 haptics('light')
                 handleSubmit()
               }}
               disabled={isSubmitting}
-              loading={isSubmitting}
               ariaLabel='直接提交反馈'
             >
-              直接提交
+              {submitted ? '已提交' : '直接提交'}
             </Button>
             <Button
               className='event-feedback__submit'
@@ -948,16 +951,15 @@ export default function EventFeedbackPage() {
               上一步
             </Button>
             <Button
-              className='event-feedback__submit'
+              className={`event-feedback__submit${submitted ? ' event-feedback__submit--submitted' : ''}`}
               onClick={() => {
                 haptics('medium')
                 handleSubmit()
               }}
               disabled={isSubmitting}
-              loading={isSubmitting}
               ariaLabel='提交反馈'
             >
-              {isSubmitting ? '提交中…' : '提交反馈'}
+              {submitted ? '已提交' : '提交反馈'}
             </Button>
           </View>
         </View>
