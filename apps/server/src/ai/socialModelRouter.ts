@@ -7,10 +7,15 @@
  * instead of instantiating provider clients directly.
  *
  * DeepSeek V4 tiers:
- *   - flash (no thinking):       real-time comments, short text, fastest
- *   - flash-thinking (high):     structured JSON output, medium-stakes
- *   - flash-thinking (max):      complex analysis, zero-tolerance accuracy
- *   - pro-thinking (max):        highest-stakes, budget-gated
+ *   - flash (thinking disabled):       real-time comments, structured JSON, fast
+ *   - flash-thinking (high/max):       genuinely analytical tasks only
+ *   - pro-thinking (max):              highest-stakes, budget-gated
+ *
+ * Note (2026-08-11): DeepSeek V4 reasons by default when no thinking control is
+ * sent, and thinking burns the completion budget (verified: empty content at
+ * production max_tokens budgets, 11-15s latency > 6s icebreaker bound). The
+ * client wrapper in deepseekClient.ts injects `thinking: {type:'disabled'}`
+ * unless a call already carries explicit thinking control.
  *
  * Services routed through this file:
  *   - socialIcebreakerAIService.ts  (warmup topics, XiaoYue, recap, lie detective, miniscript framework)
@@ -94,53 +99,59 @@ type SocialFunctionRoutingPolicy = {
 /**
  * Reasoning-effort assignment framework
  *
- * Tier 0 — Flash (no thinking): real-time chat, creative generation,
- *   anything with rich fallbacks. Fastest, cheapest.
- * Tier 1 — Flash-thinking + high: structured output, medium-stakes.
- *   Default for thinking-tier features.
+ * DeepSeek V4 models reason by default when no thinking control is sent, and
+ * with `thinking: enabled` they can burn 1000+ completion tokens on
+ * `reasoning_content` for structured-output tasks — exceeding production
+ * `max_tokens` budgets and the 6s icebreaker call bound, which yields empty or
+ * truncated `message.content` (benchmark-verified 2026-08-11). Thinking is
+ * therefore opt-in and reserved for genuinely analytical functions:
+ *
+ * Tier 0 — Flash (thinking disabled): real-time chat, JSON formatting,
+ *   creative generation, anything with rich fallbacks. Fastest, cheapest.
+ *   This is the default for every structured-JSON surface.
+ * Tier 1 — Flash-thinking + high: structured JSON output, medium-stakes
+ *   (only when a task genuinely needs multi-step reasoning).
  * Tier 2 — Flash-thinking + max: complex analysis, validation,
  *   zero-tolerance accuracy. Higher latency/cost.
  * Tier 3 — Pro-thinking + max: highest-stakes user-facing content.
  *   Budget-gated.
  */
 const SOCIAL_FUNCTION_ROUTING: Record<SocialFunction, SocialFunctionRoutingPolicy> = {
-  // ── Tier 0: Flash, no thinking — real-time comments / short text / fast ──
+  // ── Tier 0: Flash, thinking disabled — real-time comments / JSON formatting / fast ──
   generateXiaoYueComment: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
   generateXiaoyueAdaptiveSuggestion: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
-  generateMomentHighlights: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
+  generateMomentHighlights: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
   generateRecapSummary: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
   generateWelcomeMessage: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
   generateClosingMessage: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
   generateProfileTagline: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
   generatePoolCardHeadline: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
   generateConversationTopics: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateWarmupTopics: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateMicroChallenges: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateLieDetectiveStatements: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generatePersonalityDiceChallenges: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generatePersonalityDiceChallengeGroups: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateAuctionLots: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateXiaoyueSessionPack: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateIceBreakers: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateMiniScriptFramework: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateQuipBattlePrompts: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateUndercoverWordPair: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
+  generateGroupMirrorQuestions: { preferredProvider: 'deepseek', deepseekTier: 'flash' },
 
-  // ── Tier 1: Flash-thinking + high — structured JSON output, medium-stakes ──
-  generateWarmupTopics: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
-  generateMicroChallenges: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
-  generateLieDetectiveStatements: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
-  generatePersonalityDiceChallenges: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
-  generatePersonalityDiceChallengeGroups: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
-  generateAuctionLots: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
-  generateXiaoyueSessionPack: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
-  generateIceBreakers: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
-  generateMiniScriptFramework: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
-  generateQuipBattlePrompts: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
-  generateUndercoverWordPair: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
-  generateGroupMirrorQuestions: { preferredProvider: 'deepseek', deepseekTier: 'flash-thinking', reasoningEffort: 'high' },
+  // ── Tier 1: Flash-thinking + high — reserved for genuinely analytical tasks ──
+  generatePairExplanation: {
+    preferredProvider: 'deepseek',
+    deepseekTier: ENABLE_PRO_MATCH_EXPLANATIONS ? 'pro-thinking' : 'flash',
+    reasoningEffort: 'max',
+  },
 
   // ── Tier 2: Flash-thinking + max — complex analysis, validation ──
   analyzeComplexSemantics: {
     preferredProvider: 'deepseek',
     forceProvider: 'deepseek',
     deepseekTier: 'flash-thinking',
-    reasoningEffort: 'max',
-  },
-
-  // ── Tier 3: Pro-thinking + max — highest-stakes, budget-gated ──
-  generatePairExplanation: {
-    preferredProvider: 'deepseek',
-    deepseekTier: ENABLE_PRO_MATCH_EXPLANATIONS ? 'pro-thinking' : 'flash-thinking',
     reasoningEffort: 'max',
   },
 };
@@ -168,8 +179,8 @@ export interface ClientSelection {
   client: OpenAI;
   model: string;
   provider: 'minimax' | 'deepseek';
-  /** DeepSeek thinking configuration to pass via extra_body */
-  thinkingExtraBody?: { thinking?: { type: 'enabled' }; reasoning_effort?: 'high' | 'max' | 'medium' };
+  /** DeepSeek thinking configuration — applied as TOP-LEVEL request fields (extra_body is not serialized by the SDK) */
+  thinkingExtraBody?: { thinking?: { type: 'enabled' | 'disabled' }; reasoning_effort?: 'high' | 'max' | 'medium' };
   /** The reasoning effort level that was resolved for this selection */
   reasoningEffort?: 'high' | 'max';
 }
@@ -309,8 +320,12 @@ export async function callSocialAI(
     };
 
     if (deepseekSelection.thinkingExtraBody) {
-      // @ts-expect-error - DeepSeek-specific extension via extra_body
-      requestPayload.extra_body = deepseekSelection.thinkingExtraBody;
+      // @ts-expect-error - DeepSeek-specific top-level extension (extra_body is not serialized by the SDK)
+      requestPayload.thinking = deepseekSelection.thinkingExtraBody.thinking;
+      if (deepseekSelection.thinkingExtraBody.reasoning_effort) {
+        // @ts-expect-error - DeepSeek-specific top-level extension
+        requestPayload.reasoning_effort = deepseekSelection.thinkingExtraBody.reasoning_effort;
+      }
     }
 
     try {

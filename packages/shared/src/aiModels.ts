@@ -190,12 +190,21 @@ export function getReasoningEffort(
 
 /**
  * Build the DeepSeek-specific extra_body payload for thinking mode.
+ *
+ * DeepSeek V4 models reason by default when no thinking control is sent, which
+ * burns the completion token budget on `reasoning_content` and can leave
+ * `message.content` empty/truncated at production `max_tokens` budgets.
+ * Non-thinking tiers therefore explicitly send `thinking: { type: 'disabled' }`
+ * so flash-tier output is produced directly. Thinking tiers enable thinking with
+ * the resolved `reasoning_effort` level.
  */
 export function buildThinkingExtraBody(
   tier: DeepSeekModelTier,
   override?: 'medium' | 'high' | 'max',
-): { thinking?: { type: 'enabled' }; reasoning_effort?: 'medium' | 'high' | 'max' } | undefined {
-  if (!isDeepSeekThinkingTier(tier)) return undefined;
+): { thinking?: { type: 'enabled' | 'disabled' }; reasoning_effort?: 'medium' | 'high' | 'max' } {
+  if (!isDeepSeekThinkingTier(tier)) {
+    return { thinking: { type: 'disabled' } };
+  }
   return {
     thinking: { type: 'enabled' },
     reasoning_effort: getReasoningEffort(tier, override),

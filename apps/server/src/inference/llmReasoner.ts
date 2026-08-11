@@ -195,9 +195,13 @@ export class LLMReasoner {
         response_format: { type: 'json_object' as const },
       };
       const thinkingExtraBody = buildThinkingExtraBody(tier);
-      if (thinkingExtraBody) {
-        // @ts-expect-error - DeepSeek-specific thinking extension
-        requestPayload.extra_body = thinkingExtraBody;
+      if (thinkingExtraBody?.thinking) {
+        // @ts-expect-error - DeepSeek-specific top-level extension (extra_body is not serialized by the SDK)
+        requestPayload.thinking = thinkingExtraBody.thinking;
+      }
+      if (thinkingExtraBody?.reasoning_effort) {
+        // @ts-expect-error - DeepSeek-specific top-level extension
+        requestPayload.reasoning_effort = thinkingExtraBody.reasoning_effort;
       }
       const response = await getDeepseekClient().chat.completions.create(requestPayload);
 

@@ -15,7 +15,7 @@ import { OCCUPATIONS } from "@shared/occupations";
 import { ensureReasoning } from "./reasoningGenerator";
 import { inferNicheFromContext } from "./nicheInferenceEngine";
 import { applySemanticFallback } from "@shared/semanticFallback";
-import { getDeepseekModel } from "../ai/deepseekClient";
+import { getDeepseekClient, getDeepseekModel } from "../ai/deepseekClient";
 import { logger } from "../lib/logger";
 
 // Confidence thresholds for classification tiers
@@ -283,18 +283,13 @@ async function matchViaAI(userInput: string): Promise<IndustryClassificationResu
   const startTime = Date.now();
   
   try {
-    const { default: OpenAI } = await import("openai");
-    
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
       logger.error("DEEPSEEK_API_KEY not configured");
       return null;
     }
     
-    const openai = new OpenAI({
-      apiKey,
-      baseURL: "https://api.deepseek.com",
-    });
+    const openai = getDeepseekClient();
     
     const categoryList = INDUSTRY_TAXONOMY.map(cat => `${cat.id} (${cat.label})`).join(", ");
     
@@ -412,14 +407,10 @@ async function normalizeUserInput(rawText: string): Promise<string> {
   const startTime = Date.now();
   
   try {
-    const { default: OpenAI } = await import("openai");
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) return rawText;
     
-    const openai = new OpenAI({
-      apiKey,
-      baseURL: "https://api.deepseek.com",
-    });
+    const openai = getDeepseekClient();
     
     const prompt = `将用户输入的职业描述清理并标准化为专业表述（最多20个字）。只返回结果。
 输入: "${rawText}"
@@ -550,17 +541,12 @@ function generateCandidates(
  * 🆕 Generate AI semantic description (lightweight)
  */
 async function generateSemanticDescription(userInput: string): Promise<string> {
-  const { default: OpenAI } = await import("openai");
-  
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     throw new Error("DEEPSEEK_API_KEY not configured");
   }
   
-  const openai = new OpenAI({
-    apiKey,
-    baseURL: "https://api.deepseek.com",
-  });
+  const openai = getDeepseekClient();
   
   const prompt = `用一句话描述这个职业或身份的核心特征（不超过20字）：
 
@@ -719,18 +705,13 @@ async function matchViaAIWithLockedCategory(
   const startTime = Date.now();
   
   try {
-    const { default: OpenAI } = await import("openai");
-    
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
       logger.error("DEEPSEEK_API_KEY not configured");
       return null;
     }
     
-    const openai = new OpenAI({
-      apiKey,
-      baseURL: "https://api.deepseek.com",
-    });
+    const openai = getDeepseekClient();
     
     const lockedCategory = findCategoryById(lockedCategoryId);
     if (!lockedCategory) {

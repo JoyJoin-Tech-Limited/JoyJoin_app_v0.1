@@ -2,7 +2,11 @@
  * CLI entry for the Social Icebreaker AI benchmark.
  *
  * Usage (from repo root):
- *   npx tsx apps/server/src/benchmarks/socialAIBenchmark.cli.ts
+ *   npx tsx --env-file=.env apps/server/src/benchmarks/socialAIBenchmark.cli.ts
+ *
+ * Note: this CLI does NOT load .env automatically. Without `--env-file`, the
+ * process has no DEEPSEEK_API_KEY/MINIMAX_API_KEY and every call fails with a
+ * confusing 401 (the DeepSeek client falls back to a placeholder key).
  *
  * Options:
  *   --iterations N   Number of iterations per fixture-model (default: 5)
