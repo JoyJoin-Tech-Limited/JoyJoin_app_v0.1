@@ -6,6 +6,7 @@ import {
   deliverFlashTask,
   fetchFlashAssignment,
   fetchFlashEncounter,
+  fetchFlashEncounterReplay,
   fetchFlashHome,
   fetchFlashPreferences,
   fetchFlashStoryFragments,
@@ -21,7 +22,7 @@ import type { FlashLocationSnapshot } from './flashTypes'
 
 export const FLASH_QUERY_ROOT = ['alang', 'flash'] as const
 export const FLASH_HOME_QUERY_KEY = [...FLASH_QUERY_ROOT, 'home'] as const
-export const flashEncounterQueryKey = (id: string) => [...FLASH_QUERY_ROOT, 'encounter', id] as const
+export const flashEncounterQueryKey = (id: string, replay = false) => [...FLASH_QUERY_ROOT, 'encounter', id, replay ? 'replay' : 'live'] as const
 export const flashAssignmentQueryKey = (id: string) => [...FLASH_QUERY_ROOT, 'assignment', id] as const
 export const FLASH_PREFERENCES_QUERY_KEY = [...FLASH_QUERY_ROOT, 'preferences'] as const
 export const FLASH_STORY_FRAGMENTS_QUERY_KEY = [...FLASH_QUERY_ROOT, 'story-fragments'] as const
@@ -48,10 +49,10 @@ export function useFlashHome(enabled = true) {
   })
 }
 
-export function useFlashEncounter(encounterId: string, enabled = true) {
+export function useFlashEncounter(encounterId: string, enabled = true, replay = false) {
   return useQuery({
-    queryKey: flashEncounterQueryKey(encounterId),
-    queryFn: () => fetchFlashEncounter(encounterId),
+    queryKey: flashEncounterQueryKey(encounterId, replay),
+    queryFn: () => replay ? fetchFlashEncounterReplay(encounterId) : fetchFlashEncounter(encounterId),
     enabled: enabled && !!encounterId,
     staleTime: 0,
     retry: 1,
@@ -90,7 +91,7 @@ export function useAnswerFlashEncounter() {
     retry: (failureCount, error) => failureCount < 4 && getFlashApiErrorCode(error) === 'FLASH_STORY_GENERATION_PENDING',
     retryDelay: 1_600,
     onSuccess: (response, input) => {
-      queryClient.setQueryData(flashEncounterQueryKey(input.encounterId), response)
+      queryClient.setQueryData(flashEncounterQueryKey(input.encounterId, input.replay), response)
       markStale()
     },
   })

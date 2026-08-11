@@ -579,6 +579,8 @@ export async function getFlashEncounter(input: {
   now?: Date;
   allowSameEncounterDeliveryForTesting?: boolean;
   preferCurrentCompletedEpisode?: boolean;
+  allowStoryReplay?: boolean;
+  replayOptionId?: string;
 }): Promise<FlashEncounterResponse> {
   const now = input.now ?? new Date();
   await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
@@ -608,9 +610,12 @@ export async function getFlashEncounter(input: {
     }
   }
   const completedSeason = await getCompletedFlashStorySeason(input.userId, storyState?.episode.seasonId);
-  if (storyState && (!completedSeason || input.preferCurrentCompletedEpisode)) {
+  if (storyState && (!completedSeason || input.preferCurrentCompletedEpisode || input.allowStoryReplay)) {
     const content = storyState.episode.content;
-    const selectedOptionId = storyState.completion?.selectedOptionId ?? null;
+    const selectedOptionId = input.allowStoryReplay
+      ? input.replayOptionId ?? null
+      : storyState.completion?.selectedOptionId ?? null;
+    const storyCompleted = input.allowStoryReplay ? Boolean(input.replayOptionId) : Boolean(storyState.completion);
     return {
       id: encounter.id,
       npc: {
@@ -623,14 +628,14 @@ export async function getFlashEncounter(input: {
         avatarUrl: encounter.avatarUrl,
       },
       expiresAt: encounter.expiresAt.toISOString(),
-      status: storyState.completion ? "completed" : "dialogue",
+      status: storyCompleted ? "completed" : "dialogue",
       pendingDelivery: null,
-      question: storyState.completion ? null : {
+      question: storyCompleted ? null : {
         id: content.question.id,
         prompt: content.question.prompt,
         options: content.question.options.map((option: { id: string; label: string }) => ({ id: option.id, label: option.label })),
       },
-      questionPosition: storyState.completion ? null : { current: 1, total: 1 },
+      questionPosition: storyCompleted ? null : { current: 1, total: 1 },
       offer: null,
       storyEpisode: {
         id: storyState.episode.id,
@@ -645,12 +650,12 @@ export async function getFlashEncounter(input: {
         response: selectedOptionId
           ? content.responseByOption[selectedOptionId] ?? content.closing
           : null,
-        echo: storyState.completion?.echoSnapshot ?? null,
+        echo: input.allowStoryReplay ? null : storyState.completion?.echoSnapshot ?? null,
         storyMode: storyState.universeRun?.mode ?? "standard",
         renderKind: "template",
-        closing: storyState.completion ? content.closing : null,
+        closing: storyCompleted ? content.closing : null,
         motion: storyState.episode.motion,
-        fragment: storyState.completion && storyState.fragment ? {
+        fragment: !input.allowStoryReplay && storyState.completion && storyState.fragment ? {
           id: storyState.fragment.id,
           code: storyState.fragment.code,
           category: storyState.fragment.category as "object" | "past" | "relationship" | "key",
@@ -665,6 +670,7 @@ export async function getFlashEncounter(input: {
           total: 15,
         },
       },
+      isReplay: input.allowStoryReplay || undefined,
       canonicalScreen: "dialogue",
     };
   }
@@ -790,16 +796,31 @@ export async function answerFlashEncounter(input: {
   questionId: string;
   optionId: string;
   now?: Date;
+  allowStoryReplay?: boolean;
 }): Promise<FlashEncounterResponse> {
   const now = input.now ?? new Date();
   const encounter = await getFlashEncounterOwned(input.encounterId, input.userId);
   if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 404, "没有找到这次相遇");
-  if (encounter.expiresAt <= now) {
+  if (encounter.expiresAt <= now && !input.allowStoryReplay) {
     await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
     throw new FlashServiceError("FLASH_ENCOUNTER_EXPIRED", 410, "这次对话已经结束了");
   }
   const storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
   if (storyState) {
+    if (input.allowStoryReplay && storyState.completion) {
+      const question = storyState.episode.content.question;
+      const option = question.options.find((candidate: { id: string }) => candidate.id === input.optionId);
+      if (question.id !== input.questionId || !option) {
+        throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这个选择已经失效，请刷新后再选一次");
+      }
+      return getFlashEncounter({
+        encounterId: input.encounterId,
+        userId: input.userId,
+        now,
+        allowStoryReplay: true,
+        replayOptionId: option.id,
+      });
+    }
     if (storyState.completion) {
       return getFlashEncounter({
         encounterId: input.encounterId,

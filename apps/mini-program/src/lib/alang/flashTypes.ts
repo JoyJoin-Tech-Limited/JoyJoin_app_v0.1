@@ -206,6 +206,7 @@ export interface FlashStoryFragmentView {
   fact: string
   assetUrl: string | null
   unlockedAt: string
+  encounterId: string
   episodeTitle: string
   npcName: string
 }

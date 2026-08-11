@@ -266,6 +266,7 @@ export type FlashEncounterResponse = {
   questionPosition: { current: number; total: number } | null;
   offer: FlashTaskOfferDto | null;
   storyEpisode?: FlashStoryEpisodeDto | null;
+  isReplay?: boolean;
   canonicalScreen: FlashCanonicalScreen;
 };
 

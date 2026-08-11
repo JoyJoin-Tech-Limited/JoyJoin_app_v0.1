@@ -1,7 +1,8 @@
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
-import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
+import { useAuth } from '../../../hooks/useAuth'
+import { shouldShowAlangDebugTools, shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
 import { hasAcknowledgedFlashIntro, markFlashIntroAcknowledged } from '../../../lib/alang/flashExperienceStorage'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
@@ -79,7 +80,9 @@ function OnlineNpcCard({ npc, onClick }: { npc: FlashNpcSummary; onClick: () => 
 }
 
 export default function FlashHomePage() {
+  const { user } = useAuth()
   const enabled = shouldShowStreetBlindBoxEntry()
+  const canReplayStories = shouldShowAlangDebugTools(user)
   const [gate, setGate] = useState<GateState>('checking')
   const [pageVisible, setPageVisible] = useState(true)
   const { data, isLoading, isError, error, refetch } = useFlashHome(enabled && gate === 'ready' && pageVisible)
@@ -231,6 +234,22 @@ export default function FlashHomePage() {
                     <Text className='flash-story-fragment-card__meta'>{fragment.npcName} · {fragment.episodeTitle}</Text>
                     <Text className='flash-story-fragment-card__title'>{fragment.title}</Text>
                     <Text className='flash-story-fragment-card__fact'>{fragment.fact}</Text>
+                    {canReplayStories ? (
+                      <View
+                        className='flash-story-fragment-card__replay'
+                        hoverClass='flash-story-fragment-card__replay--pressed'
+                        role='button'
+                        aria-label={`重新游玩${fragment.episodeTitle}`}
+                        onClick={() => {
+                          haptics('light')
+                          void Taro.navigateTo({
+                            url: `${MINI_PROGRAM_ROUTES.alangDialogue}?encounterId=${encodeURIComponent(fragment.encounterId)}&replay=1`,
+                          })
+                        }}
+                      >
+                        <Text>重新游玩</Text>
+                      </View>
+                    ) : null}
                   </View>
                 ))}
               </View>

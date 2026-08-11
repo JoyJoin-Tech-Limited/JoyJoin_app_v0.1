@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FlashHomePage from './index'
 
 const mocks = vi.hoisted(() => ({
+  useAuth: vi.fn(),
   useFlashHome: vi.fn(),
   useFlashStoryFragments: vi.fn(),
   navigateTo: vi.fn(),
@@ -13,6 +14,8 @@ const mocks = vi.hoisted(() => ({
   didShow: undefined as (() => void) | undefined,
   didHide: undefined as (() => void) | undefined,
 }))
+
+vi.mock('../../../hooks/useAuth', () => ({ useAuth: mocks.useAuth }))
 
 vi.mock('@tarojs/taro', () => ({
   default: {
@@ -53,11 +56,13 @@ const home = {
 describe('formal Street Blind Box home', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.useAuth.mockReturnValue({ user: { appMode: 'production', singleTestMode: false, features: { alangEnabled: true } } })
     mocks.getStorage.mockReturnValue(undefined)
     mocks.useFlashHome.mockReturnValue({ data: home, isLoading: false, isError: false, refetch: mocks.refetch })
     mocks.useFlashStoryFragments.mockReturnValue({ data: [{
       id: 'fragment-1', code: 'fragment-1', category: 'object', title: '双人座位图',
       fact: '图上记录的是两个人之间合适的距离。', unlockedAt: '2026-08-07T00:00:00Z',
+      encounterId: '33333333-3333-4333-8333-333333333333',
       episodeTitle: '一张画了两把椅子的图', npcName: '阿浪', assetUrl: null,
     }] })
     mocks.didShow = undefined
@@ -151,5 +156,18 @@ describe('formal Street Blind Box home', () => {
     expect(url).toContain('appearanceId=appearance-1')
     expect(url).not.toContain('22.54')
     expect(url).not.toContain('114.05')
+  })
+
+  it('shows completed-story replay only in single-test mode', async () => {
+    mocks.getStorage.mockReturnValue('flash-intro-reviewed-story-v2')
+    mocks.useAuth.mockReturnValue({ user: {
+      appMode: 'test', singleTestMode: true, features: { alangEnabled: true },
+    } })
+    render(<FlashHomePage />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /重新游玩/ }))
+    expect(mocks.navigateTo).toHaveBeenCalledWith({
+      url: expect.stringContaining('encounterId=33333333-3333-4333-8333-333333333333&replay=1'),
+    })
   })
 })

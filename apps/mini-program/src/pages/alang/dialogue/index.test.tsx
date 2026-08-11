@@ -283,7 +283,7 @@ describe('formal Flash dialogue', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: false } } })
     render(<FlashDialoguePage />)
     expect(screen.getByText('如果现在能随便逛逛，你更想去哪种地方？')).toBeInTheDocument()
-    expect(mocks.useEncounter).toHaveBeenCalledWith('encounter-1', true)
+    expect(mocks.useEncounter).toHaveBeenCalledWith('encounter-1', true, false)
   })
 
   it('redirects a completed season into the dedicated finale ceremony', async () => {

@@ -534,11 +534,16 @@ export async function listFlashUserStoryFragments(userId: string, executor: DbEx
     fact: sql<string>`coalesce(${flashUserStoryFragments.fragmentSnapshot}->>'fact', ${flashStoryFragments.fact})`,
     assetUrl: sql<string | null>`coalesce(${flashUserStoryFragments.fragmentSnapshot}->>'assetUrl', ${flashStoryFragments.assetUrl})`,
     unlockedAt: flashUserStoryFragments.unlockedAt,
+    encounterId: flashUserStoryEpisodes.encounterId,
     episodeTitle: flashStoryEpisodes.title,
     npcName: flashNpcs.name,
   }).from(flashUserStoryFragments)
     .innerJoin(flashStoryFragments, eq(flashUserStoryFragments.fragmentId, flashStoryFragments.id))
     .innerJoin(flashStoryEpisodes, eq(flashUserStoryFragments.episodeId, flashStoryEpisodes.id))
+    .innerJoin(flashUserStoryEpisodes, and(
+      eq(flashUserStoryEpisodes.userId, flashUserStoryFragments.userId),
+      eq(flashUserStoryEpisodes.episodeId, flashUserStoryFragments.episodeId),
+    ))
     .innerJoin(flashNpcs, eq(flashStoryEpisodes.npcId, flashNpcs.id))
     .where(eq(flashUserStoryFragments.userId, userId))
     .orderBy(asc(flashUserStoryFragments.unlockedAt));

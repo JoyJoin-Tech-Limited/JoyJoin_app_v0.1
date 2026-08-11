@@ -1507,6 +1507,24 @@ page {
   line-height: 1.6;
 }
 
+.flash-story-fragment-card__replay {
+  align-self: flex-start;
+  margin-top: 8rpx;
+  padding: 12rpx 22rpx;
+  border: 2rpx solid rgba($color-primary, 0.22);
+  border-radius: $radius-pill;
+  background: $color-surface;
+  color: $color-primary-dark;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  transition: transform 180ms ease-out, opacity 180ms ease-out;
+}
+
+.flash-story-fragment-card__replay--pressed {
+  transform: scale(0.98);
+  opacity: 0.78;
+}
+
 @keyframes flash-story-breathe {
   0%, 100% { transform: translateY(0) scaleX(1) scaleY(1); }
   42% { transform: translateY(-3rpx) scaleX(1.002) scaleY(1.004); }

@@ -144,6 +144,27 @@ describe("formal Flash routes", () => {
     }));
   });
 
+  it("enables story replay only in non-production single-test mode", async () => {
+    vi.stubEnv("APP_MODE", "test");
+    vi.stubEnv("ENABLE_SINGLE_TEST_MODE", "true");
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl);
+      const response = await fetch(`${baseUrl}/api/alang/flash/encounters/${appearanceId}?replay=1`, { headers: { Cookie: cookie } });
+      expect(response.status).toBe(200);
+    });
+    expect(mocks.getEncounter).toHaveBeenCalledWith(expect.objectContaining({ allowStoryReplay: true }));
+  });
+
+  it("fails closed for story replay in production", async () => {
+    vi.stubEnv("APP_MODE", "production");
+    vi.stubEnv("ENABLE_SINGLE_TEST_MODE", "true");
+    await withServer(async (baseUrl) => {
+      const cookie = await login(baseUrl);
+      await fetch(`${baseUrl}/api/alang/flash/encounters/${appearanceId}?replay=1`, { headers: { Cookie: cookie } });
+    });
+    expect(mocks.getEncounter).toHaveBeenCalledWith(expect.objectContaining({ allowStoryReplay: false }));
+  });
+
   it("loads the home list without coordinates and trusts the session user", async () => {
     await withServer(async (baseUrl) => {
       const cookie = await login(baseUrl);

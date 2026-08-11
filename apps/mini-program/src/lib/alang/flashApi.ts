@@ -257,11 +257,26 @@ export async function fetchFlashEncounter(encounterId: string): Promise<FlashEnc
   return adaptFlashEncounterDto(await getFlashEncounterRequest(apiRequest, encounterId))
 }
 
+export async function fetchFlashEncounterReplay(encounterId: string): Promise<FlashEncounterView> {
+  return adaptFlashEncounterDto(await apiRequest<SharedFlashEncounterResponse>({
+    path: `/api/alang/flash/encounters/${encounterId}?replay=1`,
+    method: 'GET',
+  }))
+}
+
 export async function answerFlashEncounter(input: {
   encounterId: string
   questionId: string
   optionId: string
+  replay?: boolean
 }): Promise<FlashEncounterView> {
+  if (input.replay) {
+    return adaptFlashEncounterDto(await apiRequest<SharedFlashEncounterResponse>({
+      path: `/api/alang/flash/encounters/${input.encounterId}/answer?replay=1`,
+      method: 'POST',
+      data: { questionId: input.questionId, optionId: input.optionId },
+    }))
+  }
   return adaptFlashEncounterDto(await answerFlashEncounterRequest(apiRequest, input.encounterId, {
     questionId: input.questionId,
     optionId: input.optionId,

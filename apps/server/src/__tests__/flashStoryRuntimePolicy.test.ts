@@ -281,6 +281,35 @@ describe("formal Flash story runtime policy", () => {
     expectNoPersonalizationRuntimeCalls();
   });
 
+  it("replays a completed episode with reviewed copy and no settlement writes", async () => {
+    mocks.getStoryEncounterState.mockResolvedValue(storyState(reviewedOptionResponse));
+
+    const initial = await getFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      now,
+      allowStoryReplay: true,
+    });
+    expect(initial.question?.id).toBe("first-look");
+    expect(initial.storyEpisode?.fragment).toBeNull();
+
+    const result = await answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "first-look",
+      optionId: "notice-lines",
+      now,
+      allowStoryReplay: true,
+    });
+
+    expect(result.isReplay).toBe(true);
+    expect(result.storyEpisode?.response).toBe(reviewedOptionResponse);
+    expect(result.storyEpisode?.fragment).toBeNull();
+    expect(mocks.prepareChoiceIntent).not.toHaveBeenCalled();
+    expect(mocks.finalizeChoiceIntent).not.toHaveBeenCalled();
+    expect(mocks.completeStoryEpisode).not.toHaveBeenCalled();
+  });
+
   it("never serves a legacy AI completion snapshot as formal NPC copy", async () => {
     const completed = storyState("未经审核的旧 AI 快照");
     completed.completion = {

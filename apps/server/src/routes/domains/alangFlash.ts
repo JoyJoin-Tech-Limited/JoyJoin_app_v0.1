@@ -8,6 +8,7 @@ import {
 } from "@shared/alang/flashTypes";
 
 import { getFeatureFlag } from "../../lib/featureFlags";
+import { isSingleTestMode } from "../../lib/isSingleTestMode";
 import { logger } from "../../lib/logger";
 import { requireAuthenticatedUserId } from "../../lib/requestAuth";
 import { requireAuth } from "../../middleware/auth";
@@ -107,6 +108,12 @@ async function isAnyLocationArrivalTestEnabled(): Promise<boolean> {
   return getFeatureFlag("flashAnyLocationArrivalTestEnabled", false);
 }
 
+function isStoryReplayRequest(req: Request): boolean {
+  return (process.env.APP_MODE ?? "production") !== "production"
+    && req.query.replay === "1"
+    && isSingleTestMode();
+}
+
 function sendCoordinateError(res: Response, code: "FLASH_LOCATION_REQUIRED" | "FLASH_OUTSIDE_SHENZHEN") {
   return res.status(code === "FLASH_OUTSIDE_SHENZHEN" ? 403 : 400).json({
     code,
@@ -173,6 +180,7 @@ export function registerAlangFlashRoutes(app: Express): void {
         encounterId: encounterId.data,
         userId: authenticatedUserId,
         allowSameEncounterDeliveryForTesting: await isAnyLocationArrivalTestEnabled(),
+        allowStoryReplay: isStoryReplayRequest(req),
       }));
     } catch (error) {
       return sendFlashError(res, error);
@@ -202,6 +210,7 @@ export function registerAlangFlashRoutes(app: Express): void {
         encounterId: encounterId.data,
         userId: authenticatedUserId,
         ...body.data,
+        allowStoryReplay: isStoryReplayRequest(req),
       }));
     } catch (error) {
       return sendFlashError(res, error);

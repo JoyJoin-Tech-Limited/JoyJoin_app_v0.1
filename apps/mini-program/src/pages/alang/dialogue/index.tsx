@@ -95,7 +95,8 @@ export default function FlashDialoguePage() {
   const enabled = shouldShowStreetBlindBoxEntry()
   const params = Taro.getCurrentInstance().router?.params ?? {}
   const encounterId = params.encounterId ?? ''
-  const { data, isLoading, isError, error, refetch } = useFlashEncounter(encounterId, enabled && !!encounterId)
+  const replay = params.replay === '1'
+  const { data, isLoading, isError, error, refetch } = useFlashEncounter(encounterId, enabled && !!encounterId, replay)
   const answerMutation = useAnswerFlashEncounter()
   const rerollMutation = useRerollFlashEncounter()
   const offerMutation = useRespondToFlashTaskOffer()
@@ -152,7 +153,12 @@ export default function FlashDialoguePage() {
 
   const submitStoryChoice = async (choice: { questionId: string; optionId: string; label: string }) => {
     if (!enabled || storySubmitInFlightRef.current) return
-    const payload = { encounterId, questionId: choice.questionId, optionId: choice.optionId }
+    const payload = {
+      encounterId,
+      questionId: choice.questionId,
+      optionId: choice.optionId,
+      ...(replay ? { replay: true } : {}),
+    }
     storySubmitInFlightRef.current = true
     setStorySubmitState('submitting')
     setActionError('')
