@@ -157,6 +157,16 @@ export type FlashStoryEpisodeDto = {
   };
   fragment: FlashStoryFragmentDto | null;
   progress: { completedInPhase: number; totalInPhase: number; completedTotal: number; total: number };
+  storyV2?: FlashStoryV2ViewDto | null;
+};
+
+export type FlashStoryV2ViewDto = {
+  nodeId: string;
+  type: "prose" | "choice" | "callback" | "closure" | "ending";
+  segments: Array<{ speaker?: string; text: string }>;
+  choices: Array<{ id: string; text: string }>;
+  next: string | null;
+  unlockFragment: string | null;
 };
 
 export type FlashTaskDestinationDto = {

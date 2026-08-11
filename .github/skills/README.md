@@ -102,7 +102,7 @@ Deep expertise for the two core product engines.
 | [`venue-location-services`](./venue-location-services/SKILL.md) | Venue catalog, assignment, matching, time slots, deals, Tencent Maps geocoding, and data quality |
 | [`wechat-ecosystem-integration`](./wechat-ecosystem-integration/SKILL.md) | WeChat auth (Mini Program / OA OAuth), WeChat Pay v3, Taro patterns, JSAPI/H5 payments, webhooks, and cross-platform WeChat coordination |
 | [`semantic-matching-embeddings`](./semantic-matching-embeddings/SKILL.md) | Semantic similarity 7th scoring dimension, feature-hash vectors, DeepSeek embedding client, async semantic profile pipeline, and dialogue insight storage |
-| [`xiaoyue-writing-craft`](./xiaoyue-writing-craft/SKILL.md) | Canonical Chinese writing craft system — 8 verifiable axioms (rhythm, imagery, concreteness, anti-AI aesthetics), deterministic post-generation scoring (0-100), retry loop integration for all Xiaoyue LLM output |
+| [`flash-story-writing`](./flash-story-writing/SKILL.md) | 街头盲盒 story episode v2 文案生产：单元节点模型、选择回响三层、悬念钩子、5 NPC 风格指纹、去AI味、check-flash-story 质量门 |
 
 ---
 

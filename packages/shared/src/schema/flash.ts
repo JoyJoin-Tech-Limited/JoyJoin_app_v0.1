@@ -81,6 +81,65 @@ export type FlashStoryContent = {
   closing: string;
 };
 
+export type FlashStoryV2Condition = {
+  flags?: string[];
+  echo?: { gte?: number; lte?: number; lt?: number; gt?: number };
+};
+
+export type FlashStoryV2Effect = {
+  echo?: number;
+  flagsSet?: string[];
+  variables?: Record<string, number>;
+};
+
+export type FlashStoryV2Segment = {
+  speaker?: string;
+  text: string;
+};
+
+export type FlashStoryV2Choice = {
+  id: string;
+  text: string;
+  kind: "attitude" | "path" | "destiny";
+  next: string;
+  effect?: FlashStoryV2Effect;
+};
+
+export type FlashStoryV2Variant = {
+  when: FlashStoryV2Condition | "default";
+  segments?: FlashStoryV2Segment[];
+  choices?: FlashStoryV2Choice[];
+  next?: string | null;
+};
+
+export type FlashStoryV2Node = {
+  id: string;
+  type: "prose" | "choice" | "callback" | "closure" | "ending";
+  segments?: FlashStoryV2Segment[];
+  choices?: FlashStoryV2Choice[];
+  next?: string | null;
+  variants?: FlashStoryV2Variant[];
+  unlockFragment?: string;
+};
+
+export type FlashStoryContentV2 = {
+  v: 2;
+  start: string;
+  nodes: Record<string, FlashStoryV2Node>;
+  state?: FlashStoryV2Effect;
+};
+
+export type FlashStoryV2State = {
+  echo: number;
+  flags: string[];
+  variables: Record<string, number>;
+};
+
+export type FlashStoryRunState = FlashStoryV2State & {
+  currentNode: string | null;
+  nodePath: string[];
+};
+
 export type FlashStoryReleaseManifest = {
   season: { id: string; code: string; title: string; version: number };
   episodes: Array<{
@@ -420,6 +479,9 @@ export const flashStoryUniverseRuns = pgTable("flash_story_universe_runs", {
   flags: text("flags").array().notNull().default(sql`array[]::text[]`),
   echoQueue: jsonb("echo_queue").notNull().default(sql`'[]'::jsonb`).$type<Array<{ flag: string; copy: string; sourceEpisodeCode: string }>>(),
   endingCode: varchar("ending_code", { length: 40 }).$type<FlashStoryEndingCode>(),
+  currentNode: varchar("current_node", { length: 80 }),
+  nodePath: jsonb("node_path").notNull().default(sql`'[]'::jsonb`).$type<string[]>(),
+  v2State: jsonb("v2_state").$type<{ echo: number; variables: Record<string, number> }>(),
   status: varchar("status", { length: 24 }).notNull().default("active"),
   stateVersion: integer("state_version").notNull().default(1),
   consentVersion: varchar("consent_version", { length: 40 }),

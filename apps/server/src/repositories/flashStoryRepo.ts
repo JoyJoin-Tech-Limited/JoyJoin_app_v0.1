@@ -30,6 +30,13 @@ import {
   isFlashStorySeasonComplete,
   selectNextNpcStoryEpisode,
 } from "../lib/flashStoryProgression";
+import {
+  advanceStoryNode as advanceV2StoryNode,
+  answerStoryChoice as answerV2StoryChoice,
+  enterStoryEpisode as enterV2StoryEpisode,
+  getStoryNodeView as getV2StoryNodeView,
+  resolveV2Ending,
+} from "../services/flashStoryEngine";
 
 type DbExecutor = typeof db | any;
 
@@ -119,6 +126,62 @@ export async function prepareFlashStoryChoiceIntent(input: {
   });
 }
 
+export async function advanceFlashV2Node(input: {
+  userId: string;
+  encounterId: string;
+  episodeId: string;
+  now: Date;
+}) {
+  return db.transaction(async (tx: DbExecutor) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${input.encounterId}:flash-story-v2`}))`);
+    const [episode] = await tx.select().from(flashStoryEpisodes)
+      .where(eq(flashStoryEpisodes.id, input.episodeId)).limit(1);
+    if (!episode) return { state: "conflict" as const, finished: false };
+    const content = episode.content as { v?: number; start?: string; nodes?: Record<string, unknown> };
+    if (content.v !== 2) return { state: "conflict" as const, finished: false };
+    const [encounter] = await tx.select({ id: flashEncounters.id }).from(flashEncounters).where(and(
+      eq(flashEncounters.id, input.encounterId),
+      eq(flashEncounters.userId, input.userId),
+      eq(flashEncounters.storyEpisodeId, input.episodeId),
+    )).limit(1);
+    if (!encounter) return { state: "conflict" as const, finished: false };
+    const [progress] = await tx.select().from(flashUserStoryProgress).where(and(
+      eq(flashUserStoryProgress.userId, input.userId),
+      eq(flashUserStoryProgress.seasonId, episode.seasonId),
+    )).limit(1);
+    if (!progress || progress.status !== "active") return { state: "conflict" as const, finished: false };
+    const [run] = progress.universeRunId
+      ? await tx.select().from(flashStoryUniverseRuns).where(eq(flashStoryUniverseRuns.id, progress.universeRunId)).limit(1)
+      : [];
+    if (!run) return { state: "conflict" as const, finished: false };
+
+    const currentState: Parameters<typeof enterV2StoryEpisode>[1] = {
+      echo: run.v2State?.echo ?? 0,
+      flags: run.flags ?? [],
+      variables: run.v2State?.variables ?? {},
+      currentNode: run.currentNode ?? null,
+      nodePath: run.nodePath ?? [],
+    };
+    const entered = enterV2StoryEpisode(content as any, currentState);
+    let result: ReturnType<typeof advanceV2StoryNode>;
+    try {
+      result = advanceV2StoryNode({ content: content as any, state: entered });
+    } catch {
+      return { state: "conflict" as const, finished: false };
+    }
+    await tx.update(flashStoryUniverseRuns).set({
+      currentNode: result.state.currentNode,
+      nodePath: result.state.nodePath,
+      stateVersion: run.stateVersion + 1,
+      updatedAt: input.now,
+    }).where(and(eq(flashStoryUniverseRuns.id, run.id), eq(flashStoryUniverseRuns.stateVersion, run.stateVersion)));
+    if (!result.finished) return { state: "advanced" as const, finished: false };
+    await tx.update(flashEncounters).set({ status: "completed", completedAt: input.now, updatedAt: input.now })
+      .where(and(eq(flashEncounters.id, input.encounterId), eq(flashEncounters.userId, input.userId)));
+    return { state: "finished" as const, finished: true };
+  });
+}
+
 export async function getReadyFlashStoryChoiceIntent(userId: string, episodeId: string, executor: DbExecutor = db) {
   const [row] = await executor.select().from(flashStoryChoiceIntents).where(and(
     eq(flashStoryChoiceIntents.userId, userId),
@@ -126,6 +189,70 @@ export async function getReadyFlashStoryChoiceIntent(userId: string, episodeId: 
     eq(flashStoryChoiceIntents.status, "completed"),
   )).limit(1);
   return row ?? null;
+}
+
+export async function advanceFlashV2Run(input: {
+  userId: string;
+  encounterId: string;
+  episodeId: string;
+  nodeId: string;
+  choiceId: string;
+  now: Date;
+}) {
+  return db.transaction(async (tx: DbExecutor) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${input.encounterId}:flash-story-v2`}))`);
+    const [episode] = await tx.select().from(flashStoryEpisodes)
+      .where(eq(flashStoryEpisodes.id, input.episodeId)).limit(1);
+    if (!episode) return { state: "conflict" as const, finished: false };
+    const content = episode.content as { v?: number; start?: string; nodes?: Record<string, unknown> };
+    if (content.v !== 2) return { state: "conflict" as const, finished: false };
+    const [encounter] = await tx.select({ id: flashEncounters.id }).from(flashEncounters).where(and(
+      eq(flashEncounters.id, input.encounterId),
+      eq(flashEncounters.userId, input.userId),
+      eq(flashEncounters.storyEpisodeId, input.episodeId),
+    )).limit(1);
+    if (!encounter) return { state: "conflict" as const, finished: false };
+    const [progress] = await tx.select().from(flashUserStoryProgress).where(and(
+      eq(flashUserStoryProgress.userId, input.userId),
+      eq(flashUserStoryProgress.seasonId, episode.seasonId),
+    )).limit(1);
+    if (!progress || progress.status !== "active") return { state: "conflict" as const, finished: false };
+    const [run] = progress.universeRunId
+      ? await tx.select().from(flashStoryUniverseRuns).where(eq(flashStoryUniverseRuns.id, progress.universeRunId)).limit(1)
+      : [];
+    if (!run) return { state: "conflict" as const, finished: false };
+
+    const currentState: Parameters<typeof enterV2StoryEpisode>[1] = {
+      echo: run.v2State?.echo ?? 0,
+      flags: run.flags ?? [],
+      variables: run.v2State?.variables ?? {},
+      currentNode: run.currentNode ?? null,
+      nodePath: run.nodePath ?? [],
+    };
+    const entered = enterV2StoryEpisode(content as any, currentState);
+    const view = getV2StoryNodeView(content as any, entered);
+    if (!view || view.type !== "choice" || view.nodeId !== input.nodeId) {
+      return { state: "conflict" as const, finished: false };
+    }
+    let result: ReturnType<typeof answerV2StoryChoice>;
+    try {
+      result = answerV2StoryChoice({ content: content as any, state: entered, nodeId: input.nodeId, choiceId: input.choiceId });
+    } catch {
+      return { state: "conflict" as const, finished: false };
+    }
+    await tx.update(flashStoryUniverseRuns).set({
+      currentNode: result.state.currentNode,
+      nodePath: result.state.nodePath,
+      flags: result.state.flags,
+      v2State: { echo: result.state.echo, variables: result.state.variables },
+      stateVersion: run.stateVersion + 1,
+      updatedAt: input.now,
+    }).where(and(eq(flashStoryUniverseRuns.id, run.id), eq(flashStoryUniverseRuns.stateVersion, run.stateVersion)));
+    if (!result.finished) return { state: "advanced" as const, finished: false };
+    await tx.update(flashEncounters).set({ status: "completed", completedAt: input.now, updatedAt: input.now })
+      .where(and(eq(flashEncounters.id, input.encounterId), eq(flashEncounters.userId, input.userId)));
+    return { state: "finished" as const, finished: true };
+  });
 }
 
 export async function finalizeFlashStoryChoiceIntent(input: {
@@ -565,9 +692,19 @@ export async function completeFlashStoryEpisode(input: {
       ));
       if (isFlashStorySeasonComplete(Number(totalCount?.value ?? 0)) && run) {
         const [latestRun] = await tx.select().from(flashStoryUniverseRuns).where(eq(flashStoryUniverseRuns.id, run.id)).limit(1);
+        const v2State = latestRun?.v2State ?? run.v2State;
+        const endingCode = v2State
+          ? resolveV2Ending({
+              echo: v2State.echo,
+              flags: latestRun?.flags ?? run.flags ?? [],
+              variables: v2State.variables ?? {},
+              currentNode: latestRun?.currentNode ?? null,
+              nodePath: latestRun?.nodePath ?? [],
+            })
+          : resolveFlashStoryEnding(latestRun?.universeVector ?? run.universeVector);
         await tx.update(flashStoryUniverseRuns).set({
           status: "completed",
-          endingCode: resolveFlashStoryEnding(latestRun?.universeVector ?? run.universeVector),
+          endingCode,
           completedAt: input.now,
           updatedAt: input.now,
         }).where(eq(flashStoryUniverseRuns.id, run.id));

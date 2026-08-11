@@ -12,6 +12,7 @@ import {
   type FlashPreferenceDto,
   type FlashPreferenceUpdateRequest,
   type FlashReadinessResponse,
+  type FlashStoryV2ViewDto,
   type FlashTaskDto,
 } from "@shared/alang/flashTypes";
 import { alangHaversineDistanceMeters } from "@shared/alang/testPointValidation";
@@ -70,7 +71,43 @@ import {
   listFlashUserStoryFragments,
   finalizeFlashStoryChoiceIntent,
   prepareFlashStoryChoiceIntent,
+  advanceFlashV2Run,
+  advanceFlashV2Node,
 } from "../repositories/flashStoryRepo";
+import { getFeatureFlag } from "../lib/featureFlags";
+import {
+  advanceStoryNode as advanceV2StoryNode,
+  enterStoryEpisode as enterV2StoryEpisode,
+  getStoryNodeView as getV2StoryNodeView,
+} from "./flashStoryEngine";
+
+async function buildFlashStoryV2View(
+  storyState: NonNullable<Awaited<ReturnType<typeof getFlashStoryEncounterState>>>,
+): Promise<FlashStoryV2ViewDto | null> {
+  const content = storyState.episode.content as { v?: number; start?: string; nodes?: Record<string, unknown> } | null;
+  if (content?.v !== 2) return null;
+  const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
+  if (!v2Enabled) return null;
+  const run = storyState.universeRun;
+  const state: Parameters<typeof enterV2StoryEpisode>[1] = {
+    echo: run?.v2State?.echo ?? 0,
+    flags: run?.flags ?? [],
+    variables: run?.v2State?.variables ?? {},
+    currentNode: run?.currentNode ?? null,
+    nodePath: run?.nodePath ?? [],
+  };
+  const entered = enterV2StoryEpisode(content as any, state);
+  const view = getV2StoryNodeView(content as any, entered);
+  if (!view) return null;
+  return {
+    nodeId: view.nodeId,
+    type: view.type,
+    segments: view.segments ?? [],
+    choices: view.choices ?? [],
+    next: view.next,
+    unlockFragment: view.unlockFragment,
+  };
+}
 
 export class FlashServiceError extends Error {
   constructor(
@@ -681,6 +718,7 @@ export async function getFlashEncounter(input: {
           completedTotal: storyState.completedTotal,
           total: 15,
         },
+        storyV2: storyCompleted ? null : await buildFlashStoryV2View(storyState),
       },
       isReplay: input.allowStoryReplay || undefined,
       canonicalScreen: "dialogue",
@@ -856,6 +894,40 @@ export async function answerFlashEncounter(input: {
         preferCurrentCompletedEpisode: true,
       });
     }
+    const content = storyState.episode.content as { v?: number } | null;
+    const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
+    if (v2Enabled && content?.v === 2) {
+      const advance = await advanceFlashV2Run({
+        encounterId: input.encounterId,
+        userId: input.userId,
+        episodeId: storyState.episode.id,
+        nodeId: input.questionId,
+        choiceId: input.optionId,
+        now,
+      });
+      if (advance.state === "conflict") {
+        throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 409, "这次相遇已经记录了另一个选择");
+      }
+      if (advance.finished) {
+        await completeFlashStoryEpisode({
+          encounterId: input.encounterId,
+          userId: input.userId,
+          episodeId: storyState.episode.id,
+          optionId: input.optionId,
+          configuredEffects: [],
+          responseSnapshot: null,
+          renderKind: "template",
+          promptVersion: null,
+          now,
+        });
+      }
+      return getFlashEncounter({
+        encounterId: input.encounterId,
+        userId: input.userId,
+        now,
+        preferCurrentCompletedEpisode: advance.finished,
+      });
+    }
     const question = storyState.episode.content.question;
     const option = question.options.find((candidate: { id: string }) => candidate.id === input.optionId);
     if (question.id !== input.questionId || !option) {
@@ -965,6 +1037,57 @@ export async function answerFlashEncounter(input: {
     });
   }
   return getFlashEncounter({ encounterId: input.encounterId, userId: input.userId, now });
+}
+
+export async function advanceFlashV2Story(input: {
+  encounterId: string;
+  userId: string;
+  now?: Date;
+}): Promise<FlashEncounterResponse> {
+  const now = input.now ?? new Date();
+  const encounter = await getFlashEncounterOwned(input.encounterId, input.userId);
+  if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 404, "没有找到这次相遇");
+  if (encounter.expiresAt <= now) {
+    await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
+    throw new FlashServiceError("FLASH_ENCOUNTER_EXPIRED", 410, "这次对话已经结束了");
+  }
+  const storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
+  if (!storyState || storyState.completion) {
+    throw new FlashServiceError("FLASH_STORY_NOT_AVAILABLE", 409, "这次旧相遇已经结束，请从当前在线角色重新开始");
+  }
+  const content = storyState.episode.content as { v?: number } | null;
+  const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
+  if (!v2Enabled || content?.v !== 2) {
+    throw new FlashServiceError("FLASH_V2_NOT_AVAILABLE", 409, "当前故事不需要继续推进");
+  }
+  const advance = await advanceFlashV2Node({
+    encounterId: input.encounterId,
+    userId: input.userId,
+    episodeId: storyState.episode.id,
+    now,
+  });
+  if (advance.state === "conflict") {
+    throw new FlashServiceError("FLASH_V2_NOT_AVAILABLE", 409, "当前故事状态已变化，请刷新");
+  }
+  if (advance.finished) {
+    await completeFlashStoryEpisode({
+      encounterId: input.encounterId,
+      userId: input.userId,
+      episodeId: storyState.episode.id,
+      optionId: "advance",
+      configuredEffects: [],
+      responseSnapshot: null,
+      renderKind: "template",
+      promptVersion: null,
+      now,
+    });
+  }
+  return getFlashEncounter({
+    encounterId: input.encounterId,
+    userId: input.userId,
+    now,
+    preferCurrentCompletedEpisode: advance.finished,
+  });
 }
 
 export async function rerollFlashEncounterOffer(input: {

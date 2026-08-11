@@ -42,6 +42,9 @@ jobs:
       - name: Verify migration journal sync
         run: node scripts/verify/verify-journal-sync.mjs
 
+      - name: Validate flash story v2 content (only scans v=2 rows; skips when no DB)
+        run: npm run validate:flash-story
+
   lint-shared:
     needs: [guardrails]
     name: Type Check Shared Package

@@ -1770,3 +1770,45 @@ page {
 @media screen and (max-height: 700px) {
   .flash-dialogue__story-panel-scroll { max-height: 650rpx; }
 }
+
+// Story episode v2 — multi-node state-driven stage (flash-story-v2)
+.flash-dialogue__story-stage--v2 {
+  display: flex;
+  flex-direction: column;
+  padding-top: 160rpx;
+
+  .flash-npc-portrait {
+    position: absolute;
+    top: 48rpx;
+    left: 32rpx;
+    z-index: 3;
+  }
+}
+
+.flash-dialogue__story-panel--v2 {
+  gap: 20rpx;
+}
+
+.flash-story-v2__segments {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.flash-story-v2__segment {
+  color: rgba($color-surface, 0.96);
+  font-size: $font-size-sm;
+  line-height: 1.7;
+
+  &--dialogue {
+    padding-left: 20rpx;
+    border-left: 4rpx solid rgba($color-primary, 0.72);
+    color: $color-surface;
+    font-size: $font-size-md;
+    font-weight: 600;
+  }
+}
+
+.flash-story-v2__choices {
+  margin-top: 8rpx;
+}

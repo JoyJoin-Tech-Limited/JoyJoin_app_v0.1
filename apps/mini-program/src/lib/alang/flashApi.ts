@@ -286,6 +286,13 @@ export async function answerFlashEncounter(input: {
   }))
 }
 
+export async function advanceFlashStoryNode(encounterId: string): Promise<FlashEncounterView> {
+  return adaptFlashEncounterDto(await apiRequest<SharedFlashEncounterResponse>({
+    path: `/api/alang/flash/encounters/${encounterId}/story-advance`,
+    method: 'POST',
+  }))
+}
+
 export async function rerollFlashEncounter(encounterId: string): Promise<FlashEncounterView> {
   return adaptFlashEncounterDto(await rerollFlashTaskRequest(apiRequest, encounterId))
 }

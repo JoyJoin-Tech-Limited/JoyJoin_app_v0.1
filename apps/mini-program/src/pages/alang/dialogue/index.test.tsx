@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   useAuth: vi.fn(),
   useEncounter: vi.fn(),
   answer: vi.fn(),
+  advance: vi.fn(),
   deliver: vi.fn(),
   reroll: vi.fn(),
   offer: vi.fn(),
@@ -29,11 +30,12 @@ vi.mock('@tarojs/components', () => ({
 }))
 vi.mock('../../../hooks/useAuth', () => ({ useAuth: mocks.useAuth }))
 vi.mock('../../../lib/alang/useFlash', () => ({
-  useFlashEncounter: mocks.useEncounter,
-  useAnswerFlashEncounter: () => ({ mutateAsync: mocks.answer, isPending: false }),
-  useDeliverFlashTask: () => ({ mutateAsync: mocks.deliver, isPending: false }),
-  useRerollFlashEncounter: () => ({ mutateAsync: mocks.reroll, isPending: false }),
-  useRespondToFlashTaskOffer: () => ({ mutateAsync: mocks.offer, isPending: false }),
+   useFlashEncounter: mocks.useEncounter,
+   useAnswerFlashEncounter: () => ({ mutateAsync: mocks.answer, isPending: false }),
+   useAdvanceFlashStoryNode: () => ({ mutateAsync: mocks.advance, isPending: false }),
+   useDeliverFlashTask: () => ({ mutateAsync: mocks.deliver, isPending: false }),
+   useRerollFlashEncounter: () => ({ mutateAsync: mocks.reroll, isPending: false }),
+   useRespondToFlashTaskOffer: () => ({ mutateAsync: mocks.offer, isPending: false }),
 }))
 vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: mocks.canonicalRedirect }))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))

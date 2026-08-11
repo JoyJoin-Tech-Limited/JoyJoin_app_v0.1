@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   abandonFlashAssignment,
+  advanceFlashStoryNode,
   answerFlashEncounter,
   arriveAtFlashAssignment,
   deliverFlashTask,
@@ -102,6 +103,18 @@ export function useRerollFlashEncounter() {
   const markStale = useMarkFlashStateStale()
   return useMutation({
     mutationFn: rerollFlashEncounter,
+    onSuccess: (response, encounterId) => {
+      queryClient.setQueryData(flashEncounterQueryKey(encounterId), response)
+      markStale()
+    },
+  })
+}
+
+export function useAdvanceFlashStoryNode() {
+  const queryClient = useQueryClient()
+  const markStale = useMarkFlashStateStale()
+  return useMutation({
+    mutationFn: advanceFlashStoryNode,
     onSuccess: (response, encounterId) => {
       queryClient.setQueryData(flashEncounterQueryKey(encounterId), response)
       markStale()

@@ -195,6 +195,14 @@ export interface FlashEncounterView {
     motion: { ambient: 'none' | 'breathe' | 'drift'; blinkAssetUrl?: string; blinkIntervalSeconds?: number }
     fragment: { id: string; category: 'object' | 'past' | 'relationship' | 'key'; title: string; fact: string; assetUrl: string | null } | null
     progress: { completedInPhase: number; totalInPhase: number; completedTotal: number; total: number }
+    storyV2?: {
+      nodeId: string
+      type: 'prose' | 'choice' | 'callback' | 'closure' | 'ending'
+      segments: Array<{ speaker?: string; text: string }>
+      choices: Array<{ id: string; text: string }>
+      next: string | null
+      unlockFragment: string | null
+    } | null
   } | null
 }
 

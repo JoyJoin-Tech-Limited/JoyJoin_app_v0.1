@@ -4,12 +4,14 @@ import { ScrollView, Text, View } from '@tarojs/components'
 import { getFlashStoryUnitDefinition } from '@shared/alang/flashStorySeason'
 import type { AtuanFirstActSubmission } from '@shared/alang/atuanFirstAct'
 import { FlashStoryUnit } from '../../../components/alang/story-unit/FlashStoryUnit'
+import { FlashStoryV2Stage } from '../../../components/alang/FlashStoryV2Stage'
 import { FlashButton, FlashFeatureClosed, FlashNpcDialogueScene, FlashPageState, FlashTaskCategoryBadge } from '../../../components/alang/FlashUi'
 import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
 import { getApiErrorStatusCode, isTransportApiError } from '../../../lib/api/authSession'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import {
+  useAdvanceFlashStoryNode,
   useAnswerFlashEncounter,
   useDeliverFlashTask,
   useFlashEncounter,
@@ -99,6 +101,7 @@ export default function FlashDialoguePage() {
   const replay = params.replay === '1'
   const { data, isLoading, isError, error, refetch } = useFlashEncounter(encounterId, enabled && !!encounterId, replay)
   const answerMutation = useAnswerFlashEncounter()
+  const advanceMutation = useAdvanceFlashStoryNode()
   const rerollMutation = useRerollFlashEncounter()
   const offerMutation = useRespondToFlashTaskOffer()
   const deliverMutation = useDeliverFlashTask()
@@ -149,6 +152,22 @@ export default function FlashDialoguePage() {
         return
       }
       setActionError(dialogueActionError(caughtError, '刚才那句话没有送到，再选一次就好。'))
+    }
+  }
+
+  const advance = async () => {
+    if (!enabled || advanceMutation.isPending) return
+    setActionError('')
+    try {
+      haptics('light')
+      const response = await advanceMutation.mutateAsync(encounterId)
+      await applyResponse(response)
+    } catch (caughtError) {
+      if (getFlashApiErrorCode(caughtError) === 'FLASH_ENCOUNTER_EXPIRED') {
+        await refetch()
+        return
+      }
+      setActionError(dialogueActionError(caughtError, '故事没有接上，再试一次就好。'))
     }
   }
 
@@ -278,6 +297,25 @@ export default function FlashDialoguePage() {
   }
 
   if (story) {
+    const v2View = story.storyV2
+    if (v2View) {
+      return (
+        <View className='flash-page flash-dialogue flash-dialogue--story'>
+          <FlashStoryV2Stage
+            npc={data.npc}
+            segments={v2View.segments}
+            choices={v2View.choices}
+            isChoice={v2View.type === 'choice'}
+            isTerminal={v2View.type === 'closure' || v2View.type === 'ending'}
+            seasonTitle={story.seasonTitle}
+            phase={story.phase}
+            busy={answerMutation.isPending || advanceMutation.isPending}
+            onChoice={(choiceId) => { void answer(v2View.nodeId, choiceId) }}
+            onContinue={() => { void advance() }}
+          />
+        </View>
+      )
+    }
     const unitDefinition = getFlashStoryUnitDefinition(story.code)
     if (unitDefinition) {
       const unitMotion = story.motion.ambient === 'none' && SHIQI_LEGACY_STATIC_EPISODES.has(story.code)

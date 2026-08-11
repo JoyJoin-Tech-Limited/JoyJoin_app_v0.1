@@ -1,0 +1,49 @@
+skill: flash-story-writing
+category: internal
+
+primary_ownership: >
+  街头盲盒（Flash）story episode v2 文案生产与质量：单元节点模型、选择回响三层、
+  悬念钩子编排、5 NPC 风格指纹、去AI味、check-flash-story.mjs 质量门对接、
+  离线生成→人工审核→入库管线。
+
+use_when:
+  - 编写或重写街头盲盒 story episode 文案（单元 v2 节点结构）
+  - 为 flash_story_episodes.content 设计分支/选项/callback/状态变化
+  - 设计或检查每单元悬念钩子、第 2-3 幕轻冲突、结局矩阵
+  - 检查 5 个 NPC（阿浪/栗子/默默/拾柒/阿团）口吻一致性
+  - 对街头盲盒文案做去AI味（心理总结腔/说教腔/元叙事词）
+  - 扩展或修改 check-flash-story.mjs 校验规则与错误码
+  - 人工审核街头盲盒剧情内容（对照本 skill 铁律）
+
+do_not_use_when:
+  - 任务只涉及排班/班次/地点/相遇机制（用 alang-flash 上下文文档）
+  - 任务只涉及 story 表结构/迁移/引擎代码（用 backend-models-standards + database-migration-safety）
+  - 任务涉及 social icebreaker 的迷你剧本杀（用 miniscript-story-framework）
+  - 任务涉及 Xiaoyue 或通用 LLM 文案 craft（用对应写作 skill）
+
+strong_triggers:
+  - 街头盲盒剧情
+  - flash story
+  - 单元v2
+  - episode v2
+  - 悬念钩子
+  - 去AI味
+  - 风格指纹
+  - copy-spec
+  - flash_story_episodes
+  - 阿浪 / 栗子 / 默默 / 拾柒 / 阿团（文案语境）
+  - check-flash-story
+
+owned_files:
+  - docs/alang-prototype/copy-spec-v2.md
+  - scripts/check/check-flash-story.mjs
+  - apps/server/migrations/*flash_story*.sql
+  - apps/server/src/services/flashStoryEngine.ts
+
+related_skills:
+  - skill: llm-runtime-safety-and-integration
+    when: 离线生成涉及 LLM 调用边界、prompt 元数据、人工审核回退
+  - skill: joyjoin-brand-guidelines
+    when: 文案调性/治愈基调/品牌语气偏离时需要裁决
+  - skill: database-migration-safety
+    when: episode content 结构变更需要迁移

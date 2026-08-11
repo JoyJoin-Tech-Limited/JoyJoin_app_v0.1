@@ -172,6 +172,11 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   /** Non-production QA escape hatch for completing the formal Flash arrival
    * and delivery chain from any valid GCJ-02 coordinate. */
   flashAnyLocationArrivalTestEnabled: "FLASH_ANY_LOCATION_ARRIVAL_TEST_ENABLED",
+  /** Flash story episode v2 engine (multi-node state-driven branching).
+   *  Enabled: v2 content (content.v === 2) routes through the v2 engine;
+   *  v1 content keeps the flat-content path unchanged. Disable via env
+   *  FLASH_STORY_V2_ENABLED=false for instant rollback. */
+  flashStoryV2Enabled: "FLASH_STORY_V2_ENABLED",
   /** Squad-unboxing pocket-deck collapse kill-switch. When false, the
    *  mini-program hides the "收起卡组" trigger and collapseDeck() is a no-op,
    *  so the deck stays in the fan phase. Users who previously collapsed stay
@@ -247,6 +252,7 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   flashShenzhenLocationGateEnabled: true,
   flashTaskRetryTestEnabled: false,
   flashAnyLocationArrivalTestEnabled: false,
+  flashStoryV2Enabled: true,
   /** Tier-1 semantic moderation (WeChat msgSecCheck) is ON by default. The
    *  check is budget-bounded (see CONTENT_MODERATION_TIER1_BUDGET_MS) and
    *  fails open, so latency is bounded regardless. Ops can still disable via

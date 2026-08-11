@@ -16,6 +16,7 @@ import { flashLocateEndpointLimiter, geoEndpointLimiter } from "../../rateLimite
 import {
   abandonFlashTask,
   answerFlashEncounter,
+  advanceFlashV2Story,
   arriveAtFlashAssignment,
   assertFlashRuntimeReady,
   deliverFlashTaskToNpc,
@@ -197,8 +198,22 @@ export function registerAlangFlashRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/alang/flash/encounters/:id/answer", ...guards, async (req, res) => {
+  app.post("/api/alang/flash/encounters/:id/story-advance", ...guards, async (req, res) => {
     const authenticatedUserId = userId(req, res);
+    if (!authenticatedUserId) return;
+    const encounterId = idParamSchema.safeParse(req.params.id);
+    if (!encounterId.success) return res.status(404).json({ code: "FLASH_ENCOUNTER_NOT_FOUND", error: "没有找到这次相遇" });
+    try {
+      return res.json(await advanceFlashV2Story({
+        encounterId: encounterId.data,
+        userId: authenticatedUserId,
+      }));
+    } catch (error) {
+      sendFlashError(res, error);
+    }
+  });
+
+  app.post("/api/alang/flash/encounters/:id/answer", ...guards, async (req, res) => {    const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const encounterId = idParamSchema.safeParse(req.params.id);
     const body = flashAnswerRequestSchema.safeParse(req.body);
