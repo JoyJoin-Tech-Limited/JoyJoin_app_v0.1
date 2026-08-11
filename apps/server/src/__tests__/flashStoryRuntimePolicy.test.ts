@@ -279,12 +279,11 @@ describe("formal Flash story runtime policy", () => {
         { id: "protect-boundary", label: "先守边界" },
       ],
     };
-    const progress = createAtuanFirstActProgress(encounter.id, "trace_order");
+    const progress = createAtuanFirstActProgress(encounter.id, "notice_wait");
     const outcome = resolveAtuanFirstActOutcome(encounter.id, {
       ...progress,
-      hypothesisId: "returned",
-      reversalRevealed: true,
-      decisionId: "return_unread",
+      followupId: "offer_help",
+      benchReached: true,
     });
     const storyPath = toAtuanFirstActSubmission(outcome.progress);
     const completed = {
@@ -338,12 +337,11 @@ describe("formal Flash story runtime policy", () => {
       ],
     };
     mocks.getStoryEncounterState.mockResolvedValue(initial);
-    const progress = createAtuanFirstActProgress(encounter.id, "trace_order");
+    const progress = createAtuanFirstActProgress(encounter.id, "notice_wait");
     const storyPath = toAtuanFirstActSubmission({
       ...progress,
-      hypothesisId: "returned",
-      reversalRevealed: true,
-      decisionId: "return_unread",
+      followupId: "offer_help",
+      benchReached: true,
     });
 
     await expect(answerFlashEncounter({
@@ -351,7 +349,7 @@ describe("formal Flash story runtime policy", () => {
       userId: encounter.userId,
       questionId: "first-look",
       optionId: "notice-lines",
-      storyPath: { ...storyPath, endingId: "wrong_ink" },
+      storyPath: { ...storyPath, endingId: "felt_seen" },
       now,
     })).rejects.toMatchObject({ code: "FLASH_INVALID_DIALOGUE_OPTION", status: 400 });
 
@@ -495,12 +493,11 @@ describe("formal Flash story runtime policy", () => {
       ],
     };
     mocks.getStoryEncounterState.mockResolvedValue(completed);
-    const progress = createAtuanFirstActProgress(encounter.id, "protect_boundary");
+    const progress = createAtuanFirstActProgress(encounter.id, "notice_again");
     const outcome = resolveAtuanFirstActOutcome(encounter.id, {
       ...progress,
-      hypothesisId: "miscounted",
-      reversalRevealed: true,
-      decisionId: "ask_first",
+      followupId: "move_forward",
+      benchReached: true,
     });
 
     const result = await answerFlashEncounter({

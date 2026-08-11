@@ -1157,6 +1157,1028 @@ page {
   font-size: $font-size-lg;
 }
 
+.flash-dialogue__story-stage--atuan-first {
+  .flash-dialogue__story-index {
+    display: none;
+  }
+
+  .flash-dialogue-scene__shade {
+    background: linear-gradient(180deg, rgba($color-text-primary, 0.04) 0%, transparent 48%, rgba($color-text-primary-warm, 0.36) 100%);
+  }
+
+  .flash-dialogue__story-panel {
+    border-color: rgba($color-primary, 0.2);
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 16rpx 40rpx rgba($color-text-primary, 0.18);
+  }
+
+  .flash-dialogue__story-panel-content {
+    gap: 16rpx;
+  }
+
+  .flash-dialogue__story-panel .flash-dialogue__story-choice {
+    border-color: rgba($color-primary, 0.18);
+    color: $color-text-primary-warm;
+    background: $color-surface;
+    box-shadow: 0 6rpx 20rpx rgba($color-text-primary, 0.08);
+  }
+
+  .flash-dialogue__story-panel .flash-dialogue__choice-text {
+    color: $color-text-primary-warm;
+    font-weight: $font-weight-medium;
+  }
+
+  .flash-dialogue__story-panel .flash-dialogue__choice-mark {
+    color: $color-primary;
+  }
+}
+
+.atuan-first-dialogue {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+
+  &__cue,
+  &__eyebrow,
+  &__ending,
+  &__scene-action-kicker,
+  &__scene-action-label,
+  &__continue-text {
+    display: block;
+  }
+
+  &__cue {
+    color: $color-text-secondary-on-light;
+    font-size: $font-size-xs;
+    line-height: $line-height-relaxed;
+  }
+
+  &__scene-action {
+    display: flex;
+    min-height: 96rpx;
+    padding: 16rpx 20rpx;
+    align-items: center;
+    gap: 16rpx;
+    border: 2rpx solid rgba($color-primary, 0.24);
+    border-radius: 24rpx;
+    background: $color-bg-tint-purple;
+    box-sizing: border-box;
+    transition: opacity 180ms ease-out, transform 180ms ease-out;
+
+    &--pressed {
+      opacity: 0.86;
+      transform: scale(0.985);
+    }
+  }
+
+  &__scene-action-mark {
+    position: relative;
+    width: 48rpx;
+    height: 48rpx;
+    flex: 0 0 auto;
+  }
+
+  &__scene-action-ring,
+  &__scene-action-dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: $radius-circle;
+    transform: translate(-50%, -50%);
+  }
+
+  &__scene-action-ring {
+    width: 44rpx;
+    height: 44rpx;
+    border: 2rpx solid rgba($color-primary, 0.34);
+    animation: atuan-first-action-pulse 1.8s ease-in-out infinite;
+  }
+
+  &__scene-action-dot {
+    width: 16rpx;
+    height: 16rpx;
+    background: $color-primary;
+  }
+
+  &__scene-action-copy {
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__scene-action-kicker,
+  &__eyebrow {
+    color: $color-primary-dark;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    letter-spacing: 2rpx;
+  }
+
+  &__scene-action-label {
+    margin-top: 4rpx;
+    color: $color-text-primary-warm;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-normal;
+  }
+
+  &__scene-action-arrow {
+    color: $color-primary;
+    font-size: $font-size-xl;
+  }
+
+  &--invitation {
+    align-items: stretch;
+  }
+
+  &__ending {
+    color: $color-text-primary-warm;
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__continue {
+    display: flex;
+    min-height: 88rpx;
+    margin-top: 8rpx;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-pill;
+    background: $color-primary;
+    transition: opacity 180ms ease-out, transform 180ms ease-out;
+
+    &--pressed {
+      opacity: 0.88;
+      transform: scale(0.985);
+    }
+  }
+
+  &__continue-text {
+    color: $color-surface;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.atuan-arrival {
+  &__cutout {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.96;
+    pointer-events: none;
+    filter:
+      brightness(1.035)
+      saturate(1.04)
+      drop-shadow(0 0 3rpx rgba($color-surface, 0.96))
+      drop-shadow(0 0 9rpx rgba($color-primary, 0.78))
+      drop-shadow(0 0 22rpx rgba($color-primary, 0.34));
+    animation: atuan-cutout-settle 1.9s ease-in-out infinite;
+  }
+
+  &__cutout--bag {
+    filter:
+      brightness(1.05)
+      saturate(1.03)
+      drop-shadow(0 0 3rpx rgba($color-surface, 0.98))
+      drop-shadow(0 0 8rpx rgba($color-primary, 0.82))
+      drop-shadow(0 0 18rpx rgba($color-primary, 0.38));
+    animation-delay: 160ms;
+  }
+
+  &__atuan-highlight {
+    position: absolute;
+    top: 17%;
+    right: 1%;
+    width: 410rpx;
+    height: 760rpx;
+    border-radius: 48%;
+    pointer-events: auto;
+    transition: transform 160ms ease-out;
+
+    &--pressed { transform: scale(0.97); }
+  }
+
+  &__atuan-glow {
+    position: absolute;
+    inset: 24rpx 18rpx;
+    border: 4rpx solid rgba($color-surface, 0.72);
+    border-radius: 48%;
+    background: radial-gradient(ellipse at center, transparent 42%, rgba($color-primary, 0.08) 68%, rgba($color-primary, 0.18) 100%);
+    box-shadow: 0 0 0 12rpx rgba($color-primary, 0.08), 0 0 52rpx rgba($color-primary, 0.28);
+    animation: atuan-character-highlight 1.9s ease-in-out infinite;
+  }
+
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  pointer-events: none;
+
+  &__hotspot,
+  &__flying-card,
+  &__physical-action,
+  &__choice {
+    pointer-events: auto;
+  }
+
+  &__hotspot {
+    position: absolute;
+    display: flex;
+    width: 112rpx;
+    align-items: center;
+    flex-direction: column;
+    gap: 8rpx;
+    transition: opacity 180ms ease-out, transform 180ms ease-out;
+
+    &--road { top: 38%; left: 16%; }
+    &--lamp { top: 27%; right: 7%; }
+    &--bag { top: 61%; left: 8%; }
+    &--pressed { transform: scale(0.94); }
+    &--seen { opacity: 0.52; }
+  }
+
+  &__hotspot-ring {
+    width: 44rpx;
+    height: 44rpx;
+    border: 4rpx solid rgba($color-surface, 0.94);
+    border-radius: $radius-circle;
+    background: rgba($color-primary, 0.5);
+    box-shadow: 0 0 0 10rpx rgba($color-primary, 0.18), 0 6rpx 18rpx rgba($color-text-primary, 0.24);
+    animation: atuan-hotspot-breathe 1.8s ease-in-out infinite;
+  }
+
+  &__hotspot-label {
+    padding: 6rpx 10rpx;
+    border-radius: $radius-pill;
+    color: $color-surface;
+    background: rgba($color-text-primary, 0.72);
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    white-space: nowrap;
+  }
+
+  &__note,
+  &__urgent {
+    position: absolute;
+    right: 24rpx;
+    bottom: calc(24rpx + env(safe-area-inset-bottom));
+    left: 24rpx;
+    display: flex;
+    padding: 24rpx;
+    flex-direction: column;
+    gap: 12rpx;
+    border: 2rpx solid rgba($color-primary, 0.18);
+    border-radius: 28rpx;
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 16rpx 40rpx rgba($color-text-primary, 0.2);
+    pointer-events: auto;
+    animation: flash-story-panel-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__note-count,
+  &__note-copy,
+  &__choice-prompt,
+  &__choice-effect {
+    display: block;
+  }
+
+  &__note-count {
+    color: $color-primary-dark;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    letter-spacing: 2rpx;
+  }
+
+  &__note-copy,
+  &__choice-prompt {
+    color: $color-text-primary-warm;
+    font-size: $font-size-sm;
+    line-height: $line-height-relaxed;
+  }
+
+  &__wind {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  &__wind-line {
+    position: absolute;
+    width: 280rpx;
+    height: 20rpx;
+    border-top: 4rpx solid rgba($color-surface, 0.72);
+    border-radius: 50%;
+    animation: atuan-wind-sweep 1.2s ease-out infinite;
+
+    &--one { top: 49%; left: -80rpx; }
+    &--two { top: 56%; left: -180rpx; animation-delay: 240ms; }
+  }
+
+  &__flying-card {
+    position: absolute;
+    top: 51%;
+    left: 24%;
+    width: 116rpx;
+    height: 156rpx;
+    padding: 20rpx 16rpx;
+    border: 2rpx solid rgba($color-primary-dark, 0.22);
+    border-radius: 10rpx;
+    background: $color-bg-clean;
+    box-shadow: 0 12rpx 30rpx rgba($color-text-primary, 0.24);
+    box-sizing: border-box;
+    animation: atuan-card-flight 2.2s ease-in-out infinite;
+  }
+
+  &__flying-card-line {
+    height: 4rpx;
+    margin-top: 16rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-primary-dark, 0.2);
+
+    &--short { width: 62%; }
+  }
+
+  &__urgent {
+    align-items: center;
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+  }
+
+  &__physical-action {
+    display: flex;
+    min-height: 88rpx;
+    padding: 14rpx 20rpx;
+    align-items: center;
+    gap: 18rpx;
+    border-radius: 22rpx;
+    color: $color-surface;
+    background: $color-primary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+
+    &--pressed { opacity: 0.86; transform: scale(0.985); }
+  }
+
+  &__mini-card {
+    width: 34rpx;
+    height: 46rpx;
+    flex: 0 0 auto;
+    border-radius: 4rpx;
+    background: $color-surface;
+    transform: rotate(-8deg);
+  }
+
+  &__choices {
+    display: flex;
+    flex-direction: column;
+    gap: 10rpx;
+  }
+
+  &__choice {
+    display: flex;
+    min-height: 88rpx;
+    padding: 14rpx 18rpx;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+    border: 2rpx solid rgba($color-primary, 0.18);
+    border-radius: 22rpx;
+    color: $color-text-primary-warm;
+    background: $color-bg-tint-purple;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+
+    &--pressed { opacity: 0.84; transform: scale(0.985); }
+  }
+
+  &__choice-effect {
+    flex: 0 0 auto;
+    color: $color-primary-dark;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-medium;
+  }
+}
+
+@keyframes atuan-hotspot-breathe {
+  0%, 100% { transform: scale(0.9); }
+  50% { transform: scale(1); }
+}
+
+@keyframes atuan-wind-sweep {
+  from { opacity: 0; transform: translateX(0); }
+  35% { opacity: 0.8; }
+  to { opacity: 0; transform: translateX(760rpx); }
+}
+
+@keyframes atuan-card-flight {
+  0% { transform: translate3d(-70rpx, 20rpx, 0) rotate(-12deg); }
+  45% { transform: translate3d(180rpx, -72rpx, 0) rotate(14deg); }
+  100% { transform: translate3d(390rpx, 30rpx, 0) rotate(30deg); }
+}
+
+// Atuan arrival v3: simultaneous, silhouette-bound highlights with independent reveals.
+.atuan-arrival {
+  &__outline {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.94;
+    pointer-events: none;
+    animation: atuan-outline-breathe 1.65s ease-in-out infinite;
+  }
+
+  &__outline--bag { animation-delay: 180ms; }
+
+  &__atuan-highlight {
+    top: 12%;
+    right: 0;
+    width: 54%;
+    height: 72%;
+    border-radius: 44% 0 0 42%;
+    background: transparent;
+  }
+
+  &__bag-highlight {
+    top: 53%;
+    left: 12%;
+    width: 18%;
+    height: 15%;
+    border-radius: 20rpx;
+    background: transparent;
+  }
+
+  &__atuan-glow,
+  &__bag-glow { display: none; }
+
+  &__gaze-reveal {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    animation: atuan-gaze-reveal-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__gaze-line {
+    position: absolute;
+    top: 27%;
+    right: 27%;
+    width: 360rpx;
+    height: 3rpx;
+    border-radius: $radius-pill;
+    background: linear-gradient(90deg, rgba($color-surface, 0.92), rgba($color-primary, 0.5), transparent);
+    transform: rotate(158deg);
+    transform-origin: right center;
+    animation: atuan-gaze-trace 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__gaze-line--two {
+    top: 29%;
+    width: 300rpx;
+    opacity: 0.52;
+    animation-delay: 90ms;
+  }
+
+  &__gaze-point {
+    position: absolute;
+    top: 38%;
+    left: 16%;
+    width: 24rpx;
+    height: 24rpx;
+    border: 3rpx solid rgba($color-surface, 0.94);
+    border-radius: $radius-circle;
+    background: rgba($color-primary, 0.5);
+    box-shadow: 0 0 0 10rpx rgba($color-primary, 0.16), 0 0 28rpx rgba($color-primary, 0.44);
+    animation: atuan-gaze-point-in 360ms 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__card-fan--waiting {
+    pointer-events: none;
+  }
+
+  &__choices {
+    position: absolute;
+    z-index: 5;
+    right: 24rpx;
+    bottom: calc(24rpx + env(safe-area-inset-bottom));
+    left: 24rpx;
+    padding: 16rpx;
+    border: 2rpx solid rgba($color-primary, 0.16);
+    border-radius: 28rpx;
+    background: rgba($color-surface, 0.94);
+    box-shadow: 0 16rpx 40rpx rgba($color-text-primary, 0.2);
+    pointer-events: auto;
+  }
+}
+
+@keyframes atuan-outline-breathe {
+  0%, 100% { opacity: 0.74; }
+  50% { opacity: 1; }
+}
+
+@keyframes atuan-cutout-settle {
+  0%, 100% { opacity: 0.82; }
+  50% { opacity: 1; }
+}
+
+@keyframes atuan-gaze-reveal-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes atuan-gaze-trace {
+  from { opacity: 0; transform: rotate(158deg) scaleX(0); }
+  to { opacity: 1; transform: rotate(158deg) scaleX(1); }
+}
+
+@keyframes atuan-gaze-point-in {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+// Atuan arrival v2: one visual affordance, no instructional tags.
+.atuan-arrival {
+  &__bag-highlight {
+    position: absolute;
+    top: 57%;
+    left: 3%;
+    width: 190rpx;
+    height: 190rpx;
+    border-radius: 48%;
+    pointer-events: auto;
+    transition: transform 160ms ease-out;
+
+    &--pressed { transform: scale(0.94); }
+  }
+
+  &__bag-glow {
+    position: absolute;
+    inset: 20rpx;
+    border: 4rpx solid rgba($color-surface, 0.88);
+    border-radius: 48%;
+    background: rgba($color-primary, 0.08);
+    box-shadow: 0 0 0 14rpx rgba($color-primary, 0.16), 0 0 42rpx rgba($color-primary, 0.36);
+    animation: atuan-bag-highlight 1.7s ease-in-out infinite;
+  }
+
+  &__card-fan {
+    position: absolute;
+    z-index: 2;
+    top: 47%;
+    left: 7%;
+    width: 360rpx;
+    height: 300rpx;
+    pointer-events: auto;
+    transition: transform 160ms ease-out;
+
+    &--pressed { transform: scale(0.97); }
+  }
+
+  &__card {
+    position: absolute;
+    bottom: 24rpx;
+    left: 76rpx;
+    width: 126rpx;
+    height: 174rpx;
+    padding: 22rpx 18rpx;
+    border: 2rpx solid rgba($color-primary-dark, 0.16);
+    border-radius: 12rpx;
+    background: $color-bg-clean;
+    box-shadow: 0 14rpx 34rpx rgba($color-text-primary, 0.22);
+    box-sizing: border-box;
+    transform-origin: 50% 110%;
+
+    &--one { animation: atuan-card-deal-left 560ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+    &--two { z-index: 2; animation: atuan-card-deal-center 520ms 90ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+    &--three { animation: atuan-card-deal-right 580ms 160ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  }
+
+  &__card-rule {
+    width: 70%;
+    height: 4rpx;
+    margin-top: 22rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-primary-dark, 0.18);
+    box-shadow: 0 20rpx 0 rgba($color-primary-dark, 0.12), 0 40rpx 0 rgba($color-primary-dark, 0.08);
+  }
+
+  &__card-focus {
+    position: absolute;
+    z-index: -1;
+    bottom: 0;
+    left: 40rpx;
+    width: 250rpx;
+    height: 220rpx;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba($color-primary, 0.3), transparent 68%);
+    animation: atuan-card-focus 1.8s 620ms ease-in-out infinite;
+  }
+
+  &__choices {
+    position: absolute;
+    right: 24rpx;
+    bottom: calc(24rpx + env(safe-area-inset-bottom));
+    left: 24rpx;
+    display: flex;
+    padding: 20rpx;
+    flex-direction: column;
+    gap: 10rpx;
+    border: 2rpx solid rgba($color-primary, 0.16);
+    border-radius: 28rpx;
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 16rpx 40rpx rgba($color-text-primary, 0.18);
+    pointer-events: auto;
+    animation: flash-story-panel-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__choice {
+    display: flex;
+    min-height: 88rpx;
+    padding: 14rpx 20rpx;
+    align-items: center;
+    border: 2rpx solid rgba($color-primary, 0.16);
+    border-radius: 22rpx;
+    color: $color-text-primary-warm;
+    background: $color-bg-tint-purple;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+
+    &--pressed { opacity: 0.84; transform: scale(0.985); }
+  }
+}
+
+@keyframes atuan-bag-highlight {
+  0%, 100% { opacity: 0.58; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes atuan-character-highlight {
+  0%, 100% { opacity: 0.48; transform: scale(0.97); }
+  50% { opacity: 0.9; transform: scale(1); }
+}
+
+@keyframes atuan-card-deal-left {
+  from { opacity: 0; transform: translate3d(-92rpx, 118rpx, 0) rotate(-4deg) scale(0.52); }
+  to { opacity: 1; transform: translate3d(-58rpx, -16rpx, 0) rotate(-15deg) scale(1); }
+}
+
+@keyframes atuan-card-deal-center {
+  from { opacity: 0; transform: translate3d(-86rpx, 120rpx, 0) rotate(0) scale(0.5); }
+  to { opacity: 1; transform: translate3d(48rpx, -58rpx, 0) rotate(1deg) scale(1.04); }
+}
+
+@keyframes atuan-card-deal-right {
+  from { opacity: 0; transform: translate3d(-82rpx, 116rpx, 0) rotate(5deg) scale(0.5); }
+  to { opacity: 1; transform: translate3d(152rpx, -8rpx, 0) rotate(16deg) scale(1); }
+}
+
+@keyframes atuan-card-focus {
+  0%, 100% { opacity: 0.34; transform: scale(0.9); }
+  50% { opacity: 0.72; transform: scale(1); }
+}
+
+// Atuan arrival v4: layered scene, nonlinear inspection, and a scene-led convergence event.
+.atuan-arrival {
+  &__cutout {
+    filter:
+      brightness(1.025)
+      drop-shadow(0 0 2rpx rgba($color-surface, 0.96))
+      drop-shadow(0 0 8rpx rgba($color-primary, 0.62))
+      drop-shadow(0 0 18rpx rgba($color-primary, 0.24));
+    animation: atuan-interactable-rest 2.4s ease-in-out infinite;
+  }
+
+  &__cutout--bag {
+    filter:
+      brightness(1.04)
+      drop-shadow(0 0 2rpx rgba($color-surface, 0.98))
+      drop-shadow(0 0 7rpx rgba($color-primary, 0.68))
+      drop-shadow(0 0 16rpx rgba($color-primary, 0.28));
+    animation-delay: 180ms;
+  }
+
+  &__highlight--pressed { transform: scale(0.985); }
+
+  &__detail {
+    position: absolute;
+    z-index: 8;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: auto;
+    animation: atuan-detail-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--pressed { opacity: 0.96; }
+  }
+
+  &__detail-shade {
+    position: absolute;
+    inset: 0;
+    background: rgba(44, 35, 55, 0.34);
+  }
+
+  &__detail-character {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    filter: brightness(1.08) drop-shadow(0 16rpx 42rpx rgba($color-text-primary, 0.24));
+    transform: scale(1.025) translate3d(8rpx, 0, 0);
+    transform-origin: 72% 43%;
+    animation: atuan-character-focus 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__entrance-light {
+    position: absolute;
+    left: 18%;
+    width: 18rpx;
+    height: 18rpx;
+    border-radius: $radius-circle;
+    background: rgba(255, 236, 190, 0.9);
+    box-shadow: 0 0 16rpx rgba(255, 220, 142, 0.7), 0 0 36rpx rgba(255, 220, 142, 0.42);
+    animation: atuan-entrance-light 1.8s ease-in-out infinite;
+  }
+
+  &__entrance-light--one { top: 38%; }
+  &__entrance-light--two { top: 44%; left: 25%; width: 12rpx; height: 12rpx; animation-delay: 180ms; }
+  &__entrance-light--three { top: 33%; left: 31%; width: 10rpx; height: 10rpx; animation-delay: 360ms; }
+
+  &__bag-closeup {
+    position: absolute;
+    top: 27%;
+    left: 50%;
+    width: 420rpx;
+    height: 520rpx;
+    transform: translateX(-50%);
+    animation: atuan-bag-closeup-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__bag-paper {
+    position: absolute;
+    z-index: 3;
+    right: 58rpx;
+    bottom: 18rpx;
+    left: 58rpx;
+    height: 330rpx;
+    border: 2rpx solid rgba(113, 76, 40, 0.2);
+    border-radius: 20rpx 20rpx 34rpx 34rpx;
+    background: linear-gradient(100deg, #b57d42 0%, #d7a667 45%, #bc8449 100%);
+    box-shadow: 0 28rpx 54rpx rgba($color-text-primary, 0.28);
+
+    &::before {
+      position: absolute;
+      top: 28rpx;
+      right: 24rpx;
+      left: 24rpx;
+      height: 4rpx;
+      border-radius: $radius-pill;
+      background: rgba(87, 55, 27, 0.2);
+      content: '';
+    }
+  }
+
+  &__peek-card {
+    position: absolute;
+    z-index: 2;
+    top: 28rpx;
+    left: 146rpx;
+    width: 150rpx;
+    height: 220rpx;
+    padding: 22rpx;
+    border: 2rpx solid rgba($color-primary-dark, 0.14);
+    border-radius: 14rpx;
+    background: $color-bg-clean;
+    box-shadow: 0 12rpx 28rpx rgba($color-text-primary, 0.16);
+    box-sizing: border-box;
+    transform-origin: 50% 120%;
+
+    &--1 { transform: translate3d(-112rpx, 62rpx, 0) rotate(-18deg); }
+    &--2 { transform: translate3d(-58rpx, 18rpx, 0) rotate(-9deg); }
+    &--3 { z-index: 2; transform: translate3d(0, 0, 0); }
+    &--4 { transform: translate3d(58rpx, 18rpx, 0) rotate(9deg); }
+    &--5 { transform: translate3d(112rpx, 62rpx, 0) rotate(18deg); }
+  }
+
+  &__peek-stamp {
+    width: 40rpx;
+    height: 40rpx;
+    border: 3rpx solid rgba($color-primary, 0.3);
+    border-radius: $radius-circle;
+  }
+
+  &__peek-rule {
+    width: 78%;
+    height: 4rpx;
+    margin-top: 28rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-primary-dark, 0.16);
+    box-shadow: 0 22rpx 0 rgba($color-primary-dark, 0.1), 0 44rpx 0 rgba($color-primary-dark, 0.07);
+  }
+
+  &__wind-event {
+    position: absolute;
+    z-index: 7;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  &__wind-ribbon {
+    position: absolute;
+    left: -280rpx;
+    width: 360rpx;
+    height: 28rpx;
+    border-top: 5rpx solid rgba($color-surface, 0.78);
+    border-radius: 50%;
+    filter: drop-shadow(0 0 8rpx rgba($color-primary, 0.22));
+    animation: atuan-wind-cross 1.4s ease-in-out infinite;
+
+    &--one { top: 48%; }
+    &--two { top: 56%; animation-delay: 240ms; }
+  }
+
+  &__loose-card {
+    position: absolute;
+    top: 48%;
+    left: 18%;
+    width: 128rpx;
+    height: 178rpx;
+    padding: 22rpx 18rpx;
+    border: 2rpx solid rgba($color-primary-dark, 0.18);
+    border-radius: 12rpx;
+    background: $color-bg-clean;
+    box-shadow: 0 18rpx 42rpx rgba($color-text-primary, 0.26), 0 0 24rpx rgba($color-primary, 0.18);
+    box-sizing: border-box;
+    pointer-events: auto;
+    animation: atuan-loose-card 2.25s ease-in-out infinite;
+
+    &--pressed { opacity: 0.86; }
+  }
+
+  &__loose-card-stamp {
+    width: 34rpx;
+    height: 34rpx;
+    border: 3rpx solid rgba($color-primary, 0.32);
+    border-radius: $radius-circle;
+  }
+
+  &__loose-card-rule {
+    width: 70%;
+    height: 4rpx;
+    margin-top: 24rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-primary-dark, 0.16);
+    box-shadow: 0 20rpx 0 rgba($color-primary-dark, 0.1);
+  }
+
+  &__action-cards {
+    position: absolute;
+    z-index: 9;
+    right: 32rpx;
+    bottom: calc(56rpx + env(safe-area-inset-bottom));
+    left: 32rpx;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 24rpx;
+    pointer-events: none;
+  }
+
+  &__action-card {
+    display: flex;
+    width: 286rpx;
+    min-height: 250rpx;
+    padding: 24rpx;
+    align-items: center;
+    justify-content: flex-end;
+    flex-direction: column;
+    gap: 18rpx;
+    border: 2rpx solid rgba($color-surface, 0.82);
+    border-radius: 28rpx;
+    background: rgba(48, 38, 60, 0.78);
+    box-shadow: 0 20rpx 44rpx rgba($color-text-primary, 0.28);
+    box-sizing: border-box;
+    pointer-events: auto;
+    animation: atuan-action-card-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &--bag { animation-delay: 90ms; }
+    &--pressed { opacity: 0.86; transform: translateY(4rpx) scale(0.985); }
+  }
+
+  &__action-card-visual {
+    display: flex;
+    width: 108rpx;
+    height: 108rpx;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-circle;
+    background: rgba($color-primary, 0.18);
+  }
+
+  &__action-mini-card {
+    width: 54rpx;
+    height: 76rpx;
+    border: 3rpx solid rgba($color-surface, 0.94);
+    border-radius: 7rpx;
+    background: rgba($color-surface, 0.18);
+    transform: rotate(-11deg);
+  }
+
+  &__action-bag-mark {
+    width: 62rpx;
+    height: 70rpx;
+    border: 3rpx solid rgba($color-surface, 0.94);
+    border-radius: 8rpx 8rpx 14rpx 14rpx;
+    background: rgba(206, 151, 91, 0.28);
+  }
+
+  &__action-card-text {
+    color: $color-surface;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    line-height: 1.45;
+    text-align: center;
+  }
+}
+
+@keyframes atuan-interactable-rest {
+  0%, 100% { opacity: 0.82; }
+  50% { opacity: 1; }
+}
+
+@keyframes atuan-detail-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes atuan-character-focus {
+  from { opacity: 0.72; transform: scale(1) translate3d(0, 8rpx, 0); }
+  to { opacity: 1; transform: scale(1.025) translate3d(8rpx, 0, 0); }
+}
+
+@keyframes atuan-entrance-light {
+  0%, 100% { opacity: 0.36; transform: scale(0.86); }
+  50% { opacity: 0.92; transform: scale(1); }
+}
+
+@keyframes atuan-bag-closeup-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(24rpx) scale(0.94); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes atuan-wind-cross {
+  from { opacity: 0; transform: translateX(0); }
+  35% { opacity: 0.82; }
+  to { opacity: 0; transform: translateX(1080rpx); }
+}
+
+@keyframes atuan-loose-card {
+  0% { transform: translate3d(-80rpx, 80rpx, 0) rotate(-12deg); }
+  48% { transform: translate3d(220rpx, -64rpx, 0) rotate(13deg); }
+  100% { transform: translate3d(500rpx, 42rpx, 0) rotate(27deg); }
+}
+
+@keyframes atuan-action-card-in {
+  from { opacity: 0; transform: translateY(28rpx) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+// Keep v3 geometry after the legacy v2 block so the transparent outline assets stay aligned.
+.atuan-arrival {
+  &__atuan-highlight {
+    top: 12%;
+    right: 0;
+    width: 54%;
+    height: 72%;
+    border-radius: 44% 0 0 42%;
+    background: transparent;
+  }
+
+  &__bag-highlight {
+    top: 53%;
+    left: 12%;
+    width: 18%;
+    height: 15%;
+    border-radius: 20rpx;
+    background: transparent;
+  }
+
+  &__card-fan--waiting { pointer-events: none; }
+}
+
+@keyframes atuan-first-action-pulse {
+  0%,
+  100% { opacity: 0.38; transform: translate(-50%, -50%) scale(0.9); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
 .flash-dialogue__story-panel--choices {
   // Choice branch state marker; base panel layout and glass styling apply.
   position: absolute;
@@ -1718,6 +2740,24 @@ page {
   .flash-dialogue-scene--drift .flash-dialogue-scene__image,
   .flash-dialogue-scene__blink-frame,
   .flash-dialogue__story-stage .flash-dialogue-scene__bubble,
+  .atuan-first-dialogue__scene-action-ring,
+  .atuan-arrival__hotspot-ring,
+  .atuan-arrival__wind-line,
+  .atuan-arrival__flying-card,
+  .atuan-arrival__note,
+  .atuan-arrival__bag-glow,
+  .atuan-arrival__atuan-glow,
+  .atuan-arrival__cutout,
+  .atuan-arrival__detail,
+  .atuan-arrival__detail-character,
+  .atuan-arrival__entrance-light,
+  .atuan-arrival__bag-closeup,
+  .atuan-arrival__wind-ribbon,
+  .atuan-arrival__loose-card,
+  .atuan-arrival__action-card,
+  .atuan-arrival__card,
+  .atuan-arrival__card-focus,
+  .atuan-arrival__choices,
   .flash-dialogue__story-ambient,
   .flash-dialogue__story-panel,
   .flash-dialogue__story-choice,

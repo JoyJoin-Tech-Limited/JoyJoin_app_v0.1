@@ -872,7 +872,7 @@ export async function answerFlashEncounter(input: {
         }
         const validatedPath = validateAtuanFirstActSubmission(input.encounterId, input.storyPath);
         const optionIndex = question.options.findIndex((candidate: { id: string }) => candidate.id === option.id);
-        if (!validatedPath || validatedPath.submission.investigationId !== getAtuanFirstActInvestigation(optionIndex).id) {
+        if (!validatedPath || validatedPath.submission.approachId !== getAtuanFirstActInvestigation(optionIndex).id) {
           throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这条故事轨迹已经失效，请重新进入相遇");
         }
         replayResponseSnapshot = validatedPath.outcome.responseCopy;
@@ -942,7 +942,7 @@ export async function answerFlashEncounter(input: {
       }
       const validatedPath = validateAtuanFirstActSubmission(input.encounterId, input.storyPath);
       const optionIndex = question.options.findIndex((candidate: { id: string }) => candidate.id === option.id);
-      if (!validatedPath || validatedPath.submission.investigationId !== getAtuanFirstActInvestigation(optionIndex).id) {
+      if (!validatedPath || validatedPath.submission.approachId !== getAtuanFirstActInvestigation(optionIndex).id) {
         throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这条故事轨迹已经失效，请重新进入相遇");
       }
       storyAnswers = atuanFirstActStoryAnswers(validatedPath.submission);

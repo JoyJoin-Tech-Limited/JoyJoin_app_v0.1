@@ -70,6 +70,8 @@ export function FlashNpcDialogueScene({
   spacious = false,
   choicesEmbedded = false,
   deliveryEmbedded = false,
+  silent = false,
+  hideIdentity = false,
   motion,
 }: {
   npc: Pick<FlashNpcReference, 'slug' | 'name' | 'animal'>
@@ -79,6 +81,8 @@ export function FlashNpcDialogueScene({
   spacious?: boolean
   choicesEmbedded?: boolean
   deliveryEmbedded?: boolean
+  silent?: boolean
+  hideIdentity?: boolean
   motion?: { ambient: 'none' | 'breathe' | 'drift'; blinkAssetUrl?: string; blinkIntervalSeconds?: number }
 }) {
   const theme = useMemo(() => resolveFlashNpcTheme(npc.slug, npc.name), [npc.name, npc.slug])
@@ -124,15 +128,19 @@ export function FlashNpcDialogueScene({
         />
       ) : null}
       <View className='flash-dialogue-scene__shade' aria-hidden='true' />
-      <View className='flash-dialogue-scene__identity'>
-        <Text className='flash-dialogue-scene__name'>{npc.name}</Text>
-        <Text className='flash-dialogue-scene__animal'>{npc.animal ?? theme.animal}</Text>
-      </View>
-      <View className='flash-dialogue-scene__bubble' role='status'>
-        {intro ? <Text className='flash-dialogue-scene__intro'>{intro}</Text> : null}
-        <Text className='flash-dialogue-scene__speech'>{speech}</Text>
-        <View className='flash-dialogue-scene__bubble-tail' aria-hidden='true' />
-      </View>
+      {!hideIdentity ? (
+        <View className='flash-dialogue-scene__identity'>
+          <Text className='flash-dialogue-scene__name'>{npc.name}</Text>
+          <Text className='flash-dialogue-scene__animal'>{npc.animal ?? theme.animal}</Text>
+        </View>
+      ) : null}
+      {!silent ? (
+        <View className='flash-dialogue-scene__bubble' role='status'>
+          {intro ? <Text className='flash-dialogue-scene__intro'>{intro}</Text> : null}
+          <Text className='flash-dialogue-scene__speech'>{speech}</Text>
+          <View className='flash-dialogue-scene__bubble-tail' aria-hidden='true' />
+        </View>
+      ) : null}
     </View>
   )
 }
