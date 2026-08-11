@@ -1,0 +1,131 @@
+name: Apply Staging Flash Story V2 Migration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/staging-flash-story-v2-migration.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: joyjoin-cvm-remote
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply 20260811010000 on staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify and encode the checked-in migration
+        id: migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          readonly migration='apps/server/migrations/20260811010000_flash_story_episode_v2.sql'
+          readonly expected_sha='7ee4a473ccadff7bc421098db46d77a409a55832dd2ae2d6692dc8dc2422ec25'
+          actual_sha="$(sha256sum "$migration" | awk '{print $1}')"
+          test "$actual_sha" = "$expected_sha"
+          {
+            echo "sql_b64=$(base64 -w0 "$migration")"
+            echo "sha256=$actual_sha"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Resolve and pin the CVM host key
+        id: cvm-host-key
+        uses: ./.github/actions/resolve-cvm-host-fingerprint
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+
+      - name: Apply migration transaction and verify postconditions
+        env:
+          STAGING_POSTGRES_PASSWORD: ${{ secrets.STAGING_POSTGRES_PASSWORD }}
+          MIGRATION_SQL_B64: ${{ steps.migration.outputs.sql_b64 }}
+          MIGRATION_SHA256: ${{ steps.migration.outputs.sha256 }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
+          timeout: 60s
+          command_timeout: 10m
+          envs: STAGING_POSTGRES_PASSWORD,MIGRATION_SQL_B64,MIGRATION_SHA256
+          script: |
+            set -euo pipefail
+            umask 077
+            : "${STAGING_POSTGRES_PASSWORD:?STAGING_POSTGRES_PASSWORD GitHub secret is required}"
+            : "${MIGRATION_SQL_B64:?MIGRATION_SQL_B64 is required}"
+            [[ "$MIGRATION_SHA256" =~ ^[0-9a-f]{64}$ ]]
+
+            exec 9>/var/lock/joyjoin-cvm-remote.lock
+            flock -n 9
+
+            migration_file="$(mktemp)"
+            cleanup() {
+              rm -f -- "$migration_file"
+            }
+            trap cleanup EXIT
+            printf '%s' "$MIGRATION_SQL_B64" | base64 -d > "$migration_file"
+            test "$(sha256sum "$migration_file" | awk '{print $1}')" = "$MIGRATION_SHA256"
+
+            run_psql() {
+              docker exec -i \
+                -e PGPASSWORD="$STAGING_POSTGRES_PASSWORD" \
+                postgres-staging \
+                psql -h 127.0.0.1 -U joyjoin -d joyjoin_staging "$@"
+            }
+
+            run_psql -v ON_ERROR_STOP=1 <<'SQL'
+            DO $preflight$
+            BEGIN
+              IF current_database() <> 'joyjoin_staging' THEN
+                RAISE EXCEPTION 'WRONG_DATABASE: expected joyjoin_staging, got %', current_database();
+              END IF;
+              IF to_regclass('public.flash_story_universe_runs') IS NULL THEN
+                RAISE EXCEPTION 'FLASH_STORY_V2_PREFLIGHT_FAILED: flash_story_universe_runs is missing';
+              END IF;
+            END
+            $preflight$;
+            SQL
+
+            run_psql -v ON_ERROR_STOP=1 --single-transaction -f /dev/stdin < "$migration_file"
+
+            run_psql -v ON_ERROR_STOP=1 <<'SQL'
+            DO $postflight$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'flash_story_universe_runs'
+                  AND column_name = 'current_node'
+                  AND data_type = 'character varying'
+              ) OR NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'flash_story_universe_runs'
+                  AND column_name = 'node_path'
+                  AND data_type = 'jsonb'
+                  AND is_nullable = 'NO'
+              ) OR NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'flash_story_universe_runs'
+                  AND column_name = 'v2_state'
+                  AND data_type = 'jsonb'
+              ) THEN
+                RAISE EXCEPTION 'FLASH_STORY_V2_POSTFLIGHT_FAILED: required column shape missing';
+              END IF;
+            END
+            $postflight$;
+            SQL
+
+            echo 'Staging migration 20260811010000 applied and verified.'
