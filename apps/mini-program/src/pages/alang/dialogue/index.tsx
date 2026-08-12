@@ -21,6 +21,9 @@ import {
 import type { FlashCanonicalSnapshot } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
+import atuanArrivalScene from '../assets/ui/flash-atuan-park-clean-v2.webp'
+import atuanArrivalCharacter from '../assets/ui/flash-atuan-character-cutout-v2.webp'
+import atuanArrivalBag from '../assets/ui/flash-atuan-bag-cutout-v2.webp'
 import '../flash.scss'
 
 function dialogueActionError(error: unknown, fallback: string): string {
@@ -333,6 +336,11 @@ export default function FlashDialoguePage() {
           storyPosition={unitPosition}
           submitState={storySubmitState}
           submitError={actionError}
+          atuanArrivalAssets={{
+            scene: atuanArrivalScene,
+            character: atuanArrivalCharacter,
+            bag: atuanArrivalBag,
+          }}
           onSubmit={submitStoryChoice}
           onContinue={() => {
             const url = story.progress.completedTotal >= story.progress.total

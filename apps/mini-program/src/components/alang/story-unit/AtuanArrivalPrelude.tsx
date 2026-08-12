@@ -1,16 +1,22 @@
 import { useState } from 'react'
 import { Image, Text, View } from '@tarojs/components'
 import { haptics } from '../../../lib/utils/haptics'
-import atuanCutout from '../../../pages/alang/assets/ui/flash-atuan-character-cutout-v2.webp'
-import bagCutout from '../../../pages/alang/assets/ui/flash-atuan-bag-cutout-v2.webp'
+
+export interface AtuanArrivalAssets {
+  scene: string
+  character: string
+  bag: string
+}
 
 type Detail = 'atuan' | 'bag' | null
 type Stage = 'explore' | 'wind' | 'choice'
 
 export function AtuanArrivalPrelude({
+  assets,
   onSpeechChange,
   onBeginConversation,
 }: {
+  assets: AtuanArrivalAssets
   onSpeechChange: (speech: string) => void
   onBeginConversation: (approachIndex: number, label: string) => void
 }) {
@@ -46,16 +52,17 @@ export function AtuanArrivalPrelude({
 
   return (
     <View className={`atuan-arrival atuan-arrival--${stage}`} data-testid='atuan-arrival-prelude'>
+      <Image className='atuan-arrival__scene' src={assets.scene} mode='aspectFill' aria-hidden='true' />
       {stage === 'explore' && !atuanSeen ? (
         <>
-          <Image className='atuan-arrival__cutout atuan-arrival__cutout--atuan' src={atuanCutout} mode='aspectFill' aria-hidden='true' />
+          <Image className='atuan-arrival__cutout atuan-arrival__cutout--atuan' src={assets.character} mode='aspectFill' aria-hidden='true' />
           <View className='atuan-arrival__atuan-highlight' hoverClass='atuan-arrival__highlight--pressed' onClick={() => inspect('atuan')} role='button' aria-label='查看站在长椅旁的阿团' />
         </>
       ) : null}
 
       {stage === 'explore' && !bagSeen ? (
         <>
-          <Image className='atuan-arrival__cutout atuan-arrival__cutout--bag' src={bagCutout} mode='aspectFill' aria-hidden='true' />
+          <Image className='atuan-arrival__cutout atuan-arrival__cutout--bag' src={assets.bag} mode='aspectFill' aria-hidden='true' />
           <View className='atuan-arrival__bag-highlight' hoverClass='atuan-arrival__highlight--pressed' onClick={() => inspect('bag')} role='button' aria-label='查看长椅上的纸袋' />
         </>
       ) : null}
@@ -63,7 +70,7 @@ export function AtuanArrivalPrelude({
       {detail === 'atuan' ? (
         <View className='atuan-arrival__detail atuan-arrival__detail--atuan' hoverClass='atuan-arrival__detail--pressed' onClick={closeDetail} role='button' aria-label='阿团一直看着公园入口，点击回到现场'>
           <View className='atuan-arrival__detail-shade' />
-          <Image className='atuan-arrival__detail-character' src={atuanCutout} mode='aspectFill' aria-hidden='true' />
+          <Image className='atuan-arrival__detail-character' src={assets.character} mode='aspectFill' aria-hidden='true' />
           <View className='atuan-arrival__entrance-light atuan-arrival__entrance-light--one' />
           <View className='atuan-arrival__entrance-light atuan-arrival__entrance-light--two' />
           <View className='atuan-arrival__entrance-light atuan-arrival__entrance-light--three' />

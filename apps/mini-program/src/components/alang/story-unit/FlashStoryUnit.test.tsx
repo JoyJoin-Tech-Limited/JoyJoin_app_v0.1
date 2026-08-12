@@ -36,7 +36,7 @@ const firstQuestion = { id: 's1-p1-atuan-response-v2', text: '你准备怎么做
 function renderFirst(submit = vi.fn().mockResolvedValue(undefined)) {
   return {
     submit,
-    view: render(<FlashStoryUnit encounterId='enc-atuan' npc={baseNpc as any} story={firstStory as any} question={firstQuestion as any} motion={motion as any} storyPosition={5} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />),
+    view: render(<FlashStoryUnit encounterId='enc-atuan' npc={baseNpc as any} story={firstStory as any} question={firstQuestion as any} motion={motion as any} storyPosition={5} submitState='idle' submitError='' atuanArrivalAssets={{ scene: 'park.webp', character: 'atuan.webp', bag: 'bag.webp' }} onSubmit={submit} onContinue={vi.fn()} />),
   }
 }
 
@@ -54,7 +54,8 @@ beforeEach(() => storage.clear())
 describe('FlashStoryUnit production flow', () => {
   it('runs the first Atuan encounter through simultaneous highlights and a real story submission', () => {
     const { submit } = renderFirst()
-    expect(screen.getByTestId('npc-speech')).toBeEmptyDOMElement()
+    expect(screen.queryByTestId('npc-speech')).not.toBeInTheDocument()
+    expect(screen.getByTestId('atuan-arrival-prelude').querySelector('.atuan-arrival__scene')).toHaveAttribute('src', 'park.webp')
     expect(screen.getByRole('button', { name: '查看站在长椅旁的阿团' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '查看长椅上的纸袋' })).toBeInTheDocument()
 

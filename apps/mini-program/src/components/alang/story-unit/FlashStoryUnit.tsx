@@ -19,7 +19,7 @@ import {
   resolveAtuanSpeech,
   type AtuanDialogueState,
 } from './AtuanFirstEncounterDialogue'
-import { AtuanArrivalPrelude } from './AtuanArrivalPrelude'
+import { AtuanArrivalPrelude, type AtuanArrivalAssets } from './AtuanArrivalPrelude'
 import { resolveNPCResponse } from './NPCResponseResolver'
 import {
   createStoryUnitState,
@@ -44,6 +44,7 @@ export interface FlashStoryUnitProps {
   submitError: string
   onSubmit: (choice: StoryUnitChoice) => Promise<void>
   onContinue: () => void
+  atuanArrivalAssets?: AtuanArrivalAssets
 }
 
 function loadInitialState(
@@ -67,7 +68,7 @@ function loadInitialState(
 }
 
 export function FlashStoryUnit(props: FlashStoryUnitProps) {
-  const { encounterId, npc, story, question, motion, storyPosition, submitState, submitError, onSubmit, onContinue } = props
+  const { encounterId, npc, story, question, motion, storyPosition, submitState, submitError, onSubmit, onContinue, atuanArrivalAssets } = props
   const definition = getFlashStoryUnitDefinition(story.code)
   if (!definition || definition.npcSlug !== npc.slug || definition.phase !== story.phase || definition.objectCode !== story.objectCode) {
     return <View role='alert'><Text>这件旧物暂时没有接上，返回后再试一次。</Text></View>
@@ -189,15 +190,9 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   return (
     <View className='flash-page flash-dialogue flash-dialogue--story'>
       <View className={`flash-dialogue__story-stage${showResult ? ' flash-dialogue__story-stage--result' : ' flash-dialogue__story-stage--question'}${showGame ? ' flash-dialogue__story-stage--game' : ''}${definition.unitId === 's1-p1-atuan' ? ' flash-dialogue__story-stage--atuan-first' : ''}`} data-testid='flash-story-stage' data-story-unit-stage={runtime.stage} data-story-unit-id={definition.unitId}>
-        <FlashNpcDialogueScene npc={npc} speech={speech} silent={showAtuanPrelude && !atuanPreludeSpeech} hideIdentity={showAtuanPrelude} spacious choicesEmbedded={!showResult} motion={motion} />
-        <View className='flash-dialogue__story-ambient' aria-hidden='true' />
-        <View className='flash-dialogue__story-index' aria-label={`第 ${story.phase} 幕，故事 ${storyPosition} 共 ${story.progress.total}`}>
-          <Text className='flash-dialogue__story-index-phase'>第 {story.phase} 幕</Text>
-          <Text className='flash-dialogue__story-index-count'>{storyPosition}/{story.progress.total}</Text>
-        </View>
-
-        {showAtuanPrelude ? (
+        {showAtuanPrelude && atuanArrivalAssets ? (
           <AtuanArrivalPrelude
+            assets={atuanArrivalAssets}
             onSpeechChange={setAtuanPreludeSpeech}
             onBeginConversation={(approachIndex, label) => {
               const option = question?.options[approachIndex]
@@ -205,7 +200,18 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
               startInteraction({ questionId: question.id, optionId: option.id, label })
             }}
           />
-        ) : !showResult ? (
+        ) : (
+          <FlashNpcDialogueScene npc={npc} speech={speech} spacious choicesEmbedded={!showResult} motion={motion} />
+        )}
+        <View className='flash-dialogue__story-ambient' aria-hidden='true' />
+        {!showAtuanPrelude ? (
+          <View className='flash-dialogue__story-index' aria-label={`第 ${story.phase} 幕，故事 ${storyPosition} 共 ${story.progress.total}`}>
+            <Text className='flash-dialogue__story-index-phase'>第 {story.phase} 幕</Text>
+            <Text className='flash-dialogue__story-index-count'>{storyPosition}/{story.progress.total}</Text>
+          </View>
+        ) : null}
+
+        {showAtuanPrelude ? null : !showResult ? (
           <View className='flash-dialogue__story-panel flash-dialogue__story-panel--choices' data-testid='flash-story-choice-panel'>
             <ScrollView className='flash-dialogue__story-panel-scroll' scrollY>
               <View className='flash-dialogue__story-panel-content'>
