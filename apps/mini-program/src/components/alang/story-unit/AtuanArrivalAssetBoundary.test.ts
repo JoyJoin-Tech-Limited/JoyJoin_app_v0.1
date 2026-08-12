@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest'
 const sourceRoot = resolve(process.cwd(), 'src')
 const appRoot = resolve(process.cwd())
 const arrivalAssetNames = [
-  'flash-atuan-park-clean-v2.webp',
-  'flash-atuan-character-cutout-v2.webp',
-  'flash-atuan-bag-cutout-v2.webp',
+  'flash-atuan-park-clean-v2.jpg',
+  'flash-atuan-character-cutout-v2.png',
+  'flash-atuan-bag-cutout-v2.png',
 ]
 
 describe('Atuan first-arrival asset ownership', () => {
@@ -22,13 +22,13 @@ describe('Atuan first-arrival asset ownership', () => {
   it('loads the scene and both highlight layers from the Alang dialogue subpackage', () => {
     const dialoguePage = readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/index.tsx'), 'utf8')
 
-    expect(dialoguePage).toContain("../assets/ui/flash-atuan-park-clean-v2.webp")
-    expect(dialoguePage).toContain("../assets/ui/flash-atuan-character-cutout-v2.webp")
-    expect(dialoguePage).toContain("../assets/ui/flash-atuan-bag-cutout-v2.webp")
+    expect(dialoguePage).toContain("../assets/ui/flash-atuan-park-clean-v2.jpg")
+    expect(dialoguePage).toContain("../assets/ui/flash-atuan-character-cutout-v2.png")
+    expect(dialoguePage).toContain("../assets/ui/flash-atuan-bag-cutout-v2.png")
     expect(dialoguePage).toContain('atuanArrivalAssets={{')
   })
 
-  it('keeps every first-arrival asset non-empty and WebP encoded', () => {
+  it('keeps every first-arrival asset non-empty and encoded in WeChat-safe formats', () => {
     const assetRoot = resolve(sourceRoot, 'pages/alang/assets/ui')
     let totalBytes = 0
     for (const fileName of arrivalAssetNames) {
@@ -37,10 +37,13 @@ describe('Atuan first-arrival asset ownership', () => {
       totalBytes += assetBytes
       expect(assetBytes, `${fileName} must not be empty`).toBeGreaterThan(12)
       const header = readFileSync(assetPath).subarray(0, 12)
-      expect(header.subarray(0, 4).toString('ascii')).toBe('RIFF')
-      expect(header.subarray(8, 12).toString('ascii')).toBe('WEBP')
+      if (fileName.endsWith('.jpg')) {
+        expect([...header.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff])
+      } else {
+        expect([...header.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+      }
     }
-    expect(totalBytes, 'arrival images must stay within the 64 KiB scene budget').toBeLessThanOrEqual(64 * 1024)
+    expect(totalBytes, 'WeChat-safe arrival images must stay within the 160 KiB scene budget').toBeLessThanOrEqual(160 * 1024)
   })
 
   it('gives the all-absolute Atuan arrival stage a viewport-height fallback chain', () => {
@@ -55,7 +58,7 @@ describe('Atuan first-arrival asset ownership', () => {
     expect(storyStage).toMatch(/^\s*position:\s*absolute;\s*inset:\s*0;/)
   })
 
-  it('keeps all first-arrival WebPs in the production package contract', () => {
+  it('keeps first-arrival assets covered by the production package contract', () => {
     const cleanScript = readFileSync(resolve(appRoot, 'scripts/clean-cdn-assets.mjs'), 'utf8')
     const verifyScript = readFileSync(resolve(appRoot, 'scripts/verify-flash-package.mjs'), 'utf8')
     const projectConfig = JSON.parse(
@@ -63,16 +66,20 @@ describe('Atuan first-arrival asset ownership', () => {
     ) as { packOptions?: { include?: Array<{ type?: string; value?: string }> } }
 
     for (const fileName of arrivalAssetNames) {
-      expect(cleanScript, `${fileName} must be exempt from CDN-only cleanup`).toContain(fileName)
       expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
     }
 
-    expect(cleanScript).toContain("!bundledAlangUiWebps.has(name)")
+    expect(cleanScript).not.toContain('flash-atuan-park-clean-v2.webp')
     expect(verifyScript).toContain('non-collapsing Flash story viewport height chain')
     expect(verifyScript).toContain('anchor the Flash story stage to the viewport shell')
-    expect(projectConfig.packOptions?.include).toContainEqual({
-      type: 'regexp',
-      value: 'pages/alang/assets/ui/flash-atuan-(park-clean|character-cutout|bag-cutout)-v2\\.webp$',
-    })
+    expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.jpg$' })
+    expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.png$' })
+  })
+
+  it('keeps inspection targets invisible instead of rendering fallback tags', () => {
+    const prelude = readFileSync(resolve(sourceRoot, 'components/alang/story-unit/AtuanArrivalPrelude.tsx'), 'utf8')
+    expect(prelude).not.toContain('fallback-hotspot-label')
+    expect(prelude).not.toContain('查看阿团</Text>')
+    expect(prelude).not.toContain('查看纸袋</Text>')
   })
 })

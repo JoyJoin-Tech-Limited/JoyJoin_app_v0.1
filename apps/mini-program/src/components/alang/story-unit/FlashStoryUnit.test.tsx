@@ -79,9 +79,9 @@ describe('FlashStoryUnit production flow', () => {
       fireEvent.error(image)
     }
 
-    expect(screen.getByRole('status')).toHaveTextContent('场景图片暂未加载')
-    expect(screen.getByRole('button', { name: '查看站在长椅旁的阿团' })).toHaveTextContent('查看阿团')
-    expect(screen.getByRole('button', { name: '查看长椅上的纸袋' })).toHaveTextContent('查看纸袋')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '查看站在长椅旁的阿团' })).toBeEmptyDOMElement()
+    expect(screen.getByRole('button', { name: '查看长椅上的纸袋' })).toBeEmptyDOMElement()
 
     reachActionChoice()
     fireEvent.click(screen.getByRole('button', { name: '先压住纸袋' }))

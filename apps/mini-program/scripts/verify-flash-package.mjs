@@ -22,9 +22,9 @@ const flashReviewedStoryBackgrounds = [
   'pages/alang/assets/onboarding/parallel-standard-paper-world-v1.jpg',
 ]
 const atuanArrivalRelativePaths = [
-  'pages/alang/assets/ui/flash-atuan-park-clean-v2.webp',
-  'pages/alang/assets/ui/flash-atuan-character-cutout-v2.webp',
-  'pages/alang/assets/ui/flash-atuan-bag-cutout-v2.webp',
+  'pages/alang/assets/ui/flash-atuan-park-clean-v2.jpg',
+  'pages/alang/assets/ui/flash-atuan-character-cutout-v2.png',
+  'pages/alang/assets/ui/flash-atuan-bag-cutout-v2.png',
 ]
 
 const flashRuntimeImages = [
@@ -141,15 +141,6 @@ if (!existsSync(projectConfigPath)) {
   if (!flashRuntimeJpgsAreForcedIntoWxapkg) {
     failures.push(
       'project.config.json packOptions.include must explicitly include all pages/alang JPG runtime assets',
-    )
-  }
-  const atuanArrivalWebpsAreForcedIntoWxapkg = packIncludes.some(
-    (entry) => entry?.type === 'regexp' &&
-      entry?.value === 'pages/alang/assets/ui/flash-atuan-(park-clean|character-cutout|bag-cutout)-v2\\.webp$',
-  )
-  if (!atuanArrivalWebpsAreForcedIntoWxapkg) {
-    failures.push(
-      'project.config.json packOptions.include must explicitly include all Atuan arrival WebP assets',
     )
   }
   if (projectConfig.setting?.ignoreUploadUnusedFiles !== false) {

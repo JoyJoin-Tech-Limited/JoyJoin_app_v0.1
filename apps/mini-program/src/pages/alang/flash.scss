@@ -1324,55 +1324,6 @@ page {
 }
 
 .atuan-arrival {
-  &__asset-fallback {
-    position: absolute;
-    z-index: 4;
-    top: 48rpx;
-    right: 32rpx;
-    left: 32rpx;
-    padding: 24rpx;
-    border: 2rpx solid rgba($color-primary, 0.22);
-    border-radius: 24rpx;
-    background: rgba($color-surface, 0.96);
-    box-shadow: $shadow-card;
-    text-align: center;
-    pointer-events: none;
-  }
-
-  &__asset-fallback-title,
-  &__asset-fallback-detail {
-    display: block;
-  }
-
-  &__asset-fallback-title {
-    color: $color-text-primary-warm;
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-  }
-
-  &__asset-fallback-detail {
-    margin-top: 8rpx;
-    color: $color-text-secondary-on-light;
-    font-size: $font-size-xs;
-    line-height: $line-height-relaxed;
-  }
-
-  &__fallback-hotspot-label {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    padding: 16rpx 24rpx;
-    border: 2rpx solid rgba($color-primary, 0.22);
-    border-radius: $radius-pill;
-    color: $color-primary-dark;
-    background: $color-surface;
-    box-shadow: $shadow-sm;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    white-space: nowrap;
-    transform: translate(-50%, -50%);
-  }
-
   &__scene {
     position: absolute;
     z-index: 0;

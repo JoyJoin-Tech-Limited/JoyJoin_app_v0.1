@@ -87,9 +87,6 @@ const bundledAlangAssets = new Set([
 // remain in the subpackage even though the rest of the source-quality UI WebPs
 // are CDN-only alternates.
 const bundledAlangUiWebps = new Set([
-  'flash-atuan-park-clean-v2.webp',
-  'flash-atuan-character-cutout-v2.webp',
-  'flash-atuan-bag-cutout-v2.webp',
 ])
 
 await removeMatching(

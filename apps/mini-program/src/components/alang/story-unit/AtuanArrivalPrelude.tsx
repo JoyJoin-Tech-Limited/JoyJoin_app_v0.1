@@ -24,10 +24,6 @@ export function AtuanArrivalPrelude({
   const [bagSeen, setBagSeen] = useState(false)
   const [detail, setDetail] = useState<Detail>(null)
   const [stage, setStage] = useState<Stage>('explore')
-  const [assetFailed, setAssetFailed] = useState(false)
-
-  const markAssetFailed = () => setAssetFailed(true)
-
   const inspect = (target: Exclude<Detail, null>) => {
     if (stage !== 'explore' || detail) return
     haptics('light')
@@ -55,35 +51,25 @@ export function AtuanArrivalPrelude({
 
   return (
     <View className={`atuan-arrival atuan-arrival--${stage}`} data-testid='atuan-arrival-prelude'>
-      <Image className='atuan-arrival__scene' src={assets.scene} mode='aspectFill' aria-hidden='true' onError={markAssetFailed} />
-      {assetFailed ? (
-        <View className='atuan-arrival__asset-fallback' role='status' aria-live='polite'>
-          <Text className='atuan-arrival__asset-fallback-title'>场景图片暂未加载</Text>
-          <Text className='atuan-arrival__asset-fallback-detail'>你仍然可以查看阿团和纸袋，故事不会中断。</Text>
-        </View>
-      ) : null}
+      <Image className='atuan-arrival__scene' src={assets.scene} mode='aspectFill' aria-hidden='true' />
       {stage === 'explore' && !atuanSeen ? (
         <>
-          <Image className='atuan-arrival__cutout atuan-arrival__cutout--atuan' src={assets.character} mode='aspectFill' aria-hidden='true' onError={markAssetFailed} />
-          <View className='atuan-arrival__atuan-highlight' hoverClass='atuan-arrival__highlight--pressed' onClick={() => inspect('atuan')} role='button' aria-label='查看站在长椅旁的阿团'>
-            {assetFailed ? <Text className='atuan-arrival__fallback-hotspot-label'>查看阿团</Text> : null}
-          </View>
+          <Image className='atuan-arrival__cutout atuan-arrival__cutout--atuan' src={assets.character} mode='aspectFill' aria-hidden='true' />
+          <View className='atuan-arrival__atuan-highlight' hoverClass='atuan-arrival__highlight--pressed' onClick={() => inspect('atuan')} role='button' aria-label='查看站在长椅旁的阿团' />
         </>
       ) : null}
 
       {stage === 'explore' && !bagSeen ? (
         <>
-          <Image className='atuan-arrival__cutout atuan-arrival__cutout--bag' src={assets.bag} mode='aspectFill' aria-hidden='true' onError={markAssetFailed} />
-          <View className='atuan-arrival__bag-highlight' hoverClass='atuan-arrival__highlight--pressed' onClick={() => inspect('bag')} role='button' aria-label='查看长椅上的纸袋'>
-            {assetFailed ? <Text className='atuan-arrival__fallback-hotspot-label'>查看纸袋</Text> : null}
-          </View>
+          <Image className='atuan-arrival__cutout atuan-arrival__cutout--bag' src={assets.bag} mode='aspectFill' aria-hidden='true' />
+          <View className='atuan-arrival__bag-highlight' hoverClass='atuan-arrival__highlight--pressed' onClick={() => inspect('bag')} role='button' aria-label='查看长椅上的纸袋' />
         </>
       ) : null}
 
       {detail === 'atuan' ? (
         <View className='atuan-arrival__detail atuan-arrival__detail--atuan' hoverClass='atuan-arrival__detail--pressed' onClick={closeDetail} role='button' aria-label='阿团一直看着公园入口，点击回到现场'>
           <View className='atuan-arrival__detail-shade' />
-          <Image className='atuan-arrival__detail-character' src={assets.character} mode='aspectFill' aria-hidden='true' onError={markAssetFailed} />
+          <Image className='atuan-arrival__detail-character' src={assets.character} mode='aspectFill' aria-hidden='true' />
           <View className='atuan-arrival__entrance-light atuan-arrival__entrance-light--one' />
           <View className='atuan-arrival__entrance-light atuan-arrival__entrance-light--two' />
           <View className='atuan-arrival__entrance-light atuan-arrival__entrance-light--three' />
