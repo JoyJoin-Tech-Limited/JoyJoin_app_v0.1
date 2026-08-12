@@ -29,6 +29,14 @@ const VERSION = '2026-04-22.v1';
 const SEVERITY_WEIGHTS = { blocker: 3, concern: 1, nit: 0 };
 const PASS_THRESHOLD = 85; // Score out of 100
 
+// The gate script and its test file contain fixtures that match the checks
+// (debugger statements, console.log, this.setState-in-loop, …). They are
+// scanned-never by design — keep this set in sync with the actual paths.
+const GATE_SCRIPT_PATHS = new Set([
+  'scripts/harness/harness-completion-gate.mjs',
+  'scripts/harness/harness-completion-gate.test.mjs',
+]);
+
 // ─── CLI ───
 
 const args = process.argv.slice(2);
@@ -130,15 +138,32 @@ function checkReliability(changedFiles, fileContents) {
     if (!isCode) continue;
 
     // Skip the gate script and its test file (they contain test fixtures that match checks)
-    if (file === 'scripts/harness-completion-gate.mjs' || file === 'scripts/harness-completion-gate.test.mjs') continue;
+    if (GATE_SCRIPT_PATHS.has(file)) continue;
 
-    // Check for setState or side effects in loops without safeguards
-    if (/for\s*\([^)]*\)\s*\{[\s\S]*?\.(mutate|setState|setData)\(/g.test(content)) {
-      findings.push({
-        severity: 'concern',
-        file,
-        message: 'Side effect (mutate/setState/setData) inside a loop — consider batching or idempotency',
-      });
+    // Check for setState or side effects in loops without safeguards.
+    // Brace-aware: only a setState/setData/mutate INSIDE the for-block counts —
+    // the old unbounded `[\s\S]*?` matched a setState hundreds of lines after
+    // the loop (e.g. `map.set(...)` accumulators inside useMemo).
+    const loopRegex = /\bfor\s*\([^)]*\)\s*\{/g;
+    let loopMatch;
+    while ((loopMatch = loopRegex.exec(content)) !== null) {
+      let depth = 1;
+      let end = loopMatch.index + loopMatch[0].length;
+      while (depth > 0 && end < content.length) {
+        if (content[end] === '{') depth++;
+        else if (content[end] === '}') depth--;
+        end++;
+      }
+      const block = content.slice(loopMatch.index, end);
+      if (/\.(mutate|setState|setData)\(/g.test(block)) {
+        const lineNum = content.substring(0, loopMatch.index).split('\n').length;
+        findings.push({
+          severity: 'concern',
+          file,
+          line: lineNum,
+          message: 'Side effect (mutate/setState/setData) inside a loop — consider batching or idempotency',
+        });
+      }
     }
 
     // Check for missing error handling on fetch/apiRequest
@@ -213,8 +238,12 @@ function checkScalability(changedFiles, fileContents) {
       });
     }
 
-    // Missing pagination on list queries
-    if (/(findMany|select\(|query\()[\s\S]*limit/gi.test(content) === false && /(findMany|select\(|all\(|getAll)/gi.test(content)) {
+    // Missing pagination on list queries. `all\(` must not match `Promise.all(`
+    // (a bounded in-memory combinator, not a list query) or `call(`.
+    if (
+      /(findMany|select\(|query\()[\s\S]*limit/gi.test(content) === false &&
+      /(findMany|select\(|getAll|(?<![\w.])all\()/gi.test(content)
+    ) {
       const isRoute = /\/(routes|api)\//.test(file) || file.includes('routes/');
       if (isRoute) {
         findings.push({
@@ -486,7 +515,7 @@ function checkMaintainability(changedFiles, fileContents) {
     }
 
     // TODO/FIXME without issue reference (skip the gate script itself)
-    if (file !== 'scripts/harness-completion-gate.mjs') {
+    if (!GATE_SCRIPT_PATHS.has(file)) {
       const todoMatches = content.match(/(?:TODO|FIXME)\s*[:\(]?\s*(?!#\d+|https?:\/\/)/gi);
       if (todoMatches && todoMatches.length > 0) {
         findings.push({

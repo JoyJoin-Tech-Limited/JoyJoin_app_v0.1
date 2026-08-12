@@ -162,6 +162,82 @@ describe('Harness Completion Gate', () => {
     });
   });
 
+  describe('pagination false-positive guard', () => {
+    it('does not flag Promise.all() as a pagination-less list query in routes', () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-gate-test-'));
+      spawnSync('git', ['init'], { cwd: tmpDir });
+      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: tmpDir });
+      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: tmpDir });
+      fs.writeFileSync(path.join(tmpDir, 'README.md'), '# Test\n');
+      spawnSync('git', ['add', '.'], { cwd: tmpDir });
+      spawnSync('git', ['commit', '-m', 'init'], { cwd: tmpDir });
+
+      fs.mkdirSync(path.join(tmpDir, 'src', 'routes'), { recursive: true });
+      fs.writeFileSync(
+        path.join(tmpDir, 'src', 'routes', 'game.ts'),
+        'const results = await Promise.all(answers.map(async (a) => save(a)));\n'
+      );
+      spawnSync('git', ['add', 'src/routes/game.ts'], { cwd: tmpDir });
+
+      const result = runGate(tmpDir);
+      assert.ok(result.output, 'Expected JSON output');
+      const scalability = result.output.pillars.find((p) => p.key === 'scalability');
+      const paginationFindings = scalability.findings.filter((f) => f.message.includes('pagination'));
+      assert.strictEqual(paginationFindings.length, 0, 'Promise.all must not be flagged as a list query');
+
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+  });
+
+  describe('loop side-effect scope', () => {
+    it('does not flag a local Map accumulator inside a for loop', () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-gate-test-'));
+      spawnSync('git', ['init'], { cwd: tmpDir });
+      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: tmpDir });
+      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: tmpDir });
+      fs.writeFileSync(path.join(tmpDir, 'README.md'), '# Test\n');
+      spawnSync('git', ['add', '.'], { cwd: tmpDir });
+      spawnSync('git', ['commit', '-m', 'init'], { cwd: tmpDir });
+
+      fs.writeFileSync(
+        path.join(tmpDir, 'model.ts'),
+        'const map = new Map();\nfor (let i = 0; i < members.length; i += 1) { map.set(i, members[i]); }\nreturn map;\n'
+      );
+      spawnSync('git', ['add', 'model.ts'], { cwd: tmpDir });
+
+      const result = runGate(tmpDir);
+      assert.ok(result.output, 'Expected JSON output');
+      const reliability = result.output.pillars.find((p) => p.key === 'reliability');
+      const loopFindings = reliability.findings.filter((f) => f.message.includes('inside a loop'));
+      assert.strictEqual(loopFindings.length, 0, 'Local Map accumulator must not be flagged');
+
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('still flags a real setState inside a for loop', () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-gate-test-'));
+      spawnSync('git', ['init'], { cwd: tmpDir });
+      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: tmpDir });
+      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: tmpDir });
+      fs.writeFileSync(path.join(tmpDir, 'README.md'), '# Test\n');
+      spawnSync('git', ['add', '.'], { cwd: tmpDir });
+      spawnSync('git', ['commit', '-m', 'init'], { cwd: tmpDir });
+
+      fs.writeFileSync(
+        path.join(tmpDir, 'bad.ts'),
+        'for (const id of ids) { this.setState(id); }\n'
+      );
+      spawnSync('git', ['add', 'bad.ts'], { cwd: tmpDir });
+
+      const result = runGate(tmpDir);
+      assert.ok(result.output, 'Expected JSON output');
+      const reliability = result.output.pillars.find((p) => p.key === 'reliability');
+      assert.ok(reliability.findings.some((f) => f.message.includes('inside a loop')), 'Should flag setState in loop');
+
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+  });
+
   describe('Cross-app import detection', () => {
     it('fails on mini-program importing from admin-client', () => {
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-gate-test-'));
