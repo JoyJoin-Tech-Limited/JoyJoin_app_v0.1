@@ -10,6 +10,11 @@ import { DEFAULT_MASCOT_DISPLAY_NAME } from '../mascotConfig.js';
 import { getToneForSurface, validateCopyTone } from './toneMap.js';
 import type { Surface } from './toneMap.js';
 
+/** Copy returned by `getErrorMessage` when a code has no template — shared
+ *  sentinel so consumers can detect "no mapping exists" without duplicating
+ *  the literal (N-5 fragility fix). */
+export const ERROR_CODE_GENERIC_FALLBACK = '出了点问题，稍后再试';
+
 export type ErrorCode =
   | 'network'
   | 'timeout'
@@ -179,7 +184,7 @@ export function getErrorMessage(
 ): string {
   const template = ERROR_TEMPLATES[code];
   if (!template) {
-    return '出了点问题，稍后再试';
+    return ERROR_CODE_GENERIC_FALLBACK;
   }
 
   const mascotName = context?.mascotName ?? '悦仔';
@@ -205,7 +210,7 @@ export function getErrorForSurface(
   if (!template) {
     return surface === 'full-page-error'
       ? `${context?.mascotName ?? '悦仔'}遇到点问题，稍后再试试~`
-      : '出了点问题，稍后再试';
+      : ERROR_CODE_GENERIC_FALLBACK;
   }
 
   // If the template doesn't have a mascot variant, return default regardless

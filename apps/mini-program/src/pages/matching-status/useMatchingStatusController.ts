@@ -22,7 +22,7 @@ import type {
   PoolRegistrationAddedData,
 } from '@shared/wsEvents'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import { getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
+import { ERROR_CODE_GENERIC_FALLBACK, getErrorMessage, type ErrorCode } from '@shared/copy/errorBaselines'
 import {
   buildWaitingSeats,
   DEFAULT_MAX_GROUP_SIZE,
@@ -102,14 +102,12 @@ function isCompassLockedError(error: unknown): boolean {
   return candidate?.code === 'preferences_locked' || candidate?.data?.code === 'preferences_locked'
 }
 
-/** getErrorMessage resolves unknown codes to this generic fallback string —
- *  used to detect "no mapping exists" without duplicating the ErrorCode union. */
-const ERROR_CODE_GENERIC_FALLBACK = '出了点问题，稍后再试'
-
 /** Copy-governed rollback toast for the compass save: non-locked server
  *  errors carrying a known baseline error code (ApiError.data.code, the same
  *  field preferences_locked arrives on) map through getErrorMessage; anything
- *  unknown falls back to the shared submit-failed baseline. */
+ *  unknown falls back to the shared submit-failed baseline. Unknown codes
+ *  resolve to the exported ERROR_CODE_GENERIC_FALLBACK sentinel, which is how
+ *  "no mapping exists" is detected without duplicating the ErrorCode union. */
 function resolveCompassRollbackMessage(error: unknown): string {
   const candidate = error as { code?: unknown; data?: { code?: unknown } } | null
   const code = candidate?.code ?? candidate?.data?.code

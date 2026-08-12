@@ -73,7 +73,8 @@ export function useOptimisticMutation<TVariables, TData>(
   options: UseOptimisticMutationOptions<TVariables, TData>,
 ): UseOptimisticMutationResult<TVariables, TData> {
   const queryClient = useQueryClient()
-  const { mutationFn, queryKeys, optimisticUpdate, rollbackMessage, onSettledInvalidate } = options
+  const optionsRef = useRef(options)
+  optionsRef.current = options
 
   const [isPending, setIsPending] = useState(false)
   const [isOptimistic, setIsOptimistic] = useState(false)
@@ -89,6 +90,7 @@ export function useOptimisticMutation<TVariables, TData>(
 
   const mutate = useCallback(
     (vars: TVariables): Promise<TData> => {
+      const { mutationFn, queryKeys } = optionsRef.current
       const keysKey = JSON.stringify(queryKeys)
       const entries = entriesRef.current
       let entry = entries.get(keysKey)
@@ -134,8 +136,11 @@ export function useOptimisticMutation<TVariables, TData>(
         },
       )
     },
+    // The per-render helper closures (settle, snapshotAndPatch, ...) read all
+    // option values through optionsRef, so mutate's identity stays stable
+    // across renders — consumers can safely put it in useCallback deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mutationFn, queryKeys, optimisticUpdate, onSettledInvalidate, rollbackMessage, queryClient],
+    [queryClient],
   )
 
   /** Apply the optimistic patch per key (AC-2a: per-key try/catch; on throw
@@ -148,7 +153,7 @@ export function useOptimisticMutation<TVariables, TData>(
       batch.snapshots.set(keyStr, { hadEntry: prev !== undefined, value: prev })
       let patched: unknown
       try {
-        patched = queryClient.setQueryData(qk, (current) => optimisticUpdate(vars, current))
+        patched = queryClient.setQueryData(qk, (current) => optionsRef.current.optimisticUpdate(vars, current))
       } catch (err) {
         restoreBatch(batch, keys)
         throw err
@@ -200,7 +205,9 @@ export function useOptimisticMutation<TVariables, TData>(
     // toast would land on the payment page after navigation).
     if (batch.toastShown) return
     batch.toastShown = true
-    const message = rollbackMessage ? rollbackMessage(error) : getErrorMessage('submit-failed')
+    const message = optionsRef.current.rollbackMessage
+      ? optionsRef.current.rollbackMessage(error)
+      : getErrorMessage('submit-failed')
     if (message === null) return
     Taro.showToast({ title: message, icon: 'none' })
   }
@@ -214,10 +221,11 @@ export function useOptimisticMutation<TVariables, TData>(
   }): void => {
     const { success, error, batch, entry, keysKey } = args
     if (!success) {
-      rollback(batch, queryKeys, error)
+      rollback(batch, optionsRef.current.queryKeys, error)
     }
     // AC-5: invalidate on settle, then optimistic flag drops.
     if (isMountedRef.current) {
+      const onSettledInvalidate = optionsRef.current.onSettledInvalidate
       if (onSettledInvalidate && onSettledInvalidate.length > 0) {
         for (const qk of onSettledInvalidate) {
           void queryClient.invalidateQueries({ queryKey: qk })
@@ -243,12 +251,12 @@ export function useOptimisticMutation<TVariables, TData>(
       rejectWaiters(entry, error ?? new Error('OptimisticMutation: unmounted before settle'))
       return
     }
-    for (const qk of queryKeys) {
+    for (const qk of optionsRef.current.queryKeys) {
       void queryClient.cancelQueries({ queryKey: qk })
     }
     let heldBatch: BatchSnapshot
     try {
-      heldBatch = snapshotAndPatch(queryKeys, heldVars)
+      heldBatch = snapshotAndPatch(optionsRef.current.queryKeys, heldVars)
     } catch (patchErr) {
       entry.running = false
       entriesRef.current.delete(keysKey)
@@ -258,7 +266,7 @@ export function useOptimisticMutation<TVariables, TData>(
       return
     }
     setIsOptimistic(true)
-    void captureSyncThrow(() => mutationFn(heldVars)).then(
+    void captureSyncThrow(() => optionsRef.current.mutationFn(heldVars)).then(
       (heldData) => {
         settle({ success: true, batch: heldBatch, entry, keysKey, error: null })
         resolveWaiters(entry, heldData)

@@ -27,14 +27,14 @@ import type { PoolEventType } from '../pages/pool-registration/flowConfig'
 import type { RegistrationStep } from '../pages/pool-registration/poolRegistrationForm'
 
 /** Map a server error to copy-governed text: known `data.code` values resolve
- *  through the shared error-baseline templates; anything else falls back to
- *  the caller-supplied baseline code. */
+ *  through the shared error-baseline templates; unmapped codes surface the
+ *  shared generic copy (`getErrorMessage` never returns null). */
 export function resolveMessage(error: unknown, fallbackCode: ErrorCode): string {
   const apiError = error as ApiError | undefined
   if (apiError?.data && typeof apiError.data === 'object' && !Array.isArray(apiError.data)) {
     const code = (apiError.data as { code?: unknown }).code
     if (typeof code === 'string') {
-      return getErrorMessage(code as ErrorCode) ?? getErrorMessage(fallbackCode)
+      return getErrorMessage(code as ErrorCode)
     }
   }
   if (error instanceof Error && error.message) {
