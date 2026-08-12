@@ -28,6 +28,7 @@ import {
   MINISCRIPT_GENERATION_PROMPT_VERSION,
 } from '../ai/miniscriptPrompts';
 import { getClientForFunction, getDeepseekSelection } from '../ai/socialModelRouter';
+import { isLLMTimeoutError, raceWithTimeout } from '../socialIcebreakerAICore';
 import { createAiCorrelationId, logAITrace } from './aiTraceLogger';
 import { recordAIProviderRecoveryMetric } from '../middleware/metrics';
 import { validateMiniScriptFramework } from './miniscriptValidator';
@@ -36,8 +37,21 @@ import { logger } from "./logger";
 import { buildArchetypeContext } from './contextInjector';
 import { validateCraft } from './writingCraftValidator';
 
-/** Total timeout for both passes + overhead. */
-const PIPELINE_TIMEOUT_MS = 32_000;
+/**
+ * Total hard bound for the whole generation pipeline (pass 1 + pass 2 share it
+ * as a remaining-budget deadline). Enforced via deterministic Promise.race
+ * (raceWithTimeout) so a stalled provider socket can never freeze the generate
+ * route — the AbortSignal is only a cooperative backstop the SDK may ignore.
+ * Must stay under the mini-program's 35s POST timeout and nginx's 60s proxy
+ * timeout, leaving headroom for fallback persistence.
+ */
+const PIPELINE_TIMEOUT_MS = 28_000;
+
+/** Test/ops override hook; production default stays PIPELINE_TIMEOUT_MS. */
+function pipelineTimeoutMs(): number {
+  const override = Number(process.env.SOCIAL_MINISCRIPT_PIPELINE_TIMEOUT_MS);
+  return Number.isFinite(override) && override > 0 ? override : PIPELINE_TIMEOUT_MS;
+}
 
 function isMiniscriptLlmEnabled(): boolean {
   const v = process.env.SOCIAL_MINISCRIPT_LLM_ENABLED;
@@ -477,13 +491,28 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
 
   // ── Pass 1: Generate ───────────────────────────────────────────────────────
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), PIPELINE_TIMEOUT_MS);
+  const timeoutMs = pipelineTimeoutMs();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  const pass1 = await pass1Generate({
-    ...params,
-    config,
-    signal: controller.signal,
-    roster: params.roster,
+  // Deterministic hard bound: even if the provider socket stalls and the SDK
+  // never honors the AbortSignal, pass 1 settles to a failure result inside
+  // `timeoutMs` and the pipeline degrades to the curated catalog fallback.
+  const pass1 = await raceWithTimeout(
+    pass1Generate({
+      ...params,
+      config,
+      signal: controller.signal,
+      roster: params.roster,
+    }),
+    timeoutMs,
+  ).catch((error): Awaited<ReturnType<typeof pass1Generate>> => {
+    if (isLLMTimeoutError(error)) {
+      logger.error('[MiniScriptAgent] pass 1 hit hard pipeline timeout — settling to catalog fallback', {
+        timeoutMs,
+      });
+      return { ok: false, errorCode: 'pipeline_timeout', latencyMs: Date.now() - tAll };
+    }
+    throw error;
   });
 
   if (!pass1.ok || !pass1.framework) {
@@ -541,21 +570,40 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   // ── Pass 2: Validate (optional, gated by env) ──────────────────────────────
   if (isValidationEnabled()) {
     params.onProgress?.('validating', 70);
-    const pass2 = await validateMiniScriptFramework({
-      draft: withAuthority,
-      config,
+    // Same deterministic bound: pass 2 gets whatever pipeline budget remains.
+    // On timeout it degrades to `null` and flows into the catalog fallback
+    // branch below exactly like a failed validation.
+    const pass2 = await raceWithTimeout(
+      validateMiniScriptFramework({
+        draft: withAuthority,
+        config,
+      }),
+      Math.max(1, timeoutMs - (Date.now() - tAll)),
+    ).catch((error): Awaited<ReturnType<typeof validateMiniScriptFramework>> | null => {
+      if (isLLMTimeoutError(error)) {
+        logger.error('[MiniScriptAgent] pass 2 hit hard pipeline timeout — settling to catalog fallback', {
+          timeoutMs,
+        });
+        return null;
+      }
+      throw error;
     });
 
-    if (!pass2.valid) {
+    if (!pass2 || !pass2.valid) {
       clearTimeout(timer);
       params.onProgress?.('fallback', 86);
       const framework = getCatalogFallback(params);
+      const pass2ErrorCode = pass2 == null
+        ? 'pipeline_timeout'
+        : pass2.meta.fixable
+          ? 'validation_fixable'
+          : 'validation_failed';
       emitTrace({
         provider: pass1.provider!,
         model: pass1.model,
         success: false,
         fallbackUsed: true,
-        errorCode: pass2.meta.fixable ? 'validation_fixable' : 'validation_failed',
+        errorCode: pass2ErrorCode,
       });
       return {
         framework,
@@ -565,14 +613,10 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
           llmAccepted: true,
           providerRecoveryUsed: pass1.deepSeekRecoveryUsed,
           validationUsed: true,
-          validationScore: pass2.meta.score,
+          validationScore: pass2?.meta.score,
           catalogUsed: true,
         },
-        aiResponseMeta: buildFallbackAIMeta(
-          pass2.meta.fixable ? 'validation_fixable' : 'validation_failed',
-          promptVersion,
-          aiCorrelationId
-        ),
+        aiResponseMeta: buildFallbackAIMeta(pass2ErrorCode, promptVersion, aiCorrelationId),
       };
     }
 

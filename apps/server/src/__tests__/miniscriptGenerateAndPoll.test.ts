@@ -206,6 +206,26 @@ vi.mock('../lib/socialIcebreakerAccess', () => ({
   resolveIcebreakerDefaultTier: vi.fn().mockResolvedValue('breeze'),
 }));
 
+const routerCtx = vi.hoisted(() => ({
+  create: vi.fn(),
+}));
+
+// The mini-script agent obtains its LLM client through the social model
+// router; mocking the router lets tests simulate a stalled provider socket.
+vi.mock('../ai/socialModelRouter', () => ({
+  getClientForFunction: vi.fn(() => ({
+    client: { chat: { completions: { create: routerCtx.create } } },
+    model: 'deepseek-v4-flash',
+    provider: 'deepseek',
+  })),
+  getDeepseekSelection: vi.fn(() => ({
+    client: { chat: { completions: { create: routerCtx.create } } },
+    model: 'deepseek-v4-flash',
+    provider: 'deepseek',
+  })),
+  callSocialAI: vi.fn(),
+}));
+
 const { default: socialIcebreakerRouter } = await import('../routes/socialIcebreaker');
 const { default: miniscriptRouter } = await import('../routes/domains/miniscript');
 
@@ -290,4 +310,101 @@ describe('MiniScript generate + social poll', () => {
       expect(pollBody.miniScriptFramework?.schemaVersion).toBe(2);
     });
   });
+
+  it('settles via catalog fallback within the hard bound when the LLM socket hangs; retry starts fresh', async () => {
+    storeCtx.sessions.clear();
+    storeCtx.participants.clear();
+    storeCtx.lieTruthsStore.clear();
+
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
+    process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED = 'false';
+    process.env.SOCIAL_MINISCRIPT_PIPELINE_TIMEOUT_MS = '1500';
+    // Confirmed production failure mode: stalled provider socket — the SDK
+    // promise never settles and the AbortSignal is never honored.
+    routerCtx.create.mockImplementation(() => new Promise(() => {}));
+
+    try {
+      await withServer(async (baseUrl) => {
+        const loginRes = await fetch(`${baseUrl}/__test__/login/host-hang`, { method: 'POST' });
+        const cookie = cookieHeader(loginRes);
+
+        const socialSessionId = 'social-miniscript-hang-1';
+        const seed: SocialSessionState = {
+          socialSessionId,
+          icebreakerSessionId: 'ice-hang-1',
+          currentPhase: 'mini_script',
+          hostUserId: 'host-hang',
+          hostDisplayName: 'Host',
+          playerCount: 4,
+          phaseStartedAt: Date.now(),
+          sessionStartedAt: Date.now(),
+          completedPhases: [],
+          enabledPhases: ['warmup', 'micro_challenge', 'lie_detective', 'personality_dice', 'mini_script', 'recap'],
+        };
+        storeCtx.sessions.set(socialSessionId, seed);
+
+        const startedAt = Date.now();
+        const genRes = await fetch(`${baseUrl}/api/miniscript/generate`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', cookie },
+          body: JSON.stringify({
+            socialSessionId,
+            playerCount: 4,
+            style: 'modern_urban',
+            genres: ['absurd_comedy'],
+          }),
+        });
+        // The route must respond well inside the client's 35s POST timeout
+        // (before the fix, this await never resolved at all).
+        expect(Date.now() - startedAt).toBeLessThan(15_000);
+        expect(genRes.status).toBe(200);
+        const genBody = (await genRes.json()) as {
+          schemaVersion: number;
+          meta: { fallbackUsed: boolean; evaluatorRejectionReason?: string };
+        };
+        expect(genBody.schemaVersion).toBe(2);
+        expect(genBody.meta.fallbackUsed).toBe(true);
+        expect(genBody.meta.evaluatorRejectionReason).toBe('pipeline_timeout');
+
+        // Server status must reach a terminal stage, not stay 'generating'.
+        const statusRes = await fetch(
+          `${baseUrl}/api/miniscript/generation-status?socialSessionId=${encodeURIComponent(socialSessionId)}`,
+          { headers: { cookie } },
+        );
+        expect(statusRes.status).toBe(200);
+        const statusBody = (await statusRes.json()) as { stage: string };
+        expect(statusBody.stage).toBe('complete');
+
+        // The in-flight dedupe entry must be cleared once the generation
+        // settles: remove the persisted framework and flip the LLM off, so a
+        // retry is forced to regenerate. A stale in-flight promise would
+        // replay the old 'pipeline_timeout' meta; a fresh generation takes the
+        // deterministic 'llm_disabled' path.
+        const stored = storeCtx.sessions.get(socialSessionId)!;
+        delete stored.miniScriptFramework;
+        delete stored.miniScriptFrameworkGeneratedAt;
+        process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'false';
+
+        const retryRes = await fetch(`${baseUrl}/api/miniscript/generate`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', cookie },
+          body: JSON.stringify({
+            socialSessionId,
+            playerCount: 4,
+            style: 'modern_urban',
+            genres: ['absurd_comedy'],
+          }),
+        });
+        expect(retryRes.status).toBe(200);
+        const retryBody = (await retryRes.json()) as {
+          meta: { evaluatorRejectionReason?: string };
+        };
+        expect(retryBody.meta.evaluatorRejectionReason).toBe('llm_disabled');
+      });
+    } finally {
+      routerCtx.create.mockReset();
+      delete process.env.SOCIAL_MINISCRIPT_PIPELINE_TIMEOUT_MS;
+      delete process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED;
+    }
+  }, 20_000);
 });

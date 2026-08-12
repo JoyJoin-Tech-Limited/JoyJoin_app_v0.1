@@ -6,7 +6,9 @@
  *   - Show-don't-tell signals (concrete action vs abstract description)
  *   - Conflict presence per act
  * Phase 2 (LLM): Validate logical consistency, clue→solution derivability
- *   - Uses DeepSeek thinking mode for chain-of-thought reasoning
+ *   - Uses DeepSeek flash tier with thinking disabled (JSON-formatting call —
+ *     thinking tiers would burn the token budget on reasoning_content and can
+ *     leave message.content empty at the 800-token budget)
  *   - Returns structured validation report
  */
 
@@ -186,8 +188,11 @@ export async function validateMiniScriptFramework(params: {
   // Inject craft issues into validation prompt for targeted LLM review
   prompt = injectCraftIssuesIntoPrompt(craftIssues, prompt);
 
-  // Use flash-thinking with max reasoning for validation accuracy
-  const deepseek = getDeepseekSelection('flash-thinking', 'max');
+  // JSON-formatting call: flash tier, thinking disabled (default injection in
+  // getDeepseekClient — top-level `thinking: { type: 'disabled' }`). The old
+  // `flash-thinking`/`max` selection was misleading: the request never passed
+  // thinkingExtraBody, so the wrapped client sent thinking-disabled anyway.
+  const deepseek = getDeepseekSelection();
 
   try {
     const controller = new AbortController();

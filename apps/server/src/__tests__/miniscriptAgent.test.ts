@@ -95,11 +95,21 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     hoisted.validateMock.mockReset();
     delete process.env.SOCIAL_MINISCRIPT_LLM_ENABLED;
     delete process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED;
+    delete process.env.SOCIAL_MINISCRIPT_PIPELINE_TIMEOUT_MS;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     delete process.env.SOCIAL_MINISCRIPT_LLM_ENABLED;
     delete process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED;
+    delete process.env.SOCIAL_MINISCRIPT_PIPELINE_TIMEOUT_MS;
+    // Restore the module-mock default so tests that don't set their own client
+    // stay deterministic regardless of which test ran before them.
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    (getClientForFunction as any).mockImplementation(() => ({
+      client: { chat: { completions: { create: vi.fn() } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    }));
   });
 
   it('uses catalog fallback when LLM env disabled (no model call)', async () => {
@@ -334,6 +344,87 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     expect(framework.characters).toHaveLength(4);
     expect(framework.schemaVersion).toBe(2);
   });
+
+  it('settles to catalog fallback within the hard bound when pass 1 never resolves', async () => {
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
+    process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED = 'false';
+    process.env.SOCIAL_MINISCRIPT_PIPELINE_TIMEOUT_MS = '200';
+
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    // Confirmed production failure mode: a stalled provider socket — the SDK
+    // promise never settles and the AbortSignal is never honored.
+    const mockCreate = vi.fn().mockImplementation(() => new Promise(() => {}));
+    (getClientForFunction as any).mockReturnValue({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
+    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
+    const startedAt = Date.now();
+    const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
+      playerCount: 4,
+      style: 'modern_urban',
+      genres: ['light_reasoning'],
+    });
+
+    expect(Date.now() - startedAt).toBeLessThan(5_000);
+    expect(meta.llmAccepted).toBe(false);
+    expect(meta.fallbackUsed).toBe(true);
+    expect(meta.catalogUsed).toBe(true);
+    expect(framework.schemaVersion).toBe(2);
+    expect(framework.characters).toHaveLength(4);
+    expect(hoisted.traceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        feature: 'generateMiniScriptFramework',
+        success: false,
+        fallbackUsed: true,
+        errorCode: 'pipeline_timeout',
+      }),
+    );
+  }, 10_000);
+
+  it('settles to catalog fallback within the hard bound when pass 2 never resolves', async () => {
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
+    process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED = 'true';
+    process.env.SOCIAL_MINISCRIPT_PIPELINE_TIMEOUT_MS = '300';
+
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(validV2Payload) } }],
+    });
+    (getClientForFunction as any).mockReturnValue({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
+    // Validator hangs mid-flight (stalled socket) — the pipeline race must
+    // still settle instead of awaiting it forever.
+    hoisted.validateMock.mockImplementation(() => new Promise(() => {}));
+
+    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
+    const startedAt = Date.now();
+    const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
+      playerCount: 4,
+      style: 'modern_urban',
+      genres: ['light_reasoning'],
+    });
+
+    expect(Date.now() - startedAt).toBeLessThan(5_000);
+    expect(meta.fallbackUsed).toBe(true);
+    expect(meta.catalogUsed).toBe(true);
+    expect(meta.validationUsed).toBe(true);
+    expect(framework.schemaVersion).toBe(2);
+    expect(hoisted.traceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        feature: 'generateMiniScriptFramework',
+        success: false,
+        fallbackUsed: true,
+        errorCode: 'pipeline_timeout',
+      }),
+    );
+  }, 10_000);
 
   it('produces v2 stub with clues and solution when everything fails', async () => {
     const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');

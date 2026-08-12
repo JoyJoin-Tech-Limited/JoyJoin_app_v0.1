@@ -63,7 +63,19 @@ export function useMiniScriptGeneration({
           path: `/api/miniscript/generation-status?socialSessionId=${encodeURIComponent(socialSessionId)}`,
           timeout: 3000,
         })
-          .then(setGenerationStatus)
+          // Polls can overlap (800ms interval vs 3s request timeout), so a slow
+          // older response may resolve after a newer one. Two guards:
+          //  1. Never let any poll resurrect a terminal local stage (failed /
+          //     complete) — the POST already settled the outcome locally.
+          //  2. Monotonic updatedAt: a stale poll carrying an older server
+          //     timestamp cannot regress the progress bar mid-flight.
+          .then((status) =>
+            setGenerationStatus((current) => {
+              if (current?.stage === 'failed' || current?.stage === 'complete') return current
+              if (current && status.updatedAt < current.updatedAt) return current
+              return status
+            }),
+          )
           .catch(() => undefined)
       }
 
