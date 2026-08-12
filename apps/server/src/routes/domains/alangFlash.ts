@@ -1,8 +1,11 @@
 import type { Express, NextFunction, Request, Response } from "express";
 import { z } from "zod";
 import {
+  FLASH_CITY,
+  FLASH_SHENZHEN_BOUNDS,
   flashAcceptRequestSchema,
   flashAnswerRequestSchema,
+  flashCoordinateSchema,
   flashFeedbackRequestSchema,
   flashPreferenceUpdateSchema,
 } from "@shared/alang/flashTypes";
@@ -35,6 +38,7 @@ import {
   retryFlashTask,
 } from "../../services/flashService";
 import { startFlashBackgroundJobs } from "../../services/flashScheduleService";
+import { reverseGeocodeCoordinate } from "./geo";
 
 const idParamSchema = z.string().uuid();
 const flashTestCoordinateSchema = z.object({
@@ -49,6 +53,19 @@ const deliveryRequestSchema = z.object({
     optionId: z.string().min(1),
   }).strict()).max(2).optional(),
 }).strict();
+
+const SHENZHEN_DISTRICTS = new Set([
+  "南山区",
+  "福田区",
+  "罗湖区",
+  "宝安区",
+  "龙岗区",
+  "盐田区",
+  "龙华区",
+  "坪山区",
+  "光明区",
+  "大鹏新区",
+]);
 
 function sendFlashError(res: Response, error: unknown): Response {
   if (error instanceof FlashServiceError) {
@@ -90,18 +107,52 @@ function userId(req: Request, res: Response): string | null {
   return requireAuthenticatedUserId(req, res);
 }
 
-function parseEncounterCoordinate(body: unknown):
+async function parseEncounterCoordinate(body: unknown, enforceShenzhenBoundary = true, resolveDistrict = false): Promise<
   | { success: true; data: { latitude: number; longitude: number; coordinateSystem: "gcj02" } }
-  | { success: false; code: "FLASH_LOCATION_REQUIRED" } {
+  | { success: false; code: "FLASH_LOCATION_REQUIRED" | "FLASH_OUTSIDE_SHENZHEN" | "FLASH_LOCATION_UNAVAILABLE" }
+> {
   if (!body || typeof body !== "object") return { success: false, code: "FLASH_LOCATION_REQUIRED" };
   const value = body as Record<string, unknown>;
   if (typeof value.latitude !== "number" || typeof value.longitude !== "number") {
     return { success: false, code: "FLASH_LOCATION_REQUIRED" };
   }
-  const parsed = flashTestCoordinateSchema.safeParse(value);
-  return parsed.success
-    ? { success: true, data: parsed.data }
-    : { success: false, code: "FLASH_LOCATION_REQUIRED" };
+  if (
+    enforceShenzhenBoundary
+    && (
+      value.latitude < FLASH_SHENZHEN_BOUNDS.minLatitude
+      || value.latitude > FLASH_SHENZHEN_BOUNDS.maxLatitude
+      || value.longitude < FLASH_SHENZHEN_BOUNDS.minLongitude
+      || value.longitude > FLASH_SHENZHEN_BOUNDS.maxLongitude
+    )
+  ) {
+    return { success: false, code: "FLASH_OUTSIDE_SHENZHEN" };
+  }
+
+  const parsed = (enforceShenzhenBoundary ? flashCoordinateSchema : flashTestCoordinateSchema).safeParse(value);
+  if (!parsed.success) return { success: false, code: "FLASH_LOCATION_REQUIRED" };
+  if (!enforceShenzhenBoundary && !resolveDistrict) {
+    return { success: true, data: parsed.data };
+  }
+
+  // Flash coordinates are one-shot: bypass the generic geocoder cache so the
+  // raw user position is discarded when this request completes.
+  const resolved = await reverseGeocodeCoordinate(parsed.data, { cache: false });
+  if (resolved.source !== "tencent") {
+    return { success: true, data: parsed.data };
+  }
+  const city = resolved.city?.replace(/市$/, "");
+  const district = city === FLASH_CITY && resolved.district && SHENZHEN_DISTRICTS.has(resolved.district)
+    ? resolved.district
+    : "";
+  if (enforceShenzhenBoundary && !district) {
+    return { success: false, code: "FLASH_OUTSIDE_SHENZHEN" };
+  }
+  return { success: true, data: parsed.data };
+}
+
+async function shouldEnforceShenzhenBoundary(): Promise<boolean> {
+  if ((process.env.APP_MODE ?? "production") === "production") return true;
+  return getFeatureFlag("flashShenzhenLocationGateEnabled", true);
 }
 
 async function isAnyLocationArrivalTestEnabled(): Promise<boolean> {
@@ -115,7 +166,16 @@ function isStoryReplayRequest(req: Request): boolean {
     && isSingleTestMode();
 }
 
-function sendCoordinateError(res: Response, code: "FLASH_LOCATION_REQUIRED" | "FLASH_OUTSIDE_SHENZHEN") {
+function sendCoordinateError(
+  res: Response,
+  code: "FLASH_LOCATION_REQUIRED" | "FLASH_OUTSIDE_SHENZHEN" | "FLASH_LOCATION_UNAVAILABLE",
+) {
+  if (code === "FLASH_LOCATION_UNAVAILABLE") {
+    return res.status(503).json({
+      code,
+      error: "地图服务暂时无法校验位置，请稍后再试",
+    });
+  }
   return res.status(code === "FLASH_OUTSIDE_SHENZHEN" ? 403 : 400).json({
     code,
     error: code === "FLASH_OUTSIDE_SHENZHEN" ? "街头盲盒目前只在深圳开放" : "需要定位权限才能参加街头盲盒",
@@ -155,7 +215,11 @@ export function registerAlangFlashRoutes(app: Express): void {
     const appearanceId = idParamSchema.safeParse(req.params.id);
     if (!appearanceId.success) return res.status(400).json({ code: "FLASH_APPEARANCE_NOT_FOUND", error: "无效的相遇编号" });
     const forceArrivalForTesting = await isAnyLocationArrivalTestEnabled();
-    const coordinate = parseEncounterCoordinate(req.body);
+    const coordinate = await parseEncounterCoordinate(
+      req.body,
+      forceArrivalForTesting ? false : await shouldEnforceShenzhenBoundary(),
+      true,
+    );
     if (!coordinate.success) return sendCoordinateError(res, coordinate.code);
     try {
       return res.json(await locateFlashAppearance({
@@ -274,11 +338,11 @@ export function registerAlangFlashRoutes(app: Express): void {
     try {
       return res.json(await deliverFlashTaskToNpc({
         encounterId: encounterId.data,
-          assignmentId: body.data.assignmentId,
-          userId: authenticatedUserId,
-          answers: body.data.answers,
-          allowSameEncounterDeliveryForTesting: await isAnyLocationArrivalTestEnabled(),
-        }));
+        assignmentId: body.data.assignmentId,
+        userId: authenticatedUserId,
+        answers: body.data.answers,
+        allowSameEncounterDeliveryForTesting: await isAnyLocationArrivalTestEnabled(),
+      }));
     } catch (error) {
       return sendFlashError(res, error);
     }
@@ -302,7 +366,11 @@ export function registerAlangFlashRoutes(app: Express): void {
     const assignmentId = idParamSchema.safeParse(req.params.id);
     if (!assignmentId.success) return res.status(404).json({ code: "FLASH_TASK_NOT_FOUND", error: "没有找到这个委托" });
     const forceArrivalForTesting = await isAnyLocationArrivalTestEnabled();
-    const coordinate = parseEncounterCoordinate(req.body);
+    const coordinate = await parseEncounterCoordinate(
+      req.body,
+      forceArrivalForTesting ? false : await shouldEnforceShenzhenBoundary(),
+      false,
+    );
     if (!coordinate.success) return sendCoordinateError(res, coordinate.code);
     try {
       return res.json(await arriveAtFlashAssignment({

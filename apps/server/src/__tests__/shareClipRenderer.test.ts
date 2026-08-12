@@ -1,3 +1,4 @@
+import { spawnSync } from "child_process";
 import { describe, it, expect } from "vitest";
 import { renderShareClipMp4 } from "../lib/shareClipRenderer";
 
@@ -7,7 +8,10 @@ import { renderShareClipMp4 } from "../lib/shareClipRenderer";
  * Docker image). Verifies MP4 magic bytes and a sane size floor.
  */
 
-describe("renderShareClipMp4", () => {
+const hasFfmpeg = spawnSync("ffmpeg", ["-version"], { stdio: "ignore" }).status === 0;
+const describeWithFfmpeg = hasFfmpeg ? describe : describe.skip;
+
+describeWithFfmpeg("renderShareClipMp4", () => {
   it("renders a valid muted MP4 for a basic input", async () => {
     const mp4 = await renderShareClipMp4({
       archetype: "corgi",
