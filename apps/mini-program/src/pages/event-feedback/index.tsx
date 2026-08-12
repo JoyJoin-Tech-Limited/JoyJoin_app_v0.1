@@ -850,7 +850,7 @@ export default function EventFeedbackPage() {
                       <ArchetypeHead
                         archetype={p.archetype}
                         size={64}
-                        variant='sd'
+                        variant='head'
                         fallbackText={name}
                       />
                       <View className='event-feedback__attendee-info'>

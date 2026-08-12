@@ -6,9 +6,8 @@ import './ArchetypeHead.scss'
 /**
  * ArchetypeHeadRenderer — the head-crop / grid icon rendering core.
  *
- * Extracted from ArchetypeHead so SDAvatar can use the head fallback without
- * creating a circular import (ArchetypeHead renders SDAvatar for variant='sd').
- * This module intentionally does NOT import SDAvatar.
+ * Extracted from ArchetypeHead so the renderer stays reusable without
+ * circular imports. This module intentionally renders only head/grid crops.
  */
 
 interface ArchetypeHeadRendererProps {

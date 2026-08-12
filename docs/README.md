@@ -49,7 +49,7 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`mobile-design-system.md`](./mobile-design-system.md)
 - [`MOBILE_UI_IMPLEMENTATION_SUMMARY.md`](./architecture/implementation-summaries/MOBILE_UI_IMPLEMENTATION_SUMMARY.md)
 - [`design/button-design.md`](./design/button-design.md)
-- [`design/sd-pixel-avatar-style-guide.md`](./design/sd-pixel-avatar-style-guide.md) — SD pixel avatar style guide (no longer used for gathering room; retained for future compact-avatar contexts); Lovart briefs: [sd-avatar cat](./design/lovart-brief-sd-avatar-cat.md), [octopus](./design/lovart-brief-sd-avatar-octopus.md), [rooster](./design/lovart-brief-sd-avatar-rooster.md), [gathering room](./design/lovart-brief-gathering-room.md)
+- [`design/lovart-brief-gathering-room.md`](./design/lovart-brief-gathering-room.md)
 - [`reference/ui-matching-reveal-improvements.md`](./reference/ui-matching-reveal-improvements.md)
 
 ### Ops and maintainers

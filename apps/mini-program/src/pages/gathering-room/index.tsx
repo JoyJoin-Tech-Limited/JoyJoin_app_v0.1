@@ -34,6 +34,53 @@ export default function GatheringRoomPage() {
   const groupId = router.params.groupId ?? ''
   const controller = useGatheringRoomController({ groupId })
 
+  // Hooks must run unconditionally above every early return below (rules of hooks).
+  const {
+    roomState,
+    memberProfiles,
+    presenceByUserId,
+    selectedMember,
+    presentCount,
+    presentUserIds,
+    ownConfirmed,
+    isSubmitting,
+    confirmPending,
+  } = controller
+  const selectedMemberItems = useMemo(
+    () => new Map((controller.selectedMember?.equippedItems ?? []).map((item) => [item.id, item])),
+    [controller.selectedMember?.equippedItems],
+  )
+
+  // Live event countdown gives users a natural reason to check back.
+  const [countdownText, setCountdownText] = useState<string | null>(null)
+  useEffect(() => {
+    const eventDateTime = controller.roomState?.eventDateTime
+    if (!eventDateTime) {
+      setCountdownText(null)
+      return
+    }
+    const update = () => {
+      const diff = new Date(eventDateTime).getTime() - Date.now()
+      if (diff <= 0) {
+        setCountdownText('活动即将开始')
+        return
+      }
+      const minutes = Math.floor(diff / 60_000)
+      const hours = Math.floor(minutes / 60)
+      const days = Math.floor(hours / 24)
+      if (days > 0) {
+        setCountdownText(`还有 ${days} 天`)
+      } else if (hours > 0) {
+        setCountdownText(`还有 ${hours} 小时`)
+      } else {
+        setCountdownText(`还有 ${minutes} 分钟`)
+      }
+    }
+    update()
+    const id = setInterval(update, 60_000)
+    return () => clearInterval(id)
+  }, [controller.roomState?.eventDateTime])
+
   if (controller.authLoading) {
     return <LoadingScreen message='正在推开集结房间的门…' />
   }
@@ -74,53 +121,7 @@ export default function GatheringRoomPage() {
     )
   }
 
-  const {
-    roomState,
-    memberProfiles,
-    presenceByUserId,
-    selectedMember,
-    presentCount,
-    presentUserIds,
-    ownConfirmed,
-    isSubmitting,
-    confirmPending,
-  } = controller
-
-  const selectedMemberItems = useMemo(
-    () => new Map((selectedMember?.equippedItems ?? []).map((item) => [item.id, item])),
-    [selectedMember?.equippedItems],
-  )
-
-  // Live event countdown gives users a natural reason to check back.
-  const [countdownText, setCountdownText] = useState<string | null>(null)
-  useEffect(() => {
-    if (!roomState?.eventDateTime) {
-      setCountdownText(null)
-      return
-    }
-    const update = () => {
-      const diff = new Date(roomState.eventDateTime!).getTime() - Date.now()
-      if (diff <= 0) {
-        setCountdownText('活动即将开始')
-        return
-      }
-      const minutes = Math.floor(diff / 60_000)
-      const hours = Math.floor(minutes / 60)
-      const days = Math.floor(hours / 24)
-      if (days > 0) {
-        setCountdownText(`还有 ${days} 天`)
-      } else if (hours > 0) {
-        setCountdownText(`还有 ${hours} 小时`)
-      } else {
-        setCountdownText(`还有 ${minutes} 分钟`)
-      }
-    }
-    update()
-    const id = setInterval(update, 60_000)
-    return () => clearInterval(id)
-  }, [roomState?.eventDateTime])
-
-  const total = roomState.totalParticipants || memberProfiles.length
+  const total = roomState?.totalParticipants || memberProfiles.length
 
   return (
     <View className='gathering-room'>
@@ -128,8 +129,8 @@ export default function GatheringRoomPage() {
         <Text className='gathering-room__header-title'>集结房间</Text>
         <Text className='gathering-room__header-subtitle'>
           {countdownText
-            ? `${countdownText} · 已到 ${presentCount}/${total} 人 · 已确认 ${roomState.confirmedCount}/${total}`
-            : `已到 ${presentCount}/${total} 人 · 已确认 ${roomState.confirmedCount}/${total}`}
+            ? `${countdownText} · 已到 ${presentCount}/${total} 人 · 已确认 ${roomState?.confirmedCount ?? 0}/${total}`
+            : `已到 ${presentCount}/${total} 人 · 已确认 ${roomState?.confirmedCount ?? 0}/${total}`}
         </Text>
       </View>
 

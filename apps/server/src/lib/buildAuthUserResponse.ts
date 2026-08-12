@@ -123,7 +123,6 @@ const [
     socialIcebreakerCustomModeEnabled,
     profileRedesignEnabled,
     profilePixelAvatarEnabled,
-    sdAvatarEnabled,
     gatheringRoomEnabled,
     icebreakerHapticGrammarEnabled,
     icebreakerMoodFieldEnabled,
@@ -164,7 +163,6 @@ const [
     getFeatureFlag('socialIcebreakerCustomModeEnabled', true),
     getFeatureFlag('profileRedesignEnabled', true),
     getFeatureFlag('profilePixelAvatarEnabled', false),
-    getFeatureFlag('sdAvatarEnabled', false),
     getFeatureFlag('gatheringRoomEnabled', false),
     getFeatureFlag('icebreakerHapticGrammarEnabled', false),
     getFeatureFlag('icebreakerMoodFieldEnabled', false),
@@ -246,8 +244,6 @@ const [
       socialIcebreakerCustomModeEnabled,
       profileRedesignEnabled,
       profilePixelAvatarEnabled,
-      /** SD pixel avatar sprites in roster/list slots (variant='sd'). */
-      sdAvatarEnabled,
       /** Gathering room (集结房间) entry CTAs + room page. */
       gatheringRoomEnabled,
       /** Social Icebreaker social haptic grammar (ships dark). */

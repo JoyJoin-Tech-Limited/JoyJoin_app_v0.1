@@ -46,7 +46,7 @@ export function WarmupPresenceStrip({
                 <View className='warmup-presence__avatar-wrap'>
                   <View className='warmup-presence__avatar'>
                     {p.archetype ? (
-                      <ArchetypeHead archetype={p.archetype} size={40} variant='sd' fallback='none' />
+                      <ArchetypeHead archetype={p.archetype} size={40} variant='head' fallback='none' />
                     ) : (
                       <MissingArchetypePlaceholder size={40} />
                     )}

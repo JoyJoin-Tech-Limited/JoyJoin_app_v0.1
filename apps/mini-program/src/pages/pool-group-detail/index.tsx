@@ -344,7 +344,7 @@ export default function PoolGroupDetailPage() {
               >
                 <View className='pool-group-detail__member-avatar'>
                   {member.archetype ? (
-                    <ArchetypeHead archetype={member.archetype} size={72} variant='sd' />
+                    <ArchetypeHead archetype={member.archetype} size={72} variant='head' />
                   ) : (
                     <MissingArchetypePlaceholder size={72} />
                   )}

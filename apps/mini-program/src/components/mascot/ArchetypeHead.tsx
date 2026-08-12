@@ -1,6 +1,4 @@
-import { useSdAvatarEnabled } from '../../hooks/useSdAvatarEnabled'
 import ArchetypeHeadRenderer from './ArchetypeHeadRenderer'
-import SDAvatar from './SDAvatar'
 import './ArchetypeHead.scss'
 
 /**
@@ -16,12 +14,8 @@ import './ArchetypeHead.scss'
  * Variants:
  *   head — default head crop via ArchetypeHeadRenderer
  *   grid — circular grid icon via ArchetypeHeadRenderer
- *   sd   — SD pixel sprite via SDAvatar (sd-avatar/v1 family);
- *          only when the viewer's sdAvatarEnabled feature flag is on
- *          AND size >= 40rpx, otherwise falls back to head behaviour.
  *
- * The rendering core lives in ArchetypeHeadRenderer so SDAvatar's head
- * fallback can use it without a circular import.
+ * The rendering core lives in ArchetypeHeadRenderer.
  */
 
 interface ArchetypeHeadProps {
@@ -30,12 +24,8 @@ interface ArchetypeHeadProps {
   fallback?: 'initial' | 'none'
   fallbackText?: string
   className?: string
-  variant?: 'head' | 'grid' | 'sd'
+  variant?: 'head' | 'grid'
 }
-
-/** SD sprites read as full characters; below this rpx size the head crop
- * stays more legible, so small slots keep the existing head behaviour. */
-const SD_VARIANT_MIN_SIZE_RPX = 40
 
 export default function ArchetypeHead({
   archetype,
@@ -45,22 +35,6 @@ export default function ArchetypeHead({
   className = '',
   variant = 'head',
 }: ArchetypeHeadProps) {
-  const sdAvatarEnabled = useSdAvatarEnabled()
-
-  // SD pixel sprite variant: full-character chibi sprite for 40rpx+
-  // roster/list slots, gated by the server-owned sdAvatarEnabled flag.
-  if (variant === 'sd' && sdAvatarEnabled && size >= SD_VARIANT_MIN_SIZE_RPX) {
-    return (
-      <SDAvatar
-        archetype={archetype}
-        size={size}
-        fallback={fallback === 'none' ? 'none' : 'head'}
-        fallbackText={fallbackText}
-        className={className}
-      />
-    )
-  }
-
   return (
     <ArchetypeHeadRenderer
       archetype={archetype}

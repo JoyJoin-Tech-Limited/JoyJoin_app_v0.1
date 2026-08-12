@@ -119,7 +119,7 @@ export default function ConnectionsPage() {
                 <ArchetypeHead
                   archetype={conn.peerArchetype}
                   size={72}
-                  variant='sd'
+                  variant='head'
                   fallbackText={conn.peerName ?? undefined}
                 />
               </View>

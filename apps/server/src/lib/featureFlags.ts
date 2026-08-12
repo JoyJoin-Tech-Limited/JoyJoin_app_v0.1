@@ -83,11 +83,6 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   /** Profile-only pixel companion stage. Kept independent from the V1.7
    * layout rollback so art can be disabled without reverting Profile data. */
   profilePixelAvatarEnabled: "PROFILE_PIXEL_AVATAR_ENABLED",
-  /** SD pixel avatar sprites (集结房间 chibi family) in 40rpx+ roster/list
-   * slots via ArchetypeHead variant='sd'. Default false while the Lovart art
-   * is pending (manifest currently holds synthesized placeholders).
-   * Env fallback: SD_AVATAR_ENABLED (default: false). */
-  sdAvatarEnabled: "SD_AVATAR_ENABLED",
   /** Gathering room (集结房间): pixel-scene pre-event waiting room for matched
    *  groups — entry CTAs + the room page. Ships dark until the room art and
    *  the presence WS flow are device-verified.
@@ -251,9 +246,6 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   magnetismWeightProfileV2Enabled: false,
   profileRedesignEnabled: true,
   profilePixelAvatarEnabled: false,
-  /** SD pixel avatar sprites ship dark until the real Lovart art replaces
-   * the synthesized placeholders (docs/design/sd-pixel-avatar-style-guide.md). */
-  sdAvatarEnabled: false,
   /** Gathering room ships dark until room art + presence flow are verified. */
   gatheringRoomEnabled: false,
   /** Haptic grammar ships dark until the playbook §5 field protocols pass. */

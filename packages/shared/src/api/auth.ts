@@ -113,9 +113,6 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     profileRedesignEnabled?: boolean
     /** Enables the Profile-only pixel avatar stage and My Image entry. */
     profilePixelAvatarEnabled?: boolean
-    /** Enables the SD pixel avatar sprites (集结房间 chibi family) in 40rpx+
-     *  roster/list slots via ArchetypeHead variant='sd'. Default: false. */
-    sdAvatarEnabled?: boolean
     /** Enables the gathering room (集结房间): entry CTAs on pool-group-detail /
      *  squad-unboxing and the room page itself. Default: false. */
     gatheringRoomEnabled?: boolean

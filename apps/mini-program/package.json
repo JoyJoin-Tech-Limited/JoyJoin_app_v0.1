@@ -27,8 +27,6 @@
     "extract:profile-pixel-layers": "node scripts/extract-profile-pixel-atlas-layers.mjs",
     "build:profile-pixel-v2": "npm run extract:profile-pixel-layers && node scripts/build-profile-pixel-v2-assets.mjs && node scripts/check-profile-pixel-assets.mjs",
     "check:profile-pixel-assets": "node scripts/check-profile-pixel-assets.mjs",
-    "build:sd-avatar": "node scripts/build-sd-avatar-assets.mjs && node scripts/check-sd-avatar-assets.mjs",
-    "check:sd-avatar-assets": "node scripts/check-sd-avatar-assets.mjs",
     "generate:xiaoyue-spritesheet": "node scripts/generate-xiaoyue-spritesheet.mjs",
     "extract:xiaoyue-frames": "node scripts/extract-xiaoyue-strip-frames.mjs",
     "contact-sheet:xiaoyue": "node scripts/generate-xiaoyue-contact-sheet.mjs",

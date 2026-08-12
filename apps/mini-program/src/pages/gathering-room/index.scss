@@ -4,7 +4,6 @@
 // the page WXSS or Taro/Vite may chunk it into a file this page never loads
 // (subpackage style-splitting trap — see verify-subpackage-styles.mjs).
 @use '../../components/gathering-room/GatheringRoomScene';
-@use '../../components/mascot/SDAvatar';
 @use '../../components/mascot/ArchetypeHead';
 
 .gathering-room {
