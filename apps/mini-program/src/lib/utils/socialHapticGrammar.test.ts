@@ -21,6 +21,7 @@ vi.mock('@tarojs/taro', () => ({
 
 const ALL_PATTERNS: SocialHapticPattern[] = [
   'socialNudge',
+  'socialHostNudge',
   'socialYourTurn',
   'socialConfirm',
   'socialReveal',
@@ -45,7 +46,7 @@ describe('social haptic grammar (S1)', () => {
     vi.useRealTimers()
   })
 
-  it('defines exactly the five social patterns', () => {
+  it('defines exactly the six social patterns', () => {
     expect(Object.keys(SOCIAL_HAPTIC_GRAMMAR).sort()).toEqual([...ALL_PATTERNS].sort())
   })
 
@@ -58,7 +59,7 @@ describe('social haptic grammar (S1)', () => {
     }
   })
 
-  it('keeps the five playback plans pairwise distinguishable', () => {
+  it('keeps the six playback plans pairwise distinguishable', () => {
     const signatures = ALL_PATTERNS.map((pattern) =>
       JSON.stringify(
         planSocialHapticPattern(pattern).map((pulse) => [
@@ -89,6 +90,24 @@ describe('social haptic grammar (S1)', () => {
 
     vi.advanceTimersByTime(SOCIAL_HAPTIC_MIN_GAP_MS - 1)
     expect(taroRuntime.vibrateShort).toHaveBeenCalledTimes(1)
+
+    vi.advanceTimersByTime(1000)
+    expect(taroRuntime.vibrateShort).toHaveBeenCalledTimes(2)
+    expect(taroRuntime.vibrateShort).toHaveBeenLastCalledWith({ type: 'light' })
+  })
+
+  it('plays the S7 host Nudge as two light taps — private, never the group Nudge', () => {
+    // Double-light signature is pairwise-distinct from every other pattern,
+    // most importantly from the group Nudge's single mid tap (S6 beats).
+    expect(planSocialHapticPattern('socialHostNudge')).toEqual([
+      { atMs: 0, step: { kind: 'short', type: 'light' } },
+      { atMs: 90, step: { kind: 'short', type: 'light' } },
+    ])
+    expect(planSocialHapticPattern('socialHostNudge')).not.toEqual(planSocialHapticPattern('socialNudge'))
+
+    socialHaptics('socialHostNudge')
+    expect(taroRuntime.vibrateShort).toHaveBeenCalledTimes(1)
+    expect(taroRuntime.vibrateShort).toHaveBeenLastCalledWith({ type: 'light' })
 
     vi.advanceTimersByTime(1000)
     expect(taroRuntime.vibrateShort).toHaveBeenCalledTimes(2)

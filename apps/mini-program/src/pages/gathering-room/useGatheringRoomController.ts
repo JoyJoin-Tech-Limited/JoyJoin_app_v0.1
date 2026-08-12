@@ -54,6 +54,18 @@ const ROOM_WS_EVENT_TYPES = [
   'USER_CONFIRMED',
 ] as const
 
+const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const
+
+/** "周六见" style farewell derived from the event's actual date — the
+ *  hardcoded 周六 lie about every non-Saturday event (fix 2026-08-12).
+ *  Falls back to the neutral 活动见 when the date is missing/unparseable. */
+export function formatMeetDayLabel(eventDateTime: string | null | undefined): string {
+  if (!eventDateTime) return '活动见'
+  const parsed = new Date(eventDateTime)
+  if (Number.isNaN(parsed.getTime())) return '活动见'
+  return `${WEEKDAY_LABELS[parsed.getDay()]}见`
+}
+
 export interface UseGatheringRoomControllerArgs {
   groupId: string
 }
@@ -212,7 +224,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
             !celebratedRef.current
           ) {
             celebratedRef.current = true
-            setCelebrationText('全员到齐！这桌稳了，周六见～')
+            setCelebrationText(`全员到齐！这桌稳了，${formatMeetDayLabel(roomState?.eventDateTime)}～`)
             haptics('success')
             gatheringRoomAnalytics.track('room_all_present', {
               poolId: groupId,
@@ -362,7 +374,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         blindBoxEventId: response.blindBoxEventId,
       })
       haptics('success')
-      Taro.showToast({ title: '座位已锁定，周六见', icon: 'none', duration: TOAST_SHORT_MS })
+      Taro.showToast({ title: `座位已锁定，${formatMeetDayLabel(roomState?.eventDateTime)}`, icon: 'none', duration: TOAST_SHORT_MS })
       // Seated animation: the refetched snapshot flips presence to confirmed
       // and the CSS transition on the seat body animates the shift.
       queryClient.invalidateQueries({ queryKey: ['mini-program', 'gathering-room-state', groupId] })

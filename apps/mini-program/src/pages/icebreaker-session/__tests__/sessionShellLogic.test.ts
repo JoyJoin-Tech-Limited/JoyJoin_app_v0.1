@@ -3,6 +3,7 @@ import {
   buildChangeTierLabel,
   resolveHostMenuItems,
   resolveSyncLossVisible,
+  shouldNudgeHostForSuggestion,
 } from '../sessionShellLogic'
 
 // ── buildChangeTierLabel ─────────────────────────────────────────────
@@ -89,5 +90,35 @@ describe('resolveSyncLossVisible', () => {
   it('stays hidden pre-bootstrap (full-page error owns that state)', () => {
     expect(resolveSyncLossVisible({ hasSession: false, isPollError: true })).toBe(false)
     expect(resolveSyncLossVisible({ hasSession: false, isPollError: false })).toBe(false)
+  })
+})
+
+// ── shouldNudgeHostForSuggestion (S7 静默救援) ──────────────────────────
+describe('shouldNudgeHostForSuggestion', () => {
+  it('nudges the host exactly once per suggestion generation', () => {
+    expect(
+      shouldNudgeHostForSuggestion({ isHost: true, lastNudgedGeneratedAt: null, suggestionGeneratedAt: 'g1' }),
+    ).toBe(true)
+    expect(
+      shouldNudgeHostForSuggestion({ isHost: true, lastNudgedGeneratedAt: 'g1', suggestionGeneratedAt: 'g1' }),
+    ).toBe(false)
+    expect(
+      shouldNudgeHostForSuggestion({ isHost: true, lastNudgedGeneratedAt: 'g1', suggestionGeneratedAt: 'g2' }),
+    ).toBe(true)
+  })
+
+  it('never nudges non-hosts (role gate even though the server strips the data)', () => {
+    expect(
+      shouldNudgeHostForSuggestion({ isHost: false, lastNudgedGeneratedAt: null, suggestionGeneratedAt: 'g1' }),
+    ).toBe(false)
+  })
+
+  it('stays silent when no suggestion is present', () => {
+    expect(
+      shouldNudgeHostForSuggestion({ isHost: true, lastNudgedGeneratedAt: null, suggestionGeneratedAt: null }),
+    ).toBe(false)
+    expect(
+      shouldNudgeHostForSuggestion({ isHost: true, lastNudgedGeneratedAt: null, suggestionGeneratedAt: undefined }),
+    ).toBe(false)
   })
 })

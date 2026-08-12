@@ -127,6 +127,7 @@ const [
     icebreakerHapticGrammarEnabled,
     icebreakerMoodFieldEnabled,
     icebreakerGlanceStackEnabled,
+    icebreakerGroupBeatsEnabled,
     equipmentRewardsEnabled,
     personalStoryEnabled,
     oracleCardCornerStatEnabled,
@@ -167,6 +168,7 @@ const [
     getFeatureFlag('icebreakerHapticGrammarEnabled', false),
     getFeatureFlag('icebreakerMoodFieldEnabled', false),
     getFeatureFlag('icebreakerGlanceStackEnabled', false),
+    getFeatureFlag('icebreakerGroupBeatsEnabled', false),
     getFeatureFlag('equipmentRewardsEnabled', false),
     getFeatureFlag('personalStoryEnabled', false),
     getFeatureFlag('oracleCardCornerStatEnabled', true),
@@ -252,6 +254,8 @@ const [
       icebreakerMoodFieldEnabled,
       /** Social Icebreaker glance-stack pilot (ships dark). */
       icebreakerGlanceStackEnabled,
+      /** Social Icebreaker group beats (ships dark; gates emit + join). */
+      icebreakerGroupBeatsEnabled,
       equipmentRewardsEnabled,
       personalStoryEnabled,
       oracleCardCornerStatEnabled,

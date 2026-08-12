@@ -182,6 +182,12 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  squint/eyes-up field protocols pass.
    *  Env fallback: ICEBREAKER_GLANCE_STACK_ENABLED (default: false). */
   icebreakerGlanceStackEnabled: "ICEBREAKER_GLANCE_STACK_ENABLED",
+  /** S6 group-synchronized beats: gates BOTH server emission (state-free
+   *  SOCIAL_GROUP_BEAT triggers from transition/reveal choke points) AND the
+   *  mini-program's WS room join. Ships dark until the venue WS reliability
+   *  field test passes (playbook §10 ruling 6 flag-on precondition).
+   *  Env fallback: ICEBREAKER_GROUP_BEATS_ENABLED (default: false). */
+  icebreakerGroupBeatsEnabled: "ICEBREAKER_GROUP_BEATS_ENABLED",
   /** Squad-unboxing pocket-deck collapse kill-switch. When false, the
    *  mini-program hides the "收起卡组" trigger and collapseDeck() is a no-op,
    *  so the deck stays in the fan phase. Users who previously collapsed stay
@@ -254,6 +260,8 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   icebreakerMoodFieldEnabled: false,
   /** Glance-stack pilot ships dark until the Wave-3 field protocols pass. */
   icebreakerGlanceStackEnabled: false,
+  /** Group beats ship dark until the venue WS field test passes (ruling 6). */
+  icebreakerGroupBeatsEnabled: false,
   equipmentRewardsEnabled: false,
   personalStoryEnabled: false,
   profileIdentityStageEnabled: true,

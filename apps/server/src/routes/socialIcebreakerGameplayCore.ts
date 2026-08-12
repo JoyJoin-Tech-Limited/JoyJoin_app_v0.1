@@ -53,6 +53,7 @@ import {
   resolveSession,
   isHostAuthorized,
 } from './socialIcebreakerHelpers';
+import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
 import { shouldSkipOnDemandGeneration } from '../jobs/preGenerationQueue';
 import { recordVoteOptimistically } from '../lib/optimisticSync';
 import {
@@ -730,6 +731,9 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
     state.dicePassedBy = (state.dicePassedBy ?? []).filter((id) => id !== userId);
 
     const allReady = state.personalityDiceChallengeGroups.every((group) => completed.has(group.userId));
+    // S6: captured before the branch consumes the condition — the reveal beat
+    // fires only when the synchronized countdown actually starts.
+    const startsDiceReveal = allReady && !state.diceRevealOrder;
     if (allReady && !state.diceRevealOrder) {
       const order = state.personalityDiceChallengeGroups.map((group) => group.userId);
       for (let index = order.length - 1; index > 0; index -= 1) {
@@ -743,6 +747,10 @@ router.post('/:socialSessionId/personality-dice/complete', async (req: any, res)
       state.diceRevealCountdownEndsAt = undefined;
     }
     await updateSession(socialSessionId, state);
+    if (startsDiceReveal) {
+      // S6: group reveal beat (state-free; poll remains state truth).
+      void emitSocialGroupBeat(state.icebreakerSessionId, 'reveal');
+    }
     return res.json({
       ready: nextReady,
       diceCompletedBy: state.diceCompletedBy,

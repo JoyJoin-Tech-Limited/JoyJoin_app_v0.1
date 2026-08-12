@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import type { AtmosphereMood, SocialIcebreakerPhase, SocialSessionState, SocialTopic } from '@shared/socialIcebreaker'
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
+import type { WSMessage } from '@shared/wsEvents'
 import type {
   MiniScriptGenre,
   MiniScriptStyle,
@@ -17,6 +18,7 @@ import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
 import { usePageVisibility } from '../../hooks/usePageVisibility'
+import { useWebSocket } from '../../hooks/useWebSocket'
 import { logInfo, logWarn, logError } from '../../lib/utils/logger'
 import { haptics, socialHaptics } from '../../lib/utils/haptics'
 import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerAnalytics'
@@ -28,34 +30,13 @@ import {
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
 import OnboardingLoadingShell from '../../components/loading/OnboardingLoadingShell'
 import XiaoyueSessionShell from '../../components/mascot/XiaoyueSessionShell'
-import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
-import AiGenerationShell from '../../components/ui/AiGenerationShell'
-import {
-  FallbackPhaseView,
-  RecapPhaseView,
-  type SessionPhase,
-  WarmupPhaseView,
-} from './phaseViews'
+import { type SessionPhase } from './phaseViews'
 import { apiVibeToClient, VIBE_TO_API, type VibeId } from '../../lib/vibeMapping'
 import IcebreakerTierSheet, { type TierSheetSelection } from './components/IcebreakerTierSheet'
-import CustomModeSection from './components/CustomModeSection'
-import WaitingPhase from './components/WaitingPhase'
 import { getPhaseToastText } from './phaseToastText'
 import { useIcebreakerSessionAnalytics } from './useIcebreakerSessionAnalytics'
-import { MicroChallengeHeroView } from './phases/MicroChallengeHeroView'
-import { LieDetectiveHeroView } from './phases/LieDetectiveHeroView'
-import { PersonalityDiceHeroView } from './phases/PersonalityDiceHeroView'
-import { SpeedFriendingHeroView } from './phases/SpeedFriendingHeroView'
-import { QuipBattleHeroView } from './phases/QuipBattleHeroView'
-import { UndercoverWordHeroView } from './phases/UndercoverWordHeroView'
-import { GroupMirrorHeroView } from './phases/GroupMirrorHeroView'
-import { AuctionHeroView } from './phases/AuctionHeroView'
-import { MiniScriptHeroView } from './phases/MiniScriptHeroView'
 import { PhaseIntroOverlay } from './overlays/PhaseIntroOverlay'
-import { IcebreakerToolSelector } from './overlays/IcebreakerToolSelector'
-import { MiniScriptConfigModal } from './overlays/MiniScriptConfigModal'
 import BonusGateOverlay from './overlays/BonusGateOverlay'
 import { useMiniScriptGeneration } from './hooks/useMiniScriptGeneration'
 import {
@@ -65,6 +46,8 @@ import {
 } from './hooks/useSessionSensoryEvents'
 import { useKeepScreenOn } from './hooks/useKeepScreenOn'
 import { MOOD_FIELD_BLOOM_MS, deriveMoodField } from './viewModels/ambientFieldModel'
+import { GroupBeatTracker, parseSocialGroupBeat } from './viewModels/groupBeatModel'
+import { SessionPhaseViews, type SessionPhaseViewsProps } from './SessionPhaseViews'
 import {
   buildSocialPath,
   deriveParticipants,
@@ -82,6 +65,7 @@ import {
   HOST_MENU_COACHMARK_STORAGE_KEY,
   resolveHostMenuItems,
   resolveSyncLossVisible,
+  shouldNudgeHostForSuggestion,
 } from './sessionShellLogic'
 import {
   shouldRetryWarmupTopics,
@@ -91,7 +75,6 @@ import {
 import type { TopicsFailureKind, TopicsRecoveryState } from './viewModels/warmupViewModels'
 import {
   getGenerationRetryDelayMs,
-  resolvePersonalityDiceChooseMode,
   type GenerationPendingResponse,
 } from './viewModels/phaseProgressionModels'
 import { syncSocialActionResponse } from './socialActionSync'
@@ -154,6 +137,9 @@ export default function IcebreakerSessionPage() {
   // S3 glance-stack pilot (warmup + micro_challenge): L1/L2/L3 stack, S8
   // handshake ritual, S4 pilot motion. Default off.
   const glanceStackEnabled = features?.icebreakerGlanceStackEnabled ?? false
+  // S6 group beats: gates the WS room join + beat→haptic dispatch. Default
+  // off; WS-down degrades automatically to the S1 poll detector (ruling 6).
+  const groupBeatsEnabled = features?.icebreakerGroupBeatsEnabled ?? false
   const [socialSessionId, setSocialSessionId] = useState<string | null>(null)
   const [bootstrapState, setBootstrapState] = useState<SocialSessionState | null>(null)
   const [bootstrapError, setBootstrapError] = useState<string | null>(null)
@@ -291,6 +277,39 @@ export default function IcebreakerSessionPage() {
   // released on hide/unmount so the rest of the app is unaffected.
   useKeepScreenOn(moodFieldEnabled && isPageVisible)
 
+  // S6: join the session's beats room. Room key = resolvedSessionId — the id
+  // this device POSTed to /start; the server emits with
+  // state.icebreakerSessionId, the same string (no id mapping on either
+  // side). Reconnect-on-show lives inside the hook (gathering-room
+  // precedent). Beats are best-effort sensory triggers, never correctness.
+  const groupBeatTrackerRef = useRef<GroupBeatTracker | null>(null)
+  if (groupBeatTrackerRef.current === null) {
+    groupBeatTrackerRef.current = new GroupBeatTracker()
+  }
+  // N4: re-bind a fresh tracker when the session changes so a previous
+  // session's nonces/suppression window never leak into the new room.
+  useEffect(() => {
+    groupBeatTrackerRef.current?.reset()
+  }, [resolvedSessionId])
+  const handleGroupBeat = useCallback(
+    (message: WSMessage) => {
+      const beat = parseSocialGroupBeat(message, resolvedSessionId)
+      if (!beat) return
+      const pattern = groupBeatTrackerRef.current?.registerBeat(beat)
+      if (pattern) {
+        socialHaptics(pattern)
+      }
+    },
+    [resolvedSessionId],
+  )
+  useWebSocket({
+    autoConnect: groupBeatsEnabled && !!resolvedSessionId,
+    eventTypes: ['SOCIAL_GROUP_BEAT'],
+    eventId: resolvedSessionId || undefined,
+    joinEventId: resolvedSessionId || undefined,
+    onMessage: handleGroupBeat,
+  })
+
   const socialSessionQuery = useQuery<SocialSessionState>({
     queryKey: ['mini-program', 'social-icebreaker-session', socialSessionId],
     queryFn: () => apiRequest<SocialSessionState>({ path: buildSocialPath(socialSessionId ?? '') }),
@@ -417,6 +436,28 @@ export default function IcebreakerSessionPage() {
 
   useIcebreakerSessionAnalytics({ session, phase, socialSessionId, playerCount, isHost })
 
+  // S7 静默救援: the suggestion's arrival is rerouted to the S1 grammar's
+  // host-private Nudge — two light taps, never mistakable for the group
+  // Nudge (single mid tap, S6 beats). One shot per suggestion generation;
+  // the group never hears a thing. Fires on the haptic-grammar flag only.
+  const lastNudgedSuggestionAtRef = useRef<string | null>(null)
+  useEffect(() => {
+    const suggestionGeneratedAt = session?.xiaoyueAdaptiveSuggestion?.generatedAt
+    if (
+      !shouldNudgeHostForSuggestion({
+        isHost,
+        lastNudgedGeneratedAt: lastNudgedSuggestionAtRef.current,
+        suggestionGeneratedAt,
+      })
+    ) {
+      return
+    }
+    lastNudgedSuggestionAtRef.current = suggestionGeneratedAt ?? null
+    if (hapticGrammarEnabled) {
+      socialHaptics('socialHostNudge')
+    }
+  }, [session?.xiaoyueAdaptiveSuggestion?.generatedAt, isHost, hapticGrammarEnabled])
+
   // S1 + S2 share the sensory-event stream: state transitions from the
   // existing 3s poll become typed events. Haptic patterns stay gated on the
   // S1 flag alone; S2's reveal bloom keys off the same detector (its
@@ -445,7 +486,13 @@ export default function IcebreakerSessionPage() {
   const handleSensoryEvent = useCallback(
     (event: SessionSensoryEvent) => {
       if (hapticGrammarEnabled) {
-        socialHaptics(SENSORY_EVENT_HAPTIC_PATTERNS[event.kind])
+        const pattern = SENSORY_EVENT_HAPTIC_PATTERNS[event.kind]
+        // S6 double-fire contract: a group beat that already buzzed this
+        // moment suppresses the poll-detector's haptic for the same pattern
+        // (the S2 bloom below is not a haptic and is never suppressed).
+        if (!groupBeatTrackerRef.current?.shouldSuppressDetectorFire(pattern)) {
+          socialHaptics(pattern)
+        }
       }
       if (moodFieldEnabled && event.kind === 'reveal_appeared') {
         triggerFieldBloom()
@@ -1091,7 +1138,7 @@ export default function IcebreakerSessionPage() {
         guessedStatementIndex: statementIndex,
       })
     },
-    [performSocialAction, session],
+    [performSocialAction, session, socialSessionId, playerCount],
   )
 
   const handleNextLieDetectivePlayer = useCallback(() => {
@@ -1207,9 +1254,23 @@ export default function IcebreakerSessionPage() {
     void performSocialAction('xiaoyue-suggest', '/xiaoyue/adaptive-suggestion', {})
   }, [performSocialAction])
 
-  const handleDismissAdaptiveSuggestion = useCallback(() => {
-    setDismissedSuggestionAt(session?.xiaoyueAdaptiveSuggestion?.generatedAt ?? 'dismissed')
-  }, [session?.xiaoyueAdaptiveSuggestion?.generatedAt])
+  const handleDismissAdaptiveSuggestion = useCallback(
+    (source: 'tap' | 'auto') => {
+      // Funnel semantics: only a MANUAL 知道了 counts as a nudge dismissal;
+      // the 8s auto-dismiss just hides the card (the host may still act).
+      if (source === 'tap') {
+        socialIcebreakerAnalytics.track(
+          'stall_nudge_dismiss',
+          socialSessionId ?? undefined,
+          session?.icebreakerSessionId,
+          phase,
+          { playerCount },
+        )
+      }
+      setDismissedSuggestionAt(session?.xiaoyueAdaptiveSuggestion?.generatedAt ?? 'dismissed')
+    },
+    [session?.xiaoyueAdaptiveSuggestion?.generatedAt, session?.icebreakerSessionId, socialSessionId, phase, playerCount],
+  )
 
   // ─── PR1 壳层: host ⋯ menu (all phases) ──────────────────────────────────
   // Items come from the pure resolver (unit-tested in sessionShellLogic.test.ts):
@@ -1530,6 +1591,76 @@ export default function IcebreakerSessionPage() {
   })()
   const phaseShellClass = `icebreaker__phase-shell${flowSyncCopy ? ' icebreaker__phase-shell--syncing' : ''}`
 
+  // Phase dispatch moved to SessionPhaseViews (2026-08-12) — this object
+  // carries every value/callback the presentational tree needs.
+  const phaseViewsProps: SessionPhaseViewsProps = {
+    phase,
+    session,
+    participants,
+    currentUserId,
+    isHost,
+    playerCount,
+    pendingAction,
+    canChangeTier,
+    glanceStackEnabled,
+    supportedPhases,
+    mascotDisplayName: getMascotDisplayName(user),
+    personalityDiceChooseMode: features?.personalityDiceChooseMode,
+    lastTopicsMood: lastTopicsMoodRef.current,
+    topicsError,
+    topicsRecovery,
+    myVoteIndex,
+    hasGeneratedStatements,
+    canMoveToNextPlayer,
+    socialSessionId,
+    miniScriptModalOpen,
+    miniScriptSubmitting,
+    miniScriptGenerationStatus,
+    recapData: recapQuery.data?.state?.recapData ?? session.recapData ?? null,
+    recapSummary: recapQuery.data?.summary ?? null,
+    recapMedals: recapQuery.data?.medals ?? [],
+    recapMeta: recapQuery.data?.meta ?? null,
+    onOpenTierSheet: () => setIsTierSheetOpen(true),
+    onOpenMiniScript: () => {
+      resetMiniScriptGeneration()
+      setMiniScriptModalOpen(true)
+    },
+    onMiniScriptClose: handleMiniScriptModalClose,
+    onMiniScriptSubmit: handleMiniScriptSubmit,
+    onRefreshSession: () => socialSessionQuery.refetch(),
+    onAdvance: handleAdvancePhase,
+    onGenerateSessionPack: handleGenerateSessionPack,
+    onAigcFeedbackTap: handleAigcFeedbackTap,
+    onGenerateTopics: handleGenerateTopics,
+    onToggleWarmupReady: handleToggleWarmupReady,
+    onNextWarmupTopic: handleNextWarmupTopic,
+    onRitualStart: handleRitualStart,
+    onSelectPhase: handleSelectCustomPhase,
+    onEndSession: handleEndCustomSession,
+    onCompleteChallenge: handleCompleteChallenge,
+    onCastVote: handleCastVote,
+    onGenerateStatements: handleGenerateStatements,
+    onNextLieDetectivePlayer: handleNextLieDetectivePlayer,
+    onGenerateLieStatementFromTag: handleGenerateLieStatementFromTag,
+    onGenerateAuctionLots: handleGenerateAuctionLots,
+    onAuctionBid: handleAuctionBid,
+    onCloseAuctionLot: handleCloseAuctionLot,
+    onAssignRoles: handleAssignRoles,
+    onRevealAct: handleRevealAct,
+    onMiniScriptVote: handleVote,
+    onRevealSolution: handleRevealSolution,
+    onMiniScriptReady: handleMiniScriptReady,
+    onGenerateDiceChallenges: handleGenerateDiceChallenges,
+    onCompleteDiceChallenge: handleCompleteDiceChallenge,
+    onChooseDiceOption: handleChooseDiceOption,
+    onDiceReady: handleDiceReady,
+    onDiceRevealReady: handleDiceRevealReady,
+    onNextSpeedFriendingRound: handleNextSpeedFriendingRound,
+    onCompleteSpeedFriending: handleCompleteSpeedFriending,
+    onGoBack: handleGoBack,
+    onConnectTap: handleConnectTap,
+  }
+
   return (
     <ScrollView
       className={`icebreaker${phase === 'warmup' ? ' icebreaker--warmup' : ''}${moodField ? ` icebreaker--mood-field icebreaker--field-${moodField.state}` : ''}`}
@@ -1616,314 +1747,7 @@ export default function IcebreakerSessionPage() {
       )}
 
       <View className={phaseShellClass} key={phase}>
-        {phase === 'waiting' && (
-          <>
-            <WaitingPhase
-              playerCount={playerCount}
-              hostName={session?.hostDisplayName}
-              isHost={isHost}
-              currentTier={session?.eventTier ?? 'glow'}
-              currentVibe={apiVibeToClient(session?.vibe)}
-              canChangeTier={canChangeTier}
-              onChangeTier={() => setIsTierSheetOpen(true)}
-              onAdvance={handleAdvancePhase}
-              glanceMode={glanceStackEnabled}
-            />
-            {isHost && !session?.xiaoyueSessionPack && (
-              <Button
-                variant='secondary'
-                className='icebreaker__generate-pack-btn'
-                onClick={handleGenerateSessionPack}
-                disabled={pendingAction !== null}
-                loading={pendingAction === 'xiaoyue-pack'}
-              >
-                {pendingAction === 'xiaoyue-pack' ? '生成中…' : `生成${getMascotDisplayName(user)}开场包`}
-              </Button>
-            )}
-          </>
-        )}
-
-        {phase === 'warmup' && session && (
-          <WarmupPhaseView
-            topics={session.warmupTopics ?? []}
-            currentIndex={session.currentTopicIndex ?? 0}
-            readyUserIds={session.warmupReadyUserIds ?? []}
-            warmupDataReady={session.warmupReadyUserIds !== undefined}
-            participants={participants}
-            currentUserId={currentUserId}
-            selectedMood={session.selectedMood ?? lastTopicsMoodRef.current}
-            isHost={isHost}
-            vibe={apiVibeToClient(session.vibe)}
-            archetypeMixText={session.archetypeMixText}
-            isCustomMode={session.eventTier === 'custom'}
-            currentTier={session.eventTier ?? 'glow'}
-            isTestMode={session.isTestModeSkip ?? false}
-            runBots={session.runBots ?? false}
-            warmupTopicsMeta={session.warmupTopicsMeta}
-            socialSessionId={socialSessionId ?? undefined}
-            icebreakerSessionId={session.icebreakerSessionId}
-            onAigcFeedbackTap={handleAigcFeedbackTap}
-            onGenerateTopics={handleGenerateTopics}
-            onToggleReady={handleToggleWarmupReady}
-            onNextTopic={handleNextWarmupTopic}
-            onAdvance={handleAdvancePhase}
-            isGeneratingTopics={pendingAction === 'topics'}
-            isUpdatingReady={pendingAction === 'warmup-ready'}
-            isAdvancingTopic={pendingAction === 'warmup-next-topic'}
-            isAdvancing={pendingAction === 'advance'}
-            topicsError={topicsError}
-            topicsRecovery={topicsRecovery}
-            glanceStackEnabled={glanceStackEnabled}
-            onRitualStart={handleRitualStart}
-          />
-        )}
-
-        {phase === 'phase_selection' && session && (
-          <CustomModeSection
-            isHost={isHost}
-            socialSessionId={socialSessionId}
-            session={session}
-            playerCount={playerCount}
-            pendingAction={pendingAction}
-            onSelectPhase={handleSelectCustomPhase}
-            onEndSession={handleEndCustomSession}
-          />
-        )}
-
-        {phase === 'micro_challenge' && session && (
-          <MicroChallengeHeroView
-            challenge={session.currentChallenge ?? null}
-            challengeMeta={session.currentChallengeMeta}
-            completedBy={session.challengeCompletedBy ?? []}
-            currentUserId={currentUserId}
-            playerCount={playerCount}
-            onComplete={handleCompleteChallenge}
-            isCompleting={pendingAction === 'micro-complete'}
-            isHost={isHost}
-            onAdvance={handleAdvancePhase}
-            isAdvancing={pendingAction === 'advance'}
-            canAdvance={new Set(session.challengeCompletedBy ?? []).size >= playerCount}
-            advanceDisabledReason='还有小伙伴未完成'
-            glanceStackEnabled={glanceStackEnabled}
-          />
-        )}
-
-        {phase === 'lie_detective' && session && (
-          <LieDetectiveHeroView
-            players={session.lieDetectivePlayers ?? []}
-            playerCount={playerCount}
-            currentPlayerIndex={session.currentLieDetectivePlayerIndex ?? 0}
-            votes={session.votes ?? []}
-            reveal={session.currentLieDetectiveReveal ?? null}
-            currentUserId={currentUserId}
-            myVoteIndex={myVoteIndex}
-            onVote={handleCastVote}
-            isVoting={pendingAction === 'lie-vote'}
-            hasGeneratedStatements={hasGeneratedStatements}
-            onGenerateStatements={handleGenerateStatements}
-            isGeneratingStatements={pendingAction === 'lie-generate'}
-            isHost={isHost}
-            canMoveToNextPlayer={canMoveToNextPlayer}
-            onNextPlayer={handleNextLieDetectivePlayer}
-            isMovingNextPlayer={pendingAction === 'lie-next-player'}
-            onAdvance={handleAdvancePhase}
-            isAdvancing={pendingAction === 'advance'}
-            statementsMeta={session.lieDetectiveStatementsMeta}
-            onGenerateFromTag={handleGenerateLieStatementFromTag}
-            isGeneratingFromTag={pendingAction === 'lie-tag-generate'}
-          />
-        )}
-
-        {phase === 'auction' && session && (
-          <AuctionHeroView
-            session={session}
-            currentUserId={currentUserId}
-            isHost={isHost}
-            onGenerateLots={handleGenerateAuctionLots}
-            onPlaceBid={handleAuctionBid}
-            onCloseLot={handleCloseAuctionLot}
-            onAdvance={handleAdvancePhase}
-            isAdvancing={pendingAction === 'advance'}
-            isGeneratingLots={pendingAction === 'auction-gen'}
-            lotsMeta={session.auctionLotsMeta}
-            isPlacingBid={pendingAction === 'auction-bid'}
-            isClosingLot={pendingAction === 'auction-close'}
-            isSingleTest={session.isTestModeSkip ?? false}
-          />
-        )}
-
-        {phase === 'mini_script' && session && (
-          <>
-            {isHost && session.enabledPhases?.includes('mini_script') ? (
-              <IcebreakerToolSelector
-                onOpenMiniScript={() => {
-                  resetMiniScriptGeneration()
-                  setMiniScriptModalOpen(true)
-                }}
-              />
-            ) : null}
-            <MiniScriptHeroView
-              session={session}
-              currentUserId={currentUserId}
-              isHost={isHost}
-              playerCount={playerCount}
-              onAssignRoles={handleAssignRoles}
-              onRevealAct={handleRevealAct}
-              onVote={handleVote}
-              onRevealSolution={handleRevealSolution}
-              onAdvance={handleAdvancePhase}
-              onReady={handleMiniScriptReady}
-              isAssigningRoles={pendingAction === 'miniscript-assign-roles'}
-              isRevealingAct={pendingAction === 'miniscript-reveal-act'}
-              isVoting={pendingAction === 'miniscript-vote'}
-              isRevealingSolution={pendingAction === 'miniscript-reveal-solution'}
-              isAdvancing={pendingAction === 'advance'}
-              isSettingReady={pendingAction === 'miniscript-ready'}
-            />
-            <MiniScriptConfigModal
-              open={miniScriptModalOpen}
-              onClose={handleMiniScriptModalClose}
-              isSubmitting={miniScriptSubmitting}
-              generationStatus={miniScriptGenerationStatus}
-              onSubmit={handleMiniScriptSubmit}
-            />
-          </>
-        )}
-
-        {phase === 'personality_dice' && session && (
-          <PersonalityDiceHeroView
-            participants={participants}
-            challenges={session.personalityDiceChallenges ?? []}
-            currentPlayerIndex={
-              resolvePersonalityDiceChooseMode(
-                session.personalityDiceChooseModeEnabled,
-                features?.personalityDiceChooseMode,
-              )
-                ? Math.max(0, participants.findIndex((participant) => participant.userId === currentUserId))
-                : (session.currentDicePlayerIndex ?? 0)
-            }
-            completedBy={session.diceCompletedBy ?? []}
-            passedBy={session.dicePassedBy ?? []}
-            currentUserId={currentUserId}
-            isHost={isHost}
-            onGenerate={handleGenerateDiceChallenges}
-            onComplete={handleCompleteDiceChallenge}
-            isGenerating={pendingAction === 'dice-generate'}
-            isCompleting={pendingAction === 'dice-complete'}
-            chooseModeEnabled={resolvePersonalityDiceChooseMode(
-              session.personalityDiceChooseModeEnabled,
-              features?.personalityDiceChooseMode,
-            )}
-            challengeGroups={session.personalityDiceChallengeGroups ?? []}
-            selectedOption={session.diceSelectedOption ?? {}}
-            onChoose={handleChooseDiceOption}
-            onReady={handleDiceReady}
-            isChoosing={pendingAction === 'dice-choose'}
-            isReadying={pendingAction === 'dice-ready'}
-            revealOrder={session.diceRevealOrder ?? []}
-            revealCountdownEndsAt={session.diceRevealCountdownEndsAt}
-            revealReadyBy={session.diceRevealReadyBy ?? []}
-            onRevealReady={handleDiceRevealReady}
-            isRevealReadying={pendingAction === 'dice-reveal-ready'}
-            challengesMeta={session.personalityDiceChallengesMeta}
-            onAdvance={handleAdvancePhase}
-          />
-        )}
-
-        {phase === 'quip_battle' && session && (
-          <QuipBattleHeroView
-            socialSessionId={socialSessionId || ''}
-            isHost={isHost}
-            prompts={session.quipBattlePrompts ?? []}
-            answers={session.quipBattleAnswers ?? []}
-            results={session.quipBattleResults ?? []}
-            revealed={session.quipBattleRevealed ?? false}
-            submittedUserIds={session.quipBattleSubmittedUserIds ?? []}
-            votedUserIds={session.quipBattleVotedUserIds ?? []}
-            userId={currentUserId}
-            playerCount={playerCount}
-            onRefresh={() => socialSessionQuery.refetch()}
-            onAdvance={handleAdvancePhase}
-            isAdvancing={pendingAction === 'advance'}
-            promptsMeta={session.quipBattlePromptsMeta}
-          />
-        )}
-
-        {phase === 'undercover_word' && session && (
-          <UndercoverWordHeroView
-            socialSessionId={socialSessionId || ''}
-            isHost={isHost}
-            userId={currentUserId}
-            pair={session.undercoverWordPair ?? null}
-            undercoverUserId={session.undercoverUserId}
-            rounds={session.undercoverWordRounds ?? []}
-            currentRound={session.undercoverWordCurrentRound ?? 0}
-            votes={session.undercoverWordVotes ?? []}
-            votedUserIds={session.undercoverWordVotedUserIds ?? []}
-            revealed={session.undercoverWordRevealed ?? false}
-            results={session.undercoverWordResults ?? null}
-            playerCount={playerCount}
-            participants={participants}
-            onAdvance={handleAdvancePhase}
-            isAdvancing={pendingAction === 'advance'}
-            pairMeta={session.undercoverWordPairMeta}
-          />
-        )}
-
-        {phase === 'group_mirror' && session && (
-          <GroupMirrorHeroView
-            socialSessionId={socialSessionId || ''}
-            isHost={isHost}
-            userId={currentUserId}
-            questions={session.groupMirrorQuestions ?? []}
-            answers={session.groupMirrorAnswers ?? []}
-            submittedUserIds={session.groupMirrorSubmittedUserIds ?? []}
-            revealed={session.groupMirrorRevealed ?? false}
-            results={session.groupMirrorResults ?? []}
-            playerCount={playerCount}
-            participants={participants}
-            onAdvance={handleAdvancePhase}
-            isAdvancing={pendingAction === 'advance'}
-            questionsMeta={session.groupMirrorQuestionsMeta}
-          />
-        )}
-
-        {phase === 'speed_friending' && session && (
-          <SpeedFriendingHeroView
-            pairs={session.speedFriendingPairs ?? []}
-            currentRound={session.speedFriendingCurrentRound ?? 0}
-            totalRounds={session.speedFriendingTotalRounds ?? 0}
-            roundStartedAt={session.speedFriendingRoundStartedAt}
-            allRoundsComplete={session.speedFriendingAllRoundsComplete ?? false}
-            participants={participants}
-            currentUserId={currentUserId}
-            isHost={isHost}
-            onNextRound={handleNextSpeedFriendingRound}
-            onComplete={handleCompleteSpeedFriending}
-            isLoading={pendingAction === 'speed-next' || pendingAction === 'speed-complete'}
-            onAdvance={handleAdvancePhase}
-            isAdvancing={pendingAction === 'advance'}
-          />
-        )}
-
-        {(phase === 'recap' || phase === 'ended') && session && (
-          <RecapPhaseView
-            recapData={recapQuery.data?.state?.recapData ?? session.recapData ?? null}
-            summary={recapQuery.data?.summary ?? null}
-            medals={recapQuery.data?.medals ?? []}
-            playerCount={playerCount}
-            onLeave={handleGoBack}
-            onConnectTap={handleConnectTap}
-            socialSessionId={socialSessionId}
-            recapMeta={recapQuery.data?.meta ?? null}
-            phasesCompleted={(session.completedPhases ?? []).filter((p) => p !== 'phase_selection').length}
-            isEarlyEnd={Boolean(session.endedEarlyAt) || session.lastAdvanceTrigger === 'early_end_jump'}
-          />
-        )}
-
-        {!supportedPhases.includes(phase) && session && (
-          <FallbackPhaseView phase={phase} isHost={isHost} onAdvance={handleAdvancePhase} />
-        )}
+        <SessionPhaseViews {...phaseViewsProps} />
       </View>
 
       <IcebreakerTierSheet

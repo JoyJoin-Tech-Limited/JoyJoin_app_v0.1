@@ -112,3 +112,27 @@ export interface ResolveSyncLossInput {
 export function resolveSyncLossVisible(input: ResolveSyncLossInput): boolean {
   return input.hasSession && input.isPollError
 }
+
+export interface ShouldNudgeHostForSuggestionInput {
+  /** Host-only by construction: the suggestion is stripped server-side for
+   *  non-hosts, but the role gate is re-checked here regardless. */
+  isHost: boolean
+  /** `generatedAt` of the suggestion already nudged (or null on first run). */
+  lastNudgedGeneratedAt: string | null
+  /** `generatedAt` of the currently visible suggestion, if any. */
+  suggestionGeneratedAt: string | null | undefined
+}
+
+/**
+ * S7 静默救援 (silent rescue): fire the host-only signal exactly once per
+ * suggestion generation. A suggestion re-enters the polled state across
+ * refreshes and reconnects — the generatedAt identity keeps the nudge
+ * one-shot without any extra state on the server.
+ */
+export function shouldNudgeHostForSuggestion(
+  input: ShouldNudgeHostForSuggestionInput,
+): boolean {
+  if (!input.isHost) return false
+  if (!input.suggestionGeneratedAt) return false
+  return input.suggestionGeneratedAt !== input.lastNudgedGeneratedAt
+}

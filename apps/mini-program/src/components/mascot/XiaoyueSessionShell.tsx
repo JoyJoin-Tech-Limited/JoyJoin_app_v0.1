@@ -43,7 +43,8 @@ export interface XiaoyueSessionShellProps {
   showHostMenu?: boolean;
   /** ⋯ menu trigger handler — page owns the ActionSheet. */
   onOpenHostMenu?: () => void;
-  onDismissSuggestion?: () => void;
+  /** Suggestion dismiss — `'tap'` = manual 知道了, `'auto'` = 8s auto-dismiss. */
+  onDismissSuggestion?: (source: 'tap' | 'auto') => void;
   /** Fired when the host taps 反馈 in a shell-level AIGC footer (analytics). */
   onAigcFeedbackTap?: (location: 'footer' | 'suggestion') => void;
 }
@@ -146,13 +147,13 @@ export default function XiaoyueSessionShell({
     if (!suggestionKey || !onDismissSuggestion) {
       return
     }
-    const timer = setTimeout(onDismissSuggestion, SUGGESTION_AUTO_DISMISS_MS)
+    const timer = setTimeout(() => onDismissSuggestion('auto'), SUGGESTION_AUTO_DISMISS_MS)
     return () => clearTimeout(timer)
   }, [suggestionKey, onDismissSuggestion])
 
   const handleDismissSuggestionTap = () => {
     haptics('light')
-    onDismissSuggestion?.()
+    onDismissSuggestion?.('tap')
   }
 
   return (

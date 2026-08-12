@@ -11,7 +11,7 @@ import Button from '../../components/ui/Button'
 import PixelAvatarComposite from '../../components/profile/PixelAvatarComposite'
 import GatheringRoomScene from '../../components/gathering-room/GatheringRoomScene'
 import { navigateBackOrEventsTab } from '../../lib/navigation/matchingNavigation'
-import { useGatheringRoomController } from './useGatheringRoomController'
+import { formatMeetDayLabel, useGatheringRoomController } from './useGatheringRoomController'
 import './index.scss'
 
 /** Poke choice labels — text badges only, no emoji glyphs (guardrail). */
@@ -158,7 +158,7 @@ export default function GatheringRoomPage() {
           disabled={ownConfirmed || isSubmitting || confirmPending}
           loading={isSubmitting || confirmPending}
         >
-          {ownConfirmed ? '座位已锁定 · 周六见' : isSubmitting || confirmPending ? '确认中…' : '确认出席 · 锁定座位'}
+          {ownConfirmed ? `座位已锁定 · ${formatMeetDayLabel(roomState?.eventDateTime)}` : isSubmitting || confirmPending ? '确认中…' : '确认出席 · 锁定座位'}
         </Button>
       </View>
 

@@ -79,6 +79,7 @@ export function haptics(type: HapticType) {
 
 export type SocialHapticPattern =
   | 'socialNudge'
+  | 'socialHostNudge'
   | 'socialYourTurn'
   | 'socialConfirm'
   | 'socialReveal'
@@ -96,6 +97,14 @@ export const SOCIAL_HAPTIC_MIN_GAP_MS = 80
 export const SOCIAL_HAPTIC_GRAMMAR: Record<SocialHapticPattern, readonly SocialHapticStep[]> = {
   // Something new — glance when ready. Single mid-weight tap.
   socialNudge: [{ kind: 'short', type: 'medium' }],
+  // S7 silent rescue — host-private: two light taps, unmistakable from the
+  // group Nudge (single mid tap). Only the host ever feels it; the group
+  // never sees a thing.
+  socialHostNudge: [
+    { kind: 'short', type: 'light' },
+    { kind: 'gap', ms: 90 },
+    { kind: 'short', type: 'light' },
+  ],
   // Your turn — personal, must never be mistakable. Heavy beat, light echo.
   socialYourTurn: [
     { kind: 'short', type: 'heavy' },
@@ -135,6 +144,7 @@ export const SOCIAL_HAPTIC_PRIORITY: Record<SocialHapticPattern, number> = {
   socialReveal: 3,
   socialYourTurn: 2,
   socialNudge: 1,
+  socialHostNudge: 1,
   socialConfirm: 0,
 }
 

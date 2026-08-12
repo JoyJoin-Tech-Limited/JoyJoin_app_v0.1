@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerAnalytics'
 import type { IcebreakerSession } from './icebreakerSessionModel'
 import type { SessionPhase } from './phaseViews'
+import { shouldNudgeHostForSuggestion } from './sessionShellLogic'
 
 /**
  * Session-level analytics effects extracted from index.tsx (maintainability:
@@ -26,7 +27,7 @@ export function useIcebreakerSessionAnalytics({
   isHost,
 }: UseIcebreakerSessionAnalyticsInput) {
   const phaseViewTrackedRef = useRef<string | null>(null)
-  const stallNudgeShownForRef = useRef<number | null>(null)
+  const stallNudgeShownForRef = useRef<string | null>(null)
   const recapTrackedRef = useRef(false)
   const customSessionCompletedRef = useRef(false)
   const customSessionMetaRef = useRef({
@@ -76,13 +77,22 @@ export function useIcebreakerSessionAnalytics({
     prevPhaseRef.current = phase
   }, [phase, socialSessionId, session, playerCount])
 
-  // Stall nudge impression (host only; once per nudge).
+  // Stall nudge impression (S7 静默救援): fires once per suggestion arrival,
+  // host-only. The retired server field `stallNudgeAt` never gets set in the
+  // current server (machinery removed 2026-07-29) — the suggestion's
+  // generatedAt is the one-shot identity that keeps the funnel alive.
   useEffect(() => {
-    const nudgeAt = session?.stallNudgeAt
-    if (!nudgeAt || !isHost || stallNudgeShownForRef.current === nudgeAt) {
+    const suggestionGeneratedAt = session?.xiaoyueAdaptiveSuggestion?.generatedAt
+    if (
+      !shouldNudgeHostForSuggestion({
+        isHost,
+        lastNudgedGeneratedAt: stallNudgeShownForRef.current,
+        suggestionGeneratedAt,
+      })
+    ) {
       return
     }
-    stallNudgeShownForRef.current = nudgeAt
+    stallNudgeShownForRef.current = suggestionGeneratedAt ?? null
     socialIcebreakerAnalytics.track(
       'stall_nudge_shown',
       socialSessionId ?? undefined,
@@ -90,7 +100,7 @@ export function useIcebreakerSessionAnalytics({
       session?.currentPhase,
       { playerCount },
     )
-  }, [session?.stallNudgeAt, isHost, socialSessionId, session?.icebreakerSessionId, session?.currentPhase, playerCount])
+  }, [session?.xiaoyueAdaptiveSuggestion?.generatedAt, isHost, socialSessionId, session?.icebreakerSessionId, session?.currentPhase, playerCount])
 
   // recap_view with source attribution (natural vs early-end).
   useEffect(() => {

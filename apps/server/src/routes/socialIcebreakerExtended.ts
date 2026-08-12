@@ -28,6 +28,7 @@ import {
   transitionPhase,
   hasWarmupTurnCompleted,
 } from './socialIcebreakerHelpers';
+import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import {
   getSessionWithExpiry,
@@ -410,6 +411,11 @@ router.post('/:socialSessionId/lie-detective/generate', async (req: any, res) =>
       try {
         customStatements = buildCustomLieDetectiveStatements(customStatementTexts, lieIndex);
       } catch (error) {
+        logger.warn('[SocialIcebreaker] custom lie-detective statements rejected', {
+          socialSessionId,
+          userId,
+          error: error instanceof Error ? error.message : String(error),
+        });
         return res.status(400).json({
           error: error instanceof Error ? error.message : 'Invalid custom statements',
         });
@@ -617,6 +623,8 @@ router.post('/:socialSessionId/lie-detective/vote', async (req: any, res) => {
       }
 
       await updateSession(socialSessionId, state);
+      // S6: group reveal beat (state-free; poll remains state truth).
+      void emitSocialGroupBeat(state.icebreakerSessionId, 'reveal');
     }
   }
 
@@ -931,6 +939,8 @@ router.get('/:socialSessionId/quip-battle/results', async (req: any, res) => {
   state.quipBattleResults = results;
   state.quipBattleRevealed = true;
   await updateSession(socialSessionId, state);
+  // S6: group reveal beat (state-free; poll remains state truth).
+  void emitSocialGroupBeat(state.icebreakerSessionId, 'reveal');
 
   return res.json({
     results,

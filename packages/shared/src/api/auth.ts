@@ -128,6 +128,10 @@ export interface AuthUserResponse extends SanitizedAuthUser {
      *  on warmup + micro_challenge, bundling the Handshake Bridge opening
      *  ritual and S4 weighted motion on those surfaces. Default: false. */
     icebreakerGlanceStackEnabled?: boolean
+    /** Enables S6 group-synchronized beats: server emits state-free beat
+     *  triggers and the mini-program joins the session's WS room to fire
+     *  haptic patterns on receipt. Default: false. */
+    icebreakerGroupBeatsEnabled?: boolean
     /** Enables equipment draws, fragments and the fragment-only shop. */
     equipmentRewardsEnabled?: boolean
     /** Enables the private, append-only AI personal story surface. */

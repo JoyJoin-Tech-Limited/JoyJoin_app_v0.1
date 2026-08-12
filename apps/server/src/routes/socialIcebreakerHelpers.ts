@@ -12,6 +12,7 @@ import {
   loadSessionLieTruths,
   savePhaseMetric,
 } from '../lib/socialIcebreakerStore';
+import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
 import { logger } from '../lib/logger';
 import { buildArchetypeContext } from '../lib/contextInjector';
 import { isCustomMode, computeSelectablePhases, generatePhaseSelectionId } from '../services/customModeService';
@@ -747,6 +748,15 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
   }
 
   await updateSession(socialSessionId, state);
+
+  // S6: group beat for every committed transition — nudge-family for phase
+  // advances, celebration for the recap arrival. State-free; emitted after
+  // the persist (WS is a notification layer). The bonus-gate pause path
+  // returns before this point, so a paused transition emits nothing.
+  void emitSocialGroupBeat(
+    state.icebreakerSessionId,
+    targetPhase === 'recap' ? 'session_recap' : 'phase_advanced',
+  );
 
   if (targetPhase === 'recap') {
     // R5: build from the pre-cleanup copy, then persist the live state.

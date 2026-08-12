@@ -72,6 +72,7 @@ import {
   generateSpeedFriendingPairs,
   ensureRecapSnapshot,
 } from './socialIcebreakerHelpers';
+import { emitSocialGroupBeat } from '../lib/socialGroupBeats';
 
 const router = Router();
 
@@ -594,6 +595,8 @@ router.post('/:socialSessionId/undercover-word/reveal', async (req: any, res) =>
   state.undercoverWordResults = result;
   state.undercoverWordRevealed = true;
   await updateSession(socialSessionId, state);
+  // S6: group reveal beat (state-free; poll remains state truth).
+  void emitSocialGroupBeat(state.icebreakerSessionId, 'reveal');
 
   return res.json({ revealed: true, result });
 });
@@ -884,6 +887,8 @@ router.post('/:socialSessionId/group-mirror/reveal', async (req: any, res) => {
   state.groupMirrorResults = results;
   state.groupMirrorRevealed = true;
   await updateSession(socialSessionId, state);
+  // S6: group reveal beat (state-free; poll remains state truth).
+  void emitSocialGroupBeat(state.icebreakerSessionId, 'reveal');
 
   return res.json({ revealed: true, results });
 });

@@ -26,6 +26,7 @@ export type WSEventType =
   | "SOCIAL_PHASE_ADVANCE"
   | "SOCIAL_PULSE_VOTE"
   | "SOCIAL_LIE_VOTE"
+  | "SOCIAL_GROUP_BEAT"
   // Attendance status events
   | "ATTENDANCE_STATUS_UPDATED"
   // Gathering room (集结房间) presence events
@@ -176,6 +177,28 @@ export interface AttendanceStatusUpdatedData {
   status: 'pending' | 'confirmed' | 'late' | 'absent';
   estimatedLateMinutes?: number | null;
   absentReason?: string | null;
+}
+
+// ============ S6 群体感官节拍 (Group-Synchronized Beats) ============
+
+/** Beat pattern vocabulary — mirrors the S1 haptic grammar one-to-one
+ *  (camelCase social-patterns minus the prefix). `your_turn`/`confirm` are
+ *  personal/local patterns and are never emitted as group beats. */
+export type SocialGroupBeatPattern = 'nudge' | 'reveal' | 'celebration';
+
+/**
+ * S6 group beat payload (server → room). STATE-FREE by ruling 6 (playbook
+ * §10): pattern + dedupe nonce + server timestamp ONLY. The 3s poll remains
+ * the sole state truth; a beat says "fire this pattern now", never "here is
+ * state". `sessionId` is the room scope (the social session's
+ * icebreakerSessionId — the same id clients joined with).
+ */
+export interface SocialGroupBeatData {
+  sessionId: string;
+  pattern: SocialGroupBeatPattern;
+  nonce: string;
+  /** Server epoch ms when the beat was emitted (skew measurement). */
+  sentAt: number;
 }
 
 // ============ 集结房间 (Gathering Room) 事件数据 ============
