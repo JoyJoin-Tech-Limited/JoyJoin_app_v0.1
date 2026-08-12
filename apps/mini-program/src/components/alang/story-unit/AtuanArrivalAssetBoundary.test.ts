@@ -43,7 +43,7 @@ describe('Atuan first-arrival asset ownership', () => {
         expect([...header.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
       }
     }
-    expect(totalBytes, 'WeChat-safe arrival images must stay within the 160 KiB scene budget').toBeLessThanOrEqual(160 * 1024)
+    expect(totalBytes, 'WeChat-safe arrival images must stay within the 64 KiB scene budget').toBeLessThanOrEqual(64 * 1024)
   })
 
   it('gives the all-absolute Atuan arrival stage a viewport-height fallback chain', () => {
