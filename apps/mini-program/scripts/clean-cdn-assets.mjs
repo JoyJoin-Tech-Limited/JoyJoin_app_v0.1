@@ -83,6 +83,15 @@ const bundledAlangAssets = new Set([
   'alang-result-candidate.webp',
 ])
 
+// These WebPs are direct runtime imports of the Atuan arrival scene. They must
+// remain in the subpackage even though the rest of the source-quality UI WebPs
+// are CDN-only alternates.
+const bundledAlangUiWebps = new Set([
+  'flash-atuan-park-clean-v2.webp',
+  'flash-atuan-character-cutout-v2.webp',
+  'flash-atuan-bag-cutout-v2.webp',
+])
+
 await removeMatching(
   'lovart',
   (name) => name !== 'puzzle' && name !== 'squad' && !bundledAlangAssets.has(name),
@@ -111,7 +120,11 @@ await Promise.all([
     'ui',
     (name) => ['flash-city-ambient-bg.webp', 'flash-empty-online.webp', 'flash-empty-tasks.webp'].includes(name),
   ),
-  removeMatchingFrom(alangAssetsDir, 'ui', (name) => name.endsWith('.webp')),
+  removeMatchingFrom(
+    alangAssetsDir,
+    'ui',
+    (name) => name.endsWith('.webp') && !bundledAlangUiWebps.has(name),
+  ),
 ])
 
 console.log('Cleaned CDN-only assets from dist/assets.')

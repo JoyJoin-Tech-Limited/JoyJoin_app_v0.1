@@ -72,6 +72,28 @@ describe('FlashStoryUnit production flow', () => {
     }))
   })
 
+  it('keeps the full first encounter actionable when every scene image fails', () => {
+    const { submit } = renderFirst()
+
+    for (const image of screen.getAllByRole('img', { hidden: true })) {
+      fireEvent.error(image)
+    }
+
+    expect(screen.getByRole('status')).toHaveTextContent('场景图片暂未加载')
+    expect(screen.getByRole('button', { name: '查看站在长椅旁的阿团' })).toHaveTextContent('查看阿团')
+    expect(screen.getByRole('button', { name: '查看长椅上的纸袋' })).toHaveTextContent('查看纸袋')
+
+    reachActionChoice()
+    fireEvent.click(screen.getByRole('button', { name: '先压住纸袋' }))
+    fireEvent.click(screen.getByRole('button', { name: '和阿团一起整理卡片' }))
+
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: firstQuestion.id,
+      optionId: 'atuan-b',
+      storyPath: expect.objectContaining({ version: 'atuan-first-act-v2', approachId: 'notice_again' }),
+    }))
+  })
+
   it('restores the selected Atuan action after the page is recreated', () => {
     const first = renderFirst()
     reachActionChoice()

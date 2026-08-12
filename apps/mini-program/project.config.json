@@ -88,6 +88,10 @@
       },
       {
         "type": "regexp",
+        "value": "pages/alang/assets/ui/flash-atuan-(park-clean|character-cutout|bag-cutout)-v2\\.webp$"
+      },
+      {
+        "type": "regexp",
         "value": "assets/icons/intent-icons/.*\\.webp$"
       },
       {

@@ -21,6 +21,11 @@ const flashDialogueRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
 const flashReviewedStoryBackgrounds = [
   'pages/alang/assets/onboarding/parallel-standard-paper-world-v1.jpg',
 ]
+const atuanArrivalRelativePaths = [
+  'pages/alang/assets/ui/flash-atuan-park-clean-v2.webp',
+  'pages/alang/assets/ui/flash-atuan-character-cutout-v2.webp',
+  'pages/alang/assets/ui/flash-atuan-bag-cutout-v2.webp',
+]
 
 const flashRuntimeImages = [
   'pages/alang/assets/flash-city-encounter.jpg',
@@ -32,6 +37,7 @@ const flashRuntimeImages = [
   ...flashSceneRelativePaths,
   ...flashDialogueRelativePaths,
   ...flashReviewedStoryBackgrounds,
+  ...atuanArrivalRelativePaths,
   'pages/alang/assets/candidates/alang-event-card-candidate.jpg',
   'pages/alang/assets/candidates/alang-found-scene-candidate.jpg',
   'pages/alang/assets/candidates/alang-companion-atmosphere-candidate.jpg',
@@ -137,6 +143,15 @@ if (!existsSync(projectConfigPath)) {
       'project.config.json packOptions.include must explicitly include all pages/alang JPG runtime assets',
     )
   }
+  const atuanArrivalWebpsAreForcedIntoWxapkg = packIncludes.some(
+    (entry) => entry?.type === 'regexp' &&
+      entry?.value === 'pages/alang/assets/ui/flash-atuan-(park-clean|character-cutout|bag-cutout)-v2\\.webp$',
+  )
+  if (!atuanArrivalWebpsAreForcedIntoWxapkg) {
+    failures.push(
+      'project.config.json packOptions.include must explicitly include all Atuan arrival WebP assets',
+    )
+  }
   if (projectConfig.setting?.ignoreUploadUnusedFiles !== false) {
     failures.push(
       'project.config.json setting.ignoreUploadUnusedFiles must be false; ' +
@@ -206,11 +221,21 @@ if (flashRuntimeImageBytes > 1024 * 1024) {
 }
 
 const commonStylesPath = resolve(distRoot, 'common.wxss')
-if (
-  existsSync(commonStylesPath) &&
-  !readFileSync(commonStylesPath, 'utf8').includes('.flash-page')
-) {
-  failures.push('dist/common.wxss does not contain the shared Flash page styles')
+if (existsSync(commonStylesPath)) {
+  const commonStyles = readFileSync(commonStylesPath, 'utf8')
+  if (!commonStyles.includes('.flash-page')) {
+    failures.push('dist/common.wxss does not contain the shared Flash page styles')
+  }
+  if (!/\.flash-dialogue--story\{[^}]*min-height:100vh;[^}]*height:100dvh;[^}]*\}/.test(commonStyles)) {
+    failures.push(
+      'dist/common.wxss does not preserve the non-collapsing Flash story viewport height chain',
+    )
+  }
+  if (!/\.flash-dialogue__story-stage\{[^}]*position:absolute;[^}]*inset:0;[^}]*\}/.test(commonStyles)) {
+    failures.push(
+      'dist/common.wxss does not anchor the Flash story stage to the viewport shell',
+    )
+  }
 }
 
 const flashEntryPath = resolve(distRoot, 'pages/alang/event/index.js')

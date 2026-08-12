@@ -1,8 +1,14 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const sourceRoot = resolve(process.cwd(), 'src')
+const appRoot = resolve(process.cwd())
+const arrivalAssetNames = [
+  'flash-atuan-park-clean-v2.webp',
+  'flash-atuan-character-cutout-v2.webp',
+  'flash-atuan-bag-cutout-v2.webp',
+]
 
 describe('Atuan first-arrival asset ownership', () => {
   it('keeps Alang subpackage assets out of shared main-package components', () => {
@@ -20,5 +26,53 @@ describe('Atuan first-arrival asset ownership', () => {
     expect(dialoguePage).toContain("../assets/ui/flash-atuan-character-cutout-v2.webp")
     expect(dialoguePage).toContain("../assets/ui/flash-atuan-bag-cutout-v2.webp")
     expect(dialoguePage).toContain('atuanArrivalAssets={{')
+  })
+
+  it('keeps every first-arrival asset non-empty and WebP encoded', () => {
+    const assetRoot = resolve(sourceRoot, 'pages/alang/assets/ui')
+    let totalBytes = 0
+    for (const fileName of arrivalAssetNames) {
+      const assetPath = resolve(assetRoot, fileName)
+      const assetBytes = statSync(assetPath).size
+      totalBytes += assetBytes
+      expect(assetBytes, `${fileName} must not be empty`).toBeGreaterThan(12)
+      const header = readFileSync(assetPath).subarray(0, 12)
+      expect(header.subarray(0, 4).toString('ascii')).toBe('RIFF')
+      expect(header.subarray(8, 12).toString('ascii')).toBe('WEBP')
+    }
+    expect(totalBytes, 'arrival images must stay within the 64 KiB scene budget').toBeLessThanOrEqual(64 * 1024)
+  })
+
+  it('gives the all-absolute Atuan arrival stage a viewport-height fallback chain', () => {
+    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash.scss'), 'utf8')
+    const storyShell = flashStyles.match(/\.flash-dialogue--story\s*\{([\s\S]*?)\n\}/)?.[1] ?? ''
+    const storyStage = flashStyles.match(/\.flash-dialogue__story-stage\s*\{([\s\S]*?)\n\}/)?.[1] ?? ''
+
+    expect(storyShell).toContain('min-height: 100vh;')
+    expect(storyShell).toContain('height: 100dvh;')
+    expect(storyShell).toContain('position: relative;')
+    expect(storyShell).not.toMatch(/(?:height|min-height):\s*0;/)
+    expect(storyStage).toMatch(/^\s*position:\s*absolute;\s*inset:\s*0;/)
+  })
+
+  it('keeps all first-arrival WebPs in the production package contract', () => {
+    const cleanScript = readFileSync(resolve(appRoot, 'scripts/clean-cdn-assets.mjs'), 'utf8')
+    const verifyScript = readFileSync(resolve(appRoot, 'scripts/verify-flash-package.mjs'), 'utf8')
+    const projectConfig = JSON.parse(
+      readFileSync(resolve(appRoot, 'project.config.json'), 'utf8'),
+    ) as { packOptions?: { include?: Array<{ type?: string; value?: string }> } }
+
+    for (const fileName of arrivalAssetNames) {
+      expect(cleanScript, `${fileName} must be exempt from CDN-only cleanup`).toContain(fileName)
+      expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
+    }
+
+    expect(cleanScript).toContain("!bundledAlangUiWebps.has(name)")
+    expect(verifyScript).toContain('non-collapsing Flash story viewport height chain')
+    expect(verifyScript).toContain('anchor the Flash story stage to the viewport shell')
+    expect(projectConfig.packOptions?.include).toContainEqual({
+      type: 'regexp',
+      value: 'pages/alang/assets/ui/flash-atuan-(park-clean|character-cutout|bag-cutout)-v2\\.webp$',
+    })
   })
 })
