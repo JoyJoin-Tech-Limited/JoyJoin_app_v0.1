@@ -1268,7 +1268,7 @@ $__gold-accent:  $color-landed-gold;
     flex-shrink: 0;
     padding: 8rpx 16rpx;
     border-radius: 999rpx;
-    color: #ffffff;
+    color: $color-text-white;
     background: $color-primary;
     font-size: $font-size-xs;
     font-weight: $font-weight-bold;
@@ -1278,7 +1278,7 @@ $__gold-accent:  $color-landed-gold;
   &__role-card {
     padding: $spacing-lg;
     border-radius: 20rpx;
-    background: #ffffff;
+    background: $color-bg-clean;
     border: 2rpx solid rgba($color-primary, 0.22);
     box-shadow: 0 12rpx 30rpx rgba(31, 41, 55, 0.08);
   }
@@ -1320,7 +1320,7 @@ $__gold-accent:  $color-landed-gold;
     width: 100%;
     padding: $spacing-md $spacing-lg;
     border-radius: 16rpx;
-    background: #ffffff;
+    background: $color-bg-clean;
     border: 2rpx solid rgba($color-primary, 0.28);
     box-shadow: 0 8rpx 24rpx rgba(31, 41, 55, 0.06);
     transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
