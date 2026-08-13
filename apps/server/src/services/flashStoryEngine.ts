@@ -10,6 +10,8 @@ import type {
   FlashStoryV2Variant,
 } from "@shared/schema";
 
+export type { FlashStoryRunState };
+
 export const FLASH_V2_ECHO_MAX = 100;
 export const FLASH_V2_ECHO_START = 0;
 
