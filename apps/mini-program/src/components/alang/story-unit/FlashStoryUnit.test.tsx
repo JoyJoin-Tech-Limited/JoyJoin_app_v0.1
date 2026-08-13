@@ -41,29 +41,74 @@ function renderFirst(submit = vi.fn().mockResolvedValue(undefined)) {
 }
 
 function reachActionChoice() {
-  fireEvent.click(screen.getByRole('button', { name: '查看站在长椅旁的阿团' }))
-  fireEvent.click(screen.getByRole('button', { name: '阿团一直看着公园入口，点击回到现场' }))
-  fireEvent.click(screen.getByRole('button', { name: '查看长椅上的纸袋' }))
-  fireEvent.click(screen.getByRole('button', { name: '纸袋里装着五张没有送出去的卡，点击回到现场' }))
+  fireEvent.click(screen.getByRole('button', { name: '查看阿团' }))
+  fireEvent.click(screen.getByRole('button', { name: '收下阿团的线索，回到现场' }))
+  fireEvent.click(screen.getByRole('button', { name: '查看长椅' }))
+  fireEvent.click(screen.getByRole('button', { name: '收下长椅的线索，回到现场' }))
+  fireEvent.click(screen.getByRole('button', { name: '查看路灯' }))
+  fireEvent.click(screen.getByRole('button', { name: '收下路灯的线索，回到现场' }))
+  fireEvent.click(screen.getByRole('button', { name: '查看新出现的信封' }))
+  fireEvent.click(screen.getByRole('button', { name: '收下信封线索，回到现场' }))
   fireEvent.click(screen.getByRole('button', { name: '接住被风掀起的卡片' }))
+}
+
+function reachConversation(action: '接住卡片' | '护住纸袋' = '护住纸袋') {
+  reachActionChoice()
+  fireEvent.click(screen.getByRole('button', { name: action }))
+}
+
+function completeConversation() {
+  fireEvent.click(screen.getByRole('button', { name: '如果他不来，我们也别让这趟白跑。' }))
+  fireEvent.click(screen.getByRole('button', { name: '走到阿团身边，看看那只纸袋' }))
+  fireEvent.click(screen.getByRole('button', { name: '和阿团一起整理卡片' }))
 }
 
 afterEach(cleanup)
 beforeEach(() => storage.clear())
 
 describe('FlashStoryUnit production flow', () => {
-  it('runs the first Atuan encounter through simultaneous highlights and a real story submission', () => {
+  it('unlocks the letter only after Atuan, the bench, and the lamp are explored', () => {
     const { submit } = renderFirst()
     expect(screen.queryByTestId('npc-speech')).not.toBeInTheDocument()
     expect(screen.getByTestId('atuan-arrival-prelude').querySelector('.atuan-arrival__scene')).toHaveAttribute('src', 'park.webp')
-    expect(screen.getByRole('button', { name: '查看站在长椅旁的阿团' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '查看长椅上的纸袋' })).toBeInTheDocument()
+    expect(screen.getByTestId('atuan-scene-character')).toHaveAttribute('src', 'atuan.webp')
+    expect(screen.getByRole('button', { name: '查看阿团' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '查看长椅' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '查看路灯' })).toBeInTheDocument()
+    expect(screen.getByTestId('atuan-arrival-prelude').querySelectorAll('.atuan-arrival__scene-target')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: '查看新出现的信封' })).not.toBeInTheDocument()
 
-    reachActionChoice()
-    fireEvent.click(screen.getByRole('button', { name: '先压住纸袋' }))
-    expect(screen.getByTestId('npc-speech')).toHaveTextContent('一起看看它们该去哪里')
+    fireEvent.click(screen.getByRole('button', { name: '查看阿团' }))
+    expect(screen.getByTestId('atuan-scene-character')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '收下阿团的线索，回到现场' }))
+    fireEvent.click(screen.getByRole('button', { name: '查看长椅' }))
+    fireEvent.click(screen.getByRole('button', { name: '收下长椅的线索，回到现场' }))
+    expect(screen.queryByRole('button', { name: '查看新出现的信封' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '查看路灯' }))
+    fireEvent.click(screen.getByRole('button', { name: '收下路灯的线索，回到现场' }))
+    expect(screen.getByRole('button', { name: '查看新出现的信封' })).toBeInTheDocument()
+    expect(screen.getByTestId('atuan-scene-character')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '查看新出现的信封' }))
+    expect(screen.getByTestId('atuan-scene-character')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '收下信封线索，回到现场' }))
+    expect(screen.getByTestId('atuan-scene-character')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '接住被风掀起的卡片' }))
+    expect(screen.getByTestId('atuan-scene-character')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '接住卡片' })).toHaveTextContent('接住卡片')
+    expect(screen.getByRole('button', { name: '护住纸袋' })).toHaveTextContent('护住纸袋')
+    fireEvent.click(screen.getByRole('button', { name: '护住纸袋' }))
+    expect(screen.getByTestId('atuan-conversation-scene')).toBeInTheDocument()
+    expect(screen.getByTestId('atuan-conversation-background')).toHaveAttribute('src', 'park.webp')
+    expect(screen.getByTestId('atuan-conversation-character')).toHaveAttribute('src', 'atuan.webp')
+    expect(screen.queryByTestId('npc-speech')).not.toBeInTheDocument()
+    expect(screen.queryByText('水豚')).not.toBeInTheDocument()
+    expect(screen.getByTestId('atuan-scene-narration')).toHaveTextContent('你俯身护住纸袋')
+    expect(screen.getByTestId('atuan-scene-dialogue')).toHaveTextContent('风今天好像比我更着急')
+    expect(screen.getByTestId('atuan-scene-dialogue')).not.toHaveTextContent('你俯身护住纸袋')
     expect(submit).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: '和阿团一起整理卡片' }))
+    completeConversation()
 
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({
       questionId: firstQuestion.id,
@@ -79,13 +124,14 @@ describe('FlashStoryUnit production flow', () => {
       fireEvent.error(image)
     }
 
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '查看站在长椅旁的阿团' })).toBeEmptyDOMElement()
-    expect(screen.getByRole('button', { name: '查看长椅上的纸袋' })).toBeEmptyDOMElement()
+    expect(screen.getByRole('status')).toHaveTextContent('探索现场0/3')
+    expect(screen.getByRole('button', { name: '查看阿团' })).not.toBeEmptyDOMElement()
+    expect(screen.getByRole('button', { name: '查看长椅' })).not.toBeEmptyDOMElement()
+    expect(screen.getByRole('button', { name: '查看路灯' })).not.toBeEmptyDOMElement()
 
     reachActionChoice()
-    fireEvent.click(screen.getByRole('button', { name: '先压住纸袋' }))
-    fireEvent.click(screen.getByRole('button', { name: '和阿团一起整理卡片' }))
+    fireEvent.click(screen.getByRole('button', { name: '护住纸袋' }))
+    completeConversation()
 
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({
       questionId: firstQuestion.id,
@@ -96,13 +142,14 @@ describe('FlashStoryUnit production flow', () => {
 
   it('restores the selected Atuan action after the page is recreated', () => {
     const first = renderFirst()
-    reachActionChoice()
-    fireEvent.click(screen.getByRole('button', { name: '先接住飞出的卡' }))
+    reachConversation('接住卡片')
     first.view.unmount()
 
     renderFirst()
-    expect(screen.getByRole('button', { name: '和阿团一起整理卡片' })).toBeInTheDocument()
-    expect(screen.queryByText('先接住飞出的卡')).not.toBeInTheDocument()
+    expect(screen.getByTestId('atuan-conversation-background')).toHaveAttribute('src', 'park.webp')
+    expect(screen.getByTestId('atuan-scene-narration')).toHaveTextContent('你伸手接住被风掀起的卡片')
+    expect(screen.getByRole('button', { name: '如果他不来，我们也别让这趟白跑。' })).toBeInTheDocument()
+    expect(screen.queryByText('接住卡片')).not.toBeInTheDocument()
   })
 
   it('keeps later Atuan chapters on their existing conversational path', () => {
@@ -112,6 +159,16 @@ describe('FlashStoryUnit production flow', () => {
     render(<FlashStoryUnit encounterId='enc-p2' npc={baseNpc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={6} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
     expect(screen.getByTestId('npc-speech')).not.toBeEmptyDOMElement()
     expect(screen.queryByTestId('atuan-arrival-prelude')).not.toBeInTheDocument()
+  })
+
+  it('keeps the park scene and removes the identity tag after the first story settles', () => {
+    const story = { ...firstStory, response: '阿团把卡片收好了。' }
+    render(<FlashStoryUnit encounterId='enc-settled' npc={baseNpc as any} story={story as any} question={firstQuestion as any} motion={motion as any} storyPosition={5} submitState='idle' submitError='' atuanArrivalAssets={{ scene: 'park.webp', character: 'atuan.webp', bag: 'bag.webp' }} onSubmit={vi.fn()} onContinue={vi.fn()} />)
+
+    expect(screen.getByTestId('atuan-conversation-background')).toHaveAttribute('src', 'park.webp')
+    expect(screen.getByTestId('atuan-conversation-character')).toHaveAttribute('src', 'atuan.webp')
+    expect(screen.queryByTestId('npc-speech')).not.toBeInTheDocument()
+    expect(screen.queryByText('水豚')).not.toBeInTheDocument()
   })
 
   it('submits non-Atuan choices without entering the Atuan scene', () => {

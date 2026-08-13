@@ -2191,6 +2191,510 @@ page {
   &__card-fan--waiting { pointer-events: none; }
 }
 
+// Atuan arrival v5: one grounded scene level first, then the letter level.
+// This final override intentionally supersedes the older silhouette-glow experiments above.
+.atuan-arrival {
+  &__scene-grade {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba($color-text-primary-warm, 0.04) 0%, transparent 48%, rgba($color-text-primary, 0.12) 100%),
+      rgba($color-bg-warm-to, 0.035);
+    pointer-events: none;
+  }
+
+  &__cutout {
+    z-index: 2;
+    opacity: 1;
+    animation: none;
+    filter: brightness(0.97) saturate(0.88) contrast(0.98) drop-shadow(0 12rpx 16rpx rgba($color-text-primary-warm, 0.16));
+  }
+
+  &__cutout--bag {
+    z-index: 3;
+    animation: atuan-letter-layer-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    filter: brightness(0.98) saturate(0.9) drop-shadow(0 8rpx 16rpx rgba($color-text-primary-warm, 0.18));
+  }
+
+  &__progress {
+    position: absolute;
+    z-index: 5;
+    top: 24rpx;
+    left: 24rpx;
+    display: flex;
+    min-height: 64rpx;
+    padding: $spacing-sm $spacing-md;
+    align-items: center;
+    gap: $spacing-sm;
+    border: 2rpx solid rgba($color-surface, 0.72);
+    border-radius: $radius-pill;
+    background: rgba(52, 44, 48, 0.68);
+    box-sizing: border-box;
+    pointer-events: none;
+  }
+
+  &__progress-label,
+  &__progress-count {
+    color: $color-surface;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__progress-count { color: rgba($color-surface, 0.74); }
+
+  &__scene-target,
+  &__letter-target {
+    position: absolute;
+    z-index: 6;
+    display: flex;
+    min-width: 112rpx;
+    min-height: 112rpx;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8rpx;
+    pointer-events: auto;
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+  }
+
+  &__scene-target--atuan {
+    top: 39%;
+    right: 14%;
+  }
+
+  &__scene-target--bench {
+    top: 60%;
+    left: 7%;
+  }
+
+  &__scene-target--lamp {
+    top: 18%;
+    right: 1%;
+  }
+
+  &__scene-target--pressed,
+  &__letter-target--pressed { transform: scale(0.94); }
+
+  &__scene-target--seen { opacity: 0.7; }
+
+  &__target-marker {
+    position: relative;
+    display: flex;
+    width: 56rpx;
+    height: 56rpx;
+    align-items: center;
+    justify-content: center;
+    border: 2rpx solid rgba($color-surface, 0.92);
+    border-radius: $radius-circle;
+    background: rgba(55, 46, 52, 0.5);
+    box-shadow: 0 8rpx 16rpx rgba($color-text-primary-warm, 0.22);
+    box-sizing: border-box;
+    animation: atuan-scene-marker-breathe 1.9s ease-in-out infinite;
+  }
+
+  &__target-core {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: $radius-circle;
+    background: $color-primary;
+    box-shadow: 0 0 0 8rpx rgba($color-surface, 0.16);
+  }
+
+  &__scene-target--seen &__target-marker {
+    border-color: rgba($color-surface, 0.74);
+    animation: none;
+  }
+
+  &__scene-target--seen &__target-core {
+    background: $color-success;
+    box-shadow: inset 0 0 0 3rpx rgba($color-surface, 0.7);
+  }
+
+  &__target-label {
+    padding: $spacing-xs $spacing-sm;
+    border: 2rpx solid rgba($color-surface, 0.62);
+    border-radius: $radius-pill;
+    color: $color-surface;
+    background: rgba(48, 40, 47, 0.72);
+    box-shadow: 0 8rpx 16rpx rgba($color-text-primary-warm, 0.16);
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+
+  &__unlock-note {
+    position: absolute;
+    z-index: 6;
+    top: 32rpx;
+    right: 32rpx;
+    left: 32rpx;
+    display: flex;
+    padding: 20rpx 24rpx;
+    flex-direction: column;
+    gap: $spacing-xs;
+    border: 2rpx solid rgba($color-surface, 0.74);
+    border-radius: 24rpx;
+    background: rgba(52, 44, 48, 0.74);
+    box-shadow: 0 12rpx 28rpx rgba($color-text-primary-warm, 0.18);
+    pointer-events: none;
+    animation: flash-story-panel-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__unlock-kicker,
+  &__unlock-copy { display: block; color: $color-surface; }
+
+  &__unlock-kicker {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    letter-spacing: 2rpx;
+  }
+
+  &__unlock-copy {
+    color: rgba($color-surface, 0.84);
+    font-size: $font-size-xs;
+    line-height: $line-height-relaxed;
+  }
+
+  &__letter-target {
+    top: 55%;
+    left: 9%;
+    animation: atuan-letter-target-in 380ms 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__target-marker--letter {
+    border-color: rgba(255, 240, 205, 0.96);
+    background: rgba(113, 76, 40, 0.58);
+  }
+
+  &__clue {
+    position: absolute;
+    z-index: 10;
+    right: 24rpx;
+    bottom: calc(32rpx + env(safe-area-inset-bottom));
+    left: 24rpx;
+    display: flex;
+    min-height: 264rpx;
+    padding: 24rpx;
+    justify-content: center;
+    flex-direction: column;
+    gap: $spacing-xs;
+    border: 2rpx solid rgba($color-surface, 0.82);
+    border-radius: 28rpx;
+    background: rgba(49, 41, 49, 0.88);
+    box-shadow: 0 20rpx 48rpx rgba($color-text-primary-warm, 0.26);
+    box-sizing: border-box;
+    pointer-events: auto;
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+    animation: atuan-clue-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__clue--pressed { opacity: 0.92; transform: translateY(4rpx); }
+
+  &__clue-kicker,
+  &__clue-title,
+  &__clue-copy,
+  &__clue-action { display: block; }
+
+  &__clue-kicker {
+    color: rgba($color-surface, 0.68);
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__clue-title {
+    color: $color-surface;
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-black;
+  }
+
+  &__clue-copy {
+    color: rgba($color-surface, 0.88);
+    font-size: $font-size-sm;
+    line-height: $line-height-relaxed;
+  }
+
+  &__clue-action {
+    margin-top: $spacing-xs;
+    color: rgba($color-surface, 0.64);
+    font-size: $font-size-2xs;
+    text-align: right;
+  }
+
+  // v6 action sheet: contextual choices, not RPG inventory cards.
+  &__action-sheet {
+    position: absolute;
+    z-index: 9;
+    right: $spacing-md;
+    bottom: calc($spacing-md + env(safe-area-inset-bottom));
+    left: $spacing-md;
+    display: flex;
+    padding: $spacing-md;
+    flex-direction: column;
+    gap: $spacing-sm;
+    border: 2rpx solid rgba($color-surface, 0.78);
+    border-radius: 32rpx;
+    background: rgba($color-bg-warm-from, 0.96);
+    box-shadow: 0 16rpx 40rpx rgba($color-text-primary-warm, 0.18);
+    box-sizing: border-box;
+    pointer-events: auto;
+    animation: flash-story-panel-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__action-prompt {
+    display: block;
+    color: $color-text-primary-warm;
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    line-height: 1.4;
+  }
+
+  &__action-sheet &__action-cards {
+    position: static;
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    gap: $spacing-sm;
+    pointer-events: auto;
+  }
+
+  &__action-sheet &__action-card {
+    display: flex;
+    width: 100%;
+    min-height: 104rpx;
+    padding: $spacing-sm;
+    align-items: center;
+    justify-content: flex-start;
+    flex-direction: row;
+    gap: $spacing-sm;
+    border: 2rpx solid rgba($color-primary, 0.16);
+    border-radius: $radius-md;
+    background: $color-surface;
+    box-shadow: 0 8rpx 24rpx rgba($color-text-primary-warm, 0.08);
+    box-sizing: border-box;
+    animation: atuan-action-row-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__action-sheet &__action-card--bag { animation-delay: 72ms; }
+
+  &__action-sheet &__action-card--pressed {
+    opacity: 0.88;
+    transform: scale(0.985);
+  }
+
+  &__action-sheet &__action-card-visual {
+    display: flex;
+    width: 72rpx;
+    height: 72rpx;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-md;
+    background: $color-primary;
+  }
+
+  &__action-sheet &__action-mini-card {
+    width: 30rpx;
+    height: 42rpx;
+    border: 2rpx solid rgba($color-surface, 0.94);
+    border-radius: 4rpx;
+    background: rgba($color-surface, 0.18);
+    transform: rotate(-9deg);
+  }
+
+  &__action-sheet &__action-bag-mark {
+    width: 38rpx;
+    height: 42rpx;
+    border: 2rpx solid rgba($color-surface, 0.94);
+    border-radius: 4rpx 4rpx 8rpx 8rpx;
+    background: rgba($color-surface, 0.18);
+  }
+
+  &__action-card-copy {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: $spacing-xs;
+  }
+
+  &__action-sheet &__action-card-text,
+  &__action-card-hint,
+  &__action-card-arrow {
+    display: block;
+  }
+
+  &__action-sheet &__action-card-text {
+    color: $color-text-primary-warm;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    line-height: 1.25;
+    text-align: left;
+  }
+
+  &__action-card-hint {
+    color: $color-text-secondary-on-light;
+    font-size: $font-size-2xs;
+    line-height: 1.4;
+  }
+
+  &__action-card-arrow {
+    color: $color-primary;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.atuan-conversation-scene {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  background: $color-bg-warm-to;
+
+  &__background,
+  &__character,
+  &__bag,
+  &__grade {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__background { z-index: 0; }
+
+  &__grade {
+    z-index: 1;
+    background: linear-gradient(180deg, rgba($color-text-primary-warm, 0.02) 0%, transparent 44%, rgba($color-text-primary-warm, 0.28) 100%);
+  }
+
+  &__character {
+    z-index: 2;
+    filter: brightness(0.97) saturate(0.88) contrast(0.98) drop-shadow(0 12rpx 16rpx rgba($color-text-primary-warm, 0.16));
+  }
+
+  &__bag {
+    z-index: 3;
+    filter: brightness(0.98) saturate(0.9) drop-shadow(0 8rpx 16rpx rgba($color-text-primary-warm, 0.18));
+  }
+}
+
+.flash-dialogue__story-stage--atuan-first {
+  .flash-dialogue__story-ambient { display: none; }
+
+  .flash-dialogue__story-panel--atuan-conversation {
+    right: $spacing-md;
+    bottom: calc($spacing-md + env(safe-area-inset-bottom));
+    left: $spacing-md;
+    max-height: 560rpx;
+    padding: 0;
+    border: 2rpx solid rgba($color-surface, 0.78);
+    border-radius: 32rpx;
+    background: rgba($color-bg-warm-from, 0.96);
+    box-shadow: 0 16rpx 40rpx rgba($color-text-primary-warm, 0.18);
+  }
+
+  .flash-dialogue__story-panel--atuan-conversation .flash-dialogue__story-panel-content {
+    padding: $spacing-md;
+    gap: $spacing-sm;
+  }
+
+  .flash-dialogue__story-panel--atuan-conversation .flash-dialogue__story-choices {
+    margin-top: 0;
+    gap: $spacing-sm;
+  }
+
+  .flash-dialogue__story-panel--atuan-conversation .flash-dialogue__story-choice {
+    min-height: 88rpx;
+    padding: $spacing-sm $spacing-md;
+    border: 2rpx solid rgba($color-primary, 0.14);
+    border-radius: $radius-md;
+    background: $color-surface;
+    box-shadow: none;
+  }
+
+  .flash-dialogue__story-panel--atuan-conversation .flash-dialogue__choice-mark {
+    display: none;
+  }
+
+  .flash-dialogue__story-panel--atuan-conversation .flash-dialogue__choice-text {
+    color: $color-text-primary-warm;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    line-height: $line-height-relaxed;
+  }
+}
+
+.atuan-first-dialogue {
+  &__story-copy {
+    display: flex;
+    padding-bottom: $spacing-sm;
+    flex-direction: column;
+    gap: $spacing-xs;
+    border-bottom: 2rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__narration,
+  &__spoken,
+  &__prompt {
+    display: block;
+  }
+
+  &__narration {
+    color: $color-text-secondary-on-light;
+    font-size: $font-size-xs;
+    line-height: $line-height-relaxed;
+  }
+
+  &__spoken {
+    color: $color-text-primary-warm;
+    font-family: $font-cn-display;
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    line-height: $line-height-relaxed;
+  }
+
+  &__prompt {
+    color: $color-primary-dark;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+  }
+
+  &__ending {
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+  }
+}
+
+@keyframes atuan-action-row-in {
+  from { opacity: 0; transform: translateY(16rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes atuan-scene-marker-breathe {
+  0%, 100% { opacity: 0.78; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes atuan-letter-layer-in {
+  from { opacity: 0; transform: translateY(18rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes atuan-letter-target-in {
+  from { opacity: 0; transform: translateY(18rpx) scale(0.92); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes atuan-clue-in {
+  from { opacity: 0; transform: translateY(20rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes atuan-first-action-pulse {
   0%,
   100% { opacity: 0.38; transform: translate(-50%, -50%) scale(0.9); }
@@ -2776,6 +3280,11 @@ page {
   .atuan-arrival__card,
   .atuan-arrival__card-focus,
   .atuan-arrival__choices,
+  .atuan-arrival__cutout--bag,
+  .atuan-arrival__target-marker,
+  .atuan-arrival__letter-target,
+  .atuan-arrival__unlock-note,
+  .atuan-arrival__clue,
   .flash-dialogue__story-ambient,
   .flash-dialogue__story-panel,
   .flash-dialogue__story-choice,

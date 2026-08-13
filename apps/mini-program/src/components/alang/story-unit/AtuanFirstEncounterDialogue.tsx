@@ -1,4 +1,4 @@
-import { Text, View } from '@tarojs/components'
+import { Image, Text, View } from '@tarojs/components'
 import type { FlashStoryUnitId } from '@shared/alang/flashStorySeason'
 import {
   ATUAN_FIRST_ACT_ACTION,
@@ -8,6 +8,7 @@ import {
   type AtuanFirstActProgress,
   type AtuanFirstActSubmission,
 } from '@shared/alang/atuanFirstAct'
+import type { AtuanArrivalAssets } from './AtuanArrivalPrelude'
 
 interface AtuanDialogueOption {
   id: string
@@ -109,18 +110,74 @@ interface AtuanStoryDialogueProps {
   onComplete: () => void
 }
 
-export function resolveAtuanFirstActSpeech(
+interface AtuanScenePresentation {
+  narration: string
+  dialogue: string
+}
+
+const APPROACH_PRESENTATION: Record<AtuanFirstActProgress['approachId'], AtuanScenePresentation> = {
+  notice_wait: {
+    narration: '你伸手接住被风掀起的卡片。阿团终于把目光从路口收回来。',
+    dialogue: '谢谢。差一点，它又要替我去等人了。',
+  },
+  notice_again: {
+    narration: '你俯身护住纸袋，散开的卡片停在长椅边。',
+    dialogue: '谢谢。风今天好像比我更着急。',
+  },
+}
+
+const FOLLOWUP_PRESENTATION: Record<NonNullable<AtuanFirstActProgress['followupId']>, AtuanScenePresentation> = {
+  ask_who: {
+    narration: '阿团把目光从路口收了回来。',
+    dialogue: '一个答应来拿东西的人。我还没想好，他不来算不算一种回答。',
+  },
+  offer_help: {
+    narration: '阿团第一次笑了一下。',
+    dialogue: '几张一直没送出去的卡。本来不想麻烦刚认识的人，但你都走到这里了。',
+  },
+  move_forward: {
+    narration: '阿团望向长椅，把纸袋往中间挪了挪。',
+    dialogue: '好。那我们做点只有今天能做的事，别把黄昏全交给一个没出现的人。',
+  },
+}
+
+const ENDING_PRESENTATION: Record<string, AtuanScenePresentation> = {
+  felt_seen: {
+    narration: '阿团把座位图往你这边挪了挪。',
+    dialogue: '这些卡本来是写给不同人的。我不太想一个人打开。你愿意陪我一起整理吗？',
+  },
+  helped_first: {
+    narration: '阿团把纸袋轻轻放到你们中间。',
+    dialogue: '这些卡本来是写给不同人的。我不太想一个人打开。你愿意陪我一起整理吗？',
+  },
+  shared_the_trip: {
+    narration: '阿团往旁边挪了挪，给你留出一个位置。',
+    dialogue: '这些卡本来是写给不同人的。既然你来了，我们一起看看它们该去哪里。',
+  },
+}
+
+export function resolveAtuanFirstActPresentation(
   encounterId: string,
   progress: AtuanFirstActProgress | null,
-): string {
-  if (!progress) return '你真的来了。……我还以为今天又要一个人等到天黑。'
-  if (progress.benchReached) return resolveAtuanFirstActOutcome(encounterId, progress).responseCopy
-  if (progress.followupId) {
-    return ATUAN_FIRST_ACT_FOLLOWUPS.find((item) => item.id === progress.followupId)?.reply ?? ''
+): AtuanScenePresentation {
+  if (!progress) return { narration: '黄昏落在长椅边。阿团还在等你。', dialogue: '你来了。' }
+  if (progress.benchReached) {
+    const outcome = resolveAtuanFirstActOutcome(encounterId, progress)
+    return ENDING_PRESENTATION[outcome.ending.id] ?? APPROACH_PRESENTATION[progress.approachId]
   }
-  return progress.approachId === 'notice_again'
-    ? '阿团顿了一下：“上次也有人说会来。可能大家都觉得，水豚比较等得起。”'
-    : '“也没有很久。”阿团看了一眼已经亮起的路灯，“只是它今天亮得比我有耐心。”'
+  if (progress.followupId) return FOLLOWUP_PRESENTATION[progress.followupId]
+  return APPROACH_PRESENTATION[progress.approachId]
+}
+
+export function AtuanFirstConversationScene({ assets }: { assets: AtuanArrivalAssets }) {
+  return (
+    <View className='atuan-conversation-scene' data-testid='atuan-conversation-scene' aria-hidden='true'>
+      <Image className='atuan-conversation-scene__background' src={assets.scene} mode='aspectFill' data-testid='atuan-conversation-background' />
+      <View className='atuan-conversation-scene__grade' />
+      <Image className='atuan-conversation-scene__character' src={assets.character} mode='aspectFill' data-testid='atuan-conversation-character' />
+      <Image className='atuan-conversation-scene__bag' src={assets.bag} mode='aspectFill' />
+    </View>
+  )
 }
 
 interface AtuanFirstEncounterDialogueProps {
@@ -198,10 +255,19 @@ export function AtuanFirstEncounterDialogue({
   onStateChange,
   onComplete,
 }: AtuanFirstEncounterDialogueProps) {
+  const presentation = resolveAtuanFirstActPresentation(encounterId, progress)
+  const storyCopy = (
+    <View className='atuan-first-dialogue__story-copy' role='status' aria-live='polite'>
+      <Text className='atuan-first-dialogue__narration' data-testid='atuan-scene-narration'>{presentation.narration}</Text>
+      <Text className='atuan-first-dialogue__spoken' data-testid='atuan-scene-dialogue' aria-label={`阿团说：${presentation.dialogue}`}>“{presentation.dialogue}”</Text>
+    </View>
+  )
+
   if (!progress.followupId) {
     return (
       <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue'>
-        <Text className='atuan-first-dialogue__cue'>阿团的目光又越过你，落在远处的路口。</Text>
+        {storyCopy}
+        <Text className='atuan-first-dialogue__prompt'>你想先问什么？</Text>
         <View className='flash-dialogue__story-choices' aria-label='你准备怎么回应阿团'>
           {ATUAN_FIRST_ACT_FOLLOWUPS.map((option) => (
             <View
@@ -225,7 +291,7 @@ export function AtuanFirstEncounterDialogue({
   if (!progress.benchReached) {
     return (
       <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue'>
-        <Text className='atuan-first-dialogue__cue'>风掀起座位图的一角。纸袋下面，露出一张没有送出去的卡。</Text>
+        {storyCopy}
         <View
           className='atuan-first-dialogue__scene-action'
           hoverClass={disabled ? '' : 'atuan-first-dialogue__scene-action--pressed'}
@@ -251,7 +317,7 @@ export function AtuanFirstEncounterDialogue({
   const ending = resolveAtuanFirstActOutcome(encounterId, progress).ending
   return (
     <View className='atuan-first-dialogue atuan-first-dialogue--invitation' data-testid='atuan-first-dialogue'>
-      <Text className='atuan-first-dialogue__eyebrow'>第一次见面</Text>
+      {storyCopy}
       <Text className='atuan-first-dialogue__ending'>{ending.title}</Text>
       <View
         className='atuan-first-dialogue__continue'

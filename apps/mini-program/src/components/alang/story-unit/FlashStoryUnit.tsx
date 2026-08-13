@@ -12,10 +12,10 @@ import { flashStoryAnalytics, type FlashStoryAnalyticsEventType } from '../../..
 import { FlashButton, FlashNpcDialogueScene } from '../FlashUi'
 import {
   AtuanFirstEncounterDialogue,
+  AtuanFirstConversationScene,
   AtuanStoryDialogue,
   EMPTY_ATUAN_DIALOGUE_STATE,
   getAtuanOpeningOption,
-  resolveAtuanFirstActSpeech,
   resolveAtuanSpeech,
   type AtuanDialogueState,
 } from './AtuanFirstEncounterDialogue'
@@ -84,7 +84,6 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const runtimeRef = useRef(runtime)
   const emittedRef = useRef(new Set<FlashStoryAnalyticsEventType>(runtime.analyticsSent))
   const restoredSolvedRef = useRef(runtime.stage === 'OBJECT_SUCCESS')
-  const [atuanPreludeSpeech, setAtuanPreludeSpeech] = useState('')
   const [atuanDialogue, setAtuanDialogue] = useState<AtuanDialogueState>(EMPTY_ATUAN_DIALOGUE_STATE)
   runtimeRef.current = runtime
 
@@ -135,14 +134,10 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const startInteraction = (choice: StoryUnitChoice) => {
     if (runtime.stage !== 'NPC_INTRO') return
     const atuanFirstAct = definition.unitId === 's1-p1-atuan'
-      ? {
-          ...createAtuanFirstActProgress(
+      ? createAtuanFirstActProgress(
           encounterId,
           getAtuanFirstActApproach(question?.options.findIndex((item) => item.id === choice.optionId) ?? 0).id,
-          ),
-          followupId: choice.optionId === question?.options[1]?.id ? 'move_forward' as const : 'ask_who' as const,
-          benchReached: true,
-        }
+        )
       : undefined
     transition({ type: 'START_INTERACTION', choice, atuanFirstAct })
     if (definition.unitId === 's1-p1-atuan') {
@@ -174,13 +169,12 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const isAtuanStory = definition.npcSlug === 'atuan'
   const showGame = !showResult && (runtime.stage === 'OBJECT_INTERACTION' || runtime.stage === 'OBJECT_DIVERGED' || runtime.stage === 'OBJECT_SUCCESS')
   const showAtuanPrelude = definition.unitId === 's1-p1-atuan' && !showResult && (runtime.stage === 'INIT' || runtime.stage === 'NPC_INTRO')
+  const showAtuanScene = definition.unitId === 's1-p1-atuan' && !showAtuanPrelude && Boolean(atuanArrivalAssets)
   const defaultSpeech = resolveNPCResponse(definition.unitId, runtime.companionEvent, {
     intro: story.opening,
     success: showResult ? story.response : definition.success,
   })
-  const speech = definition.unitId === 's1-p1-atuan' && !showResult
-    ? (showAtuanPrelude ? atuanPreludeSpeech : resolveAtuanFirstActSpeech(encounterId, runtime.atuanFirstAct))
-    : isAtuanStory && !showResult
+  const speech = isAtuanStory && !showResult
       ? resolveAtuanSpeech(definition.unitId, runtime.choice?.label ?? null, atuanDialogue)
     : defaultSpeech
   const storyAction = definition.unitId === 's1-p1-atuan'
@@ -193,13 +187,14 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
         {showAtuanPrelude && atuanArrivalAssets ? (
           <AtuanArrivalPrelude
             assets={atuanArrivalAssets}
-            onSpeechChange={setAtuanPreludeSpeech}
             onBeginConversation={(approachIndex, label) => {
               const option = question?.options[approachIndex]
               if (!question || !option) return
               startInteraction({ questionId: question.id, optionId: option.id, label })
             }}
           />
+        ) : showAtuanScene && atuanArrivalAssets ? (
+          <AtuanFirstConversationScene assets={atuanArrivalAssets} />
         ) : (
           <FlashNpcDialogueScene npc={npc} speech={speech} spacious choicesEmbedded={!showResult} motion={motion} />
         )}
@@ -212,7 +207,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
         ) : null}
 
         {showAtuanPrelude ? null : !showResult ? (
-          <View className='flash-dialogue__story-panel flash-dialogue__story-panel--choices' data-testid='flash-story-choice-panel'>
+          <View className={`flash-dialogue__story-panel flash-dialogue__story-panel--choices${showAtuanScene ? ' flash-dialogue__story-panel--atuan-conversation' : ''}`} data-testid='flash-story-choice-panel'>
             <ScrollView className='flash-dialogue__story-panel-scroll' scrollY>
               <View className='flash-dialogue__story-panel-content'>
                 {!isAtuanStory ? (
