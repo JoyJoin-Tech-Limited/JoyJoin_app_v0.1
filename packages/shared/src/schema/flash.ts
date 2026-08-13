@@ -138,6 +138,13 @@ export type FlashStoryV2State = {
 export type FlashStoryRunState = FlashStoryV2State & {
   currentNode: string | null;
   nodePath: string[];
+  lastChoiceId: string | null;
+};
+
+export type FlashStoryV2PersistedState = {
+  echo: number;
+  variables: Record<string, number>;
+  lastChoiceId?: string | null;
 };
 
 export type FlashStoryReleaseManifest = {
@@ -481,7 +488,7 @@ export const flashStoryUniverseRuns = pgTable("flash_story_universe_runs", {
   endingCode: varchar("ending_code", { length: 40 }).$type<FlashStoryEndingCode>(),
   currentNode: varchar("current_node", { length: 80 }),
   nodePath: jsonb("node_path").notNull().default(sql`'[]'::jsonb`).$type<string[]>(),
-  v2State: jsonb("v2_state").$type<{ echo: number; variables: Record<string, number> }>(),
+  v2State: jsonb("v2_state").$type<FlashStoryV2PersistedState>(),
   status: varchar("status", { length: 24 }).notNull().default("active"),
   stateVersion: integer("state_version").notNull().default(1),
   consentVersion: varchar("consent_version", { length: 40 }),

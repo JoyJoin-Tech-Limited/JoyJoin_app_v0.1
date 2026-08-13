@@ -3420,8 +3420,15 @@ page {
   background: rgba($color-primary, 0.1);
 }
 
+.flash-story-v2__echo-label {
+  display: block;
+  color: rgba($color-surface, 0.58);
+  font-size: $font-size-2xs;
+  line-height: 1.5;
+}
+
 .flash-story-v2__echo-copy {
-  color: rgba($color-surface, 0.86);
+  color: rgba($color-surface, 0.9);
   font-size: $font-size-2xs;
   line-height: 1.6;
 }
@@ -3464,7 +3471,7 @@ page {
 }
 
 .flash-finale__gallery-title {
-  color: rgba($color-text-primary, 0.86);
+  color: rgba($color-surface, 0.94);
   font-size: $font-size-sm;
   font-weight: 600;
   line-height: 1.5;
@@ -3472,24 +3479,24 @@ page {
 
 .flash-finale__gallery-state {
   flex-shrink: 0;
-  color: rgba($color-primary, 0.9);
+  color: rgba($color-surface, 0.9);
   font-size: $font-size-2xs;
   line-height: 1.5;
 }
 
 .flash-finale__gallery-state--reached {
-  color: rgba($color-text-primary, 0.4);
+  color: rgba($color-surface, 0.55);
 }
 
 .flash-finale__gallery-summary {
-  color: rgba($color-text-primary, 0.55);
+  color: rgba($color-surface, 0.72);
   font-size: $font-size-2xs;
   line-height: 1.6;
 }
 
 .flash-finale__gallery-note {
   margin-top: 8rpx;
-  color: rgba($color-text-primary, 0.45);
+  color: rgba($color-surface, 0.66);
   font-size: $font-size-2xs;
   line-height: 1.6;
   text-align: center;

@@ -24,7 +24,7 @@ interface PilotDoc {
 const pilot = JSON.parse(readFileSync(PILOT_PATH, "utf8")) as PilotDoc;
 
 function walkUnit(content: V2Content): { finished: boolean; echo: number } {
-  let state: FlashStoryRunState = { echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [] };
+  let state: FlashStoryRunState = { echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null };
   state = enterStoryEpisode(content, state);
   let hops = 0;
   for (;;) {
@@ -63,12 +63,12 @@ describe("pilot content × engine end-to-end", () => {
     expect(momoP3).toBeTruthy();
 
     const momoState = enterStoryEpisode(momoP3!.content, {
-      echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [],
+      echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null,
     });
     expect(momoState.flags).toContain("s1-momo-invited");
 
     let liziState = enterStoryEpisode(liziP3!.content, {
-      echo: 0, flags: momoState.flags, variables: {}, currentNode: null, nodePath: [],
+      echo: 0, flags: momoState.flags, variables: {}, currentNode: null, nodePath: [], lastChoiceId: null,
     });
     liziState = { ...liziState, currentNode: "n5_close", nodePath: [...liziState.nodePath, "n5_close"] };
     const view = getStoryNodeView(liziP3!.content, liziState);

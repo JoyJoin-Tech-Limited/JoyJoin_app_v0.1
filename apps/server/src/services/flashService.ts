@@ -110,12 +110,14 @@ async function buildFlashStoryV2View(
     variables: run?.v2State?.variables ?? {},
     currentNode: run?.currentNode ?? null,
     nodePath: run?.nodePath ?? [],
+    lastChoiceId: run?.v2State?.lastChoiceId ?? null,
   };
   const entered = enterV2StoryEpisode(content as any, state);
   const view = getV2StoryNodeView(content as any, entered);
   if (!view) return null;
   return {
     echo: entered.echo,
+    echoTier: resolveV2EchoTier(entered.echo),
     nodeId: view.nodeId,
     type: view.type,
     segments: view.segments ?? [],
@@ -750,6 +752,9 @@ export async function getFlashEncounter(input: {
     const recap = completedSeason.run ? await getFlashStoryEndingRecap(input.userId, completedSeason.run.id) : null;
     const ending = recap?.ending ?? FLASH_STORY_ENDING_COPY[endingCode];
     const v2Echo = completedSeason.run?.v2State?.echo ?? null;
+    const v2Vector = v2Echo !== null
+      ? { trust: 0, attachment: 0, intervention: 0, truth: Math.round(Math.min(30, (v2Echo / 60) * 30)) }
+      : null;
     const gallery = v2Echo !== null
       ? buildV2EndingGallery(endingCode, v2Echo).map(({ code, reached, echoGap, approxChoices }) => ({
           code,
@@ -782,7 +787,11 @@ export async function getFlashEncounter(input: {
         action: "五件旧物已经被认领、处理或重新交给重要的人。",
         discovery: "那把没有锁孔的旧钥匙仍留在夹层里。",
         response: ending.summary,
-        ending: recap ? { code: endingCode, vector: recap.vector, highlights: recap.highlights, gallery } : null,
+        ending: recap
+          ? { code: endingCode, vector: v2Vector ?? recap.vector, highlights: recap.highlights, gallery }
+          : v2Vector
+            ? { code: endingCode, vector: v2Vector, highlights: [], gallery }
+            : null,
         nextStoryHint,
         closing: "这是你抵达的宇宙。相同的旧物，在另一条时间线里，也许会得到不同的回答。",
         echo: null,
@@ -1112,7 +1121,7 @@ export async function advanceFlashV2Story(input: {
       encounterId: input.encounterId,
       userId: input.userId,
       episodeId: storyState.episode.id,
-      optionId: "advance",
+      optionId: advance.lastChoiceId ?? "advance",
       configuredEffects: [],
       responseSnapshot: resolveV2ClosureResponse(storyState.episode.content),
       renderKind: "template",

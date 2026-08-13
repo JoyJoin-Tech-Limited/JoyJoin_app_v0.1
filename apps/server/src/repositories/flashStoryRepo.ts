@@ -161,6 +161,7 @@ export async function advanceFlashV2Node(input: {
       variables: run.v2State?.variables ?? {},
       currentNode: run.currentNode ?? null,
       nodePath: run.nodePath ?? [],
+      lastChoiceId: run.v2State?.lastChoiceId ?? null,
     };
     const entered = enterV2StoryEpisode(content as any, currentState);
     let result: ReturnType<typeof advanceV2StoryNode>;
@@ -175,10 +176,10 @@ export async function advanceFlashV2Node(input: {
       stateVersion: run.stateVersion + 1,
       updatedAt: input.now,
     }).where(and(eq(flashStoryUniverseRuns.id, run.id), eq(flashStoryUniverseRuns.stateVersion, run.stateVersion)));
-    if (!result.finished) return { state: "advanced" as const, finished: false };
+    if (!result.finished) return { state: "advanced" as const, finished: false, lastChoiceId: result.state.lastChoiceId };
     await tx.update(flashEncounters).set({ status: "completed", completedAt: input.now, updatedAt: input.now })
       .where(and(eq(flashEncounters.id, input.encounterId), eq(flashEncounters.userId, input.userId)));
-    return { state: "finished" as const, finished: true };
+    return { state: "finished" as const, finished: true, lastChoiceId: result.state.lastChoiceId };
   });
 }
 
@@ -228,6 +229,7 @@ export async function advanceFlashV2Run(input: {
       variables: run.v2State?.variables ?? {},
       currentNode: run.currentNode ?? null,
       nodePath: run.nodePath ?? [],
+      lastChoiceId: run.v2State?.lastChoiceId ?? null,
     };
     const entered = enterV2StoryEpisode(content as any, currentState);
     const view = getV2StoryNodeView(content as any, entered);
@@ -244,14 +246,14 @@ export async function advanceFlashV2Run(input: {
       currentNode: result.state.currentNode,
       nodePath: result.state.nodePath,
       flags: result.state.flags,
-      v2State: { echo: result.state.echo, variables: result.state.variables },
+      v2State: { echo: result.state.echo, variables: result.state.variables, lastChoiceId: result.state.lastChoiceId },
       stateVersion: run.stateVersion + 1,
       updatedAt: input.now,
     }).where(and(eq(flashStoryUniverseRuns.id, run.id), eq(flashStoryUniverseRuns.stateVersion, run.stateVersion)));
     if (!result.finished) return { state: "advanced" as const, finished: false };
     await tx.update(flashEncounters).set({ status: "completed", completedAt: input.now, updatedAt: input.now })
       .where(and(eq(flashEncounters.id, input.encounterId), eq(flashEncounters.userId, input.userId)));
-    return { state: "finished" as const, finished: true };
+    return { state: "finished" as const, finished: true, lastChoiceId: result.state.lastChoiceId };
   });
 }
 
@@ -700,6 +702,7 @@ export async function completeFlashStoryEpisode(input: {
               variables: v2State.variables ?? {},
               currentNode: latestRun?.currentNode ?? null,
               nodePath: latestRun?.nodePath ?? [],
+              lastChoiceId: v2State.lastChoiceId ?? null,
             })
           : resolveFlashStoryEnding(latestRun?.universeVector ?? run.universeVector);
         await tx.update(flashStoryUniverseRuns).set({

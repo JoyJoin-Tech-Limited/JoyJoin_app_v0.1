@@ -57,9 +57,9 @@ describe('Flash parallel-universe finale', () => {
   it('shows the ending gallery with reached state and echo gaps', () => {
     render(<FlashFinalePage />)
     expect(screen.getByText('结局图鉴')).toBeInTheDocument()
-    expect(screen.getByText('已抵达')).toBeInTheDocument()
-    expect(screen.getByText('还差 4 次深挖')).toBeInTheDocument()
-    expect(screen.getByText('还差 2 次深挖')).toBeInTheDocument()
+    expect(screen.getByText('本次抵达')).toBeInTheDocument()
+    expect(screen.getByText('再追问 4 次，也许能抵达')).toBeInTheDocument()
+    expect(screen.getByText('再追问 2 次，也许能抵达')).toBeInTheDocument()
   })
 
   it('reveals the ending, three decisive choices and the full trajectory', () => {

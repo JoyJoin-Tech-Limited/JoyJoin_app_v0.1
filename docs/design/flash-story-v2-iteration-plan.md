@@ -62,6 +62,20 @@
 | 3 | 硬钩子强度 | 未解之谜型（未画的路） | 威胁型（离开深圳）可能让治愈党不适 |
 | 4 | 计划文档 | 存档本文档 | — |
 
+## 4.5 审阅修复批（2026-08-13，verifier + user-satisfaction-auditor 并行审阅后）
+
+- **图鉴对比度 Class A**：深灰字在深紫卡上（1.6:1）→ 全改 warm-cream 系（≥4.5:1）
+- **宇宙轨迹全 +0**：v2 完成路径 configuredEffects:[] 导致 vector 永不更新 → finale 对 v2 run 用 echo 派生 truth 维度
+- **"advance" 选项文本**：advance 完成路径 selectedOptionId 写字面量 → 引擎/持久化加 lastChoiceId（v2_state.lastChoiceId），完成时落真实选项
+- **阈值一致性**：resolveV2Ending 改由 FLASH_V2_ENDING_TIERS 派生（单一权威）+ 一致性测试锁定
+- **echoTier 单一权威**：DTO 下发 echoTier，删除客户端重复实现（原 resolveV2EchoTier 生产死代码修复）
+- **追更卡试点盲区**：四钩子全部 planted 在试点外 → 新增 h1-metal-sound（s1-p1-alang，试点可达）置顶
+- **图鉴措辞评判感**："还差 N 次深挖"→"再追问 N 次，也许能抵达"；"已抵达"→"本次抵达"（跨 run 语义诚实化）
+- **回声行身份**：加固定标签"你的追问，让旧物发出了回声"
+- **closure 死屏 = 审阅误报**：isTerminal 仅 ending，closure 按钮正常；补测锁定该行为
+- QA 补测：echo 三档边界（40/15）、tier 一致性、lastChoiceId 跨 answer/advance 保留
+- 验证：服务端 flash 82/82、mini-program alang 162/162、harness gate 100/100、质量门 0 警告
+
 ## 5. Phase 1 执行细节（已落地）
 
 ### A1 对照组（跨单元 condition 变体，引擎核心卖点首次真实使用）

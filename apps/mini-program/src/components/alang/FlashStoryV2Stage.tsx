@@ -10,6 +10,7 @@ export interface FlashStoryV2StageProps {
   isTerminal: boolean
   isClosure: boolean
   echo: number
+  echoTier: '彻' | '深' | '轻'
   seasonTitle: string
   phase: number
   busy: boolean
@@ -17,10 +18,10 @@ export interface FlashStoryV2StageProps {
   onContinue: () => void
 }
 
-function echoTierCopy(echo: number): string {
-  if (echo >= 40) return '你把旧物的故事，推到了最响的地方。'
-  if (echo >= 15) return '这箱旧物，因为你变得更响了一点。'
-  return '旧物们的回声，还很小声。'
+const ECHO_TIER_COPY: Record<'彻' | '深' | '轻', string> = {
+  彻: '你把旧物的故事，推到了最响的地方。',
+  深: '这箱旧物，因为你变得更响了一点。',
+  轻: '旧物们的回声，还很小声。',
 }
 
 export function FlashStoryV2Stage({
@@ -30,7 +31,7 @@ export function FlashStoryV2Stage({
   isChoice,
   isTerminal,
   isClosure,
-  echo,
+  echoTier,
   seasonTitle,
   phase,
   busy,
@@ -58,7 +59,8 @@ export function FlashStoryV2Stage({
           </View>
           {isClosure ? (
             <View className='flash-story-v2__echo' data-testid='flash-story-v2-echo' aria-live='polite'>
-              <Text className='flash-story-v2__echo-copy'>{echoTierCopy(echo)}</Text>
+              <Text className='flash-story-v2__echo-label'>你的追问，让旧物发出了回声</Text>
+              <Text className='flash-story-v2__echo-copy'>{ECHO_TIER_COPY[echoTier]}</Text>
             </View>
           ) : null}
           {isChoice ? (

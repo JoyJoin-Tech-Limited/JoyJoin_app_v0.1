@@ -312,6 +312,7 @@ export default function FlashDialoguePage() {
             isTerminal={v2View.type === 'ending'}
             isClosure={v2View.type === 'closure'}
             echo={v2View.echo}
+            echoTier={v2View.echoTier}
             seasonTitle={story.seasonTitle}
             phase={story.phase}
             busy={answerMutation.isPending || advanceMutation.isPending}

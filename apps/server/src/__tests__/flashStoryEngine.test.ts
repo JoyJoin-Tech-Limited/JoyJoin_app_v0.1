@@ -134,9 +134,9 @@ describe("flashStoryEngine", () => {
   });
 
   it("resolves endings from echo + flags", () => {
-    expect(resolveV2Ending({ echo: 70, flags: [], variables: {}, currentNode: null, nodePath: [] })).toBe("truth_witness");
-    expect(resolveV2Ending({ echo: 30, flags: [], variables: {}, currentNode: null, nodePath: [] })).toBe("bridge_keeper");
-    expect(resolveV2Ending({ echo: 10, flags: [], variables: {}, currentNode: null, nodePath: [] })).toBe("memory_keeper");
-    expect(resolveV2Ending({ echo: 2, flags: [], variables: {}, currentNode: null, nodePath: [] })).toBe("parallel_mixed");
+    expect(resolveV2Ending({ echo: 70, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null })).toBe("truth_witness");
+    expect(resolveV2Ending({ echo: 30, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null })).toBe("bridge_keeper");
+    expect(resolveV2Ending({ echo: 10, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null })).toBe("memory_keeper");
+    expect(resolveV2Ending({ echo: 2, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null })).toBe("parallel_mixed");
   });
 });

@@ -87,6 +87,7 @@ export const FLASH_V2_HOOK_HINTS: ReadonlyArray<{
   resolvedUnit: string | null;
   hint: string;
 }> = [
+  { hook: "h1-metal-sound", plantedUnit: "s1-p1-alang", resolvedUnit: null, hint: "阿浪听到过金属碰过木板的声音。箱子里的那个东西，也许还在。" },
   { hook: "h14-route-unmapped", plantedUnit: "s1-p2-shiqi", resolvedUnit: null, hint: "阿浪最近总绕远路。那条没画进册子的路，还没有人知道通向哪里。" },
   { hook: "h11-key-layer", plantedUnit: "s1-p1-atuan", resolvedUnit: "s1-p3-atuan", hint: "箱底夹层里的钥匙还在。也许下一次打开箱子的人会知道更多。" },
   { hook: "h9-two-clicks", plantedUnit: "s1-p1-momo", resolvedUnit: "s1-p1-atuan", hint: "那两声轻响之后，金属滑进了箱子的更深处。" },

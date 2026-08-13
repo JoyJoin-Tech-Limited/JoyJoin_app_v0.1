@@ -206,6 +206,7 @@ export interface FlashEncounterView {
     nextStoryHint?: string | null
     storyV2?: {
       echo: number
+      echoTier: '彻' | '深' | '轻'
       nodeId: string
       type: 'prose' | 'choice' | 'callback' | 'closure' | 'ending'
       segments: Array<{ speaker?: string; text: string }>

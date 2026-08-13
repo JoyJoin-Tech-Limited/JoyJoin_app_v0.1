@@ -22,6 +22,7 @@ export function createEmptyFlashRunState(): FlashStoryRunState {
     variables: {},
     currentNode: null,
     nodePath: [],
+    lastChoiceId: null,
   };
 }
 
@@ -33,6 +34,7 @@ export function applyEffect(state: FlashStoryRunState, effect: FlashStoryV2Effec
     variables: { ...state.variables, ...(effect.variables ?? {}) },
     currentNode: state.currentNode,
     nodePath: state.nodePath,
+    lastChoiceId: state.lastChoiceId,
   };
 }
 
@@ -128,6 +130,7 @@ export function answerStoryChoice(input: {
     ...nextState,
     currentNode: choice.next,
     nodePath: [...nextState.nodePath, input.nodeId, choice.next],
+    lastChoiceId: choice.id,
   };
   const view = getStoryNodeView(content, nextState);
   if (!view) {
@@ -194,14 +197,6 @@ export function advanceStoryNode(input: {
   };
 }
 
-export function resolveV2Ending(state: FlashStoryRunState): FlashStoryEndingCode {
-  if (state.echo >= 60) return "truth_witness";
-  if (state.echo >= 40) return "path_changer";
-  if (state.echo >= 20) return "bridge_keeper";
-  if (state.echo >= 8) return "memory_keeper";
-  return "parallel_mixed";
-}
-
 export const FLASH_V2_ENDING_TIERS: ReadonlyArray<{
   code: FlashStoryEndingCode;
   threshold: number;
@@ -212,6 +207,13 @@ export const FLASH_V2_ENDING_TIERS: ReadonlyArray<{
   { code: "memory_keeper", threshold: 8 },
   { code: "parallel_mixed", threshold: 0 },
 ];
+
+export function resolveV2Ending(state: FlashStoryRunState): FlashStoryEndingCode {
+  for (const { code, threshold } of FLASH_V2_ENDING_TIERS) {
+    if (state.echo >= threshold) return code;
+  }
+  return "parallel_mixed";
+}
 
 const ECHO_PER_DEEP_CHOICE = 10;
 

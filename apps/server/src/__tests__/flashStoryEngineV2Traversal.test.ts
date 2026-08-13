@@ -7,6 +7,7 @@ import {
   answerStoryChoice,
   buildV2EndingGallery,
   enterStoryEpisode,
+  FLASH_V2_ENDING_TIERS,
   getStoryNodeView,
   resolveV2EchoTier,
   resolveV2Ending,
@@ -46,7 +47,7 @@ const UNIT: FlashStoryContentV2 = {
 
 describe("flashStoryEngine v2 full traversal", () => {
   it("traverses prose → choice → callback → closure with variant echo", () => {
-    let run = enterStoryEpisode(UNIT, { echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [] });
+    let run = enterStoryEpisode(UNIT, { echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null });
     expect(run.echo).toBe(5);
     expect(getStoryNodeView(UNIT, run)?.type).toBe("prose");
 
@@ -78,7 +79,7 @@ describe("flashStoryEngine v2 full traversal", () => {
         n2: { id: "n2", type: "closure", segments: [{ text: "结束。" }] },
       },
     };
-    let run = enterStoryEpisode(unit, { echo: 50, flags: [], variables: {}, currentNode: null, nodePath: [] });
+    let run = enterStoryEpisode(unit, { echo: 50, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null });
     run = { ...run, currentNode: "n1", nodePath: [...run.nodePath, "n1"] };
     const deep = answerStoryChoice({ content: unit, state: run, nodeId: "n1", choiceId: "a" });
     expect(deep.state.echo).toBe(100);
@@ -87,15 +88,15 @@ describe("flashStoryEngine v2 full traversal", () => {
   });
 
   it("resolves all ending codes across the echo range", () => {
-    expect(resolveV2Ending({ echo: 70, flags: [], variables: {}, currentNode: null, nodePath: [] })).toBe("truth_witness");
-    expect(resolveV2Ending({ echo: 50, flags: [], variables: {}, currentNode: null, nodePath: [] })).toBe("path_changer");
-    expect(resolveV2Ending({ echo: 30, flags: [], variables: {}, currentNode: null, nodePath: [] })).toBe("bridge_keeper");
-    expect(resolveV2Ending({ echo: 10, flags: [], variables: {}, currentNode: null, nodePath: [] })).toBe("memory_keeper");
-    expect(resolveV2Ending({ echo: 2, flags: [], variables: {}, currentNode: null, nodePath: [] })).toBe("parallel_mixed");
+    expect(resolveV2Ending({ echo: 70, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null })).toBe("truth_witness");
+    expect(resolveV2Ending({ echo: 50, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null })).toBe("path_changer");
+    expect(resolveV2Ending({ echo: 30, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null })).toBe("bridge_keeper");
+    expect(resolveV2Ending({ echo: 10, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null })).toBe("memory_keeper");
+    expect(resolveV2Ending({ echo: 2, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null })).toBe("parallel_mixed");
   });
 
   it("advances prose and callback nodes along next until a choice or terminal", () => {
-    let run = enterStoryEpisode(UNIT, { echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [] });
+    let run = enterStoryEpisode(UNIT, { echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null });
     expect(getStoryNodeView(UNIT, run)?.type).toBe("prose");
     const advanced = advanceStoryNode({ content: UNIT, state: run });
     expect(advanced.view.type).toBe("choice");
@@ -110,7 +111,7 @@ describe("flashStoryEngine v2 full traversal", () => {
   });
 
   it("does not re-apply root state on re-entry", () => {
-    let run = enterStoryEpisode(UNIT, { echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [] });
+    let run = enterStoryEpisode(UNIT, { echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null });
     expect(run.echo).toBe(5);
     const reEntered = enterStoryEpisode(UNIT, run);
     expect(reEntered.echo).toBe(5);
@@ -119,7 +120,7 @@ describe("flashStoryEngine v2 full traversal", () => {
   });
 
   it("rejects advancing a choice node and terminal closure", () => {
-    let run = enterStoryEpisode(UNIT, { echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [] });
+    let run = enterStoryEpisode(UNIT, { echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null });
     run = { ...run, currentNode: "n2", nodePath: [...run.nodePath, "n2"] };
     expect(() => advanceStoryNode({ content: UNIT, state: run })).toThrow(/FLASH_V2_CHOICE_EXPECTED/);
     const terminal = advanceStoryNode({ content: UNIT, state: { ...run, currentNode: "n4", nodePath: [...run.nodePath, "n4"] } });
@@ -146,5 +147,44 @@ describe("v2 ending gallery + echo tier", () => {
     expect(resolveV2EchoTier(50)).toBe("彻");
     expect(resolveV2EchoTier(20)).toBe("深");
     expect(resolveV2EchoTier(3)).toBe("轻");
+  });
+});
+
+describe("tier consistency + echo boundaries + lastChoiceId", () => {
+  it("keeps resolveV2Ending consistent with FLASH_V2_ENDING_TIERS", () => {
+        for (const { code, threshold } of FLASH_V2_ENDING_TIERS) {
+      const state = { echo: threshold, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null };
+      expect(resolveV2Ending(state), `${code} at ${threshold}`).toBe(code);
+    }
+  });
+
+  it("resolves echo tier boundaries at 40/15", () => {
+        expect(resolveV2EchoTier(40)).toBe("彻");
+    expect(resolveV2EchoTier(39)).toBe("深");
+    expect(resolveV2EchoTier(15)).toBe("深");
+    expect(resolveV2EchoTier(14)).toBe("轻");
+    expect(resolveV2EchoTier(0)).toBe("轻");
+  });
+
+  it("records lastChoiceId through answer and preserves it across advance", () => {
+        const content = {
+      v: 2,
+      start: "n1",
+      nodes: {
+        n1: {
+          id: "n1", type: "choice",
+          choices: [{ id: "deep", text: "追问", kind: "attitude", next: "n2", effect: { echo: 20 } }],
+        },
+        n2: { id: "n2", type: "callback", segments: [{ text: "回声。" }], next: "n3" },
+        n3: { id: "n3", type: "closure", segments: [{ text: "收束。" }] },
+      },
+    };
+    let run = enterStoryEpisode(content, { echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null });
+    run = { ...run, currentNode: "n1", nodePath: [...run.nodePath, "n1"] };
+    const answered = answerStoryChoice({ content, state: run, nodeId: "n1", choiceId: "deep" });
+    expect(answered.state.lastChoiceId).toBe("deep");
+    const advanced = advanceStoryNode({ content, state: answered.state });
+    expect(advanced.state.lastChoiceId).toBe("deep");
+    expect(advanced.finished).toBe(true);
   });
 });

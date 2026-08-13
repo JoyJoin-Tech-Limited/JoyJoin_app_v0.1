@@ -78,10 +78,10 @@ export default function FlashFinalePage() {
                 <View className='flash-finale__gallery-meta'>
                   <Text className='flash-finale__gallery-title'>{item.title}</Text>
                   {item.reached ? (
-                    <Text className='flash-finale__gallery-state flash-finale__gallery-state--reached'>已抵达</Text>
+                    <Text className='flash-finale__gallery-state flash-finale__gallery-state--reached'>本次抵达</Text>
                   ) : (
                     <Text className='flash-finale__gallery-state'>
-                      还差 {item.approxChoices} 次深挖
+                      再追问 {item.approxChoices} 次，也许能抵达
                     </Text>
                   )}
                 </View>
@@ -90,7 +90,7 @@ export default function FlashFinalePage() {
                 ) : null}
               </View>
             ))}
-            <Text className='flash-finale__gallery-note'>多追问几句旧物背后的故事，回声会把你带向更深的结局。</Text>
+            <Text className='flash-finale__gallery-note'>这是本次时间线的图鉴。重走一遍，另一条时间线仍然存在。</Text>
           </View>
         ) : null}
 
