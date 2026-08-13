@@ -30,9 +30,53 @@ jobs:
       - uses: actions/checkout@v4
 
       # BuildKit runs on the GitHub runner, never on the shared production CVM.
-      # The CVM pulls completed images from GHCR and switches containers.
+      # The CVM pulls completed images from a registry and switches containers.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      # Probe registry read tokens via env (secrets are not available in `if`).
+      # Delivery precedence: TCR (same-region, preferred) > GHCR > rsync bundle.
+      # A mode is active only when its flag is "true" AND its credentials exist.
+      - name: Determine staging image delivery path
+        id: delivery-mode
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          STAGING_GHCR_ENABLED: ${{ vars.STAGING_GHCR_ENABLED }}
+          STAGING_TCR_ENABLED: ${{ vars.STAGING_TCR_ENABLED }}
+          TCR_REGISTRY: ${{ secrets.TCR_REGISTRY }}
+          TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
+          TCR_TOKEN: ${{ secrets.TCR_TOKEN }}
+          TCR_NAMESPACE: ${{ vars.TCR_NAMESPACE }}
+        run: |
+          mode="bundle"
+          if [ "${STAGING_TCR_ENABLED:-false}" = "true" ] && [ -n "${TCR_REGISTRY:-}" ] && [ -n "${TCR_USERNAME:-}" ] && [ -n "${TCR_TOKEN:-}" ]; then
+            mode="tcr"
+          elif [ "${STAGING_GHCR_ENABLED:-false}" = "true" ] && [ -n "${GHCR_TOKEN:-}" ]; then
+            mode="ghcr"
+          fi
+          echo "registry_active=$mode" >> "$GITHUB_OUTPUT"
+          echo "Registry delivery mode: $mode"
+
+          # Image refs: GHCR is always pushed (secondary source); TCR refs are
+          # added when TCR is active so the CVM can prefer the same-region pull.
+          ghcr_api="ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:${GITHUB_SHA}"
+          ghcr_admin="ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:${GITHUB_SHA}"
+          api_tags="[\"${ghcr_api}\"]"
+          admin_tags="[\"${ghcr_admin}\"]"
+          if [ "$mode" = "tcr" ]; then
+            prefix="${TCR_REGISTRY}"
+            if [ -n "${TCR_NAMESPACE:-}" ]; then
+              prefix="${prefix}/${TCR_NAMESPACE}"
+            fi
+            tcr_api="${prefix}/joyjoin-api-staging:${GITHUB_SHA}"
+            tcr_admin="${prefix}/joyjoin-admin-staging:${GITHUB_SHA}"
+            api_tags="[\"${ghcr_api}\",\"${tcr_api}\"]"
+            admin_tags="[\"${ghcr_admin}\",\"${tcr_admin}\"]"
+            echo "tcr_api_ref=${tcr_api}" >> "$GITHUB_OUTPUT"
+            echo "tcr_admin_ref=${tcr_admin}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "api_tags=${api_tags}" >> "$GITHUB_OUTPUT"
+          echo "admin_tags=${admin_tags}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -41,23 +85,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Probe the GHCR read token via env (secrets are not available in `if`).
-      # GHCR is opt-in: use it only while STAGING_GHCR_ENABLED (repo variable)
-      # is explicitly "true" AND GHCR_TOKEN exists. An unset variable uses the
-      # reliable rsync bundle path when CVM-to-GHCR pulls are unavailable.
-      - name: Determine staging image delivery path
-        id: delivery-mode
-        env:
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          STAGING_GHCR_ENABLED: ${{ vars.STAGING_GHCR_ENABLED }}
-        run: |
-          if [ "${STAGING_GHCR_ENABLED:-false}" = "true" ] && [ -n "${GHCR_TOKEN:-}" ]; then
-            echo "ghcr_active=true" >> "$GITHUB_OUTPUT"
-            echo "GHCR enabled: CVM will pull staging images from GHCR."
-          else
-            echo "ghcr_active=false" >> "$GITHUB_OUTPUT"
-            echo "GHCR disabled or token absent: falling back to the rsync image bundle."
-          fi
+      - name: Log in to Tencent Cloud Container Registry
+        if: steps.delivery-mode.outputs.registry_active == 'tcr'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_TOKEN }}
 
       - name: Build and push staging API image
         uses: docker/build-push-action@v6
@@ -66,7 +100,7 @@ jobs:
           file: apps/server/Dockerfile
           push: true
           load: true
-          tags: ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:${{ github.sha }}
+          tags: ${{ fromJSON(steps.delivery-mode.outputs.api_tags) }}
           cache-from: type=gha,scope=joyjoin-staging-api
           cache-to: type=gha,mode=max,scope=joyjoin-staging-api
 
@@ -77,7 +111,7 @@ jobs:
           file: apps/admin-client/Dockerfile
           push: true
           load: true
-          tags: ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:${{ github.sha }}
+          tags: ${{ fromJSON(steps.delivery-mode.outputs.admin_tags) }}
           cache-from: type=gha,scope=joyjoin-staging-admin
           cache-to: type=gha,mode=max,scope=joyjoin-staging-admin
 
@@ -86,7 +120,7 @@ jobs:
       # a fallback for environments without GHCR_TOKEN, so the bundle steps are
       # skipped entirely once that secret exists.
       - name: Bundle prebuilt staging images
-        if: steps.delivery-mode.outputs.ghcr_active == 'false'
+        if: steps.delivery-mode.outputs.registry_active == 'bundle'
         run: |
           set -euo pipefail
           docker tag \
@@ -103,7 +137,7 @@ jobs:
           sha256sum "$RUNNER_TEMP/joyjoin-staging-images.tar.gz"
 
       - name: Preserve prebuilt staging images
-        if: steps.delivery-mode.outputs.ghcr_active == 'false'
+        if: steps.delivery-mode.outputs.registry_active == 'bundle'
         uses: actions/upload-artifact@v4.6.2
         with:
           name: joyjoin-staging-images-${{ github.sha }}
@@ -163,15 +197,39 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           STAGING_GHCR_ENABLED: ${{ vars.STAGING_GHCR_ENABLED }}
+          STAGING_TCR_ENABLED: ${{ vars.STAGING_TCR_ENABLED }}
+          TCR_REGISTRY: ${{ secrets.TCR_REGISTRY }}
+          TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
+          TCR_TOKEN: ${{ secrets.TCR_TOKEN }}
+          TCR_NAMESPACE: ${{ vars.TCR_NAMESPACE }}
         run: |
-          if [ "${STAGING_GHCR_ENABLED:-false}" = "true" ] && [ -n "${GHCR_TOKEN:-}" ]; then
-            echo "ghcr_active=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ghcr_active=false" >> "$GITHUB_OUTPUT"
+          mode="bundle"
+          if [ "${STAGING_TCR_ENABLED:-false}" = "true" ] && [ -n "${TCR_REGISTRY:-}" ] && [ -n "${TCR_USERNAME:-}" ] && [ -n "${TCR_TOKEN:-}" ]; then
+            mode="tcr"
+          elif [ "${STAGING_GHCR_ENABLED:-false}" = "true" ] && [ -n "${GHCR_TOKEN:-}" ]; then
+            mode="ghcr"
+          fi
+          echo "registry_active=$mode" >> "$GITHUB_OUTPUT"
+          echo "Registry delivery mode: $mode"
+
+          ghcr_api="ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:${GITHUB_SHA}"
+          ghcr_admin="ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:${GITHUB_SHA}"
+          if [ "$mode" = "tcr" ]; then
+            prefix="${TCR_REGISTRY}"
+            if [ -n "${TCR_NAMESPACE:-}" ]; then
+              prefix="${prefix}/${TCR_NAMESPACE}"
+            fi
+            echo "api_image=${prefix}/joyjoin-api-staging:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            echo "admin_image=${prefix}/joyjoin-admin-staging:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            echo "fallback_api_image=${ghcr_api}" >> "$GITHUB_OUTPUT"
+            echo "fallback_admin_image=${ghcr_admin}" >> "$GITHUB_OUTPUT"
+          elif [ "$mode" = "ghcr" ]; then
+            echo "api_image=${ghcr_api}" >> "$GITHUB_OUTPUT"
+            echo "admin_image=${ghcr_admin}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Restore prebuilt staging images
-        if: steps.delivery-mode.outputs.ghcr_active == 'false'
+        if: steps.delivery-mode.outputs.registry_active == 'bundle'
         uses: actions/download-artifact@v4.3.0
         with:
           name: joyjoin-staging-images-${{ github.sha }}
@@ -185,9 +243,9 @@ jobs:
           SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
           STAGING_IMAGE_BUNDLE: ${{ runner.temp }}/joyjoin-staging-images.tar.gz
           # Keep the selected delivery mode consistent through transfer and
-          # remote deployment; a token alone must not reactivate GHCR.
-          STAGING_API_IMAGE: ${{ steps.delivery-mode.outputs.ghcr_active == 'true' && format('ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:{0}', github.sha) || '' }}
-          STAGING_ADMIN_IMAGE: ${{ steps.delivery-mode.outputs.ghcr_active == 'true' && format('ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:{0}', github.sha) || '' }}
+          # remote deployment; a token alone must not reactivate a registry.
+          STAGING_API_IMAGE: ${{ steps.delivery-mode.outputs.api_image }}
+          STAGING_ADMIN_IMAGE: ${{ steps.delivery-mode.outputs.admin_image }}
         run: |
           set -euo pipefail
 
@@ -748,12 +806,18 @@ jobs:
           APP_MODE: staging
           TEST_PAYMENT_PRICE_IN_CENTS: 1
           DEPLOY_SOURCE_SHA: ${{ github.sha }}
-          # Images are built off-host and delivered to the CVM either via GHCR
-          # (sha-tagged refs below + GHCR_TOKEN for the read-only pull) or as
-          # an rsync'd tar bundle when the selected delivery mode is disabled.
-          STAGING_API_IMAGE: ${{ steps.delivery-mode.outputs.ghcr_active == 'true' && format('ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:{0}', github.sha) || '' }}
-          STAGING_ADMIN_IMAGE: ${{ steps.delivery-mode.outputs.ghcr_active == 'true' && format('ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:{0}', github.sha) || '' }}
+          # Images are built off-host and delivered to the CVM either via a
+          # registry pull (TCR same-region preferred, GHCR fallback refs) or as
+          # an rsync'd tar bundle when no registry mode is active.
+          STAGING_API_IMAGE: ${{ steps.delivery-mode.outputs.api_image }}
+          STAGING_ADMIN_IMAGE: ${{ steps.delivery-mode.outputs.admin_image }}
+          STAGING_FALLBACK_API_IMAGE: ${{ steps.delivery-mode.outputs.fallback_api_image }}
+          STAGING_FALLBACK_ADMIN_IMAGE: ${{ steps.delivery-mode.outputs.fallback_admin_image }}
+          STAGING_REGISTRY_MODE: ${{ steps.delivery-mode.outputs.registry_active }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          TCR_REGISTRY: ${{ secrets.TCR_REGISTRY }}
+          TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
+          TCR_TOKEN: ${{ secrets.TCR_TOKEN }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
@@ -762,11 +826,12 @@ jobs:
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
           fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
           # Allow a recovering CVM more time to complete the SSH banner while
-          # bounding the build-free remote switch: env-candidate write, bundle
-          # docker load, container switch, and readiness gate.
+          # bounding the build-free remote switch: env-candidate write, registry
+          # pull (TCR primary + GHCR fallback, each 3x8m parallel), container
+          # switch, and readiness gate.
           timeout: 120s
-          command_timeout: 45m
-          envs: STAGING_DATABASE_URL,STAGING_SESSION_SECRET,STAGING_ADMIN_CREATE_SECRET_KEY,STAGING_POSTGRES_PASSWORD,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,ALANG_ENABLED,PROFILE_PIXEL_AVATAR_ENABLED,EQUIPMENT_REWARDS_ENABLED,PERSONAL_STORY_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,CREATIVE_AI_PERSONAL_STORY_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,RESTART_ONBOARDING_ENABLED,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,APP_MODE,TEST_PAYMENT_PRICE_IN_CENTS,MOCK_PAYMENTS,DEPLOY_SOURCE_SHA,STAGING_API_IMAGE,STAGING_ADMIN_IMAGE,GHCR_TOKEN
+          command_timeout: 60m
+          envs: STAGING_DATABASE_URL,STAGING_SESSION_SECRET,STAGING_ADMIN_CREATE_SECRET_KEY,STAGING_POSTGRES_PASSWORD,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,ALANG_ENABLED,PROFILE_PIXEL_AVATAR_ENABLED,EQUIPMENT_REWARDS_ENABLED,PERSONAL_STORY_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,CREATIVE_AI_PERSONAL_STORY_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,RESTART_ONBOARDING_ENABLED,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,APP_MODE,TEST_PAYMENT_PRICE_IN_CENTS,MOCK_PAYMENTS,DEPLOY_SOURCE_SHA,STAGING_API_IMAGE,STAGING_ADMIN_IMAGE,STAGING_REGISTRY_MODE,STAGING_FALLBACK_API_IMAGE,STAGING_FALLBACK_ADMIN_IMAGE,GHCR_TOKEN,TCR_REGISTRY,TCR_USERNAME,TCR_TOKEN
           script: |
             set -euo pipefail
             umask 077

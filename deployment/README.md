@@ -197,8 +197,10 @@ cp deployment/.env.production.example deployment/.env.production
 每次推送 `main` 分支，GitHub Actions 会自动：
 
 1. 运行质量门（guardrails、类型检查、测试、Harness gate、AI 模拟）
-2. 在 GitHub runner 上构建 API/Admin 镜像并打包；共享 CVM 不执行应用编译
-3. 只同步 `deployment/` 运行文件；预构建镜像包拆成 8 MiB 小块，通过最多 4 条独立 SSH 连接并行续传到服务器
+2. 在 GitHub runner 上构建 API/Admin 镜像；共享 CVM 不执行应用编译
+3. 镜像交付有三种模式（按优先级）：**TCR（腾讯云同地域）> GHCR > rsync bundle**
+   - TCR / GHCR 模式：CVM 并行拉取两个镜像（每次尝试 8 分钟、最多 3 次，镜像层断点续传）；TCR 拉取失败时自动回退到 GHCR 引用
+   - bundle 模式：只同步 `deployment/` 运行文件；预构建镜像包拆成 8 MiB 小块，通过最多 4 条独立 SSH 连接并行续传到服务器
 4. 从 GitHub secrets/vars 写入 `deployment/.env.staging`
 5. 只读验证 staging schema 和容器内数据库地址；仅当 `profilePixelAvatarEnabled` 或 `equipmentRewardsEnabled` 生效时，校验 12 种人格的启用中初始装备
 6. 加载镜像、切换容器并验证 `/api/readyz`、本机/公网 Admin 页面；失败时恢复旧镜像与旧 Nginx 配置
@@ -207,6 +209,24 @@ cp deployment/.env.production.example deployment/.env.production
 > 2026-06-30：server Dockerfile 的 HEALTHCHECK 已改为 `http://127.0.0.1:${PORT:-5000}/api/health`，因此 staging 容器（PORT=5001）不再被误判为 unhealthy。
 >
 > 2026-07-20：`/api/health` 只表示进程存活，发布验收必须使用 `/api/readyz`（数据库 + 关键配置）并单独检查 Admin 根页面。部署脚本不再运行 migration、DDL 或 seed；这些操作必须按仓库迁移纪律预先人工执行。
+>
+> 2026-08-13：CVM→GHCR 跨太平洋拉取不稳定（多次 3×5 分钟超时）后，拉取改为并行 + 8 分钟/次，并实现了同地域 TCR 交付模式（见下节）。
+
+#### TCR 同地域镜像仓库（推荐启用）
+
+GHCR 跨太平洋拉取不稳定时，把 staging 镜像同时推送到腾讯云同地域容器镜像服务（TCR），CVM 首选 TCR 拉取、失败自动回退 GHCR。
+
+**一次性开通步骤（需腾讯云控制台，仓库代码已就绪）：**
+
+1. 腾讯云控制台 → 容器镜像服务 TCR，在 **CVM 同地域**（CVM IP `1.12.243.104` 所在区域）创建实例（个人版 `ccr.ccs.tencentcloud.com` 或企业版实例域名）
+2. 创建命名空间 `joyjoin`
+3. 创建长期访问凭证（访问凭证 → 新建），得到「用户名」（通常为长数字 ID）与「密码」
+4. 在 GitHub repo 设置：
+   - **Secrets**：`TCR_REGISTRY`（实例域名，如 `ccr.ccs.tencentcloud.com`）、`TCR_USERNAME`（凭证用户名）、`TCR_TOKEN`（凭证密码）
+   - **Variables**：`TCR_NAMESPACE=joyjoin`、`STAGING_TCR_ENABLED=true`（`STAGING_GHCR_ENABLED=true` 保持开启，作为自动回退）
+5. 推送一次 `main` 触发部署；镜像仓库 `joyjoin-api-staging` / `joyjoin-admin-staging` 会在首次 push 时自动创建（如实例未开启自动建仓，先在控制台创建这两个仓库）
+
+验证：部署日志显示 `Registry delivery mode: tcr`，CVM 从 `<TCR_REGISTRY>/joyjoin/...` 拉取成功。
 
 #### 手动部署（服务器内执行）
 

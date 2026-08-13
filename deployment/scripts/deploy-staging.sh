@@ -423,13 +423,14 @@ if [[ -z "$DOCKER_STORAGE_PATH" || ! -d "$DOCKER_STORAGE_PATH" ]]; then
     DOCKER_STORAGE_PATH="$DEPLOY_DIR"
 fi
 
-USE_GHCR_PULL=false
+USE_REGISTRY_PULL=false
+STAGING_REGISTRY_MODE="${STAGING_REGISTRY_MODE:-ghcr}"
 if [[ -n "${STAGING_API_IMAGE:-}" && -n "${STAGING_ADMIN_IMAGE:-}" ]]; then
-    USE_GHCR_PULL=true
+    USE_REGISTRY_PULL=true
 fi
 
-if [[ "$USE_GHCR_PULL" == "true" ]]; then
-    echo "  Pulling staging images from GHCR (no rsync bundle required)."
+if [[ "$USE_REGISTRY_PULL" == "true" ]]; then
+    echo "  Pulling staging images from registry (${STAGING_REGISTRY_MODE}); no rsync bundle required."
     storage_use_percent="$(df -P "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { gsub("%", "", $5); print $5 }')"
     available_bytes="$(df -PB1 "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
     available_inodes="$(df -Pi "$DOCKER_STORAGE_PATH" | awk 'NR == 2 { print $4 }')"
@@ -439,30 +440,19 @@ if [[ "$USE_GHCR_PULL" == "true" ]]; then
         timeout 120s docker image prune -af || true
     fi
 
-    if [[ -z "${GHCR_TOKEN:-}" ]]; then
-        echo "❌ GHCR_TOKEN is required to pull staging images from ghcr.io."
-        exit 1
-    fi
     EARLY_IMAGE_TAG_ROLLBACK=true
-    if ! printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u x-access-token --password-stdin; then
-        echo "❌ docker login ghcr.io failed."
-        restore_previous_image_tags
-        exit 1
-    fi
 
-    # Cross-Pacific GHCR pulls can stall on a single large layer. docker pull
-    # resumes already-downloaded layers, so re-invoking it is a cheap, safe
-    # retry that only re-fetches the incomplete layers. Each attempt is
-    # time-boxed so one stalled pull cannot consume the whole deploy budget;
-    # docker keeps whatever layers completed before the timeout fired.
-    pull_with_retry() {
+    # Cross-Pacific registry pulls can stall on a single large layer. docker
+    # pull resumes already-downloaded layers, so re-invoking it is a cheap,
+    # safe retry that only re-fetches the incomplete layers. Each attempt is
+    # time-boxed and the API + Admin images are pulled IN PARALLEL so the
+    # combined worst case (TCR + GHCR fallback) stays below the SSH action's
+    # 60-minute command budget while deployment and rollback still fit.
+    pull_image_with_retry() {
         local image="$1"
         local attempt=1
-        # Two images are pulled sequentially inside the SSH action's 45-minute
-        # command timeout. Keep the combined worst-case pull budget below that
-        # ceiling so deployment and rollback still have time to finish.
         local max_attempts=3
-        local attempt_timeout=5m
+        local attempt_timeout=8m
         while (( attempt <= max_attempts )); do
             if timeout --signal=TERM --kill-after=30s "$attempt_timeout" docker pull "$image"; then
                 return 0
@@ -473,10 +463,69 @@ if [[ "$USE_GHCR_PULL" == "true" ]]; then
         done
         return 1
     }
-    if ! pull_with_retry "$STAGING_API_IMAGE" || ! pull_with_retry "$STAGING_ADMIN_IMAGE"; then
-        echo "❌ Failed to pull staging images from GHCR."
+
+    pull_pair_parallel() {
+        local api_image="$1"
+        local admin_image="$2"
+        local api_status=0
+        local admin_status=0
+        local api_pid=""
+        local admin_pid=""
+        pull_image_with_retry "$api_image" &
+        api_pid=$!
+        pull_image_with_retry "$admin_image" &
+        admin_pid=$!
+        wait "$api_pid" || api_status=$?
+        wait "$admin_pid" || admin_status=$?
+        if (( api_status != 0 || admin_status != 0 )); then
+            return 1
+        fi
+        return 0
+    }
+
+    login_registry() {
+        case "$STAGING_REGISTRY_MODE" in
+            tcr)
+                if [[ -z "${TCR_REGISTRY:-}" || -z "${TCR_USERNAME:-}" || -z "${TCR_TOKEN:-}" ]]; then
+                    echo "❌ TCR_REGISTRY / TCR_USERNAME / TCR_TOKEN are required for TCR mode."
+                    return 1
+                fi
+                printf '%s' "$TCR_TOKEN" | docker login "$TCR_REGISTRY" -u "$TCR_USERNAME" --password-stdin
+                ;;
+            *)
+                if [[ -z "${GHCR_TOKEN:-}" ]]; then
+                    echo "❌ GHCR_TOKEN is required to pull staging images from ghcr.io."
+                    return 1
+                fi
+                printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u x-access-token --password-stdin
+                ;;
+        esac
+    }
+
+    if ! login_registry; then
+        echo "❌ Registry login failed (${STAGING_REGISTRY_MODE})."
         restore_previous_image_tags
         exit 1
+    fi
+
+    if ! pull_pair_parallel "$STAGING_API_IMAGE" "$STAGING_ADMIN_IMAGE"; then
+        # TCR is same-region and should succeed; when it does not, fall back to
+        # the GHCR refs supplied by the workflow before giving up entirely.
+        if [[ "$STAGING_REGISTRY_MODE" == "tcr" && -n "${STAGING_FALLBACK_API_IMAGE:-}" && -n "${STAGING_FALLBACK_ADMIN_IMAGE:-}" ]]; then
+            echo "  TCR pull failed; falling back to GHCR refs."
+            STAGING_API_IMAGE="$STAGING_FALLBACK_API_IMAGE"
+            STAGING_ADMIN_IMAGE="$STAGING_FALLBACK_ADMIN_IMAGE"
+            STAGING_REGISTRY_MODE="ghcr"
+            if ! login_registry || ! pull_pair_parallel "$STAGING_API_IMAGE" "$STAGING_ADMIN_IMAGE"; then
+                echo "❌ Failed to pull staging images from TCR and GHCR fallback."
+                restore_previous_image_tags
+                exit 1
+            fi
+        else
+            echo "❌ Failed to pull staging images from ${STAGING_REGISTRY_MODE}."
+            restore_previous_image_tags
+            exit 1
+        fi
     fi
     if ! docker image tag "$STAGING_API_IMAGE" "$API_IMAGE_REF" || \
        ! docker image tag "$STAGING_ADMIN_IMAGE" "$ADMIN_IMAGE_REF"; then
