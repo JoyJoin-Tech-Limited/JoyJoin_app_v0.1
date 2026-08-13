@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@tarojs/taro', () => ({
+  useDidShow: vi.fn(),
   default: {
     getCurrentInstance: () => ({ router: { params: { encounterId: 'encounter-1' } } }),
     setNavigationBarTitle: vi.fn(),

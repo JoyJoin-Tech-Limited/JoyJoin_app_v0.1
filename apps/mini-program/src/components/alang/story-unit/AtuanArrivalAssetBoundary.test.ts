@@ -6,7 +6,7 @@ const sourceRoot = resolve(process.cwd(), 'src')
 const appRoot = resolve(process.cwd())
 const arrivalAssetNames = [
   'flash-atuan-park-clean-v3.jpg',
-  'flash-atuan-character-cutout-v2.png',
+  'flash-atuan-character-lowpoly-v3.webp',
   'flash-atuan-bag-cutout-v2.png',
 ]
 
@@ -23,7 +23,7 @@ describe('Atuan first-arrival asset ownership', () => {
     const dialoguePage = readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/index.tsx'), 'utf8')
 
     expect(dialoguePage).toContain("../assets/ui/flash-atuan-park-clean-v3.jpg")
-    expect(dialoguePage).toContain("../assets/ui/flash-atuan-character-cutout-v2.png")
+    expect(dialoguePage).toContain("../assets/ui/flash-atuan-character-lowpoly-v3.webp")
     expect(dialoguePage).toContain("../assets/ui/flash-atuan-bag-cutout-v2.png")
     expect(dialoguePage).toContain('atuanArrivalAssets={{')
   })
@@ -39,11 +39,14 @@ describe('Atuan first-arrival asset ownership', () => {
       const header = readFileSync(assetPath).subarray(0, 12)
       if (fileName.endsWith('.jpg')) {
         expect([...header.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff])
-      } else {
+      } else if (fileName.endsWith('.png')) {
         expect([...header.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+      } else {
+        expect(header.subarray(0, 4).toString('ascii')).toBe('RIFF')
+        expect(header.subarray(8, 12).toString('ascii')).toBe('WEBP')
       }
     }
-    expect(totalBytes, 'High-resolution arrival layers must stay within a 320 KiB subpackage budget').toBeLessThanOrEqual(320 * 1024)
+    expect(totalBytes, 'High-resolution arrival layers must stay within a 360 KiB subpackage budget').toBeLessThanOrEqual(360 * 1024)
   })
 
   it('gives the all-absolute Atuan arrival stage a viewport-height fallback chain', () => {

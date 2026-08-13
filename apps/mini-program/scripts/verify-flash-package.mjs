@@ -23,7 +23,7 @@ const flashReviewedStoryBackgrounds = [
 ]
 const atuanArrivalRelativePaths = [
   'pages/alang/assets/ui/flash-atuan-park-clean-v3.jpg',
-  'pages/alang/assets/ui/flash-atuan-character-cutout-v2.png',
+    'pages/alang/assets/ui/flash-atuan-character-lowpoly-v3.webp',
   'pages/alang/assets/ui/flash-atuan-bag-cutout-v2.png',
 ]
 
