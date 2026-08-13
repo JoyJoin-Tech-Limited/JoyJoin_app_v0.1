@@ -497,23 +497,43 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   // Deterministic hard bound: even if the provider socket stalls and the SDK
   // never honors the AbortSignal, pass 1 settles to a failure result inside
   // `timeoutMs` and the pipeline degrades to the curated catalog fallback.
-  const pass1 = await raceWithTimeout(
-    pass1Generate({
-      ...params,
-      config,
-      signal: controller.signal,
-      roster: params.roster,
-    }),
-    timeoutMs,
-  ).catch((error): Awaited<ReturnType<typeof pass1Generate>> => {
-    if (isLLMTimeoutError(error)) {
-      logger.error('[MiniScriptAgent] pass 1 hit hard pipeline timeout — settling to catalog fallback', {
+  //
+  // Progress heartbeat: pass 1 is the long pole (a 2500-token json_object
+  // generation can run 15–25s) and previously emitted zero intermediate
+  // progress, freezing the client bar at 15% for the whole call — read by
+  // hosts as "stuck" (2026-08-13 生成卡住 incident). Interpolate 15→65 across
+  // the budget and stop the moment the race settles, so no late tick can
+  // regress the bar after a 'validating'/'fallback'/'persisting' update.
+  const pass1StartedAt = Date.now();
+  const pass1Heartbeat = setInterval(() => {
+    const ratio = Math.min(1, (Date.now() - pass1StartedAt) / timeoutMs);
+    params.onProgress?.('generating', Math.round(15 + ratio * 50));
+  }, 1500);
+  pass1Heartbeat.unref?.();
+
+  const pass1 = await (async () => {
+    try {
+      return await raceWithTimeout(
+        pass1Generate({
+          ...params,
+          config,
+          signal: controller.signal,
+          roster: params.roster,
+        }),
         timeoutMs,
+      ).catch((error): Awaited<ReturnType<typeof pass1Generate>> => {
+        if (isLLMTimeoutError(error)) {
+          logger.error('[MiniScriptAgent] pass 1 hit hard pipeline timeout — settling to catalog fallback', {
+            timeoutMs,
+          });
+          return { ok: false, errorCode: 'pipeline_timeout', latencyMs: Date.now() - tAll };
+        }
+        throw error;
       });
-      return { ok: false, errorCode: 'pipeline_timeout', latencyMs: Date.now() - tAll };
+    } finally {
+      clearInterval(pass1Heartbeat);
     }
-    throw error;
-  });
+  })();
 
   if (!pass1.ok || !pass1.framework) {
     clearTimeout(timer);
@@ -573,21 +593,39 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
     // Same deterministic bound: pass 2 gets whatever pipeline budget remains.
     // On timeout it degrades to `null` and flows into the catalog fallback
     // branch below exactly like a failed validation.
-    const pass2 = await raceWithTimeout(
-      validateMiniScriptFramework({
-        draft: withAuthority,
-        config,
-      }),
-      Math.max(1, timeoutMs - (Date.now() - tAll)),
-    ).catch((error): Awaited<ReturnType<typeof validateMiniScriptFramework>> | null => {
-      if (isLLMTimeoutError(error)) {
-        logger.error('[MiniScriptAgent] pass 2 hit hard pipeline timeout — settling to catalog fallback', {
-          timeoutMs,
+    const pass2BudgetMs = Math.max(1, timeoutMs - (Date.now() - tAll));
+    // Heartbeat: interpolate 70→86 across pass 2's remaining budget so the
+    // validation wait also reads as movement, not a freeze. Cleared the moment
+    // the race settles — monotonic with the following 'validating' 88 /
+    // 'fallback' 86 / 'persisting' 92 updates.
+    const pass2StartedAt = Date.now();
+    const pass2Heartbeat = setInterval(() => {
+      const ratio = Math.min(1, (Date.now() - pass2StartedAt) / pass2BudgetMs);
+      params.onProgress?.('validating', Math.round(70 + ratio * 16));
+    }, 1500);
+    pass2Heartbeat.unref?.();
+
+    const pass2 = await (async () => {
+      try {
+        return await raceWithTimeout(
+          validateMiniScriptFramework({
+            draft: withAuthority,
+            config,
+          }),
+          pass2BudgetMs,
+        ).catch((error): Awaited<ReturnType<typeof validateMiniScriptFramework>> | null => {
+          if (isLLMTimeoutError(error)) {
+            logger.error('[MiniScriptAgent] pass 2 hit hard pipeline timeout — settling to catalog fallback', {
+              timeoutMs,
+            });
+            return null;
+          }
+          throw error;
         });
-        return null;
+      } finally {
+        clearInterval(pass2Heartbeat);
       }
-      throw error;
-    });
+    })();
 
     if (!pass2 || !pass2.valid) {
       clearTimeout(timer);
