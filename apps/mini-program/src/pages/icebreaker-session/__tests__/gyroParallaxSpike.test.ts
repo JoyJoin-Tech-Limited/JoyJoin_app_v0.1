@@ -14,8 +14,12 @@ import {
 const DEG = Math.PI / 180
 
 describe('S10 gyro-parallax spike — gating', () => {
-  it('ships dark: the module-local spike flag defaults to false', () => {
-    expect(GYRO_PARALLAX_SPIKE_ENABLED).toBe(false)
+  it('is flipped for the on-device measurement window (2026-08-12)', () => {
+    // Measurement mode per ruling 7 (locked floors: 60fps, zero new crashes,
+    // battery envelope; any WARN = drop). The SHIPPED state is false — flip
+    // this back together with GYRO_PARALLAX_SPIKE_ENABLED once the device
+    // run is done and the ship/drop verdict is recorded.
+    expect(GYRO_PARALLAX_SPIKE_ENABLED).toBe(true)
   })
 
   it('stays within the locked ≤10° tilt bound', () => {

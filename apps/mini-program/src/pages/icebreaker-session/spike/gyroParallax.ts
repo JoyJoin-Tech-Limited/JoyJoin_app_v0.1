@@ -21,7 +21,7 @@
  */
 
 /** Master gate for the whole spike. Flip to true ONLY for on-device measurement. */
-export const GYRO_PARALLAX_SPIKE_ENABLED = false
+export const GYRO_PARALLAX_SPIKE_ENABLED = true
 
 /** Max card tilt per axis, within the locked ≤10° bound (personality-card precedent uses 8). */
 export const GYRO_SPIKE_MAX_TILT_DEG = 8

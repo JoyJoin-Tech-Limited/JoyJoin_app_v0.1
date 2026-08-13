@@ -6,6 +6,12 @@ const indexSource = readFileSync(
   resolve(process.cwd(), 'src/pages/icebreaker-session/index.tsx'),
   'utf8',
 )
+// Mini-script action handlers live in the useSocialActions hook (2026-08-12
+// page split) — the path contract is asserted against the hook's source.
+const actionsSource = readFileSync(
+  resolve(process.cwd(), 'src/pages/icebreaker-session/hooks/useSocialActions.ts'),
+  'utf8',
+)
 const bonusGateSource = readFileSync(
   resolve(process.cwd(), 'src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx'),
   'utf8',
@@ -31,31 +37,31 @@ const generationHookSource = readFileSync(
 // after generate (2026-08-06).
 describe('MiniScript client-server path contract', () => {
   it('posts all mini-script actions to /api/miniscript/* with socialSessionId in the body', () => {
-    expect(indexSource).toMatch(
+    expect(actionsSource).toMatch(
       /performSocialAction\('miniscript-assign-roles', '\/api\/miniscript\/assign-roles', \{\s*socialSessionId,/,
     )
-    expect(indexSource).toMatch(
+    expect(actionsSource).toMatch(
       /performSocialAction\('miniscript-reveal-act', '\/api\/miniscript\/reveal-act', \{\s*socialSessionId,\s*targetAct,/,
     )
-    expect(indexSource).toMatch(
+    expect(actionsSource).toMatch(
       /performSocialAction\('miniscript-vote', '\/api\/miniscript\/vote', \{\s*socialSessionId,\s*vote,/,
     )
-    expect(indexSource).toMatch(
+    expect(actionsSource).toMatch(
       /performSocialAction\('miniscript-reveal-solution', '\/api\/miniscript\/reveal-solution', \{\s*socialSessionId,/,
     )
-    expect(indexSource).toMatch(
+    expect(actionsSource).toMatch(
       /performSocialAction\('miniscript-ready', '\/api\/miniscript\/ready', \{\s*socialSessionId,\s*ready,/,
     )
     expect(generationHookSource).toContain("path: '/api/miniscript/generate'")
   })
 
   it('never sends mini-script actions through the session-scoped social-icebreaker path', () => {
-    expect(indexSource).not.toContain("buildSocialPath(socialSessionId, '/miniscript/")
-    expect(indexSource).not.toContain("'/miniscript/assign-roles'")
-    expect(indexSource).not.toContain("'/miniscript/reveal-act'")
-    expect(indexSource).not.toContain("'/miniscript/vote'")
-    expect(indexSource).not.toContain("'/miniscript/reveal-solution'")
-    expect(indexSource).not.toContain("'/miniscript/ready'")
+    expect(actionsSource).not.toContain("buildSocialPath(socialSessionId, '/miniscript/")
+    expect(actionsSource).not.toContain("'/miniscript/assign-roles'")
+    expect(actionsSource).not.toContain("'/miniscript/reveal-act'")
+    expect(actionsSource).not.toContain("'/miniscript/vote'")
+    expect(actionsSource).not.toContain("'/miniscript/reveal-solution'")
+    expect(actionsSource).not.toContain("'/miniscript/ready'")
   })
 
   it('closes the generation modal and refreshes session state without blocking', () => {

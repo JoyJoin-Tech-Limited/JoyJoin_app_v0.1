@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react'
-import Taro from '@tarojs/taro'
+import { useCallback, useRef, useState } from 'react'
+import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
 import type { MiniScriptGenerationStatus, MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework'
 import { apiRequest } from '../../../lib/api/api'
 import { getErrorText } from '../icebreakerSessionModel'
@@ -36,8 +36,24 @@ export function useMiniScriptGeneration({
 }: UseMiniScriptGenerationOptions): UseMiniScriptGenerationReturn {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [generationStatus, setGenerationStatus] = useState<MiniScriptGenerationStatus | null>(null)
+  // Foreground guard for completion toasts (see N3 fix).
+  const isPageVisibleRef = useRef(true)
+  // Local monotonic epoch. The previous cross-clock guard compared the
+  // server's `updatedAt` against the device clock: whenever the device clock
+  // ran ahead of the server, every poll update was rejected and the progress
+  // bar froze at 5% for the whole generation (2026-08-13 生成卡住 incident).
+  // A per-submit epoch makes stale poll responses and post-reset writes
+  // structurally impossible without touching wall clocks.
+  const generationEpochRef = useRef(0)
+  useDidShow(() => {
+    isPageVisibleRef.current = true
+  })
+  useDidHide(() => {
+    isPageVisibleRef.current = false
+  })
 
   const resetGeneration = useCallback(() => {
+    generationEpochRef.current += 1
     setGenerationStatus(null)
     setIsSubmitting(false)
   }, [])
@@ -48,6 +64,7 @@ export function useMiniScriptGeneration({
         return false
       }
 
+      const epoch = ++generationEpochRef.current
       setIsSubmitting(true)
       const startedAt = Date.now()
       setGenerationStatus({
@@ -64,18 +81,23 @@ export function useMiniScriptGeneration({
           timeout: 3000,
         })
           // Polls can overlap (800ms interval vs 3s request timeout), so a slow
-          // older response may resolve after a newer one. Two guards:
-          //  1. Never let any poll resurrect a terminal local stage (failed /
-          //     complete) — the POST already settled the outcome locally.
-          //  2. Monotonic updatedAt: a stale poll carrying an older server
-          //     timestamp cannot regress the progress bar mid-flight.
-          .then((status) =>
+          // older response may resolve after a newer one. Three guards:
+          //  1. Epoch: a poll from a previous submit/reset must never write
+          //     state (resetGeneration bumps the epoch).
+          //  2. Terminal: never let any poll resurrect a terminal local stage
+          //     (failed / complete) — the POST already settled the outcome.
+          //  3. Monotonic progress: server progress only increases within one
+          //     run (5 → 15 → … → 100), so a poll carrying older progress
+          //     cannot regress the bar. Compared by progress value, never by
+          //     cross-clock `updatedAt` timestamps.
+          .then((status) => {
+            if (generationEpochRef.current !== epoch) return
             setGenerationStatus((current) => {
               if (current?.stage === 'failed' || current?.stage === 'complete') return current
-              if (current && status.updatedAt < current.updatedAt) return current
+              if (current && status.progress < current.progress) return current
               return status
-            }),
-          )
+            })
+          })
           .catch(() => undefined)
       }
 
@@ -95,27 +117,40 @@ export function useMiniScriptGeneration({
             lite: payload.lite,
           },
         })
-        setGenerationStatus((current) => ({
-          stage: 'complete',
-          progress: 100,
-          startedAt: current?.startedAt ?? startedAt,
-          updatedAt: Date.now(),
-          estimatedTotalMs: current?.estimatedTotalMs ?? 32_000,
-        }))
+        // If the user cancelled (reset bumped the epoch) while the POST was in
+        // flight, don't resurrect a terminal status — a stale 'complete' would
+        // pin the reopened modal on the CTA-less success shell.
+        if (generationEpochRef.current === epoch) {
+          setGenerationStatus((current) => ({
+            stage: 'complete',
+            progress: 100,
+            startedAt: current?.startedAt ?? startedAt,
+            updatedAt: Date.now(),
+            estimatedTotalMs: current?.estimatedTotalMs ?? 32_000,
+          }))
+        }
         await new Promise((resolve) => setTimeout(resolve, 400))
         void refetchSession()
-        void Taro.showToast({ title: '剧本已生成', icon: 'success', duration: TOAST_DEFAULT_MS })
+        // N3: the page may be in the background stack when the POST settles —
+        // a toast firing on top of an unrelated page is noise, not feedback.
+        // The AiGenerationShell's success state is the foreground signal; the
+        // 3s poll delivers the framework either way.
+        if (isPageVisibleRef.current) {
+          void Taro.showToast({ title: '剧本已生成', icon: 'success', duration: TOAST_DEFAULT_MS })
+        }
         return true
       } catch (error) {
         const message = getErrorText(error, '生成没成功')
         logError('[IcebreakerSession] MiniScript generate failed', { socialSessionId, message })
-        setGenerationStatus((current) => ({
-          stage: 'failed',
-          progress: current?.progress ?? 5,
-          startedAt: current?.startedAt ?? startedAt,
-          updatedAt: Date.now(),
-          estimatedTotalMs: current?.estimatedTotalMs ?? 32_000,
-        }))
+        if (generationEpochRef.current === epoch) {
+          setGenerationStatus((current) => ({
+            stage: 'failed',
+            progress: current?.progress ?? 5,
+            startedAt: current?.startedAt ?? startedAt,
+            updatedAt: Date.now(),
+            estimatedTotalMs: current?.estimatedTotalMs ?? 32_000,
+          }))
+        }
         return false
       } finally {
         clearInterval(progressTimer)

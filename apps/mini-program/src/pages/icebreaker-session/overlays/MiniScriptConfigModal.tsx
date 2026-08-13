@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Image, ScrollView, RootPortal } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { haptics } from '../../../lib/utils/haptics'
-import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import {
   MINI_SCRIPT_GENRES,
   type MiniScriptGenerationStatus,
@@ -16,8 +14,11 @@ import {
   getGenreGradient,
   type MiniscriptStyleCard,
 } from '@shared/miniscriptCatalog'
+import { haptics } from '../../../lib/utils/haptics'
+import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import Button from '../../../components/ui/Button'
 import AiGenerationShell from '../../../components/ui/AiGenerationShell'
+import CheckBadge from '../../../components/ui/CheckBadge'
 
 function getMiniScriptShellPhase(status: MiniScriptGenerationStatus | null) {
   if (!status) return 'generating'
@@ -372,7 +373,7 @@ export function MiniScriptConfigModal({
                     {/* Checkmark for selected state */}
                     {isSelected && (
                       <View className='ms-genre-card__check'>
-                        <Text className='ms-genre-card__check-icon'>✓</Text>
+                        <CheckBadge className='ms-genre-card__check-icon' />
                       </View>
                     )}
                     {/* Glow ring */}

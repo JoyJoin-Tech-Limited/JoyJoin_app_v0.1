@@ -623,10 +623,6 @@ $__gold-accent:  $color-landed-gold;
     flex-shrink: 0;
   }
 
-  &__hero-emoji {
-    font-size: $font-size-xl;
-  }
-
   &__hero-text {
     flex: 1;
     min-width: 0;
@@ -780,15 +776,6 @@ $__gold-accent:  $color-landed-gold;
     pointer-events: none;
   }
 
-  &__emoji {
-    position: absolute;
-    top: 16rpx;
-    left: 16rpx;
-    font-size: $font-size-xl;
-    line-height: 1;
-    z-index: 1;
-  }
-
   &__label {
     position: absolute;
     bottom: 16rpx;
@@ -892,15 +879,6 @@ $__gold-accent:  $color-landed-gold;
     inset: 0;
     background: linear-gradient(to top, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 50%);
     pointer-events: none;
-  }
-
-  &__emoji {
-    position: absolute;
-    top: 20rpx;
-    left: 20rpx;
-    font-size: $font-size-xl;
-    line-height: 1;
-    z-index: 1;
   }
 
   &__label {

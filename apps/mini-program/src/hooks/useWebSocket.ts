@@ -49,6 +49,15 @@ export interface UseWebSocketOptions {
    * If no `eventTypes` are specified this receives ALL messages.
    */
   onMessage?: (message: WSMessage) => void
+
+  /**
+   * When false, incoming messages are forwarded to `onMessage` but NOT
+   * recorded in `lastMessage` state — avoiding a full page re-render per
+   * message for consumers that only act in the callback (e.g. the S6
+   * group-beat haptic dispatch, which reads nothing from lastMessage).
+   * @default true
+   */
+  trackLastMessage?: boolean
 }
 
 export interface UseWebSocketResult {
@@ -76,6 +85,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRes
     onMessage,
     userId: userIdProp,
     joinEventId,
+    trackLastMessage = true,
   } = options
 
   const { user } = useAuth()
@@ -88,6 +98,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRes
   // Keep a stable ref to the latest `onMessage` so we never need it in deps
   const onMessageRef = useRef(onMessage)
   onMessageRef.current = onMessage
+
+  // Same for trackLastMessage: the subscription effect must not re-run when
+  // the flag changes, and reads inside the handler need the current value.
+  const trackLastMessageRef = useRef(trackLastMessage)
+  trackLastMessageRef.current = trackLastMessage
 
   // Track whether the socket was connected when the mini-program hid, so we
   // can decide whether to reconnect on `useDidShow`.
@@ -205,7 +220,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRes
      * Shared handler: forwards to onMessage ref, updates lastMessage state.
      */
     const handler = (msg: WSMessage) => {
-      setLastMessage(msg)
+      if (trackLastMessageRef.current) {
+        setLastMessage(msg)
+      }
       onMessageRef.current?.(msg)
     }
 
