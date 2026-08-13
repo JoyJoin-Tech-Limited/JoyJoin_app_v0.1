@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   consumeLocateBudget: vi.fn(),
   ensureStoryEpisode: vi.fn(),
   prepareChoiceIntent: vi.fn(),
+  listCompletedCodes: vi.fn(),
 }));
 
 vi.mock("../repositories/flashRepo", async (importOriginal) => {
@@ -52,6 +53,7 @@ vi.mock("../repositories/flashStoryRepo", async (importOriginal) => {
     getCompletedFlashStorySeason: mocks.getCompletedStorySeason,
     getFlashStoryEncounterState: mocks.getStoryEncounterState,
     getReadyFlashStoryChoiceIntent: mocks.getReadyChoiceIntent,
+    listCompletedFlashStoryEpisodeCodes: mocks.listCompletedCodes,
     prepareFlashStoryChoiceIntent: mocks.prepareChoiceIntent,
   };
 });
@@ -159,6 +161,7 @@ describe("formal Flash story runtime policy", () => {
     mocks.getEncounterOwned.mockResolvedValue(encounter);
     mocks.getOrCreateEncounter.mockResolvedValue(encounter);
     mocks.getCompletedStorySeason.mockResolvedValue(null);
+    mocks.listCompletedCodes.mockResolvedValue([]);
     mocks.getFeatureFlag.mockResolvedValue(true);
     mocks.getPreferences.mockResolvedValue({
       preference: {
