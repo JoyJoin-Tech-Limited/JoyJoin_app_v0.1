@@ -1,7 +1,6 @@
 import { Image, Text, View } from '@tarojs/components'
 import type { FlashStoryUnitId } from '@shared/alang/flashStorySeason'
 import {
-  ATUAN_FIRST_ACT_CARDS,
   ATUAN_FIRST_ACT_FOLLOWUPS,
   ATUAN_FIRST_ACT_HIGHLIGHTS,
   resolveAtuanFirstActOutcome,
@@ -118,13 +117,20 @@ interface AtuanScenePresentation {
 
 const APPROACH_PRESENTATION: Record<AtuanFirstActProgress['approachId'], AtuanScenePresentation> = {
   notice_wait: {
-    narration: '你伸手接住被风掀起的卡片。阿团终于把目光从路口收回来。',
-    dialogue: '谢谢。差一点，它又要替我去等人了。',
+    narration: '你伸手按住飞到半空的卡片。卡角在指间抖了两下，停住了。',
+    dialogue: '谢谢。这张要是真飞远了，我可能得追到公园门口。……偏偏是这张。',
   },
   notice_again: {
-    narration: '你俯身护住纸袋，散开的卡片停在长椅边。',
-    dialogue: '谢谢。风今天好像比我更着急。',
+    narration: '你先按住纸袋。袋口塌下来，剩下的卡片没有继续往外滑。',
+    dialogue: '还好。要是五张一起散开，我大概会站在这里，一张一张和风讲道理。',
   },
+}
+
+const ARRIVAL_REPLY_PRESENTATION: Record<string, AtuanScenePresentation> = {
+  ask_special: { narration: '阿团把卡握紧了一点。', dialogue: '上面写了一个人的习惯。我本来想送给他，又怕写得太多。' },
+  turn_face_down: { narration: '你把卡片正面转回来，没有去看背面。', dialogue: '谢谢。正面可以看，背面……我还没问过他。' },
+  ask_order: { narration: '阿团把纸袋转给你看。内侧画着六条短线。', dialogue: '有顺序。原本也应该有六张。' },
+  count_cards: { narration: '你和阿团把卡片重新数了一遍。', dialogue: '五张都在。但我出门的时候，记得自己装了六张。' },
 }
 
 const FOLLOWUP_PRESENTATION: Record<NonNullable<AtuanFirstActProgress['followupId']>, AtuanScenePresentation> = {
@@ -163,11 +169,17 @@ export function resolveAtuanFirstActPresentation(
 ): AtuanScenePresentation {
   if (!progress) return { narration: '黄昏落在长椅边。阿团还在等你。', dialogue: '你来了。' }
   if (progress.benchReached) {
-    const outcome = resolveAtuanFirstActOutcome(encounterId, progress)
-    return ENDING_PRESENTATION[outcome.ending.id] ?? APPROACH_PRESENTATION[progress.approachId]
+    return progress.approachId === 'notice_wait'
+      ? { narration: '三张卡各自有了去处。阿团把你最先接住的那张留在最后，重新系好紫绳。', dialogue: '背面的名字，我会先问过他。谢谢你刚才没有替我打开。' }
+      : { narration: '三张卡重新装好。纸袋内侧的六条短线，还安静地空着一条。', dialogue: '五张都在，第六张还是没回来。至少现在，它们不会再被风弄乱了。' }
   }
   if (progress.followupId) return FOLLOWUP_PRESENTATION[progress.followupId]
+  if (progress.arrivalReplyId) return ARRIVAL_REPLY_PRESENTATION[progress.arrivalReplyId] ?? APPROACH_PRESENTATION[progress.approachId]
   return APPROACH_PRESENTATION[progress.approachId]
+}
+
+function ChoiceIcon({ kind }: { kind: 'card' | 'cover' | 'lines' | 'count' | 'question' | 'forward' }) {
+  return <View className={`atuan-choice-icon atuan-choice-icon--${kind}`} aria-hidden='true'><View className='atuan-choice-icon__shape' /></View>
 }
 
 export function AtuanFirstConversationScene({ assets }: { assets: AtuanArrivalAssets }) {
@@ -187,6 +199,7 @@ interface AtuanFirstEncounterDialogueProps {
   disabled?: boolean
   onStateChange: (state: AtuanFirstActProgress) => void
   onComplete: (submission: AtuanFirstActSubmission) => void
+  onOpenGame: () => void
 }
 
 export function AtuanStoryDialogue({
@@ -255,6 +268,7 @@ export function AtuanFirstEncounterDialogue({
   disabled = false,
   onStateChange,
   onComplete,
+  onOpenGame,
 }: AtuanFirstEncounterDialogueProps) {
   const presentation = resolveAtuanFirstActPresentation(encounterId, progress)
   const storyCopy = (
@@ -267,6 +281,27 @@ export function AtuanFirstEncounterDialogue({
   const latestHighlight = progress.highlightOrder.length
     ? ATUAN_FIRST_ACT_HIGHLIGHTS.find((item) => item.id === progress.highlightOrder[progress.highlightOrder.length - 1])
     : null
+
+  if (!progress.arrivalReplyId) {
+    const options = progress.approachId === 'notice_wait'
+      ? [
+          { id: 'ask_special' as const, label: '这张有什么不一样？', icon: 'question' as const },
+          { id: 'turn_face_down' as const, label: '把卡片正面转回去，不看背面', icon: 'card' as const },
+        ]
+      : [
+          { id: 'ask_order' as const, label: '它们原来有顺序？', icon: 'lines' as const },
+          { id: 'count_cards' as const, label: '先数一下，一张都没少吧。', icon: 'count' as const },
+        ]
+    return (
+      <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue'>
+        {storyCopy}
+        <Text className='atuan-first-dialogue__prompt'>你接着说</Text>
+        <View className='flash-dialogue__story-choices'>
+          {options.map((option) => <View key={option.id} className='flash-dialogue__choice atuan-first-dialogue__branded-choice' role='button' aria-label={option.label} onClick={() => { if (!disabled) onStateChange({ ...progress, arrivalReplyId: option.id }) }}><ChoiceIcon kind={option.icon} /><Text className='flash-dialogue__choice-text'>{option.label}</Text></View>)}
+        </View>
+      </View>
+    )
+  }
 
   if (progress.highlightOrder.length < ATUAN_FIRST_ACT_HIGHLIGHTS.length) {
     return (
@@ -322,23 +357,11 @@ export function AtuanFirstEncounterDialogue({
   }
 
   if (!progress.benchReached) {
-    const nextCard = ATUAN_FIRST_ACT_CARDS.find((item) => !progress.sortedCardIds.includes(item.id))
     return (
       <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue'>
         {storyCopy}
-        <Text className='atuan-first-dialogue__prompt'>和阿团整理三张卡</Text>
-        {nextCard ? (
-          <View className='atuan-first-dialogue__sorting-game' data-testid='atuan-card-sorting-game'>
-            <Text className='atuan-first-dialogue__sorting-card'>{nextCard.label}</Text>
-            <View className='flash-dialogue__story-choices'>
-              <View className='flash-dialogue__choice' role='button' aria-label={`整理${nextCard.label}`} onClick={() => {
-                if (disabled) return
-                const sortedCardIds = [...progress.sortedCardIds, nextCard.id]
-                onStateChange({ ...progress, sortedCardIds, benchReached: sortedCardIds.length === ATUAN_FIRST_ACT_CARDS.length })
-              }}><Text className='flash-dialogue__choice-text'>放到合适的位置</Text></View>
-            </View>
-          </View>
-        ) : null}
+        <Text className='atuan-first-dialogue__prompt'>阿团把三张卡放到你们中间。</Text>
+        <View className='flash-dialogue__choice atuan-first-dialogue__branded-choice' role='button' aria-label='和阿团一起整理卡片' onClick={() => { if (!disabled) onOpenGame() }}><ChoiceIcon kind='forward' /><Text className='flash-dialogue__choice-text'>和阿团一起整理卡片</Text></View>
       </View>
     )
   }
@@ -353,10 +376,10 @@ export function AtuanFirstEncounterDialogue({
         hoverClass={disabled ? '' : 'atuan-first-dialogue__continue--pressed'}
         onClick={() => { if (!disabled) onComplete(toAtuanFirstActSubmission(progress)) }}
         role='button'
-        aria-label='和阿团一起整理卡片'
+        aria-label='把整理好的卡片交给阿团'
         aria-disabled={disabled}
       >
-        <Text className='atuan-first-dialogue__continue-text'>和阿团一起整理卡片</Text>
+        <Text className='atuan-first-dialogue__continue-text'>把整理好的卡片交给阿团</Text>
       </View>
     </View>
   )

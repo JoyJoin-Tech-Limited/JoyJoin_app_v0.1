@@ -283,9 +283,10 @@ describe("formal Flash story runtime policy", () => {
     const outcome = resolveAtuanFirstActOutcome(encounter.id, {
       ...progress,
       followupId: "offer_help",
+      arrivalReplyId: "turn_face_down",
       benchReached: true,
       highlightOrder: ["fold", "string", "blank_name"],
-      sortedCardIds: ["city", "habit", "private_time"],
+      cardPlacements: [{ cardId: "city", destinationId: "keep" }, { cardId: "habit", destinationId: "return" }, { cardId: "private_time", destinationId: "cover" }],
     });
     const storyPath = toAtuanFirstActSubmission(outcome.progress);
     const completed = {
@@ -343,9 +344,10 @@ describe("formal Flash story runtime policy", () => {
     const storyPath = toAtuanFirstActSubmission({
       ...progress,
       followupId: "offer_help",
+      arrivalReplyId: "turn_face_down",
       benchReached: true,
       highlightOrder: ["fold", "string", "blank_name"],
-      sortedCardIds: ["city", "habit", "private_time"],
+      cardPlacements: [{ cardId: "city", destinationId: "keep" }, { cardId: "habit", destinationId: "return" }, { cardId: "private_time", destinationId: "cover" }],
     });
 
     await expect(answerFlashEncounter({
@@ -501,9 +503,10 @@ describe("formal Flash story runtime policy", () => {
     const outcome = resolveAtuanFirstActOutcome(encounter.id, {
       ...progress,
       followupId: "move_forward",
+      arrivalReplyId: "count_cards",
       benchReached: true,
       highlightOrder: ["fold", "string", "blank_name"],
-      sortedCardIds: ["city", "habit", "private_time"],
+      cardPlacements: [{ cardId: "city", destinationId: "keep" }, { cardId: "habit", destinationId: "return" }, { cardId: "private_time", destinationId: "cover" }],
     });
 
     const result = await answerFlashEncounter({

@@ -1,12 +1,15 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FlashStoryUnit } from './FlashStoryUnit'
 
 const storage = new Map<string, unknown>()
-vi.mock('@tarojs/taro', () => ({ default: {
+let didShowCallback: (() => void) | null = null
+vi.mock('@tarojs/taro', () => ({ useDidShow: (callback: () => void) => { didShowCallback = callback }, default: {
   getStorageSync: (key: string) => storage.get(key),
   setStorageSync: (key: string, value: unknown) => storage.set(key, value),
   removeStorageSync: (key: string) => storage.delete(key),
+  navigateTo: vi.fn(),
+  navigateBack: vi.fn(),
 } }))
 vi.mock('@tarojs/components', () => ({
   View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>,
@@ -58,14 +61,19 @@ function reachConversation(action: '接住卡片' | '护住纸袋' = '护住纸�
 }
 
 function completeConversation() {
+  fireEvent.click(screen.getByRole('button', { name: '它们原来有顺序？' }))
   fireEvent.click(screen.getByRole('button', { name: '查看新折痕' }))
   fireEvent.click(screen.getByRole('button', { name: '查看褪色的紫绳' }))
   fireEvent.click(screen.getByRole('button', { name: '查看被擦掉的名字' }))
   fireEvent.click(screen.getByRole('button', { name: '如果他不来，我们也别让这趟白跑。' }))
-  fireEvent.click(screen.getByRole('button', { name: '整理雨后便利店门口的橘猫' }))
-  fireEvent.click(screen.getByRole('button', { name: '整理总把靠窗的位置留空' }))
-  fireEvent.click(screen.getByRole('button', { name: '整理每周固定出现的时间' }))
+  storage.set('joyjoin_flash_story_unit_v2_s1-p1-atuan_enc-atuan_episode-atuan-1:atuan-cards', [
+    { cardId: 'city', destinationId: 'keep' },
+    { cardId: 'habit', destinationId: 'return' },
+    { cardId: 'private_time', destinationId: 'cover' },
+  ])
   fireEvent.click(screen.getByRole('button', { name: '和阿团一起整理卡片' }))
+  act(() => { didShowCallback?.() })
+  fireEvent.click(screen.getByRole('button', { name: '把整理好的卡片交给阿团' }))
 }
 
 afterEach(cleanup)
@@ -115,16 +123,16 @@ describe('FlashStoryUnit production flow', () => {
     expect(screen.getByTestId('atuan-conversation-character')).toHaveAttribute('src', 'atuan.webp')
     expect(screen.queryByTestId('npc-speech')).not.toBeInTheDocument()
     expect(screen.queryByText('水豚')).not.toBeInTheDocument()
-    expect(screen.getByTestId('atuan-scene-narration')).toHaveTextContent('你俯身护住纸袋')
-    expect(screen.getByTestId('atuan-scene-dialogue')).toHaveTextContent('风今天好像比我更着急')
-    expect(screen.getByTestId('atuan-scene-dialogue')).not.toHaveTextContent('你俯身护住纸袋')
+    expect(screen.getByTestId('atuan-scene-narration')).toHaveTextContent('你先按住纸袋')
+    expect(screen.getByTestId('atuan-scene-dialogue')).toHaveTextContent('一张一张和风讲道理')
+    expect(screen.getByTestId('atuan-scene-dialogue')).not.toHaveTextContent('你先按住纸袋')
     expect(submit).not.toHaveBeenCalled()
     completeConversation()
 
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({
       questionId: firstQuestion.id,
       optionId: 'atuan-b',
-      storyPath: expect.objectContaining({ version: 'atuan-first-act-v3', approachId: 'notice_again' }),
+      storyPath: expect.objectContaining({ version: 'atuan-first-act-v4', approachId: 'notice_again' }),
     }))
   })
 
@@ -147,7 +155,7 @@ describe('FlashStoryUnit production flow', () => {
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({
       questionId: firstQuestion.id,
       optionId: 'atuan-b',
-      storyPath: expect.objectContaining({ version: 'atuan-first-act-v3', approachId: 'notice_again' }),
+      storyPath: expect.objectContaining({ version: 'atuan-first-act-v4', approachId: 'notice_again' }),
     }))
   })
 
@@ -158,8 +166,8 @@ describe('FlashStoryUnit production flow', () => {
 
     renderFirst()
     expect(screen.getByTestId('atuan-conversation-background')).toHaveAttribute('src', 'park.webp')
-    expect(screen.getByTestId('atuan-scene-narration')).toHaveTextContent('你伸手接住被风掀起的卡片')
-    expect(screen.getByRole('button', { name: '查看新折痕' })).toBeInTheDocument()
+    expect(screen.getByTestId('atuan-scene-narration')).toHaveTextContent('你伸手按住飞到半空的卡片')
+    expect(screen.getByRole('button', { name: '这张有什么不一样？' })).toBeInTheDocument()
     expect(screen.queryByText('接住卡片')).not.toBeInTheDocument()
   })
 

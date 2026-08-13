@@ -1243,6 +1243,32 @@ page {
     font-size: $font-size-base;
     line-height: $line-height-normal;
   }
+
+  &__branded-choice {
+    gap: 16rpx;
+  }
+
+  .atuan-choice-icon {
+    position: relative;
+    width: 56rpx;
+    height: 56rpx;
+    flex: 0 0 auto;
+    border-radius: 18rpx;
+    background: rgba($color-primary, 0.12);
+
+    &__shape {
+      position: absolute;
+      inset: 14rpx;
+      border: 3rpx solid $color-primary;
+      border-radius: 6rpx;
+    }
+
+    &--question &__shape { border-radius: $radius-circle; }
+    &--cover &__shape { border-top-width: 10rpx; }
+    &--lines &__shape { border-right: 0; border-left: 0; border-radius: 0; }
+    &--count &__shape { box-shadow: 9rpx 0 0 -5rpx $color-primary, -9rpx 0 0 -5rpx $color-primary; }
+    &--forward &__shape { border-top: 0; border-left: 0; border-radius: 0; transform: rotate(-45deg); }
+  }
   display: flex;
   flex-direction: column;
   gap: 16rpx;
@@ -2246,7 +2272,7 @@ page {
     inset: 0;
     background:
       linear-gradient(180deg, rgba($color-text-primary-warm, 0.04) 0%, transparent 48%, rgba($color-text-primary, 0.12) 100%),
-      rgba($color-bg-warm-to, 0.035);
+      rgba($color-bg-warm-to, 0.015);
     pointer-events: none;
   }
 
@@ -2254,7 +2280,7 @@ page {
     z-index: 2;
     opacity: 1;
     animation: none;
-    filter: brightness(0.97) saturate(0.88) contrast(0.98) drop-shadow(0 12rpx 16rpx rgba($color-text-primary-warm, 0.16));
+    filter: brightness(1.01) saturate(0.98) contrast(1.02) drop-shadow(0 12rpx 16rpx rgba($color-text-primary-warm, 0.14));
   }
 
   &__cutout--bag {

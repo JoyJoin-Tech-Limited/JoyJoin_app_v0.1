@@ -21,10 +21,11 @@ describe('Atuan first-act arrival story', () => {
     const restored = restoreAtuanFirstActProgress('encounter-1', {
       ...progress,
       followupId: 'ask_who',
+      arrivalReplyId: 'ask_special',
       benchReached: false,
     })
     expect(restored).toEqual(expect.objectContaining({
-      version: 'atuan-first-act-v3',
+      version: 'atuan-first-act-v4',
       approachId: 'notice_wait',
       followupId: 'ask_who',
       benchReached: false,
@@ -36,9 +37,14 @@ describe('Atuan first-act arrival story', () => {
       const progress = {
         ...createAtuanFirstActProgress('encounter-2', 'notice_again'),
         followupId: followup.id,
+        arrivalReplyId: 'ask_order' as const,
         benchReached: true,
         highlightOrder: ['fold', 'string', 'blank_name'] as const,
-        sortedCardIds: ['city', 'habit', 'private_time'] as const,
+        cardPlacements: [
+          { cardId: 'city', destinationId: 'keep' },
+          { cardId: 'habit', destinationId: 'return' },
+          { cardId: 'private_time', destinationId: 'cover' },
+        ] as const,
       }
       return resolveAtuanFirstActOutcome('encounter-2', progress).ending.id
     }))
@@ -49,9 +55,14 @@ describe('Atuan first-act arrival story', () => {
     const progress = {
       ...createAtuanFirstActProgress('encounter-3', 'notice_wait'),
       followupId: 'offer_help' as const,
+      arrivalReplyId: 'turn_face_down' as const,
       benchReached: true,
       highlightOrder: ['fold', 'string', 'blank_name'] as const,
-      sortedCardIds: ['city', 'habit', 'private_time'] as const,
+      cardPlacements: [
+        { cardId: 'city', destinationId: 'keep' },
+        { cardId: 'habit', destinationId: 'return' },
+        { cardId: 'private_time', destinationId: 'cover' },
+      ] as const,
     }
     const submission = toAtuanFirstActSubmission(progress)
     expect(validateAtuanFirstActSubmission('encounter-3', submission)?.outcome.ending.id).toBe('helped_first')

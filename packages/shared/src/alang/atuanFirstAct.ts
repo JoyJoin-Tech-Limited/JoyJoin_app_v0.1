@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const ATUAN_FIRST_ACT_VERSION = 'atuan-first-act-v3' as const
+export const ATUAN_FIRST_ACT_VERSION = 'atuan-first-act-v4' as const
 
 export const ATUAN_FIRST_ACT_HIGHLIGHTS = [
   { id: 'fold', label: '新折痕', reply: '阿团用指腹压住折痕：“不是我折的。有人来过，又没等我回来。”' },
@@ -17,13 +17,13 @@ export const ATUAN_FIRST_ACT_CARDS = [
 export const ATUAN_FIRST_ACT_APPROACHES = [
   {
     id: 'notice_wait',
-    label: '你等了很久吗？',
-    reply: '“也没有很久。”阿团看了一眼已经亮起的路灯，“只是它今天亮得比我有耐心。”',
+    label: '接住卡片',
+    reply: '“谢谢。这张要是真飞远了，我可能得追到公园门口。”阿团接过卡，看到背面时停了一下，“……偏偏是这张。”',
   },
   {
     id: 'notice_again',
-    label: '你刚才说“又”？',
-    reply: '阿团顿了一下：“上次也有人说会来。可能大家都觉得，水豚比较等得起。”',
+    label: '护住纸袋',
+    reply: '“还好。”阿团蹲下去捡长椅下的卡，“要是五张一起散开，我大概会站在这里，一张一张和风讲道理。”',
   },
 ] as const
 
@@ -69,32 +69,44 @@ export const ATUAN_FIRST_ACT_ENDINGS = [
 ] as const
 
 export type AtuanFirstActApproachId = typeof ATUAN_FIRST_ACT_APPROACHES[number]['id']
+export type AtuanFirstActArrivalReplyId = 'ask_special' | 'turn_face_down' | 'ask_order' | 'count_cards'
 export type AtuanFirstActFollowupId = typeof ATUAN_FIRST_ACT_FOLLOWUPS[number]['id']
 export type AtuanFirstActEndingId = typeof ATUAN_FIRST_ACT_ENDINGS[number]['id']
+export type AtuanFirstActCardId = typeof ATUAN_FIRST_ACT_CARDS[number]['id']
+export type AtuanFirstActCardDestinationId = 'keep' | 'return' | 'cover'
+export interface AtuanFirstActCardPlacement {
+  cardId: AtuanFirstActCardId
+  destinationId: AtuanFirstActCardDestinationId
+}
 
 export interface AtuanFirstActProgress {
   version: typeof ATUAN_FIRST_ACT_VERSION
   approachId: AtuanFirstActApproachId
+  arrivalReplyId: AtuanFirstActArrivalReplyId | null
   followupId: AtuanFirstActFollowupId | null
   benchReached: boolean
   highlightOrder: Array<typeof ATUAN_FIRST_ACT_HIGHLIGHTS[number]['id']>
-  sortedCardIds: Array<typeof ATUAN_FIRST_ACT_CARDS[number]['id']>
+  cardPlacements: AtuanFirstActCardPlacement[]
 }
 
 const approachIdSchema = z.enum(['notice_wait', 'notice_again'])
+const arrivalReplyIdSchema = z.enum(['ask_special', 'turn_face_down', 'ask_order', 'count_cards'])
 const followupIdSchema = z.enum(['ask_who', 'offer_help', 'move_forward'])
 const endingIdSchema = z.enum(['felt_seen', 'helped_first', 'shared_the_trip'])
 const highlightIdSchema = z.enum(['fold', 'string', 'blank_name'])
 const cardIdSchema = z.enum(['city', 'habit', 'private_time'])
+const cardDestinationIdSchema = z.enum(['keep', 'return', 'cover'])
+const cardPlacementSchema = z.object({ cardId: cardIdSchema, destinationId: cardDestinationIdSchema }).strict()
 
 export const atuanFirstActSubmissionSchema = z.object({
   version: z.literal(ATUAN_FIRST_ACT_VERSION),
   approachId: approachIdSchema,
+  arrivalReplyId: arrivalReplyIdSchema,
   followupId: followupIdSchema,
   actionId: z.literal(ATUAN_FIRST_ACT_ACTION.id),
   endingId: endingIdSchema,
   highlightOrder: z.array(highlightIdSchema).length(3),
-  sortedCardIds: z.array(cardIdSchema).length(3),
+  cardPlacements: z.array(cardPlacementSchema).length(3),
 }).strict()
 
 export type AtuanFirstActSubmission = z.infer<typeof atuanFirstActSubmissionSchema>
@@ -113,10 +125,11 @@ export function createAtuanFirstActProgress(
   return {
     version: ATUAN_FIRST_ACT_VERSION,
     approachId,
+    arrivalReplyId: null,
     followupId: null,
     benchReached: false,
     highlightOrder: [],
-    sortedCardIds: [],
+    cardPlacements: [],
   }
 }
 
@@ -124,12 +137,13 @@ export function restoreAtuanFirstActProgress(_encounterId: string, value: unknow
   const parsed = z.object({
     version: z.literal(ATUAN_FIRST_ACT_VERSION),
     approachId: approachIdSchema,
+    arrivalReplyId: arrivalReplyIdSchema.nullable(),
     followupId: followupIdSchema.nullable(),
     benchReached: z.boolean(),
     highlightOrder: z.array(highlightIdSchema),
-    sortedCardIds: z.array(cardIdSchema),
+    cardPlacements: z.array(cardPlacementSchema),
   }).strict().safeParse(value)
-  if (!parsed.success || (parsed.data.benchReached && (!parsed.data.followupId || parsed.data.highlightOrder.length !== 3 || parsed.data.sortedCardIds.length !== 3))) return null
+  if (!parsed.success || (parsed.data.benchReached && (!parsed.data.followupId || parsed.data.highlightOrder.length !== 3 || parsed.data.cardPlacements.length !== 3))) return null
   return parsed.data
 }
 
@@ -141,21 +155,22 @@ function endingIdFor(progress: AtuanFirstActProgress): AtuanFirstActEndingId {
 
 export function resolveAtuanFirstActOutcome(encounterId: string, progress: AtuanFirstActProgress) {
   const restored = restoreAtuanFirstActProgress(encounterId, progress)
-  if (!restored?.followupId || !restored.benchReached || restored.highlightOrder.length !== 3 || restored.sortedCardIds.length !== 3) throw new Error('ATUAN_FIRST_ACT_INCOMPLETE')
+  if (!restored?.arrivalReplyId || !restored.followupId || !restored.benchReached || restored.highlightOrder.length !== 3 || restored.cardPlacements.length !== 3) throw new Error('ATUAN_FIRST_ACT_INCOMPLETE')
   const ending = ATUAN_FIRST_ACT_ENDINGS.find((item) => item.id === endingIdFor(restored))!
   return { progress: restored, ending, responseCopy: ending.responseCopy }
 }
 
 export function toAtuanFirstActSubmission(progress: AtuanFirstActProgress): AtuanFirstActSubmission {
-  if (!progress.followupId || !progress.benchReached) throw new Error('ATUAN_FIRST_ACT_INCOMPLETE')
+  if (!progress.arrivalReplyId || !progress.followupId || !progress.benchReached) throw new Error('ATUAN_FIRST_ACT_INCOMPLETE')
   return {
     version: ATUAN_FIRST_ACT_VERSION,
     approachId: progress.approachId,
+    arrivalReplyId: progress.arrivalReplyId,
     followupId: progress.followupId,
     actionId: ATUAN_FIRST_ACT_ACTION.id,
     endingId: endingIdFor(progress),
     highlightOrder: progress.highlightOrder,
-    sortedCardIds: progress.sortedCardIds,
+    cardPlacements: progress.cardPlacements,
   }
 }
 
@@ -165,10 +180,11 @@ export function validateAtuanFirstActSubmission(_encounterId: string, value: unk
   const progress: AtuanFirstActProgress = {
     version: ATUAN_FIRST_ACT_VERSION,
     approachId: parsed.data.approachId,
+    arrivalReplyId: parsed.data.arrivalReplyId,
     followupId: parsed.data.followupId,
     benchReached: true,
     highlightOrder: parsed.data.highlightOrder,
-    sortedCardIds: parsed.data.sortedCardIds,
+    cardPlacements: parsed.data.cardPlacements,
   }
   const outcome = resolveAtuanFirstActOutcome('', progress)
   return outcome.ending.id === parsed.data.endingId ? { submission: parsed.data, outcome } : null
@@ -177,10 +193,11 @@ export function validateAtuanFirstActSubmission(_encounterId: string, value: unk
 export function atuanFirstActStoryAnswers(submission: AtuanFirstActSubmission) {
   return [
     { questionId: 'atuan-first-act:approach', optionId: submission.approachId, tags: ['story_path', ATUAN_FIRST_ACT_VERSION] },
+    { questionId: 'atuan-first-act:arrival-reply', optionId: submission.arrivalReplyId, tags: ['story_path', ATUAN_FIRST_ACT_VERSION] },
     { questionId: 'atuan-first-act:followup', optionId: submission.followupId, tags: ['story_path', ATUAN_FIRST_ACT_VERSION] },
     { questionId: 'atuan-first-act:action', optionId: submission.actionId, tags: ['story_path', ATUAN_FIRST_ACT_VERSION] },
     { questionId: 'atuan-first-act:ending', optionId: submission.endingId, tags: ['story_path', ATUAN_FIRST_ACT_VERSION] },
     ...submission.highlightOrder.map((optionId) => ({ questionId: 'atuan-first-act:highlight', optionId, tags: ['story_memory', ATUAN_FIRST_ACT_VERSION] })),
-    ...submission.sortedCardIds.map((optionId) => ({ questionId: 'atuan-first-act:sorting', optionId, tags: ['story_memory', ATUAN_FIRST_ACT_VERSION] })),
+    ...submission.cardPlacements.map(({ cardId, destinationId }) => ({ questionId: `atuan-first-act:card:${cardId}`, optionId: destinationId, tags: ['story_memory', ATUAN_FIRST_ACT_VERSION] })),
   ]
 }

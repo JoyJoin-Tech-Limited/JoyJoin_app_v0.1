@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
+import { useDidShow } from '@tarojs/taro'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { getFlashStoryUnitDefinition, type FlashStoryUnitId } from '@shared/alang/flashStorySeason'
 import {
@@ -10,6 +11,7 @@ import {
 import type { FlashDialogueQuestion, FlashEncounterView, FlashNpcReference } from '../../../lib/alang/flashTypes'
 import { flashStoryAnalytics, type FlashStoryAnalyticsEventType } from '../../../lib/analytics/flashStoryAnalytics'
 import { FlashButton, FlashNpcDialogueScene } from '../FlashUi'
+import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import {
   AtuanFirstEncounterDialogue,
   AtuanFirstConversationScene,
@@ -85,6 +87,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const emittedRef = useRef(new Set<FlashStoryAnalyticsEventType>(runtime.analyticsSent))
   const restoredSolvedRef = useRef(runtime.stage === 'OBJECT_SUCCESS')
   const [atuanDialogue, setAtuanDialogue] = useState<AtuanDialogueState>(EMPTY_ATUAN_DIALOGUE_STATE)
+  const atuanGameKey = `${storageKey}:atuan-cards`
   runtimeRef.current = runtime
 
   const transition = useCallback((action: Parameters<typeof storyUnitReducer>[1]) => {
@@ -95,6 +98,14 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     }
     dispatch(action)
   }, [serverSettled, storageKey])
+
+  useDidShow(() => {
+    if (definition.unitId !== 's1-p1-atuan') return
+    const cardPlacements = Taro.getStorageSync(atuanGameKey)
+    if (!Array.isArray(cardPlacements) || cardPlacements.length !== 3 || !runtimeRef.current.atuanFirstAct) return
+    transition({ type: 'ATUAN_FIRST_ACT_UPDATED', progress: { ...runtimeRef.current.atuanFirstAct, cardPlacements, benchReached: true } })
+    Taro.removeStorageSync(atuanGameKey)
+  })
 
   const emit = useCallback((event: FlashStoryAnalyticsEventType) => {
     if (emittedRef.current.has(event)) return
@@ -251,6 +262,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                         disabled={submitState === 'submitting'}
                         onStateChange={(progress) => transition({ type: 'ATUAN_FIRST_ACT_UPDATED', progress })}
                         onComplete={completeObject}
+                        onOpenGame={() => { void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangAtuanCards}?key=${encodeURIComponent(atuanGameKey)}&approach=${runtime.atuanFirstAct?.approachId ?? 'notice_wait'}` }) }}
                       />
                     ) : isAtuanStory && runtime.choice ? (
                       <AtuanStoryDialogue

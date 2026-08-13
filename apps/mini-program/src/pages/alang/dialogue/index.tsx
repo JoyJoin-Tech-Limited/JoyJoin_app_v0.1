@@ -21,7 +21,7 @@ import {
 import type { FlashCanonicalSnapshot } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
-import atuanArrivalScene from '../assets/ui/flash-atuan-park-clean-v2.jpg'
+import atuanArrivalScene from '../assets/ui/flash-atuan-park-clean-v3.jpg'
 import atuanArrivalCharacter from '../assets/ui/flash-atuan-character-cutout-v2.png'
 import atuanArrivalBag from '../assets/ui/flash-atuan-bag-cutout-v2.png'
 import '../flash.scss'

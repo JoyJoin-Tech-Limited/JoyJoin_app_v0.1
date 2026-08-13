@@ -1,0 +1,26 @@
+@import '../../../../styles/variables';
+.atuan-cards { min-height: 100vh; min-height: 100dvh; box-sizing: border-box; padding: calc(env(safe-area-inset-top) + 40rpx) 32rpx calc(env(safe-area-inset-bottom) + 40rpx); color: $color-text-primary-warm; background: $color-bg-warm-to; font-family: $font-ui;
+  &__eyebrow,&__title,&__copy,&__card-count,&__card-copy,&__atuan-copy { display:block; }
+  &__eyebrow { color:$color-primary-dark; font-size:$font-size-xs; font-weight:$font-weight-bold; letter-spacing:2rpx; }
+  &__title { margin-top:12rpx; font-family:$font-cn-display; font-size:$font-size-2xl; font-weight:$font-weight-semibold; }
+  &__copy { margin-top:12rpx; color:$color-text-secondary-on-light; font-size:$font-size-sm; line-height:$line-height-relaxed; }
+  &__progress { display:flex; justify-content:center; gap:12rpx; margin-top:32rpx; }
+  &__progress-dot { width:40rpx; height:8rpx; border-radius:$radius-pill; background:rgba($color-primary,.14); transition:background 180ms ease-out, transform 180ms ease-out; }
+  &__progress-dot--active { background:$color-primary; transform:scaleX(1.08); }
+  &__card { position:relative; margin:48rpx auto 32rpx; min-height:320rpx; padding:48rpx 40rpx; border:2rpx solid rgba($color-primary,.14); border-radius:$card-radius-lg; background:$color-surface; box-shadow:$shadow-card; box-sizing:border-box; }
+  &__card-string { position:absolute; top:-24rpx; left:50%; width:72rpx; height:48rpx; border:5rpx solid $color-primary; border-bottom:0; border-radius:40rpx 40rpx 0 0; transform:translateX(-50%); }
+  &__card-count { color:$color-text-tertiary-on-light; font-size:$font-size-xs; }
+  &__card-copy { margin-top:64rpx; font-size:$font-size-xl; font-weight:$font-weight-semibold; line-height:$line-height-relaxed; text-align:center; }
+  &__destinations { display:flex; flex-direction:column; gap:16rpx; }
+  &__destination { display:flex; min-height:96rpx; padding:16rpx 24rpx; align-items:center; gap:20rpx; border:2rpx solid rgba($color-primary,.14); border-radius:$card-radius-sm; background:$color-bg-tint-purple; font-size:$font-size-base; font-weight:$font-weight-semibold; transition:transform 160ms ease-out; }
+  &__destination--pressed { transform:scale(.985); }
+  &__icon { position:relative; width:56rpx; height:56rpx; flex:0 0 auto; border-radius:18rpx; background:rgba($color-primary,.12); }
+  &__icon-shape { position:absolute; inset:14rpx; border:3rpx solid $color-primary; border-radius:6rpx; }
+  &__icon--spark .atuan-cards__icon-shape { inset:17rpx; border-radius:$radius-circle; transform:rotate(45deg); }
+  &__icon--cover .atuan-cards__icon-shape { border-top-width:10rpx; }
+  &__feedback { padding:28rpx; border:2rpx solid rgba($color-primary,.14); border-radius:$card-radius; background:$color-bg-tint-purple; }
+  &__feedback-name { display:block; color:$color-primary-dark; font-size:$font-size-xs; font-weight:$font-weight-bold; letter-spacing:2rpx; }
+  &__feedback-copy { display:block; margin-top:12rpx; font-size:$font-size-base; line-height:$line-height-relaxed; }
+  &__continue { display:flex; min-height:88rpx; margin-top:24rpx; align-items:center; justify-content:center; border-radius:$radius-pill; color:$color-surface; background:$color-primary; font-size:$font-size-base; font-weight:$font-weight-bold; }
+  &__atuan-copy { margin-top:28rpx; color:$color-text-secondary-on-light; font-size:$font-size-sm; line-height:$line-height-relaxed; text-align:center; }
+}

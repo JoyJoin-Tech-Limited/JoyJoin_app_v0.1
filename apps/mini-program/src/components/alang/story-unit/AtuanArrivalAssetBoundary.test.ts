@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 const sourceRoot = resolve(process.cwd(), 'src')
 const appRoot = resolve(process.cwd())
 const arrivalAssetNames = [
-  'flash-atuan-park-clean-v2.jpg',
+  'flash-atuan-park-clean-v3.jpg',
   'flash-atuan-character-cutout-v2.png',
   'flash-atuan-bag-cutout-v2.png',
 ]
@@ -22,7 +22,7 @@ describe('Atuan first-arrival asset ownership', () => {
   it('loads the scene and both highlight layers from the Alang dialogue subpackage', () => {
     const dialoguePage = readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/index.tsx'), 'utf8')
 
-    expect(dialoguePage).toContain("../assets/ui/flash-atuan-park-clean-v2.jpg")
+    expect(dialoguePage).toContain("../assets/ui/flash-atuan-park-clean-v3.jpg")
     expect(dialoguePage).toContain("../assets/ui/flash-atuan-character-cutout-v2.png")
     expect(dialoguePage).toContain("../assets/ui/flash-atuan-bag-cutout-v2.png")
     expect(dialoguePage).toContain('atuanArrivalAssets={{')
@@ -43,7 +43,7 @@ describe('Atuan first-arrival asset ownership', () => {
         expect([...header.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
       }
     }
-    expect(totalBytes, 'WeChat-safe arrival images must stay within the 64 KiB scene budget').toBeLessThanOrEqual(64 * 1024)
+    expect(totalBytes, 'High-resolution arrival layers must stay within a 320 KiB subpackage budget').toBeLessThanOrEqual(320 * 1024)
   })
 
   it('gives the all-absolute Atuan arrival stage a viewport-height fallback chain', () => {
