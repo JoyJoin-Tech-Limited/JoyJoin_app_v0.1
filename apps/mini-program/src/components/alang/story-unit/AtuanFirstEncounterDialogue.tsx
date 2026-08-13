@@ -1,8 +1,9 @@
 import { Image, Text, View } from '@tarojs/components'
 import type { FlashStoryUnitId } from '@shared/alang/flashStorySeason'
 import {
-  ATUAN_FIRST_ACT_ACTION,
+  ATUAN_FIRST_ACT_CARDS,
   ATUAN_FIRST_ACT_FOLLOWUPS,
+  ATUAN_FIRST_ACT_HIGHLIGHTS,
   resolveAtuanFirstActOutcome,
   toAtuanFirstActSubmission,
   type AtuanFirstActProgress,
@@ -263,6 +264,38 @@ export function AtuanFirstEncounterDialogue({
     </View>
   )
 
+  const latestHighlight = progress.highlightOrder.length
+    ? ATUAN_FIRST_ACT_HIGHLIGHTS.find((item) => item.id === progress.highlightOrder[progress.highlightOrder.length - 1])
+    : null
+
+  if (progress.highlightOrder.length < ATUAN_FIRST_ACT_HIGHLIGHTS.length) {
+    return (
+      <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue'>
+        {storyCopy}
+        <View className='atuan-first-dialogue__highlight-story' aria-label='查看纸袋里的细节'>
+          <Text>纸袋没有封口。你先后注意到：</Text>
+          {ATUAN_FIRST_ACT_HIGHLIGHTS.map((item) => {
+            const seen = progress.highlightOrder.includes(item.id)
+            return (
+              <View
+                key={item.id}
+                className={`atuan-first-dialogue__inline-highlight${seen ? ' atuan-first-dialogue__inline-highlight--seen' : ''}`}
+                onClick={() => {
+                  if (!disabled && !seen) onStateChange({ ...progress, highlightOrder: [...progress.highlightOrder, item.id] })
+                }}
+                role='button'
+                aria-label={`查看${item.label}`}
+                aria-disabled={disabled || seen}
+              ><Text>{item.label}{item.id === 'blank_name' ? '' : '、'}</Text></View>
+            )
+          })}
+          <Text>。阿团没有催你。</Text>
+        </View>
+        {latestHighlight ? <Text className='atuan-first-dialogue__highlight-reply'>“{latestHighlight.reply}”</Text> : null}
+      </View>
+    )
+  }
+
   if (!progress.followupId) {
     return (
       <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue'>
@@ -289,27 +322,23 @@ export function AtuanFirstEncounterDialogue({
   }
 
   if (!progress.benchReached) {
+    const nextCard = ATUAN_FIRST_ACT_CARDS.find((item) => !progress.sortedCardIds.includes(item.id))
     return (
       <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue'>
         {storyCopy}
-        <View
-          className='atuan-first-dialogue__scene-action'
-          hoverClass={disabled ? '' : 'atuan-first-dialogue__scene-action--pressed'}
-          onClick={() => { if (!disabled) onStateChange({ ...progress, benchReached: true }) }}
-          role='button'
-          aria-label={ATUAN_FIRST_ACT_ACTION.label}
-          aria-disabled={disabled}
-        >
-          <View className='atuan-first-dialogue__scene-action-mark' aria-hidden='true'>
-            <View className='atuan-first-dialogue__scene-action-ring' />
-            <View className='atuan-first-dialogue__scene-action-dot' />
+        <Text className='atuan-first-dialogue__prompt'>和阿团整理三张卡</Text>
+        {nextCard ? (
+          <View className='atuan-first-dialogue__sorting-game' data-testid='atuan-card-sorting-game'>
+            <Text className='atuan-first-dialogue__sorting-card'>{nextCard.label}</Text>
+            <View className='flash-dialogue__story-choices'>
+              <View className='flash-dialogue__choice' role='button' aria-label={`整理${nextCard.label}`} onClick={() => {
+                if (disabled) return
+                const sortedCardIds = [...progress.sortedCardIds, nextCard.id]
+                onStateChange({ ...progress, sortedCardIds, benchReached: sortedCardIds.length === ATUAN_FIRST_ACT_CARDS.length })
+              }}><Text className='flash-dialogue__choice-text'>放到合适的位置</Text></View>
+            </View>
           </View>
-          <View className='atuan-first-dialogue__scene-action-copy'>
-            <Text className='atuan-first-dialogue__scene-action-kicker'>现场行动</Text>
-            <Text className='atuan-first-dialogue__scene-action-label'>{ATUAN_FIRST_ACT_ACTION.label}</Text>
-          </View>
-          <Text className='atuan-first-dialogue__scene-action-arrow' aria-hidden='true'>›</Text>
-        </View>
+        ) : null}
       </View>
     )
   }

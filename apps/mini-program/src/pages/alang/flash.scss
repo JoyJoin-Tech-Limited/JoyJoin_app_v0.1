@@ -1197,6 +1197,52 @@ page {
 }
 
 .atuan-first-dialogue {
+  &__highlight-story {
+    display: block;
+    color: $color-text-primary-warm;
+    font-size: $font-size-base;
+    line-height: $line-height-loose;
+  }
+
+  &__inline-highlight {
+    display: inline-flex;
+    margin: 0 6rpx;
+    color: $color-primary;
+    font-weight: $font-weight-semibold;
+    text-decoration: underline;
+    text-decoration-color: rgba($color-primary, 0.3);
+    text-decoration-thickness: 4rpx;
+    text-underline-offset: 6rpx;
+
+    &--seen {
+      color: $color-text-tertiary;
+      text-decoration-color: rgba($color-text-tertiary, 0.18);
+    }
+  }
+
+  &__highlight-reply {
+    display: block;
+    margin-top: 20rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    line-height: $line-height-relaxed;
+  }
+
+  &__sorting-game {
+    margin-top: 20rpx;
+    padding: 24rpx;
+    border: 2rpx solid rgba($color-primary, 0.12);
+    border-radius: $card-radius-sm;
+    background: $color-bg-tint-purple;
+  }
+
+  &__sorting-card {
+    display: block;
+    margin-bottom: 18rpx;
+    color: $color-text-primary-warm;
+    font-size: $font-size-base;
+    line-height: $line-height-normal;
+  }
   display: flex;
   flex-direction: column;
   gap: 16rpx;

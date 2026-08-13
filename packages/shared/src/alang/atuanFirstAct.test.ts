@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ATUAN_FIRST_ACT_HIGHLIGHTS,
   ATUAN_FIRST_ACT_FOLLOWUPS,
   createAtuanFirstActProgress,
   resolveAtuanFirstActOutcome,
@@ -9,6 +10,12 @@ import {
 } from './atuanFirstAct'
 
 describe('Atuan first-act arrival story', () => {
+  it('requires all three story highlights before the card-sorting game can settle', () => {
+    const progress = createAtuanFirstActProgress('encounter-highlight', 'notice_wait')
+    expect(() => resolveAtuanFirstActOutcome('encounter-highlight', progress)).toThrow('ATUAN_FIRST_ACT_INCOMPLETE')
+    expect(ATUAN_FIRST_ACT_HIGHLIGHTS.map((item) => item.id)).toEqual(['fold', 'string', 'blank_name'])
+  })
+
   it('persists the chosen way of meeting Atuan without replaying user copy', () => {
     const progress = createAtuanFirstActProgress('encounter-1', 'notice_wait')
     const restored = restoreAtuanFirstActProgress('encounter-1', {
@@ -17,7 +24,7 @@ describe('Atuan first-act arrival story', () => {
       benchReached: false,
     })
     expect(restored).toEqual(expect.objectContaining({
-      version: 'atuan-first-act-v2',
+      version: 'atuan-first-act-v3',
       approachId: 'notice_wait',
       followupId: 'ask_who',
       benchReached: false,
@@ -30,6 +37,8 @@ describe('Atuan first-act arrival story', () => {
         ...createAtuanFirstActProgress('encounter-2', 'notice_again'),
         followupId: followup.id,
         benchReached: true,
+        highlightOrder: ['fold', 'string', 'blank_name'] as const,
+        sortedCardIds: ['city', 'habit', 'private_time'] as const,
       }
       return resolveAtuanFirstActOutcome('encounter-2', progress).ending.id
     }))
@@ -41,6 +50,8 @@ describe('Atuan first-act arrival story', () => {
       ...createAtuanFirstActProgress('encounter-3', 'notice_wait'),
       followupId: 'offer_help' as const,
       benchReached: true,
+      highlightOrder: ['fold', 'string', 'blank_name'] as const,
+      sortedCardIds: ['city', 'habit', 'private_time'] as const,
     }
     const submission = toAtuanFirstActSubmission(progress)
     expect(validateAtuanFirstActSubmission('encounter-3', submission)?.outcome.ending.id).toBe('helped_first')

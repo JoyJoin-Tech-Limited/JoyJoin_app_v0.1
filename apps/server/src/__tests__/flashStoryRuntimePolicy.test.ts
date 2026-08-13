@@ -284,6 +284,8 @@ describe("formal Flash story runtime policy", () => {
       ...progress,
       followupId: "offer_help",
       benchReached: true,
+      highlightOrder: ["fold", "string", "blank_name"],
+      sortedCardIds: ["city", "habit", "private_time"],
     });
     const storyPath = toAtuanFirstActSubmission(outcome.progress);
     const completed = {
@@ -342,6 +344,8 @@ describe("formal Flash story runtime policy", () => {
       ...progress,
       followupId: "offer_help",
       benchReached: true,
+      highlightOrder: ["fold", "string", "blank_name"],
+      sortedCardIds: ["city", "habit", "private_time"],
     });
 
     await expect(answerFlashEncounter({
@@ -498,6 +502,8 @@ describe("formal Flash story runtime policy", () => {
       ...progress,
       followupId: "move_forward",
       benchReached: true,
+      highlightOrder: ["fold", "string", "blank_name"],
+      sortedCardIds: ["city", "habit", "private_time"],
     });
 
     const result = await answerFlashEncounter({

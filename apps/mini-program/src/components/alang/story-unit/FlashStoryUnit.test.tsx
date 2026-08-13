@@ -58,8 +58,13 @@ function reachConversation(action: '接住卡片' | '护住纸袋' = '护住纸�
 }
 
 function completeConversation() {
+  fireEvent.click(screen.getByRole('button', { name: '查看新折痕' }))
+  fireEvent.click(screen.getByRole('button', { name: '查看褪色的紫绳' }))
+  fireEvent.click(screen.getByRole('button', { name: '查看被擦掉的名字' }))
   fireEvent.click(screen.getByRole('button', { name: '如果他不来，我们也别让这趟白跑。' }))
-  fireEvent.click(screen.getByRole('button', { name: '走到阿团身边，看看那只纸袋' }))
+  fireEvent.click(screen.getByRole('button', { name: '整理雨后便利店门口的橘猫' }))
+  fireEvent.click(screen.getByRole('button', { name: '整理总把靠窗的位置留空' }))
+  fireEvent.click(screen.getByRole('button', { name: '整理每周固定出现的时间' }))
   fireEvent.click(screen.getByRole('button', { name: '和阿团一起整理卡片' }))
 }
 
@@ -119,7 +124,7 @@ describe('FlashStoryUnit production flow', () => {
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({
       questionId: firstQuestion.id,
       optionId: 'atuan-b',
-      storyPath: expect.objectContaining({ version: 'atuan-first-act-v2', approachId: 'notice_again' }),
+      storyPath: expect.objectContaining({ version: 'atuan-first-act-v3', approachId: 'notice_again' }),
     }))
   })
 
@@ -142,7 +147,7 @@ describe('FlashStoryUnit production flow', () => {
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({
       questionId: firstQuestion.id,
       optionId: 'atuan-b',
-      storyPath: expect.objectContaining({ version: 'atuan-first-act-v2', approachId: 'notice_again' }),
+      storyPath: expect.objectContaining({ version: 'atuan-first-act-v3', approachId: 'notice_again' }),
     }))
   })
 
@@ -154,7 +159,7 @@ describe('FlashStoryUnit production flow', () => {
     renderFirst()
     expect(screen.getByTestId('atuan-conversation-background')).toHaveAttribute('src', 'park.webp')
     expect(screen.getByTestId('atuan-scene-narration')).toHaveTextContent('你伸手接住被风掀起的卡片')
-    expect(screen.getByRole('button', { name: '如果他不来，我们也别让这趟白跑。' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '查看新折痕' })).toBeInTheDocument()
     expect(screen.queryByText('接住卡片')).not.toBeInTheDocument()
   })
 
