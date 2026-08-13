@@ -245,7 +245,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         default:
       }
     },
-    [currentUserId, groupId, queryClient, reducedMotion, roomState?.members, markEntering],
+    [currentUserId, groupId, queryClient, reducedMotion, roomState?.members, roomState?.eventDateTime, markEntering],
   )
 
   const { send } = useWebSocket({
@@ -327,7 +327,10 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     setSelectedUserId(member.userId)
   }, [])
 
-  const closeSheet = useCallback(() => setSelectedUserId(null), [])
+  const closeSheet = useCallback(() => {
+    haptics('light')
+    setSelectedUserId(null)
+  }, [])
 
   // ── Poke ─────────────────────────────────────────────────────────────────
   const handlePoke = useCallback(

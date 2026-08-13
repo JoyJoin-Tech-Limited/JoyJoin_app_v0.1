@@ -20,4 +20,10 @@
 
 **Tests:** `apps/server/src/__tests__/gatheringRoomState.test.ts`, `gatheringRoomPresence.test.ts` (grace/flap/multi-socket/poke throttle), `gatheringRoomAnalyticsRoutes.test.ts` — run via `npm run test -w @joyjoin/server -- gatheringRoom`.
 
-**Known follow-ups:** tier skins (破冰局/畅聊局/狂欢局 room variants); subscribe-message send pipeline for room activity nudges; no-show credit hook into the absence flow; post-event 记忆页 (memory page) from PRD §2.
+**Freeze fix + copy correctness round (2026-08-12):**
+- **Rules-of-hooks crash (卡死 root-cause):** the page had 4 early returns BEFORE 3 hook calls — when room data loaded and the room first rendered, the hook count changed mid-render and React crashed, freezing the last committed frame (the loading screen) forever. Fix: all hooks run unconditionally above every early return (committed in `1120965d4`). When touching this page, never place a hook below an early return; `react-hooks/rules-of-hooks` catches this locally but is NOT yet part of the CI gate (recorded candidate improvement).
+- **`周六见` copy was a factual lie** for any non-Saturday event: confirm-button, celebration text, and toast all hardcoded it. Now derived via `formatMeetDayLabel(eventDateTime)` (exported from `useGatheringRoomController.ts`, `WEEKDAY_LABELS` convention, falls back to neutral `活动见` when the date is missing/unparseable).
+- **Empty-members room state:** the scene wrapper now renders a centered `gathering-room__scene-empty` surface (「同桌还在路上」) instead of bare art when `memberProfiles.length === 0`.
+- **Sheet-mask close** now fires `haptics('light')` (`closeSheet` in the controller covers both the mask and the 返回 button).
+
+**Known follow-ups:** tier skins (破冰局/畅聊局/狂欢局 room variants); subscribe-message send pipeline for room activity nudges; no-show credit hook into the absence flow; post-event 记忆页 (memory page) from PRD §2; seat-anchor drift on short viewports (scene `960rpx` max-height with % anchors) needs DevTools verification on compact devices.

@@ -4,7 +4,6 @@ import { useRouter } from '@tarojs/taro'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { ROOM_POKE_EMOJIS, type RoomPokeEmoji } from '@shared/wsEvents'
 import type { EquipmentOutfitView } from '@joyjoin/shared/schema'
-import type { GatheringRoomMemberProfile } from '../../components/gathering-room/GatheringRoomScene'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import StatusCard from '../../components/ui/StatusCard'
 import Button from '../../components/ui/Button'
@@ -135,19 +134,28 @@ export default function GatheringRoomPage() {
       </View>
 
       <View className='gathering-room__scene-wrap'>
-        <GatheringRoomScene
-          memberProfiles={memberProfiles}
-          presenceByUserId={presenceByUserId}
-          ownUserId={controller.currentUserId}
-          enteringUserIds={controller.enteringUserIds}
-          playOwnDoorEntry={controller.playOwnDoorEntry}
-          pokeBadge={controller.pokeBadge}
-          firstArriverText={controller.firstArriverText}
-          celebrationText={controller.celebrationText}
-          reducedMotion={controller.reducedMotion}
-          pageVisible={controller.pageVisible}
-          onAvatarTap={controller.handleAvatarTap}
-        />
+        {memberProfiles.length === 0 ? (
+          <View className='gathering-room__scene-empty' role='status'>
+            <Text className='gathering-room__scene-empty-title'>同桌还在路上</Text>
+            <Text className='gathering-room__scene-empty-sub'>
+              匹配完成后，这桌的伙伴会陆续出现
+            </Text>
+          </View>
+        ) : (
+          <GatheringRoomScene
+            memberProfiles={memberProfiles}
+            presenceByUserId={presenceByUserId}
+            ownUserId={controller.currentUserId}
+            enteringUserIds={controller.enteringUserIds}
+            playOwnDoorEntry={controller.playOwnDoorEntry}
+            pokeBadge={controller.pokeBadge}
+            firstArriverText={controller.firstArriverText}
+            celebrationText={controller.celebrationText}
+            reducedMotion={controller.reducedMotion}
+            pageVisible={controller.pageVisible}
+            onAvatarTap={controller.handleAvatarTap}
+          />
+        )}
       </View>
 
       <View className='gathering-room__action-bar'>

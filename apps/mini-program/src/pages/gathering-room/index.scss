@@ -40,6 +40,28 @@
     overflow: hidden;
   }
 
+  // Empty-room surface (no matched members yet) — centered, warm, on-brand.
+  &__scene-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-lg $container-padding;
+    text-align: center;
+  }
+
+  &__scene-empty-title {
+    font-size: $font-size-lg;
+    font-weight: 600;
+    color: $color-text-primary;
+  }
+
+  &__scene-empty-sub {
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-secondary;
+  }
+
   // Bottom action bar: solid surface + subtle top shadow (repo convention).
   &__action-bar {
     flex-shrink: 0;
