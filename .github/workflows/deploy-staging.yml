@@ -59,10 +59,12 @@ jobs:
 
           # Image refs: GHCR is always pushed (secondary source); TCR refs are
           # added when TCR is active so the CVM can prefer the same-region pull.
+          # Tags travel as newline-joined strings (%0A) because fromJSON arrays
+          # are rejected by the Actions template validator in `with:` values.
           ghcr_api="ghcr.io/joyjoin-tech-limited/joyjoin-api-staging:${GITHUB_SHA}"
           ghcr_admin="ghcr.io/joyjoin-tech-limited/joyjoin-admin-staging:${GITHUB_SHA}"
-          api_tags="[\"${ghcr_api}\"]"
-          admin_tags="[\"${ghcr_admin}\"]"
+          api_tags="${ghcr_api}"
+          admin_tags="${ghcr_admin}"
           if [ "$mode" = "tcr" ]; then
             prefix="${TCR_REGISTRY}"
             if [ -n "${TCR_NAMESPACE:-}" ]; then
@@ -70,8 +72,8 @@ jobs:
             fi
             tcr_api="${prefix}/joyjoin-api-staging:${GITHUB_SHA}"
             tcr_admin="${prefix}/joyjoin-admin-staging:${GITHUB_SHA}"
-            api_tags="[\"${ghcr_api}\",\"${tcr_api}\"]"
-            admin_tags="[\"${ghcr_admin}\",\"${tcr_admin}\"]"
+            api_tags="${ghcr_api}%0A${tcr_api}"
+            admin_tags="${ghcr_admin}%0A${tcr_admin}"
             echo "tcr_api_ref=${tcr_api}" >> "$GITHUB_OUTPUT"
             echo "tcr_admin_ref=${tcr_admin}" >> "$GITHUB_OUTPUT"
           fi
@@ -100,7 +102,7 @@ jobs:
           file: apps/server/Dockerfile
           push: true
           load: true
-          tags: ${{ fromJSON(steps.delivery-mode.outputs.api_tags) }}
+          tags: ${{ steps.delivery-mode.outputs.api_tags }}
           cache-from: type=gha,scope=joyjoin-staging-api
           cache-to: type=gha,mode=max,scope=joyjoin-staging-api
 
@@ -111,7 +113,7 @@ jobs:
           file: apps/admin-client/Dockerfile
           push: true
           load: true
-          tags: ${{ fromJSON(steps.delivery-mode.outputs.admin_tags) }}
+          tags: ${{ steps.delivery-mode.outputs.admin_tags }}
           cache-from: type=gha,scope=joyjoin-staging-admin
           cache-to: type=gha,mode=max,scope=joyjoin-staging-admin
 
