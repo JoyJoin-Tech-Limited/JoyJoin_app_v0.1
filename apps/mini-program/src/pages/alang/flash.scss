@@ -1215,15 +1215,15 @@ page {
     text-underline-offset: 6rpx;
 
     &--seen {
-      color: $color-text-tertiary;
-      text-decoration-color: rgba($color-text-tertiary, 0.18);
+      color: $color-text-tertiary-on-light;
+      text-decoration-color: rgba($color-text-tertiary-on-light, 0.18);
     }
   }
 
   &__highlight-reply {
     display: block;
     margin-top: 20rpx;
-    color: $color-text-secondary;
+    color: $color-text-secondary-on-light;
     font-size: $font-size-sm;
     line-height: $line-height-relaxed;
   }
