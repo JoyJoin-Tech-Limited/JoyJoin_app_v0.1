@@ -202,17 +202,28 @@ function fireSocialHapticStep(step: SocialHapticPulse['step']): void {
 }
 
 /**
- * Fire one social-grammar pattern. Silently no-ops when the vibration APIs are
- * unavailable. While another pattern is still playing, equal-or-lower priority
- * requests are dropped and higher-priority requests preempt (cancelling the
- * current sequence's unsounded pulses). Callers gate on the
+ * Pure arbitration decision: would `socialHaptics` fire this pattern right
+ * now? Exported so sibling channels (S9 audio seasoning) evaluate the SAME
+ * busy-guard verdict — audio must never play a pattern the haptic dropped,
+ * or the grammar diverges and audio silently becomes more informative than
+ * the buzz it mirrors.
+ */
+export function canFireSocialHaptic(pattern: SocialHapticPattern, now = Date.now()): boolean {
+  const priority = SOCIAL_HAPTIC_PRIORITY[pattern]
+  return !(now < socialHapticsBusyUntil && priority <= socialHapticsPlayingPriority)
+}
+
+/**
+ * Fire one social-grammar pattern. Returns whether the pattern actually
+ * fired (busy-guard may drop or preempt it) — the audio mirror keys off the
+ * return value so both channels can never diverge. Silently no-ops when the
+ * vibration APIs are unavailable. Callers gate on the
  * icebreakerHapticGrammarEnabled feature flag — this function does not.
  */
-export function socialHaptics(pattern: SocialHapticPattern): void {
+export function socialHaptics(pattern: SocialHapticPattern): boolean {
   try {
     const now = Date.now()
-    const priority = SOCIAL_HAPTIC_PRIORITY[pattern]
-    if (now < socialHapticsBusyUntil && priority <= socialHapticsPlayingPriority) return
+    if (!canFireSocialHaptic(pattern, now)) return false
 
     // Preemption: cancel the lower-priority sequence's unsounded pulses.
     for (const timer of socialHapticsPendingTimers) {
@@ -221,10 +232,10 @@ export function socialHaptics(pattern: SocialHapticPattern): void {
     socialHapticsPendingTimers = []
 
     const pulses = planSocialHapticPattern(pattern)
-    if (pulses.length === 0) return
+    if (pulses.length === 0) return false
 
     socialHapticsBusyUntil = now + socialHapticPatternDurationMs(pattern) + SOCIAL_HAPTIC_MIN_GAP_MS
-    socialHapticsPlayingPriority = priority
+    socialHapticsPlayingPriority = SOCIAL_HAPTIC_PRIORITY[pattern]
 
     for (const pulse of pulses) {
       if (pulse.atMs === 0) {
@@ -240,7 +251,9 @@ export function socialHaptics(pattern: SocialHapticPattern): void {
         socialHapticsPendingTimers.push(timer)
       }
     }
+    return true
   } catch {
     // silently ignore
+    return false
   }
 }

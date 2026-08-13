@@ -188,6 +188,11 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  field test passes (playbook §10 ruling 6 flag-on precondition).
    *  Env fallback: ICEBREAKER_GROUP_BEATS_ENABLED (default: false). */
   icebreakerGroupBeatsEnabled: "ICEBREAKER_GROUP_BEATS_ENABLED",
+  /** S9 audio seasoning: delicate sub-1s ticks mirroring the S1 haptic
+   *  grammar, fired alongside the haptic only. Ships dark until S1's grammar
+   *  is field-validated (playbook ruling 3/9).
+   *  Env fallback: ICEBREAKER_AUDIO_ENABLED (default: false). */
+  icebreakerAudioEnabled: "ICEBREAKER_AUDIO_ENABLED",
   /** Squad-unboxing pocket-deck collapse kill-switch. When false, the
    *  mini-program hides the "收起卡组" trigger and collapseDeck() is a no-op,
    *  so the deck stays in the fan phase. Users who previously collapsed stay
@@ -262,6 +267,8 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   icebreakerGlanceStackEnabled: false,
   /** Group beats ship dark until the venue WS field test passes (ruling 6). */
   icebreakerGroupBeatsEnabled: false,
+  /** Audio seasoning ships dark until S1's grammar is field-validated. */
+  icebreakerAudioEnabled: false,
   equipmentRewardsEnabled: false,
   personalStoryEnabled: false,
   profileIdentityStageEnabled: true,

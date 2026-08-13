@@ -21,6 +21,7 @@ import { usePageVisibility } from '../../hooks/usePageVisibility'
 import { useWebSocket } from '../../hooks/useWebSocket'
 import { logInfo, logWarn, logError } from '../../lib/utils/logger'
 import { haptics, socialHaptics } from '../../lib/utils/haptics'
+import { useSessionAudio } from '../../hooks/useSessionAudio'
 import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerAnalytics'
 import {
   usePreloadCdnIcons,
@@ -140,6 +141,9 @@ export default function IcebreakerSessionPage() {
   // S6 group beats: gates the WS room join + beat→haptic dispatch. Default
   // off; WS-down degrades automatically to the S1 poll detector (ruling 6).
   const groupBeatsEnabled = features?.icebreakerGroupBeatsEnabled ?? false
+  // S9 audio seasoning: delicate sub-1s ticks mirroring the S1 grammar,
+  // fired alongside the haptic only (never substituting for it).
+  const audioEnabled = features?.icebreakerAudioEnabled ?? false
   const [socialSessionId, setSocialSessionId] = useState<string | null>(null)
   const [bootstrapState, setBootstrapState] = useState<SocialSessionState | null>(null)
   const [bootstrapError, setBootstrapError] = useState<string | null>(null)
@@ -297,10 +301,10 @@ export default function IcebreakerSessionPage() {
       if (!beat) return
       const pattern = groupBeatTrackerRef.current?.registerBeat(beat)
       if (pattern) {
-        socialHaptics(pattern)
+        if (socialHaptics(pattern)) playPattern(pattern)
       }
     },
-    [resolvedSessionId],
+    [resolvedSessionId, playPattern],
   )
   useWebSocket({
     autoConnect: groupBeatsEnabled && !!resolvedSessionId,
@@ -309,6 +313,11 @@ export default function IcebreakerSessionPage() {
     joinEventId: resolvedSessionId || undefined,
     onMessage: handleGroupBeat,
   })
+
+  // S9: audio mirror — plays ONLY when the haptic actually fired (the
+  // busy-guard verdict from socialHaptics), so the two channels can never
+  // diverge and audio never becomes more informative than the buzz.
+  const { playPattern } = useSessionAudio(audioEnabled)
 
   const socialSessionQuery = useQuery<SocialSessionState>({
     queryKey: ['mini-program', 'social-icebreaker-session', socialSessionId],
@@ -454,9 +463,9 @@ export default function IcebreakerSessionPage() {
     }
     lastNudgedSuggestionAtRef.current = suggestionGeneratedAt ?? null
     if (hapticGrammarEnabled) {
-      socialHaptics('socialHostNudge')
+      if (socialHaptics('socialHostNudge')) playPattern('socialHostNudge')
     }
-  }, [session?.xiaoyueAdaptiveSuggestion?.generatedAt, isHost, hapticGrammarEnabled])
+  }, [session?.xiaoyueAdaptiveSuggestion?.generatedAt, isHost, hapticGrammarEnabled, playPattern])
 
   // S1 + S2 share the sensory-event stream: state transitions from the
   // existing 3s poll become typed events. Haptic patterns stay gated on the
@@ -491,14 +500,14 @@ export default function IcebreakerSessionPage() {
         // moment suppresses the poll-detector's haptic for the same pattern
         // (the S2 bloom below is not a haptic and is never suppressed).
         if (!groupBeatTrackerRef.current?.shouldSuppressDetectorFire(pattern)) {
-          socialHaptics(pattern)
+          if (socialHaptics(pattern)) playPattern(pattern)
         }
       }
       if (moodFieldEnabled && event.kind === 'reveal_appeared') {
         triggerFieldBloom()
       }
     },
-    [hapticGrammarEnabled, moodFieldEnabled, triggerFieldBloom],
+    [hapticGrammarEnabled, moodFieldEnabled, triggerFieldBloom, playPattern],
   )
   useSessionSensoryEvents({
     session,

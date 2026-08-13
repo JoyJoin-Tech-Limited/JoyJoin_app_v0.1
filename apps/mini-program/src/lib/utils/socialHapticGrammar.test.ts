@@ -4,6 +4,7 @@ import {
   SOCIAL_HAPTIC_LONG_PULSE_MS,
   SOCIAL_HAPTIC_MIN_GAP_MS,
   SOCIAL_HAPTIC_SHORT_PULSE_MS,
+  canFireSocialHaptic,
   planSocialHapticPattern,
   socialHaptics,
   socialHapticPatternDurationMs,
@@ -189,5 +190,34 @@ describe('social haptic grammar (S1)', () => {
       throw new Error('bridge down')
     })
     expect(() => socialHaptics('socialConfirm')).not.toThrow()
+  })
+
+  it('returns whether the pattern actually fired (S9 audio mirror contract)', () => {
+    // Fresh window: fires.
+    expect(socialHaptics('socialConfirm')).toBe(true)
+    // Celebration occupies the window (priority 4); a Nudge inside it is
+    // dropped — the return value is the single source of truth the audio
+    // mirror keys off, so audio can never play a dropped pattern.
+    socialHaptics('socialCelebration')
+    expect(socialHaptics('socialNudge')).toBe(false)
+    // Beyond the busy window a fresh pattern fires again.
+    vi.setSystemTime(
+      Date.now() + socialHapticPatternDurationMs('socialCelebration') + SOCIAL_HAPTIC_MIN_GAP_MS + 1000,
+    )
+    expect(socialHaptics('socialNudge')).toBe(true)
+  })
+
+  it('canFireSocialHaptic exposes the arbitration decision as a pure predicate', () => {
+    // Before any fire: everything can fire.
+    expect(canFireSocialHaptic('socialNudge')).toBe(true)
+    socialHaptics('socialCelebration') // occupies the window (priority 4)
+    // Same or lower priority inside the window: no.
+    expect(canFireSocialHaptic('socialNudge')).toBe(false)
+    expect(canFireSocialHaptic('socialCelebration')).toBe(false)
+    // After the busy window expires: yes again.
+    vi.setSystemTime(
+      Date.now() + socialHapticPatternDurationMs('socialCelebration') + SOCIAL_HAPTIC_MIN_GAP_MS + 1000,
+    )
+    expect(canFireSocialHaptic('socialNudge')).toBe(true)
   })
 })

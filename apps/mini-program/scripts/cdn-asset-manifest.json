@@ -2033,6 +2033,30 @@
     {
       "localPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/thumb-v2.ebc56861d1b8.webp",
       "cdnPath": "assets/profile-pixel/v2/equipment/starter/turtle/top/thumb-v2.ebc56861d1b8.webp"
+    },
+    {
+      "localPath": "assets/audio/s1-nudge.wav",
+      "cdnPath": "assets/audio/s1-nudge.wav"
+    },
+    {
+      "localPath": "assets/audio/s1-host-nudge.wav",
+      "cdnPath": "assets/audio/s1-host-nudge.wav"
+    },
+    {
+      "localPath": "assets/audio/s1-your-turn.wav",
+      "cdnPath": "assets/audio/s1-your-turn.wav"
+    },
+    {
+      "localPath": "assets/audio/s1-confirm.wav",
+      "cdnPath": "assets/audio/s1-confirm.wav"
+    },
+    {
+      "localPath": "assets/audio/s1-reveal.wav",
+      "cdnPath": "assets/audio/s1-reveal.wav"
+    },
+    {
+      "localPath": "assets/audio/s1-celebration.wav",
+      "cdnPath": "assets/audio/s1-celebration.wav"
     }
   ],
   "pendingAssets": [

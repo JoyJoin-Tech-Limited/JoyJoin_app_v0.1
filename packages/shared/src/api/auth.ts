@@ -132,6 +132,10 @@ export interface AuthUserResponse extends SanitizedAuthUser {
      *  triggers and the mini-program joins the session's WS room to fire
      *  haptic patterns on receipt. Default: false. */
     icebreakerGroupBeatsEnabled?: boolean
+    /** Enables S9 audio seasoning: delicate sub-1s ticks mirroring the S1
+     *  haptic grammar, fired alongside the haptic only (never substituting
+     *  for it). Ships dark until S1's grammar is field-validated. Default: false. */
+    icebreakerAudioEnabled?: boolean
     /** Enables equipment draws, fragments and the fragment-only shop. */
     equipmentRewardsEnabled?: boolean
     /** Enables the private, append-only AI personal story surface. */

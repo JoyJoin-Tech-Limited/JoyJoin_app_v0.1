@@ -128,6 +128,7 @@ const [
     icebreakerMoodFieldEnabled,
     icebreakerGlanceStackEnabled,
     icebreakerGroupBeatsEnabled,
+    icebreakerAudioEnabled,
     equipmentRewardsEnabled,
     personalStoryEnabled,
     oracleCardCornerStatEnabled,
@@ -169,6 +170,7 @@ const [
     getFeatureFlag('icebreakerMoodFieldEnabled', false),
     getFeatureFlag('icebreakerGlanceStackEnabled', false),
     getFeatureFlag('icebreakerGroupBeatsEnabled', false),
+    getFeatureFlag('icebreakerAudioEnabled', false),
     getFeatureFlag('equipmentRewardsEnabled', false),
     getFeatureFlag('personalStoryEnabled', false),
     getFeatureFlag('oracleCardCornerStatEnabled', true),
@@ -256,6 +258,8 @@ const [
       icebreakerGlanceStackEnabled,
       /** Social Icebreaker group beats (ships dark; gates emit + join). */
       icebreakerGroupBeatsEnabled,
+      /** Social Icebreaker audio seasoning (ships dark; mirrors the S1 grammar). */
+      icebreakerAudioEnabled,
       equipmentRewardsEnabled,
       personalStoryEnabled,
       oracleCardCornerStatEnabled,
