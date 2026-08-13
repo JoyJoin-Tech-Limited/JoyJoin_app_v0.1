@@ -6,6 +6,9 @@ const { setStorageSync, navigateBack } = vi.hoisted(() => ({ setStorageSync: vi.
 
 vi.mock('@tarojs/taro', () => ({
   useRouter: () => ({ params: { key: 'atuan-game', approach: 'notice_wait' } }),
+  // Shared hooks in the page graph (useResetOnShow) import useDidShow
+  // directly — the mock must export it or vitest throws.
+  useDidShow: (_callback: () => void) => {},
   default: { setStorageSync, navigateBack },
 }))
 
