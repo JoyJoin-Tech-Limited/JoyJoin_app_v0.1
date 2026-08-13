@@ -29,6 +29,21 @@ vi.mock("../lib/featureFlags", () => ({ getFeatureFlag: mocks.getFeatureFlag }))
 vi.mock("../lib/logger", () => ({
   logger: { warn: mocks.loggerWarn, error: vi.fn(), info: vi.fn() },
 }));
+// The locate path reverse-geocodes user coordinates (alangFlash.ts →
+// geo.ts). Mock it so the 360-request rate-budget test never hits the real
+// Tencent Maps API (local .env carries a live TENCENT_MAP_KEY) — the mock
+// resolves as a Shenzhen hit so boundary + district logic stays exercised.
+vi.mock("../routes/domains/geo", () => ({
+  reverseGeocodeCoordinate: vi.fn(async () => ({
+    source: "tencent" as const,
+    city: "深圳市",
+    district: "南山区",
+    formattedAddress: "深圳市南山区",
+    latitude: 22.5431,
+    longitude: 114.0579,
+    adcode: "440305",
+  })),
+}));
 vi.mock("../services/flashScheduleService", () => ({ startFlashBackgroundJobs: vi.fn() }));
 vi.mock("../services/flashService", () => {
   class FlashServiceError extends Error {
