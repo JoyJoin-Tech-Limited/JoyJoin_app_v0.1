@@ -72,10 +72,12 @@ describe("pilot content × engine end-to-end", () => {
     });
     liziState = { ...liziState, currentNode: "n5_close", nodePath: [...liziState.nodePath, "n5_close"] };
     const view = getStoryNodeView(liziP3!.content, liziState);
-    expect(view?.segments?.join("")).toContain("默默约了我下周");
+    const variantText = (view?.segments ?? []).map((s: { text?: string }) => s.text ?? "").join("");
+    expect(variantText).toContain("默默约了我下周");
 
     const fallbackState = { ...liziState, flags: [] };
     const fallback = getStoryNodeView(liziP3!.content, fallbackState);
-    expect(fallback?.segments?.join("")).not.toContain("默默约了我下周");
+    const fallbackText = (fallback?.segments ?? []).map((s: { text?: string }) => s.text ?? "").join("");
+    expect(fallbackText).not.toContain("默默约了我下周");
   });
 });
