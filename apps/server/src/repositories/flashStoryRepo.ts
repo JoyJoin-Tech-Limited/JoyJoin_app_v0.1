@@ -822,3 +822,14 @@ export async function publishFlashStorySeason(id: string, actor: string, now = n
     return season ?? null;
   });
 }
+
+export async function listCompletedFlashStoryEpisodeCodes(userId: string, seasonId: string, executor: DbExecutor = db): Promise<string[]> {
+  const rows = await executor.select({ code: flashStoryEpisodes.code })
+    .from(flashUserStoryEpisodes)
+    .innerJoin(flashStoryEpisodes, eq(flashUserStoryEpisodes.episodeId, flashStoryEpisodes.id))
+    .where(and(
+      eq(flashUserStoryEpisodes.userId, userId),
+      eq(flashStoryEpisodes.seasonId, seasonId),
+    ));
+  return rows.map((row: { code: string }) => row.code);
+}

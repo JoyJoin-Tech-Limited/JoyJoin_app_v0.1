@@ -201,3 +201,38 @@ export function resolveV2Ending(state: FlashStoryRunState): FlashStoryEndingCode
   if (state.echo >= 8) return "memory_keeper";
   return "parallel_mixed";
 }
+
+export const FLASH_V2_ENDING_TIERS: ReadonlyArray<{
+  code: FlashStoryEndingCode;
+  threshold: number;
+}> = [
+  { code: "truth_witness", threshold: 60 },
+  { code: "path_changer", threshold: 40 },
+  { code: "bridge_keeper", threshold: 20 },
+  { code: "memory_keeper", threshold: 8 },
+  { code: "parallel_mixed", threshold: 0 },
+];
+
+const ECHO_PER_DEEP_CHOICE = 10;
+
+export type FlashV2EndingGallery = Array<{
+  code: FlashStoryEndingCode;
+  reached: boolean;
+  echoGap: number;
+  approxChoices: number;
+}>;
+
+export function buildV2EndingGallery(currentEnding: FlashStoryEndingCode, echo: number): FlashV2EndingGallery {
+  return FLASH_V2_ENDING_TIERS.map(({ code, threshold }) => ({
+    code,
+    reached: code === currentEnding,
+    echoGap: Math.max(0, threshold - echo),
+    approxChoices: Math.max(0, Math.ceil((threshold - echo) / ECHO_PER_DEEP_CHOICE)),
+  }));
+}
+
+export function resolveV2EchoTier(echo: number): "彻" | "深" | "轻" {
+  if (echo >= 40) return "彻";
+  if (echo >= 15) return "深";
+  return "轻";
+}

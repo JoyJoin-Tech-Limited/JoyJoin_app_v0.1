@@ -27,12 +27,12 @@
 | A4 | 反转型 callback | 阿浪 p2 destiny 选项："想过。每天都想。……但你不该问。"（询问也是边界，呼应记录边界主题） | ✅ 已执行 |
 | A5 | 季末硬钩 | **待拍板**：软收（现状）vs 硬钩（触碰"数字居民不影响现实"世界观边界）。本次保守不执行 | ⏸ 待决策 |
 
-### Workstream B — 上瘾机制（A 验收后）
+### Workstream B — 上瘾机制（2026-08-13 已实现）
 | # | 动作 | 状态 |
 |---|------|------|
-| B1 | 结局图鉴（季末"你差哪两步到 X 结局"，不剧透选项） | 待执行 |
-| B2 | 回声可视化（closure 轻量 echo 感知） | 待执行 |
-| B3 | 追更钩子（完成页暗示哪条线还有悬念未解） | 待执行 |
+| B1 | 结局图鉴（季末"你差哪两步到 X 结局"，不剧透选项） | ✅ 已实现：引擎 `buildV2EndingGallery`（5 档阈值 + echoGap + approxChoices，每档 ≈10 echo/次深挖）+ finale 响应 `ending.gallery` + finale 页图鉴卡（已抵达/还差 N 次深挖） |
+| B2 | 回声可视化（closure 轻量 echo 感知） | ✅ 已实现：storyV2 DTO 加 `echo`，`resolveV2EchoTier`（彻/深/轻），FlashStoryV2Stage closure 节点显示回声档位文案 |
+| B3 | 追更钩子（完成页暗示哪条线还有悬念未解） | ✅ 已实现：shared `FLASH_V2_HOOK_HINTS`（4 钩子，planted/resolved 单元 + hint 文案）+ `nextFlashV2HookHint` + 服务端 completed 视图 `nextStoryHint` + 完成页"还有一件事没有答案"卡 |
 
 ### Workstream C — 部署验证
 | # | 动作 | 状态 |

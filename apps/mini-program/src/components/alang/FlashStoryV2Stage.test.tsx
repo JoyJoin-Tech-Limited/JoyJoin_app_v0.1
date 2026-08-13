@@ -27,6 +27,8 @@ describe('FlashStoryV2Stage', () => {
         choices={[]}
         isChoice={false}
         isTerminal={false}
+        isClosure={false}
+        echo={0}
         seasonTitle='没有名字的旧物'
         phase={1}
         busy={false}
@@ -51,6 +53,8 @@ describe('FlashStoryV2Stage', () => {
         ]}
         isChoice
         isTerminal={false}
+        isClosure={false}
+        echo={0}
         seasonTitle='没有名字的旧物'
         phase={1}
         busy={false}
@@ -72,6 +76,8 @@ describe('FlashStoryV2Stage', () => {
         choices={[]}
         isChoice={false}
         isTerminal
+        isClosure={false}
+        echo={60}
         seasonTitle='没有名字的旧物'
         phase={3}
         busy={false}
@@ -92,6 +98,8 @@ describe('FlashStoryV2Stage', () => {
         choices={[]}
         isChoice={false}
         isTerminal={false}
+        isClosure={false}
+        echo={0}
         seasonTitle='没有名字的旧物'
         phase={1}
         busy={false}
@@ -114,6 +122,8 @@ describe('FlashStoryV2Stage', () => {
         choices={[{ id: 'a', text: '这图画的是两个人吧。' }]}
         isChoice
         isTerminal={false}
+        isClosure={false}
+        echo={0}
         seasonTitle='没有名字的旧物'
         phase={1}
         busy

@@ -43,15 +43,28 @@ describe('Flash parallel-universe finale', () => {
               { episodeTitle: '双人座位图', optionLabel: '把位置留在原处' },
               { episodeTitle: '没有锁孔的钥匙', optionLabel: '继续追问来源' },
             ],
+            gallery: [
+              { code: 'truth_witness', title: '把真相看清的人', summary: '真相不是答案。', reached: false, echoGap: 35, approxChoices: 4 },
+              { code: 'path_changer', title: '改道的人', summary: '路可以改。', reached: false, echoGap: 15, approxChoices: 2 },
+              { code: 'bridge_keeper', title: '守桥的人', summary: '两岸都在。', reached: true, echoGap: 0, approxChoices: 0 },
+            ],
           },
         },
       },
     })
   })
 
+  it('shows the ending gallery with reached state and echo gaps', () => {
+    render(<FlashFinalePage />)
+    expect(screen.getByText('结局图鉴')).toBeInTheDocument()
+    expect(screen.getByText('已抵达')).toBeInTheDocument()
+    expect(screen.getByText('还差 4 次深挖')).toBeInTheDocument()
+    expect(screen.getByText('还差 2 次深挖')).toBeInTheDocument()
+  })
+
   it('reveals the ending, three decisive choices and the full trajectory', () => {
     render(<FlashFinalePage />)
-    expect(screen.getByText('守桥的人')).toBeInTheDocument()
+    expect(screen.getAllByText('守桥的人').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('三次关键转向')).toBeInTheDocument()
     expect(screen.getByText('先听完它的故事')).toBeInTheDocument()
     expect(screen.getByText('相信')).toBeInTheDocument()

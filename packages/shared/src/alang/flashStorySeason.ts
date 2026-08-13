@@ -74,3 +74,30 @@ export const FLASH_V2_PILOT_UNIT_IDS: readonly string[] = [
 export function isFlashV2PilotUnitId(value: string): boolean {
   return FLASH_V2_PILOT_UNIT_IDS.includes(value)
 }
+
+/**
+ * Story v2 hook hints (B3 追更钩子). Server returns the first hint whose
+ * planted unit is completed by the user but whose resolved unit is not —
+ * a direction cue for which thread still has unfinished business, without
+ * spoiling any option or outcome.
+ */
+export const FLASH_V2_HOOK_HINTS: ReadonlyArray<{
+  hook: string;
+  plantedUnit: string;
+  resolvedUnit: string | null;
+  hint: string;
+}> = [
+  { hook: "h14-route-unmapped", plantedUnit: "s1-p2-shiqi", resolvedUnit: null, hint: "阿浪最近总绕远路。那条没画进册子的路，还没有人知道通向哪里。" },
+  { hook: "h11-key-layer", plantedUnit: "s1-p1-atuan", resolvedUnit: "s1-p3-atuan", hint: "箱底夹层里的钥匙还在。也许下一次打开箱子的人会知道更多。" },
+  { hook: "h9-two-clicks", plantedUnit: "s1-p1-momo", resolvedUnit: "s1-p1-atuan", hint: "那两声轻响之后，金属滑进了箱子的更深处。" },
+  { hook: "h5-key-outline", plantedUnit: "s1-p3-shiqi", resolvedUnit: null, hint: "钥匙轮廓的日期比这只箱子更早。它的主人，早于这次交换就存在。" },
+];
+
+export function nextFlashV2HookHint(completedUnits: ReadonlySet<string>): string | null {
+  for (const entry of FLASH_V2_HOOK_HINTS) {
+    if (completedUnits.has(entry.plantedUnit) && (!entry.resolvedUnit || !completedUnits.has(entry.resolvedUnit))) {
+      return entry.hint;
+    }
+  }
+  return null;
+}

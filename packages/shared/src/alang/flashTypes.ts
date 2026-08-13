@@ -149,6 +149,14 @@ export type FlashStoryEpisodeDto = {
     code: string;
     vector: { trust: number; attachment: number; intervention: number; truth: number };
     highlights: Array<{ episodeTitle: string; optionLabel: string }>;
+    gallery?: Array<{
+      code: string;
+      title: string;
+      summary: string;
+      reached: boolean;
+      echoGap: number;
+      approxChoices: number;
+    }> | null;
   } | null;
   motion: {
     ambient: "none" | "breathe" | "drift";
@@ -158,9 +166,11 @@ export type FlashStoryEpisodeDto = {
   fragment: FlashStoryFragmentDto | null;
   progress: { completedInPhase: number; totalInPhase: number; completedTotal: number; total: number };
   storyV2?: FlashStoryV2ViewDto | null;
+  nextStoryHint?: string | null;
 };
 
 export type FlashStoryV2ViewDto = {
+  echo: number;
   nodeId: string;
   type: "prose" | "choice" | "callback" | "closure" | "ending";
   segments: Array<{ speaker?: string; text: string }>;

@@ -5,8 +5,10 @@ import type { FlashStoryContentV2 } from "@shared/schema";
 import {
   advanceStoryNode,
   answerStoryChoice,
+  buildV2EndingGallery,
   enterStoryEpisode,
   getStoryNodeView,
+  resolveV2EchoTier,
   resolveV2Ending,
 } from "../services/flashStoryEngine";
 
@@ -122,5 +124,27 @@ describe("flashStoryEngine v2 full traversal", () => {
     expect(() => advanceStoryNode({ content: UNIT, state: run })).toThrow(/FLASH_V2_CHOICE_EXPECTED/);
     const terminal = advanceStoryNode({ content: UNIT, state: { ...run, currentNode: "n4", nodePath: [...run.nodePath, "n4"] } });
     expect(terminal.finished).toBe(true);
+  });
+});
+
+describe("v2 ending gallery + echo tier", () => {
+  it("builds a gallery with reached flag and echo gaps", () => {
+    
+    const gallery = buildV2EndingGallery("bridge_keeper", 25);
+    expect(gallery.map((g: { code: string }) => g.code)).toEqual([
+      "truth_witness", "path_changer", "bridge_keeper", "memory_keeper", "parallel_mixed",
+    ]);
+    const reached = gallery.filter((g: { reached: boolean }) => g.reached);
+    expect(reached.map((g: { code: string }) => g.code)).toEqual(["bridge_keeper"]);
+    const truth = gallery.find((g: { code: string }) => g.code === "truth_witness");
+    expect(truth?.echoGap).toBe(35);
+    expect(truth?.approxChoices).toBe(4);
+  });
+
+  it("resolves echo tiers", () => {
+    
+    expect(resolveV2EchoTier(50)).toBe("彻");
+    expect(resolveV2EchoTier(20)).toBe("深");
+    expect(resolveV2EchoTier(3)).toBe("轻");
   });
 });

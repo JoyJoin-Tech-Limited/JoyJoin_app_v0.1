@@ -190,12 +190,22 @@ export interface FlashEncounterView {
       code: string
       vector: { trust: number; attachment: number; intervention: number; truth: number }
       highlights: Array<{ episodeTitle: string; optionLabel: string }>
+      gallery?: Array<{
+        code: string
+        title: string
+        summary: string
+        reached: boolean
+        echoGap: number
+        approxChoices: number
+      }> | null
     } | null
     closing: string | null
     motion: { ambient: 'none' | 'breathe' | 'drift'; blinkAssetUrl?: string; blinkIntervalSeconds?: number }
     fragment: { id: string; category: 'object' | 'past' | 'relationship' | 'key'; title: string; fact: string; assetUrl: string | null } | null
     progress: { completedInPhase: number; totalInPhase: number; completedTotal: number; total: number }
+    nextStoryHint?: string | null
     storyV2?: {
+      echo: number
       nodeId: string
       type: 'prose' | 'choice' | 'callback' | 'closure' | 'ending'
       segments: Array<{ speaker?: string; text: string }>

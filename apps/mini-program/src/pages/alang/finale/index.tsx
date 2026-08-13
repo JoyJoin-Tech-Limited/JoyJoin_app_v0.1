@@ -70,6 +70,30 @@ export default function FlashFinalePage() {
           })}
         </View>
 
+        {ending.gallery?.length ? (
+          <View className='flash-finale__card' data-testid='flash-finale-gallery'>
+            <Text className='flash-finale__section-kicker'>结局图鉴</Text>
+            {ending.gallery.map((item) => (
+              <View key={item.code} className={`flash-finale__gallery-item${item.reached ? ' flash-finale__gallery-item--reached' : ''}`}>
+                <View className='flash-finale__gallery-meta'>
+                  <Text className='flash-finale__gallery-title'>{item.title}</Text>
+                  {item.reached ? (
+                    <Text className='flash-finale__gallery-state flash-finale__gallery-state--reached'>已抵达</Text>
+                  ) : (
+                    <Text className='flash-finale__gallery-state'>
+                      还差 {item.approxChoices} 次深挖
+                    </Text>
+                  )}
+                </View>
+                {!item.reached ? (
+                  <Text className='flash-finale__gallery-summary'>{item.summary}</Text>
+                ) : null}
+              </View>
+            ))}
+            <Text className='flash-finale__gallery-note'>多追问几句旧物背后的故事，回声会把你带向更深的结局。</Text>
+          </View>
+        ) : null}
+
         <View className='flash-finale__alternate'>
           <Text className='flash-finale__alternate-title'>另一条时间线仍然存在</Text>
           <Text className='flash-finale__alternate-copy'>如果当时给出不同回答，旧物不会改变，但人与旧物之间的关系也许会走向别处。</Text>

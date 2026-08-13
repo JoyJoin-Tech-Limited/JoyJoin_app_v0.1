@@ -3411,3 +3411,86 @@ page {
 .flash-story-v2__choices {
   margin-top: 8rpx;
 }
+
+// B2 echo widget + B3 next hint + B1 finale gallery (story v2 hooks layer)
+.flash-story-v2__echo {
+  margin-top: 4rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 20rpx;
+  background: rgba($color-primary, 0.1);
+}
+
+.flash-story-v2__echo-copy {
+  color: rgba($color-surface, 0.86);
+  font-size: $font-size-2xs;
+  line-height: 1.6;
+}
+
+.flash-dialogue__next-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  margin-top: 4rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 20rpx;
+  background: rgba($color-primary, 0.1);
+}
+
+.flash-dialogue__next-hint-label {
+  color: rgba($color-surface, 0.62);
+  font-size: $font-size-2xs;
+  line-height: 1.5;
+}
+
+.flash-dialogue__next-hint-copy {
+  color: rgba($color-surface, 0.92);
+  font-size: $font-size-xs;
+  line-height: 1.6;
+}
+
+.flash-finale__gallery-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  padding: 16rpx 0;
+  border-top: 2rpx solid rgba($color-text-primary, 0.06);
+}
+
+.flash-finale__gallery-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.flash-finale__gallery-title {
+  color: rgba($color-text-primary, 0.86);
+  font-size: $font-size-sm;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.flash-finale__gallery-state {
+  flex-shrink: 0;
+  color: rgba($color-primary, 0.9);
+  font-size: $font-size-2xs;
+  line-height: 1.5;
+}
+
+.flash-finale__gallery-state--reached {
+  color: rgba($color-text-primary, 0.4);
+}
+
+.flash-finale__gallery-summary {
+  color: rgba($color-text-primary, 0.55);
+  font-size: $font-size-2xs;
+  line-height: 1.6;
+}
+
+.flash-finale__gallery-note {
+  margin-top: 8rpx;
+  color: rgba($color-text-primary, 0.45);
+  font-size: $font-size-2xs;
+  line-height: 1.6;
+  text-align: center;
+}

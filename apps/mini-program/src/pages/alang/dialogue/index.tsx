@@ -310,6 +310,8 @@ export default function FlashDialoguePage() {
             choices={v2View.choices}
             isChoice={v2View.type === 'choice'}
             isTerminal={v2View.type === 'ending'}
+            isClosure={v2View.type === 'closure'}
+            echo={v2View.echo}
             seasonTitle={story.seasonTitle}
             phase={story.phase}
             busy={answerMutation.isPending || advanceMutation.isPending}
@@ -438,6 +440,12 @@ export default function FlashDialoguePage() {
                     </View>
                   ) : null}
                   {story.closing ? <Text className='flash-dialogue__story-panel-closing'>{story.closing}</Text> : null}
+                  {story.nextStoryHint ? (
+                    <View className='flash-dialogue__next-hint' data-testid='flash-story-next-hint' aria-live='polite'>
+                      <Text className='flash-dialogue__next-hint-label'>还有一件事没有答案</Text>
+                      <Text className='flash-dialogue__next-hint-copy'>{story.nextStoryHint}</Text>
+                    </View>
+                  ) : null}
                   <Text className='flash-dialogue__story-panel-progress'>本幕 {story.progress.completedInPhase}/{story.progress.totalInPhase} · 全季 {story.progress.completedTotal}/{story.progress.total}</Text>
                   <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>
                     {story.progress.completedTotal >= story.progress.total ? '收好这一季' : '收好碎片，继续寻找'}

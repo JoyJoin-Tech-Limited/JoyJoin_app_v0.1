@@ -81,3 +81,13 @@ describe("pilot content × engine end-to-end", () => {
     expect(fallbackText).not.toContain("默默约了我下周");
   });
 });
+
+describe("v2 hook hints", () => {
+  it("returns the first planted-but-unresolved hook", async () => {
+    const { nextFlashV2HookHint } = await import("@joyjoin/shared/alang/flashStorySeason");
+    const hint = nextFlashV2HookHint(new Set(["s1-p2-shiqi", "s1-p1-atuan"]));
+    expect(hint).toContain("绕远路");
+    const resolved = nextFlashV2HookHint(new Set(["s1-p2-shiqi", "s1-p1-atuan", "s1-p3-atuan"]));
+    expect(resolved).not.toContain("夹层里的钥匙还在");
+  });
+});

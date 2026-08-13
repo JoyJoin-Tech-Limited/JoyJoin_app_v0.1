@@ -8,11 +8,19 @@ export interface FlashStoryV2StageProps {
   choices: Array<{ id: string; text: string }>
   isChoice: boolean
   isTerminal: boolean
+  isClosure: boolean
+  echo: number
   seasonTitle: string
   phase: number
   busy: boolean
   onChoice: (choiceId: string) => void
   onContinue: () => void
+}
+
+function echoTierCopy(echo: number): string {
+  if (echo >= 40) return '你把旧物的故事，推到了最响的地方。'
+  if (echo >= 15) return '这箱旧物，因为你变得更响了一点。'
+  return '旧物们的回声，还很小声。'
 }
 
 export function FlashStoryV2Stage({
@@ -21,6 +29,8 @@ export function FlashStoryV2Stage({
   choices,
   isChoice,
   isTerminal,
+  isClosure,
+  echo,
   seasonTitle,
   phase,
   busy,
@@ -46,6 +56,11 @@ export function FlashStoryV2Stage({
               </Text>
             ))}
           </View>
+          {isClosure ? (
+            <View className='flash-story-v2__echo' data-testid='flash-story-v2-echo' aria-live='polite'>
+              <Text className='flash-story-v2__echo-copy'>{echoTierCopy(echo)}</Text>
+            </View>
+          ) : null}
           {isChoice ? (
             <View className='flash-dialogue__story-choices flash-story-v2__choices'>
               {choices.slice(0, 3).map((choice) => (

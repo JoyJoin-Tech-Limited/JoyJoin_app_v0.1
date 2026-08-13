@@ -73,13 +73,16 @@ import {
   prepareFlashStoryChoiceIntent,
   advanceFlashV2Run,
   advanceFlashV2Node,
+  listCompletedFlashStoryEpisodeCodes,
 } from "../repositories/flashStoryRepo";
 import { getFeatureFlag } from "../lib/featureFlags";
-import { isFlashV2PilotUnitId } from "@joyjoin/shared/alang/flashStorySeason";
+import { isFlashV2PilotUnitId, nextFlashV2HookHint } from "@joyjoin/shared/alang/flashStorySeason";
 import {
   advanceStoryNode as advanceV2StoryNode,
+  buildV2EndingGallery,
   enterStoryEpisode as enterV2StoryEpisode,
   getStoryNodeView as getV2StoryNodeView,
+  resolveV2EchoTier,
 } from "./flashStoryEngine";
 
 function resolveV2ClosureResponse(content: unknown): string | null {
@@ -112,6 +115,7 @@ async function buildFlashStoryV2View(
   const view = getV2StoryNodeView(content as any, entered);
   if (!view) return null;
   return {
+    echo: entered.echo,
     nodeId: view.nodeId,
     type: view.type,
     segments: view.segments ?? [],
@@ -673,6 +677,10 @@ export async function getFlashEncounter(input: {
       ? input.replayOptionId ?? null
       : storyState.completion?.selectedOptionId ?? null;
     const storyCompleted = input.allowStoryReplay ? Boolean(input.replayOptionId) : Boolean(storyState.completion);
+    const completedCodesForHint = storyCompleted
+      ? await listCompletedFlashStoryEpisodeCodes(input.userId, storyState.episode.seasonId)
+      : [];
+    const nextStoryHint = storyCompleted ? nextFlashV2HookHint(new Set(completedCodesForHint)) : null;
     return {
       id: encounter.id,
       npc: {
@@ -731,6 +739,7 @@ export async function getFlashEncounter(input: {
           total: 15,
         },
         storyV2: storyCompleted ? null : await buildFlashStoryV2View(storyState),
+        nextStoryHint,
       },
       isReplay: input.allowStoryReplay || undefined,
       canonicalScreen: "dialogue",
@@ -740,6 +749,19 @@ export async function getFlashEncounter(input: {
     const endingCode = (completedSeason.run?.endingCode ?? "parallel_mixed") as FlashStoryEndingCode;
     const recap = completedSeason.run ? await getFlashStoryEndingRecap(input.userId, completedSeason.run.id) : null;
     const ending = recap?.ending ?? FLASH_STORY_ENDING_COPY[endingCode];
+    const v2Echo = completedSeason.run?.v2State?.echo ?? null;
+    const gallery = v2Echo !== null
+      ? buildV2EndingGallery(endingCode, v2Echo).map(({ code, reached, echoGap, approxChoices }) => ({
+          code,
+          title: FLASH_STORY_ENDING_COPY[code].title,
+          summary: FLASH_STORY_ENDING_COPY[code].summary,
+          reached,
+          echoGap,
+          approxChoices,
+        }))
+      : null;
+    const completedCodes = await listCompletedFlashStoryEpisodeCodes(input.userId, completedSeason.season.id);
+    const nextStoryHint = nextFlashV2HookHint(new Set(completedCodes));
     return {
       id: encounter.id,
       npc: { id: encounter.npcId, slug: encounter.npcSlug, name: encounter.npcName, species: encounter.species, personalitySummary: encounter.personalitySummary, themeColor: encounter.themeColor, avatarUrl: encounter.avatarUrl },
@@ -760,7 +782,8 @@ export async function getFlashEncounter(input: {
         action: "五件旧物已经被认领、处理或重新交给重要的人。",
         discovery: "那把没有锁孔的旧钥匙仍留在夹层里。",
         response: ending.summary,
-        ending: recap ? { code: endingCode, vector: recap.vector, highlights: recap.highlights } : null,
+        ending: recap ? { code: endingCode, vector: recap.vector, highlights: recap.highlights, gallery } : null,
+        nextStoryHint,
         closing: "这是你抵达的宇宙。相同的旧物，在另一条时间线里，也许会得到不同的回答。",
         echo: null,
         storyMode: completedSeason.run?.mode ?? "standard",
