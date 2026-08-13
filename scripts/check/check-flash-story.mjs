@@ -86,8 +86,9 @@ function scanUnit(unit) {
     for (const word of psychoWords) {
       if (texts.includes(word)) issues.push(["E108", WARN, `${unit.code}/${id}: possible psycho word "${word}"`]);
     }
-    const flatSegments = [...(node.segments ?? []), ...(variants.flatMap((v) => v.segments ?? []))];
-    if (flatSegments.length > 5) issues.push(["E111", WARN, `${unit.code}/${id}: >5 segments without interaction`]);
+    const baseSegments = node.segments ?? [];
+    const variantMax = variants.reduce((max, v) => Math.max(max, (v.segments ?? []).length), 0);
+    if (Math.max(baseSegments.length, variantMax) > 5) issues.push(["E111", WARN, `${unit.code}/${id}: >5 segments without interaction`]);
   }
 
   const allChoices = Object.values(nodes).flatMap((node) => node.choices ?? []);
