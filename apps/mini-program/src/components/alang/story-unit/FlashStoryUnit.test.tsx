@@ -76,9 +76,14 @@ describe('FlashStoryUnit production flow', () => {
     expect(screen.getByRole('button', { name: '查看长椅' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '查看路灯' })).toBeInTheDocument()
     expect(screen.getByTestId('atuan-arrival-prelude').querySelectorAll('.atuan-arrival__scene-target')).toHaveLength(3)
+    expect(screen.getByTestId('atuan-arrival-prelude').querySelectorAll('.atuan-arrival__target-label')).toHaveLength(0)
+    expect(screen.queryByText('阿团')).not.toBeInTheDocument()
+    expect(screen.queryByText('长椅')).not.toBeInTheDocument()
+    expect(screen.queryByText('路灯')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '查看新出现的信封' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '查看阿团' }))
+    expect(screen.getByTestId('atuan-arrival-prelude').querySelectorAll('.atuan-arrival__scene-target')).toHaveLength(2)
     expect(screen.getByTestId('atuan-scene-character')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '收下阿团的线索，回到现场' }))
     fireEvent.click(screen.getByRole('button', { name: '查看长椅' }))
@@ -88,6 +93,7 @@ describe('FlashStoryUnit production flow', () => {
     fireEvent.click(screen.getByRole('button', { name: '查看路灯' }))
     fireEvent.click(screen.getByRole('button', { name: '收下路灯的线索，回到现场' }))
     expect(screen.getByRole('button', { name: '查看新出现的信封' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '查看新出现的信封' }).querySelector('.atuan-arrival__target-label')).not.toBeInTheDocument()
     expect(screen.getByTestId('atuan-scene-character')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '查看新出现的信封' }))
@@ -124,7 +130,7 @@ describe('FlashStoryUnit production flow', () => {
       fireEvent.error(image)
     }
 
-    expect(screen.getByRole('status')).toHaveTextContent('探索现场0/3')
+    expect(screen.queryByText('探索现场')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '查看阿团' })).not.toBeEmptyDOMElement()
     expect(screen.getByRole('button', { name: '查看长椅' })).not.toBeEmptyDOMElement()
     expect(screen.getByRole('button', { name: '查看路灯' })).not.toBeEmptyDOMElement()

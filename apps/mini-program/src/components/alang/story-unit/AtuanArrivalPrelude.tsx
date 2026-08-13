@@ -50,7 +50,6 @@ export function AtuanArrivalPrelude({
   const [seen, setSeen] = useState(EMPTY_SEEN)
   const [detail, setDetail] = useState<Detail>(null)
   const [stage, setStage] = useState<Stage>('scene')
-  const exploredCount = SCENE_TARGETS.filter((target) => seen[target.id]).length
 
   const inspectSceneTarget = (target: SceneTarget) => {
     if (stage !== 'scene' || detail) return
@@ -119,23 +118,18 @@ export function AtuanArrivalPrelude({
 
       {stage === 'scene' ? (
         <>
-          <View className='atuan-arrival__progress' role='status' aria-live='polite'>
-            <Text className='atuan-arrival__progress-label'>探索现场</Text>
-            <Text className='atuan-arrival__progress-count'>{exploredCount}/3</Text>
-          </View>
-          {SCENE_TARGETS.map((target) => (
+          {SCENE_TARGETS.filter((target) => !seen[target.id]).map((target) => (
             <View
               key={target.id}
-              className={`atuan-arrival__scene-target atuan-arrival__scene-target--${target.id}${seen[target.id] ? ' atuan-arrival__scene-target--seen' : ''}`}
+              className={`atuan-arrival__scene-target atuan-arrival__scene-target--${target.id}`}
               hoverClass='atuan-arrival__scene-target--pressed'
               onClick={() => inspectSceneTarget(target.id)}
               role='button'
-              aria-label={`${seen[target.id] ? '再次查看' : '查看'}${target.label}`}
+              aria-label={`查看${target.label}`}
             >
               <View className='atuan-arrival__target-marker' aria-hidden='true'>
                 <View className='atuan-arrival__target-core' />
               </View>
-              <Text className='atuan-arrival__target-label'>{seen[target.id] ? `已看 · ${target.label}` : target.label}</Text>
             </View>
           ))}
         </>
@@ -157,7 +151,6 @@ export function AtuanArrivalPrelude({
             <View className='atuan-arrival__target-marker atuan-arrival__target-marker--letter' aria-hidden='true'>
               <View className='atuan-arrival__target-core' />
             </View>
-            <Text className='atuan-arrival__target-label'>新线索 · 信封</Text>
           </View>
         </>
       ) : null}
@@ -170,7 +163,7 @@ export function AtuanArrivalPrelude({
           role='button'
           aria-label={`收下${detailTarget.label}的线索，回到现场`}
         >
-          <Text className='atuan-arrival__clue-kicker'>现场线索 · {exploredCount}/3</Text>
+          <Text className='atuan-arrival__clue-kicker'>现场线索</Text>
           <Text className='atuan-arrival__clue-title'>{detailTarget.label}</Text>
           <Text className='atuan-arrival__clue-copy'>{detailTarget.clue}</Text>
           <Text className='atuan-arrival__clue-action'>轻触回到现场</Text>
