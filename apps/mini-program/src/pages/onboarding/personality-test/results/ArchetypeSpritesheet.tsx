@@ -1,5 +1,5 @@
 import { Image, View } from '@tarojs/components'
-import { memo, useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import spritesheetManifest from '../../assets/archetypes/archetype-spritesheet.json'
 import { getArchetypeVisual, getArchetypeSpritesheetLocalPath, getArchetypeSpritesheetCdnPath } from '../visuals'
 
@@ -53,7 +53,16 @@ function ArchetypeSpritesheet({
 }: ArchetypeSpritesheetProps) {
   const region = spritesheetManifest.mapping[archetype as ArchetypeName]
   const [imgError, setImgError] = useState(false)
+  const [imgLoaded, setImgLoaded] = useState(false)
   const softColor = fallbackColor ?? getArchetypeVisual(archetype).accentSoft
+
+  const handleImageError = useCallback(() => {
+    // Keep the complete placeholder visible while the CDN fallback starts.
+    // Otherwise WeChat can briefly expose a partially decoded spritesheet in
+    // the circular crop, which looks like a half-rendered archetype icon.
+    setImgLoaded(false)
+    setImgError(true)
+  }, [])
 
   if (!region) {
     return (
@@ -109,8 +118,11 @@ function ArchetypeSpritesheet({
           top: 0,
           left: 0,
           transform: `translate(${translateX}rpx, ${translateY}rpx)`,
+          opacity: imgLoaded ? 1 : 0,
         }}
-        onError={() => setImgError(true)}
+        lazyLoad={false}
+        onLoad={() => setImgLoaded(true)}
+        onError={handleImageError}
       />
     </View>
   )
