@@ -57,7 +57,7 @@ const HERO_PANEL_Y = 368
 const HERO_PANEL_H = 440
 const HERO_PANEL_RADIUS = 32
 
-const RANK_STRIP_Y = 840
+const RANK_STRIP_Y = 600
 const RANK_STRIP_HEIGHT = 36
 
 const TRAITS_Y = 892
@@ -68,15 +68,15 @@ const TRAIT_BAR_RADIUS = 7
 const TOPMATCHES_Y = 1052
 const TOPMATCHES_ROW_HEIGHT = 42
 
-const ENERGY_Y = 1128
+const ENERGY_Y = 704
 
-const SKILL_Y = 1200
-const SKILL_CARD_HEIGHT = 140
+const SKILL_Y = 824
+const SKILL_CARD_HEIGHT = 220
 const SKILL_CARD_RADIUS = 28
 const SKILL_CARD_GAP = 16
 const SKILL_TITLE_LINE_HEIGHT = 36 // 1.38
 
-const FOOTER_Y = 1372
+const FOOTER_Y = 1112
 const FOOTER_STAMP_HEIGHT = 36
 const FOOTER_LOCKUP_SIZE = 16
 const FOOTER_CTA_SIZE = 20
@@ -365,6 +365,78 @@ function drawArchetypeHeader(ctx: Taro.CanvasContext, input: PersonalitySharePos
 }
 
 /**
+ * Compact share identity block. The share poster intentionally carries only
+ * the collectible card's most recognizable information, matching the in-app
+ * reveal card instead of repeating the full personality report.
+ */
+function drawCompactIdentity(
+  ctx: Taro.CanvasContext,
+  input: PersonalitySharePosterInput,
+  archetypeImagePath: string | undefined,
+  dimensions: ImageDimensions,
+): void {
+  const portraitX = 104
+  const portraitY = 152
+  const portraitSize = 300
+  const portraitRadius = portraitSize / 2
+  const portraitCenterX = portraitX + portraitRadius
+  const portraitCenterY = portraitY + portraitRadius
+
+  ctx.save()
+  ctx.setShadow(0, 16, 34, PALETTE.shadowPurple)
+  ctx.beginPath()
+  ctx.arc(portraitCenterX, portraitCenterY, portraitRadius + 12, 0, Math.PI * 2)
+  ctx.setFillStyle(PALETTE.white)
+  ctx.fill()
+  ctx.restore()
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(portraitCenterX, portraitCenterY, portraitRadius, 0, Math.PI * 2)
+  ctx.clip()
+  ctx.setFillStyle(toCanvasRGBA(input.accentColor, 0.16))
+  ctx.fillRect(portraitX, portraitY, portraitSize, portraitSize)
+
+  if (archetypeImagePath) {
+    const scale = Math.max(portraitSize / dimensions.width, portraitSize / dimensions.height)
+    const drawW = dimensions.width * scale
+    const drawH = dimensions.height * scale
+    try {
+      ctx.drawImage(
+        archetypeImagePath,
+        portraitX + (portraitSize - drawW) / 2,
+        portraitY + (portraitSize - drawH) / 2,
+        drawW,
+        drawH,
+      )
+    } catch {
+      logWarn('[sharePoster] compact portrait drawImage failed', { archetype: input.archetype })
+    }
+  }
+  ctx.restore()
+
+  const textX = 472
+  ctx.save()
+  ctx.setFillStyle(PALETTE.textDark)
+  ctx.setFontSize(58)
+  ctx.setTextAlign('left')
+  ctx.setTextBaseline('top')
+  ctx.fillText(input.archetype, textX, 196)
+  ctx.restore()
+
+  drawTextBlock(ctx, {
+    text: input.tagline,
+    x: textX,
+    y: 294,
+    maxCharsPerLine: 15,
+    maxLines: 2,
+    lineHeight: 42,
+    fontSize: 28,
+    color: PALETTE.textSecondary,
+  })
+}
+
+/**
  * Draw the full-bleed hero art panel with accent radial glow and archetype art.
  */
 function drawHeroPanel(
@@ -466,8 +538,8 @@ function drawRankStrip(
   ctx: Taro.CanvasContext,
   archetypeRank: number,
   serialNumber: string,
-  rarityLabel?: string,
-  globalRank?: number,
+  _rarityLabel?: string,
+  _globalRank?: number,
 ): void {
   const badgeRadius = RANK_STRIP_HEIGHT / 2
 
@@ -480,13 +552,10 @@ function drawRankStrip(
   ctx.setFontSize(18)
   ctx.setTextAlign('center')
   ctx.setTextBaseline('middle')
-  ctx.fillText(`No.${archetypeRank}`, LEFT_EDGE + leftBadgeWidth / 2, RANK_STRIP_Y + RANK_STRIP_HEIGHT / 2)
+  ctx.fillText(`氛围编号 #${archetypeRank}`, LEFT_EDGE + leftBadgeWidth / 2, RANK_STRIP_Y + RANK_STRIP_HEIGHT / 2)
   ctx.restore()
 
-  const serialParts: string[] = [serialNumber]
-  if (globalRank) serialParts.push(`全球 #${globalRank}`)
-  else if (rarityLabel) serialParts.push(rarityLabel)
-  const serialText = serialParts.join(' · ')
+  const serialText = serialNumber.startsWith('#') ? serialNumber : `#${serialNumber}`
 
   ctx.save()
   ctx.setFontSize(18)
@@ -585,9 +654,8 @@ function drawTopMatches(ctx: Taro.CanvasContext, topMatches: PersonalitySharePos
 
 function drawEnergyBar(ctx: Taro.CanvasContext, energyLevel: number): void {
   const label = '社交续航力'
-  const labelWidth = 110
-  const trackX = INNER_EDGE + labelWidth + 16
-  const trackWidth = RIGHT_EDGE - 16 - trackX
+  const trackX = INNER_EDGE
+  const trackWidth = RIGHT_EDGE - INNER_EDGE
   const trackY = ENERGY_Y + 36
 
   ctx.save()
@@ -687,20 +755,10 @@ export async function generatePersonalitySharePoster(input: PersonalitySharePost
   const ctx = Taro.createCanvasContext(PERSONALITY_SHARE_POSTER_CANVAS_ID)
   createCardBackground(ctx)
 
-  drawTopChrome(ctx, input.confidenceLabel)
-  drawArchetypeHeader(ctx, input)
-  drawHeroPanel(ctx, archetypeImagePath, input.accentColor, input.archetype, heroDimensions, input.mingCardImagePath)
+  drawCompactIdentity(ctx, input, archetypeImagePath, heroDimensions)
 
   if (typeof input.archetypeRank === 'number' && input.serialNumber) {
     drawRankStrip(ctx, input.archetypeRank, input.serialNumber, input.rarityLabel, input.globalRank)
-  }
-
-  if (input.traitEntries.length > 0) {
-    drawTraitBars(ctx, input.traitEntries, input.accentColor)
-  }
-
-  if (input.topMatches.length > 0) {
-    drawTopMatches(ctx, input.topMatches)
   }
 
   if (typeof input.energyLevel === 'number') {
