@@ -61,6 +61,29 @@ describe('Atuan first-arrival asset ownership', () => {
     expect(storyStage).toMatch(/^\s*position:\s*absolute;\s*inset:\s*0;/)
   })
 
+  it('keeps Atuan human-scaled and the conversation copy readable on a phone', () => {
+    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash.scss'), 'utf8')
+    const conversationScene = flashStyles.slice(
+      flashStyles.indexOf('.atuan-conversation-scene {'),
+      flashStyles.indexOf('.flash-dialogue__story-stage--atuan-first', flashStyles.indexOf('.atuan-conversation-scene {')),
+    )
+    const conversationPanel = flashStyles.slice(
+      flashStyles.lastIndexOf('.flash-dialogue__story-stage--atuan-first'),
+      flashStyles.lastIndexOf('.atuan-first-dialogue {'),
+    )
+    const conversationCopy = flashStyles.slice(flashStyles.lastIndexOf('.atuan-first-dialogue {'))
+
+    expect(flashStyles).toMatch(/&__cutout--atuan\s*\{[^}]*translateX\(112rpx\) scale\(0\.82\)/s)
+    expect(conversationScene).toMatch(/&__character\s*\{[^}]*translateX\(112rpx\) scale\(0\.82\)/s)
+    expect(conversationScene).toMatch(/&__speech\s*\{[^}]*right:\s*200rpx;[^}]*padding:\s*32rpx;/s)
+    expect(conversationScene).toMatch(/&__speech-copy\s*\{[^}]*font-size:\s*\$font-size-md;/s)
+    expect(conversationPanel).toContain('max-height: 680rpx;')
+    expect(conversationPanel).toMatch(/\.flash-dialogue__choice\s*\{[^}]*min-height:\s*112rpx;/s)
+    expect(conversationPanel).toMatch(/\.flash-dialogue__choice-text\s*\{[^}]*font-size:\s*\$font-size-md;/s)
+    expect(conversationCopy).toMatch(/&__narration\s*\{[^}]*font-size:\s*\$font-size-base;/s)
+    expect(conversationCopy).toMatch(/&__prompt\s*\{[^}]*font-size:\s*\$font-size-base;/s)
+  })
+
   it('keeps first-arrival assets covered by the production package contract', () => {
     const cleanScript = readFileSync(resolve(appRoot, 'scripts/clean-cdn-assets.mjs'), 'utf8')
     const verifyScript = readFileSync(resolve(appRoot, 'scripts/verify-flash-package.mjs'), 'utf8')
