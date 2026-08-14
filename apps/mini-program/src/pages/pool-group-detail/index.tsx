@@ -413,29 +413,42 @@ export default function PoolGroupDetailPage() {
 
       <View className='pool-group-detail__actions'>
         {gatheringRoomEnabled ? (
-          <Button onClick={() => {
-            haptics('light')
-            openGatheringRoom(groupId)
-          }}
+          <Button
+            className='pool-group-detail__action pool-group-detail__action--room'
+            variant='secondary'
+            onClick={() => {
+              haptics('light')
+              openGatheringRoom(groupId)
+            }}
           >
-            进入集结房间
+            <View className='pool-group-detail__action-mark'>聚</View>
+            <Text className='pool-group-detail__action-label'>进入集结房间</Text>
           </Button>
         ) : null}
         <Button
-          variant={gatheringRoomEnabled ? 'secondary' : 'primary'}
-          onClick={() => Taro.navigateTo({ url: `/pages/icebreaker-session/tier-selector/index?sessionId=${encodeURIComponent(group.id)}` })}
-        >
-          开始破冰
-        </Button>
-        <Button
+          className='pool-group-detail__action pool-group-detail__action--share'
           variant='secondary'
-          onClick={handleShareGroupPoster}
+          onClick={() => {
+            haptics('light')
+            handleShareGroupPoster()
+          }}
           disabled={isGeneratingPoster}
         >
-          {isGeneratingPoster ? '生成海报中…' : '分享小分队海报'}
+          <View className='pool-group-detail__action-mark'>享</View>
+          <Text className='pool-group-detail__action-label'>
+            {isGeneratingPoster ? '生成中…' : '分享小分队'}
+          </Text>
         </Button>
-        <Button variant='secondary' onClick={() => Taro.switchTab({ url: '/pages/events/index' })}>
-          返回活动
+        <Button
+          className='pool-group-detail__action pool-group-detail__action--back'
+          variant='secondary'
+          onClick={() => {
+            haptics('light')
+            Taro.switchTab({ url: '/pages/events/index' })
+          }}
+        >
+          <View className='pool-group-detail__action-mark'>返</View>
+          <Text className='pool-group-detail__action-label'>返回活动</Text>
         </Button>
       </View>
 
