@@ -53,7 +53,7 @@ export default function AtuanCardsPage() {
 
   return (
     <View className='atuan-cards'>
-      <View className='atuan-cards__header'>
+      <View>
         <Text className='atuan-cards__eyebrow'>阿团的小纸袋</Text>
         <Text className='atuan-cards__title'>替卡片找个舒服的位置</Text>
         <Text className='atuan-cards__copy'>不是猜标准答案。你在决定：这句话可以被谁看见。</Text>
