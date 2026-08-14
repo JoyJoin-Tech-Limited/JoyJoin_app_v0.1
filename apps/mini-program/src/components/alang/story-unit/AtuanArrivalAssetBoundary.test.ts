@@ -72,6 +72,17 @@ describe('Atuan first-arrival asset ownership', () => {
       expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
     }
 
+    expect(cleanScript).toContain('const sourceOnlyAlangUiAssets = new Set([')
+    for (const fileName of [
+      'flash-atuan-first-arrival-v1.jpg',
+      'flash-atuan-character-lowpoly-v3.webp',
+      'flash-atuan-park-clean-v2.jpg',
+      'flash-atuan-character-cutout-v2.png',
+    ]) {
+      expect(cleanScript, `${fileName} must stay out of the upload package`).toContain(`'${fileName}'`)
+    }
+    expect(cleanScript).toContain('sourceOnlyAlangUiAssets.has(name)')
+    expect(cleanScript).not.toContain('const bundledAlangUiWebps')
     expect(cleanScript).not.toContain('flash-atuan-park-clean-v2.webp')
     expect(verifyScript).toContain('non-collapsing Flash story viewport height chain')
     expect(verifyScript).toContain('anchor the Flash story stage to the viewport shell')

@@ -83,11 +83,13 @@ const bundledAlangAssets = new Set([
   'alang-result-candidate.webp',
 ])
 
-// These WebPs are direct runtime imports of the Atuan arrival scene. They must
-// remain in the subpackage even though the rest of the source-quality UI WebPs
-// are CDN-only alternates.
-const bundledAlangUiWebps = new Set([
+// Keep retired/source-quality Atuan artwork available under src/, but do not
+// copy it into the upload package. The active runtime imports the PNG v3 layer.
+const sourceOnlyAlangUiAssets = new Set([
+  'flash-atuan-first-arrival-v1.jpg',
   'flash-atuan-character-lowpoly-v3.webp',
+  'flash-atuan-park-clean-v2.jpg',
+  'flash-atuan-character-cutout-v2.png',
 ])
 
 await removeMatching(
@@ -116,12 +118,7 @@ await Promise.all([
   removeMatchingFrom(
     alangAssetsDir,
     'ui',
-    (name) => ['flash-city-ambient-bg.webp', 'flash-empty-online.webp', 'flash-empty-tasks.webp'].includes(name),
-  ),
-  removeMatchingFrom(
-    alangAssetsDir,
-    'ui',
-    (name) => name.endsWith('.webp') && !bundledAlangUiWebps.has(name),
+    (name) => name.endsWith('.webp') || sourceOnlyAlangUiAssets.has(name),
   ),
 ])
 
