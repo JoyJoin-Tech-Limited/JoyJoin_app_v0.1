@@ -178,17 +178,33 @@ export function resolveAtuanFirstActPresentation(
   return APPROACH_PRESENTATION[progress.approachId]
 }
 
+export function resolveAtuanFirstActSpeech(
+  encounterId: string,
+  progress: AtuanFirstActProgress | null,
+): string {
+  if (progress && !progress.followupId && !progress.benchReached && progress.highlightOrder.length > 0) {
+    const latestHighlightId = progress.highlightOrder[progress.highlightOrder.length - 1]
+    const latestHighlight = ATUAN_FIRST_ACT_HIGHLIGHTS.find((item) => item.id === latestHighlightId)
+    if (latestHighlight) return latestHighlight.reply
+  }
+  return resolveAtuanFirstActPresentation(encounterId, progress).dialogue
+}
+
 function ChoiceIcon({ kind }: { kind: 'card' | 'cover' | 'lines' | 'count' | 'question' | 'forward' }) {
   return <View className={`atuan-choice-icon atuan-choice-icon--${kind}`} aria-hidden='true'><View className='atuan-choice-icon__shape' /></View>
 }
 
-export function AtuanFirstConversationScene({ assets }: { assets: AtuanArrivalAssets }) {
+export function AtuanFirstConversationScene({ assets, speech }: { assets: AtuanArrivalAssets; speech: string }) {
   return (
-    <View className='atuan-conversation-scene' data-testid='atuan-conversation-scene' aria-hidden='true'>
-      <Image className='atuan-conversation-scene__background' src={assets.scene} mode='aspectFill' data-testid='atuan-conversation-background' />
-      <View className='atuan-conversation-scene__grade' />
-      <Image className='atuan-conversation-scene__character' src={assets.character} mode='aspectFill' data-testid='atuan-conversation-character' />
-      <Image className='atuan-conversation-scene__bag' src={assets.bag} mode='aspectFill' />
+    <View className='atuan-conversation-scene' data-testid='atuan-conversation-scene'>
+      <Image className='atuan-conversation-scene__background' src={assets.scene} mode='aspectFill' data-testid='atuan-conversation-background' aria-hidden='true' />
+      <View className='atuan-conversation-scene__grade' aria-hidden='true' />
+      <Image className='atuan-conversation-scene__character' src={assets.character} mode='aspectFill' data-testid='atuan-conversation-character' aria-hidden='true' />
+      <Image className='atuan-conversation-scene__bag' src={assets.bag} mode='aspectFill' aria-hidden='true' />
+      <View className='atuan-conversation-scene__speech' role='status' aria-live='polite' aria-atomic='true'>
+        <Text className='atuan-conversation-scene__speaker'>阿团</Text>
+        <Text className='atuan-conversation-scene__speech-copy' data-testid='atuan-scene-dialogue'>{speech}</Text>
+      </View>
     </View>
   )
 }
@@ -272,15 +288,10 @@ export function AtuanFirstEncounterDialogue({
 }: AtuanFirstEncounterDialogueProps) {
   const presentation = resolveAtuanFirstActPresentation(encounterId, progress)
   const storyCopy = (
-    <View className='atuan-first-dialogue__story-copy' role='status' aria-live='polite'>
+    <View className='atuan-first-dialogue__story-copy'>
       <Text className='atuan-first-dialogue__narration' data-testid='atuan-scene-narration'>{presentation.narration}</Text>
-      <Text className='atuan-first-dialogue__spoken' data-testid='atuan-scene-dialogue' aria-label={`阿团说：${presentation.dialogue}`}>“{presentation.dialogue}”</Text>
     </View>
   )
-
-  const latestHighlight = progress.highlightOrder.length
-    ? ATUAN_FIRST_ACT_HIGHLIGHTS.find((item) => item.id === progress.highlightOrder[progress.highlightOrder.length - 1])
-    : null
 
   if (!progress.arrivalReplyId) {
     const options = progress.approachId === 'notice_wait'
@@ -326,7 +337,6 @@ export function AtuanFirstEncounterDialogue({
           })}
           <Text>。阿团没有催你。</Text>
         </View>
-        {latestHighlight ? <Text className='atuan-first-dialogue__highlight-reply'>“{latestHighlight.reply}”</Text> : null}
       </View>
     )
   }

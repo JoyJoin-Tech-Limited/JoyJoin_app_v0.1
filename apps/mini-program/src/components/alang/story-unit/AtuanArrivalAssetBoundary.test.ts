@@ -6,7 +6,7 @@ const sourceRoot = resolve(process.cwd(), 'src')
 const appRoot = resolve(process.cwd())
 const arrivalAssetNames = [
   'flash-atuan-park-clean-v3.jpg',
-  'flash-atuan-character-lowpoly-v3.webp',
+  'flash-atuan-character-lowpoly-v3.png',
   'flash-atuan-bag-cutout-v2.png',
 ]
 
@@ -23,7 +23,7 @@ describe('Atuan first-arrival asset ownership', () => {
     const dialoguePage = readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/index.tsx'), 'utf8')
 
     expect(dialoguePage).toContain("../assets/ui/flash-atuan-park-clean-v3.jpg")
-    expect(dialoguePage).toContain("../assets/ui/flash-atuan-character-lowpoly-v3.webp")
+    expect(dialoguePage).toContain("../assets/ui/flash-atuan-character-lowpoly-v3.png")
     expect(dialoguePage).toContain("../assets/ui/flash-atuan-bag-cutout-v2.png")
     expect(dialoguePage).toContain('atuanArrivalAssets={{')
   })

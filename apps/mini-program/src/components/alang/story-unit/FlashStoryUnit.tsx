@@ -18,6 +18,7 @@ import {
   AtuanStoryDialogue,
   EMPTY_ATUAN_DIALOGUE_STATE,
   getAtuanOpeningOption,
+  resolveAtuanFirstActSpeech,
   resolveAtuanSpeech,
   type AtuanDialogueState,
 } from './AtuanFirstEncounterDialogue'
@@ -188,6 +189,9 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const speech = isAtuanStory && !showResult
       ? resolveAtuanSpeech(definition.unitId, runtime.choice?.label ?? null, atuanDialogue)
     : defaultSpeech
+  const atuanSceneSpeech = definition.unitId === 's1-p1-atuan'
+    ? (runtime.atuanFirstAct ? resolveAtuanFirstActSpeech(encounterId, runtime.atuanFirstAct) : speech)
+    : speech
   const storyAction = definition.unitId === 's1-p1-atuan'
     ? '阿团站在长椅旁，目光越过你，仍旧望着公园入口。'
     : story.action
@@ -205,7 +209,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
             }}
           />
         ) : showAtuanScene && atuanArrivalAssets ? (
-          <AtuanFirstConversationScene assets={atuanArrivalAssets} />
+          <AtuanFirstConversationScene assets={atuanArrivalAssets} speech={atuanSceneSpeech} />
         ) : (
           <FlashNpcDialogueScene npc={npc} speech={speech} spacious choicesEmbedded={!showResult} motion={motion} />
         )}

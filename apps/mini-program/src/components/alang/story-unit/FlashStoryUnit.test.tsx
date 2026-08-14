@@ -65,6 +65,7 @@ function completeConversation() {
   fireEvent.click(screen.getByRole('button', { name: '查看新折痕' }))
   fireEvent.click(screen.getByRole('button', { name: '查看褪色的紫绳' }))
   fireEvent.click(screen.getByRole('button', { name: '查看被擦掉的名字' }))
+  expect(screen.getByTestId('atuan-scene-dialogue')).toHaveTextContent('先别替它找主人')
   fireEvent.click(screen.getByRole('button', { name: '如果他不来，我们也别让这趟白跑。' }))
   storage.set('joyjoin_flash_story_unit_v2_s1-p1-atuan_enc-atuan_episode-atuan-1:atuan-cards', [
     { cardId: 'city', destinationId: 'keep' },
@@ -126,6 +127,7 @@ describe('FlashStoryUnit production flow', () => {
     expect(screen.getByTestId('atuan-scene-narration')).toHaveTextContent('你先按住纸袋')
     expect(screen.getByTestId('atuan-scene-dialogue')).toHaveTextContent('一张一张和风讲道理')
     expect(screen.getByTestId('atuan-scene-dialogue')).not.toHaveTextContent('你先按住纸袋')
+    expect(screen.getByTestId('atuan-scene-dialogue').closest('[data-testid="flash-story-choice-panel"]')).toBeNull()
     expect(submit).not.toHaveBeenCalled()
     completeConversation()
 
@@ -188,6 +190,7 @@ describe('FlashStoryUnit production flow', () => {
     expect(screen.getByTestId('atuan-conversation-character')).toHaveAttribute('src', 'atuan.webp')
     expect(screen.queryByTestId('npc-speech')).not.toBeInTheDocument()
     expect(screen.queryByText('水豚')).not.toBeInTheDocument()
+    expect(screen.getByTestId('atuan-scene-dialogue')).toHaveTextContent('阿团把卡片收好了')
   })
 
   it('submits non-Atuan choices without entering the Atuan scene', () => {
