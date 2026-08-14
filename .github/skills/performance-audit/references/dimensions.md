@@ -43,6 +43,7 @@ Time-to-interactive: how fast the user reaches a usable state from navigation tr
 - Route transition timing (performance marks)
 - Bundle size (gzip) per changed page/subpackage
 - API response time (if new endpoints)
+- Long-running AI generation surfaces: shell renders immediately; heartbeat progress visible; generation settles to a terminal state within budget (client never waits on a stalled socket)
 
 **Common killers:**
 - Missing `React.lazy()` for non-critical pages
@@ -50,6 +51,8 @@ Time-to-interactive: how fast the user reaches a usable state from navigation tr
 - Blocking API calls in component render (not behind Suspense)
 - Over-fetching (loading data for tabs the user hasn't opened)
 - No HTTP compression on API responses
+- Full-screen wait with no progress or timeout during AI generation (miniscript / icebreaker phases)
+- Progress derived from device clock — clock skew freezes the bar (compare epochs, never `updatedAt` across clocks)
 
 ---
 
@@ -135,12 +138,16 @@ Behavior under real-world network conditions: 4G, weak signal, timeout, offline.
 - Timeout configuration on new API calls
 - Error state + retry UI on every data-dependent screen
 - Stale-while-revalidate pattern or equivalent
+- WS surfaces (gathering room, icebreaker): reconnect with heartbeat + backoff; presence leave-grace handled; HTTP poll fallback works when the socket is down
 
 **Common killers:**
 - No timeout on `fetch` / `Taro.request` calls
 - Error state missing retry action
 - Prefetch engine fires on 4G without checking network type
 - No `navigator.onLine` / `Taro.getNetworkType` check before heavy data loads
+- WS reconnect storm — reconnect without exponential backoff hammers the server on flaky networks
+- Silent WS disconnect leaves stale presence or a frozen room state (no heartbeat-based liveness detection)
+- Realtime page with no poll fallback when `connectSocket` fails or is unavailable
 
 ---
 

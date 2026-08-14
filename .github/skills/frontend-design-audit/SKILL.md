@@ -13,7 +13,7 @@ description: >
 
 ## When to use this skill
 
-- Reviewing a PR that touches UI (mini-program or web)
+- Reviewing a PR that touches UI (mini-program or admin-client — the live surfaces; the archived web client is historical parity reference only)
 - A shipped screen feels generic, cheap, or off-brand
 - Before calling a UI task "done" — run as a final quality pass
 - Onboarding a new screen: audit the first implementation
@@ -43,7 +43,7 @@ Code-reading is blind to overlap, overflow, clipping, and cramped spacing — th
 
 1. **Render + scan:** `npm run audit:visual -- --url "<h5 route>" --wait "<selector>" --screenshot /tmp/<page>.png --pretty`; record Class A (correctness) violations.
 2. **Vision review** the screenshot (`multimodal-looker`) with the gate's rubric.
-3. **Merge + classify** each finding **correctness (blocking)** / **craft (advisory)**, labelled **Seen-in-render** vs **Read-in-code**. Non-renderable surfaces: note why — never claim visual sign-off without a render.
+3. **Merge + classify** each finding **correctness (blocking)** / **craft (advisory)**, labelled **Seen-in-render** vs **Read-in-code**. Non-renderable surfaces: use the gate's documented fallback (WeChat DevTools / browser screenshot + vision review) and note why the scanner was skipped — never claim visual sign-off without a render.
 
 ### Agent-mode (during implementation / PR review)
 1. **Step 0 first** (above): render, scan, vision-inspect, classify.
@@ -91,7 +91,7 @@ See [`references/audit-framework.md`](./references/audit-framework.md) for full 
 - [ ] All Class A (correctness) defects listed as P0 — surface is not shippable until fixed
 - [ ] All 5 dimensions scored with specific evidence; anti-patterns linked to file paths/lines
 - [ ] Fix list ranked P0/P1/P2; health score + rating band stated
-- [ ] Mini-program checked vs Taro constraints; web checked vs token + accessibility
+- [ ] Mini-program checked vs Taro constraints; admin-client checked vs token + accessibility (ops tier)
 - [ ] 情绪价值 scored via `docs/reference/emotional-value-rubric.md` if user-facing (not admin/ops)
 - [ ] Grill-me interview completed for any dimension scoring < 4 (see `references/grill-me-checklist.md`)
 

@@ -62,7 +62,7 @@ After scoring a screen, run [`references/grill-me-checklist.md`](references/gril
 3. **Typography hierarchy**: Verify heading/body/meta have at least 8rpx size difference and distinct weight/color
 4. **Emoji scan**: Primary questions, headings, and CTA labels must be emoji-free. Emojis allowed only in: mascot speech, decorative badges, result celebration states
 5. **Alignment check**: Left edges of text blocks must share a 4rpx grid (verify on the render; the scanner flags right-edge bleed)
-6. **Safe area & compression**: On 375×667 (iPhone SE), no interactive element should be <88rpx tall or <200rpx from bottom without scroll
+6. **Safe area & compression**: On 375×667 (iPhone SE), no interactive element should be <88rpx tall or <200rpx from bottom without scroll. Full-screen states respect the zero-scroll viewport policy (`viewport-zero-scroll`): `100dvh` shell with `vh` fallback, no page-level scroll
 7. **Reading experience** (the treat test): Chinese body text line-height ≥1.6, display text ≥1.4. No paragraph >10 lines without visual relief. Text should invite the eye, not exhaust it
 8. **Visual coherence (孤字 guard)**: No headline or button text should produce a lone word/character on its own row. Use `word-break: keep-all` for short display text; ensure container width ≥ font-size × 8. English words in Chinese copy must never break mid-word
 9. **Emotional craft**: Every element should feel intentional, not assembled. Flag placeholder-like spacing, default-looking borders, or "that'll do" visual decisions. Cross-reference with `docs/reference/emotional-value-rubric.md`: does this layout feel generous (归属感) or cramped (transactional)?

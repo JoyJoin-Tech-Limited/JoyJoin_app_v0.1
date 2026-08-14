@@ -54,6 +54,9 @@ Run after every implementation touching `apps/mini-program` to audit six perform
   Memory (canvas usage?), then grill-me the animation choices.
 - **New API-dependent page:** score Speed (cold start + route transition), Network Resilience
   (4G behavior, timeout handling), then grill-me the data-fetching strategy.
+- **New realtime page (gathering room / icebreaker):** score Network Resilience (WS reconnect,
+  heartbeat, poll fallback) and Speed (generation polling settles to a terminal state), then
+  grill-me the disconnect scenario.
 - **Bundle size regression:** score Package Size (gzip measurement, subpackage placement),
   then grill-me every new import.
 

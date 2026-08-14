@@ -66,9 +66,9 @@ Concerns and nits are recorded but **do NOT trigger the fix loop** — this prev
 - Review fingerprint = hash(changed files + checklist version); same fingerprint → same expected result
 - Every finding cites a checklist item ID (e.g., "VF-03")
 
-## Delta Review — NOT YET WIRED (currently stateless)
+## Delta Review — NOT IMPLEMENTED (stateless today)
 
-Intended design: persist each review to `.git/.orchestration/reviews/<summary-id>.json` (48h TTL) so re-reviews re-check only previously-failed items + new files, and flag a regression when a previously-passed item fails. **Status: aspirational — nothing currently creates or reads that directory, so every review runs full/stateless today.** Treat any "delta review" claim as unimplemented until the persistence layer is built (separate task).
+Intended design: persist each review to `.git/.orchestration/reviews/<summary-id>.json` (48h TTL) so re-reviews re-check only previously-failed items + new files, and flag a regression when a previously-passed item fails. **Status as of 2026-08-13: nothing creates or reads that directory — every review runs full/stateless.** `delta_review_rules.enabled` in the checklist manifest is `false` to match reality. Treat any "delta review" claim as unimplemented; wiring it is a separate engineering task.
 
 ## Adaptive escalation ladder
 

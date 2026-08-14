@@ -53,7 +53,7 @@ Full scoring criteria per dimension in [`references/dimension-rubric.md`](refere
 | 5 | Delight completeness | Key emotional moments crafted or flat? → fix with `wow-elements` | Manual |
 | 6 | Flow completeness | Journey smooth entry→action→result→aftermath? | Manual |
 | 7 | Accessibility completeness | Touch ≥88rpx, reduced-motion, safe areas | Manual |
-| 8 | Taro discipline | ScrollView, subpackage, runtime safety | Manual |
+| 8 | Taro discipline | ScrollView, subpackage, runtime safety, CI gates (BEM coverage, subpackage styles), page-stack reset, zero-scroll viewport | Manual |
 | 9 | Visual finish | Spacing, typography, tokens, alignment — **grounded in render via the Visual Gate** | `ui-layout-audit` |
 | 10 | Brand soul | Feels like JoyJoin? Mascot? Voice? | `frontend-design-audit` |
 | 11 | Operational completeness | Blast radius, admin wiring, audit trail, kill switch | Manual |

@@ -86,6 +86,19 @@ servers exactly as in `mini-program-screenshot-workflow` (Approach A). Point `--
 running H5 hash route with `TARO_APP_API_BASE_URL=http://localhost:5001`. For a quick local
 check you can also point `--url` at any reachable page.
 
+**Documented fallback when the scanner can't render (2026-08-13):** some surfaces can't be
+served through the H5 route — subpackage pages without a working H5 path, admin-client
+screens requiring session state, or flows depending on real device runtime (`wx.*` APIs).
+The scanner itself is generic Playwright, so admin-client pages work via `--url` when they
+don't require auth. When scanning is impossible:
+
+1. Capture a real screenshot: WeChat DevTools (mini-program, per
+   `mini-program-screenshot-workflow`) or a browser screenshot of the admin-client dev URL.
+2. Skip Layer 1 and record `scanner: N/A` in the report, with the reason and capture method.
+3. Run Layer 2 (vision review) with the same rubric — vision findings are still classified
+   correctness / craft.
+4. Class A defects found by vision still BLOCK. The fallback is not a free pass.
+
 **Scanner checks** (`byCheck` keys): `page-horizontal-overflow`, `element-off-right-edge`,
 `text-clip-horizontal`, `text-clip-vertical`, `low-contrast-text`, `text-on-text-overlap`.
 

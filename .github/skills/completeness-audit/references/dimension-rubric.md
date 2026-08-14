@@ -45,6 +45,8 @@ Full 0–4 scoring criteria for all 11 dimensions. Score each dimension independ
 - [ ] Success: confirmation with visual feedback (checkmark, brief celebration)
 - [ ] Disabled: reduced opacity + no pointer events; visually distinct from active
 - [ ] Busy/submitting: button text changes, spinner, or progress indicator
+- [ ] Realtime surfaces (gathering room, icebreaker): connecting/reconnecting state visible; member join/leave presence renders; WS-down fallback (polling or degraded notice) exists
+- [ ] Long-running AI generation (miniscript, icebreaker phases): progress bar advances monotonically (never derives from device clock); terminal states (`complete`/`error`/`catalog_fallback`/`pipeline_timeout`) are always reachable and rendered; no frozen progress with no escape
 
 ---
 
@@ -91,6 +93,7 @@ Full 0–4 scoring criteria for all 11 dimensions. Score each dimension independ
 - [ ] Long-press on actionable items has visual confirmation
 - [ ] Pull-to-refresh available on scrollable list pages
 - [ ] Scroll position preserved after navigating away and returning
+- [ ] Realtime updates (WS broadcasts, presence changes) append/merge visually — they never yank the view or wipe user input mid-interaction
 
 ---
 
@@ -183,6 +186,11 @@ Full 0–4 scoring criteria for all 11 dimensions. Score each dimension independ
 - [ ] `setData` calls are batched (no rapid sequential calls)
 - [ ] Platform splits use `process.env.TARO_ENV` correctly
 - [ ] `VirtualList` or `CustomWrapper` used for large/hot-update lists
+- [ ] **BEM class-coverage gate:** every static `__`-containing class in TS/TSX is defined in some compiled stylesheet (`scripts/check/check-class-coverage.mjs`); any new component ships its SCSS in the same PR
+- [ ] **Subpackage style-splitting:** a component's WXSS must be reachable from the owning subpackage page — `@use` the component SCSS in the page SCSS (`apps/mini-program/scripts/verify-subpackage-styles.mjs`)
+- [ ] **Page-stack lifecycle:** transient exit/submit flags reset on `useDidShow` (via `useResetOnShow`) — swipe-back must not leave the CTA stuck
+- [ ] **Zero-scroll viewport:** `100dvh` shell with `100vh` fallback; no document/page-level scroll (see `viewport-zero-scroll` skill)
+- [ ] **Hook discipline on realtime pages:** all hooks run unconditionally above every early return (gathering-room freeze bug class)
 
 ---
 
@@ -258,3 +266,5 @@ Full 0–4 scoring criteria for all 11 dimensions. Score each dimension independ
 - [ ] Rollback: if this feature is disabled, does the app degrade gracefully (not crash)?
 - [ ] Config: new configuration values exposed in admin portal where ops need them
 - [ ] Notification: are ops/admin notified of critical state changes (if applicable)?
+- [ ] Payment/entitlement flows: entitlement checked server-side; pending order states handled (never double-consume a pack credit); refund path considered
+- [ ] Event-id families: writes FK'd to `events.id` canonicalize first via `resolveCanonicalEventId` (blind-box ids included)

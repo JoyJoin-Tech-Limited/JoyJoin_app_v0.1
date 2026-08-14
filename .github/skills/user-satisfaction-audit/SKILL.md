@@ -20,7 +20,7 @@ description: >
 - Post-implementation review of any user-facing frontend change (mini-program or web)
 - PR review where the diff touches a screen real users see
 - A screen is functionally complete but "feels fine, not great"
-- Before shipping an emotional peak (match reveal, squad unboxing, onboarding completion, payment success)
+- Before shipping an emotional peak (match reveal, squad unboxing, onboarding completion, payment success, gathering-room first entry, flash story ending gallery, duo invite acceptance)
 - Drop-off or churn signals point at a specific screen
 
 **Do not use when:** pixel-level spacing issues (→ `ui-layout-audit`), brand-craft scoring (→ `frontend-design-audit`), functional gaps (→ `completeness-audit`), speed/jank (→ `performance-audit`), interaction diagnosis (→ `frontend-hook-engine`), or product strategy (→ `pm-sin-mapper`). This skill assumes those pass and critiques purely from the **user's seat**.

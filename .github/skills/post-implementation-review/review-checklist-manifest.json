@@ -132,7 +132,7 @@
       "items": [
         {
           "id": "VD-01",
-          "description": "Spacing follows 8rpx rhythm (mini-program) or 8px grid (web) — craft",
+          "description": "Spacing follows 8rpx rhythm (mini-program) or 8px grid (admin-client) — craft",
           "severity": "concern",
           "verification": "agent: measure rendered gaps against ui-layout-audit spacing table",
           "auto": false
@@ -182,7 +182,7 @@
       ]
     },
     "User Satisfaction Auditor": {
-      "description": "User-perspective satisfaction audit for user-facing frontend changes only (apps/mini-program/src/pages/**, web client pages). Runs ONLY when the diff touches a user-facing surface; skipped for backend/admin-only changes. Loads user-satisfaction-audit: picks a named persona, walks the RENDERED surface in first person, scores the six angles. All items are concern-level to prevent nit-chasing EXCEPT US-04: an emotional peak delivered without ceremony is blocking because it burns the product's strongest retention asset.",
+      "description": "User-perspective satisfaction audit for user-facing frontend changes only (apps/mini-program/src/pages/**). Runs ONLY when the diff touches a user-facing surface; skipped for backend/admin-client-only changes. Loads user-satisfaction-audit: picks a named persona, walks the RENDERED surface in first person, scores the six angles. All items are concern-level to prevent nit-chasing EXCEPT US-04: an emotional peak delivered without ceremony is blocking because it burns the product's strongest retention asset.",
       "items": [
         {
           "id": "US-01",
@@ -207,7 +207,7 @@
         },
         {
           "id": "US-04",
-          "description": "Angle 4 — emotional peaks (match reveal, squad unboxing, onboarding completion, first payment) must have a ceremony arc (build-up → reveal → celebration); a peak delivered as a data table, instant redirect, or unframed toast is a retention-killing defect",
+          "description": "Angle 4 — emotional peaks (match reveal, squad unboxing, onboarding completion, first payment, gathering-room first entry, flash story ending gallery) must have a ceremony arc (build-up → reveal → celebration); a peak delivered as a data table, instant redirect, or unframed toast is a retention-killing defect",
           "severity": "blocking",
           "verification": "agent: if the diff touches an emotional peak surface, walk that moment as the persona and confirm the arc exists; skip (N/A) when no peak surface changed",
           "auto": false
@@ -247,10 +247,8 @@
     }
   },
   "delta_review_rules": {
-    "enabled": true,
-    "description": "On re-review, only check items that previously failed or are new in this iteration.",
-    "pass_items_persist": true,
-    "previous_review_ttl_hours": 48
+    "enabled": false,
+    "description": "Delta review is NOT implemented as of 2026-08-13 — no persistence layer exists, every review runs full/stateless. Re-enable only after the reviews directory wiring is built."
   },
   "consistency_guards": {
     "review_fingerprint_fields": ["changedFiles", "checklistVersion", "agentName"],

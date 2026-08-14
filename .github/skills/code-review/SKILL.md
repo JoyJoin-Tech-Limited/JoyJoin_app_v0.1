@@ -65,8 +65,9 @@ Every review must consider:
 ## Quick examples
 
 - **Payment or webhook PR** — start with this skill, then load `reliability-and-state-integrity` and `auth-session-and-safety-boundaries`; verify idempotency, retry safety, and fail-closed auth around money movement.
-- **Frontend component PR (web)** — start with this skill, then load `frontend-component-architecture` and `design-system-governance`; check whether the component belongs in the app or shared package, whether accessibility/token usage are preserved, and whether spacing matches spec or the 8px token rhythm.
+- **Admin-client PR** — start with this skill, then load `admin-client-frontend` and `design-system-governance`; check RBAC UI gating matches server roles, mutations are audit-logged, and token discipline (ops-tier surface — no emotional-rubric requirement).
 - **Mini-program UI PR** — start with this skill, then load `mini-program-frontend-excellence` (especially `references/pixel-precision.md`) and `design-system-governance`; **block** avoidable spec drift, missing 8rpx rhythm when unspecced, or absent WeChat DevTools / screenshot evidence for user-visible layout changes.
+- **Realtime surface PR (gathering room / icebreaker session)** — start with this skill, then load `social-icebreaker-domain` (or `docs/agent-context/gathering-room.md`); check hooks above every early return, WS reconnect/heartbeat, generation progress monotonicity + terminal-state guards, and the top-level `/api/miniscript/*` path contract.
 - **Onboarding routing PR** — start with this skill, then load `onboarding-state-architecture`; confirm server-owned `nextStep` remains the authority and that tests cover fallback/loop regressions.
 
 ## Troubleshooting
