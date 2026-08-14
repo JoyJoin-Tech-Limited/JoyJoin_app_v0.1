@@ -1196,6 +1196,19 @@ page {
   }
 }
 
+.flash-dialogue__story-stage--atuan-first .flash-dialogue__story-panel--result .flash-dialogue__story-panel-season {
+  color: $color-primary-dark;
+}
+
+.flash-dialogue__story-stage--atuan-first .flash-dialogue__story-panel--result .flash-dialogue__story-panel-title {
+  color: $color-text-primary-warm;
+}
+
+.flash-dialogue__story-stage--atuan-first .flash-dialogue__story-panel--result .flash-dialogue__story-panel-closing,
+.flash-dialogue__story-stage--atuan-first .flash-dialogue__story-panel--result .flash-dialogue__story-panel-progress {
+  color: $color-text-secondary-on-light;
+}
+
 .atuan-first-dialogue {
   &__highlight-story {
     display: block;

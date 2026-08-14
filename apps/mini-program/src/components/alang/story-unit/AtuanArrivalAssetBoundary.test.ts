@@ -84,6 +84,14 @@ describe('Atuan first-arrival asset ownership', () => {
     expect(conversationCopy).toMatch(/&__prompt\s*\{[^}]*font-size:\s*\$font-size-base;/s)
   })
 
+  it('uses dark copy tokens for the Atuan result panel on its light surface', () => {
+    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash.scss'), 'utf8')
+
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-stage--atuan-first \.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-season\s*\{\s*color:\s*\$color-primary-dark;/)
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-stage--atuan-first \.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-title\s*\{\s*color:\s*\$color-text-primary-warm;/)
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-stage--atuan-first \.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-closing,[\s\S]*?\.flash-dialogue__story-panel-progress\s*\{\s*color:\s*\$color-text-secondary-on-light;/)
+  })
+
   it('keeps first-arrival assets covered by the production package contract', () => {
     const cleanScript = readFileSync(resolve(appRoot, 'scripts/clean-cdn-assets.mjs'), 'utf8')
     const verifyScript = readFileSync(resolve(appRoot, 'scripts/verify-flash-package.mjs'), 'utf8')
