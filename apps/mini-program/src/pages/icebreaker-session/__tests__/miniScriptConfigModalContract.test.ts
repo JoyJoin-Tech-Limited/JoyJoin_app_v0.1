@@ -52,6 +52,13 @@ describe('MiniScriptConfigModal interaction and layout contract', () => {
     expect(source).toContain('initialGenres = [...MINI_SCRIPT_GENRES]')
   })
 
+  it('shows genre selection with the card outline only', () => {
+    expect(source).toContain("mods.push('ms-genre-card--selected')")
+    expect(source).toContain("className='ms-genre-card__glow'")
+    expect(source).not.toContain('ms-genre-card__check')
+    expect(styles).not.toContain('&__check {')
+  })
+
   it('offers an always-visible dismiss button (backdrop is display:none)', () => {
     expect(source).toContain("className='ms-modal__close'")
     expect(source).toContain("aria-label='关闭'")

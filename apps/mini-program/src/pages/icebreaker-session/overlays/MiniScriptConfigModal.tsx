@@ -18,7 +18,6 @@ import { haptics } from '../../../lib/utils/haptics'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import Button from '../../../components/ui/Button'
 import AiGenerationShell from '../../../components/ui/AiGenerationShell'
-import CheckBadge from '../../../components/ui/CheckBadge'
 
 function getMiniScriptShellPhase(status: MiniScriptGenerationStatus | null) {
   if (!status) return 'generating'
@@ -370,13 +369,7 @@ export function MiniScriptConfigModal({
                     <View className='ms-genre-card__overlay' />
                     {/* Genre icon removed — gradient + label sufficient */}
                     <Text className='ms-genre-card__label'>{card.label}</Text>
-                    {/* Checkmark for selected state */}
-                    {isSelected && (
-                      <View className='ms-genre-card__check'>
-                        <CheckBadge className='ms-genre-card__check-icon' />
-                      </View>
-                    )}
-                    {/* Glow ring */}
+                    {/* The outline is the complete selected state; avoid a separate badge panel. */}
                     <View
                       className='ms-genre-card__glow'
                       style={{ borderColor: card.accentColor }}

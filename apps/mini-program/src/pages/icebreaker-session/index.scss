@@ -894,27 +894,6 @@ $__gold-accent:  $color-landed-gold;
     z-index: 1;
   }
 
-  &__check {
-    position: absolute;
-    top: 16rpx;
-    right: 16rpx;
-    width: 40rpx;
-    height: 40rpx;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.9);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2;
-    animation: ms-check-pop 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  }
-
-  &__check-icon {
-    font-size: $font-size-sm;
-    color: $color-primary;
-    font-weight: $font-weight-bold;
-  }
-
   &__glow {
     position: absolute;
     inset: -4rpx;
@@ -954,17 +933,6 @@ $__gold-accent:  $color-landed-gold;
   100% {
     transform: scale(1);
     opacity: 1;
-  }
-}
-
-@keyframes ms-check-pop {
-  from {
-    opacity: 0;
-    transform: scale(0);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
   }
 }
 
