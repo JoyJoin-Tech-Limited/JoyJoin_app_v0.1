@@ -167,7 +167,7 @@ describe("tier consistency + echo boundaries + lastChoiceId", () => {
   });
 
   it("records lastChoiceId through answer and preserves it across advance", () => {
-        const content = {
+        const content: FlashStoryContentV2 = {
       v: 2,
       start: "n1",
       nodes: {

@@ -171,6 +171,7 @@ export type FlashStoryEpisodeDto = {
 
 export type FlashStoryV2ViewDto = {
   echo: number;
+  echoTier: "彻" | "深" | "轻";
   nodeId: string;
   type: "prose" | "choice" | "callback" | "closure" | "ending";
   segments: Array<{ speaker?: string; text: string }>;
