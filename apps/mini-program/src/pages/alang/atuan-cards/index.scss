@@ -1,4 +1,4 @@
-@import '../../../../styles/variables';
+@import '../../../styles/variables';
 .atuan-cards { min-height: 100vh; min-height: 100dvh; box-sizing: border-box; padding: calc(env(safe-area-inset-top) + 40rpx) 32rpx calc(env(safe-area-inset-bottom) + 40rpx); color: $color-text-primary-warm; background: $color-bg-warm-to; font-family: $font-ui;
   &__eyebrow,&__title,&__copy,&__card-count,&__card-copy,&__atuan-copy { display:block; }
   &__eyebrow { color:$color-primary-dark; font-size:$font-size-xs; font-weight:$font-weight-bold; letter-spacing:2rpx; }

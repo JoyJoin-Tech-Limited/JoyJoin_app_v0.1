@@ -28,11 +28,8 @@ const atuanArrivalRelativePaths = [
 ]
 
 const flashRuntimeImages = [
-  'pages/alang/assets/flash-city-encounter.jpg',
-  'pages/alang/assets/street-blind-box-icon.png',
   'pages/alang/assets/ui/flash-city-ambient-bg.png',
   'pages/alang/assets/ui/flash-empty-online.png',
-  'pages/alang/assets/ui/flash-empty-tasks.png',
   ...npcHeadshotRelativePaths,
   ...flashSceneRelativePaths,
   ...flashDialogueRelativePaths,
