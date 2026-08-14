@@ -1,0 +1,490 @@
+@use '../../../styles/variables' as *;
+
+.alang-first-act {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  color: $color-text-primary-warm;
+  background: $color-text-primary;
+  font-family: $font-ui;
+
+  &__scene,
+  &__scene-fallback,
+  &__scene-grade {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__scene {
+    object-fit: cover;
+  }
+
+  &__scene-fallback {
+    background: linear-gradient(155deg, $flow-accent-sky 0%, rgba($color-text-primary, 0.72) 48%, $color-bg-warm-to 100%);
+  }
+
+  &__scene-grade {
+    z-index: 1;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba($color-text-primary, 0.08) 0%, rgba($color-text-primary, 0) 34%),
+      linear-gradient(0deg, rgba($color-text-primary, 0.48) 0%, rgba($color-text-primary, 0) 43%);
+  }
+
+  &__speech {
+    position: absolute;
+    z-index: 6;
+    top: calc(env(safe-area-inset-top) + 80rpx);
+    left: 32rpx;
+    width: 336rpx;
+    box-sizing: border-box;
+    padding: 24rpx;
+    border: 2rpx solid rgba($color-primary, 0.16);
+    border-radius: $bubble-radius;
+    background: rgba($color-surface, 0.94);
+    box-shadow: $bubble-shadow;
+
+    &::after {
+      position: absolute;
+      right: 40rpx;
+      bottom: -14rpx;
+      width: 28rpx;
+      height: 28rpx;
+      border-right: 2rpx solid rgba($color-primary, 0.12);
+      border-bottom: 2rpx solid rgba($color-primary, 0.12);
+      background: rgba($color-surface, 0.94);
+      content: '';
+      transform: rotate(45deg);
+    }
+  }
+
+  &__speaker {
+    display: block;
+    margin-bottom: 8rpx;
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__speech-copy {
+    position: relative;
+    z-index: 1;
+    display: block;
+    color: $color-text-primary-warm;
+    font-size: $font-size-base;
+    line-height: $line-height-relaxed;
+  }
+
+  &__hotspot {
+    position: absolute;
+    z-index: 4;
+    min-width: $cta-min-tap;
+    min-height: $cta-min-tap;
+    border-radius: $radius-md;
+    transition: opacity 180ms ease-out, transform 180ms ease-out;
+
+    &--alang {
+      top: 23%;
+      left: 42%;
+      width: 37%;
+      height: 57%;
+    }
+
+    &--lifebuoy {
+      top: 39%;
+      left: 13%;
+      width: 22%;
+      height: 17%;
+    }
+
+    &--routeMap {
+      top: 53%;
+      left: 0;
+      width: 35%;
+      height: 19%;
+    }
+
+    &--window-chairs {
+      top: 31%;
+      right: 0;
+      width: 25%;
+      height: 19%;
+    }
+
+    &--pressed {
+      transform: scale(0.98);
+    }
+
+    &--seen .alang-first-act__hotspot-marker {
+      color: $color-success-text-on-light;
+      border-color: rgba($color-success, 0.5);
+      background: rgba($color-surface, 0.92);
+    }
+
+    &--active .alang-first-act__hotspot-marker {
+      box-shadow: 0 0 0 12rpx rgba($color-primary, 0.13);
+      transform: scale(1.08);
+    }
+  }
+
+  &__hotspot-marker {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48rpx;
+    height: 48rpx;
+    color: $color-primary;
+    border: 2rpx solid rgba($color-primary, 0.52);
+    border-radius: $radius-circle;
+    background: rgba($color-surface, 0.88);
+    box-shadow: 0 4rpx 20rpx rgba(55, 65, 81, 0.18);
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    transform: translate(-50%, -50%);
+    transition: box-shadow 180ms ease-out, transform 180ms ease-out;
+  }
+
+  &__progress {
+    position: absolute;
+    z-index: 5;
+    right: 24rpx;
+    bottom: 456rpx;
+    display: flex;
+    align-items: center;
+    min-height: 56rpx;
+    padding: 0 20rpx;
+    color: $color-text-secondary-on-light;
+    border: 1rpx solid rgba($color-surface, 0.72);
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.88);
+    box-shadow: $shadow-sm;
+    font-size: $font-size-sm;
+  }
+
+  &__panel {
+    position: absolute;
+    z-index: 8;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    box-sizing: border-box;
+    min-height: 424rpx;
+    padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+    border-top: 1rpx solid rgba($color-primary, 0.12);
+    border-radius: 40rpx 40rpx 0 0;
+    background: rgba($color-bg-warm-to, 0.97);
+    box-shadow: 0 -16rpx 48rpx rgba(55, 65, 81, 0.18);
+
+    &--game {
+      min-height: 696rpx;
+      padding-top: 24rpx;
+    }
+
+    &--success {
+      min-height: 440rpx;
+    }
+  }
+
+  &__copy-block,
+  &__game {
+    display: flex;
+    flex-direction: column;
+    gap: 16rpx;
+  }
+
+  &__kicker {
+    display: block;
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    letter-spacing: 2rpx;
+  }
+
+  &__title {
+    display: block;
+    color: $color-text-primary-warm;
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-display;
+  }
+
+  &__body,
+  &__prompt,
+  &__game-instruction {
+    display: block;
+    color: $color-text-secondary-on-light;
+    font-size: $font-size-base;
+    line-height: $line-height-relaxed;
+  }
+
+  &__prompt {
+    color: $color-text-primary-warm;
+    font-weight: $font-weight-medium;
+  }
+
+  &__hint {
+    display: block;
+    color: $color-text-tertiary-on-light;
+    font-size: $font-size-sm;
+  }
+
+  &__choices {
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
+  }
+
+  &__choice,
+  &__primary-action,
+  &__secondary-action,
+  &__control {
+    box-sizing: border-box;
+    min-height: $cta-min-tap;
+    transition: opacity 180ms ease-out, transform 180ms ease-out;
+
+    &[aria-disabled='true'] {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  &__choice {
+    display: flex;
+    align-items: center;
+    gap: 16rpx;
+    padding: 16rpx 24rpx;
+    color: $color-text-primary-warm;
+    border: 2rpx solid rgba($color-primary, 0.16);
+    border-radius: $card-radius-sm;
+    background: rgba($color-surface, 0.9);
+
+    &--pressed {
+      border-color: rgba($color-primary, 0.34);
+      background: $color-primary-light;
+      transform: scale(0.99);
+    }
+  }
+
+  &__choice-mark {
+    flex: 0 0 auto;
+    color: $color-primary;
+    font-size: $font-size-xl;
+    line-height: 1;
+  }
+
+  &__choice-copy {
+    color: inherit;
+    font-size: $font-size-base;
+    line-height: $line-height-normal;
+  }
+
+  &__primary-action,
+  &__secondary-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16rpx 28rpx;
+    border-radius: $button-radius;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__primary-action {
+    color: $color-text-white;
+    background: $color-primary;
+    box-shadow: $shadow-primary-soft;
+
+    &--pressed {
+      opacity: 0.9;
+      transform: scale(0.99);
+    }
+
+    &--compact {
+      min-height: $cta-min-tap;
+      margin-top: 4rpx;
+    }
+  }
+
+  &__secondary-action {
+    color: $color-primary-dark;
+    border: 2rpx solid rgba($color-primary, 0.22);
+    background: $color-primary-light;
+
+    &--pressed {
+      transform: scale(0.99);
+    }
+  }
+
+  &__game {
+    gap: 12rpx;
+  }
+
+  &__game-instruction {
+    font-size: $font-size-sm;
+  }
+
+  &__chair-board {
+    position: relative;
+    height: 152rpx;
+    overflow: hidden;
+    border: 2rpx solid rgba($flow-accent-sky, 0.5);
+    border-radius: $card-radius-sm;
+    background: linear-gradient(180deg, rgba($flow-accent-sky, 0.23), rgba($color-surface, 0.82));
+  }
+
+  &__river-line {
+    position: absolute;
+    top: 32rpx;
+    right: 24rpx;
+    left: 24rpx;
+    height: 4rpx;
+    border-radius: $radius-pill;
+    background: $flow-accent-sky;
+    opacity: 0.76;
+  }
+
+  &__chair {
+    position: absolute;
+    z-index: 1;
+    bottom: 20rpx;
+    width: 64rpx;
+    height: 72rpx;
+    transform-origin: 50% 78%;
+    transition: transform 220ms ease-out;
+
+    &-back {
+      position: absolute;
+      top: 0;
+      left: 8rpx;
+      width: 48rpx;
+      height: 44rpx;
+      border: 3rpx solid $color-text-secondary-on-light;
+      border-radius: 12rpx 12rpx 8rpx 8rpx;
+      background: $color-bg-warm-to;
+      box-shadow: 0 4rpx 10rpx rgba(55, 65, 81, 0.12);
+    }
+
+    &-base {
+      position: absolute;
+      right: 4rpx;
+      bottom: 0;
+      left: 4rpx;
+      height: 30rpx;
+      border-top: 8rpx solid $color-text-secondary-on-light;
+      border-right: 5rpx solid $color-text-secondary-on-light;
+      border-left: 5rpx solid $color-text-secondary-on-light;
+      border-radius: 4rpx;
+    }
+  }
+
+  &__chair-board--distance-0 &__chair--left { left: 41%; }
+  &__chair-board--distance-0 &__chair--right { right: 41%; }
+  &__chair-board--distance-1 &__chair--left { left: 36%; }
+  &__chair-board--distance-1 &__chair--right { right: 36%; }
+  &__chair-board--distance-2 &__chair--left { left: 30%; }
+  &__chair-board--distance-2 &__chair--right { right: 30%; }
+  &__chair-board--distance-3 &__chair--left { left: 23%; }
+  &__chair-board--distance-3 &__chair--right { right: 23%; }
+  &__chair-board--distance-4 &__chair--left { left: 15%; }
+  &__chair-board--distance-4 &__chair--right { right: 15%; }
+
+  &__chair-board--angle-0 &__chair--left { transform: rotate(20deg); }
+  &__chair-board--angle-0 &__chair--right { transform: rotate(-20deg); }
+  &__chair-board--angle-1 &__chair--left { transform: rotate(8deg); }
+  &__chair-board--angle-1 &__chair--right { transform: rotate(3deg); }
+  &__chair-board--angle-2 &__chair--left,
+  &__chair-board--angle-2 &__chair--right { transform: rotate(0); }
+  &__chair-board--angle-3 &__chair--left { transform: rotate(-18deg); }
+  &__chair-board--angle-3 &__chair--right { transform: rotate(18deg); }
+
+  &__game-feedback {
+    display: flex;
+    justify-content: space-between;
+    gap: 16rpx;
+    color: $color-text-secondary-on-light;
+    font-size: $font-size-xs;
+    line-height: $line-height-normal;
+
+    > text {
+      flex: 1;
+    }
+  }
+
+  &__control-row {
+    display: grid;
+    grid-template-columns: 176rpx 1fr 176rpx;
+    align-items: center;
+    gap: 12rpx;
+  }
+
+  &__control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12rpx 16rpx;
+    color: $color-primary-dark;
+    border: 2rpx solid rgba($color-primary, 0.18);
+    border-radius: $button-radius;
+    background: rgba($color-surface, 0.92);
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+  }
+
+  &__control-value {
+    color: $color-text-secondary-on-light;
+    font-size: $font-size-xs;
+    text-align: center;
+  }
+
+  &__error {
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
+    padding: 24rpx;
+    color: $color-text-secondary-on-light;
+    border: 2rpx solid rgba($color-warning, 0.3);
+    border-radius: $card-radius-sm;
+    background: rgba($color-bg-tint-warm, 0.96);
+    font-size: $font-size-base;
+    line-height: $line-height-relaxed;
+  }
+
+  &__error-title {
+    color: $color-amber-700;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__success {
+    gap: 20rpx;
+  }
+
+  &--disabled {
+    .alang-first-act__hotspot,
+    .alang-first-act__choice,
+    .alang-first-act__primary-action,
+    .alang-first-act__secondary-action,
+    .alang-first-act__control {
+      pointer-events: none;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alang-first-act__hotspot,
+  .alang-first-act__hotspot-marker,
+  .alang-first-act__choice,
+  .alang-first-act__primary-action,
+  .alang-first-act__secondary-action,
+  .alang-first-act__control,
+  .alang-first-act__chair {
+    transition: none;
+  }
+}

@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   refetch: vi.fn(),
   canonicalRedirect: vi.fn(),
   redirectTo: vi.fn(),
+  getStorageSync: vi.fn(),
 }))
 
 vi.mock('@tarojs/taro', () => ({
@@ -21,6 +22,8 @@ vi.mock('@tarojs/taro', () => ({
     getCurrentInstance: () => ({ router: { params: { encounterId: 'encounter-1' } } }),
     setNavigationBarTitle: vi.fn(),
     redirectTo: mocks.redirectTo,
+    getStorageSync: mocks.getStorageSync,
+    setStorageSync: vi.fn(),
   },
 }))
 vi.mock('@tarojs/components', () => ({
@@ -104,6 +107,7 @@ const answeredStoryEncounter = {
 describe('formal Flash dialogue', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.getStorageSync.mockReturnValue(undefined)
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
     mocks.useEncounter.mockReturnValue({ data: questionEncounter, isLoading: false, isError: false, refetch: mocks.refetch })
     mocks.answer.mockResolvedValue(questionEncounter)
@@ -124,7 +128,7 @@ describe('formal Flash dialogue', () => {
     }))
   })
 
-  it('keeps story choices inside one animated scene and naturalizes already-seeded copy', async () => {
+  it('routes the first Shiqi unit into its dedicated four-highlight experience', () => {
     mocks.useEncounter.mockReturnValue({
       data: storyEncounter,
       isLoading: false,
@@ -136,21 +140,12 @@ describe('formal Flash dialogue', () => {
     render(<FlashDialoguePage />)
 
     const stage = screen.getByTestId('flash-story-stage')
-    const choicePanel = screen.getByTestId('flash-story-choice-panel')
-    expect(stage).toContainElement(choicePanel)
+    const experience = screen.getByTestId('shiqi-first-act-experience')
+    expect(stage).toContainElement(experience)
     expect(stage.querySelector('.flash-page__scroll')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('拾柒正在和你说话')).toHaveClass('flash-dialogue-scene--breathe')
-
-    expect(screen.getByLabelText('你愿意怎么和我开始？')).toBeInTheDocument()
-    expect(screen.getByText('我和你一起对齐纸页，不替主人删选项。')).toBeInTheDocument()
-    expect(screen.getByText('我先看三条短线，不猜它们代表谁。')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: '我先看三条短线，不猜它们代表谁。' }))
-    await waitFor(() => expect(mocks.answer).toHaveBeenCalledWith({
-      encounterId: 'encounter-1',
-      questionId: 's1-p1-shiqi-response-v2',
-      optionId: 's1-p1-shiqi-cooperate-b',
-    }))
+    expect(screen.queryByTestId('flash-story-choice-panel')).not.toBeInTheDocument()
+    expect(screen.getAllByTestId('shiqi-first-act-hotspot')).toHaveLength(4)
+    expect(screen.getByTestId('shiqi-scene-speech')).toHaveTextContent('三份记录看似一致')
   })
 
   it('keeps the answer and fragment reveal inside the same story stage', () => {
@@ -201,9 +196,25 @@ describe('formal Flash dialogue', () => {
       refetch: mocks.refetch,
     })
     mocks.answer.mockRejectedValueOnce(new Error('offline'))
+    mocks.getStorageSync.mockImplementation((key: string) => key === 'joyjoin_flash_shiqi_first_act_v1:encounter-1'
+      ? {
+          version: 'shiqi-first-act-v1',
+          stage: 'success',
+          completedHotspots: ['shiqi', 'outing-book', 'exchange-box', 'inspection-light'],
+          selectedReplies: {},
+          activeHotspot: null,
+          activeReplyId: null,
+          approachIndex: 0,
+          layerOffsets: [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }],
+          lockedLayers: [true, true, true],
+          activeLayer: 2,
+          firstErrorShown: true,
+          gameStatus: 'aligned',
+        }
+      : undefined)
 
     render(<FlashDialoguePage />)
-    fireEvent.click(screen.getByRole('button', { name: '我和你一起对齐纸页，不替主人删选项。' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成《记录没有说完》' }))
 
     const alert = await screen.findByRole('alert')
     expect(screen.getByTestId('flash-story-stage')).toContainElement(alert)
@@ -387,6 +398,8 @@ describe('formal Flash dialogue', () => {
     })
     render(<FlashDialoguePage />)
     expect(document.querySelector('[data-testid="flash-story-v2-stage"]')).toBeNull()
-    expect(screen.getByText('栗子把五支彩笔按颜色排开。')).toBeInTheDocument()
+    expect(screen.getByTestId('lizi-first-act')).toBeInTheDocument()
+    expect(screen.getByTestId('lizi-speech')).toHaveTextContent('别急着替颜色找名字')
+    expect(screen.getAllByRole('button', { name: /^观察/ })).toHaveLength(4)
   })
 })

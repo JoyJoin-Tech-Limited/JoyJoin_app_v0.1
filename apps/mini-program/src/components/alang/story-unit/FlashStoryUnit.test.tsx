@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getFlashFirstActExperienceContract } from '@shared/alang/flashFirstActExperience'
 import { FlashStoryUnit } from './FlashStoryUnit'
 
 const storage = new Map<string, unknown>()
@@ -22,6 +23,10 @@ vi.mock('../FlashUi', () => ({
   FlashNpcDialogueScene: ({ speech }: any) => <div data-testid='npc-speech'>{speech}</div>,
 }))
 vi.mock('../../../lib/analytics/flashStoryAnalytics', () => ({ flashStoryAnalytics: { track: vi.fn() } }))
+vi.mock('./AlangFirstActExperience', () => ({ AlangFirstActExperience: ({ scene, onComplete }: any) => <div data-testid='alang-first-act-mock' data-scene={scene}><button onClick={() => onComplete(1)}>完成阿浪第一幕</button></div> }))
+vi.mock('./LiziFirstActExperience', () => ({ LiziFirstActExperience: ({ scene, onComplete }: any) => <div data-testid='lizi-first-act-mock' data-scene={scene}><button onClick={() => onComplete(1)}>完成栗子第一幕</button></div> }))
+vi.mock('./MomoFirstActExperience', () => ({ MomoFirstActExperience: ({ scene, onComplete }: any) => <div data-testid='momo-first-act-mock' data-scene={scene}><button onClick={() => onComplete(1)}>完成默默第一幕</button></div> }))
+vi.mock('./ShiqiFirstActExperience', () => ({ ShiqiFirstActExperience: ({ scene, onComplete }: any) => <div data-testid='shiqi-first-act-mock' data-scene={scene}><button onClick={() => onComplete(1)}>完成拾柒第一幕</button></div> }))
 
 const motion = { ambient: 'breathe' }
 const progress = { completedInPhase: 0, totalInPhase: 5, completedTotal: 0, total: 15 }
@@ -193,13 +198,30 @@ describe('FlashStoryUnit production flow', () => {
     expect(screen.getByTestId('atuan-scene-dialogue')).toHaveTextContent('阿团把卡片收好了')
   })
 
-  it('submits non-Atuan choices without entering the Atuan scene', () => {
+  it.each([
+    ['alang', '阿浪', '灰狼', 'seat-plan', '完成阿浪第一幕', 'alang-first-act-mock'],
+    ['lizi', '栗子', '水獭', 'dry-markers', '完成栗子第一幕', 'lizi-first-act-mock'],
+    ['momo', '默默', '兔狲', 'route-book', '完成默默第一幕', 'momo-first-act-mock'],
+    ['shiqi', '拾柒', '乌鸦', 'outing-book', '完成拾柒第一幕', 'shiqi-first-act-mock'],
+  ])('runs %s first act and maps its final stance to the real server option', (slug, name, species, objectCode, completionLabel, testId) => {
     const submit = vi.fn().mockResolvedValue(undefined)
-    const npc = { ...baseNpc, id: 'npc-lizi', slug: 'lizi', name: '栗子', species: '松鼠' }
-    const story = { ...firstStory, id: 'episode-lizi-1', code: 's1-p1-lizi', title: '干掉的彩笔', objectCode: 'dry-markers' }
-    const question = { id: 's1-p1-lizi-response-v2', text: '怎么开始？', options: [{ id: 'lizi-a', label: '先看笔迹' }] }
-    render(<FlashStoryUnit encounterId='enc-lizi' npc={npc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
-    fireEvent.click(screen.getByRole('button', { name: '先看笔迹' }))
-    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ optionId: 'lizi-a' }))
+    const npc = { ...baseNpc, id: `npc-${slug}`, slug, name, species }
+    const story = { ...firstStory, id: `episode-${slug}-1`, code: `s1-p1-${slug}`, title: `${name}第一幕`, objectCode }
+    const contract = getFlashFirstActExperienceContract(story.code)!
+    const question = {
+      id: `${story.code}-first-act-response-v1`,
+      text: contract.prompt,
+      options: contract.approaches.map(({ id, label }) => ({ id, label })),
+    }
+    render(<FlashStoryUnit encounterId={`enc-${slug}`} npc={npc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
+
+    expect(screen.getByTestId(testId)).toHaveAttribute('data-scene', expect.stringContaining(`flash-${slug}-first-act`))
+    expect(screen.queryByTestId('flash-story-choice-panel')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: completionLabel }))
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: question.id,
+      optionId: contract.approaches[1].id,
+      label: contract.approaches[1].label,
+    }))
   })
 })

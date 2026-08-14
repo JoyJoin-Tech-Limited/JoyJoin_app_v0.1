@@ -1,0 +1,423 @@
+@use '../../../styles/variables' as *;
+
+.shiqi-first-act {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 1040rpx;
+  overflow: hidden;
+  border-radius: $card-radius;
+  background: $color-bg-warm-to;
+  font-family: $font-ui;
+
+  &--disabled {
+    .shiqi-first-act__choice,
+    .shiqi-first-act__primary,
+    .shiqi-first-act__ghost,
+    .shiqi-first-act__direction-button,
+    .shiqi-first-act__hotspot {
+      opacity: 0.58;
+    }
+  }
+
+  &__scene {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__scene-grade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba($color-text-primary, 0.06) 0%,
+      rgba($color-text-primary, 0) 42%,
+      rgba($color-text-primary, 0.16) 100%
+    );
+  }
+
+  &__bubble {
+    position: absolute;
+    z-index: 6;
+    top: $spacing-md;
+    left: $spacing-md;
+    width: 544rpx;
+    min-height: $button-height;
+    box-sizing: border-box;
+    padding: 20rpx $spacing-md;
+    border: 2rpx solid rgba($flow-accent-sky, 0.7);
+    border-radius: $card-radius-sm $card-radius-sm $card-radius-sm $spacing-xs;
+    background: rgba($color-surface, 0.94);
+    box-shadow: 0 12rpx 32rpx rgba($color-text-primary, 0.12);
+  }
+
+  &__bubble-name,
+  &__bubble-text,
+  &__eyebrow,
+  &__heading,
+  &__body,
+  &__offset,
+  &__status {
+    display: block;
+  }
+
+  &__bubble-name {
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    line-height: 32rpx;
+  }
+
+  &__bubble-text {
+    margin-top: $spacing-xs;
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    line-height: 42rpx;
+  }
+
+  &__hotspot {
+    position: absolute;
+    z-index: 4;
+    min-width: $cta-min-tap;
+    min-height: $cta-min-tap;
+    transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease-out;
+
+    &--shiqi {
+      top: 17%;
+      right: 0;
+      width: 46%;
+      height: 55%;
+    }
+
+    &--outing-book {
+      top: 50%;
+      left: 0;
+      width: 58%;
+      height: 31%;
+    }
+
+    &--exchange-box {
+      top: 31%;
+      left: 0;
+      width: 37%;
+      height: 23%;
+    }
+
+    &--inspection-light {
+      top: 12%;
+      left: 39%;
+      width: 27%;
+      height: 41%;
+    }
+
+    &--pressed {
+      transform: scale(0.985);
+      opacity: 0.82;
+    }
+  }
+
+  &__hotspot-marker {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 48rpx;
+    height: 48rpx;
+    margin-top: -24rpx;
+    margin-left: -24rpx;
+    border: 4rpx solid rgba($color-surface, 0.9);
+    border-radius: $radius-circle;
+    background: rgba($color-primary, 0.28);
+    box-shadow: 0 0 0 8rpx rgba($color-primary, 0.12);
+    animation: shiqi-hotspot-breathe 1.8s ease-in-out infinite;
+  }
+
+  &__panel {
+    position: absolute;
+    z-index: 8;
+    right: $spacing-md;
+    bottom: $spacing-md;
+    left: $spacing-md;
+    box-sizing: border-box;
+    padding: $spacing-md;
+    border: 2rpx solid rgba($flow-accent-sky, 0.62);
+    border-radius: $card-radius;
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 24rpx 48rpx rgba($color-text-primary, 0.18);
+
+    &--intro {
+      min-height: 248rpx;
+    }
+  }
+
+  &__progress {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: $spacing-md;
+    color: $color-text-secondary-on-light;
+    font-size: $font-size-base;
+    line-height: 40rpx;
+  }
+
+  &__eyebrow {
+    color: $color-primary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    line-height: 32rpx;
+  }
+
+  &__heading {
+    margin-top: $spacing-2xs;
+    color: $color-text-primary;
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    line-height: 48rpx;
+  }
+
+  &__body {
+    margin-top: $spacing-xs;
+    color: $color-text-secondary-on-light;
+    font-size: $font-size-base;
+    line-height: 40rpx;
+  }
+
+  &__choice-row {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+  }
+
+  &__choice,
+  &__primary,
+  &__ghost,
+  &__direction-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: $cta-min-tap;
+    box-sizing: border-box;
+    transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease-out;
+  }
+
+  &__choice {
+    justify-content: flex-start;
+    padding: $spacing-sm $spacing-md;
+    border: 2rpx solid rgba($color-primary, 0.22);
+    border-radius: $card-radius-sm;
+    background: $color-bg-warm-to;
+    color: $color-text-primary;
+    font-size: $font-size-base;
+    line-height: 40rpx;
+
+    &--pressed {
+      transform: scale(0.985);
+      background: $color-primary-light;
+    }
+  }
+
+  &__primary {
+    margin-top: $spacing-md;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $card-radius-sm;
+    background: $color-primary;
+    color: $color-text-white;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    line-height: 40rpx;
+    box-shadow: $shadow-primary-soft;
+
+    &--inline {
+      margin-top: 0;
+    }
+
+    &--pressed {
+      transform: scale(0.985);
+      opacity: 0.86;
+    }
+  }
+
+  &__ghost {
+    padding: $spacing-sm $spacing-md;
+    border: 2rpx solid rgba($flow-accent-sky, 0.78);
+    border-radius: $card-radius-sm;
+    background: $color-surface;
+    color: $color-text-secondary-on-light;
+    font-size: $font-size-base;
+    line-height: 40rpx;
+
+    &--pressed {
+      transform: scale(0.985);
+      background: rgba($flow-accent-sky, 0.16);
+    }
+  }
+
+  &__overlay-board {
+    position: absolute;
+    z-index: 5;
+    top: 224rpx;
+    left: $spacing-md;
+    width: 360rpx;
+    height: 480rpx;
+    overflow: hidden;
+    border: 2rpx solid rgba($color-surface, 0.72);
+    border-radius: $card-radius-sm;
+    background: rgba($color-bg-warm-to, 0.88);
+    box-shadow: 0 24rpx 48rpx rgba($color-text-primary, 0.16);
+  }
+
+  &__baseline {
+    position: absolute;
+    background: rgba($color-primary, 0.72);
+
+    &--vertical {
+      top: $spacing-md;
+      bottom: $spacing-md;
+      left: 50%;
+      width: 2rpx;
+    }
+
+    &--horizontal {
+      top: 50%;
+      right: $spacing-md;
+      left: $spacing-md;
+      height: 2rpx;
+    }
+  }
+
+  &__paper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 304rpx;
+    height: 392rpx;
+    margin-top: -196rpx;
+    margin-left: -152rpx;
+    transform-origin: center;
+    border: 2rpx solid rgba($color-text-primary, 0.18);
+    border-radius: $radius-md;
+    background: rgba($color-bg-warm-to, 0.84);
+    box-shadow: 0 8rpx 16rpx rgba($color-text-primary, 0.08);
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out;
+  }
+
+  &__paper-line {
+    position: absolute;
+    height: 6rpx;
+    border-radius: $spacing-xs;
+    background: rgba($color-text-primary, 0.42);
+
+    &--a {
+      top: 88rpx;
+      left: 48rpx;
+      width: 192rpx;
+      transform: rotate(24deg);
+    }
+
+    &--b {
+      top: 192rpx;
+      left: 120rpx;
+      width: 144rpx;
+      transform: rotate(-36deg);
+    }
+  }
+
+  &__paper-mark {
+    position: absolute;
+    top: 184rpx;
+    left: 136rpx;
+    width: 24rpx;
+    height: 24rpx;
+    border: 4rpx solid rgba($color-primary, 0.52);
+    border-radius: $radius-circle;
+  }
+
+  &__layer-badge {
+    position: absolute;
+    top: $spacing-sm;
+    left: $spacing-sm;
+    color: $color-text-primary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-bold;
+  }
+
+  &__offset {
+    margin-top: $spacing-sm;
+    color: $color-text-primary;
+    font-family: $font-mono;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    line-height: 32rpx;
+  }
+
+  &__status {
+    margin-top: $spacing-sm;
+    color: $color-amber-700;
+    font-size: $font-size-sm;
+    line-height: 36rpx;
+  }
+
+  &__direction-grid {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__direction-button {
+    width: 104rpx;
+    padding: 0;
+    border: 2rpx solid rgba($color-primary, 0.24);
+    border-radius: $card-radius-sm;
+    background: $color-bg-warm-to;
+    color: $color-text-primary;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+
+    &--pressed {
+      transform: scale(0.94);
+      background: $color-primary-light;
+    }
+  }
+
+  &__game-actions {
+    display: flex;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__action-grow {
+    flex: 1;
+  }
+}
+
+@keyframes shiqi-hotspot-breathe {
+  0%, 100% {
+    transform: scale(0.92);
+    opacity: 0.72;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shiqi-first-act__hotspot-marker {
+    animation: none;
+  }
+
+  .shiqi-first-act__hotspot,
+  .shiqi-first-act__choice,
+  .shiqi-first-act__primary,
+  .shiqi-first-act__ghost,
+  .shiqi-first-act__direction-button,
+  .shiqi-first-act__paper {
+    transition: none;
+  }
+}

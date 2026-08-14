@@ -3,6 +3,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { useDidShow } from '@tarojs/taro'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { getFlashStoryUnitDefinition, type FlashStoryUnitId } from '@shared/alang/flashStorySeason'
+import { getFlashFirstActExperienceContract } from '@shared/alang/flashFirstActExperience'
 import {
   createAtuanFirstActProgress,
   getAtuanFirstActApproach,
@@ -24,6 +25,11 @@ import {
 } from './AtuanFirstEncounterDialogue'
 import { AtuanArrivalPrelude, type AtuanArrivalAssets } from './AtuanArrivalPrelude'
 import { resolveNPCResponse } from './NPCResponseResolver'
+import { resolveFlashNpcTheme } from '../../../lib/alang/flashNpcAssets'
+import { AlangFirstActExperience } from './AlangFirstActExperience'
+import { LiziFirstActExperience } from './LiziFirstActExperience'
+import { MomoFirstActExperience } from './MomoFirstActExperience'
+import { ShiqiFirstActExperience } from './ShiqiFirstActExperience'
 import {
   createStoryUnitState,
   reconcileStoryUnitState,
@@ -35,6 +41,15 @@ import {
 } from './StoryUnitRuntime'
 
 type StoryEpisode = NonNullable<FlashEncounterView['storyEpisode']>
+
+const CUSTOM_FIRST_ACT_IDS = new Set<FlashStoryUnitId>([
+  's1-p1-alang',
+  's1-p1-lizi',
+  's1-p1-momo',
+  's1-p1-shiqi',
+])
+
+const ignoreFirstActSpeech = () => undefined
 
 export interface FlashStoryUnitProps {
   encounterId: string
@@ -176,9 +191,25 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     if (submitState !== 'retry' && !(restoredSolvedRef.current && submitState === 'idle')) return
     void onSubmit(runtime.choice)
   }
+  const completeCustomFirstAct = (approachIndex: 0 | 1) => {
+    if (runtime.stage !== 'NPC_INTRO' || !question) return
+    const option = question.options[approachIndex]
+    if (!option) return
+    const approach = getFlashFirstActExperienceContract(definition.unitId)?.approaches[approachIndex]
+    startInteraction({ questionId: question.id, optionId: option.id, label: approach?.label ?? option.label })
+  }
 
   const showResult = serverSettled
   const isAtuanStory = definition.npcSlug === 'atuan'
+  const isCustomFirstAct = CUSTOM_FIRST_ACT_IDS.has(definition.unitId)
+  const customFirstActScene = resolveFlashNpcTheme(npc.slug, npc.name).dialogueSceneSrc
+  const showCustomFirstAct = isCustomFirstAct && !showResult && Boolean(customFirstActScene)
+  const customFirstActDisabled = submitState === 'submitting' || runtime.stage !== 'NPC_INTRO'
+  const showCustomSubmitStatus = showCustomFirstAct && (
+    submitState === 'submitting'
+    || Boolean(submitError)
+    || (runtime.stage === 'OBJECT_SUCCESS' && (submitState === 'retry' || (restoredSolvedRef.current && submitState === 'idle')))
+  )
   const showGame = !showResult && (runtime.stage === 'OBJECT_INTERACTION' || runtime.stage === 'OBJECT_DIVERGED' || runtime.stage === 'OBJECT_SUCCESS')
   const showAtuanPrelude = definition.unitId === 's1-p1-atuan' && !showResult && (runtime.stage === 'INIT' || runtime.stage === 'NPC_INTRO')
   const showAtuanScene = definition.unitId === 's1-p1-atuan' && !showAtuanPrelude && Boolean(atuanArrivalAssets)
@@ -195,11 +226,27 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const storyAction = definition.unitId === 's1-p1-atuan'
     ? '阿团站在长椅旁，目光越过你，仍旧望着公园入口。'
     : story.action
+  const customFirstAct = customFirstActScene ? (() => {
+    const sharedProps = {
+      encounterId,
+      scene: customFirstActScene,
+      disabled: customFirstActDisabled,
+      onSpeechChange: ignoreFirstActSpeech,
+      onComplete: completeCustomFirstAct,
+    }
+    switch (definition.unitId) {
+      case 's1-p1-alang': return <AlangFirstActExperience {...sharedProps} />
+      case 's1-p1-lizi': return <LiziFirstActExperience {...sharedProps} />
+      case 's1-p1-momo': return <MomoFirstActExperience {...sharedProps} />
+      case 's1-p1-shiqi': return <ShiqiFirstActExperience {...sharedProps} />
+      default: return null
+    }
+  })() : null
 
   return (
     <View className='flash-page flash-dialogue flash-dialogue--story'>
-      <View className={`flash-dialogue__story-stage${showResult ? ' flash-dialogue__story-stage--result' : ' flash-dialogue__story-stage--question'}${showGame ? ' flash-dialogue__story-stage--game' : ''}${definition.unitId === 's1-p1-atuan' ? ' flash-dialogue__story-stage--atuan-first' : ''}`} data-testid='flash-story-stage' data-story-unit-stage={runtime.stage} data-story-unit-id={definition.unitId}>
-        {showAtuanPrelude && atuanArrivalAssets ? (
+      <View className={`flash-dialogue__story-stage${showResult ? ' flash-dialogue__story-stage--result' : ' flash-dialogue__story-stage--question'}${showGame ? ' flash-dialogue__story-stage--game' : ''}${definition.unitId === 's1-p1-atuan' ? ' flash-dialogue__story-stage--atuan-first' : ''}${showCustomFirstAct ? ' flash-dialogue__story-stage--custom-first' : ''}`} data-testid='flash-story-stage' data-story-unit-stage={runtime.stage} data-story-unit-id={definition.unitId}>
+        {showCustomFirstAct && customFirstAct ? customFirstAct : showAtuanPrelude && atuanArrivalAssets ? (
           <AtuanArrivalPrelude
             assets={atuanArrivalAssets}
             onBeginConversation={(approachIndex, label) => {
@@ -213,15 +260,21 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
         ) : (
           <FlashNpcDialogueScene npc={npc} speech={speech} spacious choicesEmbedded={!showResult} motion={motion} />
         )}
-        <View className='flash-dialogue__story-ambient' aria-hidden='true' />
-        {!showAtuanPrelude ? (
+        {!showCustomFirstAct ? <View className='flash-dialogue__story-ambient' aria-hidden='true' /> : null}
+        {!showCustomFirstAct && !showAtuanPrelude ? (
           <View className='flash-dialogue__story-index' aria-label={`第 ${story.phase} 幕，故事 ${storyPosition} 共 ${story.progress.total}`}>
             <Text className='flash-dialogue__story-index-phase'>第 {story.phase} 幕</Text>
             <Text className='flash-dialogue__story-index-count'>{storyPosition}/{story.progress.total}</Text>
           </View>
         ) : null}
 
-        {showAtuanPrelude ? null : !showResult ? (
+        {showCustomSubmitStatus ? (
+          <View className='flash-dialogue__custom-story-status'>
+            {submitState === 'submitting' ? <View role='status'><Text>正在收下这次回应…</Text></View> : null}
+            {submitError ? <View role='alert'><Text>{submitError}</Text></View> : null}
+            {runtime.stage === 'OBJECT_SUCCESS' && (submitState === 'retry' || (restoredSolvedRef.current && submitState === 'idle')) ? <FlashButton variant='quiet' onClick={retrySubmit}>重新送出</FlashButton> : null}
+          </View>
+        ) : showCustomFirstAct ? null : showAtuanPrelude ? null : !showResult ? (
           <View className={`flash-dialogue__story-panel flash-dialogue__story-panel--choices${showAtuanScene ? ' flash-dialogue__story-panel--atuan-conversation' : ''}`} data-testid='flash-story-choice-panel'>
             <ScrollView className='flash-dialogue__story-panel-scroll' scrollY>
               <View className='flash-dialogue__story-panel-content'>

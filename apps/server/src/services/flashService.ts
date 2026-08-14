@@ -77,6 +77,8 @@ import {
 } from "../repositories/flashStoryRepo";
 import { getFeatureFlag } from "../lib/featureFlags";
 import { isFlashV2PilotUnitId, nextFlashV2HookHint } from "@joyjoin/shared/alang/flashStorySeason";
+import { isFlashFirstActExperienceUnitId } from "@joyjoin/shared/alang/flashFirstActExperience";
+import { resolveFlashFirstActRuntimeContent } from "../lib/flashFirstActRuntime";
 import {
   advanceStoryNode as advanceV2StoryNode,
   buildV2EndingGallery,
@@ -98,6 +100,7 @@ function resolveV2ClosureResponse(content: unknown): string | null {
 async function buildFlashStoryV2View(
   storyState: NonNullable<Awaited<ReturnType<typeof getFlashStoryEncounterState>>>,
 ): Promise<FlashStoryV2ViewDto | null> {
+  if (isFlashFirstActExperienceUnitId(storyState.episode.code)) return null;
   const content = storyState.episode.content as { v?: number; start?: string; nodes?: Record<string, unknown> } | null;
   if (content?.v !== 2) return null;
   if (!isFlashV2PilotUnitId(storyState.episode.code)) return null;
@@ -650,20 +653,21 @@ export async function getFlashEncounter(input: {
   if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 404, "没有找到这次相遇");
   let storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
   if (storyState && !storyState.completion) {
+    const runtimeContent = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
     const intent = await getReadyFlashStoryChoiceIntent(input.userId, storyState.episode.id);
     const option = intent
-      ? storyState.episode.content.question.options.find((candidate: { id: string }) => candidate.id === intent.optionId)
+      ? runtimeContent.question.options.find((candidate: { id: string }) => candidate.id === intent.optionId)
       : null;
     if (intent && option && intent.responseSnapshot && intent.renderKind) {
       const reviewedResponse = intent.renderKind === "template" && intent.responseSnapshot
         ? intent.responseSnapshot
-        : storyState.episode.content.responseByOption[intent.optionId] ?? storyState.episode.content.closing;
+        : runtimeContent.responseByOption[intent.optionId] ?? runtimeContent.closing;
       await completeFlashStoryEpisode({
         encounterId: intent.encounterId,
         userId: input.userId,
         episodeId: storyState.episode.id,
         optionId: intent.optionId,
-        configuredEffects: storyState.episode.content.effectsByOption?.[intent.optionId],
+        configuredEffects: runtimeContent.effectsByOption?.[intent.optionId],
         responseSnapshot: reviewedResponse,
         renderKind: "template",
         promptVersion: null,
@@ -674,7 +678,7 @@ export async function getFlashEncounter(input: {
   }
   const completedSeason = await getCompletedFlashStorySeason(input.userId, storyState?.episode.seasonId);
   if (storyState && (!completedSeason || input.preferCurrentCompletedEpisode || input.allowStoryReplay)) {
-    const content = storyState.episode.content;
+    const content = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
     const selectedOptionId = input.allowStoryReplay
       ? input.replayOptionId ?? null
       : storyState.completion?.selectedOptionId ?? null;
@@ -903,13 +907,14 @@ export async function answerFlashEncounter(input: {
   const storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
   if (storyState) {
     if (input.allowStoryReplay && storyState.completion) {
-      const question = storyState.episode.content.question;
+      const content = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
+      const question = content.question;
       const option = question.options.find((candidate: { id: string }) => candidate.id === input.optionId);
       if (question.id !== input.questionId || !option) {
         throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这个选择已经失效，请刷新后再选一次");
       }
-      let replayResponseSnapshot = storyState.episode.content.responseByOption[option.id]
-        ?? storyState.episode.content.closing;
+      let replayResponseSnapshot = content.responseByOption[option.id]
+        ?? content.closing;
       if (input.storyPath) {
         if (storyState.episode.code !== "s1-p1-atuan") {
           throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这条故事轨迹不属于当前相遇");
@@ -938,7 +943,7 @@ export async function answerFlashEncounter(input: {
         preferCurrentCompletedEpisode: true,
       });
     }
-    const content = storyState.episode.content as { v?: number } | null;
+    const content = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
     if (
       content?.v === 2
       && isFlashV2PilotUnitId(storyState.episode.code)
@@ -962,7 +967,7 @@ export async function answerFlashEncounter(input: {
           episodeId: storyState.episode.id,
           optionId: input.optionId,
           configuredEffects: [],
-          responseSnapshot: resolveV2ClosureResponse(storyState.episode.content),
+          responseSnapshot: resolveV2ClosureResponse(content),
           renderKind: "template",
           promptVersion: null,
           now,
@@ -975,14 +980,14 @@ export async function answerFlashEncounter(input: {
         preferCurrentCompletedEpisode: advance.finished,
       });
     }
-    const question = storyState.episode.content.question;
+    const question = content.question;
     const option = question.options.find((candidate: { id: string }) => candidate.id === input.optionId);
     if (question.id !== input.questionId || !option) {
       throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这个选择已经失效，请刷新后再选一次");
     }
     let storyAnswers: Array<{ questionId: string; optionId: string; tags: string[] }> | undefined;
-    let reviewedResponse = storyState.episode.content.responseByOption[option.id]
-      ?? storyState.episode.content.closing;
+    let reviewedResponse = content.responseByOption[option.id]
+      ?? content.closing;
     if (input.storyPath) {
       if (storyState.episode.code !== "s1-p1-atuan") {
         throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这条故事轨迹不属于当前相遇");
@@ -1033,7 +1038,7 @@ export async function answerFlashEncounter(input: {
       userId: input.userId,
       episodeId: storyState.episode.id,
       optionId: option.id,
-      configuredEffects: storyState.episode.content.effectsByOption?.[option.id],
+      configuredEffects: content.effectsByOption?.[option.id],
       responseSnapshot,
       renderKind,
       promptVersion,
@@ -1102,7 +1107,7 @@ export async function advanceFlashV2Story(input: {
   if (!storyState || storyState.completion) {
     throw new FlashServiceError("FLASH_STORY_NOT_AVAILABLE", 409, "这次旧相遇已经结束，请从当前在线角色重新开始");
   }
-  const content = storyState.episode.content as { v?: number } | null;
+  const content = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
   const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
   if (!v2Enabled || content?.v !== 2 || !isFlashV2PilotUnitId(storyState.episode.code)) {
     throw new FlashServiceError("FLASH_V2_NOT_AVAILABLE", 409, "当前故事不需要继续推进");
@@ -1123,7 +1128,7 @@ export async function advanceFlashV2Story(input: {
       episodeId: storyState.episode.id,
       optionId: advance.lastChoiceId ?? "advance",
       configuredEffects: [],
-      responseSnapshot: resolveV2ClosureResponse(storyState.episode.content),
+      responseSnapshot: resolveV2ClosureResponse(content),
       renderKind: "template",
       promptVersion: null,
       now,

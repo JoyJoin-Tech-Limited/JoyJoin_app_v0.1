@@ -1,0 +1,324 @@
+@use '../../../styles/variables' as *;
+
+.momo-first-act {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 1040rpx;
+  overflow: hidden;
+  color: $color-text-primary-warm;
+  font-family: $font-body;
+  background: $color-bg-warm-to;
+
+  &--disabled {
+    pointer-events: none;
+  }
+
+  &__scene {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__speech {
+    position: absolute;
+    z-index: 3;
+    top: 96rpx;
+    left: 268rpx;
+    width: 390rpx;
+    padding: 24rpx;
+    border: 2rpx solid rgba($flow-accent-sky, 0.42);
+    border-radius: $bubble-radius;
+    background: rgba($color-bg-clean, 0.94);
+    box-shadow: $bubble-shadow;
+
+    &::after {
+      position: absolute;
+      top: 48rpx;
+      left: -18rpx;
+      width: 32rpx;
+      height: 32rpx;
+      border-bottom: 2rpx solid rgba($flow-accent-sky, 0.42);
+      border-left: 2rpx solid rgba($flow-accent-sky, 0.42);
+      background: rgba($color-bg-clean, 0.94);
+      content: '';
+      transform: rotate(45deg);
+    }
+  }
+
+  &__speaker,
+  &__speech-copy,
+  &__panel-copy,
+  &__progress-copy,
+  &__game-instruction,
+  &__feedback,
+  &__success-title {
+    display: block;
+  }
+
+  &__speaker {
+    margin-bottom: 8rpx;
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__speech-copy {
+    color: $color-text-primary-warm;
+    font-size: $font-size-base;
+    line-height: 1.55;
+  }
+
+  &__hotspots {
+    position: absolute;
+    z-index: 2;
+    inset: 0 0 300rpx;
+  }
+
+  &__hotspot {
+    position: absolute;
+    display: flex;
+    min-width: $cta-min-tap;
+    min-height: $cta-min-tap;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 160ms ease, transform 160ms ease;
+
+    &::after {
+      width: 24rpx;
+      height: 24rpx;
+      border: 4rpx solid rgba($color-bg-clean, 0.94);
+      border-radius: $radius-full;
+      background: $color-primary;
+      box-shadow: 0 0 0 8rpx rgba($color-primary, 0.22), 0 8rpx 24rpx rgba($color-text-primary, 0.18);
+      content: '';
+    }
+
+    &--momo {
+      top: 310rpx;
+      left: 128rpx;
+      width: 240rpx;
+      height: 360rpx;
+    }
+
+    &--listening-window {
+      top: 276rpx;
+      left: 16rpx;
+      width: 112rpx;
+      height: 224rpx;
+    }
+
+    &--route-sign {
+      top: 214rpx;
+      right: 32rpx;
+      width: 120rpx;
+      height: 280rpx;
+    }
+
+    &--route-book {
+      right: 64rpx;
+      bottom: 24rpx;
+      width: 216rpx;
+      height: 160rpx;
+    }
+
+    &--completed {
+      opacity: 0.38;
+    }
+
+    &--pressed {
+      transform: scale(0.96);
+    }
+  }
+
+  &__panel {
+    position: absolute;
+    z-index: 4;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    min-height: 264rpx;
+    padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+    border-top: 2rpx solid rgba($flow-accent-sky, 0.32);
+    border-radius: 40rpx 40rpx 0 0;
+    background: rgba($color-bg-warm-from, 0.97);
+    box-shadow: 0 -16rpx 48rpx rgba($color-text-primary, 0.1);
+  }
+
+  &__narrative,
+  &__reply-sheet,
+  &__approach,
+  &__game,
+  &__success {
+    display: flex;
+    flex-direction: column;
+    gap: 16rpx;
+  }
+
+  &__eyebrow {
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    letter-spacing: 2rpx;
+  }
+
+  &__panel-copy,
+  &__game-instruction {
+    color: $color-text-secondary-on-light;
+    font-size: $font-size-base;
+    line-height: 1.5;
+  }
+
+  &__progress-copy {
+    color: $color-text-tertiary-on-light;
+    font-size: $font-size-sm;
+  }
+
+  &__reply-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
+  }
+
+  &__choice,
+  &__primary-action,
+  &__secondary-action,
+  &__route-node {
+    box-sizing: border-box;
+    display: flex;
+    min-height: $cta-min-tap;
+    align-items: center;
+    justify-content: center;
+    padding: 16rpx 24rpx;
+    font-size: $font-size-base;
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  &__choice {
+    border: 2rpx solid rgba($flow-accent-sky, 0.52);
+    border-radius: $card-radius-sm;
+    color: $color-text-primary-warm;
+    background: rgba($color-surface, 0.88);
+
+    &--selected {
+      border-color: $color-primary;
+      background: $color-primary-light;
+      box-shadow: 0 0 0 4rpx rgba($color-primary, 0.1);
+    }
+
+    &--pressed {
+      background: rgba($flow-accent-sky, 0.2);
+    }
+  }
+
+  &__primary-action {
+    border-radius: $button-radius;
+    color: $color-text-white;
+    font-weight: $font-weight-semibold;
+    background: $color-primary;
+    box-shadow: $flow-shadow-brand;
+
+    &--pressed {
+      background: $color-primary-dark;
+    }
+  }
+
+  &__secondary-action {
+    border: 2rpx solid rgba($color-primary, 0.32);
+    border-radius: $button-radius;
+    color: $color-primary-dark;
+    font-weight: $font-weight-medium;
+    background: $color-primary-light;
+
+    &--pressed {
+      background: rgba($color-primary, 0.16);
+    }
+  }
+
+  &__game-heading,
+  &__game-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+  }
+
+  &__counter {
+    color: $color-text-secondary-on-light;
+    font-family: $font-mono;
+    font-size: $font-size-sm;
+  }
+
+  &__route-nodes {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8rpx;
+  }
+
+  &__route-node {
+    min-width: 0;
+    flex-direction: column;
+    gap: 4rpx;
+    padding: 12rpx 8rpx;
+    border: 2rpx solid rgba($flow-accent-sky, 0.42);
+    border-radius: $radius-md;
+    color: $color-text-secondary-on-light;
+    font-size: $font-size-xs;
+    background: rgba($color-surface, 0.82);
+
+    &--visited {
+      border-color: rgba($color-success, 0.52);
+      color: $color-success-text-on-light;
+      background: rgba($color-success, 0.1);
+    }
+
+    &--blank {
+      border-style: dashed;
+      color: $color-text-tertiary-on-light;
+      background: rgba($flow-accent-sky, 0.08);
+    }
+
+    &--pressed {
+      transform: translateY(2rpx);
+    }
+  }
+
+  &__route-index {
+    display: flex;
+    width: 32rpx;
+    height: 32rpx;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-circle;
+    color: $color-text-white;
+    font-family: $font-mono;
+    font-size: $font-size-2xs;
+    background: $flow-accent-sky;
+  }
+
+  &__feedback {
+    color: $color-warning;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+  }
+
+  &__game-actions > view,
+  &__game-actions > div {
+    flex: 1;
+  }
+
+  &__success-title {
+    color: $color-text-primary-warm;
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .momo-first-act__hotspot {
+    transition: none;
+  }
+}
