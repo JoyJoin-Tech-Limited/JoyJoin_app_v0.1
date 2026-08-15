@@ -259,13 +259,15 @@ export function AtuanLaterActExperience({ unitId, background, character, progres
                   ) : null}
             </View>
           )}
-          {gameComplete ? (
-            <View className='atuan-later-experience__ending'>
-              <Text className='atuan-later-experience__ending-title'>{resolveAtuanLaterActOutcome(progress).ending.title}</Text>
-              <View className='atuan-later-experience__complete' hoverClass={disabled ? '' : 'atuan-later-experience__complete--pressed'} role='button' aria-label='收好阿团的这段故事' aria-disabled={disabled} onClick={() => { if (!disabled) { haptics('medium'); onComplete(toAtuanLaterActSubmission(progress)) } }}><Text>{disabled ? '正在收好这段故事…' : '收好阿团的这段故事'}</Text></View>
-            </View>
-          ) : null}
         </ScrollView>
+        {gameComplete ? (
+          // Keep the terminal action outside WeChat's native ScrollView layer.
+          // Absolutely positioned children can render there while missing taps on device.
+          <View className='atuan-later-experience__ending'>
+            <Text className='atuan-later-experience__ending-title'>{resolveAtuanLaterActOutcome(progress).ending.title}</Text>
+            <View className='atuan-later-experience__complete' hoverClass={disabled ? '' : 'atuan-later-experience__complete--pressed'} role='button' aria-label='收好阿团的这段故事' aria-disabled={disabled} onClick={() => { if (!disabled) { haptics('medium'); onComplete(toAtuanLaterActSubmission(progress)) } }}><Text>{disabled ? '正在收好这段故事…' : '收好阿团的这段故事'}</Text></View>
+          </View>
+        ) : null}
       </View>
     </View>
   )

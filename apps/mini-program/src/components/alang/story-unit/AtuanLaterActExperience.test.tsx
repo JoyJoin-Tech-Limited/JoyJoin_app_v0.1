@@ -64,7 +64,10 @@ describe('AtuanLaterActExperience', () => {
     fireEvent.click(screen.getByRole('button', { name: '把椅子挪得更近' }))
     expect(screen.getByRole('alert')).toHaveTextContent('再留一点呼吸感')
     fireEvent.click(screen.getByRole('button', { name: '留出能自在说话的距离' }))
-    fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
+    const completeButton = screen.getByRole('button', { name: '收好阿团的这段故事' })
+    expect(completeButton.closest('.atuan-later-experience__scroll')).toBeNull()
+    expect(completeButton.closest('.atuan-later-experience__panel')).not.toBeNull()
+    fireEvent.click(completeButton)
     expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({
       version: 'atuan-later-acts-v2',
       unitId: 's1-p2-atuan',
