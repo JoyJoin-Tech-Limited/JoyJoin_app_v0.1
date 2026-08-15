@@ -2,7 +2,7 @@ import { Image, Text, View } from '@tarojs/components'
 import { memo, useMemo, type CSSProperties } from 'react'
 import type { RoomPokeEmoji } from '@shared/wsEvents'
 import type { EquipmentItemView, EquipmentOutfitView } from '@joyjoin/shared/schema'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { useCdnFirstSrc } from '../../lib/utils/cdnAssets'
 import PixelAvatarComposite from '../profile/PixelAvatarComposite'
 import './GatheringRoomScene.scss'
 
@@ -253,14 +253,20 @@ export function GatheringRoomScene({
 
   const ownUserIdResolved = ownUserId ?? ''
 
+  // CDN-first with bundled fallback: the composite art may 404 before the CDN
+  // upload pipeline ships it — fall back to the local copy instead of showing
+  // a bare background.
+  const { src: roomArtSrc, onError: handleRoomArtError } = useCdnFirstSrc(ROOM_COMPOSITE_PATH)
+
   return (
     <View className={sceneClass} data-testid='gathering-room-scene'>
       {ROOM_ART_READY ? (
         <Image
           className='gathering-room-scene__layer gathering-room-scene__layer--composite'
-          src={cdnAsset(ROOM_COMPOSITE_PATH)}
+          src={roomArtSrc}
           mode='scaleToFill'
           aria-hidden='true'
+          onError={handleRoomArtError}
         />
       ) : (
         <>

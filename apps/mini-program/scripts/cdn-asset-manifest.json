@@ -2057,6 +2057,10 @@
     {
       "localPath": "assets/audio/s1-celebration.wav",
       "cdnPath": "assets/audio/s1-celebration.wav"
+    },
+    {
+      "localPath": "assets/gathering-room/room-composite-v1.webp",
+      "cdnPath": "assets/gathering-room/room-composite-v1.webp"
     }
   ],
   "pendingAssets": [

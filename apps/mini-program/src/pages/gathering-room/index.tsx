@@ -125,7 +125,6 @@ export default function GatheringRoomPage() {
   return (
     <View className='gathering-room'>
       <View className='gathering-room__header'>
-        <Text className='gathering-room__header-title'>集结房间</Text>
         <Text className='gathering-room__header-subtitle'>
           {countdownText
             ? `${countdownText} · 已到 ${presentCount}/${total} 人 · 已确认 ${roomState?.confirmedCount ?? 0}/${total}`

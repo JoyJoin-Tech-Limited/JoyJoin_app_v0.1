@@ -407,6 +407,14 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/mascot/xiaoyue-spritesheet-manifest.json',
           to: 'dist/assets/mascot/xiaoyue-spritesheet-manifest.json',
         },
+        // Gathering-room composite art fallback — bundled locally (~84KB) so
+        // the room scene never renders a bare background when the CDN copy
+        // 404s (e.g. before the CDN upload pipeline ships it).
+        // GatheringRoomScene loads it via useCdnFirstSrc (CDN-first).
+        {
+          from: 'src/assets/gathering-room',
+          to: 'dist/assets/gathering-room',
+        },
         // Matching status heroes — referenced via cdnAsset(); local copies are
         // not bundled because cdnAsset() returns the CDN URL in production.
         // Batch D milestone badges — 9 WebP files (~330KB total, q=70 600px).
