@@ -219,8 +219,10 @@ describe('formal Flash dialogue', () => {
 
     const alert = await screen.findByRole('alert')
     expect(screen.getByTestId('flash-story-stage')).toContainElement(alert)
-    expect(alert).toHaveTextContent('这句话没有送出去，再试一次就好。')
-    expect(screen.getByRole('button', { name: '重新送出' })).toBeInTheDocument()
+    expect(alert).toHaveTextContent('这段故事暂时没有接上，请返回地图后再进入。')
+    expect(screen.queryByRole('button', { name: '重新送出' })).not.toBeInTheDocument()
+    expect(mocks.answer).toHaveBeenCalledTimes(1)
+    expect(mocks.refetch).toHaveBeenCalledTimes(1)
   })
 
   it('prioritizes delivery from the same NPC before a new conversation', async () => {

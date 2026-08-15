@@ -195,7 +195,7 @@ describe('FlashStoryUnit production flow', () => {
     expect(screen.queryByTestId('atuan-arrival-prelude')).not.toBeInTheDocument()
   })
 
-  it('lets a completed later Atuan act retry the exact same submission after a transport failure', () => {
+  it('keeps a completed later Atuan act non-resubmittable after a transport failure', () => {
     const submit = vi.fn().mockResolvedValue(undefined)
     const story = { ...firstStory, id: 'episode-atuan-2-retry', code: 's1-p2-atuan', phase: 2, title: '阿团认领座位图', objectCode: 'seat-plan' }
     const question = { ...firstQuestion, id: 's1-p2-atuan-response-v2' }
@@ -216,11 +216,30 @@ describe('FlashStoryUnit production flow', () => {
     fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
     expect(submit).toHaveBeenCalledTimes(1)
 
-    view.rerender(<FlashStoryUnit {...baseProps} submitState='retry' submitError='网络开了小差，这段故事还没有丢。' />)
+    view.rerender(<FlashStoryUnit {...baseProps} submitState='terminal' submitError='网络开了小差，这段故事还没有丢。' />)
     expect(screen.getByRole('alert')).toHaveTextContent('这段故事还没有丢')
-    fireEvent.click(screen.getByRole('button', { name: '重新送出' }))
-    expect(submit).toHaveBeenCalledTimes(2)
-    expect(submit.mock.calls[1]?.[0]).toEqual(submit.mock.calls[0]?.[0])
+    expect(screen.queryByRole('button', { name: '重新送出' })).not.toBeInTheDocument()
+    expect(submit).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not expose resend for a locally restored solved story', () => {
+    const story = { ...firstStory, id: 'episode-alang-restored', code: 's1-p1-alang', objectCode: 'seat-plan' }
+    const question = { ...firstQuestion, id: 's1-p1-alang-response-v2' }
+    storage.set('joyjoin_flash_story_unit_v2_s1-p1-alang_enc-alang-restored_episode-alang-restored', {
+      unitId: 's1-p1-alang',
+      version: 2,
+      stage: 'OBJECT_SUCCESS',
+      choice: { questionId: question.id, optionId: question.options[0].id, label: question.options[0].label },
+      companionEvent: 'SUCCESS',
+      divergenceCopy: null,
+      atuanFirstAct: null,
+      atuanLaterAct: null,
+      analyticsSent: [],
+    })
+
+    render(<FlashStoryUnit encounterId='enc-alang-restored' npc={{ ...baseNpc, slug: 'alang' } as any} story={story as any} question={question as any} motion={motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={vi.fn()} onContinue={vi.fn()} />)
+
+    expect(screen.queryByRole('button', { name: '重新送出' })).not.toBeInTheDocument()
   })
 
   it('runs Atuan third act from its opening choice through the returned-card table game', () => {

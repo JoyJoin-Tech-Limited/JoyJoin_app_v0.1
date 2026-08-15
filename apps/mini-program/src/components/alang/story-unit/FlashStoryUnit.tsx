@@ -66,7 +66,7 @@ export interface FlashStoryUnitProps {
   question?: FlashDialogueQuestion | null
   motion: StoryEpisode['motion']
   storyPosition: number
-  submitState: 'idle' | 'submitting' | 'retry' | 'terminal'
+  submitState: 'idle' | 'submitting' | 'terminal'
   submitError: string
   onSubmit: (choice: StoryUnitChoice) => Promise<void>
   onContinue: () => void
@@ -109,7 +109,6 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   )
   const runtimeRef = useRef(runtime)
   const emittedRef = useRef(new Set<FlashStoryAnalyticsEventType>(runtime.analyticsSent))
-  const restoredSolvedRef = useRef(runtime.stage === 'OBJECT_SUCCESS')
   const [atuanDialogue, setAtuanDialogue] = useState<AtuanDialogueState>(EMPTY_ATUAN_DIALOGUE_STATE)
   const atuanGameKey = `${storageKey}:atuan-cards`
   runtimeRef.current = runtime
@@ -200,11 +199,6 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     transition({ type: 'OBJECT_ALIGNED' })
     void onSubmit(runtime.choice)
   }
-  const retrySubmit = () => {
-    if (!runtime.choice || runtime.stage !== 'OBJECT_SUCCESS') return
-    if (submitState !== 'retry' && !(restoredSolvedRef.current && submitState === 'idle')) return
-    void onSubmit(runtime.choice)
-  }
   const completeCustomFirstAct = (approachIndex: 0 | 1) => {
     if (runtime.stage !== 'NPC_INTRO' || !question) return
     const option = question.options[approachIndex]
@@ -233,7 +227,6 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const showDedicatedSubmitStatus = (showCustomFirstAct || showAtuanLaterExperience) && (
     submitState === 'submitting'
     || Boolean(submitError)
-    || (runtime.stage === 'OBJECT_SUCCESS' && (submitState === 'retry' || (restoredSolvedRef.current && submitState === 'idle')))
   )
   const defaultSpeech = resolveNPCResponse(definition.unitId, runtime.companionEvent, {
     intro: story.opening,
@@ -331,7 +324,6 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
           <View className='flash-dialogue__custom-story-status'>
             {submitState === 'submitting' ? <View role='status'><Text>正在收下这段故事…</Text></View> : null}
             {submitError ? <View role='alert'><Text>{submitError}</Text></View> : null}
-            {runtime.stage === 'OBJECT_SUCCESS' && (submitState === 'retry' || (restoredSolvedRef.current && submitState === 'idle')) ? <FlashButton variant='quiet' onClick={retrySubmit}>重新送出</FlashButton> : null}
           </View>
         ) : showCustomFirstAct ? null : showAtuanPrelude ? null : showAtuanLaterPrelude ? null : showAtuanLaterExperience ? null : !showResult ? (
           <View className={`flash-dialogue__story-panel flash-dialogue__story-panel--choices${showAtuanScene ? ' flash-dialogue__story-panel--atuan-conversation' : ''}`} data-testid='flash-story-choice-panel'>
@@ -392,7 +384,6 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                       />
                     ) : null}
                     {submitState === 'submitting' ? <View className='flash-dialogue__story-settling' role='status'><Text>旧物已经整理好，正在收下这次回应…</Text></View> : null}
-                    {runtime.stage === 'OBJECT_SUCCESS' && (submitState === 'retry' || (restoredSolvedRef.current && submitState === 'idle')) ? <FlashButton variant='quiet' onClick={retrySubmit}>重新送出</FlashButton> : null}
                   </>
                 )}
                 {submitError ? <View className='flash-dialogue__story-error' role='alert'><Text>{submitError}</Text></View> : null}
