@@ -118,7 +118,16 @@ describe('Atuan first-arrival asset ownership', () => {
     }
     expect(cleanScript).toContain('sourceOnlyAlangUiAssets.has(name)')
     expect(cleanScript).not.toContain('runtimeAlangUiWebps')
-    expect(cleanScript).toContain("(name) => name.endsWith('.webp') || sourceOnlyAlangUiAssets.has(name)")
+    expect(cleanScript).toContain('const bundledAlangUiWebpAssets = new Set([')
+    for (const fileName of [
+      'flash-atuan-second-act-pavilion-v1.webp',
+      'flash-atuan-third-act-table-v1.webp',
+    ]) {
+      expect(cleanScript, `${fileName} must survive the upload-package cleanup`).toContain(`'${fileName}'`)
+    }
+    expect(cleanScript).toContain(
+      "(name) => (name.endsWith('.webp') && !bundledAlangUiWebpAssets.has(name)) || sourceOnlyAlangUiAssets.has(name)",
+    )
     for (const fileName of [
       'flash-alang-first-act-riverside-v2.jpg',
       'flash-lizi-first-act-color-studio-v2.jpg',
