@@ -315,8 +315,8 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/assets/illustrations/street-blind-box-entry.png',
         },
         {
-          from: 'src/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg',
-          to: 'dist/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg',
+          from: 'src/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp',
+          to: 'dist/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp',
         },
         {
           from: 'src/pages/alang/assets/backgrounds/radar-paper-scene.jpg',

@@ -43,11 +43,11 @@ function renderExperience({
 
 function answerHighlight(highlightIndex: number, replyIndex = 0) {
   const highlight = MOMO_FIRST_ACT_HIGHLIGHTS[highlightIndex]
-  fireEvent.click(screen.getByRole('button', { name: `查看${highlight.label}` }))
+  fireEvent.click(screen.getByRole('button', { name: `观察${highlight.label}` }))
   expect(screen.getAllByTestId('momo-highlight-reply')).toHaveLength(2)
   fireEvent.click(screen.getByRole('button', { name: highlight.replies[replyIndex].label }))
   expect(screen.getByTestId('momo-scene-speech')).toHaveTextContent(highlight.replies[replyIndex].response)
-  fireEvent.click(screen.getByRole('button', { name: '记下这处线索' }))
+  fireEvent.click(screen.getByRole('button', { name: highlightIndex === MOMO_FIRST_ACT_HIGHLIGHTS.length - 1 ? '看完四处线索' : '继续观察' }))
 }
 
 function reachGame(approachIndex: 0 | 1) {
@@ -74,10 +74,12 @@ describe('MomoFirstActExperience', () => {
 
     expect(screen.getByTestId('momo-first-act-scene')).toHaveAttribute('src', 'momo-scene.png')
     expect(screen.getAllByTestId('momo-first-act-hotspot')).toHaveLength(4)
-    expect(screen.getByRole('button', { name: '查看默默本人' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '查看听音窗' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '查看竖向路线牌' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '查看路线书台' })).toBeInTheDocument()
+    expect(screen.queryByTestId('momo-first-act-dialogue-panel')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '观察默默本人' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '观察听音窗' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '观察竖向路线牌' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '观察路线书台' })).toBeInTheDocument()
 
     const replies = MOMO_FIRST_ACT_HIGHLIGHTS.flatMap((highlight) => highlight.replies)
     expect(replies).toHaveLength(8)
@@ -104,7 +106,7 @@ describe('MomoFirstActExperience', () => {
 
     walkThreeClues()
     fireEvent.click(screen.getByRole('button', { name: '停在这里' }))
-    expect(screen.getByTestId('momo-route-success')).toHaveTextContent('空白页前停住了')
+    expect(screen.getByTestId('momo-first-act-dialogue-panel')).toHaveTextContent('空白页前停住了')
     fireEvent.click(screen.getByRole('button', { name: '完成《雨停在空白以前》' }))
     expect(onComplete).toHaveBeenCalledWith(0)
   })
@@ -135,11 +137,11 @@ describe('MomoFirstActExperience', () => {
     renderExperience({ encounterId: 'enc-momo-resume' })
     expect(screen.getByTestId('momo-route-game')).toBeInTheDocument()
     expect(screen.getByTestId('momo-route-progress')).toHaveTextContent('2 / 3')
-    expect(screen.queryByRole('button', { name: '查看默默本人' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '观察默默本人' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '节点三：实线在页边收住' }))
     fireEvent.click(screen.getByRole('button', { name: '停在这里' }))
     fireEvent.click(screen.getByRole('button', { name: '完成《雨停在空白以前》' }))
-    expect(screen.getByTestId('momo-route-success')).toBeInTheDocument()
+    expect(screen.getByTestId('momo-first-act-dialogue-panel')).toBeInTheDocument()
   })
 })

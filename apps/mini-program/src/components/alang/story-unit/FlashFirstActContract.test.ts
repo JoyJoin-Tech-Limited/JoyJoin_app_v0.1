@@ -1,6 +1,7 @@
 import { readFileSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import sharp from 'sharp'
 import { ALANG_FIRST_ACT_HIGHLIGHTS } from './AlangFirstActExperience'
 import { LIZI_FIRST_ACT_HIGHLIGHTS } from './LiziFirstActExperience'
 import { MOMO_FIRST_ACT_HIGHLIGHTS } from './MomoFirstActExperience'
@@ -14,7 +15,7 @@ const firstActs = [
   {
     slug: 'alang',
     component: 'AlangFirstActExperience.tsx',
-    asset: 'flash-alang-first-act-riverside-v1.jpg',
+    asset: 'flash-alang-first-act-riverside-v2.webp',
     objectCode: 'seat-plan',
     gameCode: 'spacing',
     highlights: ALANG_FIRST_ACT_HIGHLIGHTS,
@@ -22,7 +23,7 @@ const firstActs = [
   {
     slug: 'lizi',
     component: 'LiziFirstActExperience.tsx',
-    asset: 'flash-lizi-first-act-color-studio-v1.jpg',
+    asset: 'flash-lizi-first-act-color-studio-v2.webp',
     objectCode: 'dry-markers',
     gameCode: 'pairing',
     highlights: LIZI_FIRST_ACT_HIGHLIGHTS,
@@ -30,7 +31,7 @@ const firstActs = [
   {
     slug: 'momo',
     component: 'MomoFirstActExperience.tsx',
-    asset: 'flash-momo-first-act-rain-route-v1.jpg',
+    asset: 'flash-momo-first-act-rain-route-v2.webp',
     objectCode: 'route-book',
     gameCode: 'path',
     highlights: MOMO_FIRST_ACT_HIGHLIGHTS,
@@ -38,7 +39,7 @@ const firstActs = [
   {
     slug: 'shiqi',
     component: 'ShiqiFirstActExperience.tsx',
-    asset: 'flash-shiqi-first-act-record-room-v1.jpg',
+    asset: 'flash-shiqi-first-act-record-room-v2.webp',
     objectCode: 'outing-book',
     gameCode: 'overlay',
     highlights: SHIQI_FIRST_ACT_HIGHLIGHTS,
@@ -78,16 +79,38 @@ describe('Flash four-NPC first-act contract', () => {
     }
   })
 
-  it('ships the four accepted scenes as compact, decodable JPEG assets', () => {
+  it('routes every NPC through the shared four-target highlight overlay', () => {
+    for (const { component } of firstActs) {
+      const source = readFileSync(resolve(componentRoot, component), 'utf8')
+      expect(source, component).toContain("import { FirstActHighlightOverlay }")
+      expect(source, component).toContain('<FirstActHighlightOverlay')
+      expect(source, component).toContain("import { FirstActDialogueChrome }")
+      expect(source, component).toContain('<FirstActDialogueChrome')
+    }
+  })
+
+  it('locks the shared non-game chrome to Atuan conversation dimensions', () => {
+    const chromeStyles = readFileSync(resolve(componentRoot, 'FirstActDialogueChrome.scss'), 'utf8')
+    expect(chromeStyles).toMatch(/&__speech\s*\{[\s\S]*?top:\s*48rpx;[\s\S]*?right:\s*200rpx;[\s\S]*?left:\s*24rpx;[\s\S]*?padding:\s*32rpx;/)
+    expect(chromeStyles).toMatch(/&__panel\s*\{[\s\S]*?max-height:\s*680rpx;[\s\S]*?padding:\s*32rpx;/)
+    expect(chromeStyles).toMatch(/&__choice\s*\{[\s\S]*?min-height:\s*112rpx;/)
+  })
+
+  it('ships the four accepted scenes as sharp, compact WebP assets', async () => {
     let totalBytes = 0
     for (const { asset } of firstActs) {
       const path = resolve(assetRoot, asset)
       const bytes = statSync(path).size
-      const header = readFileSync(path).subarray(0, 3)
+      const header = readFileSync(path).subarray(0, 12)
+      const metadata = await sharp(path).metadata()
       totalBytes += bytes
-      expect(bytes, `${asset} must fit its 64 KiB scene budget`).toBeLessThanOrEqual(64 * 1024)
-      expect([...header]).toEqual([0xff, 0xd8, 0xff])
+      expect(metadata.width, `${asset} must stay close to Atuan's 941px scene baseline`).toBeGreaterThanOrEqual(850)
+      expect(bytes, `${asset} must fit its 100 KiB scene budget`).toBeLessThanOrEqual(100 * 1024)
+      expect(header.subarray(0, 4).toString('ascii')).toBe('RIFF')
+      expect(header.subarray(8, 12).toString('ascii')).toBe('WEBP')
     }
-    expect(totalBytes).toBeLessThanOrEqual(192 * 1024)
+    const liziMetadata = await sharp(resolve(assetRoot, 'flash-lizi-first-act-color-studio-v2.webp')).metadata()
+    expect(liziMetadata).toEqual(expect.objectContaining({ width: 941, height: 1672 }))
+    expect(totalBytes).toBeLessThanOrEqual(310 * 1024)
   })
 })

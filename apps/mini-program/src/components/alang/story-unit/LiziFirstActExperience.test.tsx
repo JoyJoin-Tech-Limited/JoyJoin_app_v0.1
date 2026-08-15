@@ -56,9 +56,9 @@ function renderExperience({
 function replyToHighlight(label: string, replyLabel: string) {
   fireEvent.click(screen.getByRole('button', { name: `观察${label}` }))
   fireEvent.click(screen.getByRole('button', { name: replyLabel }))
-  const closeLabel = screen.queryByRole('button', { name: '把四处线索放在一起' })
-    ? '把四处线索放在一起'
-    : '记下这一笔，继续看'
+  const closeLabel = screen.queryByRole('button', { name: '看完四处线索' })
+    ? '看完四处线索'
+    : '继续观察'
   fireEvent.click(screen.getByRole('button', { name: closeLabel }))
 }
 
@@ -106,7 +106,8 @@ describe('LiziFirstActExperience', () => {
   it('shows the NPC plus three scene highlights and all eight Lizi-specific replies', () => {
     const first = renderExperience()
     expect(screen.getByTestId('lizi-first-act-scene')).toHaveAttribute('src', 'lizi-first-act.webp')
-    expect(screen.getByText('第一幕 · 颜色没有走丢')).toBeInTheDocument()
+    expect(screen.queryByTestId('lizi-first-act-dialogue-panel')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /^观察/ })).toHaveLength(4)
     expect(LIZI_FIRST_ACT_HIGHLIGHTS).toHaveLength(4)
     first.view.unmount()
@@ -125,8 +126,8 @@ describe('LiziFirstActExperience', () => {
     renderExperience({ onSpeechChange })
     fireEvent.click(screen.getByRole('button', { name: '观察栗子' }))
 
-    expect(screen.getByTestId('lizi-speech')).toHaveTextContent('一卷干掉的彩笔')
-    expect(screen.getByText('栗子把布卷压在肘边，三支没盖笔帽的彩笔排得很开。')).not.toHaveTextContent('来得正好')
+    expect(screen.getByTestId('lizi-scene-speech')).toHaveTextContent('一卷干掉的彩笔')
+    expect(screen.getByText('栗子压住布卷，把三支没盖笔帽的彩笔排开。')).not.toHaveTextContent('来得正好')
     expect(onSpeechChange).toHaveBeenLastCalledWith(expect.stringContaining('一卷干掉的彩笔'))
   })
 
@@ -162,8 +163,7 @@ describe('LiziFirstActExperience', () => {
 
     makeCorrectPairings()
     fireEvent.click(screen.getByRole('button', { name: '检查三顶笔帽' }))
-    expect(screen.getByText('三顶笔帽都回去了')).toBeInTheDocument()
-    expect(screen.getByText('颜色没有走丢')).toBeInTheDocument()
+    expect(screen.getByTestId('lizi-first-act-dialogue-panel')).toHaveTextContent('颜色没有走丢')
     fireEvent.click(screen.getByRole('button', { name: '把三支笔放回布卷' }))
     expect(onComplete).toHaveBeenCalledWith(0)
   })

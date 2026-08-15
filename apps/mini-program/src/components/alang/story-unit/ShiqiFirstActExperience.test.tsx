@@ -43,11 +43,11 @@ function renderExperience({
 
 function answerHighlight(highlightIndex: number, replyIndex = 0) {
   const highlight = SHIQI_FIRST_ACT_HIGHLIGHTS[highlightIndex]
-  fireEvent.click(screen.getByRole('button', { name: `查看${highlight.label}` }))
+  fireEvent.click(screen.getByRole('button', { name: `观察${highlight.label}` }))
   expect(screen.getAllByTestId('shiqi-highlight-reply')).toHaveLength(2)
   fireEvent.click(screen.getByRole('button', { name: highlight.replies[replyIndex].label }))
   expect(screen.getByTestId('shiqi-scene-speech')).toHaveTextContent(highlight.replies[replyIndex].response)
-  fireEvent.click(screen.getByRole('button', { name: '记下这处判断' }))
+  fireEvent.click(screen.getByRole('button', { name: highlightIndex === SHIQI_FIRST_ACT_HIGHLIGHTS.length - 1 ? '看完四处线索' : '继续观察' }))
 }
 
 function reachGame(approachIndex: 0 | 1) {
@@ -85,12 +85,12 @@ describe('ShiqiFirstActExperience', () => {
 
     expect(screen.getByTestId('shiqi-first-act-scene')).toHaveAttribute('src', 'shiqi-scene.webp')
     expect(screen.getAllByTestId('shiqi-first-act-hotspot')).toHaveLength(4)
-    expect(screen.getByTestId('shiqi-inspect-intro')).toHaveTextContent('记录没有说完')
-    expect(screen.getByTestId('shiqi-inspect-intro')).toHaveTextContent('0/4')
-    expect(screen.getByRole('button', { name: '查看拾柒本人' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '查看外出记录册' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '查看交换箱' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '查看竖向检视灯箱' })).toBeInTheDocument()
+    expect(screen.queryByTestId('shiqi-first-act-dialogue-panel')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '观察拾柒本人' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '观察外出记录册' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '观察交换箱' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '观察竖向检视灯箱' })).toBeInTheDocument()
 
     const replies = SHIQI_FIRST_ACT_HIGHLIGHTS.flatMap((highlight) => highlight.replies)
     expect(replies).toHaveLength(8)
@@ -120,7 +120,7 @@ describe('ShiqiFirstActExperience', () => {
     expect(screen.getByTestId('shiqi-offset-feedback')).toHaveTextContent('横向 -1 · 纵向 +1')
 
     alignAllLayers()
-    expect(screen.getByTestId('shiqi-overlay-success')).toHaveTextContent('三层浅痕对齐了')
+    expect(screen.getByTestId('shiqi-first-act-dialogue-panel')).toHaveTextContent('三层浅痕对齐了')
     fireEvent.click(screen.getByRole('button', { name: '完成《记录没有说完》' }))
     expect(onComplete).toHaveBeenCalledWith(0)
   })
@@ -147,7 +147,7 @@ describe('ShiqiFirstActExperience', () => {
     expect(screen.getByTestId('shiqi-overlay-game')).toBeInTheDocument()
     expect(screen.getByText('第二层 · 路线复写')).toBeInTheDocument()
     expect(screen.getByTestId('shiqi-offset-feedback')).toHaveTextContent('横向 +1 · 纵向 -1')
-    expect(screen.queryByRole('button', { name: '查看拾柒本人' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '观察拾柒本人' })).not.toBeInTheDocument()
   })
 })
 

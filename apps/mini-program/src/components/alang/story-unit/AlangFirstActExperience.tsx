@@ -3,6 +3,8 @@ import Taro from '@tarojs/taro'
 import { Image, Text, View } from '@tarojs/components'
 import { FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS } from '@shared/alang/flashFirstActExperience'
 import { haptics } from '../../../lib/utils/haptics'
+import { FirstActDialogueChrome } from './FirstActDialogueChrome'
+import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
 import './AlangFirstActExperience.scss'
 
 export type AlangApproachIndex = 0 | 1
@@ -357,130 +359,72 @@ export function AlangFirstActExperience({
           onError={() => setSceneAvailable(false)}
         />
       ) : <View className='alang-first-act__scene-fallback' aria-hidden='true' />}
-      <View className='alang-first-act__scene-grade' aria-hidden='true' />
+      <View className='first-act-scene-grade' aria-hidden='true' />
 
-      <View className='alang-first-act__speech' role='status' aria-live='polite' aria-atomic='true'>
-        <Text className='alang-first-act__speaker'>阿浪</Text>
-        <Text className='alang-first-act__speech-copy' data-testid='alang-scene-speech'>{speech}</Text>
-      </View>
-
-      {progress.stage === 'explore' ? (
-        <>
-          {ALANG_FIRST_ACT_HIGHLIGHTS.map((item) => {
-            const seen = progress.answers[item.id] !== undefined
-            const active = progress.activeHighlight === item.id
-            return (
-              <View
-                key={item.id}
-                className={`alang-first-act__hotspot alang-first-act__hotspot--${hotspotClassSuffix(item.id)}${seen ? ' alang-first-act__hotspot--seen' : ''}${active ? ' alang-first-act__hotspot--active' : ''}`}
-                hoverClass={disabled ? '' : 'alang-first-act__hotspot--pressed'}
-                onClick={() => openHighlight(item.id)}
-                role='button'
-                aria-label={`观察${item.label}`}
-                aria-pressed={active}
-                aria-disabled={disabled}
-                data-testid={`alang-highlight-${item.id}`}
-              >
-                <View className='alang-first-act__hotspot-marker' aria-hidden='true'>
-                  <Text>{seen ? '已' : '·'}</Text>
-                </View>
-              </View>
-            )
-          })}
-          <View className='alang-first-act__progress'>
-            <Text>{answerCount}/4 处观察</Text>
-          </View>
-        </>
+      {progress.stage === 'explore' && !activeDefinition ? (
+          <FirstActHighlightOverlay
+            npcSlug='alang'
+            targets={ALANG_FIRST_ACT_HIGHLIGHTS.map((item) => ({
+              id: item.id,
+              label: item.label,
+              placementClassName: `alang-first-act__hotspot--${hotspotClassSuffix(item.id)}`,
+            }))}
+            completedIds={ALANG_FIRST_ACT_HIGHLIGHTS.filter((item) => progress.answers[item.id] !== undefined).map((item) => item.id)}
+            activeId={null}
+            disabled={disabled}
+            onSelect={(id) => openHighlight(id as HighlightId)}
+          />
       ) : null}
 
-      <View className={`alang-first-act__panel alang-first-act__panel--${progress.stage}`}>
-        {progress.stage === 'explore' ? (
-          !activeDefinition ? (
-            <View className='alang-first-act__copy-block'>
-              <Text className='alang-first-act__kicker'>第一幕 · 并肩留白</Text>
-              <Text className='alang-first-act__title'>替阿浪看一眼这个转角</Text>
-              <Text className='alang-first-act__body'>风从栏杆缝里穿过。他想确认，这里是否适合让两个人把话说开。</Text>
-              <Text className='alang-first-act__hint'>轻触阿浪和三处场景物件</Text>
-            </View>
-          ) : activeAnswer === undefined ? (
-            <View className='alang-first-act__copy-block'>
-              <Text className='alang-first-act__kicker'>观察 · {activeDefinition.label}</Text>
-              <Text className='alang-first-act__prompt'>你怎么回应？</Text>
-              <View className='alang-first-act__choices' aria-label={`回应${activeDefinition.label}`}>
-                {activeDefinition.replies.map((reply, index) => (
-                  <View
-                    key={reply.label}
-                    className='alang-first-act__choice'
-                    hoverClass={disabled ? '' : 'alang-first-act__choice--pressed'}
-                    onClick={() => answerHighlight(index as AlangApproachIndex)}
-                    role='button'
-                    aria-label={reply.label}
-                    aria-disabled={disabled}
-                  >
-                    <Text className='alang-first-act__choice-mark' aria-hidden='true'>·</Text>
-                    <Text className='alang-first-act__choice-copy'>{reply.label}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : (
-            <View className='alang-first-act__copy-block'>
-              <Text className='alang-first-act__kicker'>阿浪的回应</Text>
-              <Text className='alang-first-act__body'>他没有马上补充，只把目光放回{activeDefinition.label}。</Text>
-              <View
-                className='alang-first-act__primary-action'
-                hoverClass={disabled ? '' : 'alang-first-act__primary-action--pressed'}
-                onClick={continueExploring}
-                role='button'
-                aria-label={answerCount === ALANG_FIRST_ACT_HIGHLIGHTS.length ? '看完四处线索' : '继续观察'}
-                aria-disabled={disabled}
-              >
-                <Text>{answerCount === ALANG_FIRST_ACT_HIGHLIGHTS.length ? '看完四处线索' : '继续观察'}</Text>
-              </View>
-            </View>
-          )
-        ) : null}
+      {progress.stage === 'explore' && activeDefinition ? (
+        <FirstActDialogueChrome
+          npcSlug='alang'
+          speaker='阿浪'
+          speech={speech}
+          narration={activeAnswer === undefined ? `你看向${activeDefinition.label}。` : `你回应了${activeDefinition.label}留下的线索。`}
+          prompt={activeAnswer === undefined ? '你接着说' : '阿浪把这句话记下了。'}
+          choices={activeAnswer === undefined ? activeDefinition.replies.map((reply, index) => ({ id: String(index), label: reply.label })) : []}
+          action={activeAnswer === undefined ? null : { label: answerCount === ALANG_FIRST_ACT_HIGHLIGHTS.length ? '看完四处线索' : '继续观察', onClick: continueExploring }}
+          disabled={disabled}
+          onChoose={(id) => answerHighlight(Number(id) as AlangApproachIndex)}
+        />
+      ) : null}
 
-        {progress.stage === 'stance' ? (
-          <View className='alang-first-act__copy-block'>
-            <Text className='alang-first-act__kicker'>揭示 · 并肩留白</Text>
-            <Text className='alang-first-act__body'>原来这里没有失踪的人。阿浪也不是在等谁。他只是在替两句总被说成争论的道歉，试一个能慢下来的位置。</Text>
-            {progress.approachIndex === null ? (
-              <>
-                <Text className='alang-first-act__prompt'>如果是你，会把椅子怎么放？</Text>
-                <View className='alang-first-act__choices' aria-label='选择阿浪的谈话立场'>
-                  {APPROACHES.map((approach, index) => (
-                    <View
-                      key={approach.label}
-                      className='alang-first-act__choice'
-                      hoverClass={disabled ? '' : 'alang-first-act__choice--pressed'}
-                      onClick={() => selectApproach(index as AlangApproachIndex)}
-                      role='button'
-                      aria-label={approach.label}
-                      aria-disabled={disabled}
-                    >
-                      <Text className='alang-first-act__choice-mark' aria-hidden='true'>·</Text>
-                      <Text className='alang-first-act__choice-copy'>{approach.label}</Text>
-                    </View>
-                  ))}
-                </View>
-              </>
-            ) : (
-              <View
-                className='alang-first-act__primary-action'
-                hoverClass={disabled ? '' : 'alang-first-act__primary-action--pressed'}
-                onClick={enterGame}
-                role='button'
-                aria-label='调一调两把椅子'
-                aria-disabled={disabled}
-              >
-                <Text>调一调两把椅子</Text>
-              </View>
-            )}
-          </View>
-        ) : null}
+      {progress.stage === 'stance' ? (
+        <FirstActDialogueChrome
+          npcSlug='alang'
+          speaker='阿浪'
+          speech={speech}
+          narration='原来这里没有失踪的人。阿浪只是在替两句总被说成争论的道歉，试一个能慢下来的位置。'
+          prompt={progress.approachIndex === null ? '如果是你，会把椅子怎么放？' : '阿浪点了点头。'}
+          choices={progress.approachIndex === null ? APPROACHES.map((approach, index) => ({ id: String(index), label: approach.label })) : []}
+          action={progress.approachIndex === null ? null : { label: '调一调两把椅子', onClick: enterGame }}
+          disabled={disabled}
+          onChoose={(id) => selectApproach(Number(id) as AlangApproachIndex)}
+        />
+      ) : null}
 
-        {progress.stage === 'game' ? (
+      {progress.stage === 'game' ? (
+        <View className='alang-first-act__speech' role='status' aria-live='polite' aria-atomic='true'>
+          <Text className='alang-first-act__speaker'>阿浪</Text>
+          <Text className='alang-first-act__speech-copy' data-testid='alang-game-speech'>{speech}</Text>
+        </View>
+      ) : null}
+
+      {progress.stage === 'success' ? (
+        <FirstActDialogueChrome
+          npcSlug='alang'
+          speaker='阿浪'
+          speech={speech}
+          narration='阿浪把折过很多次的座位图重新压平。两把椅子朝向同一段河面，也给转身和停顿留了余地。'
+          prompt='并肩，但不挤'
+          action={{ label: disabled || completionRequested ? '正在记下这次相遇…' : '记下这段并肩留白', onClick: completeExperience }}
+          disabled={disabled || completionRequested}
+        />
+      ) : null}
+
+      {progress.stage === 'game' ? <View className='alang-first-act__panel alang-first-act__panel--game'>
+
           <View className='alang-first-act__game' data-testid='alang-spacing-game'>
             <Text className='alang-first-act__kicker'>旧物复原 · 座位图</Text>
             {progress.needsRetry ? (
@@ -547,26 +491,7 @@ export function AlangFirstActExperience({
               </>
             )}
           </View>
-        ) : null}
-
-        {progress.stage === 'success' ? (
-          <View className='alang-first-act__copy-block alang-first-act__success'>
-            <Text className='alang-first-act__kicker'>复原完成</Text>
-            <Text className='alang-first-act__title'>并肩，但不挤</Text>
-            <Text className='alang-first-act__body'>阿浪把折过很多次的座位图重新压平。两把椅子朝向同一段河面，也给转身和停顿留了余地。</Text>
-            <View
-              className='alang-first-act__primary-action'
-              hoverClass={disabled || completionRequested ? '' : 'alang-first-act__primary-action--pressed'}
-              onClick={completeExperience}
-              role='button'
-              aria-label='记下这段并肩留白'
-              aria-disabled={disabled || completionRequested}
-            >
-              <Text>{disabled || completionRequested ? '正在记下这次相遇…' : '记下这段并肩留白'}</Text>
-            </View>
-          </View>
-        ) : null}
-      </View>
+      </View> : null}
     </View>
   )
 }

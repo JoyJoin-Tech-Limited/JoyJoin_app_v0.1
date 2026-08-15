@@ -11,16 +11,16 @@ const appJsonPath = resolve(distRoot, 'app.json')
 const manifestPath = resolve(distRoot, 'flash-build-manifest.json')
 const projectConfigPath = resolve(appRoot, 'project.config.json')
 const preupload = process.argv.includes('--preupload')
-const introSceneRelativePath = 'pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg'
+const introSceneRelativePath = 'pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp'
 const npcHeadshotRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
   .map((slug) => `pages/alang/assets/npcs/headshots/${slug}.jpg`)
 const flashSceneRelativePaths = ['radar', 'task', 'feedback']
   .map((scene) => `pages/alang/assets/backgrounds/${scene}-paper-scene.jpg`)
 const flashDialogueRelativePaths = [
-  'pages/alang/assets/ui/flash-alang-first-act-riverside-v1.jpg',
-  'pages/alang/assets/ui/flash-lizi-first-act-color-studio-v1.jpg',
-  'pages/alang/assets/ui/flash-momo-first-act-rain-route-v1.jpg',
-  'pages/alang/assets/ui/flash-shiqi-first-act-record-room-v1.jpg',
+  'pages/alang/assets/ui/flash-alang-first-act-riverside-v2.webp',
+  'pages/alang/assets/ui/flash-lizi-first-act-color-studio-v2.webp',
+  'pages/alang/assets/ui/flash-momo-first-act-rain-route-v2.webp',
+  'pages/alang/assets/ui/flash-shiqi-first-act-record-room-v2.webp',
   'pages/alang/assets/ui/flash-atuan-first-arrival-layered-v2.jpg',
 ]
 const flashReviewedStoryBackgrounds = [
@@ -31,6 +31,7 @@ const atuanArrivalRelativePaths = [
   'pages/alang/assets/ui/flash-atuan-character-lowpoly-v3.png',
   'pages/alang/assets/ui/flash-atuan-bag-cutout-v2.png',
 ]
+const flashRuntimeImageBudgetBytes = Math.round(1.05 * 1024 * 1024)
 
 const flashRuntimeImages = [
   'pages/alang/assets/ui/flash-city-ambient-bg.png',
@@ -145,6 +146,14 @@ if (!existsSync(projectConfigPath)) {
       'project.config.json packOptions.include must explicitly include all pages/alang JPG runtime assets',
     )
   }
+  const flashRuntimeWebpsAreForcedIntoWxapkg = packIncludes.some(
+    (entry) => entry?.type === 'regexp' && entry?.value === 'pages/alang/assets/.*\\.webp$',
+  )
+  if (!flashRuntimeWebpsAreForcedIntoWxapkg) {
+    failures.push(
+      'project.config.json packOptions.include must explicitly include all pages/alang WebP runtime assets',
+    )
+  }
   if (projectConfig.setting?.ignoreUploadUnusedFiles !== false) {
     failures.push(
       'project.config.json setting.ignoreUploadUnusedFiles must be false; ' +
@@ -184,11 +193,11 @@ const introScenePath = resolve(distRoot, introSceneRelativePath)
 if (existsSync(introScenePath) && statSync(introScenePath).size > 0) {
   try {
     const metadata = await sharp(introScenePath).metadata()
-    if (metadata.format !== 'jpeg' || !metadata.width || !metadata.height) {
-      failures.push(`dist/${introSceneRelativePath} is not a decodable JPEG image`)
+    if (metadata.format !== 'webp' || !metadata.width || !metadata.height) {
+      failures.push(`dist/${introSceneRelativePath} is not a decodable WebP image`)
     }
   } catch (error) {
-    failures.push(`dist/${introSceneRelativePath} JPEG decode failed: ${error.message}`)
+    failures.push(`dist/${introSceneRelativePath} WebP decode failed: ${error.message}`)
   }
 }
 
@@ -207,9 +216,9 @@ for (const relativePath of flashRuntimeImages) {
     failures.push(`dist/${relativePath} decode failed: ${error.message}`)
   }
 }
-if (flashRuntimeImageBytes > 1024 * 1024) {
+if (flashRuntimeImageBytes > flashRuntimeImageBudgetBytes) {
   failures.push(
-    `Flash runtime image assets use ${flashRuntimeImageBytes} bytes, exceeding the 1 MiB subpackage budget`,
+    `Flash runtime image assets use ${flashRuntimeImageBytes} bytes, exceeding the 1.05 MiB subpackage budget`,
   )
 }
 

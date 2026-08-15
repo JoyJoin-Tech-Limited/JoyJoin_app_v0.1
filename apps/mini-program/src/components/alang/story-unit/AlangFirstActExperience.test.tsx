@@ -148,13 +148,14 @@ describe('AlangFirstActExperience', () => {
   })
 
   it('keeps the accepted first-act scene versioned, valid, and package-sized', () => {
-    const assetPath = resolve(process.cwd(), 'src/pages/alang/assets/ui/flash-alang-first-act-riverside-v1.jpg')
+    const assetPath = resolve(process.cwd(), 'src/pages/alang/assets/ui/flash-alang-first-act-riverside-v2.webp')
     const bytes = statSync(assetPath).size
     const header = readFileSync(assetPath).subarray(0, 12)
 
-    expect(Array.from(header.subarray(0, 3))).toEqual([0xff, 0xd8, 0xff])
+    expect(header.subarray(0, 4).toString('ascii')).toBe('RIFF')
+    expect(header.subarray(8, 12).toString('ascii')).toBe('WEBP')
     expect(bytes).toBeGreaterThan(12)
-    expect(bytes).toBeLessThanOrEqual(420 * 1024)
+    expect(bytes).toBeLessThanOrEqual(80 * 1024)
   })
 
   it('asserts the exclusive distance-and-city story language', () => {

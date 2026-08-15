@@ -88,6 +88,10 @@
       },
       {
         "type": "regexp",
+        "value": "pages/alang/assets/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
         "value": "assets/icons/intent-icons/.*\\.webp$"
       },
       {

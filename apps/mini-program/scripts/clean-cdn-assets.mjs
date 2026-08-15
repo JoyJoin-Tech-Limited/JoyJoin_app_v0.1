@@ -92,6 +92,15 @@ const sourceOnlyAlangUiAssets = new Set([
   'flash-atuan-character-cutout-v2.png',
 ])
 
+// These full-scene WebPs are the active first-act runtime backgrounds. Keep
+// only this reviewed set; every other UI WebP remains source/CDN-only.
+const runtimeAlangUiWebps = new Set([
+  'flash-alang-first-act-riverside-v2.webp',
+  'flash-lizi-first-act-color-studio-v2.webp',
+  'flash-momo-first-act-rain-route-v2.webp',
+  'flash-shiqi-first-act-record-room-v2.webp',
+])
+
 await removeMatching(
   'lovart',
   (name) => name !== 'puzzle' && name !== 'squad' && !bundledAlangAssets.has(name),
@@ -118,7 +127,7 @@ await Promise.all([
   removeMatchingFrom(
     alangAssetsDir,
     'ui',
-    (name) => name.endsWith('.webp') || sourceOnlyAlangUiAssets.has(name),
+    (name) => (name.endsWith('.webp') && !runtimeAlangUiWebps.has(name)) || sourceOnlyAlangUiAssets.has(name),
   ),
 ])
 

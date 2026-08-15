@@ -113,12 +113,21 @@ describe('Atuan first-arrival asset ownership', () => {
       expect(cleanScript, `${fileName} must stay out of the upload package`).toContain(`'${fileName}'`)
     }
     expect(cleanScript).toContain('sourceOnlyAlangUiAssets.has(name)')
-    expect(cleanScript).not.toContain('const bundledAlangUiWebps')
+    expect(cleanScript).toContain('const runtimeAlangUiWebps = new Set([')
+    for (const fileName of [
+      'flash-alang-first-act-riverside-v2.webp',
+      'flash-lizi-first-act-color-studio-v2.webp',
+      'flash-momo-first-act-rain-route-v2.webp',
+      'flash-shiqi-first-act-record-room-v2.webp',
+    ]) {
+      expect(cleanScript, `${fileName} must survive the upload-package cleanup`).toContain(`'${fileName}'`)
+    }
     expect(cleanScript).not.toContain('flash-atuan-park-clean-v2.webp')
     expect(verifyScript).toContain('non-collapsing Flash story viewport height chain')
     expect(verifyScript).toContain('anchor the Flash story stage to the viewport shell')
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.jpg$' })
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.png$' })
+    expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.webp$' })
   })
 
   it('keeps inspection targets invisible instead of rendering fallback tags', () => {

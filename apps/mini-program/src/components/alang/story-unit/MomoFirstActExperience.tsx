@@ -2,6 +2,8 @@ import Taro from '@tarojs/taro'
 import { Image, Text, View } from '@tarojs/components'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS } from '@shared/alang/flashFirstActExperience'
+import { FirstActDialogueChrome } from './FirstActDialogueChrome'
+import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
 import './MomoFirstActExperience.scss'
 
 type ApproachIndex = 0 | 1
@@ -319,90 +321,76 @@ export function MomoFirstActExperience({
         mode='aspectFill'
         data-testid='momo-first-act-scene'
       />
+      <View className='first-act-scene-grade' aria-hidden='true' />
 
-      <View className='momo-first-act__speech' data-testid='momo-scene-speech' role='status' aria-live='polite' aria-atomic='true'>
-        <Text className='momo-first-act__speaker'>默默</Text>
-        <Text className='momo-first-act__speech-copy'>{progress.speech}</Text>
-      </View>
-
-      {progress.stage === 'observe' && (
-        <View className='momo-first-act__hotspots' aria-label='可观察区域'>
-          {MOMO_FIRST_ACT_HIGHLIGHTS.map((highlight) => {
-            const completed = progress.completedHighlightIds.includes(highlight.id)
-            return (
-              <View
-                key={highlight.id}
-                className={`${highlight.hotspotClass} momo-first-act__hotspot${completed ? ' momo-first-act__hotspot--completed' : ''}`}
-                role='button'
-                aria-label={`查看${highlight.label}`}
-                aria-disabled={disabled || completed}
-                hoverClass='momo-first-act__hotspot--pressed'
-                data-testid='momo-first-act-hotspot'
-                onClick={() => openHighlight(highlight)}
-              />
-            )
-          })}
-        </View>
+      {progress.stage === 'observe' && !activeHighlight && (
+        <FirstActHighlightOverlay
+          npcSlug='momo'
+          className='momo-first-act__hotspots'
+          targets={MOMO_FIRST_ACT_HIGHLIGHTS.map((highlight) => ({
+            id: highlight.id,
+            label: highlight.label,
+            placementClassName: highlight.hotspotClass,
+          }))}
+          completedIds={progress.completedHighlightIds}
+          activeId={null}
+          disabled={disabled}
+          onSelect={(id) => {
+            const highlight = MOMO_FIRST_ACT_HIGHLIGHTS.find((item) => item.id === id)
+            if (highlight) openHighlight(highlight)
+          }}
+        />
       )}
 
-      <View className='momo-first-act__panel'>
-        {progress.stage === 'observe' && !activeHighlight && (
-          <View className='momo-first-act__narrative'>
-            <Text className='momo-first-act__eyebrow'>雨停在空白以前</Text>
-            <Text className='momo-first-act__panel-copy'>看看默默和路线亭里的三处线索。</Text>
-            <Text className='momo-first-act__progress-copy'>已观察 {progress.completedHighlightIds.length} / 4</Text>
-          </View>
-        )}
+      {progress.stage === 'observe' && activeHighlight ? (
+        <FirstActDialogueChrome
+          npcSlug='momo'
+          speaker='默默'
+          speech={progress.speech}
+          narration={`你看向${activeHighlight.label}。`}
+          prompt={progress.selectedReplyIndex === null ? '你接着说' : '默默把这句话写在页边。'}
+          choices={progress.selectedReplyIndex === null ? activeHighlight.replies.map((reply, index) => ({ id: String(index), label: reply.label })) : []}
+          action={progress.selectedReplyIndex === null ? null : { label: progress.completedHighlightIds.length === 3 ? '看完四处线索' : '继续观察', onClick: finishHighlight }}
+          disabled={disabled}
+          onChoose={(id) => selectReply(Number(id) as 0 | 1)}
+        />
+      ) : null}
 
-        {progress.stage === 'observe' && activeHighlight && (
-          <View className='momo-first-act__reply-sheet'>
-            <Text className='momo-first-act__eyebrow'>观察 · {activeHighlight.label}</Text>
-            {progress.selectedReplyIndex === null ? (
-              <View className='momo-first-act__reply-list'>
-                {activeHighlight.replies.map((reply, replyIndex) => (
-                  <View
-                    key={reply.label}
-                    className='momo-first-act__choice'
-                    role='button'
-                    aria-label={reply.label}
-                    aria-disabled={disabled}
-                    hoverClass='momo-first-act__choice--pressed'
-                    data-testid='momo-highlight-reply'
-                    onClick={() => selectReply(replyIndex as 0 | 1)}
-                  >
-                    <Text>{reply.label}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <ActionButton label='记下这处线索' disabled={disabled} onClick={finishHighlight} />
-            )}
-          </View>
-        )}
+      {progress.stage === 'approach' ? (
+        <FirstActDialogueChrome
+          npcSlug='momo'
+          speaker='默默'
+          speech={progress.speech}
+          narration='三处环境线索和默默手里的路线册接成了一条线。空白页不是下一段路，而是一个可以自己决定的停顿。'
+          prompt={progress.approachIndex === null ? '你想怎样记下这个停顿？' : '默默把路线册翻回第一页。'}
+          choices={progress.approachIndex === null ? MOMO_APPROACHES.map((approach, index) => ({ id: String(index), label: approach.label })) : []}
+          selectedChoiceId={progress.approachIndex === null ? null : String(progress.approachIndex)}
+          action={progress.approachIndex === null ? null : { label: '开始走这段雨路', onClick: startGame }}
+          disabled={disabled}
+          onChoose={(id) => chooseApproach(Number(id) as ApproachIndex)}
+        />
+      ) : null}
 
-        {progress.stage === 'approach' && (
-          <View className='momo-first-act__approach'>
-            <Text className='momo-first-act__eyebrow'>最后怎么记</Text>
-            <Text className='momo-first-act__panel-copy'>这会决定默默走到空白页前时，怎样收住脚步。</Text>
-            <View className='momo-first-act__reply-list'>
-              <ChoiceButton
-                label={MOMO_APPROACHES[0].label}
-                selected={progress.approachIndex === 0}
-                disabled={disabled}
-                onClick={() => chooseApproach(0)}
-              />
-              <ChoiceButton
-                label={MOMO_APPROACHES[1].label}
-                selected={progress.approachIndex === 1}
-                disabled={disabled}
-                onClick={() => chooseApproach(1)}
-              />
-            </View>
-            {progress.approachIndex !== null && (
-              <ActionButton label='开始走这段雨路' disabled={disabled} onClick={startGame} />
-            )}
-          </View>
-        )}
+      {progress.stage === 'success' ? (
+        <FirstActDialogueChrome
+          npcSlug='momo'
+          speaker='默默'
+          speech={progress.speech}
+          narration='三处线索都接上，最后一步由默默自己决定。'
+          prompt='空白页前停住了。'
+          action={{ label: '完成《雨停在空白以前》', onClick: complete }}
+          disabled={disabled}
+        />
+      ) : null}
+
+      {progress.stage === 'game' ? (
+        <View className='momo-first-act__speech' data-testid='momo-game-speech' role='status' aria-live='polite' aria-atomic='true'>
+          <Text className='momo-first-act__speaker'>默默</Text>
+          <Text className='momo-first-act__speech-copy'>{progress.speech}</Text>
+        </View>
+      ) : null}
+
+      {progress.stage === 'game' ? <View className='momo-first-act__panel'>
 
         {progress.stage === 'game' && (
           <RouteGame
@@ -416,15 +404,7 @@ export function MomoFirstActExperience({
           />
         )}
 
-        {progress.stage === 'success' && (
-          <View className='momo-first-act__success' data-testid='momo-route-success'>
-            <Text className='momo-first-act__eyebrow'>路线收住了</Text>
-            <Text className='momo-first-act__success-title'>空白页前停住了</Text>
-            <Text className='momo-first-act__panel-copy'>三处线索都接上，最后一步由默默自己决定。</Text>
-            <ActionButton label='完成《雨停在空白以前》' disabled={disabled} onClick={complete} />
-          </View>
-        )}
-      </View>
+      </View> : null}
     </View>
   )
 }
@@ -507,31 +487,6 @@ function RouteGame({
           </View>
         )}
       </View>
-    </View>
-  )
-}
-
-function ChoiceButton({
-  label,
-  selected,
-  disabled,
-  onClick,
-}: {
-  label: string
-  selected: boolean
-  disabled: boolean
-  onClick: () => void
-}) {
-  return (
-    <View
-      className={`momo-first-act__choice${selected ? ' momo-first-act__choice--selected' : ''}`}
-      role='button'
-      aria-label={label}
-      aria-disabled={disabled}
-      hoverClass='momo-first-act__choice--pressed'
-      onClick={onClick}
-    >
-      <Text>{label}</Text>
     </View>
   )
 }

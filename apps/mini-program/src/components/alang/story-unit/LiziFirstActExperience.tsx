@@ -2,6 +2,8 @@ import Taro from '@tarojs/taro'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS } from '@shared/alang/flashFirstActExperience'
+import { FirstActDialogueChrome } from './FirstActDialogueChrome'
+import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
 import './LiziFirstActExperience.scss'
 
 export type LiziFirstActApproachIndex = 0 | 1
@@ -69,7 +71,7 @@ export const LIZI_FIRST_ACT_HIGHLIGHTS: readonly HighlightDefinition[] = [
     id: 'lizi',
     label: '栗子',
     speech: '来得正好。我正和一卷干掉的彩笔较劲。名字都磨没了，偏偏每支还留着自己的脾气。',
-    narration: '栗子把布卷压在肘边，三支没盖笔帽的彩笔排得很开。',
+    narration: '栗子压住布卷，把三支没盖笔帽的彩笔排开。',
     replies: [
       {
         id: 'trust-the-marks',
@@ -423,81 +425,76 @@ export function LiziFirstActExperience({
           <View className='lizi-first-act__fallback-paper' />
         </View>
       )}
-      <View className='lizi-first-act__scene-grade' aria-hidden='true' />
-
-      <View className='lizi-first-act__speech' role='status' aria-live='polite' aria-atomic='true'>
-        <Text className='lizi-first-act__speaker'>栗子</Text>
-        <Text className='lizi-first-act__speech-copy' data-testid='lizi-speech'>{speech}</Text>
-      </View>
+      <View className='first-act-scene-grade' aria-hidden='true' />
 
       {progress.phase === 'explore' && !activeHighlight ? (
-        <View className='lizi-first-act__targets' aria-label='可观察的现场细节'>
-          {LIZI_FIRST_ACT_HIGHLIGHTS.map((highlight) => {
-            const seen = Boolean(progress.replies[highlight.id])
-            return (
-              <View
-                key={highlight.id}
-                className={`lizi-first-act__target lizi-first-act__target--${highlight.id}${seen ? ' lizi-first-act__target--seen' : ''}`}
-                hoverClass={disabled ? '' : 'lizi-first-act__target--pressed'}
-                onClick={() => inspectHighlight(highlight.id)}
-                role='button'
-                aria-label={`观察${highlight.label}`}
-                aria-disabled={disabled}
-              >
-                <View className='lizi-first-act__target-ring' aria-hidden='true'>
-                  <View className='lizi-first-act__target-core' />
-                </View>
-              </View>
-            )
-          })}
+        <FirstActHighlightOverlay
+          npcSlug='lizi'
+          targets={LIZI_FIRST_ACT_HIGHLIGHTS.map((highlight) => ({
+            id: highlight.id,
+            label: highlight.label,
+            placementClassName: `lizi-first-act__target--${highlight.id}`,
+          }))}
+          completedIds={Object.keys(progress.replies)}
+          activeId={null}
+          disabled={disabled}
+          onSelect={(id) => inspectHighlight(id as HighlightId)}
+        />
+      ) : null}
+
+      {progress.phase === 'explore' && activeHighlight ? (
+        <FirstActDialogueChrome
+          npcSlug='lizi'
+          speaker='栗子'
+          speech={speech}
+          narration={selectedReply ? selectedReply.memory : activeHighlight.narration}
+          prompt={selectedReply ? '栗子记住了你分辨颜色的方式。' : '你接着说'}
+          choices={selectedReply ? [] : activeHighlight.replies.map((reply) => ({ id: reply.id, label: reply.label }))}
+          action={selectedReply ? { label: exploredCount === 4 ? '看完四处线索' : '继续观察', onClick: closeHighlight } : null}
+          disabled={disabled}
+          onChoose={(id) => {
+            const reply = activeHighlight.replies.find((item) => item.id === id)
+            if (reply) chooseHighlightReply(reply)
+          }}
+        />
+      ) : null}
+
+      {progress.phase === 'stance' ? (
+        <FirstActDialogueChrome
+          npcSlug='lizi'
+          speaker='栗子'
+          speech={speech}
+          narration='四处细节接成了一条线：颜色名会消失，痕迹的节奏却还在。'
+          prompt={progress.approachIndex === null ? '你想先相信什么？' : '栗子把三支干彩笔推到你面前。'}
+          choices={progress.approachIndex === null ? LIZI_APPROACHES.map((approach, index) => ({ id: String(index), label: approach.label })) : []}
+          action={progress.approachIndex === null ? null : { label: '看看三条试写痕迹', onClick: () => update((current) => ({ ...current, phase: 'inspect', activeMark: null })) }}
+          disabled={disabled}
+          onChoose={(id) => chooseApproach(Number(id) as LiziFirstActApproachIndex)}
+        />
+      ) : null}
+
+      {(progress.phase === 'success' || progress.phase === 'complete') ? (
+        <FirstActDialogueChrome
+          npcSlug='lizi'
+          speaker='栗子'
+          speech={speech}
+          narration='暖的软弧、静的双细线、醒的短断点，都在纸上替三种颜色记着。'
+          prompt='颜色没有走丢。'
+          action={{ label: progress.phase === 'complete' ? '再把这次整理交给栗子' : '把三支笔放回布卷', onClick: complete }}
+          disabled={disabled}
+        />
+      ) : null}
+
+      {(progress.phase === 'inspect' || progress.phase === 'pair' || progress.phase === 'error') ? (
+        <View className='lizi-first-act__speech' role='status' aria-live='polite' aria-atomic='true'>
+          <Text className='lizi-first-act__speaker'>栗子</Text>
+          <Text className='lizi-first-act__speech-copy' data-testid='lizi-game-speech'>{speech}</Text>
         </View>
       ) : null}
 
-      <View className='lizi-first-act__panel'>
+      {(progress.phase === 'inspect' || progress.phase === 'pair' || progress.phase === 'error') ? <View className='lizi-first-act__panel'>
         <ScrollView className='lizi-first-act__panel-scroll' scrollY>
           <View className='lizi-first-act__panel-content'>
-            {progress.phase === 'explore' && !activeHighlight ? (
-              <>
-                <View className='lizi-first-act__eyebrow'><Text>第一幕 · 颜色没有走丢</Text></View>
-                <Text className='lizi-first-act__narration'>雨后的创作亭很亮。栗子守着一卷干彩笔，没急着把任何颜色叫错名字。</Text>
-                <View className='lizi-first-act__progress' aria-label={`已观察 ${exploredCount} 处，共 4 处`}>
-                  <Text>观察现场</Text><Text>{exploredCount}/4</Text>
-                </View>
-              </>
-            ) : null}
-
-            {progress.phase === 'explore' && activeHighlight ? (
-              <>
-                <Text className='lizi-first-act__narration'>{activeHighlight.narration}</Text>
-                {!selectedReply ? (
-                  <View className='lizi-first-act__choices' aria-label={`回应${activeHighlight.label}`}>
-                    {activeHighlight.replies.map((reply) => (
-                      <ChoiceButton key={reply.id} label={reply.label} disabled={disabled} onClick={() => chooseHighlightReply(reply)} />
-                    ))}
-                  </View>
-                ) : (
-                  <>
-                    <View className='lizi-first-act__memory'><Text>{selectedReply.memory}</Text></View>
-                    <ChoiceButton label={exploredCount === 4 ? '把四处线索放在一起' : '记下这一笔，继续看'} disabled={disabled} onClick={closeHighlight} />
-                  </>
-                )}
-              </>
-            ) : null}
-
-            {progress.phase === 'stance' ? (
-              <>
-                <Text className='lizi-first-act__narration'>四处细节接成了一条线：颜色名会消失，痕迹的节奏却还在。</Text>
-                {progress.approachIndex === null ? (
-                  <View className='lizi-first-act__choices' aria-label='选择判断颜色的方式'>
-                    <ChoiceButton label={LIZI_APPROACHES[0].label} disabled={disabled} onClick={() => chooseApproach(0)} />
-                    <ChoiceButton label={LIZI_APPROACHES[1].label} disabled={disabled} onClick={() => chooseApproach(1)} />
-                  </View>
-                ) : (
-                  <ChoiceButton label='看看三条试写痕迹' disabled={disabled} onClick={() => update((current) => ({ ...current, phase: 'inspect', activeMark: null }))} />
-                )}
-              </>
-            ) : null}
-
             {progress.phase === 'inspect' ? (
               <>
                 <View className='lizi-first-act__game-heading'>
@@ -591,21 +588,9 @@ export function LiziFirstActExperience({
               </>
             ) : null}
 
-            {progress.phase === 'success' || progress.phase === 'complete' ? (
-              <View className='lizi-first-act__success'>
-                <Text className='lizi-first-act__success-kicker'>三顶笔帽都回去了</Text>
-                <Text className='lizi-first-act__success-title'>颜色没有走丢</Text>
-                <Text className='lizi-first-act__success-copy'>暖的软弧、静的双细线、醒的短断点，都在纸上替它们记着。</Text>
-                <ChoiceButton
-                  label={progress.phase === 'complete' ? '再把这次整理交给栗子' : '把三支笔放回布卷'}
-                  disabled={disabled}
-                  onClick={complete}
-                />
-              </View>
-            ) : null}
           </View>
         </ScrollView>
-      </View>
+      </View> : null}
     </View>
   )
 }

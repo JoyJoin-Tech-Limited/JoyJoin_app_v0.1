@@ -2,6 +2,8 @@ import Taro from '@tarojs/taro'
 import { Image, Text, View } from '@tarojs/components'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS } from '@shared/alang/flashFirstActExperience'
+import { FirstActDialogueChrome } from './FirstActDialogueChrome'
+import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
 import './ShiqiFirstActExperience.scss'
 
 type ApproachIndex = 0 | 1
@@ -378,109 +380,69 @@ export function ShiqiFirstActExperience({
       aria-label='拾柒第一幕：记录没有说完'
     >
       <Image data-testid='shiqi-first-act-scene' className='shiqi-first-act__scene' src={scene} mode='aspectFill' aria-hidden='true' />
-      <View className='shiqi-first-act__scene-grade' aria-hidden='true' />
-
-      <View className='shiqi-first-act__bubble' role='status' aria-live='polite' aria-atomic='true'>
-        <Text className='shiqi-first-act__bubble-name'>拾柒</Text>
-        <Text className='shiqi-first-act__bubble-text' data-testid='shiqi-scene-speech'>{speech}</Text>
-      </View>
-
-      {progress.stage === 'inspect' && !activeHighlight ? SHIQI_FIRST_ACT_HIGHLIGHTS
-        .filter((highlight) => !progress.completedHotspots.includes(highlight.id))
-        .map((highlight) => (
-          <View
-            key={highlight.id}
-            data-testid='shiqi-first-act-hotspot'
-            className={`shiqi-first-act__hotspot shiqi-first-act__hotspot--${highlight.id}`}
-            hoverClass={disabled ? '' : 'shiqi-first-act__hotspot--pressed'}
-            onClick={() => openHighlight(highlight.id)}
-            role='button'
-            aria-label={`查看${highlight.label}`}
-            aria-disabled={disabled}
-          >
-            <View className='shiqi-first-act__hotspot-marker' aria-hidden='true' />
-          </View>
-        )) : null}
+      <View className='first-act-scene-grade' aria-hidden='true' />
 
       {progress.stage === 'inspect' && !activeHighlight ? (
-        <View className='shiqi-first-act__panel shiqi-first-act__panel--intro' data-testid='shiqi-inspect-intro'>
-          <Text className='shiqi-first-act__eyebrow'>第一幕 · 记录没有说完</Text>
-          <Text className='shiqi-first-act__body'>先看拾柒和现场留下的三处浅痕。把事实与后来补上的解释分开。</Text>
-          <View className='shiqi-first-act__progress' aria-label={`已观察 ${progress.completedHotspots.length} 处，共 4 处`}>
-            <Text>观察现场</Text>
-            <Text>{progress.completedHotspots.length}/4</Text>
-          </View>
-        </View>
+        <FirstActHighlightOverlay
+          npcSlug='shiqi'
+          targets={SHIQI_FIRST_ACT_HIGHLIGHTS.map((highlight) => ({
+            id: highlight.id,
+            label: highlight.label,
+            placementClassName: `shiqi-first-act__hotspot--${highlight.id}`,
+          }))}
+          completedIds={progress.completedHotspots}
+          activeId={null}
+          disabled={disabled}
+          onSelect={(id) => openHighlight(id as HotspotId)}
+        />
       ) : null}
 
       {progress.stage === 'inspect' && activeHighlight ? (
-        <View className='shiqi-first-act__panel' aria-label={`${activeHighlight.label}的观察回复`}>
-          <Text className='shiqi-first-act__eyebrow'>观察 · {activeHighlight.label}</Text>
-          <Text className='shiqi-first-act__heading'>你准备怎么回应？</Text>
-          {!activeReply ? (
-            <View className='shiqi-first-act__choice-row'>
-              {activeHighlight.replies.map((reply) => (
-                <View
-                  key={reply.id}
-                  data-testid='shiqi-highlight-reply'
-                  className='shiqi-first-act__choice'
-                  hoverClass={disabled ? '' : 'shiqi-first-act__choice--pressed'}
-                  onClick={() => selectReply(reply)}
-                  role='button'
-                  aria-label={reply.label}
-                  aria-disabled={disabled}
-                ><Text>{reply.label}</Text></View>
-              ))}
-            </View>
-          ) : (
-            <>
-              <Text className='shiqi-first-act__body'>你的判断：{activeReply.label}</Text>
-              <View
-                className='shiqi-first-act__primary'
-                hoverClass={disabled ? '' : 'shiqi-first-act__primary--pressed'}
-                onClick={closeHighlight}
-                role='button'
-                aria-label='记下这处判断'
-                aria-disabled={disabled}
-              ><Text>记下这处判断</Text></View>
-            </>
-          )}
-        </View>
+        <FirstActDialogueChrome
+          npcSlug='shiqi'
+          speaker='拾柒'
+          speech={speech}
+          narration={activeReply ? `你的判断：${activeReply.label}` : `你看向${activeHighlight.label}。`}
+          prompt={activeReply ? '拾柒把事实和解释分开记下。' : '你接着说'}
+          choices={activeReply ? [] : activeHighlight.replies.map((reply) => ({ id: reply.id, label: reply.label }))}
+          action={activeReply ? { label: progress.completedHotspots.length === 3 ? '看完四处线索' : '继续观察', onClick: closeHighlight } : null}
+          disabled={disabled}
+          onChoose={(id) => {
+            const reply = activeHighlight.replies.find((item) => item.id === id)
+            if (reply) selectReply(reply)
+          }}
+        />
       ) : null}
 
       {progress.stage === 'approach' ? (
-        <View className='shiqi-first-act__panel' aria-label='选择拾柒处理记录的立场'>
-          <Text className='shiqi-first-act__eyebrow'>最后判断</Text>
-          <Text className='shiqi-first-act__heading'>怎么区分事实与后来补上的解释？</Text>
-          <View className='shiqi-first-act__choice-row'>
-            {APPROACHES.map((approach, index) => (
-              <View
-                key={approach.label}
-                className='shiqi-first-act__choice'
-                hoverClass={disabled ? '' : 'shiqi-first-act__choice--pressed'}
-                onClick={() => chooseApproach(index as ApproachIndex)}
-                role='button'
-                aria-label={approach.label}
-                aria-disabled={disabled}
-              ><Text>{approach.label}</Text></View>
-            ))}
-          </View>
-        </View>
+        <FirstActDialogueChrome
+          npcSlug='shiqi'
+          speaker='拾柒'
+          speech={speech}
+          narration='共同浅痕已经够清楚，后来补上的解释仍然各自偏开。'
+          prompt='怎么区分事实与后来补上的解释？'
+          choices={APPROACHES.map((approach, index) => ({ id: String(index), label: approach.label }))}
+          disabled={disabled}
+          onChoose={(id) => chooseApproach(Number(id) as ApproachIndex)}
+        />
       ) : null}
 
       {progress.stage === 'approach-response' ? (
-        <View className='shiqi-first-act__panel'>
-          <Text className='shiqi-first-act__eyebrow'>拾柒确认了你的立场</Text>
-          <Text className='shiqi-first-act__heading'>把三层路线纸放上检视灯箱</Text>
-          <Text className='shiqi-first-act__body'>对齐的是浅痕，不是备注文字。</Text>
-          <View
-            className='shiqi-first-act__primary'
-            hoverClass={disabled ? '' : 'shiqi-first-act__primary--pressed'}
-            onClick={beginGame}
-            role='button'
-            aria-label='开始对齐浅痕'
-            aria-disabled={disabled}
-          ><Text>开始对齐浅痕</Text></View>
+        <FirstActDialogueChrome
+          npcSlug='shiqi'
+          speaker='拾柒'
+          speech={speech}
+          narration='对齐的是浅痕，不是备注文字。'
+          prompt='把三层路线纸放上检视灯箱。'
+          action={{ label: '开始对齐浅痕', onClick: beginGame }}
+          disabled={disabled}
+        />
+      ) : null}
+
+      {progress.stage === 'game' ? (
+        <View className='shiqi-first-act__bubble' role='status' aria-live='polite' aria-atomic='true'>
+          <Text className='shiqi-first-act__bubble-name'>拾柒</Text>
+          <Text className='shiqi-first-act__bubble-text' data-testid='shiqi-scene-speech'>{speech}</Text>
         </View>
       ) : null}
 
@@ -530,19 +492,15 @@ export function ShiqiFirstActExperience({
       ) : null}
 
       {progress.stage === 'success' ? (
-        <View className='shiqi-first-act__panel' data-testid='shiqi-overlay-success'>
-          <Text className='shiqi-first-act__eyebrow'>三层检视完成</Text>
-          <Text className='shiqi-first-act__heading'>三层浅痕对齐了</Text>
-          <Text className='shiqi-first-act__body'>方向一致只是开头。现在能看见哪些是共同浅痕，哪些是后来补上的解释。</Text>
-          <View
-            className='shiqi-first-act__primary'
-            hoverClass={disabled ? '' : 'shiqi-first-act__primary--pressed'}
-            onClick={finish}
-            role='button'
-            aria-label='完成《记录没有说完》'
-            aria-disabled={disabled}
-          ><Text>{disabled ? '正在记下这次检视…' : '完成《记录没有说完》'}</Text></View>
-        </View>
+        <FirstActDialogueChrome
+          npcSlug='shiqi'
+          speaker='拾柒'
+          speech={speech}
+          narration='方向一致只是开头。现在能看见哪些是共同浅痕，哪些是后来补上的解释。'
+          prompt='三层浅痕对齐了。'
+          action={{ label: disabled ? '正在记下这次检视…' : '完成《记录没有说完》', onClick: finish }}
+          disabled={disabled}
+        />
       ) : null}
     </View>
   )
