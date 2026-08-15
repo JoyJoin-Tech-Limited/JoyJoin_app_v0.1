@@ -73,7 +73,7 @@
   &__hotspots {
     position: absolute;
     z-index: 2;
-    inset: 0 0 300rpx;
+    inset: 0;
   }
 
   &__hotspot {
@@ -96,31 +96,31 @@
     }
 
     &--momo {
-      top: 310rpx;
-      left: 128rpx;
-      width: 240rpx;
-      height: 360rpx;
+      top: 24%;
+      left: 16%;
+      width: 34%;
+      height: 56%;
     }
 
     &--listening-window {
-      top: 276rpx;
-      left: 16rpx;
-      width: 112rpx;
-      height: 224rpx;
+      top: 20%;
+      left: 0;
+      width: 18%;
+      height: 36%;
     }
 
     &--route-sign {
-      top: 214rpx;
-      right: 32rpx;
-      width: 120rpx;
-      height: 280rpx;
+      top: 23%;
+      right: 4%;
+      width: 24%;
+      height: 44%;
     }
 
     &--route-book {
-      right: 64rpx;
-      bottom: 24rpx;
-      width: 216rpx;
-      height: 160rpx;
+      right: 2%;
+      bottom: 10%;
+      width: 42%;
+      height: 25%;
     }
 
     &--completed {

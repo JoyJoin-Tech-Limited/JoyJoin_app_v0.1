@@ -2,6 +2,7 @@ import Taro from '@tarojs/taro'
 import { Image, Text, View } from '@tarojs/components'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS } from '@shared/alang/flashFirstActExperience'
+import { haptics } from '../../../lib/utils/haptics'
 import { FirstActDialogueChrome } from './FirstActDialogueChrome'
 import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
 import './ShiqiFirstActExperience.scss'
@@ -278,11 +279,13 @@ export function ShiqiFirstActExperience({
 
   const openHighlight = (id: HotspotId) => {
     if (disabled || progress.completedHotspots.includes(id)) return
+    haptics('light')
     commit((current) => ({ ...current, activeHotspot: id, activeReplyId: null }))
   }
 
   const selectReply = (reply: HighlightReply) => {
     if (disabled || !progress.activeHotspot) return
+    haptics('light')
     commit((current) => ({
       ...current,
       activeReplyId: reply.id,
@@ -292,6 +295,8 @@ export function ShiqiFirstActExperience({
 
   const closeHighlight = () => {
     if (disabled || !progress.activeHotspot || !progress.activeReplyId) return
+    const completesInspection = progress.completedHotspots.length === SHIQI_FIRST_ACT_HIGHLIGHTS.length - 1
+    haptics(completesInspection ? 'medium' : 'light')
     commit((current) => {
       const completedHotspots = current.completedHotspots.includes(current.activeHotspot!)
         ? current.completedHotspots
@@ -308,16 +313,19 @@ export function ShiqiFirstActExperience({
 
   const chooseApproach = (approachIndex: ApproachIndex) => {
     if (disabled) return
+    haptics('light')
     commit((current) => ({ ...current, approachIndex, stage: 'approach-response' }))
   }
 
   const beginGame = () => {
     if (disabled || progress.approachIndex === null) return
+    haptics('medium')
     commit((current) => ({ ...current, stage: 'game', gameStatus: 'idle' }))
   }
 
   const moveLayer = (dx: number, dy: number) => {
     if (disabled || progress.stage !== 'game' || progress.lockedLayers[progress.activeLayer]) return
+    haptics('light')
     commit((current) => {
       const layerOffsets = current.layerOffsets.map((offset) => ({ ...offset })) as [Offset, Offset, Offset]
       const offset = layerOffsets[current.activeLayer]
@@ -333,9 +341,11 @@ export function ShiqiFirstActExperience({
     if (disabled || progress.stage !== 'game') return
     const offset = progress.layerOffsets[progress.activeLayer]
     if (offset.x !== 0 || offset.y !== 0) {
+      haptics('warning')
       commit((current) => ({ ...current, firstErrorShown: true, gameStatus: 'error' }))
       return
     }
+    haptics(progress.activeLayer === 2 ? 'success' : 'medium')
     commit((current) => {
       const lockedLayers = [...current.lockedLayers] as [boolean, boolean, boolean]
       lockedLayers[current.activeLayer] = true
@@ -353,6 +363,7 @@ export function ShiqiFirstActExperience({
 
   const resetGame = () => {
     if (disabled) return
+    haptics('light')
     commit((current) => ({
       ...current,
       stage: 'game',
@@ -366,6 +377,7 @@ export function ShiqiFirstActExperience({
 
   const finish = () => {
     if (disabled || progress.stage !== 'success' || progress.approachIndex === null) return
+    haptics('success')
     onComplete(progress.approachIndex)
   }
 

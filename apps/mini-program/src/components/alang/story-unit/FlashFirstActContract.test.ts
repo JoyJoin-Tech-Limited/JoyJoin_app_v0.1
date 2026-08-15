@@ -15,7 +15,7 @@ const firstActs = [
   {
     slug: 'alang',
     component: 'AlangFirstActExperience.tsx',
-    asset: 'flash-alang-first-act-riverside-v2.jpg',
+    asset: 'flash-alang-first-act-riverside-v3.webp',
     objectCode: 'seat-plan',
     gameCode: 'spacing',
     highlights: ALANG_FIRST_ACT_HIGHLIGHTS,
@@ -31,7 +31,7 @@ const firstActs = [
   {
     slug: 'momo',
     component: 'MomoFirstActExperience.tsx',
-    asset: 'flash-momo-first-act-rain-route-v2.jpg',
+    asset: 'flash-momo-first-act-rain-route-v3.webp',
     objectCode: 'route-book',
     gameCode: 'path',
     highlights: MOMO_FIRST_ACT_HIGHLIGHTS,
@@ -39,7 +39,7 @@ const firstActs = [
   {
     slug: 'shiqi',
     component: 'ShiqiFirstActExperience.tsx',
-    asset: 'flash-shiqi-first-act-record-room-v2.jpg',
+    asset: 'flash-shiqi-first-act-record-room-v3.webp',
     objectCode: 'outing-book',
     gameCode: 'overlay',
     highlights: SHIQI_FIRST_ACT_HIGHLIGHTS,
@@ -96,7 +96,7 @@ describe('Flash four-NPC first-act contract', () => {
     expect(chromeStyles).toMatch(/&__choice\s*\{[\s\S]*?min-height:\s*112rpx;/)
   })
 
-  it('ships the four accepted scenes as sharp, compact WeChat-safe JPEG assets', async () => {
+  it('ships the four accepted scenes as sharp, WeChat-safe image assets', async () => {
     const assetRegistry = readFileSync(resolve(sourceRoot, 'lib/alang/flashNpcAssets.ts'), 'utf8')
     let totalBytes = 0
     for (const { asset } of firstActs) {
@@ -106,14 +106,20 @@ describe('Flash four-NPC first-act contract', () => {
       const metadata = await sharp(path).metadata()
       totalBytes += bytes
       expect(metadata.width, `${asset} must stay close to Atuan's 941px scene baseline`).toBeGreaterThanOrEqual(850)
-      expect(bytes, `${asset} must fit its 90 KiB scene budget`).toBeLessThanOrEqual(90 * 1024)
-      expect([...header.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff])
-      expect(metadata.format).toBe('jpeg')
+      expect(bytes, `${asset} must fit its 220 KiB scene budget`).toBeLessThanOrEqual(220 * 1024)
+      if (asset.endsWith('.webp')) {
+        expect(bytes, `${asset} must retain enough detail to avoid the previous over-compressed blur`).toBeGreaterThanOrEqual(120 * 1024)
+        expect(header.toString('ascii', 0, 4)).toBe('RIFF')
+        expect(header.toString('ascii', 8, 12)).toBe('WEBP')
+        expect(metadata.format).toBe('webp')
+      } else {
+        expect([...header.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff])
+        expect(metadata.format).toBe('jpeg')
+      }
       expect(assetRegistry, `${asset} must be the active runtime scene`).toContain(asset)
-      expect(assetRegistry).not.toContain(asset.replace(/\.jpg$/, '.webp'))
     }
     const liziMetadata = await sharp(resolve(assetRoot, 'flash-lizi-first-act-color-studio-v2.jpg')).metadata()
     expect(liziMetadata).toEqual(expect.objectContaining({ width: 941, height: 1672 }))
-    expect(totalBytes).toBeLessThanOrEqual(230 * 1024)
+    expect(totalBytes).toBeLessThanOrEqual(600 * 1024)
   })
 })

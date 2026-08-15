@@ -2,6 +2,7 @@ import Taro from '@tarojs/taro'
 import { Image, Text, View } from '@tarojs/components'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS } from '@shared/alang/flashFirstActExperience'
+import { haptics } from '../../../lib/utils/haptics'
 import { FirstActDialogueChrome } from './FirstActDialogueChrome'
 import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
 import './MomoFirstActExperience.scss'
@@ -207,6 +208,7 @@ export function MomoFirstActExperience({
 
   const openHighlight = (highlight: MomoHighlight) => {
     if (disabled || progress.completedHighlightIds.includes(highlight.id)) return
+    haptics('light')
     patchProgress({
       activeHighlightId: highlight.id,
       selectedReplyIndex: null,
@@ -216,6 +218,7 @@ export function MomoFirstActExperience({
 
   const selectReply = (replyIndex: 0 | 1) => {
     if (disabled || !activeHighlight) return
+    haptics('light')
     patchProgress({
       selectedReplyIndex: replyIndex,
       speech: activeHighlight.replies[replyIndex].response,
@@ -228,6 +231,7 @@ export function MomoFirstActExperience({
       ? progress.completedHighlightIds
       : [...progress.completedHighlightIds, activeHighlight.id]
     const allObserved = completedHighlightIds.length === MOMO_FIRST_ACT_HIGHLIGHTS.length
+    haptics(allObserved ? 'medium' : 'light')
     patchProgress({
       completedHighlightIds,
       activeHighlightId: null,
@@ -241,6 +245,7 @@ export function MomoFirstActExperience({
 
   const chooseApproach = (approachIndex: ApproachIndex) => {
     if (disabled) return
+    haptics('light')
     patchProgress({
       approachIndex,
       speech: MOMO_APPROACHES[approachIndex].response,
@@ -249,6 +254,7 @@ export function MomoFirstActExperience({
 
   const startGame = () => {
     if (disabled || progress.approachIndex === null) return
+    haptics('medium')
     patchProgress({
       stage: 'game',
       routeProgress: 0,
@@ -260,6 +266,7 @@ export function MomoFirstActExperience({
   const selectRouteNode = (nodeIndex: number) => {
     if (disabled || progress.routeOutcome === 'success') return
     if (nodeIndex === progress.routeProgress) {
+      haptics('light')
       const routeProgress = progress.routeProgress + 1
       patchProgress({
         routeProgress,
@@ -268,6 +275,7 @@ export function MomoFirstActExperience({
       })
       return
     }
+    haptics('warning')
     patchProgress({
       routeOutcome: 'wrong',
       speech: '顺序没接上。先听檐水，再看折点。',
@@ -277,12 +285,14 @@ export function MomoFirstActExperience({
   const stopHere = () => {
     if (disabled || progress.routeOutcome === 'success') return
     if (progress.routeProgress < ROUTE_NODES.length) {
+      haptics('warning')
       patchProgress({
         routeOutcome: 'early',
         speech: '停早了。檐水、折点和实线还没接齐。',
       })
       return
     }
+    haptics('success')
     patchProgress({
       stage: 'success',
       routeOutcome: 'success',
@@ -292,6 +302,7 @@ export function MomoFirstActExperience({
 
   const enterBlankPage = () => {
     if (disabled || progress.routeOutcome === 'success') return
+    haptics('warning')
     patchProgress({
       routeOutcome: 'overrun',
       speech: '走过头了。空白页不是下一段路。',
@@ -300,6 +311,7 @@ export function MomoFirstActExperience({
 
   const retryRoute = () => {
     if (disabled) return
+    haptics('light')
     patchProgress({
       stage: 'game',
       routeProgress: 0,
@@ -310,6 +322,7 @@ export function MomoFirstActExperience({
 
   const complete = () => {
     if (disabled || progress.stage !== 'success' || progress.approachIndex === null) return
+    haptics('success')
     onComplete(progress.approachIndex)
   }
 
