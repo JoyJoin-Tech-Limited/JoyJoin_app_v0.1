@@ -66,7 +66,7 @@ export interface FlashStoryUnitProps {
   question?: FlashDialogueQuestion | null
   motion: StoryEpisode['motion']
   storyPosition: number
-  submitState: 'idle' | 'submitting' | 'terminal'
+  submitState: 'idle' | 'submitting' | 'retry' | 'terminal'
   submitError: string
   onSubmit: (choice: StoryUnitChoice) => Promise<void>
   onContinue: () => void
@@ -188,18 +188,24 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     }
   }
   const completeObject = (storyPath?: AtuanFirstActSubmission | AtuanLaterActSubmission) => {
-    if (!runtime.choice || runtime.stage !== 'OBJECT_INTERACTION') return
+    if (!runtime.choice || (runtime.stage !== 'OBJECT_INTERACTION' && runtime.stage !== 'OBJECT_SUCCESS')) return
     const settledChoice = storyPath ? { ...runtime.choice, storyPath } : runtime.choice
-    transition({ type: 'OBJECT_ALIGNED', choice: settledChoice })
-    emit('object_complete')
+    if (runtime.stage === 'OBJECT_INTERACTION') {
+      transition({ type: 'OBJECT_ALIGNED', choice: settledChoice })
+      emit('object_complete')
+    }
     void onSubmit(settledChoice)
   }
   const completeAtuanDialogue = () => {
-    if (!runtime.choice || runtime.stage !== 'OBJECT_INTERACTION') return
-    transition({ type: 'OBJECT_ALIGNED' })
+    if (!runtime.choice || (runtime.stage !== 'OBJECT_INTERACTION' && runtime.stage !== 'OBJECT_SUCCESS')) return
+    if (runtime.stage === 'OBJECT_INTERACTION') transition({ type: 'OBJECT_ALIGNED' })
     void onSubmit(runtime.choice)
   }
   const completeCustomFirstAct = (approachIndex: 0 | 1) => {
+    if (runtime.stage === 'OBJECT_SUCCESS' && runtime.choice) {
+      void onSubmit(runtime.choice)
+      return
+    }
     if (runtime.stage !== 'NPC_INTRO' || !question) return
     const option = question.options[approachIndex]
     if (!option) return
@@ -212,7 +218,8 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const isCustomFirstAct = CUSTOM_FIRST_ACT_IDS.has(definition.unitId)
   const customFirstActScene = resolveFlashNpcTheme(npc.slug, npc.name).dialogueSceneSrc
   const showCustomFirstAct = isCustomFirstAct && !showResult && Boolean(customFirstActScene)
-  const customFirstActDisabled = submitState === 'submitting' || runtime.stage !== 'NPC_INTRO'
+  const customFirstActDisabled = submitState === 'submitting'
+    || (runtime.stage !== 'NPC_INTRO' && runtime.stage !== 'OBJECT_SUCCESS')
   const showGame = !showResult && (runtime.stage === 'OBJECT_INTERACTION' || runtime.stage === 'OBJECT_DIVERGED' || runtime.stage === 'OBJECT_SUCCESS')
   const showAtuanPrelude = definition.unitId === 's1-p1-atuan' && !showResult && (runtime.stage === 'INIT' || runtime.stage === 'NPC_INTRO')
   const showAtuanScene = definition.unitId === 's1-p1-atuan' && !showAtuanPrelude && Boolean(atuanArrivalAssets)

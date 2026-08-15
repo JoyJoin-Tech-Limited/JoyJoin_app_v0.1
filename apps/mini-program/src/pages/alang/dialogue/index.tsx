@@ -90,12 +90,12 @@ function storyResponseText(text: string): string {
   return LEGACY_STORY_RESPONSE_COPY[text] ?? text
 }
 
-type StorySubmitState = 'idle' | 'submitting' | 'terminal'
+type StorySubmitState = 'idle' | 'submitting' | 'retry' | 'terminal'
 
-function classifyStorySubmitFailure(error: unknown): 'reconcile' | 'refresh' | 'exit' {
+function classifyStorySubmitFailure(error: unknown): 'retry' | 'refresh' | 'exit' {
   const code = getFlashApiErrorCode(error)
   const status = getApiErrorStatusCode(error)
-  if (code === 'FLASH_STORY_GENERATION_PENDING' || isTransportApiError(error) || status === undefined || status >= 500) return 'reconcile'
+  if (code === 'FLASH_STORY_GENERATION_PENDING' || isTransportApiError(error) || status === undefined || status >= 500) return 'retry'
   if (code === 'FLASH_INVALID_DIALOGUE_OPTION' || status === 400 || status === 409) return 'refresh'
   return 'exit'
 }
@@ -196,14 +196,12 @@ export default function FlashDialoguePage() {
       setStorySubmitState('idle')
     } catch (caughtError) {
       const disposition = classifyStorySubmitFailure(caughtError)
-      setStorySubmitState('terminal')
-      setActionError(
-        disposition === 'reconcile'
-          ? '这段故事暂时没有接上，请返回地图后再进入。'
-          : disposition === 'refresh'
-            ? '故事状态刚刚变化，正在重新接上。'
-            : '这次见面已经结束。',
-      )
+      setStorySubmitState(disposition === 'retry' ? 'retry' : 'terminal')
+      setActionError(disposition === 'retry'
+        ? '刚才没有收好，再点一次下方按钮就能继续。'
+        : disposition === 'refresh'
+          ? '故事状态刚刚变化，正在重新接上。'
+          : '这次见面已经结束。')
       await refetch()
       if (disposition === 'exit') await Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent })
     } finally {

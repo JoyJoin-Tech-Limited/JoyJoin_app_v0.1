@@ -195,7 +195,7 @@ describe('FlashStoryUnit production flow', () => {
     expect(screen.queryByTestId('atuan-arrival-prelude')).not.toBeInTheDocument()
   })
 
-  it('keeps a completed later Atuan act non-resubmittable after a transport failure', () => {
+  it('retries a completed later Atuan act through the same completion button after failure or recreation', () => {
     const submit = vi.fn().mockResolvedValue(undefined)
     const story = { ...firstStory, id: 'episode-atuan-2-retry', code: 's1-p2-atuan', phase: 2, title: '阿团认领座位图', objectCode: 'seat-plan' }
     const question = { ...firstQuestion, id: 's1-p2-atuan-response-v2' }
@@ -216,13 +216,25 @@ describe('FlashStoryUnit production flow', () => {
     fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
     expect(submit).toHaveBeenCalledTimes(1)
 
-    view.rerender(<FlashStoryUnit {...baseProps} submitState='terminal' submitError='网络开了小差，这段故事还没有丢。' />)
+    view.rerender(<FlashStoryUnit {...baseProps} submitState='retry' submitError='网络开了小差，这段故事还没有丢。' />)
     expect(screen.getByRole('alert')).toHaveTextContent('这段故事还没有丢')
     expect(screen.queryByRole('button', { name: '重新送出' })).not.toBeInTheDocument()
-    expect(submit).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
+    expect(submit).toHaveBeenCalledTimes(2)
+    expect(submit.mock.calls[1]?.[0]).toEqual(submit.mock.calls[0]?.[0])
+
+    view.unmount()
+    render(<FlashStoryUnit {...baseProps} submitState='idle' />)
+    fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
+    expect(submit).toHaveBeenCalledTimes(3)
+    expect(submit.mock.calls[2]?.[0]).toEqual(expect.objectContaining({
+      questionId: submit.mock.calls[0]?.[0].questionId,
+      optionId: submit.mock.calls[0]?.[0].optionId,
+      storyPath: submit.mock.calls[0]?.[0].storyPath,
+    }))
   })
 
-  it('does not expose resend for a locally restored solved story', () => {
+  it('reuses the original completion action for a locally restored solved first act', () => {
     const story = { ...firstStory, id: 'episode-alang-restored', code: 's1-p1-alang', objectCode: 'seat-plan' }
     const question = { ...firstQuestion, id: 's1-p1-alang-response-v2' }
     storage.set('joyjoin_flash_story_unit_v2_s1-p1-alang_enc-alang-restored_episode-alang-restored', {
@@ -237,9 +249,15 @@ describe('FlashStoryUnit production flow', () => {
       analyticsSent: [],
     })
 
-    render(<FlashStoryUnit encounterId='enc-alang-restored' npc={{ ...baseNpc, slug: 'alang' } as any} story={story as any} question={question as any} motion={motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={vi.fn()} onContinue={vi.fn()} />)
+    const submit = vi.fn().mockResolvedValue(undefined)
+    render(<FlashStoryUnit encounterId='enc-alang-restored' npc={{ ...baseNpc, slug: 'alang' } as any} story={story as any} question={question as any} motion={motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
 
     expect(screen.queryByRole('button', { name: '重新送出' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '完成阿浪第一幕' }))
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: question.id,
+      optionId: question.options[0].id,
+    }))
   })
 
   it('runs Atuan third act from its opening choice through the returned-card table game', () => {

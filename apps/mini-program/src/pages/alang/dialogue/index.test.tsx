@@ -192,7 +192,7 @@ describe('formal Flash dialogue', () => {
     }))
   })
 
-  it('shows an in-scene retry message when a story answer cannot be sent', async () => {
+  it('keeps the original completion action usable when a story answer cannot be sent', async () => {
     mocks.useEncounter.mockReturnValue({
       data: storyEncounter,
       isLoading: false,
@@ -222,10 +222,13 @@ describe('formal Flash dialogue', () => {
 
     const alert = await screen.findByRole('alert')
     expect(screen.getByTestId('flash-story-stage')).toContainElement(alert)
-    expect(alert).toHaveTextContent('这段故事暂时没有接上，请返回地图后再进入。')
+    expect(alert).toHaveTextContent('刚才没有收好，再点一次下方按钮就能继续。')
     expect(screen.queryByRole('button', { name: '重新送出' })).not.toBeInTheDocument()
     expect(mocks.answer).toHaveBeenCalledTimes(1)
     expect(mocks.refetch).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByRole('button', { name: '完成《记录没有说完》' }))
+    await waitFor(() => expect(mocks.answer).toHaveBeenCalledTimes(2))
   })
 
   it('prioritizes delivery from the same NPC before a new conversation', async () => {
