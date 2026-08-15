@@ -405,10 +405,12 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                 <Text className='flash-dialogue__story-panel-title'>{atuanLaterResult?.title ?? story.title}</Text>
                 {displayedFragment ? <View className={`flash-dialogue__fragment flash-dialogue__fragment--${displayedFragment.category}`}><Text className='flash-dialogue__fragment-label'>新故事碎片</Text><Text className='flash-dialogue__fragment-title'>{displayedFragment.title}</Text><Text className='flash-dialogue__fragment-fact'>{displayedFragment.fact}</Text></View> : null}
                 {(atuanLaterResult?.closing ?? story.closing) ? <Text className='flash-dialogue__story-panel-closing'>{atuanLaterResult?.closing ?? story.closing}</Text> : null}
-                <Text className='flash-dialogue__story-panel-progress'>本幕 {story.progress.completedInPhase}/{story.progress.totalInPhase} · 全季 {story.progress.completedTotal}/{story.progress.total}</Text>
-                <FlashButton onClick={() => { emit('next_npc_click'); onContinue() }}>{story.progress.completedTotal >= story.progress.total ? '收好这一季' : '收好碎片，继续寻找'}</FlashButton>
               </View>
             </ScrollView>
+            <View className='flash-dialogue__story-panel-footer'>
+              <Text className='flash-dialogue__story-panel-progress'>本幕 {story.progress.completedInPhase}/{story.progress.totalInPhase} · 全季 {story.progress.completedTotal}/{story.progress.total}</Text>
+              <FlashButton onClick={() => { emit('next_npc_click'); onContinue() }}>{story.progress.completedTotal >= story.progress.total ? '收好这一季' : '收好碎片，继续寻找'}</FlashButton>
+            </View>
           </View>
         )}
       </View>

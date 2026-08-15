@@ -1239,6 +1239,11 @@ page {
   color: $color-text-secondary-on-light;
 }
 
+.flash-dialogue__story-stage--atuan-first .flash-dialogue__story-panel-footer {
+  border-top-color: rgba($color-primary, 0.12);
+  background: rgba($color-surface, 0.92);
+}
+
 .atuan-first-dialogue {
   &__highlight-story {
     display: block;
@@ -2829,7 +2834,27 @@ page {
 }
 
 .flash-dialogue__story-panel--result {
+  height: 920rpx;
+  max-height: calc(100% - 320rpx);
+  padding: 0;
+  gap: 0;
+}
+
+.flash-dialogue__story-panel--result .flash-dialogue__story-panel-scroll {
+  height: 0;
+  min-height: 0;
+  max-height: none;
+  flex: 1;
+}
+
+.flash-dialogue__story-panel-footer {
+  display: flex;
+  padding: 16rpx 24rpx 24rpx;
+  flex: none;
+  flex-direction: column;
   gap: 16rpx;
+  border-top: 2rpx solid rgba($color-surface, 0.16);
+  background: rgba($color-text-primary, 0.34);
 }
 
 .flash-dialogue__story-panel-progress {
@@ -3458,6 +3483,8 @@ page {
 
 @media screen and (max-height: 700px) {
   .flash-dialogue__story-panel-scroll { max-height: 650rpx; }
+  .flash-dialogue__story-panel--result { height: 650rpx; }
+  .flash-dialogue__story-panel--result .flash-dialogue__story-panel-scroll { max-height: none; }
 }
 
 // Story episode v2 — multi-node state-driven stage (flash-story-v2)

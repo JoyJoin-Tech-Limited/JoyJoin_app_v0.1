@@ -304,6 +304,40 @@ describe('FlashStoryUnit production flow', () => {
     expect(screen.getByTestId('atuan-scene-dialogue')).toHaveTextContent('阿团把卡片收好了')
   })
 
+  it('keeps the settled-story exit outside the native result scroller', () => {
+    const onContinue = vi.fn()
+    const story = {
+      ...firstStory,
+      id: 'episode-momo-3-settled',
+      code: 's1-p3-momo',
+      phase: 3,
+      title: '默默把邀请说完整',
+      objectCode: 'dry-markers',
+      response: '迟到的邀请终于成为一句完整的话。',
+      closing: '他直接向栗子发出邀请，给出时间和两个可选方向。',
+      fragment: {
+        category: 'relationship',
+        title: '一句完整的邀请',
+        fact: '默默说清了时间和方向，答案仍留给栗子。',
+      },
+      progress: { completedInPhase: 3, totalInPhase: 5, completedTotal: 7, total: 15 },
+    }
+    const npc = { ...baseNpc, id: 'npc-momo', slug: 'momo', name: '默默', species: '兔狲' }
+    const { container } = render(<FlashStoryUnit encounterId='enc-momo-p3-settled' npc={npc as any} story={story as any} question={firstQuestion as any} motion={motion as any} storyPosition={7} submitState='idle' submitError='' onSubmit={vi.fn()} onContinue={onContinue} />)
+
+    const resultPanel = container.querySelector('.flash-dialogue__story-panel--result')
+    const resultScroller = resultPanel?.querySelector<HTMLElement>('.flash-dialogue__story-panel-scroll') ?? null
+    const resultFooter = resultPanel?.querySelector<HTMLElement>('.flash-dialogue__story-panel-footer') ?? null
+    const continueButton = screen.getByRole('button', { name: '收好碎片，继续寻找' })
+
+    expect(resultPanel).not.toBeNull()
+    expect(resultFooter).not.toBeNull()
+    expect(resultScroller).not.toContainElement(resultFooter)
+    expect(resultFooter).toContainElement(continueButton)
+    fireEvent.click(continueButton)
+    expect(onContinue).toHaveBeenCalledTimes(1)
+  })
+
   it.each([
     ['alang', '阿浪', '灰狼', 'seat-plan', '完成阿浪第一幕', 'alang-first-act-mock'],
     ['lizi', '栗子', '水獭', 'dry-markers', '完成栗子第一幕', 'lizi-first-act-mock'],

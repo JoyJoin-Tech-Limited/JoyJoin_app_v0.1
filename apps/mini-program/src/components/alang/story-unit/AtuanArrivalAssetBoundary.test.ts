@@ -93,6 +93,15 @@ describe('Atuan first-arrival asset ownership', () => {
     expect(flashStyles).toMatch(/\.flash-dialogue__story-stage--atuan-first \.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-closing,[\s\S]*?\.flash-dialogue__story-panel-progress\s*\{\s*color:\s*\$color-text-secondary-on-light;/)
   })
 
+  it('keeps every settled-story exit in a fixed footer above a bounded native scroller', () => {
+    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash.scss'), 'utf8')
+
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-panel--result\s*\{[^}]*height:\s*920rpx;[^}]*max-height:\s*calc\(100% - 320rpx\);[^}]*padding:\s*0;/s)
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-scroll\s*\{[^}]*height:\s*0;[^}]*max-height:\s*none;[^}]*flex:\s*1;/s)
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-panel-footer\s*\{[^}]*flex:\s*none;[^}]*border-top:/s)
+    expect(flashStyles).toMatch(/@media screen and \(max-height:\s*700px\)\s*\{[\s\S]*?\.flash-dialogue__story-panel--result\s*\{\s*height:\s*650rpx;/)
+  })
+
   it('keeps first-arrival assets covered by the production package contract', () => {
     const cleanScript = readFileSync(resolve(appRoot, 'scripts/clean-cdn-assets.mjs'), 'utf8')
     const verifyScript = readFileSync(resolve(appRoot, 'scripts/verify-flash-package.mjs'), 'utf8')
