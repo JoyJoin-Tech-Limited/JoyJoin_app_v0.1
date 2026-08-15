@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const sourceRoot = resolve(process.cwd(), 'src')
 const appRoot = resolve(process.cwd())
+const repoRoot = resolve(appRoot, '../..')
 const arrivalAssetNames = [
   'flash-atuan-park-clean-v3.jpg',
   'flash-atuan-character-lowpoly-v3.png',
@@ -95,6 +96,7 @@ describe('Atuan first-arrival asset ownership', () => {
   it('keeps first-arrival assets covered by the production package contract', () => {
     const cleanScript = readFileSync(resolve(appRoot, 'scripts/clean-cdn-assets.mjs'), 'utf8')
     const verifyScript = readFileSync(resolve(appRoot, 'scripts/verify-flash-package.mjs'), 'utf8')
+    const buildWorkflow = readFileSync(resolve(repoRoot, '.github/workflows/taro-weapp-build.yml'), 'utf8')
     const projectConfig = JSON.parse(
       readFileSync(resolve(appRoot, 'project.config.json'), 'utf8'),
     ) as { packOptions?: { include?: Array<{ type?: string; value?: string }> } }
@@ -128,6 +130,8 @@ describe('Atuan first-arrival asset ownership', () => {
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.jpg$' })
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.png$' })
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.webp$' })
+    expect(buildWorkflow).toContain('onboarding/street-blind-box-onboarding-fullscreen-v7.webp')
+    expect(buildWorkflow).not.toContain('onboarding/street-blind-box-onboarding-fullscreen-v7.jpg')
   })
 
   it('keeps inspection targets invisible instead of rendering fallback tags', () => {
