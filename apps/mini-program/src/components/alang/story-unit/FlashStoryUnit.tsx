@@ -399,6 +399,8 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
           </View>
         ) : (
           <View className='flash-dialogue__story-panel flash-dialogue__story-panel--result' aria-live='polite'>
+            {/* Scroll exception: story fragments and closing copy vary in length;
+                the completion CTA remains pinned outside this native scroll port. */}
             <ScrollView className='flash-dialogue__story-panel-scroll' scrollY>
               <View className='flash-dialogue__story-panel-content'>
                 <Text className='flash-dialogue__story-panel-season'>{story.seasonTitle} · 第 {story.phase} 幕</Text>
@@ -407,7 +409,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                 {(atuanLaterResult?.closing ?? story.closing) ? <Text className='flash-dialogue__story-panel-closing'>{atuanLaterResult?.closing ?? story.closing}</Text> : null}
               </View>
             </ScrollView>
-            <View className='flash-dialogue__story-panel-footer'>
+            <View className='flash-dialogue__story-panel-footer' data-testid='flash-story-result-footer'>
               <Text className='flash-dialogue__story-panel-progress'>本幕 {story.progress.completedInPhase}/{story.progress.totalInPhase} · 全季 {story.progress.completedTotal}/{story.progress.total}</Text>
               <FlashButton onClick={() => { emit('next_npc_click'); onContinue() }}>{story.progress.completedTotal >= story.progress.total ? '收好这一季' : '收好碎片，继续寻找'}</FlashButton>
             </View>

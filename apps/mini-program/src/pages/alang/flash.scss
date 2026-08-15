@@ -2833,6 +2833,8 @@ page {
   position: absolute;
 }
 
+$flash-story-result-footer-reserve: 180rpx;
+
 .flash-dialogue__story-panel--result {
   height: 920rpx;
   max-height: calc(100% - 320rpx);
@@ -2841,13 +2843,25 @@ page {
 }
 
 .flash-dialogue__story-panel--result .flash-dialogue__story-panel-scroll {
-  height: 0;
+  // WeChat's native ScrollView does not reliably honor height: 0 + flex: 1 on
+  // every iOS runtime. Give it a definite box and overlay the pinned footer.
+  height: 100%;
   min-height: 0;
   max-height: none;
-  flex: 1;
+  flex: none;
+}
+
+.flash-dialogue__story-panel--result .flash-dialogue__story-panel-content {
+  min-height: 100%;
+  padding-bottom: $flash-story-result-footer-reserve;
 }
 
 .flash-dialogue__story-panel-footer {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
   padding: 16rpx 24rpx 24rpx;
   flex: none;
