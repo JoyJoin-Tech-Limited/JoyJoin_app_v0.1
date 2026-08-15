@@ -11,7 +11,6 @@ const appJsonPath = resolve(distRoot, 'app.json')
 const manifestPath = resolve(distRoot, 'flash-build-manifest.json')
 const projectConfigPath = resolve(appRoot, 'project.config.json')
 const preupload = process.argv.includes('--preupload')
-const introSceneRelativePath = 'pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.webp'
 const npcHeadshotRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
   .map((slug) => `pages/alang/assets/npcs/headshots/${slug}.jpg`)
 const flashSceneRelativePaths = ['radar', 'task', 'feedback']
@@ -50,7 +49,6 @@ const flashRuntimeImages = [
 const requiredFiles = [
   'assets/illustrations/street-blind-box-entry.webp',
   'assets/illustrations/street-blind-box-entry.png',
-  introSceneRelativePath,
   'common.wxss',
   'pages/alang/event/index.js',
   'pages/alang/event/index.wxml',
@@ -186,18 +184,6 @@ if (existsSync(runtimeIconPath) && statSync(runtimeIconPath).size > 0) {
     }
   } catch (error) {
     failures.push(`dist/${runtimeIconRelativePath} PNG decode failed: ${error.message}`)
-  }
-}
-
-const introScenePath = resolve(distRoot, introSceneRelativePath)
-if (existsSync(introScenePath) && statSync(introScenePath).size > 0) {
-  try {
-    const metadata = await sharp(introScenePath).metadata()
-    if (metadata.format !== 'webp' || !metadata.width || !metadata.height) {
-      failures.push(`dist/${introSceneRelativePath} is not a decodable WebP image`)
-    }
-  } catch (error) {
-    failures.push(`dist/${introSceneRelativePath} WebP decode failed: ${error.message}`)
   }
 }
 

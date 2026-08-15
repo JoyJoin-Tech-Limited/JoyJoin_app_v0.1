@@ -96,7 +96,9 @@ describe('Atuan first-arrival asset ownership', () => {
   it('keeps first-arrival assets covered by the production package contract', () => {
     const cleanScript = readFileSync(resolve(appRoot, 'scripts/clean-cdn-assets.mjs'), 'utf8')
     const verifyScript = readFileSync(resolve(appRoot, 'scripts/verify-flash-package.mjs'), 'utf8')
+    const buildConfig = readFileSync(resolve(appRoot, 'config/index.ts'), 'utf8')
     const buildWorkflow = readFileSync(resolve(repoRoot, '.github/workflows/taro-weapp-build.yml'), 'utf8')
+    const eventPage = readFileSync(resolve(sourceRoot, 'pages/alang/event/index.tsx'), 'utf8')
     const projectConfig = JSON.parse(
       readFileSync(resolve(appRoot, 'project.config.json'), 'utf8'),
     ) as { packOptions?: { include?: Array<{ type?: string; value?: string }> } }
@@ -130,8 +132,10 @@ describe('Atuan first-arrival asset ownership', () => {
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.jpg$' })
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.png$' })
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.webp$' })
-    expect(buildWorkflow).toContain('onboarding/street-blind-box-onboarding-fullscreen-v7.webp')
-    expect(buildWorkflow).not.toContain('onboarding/street-blind-box-onboarding-fullscreen-v7.jpg')
+    expect(eventPage).toContain("import standardPaperWorld from '../assets/onboarding/parallel-standard-paper-world-v1.jpg'")
+    for (const productionContract of [buildConfig, verifyScript, buildWorkflow]) {
+      expect(productionContract).not.toContain('street-blind-box-onboarding-fullscreen-v7')
+    }
   })
 
   it('keeps inspection targets invisible instead of rendering fallback tags', () => {
