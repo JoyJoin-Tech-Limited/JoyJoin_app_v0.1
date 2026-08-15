@@ -362,12 +362,21 @@ describe('formal Flash dialogue', () => {
     })
   })
 
-  it('keeps non-pilot units (with dedicated interactions) on the v1 path even when storyV2 is present', () => {
+  it('keeps Lizi on the dedicated first-act path and submits the completed approach', async () => {
     mocks.useEncounter.mockReturnValue({
       data: {
         ...questionEncounter,
         npc: { id: 'npc-lizi', slug: 'lizi', name: '栗子', animal: '水獭' },
-        currentQuestion: null,
+        currentQuestion: {
+          id: 's1-p1-lizi-response-v1',
+          text: '你想先相信什么？',
+          position: 1,
+          total: 1,
+          options: [
+            { id: 's1-p1-lizi-cooperate-a', label: '先相信纸上留下的痕迹。' },
+            { id: 's1-p1-lizi-cooperate-b', label: '先把三种手感排成顺序。' },
+          ],
+        },
         storyEpisode: {
           id: 'episode-lizi-1',
           code: 's1-p1-lizi',
@@ -400,8 +409,45 @@ describe('formal Flash dialogue', () => {
     render(<FlashDialoguePage />)
     expect(document.querySelector('[data-testid="flash-story-v2-stage"]')).toBeNull()
     expect(screen.getByTestId('lizi-first-act')).toBeInTheDocument()
+    expect(screen.queryByTestId('lizi-first-act-hotspot')).not.toBeInTheDocument()
+    expect(screen.getByTestId('lizi-scene-speech')).toHaveTextContent('风从画室顶棚穿过去了')
+    expect(screen.getByTestId('lizi-first-act-dialogue-panel')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '接住滚向桌沿的三支彩笔' }))
+    fireEvent.click(screen.getByRole('button', { name: '先相信纸上留下的痕迹。' }))
     expect(screen.getAllByTestId('lizi-first-act-hotspot')).toHaveLength(4)
-    expect(screen.queryByTestId('lizi-scene-speech')).not.toBeInTheDocument()
     expect(screen.queryByTestId('lizi-first-act-dialogue-panel')).not.toBeInTheDocument()
+
+    const replies = [
+      ['栗子', '名字没了，纸上的试写痕迹还在。'],
+      ['左侧色板', '不叫名字，也能看出每道痕迹不一样。'],
+      ['悬挂色片', '“静”不一定最淡，可能只是落笔更稳。'],
+      ['右侧工具车', '这次不猜颜色，认笔帽上的切口。'],
+    ] as const
+    for (const [target, reply] of replies) {
+      fireEvent.click(screen.getByRole('button', { name: `观察${target}` }))
+      fireEvent.click(screen.getByRole('button', { name: reply }))
+      fireEvent.click(screen.getByRole('button', { name: target === '右侧工具车' ? '看完四处线索' : '继续观察' }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: '和栗子一起辨认三条痕迹' }))
+    fireEvent.click(screen.getByRole('button', { name: /查看.*软弧边/ }))
+    fireEvent.click(screen.getByRole('button', { name: /查看.*双细线/ }))
+    fireEvent.click(screen.getByRole('button', { name: /查看.*短断点/ }))
+    fireEvent.click(screen.getByRole('button', { name: '按“暖、静、醒”配回笔帽' }))
+    for (const [cap, marker] of [
+      ['圆弧缺口帽', '软弧边干笔'],
+      ['双细纹帽', '双细线干笔'],
+      ['三短刻帽', '短断点干笔'],
+    ] as const) {
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`选择${cap}`) }))
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(marker) }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: '检查三顶笔帽' }))
+    fireEvent.click(screen.getByRole('button', { name: '把三支笔放回布卷' }))
+
+    await waitFor(() => expect(mocks.answer).toHaveBeenCalledWith({
+      encounterId: 'encounter-1',
+      questionId: 's1-p1-lizi-response-v1',
+      optionId: 's1-p1-lizi-cooperate-a',
+    }))
   })
 })

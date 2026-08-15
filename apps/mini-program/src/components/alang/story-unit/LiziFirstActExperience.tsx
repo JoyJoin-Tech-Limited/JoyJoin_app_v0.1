@@ -2,6 +2,7 @@ import Taro from '@tarojs/taro'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS } from '@shared/alang/flashFirstActExperience'
+import { haptics, type HapticType } from '../../../lib/utils/haptics'
 import { FirstActDialogueChrome } from './FirstActDialogueChrome'
 import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
 import './LiziFirstActExperience.scss'
@@ -21,7 +22,7 @@ export interface LiziFirstActExperienceProps {
 type HighlightId = 'lizi' | 'palette' | 'swatches' | 'cart'
 type MarkId = 'warm' | 'quiet' | 'awake'
 type CapId = 'soft-arc' | 'fine-pair' | 'quick-notch'
-type Phase = 'explore' | 'stance' | 'inspect' | 'pair' | 'error' | 'success' | 'complete'
+type Phase = 'arrival' | 'approach' | 'explore' | 'transition' | 'inspect' | 'pair' | 'error' | 'success' | 'complete'
 
 interface HighlightReply {
   id: string
@@ -53,7 +54,7 @@ interface CapDefinition {
 }
 
 interface LiziFirstActProgress {
-  version: 'lizi-first-act-v1'
+  version: 'lizi-first-act-v2'
   encounterId: string
   phase: Phase
   activeHighlight: HighlightId | null
@@ -188,17 +189,17 @@ const CORRECT_PAIRINGS: Record<MarkId, CapId> = {
 const HIGHLIGHT_IDS = new Set<HighlightId>(LIZI_FIRST_ACT_HIGHLIGHTS.map((item) => item.id))
 const MARK_IDS = new Set<MarkId>(MARKS.map((item) => item.id))
 const CAP_IDS = new Set<CapId>(CAPS.map((item) => item.id))
-const PHASES = new Set<Phase>(['explore', 'stance', 'inspect', 'pair', 'error', 'success', 'complete'])
+const PHASES = new Set<Phase>(['arrival', 'approach', 'explore', 'transition', 'inspect', 'pair', 'error', 'success', 'complete'])
 
 export function liziFirstActStorageKey(encounterId: string): string {
-  return `joyjoin_flash_lizi_first_act_v1_${encounterId}`
+  return `joyjoin_flash_lizi_first_act_v2_${encounterId}`
 }
 
 function createProgress(encounterId: string): LiziFirstActProgress {
   return {
-    version: 'lizi-first-act-v1',
+    version: 'lizi-first-act-v2',
     encounterId,
-    phase: 'explore',
+    phase: 'arrival',
     activeHighlight: null,
     replies: {},
     approachIndex: null,
@@ -218,14 +219,17 @@ function restoreProgress(encounterId: string): LiziFirstActProgress {
     if (!candidate.phase || !PHASES.has(candidate.phase)) return fallback
 
     const replies = Object.fromEntries(
-      Object.entries(candidate.replies ?? {}).filter(([id, replyId]) => HIGHLIGHT_IDS.has(id as HighlightId) && typeof replyId === 'string'),
+      Object.entries(candidate.replies ?? {}).filter(([id, replyId]) => {
+        const highlight = LIZI_FIRST_ACT_HIGHLIGHTS.find((item) => item.id === id)
+        return Boolean(highlight?.replies.some((reply) => reply.id === replyId))
+      }),
     ) as LiziFirstActProgress['replies']
     const inspectedMarks = (candidate.inspectedMarks ?? []).filter((id): id is MarkId => MARK_IDS.has(id as MarkId))
     const pairings = Object.fromEntries(
       Object.entries(candidate.pairings ?? {}).filter(([markId, capId]) => MARK_IDS.has(markId as MarkId) && CAP_IDS.has(capId as CapId)),
     ) as LiziFirstActProgress['pairings']
 
-    return {
+    const restored: LiziFirstActProgress = {
       ...fallback,
       ...candidate,
       replies,
@@ -237,6 +241,23 @@ function restoreProgress(encounterId: string): LiziFirstActProgress {
       approachIndex: candidate.approachIndex === 0 || candidate.approachIndex === 1 ? candidate.approachIndex : null,
       attempts: Number.isInteger(candidate.attempts) && (candidate.attempts ?? 0) >= 0 ? candidate.attempts! : 0,
     }
+
+    const replyCount = Object.keys(restored.replies).length
+    const hasApproach = restored.approachIndex === 0 || restored.approachIndex === 1
+    const hasAllReplies = replyCount === LIZI_FIRST_ACT_HIGHLIGHTS.length
+    const hasAllMarks = restored.inspectedMarks.length === MARKS.length
+    const hasUniquePairings = new Set(Object.values(restored.pairings)).size === Object.values(restored.pairings).length
+    const hasCorrectPairings = MARKS.every((mark) => restored.pairings[mark.id] === CORRECT_PAIRINGS[mark.id])
+
+    if (restored.phase === 'arrival' && (hasApproach || replyCount > 0)) return fallback
+    if (restored.phase === 'approach' && (hasApproach || replyCount > 0)) return fallback
+    if (restored.phase === 'explore' && !hasApproach) return fallback
+    if (['transition', 'inspect', 'pair', 'error', 'success', 'complete'].includes(restored.phase) && (!hasApproach || !hasAllReplies)) return fallback
+    if (['pair', 'error', 'success', 'complete'].includes(restored.phase) && !hasAllMarks) return fallback
+    if (!hasUniquePairings) return fallback
+    if (['success', 'complete'].includes(restored.phase) && !hasCorrectPairings) return fallback
+
+    return restored
   } catch {
     return fallback
   }
@@ -253,16 +274,14 @@ function getSelectedReply(progress: LiziFirstActProgress, highlight: HighlightDe
 }
 
 function resolveSpeech(progress: LiziFirstActProgress): string {
+  if (progress.phase === 'arrival') return '风从画室顶棚穿过去了。先别管颜色，帮我接一下桌沿那三支笔。'
+  if (progress.phase === 'approach') return '接住了。名字都磨掉了，但它们落在纸上的手感还在。你想先相信哪一种线索？'
   if (progress.phase === 'explore') {
     const highlight = getHighlight(progress.activeHighlight)
     if (!highlight) return '别急着替颜色找名字。先看看我、色板、上面的色片，还有那辆工具车。'
     return getSelectedReply(progress, highlight)?.response ?? highlight.speech
   }
-  if (progress.phase === 'stance') {
-    if (progress.approachIndex === 0) return LIZI_APPROACHES[0].response
-    if (progress.approachIndex === 1) return LIZI_APPROACHES[1].response
-    return '四处都看过了。要认回这些颜色，你想先相信纸上的痕迹，还是先把手感排成顺序？'
-  }
+  if (progress.phase === 'transition') return progress.approachIndex === 1 ? LIZI_APPROACHES[1].response : LIZI_APPROACHES[0].response
   if (progress.phase === 'inspect') {
     const mark = MARKS.find((item) => item.id === progress.activeMark)
     return mark?.speech ?? '三条试写痕迹都在这里。慢一点看，它们说话的方式完全不一样。'
@@ -276,18 +295,20 @@ function ChoiceButton({
   label,
   disabled,
   selected = false,
+  feedback = 'light',
   onClick,
 }: {
   label: string
   disabled: boolean
   selected?: boolean
+  feedback?: HapticType
   onClick: () => void
 }) {
   return (
     <View
       className={`lizi-first-act__choice${selected ? ' lizi-first-act__choice--selected' : ''}${disabled ? ' lizi-first-act__choice--disabled' : ''}`}
       hoverClass={disabled ? '' : 'lizi-first-act__choice--pressed'}
-      onClick={() => { if (!disabled) onClick() }}
+      onClick={() => { if (!disabled) { haptics(feedback); onClick() } }}
       role='button'
       aria-label={label}
       aria-disabled={disabled}
@@ -336,11 +357,14 @@ export function LiziFirstActExperience({
   }
 
   const inspectHighlight = (id: HighlightId) => {
+    if (disabled) return
+    haptics('light')
     update((current) => ({ ...current, activeHighlight: id }))
   }
 
   const chooseHighlightReply = (reply: HighlightReply) => {
-    if (!activeHighlight) return
+    if (disabled || !activeHighlight) return
+    haptics('light')
     update((current) => ({
       ...current,
       replies: { ...current.replies, [activeHighlight.id]: reply.id },
@@ -348,21 +372,27 @@ export function LiziFirstActExperience({
   }
 
   const closeHighlight = () => {
+    if (disabled) return
+    haptics(exploredCount === LIZI_FIRST_ACT_HIGHLIGHTS.length ? 'medium' : 'light')
     update((current) => {
       const completedCount = Object.keys(current.replies).length
       return {
         ...current,
         activeHighlight: null,
-        phase: completedCount === LIZI_FIRST_ACT_HIGHLIGHTS.length ? 'stance' : 'explore',
+        phase: completedCount === LIZI_FIRST_ACT_HIGHLIGHTS.length ? 'transition' : 'explore',
       }
     })
   }
 
   const chooseApproach = (approachIndex: LiziFirstActApproachIndex) => {
-    update((current) => ({ ...current, approachIndex }))
+    if (disabled) return
+    haptics('light')
+    update((current) => ({ ...current, approachIndex, phase: 'explore' }))
   }
 
   const inspectMark = (id: MarkId) => {
+    if (disabled) return
+    haptics('light')
     update((current) => ({
       ...current,
       activeMark: id,
@@ -371,10 +401,14 @@ export function LiziFirstActExperience({
   }
 
   const chooseCap = (id: CapId) => {
+    if (disabled) return
+    haptics('light')
     update((current) => ({ ...current, selectedCap: id }))
   }
 
   const placeSelectedCap = (markId: MarkId) => {
+    if (disabled) return
+    if (progress.selectedCap) haptics('slotLand')
     update((current) => {
       if (!current.selectedCap) return current
       const existingMark = Object.entries(current.pairings).find(([, capId]) => capId === current.selectedCap)?.[0] as MarkId | undefined
@@ -386,14 +420,17 @@ export function LiziFirstActExperience({
   }
 
   const checkPairings = () => {
+    if (disabled) return
+    const solved = MARKS.every((mark) => progress.pairings[mark.id] === CORRECT_PAIRINGS[mark.id])
+    haptics(solved ? 'success' : 'warning')
     update((current) => {
-      const solved = MARKS.every((mark) => current.pairings[mark.id] === CORRECT_PAIRINGS[mark.id])
       return { ...current, phase: solved ? 'success' : 'error', attempts: current.attempts + 1, selectedCap: null }
     })
   }
 
   const complete = () => {
-    if (progress.approachIndex !== 0 && progress.approachIndex !== 1) return
+    if (disabled || (progress.approachIndex !== 0 && progress.approachIndex !== 1)) return
+    haptics('success')
     const approachIndex = progress.approachIndex
     setProgress((current) => ({ ...current, phase: 'complete' }))
     onComplete(approachIndex)
@@ -401,10 +438,11 @@ export function LiziFirstActExperience({
 
   const allMarksInspected = progress.inspectedMarks.length === MARKS.length
   const allMarkersPaired = MARKS.every((mark) => Boolean(progress.pairings[mark.id]))
+  const gameActive = progress.phase === 'inspect' || progress.phase === 'pair' || progress.phase === 'error'
 
   return (
     <View
-      className={`lizi-first-act lizi-first-act--${progress.phase}${disabled ? ' lizi-first-act--disabled' : ''}`}
+      className={`lizi-first-act lizi-first-act--${progress.phase}${gameActive ? ' lizi-first-act--game' : ''}${disabled ? ' lizi-first-act--disabled' : ''}`}
       data-object-code='dry-markers'
       data-game-code='pairing'
       data-testid='lizi-first-act'
@@ -426,6 +464,41 @@ export function LiziFirstActExperience({
         </View>
       )}
       <View className='first-act-scene-grade' aria-hidden='true' />
+
+      {progress.phase === 'arrival' ? (
+        <FirstActDialogueChrome
+          npcSlug='lizi'
+          speaker='栗子'
+          speech={speech}
+          narration='风把色片翻了个面'
+          prompt='三支没盖笔帽的彩笔正滚向桌沿。'
+          choices={[]}
+          action={{
+            label: '接住滚向桌沿的三支彩笔',
+            onClick: () => {
+              if (disabled) return
+              haptics('medium')
+              update((current) => ({ ...current, phase: 'approach' }))
+            },
+          }}
+          disabled={disabled}
+          onChoose={() => undefined}
+        />
+      ) : null}
+
+      {progress.phase === 'approach' ? (
+        <FirstActDialogueChrome
+          npcSlug='lizi'
+          speaker='栗子'
+          speech={speech}
+          narration='你把滚落的三支彩笔拢回布卷；另外两支还安静躺在里面。五支笔身上的颜色名都已经磨得看不清。'
+          prompt='你想先相信什么？'
+          choices={LIZI_APPROACHES.map((approach, index) => ({ id: String(index), label: approach.label }))}
+          action={null}
+          disabled={disabled}
+          onChoose={(id) => chooseApproach(Number(id) as LiziFirstActApproachIndex)}
+        />
+      ) : null}
 
       {progress.phase === 'explore' && !activeHighlight ? (
         <FirstActHighlightOverlay
@@ -459,17 +532,24 @@ export function LiziFirstActExperience({
         />
       ) : null}
 
-      {progress.phase === 'stance' ? (
+      {progress.phase === 'transition' ? (
         <FirstActDialogueChrome
           npcSlug='lizi'
           speaker='栗子'
           speech={speech}
           narration='四处细节接成了一条线：颜色名会消失，痕迹的节奏却还在。'
-          prompt={progress.approachIndex === null ? '你想先相信什么？' : '栗子把三支干彩笔推到你面前。'}
-          choices={progress.approachIndex === null ? LIZI_APPROACHES.map((approach, index) => ({ id: String(index), label: approach.label })) : []}
-          action={progress.approachIndex === null ? null : { label: '看看三条试写痕迹', onClick: () => update((current) => ({ ...current, phase: 'inspect', activeMark: null })) }}
+          prompt='栗子把试色纸和三顶笔帽铺到你们中间。'
+          choices={[]}
+          action={{
+            label: '和栗子一起辨认三条痕迹',
+            onClick: () => {
+              if (disabled) return
+              haptics('medium')
+              update((current) => ({ ...current, phase: 'inspect', activeMark: null }))
+            },
+          }}
           disabled={disabled}
-          onChoose={(id) => chooseApproach(Number(id) as LiziFirstActApproachIndex)}
+          onChoose={() => undefined}
         />
       ) : null}
 
@@ -479,22 +559,27 @@ export function LiziFirstActExperience({
           speaker='栗子'
           speech={speech}
           narration='暖的软弧、静的双细线、醒的短断点，都在纸上替三种颜色记着。'
-          prompt='颜色没有走丢。'
+          prompt='三支笔帽归位，五支彩笔重新排齐。颜色没有走丢。'
           action={{ label: progress.phase === 'complete' ? '再把这次整理交给栗子' : '把三支笔放回布卷', onClick: complete }}
           disabled={disabled}
         />
       ) : null}
 
-      {(progress.phase === 'inspect' || progress.phase === 'pair' || progress.phase === 'error') ? (
-        <View className='lizi-first-act__speech' role='status' aria-live='polite' aria-atomic='true'>
-          <Text className='lizi-first-act__speaker'>栗子</Text>
-          <Text className='lizi-first-act__speech-copy' data-testid='lizi-game-speech'>{speech}</Text>
-        </View>
-      ) : null}
-
       {(progress.phase === 'inspect' || progress.phase === 'pair' || progress.phase === 'error') ? <View className='lizi-first-act__panel'>
         <ScrollView className='lizi-first-act__panel-scroll' scrollY>
           <View className='lizi-first-act__panel-content'>
+            <View className='lizi-first-act__game-intro'>
+              <Text className='lizi-first-act__eyebrow'>栗子的试色桌</Text>
+              <Text className='lizi-first-act__game-copy'>先摸清每道痕迹留下的节奏，再把笔帽交还给对应的笔。别让颜色替手感抢答。</Text>
+              <View className='lizi-first-act__game-guide' role='status' aria-live='polite' aria-atomic='true'>
+                <Text className='lizi-first-act__game-guide-speaker'>栗子</Text>
+                <Text className='lizi-first-act__game-guide-copy' data-testid='lizi-game-speech'>{speech}</Text>
+              </View>
+              <View className='lizi-first-act__game-progress' aria-label={`小游戏第 ${progress.phase === 'inspect' ? 1 : 2} 步，共 2 步`}>
+                <View className='lizi-first-act__game-progress-dot lizi-first-act__game-progress-dot--active' />
+                <View className={`lizi-first-act__game-progress-dot${progress.phase !== 'inspect' ? ' lizi-first-act__game-progress-dot--active' : ''}`} />
+              </View>
+            </View>
             {progress.phase === 'inspect' ? (
               <>
                 <View className='lizi-first-act__game-heading'>
