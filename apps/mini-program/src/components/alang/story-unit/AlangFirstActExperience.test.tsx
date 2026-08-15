@@ -49,11 +49,17 @@ function finishHighlights(replyIndex: AlangApproachIndex = 0) {
   })
 }
 
-function reachSpacingGame(approachIndex: AlangApproachIndex) {
-  finishHighlights()
+function enterHighlights(approachIndex: AlangApproachIndex = 0) {
+  fireEvent.click(screen.getByRole('button', { name: '按住被风掀起的河岸草图' }))
   fireEvent.click(screen.getByRole('button', { name: approachIndex === 0
     ? '先并肩看河。话慢一点再说。'
     : '留一点角度。既同向，也看得见彼此。' }))
+  fireEvent.click(screen.getByRole('button', { name: '先看看四处线索' }))
+}
+
+function reachSpacingGame(approachIndex: AlangApproachIndex) {
+  enterHighlights(approachIndex)
+  finishHighlights()
   fireEvent.click(screen.getByRole('button', { name: '调一调两把椅子' }))
 }
 
@@ -72,6 +78,30 @@ describe('AlangFirstActExperience', () => {
     vi.mocked(getStorageSync).mockReturnValue(null)
   })
 
+  it('keeps the opening playable when the scene image fails', () => {
+    renderExperience()
+    fireEvent.error(screen.getByTestId('alang-first-act-scene'))
+    expect(screen.queryByTestId('alang-first-act-scene')).not.toBeInTheDocument()
+    expect(screen.getByTestId('alang-first-act-scene-fallback')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '按住被风掀起的河岸草图' })).toBeInTheDocument()
+  })
+
+  it('migrates the legacy empty explore state back to the new arrival beat', () => {
+    vi.mocked(getStorageSync).mockReturnValue({
+      version: 1,
+      encounterId: ENCOUNTER_ID,
+      stage: 'explore',
+      answers: {},
+      activeHighlight: null,
+      approachIndex: null,
+    })
+
+    renderExperience()
+
+    expect(screen.queryAllByTestId('alang-first-act-hotspot')).toHaveLength(0)
+    expect(screen.getByRole('button', { name: '按住被风掀起的河岸草图' })).toBeInTheDocument()
+  })
+
   it('presents four Alang-specific highlights and all eight distinct player replies', () => {
     const { onSpeechChange } = renderExperience()
 
@@ -79,11 +109,15 @@ describe('AlangFirstActExperience', () => {
     expect(ALANG_FIRST_ACT_HIGHLIGHTS).toHaveLength(4)
     expect(ALANG_FIRST_ACT_HIGHLIGHTS.flatMap((highlight) => highlight.replies)).toHaveLength(8)
     expect(new Set(ALANG_FIRST_ACT_HIGHLIGHTS.flatMap((highlight) => highlight.replies.map((reply) => reply.label))).size).toBe(8)
+    expect(screen.queryByRole('button', { name: '观察阿浪' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '按住被风掀起的河岸草图' })).toBeInTheDocument()
 
     for (const highlight of ALANG_FIRST_ACT_HIGHLIGHTS) {
       expect(highlight.replies[0].response).not.toBe(highlight.replies[1].response)
     }
 
+    enterHighlights(0)
+    expect(screen.getByRole('button', { name: '观察阿浪' })).toBeInTheDocument()
     finishHighlights()
 
     expect(screen.getByText(/原来这里没有失踪的人/)).toBeInTheDocument()
@@ -148,13 +182,13 @@ describe('AlangFirstActExperience', () => {
   })
 
   it('keeps the accepted first-act scene versioned, valid, and package-sized', () => {
-    const assetPath = resolve(process.cwd(), 'src/pages/alang/assets/ui/flash-alang-first-act-riverside-v2.jpg')
+    const assetPath = resolve(process.cwd(), 'src/pages/alang/assets/ui/flash-alang-first-act-riverside-v3.jpg')
     const bytes = statSync(assetPath).size
     const header = readFileSync(assetPath).subarray(0, 12)
 
     expect([...header.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff])
     expect(bytes).toBeGreaterThan(12)
-    expect(bytes).toBeLessThanOrEqual(90 * 1024)
+    expect(bytes).toBeLessThanOrEqual(150 * 1024)
   })
 
   it('asserts the exclusive distance-and-city story language', () => {

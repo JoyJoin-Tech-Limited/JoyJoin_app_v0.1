@@ -128,7 +128,7 @@ describe('formal Flash dialogue', () => {
     }))
   })
 
-  it('routes the first Shiqi unit into its dedicated four-highlight experience', () => {
+  it('routes the first Shiqi unit through its opening beat before the four-highlight experience', () => {
     mocks.useEncounter.mockReturnValue({
       data: storyEncounter,
       isLoading: false,
@@ -144,8 +144,11 @@ describe('formal Flash dialogue', () => {
     expect(stage).toContainElement(experience)
     expect(stage.querySelector('.flash-page__scroll')).not.toBeInTheDocument()
     expect(screen.queryByTestId('flash-story-choice-panel')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('shiqi-first-act-hotspot')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '替拾柒接住滑下灯箱的路线纸' }))
+    fireEvent.click(screen.getByRole('button', { name: '先看三张纸都留下了什么痕迹' }))
+    fireEvent.click(screen.getByRole('button', { name: '先核对四处记录' }))
     expect(screen.getAllByTestId('shiqi-first-act-hotspot')).toHaveLength(4)
-    expect(screen.queryByTestId('shiqi-scene-speech')).not.toBeInTheDocument()
     expect(screen.queryByTestId('shiqi-first-act-dialogue-panel')).not.toBeInTheDocument()
   })
 

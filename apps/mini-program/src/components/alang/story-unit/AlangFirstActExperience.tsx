@@ -10,7 +10,7 @@ import './AlangFirstActExperience.scss'
 export type AlangApproachIndex = 0 | 1
 
 type HighlightId = 'alang' | 'lifebuoy' | 'routeMap' | 'windowChairs'
-type Stage = 'explore' | 'stance' | 'game' | 'success'
+type Stage = 'arrival' | 'stance' | 'explore' | 'transition' | 'game' | 'success'
 
 interface HighlightReply {
   label: string
@@ -137,7 +137,7 @@ function createInitialProgress(encounterId: string): AlangFirstActProgress {
   return {
     version: 1,
     encounterId,
-    stage: 'explore',
+    stage: 'arrival',
     answers: {},
     activeHighlight: null,
     approachIndex: null,
@@ -174,17 +174,22 @@ function restoreProgress(encounterId: string): AlangFirstActProgress {
       if (answer === 0 || answer === 1) answers[item.id] = answer
     }
     const allHighlightsSeen = ALANG_FIRST_ACT_HIGHLIGHTS.every((item) => answers[item.id] !== undefined)
-    const restoredStage: Stage = stored.stage === 'stance' || stored.stage === 'game' || stored.stage === 'success'
-      ? stored.stage
-      : 'explore'
-    const stage = restoredStage !== 'explore' && !allHighlightsSeen ? 'explore' : restoredStage
+    const hasAnyHighlights = Object.keys(answers).length > 0
     const approachIndex = stored.approachIndex === 0 || stored.approachIndex === 1
       ? stored.approachIndex
       : null
+    const restoredStage: Stage = ['arrival', 'stance', 'explore', 'transition', 'game', 'success'].includes(stored.stage ?? '')
+      ? stored.stage as Stage
+      : 'arrival'
+    let stage = restoredStage
+    if (stage === 'explore' && approachIndex === null) stage = hasAnyHighlights ? 'stance' : 'arrival'
+    if (['transition', 'game', 'success'].includes(stage) && (!allHighlightsSeen || approachIndex === null)) {
+      stage = approachIndex === null ? (hasAnyHighlights ? 'stance' : 'arrival') : 'explore'
+    }
 
     return {
       ...fallback,
-      stage: (stage === 'game' || stage === 'success') && approachIndex === null ? 'stance' : stage,
+      stage,
       answers,
       activeHighlight: stage === 'explore' && isHighlightId(stored.activeHighlight)
         ? stored.activeHighlight
@@ -201,6 +206,9 @@ function restoreProgress(encounterId: string): AlangFirstActProgress {
 }
 
 function resolveSpeech(progress: AlangFirstActProgress): string {
+  if (progress.stage === 'arrival') {
+    return '等一下。风把河岸草图掀起来了——先替我按住左下角。'
+  }
   if (progress.stage === 'success') {
     return '这样就好。看着同一条河，话不一定更容易。但至少，不必先赢。'
   }
@@ -213,6 +221,9 @@ function resolveSpeech(progress: AlangFirstActProgress): string {
     return progress.approachIndex === null
       ? '面对面，容易把道歉说成辩解。并肩一点，也许能先把同一阵风听完。'
       : APPROACHES[progress.approachIndex].response
+  }
+  if (progress.stage === 'transition') {
+    return '四处线索说的是同一件事：并肩不是挤近，而是给回应留出角度。'
   }
   if (progress.activeHighlight) {
     const item = ALANG_FIRST_ACT_HIGHLIGHTS.find((candidate) => candidate.id === progress.activeHighlight)!
@@ -280,7 +291,7 @@ export function AlangFirstActExperience({
     setProgress((current) => ({
       ...current,
       activeHighlight: null,
-      stage: countAnswers(current.answers) === ALANG_FIRST_ACT_HIGHLIGHTS.length ? 'stance' : 'explore',
+      stage: countAnswers(current.answers) === ALANG_FIRST_ACT_HIGHLIGHTS.length ? 'transition' : 'explore',
     }))
   }
 
@@ -290,8 +301,17 @@ export function AlangFirstActExperience({
     setProgress((current) => ({ ...current, approachIndex }))
   }
 
-  const enterGame = () => {
+  const beginExploring = () => {
     if (disabled || progress.stage !== 'stance' || progress.approachIndex === null) return
+    haptics('medium')
+    setProgress((current) => ({
+      ...current,
+      stage: countAnswers(current.answers) === ALANG_FIRST_ACT_HIGHLIGHTS.length ? 'transition' : 'explore',
+    }))
+  }
+
+  const enterGame = () => {
+    if (disabled || progress.stage !== 'transition' || progress.approachIndex === null) return
     haptics('medium')
     setProgress((current) => ({ ...current, stage: 'game' }))
   }
@@ -353,13 +373,46 @@ export function AlangFirstActExperience({
         <Image
           className='alang-first-act__scene'
           src={scene}
-          mode='aspectFill'
+          mode='aspectFit'
           aria-hidden='true'
           data-testid='alang-first-act-scene'
           onError={() => setSceneAvailable(false)}
         />
-      ) : <View className='alang-first-act__scene-fallback' aria-hidden='true' />}
+      ) : <View className='alang-first-act__scene-fallback' data-testid='alang-first-act-scene-fallback' aria-hidden='true' />}
       <View className='first-act-scene-grade' aria-hidden='true' />
+
+      {progress.stage === 'arrival' ? (
+        <FirstActDialogueChrome
+          npcSlug='alang'
+          speaker='阿浪'
+          speech={speech}
+          narration='一阵横风掠过河岸'
+          prompt='路线地图台边缘的草图正被风抬起。'
+          action={{
+            label: '按住被风掀起的河岸草图',
+            onClick: () => {
+              if (disabled) return
+              haptics('medium')
+              setProgress((current) => ({ ...current, stage: 'stance' }))
+            },
+          }}
+          disabled={disabled}
+        />
+      ) : null}
+
+      {progress.stage === 'stance' ? (
+        <FirstActDialogueChrome
+          npcSlug='alang'
+          speaker='阿浪'
+          speech={speech}
+          narration='草图稳住了。阿浪没有立刻解释，只把河岸、救生圈和窗边双椅一起留在你的视线里。'
+          prompt={progress.approachIndex === null ? '你想先用什么距离和他站在这里？' : '阿浪把选择记下了。'}
+          choices={progress.approachIndex === null ? APPROACHES.map((approach, index) => ({ id: String(index), label: approach.label })) : []}
+          action={progress.approachIndex === null ? null : { label: '先看看四处线索', onClick: beginExploring }}
+          disabled={disabled}
+          onChoose={(id) => selectApproach(Number(id) as AlangApproachIndex)}
+        />
+      ) : null}
 
       {progress.stage === 'explore' && !activeDefinition ? (
           <FirstActHighlightOverlay
@@ -390,17 +443,16 @@ export function AlangFirstActExperience({
         />
       ) : null}
 
-      {progress.stage === 'stance' ? (
+      {progress.stage === 'transition' ? (
         <FirstActDialogueChrome
           npcSlug='alang'
           speaker='阿浪'
           speech={speech}
           narration='原来这里没有失踪的人。阿浪只是在替两句总被说成争论的道歉，试一个能慢下来的位置。'
-          prompt={progress.approachIndex === null ? '如果是你，会把椅子怎么放？' : '阿浪点了点头。'}
-          choices={progress.approachIndex === null ? APPROACHES.map((approach, index) => ({ id: String(index), label: approach.label })) : []}
-          action={progress.approachIndex === null ? null : { label: '调一调两把椅子', onClick: enterGame }}
+          prompt='把刚才的距离落到两把椅子上。'
+          choices={[]}
+          action={{ label: '调一调两把椅子', onClick: enterGame }}
           disabled={disabled}
-          onChoose={(id) => selectApproach(Number(id) as AlangApproachIndex)}
         />
       ) : null}
 

@@ -7,7 +7,7 @@
   height: 100dvh;
   overflow: hidden;
   color: $color-text-primary-warm;
-  background: $color-text-primary;
+  background: linear-gradient(180deg, $flow-accent-sky 0%, $color-bg-warm-to 100%);
   font-family: $font-ui;
 
   &__scene,
@@ -20,7 +20,7 @@
   }
 
   &__scene {
-    object-fit: cover;
+    object-fit: contain;
   }
 
   &__scene-fallback {

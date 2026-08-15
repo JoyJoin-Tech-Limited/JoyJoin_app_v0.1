@@ -8,7 +8,7 @@ import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
 import './MomoFirstActExperience.scss'
 
 type ApproachIndex = 0 | 1
-type Stage = 'observe' | 'approach' | 'game' | 'success'
+type Stage = 'arrival' | 'approach' | 'observe' | 'transition' | 'game' | 'success'
 type RouteOutcome = 'idle' | 'early' | 'overrun' | 'wrong' | 'success'
 
 const MOMO_APPROACHES = FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS['s1-p1-momo'].approaches
@@ -114,7 +114,7 @@ interface MomoProgress {
 }
 
 const DEFAULT_PROGRESS: MomoProgress = {
-  stage: 'observe',
+  stage: 'arrival',
   completedHighlightIds: [],
   activeHighlightId: null,
   selectedReplyIndex: null,
@@ -137,9 +137,19 @@ function loadProgress(storageKey: string): MomoProgress {
       ? stored.completedHighlightIds.filter((id): id is MomoHighlight['id'] =>
         MOMO_FIRST_ACT_HIGHLIGHTS.some((highlight) => highlight.id === id))
       : []
-    const stage: Stage = ['observe', 'approach', 'game', 'success'].includes(stored.stage ?? '')
+    let stage: Stage = ['arrival', 'approach', 'observe', 'transition', 'game', 'success'].includes(stored.stage ?? '')
       ? stored.stage as Stage
-      : 'observe'
+      : 'arrival'
+    const approachIndex = isApproachIndex(stored.approachIndex) ? stored.approachIndex : null
+    const allHighlightsSeen = completedHighlightIds.length === MOMO_FIRST_ACT_HIGHLIGHTS.length
+    if (stage === 'observe' && approachIndex === null) {
+      stage = completedHighlightIds.length === 0 ? 'arrival' : 'approach'
+    }
+    if (['transition', 'game', 'success'].includes(stage) && (!allHighlightsSeen || approachIndex === null)) {
+      stage = approachIndex === null
+        ? (completedHighlightIds.length === 0 ? 'arrival' : 'approach')
+        : 'observe'
+    }
     const routeProgress = typeof stored.routeProgress === 'number'
       ? Math.max(0, Math.min(3, Math.floor(stored.routeProgress)))
       : 0
@@ -149,13 +159,13 @@ function loadProgress(storageKey: string): MomoProgress {
       ...stored,
       stage,
       completedHighlightIds,
-      activeHighlightId: MOMO_FIRST_ACT_HIGHLIGHTS.some(({ id }) => id === stored.activeHighlightId)
+      activeHighlightId: stage === 'observe' && MOMO_FIRST_ACT_HIGHLIGHTS.some(({ id }) => id === stored.activeHighlightId)
         ? stored.activeHighlightId as MomoHighlight['id']
         : null,
       selectedReplyIndex: stored.selectedReplyIndex === 0 || stored.selectedReplyIndex === 1
         ? stored.selectedReplyIndex
         : null,
-      approachIndex: isApproachIndex(stored.approachIndex) ? stored.approachIndex : null,
+      approachIndex,
       routeProgress,
       routeOutcome: ['idle', 'early', 'overrun', 'wrong', 'success'].includes(stored.routeOutcome ?? '')
         ? stored.routeOutcome as RouteOutcome
@@ -184,6 +194,7 @@ export function MomoFirstActExperience({
 }: MomoFirstActExperienceProps) {
   const storageKey = `${STORAGE_PREFIX}${encounterId}`
   const [progress, setProgress] = useState<MomoProgress>(() => loadProgress(storageKey))
+  const [sceneFailed, setSceneFailed] = useState(false)
 
   useEffect(() => {
     try {
@@ -236,7 +247,7 @@ export function MomoFirstActExperience({
       completedHighlightIds,
       activeHighlightId: null,
       selectedReplyIndex: null,
-      stage: allObserved ? 'approach' : 'observe',
+      stage: allObserved ? 'transition' : 'observe',
       speech: allObserved
         ? '三处线索接上了。……空白页还在。你觉得，我该怎么记？'
         : '记下了。再看一处。',
@@ -252,8 +263,17 @@ export function MomoFirstActExperience({
     })
   }
 
+  const beginObserving = () => {
+    if (disabled || progress.stage !== 'approach' || progress.approachIndex === null) return
+    haptics('medium')
+    patchProgress({
+      stage: progress.completedHighlightIds.length === MOMO_FIRST_ACT_HIGHLIGHTS.length ? 'transition' : 'observe',
+      speech: '先别替空白页写答案。听檐水、看折点，再看路线册停在哪里。',
+    })
+  }
+
   const startGame = () => {
-    if (disabled || progress.approachIndex === null) return
+    if (disabled || progress.stage !== 'transition' || progress.approachIndex === null) return
     haptics('medium')
     patchProgress({
       stage: 'game',
@@ -328,13 +348,35 @@ export function MomoFirstActExperience({
 
   return (
     <View className={`momo-first-act${disabled ? ' momo-first-act--disabled' : ''}`} data-object-code='route-book' data-game-code='path'>
-      <Image
-        className='momo-first-act__scene'
-        src={scene}
-        mode='aspectFill'
-        data-testid='momo-first-act-scene'
-      />
+      {!sceneFailed ? (
+        <Image
+          className='momo-first-act__scene'
+          src={scene}
+          mode='aspectFit'
+          data-testid='momo-first-act-scene'
+          onError={() => setSceneFailed(true)}
+        />
+      ) : <View className='momo-first-act__scene-fallback' data-testid='momo-first-act-scene-fallback' aria-hidden='true' />}
       <View className='first-act-scene-grade' aria-hidden='true' />
+
+      {progress.stage === 'arrival' ? (
+        <FirstActDialogueChrome
+          npcSlug='momo'
+          speaker='默默'
+          speech='门外的风带着雨，路线册的空白页正一下一下抬起来。'
+          narration='一阵穿堂风钻进站亭'
+          prompt='默默一只手抱着书，另一只手没能压住路线册。'
+          action={{
+            label: '替默默扶住晃动的路线册',
+            onClick: () => {
+              if (disabled) return
+              haptics('medium')
+              patchProgress({ stage: 'approach', speech: '……谢谢。最后一条实线停在空白以前。你觉得，停下也算一种选择吗？' })
+            },
+          }}
+          disabled={disabled}
+        />
+      ) : null}
 
       {progress.stage === 'observe' && !activeHighlight && (
         <FirstActHighlightOverlay
@@ -374,13 +416,25 @@ export function MomoFirstActExperience({
           npcSlug='momo'
           speaker='默默'
           speech={progress.speech}
-          narration='三处环境线索和默默手里的路线册接成了一条线。空白页不是下一段路，而是一个可以自己决定的停顿。'
-          prompt={progress.approachIndex === null ? '你想怎样记下这个停顿？' : '默默把路线册翻回第一页。'}
+          narration='路线册稳住了。默默没有继续翻页，只把檐水、竖牌和书台留给你核对。'
+          prompt={progress.approachIndex === null ? '你想怎样接近这段停顿？' : '默默把你的选择写在页边。'}
           choices={progress.approachIndex === null ? MOMO_APPROACHES.map((approach, index) => ({ id: String(index), label: approach.label })) : []}
           selectedChoiceId={progress.approachIndex === null ? null : String(progress.approachIndex)}
-          action={progress.approachIndex === null ? null : { label: '开始走这段雨路', onClick: startGame }}
+          action={progress.approachIndex === null ? null : { label: '先核对四处线索', onClick: beginObserving }}
           disabled={disabled}
           onChoose={(id) => chooseApproach(Number(id) as ApproachIndex)}
+        />
+      ) : null}
+
+      {progress.stage === 'transition' ? (
+        <FirstActDialogueChrome
+          npcSlug='momo'
+          speaker='默默'
+          speech={progress.speech}
+          narration='三处环境线索和默默手里的路线册接成了一条线。空白页不是下一段路，而是一个可以自己决定的停顿。'
+          prompt='沿着证据走到空白页以前。'
+          action={{ label: '开始走这段雨路', onClick: startGame }}
+          disabled={disabled}
         />
       ) : null}
 

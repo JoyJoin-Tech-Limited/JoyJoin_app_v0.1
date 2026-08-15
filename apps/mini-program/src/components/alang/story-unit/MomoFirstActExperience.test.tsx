@@ -50,12 +50,17 @@ function answerHighlight(highlightIndex: number, replyIndex = 0) {
   fireEvent.click(screen.getByRole('button', { name: highlightIndex === MOMO_FIRST_ACT_HIGHLIGHTS.length - 1 ? '看完四处线索' : '继续观察' }))
 }
 
-function reachGame(approachIndex: 0 | 1) {
-  MOMO_FIRST_ACT_HIGHLIGHTS.forEach((_, index) => answerHighlight(index, index % 2))
-  const approach = approachIndex === 0
+function enterHighlights(approachIndex: 0 | 1 = 0) {
+  fireEvent.click(screen.getByRole('button', { name: '替默默扶住晃动的路线册' }))
+  fireEvent.click(screen.getByRole('button', { name: approachIndex === 0
     ? '停下也算路线的一部分'
-    : '先核对最后三处，再决定停下'
-  fireEvent.click(screen.getByRole('button', { name: approach }))
+    : '先核对最后三处，再决定停下' }))
+  fireEvent.click(screen.getByRole('button', { name: '先核对四处线索' }))
+}
+
+function reachGame(approachIndex: 0 | 1) {
+  enterHighlights(approachIndex)
+  MOMO_FIRST_ACT_HIGHLIGHTS.forEach((_, index) => answerHighlight(index, index % 2))
   fireEvent.click(screen.getByRole('button', { name: '开始走这段雨路' }))
 }
 
@@ -69,10 +74,35 @@ afterEach(cleanup)
 beforeEach(() => storage.clear())
 
 describe('MomoFirstActExperience', () => {
+  it('keeps the opening playable when the scene image fails', () => {
+    renderExperience()
+    fireEvent.error(screen.getByTestId('momo-first-act-scene'))
+    expect(screen.queryByTestId('momo-first-act-scene')).not.toBeInTheDocument()
+    expect(screen.getByTestId('momo-first-act-scene-fallback')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '替默默扶住晃动的路线册' })).toBeInTheDocument()
+  })
+
+  it('migrates the legacy empty observe state back to the new arrival beat', () => {
+    storage.set('joyjoin:flash:momo-first-act:v1:enc-momo-legacy', {
+      stage: 'observe',
+      completedHighlightIds: [],
+      activeHighlightId: null,
+      approachIndex: null,
+    })
+
+    renderExperience({ encounterId: 'enc-momo-legacy' })
+
+    expect(screen.queryAllByTestId('momo-first-act-hotspot')).toHaveLength(0)
+    expect(screen.getByRole('button', { name: '替默默扶住晃动的路线册' })).toBeInTheDocument()
+  })
+
   it('exposes four highlights and exactly eight Momo-specific replies', () => {
     const { onSpeechChange } = renderExperience()
 
     expect(screen.getByTestId('momo-first-act-scene')).toHaveAttribute('src', 'momo-scene.png')
+    expect(screen.queryByTestId('momo-first-act-hotspot')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '替默默扶住晃动的路线册' })).toBeInTheDocument()
+    enterHighlights(0)
     expect(screen.getAllByTestId('momo-first-act-hotspot')).toHaveLength(4)
     expect(screen.queryByTestId('momo-first-act-dialogue-panel')).not.toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()

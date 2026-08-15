@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  getShiqiFirstActStorageKey,
   SHIQI_FIRST_ACT_HIGHLIGHTS,
   ShiqiFirstActExperience,
 } from './ShiqiFirstActExperience'
@@ -50,12 +51,17 @@ function answerHighlight(highlightIndex: number, replyIndex = 0) {
   fireEvent.click(screen.getByRole('button', { name: highlightIndex === SHIQI_FIRST_ACT_HIGHLIGHTS.length - 1 ? '看完四处线索' : '继续观察' }))
 }
 
+function enterHighlights(approachIndex: 0 | 1 = 0) {
+  fireEvent.click(screen.getByRole('button', { name: '替拾柒接住滑下灯箱的路线纸' }))
+  fireEvent.click(screen.getByRole('button', { name: approachIndex === 0
+    ? '先看三张纸都留下了什么痕迹'
+    : '先找哪一笔是后来补上去的' }))
+  fireEvent.click(screen.getByRole('button', { name: '先核对四处记录' }))
+}
+
 function reachGame(approachIndex: 0 | 1) {
+  enterHighlights(approachIndex)
   SHIQI_FIRST_ACT_HIGHLIGHTS.forEach((_, index) => answerHighlight(index, index % 2))
-  const label = approachIndex === 0
-    ? '先保留事实浅痕，再注明解释层'
-    : '先标出解释偏移，再回看原始浅痕'
-  fireEvent.click(screen.getByRole('button', { name: label }))
   fireEvent.click(screen.getByRole('button', { name: '开始对齐浅痕' }))
 }
 
@@ -80,10 +86,37 @@ afterEach(cleanup)
 beforeEach(() => storage.clear())
 
 describe('ShiqiFirstActExperience', () => {
+  it('keeps the opening playable when the scene image fails', () => {
+    renderExperience()
+    fireEvent.error(screen.getByTestId('shiqi-first-act-scene'))
+    expect(screen.queryByTestId('shiqi-first-act-scene')).not.toBeInTheDocument()
+    expect(screen.getByTestId('shiqi-first-act-scene-fallback')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '替拾柒接住滑下灯箱的路线纸' })).toBeInTheDocument()
+  })
+
+  it('migrates the legacy empty inspect state back to the new arrival beat', () => {
+    storage.set(getShiqiFirstActStorageKey('enc-shiqi-legacy'), {
+      version: 'shiqi-first-act-v1',
+      stage: 'inspect',
+      completedHotspots: [],
+      selectedReplies: {},
+      activeHotspot: null,
+      approachIndex: null,
+    })
+
+    renderExperience({ encounterId: 'enc-shiqi-legacy' })
+
+    expect(screen.queryAllByTestId('shiqi-first-act-hotspot')).toHaveLength(0)
+    expect(screen.getByRole('button', { name: '替拾柒接住滑下灯箱的路线纸' })).toBeInTheDocument()
+  })
+
   it('exposes four scene highlights and exactly eight Shiqi-specific replies', () => {
     const { onSpeechChange } = renderExperience()
 
     expect(screen.getByTestId('shiqi-first-act-scene')).toHaveAttribute('src', 'shiqi-scene.webp')
+    expect(screen.queryByTestId('shiqi-first-act-hotspot')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '替拾柒接住滑下灯箱的路线纸' })).toBeInTheDocument()
+    enterHighlights(0)
     expect(screen.getAllByTestId('shiqi-first-act-hotspot')).toHaveLength(4)
     expect(screen.queryByTestId('shiqi-first-act-dialogue-panel')).not.toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()

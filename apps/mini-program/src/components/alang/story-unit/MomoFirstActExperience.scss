@@ -14,11 +14,20 @@
     pointer-events: none;
   }
 
-  &__scene {
+  &__scene,
+  &__scene-fallback {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
+  }
+
+  &__scene {
+    object-fit: contain;
+  }
+
+  &__scene-fallback {
+    background: linear-gradient(160deg, $flow-accent-sky 0%, $color-bg-warm-from 52%, $color-text-primary-warm 100%);
   }
 
   &__speech {
@@ -299,9 +308,9 @@
   }
 
   &__feedback {
-    color: $color-warning;
+    color: $color-text-primary-warm;
     font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
+    font-weight: $font-weight-semibold;
   }
 
   &__game-actions > view,

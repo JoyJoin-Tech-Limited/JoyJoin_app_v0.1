@@ -15,7 +15,7 @@ const firstActs = [
   {
     slug: 'alang',
     component: 'AlangFirstActExperience.tsx',
-    asset: 'flash-alang-first-act-riverside-v3.webp',
+    asset: 'flash-alang-first-act-riverside-v3.jpg',
     objectCode: 'seat-plan',
     gameCode: 'spacing',
     highlights: ALANG_FIRST_ACT_HIGHLIGHTS,
@@ -31,7 +31,7 @@ const firstActs = [
   {
     slug: 'momo',
     component: 'MomoFirstActExperience.tsx',
-    asset: 'flash-momo-first-act-rain-route-v3.webp',
+    asset: 'flash-momo-first-act-rain-route-v3.jpg',
     objectCode: 'route-book',
     gameCode: 'path',
     highlights: MOMO_FIRST_ACT_HIGHLIGHTS,
@@ -39,7 +39,7 @@ const firstActs = [
   {
     slug: 'shiqi',
     component: 'ShiqiFirstActExperience.tsx',
-    asset: 'flash-shiqi-first-act-record-room-v3.webp',
+    asset: 'flash-shiqi-first-act-record-room-v3.jpg',
     objectCode: 'outing-book',
     gameCode: 'overlay',
     highlights: SHIQI_FIRST_ACT_HIGHLIGHTS,

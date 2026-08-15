@@ -19,11 +19,20 @@
     }
   }
 
-  &__scene {
+  &__scene,
+  &__scene-fallback {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
+  }
+
+  &__scene {
+    object-fit: contain;
+  }
+
+  &__scene-fallback {
+    background: linear-gradient(150deg, $color-bg-clean 0%, $color-bg-warm-to 58%, rgba($color-primary-dark, 0.72) 100%);
   }
 
   &__scene-grade {

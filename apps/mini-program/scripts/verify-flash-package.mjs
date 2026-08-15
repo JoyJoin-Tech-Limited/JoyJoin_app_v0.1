@@ -16,10 +16,10 @@ const npcHeadshotRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
 const flashSceneRelativePaths = ['radar', 'task', 'feedback']
   .map((scene) => `pages/alang/assets/backgrounds/${scene}-paper-scene.jpg`)
 const flashDialogueRelativePaths = [
-  'pages/alang/assets/ui/flash-alang-first-act-riverside-v2.jpg',
+  'pages/alang/assets/ui/flash-alang-first-act-riverside-v3.jpg',
   'pages/alang/assets/ui/flash-lizi-first-act-color-studio-v2.jpg',
-  'pages/alang/assets/ui/flash-momo-first-act-rain-route-v2.jpg',
-  'pages/alang/assets/ui/flash-shiqi-first-act-record-room-v2.jpg',
+  'pages/alang/assets/ui/flash-momo-first-act-rain-route-v3.jpg',
+  'pages/alang/assets/ui/flash-shiqi-first-act-record-room-v3.jpg',
   'pages/alang/assets/ui/flash-atuan-first-arrival-layered-v2.jpg',
 ]
 const flashReviewedStoryBackgrounds = [
@@ -32,9 +32,11 @@ const atuanArrivalRelativePaths = [
   'pages/alang/assets/ui/flash-atuan-second-act-pavilion-v1.jpg',
   'pages/alang/assets/ui/flash-atuan-third-act-table-v1.jpg',
 ]
-// Includes the two reviewed Atuan later-act backgrounds while preserving
-// meaningful headroom below the 1.80 MiB Alang subpackage gate.
-const flashRuntimeImageBudgetBytes = Math.round(1.20 * 1024 * 1024)
+// Includes the reviewed full-resolution first-act scenes and the two Atuan
+// later-act backgrounds. The independent package-size gate still enforces the
+// 1.80 MiB Alang subpackage ceiling.
+const flashRuntimeImageBudgetMiB = 1.40
+const flashRuntimeImageBudgetBytes = Math.round(flashRuntimeImageBudgetMiB * 1024 * 1024)
 
 const flashRuntimeImages = [
   'pages/alang/assets/ui/flash-city-ambient-bg.png',
@@ -208,7 +210,7 @@ for (const relativePath of flashRuntimeImages) {
 }
 if (flashRuntimeImageBytes > flashRuntimeImageBudgetBytes) {
   failures.push(
-    `Flash runtime image assets use ${flashRuntimeImageBytes} bytes, exceeding the 1.20 MiB subpackage budget`,
+    `Flash runtime image assets use ${flashRuntimeImageBytes} bytes, exceeding the ${flashRuntimeImageBudgetMiB.toFixed(2)} MiB image budget`,
   )
 }
 

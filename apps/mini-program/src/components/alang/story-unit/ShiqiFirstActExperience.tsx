@@ -9,7 +9,7 @@ import './ShiqiFirstActExperience.scss'
 
 type ApproachIndex = 0 | 1
 type HotspotId = 'shiqi' | 'outing-book' | 'exchange-box' | 'inspection-light'
-type Stage = 'inspect' | 'approach' | 'approach-response' | 'game' | 'success'
+type Stage = 'arrival' | 'approach' | 'approach-response' | 'inspect' | 'transition' | 'game' | 'success'
 type LayerIndex = 0 | 1 | 2
 
 interface Offset {
@@ -125,6 +125,10 @@ export const SHIQI_FIRST_ACT_HIGHLIGHTS: readonly ShiqiFirstActHighlight[] = [
 ] as const
 
 const APPROACHES = FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS['s1-p1-shiqi'].approaches
+const APPROACH_DISPLAY_LABELS = [
+  '先看三张纸都留下了什么痕迹',
+  '先找哪一笔是后来补上去的',
+] as const
 
 const LAYER_TITLES = ['第一层 · 原始浅痕', '第二层 · 路线复写', '第三层 · 后补说明'] as const
 const INITIAL_LAYER_OFFSETS: [Offset, Offset, Offset] = [
@@ -135,7 +139,7 @@ const INITIAL_LAYER_OFFSETS: [Offset, Offset, Offset] = [
 
 const INITIAL_PROGRESS: ShiqiFirstActProgress = {
   version: 'shiqi-first-act-v1',
-  stage: 'inspect',
+  stage: 'arrival',
   completedHotspots: [],
   selectedReplies: {},
   activeHotspot: null,
@@ -181,10 +185,20 @@ function restoreProgress(value: unknown): ShiqiFirstActProgress {
   const completedHotspots = Array.isArray(candidate.completedHotspots)
     ? candidate.completedHotspots.filter(isHotspotId)
     : []
-  const stage: Stage = ['inspect', 'approach', 'approach-response', 'game', 'success'].includes(candidate.stage ?? '')
+  let stage: Stage = ['arrival', 'approach', 'approach-response', 'inspect', 'transition', 'game', 'success'].includes(candidate.stage ?? '')
     ? candidate.stage as Stage
-    : 'inspect'
+    : 'arrival'
   const approachIndex = candidate.approachIndex === 0 || candidate.approachIndex === 1 ? candidate.approachIndex : null
+  const allHotspotsSeen = completedHotspots.length === SHIQI_FIRST_ACT_HIGHLIGHTS.length
+  if (stage === 'inspect' && approachIndex === null) {
+    stage = completedHotspots.length === 0 ? 'arrival' : 'approach'
+  }
+  if (stage === 'approach-response' && approachIndex === null) stage = 'approach'
+  if (['transition', 'game', 'success'].includes(stage) && (!allHotspotsSeen || approachIndex === null)) {
+    stage = approachIndex === null
+      ? (completedHotspots.length === 0 ? 'arrival' : 'approach')
+      : 'inspect'
+  }
   const activeLayer: LayerIndex = candidate.activeLayer === 1 || candidate.activeLayer === 2 ? candidate.activeLayer : 0
 
   return {
@@ -192,7 +206,7 @@ function restoreProgress(value: unknown): ShiqiFirstActProgress {
     stage,
     completedHotspots,
     selectedReplies: candidate.selectedReplies && typeof candidate.selectedReplies === 'object' ? candidate.selectedReplies : {},
-    activeHotspot: isHotspotId(candidate.activeHotspot) ? candidate.activeHotspot : null,
+    activeHotspot: stage === 'inspect' && isHotspotId(candidate.activeHotspot) ? candidate.activeHotspot : null,
     activeReplyId: typeof candidate.activeReplyId === 'string' ? candidate.activeReplyId : null,
     approachIndex,
     layerOffsets,
@@ -235,6 +249,7 @@ export function ShiqiFirstActExperience({
   onComplete,
 }: ShiqiFirstActExperienceProps) {
   const [progress, setProgress] = useState<ShiqiFirstActProgress>(() => loadProgress(encounterId))
+  const [sceneFailed, setSceneFailed] = useState(false)
 
   useEffect(() => {
     setProgress(loadProgress(encounterId))
@@ -265,8 +280,14 @@ export function ShiqiFirstActExperience({
     if (progress.stage === 'approach-response' && progress.approachIndex !== null) {
       return APPROACHES[progress.approachIndex].response
     }
+    if (progress.stage === 'arrival') {
+      return '先别读上面的字。最外层路线纸正在往下滑——帮我接一下。'
+    }
+    if (progress.stage === 'transition') {
+      return '四处都核对过了。共同浅痕留在底层，后来补上的解释各自归位。'
+    }
     if (progress.stage === 'approach') {
-      return '共同浅痕已经够清楚。最后决定怎么处理那些后加的解释。'
+      return '路线纸接住了。先别急着叠回去——你想从共同的痕迹看起，还是先找后来补上的笔迹？'
     }
     if (activeReply) return activeReply.response
     if (activeHighlight) return activeHighlight.observation
@@ -306,7 +327,7 @@ export function ShiqiFirstActExperience({
         completedHotspots,
         activeHotspot: null,
         activeReplyId: null,
-        stage: completedHotspots.length === SHIQI_FIRST_ACT_HIGHLIGHTS.length ? 'approach' : 'inspect',
+        stage: completedHotspots.length === SHIQI_FIRST_ACT_HIGHLIGHTS.length ? 'transition' : 'inspect',
       }
     })
   }
@@ -317,8 +338,17 @@ export function ShiqiFirstActExperience({
     commit((current) => ({ ...current, approachIndex, stage: 'approach-response' }))
   }
 
+  const beginInspection = () => {
+    if (disabled || progress.stage !== 'approach-response' || progress.approachIndex === null) return
+    haptics('medium')
+    commit((current) => ({
+      ...current,
+      stage: current.completedHotspots.length === SHIQI_FIRST_ACT_HIGHLIGHTS.length ? 'transition' : 'inspect',
+    }))
+  }
+
   const beginGame = () => {
-    if (disabled || progress.approachIndex === null) return
+    if (disabled || progress.stage !== 'transition' || progress.approachIndex === null) return
     haptics('medium')
     commit((current) => ({ ...current, stage: 'game', gameStatus: 'idle' }))
   }
@@ -391,8 +421,29 @@ export function ShiqiFirstActExperience({
       data-game-code='overlay'
       aria-label='拾柒第一幕：记录没有说完'
     >
-      <Image data-testid='shiqi-first-act-scene' className='shiqi-first-act__scene' src={scene} mode='aspectFill' aria-hidden='true' />
+      {!sceneFailed ? (
+        <Image data-testid='shiqi-first-act-scene' className='shiqi-first-act__scene' src={scene} mode='aspectFit' onError={() => setSceneFailed(true)} aria-hidden='true' />
+      ) : <View className='shiqi-first-act__scene-fallback' data-testid='shiqi-first-act-scene-fallback' aria-hidden='true' />}
       <View className='first-act-scene-grade' aria-hidden='true' />
+
+      {progress.stage === 'arrival' ? (
+        <FirstActDialogueChrome
+          npcSlug='shiqi'
+          speaker='拾柒'
+          speech={speech}
+          narration='检视灯箱轻轻响了一声'
+          prompt='最外层路线纸滑出卡槽，正沿灯箱边缘落下。'
+          action={{
+            label: '替拾柒接住滑下灯箱的路线纸',
+            onClick: () => {
+              if (disabled) return
+              haptics('medium')
+              commit((current) => ({ ...current, stage: 'approach' }))
+            },
+          }}
+          disabled={disabled}
+        />
+      ) : null}
 
       {progress.stage === 'inspect' && !activeHighlight ? (
         <FirstActHighlightOverlay
@@ -431,9 +482,9 @@ export function ShiqiFirstActExperience({
           npcSlug='shiqi'
           speaker='拾柒'
           speech={speech}
-          narration='共同浅痕已经够清楚，后来补上的解释仍然各自偏开。'
-          prompt='怎么区分事实与后来补上的解释？'
-          choices={APPROACHES.map((approach, index) => ({ id: String(index), label: approach.label }))}
+          narration='路线纸接住了。拾柒没有急着把三层叠回去。'
+          prompt='你想先看共同留下的痕迹，还是先看后来补上的备注？'
+          choices={APPROACHES.map((_, index) => ({ id: String(index), label: APPROACH_DISPLAY_LABELS[index] }))}
           disabled={disabled}
           onChoose={(id) => chooseApproach(Number(id) as ApproachIndex)}
         />
@@ -444,7 +495,19 @@ export function ShiqiFirstActExperience({
           npcSlug='shiqi'
           speaker='拾柒'
           speech={speech}
-          narration='对齐的是浅痕，不是备注文字。'
+          narration='先看现场，再让纸页自己证明哪些部分重合。'
+          prompt='四处记录还没有逐一核对。'
+          action={{ label: '先核对四处记录', onClick: beginInspection }}
+          disabled={disabled}
+        />
+      ) : null}
+
+      {progress.stage === 'transition' ? (
+        <FirstActDialogueChrome
+          npcSlug='shiqi'
+          speaker='拾柒'
+          speech={speech}
+          narration='方向一致只是开头。事实浅痕和后来补上的解释，需要分层摆放。'
           prompt='把三层路线纸放上检视灯箱。'
           action={{ label: '开始对齐浅痕', onClick: beginGame }}
           disabled={disabled}
