@@ -117,14 +117,16 @@ describe('Atuan first-arrival asset ownership', () => {
       expect(cleanScript, `${fileName} must stay out of the upload package`).toContain(`'${fileName}'`)
     }
     expect(cleanScript).toContain('sourceOnlyAlangUiAssets.has(name)')
-    expect(cleanScript).toContain('const runtimeAlangUiWebps = new Set([')
+    expect(cleanScript).not.toContain('runtimeAlangUiWebps')
+    expect(cleanScript).toContain("(name) => name.endsWith('.webp') || sourceOnlyAlangUiAssets.has(name)")
     for (const fileName of [
-      'flash-alang-first-act-riverside-v2.webp',
-      'flash-lizi-first-act-color-studio-v2.webp',
-      'flash-momo-first-act-rain-route-v2.webp',
-      'flash-shiqi-first-act-record-room-v2.webp',
+      'flash-alang-first-act-riverside-v2.jpg',
+      'flash-lizi-first-act-color-studio-v2.jpg',
+      'flash-momo-first-act-rain-route-v2.jpg',
+      'flash-shiqi-first-act-record-room-v2.jpg',
     ]) {
-      expect(cleanScript, `${fileName} must survive the upload-package cleanup`).toContain(`'${fileName}'`)
+      expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
+      expect(buildWorkflow, `${fileName} must be required in the compiled package`).toContain(fileName)
     }
     expect(cleanScript).not.toContain('flash-atuan-park-clean-v2.webp')
     expect(verifyScript).toContain('non-collapsing Flash story viewport height chain')

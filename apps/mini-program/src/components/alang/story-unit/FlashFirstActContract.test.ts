@@ -15,7 +15,7 @@ const firstActs = [
   {
     slug: 'alang',
     component: 'AlangFirstActExperience.tsx',
-    asset: 'flash-alang-first-act-riverside-v2.webp',
+    asset: 'flash-alang-first-act-riverside-v2.jpg',
     objectCode: 'seat-plan',
     gameCode: 'spacing',
     highlights: ALANG_FIRST_ACT_HIGHLIGHTS,
@@ -23,7 +23,7 @@ const firstActs = [
   {
     slug: 'lizi',
     component: 'LiziFirstActExperience.tsx',
-    asset: 'flash-lizi-first-act-color-studio-v2.webp',
+    asset: 'flash-lizi-first-act-color-studio-v2.jpg',
     objectCode: 'dry-markers',
     gameCode: 'pairing',
     highlights: LIZI_FIRST_ACT_HIGHLIGHTS,
@@ -31,7 +31,7 @@ const firstActs = [
   {
     slug: 'momo',
     component: 'MomoFirstActExperience.tsx',
-    asset: 'flash-momo-first-act-rain-route-v2.webp',
+    asset: 'flash-momo-first-act-rain-route-v2.jpg',
     objectCode: 'route-book',
     gameCode: 'path',
     highlights: MOMO_FIRST_ACT_HIGHLIGHTS,
@@ -39,7 +39,7 @@ const firstActs = [
   {
     slug: 'shiqi',
     component: 'ShiqiFirstActExperience.tsx',
-    asset: 'flash-shiqi-first-act-record-room-v2.webp',
+    asset: 'flash-shiqi-first-act-record-room-v2.jpg',
     objectCode: 'outing-book',
     gameCode: 'overlay',
     highlights: SHIQI_FIRST_ACT_HIGHLIGHTS,
@@ -96,7 +96,8 @@ describe('Flash four-NPC first-act contract', () => {
     expect(chromeStyles).toMatch(/&__choice\s*\{[\s\S]*?min-height:\s*112rpx;/)
   })
 
-  it('ships the four accepted scenes as sharp, compact WebP assets', async () => {
+  it('ships the four accepted scenes as sharp, compact WeChat-safe JPEG assets', async () => {
+    const assetRegistry = readFileSync(resolve(sourceRoot, 'lib/alang/flashNpcAssets.ts'), 'utf8')
     let totalBytes = 0
     for (const { asset } of firstActs) {
       const path = resolve(assetRoot, asset)
@@ -105,12 +106,14 @@ describe('Flash four-NPC first-act contract', () => {
       const metadata = await sharp(path).metadata()
       totalBytes += bytes
       expect(metadata.width, `${asset} must stay close to Atuan's 941px scene baseline`).toBeGreaterThanOrEqual(850)
-      expect(bytes, `${asset} must fit its 100 KiB scene budget`).toBeLessThanOrEqual(100 * 1024)
-      expect(header.subarray(0, 4).toString('ascii')).toBe('RIFF')
-      expect(header.subarray(8, 12).toString('ascii')).toBe('WEBP')
+      expect(bytes, `${asset} must fit its 90 KiB scene budget`).toBeLessThanOrEqual(90 * 1024)
+      expect([...header.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff])
+      expect(metadata.format).toBe('jpeg')
+      expect(assetRegistry, `${asset} must be the active runtime scene`).toContain(asset)
+      expect(assetRegistry).not.toContain(asset.replace(/\.jpg$/, '.webp'))
     }
-    const liziMetadata = await sharp(resolve(assetRoot, 'flash-lizi-first-act-color-studio-v2.webp')).metadata()
+    const liziMetadata = await sharp(resolve(assetRoot, 'flash-lizi-first-act-color-studio-v2.jpg')).metadata()
     expect(liziMetadata).toEqual(expect.objectContaining({ width: 941, height: 1672 }))
-    expect(totalBytes).toBeLessThanOrEqual(310 * 1024)
+    expect(totalBytes).toBeLessThanOrEqual(230 * 1024)
   })
 })
