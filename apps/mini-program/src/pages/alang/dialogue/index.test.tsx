@@ -145,7 +145,8 @@ describe('formal Flash dialogue', () => {
     expect(stage.querySelector('.flash-page__scroll')).not.toBeInTheDocument()
     expect(screen.queryByTestId('flash-story-choice-panel')).not.toBeInTheDocument()
     expect(screen.getAllByTestId('shiqi-first-act-hotspot')).toHaveLength(4)
-    expect(screen.getByTestId('shiqi-scene-speech')).toHaveTextContent('三份记录看似一致')
+    expect(screen.queryByTestId('shiqi-scene-speech')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('shiqi-first-act-dialogue-panel')).not.toBeInTheDocument()
   })
 
   it('keeps the answer and fragment reveal inside the same story stage', () => {
@@ -399,7 +400,8 @@ describe('formal Flash dialogue', () => {
     render(<FlashDialoguePage />)
     expect(document.querySelector('[data-testid="flash-story-v2-stage"]')).toBeNull()
     expect(screen.getByTestId('lizi-first-act')).toBeInTheDocument()
-    expect(screen.getByTestId('lizi-speech')).toHaveTextContent('别急着替颜色找名字')
-    expect(screen.getAllByRole('button', { name: /^观察/ })).toHaveLength(4)
+    expect(screen.getAllByTestId('lizi-first-act-hotspot')).toHaveLength(4)
+    expect(screen.queryByTestId('lizi-scene-speech')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('lizi-first-act-dialogue-panel')).not.toBeInTheDocument()
   })
 })
