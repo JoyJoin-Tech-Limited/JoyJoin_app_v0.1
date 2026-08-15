@@ -6,6 +6,8 @@ export interface AtuanArrivalAssets {
   scene: string
   character: string
   bag: string
+  secondScene?: string
+  thirdScene?: string
 }
 
 type SceneTarget = 'atuan' | 'bench' | 'lamp'

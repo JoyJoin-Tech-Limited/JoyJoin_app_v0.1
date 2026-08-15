@@ -29,8 +29,12 @@ const atuanArrivalRelativePaths = [
   'pages/alang/assets/ui/flash-atuan-park-clean-v3.jpg',
   'pages/alang/assets/ui/flash-atuan-character-lowpoly-v3.png',
   'pages/alang/assets/ui/flash-atuan-bag-cutout-v2.png',
+  'pages/alang/assets/ui/flash-atuan-second-act-pavilion-v1.webp',
+  'pages/alang/assets/ui/flash-atuan-third-act-table-v1.webp',
 ]
-const flashRuntimeImageBudgetBytes = Math.round(1.05 * 1024 * 1024)
+// Includes the two reviewed Atuan later-act backgrounds while preserving
+// meaningful headroom below the 1.80 MiB Alang subpackage gate.
+const flashRuntimeImageBudgetBytes = Math.round(1.20 * 1024 * 1024)
 
 const flashRuntimeImages = [
   'pages/alang/assets/ui/flash-city-ambient-bg.png',
@@ -204,7 +208,7 @@ for (const relativePath of flashRuntimeImages) {
 }
 if (flashRuntimeImageBytes > flashRuntimeImageBudgetBytes) {
   failures.push(
-    `Flash runtime image assets use ${flashRuntimeImageBytes} bytes, exceeding the 1.05 MiB subpackage budget`,
+    `Flash runtime image assets use ${flashRuntimeImageBytes} bytes, exceeding the 1.20 MiB subpackage budget`,
   )
 }
 

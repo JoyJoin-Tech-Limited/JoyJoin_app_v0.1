@@ -24,6 +24,12 @@ import {
   getAtuanFirstActInvestigation,
   validateAtuanFirstActSubmission,
 } from "@joyjoin/shared/alang/atuanFirstAct";
+import {
+  atuanLaterActStoryAnswers,
+  getAtuanLaterActApproach,
+  isAtuanLaterActUnitId,
+  validateAtuanLaterActSubmission,
+} from "@joyjoin/shared/alang/atuanLaterActs";
 
 import {
   abandonFlashAssignment,
@@ -888,6 +894,46 @@ export async function getFlashEncounter(input: {
   };
 }
 
+function validateAtuanStoryPathForOption(input: {
+  encounterId: string;
+  unitId: string;
+  optionIndex: number;
+  storyPath: NonNullable<FlashAnswerRequest["storyPath"]>;
+}): {
+  storyAnswers: Array<{ questionId: string; optionId: string; tags: string[] }>;
+  responseCopy: string;
+} | null {
+  if (input.unitId === "s1-p1-atuan") {
+    const validatedPath = validateAtuanFirstActSubmission(input.encounterId, input.storyPath);
+    if (
+      !validatedPath
+      || validatedPath.submission.approachId !== getAtuanFirstActInvestigation(input.optionIndex).id
+    ) {
+      return null;
+    }
+    return {
+      storyAnswers: atuanFirstActStoryAnswers(validatedPath.submission),
+      responseCopy: validatedPath.outcome.responseCopy,
+    };
+  }
+
+  if (isAtuanLaterActUnitId(input.unitId)) {
+    const validatedPath = validateAtuanLaterActSubmission(input.unitId, input.storyPath);
+    if (
+      !validatedPath
+      || validatedPath.submission.approachId !== getAtuanLaterActApproach(input.unitId, input.optionIndex).id
+    ) {
+      return null;
+    }
+    return {
+      storyAnswers: atuanLaterActStoryAnswers(validatedPath.submission),
+      responseCopy: validatedPath.outcome.responseCopy,
+    };
+  }
+
+  return null;
+}
+
 export async function answerFlashEncounter(input: {
   encounterId: string;
   userId: string;
@@ -916,15 +962,20 @@ export async function answerFlashEncounter(input: {
       let replayResponseSnapshot = content.responseByOption[option.id]
         ?? content.closing;
       if (input.storyPath) {
-        if (storyState.episode.code !== "s1-p1-atuan") {
+        if (storyState.episode.code !== "s1-p1-atuan" && !isAtuanLaterActUnitId(storyState.episode.code)) {
           throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这条故事轨迹不属于当前相遇");
         }
-        const validatedPath = validateAtuanFirstActSubmission(input.encounterId, input.storyPath);
         const optionIndex = question.options.findIndex((candidate: { id: string }) => candidate.id === option.id);
-        if (!validatedPath || validatedPath.submission.approachId !== getAtuanFirstActInvestigation(optionIndex).id) {
+        const validatedPath = validateAtuanStoryPathForOption({
+          encounterId: input.encounterId,
+          unitId: storyState.episode.code,
+          optionIndex,
+          storyPath: input.storyPath,
+        });
+        if (!validatedPath) {
           throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这条故事轨迹已经失效，请重新进入相遇");
         }
-        replayResponseSnapshot = validatedPath.outcome.responseCopy;
+        replayResponseSnapshot = validatedPath.responseCopy;
       }
       return getFlashEncounter({
         encounterId: input.encounterId,
@@ -989,16 +1040,21 @@ export async function answerFlashEncounter(input: {
     let reviewedResponse = content.responseByOption[option.id]
       ?? content.closing;
     if (input.storyPath) {
-      if (storyState.episode.code !== "s1-p1-atuan") {
+      if (storyState.episode.code !== "s1-p1-atuan" && !isAtuanLaterActUnitId(storyState.episode.code)) {
         throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这条故事轨迹不属于当前相遇");
       }
-      const validatedPath = validateAtuanFirstActSubmission(input.encounterId, input.storyPath);
       const optionIndex = question.options.findIndex((candidate: { id: string }) => candidate.id === option.id);
-      if (!validatedPath || validatedPath.submission.approachId !== getAtuanFirstActInvestigation(optionIndex).id) {
+      const validatedPath = validateAtuanStoryPathForOption({
+        encounterId: input.encounterId,
+        unitId: storyState.episode.code,
+        optionIndex,
+        storyPath: input.storyPath,
+      });
+      if (!validatedPath) {
         throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这条故事轨迹已经失效，请重新进入相遇");
       }
-      storyAnswers = atuanFirstActStoryAnswers(validatedPath.submission);
-      reviewedResponse = validatedPath.outcome.responseCopy;
+      storyAnswers = validatedPath.storyAnswers;
+      reviewedResponse = validatedPath.responseCopy;
     }
     const intentResult = await prepareFlashStoryChoiceIntent({
       encounterId: input.encounterId,

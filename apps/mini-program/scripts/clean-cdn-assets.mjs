@@ -92,6 +92,11 @@ const sourceOnlyAlangUiAssets = new Set([
   'flash-atuan-character-cutout-v2.png',
 ])
 
+const bundledAlangUiWebpAssets = new Set([
+  'flash-atuan-second-act-pavilion-v1.webp',
+  'flash-atuan-third-act-table-v1.webp',
+])
+
 await removeMatching(
   'lovart',
   (name) => name !== 'puzzle' && name !== 'squad' && !bundledAlangAssets.has(name),
@@ -118,7 +123,7 @@ await Promise.all([
   removeMatchingFrom(
     alangAssetsDir,
     'ui',
-    (name) => name.endsWith('.webp') || sourceOnlyAlangUiAssets.has(name),
+    (name) => (name.endsWith('.webp') && !bundledAlangUiWebpAssets.has(name)) || sourceOnlyAlangUiAssets.has(name),
   ),
 ])
 

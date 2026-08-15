@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { FlashFeedbackPrompt } from "../schema/flash.js";
 import { atuanFirstActSubmissionSchema } from "./atuanFirstAct.js";
+import { atuanLaterActSubmissionSchema } from "./atuanLaterActs.js";
 
 export const FLASH_CITY = "深圳" as const;
 export const FLASH_COORDINATE_SYSTEM = "gcj02" as const;
@@ -45,7 +46,7 @@ export type FlashCoordinateRequest = z.infer<typeof flashCoordinateSchema>;
 export const flashAnswerRequestSchema = z.object({
   questionId: z.string().trim().min(1).max(80),
   optionId: z.string().trim().min(1).max(80),
-  storyPath: atuanFirstActSubmissionSchema.optional(),
+  storyPath: z.union([atuanFirstActSubmissionSchema, atuanLaterActSubmissionSchema]).optional(),
 });
 export type FlashAnswerRequest = z.infer<typeof flashAnswerRequestSchema>;
 

@@ -1,0 +1,232 @@
+@use '../../../styles/variables' as *;
+
+.atuan-later-experience {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: $color-text-primary;
+  color: $color-text-primary-warm;
+}
+
+.atuan-later-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, $color-glow-gold-hot 0%, $flow-world-corgi-accent 52%, $color-text-primary 100%);
+  transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1), transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.atuan-later-scene--third,
+.atuan-later-scene--fallback.atuan-later-scene--third {
+  background: linear-gradient(180deg, $color-dusk-lavender 0%, $flow-world-spider-accent 52%, $color-text-primary 100%);
+}
+
+.atuan-later-scene__background,
+.atuan-later-scene__grade,
+.atuan-later-scene__hotspots {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.atuan-later-scene__grade {
+  background: linear-gradient(180deg, rgba($color-text-primary-warm, 0.04) 0%, rgba($color-text-primary-warm, 0.02) 44%, rgba($color-text-primary, 0.8) 100%);
+  pointer-events: none;
+}
+
+.atuan-later-scene__character {
+  position: absolute;
+  right: -3%;
+  bottom: 30%;
+  width: 42%;
+  height: 48%;
+  filter: drop-shadow(0 16rpx 22rpx rgba($color-text-primary, 0.25));
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.atuan-later-scene__character--quiet {
+  opacity: 0.16;
+  transform: translateX(12%);
+}
+
+.atuan-later-scene__speech {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 104rpx);
+  left: 32rpx;
+  right: 32rpx;
+  z-index: 4;
+  box-sizing: border-box;
+  padding: 16rpx 24rpx;
+  border: 2rpx solid rgba($color-primary-dark, 0.14);
+  border-radius: 24rpx 24rpx 24rpx 8rpx;
+  background: rgba($color-bg-tint-cream, 0.94);
+  box-shadow: 0 16rpx 32rpx rgba($color-text-primary, 0.18);
+}
+
+.atuan-later-scene__speaker,
+.atuan-later-scene__speech-copy {
+  display: block;
+}
+
+.atuan-later-scene__speaker {
+  margin-bottom: 6rpx;
+  color: $color-primary-dark;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  letter-spacing: 0.08em;
+}
+
+.atuan-later-scene__speech-copy {
+  color: $color-text-primary-warm;
+  font-size: $font-size-base;
+  font-weight: 560;
+  line-height: 1.55;
+}
+
+.atuan-later-scene__hotspots {
+  z-index: 3;
+}
+
+.atuan-later-scene__hotspot {
+  position: absolute;
+  width: 92rpx;
+  height: 92rpx;
+  margin: -46rpx 0 0 -46rpx;
+}
+
+.atuan-later-scene__hotspot--plan { left: 31%; top: 59%; }
+.atuan-later-scene__hotspot--chair { left: 77%; top: 75%; }
+.atuan-later-scene__hotspot--place { left: 62%; top: 56%; }
+.atuan-later-scene__hotspot--box { left: 28%; top: 56%; }
+.atuan-later-scene__hotspot--card { left: 47%; top: 58%; }
+.atuan-later-scene__hotspot--seat { left: 76%; top: 54%; }
+
+.atuan-later-scene__hotspot-ring {
+  position: absolute;
+  inset: 16rpx;
+  border: 4rpx solid $color-bg-tint-cream;
+  border-radius: 50%;
+  box-shadow: 0 0 0 8rpx rgba($color-primary-dark, 0.35), 0 8rpx 16rpx rgba($color-text-primary, 0.32);
+  animation: atuan-later-pulse 1.8s ease-in-out infinite;
+}
+
+.atuan-later-scene__hotspot--seen .atuan-later-scene__hotspot-ring {
+  border-color: $color-primary-dark;
+  background: $color-bg-tint-cream;
+  box-shadow: 0 0 0 6rpx rgba($color-bg-tint-cream, 0.32);
+  animation: none;
+}
+
+.atuan-later-scene__hotspot--focused .atuan-later-scene__hotspot-ring {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 10rpx rgba($color-bg-tint-cream, 0.4), 0 8rpx 24rpx rgba($color-text-primary, 0.34);
+}
+
+.atuan-later-experience__chapter {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 32rpx);
+  left: 32rpx;
+  z-index: 5;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: rgba($color-text-primary, 0.76);
+  color: $color-bg-tint-cream;
+  font-size: $font-size-xs;
+  letter-spacing: 0.06em;
+}
+
+.atuan-later-experience__panel {
+  position: absolute;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: calc(env(safe-area-inset-bottom) + 24rpx);
+  z-index: 6;
+  max-height: 34%;
+  overflow: hidden;
+  border: 2rpx solid rgba($color-primary-dark, 0.16);
+  border-radius: 28rpx;
+  background: rgba($color-bg-tint-cream, 0.96);
+  box-shadow: 0 16rpx 48rpx rgba($color-text-primary, 0.3);
+}
+
+.atuan-later-experience__scroll { max-height: 430rpx; }
+.atuan-later-experience__section,
+.atuan-later-experience__ending { padding: 24rpx; }
+.atuan-later-experience__section--transition {
+  text-align: center;
+  animation: atuan-later-rise 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.atuan-later-experience__panel--prelude { max-height: 42%; }
+.atuan-later-experience__game-title,
+.atuan-later-experience__game-copy { display: block; }
+.atuan-later-experience__game-title { margin-top: 16rpx; font-family: $font-cn-display; font-size: $font-size-2xl; font-weight: $font-weight-semibold; line-height: 1.35; }
+.atuan-later-experience__game-copy { margin-top: 16rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; line-height: $line-height-relaxed; }
+.atuan-later-experience__game-progress { display: flex; justify-content: center; gap: 16rpx; margin: 32rpx 0; }
+.atuan-later-experience__game-progress-dot { width: 40rpx; height: 8rpx; border-radius: $radius-pill; background: rgba($color-primary, 0.14); transition: background-color 180ms ease-out, transform 180ms ease-out; }
+.atuan-later-experience__game-progress-dot--active { background: $color-primary; transform: scaleX(1.08); }
+.atuan-later-experience--game { background: $color-bg-warm-to; color: $color-text-primary-warm; }
+.atuan-later-experience--game .atuan-later-scene { opacity: 0; transform: scale(1.025); pointer-events: none; }
+.atuan-later-experience--game .atuan-later-experience__chapter { top: calc(env(safe-area-inset-top) + 40rpx); left: 32rpx; z-index: 8; padding: 0; background: transparent; color: $color-primary-dark; }
+.atuan-later-experience--game .atuan-later-experience__panel { inset: 0; max-height: none; border: 0; border-radius: 0; background: $color-bg-warm-to; box-shadow: none; animation: atuan-later-game-enter 300ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.atuan-later-experience--game .atuan-later-experience__scroll { height: 100%; max-height: none; }
+.atuan-later-experience--game .atuan-later-experience__section { box-sizing: border-box; padding: calc(env(safe-area-inset-top) + 112rpx) 32rpx calc(env(safe-area-inset-bottom) + 176rpx); }
+.atuan-later-experience--game .atuan-later-experience__ending { position: absolute; right: 32rpx; bottom: calc(env(safe-area-inset-bottom) + 40rpx); left: 32rpx; z-index: 2; padding: 0; }
+.atuan-later-experience__eyebrow { display: block; margin-bottom: 8rpx; color: $color-primary-dark; font-size: $font-size-xs; font-weight: $font-weight-bold; letter-spacing: 0.08em; }
+.atuan-later-experience__prompt { display: block; color: $color-text-primary-warm; font-size: $font-size-base; font-weight: $font-weight-semibold; line-height: 1.45; }
+.atuan-later-experience__progress { display: block; margin-top: 16rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; }
+.atuan-later-experience__choices { display: flex; flex-direction: column; gap: 16rpx; margin-top: 16rpx; }
+.atuan-later-experience__choices--compact { gap: 16rpx; }
+.atuan-later-experience__choice,
+.atuan-later-experience__game-action,
+.atuan-later-experience__complete {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 88rpx;
+  padding: 16rpx 24rpx;
+  border: 2rpx solid rgba($color-primary-dark, 0.2);
+  border-radius: 24rpx;
+  background: $color-surface;
+  color: $color-text-primary-warm;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  line-height: 1.4;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+.atuan-later-experience__game-action,
+.atuan-later-experience__complete { justify-content: center; margin-top: 16rpx; background: $color-primary-dark; color: $color-bg-tint-cream; }
+.atuan-later-experience__choice--pressed,
+.atuan-later-experience__game-action--pressed,
+.atuan-later-experience__complete--pressed { transform: scale(0.985); }
+.atuan-later-experience__feedback { display: block; margin: 16rpx 0; padding: 16rpx; border-radius: 16rpx; background: $color-bg-tint-warm; color: $color-amber-700; font-size: $font-size-sm; line-height: 1.45; }
+.atuan-later-experience__ending { padding-top: 0; }
+.atuan-later-experience__ending-title { display: block; color: $color-primary-dark; font-size: $font-size-base; font-weight: $font-weight-bold; text-align: center; }
+
+@keyframes atuan-later-pulse {
+  0%, 100% { transform: scale(0.88); opacity: 0.72; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes atuan-later-rise {
+  from { opacity: 0; transform: translateY(16rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes atuan-later-game-enter {
+  from { opacity: 0; transform: translateY(24rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atuan-later-scene__hotspot-ring { animation: none; }
+  .atuan-later-experience__section--transition { animation: none; }
+  .atuan-later-experience--game .atuan-later-scene,
+  .atuan-later-experience--game .atuan-later-experience__panel,
+  .atuan-later-experience__game-progress-dot { transition: none; animation: none; }
+  .atuan-later-experience__choice,
+  .atuan-later-experience__game-action,
+  .atuan-later-experience__complete,
+  .atuan-later-scene__character { transition: none; }
+}

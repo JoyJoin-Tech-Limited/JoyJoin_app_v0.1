@@ -178,13 +178,82 @@ describe('FlashStoryUnit production flow', () => {
     expect(screen.queryByText('接住卡片')).not.toBeInTheDocument()
   })
 
-  it('keeps later Atuan chapters on their existing conversational path', () => {
+  it('opens Atuan second act on its new background and dedicated interaction path', () => {
     const submit = vi.fn().mockResolvedValue(undefined)
     const story = { ...firstStory, id: 'episode-atuan-2', code: 's1-p2-atuan', phase: 2, title: '阿团认领座位图', objectCode: 'seat-plan' }
     const question = { ...firstQuestion, id: 's1-p2-atuan-response-v2' }
-    render(<FlashStoryUnit encounterId='enc-p2' npc={baseNpc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={6} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
-    expect(screen.getByTestId('npc-speech')).not.toBeEmptyDOMElement()
+    render(<FlashStoryUnit encounterId='enc-p2' npc={baseNpc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={6} submitState='idle' submitError='' atuanArrivalAssets={{ scene: 'park.webp', secondScene: 'pavilion.webp', thirdScene: 'table.webp', character: 'atuan.webp', bag: 'bag.webp' }} onSubmit={submit} onContinue={vi.fn()} />)
+    expect(screen.getByTestId('atuan-later-background')).toHaveAttribute('src', 'pavilion.webp')
+    expect(screen.getByTestId('atuan-later-prelude')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '先看看他改过的地方' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '先看看他改过的地方' }))
+    expect(screen.getByTestId('atuan-later-experience')).toHaveAttribute('data-unit-id', 's1-p2-atuan')
+    expect(screen.getByText('你接着说')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '这些折痕，是你一次次改出来的吗？' }))
+    expect(screen.getByRole('button', { name: '查看反复折过的座位图' })).toBeInTheDocument()
+    expect(screen.queryByTestId('npc-speech')).not.toBeInTheDocument()
     expect(screen.queryByTestId('atuan-arrival-prelude')).not.toBeInTheDocument()
+  })
+
+  it('lets a completed later Atuan act retry the exact same submission after a transport failure', () => {
+    const submit = vi.fn().mockResolvedValue(undefined)
+    const story = { ...firstStory, id: 'episode-atuan-2-retry', code: 's1-p2-atuan', phase: 2, title: '阿团认领座位图', objectCode: 'seat-plan' }
+    const question = { ...firstQuestion, id: 's1-p2-atuan-response-v2' }
+    const baseProps = {
+      encounterId: 'enc-p2-retry', npc: baseNpc as any, story: story as any, question: question as any,
+      motion: motion as any, storyPosition: 6, submitError: '', atuanArrivalAssets: { scene: 'park.webp', secondScene: 'pavilion.webp', thirdScene: 'table.webp', character: 'atuan.webp', bag: 'bag.webp' },
+      onSubmit: submit, onContinue: vi.fn(),
+    }
+    const view = render(<FlashStoryUnit {...baseProps} submitState='idle' />)
+
+    fireEvent.click(screen.getByRole('button', { name: '先看看他改过的地方' }))
+    fireEvent.click(screen.getByRole('button', { name: '这些折痕，是你一次次改出来的吗？' }))
+    for (const name of ['查看反复折过的座位图', '查看椅脚旁的浅痕', '查看没有名字的席位卡']) fireEvent.click(screen.getByRole('button', { name }))
+    fireEvent.click(screen.getByRole('button', { name: '把你的邀请说清，把舒服的距离留给他选。' }))
+    fireEvent.click(screen.getByRole('button', { name: '和阿团一起摆好座位图' }))
+    fireEvent.click(screen.getByRole('button', { name: '把座位图转正' }))
+    fireEvent.click(screen.getByRole('button', { name: '留出能自在说话的距离' }))
+    fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
+    expect(submit).toHaveBeenCalledTimes(1)
+
+    view.rerender(<FlashStoryUnit {...baseProps} submitState='retry' submitError='网络开了小差，这段故事还没有丢。' />)
+    expect(screen.getByRole('alert')).toHaveTextContent('这段故事还没有丢')
+    fireEvent.click(screen.getByRole('button', { name: '重新送出' }))
+    expect(submit).toHaveBeenCalledTimes(2)
+    expect(submit.mock.calls[1]?.[0]).toEqual(submit.mock.calls[0]?.[0])
+  })
+
+  it('runs Atuan third act from its opening choice through the returned-card table game', () => {
+    const submit = vi.fn().mockResolvedValue(undefined)
+    const story = { ...firstStory, id: 'episode-atuan-3', code: 's1-p3-atuan', phase: 3, title: '座位图写上了名字', objectCode: 'seat-plan' }
+    const question = { ...firstQuestion, id: 's1-p3-atuan-response-v2' }
+    render(<FlashStoryUnit encounterId='enc-p3' npc={baseNpc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={15} submitState='idle' submitError='' atuanArrivalAssets={{ scene: 'park.webp', secondScene: 'pavilion.webp', thirdScene: 'table.webp', character: 'atuan.webp', bag: 'bag.webp' }} onSubmit={submit} onContinue={vi.fn()} />)
+
+    expect(screen.getByTestId('atuan-later-background')).toHaveAttribute('src', 'table.webp')
+    fireEvent.click(screen.getByRole('button', { name: '先看看箱底那把钥匙' }))
+    fireEvent.click(screen.getByRole('button', { name: '第六张卡，原来一直在这里？' }))
+    for (const name of ['查看木箱旁的钥匙', '查看回来的第六张卡', '查看座位图上空着的另一边']) fireEvent.click(screen.getByRole('button', { name }))
+    fireEvent.click(screen.getByRole('button', { name: '告诉他不用现在回答，这个位置不会催他。' }))
+    fireEvent.click(screen.getByRole('button', { name: '和阿团一起打开这份迟到的邀请' }))
+    fireEvent.click(screen.getByRole('button', { name: '用钥匙打开夹层' }))
+    fireEvent.click(screen.getByRole('button', { name: '把第六张卡摆到座位图中央' }))
+    fireEvent.click(screen.getByRole('button', { name: '放上阿团的名牌' }))
+    fireEvent.click(screen.getByRole('button', { name: '替默默写上名字' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('不能替默默写下答案')
+    fireEvent.click(screen.getByRole('button', { name: '把另一边留空' }))
+    fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
+
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: question.id,
+      optionId: 'atuan-a',
+      storyPath: expect.objectContaining({
+        unitId: 's1-p3-atuan',
+        arrivalReplyId: 'ask_sixth_card',
+        actionId: 'open_returned_card',
+        endingId: 'answer_left_open',
+        game: expect.objectContaining({ invitationPlaced: true, otherSeat: 'blank', attempts: 1 }),
+      }),
+    }))
   })
 
   it('keeps the park scene and removes the identity tag after the first story settles', () => {

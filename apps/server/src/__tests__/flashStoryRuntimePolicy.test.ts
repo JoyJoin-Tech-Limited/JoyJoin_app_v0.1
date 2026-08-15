@@ -4,6 +4,11 @@ import {
   resolveAtuanFirstActOutcome,
   toAtuanFirstActSubmission,
 } from "@joyjoin/shared/alang/atuanFirstAct";
+import {
+  createAtuanLaterActProgress,
+  resolveAtuanLaterActOutcome,
+  toAtuanLaterActSubmission,
+} from "@joyjoin/shared/alang/atuanLaterActs";
 
 const mocks = vi.hoisted(() => ({
   completeStoryEpisode: vi.fn(),
@@ -365,6 +370,126 @@ describe("formal Flash story runtime policy", () => {
     expect(mocks.prepareChoiceIntent).not.toHaveBeenCalled();
     expect(mocks.finalizeChoiceIntent).not.toHaveBeenCalled();
     expect(mocks.completeStoryEpisode).not.toHaveBeenCalled();
+  });
+
+  it("validates and persists the complete reviewed Atuan second-act path", async () => {
+    const initial = storyState();
+    initial.episode.code = "s1-p2-atuan";
+    initial.episode.phase = 2;
+    initial.episode.content.question = {
+      id: "second-look",
+      prompt: "这次你先看哪里？",
+      options: [
+        { id: "read-plan", label: "先看改过的地方" },
+        { id: "name-invitation", label: "先问这是不是邀请" },
+      ],
+    };
+    const progress = createAtuanLaterActProgress("s1-p2-atuan", "read_plan_first");
+    const outcome = resolveAtuanLaterActOutcome({
+      ...progress,
+      arrivalReplyId: "ask_fold_history",
+      highlightOrder: ["plan_folds", "chair_scuffs", "blank_place"],
+      followupId: "leave_choice",
+      gameStarted: true,
+      game: { planUpright: true, chairGap: "breathing", attempts: 2 },
+    });
+    const storyPath = toAtuanLaterActSubmission(outcome.progress);
+    const completed = {
+      ...initial,
+      completion: {
+        selectedOptionId: "read-plan",
+        responseSnapshot: outcome.responseCopy,
+        renderKind: "template" as const,
+        promptVersion: null,
+        echoSnapshot: null,
+      },
+      completedInPhase: 1,
+      completedTotal: 1,
+    };
+    mocks.getStoryEncounterState
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(completed);
+
+    const result = await answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "second-look",
+      optionId: "read-plan",
+      storyPath,
+      now,
+    });
+
+    expect(mocks.prepareChoiceIntent).toHaveBeenCalledWith(expect.objectContaining({
+      storyAnswers: expect.arrayContaining([
+        expect.objectContaining({ questionId: "atuan-later-act:ending", optionId: "room_preserved" }),
+        expect.objectContaining({ questionId: "atuan-later-act:arrival-reply", optionId: "ask_fold_history" }),
+        expect.objectContaining({ questionId: "atuan-later-act:action", optionId: "arrange_seating_plan" }),
+        expect.objectContaining({ questionId: "atuan-later-act:game:chair-gap", optionId: "breathing" }),
+      ]),
+    }));
+    expect(mocks.finalizeChoiceIntent).toHaveBeenCalledWith(expect.objectContaining({
+      responseSnapshot: outcome.responseCopy,
+    }));
+    expect(result.storyEpisode?.response).toBe(outcome.responseCopy);
+  });
+
+  it("validates and persists the complete reviewed Atuan third-act path", async () => {
+    const initial = storyState();
+    initial.episode.code = "s1-p3-atuan";
+    initial.episode.phase = 3;
+    initial.episode.content.question = {
+      id: "third-look",
+      prompt: "最后这次你先看哪里？",
+      options: [
+        { id: "open-box", label: "先看钥匙" },
+        { id: "read-card", label: "先看第六张卡" },
+      ],
+    };
+    const progress = createAtuanLaterActProgress("s1-p3-atuan", "open_box_first");
+    const outcome = resolveAtuanLaterActOutcome({
+      ...progress,
+      arrivalReplyId: "ask_sixth_card",
+      highlightOrder: ["box_key", "sixth_card", "empty_seat"],
+      followupId: "leave_answer",
+      gameStarted: true,
+      game: { boxUnlocked: true, invitationPlaced: true, atuanNamePlaced: true, otherSeat: "blank", attempts: 1 },
+    });
+    const storyPath = toAtuanLaterActSubmission(outcome.progress);
+    const completed = {
+      ...initial,
+      completion: {
+        selectedOptionId: "open-box",
+        responseSnapshot: outcome.responseCopy,
+        renderKind: "template" as const,
+        promptVersion: null,
+        echoSnapshot: null,
+      },
+      completedInPhase: 1,
+      completedTotal: 1,
+    };
+    mocks.getStoryEncounterState
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(completed);
+
+    const result = await answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "third-look",
+      optionId: "open-box",
+      storyPath,
+      now,
+    });
+
+    expect(mocks.prepareChoiceIntent).toHaveBeenCalledWith(expect.objectContaining({
+      storyAnswers: expect.arrayContaining([
+        expect.objectContaining({ questionId: "atuan-later-act:ending", optionId: "answer_left_open" }),
+        expect.objectContaining({ questionId: "atuan-later-act:arrival-reply", optionId: "ask_sixth_card" }),
+        expect.objectContaining({ questionId: "atuan-later-act:action", optionId: "open_returned_card" }),
+        expect.objectContaining({ questionId: "atuan-later-act:game:invitation", optionId: "placed_on_plan" }),
+        expect.objectContaining({ questionId: "atuan-later-act:game:other-seat", optionId: "blank" }),
+      ]),
+    }));
+    expect(result.storyEpisode?.response).toBe(outcome.responseCopy);
   });
 
   it("returns the completed snapshot without settling again when a committed response was lost", async () => {

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { getFlashStoryUnitDefinition, isFlashV2PilotUnitId } from '@shared/alang/flashStorySeason'
 import type { AtuanFirstActSubmission } from '@shared/alang/atuanFirstAct'
+import type { AtuanLaterActSubmission } from '@shared/alang/atuanLaterActs'
 import { FlashStoryUnit } from '../../../components/alang/story-unit/FlashStoryUnit'
 import { FlashStoryV2Stage } from '../../../components/alang/FlashStoryV2Stage'
 import { FlashButton, FlashFeatureClosed, FlashNpcDialogueScene, FlashPageState, FlashTaskCategoryBadge } from '../../../components/alang/FlashUi'
@@ -24,6 +25,8 @@ import { haptics } from '../../../lib/utils/haptics'
 import atuanArrivalScene from '../assets/ui/flash-atuan-park-clean-v3.jpg'
 import atuanArrivalCharacter from '../assets/ui/flash-atuan-character-lowpoly-v3.png'
 import atuanArrivalBag from '../assets/ui/flash-atuan-bag-cutout-v2.png'
+import atuanSecondActScene from '../assets/ui/flash-atuan-second-act-pavilion-v1.webp'
+import atuanThirdActScene from '../assets/ui/flash-atuan-third-act-table-v1.webp'
 import '../flash.scss'
 
 function dialogueActionError(error: unknown, fallback: string): string {
@@ -174,7 +177,7 @@ export default function FlashDialoguePage() {
     }
   }
 
-  const submitStoryChoice = async (choice: { questionId: string; optionId: string; label: string; storyPath?: AtuanFirstActSubmission }) => {
+  const submitStoryChoice = async (choice: { questionId: string; optionId: string; label: string; storyPath?: AtuanFirstActSubmission | AtuanLaterActSubmission }) => {
     if (!enabled || storySubmitInFlightRef.current) return
     const payload = {
       encounterId,
@@ -343,6 +346,8 @@ export default function FlashDialoguePage() {
             scene: atuanArrivalScene,
             character: atuanArrivalCharacter,
             bag: atuanArrivalBag,
+            secondScene: atuanSecondActScene,
+            thirdScene: atuanThirdActScene,
           }}
           onSubmit={submitStoryChoice}
           onContinue={() => {
