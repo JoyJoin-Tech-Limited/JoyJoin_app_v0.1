@@ -1,0 +1,67 @@
+@use '../../../styles/variables' as *;
+
+.first-act-atuan-template {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  color: $color-text-primary-warm;
+  background: $color-bg-warm-to;
+  font-family: $font-ui;
+
+  &--disabled { pointer-events: none; }
+
+  &__event {
+    position: absolute;
+    z-index: 6;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  &__event-ribbon {
+    position: absolute;
+    width: 420rpx;
+    height: 4rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.72);
+    box-shadow: 0 0 16rpx rgba($color-surface, 0.3);
+    transform: rotate(-12deg);
+
+    &--one { top: 37%; left: -70rpx; }
+    &--two { top: 46%; right: -100rpx; transform: rotate(10deg); }
+  }
+
+  &__event-object {
+    position: absolute;
+    top: 44%;
+    left: 50%;
+    width: 152rpx;
+    height: 196rpx;
+    margin: -98rpx 0 0 -76rpx;
+    border: 3rpx solid rgba($color-surface, 0.9);
+    border-radius: $radius-md;
+    background: rgba($color-bg-warm-from, 0.96);
+    box-shadow: 0 20rpx 44rpx rgba($color-text-primary, 0.24);
+    transform: rotate(-7deg);
+    transition: transform 160ms ease-out;
+
+    &--pressed { transform: rotate(-7deg) scale(0.94); }
+  }
+
+  &__event-rule {
+    position: absolute;
+    top: 56rpx;
+    right: 24rpx;
+    left: 24rpx;
+    height: 4rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.48);
+    box-shadow: 0 28rpx 0 rgba($color-primary, 0.28), 0 56rpx 0 rgba($color-primary, 0.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .first-act-atuan-template__event-object { transition: none; }
+}

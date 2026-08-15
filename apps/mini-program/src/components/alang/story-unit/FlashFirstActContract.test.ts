@@ -61,31 +61,48 @@ describe('Flash four-NPC first-act contract', () => {
   })
 
   it('keeps each mini-game on its own server object and interaction code', () => {
-    const pairs = firstActs.map(({ component, objectCode, gameCode }) => {
+    const sharedGame = readFileSync(resolve(sourceRoot, 'pages/alang/atuan-cards/index.tsx'), 'utf8')
+    const pairs = firstActs.map(({ slug, component, objectCode, gameCode }) => {
       const source = readFileSync(resolve(componentRoot, component), 'utf8')
-      expect(source).toContain(`data-object-code='${objectCode}'`)
-      expect(source).toContain(`data-game-code='${gameCode}'`)
+      if (slug === 'lizi') {
+        expect(source).toContain(`data-object-code='${objectCode}'`)
+        expect(source).toContain(`data-game-code='${gameCode}'`)
+      } else {
+        expect(source).toContain(`objectCode: '${objectCode}'`)
+        expect(sharedGame).toContain(`${slug}: {`)
+      }
       return `${objectCode}/${gameCode}`
     })
     expect(new Set(pairs).size).toBe(firstActs.length)
   })
 
   it('uses the scene speech bubble as the single polite live region', () => {
-    for (const { component } of firstActs) {
+    const templateSource = readFileSync(resolve(componentRoot, 'FirstActAtuanTemplateExperience.tsx'), 'utf8')
+    expect(templateSource).toContain("aria-live='polite'")
+    expect(templateSource).toContain('<FirstActDialogueChrome')
+    for (const { slug, component } of firstActs) {
       const source = readFileSync(resolve(componentRoot, component), 'utf8')
-      expect(source.match(/role='status'/g) ?? [], component).toHaveLength(1)
-      expect(source).toContain("aria-live='polite'")
-      expect(source).toContain("aria-atomic='true'")
+      if (slug === 'lizi') {
+        expect(source.match(/role='status'/g) ?? [], component).toHaveLength(1)
+        expect(source).toContain("aria-live='polite'")
+        expect(source).toContain("aria-atomic='true'")
+      } else {
+        expect(source).toContain('<FirstActAtuanTemplateExperience')
+      }
     }
   })
 
-  it('routes every NPC through the shared four-target highlight overlay', () => {
-    for (const { component } of firstActs) {
+  it('routes the three corrected NPCs through the Atuan state template', () => {
+    const templateSource = readFileSync(resolve(componentRoot, 'FirstActAtuanTemplateExperience.tsx'), 'utf8')
+    expect(templateSource).toContain("const primaryHighlights = config.highlights.slice(0, 3)")
+    expect(templateSource).toContain('const revealedHighlight = config.highlights[3]')
+    expect(templateSource).toContain('<FirstActHighlightOverlay')
+    expect(templateSource).toContain('<FirstActDialogueChrome')
+    for (const { slug, component } of firstActs) {
       const source = readFileSync(resolve(componentRoot, component), 'utf8')
-      expect(source, component).toContain("import { FirstActHighlightOverlay }")
-      expect(source, component).toContain('<FirstActHighlightOverlay')
-      expect(source, component).toContain("import { FirstActDialogueChrome }")
-      expect(source, component).toContain('<FirstActDialogueChrome')
+      if (slug === 'lizi') continue
+      expect(source, component).toContain('FirstActAtuanTemplateExperience')
+      expect(source, component).toContain('<FirstActAtuanTemplateExperience')
     }
   })
 

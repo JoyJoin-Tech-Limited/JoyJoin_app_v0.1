@@ -24,6 +24,8 @@ vi.mock('@tarojs/taro', () => ({
     redirectTo: mocks.redirectTo,
     getStorageSync: mocks.getStorageSync,
     setStorageSync: vi.fn(),
+    removeStorageSync: vi.fn(),
+    navigateTo: vi.fn(),
   },
 }))
 vi.mock('@tarojs/components', () => ({
@@ -128,7 +130,7 @@ describe('formal Flash dialogue', () => {
     }))
   })
 
-  it('routes the first Shiqi unit through its opening beat before the four-highlight experience', () => {
+  it('routes the first Shiqi unit directly into the Atuan-style three-clue scene', () => {
     mocks.useEncounter.mockReturnValue({
       data: storyEncounter,
       isLoading: false,
@@ -144,11 +146,10 @@ describe('formal Flash dialogue', () => {
     expect(stage).toContainElement(experience)
     expect(stage.querySelector('.flash-page__scroll')).not.toBeInTheDocument()
     expect(screen.queryByTestId('flash-story-choice-panel')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('shiqi-first-act-hotspot')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '替拾柒接住滑下灯箱的路线纸' }))
-    fireEvent.click(screen.getByRole('button', { name: '先看三张纸都留下了什么痕迹' }))
-    fireEvent.click(screen.getByRole('button', { name: '先核对四处记录' }))
-    expect(screen.getAllByTestId('shiqi-first-act-hotspot')).toHaveLength(4)
+    expect(screen.getAllByTestId('shiqi-first-act-hotspot')).toHaveLength(3)
+    fireEvent.click(screen.getByRole('button', { name: '观察拾柒本人' }))
+    expect(screen.getByTestId('shiqi-scene-clue')).toHaveTextContent('只让纸张最浅的压痕露出来')
+    expect(screen.queryByText('你先确认共同的浅痕？')).not.toBeInTheDocument()
     expect(screen.queryByTestId('shiqi-first-act-dialogue-panel')).not.toBeInTheDocument()
   })
 
@@ -200,25 +201,18 @@ describe('formal Flash dialogue', () => {
       refetch: mocks.refetch,
     })
     mocks.answer.mockRejectedValueOnce(new Error('offline'))
-    mocks.getStorageSync.mockImplementation((key: string) => key === 'joyjoin_flash_shiqi_first_act_v1:encounter-1'
+    mocks.getStorageSync.mockImplementation((key: string) => key === 'joyjoin:flash:shiqi-first-act:v2:encounter-1'
       ? {
-          version: 'shiqi-first-act-v1',
+          version: 'atuan-template-v1',
           stage: 'success',
-          completedHotspots: ['shiqi', 'outing-book', 'exchange-box', 'inspection-light'],
-          selectedReplies: {},
-          activeHotspot: null,
-          activeReplyId: null,
+          seenIds: ['shiqi', 'outing-book', 'exchange-box', 'inspection-light'],
+          activeId: null,
           approachIndex: 0,
-          layerOffsets: [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }],
-          lockedLayers: [true, true, true],
-          activeLayer: 2,
-          firstErrorShown: true,
-          gameStatus: 'aligned',
         }
       : undefined)
 
     render(<FlashDialoguePage />)
-    fireEvent.click(screen.getByRole('button', { name: '完成《记录没有说完》' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成拾柒第一幕' }))
 
     const alert = await screen.findByRole('alert')
     expect(screen.getByTestId('flash-story-stage')).toContainElement(alert)
@@ -227,7 +221,7 @@ describe('formal Flash dialogue', () => {
     expect(mocks.answer).toHaveBeenCalledTimes(1)
     expect(mocks.refetch).toHaveBeenCalledTimes(1)
 
-    fireEvent.click(screen.getByRole('button', { name: '完成《记录没有说完》' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成拾柒第一幕' }))
     await waitFor(() => expect(mocks.answer).toHaveBeenCalledTimes(2))
   })
 

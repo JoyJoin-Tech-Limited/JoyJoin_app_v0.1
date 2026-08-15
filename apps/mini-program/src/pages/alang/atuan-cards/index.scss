@@ -24,3 +24,10 @@
   &__continue { display:flex; min-height:88rpx; margin-top:24rpx; align-items:center; justify-content:center; border-radius:$radius-pill; color:$color-surface; background:$color-primary; font-size:$font-size-base; font-weight:$font-weight-bold; }
   &__atuan-copy { margin-top:28rpx; color:$color-text-secondary-on-light; font-size:$font-size-sm; line-height:$line-height-relaxed; text-align:center; }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .atuan-cards__progress-dot,
+  .atuan-cards__destination {
+    transition: none;
+  }
+}

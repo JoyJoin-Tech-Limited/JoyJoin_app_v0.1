@@ -1,1 +1,1 @@
-export default definePageConfig({ navigationBarTitleText: '和阿团整理卡片' })
+export default definePageConfig({ navigationBarTitleText: '整理这一幕的线索' })
