@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { createAtuanLaterActProgress, type AtuanLaterActProgress, type AtuanThirdActProgress } from '@shared/alang/atuanLaterActs'
-import { AtuanLaterActExperience, AtuanLaterActPrelude } from './AtuanLaterActExperience'
+import { AtuanLaterActExperience, AtuanLaterActPrelude, AtuanLaterActScene } from './AtuanLaterActExperience'
 
 vi.mock('@tarojs/components', () => ({
   View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>,
@@ -12,6 +12,23 @@ vi.mock('@tarojs/components', () => ({
 }))
 
 describe('AtuanLaterActExperience', () => {
+  it('keeps the scene usable when WeChat cannot decode the bundled background', () => {
+    render(
+      <AtuanLaterActScene
+        unitId='s1-p2-atuan'
+        background='pavilion.webp'
+        character='atuan.webp'
+        speech='test speech'
+      />,
+    )
+
+    fireEvent.error(screen.getByTestId('atuan-later-background'))
+
+    expect(screen.queryByTestId('atuan-later-background')).not.toBeInTheDocument()
+    expect(screen.getByTestId('atuan-later-scene')).toHaveClass('atuan-later-scene--fallback')
+    expect(screen.getByText('test speech')).toBeInTheDocument()
+  })
+
   it('opens a later act with the same two-choice scene beat as the first act', () => {
     const onBegin = vi.fn()
     render(<AtuanLaterActPrelude unitId='s1-p2-atuan' background='pavilion.webp' character='atuan.webp' disabled={false} onBegin={onBegin} />)

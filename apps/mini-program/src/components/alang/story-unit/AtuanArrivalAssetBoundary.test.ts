@@ -96,6 +96,7 @@ describe('Atuan first-arrival asset ownership', () => {
   it('keeps first-arrival assets covered by the production package contract', () => {
     const cleanScript = readFileSync(resolve(appRoot, 'scripts/clean-cdn-assets.mjs'), 'utf8')
     const verifyScript = readFileSync(resolve(appRoot, 'scripts/verify-flash-package.mjs'), 'utf8')
+    const dialoguePage = readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/index.tsx'), 'utf8')
     const buildConfig = readFileSync(resolve(appRoot, 'config/index.ts'), 'utf8')
     const buildWorkflow = readFileSync(resolve(repoRoot, '.github/workflows/taro-weapp-build.yml'), 'utf8')
     const eventPage = readFileSync(resolve(sourceRoot, 'pages/alang/event/index.tsx'), 'utf8')
@@ -118,16 +119,22 @@ describe('Atuan first-arrival asset ownership', () => {
     }
     expect(cleanScript).toContain('sourceOnlyAlangUiAssets.has(name)')
     expect(cleanScript).not.toContain('runtimeAlangUiWebps')
-    expect(cleanScript).toContain('const bundledAlangUiWebpAssets = new Set([')
+    expect(cleanScript).not.toContain('bundledAlangUiWebpAssets')
     for (const fileName of [
-      'flash-atuan-second-act-pavilion-v1.webp',
-      'flash-atuan-third-act-table-v1.webp',
+      'flash-atuan-second-act-pavilion-v1.jpg',
+      'flash-atuan-third-act-table-v1.jpg',
     ]) {
-      expect(cleanScript, `${fileName} must survive the upload-package cleanup`).toContain(`'${fileName}'`)
+      const assetBytes = readFileSync(resolve(sourceRoot, 'pages/alang/assets/ui', fileName))
+      expect([...assetBytes.subarray(0, 3)], `${fileName} must be a real JPEG`).toEqual([0xff, 0xd8, 0xff])
+      expect(assetBytes.byteLength, `${fileName} must stay within the 150 KiB scene budget`).toBeLessThanOrEqual(150 * 1024)
+      expect(dialoguePage, `${fileName} must be the runtime scene import`).toContain(`../assets/ui/${fileName}`)
+      expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
     }
     expect(cleanScript).toContain(
-      "(name) => (name.endsWith('.webp') && !bundledAlangUiWebpAssets.has(name)) || sourceOnlyAlangUiAssets.has(name)",
+      "(name) => name.endsWith('.webp') || sourceOnlyAlangUiAssets.has(name)",
     )
+    expect(dialoguePage).not.toContain('flash-atuan-second-act-pavilion-v1.webp')
+    expect(dialoguePage).not.toContain('flash-atuan-third-act-table-v1.webp')
     for (const fileName of [
       'flash-alang-first-act-riverside-v2.jpg',
       'flash-lizi-first-act-color-studio-v2.jpg',

@@ -29,8 +29,8 @@ const atuanArrivalRelativePaths = [
   'pages/alang/assets/ui/flash-atuan-park-clean-v3.jpg',
   'pages/alang/assets/ui/flash-atuan-character-lowpoly-v3.png',
   'pages/alang/assets/ui/flash-atuan-bag-cutout-v2.png',
-  'pages/alang/assets/ui/flash-atuan-second-act-pavilion-v1.webp',
-  'pages/alang/assets/ui/flash-atuan-third-act-table-v1.webp',
+  'pages/alang/assets/ui/flash-atuan-second-act-pavilion-v1.jpg',
+  'pages/alang/assets/ui/flash-atuan-third-act-table-v1.jpg',
 ]
 // Includes the two reviewed Atuan later-act backgrounds while preserving
 // meaningful headroom below the 1.80 MiB Alang subpackage gate.

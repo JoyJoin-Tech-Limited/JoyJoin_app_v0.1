@@ -25,8 +25,8 @@ import { haptics } from '../../../lib/utils/haptics'
 import atuanArrivalScene from '../assets/ui/flash-atuan-park-clean-v3.jpg'
 import atuanArrivalCharacter from '../assets/ui/flash-atuan-character-lowpoly-v3.png'
 import atuanArrivalBag from '../assets/ui/flash-atuan-bag-cutout-v2.png'
-import atuanSecondActScene from '../assets/ui/flash-atuan-second-act-pavilion-v1.webp'
-import atuanThirdActScene from '../assets/ui/flash-atuan-third-act-table-v1.webp'
+import atuanSecondActScene from '../assets/ui/flash-atuan-second-act-pavilion-v1.jpg'
+import atuanThirdActScene from '../assets/ui/flash-atuan-third-act-table-v1.jpg'
 import '../flash.scss'
 
 function dialogueActionError(error: unknown, fallback: string): string {
