@@ -273,6 +273,7 @@ describe("formal Flash story runtime policy", () => {
       promptVersion: null,
     }));
     expect(result.storyEpisode?.response).toBe(reviewedOptionResponse);
+    expect(result.canonicalScreen).toBe("completed");
     expectNoPersonalizationRuntimeCalls();
   });
 
@@ -504,6 +505,7 @@ describe("formal Flash story runtime policy", () => {
     });
 
     expect(result.storyEpisode?.response).toBe(reviewedOptionResponse);
+    expect(result.canonicalScreen).toBe("completed");
     expect(mocks.prepareChoiceIntent).not.toHaveBeenCalled();
     expect(mocks.finalizeChoiceIntent).not.toHaveBeenCalled();
     expect(mocks.completeStoryEpisode).not.toHaveBeenCalled();
@@ -532,6 +534,7 @@ describe("formal Flash story runtime policy", () => {
     });
 
     expect(result.isReplay).toBe(true);
+    expect(result.canonicalScreen).toBe("dialogue");
     expect(result.storyEpisode?.response).toBe(reviewedOptionResponse);
     expect(result.storyEpisode?.fragment).toBeNull();
     expect(mocks.prepareChoiceIntent).not.toHaveBeenCalled();

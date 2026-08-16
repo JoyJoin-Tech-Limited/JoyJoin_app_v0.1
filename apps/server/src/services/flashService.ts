@@ -754,7 +754,7 @@ export async function getFlashEncounter(input: {
         nextStoryHint,
       },
       isReplay: input.allowStoryReplay || undefined,
-      canonicalScreen: "dialogue",
+      canonicalScreen: storyCompleted && !input.allowStoryReplay ? "completed" : "dialogue",
     };
   }
   if (completedSeason) {
