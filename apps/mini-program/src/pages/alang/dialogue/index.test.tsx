@@ -256,6 +256,20 @@ describe('formal Flash dialogue', () => {
     ))
   })
 
+  it('does not bounce a later-act page back to the main dialogue from stale data while refreshing', () => {
+    mocks.useEncounter.mockReturnValue({
+      data: storyEncounter,
+      isLoading: false,
+      isFetching: true,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    render(<FlashDialoguePageWithAssets currentPath='/pages/alang-story/dialogue/index' />)
+
+    expect(mocks.canonicalRedirect).not.toHaveBeenCalled()
+  })
+
   it('does not redirect a hidden dialogue webview while a child game owns the page stack', async () => {
     const view = render(<FlashDialoguePage />)
     await waitFor(() => expect(mocks.canonicalRedirect).toHaveBeenCalled())

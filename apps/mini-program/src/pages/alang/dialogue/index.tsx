@@ -132,7 +132,7 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
   const replay = params.replay === '1'
   const replaySession = replay ? (params.replaySession ?? 'legacy-replay') : undefined
   const progressEncounterId = replaySession ? `${encounterId}:${replaySession}` : encounterId
-  const { data, isLoading, isError, error, refetch } = useFlashEncounter(encounterId, enabled && !!encounterId, replay)
+  const { data, isLoading, isFetching, isError, error, refetch } = useFlashEncounter(encounterId, enabled && !!encounterId, replay)
   const answerMutation = useAnswerFlashEncounter()
   const advanceMutation = useAdvanceFlashStoryNode()
   const rerollMutation = useRerollFlashEncounter()
@@ -162,7 +162,7 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
   }, [data?.npc?.name])
 
   useEffect(() => {
-    if (!pageVisible) return
+    if (!pageVisible || isFetching || isError) return
     if (data?.storyEpisode?.code === 'season-finale') {
       void Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}` })
       return
@@ -176,7 +176,7 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
       currentPath,
       replay ? { replay: true, replaySession } : undefined,
     )
-  }, [currentPath, data, enabled, encounterId, pageVisible, replay, replaySession])
+  }, [currentPath, data, enabled, encounterId, isError, isFetching, pageVisible, replay, replaySession])
 
   useEffect(() => {
     setFragmentRevealed(false)
