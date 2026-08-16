@@ -19,10 +19,12 @@ const mocks = vi.hoisted(() => ({
   navigateTo: vi.fn(),
   routerParams: { encounterId: 'encounter-1' } as Record<string, string>,
   didShow: null as null | (() => void),
+  didHide: null as null | (() => void),
 }))
 
 vi.mock('@tarojs/taro', () => ({
   useDidShow: (callback: () => void) => { mocks.didShow = callback },
+  useDidHide: (callback: () => void) => { mocks.didHide = callback },
   default: {
     getCurrentInstance: () => ({ router: { params: mocks.routerParams } }),
     setNavigationBarTitle: vi.fn(),
@@ -116,6 +118,7 @@ describe('formal Flash dialogue', () => {
     vi.clearAllMocks()
     mocks.routerParams = { encounterId: 'encounter-1' }
     mocks.didShow = null
+    mocks.didHide = null
     mocks.getStorageSync.mockReturnValue(undefined)
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
     mocks.useEncounter.mockReturnValue({ data: questionEncounter, isLoading: false, isError: false, refetch: mocks.refetch })
@@ -251,6 +254,24 @@ describe('formal Flash dialogue', () => {
       '/pages/alang/dialogue/index',
       { replay: true, replaySession: 'session-route' },
     ))
+  })
+
+  it('does not redirect a hidden dialogue webview while a child game owns the page stack', async () => {
+    const view = render(<FlashDialoguePage />)
+    await waitFor(() => expect(mocks.canonicalRedirect).toHaveBeenCalled())
+    mocks.canonicalRedirect.mockClear()
+
+    expect(mocks.didHide).toEqual(expect.any(Function))
+    act(() => { mocks.didHide?.() })
+    mocks.useEncounter.mockReturnValue({
+      data: { ...questionEncounter, canonicalScreen: 'completed', status: 'completed' },
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+    view.rerender(<FlashDialoguePage />)
+
+    expect(mocks.canonicalRedirect).not.toHaveBeenCalled()
   })
 
   it('keeps the original completion action usable when a story answer cannot be sent', async () => {

@@ -1,4 +1,4 @@
-import Taro from '@tarojs/taro'
+import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
 import { useEffect, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { getFlashStoryUnitDefinition, isFlashV2PilotUnitId } from '@shared/alang/flashStorySeason'
@@ -141,15 +141,28 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
   const [actionError, setActionError] = useState('')
   const [fragmentRevealed, setFragmentRevealed] = useState(false)
   const [storySubmitState, setStorySubmitState] = useState<StorySubmitState>('idle')
+  const [pageVisible, setPageVisible] = useState(true)
+  const pageVisibleRef = useRef(true)
   const answerInFlightRef = useRef(false)
   const advanceInFlightRef = useRef(false)
   const storySubmitInFlightRef = useRef(false)
+
+  useDidShow(() => {
+    pageVisibleRef.current = true
+    setPageVisible(true)
+  })
+
+  useDidHide(() => {
+    pageVisibleRef.current = false
+    setPageVisible(false)
+  })
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: data?.npc?.name ? `和${data.npc.name}聊聊` : '角色对话' })
   }, [data?.npc?.name])
 
   useEffect(() => {
+    if (!pageVisible) return
     if (data?.storyEpisode?.code === 'season-finale') {
       void Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}` })
       return
@@ -163,7 +176,7 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
       currentPath,
       replay ? { replay: true, replaySession } : undefined,
     )
-  }, [currentPath, data, enabled, encounterId, replay, replaySession])
+  }, [currentPath, data, enabled, encounterId, pageVisible, replay, replaySession])
 
   useEffect(() => {
     setFragmentRevealed(false)
@@ -175,6 +188,7 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
   }, [data?.storyEpisode?.id])
 
   const applyResponse = async (response: FlashCanonicalSnapshot) => {
+    if (!pageVisibleRef.current) return
     if ('storyEpisode' in response && response.storyEpisode?.code === 'season-finale') {
       await Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}` })
       return
@@ -275,7 +289,7 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
           ? '故事状态刚刚变化，正在重新接上。'
           : '这次见面已经结束。')
       await refetch()
-      if (disposition === 'exit') await leaveFlashStory(MINI_PROGRAM_ROUTES.alangEvent)
+      if (disposition === 'exit' && pageVisibleRef.current) await leaveFlashStory(MINI_PROGRAM_ROUTES.alangEvent)
     } finally {
       storySubmitInFlightRef.current = false
     }

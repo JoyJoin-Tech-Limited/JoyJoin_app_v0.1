@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AtuanCardsPage from './index'
 
@@ -7,15 +7,31 @@ const mocks = vi.hoisted(() => ({
   storage: new Map<string, unknown>(),
   setStorageSync: vi.fn((key: string, value: unknown) => mocks.storage.set(key, value)),
   navigateBack: vi.fn(),
+  reLaunch: vi.fn(),
+  getCurrentPages: vi.fn(() => [{ route: 'pages/alang/dialogue/index' }, { route: 'pages/alang/atuan-cards/index' }]),
 }))
 vi.mock('@tarojs/taro', () => ({
-  default: { getStorageSync: (key: string) => mocks.storage.get(key), setStorageSync: mocks.setStorageSync, navigateBack: mocks.navigateBack },
+  default: {
+    getStorageSync: (key: string) => mocks.storage.get(key),
+    setStorageSync: mocks.setStorageSync,
+    navigateBack: mocks.navigateBack,
+    reLaunch: mocks.reLaunch,
+    getCurrentPages: mocks.getCurrentPages,
+  },
   useRouter: () => ({ params: mocks.params }),
 }))
 vi.mock('@tarojs/components', () => ({ View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>, Text: ({ children, ...props }: any) => <span {...props}>{children}</span> }))
 
 afterEach(cleanup)
-beforeEach(() => { mocks.storage.clear(); mocks.setStorageSync.mockClear(); mocks.navigateBack.mockClear() })
+beforeEach(() => {
+  mocks.storage.clear()
+  mocks.setStorageSync.mockClear()
+  mocks.navigateBack.mockReset()
+  mocks.navigateBack.mockResolvedValue(undefined)
+  mocks.reLaunch.mockReset()
+  mocks.reLaunch.mockResolvedValue(undefined)
+  mocks.getCurrentPages.mockReturnValue([{ route: 'pages/alang/dialogue/index' }, { route: 'pages/alang/atuan-cards/index' }])
+})
 
 describe('shared first-act game page', () => {
   it.each([
@@ -52,7 +68,7 @@ describe('shared first-act game page', () => {
     expect(screen.getByText('2 / 3')).toBeInTheDocument()
   })
 
-  it('stores three choices and navigates back only after the last feedback', () => {
+  it('stores three choices and navigates back only after the last feedback', async () => {
     mocks.params = { mode: 'momo', key: 'momo-game', approach: '0', unitId: 's1-p1-momo', phase: '1' }
     render(<AtuanCardsPage />)
     for (let index = 0; index < 3; index += 1) {
@@ -70,7 +86,42 @@ describe('shared first-act game page', () => {
         expect.objectContaining({ cardId: 'blank' }),
       ]),
     }))
-    expect(mocks.navigateBack).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(mocks.navigateBack).toHaveBeenCalledTimes(1))
+  })
+
+  it('does not auto-navigate from a restored completion before the page stack is ready', () => {
+    mocks.params = { mode: 'momo', key: 'momo-game', approach: '0', unitId: 's1-p1-momo', phase: '1' }
+    mocks.storage.set('momo-game', {
+      version: 'flash-act-game-v1',
+      unitId: 's1-p1-momo',
+      phase: 1,
+      mode: 'momo',
+      status: 'completed',
+      placements: [
+        { cardId: 'rain', destinationId: 'listen' },
+        { cardId: 'turn', destinationId: 'trace' },
+        { cardId: 'blank', destinationId: 'stop' },
+      ],
+      pending: null,
+    })
+
+    render(<AtuanCardsPage />)
+
+    expect(mocks.navigateBack).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: '回到角色故事' })).toBeInTheDocument()
+  })
+
+  it('relaunches the Flash home when the parent webview no longer exists', async () => {
+    mocks.params = { mode: 'momo', key: 'momo-game', approach: '0', unitId: 's1-p1-momo', phase: '1' }
+    mocks.navigateBack.mockRejectedValueOnce(new Error('navigateBack with an unexist webviewId'))
+    render(<AtuanCardsPage />)
+
+    for (let index = 0; index < 3; index += 1) {
+      fireEvent.click(screen.getAllByRole('button')[1])
+      fireEvent.click(screen.getByRole('button', { name: index === 2 ? '收好最后一项' : '继续整理' }))
+    }
+
+    await waitFor(() => expect(mocks.reLaunch).toHaveBeenCalledWith({ url: '/pages/alang/event/index' }))
   })
 
   it('binds partial game progress to its story act and resumes without trapping the player', () => {

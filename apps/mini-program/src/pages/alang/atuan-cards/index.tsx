@@ -1,7 +1,8 @@
 import Taro, { useRouter } from '@tarojs/taro'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Text, View } from '@tarojs/components'
 import { ATUAN_FIRST_ACT_CARDS } from '@shared/alang/atuanFirstAct'
+import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import {
   createFlashActGameProgress,
   restoreFlashActGameProgress,
@@ -74,6 +75,8 @@ export default function AtuanCardsPage() {
     const expected = { unitId, phase, mode, itemIds: orderedItems.map(({ id }) => id) }
     try { return restoreFlashActGameProgress(Taro.getStorageSync(storageKey), expected) } catch { return createFlashActGameProgress(expected) }
   })
+  const returningRef = useRef(false)
+  const [returnError, setReturnError] = useState('')
   const index = Math.min(saved.placements.length, orderedItems.length - 1)
   const placements = saved.placements
   const item = orderedItems[index]
@@ -90,9 +93,28 @@ export default function AtuanCardsPage() {
     try { Taro.setStorageSync(storageKey, next) } catch { /* Story remains recoverable from its act screen. */ }
   }
 
-  useEffect(() => {
-    if (saved.status === 'completed') void Taro.navigateBack()
-  }, [saved.status])
+  const returnToStory = async () => {
+    if (returningRef.current) return
+    returningRef.current = true
+    setReturnError('')
+
+    try {
+      if (Taro.getCurrentPages().length > 1) {
+        await Taro.navigateBack()
+        return
+      }
+    } catch {
+      // The parent webview can disappear while WeChat is processing another
+      // route. Rebuild the Flash stack from its server-owned home instead.
+    }
+
+    try {
+      await Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.alangEvent })
+    } catch {
+      returningRef.current = false
+      setReturnError('页面暂时没有接上。请再点一次返回，进度已经保存。')
+    }
+  }
 
   const place = (choice: GameChoice) => {
     if (!item || pending) return
@@ -108,9 +130,30 @@ export default function AtuanCardsPage() {
     const next = [...placements, pending.placement]
     if (next.length === orderedItems.length) {
       persist({ ...saved, status: 'completed', placements: next, pending: null })
+      void returnToStory()
       return
     }
     persist({ ...saved, placements: next, pending: null })
+  }
+
+  if (saved.status === 'completed') {
+    return (
+      <View className='atuan-cards' data-game-mode={mode} data-story-unit={unitId} data-story-phase={phase}>
+        <View className='atuan-cards__feedback' role='status' aria-live='polite'>
+          <Text className='atuan-cards__feedback-name'>{config.speaker}</Text>
+          <Text className='atuan-cards__feedback-copy'>这一段已经整理好了，进度也已经保存。</Text>
+          <View
+            className='atuan-cards__continue'
+            role='button'
+            aria-label='回到角色故事'
+            onClick={() => { void returnToStory() }}
+          >
+            <Text>回到角色故事</Text>
+          </View>
+          {returnError ? <View role='alert'><Text>{returnError}</Text></View> : null}
+        </View>
+      </View>
+    )
   }
 
   return (
