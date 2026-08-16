@@ -1075,6 +1075,7 @@ Status:
   - Component file still exists in the repo
   - It should not be documented as a 72-hour blind-pool unlock step
   - Active blind-pool join / waiting / reveal ownership is the pool-first flow above
+  - The live pool-group-detail surface renders a `TablemateCard` deck strip and `TablemateDetailSheet` instead of the legacy `AttendeePreviewCard` grid
 ```
 
 #### Blind Pool Join Flow Enhancements *(PRs #376, #381, #382, #511, #512)*
@@ -1108,6 +1109,7 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
 | `MatchRevealSequenceV2` | Match formed — active cinematic reveal orchestrator |
 | `SurpriseMatchReveal` | Legacy rarity-first reveal overlay preserved in the repo but superseded in the active flow |
 | `MatchPointsDisplay` | Post-reveal match score breakdown |
+| `TablemateCard` *(2026-08-16)* | Matched-state member carousel and pool-group-detail deck strip — reusable squad-unboxing deck front-face card |
 
 > **Operator review mode:** When `matchingOperatorReviewEnabled` is enabled, formed groups are held in a pending operator-review state before users are notified. The mini-program continues to show the normal `MatchingWaitingScreen` during this period; once an operator approves, the standard reveal/matched flow proceeds unchanged.
 
@@ -1149,6 +1151,11 @@ UnifiedRevealCard renders fused narrative
 - No server/API changes — purely client-side view-model fusion
 - No new dependencies or animation libraries
 - No Canvas-based rendering
+
+**Matched-state member presentation (2026-08-16):**
+- After the unified reveal, the matched-state member carousel renders `TablemateCard` components: the squad-unboxing deck front-face recipe (archetype-tinted foil frame, 52% art zone / 48% info zone, connection-pill + pair-temperature chip) extracted into a reusable component.
+- `TablemateDetailSheet` opens on card tap: full governed pair explanation, rarity-dotted connection points, interest tags, industry line, hero-image fade-in, avatar preview, drag-to-dismiss, and `现场见` CTA. It is an info-type bottom sheet (same family as `DuoInfoSheet` / `PersonaSnapshotSheet`), not a centered dialog.
+- Shared display helpers (`getPairChemistryWord`, `getPairChemistryTier`, `CHEMISTRY_TIER_EMOJI`, `shortenConnectionPointForPill`, `buildInterestHookText`) live in `apps/mini-program/src/lib/utils/pairChemistry.ts` and are consumed by matching-status, pool-group-detail, and squad-unboxing.
 
 **Shared asset:** Canonical background SVG at `apps/user-client/src/assets/matching/shared/matching-bg.svg`; state-specific hero assets in sibling subdirectories.
 
@@ -1567,16 +1574,14 @@ Active server files:
 > web-reference flow and must not be used to reconstruct the mini-program.
 >
 > **Active flow** (`apps/mini-program/src/pages/event-feedback/`):
-> 1. **今晚这局怎么样？** — `RatingFace` 1–5 emoji score (skippable)
-> 2. **想继续了解谁？** — multi-select connections; mutual picks reveal WeChat IDs
-> 3. **还有什么想说的？** — optional free text (wire key `feedback`, content-safety screened)
-> 4. **Invite card（可选升级）** — 「再花 30 秒聊聊这场局,完成可得 +30 积分」;
->    跳过 = 直接提交（纯 3 步 payload）
-> 5. **均衡反馈屏 A「这场局的氛围」** — 氛围温度计（1–5:尴尬/平淡/舒适/热烈/完美）+
+> 1. **今晚这局怎么样？**（体验屏,2026-08-15 合并）— `RatingFace` 1–5 emoji score +
+>    氛围温度计（1–5:尴尬/平淡/舒适/热烈/完美）+
 >    连接雷达（topicResonance/personalityMatch/backgroundDiversity/overallFit 各 1–5）+
->    场地印象（like/neutral/dislike）+ 散场之后（已交换联系方式/有但还没联系/没有但很愉快/没有不太合适）
-> 6. **均衡反馈屏 B「参与者与建议」** — 参与者印象（仅对 connections 步选中的人显示,特质标签 max 3/人 + 悄悄话）+
->    改进建议（预设配方卡 max 3 + 自定义）
+>    场地印象（like/neutral/dislike）+ 散场之后（已交换联系方式/有但还没联系/没有但很愉快/没有不太合适）。
+>    全部可选;屏首一行说明反馈动机（你的观察,会让下一场更对味;不承诺积分——无券核销闭环）
+> 2. **想继续了解谁？** — multi-select connections; mutual picks reveal WeChat IDs
+> 3. **还有什么想说的？**（收尾屏）— 参与者印象（仅对 connections 步选中的人显示,特质标签 max 3/人 + 悄悄话）+
+>    改进建议（预设配方卡 max 3 + 自定义）+ optional free text (wire key `feedback`, content-safety screened)
 >
 > **Rewards (wired 2026-08-07):** base flow = `feedback_basic` (20xp/20coins);
 > any balanced-layer field present = `feedback_deep` (50xp/50coins) +
@@ -1585,7 +1590,8 @@ Active server files:
 > (`packages/shared/src/schema/_definitions.ts`) — unknown keys are Zod-stripped,
 > so the client wire keys are drift-gated by `feedbackPayload.test.ts` against the schema.
 > Event id families are canonicalized via `resolveCanonicalEventId` before insert.
-> **Analytics:** `feedback_invite_seen` / `feedback_deep_engaged` / `feedback_deep_submitted`
+> **Analytics (2026-08-15):** `feedback_deep_engaged`（首个深度字段被填写,仅一次）/
+> `feedback_deep_submitted`（payload 含任一深度字段,与服务端 hasDeepFeedback 口径一致）
 > land in `discover_analytics_events` (allowlist in `apps/server/src/routes/domains/analytics.ts`).
 
 #### Two-Tier Feedback Architecture

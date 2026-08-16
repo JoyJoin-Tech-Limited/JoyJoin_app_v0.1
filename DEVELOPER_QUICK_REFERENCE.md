@@ -658,6 +658,7 @@ The IcebreakerToolkit (pre-event game browser) is a **LEGACY** tool replaced by 
 | `MatchRevealSequenceV2` | Active cinematic reveal orchestrator | `components/matching/MatchRevealSequenceV2.tsx` |
 | `SurpriseMatchReveal` | Legacy rarity-first reveal overlay | `components/matching/SurpriseMatchReveal.tsx` |
 | `MatchPointsDisplay` | Match points renderer | `components/matching/MatchPointsDisplay.tsx` |
+| `TablemateCard` *(mini-program, 2026-08-16)* | Reusable matched-member portrait card | `apps/mini-program/src/components/TablemateCard/index.tsx` |
 
 ### Key Rules
 
@@ -666,6 +667,7 @@ The IcebreakerToolkit (pre-event game browser) is a **LEGACY** tool replaced by 
 3. **For full-screen matching-status screens, never duplicate `matching-bg.svg`.** Import the shared background only via `MatchingStateLayout`. Join-sheet interstitials inherit their presentation context from `JoinEventPoolSheet` and should not wrap themselves in `MatchingStateLayout`.
 4. **Asset locations (archived):** `archived/workspaces/user-client/src/assets/matching/{shared,waiting,no-match,join-error,extended-data-empty,test-incomplete}/`
 5. **Active blind-pool entry flow:** `DiscoverPage` query-param join sheet → `MatchingStatusPage`; browser blind-box checkout returns through `BlindBoxConfirmationPage`, which confirms payment state and then hands off to `/events` or `/discover`.
+6. **Mini-program matched-member cards must reuse `TablemateCard`.** The matching-status matched carousel, pool-group-detail deck strip, and squad-unboxing front-face all share `apps/mini-program/src/components/TablemateCard`; pair-chemistry copy/emoji/helpers live in `apps/mini-program/src/lib/utils/pairChemistry.ts`. Do not rebuild a one-off member card for a new matched surface.
 
 Full reference: `docs/reference/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
 

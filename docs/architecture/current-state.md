@@ -77,6 +77,7 @@ Primary files:
 - `apps/mini-program/src/pages/squad-unboxing/index.tsx`
 - `apps/mini-program/src/pages/pool-group-detail/index.tsx`
 - `apps/mini-program/src/pages/gathering-room/index.tsx` — pre-event online anteroom for matched groups; gated by `gatheringRoomEnabled`, uses `GET /api/pool-groups/:groupId/room-state` and `ROOM_*` WS events
+- `apps/mini-program/src/components/TablemateCard/index.tsx` — reusable 桌友 portrait card shared by matching-status matched carousel, pool-group-detail deck strip, and squad-unboxing front-face reference (2026-08-16)
 
 Boundary:
 - Deterministic scores come from active server matching rules, not client heuristics.
