@@ -34,6 +34,16 @@ describe('AlangFirstActExperience — Atuan template parity', () => {
     fireEvent.click(screen.getByRole('button', { name: '按住被风掀起的河岸草图' }))
     const approach = FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS['s1-p1-alang'].approaches[1]
     fireEvent.click(screen.getByRole('button', { name: approach.label }))
+    expect(screen.getByText('反复折过的座位图')).toBeInTheDocument()
+    expect(screen.getAllByTestId('alang-object-hotspot')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: '和阿浪一起摆好两把椅子' })).not.toBeInTheDocument()
+    for (const label of ['椅脚铅点', '转身弧线', '空着的名字栏']) {
+      fireEvent.click(screen.getByRole('button', { name: `观察${label}` }))
+      fireEvent.click(screen.getByRole('button', { name: `收下${label}的线索，继续查看座位图` }))
+    }
+    expect(screen.getAllByTestId('alang-highlight-reply')).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: '如果对方把椅子再挪远一点呢？' }))
+    expect(screen.getByTestId('alang-scene-speech')).toHaveTextContent('那就远一点')
     fireEvent.click(screen.getByRole('button', { name: '和阿浪一起摆好两把椅子' }))
     expect(mocks.navigateTo).toHaveBeenCalledWith({ url: expect.stringContaining('mode=alang') })
     expect(onComplete).not.toHaveBeenCalled()
@@ -41,5 +51,22 @@ describe('AlangFirstActExperience — Atuan template parity', () => {
     act(() => mocks.didShow?.())
     fireEvent.click(screen.getByRole('button', { name: '完成阿浪第一幕' }))
     expect(onComplete).toHaveBeenCalledWith(1)
+  })
+
+  it('keeps an in-progress v1 player at the game handoff after the template upgrade', () => {
+    mocks.storage.set(alangFirstActStorageKey('alang-v1'), {
+      version: 'atuan-template-v1', stage: 'conversation', seenIds: ALANG_FIRST_ACT_HIGHLIGHTS.map(({ id }) => id), activeId: null, approachIndex: 0,
+    })
+    render(<AlangFirstActExperience encounterId='alang-v1' scene='alang.jpg' onSpeechChange={vi.fn()} onComplete={vi.fn()} />)
+    expect(screen.getByRole('button', { name: '和阿浪一起摆好两把椅子' })).toBeInTheDocument()
+  })
+
+  it('repairs a v2 conversation cache that lost its approach instead of rendering blank', () => {
+    mocks.storage.set(alangFirstActStorageKey('alang-invalid'), {
+      version: 'atuan-template-v2', stage: 'conversation', seenIds: ALANG_FIRST_ACT_HIGHLIGHTS.map(({ id }) => id), activeId: null, approachIndex: null,
+      objectSeenIds: ['chair-pencil-marks', 'turning-arc', 'blank-name-line'], activeObjectId: null, followUpIndex: 0,
+    })
+    render(<AlangFirstActExperience encounterId='alang-invalid' scene='alang.jpg' onSpeechChange={vi.fn()} onComplete={vi.fn()} />)
+    expect(screen.getByRole('button', { name: FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS['s1-p1-alang'].approaches[0].label })).toBeInTheDocument()
   })
 })

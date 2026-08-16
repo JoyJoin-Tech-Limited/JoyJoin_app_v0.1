@@ -33,4 +33,5 @@ describe('Flash canonical screen routing', () => {
     expect(getFlashCanonicalRoute({ canonicalScreen: 'dialogue' })).toBe('/pages/alang/event/index')
     expect(getFlashCanonicalRoute({ canonicalScreen: 'unavailable' })).toBe('/pages/alang/event/index')
   })
+
 })

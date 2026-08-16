@@ -93,14 +93,13 @@ describe('Atuan first-arrival asset ownership', () => {
     expect(flashStyles).toMatch(/\.flash-dialogue__story-stage--atuan-first \.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-closing,[\s\S]*?\.flash-dialogue__story-panel-progress\s*\{\s*color:\s*\$color-text-secondary-on-light;/)
   })
 
-  it('keeps every settled-story exit in a fixed footer above a bounded native scroller', () => {
+  it('keeps every settled-story exit visible without a native result scroller', () => {
     const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash.scss'), 'utf8')
 
-    expect(flashStyles).toMatch(/\.flash-dialogue__story-panel--result\s*\{[^}]*height:\s*920rpx;[^}]*max-height:\s*calc\(100% - 320rpx\);[^}]*padding:\s*0;/s)
-    expect(flashStyles).toMatch(/\.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-scroll\s*\{[^}]*height:\s*100%;[^}]*max-height:\s*none;[^}]*flex:\s*none;/s)
-    expect(flashStyles).toMatch(/\.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-content\s*\{[^}]*padding-bottom:\s*\$flash-story-result-footer-reserve;/s)
-    expect(flashStyles).toMatch(/\.flash-dialogue__story-panel-footer\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*0;[^}]*flex:\s*none;[^}]*border-top:/s)
-    expect(flashStyles).toMatch(/@media screen and \(max-height:\s*700px\)\s*\{[\s\S]*?\.flash-dialogue__story-panel--result\s*\{\s*height:\s*650rpx;/)
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-panel--result\s*\{[^}]*bottom:\s*calc\(112rpx \+ env\(safe-area-inset-bottom\)\);[^}]*height:\s*auto;[^}]*overflow:\s*hidden;/s)
+    expect(flashStyles).not.toMatch(/\.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-scroll\s*\{/)
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-result-exit\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*calc\(16rpx \+ env\(safe-area-inset-bottom\)\);[^}]*min-height:\s*88rpx;/s)
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-result-exit \.flash-button\s*\{[^}]*width:\s*auto;/s)
   })
 
   it('keeps first-arrival assets covered by the production package contract', () => {

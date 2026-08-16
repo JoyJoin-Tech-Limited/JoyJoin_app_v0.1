@@ -85,7 +85,7 @@ export default function FlashHomePage() {
   const canReplayStories = shouldShowAlangDebugTools(user)
   const [gate, setGate] = useState<GateState>('checking')
   const [pageVisible, setPageVisible] = useState(true)
-  const { data, isLoading, isError, error, refetch } = useFlashHome(enabled && gate === 'ready' && pageVisible)
+  const { data, isLoading, isFetching, isError, error, refetch } = useFlashHome(enabled && gate === 'ready' && pageVisible)
   const fragmentsQuery = useFlashStoryFragments(enabled && gate === 'ready' && pageVisible)
 
   const continueReviewedStory = () => {
@@ -114,9 +114,12 @@ export default function FlashHomePage() {
   }, [gate, pageVisible, refetch])
 
   useEffect(() => {
-    if (!data?.canonicalScreen) return
+    // A completed encounter invalidates the home query. Wait for its fresh
+    // response before honoring canonicalScreen, otherwise the stale cached
+    // dialogue route can immediately bounce the user back into the story.
+    if (!enabled || gate !== 'ready' || !pageVisible || isFetching || isError || !data?.canonicalScreen) return
     void redirectToFlashCanonical(data, MINI_PROGRAM_ROUTES.alangEvent)
-  }, [data])
+  }, [data, enabled, gate, isError, isFetching, pageVisible])
 
   const openNpc = (npc: FlashNpcSummary) => {
     haptics('light')

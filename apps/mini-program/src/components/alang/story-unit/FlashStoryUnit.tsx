@@ -398,22 +398,20 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
             </ScrollView>
           </View>
         ) : (
-          <View className='flash-dialogue__story-panel flash-dialogue__story-panel--result' aria-live='polite'>
-            {/* Scroll exception: story fragments and closing copy vary in length;
-                the completion CTA remains pinned outside this native scroll port. */}
-            <ScrollView className='flash-dialogue__story-panel-scroll' scrollY>
+          <>
+            <View className='flash-dialogue__story-panel flash-dialogue__story-panel--result' aria-live='polite'>
               <View className='flash-dialogue__story-panel-content'>
                 <Text className='flash-dialogue__story-panel-season'>{story.seasonTitle} · 第 {story.phase} 幕</Text>
                 <Text className='flash-dialogue__story-panel-title'>{atuanLaterResult?.title ?? story.title}</Text>
                 {displayedFragment ? <View className={`flash-dialogue__fragment flash-dialogue__fragment--${displayedFragment.category}`}><Text className='flash-dialogue__fragment-label'>新故事碎片</Text><Text className='flash-dialogue__fragment-title'>{displayedFragment.title}</Text><Text className='flash-dialogue__fragment-fact'>{displayedFragment.fact}</Text></View> : null}
                 {(atuanLaterResult?.closing ?? story.closing) ? <Text className='flash-dialogue__story-panel-closing'>{atuanLaterResult?.closing ?? story.closing}</Text> : null}
+                <Text className='flash-dialogue__story-panel-progress'>本幕 {story.progress.completedInPhase}/{story.progress.totalInPhase} · 全季 {story.progress.completedTotal}/{story.progress.total}</Text>
               </View>
-            </ScrollView>
-            <View className='flash-dialogue__story-panel-footer' data-testid='flash-story-result-footer'>
-              <Text className='flash-dialogue__story-panel-progress'>本幕 {story.progress.completedInPhase}/{story.progress.totalInPhase} · 全季 {story.progress.completedTotal}/{story.progress.total}</Text>
+            </View>
+            <View className='flash-dialogue__story-result-exit' data-testid='flash-story-result-exit'>
               <FlashButton onClick={() => { emit('next_npc_click'); onContinue() }}>{story.progress.completedTotal >= story.progress.total ? '收好这一季' : '收好碎片，继续寻找'}</FlashButton>
             </View>
-          </View>
+          </>
         )}
       </View>
     </View>

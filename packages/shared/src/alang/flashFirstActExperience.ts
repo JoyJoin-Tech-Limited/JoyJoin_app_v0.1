@@ -63,21 +63,21 @@ export const FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS = {
     npcSlug: 'shiqi',
     opening: '三份记录看似一致。准确地说，只是方向一致；叙述还没有说完。',
     action: '拾柒把外出记录册、交换箱压痕和三层路线纸放到检视灯箱前。',
-    discovery: '共同浅痕可以先被称为事实；更晚出现的箭头和备注仍需单独标明。',
-    prompt: '四处都看过了，你想怎样区分事实与解释？',
+    discovery: '三张纸都留下的痕迹可以先记下来；更晚出现的箭头和备注要单独放在旁边。',
+    prompt: '四处都看过了，你想先核对哪一部分？',
     approaches: [
       {
         id: 's1-p1-shiqi-cooperate-a',
-        label: '先保留事实浅痕，再注明解释层',
-        response: '稳妥。事实和解释都留下，但不混成一句话。',
+        label: '先找三张纸都有的痕迹',
+        response: '稳妥。三张纸共同留下的，先单独记下来。',
       },
       {
         id: 's1-p1-shiqi-cooperate-b',
-        label: '先标出解释偏移，再回看原始浅痕',
-        response: '可以。先暴露偏移，再确认它没有改写底层。',
+        label: '把后来写上的箭头放到旁边',
+        response: '可以。先看共同部分，再判断后来加上的内容。',
       },
     ],
-    closing: '三层浅痕已经对齐。共同事实留在底层，后来补上的解释各自有了位置。',
+    closing: '三层路线纸已经对齐。共同留下的痕迹单独保留，后来补上的说明也各自有了位置。',
   },
 } as const
 

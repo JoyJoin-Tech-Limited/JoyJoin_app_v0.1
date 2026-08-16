@@ -1,6 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS } from '@shared/alang/flashFirstActExperience'
 import { getShiqiFirstActStorageKey, SHIQI_FIRST_ACT_HIGHLIGHTS, ShiqiFirstActExperience } from './ShiqiFirstActExperience'
 
 const mocks = vi.hoisted(() => ({ storage: new Map<string, unknown>(), navigateTo: vi.fn(), didShow: null as null | (() => void) }))
@@ -28,7 +27,17 @@ describe('ShiqiFirstActExperience — Atuan template parity', () => {
     render(<ShiqiFirstActExperience encounterId='shiqi-2' scene='shiqi.jpg' onSpeechChange={vi.fn()} onComplete={onComplete} />)
     for (const highlight of SHIQI_FIRST_ACT_HIGHLIGHTS.slice(0, 3)) { fireEvent.click(screen.getByRole('button', { name: `观察${highlight.label}` })); fireEvent.click(screen.getByRole('button', { name: `收下${highlight.label}的线索，回到现场` })) }
     fireEvent.click(screen.getByRole('button', { name: '观察竖向检视灯箱' })); fireEvent.click(screen.getByRole('button', { name: '收下竖向检视灯箱的线索，回到现场' })); fireEvent.click(screen.getByRole('button', { name: '替拾柒接住滑下灯箱的路线纸' }))
-    fireEvent.click(screen.getByRole('button', { name: FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS['s1-p1-shiqi'].approaches[1].label }))
+    fireEvent.click(screen.getByRole('button', { name: '把后来写上的箭头放到旁边' }))
+    expect(screen.getByText('灯箱里的三层路线纸')).toBeInTheDocument()
+    expect(screen.getAllByTestId('shiqi-object-hotspot')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: '和拾柒一起核对三层路线纸' })).not.toBeInTheDocument()
+    for (const label of ['同一个折返点', '后写的箭头', '错开的页角']) {
+      fireEvent.click(screen.getByRole('button', { name: `观察${label}` }))
+      fireEvent.click(screen.getByRole('button', { name: `收下${label}的线索，继续查看三层路线纸` }))
+    }
+    expect(screen.getAllByTestId('shiqi-highlight-reply')).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: '哪些是三张纸都能证明的？' }))
+    expect(screen.getByTestId('shiqi-scene-speech')).toHaveTextContent('共同事实')
     fireEvent.click(screen.getByRole('button', { name: '和拾柒一起核对三层路线纸' }))
     expect(mocks.navigateTo).toHaveBeenCalledWith({ url: expect.stringContaining('mode=shiqi') })
     mocks.storage.set(`${getShiqiFirstActStorageKey('shiqi-2')}:game`, [{}, {}, {}]); act(() => mocks.didShow?.())

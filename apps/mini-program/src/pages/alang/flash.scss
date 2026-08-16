@@ -1239,11 +1239,6 @@ page {
   color: $color-text-secondary-on-light;
 }
 
-.flash-dialogue__story-stage--atuan-first .flash-dialogue__story-panel-footer {
-  border-top-color: rgba($color-primary, 0.12);
-  background: rgba($color-surface, 0.92);
-}
-
 .atuan-first-dialogue {
   &__highlight-story {
     display: block;
@@ -2833,42 +2828,37 @@ page {
   position: absolute;
 }
 
-$flash-story-result-footer-reserve: 180rpx;
-
 .flash-dialogue__story-panel--result {
-  height: 920rpx;
+  bottom: calc(112rpx + env(safe-area-inset-bottom));
+  height: auto;
   max-height: calc(100% - 320rpx);
-  padding: 0;
-  gap: 0;
-}
-
-.flash-dialogue__story-panel--result .flash-dialogue__story-panel-scroll {
-  // WeChat's native ScrollView does not reliably honor height: 0 + flex: 1 on
-  // every iOS runtime. Give it a definite box and overlay the pinned footer.
-  height: 100%;
-  min-height: 0;
-  max-height: none;
-  flex: none;
+  padding: 24rpx;
+  gap: 16rpx;
+  overflow: hidden;
 }
 
 .flash-dialogue__story-panel--result .flash-dialogue__story-panel-content {
-  min-height: 100%;
-  padding-bottom: $flash-story-result-footer-reserve;
+  gap: 16rpx;
 }
 
-.flash-dialogue__story-panel-footer {
+.flash-dialogue__story-result-exit {
   position: absolute;
-  z-index: 2;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  z-index: 8;
+  right: 24rpx;
+  bottom: calc(16rpx + env(safe-area-inset-bottom));
+  left: 24rpx;
   display: flex;
-  padding: 16rpx 24rpx 24rpx;
-  flex: none;
-  flex-direction: column;
-  gap: 16rpx;
-  border-top: 2rpx solid rgba($color-surface, 0.16);
-  background: rgba($color-text-primary, 0.34);
+  min-height: 88rpx;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.flash-dialogue__story-result-exit .flash-button {
+  width: auto;
+  min-width: 280rpx;
+  padding-right: 28rpx;
+  padding-left: 28rpx;
 }
 
 .flash-dialogue__story-panel-progress {
@@ -3497,8 +3487,7 @@ $flash-story-result-footer-reserve: 180rpx;
 
 @media screen and (max-height: 700px) {
   .flash-dialogue__story-panel-scroll { max-height: 650rpx; }
-  .flash-dialogue__story-panel--result { height: 650rpx; }
-  .flash-dialogue__story-panel--result .flash-dialogue__story-panel-scroll { max-height: none; }
+  .flash-dialogue__story-panel--result { max-height: 650rpx; }
 }
 
 // Story episode v2 — multi-node state-driven stage (flash-story-v2)

@@ -11,17 +11,18 @@ function ruleBody(selector: string): string {
 }
 
 describe('Flash settled-story short viewport contract', () => {
-  it('pins the completion footer independently from the native ScrollView flex implementation', () => {
+  it('keeps the compact completion action outside the result card and native scrolling', () => {
     const resultScroller = ruleBody('.flash-dialogue__story-panel--result .flash-dialogue__story-panel-scroll')
-    const resultContent = ruleBody('.flash-dialogue__story-panel--result .flash-dialogue__story-panel-content')
-    const footer = ruleBody('.flash-dialogue__story-panel-footer')
+    const resultPanel = ruleBody('.flash-dialogue__story-panel--result')
+    const exitDock = ruleBody('.flash-dialogue__story-result-exit')
+    const compactButton = ruleBody('.flash-dialogue__story-result-exit .flash-button')
 
-    expect(resultScroller).toContain('height: 100%')
-    expect(resultScroller).not.toMatch(/(?:^|\n)\s*height:\s*0;/)
-    expect(resultContent).toContain('padding-bottom: $flash-story-result-footer-reserve')
-    expect(footer).toContain('position: absolute')
-    expect(footer).toContain('right: 0')
-    expect(footer).toContain('bottom: 0')
-    expect(footer).toContain('left: 0')
+    expect(resultScroller).toBe('')
+    expect(resultPanel).toContain('height: auto')
+    expect(resultPanel).toContain('overflow: hidden')
+    expect(exitDock).toContain('position: absolute')
+    expect(exitDock).toContain('bottom: calc(16rpx + env(safe-area-inset-bottom))')
+    expect(exitDock).toContain('min-height: 88rpx')
+    expect(compactButton).toContain('width: auto')
   })
 })

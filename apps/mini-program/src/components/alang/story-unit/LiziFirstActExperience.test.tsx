@@ -1,296 +1,99 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS } from '@shared/alang/flashFirstActExperience'
 import {
   LIZI_FIRST_ACT_HIGHLIGHTS,
   LiziFirstActExperience,
   liziFirstActStorageKey,
-  type LiziFirstActApproachIndex,
 } from './LiziFirstActExperience'
 
-const storage = new Map<string, unknown>()
-const hapticsMock = vi.hoisted(() => vi.fn())
-
+const mocks = vi.hoisted(() => ({ storage: new Map<string, unknown>(), navigateTo: vi.fn(), didShow: null as null | (() => void) }))
 vi.mock('@tarojs/taro', () => ({
   default: {
-    getStorageSync: (key: string) => storage.get(key),
-    setStorageSync: (key: string, value: unknown) => storage.set(key, value),
+    getStorageSync: (key: string) => mocks.storage.get(key),
+    setStorageSync: (key: string, value: unknown) => mocks.storage.set(key, value),
+    removeStorageSync: (key: string) => mocks.storage.delete(key),
+    navigateTo: mocks.navigateTo,
   },
+  useDidShow: (callback: () => void) => { mocks.didShow = callback },
 }))
-
 vi.mock('@tarojs/components', () => ({
   View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>,
   Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
   Image: ({ mode: _mode, ...props }: any) => <img {...props} />,
-  ScrollView: ({ children, scrollY: _scrollY, ...props }: any) => <div {...props}>{children}</div>,
 }))
 
-vi.mock('../../../lib/utils/haptics', () => ({
-  haptics: hapticsMock,
-}))
-
-const REPLY_LABELS: Record<(typeof LIZI_FIRST_ACT_HIGHLIGHTS)[number]['id'], readonly [string, string]> = {
-  lizi: ['名字没了，纸上的试写痕迹还在。', '都干了，你还留着它们？'],
-  palette: ['不叫名字，也能看出每道痕迹不一样。', '先看边缘，干掉以后差别更明显。'],
-  swatches: ['“静”不一定最淡，可能只是落笔更稳。', '风把每块色片的节奏吹出来了。'],
-  cart: ['这次不猜颜色，认笔帽上的切口。', '先把笔帽排开，再和试写痕迹一一对照。'],
+function renderExperience(encounterId = 'lizi-1', onComplete = vi.fn()) {
+  return render(<LiziFirstActExperience encounterId={encounterId} scene='lizi.jpg' onSpeechChange={vi.fn()} onComplete={onComplete} />)
 }
 
-function renderExperience({
-  encounterId = 'enc-lizi',
-  disabled = false,
-  onSpeechChange = vi.fn<(speech: string) => void>(),
-  onComplete = vi.fn<(approachIndex: LiziFirstActApproachIndex) => void>(),
-}: {
-  encounterId?: string
-  disabled?: boolean
-  onSpeechChange?: (speech: string) => void
-  onComplete?: (approachIndex: LiziFirstActApproachIndex) => void
-} = {}) {
-  const view = render(
-    <LiziFirstActExperience
-      encounterId={encounterId}
-      scene='lizi-first-act.webp'
-      disabled={disabled}
-      onSpeechChange={onSpeechChange}
-      onComplete={onComplete}
-    />,
-  )
-  return { view, onSpeechChange, onComplete }
+function finishSceneHighlights() {
+  for (const highlight of LIZI_FIRST_ACT_HIGHLIGHTS.slice(0, 3)) {
+    fireEvent.click(screen.getByRole('button', { name: `观察${highlight.label}` }))
+    fireEvent.click(screen.getByRole('button', { name: `收下${highlight.label}的线索，回到现场` }))
+  }
+  fireEvent.click(screen.getByRole('button', { name: '观察右侧工具车' }))
+  fireEvent.click(screen.getByRole('button', { name: '收下右侧工具车的线索，回到现场' }))
 }
 
-function replyToHighlight(label: string, replyLabel: string) {
-  fireEvent.click(screen.getByRole('button', { name: `观察${label}` }))
-  fireEvent.click(screen.getByRole('button', { name: replyLabel }))
-  const closeLabel = screen.queryByRole('button', { name: '看完四处线索' })
-    ? '看完四处线索'
-    : '继续观察'
-  fireEvent.click(screen.getByRole('button', { name: closeLabel }))
-}
+describe('LiziFirstActExperience — Atuan template parity', () => {
+  beforeEach(() => { mocks.storage.clear(); mocks.navigateTo.mockClear(); mocks.didShow = null })
 
-function beginExploration(approachIndex: LiziFirstActApproachIndex = 0) {
-  fireEvent.click(screen.getByRole('button', { name: '接住滚向桌沿的三支彩笔' }))
-  fireEvent.click(screen.getByRole('button', {
-    name: approachIndex === 0 ? '先相信纸上留下的痕迹。' : '先把三种手感排成顺序。',
-  }))
-}
-
-function completeHighlights(approachIndex: LiziFirstActApproachIndex = 0) {
-  beginExploration(approachIndex)
-  replyToHighlight('栗子', REPLY_LABELS.lizi[0])
-  replyToHighlight('左侧色板', REPLY_LABELS.palette[0])
-  replyToHighlight('悬挂色片', REPLY_LABELS.swatches[0])
-  replyToHighlight('右侧工具车', REPLY_LABELS.cart[0])
-}
-
-function inspectAllMarks() {
-  fireEvent.click(screen.getByRole('button', { name: '查看第一道试写痕迹：软弧边' }))
-  expect(screen.getByText(/它记住的是“暖”/)).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: '查看第二道试写痕迹：双细线' }))
-  expect(screen.getByText(/它记住的是“静”/)).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: '查看第三道试写痕迹：短断点' }))
-  expect(screen.getByText(/它记住的是“醒”/)).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: '按“暖、静、醒”配回笔帽' }))
-}
-
-function enterPairing(approachIndex: LiziFirstActApproachIndex) {
-  completeHighlights(approachIndex)
-  expect(screen.queryByText('三种手感')).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: '和栗子一起辨认三条痕迹' }))
-  expect(screen.getByTestId('lizi-first-act')).toHaveClass('lizi-first-act--game')
-  inspectAllMarks()
-}
-
-function pair(capName: string, markerName: string) {
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(`选择${capName}`) }))
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(`${markerName}干笔`) }))
-}
-
-function makeCorrectPairings() {
-  pair('圆弧缺口帽', '软弧边')
-  pair('双细纹帽', '双细线')
-  pair('三短刻帽', '短断点')
-}
-
-afterEach(cleanup)
-beforeEach(() => {
-  storage.clear()
-  hapticsMock.mockClear()
-})
-
-describe('LiziFirstActExperience', () => {
-  it('opens with a dedicated scene beat and choice before unlocking highlights', () => {
+  it('uses three disappearing scene clues, then unlocks the fourth clue', () => {
     renderExperience()
-
-    expect(screen.getByText('风把色片翻了个面')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '接住滚向桌沿的三支彩笔' })).toBeInTheDocument()
-    expect(screen.queryByTestId('lizi-first-act-hotspot')).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: '接住滚向桌沿的三支彩笔' }))
-    expect(screen.getByRole('button', { name: '先相信纸上留下的痕迹。' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '先把三种手感排成顺序。' })).toBeInTheDocument()
-    expect(screen.queryByTestId('lizi-first-act-hotspot')).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: '先相信纸上留下的痕迹。' }))
-    expect(screen.getAllByTestId('lizi-first-act-hotspot')).toHaveLength(4)
-  })
-
-  it('shows the NPC plus three scene highlights and all eight Lizi-specific replies', () => {
-    const first = renderExperience()
-    expect(screen.getByTestId('lizi-first-act-scene')).toHaveAttribute('src', 'lizi-first-act.webp')
-    beginExploration()
-    expect(screen.getAllByRole('button', { name: /^观察/ })).toHaveLength(4)
-    expect(LIZI_FIRST_ACT_HIGHLIGHTS).toHaveLength(4)
-    first.view.unmount()
-
-    for (const highlight of LIZI_FIRST_ACT_HIGHLIGHTS) {
-      const current = renderExperience({ encounterId: `enc-options-${highlight.id}` })
-      beginExploration()
+    expect(screen.getAllByTestId('lizi-first-act-hotspot')).toHaveLength(3)
+    for (const highlight of LIZI_FIRST_ACT_HIGHLIGHTS.slice(0, 3)) {
       fireEvent.click(screen.getByRole('button', { name: `观察${highlight.label}` }))
-      expect(screen.getByRole('button', { name: REPLY_LABELS[highlight.id][0] })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: REPLY_LABELS[highlight.id][1] })).toBeInTheDocument()
-      current.view.unmount()
+      expect(screen.getByTestId('lizi-scene-clue')).toHaveTextContent(highlight.speech)
+      fireEvent.click(screen.getByRole('button', { name: `收下${highlight.label}的线索，回到现场` }))
     }
+    expect(screen.getByRole('status')).toHaveTextContent('三处线索已找到')
+    expect(screen.getByRole('button', { name: '观察右侧工具车' })).toBeInTheDocument()
   })
 
-  it('keeps NPC speech beside the scene and bottom narration free of NPC dialogue', () => {
-    const onSpeechChange = vi.fn()
-    renderExperience({ onSpeechChange })
-    beginExploration()
-    fireEvent.click(screen.getByRole('button', { name: '观察栗子' }))
-
-    expect(screen.getByTestId('lizi-scene-speech')).toHaveTextContent('一卷干掉的彩笔')
-    expect(screen.getByText('栗子压住布卷，把三支没盖笔帽的彩笔排开。')).not.toHaveTextContent('来得正好')
-    expect(onSpeechChange).toHaveBeenLastCalledWith(expect.stringContaining('一卷干掉的彩笔'))
-  })
-
-  it('lets every second reply branch reconverge on the same story-to-game transition', () => {
-    renderExperience()
-    beginExploration(1)
-
-    for (const highlight of LIZI_FIRST_ACT_HIGHLIGHTS) {
-      replyToHighlight(highlight.label, REPLY_LABELS[highlight.id][1])
-    }
-
-    expect(screen.getByTestId('lizi-scene-speech')).toHaveTextContent('把三种手感排开')
-    expect(screen.getByRole('button', { name: '和栗子一起辨认三条痕迹' })).toBeInTheDocument()
-    expect(screen.queryByText('三种手感')).not.toBeInTheDocument()
-  })
-
-  it('requires three texture clues, exposes three caps and three marker bodies', () => {
-    renderExperience()
-    enterPairing(0)
-
-    expect(screen.getAllByRole('button', { name: /^选择.+帽/ })).toHaveLength(3)
-    expect(screen.getAllByRole('button', { name: /干笔，还没配笔帽$/ })).toHaveLength(3)
-    expect(screen.getByText('暖 · 软弧边')).toBeInTheDocument()
-    expect(screen.getByText('静 · 双细线')).toBeInTheDocument()
-    expect(screen.getByText('醒 · 短断点')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /选择圆弧缺口帽/ }))
-    expect(screen.getByRole('button', { name: /选择圆弧缺口帽/ })).toHaveClass('lizi-first-act__cap--selected')
-    fireEvent.click(screen.getByRole('button', { name: /软弧边干笔/ }))
-    expect(screen.getByRole('button', { name: /软弧边干笔，已配圆弧缺口帽/ })).toBeInTheDocument()
-  })
-
-  it('shows an error, clears the wrong attempt, retries, succeeds, and completes with approach 0', () => {
+  it('adds a three-detail object, follow-up response, and dedicated three-round game', () => {
     const onComplete = vi.fn()
-    renderExperience({ onComplete })
-    enterPairing(0)
-
-    pair('圆弧缺口帽', '双细线')
-    pair('双细纹帽', '软弧边')
-    pair('三短刻帽', '短断点')
-    fireEvent.click(screen.getByRole('button', { name: '检查三顶笔帽' }))
-
-    expect(screen.getByRole('alert')).toHaveTextContent('没有完全接上三条试写痕迹')
-    expect(screen.getByTestId('lizi-first-act')).toHaveAttribute('data-phase', 'error')
-    fireEvent.click(screen.getByRole('button', { name: '重新配一次' }))
-    expect(screen.getAllByRole('button', { name: /干笔，还没配笔帽$/ })).toHaveLength(3)
-
-    makeCorrectPairings()
-    fireEvent.click(screen.getByRole('button', { name: '检查三顶笔帽' }))
-    expect(screen.getByTestId('lizi-first-act-dialogue-panel')).toHaveTextContent('颜色没有走丢')
-    fireEvent.click(screen.getByRole('button', { name: '把三支笔放回布卷' }))
-    expect(onComplete).toHaveBeenCalledWith(0)
-  })
-
-  it('resumes an in-progress pairing and completes with approach 1', () => {
-    const onComplete = vi.fn()
-    const first = renderExperience({ encounterId: 'enc-resume', onComplete })
-    enterPairing(1)
-    pair('圆弧缺口帽', '软弧边')
-    pair('双细纹帽', '双细线')
-    first.view.unmount()
-
-    renderExperience({ encounterId: 'enc-resume', onComplete })
-    expect(screen.getByTestId('lizi-first-act')).toHaveAttribute('data-phase', 'pair')
-    expect(screen.getByRole('button', { name: /软弧边干笔，已配圆弧缺口帽/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /双细线干笔，已配双细纹帽/ })).toBeInTheDocument()
-    pair('三短刻帽', '短断点')
-    fireEvent.click(screen.getByRole('button', { name: '检查三顶笔帽' }))
-    fireEvent.click(screen.getByRole('button', { name: '把三支笔放回布卷' }))
-
-    expect(onComplete).toHaveBeenCalledWith(1)
-    expect(storage.get(liziFirstActStorageKey('enc-resume'))).toEqual(expect.objectContaining({ phase: 'complete', approachIndex: 1 }))
-  })
-
-  it('recovers from a broken scene image without losing any hotspot', () => {
-    renderExperience()
-    fireEvent.error(screen.getByTestId('lizi-first-act-scene'))
-    expect(screen.getByTestId('lizi-first-act-scene-fallback')).toBeInTheDocument()
-    beginExploration()
-    expect(screen.getAllByRole('button', { name: /^观察/ })).toHaveLength(4)
-  })
-
-  it('blocks hotspot interaction when disabled and keeps copy unique to Lizi', () => {
-    renderExperience({ disabled: true })
+    renderExperience('lizi-flow', onComplete)
+    finishSceneHighlights()
     fireEvent.click(screen.getByRole('button', { name: '接住滚向桌沿的三支彩笔' }))
-    expect(screen.queryByRole('button', { name: '先相信纸上留下的痕迹。' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: REPLY_LABELS.lizi[0] })).not.toBeInTheDocument()
+    const approach = FLASH_FIRST_ACT_EXPERIENCE_CONTRACTS['s1-p1-lizi'].approaches[1]
+    fireEvent.click(screen.getByRole('button', { name: approach.label }))
 
-    const allCopy = JSON.stringify(LIZI_FIRST_ACT_HIGHLIGHTS)
-    expect(allCopy).toContain('试写痕迹')
-    expect(allCopy).toContain('暖、静、醒')
-    expect(allCopy).not.toMatch(/阿团|长椅|路灯|纸袋|观察卡|路线|座位|等待|档案/)
+    expect(screen.getByText('摊开的三道试写痕迹')).toBeInTheDocument()
+    expect(screen.getAllByTestId('lizi-object-hotspot')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: '和栗子一起配回三顶笔帽' })).not.toBeInTheDocument()
+    for (const label of ['暖开的软弧边', '安静的双细线', '醒目的短断点']) {
+      fireEvent.click(screen.getByRole('button', { name: `观察${label}` }))
+      fireEvent.click(screen.getByRole('button', { name: `收下${label}的线索，继续查看试写纸` }))
+    }
+    expect(screen.getAllByTestId('lizi-highlight-reply')).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: '如果颜色看起来很像呢？' }))
+    expect(screen.getByTestId('lizi-scene-speech')).toHaveTextContent('先别让颜色抢答')
+    fireEvent.click(screen.getByRole('button', { name: '和栗子一起配回三顶笔帽' }))
+    expect(mocks.navigateTo).toHaveBeenCalledWith({ url: expect.stringContaining('mode=lizi') })
+    expect(onComplete).not.toHaveBeenCalled()
+
+    mocks.storage.set(`${liziFirstActStorageKey('lizi-flow')}:game`, [{}, {}, {}])
+    act(() => mocks.didShow?.())
+    fireEvent.click(screen.getByRole('button', { name: '完成栗子第一幕' }))
+    expect(onComplete).toHaveBeenCalledWith(1)
   })
 
-  it('keeps mid-game controls silent while the experience is disabled', () => {
-    const first = renderExperience()
-    enterPairing(0)
-    hapticsMock.mockClear()
-
-    first.view.rerender(
-      <LiziFirstActExperience
-        encounterId='enc-lizi'
-        scene='lizi-first-act.webp'
-        disabled
-        onSpeechChange={vi.fn()}
-        onComplete={vi.fn()}
-      />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: /选择圆弧缺口帽/ }))
-    fireEvent.click(screen.getByRole('button', { name: /软弧边干笔/ }))
-
-    expect(hapticsMock).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: /软弧边干笔，还没配笔帽/ })).toBeInTheDocument()
-  })
-
-  it('fails closed when restored progress skips the opening and story beats', () => {
-    storage.set(liziFirstActStorageKey('enc-invalid'), {
-      version: 'lizi-first-act-v2',
-      encounterId: 'enc-invalid',
-      phase: 'success',
-      activeHighlight: null,
-      replies: {},
-      approachIndex: null,
-      activeMark: null,
-      inspectedMarks: [],
-      selectedCap: null,
-      pairings: {},
-      attempts: 0,
+  it('keeps an old in-game v2 player at the new game handoff', () => {
+    mocks.storage.set(liziFirstActStorageKey('lizi-v2'), {
+      version: 'lizi-first-act-v2', encounterId: 'lizi-v2', phase: 'pair',
+      replies: Object.fromEntries(LIZI_FIRST_ACT_HIGHLIGHTS.map(({ id }) => [id, 'legacy-reply'])),
+      approachIndex: 0, inspectedMarks: ['warm', 'quiet', 'awake'], pairings: {}, attempts: 1,
     })
+    renderExperience('lizi-v2')
+    expect(screen.getByRole('button', { name: '和栗子一起配回三顶笔帽' })).toBeInTheDocument()
+  })
 
-    renderExperience({ encounterId: 'enc-invalid' })
-    expect(screen.getByTestId('lizi-first-act')).toHaveAttribute('data-phase', 'arrival')
-    expect(screen.getByRole('button', { name: '接住滚向桌沿的三支彩笔' })).toBeInTheDocument()
+  it('keeps the full scene and blocks interaction when disabled', () => {
+    render(<LiziFirstActExperience encounterId='lizi-disabled' scene='lizi-full.jpg' disabled onSpeechChange={vi.fn()} onComplete={vi.fn()} />)
+    expect(screen.getByTestId('lizi-first-act-scene')).toHaveAttribute('src', 'lizi-full.jpg')
+    const hotspot = screen.getAllByTestId('lizi-first-act-hotspot')[0]
+    fireEvent.click(hotspot)
+    expect(screen.queryByTestId('lizi-scene-clue')).not.toBeInTheDocument()
   })
 })

@@ -304,7 +304,7 @@ describe('FlashStoryUnit production flow', () => {
     expect(screen.getByTestId('atuan-scene-dialogue')).toHaveTextContent('阿团把卡片收好了')
   })
 
-  it('keeps the settled-story exit outside the native result scroller', () => {
+  it('renders the settled-story exit as an immediately available stage-level action', () => {
     const onContinue = vi.fn()
     const story = {
       ...firstStory,
@@ -327,13 +327,14 @@ describe('FlashStoryUnit production flow', () => {
 
     const resultPanel = container.querySelector('.flash-dialogue__story-panel--result')
     const resultScroller = resultPanel?.querySelector<HTMLElement>('.flash-dialogue__story-panel-scroll') ?? null
-    const resultFooter = resultPanel?.querySelector<HTMLElement>('.flash-dialogue__story-panel-footer') ?? null
+    const resultExit = container.querySelector<HTMLElement>('[data-testid="flash-story-result-exit"]') ?? null
     const continueButton = screen.getByRole('button', { name: '收好碎片，继续寻找' })
 
     expect(resultPanel).not.toBeNull()
-    expect(resultFooter).not.toBeNull()
-    expect(resultScroller).not.toContainElement(resultFooter)
-    expect(resultFooter).toContainElement(continueButton)
+    expect(resultScroller).toBeNull()
+    expect(resultExit).not.toBeNull()
+    expect(resultPanel).not.toContainElement(resultExit)
+    expect(resultExit).toContainElement(continueButton)
     fireEvent.click(continueButton)
     expect(onContinue).toHaveBeenCalledTimes(1)
   })

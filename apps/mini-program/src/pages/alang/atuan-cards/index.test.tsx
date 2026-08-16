@@ -15,6 +15,7 @@ beforeEach(() => { mocks.setStorageSync.mockClear(); mocks.navigateBack.mockClea
 describe('shared first-act game page', () => {
   it.each([
     ['alang', '阿浪的窗边双椅', '阿浪'],
+    ['lizi', '栗子的试色桌', '栗子'],
     ['momo', '默默的路线册', '默默'],
     ['shiqi', '拾柒的检视灯箱', '拾柒'],
   ])('keeps %s on the Atuan one-item / feedback / continue rhythm', (mode, heading, speaker) => {
@@ -28,6 +29,20 @@ describe('shared first-act game page', () => {
     expect(screen.getByRole('status')).toHaveTextContent(speaker)
     expect(screen.getByRole('button', { name: '继续整理' })).toBeInTheDocument()
     expect(screen.queryAllByRole('button')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: '继续整理' }))
+    expect(screen.getByText('2 / 3')).toBeInTheDocument()
+  })
+
+  it('keeps Lizi on the current trace until the matching cap is chosen', () => {
+    mocks.params = { mode: 'lizi', key: 'lizi-game', approach: '0' }
+    render(<AtuanCardsPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: '配双细纹帽' }))
+    expect(screen.getByRole('status')).toHaveTextContent('接不上软弧')
+    fireEvent.click(screen.getByRole('button', { name: '再看一次' }))
+    expect(screen.getByText('1 / 3')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '配圆弧缺口帽' }))
     fireEvent.click(screen.getByRole('button', { name: '继续整理' }))
     expect(screen.getByText('2 / 3')).toBeInTheDocument()
   })

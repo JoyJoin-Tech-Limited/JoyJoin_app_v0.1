@@ -64,13 +64,8 @@ describe('Flash four-NPC first-act contract', () => {
     const sharedGame = readFileSync(resolve(sourceRoot, 'pages/alang/atuan-cards/index.tsx'), 'utf8')
     const pairs = firstActs.map(({ slug, component, objectCode, gameCode }) => {
       const source = readFileSync(resolve(componentRoot, component), 'utf8')
-      if (slug === 'lizi') {
-        expect(source).toContain(`data-object-code='${objectCode}'`)
-        expect(source).toContain(`data-game-code='${gameCode}'`)
-      } else {
-        expect(source).toContain(`objectCode: '${objectCode}'`)
-        expect(sharedGame).toContain(`${slug}: {`)
-      }
+      expect(source).toContain(`objectCode: '${objectCode}'`)
+      expect(sharedGame).toContain(`${slug}: {`)
       return `${objectCode}/${gameCode}`
     })
     expect(new Set(pairs).size).toBe(firstActs.length)
@@ -82,28 +77,38 @@ describe('Flash four-NPC first-act contract', () => {
     expect(templateSource).toContain('<FirstActDialogueChrome')
     for (const { slug, component } of firstActs) {
       const source = readFileSync(resolve(componentRoot, component), 'utf8')
-      if (slug === 'lizi') {
-        expect(source.match(/role='status'/g) ?? [], component).toHaveLength(1)
-        expect(source).toContain("aria-live='polite'")
-        expect(source).toContain("aria-atomic='true'")
-      } else {
-        expect(source).toContain('<FirstActAtuanTemplateExperience')
-      }
+      expect(source).toContain('<FirstActAtuanTemplateExperience')
     }
   })
 
-  it('routes the three corrected NPCs through the Atuan state template', () => {
+  it('routes all four corrected NPCs through the Atuan state template', () => {
     const templateSource = readFileSync(resolve(componentRoot, 'FirstActAtuanTemplateExperience.tsx'), 'utf8')
     expect(templateSource).toContain("const primaryHighlights = config.highlights.slice(0, 3)")
     expect(templateSource).toContain('const revealedHighlight = config.highlights[3]')
     expect(templateSource).toContain('<FirstActHighlightOverlay')
     expect(templateSource).toContain('<FirstActDialogueChrome')
+    expect(templateSource).toContain("'object' | 'followup' | 'conversation'")
+    expect(templateSource).toContain('config.objectExploration.details')
+    expect(templateSource).toContain('config.objectExploration.followUps')
+    expect(templateSource).toContain('testIdPrefix={`${config.npcSlug}-object`}')
     for (const { slug, component } of firstActs) {
       const source = readFileSync(resolve(componentRoot, component), 'utf8')
-      if (slug === 'lizi') continue
       expect(source, component).toContain('FirstActAtuanTemplateExperience')
       expect(source, component).toContain('<FirstActAtuanTemplateExperience')
+      expect(source, component).toContain('objectExploration: {')
+      expect(source, component).toContain('followUps: [')
     }
+  })
+
+  it('gives every added internal object its own visual grammar', () => {
+    const objectStyles = readFileSync(resolve(componentRoot, 'FirstActAtuanTemplateExperience.scss'), 'utf8')
+    expect(objectStyles).toContain('&--alang-one')
+    expect(objectStyles).toContain('&--lizi-one')
+    expect(objectStyles).toContain('&--momo-one')
+    expect(objectStyles).toContain('&--shiqi-one')
+    expect(objectStyles).toContain('border-left: 4rpx dashed')
+    expect(objectStyles).toContain('transform: rotate(68deg)')
+    expect(objectStyles).toContain('background: rgba($color-surface, 0.54)')
   })
 
   it('locks the shared non-game chrome to Atuan conversation dimensions', () => {

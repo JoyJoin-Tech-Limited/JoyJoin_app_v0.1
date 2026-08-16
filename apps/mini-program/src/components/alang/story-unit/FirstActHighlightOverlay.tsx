@@ -9,6 +9,7 @@ export interface FirstActHighlightTarget {
 
 export interface FirstActHighlightOverlayProps {
   npcSlug: string
+  testIdPrefix?: string
   className?: string
   targets: readonly FirstActHighlightTarget[]
   completedIds: readonly string[]
@@ -20,6 +21,7 @@ export interface FirstActHighlightOverlayProps {
 
 export function FirstActHighlightOverlay({
   npcSlug,
+  testIdPrefix = `${npcSlug}-first-act`,
   className = '',
   targets,
   completedIds,
@@ -34,7 +36,7 @@ export function FirstActHighlightOverlay({
     <View
       className={`first-act-highlight-overlay${className ? ` ${className}` : ''}`}
       aria-label={`可观察区域，已观察 ${completed.size} 处，共 ${targets.length} 处`}
-      data-testid={`${npcSlug}-first-act-highlight-overlay`}
+      data-testid={`${testIdPrefix}-highlight-overlay`}
     >
       {targets.filter((target) => !completed.has(target.id)).map((target) => {
         const seen = completed.has(target.id)
@@ -50,7 +52,7 @@ export function FirstActHighlightOverlay({
             aria-label={`观察${target.label}`}
             aria-pressed={active}
             aria-disabled={unavailable}
-            data-testid={`${npcSlug}-first-act-hotspot`}
+            data-testid={`${testIdPrefix}-hotspot`}
             data-highlight-id={target.id}
             onClick={() => {
               if (!unavailable) onSelect(target.id)

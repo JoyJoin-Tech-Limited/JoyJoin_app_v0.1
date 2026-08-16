@@ -27,6 +27,22 @@ const CONFIG: FirstActAtuanTemplateConfig = {
   unlockCopy: '三处声音与折点对上以后，路线书台上的册子自己翻到了空白页。',
   eventLabel: '替默默扶住晃动的路线册', eventPrompt: '风又钻进站亭，先按住哪一处？',
   approaches: [{ label: APPROACHES[0].label, response: APPROACHES[0].response, hint: '承认停下也是选择' }, { label: APPROACHES[1].label, response: APPROACHES[1].response, hint: '沿着证据走到页边' }],
+  objectExploration: {
+    title: '翻到空白页的路线册',
+    shortLabel: '路线册',
+    intro: '默默把路线册转向你。写过的三页和空白页之间，藏着三处很轻的停顿。',
+    details: [
+      { id: 'dry-stop-mark', label: '干透的收笔点', clue: '第三段实线在页边完整收住。墨迹已经干透，没有仓促拖出的尾巴。' },
+      { id: 'three-page-numbers', label: '连续的三段页码', clue: '前三段依次标着一、二、三。空白页没有第四段编号，也没有被撕掉的痕迹。' },
+      { id: 'rain-interval-notes', label: '页缝里的雨声记号', clue: '页缝夹着三个小点，间距越来越长，正好对应檐水慢下来的三次停顿。' },
+    ],
+    followUpPrompt: '看完路线册，你想怎样确认默默的停下？',
+    followUps: [
+      { label: '你是走不下去，还是决定先停在这里？', response: '……我能继续。只是这一次，我想让停下也算我自己的决定。', narration: '完整的收笔点留在第三页。空白不是缺失，而是默默主动留下的余地。' },
+      { label: '要不要给空白页留一句说明？', response: '不用。没写，也能表示我还没决定下一步。', narration: '你们没有替空白页补上箭头。路线到这里结束，下一步仍然可以以后再决定。' },
+    ],
+    gamePrompt: '路线册里的三次停顿已经对上。接下来把三段路线放回正确的位置。',
+  },
   conversationNarration: '檐水、折点和实线依次接上；空白页没有催促默默继续。', gameAction: '和默默一起整理三段路线',
   successSpeech: '……对。走到这里就够了。停下不是走丢。', successNarration: '三段路线各自有了落点，最后的空白仍然保持空白。', completionLabel: '完成默默第一幕',
 }

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FlashDialoguePage from './index'
 
@@ -14,18 +14,22 @@ const mocks = vi.hoisted(() => ({
   canonicalRedirect: vi.fn(),
   redirectTo: vi.fn(),
   getStorageSync: vi.fn(),
+  setStorageSync: vi.fn(),
+  removeStorageSync: vi.fn(),
+  navigateTo: vi.fn(),
+  didShow: null as null | (() => void),
 }))
 
 vi.mock('@tarojs/taro', () => ({
-  useDidShow: vi.fn(),
+  useDidShow: (callback: () => void) => { mocks.didShow = callback },
   default: {
     getCurrentInstance: () => ({ router: { params: { encounterId: 'encounter-1' } } }),
     setNavigationBarTitle: vi.fn(),
     redirectTo: mocks.redirectTo,
     getStorageSync: mocks.getStorageSync,
-    setStorageSync: vi.fn(),
-    removeStorageSync: vi.fn(),
-    navigateTo: vi.fn(),
+    setStorageSync: mocks.setStorageSync,
+    removeStorageSync: mocks.removeStorageSync,
+    navigateTo: mocks.navigateTo,
   },
 }))
 vi.mock('@tarojs/components', () => ({
@@ -109,6 +113,7 @@ const answeredStoryEncounter = {
 describe('formal Flash dialogue', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.didShow = null
     mocks.getStorageSync.mockReturnValue(undefined)
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
     mocks.useEncounter.mockReturnValue({ data: questionEncounter, isLoading: false, isError: false, refetch: mocks.refetch })
@@ -148,7 +153,7 @@ describe('formal Flash dialogue', () => {
     expect(screen.queryByTestId('flash-story-choice-panel')).not.toBeInTheDocument()
     expect(screen.getAllByTestId('shiqi-first-act-hotspot')).toHaveLength(3)
     fireEvent.click(screen.getByRole('button', { name: '观察拾柒本人' }))
-    expect(screen.getByTestId('shiqi-scene-clue')).toHaveTextContent('只让纸张最浅的压痕露出来')
+    expect(screen.getByTestId('shiqi-scene-clue')).toHaveTextContent('只让三张纸都留下的压线露出来')
     expect(screen.queryByText('你先确认共同的浅痕？')).not.toBeInTheDocument()
     expect(screen.queryByTestId('shiqi-first-act-dialogue-panel')).not.toBeInTheDocument()
   })
@@ -411,40 +416,29 @@ describe('formal Flash dialogue', () => {
     render(<FlashDialoguePage />)
     expect(document.querySelector('[data-testid="flash-story-v2-stage"]')).toBeNull()
     expect(screen.getByTestId('lizi-first-act')).toBeInTheDocument()
-    expect(screen.queryByTestId('lizi-first-act-hotspot')).not.toBeInTheDocument()
-    expect(screen.getByTestId('lizi-scene-speech')).toHaveTextContent('风从画室顶棚穿过去了')
-    expect(screen.getByTestId('lizi-first-act-dialogue-panel')).toBeInTheDocument()
+    expect(screen.getAllByTestId('lizi-first-act-hotspot')).toHaveLength(3)
+    for (const target of ['栗子', '左侧色板', '悬挂色片'] as const) {
+      fireEvent.click(screen.getByRole('button', { name: `观察${target}` }))
+      fireEvent.click(screen.getByRole('button', { name: `收下${target}的线索，回到现场` }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: '观察右侧工具车' }))
+    fireEvent.click(screen.getByRole('button', { name: '收下右侧工具车的线索，回到现场' }))
     fireEvent.click(screen.getByRole('button', { name: '接住滚向桌沿的三支彩笔' }))
     fireEvent.click(screen.getByRole('button', { name: '先相信纸上留下的痕迹。' }))
-    expect(screen.getAllByTestId('lizi-first-act-hotspot')).toHaveLength(4)
-    expect(screen.queryByTestId('lizi-first-act-dialogue-panel')).not.toBeInTheDocument()
 
-    const replies = [
-      ['栗子', '名字没了，纸上的试写痕迹还在。'],
-      ['左侧色板', '不叫名字，也能看出每道痕迹不一样。'],
-      ['悬挂色片', '“静”不一定最淡，可能只是落笔更稳。'],
-      ['右侧工具车', '这次不猜颜色，认笔帽上的切口。'],
-    ] as const
-    for (const [target, reply] of replies) {
-      fireEvent.click(screen.getByRole('button', { name: `观察${target}` }))
-      fireEvent.click(screen.getByRole('button', { name: reply }))
-      fireEvent.click(screen.getByRole('button', { name: target === '右侧工具车' ? '看完四处线索' : '继续观察' }))
+    for (const detail of ['暖开的软弧边', '安静的双细线', '醒目的短断点'] as const) {
+      fireEvent.click(screen.getByRole('button', { name: `观察${detail}` }))
+      fireEvent.click(screen.getByRole('button', { name: `收下${detail}的线索，继续查看试写纸` }))
     }
-    fireEvent.click(screen.getByRole('button', { name: '和栗子一起辨认三条痕迹' }))
-    fireEvent.click(screen.getByRole('button', { name: /查看.*软弧边/ }))
-    fireEvent.click(screen.getByRole('button', { name: /查看.*双细线/ }))
-    fireEvent.click(screen.getByRole('button', { name: /查看.*短断点/ }))
-    fireEvent.click(screen.getByRole('button', { name: '按“暖、静、醒”配回笔帽' }))
-    for (const [cap, marker] of [
-      ['圆弧缺口帽', '软弧边干笔'],
-      ['双细纹帽', '双细线干笔'],
-      ['三短刻帽', '短断点干笔'],
-    ] as const) {
-      fireEvent.click(screen.getByRole('button', { name: new RegExp(`选择${cap}`) }))
-      fireEvent.click(screen.getByRole('button', { name: new RegExp(marker) }))
-    }
-    fireEvent.click(screen.getByRole('button', { name: '检查三顶笔帽' }))
-    fireEvent.click(screen.getByRole('button', { name: '把三支笔放回布卷' }))
+    fireEvent.click(screen.getByRole('button', { name: '名字都没了，你为什么还认得它们？' }))
+    fireEvent.click(screen.getByRole('button', { name: '和栗子一起配回三顶笔帽' }))
+    expect(mocks.navigateTo).toHaveBeenCalledWith({ url: expect.stringContaining('mode=lizi') })
+
+    mocks.getStorageSync.mockImplementation((key: string) => key === 'joyjoin_flash_lizi_first_act_v2_encounter-1:game'
+      ? [{ cardId: 'warm' }, { cardId: 'quiet' }, { cardId: 'awake' }]
+      : undefined)
+    act(() => mocks.didShow?.())
+    fireEvent.click(screen.getByRole('button', { name: '完成栗子第一幕' }))
 
     await waitFor(() => expect(mocks.answer).toHaveBeenCalledWith({
       encounterId: 'encounter-1',
