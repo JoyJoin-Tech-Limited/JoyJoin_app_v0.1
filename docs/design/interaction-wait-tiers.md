@@ -36,7 +36,7 @@
 | Pattern | Where | Notes |
 |---------|-------|-------|
 | Micro-animation state flip | `pages/squad-unboxing/index.tsx:1377` (M1) — `锁定中` wait chip in the confirm CTA | Tier-S reference: CSS seat-mark pulse + text flip, `loading` removed |
-| Instant submit flip | `pages/event-feedback/index.tsx:355` (M1) — `已提交` optimistic flip, POST in background | Tier-S reference: guard + revert-on-error preserved |
+| Instant submit flip | `pages/event-feedback/index.tsx:350` (M1) — `setSubmitted(true)` optimistic flip inside `handleSubmit`, POST in background | Tier-S reference: guard + revert-on-error preserved |
 | Opacity-pulse skeleton | `pages/onboarding/profile-review/index.scss:806` (`@keyframes profile-review-pulse`, 0.55 → 1) used at `:554-585` | The canonical pulse; any new skeleton keyframes must use these exact values |
 | Tier-M branded skeleton + staged copy | `pages/payments/event-ticket-payment/index.tsx:998` (M1) — order-summary skeleton during `creating` | Tier-M reference: skeleton mirrors the real card, copy stages at ~1.6 s |
 | LLM generation shell | `components/ui/AiGenerationShell.tsx:17` (`AiGenerationShellProps`: `title`, `subtitle`, `successSubtitle`) | Tier-L: the only sanctioned LLM loader |
@@ -52,7 +52,7 @@ Every page with wait motion carries a `prefers-reduced-motion: reduce` block (or
 - kills the animation (`animation: none`),
 - sets a static mid-opacity so skeleton/glow remains visible but quiet (opacity 0.6–0.75, or 1 for content-replace states like the `已提交` flip).
 
-Reference blocks: `pages/event-feedback/index.scss:818`, `pages/payments/event-ticket-payment/index.scss:968`, `pages/squad-unboxing/index.scss:39` (+ blanket kill list at `:3240`).
+Reference blocks: `pages/event-feedback/index.scss:766` (`prefers-reduced-motion` block, lines 766–776), `pages/payments/event-ticket-payment/index.scss:968`, `pages/squad-unboxing/index.scss:39` (+ blanket kill list at `:3240`).
 
 ---
 

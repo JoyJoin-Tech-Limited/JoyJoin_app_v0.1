@@ -179,6 +179,7 @@ describe('mini-program onboarding routes', () => {
           MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
           MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
           MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT,
+          MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_ROOT,
         ],
       },
       'pages/events/index': {
@@ -186,6 +187,7 @@ describe('mini-program onboarding routes', () => {
         packages: [
           MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
           MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT,
+          MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_ROOT,
         ],
       },
       'pages/center-hub/index': {

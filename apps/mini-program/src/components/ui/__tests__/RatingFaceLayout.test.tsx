@@ -13,8 +13,11 @@ describe('RatingFace legibility (2026-07-28 audit)', () => {
   const scss = readFileSync(RATING_FACE_SCSS, 'utf-8')
 
   it('renders faces at 88rpx (was 64rpx — illegible silhouette art)', () => {
-    expect(tsx).toContain('const sizeRpx = 88')
-    expect(tsx).not.toContain('const sizeRpx = 64')
+    // 2026-08-15 refactor: sizing moved inline → SCSS-driven (`__face` block);
+    // the 88rpx legibility floor is preserved, just owned by the stylesheet.
+    expect(tsx).not.toContain('sizeRpx')
+    expect(scss).toContain('width: 88rpx')
+    expect(scss).toContain('height: 88rpx')
   })
 
   it('keeps unselected faces legible (0.72, was a washed-out 0.5)', () => {

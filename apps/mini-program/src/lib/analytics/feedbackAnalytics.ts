@@ -2,14 +2,15 @@ import { apiRequest } from '../api/api'
 import { logWarn } from '../utils/logger'
 
 /**
- * Event-feedback balanced layer funnel (2026-08-07).
- * The 5-dimension upgrade is the feedback flow's core conversion:
- * invite seen → deep engaged → deep submitted. Events land in
+ * Event-feedback balanced layer funnel (2026-08-15 merge).
+ * The invite interstitial is gone — deep fields are inline on the merged
+ * experience screen, so the funnel is now: deep engaged (first deep field
+ * touched, fired once) → deep submitted (payload carried ≥1 deep field,
+ * mirroring the server's content-based hasDeepFeedback rule). Events land in
  * discover_analytics_events via /api/analytics/discover (allowlist-extended).
  * Fire-and-forget; never blocks the feedback submission.
  */
 export type FeedbackAnalyticsEventType =
-  | 'feedback_invite_seen'
   | 'feedback_deep_engaged'
   | 'feedback_deep_submitted'
 

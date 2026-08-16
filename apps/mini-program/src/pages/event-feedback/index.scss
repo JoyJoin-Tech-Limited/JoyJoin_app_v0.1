@@ -50,6 +50,12 @@
     display: block;
   }
 
+  &__success-title-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
   &__success-title {
     @include font-cn-display;
     display: block;
@@ -111,11 +117,17 @@
     background: $color-bg;
     border-radius: $card-radius-sm;
     border: 2rpx solid $color-border;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+
+    &--pressed {
+      background: rgba($color-primary, 0.06);
+      transform: scale(0.98);
+    }
   }
 
   &__match-wechat-label {
     font-size: $font-size-xs;
-    color: $color-text-muted;
+    color: $color-text-tertiary-on-light;
   }
 
   &__match-wechat-id {
@@ -127,12 +139,12 @@
 
   &__match-wechat-hint {
     font-size: $font-size-xs;
-    color: $color-text-muted;
+    color: $color-text-tertiary-on-light;
   }
 
   &__match-no-wechat {
     font-size: $font-size-sm;
-    color: $color-text-muted;
+    color: $color-text-tertiary-on-light;
   }
 
   // ─── Header ───────────────────────────────────────────────────────────────
@@ -152,17 +164,18 @@
     margin-bottom: $spacing-xs;
   }
 
-  // 1/2/3 step dots (2026-07-28): the flow previously gave no sense of place.
+  // 1/2/3 step dots (2026-08-15): bumped to 16rpx so the indicator reads as
+  // part of the header rather than a speck.
   &__progress {
     display: flex;
     justify-content: center;
-    gap: 12rpx;
+    gap: 16rpx;
     margin-top: $spacing-md;
   }
 
   &__progress-dot {
-    width: 12rpx;
-    height: 12rpx;
+    width: 16rpx;
+    height: 16rpx;
     border-radius: 50%;
     background: rgba($color-primary, 0.18);
     transition: background-color 0.2s ease;
@@ -202,8 +215,8 @@
   &__card-hint {
     display: block;
     font-size: $font-size-sm;
-    line-height: 1.5;
-    color: $color-text-muted;
+    line-height: 1.6;
+    color: $color-text-tertiary-on-light;
     margin-bottom: $spacing-md;
   }
 
@@ -274,7 +287,7 @@
   &__empty-participants {
     text-align: center;
     font-size: $font-size-sm;
-    color: $color-text-muted;
+    color: $color-text-tertiary-on-light;
     padding: $spacing-lg 0;
   }
 
@@ -341,10 +354,6 @@
     }
   }
 
-  &__submit-secondary {
-    @include button-secondary;
-  }
-
   // Tier-S wait (M1): instant 已提交 flip — one soft pop, no spinner. The
   // opacity-pulse of the pop keeps it quiet; static under reduce-motion.
   &__submit--submitted {
@@ -369,13 +378,12 @@
     }
   }
 
-  // Two-button footer row (invite card + deep screens): all buttons flex 1.
+  // Two-button footer row (wrap-up screen): ghost back + primary submit.
   &__footer-row {
     display: flex;
     gap: $spacing-md;
 
     .event-feedback__submit,
-    .event-feedback__submit-secondary,
     .event-feedback__submit-ghost {
       flex: 1;
       width: auto;
@@ -383,89 +391,15 @@
     }
   }
 
-  // ─── Invite card (optional upgrade) ─────────────────────────────────────
-  &__invite {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-md;
-    text-align: center;
-    padding: $spacing-xl 0;
-    animation: event-feedback-invite-enter 0.34s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  }
-
-  &__invite-icon {
-    width: 128rpx;
-    height: 128rpx;
-    border-radius: 50%;
-    background: rgba($color-primary, 0.08);
-    @include flex-center;
-    margin-bottom: $spacing-sm;
-  }
-
-  &__invite-title {
-    @include font-cn-display;
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
-    line-height: $line-height-display;
-    color: $color-text-primary;
-  }
-
-  &__invite-text {
-    font-size: $font-size-base;
-    line-height: $line-height-relaxed;
-    color: $color-text-secondary;
-    max-width: 520rpx;
-  }
-
-  &__invite-reward {
-    display: inline-flex;
-    align-items: center;
-    gap: 8rpx;
-    padding: $spacing-sm $spacing-lg;
-    border-radius: $radius-pill;
-    background: rgba($color-primary, 0.08);
+  // Why-we-ask hint (2026-08-15 merge): one quiet line under the progress dots
+  // giving the reason for feedback — deliberately NOT a points pitch, since
+  // there is no coupon-linked 积分 system for users to redeem against.
+  &__purpose-hint {
+    display: block;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    color: $color-text-tertiary-on-light;
     margin-top: $spacing-sm;
-  }
-
-  &__invite-reward-text {
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-primary;
-  }
-
-  // ─── Deep layer progress (label + 2 quiet dots, distinct from 1/2/3) ────
-  &__deep-progress {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8rpx;
-    margin-top: $spacing-md;
-  }
-
-  &__deep-progress-label {
-    font-size: $font-size-2xs;
-    letter-spacing: 2rpx;
-    color: $color-text-muted;
-  }
-
-  &__deep-progress-dots {
-    display: flex;
-    gap: 12rpx;
-  }
-
-  &__deep-progress-dot {
-    width: 12rpx;
-    height: 12rpx;
-    border-radius: 50%;
-    background: rgba($color-primary, 0.18);
-    transition: background-color 0.2s ease;
-
-    &--active {
-      background: $color-primary;
-    }
   }
 
   // ─── Deep layer scroll port ──────────────────────────────────────────────
@@ -534,7 +468,7 @@
     flex: 1;
     text-align: center;
     font-size: $font-size-xs;
-    color: $color-text-muted;
+    color: $color-text-tertiary-on-light;
     transition: color 0.2s ease;
 
     &--active {
@@ -598,7 +532,7 @@
 
   &__radar-hint {
     font-size: $font-size-2xs;
-    color: $color-text-muted;
+    color: $color-text-tertiary-on-light;
   }
 
   // ─── Selectable pills (venue style + connection status) ───────────────────
@@ -686,7 +620,7 @@
   &__attendee-hint {
     display: block;
     font-size: $font-size-xs;
-    color: $color-text-muted;
+    color: $color-text-tertiary-on-light;
   }
 
   &__attendee-tags {
@@ -751,6 +685,7 @@
     display: block;
     width: 100%;
     height: $input-height;
+    line-height: $input-height;
     padding: 0 $spacing-md;
     border: 2rpx solid $color-border;
     border-radius: $card-radius-sm;
@@ -804,18 +739,6 @@
   }
 }
 
-// Invite card entrance (2026-08-07): soft rise + settle.
-@keyframes event-feedback-invite-enter {
-  from {
-    opacity: 0;
-    transform: translateY(16rpx) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 // 灯格 lighting up (thermometer + radar share this pop).
 @keyframes event-feedback-dot-pop {
   from {
@@ -854,10 +777,6 @@
 
   .event-feedback__header,
   .event-feedback__card {
-    animation: none;
-  }
-
-  .event-feedback__invite {
     animation: none;
   }
 
