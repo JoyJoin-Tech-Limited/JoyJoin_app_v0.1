@@ -74,8 +74,10 @@ const REQUIREMENTS = [
     ],
   },
   {
-    // 桌友 card-deck reskin: pool-group-detail is main-package, but its page
-    // WXSS still needs the card + pill rules co-compiled from the deck strip.
+    // 桌友 card-deck reskin: pool-group-detail moved into its own subpackage
+    // (2026-08-16, main package 2048KB source-size budget), so its page WXSS
+    // needs the card + pill rules co-compiled from the deck strip — the shared
+    // component chunk may never load inside the subpackage.
     page: 'pages/pool-group-detail/index.wxss',
     selectors: [
       'tablemate-card__art{',

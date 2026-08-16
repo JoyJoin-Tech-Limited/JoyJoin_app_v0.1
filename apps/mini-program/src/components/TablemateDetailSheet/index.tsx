@@ -16,7 +16,8 @@ import { haptics } from '../../lib/utils/haptics'
 import MissingArchetypePlaceholder from '../mascot/MissingArchetypePlaceholder'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
 import Button from '../ui/Button'
-import './index.scss'
+// Styles are owned by consuming page SCSS (@use) — see TablemateCard import
+// note (main package 2048KB source-size budget, 2026-08-16).
 
 export interface TablemateDetailSheetProps {
   visible: boolean

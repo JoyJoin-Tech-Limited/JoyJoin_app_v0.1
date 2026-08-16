@@ -16,7 +16,10 @@ import { haptics } from '../../lib/utils/haptics'
 import MissingArchetypePlaceholder from '../mascot/MissingArchetypePlaceholder'
 import ConnectionPointPill from '../ConnectionPointPill'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
-import './index.scss'
+// Styles are owned by consuming page SCSS (@use) so the card rules co-compile
+// into each surface's page WXSS — a component-level import would additionally
+// hoist a duplicate copy into main-package common.wxss (subpackage
+// style-splitting + main package 2048KB source-size budget, 2026-08-16).
 
 export interface TablemateCardProps {
   member: PoolGroupMemberSummary
