@@ -158,7 +158,7 @@ describe('formal Flash dialogue', () => {
     expect(screen.queryByTestId('shiqi-first-act-dialogue-panel')).not.toBeInTheDocument()
   })
 
-  it('keeps the answer and fragment reveal inside the same story stage', () => {
+  it('automatically leaves a settled story without waiting for the result button', async () => {
     mocks.useEncounter.mockReturnValue({
       data: answeredStoryEncounter,
       isLoading: false,
@@ -174,6 +174,9 @@ describe('formal Flash dialogue', () => {
     expect(stage).toContainElement(screen.getByText('迟到的出发'))
     expect(stage).toContainElement(screen.getByText('这本册子不是没被想起，只是每次出发前都多了一个舍不得删掉的选择。'))
     expect(stage).toContainElement(screen.getByRole('button', { name: '收好碎片，继续寻找' }))
+    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledWith({
+      url: '/pages/alang/event/index',
+    }))
   })
 
   it('shows the fifteenth fragment before the user explicitly enters the finale', async () => {
@@ -192,7 +195,6 @@ describe('formal Flash dialogue', () => {
 
     render(<FlashDialoguePage />)
 
-    fireEvent.click(screen.getByRole('button', { name: '收好这一季' }))
     await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledWith({
       url: '/pages/alang/finale/index?encounterId=encounter-1',
     }))

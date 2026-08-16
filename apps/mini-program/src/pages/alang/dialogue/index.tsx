@@ -116,6 +116,7 @@ export default function FlashDialoguePage() {
   const [fragmentRevealed, setFragmentRevealed] = useState(false)
   const [storySubmitState, setStorySubmitState] = useState<StorySubmitState>('idle')
   const storySubmitInFlightRef = useRef(false)
+  const settledStoryExitKeyRef = useRef('')
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: data?.npc?.name ? `和${data.npc.name}聊聊` : '角色对话' })
@@ -126,9 +127,22 @@ export default function FlashDialoguePage() {
       void Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}` })
       return
     }
+    const settledStory = data?.storyEpisode
+    if (!replay && settledStory?.response) {
+      const exitKey = `${settledStory.id}:${settledStory.response}`
+      if (settledStoryExitKeyRef.current === exitKey) return
+      settledStoryExitKeyRef.current = exitKey
+      const url = settledStory.progress.completedTotal >= settledStory.progress.total
+        ? `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}`
+        : MINI_PROGRAM_ROUTES.alangEvent
+      void leaveFlashStory(url).catch(() => {
+        settledStoryExitKeyRef.current = ''
+      })
+      return
+    }
     if (!enabled || !data?.canonicalScreen || data.status === 'expired') return
     void redirectToFlashCanonical(data, MINI_PROGRAM_ROUTES.alangDialogue)
-  }, [data, enabled, encounterId])
+  }, [data, enabled, encounterId, replay])
 
   useEffect(() => {
     setFragmentRevealed(false)
