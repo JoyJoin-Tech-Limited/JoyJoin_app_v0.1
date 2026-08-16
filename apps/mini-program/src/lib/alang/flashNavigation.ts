@@ -2,17 +2,6 @@ import Taro from '@tarojs/taro'
 import { MINI_PROGRAM_ROUTES } from '../onboarding/onboardingRoutes'
 import type { FlashCanonicalSnapshot } from './flashTypes'
 
-const DEDICATED_LATER_ACT_CODES = new Set([
-  's1-p2-alang',
-  's1-p3-alang',
-  's1-p2-momo',
-  's1-p3-momo',
-  's1-p2-lizi',
-  's1-p3-lizi',
-  's1-p2-shiqi',
-  's1-p3-shiqi',
-])
-
 export interface FlashCanonicalRouteContext {
   replay?: boolean
   replaySession?: string
@@ -63,9 +52,7 @@ export function getFlashCanonicalRoute(
     case 'delivery':
       return snapshot.encounterId
         ? query(
-            snapshot.storyEpisode?.code && DEDICATED_LATER_ACT_CODES.has(snapshot.storyEpisode.code)
-              ? MINI_PROGRAM_ROUTES.alangLaterDialogue
-              : MINI_PROGRAM_ROUTES.alangDialogue,
+            MINI_PROGRAM_ROUTES.alangLaterDialogue,
             {
               encounterId: snapshot.encounterId,
               replay: context.replay ? '1' : undefined,
@@ -101,7 +88,16 @@ export async function redirectToFlashCanonical(
   const route = getFlashCanonicalRoute(snapshot, context)
   if (!route) return false
   const routePath = route.split('?')[0]
-  if (routePath === currentPath) return false
+  const normalizedCurrentPath = currentPath.startsWith('/') ? currentPath : `/${currentPath}`
+  let topPagePath = ''
+  try {
+    const pages = Taro.getCurrentPages()
+    const topRoute = pages[pages.length - 1]?.route?.split('?')[0] ?? ''
+    topPagePath = topRoute ? (topRoute.startsWith('/') ? topRoute : `/${topRoute}`) : ''
+  } catch {
+    // The explicit caller path remains the fallback in non-WeChat runtimes.
+  }
+  if (routePath === normalizedCurrentPath || routePath === topPagePath) return false
   await Taro.redirectTo({ url: route })
   return true
 }

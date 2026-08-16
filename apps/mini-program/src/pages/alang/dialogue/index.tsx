@@ -1,4 +1,4 @@
-import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
+import Taro, { useDidHide, useDidShow, useUnload } from '@tarojs/taro'
 import { useEffect, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { getFlashStoryUnitDefinition, isFlashV2PilotUnitId } from '@shared/alang/flashStorySeason'
@@ -157,12 +157,16 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
     setPageVisible(false)
   })
 
+  useUnload(() => {
+    pageVisibleRef.current = false
+  })
+
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: data?.npc?.name ? `和${data.npc.name}聊聊` : '角色对话' })
   }, [data?.npc?.name])
 
   useEffect(() => {
-    if (!pageVisible || isFetching || isError) return
+    if (!pageVisibleRef.current || !pageVisible || isFetching || isError) return
     if (data?.storyEpisode?.code === 'season-finale') {
       void Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}` })
       return

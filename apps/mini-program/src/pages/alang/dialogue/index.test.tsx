@@ -20,11 +20,13 @@ const mocks = vi.hoisted(() => ({
   routerParams: { encounterId: 'encounter-1' } as Record<string, string>,
   didShow: null as null | (() => void),
   didHide: null as null | (() => void),
+  didUnload: null as null | (() => void),
 }))
 
 vi.mock('@tarojs/taro', () => ({
   useDidShow: (callback: () => void) => { mocks.didShow = callback },
   useDidHide: (callback: () => void) => { mocks.didHide = callback },
+  useUnload: (callback: () => void) => { mocks.didUnload = callback },
   default: {
     getCurrentInstance: () => ({ router: { params: mocks.routerParams } }),
     setNavigationBarTitle: vi.fn(),
@@ -119,6 +121,7 @@ describe('formal Flash dialogue', () => {
     mocks.routerParams = { encounterId: 'encounter-1' }
     mocks.didShow = null
     mocks.didHide = null
+    mocks.didUnload = null
     mocks.getStorageSync.mockReturnValue(undefined)
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
     mocks.useEncounter.mockReturnValue({ data: questionEncounter, isLoading: false, isError: false, refetch: mocks.refetch })
@@ -139,6 +142,27 @@ describe('formal Flash dialogue', () => {
     await waitFor(() => expect(mocks.answer).toHaveBeenCalledWith({
       encounterId: 'encounter-1', questionId: 'q1', optionId: 'quiet',
     }))
+  })
+
+  it('does not navigate when an in-flight dialogue response arrives after page unload', async () => {
+    let resolveAnswer!: (value: any) => void
+    mocks.answer.mockReturnValue(new Promise((resolve) => { resolveAnswer = resolve }))
+    const view = render(<FlashDialoguePage />)
+
+    fireEvent.click(screen.getByRole('button', { name: '安静一点的' }))
+    await waitFor(() => expect(mocks.answer).toHaveBeenCalledTimes(1))
+    mocks.canonicalRedirect.mockClear()
+    act(() => { mocks.didUnload?.() })
+    view.unmount()
+    await act(async () => {
+      resolveAnswer({
+        ...questionEncounter,
+        storyEpisode: { id: 'episode-2', code: 's1-p2-alang', response: null },
+      })
+      await Promise.resolve()
+    })
+
+    expect(mocks.canonicalRedirect).not.toHaveBeenCalled()
   })
 
   it('routes the first Shiqi unit directly into the Atuan-style three-clue scene', () => {

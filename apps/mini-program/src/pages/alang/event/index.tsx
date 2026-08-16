@@ -247,7 +247,7 @@ export default function FlashHomePage() {
                           haptics('light')
                           const replaySession = `${Date.now().toString(36)}-${fragment.id.slice(0, 8)}`
                           void Taro.navigateTo({
-                            url: `${MINI_PROGRAM_ROUTES.alangDialogue}?encounterId=${encodeURIComponent(fragment.encounterId)}&replay=1&replaySession=${encodeURIComponent(replaySession)}`,
+                            url: `${MINI_PROGRAM_ROUTES.alangLaterDialogue}?encounterId=${encodeURIComponent(fragment.encounterId)}&replay=1&replaySession=${encodeURIComponent(replaySession)}`,
                           })
                         }}
                       >

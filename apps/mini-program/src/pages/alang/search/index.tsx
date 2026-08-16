@@ -111,7 +111,7 @@ export default function FlashMapPage() {
         const redirected = await redirectToFlashCanonical(response, MINI_PROGRAM_ROUTES.alangSearch)
         if (!redirected && response.encounterId) {
           await Taro.redirectTo({
-            url: `${MINI_PROGRAM_ROUTES.alangDialogue}?encounterId=${encodeURIComponent(response.encounterId)}`,
+            url: `${MINI_PROGRAM_ROUTES.alangLaterDialogue}?encounterId=${encodeURIComponent(response.encounterId)}`,
           })
         }
         return
