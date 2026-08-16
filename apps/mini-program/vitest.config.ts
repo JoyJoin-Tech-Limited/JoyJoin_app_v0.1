@@ -5,7 +5,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['src/**/*.{test,spec}.ts', 'src/**/*.{test,spec}.tsx', 'scripts/**/*.{test,spec}.mjs'],
+    include: [
+      'src/**/*.{test,spec}.ts',
+      'src/**/*.{test,spec}.tsx',
+      'config/miniProgramChunks.test.ts',
+      'scripts/**/*.{test,spec}.mjs',
+    ],
     exclude: [
       'node_modules',
       'dist',

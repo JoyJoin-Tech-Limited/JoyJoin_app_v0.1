@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
-import { getArchetypeHSL, ARCHETYPE_LEGACY_NAME_MAP } from '@joyjoin/shared'
+import { getArchetypeHSL } from '@shared/archetypeColors'
+import { ARCHETYPE_LEGACY_NAME_MAP } from '@shared/personality/archetypeNames'
 import { CANVAS_PALETTE } from '@shared/personality/canvasPalette'
 import {
   toCanvasRGBA,

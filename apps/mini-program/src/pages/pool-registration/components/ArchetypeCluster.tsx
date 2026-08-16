@@ -1,7 +1,7 @@
 import { View, Text } from '@tarojs/components'
 import { useMemo } from 'react'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
-import { ARCHETYPE_BY_ID } from '@shared/personality'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
 import './ArchetypeCluster.scss'
 

@@ -156,6 +156,7 @@ jobs:
             --robot 1
           mkdir compiled-check
           unzip -q compiledResult.zip -d compiled-check
+          node scripts/check-compiled-package-source-size.mjs compiled-check
           echo 'Compiled Street Blind Box assets:'
           find compiled-check -type f \( -path '*/pages/alang/assets/*' -o -path '*/pages/alang-story/assets/*' \) -print | sort
           grep -R -a -q 'flash-map-direct-flow-v1' compiled-check || {

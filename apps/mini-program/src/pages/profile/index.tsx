@@ -6,7 +6,7 @@ import {
 import {
   ARCHETYPE_BY_ID,
 } from '@shared/personality/archetypeNames'
-import { archetypeRegistry } from '@shared/personality'
+import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import { formatHSLAsRGBA, getArchetypeHSL, getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import type { PersonalStoryResponse } from '@joyjoin/shared/schema'
 import { useQuery } from '@tanstack/react-query'
