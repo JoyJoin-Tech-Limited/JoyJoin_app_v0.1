@@ -12,6 +12,7 @@ import {
   type FlashPreferenceDto,
   type FlashPreferenceUpdateRequest,
   type FlashReadinessResponse,
+  type FlashStoryReplayStateDto,
   type FlashStoryV2ViewDto,
   type FlashTaskDto,
 } from "@shared/alang/flashTypes";
@@ -80,18 +81,129 @@ import {
   advanceFlashV2Run,
   advanceFlashV2Node,
   listCompletedFlashStoryEpisodeCodes,
+  updateFlashStoryCompletionNarrative,
+  FlashStorySettlementInvariantError,
 } from "../repositories/flashStoryRepo";
 import { getFeatureFlag } from "../lib/featureFlags";
 import { isFlashV2PilotUnitId, nextFlashV2HookHint } from "@joyjoin/shared/alang/flashStorySeason";
 import { isFlashFirstActExperienceUnitId } from "@joyjoin/shared/alang/flashFirstActExperience";
 import { resolveFlashFirstActRuntimeContent } from "../lib/flashFirstActRuntime";
 import {
+  answerStoryChoice as answerV2StoryChoice,
   advanceStoryNode as advanceV2StoryNode,
   buildV2EndingGallery,
+  createEmptyFlashRunState,
   enterStoryEpisode as enterV2StoryEpisode,
   getStoryNodeView as getV2StoryNodeView,
   resolveV2EchoTier,
+  scopeV2TraversalToEpisode,
 } from "./flashStoryEngine";
+import {
+  FLASH_PERSONALIZED_PROMPT_VERSION,
+  generateFlashPersonalizedResponse,
+} from "./flashPersonalizedNarrativeService";
+import { logger } from "../lib/logger";
+
+function flashStoryHasMultipleChoices(content: any): boolean {
+  if (content?.v === 2 && content.nodes) {
+    return Object.values(content.nodes).some((node: any) =>
+      node?.type === "choice" && Array.isArray(node.choices) && node.choices.length > 1,
+    );
+  }
+  return Array.isArray(content?.question?.options) && content.question.options.length > 1;
+}
+
+function flashTimeBand(now: Date): "morning" | "afternoon" | "evening" {
+  const hour = now.getHours();
+  if (hour < 12) return "morning";
+  if (hour < 18) return "afternoon";
+  return "evening";
+}
+
+function flashReplayRunState(
+  replayState: FlashStoryReplayStateDto | undefined,
+  episodeId: string,
+) {
+  if (!replayState || replayState.episodeId !== episodeId) return createEmptyFlashRunState();
+  return {
+    echo: replayState.echo,
+    flags: replayState.flags,
+    variables: replayState.variables,
+    currentNode: replayState.currentNode,
+    nodePath: replayState.nodePath,
+    lastChoiceId: replayState.lastChoiceId,
+  };
+}
+
+function flashReplayStateDto(
+  episodeId: string,
+  state: ReturnType<typeof createEmptyFlashRunState>,
+): FlashStoryReplayStateDto {
+  return {
+    episodeId,
+    echo: state.echo,
+    flags: state.flags,
+    variables: state.variables,
+    currentNode: state.currentNode,
+    nodePath: state.nodePath,
+    lastChoiceId: state.lastChoiceId,
+  };
+}
+
+async function settleFlashStoryEpisode(
+  input: Parameters<typeof completeFlashStoryEpisode>[0],
+) {
+  try {
+    const settlement = await completeFlashStoryEpisode(input);
+    if (!settlement) {
+      throw new FlashServiceError("FLASH_STORY_SETTLEMENT_FAILED", 409, "这段故事还没有满足结算条件，请刷新后重试");
+    }
+    return settlement;
+  } catch (error) {
+    if (error instanceof FlashStorySettlementInvariantError) {
+      logger.error("[FlashStory] Settlement blocked by fragment catalog invariant", {
+        episodeId: error.episodeId,
+        fragmentCount: error.fragmentCount,
+        errorCode: "FLASH_STORY_FRAGMENT_NOT_READY",
+      });
+      throw new FlashServiceError("FLASH_STORY_FRAGMENT_NOT_READY", 503, "故事碎片目录暂时不完整，本次进度没有被提交");
+    }
+    throw error;
+  }
+}
+
+async function enrichSettledFlashStoryResponse(input: {
+  settlement: Awaited<ReturnType<typeof completeFlashStoryEpisode>>;
+  userId: string;
+  episodeId: string;
+  npcName: string;
+  baseResponse: string | null;
+  content: unknown;
+  now: Date;
+}) {
+  if (!input.settlement?.created || !input.baseResponse || !flashStoryHasMultipleChoices(input.content)) return;
+  if (!await getFeatureFlag("flashStoryAiResponsesEnabled", false)) return;
+  try {
+    const generated = await generateFlashPersonalizedResponse({
+      baseResponse: input.baseResponse,
+      npcName: input.npcName,
+      context: { timeBand: flashTimeBand(input.now) },
+    });
+    await updateFlashStoryCompletionNarrative({
+      userId: input.userId,
+      episodeId: input.episodeId,
+      expectedResponseSnapshot: input.baseResponse,
+      responseSnapshot: generated.response,
+      renderKind: generated.renderKind,
+      promptVersion: generated.promptVersion,
+    });
+  } catch (error) {
+    logger.warn("[FlashStory] Optional narrative enrichment failed after settlement", {
+      episodeId: input.episodeId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
 
 function resolveV2ClosureResponse(content: unknown): string | null {
   const v2 = content as { nodes?: Record<string, { type?: string; segments?: Array<{ text?: string }>; variants?: Array<{ when?: unknown; segments?: Array<{ text?: string }> }> }> } | null;
@@ -105,6 +217,7 @@ function resolveV2ClosureResponse(content: unknown): string | null {
 
 async function buildFlashStoryV2View(
   storyState: NonNullable<Awaited<ReturnType<typeof getFlashStoryEncounterState>>>,
+  replay?: { enabled: boolean; state?: FlashStoryReplayStateDto },
 ): Promise<FlashStoryV2ViewDto | null> {
   if (isFlashFirstActExperienceUnitId(storyState.episode.code)) return null;
   const content = storyState.episode.content as { v?: number; start?: string; nodes?: Record<string, unknown> } | null;
@@ -113,14 +226,17 @@ async function buildFlashStoryV2View(
   const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
   if (!v2Enabled) return null;
   const run = storyState.universeRun;
-  const state: Parameters<typeof enterV2StoryEpisode>[1] = {
-    echo: run?.v2State?.echo ?? 0,
-    flags: run?.flags ?? [],
-    variables: run?.v2State?.variables ?? {},
-    currentNode: run?.currentNode ?? null,
-    nodePath: run?.nodePath ?? [],
-    lastChoiceId: run?.v2State?.lastChoiceId ?? null,
-  };
+  const state = replay?.enabled
+    ? flashReplayRunState(replay.state, storyState.episode.id)
+    : scopeV2TraversalToEpisode({
+        episodeId: run?.v2State?.episodeId ?? null,
+        echo: run?.v2State?.echo ?? 0,
+        flags: run?.flags ?? [],
+        variables: run?.v2State?.variables ?? {},
+        currentNode: run?.currentNode ?? null,
+        nodePath: run?.nodePath ?? [],
+        lastChoiceId: run?.v2State?.lastChoiceId ?? null,
+      }, storyState.episode.id);
   const entered = enterV2StoryEpisode(content as any, state);
   const view = getV2StoryNodeView(content as any, entered);
   if (!view) return null;
@@ -133,6 +249,7 @@ async function buildFlashStoryV2View(
     choices: view.choices ?? [],
     next: view.next,
     unlockFragment: view.unlockFragment,
+    replayState: replay?.enabled ? flashReplayStateDto(storyState.episode.id, entered) : undefined,
   };
 }
 
@@ -652,6 +769,8 @@ export async function getFlashEncounter(input: {
   allowStoryReplay?: boolean;
   replayOptionId?: string;
   replayResponseSnapshot?: string;
+  replayState?: FlashStoryReplayStateDto;
+  replayFinished?: boolean;
 }): Promise<FlashEncounterResponse> {
   const now = input.now ?? new Date();
   await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
@@ -668,7 +787,7 @@ export async function getFlashEncounter(input: {
       const reviewedResponse = intent.renderKind === "template" && intent.responseSnapshot
         ? intent.responseSnapshot
         : runtimeContent.responseByOption[intent.optionId] ?? runtimeContent.closing;
-      await completeFlashStoryEpisode({
+      await settleFlashStoryEpisode({
         encounterId: intent.encounterId,
         userId: input.userId,
         episodeId: storyState.episode.id,
@@ -688,11 +807,18 @@ export async function getFlashEncounter(input: {
     const selectedOptionId = input.allowStoryReplay
       ? input.replayOptionId ?? null
       : storyState.completion?.selectedOptionId ?? null;
-    const storyCompleted = input.allowStoryReplay ? Boolean(input.replayOptionId) : Boolean(storyState.completion);
+    const storyCompleted = input.allowStoryReplay
+      ? Boolean(input.replayOptionId || input.replayFinished)
+      : Boolean(storyState.completion);
     const completedCodesForHint = storyCompleted
       ? await listCompletedFlashStoryEpisodeCodes(input.userId, storyState.episode.seasonId)
       : [];
     const nextStoryHint = storyCompleted ? nextFlashV2HookHint(new Set(completedCodesForHint)) : null;
+    const storyV2 = storyCompleted ? null : await buildFlashStoryV2View(storyState, {
+      enabled: Boolean(input.allowStoryReplay),
+      state: input.replayState,
+    });
+    const flatQuestion = storyV2 ? null : content.question ?? null;
     return {
       id: encounter.id,
       npc: {
@@ -707,12 +833,12 @@ export async function getFlashEncounter(input: {
       expiresAt: encounter.expiresAt.toISOString(),
       status: storyCompleted ? "completed" : "dialogue",
       pendingDelivery: null,
-      question: storyCompleted ? null : {
-        id: content.question.id,
-        prompt: content.question.prompt,
-        options: content.question.options.map((option: { id: string; label: string }) => ({ id: option.id, label: option.label })),
+      question: storyCompleted || !flatQuestion ? null : {
+        id: flatQuestion.id,
+        prompt: flatQuestion.prompt,
+        options: flatQuestion.options.map((option: { id: string; label: string }) => ({ id: option.id, label: option.label })),
       },
-      questionPosition: storyCompleted ? null : { current: 1, total: 1 },
+      questionPosition: storyCompleted || !flatQuestion ? null : { current: 1, total: 1 },
       offer: null,
       storyEpisode: {
         id: storyState.episode.id,
@@ -724,16 +850,28 @@ export async function getFlashEncounter(input: {
         opening: content.opening,
         action: content.action,
         discovery: content.discovery,
-        response: selectedOptionId
-          ? input.allowStoryReplay
-            ? input.replayResponseSnapshot ?? content.responseByOption[selectedOptionId] ?? content.closing
-            : storyState.completion?.renderKind === "template" && storyState.completion.responseSnapshot
+        response: input.allowStoryReplay && input.replayFinished
+          ? input.replayResponseSnapshot ?? content.closing
+          : selectedOptionId
+            ? input.allowStoryReplay
+              ? input.replayResponseSnapshot ?? content.responseByOption[selectedOptionId] ?? content.closing
+            : storyState.completion?.responseSnapshot && (
+                storyState.completion.renderKind === "template"
+                || (
+                  storyState.completion.promptVersion === FLASH_PERSONALIZED_PROMPT_VERSION
+                  && (storyState.completion.renderKind === "ai" || storyState.completion.renderKind === "fallback")
+                )
+              )
               ? storyState.completion.responseSnapshot
               : content.responseByOption[selectedOptionId] ?? content.closing
-          : null,
+            : null,
         echo: input.allowStoryReplay ? null : storyState.completion?.echoSnapshot ?? null,
         storyMode: storyState.universeRun?.mode ?? "standard",
-        renderKind: "template",
+        renderKind: !input.allowStoryReplay
+          && storyState.completion?.promptVersion === FLASH_PERSONALIZED_PROMPT_VERSION
+          && (storyState.completion.renderKind === "ai" || storyState.completion.renderKind === "fallback")
+          ? storyState.completion.renderKind
+          : "template",
         closing: storyCompleted ? content.closing : null,
         motion: storyState.episode.motion,
         fragment: !input.allowStoryReplay && storyState.completion && storyState.fragment ? {
@@ -750,7 +888,7 @@ export async function getFlashEncounter(input: {
           completedTotal: storyState.completedTotal,
           total: 15,
         },
-        storyV2: storyCompleted ? null : await buildFlashStoryV2View(storyState),
+        storyV2,
         nextStoryHint,
       },
       isReplay: input.allowStoryReplay || undefined,
@@ -940,6 +1078,7 @@ export async function answerFlashEncounter(input: {
   questionId: string;
   optionId: string;
   storyPath?: FlashAnswerRequest["storyPath"];
+  replayState?: FlashStoryReplayStateDto;
   now?: Date;
   allowStoryReplay?: boolean;
 }): Promise<FlashEncounterResponse> {
@@ -952,6 +1091,38 @@ export async function answerFlashEncounter(input: {
   }
   const storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
   if (storyState) {
+    if (input.allowStoryReplay && storyState.completion) {
+      const replayContent = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
+      if (
+        replayContent?.v === 2
+        && isFlashV2PilotUnitId(storyState.episode.code)
+        && await getFeatureFlag("flashStoryV2Enabled", false)
+      ) {
+        const entered = enterV2StoryEpisode(
+          replayContent,
+          flashReplayRunState(input.replayState, storyState.episode.id),
+        );
+        try {
+          const result = answerV2StoryChoice({
+            content: replayContent,
+            state: entered,
+            nodeId: input.questionId,
+            choiceId: input.optionId,
+          });
+          return getFlashEncounter({
+            encounterId: input.encounterId,
+            userId: input.userId,
+            now,
+            allowStoryReplay: true,
+            replayState: flashReplayStateDto(storyState.episode.id, result.state),
+            replayFinished: result.finished,
+            replayResponseSnapshot: result.finished ? resolveV2ClosureResponse(replayContent) ?? undefined : undefined,
+          });
+        } catch {
+          throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 400, "这个重玩选择已经失效，请从开场重新进入");
+        }
+      }
+    }
     if (input.allowStoryReplay && storyState.completion) {
       const content = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
       const question = content.question;
@@ -1012,7 +1183,7 @@ export async function answerFlashEncounter(input: {
         throw new FlashServiceError("FLASH_INVALID_DIALOGUE_OPTION", 409, "这次相遇已经记录了另一个选择");
       }
       if (advance.finished) {
-        await completeFlashStoryEpisode({
+        const settlement = await settleFlashStoryEpisode({
           encounterId: input.encounterId,
           userId: input.userId,
           episodeId: storyState.episode.id,
@@ -1021,6 +1192,15 @@ export async function answerFlashEncounter(input: {
           responseSnapshot: resolveV2ClosureResponse(content),
           renderKind: "template",
           promptVersion: null,
+          now,
+        });
+        await enrichSettledFlashStoryResponse({
+          settlement,
+          userId: input.userId,
+          episodeId: storyState.episode.id,
+          npcName: encounter.npcName,
+          baseResponse: resolveV2ClosureResponse(content),
+          content,
           now,
         });
       }
@@ -1089,7 +1269,7 @@ export async function answerFlashEncounter(input: {
         throw new FlashServiceError("FLASH_STORY_GENERATION_PENDING", 409, "这条时间线正在由另一次请求完成");
       }
     }
-    await completeFlashStoryEpisode({
+    const settlement = await settleFlashStoryEpisode({
       encounterId: input.encounterId,
       userId: input.userId,
       episodeId: storyState.episode.id,
@@ -1098,6 +1278,15 @@ export async function answerFlashEncounter(input: {
       responseSnapshot,
       renderKind,
       promptVersion,
+      now,
+    });
+    await enrichSettledFlashStoryResponse({
+      settlement,
+      userId: input.userId,
+      episodeId: storyState.episode.id,
+      npcName: encounter.npcName,
+      baseResponse: responseSnapshot,
+      content,
       now,
     });
     return getFlashEncounter({
@@ -1150,23 +1339,45 @@ export async function answerFlashEncounter(input: {
 export async function advanceFlashV2Story(input: {
   encounterId: string;
   userId: string;
+  replayState?: FlashStoryReplayStateDto;
+  allowStoryReplay?: boolean;
   now?: Date;
 }): Promise<FlashEncounterResponse> {
   const now = input.now ?? new Date();
   const encounter = await getFlashEncounterOwned(input.encounterId, input.userId);
   if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 404, "没有找到这次相遇");
-  if (encounter.expiresAt <= now) {
+  if (encounter.expiresAt <= now && !input.allowStoryReplay) {
     await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
     throw new FlashServiceError("FLASH_ENCOUNTER_EXPIRED", 410, "这次对话已经结束了");
   }
   const storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
-  if (!storyState || storyState.completion) {
+  if (!storyState || (!input.allowStoryReplay && storyState.completion)) {
     throw new FlashServiceError("FLASH_STORY_NOT_AVAILABLE", 409, "这次旧相遇已经结束，请从当前在线角色重新开始");
   }
   const content = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
   const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
   if (!v2Enabled || content?.v !== 2 || !isFlashV2PilotUnitId(storyState.episode.code)) {
     throw new FlashServiceError("FLASH_V2_NOT_AVAILABLE", 409, "当前故事不需要继续推进");
+  }
+  if (input.allowStoryReplay) {
+    try {
+      const entered = enterV2StoryEpisode(
+        content,
+        flashReplayRunState(input.replayState, storyState.episode.id),
+      );
+      const replayAdvance = advanceV2StoryNode({ content, state: entered });
+      return getFlashEncounter({
+        encounterId: input.encounterId,
+        userId: input.userId,
+        now,
+        allowStoryReplay: true,
+        replayState: flashReplayStateDto(storyState.episode.id, replayAdvance.state),
+        replayFinished: replayAdvance.finished,
+        replayResponseSnapshot: replayAdvance.finished ? resolveV2ClosureResponse(content) ?? undefined : undefined,
+      });
+    } catch {
+      throw new FlashServiceError("FLASH_V2_NOT_AVAILABLE", 409, "重玩节点已经变化，请从开场重新进入");
+    }
   }
   const advance = await advanceFlashV2Node({
     encounterId: input.encounterId,
@@ -1178,7 +1389,7 @@ export async function advanceFlashV2Story(input: {
     throw new FlashServiceError("FLASH_V2_NOT_AVAILABLE", 409, "当前故事状态已变化，请刷新");
   }
   if (advance.finished) {
-    await completeFlashStoryEpisode({
+    const settlement = await settleFlashStoryEpisode({
       encounterId: input.encounterId,
       userId: input.userId,
       episodeId: storyState.episode.id,
@@ -1187,6 +1398,15 @@ export async function advanceFlashV2Story(input: {
       responseSnapshot: resolveV2ClosureResponse(content),
       renderKind: "template",
       promptVersion: null,
+      now,
+    });
+    await enrichSettledFlashStoryResponse({
+      settlement,
+      userId: input.userId,
+      episodeId: storyState.episode.id,
+      npcName: encounter.npcName,
+      baseResponse: resolveV2ClosureResponse(content),
+      content,
       now,
     });
   }

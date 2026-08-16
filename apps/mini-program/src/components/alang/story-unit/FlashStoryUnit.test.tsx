@@ -24,7 +24,7 @@ vi.mock('../FlashUi', () => ({
   FlashNpcDialogueScene: ({ speech }: any) => <div data-testid='npc-speech'>{speech}</div>,
 }))
 vi.mock('../../../lib/analytics/flashStoryAnalytics', () => ({ flashStoryAnalytics: { track: vi.fn() } }))
-vi.mock('./AlangFirstActExperience', () => ({ AlangFirstActExperience: ({ scene, onComplete }: any) => <div data-testid='alang-first-act-mock' data-scene={scene}><button onClick={() => onComplete(1)}>完成阿浪第一幕</button></div> }))
+vi.mock('./AlangFirstActExperience', () => ({ AlangFirstActExperience: ({ encounterId, scene, onComplete }: any) => <div data-testid='alang-first-act-mock' data-encounter={encounterId} data-scene={scene}><button onClick={() => onComplete(1)}>完成阿浪第一幕</button></div> }))
 vi.mock('./LiziFirstActExperience', () => ({ LiziFirstActExperience: ({ scene, onComplete }: any) => <div data-testid='lizi-first-act-mock' data-scene={scene}><button onClick={() => onComplete(1)}>完成栗子第一幕</button></div> }))
 vi.mock('./MomoFirstActExperience', () => ({ MomoFirstActExperience: ({ scene, onComplete }: any) => <div data-testid='momo-first-act-mock' data-scene={scene}><button onClick={() => onComplete(1)}>完成默默第一幕</button></div> }))
 vi.mock('./ShiqiFirstActExperience', () => ({ ShiqiFirstActExperience: ({ scene, onComplete }: any) => <div data-testid='shiqi-first-act-mock' data-scene={scene}><button onClick={() => onComplete(1)}>完成拾柒第一幕</button></div> }))
@@ -258,6 +258,32 @@ describe('FlashStoryUnit production flow', () => {
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({
       questionId: question.id,
       optionId: question.options[0].id,
+    }))
+  })
+
+  it('starts first-act replay in a fresh local namespace instead of restoring the live solution', () => {
+    const story = { ...firstStory, id: 'episode-alang-replay', code: 's1-p1-alang', objectCode: 'seat-plan' }
+    const question = { ...firstQuestion, id: 's1-p1-alang-response-v2' }
+    storage.set('joyjoin_flash_story_unit_v2_s1-p1-alang_enc-alang-replay_episode-alang-replay', {
+      unitId: 's1-p1-alang',
+      version: 2,
+      stage: 'OBJECT_SUCCESS',
+      choice: { questionId: question.id, optionId: question.options[0].id, label: question.options[0].label },
+      companionEvent: 'SUCCESS',
+      divergenceCopy: null,
+      atuanFirstAct: null,
+      atuanLaterAct: null,
+      analyticsSent: [],
+    })
+
+    const submit = vi.fn().mockResolvedValue(undefined)
+    render(<FlashStoryUnit encounterId='enc-alang-replay' progressNamespace='replay-session-a' npc={{ ...baseNpc, slug: 'alang' } as any} story={story as any} question={question as any} motion={motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
+
+    expect(screen.getByTestId('alang-first-act-mock')).toHaveAttribute('data-encounter', 'enc-alang-replay:replay-session-a')
+    fireEvent.click(screen.getByRole('button', { name: '完成阿浪第一幕' }))
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: question.id,
+      optionId: question.options[1].id,
     }))
   })
 

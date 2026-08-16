@@ -45,9 +45,15 @@ describe('AlangFirstActExperience — Atuan template parity', () => {
     fireEvent.click(screen.getByRole('button', { name: '如果对方把椅子再挪远一点呢？' }))
     expect(screen.getByTestId('alang-scene-speech')).toHaveTextContent('那就远一点')
     fireEvent.click(screen.getByRole('button', { name: '和阿浪一起摆好两把椅子' }))
-    expect(mocks.navigateTo).toHaveBeenCalledWith({ url: expect.stringContaining('mode=alang') })
+    expect(mocks.navigateTo).toHaveBeenCalledWith({
+      url: expect.stringMatching(/mode=alang.*unitId=s1-p1-alang.*phase=1/),
+    })
     expect(onComplete).not.toHaveBeenCalled()
-    mocks.storage.set(`${alangFirstActStorageKey('alang-2')}:game`, [{}, {}, {}])
+    mocks.storage.set(`${alangFirstActStorageKey('alang-2')}:game`, [
+      { cardId: 'distance', destinationId: 'half-step' },
+      { cardId: 'angle', destinationId: 'same' },
+      { cardId: 'exit', destinationId: 'open' },
+    ])
     act(() => mocks.didShow?.())
     fireEvent.click(screen.getByRole('button', { name: '完成阿浪第一幕' }))
     expect(onComplete).toHaveBeenCalledWith(1)

@@ -10,6 +10,30 @@ import type {
   FlashStoryV2Variant,
 } from "@shared/schema";
 
+export function scopeV2TraversalToEpisode(
+  state: FlashStoryRunState & { episodeId?: string | null },
+  episodeId: string,
+): FlashStoryRunState {
+  if (state.episodeId === episodeId) {
+    return {
+      echo: state.echo,
+      flags: state.flags,
+      variables: state.variables,
+      currentNode: state.currentNode,
+      nodePath: state.nodePath,
+      lastChoiceId: state.lastChoiceId,
+    };
+  }
+  return {
+    echo: state.echo,
+    flags: state.flags,
+    variables: state.variables,
+    currentNode: null,
+    nodePath: [],
+    lastChoiceId: null,
+  };
+}
+
 export type { FlashStoryRunState };
 
 export const FLASH_V2_ECHO_MAX = 100;

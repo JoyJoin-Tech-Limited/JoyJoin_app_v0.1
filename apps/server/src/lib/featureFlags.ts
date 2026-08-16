@@ -165,6 +165,9 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  v1 content keeps the flat-content path unchanged. Disable via env
    *  FLASH_STORY_V2_ENABLED=false for instant rollback. */
   flashStoryV2Enabled: "FLASH_STORY_V2_ENABLED",
+  /** Optional reviewed-plan AI enrichment for Flash NPC responses. The model
+   * never owns settlement, progress, fragments, endings, or traversal. */
+  flashStoryAiResponsesEnabled: "FLASH_STORY_AI_RESPONSES_ENABLED",
   /** Social Icebreaker five-pattern social haptic grammar (Nudge / Your-turn /
    *  Confirm / Reveal / Celebration) fired from session-state transitions on
    *  the session page. Ships dark until the field protocols (playbook §5)
@@ -276,6 +279,7 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   flashTaskRetryTestEnabled: false,
   flashAnyLocationArrivalTestEnabled: false,
   flashStoryV2Enabled: true,
+  flashStoryAiResponsesEnabled: false,
   /** Tier-1 semantic moderation (WeChat msgSecCheck) is ON by default. The
    *  check is budget-bounded (see CONTENT_MODERATION_TIER1_BUDGET_MS) and
    *  fails open, so latency is bounded regardless. Ops can still disable via

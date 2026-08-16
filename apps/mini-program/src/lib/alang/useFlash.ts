@@ -115,8 +115,8 @@ export function useAdvanceFlashStoryNode() {
   const markStale = useMarkFlashStateStale()
   return useMutation({
     mutationFn: advanceFlashStoryNode,
-    onSuccess: (response, encounterId) => {
-      queryClient.setQueryData(flashEncounterQueryKey(encounterId), response)
+    onSuccess: (response, input) => {
+      queryClient.setQueryData(flashEncounterQueryKey(input.encounterId, input.replay), response)
       markStale()
     },
   })

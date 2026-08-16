@@ -1,5 +1,5 @@
 {
-  "databaseName": "joyjoin_flash_story_test_1786329746299_69248c",
+  "databaseName": "joyjoin_flash_story_test_1786885966522_8113db",
   "cleaned": true,
   "postgresVersion": "16.14",
   "roleCanCreateDatabase": true,
@@ -10,7 +10,11 @@
     "partialBaselineRejected": true,
     "partialBaselineRowsChanged": 0,
     "operatorDriftPreserved": true,
-    "candidatesRemainDraft": true
+    "candidatesRemainDraft": true,
+    "productionSizedCompletionRows": 1519,
+    "scaleRepairDurationMs": 191,
+    "scaleRepairRestoredRows": 2,
+    "scaleRepairRerunChanges": 0
   },
   "runtime": {
     "episodes": 15,
@@ -35,6 +39,11 @@
         "status": "completed"
       }
     ],
+    "replayOpenings": 15,
+    "replayFormalWrites": 0,
+    "missingCatalogSettlementRolledBack": true,
+    "repairedHistoricalFragments": 2,
+    "repairRerunChanges": 0,
     "lostResponseReplay": true,
     "concurrentFifthExactlyOnce": true,
     "differentOptionRaceExactlyOnce": true,

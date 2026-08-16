@@ -245,8 +245,9 @@ export default function FlashHomePage() {
                         aria-label={`重新游玩${fragment.episodeTitle}`}
                         onClick={() => {
                           haptics('light')
+                          const replaySession = `${Date.now().toString(36)}-${fragment.id.slice(0, 8)}`
                           void Taro.navigateTo({
-                            url: `${MINI_PROGRAM_ROUTES.alangDialogue}?encounterId=${encodeURIComponent(fragment.encounterId)}&replay=1`,
+                            url: `${MINI_PROGRAM_ROUTES.alangDialogue}?encounterId=${encodeURIComponent(fragment.encounterId)}&replay=1&replaySession=${encodeURIComponent(replaySession)}`,
                           })
                         }}
                       >

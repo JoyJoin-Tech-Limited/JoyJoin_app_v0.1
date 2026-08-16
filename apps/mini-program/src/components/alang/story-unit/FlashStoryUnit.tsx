@@ -7,6 +7,7 @@ import { getFlashFirstActExperienceContract } from '@shared/alang/flashFirstActE
 import {
   createAtuanFirstActProgress,
   getAtuanFirstActApproach,
+  type AtuanFirstActCardPlacement,
   type AtuanFirstActSubmission,
 } from '@shared/alang/atuanFirstAct'
 import {
@@ -41,6 +42,7 @@ import { AtuanLaterActExperience, AtuanLaterActPrelude, AtuanLaterActScene } fro
 import { FlatLaterActExperience } from './MomoLaterActExperience'
 import { getCustomLaterActConfig, isFlatLaterActUnitId } from './LaterActStoryConfigs'
 import { laterActStorageKey } from './LaterActStoryExperience'
+import { completedFlashActGamePlacements } from '../../../lib/alang/flashActGameProgress'
 import {
   createStoryUnitState,
   reconcileStoryUnitState,
@@ -64,6 +66,7 @@ const ignoreFirstActSpeech = () => undefined
 
 export interface FlashStoryUnitProps {
   encounterId: string
+  progressNamespace?: string
   npc: FlashNpcReference
   story: StoryEpisode
   question?: FlashDialogueQuestion | null
@@ -105,6 +108,7 @@ function loadInitialState(
 export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const {
     encounterId,
+    progressNamespace,
     npc,
     story,
     question,
@@ -127,7 +131,8 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     return <View role='alert'><Text>这件旧物暂时没有接上，返回后再试一次。</Text></View>
   }
 
-  const storageKey = storyUnitStorageKey(definition.unitId, encounterId, story.id)
+  const storageScope = progressNamespace ? `${encounterId}:${progressNamespace}` : encounterId
+  const storageKey = storyUnitStorageKey(definition.unitId, storageScope, story.id)
   const serverSettled = Boolean(story.response)
   const [runtime, dispatch] = useReducer(
     storyUnitReducer,
@@ -151,9 +156,17 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
 
   useDidShow(() => {
     if (definition.unitId !== 's1-p1-atuan') return
-    const cardPlacements = Taro.getStorageSync(atuanGameKey)
-    if (!Array.isArray(cardPlacements) || cardPlacements.length !== 3 || !runtimeRef.current.atuanFirstAct) return
-    transition({ type: 'ATUAN_FIRST_ACT_UPDATED', progress: { ...runtimeRef.current.atuanFirstAct, cardPlacements, benchReached: true } })
+    const cardPlacements = completedFlashActGamePlacements(Taro.getStorageSync(atuanGameKey), {
+      unitId: definition.unitId,
+      phase: definition.phase,
+    })
+    if (!cardPlacements || !runtimeRef.current.atuanFirstAct) return
+    const atuanCardPlacements = cardPlacements.filter((placement): placement is AtuanFirstActCardPlacement => (
+      (placement.cardId === 'city' || placement.cardId === 'habit' || placement.cardId === 'private_time')
+      && (placement.destinationId === 'keep' || placement.destinationId === 'return' || placement.destinationId === 'cover')
+    ))
+    if (atuanCardPlacements.length !== cardPlacements.length) return
+    transition({ type: 'ATUAN_FIRST_ACT_UPDATED', progress: { ...runtimeRef.current.atuanFirstAct, cardPlacements: atuanCardPlacements, benchReached: true } })
     Taro.removeStorageSync(atuanGameKey)
   })
 
@@ -178,7 +191,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
       dispatch({ type: 'COMPLETE' })
       try { Taro.removeStorageSync(storageKey) } catch { /* fail-open */ }
       if (isFlatLaterActUnitId(definition.unitId)) {
-        try { Taro.removeStorageSync(laterActStorageKey(definition.unitId, encounterId)) } catch { /* fail-open */ }
+        try { Taro.removeStorageSync(laterActStorageKey(definition.unitId, storageScope)) } catch { /* fail-open */ }
       }
     }
   }, [emit, runtime.stage, serverSettled, storageKey])
@@ -318,7 +331,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     : story.action
   const customFirstAct = customFirstActScene ? (() => {
     const sharedProps = {
-      encounterId,
+      encounterId: storageScope,
       scene: customFirstActScene,
       disabled: customFirstActDisabled,
       onSpeechChange: ignoreFirstActSpeech,
@@ -338,7 +351,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
       <View className={`flash-dialogue__story-stage${showResult ? ' flash-dialogue__story-stage--result' : ' flash-dialogue__story-stage--question'}${showGame ? ' flash-dialogue__story-stage--game' : ''}${definition.unitId === 's1-p1-atuan' ? ' flash-dialogue__story-stage--atuan-first' : ''}${showCustomFirstAct ? ' flash-dialogue__story-stage--custom-first' : ''}`} data-testid='flash-story-stage' data-story-unit-stage={runtime.stage} data-story-unit-id={definition.unitId}>
         {showCustomFirstAct && customFirstAct ? customFirstAct : showFlatLaterAct && flatLaterActBackground && isFlatLaterActUnitId(definition.unitId) ? (
           <FlatLaterActExperience
-            encounterId={encounterId}
+            encounterId={storageScope}
             unitId={definition.unitId}
             background={flatLaterActBackground}
             character={flatLaterActCharacter ?? npcTheme.imageSrc}
@@ -449,7 +462,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
                         disabled={submitState === 'submitting'}
                         onStateChange={(progress) => transition({ type: 'ATUAN_FIRST_ACT_UPDATED', progress })}
                         onComplete={completeObject}
-                        onOpenGame={() => { void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangAtuanCards}?key=${encodeURIComponent(atuanGameKey)}&approach=${runtime.atuanFirstAct?.approachId ?? 'notice_wait'}` }) }}
+                        onOpenGame={() => { void Taro.navigateTo({ url: `${MINI_PROGRAM_ROUTES.alangAtuanCards}?mode=atuan&unitId=${definition.unitId}&phase=${definition.phase}&key=${encodeURIComponent(atuanGameKey)}&approach=${runtime.atuanFirstAct?.approachId ?? 'notice_wait'}` }) }}
                       />
                     ) : isAtuanStory && runtime.choice ? (
                       <AtuanStoryDialogue

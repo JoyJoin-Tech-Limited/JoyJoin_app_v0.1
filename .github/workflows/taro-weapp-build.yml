@@ -151,6 +151,7 @@ jobs:
             --appid wx5a038ee6dee12032 \
             --pp dist \
             --pkp "$KEY_FILE" \
+            --use-project-config true \
             --save-path compiledResult.zip \
             --robot 1
           mkdir compiled-check
@@ -453,6 +454,7 @@ jobs:
                  --uv '$VERSION' \
                  --ud '$DESCRIPTION' \
                  --rp 1 \
+                 --use-project-config true \
                  --use-cos=false \
                  --verbose 2>&1 | tee -a '$UPLOAD_LOG'"
           }

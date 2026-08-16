@@ -187,6 +187,7 @@ async function main() {
     process.env.DATABASE_URL = tempUrl.toString()
     const repository = await import('../../apps/server/src/repositories/flashStoryRepo.js')
     const flashRepository = await import('../../apps/server/src/repositories/flashRepo.js')
+    const flashService = await import('../../apps/server/src/services/flashService.js')
     const dbModule = await import('../../apps/server/src/db.js')
     appPool = dbModule.pool
 
@@ -194,28 +195,37 @@ async function main() {
     assert(published, 'reviewed test season did not publish')
 
     const repeatedEpisode = episodes.rows[0]
+    const repeatedNpcEpisodes = episodes.rows.filter((episode) => episode.npc_id === repeatedEpisode.npc_id)
+    assert(repeatedNpcEpisodes.length === 3, 'repeat-NPC setup did not find all three acts')
     await tempPool.query(
       `insert into flash_shifts(id,plan_id,npc_id,location_id,starts_at,ends_at,status,source,availability_mode)
        values ('flash-db-repeat-shift','flash-db-plan',$1,'flash-db-location',now()-interval '1 hour',now()+interval '1 hour','published','generated','scheduled')`,
       [repeatedEpisode.npc_id],
     )
+    for (const [repeatIndex, episode] of repeatedNpcEpisodes.entries()) {
+      const episodeIndex = episodes.rows.findIndex((candidate) => candidate.id === episode.id)
+      await tempPool.query(
+        `insert into flash_encounters(id,user_id,shift_id,npc_id,story_episode_id,status,expires_at)
+         values ($1,$2,$3,$4,$5,'dialogue',now()+interval '24 hours')`,
+        [`flash-db-repeat-original-${repeatIndex}`, repeatUserId, `flash-db-shift-${episodeIndex}`, episode.npc_id, episode.id],
+      )
+      const repeatedCompletion = await repository.completeFlashStoryEpisode({
+        encounterId: `flash-db-repeat-original-${repeatIndex}`,
+        userId: repeatUserId,
+        episodeId: episode.id,
+        optionId: `${episode.code}-cooperate-a`,
+        responseSnapshot: 'static reviewed response',
+        renderKind: 'template',
+        promptVersion: null,
+        now: new Date(),
+      })
+      assert(repeatedCompletion?.created, `repeat-NPC setup did not complete act ${repeatIndex + 1}`)
+    }
     await tempPool.query(
       `insert into flash_encounters(id,user_id,shift_id,npc_id,story_episode_id,status,expires_at)
-       values ('flash-db-repeat-original',$1,'flash-db-shift-0',$2,$3,'dialogue',now()+interval '24 hours'),
-              ('flash-db-repeat-duplicate',$1,'flash-db-repeat-shift',$2,null,'dialogue',now()+interval '24 hours')`,
-      [repeatUserId, repeatedEpisode.npc_id, repeatedEpisode.id],
+       values ('flash-db-repeat-duplicate',$1,'flash-db-repeat-shift',$2,null,'dialogue',now()+interval '24 hours')`,
+      [repeatUserId, repeatedEpisode.npc_id],
     )
-    const repeatedCompletion = await repository.completeFlashStoryEpisode({
-      encounterId: 'flash-db-repeat-original',
-      userId: repeatUserId,
-      episodeId: repeatedEpisode.id,
-      optionId: `${repeatedEpisode.code}-cooperate-a`,
-      responseSnapshot: 'static reviewed response',
-      renderKind: 'template',
-      promptVersion: null,
-      now: new Date(),
-    })
-    assert(repeatedCompletion?.created, 'repeat-NPC setup did not complete the original unit')
     const repeatedAssignment = await repository.ensureFlashStoryEpisodeForEncounter({
       encounterId: 'flash-db-repeat-duplicate',
       userId: repeatUserId,
@@ -265,6 +275,74 @@ async function main() {
       'different-option race persisted a non-canonical result',
     )
 
+    const missingCatalogEpisode = episodes.rows[0]
+    const missingCatalogFragment = await tempPool.query<{
+      id: string
+      episode_id: string
+      code: string
+      category: string
+      title: string
+      fact: string
+      asset_url: string | null
+      sort_order: number
+      created_at: Date
+      updated_at: Date
+    }>(`select * from flash_story_fragments where episode_id=$1`, [missingCatalogEpisode.id])
+    assert(missingCatalogFragment.rows.length === 1, 'catalog rollback setup did not find exactly one fragment')
+    await tempPool.query(
+      `insert into flash_encounters(id,user_id,shift_id,npc_id,story_episode_id,status,expires_at)
+       values ('flash-db-missing-catalog',$1,'flash-db-shift-0',$2,$3,'dialogue',now()+interval '24 hours')`,
+      [isolatedUserId, missingCatalogEpisode.npc_id, missingCatalogEpisode.id],
+    )
+    await tempPool.query(`delete from flash_story_fragments where episode_id=$1`, [missingCatalogEpisode.id])
+    let missingCatalogRejected = false
+    try {
+      await repository.completeFlashStoryEpisode({
+        encounterId: 'flash-db-missing-catalog',
+        userId: isolatedUserId,
+        episodeId: missingCatalogEpisode.id,
+        optionId: `${missingCatalogEpisode.code}-cooperate-a`,
+        responseSnapshot: 'static reviewed response',
+        renderKind: 'template',
+        promptVersion: null,
+        now: new Date(),
+      })
+    } catch (error) {
+      missingCatalogRejected = error instanceof repository.FlashStorySettlementInvariantError
+    }
+    const missingCatalogState = await tempPool.query(
+      `select
+        (select count(*)::int from flash_user_story_episodes where user_id=$1) as episodes,
+        (select count(*)::int from flash_user_story_fragments where user_id=$1) as fragments,
+        (select status from flash_encounters where id='flash-db-missing-catalog') as encounter_status`,
+      [isolatedUserId],
+    )
+    assert(
+      missingCatalogRejected
+      && missingCatalogState.rows[0].episodes === 0
+      && missingCatalogState.rows[0].fragments === 0
+      && missingCatalogState.rows[0].encounter_status === 'dialogue',
+      'missing fragment catalog did not roll back the entire settlement',
+    )
+    const restoredFragment = missingCatalogFragment.rows[0]
+    await tempPool.query(
+      `insert into flash_story_fragments
+        (id,episode_id,code,category,title,fact,asset_url,sort_order,created_at,updated_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [
+        restoredFragment.id,
+        restoredFragment.episode_id,
+        restoredFragment.code,
+        restoredFragment.category,
+        restoredFragment.title,
+        restoredFragment.fact,
+        restoredFragment.asset_url,
+        restoredFragment.sort_order,
+        restoredFragment.created_at,
+        restoredFragment.updated_at,
+      ],
+    )
+
     const phaseEvidence: Array<{ phase: number; completions: number; currentPhase: number; status: string }> = []
     for (const phase of [1, 2, 3]) {
       const phaseEpisodes = episodes.rows.filter((episode) => episode.phase === phase)
@@ -312,6 +390,60 @@ async function main() {
     assert(totals.rows[0].isolated_user_episodes === 0, 'cross-user isolation failed')
     assert(phaseEvidence.every((item) => item.completions === 5), 'a phase did not settle exactly five units')
     assert(phaseEvidence[0].currentPhase === 2 && phaseEvidence[1].currentPhase === 3 && phaseEvidence[2].status === 'completed', 'phase/finale progression failed')
+
+    const beforeReplay = await tempPool.query(
+      `select
+        (select count(*)::int from flash_user_story_episodes where user_id=$1) as episodes,
+        (select count(*)::int from flash_user_story_fragments where user_id=$1) as fragments`,
+      [userId],
+    )
+    let replayOpenings = 0
+    for (const [index] of episodes.rows.entries()) {
+      const replay = await flashService.getFlashEncounter({
+        encounterId: `flash-db-encounter-${index}`,
+        userId,
+        now: new Date(),
+        allowStoryReplay: true,
+      })
+      assert(replay.isReplay === true, `episode ${index + 1} did not enter replay mode`)
+      assert(replay.question?.options.length === 2, `episode ${index + 1} did not restart at its opening choice`)
+      assert(replay.storyEpisode?.fragment === null, `episode ${index + 1} exposed an earnable fragment during replay`)
+      replayOpenings += 1
+    }
+    const afterReplay = await tempPool.query(
+      `select
+        (select count(*)::int from flash_user_story_episodes where user_id=$1) as episodes,
+        (select count(*)::int from flash_user_story_fragments where user_id=$1) as fragments`,
+      [userId],
+    )
+    assert(
+      replayOpenings === 15
+      && JSON.stringify(afterReplay.rows[0]) === JSON.stringify(beforeReplay.rows[0]),
+      'opening all 15 replays changed formal completion or fragment ownership',
+    )
+
+    const repairTargets = episodes.rows.slice(0, 2).map((episode) => episode.id)
+    await tempPool.query(
+      `delete from flash_user_story_fragments where user_id=$1 and episode_id = any($2::varchar[])`,
+      [userId, repairTargets],
+    )
+    const beforeRepair = await tempPool.query(
+      `select count(*)::int as count from flash_user_story_fragments where user_id=$1`,
+      [userId],
+    )
+    assert(beforeRepair.rows[0].count === 13, 'historical repair setup did not remove exactly two owned fragments')
+    await tempPool.query(migration('20260816010000_repair_flash_story_fragments.sql'))
+    const afterRepair = await tempPool.query(
+      `select count(*)::int as count from flash_user_story_fragments where user_id=$1`,
+      [userId],
+    )
+    assert(afterRepair.rows[0].count === 15, 'historical repair did not restore every missing fragment')
+    await tempPool.query(migration('20260816010000_repair_flash_story_fragments.sql'))
+    const afterRepairRerun = await tempPool.query(
+      `select count(*)::int as count from flash_user_story_fragments where user_id=$1`,
+      [userId],
+    )
+    assert(afterRepairRerun.rows[0].count === 15, 'historical repair rerun was not idempotent')
 
     // Production-repository journey gate: 100 isolated users, 15 episodes each.
     // The deterministic client simulator covers reducer/restore failures; this
@@ -467,6 +599,42 @@ async function main() {
       '100-user persisted journey totals failed',
     )
 
+    // Scale gate: run the repair against a production-shaped completion set,
+    // then prove both the time budget and the second-run no-op contract.
+    await tempPool.query(
+      `delete from flash_user_story_fragments where user_id=$1 and episode_id = any($2::varchar[])`,
+      [userId, repairTargets],
+    )
+    const beforeScaleRepair = await tempPool.query(
+      `select
+        (select count(*)::int from flash_user_story_episodes) as completion_rows,
+        (select count(*)::int from flash_user_story_fragments) as fragment_rows`,
+    )
+    assert(beforeScaleRepair.rows[0].completion_rows >= 1500, 'scale repair fixture is smaller than 1,500 completions')
+    const scaleRepairStartedAt = Date.now()
+    await tempPool.query(migration('20260816010000_repair_flash_story_fragments.sql'))
+    const scaleRepairDurationMs = Date.now() - scaleRepairStartedAt
+    const afterScaleRepair = await tempPool.query(
+      `select
+        (select count(*)::int from flash_user_story_fragments) as fragment_rows,
+        (select count(*)::int from flash_user_story_fragments where user_id=$1) as user_fragment_rows`,
+      [userId],
+    )
+    assert(scaleRepairDurationMs < 30_000, `scale repair exceeded 30 seconds (${scaleRepairDurationMs}ms)`)
+    assert(afterScaleRepair.rows[0].user_fragment_rows === 15, 'scale repair did not restore all user fragments')
+    assert(
+      afterScaleRepair.rows[0].fragment_rows === beforeScaleRepair.rows[0].fragment_rows + 2,
+      'scale repair changed an unexpected number of fragment rows',
+    )
+    await tempPool.query(migration('20260816010000_repair_flash_story_fragments.sql'))
+    const afterScaleRepairRerun = await tempPool.query(
+      `select count(*)::int as fragment_rows from flash_user_story_fragments`,
+    )
+    assert(
+      afterScaleRepairRerun.rows[0].fragment_rows === afterScaleRepair.rows[0].fragment_rows,
+      'scale repair rerun was not a no-op',
+    )
+
     Object.assign(evidence, {
       migration: {
         baselineRows: 15,
@@ -476,11 +644,20 @@ async function main() {
         partialBaselineRowsChanged: 0,
         operatorDriftPreserved: true,
         candidatesRemainDraft: true,
+        productionSizedCompletionRows: beforeScaleRepair.rows[0].completion_rows,
+        scaleRepairDurationMs,
+        scaleRepairRestoredRows: 2,
+        scaleRepairRerunChanges: 0,
       },
       runtime: {
         episodes: 15,
         fragments: 15,
         phaseEvidence,
+        replayOpenings,
+        replayFormalWrites: 0,
+        missingCatalogSettlementRolledBack: true,
+        repairedHistoricalFragments: 2,
+        repairRerunChanges: 0,
         lostResponseReplay: true,
         concurrentFifthExactlyOnce: true,
         differentOptionRaceExactlyOnce: true,

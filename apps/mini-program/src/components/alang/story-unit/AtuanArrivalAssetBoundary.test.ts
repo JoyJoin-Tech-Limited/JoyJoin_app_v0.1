@@ -206,6 +206,10 @@ describe('Atuan first-arrival asset ownership', () => {
     expect(verifyScript).toContain('setting.ignoreUploadUnusedFiles must be true')
     expect(packageSizeScript).toContain("path.join(ROOT, 'project.config.json')")
     expect(packageSizeScript).not.toContain("path.join(ROOT, 'project.private.config.json')")
+    expect(
+      buildWorkflow.match(/--use-project-config true/g) ?? [],
+      'both compiled-result verification and upload must actually read project.config.json',
+    ).toHaveLength(2)
     expect(eventPage).toContain("import standardPaperWorld from '../assets/onboarding/parallel-standard-paper-world-v1.jpg'")
     for (const productionContract of [buildConfig, verifyScript, buildWorkflow]) {
       expect(productionContract).not.toContain('street-blind-box-onboarding-fullscreen-v7')

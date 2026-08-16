@@ -1,5 +1,14 @@
 # AI feature flags and environment (server)
 
+## Flash story response enrichment
+
+`FLASH_STORY_AI_RESPONSES_ENABLED` defaults to `false`. When enabled, a story
+path with more than one reviewed choice may ask the approved creative model
+router for a constrained response plan only after the deterministic episode
+completion and fragment transaction commits. Timeout, missing credentials,
+schema rejection, or provider failure keeps the reviewed response. The model
+never chooses fragments, progress, endings, unlocks, or the next node.
+
 **Policy:** Production **chat/completion** routes use **MiniMax** and/or **DeepSeek** via [`socialModelRouter`](../apps/server/src/ai/socialModelRouter.ts) and [`creativeModelRouter`](../apps/server/src/ai/creativeModelRouter.ts). **Embeddings** are self-hosted only. Set `EMBEDDING_BASE_URL` to point to your OpenAI-compatible endpoint (default model: **Granite** `granite-embedding-97m-multilingual-r2`, overridable via `EMBEDDING_MODEL`). DeepSeek has no embedding API and is never used for embeddings.
 
 ## Semantic embeddings (`embeddingClient.ts`)

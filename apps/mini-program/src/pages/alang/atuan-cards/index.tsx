@@ -1,7 +1,13 @@
 import Taro, { useRouter } from '@tarojs/taro'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Text, View } from '@tarojs/components'
 import { ATUAN_FIRST_ACT_CARDS } from '@shared/alang/atuanFirstAct'
+import {
+  createFlashActGameProgress,
+  restoreFlashActGameProgress,
+  type FlashActGamePlacement as Placement,
+  type FlashActGameProgress,
+} from '../../../lib/alang/flashActGameProgress'
 import './index.scss'
 
 type GameMode = 'atuan' | 'alang' | 'lizi' | 'momo' | 'shiqi'
@@ -9,8 +15,6 @@ type GameMode = 'atuan' | 'alang' | 'lizi' | 'momo' | 'shiqi'
 interface GameChoice { id: string; label: string; icon: 'spark' | 'letter' | 'cover'; feedback: string; isCorrect?: boolean }
 interface GameItem { id: string; label: string; choices: readonly [GameChoice, GameChoice, GameChoice] }
 interface GameConfig { eyebrow: string; title: string; copy: string; speaker: string; footer: string; items: readonly GameItem[]; requireCorrectChoice?: boolean }
-interface Placement { cardId: string; destinationId: string }
-
 const ATUAN_CHOICES: readonly [GameChoice, GameChoice, GameChoice] = [
   { id: 'keep', label: '可以一起记住', icon: 'spark', feedback: '“好。能让人觉得被记住，又不会让他不自在的事，可以留下。”' },
   { id: 'return', label: '只留给卡上的人', icon: 'letter', feedback: '“那就装进信封，只交给卡上的人。别人不需要替他读完。”' },
@@ -62,40 +66,55 @@ export default function AtuanCardsPage() {
   const mode: GameMode = params.mode === 'alang' || params.mode === 'lizi' || params.mode === 'momo' || params.mode === 'shiqi' ? params.mode : 'atuan'
   const storageKey = decodeURIComponent(params.key ?? '')
   const config = CONFIGS[mode]
+  const unitId = params.unitId ?? `s1-p1-${mode}`
+  const parsedPhase = Number(params.phase)
+  const phase = (parsedPhase === 2 || parsedPhase === 3 ? parsedPhase : 1) as 1 | 2 | 3
   const orderedItems = useMemo(() => mode === 'atuan' && params.approach === 'notice_wait' ? [...config.items].reverse() : [...config.items], [config.items, mode, params.approach])
-  const [index, setIndex] = useState(0)
-  const [placements, setPlacements] = useState<Placement[]>([])
-  const [pending, setPending] = useState<{ placement: Placement; feedback: string; isCorrect: boolean } | null>(null)
+  const [saved, setSaved] = useState<FlashActGameProgress>(() => {
+    const expected = { unitId, phase, mode, itemIds: orderedItems.map(({ id }) => id) }
+    try { return restoreFlashActGameProgress(Taro.getStorageSync(storageKey), expected) } catch { return createFlashActGameProgress(expected) }
+  })
+  const index = Math.min(saved.placements.length, orderedItems.length - 1)
+  const placements = saved.placements
   const item = orderedItems[index]
+  const pendingChoice = saved.pending && item
+    ? item.choices.find(({ id }) => id === saved.pending?.destinationId) ?? null
+    : null
+  const pending = saved.pending && pendingChoice
+    ? { placement: saved.pending, feedback: pendingChoice.feedback, isCorrect: !config.requireCorrectChoice || pendingChoice.isCorrect === true }
+    : null
+
+  const persist = (next: FlashActGameProgress) => {
+    setSaved(next)
+    if (!storageKey) return
+    try { Taro.setStorageSync(storageKey, next) } catch { /* Story remains recoverable from its act screen. */ }
+  }
+
+  useEffect(() => {
+    if (saved.status === 'completed') void Taro.navigateBack()
+  }, [saved.status])
 
   const place = (choice: GameChoice) => {
     if (!item || pending) return
-    setPending({
-      placement: { cardId: item.id, destinationId: choice.id },
-      feedback: choice.feedback,
-      isCorrect: !config.requireCorrectChoice || choice.isCorrect === true,
-    })
+    persist({ ...saved, pending: { cardId: item.id, destinationId: choice.id } })
   }
 
   const continueSorting = () => {
     if (!pending) return
     if (!pending.isCorrect) {
-      setPending(null)
+      persist({ ...saved, pending: null })
       return
     }
     const next = [...placements, pending.placement]
     if (next.length === orderedItems.length) {
-      Taro.setStorageSync(storageKey, next)
-      void Taro.navigateBack()
+      persist({ ...saved, status: 'completed', placements: next, pending: null })
       return
     }
-    setPlacements(next)
-    setPending(null)
-    setIndex((current) => current + 1)
+    persist({ ...saved, placements: next, pending: null })
   }
 
   return (
-    <View className='atuan-cards' data-game-mode={mode}>
+    <View className='atuan-cards' data-game-mode={mode} data-story-unit={unitId} data-story-phase={phase}>
       <View>
         <Text className='atuan-cards__eyebrow'>{config.eyebrow}</Text>
         <Text className='atuan-cards__title'>{config.title}</Text>

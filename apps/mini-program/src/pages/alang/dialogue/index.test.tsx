@@ -17,13 +17,14 @@ const mocks = vi.hoisted(() => ({
   setStorageSync: vi.fn(),
   removeStorageSync: vi.fn(),
   navigateTo: vi.fn(),
+  routerParams: { encounterId: 'encounter-1' } as Record<string, string>,
   didShow: null as null | (() => void),
 }))
 
 vi.mock('@tarojs/taro', () => ({
   useDidShow: (callback: () => void) => { mocks.didShow = callback },
   default: {
-    getCurrentInstance: () => ({ router: { params: { encounterId: 'encounter-1' } } }),
+    getCurrentInstance: () => ({ router: { params: mocks.routerParams } }),
     setNavigationBarTitle: vi.fn(),
     redirectTo: mocks.redirectTo,
     getStorageSync: mocks.getStorageSync,
@@ -113,6 +114,7 @@ const answeredStoryEncounter = {
 describe('formal Flash dialogue', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.routerParams = { encounterId: 'encounter-1' }
     mocks.didShow = null
     mocks.getStorageSync.mockReturnValue(undefined)
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
@@ -159,9 +161,9 @@ describe('formal Flash dialogue', () => {
     expect(screen.queryByTestId('shiqi-first-act-dialogue-panel')).not.toBeInTheDocument()
   })
 
-  it('automatically leaves a settled story without waiting for the result button', async () => {
+  it('keeps a settled fragment visible until the user explicitly stores it', async () => {
     mocks.useEncounter.mockReturnValue({
-      data: answeredStoryEncounter,
+      data: { ...answeredStoryEncounter, canonicalScreen: 'completed', status: 'completed' },
       isLoading: false,
       isError: false,
       refetch: mocks.refetch,
@@ -175,9 +177,9 @@ describe('formal Flash dialogue', () => {
     expect(stage).toContainElement(screen.getByText('迟到的出发'))
     expect(stage).toContainElement(screen.getByText('这本册子不是没被想起，只是每次出发前都多了一个舍不得删掉的选择。'))
     expect(stage).toContainElement(screen.getByRole('button', { name: '收好碎片，继续寻找' }))
-    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledWith({
-      url: '/pages/alang/event/index',
-    }))
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /收好/ }))
+    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledWith({ url: '/pages/alang/event/index' }))
   })
 
   it('shows the fifteenth fragment before the user explicitly enters the finale', async () => {
@@ -196,9 +198,34 @@ describe('formal Flash dialogue', () => {
 
     render(<FlashDialoguePage />)
 
+    expect(mocks.redirectTo).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /收好/ }))
     await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledWith({
       url: '/pages/alang/finale/index?encounterId=encounter-1',
     }))
+  })
+
+  it('returns a completed-season replay to the collection instead of replaying the finale', async () => {
+    mocks.routerParams = { encounterId: 'encounter-1', replay: '1', replaySession: 'session-a' }
+    mocks.useEncounter.mockReturnValue({
+      data: {
+        ...answeredStoryEncounter,
+        isReplay: true,
+        storyEpisode: {
+          ...answeredStoryEncounter.storyEpisode,
+          fragment: null,
+          progress: { completedInPhase: 5, totalInPhase: 5, completedTotal: 15, total: 15 },
+        },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    render(<FlashDialoguePage />)
+
+    fireEvent.click(screen.getByRole('button', { name: /收好/ }))
+    await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledWith({ url: '/pages/alang/event/index' }))
   })
 
   it('keeps the original completion action usable when a story answer cannot be sent', async () => {
@@ -473,7 +500,17 @@ describe('formal Flash dialogue', () => {
     expect(mocks.advance).toHaveBeenCalledTimes(1)
   })
 
-  it('settles an Alang ending in one tap even when the automatic callback advance previously failed', async () => {
+  it('settles a replayed Alang ending in one tap while carrying the new cursor into the final advance', async () => {
+    mocks.routerParams = { encounterId: 'encounter-1', replay: '1', replaySession: 'session-alang' }
+    const openingReplayState = {
+      episodeId: 'episode-alang-3', echo: 0, flags: [], variables: {},
+      currentNode: 'n4_echo_b', nodePath: ['n1_setup', 'n4_echo_b'], lastChoiceId: 'keep',
+    }
+    const closureReplayState = {
+      ...openingReplayState,
+      currentNode: 'n5_close',
+      nodePath: [...openingReplayState.nodePath, 'n5_close'],
+    }
     const storyEpisode = {
       id: 'episode-alang-3',
       code: 's1-p3-alang',
@@ -486,6 +523,7 @@ describe('formal Flash dialogue', () => {
       progress: { completedInPhase: 0, totalInPhase: 5, completedTotal: 10, total: 15 },
       storyV2: {
         nodeId: 'n4_echo_b', type: 'callback', segments: [], choices: [], next: 'n5_close', unlockFragment: null,
+        replayState: openingReplayState,
       },
     }
     const encounter = {
@@ -494,7 +532,7 @@ describe('formal Flash dialogue', () => {
       currentQuestion: null,
       storyEpisode,
     }
-    const closure = { ...encounter, storyEpisode: { ...storyEpisode, storyV2: { ...storyEpisode.storyV2, nodeId: 'n5_close', type: 'closure', next: null } } }
+    const closure = { ...encounter, storyEpisode: { ...storyEpisode, storyV2: { ...storyEpisode.storyV2, nodeId: 'n5_close', type: 'closure', next: null, replayState: closureReplayState } } }
     const settled = { ...encounter, canonicalScreen: 'completed', status: 'completed', storyEpisode: { ...storyEpisode, response: '已经归还。', storyV2: null } }
     mocks.useEncounter.mockReturnValue({ data: encounter, isLoading: false, isError: false, refetch: mocks.refetch })
     mocks.getStorageSync.mockReturnValue({
@@ -515,6 +553,16 @@ describe('formal Flash dialogue', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '收好阿浪归还的空白页' }))
     await waitFor(() => expect(mocks.advance).toHaveBeenCalledTimes(2))
+    expect(mocks.canonicalRedirect).not.toHaveBeenCalledWith(
+      expect.objectContaining({ canonicalScreen: 'completed' }),
+      expect.anything(),
+    )
+    expect(mocks.advance).toHaveBeenNthCalledWith(1, {
+      encounterId: 'encounter-1', replay: true, replayState: openingReplayState,
+    })
+    expect(mocks.advance).toHaveBeenNthCalledWith(2, {
+      encounterId: 'encounter-1', replay: true, replayState: closureReplayState,
+    })
     expect(mocks.removeStorageSync).toHaveBeenCalledWith(expect.stringContaining('s1-p3-alang'))
   })
 
@@ -584,7 +632,11 @@ describe('formal Flash dialogue', () => {
     expect(mocks.navigateTo).toHaveBeenCalledWith({ url: expect.stringContaining('mode=lizi') })
 
     mocks.getStorageSync.mockImplementation((key: string) => key === 'joyjoin_flash_lizi_first_act_v2_encounter-1:game'
-      ? [{ cardId: 'warm' }, { cardId: 'quiet' }, { cardId: 'awake' }]
+      ? [
+          { cardId: 'warm', destinationId: 'soft-arc' },
+          { cardId: 'quiet', destinationId: 'fine-pair' },
+          { cardId: 'awake', destinationId: 'quick-notch' },
+        ]
       : undefined)
     act(() => mocks.didShow?.())
     fireEvent.click(screen.getByRole('button', { name: '完成栗子第一幕' }))

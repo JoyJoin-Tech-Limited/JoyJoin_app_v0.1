@@ -202,5 +202,6 @@ describe('formal Street Blind Box home', () => {
     expect(mocks.navigateTo).toHaveBeenCalledWith({
       url: expect.stringContaining('encounterId=33333333-3333-4333-8333-333333333333&replay=1'),
     })
+    expect(mocks.navigateTo.mock.calls[0][0].url).toMatch(/&replaySession=[a-z0-9-]+/)
   })
 })

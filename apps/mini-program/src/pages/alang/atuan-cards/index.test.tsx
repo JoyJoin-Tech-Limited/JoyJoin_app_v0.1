@@ -2,15 +2,20 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AtuanCardsPage from './index'
 
-const mocks = vi.hoisted(() => ({ params: { mode: 'alang', key: 'game-key', approach: '0' } as Record<string, string>, setStorageSync: vi.fn(), navigateBack: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  params: { mode: 'alang', key: 'game-key', approach: '0', unitId: 's1-p1-alang', phase: '1' } as Record<string, string>,
+  storage: new Map<string, unknown>(),
+  setStorageSync: vi.fn((key: string, value: unknown) => mocks.storage.set(key, value)),
+  navigateBack: vi.fn(),
+}))
 vi.mock('@tarojs/taro', () => ({
-  default: { setStorageSync: mocks.setStorageSync, navigateBack: mocks.navigateBack },
+  default: { getStorageSync: (key: string) => mocks.storage.get(key), setStorageSync: mocks.setStorageSync, navigateBack: mocks.navigateBack },
   useRouter: () => ({ params: mocks.params }),
 }))
 vi.mock('@tarojs/components', () => ({ View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>, Text: ({ children, ...props }: any) => <span {...props}>{children}</span> }))
 
 afterEach(cleanup)
-beforeEach(() => { mocks.setStorageSync.mockClear(); mocks.navigateBack.mockClear() })
+beforeEach(() => { mocks.storage.clear(); mocks.setStorageSync.mockClear(); mocks.navigateBack.mockClear() })
 
 describe('shared first-act game page', () => {
   it.each([
@@ -48,17 +53,62 @@ describe('shared first-act game page', () => {
   })
 
   it('stores three choices and navigates back only after the last feedback', () => {
-    mocks.params = { mode: 'momo', key: 'momo-game', approach: '0' }
+    mocks.params = { mode: 'momo', key: 'momo-game', approach: '0', unitId: 's1-p1-momo', phase: '1' }
     render(<AtuanCardsPage />)
     for (let index = 0; index < 3; index += 1) {
       fireEvent.click(screen.getAllByRole('button')[1])
       fireEvent.click(screen.getByRole('button', { name: index === 2 ? '收好最后一项' : '继续整理' }))
     }
-    expect(mocks.setStorageSync).toHaveBeenCalledWith('momo-game', expect.arrayContaining([
-      expect.objectContaining({ cardId: 'rain' }),
-      expect.objectContaining({ cardId: 'turn' }),
-      expect.objectContaining({ cardId: 'blank' }),
-    ]))
+    expect(mocks.setStorageSync).toHaveBeenCalledWith('momo-game', expect.objectContaining({
+      version: 'flash-act-game-v1',
+      unitId: 's1-p1-momo',
+      phase: 1,
+      status: 'completed',
+      placements: expect.arrayContaining([
+        expect.objectContaining({ cardId: 'rain' }),
+        expect.objectContaining({ cardId: 'turn' }),
+        expect.objectContaining({ cardId: 'blank' }),
+      ]),
+    }))
     expect(mocks.navigateBack).toHaveBeenCalledTimes(1)
+  })
+
+  it('binds partial game progress to its story act and resumes without trapping the player', () => {
+    mocks.params = { mode: 'momo', key: 'momo-act-1-game', approach: '0', unitId: 's1-p1-momo', phase: '1' }
+    const firstRender = render(<AtuanCardsPage />)
+
+    fireEvent.click(screen.getAllByRole('button')[1])
+    fireEvent.click(screen.getByRole('button', { name: '继续整理' }))
+
+    expect(mocks.storage.get('momo-act-1-game')).toMatchObject({
+      version: 'flash-act-game-v1',
+      unitId: 's1-p1-momo',
+      phase: 1,
+      status: 'playing',
+      placements: [expect.objectContaining({ cardId: 'rain' })],
+    })
+
+    firstRender.unmount()
+    render(<AtuanCardsPage />)
+    expect(screen.getByText('2 / 3')).toBeInTheDocument()
+    expect(screen.getByText('第二段：竖牌在中段向里折')).toBeInTheDocument()
+  })
+
+  it('does not restore game progress that belongs to another story act', () => {
+    mocks.params = { mode: 'momo', key: 'momo-game', approach: '0', unitId: 's1-p1-momo', phase: '1' }
+    mocks.storage.set('momo-game', {
+      version: 'flash-act-game-v1',
+      unitId: 's1-p2-momo',
+      phase: 2,
+      mode: 'momo',
+      status: 'playing',
+      placements: [{ cardId: 'rain', destinationId: 'listen' }],
+      pending: null,
+    })
+
+    render(<AtuanCardsPage />)
+
+    expect(screen.getByText('1 / 3')).toBeInTheDocument()
+    expect(screen.queryByText('2 / 3')).not.toBeInTheDocument()
   })
 })

@@ -11,6 +11,7 @@ import {
   getStoryNodeView,
   resolveV2EchoTier,
   resolveV2Ending,
+  scopeV2TraversalToEpisode,
 } from "../services/flashStoryEngine";
 
 const UNIT: FlashStoryContentV2 = {
@@ -46,6 +47,27 @@ const UNIT: FlashStoryContentV2 = {
 };
 
 describe("flashStoryEngine v2 full traversal", () => {
+  it("resets traversal for a different episode while preserving shared story signals", () => {
+    const scoped = scopeV2TraversalToEpisode({
+      episodeId: "episode-one",
+      echo: 42,
+      flags: ["noticed_evidence"],
+      variables: { trust: 2 },
+      currentNode: "ending",
+      nodePath: ["start", "ending"],
+      lastChoiceId: "look-closer",
+    }, "episode-two");
+
+    expect(scoped).toEqual({
+      echo: 42,
+      flags: ["noticed_evidence"],
+      variables: { trust: 2 },
+      currentNode: null,
+      nodePath: [],
+      lastChoiceId: null,
+    });
+  });
+
   it("traverses prose → choice → callback → closure with variant echo", () => {
     let run = enterStoryEpisode(UNIT, { echo: 0, flags: [], variables: {}, currentNode: null, nodePath: [], lastChoiceId: null });
     expect(run.echo).toBe(5);

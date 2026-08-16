@@ -3,6 +3,7 @@ import { Image, Text, View } from '@tarojs/components'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
+import { completedFlashActGamePlacements } from '../../../lib/alang/flashActGameProgress'
 import { FirstActDialogueChrome } from './FirstActDialogueChrome'
 import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
 import './FirstActAtuanTemplateExperience.scss'
@@ -184,8 +185,9 @@ export function FirstActAtuanTemplateExperience({
 
   useDidShow(() => {
     if (progressRef.current.stage !== 'conversation') return
-    const result = Taro.getStorageSync(gameKey)
-    if (!Array.isArray(result) || result.length !== 3) return
+    const unitId = `s1-p1-${config.npcSlug}`
+    const result = completedFlashActGamePlacements(Taro.getStorageSync(gameKey), { unitId, phase: 1 })
+    if (!result) return
     Taro.removeStorageSync(gameKey)
     haptics('success')
     setProgress((current) => ({ ...current, stage: 'success', activeId: null }))
@@ -217,7 +219,7 @@ export function FirstActAtuanTemplateExperience({
     if (disabled || progress.approachIndex === null) return
     haptics('medium')
     void Taro.navigateTo({
-      url: `${MINI_PROGRAM_ROUTES.alangAtuanCards}?mode=${config.npcSlug}&key=${encodeURIComponent(gameKey)}&approach=${progress.approachIndex}`,
+      url: `${MINI_PROGRAM_ROUTES.alangAtuanCards}?mode=${config.npcSlug}&unitId=s1-p1-${config.npcSlug}&phase=1&key=${encodeURIComponent(gameKey)}&approach=${progress.approachIndex}`,
     })
   }
 

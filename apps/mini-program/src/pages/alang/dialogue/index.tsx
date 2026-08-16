@@ -4,6 +4,7 @@ import { ScrollView, Text, View } from '@tarojs/components'
 import { getFlashStoryUnitDefinition, isFlashV2PilotUnitId } from '@shared/alang/flashStorySeason'
 import type { AtuanFirstActSubmission } from '@shared/alang/atuanFirstAct'
 import type { AtuanLaterActSubmission } from '@shared/alang/atuanLaterActs'
+import type { FlashStoryReplayStateDto } from '@shared/alang/flashTypes'
 import { FlashStoryUnit } from '../../../components/alang/story-unit/FlashStoryUnit'
 import { FlashStoryV2Stage } from '../../../components/alang/FlashStoryV2Stage'
 import { V2LaterActExperience } from '../../../components/alang/story-unit/AlangLaterActExperience'
@@ -129,6 +130,8 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
   const params = Taro.getCurrentInstance().router?.params ?? {}
   const encounterId = params.encounterId ?? ''
   const replay = params.replay === '1'
+  const replaySession = replay ? (params.replaySession ?? 'legacy-replay') : undefined
+  const progressEncounterId = replaySession ? `${encounterId}:${replaySession}` : encounterId
   const { data, isLoading, isError, error, refetch } = useFlashEncounter(encounterId, enabled && !!encounterId, replay)
   const answerMutation = useAnswerFlashEncounter()
   const advanceMutation = useAdvanceFlashStoryNode()
@@ -141,7 +144,6 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
   const answerInFlightRef = useRef(false)
   const advanceInFlightRef = useRef(false)
   const storySubmitInFlightRef = useRef(false)
-  const settledStoryExitKeyRef = useRef('')
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: data?.npc?.name ? `和${data.npc.name}聊聊` : '角色对话' })
@@ -152,22 +154,12 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
       void Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}` })
       return
     }
-    const settledStory = data?.storyEpisode
-    if (!replay && settledStory?.response) {
-      const exitKey = `${settledStory.id}:${settledStory.response}`
-      if (settledStoryExitKeyRef.current === exitKey) return
-      settledStoryExitKeyRef.current = exitKey
-      const url = settledStory.progress.completedTotal >= settledStory.progress.total
-        ? `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}`
-        : MINI_PROGRAM_ROUTES.alangEvent
-      void leaveFlashStory(url).catch(() => {
-        settledStoryExitKeyRef.current = ''
-      })
-      return
-    }
+    // A settled episode stays on the result card until the user explicitly
+    // stores the fragment. `canonicalScreen=completed` must not auto-exit it.
+    if (data?.storyEpisode?.response) return
     if (!enabled || !data?.canonicalScreen || data.status === 'expired') return
     void redirectToFlashCanonical(data, currentPath)
-  }, [currentPath, data, enabled, encounterId, replay])
+  }, [currentPath, data, enabled, encounterId])
 
   useEffect(() => {
     setFragmentRevealed(false)
@@ -183,6 +175,7 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
       await Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}` })
       return
     }
+    if ('storyEpisode' in response && response.storyEpisode?.response) return
     const redirected = await redirectToFlashCanonical(response, currentPath)
     if (!redirected && !('npc' in response)) await refetch()
   }
@@ -193,7 +186,13 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
     setActionError('')
     try {
       haptics('light')
-      const response = await answerMutation.mutateAsync({ encounterId, questionId, optionId })
+      const response = await answerMutation.mutateAsync({
+        encounterId,
+        questionId,
+        optionId,
+        ...(replay ? { replay: true } : {}),
+        ...(data?.storyEpisode?.storyV2?.replayState ? { replayState: data.storyEpisode.storyV2.replayState } : {}),
+      })
       await applyResponse(response)
     } catch (caughtError) {
       if (getFlashApiErrorCode(caughtError) === 'FLASH_ENCOUNTER_EXPIRED') {
@@ -206,13 +205,18 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
     }
   }
 
-  const advance = async (): Promise<FlashCanonicalSnapshot | null> => {
+  const advance = async (replayStateOverride?: FlashStoryReplayStateDto): Promise<FlashCanonicalSnapshot | null> => {
     if (!enabled || advanceInFlightRef.current) return null
     advanceInFlightRef.current = true
     setActionError('')
     try {
       haptics('light')
-      const response = await advanceMutation.mutateAsync(encounterId)
+      const replayState = replayStateOverride ?? data?.storyEpisode?.storyV2?.replayState
+      const response = await advanceMutation.mutateAsync({
+        encounterId,
+        ...(replay ? { replay: true } : {}),
+        ...(replayState ? { replayState } : {}),
+      })
       await applyResponse(response)
       return response
     } catch (caughtError) {
@@ -231,7 +235,7 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
     const response = await advance()
     if (!response) return false
     if (response.storyEpisode?.storyV2?.nodeId === 'n5_close') {
-      return Boolean(await advance())
+      return Boolean(await advance(response.storyEpisode.storyV2.replayState))
     }
     return true
   }
@@ -244,6 +248,7 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
       optionId: choice.optionId,
       ...(choice.storyPath ? { storyPath: choice.storyPath } : {}),
       ...(replay ? { replay: true } : {}),
+      ...(data?.storyEpisode?.storyV2?.replayState ? { replayState: data.storyEpisode.storyV2.replayState } : {}),
     }
     storySubmitInFlightRef.current = true
     setStorySubmitState('submitting')
@@ -382,7 +387,7 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
         return (
           <View className='flash-page flash-dialogue flash-dialogue--story'>
             <V2LaterActExperience
-              encounterId={encounterId}
+              encounterId={progressEncounterId}
               unitId={story.code}
               nodeId={v2View.nodeId}
               availableChoiceIds={v2View.choices.map(({ id }) => id)}
@@ -431,8 +436,9 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
       const unitPosition = Math.min(story.progress.total, story.progress.completedTotal + (story.response ? 0 : 1))
       return (
         <FlashStoryUnit
-          key={`${encounterId}:${story.id}`}
+          key={`${encounterId}:${story.id}:${replaySession ?? 'live'}`}
           encounterId={encounterId}
+          progressNamespace={replaySession}
           npc={data.npc}
           story={story}
           question={question}
@@ -455,7 +461,7 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
           shiqiLaterActCharacter={customLaterActAssets?.shiqiCharacter}
           onSubmit={submitStoryChoice}
           onContinue={() => {
-            const url = story.progress.completedTotal >= story.progress.total
+            const url = !replay && story.progress.completedTotal >= story.progress.total
               ? `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}`
               : MINI_PROGRAM_ROUTES.alangEvent
             void leaveFlashStory(url)

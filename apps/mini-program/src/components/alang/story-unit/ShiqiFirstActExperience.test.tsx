@@ -40,7 +40,11 @@ describe('ShiqiFirstActExperience — Atuan template parity', () => {
     expect(screen.getByTestId('shiqi-scene-speech')).toHaveTextContent('共同事实')
     fireEvent.click(screen.getByRole('button', { name: '和拾柒一起核对三层路线纸' }))
     expect(mocks.navigateTo).toHaveBeenCalledWith({ url: expect.stringContaining('mode=shiqi') })
-    mocks.storage.set(`${getShiqiFirstActStorageKey('shiqi-2')}:game`, [{}, {}, {}]); act(() => mocks.didShow?.())
+    mocks.storage.set(`${getShiqiFirstActStorageKey('shiqi-2')}:game`, [
+      { cardId: 'base', destinationId: 'align' },
+      { cardId: 'copy', destinationId: 'compare' },
+      { cardId: 'note', destinationId: 'separate' },
+    ]); act(() => mocks.didShow?.())
     fireEvent.click(screen.getByRole('button', { name: '完成拾柒第一幕' })); expect(onComplete).toHaveBeenCalledWith(1)
   })
 })

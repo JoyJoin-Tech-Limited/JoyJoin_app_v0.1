@@ -41,7 +41,11 @@ describe('MomoFirstActExperience — Atuan template parity', () => {
     expect(screen.getByTestId('momo-scene-speech')).toHaveTextContent('我能继续')
     fireEvent.click(screen.getByRole('button', { name: '和默默一起整理三段路线' }))
     expect(mocks.navigateTo).toHaveBeenCalledWith({ url: expect.stringContaining('mode=momo') })
-    mocks.storage.set(`${momoFirstActStorageKey('momo-2')}:game`, [{}, {}, {}]); act(() => mocks.didShow?.())
+    mocks.storage.set(`${momoFirstActStorageKey('momo-2')}:game`, [
+      { cardId: 'rain', destinationId: 'listen' },
+      { cardId: 'turn', destinationId: 'trace' },
+      { cardId: 'blank', destinationId: 'stop' },
+    ]); act(() => mocks.didShow?.())
     fireEvent.click(screen.getByRole('button', { name: '完成默默第一幕' })); expect(onComplete).toHaveBeenCalledWith(0)
   })
 

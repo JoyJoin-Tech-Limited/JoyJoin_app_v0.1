@@ -73,7 +73,11 @@ describe('LiziFirstActExperience — Atuan template parity', () => {
     expect(mocks.navigateTo).toHaveBeenCalledWith({ url: expect.stringContaining('mode=lizi') })
     expect(onComplete).not.toHaveBeenCalled()
 
-    mocks.storage.set(`${liziFirstActStorageKey('lizi-flow')}:game`, [{}, {}, {}])
+    mocks.storage.set(`${liziFirstActStorageKey('lizi-flow')}:game`, [
+      { cardId: 'warm', destinationId: 'soft-arc' },
+      { cardId: 'quiet', destinationId: 'fine-pair' },
+      { cardId: 'awake', destinationId: 'quick-notch' },
+    ])
     act(() => mocks.didShow?.())
     fireEvent.click(screen.getByRole('button', { name: '完成栗子第一幕' }))
     expect(onComplete).toHaveBeenCalledWith(1)
