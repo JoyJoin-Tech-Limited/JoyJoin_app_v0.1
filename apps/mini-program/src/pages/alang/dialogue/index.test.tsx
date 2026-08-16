@@ -228,6 +228,31 @@ describe('formal Flash dialogue', () => {
     await waitFor(() => expect(mocks.redirectTo).toHaveBeenCalledWith({ url: '/pages/alang/event/index' }))
   })
 
+  it('passes replay context into canonical routing when a replay moves to the later-act subpackage', async () => {
+    mocks.routerParams = { encounterId: 'encounter-1', replay: '1', replaySession: 'session-route' }
+    const laterActReplay = {
+      ...storyEncounter,
+      storyEpisode: {
+        ...storyEncounter.storyEpisode,
+        code: 's1-p2-shiqi',
+      },
+    }
+    mocks.useEncounter.mockReturnValue({
+      data: laterActReplay,
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    render(<FlashDialoguePage />)
+
+    await waitFor(() => expect(mocks.canonicalRedirect).toHaveBeenCalledWith(
+      laterActReplay,
+      '/pages/alang/dialogue/index',
+      { replay: true, replaySession: 'session-route' },
+    ))
+  })
+
   it('keeps the original completion action usable when a story answer cannot be sent', async () => {
     mocks.useEncounter.mockReturnValue({
       data: storyEncounter,

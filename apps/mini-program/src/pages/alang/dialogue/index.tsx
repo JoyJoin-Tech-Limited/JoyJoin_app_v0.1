@@ -158,8 +158,12 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
     // stores the fragment. `canonicalScreen=completed` must not auto-exit it.
     if (data?.storyEpisode?.response) return
     if (!enabled || !data?.canonicalScreen || data.status === 'expired') return
-    void redirectToFlashCanonical(data, currentPath)
-  }, [currentPath, data, enabled, encounterId])
+    void redirectToFlashCanonical(
+      data,
+      currentPath,
+      replay ? { replay: true, replaySession } : undefined,
+    )
+  }, [currentPath, data, enabled, encounterId, replay, replaySession])
 
   useEffect(() => {
     setFragmentRevealed(false)
@@ -176,7 +180,11 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
       return
     }
     if ('storyEpisode' in response && response.storyEpisode?.response) return
-    const redirected = await redirectToFlashCanonical(response, currentPath)
+    const redirected = await redirectToFlashCanonical(
+      response,
+      currentPath,
+      replay ? { replay: true, replaySession } : undefined,
+    )
     if (!redirected && !('npc' in response)) await refetch()
   }
 

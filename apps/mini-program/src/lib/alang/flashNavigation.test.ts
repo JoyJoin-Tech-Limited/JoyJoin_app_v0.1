@@ -32,6 +32,19 @@ describe('Flash canonical screen routing', () => {
       .toBe('/pages/alang/result/index?assignmentId=t1')
   })
 
+  it('preserves the replay session when a later act moves into the story subpackage', () => {
+    expect(getFlashCanonicalRoute(
+      {
+        canonicalScreen: 'dialogue',
+        encounterId: 'encounter-replay',
+        storyEpisode: { code: 's1-p2-shiqi' },
+      } as any,
+      { replay: true, replaySession: 'session-42' },
+    )).toBe(
+      '/pages/alang-story/dialogue/index?encounterId=encounter-replay&replay=1&replaySession=session-42',
+    )
+  })
+
   it('accepts the retired radar screen name only as a cached-route alias', () => {
     expect(getFlashCanonicalRoute({ canonicalScreen: 'radar', appearanceId: 'legacy' }))
       .toBe('/pages/alang/search/index?appearanceId=legacy')

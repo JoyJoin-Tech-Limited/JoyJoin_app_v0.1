@@ -13,6 +13,11 @@ const DEDICATED_LATER_ACT_CODES = new Set([
   's1-p3-shiqi',
 ])
 
+export interface FlashCanonicalRouteContext {
+  replay?: boolean
+  replaySession?: string
+}
+
 export function decodeFlashRouteParam(value: string | undefined, fallback = ''): string {
   if (!value) return fallback
 
@@ -37,7 +42,10 @@ function query(path: string, params: Record<string, string | undefined>): string
   return search ? `${path}?${search}` : path
 }
 
-export function getFlashCanonicalRoute(snapshot: FlashCanonicalSnapshot): string | null {
+export function getFlashCanonicalRoute(
+  snapshot: FlashCanonicalSnapshot,
+  context: FlashCanonicalRouteContext = {},
+): string | null {
   const screen = snapshot.canonicalScreen?.trim().toLowerCase().replace(/^flash[_-]/, '')
   switch (screen) {
     case 'map':
@@ -58,7 +66,11 @@ export function getFlashCanonicalRoute(snapshot: FlashCanonicalSnapshot): string
             snapshot.storyEpisode?.code && DEDICATED_LATER_ACT_CODES.has(snapshot.storyEpisode.code)
               ? MINI_PROGRAM_ROUTES.alangLaterDialogue
               : MINI_PROGRAM_ROUTES.alangDialogue,
-            { encounterId: snapshot.encounterId },
+            {
+              encounterId: snapshot.encounterId,
+              replay: context.replay ? '1' : undefined,
+              replaySession: context.replay ? context.replaySession : undefined,
+            },
           )
         : MINI_PROGRAM_ROUTES.alangEvent
     case 'task':
@@ -84,8 +96,9 @@ export function getFlashCanonicalRoute(snapshot: FlashCanonicalSnapshot): string
 export async function redirectToFlashCanonical(
   snapshot: FlashCanonicalSnapshot,
   currentPath: string,
+  context: FlashCanonicalRouteContext = {},
 ): Promise<boolean> {
-  const route = getFlashCanonicalRoute(snapshot)
+  const route = getFlashCanonicalRoute(snapshot, context)
   if (!route) return false
   const routePath = route.split('?')[0]
   if (routePath === currentPath) return false
