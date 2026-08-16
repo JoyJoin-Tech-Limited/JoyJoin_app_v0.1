@@ -106,6 +106,7 @@ describe('Atuan first-arrival asset ownership', () => {
   it('keeps first-arrival assets covered by the production package contract', () => {
     const cleanScript = readFileSync(resolve(appRoot, 'scripts/clean-cdn-assets.mjs'), 'utf8')
     const verifyScript = readFileSync(resolve(appRoot, 'scripts/verify-flash-package.mjs'), 'utf8')
+    const packageSizeScript = readFileSync(resolve(appRoot, 'scripts/check-package-size.mjs'), 'utf8')
     const dialoguePage = readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/index.tsx'), 'utf8')
     const laterActPage = readFileSync(resolve(sourceRoot, 'pages/alang-story/dialogue/index.tsx'), 'utf8')
     const buildConfig = readFileSync(resolve(appRoot, 'config/index.ts'), 'utf8')
@@ -113,7 +114,10 @@ describe('Atuan first-arrival asset ownership', () => {
     const eventPage = readFileSync(resolve(sourceRoot, 'pages/alang/event/index.tsx'), 'utf8')
     const projectConfig = JSON.parse(
       readFileSync(resolve(appRoot, 'project.config.json'), 'utf8'),
-    ) as { packOptions?: { include?: Array<{ type?: string; value?: string }> } }
+    ) as {
+      setting?: { ignoreUploadUnusedFiles?: boolean }
+      packOptions?: { include?: Array<{ type?: string; value?: string }> }
+    }
 
     for (const fileName of arrivalAssetNames) {
       expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
@@ -198,6 +202,10 @@ describe('Atuan first-arrival asset ownership', () => {
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.jpg$' })
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.png$' })
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.webp$' })
+    expect(projectConfig.setting?.ignoreUploadUnusedFiles).toBe(true)
+    expect(verifyScript).toContain('setting.ignoreUploadUnusedFiles must be true')
+    expect(packageSizeScript).toContain("path.join(ROOT, 'project.config.json')")
+    expect(packageSizeScript).not.toContain("path.join(ROOT, 'project.private.config.json')")
     expect(eventPage).toContain("import standardPaperWorld from '../assets/onboarding/parallel-standard-paper-world-v1.jpg'")
     for (const productionContract of [buildConfig, verifyScript, buildWorkflow]) {
       expect(productionContract).not.toContain('street-blind-box-onboarding-fullscreen-v7')

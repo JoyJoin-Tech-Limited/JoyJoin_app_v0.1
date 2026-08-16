@@ -179,10 +179,10 @@ if (!existsSync(projectConfigPath)) {
       'project.config.json packOptions.include must explicitly include all pages/alang WebP runtime assets',
     )
   }
-  if (projectConfig.setting?.ignoreUploadUnusedFiles !== false) {
+  if (projectConfig.setting?.ignoreUploadUnusedFiles !== true) {
     failures.push(
-      'project.config.json setting.ignoreUploadUnusedFiles must be false; ' +
-        `the WeChat upload optimizer cannot statically trace the Taro runtime path for ${iconRelativePath}`,
+      'project.config.json setting.ignoreUploadUnusedFiles must be true; ' +
+        'packOptions.include is the reviewed authority for dynamic Taro runtime assets',
     )
   }
 }
