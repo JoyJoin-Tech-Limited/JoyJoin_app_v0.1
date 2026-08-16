@@ -1,5 +1,12 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
+// TablemateCard (桌友卡) styles co-compiled into the page WXSS so the deck
+// strip can never lose its rules to style chunking.
+@use '../../components/TablemateCard/index.scss';
+// TablemateDetailSheet (成员详情浮层) — co-compiled for the same reason.
+// Aliased: two `@use`d files both named index.scss would otherwise collide
+// on the default "index" namespace and fail the sass build.
+@use '../../components/TablemateDetailSheet/index.scss' as detail-sheet;
 
 .pool-group-detail {
   min-height: 100vh;
@@ -265,6 +272,102 @@
     margin-bottom: $spacing-md;
   }
 
+  // 桌友卡 deck strip (2026-08-15): the squad-unboxing card recipe as a
+  // horizontal strip above the member rows. Tap a card → detail sheet.
+  &__deck-strip {
+    position: relative;
+    margin-bottom: $spacing-md;
+  }
+
+  &__deck-title {
+    display: block;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin: 0 $container-padding $spacing-sm;
+  }
+
+  &__deck-scroll {
+    width: 100%;
+    // Gentle proximity snap — cards settle onto a clean edge after a flick
+    // (H5/webview ScrollView; native clients that ignore it degrade to the
+    // existing free scroll).
+    scroll-snap-type: x proximity;
+  }
+
+  &__deck-track {
+    display: flex;
+    gap: $spacing-md;
+    // Side padding aligns the first card with the page content; bottom
+    // padding gives the dealt-card tilt + tinted shadow room to render.
+    padding: $spacing-xs $container-padding $spacing-md;
+
+    > .tablemate-card {
+      scroll-snap-align: start;
+    }
+  }
+
+  // "左滑看更多" hint chip — fades away after the first deck scroll. The
+  // page background is a vertical gradient, so a solid fade mask would show
+  // seams; a floating pill communicates scrollability without one. A gentle
+  // breathing pulse keeps it noticeable without being loud.
+  &__deck-hint {
+    position: absolute;
+    right: $container-padding;
+    top: 56%;
+    transform: translateY(-50%);
+    z-index: 2;
+    padding: 4rpx $spacing-sm;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.92);
+    box-shadow: $shadow-sm;
+    pointer-events: none;
+    animation: pgd-deck-hint-pulse 1.6s ease-in-out infinite;
+  }
+
+  &__deck-hint-text {
+    font-size: $font-size-2xs;
+    color: $color-text-secondary;
+    white-space: nowrap;
+  }
+
+  // Deck progress dots — take over the orientation role once the hint chip
+  // has faded away.
+  &__deck-dots {
+    display: flex;
+    justify-content: center;
+    gap: 12rpx;
+    margin-top: $spacing-xs;
+  }
+
+  &__deck-dot {
+    width: 8rpx;
+    height: 8rpx;
+    border-radius: 50%;
+    background: rgba($color-text-secondary, 0.25);
+    transition: background 0.2s ease, transform 0.2s ease;
+
+    &--active {
+      background: $color-primary;
+      transform: scale(1.25);
+    }
+  }
+
+  // Collapsible 完整名单 toggle — the deck + detail sheet carry the primary
+  // member experience, so the row list stays collapsed until asked for.
+  &__members-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-sm;
+  }
+
+  &__members-toggle-text {
+    flex-shrink: 0;
+    font-size: $font-size-sm;
+    color: $color-primary;
+  }
+
   &__members-list {
     display: flex;
     flex-direction: column;
@@ -279,10 +382,14 @@
     border-radius: $card-radius-sm;
     background: rgba($color-surface, 0.88);
     box-shadow: $shadow-sm;
+    // Archetype-tinted foil frame — the colour arrives inline per member.
+    border: 2rpx solid transparent;
 
     &--current {
-      border: 2rpx solid rgba($color-primary, 0.18);
       background: rgba($color-surface, 0.98);
+      // Self-identification accent bar (inset, so it never fights the
+      // per-member archetype borderColor inline style).
+      box-shadow: $shadow-sm, inset 6rpx 0 0 $color-primary;
     }
   }
 
@@ -314,11 +421,15 @@
     font-size: $font-size-base;
     font-weight: $font-weight-semibold;
     word-break: keep-all;
+    min-width: 0;
+    @include text-truncate;
   }
 
   &__member-meta {
     color: $color-text-secondary;
     font-size: $font-size-sm;
+    min-width: 0;
+    @include text-truncate;
   }
 
   &__member-you-badge {
@@ -336,6 +447,46 @@
     color: $color-primary-dark;
   }
 
+  // Pair-temperature chip on member rows — same tier language as the cards.
+  &__member-temp-chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 240rpx;
+    padding: 2rpx $spacing-sm;
+    border-radius: 999rpx;
+
+    &--fire,
+    &--warm {
+      background: rgba($color-secondary, 0.16);
+    }
+
+    &--mild {
+      background: rgba($color-primary, 0.12);
+    }
+
+    &--cold {
+      background: rgba($color-text-secondary, 0.1);
+    }
+  }
+
+  &__member-temp-chip-text {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    .pool-group-detail__member-temp-chip--fire &,
+    .pool-group-detail__member-temp-chip--warm & {
+      color: $chemistry-warm-text;
+    }
+
+    .pool-group-detail__member-temp-chip--mild & {
+      color: $chemistry-mild-text;
+    }
+  }
+
   &__member-archetype {
     display: block;
     margin-top: $spacing-xs;
@@ -343,6 +494,7 @@
     font-size: $font-size-sm;
     font-weight: $font-weight-medium;
     word-break: keep-all;
+    @include text-truncate;
   }
 
   &__member-tags {
@@ -358,6 +510,13 @@
     background: $color-primary-light;
     color: $color-primary-dark;
     font-size: $font-size-xs;
+
+    // "+N" overflow counter for interests beyond the 3 shown.
+    &--more {
+      background: rgba($color-text-secondary, 0.1);
+      color: $color-text-secondary;
+      font-weight: $font-weight-semibold;
+    }
   }
 
   &__actions {
@@ -452,6 +611,11 @@
     text-align: center;
   }
 
+  &__error-actions {
+    display: flex;
+    gap: $spacing-md;
+  }
+
   &__error-hero {
     width: 320rpx;
     height: auto;
@@ -470,8 +634,24 @@
   .pool-group-detail__member-card,
   .pool-group-detail__member-card--current,
   .pool-group-detail__countdown,
-  .pool-group-detail__match-score {
+  .pool-group-detail__match-score,
+  .pool-group-detail__deck-hint,
+  .pool-group-detail__deck-dot {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+// Deck hint breathing pulse — translateY(-50%) is baked into the keyframes so
+// the centering transform is never dropped mid-animation.
+@keyframes pgd-deck-hint-pulse {
+  0%,
+  100% {
+    transform: translateY(-50%) translateX(0);
+    opacity: 0.92;
+  }
+  50% {
+    transform: translateY(-50%) translateX(-10rpx);
+    opacity: 0.6;
   }
 }

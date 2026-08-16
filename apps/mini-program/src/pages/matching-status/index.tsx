@@ -47,6 +47,7 @@ export default function MatchingStatusPage() {
     currentFill,
     effectiveEventDateTime,
     effectiveGroupDetails,
+    currentUserId,
     fillStatusText,
     finishLiveJourney,
     groupAnalysis,
@@ -419,6 +420,9 @@ export default function MatchingStatusPage() {
         leadIceBreaker={leadIceBreaker}
         persistedThemeSummary={persistedThemeSummary}
         viewerArchetype={viewerArchetype}
+        currentUserId={currentUserId}
+        shouldReduceMotion={shouldReduceMotion}
+        hasRevealed={hasRevealed}
         groupAnalysisDebugMeta={groupAnalysisDebugMeta}
         groupAnalysis={groupAnalysis}
         relatedEventId={currentRegistration.poolId ?? currentRegistration.id ?? undefined}
@@ -493,6 +497,7 @@ export default function MatchingStatusPage() {
             puzzlePreludeEnabled={matchingPuzzlePreludeEnabled}
             persistedThemeSummary={persistedThemeSummary}
             resolvedGroupId={resolvedGroupId}
+            currentUserId={currentUserId}
             liveRevealError={liveRevealError}
             relatedEventId={currentRegistration.poolId ?? currentRegistration.id ?? undefined}
             onStartSquadUnboxing={handleStartSquadUnboxing}

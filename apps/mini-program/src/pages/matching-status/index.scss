@@ -1,5 +1,13 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
+// TablemateCard (桌友卡) styles must compile into THIS subpackage page's WXSS —
+// Taro can otherwise chunk the shared component's styles into a package this
+// page never loads (blank-card trap; see scripts/verify-subpackage-styles.mjs).
+@use '../../components/TablemateCard/index.scss';
+// TablemateDetailSheet (成员详情浮层) — opened from the reveal overlay and the
+// squad card; co-compiled for the same chunking reason. Aliased: two `@use`d
+// files both named index.scss would collide on the default "index" namespace.
+@use '../../components/TablemateDetailSheet/index.scss' as detail-sheet;
 @use 'styles/base';
 @use 'styles/error-state';
 @use 'styles/hero';
@@ -109,7 +117,9 @@
   .matching-status__waiting-card,
   .matching-status__waiting-seat--new,
   .matching-status__waiting-seat-burst,
-  .matching-status__overlay-member-card,
+  .tablemate-card,
+  .tablemate-card__sheen,
+  .tablemate-card__art-skeleton,
   .matching-status__waiting-orbit,
   .match-compass__chip,
   .match-compass__pref-card--collapsed,

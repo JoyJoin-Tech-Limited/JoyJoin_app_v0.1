@@ -4,6 +4,24 @@ import { resolveArchetype } from '@shared/personality/archetypeNames'
 import type { OverallChemistry, PairExplanation } from '@shared/types/groupAnalysis'
 
 import { getVibeLabel as getVibeLabelShared } from '../../lib/matching/groupDisplay'
+import {
+  CHEMISTRY_FALLBACK_WORD,
+  CHEMISTRY_TITLES,
+  stripConnectionPointParens,
+} from '../../lib/utils/pairChemistry'
+import type { ChemistryType } from '../../lib/utils/pairChemistry'
+
+// Pair-chemistry display helpers moved to lib/utils/pairChemistry (2026-08-15)
+// so TablemateCard can share them; re-exported here for existing consumers.
+export {
+  buildInterestHookText,
+  buildPairKeyMemberMap,
+  getPairChemistryTier,
+  getPairChemistryWord,
+  shortenConnectionPointForPill,
+  stripConnectionPointParens,
+} from '../../lib/utils/pairChemistry'
+export type { ChemistryType } from '../../lib/utils/pairChemistry'
 
 export type FlowState = 'ready' | 'shaking' | 'revealed'
 export type ActionDockState = 'hidden' | 'ready'
@@ -11,8 +29,6 @@ export type BlindBoxVisualState = 'ready' | 'opening' | 'open'
 
 // Legacy type kept for backward compatibility in persisted analytics; UI now uses a single expandable panel.
 export type AnalysisStage = 0 | 1 | 2 | 3 | 4
-
-export type ChemistryType = 'fire' | 'warm' | 'cold' | 'mild'
 
 export interface SquadChemistryTokens {
   iconRef: ChemistryType
@@ -127,36 +143,6 @@ export function buildEventBriefDate(dateTime?: string | null): EventBriefDate | 
 }
 
 /**
- * Server-side connection copy sometimes arrives wrapped in full-width parens
- * (e.g. （都偏内向细腻）). Inside the pill's 1-line nowrap+ellipsis the leading
- * （ made the truncated text read as a severed fragment (`（都偏内向…`). Strip
- * one pair of WRAPPING full-width parens so the pill starts with content.
- * Inner parens and unbalanced pairs are left untouched.
- */
-export function stripConnectionPointParens(text: string): string {
-  const value = (text ?? '').trim()
-  if (value.length >= 2 && value.startsWith('（') && value.endsWith('）')) {
-    return value.slice(1, -1).trim()
-  }
-  return value
-}
-
-/**
- * Card-pill copy budget (2026-07-24 full-marks): a mid-glyph ellipsis
- * (`都爱在…`) reads as broken, not mysterious. Strip the leading filler
- * （都 / 爱在 / 喜欢 / 是 / 偏 …) so the pill carries the semantic core
- * ("咖啡馆里发呆", "阅读习惯相似") and only ellipsizes truly long tails.
- * Display-only — narration keeps the full governed copy.
- */
-export function shortenConnectionPointForPill(text: string): string {
-  let value = stripConnectionPointParens(text)
-  value = value.replace(/^都/, '')
-  value = value.replace(/^(爱在|喜欢去|喜欢看|喜欢听|喜欢|爱看|爱去|爱听|爱)/, '')
-  value = value.replace(/^(是|偏|偏好|相信)/, '')
-  return value.trim() || stripConnectionPointParens(text)
-}
-
-/**
  * 团魂 bubble copy. The archetype-mix clause is only inserted when non-empty,
  * so the bubble never renders a stranded `！，` when no member archetypes are
  * known. Trailing punctuation on each line is stripped before the final `。`
@@ -181,17 +167,6 @@ export function buildSquadSoulBubbleText(
   const normalizedDynamics = normalize(dynamics)
   const extra = normalizedDynamics && normalizedDynamics !== normalizedCompanion ? normalizedDynamics : ''
   return extra ? `${head}${extra}。` : head
-}
-
-/**
- * Row-4 fallback hook (2026-07-16 PM "every card has a hook"): when a card
- * has no viewer connection point, the hook pill falls back to the member's
- * top interest so every card deals a full 4-row face. Returns the first
- * non-empty trimmed interest, or '' when the member has none (row 4 then
- * collapses, same as before).
- */
-export function buildInterestHookText(member?: PoolGroupMemberSummary | null): string {
-  return (member?.topInterests ?? []).map((interest) => (interest ?? '').trim()).filter(Boolean)[0] ?? ''
 }
 
 /**
@@ -436,43 +411,11 @@ export function computeBestPartnerUserId(
   return bestUserId
 }
 
-const CHEMISTRY_TITLES: Record<ChemistryType, string> = {
-  fire: '超级火花',
-  warm: '暖意融融',
-  mild: '相聊甚欢',
-  cold: '慢慢发现',
-}
-
-const CHEMISTRY_FALLBACK_WORD = '今晚有戏'
-
 export function getChemistryWord(chemistry?: OverallChemistry | ChemistryType | null): string {
   if (chemistry && chemistry in CHEMISTRY_TITLES) {
     return CHEMISTRY_TITLES[chemistry as ChemistryType]
   }
   return CHEMISTRY_FALLBACK_WORD
-}
-
-function scoreToChemistryType(score: number): ChemistryType {
-  // Mirrors server `getTemperatureLevel` thresholds (poolMatchingService.ts):
-  // fire >= 85, warm >= 70, mild >= 55, else cold.
-  if (score >= 85) return 'fire'
-  if (score >= 70) return 'warm'
-  if (score >= 55) return 'mild'
-  return 'cold'
-}
-
-export function getPairChemistryWord(score?: number | null): string {
-  if (typeof score !== 'number' || Number.isNaN(score)) return CHEMISTRY_FALLBACK_WORD
-  return CHEMISTRY_TITLES[scoreToChemistryType(score)]
-}
-
-/**
- * Raw chemistry tier for a pair score (2026-07-24 polish): drives the
- * tier-aware temperature-chip tint — a cold read must not wear hot pink.
- */
-export function getPairChemistryTier(score?: number | null): ChemistryType | null {
-  if (typeof score !== 'number' || Number.isNaN(score)) return null
-  return scoreToChemistryType(score)
 }
 
 export function getSquadChemistryTokens(chemistry?: OverallChemistry): SquadChemistryTokens {
@@ -517,21 +460,6 @@ export function getSquadChemistryTokens(chemistry?: OverallChemistry): SquadChem
 
 export function computeActionDockState(flowState: FlowState): ActionDockState {
   return flowState === 'revealed' ? 'ready' : 'hidden'
-}
-
-export function buildPairKeyMemberMap(
-  members: PoolGroupMemberSummary[],
-): Map<string, [PoolGroupMemberSummary, PoolGroupMemberSummary]> {
-  const map = new Map<string, [PoolGroupMemberSummary, PoolGroupMemberSummary]>()
-
-  for (let index = 0; index < members.length; index += 1) {
-    for (let nextIndex = index + 1; nextIndex < members.length; nextIndex += 1) {
-      const pairKey = [members[index].userId, members[nextIndex].userId].sort().join('-')
-      map.set(pairKey, [members[index], members[nextIndex]])
-    }
-  }
-
-  return map
 }
 
 // ── 桌型诊断 (2026-07-24 P0) ────────────────────────────────────────────────

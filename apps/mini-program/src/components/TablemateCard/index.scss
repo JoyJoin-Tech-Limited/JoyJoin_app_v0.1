@@ -1,0 +1,333 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+// Co-compile ConnectionPointPill styles with this component so the page WXSS
+// that includes TablemateCard always carries the pill selectors, preventing
+// the subpackage style-splitting blank-pill trap.
+@use '../ConnectionPointPill/index.scss';
+
+// TablemateCard (2026-08-15) — the squad-unboxing deck card's front-face
+// recipe as a standalone lightweight card: archetype-tinted foil frame
+// (inline border/shadow), 52% art zone over a 4-row info zone, connection
+// pill + pair-temperature chip. Deal-in entrance only (rise + slight fan
+// tilt + one-shot holo sheen); no flip/fan/pocket machinery.
+//
+// Consumed by matching-status (subpackage) and pool-group-detail (main
+// package). Because Taro can chunk a shared component's WXSS into a package
+// the page never loads, each consuming page SCSS also `@use`s this file so
+// the rules compile into the page WXSS itself (see
+// scripts/verify-subpackage-styles.mjs).
+
+.tablemate-card {
+  // Archetype-tinted foil frame: the colour values arrive as inline CSS
+  // variables (H5-safe), while the rpx geometry stays in SCSS.
+  --tablemate-card-shadow-color: #{rgba($color-primary, 0.18)};
+  --tablemate-card-edge-color: #{rgba($color-primary, 0.6)};
+  --tablemate-card-skeleton-color: #{rgba($color-primary, 0.08)};
+
+  position: relative;
+  flex: 0 0 auto;
+  width: 245rpx;
+  height: 356rpx;
+  border-radius: $card-radius;
+  background: $color-surface;
+  border: 2rpx solid transparent; // overridden inline by the archetype tint
+  // Start pose carries a transparent shadow so the dealt transition can
+  // "land" the card with growing weight (box-shadow is transitioned too).
+  box-shadow:
+    0 2rpx 8rpx transparent,
+    inset 0 0 0 1rpx transparent;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform-origin: 50% 100%; // bottom-centre pivot → dealt-card tilt
+
+  // Deal-in start pose — the parent flips --dealt once; per-card stagger
+  // arrives as an inline transition-delay (ms is H5-safe).
+  opacity: 0;
+  transform: translateY(120rpx) scale(0.6);
+  transition-property: transform, opacity, box-shadow;
+  transition-duration: 0.26s;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+
+  &--dealt {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+    box-shadow:
+      0 12rpx 32rpx var(--tablemate-card-shadow-color),
+      inset 0 0 0 1rpx var(--tablemate-card-edge-color);
+  }
+
+  // Slight hand-of-cards tilt on the dealt pose (nth-child so the pattern
+  // needs no JS ↔ SCSS drift lock).
+  &--dealt:nth-child(odd) {
+    transform: translateY(0) rotate(-2.5deg) scale(1);
+  }
+
+  &--dealt:nth-child(even) {
+    transform: translateY(0) rotate(2deg) scale(1);
+  }
+
+  &--pressed {
+    filter: brightness(0.96);
+    // No transform scale here — it would fight the dealt tilt on nth-child.
+    // A tightened shadow gives the tactile "card pressed onto the felt" feel.
+    box-shadow:
+      0 4rpx 14rpx var(--tablemate-card-shadow-color),
+      inset 0 0 0 1rpx var(--tablemate-card-edge-color);
+  }
+
+  &--reduce-motion {
+    transition-duration: 0ms !important;
+    transition-delay: 0ms !important;
+
+    &.tablemate-card--dealt,
+    &.tablemate-card--dealt:nth-child(odd),
+    &.tablemate-card--dealt:nth-child(even) {
+      transform: none;
+    }
+
+    .tablemate-card__art-skeleton {
+      animation: none !important;
+    }
+
+    .tablemate-card__art-img {
+      transition: none !important;
+    }
+  }
+
+  &__sheen {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 45%;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(
+      115deg,
+      rgba($color-surface, 0) 0%,
+      rgba($color-surface, 0.75) 50%,
+      rgba($color-surface, 0) 100%
+    );
+    transform: translateX(-120%);
+
+    &--active {
+      animation: tablemate-card-holo-sweep 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+  }
+
+  &__art {
+    position: relative;
+    flex: 0 0 52%;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+    @include flex-center;
+  }
+
+  // Inline "我" chip lives in the name row — the old absolute art-zone badge
+  // could cover the archetype/avatar face on left-leaning art.
+  &__name-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-width: 0;
+  }
+
+  &__me-chip {
+    flex: 0 0 auto;
+    min-width: 32rpx;
+    height: 32rpx;
+    padding: 0 $spacing-xs;
+    box-sizing: border-box;
+    border-radius: 999rpx;
+    background: $color-primary;
+    @include flex-center;
+    box-shadow: 0 2rpx 8rpx rgba($color-primary, 0.28);
+  }
+
+  &__me-chip-text {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  &__art-frame {
+    position: absolute;
+    inset: 0;
+    @include flex-center;
+  }
+
+  &__art-skeleton {
+    position: absolute;
+    inset: 0;
+    // Archetype-tinted shimmer (inline CSS var per card) so the loading frame
+    // already belongs to this member's colour story.
+    background: var(--tablemate-card-skeleton-color);
+    animation: tablemate-card-shimmer 1.2s ease-in-out infinite;
+  }
+
+  &__art-img {
+    width: 100%;
+    height: 100%;
+    // Progressive reveal: the skeleton holds the frame until onLoad, then the
+    // art fades in instead of popping (disabled under reduce-motion above).
+    opacity: 0;
+    transition: opacity 0.24s ease-out;
+
+    &--loaded {
+      opacity: 1;
+    }
+
+    &--avatar {
+      background: rgba($color-primary, 0.06);
+    }
+  }
+
+  &__placeholder {
+    // Size is controlled by the MissingArchetypePlaceholder `size` prop; this
+    // class is kept for BEM-coverage continuity.
+    opacity: 0.9;
+  }
+
+  &__info {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2rpx;
+    padding: $spacing-sm;
+    overflow: hidden;
+  }
+
+  &__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    word-break: keep-all;
+    @include text-truncate;
+  }
+
+  &__archetype {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    word-break: keep-all;
+    @include text-truncate;
+  }
+
+  &__meta {
+    font-size: $font-size-2xs;
+    color: $color-text-secondary;
+    @include text-truncate;
+  }
+
+  &__pills {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4rpx;
+    margin-top: 2rpx;
+    overflow: hidden;
+
+    .connection-point-pill {
+      display: block;
+      max-width: 100%;
+      padding: 2rpx $spacing-xs;
+
+      .pill-text {
+        display: block;
+        font-size: $font-size-2xs;
+        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: keep-all;
+      }
+    }
+
+    &--interest .connection-point-pill {
+      background: transparent;
+    }
+  }
+
+  // Pair-temperature corner badge — absolutely positioned inside the art zone
+  // (top-right) so the info zone keeps its calm 4-row stack.
+  &__temp-chip {
+    position: absolute;
+    top: $spacing-sm;
+    right: $spacing-sm;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    max-width: 62%;
+    padding: 2rpx $spacing-xs;
+    border-radius: 999rpx;
+    box-sizing: border-box;
+
+    &--fire,
+    &--warm {
+      background: rgba($color-secondary, 0.16);
+    }
+
+    &--mild {
+      background: rgba($color-primary, 0.12);
+    }
+
+    &--cold {
+      background: rgba($color-text-secondary, 0.1);
+    }
+  }
+
+  &__temp-chip-icon {
+    margin-right: 4rpx;
+    flex-shrink: 0;
+  }
+
+  &__temp-chip-text {
+    display: block;
+    font-size: $font-size-2xs;
+    line-height: 1.3;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: keep-all;
+
+    .tablemate-card__temp-chip--fire &,
+    .tablemate-card__temp-chip--warm & {
+      color: $chemistry-warm-text;
+    }
+
+    .tablemate-card__temp-chip--mild & {
+      color: $chemistry-mild-text;
+    }
+  }
+}
+
+@keyframes tablemate-card-holo-sweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-120%);
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(320%);
+  }
+}
+
+@keyframes tablemate-card-shimmer {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}

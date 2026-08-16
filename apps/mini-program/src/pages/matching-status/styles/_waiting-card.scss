@@ -483,55 +483,20 @@
 
   &__member-scroll {
     width: 100%;
+    // Gentle proximity snap so a flick settles onto a clean card edge.
+    scroll-snap-type: x proximity;
   }
 
   &__member-row {
     display: flex;
     gap: $spacing-md;
-    padding-bottom: $spacing-xs;
-  }
+    // Headroom for the dealt-card tilt poke + tinted drop shadow; horizontal
+    // padding prevents the first/last rotated card corners from touching the
+    // ScrollView / Card edge.
+    padding: $spacing-xs $spacing-xs $spacing-md;
 
-  &__member-chip {
-    @include card;
-    min-width: 176rpx;
-    padding: $spacing-md;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $spacing-xs;
-    background: linear-gradient(160deg, rgba($color-surface, 0.98) 0%, rgba($color-primary-light, 0.88) 100%);
-  }
-
-  &__member-avatar {
-    width: 64rpx;
-    height: 64rpx;
-    border-radius: 50%;
-    background: rgba($color-primary, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
-
-  &__member-name {
-    display: block;
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    text-align: center;
-  }
-
-  &__member-signal {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-primary-dark;
-    line-height: 1.5;
-  }
-
-  &__member-archetype {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-primary;
+    > .tablemate-card {
+      scroll-snap-align: start;
+    }
   }
 }

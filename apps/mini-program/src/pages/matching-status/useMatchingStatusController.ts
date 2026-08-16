@@ -987,6 +987,7 @@ export function useMatchingStatusController({
     matchedData,
     effectiveGroupDetails,
     effectiveEventDateTime,
+    currentUserId,
     countdown,
     venueUnlocked,
     waitingCopy,

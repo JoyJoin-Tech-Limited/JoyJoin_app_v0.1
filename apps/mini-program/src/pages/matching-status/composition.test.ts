@@ -14,10 +14,13 @@ describe('matching-status page composition', () => {
     expect(pageSource).toContain('<MatchingStatusDetailSections')
     expect(pageSource).toContain('<MatchingStatusLiveOverlay')
     expect(pageSource).not.toContain("className='matching-status__waiting-seat-core'")
-    expect(pageSource).not.toContain("className='matching-status__overlay-member-grid'")
+    expect(pageSource).not.toContain("className='matching-status__overlay-member-carousel'")
 
     expect(sectionsSource).toContain("className='matching-status__waiting-seat-core'")
-    expect(sectionsSource).toContain("className='matching-status__overlay-member-grid'")
+    // 桌友 card-deck reskin (2026-08-15): the overlay members view is a
+    // TablemateCard carousel, fed by the viewer pair map.
+    expect(sectionsSource).toContain("className='matching-status__overlay-member-carousel'")
+    expect(sectionsSource).toContain('<TablemateCard')
   })
 
   it('moves page-local helper ownership into the shared view-model module', () => {

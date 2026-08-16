@@ -1,13 +1,16 @@
 import { Canvas, Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   getPoolGroupAnalysis,
   getPoolGroupDetails,
   type PoolGroupDetailsResponse,
   type PoolGroupMemberSummary,
 } from '@shared/api'
+import type { PairExplanation } from '@shared/types/groupAnalysis'
+import { resolveArchetype } from '@shared/personality/archetypeNames'
+import { getArchetypeHSL, formatHSLAsRGBA } from '@shared/archetypeColors'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
@@ -15,16 +18,19 @@ import LoadingScreen from '../../components/loading/LoadingScreen'
 import Card from '../../components/ui/Card'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import MissingArchetypePlaceholder from '../../components/mascot/MissingArchetypePlaceholder'
+import TablemateCard from '../../components/TablemateCard'
+import TablemateDetailSheet from '../../components/TablemateDetailSheet'
 import Button from '../../components/ui/Button'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import { haptics } from '../../lib/utils/haptics'
+import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
+import { buildPairKeyMemberMap, getPairChemistryTier, getPairChemistryWord } from '../../lib/utils/pairChemistry'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { GroupAnalysisSourceHint } from '../../components/GroupAnalysisSourceHint'
 import AIGCLabel from '../../components/ai-content/AIGCLabel'
 import AIContentReportButton from '../../components/ai-content/AIContentReportButton'
 import { useAIGCLabelsEnabled } from '../../hooks/useAIGCLabelsEnabled'
 import { openGatheringRoom } from '../../lib/navigation/matchingNavigation'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/utils/uiConstants'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 import {
@@ -90,6 +96,79 @@ export default function PoolGroupDetailPage() {
   const aigcLabelsEnabled = useAIGCLabelsEnabled()
   const gatheringRoomEnabled = currentUser?.features?.gatheringRoomEnabled ?? false
   const prevVenueStatusRef = useRef<string | null>(null)
+  const { shouldReduceMotion } = useMiniRevealMotion(router.params)
+
+  // Deck-strip tap → open the member detail sheet (full connection copy +
+  // interests + industry). The sheet takes over the detail role, so the
+  // member rows below stay collapsed behind a toggle by default (#1 polish).
+  const [sheetMemberId, setSheetMemberId] = useState<string | null>(null)
+  const [isMemberListExpanded, setIsMemberListExpanded] = useState(false)
+  // Deck scroll state: the "左滑看更多" hint chip shows until the first
+  // scroll; progress dots take over from there. `deckOverflows` starts as a
+  // length heuristic and is replaced by a real scrollWidth measurement once
+  // the page settles (3 members on a wide screen do NOT overflow).
+  const [deckHasScrolled, setDeckHasScrolled] = useState(false)
+  const [activeDeckIndex, setActiveDeckIndex] = useState(0)
+  const [deckOverflows, setDeckOverflows] = useState<boolean | null>(null)
+  const deckPitchPxRef = useRef(0)
+  const handleDeckScroll = useCallback((event: any) => {
+    setDeckHasScrolled((prev) => prev || true)
+    const scrollLeft = event?.detail?.scrollLeft
+    if (typeof scrollLeft !== 'number') return
+    if (deckPitchPxRef.current === 0) {
+      const windowWidth = Taro.getWindowInfo?.().windowWidth ?? 375
+      deckPitchPxRef.current = (245 + 24) * (windowWidth / 750) // card + gap
+    }
+    const next = Math.max(0, Math.round(scrollLeft / deckPitchPxRef.current))
+    setActiveDeckIndex((prev) => (prev === next ? prev : next))
+  }, [])
+
+  // Viewer-pair map for the deck strip + row temperature chips — same
+  // construction as useMatchingStatusController (pairKey = sorted userIds).
+  const members = useMemo(() => poolGroup?.members ?? [], [poolGroup])
+  const currentUserId = currentUser?.id
+  const viewerPairSummaryByMemberId = useMemo(() => {
+    const map = new Map<string, PairExplanation>()
+    if (!currentUserId || !groupAnalysis || members.length === 0) return map
+    const pairKeyMemberMap = buildPairKeyMemberMap(members)
+    const viewerPairs = (groupAnalysis.myPairs ?? groupAnalysis.pairExplanations ?? []).filter((pair) => {
+      const pairMembers = pairKeyMemberMap.get(pair.pairKey)
+      return Boolean(pairMembers && pairMembers.some((member) => member.userId === currentUserId))
+    })
+    viewerPairs.forEach((pair) => {
+      const pairMembers = pairKeyMemberMap.get(pair.pairKey)
+      const otherMember = pairMembers?.find((member) => member.userId !== currentUserId)
+      if (otherMember) map.set(otherMember.userId, pair)
+    })
+    return map
+  }, [currentUserId, groupAnalysis, members])
+
+  const sheetMember = useMemo(
+    () => members.find((member) => member.userId === sheetMemberId) ?? null,
+    [members, sheetMemberId],
+  )
+
+  // Measure the deck's real overflow once members render — the hint chip and
+  // progress dots should only exist when there is somewhere to scroll to.
+  useEffect(() => {
+    if (members.length <= 1) {
+      setDeckOverflows(false)
+      return
+    }
+    const query = Taro.createSelectorQuery()
+    query.select('.pool-group-detail__deck-scroll').boundingClientRect()
+    query.select('.pool-group-detail__deck-scroll').scrollOffset()
+    query.exec((result) => {
+      const rect = result?.[0]
+      const scroll = result?.[1]
+      if (rect && scroll && typeof scroll.scrollWidth === 'number') {
+        setDeckOverflows(scroll.scrollWidth > rect.width + 8)
+      }
+    })
+  }, [members.length])
+
+  const deckMayOverflow = deckOverflows ?? members.length > 2
+  const clampedActiveDeckIndex = Math.min(activeDeckIndex, Math.max(0, members.length - 1))
 
   useEffect(() => {
     if (!poolGroup) return
@@ -105,7 +184,7 @@ export default function PoolGroupDetailPage() {
     if (!poolGroup || isGeneratingPoster) return
     setIsGeneratingPoster(true)
     try {
-      const { group, pool, members } = poolGroup
+      const { group, pool } = poolGroup
       const path = await generateGroupRevealPoster({
         poolTitle: pool.title || '悦聚盲盒活动',
         groupNumber: group.groupNumber ?? undefined,
@@ -142,7 +221,7 @@ export default function PoolGroupDetailPage() {
           lazyLoad
         />
         <Text className='pool-group-detail__error-text'>加载小队详情没成功</Text>
-        <View style={{ display: 'flex', gap: '24rpx' }}>
+        <View className='pool-group-detail__error-actions'>
           <Button variant='primary' onClick={() => {
             haptics('light')
             queryClient.invalidateQueries({ queryKey: ['mini-program', 'pool-group-detail', groupId] })
@@ -162,8 +241,7 @@ export default function PoolGroupDetailPage() {
     )
   }
 
-  const { group, pool, members } = poolGroup
-  const currentUserId = currentUser?.id
+  const { group, pool } = poolGroup
   const locationText = [group.venueName, group.venueAddress].filter(Boolean).join(' ')
 
   const handleCopyAddressForNavigation = () => {
@@ -181,7 +259,12 @@ export default function PoolGroupDetailPage() {
   }
 
   return (
-    <ScrollView className='pool-group-detail' scrollY enhanced showScrollbar={false}>
+    <ScrollView
+      className='pool-group-detail'
+      scrollY
+      enhanced
+      showScrollbar={false}
+    >
       <View className='pool-group-detail__header'>
         {group.groupNumber ? (
           <View className='pool-group-detail__group-badge'>
@@ -326,21 +409,89 @@ export default function PoolGroupDetailPage() {
         </Card>
       ) : null}
 
+      <View className='pool-group-detail__deck-strip'>
+        <Text className='pool-group-detail__deck-title'>先翻牌，再见面</Text>
+        <ScrollView
+          className='pool-group-detail__deck-scroll'
+          scrollX
+          enhanced
+          showScrollbar={false}
+          onScroll={handleDeckScroll}
+          aria-label='桌友卡片，左右滑动浏览'
+        >
+          <View className='pool-group-detail__deck-track'>
+            {members.map((member, index) => (
+              <TablemateCard
+                key={member.userId}
+                member={member}
+                viewerPair={viewerPairSummaryByMemberId.get(member.userId) ?? null}
+                isCurrentUser={member.userId === currentUserId}
+                dealt
+                dealKey={`pgd-${groupId}-${member.userId}`}
+                entranceDelayMs={shouldReduceMotion ? 0 : index * 120}
+                reduceMotion={shouldReduceMotion}
+                onTap={() => setSheetMemberId(member.userId)}
+              />
+            ))}
+          </View>
+        </ScrollView>
+        {!deckHasScrolled && deckMayOverflow ? (
+          <View className='pool-group-detail__deck-hint' aria-hidden='true'>
+            <Text className='pool-group-detail__deck-hint-text'>左滑看更多</Text>
+          </View>
+        ) : null}
+        {deckMayOverflow ? (
+          <View className='pool-group-detail__deck-dots' aria-hidden='true'>
+            {members.map((member, index) => (
+              <View
+                key={member.userId}
+                className={[
+                  'pool-group-detail__deck-dot',
+                  index === clampedActiveDeckIndex ? 'pool-group-detail__deck-dot--active' : '',
+                ].filter(Boolean).join(' ')}
+              />
+            ))}
+          </View>
+        ) : null}
+      </View>
+
       <Card className='pool-group-detail__card'>
-        <Text className='pool-group-detail__members-title'>小队成员 ({group.memberCount || members.length})</Text>
+        <View
+          className='pool-group-detail__members-toggle'
+          role='button'
+          aria-expanded={isMemberListExpanded}
+          onClick={() => {
+            haptics('light')
+            setIsMemberListExpanded((prev) => !prev)
+          }}
+        >
+          <Text className='pool-group-detail__members-title'>完整名单 ({group.memberCount || members.length})</Text>
+          <Text className='pool-group-detail__members-toggle-text'>
+            {isMemberListExpanded ? '收起' : '展开'}
+          </Text>
+        </View>
+        {isMemberListExpanded ? (
         <View className='pool-group-detail__members-list'>
           {members.map((member) => {
             const name = getMemberName(member)
             const isCurrentUser = member.userId === currentUserId
             const visibleTags = (member.topInterests ?? []).slice(0, 3)
+            const pairSummary = viewerPairSummaryByMemberId.get(member.userId)
+            const temperatureTier = getPairChemistryTier(pairSummary?.chemistryScore)
+            const archetypeId = member.archetype ? resolveArchetype(member.archetype)?.id ?? null : null
+            const foilBorderColor = archetypeId
+              ? formatHSLAsRGBA(getArchetypeHSL(archetypeId), 0.35)
+              : undefined
 
             return (
               <View
                 key={member.userId}
+                id={`pgd-member-${member.userId}`}
                 className={
                   'pool-group-detail__member-card' +
                   (isCurrentUser ? ' pool-group-detail__member-card--current' : '')
                 }
+                style={foilBorderColor ? { borderColor: foilBorderColor } : undefined}
               >
                 <View className='pool-group-detail__member-avatar'>
                   {member.archetype ? (
@@ -352,25 +503,37 @@ export default function PoolGroupDetailPage() {
 
                 <View className='pool-group-detail__member-content'>
                   <View className='pool-group-detail__member-name-row'>
-                    <Text className='pool-group-detail__member-name'>{name}</Text>
+                    <Text className='pool-group-detail__member-name' numberOfLines={1}>{name}</Text>
                     {member.ageLabel ? (
-                      <Text className='pool-group-detail__member-meta'>{member.ageLabel}</Text>
+                      <Text className='pool-group-detail__member-meta' numberOfLines={1}>{member.ageLabel}</Text>
                     ) : null}
                     {isCurrentUser ? (
                       <View className='pool-group-detail__member-you-badge'>
                         <Text className='pool-group-detail__member-you-text'>我</Text>
                       </View>
                     ) : null}
+                    {!isCurrentUser && pairSummary ? (
+                      <View
+                        className={
+                          'pool-group-detail__member-temp-chip' +
+                          (temperatureTier ? ` pool-group-detail__member-temp-chip--${temperatureTier}` : '')
+                        }
+                      >
+                        <Text className='pool-group-detail__member-temp-chip-text'>
+                          {getPairChemistryWord(pairSummary.chemistryScore)}
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
 
                   {member.archetype ? (
-                    <Text className='pool-group-detail__member-archetype'>
-                      {ARCHETYPE_BY_ID[member.archetype]?.nameCn || member.archetype}
+                    <Text className='pool-group-detail__member-archetype' numberOfLines={1}>
+                      {resolveArchetype(member.archetype)?.nameCn ?? member.archetype}
                     </Text>
                   ) : null}
 
                   {member.industryNicheLabel ? (
-                    <Text className='pool-group-detail__member-meta'>{member.industryNicheLabel}</Text>
+                    <Text className='pool-group-detail__member-meta' numberOfLines={1}>{member.industryNicheLabel}</Text>
                   ) : null}
 
                   {visibleTags.length > 0 ? (
@@ -380,6 +543,11 @@ export default function PoolGroupDetailPage() {
                           {interest}
                         </Text>
                       ))}
+                      {(member.topInterests?.length ?? 0) - visibleTags.length > 0 ? (
+                        <Text className='pool-group-detail__member-tag pool-group-detail__member-tag--more'>
+                          +{(member.topInterests?.length ?? 0) - visibleTags.length}
+                        </Text>
+                      ) : null}
                     </View>
                   ) : null}
                 </View>
@@ -387,6 +555,7 @@ export default function PoolGroupDetailPage() {
             )
           })}
         </View>
+        ) : null}
       </Card>
 
       <Card className='pool-group-detail__card'>
@@ -460,6 +629,16 @@ export default function PoolGroupDetailPage() {
       />
 
       <View className='pool-group-detail__spacer' />
+
+      {/* Member detail bottom sheet — opened by tapping a 桌友卡. */}
+      <TablemateDetailSheet
+        visible={sheetMember != null}
+        member={sheetMember}
+        viewerPair={sheetMember ? viewerPairSummaryByMemberId.get(sheetMember.userId) ?? null : null}
+        isCurrentUser={sheetMember?.userId === currentUserId}
+        reduceMotion={shouldReduceMotion}
+        onClose={() => setSheetMemberId(null)}
+      />
     </ScrollView>
   )
 }
