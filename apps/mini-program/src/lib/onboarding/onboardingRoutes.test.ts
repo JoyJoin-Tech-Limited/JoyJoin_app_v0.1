@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES,
   MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
+  MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_PAGES,
+  MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_ROOT,
   MINI_PROGRAM_CENTER_TAB_EMPTY_SUBPACKAGE_PAGES,
   MINI_PROGRAM_CENTER_TAB_EMPTY_SUBPACKAGE_ROOT,
   MINI_PROGRAM_CITY_UNLOCK_SUBPACKAGE_PAGES,
@@ -74,6 +76,7 @@ describe('mini-program onboarding routes', () => {
       'pages/gathering-room',
       'pages/payments',
       'pages/alang',
+      'pages/alang-story',
       'pages/event-feedback',
       'pages/city-unlock',
       'pages/event-coordination',
@@ -143,6 +146,10 @@ describe('mini-program onboarding routes', () => {
       {
         root: MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
         pages: MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES,
+      },
+      {
+        root: MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_ROOT,
+        pages: MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_PAGES,
       },
       {
         root: MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_ROOT,

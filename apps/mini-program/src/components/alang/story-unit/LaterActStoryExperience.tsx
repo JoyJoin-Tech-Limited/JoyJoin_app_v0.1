@@ -1,0 +1,512 @@
+import { useState } from 'react'
+import { Image, ScrollView, Text, View } from '@tarojs/components'
+import { haptics } from '../../../lib/utils/haptics'
+import './LaterActStoryExperience.scss'
+
+export type LaterActExperienceStage = 'approach' | 'explore' | 'object' | 'followup' | 'game' | 'ending'
+
+export interface LaterActChoice {
+  id: string
+  label: string
+  response: string
+  hint?: string
+  narration?: string
+}
+
+export interface LaterActHighlight {
+  id: string
+  label: string
+  clue: string
+  placementClassName: string
+}
+
+export interface LaterActObjectDetail {
+  id: string
+  label: string
+  clue: string
+}
+
+export interface LaterActGameChoice {
+  id: string
+  label: string
+  correct: boolean
+  feedback: string
+}
+
+export interface LaterActGameStep {
+  id: string
+  prompt: string
+  choices: readonly [LaterActGameChoice, LaterActGameChoice]
+}
+
+export interface LaterActStoryConfig {
+  unitId: string
+  npcName: string
+  rootClassName: string
+  chapter: string
+  title: string
+  opening: string
+  approaches: readonly [LaterActChoice, LaterActChoice]
+  highlights: readonly [LaterActHighlight, LaterActHighlight, LaterActHighlight]
+  objectTarget: { label: string; placementClassName: string }
+  objectExploration: {
+    title: string
+    shortLabel: string
+    intro: string
+    details: readonly [LaterActObjectDetail, LaterActObjectDetail, LaterActObjectDetail]
+  }
+  followUpPrompt: string
+  followUps: readonly [LaterActChoice, LaterActChoice]
+  game: {
+    eyebrow: string
+    title: string
+    intro: string
+    startLabel: string
+    steps: readonly [LaterActGameStep, LaterActGameStep, LaterActGameStep]
+  }
+  ending: {
+    eyebrow: string
+    speech: string
+    narration: string
+    completionLabel: string
+  }
+  result: {
+    title: string
+    closing: string
+    fragment: { category: 'object' | 'past' | 'relationship' | 'key'; title: string; fact: string }
+  }
+}
+
+export interface LaterActProgress {
+  version: 'npc-later-act-v1'
+  unitId: string
+  stage: LaterActExperienceStage
+  approachId: string | null
+  seenHighlightIds: string[]
+  objectOpened: boolean
+  seenDetailIds: string[]
+  followupId: string | null
+  gameStarted: boolean
+  gameStep: number
+  gameComplete: boolean
+  mistakes: number
+  wrongChoiceId: string | null
+}
+
+export const laterActStorageKey = (unitId: string, encounterId: string) => `joyjoin:flash:later-act:v1:${unitId}:${encounterId}`
+
+export function createLaterActProgress(unitId: string): LaterActProgress {
+  return {
+    version: 'npc-later-act-v1',
+    unitId,
+    stage: 'approach',
+    approachId: null,
+    seenHighlightIds: [],
+    objectOpened: false,
+    seenDetailIds: [],
+    followupId: null,
+    gameStarted: false,
+    gameStep: 0,
+    gameComplete: false,
+    mistakes: 0,
+    wrongChoiceId: null,
+  }
+}
+
+export function restoreLaterActProgress(config: LaterActStoryConfig, value: unknown): LaterActProgress {
+  const fallback = createLaterActProgress(config.unitId)
+  if (!value || typeof value !== 'object') return fallback
+  const candidate = value as Partial<LaterActProgress>
+  if (candidate.version !== 'npc-later-act-v1' || candidate.unitId !== config.unitId) return fallback
+  const highlightIds = new Set(config.highlights.map(({ id }) => id))
+  const detailIds = new Set(config.objectExploration.details.map(({ id }) => id))
+  const approachIds = new Set(config.approaches.map(({ id }) => id))
+  const followupIds = new Set(config.followUps.map(({ id }) => id))
+  const maxGameStep = config.game.steps.length
+  const approachId = typeof candidate.approachId === 'string' && approachIds.has(candidate.approachId) ? candidate.approachId : null
+  if (!approachId) return fallback
+
+  const seenHighlightIds = Array.isArray(candidate.seenHighlightIds)
+    ? [...new Set(candidate.seenHighlightIds.filter((id): id is string => typeof id === 'string' && highlightIds.has(id)))]
+    : []
+  const base = { ...fallback, approachId, seenHighlightIds, stage: 'explore' as LaterActExperienceStage }
+  if (seenHighlightIds.length < config.highlights.length || candidate.objectOpened !== true) return base
+
+  const seenDetailIds = Array.isArray(candidate.seenDetailIds)
+    ? [...new Set(candidate.seenDetailIds.filter((id): id is string => typeof id === 'string' && detailIds.has(id)))]
+    : []
+  const objectProgress = { ...base, objectOpened: true, seenDetailIds, stage: 'object' as LaterActExperienceStage }
+  if (seenDetailIds.length < config.objectExploration.details.length) return objectProgress
+
+  const followupId = typeof candidate.followupId === 'string' && followupIds.has(candidate.followupId) ? candidate.followupId : null
+  const followupProgress = { ...objectProgress, followupId, stage: 'followup' as LaterActExperienceStage }
+  if (!followupId) return followupProgress
+
+  const rawGameStep = Number.isInteger(candidate.gameStep) ? Math.max(0, Math.min(Number(candidate.gameStep), maxGameStep)) : 0
+  const gameComplete = candidate.gameComplete === true && rawGameStep === maxGameStep
+  const gameStep = gameComplete ? maxGameStep : Math.min(rawGameStep, maxGameStep - 1)
+  const currentChoiceIds = new Set(config.game.steps[gameStep]?.choices.map(({ id }) => id) ?? [])
+  const wrongChoiceId = typeof candidate.wrongChoiceId === 'string' && currentChoiceIds.has(candidate.wrongChoiceId)
+    ? candidate.wrongChoiceId
+    : null
+  return {
+    ...followupProgress,
+    stage: gameComplete ? 'ending' : 'game',
+    gameStarted: candidate.gameStarted === true,
+    gameStep,
+    gameComplete,
+    mistakes: Number.isInteger(candidate.mistakes) ? Math.max(0, Number(candidate.mistakes)) : 0,
+    wrongChoiceId,
+  }
+}
+
+interface LaterActStoryExperienceProps {
+  config: LaterActStoryConfig
+  stage: LaterActExperienceStage
+  background: string
+  character?: string
+  progress: LaterActProgress
+  disabled?: boolean
+  onProgress: (progress: LaterActProgress) => void
+  onApproach: (index: 0 | 1, choice: LaterActChoice) => void
+  onExplorationComplete: () => void
+  onFollowup: (choice: LaterActChoice) => void
+  onGameComplete: () => void
+  onComplete: () => void
+}
+
+function findLatestSpeech(config: LaterActStoryConfig, progress: LaterActProgress, stage: LaterActExperienceStage): string {
+  if (stage === 'ending') return config.ending.speech
+  if (progress.wrongChoiceId && stage === 'game') {
+    const step = config.game.steps[Math.min(progress.gameStep, config.game.steps.length - 1)]
+    return step?.choices.find(({ id }) => id === progress.wrongChoiceId)?.feedback ?? config.game.intro
+  }
+  if (stage === 'game') {
+    if (progress.gameComplete) return config.ending.speech
+    if (progress.gameStarted) return config.game.steps[progress.gameStep]?.prompt ?? config.game.intro
+    return config.game.intro
+  }
+  if (progress.followupId) return config.followUps.find(({ id }) => id === progress.followupId)?.response ?? config.opening
+  const latestDetailId = progress.seenDetailIds[progress.seenDetailIds.length - 1]
+  if (latestDetailId) return config.objectExploration.details.find(({ id }) => id === latestDetailId)?.clue ?? config.opening
+  const latestHighlightId = progress.seenHighlightIds[progress.seenHighlightIds.length - 1]
+  if (latestHighlightId) return config.highlights.find(({ id }) => id === latestHighlightId)?.clue ?? config.opening
+  if (progress.approachId) return config.approaches.find(({ id }) => id === progress.approachId)?.response ?? config.opening
+  return config.opening
+}
+
+export function LaterActStoryExperience({
+  config,
+  stage,
+  background,
+  character,
+  progress,
+  disabled = false,
+  onProgress,
+  onApproach,
+  onExplorationComplete,
+  onFollowup,
+  onGameComplete,
+  onComplete,
+}: LaterActStoryExperienceProps) {
+  const [backgroundFailed, setBackgroundFailed] = useState(false)
+  const [characterFailed, setCharacterFailed] = useState(false)
+  const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null)
+  const [activeDetailId, setActiveDetailId] = useState<string | null>(null)
+
+  const highlightsComplete = progress.seenHighlightIds.length === config.highlights.length
+  const detailsComplete = progress.seenDetailIds.length === config.objectExploration.details.length
+  const activeHighlight = config.highlights.find(({ id }) => id === activeHighlightId) ?? null
+  const activeDetail = config.objectExploration.details.find(({ id }) => id === activeDetailId) ?? null
+  const speech = findLatestSpeech(config, progress, stage)
+  const update = (patch: Partial<LaterActProgress>) => onProgress({ ...progress, ...patch })
+
+  const settleHighlight = () => {
+    if (!activeHighlight) return
+    const seenHighlightIds = progress.seenHighlightIds.includes(activeHighlight.id)
+      ? progress.seenHighlightIds
+      : [...progress.seenHighlightIds, activeHighlight.id]
+    update({ seenHighlightIds })
+    setActiveHighlightId(null)
+    haptics('light')
+  }
+
+  const settleDetail = () => {
+    if (!activeDetail) return
+    const seenDetailIds = progress.seenDetailIds.includes(activeDetail.id)
+      ? progress.seenDetailIds
+      : [...progress.seenDetailIds, activeDetail.id]
+    update({ seenDetailIds })
+    setActiveDetailId(null)
+    haptics('light')
+  }
+
+  const chooseGameOption = (choice: LaterActGameChoice) => {
+    if (disabled || progress.wrongChoiceId || progress.gameComplete) return
+    haptics(choice.correct ? 'light' : 'medium')
+    if (!choice.correct) {
+      update({ wrongChoiceId: choice.id, mistakes: progress.mistakes + 1 })
+      return
+    }
+    const nextStep = progress.gameStep + 1
+    const gameComplete = nextStep >= config.game.steps.length
+    update({ gameStep: nextStep, gameComplete, wrongChoiceId: null, stage: gameComplete ? 'ending' : 'game' })
+    if (gameComplete) {
+      haptics('success')
+      onGameComplete()
+    }
+  }
+
+  return (
+    <View className={`later-act-experience ${config.rootClassName} later-act-experience--${stage}`} data-testid='later-act-experience' data-unit-id={config.unitId}>
+      <View className={`later-act-scene${backgroundFailed ? ' later-act-scene--fallback' : ''}`} data-testid='later-act-scene'>
+        {!backgroundFailed ? (
+          <Image className='later-act-scene__background' src={background} mode='aspectFit' onError={() => setBackgroundFailed(true)} data-testid='later-act-background' aria-hidden='true' />
+        ) : null}
+        <View className='later-act-scene__wash' aria-hidden='true' />
+        {character && !characterFailed ? (
+          <Image className='later-act-scene__character' src={character} mode='aspectFit' onError={() => setCharacterFailed(true)} data-testid='later-act-character' aria-hidden='true' />
+        ) : null}
+
+        {stage === 'explore' ? (
+          <View className='later-act-scene__hotspots' aria-label='探索现场细节'>
+            {config.highlights.map((highlight) => {
+              const seen = progress.seenHighlightIds.includes(highlight.id)
+              return (
+                <View
+                  key={highlight.id}
+                  className={`later-act-scene__hotspot ${highlight.placementClassName}${seen ? ' later-act-scene__hotspot--seen' : ''}`}
+                  role='button'
+                  aria-label={`${seen ? '已查看' : '查看'}${highlight.label}`}
+                  aria-disabled={disabled || seen}
+                  onClick={() => {
+                    if (disabled || seen) return
+                    haptics('light')
+                    setActiveHighlightId(highlight.id)
+                  }}
+                >
+                  <View className='later-act-scene__hotspot-ring' aria-hidden='true' />
+                </View>
+              )
+            })}
+            {highlightsComplete ? (
+              <View
+                className={`later-act-scene__hotspot later-act-scene__hotspot--object ${config.objectTarget.placementClassName}`}
+                role='button'
+                aria-label={`打开${config.objectTarget.label}`}
+                aria-disabled={disabled}
+                onClick={() => {
+                  if (disabled) return
+                  haptics('medium')
+                  update({ objectOpened: true, stage: 'object' })
+                }}
+              >
+                <View className='later-act-scene__hotspot-ring' aria-hidden='true' />
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        <View className='later-act-scene__speech' role='status' aria-live='polite' aria-atomic='true'>
+          <Text className='later-act-scene__speaker'>{config.npcName}</Text>
+          <Text className='later-act-scene__speech-copy'>{speech}</Text>
+        </View>
+      </View>
+
+      <View className='later-act-experience__chapter'><Text>{config.chapter}</Text></View>
+
+      {activeHighlight ? (
+        <View className='later-act-clue' data-testid='later-act-highlight-clue'>
+          <Text className='later-act-clue__eyebrow'>现场线索</Text>
+          <Text className='later-act-clue__title'>{activeHighlight.label}</Text>
+          <Text className='later-act-clue__copy'>{activeHighlight.clue}</Text>
+          <View className='later-act-clue__action' role='button' aria-label={`收下${activeHighlight.label}的线索，回到现场`} onClick={settleHighlight}>
+            <Text>收下线索，回到现场</Text>
+          </View>
+        </View>
+      ) : null}
+
+      <View className='later-act-experience__panel'>
+        {stage === 'ending' ? (
+          // Keep the terminal submit outside the native ScrollView. WeChat can
+          // swallow taps on absolute-positioned actions inside that layer.
+          <View className='later-act-experience__section later-act-experience__section--ending'>
+            <Text className='later-act-experience__eyebrow'>{config.ending.eyebrow}</Text>
+            <Text className='later-act-experience__prompt'>{config.ending.speech}</Text>
+            <Text className='later-act-experience__copy'>{config.ending.narration}</Text>
+            <View
+              className='later-act-experience__primary-action'
+              hoverClass={disabled ? '' : 'later-act-experience__primary-action--pressed'}
+              role='button'
+              aria-label={config.ending.completionLabel}
+              aria-disabled={disabled}
+              onClick={() => { if (!disabled) { haptics('success'); onComplete() } }}
+            ><Text>{config.ending.completionLabel}</Text></View>
+          </View>
+        ) : (
+          <ScrollView className='later-act-experience__scroll' scrollY>
+          {stage === 'approach' ? (
+            <View className='later-act-experience__section'>
+              <Text className='later-act-experience__eyebrow'>{config.title}</Text>
+              <Text className='later-act-experience__prompt'>你先从哪里接近这件旧物？</Text>
+              <View className='later-act-experience__choices'>
+                {config.approaches.map((choice, index) => (
+                  <View
+                    key={choice.id}
+                    className='later-act-experience__choice'
+                    hoverClass={disabled ? '' : 'later-act-experience__choice--pressed'}
+                    role='button'
+                    aria-label={choice.label}
+                    aria-disabled={disabled}
+                    onClick={() => {
+                      if (disabled) return
+                      haptics('light')
+                      onProgress({ ...progress, approachId: choice.id, stage: 'explore' })
+                      onApproach(index as 0 | 1, choice)
+                    }}
+                  >
+                    <Text className='later-act-experience__choice-copy'>{choice.label}</Text>
+                    {choice.hint ? <Text className='later-act-experience__choice-hint'>{choice.hint}</Text> : null}
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {stage === 'explore' ? (
+            <View className='later-act-experience__section later-act-experience__section--compact'>
+              <Text className='later-act-experience__eyebrow'>先看现场</Text>
+              <Text className='later-act-experience__prompt'>{highlightsComplete ? `${config.objectTarget.label}已经可以打开。` : '把三处留下变化的地方看完整。'}</Text>
+              <Text className='later-act-experience__progress'>已看见 {progress.seenHighlightIds.length}/{config.highlights.length}</Text>
+            </View>
+          ) : null}
+
+          {stage === 'object' ? (
+            <View className='later-act-experience__section'>
+              <Text className='later-act-experience__eyebrow'>{config.objectExploration.shortLabel}内部</Text>
+              <Text className='later-act-experience__prompt'>{config.objectExploration.title}</Text>
+              <Text className='later-act-experience__copy'>{config.objectExploration.intro}</Text>
+              <View className='later-act-object' aria-label={`探索${config.objectExploration.title}`}>
+                {config.objectExploration.details.map((detail, index) => {
+                  const seen = progress.seenDetailIds.includes(detail.id)
+                  return (
+                    <View
+                      key={detail.id}
+                      className={`later-act-object__detail later-act-object__detail--${index + 1}${seen ? ' later-act-object__detail--seen' : ''}`}
+                      role='button'
+                      aria-label={`${seen ? '已查看' : '查看'}${detail.label}`}
+                      aria-disabled={disabled || seen}
+                      onClick={() => {
+                        if (disabled || seen) return
+                        haptics('light')
+                        setActiveDetailId(detail.id)
+                      }}
+                    >
+                      <View className='later-act-object__dot' aria-hidden='true' />
+                      <Text>{detail.label}</Text>
+                    </View>
+                  )
+                })}
+              </View>
+              {activeDetail ? (
+                <View className='later-act-object__clue' data-testid='later-act-object-clue'>
+                  <Text className='later-act-object__clue-title'>{activeDetail.label}</Text>
+                  <Text className='later-act-object__clue-copy'>{activeDetail.clue}</Text>
+                  <View className='later-act-object__clue-action' role='button' aria-label={`收下${activeDetail.label}的细节`} onClick={settleDetail}><Text>收下这处细节</Text></View>
+                </View>
+              ) : null}
+              {detailsComplete && !activeDetail ? (
+                <View
+                  className='later-act-experience__primary-action'
+                  hoverClass={disabled ? '' : 'later-act-experience__primary-action--pressed'}
+                  role='button'
+                  aria-label='继续追问'
+                  aria-disabled={disabled}
+                  onClick={() => {
+                    if (disabled) return
+                    haptics('medium')
+                    update({ stage: 'followup' })
+                    onExplorationComplete()
+                  }}
+                ><Text>继续追问</Text></View>
+              ) : null}
+            </View>
+          ) : null}
+
+          {stage === 'followup' ? (
+            <View className='later-act-experience__section'>
+              <Text className='later-act-experience__eyebrow'>把看见的事问清楚</Text>
+              <Text className='later-act-experience__prompt'>{config.followUpPrompt}</Text>
+              <View className='later-act-experience__choices'>
+                {config.followUps.map((choice) => (
+                  <View
+                    key={choice.id}
+                    className='later-act-experience__choice'
+                    hoverClass={disabled ? '' : 'later-act-experience__choice--pressed'}
+                    role='button'
+                    aria-label={choice.label}
+                    aria-disabled={disabled}
+                    onClick={() => {
+                      if (disabled) return
+                      haptics('light')
+                      onProgress({ ...progress, followupId: choice.id, stage: 'game' })
+                      onFollowup(choice)
+                    }}
+                  ><Text className='later-act-experience__choice-copy'>{choice.label}</Text></View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {stage === 'game' ? (
+            <View className='later-act-experience__section'>
+              <Text className='later-act-experience__eyebrow'>{config.game.eyebrow}</Text>
+              <Text className='later-act-experience__prompt'>{config.game.title}</Text>
+              <Text className='later-act-experience__copy'>{config.game.intro}</Text>
+              <View className='later-act-game__progress' aria-label={`已完成 ${progress.gameStep} 步，共 ${config.game.steps.length} 步`}>
+                {config.game.steps.map((step, index) => <View key={step.id} className={`later-act-game__progress-dot${index < progress.gameStep ? ' later-act-game__progress-dot--active' : ''}`} />)}
+              </View>
+              {!progress.gameStarted ? (
+                <View
+                  className='later-act-experience__primary-action'
+                  hoverClass={disabled ? '' : 'later-act-experience__primary-action--pressed'}
+                  role='button'
+                  aria-label={config.game.startLabel}
+                  aria-disabled={disabled}
+                  onClick={() => { if (!disabled) { haptics('medium'); update({ gameStarted: true }) } }}
+                ><Text>{config.game.startLabel}</Text></View>
+              ) : progress.gameComplete ? (
+                <View className='later-act-game__complete' role='status'><Text>三步已经放好，故事正在接回结尾。</Text></View>
+              ) : progress.wrongChoiceId ? (
+                <View className='later-act-game__retry' role='alert'>
+                  <Text>{findLatestSpeech(config, progress, 'game')}</Text>
+                  <View className='later-act-game__retry-action' role='button' aria-label='再看一次' onClick={() => update({ wrongChoiceId: null })}><Text>再看一次</Text></View>
+                </View>
+              ) : (
+                <View className='later-act-game'>
+                  <Text className='later-act-game__step'>第 {progress.gameStep + 1} 步</Text>
+                  <Text className='later-act-game__prompt'>{config.game.steps[progress.gameStep]?.prompt}</Text>
+                  <View className='later-act-experience__choices'>
+                    {config.game.steps[progress.gameStep]?.choices.map((choice) => (
+                      <View
+                        key={choice.id}
+                        className='later-act-experience__choice'
+                        hoverClass={disabled ? '' : 'later-act-experience__choice--pressed'}
+                        role='button'
+                        aria-label={choice.label}
+                        aria-disabled={disabled}
+                        onClick={() => chooseGameOption(choice)}
+                      ><Text className='later-act-experience__choice-copy'>{choice.label}</Text></View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+          ) : null}
+
+          </ScrollView>
+        )}
+      </View>
+    </View>
+  )
+}

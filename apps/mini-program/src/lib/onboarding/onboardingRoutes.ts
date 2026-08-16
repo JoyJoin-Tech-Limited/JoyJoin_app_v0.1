@@ -47,6 +47,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   alangConfig: 'pages/alang/config/index',
   alangSearch: 'pages/alang/search/index',
   alangDialogue: 'pages/alang/dialogue/index',
+  alangLaterDialogue: 'pages/alang-story/dialogue/index',
   alangAtuanCards: 'pages/alang/atuan-cards/index',
   alangFinale: 'pages/alang/finale/index',
   alangCompanion: 'pages/alang/companion/index',
@@ -97,6 +98,7 @@ export const MINI_PROGRAM_ROUTES = {
   alangConfig: `/${MINI_PROGRAM_PAGE_PATHS.alangConfig}`,
   alangSearch: `/${MINI_PROGRAM_PAGE_PATHS.alangSearch}`,
   alangDialogue: `/${MINI_PROGRAM_PAGE_PATHS.alangDialogue}`,
+  alangLaterDialogue: `/${MINI_PROGRAM_PAGE_PATHS.alangLaterDialogue}`,
   alangAtuanCards: `/${MINI_PROGRAM_PAGE_PATHS.alangAtuanCards}`,
   alangFinale: `/${MINI_PROGRAM_PAGE_PATHS.alangFinale}`,
   alangCompanion: `/${MINI_PROGRAM_PAGE_PATHS.alangCompanion}`,
@@ -184,6 +186,8 @@ export const MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT = 'pages/matching-status' as 
 
 export const MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT = 'pages/alang' as const
 
+export const MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_ROOT = 'pages/alang-story' as const
+
 export const MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES = [
   'event/index',
   'event-detail/index',
@@ -197,6 +201,10 @@ export const MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES = [
   'story-detail/index',
   'preferences/index',
   'debug/index',
+] as const
+
+export const MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_PAGES = [
+  'dialogue/index',
 ] as const
 
 export const MINI_PROGRAM_MATCHING_SUBPACKAGE_PAGES = [
@@ -303,6 +311,10 @@ export const MINI_PROGRAM_SUBPACKAGES = [
   {
     root: MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES,
+  },
+  {
+    root: MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_PAGES,
   },
   {
     root: MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_ROOT,

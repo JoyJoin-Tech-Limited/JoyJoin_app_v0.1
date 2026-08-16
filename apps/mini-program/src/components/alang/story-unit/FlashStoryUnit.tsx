@@ -38,6 +38,9 @@ import { LiziFirstActExperience } from './LiziFirstActExperience'
 import { MomoFirstActExperience } from './MomoFirstActExperience'
 import { ShiqiFirstActExperience } from './ShiqiFirstActExperience'
 import { AtuanLaterActExperience, AtuanLaterActPrelude, AtuanLaterActScene } from './AtuanLaterActExperience'
+import { FlatLaterActExperience } from './MomoLaterActExperience'
+import { getCustomLaterActConfig, isFlatLaterActUnitId } from './LaterActStoryConfigs'
+import { laterActStorageKey } from './LaterActStoryExperience'
 import {
   createStoryUnitState,
   reconcileStoryUnitState,
@@ -71,6 +74,12 @@ export interface FlashStoryUnitProps {
   onSubmit: (choice: StoryUnitChoice) => Promise<void>
   onContinue: () => void
   atuanArrivalAssets?: AtuanArrivalAssets
+  momoLaterActScenes?: { second: string; third: string }
+  momoLaterActCharacter?: string
+  liziLaterActScenes?: { second: string; third: string }
+  liziLaterActCharacter?: string
+  shiqiSecondActScene?: string
+  shiqiLaterActCharacter?: string
 }
 
 function loadInitialState(
@@ -94,7 +103,25 @@ function loadInitialState(
 }
 
 export function FlashStoryUnit(props: FlashStoryUnitProps) {
-  const { encounterId, npc, story, question, motion, storyPosition, submitState, submitError, onSubmit, onContinue, atuanArrivalAssets } = props
+  const {
+    encounterId,
+    npc,
+    story,
+    question,
+    motion,
+    storyPosition,
+    submitState,
+    submitError,
+    onSubmit,
+    onContinue,
+    atuanArrivalAssets,
+    momoLaterActScenes,
+    momoLaterActCharacter,
+    liziLaterActScenes,
+    liziLaterActCharacter,
+    shiqiSecondActScene,
+    shiqiLaterActCharacter,
+  } = props
   const definition = getFlashStoryUnitDefinition(story.code)
   if (!definition || definition.npcSlug !== npc.slug || definition.phase !== story.phase || definition.objectCode !== story.objectCode) {
     return <View role='alert'><Text>这件旧物暂时没有接上，返回后再试一次。</Text></View>
@@ -150,6 +177,9 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
       emit('story_complete')
       dispatch({ type: 'COMPLETE' })
       try { Taro.removeStorageSync(storageKey) } catch { /* fail-open */ }
+      if (isFlatLaterActUnitId(definition.unitId)) {
+        try { Taro.removeStorageSync(laterActStorageKey(definition.unitId, encounterId)) } catch { /* fail-open */ }
+      }
     }
   }, [emit, runtime.stage, serverSettled, storageKey])
 
@@ -182,7 +212,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     transition({ type: 'START_INTERACTION', choice, atuanFirstAct, atuanLaterAct })
     if (definition.unitId === 's1-p1-atuan' || isAtuanLaterActUnitId(definition.unitId)) {
       emit('object_interaction_start')
-    } else if (definition.npcSlug !== 'atuan') {
+    } else if (definition.npcSlug !== 'atuan' && !isFlatLaterActUnitId(definition.unitId)) {
       transition({ type: 'OBJECT_ALIGNED' })
       void onSubmit(choice)
     }
@@ -216,7 +246,8 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const showResult = serverSettled
   const isAtuanStory = definition.npcSlug === 'atuan'
   const isCustomFirstAct = CUSTOM_FIRST_ACT_IDS.has(definition.unitId)
-  const customFirstActScene = resolveFlashNpcTheme(npc.slug, npc.name).dialogueSceneSrc
+  const npcTheme = resolveFlashNpcTheme(npc.slug, npc.name)
+  const customFirstActScene = npcTheme.dialogueSceneSrc
   const showCustomFirstAct = isCustomFirstAct && !showResult && Boolean(customFirstActScene)
   const customFirstActDisabled = submitState === 'submitting'
     || (runtime.stage !== 'NPC_INTRO' && runtime.stage !== 'OBJECT_SUCCESS')
@@ -231,7 +262,26 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const showAtuanLaterScene = isAtuanLaterActUnitId(definition.unitId) && Boolean(atuanLaterActBackground && atuanArrivalAssets)
   const showAtuanLaterPrelude = showAtuanLaterScene && !showResult && (runtime.stage === 'INIT' || runtime.stage === 'NPC_INTRO')
   const showAtuanLaterExperience = showAtuanLaterScene && !showResult && Boolean(runtime.atuanLaterAct) && runtime.stage !== 'INIT' && runtime.stage !== 'NPC_INTRO'
-  const showDedicatedSubmitStatus = (showCustomFirstAct || showAtuanLaterExperience) && (
+  const flatLaterActBackground = definition.unitId === 's1-p2-momo'
+    ? momoLaterActScenes?.second
+    : definition.unitId === 's1-p3-momo'
+      ? momoLaterActScenes?.third
+      : definition.unitId === 's1-p2-lizi'
+        ? liziLaterActScenes?.second
+        : definition.unitId === 's1-p3-lizi'
+          ? liziLaterActScenes?.third
+          : definition.unitId === 's1-p2-shiqi'
+            ? shiqiSecondActScene
+      : undefined
+  const flatLaterActCharacter = definition.npcSlug === 'momo'
+    ? momoLaterActCharacter
+    : definition.npcSlug === 'lizi'
+      ? liziLaterActCharacter
+      : definition.npcSlug === 'shiqi'
+        ? shiqiLaterActCharacter
+        : undefined
+  const showFlatLaterAct = isFlatLaterActUnitId(definition.unitId) && !showResult && Boolean(flatLaterActBackground)
+  const showDedicatedSubmitStatus = (showCustomFirstAct || showAtuanLaterExperience || showFlatLaterAct) && (
     submitState === 'submitting'
     || Boolean(submitError)
   )
@@ -253,10 +303,15 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     : definition.unitId === 's1-p3-atuan'
       ? { title: '回来的第六张卡', closing: '阿团只放好自己的名字。另一边空着，也是一份完整而不催促的等待。' }
       : null
+  const customLaterResult = isFlatLaterActUnitId(definition.unitId)
+    ? getCustomLaterActConfig(definition.unitId).result
+    : atuanLaterResult
   const displayedFragment = definition.unitId === 's1-p2-atuan'
     ? { category: 'relationship', title: '没有替人回答的邀请', fact: '座位图能表达阿团想靠近的心意，但不能替默默决定距离。' }
     : definition.unitId === 's1-p3-atuan'
       ? { category: 'key', title: '回来的第六张卡', fact: '第六张卡一直留在箱底夹层；它是一份迟到的邀请，不是默默的回答。' }
+      : isFlatLaterActUnitId(definition.unitId)
+        ? getCustomLaterActConfig(definition.unitId).result.fragment
       : story.fragment
   const storyAction = definition.unitId === 's1-p1-atuan'
     ? '阿团站在长椅旁，目光越过你，仍旧望着公园入口。'
@@ -281,7 +336,22 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   return (
     <View className='flash-page flash-dialogue flash-dialogue--story'>
       <View className={`flash-dialogue__story-stage${showResult ? ' flash-dialogue__story-stage--result' : ' flash-dialogue__story-stage--question'}${showGame ? ' flash-dialogue__story-stage--game' : ''}${definition.unitId === 's1-p1-atuan' ? ' flash-dialogue__story-stage--atuan-first' : ''}${showCustomFirstAct ? ' flash-dialogue__story-stage--custom-first' : ''}`} data-testid='flash-story-stage' data-story-unit-stage={runtime.stage} data-story-unit-id={definition.unitId}>
-        {showCustomFirstAct && customFirstAct ? customFirstAct : showAtuanPrelude && atuanArrivalAssets ? (
+        {showCustomFirstAct && customFirstAct ? customFirstAct : showFlatLaterAct && flatLaterActBackground && isFlatLaterActUnitId(definition.unitId) ? (
+          <FlatLaterActExperience
+            encounterId={encounterId}
+            unitId={definition.unitId}
+            background={flatLaterActBackground}
+            character={flatLaterActCharacter ?? npcTheme.imageSrc}
+            started={runtime.stage !== 'INIT' && runtime.stage !== 'NPC_INTRO'}
+            disabled={submitState === 'submitting' || ((runtime.stage === 'INIT' || runtime.stage === 'NPC_INTRO') && !question?.options.length)}
+            onBegin={(approachIndex, label) => {
+              const option = question?.options[approachIndex]
+              if (!question || !option) return
+              startInteraction({ questionId: question.id, optionId: option.id, label })
+            }}
+            onComplete={() => completeObject()}
+          />
+        ) : showAtuanPrelude && atuanArrivalAssets ? (
           <AtuanArrivalPrelude
             assets={atuanArrivalAssets}
             onBeginConversation={(approachIndex, label) => {
@@ -319,8 +389,8 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
         ) : (
           <FlashNpcDialogueScene npc={npc} speech={speech} spacious choicesEmbedded={!showResult} motion={motion} />
         )}
-        {!showCustomFirstAct && !showAtuanLaterScene ? <View className='flash-dialogue__story-ambient' aria-hidden='true' /> : null}
-        {!showCustomFirstAct && !showAtuanPrelude && !showAtuanLaterScene ? (
+        {!showCustomFirstAct && !showAtuanLaterScene && !showFlatLaterAct ? <View className='flash-dialogue__story-ambient' aria-hidden='true' /> : null}
+        {!showCustomFirstAct && !showAtuanPrelude && !showAtuanLaterScene && !showFlatLaterAct ? (
           <View className='flash-dialogue__story-index' aria-label={`第 ${story.phase} 幕，故事 ${storyPosition} 共 ${story.progress.total}`}>
             <Text className='flash-dialogue__story-index-phase'>第 {story.phase} 幕</Text>
             <Text className='flash-dialogue__story-index-count'>{storyPosition}/{story.progress.total}</Text>
@@ -332,7 +402,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
             {submitState === 'submitting' ? <View role='status'><Text>正在收下这段故事…</Text></View> : null}
             {submitError ? <View role='alert'><Text>{submitError}</Text></View> : null}
           </View>
-        ) : showCustomFirstAct ? null : showAtuanPrelude ? null : showAtuanLaterPrelude ? null : showAtuanLaterExperience ? null : !showResult ? (
+        ) : showCustomFirstAct ? null : showFlatLaterAct ? null : showAtuanPrelude ? null : showAtuanLaterPrelude ? null : showAtuanLaterExperience ? null : !showResult ? (
           <View className={`flash-dialogue__story-panel flash-dialogue__story-panel--choices${showAtuanScene ? ' flash-dialogue__story-panel--atuan-conversation' : ''}`} data-testid='flash-story-choice-panel'>
             <ScrollView className='flash-dialogue__story-panel-scroll' scrollY>
               <View className='flash-dialogue__story-panel-content'>
@@ -401,9 +471,9 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
           <View className='flash-dialogue__story-panel flash-dialogue__story-panel--result' aria-live='polite'>
             <View className='flash-dialogue__story-panel-content'>
               <Text className='flash-dialogue__story-panel-season'>{story.seasonTitle} · 第 {story.phase} 幕</Text>
-              <Text className='flash-dialogue__story-panel-title'>{atuanLaterResult?.title ?? story.title}</Text>
+              <Text className='flash-dialogue__story-panel-title'>{customLaterResult?.title ?? story.title}</Text>
               {displayedFragment ? <View className={`flash-dialogue__fragment flash-dialogue__fragment--${displayedFragment.category}`}><Text className='flash-dialogue__fragment-label'>新故事碎片</Text><Text className='flash-dialogue__fragment-title'>{displayedFragment.title}</Text><Text className='flash-dialogue__fragment-fact'>{displayedFragment.fact}</Text></View> : null}
-              {(atuanLaterResult?.closing ?? story.closing) ? <Text className='flash-dialogue__story-panel-closing'>{atuanLaterResult?.closing ?? story.closing}</Text> : null}
+              {(customLaterResult?.closing ?? story.closing) ? <Text className='flash-dialogue__story-panel-closing'>{customLaterResult?.closing ?? story.closing}</Text> : null}
               <Text className='flash-dialogue__story-panel-progress'>本幕 {story.progress.completedInPhase}/{story.progress.totalInPhase} · 全季 {story.progress.completedTotal}/{story.progress.total}</Text>
             </View>
             <View className='flash-dialogue__story-result-exit' data-testid='flash-story-result-exit'>

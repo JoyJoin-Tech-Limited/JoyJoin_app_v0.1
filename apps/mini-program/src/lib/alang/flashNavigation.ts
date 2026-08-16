@@ -2,6 +2,17 @@ import Taro from '@tarojs/taro'
 import { MINI_PROGRAM_ROUTES } from '../onboarding/onboardingRoutes'
 import type { FlashCanonicalSnapshot } from './flashTypes'
 
+const DEDICATED_LATER_ACT_CODES = new Set([
+  's1-p2-alang',
+  's1-p3-alang',
+  's1-p2-momo',
+  's1-p3-momo',
+  's1-p2-lizi',
+  's1-p3-lizi',
+  's1-p2-shiqi',
+  's1-p3-shiqi',
+])
+
 export function decodeFlashRouteParam(value: string | undefined, fallback = ''): string {
   if (!value) return fallback
 
@@ -43,7 +54,12 @@ export function getFlashCanonicalRoute(snapshot: FlashCanonicalSnapshot): string
     case 'encounter':
     case 'delivery':
       return snapshot.encounterId
-        ? query(MINI_PROGRAM_ROUTES.alangDialogue, { encounterId: snapshot.encounterId })
+        ? query(
+            snapshot.storyEpisode?.code && DEDICATED_LATER_ACT_CODES.has(snapshot.storyEpisode.code)
+              ? MINI_PROGRAM_ROUTES.alangLaterDialogue
+              : MINI_PROGRAM_ROUTES.alangDialogue,
+            { encounterId: snapshot.encounterId },
+          )
         : MINI_PROGRAM_ROUTES.alangEvent
     case 'task':
     case 'assignment':

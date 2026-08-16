@@ -6,6 +6,8 @@ import type { AtuanFirstActSubmission } from '@shared/alang/atuanFirstAct'
 import type { AtuanLaterActSubmission } from '@shared/alang/atuanLaterActs'
 import { FlashStoryUnit } from '../../../components/alang/story-unit/FlashStoryUnit'
 import { FlashStoryV2Stage } from '../../../components/alang/FlashStoryV2Stage'
+import { V2LaterActExperience } from '../../../components/alang/story-unit/AlangLaterActExperience'
+import { isAlangLaterActUnitId, isFlatLaterActUnitId } from '../../../components/alang/story-unit/LaterActStoryConfigs'
 import { FlashButton, FlashFeatureClosed, FlashNpcDialogueScene, FlashPageState, FlashTaskCategoryBadge } from '../../../components/alang/FlashUi'
 import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
@@ -23,6 +25,7 @@ import {
 import type { FlashCanonicalSnapshot } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
+import { resolveFlashNpcTheme } from '../../../lib/alang/flashNpcAssets'
 import atuanArrivalScene from '../assets/ui/flash-atuan-park-clean-v3.jpg'
 import atuanArrivalCharacter from '../assets/ui/flash-atuan-character-lowpoly-v3.png'
 import atuanArrivalBag from '../assets/ui/flash-atuan-bag-cutout-v2.png'
@@ -101,7 +104,27 @@ function classifyStorySubmitFailure(error: unknown): 'retry' | 'refresh' | 'exit
   return 'exit'
 }
 
-export default function FlashDialoguePage() {
+export interface CustomLaterActAssets {
+  alangSecond: string
+  alangThird: string
+  alangCharacter: string
+  momoSecond: string
+  momoThird: string
+  momoCharacter: string
+  liziSecond: string
+  liziThird: string
+  liziCharacter: string
+  shiqiSecond: string
+  shiqiThird: string
+  shiqiCharacter: string
+}
+
+interface FlashDialoguePageProps {
+  customLaterActAssets?: CustomLaterActAssets
+  currentPath?: string
+}
+
+export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PROGRAM_ROUTES.alangDialogue }: FlashDialoguePageProps = {}) {
   const enabled = shouldShowStreetBlindBoxEntry()
   const params = Taro.getCurrentInstance().router?.params ?? {}
   const encounterId = params.encounterId ?? ''
@@ -115,6 +138,8 @@ export default function FlashDialoguePage() {
   const [actionError, setActionError] = useState('')
   const [fragmentRevealed, setFragmentRevealed] = useState(false)
   const [storySubmitState, setStorySubmitState] = useState<StorySubmitState>('idle')
+  const answerInFlightRef = useRef(false)
+  const advanceInFlightRef = useRef(false)
   const storySubmitInFlightRef = useRef(false)
   const settledStoryExitKeyRef = useRef('')
 
@@ -141,13 +166,15 @@ export default function FlashDialoguePage() {
       return
     }
     if (!enabled || !data?.canonicalScreen || data.status === 'expired') return
-    void redirectToFlashCanonical(data, MINI_PROGRAM_ROUTES.alangDialogue)
-  }, [data, enabled, encounterId, replay])
+    void redirectToFlashCanonical(data, currentPath)
+  }, [currentPath, data, enabled, encounterId, replay])
 
   useEffect(() => {
     setFragmentRevealed(false)
     setStorySubmitState('idle')
     setActionError('')
+    answerInFlightRef.current = false
+    advanceInFlightRef.current = false
     storySubmitInFlightRef.current = false
   }, [data?.storyEpisode?.id])
 
@@ -156,12 +183,13 @@ export default function FlashDialoguePage() {
       await Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}` })
       return
     }
-    const redirected = await redirectToFlashCanonical(response, MINI_PROGRAM_ROUTES.alangDialogue)
+    const redirected = await redirectToFlashCanonical(response, currentPath)
     if (!redirected && !('npc' in response)) await refetch()
   }
 
   const answer = async (questionId: string, optionId: string) => {
-    if (!enabled || answerMutation.isPending) return
+    if (!enabled || answerInFlightRef.current) return
+    answerInFlightRef.current = true
     setActionError('')
     try {
       haptics('light')
@@ -173,23 +201,39 @@ export default function FlashDialoguePage() {
         return
       }
       setActionError(dialogueActionError(caughtError, '刚才那句话没有送到，再选一次就好。'))
+    } finally {
+      answerInFlightRef.current = false
     }
   }
 
-  const advance = async () => {
-    if (!enabled || advanceMutation.isPending) return
+  const advance = async (): Promise<FlashCanonicalSnapshot | null> => {
+    if (!enabled || advanceInFlightRef.current) return null
+    advanceInFlightRef.current = true
     setActionError('')
     try {
       haptics('light')
       const response = await advanceMutation.mutateAsync(encounterId)
       await applyResponse(response)
+      return response
     } catch (caughtError) {
       if (getFlashApiErrorCode(caughtError) === 'FLASH_ENCOUNTER_EXPIRED') {
         await refetch()
-        return
+        return null
       }
       setActionError(dialogueActionError(caughtError, '故事没有接上，再试一次就好。'))
+      return null
+    } finally {
+      advanceInFlightRef.current = false
     }
+  }
+
+  const completeV2LaterAct = async (): Promise<boolean> => {
+    const response = await advance()
+    if (!response) return false
+    if (response.storyEpisode?.storyV2?.nodeId === 'n5_close') {
+      return Boolean(await advance())
+    }
+    return true
   }
 
   const submitStoryChoice = async (choice: { questionId: string; optionId: string; label: string; storyPath?: AtuanFirstActSubmission | AtuanLaterActSubmission }) => {
@@ -317,8 +361,48 @@ export default function FlashDialoguePage() {
   }
 
   if (story) {
+    const isCustomLaterAct = isAlangLaterActUnitId(story.code)
+      || isFlatLaterActUnitId(story.code)
+      || story.code === 's1-p3-shiqi'
+    if (isCustomLaterAct && !customLaterActAssets) {
+      return <View className='flash-page'><FlashPageState title='正在展开新的现场…' description='完整场景会在下一页接上，刚才的进度不会丢。' /></View>
+    }
     const v2View = isFlashV2PilotUnitId(story.code) ? story.storyV2 : null
     if (v2View) {
+      if (isAlangLaterActUnitId(story.code) || story.code === 's1-p3-shiqi') {
+        const theme = resolveFlashNpcTheme(data.npc.slug, data.npc.name)
+        const background = story.code === 's1-p2-alang'
+          ? customLaterActAssets?.alangSecond
+          : story.code === 's1-p3-alang'
+            ? customLaterActAssets?.alangThird
+            : customLaterActAssets?.shiqiThird
+        const character = story.code === 's1-p3-shiqi'
+          ? customLaterActAssets?.shiqiCharacter
+          : customLaterActAssets?.alangCharacter
+        return (
+          <View className='flash-page flash-dialogue flash-dialogue--story'>
+            <V2LaterActExperience
+              encounterId={encounterId}
+              unitId={story.code}
+              nodeId={v2View.nodeId}
+              availableChoiceIds={v2View.choices.map(({ id }) => id)}
+              background={background ?? ''}
+              character={character ?? theme.imageSrc}
+              disabled={answerMutation.isPending || advanceMutation.isPending}
+              onChoice={(choiceId) => { void answer(v2View.nodeId, choiceId) }}
+              onContinue={() => { void advance() }}
+              onComplete={completeV2LaterAct}
+            />
+            {answerMutation.isPending || advanceMutation.isPending ? (
+              <View className='flash-dialogue__story-error flash-dialogue__story-error--status' role='status'>
+                <Text>故事正在接上…</Text>
+              </View>
+            ) : actionError ? (
+              <View className='flash-dialogue__story-error' role='alert'><Text>{actionError}</Text></View>
+            ) : null}
+          </View>
+        )
+      }
       return (
         <View className='flash-page flash-dialogue flash-dialogue--story'>
           <FlashStoryV2Stage
@@ -363,6 +447,12 @@ export default function FlashDialoguePage() {
             secondScene: atuanSecondActScene,
             thirdScene: atuanThirdActScene,
           }}
+          momoLaterActScenes={customLaterActAssets ? { second: customLaterActAssets.momoSecond, third: customLaterActAssets.momoThird } : undefined}
+          momoLaterActCharacter={customLaterActAssets?.momoCharacter}
+          liziLaterActScenes={customLaterActAssets ? { second: customLaterActAssets.liziSecond, third: customLaterActAssets.liziThird } : undefined}
+          liziLaterActCharacter={customLaterActAssets?.liziCharacter}
+          shiqiSecondActScene={customLaterActAssets?.shiqiSecond}
+          shiqiLaterActCharacter={customLaterActAssets?.shiqiCharacter}
           onSubmit={submitStoryChoice}
           onContinue={() => {
             const url = story.progress.completedTotal >= story.progress.total
@@ -628,3 +718,5 @@ export default function FlashDialoguePage() {
     </View>
   )
 }
+
+export default FlashDialoguePage

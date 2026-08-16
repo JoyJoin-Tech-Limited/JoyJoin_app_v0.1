@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import FlashDialoguePage from './index'
+import FlashDialoguePage, { FlashDialoguePage as FlashDialoguePageWithAssets } from './index'
 
 const mocks = vi.hoisted(() => ({
   useAuth: vi.fn(),
@@ -118,6 +118,7 @@ describe('formal Flash dialogue', () => {
     mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
     mocks.useEncounter.mockReturnValue({ data: questionEncounter, isLoading: false, isError: false, refetch: mocks.refetch })
     mocks.answer.mockResolvedValue(questionEncounter)
+    mocks.advance.mockResolvedValue(questionEncounter)
     mocks.reroll.mockResolvedValue(questionEncounter)
     mocks.offer.mockResolvedValue(questionEncounter)
     mocks.canonicalRedirect.mockResolvedValue(false)
@@ -369,6 +370,152 @@ describe('formal Flash dialogue', () => {
       questionId: 'n3_choice',
       optionId: 'ask-changes',
     })
+  })
+
+  it('routes Alang second act away from the generic v2 card and into the complete scene chain', async () => {
+    let rejectAdvance: ((reason?: unknown) => void) | undefined
+    mocks.advance.mockImplementationOnce(() => new Promise((_, reject) => { rejectAdvance = reject }))
+    mocks.useEncounter.mockReturnValue({
+      data: {
+        ...questionEncounter,
+        npc: { id: 'npc-alang', slug: 'alang', name: '阿浪', animal: '灰狼' },
+        currentQuestion: null,
+        storyEpisode: {
+          id: 'episode-alang-2',
+          code: 's1-p2-alang',
+          seasonTitle: '没有名字的旧物',
+          phase: 2,
+          title: '一本停在半程的路线册',
+          objectCode: 'route-book',
+          opening: '', action: '', discovery: '', response: null, closing: null,
+          motion: { ambient: 'none' as const }, fragment: null,
+          progress: { completedInPhase: 0, totalInPhase: 5, completedTotal: 5, total: 15 },
+          storyV2: {
+            nodeId: 'n1_setup',
+            type: 'prose',
+            segments: [{ text: '旧的服务端开场不会直接露出。' }],
+            choices: [],
+            next: 'n2_object',
+            unlockFragment: null,
+          },
+        },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    render(<FlashDialoguePageWithAssets customLaterActAssets={{
+      alangSecond: 'flash-alang-second-act-route-pavilion-v1.jpg',
+      alangThird: 'alang-third.jpg',
+      alangCharacter: 'alang-official.png',
+      momoSecond: 'momo-second.jpg',
+      momoThird: 'momo-third.jpg',
+      momoCharacter: 'momo-official.png',
+      liziSecond: 'lizi-second.jpg', liziThird: 'lizi-third.jpg', liziCharacter: 'lizi-official.png',
+      shiqiSecond: 'shiqi-second.jpg', shiqiThird: 'shiqi-third.jpg', shiqiCharacter: 'shiqi-official.png',
+    }} />)
+
+    expect(document.querySelector('[data-testid="flash-story-v2-stage"]')).toBeNull()
+    expect(screen.getByTestId('later-act-background')).toHaveAttribute('src', expect.stringContaining('flash-alang-second-act-route-pavilion-v1'))
+    expect(screen.getByTestId('later-act-character')).toHaveAttribute('src', 'alang-official.png')
+    expect(screen.getByText('第二幕 · 断在半程的路线')).toBeInTheDocument()
+    const approach = screen.getByRole('button', { name: '先看本子被雨打湿的地方' })
+    act(() => {
+      approach.click()
+      approach.click()
+    })
+    expect(mocks.advance).toHaveBeenCalledTimes(1)
+    rejectAdvance?.(new Error('network unavailable'))
+    expect(await screen.findByRole('alert')).toHaveTextContent('故事没有接上，再试一次就好。')
+  })
+
+  it('routes Shiqi third act through its crisp scene, highlights, and guarded v2 chain', () => {
+    mocks.advance.mockReturnValue(new Promise(() => undefined))
+    mocks.useEncounter.mockReturnValue({
+      data: {
+        ...questionEncounter,
+        npc: { id: 'npc-shiqi', slug: 'shiqi', name: '拾柒', animal: '乌鸦' },
+        currentQuestion: null,
+        storyEpisode: {
+          id: 'episode-shiqi-3', code: 's1-p3-shiqi', seasonTitle: '没有名字的旧物', phase: 3,
+          title: '被退回来的记录', objectCode: 'observation-cards',
+          opening: '', action: '', discovery: '', response: null, closing: null,
+          motion: { ambient: 'none' as const }, fragment: null,
+          progress: { completedInPhase: 0, totalInPhase: 5, completedTotal: 10, total: 15 },
+          storyV2: {
+            nodeId: 'n1_setup', type: 'prose', segments: [{ text: '旧的通用卡片不会露出。' }],
+            choices: [], next: 'n2_object', unlockFragment: null,
+          },
+        },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    render(<FlashDialoguePageWithAssets customLaterActAssets={{
+      alangSecond: 'alang-second.jpg', alangThird: 'alang-third.jpg', alangCharacter: 'alang-official.png',
+      momoSecond: 'momo-second.jpg', momoThird: 'momo-third.jpg', momoCharacter: 'momo-official.png',
+      liziSecond: 'lizi-second.jpg', liziThird: 'lizi-third.jpg', liziCharacter: 'lizi-official.png',
+      shiqiSecond: 'shiqi-second.jpg', shiqiThird: 'shiqi-third.jpg', shiqiCharacter: 'shiqi-official.png',
+    }} />)
+
+    expect(document.querySelector('[data-testid="flash-story-v2-stage"]')).toBeNull()
+    expect(screen.getByTestId('later-act-background')).toHaveAttribute('src', 'shiqi-third.jpg')
+    expect(screen.getByTestId('later-act-character')).toHaveAttribute('src', 'shiqi-official.png')
+    expect(screen.getByText('第三幕 · 删除并不是抹掉城市')).toBeInTheDocument()
+    const approach = screen.getByRole('button', { name: '先确认其余四张卡还能留下什么' })
+    act(() => {
+      approach.click()
+      approach.click()
+    })
+    expect(mocks.advance).toHaveBeenCalledTimes(1)
+  })
+
+  it('settles an Alang ending in one tap even when the automatic callback advance previously failed', async () => {
+    const storyEpisode = {
+      id: 'episode-alang-3',
+      code: 's1-p3-alang',
+      seasonTitle: '没有名字的旧物',
+      phase: 3,
+      title: '被拆开的后半本',
+      objectCode: 'split-route-book',
+      opening: '', action: '', discovery: '', response: null, closing: null,
+      motion: { ambient: 'none' as const }, fragment: null,
+      progress: { completedInPhase: 0, totalInPhase: 5, completedTotal: 10, total: 15 },
+      storyV2: {
+        nodeId: 'n4_echo_b', type: 'callback', segments: [], choices: [], next: 'n5_close', unlockFragment: null,
+      },
+    }
+    const encounter = {
+      ...questionEncounter,
+      npc: { id: 'npc-alang', slug: 'alang', name: '阿浪', animal: '灰狼' },
+      currentQuestion: null,
+      storyEpisode,
+    }
+    const closure = { ...encounter, storyEpisode: { ...storyEpisode, storyV2: { ...storyEpisode.storyV2, nodeId: 'n5_close', type: 'closure', next: null } } }
+    const settled = { ...encounter, canonicalScreen: 'completed', status: 'completed', storyEpisode: { ...storyEpisode, response: '已经归还。', storyV2: null } }
+    mocks.useEncounter.mockReturnValue({ data: encounter, isLoading: false, isError: false, refetch: mocks.refetch })
+    mocks.getStorageSync.mockReturnValue({
+      version: 'npc-later-act-v1', unitId: 's1-p3-alang', stage: 'ending',
+      approachId: 'inspect-binding',
+      seenHighlightIds: ['opened-rings', 'written-route', 'return-envelope'], objectOpened: true,
+      seenDetailIds: ['clean-edges', 'removable-thread', 'outside-invite'], followupId: 'write-date',
+      gameStarted: true, gameStep: 3, gameComplete: true, mistakes: 0, wrongChoiceId: null,
+    })
+    mocks.advance.mockResolvedValueOnce(closure).mockResolvedValueOnce(settled)
+
+    render(<FlashDialoguePageWithAssets customLaterActAssets={{
+      alangSecond: 'alang-second.jpg', alangThird: 'alang-third.jpg', alangCharacter: 'alang-official.png',
+      momoSecond: 'momo-second.jpg', momoThird: 'momo-third.jpg', momoCharacter: 'momo-official.png',
+      liziSecond: 'lizi-second.jpg', liziThird: 'lizi-third.jpg', liziCharacter: 'lizi-official.png',
+      shiqiSecond: 'shiqi-second.jpg', shiqiThird: 'shiqi-third.jpg', shiqiCharacter: 'shiqi-official.png',
+    }} />)
+
+    fireEvent.click(screen.getByRole('button', { name: '收好阿浪归还的空白页' }))
+    await waitFor(() => expect(mocks.advance).toHaveBeenCalledTimes(2))
+    expect(mocks.removeStorageSync).toHaveBeenCalledWith(expect.stringContaining('s1-p3-alang'))
   })
 
   it('keeps Lizi on the dedicated first-act path and submits the completed approach', async () => {

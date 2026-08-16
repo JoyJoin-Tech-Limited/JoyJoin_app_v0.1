@@ -107,6 +107,7 @@ describe('Atuan first-arrival asset ownership', () => {
     const cleanScript = readFileSync(resolve(appRoot, 'scripts/clean-cdn-assets.mjs'), 'utf8')
     const verifyScript = readFileSync(resolve(appRoot, 'scripts/verify-flash-package.mjs'), 'utf8')
     const dialoguePage = readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/index.tsx'), 'utf8')
+    const laterActPage = readFileSync(resolve(sourceRoot, 'pages/alang-story/dialogue/index.tsx'), 'utf8')
     const buildConfig = readFileSync(resolve(appRoot, 'config/index.ts'), 'utf8')
     const buildWorkflow = readFileSync(resolve(repoRoot, '.github/workflows/taro-weapp-build.yml'), 'utf8')
     const eventPage = readFileSync(resolve(sourceRoot, 'pages/alang/event/index.tsx'), 'utf8')
@@ -159,6 +160,35 @@ describe('Atuan first-arrival asset ownership', () => {
       'flash-momo-first-act-rain-route-v3.jpg',
       'flash-shiqi-first-act-record-room-v3.jpg',
     ]) {
+      expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
+      expect(buildWorkflow, `${fileName} must be required in the compiled package`).toContain(fileName)
+    }
+    for (const fileName of [
+      'flash-alang-second-act-route-pavilion-v1.jpg',
+      'flash-alang-third-act-return-pages-v1.jpg',
+      'flash-momo-second-act-color-route-v1.jpg',
+      'flash-momo-third-act-complete-invitation-v1.jpg',
+      'flash-lizi-second-act-repeated-circles-v1.jpg',
+      'flash-lizi-third-act-first-outing-v1.jpg',
+      'flash-shiqi-second-act-private-record-v1.jpg',
+      'flash-shiqi-third-act-return-record-v1.jpg',
+    ]) {
+      const assetBytes = readFileSync(resolve(sourceRoot, 'pages/alang-story/assets', fileName))
+      expect([...assetBytes.subarray(0, 3)], `${fileName} must be a real JPEG`).toEqual([0xff, 0xd8, 0xff])
+      expect(assetBytes.byteLength, `${fileName} must stay within the 150 KiB scene budget`).toBeLessThanOrEqual(150 * 1024)
+      expect(laterActPage, `${fileName} must be wired through the dedicated later-act page`).toContain(fileName)
+      expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
+      expect(buildWorkflow, `${fileName} must be required in the compiled package`).toContain(fileName)
+    }
+    for (const fileName of [
+      'flash-alang-character-official-v1.png',
+      'flash-momo-character-official-v1.png',
+      'flash-lizi-character-official-v1.png',
+      'flash-shiqi-character-official-v1.png',
+    ]) {
+      const assetBytes = readFileSync(resolve(sourceRoot, 'pages/alang-story/assets', fileName))
+      expect([...assetBytes.subarray(0, 8)], `${fileName} must remain a real PNG`).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+      expect(laterActPage, `${fileName} must be wired through the dedicated later-act page`).toContain(fileName)
       expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
       expect(buildWorkflow, `${fileName} must be required in the compiled package`).toContain(fileName)
     }

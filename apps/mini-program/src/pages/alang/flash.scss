@@ -2900,6 +2900,10 @@ page {
   text-align: center;
 }
 
+.flash-dialogue__story-error--status {
+  border-color: rgba($color-primary, 0.34);
+}
+
 .flash-dialogue-scene {
   position: relative;
   height: 100dvh;

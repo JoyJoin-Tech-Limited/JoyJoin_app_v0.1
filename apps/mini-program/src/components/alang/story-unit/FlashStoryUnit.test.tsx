@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getFlashFirstActExperienceContract } from '@shared/alang/flashFirstActExperience'
 import { FlashStoryUnit } from './FlashStoryUnit'
+import { getCustomLaterActConfig, type FlatLaterActUnitId } from './LaterActStoryConfigs'
 
 const storage = new Map<string, unknown>()
 let didShowCallback: (() => void) | null = null
@@ -337,6 +338,94 @@ describe('FlashStoryUnit production flow', () => {
     expect(resultExit).toContainElement(continueButton)
     fireEvent.click(continueButton)
     expect(onContinue).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps Momo second act on the full highlight, object, followup, retryable-game chain before submit', () => {
+    const submit = vi.fn().mockResolvedValue(undefined)
+    const npc = { ...baseNpc, id: 'npc-momo', slug: 'momo', name: '默默', species: '兔狲' }
+    const story = {
+      ...firstStory,
+      id: 'episode-momo-2',
+      code: 's1-p2-momo',
+      phase: 2,
+      title: '没有发出的颜色选择',
+      objectCode: 'dry-markers',
+    }
+    const question = { id: 's1-p2-momo-response-v1', text: '你准备怎么做？', options: [
+      { id: 'momo-color', label: '旧选项一' },
+      { id: 'momo-card', label: '旧选项二' },
+    ] }
+    render(<FlashStoryUnit encounterId='enc-momo-p2' npc={npc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={6} submitState='idle' submitError='' momoLaterActScenes={{ second: 'flash-momo-second-act-color-route-v1.jpg', third: 'flash-momo-third-act-complete-invitation-v1.jpg' }} onSubmit={submit} onContinue={vi.fn()} />)
+
+    expect(screen.getByTestId('later-act-background')).toHaveAttribute('src', expect.stringContaining('flash-momo-second-act'))
+    fireEvent.click(screen.getByRole('button', { name: '先核对路线真正留下的颜色' }))
+    expect(submit).not.toHaveBeenCalled()
+
+    for (const name of ['只压出轮廓的空白页', '两条真实留下的色带', '被换乱的笔帽']) {
+      fireEvent.click(screen.getByRole('button', { name: `查看${name}` }))
+      fireEvent.click(screen.getByRole('button', { name: `收下${name}的线索，回到现场` }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: '打开旧马克笔盒' }))
+    for (const name of ['沾着暖橙的笔尖', '几乎干掉的冷蓝笔', '折在底层的方向卡']) {
+      fireEvent.click(screen.getByRole('button', { name: `查看${name}` }))
+      fireEvent.click(screen.getByRole('button', { name: `收下${name}的细节` }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: '继续追问' }))
+    fireEvent.click(screen.getByRole('button', { name: '为什么把笔帽故意换乱？' }))
+    fireEvent.click(screen.getByRole('button', { name: '开始校对颜色' }))
+    fireEvent.click(screen.getByRole('button', { name: '选套着橙色笔帽的那支' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('请看笔尖真正留下的颜色')
+    expect(submit).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '再看一次' }))
+    fireEvent.click(screen.getByRole('button', { name: '选笔尖沾着暖橙的那支' }))
+    fireEvent.click(screen.getByRole('button', { name: '在废纸上试出那条淡冷蓝' }))
+    fireEvent.click(screen.getByRole('button', { name: '用还能清楚书写的中性笔' }))
+    expect(screen.getByText('颜色不再替默默躲藏')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '收好默默的颜色选择' }))
+
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: question.id,
+      optionId: 'momo-color',
+      label: '先核对路线真正留下的颜色',
+    }))
+  })
+
+  it.each([
+    ['s1-p2-lizi', 'lizi', '栗子', 2, 'outing-book', 'lizi-second.jpg'],
+    ['s1-p3-lizi', 'lizi', '栗子', 3, 'outing-book', 'lizi-third.jpg'],
+    ['s1-p2-shiqi', 'shiqi', '拾柒', 2, 'observation-cards', 'shiqi-second.jpg'],
+  ] as const)('keeps %s inside the complete local experience before server settlement', (unitId, slug, name, phase, objectCode, expectedScene) => {
+    const submit = vi.fn().mockResolvedValue(undefined)
+    const config = getCustomLaterActConfig(unitId as FlatLaterActUnitId)
+    const npc = { ...baseNpc, id: `npc-${slug}`, slug, name, species: slug === 'lizi' ? '水獭' : '乌鸦' }
+    const story = { ...firstStory, id: `episode-${unitId}`, code: unitId, phase, title: config.title, objectCode }
+    const question = { id: `${unitId}-response-v1`, text: '你准备怎么做？', options: [
+      { id: `${unitId}-a`, label: '旧选项一' },
+      { id: `${unitId}-b`, label: '旧选项二' },
+    ] }
+
+    render(
+      <FlashStoryUnit
+        encounterId={`enc-${unitId}`}
+        npc={npc as any}
+        story={story as any}
+        question={question as any}
+        motion={motion as any}
+        storyPosition={phase === 2 ? 6 : 11}
+        submitState='idle'
+        submitError=''
+        liziLaterActScenes={{ second: 'lizi-second.jpg', third: 'lizi-third.jpg' }}
+        shiqiSecondActScene='shiqi-second.jpg'
+        onSubmit={submit}
+        onContinue={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId('later-act-background')).toHaveAttribute('src', expectedScene)
+    expect(screen.getAllByRole('button')).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: config.approaches[0].label }))
+    expect(screen.getByRole('button', { name: `查看${config.highlights[0].label}` })).toBeInTheDocument()
+    expect(submit).not.toHaveBeenCalled()
   })
 
   it.each([

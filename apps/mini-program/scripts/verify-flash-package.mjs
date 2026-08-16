@@ -22,6 +22,22 @@ const flashDialogueRelativePaths = [
   'pages/alang/assets/ui/flash-shiqi-first-act-record-room-v3.jpg',
   'pages/alang/assets/ui/flash-atuan-first-arrival-layered-v2.jpg',
 ]
+const laterActRelativePaths = [
+  'pages/alang-story/assets/flash-alang-second-act-route-pavilion-v1.jpg',
+  'pages/alang-story/assets/flash-alang-third-act-return-pages-v1.jpg',
+  'pages/alang-story/assets/flash-momo-second-act-color-route-v1.jpg',
+  'pages/alang-story/assets/flash-momo-third-act-complete-invitation-v1.jpg',
+  'pages/alang-story/assets/flash-lizi-second-act-repeated-circles-v1.jpg',
+  'pages/alang-story/assets/flash-lizi-third-act-first-outing-v1.jpg',
+  'pages/alang-story/assets/flash-shiqi-second-act-private-record-v1.jpg',
+  'pages/alang-story/assets/flash-shiqi-third-act-return-record-v1.jpg',
+]
+const laterActCharacterPaths = [
+  'pages/alang-story/assets/flash-alang-character-official-v1.png',
+  'pages/alang-story/assets/flash-momo-character-official-v1.png',
+  'pages/alang-story/assets/flash-lizi-character-official-v1.png',
+  'pages/alang-story/assets/flash-shiqi-character-official-v1.png',
+]
 const flashReviewedStoryBackgrounds = [
   'pages/alang/assets/onboarding/parallel-standard-paper-world-v1.jpg',
 ]
@@ -32,8 +48,7 @@ const atuanArrivalRelativePaths = [
   'pages/alang/assets/ui/flash-atuan-second-act-pavilion-v1.jpg',
   'pages/alang/assets/ui/flash-atuan-third-act-table-v1.jpg',
 ]
-// Includes the reviewed full-resolution first-act scenes and the two Atuan
-// later-act backgrounds. The independent package-size gate still enforces the
+// Includes the reviewed full-resolution story scenes. The independent package-size gate still enforces the
 // 1.80 MiB Alang subpackage ceiling.
 const flashRuntimeImageBudgetMiB = 1.40
 const flashRuntimeImageBudgetBytes = Math.round(flashRuntimeImageBudgetMiB * 1024 * 1024)
@@ -59,6 +74,8 @@ const requiredFiles = [
   'pages/alang/event/index.js',
   'pages/alang/event/index.wxml',
   ...flashRuntimeImages,
+  ...laterActRelativePaths,
+  ...laterActCharacterPaths,
 ]
 
 const requiredPages = [
@@ -86,6 +103,7 @@ if (!existsSync(appJsonPath)) {
   const appConfig = JSON.parse(readFileSync(appJsonPath, 'utf8'))
   const packages = appConfig.subPackages ?? appConfig.subpackages ?? []
   const flashPackage = packages.find((entry) => entry.root === 'pages/alang')
+  const laterActPackage = packages.find((entry) => entry.root === 'pages/alang-story')
 
   if (!flashPackage) {
     failures.push('app.json does not register the pages/alang subpackage')
@@ -95,6 +113,9 @@ if (!existsSync(appJsonPath)) {
         failures.push(`app.json is missing Flash page: pages/alang/${page}`)
       }
     }
+  }
+  if (!laterActPackage?.pages?.includes('dialogue/index')) {
+    failures.push('app.json does not register the pages/alang-story dialogue page')
   }
 }
 
@@ -214,6 +235,33 @@ if (flashRuntimeImageBytes > flashRuntimeImageBudgetBytes) {
   )
 }
 
+for (const relativePath of laterActRelativePaths) {
+  const absolutePath = resolve(distRoot, relativePath)
+  if (!existsSync(absolutePath) || statSync(absolutePath).size === 0) continue
+  if (statSync(absolutePath).size > 150 * 1024) {
+    failures.push(`dist/${relativePath} exceeds the 150 KiB later-act scene budget`)
+  }
+  try {
+    const metadata = await sharp(absolutePath).metadata()
+    if (metadata.format !== 'jpeg' || metadata.width !== 828 || metadata.height !== 1471) {
+      failures.push(`dist/${relativePath} must be a decodable 828x1471 JPEG image`)
+    }
+  } catch (error) {
+    failures.push(`dist/${relativePath} decode failed: ${error.message}`)
+  }
+}
+
+for (const relativePath of laterActCharacterPaths) {
+  const absolutePath = resolve(distRoot, relativePath)
+  if (!existsSync(absolutePath) || statSync(absolutePath).size === 0) continue
+  try {
+    const metadata = await sharp(absolutePath).metadata()
+    if (metadata.format !== 'png') failures.push(`dist/${relativePath} must remain a decodable PNG image`)
+  } catch (error) {
+    failures.push(`dist/${relativePath} decode failed: ${error.message}`)
+  }
+}
+
 const commonStylesPath = resolve(distRoot, 'common.wxss')
 if (existsSync(commonStylesPath)) {
   const commonStyles = readFileSync(commonStylesPath, 'utf8')
@@ -302,6 +350,10 @@ if (preupload) {
       count: flashRuntimeImages.length,
       totalBytes: flashRuntimeImageBytes,
     },
+    laterActAssets: {
+      format: 'jpeg/png',
+      count: laterActRelativePaths.length + laterActCharacterPaths.length,
+    },
     files: fileEntries,
   }, null, 2)}\n`, 'utf8')
 }
@@ -309,6 +361,6 @@ if (preupload) {
 console.log(
   `[verify-flash-package] OK — build ${buildHash}; main-package icon exists, is non-empty, ` +
     `and decodes as WebP; its runtime PNG derivative is present and decodable; ` +
-    `${requiredPages.length} Flash pages and all ${flashRuntimeImages.length} runtime image assets ` +
+    `${requiredPages.length} Flash pages and all ${flashRuntimeImages.length + laterActRelativePaths.length + laterActCharacterPaths.length} runtime image assets ` +
     `are present and decodable${preupload ? ' and match the build manifest' : ''}.`,
 )
