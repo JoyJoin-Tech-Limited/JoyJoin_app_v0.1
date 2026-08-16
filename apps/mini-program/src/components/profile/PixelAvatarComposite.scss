@@ -1,5 +1,13 @@
 @use '../../styles/variables' as *;
 
+// Vertical squash factor — interim mitigation for the lanky 3+头身 body
+// proportions (uncanny-valley feedback, 2026-08-15). Applied with
+// transform-origin: bottom so foot positions (gathering-room seat anchors,
+// identity-stage bottom anchoring) stay exactly where they were. The real fix
+// is regenerating shorter chibi body art; see
+// assets-source/profile-pixel-v2/lovart-brief-starter-outfits-v2.md.
+$pixel-avatar-squash: 0.85;
+
 .pixel-avatar-composite {
   position: relative;
   width: 100%;
@@ -25,6 +33,8 @@
     max-width: 100%;
     height: 100%;
     aspect-ratio: 2 / 3;
+    transform: translate3d(-50%, 0, 0) scaleY($pixel-avatar-squash);
+    transform-origin: bottom center;
   }
 
   &__body,
@@ -67,7 +77,8 @@
     max-width: 100%;
     height: 100%;
     aspect-ratio: 2 / 3;
-    transform: translate3d(-50%, 0, 0);
+    transform: translate3d(-50%, 0, 0) scaleY($pixel-avatar-squash);
+    transform-origin: bottom center;
     pointer-events: none;
   }
 

@@ -133,10 +133,9 @@ export function PixelAvatarComposite({
   const accessibleLabel = `${archetypeName}像素形象${equipmentCopy}${failedAssetCopy}${unresolvedAssetCopy}；基础背心和安全短裤固定保留${fallbackCopy}`
   const bodyFallbackAccessibleLabel = `${archetypeName}像素形象；原始图片未加载，已显示不可脱基础背心和安全短裤的安全替代形象；装备图层已暂时隐藏${fallbackCopy}`
   // The scene box mirrors the 2:3 body canvas and stays centered; equipment
-  // placement rects and the hotspot plane map 1:1 onto it.
-  const sceneStyle: CSSProperties = {
-    transform: 'translate3d(-50%, 0, 0)',
-  }
+  // placement rects and the hotspot plane map 1:1 onto it. Centering +
+  // proportion squash live in the stylesheet (`translate3d(-50%, 0, 0)
+  // scaleY($pixel-avatar-squash)`) so the hotspot plane stays in sync.
 
   if (bodySource === 'placeholder') {
     return (
@@ -181,7 +180,6 @@ export function PixelAvatarComposite({
       >
         <View
           className='pixel-avatar-composite__scene'
-          style={sceneStyle}
           aria-hidden='true'
         >
           <Image

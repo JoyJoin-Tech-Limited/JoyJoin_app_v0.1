@@ -105,6 +105,7 @@
     "screenshot:event-ticket-payment": "node scripts/screenshot-open.mjs event-ticket-payment",
     "screenshot:squad-unboxing": "node scripts/screenshot-open.mjs squad-unboxing",
     "screenshot:profile-review": "node scripts/screenshot-open.mjs profile-review",
+    "screenshot:gathering-room": "node scripts/screenshot-open.mjs gathering-room",
     "screenshot:landing": "node scripts/screenshot-open.mjs landing",
     "screenshot:help": "node scripts/screenshot-open.mjs --help"
   }

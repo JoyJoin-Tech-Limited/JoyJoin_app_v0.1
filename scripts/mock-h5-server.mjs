@@ -1,6 +1,7 @@
 import express from 'express'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { WebSocketServer } from 'ws'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -70,6 +71,7 @@ const MOCK_USER = {
     equipmentRewardsEnabled: true,
     personalStoryEnabled: true,
     aigcLabelsEnabled: true,
+    gatheringRoomEnabled: true,
   },
 }
 
@@ -1215,6 +1217,132 @@ app.post('/api/pool-groups/:id/confirm-attendance', (req, res) => {
   res.json({ success: true, blindBoxEventId: null, attendanceStatus: 'confirmed' })
 })
 
+// ─── Gathering room (集结房间) ──────────────────────────────────
+// REST snapshot + WS presence fixtures for the H5 screenshot harness.
+// Six members, distinct archetypes; the viewer (user-screenshot-001) is still
+// pending so the 确认出席 CTA renders active, two members are already confirmed
+// so the seated pose + 已确认 badge are visible in the capture.
+
+const GATHERING_ROOM_EVENT_ID = 'blindbox-event-screenshot-001'
+
+/** Full starter equipment set for one archetype — assetKeys resolve to the
+ *  approved full-starter composite in PixelAvatarComposite. */
+function gatheringRoomStarterEquipment(archetype) {
+  const slots = ['top', 'bottom', 'shoes', 'accessory']
+  const equippedItems = slots.map((slot) => ({
+    id: `equipment-starter-${archetype}-${slot}`,
+    slug: `starter-${archetype}-${slot}`,
+    name: `${archetype} 初始${slot}`,
+    description: null,
+    slot,
+    rarity: 'common',
+    assetKey: `equipment/starter/${archetype}/${slot}/v1`,
+    compatibleArchetypes: [archetype],
+  }))
+  return {
+    outfit: {
+      topItemId: `equipment-starter-${archetype}-top`,
+      bottomItemId: `equipment-starter-${archetype}-bottom`,
+      shoesItemId: `equipment-starter-${archetype}-shoes`,
+      accessoryItemId: `equipment-starter-${archetype}-accessory`,
+      version: 1,
+    },
+    equippedItems,
+  }
+}
+
+function gatheringRoomMember({ userId, displayName, archetype, attendanceStatus, topInterests, ageLabel, industryNicheLabel }) {
+  return {
+    userId,
+    displayName,
+    archetype,
+    attendanceStatus,
+    topInterests,
+    ageVisible: true,
+    industryVisible: true,
+    ageLabel,
+    industryNicheLabel,
+    ...gatheringRoomStarterEquipment(archetype),
+  }
+}
+
+const GATHERING_ROOM_MEMBERS = [
+  gatheringRoomMember({
+    userId: 'user-screenshot-001',
+    displayName: '悦仔测试',
+    archetype: 'corgi',
+    attendanceStatus: 'pending',
+    topInterests: ['徒步', '咖啡', '电影'],
+    ageLabel: '28',
+    industryNicheLabel: '互联网产品',
+  }),
+  gatheringRoomMember({
+    userId: 'user-screenshot-002',
+    displayName: '阿泽',
+    archetype: 'fox',
+    attendanceStatus: 'confirmed',
+    topInterests: ['脱口秀', '精酿', '旅行'],
+    ageLabel: '30',
+    industryNicheLabel: '品牌策划',
+  }),
+  gatheringRoomMember({
+    userId: 'user-screenshot-003',
+    displayName: '桃桃',
+    archetype: 'hamster_praise',
+    attendanceStatus: 'confirmed',
+    topInterests: ['烘焙', '瑜伽', '手账'],
+    ageLabel: '26',
+    industryNicheLabel: '心理咨询',
+  }),
+  gatheringRoomMember({
+    userId: 'user-screenshot-004',
+    displayName: '阿鸣',
+    archetype: 'rooster',
+    attendanceStatus: 'pending',
+    topInterests: ['创业', '跑步', '播客'],
+    ageLabel: '31',
+    industryNicheLabel: '连续创业者',
+  }),
+  gatheringRoomMember({
+    userId: 'user-screenshot-005',
+    displayName: '小禾',
+    archetype: 'koala',
+    attendanceStatus: 'pending',
+    topInterests: ['插画', '咖啡', '猫'],
+    ageLabel: '26',
+    industryNicheLabel: '自由插画师',
+  }),
+  gatheringRoomMember({
+    userId: 'user-screenshot-006',
+    displayName: '老王',
+    archetype: 'owl',
+    attendanceStatus: 'pending',
+    topInterests: ['围棋', '历史', '茶'],
+    ageLabel: '35',
+    industryNicheLabel: '高校教师',
+  }),
+]
+
+// Exclude exactly one member (the owl, user-screenshot-006) from WS presence
+// so the screenshots cover the absent-member rendering path: header reads
+// 已到 5/6, the owl's avatar queues at the room door, and its name card stays
+// at the seat. REST room-state still returns all six members.
+const GATHERING_ROOM_PRESENT_USER_IDS = GATHERING_ROOM_MEMBERS
+  .map((member) => member.userId)
+  .filter((userId) => userId !== 'user-screenshot-006')
+
+app.get('/api/pool-groups/:id/room-state', (req, res) => {
+  res.json({
+    groupId: req.params.id,
+    blindBoxEventId: GATHERING_ROOM_EVENT_ID,
+    totalParticipants: GATHERING_ROOM_MEMBERS.length,
+    confirmedCount: GATHERING_ROOM_MEMBERS.filter((member) => member.attendanceStatus === 'confirmed').length,
+    // ~1 day out so the header countdown renders 还有 1 天.
+    eventDateTime: new Date(Date.now() + 26 * 60 * 60 * 1000).toISOString(),
+    members: GATHERING_ROOM_MEMBERS,
+  })
+})
+
 // Analytics sink
 app.post('/api/analytics/:event', (req, res) => {
   res.json({ success: true })
@@ -1503,6 +1631,51 @@ app.get('*', (req, res) => {
 
 const server = app.listen(PORT, '127.0.0.1', () => {
   console.log(`[mock-h5-server] listening on http://localhost:${PORT}`)
+})
+
+// ─── WebSocket mock (gathering-room presence) ──────────────────
+// The mini-program connects to ws://localhost:5001/ws (derived from
+// TARO_APP_API_BASE_URL). On USER_JOINED we reply with an authoritative
+// ROOM_PRESENCE_STATE snapshot (five of six fixture members present — the owl
+// is absent to cover the absent-member rendering path) and mirror
+// the production ROOM_MEMBER_ENTERED broadcast; clients dedupe their own id.
+const wss = new WebSocketServer({ server, path: '/ws' })
+
+wss.on('connection', (socket) => {
+  socket.on('message', (raw) => {
+    let message
+    try {
+      message = JSON.parse(raw.toString())
+    } catch {
+      return
+    }
+
+    if (message.type === 'PING') {
+      socket.send(JSON.stringify({ type: 'PONG', timestamp: new Date().toISOString() }))
+      return
+    }
+
+    if (message.type === 'USER_JOINED' && message.eventId && message.userId) {
+      const timestamp = new Date().toISOString()
+      socket.send(JSON.stringify({
+        type: 'ROOM_PRESENCE_STATE',
+        eventId: message.eventId,
+        data: { eventId: message.eventId, presentUserIds: GATHERING_ROOM_PRESENT_USER_IDS },
+        timestamp,
+      }))
+      const entered = JSON.stringify({
+        type: 'ROOM_MEMBER_ENTERED',
+        eventId: message.eventId,
+        data: { eventId: message.eventId, userId: message.userId },
+        timestamp,
+      })
+      for (const client of wss.clients) {
+        if (client.readyState === client.OPEN) {
+          client.send(entered)
+        }
+      }
+    }
+  })
 })
 
 process.on('SIGTERM', () => server.close())

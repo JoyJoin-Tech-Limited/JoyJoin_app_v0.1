@@ -54,9 +54,15 @@ const PAGES = {
   'icebreaker-warmup-error': { url: 'http://localhost:9000/icebreaker-warmup-error.png', altPort: 9003 },
   'landing': { url: 'http://localhost:9000/landing-blind-box.png', altPort: 9003 },
   'landing-legal-hint': { url: 'http://localhost:9000/landing-legal-hint.png', altPort: 9003 },
+  'gathering-room': { url: 'http://localhost:9000/gathering-room.png', altPort: 9003 },
 }
 
 const page = process.argv[2] || 'events'
+// `--once` (CI / headless shells with no stdin): build, start both servers,
+// poll the PNG URL until a capture succeeds, then exit WITHOUT stopping the
+// servers so the URL stays servable. Stop them afterwards with:
+//   pkill -f mock-h5-server.mjs; pkill -f screenshot-server.mjs
+const runOnce = process.argv.includes('--once')
 
 if (page === '--help' || page === '-h') {
   console.log('Usage: npm run screenshot:<page>')
@@ -167,6 +173,36 @@ async function main() {
   await sleep(2000)
 
   const url = config.url.replace('localhost:9000', `localhost:${screenshotPort}`)
+
+  if (runOnce) {
+    console.log(`[screenshot-open] --once: verifying ${url}`)
+    const deadline = Date.now() + 180_000
+    let lastError = null
+    while (Date.now() < deadline) {
+      try {
+        const res = await fetch(url)
+        const contentType = res.headers.get('content-type') || ''
+        if (res.ok && contentType.includes('image/png')) {
+          await res.arrayBuffer() // drain the body so the request completes
+          console.log(`[screenshot-open] OK — fresh PNG served at ${url}`)
+          console.log(
+            `[screenshot-open] servers left running (mock :5001, screenshot :${screenshotPort}). ` +
+              'Stop with: pkill -f mock-h5-server.mjs; pkill -f screenshot-server.mjs'
+          )
+          process.exit(0)
+        }
+        lastError = new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`)
+      } catch (err) {
+        lastError = err
+      }
+      await sleep(3000)
+    }
+    console.error('[screenshot-open] --once verification failed:', lastError)
+    mockServer.kill()
+    screenshotServer.kill()
+    process.exit(1)
+  }
+
   console.log(`[screenshot-open] opening ${url}`)
 
   try {

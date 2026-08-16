@@ -114,7 +114,7 @@ const REQUIREMENTS = [
     page: 'pages/gathering-room/index.wxss',
     selectors: [
       'gathering-room-scene{',
-      'gathering-room-scene__table{',
+      'gathering-room-scene__seat-shadow{',
       'gathering-room-scene__seat{',
       'gathering-room__action-bar{',
       'gathering-room__sheet{',
