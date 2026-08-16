@@ -11,7 +11,7 @@ function ruleBody(selector: string): string {
 }
 
 describe('Flash settled-story short viewport contract', () => {
-  it('keeps the compact completion action outside the result card and native scrolling', () => {
+  it('keeps the compact completion action inside the result card without native scrolling', () => {
     const resultScroller = ruleBody('.flash-dialogue__story-panel--result .flash-dialogue__story-panel-scroll')
     const resultPanel = ruleBody('.flash-dialogue__story-panel--result')
     const exitDock = ruleBody('.flash-dialogue__story-result-exit')
@@ -20,9 +20,10 @@ describe('Flash settled-story short viewport contract', () => {
     expect(resultScroller).toBe('')
     expect(resultPanel).toContain('height: auto')
     expect(resultPanel).toContain('overflow: hidden')
-    expect(exitDock).toContain('position: absolute')
-    expect(exitDock).toContain('bottom: calc(16rpx + env(safe-area-inset-bottom))')
+    expect(exitDock).not.toContain('position: absolute')
+    expect(exitDock).not.toContain('bottom:')
     expect(exitDock).toContain('min-height: 88rpx')
+    expect(exitDock).toContain('flex: none')
     expect(compactButton).toContain('width: auto')
   })
 })

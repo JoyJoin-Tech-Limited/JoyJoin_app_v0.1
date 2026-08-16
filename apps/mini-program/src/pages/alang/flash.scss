@@ -2838,20 +2838,20 @@ page {
 }
 
 .flash-dialogue__story-panel--result .flash-dialogue__story-panel-content {
+  min-height: 0;
   gap: 16rpx;
+  overflow: hidden;
 }
 
 .flash-dialogue__story-result-exit {
-  position: absolute;
-  z-index: 8;
-  right: 24rpx;
-  bottom: calc(16rpx + env(safe-area-inset-bottom));
-  left: 24rpx;
   display: flex;
+  width: 100%;
   min-height: 88rpx;
+  flex: none;
   align-items: center;
   justify-content: center;
   pointer-events: auto;
+  box-sizing: border-box;
 }
 
 .flash-dialogue__story-result-exit .flash-button {

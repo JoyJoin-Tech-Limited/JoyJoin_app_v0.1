@@ -98,7 +98,8 @@ describe('Atuan first-arrival asset ownership', () => {
 
     expect(flashStyles).toMatch(/\.flash-dialogue__story-panel--result\s*\{[^}]*bottom:\s*calc\(112rpx \+ env\(safe-area-inset-bottom\)\);[^}]*height:\s*auto;[^}]*overflow:\s*hidden;/s)
     expect(flashStyles).not.toMatch(/\.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-scroll\s*\{/)
-    expect(flashStyles).toMatch(/\.flash-dialogue__story-result-exit\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*calc\(16rpx \+ env\(safe-area-inset-bottom\)\);[^}]*min-height:\s*88rpx;/s)
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-result-exit\s*\{[^}]*min-height:\s*88rpx;[^}]*flex:\s*none;/s)
+    expect(flashStyles).not.toMatch(/\.flash-dialogue__story-result-exit\s*\{[^}]*(?:position:\s*absolute|bottom:)/s)
     expect(flashStyles).toMatch(/\.flash-dialogue__story-result-exit \.flash-button\s*\{[^}]*width:\s*auto;/s)
   })
 

@@ -333,7 +333,7 @@ describe('FlashStoryUnit production flow', () => {
     expect(resultPanel).not.toBeNull()
     expect(resultScroller).toBeNull()
     expect(resultExit).not.toBeNull()
-    expect(resultPanel).not.toContainElement(resultExit)
+    expect(resultPanel).toContainElement(resultExit)
     expect(resultExit).toContainElement(continueButton)
     fireEvent.click(continueButton)
     expect(onContinue).toHaveBeenCalledTimes(1)
