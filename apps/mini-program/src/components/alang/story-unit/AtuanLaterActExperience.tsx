@@ -15,6 +15,7 @@ import {
   type AtuanThirdActHighlightId,
 } from '@shared/alang/atuanLaterActs'
 import { haptics } from '../../../lib/utils/haptics'
+import { deterministicGameOrder, getFailureAssistance } from '../../../lib/alang/flashGameDifficulty'
 import './AtuanLaterActExperience.scss'
 
 interface AtuanLaterActSceneProps {
@@ -82,6 +83,7 @@ interface AtuanLaterActExperienceProps {
   character: string
   progress: AtuanLaterActProgress
   disabled?: boolean
+  variantKey?: string
   onProgress: (progress: AtuanLaterActProgress) => void
   onComplete: (submission: AtuanLaterActSubmission) => void
 }
@@ -120,12 +122,14 @@ function latestSpeech(progress: AtuanLaterActProgress): string {
   const definition = getAtuanLaterActDefinition(progress.unitId)
   if (progress.unitId === 's1-p2-atuan') {
     if (progress.game.chairGap === 'breathing') return resolveAtuanLaterActOutcome(progress).responseCopy
+    if (progress.game.attempts > 0 && !progress.game.planUpright) return '方向不对时，折痕会互相压住。先找右下角那枚朝上的小记号。'
     if (progress.game.planUpright) return '图已经正过来了。现在只决定阿团这一边：靠近不是越多越好，能自在说话才算合适。'
   } else {
     if (progress.game.otherSeat === 'blank') return resolveAtuanLaterActOutcome(progress).responseCopy
     if (progress.game.atuanNamePlaced) return '阿团的名字已经放好。另一边不是一道要替默默完成的题。'
     if (progress.game.invitationPlaced) return '第六张卡已经摆在座位图中央。现在只放好发出邀请的人，再把回答的位置留出来。'
     if (progress.game.boxUnlocked) return '第六张卡在夹层里。把这份迟到的邀请摆回第二幕的座位图上吧。'
+    if (progress.game.attempts > 0) return '锁孔边只有一组浅齿痕。不要硬撬，先让钥匙的缺口对上它。'
   }
   if (progress.followupId) {
     return (definition.followups as readonly { id: string; reply: string }[]).find((item) => item.id === progress.followupId)?.reply ?? definition.opening
@@ -140,7 +144,7 @@ function latestSpeech(progress: AtuanLaterActProgress): string {
   return (definition.approaches as readonly { id: string; reply: string }[]).find((item) => item.id === progress.approachId)?.reply ?? definition.opening
 }
 
-export function AtuanLaterActExperience({ unitId, background, character, progress, disabled = false, onProgress, onComplete }: AtuanLaterActExperienceProps) {
+export function AtuanLaterActExperience({ unitId, background, character, progress, disabled = false, variantKey = unitId, onProgress, onComplete }: AtuanLaterActExperienceProps) {
   const definition = getAtuanLaterActDefinition(unitId)
   const highlightsComplete = progress.highlightOrder.length === definition.highlights.length
   const arrivalReplies = (definition.arrivalReplies as readonly { id: string; approachId: string; label: string }[]).filter((option) => option.approachId === progress.approachId)
@@ -173,6 +177,15 @@ export function AtuanLaterActExperience({ unitId, background, character, progres
   const gameProgress = progress.unitId === 's1-p2-atuan'
     ? Number(progress.game.planUpright) + Number(progress.game.chairGap === 'breathing')
     : Number(progress.game.boxUnlocked) + Number(progress.game.invitationPlaced) + Number(progress.game.atuanNamePlaced) + Number(progress.game.otherSeat === 'blank')
+  const assistance = getFailureAssistance(progress.game.attempts)
+  const failGameStep = () => {
+    if (disabled) return
+    haptics('medium')
+    onProgress({ ...progress, game: { ...progress.game, attempts: Math.min(20, progress.game.attempts + 1) } } as AtuanLaterActProgress)
+  }
+  const orderGameChoices = <T extends { id: string },>(stepId: string, choices: readonly T[]) => (
+    deterministicGameOrder(choices, `${variantKey}:${unitId}:${stepId}`)
+  )
   const gameHeader = progress.gameStarted ? (
     <>
       <Text className='atuan-later-experience__eyebrow'>{progress.unitId === 's1-p2-atuan' ? '阿团的小座位图' : '阿团的第六张卡'}</Text>
@@ -226,35 +239,88 @@ export function AtuanLaterActExperience({ unitId, background, character, progres
             <View className='atuan-later-experience__section' data-testid='atuan-second-act-game'>
               {gameHeader}
               {!progress.game.planUpright ? (
-                <View className='atuan-later-experience__game-action' hoverClass={disabled ? '' : 'atuan-later-experience__game-action--pressed'} role='button' aria-label='把座位图转正' aria-disabled={disabled} onClick={() => { if (!disabled) { haptics('light'); onProgress({ ...progress, game: { ...progress.game, planUpright: true } }) } }}><Text>把座位图转正</Text></View>
+                <>
+                  <Text className='atuan-later-experience__prompt'>先根据右下角的朝上记号，判断座位图方向。</Text>
+                  {progress.game.attempts > 0 ? <View className='atuan-later-experience__feedback' role='alert'><Text>这个方向让折痕叠在一起了，座位边界无法读清。</Text>{assistance.showClue ? <Text>线索：朝上记号应停在右下角，标题折线在上方。</Text> : null}</View> : null}
+                  <View className='atuan-later-experience__choices atuan-later-experience__choices--compact'>
+                    {orderGameChoices('plan-direction', [
+                      { id: 'counterclockwise', label: '逆时针转一格', correct: false },
+                      { id: 'upright-marker', label: '让朝上记号停在右下角', correct: true },
+                      { id: 'mirror', label: '把座位图镜像翻面', correct: false },
+                    ]).map((choice) => <View key={choice.id} className='atuan-later-experience__choice' hoverClass={disabled ? '' : 'atuan-later-experience__choice--pressed'} role='button' aria-label={choice.label} aria-disabled={disabled} onClick={() => { if (disabled) return; if (!choice.correct) { failGameStep(); return } haptics('light'); onProgress({ ...progress, game: { ...progress.game, planUpright: true, attempts: 0 } }) }}><Text>{choice.label}</Text></View>)}
+                  </View>
+                  {assistance.assist ? <View className='atuan-later-experience__game-assist' hoverClass={disabled ? '' : 'atuan-later-experience__game-assist--pressed'} role='button' aria-label='请阿团压住正确方向' aria-disabled={disabled} onClick={() => { if (!disabled) onProgress({ ...progress, game: { ...progress.game, planUpright: true, attempts: 0 } }) }}><Text>请阿团压住正确方向</Text></View> : null}
+                </>
               ) : progress.game.chairGap !== 'breathing' ? (
                 <>
                   {progress.game.chairGap ? <View className='atuan-later-experience__feedback' role='alert'><Text>{progress.game.chairGap === 'close' ? '太近会替默默做决定，再留一点呼吸感。' : '太远又藏住了阿团的邀请，再试一次。'}</Text></View> : null}
                   <Text className='atuan-later-experience__prompt'>两把椅子停在哪里？</Text>
                   <View className='atuan-later-experience__choices atuan-later-experience__choices--compact'>
-                    {([
+                    {orderGameChoices('chair-gap', ([
                       ['close', '把椅子挪得更近'],
                       ['breathing', '留出能自在说话的距离'],
                       ['far', '把椅子推得很远'],
-                    ] as const).map(([chairGap, label]) => <View key={chairGap} className='atuan-later-experience__choice' hoverClass={disabled ? '' : 'atuan-later-experience__choice--pressed'} role='button' aria-label={label} aria-disabled={disabled} onClick={() => { if (!disabled) { haptics(chairGap === 'breathing' ? 'medium' : 'light'); onProgress({ ...progress, game: { ...progress.game, chairGap, attempts: progress.game.attempts + (chairGap === 'breathing' ? 0 : 1) } }) } }}><Text>{label}</Text></View>)}
+                    ] as const).map(([chairGap, label]) => ({ id: chairGap, chairGap, label })))
+                      .map(({ chairGap, label }) => <View key={chairGap} className='atuan-later-experience__choice' hoverClass={disabled ? '' : 'atuan-later-experience__choice--pressed'} role='button' aria-label={label} aria-disabled={disabled} onClick={() => { if (!disabled) { haptics(chairGap === 'breathing' ? 'medium' : 'light'); onProgress({ ...progress, game: { ...progress.game, chairGap, attempts: chairGap === 'breathing' ? 0 : Math.min(20, progress.game.attempts + 1) } }) } }}><Text>{label}</Text></View>)}
                   </View>
+                  {assistance.showClue ? <Text className='atuan-later-experience__game-clue'>线索：两道椅脚浅痕之间刚好能放下一只纸袋。</Text> : null}
+                  {assistance.assist ? <View className='atuan-later-experience__game-assist' hoverClass={disabled ? '' : 'atuan-later-experience__game-assist--pressed'} role='button' aria-label='沿椅脚浅痕摆好距离' aria-disabled={disabled} onClick={() => { if (!disabled) onProgress({ ...progress, game: { ...progress.game, chairGap: 'breathing', attempts: 0 } }) }}><Text>沿椅脚浅痕摆好距离</Text></View> : null}
                 </>
               ) : null}
             </View>
           ) : (
             <View className='atuan-later-experience__section' data-testid='atuan-third-act-game'>
               {gameHeader}
-              {!progress.game.boxUnlocked ? <View className='atuan-later-experience__game-action' hoverClass={disabled ? '' : 'atuan-later-experience__game-action--pressed'} role='button' aria-label='用钥匙打开夹层' aria-disabled={disabled} onClick={() => { if (!disabled) { haptics('medium'); onProgress({ ...progress, game: { ...progress.game, boxUnlocked: true } }) } }}><Text>用钥匙打开夹层</Text></View>
-                : !progress.game.invitationPlaced ? <View className='atuan-later-experience__game-action' hoverClass={disabled ? '' : 'atuan-later-experience__game-action--pressed'} role='button' aria-label='把第六张卡摆到座位图中央' aria-disabled={disabled} onClick={() => { if (!disabled) { haptics('light'); onProgress({ ...progress, game: { ...progress.game, invitationPlaced: true } }) } }}><Text>把第六张卡摆到座位图中央</Text></View>
-                  : !progress.game.atuanNamePlaced ? <View className='atuan-later-experience__game-action' hoverClass={disabled ? '' : 'atuan-later-experience__game-action--pressed'} role='button' aria-label='放上阿团的名牌' aria-disabled={disabled} onClick={() => { if (!disabled) { haptics('light'); onProgress({ ...progress, game: { ...progress.game, atuanNamePlaced: true } }) } }}><Text>放上阿团的名牌</Text></View>
+              {!progress.game.boxUnlocked ? <>
+                <Text className='atuan-later-experience__prompt'>锁孔边有一组浅齿痕，先选开箱方式。</Text>
+                {progress.game.attempts > 0 ? <View className='atuan-later-experience__feedback' role='alert'><Text>硬撬或倒插都会让锁芯卡得更紧，箱盖没有打开。</Text></View> : null}
+                <View className='atuan-later-experience__choices atuan-later-experience__choices--compact'>
+                  {orderGameChoices('box-lock', [
+                    { id: 'pry', label: '用卡角撬开箱盖', correct: false },
+                    { id: 'align', label: '对齐齿痕后转动钥匙', correct: true },
+                    { id: 'reverse', label: '把钥匙倒着插入', correct: false },
+                  ]).map((choice) => <View key={choice.id} className='atuan-later-experience__choice' hoverClass={disabled ? '' : 'atuan-later-experience__choice--pressed'} role='button' aria-label={choice.label} aria-disabled={disabled} onClick={() => { if (disabled) return; if (!choice.correct) { failGameStep(); return } haptics('light'); onProgress({ ...progress, game: { ...progress.game, boxUnlocked: true, attempts: 0 } }) }}><Text>{choice.label}</Text></View>)}
+                </View>
+                {assistance.showClue ? <Text className='atuan-later-experience__game-clue'>线索：钥匙第二齿的缺口与锁孔右侧浅痕吻合。</Text> : null}
+                {assistance.assist ? <View className='atuan-later-experience__game-assist' hoverClass={disabled ? '' : 'atuan-later-experience__game-assist--pressed'} role='button' aria-label='沿浅齿痕打开夹层' aria-disabled={disabled} onClick={() => { if (!disabled) onProgress({ ...progress, game: { ...progress.game, boxUnlocked: true, attempts: 0 } }) }}><Text>沿浅齿痕打开夹层</Text></View> : null}
+              </>
+                : !progress.game.invitationPlaced ? <>
+                  <Text className='atuan-later-experience__prompt'>第六张卡该怎样回到第二幕？</Text>
+                  {progress.game.attempts > 0 ? <View className='atuan-later-experience__feedback' role='alert'><Text>藏回去会让邀请再次消失，追读擦淡的名字又会替旧物补写答案。</Text></View> : null}
+                  <View className='atuan-later-experience__choices atuan-later-experience__choices--compact'>
+                    {orderGameChoices('invitation-card', [
+                      { id: 'hide', label: '把卡片藏回夹层', correct: false },
+                      { id: 'front', label: '只看正面并摆到座位图中央', correct: true },
+                      { id: 'read-erased', label: '翻读背面被擦淡的名字', correct: false },
+                    ]).map((choice) => <View key={choice.id} className='atuan-later-experience__choice' hoverClass={disabled ? '' : 'atuan-later-experience__choice--pressed'} role='button' aria-label={choice.label} aria-disabled={disabled} onClick={() => { if (disabled) return; if (!choice.correct) { failGameStep(); return } haptics('light'); onProgress({ ...progress, game: { ...progress.game, invitationPlaced: true, attempts: 0 } }) }}><Text>{choice.label}</Text></View>)}
+                  </View>
+                  {assistance.showClue ? <Text className='atuan-later-experience__game-clue'>线索：正面保留着完整邀请句，背面的名字已经被主动擦淡。</Text> : null}
+                  {assistance.assist ? <View className='atuan-later-experience__game-assist' hoverClass={disabled ? '' : 'atuan-later-experience__game-assist--pressed'} role='button' aria-label='请阿团只摆好卡片正面' aria-disabled={disabled} onClick={() => { if (!disabled) onProgress({ ...progress, game: { ...progress.game, invitationPlaced: true, attempts: 0 } }) }}><Text>请阿团只摆好卡片正面</Text></View> : null}
+                </>
+                  : !progress.game.atuanNamePlaced ? <>
+                    <Text className='atuan-later-experience__prompt'>先确认谁在发出邀请。</Text>
+                    {progress.game.attempts > 0 ? <View className='atuan-later-experience__feedback' role='alert'><Text>默默不是发出邀请的人，把他的名牌放在这里会颠倒邀请方向。</Text></View> : null}
+                    <View className='atuan-later-experience__choices atuan-later-experience__choices--compact'>
+                      {orderGameChoices('inviter-name', [
+                        { id: 'momo', label: '先放上默默的名牌', correct: false },
+                        { id: 'atuan', label: '先放上阿团的名牌', correct: true },
+                      ]).map((choice) => <View key={choice.id} className='atuan-later-experience__choice' hoverClass={disabled ? '' : 'atuan-later-experience__choice--pressed'} role='button' aria-label={choice.label} aria-disabled={disabled} onClick={() => { if (disabled) return; if (!choice.correct) { failGameStep(); return } haptics('light'); onProgress({ ...progress, game: { ...progress.game, atuanNamePlaced: true, attempts: 0 } }) }}><Text>{choice.label}</Text></View>)}
+                    </View>
+                    {assistance.showClue ? <Text className='atuan-later-experience__game-clue'>线索：卡片上的句子来自阿团，这一步只为发出邀请的人署名。</Text> : null}
+                    {assistance.assist ? <View className='atuan-later-experience__game-assist' hoverClass={disabled ? '' : 'atuan-later-experience__game-assist--pressed'} role='button' aria-label='请阿团放上自己的名牌' aria-disabled={disabled} onClick={() => { if (!disabled) onProgress({ ...progress, game: { ...progress.game, atuanNamePlaced: true, attempts: 0 } }) }}><Text>请阿团放上自己的名牌</Text></View> : null}
+                  </>
                   : progress.game.otherSeat !== 'blank' ? (
                     <>
                       {progress.game.attempts > 0 ? <View className='atuan-later-experience__feedback' role='alert'><Text>不能替默默写下答案。邀请可以被看见，回应仍要由他自己决定。</Text></View> : null}
                       <Text className='atuan-later-experience__prompt'>另一边怎么放？</Text>
                       <View className='atuan-later-experience__choices atuan-later-experience__choices--compact'>
-                        <View className='atuan-later-experience__choice' hoverClass={disabled ? '' : 'atuan-later-experience__choice--pressed'} role='button' aria-label='替默默写上名字' aria-disabled={disabled} onClick={() => { if (!disabled) { haptics('light'); onProgress({ ...progress, game: { ...progress.game, attempts: progress.game.attempts + 1 } }) } }}><Text>替默默写上名字</Text></View>
-                        <View className='atuan-later-experience__choice' hoverClass={disabled ? '' : 'atuan-later-experience__choice--pressed'} role='button' aria-label='把另一边留空' aria-disabled={disabled} onClick={() => { if (!disabled) { haptics('medium'); onProgress({ ...progress, game: { ...progress.game, otherSeat: 'blank' } }) } }}><Text>把另一边留空</Text></View>
+                        {orderGameChoices('other-seat', [
+                          { id: 'write-momo', label: '替默默写上名字', correct: false },
+                          { id: 'leave-blank', label: '把另一边留空', correct: true },
+                        ]).map((choice) => <View key={choice.id} className='atuan-later-experience__choice' hoverClass={disabled ? '' : 'atuan-later-experience__choice--pressed'} role='button' aria-label={choice.label} aria-disabled={disabled} onClick={() => { if (disabled) return; if (!choice.correct) { failGameStep(); return } haptics('medium'); onProgress({ ...progress, game: { ...progress.game, otherSeat: 'blank', attempts: 0 } }) }}><Text>{choice.label}</Text></View>)}
                       </View>
+                      {assistance.showClue ? <Text className='atuan-later-experience__game-clue'>线索：阿团只能为自己的邀请署名，回应席位仍属于默默。</Text> : null}
+                      {assistance.assist ? <View className='atuan-later-experience__game-assist' hoverClass={disabled ? '' : 'atuan-later-experience__game-assist--pressed'} role='button' aria-label='保留回应席位为空白' aria-disabled={disabled} onClick={() => { if (!disabled) onProgress({ ...progress, game: { ...progress.game, otherSeat: 'blank', attempts: 0 } }) }}><Text>保留回应席位为空白</Text></View> : null}
                     </>
                   ) : null}
             </View>

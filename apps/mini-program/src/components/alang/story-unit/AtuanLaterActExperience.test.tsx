@@ -60,7 +60,7 @@ describe('AtuanLaterActExperience', () => {
     expect(screen.queryByRole('button', { name: '把座位图转正' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '和阿团一起摆好座位图' }))
     expect(screen.getByTestId('atuan-later-experience')).toHaveClass('atuan-later-experience--game')
-    fireEvent.click(screen.getByRole('button', { name: '把座位图转正' }))
+    fireEvent.click(screen.getByRole('button', { name: '让朝上记号停在右下角' }))
     fireEvent.click(screen.getByRole('button', { name: '把椅子挪得更近' }))
     expect(screen.getByRole('alert')).toHaveTextContent('再留一点呼吸感')
     fireEvent.click(screen.getByRole('button', { name: '留出能自在说话的距离' }))
@@ -74,7 +74,7 @@ describe('AtuanLaterActExperience', () => {
       arrivalReplyId: 'ask_fold_history',
       actionId: 'arrange_seating_plan',
       endingId: 'room_preserved',
-      game: expect.objectContaining({ planUpright: true, chairGap: 'breathing', attempts: 1 }),
+      game: expect.objectContaining({ planUpright: true, chairGap: 'breathing', attempts: 0 }),
     }))
   })
 
@@ -108,7 +108,132 @@ describe('AtuanLaterActExperience', () => {
       arrivalReplyId: 'ask_sixth_card',
       actionId: 'open_returned_card',
       endingId: 'answer_left_open',
-      game: expect.objectContaining({ boxUnlocked: true, invitationPlaced: true, atuanNamePlaced: true, otherSeat: 'blank', attempts: 1 }),
+      game: expect.objectContaining({ boxUnlocked: true, invitationPlaced: true, atuanNamePlaced: true, otherSeat: 'blank', attempts: 0 }),
     }))
+  })
+
+  it('turns repeated orientation mistakes into a clue and an optional assist', () => {
+    const Harness = () => {
+      const [progress, setProgress] = useState<AtuanLaterActProgress>({
+        ...createAtuanLaterActProgress('s1-p2-atuan', 'read_plan_first'),
+        arrivalReplyId: 'ask_fold_history',
+        highlightOrder: ['plan_folds', 'chair_scuffs', 'blank_place'],
+        followupId: 'leave_choice',
+        gameStarted: true,
+      })
+      return <AtuanLaterActExperience unitId='s1-p2-atuan' background='pavilion.webp' character='atuan.webp' progress={progress} onProgress={setProgress} onComplete={vi.fn()} />
+    }
+    render(<Harness />)
+    for (let attempt = 0; attempt < 3; attempt += 1) fireEvent.click(screen.getByRole('button', { name: '逆时针转一格' }))
+    expect(screen.getByText(/线索：朝上记号/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '请阿团压住正确方向' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '请阿团压住正确方向' }))
+    expect(screen.getByText('两把椅子停在哪里？')).toBeInTheDocument()
+  })
+
+  it('makes the third act inspect the lock and card boundary before name placement', () => {
+    const Harness = () => {
+      const [progress, setProgress] = useState<AtuanLaterActProgress>({
+        ...createAtuanLaterActProgress('s1-p3-atuan', 'open_box_first'),
+        arrivalReplyId: 'ask_sixth_card',
+        highlightOrder: ['box_key', 'sixth_card', 'empty_seat'],
+        followupId: 'leave_answer',
+        gameStarted: true,
+      })
+      return <AtuanLaterActExperience unitId='s1-p3-atuan' background='table.webp' character='atuan.webp' progress={progress} onProgress={setProgress} onComplete={vi.fn()} />
+    }
+    render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: '用卡角撬开箱盖' }))
+    expect(screen.getByLabelText('已完成 0 步，共 4 步')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '对齐齿痕后转动钥匙' }))
+    fireEvent.click(screen.getByRole('button', { name: '翻读背面被擦淡的名字' }))
+    expect(screen.getByText('第六张卡该怎样回到第二幕？')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '只看正面并摆到座位图中央' }))
+    expect(screen.getByText('先确认谁在发出邀请。')).toBeInTheDocument()
+  })
+
+  it('gives the third-act card and signer steps their own failure ladder and assist', () => {
+    const Harness = () => {
+      const [progress, setProgress] = useState<AtuanThirdActProgress>({
+        ...createAtuanLaterActProgress('s1-p3-atuan', 'open_box_first'),
+        arrivalReplyId: 'ask_sixth_card',
+        highlightOrder: ['box_key', 'sixth_card', 'empty_seat'],
+        followupId: 'leave_answer',
+        gameStarted: true,
+        game: { boxUnlocked: true, invitationPlaced: false, atuanNamePlaced: false, otherSeat: 'unset', attempts: 0 },
+      })
+      return <AtuanLaterActExperience unitId='s1-p3-atuan' background='table.webp' character='atuan.webp' progress={progress} variantKey='replay-third-act' onProgress={(next) => { if (next.unitId === 's1-p3-atuan') setProgress(next) }} onComplete={vi.fn()} />
+    }
+    render(<Harness />)
+
+    for (let attempt = 0; attempt < 3; attempt += 1) fireEvent.click(screen.getByRole('button', { name: '把卡片藏回夹层' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('邀请再次消失')
+    expect(screen.getByText(/线索：正面保留着完整邀请句/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '请阿团只摆好卡片正面' }))
+    expect(screen.getByText('先确认谁在发出邀请。')).toBeInTheDocument()
+
+    for (let attempt = 0; attempt < 3; attempt += 1) fireEvent.click(screen.getByRole('button', { name: '先放上默默的名牌' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('颠倒邀请方向')
+    expect(screen.getByText(/线索：卡片上的句子来自阿团/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '请阿团放上自己的名牌' }))
+    expect(screen.getByText('另一边怎么放？')).toBeInTheDocument()
+  })
+
+  it('keeps attempts bounded and lets the user finish after repeated mistakes', () => {
+    const onComplete = vi.fn()
+    const Harness = () => {
+      const [progress, setProgress] = useState<AtuanThirdActProgress>({
+        ...createAtuanLaterActProgress('s1-p3-atuan', 'open_box_first'),
+        arrivalReplyId: 'ask_sixth_card',
+        highlightOrder: ['box_key', 'sixth_card', 'empty_seat'],
+        followupId: 'leave_answer',
+        gameStarted: true,
+        game: { boxUnlocked: true, invitationPlaced: true, atuanNamePlaced: true, otherSeat: 'unset', attempts: 20 },
+      })
+      return <AtuanLaterActExperience unitId='s1-p3-atuan' background='table.webp' character='atuan.webp' progress={progress} onProgress={(next) => { if (next.unitId === 's1-p3-atuan') setProgress(next) }} onComplete={onComplete} />
+    }
+    render(<Harness />)
+
+    fireEvent.click(screen.getByRole('button', { name: '替默默写上名字' }))
+    fireEvent.click(screen.getByRole('button', { name: '把另一边留空' }))
+    fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
+
+    expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ game: expect.objectContaining({ attempts: 0, otherSeat: 'blank' }) }))
+  })
+
+  it('uses the replay namespace to vary choice order deterministically', () => {
+    const progress: AtuanThirdActProgress = {
+      ...createAtuanLaterActProgress('s1-p3-atuan', 'open_box_first'),
+      arrivalReplyId: 'ask_sixth_card',
+      highlightOrder: ['box_key', 'sixth_card', 'empty_seat'],
+      followupId: 'leave_answer',
+      gameStarted: true,
+    }
+    const props = { unitId: 's1-p3-atuan' as const, background: 'table.webp', character: 'atuan.webp', progress, onProgress: vi.fn(), onComplete: vi.fn() }
+    const { container, rerender } = render(<AtuanLaterActExperience {...props} variantKey='a' />)
+    const firstOrder = [...container.querySelectorAll('.atuan-later-experience__choice')].map((node) => node.textContent)
+    rerender(<AtuanLaterActExperience {...props} variantKey='b' />)
+    const secondOrder = [...container.querySelectorAll('.atuan-later-experience__choice')].map((node) => node.textContent)
+
+    expect(secondOrder).not.toEqual(firstOrder)
+    rerender(<AtuanLaterActExperience {...props} variantKey='a' />)
+    expect([...container.querySelectorAll('.atuan-later-experience__choice')].map((node) => node.textContent)).toEqual(firstOrder)
+  })
+
+  it('also varies the second-act seating choices by replay namespace', () => {
+    const progress: AtuanLaterActProgress = {
+      ...createAtuanLaterActProgress('s1-p2-atuan', 'read_plan_first'),
+      arrivalReplyId: 'ask_fold_history',
+      highlightOrder: ['plan_folds', 'chair_scuffs', 'blank_place'],
+      followupId: 'leave_choice',
+      gameStarted: true,
+    }
+    const props = { unitId: 's1-p2-atuan' as const, background: 'pavilion.webp', character: 'atuan.webp', progress, onProgress: vi.fn(), onComplete: vi.fn() }
+    const { container, rerender } = render(<AtuanLaterActExperience {...props} variantKey='a' />)
+    const firstOrder = [...container.querySelectorAll('.atuan-later-experience__choice')].map((node) => node.textContent)
+    rerender(<AtuanLaterActExperience {...props} variantKey='b' />)
+    const secondOrder = [...container.querySelectorAll('.atuan-later-experience__choice')].map((node) => node.textContent)
+
+    expect(secondOrder).not.toEqual(firstOrder)
   })
 })

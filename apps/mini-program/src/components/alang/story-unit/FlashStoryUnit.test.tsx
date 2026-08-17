@@ -212,7 +212,7 @@ describe('FlashStoryUnit production flow', () => {
     for (const name of ['查看反复折过的座位图', '查看椅脚旁的浅痕', '查看没有名字的席位卡']) fireEvent.click(screen.getByRole('button', { name }))
     fireEvent.click(screen.getByRole('button', { name: '把你的邀请说清，把舒服的距离留给他选。' }))
     fireEvent.click(screen.getByRole('button', { name: '和阿团一起摆好座位图' }))
-    fireEvent.click(screen.getByRole('button', { name: '把座位图转正' }))
+    fireEvent.click(screen.getByRole('button', { name: '让朝上记号停在右下角' }))
     fireEvent.click(screen.getByRole('button', { name: '留出能自在说话的距离' }))
     fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
     expect(submit).toHaveBeenCalledTimes(1)
@@ -299,9 +299,9 @@ describe('FlashStoryUnit production flow', () => {
     for (const name of ['查看木箱旁的钥匙', '查看回来的第六张卡', '查看座位图上空着的另一边']) fireEvent.click(screen.getByRole('button', { name }))
     fireEvent.click(screen.getByRole('button', { name: '告诉他不用现在回答，这个位置不会催他。' }))
     fireEvent.click(screen.getByRole('button', { name: '和阿团一起打开这份迟到的邀请' }))
-    fireEvent.click(screen.getByRole('button', { name: '用钥匙打开夹层' }))
-    fireEvent.click(screen.getByRole('button', { name: '把第六张卡摆到座位图中央' }))
-    fireEvent.click(screen.getByRole('button', { name: '放上阿团的名牌' }))
+    fireEvent.click(screen.getByRole('button', { name: '对齐齿痕后转动钥匙' }))
+    fireEvent.click(screen.getByRole('button', { name: '只看正面并摆到座位图中央' }))
+    fireEvent.click(screen.getByRole('button', { name: '先放上阿团的名牌' }))
     fireEvent.click(screen.getByRole('button', { name: '替默默写上名字' }))
     expect(screen.getByRole('alert')).toHaveTextContent('不能替默默写下答案')
     fireEvent.click(screen.getByRole('button', { name: '把另一边留空' }))
@@ -315,7 +315,7 @@ describe('FlashStoryUnit production flow', () => {
         arrivalReplyId: 'ask_sixth_card',
         actionId: 'open_returned_card',
         endingId: 'answer_left_open',
-        game: expect.objectContaining({ invitationPlaced: true, otherSeat: 'blank', attempts: 1 }),
+        game: expect.objectContaining({ invitationPlaced: true, otherSeat: 'blank', attempts: 0 }),
       }),
     }))
   })
@@ -401,12 +401,15 @@ describe('FlashStoryUnit production flow', () => {
     fireEvent.click(screen.getByRole('button', { name: '继续追问' }))
     fireEvent.click(screen.getByRole('button', { name: '为什么把笔帽故意换乱？' }))
     fireEvent.click(screen.getByRole('button', { name: '开始校对颜色' }))
+    fireEvent.click(screen.getByRole('button', { name: '选择证据：沾着暖橙的笔尖' }))
     fireEvent.click(screen.getByRole('button', { name: '选套着橙色笔帽的那支' }))
     expect(screen.getByRole('alert')).toHaveTextContent('请看笔尖真正留下的颜色')
     expect(submit).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: '再看一次' }))
     fireEvent.click(screen.getByRole('button', { name: '选笔尖沾着暖橙的那支' }))
+    fireEvent.click(screen.getByRole('button', { name: '选择证据：几乎干掉的冷蓝笔' }))
     fireEvent.click(screen.getByRole('button', { name: '在废纸上试出那条淡冷蓝' }))
+    fireEvent.click(screen.getByRole('button', { name: '选择证据：折在底层的方向卡' }))
     fireEvent.click(screen.getByRole('button', { name: '用还能清楚书写的中性笔' }))
     expect(screen.getByText('颜色不再替默默躲藏')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '收好默默的颜色选择' }))

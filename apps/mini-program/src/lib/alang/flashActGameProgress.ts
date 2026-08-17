@@ -4,13 +4,15 @@ export interface FlashActGamePlacement {
 }
 
 export interface FlashActGameProgress {
-  version: 'flash-act-game-v1'
+  version: 'flash-act-game-v2'
   unitId: string
   phase: 1 | 2 | 3
   mode: string
   status: 'playing' | 'completed'
   placements: FlashActGamePlacement[]
   pending: FlashActGamePlacement | null
+  revealedItemIds: string[]
+  attemptsByItem: Record<string, number>
 }
 
 const isPlacement = (value: unknown): value is FlashActGamePlacement => Boolean(
@@ -26,13 +28,15 @@ export function createFlashActGameProgress(input: {
   mode: string
 }): FlashActGameProgress {
   return {
-    version: 'flash-act-game-v1',
+    version: 'flash-act-game-v2',
     unitId: input.unitId,
     phase: input.phase,
     mode: input.mode,
     status: 'playing',
     placements: [],
     pending: null,
+    revealedItemIds: [],
+    attemptsByItem: {},
   }
 }
 
@@ -43,8 +47,9 @@ export function restoreFlashActGameProgress(
   const fallback = createFlashActGameProgress(expected)
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback
   const candidate = value as Partial<FlashActGameProgress>
+  const candidateVersion = (value as { version?: unknown }).version
   if (
-    candidate.version !== 'flash-act-game-v1'
+    (candidateVersion !== 'flash-act-game-v1' && candidateVersion !== 'flash-act-game-v2')
     || candidate.unitId !== expected.unitId
     || candidate.phase !== expected.phase
     || candidate.mode !== expected.mode
@@ -63,11 +68,19 @@ export function restoreFlashActGameProgress(
     ? candidate.pending
     : null
   const completed = placements.length === expected.itemIds.length && candidate.status === 'completed'
+  const revealedItemIds = candidateVersion === 'flash-act-game-v2' && Array.isArray(candidate.revealedItemIds)
+    ? [...new Set(candidate.revealedItemIds.filter((id): id is string => typeof id === 'string' && expected.itemIds.includes(id)))]
+    : []
+  const attemptsByItem = candidateVersion === 'flash-act-game-v2' && candidate.attemptsByItem && typeof candidate.attemptsByItem === 'object'
+    ? Object.fromEntries(expected.itemIds.map((id) => [id, Math.max(0, Math.min(20, Number((candidate.attemptsByItem as Record<string, unknown>)[id]) || 0))]))
+    : {}
   return {
     ...fallback,
     status: completed ? 'completed' : 'playing',
     placements,
     pending: completed ? null : pending,
+    revealedItemIds,
+    attemptsByItem,
   }
 }
 
@@ -79,8 +92,9 @@ export function completedFlashActGamePlacements(
   if (Array.isArray(value) && value.length === 3 && value.every(isPlacement)) return value
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const candidate = value as Partial<FlashActGameProgress>
+  const candidateVersion = (value as { version?: unknown }).version
   if (
-    candidate.version !== 'flash-act-game-v1'
+    (candidateVersion !== 'flash-act-game-v1' && candidateVersion !== 'flash-act-game-v2')
     || candidate.unitId !== expected.unitId
     || candidate.phase !== expected.phase
     || candidate.status !== 'completed'

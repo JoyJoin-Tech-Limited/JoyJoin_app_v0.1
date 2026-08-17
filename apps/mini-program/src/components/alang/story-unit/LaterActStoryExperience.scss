@@ -474,6 +474,50 @@
   display: block;
 }
 
+.later-act-game__instruction,
+.later-act-game__clue {
+  display: block;
+  margin-top: 16rpx;
+  color: $color-text-secondary-on-light;
+  font-size: $font-size-sm;
+  line-height: 1.55;
+}
+
+.later-act-game__evidence-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.later-act-game__evidence,
+.later-act-game__assist,
+.later-act-game__evidence-lock {
+  display: flex;
+  min-height: 88rpx;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 16rpx 24rpx;
+  border: 2rpx solid rgba($color-primary, 0.18);
+  border-radius: 24rpx;
+  color: $color-text-primary-warm;
+  background: $color-surface;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  line-height: 1.45;
+  text-align: center;
+  transition: transform 160ms ease-out, background-color 160ms ease-out;
+}
+
+.later-act-game__evidence--pressed { transform: scale(0.985); }
+.later-act-object__clue-action--pressed,
+.later-act-game__retry-action--pressed,
+.later-act-game__assist--pressed { transform: scale(0.985); }
+.later-act-game__evidence-lock { margin-top: 16rpx; color: $color-primary-dark; background: rgba($color-primary, 0.08); }
+.later-act-game__assist { margin-top: 16rpx; color: $color-surface; background: $color-primary; }
+.later-act-game__clue { color: $color-primary-dark; }
+
 .later-act-game__step {
   margin-top: 24rpx;
   color: $color-primary;
@@ -503,6 +547,10 @@
   .later-act-scene__hotspot,
   .later-act-experience__choice,
   .later-act-experience__primary-action,
+  .later-act-game__evidence,
+  .later-act-game__assist,
+  .later-act-game__retry-action,
+  .later-act-object__clue-action,
   .later-act-scene__character {
     animation: none;
     transition: none;

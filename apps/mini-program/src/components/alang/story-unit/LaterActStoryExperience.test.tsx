@@ -100,6 +100,29 @@ describe('LaterActStoryExperience', () => {
     expect(restored.gameComplete).toBe(false)
   })
 
+  it('restores v2 evidence state only inside the matching act and migrates v1 safely', () => {
+    const config = getCustomLaterActConfig('s1-p3-shiqi')
+    const base = {
+      ...createLaterActProgress(config.unitId),
+      approachId: config.approaches[0].id,
+      seenHighlightIds: config.highlights.map(({ id }) => id),
+      objectOpened: true,
+      seenDetailIds: config.objectExploration.details.map(({ id }) => id),
+      followupId: config.followUps[0].id,
+      gameStarted: true,
+      gameStep: 1,
+      selectedEvidenceId: config.objectExploration.details[1].id,
+      stepMistakes: [1, 3, 0],
+    }
+    const restored = restoreLaterActProgress(config, base)
+    expect(restored.selectedEvidenceId).toBe(config.objectExploration.details[1].id)
+    expect(restored.stepMistakes).toEqual([1, 3, 0])
+
+    expect(restoreLaterActProgress(getCustomLaterActConfig('s1-p2-shiqi'), base).stage).toBe('approach')
+    expect(restoreLaterActProgress(config, { ...base, version: 'npc-later-act-v1' }).selectedEvidenceId).toBeNull()
+    expect(restoreLaterActProgress(config, { ...base, selectedEvidenceId: config.objectExploration.details[0].id }).selectedEvidenceId).toBeNull()
+  })
+
   it('shows the full image and makes a wrong game answer retryable without advancing', () => {
     const config = getCustomLaterActConfig('s1-p3-momo')
     const onGameComplete = vi.fn()
@@ -134,6 +157,7 @@ describe('LaterActStoryExperience', () => {
 
     expect(screen.getByTestId('later-act-background')).toHaveAttribute('src', 'complete-scene.jpg')
     expect(screen.getByTestId('later-act-background')).toHaveAttribute('mode', 'aspectFit')
+    fireEvent.click(screen.getByRole('button', { name: `选择证据：${config.objectExploration.details[0].label}` }))
     fireEvent.click(screen.getByRole('button', { name: '放只有默默懂的颜色暗号' }))
     expect(screen.getByRole('alert')).toHaveTextContent('第一格先把时间说清楚')
     expect(screen.getByLabelText('已完成 0 步，共 3 步')).toBeInTheDocument()
@@ -142,6 +166,32 @@ describe('LaterActStoryExperience', () => {
     fireEvent.click(screen.getByRole('button', { name: '再看一次' }))
     fireEvent.click(screen.getByRole('button', { name: '放一段可以商量的出发时间' }))
     expect(screen.getByText('第 2 步')).toBeInTheDocument()
+  })
+
+  it('requires evidence before action and reveals an assist after repeated wrong evidence', () => {
+    const config = getCustomLaterActConfig('s1-p2-alang')
+    const Harness = () => {
+      const [progress, setProgress] = useState<LaterActProgress>({
+        ...createLaterActProgress(config.unitId),
+        stage: 'game',
+        approachId: config.approaches[0].id,
+        seenHighlightIds: config.highlights.map(({ id }) => id),
+        objectOpened: true,
+        seenDetailIds: config.objectExploration.details.map(({ id }) => id),
+        followupId: config.followUps[0].id,
+        gameStarted: true,
+      })
+      return <LaterActStoryExperience config={config} stage={progress.stage} background='scene.jpg' progress={progress} onProgress={setProgress} onApproach={vi.fn()} onExplorationComplete={vi.fn()} onFollowup={vi.fn()} onGameComplete={vi.fn()} onComplete={vi.fn()} />
+    }
+    render(<Harness />)
+    expect(screen.queryByRole('button', { name: config.game.steps[0].choices[0].label })).not.toBeInTheDocument()
+    const wrongEvidence = config.objectExploration.details[1]
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      fireEvent.click(screen.getByRole('button', { name: `选择证据：${wrongEvidence.label}` }))
+      if (attempt >= 1) expect(screen.getByText(/线索：/)).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: '再看一次' }))
+    }
+    expect(screen.getByRole('button', { name: '请角色标出关键痕迹' })).toBeInTheDocument()
   })
 
   it('falls back to a solid scene without hiding story controls when an image fails', () => {

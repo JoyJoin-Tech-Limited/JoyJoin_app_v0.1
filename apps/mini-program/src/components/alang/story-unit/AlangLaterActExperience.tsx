@@ -64,6 +64,7 @@ export function V2LaterActExperience({
       character={character}
       progress={progress}
       disabled={disabled}
+      variantKey={storageKey}
       onProgress={setProgress}
       onApproach={() => onContinue()}
       onExplorationComplete={() => onContinue()}

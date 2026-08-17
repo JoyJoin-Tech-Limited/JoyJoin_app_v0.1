@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { haptics } from '../../../lib/utils/haptics'
+import { deterministicGameOrder, getFailureAssistance } from '../../../lib/alang/flashGameDifficulty'
 import './LaterActStoryExperience.scss'
 
 export type LaterActExperienceStage = 'approach' | 'explore' | 'object' | 'followup' | 'game' | 'ending'
@@ -78,7 +79,7 @@ export interface LaterActStoryConfig {
 }
 
 export interface LaterActProgress {
-  version: 'npc-later-act-v1'
+  version: 'npc-later-act-v2'
   unitId: string
   stage: LaterActExperienceStage
   approachId: string | null
@@ -90,6 +91,8 @@ export interface LaterActProgress {
   gameStep: number
   gameComplete: boolean
   mistakes: number
+  stepMistakes: number[]
+  selectedEvidenceId: string | null
   wrongChoiceId: string | null
 }
 
@@ -97,7 +100,7 @@ export const laterActStorageKey = (unitId: string, encounterId: string) => `joyj
 
 export function createLaterActProgress(unitId: string): LaterActProgress {
   return {
-    version: 'npc-later-act-v1',
+    version: 'npc-later-act-v2',
     unitId,
     stage: 'approach',
     approachId: null,
@@ -109,6 +112,8 @@ export function createLaterActProgress(unitId: string): LaterActProgress {
     gameStep: 0,
     gameComplete: false,
     mistakes: 0,
+    stepMistakes: [0, 0, 0],
+    selectedEvidenceId: null,
     wrongChoiceId: null,
   }
 }
@@ -117,7 +122,8 @@ export function restoreLaterActProgress(config: LaterActStoryConfig, value: unkn
   const fallback = createLaterActProgress(config.unitId)
   if (!value || typeof value !== 'object') return fallback
   const candidate = value as Partial<LaterActProgress>
-  if (candidate.version !== 'npc-later-act-v1' || candidate.unitId !== config.unitId) return fallback
+  const storedVersion = (candidate as { version?: unknown }).version
+  if ((storedVersion !== 'npc-later-act-v1' && storedVersion !== 'npc-later-act-v2') || candidate.unitId !== config.unitId) return fallback
   const highlightIds = new Set(config.highlights.map(({ id }) => id))
   const detailIds = new Set(config.objectExploration.details.map(({ id }) => id))
   const approachIds = new Set(config.approaches.map(({ id }) => id))
@@ -146,9 +152,17 @@ export function restoreLaterActProgress(config: LaterActStoryConfig, value: unkn
   const gameComplete = candidate.gameComplete === true && rawGameStep === maxGameStep
   const gameStep = gameComplete ? maxGameStep : Math.min(rawGameStep, maxGameStep - 1)
   const currentChoiceIds = new Set(config.game.steps[gameStep]?.choices.map(({ id }) => id) ?? [])
-  const wrongChoiceId = typeof candidate.wrongChoiceId === 'string' && currentChoiceIds.has(candidate.wrongChoiceId)
+  const evidenceIds = new Set(config.objectExploration.details.map(({ id }) => id))
+  const expectedEvidenceId = config.objectExploration.details[gameStep]?.id
+  const selectedEvidenceId = storedVersion === 'npc-later-act-v2' && typeof candidate.selectedEvidenceId === 'string' && evidenceIds.has(candidate.selectedEvidenceId) && candidate.selectedEvidenceId === expectedEvidenceId
+    ? candidate.selectedEvidenceId
+    : null
+  const wrongChoiceId = typeof candidate.wrongChoiceId === 'string' && (currentChoiceIds.has(candidate.wrongChoiceId) || (candidate.wrongChoiceId.startsWith('evidence:') && evidenceIds.has(candidate.wrongChoiceId.slice(9))))
     ? candidate.wrongChoiceId
     : null
+  const stepMistakes = storedVersion === 'npc-later-act-v2' && Array.isArray(candidate.stepMistakes)
+    ? config.game.steps.map((_, index) => Math.max(0, Math.min(20, Number(candidate.stepMistakes?.[index]) || 0)))
+    : config.game.steps.map(() => 0)
   return {
     ...followupProgress,
     stage: gameComplete ? 'ending' : 'game',
@@ -156,6 +170,8 @@ export function restoreLaterActProgress(config: LaterActStoryConfig, value: unkn
     gameStep,
     gameComplete,
     mistakes: Number.isInteger(candidate.mistakes) ? Math.max(0, Number(candidate.mistakes)) : 0,
+    stepMistakes,
+    selectedEvidenceId: gameComplete ? null : selectedEvidenceId,
     wrongChoiceId,
   }
 }
@@ -167,6 +183,7 @@ interface LaterActStoryExperienceProps {
   character?: string
   progress: LaterActProgress
   disabled?: boolean
+  variantKey?: string
   onProgress: (progress: LaterActProgress) => void
   onApproach: (index: 0 | 1, choice: LaterActChoice) => void
   onExplorationComplete: () => void
@@ -178,6 +195,7 @@ interface LaterActStoryExperienceProps {
 function findLatestSpeech(config: LaterActStoryConfig, progress: LaterActProgress, stage: LaterActExperienceStage): string {
   if (stage === 'ending') return config.ending.speech
   if (progress.wrongChoiceId && stage === 'game') {
+    if (progress.wrongChoiceId.startsWith('evidence:')) return '这条细节解释不了当前动作。先找和这一小步直接相关的痕迹。'
     const step = config.game.steps[Math.min(progress.gameStep, config.game.steps.length - 1)]
     return step?.choices.find(({ id }) => id === progress.wrongChoiceId)?.feedback ?? config.game.intro
   }
@@ -202,6 +220,7 @@ export function LaterActStoryExperience({
   character,
   progress,
   disabled = false,
+  variantKey = config.unitId,
   onProgress,
   onApproach,
   onExplorationComplete,
@@ -241,16 +260,38 @@ export function LaterActStoryExperience({
     haptics('light')
   }
 
+  const currentGameStep = config.game.steps[Math.min(progress.gameStep, config.game.steps.length - 1)]
+  const correctEvidence = config.objectExploration.details[Math.min(progress.gameStep, config.objectExploration.details.length - 1)]
+  const evidenceChoices = deterministicGameOrder(config.objectExploration.details, `${variantKey}:${progress.gameStep}`)
+  const currentStepMistakes = progress.stepMistakes[progress.gameStep] ?? 0
+  const assistance = getFailureAssistance(currentStepMistakes)
+
+  const recordGameMistake = (wrongChoiceId: string) => {
+    const nextStepMistakes = [...progress.stepMistakes]
+    nextStepMistakes[progress.gameStep] = Math.min(20, currentStepMistakes + 1)
+    update({ wrongChoiceId, mistakes: progress.mistakes + 1, stepMistakes: nextStepMistakes })
+  }
+
+  const chooseEvidence = (evidenceId: string) => {
+    if (disabled || progress.wrongChoiceId || progress.gameComplete || !correctEvidence) return
+    haptics(evidenceId === correctEvidence.id ? 'light' : 'medium')
+    if (evidenceId !== correctEvidence.id) {
+      recordGameMistake(`evidence:${evidenceId}`)
+      return
+    }
+    update({ selectedEvidenceId: evidenceId, wrongChoiceId: null })
+  }
+
   const chooseGameOption = (choice: LaterActGameChoice) => {
-    if (disabled || progress.wrongChoiceId || progress.gameComplete) return
+    if (disabled || progress.wrongChoiceId || progress.gameComplete || progress.selectedEvidenceId !== correctEvidence?.id) return
     haptics(choice.correct ? 'light' : 'medium')
     if (!choice.correct) {
-      update({ wrongChoiceId: choice.id, mistakes: progress.mistakes + 1 })
+      recordGameMistake(choice.id)
       return
     }
     const nextStep = progress.gameStep + 1
     const gameComplete = nextStep >= config.game.steps.length
-    update({ gameStep: nextStep, gameComplete, wrongChoiceId: null, stage: gameComplete ? 'ending' : 'game' })
+    update({ gameStep: nextStep, gameComplete, selectedEvidenceId: null, wrongChoiceId: null, stage: gameComplete ? 'ending' : 'game' })
     if (gameComplete) {
       haptics('success')
       onGameComplete()
@@ -415,7 +456,7 @@ export function LaterActStoryExperience({
                 <View className='later-act-object__clue' data-testid='later-act-object-clue'>
                   <Text className='later-act-object__clue-title'>{activeDetail.label}</Text>
                   <Text className='later-act-object__clue-copy'>{activeDetail.clue}</Text>
-                  <View className='later-act-object__clue-action' role='button' aria-label={`收下${activeDetail.label}的细节`} onClick={settleDetail}><Text>收下这处细节</Text></View>
+                  <View className='later-act-object__clue-action' hoverClass={disabled ? '' : 'later-act-object__clue-action--pressed'} role='button' aria-label={`收下${activeDetail.label}的细节`} aria-disabled={disabled} onClick={settleDetail}><Text>收下这处细节</Text></View>
                 </View>
               ) : null}
               {detailsComplete && !activeDetail ? (
@@ -483,14 +524,29 @@ export function LaterActStoryExperience({
               ) : progress.wrongChoiceId ? (
                 <View className='later-act-game__retry' role='alert'>
                   <Text>{findLatestSpeech(config, progress, 'game')}</Text>
-                  <View className='later-act-game__retry-action' role='button' aria-label='再看一次' onClick={() => update({ wrongChoiceId: null })}><Text>再看一次</Text></View>
+                  {assistance.showClue ? <Text className='later-act-game__clue'>线索：{correctEvidence?.clue}</Text> : null}
+                  <View className='later-act-game__retry-action' hoverClass={disabled ? '' : 'later-act-game__retry-action--pressed'} role='button' aria-label='再看一次' aria-disabled={disabled} onClick={() => { if (!disabled) update({ wrongChoiceId: null }) }}><Text>再看一次</Text></View>
                 </View>
               ) : (
                 <View className='later-act-game'>
                   <Text className='later-act-game__step'>第 {progress.gameStep + 1} 步</Text>
-                  <Text className='later-act-game__prompt'>{config.game.steps[progress.gameStep]?.prompt}</Text>
-                  <View className='later-act-experience__choices'>
-                    {config.game.steps[progress.gameStep]?.choices.map((choice) => (
+                  <Text className='later-act-game__prompt'>{currentGameStep?.prompt}</Text>
+                  {!progress.selectedEvidenceId ? (
+                    <>
+                      <Text className='later-act-game__instruction'>先从刚才看过的细节里，找出能证明这一步的痕迹。</Text>
+                      <View className='later-act-game__evidence-grid'>
+                        {evidenceChoices.map((detail) => (
+                          <View key={detail.id} className='later-act-game__evidence' hoverClass={disabled ? '' : 'later-act-game__evidence--pressed'} role='button' aria-label={`选择证据：${detail.label}`} aria-disabled={disabled} onClick={() => chooseEvidence(detail.id)}><Text>{detail.label}</Text></View>
+                        ))}
+                      </View>
+                      {assistance.assist && correctEvidence ? <View className='later-act-game__assist' hoverClass={disabled ? '' : 'later-act-game__assist--pressed'} role='button' aria-label='请角色标出关键痕迹' aria-disabled={disabled} onClick={() => { if (!disabled) update({ selectedEvidenceId: correctEvidence.id, wrongChoiceId: null }) }}><Text>请{config.npcName}标出关键痕迹</Text></View> : null}
+                    </>
+                  ) : (
+                    <>
+                      <View className='later-act-game__evidence-lock' role='status'><Text>证据已锁定：{correctEvidence?.label}</Text></View>
+                      <Text className='later-act-game__instruction'>现在根据这条痕迹完成实际操作。</Text>
+                      <View className='later-act-experience__choices'>
+                    {currentGameStep?.choices.map((choice) => (
                       <View
                         key={choice.id}
                         className='later-act-experience__choice'
@@ -501,7 +557,9 @@ export function LaterActStoryExperience({
                         onClick={() => chooseGameOption(choice)}
                       ><Text className='later-act-experience__choice-copy'>{choice.label}</Text></View>
                     ))}
-                  </View>
+                      </View>
+                    </>
+                  )}
                 </View>
               )}
             </View>

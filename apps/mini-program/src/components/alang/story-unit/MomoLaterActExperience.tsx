@@ -50,6 +50,7 @@ export function FlatLaterActExperience({
       character={character}
       progress={progress}
       disabled={disabled}
+      variantKey={storageKey}
       onProgress={setProgress}
       onApproach={(index, choice) => onBegin(index, choice.label)}
       onExplorationComplete={() => undefined}

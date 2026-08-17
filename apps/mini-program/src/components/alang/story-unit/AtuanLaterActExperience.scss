@@ -200,8 +200,11 @@
 .atuan-later-experience__complete { justify-content: center; margin-top: 16rpx; background: $color-primary-dark; color: $color-bg-tint-cream; }
 .atuan-later-experience__choice--pressed,
 .atuan-later-experience__game-action--pressed,
+.atuan-later-experience__game-assist--pressed,
 .atuan-later-experience__complete--pressed { transform: scale(0.985); }
 .atuan-later-experience__feedback { display: block; margin: 16rpx 0; padding: 16rpx; border-radius: 16rpx; background: $color-bg-tint-warm; color: $color-amber-700; font-size: $font-size-sm; line-height: 1.45; }
+.atuan-later-experience__game-clue { display:block; margin-top:16rpx; color:$color-primary-dark; font-size:$font-size-sm; line-height:$line-height-relaxed; }
+.atuan-later-experience__game-assist { display:flex; min-height:88rpx; align-items:center; justify-content:center; box-sizing:border-box; margin-top:16rpx; padding:0 24rpx; border-radius:$radius-pill; color:$color-bg-tint-cream; background:$color-primary; font-size:$font-size-base; font-weight:$font-weight-bold; }
 .atuan-later-experience__ending { padding-top: 0; }
 .atuan-later-experience__ending-title { display: block; color: $color-primary-dark; font-size: $font-size-base; font-weight: $font-weight-bold; text-align: center; }
 
@@ -233,6 +236,7 @@
   .atuan-later-experience__game-progress-dot { transition: none; animation: none; }
   .atuan-later-experience__choice,
   .atuan-later-experience__game-action,
+  .atuan-later-experience__game-assist,
   .atuan-later-experience__complete,
   .atuan-later-scene__character { transition: none; animation: none; }
 }

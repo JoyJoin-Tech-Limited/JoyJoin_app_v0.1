@@ -1,6 +1,6 @@
 @import '../../../styles/variables';
 .atuan-cards { min-height: 100vh; min-height: 100dvh; box-sizing: border-box; padding: calc(env(safe-area-inset-top) + 40rpx) 32rpx calc(env(safe-area-inset-bottom) + 40rpx); color: $color-text-primary-warm; background: $color-bg-warm-to; font-family: $font-ui;
-  &__eyebrow,&__title,&__copy,&__card-count,&__card-copy,&__atuan-copy { display:block; }
+  &__eyebrow,&__title,&__copy,&__card-count,&__card-copy,&__observation,&__clue,&__atuan-copy { display:block; }
   &__eyebrow { color:$color-primary-dark; font-size:$font-size-xs; font-weight:$font-weight-bold; letter-spacing:2rpx; }
   &__title { margin-top:12rpx; font-family:$font-cn-display; font-size:$font-size-2xl; font-weight:$font-weight-semibold; }
   &__copy { margin-top:12rpx; color:$color-text-secondary-on-light; font-size:$font-size-sm; line-height:$line-height-relaxed; }
@@ -11,6 +11,10 @@
   &__card-string { position:absolute; top:-24rpx; left:50%; width:72rpx; height:48rpx; border:5rpx solid $color-primary; border-bottom:0; border-radius:40rpx 40rpx 0 0; transform:translateX(-50%); }
   &__card-count { color:$color-text-tertiary-on-light; font-size:$font-size-xs; }
   &__card-copy { margin-top:64rpx; font-size:$font-size-xl; font-weight:$font-weight-semibold; line-height:$line-height-relaxed; text-align:center; }
+  &__observation { margin-top:24rpx; color:$color-text-secondary-on-light; font-size:$font-size-sm; line-height:$line-height-relaxed; text-align:center; }
+  &__reveal,&__assist { display:flex; min-height:88rpx; align-items:center; justify-content:center; box-sizing:border-box; margin-top:24rpx; padding:0 24rpx; border:2rpx solid rgba($color-primary,.22); border-radius:$radius-pill; color:$color-primary-dark; background:$color-bg-tint-purple; font-size:$font-size-base; font-weight:$font-weight-bold; transition:transform 160ms ease-out; }
+  &__reveal--pressed { transform:scale(.985); }
+  &__assist--pressed,&__continue--pressed { transform:scale(.985); }
   &__destinations { display:flex; flex-direction:column; gap:16rpx; }
   &__destination { display:flex; min-height:96rpx; padding:16rpx 24rpx; align-items:center; gap:20rpx; border:2rpx solid rgba($color-primary,.14); border-radius:$card-radius-sm; background:$color-bg-tint-purple; font-size:$font-size-base; font-weight:$font-weight-semibold; transition:transform 160ms ease-out; }
   &__destination--pressed { transform:scale(.985); }
@@ -21,13 +25,16 @@
   &__feedback { padding:28rpx; border:2rpx solid rgba($color-primary,.14); border-radius:$card-radius; background:$color-bg-tint-purple; }
   &__feedback-name { display:block; color:$color-primary-dark; font-size:$font-size-xs; font-weight:$font-weight-bold; letter-spacing:2rpx; }
   &__feedback-copy { display:block; margin-top:12rpx; font-size:$font-size-base; line-height:$line-height-relaxed; }
+  &__clue { margin-top:16rpx; padding:16rpx; border-radius:$card-radius-sm; color:$color-primary-dark; background:rgba($color-primary,.08); font-size:$font-size-sm; line-height:$line-height-relaxed; }
   &__continue { display:flex; min-height:88rpx; margin-top:24rpx; align-items:center; justify-content:center; border-radius:$radius-pill; color:$color-surface; background:$color-primary; font-size:$font-size-base; font-weight:$font-weight-bold; }
   &__atuan-copy { margin-top:28rpx; color:$color-text-secondary-on-light; font-size:$font-size-sm; line-height:$line-height-relaxed; text-align:center; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .atuan-cards__progress-dot,
-  .atuan-cards__destination {
+  .atuan-cards__destination,
+  .atuan-cards__reveal,
+  .atuan-cards__assist {
     transition: none;
   }
 }

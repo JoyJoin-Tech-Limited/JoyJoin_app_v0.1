@@ -389,6 +389,7 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
             character={atuanArrivalAssets.character}
             progress={runtime.atuanLaterAct}
             disabled={submitState === 'submitting'}
+            variantKey={storageScope}
             onProgress={(progress) => transition({ type: 'ATUAN_LATER_ACT_UPDATED', progress })}
             onComplete={completeObject}
           />
