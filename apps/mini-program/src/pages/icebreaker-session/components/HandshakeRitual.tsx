@@ -75,11 +75,21 @@ export function HandshakeRitual({ isHost, vibe, tier, onStart }: HandshakeRitual
   }
 
   if (beatIndex !== null && beatIndex < beats.length) {
+    const beat = beats[beatIndex]
+    const isFinalBeat = beatIndex === beats.length - 1
     return (
-      <View className='handshake-beat' catchMove>
-        <Text className='handshake-beat__text' key={beatIndex}>
-          {beats[beatIndex]}
-        </Text>
+      <View
+        className={`handshake-beat${isFinalBeat ? ' handshake-beat--final' : ''}`}
+        catchMove
+        role='status'
+        aria-label={`齐声倒数：${beat}`}
+      >
+        <View className='handshake-beat__halo' aria-hidden />
+        <View className='handshake-beat__content' key={beatIndex}>
+          <Text className='handshake-beat__eyebrow'>一起倒数</Text>
+          <Text className='handshake-beat__text'>{beat}</Text>
+          <Text className='handshake-beat__label'>准备好，和新朋友说第一句话</Text>
+        </View>
       </View>
     )
   }
