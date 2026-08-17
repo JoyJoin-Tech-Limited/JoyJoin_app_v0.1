@@ -43,6 +43,7 @@
   height: 48%;
   filter: drop-shadow(0 16rpx 22rpx rgba($color-text-primary, 0.25));
   pointer-events: none;
+  animation: atuan-later-character-enter 420ms cubic-bezier(0.22, 1, 0.36, 1);
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
@@ -214,6 +215,11 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes atuan-later-character-enter {
+  from { opacity: 0; transform: translateY(16rpx) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @keyframes atuan-later-game-enter {
   from { opacity: 0; transform: translateY(24rpx); }
   to { opacity: 1; transform: translateY(0); }
@@ -228,5 +234,5 @@
   .atuan-later-experience__choice,
   .atuan-later-experience__game-action,
   .atuan-later-experience__complete,
-  .atuan-later-scene__character { transition: none; }
+  .atuan-later-scene__character { transition: none; animation: none; }
 }

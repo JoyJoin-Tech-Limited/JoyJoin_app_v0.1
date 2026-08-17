@@ -272,10 +272,12 @@ export function LaterActStoryExperience({
           <View className='later-act-scene__hotspots' aria-label='探索现场细节'>
             {config.highlights.map((highlight) => {
               const seen = progress.seenHighlightIds.includes(highlight.id)
+              const focused = activeHighlightId === highlight.id
               return (
                 <View
                   key={highlight.id}
-                  className={`later-act-scene__hotspot ${highlight.placementClassName}${seen ? ' later-act-scene__hotspot--seen' : ''}`}
+                  className={`later-act-scene__hotspot ${highlight.placementClassName}${seen ? ' later-act-scene__hotspot--seen' : ''}${focused ? ' later-act-scene__hotspot--focused' : ''}`}
+                  hoverClass={disabled || seen ? '' : 'later-act-scene__hotspot--pressed'}
                   role='button'
                   aria-label={`${seen ? '已查看' : '查看'}${highlight.label}`}
                   aria-disabled={disabled || seen}
@@ -292,6 +294,7 @@ export function LaterActStoryExperience({
             {highlightsComplete ? (
               <View
                 className={`later-act-scene__hotspot later-act-scene__hotspot--object ${config.objectTarget.placementClassName}`}
+                hoverClass={disabled ? '' : 'later-act-scene__hotspot--pressed'}
                 role='button'
                 aria-label={`打开${config.objectTarget.label}`}
                 aria-disabled={disabled}

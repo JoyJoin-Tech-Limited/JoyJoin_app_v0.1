@@ -517,7 +517,7 @@ describe('formal Flash dialogue', () => {
     })
 
     render(<FlashDialoguePageWithAssets customLaterActAssets={{
-      alangSecond: 'flash-alang-second-act-route-pavilion-v1.jpg',
+      alangSecond: 'flash-alang-second-act-return-shelter-v2.jpg',
       alangThird: 'alang-third.jpg',
       alangCharacter: 'alang-official.png',
       momoSecond: 'momo-second.jpg',
@@ -528,7 +528,7 @@ describe('formal Flash dialogue', () => {
     }} />)
 
     expect(document.querySelector('[data-testid="flash-story-v2-stage"]')).toBeNull()
-    expect(screen.getByTestId('later-act-background')).toHaveAttribute('src', expect.stringContaining('flash-alang-second-act-route-pavilion-v1'))
+    expect(screen.getByTestId('later-act-background')).toHaveAttribute('src', expect.stringContaining('flash-alang-second-act-return-shelter-v2'))
     expect(screen.getByTestId('later-act-character')).toHaveAttribute('src', 'alang-official.png')
     expect(screen.getByText('第二幕 · 断在半程的路线')).toBeInTheDocument()
     const approach = screen.getByRole('button', { name: '先看本子被雨打湿的地方' })

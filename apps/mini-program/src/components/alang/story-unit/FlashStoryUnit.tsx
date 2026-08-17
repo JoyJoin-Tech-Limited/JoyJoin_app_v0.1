@@ -319,13 +319,10 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const customLaterResult = isFlatLaterActUnitId(definition.unitId)
     ? getCustomLaterActConfig(definition.unitId).result
     : atuanLaterResult
-  const displayedFragment = definition.unitId === 's1-p2-atuan'
-    ? { category: 'relationship', title: '没有替人回答的邀请', fact: '座位图能表达阿团想靠近的心意，但不能替默默决定距离。' }
-    : definition.unitId === 's1-p3-atuan'
-      ? { category: 'key', title: '回来的第六张卡', fact: '第六张卡一直留在箱底夹层；它是一份迟到的邀请，不是默默的回答。' }
-      : isFlatLaterActUnitId(definition.unitId)
-        ? getCustomLaterActConfig(definition.unitId).result.fragment
-      : story.fragment
+  // The settlement response is the collection source of truth. Showing a
+  // client-authored substitute here made the fragment appear to change after
+  // the user opened their collection.
+  const displayedFragment = story.fragment
   const storyAction = definition.unitId === 's1-p1-atuan'
     ? '阿团站在长椅旁，目光越过你，仍旧望着公园入口。'
     : story.action

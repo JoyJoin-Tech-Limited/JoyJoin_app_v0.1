@@ -15,7 +15,7 @@ const targets = [
 ] as const
 
 describe('FirstActHighlightOverlay', () => {
-  it('matches Atuan by showing only the remaining targets with one shared marker grammar', () => {
+  it('matches Atuan by keeping completed targets visible with one shared marker grammar', () => {
     const onSelect = vi.fn()
     render(
       <FirstActHighlightOverlay
@@ -27,8 +27,8 @@ describe('FirstActHighlightOverlay', () => {
       />,
     )
 
-    expect(screen.getAllByTestId('demo-first-act-hotspot')).toHaveLength(3)
-    expect(screen.queryByRole('button', { name: '观察物件一' })).not.toBeInTheDocument()
+    expect(screen.getAllByTestId('demo-first-act-hotspot')).toHaveLength(4)
+    expect(screen.getByRole('button', { name: '观察物件一' })).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByRole('button', { name: '观察物件二' })).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(screen.getByRole('button', { name: '观察物件三' }))
     expect(onSelect).toHaveBeenCalledWith('three')

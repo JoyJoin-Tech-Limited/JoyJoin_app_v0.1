@@ -22,10 +22,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: $cta-min-tap;
-  min-width: $cta-min-tap;
-  height: $cta-min-tap;
-  min-height: $cta-min-tap;
+  width: 92rpx;
+  min-width: 92rpx;
+  height: 92rpx;
+  min-height: 92rpx;
   padding: 0;
   box-sizing: border-box;
   pointer-events: auto;
@@ -36,39 +36,43 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 56rpx;
-    height: 56rpx;
-    border: 2rpx solid rgba($color-surface, 0.92);
+    width: 60rpx;
+    height: 60rpx;
+    border: 4rpx solid $color-bg-tint-cream;
     border-radius: 50%;
-    background: rgba(55, 46, 52, 0.5);
-    box-shadow: 0 8rpx 16rpx rgba($color-text-primary-warm, 0.22);
+    background: transparent;
+    box-shadow: 0 0 0 8rpx rgba($color-primary-dark, 0.35), 0 8rpx 16rpx rgba($color-text-primary, 0.32);
     box-sizing: border-box;
-    animation: first-act-highlight-breathe 1.9s ease-in-out infinite;
-  }
-
-  &__core {
-    width: 16rpx;
-    height: 16rpx;
-    border-radius: 50%;
-    background: $color-primary;
-    box-shadow: 0 0 0 8rpx rgba($color-surface, 0.16);
+    animation: first-act-highlight-breathe 1.8s ease-in-out infinite;
   }
 
   &--active {
     z-index: 2;
 
     .first-act-highlight__marker {
-      box-shadow: 0 0 0 8rpx rgba($color-primary, 0.18), 0 8rpx 16rpx rgba($color-text-primary-warm, 0.22);
+      transform: scale(1.12);
+      box-shadow: 0 0 0 10rpx rgba($color-bg-tint-cream, 0.4), 0 8rpx 24rpx rgba($color-text-primary, 0.34);
+    }
+  }
+
+  &--seen {
+    pointer-events: none;
+
+    .first-act-highlight__marker {
+      border-color: $color-primary-dark;
+      background: $color-bg-tint-cream;
+      box-shadow: 0 0 0 6rpx rgba($color-bg-tint-cream, 0.32);
+      animation: none;
     }
   }
 
   &--pressed {
-    transform: scale(0.92);
+    transform: scale(0.94);
   }
 }
 
 @keyframes first-act-highlight-breathe {
-  0%, 100% { opacity: 0.78; transform: scale(0.94); }
+  0%, 100% { opacity: 0.72; transform: scale(0.88); }
   50% { opacity: 1; transform: scale(1); }
 }
 

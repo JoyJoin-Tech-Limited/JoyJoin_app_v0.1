@@ -362,6 +362,8 @@ describe('FlashStoryUnit production flow', () => {
     expect(resultExit).not.toBeNull()
     expect(resultPanel).toContainElement(resultExit)
     expect(resultExit).toContainElement(continueButton)
+    expect(screen.getByText('一句完整的邀请')).toBeInTheDocument()
+    expect(screen.queryByText('可以稍后回答的邀请')).not.toBeInTheDocument()
     fireEvent.click(continueButton)
     expect(onContinue).toHaveBeenCalledTimes(1)
   })
@@ -381,7 +383,7 @@ describe('FlashStoryUnit production flow', () => {
       { id: 'momo-color', label: '旧选项一' },
       { id: 'momo-card', label: '旧选项二' },
     ] }
-    render(<FlashStoryUnit encounterId='enc-momo-p2' npc={npc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={6} submitState='idle' submitError='' momoLaterActScenes={{ second: 'flash-momo-second-act-color-route-v1.jpg', third: 'flash-momo-third-act-complete-invitation-v1.jpg' }} onSubmit={submit} onContinue={vi.fn()} />)
+    render(<FlashStoryUnit encounterId='enc-momo-p2' npc={npc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={6} submitState='idle' submitError='' momoLaterActScenes={{ second: 'flash-momo-second-act-listening-pavilion-v2.jpg', third: 'flash-momo-third-act-invitation-panels-v2.jpg' }} onSubmit={submit} onContinue={vi.fn()} />)
 
     expect(screen.getByTestId('later-act-background')).toHaveAttribute('src', expect.stringContaining('flash-momo-second-act'))
     fireEvent.click(screen.getByRole('button', { name: '先核对路线真正留下的颜色' }))

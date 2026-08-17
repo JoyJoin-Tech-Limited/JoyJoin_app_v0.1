@@ -168,14 +168,14 @@ describe('Atuan first-arrival asset ownership', () => {
       expect(buildWorkflow, `${fileName} must be required in the compiled package`).toContain(fileName)
     }
     for (const fileName of [
-      'flash-alang-second-act-route-pavilion-v1.jpg',
-      'flash-alang-third-act-return-pages-v1.jpg',
-      'flash-momo-second-act-color-route-v1.jpg',
-      'flash-momo-third-act-complete-invitation-v1.jpg',
-      'flash-lizi-second-act-repeated-circles-v1.jpg',
-      'flash-lizi-third-act-first-outing-v1.jpg',
-      'flash-shiqi-second-act-private-record-v1.jpg',
-      'flash-shiqi-third-act-return-record-v1.jpg',
+      'flash-alang-second-act-return-shelter-v2.jpg',
+      'flash-alang-third-act-return-cabinet-v2.jpg',
+      'flash-momo-second-act-listening-pavilion-v2.jpg',
+      'flash-momo-third-act-invitation-panels-v2.jpg',
+      'flash-lizi-second-act-color-threshold-v2.jpg',
+      'flash-lizi-third-act-outing-kiosk-v2.jpg',
+      'flash-shiqi-second-act-public-record-wall-v2.jpg',
+      'flash-shiqi-third-act-privacy-return-v2.jpg',
     ]) {
       const assetBytes = readFileSync(resolve(sourceRoot, 'pages/alang-story/assets', fileName))
       expect([...assetBytes.subarray(0, 3)], `${fileName} must be a real JPEG`).toEqual([0xff, 0xd8, 0xff])
@@ -185,10 +185,10 @@ describe('Atuan first-arrival asset ownership', () => {
       expect(buildWorkflow, `${fileName} must be required in the compiled package`).toContain(fileName)
     }
     for (const fileName of [
-      'flash-alang-character-official-v1.png',
-      'flash-momo-character-official-v1.png',
-      'flash-lizi-character-official-v1.png',
-      'flash-shiqi-character-official-v1.png',
+      'flash-alang-character-first-act-v2.png',
+      'flash-momo-character-first-act-v2.png',
+      'flash-lizi-character-first-act-v2.png',
+      'flash-shiqi-character-first-act-v2.png',
     ]) {
       const assetBytes = readFileSync(resolve(sourceRoot, 'pages/alang-story/assets', fileName))
       expect([...assetBytes.subarray(0, 8)], `${fileName} must remain a real PNG`).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])

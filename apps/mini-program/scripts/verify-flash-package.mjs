@@ -23,20 +23,20 @@ const flashDialogueRelativePaths = [
   'pages/alang/assets/ui/flash-atuan-first-arrival-layered-v2.jpg',
 ]
 const laterActRelativePaths = [
-  'pages/alang-story/assets/flash-alang-second-act-route-pavilion-v1.jpg',
-  'pages/alang-story/assets/flash-alang-third-act-return-pages-v1.jpg',
-  'pages/alang-story/assets/flash-momo-second-act-color-route-v1.jpg',
-  'pages/alang-story/assets/flash-momo-third-act-complete-invitation-v1.jpg',
-  'pages/alang-story/assets/flash-lizi-second-act-repeated-circles-v1.jpg',
-  'pages/alang-story/assets/flash-lizi-third-act-first-outing-v1.jpg',
-  'pages/alang-story/assets/flash-shiqi-second-act-private-record-v1.jpg',
-  'pages/alang-story/assets/flash-shiqi-third-act-return-record-v1.jpg',
+  'pages/alang-story/assets/flash-alang-second-act-return-shelter-v2.jpg',
+  'pages/alang-story/assets/flash-alang-third-act-return-cabinet-v2.jpg',
+  'pages/alang-story/assets/flash-momo-second-act-listening-pavilion-v2.jpg',
+  'pages/alang-story/assets/flash-momo-third-act-invitation-panels-v2.jpg',
+  'pages/alang-story/assets/flash-lizi-second-act-color-threshold-v2.jpg',
+  'pages/alang-story/assets/flash-lizi-third-act-outing-kiosk-v2.jpg',
+  'pages/alang-story/assets/flash-shiqi-second-act-public-record-wall-v2.jpg',
+  'pages/alang-story/assets/flash-shiqi-third-act-privacy-return-v2.jpg',
 ]
 const laterActCharacterPaths = [
-  'pages/alang-story/assets/flash-alang-character-official-v1.png',
-  'pages/alang-story/assets/flash-momo-character-official-v1.png',
-  'pages/alang-story/assets/flash-lizi-character-official-v1.png',
-  'pages/alang-story/assets/flash-shiqi-character-official-v1.png',
+  'pages/alang-story/assets/flash-alang-character-first-act-v2.png',
+  'pages/alang-story/assets/flash-momo-character-first-act-v2.png',
+  'pages/alang-story/assets/flash-lizi-character-first-act-v2.png',
+  'pages/alang-story/assets/flash-shiqi-character-first-act-v2.png',
 ]
 const flashReviewedStoryBackgrounds = [
   'pages/alang/assets/onboarding/parallel-standard-paper-world-v1.jpg',

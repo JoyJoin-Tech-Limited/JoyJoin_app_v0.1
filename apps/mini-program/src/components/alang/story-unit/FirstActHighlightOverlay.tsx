@@ -38,7 +38,7 @@ export function FirstActHighlightOverlay({
       aria-label={`可观察区域，已观察 ${completed.size} 处，共 ${targets.length} 处`}
       data-testid={`${testIdPrefix}-highlight-overlay`}
     >
-      {targets.filter((target) => !completed.has(target.id)).map((target) => {
+      {targets.map((target) => {
         const seen = completed.has(target.id)
         const active = activeId === target.id
         const unavailable = disabled || seen || (locked && !active)
@@ -46,7 +46,7 @@ export function FirstActHighlightOverlay({
         return (
           <View
             key={target.id}
-            className={`first-act-highlight ${target.placementClassName}${active ? ' first-act-highlight--active' : ''}`}
+            className={`first-act-highlight ${target.placementClassName}${seen ? ' first-act-highlight--seen' : ''}${active ? ' first-act-highlight--active' : ''}`}
             hoverClass={unavailable ? '' : 'first-act-highlight--pressed'}
             role='button'
             aria-label={`观察${target.label}`}
@@ -58,9 +58,7 @@ export function FirstActHighlightOverlay({
               if (!unavailable) onSelect(target.id)
             }}
           >
-            <View className='first-act-highlight__marker' aria-hidden='true'>
-              <View className='first-act-highlight__core' />
-            </View>
+            <View className='first-act-highlight__marker' aria-hidden='true' />
           </View>
         )
       })}

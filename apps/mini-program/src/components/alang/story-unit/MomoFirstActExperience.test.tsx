@@ -56,7 +56,8 @@ describe('MomoFirstActExperience — Atuan template parity', () => {
     })
     render(<MomoFirstActExperience encounterId='momo-resume' scene='momo.jpg' disabled={false} onSpeechChange={vi.fn()} onComplete={vi.fn()} />)
     expect(screen.getByText('已看见 2/3 处细节')).toBeInTheDocument()
-    expect(screen.getAllByTestId('momo-object-hotspot')).toHaveLength(1)
+    expect(screen.getAllByTestId('momo-object-hotspot')).toHaveLength(3)
+    expect(screen.getByRole('button', { name: '观察干透的收笔点' })).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByRole('button', { name: '观察页缝里的雨声记号' })).toBeInTheDocument()
   })
 
