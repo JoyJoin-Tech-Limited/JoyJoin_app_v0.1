@@ -57,6 +57,11 @@ export function sanitizeStateForClient(
   const sanitized = { ...state };
   delete (sanitized as Partial<SocialSessionState>).xiaoyueAdaptiveSuggestion;
   delete (sanitized as Partial<SocialSessionState>).xiaoyueSessionPackMeta;
+  if (requestingUserId && sanitized.hostUserId !== requestingUserId) {
+    delete sanitized.miniScriptCandidateFramework;
+    delete sanitized.miniScriptCandidateGeneratedAt;
+    delete sanitized.miniScriptCandidateGeneratedByUserId;
+  }
 
   // Strip server-only participant profiles before sending to clients
   if (sanitized.joinedParticipants) {

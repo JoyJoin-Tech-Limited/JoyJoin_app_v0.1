@@ -191,6 +191,9 @@ export function cleanupPhaseStateForNextPhase(
       state.miniScriptFramework = undefined;
       state.miniScriptFrameworkGeneratedAt = undefined;
       state.miniScriptFrameworkGeneratedByUserId = undefined;
+      state.miniScriptCandidateFramework = undefined;
+      state.miniScriptCandidateGeneratedAt = undefined;
+      state.miniScriptCandidateGeneratedByUserId = undefined;
       state.miniScriptRoleAssignments = undefined;
       state.miniScriptPlayerRuntimeViews = undefined;
       state.miniScriptCurrentAct = undefined;

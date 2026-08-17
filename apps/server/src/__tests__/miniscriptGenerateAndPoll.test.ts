@@ -263,7 +263,7 @@ describe('MiniScript generate + social poll', () => {
     delete process.env.SOCIAL_MINISCRIPT_LLM_ENABLED;
   });
 
-  it('GET social session includes miniScriptFramework after generate', async () => {
+  it('GET social session keeps the generated framework as a host candidate until selection', async () => {
     storeCtx.sessions.clear();
     storeCtx.participants.clear();
     storeCtx.lieTruthsStore.clear();
@@ -306,8 +306,9 @@ describe('MiniScript generate + social poll', () => {
       });
       expect(pollRes.status).toBe(200);
       const pollBody = (await pollRes.json()) as SocialSessionState;
-      expect(pollBody.miniScriptFramework?.premise).toBe(genBody.premise);
-      expect(pollBody.miniScriptFramework?.schemaVersion).toBe(2);
+      expect(pollBody.miniScriptFramework).toBeUndefined();
+      expect(pollBody.miniScriptCandidateFramework?.premise).toBe(genBody.premise);
+      expect(pollBody.miniScriptCandidateFramework?.schemaVersion).toBe(2);
     });
   });
 
@@ -376,13 +377,13 @@ describe('MiniScript generate + social poll', () => {
         expect(statusBody.stage).toBe('complete');
 
         // The in-flight dedupe entry must be cleared once the generation
-        // settles: remove the persisted framework and flip the LLM off, so a
+        // settles: remove the persisted candidate and flip the LLM off, so a
         // retry is forced to regenerate. A stale in-flight promise would
         // replay the old 'pipeline_timeout' meta; a fresh generation takes the
         // deterministic 'llm_disabled' path.
         const stored = storeCtx.sessions.get(socialSessionId)!;
-        delete stored.miniScriptFramework;
-        delete stored.miniScriptFrameworkGeneratedAt;
+        delete stored.miniScriptCandidateFramework;
+        delete stored.miniScriptCandidateGeneratedAt;
         process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'false';
 
         const retryRes = await fetch(`${baseUrl}/api/miniscript/generate`, {

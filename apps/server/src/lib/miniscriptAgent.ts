@@ -91,7 +91,7 @@ function getCatalogFallback(params: {
  * Adapt a catalog entry to the requested player count.
  * If catalog has fewer characters, duplicate/adjust. If more, slice.
  */
-function adaptCatalogEntry(
+export function adaptCatalogEntry(
   framework: MiniScriptStoryFramework,
   params: {
     playerCount: number;
@@ -244,6 +244,7 @@ async function pass1Generate(params: {
   lite?: boolean;
   signal?: AbortSignal;
   roster?: Array<{ archetype?: string }>;
+  selectedLabel?: string;
 }): Promise<{
   ok: boolean;
   framework?: MiniScriptStoryFramework;
@@ -262,6 +263,7 @@ async function pass1Generate(params: {
     config: params.config,
     lite: params.lite,
     sessionContext: sessionContext?.mixText ? { mixText: sessionContext.mixText } : undefined,
+    selectedLabel: params.selectedLabel,
   });
 
   let selection;
@@ -438,6 +440,7 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   genres: MiniScriptGenre[];
   lite?: boolean;
   roster?: Array<{ archetype?: string }>;
+  selectedLabel?: string;
   onProgress?: (stage: 'generating' | 'validating' | 'fallback', progress: number) => void;
 }): Promise<{
   framework: MiniScriptStoryFramework;

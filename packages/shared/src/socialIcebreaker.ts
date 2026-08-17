@@ -678,6 +678,10 @@ export interface SocialSessionState {
   miniScriptFramework?: MiniScriptStoryFrameworkPublic;
   miniScriptFrameworkGeneratedAt?: number;
   miniScriptFrameworkGeneratedByUserId?: string;
+  /** Host-preview candidate; not active for gameplay until POST /api/miniscript/select. */
+  miniScriptCandidateFramework?: MiniScriptStoryFrameworkPublic;
+  miniScriptCandidateGeneratedAt?: number;
+  miniScriptCandidateGeneratedByUserId?: string;
   // MiniScript gameplay state
   miniScriptRoleAssignments?: Record<string, number>; // userId -> slotIndex
   miniScriptPlayerRuntimeViews?: Record<string, MiniScriptPlayerRuntimeView>;
