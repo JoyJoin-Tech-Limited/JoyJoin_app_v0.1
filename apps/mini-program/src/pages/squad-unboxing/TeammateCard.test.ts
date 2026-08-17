@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest'
 // longpress-then-immediate-tap = single focus; longpress-then-late-tap = tap
 // processed; the guard can never double-swallow.
 const componentPath = resolve(dirname(fileURLToPath(import.meta.url)), 'TeammateCard.tsx')
+const stylesPath = resolve(dirname(fileURLToPath(import.meta.url)), 'index.scss')
 
 describe('TeammateCard longpress trailing-tap guard', () => {
   const source = readFileSync(componentPath, 'utf8')
@@ -61,6 +62,7 @@ describe('TeammateCard longpress trailing-tap guard', () => {
 
 describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () => {
   const source = readFileSync(componentPath, 'utf8')
+  const styles = readFileSync(stylesPath, 'utf8')
 
   it('renders the rich collectible template (art zone + 4-row info grid)', () => {
     expect(source).toContain('squad-unboxing__deck-card-art')
@@ -88,6 +90,14 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
     expect(source).toContain('setAvatarFailed(true)')
     expect(source).toContain("mode={usingAvatar ? 'aspectFill' : 'aspectFit'}")
     expect(source).toContain('squad-unboxing__deck-card-art-img--avatar')
+  })
+
+  it('keeps every portrait compact instead of filling the art zone', () => {
+    const portraitBlock = styles
+      .split('&__deck-card-art-img {')[1]
+      ?.split('&__deck-card-placeholder')[0] ?? ''
+    expect(portraitBlock).toContain('width: 120rpx;')
+    expect(portraitBlock).toContain('height: 120rpx;')
   })
 
   it('shows exactly one connection-point pill on the card (full list in detail)', () => {

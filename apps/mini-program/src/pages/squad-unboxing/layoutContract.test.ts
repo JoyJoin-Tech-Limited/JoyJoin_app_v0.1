@@ -27,6 +27,18 @@ describe('squad unboxing revealed layout contract', () => {
     expect(pageStyles).toMatch(/&__scroll-content--revealed\s*\{[\s\S]*?justify-content:\s*center;/)
   })
 
+  it('reserves the full fixed dock and moves its description with the CTA', () => {
+    expect(pageStyles).toContain('@include fixed-footer-reserve(184rpx, $spacing-sm);')
+
+    const dockStart = pageSource.indexOf("'squad-unboxing__bottom-dock'")
+    const confirmStart = pageSource.indexOf('squad-unboxing__confirm-btn', dockStart)
+    const descriptionStart = pageSource.indexOf('squad-unboxing__return-thread', confirmStart)
+    const successOverlayStart = pageSource.indexOf('squad-unboxing__success-overlay', descriptionStart)
+    expect(confirmStart).toBeGreaterThan(dockStart)
+    expect(descriptionStart).toBeGreaterThan(confirmStart)
+    expect(successOverlayStart).toBeGreaterThan(descriptionStart)
+  })
+
   it('keeps the scaled card fan below the navigation bar', () => {
     // 2026-07-24 wow pass: fan scale raised 0.75 → 0.85 (stage clamp grew
     // 560 → 640rpx to absorb the taller scaled two-row fan).

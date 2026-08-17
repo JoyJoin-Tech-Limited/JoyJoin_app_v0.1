@@ -363,7 +363,10 @@ $fan-rotations: (
   }
 
   &__scroll--revealed {
-    @include fixed-footer-reserve(128rpx, $spacing-sm);
+    // Reserve the complete fixed dock: 96rpx CTA + vertical padding + the
+    // return-thread line. Keeping this in sync with the dock prevents the
+    // event brief from sliding underneath its description on short screens.
+    @include fixed-footer-reserve(184rpx, $spacing-sm);
     overflow: hidden;
   }
 
@@ -2147,10 +2150,14 @@ $fan-rotations: (
   }
 
   &__deck-card-art-img {
-    width: 100%;
-    height: 100%;
+    // Give every tablemate the same compact portrait scale as the current-
+    // user card. The art zone remains full-size, but the subject no longer
+    // balloons to fill it and overpower the card information.
+    width: 120rpx;
+    height: 120rpx;
 
     &--avatar {
+      border-radius: $radius-pill;
       background: rgba($color-primary, 0.06);
     }
   }
