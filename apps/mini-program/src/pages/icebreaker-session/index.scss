@@ -1,6 +1,19 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
 
+// Keep phase presentation in the page WXSS bundle. Taro does not reliably
+// propagate stylesheet side effects through the extracted SessionPhaseViews
+// module, which otherwise leaves every game view as unstyled WXML on device.
+@use './phases/AuctionHeroView';
+@use './phases/GroupMirrorHeroView';
+@use './phases/LieDetectiveHeroView';
+@use './phases/MicroChallengeHeroView';
+@use './phases/MiniScriptHeroView';
+@use './phases/PersonalityDiceHeroView';
+@use './phases/QuipBattleHeroView';
+@use './phases/SpeedFriendingHeroView';
+@use './phases/UndercoverWordHeroView';
+
 // S10 gyro-parallax spike (2026-08-11): rules-bearing partial compiled into
 // the page WXSS so subpackage style-splitting cannot chunk it away.
 @use './styles/gyro-parallax-spike';
