@@ -1,6 +1,12 @@
 import { useCallback, useRef, useState } from 'react'
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
-import type { MiniScriptGenerationStatus, MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework'
+import type {
+  MiniScriptGenerationStatus,
+  MiniScriptGenre,
+  MiniScriptLibraryItem,
+  MiniScriptLibraryResponse,
+  MiniScriptStyle,
+} from '@shared/miniscriptStoryFramework'
 import { apiRequest } from '../../../lib/api/api'
 import { getErrorText } from '../icebreakerSessionModel'
 import { logError } from '../../../lib/utils/logger'
@@ -17,10 +23,16 @@ interface UseMiniScriptGenerationOptions {
 interface UseMiniScriptGenerationReturn {
   isSubmitting: boolean
   generationStatus: MiniScriptGenerationStatus | null
+  libraryScripts: MiniScriptLibraryItem[]
+  isLibraryLoading: boolean
+  libraryError: string | null
+  loadLibrary: (style: MiniScriptStyle) => Promise<void>
+  selectScript: (scriptId: string) => Promise<boolean>
   submitGenerate: (payload: {
     style: MiniScriptStyle
     genres: MiniScriptGenre[]
     lite?: boolean
+    selectedLabel?: string
   }) => Promise<boolean>
   resetGeneration: () => void
 }
@@ -36,6 +48,10 @@ export function useMiniScriptGeneration({
 }: UseMiniScriptGenerationOptions): UseMiniScriptGenerationReturn {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [generationStatus, setGenerationStatus] = useState<MiniScriptGenerationStatus | null>(null)
+  const [libraryScripts, setLibraryScripts] = useState<MiniScriptLibraryItem[]>([])
+  const [isLibraryLoading, setIsLibraryLoading] = useState(false)
+  const [libraryError, setLibraryError] = useState<string | null>(null)
+  const selectedStyleRef = useRef<MiniScriptStyle | null>(null)
   // Foreground guard for completion toasts (see N3 fix).
   const isPageVisibleRef = useRef(true)
   // Local monotonic epoch. The previous cross-clock guard compared the
@@ -56,10 +72,58 @@ export function useMiniScriptGeneration({
     generationEpochRef.current += 1
     setGenerationStatus(null)
     setIsSubmitting(false)
+    setLibraryScripts([])
+    setLibraryError(null)
+    selectedStyleRef.current = null
   }, [])
 
+  const loadLibrary = useCallback(async (style: MiniScriptStyle) => {
+    if (!socialSessionId) return
+    selectedStyleRef.current = style
+    setIsLibraryLoading(true)
+    setLibraryError(null)
+    try {
+      const result = await apiRequest<MiniScriptLibraryResponse>({
+        path: `/api/miniscript/library?socialSessionId=${encodeURIComponent(socialSessionId)}&style=${encodeURIComponent(style)}`,
+        timeout: 5000,
+      })
+      if (selectedStyleRef.current !== style) return
+      setLibraryScripts(result.scripts)
+      setGenerationStatus(result.generationStatus)
+    } catch (error) {
+      if (selectedStyleRef.current === style) {
+        setLibraryError(getErrorText(error, '剧本列表暂时没加载出来'))
+      }
+    } finally {
+      if (selectedStyleRef.current === style) setIsLibraryLoading(false)
+    }
+  }, [socialSessionId])
+
+  const selectScript = useCallback(async (scriptId: string): Promise<boolean> => {
+    if (!socialSessionId) return false
+    setIsSubmitting(true)
+    try {
+      await apiRequest({
+        path: '/api/miniscript/select',
+        method: 'POST',
+        data: { socialSessionId, scriptId },
+      })
+      void refetchSession()
+      if (isPageVisibleRef.current) {
+        void Taro.showToast({ title: '剧本已选好', icon: 'success', duration: TOAST_DEFAULT_MS })
+      }
+      return true
+    } catch (error) {
+      const message = getErrorText(error, '选择没成功')
+      setLibraryError(message)
+      return false
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [socialSessionId, refetchSession])
+
   const submitGenerate = useCallback(
-    async (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[]; lite?: boolean }): Promise<boolean> => {
+    async (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[]; lite?: boolean; selectedLabel?: string }): Promise<boolean> => {
       if (!socialSessionId) {
         return false
       }
@@ -115,6 +179,7 @@ export function useMiniScriptGeneration({
             style: payload.style,
             genres: payload.genres,
             lite: payload.lite,
+            selectedLabel: payload.selectedLabel,
           },
         })
         // If the user cancelled (reset bumped the epoch) while the POST was in
@@ -163,6 +228,11 @@ export function useMiniScriptGeneration({
   return {
     isSubmitting,
     generationStatus,
+    libraryScripts,
+    isLibraryLoading,
+    libraryError,
+    loadLibrary,
+    selectScript,
     submitGenerate,
     resetGeneration,
   }

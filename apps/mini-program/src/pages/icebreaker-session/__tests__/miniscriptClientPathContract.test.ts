@@ -64,16 +64,16 @@ describe('MiniScript client-server path contract', () => {
     expect(actionsSource).not.toContain("'/miniscript/ready'")
   })
 
-  it('closes the generation modal and refreshes session state without blocking', () => {
+  it('keeps the library open after generation and refreshes session state without blocking', () => {
     // The hook initiates a non-blocking refetch inside the generation pipeline.
     expect(generationHookSource).toContain('void refetchSession()')
     expect(generationHookSource).not.toContain('await refetchSession()')
-    // The page closes the modal after the generation hook reports success.
+    // The page leaves the library open so the host can choose the generated script.
     const submitStart = indexSource.indexOf('const handleMiniScriptSubmit')
     const submitEnd = indexSource.indexOf('const handleMiniScriptModalClose', submitStart)
     const submitSource = indexSource.slice(submitStart, submitEnd)
-    expect(submitSource).toContain('const success = await submitMiniScriptGenerate(payload)')
-    expect(submitSource).toContain('setMiniScriptModalOpen(false)')
+    expect(submitSource).toContain('return submitMiniScriptGenerate(payload)')
+    expect(submitSource).not.toContain('setMiniScriptModalOpen(false)')
   })
 
   it('polls real server progress and renders a determinate generation bar', () => {

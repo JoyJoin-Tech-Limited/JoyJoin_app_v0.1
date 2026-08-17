@@ -11,7 +11,7 @@ import type { MiniScriptGameModeConfig } from '@shared/miniscriptGameModes';
 import type { MiniScriptStyle, MiniScriptGenre } from '@shared/miniscriptStoryFramework';
 import { XIAOYUE_CRAFT_LITE } from '../prompts/craft';
 
-export const MINISCRIPT_GENERATION_PROMPT_VERSION = 'miniscript-generate-v3.0';
+export const MINISCRIPT_GENERATION_PROMPT_VERSION = 'miniscript-generate-v3.1';
 
 // ─── Base System Prompt (all modes share) ─────────────────────────────────────
 
@@ -188,6 +188,7 @@ export interface MiniScriptGenerationPromptParams {
   config: MiniScriptGameModeConfig;
   lite?: boolean;
   sessionContext?: { mixText: string };
+  selectedLabel?: string;
 }
 
 export function buildMiniScriptGenerationPrompt(
@@ -215,6 +216,10 @@ export function buildMiniScriptGenerationPrompt(
     ? `\n【本组画像】${params.sessionContext.mixText}\n`
     : '';
 
+  const selectedLabelBlock = params.selectedLabel
+    ? `\n【主持人已选标签】${params.selectedLabel}\n`
+    : '';
+
   const userMessage =
     `为一场${styleLabels[params.style]}风格的迷你剧本杀生成故事框架。\n\n` +
     `玩家数量：${params.playerCount}人\n` +
@@ -222,6 +227,7 @@ export function buildMiniScriptGenerationPrompt(
     `${liteModifier}\n` +
     `${genreInstructions}\n\n` +
     `${buildJsonShapeInstructions(params.playerCount, params.config)}` +
+    `${selectedLabelBlock}` +
     `${contextBlock}`;
 
   return {

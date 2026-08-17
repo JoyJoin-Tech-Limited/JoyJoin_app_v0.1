@@ -14,7 +14,7 @@ import type {
 
 export const CATALOG_VERSION = 'v2.0.0';
 
-interface CatalogEntry {
+export interface CatalogEntry {
   id: string;
   style: MiniScriptStyle;
   genres: MiniScriptGenre[];

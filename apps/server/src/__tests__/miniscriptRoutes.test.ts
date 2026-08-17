@@ -127,7 +127,8 @@ describe('POST /api/miniscript/generate', () => {
       expect(body.ending.resolutionSummary).toBe('真相将在最终揭晓时公开。');
 
       const after = testSessions.get(socialSessionId);
-      expect(after?.miniScriptFramework?.premise).toBe(body.premise);
+      expect(after?.miniScriptFramework).toBeUndefined();
+      expect(after?.miniScriptCandidateFramework?.premise).toBe(body.premise);
 
       const statusRes = await fetch(
         `${baseUrl}/api/miniscript/generation-status?socialSessionId=${socialSessionId}`,
@@ -172,22 +173,18 @@ describe('POST /api/miniscript/generate', () => {
       });
       expect(res1.status).toBe(200);
       const first = (await res1.json()) as { premise: string };
-      const generatedAtAfterFirst = testSessions.get(socialSessionId)?.miniScriptFrameworkGeneratedAt;
+      const generatedAtAfterFirst = testSessions.get(socialSessionId)?.miniScriptCandidateGeneratedAt;
 
       const res2 = await fetch(`${baseUrl}/api/miniscript/generate`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', cookie },
-        body: JSON.stringify({
-          ...body1,
-          style: 'medieval',
-          genres: ['romance'],
-        }),
+        body: JSON.stringify(body1),
       });
       expect(res2.status).toBe(200);
       const second = (await res2.json()) as { premise: string; style: string };
       expect(second.premise).toBe(first.premise);
-      // Idempotent: same cached framework returned regardless of new request params
-      expect(testSessions.get(socialSessionId)?.miniScriptFrameworkGeneratedAt).toBe(generatedAtAfterFirst);
+      // Idempotent: the same selection returns the cached candidate.
+      expect(testSessions.get(socialSessionId)?.miniScriptCandidateGeneratedAt).toBe(generatedAtAfterFirst);
     });
   });
 
@@ -210,7 +207,7 @@ describe('POST /api/miniscript/generate', () => {
         enabledPhases: ['mini_script', 'recap'],
       });
 
-      const generate = (style: 'modern_urban' | 'medieval') => fetch(
+      const generate = () => fetch(
         `${baseUrl}/api/miniscript/generate`,
         {
           method: 'POST',
@@ -218,22 +215,161 @@ describe('POST /api/miniscript/generate', () => {
           body: JSON.stringify({
             socialSessionId,
             playerCount: 4,
-            style,
+            style: 'modern_urban',
             genres: ['light_reasoning'],
           }),
         },
       );
 
       const [firstResponse, secondResponse] = await Promise.all([
-        generate('modern_urban'),
-        generate('medieval'),
+        generate(),
+        generate(),
       ]);
       expect(firstResponse.status).toBe(200);
       expect(secondResponse.status).toBe(200);
       const first = await firstResponse.json() as { style: string; premise: string };
       const second = await secondResponse.json() as { style: string; premise: string };
       expect(second).toMatchObject({ style: first.style, premise: first.premise });
-      expect(testSessions.get(socialSessionId)?.miniScriptFramework?.style).toBe(first.style);
+      expect(testSessions.get(socialSessionId)?.miniScriptCandidateFramework?.style).toBe(first.style);
+    });
+  });
+});
+
+describe('mini-script host library', () => {
+  it('lists compatible curated scripts for the selected style', async () => {
+    testSessions.clear();
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login/host-user`, { method: 'POST' });
+      const cookie = cookieHeader(loginRes);
+      const socialSessionId = 'social-library-list';
+      testSessions.set(socialSessionId, {
+        socialSessionId,
+        icebreakerSessionId: 'ice-library-list',
+        currentPhase: 'mini_script',
+        hostUserId: 'host-user',
+        hostDisplayName: 'Host',
+        playerCount: 4,
+        phaseStartedAt: Date.now(),
+        sessionStartedAt: Date.now(),
+        completedPhases: [],
+        enabledPhases: ['mini_script', 'recap'],
+      });
+
+      const res = await fetch(
+        `${baseUrl}/api/miniscript/library?socialSessionId=${socialSessionId}&style=modern_urban`,
+        { headers: { cookie } },
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json() as { scripts: Array<{ id: string; source: string; premise: string }>; generationStatus: unknown };
+      expect(body.scripts).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'modern-urban-light-reasoning-001', source: 'catalog' }),
+      ]));
+      expect(body.scripts[0]?.premise).not.toContain('secret');
+      expect(body.generationStatus).toBeNull();
+    });
+  });
+
+  it('lets only the host select a catalog script and persists public framework plus secrets', async () => {
+    testSessions.clear();
+    testMiniScriptSecrets.clear();
+    await withServer(async (baseUrl) => {
+      const hostLogin = await fetch(`${baseUrl}/__test__/login/host-user`, { method: 'POST' });
+      const hostCookie = cookieHeader(hostLogin);
+      const playerLogin = await fetch(`${baseUrl}/__test__/login/player-user`, { method: 'POST' });
+      const playerCookie = cookieHeader(playerLogin);
+      const socialSessionId = 'social-library-select';
+      testSessions.set(socialSessionId, {
+        socialSessionId,
+        icebreakerSessionId: 'ice-library-select',
+        currentPhase: 'mini_script',
+        hostUserId: 'host-user',
+        hostDisplayName: 'Host',
+        playerCount: 5,
+        phaseStartedAt: Date.now(),
+        sessionStartedAt: Date.now(),
+        completedPhases: [],
+        enabledPhases: ['mini_script', 'recap'],
+      });
+
+      const select = (cookie: string) => fetch(`${baseUrl}/api/miniscript/select`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({ socialSessionId, scriptId: 'modern-urban-light-reasoning-001' }),
+      });
+      expect((await select(playerCookie)).status).toBe(403);
+      const hostRes = await select(hostCookie);
+      expect(hostRes.status).toBe(200);
+      expect(testSessions.get(socialSessionId)?.miniScriptFramework?.characters).toHaveLength(5);
+      expect(testMiniScriptSecrets.has(socialSessionId)).toBe(true);
+      expect((await hostRes.json()) as object).not.toHaveProperty('solution');
+    });
+  });
+
+  it('promotes a generated candidate only after the host selects it', async () => {
+    testSessions.clear();
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login/host-user`, { method: 'POST' });
+      const cookie = cookieHeader(loginRes);
+      const socialSessionId = 'social-candidate-select';
+      testSessions.set(socialSessionId, {
+        socialSessionId,
+        icebreakerSessionId: 'ice-candidate-select',
+        currentPhase: 'mini_script',
+        hostUserId: 'host-user',
+        hostDisplayName: 'Host',
+        playerCount: 4,
+        phaseStartedAt: Date.now(),
+        sessionStartedAt: Date.now(),
+        completedPhases: [],
+        enabledPhases: ['mini_script', 'recap'],
+      });
+
+      const generateRes = await fetch(`${baseUrl}/api/miniscript/generate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({ socialSessionId, playerCount: 4, style: 'modern_urban', genres: ['light_reasoning'], selectedLabel: '现代都市' }),
+      });
+      expect(generateRes.status).toBe(200);
+      expect(testSessions.get(socialSessionId)?.miniScriptFramework).toBeUndefined();
+      expect(testSessions.get(socialSessionId)?.miniScriptCandidateFramework).toBeDefined();
+
+      const selectRes = await fetch(`${baseUrl}/api/miniscript/select`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({ socialSessionId, scriptId: 'current-generation' }),
+      });
+      expect(selectRes.status).toBe(200);
+      expect(testSessions.get(socialSessionId)?.miniScriptFramework?.style).toBe('modern_urban');
+      expect(testSessions.get(socialSessionId)?.miniScriptCandidateFramework).toBeUndefined();
+    });
+  });
+
+  it('does not reuse a completed candidate when the host requests another style', async () => {
+    testSessions.clear();
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login/host-user`, { method: 'POST' });
+      const cookie = cookieHeader(loginRes);
+      const socialSessionId = 'social-candidate-replace';
+      testSessions.set(socialSessionId, {
+        socialSessionId,
+        icebreakerSessionId: 'ice-candidate-replace',
+        currentPhase: 'mini_script',
+        hostUserId: 'host-user',
+        hostDisplayName: 'Host',
+        playerCount: 4,
+        phaseStartedAt: Date.now(),
+        sessionStartedAt: Date.now(),
+        completedPhases: [],
+        enabledPhases: ['mini_script', 'recap'],
+      });
+      const generate = (style: 'modern_urban' | 'medieval') => fetch(`${baseUrl}/api/miniscript/generate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({ socialSessionId, playerCount: 4, style, genres: ['light_reasoning'] }),
+      });
+      expect((await generate('modern_urban')).status).toBe(200);
+      expect((await generate('medieval')).status).toBe(200);
+      expect(testSessions.get(socialSessionId)?.miniScriptCandidateFramework?.style).toBe('medieval');
     });
   });
 });

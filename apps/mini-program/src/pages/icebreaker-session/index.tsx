@@ -766,6 +766,11 @@ export default function IcebreakerSessionPage() {
   const {
     isSubmitting: miniScriptSubmitting,
     generationStatus: miniScriptGenerationStatus,
+    libraryScripts: miniScriptLibraryScripts,
+    isLibraryLoading: miniScriptLibraryLoading,
+    libraryError: miniScriptLibraryError,
+    loadLibrary: loadMiniScriptLibrary,
+    selectScript: selectMiniScript,
     submitGenerate: submitMiniScriptGenerate,
     resetGeneration: resetMiniScriptGeneration,
   } = useMiniScriptGeneration({
@@ -775,14 +780,10 @@ export default function IcebreakerSessionPage() {
   })
 
   const handleMiniScriptSubmit = useCallback(
-    async (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[]; lite?: boolean }) => {
-      const success = await submitMiniScriptGenerate(payload)
-      if (success) {
-        setMiniScriptModalOpen(false)
-        resetMiniScriptGeneration()
-      }
+    async (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[]; lite?: boolean; selectedLabel?: string }) => {
+      return submitMiniScriptGenerate(payload)
     },
-    [submitMiniScriptGenerate, resetMiniScriptGeneration],
+    [submitMiniScriptGenerate],
   )
 
   const handleMiniScriptModalClose = useCallback(() => {
@@ -945,6 +946,9 @@ export default function IcebreakerSessionPage() {
     miniScriptModalOpen,
     miniScriptSubmitting,
     miniScriptGenerationStatus,
+    miniScriptLibraryScripts,
+    miniScriptLibraryLoading,
+    miniScriptLibraryError,
     recapData: recapQuery.data?.state?.recapData ?? session.recapData ?? null,
     recapSummary: recapQuery.data?.summary ?? null,
     recapMedals: recapQuery.data?.medals ?? [],
@@ -956,6 +960,8 @@ export default function IcebreakerSessionPage() {
     },
     onMiniScriptClose: handleMiniScriptModalClose,
     onMiniScriptSubmit: handleMiniScriptSubmit,
+    onLoadMiniScriptLibrary: loadMiniScriptLibrary,
+    onSelectMiniScript: selectMiniScript,
     onRefreshSession: () => socialSessionQuery.refetch(),
     onAdvance: handleAdvancePhase,
     onGenerateSessionPack: handleGenerateSessionPack,
@@ -1092,4 +1098,3 @@ export default function IcebreakerSessionPage() {
     </ScrollView>
   )
 }
-

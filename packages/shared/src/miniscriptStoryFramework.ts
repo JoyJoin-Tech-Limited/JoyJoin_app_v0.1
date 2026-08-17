@@ -29,6 +29,8 @@ export const miniScriptGenerateRequestSchema = z.object({
   style: z.enum(MINI_SCRIPT_STYLES),
   genres: z.array(z.enum(MINI_SCRIPT_GENRES)).min(1).max(8),
   lite: z.boolean().optional().default(false),
+  /** Human-readable picker label, used only as bounded prompt context. */
+  selectedLabel: z.string().trim().min(1).max(24).optional(),
 });
 
 export type MiniScriptGenerateRequest = z.infer<typeof miniScriptGenerateRequestSchema>;
@@ -51,6 +53,25 @@ export type MiniScriptGenerationStatus = {
   startedAt: number;
   updatedAt: number;
   estimatedTotalMs: number;
+  style?: MiniScriptStyle;
+  genres?: MiniScriptGenre[];
+  selectedLabel?: string;
+};
+
+export type MiniScriptLibraryItem = {
+  id: string;
+  source: 'catalog' | 'session';
+  style: MiniScriptStyle;
+  genres: MiniScriptGenre[];
+  title: string;
+  premise: string;
+  playerCount: number;
+  generatedAt?: number;
+};
+
+export type MiniScriptLibraryResponse = {
+  scripts: MiniScriptLibraryItem[];
+  generationStatus: MiniScriptGenerationStatus | null;
 };
 
 // ─── v2 Schema Components ─────────────────────────────────────────────────────

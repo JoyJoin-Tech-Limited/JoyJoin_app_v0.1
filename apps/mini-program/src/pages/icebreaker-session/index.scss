@@ -1,6 +1,19 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
 
+// Keep phase presentation in the page WXSS bundle. Taro does not reliably
+// propagate stylesheet side effects through the extracted SessionPhaseViews
+// module, which otherwise leaves every game view as unstyled WXML on device.
+@use './phases/AuctionHeroView';
+@use './phases/GroupMirrorHeroView';
+@use './phases/LieDetectiveHeroView';
+@use './phases/MicroChallengeHeroView';
+@use './phases/MiniScriptHeroView';
+@use './phases/PersonalityDiceHeroView';
+@use './phases/QuipBattleHeroView';
+@use './phases/SpeedFriendingHeroView';
+@use './phases/UndercoverWordHeroView';
+
 // S10 gyro-parallax spike (2026-08-11): rules-bearing partial compiled into
 // the page WXSS so subpackage style-splitting cannot chunk it away.
 @use './styles/gyro-parallax-spike';
@@ -919,6 +932,158 @@ $__gold-accent:  $color-landed-gold;
   }
 }
 
+// ─── Host Script Library ─────────────────────────────────────────────────────
+
+.ms-library {
+  &__section-head,
+  &__mode-row,
+  &__genre-row,
+  &-card__meta {
+    display: flex;
+    align-items: center;
+  }
+
+  &__section-head {
+    justify-content: space-between;
+    gap: 16rpx;
+    margin-bottom: 16rpx;
+  }
+
+  &__section-title {
+    @include type-body-emphasis;
+    color: $color-text-primary;
+  }
+
+  &__section-hint,
+  &__empty-copy {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 16rpx;
+  }
+
+  &__state {
+    min-height: 192rpx;
+    padding: 32rpx;
+    border-radius: 24rpx;
+    background: rgba($color-primary, 0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16rpx;
+    text-align: center;
+    color: $color-text-secondary;
+
+    &--error {
+      color: $color-error;
+      background: rgba($color-error, 0.06);
+    }
+  }
+
+  &__empty-title {
+    @include type-body-emphasis;
+    color: $color-text-primary;
+  }
+
+  &__generation,
+  &__create {
+    margin-top: 32rpx;
+  }
+
+  &__genre-row {
+    flex-wrap: wrap;
+    gap: 16rpx;
+    margin: 16rpx 0;
+  }
+
+  &__genre {
+    min-height: 88rpx;
+    padding: 0 24rpx;
+    border: 4rpx solid transparent;
+    border-radius: 999rpx;
+    display: flex;
+    align-items: center;
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    opacity: 0.55;
+    transition: transform 150ms ease, opacity 150ms ease, border-color 150ms ease;
+
+    &--selected {
+      border-color: $color-primary;
+      opacity: 1;
+    }
+
+    &:active {
+      transform: scale(0.96);
+    }
+  }
+
+  &__mode-row {
+    min-height: 88rpx;
+    justify-content: space-between;
+    gap: 16rpx;
+    margin-bottom: 16rpx;
+    padding: 0 24rpx;
+    border-radius: 20rpx;
+    background: rgba($color-primary, 0.06);
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+  }
+
+  &__mode-action {
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.ms-library-card {
+  padding: 24rpx;
+  border: 2rpx solid rgba($color-primary, 0.14);
+  border-radius: 24rpx;
+  background: $color-surface;
+  box-shadow: 0 12rpx 32rpx rgba($color-primary, 0.08);
+
+  &__copy {
+    min-width: 0;
+  }
+
+  &__meta {
+    gap: 12rpx;
+    margin-bottom: 8rpx;
+    font-size: $font-size-xs;
+    color: $color-primary;
+  }
+
+  &__title {
+    @include font-cn-display;
+    display: block;
+    color: $color-text-primary;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+  }
+
+  &__premise {
+    display: -webkit-box;
+    margin-top: 8rpx;
+    overflow: hidden;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  &__choose {
+    width: 100%;
+    margin-top: 24rpx;
+  }
+}
+
 // ─── Keyframes ────────────────────────────────────────────────────────────────
 
 @keyframes ms-shuffle-pulse {
@@ -953,6 +1118,7 @@ $__gold-accent:  $color-landed-gold;
   .ms-generation__card,
   .ms-card,
   .ms-genre-card,
+  .ms-library__genre,
   .ms-stage {
     transition: none !important;
     animation: none !important;

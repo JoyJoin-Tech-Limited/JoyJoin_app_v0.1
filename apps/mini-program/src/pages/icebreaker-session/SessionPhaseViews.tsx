@@ -1,5 +1,5 @@
 import type { AtmosphereMood, SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
-import type { MiniScriptGenerationStatus, MiniScriptGenre, MiniScriptStyle } from '@shared/miniscriptStoryFramework'
+import type { MiniScriptGenerationStatus, MiniScriptGenre, MiniScriptLibraryItem, MiniScriptStyle } from '@shared/miniscriptStoryFramework'
 import Button from '../../components/ui/Button'
 import CustomModeSection from './components/CustomModeSection'
 import WaitingPhase from './components/WaitingPhase'
@@ -50,6 +50,9 @@ export interface SessionPhaseViewsProps {
   miniScriptModalOpen: boolean
   miniScriptSubmitting: boolean
   miniScriptGenerationStatus: MiniScriptGenerationStatus | null
+  miniScriptLibraryScripts: MiniScriptLibraryItem[]
+  miniScriptLibraryLoading: boolean
+  miniScriptLibraryError: string | null
   recapData: {
     topicsDiscussed: string[]
     challengesCompleted: number
@@ -69,7 +72,9 @@ export interface SessionPhaseViewsProps {
   onOpenTierSheet: () => void
   onOpenMiniScript: () => void
   onMiniScriptClose: () => void
-  onMiniScriptSubmit: (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[]; lite?: boolean }) => void
+  onMiniScriptSubmit: (payload: { style: MiniScriptStyle; genres: MiniScriptGenre[]; lite?: boolean; selectedLabel?: string }) => Promise<boolean>
+  onLoadMiniScriptLibrary: (style: MiniScriptStyle) => Promise<void>
+  onSelectMiniScript: (scriptId: string) => Promise<boolean>
   onRefreshSession: () => void
   onAdvance: () => void
   onGenerateSessionPack: () => void
@@ -128,6 +133,9 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
     miniScriptModalOpen,
     miniScriptSubmitting,
     miniScriptGenerationStatus,
+    miniScriptLibraryScripts,
+    miniScriptLibraryLoading,
+    miniScriptLibraryError,
     recapData,
     recapSummary,
     recapMedals,
@@ -136,6 +144,8 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
     onOpenMiniScript,
     onMiniScriptClose,
     onMiniScriptSubmit,
+    onLoadMiniScriptLibrary,
+    onSelectMiniScript,
     onRefreshSession,
     onAdvance,
     onGenerateSessionPack,
@@ -338,6 +348,11 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
             onClose={onMiniScriptClose}
             isSubmitting={miniScriptSubmitting}
             generationStatus={miniScriptGenerationStatus}
+            scripts={miniScriptLibraryScripts}
+            isLibraryLoading={miniScriptLibraryLoading}
+            libraryError={miniScriptLibraryError}
+            onLoadLibrary={onLoadMiniScriptLibrary}
+            onSelectScript={onSelectMiniScript}
             onSubmit={onMiniScriptSubmit}
           />
         </>

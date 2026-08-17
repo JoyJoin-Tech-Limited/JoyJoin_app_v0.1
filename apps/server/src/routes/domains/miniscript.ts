@@ -12,6 +12,8 @@ import {
   type MiniScriptGenerationStatus,
   type MiniScriptStoryFramework,
   type MiniScriptStoryFrameworkPublic,
+  type MiniScriptStyle,
+  type MiniScriptLibraryItem,
 } from '@shared/miniscriptStoryFramework';
 import {
   getSessionWithExpiry,
@@ -23,7 +25,8 @@ import {
 import { validateContentSafeAsync, contentViolationResponse } from '../../lib/contentSafety';
 import { recordViolation } from '../../abuseDetection';
 import { requireAuthenticatedUserId } from '../../lib/requestAuth';
-import { generateMiniScriptFrameworkWithMeta } from '../../lib/miniscriptAgent';
+import { adaptCatalogEntry, generateMiniScriptFrameworkWithMeta } from '../../lib/miniscriptAgent';
+import { getCatalogEntries, getCatalogEntryById } from '../../lib/miniscriptCatalog';
 import { MINISCRIPT_GENERATION_PROMPT_VERSION } from '../../ai/miniscriptPrompts';
 import { buildCachedAIMeta } from '@shared/types/aiMeta';
 import { ensureSessionEnabledPhases, cleanupPhaseStateForNextPhase } from '../../socialIcebreakerPhaseConfig';
@@ -50,6 +53,7 @@ function setGenerationStatus(
   socialSessionId: string,
   stage: MiniScriptGenerationStage,
   progress: number,
+  selection?: { style: MiniScriptStyle; genres: string[]; selectedLabel?: string },
 ) {
   const previous = generationStatuses.get(socialSessionId);
   generationStatuses.set(socialSessionId, {
@@ -58,6 +62,9 @@ function setGenerationStatus(
     startedAt: previous?.startedAt ?? Date.now(),
     updatedAt: Date.now(),
     estimatedTotalMs: GENERATION_ESTIMATE_MS,
+    style: selection?.style ?? previous?.style,
+    genres: (selection?.genres ?? previous?.genres) as MiniScriptGenerationStatus['genres'],
+    selectedLabel: selection?.selectedLabel ?? previous?.selectedLabel,
   });
 }
 
@@ -105,6 +112,110 @@ function stripFrameworkSecrets(
   };
 }
 
+function catalogTitle(premise: string): string {
+  const firstSentence = premise.split(/[。！？]/)[0]?.trim();
+  return firstSentence ? firstSentence.slice(0, 22) : '今晚的神秘故事';
+}
+
+function assertHostMiniScriptSession(
+  state: SocialSessionState,
+  userId: string,
+): { status: number; error: string } | null {
+  if (userId !== state.hostUserId) return { status: 403, error: 'HOST_ONLY' };
+  if (state.currentPhase !== 'mini_script') return { status: 400, error: 'WRONG_PHASE' };
+  if (!state.enabledPhases?.includes('mini_script')) return { status: 403, error: 'FEATURE_DISABLED' };
+  if (state.playerCount < 4 || state.playerCount > 6) return { status: 400, error: 'INVALID_PLAYER_COUNT' };
+  return null;
+}
+
+router.get('/library', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+  const parsed = z.object({
+    socialSessionId: z.string().min(1),
+    style: z.enum(['western_court', 'medieval', 'ancient_chinese', 'xianxia', 'future_tech', 'modern_urban', 'republican_era']),
+  }).safeParse(req.query);
+  if (!parsed.success) return res.status(400).json({ error: 'INVALID_QUERY', details: parsed.error.flatten() });
+
+  const { socialSessionId, style } = parsed.data;
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+  if (!state) return res.status(expired ? 410 : 404).json({ error: expired ? 'SESSION_EXPIRED' : 'Social session not found' });
+  const guard = assertHostMiniScriptSession(state, userId);
+  if (guard) return res.status(guard.status).json({ error: guard.error });
+
+  const scripts: MiniScriptLibraryItem[] = getCatalogEntries()
+    .filter((entry) => entry.style === style)
+    .map((entry) => ({
+      id: entry.id,
+      source: 'catalog',
+      style: entry.style,
+      genres: [...entry.genres],
+      title: catalogTitle(entry.framework.premise),
+      premise: entry.framework.premise,
+      playerCount: state.playerCount,
+    }));
+  if (state.miniScriptCandidateFramework?.style === style) {
+    scripts.unshift({
+      id: 'current-generation',
+      source: 'session',
+      style,
+      genres: [...state.miniScriptCandidateFramework.genres],
+      title: catalogTitle(state.miniScriptCandidateFramework.premise),
+      premise: state.miniScriptCandidateFramework.premise,
+      playerCount: state.miniScriptCandidateFramework.characters.length,
+      generatedAt: state.miniScriptCandidateGeneratedAt,
+    });
+  }
+  const generationStatus = generationStatuses.get(socialSessionId);
+  return res.json({
+    scripts,
+    generationStatus: generationStatus?.style === style ? generationStatus : null,
+  });
+});
+
+router.post('/select', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+  const parsed = z.object({ socialSessionId: z.string().min(1), scriptId: z.string().min(1).max(100) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  const { socialSessionId, scriptId } = parsed.data;
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+  if (!state) return res.status(expired ? 410 : 404).json({ error: expired ? 'SESSION_EXPIRED' : 'Social session not found' });
+  const guard = assertHostMiniScriptSession(state, userId);
+  if (guard) return res.status(guard.status).json({ error: guard.error });
+  if (state.miniScriptRoleAssignments && Object.keys(state.miniScriptRoleAssignments).length > 0) {
+    return res.status(409).json({ error: 'ROLES_ALREADY_ASSIGNED' });
+  }
+  if (scriptId === 'current-generation' && state.miniScriptCandidateFramework) {
+    state.miniScriptFramework = state.miniScriptCandidateFramework;
+    state.miniScriptFrameworkGeneratedAt = state.miniScriptCandidateGeneratedAt ?? Date.now();
+    state.miniScriptFrameworkGeneratedByUserId = userId;
+    state.miniScriptCandidateFramework = undefined;
+    state.miniScriptCandidateGeneratedAt = undefined;
+    state.miniScriptCandidateGeneratedByUserId = undefined;
+    await updateSession(socialSessionId, state);
+    return res.json(state.miniScriptFramework);
+  }
+  const entry = getCatalogEntryById(scriptId);
+  if (!entry) return res.status(404).json({ error: 'SCRIPT_NOT_FOUND' });
+
+  const framework = adaptCatalogEntry(entry.framework, {
+    playerCount: state.playerCount,
+    style: entry.style,
+    genres: [...entry.genres],
+  });
+  await setMiniScriptSecrets(socialSessionId, extractSecrets(framework));
+  state.miniScriptFramework = stripFrameworkSecrets(framework);
+  state.miniScriptFrameworkGeneratedAt = Date.now();
+  state.miniScriptFrameworkGeneratedByUserId = userId;
+  state.miniScriptCandidateFramework = undefined;
+  state.miniScriptCandidateGeneratedAt = undefined;
+  state.miniScriptCandidateGeneratedByUserId = undefined;
+  await updateSession(socialSessionId, state);
+  logger.info('[miniscript] catalog script selected', { socialSessionId, scriptId, userId });
+  return res.json(state.miniScriptFramework);
+});
+
 // ─── POST /generate ──────────────────────────────────────────────────────────
 
 router.get('/generation-status', async (req: any, res) => {
@@ -130,8 +241,8 @@ router.get('/generation-status', async (req: any, res) => {
 
   const status = generationStatuses.get(socialSessionId);
   if (status) return res.json(status);
-  if (state.miniScriptFramework) {
-    const completedAt = state.miniScriptFrameworkGeneratedAt ?? Date.now();
+  if (state.miniScriptCandidateFramework) {
+    const completedAt = state.miniScriptCandidateGeneratedAt ?? Date.now();
     return res.json({
       stage: 'complete',
       progress: 100,
@@ -152,7 +263,7 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
     return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
   }
 
-  const { socialSessionId, playerCount, style, genres, lite } = parsed.data;
+  const { socialSessionId, playerCount, style, genres, lite, selectedLabel } = parsed.data;
   const { state, expired } = await getSessionWithExpiry(socialSessionId);
 
   if (!state) {
@@ -191,20 +302,28 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
   }
 
   /** Idempotent: avoid duplicate LLM cost and overwriting a host-approved framework. */
-  if (session.miniScriptFramework) {
-    const generatedAt = session.miniScriptFrameworkGeneratedAt
-      ? new Date(session.miniScriptFrameworkGeneratedAt).toISOString()
+  if (session.miniScriptCandidateFramework?.style === style) {
+    const generatedAt = session.miniScriptCandidateGeneratedAt
+      ? new Date(session.miniScriptCandidateGeneratedAt).toISOString()
       : new Date().toISOString();
     return res.json({
-      ...session.miniScriptFramework,
+      ...session.miniScriptCandidateFramework,
       meta: buildCachedAIMeta(generatedAt, null, MINISCRIPT_GENERATION_PROMPT_VERSION),
     });
   }
 
   try {
     let generation = generationInFlight.get(socialSessionId);
+    const inFlightStatus = generationStatuses.get(socialSessionId);
+    if (generation && inFlightStatus?.style && inFlightStatus.style !== style) {
+      return res.status(409).json({
+        error: 'GENERATION_IN_PROGRESS',
+        style: inFlightStatus.style,
+        selectedLabel: inFlightStatus.selectedLabel,
+      });
+    }
     if (!generation) {
-      setGenerationStatus(socialSessionId, 'queued', 5);
+      setGenerationStatus(socialSessionId, 'queued', 5, { style, genres, selectedLabel });
       generation = (async () => {
         const roster = await listParticipants(socialSessionId);
         const { framework, aiResponseMeta } = await generateMiniScriptFrameworkWithMeta({
@@ -213,6 +332,7 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
           genres,
           lite: lite ?? false,
           roster,
+          selectedLabel,
           onProgress: (stage, progress) => setGenerationStatus(socialSessionId, stage, progress),
         });
 
@@ -221,9 +341,9 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
         await setMiniScriptSecrets(socialSessionId, secrets);
 
         const publicFramework = stripFrameworkSecrets(framework);
-        session.miniScriptFramework = publicFramework;
-        session.miniScriptFrameworkGeneratedAt = Date.now();
-        session.miniScriptFrameworkGeneratedByUserId = userId;
+        session.miniScriptCandidateFramework = publicFramework;
+        session.miniScriptCandidateGeneratedAt = Date.now();
+        session.miniScriptCandidateGeneratedByUserId = userId;
         await updateSession(socialSessionId, session);
 
         setGenerationStatus(socialSessionId, 'complete', 100);

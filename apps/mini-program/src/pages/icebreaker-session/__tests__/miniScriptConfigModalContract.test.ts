@@ -23,9 +23,8 @@ const generationHookSource = readFileSync(
 describe('MiniScriptConfigModal interaction and layout contract', () => {
   it('uses click activation rather than relying on touch-end selection', () => {
     expect(source).toContain("className='ms-card__hit-target'")
-    expect(source).toContain("className='ms-genre-card__hit-target'")
     expect(source).toContain('onClick={() => handleSelectStyle(card.key)}')
-    expect(source).toContain('onClick={() => handleToggleGenre(card.key as MiniScriptGenre)}')
+    expect(source).toContain('onClick={() => toggleGenre(genre.key as MiniScriptGenre)}')
     expect(source).not.toContain('onTouchStart=')
     expect(source).not.toContain('onTouchEnd=')
     expect(source).not.toContain('onTouchCancel=')
@@ -37,7 +36,7 @@ describe('MiniScriptConfigModal interaction and layout contract', () => {
   })
 
   it('escapes transformed and scrollable ancestors through the WeChat root portal', () => {
-    expect(source).toContain("import { View, Text, Image, ScrollView, RootPortal } from '@tarojs/components'")
+    expect(source).toContain("RootPortal, ScrollView")
     expect(source).toContain('<RootPortal>')
     expect(source).toContain('</RootPortal>')
   })
@@ -45,24 +44,22 @@ describe('MiniScriptConfigModal interaction and layout contract', () => {
   it('puts the card grids in a vertical ScrollView and uses full poster art', () => {
     expect(source).toContain("<ScrollView className='ms-modal__content' scrollY")
     expect(source).toContain('card.posterPath ? cdnAsset(card.posterPath) : undefined')
-    expect(source).toContain('src={posterPath}')
+    expect(source).toContain('src={poster}')
   })
 
   it('starts with every PM-approved genre selected', () => {
     expect(source).toContain('initialGenres = [...MINI_SCRIPT_GENRES]')
   })
 
-  it('shows genre selection with the card outline only', () => {
-    expect(source).toContain("mods.push('ms-genre-card--selected')")
-    expect(source).toContain("className='ms-genre-card__glow'")
-    expect(source).not.toContain('ms-genre-card__check')
-    expect(styles).not.toContain('&__check {')
+  it('shows genre selection as compact selected chips on the library page', () => {
+    expect(source).toContain("' ms-library__genre--selected'")
+    expect(styles).toMatch(/&__genre\s*\{[\s\S]*?&--selected\s*\{/)
   })
 
   it('offers an always-visible dismiss button (backdrop is display:none)', () => {
     expect(source).toContain("className='ms-modal__close'")
     expect(source).toContain("aria-label='关闭'")
-    expect(source).toContain("onClick={() => {\n              haptics('light')\n              onClose()\n            }}")
+    expect(source).toContain('onClick={onClose}')
     expect(styles).toMatch(/&__close\s*\{[\s\S]*?width:\s*88rpx;[\s\S]*?height:\s*88rpx;/)
   })
 
