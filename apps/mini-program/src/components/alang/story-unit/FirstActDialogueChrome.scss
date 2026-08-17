@@ -1,0 +1,138 @@
+@use '../../../styles/variables' as *;
+
+.first-act-dialogue-chrome {
+  &__speech {
+    position: absolute;
+    z-index: 7;
+    top: 48rpx;
+    right: 200rpx;
+    left: 24rpx;
+    display: flex;
+    padding: 32rpx;
+    flex-direction: column;
+    gap: 12rpx;
+    border: 2rpx solid rgba($color-primary, 0.78);
+    border-radius: 32rpx;
+    background: rgba($color-surface, 0.96);
+    box-shadow: 0 14rpx 36rpx rgba($color-text-primary-warm, 0.18);
+    box-sizing: border-box;
+    pointer-events: none;
+
+    &::after {
+      position: absolute;
+      right: -14rpx;
+      bottom: 32rpx;
+      width: 24rpx;
+      height: 24rpx;
+      border-top: 2rpx solid rgba($color-primary, 0.78);
+      border-right: 2rpx solid rgba($color-primary, 0.78);
+      background: rgba($color-surface, 0.96);
+      content: '';
+      transform: rotate(45deg);
+    }
+  }
+
+  &__speaker,
+  &__speech-copy,
+  &__narration,
+  &__prompt {
+    position: relative;
+    z-index: 1;
+    display: block;
+  }
+
+  &__speaker {
+    color: $color-primary-dark;
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-normal;
+  }
+
+  &__speech-copy {
+    color: $color-text-primary-warm;
+    font-size: $font-size-md;
+    line-height: $line-height-relaxed;
+  }
+
+  &__panel {
+    position: absolute;
+    z-index: 8;
+    right: $spacing-sm;
+    bottom: calc($spacing-sm + env(safe-area-inset-bottom));
+    left: $spacing-sm;
+    display: flex;
+    max-height: 680rpx;
+    padding: 32rpx;
+    flex-direction: column;
+    gap: $spacing-md;
+    overflow-y: auto;
+    border: 2rpx solid rgba($color-surface, 0.78);
+    border-radius: $card-radius-lg;
+    background: rgba($color-bg-warm-from, 0.96);
+    box-shadow: 0 16rpx 40rpx rgba($color-text-primary-warm, 0.18);
+    box-sizing: border-box;
+  }
+
+  &__story-copy {
+    display: flex;
+    padding-bottom: $spacing-md;
+    flex-direction: column;
+    gap: $spacing-xs;
+    border-bottom: 2rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__narration {
+    color: $color-text-secondary-on-light;
+    font-size: $font-size-base;
+    line-height: $line-height-relaxed;
+  }
+
+  &__prompt {
+    color: $color-primary-dark;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+  }
+
+  &__choices {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__choice {
+    display: flex;
+    min-height: 112rpx;
+    padding: $spacing-md 32rpx;
+    align-items: center;
+    color: $color-text-primary-warm;
+    border: 2rpx solid rgba($color-primary, 0.14);
+    border-radius: $radius-md;
+    background: $color-surface;
+    box-shadow: none;
+    box-sizing: border-box;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-relaxed;
+    transition: transform 160ms ease-out, border-color 160ms ease-out;
+
+    &--selected {
+      border-color: rgba($color-primary, 0.72);
+      background: $color-primary-light;
+    }
+
+    &--action {
+      justify-content: center;
+      color: $color-surface;
+      border-color: $color-primary;
+      background: $color-primary;
+      box-shadow: $shadow-primary-soft;
+      text-align: center;
+    }
+
+    &--pressed { transform: scale(0.985); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .first-act-dialogue-chrome__choice { transition: none; }
+}

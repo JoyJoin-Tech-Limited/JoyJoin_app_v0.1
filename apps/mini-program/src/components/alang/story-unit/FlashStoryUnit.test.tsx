@@ -1,6 +1,8 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getFlashFirstActExperienceContract } from '@shared/alang/flashFirstActExperience'
 import { FlashStoryUnit } from './FlashStoryUnit'
+import { getCustomLaterActConfig, type FlatLaterActUnitId } from './LaterActStoryConfigs'
 
 const storage = new Map<string, unknown>()
 let didShowCallback: (() => void) | null = null
@@ -22,6 +24,10 @@ vi.mock('../FlashUi', () => ({
   FlashNpcDialogueScene: ({ speech }: any) => <div data-testid='npc-speech'>{speech}</div>,
 }))
 vi.mock('../../../lib/analytics/flashStoryAnalytics', () => ({ flashStoryAnalytics: { track: vi.fn() } }))
+vi.mock('./AlangFirstActExperience', () => ({ AlangFirstActExperience: ({ encounterId, scene, onComplete }: any) => <div data-testid='alang-first-act-mock' data-encounter={encounterId} data-scene={scene}><button onClick={() => onComplete(1)}>完成阿浪第一幕</button></div> }))
+vi.mock('./LiziFirstActExperience', () => ({ LiziFirstActExperience: ({ scene, onComplete }: any) => <div data-testid='lizi-first-act-mock' data-scene={scene}><button onClick={() => onComplete(1)}>完成栗子第一幕</button></div> }))
+vi.mock('./MomoFirstActExperience', () => ({ MomoFirstActExperience: ({ scene, onComplete }: any) => <div data-testid='momo-first-act-mock' data-scene={scene}><button onClick={() => onComplete(1)}>完成默默第一幕</button></div> }))
+vi.mock('./ShiqiFirstActExperience', () => ({ ShiqiFirstActExperience: ({ scene, onComplete }: any) => <div data-testid='shiqi-first-act-mock' data-scene={scene}><button onClick={() => onComplete(1)}>完成拾柒第一幕</button></div> }))
 
 const motion = { ambient: 'breathe' }
 const progress = { completedInPhase: 0, totalInPhase: 5, completedTotal: 0, total: 15 }
@@ -173,13 +179,145 @@ describe('FlashStoryUnit production flow', () => {
     expect(screen.queryByText('接住卡片')).not.toBeInTheDocument()
   })
 
-  it('keeps later Atuan chapters on their existing conversational path', () => {
+  it('opens Atuan second act on its new background and dedicated interaction path', () => {
     const submit = vi.fn().mockResolvedValue(undefined)
     const story = { ...firstStory, id: 'episode-atuan-2', code: 's1-p2-atuan', phase: 2, title: '阿团认领座位图', objectCode: 'seat-plan' }
     const question = { ...firstQuestion, id: 's1-p2-atuan-response-v2' }
-    render(<FlashStoryUnit encounterId='enc-p2' npc={baseNpc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={6} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
-    expect(screen.getByTestId('npc-speech')).not.toBeEmptyDOMElement()
+    render(<FlashStoryUnit encounterId='enc-p2' npc={baseNpc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={6} submitState='idle' submitError='' atuanArrivalAssets={{ scene: 'park.webp', secondScene: 'pavilion.webp', thirdScene: 'table.webp', character: 'atuan.webp', bag: 'bag.webp' }} onSubmit={submit} onContinue={vi.fn()} />)
+    expect(screen.getByTestId('atuan-later-background')).toHaveAttribute('src', 'pavilion.webp')
+    expect(screen.getByTestId('atuan-later-prelude')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '先看看他改过的地方' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '先看看他改过的地方' }))
+    expect(screen.getByTestId('atuan-later-experience')).toHaveAttribute('data-unit-id', 's1-p2-atuan')
+    expect(screen.getByText('你接着说')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '这些折痕，是你一次次改出来的吗？' }))
+    expect(screen.getByRole('button', { name: '查看反复折过的座位图' })).toBeInTheDocument()
+    expect(screen.queryByTestId('npc-speech')).not.toBeInTheDocument()
     expect(screen.queryByTestId('atuan-arrival-prelude')).not.toBeInTheDocument()
+  })
+
+  it('retries a completed later Atuan act through the same completion button after failure or recreation', () => {
+    const submit = vi.fn().mockResolvedValue(undefined)
+    const story = { ...firstStory, id: 'episode-atuan-2-retry', code: 's1-p2-atuan', phase: 2, title: '阿团认领座位图', objectCode: 'seat-plan' }
+    const question = { ...firstQuestion, id: 's1-p2-atuan-response-v2' }
+    const baseProps = {
+      encounterId: 'enc-p2-retry', npc: baseNpc as any, story: story as any, question: question as any,
+      motion: motion as any, storyPosition: 6, submitError: '', atuanArrivalAssets: { scene: 'park.webp', secondScene: 'pavilion.webp', thirdScene: 'table.webp', character: 'atuan.webp', bag: 'bag.webp' },
+      onSubmit: submit, onContinue: vi.fn(),
+    }
+    const view = render(<FlashStoryUnit {...baseProps} submitState='idle' />)
+
+    fireEvent.click(screen.getByRole('button', { name: '先看看他改过的地方' }))
+    fireEvent.click(screen.getByRole('button', { name: '这些折痕，是你一次次改出来的吗？' }))
+    for (const name of ['查看反复折过的座位图', '查看椅脚旁的浅痕', '查看没有名字的席位卡']) fireEvent.click(screen.getByRole('button', { name }))
+    fireEvent.click(screen.getByRole('button', { name: '把你的邀请说清，把舒服的距离留给他选。' }))
+    fireEvent.click(screen.getByRole('button', { name: '和阿团一起摆好座位图' }))
+    fireEvent.click(screen.getByRole('button', { name: '把座位图转正' }))
+    fireEvent.click(screen.getByRole('button', { name: '留出能自在说话的距离' }))
+    fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
+    expect(submit).toHaveBeenCalledTimes(1)
+
+    view.rerender(<FlashStoryUnit {...baseProps} submitState='retry' submitError='网络开了小差，这段故事还没有丢。' />)
+    expect(screen.getByRole('alert')).toHaveTextContent('这段故事还没有丢')
+    expect(screen.queryByRole('button', { name: '重新送出' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
+    expect(submit).toHaveBeenCalledTimes(2)
+    expect(submit.mock.calls[1]?.[0]).toEqual(submit.mock.calls[0]?.[0])
+
+    view.unmount()
+    render(<FlashStoryUnit {...baseProps} submitState='idle' />)
+    fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
+    expect(submit).toHaveBeenCalledTimes(3)
+    expect(submit.mock.calls[2]?.[0]).toEqual(expect.objectContaining({
+      questionId: submit.mock.calls[0]?.[0].questionId,
+      optionId: submit.mock.calls[0]?.[0].optionId,
+      storyPath: submit.mock.calls[0]?.[0].storyPath,
+    }))
+  })
+
+  it('reuses the original completion action for a locally restored solved first act', () => {
+    const story = { ...firstStory, id: 'episode-alang-restored', code: 's1-p1-alang', objectCode: 'seat-plan' }
+    const question = { ...firstQuestion, id: 's1-p1-alang-response-v2' }
+    storage.set('joyjoin_flash_story_unit_v2_s1-p1-alang_enc-alang-restored_episode-alang-restored', {
+      unitId: 's1-p1-alang',
+      version: 2,
+      stage: 'OBJECT_SUCCESS',
+      choice: { questionId: question.id, optionId: question.options[0].id, label: question.options[0].label },
+      companionEvent: 'SUCCESS',
+      divergenceCopy: null,
+      atuanFirstAct: null,
+      atuanLaterAct: null,
+      analyticsSent: [],
+    })
+
+    const submit = vi.fn().mockResolvedValue(undefined)
+    render(<FlashStoryUnit encounterId='enc-alang-restored' npc={{ ...baseNpc, slug: 'alang' } as any} story={story as any} question={question as any} motion={motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
+
+    expect(screen.queryByRole('button', { name: '重新送出' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '完成阿浪第一幕' }))
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: question.id,
+      optionId: question.options[0].id,
+    }))
+  })
+
+  it('starts first-act replay in a fresh local namespace instead of restoring the live solution', () => {
+    const story = { ...firstStory, id: 'episode-alang-replay', code: 's1-p1-alang', objectCode: 'seat-plan' }
+    const question = { ...firstQuestion, id: 's1-p1-alang-response-v2' }
+    storage.set('joyjoin_flash_story_unit_v2_s1-p1-alang_enc-alang-replay_episode-alang-replay', {
+      unitId: 's1-p1-alang',
+      version: 2,
+      stage: 'OBJECT_SUCCESS',
+      choice: { questionId: question.id, optionId: question.options[0].id, label: question.options[0].label },
+      companionEvent: 'SUCCESS',
+      divergenceCopy: null,
+      atuanFirstAct: null,
+      atuanLaterAct: null,
+      analyticsSent: [],
+    })
+
+    const submit = vi.fn().mockResolvedValue(undefined)
+    render(<FlashStoryUnit encounterId='enc-alang-replay' progressNamespace='replay-session-a' npc={{ ...baseNpc, slug: 'alang' } as any} story={story as any} question={question as any} motion={motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
+
+    expect(screen.getByTestId('alang-first-act-mock')).toHaveAttribute('data-encounter', 'enc-alang-replay:replay-session-a')
+    fireEvent.click(screen.getByRole('button', { name: '完成阿浪第一幕' }))
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: question.id,
+      optionId: question.options[1].id,
+    }))
+  })
+
+  it('runs Atuan third act from its opening choice through the returned-card table game', () => {
+    const submit = vi.fn().mockResolvedValue(undefined)
+    const story = { ...firstStory, id: 'episode-atuan-3', code: 's1-p3-atuan', phase: 3, title: '座位图写上了名字', objectCode: 'seat-plan' }
+    const question = { ...firstQuestion, id: 's1-p3-atuan-response-v2' }
+    render(<FlashStoryUnit encounterId='enc-p3' npc={baseNpc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={15} submitState='idle' submitError='' atuanArrivalAssets={{ scene: 'park.webp', secondScene: 'pavilion.webp', thirdScene: 'table.webp', character: 'atuan.webp', bag: 'bag.webp' }} onSubmit={submit} onContinue={vi.fn()} />)
+
+    expect(screen.getByTestId('atuan-later-background')).toHaveAttribute('src', 'table.webp')
+    fireEvent.click(screen.getByRole('button', { name: '先看看箱底那把钥匙' }))
+    fireEvent.click(screen.getByRole('button', { name: '第六张卡，原来一直在这里？' }))
+    for (const name of ['查看木箱旁的钥匙', '查看回来的第六张卡', '查看座位图上空着的另一边']) fireEvent.click(screen.getByRole('button', { name }))
+    fireEvent.click(screen.getByRole('button', { name: '告诉他不用现在回答，这个位置不会催他。' }))
+    fireEvent.click(screen.getByRole('button', { name: '和阿团一起打开这份迟到的邀请' }))
+    fireEvent.click(screen.getByRole('button', { name: '用钥匙打开夹层' }))
+    fireEvent.click(screen.getByRole('button', { name: '把第六张卡摆到座位图中央' }))
+    fireEvent.click(screen.getByRole('button', { name: '放上阿团的名牌' }))
+    fireEvent.click(screen.getByRole('button', { name: '替默默写上名字' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('不能替默默写下答案')
+    fireEvent.click(screen.getByRole('button', { name: '把另一边留空' }))
+    fireEvent.click(screen.getByRole('button', { name: '收好阿团的这段故事' }))
+
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: question.id,
+      optionId: 'atuan-a',
+      storyPath: expect.objectContaining({
+        unitId: 's1-p3-atuan',
+        arrivalReplyId: 'ask_sixth_card',
+        actionId: 'open_returned_card',
+        endingId: 'answer_left_open',
+        game: expect.objectContaining({ invitationPlaced: true, otherSeat: 'blank', attempts: 1 }),
+      }),
+    }))
   })
 
   it('keeps the park scene and removes the identity tag after the first story settles', () => {
@@ -193,13 +331,155 @@ describe('FlashStoryUnit production flow', () => {
     expect(screen.getByTestId('atuan-scene-dialogue')).toHaveTextContent('阿团把卡片收好了')
   })
 
-  it('submits non-Atuan choices without entering the Atuan scene', () => {
+  it('renders the settled-story exit as an immediately available stage-level action', () => {
+    const onContinue = vi.fn()
+    const story = {
+      ...firstStory,
+      id: 'episode-momo-3-settled',
+      code: 's1-p3-momo',
+      phase: 3,
+      title: '默默把邀请说完整',
+      objectCode: 'dry-markers',
+      response: '迟到的邀请终于成为一句完整的话。',
+      closing: '他直接向栗子发出邀请，给出时间和两个可选方向。',
+      fragment: {
+        category: 'relationship',
+        title: '一句完整的邀请',
+        fact: '默默说清了时间和方向，答案仍留给栗子。',
+      },
+      progress: { completedInPhase: 3, totalInPhase: 5, completedTotal: 7, total: 15 },
+    }
+    const npc = { ...baseNpc, id: 'npc-momo', slug: 'momo', name: '默默', species: '兔狲' }
+    const { container } = render(<FlashStoryUnit encounterId='enc-momo-p3-settled' npc={npc as any} story={story as any} question={firstQuestion as any} motion={motion as any} storyPosition={7} submitState='idle' submitError='' onSubmit={vi.fn()} onContinue={onContinue} />)
+
+    const resultPanel = container.querySelector('.flash-dialogue__story-panel--result')
+    const resultScroller = resultPanel?.querySelector<HTMLElement>('.flash-dialogue__story-panel-scroll') ?? null
+    const resultExit = container.querySelector<HTMLElement>('[data-testid="flash-story-result-exit"]') ?? null
+    const continueButton = screen.getByRole('button', { name: '收好碎片，继续寻找' })
+
+    expect(resultPanel).not.toBeNull()
+    expect(resultScroller).toBeNull()
+    expect(resultExit).not.toBeNull()
+    expect(resultPanel).toContainElement(resultExit)
+    expect(resultExit).toContainElement(continueButton)
+    expect(screen.getByText('一句完整的邀请')).toBeInTheDocument()
+    expect(screen.queryByText('可以稍后回答的邀请')).not.toBeInTheDocument()
+    fireEvent.click(continueButton)
+    expect(onContinue).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps Momo second act on the full highlight, object, followup, retryable-game chain before submit', () => {
     const submit = vi.fn().mockResolvedValue(undefined)
-    const npc = { ...baseNpc, id: 'npc-lizi', slug: 'lizi', name: '栗子', species: '松鼠' }
-    const story = { ...firstStory, id: 'episode-lizi-1', code: 's1-p1-lizi', title: '干掉的彩笔', objectCode: 'dry-markers' }
-    const question = { id: 's1-p1-lizi-response-v2', text: '怎么开始？', options: [{ id: 'lizi-a', label: '先看笔迹' }] }
-    render(<FlashStoryUnit encounterId='enc-lizi' npc={npc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
-    fireEvent.click(screen.getByRole('button', { name: '先看笔迹' }))
-    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ optionId: 'lizi-a' }))
+    const npc = { ...baseNpc, id: 'npc-momo', slug: 'momo', name: '默默', species: '兔狲' }
+    const story = {
+      ...firstStory,
+      id: 'episode-momo-2',
+      code: 's1-p2-momo',
+      phase: 2,
+      title: '没有发出的颜色选择',
+      objectCode: 'dry-markers',
+    }
+    const question = { id: 's1-p2-momo-response-v1', text: '你准备怎么做？', options: [
+      { id: 'momo-color', label: '旧选项一' },
+      { id: 'momo-card', label: '旧选项二' },
+    ] }
+    render(<FlashStoryUnit encounterId='enc-momo-p2' npc={npc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={6} submitState='idle' submitError='' momoLaterActScenes={{ second: 'flash-momo-second-act-listening-pavilion-v2.jpg', third: 'flash-momo-third-act-invitation-panels-v2.jpg' }} onSubmit={submit} onContinue={vi.fn()} />)
+
+    expect(screen.getByTestId('later-act-background')).toHaveAttribute('src', expect.stringContaining('flash-momo-second-act'))
+    fireEvent.click(screen.getByRole('button', { name: '先核对路线真正留下的颜色' }))
+    expect(submit).not.toHaveBeenCalled()
+
+    for (const name of ['只压出轮廓的空白页', '两条真实留下的色带', '被换乱的笔帽']) {
+      fireEvent.click(screen.getByRole('button', { name: `查看${name}` }))
+      fireEvent.click(screen.getByRole('button', { name: `收下${name}的线索，回到现场` }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: '打开旧马克笔盒' }))
+    for (const name of ['沾着暖橙的笔尖', '几乎干掉的冷蓝笔', '折在底层的方向卡']) {
+      fireEvent.click(screen.getByRole('button', { name: `查看${name}` }))
+      fireEvent.click(screen.getByRole('button', { name: `收下${name}的细节` }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: '继续追问' }))
+    fireEvent.click(screen.getByRole('button', { name: '为什么把笔帽故意换乱？' }))
+    fireEvent.click(screen.getByRole('button', { name: '开始校对颜色' }))
+    fireEvent.click(screen.getByRole('button', { name: '选套着橙色笔帽的那支' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('请看笔尖真正留下的颜色')
+    expect(submit).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '再看一次' }))
+    fireEvent.click(screen.getByRole('button', { name: '选笔尖沾着暖橙的那支' }))
+    fireEvent.click(screen.getByRole('button', { name: '在废纸上试出那条淡冷蓝' }))
+    fireEvent.click(screen.getByRole('button', { name: '用还能清楚书写的中性笔' }))
+    expect(screen.getByText('颜色不再替默默躲藏')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '收好默默的颜色选择' }))
+
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: question.id,
+      optionId: 'momo-color',
+      label: '先核对路线真正留下的颜色',
+    }))
+  })
+
+  it.each([
+    ['s1-p2-lizi', 'lizi', '栗子', 2, 'outing-book', 'lizi-second.jpg'],
+    ['s1-p3-lizi', 'lizi', '栗子', 3, 'outing-book', 'lizi-third.jpg'],
+    ['s1-p2-shiqi', 'shiqi', '拾柒', 2, 'observation-cards', 'shiqi-second.jpg'],
+  ] as const)('keeps %s inside the complete local experience before server settlement', (unitId, slug, name, phase, objectCode, expectedScene) => {
+    const submit = vi.fn().mockResolvedValue(undefined)
+    const config = getCustomLaterActConfig(unitId as FlatLaterActUnitId)
+    const npc = { ...baseNpc, id: `npc-${slug}`, slug, name, species: slug === 'lizi' ? '水獭' : '乌鸦' }
+    const story = { ...firstStory, id: `episode-${unitId}`, code: unitId, phase, title: config.title, objectCode }
+    const question = { id: `${unitId}-response-v1`, text: '你准备怎么做？', options: [
+      { id: `${unitId}-a`, label: '旧选项一' },
+      { id: `${unitId}-b`, label: '旧选项二' },
+    ] }
+
+    render(
+      <FlashStoryUnit
+        encounterId={`enc-${unitId}`}
+        npc={npc as any}
+        story={story as any}
+        question={question as any}
+        motion={motion as any}
+        storyPosition={phase === 2 ? 6 : 11}
+        submitState='idle'
+        submitError=''
+        liziLaterActScenes={{ second: 'lizi-second.jpg', third: 'lizi-third.jpg' }}
+        shiqiSecondActScene='shiqi-second.jpg'
+        onSubmit={submit}
+        onContinue={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId('later-act-background')).toHaveAttribute('src', expectedScene)
+    expect(screen.getAllByRole('button')).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: config.approaches[0].label }))
+    expect(screen.getByRole('button', { name: `查看${config.highlights[0].label}` })).toBeInTheDocument()
+    expect(submit).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['alang', '阿浪', '灰狼', 'seat-plan', '完成阿浪第一幕', 'alang-first-act-mock'],
+    ['lizi', '栗子', '水獭', 'dry-markers', '完成栗子第一幕', 'lizi-first-act-mock'],
+    ['momo', '默默', '兔狲', 'route-book', '完成默默第一幕', 'momo-first-act-mock'],
+    ['shiqi', '拾柒', '乌鸦', 'outing-book', '完成拾柒第一幕', 'shiqi-first-act-mock'],
+  ])('runs %s first act and maps its final stance to the real server option', (slug, name, species, objectCode, completionLabel, testId) => {
+    const submit = vi.fn().mockResolvedValue(undefined)
+    const npc = { ...baseNpc, id: `npc-${slug}`, slug, name, species }
+    const story = { ...firstStory, id: `episode-${slug}-1`, code: `s1-p1-${slug}`, title: `${name}第一幕`, objectCode }
+    const contract = getFlashFirstActExperienceContract(story.code)!
+    const question = {
+      id: `${story.code}-first-act-response-v1`,
+      text: contract.prompt,
+      options: contract.approaches.map(({ id, label }) => ({ id, label })),
+    }
+    render(<FlashStoryUnit encounterId={`enc-${slug}`} npc={npc as any} story={story as any} question={question as any} motion={motion as any} storyPosition={1} submitState='idle' submitError='' onSubmit={submit} onContinue={vi.fn()} />)
+
+    expect(screen.getByTestId(testId)).toHaveAttribute('data-scene', expect.stringContaining(`flash-${slug}-first-act`))
+    expect(screen.queryByTestId('flash-story-choice-panel')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: completionLabel }))
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: question.id,
+      optionId: contract.approaches[1].id,
+      label: contract.approaches[1].label,
+    }))
   })
 })

@@ -1024,6 +1024,36 @@ page {
   }
 }
 
+.flash-dialogue__story-stage--custom-first {
+  .flash-dialogue__story-ambient,
+  .flash-dialogue__story-index {
+    display: none;
+  }
+}
+
+.flash-dialogue__custom-story-status {
+  position: absolute;
+  z-index: 30;
+  right: $spacing-md;
+  bottom: calc($spacing-md + env(safe-area-inset-bottom));
+  left: $spacing-md;
+  display: flex;
+  min-height: $cta-min-tap;
+  box-sizing: border-box;
+  padding: $spacing-md;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  border: 2rpx solid rgba($color-primary, 0.16);
+  border-radius: $card-radius-lg;
+  color: $color-text-primary-warm;
+  font-size: $font-size-base;
+  line-height: $line-height-relaxed;
+  text-align: center;
+  background: rgba($color-surface, 0.97);
+  box-shadow: $bubble-shadow;
+}
+
 .flash-dialogue__story-ambient {
   position: absolute;
   z-index: 2;
@@ -2799,7 +2829,36 @@ page {
 }
 
 .flash-dialogue__story-panel--result {
+  bottom: calc(112rpx + env(safe-area-inset-bottom));
+  height: auto;
+  max-height: calc(100% - 320rpx);
+  padding: 24rpx;
   gap: 16rpx;
+  overflow: hidden;
+}
+
+.flash-dialogue__story-panel--result .flash-dialogue__story-panel-content {
+  min-height: 0;
+  gap: 16rpx;
+  overflow: hidden;
+}
+
+.flash-dialogue__story-result-exit {
+  display: flex;
+  width: 100%;
+  min-height: 88rpx;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.flash-dialogue__story-result-exit .flash-button {
+  width: auto;
+  min-width: 280rpx;
+  padding-right: 28rpx;
+  padding-left: 28rpx;
 }
 
 .flash-dialogue__story-panel-progress {
@@ -2839,6 +2898,10 @@ page {
   font-size: $font-size-xs;
   line-height: $line-height-relaxed;
   text-align: center;
+}
+
+.flash-dialogue__story-error--status {
+  border-color: rgba($color-primary, 0.34);
 }
 
 .flash-dialogue-scene {
@@ -3428,6 +3491,7 @@ page {
 
 @media screen and (max-height: 700px) {
   .flash-dialogue__story-panel-scroll { max-height: 650rpx; }
+  .flash-dialogue__story-panel--result { max-height: 650rpx; }
 }
 
 // Story episode v2 — multi-node state-driven stage (flash-story-v2)

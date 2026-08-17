@@ -47,6 +47,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   alangConfig: 'pages/alang/config/index',
   alangSearch: 'pages/alang/search/index',
   alangDialogue: 'pages/alang/dialogue/index',
+  alangLaterDialogue: 'pages/alang-story/dialogue/index',
   alangAtuanCards: 'pages/alang/atuan-cards/index',
   alangFinale: 'pages/alang/finale/index',
   alangCompanion: 'pages/alang/companion/index',
@@ -97,6 +98,7 @@ export const MINI_PROGRAM_ROUTES = {
   alangConfig: `/${MINI_PROGRAM_PAGE_PATHS.alangConfig}`,
   alangSearch: `/${MINI_PROGRAM_PAGE_PATHS.alangSearch}`,
   alangDialogue: `/${MINI_PROGRAM_PAGE_PATHS.alangDialogue}`,
+  alangLaterDialogue: `/${MINI_PROGRAM_PAGE_PATHS.alangLaterDialogue}`,
   alangAtuanCards: `/${MINI_PROGRAM_PAGE_PATHS.alangAtuanCards}`,
   alangFinale: `/${MINI_PROGRAM_PAGE_PATHS.alangFinale}`,
   alangCompanion: `/${MINI_PROGRAM_PAGE_PATHS.alangCompanion}`,
@@ -154,7 +156,6 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.profile,
   MINI_PROGRAM_PAGE_PATHS.login,
   MINI_PROGRAM_PAGE_PATHS.eventDetail,
-  MINI_PROGRAM_PAGE_PATHS.poolGroupDetail,
 ] as const
 export const MINI_PROGRAM_PROFILE_LINKED_PACKAGE_PAGE_PATHS = [
   MINI_PROGRAM_PAGE_PATHS.editProfile,
@@ -176,6 +177,7 @@ export const MINI_PROGRAM_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.matchingStatus,
   MINI_PROGRAM_PAGE_PATHS.poolRegistration,
   MINI_PROGRAM_PAGE_PATHS.squadUnboxing,
+  MINI_PROGRAM_PAGE_PATHS.poolGroupDetail,
 ] as const
 
 export const MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT = 'pages/icebreaker-session' as const
@@ -183,6 +185,8 @@ export const MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT = 'pages/icebreaker-session' 
 export const MINI_PROGRAM_MATCHING_SUBPACKAGE_ROOT = 'pages/matching-status' as const
 
 export const MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT = 'pages/alang' as const
+
+export const MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_ROOT = 'pages/alang-story' as const
 
 export const MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES = [
   'event/index',
@@ -197,6 +201,10 @@ export const MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES = [
   'story-detail/index',
   'preferences/index',
   'debug/index',
+] as const
+
+export const MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_PAGES = [
+  'dialogue/index',
 ] as const
 
 export const MINI_PROGRAM_MATCHING_SUBPACKAGE_PAGES = [
@@ -217,6 +225,12 @@ export const MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES = [
 export const MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT = 'pages/squad-unboxing' as const
 
 export const MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES = [
+  'index',
+] as const
+
+export const MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT = 'pages/pool-group-detail' as const
+
+export const MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_PAGES = [
   'index',
 ] as const
 
@@ -283,6 +297,10 @@ export const MINI_PROGRAM_SUBPACKAGES = [
     pages: MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES,
   },
   {
+    root: MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_PAGES,
+  },
+  {
     root: MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_PAGES,
   },
@@ -293,6 +311,10 @@ export const MINI_PROGRAM_SUBPACKAGES = [
   {
     root: MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
     pages: MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES,
+  },
+  {
+    root: MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_ROOT,
+    pages: MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_PAGES,
   },
   {
     root: MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_ROOT,
@@ -326,6 +348,7 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
     packages: [
       MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
       MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT,
+      MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT,
     ],
   },
   [MINI_PROGRAM_PAGE_PATHS.poolGroupDetail]: {
@@ -338,6 +361,8 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
       MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
       MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
       MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT,
+      MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_ROOT,
+      MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT,
     ],
   },
   [MINI_PROGRAM_PAGE_PATHS.events]: {
@@ -345,15 +370,22 @@ export const MINI_PROGRAM_PRELOAD_RULES = {
     packages: [
       MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
       MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT,
+      MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_ROOT,
     ],
   },
   [MINI_PROGRAM_PAGE_PATHS.centerHub]: {
     network: 'all',
-    packages: [MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT],
+    packages: [
+      MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT,
+      MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT,
+    ],
   },
   [MINI_PROGRAM_PAGE_PATHS.matchingStatus]: {
     network: 'all',
-    packages: [MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT],
+    packages: [
+      MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT,
+      MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT,
+    ],
   },
   [MINI_PROGRAM_PAGE_PATHS.poolRegistration]: {
     network: 'all',

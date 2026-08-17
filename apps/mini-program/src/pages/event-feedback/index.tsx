@@ -46,24 +46,18 @@ interface MutualMatch {
   wechatContactId: string | null
 }
 
+// 2026-08-15 merge: the old 6-screen flow (rating → connections → comment →
+// invite → deep-atmosphere → deep-people) folded into 3 screens. The rating
+// faces and the 均衡反馈 deep fields all describe the same event experience, so
+// they now share one screen; the invite interstitial is gone.
 type FeedbackStep =
-  | 'rating'
+  | 'experience'
   | 'connections'
-  | 'comment'
-  // ─── Optional balanced layer (均衡反馈) — never part of the required 3 steps ───
-  | 'invite'
-  | 'deep-atmosphere'
-  | 'deep-people'
+  | 'wrapup'
   | 'revealed'
 
 /** Ordered interactive steps (revealed is the terminal celebration, not a step). */
-const FEEDBACK_STEP_ORDER: Array<Exclude<FeedbackStep, 'revealed'>> = ['rating', 'connections', 'comment']
-
-/** The two upgrade screens share one quiet progress marker (label + 2 dots). */
-const DEEP_STEP_ORDER: Array<Extract<FeedbackStep, 'deep-atmosphere' | 'deep-people'>> = [
-  'deep-atmosphere',
-  'deep-people',
-]
+const FEEDBACK_STEP_ORDER: Array<Exclude<FeedbackStep, 'revealed'>> = ['experience', 'connections', 'wrapup']
 
 /** 1/2/3 progress dots — the flow had no sense of place before (2026-07-28). */
 function renderStepProgress(current: Exclude<FeedbackStep, 'revealed'>) {
@@ -110,7 +104,7 @@ function ScaleDots({ value, onChange, labels, ariaGroupLabel, compact = false }:
               hoverClass='event-feedback__scale-dot--pressed'
               role='radio'
               aria-checked={value === dotValue}
-              aria-label={`${labels?.[index] ?? `${dotValue} 分`}，${dotValue} 分`}
+              aria-label={`${labels?.[index] ?? `${dotValue} 分`}`}
               onClick={() => {
                 haptics('light')
                 onChange(dotValue)
@@ -229,31 +223,13 @@ function ParticipantAvatar({ participant, name }: { participant: EventParticipan
   )
 }
 
-/** 均衡反馈 layer progress — a label + 2 quiet dots, distinct from the base 1/2/3. */
-function renderDeepProgress(current: Extract<FeedbackStep, 'deep-atmosphere' | 'deep-people'>) {
-  const activeIndex = DEEP_STEP_ORDER.indexOf(current)
-  return (
-    <View className='event-feedback__deep-progress' aria-hidden='true'>
-      <Text className='event-feedback__deep-progress-label'>均衡反馈</Text>
-      <View className='event-feedback__deep-progress-dots'>
-        {DEEP_STEP_ORDER.map((stepId, index) => (
-          <View
-            key={stepId}
-            className={`event-feedback__deep-progress-dot ${index <= activeIndex ? 'event-feedback__deep-progress-dot--active' : ''}`}
-          />
-        ))}
-      </View>
-    </View>
-  )
-}
-
 export default function EventFeedbackPage() {
   const router = useRouter()
   const eventId = router.params.id ?? ''
   const { user: currentUser, isLoading: authLoading } = useAuthGuard()
   const currentUserId = currentUser?.id
 
-  const [step, setStep] = useState<FeedbackStep>('rating')
+  const [step, setStep] = useState<FeedbackStep>('experience')
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
   const [selectedConnections, setSelectedConnections] = useState<string[]>([])
@@ -285,7 +261,9 @@ export default function EventFeedbackPage() {
 
   // G12 (2026-08-07 audit): a swipe-back mid-submit would otherwise leave the
   // CTA stuck in 提交中… — reset the transient flag when the page is re-shown.
-  useResetOnShow(setIsSubmitting)
+  // 2026-08-15: also reset the optimistic submitted flip so the button does not
+  // show 已提交 while clickable after returning from swipe-back.
+  useResetOnShow(setIsSubmitting, setSubmitted)
 
   // C5 — Fire success haptic when entering the revealed step (effect, not render)
   useEffect(() => {
@@ -306,12 +284,16 @@ export default function EventFeedbackPage() {
     enabled: !!eventId && !authLoading && !!currentUserId,
   })
 
-  // G3 (2026-08-07 audit): track invite exposure for the balanced-layer funnel.
-  useEffect(() => {
-    if (step === 'invite') {
-      trackFeedbackEvent('feedback_invite_seen', { eventId })
-    }
-  }, [step, eventId])
+  // Balanced-layer funnel (2026-08-15 merge): the invite interstitial is gone
+  // and the deep fields are inline, so "engaged" = the FIRST deep field the
+  // user touches (thermometer / radar / venue / status / trait tag / improve
+  // chip). Fired exactly once per page visit.
+  const deepEngagedRef = useRef(false)
+  const markDeepEngaged = useCallback(() => {
+    if (deepEngagedRef.current) return
+    deepEngagedRef.current = true
+    trackFeedbackEvent('feedback_deep_engaged', { eventId })
+  }, [eventId])
 
   const toggleConnection = useCallback((userId: string) => {
     setSelectedConnections((prev) =>
@@ -325,6 +307,7 @@ export default function EventFeedbackPage() {
       const entry = prev[userId] ?? { tags: [], note: '' }
       const has = entry.tags.includes(tag)
       if (!has && entry.tags.length >= MAX_TAGS_PER_ATTENDEE) return prev
+      markDeepEngaged()
       return {
         ...prev,
         [userId]: {
@@ -333,7 +316,7 @@ export default function EventFeedbackPage() {
         },
       }
     })
-  }, [])
+  }, [markDeepEngaged])
 
   const setAttendeeNote = useCallback((userId: string, note: string) => {
     setAttendeeTraits((prev) => ({
@@ -343,17 +326,22 @@ export default function EventFeedbackPage() {
   }, [])
 
   const setRadarDimension = useCallback((key: RadarKey, value: number) => {
+    markDeepEngaged()
     setRadar((prev) => ({ ...prev, [key]: value }))
-  }, [])
+  }, [markDeepEngaged])
 
   // Up to MAX_IMPROVEMENT_AREAS areas; further taps are ignored.
   const toggleImprovementArea = useCallback((area: string) => {
     setImprovementAreas((prev) => {
-      if (prev.includes(area)) return prev.filter((a) => a !== area)
+      if (prev.includes(area)) {
+        markDeepEngaged()
+        return prev.filter((a) => a !== area)
+      }
       if (prev.length >= MAX_IMPROVEMENT_AREAS) return prev
+      markDeepEngaged()
       return [...prev, area]
     })
-  }, [])
+  }, [markDeepEngaged])
 
   const handleSubmit = useCallback(async () => {
     if (!eventId || isSubmitting) return
@@ -365,6 +353,10 @@ export default function EventFeedbackPage() {
       logInfo('[EventFeedback] Submitting', { eventId, rating, connections: selectedConnections.length })
       const attendeeTraitsPayload: Record<string, AttendeeTraitInput> = {}
       for (const [userId, entry] of Object.entries(attendeeTraits)) {
+        // Only keep impressions for people still selected on the connections
+        // step — if a user unchecks someone, their tags/notes must not be
+        // submitted (completeness-audit P1, 2026-08-15).
+        if (!selectedConnections.includes(userId)) continue
         const participant = participants.find((p) => p.id === userId)
         attendeeTraitsPayload[userId] = {
           displayName: participant?.displayName || participant?.firstName || '参与者',
@@ -372,9 +364,21 @@ export default function EventFeedbackPage() {
           improvementNote: entry.note,
         }
       }
-      // Balanced layer is engaged only once the user leaves the invite card
-      // (invite skip = base 3-step payload, exactly as before).
-      const deepEngaged = step !== 'invite'
+      // 2026-08-15 merge: deep fields are inline, so the balanced payload is
+      // always sent — buildEventFeedbackPayload drops untouched fields, and the
+      // server's hasDeepFeedback / XP tier keys off CONTENT, not the client path.
+      // The same content check drives the feedback_deep_submitted funnel event.
+      const hasDeepFields =
+        atmosphereScore > 0 ||
+        atmosphereNote.trim() !== '' ||
+        venueStyleRating !== null ||
+        connectionStatus !== null ||
+        improvementAreas.length > 0 ||
+        improvementOther.trim() !== '' ||
+        Object.values(radar).some((value) => value > 0) ||
+        Object.values(attendeeTraits).some(
+          (entry) => entry.tags.length > 0 || entry.note.trim() !== '',
+        )
       const res = await apiRequest<{ mutualMatches?: MutualMatch[] }>({
         path: `/api/events/${encodeURIComponent(eventId)}/feedback`,
         method: 'POST',
@@ -382,26 +386,22 @@ export default function EventFeedbackPage() {
           rating,
           comment,
           connections: selectedConnections,
-          ...(deepEngaged
-            ? {
-                balanced: {
-                  atmosphereScore,
-                  atmosphereNote,
-                  attendeeTraits: attendeeTraitsPayload,
-                  connectionRadar: radar,
-                  connectionStatus,
-                  hasNewConnections: selectedConnections.length > 0,
-                  improvementAreas,
-                  improvementOther,
-                  venueStyleRating,
-                },
-              }
-            : {}),
+          balanced: {
+            atmosphereScore,
+            atmosphereNote,
+            attendeeTraits: attendeeTraitsPayload,
+            connectionRadar: radar,
+            connectionStatus,
+            hasNewConnections: selectedConnections.length > 0,
+            improvementAreas,
+            improvementOther,
+            venueStyleRating,
+          },
         }),
       })
       setMutualMatches(res.mutualMatches || [])
       setStep('revealed')
-      if (deepEngaged) {
+      if (hasDeepFields) {
         trackFeedbackEvent('feedback_deep_submitted', { eventId })
       }
       // Invalidate the Connections Predictive Shell so the 连接 tab reflects the
@@ -421,7 +421,6 @@ export default function EventFeedbackPage() {
     comment,
     selectedConnections,
     isSubmitting,
-    step,
     atmosphereScore,
     atmosphereNote,
     attendeeTraits,
@@ -487,7 +486,7 @@ export default function EventFeedbackPage() {
             />
           )}
           {hasMatches ? (
-            <View style={{ display: 'flex', alignItems: 'center', gap: '8rpx' }}>
+            <View className='event-feedback__success-title-row'>
               <JoyJoinIcon emoji='🎉' tier='reaction' size={32} />
               <Text className='event-feedback__success-title'>互选成功！</Text>
             </View>
@@ -511,6 +510,10 @@ export default function EventFeedbackPage() {
                       {match.wechatContactId ? (
                         <View
                           className='event-feedback__match-wechat'
+                          hoverClass='event-feedback__match-wechat--pressed'
+                          // Type narrowing does not cross the closure boundary;
+                          // the non-null assertion is safe because we are inside
+                          // the `match.wechatContactId ?` truthy branch.
                           onClick={() => handleCopyWechat(match.wechatContactId!)}
                         >
                           <Text className='event-feedback__match-wechat-label'>微信号</Text>
@@ -536,180 +539,38 @@ export default function EventFeedbackPage() {
     )
   }
 
-  // ─── Rating step ───────────────────────────────────────────────────────────
-  if (step === 'rating') {
+  // ─── Experience step (merged 2026-08-15): faces + thermometer + radar + ───
+  // venue/status all describe the same night, so they share ONE screen. Every
+  // field is optional — the CTA is always 下一步, never a skip-or-answer fork.
+  if (step === 'experience') {
     return (
       <View className='event-feedback'>
         <View className='event-feedback__header'>
           <Text className='event-feedback__title'>今晚这局怎么样？</Text>
-          {renderStepProgress('rating')}
-        </View>
-
-        <View className='event-feedback__card'>
-          <Text className='event-feedback__card-title'>整体体验如何？</Text>
-          <View className='event-feedback__rating'>
-            <RatingFace value={rating} onSelect={setRating} disabled={false} />
-          </View>
-        </View>
-
-        <View className='event-feedback__footer'>
-          <Button
-            className='event-feedback__submit'
-            onClick={() => {
-              haptics('light')
-              setStep('connections')
-            }}
-            ariaLabel={rating > 0 ? '进入下一步' : '跳过整体体验评分'}
-          >
-            {rating > 0 ? '下一步' : '跳过'}
-          </Button>
-        </View>
-      </View>
-    )
-  }
-
-  // ─── Connections step ──────────────────────────────────────────────────────
-  if (step === 'connections') {
-    return (
-      <View className='event-feedback'>
-        <View className='event-feedback__header'>
-          <Text className='event-feedback__title'>想继续了解谁？</Text>
-          {renderStepProgress('connections')}
-        </View>
-
-        <View className='event-feedback__card'>
-          <Text className='event-feedback__card-title'>选择想保持联系的人</Text>
-          <Text className='event-feedback__card-hint'>互相选择后，即可看到对方的微信号</Text>
-          {participantsError ? (
-            <View className='event-feedback__participants-error' role='alert' aria-live='polite'>
-              <Text className='event-feedback__participants-error-text'>参与者信息加载失败</Text>
-              <Button
-                className='event-feedback__participants-retry'
-                onClick={() => {
-                  haptics('light')
-                  void queryClient.refetchQueries({ queryKey: ['mini-program', 'event-participants', eventId] })
-                }}
-                ariaLabel='重试加载参与者'
-              >
-                重试
-              </Button>
-            </View>
-          ) : participants.length === 0 ? (
-            <Text className='event-feedback__empty-participants'>暂时没有其他参与者信息</Text>
-          ) : (
-            <View className='event-feedback__participant-grid'>
-              {participants.map((p) => {
-                const isSelected = selectedConnections.includes(p.id)
-                const participantName = p.displayName || p.firstName || '匿名'
-                return (
-                  <View
-                    key={p.id}
-                    className={`event-feedback__participant-item ${isSelected ? 'event-feedback__participant-item--selected' : ''}`}
-                    onClick={() => {
-                      haptics('light')
-                      toggleConnection(p.id)
-                    }}
-                    role='button'
-                    aria-pressed={isSelected}
-                    aria-label={`选择${participantName}`}
-                  >
-                    <ParticipantAvatar participant={p} name={participantName} />
-                    <Text className='event-feedback__participant-name'>
-                      {participantName}
-                    </Text>
-                    {isSelected && (
-                      <Text className='event-feedback__participant-check'>✓</Text>
-                    )}
-                  </View>
-                )
-              })}
-            </View>
-          )}
-        </View>
-
-        <View className='event-feedback__footer'>
-          <Button
-            className='event-feedback__submit'
-            onClick={() => {
-              haptics('light')
-              setStep('comment')
-            }}
-            ariaLabel={selectedConnections.length > 0 ? `已选 ${selectedConnections.length} 人，进入下一步` : '跳过选择，进入下一步'}
-          >
-            {selectedConnections.length > 0
-              ? `已选 ${selectedConnections.length} 人，下一步`
-              : '跳过，下一步'}
-          </Button>
-        </View>
-      </View>
-    )
-  }
-
-  // ─── Invite card (optional upgrade — never a required step) ─────────────────
-  if (step === 'invite') {
-    return (
-      <View className='event-feedback'>
-        <View className='event-feedback__invite'>
-          <View className='event-feedback__invite-icon'>
-            <JoyJoinIcon emoji='✨' tier='mood' size={48} />
-          </View>
-          <Text className='event-feedback__invite-title'>再花 30 秒聊聊这场局</Text>
-          <Text className='event-feedback__invite-text'>
-            氛围、雷达、悄悄话 —— 你的观察会让下一场更对味
-          </Text>
-          <View className='event-feedback__invite-reward'>
-            <JoyJoinIcon emoji='🌟' tier='status' size={24} />
-            <Text className='event-feedback__invite-reward-text'>完成可得 +30 积分</Text>
-          </View>
-        </View>
-
-        {error ? <View className='event-feedback__error' role='alert' aria-live='polite'><Text>{error}</Text></View> : null}
-
-        <View className='event-feedback__footer'>
-          <View className='event-feedback__footer-row'>
-            <Button
-              className={`event-feedback__submit-secondary${submitted ? ' event-feedback__submit--submitted' : ''}`}
-              onClick={() => {
-                haptics('light')
-                handleSubmit()
-              }}
-              disabled={isSubmitting}
-              ariaLabel='直接提交反馈'
-            >
-              {submitted ? '已提交' : '直接提交'}
-            </Button>
-            <Button
-              className='event-feedback__submit'
-              onClick={() => {
-                haptics('medium')
-                trackFeedbackEvent('feedback_deep_engaged', { eventId })
-                setStep('deep-atmosphere')
-              }}
-              disabled={isSubmitting}
-              ariaLabel='开启均衡反馈'
-            >
-              开启均衡反馈
-            </Button>
-          </View>
-        </View>
-      </View>
-    )
-  }
-
-  // ─── Deep screen A — atmosphere, radar, venue, connection status ────────────
-  if (step === 'deep-atmosphere') {
-    return (
-      <View className='event-feedback'>
-        <View className='event-feedback__header'>
-          <Text className='event-feedback__title'>这场局的氛围</Text>
-          {renderDeepProgress('deep-atmosphere')}
+          {renderStepProgress('experience')}
+          {/* Why-we-ask line: no points pitch (there's no coupon-linked 积分
+              system to redeem them against) — just the honest reason. */}
+          <Text className='event-feedback__purpose-hint'>你的观察，会让下一场更对味</Text>
         </View>
 
         <ScrollView className='event-feedback__deep-scroll' scrollY enhanced showScrollbar={false}>
           <View className='event-feedback__card'>
+            <Text className='event-feedback__card-title'>整体体验如何？</Text>
+            <View className='event-feedback__rating'>
+              <RatingFace value={rating} onSelect={setRating} />
+            </View>
+          </View>
+
+          <View className='event-feedback__card'>
             <Text className='event-feedback__card-title'>氛围温度计</Text>
             <Text className='event-feedback__card-hint'>整场下来，气氛停在哪个刻度？</Text>
-            <Thermometer value={atmosphereScore} onChange={setAtmosphereScore} />
+            <Thermometer
+              value={atmosphereScore}
+              onChange={(value) => {
+                markDeepEngaged()
+                setAtmosphereScore(value)
+              }}
+            />
             <Input
               className='event-feedback__deep-input'
               placeholder='补充一句（选填）'
@@ -750,6 +611,7 @@ export default function EventFeedbackPage() {
                   selected={venueStyleRating === option.value}
                   onClick={() => {
                     haptics('light')
+                    markDeepEngaged()
                     setVenueStyleRating(option.value)
                   }}
                 />
@@ -770,6 +632,7 @@ export default function EventFeedbackPage() {
                   selected={connectionStatus === status}
                   onClick={() => {
                     haptics('light')
+                    markDeepEngaged()
                     setConnectionStatus(status)
                   }}
                 />
@@ -778,58 +641,112 @@ export default function EventFeedbackPage() {
           </View>
         </ScrollView>
 
-        {error ? <View className='event-feedback__error' role='alert' aria-live='polite'><Text>{error}</Text></View> : null}
-
         <View className='event-feedback__footer'>
-          <View className='event-feedback__footer-row'>
-            <Button
-              className='event-feedback__submit-ghost'
-              onClick={() => {
-                haptics('light')
-                setStep('invite')
-              }}
-              disabled={isSubmitting}
-              ariaLabel='返回邀请页'
-            >
-              上一步
-            </Button>
-            <Button
-              className={`event-feedback__submit-secondary${submitted ? ' event-feedback__submit--submitted' : ''}`}
-              onClick={() => {
-                haptics('light')
-                handleSubmit()
-              }}
-              disabled={isSubmitting}
-              ariaLabel='直接提交反馈'
-            >
-              {submitted ? '已提交' : '直接提交'}
-            </Button>
-            <Button
-              className='event-feedback__submit'
-              onClick={() => {
-                haptics('medium')
-                setStep('deep-people')
-              }}
-              disabled={isSubmitting}
-              ariaLabel='进入参与者与建议'
-            >
-              下一步
-            </Button>
-          </View>
+          <Button
+            className='event-feedback__submit'
+            onClick={() => {
+              haptics('light')
+              setStep('connections')
+            }}
+            ariaLabel='进入下一步'
+          >
+            下一步
+          </Button>
         </View>
       </View>
     )
   }
 
-  // ─── Deep screen B — attendee impressions + improvement areas ───────────────
-  if (step === 'deep-people') {
+  // ─── Connections step ──────────────────────────────────────────────────────
+  if (step === 'connections') {
+    return (
+      <View className='event-feedback'>
+        <View className='event-feedback__header'>
+          <Text className='event-feedback__title'>想继续了解谁？</Text>
+          {renderStepProgress('connections')}
+        </View>
+
+        <ScrollView className='event-feedback__deep-scroll' scrollY enhanced showScrollbar={false}>
+          <View className='event-feedback__card'>
+            <Text className='event-feedback__card-title'>选择想保持联系的人</Text>
+            <Text className='event-feedback__card-hint'>互相选择后，即可看到对方的微信号</Text>
+            {participantsError ? (
+              <View className='event-feedback__participants-error' role='alert' aria-live='polite'>
+                <Text className='event-feedback__participants-error-text'>参与者信息加载失败</Text>
+                <Button
+                  className='event-feedback__participants-retry'
+                  onClick={() => {
+                    haptics('light')
+                    void queryClient.refetchQueries({ queryKey: ['mini-program', 'event-participants', eventId] })
+                  }}
+                  ariaLabel='重试加载参与者'
+                >
+                  重试
+                </Button>
+              </View>
+            ) : participants.length === 0 ? (
+              <Text className='event-feedback__empty-participants'>暂时没有其他参与者信息</Text>
+            ) : (
+              <View className='event-feedback__participant-grid'>
+                {participants.map((p) => {
+                  const isSelected = selectedConnections.includes(p.id)
+                  const participantName = p.displayName || p.firstName || '匿名'
+                  return (
+                    <View
+                      key={p.id}
+                      className={`event-feedback__participant-item ${isSelected ? 'event-feedback__participant-item--selected' : ''}`}
+                      onClick={() => {
+                        haptics('light')
+                        toggleConnection(p.id)
+                      }}
+                      role='button'
+                      aria-pressed={isSelected}
+                      aria-label={`选择${participantName}`}
+                    >
+                      <ParticipantAvatar participant={p} name={participantName} />
+                      <Text className='event-feedback__participant-name'>
+                        {participantName}
+                      </Text>
+                      {isSelected && (
+                        <Text className='event-feedback__participant-check'>✓</Text>
+                      )}
+                    </View>
+                  )
+                })}
+              </View>
+            )}
+          </View>
+        </ScrollView>
+
+        <View className='event-feedback__footer'>
+          <Button
+            className='event-feedback__submit'
+            onClick={() => {
+              haptics('light')
+              setStep('wrapup')
+            }}
+            ariaLabel={selectedConnections.length > 0 ? `已选 ${selectedConnections.length} 人，进入下一步` : '跳过选择，进入下一步'}
+          >
+            {selectedConnections.length > 0
+              ? `已选 ${selectedConnections.length} 人，下一步`
+              : '跳过，下一步'}
+          </Button>
+        </View>
+      </View>
+    )
+  }
+
+  // ─── Wrap-up step (merged 2026-08-15): attendee impressions + improvement ──
+  // areas + free comment. Impressions only render for people picked on the
+  // connections step (轻量原则).
+  if (step === 'wrapup') {
     const attendees = participants.filter((p) => selectedConnections.includes(p.id))
     const improvementRemaining = MAX_IMPROVEMENT_AREAS - improvementAreas.length
     return (
       <View className='event-feedback'>
         <View className='event-feedback__header'>
-          <Text className='event-feedback__title'>参与者与建议</Text>
-          {renderDeepProgress('deep-people')}
+          <Text className='event-feedback__title'>还有什么想说的？</Text>
+          {renderStepProgress('wrapup')}
         </View>
 
         <ScrollView className='event-feedback__deep-scroll' scrollY enhanced showScrollbar={false}>
@@ -933,6 +850,18 @@ export default function EventFeedbackPage() {
               aria-label='其他改进建议（选填）'
             />
           </View>
+
+          <View className='event-feedback__card'>
+            <Text className='event-feedback__card-title'>想说点什么？（可选）</Text>
+            <Textarea
+              className='event-feedback__textarea'
+              placeholder='分享你的感受和建议…'
+              value={comment}
+              onInput={(e) => setComment(e.detail.value)}
+              maxlength={500}
+              aria-label='分享你的感受和建议（可选）'
+            />
+          </View>
         </ScrollView>
 
         {error ? <View className='event-feedback__error' role='alert' aria-live='polite'><Text>{error}</Text></View> : null}
@@ -943,10 +872,10 @@ export default function EventFeedbackPage() {
               className='event-feedback__submit-ghost'
               onClick={() => {
                 haptics('light')
-                setStep('deep-atmosphere')
+                setStep('connections')
               }}
               disabled={isSubmitting}
-              ariaLabel='返回氛围反馈'
+              ariaLabel='返回选择联系人'
             >
               上一步
             </Button>
@@ -956,7 +885,7 @@ export default function EventFeedbackPage() {
                 haptics('medium')
                 handleSubmit()
               }}
-              disabled={isSubmitting}
+              disabled={isSubmitting || submitted}
               ariaLabel='提交反馈'
             >
               {submitted ? '已提交' : '提交反馈'}
@@ -967,49 +896,12 @@ export default function EventFeedbackPage() {
     )
   }
 
-  // ─── Comment step ──────────────────────────────────────────────────────────
-  if (step !== 'comment') {
-    // Defensive: unknown step state
-    return (
-      <JoyJoinLoadingScreen
-        title='页面加载中…'
-        subtitle={`${getMascotDisplayName(currentUser)}正在准备`}
-        showSkeleton={false}
-      />
-    )
-  }
-
+  // Defensive: unknown step state
   return (
-    <View className='event-feedback'>
-      <View className='event-feedback__header'>
-        <Text className='event-feedback__title'>还有什么想说的？</Text>
-        {renderStepProgress('comment')}
-      </View>
-
-      <View className='event-feedback__card'>
-        <Text className='event-feedback__card-title'>想说点什么？（可选）</Text>
-        <Textarea
-          className='event-feedback__textarea'
-          placeholder='分享你的感受和建议…'
-          value={comment}
-          onInput={(e) => setComment(e.detail.value)}
-          maxlength={500}
-          aria-label='分享你的感受和建议（可选）'
-        />
-      </View>
-
-      <View className='event-feedback__footer'>
-        <Button
-          className='event-feedback__submit'
-          onClick={() => {
-            haptics('light')
-            setStep('invite')
-          }}
-          ariaLabel='下一步'
-        >
-          下一步
-        </Button>
-      </View>
-    </View>
+    <JoyJoinLoadingScreen
+      title='页面加载中…'
+      subtitle={`${getMascotDisplayName(currentUser)}正在准备`}
+      showSkeleton={false}
+    />
   )
 }

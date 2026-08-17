@@ -33,6 +33,7 @@
     "repair:xiaoyue": "node scripts/queue-xiaoyue-repairs.mjs",
     "check:package-size": "node scripts/check-package-size.mjs",
     "check:package-size:strict": "node scripts/check-package-size.mjs --strict",
+    "check:compiled-package-size": "node scripts/check-compiled-package-source-size.mjs",
     "verify:subpackage-styles": "node scripts/verify-subpackage-styles.mjs",
     "subset:brand-font": "python3 scripts/subset-brand-font.py",
     "subset:brand-font:aggressive": "python3 scripts/subset-brand-font.py --aggressive",

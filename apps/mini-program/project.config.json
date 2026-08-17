@@ -19,7 +19,7 @@
     "minifyWXML": true,
     "localPlugins": false,
     "disableUseStrict": false,
-    "ignoreUploadUnusedFiles": false,
+    "ignoreUploadUnusedFiles": true,
     "useCompilerPlugins": false,
     "condition": false,
     "swc": false,
@@ -85,6 +85,10 @@
       {
         "type": "regexp",
         "value": "pages/alang/assets/.*\\.jpg$"
+      },
+      {
+        "type": "regexp",
+        "value": "pages/alang/assets/.*\\.webp$"
       },
       {
         "type": "regexp",

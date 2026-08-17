@@ -10,6 +10,13 @@ import {
   type AtuanFirstActProgress,
   type AtuanFirstActSubmission,
 } from './atuanFirstAct'
+import {
+  atuanLaterActSubmissionSchema,
+  isAtuanLaterActUnitId,
+  restoreAtuanLaterActProgress,
+  type AtuanLaterActProgress,
+  type AtuanLaterActSubmission,
+} from './atuanLaterActs'
 
 export const STORY_UNIT_VERSION = 2 as const
 
@@ -29,7 +36,7 @@ export interface StoryUnitChoice {
   questionId: string
   optionId: string
   label: string
-  storyPath?: AtuanFirstActSubmission
+  storyPath?: AtuanFirstActSubmission | AtuanLaterActSubmission
 }
 
 export interface StoryUnitQuestionSnapshot {
@@ -45,16 +52,18 @@ export interface StoryUnitState {
   companionEvent: NPCResponseEvent
   divergenceCopy: string | null
   atuanFirstAct: AtuanFirstActProgress | null
+  atuanLaterAct: AtuanLaterActProgress | null
   analyticsSent: FlashStoryUnitAnalyticsEvent[]
 }
 
 export type StoryUnitAction =
   | { type: 'ENTER' }
-  | { type: 'START_INTERACTION'; choice: StoryUnitChoice; atuanFirstAct?: AtuanFirstActProgress }
+  | { type: 'START_INTERACTION'; choice: StoryUnitChoice; atuanFirstAct?: AtuanFirstActProgress; atuanLaterAct?: AtuanLaterActProgress }
   | { type: 'FIRST_MISTAKE' }
   | { type: 'OBJECT_DIVERGED'; copy: string }
   | { type: 'OBJECT_ALIGNED'; choice?: StoryUnitChoice }
   | { type: 'ATUAN_FIRST_ACT_UPDATED'; progress: AtuanFirstActProgress }
+  | { type: 'ATUAN_LATER_ACT_UPDATED'; progress: AtuanLaterActProgress }
   | { type: 'RESPONSE_RECEIVED' }
   | { type: 'COMPLETE' }
   | { type: 'ANALYTIC_RECORDED'; event: FlashStoryUnitAnalyticsEvent }
@@ -81,6 +90,7 @@ export function createStoryUnitState(unitId: FlashStoryUnitId): StoryUnitState {
     companionEvent: 'INTRO',
     divergenceCopy: null,
     atuanFirstAct: null,
+    atuanLaterAct: null,
     analyticsSent: [],
   }
 }
@@ -88,7 +98,9 @@ export function createStoryUnitState(unitId: FlashStoryUnitId): StoryUnitState {
 function isChoice(value: unknown): value is StoryUnitChoice {
   if (!value || typeof value !== 'object') return false
   const choice = value as Partial<StoryUnitChoice>
-  const pathIsValid = choice.storyPath === undefined || atuanFirstActSubmissionSchema.safeParse(choice.storyPath).success
+  const pathIsValid = choice.storyPath === undefined
+    || atuanFirstActSubmissionSchema.safeParse(choice.storyPath).success
+    || atuanLaterActSubmissionSchema.safeParse(choice.storyPath).success
   return pathIsValid
     && typeof choice.questionId === 'string'
     && choice.questionId.length > 0
@@ -122,6 +134,9 @@ export function restoreStoryUnitState(unitId: FlashStoryUnitId, value: unknown, 
   const atuanFirstAct = unitId === 's1-p1-atuan' && encounterId
     ? restoreAtuanFirstActProgress(encounterId, candidate.atuanFirstAct)
     : null
+  const atuanLaterAct = isAtuanLaterActUnitId(unitId)
+    ? restoreAtuanLaterActProgress(unitId, candidate.atuanLaterAct)
+    : null
 
   // V2 snapshots created before the first-act loop have no path progress.
   // Reset those active snapshots instead of dropping the user into a half-old,
@@ -133,6 +148,13 @@ export function restoreStoryUnitState(unitId: FlashStoryUnitId, value: unknown, 
     && !atuanFirstAct
   ) return fallback
 
+  if (
+    isAtuanLaterActUnitId(unitId)
+    && candidate.stage !== 'INIT'
+    && candidate.stage !== 'NPC_INTRO'
+    && !atuanLaterAct
+  ) return fallback
+
   return {
     unitId,
     version: STORY_UNIT_VERSION,
@@ -141,6 +163,7 @@ export function restoreStoryUnitState(unitId: FlashStoryUnitId, value: unknown, 
     companionEvent: candidate.companionEvent,
     divergenceCopy: typeof candidate.divergenceCopy === 'string' ? candidate.divergenceCopy : null,
     atuanFirstAct,
+    atuanLaterAct,
     analyticsSent: [...new Set(analyticsSent)],
   }
 }
@@ -176,6 +199,7 @@ export function storyUnitReducer(state: StoryUnitState, action: StoryUnitAction)
             stage: 'OBJECT_INTERACTION',
             choice: action.choice,
             atuanFirstAct: action.atuanFirstAct ?? null,
+            atuanLaterAct: action.atuanLaterAct ?? null,
             companionEvent: 'INTRO',
           }
         : state
@@ -194,6 +218,12 @@ export function storyUnitReducer(state: StoryUnitState, action: StoryUnitAction)
     case 'ATUAN_FIRST_ACT_UPDATED':
       return state.unitId === 's1-p1-atuan' && state.stage === 'OBJECT_INTERACTION'
         ? { ...state, atuanFirstAct: action.progress }
+        : state
+    case 'ATUAN_LATER_ACT_UPDATED':
+      return isAtuanLaterActUnitId(state.unitId)
+        && state.stage === 'OBJECT_INTERACTION'
+        && action.progress.unitId === state.unitId
+        ? { ...state, atuanLaterAct: action.progress }
         : state
     case 'RESPONSE_RECEIVED':
       return state.stage === 'OBJECT_SUCCESS'

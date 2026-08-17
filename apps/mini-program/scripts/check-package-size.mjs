@@ -3,8 +3,9 @@
  * Measure mini-program package sizes after build and fail if main package exceeds limit.
  *
  * WeChat Mini Program enforces a 2MB hard limit per package (main + subpackages).
- * The limit applies to the COMPRESSED upload package, not uncompressed files.
- * This script measures the actual zip-compressed size to be accurate.
+ * The upload service also rejects an oversized filtered source package before
+ * producing the final archive, so this gate verifies both the upload filter
+ * contract and the compressed package estimate.
  *
  * Usage (from apps/mini-program, after build:weapp):
  *   npm run check:package-size
@@ -103,8 +104,8 @@ function readAppConfig() {
   }
 }
 
-function readPrivateProjectConfig() {
-  const configPath = path.join(ROOT, 'project.private.config.json')
+function readProjectConfig() {
+  const configPath = path.join(ROOT, 'project.config.json')
   if (!fs.existsSync(configPath)) return null
   try {
     return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
@@ -121,9 +122,9 @@ function main() {
   }
 
   const appConfig = readAppConfig()
-  const privateProjectConfig = readPrivateProjectConfig()
+  const projectConfig = readProjectConfig()
   const filtersUnusedFiles =
-    privateProjectConfig?.setting?.ignoreDevUnusedFiles === true
+    projectConfig?.setting?.ignoreUploadUnusedFiles === true
   const subpackageRoots =
     appConfig?.subPackages?.map((pkg) => pkg.root).filter(Boolean) ?? ['pages/onboarding']
   const subpackageDirNames = subpackageRoots.map((root) => root.split('/').filter(Boolean)[1]).filter(Boolean)
@@ -254,7 +255,7 @@ function main() {
         `FAIL: Main package source exceeds ${formatSize(MAIN_PACKAGE_SOURCE_MAX_BYTES)} safety limit`,
       )
       console.error(`      Current raw source: ${formatSize(uncompressedSize)}`)
-      console.error('      Remediation: enable project.private.config.json setting.ignoreDevUnusedFiles.')
+      console.error('      Remediation: enable project.config.json setting.ignoreUploadUnusedFiles and explicitly include dynamic runtime assets.')
       failed = true
     } else if (filtersUnusedFiles) {
       console.log('PASS: WeChat unused-file filtering is enabled for source packaging')

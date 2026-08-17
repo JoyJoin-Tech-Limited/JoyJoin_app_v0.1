@@ -1,0 +1,60 @@
+@use '../../../styles/variables' as *;
+
+.lizi-first-act {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 1040rpx;
+  overflow: hidden;
+  color: $color-text-primary-warm;
+  background: $color-bg-warm-to;
+  font-family: $font-body;
+
+  &__scene,
+  &__scene-fallback {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__scene {
+    object-fit: contain;
+  }
+
+  &__scene-fallback {
+    background:
+      linear-gradient(150deg, rgba($flow-accent-human, 0.34), transparent 44%),
+      linear-gradient(180deg, $color-surface 0%, $color-bg-warm-mid 52%, $color-bg-warm-to 100%);
+  }
+
+  &__target {
+    &--lizi {
+      top: 31%;
+      right: 14%;
+      width: 35%;
+      height: 52%;
+    }
+
+    &--palette {
+      top: 34%;
+      left: 2%;
+      width: 30%;
+      height: 27%;
+    }
+
+    &--swatches {
+      top: 5%;
+      right: 15%;
+      width: 34%;
+      height: 18%;
+    }
+
+    &--cart {
+      right: 1%;
+      bottom: 9%;
+      width: 32%;
+      height: 28%;
+    }
+  }
+}

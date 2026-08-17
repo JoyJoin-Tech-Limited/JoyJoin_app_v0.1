@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES,
   MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
+  MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_PAGES,
+  MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_ROOT,
   MINI_PROGRAM_CENTER_TAB_EMPTY_SUBPACKAGE_PAGES,
   MINI_PROGRAM_CENTER_TAB_EMPTY_SUBPACKAGE_ROOT,
   MINI_PROGRAM_CITY_UNLOCK_SUBPACKAGE_PAGES,
@@ -22,6 +24,8 @@ import {
   MINI_PROGRAM_PAGES,
   MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_PAGES,
   MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
+  MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_PAGES,
+  MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT,
   MINI_PROGRAM_PRELOAD_RULES,
   MINI_PROGRAM_PAYMENTS_SUBPACKAGE_PAGES,
   MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT,
@@ -68,9 +72,11 @@ describe('mini-program onboarding routes', () => {
       'pages/matching-status',
       'pages/pool-registration',
       'pages/squad-unboxing',
+      'pages/pool-group-detail',
       'pages/gathering-room',
       'pages/payments',
       'pages/alang',
+      'pages/alang-story',
       'pages/event-feedback',
       'pages/city-unlock',
       'pages/event-coordination',
@@ -96,6 +102,10 @@ describe('mini-program onboarding routes', () => {
     // the page past the 2 MB zip ceiling.
     expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/squad-unboxing/index')
     expect(MINI_PROGRAM_PAGES).toContain('pages/squad-unboxing/index')
+    // D2: pool-group-detail left the main package — the TablemateCard deck
+    // reskin pushed main source size over WeChat's 2048KB gate (2026-08-16).
+    expect(MINI_PROGRAM_MAIN_PACKAGE_PAGES).not.toContain('pages/pool-group-detail/index')
+    expect(MINI_PROGRAM_PAGES).toContain('pages/pool-group-detail/index')
     expect(MINI_PROGRAM_SUBPACKAGES).toEqual([
       {
         root: MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT,
@@ -122,6 +132,10 @@ describe('mini-program onboarding routes', () => {
         pages: MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_PAGES,
       },
       {
+        root: MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT,
+        pages: MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_PAGES,
+      },
+      {
         root: MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT,
         pages: MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_PAGES,
       },
@@ -132,6 +146,10 @@ describe('mini-program onboarding routes', () => {
       {
         root: MINI_PROGRAM_ALANG_SUBPACKAGE_ROOT,
         pages: MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES,
+      },
+      {
+        root: MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_ROOT,
+        pages: MINI_PROGRAM_ALANG_STORY_SUBPACKAGE_PAGES,
       },
       {
         root: MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_ROOT,
@@ -167,6 +185,7 @@ describe('mini-program onboarding routes', () => {
         packages: [
           MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
           MINI_PROGRAM_GATHERING_ROOM_SUBPACKAGE_ROOT,
+          MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT,
         ],
       },
       'pages/pool-group-detail/index': {
@@ -179,6 +198,8 @@ describe('mini-program onboarding routes', () => {
           MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
           MINI_PROGRAM_FEATURES_SUBPACKAGE_ROOT,
           MINI_PROGRAM_PAYMENTS_SUBPACKAGE_ROOT,
+          MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_ROOT,
+          MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT,
         ],
       },
       'pages/events/index': {
@@ -186,15 +207,22 @@ describe('mini-program onboarding routes', () => {
         packages: [
           MINI_PROGRAM_POOL_REGISTRATION_SUBPACKAGE_ROOT,
           MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT,
+          MINI_PROGRAM_EVENT_FEEDBACK_SUBPACKAGE_ROOT,
         ],
       },
       'pages/center-hub/index': {
         network: 'all',
-        packages: [MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT],
+        packages: [
+          MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT,
+          MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT,
+        ],
       },
       'pages/matching-status/index': {
         network: 'all',
-        packages: [MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT],
+        packages: [
+          MINI_PROGRAM_SQUAD_UNBOXING_SUBPACKAGE_ROOT,
+          MINI_PROGRAM_POOL_GROUP_DETAIL_SUBPACKAGE_ROOT,
+        ],
       },
       'pages/pool-registration/index': {
         network: 'all',

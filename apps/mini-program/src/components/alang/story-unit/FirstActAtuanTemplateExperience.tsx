@@ -1,0 +1,449 @@
+import Taro, { useDidShow } from '@tarojs/taro'
+import { Image, Text, View } from '@tarojs/components'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
+import { haptics } from '../../../lib/utils/haptics'
+import { completedFlashActGamePlacements } from '../../../lib/alang/flashActGameProgress'
+import { FirstActDialogueChrome } from './FirstActDialogueChrome'
+import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
+import './FirstActAtuanTemplateExperience.scss'
+
+export type FirstActApproachIndex = 0 | 1
+export type FirstActTemplateStage = 'scene' | 'reveal' | 'event' | 'choice' | 'object' | 'followup' | 'conversation' | 'success'
+
+export interface FirstActTemplateMigratedProgress {
+  stage: FirstActTemplateStage
+  seenIds: string[]
+  activeId: string | null
+  approachIndex: FirstActApproachIndex | null
+  objectSeenIds: string[]
+  activeObjectId: string | null
+  followUpIndex: FirstActApproachIndex | null
+}
+
+export interface FirstActTemplateHighlight {
+  id: string
+  label: string
+  clue: string
+  placementClassName: string
+}
+
+export interface FirstActTemplateApproach {
+  label: string
+  response: string
+  hint: string
+}
+
+export interface FirstActTemplateObjectDetail {
+  id: string
+  label: string
+  clue: string
+}
+
+export interface FirstActTemplateFollowUp {
+  label: string
+  response: string
+  narration: string
+}
+
+export interface FirstActTemplateObjectExploration {
+  title: string
+  shortLabel: string
+  intro: string
+  details: readonly [FirstActTemplateObjectDetail, FirstActTemplateObjectDetail, FirstActTemplateObjectDetail]
+  followUpPrompt: string
+  followUps: readonly [FirstActTemplateFollowUp, FirstActTemplateFollowUp]
+  gamePrompt: string
+}
+
+export interface FirstActAtuanTemplateConfig {
+  npcSlug: 'alang' | 'lizi' | 'momo' | 'shiqi'
+  npcName: string
+  objectCode: string
+  rootClassName: string
+  testId: string
+  sceneTestId: string
+  fallbackTestId: string
+  storageKey: (encounterId: string) => string
+  migrateLegacyProgress?: (value: unknown) => FirstActTemplateMigratedProgress | null
+  highlights: readonly [FirstActTemplateHighlight, FirstActTemplateHighlight, FirstActTemplateHighlight, FirstActTemplateHighlight]
+  unlockCopy: string
+  eventLabel: string
+  eventPrompt: string
+  approaches: readonly [FirstActTemplateApproach, FirstActTemplateApproach]
+  objectExploration: FirstActTemplateObjectExploration
+  conversationNarration: string
+  gameAction: string
+  successSpeech: string
+  successNarration: string
+  completionLabel: string
+}
+
+interface Progress {
+  version: 'atuan-template-v2'
+  stage: FirstActTemplateStage
+  seenIds: string[]
+  activeId: string | null
+  approachIndex: FirstActApproachIndex | null
+  objectSeenIds: string[]
+  activeObjectId: string | null
+  followUpIndex: FirstActApproachIndex | null
+}
+
+function initialProgress(): Progress {
+  return {
+    version: 'atuan-template-v2',
+    stage: 'scene',
+    seenIds: [],
+    activeId: null,
+    approachIndex: null,
+    objectSeenIds: [],
+    activeObjectId: null,
+    followUpIndex: null,
+  }
+}
+
+function loadProgress(storageKey: string, config: FirstActAtuanTemplateConfig): Progress {
+  try {
+    const stored = Taro.getStorageSync(storageKey) as unknown
+    const storedVersion = stored && typeof stored === 'object' && 'version' in stored ? (stored as { version?: unknown }).version : undefined
+    const migrated = storedVersion === 'atuan-template-v1' || storedVersion === 'atuan-template-v2'
+      ? null
+      : config.migrateLegacyProgress?.(stored) ?? null
+    if (storedVersion !== 'atuan-template-v1' && storedVersion !== 'atuan-template-v2' && !migrated) return initialProgress()
+    const value = (migrated ? { ...migrated, version: 'atuan-template-v2' as const } : stored) as Omit<Partial<Progress>, 'version'> & { version: 'atuan-template-v1' | 'atuan-template-v2' }
+    const validIds = new Set(config.highlights.map(({ id }) => id))
+    const validObjectIds = new Set(config.objectExploration.details.map(({ id }) => id))
+    const seenIds = Array.isArray(value.seenIds) ? value.seenIds.filter((id): id is string => typeof id === 'string' && validIds.has(id)) : []
+    const objectSeenIds = Array.isArray(value.objectSeenIds) ? value.objectSeenIds.filter((id): id is string => typeof id === 'string' && validObjectIds.has(id)) : []
+    let stage = ['scene', 'reveal', 'event', 'choice', 'object', 'followup', 'conversation', 'success'].includes(value.stage ?? '') ? value.stage as FirstActTemplateStage : 'scene'
+    const approachIndex = value.approachIndex === 0 || value.approachIndex === 1 ? value.approachIndex : null
+    const followUpIndex = value.followUpIndex === 0 || value.followUpIndex === 1 ? value.followUpIndex : null
+    const storedActiveObjectId = typeof value.activeObjectId === 'string' && validObjectIds.has(value.activeObjectId) ? value.activeObjectId : null
+    if (['object', 'followup', 'conversation', 'success'].includes(stage) && approachIndex === null) stage = 'choice'
+    if (stage === 'followup' && objectSeenIds.length !== config.objectExploration.details.length) stage = 'object'
+    if (stage === 'object' && objectSeenIds.length === config.objectExploration.details.length && storedActiveObjectId === null) stage = 'followup'
+    return {
+      version: 'atuan-template-v2',
+      stage,
+      seenIds,
+      activeId: ['scene', 'reveal'].includes(stage) && typeof value.activeId === 'string' && validIds.has(value.activeId) ? value.activeId : null,
+      approachIndex,
+      objectSeenIds,
+      activeObjectId: stage === 'object' ? storedActiveObjectId : null,
+      followUpIndex,
+    }
+  } catch {
+    return initialProgress()
+  }
+}
+
+export function FirstActAtuanTemplateExperience({
+  encounterId,
+  scene,
+  disabled = false,
+  onSpeechChange,
+  onComplete,
+  config,
+}: {
+  encounterId: string
+  scene: string
+  disabled?: boolean
+  onSpeechChange: (speech: string) => void
+  onComplete: (approachIndex: FirstActApproachIndex) => void | Promise<void>
+  config: FirstActAtuanTemplateConfig
+}) {
+  const storageKey = config.storageKey(encounterId)
+  const gameKey = `${storageKey}:game`
+  const [progress, setProgress] = useState<Progress>(() => loadProgress(storageKey, config))
+  const progressRef = useRef(progress)
+  const [sceneFailed, setSceneFailed] = useState(false)
+  const primaryHighlights = config.highlights.slice(0, 3)
+  const revealedHighlight = config.highlights[3]
+  const activeHighlight = useMemo(
+    () => config.highlights.find(({ id }) => id === progress.activeId) ?? null,
+    [config.highlights, progress.activeId],
+  )
+  const activeObjectDetail = useMemo(
+    () => config.objectExploration.details.find(({ id }) => id === progress.activeObjectId) ?? null,
+    [config.objectExploration.details, progress.activeObjectId],
+  )
+  const selectedFollowUp = progress.followUpIndex === null ? null : config.objectExploration.followUps[progress.followUpIndex]
+  progressRef.current = progress
+
+  useEffect(() => {
+    try { Taro.setStorageSync(storageKey, progress) } catch { /* Local progress must not block the encounter. */ }
+  }, [progress, storageKey])
+
+  useEffect(() => {
+    const speech = activeHighlight?.clue
+      ?? activeObjectDetail?.clue
+      ?? selectedFollowUp?.response
+      ?? (progress.approachIndex === null ? config.eventPrompt : config.approaches[progress.approachIndex].response)
+    onSpeechChange(progress.stage === 'success' ? config.successSpeech : speech)
+  }, [activeHighlight, activeObjectDetail, config, onSpeechChange, progress.approachIndex, progress.stage, selectedFollowUp])
+
+  useDidShow(() => {
+    if (progressRef.current.stage !== 'conversation') return
+    const unitId = `s1-p1-${config.npcSlug}`
+    const result = completedFlashActGamePlacements(Taro.getStorageSync(gameKey), { unitId, phase: 1 })
+    if (!result) return
+    Taro.removeStorageSync(gameKey)
+    haptics('success')
+    setProgress((current) => ({ ...current, stage: 'success', activeId: null }))
+  })
+
+  const inspect = (id: string) => {
+    if (disabled || progress.activeId || progress.seenIds.includes(id)) return
+    haptics('light')
+    setProgress((current) => ({
+      ...current,
+      activeId: id,
+      seenIds: [...current.seenIds, id],
+    }))
+  }
+
+  const closeClue = () => {
+    if (!activeHighlight) return
+    const isReveal = activeHighlight.id === revealedHighlight.id
+    const primaryComplete = primaryHighlights.every(({ id }) => progress.seenIds.includes(id))
+    haptics(isReveal || primaryComplete ? 'medium' : 'light')
+    setProgress((current) => ({
+      ...current,
+      activeId: null,
+      stage: isReveal ? 'event' : primaryComplete ? 'reveal' : 'scene',
+    }))
+  }
+
+  const openGame = () => {
+    if (disabled || progress.approachIndex === null) return
+    haptics('medium')
+    void Taro.navigateTo({
+      url: `${MINI_PROGRAM_ROUTES.alangAtuanCards}?mode=${config.npcSlug}&unitId=s1-p1-${config.npcSlug}&phase=1&key=${encodeURIComponent(gameKey)}&approach=${progress.approachIndex}`,
+    })
+  }
+
+  const inspectObjectDetail = (id: string) => {
+    if (disabled || progress.activeObjectId || progress.objectSeenIds.includes(id)) return
+    haptics('light')
+    setProgress((current) => ({
+      ...current,
+      activeObjectId: id,
+      objectSeenIds: [...current.objectSeenIds, id],
+    }))
+  }
+
+  const closeObjectDetail = () => {
+    if (!activeObjectDetail) return
+    const complete = config.objectExploration.details.every(({ id }) => progress.objectSeenIds.includes(id))
+    haptics(complete ? 'medium' : 'light')
+    setProgress((current) => ({
+      ...current,
+      activeObjectId: null,
+      stage: complete ? 'followup' : 'object',
+    }))
+  }
+
+  const chooseApproach = (approachIndex: FirstActApproachIndex) => {
+    if (disabled) return
+    haptics('light')
+    setProgress((current) => ({
+      ...current,
+      stage: 'object',
+      approachIndex,
+      objectSeenIds: [],
+      activeObjectId: null,
+      followUpIndex: null,
+    }))
+  }
+
+  const chooseFollowUp = (id: string) => {
+    if (disabled) return
+    const followUpIndex = Number(id)
+    if (followUpIndex !== 0 && followUpIndex !== 1) return
+    haptics('light')
+    setProgress((current) => ({ ...current, stage: 'conversation', followUpIndex }))
+  }
+
+  return (
+    <View
+      className={`${config.rootClassName} first-act-atuan-template${disabled ? ' first-act-atuan-template--disabled' : ''}`}
+      data-testid={config.testId}
+      data-object-code={config.objectCode}
+      data-stage={progress.stage}
+      data-scene={scene}
+    >
+      {!sceneFailed ? (
+        <Image className={`${config.rootClassName}__scene`} src={scene} mode='aspectFit' data-testid={config.sceneTestId} onError={() => setSceneFailed(true)} aria-hidden='true' />
+      ) : <View className={`${config.rootClassName}__scene-fallback`} data-testid={config.fallbackTestId} aria-hidden='true' />}
+      <View className='first-act-scene-grade' aria-hidden='true' />
+
+      {progress.stage === 'scene' && !activeHighlight ? (
+        <FirstActHighlightOverlay
+          npcSlug={config.npcSlug}
+          targets={primaryHighlights}
+          completedIds={progress.seenIds}
+          activeId={null}
+          disabled={disabled}
+          onSelect={inspect}
+        />
+      ) : null}
+
+      {progress.stage === 'reveal' && !activeHighlight ? (
+        <>
+          <View className='atuan-arrival__unlock-note' role='status' aria-live='polite'>
+            <Text className='atuan-arrival__unlock-kicker'>三处线索已找到</Text>
+            <Text className='atuan-arrival__unlock-copy'>{config.unlockCopy}</Text>
+          </View>
+          <FirstActHighlightOverlay
+            npcSlug={config.npcSlug}
+            targets={[revealedHighlight]}
+            completedIds={[]}
+            activeId={null}
+            disabled={disabled}
+            onSelect={inspect}
+          />
+        </>
+      ) : null}
+
+      {activeHighlight ? (
+        <View
+          className='atuan-arrival__clue'
+          hoverClass='atuan-arrival__clue--pressed'
+          onClick={closeClue}
+          role='button'
+          aria-label={`收下${activeHighlight.label}的线索，回到现场`}
+          data-testid={`${config.npcSlug}-scene-clue`}
+        >
+          <Text className='atuan-arrival__clue-kicker'>{activeHighlight.id === revealedHighlight.id ? '第二层 · 新线索' : '现场线索'}</Text>
+          <Text className='atuan-arrival__clue-title'>{activeHighlight.label}</Text>
+          <Text className='atuan-arrival__clue-copy'>{activeHighlight.clue}</Text>
+          <Text className='atuan-arrival__clue-action'>轻触收下线索</Text>
+        </View>
+      ) : null}
+
+      {progress.stage === 'event' ? (
+        <View className='first-act-atuan-template__event'>
+          <View className='first-act-atuan-template__event-ribbon first-act-atuan-template__event-ribbon--one' />
+          <View className='first-act-atuan-template__event-ribbon first-act-atuan-template__event-ribbon--two' />
+          <View className='first-act-atuan-template__event-object' hoverClass='first-act-atuan-template__event-object--pressed' onClick={() => setProgress((current) => ({ ...current, stage: 'choice' }))} role='button' aria-label={config.eventLabel}>
+            <View className='first-act-atuan-template__event-rule' />
+          </View>
+        </View>
+      ) : null}
+
+      {progress.stage === 'choice' ? (
+        <View className='atuan-arrival__action-sheet' aria-label='选择你的现场动作'>
+          <Text className='atuan-arrival__action-prompt'>{config.eventPrompt}</Text>
+          <View className='atuan-arrival__action-cards'>
+            {config.approaches.map((approach, index) => (
+              <View key={approach.label} className={`atuan-arrival__action-card atuan-arrival__action-card--${index === 0 ? 'catch' : 'bag'}`} hoverClass='atuan-arrival__action-card--pressed' onClick={() => chooseApproach(index as FirstActApproachIndex)} role='button' aria-label={approach.label}>
+                <View className='atuan-arrival__action-card-visual'><View className={index === 0 ? 'atuan-arrival__action-mini-card' : 'atuan-arrival__action-bag-mark'} /></View>
+                <View className='atuan-arrival__action-card-copy'>
+                  <Text className='atuan-arrival__action-card-text'>{approach.label}</Text>
+                  <Text className='atuan-arrival__action-card-hint'>{approach.hint}</Text>
+                </View>
+                <Text className='atuan-arrival__action-card-arrow' aria-hidden='true'>›</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {progress.stage === 'object' && progress.approachIndex !== null ? (
+        <>
+          <View className='first-act-atuan-template__object-stage' data-testid={`${config.npcSlug}-object-explorer`}>
+            <View className='first-act-atuan-template__object-heading'>
+              <Text className='first-act-atuan-template__object-kicker'>再靠近一点</Text>
+              <Text className='first-act-atuan-template__object-title'>{config.objectExploration.title}</Text>
+              <Text className='first-act-atuan-template__object-progress'>已看见 {progress.objectSeenIds.length}/3 处细节</Text>
+            </View>
+            <View className={`first-act-atuan-template__object first-act-atuan-template__object--${config.npcSlug}`} aria-hidden='true'>
+              <View className={`first-act-atuan-template__object-mark first-act-atuan-template__object-mark--${config.npcSlug}-one`} />
+              <View className={`first-act-atuan-template__object-mark first-act-atuan-template__object-mark--${config.npcSlug}-two`} />
+              <View className={`first-act-atuan-template__object-mark first-act-atuan-template__object-mark--${config.npcSlug}-three`} />
+            </View>
+          </View>
+          {!activeObjectDetail ? (
+            <FirstActHighlightOverlay
+              npcSlug={config.npcSlug}
+              testIdPrefix={`${config.npcSlug}-object`}
+              className='first-act-atuan-template__object-highlights'
+              targets={config.objectExploration.details.map((detail, index) => ({
+                ...detail,
+                placementClassName: `first-act-atuan-template__object-hotspot--${['one', 'two', 'three'][index]}`,
+              }))}
+              completedIds={progress.objectSeenIds}
+              activeId={null}
+              disabled={disabled}
+              onSelect={inspectObjectDetail}
+            />
+          ) : null}
+          {!activeObjectDetail ? (
+            <FirstActDialogueChrome
+              npcSlug={config.npcSlug}
+              speaker={config.npcName}
+              speech={config.approaches[progress.approachIndex].response}
+              narration={config.objectExploration.intro}
+              prompt={`点亮${config.objectExploration.shortLabel}里的三处细节。`}
+              disabled={disabled}
+            />
+          ) : null}
+        </>
+      ) : null}
+
+      {activeObjectDetail ? (
+        <View
+          className='atuan-arrival__clue first-act-atuan-template__object-clue'
+          hoverClass='atuan-arrival__clue--pressed'
+          onClick={closeObjectDetail}
+          role='button'
+          aria-label={`收下${activeObjectDetail.label}的线索，继续查看${config.objectExploration.shortLabel}`}
+          data-testid={`${config.npcSlug}-object-clue`}
+        >
+          <Text className='atuan-arrival__clue-kicker'>物件里面 · 新发现</Text>
+          <Text className='atuan-arrival__clue-title'>{activeObjectDetail.label}</Text>
+          <Text className='atuan-arrival__clue-copy'>{activeObjectDetail.clue}</Text>
+          <Text className='atuan-arrival__clue-action'>轻触收下线索</Text>
+        </View>
+      ) : null}
+
+      {progress.stage === 'followup' && progress.approachIndex !== null ? (
+        <FirstActDialogueChrome
+          npcSlug={config.npcSlug}
+          speaker={config.npcName}
+          speech={config.approaches[progress.approachIndex].response}
+          narration={config.conversationNarration}
+          prompt={config.objectExploration.followUpPrompt}
+          choices={config.objectExploration.followUps.map((followUp, index) => ({ id: String(index), label: followUp.label }))}
+          disabled={disabled}
+          onChoose={chooseFollowUp}
+        />
+      ) : null}
+
+      {progress.stage === 'conversation' && progress.approachIndex !== null ? (
+        <FirstActDialogueChrome
+          npcSlug={config.npcSlug}
+          speaker={config.npcName}
+          speech={selectedFollowUp?.response ?? config.approaches[progress.approachIndex].response}
+          narration={selectedFollowUp?.narration ?? config.conversationNarration}
+          prompt={selectedFollowUp ? config.objectExploration.gamePrompt : '把刚才找到的线索整理一下。'}
+          action={{ label: config.gameAction, onClick: openGame }}
+          disabled={disabled}
+        />
+      ) : null}
+
+      {progress.stage === 'success' && progress.approachIndex !== null ? (
+        <FirstActDialogueChrome
+          npcSlug={config.npcSlug}
+          speaker={config.npcName}
+          speech={config.successSpeech}
+          narration={config.successNarration}
+          prompt='这一幕已经有了答案。'
+          action={{ label: config.completionLabel, onClick: () => onComplete(progress.approachIndex!) }}
+          disabled={disabled}
+        />
+      ) : null}
+    </View>
+  )
+}

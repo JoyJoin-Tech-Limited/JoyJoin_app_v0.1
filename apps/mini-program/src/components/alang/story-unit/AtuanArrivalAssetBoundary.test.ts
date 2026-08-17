@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const sourceRoot = resolve(process.cwd(), 'src')
 const appRoot = resolve(process.cwd())
+const repoRoot = resolve(appRoot, '../..')
 const arrivalAssetNames = [
   'flash-atuan-park-clean-v3.jpg',
   'flash-atuan-character-lowpoly-v3.png',
@@ -92,12 +93,31 @@ describe('Atuan first-arrival asset ownership', () => {
     expect(flashStyles).toMatch(/\.flash-dialogue__story-stage--atuan-first \.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-closing,[\s\S]*?\.flash-dialogue__story-panel-progress\s*\{\s*color:\s*\$color-text-secondary-on-light;/)
   })
 
+  it('keeps every settled-story exit visible without a native result scroller', () => {
+    const flashStyles = readFileSync(resolve(sourceRoot, 'pages/alang/flash.scss'), 'utf8')
+
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-panel--result\s*\{[^}]*bottom:\s*calc\(112rpx \+ env\(safe-area-inset-bottom\)\);[^}]*height:\s*auto;[^}]*overflow:\s*hidden;/s)
+    expect(flashStyles).not.toMatch(/\.flash-dialogue__story-panel--result \.flash-dialogue__story-panel-scroll\s*\{/)
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-result-exit\s*\{[^}]*min-height:\s*88rpx;[^}]*flex:\s*none;/s)
+    expect(flashStyles).not.toMatch(/\.flash-dialogue__story-result-exit\s*\{[^}]*(?:position:\s*absolute|bottom:)/s)
+    expect(flashStyles).toMatch(/\.flash-dialogue__story-result-exit \.flash-button\s*\{[^}]*width:\s*auto;/s)
+  })
+
   it('keeps first-arrival assets covered by the production package contract', () => {
     const cleanScript = readFileSync(resolve(appRoot, 'scripts/clean-cdn-assets.mjs'), 'utf8')
     const verifyScript = readFileSync(resolve(appRoot, 'scripts/verify-flash-package.mjs'), 'utf8')
+    const packageSizeScript = readFileSync(resolve(appRoot, 'scripts/check-package-size.mjs'), 'utf8')
+    const dialoguePage = readFileSync(resolve(sourceRoot, 'pages/alang/dialogue/index.tsx'), 'utf8')
+    const laterActPage = readFileSync(resolve(sourceRoot, 'pages/alang-story/dialogue/index.tsx'), 'utf8')
+    const buildConfig = readFileSync(resolve(appRoot, 'config/index.ts'), 'utf8')
+    const buildWorkflow = readFileSync(resolve(repoRoot, '.github/workflows/taro-weapp-build.yml'), 'utf8')
+    const eventPage = readFileSync(resolve(sourceRoot, 'pages/alang/event/index.tsx'), 'utf8')
     const projectConfig = JSON.parse(
       readFileSync(resolve(appRoot, 'project.config.json'), 'utf8'),
-    ) as { packOptions?: { include?: Array<{ type?: string; value?: string }> } }
+    ) as {
+      setting?: { ignoreUploadUnusedFiles?: boolean }
+      packOptions?: { include?: Array<{ type?: string; value?: string }> }
+    }
 
     for (const fileName of arrivalAssetNames) {
       expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
@@ -109,16 +129,91 @@ describe('Atuan first-arrival asset ownership', () => {
       'flash-atuan-character-lowpoly-v3.webp',
       'flash-atuan-park-clean-v2.jpg',
       'flash-atuan-character-cutout-v2.png',
+      'flash-alang-dialogue-paper-v1.jpg',
+      'flash-lizi-dialogue-paper-v1.jpg',
+      'flash-momo-dialogue-paper-v1.jpg',
+      'flash-shiqi-dialogue-paper-v1.jpg',
+      'flash-atuan-dialogue-paper-v1.jpg',
+      'flash-alang-first-act-riverside-v2.jpg',
+      'flash-momo-first-act-rain-route-v2.jpg',
+      'flash-shiqi-first-act-record-room-v2.jpg',
     ]) {
       expect(cleanScript, `${fileName} must stay out of the upload package`).toContain(`'${fileName}'`)
     }
     expect(cleanScript).toContain('sourceOnlyAlangUiAssets.has(name)')
-    expect(cleanScript).not.toContain('const bundledAlangUiWebps')
+    expect(cleanScript).not.toContain('runtimeAlangUiWebps')
+    expect(cleanScript).not.toContain('bundledAlangUiWebpAssets')
+    for (const fileName of [
+      'flash-atuan-second-act-pavilion-v1.jpg',
+      'flash-atuan-third-act-table-v1.jpg',
+    ]) {
+      const assetBytes = readFileSync(resolve(sourceRoot, 'pages/alang/assets/ui', fileName))
+      expect([...assetBytes.subarray(0, 3)], `${fileName} must be a real JPEG`).toEqual([0xff, 0xd8, 0xff])
+      expect(assetBytes.byteLength, `${fileName} must stay within the 150 KiB scene budget`).toBeLessThanOrEqual(150 * 1024)
+      expect(dialoguePage, `${fileName} must be the runtime scene import`).toContain(`../assets/ui/${fileName}`)
+      expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
+    }
+    expect(cleanScript).toContain(
+      "(name) => name.endsWith('.webp') || sourceOnlyAlangUiAssets.has(name)",
+    )
+    expect(dialoguePage).not.toContain('flash-atuan-second-act-pavilion-v1.webp')
+    expect(dialoguePage).not.toContain('flash-atuan-third-act-table-v1.webp')
+    for (const fileName of [
+      'flash-alang-first-act-riverside-v3.jpg',
+      'flash-lizi-first-act-color-studio-v2.jpg',
+      'flash-momo-first-act-rain-route-v3.jpg',
+      'flash-shiqi-first-act-record-room-v3.jpg',
+    ]) {
+      expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
+      expect(buildWorkflow, `${fileName} must be required in the compiled package`).toContain(fileName)
+    }
+    for (const fileName of [
+      'flash-alang-second-act-return-shelter-v2.jpg',
+      'flash-alang-third-act-return-cabinet-v2.jpg',
+      'flash-momo-second-act-listening-pavilion-v2.jpg',
+      'flash-momo-third-act-invitation-panels-v2.jpg',
+      'flash-lizi-second-act-color-threshold-v2.jpg',
+      'flash-lizi-third-act-outing-kiosk-v2.jpg',
+      'flash-shiqi-second-act-public-record-wall-v2.jpg',
+      'flash-shiqi-third-act-privacy-return-v2.jpg',
+    ]) {
+      const assetBytes = readFileSync(resolve(sourceRoot, 'pages/alang-story/assets', fileName))
+      expect([...assetBytes.subarray(0, 3)], `${fileName} must be a real JPEG`).toEqual([0xff, 0xd8, 0xff])
+      expect(assetBytes.byteLength, `${fileName} must stay within the 150 KiB scene budget`).toBeLessThanOrEqual(150 * 1024)
+      expect(laterActPage, `${fileName} must be wired through the dedicated later-act page`).toContain(fileName)
+      expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
+      expect(buildWorkflow, `${fileName} must be required in the compiled package`).toContain(fileName)
+    }
+    for (const fileName of [
+      'flash-alang-character-first-act-v2.png',
+      'flash-momo-character-first-act-v2.png',
+      'flash-lizi-character-first-act-v2.png',
+      'flash-shiqi-character-first-act-v2.png',
+    ]) {
+      const assetBytes = readFileSync(resolve(sourceRoot, 'pages/alang-story/assets', fileName))
+      expect([...assetBytes.subarray(0, 8)], `${fileName} must remain a real PNG`).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+      expect(laterActPage, `${fileName} must be wired through the dedicated later-act page`).toContain(fileName)
+      expect(verifyScript, `${fileName} must be required by the upload verifier`).toContain(fileName)
+      expect(buildWorkflow, `${fileName} must be required in the compiled package`).toContain(fileName)
+    }
     expect(cleanScript).not.toContain('flash-atuan-park-clean-v2.webp')
     expect(verifyScript).toContain('non-collapsing Flash story viewport height chain')
     expect(verifyScript).toContain('anchor the Flash story stage to the viewport shell')
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.jpg$' })
     expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.png$' })
+    expect(projectConfig.packOptions?.include).toContainEqual({ type: 'regexp', value: 'pages/alang/assets/.*\\.webp$' })
+    expect(projectConfig.setting?.ignoreUploadUnusedFiles).toBe(true)
+    expect(verifyScript).toContain('setting.ignoreUploadUnusedFiles must be true')
+    expect(packageSizeScript).toContain("path.join(ROOT, 'project.config.json')")
+    expect(packageSizeScript).not.toContain("path.join(ROOT, 'project.private.config.json')")
+    expect(
+      buildWorkflow.match(/--use-project-config true/g) ?? [],
+      'both compiled-result verification and upload must actually read project.config.json',
+    ).toHaveLength(2)
+    expect(eventPage).toContain("import standardPaperWorld from '../assets/onboarding/parallel-standard-paper-world-v1.jpg'")
+    for (const productionContract of [buildConfig, verifyScript, buildWorkflow]) {
+      expect(productionContract).not.toContain('street-blind-box-onboarding-fullscreen-v7')
+    }
   })
 
   it('keeps inspection targets invisible instead of rendering fallback tags', () => {

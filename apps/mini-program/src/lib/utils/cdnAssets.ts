@@ -77,14 +77,21 @@ export function localAsset(localPath: string): string {
  * WeChat package as a safety net. The hook starts with `cdnAsset(localPath)`;
  * if that fails, `onError` switches to `localAsset(localPath)`.
  *
+ * A module-level negative cache remembers paths whose CDN copy already failed
+ * this session, so later mounts (e.g. re-entering the gathering room) go
+ * straight to the local asset instead of re-firing a doomed CDN request.
+ *
  * @returns `{ src, onError, isLocal }` — `isLocal` is true after the CDN
  *   attempt has failed and the local fallback is active.
  */
+const failedCdnPaths = new Set<string>()
+
 export function useCdnFirstSrc(localPath: string) {
-  const [isLocal, setIsLocal] = useState(false)
+  const [isLocal, setIsLocal] = useState(() => failedCdnPaths.has(localPath))
   const src = isLocal ? localAsset(localPath) : cdnAsset(localPath)
   const onError = useCallback(() => {
+    failedCdnPaths.add(localPath)
     setIsLocal(true)
-  }, [])
+  }, [localPath])
   return { src, onError, isLocal }
 }

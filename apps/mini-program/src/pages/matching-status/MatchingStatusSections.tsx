@@ -14,6 +14,8 @@ import {
   type UnifiedRevealTokens,
 } from '@shared/features/matching-status'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
+import TablemateCard from '../../components/TablemateCard'
+import TablemateDetailSheet from '../../components/TablemateDetailSheet'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
@@ -28,6 +30,7 @@ import { haptics } from '../../lib/utils/haptics'
 import { PUZZLE_PIECE_COUNT } from '../../lib/utils/matchingPuzzleAssets'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import { getVibeLabel } from '../../lib/matching/groupDisplay'
+import { openPoolGroupDetail } from '../../lib/navigation/matchingNavigation'
 import { MATCHING_BG_SRC } from './constants'
 
 export function MatchingHero({ heroSrc, className = '' }: { heroSrc: string; className?: string }) {
@@ -167,6 +170,11 @@ interface MatchingStatusDetailSectionsProps {
   leadIceBreaker: string | null
   persistedThemeSummary: ThemeSummary | null
   viewerArchetype?: string | null
+  /** Viewer id — drives the 我 badge on tablemate cards. */
+  currentUserId?: string | null
+  /** Entrance motion gates for the tablemate card carousel. */
+  shouldReduceMotion?: boolean
+  hasRevealed?: boolean
   /** WP4: optional; when set, dev/beta may show cache vs fresh for group analysis */
   groupAnalysisDebugMeta?: Pick<GroupAnalysisResponse, 'fromCache' | 'generatedAt'> | null
   groupAnalysis?: GroupAnalysisResponse | null
@@ -184,6 +192,9 @@ export function MatchingStatusDetailSections({
   leadIceBreaker,
   persistedThemeSummary,
   viewerArchetype,
+  currentUserId,
+  shouldReduceMotion = false,
+  hasRevealed = false,
   groupAnalysisDebugMeta,
   groupAnalysis,
   relatedEventId,
@@ -204,30 +215,19 @@ export function MatchingStatusDetailSections({
           </View>
           <ScrollView className='matching-status__member-scroll' scrollX enhanced showScrollbar={false}>
             <View className='matching-status__member-row'>
-              {effectiveGroupDetails.members.map((member) => {
-                const pairSummary = viewerPairSummaryByMemberId.get(member.userId)
-
-                return (
-                  <View key={member.userId} className='matching-status__member-chip'>
-                    <View className='matching-status__member-avatar'>
-                      <ArchetypeHead
-                        archetype={member.archetype}
-                        size={56}
-                        variant='head'
-                        fallbackText={member.displayName ?? undefined}
-                      />
-                    </View>
-                    <Text className='matching-status__member-name'>
-                      {member.displayName ?? '神秘嘉宾'}
-                    </Text>
-                    {pairSummary?.connectionPointsWithRarity?.[0]?.text ?? pairSummary?.connectionPoints?.[0] ? (
-                      <Text className='matching-status__member-signal'>
-                        {pairSummary.connectionPointsWithRarity?.[0]?.text ?? pairSummary.connectionPoints?.[0]}
-                      </Text>
-                    ) : null}
-                  </View>
-                )
-              })}
+              {effectiveGroupDetails.members.map((member, index) => (
+                <TablemateCard
+                  key={member.userId}
+                  member={member}
+                  viewerPair={viewerPairSummaryByMemberId.get(member.userId) ?? null}
+                  isCurrentUser={member.userId === currentUserId}
+                  dealt
+                  dealKey={`ms-${effectiveGroupDetails.group.id}-${member.userId}`}
+                  entranceDelayMs={(shouldReduceMotion || hasRevealed) ? 0 : index * 120}
+                  reduceMotion={shouldReduceMotion || hasRevealed}
+                  onTap={() => openPoolGroupDetail(effectiveGroupDetails.group.id)}
+                />
+              ))}
             </View>
           </ScrollView>
         </Card>
@@ -307,6 +307,8 @@ interface MatchingStatusLiveOverlayProps {
   puzzlePreludeEnabled: boolean
   persistedThemeSummary: ThemeSummary | null
   resolvedGroupId: string
+  /** Viewer id — drives the 我 badge on tablemate cards. */
+  currentUserId?: string | null
   liveRevealError: string | null
   relatedEventId?: string
   onStartSquadUnboxing: () => void
@@ -330,6 +332,7 @@ export function MatchingStatusLiveOverlay({
   puzzlePreludeEnabled,
   persistedThemeSummary,
   resolvedGroupId,
+  currentUserId,
   liveRevealError,
   relatedEventId,
   onStartSquadUnboxing,
@@ -340,6 +343,12 @@ export function MatchingStatusLiveOverlay({
 }: MatchingStatusLiveOverlayProps) {
   const aigcLabelsEnabled = useAIGCLabelsEnabled()
   const [isPuzzleComplete, setIsPuzzleComplete] = useState(shouldReduceMotion || puzzlePreludeEnabled === false)
+  // Members-stage card tap → detail sheet (full connection copy + interests)
+  // instead of navigating away mid-reveal; the journey CTAs stay in control.
+  const [sheetMemberId, setSheetMemberId] = useState<string | null>(null)
+  const sheetMember = sheetMemberId
+    ? effectiveGroupDetails?.members.find((member) => member.userId === sheetMemberId) ?? null
+    : null
   const showPuzzlePrelude = puzzlePreludeEnabled && !hasRevealed && effectiveGroupDetails != null
   const memberCount = effectiveGroupDetails?.members.length ?? 0
 
@@ -483,40 +492,28 @@ export function MatchingStatusLiveOverlay({
                     : `第 ${resolvedGroupNumber} 组已锁定，先认识一下今晚会同桌的人。`}
               </Text>
 
-              <View className='matching-status__overlay-member-grid'>
-                {effectiveGroupDetails.members.map((member, index) => {
-                  const pairSummary = viewerPairSummaryByMemberId.get(member.userId)
-
-                  return (
-                    <View
+              <ScrollView
+                className='matching-status__overlay-member-carousel'
+                scrollX
+                enhanced
+                showScrollbar={false}
+              >
+                <View className='matching-status__overlay-member-track'>
+                  {effectiveGroupDetails.members.map((member, index) => (
+                    <TablemateCard
                       key={member.userId}
-                      className='matching-status__overlay-member-card'
-                      style={{ animationDelay: (shouldReduceMotion || hasRevealed) ? '0ms' : `${index * 120}ms` }}
-                    >
-                      <View className='matching-status__overlay-member-avatar'>
-                        <ArchetypeHead
-                          archetype={member.archetype}
-                          size={52}
-                          variant='head'
-                          fallbackText={member.displayName ?? undefined}
-                        />
-                      </View>
-                      <Text className='matching-status__overlay-member-name'>
-                        {member.displayName ?? '神秘嘉宾'}
-                      </Text>
-                      {pairSummary?.connectionPointsWithRarity?.[0]?.text ?? pairSummary?.connectionPoints?.[0] ? (
-                        <Text className='matching-status__overlay-member-note'>
-                          {pairSummary.connectionPointsWithRarity?.[0]?.text ?? pairSummary.connectionPoints?.[0]}
-                        </Text>
-                      ) : pairSummary ? (
-                        <Text className='matching-status__overlay-member-note'>
-                          默契度 {pairSummary.chemistryScore}
-                        </Text>
-                      ) : null}
-                    </View>
-                  )
-                })}
-              </View>
+                      member={member}
+                      viewerPair={viewerPairSummaryByMemberId.get(member.userId) ?? null}
+                      isCurrentUser={member.userId === currentUserId}
+                      dealt
+                      dealKey={`ms-${effectiveGroupDetails.group.id}-${member.userId}`}
+                      entranceDelayMs={(shouldReduceMotion || hasRevealed) ? 0 : index * 120}
+                      reduceMotion={shouldReduceMotion || hasRevealed}
+                      onTap={() => setSheetMemberId(member.userId)}
+                    />
+                  ))}
+                </View>
+              </ScrollView>
 
               <Button className='matching-status__overlay-button' onClick={onContinueFromMembers}>
                 {persistedThemeSummary ? '看看今晚主题' : '前往完整详情'}
@@ -565,6 +562,17 @@ export function MatchingStatusLiveOverlay({
           </Button>
         </View>
       ) : null}
+
+      {/* Member detail sheet — sits above the reveal overlay (z-modal > 40)
+          so a card tap peeks at full copy without leaving the journey. */}
+      <TablemateDetailSheet
+        visible={sheetMember != null}
+        member={sheetMember}
+        viewerPair={sheetMember ? viewerPairSummaryByMemberId.get(sheetMember.userId) ?? null : null}
+        isCurrentUser={sheetMember?.userId === currentUserId}
+        reduceMotion={shouldReduceMotion}
+        onClose={() => setSheetMemberId(null)}
+      />
     </View>
   )
 }

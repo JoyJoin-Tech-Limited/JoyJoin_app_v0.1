@@ -5,6 +5,7 @@ import {
   RATING_FACES_ORDERED,
   getLocalIconAssetPath,
 } from '@joyjoin/shared/iconSystem'
+import { haptics } from '../../lib/utils/haptics'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { BRAND_COLORS } from '../../styles/colors'
 
@@ -72,12 +73,9 @@ export default function RatingFace({
       const ratingValue = idx + 1
       onSelect(ratingValue)
 
-      // Light haptic feedback
-      try {
-        Taro.vibrateShort({ type: 'light' })
-      } catch {
-        // Haptic not available — silently ignore
-      }
+      // Light haptic feedback — routed through the shared haptics util so the
+      // mini-program surface stays consistent and respects reduced-motion state.
+      haptics('light')
     },
     [disabled, onSelect],
   )
@@ -88,11 +86,6 @@ export default function RatingFace({
         {RATING_FACES_ORDERED.map((mapping, idx) => {
           const isSelected = value === idx + 1
           const isPressed = pressedIndex === idx
-          // 2026-07-28 device audit: 64rpx faces were illegible — the
-          // monochrome-purple art carries all meaning in its silhouette and
-          // vanished at 32px. 88rpx keeps the row inside 750rpx (5×112 + gaps).
-          const sizeRpx = 88
-          const sizeStr = `${sizeRpx}rpx`
 
           // Resolve asset path. Rating faces are CDN-only in production; the
           // bundled local copies are no longer shipped to save package size.
@@ -111,12 +104,6 @@ export default function RatingFace({
               key={mapping.assetKey}
               className={`rating-face__item ${isSelected ? 'rating-face__item--selected' : ''}`}
               style={{
-                width: `${sizeRpx + 24}rpx`,
-                height: `${sizeRpx + 24}rpx`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '50%',
                 // Unselected stays legible (0.72, was 0.5 — the wash-out made
                 // the five purple faces indistinguishable on device).
                 opacity: isSelected ? 1 : 0.72,
@@ -137,14 +124,11 @@ export default function RatingFace({
               {!hasError ? (
                 <Image
                   src={src}
-                  style={{
-                    width: sizeStr,
-                    height: sizeStr,
-                  }}
+                  className='rating-face__face'
                   onError={() => markFaceError(mapping.assetKey)}
                 />
               ) : (
-                <Text style={{ fontSize: sizeStr, lineHeight: sizeStr }}>
+                <Text className='rating-face__emoji'>
                   {mapping.fallbackEmoji}
                 </Text>
               )}

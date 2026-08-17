@@ -1,5 +1,4 @@
 import Taro from '@tarojs/taro'
-import type { AtuanFirstActSubmission } from '@shared/alang/atuanFirstAct'
 import {
   abandonFlashTask as abandonFlashTaskRequest,
   answerFlashEncounter as answerFlashEncounterRequest,
@@ -22,10 +21,12 @@ import {
   type FlashCoordinateRequest,
   type FlashEncounterResponse as SharedFlashEncounterResponse,
   type FlashFeedbackRequest,
+  type FlashAnswerRequest,
   type FlashHomeResponse as SharedFlashHomeResponse,
   type FlashLocateResponse as SharedFlashLocateResponse,
   type FlashPreferenceDto,
   type FlashPreferenceUpdateRequest,
+  type FlashStoryReplayStateDto,
   type FlashTaskDto,
 } from '@shared/alang/flashTypes'
 import { apiRequest } from '../api/api'
@@ -269,14 +270,20 @@ export async function answerFlashEncounter(input: {
   encounterId: string
   questionId: string
   optionId: string
-  storyPath?: AtuanFirstActSubmission
+  storyPath?: FlashAnswerRequest['storyPath']
   replay?: boolean
+  replayState?: FlashStoryReplayStateDto
 }): Promise<FlashEncounterView> {
   if (input.replay) {
     return adaptFlashEncounterDto(await apiRequest<SharedFlashEncounterResponse>({
       path: `/api/alang/flash/encounters/${input.encounterId}/answer?replay=1`,
       method: 'POST',
-      data: { questionId: input.questionId, optionId: input.optionId, storyPath: input.storyPath },
+      data: {
+        questionId: input.questionId,
+        optionId: input.optionId,
+        storyPath: input.storyPath,
+        replayState: input.replayState,
+      },
     }))
   }
   return adaptFlashEncounterDto(await answerFlashEncounterRequest(apiRequest, input.encounterId, {
@@ -286,10 +293,15 @@ export async function answerFlashEncounter(input: {
   }))
 }
 
-export async function advanceFlashStoryNode(encounterId: string): Promise<FlashEncounterView> {
+export async function advanceFlashStoryNode(input: {
+  encounterId: string
+  replay?: boolean
+  replayState?: FlashStoryReplayStateDto
+}): Promise<FlashEncounterView> {
   return adaptFlashEncounterDto(await apiRequest<SharedFlashEncounterResponse>({
-    path: `/api/alang/flash/encounters/${encounterId}/story-advance`,
+    path: `/api/alang/flash/encounters/${input.encounterId}/story-advance${input.replay ? '?replay=1' : ''}`,
     method: 'POST',
+    data: input.replayState ? { replayState: input.replayState } : {},
   }))
 }
 

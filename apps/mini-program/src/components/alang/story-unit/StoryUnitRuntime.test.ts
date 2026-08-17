@@ -5,6 +5,7 @@ import {
   restoreStoryUnitState,
   storyUnitReducer,
 } from './StoryUnitRuntime'
+import { createAtuanLaterActProgress } from '@shared/alang/atuanLaterActs'
 
 const STORY_UNIT_ID = 's1-p1-shiqi' as const
 
@@ -88,6 +89,26 @@ describe('StoryUnitRuntime', () => {
       companionEvent: 'INTRO',
       analyticsSent: ['story_start'],
     }, 'enc-atuan')).toEqual(createStoryUnitState('s1-p1-atuan'))
+  })
+
+  it('stores and restores the dedicated Atuan second-act progress', () => {
+    const laterAct = createAtuanLaterActProgress('s1-p2-atuan', 'read_plan_first')
+    let state = storyUnitReducer(createStoryUnitState('s1-p2-atuan'), { type: 'ENTER' })
+    state = storyUnitReducer(state, { type: 'START_INTERACTION', choice, atuanLaterAct: laterAct })
+    state = storyUnitReducer(state, {
+      type: 'ATUAN_LATER_ACT_UPDATED',
+      progress: { ...laterAct, arrivalReplyId: 'ask_fold_history', highlightOrder: ['plan_folds'] },
+    })
+
+    expect(state.atuanLaterAct).toMatchObject({
+      unitId: 's1-p2-atuan',
+      arrivalReplyId: 'ask_fold_history',
+      highlightOrder: ['plan_folds'],
+    })
+    expect(restoreStoryUnitState('s1-p2-atuan', state)).toMatchObject({
+      stage: 'OBJECT_INTERACTION',
+      atuanLaterAct: { unitId: 's1-p2-atuan', arrivalReplyId: 'ask_fold_history', highlightOrder: ['plan_folds'] },
+    })
   })
 
   it('drops a recovered payload whose reviewed question or option changed', () => {

@@ -36,11 +36,33 @@ import {
   enterStoryEpisode as enterV2StoryEpisode,
   getStoryNodeView as getV2StoryNodeView,
   resolveV2Ending,
+  scopeV2TraversalToEpisode,
 } from "../services/flashStoryEngine";
 
 type DbExecutor = typeof db | any;
 
 const FLASH_STORY_GENERATION_LEASE_MS = 6_000;
+
+export class FlashStorySettlementInvariantError extends Error {
+  readonly code = "FLASH_STORY_FRAGMENT_CATALOG_INVALID";
+
+  constructor(readonly episodeId: string, readonly fragmentCount: number) {
+    super(`Flash story episode ${episodeId} must have exactly one fragment; found ${fragmentCount}`);
+    this.name = "FlashStorySettlementInvariantError";
+  }
+}
+
+function scopedV2RunState(run: any, episodeId: string) {
+  return scopeV2TraversalToEpisode({
+    episodeId: run.v2State?.episodeId ?? null,
+    echo: run.v2State?.echo ?? 0,
+    flags: run.flags ?? [],
+    variables: run.v2State?.variables ?? {},
+    currentNode: run.currentNode ?? null,
+    nodePath: run.nodePath ?? [],
+    lastChoiceId: run.v2State?.lastChoiceId ?? null,
+  }, episodeId);
+}
 
 function stableHash(value: unknown) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -155,14 +177,7 @@ export async function advanceFlashV2Node(input: {
       : [];
     if (!run) return { state: "conflict" as const, finished: false };
 
-    const currentState: Parameters<typeof enterV2StoryEpisode>[1] = {
-      echo: run.v2State?.echo ?? 0,
-      flags: run.flags ?? [],
-      variables: run.v2State?.variables ?? {},
-      currentNode: run.currentNode ?? null,
-      nodePath: run.nodePath ?? [],
-      lastChoiceId: run.v2State?.lastChoiceId ?? null,
-    };
+    const currentState = scopedV2RunState(run, input.episodeId);
     const entered = enterV2StoryEpisode(content as any, currentState);
     let result: ReturnType<typeof advanceV2StoryNode>;
     try {
@@ -173,6 +188,12 @@ export async function advanceFlashV2Node(input: {
     await tx.update(flashStoryUniverseRuns).set({
       currentNode: result.state.currentNode,
       nodePath: result.state.nodePath,
+      v2State: {
+        episodeId: input.episodeId,
+        echo: result.state.echo,
+        variables: result.state.variables,
+        lastChoiceId: result.state.lastChoiceId,
+      },
       stateVersion: run.stateVersion + 1,
       updatedAt: input.now,
     }).where(and(eq(flashStoryUniverseRuns.id, run.id), eq(flashStoryUniverseRuns.stateVersion, run.stateVersion)));
@@ -223,14 +244,7 @@ export async function advanceFlashV2Run(input: {
       : [];
     if (!run) return { state: "conflict" as const, finished: false };
 
-    const currentState: Parameters<typeof enterV2StoryEpisode>[1] = {
-      echo: run.v2State?.echo ?? 0,
-      flags: run.flags ?? [],
-      variables: run.v2State?.variables ?? {},
-      currentNode: run.currentNode ?? null,
-      nodePath: run.nodePath ?? [],
-      lastChoiceId: run.v2State?.lastChoiceId ?? null,
-    };
+    const currentState = scopedV2RunState(run, input.episodeId);
     const entered = enterV2StoryEpisode(content as any, currentState);
     const view = getV2StoryNodeView(content as any, entered);
     if (!view || view.type !== "choice" || view.nodeId !== input.nodeId) {
@@ -246,7 +260,7 @@ export async function advanceFlashV2Run(input: {
       currentNode: result.state.currentNode,
       nodePath: result.state.nodePath,
       flags: result.state.flags,
-      v2State: { echo: result.state.echo, variables: result.state.variables, lastChoiceId: result.state.lastChoiceId },
+      v2State: { episodeId: input.episodeId, echo: result.state.echo, variables: result.state.variables, lastChoiceId: result.state.lastChoiceId },
       stateVersion: run.stateVersion + 1,
       updatedAt: input.now,
     }).where(and(eq(flashStoryUniverseRuns.id, run.id), eq(flashStoryUniverseRuns.stateVersion, run.stateVersion)));
@@ -590,14 +604,37 @@ export async function completeFlashStoryEpisode(input: {
       eq(flashEncounters.storyEpisodeId, input.episodeId),
     )).limit(1);
     if (!encounter) return null;
+    const fragments = await tx.select().from(flashStoryFragments)
+      .where(eq(flashStoryFragments.episodeId, episode.id))
+      .orderBy(asc(flashStoryFragments.sortOrder))
+      .limit(2);
+    if (fragments.length !== 1) {
+      throw new FlashStorySettlementInvariantError(episode.id, fragments.length);
+    }
+    const fragment = fragments[0];
     const [existing] = await tx.select().from(flashUserStoryEpisodes).where(and(
       eq(flashUserStoryEpisodes.userId, input.userId),
       eq(flashUserStoryEpisodes.episodeId, input.episodeId),
     )).limit(1);
     if (existing) {
+      const [existingRun] = existing.universeRunId
+        ? await tx.select().from(flashStoryUniverseRuns).where(eq(flashStoryUniverseRuns.id, existing.universeRunId)).limit(1)
+        : [];
+      const [existingRelease] = existingRun
+        ? await tx.select().from(flashStoryReleaseSnapshots).where(eq(flashStoryReleaseSnapshots.id, existingRun.releaseSnapshotId)).limit(1)
+        : [];
+      const existingFragmentSnapshot = existingRelease?.manifest.episodes
+        .find((item: any) => item.code === episode.code)?.fragment ?? null;
+      const [fragmentCreated] = await tx.insert(flashUserStoryFragments).values({
+        userId: input.userId,
+        fragmentId: fragment.id,
+        episodeId: episode.id,
+        fragmentSnapshot: existingFragmentSnapshot,
+        unlockedAt: existing.completedAt ?? input.now,
+      }).onConflictDoNothing({ target: [flashUserStoryFragments.userId, flashUserStoryFragments.fragmentId] }).returning({ id: flashUserStoryFragments.id });
       await tx.update(flashEncounters).set({ status: "completed", updatedAt: input.now })
         .where(and(eq(flashEncounters.id, input.encounterId), eq(flashEncounters.userId, input.userId)));
-      return { created: false };
+      return { created: false, fragmentCreated: Boolean(fragmentCreated) };
     }
     const [progress] = await tx.select().from(flashUserStoryProgress).where(and(
       eq(flashUserStoryProgress.userId, input.userId),
@@ -649,22 +686,19 @@ export async function completeFlashStoryEpisode(input: {
           updatedAt: input.now,
         }).where(and(eq(flashStoryUniverseRuns.id, run.id), eq(flashStoryUniverseRuns.stateVersion, run.stateVersion)));
       }
-      const fragments = await tx.select({ id: flashStoryFragments.id }).from(flashStoryFragments)
-        .where(eq(flashStoryFragments.episodeId, episode.id)).orderBy(asc(flashStoryFragments.sortOrder)).limit(1);
-      if (fragments[0]) {
-        const [release] = run
-          ? await tx.select().from(flashStoryReleaseSnapshots).where(eq(flashStoryReleaseSnapshots.id, run.releaseSnapshotId)).limit(1)
-          : [];
-        const fragmentSnapshot = release?.manifest.episodes.find((item: any) => item.code === episode.code)?.fragment ?? null;
-        await tx.insert(flashUserStoryFragments).values([{
-          userId: input.userId,
-          fragmentId: fragments[0].id,
-          episodeId: episode.id,
-          fragmentSnapshot,
-          unlockedAt: input.now,
-        }]).onConflictDoNothing();
-      }
     }
+
+    const [release] = run
+      ? await tx.select().from(flashStoryReleaseSnapshots).where(eq(flashStoryReleaseSnapshots.id, run.releaseSnapshotId)).limit(1)
+      : [];
+    const fragmentSnapshot = release?.manifest.episodes.find((item: any) => item.code === episode.code)?.fragment ?? null;
+    const [fragmentCreated] = await tx.insert(flashUserStoryFragments).values({
+      userId: input.userId,
+      fragmentId: fragment.id,
+      episodeId: episode.id,
+      fragmentSnapshot,
+      unlockedAt: input.now,
+    }).onConflictDoNothing({ target: [flashUserStoryFragments.userId, flashUserStoryFragments.fragmentId] }).returning({ id: flashUserStoryFragments.id });
 
     const [[phaseCount], [totalCount]] = await Promise.all([
       tx.select({ value: count() }).from(flashUserStoryEpisodes)
@@ -715,8 +749,31 @@ export async function completeFlashStoryEpisode(input: {
     }
     await tx.update(flashEncounters).set({ status: "completed", completedAt: input.now, updatedAt: input.now })
       .where(and(eq(flashEncounters.id, input.encounterId), eq(flashEncounters.userId, input.userId)));
-    return { created: Boolean(created) };
+    return { created: Boolean(created), fragmentCreated: Boolean(fragmentCreated) };
   });
+}
+
+export async function updateFlashStoryCompletionNarrative(input: {
+  userId: string;
+  episodeId: string;
+  expectedResponseSnapshot: string | null;
+  responseSnapshot: string;
+  renderKind: "ai" | "fallback";
+  promptVersion: string;
+}) {
+  const [updated] = await db.update(flashUserStoryEpisodes).set({
+    responseSnapshot: input.responseSnapshot,
+    renderKind: input.renderKind,
+    promptVersion: input.promptVersion,
+  }).where(and(
+    eq(flashUserStoryEpisodes.userId, input.userId),
+    eq(flashUserStoryEpisodes.episodeId, input.episodeId),
+    eq(flashUserStoryEpisodes.renderKind, "template"),
+    input.expectedResponseSnapshot === null
+      ? sql`${flashUserStoryEpisodes.responseSnapshot} is null`
+      : eq(flashUserStoryEpisodes.responseSnapshot, input.expectedResponseSnapshot),
+  )).returning({ id: flashUserStoryEpisodes.id });
+  return Boolean(updated);
 }
 
 export async function listFlashUserStoryFragments(userId: string, executor: DbExecutor = db) {

@@ -19,12 +19,24 @@
 
   &__item {
     @include flex-center;
+    width: 112rpx;
+    height: 112rpx;
     border-radius: 50%;
     transition: transform 150ms ease-out, opacity 200ms ease-out;
 
     &--selected {
       // Glow ring handled inline for dynamic brand color
     }
+  }
+
+  &__face {
+    width: 88rpx;
+    height: 88rpx;
+  }
+
+  &__emoji {
+    font-size: 88rpx;
+    line-height: 88rpx;
   }
 
   // Selection caption (2026-07-28): reserves its line height even when empty

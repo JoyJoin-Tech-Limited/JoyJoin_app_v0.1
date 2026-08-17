@@ -142,6 +142,8 @@ export type FlashStoryRunState = FlashStoryV2State & {
 };
 
 export type FlashStoryV2PersistedState = {
+  /** Episode that owns currentNode/nodePath. Missing on legacy rows. */
+  episodeId?: string | null;
   echo: number;
   variables: Record<string, number>;
   lastChoiceId?: string | null;
@@ -454,7 +456,7 @@ export const flashStoryFragments = pgTable("flash_story_fragments", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("uq_flash_story_fragment_code").on(table.code),
-  index("idx_flash_story_fragment_episode").on(table.episodeId, table.sortOrder),
+  uniqueIndex("uq_flash_story_fragment_episode").on(table.episodeId),
   check("ck_flash_story_fragment_category", sql`${table.category} in ('object', 'past', 'relationship', 'key')`),
 ]);
 

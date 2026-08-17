@@ -118,6 +118,7 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Encounter:** 用户主动进入后进行一次 GCJ-02 定位；拒绝定位不能参加且无 IP 回退。在线响应只给角色、区、剩余时间；隐藏地点坐标/地址/路线/精确距离均不下发。50 米服务端判断，班次结束即关闭；已解锁对话保留 24 小时。
 - **Tasks:** 30 条人工审核任务，6 类各 5 条，按 NPC 人设与用户可选偏好抽取；每次相遇最多 2 个结构化问题、任务随机、允许换 1 次。最多同时 3 件、同 NPC 1 件、未完成 7 天；已完成模板按 `max(5%, 0.35^n)` 降权。
 - **Completion/delivery:** 目的地 50 米到达即可，进店、消费、拍照、扫码、评价或打扰他人均非要求。反馈后任务保留，必须在之后一次同 NPC encounter 交付；不提供积分、奖品或门店权益。
+- **Story settlement and replay (2026-08-16):** 第一季 15 幕每幕完成时，正式完成记录与唯一目录碎片必须在同一事务中结算；目录缺失或重复时整笔回滚并显式提示，历史已完成但缺碎片由人工应用的幂等迁移补回。仅 non-production single-test 可从每幕开场重玩；重玩使用独立游标与本地命名空间，不推进正式进度、不重复发碎片。可选 AI 回应仅在碎片结算成功后、且该幕存在多个有效选择时生成；模型不决定碎片、进度、结局或下一幕，默认关闭并在失败时使用审核文案。
 - **Non-production arrival testing (2026-08-06):** Admin `/admin/feature-flags` 提供“街头盲盒：任意地点到达测试”开关。仅 super_admin 可修改且写入审计；仅 `APP_MODE != production` 生效。开启时任意有效 GCJ-02 坐标可通过 NPC 相遇与兼容目的地任务到达校验，并可在当前测试 encounter 完成交付；其余环节仍走正式状态机。生产环境强制关闭。
 - **Staging formal-flow availability testing (2026-08-08):** operator+ 可在 `/admin/alang` 为一位已启用 NPC 和已审核绑定地点创建独立 `manual_hold`。该出现没有自动结束时间，用户端不得伪造倒计时，只有管理员显式下线才结束；正式 10 米服务端到达、前台定位和故事结算保持不变。能力仅在 `APP_MODE=staging` 生效，production 与缺失 `APP_MODE` 均强制拒绝并忽略 hold。
 - **Privacy:** 原始用户坐标不落库、不入日志/URL/query key；可选 100 字回信不进入画像、分析、故事、LLM 或后台列表，交付 30 天后清除。个性化总开关及人格、兴趣、宽泛行业、行政区、任务行为来源均默认关闭并可撤回。
@@ -1075,6 +1076,7 @@ Status:
   - Component file still exists in the repo
   - It should not be documented as a 72-hour blind-pool unlock step
   - Active blind-pool join / waiting / reveal ownership is the pool-first flow above
+  - The live pool-group-detail surface renders a `TablemateCard` deck strip and `TablemateDetailSheet` instead of the legacy `AttendeePreviewCard` grid
 ```
 
 #### Blind Pool Join Flow Enhancements *(PRs #376, #381, #382, #511, #512)*
@@ -1108,6 +1110,7 @@ A shared `MatchingStateLayout` abstraction provides a canonical dark-background,
 | `MatchRevealSequenceV2` | Match formed — active cinematic reveal orchestrator |
 | `SurpriseMatchReveal` | Legacy rarity-first reveal overlay preserved in the repo but superseded in the active flow |
 | `MatchPointsDisplay` | Post-reveal match score breakdown |
+| `TablemateCard` *(2026-08-16)* | Matched-state member carousel and pool-group-detail deck strip — reusable squad-unboxing deck front-face card |
 
 > **Operator review mode:** When `matchingOperatorReviewEnabled` is enabled, formed groups are held in a pending operator-review state before users are notified. The mini-program continues to show the normal `MatchingWaitingScreen` during this period; once an operator approves, the standard reveal/matched flow proceeds unchanged.
 
@@ -1149,6 +1152,11 @@ UnifiedRevealCard renders fused narrative
 - No server/API changes — purely client-side view-model fusion
 - No new dependencies or animation libraries
 - No Canvas-based rendering
+
+**Matched-state member presentation (2026-08-16):**
+- After the unified reveal, the matched-state member carousel renders `TablemateCard` components: the squad-unboxing deck front-face recipe (archetype-tinted foil frame, 52% art zone / 48% info zone, connection-pill + pair-temperature chip) extracted into a reusable component.
+- `TablemateDetailSheet` opens on card tap: full governed pair explanation, rarity-dotted connection points, interest tags, industry line, hero-image fade-in, avatar preview, drag-to-dismiss, and `现场见` CTA. It is an info-type bottom sheet (same family as `DuoInfoSheet` / `PersonaSnapshotSheet`), not a centered dialog.
+- Shared display helpers (`getPairChemistryWord`, `getPairChemistryTier`, `CHEMISTRY_TIER_EMOJI`, `shortenConnectionPointForPill`, `buildInterestHookText`) live in `apps/mini-program/src/lib/utils/pairChemistry.ts` and are consumed by matching-status, pool-group-detail, and squad-unboxing.
 
 **Shared asset:** Canonical background SVG at `apps/user-client/src/assets/matching/shared/matching-bg.svg`; state-specific hero assets in sibling subdirectories.
 
@@ -1567,16 +1575,14 @@ Active server files:
 > web-reference flow and must not be used to reconstruct the mini-program.
 >
 > **Active flow** (`apps/mini-program/src/pages/event-feedback/`):
-> 1. **今晚这局怎么样？** — `RatingFace` 1–5 emoji score (skippable)
-> 2. **想继续了解谁？** — multi-select connections; mutual picks reveal WeChat IDs
-> 3. **还有什么想说的？** — optional free text (wire key `feedback`, content-safety screened)
-> 4. **Invite card（可选升级）** — 「再花 30 秒聊聊这场局,完成可得 +30 积分」;
->    跳过 = 直接提交（纯 3 步 payload）
-> 5. **均衡反馈屏 A「这场局的氛围」** — 氛围温度计（1–5:尴尬/平淡/舒适/热烈/完美）+
+> 1. **今晚这局怎么样？**（体验屏,2026-08-15 合并）— `RatingFace` 1–5 emoji score +
+>    氛围温度计（1–5:尴尬/平淡/舒适/热烈/完美）+
 >    连接雷达（topicResonance/personalityMatch/backgroundDiversity/overallFit 各 1–5）+
->    场地印象（like/neutral/dislike）+ 散场之后（已交换联系方式/有但还没联系/没有但很愉快/没有不太合适）
-> 6. **均衡反馈屏 B「参与者与建议」** — 参与者印象（仅对 connections 步选中的人显示,特质标签 max 3/人 + 悄悄话）+
->    改进建议（预设配方卡 max 3 + 自定义）
+>    场地印象（like/neutral/dislike）+ 散场之后（已交换联系方式/有但还没联系/没有但很愉快/没有不太合适）。
+>    全部可选;屏首一行说明反馈动机（你的观察,会让下一场更对味;不承诺积分——无券核销闭环）
+> 2. **想继续了解谁？** — multi-select connections; mutual picks reveal WeChat IDs
+> 3. **还有什么想说的？**（收尾屏）— 参与者印象（仅对 connections 步选中的人显示,特质标签 max 3/人 + 悄悄话）+
+>    改进建议（预设配方卡 max 3 + 自定义）+ optional free text (wire key `feedback`, content-safety screened)
 >
 > **Rewards (wired 2026-08-07):** base flow = `feedback_basic` (20xp/20coins);
 > any balanced-layer field present = `feedback_deep` (50xp/50coins) +
@@ -1585,7 +1591,8 @@ Active server files:
 > (`packages/shared/src/schema/_definitions.ts`) — unknown keys are Zod-stripped,
 > so the client wire keys are drift-gated by `feedbackPayload.test.ts` against the schema.
 > Event id families are canonicalized via `resolveCanonicalEventId` before insert.
-> **Analytics:** `feedback_invite_seen` / `feedback_deep_engaged` / `feedback_deep_submitted`
+> **Analytics (2026-08-15):** `feedback_deep_engaged`（首个深度字段被填写,仅一次）/
+> `feedback_deep_submitted`（payload 含任一深度字段,与服务端 hasDeepFeedback 口径一致）
 > land in `discover_analytics_events` (allowlist in `apps/server/src/routes/domains/analytics.ts`).
 
 #### Two-Tier Feedback Architecture

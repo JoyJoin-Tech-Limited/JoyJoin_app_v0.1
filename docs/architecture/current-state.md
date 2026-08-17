@@ -77,6 +77,7 @@ Primary files:
 - `apps/mini-program/src/pages/squad-unboxing/index.tsx`
 - `apps/mini-program/src/pages/pool-group-detail/index.tsx`
 - `apps/mini-program/src/pages/gathering-room/index.tsx` — pre-event online anteroom for matched groups; gated by `gatheringRoomEnabled`, uses `GET /api/pool-groups/:groupId/room-state` and `ROOM_*` WS events
+- `apps/mini-program/src/components/TablemateCard/index.tsx` — reusable 桌友 portrait card shared by matching-status matched carousel, pool-group-detail deck strip, and squad-unboxing front-face reference (2026-08-16)
 
 Boundary:
 - Deterministic scores come from active server matching rules, not client heuristics.
@@ -92,6 +93,8 @@ Boundary:
 
 **Street Blind Box formal runtime (2026-08-08)**
 - `apps/server/src/routes/domains/alangFlash.ts`, `services/flashService.ts`, `services/flashScheduleService.ts`, and `repositories/flashRepo.ts` own the separate `/api/alang/flash/*` multi-NPC flow. The server emits `canonicalScreen="map"`; the formal first season is 3 acts × 5 NPC story episodes, with 10 m server-owned arrival and no client-visible hidden coordinates or future schedules.
+- Story completion and its catalog fragment settle atomically. A missing or duplicate catalog fragment blocks the whole settlement; the idempotent `20260816010000_repair_flash_story_fragments.sql` migration repairs historical completed episodes without deleting earned rows. Non-production single-test replay carries an episode-scoped cursor and never writes formal completion, fragment ownership, season progress, or ending state.
+- Optional choice-aware narrative enrichment runs only after a newly created settlement and is disabled by default through `flashStoryAiResponsesEnabled` / `FLASH_STORY_AI_RESPONSES_ENABLED`. The model returns a bounded presentation plan rather than user-visible prose; reviewed copy remains the fallback and the model has no authority over progression or rewards.
 - Staging formal-flow QA can create a plan-less `flash_shifts.availability_mode='manual_hold'` row through operator+ `/api/admin/alang/manual-holds*` endpoints. Active holds have no `ends_at` and remain online until explicitly stopped. Only exact `APP_MODE=staging` includes these rows in public responses; production and missing mode ignore and reject them. Start/stop are audited without coordinates.
 
 **Authority chain**

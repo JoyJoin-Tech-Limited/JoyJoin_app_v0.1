@@ -24,9 +24,11 @@
     z-index: 1;
     width: 100%;
     max-width: 640rpx;
+    max-height: 76vh;
+    overflow-y: auto;
     border-radius: $card-radius;
     padding: $spacing-xl;
-    background: linear-gradient(180deg, $color-surface 0%, #f5f0ff 100%);
+    background: linear-gradient(180deg, $color-surface 0%, $color-bg-tint-purple 100%);
     box-shadow: 0 30rpx 90rpx rgba($color-primary, 0.24);
     display: flex;
     flex-direction: column;
@@ -119,54 +121,25 @@
     color: $color-primary;
   }
 
-  &__overlay-member-grid {
+  &__overlay-member-carousel {
+    // Bleed to the overlay card's edge so the dealt cards peek from the side.
+    margin: $spacing-lg (-$spacing-xl) 0;
+    // Gentle proximity snap so a flick settles onto a clean card edge.
+    scroll-snap-type: x proximity;
+  }
+
+  &__overlay-member-track {
     display: flex;
-    flex-wrap: wrap;
     gap: $spacing-md;
-    justify-content: center;
-    margin-top: $spacing-lg;
-  }
+    // Left padding matches the overlay card padding; right padding is just
+    // the tilt-poke clearance ($spacing-md > ~16rpx corner poke) so the
+    // end-of-scroll state hugs the edge instead of leaving a 60rpx void.
+    // Bottom padding gives the dealt-card tilt + tinted shadow room to render.
+    padding: 0 $spacing-md $spacing-md $spacing-xl;
 
-  &__overlay-member-card {
-    width: calc(50% - #{$spacing-sm});
-    min-height: 176rpx;
-    border-radius: $card-radius-sm;
-    padding: $spacing-md;
-    background: rgba($color-surface, 0.94);
-    box-shadow: inset 0 0 0 1rpx rgba($color-primary, 0.08);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10rpx;
-    animation: matching-overlay-rise 0.45s ease both;
-  }
-
-  &__overlay-member-avatar {
-    width: 60rpx;
-    height: 60rpx;
-    border-radius: 50%;
-    background: rgba($color-primary, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
-
-  &__overlay-member-name {
-    display: block;
-    font-size: $font-size-base;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    text-align: center;
-  }
-
-  &__overlay-member-note {
-    display: block;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: 1.5;
-    text-align: center;
+    > .tablemate-card {
+      scroll-snap-align: start;
+    }
   }
 
   &__overlay-button {

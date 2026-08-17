@@ -8,6 +8,7 @@ import {
   flashCoordinateSchema,
   flashFeedbackRequestSchema,
   flashPreferenceUpdateSchema,
+  flashStoryAdvanceRequestSchema,
 } from "@shared/alang/flashTypes";
 
 import { getFeatureFlag } from "../../lib/featureFlags";
@@ -266,11 +267,15 @@ export function registerAlangFlashRoutes(app: Express): void {
     const authenticatedUserId = userId(req, res);
     if (!authenticatedUserId) return;
     const encounterId = idParamSchema.safeParse(req.params.id);
+    const body = flashStoryAdvanceRequestSchema.safeParse(req.body ?? {});
+    if (!body.success) return res.status(400).json({ code: "FLASH_V2_NOT_AVAILABLE", error: "无效的故事重玩状态" });
     if (!encounterId.success) return res.status(404).json({ code: "FLASH_ENCOUNTER_NOT_FOUND", error: "没有找到这次相遇" });
     try {
       return res.json(await advanceFlashV2Story({
         encounterId: encounterId.data,
         userId: authenticatedUserId,
+        ...body.data,
+        allowStoryReplay: isStoryReplayRequest(req),
       }));
     } catch (error) {
       sendFlashError(res, error);

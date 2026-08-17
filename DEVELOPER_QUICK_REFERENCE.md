@@ -658,6 +658,7 @@ The IcebreakerToolkit (pre-event game browser) is a **LEGACY** tool replaced by 
 | `MatchRevealSequenceV2` | Active cinematic reveal orchestrator | `components/matching/MatchRevealSequenceV2.tsx` |
 | `SurpriseMatchReveal` | Legacy rarity-first reveal overlay | `components/matching/SurpriseMatchReveal.tsx` |
 | `MatchPointsDisplay` | Match points renderer | `components/matching/MatchPointsDisplay.tsx` |
+| `TablemateCard` *(mini-program, 2026-08-16)* | Reusable matched-member portrait card | `apps/mini-program/src/components/TablemateCard/index.tsx` |
 
 ### Key Rules
 
@@ -666,6 +667,7 @@ The IcebreakerToolkit (pre-event game browser) is a **LEGACY** tool replaced by 
 3. **For full-screen matching-status screens, never duplicate `matching-bg.svg`.** Import the shared background only via `MatchingStateLayout`. Join-sheet interstitials inherit their presentation context from `JoinEventPoolSheet` and should not wrap themselves in `MatchingStateLayout`.
 4. **Asset locations (archived):** `archived/workspaces/user-client/src/assets/matching/{shared,waiting,no-match,join-error,extended-data-empty,test-incomplete}/`
 5. **Active blind-pool entry flow:** `DiscoverPage` query-param join sheet → `MatchingStatusPage`; browser blind-box checkout returns through `BlindBoxConfirmationPage`, which confirms payment state and then hands off to `/events` or `/discover`.
+6. **Mini-program matched-member cards must reuse `TablemateCard`.** The matching-status matched carousel, pool-group-detail deck strip, and squad-unboxing front-face all share `apps/mini-program/src/components/TablemateCard`; pair-chemistry copy/emoji/helpers live in `apps/mini-program/src/lib/utils/pairChemistry.ts`. Do not rebuild a one-off member card for a new matched surface.
 
 Full reference: `docs/reference/ui-matching-reveal-improvements.md`, `docs/matching-reveal-implementation-summary.md`
 
@@ -1269,6 +1271,7 @@ All AI endpoints are rate-limited and auth-gated to prevent abuse.
 | `PROMO_BANNER_ENABLED` | `true` shows the discover hero promo banner; `false` kills the entire surface (zero-height spacer) and stops all `promo_banner_*` analytics. DB override via `/admin/feature-flags` (key `promoBannerEnabled`). Default `true` |
 | `ENABLE_MATCHING_TEST_MODE` | `true` enables `/api/test/matching-test/*` routes for end-to-end matching with seed bots + real tester payment. Requires `ENABLE_SINGLE_TEST_MODE=true`. Returns 403 in `APP_MODE=production`. Default `false` (2026-06-24) |
 | `ALANG_ENABLED` | Environment fallback for DB-backed `alangEnabled`; gates the Alang entry and `/api/alang/*`. Default `false` |
+| `FLASH_STORY_AI_RESPONSES_ENABLED` | Environment fallback for DB-backed `flashStoryAiResponsesEnabled`. Default `false`; when enabled, only enriches newly settled multi-choice Flash story responses through the existing model router with a 4 s bound and reviewed fallback. It never controls completion, fragments, progression, endings, or replay. |
 | `ENABLE_SINGLE_TEST_MODE` | Enables non-production single-test surfaces. Alang internal point config/debug routes require this marker (or `APP_MODE=test`); production Alang debug routes stay 404 and auth fails client test mode closed |
 | `PROFILE_PIXEL_AVATAR_ENABLED` | Environment fallback for DB-backed `profilePixelAvatarEnabled`; gates the Profile-only 12-archetype pixel avatar and “我的形象” page. Default `false` |
 | `EQUIPMENT_REWARDS_ENABLED` | Environment fallback for DB-backed `equipmentRewardsEnabled`; gates inventory, manual reward draw, outfit save, pity, fragments, and fragment exchange. Default `false` |

@@ -1,9 +1,13 @@
+@use 'sass:color';
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
 // This page lives in its own subpackage. The scene SCSS must be compiled into
 // the page WXSS or Taro/Vite may chunk it into a file this page never loads
 // (subpackage style-splitting trap — see verify-subpackage-styles.mjs).
 @use '../../components/gathering-room/GatheringRoomScene';
+// XiaoyueEmptyState (empty-room surface) renders ArchetypeHead internally —
+// both must be @use'd here for the same subpackage style-splitting reason.
+@use '../../components/mascot/XiaoyueEmptyState';
 @use '../../components/mascot/ArchetypeHead';
 
 .gathering-room {
@@ -20,24 +24,42 @@
     padding: $spacing-md $container-padding $spacing-sm;
   }
 
-  &__header-title {
-    font-size: $font-size-lg;
-    font-weight: 600;
-    color: $color-text-primary;
-  }
-
   &__header-subtitle {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: center;
     font-size: $font-size-sm;
     color: $color-text-secondary;
   }
 
   &__scene-wrap {
+    position: relative;
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
     overflow: hidden;
+    // Blend the bands above/below the fixed 960rpx scene into the room art's
+    // edge tones (cream wall → salmon floor) instead of bare page background.
+    background: linear-gradient(
+      180deg,
+      $color-bg-warm-to 0%,
+      color.mix($flow-accent-human, $color-bg-warm-mid, 35%) 100%
+    );
+
+    // Soft scrim where the scene meets the solid action bar — no hard cut.
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 120rpx;
+      background: linear-gradient(180deg, rgba($color-surface, 0) 0%, rgba($color-surface, 0.92) 100%);
+      pointer-events: none;
+    }
   }
 
   // Empty-room surface (no matched members yet) — centered, warm, on-brand.
@@ -50,16 +72,26 @@
     text-align: center;
   }
 
-  &__scene-empty-title {
-    font-size: $font-size-lg;
+  // Event-day countdown reads warmer (「今天见 · 还有 N 小时」+ coral accent).
+  &__header-today {
+    color: $flow-accent-human;
     font-weight: 600;
-    color: $color-text-primary;
   }
 
-  &__scene-empty-sub {
-    font-size: $font-size-sm;
-    line-height: 1.6;
-    color: $color-text-secondary;
+  // Attendance/confirmed digits roll up briefly when the counts change. Two
+  // identical keyframes — swapping animation-name restarts the animation
+  // without remounting the Text (keyed remounts leak stale nodes on H5).
+  &__header-count {
+    display: inline-block;
+    animation: gathering-room-count-roll-a 240ms ease-out both;
+
+    &--roll-0 {
+      animation-name: gathering-room-count-roll-a;
+    }
+
+    &--roll-1 {
+      animation-name: gathering-room-count-roll-b;
+    }
   }
 
   // Bottom action bar: solid surface + subtle top shadow (repo convention).
@@ -104,6 +136,15 @@
     background: $color-surface;
     border-radius: 32rpx 32rpx 0 0;
     animation: gathering-room-sheet-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  // Grabber handle — reads as pull-to-dismiss without a word of instruction.
+  &__sheet-grabber {
+    align-self: center;
+    width: 72rpx;
+    height: 8rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-text-primary, 0.14);
   }
 
   &__sheet-header {
@@ -194,4 +235,52 @@
 @keyframes gathering-room-sheet-in {
   0% { transform: translateY(100%); opacity: 0.6; }
   100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes gathering-room-count-roll-a {
+  0% { opacity: 0; transform: translateY(8rpx); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gathering-room-count-roll-b {
+  0% { opacity: 0; transform: translateY(8rpx); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gathering-room__header-count {
+    animation: none;
+  }
+}
+
+// First-visit hint pill — floats at the bottom of the scene, self-contained
+// 2.5s in/hold/out lifecycle (unmounted by the page timer at 2500ms).
+.gathering-room__hint {
+  position: absolute;
+  left: 50%;
+  bottom: 24rpx;
+  z-index: 5;
+  transform: translateX(-50%);
+  padding: 12rpx 28rpx;
+  border-radius: $radius-pill;
+  background: rgba($color-text-primary, 0.72);
+  animation: gathering-room-hint 2500ms ease-in-out both;
+}
+
+.gathering-room__hint-text {
+  font-size: $font-size-xs;
+  color: $color-surface;
+  white-space: nowrap;
+}
+
+@keyframes gathering-room-hint {
+  0% { opacity: 0; transform: translateX(-50%) translateY(12rpx); }
+  10%, 86% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(8rpx); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gathering-room__hint {
+    animation: none;
+  }
 }

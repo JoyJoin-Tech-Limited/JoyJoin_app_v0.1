@@ -806,6 +806,69 @@ async function captureProfileReviewCeremony() {
   )
 }
 
+// ─── Gathering room (集结房间, 2026-08-15) ──────────────────────
+// Presence arrives over the mock WS endpoint (/ws on the mock server): after
+// USER_JOINED the mock replies ROOM_PRESENCE_STATE with five of the six fixture
+// members (the owl is absent), so the header must reach 已到 5/6 before we
+// capture and a name card must remain at the absent member's seat. Avatar art
+// resolves to the approved full-starter composites via the CDN-intercept in
+// withBrowserPage (served from apps/mini-program/src/assets).
+async function captureGatheringRoom(viewport = V17_VIEWPORT) {
+  return withBrowserPage(viewport, async (page) => {
+    await page.goto(
+      `${H5_BASE_URL}/#/pages/gathering-room/index?groupId=group-screenshot-001&motion=reduce`,
+      { waitUntil: 'domcontentloaded', timeout: 60000 }
+    )
+    await clearAndSeedStorage(page)
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+    await page.waitForSelector('.gathering-room__action-bar', { state: 'visible', timeout: 15000 })
+    // All six seats rendered.
+    await page.waitForFunction(
+      () => document.querySelectorAll('.gathering-room-scene__seat').length === 6,
+      undefined,
+      { timeout: 10000 }
+    )
+    // WS presence applied: countdown + full attendance in the header strip.
+    // Whitespace-tolerant: the count Texts use a non-breaking space.
+    await page.waitForFunction(() => {
+      const text = document.querySelector('.gathering-room__header-subtitle')?.textContent ?? ''
+      return text.includes('还有') && /已到\s*5\/6/.test(text) && /已确认\s*2\/6/.test(text)
+    }, undefined, { timeout: 15000 })
+    // Absent-member path rendered: the owl is excluded from WS presence, so a
+    // name card remains at its seat while its avatar queues at the door.
+    await page.waitForFunction(
+      () => document.querySelectorAll('.gathering-room-scene__name-card').length >= 1,
+      undefined,
+      { timeout: 10000 }
+    )
+    // Every avatar resolved to its approved full-starter composite.
+    await page.waitForFunction(() => {
+      const bodies = Array.from(document.querySelectorAll('.pixel-avatar-composite__body'))
+      return bodies.length === 6 && bodies.every((el) =>
+        /full-starter-v2\.[a-f0-9]{12}\.webp/.test(el.getAttribute('src') ?? ''))
+    }, undefined, { timeout: 10000 })
+    // No avatar fell back to the error/placeholder state.
+    await page.waitForFunction(
+      () => document.querySelectorAll('.pixel-avatar-composite__asset-warning').length === 0,
+      undefined,
+      { timeout: 10000 }
+    )
+    // Give the room art + six composites time to decode via the asset proxy.
+    await page.waitForTimeout(2500)
+
+    return screenshotViewport(page)
+  })
+}
+
+register('gathering-room', captureGatheringRoom)
+
+// Compact-device variant (360×640) — verifies seat anchors hold on short
+// viewports (scene is 960rpx max-height with %-anchored seats).
+register('gathering-room-compact', () => captureGatheringRoom({
+  ...V17_VIEWPORT,
+  viewport: { width: 360, height: 640 },
+}))
 register('profile-review-ceremony', captureProfileReviewCeremony)
 register('matching-status-puzzle-prelude', captureMatchingStatusPuzzlePrelude)
 register('profile-v17', captureProfileV17)

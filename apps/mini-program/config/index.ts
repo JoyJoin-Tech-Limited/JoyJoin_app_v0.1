@@ -3,6 +3,7 @@ import { defineConfig, type UserConfigExport } from '@tarojs/cli'
 
 import { loadRepoRootEnvFile, loadMiniProgramEnvFile, resolveMiniProgramApiBaseUrl } from './apiBaseUrl'
 import devConfig from './dev'
+import { miniProgramManualChunks } from './miniProgramChunks'
 import prodConfig from './prod'
 
 type MergeConfig = (...configs: UserConfigExport<'vite'>[]) => UserConfigExport<'vite'>
@@ -75,51 +76,6 @@ if (MINI_PROGRAM_NODE_ENV === 'production' && !MINI_PROGRAM_CDN_BASE_URL) {
  * (2026-08-11; regression: the K3 WebGL spike imported three from the
  * onboarding results page and blanked 原型揭晓 on device with wx://not-found).
  */
-const AVATAR_3D_CHUNK_NAME = 'pages/profile-linked/three-avatar'
-// Mirrored from @tarojs/helper dist/constants.js (Taro 4.2) — inlined so this
-// config does not rely on hoisted transitive deps.
-const REG_TARO_SCOPED_PACKAGE = /@tarojs[\\/][a-z]+/
-const REG_NODE_MODULES_DIR = /[\\/]node_modules[\\/]/gi
-
-type ManualChunksModuleInfo = { importers?: string[] } | null
-
-/**
- * Mirrors Taro's manualChunks (react branch of getManualChunks() in
- * @tarojs/vite-runner dist/mini/config.js) and prepends the avatar3d rules.
- * This fully replaces Taro's function: vite mergeConfig lets the later plugin
- * config win for function values, and mini.compiler.vitePlugins run after
- * Taro's internal config plugin (dist/index.mini.js pushes them last).
- */
-function miniProgramManualChunks(
-  id: string,
-  api: { getModuleInfo: (moduleId: string) => ManualChunksModuleInfo },
-): string | null | undefined {
-  if (
-    /node_modules[\\/]three[\\/]/.test(id) ||
-    /[\\/]src[\\/]lib[\\/]profile[\\/]avatar3d[\\/]/.test(id) ||
-    /[\\/]src[\\/]components[\\/]profile[\\/]PixelAvatar3D\.tsx$/.test(id)
-  ) {
-    return AVATAR_3D_CHUNK_NAME
-  }
-  REG_NODE_MODULES_DIR.lastIndex = 0
-  if (/node_modules[\\/]@tarojs[\\/]vite-runner/.test(id)) return null
-  if (/node_modules[\\/]@babel[\\/]/.test(id) || /commonjsHelpers\.js$/.test(id)) {
-    return 'babelHelpers'
-  }
-  if (
-    REG_TARO_SCOPED_PACKAGE.test(id) ||
-    /node_modules[\\/](react-reconciler|react|scheduler|tslib)[\\/]/.test(id)
-  ) {
-    return 'taro'
-  }
-  if (REG_NODE_MODULES_DIR.test(id)) return 'vendors'
-  const moduleInfo = api.getModuleInfo(id)
-  if (moduleInfo?.importers?.length && moduleInfo.importers.length > 1) {
-    return 'common'
-  }
-  return undefined
-}
-
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
 export default defineConfig<'vite'>(async (merge: MergeConfig) => {
   const baseConfig: UserConfigExport<'vite'> = {
@@ -315,10 +271,6 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           to: 'dist/assets/illustrations/street-blind-box-entry.png',
         },
         {
-          from: 'src/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg',
-          to: 'dist/pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg',
-        },
-        {
           from: 'src/pages/alang/assets/backgrounds/radar-paper-scene.jpg',
           to: 'dist/pages/alang/assets/backgrounds/radar-paper-scene.jpg',
         },
@@ -406,6 +358,14 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
         {
           from: 'src/assets/mascot/xiaoyue-spritesheet-manifest.json',
           to: 'dist/assets/mascot/xiaoyue-spritesheet-manifest.json',
+        },
+        // Gathering-room composite art fallback — bundled locally (~84KB) so
+        // the room scene never renders a bare background when the CDN copy
+        // 404s (e.g. before the CDN upload pipeline ships it).
+        // GatheringRoomScene loads it via useCdnFirstSrc (CDN-first).
+        {
+          from: 'src/assets/gathering-room',
+          to: 'dist/assets/gathering-room',
         },
         // Matching status heroes — referenced via cdnAsset(); local copies are
         // not bundled because cdnAsset() returns the CDN URL in production.

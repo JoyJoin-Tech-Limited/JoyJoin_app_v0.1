@@ -27,7 +27,7 @@ export default function DuoInfoSheet({ reduceMotion, onClose }: DuoInfoSheetProp
     : 'duo-info-sheet__surface'
 
   return (
-    <View className='duo-info-sheet' onClick={onClose}>
+    <View className='duo-info-sheet' catchMove onClick={onClose}>
       <View className='duo-info-sheet__backdrop' />
       <View
         className={surfaceClass}

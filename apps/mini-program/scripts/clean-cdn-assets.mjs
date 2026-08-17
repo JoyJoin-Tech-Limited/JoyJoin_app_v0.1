@@ -90,6 +90,14 @@ const sourceOnlyAlangUiAssets = new Set([
   'flash-atuan-character-lowpoly-v3.webp',
   'flash-atuan-park-clean-v2.jpg',
   'flash-atuan-character-cutout-v2.png',
+  'flash-alang-dialogue-paper-v1.jpg',
+  'flash-lizi-dialogue-paper-v1.jpg',
+  'flash-momo-dialogue-paper-v1.jpg',
+  'flash-shiqi-dialogue-paper-v1.jpg',
+  'flash-atuan-dialogue-paper-v1.jpg',
+  'flash-alang-first-act-riverside-v2.jpg',
+  'flash-momo-first-act-rain-route-v2.jpg',
+  'flash-shiqi-first-act-record-room-v2.jpg',
 ])
 
 await removeMatching(

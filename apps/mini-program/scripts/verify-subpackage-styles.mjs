@@ -53,6 +53,44 @@ const REQUIREMENTS = [
     selectors: ['profile-page__identity-stage{position:relative;height:728rpx'],
   },
   {
+    // 桌友 card-deck reskin (2026-08-15): TablemateCard styles are @use'd by
+    // the matching-status page SCSS so the 桌友卡 carousel rules compile into
+    // the subpackage page WXSS — the shared component's own chunk may never
+    // load there (same style-splitting trap as the incidents above).
+    page: 'pages/matching-status/index.wxss',
+    selectors: [
+      'tablemate-card__art{',
+      'tablemate-card__temp-chip{',
+      'matching-status__overlay-member-carousel',
+      // 成员详情浮层 (2026-08-16): the reveal overlay + squad card open
+      // TablemateDetailSheet; its rules are @use'd by the page SCSS and must
+      // reach this subpackage page WXSS.
+      'tablemate-sheet__surface{',
+      // ConnectionPointPill styles are co-compiled through TablemateCard's own
+      // @use; guard the pill tiers so a chunking regression can't blank them.
+      'pill--common',
+      'pill--rare',
+      'pill--epic',
+    ],
+  },
+  {
+    // 桌友 card-deck reskin: pool-group-detail moved into its own subpackage
+    // (2026-08-16, main package 2048KB source-size budget), so its page WXSS
+    // needs the card + pill rules co-compiled from the deck strip — the shared
+    // component chunk may never load inside the subpackage.
+    page: 'pages/pool-group-detail/index.wxss',
+    selectors: [
+      'tablemate-card__art{',
+      'tablemate-card__temp-chip{',
+      'pool-group-detail__deck-track',
+      // 成员详情浮层 (2026-08-16): deck card taps open TablemateDetailSheet.
+      'tablemate-sheet__surface{',
+      'pill--common',
+      'pill--rare',
+      'pill--epic',
+    ],
+  },
+  {
     // Zero-CSS regression (2026-07-26): SquadTableCard + the table-transition
     // line shipped with NO stylesheet at all (the "giant circles" incident) —
     // their classes now live in the page SCSS and must reach the page WXSS.
@@ -114,7 +152,7 @@ const REQUIREMENTS = [
     page: 'pages/gathering-room/index.wxss',
     selectors: [
       'gathering-room-scene{',
-      'gathering-room-scene__table{',
+      'gathering-room-scene__seat-shadow{',
       'gathering-room-scene__seat{',
       'gathering-room__action-bar{',
       'gathering-room__sheet{',

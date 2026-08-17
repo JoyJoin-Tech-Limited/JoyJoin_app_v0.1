@@ -1,15 +1,20 @@
-import Taro from '@tarojs/taro'
+import Taro, { useDidHide, useDidShow, useUnload } from '@tarojs/taro'
 import { useEffect, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
 import { getFlashStoryUnitDefinition, isFlashV2PilotUnitId } from '@shared/alang/flashStorySeason'
 import type { AtuanFirstActSubmission } from '@shared/alang/atuanFirstAct'
+import type { AtuanLaterActSubmission } from '@shared/alang/atuanLaterActs'
+import type { FlashStoryReplayStateDto } from '@shared/alang/flashTypes'
 import { FlashStoryUnit } from '../../../components/alang/story-unit/FlashStoryUnit'
 import { FlashStoryV2Stage } from '../../../components/alang/FlashStoryV2Stage'
+import { V2LaterActExperience } from '../../../components/alang/story-unit/AlangLaterActExperience'
+import { isAlangLaterActUnitId, isFlatLaterActUnitId } from '../../../components/alang/story-unit/LaterActStoryConfigs'
 import { FlashButton, FlashFeatureClosed, FlashNpcDialogueScene, FlashPageState, FlashTaskCategoryBadge } from '../../../components/alang/FlashUi'
 import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
 import { getApiErrorStatusCode, isTransportApiError } from '../../../lib/api/authSession'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
+import { leaveFlashStory } from '../../../lib/alang/flashExitNavigation'
 import {
   useAdvanceFlashStoryNode,
   useAnswerFlashEncounter,
@@ -21,9 +26,12 @@ import {
 import type { FlashCanonicalSnapshot } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
+import { resolveFlashNpcTheme } from '../../../lib/alang/flashNpcAssets'
 import atuanArrivalScene from '../assets/ui/flash-atuan-park-clean-v3.jpg'
 import atuanArrivalCharacter from '../assets/ui/flash-atuan-character-lowpoly-v3.png'
 import atuanArrivalBag from '../assets/ui/flash-atuan-bag-cutout-v2.png'
+import atuanSecondActScene from '../assets/ui/flash-atuan-second-act-pavilion-v1.jpg'
+import atuanThirdActScene from '../assets/ui/flash-atuan-third-act-table-v1.jpg'
 import '../flash.scss'
 
 function dialogueActionError(error: unknown, fallback: string): string {
@@ -97,12 +105,34 @@ function classifyStorySubmitFailure(error: unknown): 'retry' | 'refresh' | 'exit
   return 'exit'
 }
 
-export default function FlashDialoguePage() {
+export interface CustomLaterActAssets {
+  alangSecond: string
+  alangThird: string
+  alangCharacter: string
+  momoSecond: string
+  momoThird: string
+  momoCharacter: string
+  liziSecond: string
+  liziThird: string
+  liziCharacter: string
+  shiqiSecond: string
+  shiqiThird: string
+  shiqiCharacter: string
+}
+
+interface FlashDialoguePageProps {
+  customLaterActAssets?: CustomLaterActAssets
+  currentPath?: string
+}
+
+export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PROGRAM_ROUTES.alangDialogue }: FlashDialoguePageProps = {}) {
   const enabled = shouldShowStreetBlindBoxEntry()
   const params = Taro.getCurrentInstance().router?.params ?? {}
   const encounterId = params.encounterId ?? ''
   const replay = params.replay === '1'
-  const { data, isLoading, isError, error, refetch } = useFlashEncounter(encounterId, enabled && !!encounterId, replay)
+  const replaySession = replay ? (params.replaySession ?? 'legacy-replay') : undefined
+  const progressEncounterId = replaySession ? `${encounterId}:${replaySession}` : encounterId
+  const { data, isLoading, isFetching, isError, error, refetch } = useFlashEncounter(encounterId, enabled && !!encounterId, replay)
   const answerMutation = useAnswerFlashEncounter()
   const advanceMutation = useAdvanceFlashStoryNode()
   const rerollMutation = useRerollFlashEncounter()
@@ -111,43 +141,84 @@ export default function FlashDialoguePage() {
   const [actionError, setActionError] = useState('')
   const [fragmentRevealed, setFragmentRevealed] = useState(false)
   const [storySubmitState, setStorySubmitState] = useState<StorySubmitState>('idle')
+  const [pageVisible, setPageVisible] = useState(true)
+  const pageVisibleRef = useRef(true)
+  const answerInFlightRef = useRef(false)
+  const advanceInFlightRef = useRef(false)
   const storySubmitInFlightRef = useRef(false)
+
+  useDidShow(() => {
+    pageVisibleRef.current = true
+    setPageVisible(true)
+  })
+
+  useDidHide(() => {
+    pageVisibleRef.current = false
+    setPageVisible(false)
+  })
+
+  useUnload(() => {
+    pageVisibleRef.current = false
+  })
 
   useEffect(() => {
     void Taro.setNavigationBarTitle({ title: data?.npc?.name ? `和${data.npc.name}聊聊` : '角色对话' })
   }, [data?.npc?.name])
 
   useEffect(() => {
+    if (!pageVisibleRef.current || !pageVisible || isFetching || isError) return
     if (data?.storyEpisode?.code === 'season-finale') {
       void Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}` })
       return
     }
+    // A settled episode stays on the result card until the user explicitly
+    // stores the fragment. `canonicalScreen=completed` must not auto-exit it.
+    if (data?.storyEpisode?.response) return
     if (!enabled || !data?.canonicalScreen || data.status === 'expired') return
-    void redirectToFlashCanonical(data, MINI_PROGRAM_ROUTES.alangDialogue)
-  }, [data, enabled, encounterId])
+    void redirectToFlashCanonical(
+      data,
+      currentPath,
+      replay ? { replay: true, replaySession } : undefined,
+    )
+  }, [currentPath, data, enabled, encounterId, isError, isFetching, pageVisible, replay, replaySession])
 
   useEffect(() => {
     setFragmentRevealed(false)
     setStorySubmitState('idle')
     setActionError('')
+    answerInFlightRef.current = false
+    advanceInFlightRef.current = false
     storySubmitInFlightRef.current = false
   }, [data?.storyEpisode?.id])
 
   const applyResponse = async (response: FlashCanonicalSnapshot) => {
+    if (!pageVisibleRef.current) return
     if ('storyEpisode' in response && response.storyEpisode?.code === 'season-finale') {
       await Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}` })
       return
     }
-    const redirected = await redirectToFlashCanonical(response, MINI_PROGRAM_ROUTES.alangDialogue)
+    if ('storyEpisode' in response && response.storyEpisode?.response) return
+    const redirected = await redirectToFlashCanonical(
+      response,
+      currentPath,
+      replay ? { replay: true, replaySession } : undefined,
+    )
     if (!redirected && !('npc' in response)) await refetch()
   }
 
   const answer = async (questionId: string, optionId: string) => {
-    if (!enabled || answerMutation.isPending) return
+    if (!enabled || answerInFlightRef.current) return
+    answerInFlightRef.current = true
     setActionError('')
     try {
       haptics('light')
-      const response = await answerMutation.mutateAsync({ encounterId, questionId, optionId })
+      const response = await answerMutation.mutateAsync({
+        encounterId,
+        questionId,
+        optionId,
+        ...(replay ? { replay: true } : {}),
+        ...(data?.storyEpisode?.storyV2?.replayState ? { replayState: data.storyEpisode.storyV2.replayState } : {}),
+      })
       await applyResponse(response)
     } catch (caughtError) {
       if (getFlashApiErrorCode(caughtError) === 'FLASH_ENCOUNTER_EXPIRED') {
@@ -155,26 +226,47 @@ export default function FlashDialoguePage() {
         return
       }
       setActionError(dialogueActionError(caughtError, '刚才那句话没有送到，再选一次就好。'))
+    } finally {
+      answerInFlightRef.current = false
     }
   }
 
-  const advance = async () => {
-    if (!enabled || advanceMutation.isPending) return
+  const advance = async (replayStateOverride?: FlashStoryReplayStateDto): Promise<FlashCanonicalSnapshot | null> => {
+    if (!enabled || advanceInFlightRef.current) return null
+    advanceInFlightRef.current = true
     setActionError('')
     try {
       haptics('light')
-      const response = await advanceMutation.mutateAsync(encounterId)
+      const replayState = replayStateOverride ?? data?.storyEpisode?.storyV2?.replayState
+      const response = await advanceMutation.mutateAsync({
+        encounterId,
+        ...(replay ? { replay: true } : {}),
+        ...(replayState ? { replayState } : {}),
+      })
       await applyResponse(response)
+      return response
     } catch (caughtError) {
       if (getFlashApiErrorCode(caughtError) === 'FLASH_ENCOUNTER_EXPIRED') {
         await refetch()
-        return
+        return null
       }
       setActionError(dialogueActionError(caughtError, '故事没有接上，再试一次就好。'))
+      return null
+    } finally {
+      advanceInFlightRef.current = false
     }
   }
 
-  const submitStoryChoice = async (choice: { questionId: string; optionId: string; label: string; storyPath?: AtuanFirstActSubmission }) => {
+  const completeV2LaterAct = async (): Promise<boolean> => {
+    const response = await advance()
+    if (!response) return false
+    if (response.storyEpisode?.storyV2?.nodeId === 'n5_close') {
+      return Boolean(await advance(response.storyEpisode.storyV2.replayState))
+    }
+    return true
+  }
+
+  const submitStoryChoice = async (choice: { questionId: string; optionId: string; label: string; storyPath?: AtuanFirstActSubmission | AtuanLaterActSubmission }) => {
     if (!enabled || storySubmitInFlightRef.current) return
     const payload = {
       encounterId,
@@ -182,6 +274,7 @@ export default function FlashDialoguePage() {
       optionId: choice.optionId,
       ...(choice.storyPath ? { storyPath: choice.storyPath } : {}),
       ...(replay ? { replay: true } : {}),
+      ...(data?.storyEpisode?.storyV2?.replayState ? { replayState: data.storyEpisode.storyV2.replayState } : {}),
     }
     storySubmitInFlightRef.current = true
     setStorySubmitState('submitting')
@@ -193,15 +286,14 @@ export default function FlashDialoguePage() {
       setStorySubmitState('idle')
     } catch (caughtError) {
       const disposition = classifyStorySubmitFailure(caughtError)
-      if (disposition === 'retry') {
-        setStorySubmitState('retry')
-        setActionError('这句话没有送出去，再试一次就好。')
-      } else {
-        setStorySubmitState('terminal')
-        setActionError(disposition === 'refresh' ? '故事状态刚刚变化，正在重新接上。' : '这次见面已经结束。')
-        await refetch()
-        if (disposition === 'exit') await Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent })
-      }
+      setStorySubmitState(disposition === 'retry' ? 'retry' : 'terminal')
+      setActionError(disposition === 'retry'
+        ? '刚才没有收好，再点一次下方按钮就能继续。'
+        : disposition === 'refresh'
+          ? '故事状态刚刚变化，正在重新接上。'
+          : '这次见面已经结束。')
+      await refetch()
+      if (disposition === 'exit' && pageVisibleRef.current) await leaveFlashStory(MINI_PROGRAM_ROUTES.alangEvent)
     } finally {
       storySubmitInFlightRef.current = false
     }
@@ -258,7 +350,7 @@ export default function FlashDialoguePage() {
         <FlashPageState
           title='这段旧对话已经收好了'
           description='回到街头盲盒，可以从刚才停下的地方继续。'
-          action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}
+          action={() => { void leaveFlashStory(MINI_PROGRAM_ROUTES.alangEvent) }}
           actionLabel='返回街头盲盒'
         />
       </View>
@@ -273,7 +365,7 @@ export default function FlashDialoguePage() {
           tone={expired ? 'plain' : 'error'}
           title={expired ? '这段对话已经聊完了' : '刚才的话暂时没接上'}
           description={expired ? '解锁后的对话会保留 24 小时。现在可以回去看看有没有其他角色在线。' : '刚才的进度还在，重新接上不会从头开始。'}
-          action={expired ? () => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) } : () => { void refetch() }}
+          action={expired ? () => { void leaveFlashStory(MINI_PROGRAM_ROUTES.alangEvent) } : () => { void refetch() }}
           actionLabel={expired ? '返回街头盲盒' : '重新接上'}
         />
       </View>
@@ -287,7 +379,7 @@ export default function FlashDialoguePage() {
   if (data.status === 'expired') {
     return (
       <View className='flash-page'>
-        <FlashPageState title='这段对话已经聊完了' description='解锁后的对话会保留 24 小时。现在可以回去看看有没有其他角色在线。' action={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }} actionLabel='返回街头盲盒' />
+        <FlashPageState title='这段对话已经聊完了' description='解锁后的对话会保留 24 小时。现在可以回去看看有没有其他角色在线。' action={() => { void leaveFlashStory(MINI_PROGRAM_ROUTES.alangEvent) }} actionLabel='返回街头盲盒' />
       </View>
     )
   }
@@ -300,8 +392,48 @@ export default function FlashDialoguePage() {
   }
 
   if (story) {
+    const isCustomLaterAct = isAlangLaterActUnitId(story.code)
+      || isFlatLaterActUnitId(story.code)
+      || story.code === 's1-p3-shiqi'
+    if (isCustomLaterAct && !customLaterActAssets) {
+      return <View className='flash-page'><FlashPageState title='正在展开新的现场…' description='完整场景会在下一页接上，刚才的进度不会丢。' /></View>
+    }
     const v2View = isFlashV2PilotUnitId(story.code) ? story.storyV2 : null
     if (v2View) {
+      if (isAlangLaterActUnitId(story.code) || story.code === 's1-p3-shiqi') {
+        const theme = resolveFlashNpcTheme(data.npc.slug, data.npc.name)
+        const background = story.code === 's1-p2-alang'
+          ? customLaterActAssets?.alangSecond
+          : story.code === 's1-p3-alang'
+            ? customLaterActAssets?.alangThird
+            : customLaterActAssets?.shiqiThird
+        const character = story.code === 's1-p3-shiqi'
+          ? customLaterActAssets?.shiqiCharacter
+          : customLaterActAssets?.alangCharacter
+        return (
+          <View className='flash-page flash-dialogue flash-dialogue--story'>
+            <V2LaterActExperience
+              encounterId={progressEncounterId}
+              unitId={story.code}
+              nodeId={v2View.nodeId}
+              availableChoiceIds={v2View.choices.map(({ id }) => id)}
+              background={background ?? ''}
+              character={character ?? theme.imageSrc}
+              disabled={answerMutation.isPending || advanceMutation.isPending}
+              onChoice={(choiceId) => { void answer(v2View.nodeId, choiceId) }}
+              onContinue={() => { void advance() }}
+              onComplete={completeV2LaterAct}
+            />
+            {answerMutation.isPending || advanceMutation.isPending ? (
+              <View className='flash-dialogue__story-error flash-dialogue__story-error--status' role='status'>
+                <Text>故事正在接上…</Text>
+              </View>
+            ) : actionError ? (
+              <View className='flash-dialogue__story-error' role='alert'><Text>{actionError}</Text></View>
+            ) : null}
+          </View>
+        )
+      }
       return (
         <View className='flash-page flash-dialogue flash-dialogue--story'>
           <FlashStoryV2Stage
@@ -330,8 +462,9 @@ export default function FlashDialoguePage() {
       const unitPosition = Math.min(story.progress.total, story.progress.completedTotal + (story.response ? 0 : 1))
       return (
         <FlashStoryUnit
-          key={`${encounterId}:${story.id}`}
+          key={`${encounterId}:${story.id}:${replaySession ?? 'live'}`}
           encounterId={encounterId}
+          progressNamespace={replaySession}
           npc={data.npc}
           story={story}
           question={question}
@@ -343,13 +476,21 @@ export default function FlashDialoguePage() {
             scene: atuanArrivalScene,
             character: atuanArrivalCharacter,
             bag: atuanArrivalBag,
+            secondScene: atuanSecondActScene,
+            thirdScene: atuanThirdActScene,
           }}
+          momoLaterActScenes={customLaterActAssets ? { second: customLaterActAssets.momoSecond, third: customLaterActAssets.momoThird } : undefined}
+          momoLaterActCharacter={customLaterActAssets?.momoCharacter}
+          liziLaterActScenes={customLaterActAssets ? { second: customLaterActAssets.liziSecond, third: customLaterActAssets.liziThird } : undefined}
+          liziLaterActCharacter={customLaterActAssets?.liziCharacter}
+          shiqiSecondActScene={customLaterActAssets?.shiqiSecond}
+          shiqiLaterActCharacter={customLaterActAssets?.shiqiCharacter}
           onSubmit={submitStoryChoice}
           onContinue={() => {
-            const url = story.progress.completedTotal >= story.progress.total
+            const url = !replay && story.progress.completedTotal >= story.progress.total
               ? `${MINI_PROGRAM_ROUTES.alangFinale}?encounterId=${encodeURIComponent(encounterId)}`
               : MINI_PROGRAM_ROUTES.alangEvent
-            void Taro.redirectTo({ url })
+            void leaveFlashStory(url)
           }}
         />
       )
@@ -448,7 +589,7 @@ export default function FlashDialoguePage() {
                     </View>
                   ) : null}
                   <Text className='flash-dialogue__story-panel-progress'>本幕 {story.progress.completedInPhase}/{story.progress.totalInPhase} · 全季 {story.progress.completedTotal}/{story.progress.total}</Text>
-                  <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>
+                  <FlashButton onClick={() => { void leaveFlashStory(MINI_PROGRAM_ROUTES.alangEvent) }}>
                     {story.progress.completedTotal >= story.progress.total ? '收好这一季' : '收好碎片，继续寻找'}
                   </FlashButton>
                 </>
@@ -599,7 +740,7 @@ export default function FlashDialoguePage() {
             </View>
           ) : (
             <View className='flash-dialogue__conversation'>
-              <FlashButton onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>回到街头盲盒</FlashButton>
+              <FlashButton onClick={() => { void leaveFlashStory(MINI_PROGRAM_ROUTES.alangEvent) }}>回到街头盲盒</FlashButton>
             </View>
           )}
 
@@ -609,3 +750,5 @@ export default function FlashDialoguePage() {
     </View>
   )
 }
+
+export default FlashDialoguePage

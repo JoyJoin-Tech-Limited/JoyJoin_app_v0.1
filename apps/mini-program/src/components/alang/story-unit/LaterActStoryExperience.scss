@@ -1,0 +1,510 @@
+@use '../../../styles/variables' as *;
+
+.later-act-experience {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: $color-text-primary;
+  background: $color-bg-warm-mid;
+}
+
+.later-act-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: $color-bg-warm-to;
+}
+
+.later-act-scene--fallback {
+  background: linear-gradient(180deg, $flow-accent-sky 0%, $color-bg-warm-to 62%, $color-text-secondary 100%);
+}
+
+.later-act-scene__background,
+.later-act-scene__wash,
+.later-act-scene__hotspots {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.later-act-scene__background {
+  z-index: 0;
+}
+
+.later-act-scene__wash {
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(18, 22, 28, 0.04) 0%, rgba(18, 22, 28, 0.08) 54%, rgba(18, 22, 28, 0.7) 100%);
+}
+
+.later-act-scene__character {
+  position: absolute;
+  z-index: 2;
+  right: 4%;
+  bottom: 24%;
+  width: 42%;
+  height: 56%;
+  transform-origin: center bottom;
+  filter: drop-shadow(0 18rpx 20rpx rgba(14, 20, 28, 0.2));
+  pointer-events: none;
+  animation: later-act-character-enter 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.momo-later-act .later-act-scene__character {
+  right: auto;
+  left: 4%;
+  width: 43%;
+  height: 58%;
+}
+
+.lizi-later-act .later-act-scene__character {
+  right: auto;
+  left: 4%;
+  width: 42%;
+  height: 56%;
+}
+
+.shiqi-later-act .later-act-scene__character {
+  right: 4%;
+  width: 40%;
+  height: 58%;
+}
+
+.alang-later-act--second .later-act-scene__character {
+  right: 4%;
+  width: 39%;
+}
+
+.later-act-experience--explore .later-act-scene__character,
+.later-act-experience--object .later-act-scene__character {
+  opacity: 0.16;
+  transform: translateX(4%);
+}
+
+.later-act-experience--explore.momo-later-act .later-act-scene__character,
+.later-act-experience--object.momo-later-act .later-act-scene__character,
+.later-act-experience--explore.lizi-later-act .later-act-scene__character,
+.later-act-experience--object.lizi-later-act .later-act-scene__character {
+  transform: translateX(-4%);
+}
+
+.later-act-scene__hotspots {
+  z-index: 4;
+}
+
+.later-act-scene__hotspot {
+  position: absolute;
+  width: 92rpx;
+  height: 92rpx;
+  margin: -46rpx 0 0 -46rpx;
+  border-radius: 50%;
+  transition: transform 160ms ease-out;
+}
+
+.later-act-scene__hotspot-ring {
+  position: absolute;
+  inset: 16rpx;
+  border: 4rpx solid $color-bg-tint-cream;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow: 0 0 0 8rpx rgba($color-primary-dark, 0.35), 0 8rpx 16rpx rgba($color-text-primary, 0.32);
+  animation: later-act-pulse 1.8s ease-in-out infinite;
+}
+
+.later-act-scene__hotspot--seen {
+  pointer-events: none;
+}
+
+.later-act-scene__hotspot--seen .later-act-scene__hotspot-ring {
+  border-color: $color-primary-dark;
+  background: $color-bg-tint-cream;
+  box-shadow: 0 0 0 6rpx rgba($color-bg-tint-cream, 0.32);
+  animation: none;
+}
+
+.later-act-scene__hotspot--focused .later-act-scene__hotspot-ring {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 10rpx rgba($color-bg-tint-cream, 0.4), 0 8rpx 24rpx rgba($color-text-primary, 0.34);
+}
+
+.later-act-scene__hotspot--object {
+  z-index: 1;
+}
+
+.later-act-scene__hotspot--pressed {
+  transform: scale(0.94);
+}
+
+.alang-p2__hotspot--notebook { left: 13%; top: 67%; }
+.alang-p2__hotspot--ticket { left: 27%; top: 72%; }
+.alang-p2__hotspot--footprints { left: 58%; top: 68%; }
+.alang-p2__hotspot--route-book { left: 18%; top: 69%; }
+.alang-p3__hotspot--rings { left: 17%; top: 70%; }
+.alang-p3__hotspot--written { left: 18%; top: 57%; }
+.alang-p3__hotspot--envelope { left: 43%; top: 77%; }
+.alang-p3__hotspot--blank-pages { left: 35%; top: 59%; }
+.momo-p2__hotspot--blank-page { left: 79%; top: 72%; }
+.momo-p2__hotspot--swatches { left: 72%; top: 50%; }
+.momo-p2__hotspot--caps { left: 73%; top: 77%; }
+.momo-p2__hotspot--marker-case { left: 80%; top: 76%; }
+.momo-p3__hotspot--time { left: 78%; top: 31%; }
+.momo-p3__hotspot--routes { left: 77%; top: 51%; }
+.momo-p3__hotspot--response { left: 77%; top: 68%; }
+.momo-p3__hotspot--invitation { left: 77%; top: 51%; }
+.lizi-p2__hotspot--overlays { left: 74%; top: 40%; }
+.lizi-p2__hotspot--lanyard { left: 93%; top: 47%; }
+.lizi-p2__hotspot--stool { left: 68%; top: 68%; }
+.lizi-p2__hotspot--outing-book { left: 89%; top: 59%; }
+.lizi-p3__hotspot--bottle { left: 80%; top: 46%; }
+.lizi-p3__hotspot--stamp { left: 81%; top: 80%; }
+.lizi-p3__hotspot--blank { left: 77%; top: 86%; }
+.lizi-p3__hotspot--outing-book { left: 59%; top: 73%; }
+.shiqi-p2__hotspot--cards { left: 18%; top: 34%; }
+.shiqi-p2__hotspot--schedule { left: 18%; top: 58%; }
+.shiqi-p2__hotspot--key-card { left: 20%; top: 81%; }
+.shiqi-p2__hotspot--private-card { left: 18%; top: 58%; }
+.shiqi-p3__hotspot--envelope { left: 23%; top: 39%; }
+.shiqi-p3__hotspot--folded-card { left: 49%; top: 49%; }
+.shiqi-p3__hotspot--cover { left: 25%; top: 64%; }
+.shiqi-p3__hotspot--private-card { left: 49%; top: 49%; }
+
+.later-act-scene__speech {
+  position: absolute;
+  z-index: 5;
+  top: 4%;
+  left: 4%;
+  max-width: 58%;
+  padding: 24rpx;
+  border: 2rpx solid rgba(139, 92, 246, 0.28);
+  border-radius: 26rpx 26rpx 26rpx 6rpx;
+  background: rgba(255, 253, 249, 0.94);
+  box-shadow: 0 14rpx 36rpx rgba(26, 25, 34, 0.16);
+}
+
+.later-act-scene__speaker,
+.later-act-scene__speech-copy {
+  display: block;
+}
+
+.later-act-scene__speaker {
+  margin-bottom: 8rpx;
+  color: $color-primary;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.later-act-scene__speech-copy {
+  font-size: 28rpx;
+  line-height: 1.55;
+}
+
+.later-act-experience__chapter {
+  position: absolute;
+  z-index: 7;
+  top: 3%;
+  right: 4%;
+  padding: 10rpx 18rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.45);
+  border-radius: 999rpx;
+  color: $color-text-white;
+  background: rgba(27, 28, 37, 0.64);
+  font-size: 24rpx;
+}
+
+.later-act-experience__panel {
+  position: absolute;
+  z-index: 8;
+  right: 24rpx;
+  bottom: 24rpx;
+  bottom: calc(24rpx + env(safe-area-inset-bottom));
+  left: 24rpx;
+  max-height: 40%;
+  overflow: hidden;
+  border: 2rpx solid rgba(255, 255, 255, 0.5);
+  border-radius: 32rpx;
+  background: rgba(250, 247, 242, 0.96);
+  box-shadow: 0 22rpx 54rpx rgba(19, 22, 30, 0.28);
+}
+
+.later-act-experience--explore .later-act-experience__panel {
+  max-height: 23%;
+}
+
+.later-act-experience__scroll {
+  max-height: 640rpx;
+}
+
+.later-act-experience__section {
+  padding: 24rpx;
+}
+
+.later-act-experience__section--compact {
+  padding: 16rpx 24rpx;
+}
+
+.later-act-experience__section--ending {
+  padding-bottom: 24rpx;
+}
+
+.later-act-experience__eyebrow,
+.later-act-experience__prompt,
+.later-act-experience__copy,
+.later-act-experience__progress {
+  display: block;
+}
+
+.later-act-experience__eyebrow {
+  margin-bottom: 8rpx;
+  color: $color-primary;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.later-act-experience__prompt {
+  color: $color-text-primary;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.later-act-experience__copy,
+.later-act-experience__progress {
+  margin-top: 12rpx;
+  color: $color-text-secondary;
+  font-size: 26rpx;
+  line-height: 1.55;
+}
+
+.later-act-experience__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.later-act-experience__choice,
+.later-act-experience__primary-action,
+.later-act-game__retry-action {
+  display: flex;
+  min-height: 88rpx;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 24rpx;
+  border-radius: 24rpx;
+  text-align: center;
+}
+
+.later-act-experience__choice {
+  flex-direction: column;
+  border: 2rpx solid rgba(139, 92, 246, 0.2);
+  background: $color-surface;
+}
+
+.later-act-experience__choice--pressed,
+.later-act-experience__primary-action--pressed {
+  transform: scale(0.985);
+  opacity: 0.82;
+}
+
+.later-act-experience__choice-copy {
+  font-size: 28rpx;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.later-act-experience__choice-hint {
+  margin-top: 8rpx;
+  color: $color-text-secondary;
+  font-size: 23rpx;
+}
+
+.later-act-experience__primary-action {
+  margin-top: 24rpx;
+  color: $color-text-white;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.later-act-clue {
+  position: absolute;
+  z-index: 12;
+  right: 32rpx;
+  bottom: 28%;
+  left: 32rpx;
+  padding: 24rpx;
+  border: 2rpx solid rgba(139, 92, 246, 0.28);
+  border-radius: 28rpx;
+  background: rgba(255, 253, 249, 0.98);
+  box-shadow: 0 24rpx 58rpx rgba(20, 19, 31, 0.32);
+}
+
+.later-act-clue__eyebrow,
+.later-act-clue__title,
+.later-act-clue__copy {
+  display: block;
+}
+
+.later-act-clue__eyebrow {
+  color: $color-primary;
+  font-size: 23rpx;
+  font-weight: 700;
+}
+
+.later-act-clue__title {
+  margin-top: 8rpx;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.later-act-clue__copy {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.55;
+}
+
+.later-act-clue__action {
+  display: flex;
+  min-height: 88rpx;
+  align-items: center;
+  justify-content: center;
+  margin-top: 24rpx;
+  border-radius: 24rpx;
+  color: $color-text-white;
+  background: $color-primary;
+  font-size: 27rpx;
+  font-weight: 700;
+}
+
+.later-act-object {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.later-act-object__detail {
+  display: flex;
+  min-height: 96rpx;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 12rpx 8rpx;
+  border: 2rpx solid rgba(91, 75, 123, 0.18);
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 23rpx;
+  text-align: center;
+}
+
+.later-act-object__detail--seen {
+  color: $color-primary;
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.later-act-object__dot {
+  width: 18rpx;
+  height: 18rpx;
+  border: 4rpx solid rgba(139, 92, 246, 0.3);
+  border-radius: 50%;
+  background: $color-primary;
+}
+
+.later-act-object__clue,
+.later-act-game__retry,
+.later-act-game__complete {
+  margin-top: 24rpx;
+  padding: 24rpx;
+  border-radius: 24rpx;
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.later-act-object__clue-title,
+.later-act-object__clue-copy {
+  display: block;
+}
+
+.later-act-object__clue-title {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.later-act-object__clue-copy,
+.later-act-game__retry,
+.later-act-game__complete {
+  font-size: 25rpx;
+  line-height: 1.55;
+}
+
+.later-act-object__clue-action,
+.later-act-game__retry-action {
+  display: flex;
+  min-height: 88rpx;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16rpx;
+  padding: 0 24rpx;
+  color: $color-primary;
+  font-size: 25rpx;
+  font-weight: 700;
+}
+
+.later-act-game__progress {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.later-act-game__progress-dot {
+  width: 48rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+  background: rgba(139, 92, 246, 0.18);
+}
+
+.later-act-game__progress-dot--active {
+  background: $color-primary;
+}
+
+.later-act-game__step,
+.later-act-game__prompt {
+  display: block;
+}
+
+.later-act-game__step {
+  margin-top: 24rpx;
+  color: $color-primary;
+  font-size: 23rpx;
+  font-weight: 700;
+}
+
+.later-act-game__prompt {
+  margin-top: 8rpx;
+  font-size: 29rpx;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+@keyframes later-act-pulse {
+  0%, 100% { transform: scale(0.88); opacity: 0.72; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes later-act-character-enter {
+  from { opacity: 0; transform: translateY(16rpx) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .later-act-scene__hotspot-ring,
+  .later-act-scene__hotspot,
+  .later-act-experience__choice,
+  .later-act-experience__primary-action,
+  .later-act-scene__character {
+    animation: none;
+    transition: none;
+  }
+}

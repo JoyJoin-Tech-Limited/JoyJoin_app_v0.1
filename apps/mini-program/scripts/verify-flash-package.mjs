@@ -11,13 +11,33 @@ const appJsonPath = resolve(distRoot, 'app.json')
 const manifestPath = resolve(distRoot, 'flash-build-manifest.json')
 const projectConfigPath = resolve(appRoot, 'project.config.json')
 const preupload = process.argv.includes('--preupload')
-const introSceneRelativePath = 'pages/alang/assets/onboarding/street-blind-box-onboarding-fullscreen-v7.jpg'
 const npcHeadshotRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
   .map((slug) => `pages/alang/assets/npcs/headshots/${slug}.jpg`)
 const flashSceneRelativePaths = ['radar', 'task', 'feedback']
   .map((scene) => `pages/alang/assets/backgrounds/${scene}-paper-scene.jpg`)
-const flashDialogueRelativePaths = ['alang', 'lizi', 'momo', 'shiqi', 'atuan']
-  .map((slug) => `pages/alang/assets/ui/flash-${slug}-dialogue-paper-v1.jpg`)
+const flashDialogueRelativePaths = [
+  'pages/alang/assets/ui/flash-alang-first-act-riverside-v3.jpg',
+  'pages/alang/assets/ui/flash-lizi-first-act-color-studio-v2.jpg',
+  'pages/alang/assets/ui/flash-momo-first-act-rain-route-v3.jpg',
+  'pages/alang/assets/ui/flash-shiqi-first-act-record-room-v3.jpg',
+  'pages/alang/assets/ui/flash-atuan-first-arrival-layered-v2.jpg',
+]
+const laterActRelativePaths = [
+  'pages/alang-story/assets/flash-alang-second-act-return-shelter-v2.jpg',
+  'pages/alang-story/assets/flash-alang-third-act-return-cabinet-v2.jpg',
+  'pages/alang-story/assets/flash-momo-second-act-listening-pavilion-v2.jpg',
+  'pages/alang-story/assets/flash-momo-third-act-invitation-panels-v2.jpg',
+  'pages/alang-story/assets/flash-lizi-second-act-color-threshold-v2.jpg',
+  'pages/alang-story/assets/flash-lizi-third-act-outing-kiosk-v2.jpg',
+  'pages/alang-story/assets/flash-shiqi-second-act-public-record-wall-v2.jpg',
+  'pages/alang-story/assets/flash-shiqi-third-act-privacy-return-v2.jpg',
+]
+const laterActCharacterPaths = [
+  'pages/alang-story/assets/flash-alang-character-first-act-v2.png',
+  'pages/alang-story/assets/flash-momo-character-first-act-v2.png',
+  'pages/alang-story/assets/flash-lizi-character-first-act-v2.png',
+  'pages/alang-story/assets/flash-shiqi-character-first-act-v2.png',
+]
 const flashReviewedStoryBackgrounds = [
   'pages/alang/assets/onboarding/parallel-standard-paper-world-v1.jpg',
 ]
@@ -25,7 +45,13 @@ const atuanArrivalRelativePaths = [
   'pages/alang/assets/ui/flash-atuan-park-clean-v3.jpg',
   'pages/alang/assets/ui/flash-atuan-character-lowpoly-v3.png',
   'pages/alang/assets/ui/flash-atuan-bag-cutout-v2.png',
+  'pages/alang/assets/ui/flash-atuan-second-act-pavilion-v1.jpg',
+  'pages/alang/assets/ui/flash-atuan-third-act-table-v1.jpg',
 ]
+// Includes the reviewed full-resolution story scenes. The independent package-size gate still enforces the
+// 1.80 MiB Alang subpackage ceiling.
+const flashRuntimeImageBudgetMiB = 1.40
+const flashRuntimeImageBudgetBytes = Math.round(flashRuntimeImageBudgetMiB * 1024 * 1024)
 
 const flashRuntimeImages = [
   'pages/alang/assets/ui/flash-city-ambient-bg.png',
@@ -44,11 +70,12 @@ const flashRuntimeImages = [
 const requiredFiles = [
   'assets/illustrations/street-blind-box-entry.webp',
   'assets/illustrations/street-blind-box-entry.png',
-  introSceneRelativePath,
   'common.wxss',
   'pages/alang/event/index.js',
   'pages/alang/event/index.wxml',
   ...flashRuntimeImages,
+  ...laterActRelativePaths,
+  ...laterActCharacterPaths,
 ]
 
 const requiredPages = [
@@ -76,6 +103,7 @@ if (!existsSync(appJsonPath)) {
   const appConfig = JSON.parse(readFileSync(appJsonPath, 'utf8'))
   const packages = appConfig.subPackages ?? appConfig.subpackages ?? []
   const flashPackage = packages.find((entry) => entry.root === 'pages/alang')
+  const laterActPackage = packages.find((entry) => entry.root === 'pages/alang-story')
 
   if (!flashPackage) {
     failures.push('app.json does not register the pages/alang subpackage')
@@ -85,6 +113,9 @@ if (!existsSync(appJsonPath)) {
         failures.push(`app.json is missing Flash page: pages/alang/${page}`)
       }
     }
+  }
+  if (!laterActPackage?.pages?.includes('dialogue/index')) {
+    failures.push('app.json does not register the pages/alang-story dialogue page')
   }
 }
 
@@ -140,10 +171,18 @@ if (!existsSync(projectConfigPath)) {
       'project.config.json packOptions.include must explicitly include all pages/alang JPG runtime assets',
     )
   }
-  if (projectConfig.setting?.ignoreUploadUnusedFiles !== false) {
+  const flashRuntimeWebpsAreForcedIntoWxapkg = packIncludes.some(
+    (entry) => entry?.type === 'regexp' && entry?.value === 'pages/alang/assets/.*\\.webp$',
+  )
+  if (!flashRuntimeWebpsAreForcedIntoWxapkg) {
     failures.push(
-      'project.config.json setting.ignoreUploadUnusedFiles must be false; ' +
-        `the WeChat upload optimizer cannot statically trace the Taro runtime path for ${iconRelativePath}`,
+      'project.config.json packOptions.include must explicitly include all pages/alang WebP runtime assets',
+    )
+  }
+  if (projectConfig.setting?.ignoreUploadUnusedFiles !== true) {
+    failures.push(
+      'project.config.json setting.ignoreUploadUnusedFiles must be true; ' +
+        'packOptions.include is the reviewed authority for dynamic Taro runtime assets',
     )
   }
 }
@@ -175,18 +214,6 @@ if (existsSync(runtimeIconPath) && statSync(runtimeIconPath).size > 0) {
   }
 }
 
-const introScenePath = resolve(distRoot, introSceneRelativePath)
-if (existsSync(introScenePath) && statSync(introScenePath).size > 0) {
-  try {
-    const metadata = await sharp(introScenePath).metadata()
-    if (metadata.format !== 'jpeg' || !metadata.width || !metadata.height) {
-      failures.push(`dist/${introSceneRelativePath} is not a decodable JPEG image`)
-    }
-  } catch (error) {
-    failures.push(`dist/${introSceneRelativePath} JPEG decode failed: ${error.message}`)
-  }
-}
-
 let flashRuntimeImageBytes = 0
 for (const relativePath of flashRuntimeImages) {
   const absolutePath = resolve(distRoot, relativePath)
@@ -202,10 +229,37 @@ for (const relativePath of flashRuntimeImages) {
     failures.push(`dist/${relativePath} decode failed: ${error.message}`)
   }
 }
-if (flashRuntimeImageBytes > 1024 * 1024) {
+if (flashRuntimeImageBytes > flashRuntimeImageBudgetBytes) {
   failures.push(
-    `Flash runtime image assets use ${flashRuntimeImageBytes} bytes, exceeding the 1 MiB subpackage budget`,
+    `Flash runtime image assets use ${flashRuntimeImageBytes} bytes, exceeding the ${flashRuntimeImageBudgetMiB.toFixed(2)} MiB image budget`,
   )
+}
+
+for (const relativePath of laterActRelativePaths) {
+  const absolutePath = resolve(distRoot, relativePath)
+  if (!existsSync(absolutePath) || statSync(absolutePath).size === 0) continue
+  if (statSync(absolutePath).size > 150 * 1024) {
+    failures.push(`dist/${relativePath} exceeds the 150 KiB later-act scene budget`)
+  }
+  try {
+    const metadata = await sharp(absolutePath).metadata()
+    if (metadata.format !== 'jpeg' || metadata.width !== 828 || metadata.height !== 1471) {
+      failures.push(`dist/${relativePath} must be a decodable 828x1471 JPEG image`)
+    }
+  } catch (error) {
+    failures.push(`dist/${relativePath} decode failed: ${error.message}`)
+  }
+}
+
+for (const relativePath of laterActCharacterPaths) {
+  const absolutePath = resolve(distRoot, relativePath)
+  if (!existsSync(absolutePath) || statSync(absolutePath).size === 0) continue
+  try {
+    const metadata = await sharp(absolutePath).metadata()
+    if (metadata.format !== 'png') failures.push(`dist/${relativePath} must remain a decodable PNG image`)
+  } catch (error) {
+    failures.push(`dist/${relativePath} decode failed: ${error.message}`)
+  }
 }
 
 const commonStylesPath = resolve(distRoot, 'common.wxss')
@@ -296,6 +350,10 @@ if (preupload) {
       count: flashRuntimeImages.length,
       totalBytes: flashRuntimeImageBytes,
     },
+    laterActAssets: {
+      format: 'jpeg/png',
+      count: laterActRelativePaths.length + laterActCharacterPaths.length,
+    },
     files: fileEntries,
   }, null, 2)}\n`, 'utf8')
 }
@@ -303,6 +361,6 @@ if (preupload) {
 console.log(
   `[verify-flash-package] OK — build ${buildHash}; main-package icon exists, is non-empty, ` +
     `and decodes as WebP; its runtime PNG derivative is present and decodable; ` +
-    `${requiredPages.length} Flash pages and all ${flashRuntimeImages.length} runtime image assets ` +
+    `${requiredPages.length} Flash pages and all ${flashRuntimeImages.length + laterActRelativePaths.length + laterActCharacterPaths.length} runtime image assets ` +
     `are present and decodable${preupload ? ' and match the build manifest' : ''}.`,
 )

@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   useFlashHome: vi.fn(),
   useFlashStoryFragments: vi.fn(),
   navigateTo: vi.fn(),
+  canonicalRedirect: vi.fn(),
   refetch: vi.fn(),
   getStorage: vi.fn(),
   setStorage: vi.fn(),
@@ -39,7 +40,7 @@ vi.mock('../../../lib/alang/useFlash', () => ({
   useFlashHome: mocks.useFlashHome,
   useFlashStoryFragments: mocks.useFlashStoryFragments,
 }))
-vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: vi.fn() }))
+vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: mocks.canonicalRedirect }))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
 
 const home = {
@@ -58,7 +59,7 @@ describe('formal Street Blind Box home', () => {
     vi.clearAllMocks()
     mocks.useAuth.mockReturnValue({ user: { appMode: 'production', singleTestMode: false, features: { alangEnabled: true } } })
     mocks.getStorage.mockReturnValue(undefined)
-    mocks.useFlashHome.mockReturnValue({ data: home, isLoading: false, isError: false, refetch: mocks.refetch })
+    mocks.useFlashHome.mockReturnValue({ data: home, isLoading: false, isFetching: false, isError: false, refetch: mocks.refetch })
     mocks.useFlashStoryFragments.mockReturnValue({ data: [{
       id: 'fragment-1', code: 'fragment-1', category: 'object', title: '双人座位图',
       fact: '图上记录的是两个人之间合适的距离。', unlockedAt: '2026-08-07T00:00:00Z',
@@ -96,6 +97,38 @@ describe('formal Street Blind Box home', () => {
     expect(await screen.findByText('阿浪')).toBeInTheDocument()
     expect(screen.queryByText('这一季，只让旧物慢慢开口')).not.toBeInTheDocument()
     expect(screen.queryByText('专属剧情已开启')).not.toBeInTheDocument()
+  })
+
+  it('does not bounce back into a settled dialogue from stale home data while refetching', async () => {
+    mocks.getStorage.mockReturnValue('flash-intro-reviewed-story-v2')
+    mocks.useFlashHome.mockReturnValue({
+      data: { ...home, canonicalScreen: 'dialogue', encounterId: 'settled-encounter' },
+      isLoading: false,
+      isFetching: true,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    render(<FlashHomePage />)
+
+    await screen.findByText('阿浪')
+    expect(mocks.canonicalRedirect).not.toHaveBeenCalled()
+  })
+
+  it('does not honor a stale canonical route before the intro gate is ready', async () => {
+    mocks.getStorage.mockReturnValue(undefined)
+    mocks.useFlashHome.mockReturnValue({
+      data: { ...home, canonicalScreen: 'dialogue', encounterId: 'settled-encounter' },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      refetch: mocks.refetch,
+    })
+
+    render(<FlashHomePage />)
+
+    await screen.findByRole('button', { name: '进入没有名字的旧物' })
+    expect(mocks.canonicalRedirect).not.toHaveBeenCalled()
   })
 
   it('does not re-show the introduction after backgrounding in the same visit', async () => {
@@ -169,5 +202,6 @@ describe('formal Street Blind Box home', () => {
     expect(mocks.navigateTo).toHaveBeenCalledWith({
       url: expect.stringContaining('encounterId=33333333-3333-4333-8333-333333333333&replay=1'),
     })
+    expect(mocks.navigateTo.mock.calls[0][0].url).toMatch(/&replaySession=[a-z0-9-]+/)
   })
 })

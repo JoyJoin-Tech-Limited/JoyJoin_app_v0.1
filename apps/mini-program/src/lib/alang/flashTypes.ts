@@ -1,6 +1,7 @@
 import type {
   FlashCanonicalScreen,
   FlashPreferenceUpdateRequest,
+  FlashStoryReplayStateDto,
 } from '@shared/alang/flashTypes'
 
 /**
@@ -213,6 +214,7 @@ export interface FlashEncounterView {
       choices: Array<{ id: string; text: string }>
       next: string | null
       unlockFragment: string | null
+      replayState?: FlashStoryReplayStateDto
     } | null
   } | null
 }

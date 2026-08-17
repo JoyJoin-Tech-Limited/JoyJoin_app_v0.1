@@ -110,17 +110,19 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
   const [celebrationText, setCelebrationText] = useState<string | null>(null)
   const celebratedRef = useRef(false)
 
-  const enteringTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
-  const pokeBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const doorEntryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
+  // Single managed-timeout map: every ephemeral UI timer (entering bounce per
+  // user, own door entry, poke badge, celebration) lives here keyed by name,
+  // so unmount cleanup clears all of them in one pass.
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   useEffect(() => () => {
-    enteringTimersRef.current.forEach((timer) => clearTimeout(timer))
-    enteringTimersRef.current.clear()
-    if (pokeBadgeTimerRef.current) clearTimeout(pokeBadgeTimerRef.current)
-    if (celebrationTimerRef.current) clearTimeout(celebrationTimerRef.current)
-    if (doorEntryTimerRef.current) clearTimeout(doorEntryTimerRef.current)
+    timersRef.current.forEach(clearTimeout)
+    timersRef.current.clear()
+  }, [])
+  const setManagedTimeout = useCallback((key: string, cb: () => void, ms: number) => {
+    const timers = timersRef.current
+    const existing = timers.get(key)
+    if (existing) clearTimeout(existing)
+    timers.set(key, setTimeout(() => { timers.delete(key); cb() }, ms))
   }, [])
 
   const markEntering = useCallback((userId: string) => {
@@ -130,21 +132,17 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
       next.add(userId)
       return next
     })
-    const timers = enteringTimersRef.current
-    if (timers.has(userId)) clearTimeout(timers.get(userId))
-    timers.set(
-      userId,
-      setTimeout(() => {
-        timers.delete(userId)
-        setEnteringUserIds((current) => {
-          if (!current.has(userId)) return current
-          const next = new Set(current)
-          next.delete(userId)
-          return next
-        })
-      }, ENTERING_BOUNCE_MS),
-    )
-  }, [])
+    // Re-arm semantics come free: setManagedTimeout clears any existing timer
+    // for this key before arming the new one.
+    setManagedTimeout(`entering:${userId}`, () => {
+      setEnteringUserIds((current) => {
+        if (!current.has(userId)) return current
+        const next = new Set(current)
+        next.delete(userId)
+        return next
+      })
+    }, ENTERING_BOUNCE_MS)
+  }, [setManagedTimeout])
 
   const handleWsMessage = useCallback(
     (message: WSMessage) => {
@@ -164,9 +162,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
             // Own door-entry animation plays once per page visit.
             if (!reducedMotion) {
               setPlayOwnDoorEntry(true)
-              if (doorEntryTimerRef.current) clearTimeout(doorEntryTimerRef.current)
-              doorEntryTimerRef.current = setTimeout(() => {
-                doorEntryTimerRef.current = null
+              setManagedTimeout('door-entry', () => {
                 setPlayOwnDoorEntry(false)
               }, OWN_DOOR_ENTRY_MS)
             }
@@ -207,9 +203,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
           const fromName = fromMember?.displayName || '队友'
           setPokeBadge({ fromName, emoji: data.emoji, ts: data.ts || Date.now() })
           haptics('light')
-          if (pokeBadgeTimerRef.current) clearTimeout(pokeBadgeTimerRef.current)
-          pokeBadgeTimerRef.current = setTimeout(() => {
-            pokeBadgeTimerRef.current = null
+          setManagedTimeout('poke-badge', () => {
             setPokeBadge(null)
           }, POKE_BADGE_MS)
           return
@@ -232,9 +226,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
               screen: 'gathering-room',
               totalParticipants: data.totalParticipants,
             })
-            if (celebrationTimerRef.current) clearTimeout(celebrationTimerRef.current)
-            celebrationTimerRef.current = setTimeout(() => {
-              celebrationTimerRef.current = null
+            setManagedTimeout('celebration', () => {
               setCelebrationText(null)
             }, CELEBRATION_MS)
           }
@@ -245,7 +237,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
         default:
       }
     },
-    [currentUserId, groupId, queryClient, reducedMotion, roomState?.members, roomState?.eventDateTime, markEntering],
+    [currentUserId, groupId, queryClient, reducedMotion, roomState?.members, roomState?.eventDateTime, markEntering, setManagedTimeout],
   )
 
   const { send } = useWebSocket({
@@ -274,18 +266,45 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
   // ── Derived view model ───────────────────────────────────────────────────
   // Keep member profiles stable (identity + equipment) and presence transient
   // so the scene's PixelAvatarComposite instances don't re-render on every
-  // ephemeral WS presence update.
-  const memberProfiles = useMemo(
-    () =>
-      (roomState?.members ?? []).map((member: GatheringRoomMember) => ({
-        userId: member.userId,
-        displayName: member.displayName,
-        archetype: member.archetype,
-        outfit: member.outfit ?? null,
-        equippedItems: member.equippedItems ?? [],
-      })),
-    [roomState?.members],
-  )
+  // ephemeral WS presence update. Structural sharing: a profile object is
+  // rebuilt only when that member's underlying data actually changed —
+  // otherwise every refetch (30s poll / confirm / WS broadcast) would defeat
+  // the memoized seats and re-render all six avatars.
+  const memberProfilesRef = useRef<{
+    signatures: Map<string, string>
+    profiles: Map<string, GatheringRoomMemberProfile>
+  }>({ signatures: new Map(), profiles: new Map() })
+
+  const memberProfiles = useMemo(() => {
+    const members = roomState?.members ?? []
+    const { signatures, profiles } = memberProfilesRef.current
+    const nextSignatures = new Map<string, string>()
+    const nextProfiles = new Map<string, GatheringRoomMemberProfile>()
+    const list = members.map((member: GatheringRoomMember) => {
+      const signature = JSON.stringify([
+        member.displayName,
+        member.archetype,
+        member.outfit,
+        member.equippedItems,
+      ])
+      nextSignatures.set(member.userId, signature)
+      const previous = profiles.get(member.userId)
+      const profile: GatheringRoomMemberProfile =
+        previous && signatures.get(member.userId) === signature
+          ? previous
+          : {
+              userId: member.userId,
+              displayName: member.displayName,
+              archetype: member.archetype,
+              outfit: member.outfit ?? null,
+              equippedItems: member.equippedItems ?? [],
+            }
+      nextProfiles.set(member.userId, profile)
+      return profile
+    })
+    memberProfilesRef.current = { signatures: nextSignatures, profiles: nextProfiles }
+    return list
+  }, [roomState?.members])
 
   const presenceByUserId = useMemo(
     () =>

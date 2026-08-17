@@ -1,7 +1,7 @@
 import { View, Text } from '@tarojs/components'
 import { useMemo } from 'react'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
-import { ARCHETYPE_BY_ID } from '@shared/personality'
+import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import XiaoyueSpriteAnimator from '../../../components/mascot/XiaoyueSpriteAnimator'
 import MatchPromiseChip from './MatchPromiseChip'

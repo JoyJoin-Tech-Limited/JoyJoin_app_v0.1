@@ -1,5 +1,12 @@
 # Launch Configuration Guide
 
+## Flash story AI response switch
+
+`FLASH_STORY_AI_RESPONSES_ENABLED=false` is the safe default. Enabling it only
+adds optional NPC response wording after successful story settlement. Setting
+it back to `false` immediately restores the reviewed deterministic response;
+fragment ownership, progress, endings, unlocks, and traversal are unaffected.
+
 This document describes the environment variables and feature flags introduced in
 **PR Batch 1: Launch-Critical Reliability & Security**.
 

@@ -17,7 +17,7 @@ import {
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import { getOnboardingVoiceLine } from '@shared/copy/onboardingVoice'
 import { getContrastSafeArchetypeColor } from '@shared/archetypeColors'
-import { ARCHETYPE_BY_ID, type ArchetypeId } from '@shared/personality'
+import { ARCHETYPE_BY_ID, type ArchetypeId } from '@shared/personality/archetypeNames'
 import { CATEGORY_COLORS } from '@shared/ui/categoryColors'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'

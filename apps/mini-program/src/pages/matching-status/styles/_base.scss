@@ -9,13 +9,13 @@
     .matching-status__dot,
     .matching-status__waiting-seat--new .matching-status__waiting-seat-core,
     .matching-status__arrival-toast,
-    .matching-status__overlay-member-card {
+    .tablemate-card__sheen {
       animation: none !important;
     }
 
     .matching-status__waiting-seat-core,
     .matching-status__waiting-seat-burst,
-    .matching-status__overlay-member-card {
+    .tablemate-card {
       transition-duration: 0s !important;
     }
 

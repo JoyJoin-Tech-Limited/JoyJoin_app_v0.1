@@ -1,23 +1,24 @@
 import { Image, Text, View } from '@tarojs/components'
-import { memo, useMemo, type CSSProperties } from 'react'
+import { Fragment, memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { RoomPokeEmoji } from '@shared/wsEvents'
 import type { EquipmentItemView, EquipmentOutfitView } from '@joyjoin/shared/schema'
-import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { useCdnFirstSrc } from '../../lib/utils/cdnAssets'
 import PixelAvatarComposite from '../profile/PixelAvatarComposite'
 import './GatheringRoomScene.scss'
 
 /**
  * GatheringRoomScene — 集结房间 pixel-scene stage.
  *
- * Full-viewport zero-scroll room: 4–6 matched members stand around the table
- * as their existing V2 pixel avatars (with equipped outfits) while they wait
- * for the offline event. Three presence states (PRD): 未现身 (dimmed + name-card),
- * 在场 (full opacity, idle breathing), 已确认出席 (seated pose + 已确认 badge).
+ * Full-viewport zero-scroll room: 4–6 matched members wait for the offline
+ * event as their existing V2 pixel avatars (with equipped outfits). Three
+ * presence states (PRD): 未现身 (avatar queues dimmed at the door, name card
+ * holds the seat), 在场 (walked to seat, idle breathing), 已确认出席 (seated
+ * pose + 已确认 badge).
  *
- * The scene uses a single composite room-art image (`ROOM_COMPOSITE_PATH`) when
- * `ROOM_ART_READY` is true; otherwise it falls back to a layered CSS placeholder.
- * Swapping art later only requires changing the path/flag — the seat anchors
- * and character layer stay the same.
+ * The scene renders the composite room art (`ROOM_COMPOSITE_PATH`) CDN-first
+ * with a bundled local fallback (useCdnFirstSrc, session-level CDN failure
+ * cache). Seats mount once the art has decoded (900ms fallback) so the room
+ * "lights up" before anyone walks in, then stagger in per seat.
  *
  * Performance note: member profiles (identity + equipment) are kept stable and
  * split from transient presence state. Each seat is memoized so a presence
@@ -29,14 +30,8 @@ import './GatheringRoomScene.scss'
  * motion renders everything static at the final state.
  */
 
-/** Flip to true when the composite room art (room-composite-v1.png) lands on CDN. */
-const ROOM_ART_READY = true
-
 /** Single composite background image path (CDN-first, local fallback). */
 const ROOM_COMPOSITE_PATH = '/assets/gathering-room/room-composite-v1.webp'
-
-/** Scene viewport height in rpx — fixed so seat-percent → rpx math stays exact. */
-export const GATHERING_ROOM_SCENE_HEIGHT_RPX = 960
 
 /** Seat anchors in % of the scene viewport (x from left, y from top).
  *  Tuned to the composite room art's cushion positions. */
@@ -68,8 +63,21 @@ const SEATED_OFFSETS: Record<number, { dx: number; dy: number }> = {
   5: { dx: -14, dy: -14 },
 }
 
-/** Table centre (%) — the lamp glow and seat markers hang off this point. */
-const TABLE_CENTER = { x: 50, y: 58 } as const
+/** Scene box in rpx — the composite art is 750×960 and the scene box mirrors
+ *  it exactly (full width × 960rpx), so seat-% → rpx math stays exact. */
+const SCENE_WIDTH_RPX = 750
+const SCENE_HEIGHT_RPX = 960
+
+/** Door-waiting zone (%) — absent members queue here, dimmed and slightly
+ *  scaled down, until their presence event walks them to their seat. Laid out
+ *  as a two-column fan per seat index. */
+const DOOR_QUEUE_BASE = { x: 71, y: 30 } as const
+
+function doorQueuePoint(seatIndex: number): { x: number; y: number } {
+  const col = seatIndex % 2
+  const row = Math.floor(seatIndex / 2)
+  return { x: DOOR_QUEUE_BASE.x + col * 8, y: DOOR_QUEUE_BASE.y + row * 8 }
+}
 
 export type GatheringRoomPresence = 'absent' | 'present' | 'confirmed'
 
@@ -166,18 +174,58 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
   const anchor = SEAT_ANCHORS[seatIndex]
   const seatedOffset = SEATED_OFFSETS[seatIndex]
 
+  // Confirmation beat: hop once when this member's attendance flips to
+  // confirmed (pairs with the CTA haptic + the 480ms seated slide).
+  const prevPresenceRef = useRef(presence)
+  const [justConfirmed, setJustConfirmed] = useState(false)
+  useEffect(() => {
+    const prev = prevPresenceRef.current
+    prevPresenceRef.current = presence
+    if (presence === 'confirmed' && prev !== 'confirmed' && !reducedMotion) {
+      setJustConfirmed(true)
+      const id = setTimeout(() => setJustConfirmed(false), 420)
+      return () => clearTimeout(id)
+    }
+  }, [presence, reducedMotion])
+
   const bodyClass = [
     'gathering-room-scene__seat-body',
     `gathering-room-scene__seat-body--${presence}`,
     !reducedMotion && isEntering ? 'gathering-room-scene__seat-body--entering' : '',
     !reducedMotion && playOwnDoorEntry ? 'gathering-room-scene__seat-body--door-entry' : '',
+    justConfirmed ? 'gathering-room-scene__seat-body--just-confirmed' : '',
   ]
     .filter(Boolean)
     .join(' ')
 
+  // The seated (confirmed) offset lives on the seat WRAPPER so pose keyframes
+  // and the press state on the body never fight it — an animation on the same
+  // element would override an inline transform mid-run and snap the avatar
+  // back to the standing spot. Absent members queue at the door instead:
+  // their wrapper slides from the door zone to the seat anchor when the
+  // presence event arrives (the 640ms wrapper transition reads as a walk).
+  const doorPoint = doorQueuePoint(seatIndex)
+  const seatStyle: CSSProperties = {
+    left: `${anchor.x}%`,
+    top: `${anchor.y}%`,
+    // First-paint stagger (see &__seat animation in the stylesheet); the base
+    // 150ms lets the room art finish fading in before anyone walks in.
+    animationDelay: `${150 + seatIndex * 70}ms`,
+    ...(presence === 'confirmed' && seatedOffset
+      ? { transform: `translate(-50%, -88%) translate(${seatedOffset.dx}rpx, ${seatedOffset.dy}rpx)` }
+      : presence === 'absent'
+        ? {
+            transform: `translate(-50%, -88%) translate(${(doorPoint.x - anchor.x) / 100 * SCENE_WIDTH_RPX}rpx, ${(doorPoint.y - anchor.y) / 100 * SCENE_HEIGHT_RPX}rpx) scale(0.88)`,
+          }
+        : {}),
+  }
+
+  // Desync the shared breathing loop per seat so members don't bob in
+  // lockstep (chorus-line robot effect). Only while idle-present: a negative
+  // delay on the entry keyframes would skip them.
   const bodyStyle: CSSProperties =
-    presence === 'confirmed' && seatedOffset
-      ? { transform: `translate(${seatedOffset.dx}rpx, ${seatedOffset.dy}rpx)` }
+    presence === 'present' && !isEntering && !playOwnDoorEntry
+      ? { animationDelay: `-${seatIndex * 900}ms` }
       : {}
 
   const name = profile.displayName || '队友'
@@ -191,7 +239,7 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
     <View
       key={profile.userId}
       className='gathering-room-scene__seat'
-      style={{ left: `${anchor.x}%`, top: `${anchor.y}%` }}
+      style={seatStyle}
     >
       <View
         className={bodyClass}
@@ -201,6 +249,7 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
         role='button'
         onClick={() => onAvatarTap?.(profile)}
       >
+        <View className='gathering-room-scene__seat-shadow' aria-hidden='true' />
         <PixelAvatarComposite
           archetypeId={profile.archetype ?? 'corgi'}
           outfit={profile.outfit ?? EMPTY_OUTFIT}
@@ -221,11 +270,6 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
           </View>
         ) : null}
       </View>
-      {presence === 'absent' ? (
-        <View className='gathering-room-scene__name-card'>
-          <Text className='gathering-room-scene__name-card-text'>{name}</Text>
-        </View>
-      ) : null}
     </View>
   )
 })
@@ -246,100 +290,110 @@ export function GatheringRoomScene({
   const sceneClass = [
     'gathering-room-scene',
     pageVisible ? '' : 'gathering-room-scene--paused',
-    ROOM_ART_READY ? 'gathering-room-scene--art' : 'gathering-room-scene--placeholder',
   ]
     .filter(Boolean)
     .join(' ')
 
   const ownUserIdResolved = ownUserId ?? ''
 
+  // CDN-first with bundled fallback: the composite art may 404 before the CDN
+  // upload pipeline ships it — fall back to the local copy instead of showing
+  // a bare background. Fade in on decode so the art never pops into the scene
+  // (this also masks the CDN→local swap).
+  const { src: roomArtSrc, onError: handleRoomArtError } = useCdnFirstSrc(ROOM_COMPOSITE_PATH)
+  const [roomArtLoaded, setRoomArtLoaded] = useState(false)
+
+  // Entrance choreography: seats mount only once the room art has decoded
+  // (900ms fallback so a slow/failed art load never blocks the room), then
+  // stagger in per seat — the room "lights up" before anyone walks in.
+  const [entranceArmed, setEntranceArmed] = useState(false)
+  useEffect(() => {
+    if (entranceArmed) return
+    if (roomArtLoaded) {
+      const id = setTimeout(() => setEntranceArmed(true), 150)
+      return () => clearTimeout(id)
+    }
+    const id = setTimeout(() => setEntranceArmed(true), 900)
+    return () => clearTimeout(id)
+  }, [roomArtLoaded, entranceArmed])
+
+  // Celebration exit choreography: when the controller clears the text, keep
+  // the overlay mounted for a 320ms fade-out instead of unmounting mid-beat.
+  const [celebrationShown, setCelebrationShown] = useState<string | null>(null)
+  const [celebrationLeaving, setCelebrationLeaving] = useState(false)
+  useEffect(() => {
+    if (celebrationText) {
+      setCelebrationShown(celebrationText)
+      setCelebrationLeaving(false)
+      return
+    }
+    if (!celebrationShown) return
+    setCelebrationLeaving(true)
+    const id = setTimeout(() => {
+      setCelebrationShown(null)
+      setCelebrationLeaving(false)
+    }, 320)
+    return () => clearTimeout(id)
+  }, [celebrationText, celebrationShown])
+
   return (
     <View className={sceneClass} data-testid='gathering-room-scene'>
-      {ROOM_ART_READY ? (
-        <Image
-          className='gathering-room-scene__layer gathering-room-scene__layer--composite'
-          src={cdnAsset(ROOM_COMPOSITE_PATH)}
-          mode='scaleToFill'
-          aria-hidden='true'
-        />
-      ) : (
-        <>
-          {/* Layer 1 — far wall + floor (placeholder: warm beige wall over wood floor) */}
-          <View className='gathering-room-scene__layer gathering-room-scene__layer--far-wall-floor' aria-hidden='true'>
-            <View className='gathering-room-scene__wall' />
-            <View className='gathering-room-scene__floor' />
-          </View>
+      <Image
+        className='gathering-room-scene__layer gathering-room-scene__layer--composite'
+        src={roomArtSrc}
+        mode='scaleToFill'
+        aria-hidden='true'
+        onError={handleRoomArtError}
+        onLoad={() => setRoomArtLoaded(true)}
+        style={{ opacity: roomArtLoaded ? 1 : 0, transition: 'opacity 320ms ease-out' }}
+      />
 
-          {/* Layer 3 — door (entry choreography stage) */}
-          <View className='gathering-room-scene__layer gathering-room-scene__layer--door' aria-hidden='true'>
-            <View className='gathering-room-scene__door-frame'>
-              <View className='gathering-room-scene__door-panel' />
-            </View>
-          </View>
+      {/* Lamp glow breathing — a live warm pulse over the static composite art
+          so the room feels awake without any animated asset. */}
+      <View className='gathering-room-scene__layer gathering-room-scene__layer--lamp-breathe' aria-hidden='true' />
 
-          {/* Layer 4 — night window (time-passage indicator) */}
-          <View className='gathering-room-scene__layer gathering-room-scene__layer--window-night' aria-hidden='true'>
-            <View className='gathering-room-scene__window-frame'>
-              <View className='gathering-room-scene__window-sky'>
-                <View className='gathering-room-scene__window-star gathering-room-scene__window-star--a' />
-                <View className='gathering-room-scene__window-star gathering-room-scene__window-star--b' />
-                <View className='gathering-room-scene__window-star gathering-room-scene__window-star--c' />
-              </View>
-            </View>
-          </View>
-
-          {/* Layer 2 — six-seat table (coral cloth, six seat markers) */}
-          <View
-            className='gathering-room-scene__layer gathering-room-scene__layer--table'
-            style={{ left: `${TABLE_CENTER.x}%`, top: `${TABLE_CENTER.y}%` }}
-            aria-hidden='true'
-          >
-            <View className='gathering-room-scene__table'>
-              <View className='gathering-room-scene__table-cloth' />
-              {SEAT_ANCHORS.map((_, index) => (
-                <View
-                  key={index}
-                  className={`gathering-room-scene__seat-marker gathering-room-scene__seat-marker--${index}`}
+      {/* Character layer — above the art and lamp-breathe overlay. Each seat
+          is memoized so presence changes only re-render the seat whose state
+          actually changed. Absent members queue at the door; their name card
+          stays at the seat as a held place. */}
+      {entranceArmed
+        ? memberProfiles.map((profile, index) => {
+            const seatIndex = seatIndexFor(index, memberProfiles.length)
+            const isOwn = profile.userId === ownUserIdResolved
+            const anchor = SEAT_ANCHORS[seatIndex]
+            const presence = presenceByUserId.get(profile.userId) ?? 'absent'
+            return (
+              <Fragment key={profile.userId}>
+                <GatheringRoomSeat
+                  profile={profile}
+                  presence={presence}
+                  seatIndex={seatIndex}
+                  isOwn={isOwn}
+                  isEntering={enteringUserIds.has(profile.userId)}
+                  playOwnDoorEntry={isOwn && playOwnDoorEntry}
+                  pokeBadge={isOwn ? pokeBadge ?? null : null}
+                  reducedMotion={reducedMotion}
+                  onAvatarTap={onAvatarTap}
                 />
-              ))}
-            </View>
-          </View>
-        </>
-      )}
-
-      {/* Character layer — between the table layer and the lamp cone.
-          Each seat is memoized so presence changes only re-render the seat
-          whose state actually changed. */}
-      {memberProfiles.map((profile, index) => {
-        const seatIndex = seatIndexFor(index, memberProfiles.length)
-        const isOwn = profile.userId === ownUserIdResolved
-        return (
-          <GatheringRoomSeat
-            key={profile.userId}
-            profile={profile}
-            presence={presenceByUserId.get(profile.userId) ?? 'absent'}
-            seatIndex={seatIndex}
-            isOwn={isOwn}
-            isEntering={enteringUserIds.has(profile.userId)}
-            playOwnDoorEntry={isOwn && playOwnDoorEntry}
-            pokeBadge={isOwn ? pokeBadge ?? null : null}
-            reducedMotion={reducedMotion}
-            onAvatarTap={onAvatarTap}
-          />
-        )
-      })}
-
-      {/* Layer 5 — lamp cone (top overlay: purple shade + warm radial glow).
-          Hidden when the composite art already includes the lamp + light. */}
-      {!ROOM_ART_READY ? (
-        <View className='gathering-room-scene__layer gathering-room-scene__layer--lamp-cone' aria-hidden='true'>
-          <View className='gathering-room-scene__lamp'>
-            <View className='gathering-room-scene__lamp-cord' />
-            <View className='gathering-room-scene__lamp-shade' />
-          </View>
-          <View className='gathering-room-scene__lamp-glow' />
-        </View>
-      ) : null}
+                {presence === 'absent' ? (
+                  <View
+                    className='gathering-room-scene__name-card'
+                    style={{
+                      left: `${anchor.x}%`,
+                      top: `${anchor.y}%`,
+                      animationDelay: `${150 + seatIndex * 70}ms`,
+                    }}
+                  >
+                    <View className='gathering-room-scene__name-card-dot' aria-hidden='true' />
+                    <Text className='gathering-room-scene__name-card-text'>
+                      {profile.displayName || '队友'}
+                    </Text>
+                  </View>
+                ) : null}
+              </Fragment>
+            )
+          })
+        : null}
 
       {firstArriverText ? (
         <View className='gathering-room-scene__first-arriver'>
@@ -347,8 +401,12 @@ export function GatheringRoomScene({
         </View>
       ) : null}
 
-      {celebrationText ? (
-        <View className='gathering-room-scene__celebration' role='status' aria-live='polite'>
+      {celebrationShown ? (
+        <View
+          className={`gathering-room-scene__celebration${celebrationLeaving ? ' gathering-room-scene__celebration--leaving' : ''}`}
+          role='status'
+          aria-live='polite'
+        >
           <View className='gathering-room-scene__celebration-glow' aria-hidden='true' />
           {!reducedMotion
             ? CELEBRATION_SPARKLES.map((spec, index) => (
@@ -365,7 +423,7 @@ export function GatheringRoomScene({
               ))
             : null}
           <View className='gathering-room-scene__celebration-card'>
-            <Text className='gathering-room-scene__celebration-text'>{celebrationText}</Text>
+            <Text className='gathering-room-scene__celebration-text'>{celebrationShown}</Text>
           </View>
         </View>
       ) : null}

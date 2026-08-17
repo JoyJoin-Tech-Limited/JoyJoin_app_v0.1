@@ -2,6 +2,11 @@ import Taro from '@tarojs/taro'
 import { MINI_PROGRAM_ROUTES } from '../onboarding/onboardingRoutes'
 import type { FlashCanonicalSnapshot } from './flashTypes'
 
+export interface FlashCanonicalRouteContext {
+  replay?: boolean
+  replaySession?: string
+}
+
 export function decodeFlashRouteParam(value: string | undefined, fallback = ''): string {
   if (!value) return fallback
 
@@ -26,7 +31,10 @@ function query(path: string, params: Record<string, string | undefined>): string
   return search ? `${path}?${search}` : path
 }
 
-export function getFlashCanonicalRoute(snapshot: FlashCanonicalSnapshot): string | null {
+export function getFlashCanonicalRoute(
+  snapshot: FlashCanonicalSnapshot,
+  context: FlashCanonicalRouteContext = {},
+): string | null {
   const screen = snapshot.canonicalScreen?.trim().toLowerCase().replace(/^flash[_-]/, '')
   switch (screen) {
     case 'map':
@@ -43,7 +51,14 @@ export function getFlashCanonicalRoute(snapshot: FlashCanonicalSnapshot): string
     case 'encounter':
     case 'delivery':
       return snapshot.encounterId
-        ? query(MINI_PROGRAM_ROUTES.alangDialogue, { encounterId: snapshot.encounterId })
+        ? query(
+            MINI_PROGRAM_ROUTES.alangLaterDialogue,
+            {
+              encounterId: snapshot.encounterId,
+              replay: context.replay ? '1' : undefined,
+              replaySession: context.replay ? context.replaySession : undefined,
+            },
+          )
         : MINI_PROGRAM_ROUTES.alangEvent
     case 'task':
     case 'assignment':
@@ -68,11 +83,21 @@ export function getFlashCanonicalRoute(snapshot: FlashCanonicalSnapshot): string
 export async function redirectToFlashCanonical(
   snapshot: FlashCanonicalSnapshot,
   currentPath: string,
+  context: FlashCanonicalRouteContext = {},
 ): Promise<boolean> {
-  const route = getFlashCanonicalRoute(snapshot)
+  const route = getFlashCanonicalRoute(snapshot, context)
   if (!route) return false
   const routePath = route.split('?')[0]
-  if (routePath === currentPath) return false
+  const normalizedCurrentPath = currentPath.startsWith('/') ? currentPath : `/${currentPath}`
+  let topPagePath = ''
+  try {
+    const pages = Taro.getCurrentPages()
+    const topRoute = pages[pages.length - 1]?.route?.split('?')[0] ?? ''
+    topPagePath = topRoute ? (topRoute.startsWith('/') ? topRoute : `/${topRoute}`) : ''
+  } catch {
+    // The explicit caller path remains the fallback in non-WeChat runtimes.
+  }
+  if (routePath === normalizedCurrentPath || routePath === topPagePath) return false
   await Taro.redirectTo({ url: route })
   return true
 }

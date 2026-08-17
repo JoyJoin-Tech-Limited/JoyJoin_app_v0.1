@@ -3,23 +3,16 @@
 
 // GatheringRoomScene — 集结房间 stage styles.
 //
-// Placeholder room art behind the ROOM_ART_READY switch in the component:
-// warm-wood palette anchored to the design-system tokens from style guide T1.
-// When the layered pixel art lands, the placeholder layers below are replaced
-// by <Image> layers; the character layer (.gathering-room-scene__seat) and
-// all motion rules stay untouched.
+// The scene renders the delivered composite room art (CDN-first WebP with a
+// bundled fallback); the only decorative overlay is the lamp-breathe pulse.
+// Character layer (.gathering-room-scene__seat) and all motion rules are
+// art-independent.
 //
 // Motion: transform/opacity only. Loops pause under --paused (page hidden).
 
-$room-wall: $color-bg-warm-to;
 $room-wall-line: $color-bg-warm-mid;
 $room-floor: color.mix($flow-accent-human, $color-bg-warm-mid, 35%);
-$room-floor-line: color.mix($flow-accent-human, $color-bg-warm-mid, 55%);
-$room-wood: color.mix($flow-accent-human, $color-text-primary-warm, 55%);
-$room-wood-dark: color.mix($flow-accent-human, $color-text-primary-warm, 40%);
 $room-coral: $flow-accent-human;
-$room-night: $flow-scrim-cool-shadow;
-$room-night-star: $color-glow-gold-hot;
 $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
 
 .gathering-room-scene {
@@ -42,142 +35,20 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
       height: 100%;
     }
 
-    &--far-wall-floor {
-      z-index: 0;
-    }
-
-    &--door {
-      z-index: 1;
-    }
-
-    &--window-night {
-      z-index: 1;
-    }
-
-    &--table {
+    // Warm breathing pulse over the composite art's lamp zone — keeps the
+    // static art feeling awake. Sits below the character layer (z-index 3 on
+    // __seat).
+    &--lamp-breathe {
+      inset: auto;
       z-index: 2;
+      left: 50%;
+      top: 4%;
+      width: 320rpx;
+      height: 320rpx;
+      transform: translateX(-50%);
+      background: radial-gradient(closest-side, $room-lamp-glow 0%, rgba($color-glow-gold-hot, 0) 70%);
+      animation: gathering-room-lamp-breathe 4500ms ease-in-out infinite;
     }
-
-    // Lamp cone renders above the character layer (z-index 3 on __seat).
-    &--lamp-cone {
-      z-index: 4;
-    }
-  }
-
-  // ── Layer 1: far wall + floor ──────────────────────────────────────────
-  &__wall {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 34%;
-    background: linear-gradient(180deg, $room-wall 0%, $room-wall-line 100%);
-    border-bottom: 4rpx solid $room-wood;
-  }
-
-  &__floor {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 34%;
-    bottom: 0;
-    background: repeating-linear-gradient(
-      180deg,
-      $room-floor 0,
-      $room-floor 64rpx,
-      $room-floor-line 64rpx,
-      $room-floor-line 68rpx
-    );
-  }
-
-  // ── Layer 3: door (back wall, right) ───────────────────────────────────
-  &__door-frame {
-    position: absolute;
-    left: 78%;
-    top: 6%;
-    width: 120rpx;
-    height: 240rpx;
-    background: $room-wood-dark;
-    border-radius: 12rpx 12rpx 0 0;
-  }
-
-  &__door-panel {
-    position: absolute;
-    inset: 8rpx;
-    background: linear-gradient(180deg, $room-wood 0%, $room-wood-dark 100%);
-    border-radius: 8rpx 8rpx 0 0;
-  }
-
-  // ── Layer 4: night window (back wall, left) ────────────────────────────
-  &__window-frame {
-    position: absolute;
-    left: 10%;
-    top: 7%;
-    width: 200rpx;
-    height: 176rpx;
-    background: $room-wood;
-    border-radius: 16rpx;
-    padding: 10rpx;
-  }
-
-  &__window-sky {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(180deg, $room-night 0%, $flow-scrim-cool-shadow 100%);
-    border-radius: 10rpx;
-    overflow: hidden;
-  }
-
-  &__window-star {
-    position: absolute;
-    width: 8rpx;
-    height: 8rpx;
-    border-radius: $radius-circle;
-    background: $room-night-star;
-
-    &--a { left: 22%; top: 28%; }
-    &--b { left: 58%; top: 18%; }
-    &--c { left: 74%; top: 52%; }
-  }
-
-  // ── Layer 2: six-seat table ────────────────────────────────────────────
-  &__layer--table {
-    inset: auto;
-    transform: translate(-50%, -50%);
-  }
-
-  &__table {
-    position: relative;
-    width: 420rpx;
-    height: 300rpx;
-    border-radius: $radius-circle;
-    background: $room-wood-dark;
-    box-shadow: 0 24rpx 40rpx rgba($color-text-primary-warm, 0.28);
-  }
-
-  &__table-cloth {
-    position: absolute;
-    inset: 14rpx;
-    border-radius: $radius-circle;
-    background: radial-gradient(closest-side, $flow-scrim-warm-glow 0%, $room-coral 78%);
-  }
-
-  &__seat-marker {
-    position: absolute;
-    width: 44rpx;
-    height: 30rpx;
-    border-radius: $radius-circle;
-    background: $room-wood;
-    border: 4rpx solid $room-wood-dark;
-
-    // Six markers around the table rim (matches SEAT_ANCHORS in the component)
-    &--0 { left: 22%; top: -18rpx; }
-    &--1 { right: 22%; top: -18rpx; }
-    &--2 { left: -26rpx; top: 44%; }
-    &--3 { right: -26rpx; top: 44%; }
-    &--4 { left: 24%; bottom: -18rpx; }
-    &--5 { right: 24%; bottom: -18rpx; }
   }
 
   // ── Character layer ────────────────────────────────────────────────────
@@ -188,6 +59,13 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     display: flex;
     flex-direction: column;
     align-items: center;
+    // Wrapper slides: seated (confirmed) offset AND the door→seat walk when an
+    // absent member arrives — 640ms reads as a walk, not a teleport.
+    transition: transform 640ms cubic-bezier(0.22, 1, 0.36, 1);
+    // First-paint stagger: each seat fades in slightly after the previous one
+    // (delay set inline per seat). Opacity-only keyframes so the wrapper
+    // transforms above are never overridden mid-run.
+    animation: gathering-room-seat-in 420ms ease-out both;
   }
 
   &__seat-body {
@@ -195,7 +73,7 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     display: flex;
     flex-direction: column;
     align-items: center;
-    transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1), opacity 360ms ease-out;
 
     &--absent {
       opacity: 0.38;
@@ -210,6 +88,11 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
       opacity: 1;
     }
 
+    // One-hop celebration when a member's attendance flips to confirmed.
+    &--just-confirmed {
+      animation: gathering-room-hop 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
     &--entering {
       animation: gathering-room-look-up 700ms ease-out both;
     }
@@ -220,8 +103,24 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
 
     &--pressed {
       opacity: 0.7;
-      transform: scale(0.94);
+      // Scale only the avatar — the name card / badges / poke bubble stay put.
+      .gathering-room-scene__avatar {
+        transform: scale(0.94);
+      }
     }
+  }
+
+  // Soft contact shadow grounding each avatar into the room art's lighting.
+  &__seat-shadow {
+    position: absolute;
+    left: 50%;
+    top: 124rpx;
+    width: 92rpx;
+    height: 22rpx;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba($color-text-primary-warm, 0.22) 0%, rgba($color-text-primary-warm, 0) 72%);
+    pointer-events: none;
   }
 
   &__avatar {
@@ -231,6 +130,7 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     width: 96rpx;
     height: 144rpx;
     line-height: 0;
+    transition: transform 120ms ease-out;
   }
 
   &__confirmed-badge {
@@ -241,6 +141,8 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     border-radius: $radius-pill;
     background: $color-success;
     box-shadow: 0 4rpx 10rpx rgba($color-success, 0.3);
+    // Pop lands just as the 480ms seated shift settles — one choreographed beat.
+    animation: gathering-room-badge-pop 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__confirmed-badge-text {
@@ -271,12 +173,29 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     text-overflow: ellipsis;
   }
 
+  // Held-place card for absent members — stays at the seat anchor while the
+  // dimmed avatar waits at the door. Positioned standalone (left/top inline).
   &__name-card {
-    margin-top: 8rpx;
+    position: absolute;
+    z-index: 3;
+    transform: translate(-50%, 20rpx);
+    display: flex;
+    align-items: center;
+    gap: 10rpx;
     padding: 6rpx 20rpx;
     border-radius: $radius-pill;
     background: rgba($color-surface, 0.85);
     border: 2rpx solid $room-wall-line;
+    animation: gathering-room-seat-in 420ms ease-out both;
+  }
+
+  // "On the way" pulse — no words needed to read the card as a held seat.
+  &__name-card-dot {
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: $radius-circle;
+    background: $color-success;
+    animation: gathering-room-dot-pulse 1600ms ease-in-out infinite;
   }
 
   &__name-card-text {
@@ -286,42 +205,6 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  // ── Layer 5: lamp cone ─────────────────────────────────────────────────
-  &__lamp {
-    position: absolute;
-    left: 50%;
-    top: 0;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  &__lamp-cord {
-    width: 6rpx;
-    height: 56rpx;
-    background: $room-wood-dark;
-  }
-
-  &__lamp-shade {
-    width: 120rpx;
-    height: 64rpx;
-    border-radius: 0 0 60rpx 60rpx;
-    background: linear-gradient(180deg, $color-primary 0%, $color-primary-dark 100%);
-    box-shadow: 0 10rpx 24rpx rgba($color-primary, 0.35);
-  }
-
-  &__lamp-glow {
-    position: absolute;
-    left: 50%;
-    top: 100rpx;
-    width: 640rpx;
-    height: 640rpx;
-    transform: translateX(-50%);
-    border-radius: $radius-circle;
-    background: radial-gradient(closest-side, $room-lamp-glow 0%, rgba($color-glow-gold-hot, 0) 72%);
   }
 
   // ── First-arriver banner ───────────────────────────────────────────────
@@ -336,6 +219,7 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     background: rgba($color-surface, 0.92);
     border: 2rpx solid $room-wall-line;
     box-shadow: 0 10rpx 28rpx rgba($color-text-primary-warm, 0.14);
+    animation: gathering-room-banner-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__first-arriver-text {
@@ -357,6 +241,12 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     align-items: center;
     justify-content: center;
     pointer-events: none;
+    // 320ms fade-out when the overlay leaves (driven by --leaving).
+    transition: opacity 300ms ease-in;
+
+    &--leaving {
+      opacity: 0;
+    }
   }
 
   &__celebration-glow {
@@ -368,7 +258,9 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     transform: translate(-50%, -50%);
     border-radius: $radius-circle;
     background: radial-gradient(closest-side, rgba($color-glow-gold-hot, 0.45) 0%, rgba($color-glow-gold-hot, 0) 70%);
-    animation: gathering-room-celebration-glow 2400ms ease-out both;
+    // Gentle pulse for the overlay's full lifetime — the old one-shot fade
+    // left ~2.8s of static card after the glow died.
+    animation: gathering-room-celebration-glow 2200ms ease-in-out infinite;
   }
 
   &__celebration-sparkle {
@@ -378,7 +270,8 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     border-radius: $radius-circle;
     background: $room-coral;
     box-shadow: 0 0 12rpx rgba($room-coral, 0.8);
-    animation: gathering-room-sparkle 1400ms ease-out both;
+    // Two waves per sparkle so the celebration doesn't go static after 1.4s.
+    animation: gathering-room-sparkle 1400ms ease-out 2 both;
   }
 
   &__celebration-card {
@@ -403,7 +296,9 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
 
   // ── Pause switch (page hidden) ─────────────────────────────────────────
   &--paused {
+    .gathering-room-scene__layer--lamp-breathe,
     .gathering-room-scene__seat-body,
+    .gathering-room-scene__name-card-dot,
     .gathering-room-scene__celebration-glow,
     .gathering-room-scene__celebration-sparkle,
     .gathering-room-scene__poke-badge {
@@ -413,14 +308,51 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gathering-room-scene {
+  .gathering-room-scene,
+  .gathering-room-scene__layer--lamp-breathe,
+  .gathering-room-scene__seat,
+  .gathering-room-scene__seat-body,
+  .gathering-room-scene__confirmed-badge,
+  .gathering-room-scene__name-card,
+  .gathering-room-scene__name-card-dot,
+  .gathering-room-scene__first-arriver,
+  .gathering-room-scene__celebration-glow,
+  .gathering-room-scene__celebration-card,
+  .gathering-room-scene__celebration-sparkle,
+  .gathering-room-scene__poke-badge {
     animation: none;
+  }
+
+  .gathering-room-scene__seat {
+    transition: none;
   }
 }
 
 @keyframes gathering-room-scene-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes gathering-room-seat-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes gathering-room-lamp-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes gathering-room-dot-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes gathering-room-hop {
+  0% { transform: translateY(0); }
+  35% { transform: translateY(-16rpx); }
+  70% { transform: translateY(2rpx); }
+  100% { transform: translateY(0); }
 }
 
 @keyframes gathering-room-breathe {
@@ -451,9 +383,18 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
 }
 
 @keyframes gathering-room-celebration-glow {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
-  40% { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
+  0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.92); }
+  50% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+@keyframes gathering-room-badge-pop {
+  0% { opacity: 0; transform: scale(0.6); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes gathering-room-banner-in {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-8rpx); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 @keyframes gathering-room-celebration-pop {

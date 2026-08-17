@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { FlashFeedbackPrompt } from "../schema/flash.js";
 import { atuanFirstActSubmissionSchema } from "./atuanFirstAct.js";
+import { atuanLaterActSubmissionSchema } from "./atuanLaterActs.js";
 
 export const FLASH_CITY = "深圳" as const;
 export const FLASH_COORDINATE_SYSTEM = "gcj02" as const;
@@ -42,12 +43,32 @@ export const flashCoordinateSchema = z.object({
 });
 export type FlashCoordinateRequest = z.infer<typeof flashCoordinateSchema>;
 
+export const flashStoryReplayStateSchema = z.object({
+  episodeId: z.string().trim().min(1).max(80),
+  echo: z.number().int().min(0).max(100),
+  flags: z.array(z.string().trim().min(1).max(80)).max(64),
+  variables: z.record(
+    z.string().trim().min(1).max(80),
+    z.number().int().min(-1_000).max(1_000),
+  ).refine((value) => Object.keys(value).length <= 64, "Too many replay variables"),
+  currentNode: z.string().trim().min(1).max(80).nullable(),
+  nodePath: z.array(z.string().trim().min(1).max(80)).max(64),
+  lastChoiceId: z.string().trim().min(1).max(80).nullable(),
+}).strict();
+export type FlashStoryReplayStateDto = z.infer<typeof flashStoryReplayStateSchema>;
+
 export const flashAnswerRequestSchema = z.object({
   questionId: z.string().trim().min(1).max(80),
   optionId: z.string().trim().min(1).max(80),
-  storyPath: atuanFirstActSubmissionSchema.optional(),
+  storyPath: z.union([atuanFirstActSubmissionSchema, atuanLaterActSubmissionSchema]).optional(),
+  replayState: flashStoryReplayStateSchema.optional(),
 });
 export type FlashAnswerRequest = z.infer<typeof flashAnswerRequestSchema>;
+
+export const flashStoryAdvanceRequestSchema = z.object({
+  replayState: flashStoryReplayStateSchema.optional(),
+}).strict();
+export type FlashStoryAdvanceRequest = z.infer<typeof flashStoryAdvanceRequestSchema>;
 
 export const flashAcceptRequestSchema = z.object({
   accepted: z.boolean().default(true),
@@ -178,6 +199,7 @@ export type FlashStoryV2ViewDto = {
   choices: Array<{ id: string; text: string }>;
   next: string | null;
   unlockFragment: string | null;
+  replayState?: FlashStoryReplayStateDto;
 };
 
 export type FlashTaskDestinationDto = {

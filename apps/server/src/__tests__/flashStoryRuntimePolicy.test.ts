@@ -4,9 +4,16 @@ import {
   resolveAtuanFirstActOutcome,
   toAtuanFirstActSubmission,
 } from "@joyjoin/shared/alang/atuanFirstAct";
+import {
+  createAtuanLaterActProgress,
+  resolveAtuanLaterActOutcome,
+  toAtuanLaterActSubmission,
+} from "@joyjoin/shared/alang/atuanLaterActs";
 
 const mocks = vi.hoisted(() => ({
   completeStoryEpisode: vi.fn(),
+  advanceV2Node: vi.fn(),
+  advanceV2Run: vi.fn(),
   expireEncounter: vi.fn(),
   finalizeChoiceIntent: vi.fn(),
   generatePersonalizedResponse: vi.fn(),
@@ -25,6 +32,7 @@ const mocks = vi.hoisted(() => ({
   ensureStoryEpisode: vi.fn(),
   prepareChoiceIntent: vi.fn(),
   listCompletedCodes: vi.fn(),
+  updateCompletionNarrative: vi.fn(),
 }));
 
 vi.mock("../repositories/flashRepo", async (importOriginal) => {
@@ -48,6 +56,8 @@ vi.mock("../repositories/flashStoryRepo", async (importOriginal) => {
   return {
     ...actual,
     completeFlashStoryEpisode: mocks.completeStoryEpisode,
+    advanceFlashV2Node: mocks.advanceV2Node,
+    advanceFlashV2Run: mocks.advanceV2Run,
     ensureFlashStoryEpisodeForEncounter: mocks.ensureStoryEpisode,
     finalizeFlashStoryChoiceIntent: mocks.finalizeChoiceIntent,
     getCompletedFlashStorySeason: mocks.getCompletedStorySeason,
@@ -55,6 +65,7 @@ vi.mock("../repositories/flashStoryRepo", async (importOriginal) => {
     getReadyFlashStoryChoiceIntent: mocks.getReadyChoiceIntent,
     listCompletedFlashStoryEpisodeCodes: mocks.listCompletedCodes,
     prepareFlashStoryChoiceIntent: mocks.prepareChoiceIntent,
+    updateFlashStoryCompletionNarrative: mocks.updateCompletionNarrative,
   };
 });
 
@@ -68,7 +79,8 @@ vi.mock("../services/flashPersonalizedNarrativeService", async (importOriginal) 
   return { ...actual, generateFlashPersonalizedResponse: mocks.generatePersonalizedResponse };
 });
 
-const { answerFlashEncounter, getFlashEncounter, locateFlashAppearance } = await import("../services/flashService");
+const { advanceFlashV2Story, answerFlashEncounter, getFlashEncounter, locateFlashAppearance } = await import("../services/flashService");
+const { FlashStorySettlementInvariantError } = await import("../repositories/flashStoryRepo");
 
 const now = new Date("2026-08-09T10:00:00.000Z");
 const reviewedOptionResponse = "拾柒把册子转向你：三条短线确实朝着同一个方向。";
@@ -162,6 +174,7 @@ describe("formal Flash story runtime policy", () => {
     mocks.getOrCreateEncounter.mockResolvedValue(encounter);
     mocks.getCompletedStorySeason.mockResolvedValue(null);
     mocks.listCompletedCodes.mockResolvedValue([]);
+    mocks.completeStoryEpisode.mockResolvedValue({ created: true, fragmentCreated: true });
     mocks.getFeatureFlag.mockResolvedValue(true);
     mocks.getPreferences.mockResolvedValue({
       preference: {
@@ -190,7 +203,7 @@ describe("formal Flash story runtime policy", () => {
       leaseToken: "lease-1",
     });
     mocks.finalizeChoiceIntent.mockResolvedValue(true);
-    mocks.completeStoryEpisode.mockResolvedValue(undefined);
+    mocks.updateCompletionNarrative.mockResolvedValue(true);
     mocks.getReadyChoiceIntent.mockResolvedValue(null);
     mocks.ensureStoryEpisode.mockResolvedValue(undefined);
     mocks.consumeLocateBudget.mockResolvedValue({ allowed: true });
@@ -268,6 +281,7 @@ describe("formal Flash story runtime policy", () => {
       promptVersion: null,
     }));
     expect(result.storyEpisode?.response).toBe(reviewedOptionResponse);
+    expect(result.canonicalScreen).toBe("completed");
     expectNoPersonalizationRuntimeCalls();
   });
 
@@ -367,6 +381,126 @@ describe("formal Flash story runtime policy", () => {
     expect(mocks.completeStoryEpisode).not.toHaveBeenCalled();
   });
 
+  it("validates and persists the complete reviewed Atuan second-act path", async () => {
+    const initial = storyState();
+    initial.episode.code = "s1-p2-atuan";
+    initial.episode.phase = 2;
+    initial.episode.content.question = {
+      id: "second-look",
+      prompt: "这次你先看哪里？",
+      options: [
+        { id: "read-plan", label: "先看改过的地方" },
+        { id: "name-invitation", label: "先问这是不是邀请" },
+      ],
+    };
+    const progress = createAtuanLaterActProgress("s1-p2-atuan", "read_plan_first");
+    const outcome = resolveAtuanLaterActOutcome({
+      ...progress,
+      arrivalReplyId: "ask_fold_history",
+      highlightOrder: ["plan_folds", "chair_scuffs", "blank_place"],
+      followupId: "leave_choice",
+      gameStarted: true,
+      game: { planUpright: true, chairGap: "breathing", attempts: 2 },
+    });
+    const storyPath = toAtuanLaterActSubmission(outcome.progress);
+    const completed = {
+      ...initial,
+      completion: {
+        selectedOptionId: "read-plan",
+        responseSnapshot: outcome.responseCopy,
+        renderKind: "template" as const,
+        promptVersion: null,
+        echoSnapshot: null,
+      },
+      completedInPhase: 1,
+      completedTotal: 1,
+    };
+    mocks.getStoryEncounterState
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(completed);
+
+    const result = await answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "second-look",
+      optionId: "read-plan",
+      storyPath,
+      now,
+    });
+
+    expect(mocks.prepareChoiceIntent).toHaveBeenCalledWith(expect.objectContaining({
+      storyAnswers: expect.arrayContaining([
+        expect.objectContaining({ questionId: "atuan-later-act:ending", optionId: "room_preserved" }),
+        expect.objectContaining({ questionId: "atuan-later-act:arrival-reply", optionId: "ask_fold_history" }),
+        expect.objectContaining({ questionId: "atuan-later-act:action", optionId: "arrange_seating_plan" }),
+        expect.objectContaining({ questionId: "atuan-later-act:game:chair-gap", optionId: "breathing" }),
+      ]),
+    }));
+    expect(mocks.finalizeChoiceIntent).toHaveBeenCalledWith(expect.objectContaining({
+      responseSnapshot: outcome.responseCopy,
+    }));
+    expect(result.storyEpisode?.response).toBe(outcome.responseCopy);
+  });
+
+  it("validates and persists the complete reviewed Atuan third-act path", async () => {
+    const initial = storyState();
+    initial.episode.code = "s1-p3-atuan";
+    initial.episode.phase = 3;
+    initial.episode.content.question = {
+      id: "third-look",
+      prompt: "最后这次你先看哪里？",
+      options: [
+        { id: "open-box", label: "先看钥匙" },
+        { id: "read-card", label: "先看第六张卡" },
+      ],
+    };
+    const progress = createAtuanLaterActProgress("s1-p3-atuan", "open_box_first");
+    const outcome = resolveAtuanLaterActOutcome({
+      ...progress,
+      arrivalReplyId: "ask_sixth_card",
+      highlightOrder: ["box_key", "sixth_card", "empty_seat"],
+      followupId: "leave_answer",
+      gameStarted: true,
+      game: { boxUnlocked: true, invitationPlaced: true, atuanNamePlaced: true, otherSeat: "blank", attempts: 1 },
+    });
+    const storyPath = toAtuanLaterActSubmission(outcome.progress);
+    const completed = {
+      ...initial,
+      completion: {
+        selectedOptionId: "open-box",
+        responseSnapshot: outcome.responseCopy,
+        renderKind: "template" as const,
+        promptVersion: null,
+        echoSnapshot: null,
+      },
+      completedInPhase: 1,
+      completedTotal: 1,
+    };
+    mocks.getStoryEncounterState
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(completed);
+
+    const result = await answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "third-look",
+      optionId: "open-box",
+      storyPath,
+      now,
+    });
+
+    expect(mocks.prepareChoiceIntent).toHaveBeenCalledWith(expect.objectContaining({
+      storyAnswers: expect.arrayContaining([
+        expect.objectContaining({ questionId: "atuan-later-act:ending", optionId: "answer_left_open" }),
+        expect.objectContaining({ questionId: "atuan-later-act:arrival-reply", optionId: "ask_sixth_card" }),
+        expect.objectContaining({ questionId: "atuan-later-act:action", optionId: "open_returned_card" }),
+        expect.objectContaining({ questionId: "atuan-later-act:game:invitation", optionId: "placed_on_plan" }),
+        expect.objectContaining({ questionId: "atuan-later-act:game:other-seat", optionId: "blank" }),
+      ]),
+    }));
+    expect(result.storyEpisode?.response).toBe(outcome.responseCopy);
+  });
+
   it("returns the completed snapshot without settling again when a committed response was lost", async () => {
     mocks.getStoryEncounterState.mockResolvedValue(storyState(reviewedOptionResponse));
 
@@ -379,10 +513,115 @@ describe("formal Flash story runtime policy", () => {
     });
 
     expect(result.storyEpisode?.response).toBe(reviewedOptionResponse);
+    expect(result.canonicalScreen).toBe("completed");
     expect(mocks.prepareChoiceIntent).not.toHaveBeenCalled();
     expect(mocks.finalizeChoiceIntent).not.toHaveBeenCalled();
     expect(mocks.completeStoryEpisode).not.toHaveBeenCalled();
     expectNoPersonalizationRuntimeCalls();
+  });
+
+  it("commits the fragment before optional multi-choice AI enrichment", async () => {
+    const initial = storyState() as ReturnType<typeof storyState> & {
+      episode: { content: { responseByOption: Record<string, string> } };
+    };
+    initial.episode.content.question.options.push({ id: "inspect-again", label: "换一个角度再看" });
+    initial.episode.content.responseByOption["inspect-again"] = "审核过的第二条回应";
+    const completed = storyState("审核过的第二条回应");
+    completed.completion = {
+      ...completed.completion!,
+      selectedOptionId: "inspect-again",
+      responseSnapshot: "服务端编排后的安全回应",
+      renderKind: "ai",
+      promptVersion: "flash-parallel-universe-v1",
+    };
+    completed.episode.content = initial.episode.content;
+    mocks.getStoryEncounterState.mockResolvedValueOnce(initial).mockResolvedValueOnce(completed);
+    const order: string[] = [];
+    mocks.completeStoryEpisode.mockImplementation(async () => {
+      order.push("settlement");
+      return { created: true, fragmentCreated: true };
+    });
+    mocks.generatePersonalizedResponse.mockImplementation(async () => {
+      order.push("ai");
+      return {
+        response: "服务端编排后的安全回应",
+        renderKind: "ai",
+        provider: "deepseek",
+        model: "deepseek-v4-flash",
+        promptVersion: "flash-parallel-universe-v1",
+      };
+    });
+    mocks.updateCompletionNarrative.mockImplementation(async () => {
+      order.push("persist-ai");
+      return true;
+    });
+
+    const result = await answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "first-look",
+      optionId: "inspect-again",
+      now,
+    });
+
+    expect(order).toEqual(["settlement", "ai", "persist-ai"]);
+    expect(mocks.getFeatureFlag).toHaveBeenCalledWith("flashStoryAiResponsesEnabled", false);
+    expect(result.storyEpisode?.response).toBe("服务端编排后的安全回应");
+    expect(result.storyEpisode?.renderKind).toBe("ai");
+  });
+
+  it("keeps reviewed multi-choice copy when AI enrichment is disabled", async () => {
+    const initial = storyState() as ReturnType<typeof storyState> & {
+      episode: { content: { responseByOption: Record<string, string> } };
+    };
+    initial.episode.content.question.options.push({ id: "inspect-again", label: "换一个角度再看" });
+    initial.episode.content.responseByOption["inspect-again"] = "审核过的第二条回应";
+    const completed = storyState("审核过的第二条回应");
+    completed.completion = {
+      ...completed.completion!,
+      selectedOptionId: "inspect-again",
+      responseSnapshot: "审核过的第二条回应",
+      renderKind: "template",
+      promptVersion: null,
+    };
+    completed.episode.content = initial.episode.content;
+    mocks.getStoryEncounterState.mockResolvedValueOnce(initial).mockResolvedValueOnce(completed);
+    mocks.getFeatureFlag.mockResolvedValue(false);
+
+    const result = await answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "first-look",
+      optionId: "inspect-again",
+      now,
+    });
+
+    expect(mocks.completeStoryEpisode).toHaveBeenCalledTimes(1);
+    expect(mocks.getFeatureFlag).toHaveBeenCalledWith("flashStoryAiResponsesEnabled", false);
+    expect(mocks.generatePersonalizedResponse).not.toHaveBeenCalled();
+    expect(mocks.updateCompletionNarrative).not.toHaveBeenCalled();
+    expect(result.storyEpisode?.response).toBe("审核过的第二条回应");
+    expect(result.storyEpisode?.renderKind).toBe("template");
+  });
+
+  it("fails the response closed when the episode fragment catalog is missing", async () => {
+    const initial = storyState();
+    mocks.getStoryEncounterState.mockResolvedValue(initial);
+    mocks.completeStoryEpisode.mockRejectedValue(new FlashStorySettlementInvariantError(initial.episode.id, 0));
+
+    await expect(answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "first-look",
+      optionId: "notice-lines",
+      now,
+    })).rejects.toMatchObject({
+      code: "FLASH_STORY_FRAGMENT_NOT_READY",
+      status: 503,
+    });
+
+    expect(mocks.generatePersonalizedResponse).not.toHaveBeenCalled();
+    expect(mocks.updateCompletionNarrative).not.toHaveBeenCalled();
   });
 
   it("replays a completed episode with reviewed copy and no settlement writes", async () => {
@@ -407,10 +646,74 @@ describe("formal Flash story runtime policy", () => {
     });
 
     expect(result.isReplay).toBe(true);
+    expect(result.canonicalScreen).toBe("dialogue");
     expect(result.storyEpisode?.response).toBe(reviewedOptionResponse);
     expect(result.storyEpisode?.fragment).toBeNull();
     expect(mocks.prepareChoiceIntent).not.toHaveBeenCalled();
     expect(mocks.finalizeChoiceIntent).not.toHaveBeenCalled();
+    expect(mocks.completeStoryEpisode).not.toHaveBeenCalled();
+  });
+
+  it("replays a completed v2 episode from its opening with a client cursor and no official writes", async () => {
+    const completed = storyState(reviewedOptionResponse) as any;
+    completed.episode.code = "s1-p2-alang";
+    completed.episode.content = {
+      v: 2,
+      start: "n1_setup",
+      nodes: {
+        n1_setup: { id: "n1_setup", type: "prose", segments: [{ text: "Opening" }], next: "n3_choice" },
+        n3_choice: {
+          id: "n3_choice",
+          type: "choice",
+          choices: [
+            { id: "keep", text: "Keep", next: "n5_close", effect: { echo: 10 } },
+            { id: "return", text: "Return", next: "n5_close", effect: { echo: 20 } },
+          ],
+        },
+        n5_close: { id: "n5_close", type: "closure", segments: [{ text: "Reviewed closure" }], unlockFragment: "fragment" },
+      },
+    };
+    completed.universeRun = {
+      ...completed.universeRun,
+      currentNode: "n5_close",
+      nodePath: ["n1_setup", "n3_choice", "n5_close"],
+      v2State: { episodeId: completed.episode.id, echo: 99, variables: {}, lastChoiceId: "old" },
+      flags: ["official-flag"],
+    };
+    mocks.getStoryEncounterState.mockResolvedValue(completed);
+
+    const opened = await getFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      now,
+      allowStoryReplay: true,
+    });
+    expect(opened.storyEpisode?.storyV2?.nodeId).toBe("n1_setup");
+    expect(opened.storyEpisode?.storyV2?.echo).toBe(0);
+
+    const advanced = await advanceFlashV2Story({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      now,
+      allowStoryReplay: true,
+      replayState: opened.storyEpisode?.storyV2?.replayState,
+    });
+    expect(advanced.storyEpisode?.storyV2?.nodeId).toBe("n3_choice");
+
+    const finished = await answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "n3_choice",
+      optionId: "keep",
+      now,
+      allowStoryReplay: true,
+      replayState: advanced.storyEpisode?.storyV2?.replayState,
+    });
+    expect(finished.isReplay).toBe(true);
+    expect(finished.storyEpisode?.response).toBe("Reviewed closure");
+    expect(finished.storyEpisode?.fragment).toBeNull();
+    expect(mocks.advanceV2Node).not.toHaveBeenCalled();
+    expect(mocks.advanceV2Run).not.toHaveBeenCalled();
     expect(mocks.completeStoryEpisode).not.toHaveBeenCalled();
   });
 
