@@ -15,7 +15,7 @@ import {
   GLANCE_L2_FRAMING_MICRO_CHALLENGE,
   GLANCE_L2_HINT_MICRO_CHALLENGE,
 } from '../viewModels/glanceStackModel'
-import './MicroChallengeHeroView.scss'
+// Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 const TAP_TARGET = 5
 

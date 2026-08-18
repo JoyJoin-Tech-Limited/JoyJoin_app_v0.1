@@ -1,5 +1,8 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+// Subpackage WXSS guard (AGENTS §15): component SCSS must be @use'd in the
+// consuming page's SCSS or Taro's chunk graph can drop it.
+@use './PersonalityTestAnswerArea.scss' as *;
 
 @keyframes personality-intro-tease-card-enter {
   from {

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
-import './WarmupCelebrationOverlay.scss'
+// Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
+// import would be chunked into the page-invisible sub-common.wxss.
 
 interface WarmupCelebrationOverlayProps {
   visible: boolean

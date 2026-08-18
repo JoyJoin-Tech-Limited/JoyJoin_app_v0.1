@@ -30,7 +30,8 @@ import type { AIResponseMeta } from '@shared/types/aiMeta'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { haptics } from '../../../lib/utils/haptics'
-import './WarmupCardSlot.scss'
+// Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
+// import would be chunked into the page-invisible sub-common.wxss.
 
 interface WarmupCardSlotProps {
   state: WarmupCardState

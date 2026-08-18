@@ -11,7 +11,7 @@ import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { haptics } from '../../../lib/utils/haptics'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
-import './QuipBattleHeroView.scss'
+// Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 interface QuipBattlePrompt {
   id: string

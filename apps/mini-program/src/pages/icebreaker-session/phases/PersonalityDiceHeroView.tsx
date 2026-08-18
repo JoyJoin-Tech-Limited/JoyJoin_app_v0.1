@@ -17,7 +17,7 @@ import {
   canChoosePersonalityDiceOption,
   getPersonalityDiceCountdownSeconds,
 } from '../viewModels/phaseProgressionModels'
-import './PersonalityDiceHeroView.scss'
+// Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 function hslToHex(h: number, s: number, l: number): string {
   l /= 100

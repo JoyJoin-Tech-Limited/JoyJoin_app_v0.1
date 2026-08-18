@@ -9,7 +9,7 @@ import { CardFlip, ParticleBurst } from '../../../components/reveal'
 import { TapReaction } from '../../../components/gesture'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
-import './MiniScriptHeroView.scss'
+// Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 const STEP_LABELS = ['角色', '幕1', '幕2', '投票', '真相']
 

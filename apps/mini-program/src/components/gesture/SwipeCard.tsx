@@ -1,7 +1,9 @@
 import { type ReactNode, useRef, useState, useCallback, useEffect } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import './SwipeCard.scss'
+// No SCSS side-effect import: Taro's per-subpackage chunking would strand it
+// in a page-invisible sub-common.wxss. Consuming pages must @use
+// '../../components/gesture/SwipeCard.scss' in their page SCSS.
 
 function prefersReducedMotion(): boolean {
   try {

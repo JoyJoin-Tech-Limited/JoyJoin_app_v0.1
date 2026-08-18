@@ -7,7 +7,8 @@ import { haptics } from '../../../lib/utils/haptics'
 import Button from '../../../components/ui/Button'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 
-import './IcebreakerTierSheet.scss'
+// Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
+// import would be chunked into the page-invisible sub-common.wxss.
 
 export type TierSheetSelection = { tier: TierMachineId; vibe: VibeId }
 

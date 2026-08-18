@@ -11,7 +11,7 @@ import { haptics } from '../../../lib/utils/haptics'
 import { getSystemReducedMotion } from '../../../lib/utils/accessibility'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
 import { buildGroupMirrorAnswerRows } from '../viewModels/phaseProgressionModels'
-import './GroupMirrorHeroView.scss'
+// Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 interface GroupMirrorHeroViewProps {
   socialSessionId: string

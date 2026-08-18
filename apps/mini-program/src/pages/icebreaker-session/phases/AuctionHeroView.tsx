@@ -15,7 +15,7 @@ import {
   resolveAuctionRoleControls,
   type AuctionPreviewRole,
 } from '../viewModels/phaseProgressionModels'
-import './AuctionHeroView.scss'
+// Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 export interface AuctionBidRecordLocal {
   userId: string

@@ -5,7 +5,8 @@ import { TIER_PRESETS } from '../tierPresets'
 import type { VibeId } from '../../../lib/vibeMapping'
 import { haptics } from '../../../lib/utils/haptics'
 
-import './IcebreakerTierSelector.scss'
+// Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
+// import would be chunked into the page-invisible sub-common.wxss.
 
 interface IcebreakerTierSelectorProps {
   currentTier: TierMachineId

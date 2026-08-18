@@ -3,7 +3,11 @@
 
 // Keep phase presentation in the page WXSS bundle. Taro does not reliably
 // propagate stylesheet side effects through the extracted SessionPhaseViews
-// module, which otherwise leaves every game view as unstyled WXML on device.
+// module, and the 2026-08-17 per-subpackage chunking (config/miniProgramChunks.ts)
+// strands any component-level SCSS import into the page-invisible
+// sub-common.wxss — both leave game views as unstyled WXML on device. Every
+// phase/component stylesheet of this subpackage is therefore @use'd here and
+// the matching `import './X.scss'` side effects are removed from the TSX.
 @use './phases/AuctionHeroView';
 @use './phases/GroupMirrorHeroView';
 @use './phases/LieDetectiveHeroView';
@@ -11,8 +15,27 @@
 @use './phases/MiniScriptHeroView';
 @use './phases/PersonalityDiceHeroView';
 @use './phases/QuipBattleHeroView';
+@use './phases/RecapPhaseView';
 @use './phases/SpeedFriendingHeroView';
 @use './phases/UndercoverWordHeroView';
+@use './phases/WarmupPhaseView';
+@use './components/IcebreakerTierSelector';
+@use './components/IcebreakerTierSheet';
+@use './components/PhaseHeroCard';
+@use './components/WarmupActionBar';
+@use './components/WarmupCardSlot';
+@use './components/WarmupCelebrationOverlay';
+@use './components/WarmupEmberRim';
+@use './components/WarmupPresenceStrip';
+@use './components/WarmupWelcomeBand';
+// Shared gesture/reveal primitives whose only page-entry consumers live in
+// this subpackage (pages/dev/wow-demo is not a registered entry) — same
+// sub-common.wxss stranding guard as above.
+@use '../../components/gesture/SwipeCard.scss' as *;
+@use '../../components/gesture/TapReaction.scss' as *;
+@use '../../components/gesture/TapRhythm.scss' as *;
+@use '../../components/reveal/CardFlip.scss' as *;
+@use '../../components/reveal/IdentityReveal.scss' as *;
 
 // S10 gyro-parallax spike (2026-08-11): rules-bearing partial compiled into
 // the page WXSS so subpackage style-splitting cannot chunk it away.

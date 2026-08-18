@@ -9,7 +9,8 @@ import { haptics } from '../../../lib/utils/haptics'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { resolvePersonalityEmoji, resolvePersonalityIcon } from './emojiAssets'
 import { resolveFragmentLabel, getNearestSliderOption } from './personalityTestLogic'
-import './PersonalityTestAnswerArea.scss'
+// Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
+// import would be chunked into the page-invisible sub-common.wxss.
 
 export { resolveFragmentLabel, getNearestSliderOption, type AnswerOption } from './personalityTestLogic'
 

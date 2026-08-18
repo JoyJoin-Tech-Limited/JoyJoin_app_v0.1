@@ -11,7 +11,7 @@ import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PHASE_ACCENTS } from './phaseAccents'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
-import './UndercoverWordHeroView.scss'
+// Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 interface UndercoverWordHeroViewProps {
   socialSessionId: string

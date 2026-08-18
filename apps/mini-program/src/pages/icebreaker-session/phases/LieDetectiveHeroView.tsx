@@ -11,7 +11,7 @@ import { haptics } from '../../../lib/utils/haptics'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
-import './LieDetectiveHeroView.scss'
+// Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 // ─── Minimal client-side profanity guard (subset of server filter) ──────────
 const SENSITIVE_KEYWORDS = [

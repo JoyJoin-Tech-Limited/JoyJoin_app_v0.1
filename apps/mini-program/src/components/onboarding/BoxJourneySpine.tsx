@@ -2,7 +2,8 @@ import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect, useState } from 'react'
 import { getSystemReducedMotion } from '../../lib/utils/accessibility'
-import './BoxJourneySpine.scss'
+// Styles are @use'd by the consuming pages' SCSS — a component-level SCSS
+// import would be chunked into the page-invisible sub-common.wxss.
 
 /**
  * BoxJourneySpine — the 装盒进度 macro-journey spine for onboarding

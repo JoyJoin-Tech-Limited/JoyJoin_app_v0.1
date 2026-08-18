@@ -186,6 +186,22 @@ const REQUIREMENTS = [
       'handshake-ritual{',
       'handshake-beat{',
       'icebreaker__waiting-l1-word{',
+      // 2026-08-17 sub-common stranding incident: the per-subpackage chunking
+      // (config/miniProgramChunks.ts) moved every component-level SCSS import
+      // of this page into pages/icebreaker-session/sub-common.wxss, which no
+      // page ever loads — all game views rendered unstyled on device. These
+      // selectors anchor the @use'd legacy PhaseHeroCard frame, the warmup
+      // component family, and the recap view in the page WXSS.
+      'phase-hero-card__header-rail{',
+      'phase-hero-card__emblem{',
+      'warmup-card-slot__content',
+      'warmup-ember-rim',
+      'warmup-celebration',
+      'warmup-action',
+      'warmup-presence__',
+      'warmup-welcome__',
+      'icebreaker__recap-hero{',
+      'icebreaker__recap-connect-btn{',
     ],
   },
 ]
@@ -207,6 +223,37 @@ for (const { page, selectors } of REQUIREMENTS) {
     failed = true
   } else {
     console.log(`✓ ${page}: ${selectors.length} required selectors present`)
+  }
+}
+
+// Generic stranding gate (2026-08-17): the per-subpackage manualChunks rule
+// emits a sub-common.wxss per subpackage, but no page WXSS ever references it
+// — WeChat applies only the page's own WXSS plus the app.wxss chain. Any rule
+// that lands there is invisible on device (the icebreaker-session incident:
+// every phase hero + warmup component rendered unstyled). A non-empty
+// sub-common.wxss therefore fails the build; the fix is to `@use` the
+// component SCSS in the consuming page's SCSS and drop the TSX-side import.
+function collectSubCommonWxss(dir) {
+  const found = []
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      found.push(...collectSubCommonWxss(full))
+    } else if (entry.name === 'sub-common.wxss') {
+      found.push(full)
+    }
+  }
+  return found
+}
+for (const file of collectSubCommonWxss(DIST_ROOT)) {
+  const content = fs.readFileSync(file, 'utf8').replace('@charset "UTF-8";', '').trim()
+  if (content.length > 0) {
+    console.error(`✗ ${path.relative(DIST_ROOT, file)} contains ${content.length} bytes of unreachable styles`)
+    console.error('  No page loads sub-common.wxss — `@use` the stranded component SCSS in the consuming')
+    console.error('  page SCSS and remove the matching `import \'./X.scss\'` from the component TSX.')
+    failed = true
+  } else {
+    console.log(`✓ ${path.relative(DIST_ROOT, file)}: empty (no stranded styles)`)
   }
 }
 

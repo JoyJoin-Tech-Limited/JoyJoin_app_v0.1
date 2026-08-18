@@ -20,7 +20,7 @@ import { MILESTONE_BADGES } from '../../../lib/milestoneBadges'
 import { haptics } from '../../../lib/utils/haptics'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
-import './RecapPhaseView.scss'
+// Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 function MedalIcon({ title, emoji }: { title: string; emoji: string }) {
   switch (title) {

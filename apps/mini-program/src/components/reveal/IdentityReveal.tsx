@@ -1,6 +1,8 @@
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import './IdentityReveal.scss'
+// No SCSS side-effect import: Taro's per-subpackage chunking would strand it
+// in a page-invisible sub-common.wxss. Consuming pages must @use
+// '../../components/reveal/IdentityReveal.scss' in their page SCSS.
 
 function prefersReducedMotion(): boolean {
   try {

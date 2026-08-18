@@ -1,7 +1,9 @@
 import { type ReactNode, useCallback } from 'react'
 import { View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import './CardFlip.scss'
+// No SCSS side-effect import: Taro's per-subpackage chunking would strand it
+// in a page-invisible sub-common.wxss. Consuming pages must @use
+// '../../components/reveal/CardFlip.scss' in their page SCSS.
 
 function prefersReducedMotion(): boolean {
   try {

@@ -3,7 +3,8 @@ import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpression
 import { getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import type { WelcomeSegment } from '../viewModels/warmupViewModels'
-import './WarmupWelcomeBand.scss'
+// Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
+// import would be chunked into the page-invisible sub-common.wxss.
 
 interface WarmupWelcomeBandProps {
   welcomeSegments: WelcomeSegment[]

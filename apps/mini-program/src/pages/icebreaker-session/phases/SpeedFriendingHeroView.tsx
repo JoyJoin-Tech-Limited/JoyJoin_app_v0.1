@@ -7,7 +7,7 @@ import ArchetypeGlyph from '../../../components/mascot/ArchetypeGlyph'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { ParticleBurst } from '../../../components/reveal'
 import { haptics } from '../../../lib/utils/haptics'
-import './SpeedFriendingHeroView.scss'
+// Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 
 interface SpeedFriendingHeroViewProps {

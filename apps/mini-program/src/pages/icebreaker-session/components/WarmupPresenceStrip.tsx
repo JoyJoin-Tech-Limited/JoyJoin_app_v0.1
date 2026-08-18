@@ -4,7 +4,8 @@ import ArchetypeHead from '../../../components/mascot/ArchetypeHead'
 import MissingArchetypePlaceholder from '../../../components/mascot/MissingArchetypePlaceholder'
 import { localAsset } from '../../../lib/utils/cdnAssets'
 import type { SessionParticipant } from '../phaseUtils'
-import './WarmupPresenceStrip.scss'
+// Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
+// import would be chunked into the page-invisible sub-common.wxss.
 
 interface WarmupPresenceStripProps {
   participants: SessionParticipant[]

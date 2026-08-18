@@ -12,7 +12,8 @@ import {
   seedLitUserIds,
 } from '../viewModels/warmupViewModels'
 import type { EmberAccent, EmberHaloVisual, EmberSeat } from '../viewModels/warmupViewModels'
-import './WarmupEmberRim.scss'
+// Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
+// import would be chunked into the page-invisible sub-common.wxss.
 
 // ─── Campfire Vault Card PR2 motion constants (contract E1 / S2 / H1 / H4) ──
 /** E1 — per-seat pop-in stagger on first topic_card entry. */

@@ -6,7 +6,8 @@ import { PhaseHeaderIcon } from '../phaseUtils'
 import { getPhaseFoilStyle, PHASE_ACCENTS } from '../phases/phaseAccents'
 import { GlancePeek } from './GlancePeek'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
-import './PhaseHeroCard.scss'
+// Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
+// import would be chunked into the page-invisible sub-common.wxss.
 
 /**
  * PhaseHeroCard (PR2/PR3 revamp) — one shared premium frame for every phase.

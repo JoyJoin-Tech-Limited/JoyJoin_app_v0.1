@@ -27,7 +27,7 @@ import {
   buildArchetypeMixText,
 } from '../viewModels/warmupViewModels'
 import type { TopicsRecoveryState, WarmupCardState } from '../viewModels/warmupViewModels'
-import './WarmupPhaseView.scss'
+// Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 
 interface WarmupPhaseViewProps {
   topics: SocialTopic[]

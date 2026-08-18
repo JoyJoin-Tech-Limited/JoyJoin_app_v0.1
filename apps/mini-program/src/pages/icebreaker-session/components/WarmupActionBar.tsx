@@ -3,7 +3,8 @@ import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Button from '../../../components/ui/Button'
 import type { CTAState } from '../viewModels/warmupViewModels'
 import { haptics } from '../../../lib/utils/haptics'
-import './WarmupActionBar.scss'
+// Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
+// import would be chunked into the page-invisible sub-common.wxss.
 
 interface WarmupActionBarProps {
   ctaState: CTAState
