@@ -15,6 +15,7 @@ import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadin
 import { useAuth } from '../../../hooks/useAuth'
 import { apiRequest } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
+import { useStepAbandonGuard } from '../../../hooks/onboarding/useStepAbandonGuard'
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
 import {
   clearAnonymousAssessmentStorage,
@@ -39,7 +40,6 @@ import { logInfo, logWarn, logError } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
-import { isMilestoneQuestion } from './personalityTestLogic'
 import { triggerXiaoyueAnalysisPrefetch } from './triggerXiaoyueAnalysisPrefetch'
 import PersonalityTestIntro from './PersonalityTestIntro'
 import PersonalityTestQuestion from './PersonalityTestQuestion'
@@ -48,9 +48,7 @@ import PersonalityTestPreloadLayer from './PersonalityTestPreloadLayer'
 import PersonalityTestCompletingError from './PersonalityTestCompletingError'
 import {
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
-  ASSET_BASE_WEBP_LOCAL,
 } from './visuals'
-import { preloadImagesWithDiagnostics } from '../../../lib/utils/imagePreload'
 import { preloadRouteAssets } from '../../../lib/utils/routePreloadAssets'
 import './index.scss'
 import type {
@@ -135,7 +133,9 @@ export default function PersonalityTestPage() {
   const [error, setError] = useState('')
   const [postAnswerCommentary, setPostAnswerCommentary] = useState<string | null>(null)
   const commentaryReceivedAtRef = useRef<number>(0)
-  const [, setMilestonePulse] = useState(false)
+  // True once the user drags the slider on the current question — gates 下一题
+  // so an untouched slider can't silently submit the default 50.
+  const [hasSliderInteracted, setHasSliderInteracted] = useState(false)
 
   const [skipsRemaining, setSkipsRemaining] = useState(MAX_SKIP_COUNT)
   const [isSkipping, setIsSkipping] = useState(false)
@@ -206,8 +206,6 @@ export default function PersonalityTestPage() {
     progress: AssessmentProgress | null
     matches: AssessmentMatch[]
   } | null>(null)
-  // Option-hover preview (P1-2): 200ms touch debounce, cancel on move or early release.
-  // Stores the option whose 200ms timer is pending so we can cancel cleanly.
   // Holds the server-completed result until the celebrate animation finishes.
   // Navigation is gated by OnboardingLoadingShell's onCelebrateReady so the
   // user sees the full completion beat before the slot/result page appears.
@@ -255,6 +253,19 @@ export default function PersonalityTestPage() {
     },
   })
 
+  // R1-3 funnel: mid-test exit (swipe-back / forward nav / app background /
+  // unload) fires step_abandoned once per visit; completion marks the guard
+  // so the results-page navigation never false-positives.
+  const { markCompleted: markTestCompleted } = useStepAbandonGuard(() => {
+    if (auth.isLoading) return
+    if (auth.isAuthenticated && auth.nextStep !== 'personality-test') return
+    if (phase !== 'intro' && phase !== 'testing') return
+    analytics.stepAbandoned('exit', {
+      phase,
+      answeredCount: progress?.answered ?? 0,
+    })
+  })
+
   const estimatedTotal = progress
     ? progress.answered + Math.max(progress.estimatedRemaining, 1)
     : 1
@@ -269,7 +280,6 @@ export default function PersonalityTestPage() {
     nextTopArchetypes?: AnonymousAssessmentTopMatch[] | null,
     finalResult?: AnonymousAssessmentResult | null,
   ) => {
-    const primaryArchetype = finalResult?.primaryArchetype ?? nextTopArchetypes?.[0]?.archetype
     saveAnonymousAssessmentSession({
       sessionId: targetSessionId,
       phase: 'completed',
@@ -280,14 +290,8 @@ export default function PersonalityTestPage() {
       resultSequenceCompletedAt: undefined,
     })
 
-    // Warm the result-page image cache while the route transition plays.
-    // This removes the cold-start decode on the result hero and pokemon cards.
-    if (primaryArchetype) {
-      void preloadImagesWithDiagnostics(
-        [`${ASSET_BASE_WEBP_LOCAL}/archetype-${primaryArchetype}.webp`],
-        'personality-test-completion',
-      )
-    }
+    // Result-page image warm-up is owned by the results page mount preload
+    // (results/index.tsx), which also covers direct entry — no duplicate here.
 
     await runMiniProgramRouteTransition({
       beforeNavigate: () => setIsPageExiting(true),
@@ -412,6 +416,7 @@ export default function PersonalityTestPage() {
       setProgress(result.progress)
       setCurrentMatches(result.currentMatches ?? [])
       setSliderValue(50)
+      setHasSliderInteracted(false)
 
       if (!isAuthenticated) {
         const nextSnapshot: AnonymousAssessmentSessionSnapshot = {
@@ -471,6 +476,7 @@ export default function PersonalityTestPage() {
           topArchetypes: result.currentMatches ?? currentMatches,
           finalResult: result.result,
         }
+        markTestCompleted()
         setPhase('completing')
         return
       }
@@ -490,17 +496,13 @@ export default function PersonalityTestPage() {
     analytics,
     currentMatches,
     isAuthenticated,
+    markTestCompleted,
   ])
 
   const handleAnswer = useCallback((option: AssessmentOption) => {
     if (!sessionId || !question || isSubmitting) return
 
     setPostAnswerCommentary(null)
-
-    const isMilestone = progress && isMilestoneQuestion(progress.answered)
-    if (isMilestone) {
-      setMilestonePulse(true)
-    }
 
     lastAttemptedOptionRef.current = option
     setCurrentSelection(option)
@@ -511,7 +513,7 @@ export default function PersonalityTestPage() {
     if (immediateCommentary) {
       commentaryReceivedAtRef.current = commentaryStartTime
     }
-  }, [sessionId, question, isSubmitting, progress])
+  }, [sessionId, question, isSubmitting])
 
   const handleSliderSubmit = useCallback(() => {
     if (!question) return
@@ -524,7 +526,12 @@ export default function PersonalityTestPage() {
   }, [question, sliderValue, handleAnswer, analytics])
 
   const handleSliderChange = useCallback((value: number) => {
+    setHasSliderInteracted(true)
     setSliderValue(value)
+    // In back-review, currentSelection still holds the previously submitted
+    // option; handleNext prefers it over the slider value, which would
+    // silently re-submit the old answer. A drag means "change the answer".
+    setCurrentSelection(null)
   }, [])
 
   // Echo lifecycle: fade-out before unmount so the transition to the next
@@ -557,6 +564,7 @@ export default function PersonalityTestPage() {
           setProgress(pending.progress)
           setCurrentMatches(pending.matches)
           setSliderValue(50)
+          setHasSliderInteracted(false)
           pendingQuestionUpdateRef.current = null
         }
       }, 220)
@@ -585,13 +593,6 @@ export default function PersonalityTestPage() {
     }
   }, [shouldShowEcho, analytics, postAnswerCommentary])
 
-  // Cleanup any pending slider interaction timer when the page unmounts or
-  // the user navigates away, preventing stale setState calls.
-  useEffect(() => {
-    return () => {
-    }
-  }, [])
-
   const handleNext = useCallback(async () => {
     if (!sessionId || !question || isSubmitting) return
 
@@ -609,6 +610,7 @@ export default function PersonalityTestPage() {
         const prevOption = nextEntry.question.options.find(o => o.value === nextEntry.answer) ?? null
         setCurrentSelection(prevOption)
         setSliderValue(50)
+        setHasSliderInteracted(false)
         setPostAnswerCommentary(null)
         return
       }
@@ -624,6 +626,7 @@ export default function PersonalityTestPage() {
         setCurrentHistoryIndex(-1)
         setCurrentSelection(null)
         setSliderValue(50)
+        setHasSliderInteracted(false)
         setPostAnswerCommentary(null)
         return
       }
@@ -655,7 +658,11 @@ export default function PersonalityTestPage() {
         },
       })
 
-      // Ensure commentary is visible for at least COMMENTARY_MIN_DISPLAY_MS
+      // Ensure commentary is visible for at least COMMENTARY_MIN_DISPLAY_MS.
+      // The window is measured from when the instant per-option commentary
+      // appeared (option tap), so a user who already read it advances with no
+      // added wait — only the *remaining* time is enforced. Runs in parallel
+      // with the request so it never adds latency on slow networks.
       if (postAnswerCommentary) {
         const minDisplayRemaining = Math.max(
           0,
@@ -684,6 +691,11 @@ export default function PersonalityTestPage() {
       } else if (result.commentary) {
         setPostAnswerCommentary(result.commentary)
         commentaryReceivedAtRef.current = Date.now()
+        // Commentary arrived late (with the response): it gets the full
+        // minimum display window from now so the feedback doesn't flash by.
+        if (!postAnswerCommentary) {
+          await new Promise((resolve) => setTimeout(resolve, COMMENTARY_MIN_DISPLAY_MS))
+        }
       }
 
       if (result.isComplete || !result.nextQuestion) {
@@ -722,6 +734,7 @@ export default function PersonalityTestPage() {
           topArchetypes: result.currentMatches ?? currentMatches,
           finalResult: result.result,
         }
+        markTestCompleted()
         setPhase('completing')
         return
       }
@@ -800,6 +813,7 @@ export default function PersonalityTestPage() {
     currentSelection,
     isAuthenticated,
     isSubmitting,
+    markTestCompleted,
     postAnswerCommentary,
     progress,
     question,
@@ -830,6 +844,7 @@ export default function PersonalityTestPage() {
     const prevOption = entry.question.options.find(o => o.value === entry.answer) ?? null
     setCurrentSelection(prevOption)
     setSliderValue(50)
+    setHasSliderInteracted(false)
     setPostAnswerCommentary(null)
   }, [currentHistoryIndex, question, progress, currentMatches])
 
@@ -965,6 +980,7 @@ export default function PersonalityTestPage() {
           progressPercent={progressPercent}
           currentMatches={currentMatches}
           sliderValue={sliderValue}
+          sliderTouched={hasSliderInteracted}
           isSubmitting={isSubmitting}
           isSkipping={isSkipping}
           skipsRemaining={skipsRemaining}
@@ -974,12 +990,20 @@ export default function PersonalityTestPage() {
           isEchoExiting={isEchoExiting}
           echoEnabled={echoEnabled}
           currentSelection={currentSelection}
-          canGoNext={currentSelection !== null || (question?.questionType === 'slider')}
+          canGoNext={currentSelection !== null || (question?.questionType === 'slider' && hasSliderInteracted)}
           canGoPrevious={currentHistoryIndex === -1 ? questionHistoryRef.current.length > 0 : currentHistoryIndex > 0}
           lastAttemptedOptionRef={lastAttemptedOptionRef}
           onAnswer={handleAnswer}
           onSliderChange={handleSliderChange}
           onSliderSubmit={handleSliderSubmit}
+          onSliderAdvanceBlocked={() => {
+            // P1 polish validation: user tried to advance a slider question
+            // without touching the slider (gate blocked the tap).
+            analytics.interaction('slider_advance_blocked', {
+              questionId: question?.id,
+              questionIndex: progress?.answered ?? 0,
+            })
+          }}
           onNext={handleNext}
           onPrevious={handlePrevious}
           onSkip={handleSkip}

@@ -228,6 +228,11 @@
     @include type-caption;
     color: $color-text-muted;
     line-height: 1.4;
+
+    &--prefill {
+      color: $color-text-secondary;
+      margin-bottom: 4rpx; // optical pairing with the base hint below
+    }
   }
 
   &__choice-row {
@@ -303,7 +308,6 @@
       flex: 0 0 auto;
       min-height: 72rpx;
       padding: $spacing-xs $spacing-sm;
-      border-radius: 32rpx;
     }
   }
 

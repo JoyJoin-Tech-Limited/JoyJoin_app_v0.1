@@ -20,7 +20,7 @@ import BrandLogo from '../../../components/ui/BrandLogo'
 import './index.scss'
 
 const STEP_NAME_MAP: Record<string, string> = {
-  'onboarding': '欢迎加入',
+  'onboarding': '基础资料填写',
   'personality-test': '人格测试',
   'essential-data': '基础资料填写',
   'extended-data': '兴趣标签选择',
@@ -50,7 +50,7 @@ export default function WelcomeBackPage() {
     onboardingAnalytics.interaction('welcome-back', 'screen_shown', { nextStep: auth.nextStep })
   }, [auth.isLoading, auth.isAuthenticated, auth.nextStep])
 
-  const stepName = (auth.nextStep && STEP_NAME_MAP[auth.nextStep]) ?? '欢迎加入'
+  const stepName = (auth.nextStep && STEP_NAME_MAP[auth.nextStep]) ?? '基础资料填写'
   const restartsRemaining = auth.user?.restartsRemaining ?? 0
 
   const handleContinue = async () => {
@@ -163,9 +163,6 @@ export default function WelcomeBackPage() {
         {/* Text content */}
         <View className='welcome-back__text'>
           <Text className='welcome-back__headline'>欢迎回来</Text>
-          <Text className='welcome-back__subtitle'>
-            你上次进行到了「{stepName}」，随时可以继续完成
-          </Text>
         </View>
 
         {/* Step card */}

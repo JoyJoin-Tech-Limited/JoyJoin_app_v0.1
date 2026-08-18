@@ -24,6 +24,12 @@
     animation: halfway-card-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  // Transient beat: fade-out before unmount (driven by HALFWAY_DISPLAY_MS /
+  // HALFWAY_EXIT_MS in the component).
+  &__card--exiting {
+    animation: halfway-card-exit 0.3s ease-out both;
+  }
+
   &__badge {
     position: relative;
     flex-shrink: 0;
@@ -33,9 +39,7 @@
     align-items: center;
     justify-content: center;
     z-index: 1;
-    animation:
-      halfway-badge-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both,
-      halfway-badge-breathe 3s ease-in-out 0.6s infinite;
+    animation: halfway-badge-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 
     // Single radial burst replaces dense CSS confetti — compositor-safe,
     // no clip-path aliasing in WeChat WKWebView.
@@ -104,6 +108,13 @@
   }
 
   &__text-sub {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6rpx;
+  }
+
+  &__text-sub-label {
     font-size: $font-size-xs;
     font-weight: $font-weight-medium;
     color: $color-text-secondary;
@@ -119,6 +130,11 @@
       animation: none;
       opacity: 1;
       transform: none;
+    }
+
+    &__card--exiting {
+      animation: none;
+      opacity: 0;
     }
 
     &__badge {
@@ -193,13 +209,13 @@
   }
 }
 
-// Gentle post-pop breathe — keeps the milestone feeling alive and encouraging
-// without demanding attention. 4% scale is sub-threshold for distraction.
-@keyframes halfway-badge-breathe {
-  0%, 100% {
-    transform: scale(1);
+@keyframes halfway-card-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
   }
-  50% {
-    transform: scale(1.04);
+  to {
+    opacity: 0;
+    transform: translateY(-8rpx);
   }
 }

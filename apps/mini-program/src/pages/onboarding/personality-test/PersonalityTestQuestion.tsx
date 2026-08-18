@@ -4,10 +4,9 @@ import Button from '../../../components/ui/Button'
 import SegmentedProgress from '../../../components/ui/SegmentedProgress'
 import TypewriterText from '../../../components/ui/TypewriterText'
 import MascotQuestionHeader from './MascotQuestionHeader'
-import PersonalityTestAnswerArea, { getNearestSliderOption } from './PersonalityTestAnswerArea'
+import PersonalityTestAnswerArea from './PersonalityTestAnswerArea'
 import QuestionTransition from './QuestionTransition'
 import { HalfwayMilestone } from './HalfwayMilestone'
-import { isMilestoneQuestion } from './personalityTestLogic'
 import { getXiaoyueExpressionAsset, PERSONALITY_TEST_QUESTION_EXPRESSION } from './visuals'
 import type {
   Phase,
@@ -30,14 +29,6 @@ export function getQuestionMascotPose(_questionId: string): typeof PERSONALITY_T
   return PERSONALITY_TEST_QUESTION_EXPRESSION.choice
 }
 
-function getSliderValueFromPreviousAnswer(previousAnswer: string | null, options: AssessmentOption[]): number {
-  if (!previousAnswer) return 50
-  const match = previousAnswer.match(/(\d+)/)
-  const numericValue = match ? Number(match[1]) : 50
-  const option = getNearestSliderOption(options, numericValue)
-  return option ? numericValue : 50
-}
-
 interface PersonalityTestQuestionProps {
   isPageExiting: boolean
   isDegradation: boolean
@@ -48,6 +39,8 @@ interface PersonalityTestQuestionProps {
   progressPercent: number
   currentMatches: AssessmentMatch[]
   sliderValue: number
+  /** True once the user has dragged the slider on the current question. */
+  sliderTouched: boolean
   isSubmitting: boolean
   isSkipping: boolean
   skipsRemaining: number
@@ -64,6 +57,13 @@ interface PersonalityTestQuestionProps {
   onSliderChange: (value: number) => void
   onSliderSubmit: () => void
   onNext: () => void
+  /**
+   * Analytics-only: fires when the user taps 下一题 while the slider gate is
+   * blocking (slider question, not yet touched). The disabled native Button
+   * swallows its own tap, so the page wraps the button and observes the
+   * bubbled tap instead.
+   */
+  onSliderAdvanceBlocked?: () => void
   onPrevious: () => void
   onSkip: () => void
   onRetry: () => void
@@ -79,6 +79,7 @@ export default function PersonalityTestQuestion({
   estimatedTotal,
   progressPercent,
   sliderValue,
+  sliderTouched,
   isSubmitting,
   isSkipping,
   skipsRemaining,
@@ -95,6 +96,7 @@ export default function PersonalityTestQuestion({
   onSliderChange,
   onSliderSubmit,
   onNext,
+  onSliderAdvanceBlocked,
   onPrevious,
   onSkip,
   onRetry,
@@ -117,24 +119,16 @@ export default function PersonalityTestQuestion({
     .filter(Boolean)
     .join(' ')
 
-  // Xiaoyue speech bubble text. Commentary is set immediately from pre-attached
-  // per-option data so the user sees tailored feedback without a network round-trip.
-  const speechText = postAnswerCommentary
-    ? postAnswerCommentary
-    : progress && progress.answered === 4
-      ? '已经一半了！你的命格轮廓越来越清晰，继续凭直觉选。'
-      : progress && progress.answered === 8
-        ? '太棒了！进入精准阶段，接下来的题目会更聚焦，帮你锁定最像自己的氛围命格。'
-        : question?.questionText ?? ''
+  // Xiaoyue speech bubble carries ONLY the per-option reaction commentary
+  // (set instantly from pre-attached option data, or late from the server).
+  // The question itself already renders in the banner above — typewriting it
+  // here again duplicated the text and stacked extra latency on every question.
+  const speechText = postAnswerCommentary ?? ''
 
-  const isLoadingSpeech = isSubmitting && !postAnswerCommentary
   const isNavLocked = isSubmitting || isSkipping
 
-  // Forces a remount (and typing restart) whenever the speech source changes,
-  // even if two consecutive questions happen to have identical text.
-  const speechKey = postAnswerCommentary
-    ? `commentary-${progress?.answered ?? 0}`
-    : `question-${question?.id ?? 'none'}-${progress?.answered ?? 0}`
+  // Forces a remount (and typing restart) whenever the commentary changes.
+  const speechKey = `commentary-${progress?.answered ?? 0}`
 
   return (
     <View className={pageClassName}>
@@ -190,12 +184,8 @@ export default function PersonalityTestQuestion({
                     aria-hidden='true'
                   />
                 </View>
-                <View
-                  className={`personality-test__speech-bubble${progress && (progress.answered === 4 || progress.answered === 8) ? ' personality-test__speech-bubble--milestone' : ''}`}
-                >
-                  {isLoadingSpeech ? (
-                    <Text className='personality-test__speech-bubble-text'>{speechText}</Text>
-                  ) : (
+                {speechText ? (
+                  <View className='personality-test__speech-bubble'>
                     <TypewriterText
                       key={speechKey}
                       className='personality-test__speech-bubble-text'
@@ -205,38 +195,39 @@ export default function PersonalityTestQuestion({
                       showCursor
                       numberOfLines={3}
                     />
-                  )}
-                </View>
+                  </View>
+                ) : null}
               </View>
             )
           })()
         ) : null}
       </View>
 
-      {/* Zone D: Answers — explicit ScrollView scroll port inside the locked page shell */}
+      {/* Zone D: Answers — explicit ScrollView scroll port inside the locked page shell.
+          No QuestionTransition wrapper here: the option buttons carry their own
+          staggered enter animation (keyed by option value), so wrapping the whole
+          area in a second 360ms enter produced a nested double animation. */}
       <ScrollView className='personality-test__answer-zone' scrollY enhanced showScrollbar={false}>
         {currentQuestion ? (
-          <QuestionTransition questionId={currentQuestion.id}>
-            <PersonalityTestAnswerArea
-              questionType={questionType}
-              options={currentQuestion.options}
-              sliderConfig={currentQuestion.sliderConfig}
-              sliderValue={sliderValue}
-              isSubmitting={isSubmitting}
-              onAnswer={onAnswer}
-              onSliderChange={onSliderChange}
-              onSliderSubmit={onSliderSubmit}
-              committedValue={currentSelection?.value ?? null}
-              hideSliderSubmit={true}
-              onOptionTouchStart={undefined}
-              onOptionTouchEnd={undefined}
-              onOptionTouchMove={undefined}
-            />
-          </QuestionTransition>
+          <PersonalityTestAnswerArea
+            questionType={questionType}
+            options={currentQuestion.options}
+            sliderConfig={currentQuestion.sliderConfig}
+            sliderValue={sliderValue}
+            sliderTouched={sliderTouched}
+            isSubmitting={isSubmitting}
+            onAnswer={onAnswer}
+            onSliderChange={onSliderChange}
+            onSliderSubmit={onSliderSubmit}
+            committedValue={currentSelection?.value ?? null}
+            hideSliderSubmit={true}
+          />
         ) : null}
 
-        {/* Echo overlay — renders on top of answer area during submission */}
-        {(shouldShowEcho || isEchoExiting) && echoEnabled && (
+        {/* Echo overlay — covers the answer zone during submission, but only
+            when there is no instant per-option commentary (the bubble already
+            delivers that feedback; showing both duplicated the beat). */}
+        {(shouldShowEcho || isEchoExiting) && echoEnabled && !postAnswerCommentary && (
           <View
             className={`personality-test__answer-echo-overlay${isEchoExiting ? ' personality-test__answer-echo-overlay--exiting' : ''}`}
             aria-live='polite'
@@ -284,23 +275,37 @@ export default function PersonalityTestQuestion({
         >
           上一题
         </Button>
-        <Button
-          variant='brand'
-          className={[
-            'personality-test__nav-btn',
-            'personality-test__nav-btn--next',
-            !canGoNext || isNavLocked ? 'personality-test__nav-btn--disabled' : '',
-          ].filter(Boolean).join(' ')}
+        {/* Wrapper observes taps that the disabled next Button swallows
+            (slider-gated advance) — analytics only, no visual role. The flex
+            styling mirrors the button's own flex-item rules so the layout is
+            unchanged. */}
+        <View
+          style={{ flex: '1 1 0', minWidth: 0, display: 'flex' }}
           onClick={() => {
-            if (isNavLocked || !canGoNext) return
-            onNext()
+            if (isNavLocked || canGoNext) return
+            if (questionType === 'slider' && !sliderTouched) {
+              onSliderAdvanceBlocked?.()
+            }
           }}
-          disabled={isNavLocked || !canGoNext}
-          loading={isSubmitting}
-          hoverClass='personality-test__nav-btn--active'
         >
-          {isSubmitting ? '提交中…' : '下一题'}
-        </Button>
+          <Button
+            variant='brand'
+            className={[
+              'personality-test__nav-btn',
+              'personality-test__nav-btn--next',
+              !canGoNext || isNavLocked ? 'personality-test__nav-btn--disabled' : '',
+            ].filter(Boolean).join(' ')}
+            onClick={() => {
+              if (isNavLocked || !canGoNext) return
+              onNext()
+            }}
+            disabled={isNavLocked || !canGoNext}
+            loading={isSubmitting}
+            hoverClass='personality-test__nav-btn--active'
+          >
+            {isSubmitting ? '提交中…' : '下一题'}
+          </Button>
+        </View>
       </View>
 
       {/* Skip button */}
@@ -334,7 +339,7 @@ export default function PersonalityTestQuestion({
         ) : (
           <View className='personality-test__skip-hint personality-test__skip-hint--enter'>
             <Text className='personality-test__skip-hint-text'>这些题目都是为你挑选的，试试看～</Text>
-            <Text className='personality-test__skip-hint-subtext'>直觉很准，一题都没跳。</Text>
+            <Text className='personality-test__skip-hint-subtext'>换题次数用完啦，凭直觉选也很准。</Text>
           </View>
         )}
       </View>

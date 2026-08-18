@@ -9,7 +9,7 @@ import { ARCHETYPE_CANONICAL_ORDER } from '../../personality/archetypeNames';
 const ALL_ARCHETYPE_IDS = [...ARCHETYPE_CANONICAL_ORDER];
 
 describe('onboarding archetype voice matrix', () => {
-  it('covers all 12 archetypes × 8 steps in Tier A', () => {
+  it('covers all 12 archetypes × 13 steps in Tier A', () => {
     expect(ALL_ARCHETYPE_IDS).toHaveLength(12);
     for (const archetype of ALL_ARCHETYPE_IDS) {
       const voiceMap = ONBOARDING_VOICE_TABLES.tierA[archetype];

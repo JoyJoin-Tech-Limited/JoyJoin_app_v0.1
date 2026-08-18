@@ -1,18 +1,10 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import Button from '../../../components/ui/Button'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
-import ArchetypeSpritesheet from '../personality-test/results/ArchetypeSpritesheet'
 import {
   getIntroStaticAsset,
   getIntroStaticFallbackAsset,
 } from './visuals'
-
-const INTRO_ARCHETYPE_TEASERS: { archetype: string; vibeLine: string }[] = [
-  { archetype: 'corgi', vibeLine: '一进场，就把气氛带热。' },
-  { archetype: 'fox', vibeLine: '普通话题，也能聊出火花。' },
-  { archetype: 'koala', vibeLine: '会让人慢慢放松下来。' },
-]
 
 const INTRO_TRUST_POINTS = [
   {
@@ -71,12 +63,6 @@ export default function PersonalityTestIntro({
   const introCoachLine = hasStoredIncompleteSession
     ? '进度还在，继续答几分钟就能完成。'
     : '没有标准答案，凭直觉选就好。我会帮你整理出最真实的氛围命格。'
-  const introFooterKicker = hasStoredIncompleteSession
-    ? '再几分钟就能完成，继续吧。'
-    : '先找到你的氛围命格，后面的遇见才会更对味。'
-  const introFooterLine = hasStoredIncompleteSession
-    ? '进度已经留好，从停下的地方继续就行'
-    : '没有标准答案，选最像你的感觉就好'
   const introPrimaryLabel = isSubmitting
     ? '准备中…'
     : error
@@ -87,8 +73,8 @@ export default function PersonalityTestIntro({
 
   return (
     <View className={pageClassName}>
-      {/* Inner scroll port: intro content is intentionally longer than one
-          viewport, so it scrolls inside the locked page shell. */}
+      {/* Inner scroll port: the intro is designed to fit one viewport; the
+          ScrollView stays as a safety port for shorter screens. */}
       <ScrollView
         className='personality-test__intro-shell'
         scrollY
@@ -166,42 +152,14 @@ export default function PersonalityTestIntro({
             <Text className='personality-test__intro-tease-subtitle'>
               不是贴标签，而是帮你找到最对味的人。
             </Text>
-
-            <ScrollView
-              className='personality-test__intro-tease-scroll'
-              scrollX
-              enhanced
-              showScrollbar={false}
-            >
-              <View className='personality-test__intro-tease-list'>
-                {INTRO_ARCHETYPE_TEASERS.map((item) => (
-                  <View
-                    key={item.archetype}
-                    className='personality-test__intro-tease-card'
-                  >
-                    <View className='personality-test__intro-tease-avatar-wrap'>
-                      <ArchetypeSpritesheet
-                        archetype={item.archetype}
-                        size='124rpx'
-                        className='personality-test__intro-tease-avatar'
-                      />
-                    </View>
-                    <Text className='personality-test__intro-tease-name'>
-                      {ARCHETYPE_BY_ID[item.archetype]?.nameCn ?? item.archetype}
-                    </Text>
-                    <Text className='personality-test__intro-tease-vibe'>{item.vibeLine}</Text>
-                  </View>
-                ))}
-              </View>
-            </ScrollView>
+            <Text className='personality-test__intro-tease-line'>
+              12 种氛围命格，答完就知道你是哪一种。
+            </Text>
           </View>
         </View>
       </ScrollView>
 
       <View className='personality-test__intro-footer'>
-        <Text className='personality-test__intro-footer-kicker'>
-          {introFooterKicker}
-        </Text>
         {error ? <Text className='personality-test__error personality-test__error--footer'>{error}</Text> : null}
         <Button
           variant='brand'
@@ -213,7 +171,6 @@ export default function PersonalityTestIntro({
         >
           {introPrimaryLabel}
         </Button>
-        <Text className='personality-test__intro-footer-note'>{introFooterLine}</Text>
       </View>
     </View>
   )

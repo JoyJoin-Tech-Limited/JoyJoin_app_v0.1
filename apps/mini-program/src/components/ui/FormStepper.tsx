@@ -25,9 +25,12 @@ export interface FormStepperProps {
  *
  * Mechanical segmented progress bar design:
  * - Thick segmented blocks (12rpx) that fill with solid brand color
- * - Step label integrated above the bar, centered absolutely
  * - Back button anchored to the left at 32rpx
  * - Each segment represents one step for tangible progress feel
+ *
+ * The macro journey fraction ("装盒中 · 第 N 格") is owned by
+ * BoxJourneySpine — FormStepper intentionally renders no step-count text
+ * so the two indicators never duplicate each other.
  */
 export default function FormStepper({
   currentStep,
@@ -55,11 +58,8 @@ export default function FormStepper({
           </Button>
         ) : null}
 
-        {/* Step status unit: label + segmented bar, absolutely centered */}
+        {/* Step status unit: segmented bar, absolutely centered */}
         <View className='form-stepper__status-unit'>
-          <Text className='form-stepper__step-label'>
-            {`步骤 ${currentStep + 1} / ${totalSteps}`}
-          </Text>
           <View className='form-stepper__segments'>
             {Array.from({ length: totalSteps }, (_, i) => (
               <View

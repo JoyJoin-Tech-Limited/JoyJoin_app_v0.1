@@ -4,18 +4,6 @@
 // consuming page's SCSS or Taro's chunk graph can drop it.
 @use './PersonalityTestAnswerArea.scss' as *;
 
-@keyframes personality-intro-tease-card-enter {
-  from {
-    opacity: 0;
-    transform: translateY(16rpx) scale(0.96);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 @keyframes mascot-breathe {
   0%, 100% {
     transform: scale(1);
@@ -53,21 +41,6 @@
   to {
     opacity: 1;
     transform: translateX(0);
-  }
-}
-
-@keyframes speech-bubble-milestone-pop {
-  0% {
-    opacity: 0.8;
-    transform: scale(0.96);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(1.02);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
   }
 }
 
@@ -386,79 +359,16 @@
     max-width: 100%;
   }
 
-  &__intro-tease-scroll {
+  // Single static tease line — replaced the 3-of-12 archetype card strip so
+  // the intro fits one viewport without scrolling.
+  &__intro-tease-line {
+    display: block;
     margin-top: $spacing-md;
-  }
-
-  &__intro-tease-list {
-    display: inline-flex;
-    gap: $spacing-md;
-    padding-right: $spacing-md;
-  }
-
-  &__intro-tease-card {
-    @include card;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    width: 220rpx;
-    min-width: 220rpx;
-    min-height: 260rpx;
-    padding: 20rpx;
-    border: 2rpx solid rgba($color-border, 0.92);
-    background: rgba($color-surface, 0.96);
-    box-shadow: 0 10rpx 28rpx rgba(0, 0, 0, 0.05);
-    animation: personality-intro-tease-card-enter 0.42s ease-out both;
-
-    &:nth-child(1) {
-      animation-delay: 80ms;
-    }
-
-    &:nth-child(2) {
-      animation-delay: 180ms;
-    }
-
-    &:nth-child(3) {
-      animation-delay: 280ms;
-    }
-  }
-
-  &__intro-tease-avatar-wrap {
-    position: relative;
-    width: 132rpx;
-    height: 132rpx;
-    margin: 0 auto $spacing-sm;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  &__intro-tease-avatar {
-    width: 124rpx;
-    height: 124rpx;
-  }
-
-  &__intro-tease-name {
-    display: block;
-    width: 100%;
-    min-width: 0;
     font-size: $font-size-sm;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-    text-align: center;
-    line-height: 1.4;
-  }
-
-  &__intro-tease-vibe {
-    display: block;
-    width: 100%;
-    min-width: 0;
-    flex: 1;
-    margin-top: 8rpx;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    line-height: 1.56;
-    text-align: center;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    line-height: 1.6;
+    max-width: 100%;
   }
 
   &__intro-footer {
@@ -470,16 +380,6 @@
     z-index: 8;
     background: $color-surface;
     box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
-  }
-
-  &__intro-footer-kicker {
-    display: block;
-    margin-bottom: $spacing-sm;
-    font-size: $font-size-sm;
-    color: $color-text-primary;
-    font-weight: $font-weight-medium;
-    text-align: center;
-    line-height: 1.6;
   }
 
   &__start-btn {
@@ -525,15 +425,6 @@
     &--footer {
       margin: 0 0 $spacing-sm;
     }
-  }
-
-  &__intro-footer-note {
-    display: block;
-    margin-top: $spacing-sm;
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-    text-align: center;
-    line-height: 1.56;
   }
 
   // ───────────────────────────────────────────
@@ -992,14 +883,6 @@
     border-left: 3rpx solid rgba($color-primary, 0.25);
     box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.035);
     transition: background 0.3s ease, border-color 0.3s ease;
-
-    &--milestone {
-      background: $color-bg-tint-cream;
-      border-color: rgba($color-secondary, 0.12);
-      border-left-color: rgba($color-secondary, 0.4);
-      box-shadow: 0 4rpx 20rpx rgba($color-secondary, 0.06);
-      animation: speech-bubble-milestone-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
   }
 
   &__speech-bubble-text {
@@ -1038,12 +921,6 @@
       transform: none !important;
     }
 
-    &__intro-tease-card {
-      animation: none;
-      opacity: 1;
-      transform: none;
-    }
-
     &__progress-fill {
       transition: none;
     }
@@ -1052,10 +929,6 @@
       animation: none;
       opacity: 1;
       transform: none;
-    }
-
-    &__speech-bubble--milestone {
-      animation: none;
     }
 
     &__nav-row,

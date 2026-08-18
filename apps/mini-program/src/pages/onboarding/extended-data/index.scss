@@ -194,6 +194,16 @@
     line-height: 1.55;
   }
 
+  // R3-9 archetype-voiced per-category hint: reads as Xiaoyue's whisper
+  // under the functional description, so it carries the brand purple tint.
+  &__category-hint {
+    display: block;
+    margin-top: 4rpx;
+    font-size: $font-size-xs;
+    color: $color-primary-dark;
+    line-height: 1.55;
+  }
+
   &__category-count {
     flex-shrink: 0;
     font-size: $font-size-xs;
@@ -261,6 +271,65 @@
     // otherwise paint over the bubble.
     &--hint {
       z-index: 2;
+    }
+
+    // Ghost-tap demo (first visit only): the card gently dips on each
+    // simulated tap while the tint overlays crossfade L1 → L2 heat.
+    // A short delay lets the page subtitle/legend finish entering first.
+    &--demo {
+      animation: extended-data-demo-card 2.8s ease-in-out 0.8s infinite;
+    }
+  }
+
+  // Demo overlays paint above the card background but below the label text
+  // and tap rings, so the readable layer stays crisp while the heat tints
+  // and ripples read as background effects.
+  &__interest-card--demo &__interest-card-top,
+  &__interest-card--demo &__interest-meta {
+    position: relative;
+    z-index: 3;
+  }
+
+  &__tap-demo {
+    position: absolute;
+    inset: 0;
+    border-radius: $card-radius-sm;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  &__tap-demo-tint {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+
+    &--l1 {
+      background: rgba($heat-l1, 0.16);
+      animation: extended-data-demo-tint-l1 2.8s ease-in-out 0.8s infinite;
+    }
+
+    &--l2 {
+      background: rgba($heat-l2, 0.20);
+      animation: extended-data-demo-tint-l2 2.8s ease-in-out 0.8s infinite;
+    }
+  }
+
+  // Contracting ring = the "tap" itself. Two rings per loop teach multi-tap.
+  &__tap-demo-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 2;
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 50%;
+    border: 3rpx solid rgba($heat-l2, 0.65);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.6);
+    animation: extended-data-demo-ring 2.8s ease-out 0.8s infinite;
+
+    &--2 {
+      animation-delay: 1.92s;
     }
   }
 
@@ -330,7 +399,7 @@
     max-width: 560rpx;
     padding: 10rpx 20rpx;
     background: $color-text-primary;
-    border-radius: 16rpx;
+    border-radius: $radius-md;
     box-shadow: 0 8rpx 24rpx rgba($color-text-primary, 0.16);
     white-space: nowrap;
     pointer-events: none;
@@ -341,6 +410,25 @@
       top: calc(100% + 12rpx);
       animation-name: extended-data-coachmark-in-below;
     }
+  }
+
+  // Tap affordance glyph: solid dot + expanding pulse ring, reads as
+  // "press here" on the dark bubble. Shown on every per-tap coachmark.
+  &__coachmark-tap {
+    position: relative;
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    background: $color-surface;
+    flex-shrink: 0;
+  }
+
+  &__coachmark-tap-pulse {
+    position: absolute;
+    inset: -6rpx;
+    border-radius: 50%;
+    border: 2rpx solid rgba($color-surface, 0.8);
+    animation: extended-data-coachmark-tap 1.2s ease-out infinite;
   }
 
   // Level-colored dot ties the guidance to the heat system it teaches.
@@ -364,6 +452,9 @@
   }
 
   &__coachmark-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: $font-size-xs;
     line-height: 1.45;
     color: $color-surface;
@@ -385,6 +476,7 @@
   &__coachmark--below &__coachmark-arrow {
     bottom: auto;
     top: -8rpx;
+    box-shadow: -6rpx -6rpx 14rpx rgba($color-text-primary, 0.1);
   }
 
   &__milestone-toast {
@@ -433,7 +525,6 @@
 
   &__footer {
     box-sizing: border-box;
-    min-height: 220rpx;
     padding: $spacing-md $container-padding;
     @include safe-area-inline($container-padding);
     @include safe-area-bottom-padding(padding-bottom, $spacing-md);
@@ -443,25 +534,19 @@
 
   &__footer-summary {
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
     gap: $spacing-sm;
     margin-bottom: $spacing-sm;
-    padding: $spacing-md;
+    padding: $spacing-sm $spacing-md;
     border-radius: $card-radius-sm;
     background: rgba($color-primary-light, 0.35);
     border: 1rpx solid rgba($color-primary, 0.12);
   }
 
-  &__footer-coach {
-    display: block;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-    line-height: 1.45;
-    text-align: center;
-  }
-
   &__footer-thermometer {
+    flex: 1;
+    min-width: 0;
     display: flex;
     gap: 8rpx;
     height: 18rpx;
@@ -480,96 +565,11 @@
   }
 
   &__footer-combined-stat {
-    display: block;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    text-align: center;
-    line-height: 1.4;
-  }
-
-  &__footer-heat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    // 4rpx micro-gap: value + micro-copy are a single stat unit.
-    gap: 4rpx;
-  }
-
-  &__footer-heat-value {
-    display: block;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-black;
-    color: $color-primary;
-    line-height: 1.2;
-  }
-
-  &__footer-heat-micro {
-    display: block;
-    font-size: $font-size-2xs;
-    color: $color-text-tertiary;
-    line-height: 1.35;
-  }
-
-  &__footer-summary-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8rpx;
-    justify-content: center;
-  }
-
-  &__footer-summary-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8rpx;
-    padding: 8rpx 14rpx;
-    border-radius: 999rpx;
-    background: rgba($color-primary-light, 0.40);
-    border: 2rpx solid rgba($color-primary, 0.12);
-
-    &--level-2 {
-      background: rgba($heat-l2, 0.18);
-      border-color: rgba($heat-l2, 0.36);
-    }
-
-    &--level-3 {
-      background: rgba($heat-l3, 0.22);
-      border-color: rgba($heat-l3, 0.52);
-      box-shadow: 0 4rpx 12rpx rgba($heat-l3, 0.12);
-    }
-  }
-
-  &__footer-summary-chip-label {
-    font-size: $font-size-2xs;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-  }
-
-  &__footer-summary-chip-meta {
-    font-size: $font-size-2xs;
-    color: $color-text-secondary;
-  }
-
-  &__footer-story-pill {
-    align-self: center;
-    display: inline-flex;
-    align-items: center;
-    gap: 8rpx;
-    padding: 8rpx 16rpx;
-    border-radius: 999rpx;
-    background: rgba($color-secondary, 0.12);
-    border: 1rpx solid rgba($color-secondary, 0.22);
-  }
-
-  &__footer-story-pill-icon {
     flex-shrink: 0;
-  }
-
-  &__footer-story-pill-text {
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
-    color: $color-secondary;
-    line-height: 1.35;
+    color: $color-text-primary;
+    line-height: 1.4;
   }
 
   &__error {
@@ -620,6 +620,21 @@
       &--popping {
         animation: none;
       }
+
+      &--demo {
+        animation: none;
+      }
+    }
+
+    // Static fallback: no ghost-tap loop — the subtitle copy and heat-guide
+    // legend carry the multi-tap teaching without motion.
+    &__tap-demo {
+      display: none;
+    }
+
+    &__coachmark-tap-pulse {
+      animation: none;
+      opacity: 0;
     }
 
     &__coachmark {
@@ -652,6 +667,100 @@
         transform: none;
       }
     }
+  }
+}
+
+// Ghost-tap demo loop (2.8s): tap ring 1 → L1 tint → tap ring 2 → L2 tint →
+// hold → fade out. Transform/opacity only; tints crossfade via opacity.
+@keyframes extended-data-demo-ring {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.6);
+  }
+
+  6% {
+    opacity: 0.55;
+  }
+
+  14% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+}
+
+@keyframes extended-data-demo-tint-l1 {
+  0%,
+  7% {
+    opacity: 0;
+  }
+
+  14%,
+  40% {
+    opacity: 1;
+  }
+
+  46%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes extended-data-demo-tint-l2 {
+  0%,
+  48% {
+    opacity: 0;
+  }
+
+  54%,
+  80% {
+    opacity: 1;
+  }
+
+  92%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes extended-data-demo-card {
+  0%,
+  4% {
+    transform: scale(1);
+  }
+
+  7% {
+    transform: scale(0.965);
+  }
+
+  12%,
+  42% {
+    transform: scale(1);
+  }
+
+  46% {
+    transform: scale(0.965);
+  }
+
+  52%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes extended-data-coachmark-tap {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.6);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
   }
 }
 

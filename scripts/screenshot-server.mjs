@@ -823,9 +823,10 @@ async function captureGatheringRoom(viewport = V17_VIEWPORT) {
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
 
     await page.waitForSelector('.gathering-room__action-bar', { state: 'visible', timeout: 15000 })
-    // All six seats rendered.
+    // Present members rendered: the owl is excluded from WS presence, so only
+    // five seats mount — absent members show a held-place name card only.
     await page.waitForFunction(
-      () => document.querySelectorAll('.gathering-room-scene__seat').length === 6,
+      () => document.querySelectorAll('.gathering-room-scene__seat').length === 5,
       undefined,
       { timeout: 10000 }
     )
@@ -835,17 +836,16 @@ async function captureGatheringRoom(viewport = V17_VIEWPORT) {
       const text = document.querySelector('.gathering-room__header-subtitle')?.textContent ?? ''
       return text.includes('还有') && /已到\s*5\/6/.test(text) && /已确认\s*2\/6/.test(text)
     }, undefined, { timeout: 15000 })
-    // Absent-member path rendered: the owl is excluded from WS presence, so a
-    // name card remains at its seat while its avatar queues at the door.
+    // Absent-member path rendered: a name card holds the owl's seat.
     await page.waitForFunction(
       () => document.querySelectorAll('.gathering-room-scene__name-card').length >= 1,
       undefined,
       { timeout: 10000 }
     )
-    // Every avatar resolved to its approved full-starter composite.
+    // Every rendered avatar resolved to its approved full-starter composite.
     await page.waitForFunction(() => {
       const bodies = Array.from(document.querySelectorAll('.pixel-avatar-composite__body'))
-      return bodies.length === 6 && bodies.every((el) =>
+      return bodies.length === 5 && bodies.every((el) =>
         /full-starter-v2\.[a-f0-9]{12}\.webp/.test(el.getAttribute('src') ?? ''))
     }, undefined, { timeout: 10000 })
     // No avatar fell back to the error/placeholder state.

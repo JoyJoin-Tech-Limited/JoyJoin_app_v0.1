@@ -1,6 +1,5 @@
 import { View, Text } from '@tarojs/components'
-import Taro from '@tarojs/taro'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 // Styles are @use'd by the consuming pages' SCSS — a component-level SCSS
 // import would be chunked into the page-invisible sub-common.wxss.
@@ -28,44 +27,22 @@ interface BoxJourneySpineProps {
   className?: string
 }
 
-const SPINE_COPY: Record<BoxJourneyStep, { status: string; fraction: string; hint: string }> = {
-  1: { status: '装盒中 · ', fraction: '第 1 格', hint: '约 2 分钟' },
-  2: { status: '装盒中 · ', fraction: '第 2 格', hint: '约 1 分钟' },
-  3: { status: '装盒完成 · ', fraction: '准备开盒', hint: '' },
+const SPINE_COPY: Record<BoxJourneyStep, { status: string; fraction: string }> = {
+  1: { status: '装盒中 · ', fraction: '第 1 格' },
+  2: { status: '装盒中 · ', fraction: '第 2 格' },
+  3: { status: '装盒完成 · ', fraction: '准备开盒' },
 }
 
 const DEFAULT_ACCENT = '#8B5CF6'
 
-function readIsShortScreen(): boolean {
-  try {
-    const wi = Taro.getWindowInfo?.()
-    if (wi && typeof wi.windowHeight === 'number') return wi.windowHeight < 640
-  } catch {
-    /* ignore */
-  }
-  try {
-    const s = Taro.getSystemInfoSync()
-    if (typeof s.windowHeight === 'number') return s.windowHeight < 640
-  } catch {
-    /* ignore */
-  }
-  return false
-}
-
 export default function BoxJourneySpine({ step, accentColor, className = '' }: BoxJourneySpineProps) {
-  const [isShortScreen, setIsShortScreen] = useState(false)
   const [reduceMotion] = useState(() => getSystemReducedMotion())
-
-  useEffect(() => {
-    setIsShortScreen(readIsShortScreen())
-  }, [])
 
   const copy = SPINE_COPY[step]
   const tint = accentColor || DEFAULT_ACCENT
   const rootClass = [
     'box-journey-spine',
     `box-journey-spine--step-${step}`,
-    isShortScreen ? 'box-journey-spine--short' : '',
     reduceMotion ? 'box-journey-spine--rm' : '',
     className,
   ]
@@ -90,9 +67,6 @@ export default function BoxJourneySpine({ step, accentColor, className = '' }: B
       <Text className='box-journey-spine__text'>
         {copy.status}
         <Text className='box-journey-spine__fraction'>{copy.fraction}</Text>
-        {!isShortScreen && copy.hint ? (
-          <Text className='box-journey-spine__hint'> · {copy.hint}</Text>
-        ) : null}
       </Text>
     </View>
   )

@@ -19,6 +19,7 @@ import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/utils/uiConstants
 import { useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
+import { useStepAbandonGuard } from '../../../hooks/onboarding/useStepAbandonGuard'
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
 import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes'
@@ -32,6 +33,7 @@ import { evaluateProfessionInputQuality, isMeaningfulProfessionInput } from '../
 import { sanitizeIndustrySource } from '../../../lib/onboarding/professionSubmissionGuard'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import IntentCard from '../../../components/intent/IntentCard'
 import type { IntentCardOption } from '../../../components/intent/IntentCard'
 import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
@@ -39,7 +41,7 @@ import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import FormStepper from '../../../components/ui/FormStepper'
 import BoxJourneySpine from '../../../components/onboarding/BoxJourneySpine'
 import { getOnboardingVoiceLine, type OnboardingVoiceStepId } from '@shared/copy/onboardingVoice'
-import type { EssentialDataStepId } from './stepIds'
+import { ESSENTIAL_DATA_STEP_IDS, type EssentialDataStepId } from './stepIds'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import ProfessionChatOverlay from '../../../components/ProfessionChatOverlay'
 import ContentBlockedError from '../../../components/ContentBlockedError'
@@ -47,17 +49,37 @@ import type { ProfessionClassificationData } from '../../../components/Professio
 import { getArchetypeVisual } from '../personality-test/visuals'
 import './index.scss'
 
+// Convert a 6-digit hex accent color to rgba for inline shadows.
+// Avoids 8-digit hex alpha, which older WeChat base libraries may not parse.
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '')
+  const full = clean.length === 3
+    ? clean.split('').map((c) => c + c).join('')
+    : clean
+  const bigint = parseInt(full, 16)
+  const r = (bigint >> 16) & 255
+  const g = (bigint >> 8) & 255
+  const b = bigint & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
 const MAX_INTENTS = 3
 const currentYear = new Date().getFullYear()
 const BIRTH_YEAR_RANGE = Array.from(
   { length: currentYear - 1970 - 17 },
   (_, index) => currentYear - 18 - index,
 )
+// Picker wheel opens at ~28 years old instead of the 18-year-old top of the
+// range, so the median user scrolls a few rows rather than seventeen.
+const DEFAULT_BIRTH_YEAR_INDEX = Math.max(0, BIRTH_YEAR_RANGE.indexOf(currentYear - 28))
+// Optional pickers open on a neutral entry so an unscrolled wheel + 确定 can
+// never silently record a wrong fact (单身 / 香港) about the user.
+const DEFAULT_RELATIONSHIP_INDEX = Math.max(0, RELATIONSHIP_STATUS_OPTIONS.indexOf('不透露'))
+const DEFAULT_CITY_INDEX = Math.max(0, CURRENT_CITY_OPTIONS.indexOf('深圳'))
 
 interface StepConfig {
   id: EssentialDataStepId
   title: string
-  subtitle: string
   mascotPose: 'thinking' | 'casual' | 'pointing'
 }
 
@@ -69,47 +91,56 @@ const STEP_CONFIG: StepConfig[] = [
   {
     id: 'displayName',
     title: '大家怎么称呼你？',
-    subtitle: '这是大家在活动中看到的名字',
-    mascotPose: 'casual',
-  },
-  {
-    id: 'genderBirthday',
-    title: '基本信息',
-    subtitle: '帮助匹配更合适的活动',
-    mascotPose: 'pointing',
-  },
-  {
-    id: 'professionalProfile',
-    title: '你的职业身份',
-    subtitle: '学历+行业一起搞定',
-    mascotPose: 'pointing',
-  },
-  {
-    id: 'lifeStage',
-    title: '你现在处于哪个阶段？',
-    subtitle: '相同人生阶段的人更容易聊到一起',
-    mascotPose: 'thinking',
-  },
-  {
-    id: 'location',
-    title: '你从哪来，在哪混？',
-    subtitle: '老乡见老乡，两眼泪汪汪',
     mascotPose: 'casual',
   },
   {
     id: 'intent',
     title: '这次聚会，你最想……',
-    subtitle: '选得越准，同桌的人越对味',
+    mascotPose: 'casual',
+  },
+  {
+    id: 'aboutYou',
+    title: '聊聊你的基本情况',
+    mascotPose: 'pointing',
+  },
+  {
+    id: 'professionalProfile',
+    title: '你的职业身份',
+    mascotPose: 'pointing',
+  },
+  {
+    id: 'location',
+    title: '你从哪来，在哪混？',
     mascotPose: 'casual',
   },
 ]
+
+/**
+ * Content-violation field → owning step. Used to jump the wizard back to the
+ * step containing the offending field when the server rejects the submit.
+ */
+const FIELD_TO_STEP_ID: Record<string, EssentialDataStepId> = {
+  displayName: 'displayName',
+  intent: 'intent',
+  gender: 'aboutYou',
+  birthYear: 'aboutYou',
+  lifeStage: 'aboutYou',
+  educationLevel: 'professionalProfile',
+  occupationId: 'professionalProfile',
+  industryRawInput: 'professionalProfile',
+  relationshipStatus: 'professionalProfile',
+  currentCity: 'location',
+  hometownRegionCity: 'location',
+}
 
 const TOTAL_STEPS = STEP_CONFIG.length
 
 const ESSENTIAL_DATA_CACHE_KEY = 'joyjoin_essential_data_progress'
 
 interface CachedProgress {
-  currentStep: number
+  // Step is persisted by id (not index) so a mid-onboarding deploy that
+  // reorders steps never resumes a user on the wrong screen.
+  currentStepId?: EssentialDataStepId
   displayName: string
   gender: string
   birthYear: number
@@ -184,6 +215,11 @@ export default function EssentialDataPage() {
   const { shouldReduceMotion } = useMiniRevealMotion()
   const [currentStep, setCurrentStep] = useState(0)
   const [displayName, setDisplayName] = useState('')
+  // True only when the displayName value was prefilled from the user's stored
+  // WeChat nickname (no typed value, no cache, no server displayName). Drives
+  // the "已带入你的微信昵称" hint; cleared the moment the user edits the field.
+  const [namePrefilledFromWeChat, setNamePrefilledFromWeChat] = useState(false)
+  const hasEditedDisplayNameRef = useRef(false)
   const [gender, setGender] = useState('')
   const [birthYear, setBirthYear] = useState(0)
   const [currentCity, setCurrentCity] = useState('')
@@ -221,6 +257,26 @@ export default function EssentialDataPage() {
   const analytics = useOnboardingAnalytics('essential-data', { enabled: !isLoading })
   const { saveCheckpoint } = useOnboardingCheckpoint()
 
+  // R1-3 funnel: mid-wizard exit (swipe-back / forward nav / app background /
+  // unload) without completing fires step_abandoned once per visit; the guard
+  // suppresses the post-submit navigation so it never false-positives.
+  const { markCompleted: markWizardCompleted } = useStepAbandonGuard(() => {
+    if (isLoading) return
+    analytics.stepAbandoned('exit', {
+      stepId: STEP_CONFIG[currentStep]?.id,
+      stepIndex: currentStep,
+    })
+  })
+
+  // Per-substep enter signal — stepId + stepIndex pair with the per-substep
+  // step_completed fired in handleNext.
+  useEffect(() => {
+    if (isLoading) return
+    const stepId = STEP_CONFIG[currentStep]?.id
+    if (!stepId) return
+    analytics.stepEnter({ stepId, stepIndex: currentStep })
+  }, [analytics, currentStep, isLoading])
+
   // Restore from cache or user data on mount
   useEffect(() => {
     if (isLoading || !user) return
@@ -228,7 +284,16 @@ export default function EssentialDataPage() {
     const cached = readCachedProgress()
     const source = user as unknown as Record<string, unknown>
 
-    setDisplayName((c) => c || cached?.displayName || (typeof source.displayName === 'string' ? source.displayName : '') || '')
+    // WeChat nickname prefill (R3-8): slots in below the existing priority
+    // (typed value → cache → server displayName) as the last default, so the
+    // first screen feels half-answered for users whose nickname was captured.
+    const cachedDisplayName = cached?.displayName || ''
+    const serverDisplayName = typeof source.displayName === 'string' ? source.displayName : ''
+    const wechatNickname = typeof source.wechatNickname === 'string' ? source.wechatNickname.trim() : ''
+    setDisplayName((c) => c || cachedDisplayName || serverDisplayName || wechatNickname)
+    if (wechatNickname !== '' && cachedDisplayName === '' && serverDisplayName === '' && !hasEditedDisplayNameRef.current) {
+      setNamePrefilledFromWeChat(true)
+    }
     setGender((c) => c || cached?.gender || (typeof source.gender === 'string' ? source.gender : '') || '')
     setBirthYear((c) => c || cached?.birthYear || getBirthYear(source))
     setCurrentCity((c) => c || cached?.currentCity || (typeof source.currentCity === 'string' ? source.currentCity : '') || '')
@@ -245,13 +310,16 @@ export default function EssentialDataPage() {
     })
     setLifeStage((c) => c || cached?.lifeStage || getLifeStage(source))
     setIntent((c) => (c.length > 0 ? c : cached?.intent || (Array.isArray(source.intent) ? source.intent.filter((item): item is string => typeof item === 'string') : [])))
-    setCurrentStep((c) => (c === 0 && cached?.currentStep ? Math.min(cached.currentStep, TOTAL_STEPS - 1) : c))
+    // Legacy caches stored a numeric step index; those are ignored (fields
+    // still restore) so a stale index can never land on the wrong step.
+    const cachedStepIndex = cached?.currentStepId ? ESSENTIAL_DATA_STEP_IDS.indexOf(cached.currentStepId) : -1
+    setCurrentStep((c) => (c === 0 && cachedStepIndex > 0 ? cachedStepIndex : c))
   }, [user, isLoading])
 
   // Auto-save to cache on field changes
   useEffect(() => {
     saveCachedProgress({
-      currentStep,
+      currentStepId: STEP_CONFIG[currentStep]?.id,
       displayName,
       gender,
       birthYear,
@@ -310,33 +378,27 @@ export default function EssentialDataPage() {
       case 0:
         return displayName.trim().length >= 1
       case 1:
-        return gender !== '' && birthYear > 0
+        return intent.length > 0
       case 2:
-        return true
+        return gender !== '' && birthYear > 0 && lifeStage !== ''
       case 3:
-        return lifeStage !== ''
+        return true
       case 4:
         return currentCity !== ''
-      case 5:
-        return intent.length > 0
       default:
         return false
     }
   }, [currentStep, displayName, gender, birthYear, lifeStage, currentCity, intent.length])
 
   const handleNext = useCallback(() => {
-    if (!isStepValid) {
-      analytics.validationFailed('step', `step-${currentStep}-incomplete`)
-      Taro.showToast({ title: '请完成当前步骤', icon: 'none', duration: TOAST_DEFAULT_MS })
-      return
-    }
+    if (!isStepValid) return
     if (currentStep < TOTAL_STEPS - 1) {
-      analytics.stepCompleted({ stepId: stepConfig.id, stepNumber: currentStep + 1 })
+      analytics.stepCompleted({ stepId: stepConfig.id, stepIndex: currentStep, stepNumber: currentStep + 1 })
       haptics('medium')
       setCurrentStep((s) => s + 1)
       setMascotReaction('')
     }
-  }, [isStepValid, currentStep, analytics, stepConfig.id])
+  }, [currentStep, analytics, stepConfig.id, isStepValid])
 
   const handleBack = useCallback(() => {
     if (currentStep > 0) {
@@ -355,6 +417,14 @@ export default function EssentialDataPage() {
         cancelText: '继续填写',
       })
       if (!confirm) return
+      // Force-skip is a deliberate mid-wizard exit: count it as an abandonment
+      // of the current sub-step, then complete the guard so the navigation
+      // away doesn't double-fire.
+      analytics.stepAbandoned('force_skip', {
+        stepId: STEP_CONFIG[currentStep]?.id,
+        stepIndex: currentStep,
+      })
+      markWizardCompleted()
       setIsSubmitting(true)
       const response = await apiRequest<AuthUserResponse>({ path: '/api/auth/onboarding/force-skip', method: 'POST' })
       await invalidateAuth()
@@ -366,7 +436,7 @@ export default function EssentialDataPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [invalidateAuth])
+  }, [analytics, currentStep, invalidateAuth, markWizardCompleted])
 
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return
@@ -412,6 +482,8 @@ export default function EssentialDataPage() {
         fieldsCompleted: Object.keys(payload).length,
         nextStep: userState.nextStep ?? 'extended-data',
       })
+      // Submit succeeded — the onward navigation must not count as abandonment.
+      markWizardCompleted()
 
       Taro.showToast({ title: '入场名片已保存', icon: 'success', duration: TOAST_DEFAULT_MS })
       await navigateToMiniProgramNextStep(userState.nextStep, {
@@ -429,13 +501,14 @@ export default function EssentialDataPage() {
         if (field) {
           setContentViolations((prev) => ({ ...prev, [field]: fieldMessage }))
           // Navigate to the step containing this field if needed
-          if (field === 'displayName' && currentStep !== 0) {
-            setCurrentStep(0)
+          const targetStepId = FIELD_TO_STEP_ID[field]
+          const targetStep = targetStepId ? STEP_CONFIG.findIndex((s) => s.id === targetStepId) : -1
+          if (targetStep >= 0 && currentStep !== targetStep) {
+            setCurrentStep(targetStep)
           }
           setError('')
         } else {
           setError(fieldMessage)
-          Taro.showToast({ title: fieldMessage, icon: 'none', duration: TOAST_FATAL_MS })
         }
 
         analytics.errorOccurred('content_violation', fieldMessage)
@@ -447,11 +520,10 @@ export default function EssentialDataPage() {
       setError(message)
       analytics.errorOccurred('submit_failed', message)
       logError('[EssentialData] Submit failed', { message })
-      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, professionText, professionClassification, relationshipStatus, saveCheckpoint, lifeStage, currentStep])
+  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, markWizardCompleted, professionText, professionClassification, relationshipStatus, saveCheckpoint, lifeStage, currentStep])
 
   const handleProfessionSubmit = useCallback((value: string, classification?: ProfessionClassificationData) => {
     const quality = evaluateProfessionInputQuality(value)
@@ -551,7 +623,7 @@ export default function EssentialDataPage() {
   if (isLoading) {
     return (
       <OnboardingLoadingShell
-        stepLabel='Onboarding 2 / 4'
+        stepLabel='装盒中 · 第 1 格'
         title={`${getMascotDisplayName(user)}在整理你的入场名片`}
         subtitle='把这一步铺好后，后面的兴趣热度和资料预览都会顺滑接上。'
       />
@@ -608,8 +680,11 @@ export default function EssentialDataPage() {
                 <Input
                   className={`essential-data__input ${contentViolations.displayName ? 'essential-data__input--error' : ''}`}
                   placeholder='大家在活动里会怎么称呼你'
+                  type='nickname'
                   value={displayName}
                   onInput={(e) => {
+                    hasEditedDisplayNameRef.current = true
+                    setNamePrefilledFromWeChat(false)
                     setDisplayName(e.detail.value)
                     setContentViolations((prev) => ({ ...prev, displayName: '' }))
                   }}
@@ -619,6 +694,9 @@ export default function EssentialDataPage() {
                   }}
                   maxlength={20}
                 />
+                {namePrefilledFromWeChat && (
+                  <Text className='essential-data__hint essential-data__hint--prefill'>已带入你的微信昵称，可以改</Text>
+                )}
                 <Text className='essential-data__hint'>1-20 个字符，会显示在活动和匹配资料里。</Text>
                 <ContentBlockedError
                   message={contentViolations.displayName || ''}
@@ -634,8 +712,19 @@ export default function EssentialDataPage() {
             </Card>
           )}
 
-          {/* Step 2: Gender + Birth year */}
+          {/* Step 1: Intent */}
           {currentStep === 1 && (
+            <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
+              <View className='essential-data__field'>
+                <Text className='essential-data__label'>这次更想收获什么</Text>
+                {intentGrid}
+                <Text className='essential-data__hint'>最多可选 {MAX_INTENTS} 个，多选会影响后续活动推荐。</Text>
+              </View>
+            </Card>
+          )}
+
+          {/* Step 2: About you — gender + birth year + life stage */}
+          {currentStep === 2 && (
             <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>
@@ -664,16 +753,22 @@ export default function EssentialDataPage() {
                 <Picker
                   mode='selector'
                   range={BIRTH_YEAR_RANGE}
-                  value={birthYearIndex >= 0 ? birthYearIndex : 0}
+                  value={birthYearIndex >= 0 ? birthYearIndex : DEFAULT_BIRTH_YEAR_INDEX}
                   onChange={(e) => {
-                    const year = BIRTH_YEAR_RANGE[Number(e.detail.value)] ?? 0
+                    const selectedIndex = Number(e.detail.value)
+                    const year = BIRTH_YEAR_RANGE[selectedIndex] ?? 0
                     setBirthYear(year)
-                    triggerMascotReaction(` ${year}年，正是好年纪！✨`)
+                    // P1 polish validation: picker confirmed on the resting
+                    // wheel position (opened at the default, never scrolled).
+                    if (birthYear === 0 && selectedIndex === DEFAULT_BIRTH_YEAR_INDEX) {
+                      analytics.interaction('picker_default_adopted', { field: 'birthYear', value: year })
+                    }
+                    triggerMascotReaction(`${year}年，正是好年纪！`)
                   }}
                 >
                   <View
                     className={['essential-data__picker', birthYear > 0 ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}
-                    style={birthYear > 0 && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
+                    style={birthYear > 0 && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${hexToRgba(accentColor, 0.12)}` } : undefined}
                     aria-label={birthYear > 0 ? `出生年份：${birthYear} 年` : '请选择出生年份'}
                   >
                     <Text className={['essential-data__picker-text', birthYear > 0 ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
@@ -681,108 +776,13 @@ export default function EssentialDataPage() {
                     </Text>
                     {birthYear > 0 && (
                       <View className='essential-data__picker-check' style={accentColor ? { background: accentColor } : undefined}>
-                        <Text className='essential-data__picker-check-icon'>✓</Text>
+                        <JoyJoinIcon emoji='✓' tier='status' size={20} className='essential-data__picker-check-icon' />
                       </View>
                     )}
                   </View>
                 </Picker>
               </View>
-            </Card>
-          )}
 
-          {/* Step 3: Education + Occupation + Relationship */}
-          {currentStep === 2 && (
-            <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
-              <View className='essential-data__field'>
-                <Text className='essential-data__label'>学历</Text>
-                <View className='essential-data__choice-row essential-data__choice-row--wrap'>
-                  {EDUCATION_LEVEL_OPTIONS.map((option) => {
-                    const selected = educationLevel === option
-                    return (
-                      <View
-                        key={option}
-                        className={['essential-data__choice-chip', 'essential-data__choice-chip--compact', selected ? 'essential-data__choice-chip--selected' : ''].filter(Boolean).join(' ')}
-                        onClick={() => setEducationLevel(selected ? '' : option)}
-                      >
-                        <Text className='essential-data__choice-chip-text'>{option}</Text>
-                      </View>
-                    )
-                  })}
-                </View>
-              </View>
-
-              <View className='essential-data__field'>
-                <Text className='essential-data__label'>{occupationGuidance.title}</Text>
-                <View
-                  className={[
-                    'essential-data__picker',
-                    professionText !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta',
-                  ].filter(Boolean).join(' ')}
-                  style={professionText !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
-                  onClick={() => setShowProfessionOverlay(true)}
-                  aria-label={professionText !== '' ? `职业：${professionText}` : '选填（点击告诉悦仔你的职业）'}
-                >
-                  <Text
-                    className={[
-                      'essential-data__picker-text',
-                      professionText !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta',
-                    ].filter(Boolean).join(' ')}
-                  >
-                    {professionText !== '' ? professionText : '选填（点击告诉悦仔）'}
-                  </Text>
-                  {professionText !== '' && (
-                    <View className='essential-data__picker-check' style={accentColor ? { background: accentColor } : undefined}>
-                      <Text className='essential-data__picker-check-icon'>✓</Text>
-                    </View>
-                  )}
-                </View>
-                <Text className='essential-data__hint'>
-                  {professionText !== '' ? '已记录，我会用它来优化匹配~' : occupationGuidance.matchPreview}
-                </Text>
-              </View>
-
-              <View className='essential-data__field'>
-                <Text className='essential-data__label'>关系状态</Text>
-                <Picker
-                  mode='selector'
-                  range={relationshipOptions}
-                  value={relationshipIndex >= 0 ? relationshipIndex : 0}
-                  onChange={(e) => {
-                    const status = relationshipOptions[Number(e.detail.value)] ?? ''
-                    setRelationshipStatus(status)
-                    const reactions: Record<string, string> = {
-                      '单身': '单身贵族！悦仔记住了~ 💫',
-                      '恋爱中': '甜甜蜜蜜！祝你们幸福~ 💕',
-                      '已婚/伴侣': '稳定的幸福，很踏实~ 🏠',
-                      '离异': '新的篇章，新的开始~ ✨',
-                      '丧偶': '感谢你愿意信任我们~ 🤝',
-                      '不透露': '保持神秘感也是一种魅力~ 😉',
-                    }
-                    triggerMascotReaction(reactions[status] || '了解！')
-                  }}
-                >
-                  <View
-                    className={['essential-data__picker', relationshipStatus !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}
-                    style={relationshipStatus !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
-                    aria-label={relationshipStatus !== '' ? `关系状态：${relationshipStatus}` : '请选择关系状态'}
-                  >
-                    <Text className={['essential-data__picker-text', relationshipStatus !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
-                      {relationshipStatus || '选填（点击选择）'}
-                    </Text>
-                    {relationshipStatus !== '' && (
-                      <View className='essential-data__picker-check' style={accentColor ? { background: accentColor } : undefined}>
-                        <Text className='essential-data__picker-check-icon'>✓</Text>
-                      </View>
-                    )}
-                  </View>
-                </Picker>
-              </View>
-            </Card>
-          )}
-
-          {/* Step 4: Life stage */}
-          {currentStep === 3 && (
-            <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>
                   人生阶段<Text className='essential-data__required'>*</Text>
@@ -816,7 +816,101 @@ export default function EssentialDataPage() {
             </Card>
           )}
 
-          {/* Step 5: Location */}
+          {/* Step 3: Education + Occupation + Relationship */}
+          {currentStep === 3 && (
+            <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
+              <View className='essential-data__field'>
+                <Text className='essential-data__label'>学历</Text>
+                <View className='essential-data__choice-row essential-data__choice-row--wrap'>
+                  {EDUCATION_LEVEL_OPTIONS.map((option) => {
+                    const selected = educationLevel === option
+                    return (
+                      <View
+                        key={option}
+                        className={['essential-data__choice-chip', 'essential-data__choice-chip--compact', selected ? 'essential-data__choice-chip--selected' : ''].filter(Boolean).join(' ')}
+                        onClick={() => setEducationLevel(selected ? '' : option)}
+                      >
+                        <Text className='essential-data__choice-chip-text'>{option}</Text>
+                      </View>
+                    )
+                  })}
+                </View>
+              </View>
+
+              <View className='essential-data__field'>
+                <Text className='essential-data__label'>{occupationGuidance.title}</Text>
+                <View
+                  className={[
+                    'essential-data__picker',
+                    professionText !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta',
+                  ].filter(Boolean).join(' ')}
+                  style={professionText !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${hexToRgba(accentColor, 0.12)}` } : undefined}
+                  onClick={() => setShowProfessionOverlay(true)}
+                  aria-label={professionText !== '' ? `职业：${professionText}` : '选填（点击告诉悦仔你的职业）'}
+                >
+                  <Text
+                    className={[
+                      'essential-data__picker-text',
+                      professionText !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    {professionText !== '' ? professionText : '选填（点击告诉悦仔）'}
+                  </Text>
+                  {professionText !== '' && (
+                    <View className='essential-data__picker-check' style={accentColor ? { background: accentColor } : undefined}>
+                      <JoyJoinIcon emoji='✓' tier='status' size={20} className='essential-data__picker-check-icon' />
+                    </View>
+                  )}
+                </View>
+                <Text className='essential-data__hint'>
+                  {professionText !== '' ? '已记录，我会用它来优化匹配~' : occupationGuidance.matchPreview}
+                </Text>
+              </View>
+
+              <View className='essential-data__field'>
+                <Text className='essential-data__label'>关系状态</Text>
+                <Picker
+                  mode='selector'
+                  range={relationshipOptions}
+                  value={relationshipIndex >= 0 ? relationshipIndex : DEFAULT_RELATIONSHIP_INDEX}
+                  onChange={(e) => {
+                    const selectedIndex = Number(e.detail.value)
+                    const status = relationshipOptions[selectedIndex] ?? ''
+                    setRelationshipStatus(status)
+                    if (relationshipStatus === '' && selectedIndex === DEFAULT_RELATIONSHIP_INDEX) {
+                      analytics.interaction('picker_default_adopted', { field: 'relationshipStatus', value: status })
+                    }
+                    const reactions: Record<string, string> = {
+                      '单身': '单身贵族！悦仔记住了~',
+                      '恋爱中': '甜甜蜜蜜！祝你们幸福~',
+                      '已婚/伴侣': '稳定的幸福，很踏实~',
+                      '离异': '新的篇章，新的开始~',
+                      '丧偶': '感谢你愿意信任我们~',
+                      '不透露': '保持神秘感也是一种魅力~',
+                    }
+                    triggerMascotReaction(reactions[status] || '了解！')
+                  }}
+                >
+                  <View
+                    className={['essential-data__picker', relationshipStatus !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}
+                    style={relationshipStatus !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${hexToRgba(accentColor, 0.12)}` } : undefined}
+                    aria-label={relationshipStatus !== '' ? `关系状态：${relationshipStatus}` : '请选择关系状态'}
+                  >
+                    <Text className={['essential-data__picker-text', relationshipStatus !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
+                      {relationshipStatus || '选填（点击选择）'}
+                    </Text>
+                    {relationshipStatus !== '' && (
+                      <View className='essential-data__picker-check' style={accentColor ? { background: accentColor } : undefined}>
+                        <JoyJoinIcon emoji='✓' tier='status' size={20} className='essential-data__picker-check-icon' />
+                      </View>
+                    )}
+                  </View>
+                </Picker>
+              </View>
+            </Card>
+          )}
+
+          {/* Step 4: Location */}
           {currentStep === 4 && (
             <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
               <View className='essential-data__field'>
@@ -826,12 +920,19 @@ export default function EssentialDataPage() {
                 <Picker
                   mode='selector'
                   range={cityOptions}
-                  value={currentCityIndex >= 0 ? currentCityIndex : 0}
-                  onChange={(e) => setCurrentCity(cityOptions[Number(e.detail.value)] ?? '')}
+                  value={currentCityIndex >= 0 ? currentCityIndex : DEFAULT_CITY_INDEX}
+                  onChange={(e) => {
+                    const selectedIndex = Number(e.detail.value)
+                    const nextCity = cityOptions[selectedIndex] ?? ''
+                    setCurrentCity(nextCity)
+                    if (currentCity === '' && selectedIndex === DEFAULT_CITY_INDEX) {
+                      analytics.interaction('picker_default_adopted', { field: 'currentCity', value: nextCity })
+                    }
+                  }}
                 >
                   <View
                     className='essential-data__picker'
-                    style={currentCity !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${accentColor}20` } : undefined}
+                    style={currentCity !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${hexToRgba(accentColor, 0.12)}` } : undefined}
                     aria-label={currentCity !== '' ? `现居城市：${currentCity}` : '请选择现居城市'}
                   >
                     <Text className={['essential-data__picker-text', currentCity !== '' ? 'essential-data__picker-text--filled' : ''].filter(Boolean).join(' ')}>
@@ -839,7 +940,7 @@ export default function EssentialDataPage() {
                     </Text>
                     {currentCity !== '' && (
                       <View className='essential-data__picker-check' style={accentColor ? { background: accentColor } : undefined}>
-                        <Text className='essential-data__picker-check-icon'>✓</Text>
+                        <JoyJoinIcon emoji='✓' tier='status' size={20} className='essential-data__picker-check-icon' />
                       </View>
                     )}
                   </View>
@@ -855,17 +956,6 @@ export default function EssentialDataPage() {
                   onInput={(e) => setHometownRegionCity(e.detail.value)}
                   maxlength={30}
                 />
-              </View>
-            </Card>
-          )}
-
-          {/* Step 6: Intent */}
-          {currentStep === 5 && (
-            <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
-              <View className='essential-data__field'>
-                <Text className='essential-data__label'>这次更想收获什么</Text>
-                {intentGrid}
-                <Text className='essential-data__hint'>最多可选 {MAX_INTENTS} 个，多选会影响后续活动推荐。</Text>
               </View>
             </Card>
           )}

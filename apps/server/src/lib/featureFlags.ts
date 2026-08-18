@@ -30,8 +30,10 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   personalitySlotAnimationEnabled: "PERSONALITY_SLOT_ANIMATION_ENABLED",
   /** K3 Phase 1+ (2026-08-01): remote-selectable slot timing profile.
    *  personalitySlotProfileDramatic wins over personalitySlotProfileFast;
-   *  both false = baseline. Consumed by getAnimationProfile() in the
-   *  mini-program results page. */
+   *  both false = baseline. Since the 2026-08-17 tempo retune the env
+   *  fallback for personalitySlotProfileFast is TRUE (fast = product
+   *  default) — set the DB flag to false to remotely roll back to baseline.
+   *  Consumed by getAnimationProfile() in the mini-program results page. */
   personalitySlotProfileFast: "PERSONALITY_SLOT_PROFILE_FAST",
   personalitySlotProfileDramatic: "PERSONALITY_SLOT_PROFILE_DRAMATIC",
   /** K3 Phase 3 / B3 (2026-08-01): server-composed animated share clip

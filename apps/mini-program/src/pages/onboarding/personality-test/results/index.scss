@@ -2589,6 +2589,113 @@ $color-skill-cool: #7c3aed;
   text-align: center;
 }
 
+/* ── R2-7 login handoff overlay + inline login retry (2026-08-18) ───── */
+@keyframes personality-results-handoff-rise {
+  0% { opacity: 0; transform: translateY(24rpx); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes personality-results-handoff-float {
+  0%,
+  100% { transform: translateY(0); }
+  50% { transform: translateY(-12rpx); }
+}
+
+@keyframes personality-results-handoff-dot-pulse {
+  0%,
+  100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
+.personality-results__handoff {
+  @include page-gradient-bg;
+
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  padding: $container-padding;
+  text-align: center;
+  animation: personality-results-handoff-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.personality-results__handoff-xiaoyue {
+  width: 220rpx;
+  height: 220rpx;
+  animation: personality-results-handoff-float 2.4s ease-in-out infinite;
+}
+
+.personality-results__handoff-title {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-black;
+  color: $color-text-primary;
+  font-family: $font-cn-display, PingFang SC, -apple-system, sans-serif;
+}
+
+.personality-results__handoff-copy {
+  font-size: $font-size-base;
+  color: $color-text-secondary;
+}
+
+.personality-results__handoff-whisper {
+  max-width: 560rpx;
+  min-height: 80rpx;
+  font-size: $font-size-sm;
+  line-height: 1.6;
+  color: $color-text-tertiary;
+}
+
+.personality-results__handoff-dots {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.personality-results__handoff-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 999rpx;
+  background: $color-primary;
+  animation: personality-results-handoff-dot-pulse 1.2s ease-in-out infinite;
+
+  &:nth-child(2) { animation-delay: 0.2s; }
+  &:nth-child(3) { animation-delay: 0.4s; }
+}
+
+.personality-results--reduce-motion {
+  .personality-results__handoff,
+  .personality-results__handoff-xiaoyue,
+  .personality-results__handoff-dot {
+    animation: none !important;
+  }
+}
+
+.personality-results__login-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-md;
+  background: rgba($color-error, 0.06);
+  border-radius: $card-radius;
+  border: 2rpx solid rgba($color-error, 0.12);
+}
+
+.personality-results__login-error-text {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  text-align: center;
+}
+
+.personality-results__login-error-hint {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  text-align: center;
+}
+
 /* ── bridge skip affordance ─────────────────────────────────────────── */
 .personality-results__bridge-skip-row {
   margin-top: $spacing-md;

@@ -24,7 +24,7 @@
 2. **No fake progress.** Stages must map to real work (e.g., "正在为你创建订单…" → "确认支付通道中…" = order creation → payment-channel confirm). Never a percentage bar for an indeterminate request.
 3. **`prefers-reduced-motion` fallback required** on all new motion: static/low-opacity state, `animation: none`. See §4 for the canonical pattern per page.
 4. **Haptics mandatory on completion** (`haptics('success')` per `lib/utils/haptics.ts` intensity rules). Haptics on tap stay `light`/`medium` per surface rules.
-5. **Copy via `@shared/copy/*` helpers where a category exists** — `getOnboardingVoiceLine` (`packages/shared/src/copy/onboardingVoice.ts:182`), `getEmptyStateMessage` (`packages/shared/src/copy/emptyStates.ts:62`), `mascotVoice.ts` patterns. Surface-specific copy (payment, squad) lives on the page, following the same voice. **Zero emoji** on wait copy.
+5. **Copy via `@shared/copy/*` helpers where a category exists** — `getOnboardingVoiceLine` (`packages/shared/src/copy/onboardingVoice.ts:167`), `getEmptyStateMessage` (`packages/shared/src/copy/emptyStates.ts:62`), `mascotVoice.ts` patterns. Surface-specific copy (payment, squad) lives on the page, following the same voice. **Zero emoji** on wait copy.
 6. **Motion = `transform` + `opacity` only** (WeChat runtime discipline; no layout-triggering properties per frame).
 7. **No new assets.** Skeleton blocks are CSS shapes; icons are CSS marks. If a mascot is wanted, reuse `getXiaoyueExpressionAsset` (existing bundled set).
 8. **Never block or reorder success paths.** Wait layers are feedback-only: no state changes to the underlying flow, no server calls added, no success-path behavior altered.

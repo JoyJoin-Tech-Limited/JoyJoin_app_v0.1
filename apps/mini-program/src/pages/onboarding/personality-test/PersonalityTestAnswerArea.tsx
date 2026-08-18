@@ -32,12 +32,10 @@ export interface AnswerAreaProps {
   onAnswer: (option: AnswerOption) => void
   onSliderChange: (value: number) => void
   onSliderSubmit: () => void
-  /** Called when user touches an option (for reactive mascot preview) */
-  onOptionTouchStart?: (option: AnswerOption) => void
-  /** Called when user releases an option touch */
-  onOptionTouchEnd?: () => void
-  /** Called when the touch point moves while still pressed (cancel preview on scroll/drag) */
-  onOptionTouchMove?: (e: any) => void
+  /** True once the user has dragged the slider at least once on this question.
+   *  Until then the live badge renders neutral so the default 50% doesn't read
+   *  as a confirmed choice. */
+  sliderTouched?: boolean
   /** Committed (pre-filled) answer value for back-review mode */
   committedValue?: string | null
   /** Hide the slider's own submit button (used in back-review mode) */
@@ -61,9 +59,6 @@ interface EmojiTapOptionProps {
   isCommitted: boolean
   isSubmitting: boolean
   selectedValue: string | null
-  onTouchStart: () => void
-  onTouchEnd: () => void
-  onTouchMove?: (e: any) => void
   onClick: () => void
 }
 
@@ -76,9 +71,6 @@ function EmojiTapOption({
   isCommitted,
   isSubmitting,
   selectedValue,
-  onTouchStart,
-  onTouchEnd,
-  onTouchMove,
   onClick,
 }: EmojiTapOptionProps) {
   const [hasError, setHasError] = useState(false)
@@ -88,9 +80,6 @@ function EmojiTapOption({
     <Button
       className={`answer-area__emoji-option${isSelected ? ' answer-area__emoji-option--selected' : ''}${isCommitted ? ' answer-area__emoji-option--committed' : ''}`}
       style={{ animationDelay: `${index * 0.05}s` }}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-      onTouchMove={onTouchMove}
       onClick={onClick}
       disabled={isSubmitting}
       hoverClass='answer-area__emoji-option--active'
@@ -167,10 +156,25 @@ const SLIDER_GRADIENT_STOPS = {
 function buildSliderBadgeStyle(
   value: number,
   reducedMotion = false,
+  neutral = false,
 ): { inner: React.CSSProperties; arrow: React.CSSProperties } {
   const t = value / 100
   const drift = reducedMotion ? 0 : ((value - 50) / 50) * 80 // -80rpx .. +80rpx
   const scale = reducedMotion ? 1 : 1 + Math.abs(value - 50) / 50 * 0.04
+
+  // Untouched slider: neutral gray so the default midpoint doesn't read as a
+  // confirmed choice. Switches to the temperature gradient on first drag.
+  if (neutral) {
+    return {
+      inner: {
+        transform: undefined,
+        background: 'linear-gradient(135deg, #9CA3AF 0%, #B7BEC9 100%)',
+      } as React.CSSProperties,
+      arrow: {
+        borderTopColor: '#9CA3AF',
+      },
+    }
+  }
 
   const { leftFrom, leftTo, centerFrom, centerTo, rightFrom, rightTo } = SLIDER_GRADIENT_STOPS
   let from: string
@@ -198,6 +202,11 @@ function buildSliderBadgeStyle(
   }
 }
 
+// The first-time slider hint shows once per session, not per question — the
+// answer subtree remounts as questions change, so dismissal is kept at module
+// level to survive those remounts.
+let sliderHintDismissedThisSession = false
+
 export default memo(function PersonalityTestAnswerArea({
   questionType,
   options,
@@ -207,21 +216,18 @@ export default memo(function PersonalityTestAnswerArea({
   onAnswer,
   onSliderChange,
   onSliderSubmit,
-  onOptionTouchStart,
-  onOptionTouchEnd,
-  onOptionTouchMove,
+  sliderTouched = false,
   committedValue,
   hideSliderSubmit = false,
 }: AnswerAreaProps) {
   const [selectedValue, setSelectedValue] = useState<string | null>(null)
   const [fragmentLabel, setFragmentLabel] = useState<string>('')
   const [fragmentVisible, setFragmentVisible] = useState(false)
-  const [showSliderHint, setShowSliderHint] = useState(true)
+  const [showSliderHint, setShowSliderHint] = useState(() => !sliderHintDismissedThisSession)
   const selectedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fragmentTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSliderValueRef = useRef(sliderValue)
   const lastHapticValueRef = useRef<number | null>(null)
-  const hintDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Accessibility: suppress continuous spatial motion when reduced motion is requested.
   const reducedMotion = useMemo(() => {
@@ -281,13 +287,10 @@ export default memo(function PersonalityTestAnswerArea({
     lastSliderValueRef.current = val
     onSliderChange(val)
 
-    // Dismiss the first-time hint as soon as the user interacts.
+    // Dismiss the first-time hint as soon as the user interacts (session-scoped).
     if (showSliderHint) {
+      sliderHintDismissedThisSession = true
       setShowSliderHint(false)
-      if (hintDismissTimerRef.current) {
-        clearTimeout(hintDismissTimerRef.current)
-        hintDismissTimerRef.current = null
-      }
     }
 
     // Tactile feedback: light haptic on every 10-point threshold crossing.
@@ -304,11 +307,17 @@ export default memo(function PersonalityTestAnswerArea({
 
   const handleSliderCommit = useCallback((event: any) => {
     const val = Number(event.detail.value)
+    // A tap on the track can fire onChange without onChanging; clear the hint
+    // so it never outlives a real user choice.
+    if (showSliderHint) {
+      sliderHintDismissedThisSession = true
+      setShowSliderHint(false)
+    }
     if (val !== lastSliderValueRef.current) {
       lastSliderValueRef.current = val
       onSliderChange(val)
     }
-  }, [onSliderChange])
+  }, [onSliderChange, showSliderHint])
 
   // Guard: render fallback when no options are available
   if (options.length === 0) {
@@ -322,7 +331,7 @@ export default memo(function PersonalityTestAnswerArea({
   if (questionType === 'slider' && sliderConfig) {
     const lean = resolveSliderLean(sliderConfig, sliderValue)
     const liveLabel = getSliderLiveLabel(options, sliderValue)
-    const badgeStyles = buildSliderBadgeStyle(sliderValue, reducedMotion)
+    const badgeStyles = buildSliderBadgeStyle(sliderValue, reducedMotion, !sliderTouched)
 
     return (
       <View className='answer-area__slider-shell'>
@@ -334,21 +343,25 @@ export default memo(function PersonalityTestAnswerArea({
           </View>
         ) : null}
 
-        {/* Live semantic label that reacts to drag — announced politely to screen readers */}
+        {/* Live semantic label that reacts to drag — announced politely to screen readers.
+            Until the first drag it stays neutral so the default 50% doesn't
+            read as a confirmed choice. */}
         <View
           className='answer-area__slider-live-badge'
           aria-live='polite'
           aria-atomic='true'
-          aria-label={`当前选择：${liveLabel || '未选择'}，${sliderValue}%`}
+          aria-label={sliderTouched ? `当前选择：${liveLabel || '未选择'}，${sliderValue}%` : '尚未选择，拖动滑块告诉我你的感觉'}
         >
           <View
             className={`answer-area__slider-live-badge-inner answer-area__slider-live-badge-inner--${lean}`}
             style={badgeStyles.inner}
           >
             <Text className='answer-area__slider-live-badge-label' numberOfLines={1}>
-              {liveLabel || '·'}
+              {sliderTouched ? (liveLabel || '·') : '拖一拖，选一个程度'}
             </Text>
-            <Text className='answer-area__slider-live-badge-value'>{sliderValue}%</Text>
+            {sliderTouched ? (
+              <Text className='answer-area__slider-live-badge-value'>{sliderValue}%</Text>
+            ) : null}
             <View className='answer-area__slider-live-badge-arrow' style={badgeStyles.arrow} />
           </View>
         </View>
@@ -380,8 +393,6 @@ export default memo(function PersonalityTestAnswerArea({
           <Button
             variant='brand'
             className='answer-area__slider-submit'
-            onTouchStart={() => { onOptionTouchStart?.({ value: 'slider', text: '确认这个感觉' }) }}
-            onTouchEnd={() => { onOptionTouchEnd?.() }}
             onClick={() => {
               haptics('light')
               onSliderSubmit()
@@ -419,9 +430,6 @@ export default memo(function PersonalityTestAnswerArea({
               isCommitted={isCommitted}
               isSubmitting={isSubmitting}
               selectedValue={selectedValue}
-              onTouchStart={() => { onOptionTouchStart?.(option) }}
-              onTouchEnd={() => { onOptionTouchEnd?.() }}
-              onTouchMove={onOptionTouchMove ? (e) => onOptionTouchMove(e) : undefined}
               onClick={() => {
                 haptics('light')
                 handleAnswer(option)
@@ -451,9 +459,6 @@ export default memo(function PersonalityTestAnswerArea({
             key={option.value}
             className={`answer-area__option${isSelected ? ' answer-area__option--selected' : ''}${isCommitted ? ' answer-area__option--committed' : ''}`}
             style={{ animationDelay: `${index * 0.05}s` }}
-            onTouchStart={() => { onOptionTouchStart?.(option) }}
-            onTouchEnd={() => { onOptionTouchEnd?.() }}
-            onTouchMove={onOptionTouchMove ? (e) => onOptionTouchMove(e) : undefined}
             onClick={() => {
               haptics('light')
               handleAnswer(option)

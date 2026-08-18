@@ -16,6 +16,7 @@ const state = vi.hoisted(() => ({
   showToast: vi.fn(),
   equipmentRefetch: vi.fn(),
   systemInfo: {} as Record<string, unknown>,
+  storage: new Map<string, unknown>(),
 }))
 
 vi.mock('@tarojs/taro', () => ({
@@ -26,6 +27,8 @@ vi.mock('@tarojs/taro', () => ({
     showToast: state.showToast,
     reLaunch: vi.fn(),
     getSystemInfoSync: () => state.systemInfo,
+    getStorageSync: (key: string) => state.storage.get(key),
+    setStorageSync: (key: string, value: unknown) => { state.storage.set(key, value) },
   },
   useDidShow: vi.fn(),
   useDidHide: vi.fn(),
@@ -153,6 +156,7 @@ describe('Profile approved V4 layout', () => {
     state.storyState = { data: [] }
     state.storyEnabled = false
     state.systemInfo = {}
+    state.storage.clear()
     state.queryStates.set('mini-program/equipment/me', {
       data: {
         archetypeId: 'corgi',
@@ -514,6 +518,37 @@ describe('Profile approved V4 layout', () => {
       'profile_personality_action_tap',
       { source: 'v17_card' },
     )
+  })
+
+  it('shows the bio prompt after onboarding when the bio is empty, and taps through to edit-profile', () => {
+    state.user = { ...makeUser(true), hasSeenProfileReview: true }
+    state.navigateTo.mockClear()
+
+    const { getByTestId, getByText } = render(<ProfilePage />)
+
+    expect(getByText('悦仔还想多认识你一点')).toBeTruthy()
+    fireEvent.click(getByTestId('profile-bio-prompt-cta'))
+    expect(state.navigateTo).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.editProfile })
+  })
+
+  it('hides the bio prompt when the bio exists or onboarding is incomplete', () => {
+    state.user = { ...makeUser(true), hasSeenProfileReview: true, bio: '正在寻找探店搭子' }
+    const { queryByTestId, rerender } = render(<ProfilePage />)
+    expect(queryByTestId('profile-bio-prompt')).toBeNull()
+
+    state.user = { ...makeUser(true), hasSeenProfileReview: false }
+    rerender(<ProfilePage />)
+    expect(queryByTestId('profile-bio-prompt')).toBeNull()
+  })
+
+  it('dismisses the bio prompt and persists the dismissal per user', () => {
+    state.user = { ...makeUser(true), hasSeenProfileReview: true }
+
+    const { getByTestId, queryByTestId } = render(<ProfilePage />)
+    fireEvent.click(getByTestId('profile-bio-prompt-dismiss'))
+
+    expect(queryByTestId('profile-bio-prompt')).toBeNull()
+    expect(state.storage.get('joyjoin_profile_bio_prompt_dismissed:profile-user')).toBe(true)
   })
 
   it('uses a state-aware edit-profile caption on the completion stat card', () => {

@@ -6,11 +6,10 @@
  */
 export const ESSENTIAL_DATA_STEP_IDS = [
   'displayName',
-  'genderBirthday',
-  'professionalProfile',
-  'lifeStage',
-  'location',
   'intent',
+  'aboutYou',
+  'professionalProfile',
+  'location',
 ] as const
 
 export type EssentialDataStepId = (typeof ESSENTIAL_DATA_STEP_IDS)[number]

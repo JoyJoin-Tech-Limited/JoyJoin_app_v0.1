@@ -1,5 +1,3 @@
-import type { XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
-
 /** Poetic trait-fragment labels for Phase 2 wow element.
  *  One entry per ACOEXP trait, keyed by short trait code (A/O/C/E/X/P).
  *  Selected at runtime by the option's dominant traitScores — no "+1" gamification,
@@ -37,18 +35,6 @@ export function resolveFragmentLabel(option: AnswerOption): string {
     entries[0]!,
   )
   return FRAGMENT_LABELS[topKey] ?? DEFAULT_FRAGMENT_LABEL
-}
-
-/** Map an option to a preview sprite state based on its text content. */
-export function resolveOptionPreviewSpriteState(option: { text: string }): XiaoyueSpriteState {
-  const states: XiaoyueSpriteState[] = ['listening', 'curious', 'thinking', 'surprised']
-  const hash = Math.abs(option.text.charCodeAt(0)) % states.length
-  return states[hash]!
-}
-
-/** Check if the given answered count triggers a milestone celebration. */
-export function isMilestoneQuestion(answeredCount: number): boolean {
-  return answeredCount === 3 || answeredCount === 7
 }
 
 /** Resolve the nearest slider option for a given value (0-100). */

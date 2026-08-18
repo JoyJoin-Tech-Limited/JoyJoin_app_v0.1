@@ -52,6 +52,8 @@ interface FinalStageProps {
   authIsLoading: boolean
   isAuthenticated?: boolean
   isLoggingIn?: boolean
+  /** R2-7: inline login-handoff failure message shown above the continue CTA. */
+  loginError?: string
   isDecisive?: boolean
   /** Phase 3 (2026-08-01): rare-variant easter egg — highly typical match
    *  shows the 闪光 badge on the hero card. */
@@ -119,6 +121,7 @@ export default function FinalStage({
   authIsLoading,
   isAuthenticated,
   isLoggingIn,
+  loginError = '',
   isDecisive,
   isRareVariant = false,
   secondaryDisplayName,
@@ -709,6 +712,14 @@ export default function FinalStage({
               ? '悦仔会在发现页为你留意同频的人——记得回来看看'
               : '登录后，悦仔就开始为你寻找同频的人'}
           </Text>
+          {/* R2-7: inline login retry surface — mirrors the poster-error
+              pattern; the primary CTA below is the retry action. */}
+          {loginError ? (
+            <View className='personality-results__login-error' role='alert'>
+              <Text className='personality-results__login-error-text'>{loginError}</Text>
+              <Text className='personality-results__login-error-hint'>结果还在这里，点下方按钮再试一次</Text>
+            </View>
+          ) : null}
           <Button variant='wechat' onClick={() => void onContinue()} disabled={authIsLoading || isLoggingIn} loading={isLoggingIn}>
             {continueButtonLabel}
           </Button>

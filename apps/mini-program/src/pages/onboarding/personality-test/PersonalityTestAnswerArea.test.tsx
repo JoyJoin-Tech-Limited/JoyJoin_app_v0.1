@@ -3,8 +3,6 @@ import {
   resolveFragmentLabel,
   getNearestSliderOption,
   type AnswerOption,
-  resolveOptionPreviewSpriteState,
-  isMilestoneQuestion,
 } from './personalityTestLogic'
 
 describe('PersonalityTest wow element logic', () => {
@@ -85,50 +83,6 @@ describe('PersonalityTest wow element logic', () => {
       // Also no fallback emoji
       const fallback = resolveFragmentLabel({ value: 'X', text: 'no scores' })
       expect(fallback).not.toMatch(/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}]/u)
-    })
-  })
-
-  describe('resolveOptionPreviewSpriteState', () => {
-    it('returns a valid sprite state for any option text', () => {
-      const validStates = ['listening', 'curious', 'thinking', 'surprised']
-      const option = { text: '直接冲' }
-      const state = resolveOptionPreviewSpriteState(option)
-      expect(validStates).toContain(state)
-    })
-
-    it('returns the same state for the same option text', () => {
-      const option = { text: '直接冲' }
-      expect(resolveOptionPreviewSpriteState(option)).toBe(
-        resolveOptionPreviewSpriteState(option),
-      )
-    })
-
-    it('returns different states for different option texts', () => {
-      const states = new Set<string>()
-      const texts = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-      for (const text of texts) {
-        states.add(resolveOptionPreviewSpriteState({ text }))
-      }
-      // With 4 states and 8 different inputs, we should cover all states
-      expect(states.size).toBeGreaterThanOrEqual(2)
-    })
-  })
-
-  describe('isMilestoneQuestion', () => {
-    it('returns true for answered counts 3 and 7', () => {
-      expect(isMilestoneQuestion(3)).toBe(true)
-      expect(isMilestoneQuestion(7)).toBe(true)
-    })
-
-    it('returns false for non-milestone counts', () => {
-      expect(isMilestoneQuestion(0)).toBe(false)
-      expect(isMilestoneQuestion(1)).toBe(false)
-      expect(isMilestoneQuestion(2)).toBe(false)
-      expect(isMilestoneQuestion(4)).toBe(false)
-      expect(isMilestoneQuestion(5)).toBe(false)
-      expect(isMilestoneQuestion(6)).toBe(false)
-      expect(isMilestoneQuestion(8)).toBe(false)
-      expect(isMilestoneQuestion(10)).toBe(false)
     })
   })
 

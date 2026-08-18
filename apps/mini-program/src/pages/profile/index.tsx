@@ -57,6 +57,9 @@ const EMPTY_EQUIPMENT_OUTFIT: EquipmentOutfit = {
 
 const DEFAULT_EQUIPMENT_PLACEHOLDER_URL = localAsset('/assets/joyjoin-logo-tab.png')
 
+/** Local-storage prefix for the dismissed 悦仔 bio prompt (per user). */
+const BIO_PROMPT_DISMISS_STORAGE_PREFIX = 'joyjoin_profile_bio_prompt_dismissed'
+
 function EquipmentPreviewArtwork({
   item,
   artworkUrl,
@@ -436,6 +439,44 @@ export default function ProfilePage() {
 
   const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
 
+  // Post-onboarding bio nudge (2026-08-18, R2-6): profile-review no longer
+  // collects the 社交签名, so the profile tab gently prompts while the bio is
+  // empty. Dismissal persists per user in local storage.
+  const bioPromptStorageKey = authUser?.id
+    ? `${BIO_PROMPT_DISMISS_STORAGE_PREFIX}:${authUser.id}`
+    : null
+  const [bioPromptDismissed, setBioPromptDismissed] = useState(false)
+  useEffect(() => {
+    if (!bioPromptStorageKey) return
+    try {
+      setBioPromptDismissed(Taro.getStorageSync(bioPromptStorageKey) === true)
+    } catch {
+      // Storage unavailable — leave the prompt visible for this session.
+    }
+  }, [bioPromptStorageKey])
+
+  const showBioPrompt = !authLoading
+    && authUser?.hasSeenProfileReview === true
+    && !bio
+    && !bioPromptDismissed
+
+  const handleBioPromptTap = () => {
+    haptics('light')
+    void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.editProfile })
+  }
+
+  const handleBioPromptDismiss = () => {
+    haptics('light')
+    setBioPromptDismissed(true)
+    if (bioPromptStorageKey) {
+      try {
+        Taro.setStorageSync(bioPromptStorageKey, true)
+      } catch {
+        // Non-fatal — the prompt simply reappears next session.
+      }
+    }
+  }
+
   return renderGate(
     <View className={`profile-page ${tabEntranceClass}`}>
       <View className='profile-page__nav' data-testid='profile-top-navigation'>
@@ -744,6 +785,35 @@ export default function ProfilePage() {
             <View className='profile-page__chevron profile-page__chevron--stat' />
           </Card>
         </View>
+
+        {showBioPrompt && (
+          <View
+            className={`profile-page__bio-prompt${hasEntered ? ' profile-page__bio-prompt--entered' : ''}`}
+            data-testid='profile-bio-prompt'
+          >
+            <View
+              className='profile-page__bio-prompt-main'
+              hoverClass='profile-page__bio-prompt-main--pressed'
+              onClick={handleBioPromptTap}
+              role='button'
+              aria-label='去写一句聚会签名'
+              data-testid='profile-bio-prompt-cta'
+            >
+              <Text className='profile-page__bio-prompt-title'>悦仔还想多认识你一点</Text>
+              <Text className='profile-page__bio-prompt-copy'>写一句聚会签名，让新朋友更快记住你。</Text>
+              <Text className='profile-page__bio-prompt-cta'>去写一句</Text>
+            </View>
+            <View
+              className='profile-page__bio-prompt-dismiss'
+              onClick={handleBioPromptDismiss}
+              role='button'
+              aria-label='暂时不用，关闭提示'
+              data-testid='profile-bio-prompt-dismiss'
+            >
+              <View className='profile-page__bio-prompt-dismiss-icon' aria-hidden='true' />
+            </View>
+          </View>
+        )}
 
         {profileV17DataPolicy.personalStoryEnabled && (
           <View

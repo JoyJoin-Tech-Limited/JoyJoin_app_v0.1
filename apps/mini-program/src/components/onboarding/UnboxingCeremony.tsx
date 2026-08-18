@@ -27,11 +27,40 @@ import './UnboxingCeremony.scss'
 
 const AUTO_ADVANCE_MS = 2400
 
+/**
+ * Local copy of WelcomeGiftCard's discount formatter. Deliberately NOT
+ * imported from WelcomeGiftCard.tsx: that module side-effect-imports
+ * WelcomeGiftCard.scss, and pulling it in here would drag the gift-card WXSS
+ * back into the onboarding subpackage chunk graph (sub-common.wxss trap).
+ */
+function formatGiftDiscount(discountValue: number): { value: string; unit: string } {
+  if (discountValue > 0 && discountValue <= 100) {
+    const zhe = Math.round((100 - discountValue) / 10)
+    if (zhe >= 1 && zhe <= 9) {
+      return { value: `${zhe}`, unit: '折' }
+    }
+  }
+  return { value: `${discountValue}`, unit: '%' }
+}
+
 interface UnboxingCeremonyProps {
   visible: boolean
   displayName: string
   archetypeName?: string
   accentText?: string
+  /**
+   * 拆盒即得礼: the welcome coupon folds into the rising entry card. When
+   * omitted (claim failed), the card simply renders without the gift row —
+   * the ceremony never blocks on the coupon network call.
+   */
+  giftDiscountValue?: number | null
+  /** True while the welcome-coupon claim is still in flight. */
+  giftLoading?: boolean
+  /**
+   * Analytics-only hook: fired once per ceremony with how the advance
+   * happened — 'auto' (AUTO_ADVANCE_MS elapsed) or 'tap' (user-paced).
+   */
+  onAdvance?: (mode: 'auto' | 'tap') => void
   onComplete: () => void
 }
 
@@ -40,6 +69,9 @@ export default function UnboxingCeremony({
   displayName,
   archetypeName,
   accentText,
+  giftDiscountValue = null,
+  giftLoading = false,
+  onAdvance,
   onComplete,
 }: UnboxingCeremonyProps) {
   const [reduceMotion] = useState(() => getSystemReducedMotion())
@@ -52,17 +84,20 @@ export default function UnboxingCeremony({
   // one-shot guard.
   const onCompleteRef = useRef(onComplete)
   onCompleteRef.current = onComplete
+  const onAdvanceRef = useRef(onAdvance)
+  onAdvanceRef.current = onAdvance
 
-  const finish = useCallback(() => {
+  const finish = useCallback((mode: 'auto' | 'tap') => {
     if (completedRef.current) return
     completedRef.current = true
+    onAdvanceRef.current?.(mode)
     onCompleteRef.current()
   }, [])
 
   useEffect(() => {
     if (!visible) return undefined
     completedRef.current = false
-    timerRef.current = setTimeout(finish, AUTO_ADVANCE_MS)
+    timerRef.current = setTimeout(() => finish('auto'), AUTO_ADVANCE_MS)
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current)
@@ -72,6 +107,8 @@ export default function UnboxingCeremony({
   }, [visible, finish])
 
   if (!visible) return null
+
+  const giftDiscount = giftDiscountValue != null ? formatGiftDiscount(giftDiscountValue) : null
 
   const rootClass = [
     'unboxing-ceremony',
@@ -86,7 +123,7 @@ export default function UnboxingCeremony({
       className={rootClass}
       onClick={() => {
         haptics('light')
-        finish()
+        finish('tap')
       }}
       role='button'
       aria-label='开盒完成，轻触继续'
@@ -133,6 +170,18 @@ export default function UnboxingCeremony({
         <Text className='unboxing-ceremony__name'>
           {displayName} · 入场卡已生效
         </Text>
+        {giftDiscount ? (
+          <View className='unboxing-ceremony__gift'>
+            <Text className='unboxing-ceremony__gift-eyebrow'>拆盒即得礼</Text>
+            <Text className='unboxing-ceremony__gift-text'>
+              悦仔见面礼 · <Text className='unboxing-ceremony__gift-discount'>{giftDiscount.value}{giftDiscount.unit}</Text>券，报名可用
+            </Text>
+          </View>
+        ) : giftLoading ? (
+          <View className='unboxing-ceremony__gift unboxing-ceremony__gift--loading' aria-hidden='true'>
+            <View className='unboxing-ceremony__gift-shimmer' />
+          </View>
+        ) : null}
       </View>
 
       <Text className='unboxing-ceremony__hint'>轻触继续，去看为你准备的局</Text>

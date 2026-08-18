@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { View, Text, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -15,7 +15,7 @@ import {
   type MacroCategory,
 } from '@shared/interests'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
-import { getOnboardingVoiceLine } from '@shared/copy/onboardingVoice'
+import { getOnboardingVoiceLine, type OnboardingVoiceStepId } from '@shared/copy/onboardingVoice'
 import { getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import { ARCHETYPE_BY_ID, type ArchetypeId } from '@shared/personality/archetypeNames'
 import { CATEGORY_COLORS } from '@shared/ui/categoryColors'
@@ -24,13 +24,14 @@ import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useAuth, useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
+import { useStepAbandonGuard } from '../../../hooks/onboarding/useStepAbandonGuard'
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
 import { usePreloadCategoryIcons } from '../../../hooks/usePreloadCategoryIcons'
 import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
 import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
-import { logError, logInfo } from '../../../lib/utils/logger'
+import { logError, logInfo, logWarn } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
@@ -50,11 +51,28 @@ const MIN_INTERESTS = 3
 const TAP_HINT_COPY: Record<InterestSelectionLevel, string> = {
   1: '再点一次增强热度',
   2: '再点一次设为必聊项',
-  3: '已是必聊项，再点可取消',
+  3: '再点取消必聊项',
 }
 const TAP_HINT_DURATION_MS = 1800
 
+// Milestone toast icons (passed to JoyJoinIcon) — module scope so they are
+// not re-created on every render.
+const UNLOCKED_EMOJI = '🎉'
+const FIRST_PRIORITY_EMOJI = '⭐'
+const ALL_CATEGORIES_EMOJI = '🌈'
+
 const CATEGORY_ORDER: MacroCategory[] = ['food', 'play', 'sports', 'culture', 'life', 'growth']
+
+// R3-9 人格在场: each taxonomy category gets its own archetype-voiced hint
+// line in the voice matrix (Tier A per archetype, Tier B fallback).
+const CATEGORY_VOICE_STEP_IDS: Record<MacroCategory, OnboardingVoiceStepId> = {
+  food: 'extended-category-food',
+  play: 'extended-category-play',
+  sports: 'extended-category-sports',
+  culture: 'extended-category-culture',
+  life: 'extended-category-life',
+  growth: 'extended-category-growth',
+}
 
 const HEAT_CSS_VARS = {
   1: 'var(--jj-heat-l1)',
@@ -98,6 +116,11 @@ const groupedInterests = activeInterests.reduce<Record<MacroCategory, InterestDe
   {} as Record<MacroCategory, InterestDefinition[]>,
 )
 
+// First-visit gesture demo target: the first card of the first category. A
+// CSS-only "ghost tap" loop plays on this card until the user's first real
+// tap, demonstrating the multi-tap heat gesture before any interaction.
+const DEMO_TOPIC_ID = groupedInterests[CATEGORY_ORDER[0]]?.[0]?.id ?? null
+
 function getInterestLevelMeta(level: InterestSelectionLevel | undefined) {
   return INTEREST_LEVEL_META.find((item) => item.level === level)
 }
@@ -131,6 +154,9 @@ export default function ExtendedDataPage() {
 
   useResetOnShow(setIsPageExiting, setIsSubmitting)
   const [tapHint, setTapHint] = useState<{ topicId: string; level: InterestSelectionLevel; message: string } | null>(null)
+  // Set on the first real tap anywhere — permanently ends the ghost-tap demo
+  // for this session (the user has started interacting, demo has done its job).
+  const [tapDemoDismissed, setTapDemoDismissed] = useState(false)
   const [poppingCardId, setPoppingCardId] = useState<string | null>(null)
   const [milestone, setMilestone] = useState<'unlocked' | 'first-priority' | 'all-categories' | null>(null)
   const poppingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -152,9 +178,32 @@ export default function ExtendedDataPage() {
   const archetypeAccent = userArchetype ? getContrastSafeArchetypeColor(userArchetype) : undefined
 
   usePreloadCategoryIcons(!isLoading)
+  // Pre-warm the coach bubble's pointing sprite so it decodes before the
+  // bubble animates in (replaces the old 0×0 hidden <Image> preload hack).
+  useEffect(() => {
+    Taro.getImageInfo({ src: getXiaoyueAsset('pointing') }).catch(() => {
+      logWarn('[ExtendedData] Pointing sprite pre-warm failed', { src: getXiaoyueAsset('pointing') })
+    })
+  }, [])
   const invalidateAuth = useInvalidateAuth()
   const analytics = useOnboardingAnalytics('extended-data', { enabled: !isLoading })
   const { saveCheckpoint } = useOnboardingCheckpoint()
+
+  // R1-3 funnel: single-screen enter/abandon discipline. step_enter pairs with
+  // the essential-data sub-step events so funnel queries stay uniform.
+  useEffect(() => {
+    if (isLoading) return
+    analytics.stepEnter({ stepId: 'interests', stepIndex: 0 })
+  }, [analytics, isLoading])
+
+  const { markCompleted: markInterestsCompleted } = useStepAbandonGuard(() => {
+    if (isLoading) return
+    analytics.stepAbandoned('exit', {
+      stepId: 'interests',
+      stepIndex: 0,
+      selectedCount: Object.keys(levelsById).length,
+    })
+  })
 
   useEffect(() => {
     return () => {
@@ -209,7 +258,7 @@ export default function ExtendedDataPage() {
     } else if (prevPriority === 0 && topPriorityCount > 0) {
       haptics('success')
       newMilestone = 'first-priority'
-    } else if (selectedCategories.size === 5 && selectedCategories.size > prevCategories.size) {
+    } else if (selectedCategories.size === CATEGORY_ORDER.length && selectedCategories.size > prevCategories.size) {
       haptics('success')
       newMilestone = 'all-categories'
     }
@@ -224,35 +273,6 @@ export default function ExtendedDataPage() {
     }
   }, [selectedCount, topPriorityCount, selectionPreview.selections])
 
-  const dominantCategories = useMemo(
-    () =>
-      Object.entries(selectionPreview.categoryHeat)
-        .filter(([, heat]) => heat > 0)
-        .sort((left, right) => right[1] - left[1])
-        .slice(0, 3)
-        .map(([categoryId]) => categoryId),
-    [selectionPreview.categoryHeat],
-  )
-  const hasMultipleCategories = dominantCategories.length > 1
-  const topCategory = dominantCategories[0] as MacroCategory | undefined
-  const selectedCategories = useMemo(
-    () =>
-      new Set(
-        selectionPreview.selections
-          .map((s) => INTEREST_TAXONOMY.find((i) => i.id === s.topicId)?.macroCategory)
-          .filter(Boolean),
-      ) as Set<MacroCategory>,
-    [selectionPreview.selections],
-  )
-  const hasAllCategories = selectedCategories.size === CATEGORY_ORDER.length
-
-  const highlightedSelections = useMemo(
-    () =>
-      [...selectionPreview.selections]
-        .sort((left, right) => right.level - left.level || right.heat - left.heat)
-        .slice(0, 6),
-    [selectionPreview.selections],
-  )
   const canSubmit = selectedCount >= MIN_INTERESTS
 
   const coachCopy = useMemo(() => {
@@ -275,20 +295,6 @@ export default function ExtendedDataPage() {
     return '画像已解锁！把最期待的兴趣升到必聊项，匹配会更精准。'
   }, [archetypeName, canSubmit, selectedCount, topPriorityCount, userArchetype])
 
-  const footerCoachLine = useMemo(() => {
-    if (!canSubmit) {
-      return archetypeName
-        ? `再选 ${MIN_INTERESTS - selectedCount} 个，${archetypeName}的入场卡就能生成了～`
-        : `再选 ${MIN_INTERESTS - selectedCount} 个，你的入场卡就能生成了～`
-    }
-
-    if (topPriorityCount === 0) {
-      return '把最期待的兴趣升到必聊项吧，匹配会更精准。'
-    }
-
-    return '必聊项会优先帮你找到同好。'
-  }, [archetypeName, canSubmit, selectedCount, topPriorityCount])
-
   const ctaLabel = useMemo(() => {
     if (isSubmitting) {
       return '提交中…'
@@ -305,6 +311,7 @@ export default function ExtendedDataPage() {
 
   const toggleInterestLevel = useCallback(
     (topicId: string) => {
+      setTapDemoDismissed(true)
       const currentLevel = levelsById[topicId]
 
       const nextLevels = { ...levelsById }
@@ -411,6 +418,8 @@ export default function ExtendedDataPage() {
         totalHeat: selectionPreview.totalHeat,
         nextStep: userState.nextStep ?? 'profile-review',
       })
+      // Submit succeeded — the onward navigation must not count as abandonment.
+      markInterestsCompleted()
 
       // NOTE: prefers-reduced-motion is respected by the CSS animations in this screen.
       // The route transition below is handled by onboardingNavigation and is not user-motion.
@@ -422,9 +431,9 @@ export default function ExtendedDataPage() {
       setIsPageExiting(false)
       const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
       setError(message)
+      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
       analytics.errorOccurred('submit_failed', message)
       logError('[ExtendedData] Submit failed', { message })
-      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
     } finally {
       setIsSubmitting(false)
     }
@@ -433,6 +442,7 @@ export default function ExtendedDataPage() {
     canSubmit,
     invalidateAuth,
     isSubmitting,
+    markInterestsCompleted,
     saveCheckpoint,
     selectedCount,
     selectionDrafts,
@@ -443,22 +453,19 @@ export default function ExtendedDataPage() {
   if (isLoading) {
     return (
       <OnboardingLoadingShell
-        stepLabel='Onboarding 3 / 4'
+        stepLabel='装盒中 · 第 2 格'
         title={`${DEFAULT_MASCOT_DISPLAY_NAME}在点亮你的兴趣热度`}
         subtitle='把这一步准备好后，资料预览就会更有你的味道。'
       />
     )
   }
 
-  const unlocked_emoji = '🎉'
-  const first_priority_emoji = '⭐'
-  const all_categories_emoji = '🌈'
   const milestone_emoji = milestone
     ? milestone === 'unlocked'
-      ? unlocked_emoji
+      ? UNLOCKED_EMOJI
       : milestone === 'first-priority'
-        ? first_priority_emoji
-        : all_categories_emoji
+        ? FIRST_PRIORITY_EMOJI
+        : ALL_CATEGORIES_EMOJI
     : null
 
   return (
@@ -487,17 +494,6 @@ export default function ExtendedDataPage() {
           avatarSize={ONBOARDING_MASCOT_SIZE}
         />
       </View>
-      <Image
-        src={getXiaoyueAsset('pointing')}
-        mode='aspectFit'
-        style={{
-          width: 0,
-          height: 0,
-          opacity: 0,
-          position: 'absolute',
-          pointerEvents: 'none',
-        }}
-      />
 
       <View className='extended-data__heat-guide extended-data__stage extended-data__stage--3'>
         {INTEREST_LEVEL_META.map((item, index) => (
@@ -552,6 +548,13 @@ export default function ExtendedDataPage() {
                         <Text className='extended-data__category-description'>
                           {CATEGORY_META[category]?.description}
                         </Text>
+                        {/* R3-9 人格在场: archetype-voiced per-category hint
+                            (Tier A when the archetype is known, Tier B
+                            fallback otherwise) — the section's own hint line,
+                            no new surface. */}
+                        <Text className='extended-data__category-hint'>
+                          {getOnboardingVoiceLine(CATEGORY_VOICE_STEP_IDS[category], userArchetype)}
+                        </Text>
                       </View>
                     </View>
                     {selectedInCategory > 0 ? (
@@ -569,6 +572,11 @@ export default function ExtendedDataPage() {
                       // below so it is not clipped by the category header.
                       const isFirstRow = itemIndex < 2
                       const showTapHint = tapHint?.topicId === item.id
+                      // Ghost-tap demo plays only on the first card, only
+                      // while nothing is selected (covers checkpoint restores
+                      // that pre-populate selections).
+                      const showTapDemo =
+                        !tapDemoDismissed && selectedCount === 0 && item.id === DEMO_TOPIC_ID
 
                       return (
                         <View
@@ -578,6 +586,7 @@ export default function ExtendedDataPage() {
                             level ? `extended-data__interest-card--level-${level}` : '',
                             poppingCardId === item.id ? 'extended-data__interest-card--popping' : '',
                             showTapHint ? 'extended-data__interest-card--hint' : '',
+                            showTapDemo ? 'extended-data__interest-card--demo' : '',
                           ]
                             .filter(Boolean)
                             .join(' ')}
@@ -599,12 +608,23 @@ export default function ExtendedDataPage() {
                               aria-live='polite'
                               role='status'
                             >
+                              <View className='extended-data__coachmark-tap' aria-hidden='true'>
+                                <View className='extended-data__coachmark-tap-pulse' />
+                              </View>
                               <View
                                 className={`extended-data__coachmark-dot extended-data__coachmark-dot--level-${tapHint.level}`}
                                 aria-hidden='true'
                               />
                               <Text className='extended-data__coachmark-text'>{tapHint.message}</Text>
                               <View className='extended-data__coachmark-arrow' aria-hidden='true' />
+                            </View>
+                          ) : null}
+                          {showTapDemo ? (
+                            <View className='extended-data__tap-demo' aria-hidden='true'>
+                              <View className='extended-data__tap-demo-tint extended-data__tap-demo-tint--l1' />
+                              <View className='extended-data__tap-demo-tint extended-data__tap-demo-tint--l2' />
+                              <View className='extended-data__tap-demo-ring' />
+                              <View className='extended-data__tap-demo-ring extended-data__tap-demo-ring--2' />
                             </View>
                           ) : null}
                           <View className='extended-data__interest-card-top'>
@@ -650,9 +670,10 @@ export default function ExtendedDataPage() {
       ) : null}
 
       <View className='extended-data__footer'>
+        {/* Compact summary row: heat thermometer + counts. The detailed
+            stats (热度总值, top-category story) live on the profile-review
+            entry card; the CTA below carries the remaining-count coaching. */}
         <View className='extended-data__footer-summary'>
-          <Text className='extended-data__footer-coach'>{footerCoachLine}</Text>
-
           <View className='extended-data__footer-thermometer' aria-label='热度温度计'>
             {INTEREST_LEVEL_META.map((meta) => {
               const filled = selectedCount >= meta.level
@@ -672,61 +693,6 @@ export default function ExtendedDataPage() {
           <Text className='extended-data__footer-combined-stat'>
             已选 {selectedCount} 项 · 必聊 {topPriorityCount} 项
           </Text>
-
-          <View className='extended-data__footer-heat'>
-            <Text className='extended-data__footer-heat-value'>
-              热度总值 {selectionPreview.totalHeat}
-            </Text>
-            <Text className='extended-data__footer-heat-micro'>热度越高，匹配越优先</Text>
-          </View>
-
-          {highlightedSelections.length > 0 ? (
-            <View className='extended-data__footer-summary-chips'>
-              {highlightedSelections.map((selection) => {
-                const meta = getInterestLevelMeta(selection.level)
-                return (
-                  <View
-                    key={selection.topicId}
-                    className={[
-                      'extended-data__footer-summary-chip',
-                      `extended-data__footer-summary-chip--level-${selection.level}`,
-                    ].join(' ')}
-                  >
-                    <Text className='extended-data__footer-summary-chip-label'>{selection.label}</Text>
-                    <Text className='extended-data__footer-summary-chip-meta'>{meta?.shortLabel}</Text>
-                  </View>
-                )
-              })}
-            </View>
-          ) : null}
-
-          {selectedCount > 0 ? (
-            <View className='extended-data__footer-story-pill'>
-              {hasAllCategories ? (
-                <>
-                  <JoyJoinIcon emoji='🌈' size={24} className='extended-data__footer-story-pill-icon' />
-                  <Text className='extended-data__footer-story-pill-text'>
-                    兴趣横跨六大领域，你的同好画像很丰盛
-                  </Text>
-                </>
-              ) : hasMultipleCategories && topCategory ? (
-                <>
-                  <JoyJoinIcon emoji='🔥' size={24} className='extended-data__footer-story-pill-icon' />
-                  <Text className='extended-data__footer-story-pill-text'>
-                    {MACRO_CATEGORY_LABELS[topCategory]} 是你和同好最容易聊起来的领域
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <JoyJoinIcon emoji='✨' size={24} className='extended-data__footer-story-pill-icon' />
-                  <Text className='extended-data__footer-story-pill-text'>
-                    已经点亮 {selectedCount} 个同好信号
-                    {archetypeName ? `，${archetypeName}的画像正在成形` : ''}
-                  </Text>
-                </>
-              )}
-            </View>
-          ) : null}
         </View>
 
         {error ? (

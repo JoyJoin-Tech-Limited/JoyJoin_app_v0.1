@@ -185,7 +185,9 @@ const [
     getFeatureFlag('flowIntroEnabled', true),
     getFeatureFlag('flowLifecycleEnabled', true),
     getFeatureFlag('poolTeaserEnabled', false),
-    getFeatureFlag('personalitySlotProfileFast', false),
+    // Default ON since the 2026-08-17 tempo retune (fast is the product
+    // default); set the DB flag to false to remotely roll back to baseline.
+    getFeatureFlag('personalitySlotProfileFast', true),
     getFeatureFlag('personalitySlotProfileDramatic', false),
     getFeatureFlag('shareAnimatedClipEnabled', false),
     getFeatureFlag('duoRegistrationEnabled', true),
