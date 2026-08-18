@@ -33,7 +33,7 @@ const MATCH_BADGE_LABELS: Record<MilestoneBadgeKey, string> = {
   matchReasonSameRelationship: '关系同步',
   matchReasonSameArchetypeBand: '同频共振',
   matchReasonSameWorkIndustry: '同行相遇',
-  matchReasonExactArchetype: '灵魂默契',
+  matchReasonExactArchetype: '一拍即合',
   matchReasonHometownIndustry: '故乡同行',
   firstEvent: '初次见面',
   streak3: '三场连击',

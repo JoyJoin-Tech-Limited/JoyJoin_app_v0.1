@@ -38,7 +38,7 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   {
     archetype: 'corgi',
     statements: [
-      { index: 1, text: '我能和陌生人聊成老朋友', is_ai: false, source_tag: '社交悍匪' },
+      { index: 1, text: '我能和陌生人聊成老朋友', is_ai: false, source_tag: '聚会达人' },
       { index: 2, text: '手机里有五千个表情包', is_ai: false, source_tag: '表情包大户' },
       { index: 3, text: '我曾经在地铁上即兴演讲', is_ai: true, source_tag: null },
     ],
@@ -130,9 +130,9 @@ export const LIE_DETECTIVE_V2_FALLBACK_SETS: LieDetectiveV2FallbackSet[] = [
   {
     archetype: 'spider',
     statements: [
-      { index: 1, text: '我撮合过两对朋友在一起', is_ai: false, source_tag: '牵线搭桥' },
+      { index: 1, text: '我促成过两对朋友成为好友', is_ai: false, source_tag: '牵线搭桥' },
       { index: 2, text: '我擅长把不同圈子凑一起', is_ai: false, source_tag: '组局达人' },
-      { index: 3, text: '我写过一本社交书', is_ai: true, source_tag: null },
+      { index: 3, text: '我写过一本聚会指南', is_ai: true, source_tag: null },
     ],
   },
   {

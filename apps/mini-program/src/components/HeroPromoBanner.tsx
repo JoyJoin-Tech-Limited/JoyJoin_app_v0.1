@@ -29,18 +29,18 @@ const PROMO_VARIANTS: Record<PromoBannerVariant, PromoVariantConfig> = {
     accessibilityLabel: '本周推荐，每周精选适合你的小聚',
   },
   B: {
-    eyebrow: '专属匹配',
-    title: '看看你的专属匹配',
+    eyebrow: '专属同桌',
+    title: '看看你的专属同桌',
     subtitle: '你的同类正在附近聚会',
     cta: '看看是谁',
-    accessibilityLabel: '专属匹配，发现与你契合的聚会伙伴',
+    accessibilityLabel: '专属同桌，发现与你契合的聚会伙伴',
   },
   C: {
     eyebrow: '先测再玩',
-    title: '30 秒测出你的社交人格',
+    title: '30 秒测出你的聚会人格',
     subtitle: '更精准的聚会推荐',
     cta: '开始测试',
-    accessibilityLabel: '30 秒测出你的社交人格，更精准的聚会推荐',
+    accessibilityLabel: '30 秒测出你的聚会人格，更精准的聚会推荐',
   },
 } as const
 

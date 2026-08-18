@@ -70,7 +70,7 @@ describe('mini-program center tab routing — hub page architecture', () => {
         poolDateTime: '2026-07-29T11:32:00.000Z',
       },
     ], [], new Date('2026-06-25T12:00:00.000Z'))).toEqual({
-      label: '匹配中…',
+      label: '排桌中…',
       showBadge: true,
       action: {
         kind: 'pending-registration',

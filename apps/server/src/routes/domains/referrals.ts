@@ -339,8 +339,8 @@ export function registerReferralRoutes(app: Express): void {
         userId,
         category: 'activities',
         type: 'match_success',
-        title: '匹配成功',
-        message: '你的周末轰趴活动已成功匹配4位小伙伴',
+        title: '排桌完成',
+        message: '你的周末轰趴活动已排桌完成，4位小伙伴已就位',
       });
 
       await storage.createNotification({

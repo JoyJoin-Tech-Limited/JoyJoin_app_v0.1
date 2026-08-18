@@ -115,8 +115,8 @@ describe('eventDisplay', () => {
 
   describe('getJoinedEventStatusLabel', () => {
     it('maps known statuses to labels', () => {
-      expect(getJoinedEventStatusLabel('matched')).toBe('已匹配')
-      expect(getJoinedEventStatusLabel('pending')).toBe('匹配中')
+      expect(getJoinedEventStatusLabel('matched')).toBe('已排桌')
+      expect(getJoinedEventStatusLabel('pending')).toBe('排桌中')
       expect(getJoinedEventStatusLabel('registered')).toBe('已报名')
       expect(getJoinedEventStatusLabel('confirmed')).toBe('已确认')
       expect(getJoinedEventStatusLabel('venue_unlocked')).toBe('场地已解锁')
@@ -163,7 +163,7 @@ describe('eventDisplay', () => {
   describe('getEventPoolStatusLabel (2026-07-28 — event-detail raw `active` fix)', () => {
     it('localizes every pool lifecycle status', () => {
       expect(getEventPoolStatusLabel('active')).toBe('招募中')
-      expect(getEventPoolStatusLabel('matching')).toBe('匹配中')
+      expect(getEventPoolStatusLabel('matching')).toBe('排桌中')
       expect(getEventPoolStatusLabel('matched')).toBe('已成局')
       expect(getEventPoolStatusLabel('completed')).toBe('已结束')
       expect(getEventPoolStatusLabel('cancelled')).toBe('已取消')

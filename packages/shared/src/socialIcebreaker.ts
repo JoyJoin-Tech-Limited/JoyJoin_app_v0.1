@@ -835,7 +835,7 @@ export const PHASE_CONFIG = {
   },
   speed_friending: {
     emoji: '',
-    name: '快速交友',
+    name: '轮桌畅聊',
     nameEn: 'Speed Friending',
     gradient: 'from-green-400 to-emerald-500',
     bgGradient: 'from-green-50 via-emerald-50 to-teal-50',

@@ -373,7 +373,7 @@ function getDefaultPrediction(): AtmospherePrediction {
 // 通知文案变体（避免重复）
 const matchTitleVariants = [
   "小悦已为你安排妥当",
-  "你的社交局已就绪",
+  "你的这一局已就绪",
   "精心安排，只等你来",
   "专属局已配好",
 ];
@@ -462,7 +462,7 @@ export function generateReminderCopy(
  */
 export function generateFirstMatchIntro(): { title: string; message: string } {
   const title = "小悦来啦";
-  const message = "我是悦聚的AI社交建筑师，根据你们的性格、兴趣和社交风格，精心搭建了这一局~ 现在就去看看你的伙伴吧";
+  const message = "我是悦聚的氛围建筑师，根据你们的性格、兴趣和风格，精心搭建了这一局~ 现在就去看看你的伙伴吧";
   
   return { title, message };
 }

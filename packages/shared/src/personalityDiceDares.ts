@@ -203,7 +203,7 @@ export const PERSONALITY_DICE_DARES: Record<string, ArchetypeDare[]> = {
     {
       id: 'spider_3',
       title: '社交裁缝',
-      body: '现场"撮合"两个人成为"今天最佳拍档"，用30秒编一个他们应该合作的理由。',
+      body: '现场牵线让两个人成为"今天最佳拍档"，用30秒编一个他们应该合作的理由。',
       emoji: '🧵',
       difficulty: 'spicy',
       passLine: '今天不营业。',

@@ -189,7 +189,7 @@ export default function GatheringRoomPage() {
             <XiaoyueEmptyState
               emotion='waiting'
               title='同桌还在路上'
-              subtitle='匹配完成后，这桌的伙伴会陆续出现'
+              subtitle='排桌完成后，这桌的伙伴会陆续出现'
             />
           </View>
         ) : (

@@ -116,7 +116,7 @@ export const ACTIVITY_TIME_PREFERENCE_OPTIONS = ["工作日晚上", "周末白�
 export type ActivityTimePreference = typeof ACTIVITY_TIME_PREFERENCE_OPTIONS[number];
 
 // Social frequency options (聚会频率)
-export const SOCIAL_FREQUENCY_OPTIONS = ["每周社交", "每两周一次", "每月一两次", "看心情"] as const;
+export const SOCIAL_FREQUENCY_OPTIONS = ["每周聚会", "每两周一次", "每月一两次", "看心情"] as const;
 export type SocialFrequency = typeof SOCIAL_FREQUENCY_OPTIONS[number];
 
 // Languages comfort options - sorted by number of speakers (most to least)
@@ -223,7 +223,7 @@ export type IndustryOption = typeof INDUSTRY_OPTIONS[number];
 // Intent/Social Goals options
 export const INTENT_OPTIONS = [
   { value: "friends", label: "交新朋友", subtitle: "认识有趣的人", emoji: "👋", iconHint: "Users" },
-  { value: "networking", label: "拓展人脉", subtitle: "扩大社交圈", emoji: "🤝", iconHint: "Network" },
+  { value: "networking", label: "拓展人脉", subtitle: "扩大圈子", emoji: "🤝", iconHint: "Network" },
   { value: "discussion", label: "深度交流", subtitle: "走心的对话", emoji: "💬", iconHint: "MessageCircle" },
   { value: "fun", label: "轻松娱乐", subtitle: "开心就好", emoji: "🎉", iconHint: "PartyPopper" },
   { value: "explore", label: "尝鲜体验", subtitle: "试试新玩法", emoji: "🎯", iconHint: "Compass" },

@@ -86,7 +86,7 @@ function getStateBandSubcopy(band: PoolPersonaStateBand): string {
     case 'clear':
       return '画像越来越清晰，离遇见同频的人更近一步'
     case 'full':
-      return '这一桌的人已经足够拼出完整的社交画像'
+      return '这一桌的人已经足够拼出完整的活动画像'
     default:
       return '报名伙伴越多，悦仔拼出的画像越清晰'
   }

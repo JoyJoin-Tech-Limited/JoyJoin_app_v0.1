@@ -57,7 +57,7 @@ function localiseInterest(key: string): string {
 // ── Headline templates ─────────────────────────────────────────────────────────
 
 const GENERIC_HEADLINES = [
-  `${DEFAULT_MASCOT_DISPLAY_NAME}凑齐了这一桌有趣的灵魂`,
+  `${DEFAULT_MASCOT_DISPLAY_NAME}凑齐了这一桌有趣的搭子`,
   '这次，共同的兴趣把你们安排在了同一桌',
   '你们之间，有种聊得来的默契',
   `${DEFAULT_MASCOT_DISPLAY_NAME}觉得，这一桌注定要相聚`,

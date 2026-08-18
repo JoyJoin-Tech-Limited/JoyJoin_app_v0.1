@@ -1,7 +1,7 @@
 # JoyJoin Mini-Program 文案策略
 
 > Brand-governed copy strategy for production-facing mini-program 文案.
-> Last updated: 2026-05-15
+> Last updated: 2026-08-17
 >
 > **Audience:** AI Agent (primary) + human editors/copywriters.
 > **Scope:** All user-facing text in `apps/mini-program` and `packages/shared`.
@@ -132,6 +132,7 @@ When using an 🟠 word, the surrounding sentence must frame it in social-experi
 | 悦聚卡（权益订阅昵称家族） | — | 活动礼包 / 月度活动礼包 / 季度活动礼包 |
 | 连局包（次数包昵称） | — | 活动包 / 3次活动包 / 6次活动包 |
 | 单场局票（单场票昵称） | — | 单次票 / 单次体验 |
+| 订座 / 留座 / 入座 / 席位 | — | 预约 / 抢票 / 选座 / 占座 |
 
 ---
 
@@ -186,7 +187,7 @@ packages/shared/src/copy/
 ├── mascotVoice.ts     # 悦仔常用句式库
 ├── toneMap.ts         # Surface ↔ Tone mapping + allowed modes
 ├── exceptions.ts      # 🟠 Orange-word framing templates
-├── onboardingVoice.ts # Tier A 12-archetype × 8-step onboarding voice matrix + Tier B fallbacks (getOnboardingVoiceLine)
+├── onboardingVoice.ts # Tier A 12-archetype × 7-step onboarding voice matrix + Tier B fallbacks (getOnboardingVoiceLine)
 ├── flowAnimationCopy.ts # Flow-1/Flow-2 overlay copy deck (import via @shared/copy/flowAnimationCopy, not the barrel)
 └── poolTeaserCopy.ts    # Pool-registration flow teaser copy deck (import via @shared/copy/poolTeaserCopy, not the barrel)
 ```

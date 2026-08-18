@@ -24,10 +24,11 @@ export interface OrangeWordEntry {
 export const ORANGE_WORDS: OrangeWordEntry[] = [
   {
     word: '匹配',
-    allowedContext: 'User-facing value statements: "匹配偏好", "匹配设置"',
-    bannedContext: 'Describing internal mechanism: "匹配算法", "系统匹配"',
-    framingTemplate: `{context}匹配偏好`,
-    note: 'Frame as user-owned concept, not system action',
+    allowedContext: 'Internal machine identifiers and API contracts only (matchStatus, matchingService, schema fields).',
+    bannedContext:
+      'User-facing copy: "匹配中", "匹配成功", "为你匹配", "匹配算法", "系统匹配", "匹配度"',
+    framingTemplate: `{context}排桌`,
+    note: '2026-08-18: systematic softening to event-booking vocabulary (排桌/合拍/同桌/轮桌畅聊) for WeChat category positioning — see docs/runbooks/wechat-review-submission.md',
   },
   {
     word: 'AI',

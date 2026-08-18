@@ -390,7 +390,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
     },
     narrative: {
       nickname: "关系织网师",
-      tagline: "发现共同点并撮合交流的连接器",
+      tagline: "发现共同点并牵线交流的连接器",
       epicDescription: "他们有一种特别的眼光，总能把两个看似不相干的人连到一起。「你们都喜欢这个？」——这句话一出口，一段新关系就开始了。他们不一定是聚会上最显眼的，但往往是那个让所有人都被看见的人。",
       styleQuote: "社交黏合剂，网络织一织，陌生朋友变知己",
       coreContributions: "连接不同人群，构建社交网络",
@@ -417,7 +417,7 @@ export const archetypeRegistry: Record<ArchetypeId, ArchetypeRecord> = {
         headline: "你不是社交用力派，你是把关系慢慢织起来",
         shareLine: "我是人脉蛛型，更擅长让关系慢慢连起来，不是硬撑热闹。",
         stateLabel: "局内升温型",
-        analysis: "你是人脉蛛型：发现两个人应该认识，然后悄悄搭一座桥。撮合成功了你是最高兴的那个，也是最不显眼的那个。这种连接的眼光，不是所有人都有。",
+        analysis: "你是人脉蛛型：发现两个人应该认识，然后悄悄搭一座桥。牵线成功了你是最高兴的那个，也是最不显眼的那个。这种连接的眼光，不是所有人都有。",
         socialRole: "你更像连接器，擅长让对的人自然搭上线。",
         bestScene: "更适合有轮流交流空间的小局，而不是只顾抢话的大场子。",
         microAction: "下次进局先记下两个可能聊得来的人，再顺手搭一座桥。",

@@ -63,7 +63,7 @@ describe('tabBarState singleton', () => {
     listener.mockClear()
 
     const newCenter = nextState(getTabBarState(), {
-      center: { label: '匹配中', showBadge: true, action: DEFAULT_CENTER.action },
+      center: { label: '排桌中', showBadge: true, action: DEFAULT_CENTER.action },
     }).center
 
     setTabBarCenterState(newCenter)

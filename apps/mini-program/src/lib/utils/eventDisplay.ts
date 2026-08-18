@@ -117,11 +117,11 @@ export function getCountdownText(startTime: string): string {
 export function getJoinedEventStatusLabel(status?: string | null): string {
   switch (status) {
     case 'matched':
-      return '已匹配'
+      return '已排桌'
     case 'venue_unlocked':
       return '场地已解锁'
     case 'pending':
-      return '匹配中'
+      return '排桌中'
     case 'registered':
       return '已报名'
     case 'confirmed':
@@ -152,7 +152,7 @@ export function getEventPoolStatusLabel(status?: string | null): string {
     case 'active':
       return '招募中'
     case 'matching':
-      return '匹配中'
+      return '排桌中'
     case 'matched':
       return '已成局'
     case 'completed':

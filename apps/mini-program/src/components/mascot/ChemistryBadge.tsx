@@ -35,7 +35,7 @@ export default function ChemistryBadge({
   className = '',
 }: ChemistryBadgeProps) {
   const assetKey = assetMap[chemistry]
-  const fallbackLabel = labelMap[chemistry] ?? '匹配'
+  const fallbackLabel = labelMap[chemistry] ?? '合拍'
   const { src, onError, isLocal } = useCdnFirstSrc(`/assets/icons/chemistry-badges/${assetKey}.webp`)
   const [hasError, setHasError] = useState(false)
 

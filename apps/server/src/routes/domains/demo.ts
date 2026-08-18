@@ -440,7 +440,7 @@ export function registerDemoRoutes(app: Express): void {
         message: "Christmas pool created successfully",
         event: created[0],
         eventId: created[0].id,
-        instructions: "你现在可以体验报名流程。系统将自动为你匹配其他参加者，生成完整的匹配桌。"
+        instructions: "你现在可以体验报名流程。系统将自动为你安排其他参加者，拼成完整的一桌。"
       });
     } catch (error) {
       logger.error("[DemoChristmasPool] Error creating pool:", { error: error instanceof Error ? error.message : String(error) });

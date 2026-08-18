@@ -43,7 +43,7 @@ export const LEVELS: LevelConfig[] = [
   {
     level: 4,
     name: "Social Star",
-    nameCn: "社交达人",
+    nameCn: "聚会达人",
     xpRequired: 600,
     icon: "star",
     benefits: ["Early event registration"],

@@ -13,7 +13,7 @@ function m(text: string, mascotName = DEFAULT_MASCOT_NAME): string {
 
 export const loadingWhispers: LoadingWhisper[] = [
   { text: '今天也要把快乐传染给新朋友哦！', archetypes: ['社牛柯基'] },
-  { text: '太阳照常升起，有趣的灵魂正在路上。', archetypes: ['小太阳鸡'] },
+  { text: '太阳照常升起，有趣的搭子正在路上。', archetypes: ['小太阳鸡'] },
   { text: '你的真诚夸奖，是别人的一整天。', archetypes: ['夸夸仓鼠'] },
   { text: '机智如你，总能在关键时刻找到最优解。', archetypes: ['寻宝狐'] },
   { text: '深海般沉稳，是你最迷人的气场。', archetypes: ['机灵海豚'] },
@@ -32,7 +32,7 @@ export const loadingWhispers: LoadingWhisper[] = [
   { text: '{{mascot}}正在把盲盒摇匀，保证公平。' },
   { text: '悦仔已经喝了三杯咖啡，精神得很。' },
   { text: '每一个等待的瞬间，都是惊喜的伏笔。' },
-  { text: '你的社交DNA正在高速解析中…' },
+  { text: '你的合拍DNA正在高速解析中…' },
   { text: '{{mascot}}偷偷看了眼结果，嘴角已经上扬。' },
 ]
 

@@ -123,7 +123,7 @@ export function getActIICopy(
       contextLine: contextActivity
         ? `你刚看了《${contextActivity}》——那桌人需要你`
         : undefined,
-      revealLine: '悦仔为你匹配了最适合的参与方式',
+      revealLine: '悦仔为你挑选了最适合的参与方式',
       invitationLine: '不是所有人都能加入，但你可以',
     }
   }
@@ -134,7 +134,7 @@ export function getActIICopy(
     contextLine: contextActivity
       ? `你刚看了《${contextActivity}》——那场局在等你`
       : undefined,
-    revealLine: '悦仔为你匹配了最适合的参与方式',
+    revealLine: '悦仔为你挑选了最适合的参与方式',
     invitationLine: '不是所有人都能加入，但你可以',
   }
 }

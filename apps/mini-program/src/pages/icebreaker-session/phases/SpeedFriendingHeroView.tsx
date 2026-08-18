@@ -117,7 +117,7 @@ export function SpeedFriendingHeroView({
         <PhaseHeroCard
           phase='speed_friending'
           artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-speed-friending.webp')}
-          title='快速交友完成'
+          title='轮桌畅聊完成'
           prompt={`共 ${totalRounds} 轮，${pairs.length} 次配对 · 大家都认识了新伙伴，真棒！`}
           statusText='本环节已完成'
           doneCount={totalRounds}
@@ -154,7 +154,7 @@ export function SpeedFriendingHeroView({
       <PhaseHeroCard
         phase='speed_friending'
         artUrl={cdnAsset('/assets/lovart/icebreaker/bands/band-speed-friending.webp')}
-        title={myPair ? `搭档：${partnerName}` : isBye ? '本轮观察席' : '快速交友'}
+        title={myPair ? `搭档：${partnerName}` : isBye ? '本轮观察席' : '轮桌畅聊'}
         prompt={
           myPair
             ? '和搭档聊聊吧，时间由主持人把控'

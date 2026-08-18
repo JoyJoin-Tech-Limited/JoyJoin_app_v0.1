@@ -54,7 +54,7 @@ export function getDiscoverSubtitle(ctx: DiscoverHeaderContext): string {
   }
 
   // No archetype — nudge toward personality test
-  return '先完成氛围测试，解锁你的专属匹配'
+  return '先完成氛围测试，解锁你的专属同桌'
 }
 
 export function getDiscoverActionLabel(ctx: DiscoverHeaderContext): {

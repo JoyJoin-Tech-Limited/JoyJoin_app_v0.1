@@ -58,7 +58,7 @@ export function buildMascotConfigFromEnv(env: {
   const backstory: MascotBackstory | undefined = backstoryEnabled
     ? {
         enabled: true,
-        text: '悦仔来自悦聚，是你的社交小向导。',
+        text: '悦仔来自悦聚，是你的聚会小向导。',
         ...(originLoreEnabled
           ? {
               originName: '小悦',

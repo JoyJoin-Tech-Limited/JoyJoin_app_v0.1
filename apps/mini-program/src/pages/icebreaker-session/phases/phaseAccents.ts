@@ -84,7 +84,7 @@ export const PHASE_ACCENTS: Partial<Record<SocialIcebreakerPhase, PhaseAccent>> 
     accent: '#5B8DB8',
     accentDeep: '#3D6E9C',
     tint: '#EEF4FA',
-    label: '快速交友',
+    label: '轮桌畅聊',
   },
   mini_script: {
     accent: '#C26A8C',

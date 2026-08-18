@@ -380,7 +380,7 @@ describe('native custom tab bar behavior', () => {
 
     component.syncState({
       center: {
-        label: '匹配中',
+        label: '排桌中',
         showBadge: true,
         action: { kind: 'pending-registration', navigation: 'switchTab', url: '/pages/center-hub/index' },
       },
@@ -389,7 +389,7 @@ describe('native custom tab bar behavior', () => {
 
     await vi.advanceTimersByTimeAsync(50)
 
-    expect(component.data.center.label).toBe('匹配中')
+    expect(component.data.center.label).toBe('排桌中')
     expect(component.data.center.showBadge).toBe(true)
     expect(component.data.leftTabs[0].badgeCount).toBe(3)
     expect(component.data.leftTabs[1].badgeCount).toBe(0)

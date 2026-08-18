@@ -747,7 +747,7 @@ export default function EditProfilePage() {
                   onFocus={() => {
                     profileAnalytics.track('profile_edit_tap', { field: 'bio' })
                   }}
-                  placeholder='输入你的社交签名'
+                  placeholder='输入你的聚会签名'
                   maxlength={100}
                 />
                 {fieldErrors.bio && (
@@ -808,11 +808,11 @@ export default function EditProfilePage() {
           </Card>
         </View>
 
-        {/* ── Step 2: 社交画像 ── */}
+        {/* ── Step 2: 活动画像 ── */}
         <View className='edit-profile__section'>
           <View className='edit-profile__section-header'>
-            <Text className='edit-profile__section-title'>社交画像</Text>
-            <Text className='edit-profile__section-subtitle'>定义你的社交身份</Text>
+            <Text className='edit-profile__section-title'>活动画像</Text>
+            <Text className='edit-profile__section-subtitle'>定义你的活动身份</Text>
           </View>
 
           <Card className='edit-profile__card'>
@@ -854,7 +854,7 @@ export default function EditProfilePage() {
             {/* Intent */}
             <View className='edit-profile__field'>
               <Text className='edit-profile__label'>
-                社交期待
+                活动期待
                 <Text className='edit-profile__intent-count'>（{intent.length} 已选，最多 {MAX_INTENTS}）</Text>
               </Text>
               <View className='edit-profile__intent-grid'>

@@ -85,8 +85,8 @@ export async function broadcastEventMatched(
         userId,
         category: 'activities',
         type: 'event_reminder',
-        title: '匹配成功！',
-        message: `您的活动已成功匹配，${participants.length}位参与者，地点：${restaurantName}`,
+        title: '排桌完成！',
+        message: `您的活动已排桌完成，${participants.length}位参与者，地点：${restaurantName}`,
         relatedResourceId: eventId,
       })
     )
@@ -254,8 +254,8 @@ async function createStatusChangeNotification(eventId: string, newStatus: string
     
     switch (newStatus) {
       case 'matched':
-        title = '匹配成功！';
-        message = '您的活动已成功匹配，查看详情了解更多';
+        title = '排桌完成！';
+        message = '您的活动已排桌完成，查看详情了解更多';
         break;
       case 'completed':
         title = '活动已完成';

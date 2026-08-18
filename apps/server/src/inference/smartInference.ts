@@ -502,7 +502,7 @@ export function generateStylePrompt(profile: StyleProfile): string {
 export const PERSONALITY_TEST_VALUE_MESSAGES = [
   {
     timing: 'before_test',
-    message: '接下来是一个小小的性格探索游戏～只需要2-3分钟，帮我更了解你的社交风格，这样才能为你匹配到真正合拍的新朋友哦！',
+    message: '接下来是一个小小的性格探索游戏～只需要2-3分钟，帮我更了解你的活动风格，这样才能为你安排到真正合拍的同桌哦！',
     emoji: '🎮',
   },
   {

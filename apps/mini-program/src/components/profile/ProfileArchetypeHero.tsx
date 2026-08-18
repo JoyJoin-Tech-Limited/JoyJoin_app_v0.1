@@ -102,10 +102,10 @@ export default function ProfileArchetypeHero({
               className='profile-archetype-hero__bio-cta'
               hoverClass='profile-archetype-hero__bio-cta--pressed'
               onClick={onBioCta}
-              aria-label='写一句你的社交签名'
+              aria-label='写一句你的聚会签名'
             >
               <Text className='profile-archetype-hero__bio-cta-text'>
-                写一句你的社交签名，让别人一眼记住你
+                写一句你的聚会签名，让别人一眼记住你
               </Text>
               <View className='profile-archetype-hero__bio-cta-chevron' />
             </View>

@@ -39,11 +39,11 @@ const STATUS_FAMILY_MAP: Record<string, 'fire' | 'calm' | 'warm' | 'cool'> = {
 
 // Human, playful momentum copy for each status.
 const STATUS_MOMENTUM_COPY: Record<string, string> = {
-  matched: '匹配成功',
+  matched: '排桌完成',
   venue_unlocked: '场地已解锁',
   confirmed: '已确认',
   upcoming: '即将开始',
-  pending: '匹配中',
+  pending: '排桌中',
   registered: '报名成功',
   completed: '圆满结束',
   attended: '已参加',
@@ -54,10 +54,10 @@ const STATUS_MOMENTUM_COPY: Record<string, string> = {
 
 // Explicit "what you are waiting for" copy. Empty means no extra waiting hint.
 const STATUS_WAITING_COPY: Record<string, string> = {
-  pending: '系统正在撮合本场成员，请耐心等待',
-  registered: '报名成功，等待系统匹配',
+  pending: '系统正在安排本场同桌，请耐心等待',
+  registered: '报名成功，等待排桌',
   upcoming: '报名成功，活动即将开始',
-  matched: '匹配成功，场地安排中',
+  matched: '排桌完成，场地安排中',
   confirmed: '已确认，期待见面',
   venue_unlocked: '场地已解锁，期待见面',
 }

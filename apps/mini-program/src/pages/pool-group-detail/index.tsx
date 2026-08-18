@@ -310,7 +310,7 @@ export default function PoolGroupDetailPage() {
         </Text>
         {group.matchScore != null ? (
           <View className='pool-group-detail__match-score'>
-            <Text className='pool-group-detail__match-score-text'>匹配度 {group.matchScore}分</Text>
+            <Text className='pool-group-detail__match-score-text'>合拍度 {group.matchScore}分</Text>
           </View>
         ) : null}
       </View>

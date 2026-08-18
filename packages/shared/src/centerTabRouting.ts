@@ -193,7 +193,7 @@ export function getCenterButtonLabel(
   )
 
   if (pendingRegistration) {
-    return '匹配中…'
+    return '排桌中…'
   }
 
   const matchedPool = poolRegistrations.find(

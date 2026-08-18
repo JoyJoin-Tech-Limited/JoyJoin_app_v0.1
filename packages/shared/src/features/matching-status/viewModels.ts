@@ -310,12 +310,12 @@ export function getMatchingStatusScreenState<TRegistration extends { id: string 
 export function getStatusLabel(status?: string): string {
   switch (status) {
     case 'matched':
-      return '匹配成功'
+      return '排桌完成'
     case 'completed':
       return '圆满结束'
     case 'pending':
     default:
-      return '匹配中'
+      return '排桌中'
   }
 }
 

@@ -9,6 +9,8 @@
  *
  * TODO(AC-14): Legal review required before merge. The AIGC clauses below are
  * drafted for compliance review and must be signed off by legal before shipping.
+ * 2026-08-18: copy softened to event-booking vocabulary (排桌) and the AIGC
+ * clause made conditional to match the no-AI review posture; still legal-review pending.
  */
 
 export interface TermsSectionZh {
@@ -18,9 +20,9 @@ export interface TermsSectionZh {
 }
 
 /** ISO-like date for internal reference; shown in UI as LEGAL_LAST_UPDATED_LABEL_ZH */
-export const LEGAL_DOCUMENT_VERSION = "2026-05-13";
+export const LEGAL_DOCUMENT_VERSION = "2026-08-18";
 
-export const LEGAL_LAST_UPDATED_LABEL_ZH = "2026年5月13日";
+export const LEGAL_LAST_UPDATED_LABEL_ZH = "2026年8月18日";
 
 export const JOYJOIN_COPYRIGHT_YEAR = "2026";
 
@@ -29,8 +31,8 @@ export const JOYJOIN_TERMS_SECTIONS_ZH: TermsSectionZh[] = [
     id: "ts-service",
     heading: "一、服务说明",
     paragraphs: [
-      "悦聚（JoyJoin）是一个面向都市青年的社交活动平台，致力于通过精心设计的线下活动帮助用户结识志趣相投的新朋友。",
-      "平台提供活动报名、兴趣分组、破冰工具及活动回顾等服务，旨在以轻松自然的方式促进真实的人际连接。",
+      "悦聚（JoyJoin）是一个面向都市青年的线下聚会活动平台，致力于通过精心设计的线下聚会帮助用户结识志趣相投的新朋友。",
+      "平台提供活动报名、同桌安排、破冰游戏及活动回顾等服务，旨在以轻松自然的方式促进真实的人际连接。",
     ],
   },
   {
@@ -62,16 +64,16 @@ export const JOYJOIN_TERMS_SECTIONS_ZH: TermsSectionZh[] = [
     id: "ts-events",
     heading: "五、活动参与规则",
     paragraphs: [
-      "报名时须如实填写个人信息。虚假信息将影响匹配质量，情节严重者将限制未来报名资格。",
-      "取消与退款：\n— 配池阶段取消（匹配尚未完成）：全额退款，活动次数自动返还，权益用户不受影响。\n— 匹配完成后取消：于活动开始24小时前取消，平台退还50%费用或保留本次参与机会；不足24小时取消，不予退款且正常扣除活动次数（如有）。\n— 平台因故取消活动：全额退款或恢复活动次数，不受上述时间限制。\n— 以上规则适用于单场局票购买、连局包及权益方案用户。",
-      "无故缺席：未在活动开始至少24小时前通过平台取消且未出席，记为缺席。缺席将降低个人匹配优先级评分：累计2次暂停报名资格30天，累计3次及以上长期降低匹配权重。缺席记录每6个月自动清零。「提前取消」指在活动开始至少24小时前通过平台完成取消操作。",
+      "报名时须如实填写个人信息。虚假信息将影响排桌质量，情节严重者将限制未来报名资格。",
+      "取消与退款：\n— 配池阶段取消（排桌尚未完成）：全额退款，活动次数自动返还，权益用户不受影响。\n— 排桌完成后取消：于活动开始24小时前取消，平台退还50%费用或保留本次参与机会；不足24小时取消，不予退款且正常扣除活动次数（如有）。\n— 平台因故取消活动：全额退款或恢复活动次数，不受上述时间限制。\n— 以上规则适用于单场局票购买、连局包及权益方案用户。",
+      "无故缺席：未在活动开始至少24小时前通过平台取消且未出席，记为缺席。缺席将降低个人排桌优先级评分：累计2次暂停报名资格30天，累计3次及以上长期降低排桌权重。缺席记录每6个月自动清零。「提前取消」指在活动开始至少24小时前通过平台完成取消操作。",
     ],
   },
   {
     id: "ts-disclaimer",
     heading: "六、免责声明",
     paragraphs: [
-      "悦聚平台的职责是为用户创造高质量的相遇机会，活动结束后双方形成的任何关系（友谊、恋爱或其他）均属个人私事，平台不承担任何连带责任。",
+      "悦聚平台的职责是为用户创造高质量的相聚机会，活动结束后双方形成的任何关系均属个人私事，平台不承担任何连带责任。",
       "平台不对活动中因个人行为引发的纠纷负责。如需法律援助，请通过正规法律途径解决。",
     ],
   },
@@ -79,8 +81,8 @@ export const JOYJOIN_TERMS_SECTIONS_ZH: TermsSectionZh[] = [
     id: "ts-aigc",
     heading: "七、人工智能生成内容（AIGC）说明",
     paragraphs: [
-      "为提升活动氛围与破冰体验，平台部分文案、标签或建议由生成式人工智能技术辅助生成。",
-      "若你发现某条内容由 AI 生成且存在不当、错误或不妥之处，可通过 App 内举报入口选择「AI 生成内容」进行反馈，平台将在收到举报后依规审核与处理。",
+      "在启用生成式人工智能功能的前提下，为提升活动氛围与破冰体验，平台部分文案、标签或建议可能由生成式人工智能技术辅助生成；相关功能将依法完成算法备案后方可上线，并在启用时另行显著告知。在相关功能未启用的版本中，平台内所有互动内容均为预先创作，不包含 AI 生成内容。",
+      "在相关功能启用期间，若你发现某条内容由 AI 生成且存在不当、错误或不妥之处，可通过 App 内举报入口选择「AI 生成内容」进行反馈，平台将在收到举报后依规审核与处理。",
       "平台保留对 AI 生成或 AI 辅助生成内容进行人工复核、调整、下架或替换的权利，以确保符合法律法规及社区准则。",
     ],
   },

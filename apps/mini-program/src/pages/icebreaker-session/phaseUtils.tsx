@@ -54,7 +54,7 @@ export function getPhaseLabel(phase: SessionPhase): string {
     case 'auction':
       return '拍卖'
     case 'speed_friending':
-      return '快速交友'
+      return '轮桌畅聊'
     case 'quip_battle':
       return '机智对决'
     case 'undercover_word':

@@ -78,7 +78,7 @@ describe('useTabBarStateBridge', () => {
     renderHook(() => useTabBarStateBridge(), { wrapper: createWrapper() })
 
     await waitFor(() => {
-      expect(getTabBarState().center.label).toBe('匹配中…')
+      expect(getTabBarState().center.label).toBe('排桌中…')
       expect(getTabBarState().center.showBadge).toBe(true)
     })
   })

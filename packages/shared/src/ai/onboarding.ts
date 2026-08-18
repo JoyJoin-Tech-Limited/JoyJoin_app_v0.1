@@ -14,7 +14,7 @@ import type { AIResponseMeta } from '../types/aiMeta';
  * Used as a placeholder that reserves layout height to prevent card jump.
  */
 export const GENERIC_PROFILE_TAGLINE_FALLBACK =
-  '悦仔已经记下了你的社交画像，期待你的加入。';
+  '悦仔已经记下了你的活动画像，期待你的加入。';
 
 /**
  * Profile Tagline Response

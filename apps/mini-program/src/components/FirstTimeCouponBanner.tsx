@@ -225,7 +225,7 @@ export default function FirstTimeCouponBanner({
   const titleText = `首单${countedPercent > 0 ? countedPercent : discountPercent}折`
   const subtitleText = archetypeDisplayName
     ? `作为「${archetypeDisplayName}」的你，这份福利专属于你`
-    : '完成社交人格测试后，悦仔为你准备的专属福利'
+    : '完成聚会人格测试后，悦仔为你准备的专属福利'
 
   return (
     <View

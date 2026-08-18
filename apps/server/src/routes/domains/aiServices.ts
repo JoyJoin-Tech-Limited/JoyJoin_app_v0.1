@@ -87,9 +87,9 @@ export function registerAIServiceRoutes(app: Express): void {
 
   // WorkMode-keyed matching promise variants
   const WORK_MODE_PROMISES: Record<string, string> = {
-    founder: '我们会为你匹配同样有主见、聊得来的同频小组',
+    founder: '我们会为你安排同样有主见、聊得来的同频小组',
     self_employed: '我们会优先把你放进背景多元、互相启发的小组',
-    employed: '我们会以此为基础，为你匹配更对 vibe 的小组',
+    employed: '我们会以此为基础，为你安排更对 vibe 的小组',
     student: '我们会帮你找到同样好奇心旺盛、愿意交流的小组',
   };
 

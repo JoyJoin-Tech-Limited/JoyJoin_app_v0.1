@@ -129,7 +129,7 @@ export function getIcebreakerPageErrorText(error: unknown, fallback = '无法加
   if (error && typeof error === 'object') {
     const statusCode = (error as { statusCode?: unknown }).statusCode
     if (statusCode === 404) {
-      return '还没有找到这场活动的破冰入口，请从匹配成功的小队详情重新进入。'
+      return '还没有找到这场活动的破冰入口，请从排桌完成的小队详情重新进入。'
     }
     if (statusCode === 403) {
       return '你还不是这场活动的小队成员，暂时不能进入破冰。'

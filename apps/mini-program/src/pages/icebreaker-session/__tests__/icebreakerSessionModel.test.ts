@@ -338,7 +338,7 @@ describe('getIcebreakerPageErrorText', () => {
         isGenericMessage: true,
         message: 'Request failed with status 404',
       }),
-    ).toBe('还没有找到这场活动的破冰入口，请从匹配成功的小队详情重新进入。')
+    ).toBe('还没有找到这场活动的破冰入口，请从排桌完成的小队详情重新进入。')
   })
 
   it('explains forbidden access without exposing raw API text', () => {

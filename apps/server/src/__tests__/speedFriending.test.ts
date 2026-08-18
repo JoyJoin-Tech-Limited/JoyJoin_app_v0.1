@@ -50,7 +50,7 @@ describe('speed_friending — implementation tests', () => {
     const module = PHASE_REGISTRY.speed_friending;
 
     expect(module.id).toBe('speed_friending');
-    expect(module.name).toBe('快速交友');
+    expect(module.name).toBe('轮桌畅聊');
     expect(module.nameEn).toBe('Speed Friending');
     expect(module.durationMinutes).toBe(20);
     expect(module.minPlayers).toBe(2);

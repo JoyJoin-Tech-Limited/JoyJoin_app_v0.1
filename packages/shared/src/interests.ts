@@ -362,7 +362,7 @@ export const RIASEC_LABELS: Record<RiasecType, string> = {
   R: '现实型',
   I: '研究型',
   A: '艺术型',
-  S: '社交型',
+  S: '聚会型',
   E: '企业型',
   C: '传统型',
 };

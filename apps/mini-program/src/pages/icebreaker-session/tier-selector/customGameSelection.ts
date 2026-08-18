@@ -17,7 +17,7 @@ export const CUSTOM_GAME_OPTIONS: CustomGameOption[] = [
   { phase: 'lie_detective', iconPhase: 'lie_detective', title: '谎言侦探', minutes: 15 },
   { phase: 'auction', iconPhase: 'auction', title: '心动拍卖', minutes: 20 },
   { phase: 'personality_dice', iconPhase: 'personality_dice', title: '人格骰子', minutes: 12 },
-  { phase: 'speed_friending', iconPhase: 'speed_friending', title: '快速交友', minutes: 20 },
+  { phase: 'speed_friending', iconPhase: 'speed_friending', title: '轮桌畅聊', minutes: 20 },
   { phase: 'quip_battle', iconPhase: 'quip_battle', title: '机智对决', minutes: 12 },
   { phase: 'undercover_word', iconPhase: 'undercover_word', title: '谁是卧底', minutes: 12 },
   { phase: 'group_mirror', iconPhase: 'group_mirror', title: '群像镜像', minutes: 10 },

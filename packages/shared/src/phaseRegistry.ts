@@ -181,7 +181,7 @@ export const PHASE_REGISTRY: Record<SocialIcebreakerPhase, PhaseModule> = {
   },
   speed_friending: {
     id: 'speed_friending',
-    name: '快速交友',
+    name: '轮桌畅聊',
     nameEn: 'Speed Friending',
     emoji: '⏱️',
     durationMinutes: 20,
