@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, RootPortal, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { MINI_SCRIPT_GENRES, type MiniScriptGenerationStatus, type MiniScriptGenre, type MiniScriptLibraryItem, type MiniScriptStyle } from '@shared/miniscriptStoryFramework'
@@ -31,7 +31,10 @@ export type MiniScriptConfigModalProps = {
 
 type PickerStage = 'style' | 'library'
 
-export function MiniScriptConfigModal({ open, onClose, initialGenres = [...MINI_SCRIPT_GENRES], isSubmitting, generationStatus, scripts, isLibraryLoading, libraryError, onLoadLibrary, onSelectScript, onSubmit }: MiniScriptConfigModalProps) {
+// Hoisted so the default keeps a stable identity across renders
+const DEFAULT_INITIAL_GENRES: MiniScriptGenre[] = [...MINI_SCRIPT_GENRES]
+
+export function MiniScriptConfigModal({ open, onClose, initialGenres = DEFAULT_INITIAL_GENRES, isSubmitting, generationStatus, scripts, isLibraryLoading, libraryError, onLoadLibrary, onSelectScript, onSubmit }: MiniScriptConfigModalProps) {
   const [stage, setStage] = useState<PickerStage>('style')
   const [selectedStyle, setSelectedStyle] = useState<MiniScriptStyle | null>(null)
   const [selectedGenres, setSelectedGenres] = useState<MiniScriptGenre[]>(initialGenres)
@@ -44,8 +47,13 @@ export function MiniScriptConfigModal({ open, onClose, initialGenres = [...MINI_
     try { return !!(Taro.getSystemInfoSync() as { reduceMotion?: boolean }).reduceMotion } catch { return false }
   }, [])
 
+  // Reset selection only when the modal transitions to open — re-renders while
+  // open must not wipe the user's in-progress style/genre picks.
+  const wasOpenRef = useRef(false)
   useEffect(() => {
-    if (!open) return
+    const justOpened = open && !wasOpenRef.current
+    wasOpenRef.current = open
+    if (!justOpened) return
     setStage('style')
     setSelectedStyle(null)
     setSelectedGenres([...initialGenres])

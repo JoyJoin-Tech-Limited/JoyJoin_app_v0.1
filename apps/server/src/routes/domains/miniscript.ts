@@ -260,16 +260,24 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
 
   const parsed = miniScriptGenerateRequestSchema.safeParse(req.body);
   if (!parsed.success) {
+    logger.warn('[miniscript] generate rejected', { code: 'INVALID_BODY', userId });
     return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
   }
 
   const { socialSessionId, playerCount, style, genres, lite, selectedLabel } = parsed.data;
+  logger.info('[miniscript] generate requested', { socialSessionId, userId, style, playerCount });
+  // Every early return below must log — a silent 4xx reads identically to a
+  // never-delivered request when tailing server logs (2026-08-17 incident).
+  const logReject = (code: string, extra?: Record<string, unknown>) =>
+    logger.warn('[miniscript] generate rejected', { socialSessionId, userId, code, ...extra });
   const { state, expired } = await getSessionWithExpiry(socialSessionId);
 
   if (!state) {
     if (expired) {
+      logReject('SESSION_EXPIRED');
       return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
     }
+    logReject('SESSION_NOT_FOUND');
     return res.status(404).json({ error: 'Social session not found' });
   }
 
@@ -278,22 +286,27 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
   ensureSessionEnabledPhases(session);
 
   if (userId !== session.hostUserId) {
+    logReject('HOST_ONLY', { hostUserId: session.hostUserId });
     return res.status(403).json({ error: 'HOST_ONLY' });
   }
 
   if (session.currentPhase !== 'mini_script') {
+    logReject('WRONG_PHASE', { currentPhase: session.currentPhase });
     return res.status(400).json({ error: 'WRONG_PHASE', message: '仅在「迷你剧本杀」环节可生成剧本' });
   }
 
   if (!session.enabledPhases?.includes('mini_script')) {
+    logReject('FEATURE_DISABLED');
     return res.status(403).json({ error: 'FEATURE_DISABLED' });
   }
 
   if (session.playerCount < 4) {
+    logReject('NOT_ENOUGH_PLAYERS', { sessionPlayerCount: session.playerCount });
     return res.status(400).json({ error: 'NOT_ENOUGH_PLAYERS', message: '至少需要 4 位玩家' });
   }
 
   if (playerCount !== session.playerCount) {
+    logReject('PLAYER_COUNT_MISMATCH', { expected: session.playerCount, received: playerCount });
     return res.status(400).json({
       error: 'PLAYER_COUNT_MISMATCH',
       message: 'playerCount 必须与当前房间人数一致',
@@ -316,6 +329,7 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
     let generation = generationInFlight.get(socialSessionId);
     const inFlightStatus = generationStatuses.get(socialSessionId);
     if (generation && inFlightStatus?.style && inFlightStatus.style !== style) {
+      logReject('GENERATION_IN_PROGRESS', { inFlightStyle: inFlightStatus.style });
       return res.status(409).json({
         error: 'GENERATION_IN_PROGRESS',
         style: inFlightStatus.style,
@@ -360,6 +374,7 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
     }
 
     const { framework, aiResponseMeta } = await generation;
+    logger.info('[miniscript] generate completed', { socialSessionId, userId, style });
     return res.json({ ...framework, meta: aiResponseMeta });
   } catch (error) {
     setGenerationStatus(socialSessionId, 'failed', 100);

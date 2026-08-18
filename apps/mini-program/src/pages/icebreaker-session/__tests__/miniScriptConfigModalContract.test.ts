@@ -48,7 +48,17 @@ describe('MiniScriptConfigModal interaction and layout contract', () => {
   })
 
   it('starts with every PM-approved genre selected', () => {
-    expect(source).toContain('initialGenres = [...MINI_SCRIPT_GENRES]')
+    expect(source).toContain('const DEFAULT_INITIAL_GENRES: MiniScriptGenre[] = [...MINI_SCRIPT_GENRES]')
+    expect(source).toContain('initialGenres = DEFAULT_INITIAL_GENRES')
+  })
+
+  it('resets picker state only when the modal opens, never on re-renders', () => {
+    // Regression guard: an inline spread default gave initialGenres a new identity
+    // every render, retriggering the reset effect and wiping the selected style
+    // before 生成新剧本 could fire (stuck style buttons, zero network traffic).
+    expect(source).not.toContain('initialGenres = [...MINI_SCRIPT_GENRES]')
+    expect(source).toContain('const wasOpenRef = useRef(false)')
+    expect(source).toContain('const justOpened = open && !wasOpenRef.current')
   })
 
   it('shows genre selection as compact selected chips on the library page', () => {
