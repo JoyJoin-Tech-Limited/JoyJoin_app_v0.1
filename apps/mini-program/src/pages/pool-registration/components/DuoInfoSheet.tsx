@@ -1,6 +1,5 @@
 import { View, Text, ScrollView } from '@tarojs/components'
 import Button from '../../../components/ui/Button'
-import './DuoInfoSheet.scss'
 
 interface DuoInfoSheetProps {
   reduceMotion: boolean

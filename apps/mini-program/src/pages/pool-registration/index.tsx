@@ -8,6 +8,7 @@ import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION, toggleIntentValue } from '@s
 
 import { useStaggerMount } from '../../hooks/useStaggerMount'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
+import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { apiRequest } from '../../lib/api/api'
@@ -36,7 +37,6 @@ import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
 import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils/uiConstants'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
-import LoadingScreen from '../../components/loading/LoadingScreen'
 import BlindBoxFlow from '../../components/flow-animation/BlindBoxFlow'
 import type { XiaoyueSpriteState } from '../../components/mascot/XiaoyueSpriteAnimator'
 import { shouldShowFlow } from '../../components/flow-animation/FlowStorage'
@@ -50,6 +50,7 @@ import {
   getMascotStepIntro,
   getStepReactionLine,
   INTENT_FLOW_OPTIONS,
+  LANGUAGE_OPTIONS,
   resolvePoolEventType,
   type PoolEventType,
 } from './flowConfig'
@@ -67,18 +68,18 @@ import {
   type RegistrationStep,
 } from './poolRegistrationForm'
 import PoolRegistrationDetailsFields from './components/PoolRegistrationDetailsFields'
+import PoolRegistrationDetailsExpander from './components/PoolRegistrationDetailsExpander'
 import ChoiceCard from './components/ChoiceCard'
 import PoolRegistrationErrorCard from './components/PoolRegistrationErrorCard'
 import PoolRegistrationFooterBar from './components/PoolRegistrationFooterBar'
 import PoolRegistrationIntentGrid from './components/PoolRegistrationIntentGrid'
 import PoolRegistrationMascotSection from './components/PoolRegistrationMascotSection'
-import PoolRegistrationNewRegistrantBanner from './components/PoolRegistrationNewRegistrantBanner'
 import PoolRegistrationResumeCard from './components/PoolRegistrationResumeCard'
 import PoolRegistrationStepper from './components/PoolRegistrationStepper'
-import PoolRegistrationSummaryCard from './components/PoolRegistrationSummaryCard'
 import RegistrationConfirmModal from './components/RegistrationConfirmModal'
 import { getIntentFeedback } from './components/intentFeedback'
 import PoolRegistrationHeroPersonaSection from './components/PoolRegistrationHeroPersonaSection'
+import PoolRegistrationVibePeek from './components/PoolRegistrationVibePeek'
 import XiaoyueCoachCard from './components/XiaoyueCoachCard'
 import XiaoyueLetterCard from './components/XiaoyueLetterCard'
 import PoolRegistrationDuoCard from './components/PoolRegistrationDuoCard'
@@ -88,16 +89,15 @@ import {
   PoolRegistrationLoading,
   PoolRegistrationEmpty,
   PoolRegistrationAlreadyJoined,
-  PoolRegistrationSuccess,
 } from './components/PoolRegistrationTerminalStates'
+import PoolRegistrationSuccessCeremony from './components/PoolRegistrationSuccessCeremony'
 import './index.scss'
 
 const STEP_BRIEF = 0
 const STEP_BUDGET = 1
 const STEP_INTENT = 2
-const STEP_DETAILS = 3
 
-const TIER_COPY = {
+const BUDGET_STEP_COPY = {
   budgetStepHelper: '这是报名时最重要的节奏信号之一，悦仔会优先帮你避开预算预期完全不一样的组合。',
 }
 
@@ -143,16 +143,10 @@ export default function PoolRegistrationPage() {
   // Gate transient reactions so they only celebrate the first selection per step visit.
   const budgetReactionShownRef = useRef(false)
   const intentReactionShownRef = useRef(false)
-  const detailCelebrateShownRef = useRef(false)
   const prevCanSubmitRef = useRef(false)
 
-  const reduceMotion = useMemo(() => {
-    try {
-      return !!(Taro.getSystemInfoSync() as any).reduceMotion
-    } catch {
-      return false
-    }
-  }, [])
+  const { shouldReduceMotion } = useMiniRevealMotion()
+  const reduceMotion = shouldReduceMotion
 
   const {
     data: pool,
@@ -209,6 +203,10 @@ export default function PoolRegistrationPage() {
     staleTime: 30_000,
   })
 
+  const handleRetryPersonaSnapshot = useCallback(() => {
+    refetchPersonaSnapshot()
+  }, [refetchPersonaSnapshot])
+
   // Track persona snapshot impression once
   const hasTrackedPersonaImpressionRef = useRef(false)
   useEffect(() => {
@@ -225,10 +223,10 @@ export default function PoolRegistrationPage() {
     })
   }, [personaSnapshot, poolId])
 
-  // Surface a "new registrant" micro-banner when count grew meaningfully since last view
+  // Surface a "new registrant" meta pill when count grew meaningfully since last view
   const MIN_BANNER_DELTA = 3
   const BANNER_COOLDOWN_MS = 24 * 60 * 60 * 1000
-  const [showNewRegistrantBanner, setShowNewRegistrantBanner] = useState(false)
+  const [showNewRegistrantPill, setShowNewRegistrantPill] = useState(false)
   const [newRegistrantDelta, setNewRegistrantDelta] = useState(0)
   useEffect(() => {
     if (!personaSnapshot || personaSnapshot.totalRegistrants === 0) return
@@ -243,7 +241,7 @@ export default function PoolRegistrationPage() {
       const now = Date.now()
       const canShowBanner = delta >= MIN_BANNER_DELTA && now - lastBannerAt > BANNER_COOLDOWN_MS
       if (canShowBanner) {
-        setShowNewRegistrantBanner(true)
+        setShowNewRegistrantPill(true)
         setNewRegistrantDelta(delta)
         discoverAnalytics.track('persona_snapshot_new_registrant_banner_shown', poolId, {
           previousCount: lastCount,
@@ -428,16 +426,27 @@ export default function PoolRegistrationPage() {
   }, [poolId])
 
   // When error appears: trigger haptics + scroll into view
+  const scrollErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     if (!error) {
       setScrollErrorId('')
       return
     }
     haptics('medium')
-    // Defer scroll so DOM has painted the error card
+    // Defer scroll so DOM has painted the error card, then clear the anchor so
+    // repeated errors can re-scroll (the id must toggle to trigger ScrollView).
     requestAnimationFrame(() => {
       setScrollErrorId('pool-reg-error-anchor')
+      scrollErrorTimeoutRef.current = setTimeout(() => {
+        setScrollErrorId('')
+      }, 500)
     })
+    return () => {
+      if (scrollErrorTimeoutRef.current) {
+        clearTimeout(scrollErrorTimeoutRef.current)
+        scrollErrorTimeoutRef.current = null
+      }
+    }
   }, [error])
 
   const applyStoredReturnContext = useCallback(() => {
@@ -495,7 +504,7 @@ export default function PoolRegistrationPage() {
 
   const brief = briefData ?? fallbackBrief
   const budgetOptions = useMemo(() => getBudgetOptions(eventType), [eventType])
-  const stepLabels = useMemo(() => getFlowStepLabels(eventType), [eventType])
+  const stepLabels = useMemo(() => getFlowStepLabels(), [])
   const selectedBudget =
     eventType === '酒局' ? formState.barBudgetRange?.[0] ?? '' : formState.budgetRange?.[0] ?? ''
   const hasBudgetSelection = selectedBudget !== ''
@@ -521,9 +530,6 @@ export default function PoolRegistrationPage() {
     }
     if (step === STEP_INTENT) {
       intentReactionShownRef.current = false
-    }
-    if (step === STEP_DETAILS) {
-      detailCelebrateShownRef.current = false
     }
   }, [step])
 
@@ -553,22 +559,19 @@ export default function PoolRegistrationPage() {
     step === STEP_BUDGET
       ? !hasBudgetSelection
       : step === STEP_INTENT
-        ? !hasIntentSelection
-        : step === STEP_DETAILS
-          ? isRegistering || !canSubmit
-          : false
+        ? isRegistering || !hasIntentSelection
+        : false
 
   const advanceLabel = useMemo(() => {
     if (step === STEP_BUDGET) {
       return hasBudgetSelection ? '下一步：选择期待' : '先选一个预算区间'
     }
     if (step === STEP_INTENT) {
-      return hasIntentSelection ? '下一步：补细节' : '先选一个期待方向'
-    }
-    if (step === STEP_DETAILS) {
+      // Phase 2: the intent step is the final step — its CTA opens the
+      // confirmation modal instead of advancing to a details step.
       if (isRegistering) return '报名中…'
       if (resumeContext?.paymentStatus === 'paid') return '继续完成报名'
-      return '确认加入这场局'
+      return hasIntentSelection ? '确认加入这场局' : '先选一个期待方向'
     }
     return '继续填写'
   }, [step, hasBudgetSelection, hasIntentSelection, isRegistering, resumeContext?.paymentStatus])
@@ -578,20 +581,30 @@ export default function PoolRegistrationPage() {
     [formState, eventType],
   )
 
-  // Show the first Step 3 acknowledgement without changing the step-specific static pose.
-  useEffect(() => {
-    if (step !== STEP_DETAILS) return
-    if (!anyDetailSelected) return
-    if (detailCelebrateShownRef.current) return
-    detailCelebrateShownRef.current = true
-    setReacting(true)
-    discoverAnalytics.track('registration_step_reaction_shown', poolId, { step: 'details' })
-  }, [step, anyDetailSelected, poolId])
-
   const successHighlights = useMemo(() => {
     const items = [selectedBudget, ...findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS).slice(0, 2)]
     return items.filter(Boolean)
   }, [formState.eventIntent, selectedBudget])
+
+  // Confirm-modal summary (Phase 2): budget + intents + any details chosen in
+  // the step-2 补充细节（可选） expander, so the modal reflects everything the
+  // user picked before they 锁定席位. Details join into one trailing segment.
+  const confirmHighlights = useMemo(() => {
+    const intentLine = findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS).join('、')
+    const detailSegments = [
+      ...findLabels(formState.preferredLanguages, LANGUAGE_OPTIONS),
+      ...(eventType === '酒局' ? formState.barThemes : []),
+      ...(eventType === '酒局' && formState.alcoholComfort ? [formState.alcoholComfort] : []),
+    ]
+    return [selectedBudget, intentLine, detailSegments.join(' · ')].filter(Boolean)
+  }, [
+    selectedBudget,
+    formState.eventIntent,
+    formState.preferredLanguages,
+    formState.barThemes,
+    formState.alcoholComfort,
+    eventType,
+  ])
 
   const handleBudgetSelect = useCallback(
     (value: string) => {
@@ -656,27 +669,6 @@ export default function PoolRegistrationPage() {
     }))
   }, [])
 
-  const handleDietaryToggle = useCallback((value: string) => {
-    setFormState((currentState) => {
-      if (value === 'none') {
-        return {
-          ...currentState,
-          dietaryRestrictions: currentState.dietaryRestrictions.includes('none') ? [] : ['none'],
-        }
-      }
-
-      const nextValues = toggleValue(
-        currentState.dietaryRestrictions.filter((item) => item !== 'none'),
-        value,
-      )
-
-      return {
-        ...currentState,
-        dietaryRestrictions: nextValues,
-      }
-    })
-  }, [])
-
   const handleBarThemeToggle = useCallback((value: string) => {
     setFormState((currentState) => ({
       ...currentState,
@@ -693,12 +685,15 @@ export default function PoolRegistrationPage() {
 
   const handleAdvance = useCallback(() => {
     if (step === STEP_BRIEF) {
+      haptics('light')
       setPrevStep(step)
       setStep(STEP_BUDGET)
       return
     }
 
-    if (step === STEP_DETAILS) {
+    // Step 2 is the final step — its CTA routes to the confirm modal, so
+    // handleAdvance should never fire from it (defensive guard).
+    if (step === STEP_INTENT) {
       return
     }
 
@@ -711,6 +706,7 @@ export default function PoolRegistrationPage() {
       return
     }
 
+    haptics('light')
     setPrevStep(step)
     setStep((currentStep) => ((currentStep + 1) as RegistrationStep))
   }, [hasBudgetSelection, hasIntentSelection, step])
@@ -732,6 +728,7 @@ export default function PoolRegistrationPage() {
       return
     }
 
+    haptics('light')
     setPrevStep(step)
     setStep((currentStep) => (currentStep > STEP_BRIEF ? ((currentStep - 1) as RegistrationStep) : STEP_BRIEF))
   }, [step])
@@ -799,7 +796,6 @@ export default function PoolRegistrationPage() {
         eventType,
         step,
         intentCount: payload.eventIntent?.length,
-        hasDietary: payload.dietaryRestrictions && payload.dietaryRestrictions.length > 0,
       })
       await registerForPool(apiRequest, poolId, payload)
       await bustRegistrationCaches(queryClient, { poolId })
@@ -869,8 +865,9 @@ export default function PoolRegistrationPage() {
     user?.entitlementMode,
     user?.id,
   ])
-  // Step-3 CTA opens the animated confirmation modal instead of submitting
-  // directly; the modal's confirm action then runs handleRegister unchanged.
+  // Step-2 (final step) CTA opens the animated confirmation modal instead of
+  // submitting directly; the modal's confirm action then runs handleRegister
+  // unchanged.
   const handleConfirmCta = useCallback(() => {
     const submitBlocker = getPoolRegistrationSubmitBlocker({
       hasBudgetSelection,
@@ -900,21 +897,17 @@ export default function PoolRegistrationPage() {
   const { isStale: isPageLoadingStale } = useLoadingDeadline(isPageLoading, 8000)
 
   if (isPageLoading) {
-    if (isPageLoadingStale) {
-      return (
-        <PoolRegistrationLoading
-          isStale
-          onRetry={() => {
-            void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY })
-            void refetchPool()
-            void refetchMyRegistrations()
-          }}
-          onBack={() => Taro.navigateBack()}
-        />
-      )
-    }
-
-    return <LoadingScreen message='正在加载报名信息…' />
+    return (
+      <PoolRegistrationLoading
+        isStale={isPageLoadingStale}
+        onRetry={() => {
+          void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY })
+          void refetchPool()
+          void refetchMyRegistrations()
+        }}
+        onBack={() => Taro.navigateBack()}
+      />
+    )
   }
 
   if (!poolId || poolError || !pool) {
@@ -958,7 +951,7 @@ export default function PoolRegistrationPage() {
 
   if (registered) {
     return (
-      <PoolRegistrationSuccess
+      <PoolRegistrationSuccessCeremony
         poolId={pool.id}
         eventType={eventType}
         highlights={successHighlights}
@@ -968,6 +961,7 @@ export default function PoolRegistrationPage() {
         onEnableNotifications={handleEnableMatchNotifications}
         isEnablingNotifications={isEnablingNotifications}
         notificationsEnabled={notificationsEnabled}
+        reduceMotion={reduceMotion}
       />
     )
   }
@@ -982,29 +976,22 @@ export default function PoolRegistrationPage() {
             <Text className='pool-reg__title pool-reg__title--headline'>{pool?.title ?? '活动报名'}</Text>
           </View>
 
-          {personaSnapshotEnabled && showNewRegistrantBanner && !isLoadingPersonaSnapshot && personaSnapshot ? (
-            <PoolRegistrationNewRegistrantBanner
-              delta={newRegistrantDelta}
-              onClose={() => setShowNewRegistrantBanner(false)}
-            />
-          ) : null}
-
+          {/* Step 0 三拍化 (registration-ceremony-spec-20260817 §1): exactly
+              three beats — 封面 → 悦仔的信 → 双人单行入口. The old standalone
+              new-registrant banner is demoted to one meta pill in the hero's
+              meta band (same delta ≥ 3 + 24h cooldown gating). */}
           <PoolRegistrationHeroPersonaSection
             eventType={eventType}
             dateTimeLabel={poolDateTimeLabel}
             area={poolArea}
             price={pool?.price}
             registrationTotal={registrationTotal}
-            sampleArchetypes={pool?.sampleArchetypes}
-            poolId={poolId}
-            snapshot={personaSnapshot}
-            isLoadingPersonaSnapshot={isLoadingPersonaSnapshot}
-            personaSnapshotError={personaSnapshotError}
-            onRetryPersonaSnapshot={() => refetchPersonaSnapshot()}
-            userArchetype={user?.primaryArchetype ?? null}
-            userId={user?.id ?? null}
+            newRegistrantDelta={
+              personaSnapshotEnabled && showNewRegistrantPill && !isLoadingPersonaSnapshot && personaSnapshot
+                ? newRegistrantDelta
+                : undefined
+            }
             visible={staggerMounted}
-            personaSnapshotEnabled={personaSnapshotEnabled}
           />
           <XiaoyueLetterCard
             insight={brief.insight}
@@ -1016,6 +1003,24 @@ export default function PoolRegistrationPage() {
             reduceMotion={reduceMotion}
             isLoading={briefLoading && !briefData}
             teaser={{ enabled: poolTeaserEnabled }}
+          />
+          {/* Persona snapshot / seat heads are data modules — demoted behind a
+              collapsed expander so they never share equal billing with the
+              letter (spec §1 module keep/drop test). Default collapsed keeps
+              the one-mascot rule on Step 0. */}
+          <PoolRegistrationVibePeek
+            poolId={poolId}
+            eventType={eventType}
+            snapshot={personaSnapshot}
+            isLoadingPersonaSnapshot={isLoadingPersonaSnapshot}
+            personaSnapshotError={personaSnapshotError}
+            onRetryPersonaSnapshot={handleRetryPersonaSnapshot}
+            userArchetype={user?.primaryArchetype ?? null}
+            userId={user?.id ?? null}
+            sampleArchetypes={pool?.sampleArchetypes}
+            visible={staggerMounted}
+            reduceMotion={reduceMotion}
+            personaSnapshotEnabled={personaSnapshotEnabled}
           />
           {/* 双人成行 (spec §A/附录 H): collapsed single-row entry after the
               letter card — the letter stays the emotional hero of Step 0. */}
@@ -1034,7 +1039,7 @@ export default function PoolRegistrationPage() {
         </>
       ) : null}
 
-      {/* Invitee duo context banner — persistent across steps 0–3 (spec §C.1). */}
+      {/* Invitee duo context banner — persistent across steps 0–2 (spec §C.1). */}
       {duoRegistrationEnabled && duo.showDuoBanner ? (
         <PoolRegistrationDuoBanner inviterName={duo.partnerName} />
       ) : null}
@@ -1050,7 +1055,7 @@ export default function PoolRegistrationPage() {
 
       {step > 0 ? <PoolRegistrationStepper step={step} labels={stepLabels} /> : null}
 
-      {step >= STEP_BUDGET && step <= STEP_DETAILS ? (
+      {step >= STEP_BUDGET ? (
         <PoolRegistrationMascotSection
           step={step}
           spriteState={mascotBaseState}
@@ -1068,7 +1073,7 @@ export default function PoolRegistrationPage() {
             step={1}
             eyebrow='Step 1 · 预算'
             title='先定一个你更舒服的预算区间'
-            copy={TIER_COPY.budgetStepHelper}
+            copy={BUDGET_STEP_COPY.budgetStepHelper}
             userArchetype={user?.primaryArchetype ?? undefined}
             visible={staggerMounted}
             reduceMotion={reduceMotion}
@@ -1111,7 +1116,7 @@ export default function PoolRegistrationPage() {
               hasIntentSelection ? (
                 <View className='pool-reg__completion-pill'>
                   <View className='pool-reg__completion-check' aria-hidden='true' />
-                  <Text className='pool-reg__completion-text'>期待已收到，可以继续了</Text>
+                  <Text className='pool-reg__completion-text'>期待已收到，可以确认加入了</Text>
                 </View>
               ) : (
                 <Text className='pool-reg__helper'>至少选择 1 个期待方向后，悦仔才能帮你挑出同频的桌友。</Text>
@@ -1119,41 +1124,19 @@ export default function PoolRegistrationPage() {
             }
           >
             <PoolRegistrationIntentGrid selected={formState.eventIntent} onToggle={handleIntentToggle} />
-          </XiaoyueCoachCard>
-        </View>
-      ) : null}
-
-      {step === 3 ? (
-        <View className={`pool-reg__step-content pool-reg__step-content--${step > prevStep ? 'forward' : 'back'}${reduceMotion ? ' pool-reg__step-content--reduce-motion' : ''}`}>
-          <XiaoyueCoachCard
-            step={3}
-            eyebrow={`Step 3 · ${stepLabels[2]}`}
-            title='最后补几项细节，让匹配更顺'
-            copy='语言和具体偏好都可以留空。你填得越清楚，悦仔越容易帮你把这一桌的节奏调顺。'
-            userArchetype={user?.primaryArchetype ?? undefined}
-            visible={staggerMounted}
-            reduceMotion={reduceMotion}
-            footer={
-              anyDetailSelected ? (
-                <View className='pool-reg__completion-pill'>
-                  <View className='pool-reg__completion-check' aria-hidden='true' />
-                  <Text className='pool-reg__completion-text'>细节已补充，可以提交了</Text>
-                </View>
-              ) : (
-                <Text className='pool-reg__helper'>这些都可以留空，填了会让匹配更精准。</Text>
-              )
-            }
-          >
-            <PoolRegistrationSummaryCard formState={formState} eventType={eventType} />
-
-            <PoolRegistrationDetailsFields
-              eventType={eventType}
-              formState={formState}
-              onLanguageToggle={handleLanguageToggle}
-              onBarThemeToggle={handleBarThemeToggle}
-              onAlcoholComfortSelect={handleAlcoholComfortSelect}
-              onDietaryToggle={handleDietaryToggle}
-            />
+            {/* Phase 2 (spec §6): the removed all-optional details step now
+                lives here as a collapsed section. 酒局 bar-theme chips and
+                alcohol-comfort cards stay exactly as they were — alcohol
+                comfort is safety-relevant and must not move or be dropped. */}
+            <PoolRegistrationDetailsExpander reduceMotion={reduceMotion} defaultOpen={anyDetailSelected}>
+              <PoolRegistrationDetailsFields
+                eventType={eventType}
+                formState={formState}
+                onLanguageToggle={handleLanguageToggle}
+                onBarThemeToggle={handleBarThemeToggle}
+                onAlcoholComfortSelect={handleAlcoholComfortSelect}
+              />
+            </PoolRegistrationDetailsExpander>
           </XiaoyueCoachCard>
         </View>
       ) : null}
@@ -1183,7 +1166,7 @@ export default function PoolRegistrationPage() {
         visible={showConfirmModal}
         dateTimeLabel={poolDateTimeLabel}
         area={poolArea}
-        highlights={successHighlights}
+        highlights={confirmHighlights}
         isRegistering={isRegistering}
         reduceMotion={reduceMotion}
         onConfirm={handleConfirmModalConfirm}

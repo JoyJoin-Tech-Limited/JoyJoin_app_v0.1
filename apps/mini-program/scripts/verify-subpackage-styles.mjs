@@ -122,7 +122,7 @@ const REQUIREMENTS = [
   },
   {
     // Pool-registration mascot section (2026-08-05): the dedicated 悦仔 row
-    // for Steps 1–3 lives in the pool-registration subpackage page — its SCSS
+    // for Steps 1–2 lives in the pool-registration subpackage page — its SCSS
     // is @use'd by the page SCSS and must reach the page WXSS, or the mascot
     // row renders unstyled on device (same subpackage style-splitting trap as
     // the my-image stage and squad-unboxing incidents). The PoolTeaserStrip
@@ -142,6 +142,45 @@ const REQUIREMENTS = [
       'pool-reg-duo__segmented-thumb{',
       'pool-reg-duo-banner{',
       'duo-info-sheet__surface{',
+      // Step 0 三拍化 (2026-08-17): the VibePeek expander SCSS is @use'd by the
+      // page SCSS and must reach the page WXSS.
+      'pool-reg-vibe-peek__toggle{',
+      'pool-reg-vibe-peek__content{',
+      // Phase 2 (2026-08-17): the step-2 补充细节（可选） expander SCSS is
+      // @use'd by the page SCSS and must reach the page WXSS.
+      'pool-reg-details-expander__toggle{',
+      'pool-reg-details-expander__content{',
+      // Phase 3 「订座」 (2026-08-17): the confirm modal renders its 地点/时间
+      // meta through the shared ReservationTicket component; its chrome SCSS
+      // is @use'd by the page SCSS and must reach the page WXSS.
+      'reservation-ticket__meta-grid{',
+      'reservation-ticket__meta-cell{',
+      'reservation-ticket--flat',
+      // Phase 4 「订座」 (2026-08-17): the unified RegistrationSuccessCeremony
+      // (seal stamp) SCSS is @use'd by the page SCSS and must reach the page
+      // WXSS — same subpackage style-splitting trap.
+      'registration-ceremony__seal{',
+      'registration-ceremony__ticket-wrap{',
+    ],
+  },
+  {
+    // Phase 3 「订座」 (2026-08-17): the payment ticket card renders through
+    // the shared ReservationTicket component; its chrome SCSS (card shell,
+    // banner, perforation, meta grid, entrance) is @use'd by the page SCSS
+    // and must reach this subpackage page WXSS — the component's own chunk
+    // may never load inside the subpackage.
+    page: 'pages/payments/event-ticket-payment/index.wxss',
+    selectors: [
+      '.reservation-ticket{',
+      'reservation-ticket__banner{',
+      'reservation-ticket__perforation{',
+      'reservation-ticket__meta-grid{',
+      'reservation-ticket--entrance',
+      // Phase 4 「订座」 (2026-08-17): the unified RegistrationSuccessCeremony
+      // (seal stamp + paid 票根 tear-off) SCSS is @use'd by the page SCSS and
+      // must reach this subpackage page WXSS.
+      'registration-ceremony__seal{',
+      'registration-ceremony__stub{',
     ],
   },
   {

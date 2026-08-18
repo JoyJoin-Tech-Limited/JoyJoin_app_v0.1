@@ -1,4 +1,5 @@
 
+import { memo, useMemo } from 'react'
 import { View, Text } from '@tarojs/components'
 import { getArchetypeCompatibility } from '@shared/personality/archetypeCompatibility'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
@@ -32,11 +33,11 @@ function getChemistryColorClass(score: number): string {
   return 'chemistry-mini-grid__score--low'
 }
 
-function getChemistryBarWidth(score: number): string {
-  return `${Math.max(10, Math.min(100, score))}%`
+function getChemistryBarScale(score: number): number {
+  return Math.max(0.1, Math.min(1, score / 100))
 }
 
-export default function ChemistryMiniGrid({ pool, userArchetype }: ChemistryMiniGridProps) {
+function ChemistryMiniGrid({ pool, userArchetype }: ChemistryMiniGridProps) {
   const topArchetypes = pool.topArchetypes ?? []
 
   if (!userArchetype || topArchetypes.length === 0) {
@@ -48,21 +49,24 @@ export default function ChemistryMiniGrid({ pool, userArchetype }: ChemistryMini
     )
   }
 
-  const rows = topArchetypes.map(({ archetype, count }) => {
-    const score = getArchetypeCompatibility(userArchetype, archetype)
-    const definition = ARCHETYPE_BY_ID[archetype]
-    const family = getArchetypeFamily(archetype)
-    return {
-      archetype,
-      name: definition?.nameCn ?? archetype,
-      count,
-      score,
-      family,
-    }
-  })
-
-  // Sort by chemistry score descending
-  rows.sort((a, b) => b.score - a.score)
+  const rows = useMemo(
+    () =>
+      topArchetypes
+        .map(({ archetype, count }) => {
+          const score = getArchetypeCompatibility(userArchetype, archetype)
+          const definition = ARCHETYPE_BY_ID[archetype]
+          const family = getArchetypeFamily(archetype)
+          return {
+            archetype,
+            name: definition?.nameCn ?? archetype,
+            count,
+            score,
+            family,
+          }
+        })
+        .sort((a, b) => b.score - a.score),
+    [topArchetypes, userArchetype],
+  )
 
   const userDefinition = ARCHETYPE_BY_ID[userArchetype]
   const userFamily = getArchetypeFamily(userArchetype)
@@ -91,7 +95,10 @@ export default function ChemistryMiniGrid({ pool, userArchetype }: ChemistryMini
                   'chemistry-mini-grid__bar',
                   `chemistry-mini-grid__bar--${row.family}`,
                 ].join(' ')}
-                style={{ width: getChemistryBarWidth(row.score) }}
+                style={{
+                  transform: `scaleX(${getChemistryBarScale(row.score)})`,
+                  transformOrigin: 'left center',
+                }}
               />
             </View>
             <View className='chemistry-mini-grid__row-score'>
@@ -112,3 +119,5 @@ export default function ChemistryMiniGrid({ pool, userArchetype }: ChemistryMini
     </View>
   )
 }
+
+export default memo(ChemistryMiniGrid)

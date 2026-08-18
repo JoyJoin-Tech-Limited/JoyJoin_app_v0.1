@@ -1,0 +1,75 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// Phase 2 (registration-ceremony-spec-20260817 §6): collapsed 补充细节（可选）
+// section at the bottom of the intent step. The toggle row mirrors the
+// PoolRegistrationVibePeek expander (quiet System UI text row + chevron); the
+// expanded panel is a plain surface card — detail fields are data modules and
+// stay visually demoted (spec §1 module keep/drop test).
+.pool-reg-details-expander {
+  width: 100%;
+  margin-top: $spacing-md;
+
+  &__toggle {
+    @include flex-center;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-pill;
+    transition: background 0.12s ease;
+
+    &--active {
+      background: rgba($color-primary, 0.06);
+    }
+  }
+
+  &__toggle-text {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+  }
+
+  &__toggle-chevron {
+    font-size: $font-size-md;
+    color: $color-text-tertiary;
+    line-height: 1;
+    transition: transform 0.18s ease;
+
+    &--open {
+      transform: rotate(90deg);
+    }
+  }
+
+  &__content {
+    margin-top: $spacing-sm;
+    padding: $spacing-md;
+    border-radius: $card-radius;
+    background: rgba($color-surface, 0.96);
+    border: 2rpx solid rgba($color-primary, 0.06);
+    animation: pool-reg-details-expander-expand 0.24s ease-out;
+
+    &--reduce-motion {
+      animation: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pool-reg-details-expander__content {
+      animation: none;
+    }
+
+    .pool-reg-details-expander__toggle-chevron {
+      transition: none;
+    }
+  }
+}
+
+@keyframes pool-reg-details-expander-expand {
+  from {
+    opacity: 0;
+    transform: translateY(8rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

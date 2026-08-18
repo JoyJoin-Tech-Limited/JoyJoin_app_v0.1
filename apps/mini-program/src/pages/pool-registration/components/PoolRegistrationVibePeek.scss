@@ -1,0 +1,116 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// Step 0 三拍化 (registration-ceremony-spec-20260817 §1): collapsed vibe
+// expander between 悦仔的信 and the duo entry. The toggle is a quiet text row
+// (System UI tone); the expanded panel keeps the warm cream/pink gradient the
+// persona zone used when it lived inside the hero card.
+.pool-reg-vibe-peek {
+  width: 100%;
+  margin-bottom: $spacing-md;
+
+  &__toggle {
+    @include flex-center;
+    gap: $spacing-xs;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-pill;
+    transition: background 0.12s ease;
+
+    &--active {
+      background: rgba($color-primary, 0.06);
+    }
+  }
+
+  &__toggle-text {
+    @include type-caption;
+    font-weight: $font-weight-semibold;
+    color: $color-text-secondary;
+  }
+
+  &__toggle-chevron {
+    font-size: $font-size-md;
+    color: $color-text-tertiary;
+    line-height: 1;
+    transition: transform 0.18s ease;
+
+    &--open {
+      transform: rotate(90deg);
+    }
+  }
+
+  &__content {
+    margin-top: $spacing-sm;
+    border-radius: $card-radius;
+    overflow: hidden;
+    background: linear-gradient(
+      180deg,
+      $color-bg-tint-cream 0%,
+      $color-bg-tint-pink 55%,
+      rgba($color-bg-tint-pink, 0.96) 100%
+    );
+    padding: $spacing-md;
+    animation: pool-reg-vibe-peek-expand 0.24s ease-out;
+
+    &--reduce-motion {
+      animation: none;
+    }
+  }
+
+  &__seat-heads {
+    display: flex;
+    align-items: center;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__seat-head {
+    @include flex-center;
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    border: 2rpx solid;
+    margin-left: -24rpx;
+    overflow: hidden;
+    box-shadow: $shadow-sm;
+
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+
+  &__seat-overflow {
+    @include flex-center;
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    background: $color-primary;
+    margin-left: -24rpx;
+    border: 2rpx solid rgba($color-surface, 0.6);
+  }
+
+  &__seat-overflow-text {
+    @include type-caption;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pool-reg-vibe-peek__content {
+      animation: none;
+    }
+
+    .pool-reg-vibe-peek__toggle-chevron {
+      transition: none;
+    }
+  }
+}
+
+@keyframes pool-reg-vibe-peek-expand {
+  from {
+    opacity: 0;
+    transform: translateY(8rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -17,10 +17,6 @@ export function formatBudgetLabel(budget: string): string {
   return `¥${budget}`
 }
 
-export function calculateSavings(singlePrice: number, packPrice: number, count: number): number {
-  return singlePrice * count - packPrice
-}
-
 export function getBestCoupon(coupons: UserCouponSummary[], originalAmount: number): UserCouponSummary | null {
   const available = coupons.filter((c) => c.status === 'available' && !c.isUsed)
   if (!available.length) return null
@@ -72,13 +68,6 @@ export function calculateDiscount(coupon: UserCouponSummary | null, originalAmou
 
 // Localized display labels for registration draft values.
 // Mirrors the most common option sets without importing across app boundaries.
-const DIETARY_LABELS: Record<string, string> = {
-  none: '无限制',
-  vegetarian: '素食',
-  halal: '清真',
-  seafood_allergy: '海鲜过敏',
-}
-
 const LANGUAGE_LABELS: Record<string, string> = {
   粤语: '粤语',
   普通话: '普通话',
@@ -92,16 +81,13 @@ const ALCOHOL_LABELS: Record<string, string> = {
   无酒精: '无酒精',
 }
 
-export function getDisplayLabel(value: string, category: 'intent' | 'language' | 'dietary' | 'alcohol' | 'other'): string {
+export function getDisplayLabel(value: string, category: 'intent' | 'language' | 'alcohol' | 'other'): string {
   if (!value) return value
   if (category === 'intent') {
     return getIntentLabel(value)
   }
   if (category === 'language') {
     return LANGUAGE_LABELS[value] ?? value
-  }
-  if (category === 'dietary') {
-    return DIETARY_LABELS[value] ?? value
   }
   if (category === 'alcohol') {
     return ALCOHOL_LABELS[value] ?? value

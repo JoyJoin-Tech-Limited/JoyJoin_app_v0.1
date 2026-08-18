@@ -3,11 +3,33 @@
 @use '../../styles/mixins' as *;
 @use './components/PoolRegistrationMascotSection.scss' as *;
 @use './components/RegistrationConfirmModal.scss' as *;
+// Phase 3 「订座」 (2026-08-17): the shared ReservationTicket chrome (meta grid
+// inside the confirm modal) is @use'd into the page SCSS so its rules compile
+// into the pool-registration subpackage page WXSS (subpackage style-splitting
+// gate).
+@use '../../components/reservation/ReservationTicket.scss' as *;
+// Phase 4 「订座」 (2026-08-17): the unified RegistrationSuccessCeremony (seal
+// stamp + tear-off) is @use'd into the page SCSS so its rules compile into the
+// pool-registration subpackage page WXSS (subpackage style-splitting gate).
+@use '../../components/reservation/RegistrationSuccessCeremony.scss' as *;
 // 双人成行 components: @use'd into the page SCSS so their rules compile into
 // the pool-registration subpackage page WXSS (subpackage style-splitting gate).
 @use './components/PoolRegistrationDuoCard.scss' as *;
 @use './components/DuoInfoSheet.scss' as *;
 @use './components/PoolRegistrationDuoBanner.scss' as *;
+// Step 0 三拍化 (2026-08-17): VibePeek expander SCSS is @use'd into the page
+// SCSS so its rules compile into the pool-registration subpackage page WXSS
+// (subpackage style-splitting gate).
+@use './components/PoolRegistrationVibePeek.scss' as *;
+// Phase 2 (2026-08-17): details expander on the intent step — same subpackage
+// style-splitting gate as VibePeek.
+@use './components/PoolRegistrationDetailsExpander.scss' as *;
+// Step 0 三拍化 (2026-08-17): hero + persona section SCSS is @use'd into the
+// page SCSS so their rules compile into the pool-registration subpackage page
+// WXSS (subpackage style-splitting gate). Component-level imports were removed
+// to avoid duplicate CSS in the main-package common chunk.
+@use './components/PoolRegistrationHero.scss' as *;
+@use './components/PoolRegistrationHeroPersonaSection.scss' as *;
 
 .pool-reg {
   @include page-gradient-bg;
@@ -32,47 +54,6 @@
     @include safe-area-inline($container-padding);
   }
 
-  &__persona-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $spacing-sm;
-    margin: 0 $spacing-md $spacing-xs;
-    padding: $spacing-xs $spacing-md;
-    border-radius: 24rpx;
-    background: rgba($color-primary, 0.08);
-    border: 1rpx solid rgba($color-primary, 0.12);
-  }
-
-  &__persona-banner-text {
-    flex: 1;
-    font-size: 24rpx;
-    color: $color-primary;
-    font-weight: 500;
-    text-align: center;
-    display: block;
-  }
-
-  &__persona-banner-close {
-    @include flex-center;
-    width: 48rpx;
-    height: 48rpx;
-    border-radius: 50%;
-    margin: -$spacing-xs 0;
-    margin-right: -$spacing-sm;
-    transition: background 0.12s ease;
-
-    &--active {
-      background: rgba($color-primary, 0.1);
-    }
-  }
-
-  &__persona-banner-close-text {
-    font-size: 28rpx;
-    color: $color-primary;
-    line-height: 1;
-  }
-
   &__persona-error {
     margin: 0 $spacing-md $spacing-xs;
     padding: $spacing-xs $spacing-md;
@@ -93,16 +74,6 @@
     display: block;
   }
 
-  &__success {
-    @include flex-center;
-    flex-direction: column;
-    gap: $spacing-md;
-    text-align: center;
-    padding: $spacing-lg;
-    background: linear-gradient(180deg, rgba($color-surface, 0.98) 0%, rgba($color-primary, 0.04) 100%);
-    border: 2rpx solid rgba($color-primary, 0.08);
-  }
-
   &__terminal-center {
     // design-audit:intentional — dvh fallback for WeChat WKWebView (see AGENTS.md §4)
     min-height: 100vh;
@@ -112,61 +83,15 @@
     justify-content: center;
   }
 
-  &__success-hero {
-    width: 100%;
-    max-width: 600rpx;
-    // Source art is 600×450 (4:3). A fixed 420rpx height left blank bands
-    // on the sides under aspectFit. Match the art aspect so it fills fully.
-    aspect-ratio: 4 / 3;
-    height: auto;
-    margin: 0 auto;
-    display: block;
-    opacity: 0;
-    animation: pool-reg-success-hero-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
-  }
-
-  &__success-title {
-    display: block;
-    @include type-heading;
-    line-height: 1.4;
-    margin-top: $spacing-xs;
-  }
-
-  &__success-text {
-    display: block;
-    @include type-body;
-    color: $color-text-secondary;
-    line-height: $line-height-relaxed;
-  }
-
-  &__success-notify-hint {
-    display: block;
-    @include type-label;
-    color: $color-text-muted;
-    line-height: $line-height-relaxed;
-    max-width: 600rpx;
-    margin-top: -$spacing-xs;
-  }
-
-  &__notify-btn {
-    width: 100%;
-    max-width: 520rpx;
-  }
-
-  &__success-pills {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: $spacing-sm;
-  }
-
-  &__success-pill {
-    padding: $spacing-xs $spacing-md;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.1);
-    color: $color-primary-dark;
-    @include type-caption;
-    font-weight: $font-weight-semibold;
+  // Phase 4 「订座」 (2026-08-17): the success ceremony renders the shared
+  // ReservationTicket (own 32rpx side margins) and carries its own vertical
+  // rhythm, so the scroll container drops its padding to avoid
+  // double-insetting the ticket. The background is set to $color-bg so the
+  // perforation notches (drawn as $color-bg semicircles) blend in on the
+  // gradient page background.
+  &__scroll--ceremony {
+    padding: 0 0 $spacing-md;
+    background: $color-bg;
   }
 
   &__header {
@@ -545,61 +470,6 @@
     background: rgba($color-surface, 0.96);
   }
 
-  // Premium read-only recap of locked-in preferences from Steps 1–2.
-  // Uses icon-led rows + muted pills to mirror the detail inputs below.
-  &__summary-card {
-    padding: $spacing-md;
-    margin-bottom: $spacing-md;
-    border-radius: $card-radius;
-    background: $color-bg-tint-cream;
-    border: 1rpx solid rgba($color-primary, 0.06);
-    box-shadow: 0 4rpx 16rpx rgba($color-primary, 0.04);
-  }
-
-  &__summary-header {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    margin-bottom: $spacing-md;
-  }
-
-  &__summary-header-accent {
-    width: 8rpx;
-    height: 24rpx;
-    border-radius: 4rpx;
-    background: $color-primary;
-  }
-
-  &__summary-title {
-    flex: 1;
-    @include type-caption;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-  }
-
-  &__summary-completed {
-    display: inline-flex;
-    align-items: center;
-    gap: $spacing-xs;
-    padding: $spacing-xs $spacing-sm;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.06);
-    border: 1rpx solid rgba($color-primary, 0.12);
-  }
-
-  &__summary-completed-dot {
-    width: 10rpx;
-    height: 10rpx;
-    border-radius: 50%;
-    background: rgba($color-primary, 0.6);
-  }
-
-  &__summary-completed-text {
-    @include type-micro;
-    color: rgba($color-primary, 0.72);
-    font-weight: $font-weight-semibold;
-  }
-
   &__brief-card {
     border: 2rpx solid rgba($color-primary, 0.08);
     background: linear-gradient(180deg, rgba($color-surface, 0.98) 0%, rgba($color-primary, 0.06) 100%);
@@ -865,14 +735,6 @@
     margin-bottom: $spacing-sm;
   }
 
-  &__field-desc {
-    display: block;
-    @include type-caption;
-    color: $color-text-tertiary;
-    line-height: $line-height-relaxed;
-    margin-bottom: $spacing-sm;
-  }
-
   &__chip-row {
     display: flex;
     flex-wrap: wrap;
@@ -930,79 +792,6 @@
     @include type-label;
     color: $color-text-primary;
     font-weight: $font-weight-medium;
-  }
-
-  &__summary-body {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-  }
-
-  &__summary-row {
-    display: flex;
-    align-items: flex-start;
-    gap: $spacing-sm;
-  }
-
-  &__summary-row-icon {
-    flex-shrink: 0;
-    width: 48rpx;
-    height: 48rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: rgba($color-primary, 0.04);
-    margin-top: 2rpx;
-  }
-
-  &__summary-row-content {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-xs;
-  }
-
-  &__summary-row-label {
-    @include type-caption;
-    color: $color-text-secondary;
-  }
-
-  &__summary-row-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-xs;
-  }
-
-  &__summary-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: $spacing-xs $spacing-sm;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.08);
-    border: 1rpx solid rgba($color-primary, 0.2);
-
-    &--empty {
-      background: rgba($color-surface, 0.72);
-      border-color: $color-border;
-      border-style: dashed;
-    }
-  }
-
-  &__summary-chip-text {
-    @include type-label;
-    color: $color-primary;
-
-    .pool-reg__summary-chip--empty & {
-      color: $color-text-muted;
-    }
-  }
-
-  &__summary-divider {
-    height: 1rpx;
-    background: rgba($color-primary, 0.06);
-    margin-left: 64rpx;
   }
 
   &__helper {
@@ -1275,11 +1064,6 @@
     max-width: 560rpx;
   }
 
-  &__back-btn {
-    width: 100%;
-    max-width: 520rpx;
-  }
-
   &__already-cta {
     width: 100%;
     max-width: 520rpx;
@@ -1299,24 +1083,6 @@
     &[disabled] {
       opacity: 0.5;
     }
-  }
-}
-
-@keyframes pool-reg-success-hero-in {
-  from {
-    opacity: 0;
-    transform: translateY(20rpx) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pool-reg__success-hero {
-    animation: none;
-    opacity: 1;
   }
 }
 

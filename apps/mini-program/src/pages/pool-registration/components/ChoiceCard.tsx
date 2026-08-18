@@ -1,7 +1,7 @@
 import { View, Text } from '@tarojs/components'
-import Taro from '@tarojs/taro'
 import { useCallback } from 'react'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
+import { haptics } from '../../../lib/utils/haptics'
 import type { FlowOption } from '../flowConfig'
 
 interface ChoiceCardProps {
@@ -15,11 +15,7 @@ interface ChoiceCardProps {
 export default function ChoiceCard({ option, selected, onClick, compact = false, disabled = false }: ChoiceCardProps) {
   const handleTap = useCallback(() => {
     if (disabled) return
-    try {
-      Taro.vibrateShort({ type: 'light' })
-    } catch {
-      // decorative
-    }
+    haptics('light')
     onClick()
   }, [disabled, onClick])
 

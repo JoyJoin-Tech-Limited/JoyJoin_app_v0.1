@@ -1,6 +1,5 @@
 import { View, Text } from '@tarojs/components'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
-import './PoolRegistrationDuoBanner.scss'
 
 interface PoolRegistrationDuoBannerProps {
   inviterName: string

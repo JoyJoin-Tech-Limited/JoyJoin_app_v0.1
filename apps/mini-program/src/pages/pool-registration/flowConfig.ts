@@ -45,13 +45,6 @@ export const DRINKS_BUDGET_OPTIONS: FlowOption[] = [
   { value: '80-150', label: '80-150', description: '更偏精品调酒或氛围' },
 ]
 
-export const DIETARY_OPTIONS: FlowOption[] = [
-  { value: 'none', label: '无特殊要求' },
-  { value: 'vegetarian', label: '素食' },
-  { value: 'halal', label: '清真' },
-  { value: 'seafood_allergy', label: '海鲜过敏' },
-]
-
 export const BAR_THEME_OPTIONS: FlowOption[] = [
   { value: '精酿', label: '精酿', description: '偏啤酒和轻松聊天' },
   { value: '清吧', label: '清吧', description: '更安静，更适合慢聊' },
@@ -78,8 +71,10 @@ export function getBudgetOptions(eventType: PoolEventType): FlowOption[] {
   return eventType === '酒局' ? DRINKS_BUDGET_OPTIONS : DINNER_BUDGET_OPTIONS
 }
 
-export function getFlowStepLabels(eventType: PoolEventType): string[] {
-  return ['预算', '期待', eventType === '酒局' ? '氛围' : '细节']
+// Phase 2 (registration-ceremony-spec-20260817 §6): details folded into the
+// intent step, so the stepper shows two segments — 预算 / 期待.
+export function getFlowStepLabels(): string[] {
+  return ['预算', '期待']
 }
 
 export function buildPreJoinVibeBriefPath(input: {
@@ -116,29 +111,28 @@ export function buildFallbackBrief(input: {
 
   return {
     insight: '你更适合在轻松的饭局里，先吃得舒服，再慢慢把话题聊开。',
-    matchingPromise: '我们会把你的预算、语言和饮食偏好一起放进匹配里，为你找更同频的饭搭子。',
+    matchingPromise: '我们会把你的预算、语言和活动期待一起放进排桌里，为你找更同频的饭搭子。',
     reasons: [
       `${areaReasonPrefix}更容易遇到顺路也顺频的人`,
-      '预算和社交期待会一起参与匹配',
-      '饮食细节会帮我们避开不合拍的组合',
+      '预算和活动期待会一起参与排桌',
+      '语言相投能让这一桌更快热起来',
     ],
   }
 }
 
 /**
- * Step-intro bubble copy for the dedicated mascot section (Steps 1–3).
- * Copy-owner sign-off pending — see sprint contract AC-09.
+ * Step-intro bubble copy for the dedicated mascot section (Steps 1–2).
+ * Step 2 hosts the intent grid plus the collapsed 补充细节（可选） section —
+ * details stay optional, so the intro keeps the intent ask front and center.
  */
 export function getMascotStepIntro(step: number): string {
   if (step === 2) return '这次最想收获什么？可以多选，选全了就交给悦仔'
-  if (step === 3) return '最后补几个细节，都可以留空'
   return '先定个预算区间，悦仔帮你挑合拍的桌友'
 }
 
 /**
- * Reaction bubble line shown while the one-shot nod plays. Reuses the
- * previously approved reaction copy verbatim; flexible-only selections reuse
- * the approved flexible feedback line.
+ * Reaction bubble line shown while the one-shot nod plays. Steps 1–2 reuse
+ * the previously approved reaction copy verbatim.
  */
 export function getStepReactionLine(
   step: number,
@@ -149,14 +143,11 @@ export function getStepReactionLine(
       ? `收到！${input.selectedBudget} 的预算，悦仔按这个区间帮你配对`
       : '收到！悦仔会按这个预算帮你配对'
   }
-  if (step === 2) {
-    const intents = input.intents ?? []
-    if (intents.includes(INTENT_FLEXIBLE_OPTION.value)) {
-      return '没问题，把期待交给悦仔，我来帮你挑一个舒服的组合。'
-    }
-    return intents.length > 0
-      ? `收到！${intents.length} 个期待，悦仔按这个方向帮你匹配`
-      : '收到！悦仔会按这些期待帮你匹配'
+  const intents = input.intents ?? []
+  if (intents.includes(INTENT_FLEXIBLE_OPTION.value)) {
+    return '没问题，把期待交给悦仔，我来帮你挑一个舒服的组合。'
   }
-  return '收到，悦仔记下了'
+  return intents.length > 0
+    ? `收到！${intents.length} 个期待，悦仔按这个方向帮你匹配`
+    : '收到！悦仔会按这些期待帮你匹配'
 }

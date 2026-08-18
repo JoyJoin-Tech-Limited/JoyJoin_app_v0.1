@@ -1,0 +1,234 @@
+@use '../../styles/variables' as *;
+
+// ReservationTicket (Phase 3, 2026-08-17) — the shared 「订座」 ticket chrome:
+// card shell + entrance, banner (hero/scrim/type badge/title), notched
+// perforation, and the 地点/时间 meta grid. Surface-specific slot content
+// (payment: choices/terms/coupon-stub/tail; confirm modal: preference chips)
+// keeps its own SCSS in the consuming page.
+//
+// Consumed by pages/payments/event-ticket-payment and pages/pool-registration
+// (both subpackages). Each consuming page SCSS `@use`s this file so the rules
+// compile into the page WXSS itself — the component's own chunk may never
+// load inside a subpackage (see scripts/verify-subpackage-styles.mjs).
+//
+// Spec: docs/design/registration-ceremony-spec-20260817.md.
+
+$reservation-ticket-text: $color-text-primary;
+$reservation-ticket-text-muted: $color-text-tertiary;
+
+.reservation-ticket {
+  position: relative;
+  margin: 24rpx 32rpx 0;
+  background: $color-surface;
+  border-radius: $card-radius-lg;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+
+  &--entrance {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.98);
+    animation: reservation-ticket-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
+  }
+
+  // Flat variant: embedded inside an already-carded surface (confirm modal) —
+  // no outer margin, background, radius, or shadow of its own.
+  &--flat {
+    margin: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+
+    .reservation-ticket__body {
+      padding: 0;
+    }
+  }
+
+  &__banner {
+    position: relative;
+    width: 100%;
+    height: 320rpx;
+    overflow: hidden;
+
+    // Banner without a hero image: badge + title flow statically instead of
+    // overlapping the image/scrim.
+    &--no-image {
+      height: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16rpx;
+      padding: 24rpx 28rpx;
+
+      .reservation-ticket__type-badge,
+      .reservation-ticket__banner-title-wrap {
+        position: static;
+      }
+    }
+  }
+
+  &__banner-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__banner-scrim {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba($color-surface, 0) 0%, rgba($color-surface, 0.25) 55%, rgba($color-surface, 0.92) 100%);
+    pointer-events: none;
+  }
+
+  &__type-badge {
+    position: absolute;
+    top: 24rpx;
+    left: 24rpx;
+    display: inline-flex;
+    align-items: center;
+    gap: 10rpx;
+    padding: 14rpx 26rpx;
+    // Near-opaque so the badge stays legible over the banner image without
+    // backdrop-filter (WKWebView compositor cost — see AGENTS.md promo banner note).
+    background: rgba($color-surface, 0.96);
+    border-radius: $radius-pill;
+    box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+  }
+
+  &__type-badge-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40rpx;
+    height: 40rpx;
+  }
+
+  &__type-badge-text {
+    font-family: $font-cn-display;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-black;
+    color: $color-primary;
+    letter-spacing: 1rpx;
+  }
+
+  &__banner-title-wrap {
+    position: absolute;
+    bottom: 24rpx;
+    left: 28rpx;
+    right: 28rpx;
+  }
+
+  &__banner-title {
+    display: block;
+    font-family: $font-cn-display;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $reservation-ticket-text;
+    line-height: $line-height-snug;
+    word-break: keep-all;
+    text-shadow: 0 2rpx 8rpx rgba($color-surface, 0.8);
+  }
+
+  // Perforation divider with real concave semicircular cutouts. The notch
+  // circles blend into the page background ($color-bg) — only use the
+  // perforation on surfaces sitting directly on the page background.
+  &__perforation {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 80rpx;
+    background: $color-surface;
+  }
+
+  &__notch {
+    position: absolute;
+    top: 50%;
+    width: 80rpx;
+    height: 80rpx;
+    margin-top: -40rpx;
+    background: $color-bg;
+    border-radius: 50%;
+    z-index: 2;
+
+    &--left {
+      left: -40rpx;
+    }
+
+    &--right {
+      right: -40rpx;
+    }
+  }
+
+  &__dash-line {
+    flex: 1;
+    height: 0;
+    margin: 0 56rpx;
+    border-bottom: 2rpx dashed rgba($color-border, 0.85);
+  }
+
+  // Body
+  &__body {
+    padding: 8rpx 32rpx 32rpx;
+  }
+
+  &__meta-grid {
+    display: flex;
+    padding-bottom: 24rpx;
+    border-bottom: 1rpx solid $color-divider;
+  }
+
+  &__meta-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+
+    &--right {
+      align-items: flex-end;
+    }
+  }
+
+  &__meta-label {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $reservation-ticket-text-muted;
+    letter-spacing: 2rpx;
+  }
+
+  &__meta-value {
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: $reservation-ticket-text;
+    line-height: $line-height-relaxed;
+  }
+
+  &__meta-hint {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $reservation-ticket-text-muted;
+    line-height: $line-height-snug;
+  }
+}
+
+@keyframes reservation-ticket-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reservation-ticket--entrance {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

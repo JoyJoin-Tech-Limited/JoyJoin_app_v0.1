@@ -41,9 +41,9 @@ export default function PoolRegistrationFooterBar({
           <Button
             variant='primary'
             className='pool-reg__footer-btn pool-reg__footer-btn--primary'
-            onClick={step === 3 ? onRegister : onAdvance}
+            onClick={step === 2 ? onRegister : onAdvance}
             disabled={advanceDisabled}
-            loading={step === 3 && isRegistering}
+            loading={step === 2 && isRegistering}
           >
             {advanceLabel}
           </Button>

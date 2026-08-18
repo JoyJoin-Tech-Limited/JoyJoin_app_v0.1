@@ -32,15 +32,29 @@ describe('RegistrationConfirmModal', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders the confirmation copy and highlights', () => {
+  it('renders the confirmation copy, ticket meta, and highlight chips', () => {
     render(<RegistrationConfirmModal {...baseProps} />)
 
     expect(screen.getByText('预约确认')).toBeInTheDocument()
-    expect(screen.getByText('请确认报名信息')).toBeInTheDocument()
+    expect(screen.getByText('请确认订座信息')).toBeInTheDocument()
+    // Reservation facts render via the shared ReservationTicket meta cells.
+    expect(screen.getByText('地点')).toBeInTheDocument()
+    expect(screen.getByText('时间')).toBeInTheDocument()
     expect(screen.getByText('8月12日 周二 19:30')).toBeInTheDocument()
     expect(screen.getByText('南山区')).toBeInTheDocument()
-    expect(screen.getByText('150-200 · 交朋友')).toBeInTheDocument()
+    // Phase 2 highlights render as individual chips inside the ticket body.
+    expect(screen.getByText('150-200')).toBeInTheDocument()
+    expect(screen.getByText('交朋友')).toBeInTheDocument()
+    // Assurance rows (Phase 3 slim).
+    expect(screen.getByText('排桌完成后 24 小时内公布精确地点')).toBeInTheDocument()
+    expect(screen.getByText('排桌完成前可免费取消 · 全额退款')).toBeInTheDocument()
     expect(screen.getByText('确认无误，锁定席位')).toBeInTheDocument()
+  })
+
+  it('drops the system-serving match row (Phase 3)', () => {
+    render(<RegistrationConfirmModal {...baseProps} />)
+
+    expect(screen.queryByText('按你的偏好匹配同桌与场地')).not.toBeInTheDocument()
   })
 
   it('calls onCancel when the overlay is clicked', () => {
@@ -96,11 +110,13 @@ describe('RegistrationConfirmModal', () => {
     expect(container.querySelector('.reg-confirm--static')).not.toBeNull()
   })
 
-  it('renders without highlights when the list is empty', () => {
+  it('renders without highlight chips when the list is empty', () => {
     render(<RegistrationConfirmModal {...baseProps} highlights={[]} />)
 
-    // Match row should still render; sub-line is omitted.
-    expect(screen.getByText('按你的偏好匹配同桌与场地')).toBeInTheDocument()
+    // Assurance rows still render; the chip row is omitted entirely.
+    expect(screen.getByText('排桌完成后 24 小时内公布精确地点')).toBeInTheDocument()
+    expect(screen.getByText('排桌完成前可免费取消 · 全额退款')).toBeInTheDocument()
     expect(screen.queryByText(/150-200/)).not.toBeInTheDocument()
+    expect(document.querySelector('.reg-confirm__chips')).toBeNull()
   })
 })

@@ -1,0 +1,238 @@
+@use '../../styles/variables' as *;
+
+// RegistrationSuccessCeremony (Phase 4, 2026-08-17) — the unified 「订座」
+// success climax: ticket + 「已留座」 seal stamp + (paid) 票根 tear-off.
+// Spec: docs/design/registration-ceremony-spec-20260817.md (§3 motion grammar,
+// §4 degradation ladder).
+//
+// Consumed by pages/pool-registration and pages/payments/event-ticket-payment
+// (both subpackages). Each consuming page SCSS `@use`s this file so the rules
+// compile into the page WXSS itself — the component's own chunk may never
+// load inside a subpackage (see scripts/verify-subpackage-styles.mjs).
+
+.registration-ceremony {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-xl 0 calc(#{$spacing-lg} + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+
+  &__title {
+    display: block;
+    margin: 0 $container-padding $spacing-md;
+    font-family: $font-cn-display;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-black;
+    color: $color-text-primary;
+    line-height: $line-height-display;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    max-width: 100%;
+  }
+
+  // Seal anchor: positioned over the ticket's banner/perforation seam. The
+  // banner is a fixed 320rpx whenever a hero image is present (both current
+  // surfaces pass one), so the seal straddles the perforation at a constant
+  // offset from the ticket top.
+  &__ticket-wrap {
+    position: relative;
+    align-self: stretch;
+  }
+
+  // ── 「已留座」 seal — pure CSS circular stamp (no new assets) ──
+  &__seal {
+    position: absolute;
+    top: 280rpx;
+    right: 48rpx;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 160rpx;
+    height: 160rpx;
+    border-radius: 50%;
+    border: 4rpx solid rgba($color-primary, 0.92);
+    // Double-ring stamp: surface gap + thin inner ring.
+    box-shadow:
+      inset 0 0 0 4rpx $color-surface,
+      inset 0 0 0 7rpx rgba($color-primary, 0.55);
+    background: rgba($color-surface, 0.72);
+    color: $color-primary;
+    transform: rotate(-12deg);
+    pointer-events: none;
+
+    // Spec §3: scale-in stamp 0.92 → 1.04 (overshoot ≤ 1.04) → 1.0,
+    // ~320ms ease-out after a 240ms settle delay. No bounce loop.
+    &--stamp {
+      opacity: 0;
+      animation: registration-ceremony-seal-stamp 320ms ease-out 240ms forwards;
+    }
+  }
+
+  &__seal-text {
+    font-family: $font-cn-display;
+    font-size: 34rpx;
+    font-weight: $font-weight-black;
+    letter-spacing: 4rpx;
+  }
+
+  // Real-data seat line (🔴 spec §5) — rendered inside the ticket body.
+  &__seat-line {
+    display: block;
+    margin-top: $spacing-md;
+    font-family: $font-ui;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-primary-dark;
+    text-align: center;
+  }
+
+  // ── 票根 stub (paid variant) — tears off along the perforation ──
+  &__stub {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    margin: 0 $spacing-md $spacing-md;
+    padding: $spacing-md $spacing-sm;
+    border-top: 2rpx dashed rgba($color-border, 0.85);
+    transform-origin: 0 0;
+    opacity: 1;
+    // Duration/delay: 450ms tear (spec §3) starting just after the seal lands;
+    // the delay itself comes from the component inline style so it stays in
+    // sync with the seal-land timestamp.
+    animation: registration-ceremony-stub-tear 450ms ease-in forwards;
+  }
+
+  &__stub-label {
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-tertiary;
+    letter-spacing: 2rpx;
+  }
+
+  &__stub-barcode {
+    display: flex;
+    align-items: center;
+    gap: 4rpx;
+    height: 40rpx;
+  }
+
+  &__stub-barcode-line {
+    height: 100%;
+    background: rgba($color-text-primary, 0.55);
+  }
+
+  // Surface extras slot (notify block, pills, payment subtitle).
+  &__extras {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-md;
+    align-self: stretch;
+    margin: $spacing-lg $container-padding 0;
+    text-align: center;
+  }
+
+  // Shared body copy inside the extras slot (pool-reg promise text, duo bound
+  // line, payment subtitle variants).
+  &__text {
+    display: block;
+    font-family: $font-ui;
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    line-height: $line-height-relaxed;
+    max-width: 600rpx;
+  }
+
+  // Notify hint (pool-registration) — quiet label above the subscribe button.
+  &__hint {
+    display: block;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+    line-height: $line-height-relaxed;
+    max-width: 600rpx;
+  }
+
+  &__notify-btn {
+    width: 100%;
+    max-width: 520rpx;
+  }
+
+  &__pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: $spacing-sm;
+  }
+
+  &__pill {
+    padding: $spacing-xs $spacing-md;
+    border-radius: 999rpx;
+    background: rgba($color-primary, 0.1);
+    color: $color-primary-dark;
+    font-family: $font-ui;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+  }
+
+  &__cta {
+    align-self: stretch;
+    margin: $spacing-lg $container-padding 0;
+  }
+
+  &__after {
+    align-self: stretch;
+    margin: $spacing-lg $container-padding 0;
+  }
+}
+
+// Seal stamp: 0.92 → 1.04 → 1.0 with the resting -12deg rotation (spec §3).
+@keyframes registration-ceremony-seal-stamp {
+  0% {
+    opacity: 0;
+    transform: rotate(-12deg) scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    transform: rotate(-12deg) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-12deg) scale(1);
+  }
+}
+
+// 票根 tear-off: small tug, then translate + rotate + fade (spec §3, ~450ms).
+@keyframes registration-ceremony-stub-tear {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(6rpx, 4rpx) rotate(1.5deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(48rpx, 120rpx) rotate(7deg);
+  }
+}
+
+// Degradation ladder (spec §4): reduced motion → static seal, no tear-off.
+@media (prefers-reduced-motion: reduce) {
+  .registration-ceremony__seal--stamp {
+    animation: none;
+    opacity: 1;
+    transform: rotate(-12deg);
+  }
+
+  .registration-ceremony__stub {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

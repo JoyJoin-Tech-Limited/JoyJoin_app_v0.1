@@ -2,8 +2,8 @@
 @use '../../../styles/mixins' as *;
 
 .pool-registration-hero {
-  // Frame-only when embedded inside the merged hero+persona card.
-  // The outer card chrome (radius/shadow/margin) lives in the wrapper.
+  // Frame + chrome for the Step 0 封面 (hero art, badge, seats pill, meta
+  // band). The outer card chrome (radius/shadow/margin) lives in the wrapper.
   width: 100%;
   contain: layout style;
 
@@ -206,6 +206,13 @@
     background: rgba($color-surface, 0.92);
     border: 2rpx solid rgba($color-primary, 0.12);
     box-shadow: $shadow-sm;
+
+    // Step 0 三拍化: the demoted new-registrant signal rides the meta band as
+    // one filled accent pill (was a standalone dismissible banner).
+    &--accent {
+      background: rgba($color-primary, 0.92);
+      border-color: rgba($color-primary, 0.4);
+    }
   }
 
   &__meta-icon {
@@ -230,71 +237,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
 
-  &__seats-heads {
-    display: flex;
-    align-items: center;
-  }
-
-  &__seat-head {
-    @include flex-center;
-    width: 56rpx;
-    height: 56rpx;
-    border-radius: 50%;
-    border: 2rpx solid;
-    margin-left: -24rpx;
-    overflow: hidden;
-    box-shadow: $shadow-sm;
-    opacity: 0;
-    transform: scale(0);
-
-    .pool-registration-hero--visible & {
-      animation: pool-registration-hero-seat-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    &--accent {
+      color: $color-text-white;
     }
-
-    &--delay-0 { animation-delay: 0.2s; }
-    &--delay-1 { animation-delay: 0.28s; }
-    &--delay-2 { animation-delay: 0.36s; }
-    &--delay-3 { animation-delay: 0.44s; }
-    &--delay-4 { animation-delay: 0.52s; }
-
-    &:first-child {
-      margin-left: 0;
-    }
-  }
-
-  &__seat-overflow {
-    @include flex-center;
-    width: 56rpx;
-    height: 56rpx;
-    border-radius: 50%;
-    background: $color-primary;
-    margin-left: -24rpx;
-    border: 2rpx solid rgba($color-surface, 0.6);
-  }
-
-  &__seat-empty {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 56rpx;
-    padding: 0 $spacing-sm;
-    border-radius: $radius-pill;
-    background: rgba($color-surface, 0.92);
-    border: 2rpx solid rgba($color-primary, 0.12);
-  }
-
-  &__seat-empty-text {
-    @include type-caption;
-    font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
-  }
-
-  &__seat-overflow-text {
-    @include type-caption;
-    font-weight: $font-weight-bold;
-    color: $color-text-white;
   }
 
   &__seats-text {
@@ -311,17 +257,6 @@
   }
   50% {
     opacity: 0.65;
-  }
-}
-
-@keyframes pool-registration-hero-seat-pop {
-  from {
-    opacity: 0;
-    transform: scale(0);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
   }
 }
 
@@ -342,15 +277,6 @@
   .pool-registration-hero__aurora-orb,
   .pool-registration-hero--low-end .pool-registration-hero__aurora-orb {
     animation: none;
-  }
-
-  .pool-registration-hero--visible .pool-registration-hero__seat-head {
-    animation: none;
-  }
-
-  .pool-registration-hero__seat-head {
-    opacity: 1;
-    transform: scale(1);
   }
 
   .pool-registration-hero__skeleton-shimmer {

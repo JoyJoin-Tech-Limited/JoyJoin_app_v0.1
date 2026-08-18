@@ -91,9 +91,11 @@
   }
 
   &__bar {
+    width: 100%;
     height: 100%;
     border-radius: 4rpx;
-    transition: width 0.4s ease-out;
+    transform-origin: left center;
+    transition: transform 0.4s ease-out;
 
     &--warm {
       background: $color-archetype-warm;
@@ -156,5 +158,11 @@
     color: $color-text-muted;
     text-align: center;
     padding: $spacing-md 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chemistry-mini-grid__bar {
+    transition: none;
   }
 }

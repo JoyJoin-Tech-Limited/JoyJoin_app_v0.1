@@ -4,6 +4,15 @@
 
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+// Shared 「订座」 ticket chrome (Phase 3, 2026-08-17): card shell, banner,
+// perforation, and the 地点/时间 meta grid live in the ReservationTicket
+// component SCSS, @use'd here so the rules compile into this subpackage
+// page's WXSS (see scripts/verify-subpackage-styles.mjs).
+@use '../../../components/reservation/ReservationTicket.scss' as *;
+// Phase 4 「订座」 (2026-08-17): the unified RegistrationSuccessCeremony (seal
+// stamp + paid 票根 tear-off) is @use'd here so its rules compile into this
+// subpackage page's WXSS (see scripts/verify-subpackage-styles.mjs).
+@use '../../../components/reservation/RegistrationSuccessCeremony.scss' as *;
 
 // ── Color aliases ──
 $ticket-text: $color-text-primary;
@@ -26,172 +35,12 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   min-height: 0;
 }
 
-// ── Ticket Card ──
+// ── Ticket Card slot content ──
+// The ticket chrome (card shell, banner, perforation, meta grid) moved to the
+// shared ReservationTicket component SCSS (@use'd above, Phase 3 2026-08-17).
+// The rules below style this page's slot content inside the ticket; they keep
+// the historical `ticket-card__*` names so slot markup stays unchanged.
 .ticket-card {
-  position: relative;
-  margin: 24rpx 32rpx 0;
-  background: $color-surface;
-  border-radius: $card-radius-lg;
-  box-shadow: $shadow-card;
-  overflow: hidden;
-
-  &--entrance {
-    opacity: 0;
-    transform: translateY(24rpx) scale(0.98);
-    animation: ticket-card-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
-  }
-
-  &__banner {
-    position: relative;
-    width: 100%;
-    height: 320rpx;
-    overflow: hidden;
-  }
-
-  &__banner-image {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-  }
-
-  &__banner-scrim {
-    position: absolute;
-    inset: 0;
-    background:
-      linear-gradient(180deg, rgba($color-surface, 0) 0%, rgba($color-surface, 0.25) 55%, rgba($color-surface, 0.92) 100%);
-    pointer-events: none;
-  }
-
-  &__type-badge {
-    position: absolute;
-    top: 24rpx;
-    left: 24rpx;
-    display: inline-flex;
-    align-items: center;
-    gap: 10rpx;
-    padding: 14rpx 26rpx;
-    // Near-opaque so the badge stays legible over the banner image without
-    // backdrop-filter (WKWebView compositor cost — see AGENTS.md promo banner note).
-    background: rgba($color-surface, 0.96);
-    border-radius: $radius-pill;
-    box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
-  }
-
-  &__type-badge-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40rpx;
-    height: 40rpx;
-  }
-
-  &__type-badge-text {
-    font-family: $font-cn-display;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-black;
-    color: $color-primary;
-    letter-spacing: 1rpx;
-  }
-
-  &__banner-title-wrap {
-    position: absolute;
-    bottom: 24rpx;
-    left: 28rpx;
-    right: 28rpx;
-  }
-
-  &__banner-title {
-    display: block;
-    font-family: $font-cn-display;
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
-    color: $ticket-text;
-    line-height: $line-height-snug;
-    word-break: keep-all;
-    text-shadow: 0 2rpx 8rpx rgba($color-surface, 0.8);
-  }
-
-  // Perforation divider with real concave semicircular cutouts
-  &__perforation {
-    position: relative;
-    display: flex;
-    align-items: center;
-    height: 80rpx;
-    background: $color-surface;
-  }
-
-  &__notch {
-    position: absolute;
-    top: 50%;
-    width: 80rpx;
-    height: 80rpx;
-    margin-top: -40rpx;
-    background: $color-bg;
-    border-radius: 50%;
-    z-index: 2;
-
-    &--left {
-      left: -40rpx;
-    }
-
-    &--right {
-      right: -40rpx;
-    }
-  }
-
-  &__dash-line {
-    flex: 1;
-    height: 0;
-    margin: 0 56rpx;
-    border-bottom: 2rpx dashed rgba($color-border, 0.85);
-  }
-
-  // Body
-  &__body {
-    padding: 8rpx 32rpx 32rpx;
-  }
-
-  &__meta-grid {
-    display: flex;
-    padding-bottom: 24rpx;
-    border-bottom: 1rpx solid $color-divider;
-  }
-
-  &__meta-cell {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8rpx;
-
-    &--right {
-      align-items: flex-end;
-    }
-  }
-
-  &__meta-label {
-    font-family: $font-ui;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    color: $ticket-text-muted;
-    letter-spacing: 2rpx;
-  }
-
-  &__meta-value {
-    font-family: $font-ui;
-    font-size: $font-size-base;
-    font-weight: $font-weight-bold;
-    color: $ticket-text;
-    line-height: $line-height-relaxed;
-  }
-
-  &__meta-hint {
-    font-family: $font-ui;
-    font-size: $font-size-xs;
-    color: $ticket-text-muted;
-    line-height: $line-height-snug;
-  }
-
   // Section base
   &__section {
     margin-top: 28rpx;
@@ -249,7 +98,6 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     }
 
     &--language,
-    &--dietary,
     &--alcohol {
       background: rgba($color-text-secondary, 0.06);
       Text { color: $ticket-text-subtle; }
@@ -629,238 +477,12 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   min-height: 100vh;
   min-height: 100dvh;
   padding: 48rpx;
-
-  &__icon {
-    width: 96rpx;
-    height: 96rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba($color-error, 0.1);
-    border-radius: 50%;
-    margin-bottom: 32rpx;
-
-    Text {
-      font-size: $font-size-2xl;
-      color: $color-error;
-    }
-  }
-
-  &__title {
-    font-family: $font-ui;
-    font-size: $font-size-base;
-    color: $ticket-text;
-    text-align: center;
-    margin-bottom: 32rpx;
-  }
-
-  &__actions {
-    display: flex;
-    gap: 24rpx;
-  }
-
-  &__btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: $cta-min-tap;
-    padding: 0 48rpx;
-    border-radius: $button-radius;
-    transition: opacity 0.12s ease;
-
-    &--back {
-      background: rgba($color-primary, 0.08);
-      Text { font-family: $font-ui; font-size: $font-size-base; color: $color-primary; font-weight: $font-weight-bold; }
-    }
-
-    &--pressed {
-      opacity: 0.6;
-    }
-  }
 }
 
 // ── Success State ──
-.ticket-success {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  // design-audit:intentional — vh fallback required for WeChat WKWebView (AGENTS.md §4)
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: $color-bg-warm-to;
-
-  &__hero-wrap {
-    position: relative;
-    width: 100%;
-    // Taller than the rendered image to keep the faded-bottom characters
-    // visible and emotionally present on the screen.
-    min-height: 560rpx;
-    // Cap the hero so a tall asset cannot push the non-scrollable success
-    // surface beyond the viewport on small devices.
-    max-height: 640rpx;
-    overflow: hidden;
-  }
-
-  &__hero {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
-  &__hero-bridge {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    // Taller bridge for the soft-faded rooster/corgi asset so the transition
-    // into the solid page background is imperceptible.
-    height: 180rpx;
-    background: linear-gradient(
-      180deg,
-      rgba($color-bg-warm-to, 0) 0%,
-      rgba($color-bg-warm-to, 0.35) 50%,
-      rgba($color-bg-warm-to, 0.85) 80%,
-      $color-bg-warm-to 100%
-    );
-    pointer-events: none;
-  }
-
-  &__confetti {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    overflow: hidden;
-  }
-
-  &__confetti-particle {
-    position: absolute;
-    border-radius: 2rpx;
-    opacity: 1;
-    transition-property: transform, opacity;
-    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1), ease;
-    will-change: transform, opacity;
-  }
-
-  &__body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 0 $container-padding;
-    // Pull the text block up into the hero's faded bottom so the
-    // illustration and message read as one continuous scene.
-    margin-top: -48rpx;
-    text-align: center;
-    position: relative;
-    z-index: 2;
-  }
-
-  &__title {
-    font-family: $font-cn-display;
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-black;
-    color: $ticket-text;
-    line-height: $line-height-display;
-    margin-bottom: $spacing-sm;
-    text-align: center;
-  }
-
-  &__subtitle {
-    font-family: $font-ui;
-    font-size: $font-size-base;
-    color: $ticket-text-subtle;
-    text-align: center;
-    line-height: $line-height-relaxed;
-    max-width: 560rpx;
-  }
-
-  &__chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 12rpx;
-    margin-top: $spacing-md;
-    padding: 14rpx 24rpx;
-    background: rgba($ticket-text, 0.05);
-    border-radius: $radius-pill;
-
-    &-text {
-      font-family: $font-ui;
-      font-size: $font-size-sm;
-      color: $ticket-text-subtle;
-      white-space: nowrap;
-    }
-  }
-
-  &__footer {
-    position: relative;
-    z-index: 3;
-    margin-top: auto;
-    padding: $spacing-md $container-padding;
-    padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
-  }
-
-  &__cta {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: $cta-min-tap;
-    background: $color-primary;
-    border-radius: $button-radius;
-    transition: opacity 0.12s ease, transform 0.12s ease;
-
-    &--pressed {
-      opacity: 0.9;
-      transform: scale(0.97);
-    }
-
-    &--disabled {
-      opacity: 0.55;
-      pointer-events: none;
-    }
-  }
-
-  &__cta-text {
-    font-family: $font-cn-display;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-white;
-  }
-
-  // Stagger entrance — only when motion is enabled.
-  &--motion {
-    .ticket-success__hero {
-      opacity: 0;
-      animation: ticket-success-hero-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0s forwards;
-    }
-
-    .ticket-success__title,
-    .ticket-success__subtitle {
-      opacity: 0;
-      animation: ticket-success-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
-    }
-
-    .ticket-success__chip {
-      opacity: 0;
-      animation: ticket-success-fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.25s forwards;
-    }
-
-    .ticket-success__cta {
-      opacity: 0;
-      animation: ticket-success-fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.35s forwards;
-    }
-  }
-}
-
-@keyframes ticket-success-fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(20rpx);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+// Phase 4 「订座」 (2026-08-17): the success surface is the shared
+// RegistrationSuccessCeremony (@use'd above) — seal + 票根 tear-off replace
+// the old hero/confetti ticket-success block.
 
 // ── Verifying State ──
 .ticket-verifying {
@@ -920,17 +542,6 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   }
 }
 
-@keyframes ticket-success-hero-in {
-  from {
-    opacity: 0;
-    transform: translateY(20rpx) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 @keyframes ticket-verify-hero-in {
   from {
     opacity: 0;
@@ -953,18 +564,9 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
   }
 }
 
-@keyframes ticket-card-enter {
-  from {
-    opacity: 0;
-    transform: translateY(24rpx) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 // ── Reduced Motion ──
+// NOTE: the ticket card entrance (`reservation-ticket--entrance`) reduced-motion
+// override lives in the shared ReservationTicket SCSS (@use'd above).
 @media (prefers-reduced-motion: reduce) {
   .ticket-loading__dot {
     animation: none;
@@ -982,26 +584,12 @@ $ticket-coupon-bg: rgba($color-secondary, 0.08);
     opacity: 0.6;
   }
 
-  .ticket-success__hero,
   .ticket-verifying__hero {
     animation: none;
     opacity: 1;
   }
 
-  .ticket-success--motion {
-    .ticket-success__hero,
-    .ticket-success__title,
-    .ticket-success__subtitle,
-    .ticket-success__chip,
-    .ticket-success__cta {
-      animation: none;
-      opacity: 1;
-      transform: none;
-    }
-  }
-
-  .ticket-card__stamp--animated,
-  .ticket-card--entrance {
+  .ticket-card__stamp--animated {
     animation: none;
     opacity: 1;
     transform: none;

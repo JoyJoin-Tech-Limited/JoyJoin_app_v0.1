@@ -4,7 +4,6 @@ import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../compone
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { MASCOT_SIZE } from '../../../lib/mascot/mascotSizes'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
-import './PoolRegistrationMascotSection.scss'
 
 /**
  * Reduced-motion portrait fallback per step base state (CDN-primary; the
@@ -25,7 +24,7 @@ const NOD_HOLD_MS = 600
 const ENTRY_MS = 300
 
 export interface PoolRegistrationMascotSectionProps {
-  /** Active step (1 = budget, 2 = intent, 3 = details/ambience) */
+  /** Active step (1 = budget, 2 = intent + collapsed details section) */
   step: number
   /** Per-step base sprite state (coach / curious / listening) */
   spriteState: XiaoyueSpriteState
@@ -41,7 +40,7 @@ export interface PoolRegistrationMascotSectionProps {
 
 /**
  * PoolRegistrationMascotSection — the single 悦仔 mascot row shown directly
- * above Steps 1–3 content: mascot-left (160rpx animated sprite) + speech
+ * above Steps 1–2 content: mascot-left (160rpx animated sprite) + speech
  * bubble-right (max 520rpx, radius 24rpx, left tail).
  *
  * The section owns its sprite-state machine:

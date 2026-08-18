@@ -8,7 +8,7 @@ import { resolve } from 'node:path'
  * duplicates the submit logic inside it, this test fails.
  *
  * Guards against regression where:
- * - step-3 CTA stops opening the modal
+ * - step-2 (final step) CTA stops opening the modal
  * - modal confirm does not call the existing handleRegister
  * - error-card retry skips the confirmation gate
  */
@@ -17,7 +17,7 @@ const PAGE_SOURCE = resolve(__dirname, '..', 'index.tsx')
 describe('pool-registration confirmation modal wiring', () => {
   const source = readFileSync(PAGE_SOURCE, 'utf-8')
 
-  it('wires the step-3 footer CTA to open the confirmation modal', () => {
+  it('wires the final-step footer CTA to open the confirmation modal', () => {
     expect(source).toContain('onRegister={handleConfirmCta}')
     expect(source).toContain("discoverAnalytics.track('registration_confirm_shown', poolId)")
     expect(source).toContain('setShowConfirmModal(true)')

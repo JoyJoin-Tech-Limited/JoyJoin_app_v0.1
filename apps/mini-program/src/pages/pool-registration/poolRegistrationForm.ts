@@ -3,15 +3,16 @@ import type {
   NormalizedEventPoolRegistrationPayload,
 } from '@shared/api'
 import type { PoolEventType } from './flowConfig'
-import { INTENT_FLOW_OPTIONS } from './flowConfig'
 
-export type RegistrationStep = 0 | 1 | 2 | 3
+// Phase 2 (registration-ceremony-spec-20260817 §6): the all-optional details
+// step folded into the intent step, so the flow is 0 brief / 1 budget /
+// 2 intent+details.
+export type RegistrationStep = 0 | 1 | 2
 
 export interface RegistrationFormState {
   eventIntent: string[]
   preferredLanguages: string[]
   budgetRange?: string[]
-  dietaryRestrictions: string[]
   barThemes: string[]
   alcoholComfort?: string
   barBudgetRange?: string[]
@@ -21,16 +22,7 @@ export interface RegistrationFormState {
 export const INITIAL_FORM_STATE: RegistrationFormState = {
   eventIntent: [],
   preferredLanguages: [],
-  dietaryRestrictions: [],
   barThemes: [],
-}
-
-export interface PoolRegistrationSummaryItem {
-  label: string
-  value: string
-  icon: string
-  tier: 'ui' | 'semantic'
-  intentLabels?: string[]
 }
 
 export function toggleValue(values: string[], value: string): string[] {
@@ -41,32 +33,6 @@ export function findLabels(values: string[], options: { value: string; label: st
   return options.filter((option) => values.includes(option.value)).map((option) => option.label)
 }
 
-export function buildSummaryItems(
-  formState: RegistrationFormState,
-  eventType: PoolEventType,
-): PoolRegistrationSummaryItem[] {
-  const selectedBudget =
-    eventType === '酒局' ? formState.barBudgetRange?.[0] ?? '' : formState.budgetRange?.[0] ?? ''
-  const intentLabels = findLabels(formState.eventIntent, INTENT_FLOW_OPTIONS)
-
-  return [
-    {
-      label: '你的预算',
-      value: selectedBudget || '未选择',
-      icon: '👑',
-      tier: 'ui',
-      intentLabels: [],
-    },
-    {
-      label: '这次想收获',
-      value: intentLabels.length > 0 ? intentLabels.join('、') : '未选择',
-      icon: '🎯',
-      tier: 'semantic',
-      intentLabels,
-    },
-  ]
-}
-
 export function hasAnyDetailSelection(
   formState: RegistrationFormState,
   eventType: PoolEventType,
@@ -75,7 +41,7 @@ export function hasAnyDetailSelection(
   if (eventType === '酒局') {
     return hasLanguage || formState.barThemes.length > 0 || !!formState.alcoholComfort
   }
-  return hasLanguage || formState.dietaryRestrictions.length > 0
+  return hasLanguage
 }
 
 export function buildRegistrationPayload(
@@ -94,7 +60,6 @@ export function buildRegistrationPayload(
         }
       : {
           budgetRange: formState.budgetRange,
-          dietaryRestrictions: formState.dietaryRestrictions,
         }),
   }
 }
@@ -110,7 +75,6 @@ export function buildFormStateFromDraft(
     eventIntent: draft.eventIntent ?? [],
     preferredLanguages: draft.preferredLanguages ?? [],
     budgetRange: draft.budgetRange?.slice(0, 1),
-    dietaryRestrictions: draft.dietaryRestrictions ?? [],
     barThemes: draft.barThemes ?? [],
     alcoholComfort,
     barBudgetRange: draft.barBudgetRange?.slice(0, 1),
@@ -123,10 +87,12 @@ export function resolveRegistrationStep(step: number): RegistrationStep {
     case 0:
     case 1:
     case 2:
-    case 3:
       return step
     default:
-      return 3
+      // Phase 2 clamp: legacy payment-return drafts may still carry
+      // resumeStep = 3 (the removed details step) — land them on the merged
+      // intent+details step instead.
+      return 2
   }
 }
 

@@ -1,7 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import type { DuoCardState } from '../../../lib/duo/duoState'
 import Button from '../../../components/ui/Button'
-import './PoolRegistrationDuoCard.scss'
 
 interface PoolRegistrationDuoCardProps {
   state: DuoCardState

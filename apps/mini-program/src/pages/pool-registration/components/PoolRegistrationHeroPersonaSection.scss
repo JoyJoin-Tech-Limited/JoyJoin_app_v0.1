@@ -29,23 +29,6 @@
       opacity: 1;
       transform: none;
     }
-
-    &--active {
-      background: rgba($color-primary, 0.04);
-    }
-  }
-
-  &__persona-zone {
-    position: relative;
-    // Warm cream/pink gradient that continues from the hero image without a seam.
-    background: linear-gradient(
-      180deg,
-      $color-bg-tint-cream 0%,
-      $color-bg-tint-pink 55%,
-      rgba($color-bg-tint-pink, 0.96) 100%
-    );
-    padding: $spacing-md;
-    overflow: hidden;
   }
 
   @media (prefers-reduced-motion: reduce) {

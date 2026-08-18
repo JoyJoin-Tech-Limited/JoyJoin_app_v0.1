@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { registerForPoolWithPayment, getEventPool, getUserCoupons, reconcilePayment } from '@shared/api'
+import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { useAuth } from '../../../hooks/useAuth'
 import { apiRequest } from '../../../lib/api/api'
 import { logInfo, logError } from '../../../lib/utils/logger'
@@ -28,13 +29,13 @@ import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
 import { interactionLatency } from '../../../lib/analytics/interactionLatency'
 import StatusCard from '../../../components/ui/StatusCard'
-import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
-import TicketSuccessView from './components/TicketSuccessView'
+import ReservationTicket from '../../../components/reservation/ReservationTicket'
+import RegistrationSuccessCeremony from '../../../components/reservation/RegistrationSuccessCeremony'
+import TicketPlanSelection, { type SelectedPlan } from './components/TicketPlanSelection'
 import IcebreakerInclusionSheet from '../../../components/event-ticket-payment/IcebreakerInclusionSheet'
 import TicketOrderSkeleton, { getTicketCtaLabel } from '../../../components/payments/TicketOrderSkeleton'
 import {
   calculateDiscount,
-  calculateSavings,
   findWelcomeCoupon,
   formatBudgetLabel,
   formatDateTimeLabel,
@@ -84,7 +85,7 @@ export default function EventTicketPaymentPage() {
     cancelRetentionShownRef.current = true
     discoverAnalytics.track('pay_cancel_retention_shown', undefined, { poolId })
   }, [cancelCount, cancelSheetDismissed, poolId])
-  const [selectedPlan, setSelectedPlan] = useState<'single' | 'pack_3' | 'pack_6'>('single')
+  const [selectedPlan, setSelectedPlan] = useState<SelectedPlan>('single')
   const [showCouponDetail, setShowCouponDetail] = useState(false)
   const [isPageReady, setIsPageReady] = useState(false)
   const [pageError, setPageError] = useState<string>('')
@@ -97,7 +98,7 @@ export default function EventTicketPaymentPage() {
   const [tailLoadTimedOut, setTailLoadTimedOut] = useState(false)
 
   const paymentInFlightRef = useRef(false)
-  const verifyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const verifyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const returnContextRef = useRef<MiniProgramPoolRegistrationReturnContext | null>(null)
   const tailErrorHandledRef = useRef(false)
   const tailTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -182,7 +183,6 @@ export default function EventTicketPaymentPage() {
   const pack3Price = pack3Plan?.priceInCents ?? 21100
   const pack6Price = pack6Plan?.priceInCents ?? 37000
   const currentPrice = selectedPlan === 'pack_3' ? pack3Price : selectedPlan === 'pack_6' ? pack6Price : singlePrice
-  const savings3 = calculateSavings(singlePrice, pack3Price, 3)
 
   const selectedCoupon = useMemo(() => {
     if (!selectedCouponCode || !couponsData?.coupons) return null
@@ -218,7 +218,7 @@ export default function EventTicketPaymentPage() {
       hasAnyCoupon: Boolean(couponsData?.coupons?.length),
       deviceTier: deviceTier.tier,
     })
-  }, [isPageReady, poolId, pool, selectedPlan, couponsData?.coupons, deviceTier.tier])
+  }, [isPageReady, poolId, selectedPlan, couponsData?.coupons, deviceTier.tier])
 
   // Track plan selector impression once it becomes visible.
   useEffect(() => {
@@ -243,6 +243,15 @@ export default function EventTicketPaymentPage() {
       hasIcebreakerChip: true,
     })
   }, [isPageReady, poolId, poolLoading, pool])
+
+  // Success surface (Phase 4 「订座」): nav title + view tracking are page-level
+  // effects keyed on the payment status, not owned by the shared ceremony
+  // component (spec: docs/design/registration-ceremony-spec-20260817.md).
+  useEffect(() => {
+    if (payment.status !== 'success') return
+    Taro.setNavigationBarTitle({ title: '报名成功' })
+    discoverAnalytics.track('event_ticket_payment_success_view', undefined, { poolId: poolId ?? pool?.id })
+  }, [payment.status, poolId, pool?.id])
 
   // Derived event-type label used for event-type-aware UI and analytics.
   const eventType = pool?.eventType === '酒局' ? '酒局' : '饭局'
@@ -274,7 +283,7 @@ export default function EventTicketPaymentPage() {
   useEffect(() => {
     return () => {
       if (verifyTimerRef.current) {
-        clearInterval(verifyTimerRef.current)
+        clearTimeout(verifyTimerRef.current)
         verifyTimerRef.current = null
       }
     }
@@ -283,110 +292,119 @@ export default function EventTicketPaymentPage() {
   const pollVerification = useCallback((orderId: string, paymentId: string) => {
     setPayment({ status: 'verifying', paymentId, wechatOrderId: orderId })
     let attempts = 0
-    // Responsive fallback polling: 20 attempts × 1 second = 20 seconds total.
-    // The primary confirmation path is the WeChat Pay webhook, which typically
-    // arrives in under 5 seconds. Polling only covers delayed webhook delivery.
-    const maxAttempts = 20
-    const pollIntervalMs = 1000
+    // Capped exponential-backoff polling: webhooks usually arrive in <5s; polling
+    // covers delayed delivery without hammering the status endpoint on fixed 1s
+    // intervals. Delays: 500ms → 1s → 2s → 4s cap, ~23.5s total across 8
+    // attempts before the final server-side reconcile fallback.
+    const maxAttempts = 8
+    const getPollDelay = (attempt: number) => Math.min(4000, 500 * 2 ** (attempt - 1))
 
-    if (verifyTimerRef.current) clearInterval(verifyTimerRef.current)
+    if (verifyTimerRef.current) clearTimeout(verifyTimerRef.current)
 
     const finish = (status: 'success' | 'failed', error?: string) => {
       if (verifyTimerRef.current) {
-        clearInterval(verifyTimerRef.current)
+        clearTimeout(verifyTimerRef.current)
         verifyTimerRef.current = null
       }
       if (status === 'success') {
         setPayment({ status: 'success', paymentId, wechatOrderId: orderId })
-        haptics('success')
+        // No haptic here (spec §2): the celebration haptic fires on the visual
+        // beat — the 「已留座」 seal landing in RegistrationSuccessCeremony —
+        // not on the network response.
       } else {
         setPayment({ status: 'failed', error: error || '支付未成功，请重试' })
       }
     }
 
-    verifyTimerRef.current = setInterval(async () => {
-      attempts++
-      try {
-        const statusResp = await apiRequest<{ status: string }>({
-          path: `/api/payments/status/${encodeURIComponent(orderId)}`,
-        })
+    const completeSuccess = (via: 'poll' | 'reconcile') => {
+      finish('success')
+      discoverAnalytics.track('pay_success', undefined, {
+        poolId,
+        plan: selectedPlan,
+        couponCode: bestCoupon?.code ?? null,
+        originalAmount: currentPrice,
+        finalAmount: finalPrice,
+        paymentId,
+        wechatOrderId: orderId,
+        via,
+      })
 
-        logInfo('[EventTicketPayment] Poll status', {
-          orderId,
-          paymentId,
-          attempt: attempts,
-          status: statusResp.status,
-        })
-
-        if (statusResp.status === 'completed') {
-          finish('success')
-          discoverAnalytics.track('pay_success', undefined, {
-            poolId,
-            plan: selectedPlan,
-            couponCode: bestCoupon?.code ?? null,
-            originalAmount: currentPrice,
-            finalAmount: finalPrice,
-            paymentId,
-            wechatOrderId: orderId,
-          })
-
-          // Update return context to paid (use ref for fresh value)
-          const ctx = returnContextRef.current
-          if (ctx) {
-            const paid = markPaymentReturnContextPaid(ctx)
-            await persistPaymentReturnContext(paid)
-            setReturnContext(paid)
-            returnContextRef.current = paid
-          }
-
-          // Invalidate caches
-          void bustRegistrationCaches(queryClient, { poolId })
-          clearPaymentReturnContextStorage()
-
-          logInfo('[EventTicketPayment] Payment confirmed, registration created', { orderId, paymentId })
-          return
-        }
-
-        if (statusResp.status === 'failed' || statusResp.status === 'closed') {
-          finish('failed', '支付未成功，请重试')
-          discoverAnalytics.track('pay_fail', undefined, {
-            poolId,
-            plan: selectedPlan,
-            couponCode: bestCoupon?.code ?? null,
-            originalAmount: currentPrice,
-            finalAmount: finalPrice,
-            paymentId,
-            wechatOrderId: orderId,
-            reason: statusResp.status,
-          })
-          return
-        }
-      } catch (err) {
-        logError('[EventTicketPayment] Poll status error', {
-          message: err instanceof Error ? err.message : String(err),
-        })
-        // Continue polling on transient errors
+      // Update return context to paid (use ref for fresh value)
+      const ctx = returnContextRef.current
+      if (ctx) {
+        const paid = markPaymentReturnContextPaid(ctx)
+        void persistPaymentReturnContext(paid)
+        setReturnContext(paid)
+        returnContextRef.current = paid
       }
 
-      if (attempts >= maxAttempts) {
-        // Last-resort server-side reconciliation before giving up.
+      // Invalidate caches
+      void bustRegistrationCaches(queryClient, { poolId })
+      clearPaymentReturnContextStorage()
+
+      logInfo('[EventTicketPayment] Payment confirmed, registration created', { orderId, paymentId, via })
+    }
+
+    const runReconcile = async () => {
+      try {
+        logInfo('[EventTicketPayment] Polling window exhausted, requesting server reconciliation', {
+          orderId,
+          paymentId,
+          attempts,
+        })
+        const reconcileResp = await reconcilePayment(apiRequest, orderId)
+        logInfo('[EventTicketPayment] Reconcile response', {
+          orderId,
+          paymentId,
+          status: reconcileResp.status,
+          fulfilled: reconcileResp.fulfilled,
+        })
+
+        if (reconcileResp.status === 'completed') {
+          completeSuccess('reconcile')
+          return
+        }
+      } catch (reconcileErr) {
+        logError('[EventTicketPayment] Reconcile request failed', { error: String(reconcileErr) })
+      }
+
+      finish('failed', '支付确认超时，请稍后查看活动列表')
+      discoverAnalytics.track('pay_timeout', undefined, {
+        poolId,
+        plan: selectedPlan,
+        couponCode: bestCoupon?.code ?? null,
+        originalAmount: currentPrice,
+        finalAmount: finalPrice,
+        paymentId,
+        wechatOrderId: orderId,
+        attempts,
+      })
+    }
+
+    const scheduleNextPoll = () => {
+      const delay = getPollDelay(attempts + 1)
+      verifyTimerRef.current = setTimeout(async () => {
+        attempts++
         try {
-          logInfo('[EventTicketPayment] Polling window exhausted, requesting server reconciliation', {
-            orderId,
-            paymentId,
-            attempts,
-          })
-          const reconcileResp = await reconcilePayment(apiRequest, orderId)
-          logInfo('[EventTicketPayment] Reconcile response', {
-            orderId,
-            paymentId,
-            status: reconcileResp.status,
-            fulfilled: reconcileResp.fulfilled,
+          const statusResp = await apiRequest<{ status: string }>({
+            path: `/api/payments/status/${encodeURIComponent(orderId)}`,
           })
 
-          if (reconcileResp.status === 'completed') {
-            finish('success')
-            discoverAnalytics.track('pay_success', undefined, {
+          logInfo('[EventTicketPayment] Poll status', {
+            orderId,
+            paymentId,
+            attempt: attempts,
+            status: statusResp.status,
+          })
+
+          if (statusResp.status === 'completed') {
+            completeSuccess('poll')
+            return
+          }
+
+          if (statusResp.status === 'failed' || statusResp.status === 'closed') {
+            finish('failed', '支付未成功，请重试')
+            discoverAnalytics.track('pay_fail', undefined, {
               poolId,
               plan: selectedPlan,
               couponCode: bestCoupon?.code ?? null,
@@ -394,38 +412,26 @@ export default function EventTicketPaymentPage() {
               finalAmount: finalPrice,
               paymentId,
               wechatOrderId: orderId,
-              via: 'reconcile',
+              reason: statusResp.status,
             })
-
-            const ctx = returnContextRef.current
-            if (ctx) {
-              const paid = markPaymentReturnContextPaid(ctx)
-              await persistPaymentReturnContext(paid)
-              setReturnContext(paid)
-              returnContextRef.current = paid
-            }
-
-            void bustRegistrationCaches(queryClient, { poolId })
-            clearPaymentReturnContextStorage()
             return
           }
-        } catch (reconcileErr) {
-          logError('[EventTicketPayment] Reconcile request failed', { error: String(reconcileErr) })
+        } catch (err) {
+          logError('[EventTicketPayment] Poll status error', {
+            message: err instanceof Error ? err.message : String(err),
+          })
+          // Continue polling on transient errors
         }
 
-        finish('failed', '支付确认超时，请稍后查看活动列表')
-        discoverAnalytics.track('pay_timeout', undefined, {
-          poolId,
-          plan: selectedPlan,
-          couponCode: bestCoupon?.code ?? null,
-          originalAmount: currentPrice,
-          finalAmount: finalPrice,
-          paymentId,
-          wechatOrderId: orderId,
-          attempts,
-        })
-      }
-    }, pollIntervalMs)
+        if (attempts >= maxAttempts) {
+          void runReconcile()
+          return
+        }
+        scheduleNextPoll()
+      }, delay)
+    }
+
+    scheduleNextPoll()
   }, [queryClient, poolId, selectedPlan, currentPrice, finalPrice, bestCoupon?.code])
 
   const handlePay = useCallback(async () => {
@@ -433,6 +439,7 @@ export default function EventTicketPaymentPage() {
     paymentInFlightRef.current = true
 
     if (!returnContext) {
+      paymentInFlightRef.current = false
       Taro.showToast({ title: '缺少报名信息，请返回重新选择', icon: 'none', duration: TOAST_DURATION })
       return
     }
@@ -523,7 +530,7 @@ export default function EventTicketPaymentPage() {
     } finally {
       paymentInFlightRef.current = false
     }
-  }, [returnContext, bestCoupon, poolId, pollVerification, currentPrice, finalPrice, selectedPlan])
+  }, [returnContext, bestCoupon, poolId, pollVerification, currentPrice, finalPrice, selectedPlan, effectiveCouponCode])
 
   const handleRetry = useCallback(() => {
     haptics('light')
@@ -612,30 +619,76 @@ export default function EventTicketPaymentPage() {
   if (pageError || poolError || !pool) {
     return (
       <View className='ticket-error' role='alert'>
-        <View className='ticket-error__icon'>
-          <Text>!</Text>
-        </View>
-        <Text className='ticket-error__title'>{pageError || '活动信息加载失败'}</Text>
-        <View className='ticket-error__actions'>
-          <View className='ticket-error__btn ticket-error__btn--back' hoverClass='ticket-error__btn--pressed' onClick={handleBack}>
-            <Text>返回上一步</Text>
-          </View>
-        </View>
+        <StatusCard
+          tone='error'
+          heroSrc={getXiaoyueExpressionAsset('actionFailure')}
+          title={pageError || '活动信息加载失败'}
+          description={pageError ? '加载失败，请重试或返回' : '网络或服务器响应超时，刷新一下再试试'}
+          action={{
+            label: '重新加载',
+            onClick: () => void refetchPool(),
+            variant: 'primary',
+          }}
+          footer={
+            <View className='ticket-loading__back' onClick={handleBack}>
+              <Text>返回上一步</Text>
+            </View>
+          }
+        />
       </View>
     )
   }
 
-  // Success state
+  // Success state — unified 「订座」 ceremony (Phase 4, 2026-08-17; spec §3/§4):
+  // paid variant adds the 票根 tear-off; seal + celebration haptic fire here too
+  // (no more toast-only success for entitlement users).
   if (payment.status === 'success') {
+    // 'active' means the pool is still recruiting/collecting registrations.
+    // Only 'matching' means the matching engine is actually running.
+    const isMatchingInProgress = pool.status === 'matching'
+    const successSubtitle = isMatchingInProgress
+      ? `${DEFAULT_MASCOT_DISPLAY_NAME}已收到你的入场券，正在为你安排合适的同桌伙伴。`
+      : `报名成功！${DEFAULT_MASCOT_DISPLAY_NAME}拿着你的入场券，排桌开始前会第一时间通知你。`
+    const successAreaLabel = pool.district || pool.city || ''
+    const successDateLabel = formatDateTimeLabel(pool.dateTime)
+
     return (
-      <TicketSuccessView
-        pool={pool}
-        eventType={eventType}
-        motionEnabled={motionEnabled}
-        onCtaClick={handleBackToEvents}
-        ctaDisabled={isNavigating}
-        poolId={poolId}
-      />
+      <View className='ticket-page'>
+        <ScrollView className='ticket-scroll' scrollY>
+          <RegistrationSuccessCeremony
+            variant='paid'
+            title={`已加入这场${eventType}`}
+            banner={{
+              imageSrc: CEREMONY_HEROES.eventTicketSuccessV2.webp,
+              badgeEmoji: eventType === '饭局' ? '🍜' : '🍷',
+              badgeText: eventType,
+              title: pool.title,
+            }}
+            bannerImageFallbackSrc={CEREMONY_HEROES.eventTicketSuccessV2.png}
+            meta={[
+              {
+                key: 'venue',
+                label: '地点',
+                value: successAreaLabel || '待定',
+                hint: successAreaLabel ? undefined : '排桌完成后 24 小时内公布',
+              },
+              {
+                key: 'time',
+                label: '时间',
+                value: successDateLabel || '待定',
+                hint: successDateLabel ? undefined : '确认后推送具体时段',
+                align: 'right',
+              },
+            ]}
+            seatOrdinal={pool.registrationCount ?? pool.currentParticipants}
+            motionEnabled={motionEnabled}
+            onCtaClick={handleBackToEvents}
+            ctaDisabled={isNavigating}
+          >
+            <Text className='registration-ceremony__text'>{successSubtitle}</Text>
+          </RegistrationSuccessCeremony>
+        </ScrollView>
+      </View>
     )
   }
 
@@ -665,14 +718,13 @@ export default function EventTicketPaymentPage() {
 
   // Build choice chips from return context draft
   const draft = returnContext?.draft
-  const choiceChips: Array<{ label: string; category: 'budget' | 'intent' | 'language' | 'theme' | 'dietary' | 'alcohol' | 'other' }> = []
+  const choiceChips: Array<{ label: string; category: 'budget' | 'intent' | 'language' | 'theme' | 'alcohol' | 'other' }> = []
   if (draft && Object.keys(draft).length > 0) {
     const budgets = eventType === '酒局' ? draft.barBudgetRange : draft.budgetRange
     budgets?.forEach((b: string) => choiceChips.push({ label: formatBudgetLabel(b), category: 'budget' }))
     draft.eventIntent?.forEach((i: string) => choiceChips.push({ label: getDisplayLabel(i, 'intent'), category: 'intent' }))
     draft.preferredLanguages?.forEach((l: string) => choiceChips.push({ label: getDisplayLabel(l, 'language'), category: 'language' }))
     draft.barThemes?.forEach((t: string) => choiceChips.push({ label: t, category: 'theme' }))
-    draft.dietaryRestrictions?.forEach((d: string) => choiceChips.push({ label: getDisplayLabel(d, 'dietary'), category: 'dietary' }))
     const alcohol = Array.isArray(draft.alcoholComfort) ? draft.alcoholComfort[0] : draft.alcoholComfort
     if (alcohol) choiceChips.push({ label: getDisplayLabel(alcohol, 'alcohol'), category: 'alcohol' })
   }
@@ -684,57 +736,153 @@ export default function EventTicketPaymentPage() {
   // corner badge data source; deliberately unstyled/urgency-free.
   const seatCount = pool.registrationCount ?? pool.currentParticipants ?? 0
 
-  return (
-    <View className='ticket-page'>
-      <ScrollView className='ticket-scroll' scrollY>
-        {/* ── Ticket Card ── */}
-        <View className={`ticket-card ${!shouldReduceMotion && !deviceTier.isDegradation ? 'ticket-card--entrance' : ''}`}>
-          {/* Banner */}
-          <View className='ticket-card__banner'>
+  // Coupon stub + tail vignette/barcode render inside the ticket chrome via
+  // the ReservationTicket footer slot (Phase 3 「订座」, 2026-08-17).
+  const ticketFooter = useMemo(
+    () => (
+      <>
+        {/* Coupon stub */}
+        {bestCoupon && discountAmount > 0 && (
+          <View className='ticket-card__coupon-stub'>
+            <View className='ticket-card__coupon-stub-left'>
+              <View className='ticket-card__coupon-stub-notch ticket-card__coupon-stub-notch--left' />
+            </View>
+            <View className='ticket-card__coupon-stub-body' onClick={() => {
+              haptics('light')
+              const next = !showCouponDetail
+              setShowCouponDetail(next)
+              discoverAnalytics.track(next ? 'coupon_detail_expand' : 'coupon_detail_collapse', undefined, {
+                poolId,
+                couponCode: bestCoupon?.code ?? null,
+                context: 'event-ticket-payment',
+              })
+            }}
+            >
+              <View className='ticket-card__coupon-stub-header'>
+                <Text className='ticket-card__coupon-stub-title'>悦仔见面礼</Text>
+                {couponStampAnimated && (
+                  <View className='ticket-card__stamp ticket-card__stamp--animated'>
+                    <Text className='ticket-card__stamp-text'>已用</Text>
+                  </View>
+                )}
+                {!couponStampAnimated && showCouponStamp && (
+                  <View className='ticket-card__stamp'>
+                    <Text className='ticket-card__stamp-text'>已用</Text>
+                  </View>
+                )}
+              </View>
+              <Text className='ticket-card__coupon-stub-savings'>首单立省 {formatPrice(discountAmount)}</Text>
+              <Text className='ticket-card__coupon-stub-code'>
+                优惠码 {bestCoupon.code} · {showCouponDetail ? '▲' : '▼'}
+              </Text>
+              {showCouponDetail && (
+                <View className='ticket-card__coupon-stub-detail'>
+                  <Text>已自动为你使用，无需手动操作</Text>
+                </View>
+              )}
+            </View>
+            <View className='ticket-card__coupon-stub-right'>
+              <View className='ticket-card__coupon-stub-notch ticket-card__coupon-stub-notch--right' />
+            </View>
+          </View>
+        )}
+
+        {/* Event-type full-bleed footer vignette or barcode fallback */}
+        {deviceTier.isDegradation || tailImageError || tailLoadTimedOut ? (
+          <View className='ticket-card__barcode' aria-hidden='true'>
+            {Array.from({ length: 28 }).map((_, i) => (
+              <View
+                key={i}
+                className='ticket-card__barcode-line'
+                style={{ width: `${2 + (i % 3) * 2}rpx` }}
+              />
+            ))}
+          </View>
+        ) : (
+          <View className='ticket-card__tail-wrap' aria-hidden='true'>
             <Image
-              className='ticket-card__banner-image'
-              src={TICKET_HERO}
+              className={`ticket-card__tail-image ${tailImageLoaded ? 'ticket-card__tail-image--loaded' : ''}`}
+              src={getEventTicketTailAsset(eventType)}
               mode='aspectFill'
               lazyLoad={false}
               aria-hidden='true'
+              onLoad={() => {
+                if (tailImageLoaded) return
+                setTailImageLoaded(true)
+                if (tailTimeoutRef.current) {
+                  clearTimeout(tailTimeoutRef.current)
+                  tailTimeoutRef.current = null
+                }
+                discoverAnalytics.track('ticket_tail_image_impression', undefined, {
+                  poolId,
+                  eventType,
+                })
+              }}
+              onError={() => {
+                if (tailErrorHandledRef.current) return
+                tailErrorHandledRef.current = true
+                if (tailTimeoutRef.current) {
+                  clearTimeout(tailTimeoutRef.current)
+                  tailTimeoutRef.current = null
+                }
+                logError('[EventTicketPayment] Tail image failed to load', { eventType, poolId })
+                discoverAnalytics.track('ticket_tail_image_load_error', undefined, {
+                  poolId,
+                  eventType,
+                  error: 'image_load_failed',
+                })
+                setTailImageError(true)
+              }}
             />
-            <View className='ticket-card__banner-scrim' />
-            <View className='ticket-card__type-badge'>
-              <View className='ticket-card__type-badge-icon'>
-                <JoyJoinIcon emoji={eventType === '饭局' ? '🍜' : '🍷'} tier='category' size={40} />
-              </View>
-              <Text className='ticket-card__type-badge-text'>{eventType}</Text>
-            </View>
-            <View className='ticket-card__banner-title-wrap'>
-              <Text className='ticket-card__banner-title'>{pool.title}</Text>
-            </View>
+            <View className='ticket-card__tail-fade' aria-hidden='true' />
           </View>
+        )}
+      </>
+    ),
+    [
+      bestCoupon,
+      discountAmount,
+      showCouponDetail,
+      couponStampAnimated,
+      showCouponStamp,
+      deviceTier.isDegradation,
+      tailImageError,
+      tailImageLoaded,
+      tailLoadTimedOut,
+      eventType,
+      poolId,
+    ],
+  )
 
-          {/* Notched perforation divider */}
-          <View className='ticket-card__perforation'>
-            <View className='ticket-card__notch ticket-card__notch--left' />
-            <View className='ticket-card__dash-line' />
-            <View className='ticket-card__notch ticket-card__notch--right' />
-          </View>
-
-          {/* Event meta grid */}
-          <View className='ticket-card__body'>
-            <View className='ticket-card__meta-grid'>
-              <View className='ticket-card__meta-cell'>
-                <Text className='ticket-card__meta-label'>地点</Text>
-                <Text className='ticket-card__meta-value'>{areaLabel || '待定'}</Text>
-                {!areaLabel && (
-                  <Text className='ticket-card__meta-hint'>匹配成功后 24 小时内公布</Text>
-                )}
-              </View>
-              <View className='ticket-card__meta-cell ticket-card__meta-cell--right'>
-                <Text className='ticket-card__meta-label'>时间</Text>
-                <Text className='ticket-card__meta-value'>{dateLabel || '待定'}</Text>
-                {!dateLabel && (
-                  <Text className='ticket-card__meta-hint'>确认后推送具体时段</Text>
-                )}
-              </View>
-            </View>
+  return (
+    <View className='ticket-page'>
+      <ScrollView className='ticket-scroll' scrollY>
+        {/* ── Ticket Card: shared ReservationTicket (Phase 3 「订座」, 2026-08-17) ── */}
+        <ReservationTicket
+          banner={{
+            imageSrc: TICKET_HERO,
+            badgeEmoji: eventType === '饭局' ? '🍜' : '🍷',
+            badgeText: eventType,
+            title: pool.title,
+          }}
+          meta={[
+            {
+              key: 'venue',
+              label: '地点',
+              value: areaLabel || '待定',
+              hint: areaLabel ? undefined : '排桌完成后 24 小时内公布',
+            },
+            {
+              key: 'time',
+              label: '时间',
+              value: dateLabel || '待定',
+              hint: dateLabel ? undefined : '确认后推送具体时段',
+              align: 'right',
+            },
+          ]}
+          motionEnabled={!shouldReduceMotion && !deviceTier.isDegradation}
+          footer={ticketFooter}
+        >
 
             {/* Quiet factual seat signal — no urgency styling (Wave 1) */}
             {seatCount > 0 ? (
@@ -765,7 +913,7 @@ export default function EventTicketPaymentPage() {
             {/* Terms */}
             <View className='ticket-card__terms'>
               <View className='ticket-card__terms-chip'>
-                <Text className='ticket-card__terms-chip-text'>报名费含组织与匹配</Text>
+                <Text className='ticket-card__terms-chip-text'>报名费含组织与排桌</Text>
               </View>
               <View className='ticket-card__terms-chip'>
                 <Text className='ticket-card__terms-chip-text'>含悦仔多环节破冰</Text>
@@ -791,105 +939,7 @@ export default function EventTicketPaymentPage() {
               <Text className='ticket-card__inclusion-link-text'>查看费用包含内容</Text>
               <Text className='ticket-card__inclusion-link-chevron'>›</Text>
             </View>
-          </View>
-
-          {/* Coupon stub */}
-          {bestCoupon && discountAmount > 0 && (
-            <View className='ticket-card__coupon-stub'>
-              <View className='ticket-card__coupon-stub-left'>
-                <View className='ticket-card__coupon-stub-notch ticket-card__coupon-stub-notch--left' />
-              </View>
-              <View className='ticket-card__coupon-stub-body' onClick={() => {
-                haptics('light')
-                const next = !showCouponDetail
-                setShowCouponDetail(next)
-                discoverAnalytics.track(next ? 'coupon_detail_expand' : 'coupon_detail_collapse', undefined, {
-                  poolId,
-                  couponCode: bestCoupon?.code ?? null,
-                  context: 'event-ticket-payment',
-                })
-              }}
-              >
-                <View className='ticket-card__coupon-stub-header'>
-                  <Text className='ticket-card__coupon-stub-title'>悦仔见面礼</Text>
-                  {couponStampAnimated && (
-                    <View className='ticket-card__stamp ticket-card__stamp--animated'>
-                      <Text className='ticket-card__stamp-text'>已用</Text>
-                    </View>
-                  )}
-                  {!couponStampAnimated && showCouponStamp && (
-                    <View className='ticket-card__stamp'>
-                      <Text className='ticket-card__stamp-text'>已用</Text>
-                    </View>
-                  )}
-                </View>
-                <Text className='ticket-card__coupon-stub-savings'>首单立省 {formatPrice(discountAmount)}</Text>
-                <Text className='ticket-card__coupon-stub-code'>
-                  优惠码 {bestCoupon.code} · {showCouponDetail ? '▲' : '▼'}
-                </Text>
-                {showCouponDetail && (
-                  <View className='ticket-card__coupon-stub-detail'>
-                    <Text>已自动为你使用，无需手动操作</Text>
-                  </View>
-                )}
-              </View>
-              <View className='ticket-card__coupon-stub-right'>
-                <View className='ticket-card__coupon-stub-notch ticket-card__coupon-stub-notch--right' />
-              </View>
-            </View>
-          )}
-
-          {/* Event-type full-bleed footer vignette or barcode fallback */}
-          {deviceTier.isDegradation || tailImageError || tailLoadTimedOut ? (
-            <View className='ticket-card__barcode' aria-hidden='true'>
-              {Array.from({ length: 28 }).map((_, i) => (
-                <View
-                  key={i}
-                  className='ticket-card__barcode-line'
-                  style={{ width: `${2 + (i % 3) * 2}rpx` }}
-                />
-              ))}
-            </View>
-          ) : (
-            <View className='ticket-card__tail-wrap' aria-hidden='true'>
-              <Image
-                className={`ticket-card__tail-image ${tailImageLoaded ? 'ticket-card__tail-image--loaded' : ''}`}
-                src={getEventTicketTailAsset(eventType)}
-                mode='aspectFill'
-                lazyLoad={false}
-                aria-hidden='true'
-                onLoad={() => {
-                  if (tailImageLoaded) return
-                  setTailImageLoaded(true)
-                  if (tailTimeoutRef.current) {
-                    clearTimeout(tailTimeoutRef.current)
-                    tailTimeoutRef.current = null
-                  }
-                  discoverAnalytics.track('ticket_tail_image_impression', undefined, {
-                    poolId,
-                    eventType,
-                  })
-                }}
-                onError={() => {
-                  if (tailErrorHandledRef.current) return
-                  tailErrorHandledRef.current = true
-                  if (tailTimeoutRef.current) {
-                    clearTimeout(tailTimeoutRef.current)
-                    tailTimeoutRef.current = null
-                  }
-                  logError('[EventTicketPayment] Tail image failed to load', { eventType, poolId })
-                  discoverAnalytics.track('ticket_tail_image_load_error', undefined, {
-                    poolId,
-                    eventType,
-                    error: 'image_load_failed',
-                  })
-                  setTailImageError(true)
-                }}
-              />
-              <View className='ticket-card__tail-fade' aria-hidden='true' />
-            </View>
-          )}
-        </View>
+        </ReservationTicket>
 
         {/* ── Plan Selector ── */}
         {/* Tier-M wait (M1): while the order is being created, replace the
@@ -898,135 +948,18 @@ export default function EventTicketPaymentPage() {
         {payment.status === 'creating' ? (
           <TicketOrderSkeleton />
         ) : (
-        <>
-        <View className='ticket-plan-section'>
-          <View className='ticket-plan-section__header'>
-            <View className='ticket-plan-section__header-accent' />
-            <Text className='ticket-plan-section__label'>选择入场方案</Text>
-          </View>
-
-          <View className='ticket-plan-cards'>
-            {/* Single */}
-            <View
-              className={`ticket-plan-card ${selectedPlan === 'single' ? 'ticket-plan-card--selected' : ''}`}
-              hoverClass='ticket-plan-card--pressed'
-              onClick={() => {
-                haptics('light')
-                if (selectedPlan !== 'single') {
-                  discoverAnalytics.track('plan_switch', undefined, {
-                    fromPlan: selectedPlan,
-                    toPlan: 'single',
-                    poolId,
-                    couponCode: bestCoupon?.code ?? null,
-                  })
-                }
-                setSelectedPlan('single')
-              }}
-            >
-              <View className='ticket-plan-card__radio'>
-                <View className={`ticket-plan-card__radio-dot ${selectedPlan === 'single' ? 'ticket-plan-card__radio-dot--active' : ''}`} />
-              </View>
-              <View className='ticket-plan-card__body'>
-                <View className='ticket-plan-card__top'>
-                  <Text className='ticket-plan-card__title'>单场局票</Text>
-                  <Text className='ticket-plan-card__price'>{formatPrice(singlePrice)}</Text>
-                </View>
-                <Text className='ticket-plan-card__desc'>先体验一场，合适再续杯</Text>
-              </View>
-            </View>
-
-            {/* 3-pack */}
-            <View
-              className={`ticket-plan-card ${selectedPlan === 'pack_3' ? 'ticket-plan-card--selected' : ''}`}
-              hoverClass='ticket-plan-card--pressed'
-              onClick={() => {
-                haptics('light')
-                if (selectedPlan !== 'pack_3') {
-                  discoverAnalytics.track('plan_switch', undefined, {
-                    fromPlan: selectedPlan,
-                    toPlan: 'pack_3',
-                    poolId,
-                    couponCode: bestCoupon?.code ?? null,
-                  })
-                }
-                setSelectedPlan('pack_3')
-              }}
-            >
-              <View className='ticket-plan-card__radio'>
-                <View className={`ticket-plan-card__radio-dot ${selectedPlan === 'pack_3' ? 'ticket-plan-card__radio-dot--active' : ''}`} />
-              </View>
-              <View className='ticket-plan-card__body'>
-                <View className='ticket-plan-card__top'>
-                  <View className='ticket-plan-card__title-wrap'>
-                    <Text className='ticket-plan-card__title'>3 次聚会卡</Text>
-                    <View className='ticket-plan-card__badge'>
-                      <Text>省 {formatPrice(savings3)}</Text>
-                    </View>
-                  </View>
-                  <Text className='ticket-plan-card__price'>{formatPrice(pack3Price)}</Text>
-                </View>
-                <Text className='ticket-plan-card__desc'>灵活选择任意 3 场 · 每次约 {formatPrice(Math.floor(pack3Price / 3))}</Text>
-              </View>
-            </View>
-
-            {/* 6-pack */}
-            <View
-              className={`ticket-plan-card ${selectedPlan === 'pack_6' ? 'ticket-plan-card--selected' : ''}`}
-              hoverClass='ticket-plan-card--pressed'
-              onClick={() => {
-                haptics('light')
-                if (selectedPlan !== 'pack_6') {
-                  discoverAnalytics.track('plan_switch', undefined, {
-                    fromPlan: selectedPlan,
-                    toPlan: 'pack_6',
-                    poolId,
-                    couponCode: bestCoupon?.code ?? null,
-                  })
-                }
-                setSelectedPlan('pack_6')
-              }}
-            >
-              <View className='ticket-plan-card__radio'>
-                <View className={`ticket-plan-card__radio-dot ${selectedPlan === 'pack_6' ? 'ticket-plan-card__radio-dot--active' : ''}`} />
-              </View>
-              <View className='ticket-plan-card__body'>
-                <View className='ticket-plan-card__top'>
-                  <View className='ticket-plan-card__title-wrap'>
-                    <Text className='ticket-plan-card__title'>6 次聚会卡</Text>
-                    <View className='ticket-plan-card__badge ticket-plan-card__badge--best'>
-                      <Text>最佳价值</Text>
-                    </View>
-                  </View>
-                  <Text className='ticket-plan-card__price'>{formatPrice(pack6Price)}</Text>
-                </View>
-                <Text className='ticket-plan-card__desc'>畅享半年活动自由 · 每次约 {formatPrice(Math.floor(pack6Price / 6))}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* ── Price Summary ── */}
-        <View className='ticket-price-summary'>
-          <View className='ticket-price-summary__row'>
-            <Text className='ticket-price-summary__label'>方案金额</Text>
-            <Text className={`ticket-price-summary__value ${discountAmount > 0 ? 'ticket-price-summary__value--struck' : ''}`}>
-              {formatPrice(currentPrice)}
-            </Text>
-          </View>
-          {discountAmount > 0 && (
-            <View className='ticket-price-summary__row'>
-              <Text className='ticket-price-summary__label'>新人优惠</Text>
-              <Text className='ticket-price-summary__value ticket-price-summary__value--discount'>
-                -{formatPrice(discountAmount)}
-              </Text>
-            </View>
-          )}
-          <View className='ticket-price-summary__row ticket-price-summary__row--total'>
-            <Text className='ticket-price-summary__label'>实付金额</Text>
-            <Text className='ticket-price-summary__value ticket-price-summary__value--total'>{formatPrice(finalPrice)}</Text>
-          </View>
-        </View>
-        </>
+          <TicketPlanSelection
+            selectedPlan={selectedPlan}
+            onSelectPlan={setSelectedPlan}
+            singlePrice={singlePrice}
+            pack3Price={pack3Price}
+            pack6Price={pack6Price}
+            currentPrice={currentPrice}
+            discountAmount={discountAmount}
+            finalPrice={finalPrice}
+            bestCoupon={bestCoupon}
+            poolId={poolId}
+          />
         )}
 
         {/* ── Trust & Policy ── */}
