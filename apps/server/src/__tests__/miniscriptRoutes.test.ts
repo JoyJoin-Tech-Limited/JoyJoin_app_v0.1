@@ -236,6 +236,14 @@ describe('POST /api/miniscript/generate', () => {
 });
 
 describe('mini-script host library', () => {
+  beforeEach(() => {
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'false';
+  });
+
+  afterEach(() => {
+    delete process.env.SOCIAL_MINISCRIPT_LLM_ENABLED;
+  });
+
   it('lists compatible curated scripts for the selected style', async () => {
     testSessions.clear();
     await withServer(async (baseUrl) => {
