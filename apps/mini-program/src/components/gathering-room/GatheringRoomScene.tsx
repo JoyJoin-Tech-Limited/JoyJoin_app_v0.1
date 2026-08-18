@@ -2,7 +2,7 @@ import { Image, Text, View } from '@tarojs/components'
 import { Fragment, memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { RoomPokeEmoji } from '@shared/wsEvents'
 import type { EquipmentItemView, EquipmentOutfitView } from '@joyjoin/shared/schema'
-import { useCdnFirstSrc } from '../../lib/utils/cdnAssets'
+import { localAsset } from '../../lib/utils/cdnAssets'
 import PixelAvatarComposite from '../profile/PixelAvatarComposite'
 import './GatheringRoomScene.scss'
 
@@ -11,14 +11,17 @@ import './GatheringRoomScene.scss'
  *
  * Full-viewport zero-scroll room: 4–6 matched members wait for the offline
  * event as their existing V2 pixel avatars (with equipped outfits). Three
- * presence states (PRD): 未现身 (avatar queues dimmed at the door, name card
- * holds the seat), 在场 (walked to seat, idle breathing), 已确认出席 (seated
- * pose + 已确认 badge).
+ * presence states (PRD): 未现身 (held-place name card at the seat, no
+ * avatar), 在场 (walks in from the door on live arrival, idle breathing),
+ * 已确认出席 (seated pose + 已确认 badge).
  *
- * The scene renders the composite room art (`ROOM_COMPOSITE_PATH`) CDN-first
- * with a bundled local fallback (useCdnFirstSrc, session-level CDN failure
- * cache). Seats mount once the art has decoded (900ms fallback) so the room
- * "lights up" before anyone walks in, then stagger in per seat.
+ * The scene renders the composite room art (`ROOM_COMPOSITE_PATH`) from the
+ * bundled package copy (packOptions force-included). Loading locally removes
+ * the whole CDN failure class for this asset: a transient CDN error used to
+ * pin the session onto a bundled fallback that packOptions.include never
+ * uploaded, leaving the scene bare on device. Seats mount once the art has
+ * decoded (900ms fallback) so the room "lights up" before anyone walks in,
+ * then stagger in per seat.
  *
  * Performance note: member profiles (identity + equipment) are kept stable and
  * split from transient presence state. Each seat is memoized so a presence
@@ -34,14 +37,17 @@ import './GatheringRoomScene.scss'
 const ROOM_COMPOSITE_PATH = '/assets/gathering-room/room-composite-v1.webp'
 
 /** Seat anchors in % of the scene viewport (x from left, y from top).
- *  Tuned to the composite room art's cushion positions. */
+ *  Measured against room-composite-v1.webp's six zabuton cushions (feet land
+ *  on the cushion, so the avatar reads as seated at the table):
+ *  back (50,35.5) / top-left (34.6,44) / top-right (65.4,44) /
+ *  mid-left (32.7,58) / mid-right (67.3,58) / front (50,68.5). */
 const SEAT_ANCHORS = [
-  { x: 48, y: 24 }, // 0 back
-  { x: 28, y: 40 }, // 1 mid-left
-  { x: 68, y: 40 }, // 2 mid-right
-  { x: 24, y: 66 }, // 3 front-left
-  { x: 48, y: 72 }, // 4 front
-  { x: 72, y: 66 }, // 5 front-right
+  { x: 50, y: 36 }, // 0 back
+  { x: 35, y: 45 }, // 1 mid-left
+  { x: 65, y: 45 }, // 2 mid-right
+  { x: 33, y: 59 }, // 3 front-left
+  { x: 50, y: 69.5 }, // 4 front
+  { x: 67, y: 59 }, // 5 front-right
 ] as const
 
 /** Which seat indices are used for a given member count (4–6). Front seats are
@@ -68,9 +74,9 @@ const SEATED_OFFSETS: Record<number, { dx: number; dy: number }> = {
 const SCENE_WIDTH_RPX = 750
 const SCENE_HEIGHT_RPX = 960
 
-/** Door-waiting zone (%) — absent members queue here, dimmed and slightly
- *  scaled down, until their presence event walks them to their seat. Laid out
- *  as a two-column fan per seat index. */
+/** Door zone (%) — a live arrival materializes here for one beat, then the
+ *  wrapper transition walks the avatar to its seat. Fanned per seat index so
+ *  back-to-back arrivals don't spawn on top of each other. */
 const DOOR_QUEUE_BASE = { x: 71, y: 30 } as const
 
 function doorQueuePoint(seatIndex: number): { x: number; y: number } {
@@ -177,10 +183,27 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
   // Confirmation beat: hop once when this member's attendance flips to
   // confirmed (pairs with the CTA haptic + the 480ms seated slide).
   const prevPresenceRef = useRef(presence)
+  const hasMountedRef = useRef(false)
   const [justConfirmed, setJustConfirmed] = useState(false)
+  // Live-arrival walk: 'door' renders the avatar at the door point for one
+  // beat, then 'walking' flips the wrapper transform to the seat so the
+  // 640ms transition reads as a walk. Only for absent→present/confirmed
+  // flips after first paint — first-paint members fade in at their seats.
+  const [arrival, setArrival] = useState<'door' | 'walking' | null>(null)
   useEffect(() => {
     const prev = prevPresenceRef.current
     prevPresenceRef.current = presence
+    const isLiveArrival = hasMountedRef.current && prev === 'absent' && presence !== 'absent'
+    hasMountedRef.current = true
+    if (isLiveArrival && !reducedMotion) {
+      setArrival('door')
+      const walkId = setTimeout(() => setArrival('walking'), 60)
+      const doneId = setTimeout(() => setArrival(null), 780)
+      return () => {
+        clearTimeout(walkId)
+        clearTimeout(doneId)
+      }
+    }
     if (presence === 'confirmed' && prev !== 'confirmed' && !reducedMotion) {
       setJustConfirmed(true)
       const id = setTimeout(() => setJustConfirmed(false), 420)
@@ -198,25 +221,27 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
     .filter(Boolean)
     .join(' ')
 
-  // The seated (confirmed) offset lives on the seat WRAPPER so pose keyframes
-  // and the press state on the body never fight it — an animation on the same
-  // element would override an inline transform mid-run and snap the avatar
-  // back to the standing spot. Absent members queue at the door instead:
-  // their wrapper slides from the door zone to the seat anchor when the
-  // presence event arrives (the 640ms wrapper transition reads as a walk).
+  // Absent members render no avatar at all — the held-place name card at the
+  // seat anchor (rendered by the parent) is their only visual. The seated
+  // (confirmed) offset lives on the seat WRAPPER so pose keyframes and the
+  // press state on the body never fight it — an animation on the same element
+  // would override an inline transform mid-run and snap the avatar back to
+  // the standing spot. A live arrival mounts at the door point and the
+  // wrapper's 640ms transition walks the avatar to its seat.
   const doorPoint = doorQueuePoint(seatIndex)
   const seatStyle: CSSProperties = {
     left: `${anchor.x}%`,
     top: `${anchor.y}%`,
     // First-paint stagger (see &__seat animation in the stylesheet); the base
-    // 150ms lets the room art finish fading in before anyone walks in.
-    animationDelay: `${150 + seatIndex * 70}ms`,
-    ...(presence === 'confirmed' && seatedOffset
-      ? { transform: `translate(-50%, -88%) translate(${seatedOffset.dx}rpx, ${seatedOffset.dy}rpx)` }
-      : presence === 'absent'
-        ? {
-            transform: `translate(-50%, -88%) translate(${(doorPoint.x - anchor.x) / 100 * SCENE_WIDTH_RPX}rpx, ${(doorPoint.y - anchor.y) / 100 * SCENE_HEIGHT_RPX}rpx) scale(0.88)`,
-          }
+    // 150ms lets the room art finish fading in before anyone walks in. Live
+    // arrivals skip the stagger — they fade in at the door instead.
+    animationDelay: arrival ? '0ms' : `${150 + seatIndex * 70}ms`,
+    ...(arrival === 'door'
+      ? {
+          transform: `translate(-50%, -88%) translate(${(doorPoint.x - anchor.x) / 100 * SCENE_WIDTH_RPX}rpx, ${(doorPoint.y - anchor.y) / 100 * SCENE_HEIGHT_RPX}rpx)`,
+        }
+      : presence === 'confirmed' && seatedOffset
+        ? { transform: `translate(-50%, -88%) translate(${seatedOffset.dx}rpx, ${seatedOffset.dy}rpx)` }
         : {}),
   }
 
@@ -234,6 +259,11 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
     () => new Map((profile.equippedItems ?? []).map((item) => [item.id, item])),
     [profile.equippedItems],
   )
+
+  // 未现身 = held-place name card only (rendered by the parent at the seat
+  // anchor). No avatar: a pile of dimmed avatars waiting at the door read as
+  // a layout bug, not as "on the way" (device screenshot 2026-08-17).
+  if (presence === 'absent') return null
 
   return (
     <View
@@ -296,11 +326,9 @@ export function GatheringRoomScene({
 
   const ownUserIdResolved = ownUserId ?? ''
 
-  // CDN-first with bundled fallback: the composite art may 404 before the CDN
-  // upload pipeline ships it — fall back to the local copy instead of showing
-  // a bare background. Fade in on decode so the art never pops into the scene
-  // (this also masks the CDN→local swap).
-  const { src: roomArtSrc, onError: handleRoomArtError } = useCdnFirstSrc(ROOM_COMPOSITE_PATH)
+  // Bundled local art (packOptions force-included) — no CDN attempt at all.
+  // Fade in on decode so the art never pops into the scene.
+  const roomArtSrc = localAsset(ROOM_COMPOSITE_PATH)
   const [roomArtLoaded, setRoomArtLoaded] = useState(false)
 
   // Entrance choreography: seats mount only once the room art has decoded
@@ -343,7 +371,6 @@ export function GatheringRoomScene({
         src={roomArtSrc}
         mode='scaleToFill'
         aria-hidden='true'
-        onError={handleRoomArtError}
         onLoad={() => setRoomArtLoaded(true)}
         style={{ opacity: roomArtLoaded ? 1 : 0, transition: 'opacity 320ms ease-out' }}
       />
@@ -354,8 +381,8 @@ export function GatheringRoomScene({
 
       {/* Character layer — above the art and lamp-breathe overlay. Each seat
           is memoized so presence changes only re-render the seat whose state
-          actually changed. Absent members queue at the door; their name card
-          stays at the seat as a held place. */}
+          actually changed. Absent members show only their held-place name
+          card at the seat; the avatar walks in from the door on arrival. */}
       {entranceArmed
         ? memberProfiles.map((profile, index) => {
             const seatIndex = seatIndexFor(index, memberProfiles.length)

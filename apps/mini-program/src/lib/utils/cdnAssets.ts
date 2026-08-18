@@ -25,6 +25,16 @@ const isTestEnv = nodeEnv === 'test'
 
 /** Returns CDN URL if configured, otherwise the local path. */
 export function cdnAsset(localPath: string): string {
+  // Idempotency guard: an already-absolute URL passes through unchanged.
+  // Without this, utilities that accept BOTH raw paths and wrapped URLs
+  // (e.g. persistentAssetCache.cacheAssets, whose callers hand it
+  // cdnAsset()-wrapped values) silently double the base —
+  // `https://cdn…/static` + `https://cdn…/static/assets/…` — and every
+  // downloadFile 404s (observed 2026-08-17 in the H5 probe; the persistent
+  // asset cache had been warming nothing on device either).
+  if (/^https?:\/\//.test(localPath)) {
+    return localPath
+  }
   if (!CDN_BASE_URL) {
     if (isProductionBuild) {
       throw new Error(

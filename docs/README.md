@@ -116,6 +116,7 @@ The **Taro mini-program** (`apps/mini-program`) is the **launch-primary** client
 - [`runbooks/admin-incident-handling.md`](./runbooks/admin-incident-handling.md)
 - [`runbooks/alerting.md`](./runbooks/alerting.md)
 - [`runbooks/observability.md`](./runbooks/observability.md)
+- [`runbooks/mini-program-asset-delivery.md`](./runbooks/mini-program-asset-delivery.md) — bundled/CDN asset delivery protocol and 2026-08-17 incident retrospective
 
 ## Contributor resources outside this directory
 

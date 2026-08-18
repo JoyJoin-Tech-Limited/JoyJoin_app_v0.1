@@ -216,9 +216,17 @@ Fallback chain: if asset resolve fails → native emoji (for `JoyJoinIcon`) or t
      to: 'dist/assets/your-folder',
    },
    ```
-3. Reference in code with `localAsset('/assets/your-folder/file.webp')`
-4. **Verify** the clean step doesn't remove your directory
-5. Run `npm run build:weapp` and check `dist/assets/`
+3. **Add a `packOptions.include` regexp in `project.config.json`** — `miniprogram-ci` treats `include` as an upload allow-list; files that match no pattern are silently dropped from the uploaded package even when they exist in `dist/`. Example:
+   ```json
+   {
+     "type": "regexp",
+     "value": "assets/your-folder/.*\\.webp$"
+   }
+   ```
+4. Reference in code with `localAsset('/assets/your-folder/file.webp')`
+5. **Verify** the clean step doesn't remove your directory
+6. Run `npm run build:weapp` and check `dist/assets/`
+7. Verify on a real device or uploaded preview; H5 / DevTools cannot catch upload-only drops
 
 ### If it should be CDN-only:
 1. Place file in `src/assets/<appropriate-folder>/`
@@ -314,6 +322,8 @@ npm run upload:cdn-assets
 | Mistake | Symptom | Fix |
 |---------|---------|-----|
 | `cdnAsset()` for a bundled asset | Works on first load, fails on repeat (cache) or slow network | Switch to `localAsset()` |
+| Missing `packOptions.include` regexp for a new bundled dir | Looks fine in H5/DevTools, asset is invisible on device after upload | Add regexp to `project.config.json` in the same PR |
+| Double-wrapping a `cdnAsset()` URL (e.g. cache utility re-wrapping) | Persistent cache / download 404s silently; render may still look fine | Ensure utilities are idempotent for absolute URLs; add regression tests |
 | Missing copy config entry | Image fails silently, shows fallback/placeholder | Add to `config/index.ts` |
 | Clean step removes bundled dir | Icons show as emojis instead of proprietary assets | Remove directory from clean script |
 | `@2x`/`@3x` not bundled | Icons look blurry on retina devices | Add icon dir to copy config |

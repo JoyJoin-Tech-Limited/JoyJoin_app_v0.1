@@ -55,6 +55,10 @@
       {
         "type": "regexp",
         "value": "assets/icons/rating-faces/.*grid.*\\.png$"
+      },
+      {
+        "type": "regexp",
+        "value": "pages/pool-registration/assets/ceremony/.*\\.png$"
       }
     ],
     "include": [
@@ -132,6 +136,10 @@
       },
       {
         "type": "regexp",
+        "value": "assets/gathering-room/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
         "value": "assets/qr/.*\\.(webp|png)$"
       },
       {
@@ -141,6 +149,10 @@
       {
         "type": "regexp",
         "value": "assets/tab-icons/.*\\.png$"
+      },
+      {
+        "type": "regexp",
+        "value": "pages/pool-registration/assets/ceremony/.*\\.webp$"
       }
     ]
   },

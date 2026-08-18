@@ -75,10 +75,6 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     align-items: center;
     transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1), opacity 360ms ease-out;
 
-    &--absent {
-      opacity: 0.38;
-    }
-
     &--present {
       opacity: 1;
       animation: gathering-room-breathe 5600ms ease-in-out infinite;
