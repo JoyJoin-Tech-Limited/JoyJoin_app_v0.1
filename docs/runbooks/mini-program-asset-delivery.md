@@ -1,13 +1,13 @@
-# Mini-Program Asset Delivery Runbook
+# Mini-Program Asset & Style Delivery Runbook
 
-> Operational guide for adding, bundling, CDN-hosting, and troubleshooting static assets in `apps/mini-program`.
-> Last updated: 2026-08-17
+> Operational guide for adding, bundling, CDN-hosting, and troubleshooting static assets **and styles** in `apps/mini-program`.
+> Last updated: 2026-08-18
 
-This runbook is the durable record of two back-to-back incidents that shipped the gathering-room feature to device with broken visuals, plus the protocol changes that prevent a repeat.
+This runbook is the durable record of back-to-back incidents that shipped mini-program features to device with broken visuals, plus the protocol changes that prevent a repeat.
 
 ---
 
-## 1. The two incidents (2026-08-17)
+## 1. The incidents (2026-08-17 – 2026-08-18)
 
 ### 1.1 Gathering-room art was invisible on device
 
@@ -43,6 +43,26 @@ This runbook is the durable record of two back-to-back incidents that shipped th
 - Made `cdnAsset()` idempotent for absolute `http(s)://` URLs — it now returns the input unchanged.
 - Added a 5-case regression test in `apps/mini-program/src/lib/utils/cdnAssets.test.ts`.
 
+### 1.3 Icebreaker phase views rendered unstyled on device (sub-common.wxss stranding)
+
+**Symptom:** The social-icebreaker session page (`/pages/icebreaker-session/index`) looked correct in H5 / WeChat DevTools simulator, but on a real device every phase-hero view, the warmup card family, and the recap view were partially or fully unstyled — bare text on a pink background, misaligned buttons, missing cards. The screenshot from the bug report shows the "迷你剧本杀" phase card collapsed into a plain block with no foil frame, status rail, or action styling.
+
+**Root cause chain:**
+
+1. Commit `b7be2757f` introduced a per-subpackage `manualChunks` rule (`apps/mini-program/config/miniProgramChunks.ts`) that routes modules shared only inside one subpackage to `<subpackage>/sub-common.js`.
+2. When commit `899761a5f` (2026-08-12, "page extraction") moved the phase JSX into `SessionPhaseViews.tsx` and the action handlers into `hooks/useSocialActions.ts`, the importer graph changed: many phase/component modules now had multiple importers inside the `icebreaker-session` subpackage.
+3. Taro/Vite attaches the SCSS side-effect imports (`import './X.scss'`) to those modules, so the stylesheets also followed the modules into `pages/icebreaker-session/sub-common.wxss`.
+4. WeChat applies **only** the page's own WXSS plus the app-level WXSS chain; it never loads `sub-common.wxss`. The styles were therefore present in the build output but invisible on device.
+5. The regression was masked in local H5/DevTools because those environments load all generated WXSS files, and was masked on one agent's first build because a stale `dist/` from before the chunking change still had the styles in `common.wxss`.
+
+**Fix:**
+
+- In `pages/icebreaker-session/index.scss`, `@use` every phase, component, and shared gesture/reveal stylesheet whose rules must land in the page WXSS.
+- Remove the matching `import './X.scss'` side-effect imports from the TSX files so the styles are not duplicated into `sub-common.wxss`.
+- Apply the same pattern to `BoxJourneySpine` and `PersonalityTestAnswerArea` in the onboarding subpackage.
+- Harden `apps/mini-program/scripts/verify-subpackage-styles.mjs` so that **any non-empty `sub-common.wxss` fails the build**, turning a silent device-only regression into a CI failure.
+- Extend `phaseStyleBundling.test.ts` to assert all 25 `@use` entries are present.
+
 ---
 
 ## 2. What we did right
@@ -52,6 +72,10 @@ This runbook is the durable record of two back-to-back incidents that shipped th
 - **Added a regression test for `cdnAsset()` idempotency.** The test locks in wrap-safety for absolute URLs, bare paths, and already-prefixed CDN paths.
 - **Re-measured anchors against real art.** Seat coordinates were no longer tuned blind; they now match the six zabuton cushions in the composite.
 - **Kept the fix minimal.** No new dependencies, no redesign. The root causes were configuration and URL normalization.
+- **Used the existing `verify-subpackage-styles.mjs` gate as ground truth.** Rather than trusting H5 or a single local build, we let the purpose-built regression gate tell us whether required selectors were present in the page WXSS.
+- **Did a staged-tree build + test pass before push.** We verified the exact files that would be committed, not just the working tree, so no WIP leaked into the commit.
+- **Hardened the gate to fail on any non-empty `sub-common.wxss`.** This turned a device-only silent failure into a build-time assertion, preventing the same class of regression in every subpackage.
+- **Partial-staged the onboarding WIP files.** Only the `@use` / import-removal hunks were committed; the user's ongoing personality-test refactor stayed in the working tree.
 
 ---
 
@@ -65,6 +89,9 @@ This runbook is the durable record of two back-to-back incidents that shipped th
 | Let a utility re-wrap URLs without knowing if they were already wrapped | Produces invalid URLs that fail silently in caches and downloads |
 | Let a CDN-failure negative cache fall back to a bundled path that was never uploaded | Users get stuck in a broken state until cache/session resets |
 | Tuned avatar/seat anchors without the final art loaded | Layers float in wrong places; name cards detach from bodies |
+| Relied on a stale `dist/` or H5 preview to prove styles were bundled | `sub-common.wxss` and simulator-only loads can hide real device regressions |
+| Left `import './X.scss'` in a component that is consumed inside a subpackage | Taro chunks the SCSS into `sub-common.wxss`, which WeChat never loads |
+| Moved/re-exported page-owned components without re-checking `@use` coverage | A page extraction changes the chunk graph and can strand styles silently |
 
 ---
 
@@ -108,6 +135,36 @@ Rule of thumb: **if the file is in `dist/assets/` after build, load it with `loc
 - When art changes, re-measure anchors and update screenshot gates in the same PR.
 - Keep absent/placeholder states anchored to the same coordinate system as live states; do not invent separate staging areas that read as bugs when art is missing.
 
+### 4.6 Subpackage style-splitting / WXSS stranding
+
+The per-subpackage `manualChunks` rule in `apps/mini-program/config/miniProgramChunks.ts` routes modules shared only inside one subpackage to `<subpackage>/sub-common.js`. Any SCSS imported as a side effect (`import './X.scss'`) from those modules is emitted into `pages/<subpackage>/sub-common.wxss`, which **no page ever loads**. The result is styled H5 / DevTools, unstyled device.
+
+**Correct pattern:**
+
+1. In the consuming **page SCSS**, `@use` the component/partial stylesheet:
+   ```scss
+   @use './phases/AuctionHeroView';
+   @use './components/WarmupActionBar';
+   @use '../../components/reveal/CardFlip.scss' as *;
+   ```
+2. Remove the matching `import './X.scss'` from the component TSX:
+   ```ts
+   // BAD: strands the SCSS into sub-common.wxss
+   import './AuctionHeroView.scss'
+
+   // GOOD: rules are co-compiled into the page WXSS
+   ```
+3. If the component is consumed by **multiple pages**, either:
+   - keep the side-effect import and accept that the component must live in a chunk every consumer loads (rare), or
+   - `@use` the component SCSS from every consuming page SCSS (the rule used inside subpackages).
+4. After `npm run build:weapp`, run `npm run verify:subpackage-styles`. The gate fails if any required selector is missing from a page WXSS **or** if any `sub-common.wxss` is non-empty.
+
+**When to apply this pattern:**
+
+- Any component that defines its own `.scss` and is imported from a subpackage page.
+- Any page-extraction/refactor that moves JSX from a page file into a sibling module inside the same subpackage.
+- Any shared primitive (`components/gesture/*`, `components/reveal/*`, etc.) whose only registered consumers live inside one subpackage.
+
 ---
 
 ## 5. Checklists
@@ -135,6 +192,15 @@ Rule of thumb: **if the file is in `dist/assets/` after build, load it with `loc
 - [ ] `npm run test -w mini-program` passes
 - [ ] `npm run guardrails` passes
 
+### Before adding or moving a styled component inside a subpackage
+
+- [ ] Component has a matching `.scss` file
+- [ ] The consuming page SCSS `@use`s the component SCSS
+- [ ] The component TSX no longer imports its own `.scss` as a side effect
+- [ ] `npm run build:weapp -w mini-program` completes
+- [ ] `npm run verify:subpackage-styles -w mini-program` passes with no non-empty `sub-common.wxss`
+- [ ] Device or uploaded preview verifies the component is still styled
+
 ---
 
 ## 6. References
@@ -143,8 +209,13 @@ Rule of thumb: **if the file is in `dist/assets/` after build, load it with `loc
 - [`docs/agent-context/mini-program-assets.md`](../agent-context/mini-program-assets.md) — implementation notes and recent gotchas
 - [`docs/agent-context/gathering-room.md`](../agent-context/gathering-room.md) — gathering-room feature context and 2026-08-17 device fix
 - [`AGENTS.md`](../../AGENTS.md) §3 — exact WeChat upload and CDN commands
+- [`AGENTS.md`](../../AGENTS.md) §7 — subpackage style-splitting guardrail
+- [`docs/agent-context/mini-program-patterns.md`](../agent-context/mini-program-patterns.md) — cross-cutting mini-program patterns
 - Source files:
   - `apps/mini-program/src/lib/utils/cdnAssets.ts`
   - `apps/mini-program/src/lib/utils/cdnAssets.test.ts`
   - `apps/mini-program/project.config.json`
   - `apps/mini-program/src/components/gathering-room/GatheringRoomScene.tsx`
+  - `apps/mini-program/config/miniProgramChunks.ts`
+  - `apps/mini-program/scripts/verify-subpackage-styles.mjs`
+  - `apps/mini-program/src/pages/icebreaker-session/index.scss`

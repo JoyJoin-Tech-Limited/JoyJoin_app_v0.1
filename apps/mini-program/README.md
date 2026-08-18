@@ -155,9 +155,9 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 3. Run `npm run validate:assets` before committing to catch orphan references.
 4. Add new CDN assets to `src/assets/` **and** `scripts/cdn-asset-manifest.json` so the CDN uploader discovers them.
 5. Run `npm run check:package-size` after build, then confirm the result with WeChat DevTools or `miniprogram-ci`. The current script needs a system `zip` executable for compressed measurement; without it, it falls back to raw bytes. See `docs/package-size/main-package-audit.md` for the audited boundary and remediation plan.
-6. Run `npm run verify:subpackage-styles` after `npm run build:weapp` to catch Taro/Vite WXSS chunking regressions. The script fails if required selectors are missing from the owning page WXSS; fix by `@use`-ing the component SCSS in the page SCSS.
-6. **Mascot bundle policy:** only 6 core Xiaoyue sprite states (`welcome`, `idle`, `coach`, `loading`, `listening`, `thinking`) are bundled locally; the remaining 14 states are CDN-primary with local fallback via `XiaoyueSpriteAnimator.onError`.
-7. **Bundled icon density policy:** `status-icons`, `info-labels` (semantic), and `ui` tiers ship at `@1x`/`@2x` only; `@3x` variants are stripped by `clean:cdn-assets` to save package size. Source `@3x` files remain for CDN fallback.
+6. Run `npm run verify:subpackage-styles` after `npm run build:weapp` to catch Taro/Vite WXSS chunking regressions. The script fails if required selectors are missing from the owning page WXSS **or** if any `sub-common.wxss` is non-empty. Fix: `@use` the component SCSS in the consuming page SCSS **and** remove the matching `import './X.scss'` side effect from the component TSX. See `docs/runbooks/mini-program-asset-delivery.md` §4.6.
+7. **Mascot bundle policy:** only 6 core Xiaoyue sprite states (`welcome`, `idle`, `coach`, `loading`, `listening`, `thinking`) are bundled locally; the remaining 14 states are CDN-primary with local fallback via `XiaoyueSpriteAnimator.onError`.
+8. **Bundled icon density policy:** `status-icons`, `info-labels` (semantic), and `ui` tiers ship at `@1x`/`@2x` only; `@3x` variants are stripped by `clean:cdn-assets` to save package size. Source `@3x` files remain for CDN fallback.
 
 | Script | Purpose |
 |--------|---------|
@@ -176,7 +176,7 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 | `npm run check:lovart-assets` | Validate Lovart asset sizes |
 | `npm run upload:cdn-assets` | Upload manifest assets to CDN (`--dry-run` for preview). For production, trigger `gh workflow run "Upload CDN Assets"` which builds + uploads via GitHub Actions. **Symlink resolution:** the uploader resolves symlinks (e.g. `src/assets/archetypes/` → `src/pages/onboarding/assets/archetypes/`) before rsync so the remote host receives real files, not broken symlinks. |
 | `npm run check:package-size` | Audit mini-program bundle size against the 2MB WeChat limit; compressed measurement currently requires a system `zip`, so verify the reported mode and use WeChat tooling as authority |
-| `npm run verify:subpackage-styles` | Post-build regression gate: fails if required component selectors are missing from the owning page WXSS because Taro/Vite chunked them elsewhere. Fix by `@use`-ing the component SCSS in the page SCSS. |
+| `npm run verify:subpackage-styles` | Post-build regression gate: fails if required component selectors are missing from the owning page WXSS **or** any `sub-common.wxss` is non-empty. Fix by `@use`-ing the component SCSS in the page SCSS and removing the matching `import './X.scss'` from the component TSX. |
 
 **Active copy patterns** (`config/index.ts`) — bundled assets:
 

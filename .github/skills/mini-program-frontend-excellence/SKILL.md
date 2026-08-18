@@ -68,6 +68,7 @@ Top rules. Deep reference: [`references/taro-ui-framework.md`](references/taro-u
 - **CSS-in-JS proposed** — default to existing repo Taro styling patterns unless the architecture explicitly shifts.
 - **Chinese text breaks awkwardly** — never use `overflow-wrap: anywhere` on CJK display text (produces 孤字). Default `overflow-wrap: normal` is correct.
 - **Entrance animations feel generic** — use `cubic-bezier(0.22, 1, 0.36, 1)`. Reserve `ease-out`/`ease-in-out` for loops only.
+- **Component looks styled in H5 / DevTools but unstyled on device** — Taro may have chunked its SCSS into the subpackage's `sub-common.wxss`, which WeChat never loads. Fix: `@use` the component SCSS in the consuming page SCSS and remove the matching `import './X.scss'` from the component TSX; then run `npm run verify:subpackage-styles -w mini-program` (see `docs/runbooks/mini-program-asset-delivery.md` §4.6).
 ## Grill-me stress-test
 After completing Full-tier changes, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that stress-tests pixel precision, Taro discipline, state completeness, cross-device behavior, and brand feel.
 ## Full review checklist (17 items)
@@ -90,6 +91,7 @@ For Full-tier changes. Routine changes use the quick check above.
 - [ ] Entrance animations use `cubic-bezier(0.22, 1, 0.36, 1)`; loops use `ease-out`/`ease-in-out`
 - [ ] No `overflow-wrap: anywhere` on CJK display text; default breaking preserved
 - [ ] Screen is unmistakably JoyJoin, not generic — don't sign off on "functional but cheap"
+- [ ] For subpackage pages: `npm run build:weapp -w mini-program && npm run verify:subpackage-styles -w mini-program` passes with no non-empty `sub-common.wxss`
 - [ ] 情绪价值 scored via `docs/reference/emotional-value-rubric.md` for user-facing screens (0–24). A technically perfect screen with 0 情绪价值 is a failure.
 ## Related skills
 
