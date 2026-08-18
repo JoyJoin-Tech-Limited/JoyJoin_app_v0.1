@@ -132,6 +132,12 @@
       font-size: $font-size-sm;
       color: $color-text-secondary;
     }
+
+    // No restart quota left — visually greyed to match the disabled state.
+    &--exhausted {
+      opacity: 0.46;
+      color: $color-text-muted;
+    }
   }
 
   &__cta-hover {

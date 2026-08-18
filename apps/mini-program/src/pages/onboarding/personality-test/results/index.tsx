@@ -458,8 +458,7 @@ export default function PersonalityTestResultsPage() {
     // A displayable local result (replay fast-path or a freshly-saved snapshot)
     // means the normal flow can render — never forward in that case.
     if (hasCompletedReplay) return
-    // new update for the authenticated user result state
-    if (buildResolvedResultState(readAnonymousAssessmentSession())|| authUserResult) return
+    if (buildResolvedResultState(readAnonymousAssessmentSession()) || authUserResult) return
 
     forwardedAuthedRef.current = true
     logInfo('[PersonalityResults] Authenticated archetype-holder with no local result — forwarding to nextStep', {
@@ -467,7 +466,7 @@ export default function PersonalityTestResultsPage() {
     })
     analytics.interaction('results_forwarded_authenticated', { nextStep: auth.nextStep ?? null })
     void navigateToMiniProgramNextStep(auth.nextStep, { mode: 'root' })
-  }, [auth.isLoading, auth.isAuthenticated, auth.user, auth.nextStep, isLoggingIn, hasCompletedReplay,authUserResult, analytics])
+  }, [auth.isLoading, auth.isAuthenticated, auth.user, auth.nextStep, isLoggingIn, hasCompletedReplay, authUserResult, analytics])
 
   const content = (() => {
     switch (flowStage) {

@@ -1709,7 +1709,7 @@ $color-skill-cool: #7c3aed;
     pointer-events: none;
     overflow: hidden;
     opacity: 0;
-    animation: personality-results-holo-shimmer 4s ease-in-out infinite;
+    animation: personality-results-holo-shimmer 4s ease-in-out 2;
 
     .personality-results__pokemon-card--pressed & {
       animation-duration: 1.5s;
@@ -1732,7 +1732,7 @@ $color-skill-cool: #7c3aed;
         transparent 45%
       );
       transform: translateX(-100%);
-      animation: personality-results-holo-sweep 4s ease-in-out infinite;
+      animation: personality-results-holo-sweep 4s ease-in-out 2;
     }
   }
 

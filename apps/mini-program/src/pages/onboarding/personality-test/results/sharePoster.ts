@@ -653,7 +653,7 @@ function drawTopMatches(ctx: Taro.CanvasContext, topMatches: PersonalitySharePos
 }
 
 function drawEnergyBar(ctx: Taro.CanvasContext, energyLevel: number): void {
-  const label = '社交续航力'
+  const label = '聚会续航力'
   const trackX = INNER_EDGE
   const trackWidth = RIGHT_EDGE - INNER_EDGE
   const trackY = ENERGY_Y + 36
@@ -730,7 +730,7 @@ function drawFooterBand(ctx: Taro.CanvasContext, shareLine: string): void {
 
   const ctaY = lockupY + FOOTER_LOCKUP_SIZE + GAP_TIGHT
   drawTextBlock(ctx, {
-    text: shareLine || '来悦聚测测你的社交命格，看看默契会带你去哪里',
+    text: shareLine || '来悦聚测测你的氛围命格，看看默契会带你去哪里',
     x: LEFT_EDGE + CONTENT_WIDTH / 2,
     y: ctaY,
     maxCharsPerLine: 40,

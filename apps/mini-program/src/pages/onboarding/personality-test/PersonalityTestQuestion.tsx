@@ -146,16 +146,18 @@ export default function PersonalityTestQuestion({
             已答 {progress?.answered ?? 0} 题 · 还剩约 {progress?.estimatedRemaining ?? 0} 题
           </Text>
         </View>
-      </View>
 
-      {/* D3 — Quiz halfway cheer badge (Batch D) — appears at >=50% progress */}
-      <HalfwayMilestone
-        progressPercent={progressPercent}
-        phase={phase}
-        answered={progress?.answered ?? 0}
-        estimatedTotal={estimatedTotal}
-        onMilestoneReached={onMilestoneReached}
-      />
+        {/* D3 — Quiz halfway cheer badge (Batch D) — appears at >=50% progress.
+            Absolutely positioned under this row (see HalfwayMilestone.scss) so
+            the transient card never shifts the quiz layout. */}
+        <HalfwayMilestone
+          progressPercent={progressPercent}
+          phase={phase}
+          answered={progress?.answered ?? 0}
+          estimatedTotal={estimatedTotal}
+          onMilestoneReached={onMilestoneReached}
+        />
+      </View>
 
       {/* Zone B: Full-width glassmium question banner */}
       <View className='personality-test__question-zone'>
@@ -280,7 +282,7 @@ export default function PersonalityTestQuestion({
             styling mirrors the button's own flex-item rules so the layout is
             unchanged. */}
         <View
-          style={{ flex: '1 1 0', minWidth: 0, display: 'flex' }}
+          className='personality-test__nav-next-wrap'
           onClick={() => {
             if (isNavLocked || canGoNext) return
             if (questionType === 'slider' && !sliderTouched) {
@@ -312,7 +314,7 @@ export default function PersonalityTestQuestion({
       <View className='personality-test__skip-row'>
         {skipsRemaining > 0 ? (
           <View
-            className='personality-test__skip-btn personality-test__skip-btn--enter'
+            className={`personality-test__skip-btn personality-test__skip-btn--enter${isSubmitting || isSkipping ? ' personality-test__skip-btn--busy' : ''}`}
             hoverClass='personality-test__skip-btn--active'
             hoverStartTime={0}
             hoverStayTime={100}
@@ -320,7 +322,6 @@ export default function PersonalityTestQuestion({
               if (isSubmitting || isSkipping) return
               onSkip()
             }}
-            style={{ opacity: isSubmitting || isSkipping ? 0.4 : 1 }}
           >
             {isSkipping ? (
               <View className='personality-test__skip-btn-dots'>

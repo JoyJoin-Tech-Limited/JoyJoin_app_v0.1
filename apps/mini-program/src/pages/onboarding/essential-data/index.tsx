@@ -412,7 +412,7 @@ export default function EssentialDataPage() {
     try {
       const { confirm } = await Taro.showModal({
         title: '跳过当前步骤',
-        content: '确定要跳过这一步吗？悦仔建议尽量完成，匹配会更精准。',
+        content: '确定要跳过这一步吗？悦仔建议尽量完成，排桌会更对味。',
         confirmText: '确认跳过',
         cancelText: '继续填写',
       })
@@ -558,7 +558,7 @@ export default function EssentialDataPage() {
     () => ({
       friends: '新朋友 +1，这一局会很有趣。',
       networking: '拓展人脉，悦仔会帮你找能互相增值的圈子。',
-      discussion: '想深聊？我会帮你匹配也愿意倾听的人。',
+      discussion: '想深聊？悦仔会帮你安排一桌愿意倾听的人。',
       fun: '开心优先，别想太多。',
       explore: '尝鲜体验，悦仔会帮你挑一个有趣的方向。',
       romance: '这份期待，悦仔会悄悄记在心里。',
@@ -681,6 +681,7 @@ export default function EssentialDataPage() {
                   className={`essential-data__input ${contentViolations.displayName ? 'essential-data__input--error' : ''}`}
                   placeholder='大家在活动里会怎么称呼你'
                   type='nickname'
+                  confirm-type='done'
                   value={displayName}
                   onInput={(e) => {
                     hasEditedDisplayNameRef.current = true
@@ -688,16 +689,12 @@ export default function EssentialDataPage() {
                     setDisplayName(e.detail.value)
                     setContentViolations((prev) => ({ ...prev, displayName: '' }))
                   }}
-                  onBlur={(e) => {
-                    const v = e.detail.value.trim()
-                    if (v !== '' && v.length < 1) analytics.validationFailed('displayName', 'too-short')
-                  }}
                   maxlength={20}
                 />
                 {namePrefilledFromWeChat && (
                   <Text className='essential-data__hint essential-data__hint--prefill'>已带入你的微信昵称，可以改</Text>
                 )}
-                <Text className='essential-data__hint'>1-20 个字符，会显示在活动和匹配资料里。</Text>
+                <Text className='essential-data__hint'>1-20 个字符，会显示在活动和排桌资料里。</Text>
                 <ContentBlockedError
                   message={contentViolations.displayName || ''}
                   visible={!!contentViolations.displayName}
@@ -801,7 +798,7 @@ export default function EssentialDataPage() {
                             '职场新人': '刚起步的旅程，有很多故事可以分享~',
                             '职场老手': '经验丰富，适合带带新伙伴~',
                             '创业中': '创业路上不孤单，一起碰撞灵感~',
-                            '自由职业': '自由节奏，也能有高质量社交~',
+                            '自由职业': '自由节奏，也能遇上对味的局~',
                           }
                           triggerMascotReaction(reactions[option] || '了解！')
                         }}
@@ -863,7 +860,7 @@ export default function EssentialDataPage() {
                   )}
                 </View>
                 <Text className='essential-data__hint'>
-                  {professionText !== '' ? '已记录，我会用它来优化匹配~' : occupationGuidance.matchPreview}
+                  {professionText !== '' ? '已记录，我会用它来帮你排得更对味~' : occupationGuidance.matchPreview}
                 </Text>
               </View>
 

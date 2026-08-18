@@ -726,7 +726,7 @@ export default function ProfileReviewPage() {
           {/* Folded summary card (2026-08-18 simplification, R2-5/R2-6): the
               already-filled data (小档案 / 意向 / 兴趣热量地图) collapses into
               one compact card, default folded — this page's job is to let the
-              user through, not collect more data. 改 expands in place. */}
+              user through, not collect more data. 详情 expands in place. */}
           <Card className={`profile-review__summary ${getStageClassName(5)}`}>
             <View
               className='profile-review__summary-header'
@@ -739,7 +739,7 @@ export default function ProfileReviewPage() {
               <Text className='profile-review__summary-title'>入场卡详情</Text>
               <View className='profile-review__summary-edit'>
                 <Text className='profile-review__summary-edit-text'>
-                  {isSummaryExpanded ? '收起' : '改'}
+                  {isSummaryExpanded ? '收起' : '详情'}
                 </Text>
               </View>
             </View>
@@ -798,7 +798,7 @@ export default function ProfileReviewPage() {
                     <View className='profile-review__interest-error' role='status' aria-live='polite'>
                       <Text className='profile-review__interest-error-title'>兴趣数据加载失败</Text>
                       <Text className='profile-review__interest-error-copy'>
-                        网络不太稳定，但你的入场卡已经可以用了。先出发，兴趣数据稍后自动同步。
+                        网络不太稳定，但你的入场卡已经可以用了。先出发，稍后可以到资料页补充兴趣。
                       </Text>
                       <View
                         className='profile-review__interest-error-retry'

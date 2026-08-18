@@ -340,12 +340,6 @@ export default function PersonalityTestPage() {
     }
 
     // If user already has an archetype, they should never be on the test page
-    // if (auth.user?.primaryArchetype) {
-    //   Taro.switchTab({ url: MINI_PROGRAM_ROUTES.discover }).catch((err: unknown) => {
-    //     logError('[PersonalityTest] switchTab failed', { err: err instanceof Error ? err.message : String(err) })
-    //   })
-    //   return
-    // }
     const existingArchetype = auth.user?.primaryArchetype ?? auth.user?.archetype ?? null
 
     if (existingArchetype && ! isRestartEntry) {
@@ -357,19 +351,14 @@ export default function PersonalityTestPage() {
       return
     }
 
-    // if (auth.isAuthenticated && auth.nextStep && auth.nextStep !== 'personality-test' && auth.nextStep !== 'onboarding') {
     if (
-      // auth.isAuthenticated &&
-      // !isProfileSocialTypeEntry &&
-      // auth.nextStep &&
-      //change the guard 
       auth.isAuthenticated &&
       !isProfileSocialTypeEntry &&
       !isRestartEntry &&
       auth.nextStep &&
       auth.nextStep !== 'personality-test' &&
       auth.nextStep !== 'onboarding'
-    ) {  
+    ) {
       void navigateToMiniProgramNextStep(auth.nextStep, {
         mode: 'replace',
         transition: { beforeNavigate: () => setIsPageExiting(true) },

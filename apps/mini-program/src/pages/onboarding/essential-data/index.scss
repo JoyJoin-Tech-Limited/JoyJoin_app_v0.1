@@ -258,6 +258,13 @@
         font-size: 24rpx;
         white-space: nowrap;
       }
+
+      // ≤360px viewports clip the 4-char labels at five columns (same
+      // narrow-screen media-query pattern as ProfileReviewInviteCard);
+      // 3+2 rows keep each chip whole.
+      @media (max-width: 360px) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
     }
   }
 

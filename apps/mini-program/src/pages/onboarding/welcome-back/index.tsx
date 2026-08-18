@@ -14,17 +14,18 @@ import { seedMiniProgramAuthSession } from '../../../lib/api/authSession'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import { logError, logInfo } from '../../../lib/utils/logger'
+import { haptics } from '../../../lib/utils/haptics'
 import { TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
 import Button from '../../../components/ui/Button'
 import BrandLogo from '../../../components/ui/BrandLogo'
 import './index.scss'
 
 const STEP_NAME_MAP: Record<string, string> = {
-  'onboarding': '基础资料填写',
-  'personality-test': '人格测试',
-  'essential-data': '基础资料填写',
+  'onboarding': '入门引导',
+  'personality-test': '氛围测试',
+  'essential-data': '入场名片',
   'extended-data': '兴趣标签选择',
-  'profile-review': '资料预览确认',
+  'profile-review': '入场卡预览',
 }
 
 export default function WelcomeBackPage() {
@@ -50,11 +51,13 @@ export default function WelcomeBackPage() {
     onboardingAnalytics.interaction('welcome-back', 'screen_shown', { nextStep: auth.nextStep })
   }, [auth.isLoading, auth.isAuthenticated, auth.nextStep])
 
-  const stepName = (auth.nextStep && STEP_NAME_MAP[auth.nextStep]) ?? '基础资料填写'
+  const stepName = (auth.nextStep && STEP_NAME_MAP[auth.nextStep]) ?? '入场名片'
   const restartsRemaining = auth.user?.restartsRemaining ?? 0
+  const displayName = auth.user?.displayName?.trim() ?? ''
 
   const handleContinue = async () => {
     if (isNavigating || isRestarting) return
+    haptics('light')
     setIsNavigating(true)
     markWelcomeBackScreenSeen()
     onboardingAnalytics.interaction('welcome-back', 'continue_clicked')
@@ -69,6 +72,8 @@ export default function WelcomeBackPage() {
   }
 
   const handleRestartClick = () => {
+    if (restartsRemaining <= 0) return
+    haptics('light')
     onboardingAnalytics.interaction('welcome-back', 'restart_clicked')
 
     void Taro.showModal({
@@ -162,7 +167,9 @@ export default function WelcomeBackPage() {
 
         {/* Text content */}
         <View className='welcome-back__text'>
-          <Text className='welcome-back__headline'>欢迎回来</Text>
+          <Text className='welcome-back__headline'>
+            欢迎回来{displayName ? `，${displayName}` : ''}
+          </Text>
         </View>
 
         {/* Step card */}
@@ -187,9 +194,9 @@ export default function WelcomeBackPage() {
 
         <Button
           variant='secondary'
-          className='welcome-back__cta welcome-back__cta--secondary'
+          className={`welcome-back__cta welcome-back__cta--secondary${restartsRemaining <= 0 ? ' welcome-back__cta--exhausted' : ''}`}
           loading={isRestarting}
-          disabled={isNavigating}
+          disabled={isNavigating || restartsRemaining <= 0}
           onClick={handleRestartClick}
         >
           重新开始（还剩 {restartsRemaining} 次）

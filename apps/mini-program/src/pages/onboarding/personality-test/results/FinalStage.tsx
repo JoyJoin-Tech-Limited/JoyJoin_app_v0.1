@@ -319,7 +319,7 @@ export default function FinalStage({
     return topMatches.slice(0, 3).map((match) => {
       const rawScore = Number(match.score)
       const displayScore = normalizeMatchScore(rawScore)
-      const chemistryLabel = displayScore >= 85 ? '灵魂拍档' : displayScore >= 70 ? '默契搭档' : displayScore >= 55 ? '互补组合' : '潜力搭档'
+      const chemistryLabel = displayScore >= 85 ? '满分合拍' : displayScore >= 70 ? '默契搭档' : displayScore >= 55 ? '互补组合' : '潜力搭档'
       const chemistryColor =
         displayScore >= 85
           ? chemistryTierColors.soul
@@ -583,7 +583,7 @@ export default function FinalStage({
             {typeof energyLevel === 'number' ? (
               <View className='personality-results__pokemon-energy'>
                 <View className='personality-results__pokemon-energy-header'>
-                  <Text className='personality-results__pokemon-energy-label'>社交续航力</Text>
+                  <Text className='personality-results__pokemon-energy-label'>聚会续航力</Text>
                   <Text className='personality-results__pokemon-energy-value'>{Math.round(energyLevel)}%</Text>
                 </View>
                 <View className='personality-results__pokemon-energy-track'>
@@ -592,7 +592,7 @@ export default function FinalStage({
                     style={{ width: `${Math.min(energyLevel, 100)}%` }}
                   />
                 </View>
-                <Text className='personality-results__pokemon-energy-hint'>你在社交场合的持久活力</Text>
+                <Text className='personality-results__pokemon-energy-hint'>你在聚会里的持久活力</Text>
               </View>
             ) : null}
 

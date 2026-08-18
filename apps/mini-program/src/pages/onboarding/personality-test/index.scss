@@ -464,6 +464,7 @@
   }
 
   &__progress-meta-row {
+    position: relative; // anchor for the absolutely-positioned halfway milestone overlay
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -524,6 +525,15 @@
     gap: 20rpx;
     padding: 0 $container-padding 20rpx;
     @include safe-area-inline($container-padding);
+  }
+
+  // Tap-observer wrapper around the 下一题 button (catches taps the disabled
+  // button swallows) — mirrors the button's own flex-item rules so layout is
+  // unchanged.
+  &__nav-next-wrap {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
   }
 
   &__nav-btn {
@@ -590,6 +600,10 @@
 
     &--enter {
       animation: btn-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    &--busy {
+      opacity: 0.4;
     }
   }
 

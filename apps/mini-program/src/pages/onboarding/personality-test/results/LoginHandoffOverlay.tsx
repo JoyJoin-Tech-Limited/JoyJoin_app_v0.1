@@ -42,7 +42,7 @@ export default function LoginHandoffOverlay({ archetypeName }: LoginHandoffOverl
         src={getXiaoyueExpressionAsset(PERSONALITY_TEST_XIAOYUE_EXPRESSION.resultsCelebrate)}
       />
       <Text className='personality-results__handoff-title'>「{archetypeName}」已被悦仔接住</Text>
-      <Text className='personality-results__handoff-copy'>正在为你保存结果、开启匹配…</Text>
+      <Text className='personality-results__handoff-copy'>正在为你保存结果、准备你的局…</Text>
       <Text className='personality-results__handoff-whisper'>{whisper}</Text>
       <View className='personality-results__handoff-dots' aria-hidden='true'>
         <View className='personality-results__handoff-dot' />

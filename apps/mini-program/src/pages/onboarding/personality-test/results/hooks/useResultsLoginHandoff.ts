@@ -48,7 +48,7 @@ export function useResultsLoginHandoff({
     : auth.isLoading
       ? '检查登录状态中…'
       : auth.isAuthenticated
-        ? '开启匹配'
+        ? '去看看你的局'
         : '微信登录，查看谁和你最搭'
 
   const handleContinue = useCallback(async () => {
@@ -73,7 +73,7 @@ export function useResultsLoginHandoff({
     // Show explicit confirmation before silent WeChat login so users know auth is happening.
     const { confirm } = await Taro.showModal({
       title: '微信登录',
-      content: '使用微信账号登录以保存你的氛围原型测试结果，并开启匹配。',
+      content: '使用微信账号登录以保存你的氛围原型测试结果，并看看为你准备的局。',
       confirmText: '确认登录',
       cancelText: '取消',
     })
@@ -112,7 +112,7 @@ export function useResultsLoginHandoff({
       // authed-forward escape hatch above suspended (same discipline as
       // profile-review's isPageExiting around handleCeremonyComplete).
       await waitFor(Math.max(0, LOGIN_HANDOFF_MIN_VISIBLE_MS - (Date.now() - handoffStartedAt)))
-      void Taro.showToast({ title: '登录成功，正在为你准备匹配…', icon: 'success', duration: 2000 })
+      void Taro.showToast({ title: '登录成功，正在为你排桌…', icon: 'success', duration: 2000 })
       await navigateToMiniProgramNextStep(userState.nextStep, { mode: 'root' })
     } catch (error) {
       const typedError = error as ApiError | undefined

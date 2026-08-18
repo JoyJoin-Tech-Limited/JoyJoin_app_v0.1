@@ -72,7 +72,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
   corgi: {
     'essential-displayName': '名字就是你在桌上的第一张名片，柯基——挑一个一开口就带笑场的！',
     'essential-intent': '先选好想玩的方向，我就把你的场子安排上。',
-    'essential-aboutYou': '像你这样的热场高手，当然要按年龄和阶段，把你放进最热闹、接得住你能量的那一桌！',
+    'essential-aboutYou': '说说你的年龄和阶段，柯基——我把你排进最热闹的那一桌！',
     'essential-professionalProfile': '说说你的职业吧，说不定桌上就有人等着被你点燃。',
     'essential-location': '同乡同桌，热场加倍——告诉我你从哪来、现在在哪混？',
     'extended-interests': '你的雷达本来就灵，先点一个真正想聊的话题，再点一下就能升温。',

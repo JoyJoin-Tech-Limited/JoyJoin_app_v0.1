@@ -27,7 +27,7 @@ import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingA
 import { useStepAbandonGuard } from '../../../hooks/onboarding/useStepAbandonGuard'
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
 import { usePreloadCategoryIcons } from '../../../hooks/usePreloadCategoryIcons'
-import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
+import { TOAST_DEFAULT_MS } from '../../../lib/utils/uiConstants'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
 import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
@@ -74,10 +74,12 @@ const CATEGORY_VOICE_STEP_IDS: Record<MacroCategory, OnboardingVoiceStepId> = {
   growth: 'extended-category-growth',
 }
 
-const HEAT_CSS_VARS = {
-  1: 'var(--jj-heat-l1)',
-  2: 'var(--jj-heat-l2)',
-  3: 'var(--jj-heat-l3)',
+// WeChat resolves inline var() unreliably, so inline styles carry the resolved
+// hex values. Must stay in sync with --jj-heat-l1..l3 in index.scss.
+const HEAT_COLORS = {
+  1: '#A78BFA',
+  2: '#8B5CF6',
+  3: '#F97316',
 } as const
 
 const CATEGORY_META: Record<MacroCategory, { dotColor: string; description: string }> = {
@@ -98,9 +100,9 @@ const INTEREST_LEVEL_META: Array<{
   bgColor: string
   borderColor: string
 }> = [
-  { level: 1, label: '感兴趣', shortLabel: '感兴趣', description: '加入你的兴趣画像', color: HEAT_CSS_VARS[1], bgColor: 'rgba(167,139,250,0.12)', borderColor: 'rgba(167,139,250,0.28)' },
-  { level: 2, label: '很热衷', shortLabel: '很热衷', description: '更容易聊到停不下来', color: HEAT_CSS_VARS[2], bgColor: 'rgba(139,92,246,0.14)', borderColor: 'rgba(139,92,246,0.35)' },
-  { level: 3, label: '必聊项', shortLabel: '必聊项', description: '优先匹配同好，预览重点展示', color: HEAT_CSS_VARS[3], bgColor: 'rgba(249,115,22,0.16)', borderColor: 'rgba(249,115,22,0.42)' },
+  { level: 1, label: '感兴趣', shortLabel: '感兴趣', description: '加入你的兴趣画像', color: HEAT_COLORS[1], bgColor: 'rgba(167,139,250,0.12)', borderColor: 'rgba(167,139,250,0.28)' },
+  { level: 2, label: '很热衷', shortLabel: '很热衷', description: '更容易聊到停不下来', color: HEAT_COLORS[2], bgColor: 'rgba(139,92,246,0.14)', borderColor: 'rgba(139,92,246,0.35)' },
+  { level: 3, label: '必聊项', shortLabel: '必聊项', description: '优先排到同好，预览重点展示', color: HEAT_COLORS[3], bgColor: 'rgba(249,115,22,0.16)', borderColor: 'rgba(249,115,22,0.42)' },
 ]
 
 const activeInterests = INTEREST_TAXONOMY.filter((item) => item.active)
@@ -292,7 +294,7 @@ export default function ExtendedDataPage() {
       return '必聊项会优先帮你找到同好。继续升温，或者直接生成入场卡预览。'
     }
 
-    return '画像已解锁！把最期待的兴趣升到必聊项，匹配会更精准。'
+    return '画像已解锁！把最期待的兴趣升到必聊项，帮你排得更对味。'
   }, [archetypeName, canSubmit, selectedCount, topPriorityCount, userArchetype])
 
   const ctaLabel = useMemo(() => {
@@ -430,8 +432,8 @@ export default function ExtendedDataPage() {
     } catch (err) {
       setIsPageExiting(false)
       const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
+      // Inline banner only — no toast duplicating the same failure message.
       setError(message)
-      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
       analytics.errorOccurred('submit_failed', message)
       logError('[ExtendedData] Submit failed', { message })
     } finally {
@@ -662,7 +664,7 @@ export default function ExtendedDataPage() {
               {milestone === 'unlocked'
                 ? '可以生成入场卡预览了'
                 : milestone === 'first-priority'
-                  ? '优先匹配同好从这里开始'
+                  ? '优先排到同好从这里开始'
                   : '你的兴趣版图真的很丰盛'}
             </Text>
           </View>

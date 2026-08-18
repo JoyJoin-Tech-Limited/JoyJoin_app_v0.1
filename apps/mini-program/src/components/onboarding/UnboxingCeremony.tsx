@@ -25,7 +25,7 @@ import './UnboxingCeremony.scss'
  * UnboxingCeremony.scss in their own page SCSS.
  */
 
-const AUTO_ADVANCE_MS = 2400
+const AUTO_ADVANCE_MS = 4000
 
 /**
  * Local copy of WelcomeGiftCard's discount formatter. Deliberately NOT
@@ -80,7 +80,7 @@ export default function UnboxingCeremony({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Hold the callback in a ref: parents pass inline arrows (new identity per
   // render), and re-subscribing the auto-advance timer on every parent
-  // render would push the 2.4s advance out indefinitely and re-arm the
+  // render would push the 4s advance out indefinitely and re-arm the
   // one-shot guard.
   const onCompleteRef = useRef(onComplete)
   onCompleteRef.current = onComplete

@@ -112,14 +112,16 @@
   }
 
   &__heat-guide-desc {
-    font-size: $font-size-2xs;
+    font-size: $font-size-xs;
     color: $color-text-secondary;
     line-height: 1.5;
   }
 
   &__heat-guide-arrow {
     position: absolute;
-    right: -10rpx;
+    // Pinned to the column edge (was -10rpx): on 375px the overhang reached
+    // into the next column's bounds.
+    right: 0;
     top: 8rpx;
     display: flex;
     align-items: center;

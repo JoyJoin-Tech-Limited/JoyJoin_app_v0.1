@@ -8,17 +8,25 @@
 
 .halfway-milestone {
   &__card {
-    position: relative;
+    // Absolute overlay anchored just under the progress-meta-row (the parent
+    // row carries `position: relative`) — an in-flow card inserted ~120rpx at
+    // 50% progress and removed it 4.3s later, double-shifting the quiz surface.
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 20;
     flex: 0 0 auto;
     display: flex;
     flex-direction: row;
     align-items: center;
     gap: 8rpx;
     padding: 8rpx $container-padding;
-    margin: 8rpx 0 16rpx;
+    margin: 8rpx 0 0;
     border-radius: 16rpx;
     background: $card-gradient-warm;
     border: 2rpx solid rgba($color-primary, 0.06);
+    box-shadow: 0 8rpx 24rpx rgba($color-text-primary, 0.08);
     overflow: hidden;
     @include safe-area-inline($container-padding);
     animation: halfway-card-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
