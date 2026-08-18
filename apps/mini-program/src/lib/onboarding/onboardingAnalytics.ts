@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 import { apiRequest } from '../api/api'
+import type { ExperimentMarker } from '../experiments'
 import { logWarn } from '../utils/logger'
 
 export type MiniProgramOnboardingAnalyticsStep =
@@ -20,6 +21,7 @@ export type MiniProgramOnboardingAnalyticsStep =
 
 export type OnboardingAnalyticsEventType =
   | 'step_started'
+  | 'step_enter'
   | 'step_completed'
   | 'step_abandoned'
   | 'validation_failed'
@@ -46,9 +48,18 @@ export interface MiniProgramOnboardingAnalyticsEvent {
   stepDuration?: number
   userAgent: string
   screenSize: string
+  /**
+   * Client-persisted anonymous id (R1-3 funnel stitching). Generated once per
+   * install, survives the anonymous→login handoff, and is mirrored into
+   * `metadata.anonymousId` so the current server-side metadata blob retains it.
+   */
+  anonymousId?: string
+  /** R3-10 experiment marker — present on every event while an experiment is active. */
+  experiment?: ExperimentMarker
 }
 
 const ONBOARDING_SESSION_START_KEY = 'joyjoin_onboarding_session_start'
+const ONBOARDING_ANONYMOUS_ID_KEY = 'joyjoin_onboarding_anonymous_id'
 
 function normalizeString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined
@@ -87,6 +98,31 @@ function initializeSessionStartTime(): number {
   return now
 }
 
+function generateAnonymousId(): string {
+  return `anon_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+}
+
+/**
+ * Read-or-create the client-side anonymous id. Persisted in Taro storage so
+ * pre-login (userId=null) and post-login events share one stitch key. Never
+ * cleared by login, restart, or session reset — that continuity is the point.
+ */
+function initializeAnonymousId(): string {
+  try {
+    const storedValue = Taro.getStorageSync(ONBOARDING_ANONYMOUS_ID_KEY)
+    if (typeof storedValue === 'string' && storedValue.trim() !== '') {
+      return storedValue
+    }
+    const generated = generateAnonymousId()
+    Taro.setStorageSync(ONBOARDING_ANONYMOUS_ID_KEY, generated)
+    return generated
+  } catch {
+    // Storage unavailable: fall back to an in-memory id so events still carry
+    // a stable key for this run.
+    return generateAnonymousId()
+  }
+}
+
 function getCurrentRoute(): string {
   try {
     const pages = Taro.getCurrentPages()
@@ -123,6 +159,8 @@ export function buildMiniProgramOnboardingAnalyticsEvent(input: {
   metadata?: Record<string, unknown>
   route?: string
   systemInfo?: MiniProgramOnboardingSystemInfo
+  anonymousId?: string
+  experiment?: ExperimentMarker
 }): MiniProgramOnboardingAnalyticsEvent {
   const route = normalizeString(input.route) ?? 'unknown'
   const systemInfo = input.systemInfo ?? {}
@@ -160,6 +198,10 @@ export function buildMiniProgramOnboardingAnalyticsEvent(input: {
     version: normalizeString(systemInfo.version) ?? 'unknown',
     language: normalizeString(systemInfo.language) ?? 'unknown',
     taroEnv: process.env.TARO_ENV ?? 'unknown',
+    // Mirrored into metadata so today's server-side metadata blob retains the
+    // stitch key / experiment marker even before dedicated columns exist.
+    ...(input.anonymousId ? { anonymousId: input.anonymousId } : {}),
+    ...(input.experiment ? { experiment: input.experiment } : {}),
   }
 
   return {
@@ -171,38 +213,93 @@ export function buildMiniProgramOnboardingAnalyticsEvent(input: {
     ...(typeof stepDuration === 'number' ? { stepDuration } : {}),
     userAgent,
     screenSize,
+    ...(input.anonymousId ? { anonymousId: input.anonymousId } : {}),
+    ...(input.experiment ? { experiment: input.experiment } : {}),
   }
 }
 
 class MiniProgramOnboardingAnalytics {
   private sessionStartTime = initializeSessionStartTime()
 
-  private stepStartTimes = new Map<MiniProgramOnboardingAnalyticsStep, number>()
+  private anonymousId = initializeAnonymousId()
+
+  private activeExperiment: ExperimentMarker | null = null
+
+  /**
+   * Duration timers keyed by step, or `${step}#${stepId}` when the caller
+   * passes a sub-step id (essential-data wizard) — page-level and sub-step
+   * durations never clobber each other.
+   */
+  private stepStartTimes = new Map<string, number>()
+
+  private resolveStartKey(
+    step: MiniProgramOnboardingAnalyticsStep,
+    metadata?: Record<string, unknown>,
+  ): string {
+    const stepId = typeof metadata?.stepId === 'string' && metadata.stepId !== '' ? metadata.stepId : null
+    return stepId ? `${step}#${stepId}` : step
+  }
 
   resetSession(): void {
     this.sessionStartTime = Date.now()
     this.stepStartTimes.clear()
     writeStoredSessionStartTime(this.sessionStartTime)
+    // Deliberately NOT reset: anonymousId (funnel stitch key) and the active
+    // experiment marker must survive session resets and the login handoff.
+  }
+
+  /** The stable anonymous id carried on every event (funnel stitching). */
+  getAnonymousId(): string {
+    return this.anonymousId
+  }
+
+  /**
+   * R3-10: set (or clear) the active experiment marker. While set, EVERY
+   * onboarding analytics event carries `{ flagKey, bucket }` — pass null when
+   * no experiment is active.
+   */
+  setActiveExperiment(marker: ExperimentMarker | null): void {
+    this.activeExperiment = marker
   }
 
   stepStarted(step: MiniProgramOnboardingAnalyticsStep, metadata?: Record<string, unknown>): void {
-    this.stepStartTimes.set(step, Date.now())
+    this.stepStartTimes.set(this.resolveStartKey(step, metadata), Date.now())
     this.track('step_started', step, metadata)
   }
 
-  stepCompleted(step: MiniProgramOnboardingAnalyticsStep, metadata?: Record<string, unknown>): void {
-    this.track('step_completed', step, metadata, this.stepStartTimes.get(step))
-    this.stepStartTimes.delete(step)
+  /**
+   * Sub-step / single-screen enter signal. essential-data fires this per
+   * wizard sub-step (`stepId` + `stepIndex` in metadata); single-screen steps
+   * fire it once so funnel queries have a uniform enter event.
+   */
+  stepEnter(step: MiniProgramOnboardingAnalyticsStep, metadata?: Record<string, unknown>): void {
+    this.stepStartTimes.set(this.resolveStartKey(step, metadata), Date.now())
+    this.track('step_enter', step, metadata)
   }
 
-  stepAbandoned(step: MiniProgramOnboardingAnalyticsStep, reason?: string): void {
+  stepCompleted(step: MiniProgramOnboardingAnalyticsStep, metadata?: Record<string, unknown>): void {
+    const key = this.resolveStartKey(step, metadata)
+    this.track('step_completed', step, metadata, this.stepStartTimes.get(key))
+    this.stepStartTimes.delete(key)
+  }
+
+  stepAbandoned(
+    step: MiniProgramOnboardingAnalyticsStep,
+    reason?: string,
+    metadata?: Record<string, unknown>,
+  ): void {
+    const mergedMetadata = {
+      ...(reason ? { reason } : {}),
+      ...(metadata ?? {}),
+    }
+    const key = this.resolveStartKey(step, mergedMetadata)
     this.track(
       'step_abandoned',
       step,
-      reason ? { reason } : undefined,
-      this.stepStartTimes.get(step),
+      Object.keys(mergedMetadata).length > 0 ? mergedMetadata : undefined,
+      this.stepStartTimes.get(key),
     )
-    this.stepStartTimes.delete(step)
+    this.stepStartTimes.delete(key)
   }
 
   validationFailed(
@@ -259,12 +356,17 @@ class MiniProgramOnboardingAnalytics {
       stepStartTime,
       route: getCurrentRoute(),
       systemInfo: getSystemInfoSnapshot(),
+      anonymousId: this.anonymousId,
+      experiment: this.activeExperiment ?? undefined,
     })
 
     void apiRequest<{ success?: boolean }>({
       path: '/api/analytics/onboarding',
       method: 'POST',
       data: event,
+      // Populates the server `sessionId` column for anonymous (session-less)
+      // requests; authenticated requests keep their server-side session id.
+      headers: { 'x-session-id': this.anonymousId },
       handleUnauthorized: false,
     }).catch((error) => {
       const message = error instanceof Error ? error.message : 'unknown error'

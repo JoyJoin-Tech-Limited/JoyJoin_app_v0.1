@@ -45,6 +45,12 @@ export {
 
 export { type AdminUserDto, type AdminProfileCompleteness, getCanonicalDisplayName } from './api/adminUser.js'
 export {
+  type OnboardingFunnelStepStats,
+  type OnboardingFunnelStitchStats,
+  type OnboardingFunnelExperimentBucket,
+  type AdminOnboardingFunnelResponse,
+} from './api/onboardingFunnel.js'
+export {
   ContentFilterReviewStatuses,
   type ContentFilterReviewStatus,
   contentFilterLogReviewSchema,

@@ -18,6 +18,82 @@ async function requireAuth(req: Request, res: any, next: any) {
   next();
 }
 
+/**
+ * Onboarding analytics event allow-list (POST /api/analytics/onboarding).
+ * Legacy V1-V3 names stay accepted so older clients never break; the V4
+ * funnel adds per-substep step_enter and the polish events emitted by the
+ * mini-program onboarding instrumentation (R1-3).
+ */
+const ONBOARDING_ANALYTICS_EVENT_TYPES = [
+  // Legacy step lifecycle
+  "step_started",
+  "step_completed",
+  "step_abandoned",
+  "validation_failed",
+  "error_occurred",
+  "interaction",
+  // V4 per-substep lifecycle
+  "step_enter",
+  // V4 polish events
+  "slider_advance_blocked",
+  "picker_default_adopted",
+  "ceremony_advance",
+] as const;
+
+const ALLOWED_ONBOARDING_EVENT_TYPES = new Set<string>(ONBOARDING_ANALYTICS_EVENT_TYPES);
+
+const MAX_ONBOARDING_STEP_LENGTH = 120;
+const MAX_ONBOARDING_SESSION_ID_LENGTH = 120;
+const MAX_ONBOARDING_METADATA_BYTES = 4_096;
+
+/**
+ * Merge the client metadata object with the structured V4 payload fields
+ * (stepIndex, experiment { flagKey, bucket }). Tolerant by design: anything
+ * unexpected is dropped, never rejected.
+ */
+function buildOnboardingEventMetadata(
+  metadata: unknown,
+  stepIndex: unknown,
+  experiment: unknown,
+): Record<string, unknown> | null {
+  const merged: Record<string, unknown> = {};
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    Object.assign(merged, metadata);
+  }
+  if (typeof stepIndex === "number" && Number.isInteger(stepIndex) && stepIndex >= 0) {
+    merged.stepIndex = stepIndex;
+  }
+  if (experiment && typeof experiment === "object" && !Array.isArray(experiment)) {
+    const { flagKey, bucket } = experiment as Record<string, unknown>;
+    if (typeof flagKey === "string" && flagKey.length > 0 && typeof bucket === "string" && bucket.length > 0) {
+      merged.experiment = { flagKey, bucket };
+    }
+  }
+  if (Object.keys(merged).length === 0) {
+    return null;
+  }
+  try {
+    if (JSON.stringify(merged).length > MAX_ONBOARDING_METADATA_BYTES) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  return merged;
+}
+
+function parseOnboardingTimestamp(timestamp: unknown): Date {
+  if (typeof timestamp === "number" && Number.isFinite(timestamp)) {
+    const date = new Date(timestamp);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  if (typeof timestamp === "string") {
+    const date = new Date(timestamp);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  return new Date();
+}
+
 
 export function registerOnboardingRoutes(app: Express): void {
   // Mark guide as seen (B2: Guide persistence server-side)
@@ -176,40 +252,79 @@ export function registerOnboardingRoutes(app: Express): void {
   // Phase 2: Onboarding Analytics endpoint
   app.post('/api/analytics/onboarding', async (req: Request, res) => {
     try {
-      const { step, eventType, metadata, timestamp, sessionDuration, stepDuration, userAgent, screenSize } = req.body;
+      const {
+        step,
+        stepId,
+        stepIndex,
+        eventType,
+        metadata,
+        timestamp,
+        sessionDuration,
+        stepDuration,
+        duration,
+        sessionId: bodySessionId,
+        experiment,
+        userAgent,
+        screenSize,
+      } = req.body ?? {};
 
-      // Validation
-      if (!step || !eventType) {
-        return res.status(400).json({ message: "Step and eventType are required" });
+      // Allow-listed event types only; anything else is silently ignored so
+      // analytics ingestion never 4xx's the client. Legacy V1-V3 names are
+      // kept alongside the V4 per-substep + polish events.
+      if (typeof eventType !== 'string' || !ALLOWED_ONBOARDING_EVENT_TYPES.has(eventType)) {
+        return res.status(200).json({ success: false, error: 'invalid eventType' });
+      }
+
+      // V4 clients send `stepId`; legacy clients send `step`.
+      const rawStep = typeof stepId === 'string' && stepId.length > 0 ? stepId : step;
+      if (typeof rawStep !== 'string' || rawStep.length === 0 || rawStep.length > MAX_ONBOARDING_STEP_LENGTH) {
+        return res.status(200).json({ success: false, error: 'invalid step' });
       }
 
       // Get userId from session if authenticated (optional for unauthenticated tracking)
       const userId = req.session?.userId || null;
 
-      // Generate or use session ID
-      const sessionId = req.session?.id || req.headers['x-session-id'] as string || null;
+      // Anonymous session id stitched across login: the client-generated id
+      // (body) wins, then the explicit header, then the express session id.
+      const headerSessionId = req.headers['x-session-id'];
+      const sessionId =
+        (typeof bodySessionId === 'string' && bodySessionId.length > 0 && bodySessionId.length <= MAX_ONBOARDING_SESSION_ID_LENGTH
+          ? bodySessionId
+          : null)
+        || (typeof headerSessionId === 'string' && headerSessionId.length > 0 ? headerSessionId : null)
+        || req.session?.id
+        || null;
 
-      // Fix: Validate duration values are non-negative
+      // Fix: Validate duration values are non-negative. V4 per-substep events
+      // report `duration`; treat it as the step duration when stepDuration is
+      // absent.
       const validSessionDuration = normalizeOptionalDuration(sessionDuration);
-      const validStepDuration = normalizeOptionalDuration(stepDuration);
+      const validStepDuration = normalizeOptionalDuration(stepDuration) ?? normalizeOptionalDuration(duration);
+
+      // Tolerant metadata merge: client metadata object + stepIndex +
+      // experiment { flagKey, bucket }. Unknown extra body fields are ignored.
+      const normalizedMetadata = buildOnboardingEventMetadata(metadata, stepIndex, experiment);
 
       // Insert analytics event
       await db.insert(onboardingAnalytics).values({
         userId,
         sessionId,
-        step,
+        step: rawStep,
         eventType,
-        timestamp: timestamp ? new Date(timestamp) : new Date(),
+        timestamp: parseOnboardingTimestamp(timestamp),
         sessionDuration: validSessionDuration,
         stepDuration: validStepDuration,
-        metadata: metadata || null,
-        userAgent: userAgent || req.headers['user-agent'] || null,
-        screenSize: screenSize || null,
+        metadata: normalizedMetadata,
+        userAgent: typeof userAgent === 'string' && userAgent.length > 0 ? userAgent : req.headers['user-agent'] || null,
+        screenSize: typeof screenSize === 'string' && screenSize.length > 0 ? screenSize : null,
       });
 
       res.json({ success: true });
     } catch (error) {
-      console.error("Error saving analytics event:", error);
+      logger.warn('onboarding analytics write failed (non-fatal)', {
+        request_id: req.requestId,
+        error: String(error),
+      });
       // Silent fail - analytics should never block user flow
       res.status(200).json({ success: false, error: 'Analytics tracking failed' });
     }

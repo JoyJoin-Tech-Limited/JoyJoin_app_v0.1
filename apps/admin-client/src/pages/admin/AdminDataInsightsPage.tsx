@@ -32,7 +32,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import RegistrationFunnelDashboard from "@/components/admin/RegistrationFunnelDashboard";
+import OnboardingFunnelDashboard from "@/components/admin/OnboardingFunnelDashboard";
 
 interface InsightsData {
   engagementMetrics: {
@@ -184,7 +184,7 @@ export default function AdminDataInsightsPage() {
         )}
 
         <TabsContent value="registration" className="mt-6">
-          <RegistrationFunnelDashboard />
+          <OnboardingFunnelDashboard />
         </TabsContent>
 
         <TabsContent value="operations" className="mt-6 space-y-6">

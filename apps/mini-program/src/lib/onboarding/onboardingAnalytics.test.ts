@@ -90,4 +90,39 @@ describe('mini-program onboarding analytics event builder', () => {
       },
     })
   })
+
+  it('carries the anonymous stitch key and experiment marker top-level and in metadata', () => {
+    const event = buildMiniProgramOnboardingAnalyticsEvent({
+      step: 'personality-test-results',
+      eventType: 'interaction',
+      now: 5_000,
+      sessionStartTime: 1_000,
+      metadata: { action: 'slot_animation_start' },
+      anonymousId: 'anon_test_123',
+      experiment: { flagKey: 'personality_slot_profile', bucket: 'B' },
+    })
+
+    expect(event.anonymousId).toBe('anon_test_123')
+    expect(event.experiment).toEqual({ flagKey: 'personality_slot_profile', bucket: 'B' })
+    expect(event.metadata?.anonymousId).toBe('anon_test_123')
+    expect(event.metadata?.experiment).toEqual({ flagKey: 'personality_slot_profile', bucket: 'B' })
+    expect(event.metadata?.action).toBe('slot_animation_start')
+  })
+
+  it('omits anonymousId and experiment entirely when not provided', () => {
+    const event = buildMiniProgramOnboardingAnalyticsEvent({
+      step: 'essential-data',
+      eventType: 'step_enter',
+      now: 2_000,
+      sessionStartTime: 1_000,
+      metadata: { stepId: 'displayName', stepIndex: 0 },
+    })
+
+    expect(event).not.toHaveProperty('anonymousId')
+    expect(event).not.toHaveProperty('experiment')
+    expect(event.metadata).not.toHaveProperty('anonymousId')
+    expect(event.metadata).not.toHaveProperty('experiment')
+    expect(event.metadata?.stepId).toBe('displayName')
+    expect(event.metadata?.stepIndex).toBe(0)
+  })
 })

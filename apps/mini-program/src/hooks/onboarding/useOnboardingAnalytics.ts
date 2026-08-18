@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
+import type { ExperimentMarker } from '../../lib/experiments'
 import {
   onboardingAnalytics,
   type MiniProgramOnboardingAnalyticsStep,
@@ -23,12 +24,16 @@ export function useOnboardingAnalytics(
     onboardingAnalytics.stepStarted(step, metadata)
   }, [step])
 
+  const stepEnter = useCallback((metadata?: Record<string, unknown>) => {
+    onboardingAnalytics.stepEnter(step, metadata)
+  }, [step])
+
   const stepCompleted = useCallback((metadata?: Record<string, unknown>) => {
     onboardingAnalytics.stepCompleted(step, metadata)
   }, [step])
 
-  const stepAbandoned = useCallback((reason?: string) => {
-    onboardingAnalytics.stepAbandoned(step, reason)
+  const stepAbandoned = useCallback((reason?: string, metadata?: Record<string, unknown>) => {
+    onboardingAnalytics.stepAbandoned(step, reason, metadata)
   }, [step])
 
   const validationFailed = useCallback((field: string, reason: string) => {
@@ -43,6 +48,12 @@ export function useOnboardingAnalytics(
     onboardingAnalytics.interaction(step, action, metadata)
   }, [step])
 
+  // R3-10: attach/clear the active experiment marker — while set, every
+  // onboarding analytics event carries { flagKey, bucket }.
+  const setExperiment = useCallback((marker: ExperimentMarker | null) => {
+    onboardingAnalytics.setActiveExperiment(marker)
+  }, [])
+
   useEffect(() => {
     if (!enabled || !autoTrackStart || hasStartedRef.current) {
       return
@@ -53,10 +64,12 @@ export function useOnboardingAnalytics(
 
   return useMemo(() => ({
     stepStarted,
+    stepEnter,
     stepCompleted,
     stepAbandoned,
     validationFailed,
     errorOccurred,
     interaction,
-  }), [errorOccurred, interaction, stepAbandoned, stepCompleted, stepStarted, validationFailed])
+    setExperiment,
+  }), [errorOccurred, interaction, setExperiment, stepAbandoned, stepCompleted, stepEnter, stepStarted, validationFailed])
 }

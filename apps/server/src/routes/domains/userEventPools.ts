@@ -1414,17 +1414,17 @@ export function registerUserEventPoolRoutes(app: Express): void {
           poolIds: deletedRegistrations.map((r: any) => r.poolId),
         });
 
-        // 2) 对每个受影响的池子，把 totalRegistrations - 1
-        for (const reg of deletedRegistrations) {
-          if (reg.poolId) {
-            await db
-              .update(eventPools)
-              .set({
-                totalRegistrations: sql`${eventPools.totalRegistrations} - 1`,
-                updatedAt: new Date(),
-              })
-              .where(eq(eventPools.id, reg.poolId));
-          }
+        // 2) 把受影响池子的 totalRegistrations - 1（按 id+userId 删除至多命中一行，
+        // 直接单次 UPDATE，不在循环里发库调用）
+        const affectedPoolId = deletedRegistrations[0]?.poolId;
+        if (affectedPoolId) {
+          await db
+            .update(eventPools)
+            .set({
+              totalRegistrations: sql`${eventPools.totalRegistrations} - 1`,
+              updatedAt: new Date(),
+            })
+            .where(eq(eventPools.id, affectedPoolId));
         }
 
         logger.info('[MyPoolRegistrationsCancel] updated pools after deletion');
@@ -2071,18 +2071,6 @@ export function registerUserEventPoolRoutes(app: Express): void {
       } catch (error) {
         logger.error("Error fetching insights:", { error: String(error) });
         res.json(createEmptyInsightsData());
-      }
-    });
-
-    // Registration Funnel Analytics - Get registration funnel data
-    app.get("/api/admin/insights/registration-funnel", requireAdmin, async (req, res) => {
-      try {
-        const { getRegistrationFunnelData } = await import('../../analytics/registrationFunnelAnalytics');
-        const funnelData = await getRegistrationFunnelData();
-        res.json(funnelData);
-      } catch (error) {
-        logger.error("Error fetching registration funnel data:", { error: String(error) });
-        res.status(500).json({ message: "Failed to fetch registration funnel data" });
       }
     });
 }

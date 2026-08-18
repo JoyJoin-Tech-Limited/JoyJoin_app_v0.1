@@ -55,6 +55,7 @@ const ADMIN_ROUTE_FILES = [
   'apps/server/src/routes/domains/adminEventManagement.ts',
   'apps/server/src/routes/domains/adminEventPools.ts',
   'apps/server/src/routes/domains/adminMatchingShadow.ts',
+  'apps/server/src/routes/domains/adminOnboardingFunnel.ts',
   'apps/server/src/routes/domains/adminOperations.ts',
   'apps/server/src/routes/domains/adminUsers.ts',
   'apps/server/src/routes/domains/aiServices.ts',

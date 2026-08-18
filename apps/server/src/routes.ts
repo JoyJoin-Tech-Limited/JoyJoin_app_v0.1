@@ -28,6 +28,7 @@ import { registerMatchExplanationRoutes } from "./routes/domains/matchExplanatio
 import { registerMatchingAdminRoutes } from "./routes/domains/matchingAdmin";
 import { registerMatchingConfigRoutes } from "./routes/domains/matchingConfig";
 import { registerAdminMatchingReviewRoutes } from "./routes/domains/adminMatchingReview";
+import { registerAdminOnboardingFunnelRoutes } from "./routes/domains/adminOnboardingFunnel";
 import { registerOnboardingRoutes } from "./routes/domains/onboarding";
 import { registerPaymentRoutes } from "./routes/domains/payments";
 import { registerProfileRoutes } from "./routes/domains/profile";
@@ -182,6 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAdminGeolocationRoutes(app);
   registerMatchingAdminRoutes(app);
   registerAdminMatchingReviewRoutes(app);
+  registerAdminOnboardingFunnelRoutes(app);
   registerMatchExplanationRoutes(app);
   registerMatchCompassRoutes(app);
   registerAIServiceRoutes(app);
