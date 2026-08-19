@@ -31,6 +31,13 @@ function query(path: string, params: Record<string, string | undefined>): string
   return search ? `${path}?${search}` : path
 }
 
+function normalizeFlashPagePath(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const path = value.trim().split('?')[0]
+  if (!path) return ''
+  return path.startsWith('/') ? path : `/${path}`
+}
+
 export function getFlashCanonicalRoute(
   snapshot: FlashCanonicalSnapshot,
   context: FlashCanonicalRouteContext = {},
@@ -82,18 +89,17 @@ export function getFlashCanonicalRoute(
 
 export async function redirectToFlashCanonical(
   snapshot: FlashCanonicalSnapshot,
-  currentPath: string,
+  currentPath: unknown,
   context: FlashCanonicalRouteContext = {},
 ): Promise<boolean> {
   const route = getFlashCanonicalRoute(snapshot, context)
   if (!route) return false
   const routePath = route.split('?')[0]
-  const normalizedCurrentPath = currentPath.startsWith('/') ? currentPath : `/${currentPath}`
+  const normalizedCurrentPath = normalizeFlashPagePath(currentPath)
   let topPagePath = ''
   try {
     const pages = Taro.getCurrentPages()
-    const topRoute = pages[pages.length - 1]?.route?.split('?')[0] ?? ''
-    topPagePath = topRoute ? (topRoute.startsWith('/') ? topRoute : `/${topRoute}`) : ''
+    topPagePath = normalizeFlashPagePath(pages[pages.length - 1]?.route)
   } catch {
     // The explicit caller path remains the fallback in non-WeChat runtimes.
   }

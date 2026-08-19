@@ -29,5 +29,5 @@ const CUSTOM_LATER_ACT_ASSETS: CustomLaterActAssets = {
 }
 
 export default function FlashLaterActDialoguePage() {
-  return <FlashDialoguePage customLaterActAssets={CUSTOM_LATER_ACT_ASSETS} currentPath={MINI_PROGRAM_ROUTES.alangLaterDialogue} />
+  return <FlashDialoguePage customLaterActAssets={CUSTOM_LATER_ACT_ASSETS} canonicalPath={MINI_PROGRAM_ROUTES.alangLaterDialogue} />
 }

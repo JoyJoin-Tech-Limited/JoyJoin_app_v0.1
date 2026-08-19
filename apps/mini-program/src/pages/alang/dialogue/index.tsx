@@ -122,10 +122,10 @@ export interface CustomLaterActAssets {
 
 interface FlashDialoguePageProps {
   customLaterActAssets?: CustomLaterActAssets
-  currentPath?: string
+  canonicalPath?: string
 }
 
-export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PROGRAM_ROUTES.alangDialogue }: FlashDialoguePageProps = {}) {
+export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_PROGRAM_ROUTES.alangDialogue }: FlashDialoguePageProps = {}) {
   const enabled = shouldShowStreetBlindBoxEntry()
   const params = Taro.getCurrentInstance().router?.params ?? {}
   const encounterId = params.encounterId ?? ''
@@ -177,10 +177,10 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
     if (!enabled || !data?.canonicalScreen || data.status === 'expired') return
     void redirectToFlashCanonical(
       data,
-      currentPath,
+      canonicalPath,
       replay ? { replay: true, replaySession } : undefined,
     )
-  }, [currentPath, data, enabled, encounterId, isError, isFetching, pageVisible, replay, replaySession])
+  }, [canonicalPath, data, enabled, encounterId, isError, isFetching, pageVisible, replay, replaySession])
 
   useEffect(() => {
     setFragmentRevealed(false)
@@ -200,7 +200,7 @@ export function FlashDialoguePage({ customLaterActAssets, currentPath = MINI_PRO
     if ('storyEpisode' in response && response.storyEpisode?.response) return
     const redirected = await redirectToFlashCanonical(
       response,
-      currentPath,
+      canonicalPath,
       replay ? { replay: true, replaySession } : undefined,
     )
     if (!redirected && !('npc' in response)) await refetch()

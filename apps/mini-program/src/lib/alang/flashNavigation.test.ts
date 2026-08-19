@@ -92,6 +92,17 @@ describe('Flash canonical screen routing', () => {
     expect(mocks.redirectTo).not.toHaveBeenCalled()
   })
 
+  it('recovers when the native runtime supplies a non-string caller path', async () => {
+    await expect(redirectToFlashCanonical(
+      { canonicalScreen: 'dialogue', encounterId: 'encounter-1' },
+      { route: 'pages/alang/dialogue/index' } as unknown as string,
+    )).resolves.toBe(true)
+
+    expect(mocks.redirectTo).toHaveBeenCalledWith({
+      url: '/pages/alang-story/dialogue/index?encounterId=encounter-1',
+    })
+  })
+
   it('accepts the retired radar screen name only as a cached-route alias', () => {
     expect(getFlashCanonicalRoute({ canonicalScreen: 'radar', appearanceId: 'legacy' }))
       .toBe('/pages/alang/search/index?appearanceId=legacy')

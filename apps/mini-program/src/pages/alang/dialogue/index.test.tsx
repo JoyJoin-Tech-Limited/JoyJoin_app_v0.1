@@ -289,7 +289,7 @@ describe('formal Flash dialogue', () => {
       refetch: mocks.refetch,
     })
 
-    render(<FlashDialoguePageWithAssets currentPath='/pages/alang-story/dialogue/index' />)
+    render(<FlashDialoguePageWithAssets canonicalPath='/pages/alang-story/dialogue/index' />)
 
     expect(mocks.canonicalRedirect).not.toHaveBeenCalled()
   })
