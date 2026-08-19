@@ -30,7 +30,8 @@ export function mapBotUserIdsToBotIds(
     if (value !== null && typeof value === 'object') {
       const result: Record<string, unknown> = {};
       for (const [key, val] of Object.entries(value)) {
-        result[key] = transform(val);
+        const mappedKey = botUserIds.has(key) ? botIdByUserId.get(key) ?? key : key;
+        result[mappedKey] = transform(val);
       }
       return result;
     }
