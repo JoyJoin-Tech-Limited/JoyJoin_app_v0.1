@@ -248,15 +248,20 @@
 }
 
 // The spoken-ritual beat follows the later Personality Dice countdown's
-// number + supporting-label hierarchy, while staying a full-screen group cue.
+// number + supporting-label hierarchy. Keep the cue in normal flow: a fixed
+// child inside the animated phase shell is viewport-clipped by WeChat and can
+// collapse into a narrow strip on device.
 .handshake-beat {
-  position: fixed;
-  inset: 0;
+  position: relative;
   z-index: 320;
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 640rpx;
   padding: $container-padding;
   background: linear-gradient(
     180deg,

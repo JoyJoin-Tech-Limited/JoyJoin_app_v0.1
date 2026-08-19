@@ -35,7 +35,7 @@ export type HandshakeRitualKind = 'countdown' | 'toast' | 'name_relay'
 /** Locked spoken-ritual beats (spec §6.1): A 齐声倒数 default, B 碰杯
  *  (host-selectable, glow/blaze), C 名字接龙 (深聊 vibe). */
 export const RITUAL_BEATS: Record<HandshakeRitualKind, readonly string[]> = {
-  countdown: ['三', '二', '一', '开聊！'],
+  countdown: ['3', '2', '1', '开聊！'],
   toast: ['这杯，敬新桌友——', '干杯！'],
   name_relay: ['我是 __ ，今天想聊 __ '],
 }

@@ -28,7 +28,7 @@ describe('glanceStackModel — locked spec strings (verbatim)', () => {
   it('ships the ritual CTA pair and beats exactly as locked (spec §6)', () => {
     expect(RITUAL_CTA_START).toBe('人齐了，开聊')
     expect(RITUAL_CTA_WAIT).toBe('再等等')
-    expect(RITUAL_BEATS.countdown).toEqual(['三', '二', '一', '开聊！'])
+    expect(RITUAL_BEATS.countdown).toEqual(['3', '2', '1', '开聊！'])
     expect(RITUAL_BEATS.toast).toEqual(['这杯，敬新桌友——', '干杯！'])
     expect(RITUAL_BEATS.name_relay).toEqual(['我是 __ ，今天想聊 __ '])
   })
