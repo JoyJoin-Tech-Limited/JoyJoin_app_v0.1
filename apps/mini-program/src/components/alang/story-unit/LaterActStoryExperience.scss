@@ -79,8 +79,8 @@
 
 .later-act-experience--explore .later-act-scene__character,
 .later-act-experience--object .later-act-scene__character {
-  opacity: 0.16;
-  transform: translateX(4%);
+  opacity: 0.76;
+  transform: translateX(2%);
 }
 
 .later-act-experience--explore.momo-later-act .later-act-scene__character,
@@ -97,8 +97,12 @@
 .later-act-scene__hotspot {
   position: absolute;
   width: 92rpx;
+  min-width: 92rpx;
   height: 92rpx;
+  min-height: 92rpx;
   margin: -46rpx 0 0 -46rpx;
+  padding: 0;
+  box-sizing: border-box;
   border-radius: 50%;
   transition: transform 160ms ease-out;
 }
@@ -154,12 +158,12 @@
 .momo-p3__hotspot--response { left: 77%; top: 68%; }
 .momo-p3__hotspot--invitation { left: 77%; top: 51%; }
 .lizi-p2__hotspot--overlays { left: 74%; top: 40%; }
-.lizi-p2__hotspot--lanyard { left: 93%; top: 47%; }
+.lizi-p2__hotspot--lanyard { left: 86%; top: 47%; }
 .lizi-p2__hotspot--stool { left: 68%; top: 68%; }
-.lizi-p2__hotspot--outing-book { left: 89%; top: 59%; }
+.lizi-p2__hotspot--outing-book { left: 84%; top: 59%; }
 .lizi-p3__hotspot--bottle { left: 80%; top: 46%; }
 .lizi-p3__hotspot--stamp { left: 81%; top: 80%; }
-.lizi-p3__hotspot--blank { left: 77%; top: 86%; }
+.lizi-p3__hotspot--blank { left: 77%; top: 82%; }
 .lizi-p3__hotspot--outing-book { left: 59%; top: 73%; }
 .shiqi-p2__hotspot--cards { left: 18%; top: 34%; }
 .shiqi-p2__hotspot--schedule { left: 18%; top: 58%; }

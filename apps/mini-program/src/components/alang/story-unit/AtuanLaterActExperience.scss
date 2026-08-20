@@ -48,8 +48,8 @@
 }
 
 .atuan-later-scene__character--quiet {
-  opacity: 0.16;
-  transform: translateX(12%);
+  opacity: 0.76;
+  transform: translateX(4%);
 }
 
 .atuan-later-scene__speech {
@@ -93,8 +93,14 @@
 .atuan-later-scene__hotspot {
   position: absolute;
   width: 92rpx;
+  min-width: 92rpx;
   height: 92rpx;
+  min-height: 92rpx;
   margin: -46rpx 0 0 -46rpx;
+  padding: 0;
+  box-sizing: border-box;
+  border-radius: 50%;
+  transition: transform 160ms ease-out;
 }
 
 .atuan-later-scene__hotspot--plan { left: 31%; top: 59%; }
