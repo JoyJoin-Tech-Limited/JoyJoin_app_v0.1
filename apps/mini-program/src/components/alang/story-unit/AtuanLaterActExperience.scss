@@ -37,10 +37,10 @@
 
 .atuan-later-scene__character {
   position: absolute;
-  right: -3%;
-  bottom: 30%;
-  width: 42%;
-  height: 48%;
+  right: 0;
+  bottom: 24%;
+  width: 45%;
+  height: 56%;
   filter: drop-shadow(0 16rpx 22rpx rgba($color-text-primary, 0.25));
   pointer-events: none;
   animation: atuan-later-character-enter 420ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -50,11 +50,11 @@
 .atuan-later-scene__speech {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 104rpx);
-  left: 32rpx;
-  right: 32rpx;
+  right: 200rpx;
+  left: 24rpx;
   z-index: 4;
   box-sizing: border-box;
-  padding: 16rpx 24rpx;
+  padding: 24rpx;
   border: 2rpx solid rgba($color-primary-dark, 0.14);
   border-radius: 24rpx 24rpx 24rpx 8rpx;
   background: rgba($color-bg-tint-cream, 0.94);

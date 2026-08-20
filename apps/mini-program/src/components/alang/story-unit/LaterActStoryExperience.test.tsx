@@ -26,6 +26,8 @@ describe('LaterActStoryExperience', () => {
     expect(styles).not.toMatch(/later-act-experience--object\s+\.later-act-scene__character/)
     expect(styles).not.toMatch(/\.later-act-scene__character[^{]*\{[^}]*opacity:\s*0\.[0-8]/s)
     expect(styles).toContain('rgba(18, 22, 28, 0.34)')
+    expect(styles).toMatch(/\.later-act-scene__character\s*\{[^}]*right:\s*2%;[^}]*bottom:\s*22%;[^}]*width:\s*45%;[^}]*height:\s*62%;/s)
+    expect(styles).toMatch(/\.momo-later-act \.later-act-scene__speech,[\s\S]*?\.lizi-later-act \.later-act-scene__speech\s*\{[^}]*right:\s*4%;[^}]*left:\s*auto;/s)
   })
 
   it('keeps every rewritten act on the same complete six-beat contract', () => {

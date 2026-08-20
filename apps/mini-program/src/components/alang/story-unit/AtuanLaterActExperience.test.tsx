@@ -20,6 +20,8 @@ describe('AtuanLaterActExperience', () => {
     expect(styles).not.toContain('atuan-later-scene__character--quiet')
     expect(styles).not.toMatch(/\.atuan-later-scene__character[^{]*\{[^}]*opacity:\s*0\.[0-8]/s)
     expect(styles).toContain('rgba($color-text-primary, 0.36)')
+    expect(styles).toMatch(/\.atuan-later-scene__character\s*\{[^}]*right:\s*0;[^}]*width:\s*45%;[^}]*height:\s*56%;/s)
+    expect(styles).toMatch(/\.atuan-later-scene__speech\s*\{[^}]*right:\s*200rpx;[^}]*left:\s*24rpx;/s)
   })
 
   it('keeps the scene usable when WeChat cannot decode the bundled background', () => {
