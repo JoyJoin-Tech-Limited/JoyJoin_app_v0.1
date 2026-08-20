@@ -56,6 +56,42 @@ describe('Flash first-act runtime contract', () => {
     expect(content.responseByOption['s1-p2-alang-template-b']).toBe('把这段结尾收好。')
   })
 
+  it('rewrites Atuan later acts away from stale v2 content into the reviewed local-story contract', () => {
+    const stored = {
+      v: 2,
+      start: 'n1_setup',
+      nodes: {
+        n5_close: {
+          id: 'n5_close',
+          type: 'closure',
+          segments: [{ text: '旧 V2 收尾不应该成为阿团后续幕的运行时合同。' }],
+        },
+      },
+    }
+
+    const second = resolveFlashFirstActRuntimeContent('s1-p2-atuan', stored)
+    expect(second.v).not.toBe(2)
+    expect(second.opening).toContain('座位图')
+    expect(second.question.id).toBe('s1-p2-atuan-template-response-v1')
+    expect(second.question.options.map((option: { id: string }) => option.id)).toEqual([
+      's1-p2-atuan-template-a',
+      's1-p2-atuan-template-b',
+    ])
+    expect(second.responseByOption['s1-p2-atuan-template-a']).toContain('邀请')
+    expect(second.responseByOption['s1-p2-atuan-template-a']).not.toContain('旧 V2')
+
+    const third = resolveFlashFirstActRuntimeContent('s1-p3-atuan', stored)
+    expect(third.v).not.toBe(2)
+    expect(third.opening).toContain('第六张卡')
+    expect(third.question.id).toBe('s1-p3-atuan-template-response-v1')
+    expect(third.question.options.map((option: { id: string }) => option.id)).toEqual([
+      's1-p3-atuan-template-a',
+      's1-p3-atuan-template-b',
+    ])
+    expect(third.responseByOption['s1-p3-atuan-template-a']).toContain('答案')
+    expect(third.responseByOption['s1-p3-atuan-template-a']).not.toContain('旧 V2')
+  })
+
   it('does not rewrite unrelated story units', () => {
     const stored = { v: 2, start: 'n1', nodes: {} }
     expect(resolveFlashFirstActRuntimeContent('season-finale', stored)).toBe(stored)

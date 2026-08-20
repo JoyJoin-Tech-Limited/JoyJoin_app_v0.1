@@ -1,5 +1,6 @@
 import { getFlashFirstActExperienceContract } from '@joyjoin/shared/alang/flashFirstActExperience'
 import { getFlashStoryUnitDefinition, type FlashStoryUnitId } from '@joyjoin/shared/alang/flashStorySeason'
+import { getAtuanLaterActDefinition, isAtuanLaterActUnitId } from '@joyjoin/shared/alang/atuanLaterActs'
 
 const LOCAL_TEMPLATE_LATER_ACT_IDS = new Set<FlashStoryUnitId>([
   's1-p2-alang',
@@ -31,6 +32,53 @@ function v2ClosureText(storedContent: unknown): string | null {
   return text || null
 }
 
+function hasRuntimeQuestion(storedContent: unknown): storedContent is { question: { id: string; options: unknown[] } } {
+  const question = storedContent && typeof storedContent === 'object'
+    ? (storedContent as { question?: unknown }).question
+    : null
+  return Boolean(
+    question
+    && typeof question === 'object'
+    && typeof (question as { id?: unknown }).id === 'string'
+    && Array.isArray((question as { options?: unknown }).options)
+    && (question as { options: unknown[] }).options.length >= 2,
+  )
+}
+
+function atuanLaterActRuntimeContent(unitId: string, storedContent: unknown): any | null {
+  if (!isAtuanLaterActUnitId(unitId)) return null
+  if ((storedContent as { v?: unknown } | null)?.v !== 2 && hasRuntimeQuestion(storedContent)) return storedContent
+
+  const definition = getAtuanLaterActDefinition(unitId)
+  const stored = storedContent && typeof storedContent === 'object' && (storedContent as { v?: number }).v !== 2
+    ? storedContent as Record<string, unknown>
+    : {}
+  const response = definition.endings[0]?.responseCopy ?? v2ClosureText(storedContent) ?? definition.opening
+
+  return {
+    ...stored,
+    opening: typeof stored.opening === 'string' ? stored.opening : definition.opening,
+    action: typeof stored.action === 'string' ? stored.action : definition.action.prompt,
+    discovery: typeof stored.discovery === 'string' ? stored.discovery : definition.action.prompt,
+    question: {
+      id: `${unitId}-template-response-v1`,
+      prompt: definition.action.prompt,
+      options: definition.approaches.map((approach, index) => ({
+        id: `${unitId}-template-${index === 0 ? 'a' : 'b'}`,
+        label: approach.label,
+        tags: [],
+      })),
+    },
+    responseByOption: Object.fromEntries(
+      definition.approaches.map((_, index) => [
+        `${unitId}-template-${index === 0 ? 'a' : 'b'}`,
+        definition.endings[index]?.responseCopy ?? response,
+      ]),
+    ),
+    closing: response,
+  }
+}
+
 /**
  * The four rebuilt first acts are a flat, scene-driven contract even when an
  * older database snapshot still contains the retired v2 pilot document.
@@ -40,6 +88,9 @@ function v2ClosureText(storedContent: unknown): string | null {
 export function resolveFlashFirstActRuntimeContent(unitId: string, storedContent: unknown): any {
   const contract = getFlashFirstActExperienceContract(unitId)
   if (!contract) {
+    const atuanLaterAct = atuanLaterActRuntimeContent(unitId, storedContent)
+    if (atuanLaterAct) return atuanLaterAct
+
     const definition = getFlashStoryUnitDefinition(unitId)
     if (!definition || !LOCAL_TEMPLATE_LATER_ACT_IDS.has(unitId as FlashStoryUnitId)) return storedContent
     const stored = storedContent && typeof storedContent === 'object' && (storedContent as { v?: number }).v !== 2

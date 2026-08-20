@@ -442,6 +442,80 @@ describe("formal Flash story runtime policy", () => {
     expect(result.storyEpisode?.response).toBe(outcome.responseCopy);
   });
 
+  it("keeps Atuan later acts on the shared answer settlement path when the stored episode content is stale v2", async () => {
+    const initial = storyState();
+    initial.episode.code = "s1-p2-atuan";
+    initial.episode.phase = 2;
+    initial.episode.objectCode = "seat-plan";
+    initial.episode.content = {
+      v: 2,
+      start: "n1_setup",
+      nodes: {
+        n1_setup: { id: "n1_setup", type: "prose", segments: [{ text: "Old v2 opening" }], next: "n5_close" },
+        n5_close: { id: "n5_close", type: "closure", segments: [{ text: "Old v2 closure" }] },
+      },
+    } as any;
+    const progress = createAtuanLaterActProgress("s1-p2-atuan", "read_plan_first");
+    const outcome = resolveAtuanLaterActOutcome({
+      ...progress,
+      arrivalReplyId: "ask_fold_history",
+      highlightOrder: ["plan_folds", "chair_scuffs", "blank_place"],
+      followupId: "leave_choice",
+      gameStarted: true,
+      game: { planUpright: true, chairGap: "breathing", attempts: 0 },
+    });
+    const storyPath = toAtuanLaterActSubmission(outcome.progress);
+    const completed = {
+      ...initial,
+      completion: {
+        selectedOptionId: "s1-p2-atuan-template-a",
+        responseSnapshot: outcome.responseCopy,
+        renderKind: "template" as const,
+        promptVersion: null,
+        echoSnapshot: null,
+      },
+      completedInPhase: 1,
+      completedTotal: 1,
+    };
+    mocks.getStoryEncounterState
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(initial)
+      .mockResolvedValueOnce(completed);
+
+    const opened = await getFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      now,
+    });
+    expect(opened.storyEpisode?.storyV2).toBeNull();
+    expect(opened.question?.id).toBe("s1-p2-atuan-template-response-v1");
+
+    const result = await answerFlashEncounter({
+      encounterId: encounter.id,
+      userId: encounter.userId,
+      questionId: "s1-p2-atuan-template-response-v1",
+      optionId: "s1-p2-atuan-template-a",
+      storyPath,
+      now,
+    });
+
+    expect(mocks.advanceV2Run).not.toHaveBeenCalled();
+    expect(mocks.prepareChoiceIntent).toHaveBeenCalledWith(expect.objectContaining({
+      questionId: "s1-p2-atuan-template-response-v1",
+      optionId: "s1-p2-atuan-template-a",
+      storyAnswers: expect.arrayContaining([
+        expect.objectContaining({ questionId: "atuan-later-act:game:chair-gap", optionId: "breathing" }),
+      ]),
+    }));
+    expect(mocks.completeStoryEpisode).toHaveBeenCalledWith(expect.objectContaining({
+      episodeId: initial.episode.id,
+      optionId: "s1-p2-atuan-template-a",
+      responseSnapshot: outcome.responseCopy,
+      renderKind: "template",
+    }));
+    expect(result.storyEpisode?.response).toBe(outcome.responseCopy);
+  });
+
   it("validates and persists the complete reviewed Atuan third-act path", async () => {
     const initial = storyState();
     initial.episode.code = "s1-p3-atuan";
