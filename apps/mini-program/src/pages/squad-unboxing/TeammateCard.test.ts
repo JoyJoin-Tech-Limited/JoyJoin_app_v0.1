@@ -85,6 +85,24 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
     expect(source).not.toContain('squad-unboxing__deck-card-industry')
   })
 
+  it('keeps the hook pill from shrinking into the age row on real-device font metrics', () => {
+    const infoBlock = styles
+      .split('&__deck-card-info {')
+      .slice(1)
+      .map((tail) => tail.split('\n  }')[0] ?? '')
+      .find((block) => block.includes('flex: 1 1 auto')) ?? ''
+    const nameBlock = styles.split('&__deck-card-name {')[1]?.split('\n  }')[0] ?? ''
+    const archetypeBlock = styles.split('&__deck-card-archetype {')[1]?.split('\n  }')[0] ?? ''
+    const metaBlock = styles.split('&__deck-card-meta {')[1]?.split('\n  }')[0] ?? ''
+    const pillsBlock = styles.split('&__deck-card-pills {')[1]?.split('\n  }')[0] ?? ''
+
+    expect(infoBlock).toContain('padding: 12rpx $spacing-sm')
+    expect(nameBlock).toContain('flex-shrink: 0')
+    expect(archetypeBlock).toContain('flex-shrink: 0')
+    expect(metaBlock).toContain('flex-shrink: 0')
+    expect(pillsBlock).toContain('flex-shrink: 0')
+  })
+
   it('prefers member avatars and falls back to archetype art after an avatar error', () => {
     expect(source).toContain('member.avatarUrl && !avatarFailed')
     expect(source).toContain('setAvatarFailed(true)')

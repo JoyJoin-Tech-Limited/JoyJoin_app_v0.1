@@ -2207,7 +2207,11 @@ $fan-rotations: (
     display: flex;
     flex-direction: column;
     gap: 2rpx;
-    padding: $spacing-sm;
+    // Real-device font metrics make the four rows a few rpx taller than the
+    // simulator. Keep the horizontal inset, but recover 8rpx vertically so
+    // the hook pill never compresses into the age row (4rpx optical nudge on
+    // each edge within this fixed 332rpx collectible-card geometry).
+    padding: 12rpx $spacing-sm;
     overflow: hidden;
     // Ghost-fade motion (the --has-focus rule above only sets the target
     // opacity; RM's global 150ms transition-duration cap covers this too).
@@ -2215,6 +2219,7 @@ $fan-rotations: (
   }
 
   &__deck-card-name {
+    flex-shrink: 0;
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
     color: $color-text-primary;
@@ -2225,6 +2230,7 @@ $fan-rotations: (
   // Archetype row — rendered in the archetype's contrast-safe accent colour
   // (set inline), per the brand accent rule.
   &__deck-card-archetype {
+    flex-shrink: 0;
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
     word-break: keep-all;
@@ -2235,6 +2241,7 @@ $fan-rotations: (
   // privacy-hidden). Industry lives in the detail panel; at fan widths the
   // safe inset left too little room for both (round-3).
   &__deck-card-meta {
+    flex-shrink: 0;
     font-size: $font-size-2xs;
     color: $color-text-secondary;
     @include text-truncate;
@@ -2247,6 +2254,7 @@ $fan-rotations: (
   // both WeChat WKWebView and the H5 preview. Full connection list lives in
   // the detail panel below.
   &__deck-card-pills {
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: stretch;
