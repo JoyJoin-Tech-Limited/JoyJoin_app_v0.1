@@ -138,11 +138,14 @@ describe("POST /api/analytics/squad-unboxing", () => {
     });
   });
 
-  it("accepts the pocket-deck event types (deck_collapse / deck_reopen)", async () => {
+  it("accepts the pocket-deck event types (deck_collapse / deck_reopen / auto_pocket)", async () => {
     const app = await buildTestApp();
     const pocketDeckTypes = [
       "squad_unboxing_deck_collapse",
       "squad_unboxing_deck_reopen",
+      // 2026-08-19 auto-pocket handoff: fires once when the deck folds itself
+      // after the live all-cards-up transition.
+      "squad_unboxing_auto_pocket",
     ];
     await withServer(app, async (base) => {
       for (const eventType of pocketDeckTypes) {

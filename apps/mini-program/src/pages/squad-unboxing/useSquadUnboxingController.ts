@@ -43,7 +43,9 @@ import {
   getDeckCollapseKey,
   type DeckPhase,
 } from './squadDeckCollapseState'
+import { createSquadAutoPocketSession, type SquadAutoPocketSession } from './squadAutoPocket'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
+import { usePageVisibility } from '../../hooks/usePageVisibility'
 
 function getRevealFlagKey(groupId: string): string {
   return `jj_revealed_${groupId}`
@@ -114,12 +116,21 @@ function writeDeckCollapseHintFlag(groupId: string): void {
 export interface UseSquadUnboxingControllerArgs {
   groupId: string
   routerParams: Record<string, string | undefined>
+  /**
+   * Page-owned focused card index (-1 = none). Read by the auto-pocket
+   * handoff (2026-08-19): a focused card at the all-cards-up beat blocks
+   * arming, and any focus during the hold cancels it permanently.
+   */
+  focusedIndex: number
+  /** Page swipe-back reset signal — a bump drops any pending auto-fold. */
+  resetSignal: number
 }
 
-export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUnboxingControllerArgs) {
+export function useSquadUnboxingController({ groupId, routerParams, focusedIndex, resetSignal }: UseSquadUnboxingControllerArgs) {
   const { user: currentUser, isLoading: authLoading } = useAuthGuard()
   const { shouldReduceMotion } = useMiniRevealMotion(routerParams)
   const { isDegradation } = useDeviceTier()
+  const { isPageVisible } = usePageVisibility()
   const motionInstant = shouldReduceMotion || isDegradation
 
   // Pocket-deck kill switch (2026-07-15): when disabled remotely, the page
@@ -251,10 +262,13 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
     enabled: !!groupId && (!!currentUser || !authLoading),
     // While the venue is unassigned, poll gently so the "场地已确定" toast and
     // the 地点 row can flip without forcing the user to re-enter the page.
-    // Stops as soon as a venue lands (or the page backgrounds — React Query
-    // pauses interval refetches when the window is unfocused).
+    // Stops as soon as a venue lands, and pauses when the page is hidden —
+    // WeChat has no document.hidden, so React Query's default window-focus
+    // pause is not enough (matching-status uses the same visibility hook).
     refetchInterval: (query) =>
-      query.state.data?.group?.venueAssignmentStatus === 'unassigned' ? 30_000 : false,
+      isPageVisible && query.state.data?.group?.venueAssignmentStatus === 'unassigned'
+        ? 30_000
+        : false,
   })
 
   const {
@@ -623,6 +637,95 @@ export function useSquadUnboxingController({ groupId, routerParams }: UseSquadUn
   const notifyUnfoldSettled = useCallback(() => {
     setDeckPhase((phase) => (phase === 'unfolding' ? 'fan' : phase))
   }, [])
+
+  // ── Auto-pocket handoff (2026-08-19, UX Strategy A) ───────────────────────
+  // Once EVERY card is face-up in an interactive session the fan has done its
+  // job, but the locked fan-phase column clips the 桌型诊断 chips and the
+  // transition line (~830-900rpx of content vs a ~563rpx budget). The deck
+  // therefore folds itself into the top pill after the settle breath +
+  // AUTO_POCKET_DELAY_MS, through the EXACT manual-collapse path
+  // (collapseDeckRef → same cascade, heartbeat glow, spacer collapse, SR
+  // announcement, RM crossfade tier, persisted flag). Arms ONLY on the live
+  // all-cards-up transition; any card focus during the hold cancels the fold
+  // permanently (掌控感 — the user took control).
+  const deckPhaseRef = useRef<DeckPhase>(deckPhase)
+  useEffect(() => {
+    deckPhaseRef.current = deckPhase
+  }, [deckPhase])
+  const focusedIndexRef = useRef(focusedIndex)
+  useEffect(() => {
+    focusedIndexRef.current = focusedIndex
+  }, [focusedIndex])
+
+  const autoPocketRef = useRef<SquadAutoPocketSession | null>(null)
+  const autoPocketGroupRef = useRef<string | null>(null)
+  // Same creation discipline as the flip session (B6): the ref guard keeps
+  // creation safe across memo-cache discards; a stale table's session can
+  // never survive a groupId swap.
+  useMemo(() => {
+    if (autoPocketRef.current === null || autoPocketGroupRef.current !== groupId) {
+      autoPocketRef.current?.destroy()
+      autoPocketRef.current = createSquadAutoPocketSession({
+        setTimer: (cb, ms) => setTimeout(cb, ms),
+        clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+        canFire: () =>
+          deckPhaseRef.current === 'fan' &&
+          focusedIndexRef.current < 0 &&
+          !flipSessionRef.current!.isFlipInFlight(),
+        onFire: () => {
+          squadUnboxingAnalytics.track('squad_unboxing_auto_pocket', {
+            groupId,
+            screen: 'squad-unboxing',
+          })
+          collapseDeckRef.current()
+        },
+      })
+      autoPocketGroupRef.current = groupId
+    }
+  }, [groupId])
+  useEffect(() => () => autoPocketRef.current?.destroy(), [])
+
+  // Arm detector: the LIVE 1+ → 0 unflipped transition only — a revisit
+  // (all-up arrival) or an already-pocketed deck never arms, and the
+  // once-per-session state machine inside means it can never fire twice.
+  const prevAutoPocketUnflippedRef = useRef(unflippedCount)
+  useEffect(() => {
+    const prev = prevAutoPocketUnflippedRef.current
+    prevAutoPocketUnflippedRef.current = unflippedCount
+    if (prev <= 0 || unflippedCount !== 0) return
+    autoPocketRef.current?.arm({
+      interactive: isInteractiveSession,
+      deckPhase,
+      focusedIndex,
+      visibleCount: visibleIds.length,
+      pocketDeckEnabled,
+      motionInstant,
+      storyMode,
+      lastFlipCount: prev,
+    })
+  }, [
+    unflippedCount,
+    isInteractiveSession,
+    deckPhase,
+    focusedIndex,
+    visibleIds.length,
+    pocketDeckEnabled,
+    motionInstant,
+    storyMode,
+  ])
+
+  // Cancel-permanent: any card focus during the hold = user took control.
+  useEffect(() => {
+    if (focusedIndex >= 0) autoPocketRef.current?.cancelPermanently()
+  }, [focusedIndex])
+
+  // Swipe-back reset: a backgrounded page must never fire a stale fold.
+  const prevAutoPocketResetRef = useRef(resetSignal)
+  useEffect(() => {
+    if (prevAutoPocketResetRef.current === resetSignal) return
+    prevAutoPocketResetRef.current = resetSignal
+    autoPocketRef.current?.cancelPermanently()
+  }, [resetSignal])
 
   // Hint auto-dismiss: the bubble lingers 3.6s once the deck is pocketed.
   useEffect(() => {

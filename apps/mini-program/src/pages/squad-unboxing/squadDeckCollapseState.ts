@@ -59,6 +59,19 @@ export const UNFOLD_RELEASE_MS = 80
  */
 export const HEARTBEAT_STAGGER_MS = 100
 
+/**
+ * Auto-pocket handoff (2026-08-19): after ALL cards flip face-up in an
+ * interactive session, the deck folds itself into the pill so the revealed
+ * column regains the viewport (the locked fan column clipped the 桌型诊断
+ * chips + the transition line). This is the quiet beat held AFTER the settle
+ * breath finishes (SETTLE_BREATH_TOTAL_MS in squadDealTiming) before the
+ * fold fires — long enough to read the last card, short enough that the
+ * handoff still feels like one gesture. On reduced-motion / degradation
+ * tiers (no breath) this is the whole pre-fold wait. The scheduler itself
+ * lives in squadAutoPocket.ts; the fold runs the exact manual-collapse path.
+ */
+export const AUTO_POCKET_DELAY_MS = 500
+
 // ── Storage keys (builders are pure; Taro I/O stays in the controller) ──────
 /** Collapsed-phase flag — mirrors the `jj_revealed_${groupId}` pattern. */
 export function getDeckCollapseKey(groupId: string): string {

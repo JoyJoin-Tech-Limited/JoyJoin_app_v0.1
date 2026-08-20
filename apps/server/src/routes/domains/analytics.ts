@@ -262,6 +262,7 @@ const SQUAD_UNBOXING_EVENT_TYPES = [
   "squad_unboxing_all_revealed",
   "squad_unboxing_deck_collapse",
   "squad_unboxing_deck_reopen",
+  "squad_unboxing_auto_pocket",
   "squad_unboxing_table_card_tap",
   "squad_unboxing_table_card_saved",
   "squad_unboxing_table_card_save_failed",

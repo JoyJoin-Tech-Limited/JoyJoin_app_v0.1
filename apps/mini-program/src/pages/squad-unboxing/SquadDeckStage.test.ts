@@ -231,6 +231,8 @@ describe('SquadDeckStage structure (tap-to-reveal fan)', () => {
 // leftover selector-query scroll math or collapse flag.
 describe('SquadUnboxingPage fan orchestration', () => {
   const source = readFileSync(resolve(here, 'index.tsx'), 'utf8')
+  const bubbleSource = readFileSync(resolve(here, 'SquadUnboxingAnalysisBubble.tsx'), 'utf8')
+  const panelSource = readFileSync(resolve(here, 'SquadUnboxingTonightsPanel.tsx'), 'utf8')
 
   it('has no selector-query scroll placement or flat-row collapse state', () => {
     expect(source).not.toContain('createSelectorQuery')
@@ -249,8 +251,13 @@ describe('SquadUnboxingPage fan orchestration', () => {
   it('renders the reveal story without the removed connection-analysis chapter', () => {
     expect(source).not.toContain('连接解读')
     expect(source).not.toContain('squad-unboxing__chapter--analysis')
-    expect(source.indexOf("'squad-unboxing__chapter--meta'"))
-      .toBeLessThan(source.indexOf("className='squad-unboxing__analysis-bubble'"))
+    // The meta chapter now lives in SquadUnboxingTonightsPanel and the bubble
+    // in SquadUnboxingAnalysisBubble; ordering matches the pre-extraction
+    // design (bubble first, tonights panel below it in the revealed JSX).
+    expect(source.indexOf('<SquadUnboxingAnalysisBubble'))
+      .toBeLessThan(source.indexOf('<SquadUnboxingTonightsPanel'))
+    expect(panelSource).toContain("'squad-unboxing__chapter--meta'")
+    expect(bubbleSource).toContain("className='squad-unboxing__analysis-bubble'")
   })
 
   it('keeps focused member copy in the Xiaoyue dock without a blank inline panel', () => {
@@ -495,12 +502,8 @@ describe('SCSS focus-lift collision guards (2026-07-28 overlap incident)', () =>
   it('ships the previously zero-CSS deck chip/badge/sheen styles', () => {
     // All caught by the fixed class-coverage extractor (comment-apostrophe
     // desync) — they rendered unstyled on device until now.
-    const tempChipBlock = scss.split('&__deck-card-temp-chip {')[1]?.split(/^  }/m)[0] ?? ''
-    expect(tempChipBlock).not.toBe('')
-    expect(tempChipBlock).toContain('&--fire')
-    expect(tempChipBlock).toContain('&--mild')
-    expect(tempChipBlock).toContain('&--cold')
-    expect(scss).toContain('&__deck-card-temp-chip-text {')
+    // 2026-08-19: the temp-chip assertions were removed with the chip itself
+    // (front face is back to a strict 4-row grid — see TeammateCard.test.ts).
     expect(scss).toContain('&__deck-card-role-badge {')
     // Gold sheen is a nested modifier under the sheen base rule.
     const sheenBlock = scss.split('&__deck-card-sheen {')[1]?.split(/^  }/m)[0] ?? ''
@@ -522,7 +525,7 @@ describe('SCSS focus-lift collision guards (2026-07-28 overlap incident)', () =>
 // it must clip, and the typewriters must clamp.
 describe('BUG B — narration bubble never spills over the 桌卡 strip (2026-07-28)', () => {
   const scss = readFileSync(resolve(here, 'index.scss'), 'utf8')
-  const tsx = readFileSync(resolve(here, 'index.tsx'), 'utf8')
+  const tsx = readFileSync(resolve(here, 'SquadUnboxingAnalysisBubble.tsx'), 'utf8')
 
   it('clips the analysis bubble instead of letting it overflow its flex slot', () => {
     const bubbleBlock = scss.split('&__analysis-bubble {')[1]?.split('}')[0] ?? ''
@@ -531,10 +534,13 @@ describe('BUG B — narration bubble never spills over the 桌卡 strip (2026-07
     expect(bubbleBlock).toContain('overflow: hidden')
   })
 
-  it('clamps both narration typewriters (verdict ≤3 lines, prose ≤4 lines)', () => {
+  it('clamps both narration typewriters (verdict ≤3 lines, prose ≤3 lines)', () => {
     const verdictBlock = tsx.split("className='squad-unboxing__narrative-verdict'")[1]?.split('/>')[0] ?? ''
     expect(verdictBlock).toContain('numberOfLines={3}')
+    // 2026-08-19: the prose clamp tightened 4 → 3 — the fan-phase column only
+    // carries the bubble + event panel (~563rpx); the transition line + 桌卡
+    // now debut post-fold via the auto-pocket handoff.
     const proseBlock = tsx.split("className='squad-unboxing__analysis-bubble-text'")[1]?.split('/>')[0] ?? ''
-    expect(proseBlock).toContain('numberOfLines={4}')
+    expect(proseBlock).toContain('numberOfLines={3}')
   })
 })

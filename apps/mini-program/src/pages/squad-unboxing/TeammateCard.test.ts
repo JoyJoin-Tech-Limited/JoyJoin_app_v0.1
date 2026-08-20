@@ -69,8 +69,8 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
     expect(source).toContain('squad-unboxing__deck-card-info')
     // Round-3 restructure (2026-07-13): the art zone is pure art + 我 badge /
     // +N overflow chip / 最佳拍档 stamp only. The info zone is a strict 4-row
-    // grid: name, accent archetype, grey meta line (age·gender · industry),
-    // one pill. The nameplate strip and art-zone meta chip are gone.
+    // grid: name, accent archetype, grey meta line (age·gender), one pill.
+    // The nameplate strip and art-zone meta chip are gone.
     expect(source).toContain('squad-unboxing__deck-card-badges')
     expect(source).toContain('squad-unboxing__deck-card-meta-chip')
     expect(source).toContain('squad-unboxing__deck-card-name')
@@ -85,7 +85,7 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
     expect(source).not.toContain('squad-unboxing__deck-card-industry')
   })
 
-  it('keeps the hook pill from shrinking into the age row on real-device font metrics', () => {
+it('keeps the hook pill from shrinking into the age row on real-device font metrics', () => {
     const infoBlock = styles
       .split('&__deck-card-info {')
       .slice(1)
@@ -101,6 +101,18 @@ describe('TeammateCard fan template + deal geometry (Cascading Hand Fan)', () =>
     expect(archetypeBlock).toContain('flex-shrink: 0')
     expect(metaBlock).toContain('flex-shrink: 0')
     expect(pillsBlock).toContain('flex-shrink: 0')
+  })
+
+  it('keeps the pair-temperature chip OFF the front face (2026-08-19 PM) but the tier tint on the back', () => {
+    // The 5th row (temp chip + hook pill) overflowed the ~127rpx info zone and
+    // clipped the pill on every card. The chemistry signal now lives on the
+    // card-BACK edge tint, the focused narration verdict, and the 桌卡/poster.
+    expect(source).not.toContain('temp-chip')
+    expect(source).not.toContain('temperatureWord')
+    // Back-face tier classes stay (variable-reward backs) — only the gold
+    // 最佳拍档 stamp outranks the tier tint.
+    expect(source).toContain('getPairChemistryTier')
+    expect(source).toContain('`squad-unboxing__deck-card-face--back-${temperatureTier}`')
   })
 
   it('prefers member avatars and falls back to archetype art after an avatar error', () => {

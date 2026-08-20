@@ -200,12 +200,13 @@ export function buildFocusedMemberBubbleText(
     education ? `${education}学历` : '',
     interests.length > 0 ? `喜欢${interests.join('、')}` : '',
     hometown ? `来自${hometown}` : '',
-    archetype ? `带着${archetype}的社交气质` : '',
+    archetype ? `带着${archetype}的气质` : '',
   ].filter(Boolean)
   // BUG B (2026-07-28 overlap incident): when a pair explanation follows,
   // cap the intro at 2 beats — intro(3 beats) + explanation blew past the
-  // 4-line bubble clamp and spilled over the 桌卡 strip in the locked
-  // revealed column.
+  // bubble clamp and spilled over the 桌卡 strip in the locked revealed
+  // column. The clamp tightened 4 → 3 lines on 2026-08-19 (auto-pocket
+  // handoff), so the 2-beat cap matters even more.
   const reason = normalize(explanation)
   const hasReason = Boolean(reason) && !/还在.{0,8}(整理|寻找).{0,8}连接线索/.test(reason)
   const beatCap = hasReason ? 2 : 3

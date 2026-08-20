@@ -175,6 +175,17 @@ describe('squadUnboxingViewModels', () => {
     )
   })
 
+  it('buildFocusedMemberBubbleText renders the archetype beat without the banned 社交 wording (2026-08-19)', () => {
+    // WeChat review hard rule: 社交 never appears in visible copy — the
+    // archetype beat reads 「带着X的气质」, never 「带着X的社交气质」.
+    const text = buildFocusedMemberBubbleText('雪花', '你们都对雨天的城市有同一种偏爱。', [], null, {
+      userId: 'bot-4',
+      archetype: 'octopus',
+    })
+    expect(text).toContain('带着脑洞章鱼的气质')
+    expect(text).not.toContain('社交')
+  })
+
   it('buildFocusedMemberBubbleText caps the intro at 2 beats when a pair explanation follows (2026-07-28 bubble-spill)', () => {
     // With industry + education + interests + hometown all present, the 3-beat
     // intro plus the explanation blew past the 4-line bubble clamp and spilled

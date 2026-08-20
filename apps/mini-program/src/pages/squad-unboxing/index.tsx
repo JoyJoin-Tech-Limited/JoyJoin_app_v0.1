@@ -6,15 +6,10 @@ import { normalizeMatchingCopy } from '@shared/features/matching-status'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { usePageTTI } from '../../hooks/usePageTTI'
-import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
-import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import Button from '../../components/ui/Button'
-import AIGCLabel from '../../components/ai-content/AIGCLabel'
-import TypewriterText from '../../components/ui/TypewriterText'
-import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { haptics } from '../../lib/utils/haptics'
 import { squadUnboxingAnalytics } from '../../lib/analytics/squadUnboxingAnalytics'
 import { BlindBoxVisual } from './BlindBoxVisual'
@@ -24,6 +19,10 @@ import XiaoyueHostImage from './XiaoyueHostImage'
 import SquadDeckStage from './SquadDeckStage'
 import DeckCollapsePill from './DeckCollapsePill'
 import SquadTableCard from './SquadTableCard'
+import SquadUnboxingAnalysisBubble from './SquadUnboxingAnalysisBubble'
+import SquadUnboxingPocketHint from './SquadUnboxingPocketHint'
+import SquadUnboxingSuccessOverlay from './SquadUnboxingSuccessOverlay'
+import SquadUnboxingTonightsPanel from './SquadUnboxingTonightsPanel'
 import {
   drawSquadTableCardPoster,
   SQUAD_TABLE_CARD_CANVAS_ID,
@@ -32,7 +31,6 @@ import {
 } from './squadTableCardPoster'
 import {
   SQUAD_DECK_POCKETED_ANNOUNCEMENT,
-  SQUAD_DECK_POCKETED_HINT_TEXT,
   buildDeckPillStripModel,
   buildEventBriefDate,
   buildFocusedMemberBubbleText,
@@ -43,11 +41,8 @@ import {
   buildTableDiagnosis,
   getChemistryWord,
   getDeckPillChemistryClass,
-  getEventTypeLabel,
-  getEventTypePillTone,
   getMemberName,
   getSelfSquadRoleLabel,
-  getVibeLabel,
   resolveCardFocusInteraction,
   SQUAD_BURST_COMPLETION_BUBBLE_TEXT,
   SQUAD_SELF_CARD_BUBBLE_TEXT,
@@ -55,33 +50,32 @@ import {
   SQUAD_TEASE_POCKETED_BUBBLE_TEXT,
 } from './squadUnboxingViewModels'
 import { scheduleFlipSettleNarration, FLIP_NARRATION_DELAY_MS, FLIP_IN_FLIGHT_GUARD_MS } from './squadFlipState'
-import { getOracleCardCornerAsset } from '../../components/discover/oracleCardAssets'
+import { SETTLE_BREATH_DELAY_MS, SETTLE_BREATH_DURATION_MS } from './squadDealTiming'
 import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import { resolveArchetype } from '@shared/personality/archetypeNames'
 import { preloadImagesWithDiagnostics } from '../../lib/utils/imagePreload'
+import {
+  ART_FLIP_HOLD_TIMEOUT_MS,
+  BEST_PARTNER_HEARTBEAT_GAP_MS,
+  HELD_FLIP_MAX_RETRIES,
+  getPageTitle,
+} from './squadUnboxingConstants'
 
 import { useSquadUnboxingController } from './useSquadUnboxingController'
 import './index.scss'
-
-function getPageTitle(eventType?: string | null): string {
-  if (eventType === 'bar') return '你的酒局桌友来了'
-  if (eventType === 'dining') return '你的饭局桌友来了'
-  return '你的桌友来了'
-}
-
-/** Flip hold-to-onLoad (2026-07-24 P1): max wait for the front art before
- *  flipping anyway — a card never flips into a skeleton on slow networks. */
-const ART_FLIP_HOLD_TIMEOUT_MS = 1200
-/** Bounded re-arms for a held flip that keeps landing inside the in-flight
- *  guard window (review CONCERN-1). */
-const HELD_FLIP_MAX_RETRIES = 3
-/** 最佳拍档 heartbeat haptics: the light pulse follows the medium beat. */
-const BEST_PARTNER_HEARTBEAT_GAP_MS = 90
 
 export default function SquadUnboxingPage() {
   const router = useRouter()
   const groupId = router.params.groupId ?? ''
   const { isExiting, navigateBack } = useJoyJoinNavigation()
+
+  // Declared BEFORE the controller (2026-08-19): the auto-pocket handoff
+  // reads the focused card index and the swipe-back reset signal as hook
+  // args — a focused card blocks/cancels the auto-fold, a reset bump drops it.
+  const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
+  // Bump on swipe-back re-entry to reset transient deal/focus state in
+  // the deck stage. First mount is excluded so the initial deal can animate.
+  const [resetSignal, setResetSignal] = useState(0)
 
   const {
     authLoading,
@@ -125,7 +119,7 @@ export default function SquadUnboxingPage() {
     handleOpenBox,
     handleConfirmAttendance,
     refetch,
-  } = useSquadUnboxingController({ groupId, routerParams: router.params })
+  } = useSquadUnboxingController({ groupId, routerParams: router.params, focusedIndex: focusedCardIndex, resetSignal })
 
   const { isDegradation } = useDeviceTier()
   // B5: TTI instrumentation — ready once the auth gate and group fetch settle.
@@ -141,14 +135,9 @@ export default function SquadUnboxingPage() {
   // drops its own handlers to avoid double-firing.
   const isStageTap = composedHeroEnabled && flowState === 'ready'
 
-  const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
   const [animateFocusedNarration, setAnimateFocusedNarration] = useState(false)
   const [announcement, setAnnouncement] = useState('')
   const [headerReady, setHeaderReady] = useState(false)
-  const [briefVignetteFailed, setBriefVignetteFailed] = useState(false)
-  // Bump on swipe-back re-entry to reset transient deal/focus state in
-  // the deck stage. First mount is excluded so the initial deal can animate.
-  const [resetSignal, setResetSignal] = useState(0)
   const hasShownRef = useRef(false)
   // Mirror of focusedCardIndex so handleCardTap can compute the next focus
   // synchronously without running side effects inside a state updater.
@@ -582,7 +571,9 @@ export default function SquadUnboxingPage() {
   // Peak-end settle breath (2026-07-24): the moment the LAST card lands, the
   // whole stage exhales once (1.0→1.015→1.0) with a success haptic — the
   // session's final 400ms decides what the user remembers. Motion tiers
-  // only; never on re-entry (isInteractiveSession false).
+  // only; never on re-entry (isInteractiveSession false). Timing lives in
+  // squadDealTiming (2026-08-19): the auto-pocket hold waits for the breath
+  // to finish (SETTLE_BREATH_TOTAL_MS) before folding — one source of truth.
   const [settleBreath, setSettleBreath] = useState(false)
   const prevUnflippedRef = useRef(unflippedCount)
   const breathTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -600,8 +591,8 @@ export default function SquadUnboxingPage() {
     breathTimersRef.current.push(setTimeout(() => {
       haptics('success')
       setSettleBreath(true)
-      breathTimersRef.current.push(setTimeout(() => setSettleBreath(false), 480))
-    }, 420))
+      breathTimersRef.current.push(setTimeout(() => setSettleBreath(false), SETTLE_BREATH_DURATION_MS))
+    }, SETTLE_BREATH_DELAY_MS))
     return undefined
   }, [unflippedCount, isInteractiveSession, shouldReduceMotion, isDegradation])
 
@@ -685,7 +676,6 @@ export default function SquadUnboxingPage() {
 
   // Event-brief card: structured date block + shared OracleCard corner vignette.
   const briefDate = buildEventBriefDate(group?.finalDateTime ?? pool?.dateTime)
-  const briefVignetteSrc = getOracleCardCornerAsset(pool?.eventType ?? undefined)
   // 桌卡 derivatives (2026-07-24 P2): date line reuses the brief breakdown;
   // place line mirrors the 地点 row.
   const tableCardDateLine = briefDate
@@ -832,130 +822,6 @@ export default function SquadUnboxingPage() {
 
   // Always expanded (2026-07-17) — the collapse toggle/link was removed; the
   // chapter renders directly in the scroll flow below the bubble.
-  const tonightsPanel = (
-    <View
-      className={[
-        'squad-unboxing__tonights-panel',
-        // Post-review fix: --open follows dealSettled (people first,
-        // logistics second) — the chapter never renders during the deal.
-        dealSettled ? 'squad-unboxing__tonights-panel--open' : '',
-      ].filter(Boolean).join(' ')}
-      role='region'
-      aria-label='今晚这桌详情'
-    >
-      <View className={[
-        'squad-unboxing__chapter',
-        'squad-unboxing__chapter--meta',
-        // Chemistry-tint foil top border (2026-07-24 P2): the event card
-        // inherits the table's chemistry colour so "人" flows into "事".
-        `squad-unboxing__chapter--chem-${groupAnalysis?.overallChemistry ?? 'fallback'}`,
-        allCardsUp ? 'squad-unboxing__chapter--late' : '',
-        headerReady && dealSettled ? 'squad-unboxing__chapter--ready' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}>
-        {/* Event-brief header: date-led. Big day numeral + month/weekday·time
-            on the left; event-type pill + the shared OracleCard corner
-            vignette (dining/drinks) on the right. Collapses gracefully —
-            with no dateTime the date block drops and the pill stays. */}
-        <View className='squad-unboxing__brief-header'>
-          <View className='squad-unboxing__brief-header-main'>
-            <Text className='squad-unboxing__chapter-title'>今晚这桌</Text>
-            {briefDate ? (
-              <View className='squad-unboxing__brief-date'>
-                <Text className='squad-unboxing__brief-date-day'>{briefDate.day}</Text>
-                <View className='squad-unboxing__brief-date-side'>
-                  <Text className='squad-unboxing__brief-date-month'>{briefDate.month}</Text>
-                  <Text className='squad-unboxing__brief-date-weekday'>
-                    {briefDate.weekday} · {briefDate.time}
-                  </Text>
-                </View>
-              </View>
-            ) : null}
-          </View>
-          <View className='squad-unboxing__brief-header-aside'>
-            <View
-              className={`squad-unboxing__brief-type-pill squad-unboxing__brief-type-pill--${getEventTypePillTone(pool.eventType)}`}
-            >
-              <Text className='squad-unboxing__brief-type-pill-text'>{getEventTypeLabel(pool.eventType)}</Text>
-            </View>
-            {briefVignetteSrc && !briefVignetteFailed ? (
-              <Image
-                className='squad-unboxing__brief-vignette'
-                src={briefVignetteSrc}
-                mode='aspectFit'
-                lazyLoad
-                aria-hidden='true'
-                onError={() => setBriefVignetteFailed(true)}
-              />
-            ) : null}
-          </View>
-        </View>
-
-        <View className='squad-unboxing__meta-row'>
-          <View className='squad-unboxing__meta-label'>
-            <JoyJoinIcon emoji='📍' size={24} className='squad-unboxing__meta-icon' />
-            <Text>地点</Text>
-          </View>
-          <View className='squad-unboxing__meta-value-wrap'>
-            <View className='squad-unboxing__meta-value-line'>
-              <Text className='squad-unboxing__meta-value'>
-                {group.venueName || [pool.city, pool.district].filter(Boolean).join(' · ') || '地点待定'}
-              </Text>
-              {group.venueName ? (
-                <View
-                  className='squad-unboxing__copy-chip'
-                  hoverClass='squad-unboxing__copy-chip--pressed'
-                  role='button'
-                  aria-label='复制地址'
-                  onClick={handleCopyVenue}
-                >
-                  <Text className='squad-unboxing__copy-chip-text'>复制</Text>
-                </View>
-              ) : null}
-            </View>
-            <Text className={`squad-unboxing__meta-status ${group.venueName ? 'squad-unboxing__meta-status--assigned' : 'squad-unboxing__meta-status--pending'}`}>
-              {group.venueName ? '场地已确定' : '场地待定，悦仔会在确认后提醒你'}
-            </Text>
-            {group.venueAddress ? (
-              <Text className='squad-unboxing__meta-sub'>{group.venueAddress}</Text>
-            ) : null}
-          </View>
-        </View>
-
-        {group.theme || group.themeEmoji || group.vibe ? (
-          <View className='squad-unboxing__meta-row squad-unboxing__meta-row--theme'>
-            <View className='squad-unboxing__meta-label'>
-              {group.themeEmoji ? (
-                <JoyJoinIcon emoji={group.themeEmoji} size={24} className='squad-unboxing__meta-icon' />
-              ) : (
-                <JoyJoinIcon emoji='✨' size={24} className='squad-unboxing__meta-icon' />
-              )}
-              <Text>主题</Text>
-            </View>
-            <View className='squad-unboxing__meta-value-wrap'>
-              <Text className='squad-unboxing__meta-value'>
-                {group.theme || '今晚的主题'}
-                {group.vibe ? ` · ${getVibeLabel(group.vibe)}` : ''}
-              </Text>
-              {group.subtitle ? (
-                <Text className='squad-unboxing__meta-sub'>{group.subtitle}</Text>
-              ) : null}
-              {groupThemeHighlights.length > 0 ? (
-                <View className='squad-unboxing__meta-highlights'>
-                  {groupThemeHighlights.map((highlight) => (
-                    <View key={highlight} className='squad-unboxing__meta-highlight'>
-                      <Text className='squad-unboxing__meta-highlight-text'>{highlight}</Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-            </View>
-          </View>
-        ) : null}
-      </View>
-    </View>
-  );
 
   // Batch A (2026-07-24): mascot avatar + the puzzle copy card removed —
   // the gift box is the sole focal point; one tease line in present tense
@@ -1059,139 +925,39 @@ export default function SquadUnboxingPage() {
 
         {flowState === 'revealed' ? (
           <>
-            <View
-              className='squad-unboxing__analysis-bubble'
-              role='status'
-              aria-live='polite'
-              aria-atomic='true'
-            >
-              <View
-                className={[
-                  'squad-unboxing__analysis-bubble-inner',
-                  // Post-review fix: the bubble holds its entrance until the
-                  // deal settles — no empty white slab during the handoff.
-                  headerReady && dealSettled ? 'squad-unboxing__analysis-bubble-inner--ready' : '',
-                ].filter(Boolean).join(' ')}
-              >
-                <Image
-                  className={['squad-unboxing__analysis-bubble-mascot', headerReady && dealSettled ? 'squad-unboxing__analysis-bubble-mascot--ready' : ''].filter(Boolean).join(' ')}
-                  mode='aspectFit'
-                  src={getXiaoyueExpressionAsset('matchSuccess')}
-                  aria-hidden='true'
-                />
-                {/* key remounts the typewriters when the deal settles so the
-                    first keystroke lands with the bubble's entrance, never
-                    mid-type while hidden. */}
-                <View className='squad-unboxing__analysis-bubble-bubble' key={dealSettled ? 'settled' : 'pending'}>
-                  {focusedNarrativeModel ? (
-                    <>
-                      <View aria-hidden='true'>
-                        <TypewriterText
-                          className='squad-unboxing__narrative-verdict'
-                          text={focusedNarrativeModel.verdict}
-                          speed={45}
-                          delay={180}
-                          enabled={!shouldReduceMotion && !isDegradation && animateFocusedNarration}
-                          showCursor={false}
-                          numberOfLines={3}
-                          onComplete={() => {
-                            setVerdictComplete(true)
-                            squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
-                              groupId,
-                              screen: 'squad-unboxing',
-                            })
-                          }}
-                        />
-                        {showNarrativeDetails && focusedNarrativeModel.evidence.length > 0 ? (
-                          <View className='squad-unboxing__narrative-evidence'>
-                            {focusedNarrativeModel.evidence.map((point) => (
-                              <ConnectionPointPill key={point} text={point} rarity='common' />
-                            ))}
-                          </View>
-                        ) : null}
-                        {showNarrativeDetails && focusedNarrativeModel.opener ? (
-                          <Text className='squad-unboxing__narrative-opener'>
-                            {`「${focusedNarrativeModel.opener}」`}
-                          </Text>
-                        ) : null}
-                      </View>
-                      <Text className='squad-unboxing__sr-only'>
-                        {[
-                          focusedNarrativeModel.verdict,
-                          ...focusedNarrativeModel.evidence,
-                          focusedNarrativeModel.opener,
-                        ].filter(Boolean).join('。')}
-                      </Text>
-                    </>
-                  ) : (
-                    <>
-                      <View aria-hidden='true'>
-                        <TypewriterText
-                          className='squad-unboxing__analysis-bubble-text'
-                          text={bubbleText}
-                          speed={45}
-                          delay={180}
-                          maxDuration={bubbleNarration?.kind === 'member' ? undefined : 3000}
-                          enabled={!shouldReduceMotion && !isDegradation && (bubbleNarration?.kind !== 'member' || animateFocusedNarration)}
-                          showCursor={false}
-                          // BUG B (2026-07-28): clamp the narration so a long
-                          // member intro can never spill over the 桌卡 strip
-                          // in the locked revealed column.
-                          numberOfLines={4}
-                          onComplete={() => {
-                            squadUnboxingAnalytics.track('squad_unboxing_bubble_reveal_complete', {
-                              groupId,
-                              screen: 'squad-unboxing',
-                            })
-                          }}
-                        />
-                      </View>
-                      <Text className='squad-unboxing__sr-only'>{bubbleText}</Text>
-                    </>
-                  )}
-                  <AIGCLabel
-                    meta={groupAnalysis?.meta?.aigc}
-                    className='squad-unboxing__analysis-bubble-aigc'
-                    reduceMotion={shouldReduceMotion}
-                  />
-                  {/* 桌型诊断 (2026-07-24 P0/P2): group-level role mix, shown
-                      only under the GROUP voice (tease/burst/soul) — hidden
-                      while the bubble narrates a single member. Lives inside
-                      the bubble footer to keep the vertical budget honest. */}
-                  {tableDiagnosis.length > 0 && bubbleNarration?.kind !== 'member' ? (
-                    <View
-                      className='squad-unboxing__diagnosis'
-                      aria-label={`这桌配置：${tableDiagnosis.map((segment) => `${segment.count}个${segment.label}`).join('，')}`}
-                    >
-                      <Text className='squad-unboxing__diagnosis-label'>这桌配置</Text>
-                      <View className='squad-unboxing__diagnosis-chips'>
-                        {tableDiagnosis.map((segment) => (
-                          <View
-                            key={segment.key}
-                            className={`squad-unboxing__diagnosis-chip squad-unboxing__diagnosis-chip--${segment.key}`}
-                          >
-                            <Text className='squad-unboxing__diagnosis-chip-text'>
-                              {`${segment.count}个${segment.label}`}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  ) : null}
-                </View>
-              </View>
-            </View>
+            <SquadUnboxingAnalysisBubble
+              groupId={groupId}
+              dealSettled={dealSettled}
+              headerReady={headerReady}
+              bubbleNarration={bubbleNarration}
+              animateFocusedNarration={animateFocusedNarration}
+              shouldReduceMotion={shouldReduceMotion}
+              isDegradation={isDegradation}
+              bubbleText={bubbleText}
+              focusedNarrativeModel={focusedNarrativeModel}
+              showNarrativeDetails={showNarrativeDetails}
+              tableDiagnosis={tableDiagnosis}
+              aigcMeta={groupAnalysis?.meta?.aigc}
+              onVerdictComplete={() => setVerdictComplete(true)}
+            />
             {/* 人→关系→场合 transition (2026-07-24 P2): once every card is
                 face-up, one quiet line hands the story from the people to
-                the occasion before the event card slides in. */}
-            {allCardsUp ? (
+                the occasion before the event card slides in. 2026-08-19
+                auto-pocket: the line debuts only once the deck has left the
+                fan phase (auto/manual fold, or a pocketed re-entry) — inside
+                the locked fan column it rendered half-cut. A revisit user
+                who manually re-fans hides it while fanned (the fan owns the
+                viewport; same fix applied to that state). */}
+            {allCardsUp && deckPhase !== 'fan' ? (
               <View className='squad-unboxing__table-transition' aria-hidden='true'>
                 <Text className='squad-unboxing__table-transition-text'>都认识了，就差一张桌子</Text>
               </View>
             ) : null}
             {/* 这桌的桌卡 (2026-07-24 P2): the collectible artifact + poster
-                save. Persists on re-entry — the return hook. */}
-            {allCardsUp && members.length > 0 ? (
+                save. Persists on re-entry — the return hook. Mount-gated with
+                the transition line (2026-08-19): it debuts in the relaxed
+                post-fold column, never clipped inside the fan phase. */}
+            {allCardsUp && deckPhase !== 'fan' && members.length > 0 ? (
               <SquadTableCard
                 members={members}
                 currentUserId={currentUserId}
@@ -1201,7 +967,16 @@ export default function SquadUnboxingPage() {
                 onSave={handleSaveTableCard}
               />
             ) : null}
-            {tonightsPanel}
+            <SquadUnboxingTonightsPanel
+              group={group}
+              pool={pool}
+              groupAnalysis={groupAnalysis}
+              groupThemeHighlights={groupThemeHighlights}
+              dealSettled={dealSettled}
+              allCardsUp={allCardsUp}
+              headerReady={headerReady}
+              onCopyVenue={handleCopyVenue}
+            />
           </>
         ) : null}
         </View>
@@ -1338,17 +1113,7 @@ export default function SquadUnboxingPage() {
       {/* One-time first-collapse Xiaoyue hint (AC-10): transient bubble
           anchored near the pill; auto-dismisses and never replays for this
           group (same storage flag as the `firstCollapse` property). */}
-      {showPocketHint && deckPhase === 'pocketed' ? (
-        <View className='squad-unboxing__pocket-hint' role='status'>
-          <Image
-            className='squad-unboxing__pocket-hint-mascot'
-            mode='aspectFit'
-            src={getXiaoyueExpressionAsset('homeWelcome')}
-            aria-hidden='true'
-          />
-          <Text className='squad-unboxing__pocket-hint-text'>{SQUAD_DECK_POCKETED_HINT_TEXT}</Text>
-        </View>
-      ) : null}
+      {showPocketHint && deckPhase === 'pocketed' ? <SquadUnboxingPocketHint /> : null}
 
       {flowState === 'revealed' && actionDockState === 'ready' ? (
         <View
@@ -1410,20 +1175,7 @@ export default function SquadUnboxingPage() {
         </View>
       ) : null}
 
-      {showSuccessOverlay ? (
-        <View className='squad-unboxing__success-overlay' role='status' aria-live='polite'>
-          <View className='squad-unboxing__success-card'>
-            <Image
-              className='squad-unboxing__success-mascot'
-              mode='aspectFit'
-              src={getXiaoyueExpressionAsset('actionSuccess')}
-              aria-hidden='true'
-            />
-            <Text className='squad-unboxing__success-title'>座位已锁定</Text>
-            <Text className='squad-unboxing__success-subtitle'>解锁新羁绊 · 准备见面吧</Text>
-          </View>
-        </View>
-      ) : null}
+      {showSuccessOverlay ? <SquadUnboxingSuccessOverlay /> : null}
 
       {/* Hidden poster canvas (2026-07-24 P2): mounted only when the 桌卡 is
           available so low-end devices never hold the ~13MB bitmap (perf

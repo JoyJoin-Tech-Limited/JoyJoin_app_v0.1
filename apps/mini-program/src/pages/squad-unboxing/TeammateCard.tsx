@@ -1,7 +1,7 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { ARCHETYPE_BY_ID, resolveArchetype } from '@shared/personality/archetypeNames'
-import { getArchetypeHSL, formatHSLAsRGBA, getContrastSafeArchetypeColor } from '@shared/archetypeColors'
+import { getArchetypeHSL, formatHSLAsRGBA, getDeepContrastArchetypeColor } from '@shared/archetypeColors'
 import type { PoolGroupMemberSummary } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
 import { normalizeMatchingCopy } from '@shared/features/matching-status'
@@ -9,7 +9,7 @@ import { ARCHETYPE_ASSET_MAP } from '../../lib/utils/archetypeAssets'
 import MissingArchetypePlaceholder from '../../components/mascot/MissingArchetypePlaceholder'
 import ConnectionPointPill from '../../components/ConnectionPointPill'
 import { haptics } from '../../lib/utils/haptics'
-import { buildFaceDownCardAriaLabel, buildInterestHookText, getPairChemistryTier, getPairChemistryWord, getSelfSquadRoleLabel, shortenConnectionPointForPill } from './squadUnboxingViewModels'
+import { buildFaceDownCardAriaLabel, buildInterestHookText, getPairChemistryTier, getSelfSquadRoleLabel, shortenConnectionPointForPill } from './squadUnboxingViewModels'
 
 export interface TeammateCardProps {
   member: PoolGroupMemberSummary
@@ -191,16 +191,12 @@ export default function TeammateCard({
     () => (connectionPoints.length > 0 ? '' : buildInterestHookText(member)),
     [connectionPoints, member],
   )
-  // Pair-temperature word (2026-07-24 P1): the viewer's chemistry with THIS
-  // tablemate as a chip prepended to the hook pill — every pair-backed card
-  // leads with "how 同频 we are". Absent when no viewer pair exists.
-  const temperatureWord = useMemo(
-    () => (viewerPair && typeof viewerPair.chemistryScore === 'number'
-      ? getPairChemistryWord(viewerPair.chemistryScore)
-      : ''),
-    [viewerPair],
-  )
-  // Tier-aware chip tint (2026-07-24 polish): cold reads never wear hot pink.
+  // Pair-temperature tier (2026-07-24 P1) — drives ONLY the card-BACK edge
+  // tint class (variable-reward backs, see the back-face class list below).
+  // The front-face temp chip was removed 2026-08-19 (PM decision): the 5th
+  // row overflowed the info zone and clipped the hook pill on every card;
+  // the chemistry signal already lives on the back edge tint, the focused
+  // narration verdict, and the 桌卡/poster. Cold reads never wear hot pink.
   const temperatureTier = useMemo(
     () => getPairChemistryTier(viewerPair?.chemistryScore),
     [viewerPair],
@@ -340,7 +336,7 @@ export default function TeammateCard({
   }, [archetypeId])
 
   const archetypeTextColor = useMemo(
-    () => getContrastSafeArchetypeColor(archetypeId),
+    () => getDeepContrastArchetypeColor(archetypeId),
     [archetypeId],
   )
 
@@ -557,7 +553,9 @@ export default function TeammateCard({
               viewer's strongest connection point when one exists, else the
               member's top interest (2026-07-16 fallback — every card has a
               hook); the full industry + connection list feeds the focused
-              narration bubble. */}
+              narration bubble. 2026-08-19: the pair-temperature chip row was
+              removed (PM) — the face is back to exactly 4 rows so the hook
+              pill never clips inside the 332rpx card. */}
           <View className='squad-unboxing__deck-card-info'>
             <Text className='squad-unboxing__deck-card-name' numberOfLines={1}>{name}</Text>
             {archetypeName ? (
@@ -574,23 +572,13 @@ export default function TeammateCard({
                 {metaLine}
               </Text>
             ) : null}
-            {connectionPoints.length > 0 || interestHook || temperatureWord ? (
+            {connectionPoints.length > 0 || interestHook ? (
               <View
                 className={[
                   'squad-unboxing__deck-card-pills',
                   connectionPoints.length === 0 && interestHook ? 'squad-unboxing__deck-card-pills--interest' : '',
                 ].filter(Boolean).join(' ')}
               >
-                {temperatureWord ? (
-                  <View
-                    className={[
-                      'squad-unboxing__deck-card-temp-chip',
-                      temperatureTier ? `squad-unboxing__deck-card-temp-chip--${temperatureTier}` : '',
-                    ].filter(Boolean).join(' ')}
-                  >
-                    <Text className='squad-unboxing__deck-card-temp-chip-text'>{temperatureWord}</Text>
-                  </View>
-                ) : null}
                 {connectionPoints.length > 0 ? (
                   connectionPoints.map((point) => (
                     <ConnectionPointPill key={point.text} text={point.text} rarity={point.rarity} />

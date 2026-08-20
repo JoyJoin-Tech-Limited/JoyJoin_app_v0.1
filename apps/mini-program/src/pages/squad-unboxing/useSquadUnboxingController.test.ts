@@ -161,3 +161,52 @@ describe('useSquadUnboxingController flip-state wiring (tap-to-reveal)', () => {
     expect(source).toContain('clearCollapseDeferTimer')
   })
 })
+
+// Auto-pocket handoff (2026-08-19, UX Strategy A): after the LIVE all-cards-up
+// transition in an interactive session, the deck folds itself into the pill
+// via the exact manual-collapse path so the revealed column regains the
+// viewport. The scheduler semantics are runtime-tested in
+// squadAutoPocket.test.ts; these assertions pin the controller wiring.
+describe('useSquadUnboxingController auto-pocket handoff (2026-08-19)', () => {
+  const source = readFileSync(hookPath, 'utf8')
+
+  it('creates one auto-pocket session per groupId with injectable timers', () => {
+    expect(source).toContain('createSquadAutoPocketSession')
+    expect(source).toContain("from './squadAutoPocket'")
+    expect(source).toContain('autoPocketGroupRef')
+    expect(source).toContain('autoPocketRef.current?.destroy()')
+  })
+
+  it('arms ONLY on the live 1+ → 0 unflipped transition (never on re-entry, never twice)', () => {
+    expect(source).toContain('prevAutoPocketUnflippedRef')
+    expect(source).toContain('if (prev <= 0 || unflippedCount !== 0) return')
+    expect(source).toContain('interactive: isInteractiveSession')
+    expect(source).toContain('storyMode')
+  })
+
+  it('invokes the EXACT manual-collapse path and tracks squad_unboxing_auto_pocket once', () => {
+    // The fold goes through collapseDeckRef so cascade / heartbeat glow /
+    // spacer collapse / SR announcement / persisted flag are all identical
+    // to a manual 收起卡组 collapse.
+    expect(source).toContain('collapseDeckRef.current()')
+    expect(source).toContain("squad_unboxing_auto_pocket")
+  })
+
+  it('re-probes fan phase, focus, and in-flight flips at fire time', () => {
+    expect(source).toContain("deckPhaseRef.current === 'fan'")
+    expect(source).toContain('focusedIndexRef.current < 0')
+    expect(source).toContain('!flipSessionRef.current!.isFlipInFlight()')
+  })
+
+  it('cancels permanently on card focus and on the swipe-back reset signal', () => {
+    expect(source).toContain('cancelPermanently()')
+    expect(source).toContain('if (focusedIndex >= 0) autoPocketRef.current?.cancelPermanently()')
+    expect(source).toContain('prevAutoPocketResetRef')
+  })
+
+  it('receives the page-owned focused index + reset signal as hook args', () => {
+    expect(source).toContain('focusedIndex: number')
+    expect(source).toContain('resetSignal: number')
+    expect(source).toContain('{ groupId, routerParams, focusedIndex, resetSignal }')
+  })
+})

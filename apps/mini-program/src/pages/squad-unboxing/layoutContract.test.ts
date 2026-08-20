@@ -33,7 +33,10 @@ describe('squad unboxing revealed layout contract', () => {
     const dockStart = pageSource.indexOf("'squad-unboxing__bottom-dock'")
     const confirmStart = pageSource.indexOf('squad-unboxing__confirm-btn', dockStart)
     const descriptionStart = pageSource.indexOf('squad-unboxing__return-thread', confirmStart)
-    const successOverlayStart = pageSource.indexOf('squad-unboxing__success-overlay', descriptionStart)
+    // The overlay moved into its own component (2026-08-19) — the page-level
+    // contract is that the component mounts after the dock, and the class
+    // string itself lives in SquadUnboxingSuccessOverlay.tsx.
+    const successOverlayStart = pageSource.indexOf('<SquadUnboxingSuccessOverlay', descriptionStart)
     expect(confirmStart).toBeGreaterThan(dockStart)
     expect(descriptionStart).toBeGreaterThan(confirmStart)
     expect(successOverlayStart).toBeGreaterThan(descriptionStart)
@@ -44,5 +47,38 @@ describe('squad unboxing revealed layout contract', () => {
     // 560 → 640rpx to absorb the taller scaled two-row fan).
     expect(pageStyles).toContain('transform: translateY(-16rpx) scale(0.85);')
     expect(pageStyles).not.toContain('transform: translateY(-88rpx) scale(0.85);')
+  })
+
+  it('keeps the 4-row card face inside the info-zone budget (2026-08-19 row-budget invariant)', () => {
+    // Pure arithmetic guard: the next "one more row" addition fails CI here
+    // instead of clipping on device. Anchors (update BOTH sides together):
+    // - card height 332rpx — $fan-card-sizes in index.scss, drift-locked to
+    //   computeFanLayout.ts in SquadDeckStage.test.ts (do not change).
+    // - art zone `flex: 0 0 46%` — index.scss `&__deck-card-art`.
+    // - info zone `flex: 1 1 auto` + `padding: 12rpx $spacing-sm` (12rpx × 2
+    //   vertical, 8rpx recovered per edge by the 2026-08-20 overlap fix) —
+    //   index.scss `&__deck-card-info`.
+    const artBlock = pageStyles.split('&__deck-card-art {')[1]?.split('}')[0] ?? ''
+    expect(artBlock).toContain('flex: 0 0 46%')
+    const infoBlock = pageStyles
+      .split('&__deck-card-info {')
+      .slice(1)
+      .map((tail) => tail.split('}')[0] ?? '')
+      .find((block) => block.includes('flex: 1 1 auto')) ?? ''
+    expect(infoBlock).toContain('padding: 12rpx $spacing-sm')
+
+    const CARD_HEIGHT_RPX = 332
+    const ART_SHARE = 0.46
+    const INFO_VERTICAL_PADDING_RPX = 12 * 2 // 12rpx top + bottom
+    const infoUsableRpx = CARD_HEIGHT_RPX * (1 - ART_SHARE) - INFO_VERTICAL_PADDING_RPX
+    expect(infoUsableRpx).toBeGreaterThanOrEqual(147)
+
+    // 4-row face: name ~34 + archetype ~31 + meta ~30 + hook pill ~30 + gaps ~10.
+    const FOUR_ROW_BUDGET_RPX = 34 + 31 + 30 + 30 + 10
+    expect(FOUR_ROW_BUDGET_RPX).toBeLessThanOrEqual(infoUsableRpx)
+    // …and a hypothetical 5th row (~30rpx, e.g. the removed temp chip) must
+    // NOT fit — that was the 2026-08-19 clipping bug.
+    const FIVE_ROW_BUDGET_RPX = FOUR_ROW_BUDGET_RPX + 30
+    expect(FIVE_ROW_BUDGET_RPX).toBeGreaterThan(infoUsableRpx)
   })
 })

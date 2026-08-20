@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const pageSource = readFileSync(new URL('./index.tsx', import.meta.url), 'utf8')
+const bubbleSource = readFileSync(new URL('./SquadUnboxingAnalysisBubble.tsx', import.meta.url), 'utf8')
+const panelSource = readFileSync(new URL('./SquadUnboxingTonightsPanel.tsx', import.meta.url), 'utf8')
 
 describe('squad-unboxing page composition', () => {
   it('delegates orchestration to useSquadUnboxingController', () => {
@@ -76,15 +78,25 @@ describe('squad-unboxing page composition', () => {
   it('holds the bubble + chapter entrance until the deal settles (post-review fix)', () => {
     // No empty white slab during the handoff; logistics never render before
     // people. The composed hero gets the taller box-exit geometry.
-    expect(pageSource).toContain("headerReady && dealSettled ? 'squad-unboxing__analysis-bubble-inner--ready' : ''")
-    expect(pageSource).toContain("headerReady && dealSettled ? 'squad-unboxing__chapter--ready' : ''")
-    expect(pageSource).toContain("key={dealSettled ? 'settled' : 'pending'}")
+    // Bubble + chapter extracted into sub-components; the gating logic lives there.
+    expect(bubbleSource).toContain("headerReady && dealSettled ? 'squad-unboxing__analysis-bubble-inner--ready' : ''")
+    expect(panelSource).toContain("headerReady && dealSettled ? 'squad-unboxing__chapter--ready' : ''")
+    expect(bubbleSource).toContain("key={dealSettled ? 'settled' : 'pending'}")
     expect(pageSource).toContain('squad-unboxing__box-exit--composed')
     expect(pageSource).toContain("if (flowState !== 'revealed' || !dealSettled) return")
   })
 
   it('gates the reveal-all chip until the deal settles (PM polish — no dead control mid-deal)', () => {
     expect(pageSource).toContain("isInteractiveSession && unflippedCount > 0 && deckPhase === 'fan' && dealSettled")
+  })
+
+  it('debuts the transition line + 桌卡 only after the deck leaves the fan phase (2026-08-19 auto-pocket)', () => {
+    // Inside the locked fan-phase column they rendered clipped (~830-900rpx
+    // of content vs a ~563rpx budget). They now mount once the deck folds
+    // (auto-pocket handoff or manual collapse) — a revisit starts pocketed
+    // so the gate passes there too.
+    expect(pageSource).toContain("allCardsUp && deckPhase !== 'fan' ? (")
+    expect(pageSource).toContain("allCardsUp && deckPhase !== 'fan' && members.length > 0 ? (")
   })
 
   it('routes focused member explanations into the Xiaoyue dock without mounting a blank detail frame', () => {
@@ -100,7 +112,7 @@ describe('squad-unboxing page composition', () => {
     // Member narration types fully (tap fast-forwards); burst/tease/soul are
     // capped at 3s. Gated on the bubble KIND, not focusedMember — a pending
     // flip keeps a focused card while the tease line shows.
-    expect(pageSource).toContain("maxDuration={bubbleNarration?.kind === 'member' ? undefined : 3000}")
+    expect(bubbleSource).toContain("maxDuration={bubbleNarration?.kind === 'member' ? undefined : 3000}")
     expect(pageSource).toContain("trackCardFocus(index, current, 'narration_fast_forward')")
   })
 
@@ -113,14 +125,14 @@ describe('squad-unboxing page composition', () => {
   })
 
   it('makes the bubble the voice of the reveal (status + aria-live + sr-only full text, AC-18)', () => {
-    expect(pageSource).toContain("role='status'")
-    expect(pageSource).toContain("aria-live='polite'")
-    expect(pageSource).toContain("aria-atomic='true'")
-    expect(pageSource).toContain("squad-unboxing__sr-only")
+    expect(bubbleSource).toContain("role='status'")
+    expect(bubbleSource).toContain("aria-live='polite'")
+    expect(bubbleSource).toContain("aria-atomic='true'")
+    expect(bubbleSource).toContain("squad-unboxing__sr-only")
     // The animated TypewriterText visual is aria-hidden so screen readers
     // announce the complete narration once, not per-character typing.
-    expect(pageSource).toContain("<View aria-hidden='true'>")
-    expect(pageSource).toContain('<Text className=\'squad-unboxing__sr-only\'>{bubbleText}</Text>')
+    expect(bubbleSource).toContain("<View aria-hidden='true'>")
+    expect(bubbleSource).toContain('<Text className=\'squad-unboxing__sr-only\'>{bubbleText}</Text>')
   })
 
   it('selects narration by session state: burst completion → self card → member → soul fallback', () => {

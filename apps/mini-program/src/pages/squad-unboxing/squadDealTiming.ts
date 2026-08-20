@@ -82,6 +82,20 @@ export const FLIP_NARRATION_DELAY_MS = 400
  */
 export const FLIP_IN_FLIGHT_GUARD_MS = 380
 
+/**
+ * Peak-end settle breath (2026-07-24): the moment the LAST card lands, the
+ * whole stage exhales once (1.0→1.015→1.0) with a success haptic. The breath
+ * starts this long after the final flip so the flip (340ms) fully settles
+ * first. Motion tiers only — reduced-motion / degradation never play it.
+ * Single source of truth for both the page breath effect and the auto-pocket
+ * hold (2026-08-19): the fold waits for the breath to finish, never cuts it.
+ */
+export const SETTLE_BREATH_DELAY_MS = 420
+/** Breath exhale duration (1.0→1.015→1.0). */
+export const SETTLE_BREATH_DURATION_MS = 480
+/** Wall-clock from the final flip until the breath fully exhales. */
+export const SETTLE_BREATH_TOTAL_MS = SETTLE_BREATH_DELAY_MS + SETTLE_BREATH_DURATION_MS
+
 /** Reveal-all burst: every remaining card flips within this wall-clock budget. */
 export const BURST_ACTIVE_BUDGET_MS = 600
 export const BURST_STAGGER_MAX_MS = 120

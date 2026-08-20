@@ -88,6 +88,7 @@ $fan-rotations: (
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 
     &--ready,
     &--shaking {
@@ -2036,9 +2037,9 @@ $fan-rotations: (
     padding: 0 $spacing-xs;
     box-sizing: border-box;
     border-radius: 999rpx;
-    background: $color-primary;
+    background: $color-primary-dark;
     @include flex-center;
-    box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.32);
+    box-shadow: 0 4rpx 12rpx rgba($color-primary-dark, 0.32);
 
     // Inside the front-face badge row it flows next to the meta chip instead
     // of being absolutely positioned.
@@ -2124,12 +2125,17 @@ $fan-rotations: (
     color: $color-amber-700;
   }
 
-  // Art zone (52% of the card) — archetype-tinted gradient (set inline) behind
+  // Art zone (46% of the card) — archetype-tinted gradient (set inline) behind
   // the full-body archetype image. Only the 我 badge / +N overflow chip /
   // 最佳拍档 stamp overlay it; no text strips (round-3 restructure).
+  // 2026-08-19: rebalanced 52% → 46% when the front-face temp chip was
+  // removed — the portrait is only 120rpx, so the reclaimed ~20rpx moves to
+  // the info zone where the strict 4-row grid (~135rpx) now breathes inside
+  // ~147rpx usable (332 × 0.54 − 2×16 padding). The badges/stamp/focus
+  // caption are absolutely positioned overlays, unaffected by the flex change.
   &__deck-card-art {
     position: relative;
-    flex: 0 0 52%;
+    flex: 0 0 46%;
     min-height: 0;
     width: 100%;
     overflow: hidden;
@@ -2196,11 +2202,12 @@ $fan-rotations: (
     animation: none;
   }
 
-  // Info zone (48% of the card) — strict 4-row grid: name, accent archetype,
-  // grey meta line (age·gender · industry), one rarity pill. Every row is a
-  // single ellipsis-safe line; on covered cards the right safe inset (from
-  // the anti-collision rule on &__deck-card) keeps text out of the covered
-  // band.
+  // Info zone (54% of the card after the 2026-08-19 rebalance) — strict
+  // 4-row grid: name, accent archetype, grey meta line (age·gender), one
+  // rarity pill. Every row is a single ellipsis-safe line; on covered cards
+  // the right safe inset (from the anti-collision rule on &__deck-card) keeps
+  // text out of the covered band. The 4-row budget (~135rpx) vs the usable
+  // height (~147rpx) is CI-locked in layoutContract.test.ts.
   &__deck-card-info {
     flex: 1 1 auto;
     min-height: 0;
@@ -2285,54 +2292,6 @@ $fan-rotations: (
     // not inconsistency.
     &--interest .connection-point-pill {
       background: transparent;
-    }
-  }
-
-  // Pair-temperature chip (2026-07-24 P1): the viewer↔member chemistry word
-  // rides above the hook pill in the pills stack. Tier tints follow the
-  // chemistry palette — fire/warm pink, mild purple, cold grey — at chip
-  // strength so the foil border stays the card's only loud surface.
-  &__deck-card-temp-chip {
-    display: inline-flex;
-    align-items: center;
-    align-self: flex-start;
-    max-width: 100%;
-    padding: 2rpx $spacing-xs;
-    border-radius: 999rpx;
-    box-sizing: border-box;
-
-    &--fire,
-    &--warm {
-      background: rgba($color-secondary, 0.16);
-    }
-
-    &--mild {
-      background: rgba($color-primary, 0.12);
-    }
-
-    &--cold {
-      background: rgba($color-text-secondary, 0.1);
-    }
-  }
-
-  &__deck-card-temp-chip-text {
-    display: block;
-    font-size: $font-size-2xs;
-    line-height: 1.3;
-    font-weight: $font-weight-semibold;
-    color: $color-text-primary;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    word-break: keep-all;
-
-    .squad-unboxing__deck-card-temp-chip--fire &,
-    .squad-unboxing__deck-card-temp-chip--warm & {
-      color: $chemistry-warm-text;
-    }
-
-    .squad-unboxing__deck-card-temp-chip--mild & {
-      color: $chemistry-mild-text;
     }
   }
 
@@ -2941,6 +2900,11 @@ $fan-rotations: (
     @include type-brand-cta-label;
     width: 100%;
     border: 0;
+    // Contrast fix (2026-08-20): the brand purple on white is ~4.2:1, just
+    // below WCAG AA for small text. The dark variant keeps the hue family
+    // identical while clearing the 4.5:1 threshold.
+    background: $color-primary-dark;
+    box-shadow: 0 8rpx 32rpx rgba($color-primary-dark, 0.35);
 
     &:not(:disabled):active {
       transform: scale(0.98);

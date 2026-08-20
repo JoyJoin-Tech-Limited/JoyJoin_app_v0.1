@@ -27,6 +27,7 @@ export type SquadUnboxingEventType =
   | 'squad_unboxing_analysis_retry_tap'
   | 'squad_unboxing_deck_collapse'
   | 'squad_unboxing_deck_reopen'
+  | 'squad_unboxing_auto_pocket'
   | 'squad_unboxing_table_card_tap'
   | 'squad_unboxing_table_card_saved'
   | 'squad_unboxing_table_card_save_failed'
@@ -47,6 +48,10 @@ export type SquadUnboxingEventType =
 // apps/server/src/__tests__/squadUnboxingAnalyticsRoutes.test.ts) as of
 // 2026-07-15. Events emitted before the whitelist follow-up landed were
 // dropped server-side (fail-open) and are not backfilled.
+//
+// NOTE: `squad_unboxing_auto_pocket` (2026-08-19 auto-pocket handoff) fires
+// once when the deck folds itself after the live all-cards-up transition; it
+// is whitelisted server-side in the same change.
 
 export interface SquadUnboxingAnalyticsEvent {
   eventType: SquadUnboxingEventType
