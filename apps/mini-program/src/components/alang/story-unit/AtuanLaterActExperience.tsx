@@ -16,6 +16,11 @@ import {
 } from '@shared/alang/atuanLaterActs'
 import { haptics } from '../../../lib/utils/haptics'
 import { deterministicGameOrder, getFailureAssistance } from '../../../lib/alang/flashGameDifficulty'
+import {
+  FLASH_STORY_EXPERIENCE_SKELETON_VERSION,
+  FLASH_STORY_SHARED_SETTLEMENT_KIND,
+  resolveAtuanLaterActSkeletonStep,
+} from './FlashStoryExperienceSkeleton'
 import './AtuanLaterActExperience.scss'
 
 interface AtuanLaterActSceneProps {
@@ -100,7 +105,14 @@ export function AtuanLaterActPrelude({ unitId, background, character, disabled =
   const definition = getAtuanLaterActDefinition(unitId)
   const approaches = definition.approaches as readonly { id: string; label: string }[]
   return (
-    <View className='atuan-later-experience' data-testid='atuan-later-prelude' data-unit-id={unitId}>
+    <View
+      className='atuan-later-experience'
+      data-testid='atuan-later-prelude'
+      data-unit-id={unitId}
+      data-experience-skeleton={FLASH_STORY_EXPERIENCE_SKELETON_VERSION}
+      data-experience-step='opening'
+      data-experience-settlement={FLASH_STORY_SHARED_SETTLEMENT_KIND}
+    >
       <AtuanLaterActScene unitId={unitId} background={background} character={character} speech={definition.opening} />
       <View className='atuan-later-experience__panel atuan-later-experience__panel--prelude' aria-label='选择你的现场动作'>
         <View className='atuan-later-experience__section'>
@@ -197,7 +209,20 @@ export function AtuanLaterActExperience({ unitId, background, character, progres
   ) : null
 
   return (
-    <View className={`atuan-later-experience${progress.gameStarted ? ' atuan-later-experience--game' : ''}`} data-testid='atuan-later-experience' data-unit-id={unitId}>
+    <View
+      className={`atuan-later-experience${progress.gameStarted ? ' atuan-later-experience--game' : ''}`}
+      data-testid='atuan-later-experience'
+      data-unit-id={unitId}
+      data-experience-skeleton={FLASH_STORY_EXPERIENCE_SKELETON_VERSION}
+      data-experience-step={resolveAtuanLaterActSkeletonStep({
+        arrivalReplyId: progress.arrivalReplyId,
+        highlightsComplete,
+        followupId: progress.followupId,
+        gameStarted: progress.gameStarted,
+        gameComplete,
+      })}
+      data-experience-settlement={FLASH_STORY_SHARED_SETTLEMENT_KIND}
+    >
       <AtuanLaterActScene unitId={unitId} background={background} character={character} speech={latestSpeech(progress)} progress={progress} disabled={disabled} onInspect={progress.arrivalReplyId ? inspect : undefined} />
       <View className='atuan-later-experience__panel'>
         <ScrollView className='atuan-later-experience__scroll' scrollY>

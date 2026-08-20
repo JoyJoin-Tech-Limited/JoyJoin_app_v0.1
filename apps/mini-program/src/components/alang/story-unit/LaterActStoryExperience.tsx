@@ -2,6 +2,11 @@ import { useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { haptics } from '../../../lib/utils/haptics'
 import { deterministicGameOrder, getFailureAssistance } from '../../../lib/alang/flashGameDifficulty'
+import {
+  FLASH_STORY_EXPERIENCE_SKELETON_VERSION,
+  FLASH_STORY_SHARED_SETTLEMENT_KIND,
+  resolveLaterActSkeletonStep,
+} from './FlashStoryExperienceSkeleton'
 import './LaterActStoryExperience.scss'
 
 export type LaterActExperienceStage = 'approach' | 'explore' | 'object' | 'followup' | 'game' | 'ending'
@@ -301,7 +306,14 @@ export function LaterActStoryExperience({
   }
 
   return (
-    <View className={`later-act-experience ${config.rootClassName} later-act-experience--${stage}`} data-testid='later-act-experience' data-unit-id={config.unitId}>
+    <View
+      className={`later-act-experience ${config.rootClassName} later-act-experience--${stage}`}
+      data-testid='later-act-experience'
+      data-unit-id={config.unitId}
+      data-experience-skeleton={FLASH_STORY_EXPERIENCE_SKELETON_VERSION}
+      data-experience-step={resolveLaterActSkeletonStep(stage)}
+      data-experience-settlement={FLASH_STORY_SHARED_SETTLEMENT_KIND}
+    >
       <View className={`later-act-scene${backgroundFailed ? ' later-act-scene--fallback' : ''}`} data-testid='later-act-scene'>
         {!backgroundFailed ? (
           <Image className='later-act-scene__background' src={background} mode='aspectFit' onError={() => setBackgroundFailed(true)} data-testid='later-act-background' aria-hidden='true' />

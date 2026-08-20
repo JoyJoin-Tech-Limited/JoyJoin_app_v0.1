@@ -9,6 +9,11 @@ import {
   type AtuanFirstActSubmission,
 } from '@shared/alang/atuanFirstAct'
 import type { AtuanArrivalAssets } from './AtuanArrivalPrelude'
+import {
+  FLASH_STORY_EXPERIENCE_SKELETON_VERSION,
+  FLASH_STORY_SHARED_SETTLEMENT_KIND,
+  resolveAtuanFirstActSkeletonStep,
+} from './FlashStoryExperienceSkeleton'
 
 interface AtuanDialogueOption {
   id: string
@@ -287,6 +292,7 @@ export function AtuanFirstEncounterDialogue({
   onOpenGame,
 }: AtuanFirstEncounterDialogueProps) {
   const presentation = resolveAtuanFirstActPresentation(encounterId, progress)
+  const skeletonStep = resolveAtuanFirstActSkeletonStep(progress)
   const storyCopy = (
     <View className='atuan-first-dialogue__story-copy'>
       <Text className='atuan-first-dialogue__narration' data-testid='atuan-scene-narration'>{presentation.narration}</Text>
@@ -304,7 +310,7 @@ export function AtuanFirstEncounterDialogue({
           { id: 'count_cards' as const, label: '先数一下，一张都没少吧。', icon: 'count' as const },
         ]
     return (
-      <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue'>
+      <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue' data-experience-skeleton={FLASH_STORY_EXPERIENCE_SKELETON_VERSION} data-experience-step={skeletonStep} data-experience-settlement={FLASH_STORY_SHARED_SETTLEMENT_KIND}>
         {storyCopy}
         <Text className='atuan-first-dialogue__prompt'>你接着说</Text>
         <View className='flash-dialogue__story-choices'>
@@ -316,7 +322,7 @@ export function AtuanFirstEncounterDialogue({
 
   if (progress.highlightOrder.length < ATUAN_FIRST_ACT_HIGHLIGHTS.length) {
     return (
-      <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue'>
+      <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue' data-experience-skeleton={FLASH_STORY_EXPERIENCE_SKELETON_VERSION} data-experience-step={skeletonStep} data-experience-settlement={FLASH_STORY_SHARED_SETTLEMENT_KIND}>
         {storyCopy}
         <View className='atuan-first-dialogue__highlight-story' aria-label='查看纸袋里的细节'>
           <Text>纸袋没有封口。你先后注意到：</Text>
@@ -343,7 +349,7 @@ export function AtuanFirstEncounterDialogue({
 
   if (!progress.followupId) {
     return (
-      <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue'>
+      <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue' data-experience-skeleton={FLASH_STORY_EXPERIENCE_SKELETON_VERSION} data-experience-step={skeletonStep} data-experience-settlement={FLASH_STORY_SHARED_SETTLEMENT_KIND}>
         {storyCopy}
         <Text className='atuan-first-dialogue__prompt'>你想先问什么？</Text>
         <View className='flash-dialogue__story-choices' aria-label='你准备怎么回应阿团'>
@@ -368,7 +374,7 @@ export function AtuanFirstEncounterDialogue({
 
   if (!progress.benchReached) {
     return (
-      <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue'>
+      <View className='atuan-first-dialogue' data-testid='atuan-first-dialogue' data-experience-skeleton={FLASH_STORY_EXPERIENCE_SKELETON_VERSION} data-experience-step={skeletonStep} data-experience-settlement={FLASH_STORY_SHARED_SETTLEMENT_KIND}>
         {storyCopy}
         <Text className='atuan-first-dialogue__prompt'>阿团把三张卡放到你们中间。</Text>
         <View className='flash-dialogue__choice atuan-first-dialogue__branded-choice' role='button' aria-label='和阿团一起整理卡片' onClick={() => { if (!disabled) onOpenGame() }}><ChoiceIcon kind='forward' /><Text className='flash-dialogue__choice-text'>和阿团一起整理卡片</Text></View>
@@ -378,7 +384,7 @@ export function AtuanFirstEncounterDialogue({
 
   const ending = resolveAtuanFirstActOutcome(encounterId, progress).ending
   return (
-    <View className='atuan-first-dialogue atuan-first-dialogue--invitation' data-testid='atuan-first-dialogue'>
+    <View className='atuan-first-dialogue atuan-first-dialogue--invitation' data-testid='atuan-first-dialogue' data-experience-skeleton={FLASH_STORY_EXPERIENCE_SKELETON_VERSION} data-experience-step={skeletonStep} data-experience-settlement={FLASH_STORY_SHARED_SETTLEMENT_KIND}>
       {storyCopy}
       <Text className='atuan-first-dialogue__ending'>{ending.title}</Text>
       <View

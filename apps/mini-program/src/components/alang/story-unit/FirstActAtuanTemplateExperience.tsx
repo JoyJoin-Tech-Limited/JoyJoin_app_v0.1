@@ -6,6 +6,11 @@ import { haptics } from '../../../lib/utils/haptics'
 import { completedFlashActGamePlacements } from '../../../lib/alang/flashActGameProgress'
 import { FirstActDialogueChrome } from './FirstActDialogueChrome'
 import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
+import {
+  FLASH_STORY_EXPERIENCE_SKELETON_VERSION,
+  FLASH_STORY_SHARED_SETTLEMENT_KIND,
+  resolveFirstActTemplateSkeletonStep,
+} from './FlashStoryExperienceSkeleton'
 import './FirstActAtuanTemplateExperience.scss'
 
 export type FirstActApproachIndex = 0 | 1
@@ -271,6 +276,9 @@ export function FirstActAtuanTemplateExperience({
       data-testid={config.testId}
       data-object-code={config.objectCode}
       data-stage={progress.stage}
+      data-experience-skeleton={FLASH_STORY_EXPERIENCE_SKELETON_VERSION}
+      data-experience-step={resolveFirstActTemplateSkeletonStep(progress.stage)}
+      data-experience-settlement={FLASH_STORY_SHARED_SETTLEMENT_KIND}
       data-scene={scene}
     >
       {!sceneFailed ? (
