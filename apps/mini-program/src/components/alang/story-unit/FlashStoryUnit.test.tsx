@@ -394,6 +394,8 @@ describe('FlashStoryUnit production flow', () => {
       fireEvent.click(screen.getByRole('button', { name: `收下${name}的线索，回到现场` }))
     }
     fireEvent.click(screen.getByRole('button', { name: '打开旧马克笔盒' }))
+    expect(screen.getByTestId('later-act-object-reveal')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '打开笔盒' }))
     for (const name of ['沾着暖橙的笔尖', '几乎干掉的冷蓝笔', '折在底层的方向卡']) {
       fireEvent.click(screen.getByRole('button', { name: `查看${name}` }))
       fireEvent.click(screen.getByRole('button', { name: `收下${name}的细节` }))

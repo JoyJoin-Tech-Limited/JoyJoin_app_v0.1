@@ -123,6 +123,41 @@ describe('LaterActStoryExperience', () => {
     expect(restoreLaterActProgress(config, { ...base, selectedEvidenceId: config.objectExploration.details[0].id }).selectedEvidenceId).toBeNull()
   })
 
+  it('reveals the second-layer object before entering the internal exploration', () => {
+    const config = getCustomLaterActConfig('s1-p2-lizi')
+    const Harness = () => {
+      const [progress, setProgress] = useState<LaterActProgress>({
+        ...createLaterActProgress(config.unitId),
+        stage: 'explore',
+        approachId: config.approaches[0].id,
+        seenHighlightIds: config.highlights.map(({ id }) => id),
+      })
+      return (
+        <LaterActStoryExperience
+          config={config}
+          stage={progress.stage}
+          background='lizi-second.jpg'
+          character='lizi.png'
+          progress={progress}
+          onProgress={setProgress}
+          onApproach={vi.fn()}
+          onExplorationComplete={vi.fn()}
+          onFollowup={vi.fn()}
+          onGameComplete={vi.fn()}
+          onComplete={vi.fn()}
+        />
+      )
+    }
+    render(<Harness />)
+
+    fireEvent.click(screen.getByRole('button', { name: `打开${config.objectTarget.label}` }))
+    expect(screen.getByTestId('later-act-object-reveal')).toBeInTheDocument()
+    expect(screen.queryByTestId('later-act-object-panel')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: `打开${config.objectExploration.shortLabel}` }))
+    expect(screen.getByTestId('later-act-object-panel')).toBeInTheDocument()
+  })
+
   it('shows the full image and makes a wrong game answer retryable without advancing', () => {
     const config = getCustomLaterActConfig('s1-p3-momo')
     const onGameComplete = vi.fn()
