@@ -31,24 +31,27 @@ description: >-
 
 ## 工作流（每单元）
 
-1. **读设计文档**：叙事策略锁定稿 + 该单元设计（节点规划/状态变化/钩子位置）+ 对应 NPC 风格指纹（`references/style-fingerprints.md`）。
-2. **写节点 JSON**：按 `references/node-model.md` 的 v2 结构；每节点先答"叙事目的"，无目的不写。
-3. **选项自查**：逐条过 `references/copy-rules.md` 选项铁律（台词/动作直写、不引用未知信息、只回应此刻）。
-4. **回响检查**：每选项专属 callback；同向选项插独立 callback 节点；状态变化与文案可见差异一一对应。
-5. **钩子检查**：单元内 ≥1 悬念钩子（`references/hooks-and-emotion.md` 钩子库选型），登记在单元设计文档，第 3 幕回收。
-6. **去AI味三遍**：按 `references/de-ai-check.md` 执行（词表扫描→句式改写→通读判读感）。
-7. **过质量门**：跑校验脚本零违规，附自检报告，转人工审核。
+1. **读语感卡 + 设计文档**：先读 `references/voice-card.md`（目标语感/五维卡片/失控感清单），再读叙事策略锁定稿 + 该单元设计（节点规划/状态变化/钩子位置）+ 对应 NPC 风格指纹（`references/style-fingerprints.md`）。
+2. **声明情绪目标**：按 `voice-card.md` §1 情绪目标表登记（无声明不写）。
+3. **写节点 JSON**：按 `references/node-model.md` 的 v2 结构；每节点先答"叙事目的"，无目的不写。
+4. **选项自查**：逐条过 `references/copy-rules.md` 选项铁律（台词/动作直写、不引用未知信息、只回应此刻）。
+5. **回响检查**：每选项专属 callback；同向选项插独立 callback 节点；状态变化与文案可见差异一一对应。
+6. **钩子检查**：单元内 ≥1 悬念钩子（`references/hooks-and-emotion.md` 钩子库选型），登记在单元设计文档，第 3 幕回收。
+7. **去AI味三遍 + 失控感检查**：按 `references/de-ai-check.md` 执行（词表扫描→句式改写→通读判读感），再按 `voice-card.md` §3 失控感清单逐条打勾。
+8. **过质量门**：跑 `node scripts/check/check-flash-story.mjs` 零致命违规，附自检报告，转人工审核。
 
 ## References（按需加载）
 
 | 文件 | 用途 |
 |------|------|
+| [references/voice-card.md](references/voice-card.md) | **语感卡**：五维风格打分基准、失控感清单、温暖现实收束规则、金句校准、自检十问（动笔前必读） |
 | [references/node-model.md](references/node-model.md) | 单元 v2 节点 JSON 结构、节点类型、state/condition 语法 |
 | [references/copy-rules.md](references/copy-rules.md) | 文案铁律完整清单 + 自检十问 |
 | [references/style-fingerprints.md](references/style-fingerprints.md) | 5 NPC 风格指纹（5 维：叙述温度/对白风格/节奏型/口头禅/禁区） |
 | [references/hooks-and-emotion.md](references/hooks-and-emotion.md) | 悬念钩子库（13 式改编）+ 情绪弧线（和解+悬念） |
-| [references/de-ai-check.md](references/de-ai-check.md) | 去AI味三遍法、禁用词表、检测清单 |
-| [references/validator-interface.md](references/validator-interface.md) | check-flash-story.mjs 校验契约（13 项子集本地化） |
+| [references/de-ai-check.md](references/de-ai-check.md) | 去AI味三遍法、禁用词表、检测清单（词表→句式→通读） |
+| [references/validator-interface.md](references/validator-interface.md) | check-flash-story.mjs 校验契约（E101–E113 结构 + E114–E122 语感卡门禁） |
+| [references/vendor/](references/vendor/) | 上游写作参考原文（human-texture / warm-realism / sentence-rhythm / anti-ai-checklist / style-imitation，MIT） |
 
 ## Quick example（before/after）
 
@@ -79,10 +82,11 @@ N4 回响: "阿浪愣了一下，手指停在折痕上："画图的人……可�
 
 ## Review checklist
 
-- [ ] 每单元 5-9 节点，无假三选；每节点有叙事目的
+- [ ] 每单元 5-9 节点，无假三选；每节点有叙事目的 + 情绪目标已登记
 - [ ] 每选项专属 callback；状态变化有可见文本差异
-- [ ] 无心理描写/说教/元叙事词；选项为台词或动作
+- [ ] 无心理描写/说教/元叙事词/叙述者提问/升华收束；选项为台词或动作
 - [ ] 每单元 ≥1 悬念钩子且登记回收；基调未偏离治愈+悬念
 - [ ] 口吻匹配该 NPC 风格指纹
-- [ ] check-flash-story.mjs 零违规
+- [ ] 失控感清单逐条达标（≥1 话说一半、≥1 非理性小动作、允许 1 条没收干净的线）
+- [ ] `node scripts/check/check-flash-story.mjs` 零致命违规（警告项附处理说明）
 - [ ] 审核通过、review_status='reviewed' 后入库

@@ -1,9 +1,7 @@
 # check-flash-story.mjs 校验契约（validator-interface）
 
-> 街头盲盒 story episode 质量门。13 项 Story-to-game 校验本地化后的子集，
-> 挂入 `npm run check:full`（CI），任何 episode 写入前必须零违规。
-> 本契约是写作侧接口约定；脚本本身由 backend-engineer 按 Tier 2 Sprint Contract 实现
-> （当前未实现，契约以本文为准，实现时以本文为验收标准之一）。
+> 街头盲盒 story episode 质量门。结构校验（E101–E113）+ 语感卡门禁（E114–E122，依据 `voice-card.md`）。
+> 挂入 `npm run validate:flash-story`（CI），任何 episode 写入前必须零致命违规。
 
 ## 输入
 
@@ -16,12 +14,11 @@
 
 | 场景 | 行为 |
 |------|------|
-| DB 可用（默认，读 `DATABASE_URL`） | 全量扫描 v2 行 |
-| DB 不可用（CI 无 DB） | 退出码 0 + 提示"DB unavailable, skipped"（CI 中 check:full 不应因无 DB 崩） |
-| `--ci` 标志 | 警告级项不阻断：仅致命项（E1xx 首字节）令退出码 1；否则 0 |
+| 默认运行 | 扫描 `apps/server/src/data/flashStoryPilot/v2-pilot.json` + `v2-season1.json` 两个内容源（`--source=<path>` 可覆盖，`--unit` 过滤单元） |
+| `--ci` 标志 | 警告级项不阻断：仅致命项令退出码 1；否则 0 |
 | 手动运行 | 退出码 0=通过 / 1=致命 / 2=仅警告 |
 
-## 校验项（13 项子集）
+## 校验项（13 项子集 + 语感卡门禁 E114–E122）
 
 | # | 校验 | 说明 | 级别 |
 |---|------|------|------|
@@ -38,6 +35,7 @@
 | 11 | 互动节奏 | 连续 segments 超过 5 句无互动 → 报告 | 警告 |
 | 12 | 钩子登记 | 单元 closure 最后句存在钩子（与单元设计文档登记表核对） | 警告 |
 | 13 | 状态引用完整 | condition/variants/flags/valDelta 引用的变量在季内被设置过 | 致命 |
+| 14–22 | 语感卡门禁 | 见 E114–E122：强化词/副词喊情绪/元叙事开场/叙述者提问/升华收束/等长节奏/句式重复/声音套话/否定铺垫 | 致命+警告 |
 
 ## 错误码格式
 
@@ -55,7 +53,19 @@ FLASH_STORY_E110 分支配比偏离（警告级）
 FLASH_STORY_E111 互动间隔过长 @ <nodeId>（警告级）
 FLASH_STORY_E112 钩子缺失 @ <closureNodeId>（警告级）
 FLASH_STORY_E113 状态引用未定义: <name>（致命）
+FLASH_STORY_E114 强化词（非常/极其/十分…）出现在叙述层（警告级）
+FLASH_STORY_E115 副词喊情绪（温柔地/坚定地…）出现在叙述层（致命）
+FLASH_STORY_E116 元叙事开场"第X轮回"出现在 prose（致命）
+FLASH_STORY_E117 叙述者提问"你想…？"出现在 prose（致命）
+FLASH_STORY_E118 收束升华/预告式结尾（这一刻/从此/人生就是…）（警告级）
+FLASH_STORY_E119 节奏：同节点 3+ 段等长（警告级）
+FLASH_STORY_E120 句式重复：同一"名/代词+动词"开头 x3（警告级）
+FLASH_STORY_E121 声音描写套话（"声音不大，却…"）（致命）
+FLASH_STORY_E122 否定铺垫句式（"不是X，而是Y"）出现在叙述层（致命）
 ```
+
+> E114–E122 为语感卡门禁（2026-08-19，依据 `voice-card.md`）：
+> 叙述层 = 段落去掉“…”引号内台词后的文本，台词按 `style-fingerprints.md` 豁免。
 
 ## 运行方式
 

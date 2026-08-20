@@ -19,9 +19,9 @@ export interface FlashStoryV2StageProps {
 }
 
 const ECHO_TIER_COPY: Record<'彻' | '深' | '轻', string> = {
-  彻: '你把旧物的故事，推到了最响的地方。',
-  深: '这箱旧物，因为你变得更响了一点。',
-  轻: '旧物们的回声，还很小声。',
+  彻: '这箱旧物，把你今天的追问都记下了。',
+  深: '旧物记下了今天的几句追问。',
+  轻: '回声很轻，还留在箱子里。',
 }
 
 export function FlashStoryV2Stage({
@@ -59,7 +59,7 @@ export function FlashStoryV2Stage({
           </View>
           {isClosure ? (
             <View className='flash-story-v2__echo' data-testid='flash-story-v2-echo' aria-live='polite'>
-              <Text className='flash-story-v2__echo-label'>你的追问，让旧物发出了回声</Text>
+              <Text className='flash-story-v2__echo-label'>旧物有了回声</Text>
               <Text className='flash-story-v2__echo-copy'>{ECHO_TIER_COPY[echoTier]}</Text>
             </View>
           ) : null}

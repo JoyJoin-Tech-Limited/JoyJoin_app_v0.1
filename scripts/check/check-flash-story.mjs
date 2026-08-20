@@ -86,6 +86,47 @@ function scanUnit(unit) {
     for (const word of psychoWords) {
       if (texts.includes(word)) issues.push(["E108", WARN, `${unit.code}/${id}: possible psycho word "${word}"`]);
     }
+    // —— 语感卡门禁（voice-card.md §3/§5）：只扫叙述层，引号内台词按风格指纹豁免 ——
+    const narration = (t) => t.replace(/“[^”]*”/g, "");
+    const nodeNarrations = [
+      ...(node.segments ?? []).map((s) => narration(s.text)),
+      ...variants.flatMap((v) => (v.segments ?? []).map((s) => narration(s.text))),
+    ];
+    for (const text of nodeNarrations) {
+      if (/^第[一二三四五六七八九十]+轮/.test(text)) {
+        issues.push(["E116", FATAL, `${unit.code}/${id}: meta opener "第X轮回" in prose: ${text}`]);
+      }
+      if (/^你想[^。！？]{0,18}[？?]$/.test(text.trim())) {
+        issues.push(["E117", FATAL, `${unit.code}/${id}: narrator prompt "你想…？" in prose: ${text}`]);
+      }
+      if (/(非常|极其|极大|无比|十分|格外|分外|巨大|特别)/.test(text)) {
+        issues.push(["E114", WARN, `${unit.code}/${id}: intensifier word in narration: ${text}`]);
+      }
+      if (/(温柔地|坚定地|冷静地|愤怒地|开心地|悲伤地|难过地|激动地|平静地|轻轻地|缓缓地|慢慢地|淡淡地|冷冷地)/.test(text)) {
+        issues.push(["E115", FATAL, `${unit.code}/${id}: emotion adverb in narration: ${text}`]);
+      }
+      if (/(声音|语气|声线|话|嗓子)(不大|很轻|很淡|很平静|很温柔)，?(却|但)/.test(text)) {
+        issues.push(["E121", FATAL, `${unit.code}/${id}: voice-contrast cliché: ${text}`]);
+      }
+      if (/不是[^。！？]{1,14}，?(而是|是)/.test(text)) {
+        issues.push(["E122", FATAL, `${unit.code}/${id}: negation-parade sentence: ${text}`]);
+      }
+    }
+    if (node.type === "closure" || node.type === "ending") {
+      for (const text of nodeNarrations) {
+        if (/(这(才|就|便|正)是|这一刻|从此|多年以后|人生(就|总是|不过)|命运(总|就是))/.test(text)) {
+          issues.push(["E118", WARN, `${unit.code}/${id}: possible elevation/summary ending: ${text}`]);
+        }
+      }
+    }
+    const segLens = (node.segments ?? []).map((s) => s.text.length);
+    for (let i = 0; i + 2 < segLens.length; i++) {
+      const run = segLens.slice(i, i + 3);
+      if (Math.max(...run) - Math.min(...run) <= 2) {
+        issues.push(["E119", WARN, `${unit.code}/${id}: 3+ uniform-length segments (rhythm)`]);
+        break;
+      }
+    }
     const baseSegments = node.segments ?? [];
     const variantMax = variants.reduce((max, v) => Math.max(max, (v.segments ?? []).length), 0);
     if (Math.max(baseSegments.length, variantMax) > 5) issues.push(["E111", WARN, `${unit.code}/${id}: >5 segments without interaction`]);
@@ -115,6 +156,19 @@ function scanUnit(unit) {
       }
     }
   }
+
+  // E120 句式重复：同一"名/代词+动词"开头在单元内出现 ≥3 次的叙述句
+  const leadingCounts = new Map();
+  for (const node of Object.values(nodes)) {
+    for (const segment of node.segments ?? []) {
+      const lead = segment.text.replace(/“[^”]*”/g, "").slice(0, 3);
+      if (lead.length < 3) continue;
+      leadingCounts.set(lead, (leadingCounts.get(lead) ?? 0) + 1);
+    }
+  }
+  for (const [lead, count] of leadingCounts) {
+    if (count >= 3) issues.push(["E120", WARN, `${unit.code}: sentence-start repetition "${lead}" x${count}`]);
+  }
   return issues;
 }
 
@@ -123,10 +177,22 @@ function main() {
     options: { unit: { type: "string" }, source: { type: "string" }, ci: { type: "boolean" } },
   });
   const episodes = [];
-  if (values.source) {
-    const raw = readFileSync(values.source, "utf8");
-    const parsed = JSON.parse(raw);
-    episodes.push(...(Array.isArray(parsed) ? parsed : [parsed]));
+  const sources = values.source
+    ? [values.source]
+    : [
+        "apps/server/src/data/flashStoryPilot/v2-pilot.json",
+        "apps/server/src/data/flashStoryPilot/v2-season1.json",
+      ];
+  for (const source of sources) {
+    let parsed;
+    try {
+      parsed = JSON.parse(readFileSync(source, "utf8"));
+    } catch (error) {
+      console.log(`check-flash-story: cannot read ${source} (${error.code ?? error.message}); skipped`);
+      continue;
+    }
+    const units = Array.isArray(parsed) ? parsed : (parsed.units ?? (parsed.content ? [parsed] : []));
+    episodes.push(...units);
   }
   if (values.unit) {
     const selected = episodes.filter((episode) => episode.code === values.unit);
@@ -134,7 +200,6 @@ function main() {
     episodes.push(...selected);
   }
   if (episodes.length === 0) {
-    // No DB read path here; CI without DB exits 0 (see validator-interface.md).
     console.log("check-flash-story: no v2 units supplied; skipped (exit 0)");
     process.exit(0);
   }

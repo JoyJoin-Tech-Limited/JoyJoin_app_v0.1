@@ -90,3 +90,14 @@
    （12 非 atuan 单元）在试点验收后生成新 SQL 启用。
 4. 回滚：`FLASH_STORY_V2_ENABLED=false` 即时回到 v1 路径；中途 v2 用户遗留的
    `universe_runs` 状态可接受（不触发 v1 路径读取）。不得删除 v2 三列。
+
+## 2026-08-19/20 试点语感打磨与 staging 走查
+
+1. 语感打磨轮（voice-card 规范）产出 `20260819010000_refine_flash_story_v2_pilot_copy.sql`：
+   幂等（限定 code + content_version 递增，重复执行收敛），试点单元升级到 content_version 3。
+2. 2026-08-20 staging 走查通过：两版 SQL 已用 psql 人工应用到 joyjoin_staging
+   （5 试点单元 v3，7 个 pending 单元保持 v1）；`flashStoryV2Enabled=true` 落库
+   （feature_flags 为真源）；只读引擎走查脚本 `apps/server/src/scripts/qa-flash-v2-staging.ts`
+   （SSH 隧道 + DATABASE_URL 指向 joyjoin_staging，从 apps/server 目录跑
+   `node --import tsx/esm src/scripts/qa-flash-v2-staging.ts`）全分支通过、failures 为空。
+3. 生产应用同一 SQL 仍须先过试点验收（体验版设备验证完成）后再走，CI/CD 不自动执行 DDL。
