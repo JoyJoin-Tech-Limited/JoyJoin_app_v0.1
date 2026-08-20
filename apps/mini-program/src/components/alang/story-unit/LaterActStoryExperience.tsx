@@ -7,6 +7,7 @@ import {
   FLASH_STORY_SHARED_SETTLEMENT_KIND,
   resolveLaterActSkeletonStep,
 } from './FlashStoryExperienceSkeleton'
+import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
 import './LaterActStoryExperience.scss'
 
 export type LaterActExperienceStage = 'approach' | 'explore' | 'object' | 'followup' | 'game' | 'ending'
@@ -246,6 +247,16 @@ export function LaterActStoryExperience({
   const showObjectReveal = stage === 'explore' && highlightsComplete && !progress.objectOpened && !activeHighlight && objectRevealOpen
   const speech = findLatestSpeech(config, progress, stage)
   const update = (patch: Partial<LaterActProgress>) => onProgress({ ...progress, ...patch })
+  const highlightTargets = config.highlights.map((highlight) => ({
+    id: highlight.id,
+    label: highlight.label,
+    placementClassName: highlight.placementClassName,
+  }))
+  const objectTarget = [{
+    id: `${config.unitId}:object`,
+    label: config.objectTarget.label,
+    placementClassName: `later-act-scene__hotspot--object ${config.objectTarget.placementClassName}`,
+  }]
 
   const settleHighlight = () => {
     if (!activeHighlight) return
@@ -324,45 +335,36 @@ export function LaterActStoryExperience({
         ) : null}
 
         {stage === 'explore' && !showObjectReveal ? (
-          <View className='later-act-scene__hotspots' aria-label='探索现场细节'>
-            {config.highlights.map((highlight) => {
-              const seen = progress.seenHighlightIds.includes(highlight.id)
-              const focused = activeHighlightId === highlight.id
-              return (
-                <View
-                  key={highlight.id}
-                  className={`later-act-scene__hotspot ${highlight.placementClassName}${seen ? ' later-act-scene__hotspot--seen' : ''}${focused ? ' later-act-scene__hotspot--focused' : ''}`}
-                  hoverClass={disabled || seen ? '' : 'later-act-scene__hotspot--pressed'}
-                  role='button'
-                  aria-label={`${seen ? '已查看' : '查看'}${highlight.label}`}
-                  aria-disabled={disabled || seen}
-                  onClick={() => {
-                    if (disabled || seen) return
-                    haptics('light')
-                    setActiveHighlightId(highlight.id)
-                  }}
-                >
-                  <View className='later-act-scene__hotspot-ring' aria-hidden='true' />
-                </View>
-              )
-            })}
+          <>
+            <FirstActHighlightOverlay
+              npcSlug={config.npcName}
+              testIdPrefix={`${config.unitId}-scene`}
+              className='later-act-scene__hotspots'
+              targets={highlightTargets}
+              completedIds={progress.seenHighlightIds}
+              activeId={activeHighlightId}
+              disabled={disabled}
+              onSelect={(highlightId) => {
+                haptics('light')
+                setActiveHighlightId(highlightId)
+              }}
+            />
             {highlightsComplete ? (
-              <View
-                className={`later-act-scene__hotspot later-act-scene__hotspot--object ${config.objectTarget.placementClassName}`}
-                hoverClass={disabled ? '' : 'later-act-scene__hotspot--pressed'}
-                role='button'
-                aria-label={`打开${config.objectTarget.label}`}
-                aria-disabled={disabled}
-                onClick={() => {
-                  if (disabled) return
+              <FirstActHighlightOverlay
+                npcSlug={config.npcName}
+                testIdPrefix={`${config.unitId}-object`}
+                className='later-act-scene__hotspots later-act-scene__hotspots--object'
+                targets={objectTarget}
+                completedIds={[]}
+                activeId={null}
+                disabled={disabled}
+                onSelect={() => {
                   haptics('medium')
                   setObjectRevealOpen(true)
                 }}
-              >
-                <View className='later-act-scene__hotspot-ring' aria-hidden='true' />
-              </View>
+              />
             ) : null}
-          </View>
+          </>
         ) : null}
 
         <View className='later-act-scene__speech' role='status' aria-live='polite' aria-atomic='true'>

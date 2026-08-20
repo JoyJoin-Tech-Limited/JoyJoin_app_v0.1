@@ -150,7 +150,7 @@ describe('LaterActStoryExperience', () => {
     }
     render(<Harness />)
 
-    fireEvent.click(screen.getByRole('button', { name: `打开${config.objectTarget.label}` }))
+    fireEvent.click(screen.getByRole('button', { name: `观察${config.objectTarget.label}` }))
     expect(screen.getByTestId('later-act-object-reveal')).toBeInTheDocument()
     expect(screen.queryByTestId('later-act-object-panel')).not.toBeInTheDocument()
 
@@ -182,7 +182,8 @@ describe('LaterActStoryExperience', () => {
 
     expect(container.querySelector('.later-act-experience__chapter')).toBeNull()
     expect(container.querySelector('.later-act-experience__section--compact')).toBeNull()
-    expect(container.querySelectorAll('.later-act-scene__hotspot')).toHaveLength(config.highlights.length)
+    expect(container.querySelectorAll('.first-act-highlight')).toHaveLength(config.highlights.length)
+    expect(container.querySelector('.later-act-scene__hotspot-ring')).toBeNull()
   })
 
   it('shows the full image and makes a wrong game answer retryable without advancing', () => {

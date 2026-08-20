@@ -90,17 +90,8 @@
   z-index: 3;
 }
 
-.atuan-later-scene__hotspot {
-  position: absolute;
-  width: 92rpx;
-  min-width: 92rpx;
-  height: 92rpx;
-  min-height: 92rpx;
+.atuan-later-scene__hotspots .first-act-highlight {
   margin: -46rpx 0 0 -46rpx;
-  padding: 0;
-  box-sizing: border-box;
-  border-radius: 50%;
-  transition: transform 160ms ease-out;
 }
 
 .atuan-later-scene__hotspot--plan { left: 31%; top: 59%; }
@@ -109,27 +100,6 @@
 .atuan-later-scene__hotspot--box { left: 28%; top: 56%; }
 .atuan-later-scene__hotspot--card { left: 47%; top: 58%; }
 .atuan-later-scene__hotspot--seat { left: 76%; top: 54%; }
-
-.atuan-later-scene__hotspot-ring {
-  position: absolute;
-  inset: 16rpx;
-  border: 4rpx solid $color-bg-tint-cream;
-  border-radius: 50%;
-  box-shadow: 0 0 0 8rpx rgba($color-primary-dark, 0.35), 0 8rpx 16rpx rgba($color-text-primary, 0.32);
-  animation: atuan-later-pulse 1.8s ease-in-out infinite;
-}
-
-.atuan-later-scene__hotspot--seen .atuan-later-scene__hotspot-ring {
-  border-color: $color-primary-dark;
-  background: $color-bg-tint-cream;
-  box-shadow: 0 0 0 6rpx rgba($color-bg-tint-cream, 0.32);
-  animation: none;
-}
-
-.atuan-later-scene__hotspot--focused .atuan-later-scene__hotspot-ring {
-  transform: scale(1.12);
-  box-shadow: 0 0 0 10rpx rgba($color-bg-tint-cream, 0.4), 0 8rpx 24rpx rgba($color-text-primary, 0.34);
-}
 
 .atuan-later-experience__panel {
   position: absolute;
@@ -200,11 +170,6 @@
 .atuan-later-experience__ending { padding-top: 0; }
 .atuan-later-experience__ending-title { display: block; color: $color-primary-dark; font-size: $font-size-base; font-weight: $font-weight-bold; text-align: center; }
 
-@keyframes atuan-later-pulse {
-  0%, 100% { transform: scale(0.88); opacity: 0.72; }
-  50% { transform: scale(1); opacity: 1; }
-}
-
 @keyframes atuan-later-rise {
   from { opacity: 0; transform: translateY(16rpx); }
   to { opacity: 1; transform: translateY(0); }
@@ -221,7 +186,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .atuan-later-scene__hotspot-ring { animation: none; }
   .atuan-later-experience__section--transition { animation: none; }
   .atuan-later-experience--game .atuan-later-scene,
   .atuan-later-experience--game .atuan-later-experience__panel,

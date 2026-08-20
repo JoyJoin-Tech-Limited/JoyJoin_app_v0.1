@@ -21,6 +21,7 @@ import {
   FLASH_STORY_SHARED_SETTLEMENT_KIND,
   resolveAtuanLaterActSkeletonStep,
 } from './FlashStoryExperienceSkeleton'
+import { FirstActHighlightOverlay } from './FirstActHighlightOverlay'
 import './AtuanLaterActExperience.scss'
 
 interface AtuanLaterActSceneProps {
@@ -44,6 +45,11 @@ export function AtuanLaterActScene({ unitId, background, character, speech, prog
   const definition = getAtuanLaterActDefinition(unitId)
   const highlights = definition.highlights as readonly { id: string; label: string }[]
   const exploring = Boolean(progress?.arrivalReplyId && progress.highlightOrder.length < highlights.length)
+  const hotspotTargets = highlights.map((highlight, index) => ({
+    id: highlight.id,
+    label: highlight.label,
+    placementClassName: `atuan-later-scene__hotspot--${HOTSPOT_CLASS[unitId][index]}`,
+  }))
 
   return (
     <View className={`atuan-later-scene atuan-later-scene--${unitId === 's1-p2-atuan' ? 'second' : 'third'}${backgroundFailed ? ' atuan-later-scene--fallback' : ''}`} data-testid='atuan-later-scene'>
@@ -51,28 +57,19 @@ export function AtuanLaterActScene({ unitId, background, character, speech, prog
       <View className='atuan-later-scene__grade' aria-hidden='true' />
       <Image className={`atuan-later-scene__character${exploring ? ' atuan-later-scene__character--quiet' : ''}`} src={character} mode='aspectFit' aria-hidden='true' />
       {progress && onInspect ? (
-        <View className='atuan-later-scene__hotspots' aria-label='探索场景细节'>
-          {highlights.map((highlight, index) => {
-            const seen = (progress.highlightOrder as readonly string[]).includes(highlight.id)
-            const focused = focusedHighlightId === highlight.id
-            return (
-              <View
-                key={highlight.id}
-                className={`atuan-later-scene__hotspot atuan-later-scene__hotspot--${HOTSPOT_CLASS[unitId][index]}${seen ? ' atuan-later-scene__hotspot--seen' : ''}${focused ? ' atuan-later-scene__hotspot--focused' : ''}`}
-                role='button'
-                aria-label={`${focused ? '正在查看' : seen ? '已查看' : '查看'}${highlight.label}`}
-                aria-disabled={disabled || seen}
-                onClick={() => {
-                  if (disabled || seen) return
-                  setFocusedHighlightId(highlight.id)
-                  onInspect(highlight.id)
-                }}
-              >
-                <View className='atuan-later-scene__hotspot-ring' aria-hidden='true' />
-              </View>
-            )
-          })}
-        </View>
+        <FirstActHighlightOverlay
+          npcSlug='atuan'
+          testIdPrefix='atuan-later-act'
+          className='atuan-later-scene__hotspots'
+          targets={hotspotTargets}
+          completedIds={progress.highlightOrder}
+          activeId={focusedHighlightId}
+          disabled={disabled}
+          onSelect={(highlightId) => {
+            setFocusedHighlightId(highlightId)
+            onInspect(highlightId)
+          }}
+        />
       ) : null}
       <View className='atuan-later-scene__speech' role='status' aria-live='polite' aria-atomic='true'>
         <Text className='atuan-later-scene__speaker'>阿团</Text>

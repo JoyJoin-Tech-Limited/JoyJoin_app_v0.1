@@ -94,51 +94,12 @@
   z-index: 4;
 }
 
-.later-act-scene__hotspot {
-  position: absolute;
-  width: 92rpx;
-  min-width: 92rpx;
-  height: 92rpx;
-  min-height: 92rpx;
+.later-act-scene__hotspots .first-act-highlight {
   margin: -46rpx 0 0 -46rpx;
-  padding: 0;
-  box-sizing: border-box;
-  border-radius: 50%;
-  transition: transform 160ms ease-out;
-}
-
-.later-act-scene__hotspot-ring {
-  position: absolute;
-  inset: 16rpx;
-  border: 4rpx solid $color-bg-tint-cream;
-  border-radius: inherit;
-  background: transparent;
-  box-shadow: 0 0 0 8rpx rgba($color-primary-dark, 0.35), 0 8rpx 16rpx rgba($color-text-primary, 0.32);
-  animation: later-act-pulse 1.8s ease-in-out infinite;
-}
-
-.later-act-scene__hotspot--seen {
-  pointer-events: none;
-}
-
-.later-act-scene__hotspot--seen .later-act-scene__hotspot-ring {
-  border-color: $color-primary-dark;
-  background: $color-bg-tint-cream;
-  box-shadow: 0 0 0 6rpx rgba($color-bg-tint-cream, 0.32);
-  animation: none;
-}
-
-.later-act-scene__hotspot--focused .later-act-scene__hotspot-ring {
-  transform: scale(1.12);
-  box-shadow: 0 0 0 10rpx rgba($color-bg-tint-cream, 0.4), 0 8rpx 24rpx rgba($color-text-primary, 0.34);
 }
 
 .later-act-scene__hotspot--object {
   z-index: 1;
-}
-
-.later-act-scene__hotspot--pressed {
-  transform: scale(0.94);
 }
 
 .alang-p2__hotspot--notebook { left: 13%; top: 67%; }
@@ -591,11 +552,6 @@
   line-height: 1.45;
 }
 
-@keyframes later-act-pulse {
-  0%, 100% { transform: scale(0.88); opacity: 0.72; }
-  50% { transform: scale(1); opacity: 1; }
-}
-
 @keyframes later-act-character-enter {
   from { opacity: 0; transform: translateY(16rpx) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
@@ -607,8 +563,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .later-act-scene__hotspot-ring,
-  .later-act-scene__hotspot,
   .later-act-experience__choice,
   .later-act-experience__primary-action,
   .later-act-object-reveal,
