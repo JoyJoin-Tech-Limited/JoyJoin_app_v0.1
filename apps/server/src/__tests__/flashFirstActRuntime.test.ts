@@ -35,9 +35,30 @@ describe('Flash first-act runtime contract', () => {
     }
   })
 
+  it('rewrites local later template units away from v2 into the shared answer settlement contract', () => {
+    const stored = {
+      v: 2,
+      start: 'n1',
+      nodes: {
+        n5_close: {
+          id: 'n5_close',
+          type: 'closure',
+          segments: [{ text: '把这段结尾收好。' }],
+        },
+      },
+    }
+    const content = resolveFlashFirstActRuntimeContent('s1-p2-alang', stored)
+
+    expect(content.v).not.toBe(2)
+    expect(content.question.id).toBe('s1-p2-alang-template-response-v1')
+    expect(content.question.options).toHaveLength(2)
+    expect(content.responseByOption['s1-p2-alang-template-a']).toBe('把这段结尾收好。')
+    expect(content.responseByOption['s1-p2-alang-template-b']).toBe('把这段结尾收好。')
+  })
+
   it('does not rewrite unrelated story units', () => {
     const stored = { v: 2, start: 'n1', nodes: {} }
-    expect(resolveFlashFirstActRuntimeContent('s1-p2-alang', stored)).toBe(stored)
+    expect(resolveFlashFirstActRuntimeContent('season-finale', stored)).toBe(stored)
   })
 
   it('covers exactly the four rebuilt first acts', () => {

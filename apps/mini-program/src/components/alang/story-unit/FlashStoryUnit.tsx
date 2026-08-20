@@ -77,11 +77,14 @@ export interface FlashStoryUnitProps {
   onSubmit: (choice: StoryUnitChoice) => Promise<void>
   onContinue: () => void
   atuanArrivalAssets?: AtuanArrivalAssets
+  alangLaterActScenes?: { second: string; third: string }
+  alangLaterActCharacter?: string
   momoLaterActScenes?: { second: string; third: string }
   momoLaterActCharacter?: string
   liziLaterActScenes?: { second: string; third: string }
   liziLaterActCharacter?: string
   shiqiSecondActScene?: string
+  shiqiThirdActScene?: string
   shiqiLaterActCharacter?: string
 }
 
@@ -119,11 +122,14 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
     onSubmit,
     onContinue,
     atuanArrivalAssets,
+    alangLaterActScenes,
+    alangLaterActCharacter,
     momoLaterActScenes,
     momoLaterActCharacter,
     liziLaterActScenes,
     liziLaterActCharacter,
     shiqiSecondActScene,
+    shiqiThirdActScene,
     shiqiLaterActCharacter,
   } = props
   const definition = getFlashStoryUnitDefinition(story.code)
@@ -275,24 +281,32 @@ export function FlashStoryUnit(props: FlashStoryUnitProps) {
   const showAtuanLaterScene = isAtuanLaterActUnitId(definition.unitId) && Boolean(atuanLaterActBackground && atuanArrivalAssets)
   const showAtuanLaterPrelude = showAtuanLaterScene && !showResult && (runtime.stage === 'INIT' || runtime.stage === 'NPC_INTRO')
   const showAtuanLaterExperience = showAtuanLaterScene && !showResult && Boolean(runtime.atuanLaterAct) && runtime.stage !== 'INIT' && runtime.stage !== 'NPC_INTRO'
-  const flatLaterActBackground = definition.unitId === 's1-p2-momo'
-    ? momoLaterActScenes?.second
-    : definition.unitId === 's1-p3-momo'
-      ? momoLaterActScenes?.third
-      : definition.unitId === 's1-p2-lizi'
-        ? liziLaterActScenes?.second
-        : definition.unitId === 's1-p3-lizi'
-          ? liziLaterActScenes?.third
-          : definition.unitId === 's1-p2-shiqi'
-            ? shiqiSecondActScene
-      : undefined
-  const flatLaterActCharacter = definition.npcSlug === 'momo'
-    ? momoLaterActCharacter
-    : definition.npcSlug === 'lizi'
-      ? liziLaterActCharacter
-      : definition.npcSlug === 'shiqi'
-        ? shiqiLaterActCharacter
-        : undefined
+  const flatLaterActBackground = definition.unitId === 's1-p2-alang'
+    ? alangLaterActScenes?.second
+    : definition.unitId === 's1-p3-alang'
+      ? alangLaterActScenes?.third
+      : definition.unitId === 's1-p2-momo'
+        ? momoLaterActScenes?.second
+        : definition.unitId === 's1-p3-momo'
+          ? momoLaterActScenes?.third
+          : definition.unitId === 's1-p2-lizi'
+            ? liziLaterActScenes?.second
+            : definition.unitId === 's1-p3-lizi'
+              ? liziLaterActScenes?.third
+              : definition.unitId === 's1-p2-shiqi'
+                ? shiqiSecondActScene
+                : definition.unitId === 's1-p3-shiqi'
+                  ? shiqiThirdActScene
+                  : undefined
+  const flatLaterActCharacter = definition.npcSlug === 'alang'
+    ? alangLaterActCharacter
+    : definition.npcSlug === 'momo'
+      ? momoLaterActCharacter
+      : definition.npcSlug === 'lizi'
+        ? liziLaterActCharacter
+        : definition.npcSlug === 'shiqi'
+          ? shiqiLaterActCharacter
+          : undefined
   const showFlatLaterAct = isFlatLaterActUnitId(definition.unitId) && !showResult && Boolean(flatLaterActBackground)
   const showDedicatedSubmitStatus = (showCustomFirstAct || showAtuanLaterExperience || showFlatLaterAct) && (
     submitState === 'submitting'

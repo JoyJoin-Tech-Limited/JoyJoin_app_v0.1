@@ -483,9 +483,7 @@ describe('formal Flash dialogue', () => {
     })
   })
 
-  it('routes Alang second act away from the generic v2 card and into the complete scene chain', async () => {
-    let rejectAdvance: ((reason?: unknown) => void) | undefined
-    mocks.advance.mockImplementationOnce(() => new Promise((_, reject) => { rejectAdvance = reject }))
+  it('routes Alang second act through the same local-submit template instead of the v2 advance chain', () => {
     mocks.useEncounter.mockReturnValue({
       data: {
         ...questionEncounter,
@@ -536,13 +534,10 @@ describe('formal Flash dialogue', () => {
       approach.click()
       approach.click()
     })
-    expect(mocks.advance).toHaveBeenCalledTimes(1)
-    rejectAdvance?.(new Error('network unavailable'))
-    expect(await screen.findByRole('alert')).toHaveTextContent('故事没有接上，再试一次就好。')
+    expect(mocks.advance).not.toHaveBeenCalled()
   })
 
-  it('routes Shiqi third act through its crisp scene, highlights, and guarded v2 chain', () => {
-    mocks.advance.mockReturnValue(new Promise(() => undefined))
+  it('routes Shiqi third act through the same local-submit template instead of the v2 advance chain', () => {
     mocks.useEncounter.mockReturnValue({
       data: {
         ...questionEncounter,
@@ -581,52 +576,58 @@ describe('formal Flash dialogue', () => {
       approach.click()
       approach.click()
     })
-    expect(mocks.advance).toHaveBeenCalledTimes(1)
+    expect(mocks.advance).not.toHaveBeenCalled()
   })
 
-  it('settles a replayed Alang ending in one tap while carrying the new cursor into the final advance', async () => {
+  it('settles a restored Alang ending through the same story answer path', async () => {
     mocks.routerParams = { encounterId: 'encounter-1', replay: '1', replaySession: 'session-alang' }
-    const openingReplayState = {
-      episodeId: 'episode-alang-3', echo: 0, flags: [], variables: {},
-      currentNode: 'n4_echo_b', nodePath: ['n1_setup', 'n4_echo_b'], lastChoiceId: 'keep',
-    }
-    const closureReplayState = {
-      ...openingReplayState,
-      currentNode: 'n5_close',
-      nodePath: [...openingReplayState.nodePath, 'n5_close'],
-    }
     const storyEpisode = {
       id: 'episode-alang-3',
       code: 's1-p3-alang',
       seasonTitle: '没有名字的旧物',
       phase: 3,
       title: '被拆开的后半本',
-      objectCode: 'split-route-book',
+      objectCode: 'route-book',
       opening: '', action: '', discovery: '', response: null, closing: null,
       motion: { ambient: 'none' as const }, fragment: null,
       progress: { completedInPhase: 0, totalInPhase: 5, completedTotal: 10, total: 15 },
-      storyV2: {
-        nodeId: 'n4_echo_b', type: 'callback', segments: [], choices: [], next: 'n5_close', unlockFragment: null,
-        replayState: openingReplayState,
-      },
+      storyV2: null,
     }
     const encounter = {
       ...questionEncounter,
       npc: { id: 'npc-alang', slug: 'alang', name: '阿浪', animal: '灰狼' },
-      currentQuestion: null,
+      currentQuestion: {
+        id: 's1-p3-alang-template-response-v1',
+        text: 'template settlement question',
+        options: [
+          { id: 's1-p3-alang-template-a', label: 'template option a' },
+          { id: 's1-p3-alang-template-b', label: 'template option b' },
+        ],
+      },
       storyEpisode,
     }
-    const closure = { ...encounter, storyEpisode: { ...storyEpisode, storyV2: { ...storyEpisode.storyV2, nodeId: 'n5_close', type: 'closure', next: null, replayState: closureReplayState } } }
     const settled = { ...encounter, canonicalScreen: 'completed', status: 'completed', storyEpisode: { ...storyEpisode, response: '已经归还。', storyV2: null } }
     mocks.useEncounter.mockReturnValue({ data: encounter, isLoading: false, isError: false, refetch: mocks.refetch })
-    mocks.getStorageSync.mockReturnValue({
-      version: 'npc-later-act-v1', unitId: 's1-p3-alang', stage: 'ending',
+    const laterProgress = {
+      version: 'npc-later-act-v2', unitId: 's1-p3-alang', stage: 'ending',
       approachId: 'inspect-binding',
       seenHighlightIds: ['opened-rings', 'written-route', 'return-envelope'], objectOpened: true,
       seenDetailIds: ['clean-edges', 'removable-thread', 'outside-invite'], followupId: 'write-date',
-      gameStarted: true, gameStep: 3, gameComplete: true, mistakes: 0, wrongChoiceId: null,
-    })
-    mocks.advance.mockResolvedValueOnce(closure).mockResolvedValueOnce(settled)
+      gameStarted: true, gameStep: 3, gameComplete: true, mistakes: 0, stepMistakes: [0, 0, 0], selectedEvidenceId: null, wrongChoiceId: null,
+    }
+    const storyUnitState = {
+      unitId: 's1-p3-alang',
+      version: 2,
+      stage: 'OBJECT_SUCCESS',
+      choice: { questionId: 's1-p3-alang-template-response-v1', optionId: 's1-p3-alang-template-a', label: 'template option a' },
+      companionEvent: 'SUCCESS',
+      divergenceCopy: null,
+      atuanFirstAct: null,
+      atuanLaterAct: null,
+      analyticsSent: [],
+    }
+    mocks.getStorageSync.mockImplementation((key: string) => key.includes('flash_story_unit') ? storyUnitState : key.includes('later-act') ? laterProgress : undefined)
+    mocks.answer.mockResolvedValueOnce(settled)
 
     render(<FlashDialoguePageWithAssets customLaterActAssets={{
       alangSecond: 'alang-second.jpg', alangThird: 'alang-third.jpg', alangCharacter: 'alang-official.png',
@@ -636,18 +637,18 @@ describe('formal Flash dialogue', () => {
     }} />)
 
     fireEvent.click(screen.getByRole('button', { name: '收好阿浪归还的空白页' }))
-    await waitFor(() => expect(mocks.advance).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(mocks.answer).toHaveBeenCalledTimes(1))
+    expect(mocks.advance).not.toHaveBeenCalled()
     expect(mocks.canonicalRedirect).not.toHaveBeenCalledWith(
       expect.objectContaining({ canonicalScreen: 'completed' }),
       expect.anything(),
     )
-    expect(mocks.advance).toHaveBeenNthCalledWith(1, {
-      encounterId: 'encounter-1', replay: true, replayState: openingReplayState,
+    expect(mocks.answer).toHaveBeenCalledWith({
+      encounterId: 'encounter-1',
+      questionId: 's1-p3-alang-template-response-v1',
+      optionId: 's1-p3-alang-template-a',
+      replay: true,
     })
-    expect(mocks.advance).toHaveBeenNthCalledWith(2, {
-      encounterId: 'encounter-1', replay: true, replayState: closureReplayState,
-    })
-    expect(mocks.removeStorageSync).toHaveBeenCalledWith(expect.stringContaining('s1-p3-alang'))
   })
 
   it('keeps Lizi on the dedicated first-act path and submits the completed approach', async () => {

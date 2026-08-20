@@ -5,7 +5,7 @@ export type LiziLaterActUnitId = 's1-p2-lizi' | 's1-p3-lizi'
 export type MomoLaterActUnitId = 's1-p2-momo' | 's1-p3-momo'
 export type ShiqiLaterActUnitId = 's1-p2-shiqi' | 's1-p3-shiqi'
 export type CustomLaterActUnitId = AlangLaterActUnitId | LiziLaterActUnitId | MomoLaterActUnitId | ShiqiLaterActUnitId
-export type FlatLaterActUnitId = LiziLaterActUnitId | MomoLaterActUnitId | 's1-p2-shiqi'
+export type FlatLaterActUnitId = CustomLaterActUnitId
 
 export const ALANG_LATER_ACT_UNIT_IDS = new Set<string>(['s1-p2-alang', 's1-p3-alang'])
 export const LIZI_LATER_ACT_UNIT_IDS = new Set<string>(['s1-p2-lizi', 's1-p3-lizi'])
@@ -24,7 +24,7 @@ export function isLiziLaterActUnitId(value: string): value is LiziLaterActUnitId
 }
 
 export function isFlatLaterActUnitId(value: string): value is FlatLaterActUnitId {
-  return isLiziLaterActUnitId(value) || isMomoLaterActUnitId(value) || value === 's1-p2-shiqi'
+  return isAlangLaterActUnitId(value) || isLiziLaterActUnitId(value) || isMomoLaterActUnitId(value) || value === 's1-p2-shiqi' || value === 's1-p3-shiqi'
 }
 
 const ALANG_SECOND_ACT: LaterActStoryConfig = {

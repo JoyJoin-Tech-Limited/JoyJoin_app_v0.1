@@ -79,7 +79,7 @@ vi.mock("../services/flashPersonalizedNarrativeService", async (importOriginal) 
   return { ...actual, generateFlashPersonalizedResponse: mocks.generatePersonalizedResponse };
 });
 
-const { advanceFlashV2Story, answerFlashEncounter, getFlashEncounter, locateFlashAppearance } = await import("../services/flashService");
+const { answerFlashEncounter, getFlashEncounter, locateFlashAppearance } = await import("../services/flashService");
 const { FlashStorySettlementInvariantError } = await import("../repositories/flashStoryRepo");
 
 const now = new Date("2026-08-09T10:00:00.000Z");
@@ -654,7 +654,7 @@ describe("formal Flash story runtime policy", () => {
     expect(mocks.completeStoryEpisode).not.toHaveBeenCalled();
   });
 
-  it("replays a completed v2 episode from its opening with a client cursor and no official writes", async () => {
+  it("replays a completed local-template episode through the shared answer path with no official writes", async () => {
     const completed = storyState(reviewedOptionResponse) as any;
     completed.episode.code = "s1-p2-alang";
     completed.episode.content = {
@@ -688,26 +688,16 @@ describe("formal Flash story runtime policy", () => {
       now,
       allowStoryReplay: true,
     });
-    expect(opened.storyEpisode?.storyV2?.nodeId).toBe("n1_setup");
-    expect(opened.storyEpisode?.storyV2?.echo).toBe(0);
-
-    const advanced = await advanceFlashV2Story({
-      encounterId: encounter.id,
-      userId: encounter.userId,
-      now,
-      allowStoryReplay: true,
-      replayState: opened.storyEpisode?.storyV2?.replayState,
-    });
-    expect(advanced.storyEpisode?.storyV2?.nodeId).toBe("n3_choice");
+    expect(opened.storyEpisode?.storyV2).toBeNull();
+    expect(opened.question?.id).toBe("s1-p2-alang-template-response-v1");
 
     const finished = await answerFlashEncounter({
       encounterId: encounter.id,
       userId: encounter.userId,
-      questionId: "n3_choice",
-      optionId: "keep",
+      questionId: "s1-p2-alang-template-response-v1",
+      optionId: "s1-p2-alang-template-a",
       now,
       allowStoryReplay: true,
-      replayState: advanced.storyEpisode?.storyV2?.replayState,
     });
     expect(finished.isReplay).toBe(true);
     expect(finished.storyEpisode?.response).toBe("Reviewed closure");

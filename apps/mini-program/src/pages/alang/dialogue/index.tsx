@@ -7,8 +7,7 @@ import type { AtuanLaterActSubmission } from '@shared/alang/atuanLaterActs'
 import type { FlashStoryReplayStateDto } from '@shared/alang/flashTypes'
 import { FlashStoryUnit } from '../../../components/alang/story-unit/FlashStoryUnit'
 import { FlashStoryV2Stage } from '../../../components/alang/FlashStoryV2Stage'
-import { V2LaterActExperience } from '../../../components/alang/story-unit/AlangLaterActExperience'
-import { isAlangLaterActUnitId, isFlatLaterActUnitId } from '../../../components/alang/story-unit/LaterActStoryConfigs'
+import { isFlatLaterActUnitId } from '../../../components/alang/story-unit/LaterActStoryConfigs'
 import { FlashButton, FlashFeatureClosed, FlashNpcDialogueScene, FlashPageState, FlashTaskCategoryBadge } from '../../../components/alang/FlashUi'
 import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
@@ -26,7 +25,6 @@ import {
 import type { FlashCanonicalSnapshot } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
-import { resolveFlashNpcTheme } from '../../../lib/alang/flashNpcAssets'
 import atuanArrivalScene from '../assets/ui/flash-atuan-park-clean-v3.jpg'
 import atuanArrivalCharacter from '../assets/ui/flash-atuan-character-lowpoly-v3.png'
 import atuanArrivalBag from '../assets/ui/flash-atuan-bag-cutout-v2.png'
@@ -131,7 +129,6 @@ export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_P
   const encounterId = params.encounterId ?? ''
   const replay = params.replay === '1'
   const replaySession = replay ? (params.replaySession ?? 'legacy-replay') : undefined
-  const progressEncounterId = replaySession ? `${encounterId}:${replaySession}` : encounterId
   const { data, isLoading, isFetching, isError, error, refetch } = useFlashEncounter(encounterId, enabled && !!encounterId, replay)
   const answerMutation = useAnswerFlashEncounter()
   const advanceMutation = useAdvanceFlashStoryNode()
@@ -255,15 +252,6 @@ export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_P
     } finally {
       advanceInFlightRef.current = false
     }
-  }
-
-  const completeV2LaterAct = async (): Promise<boolean> => {
-    const response = await advance()
-    if (!response) return false
-    if (response.storyEpisode?.storyV2?.nodeId === 'n5_close') {
-      return Boolean(await advance(response.storyEpisode.storyV2.replayState))
-    }
-    return true
   }
 
   const submitStoryChoice = async (choice: { questionId: string; optionId: string; label: string; storyPath?: AtuanFirstActSubmission | AtuanLaterActSubmission }) => {
@@ -392,48 +380,12 @@ export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_P
   }
 
   if (story) {
-    const isCustomLaterAct = isAlangLaterActUnitId(story.code)
-      || isFlatLaterActUnitId(story.code)
-      || story.code === 's1-p3-shiqi'
+    const isCustomLaterAct = isFlatLaterActUnitId(story.code)
     if (isCustomLaterAct && !customLaterActAssets) {
       return <View className='flash-page'><FlashPageState title='正在展开新的现场…' description='完整场景会在下一页接上，刚才的进度不会丢。' /></View>
     }
-    const v2View = isFlashV2PilotUnitId(story.code) ? story.storyV2 : null
+    const v2View = !isCustomLaterAct && isFlashV2PilotUnitId(story.code) ? story.storyV2 : null
     if (v2View) {
-      if (isAlangLaterActUnitId(story.code) || story.code === 's1-p3-shiqi') {
-        const theme = resolveFlashNpcTheme(data.npc.slug, data.npc.name)
-        const background = story.code === 's1-p2-alang'
-          ? customLaterActAssets?.alangSecond
-          : story.code === 's1-p3-alang'
-            ? customLaterActAssets?.alangThird
-            : customLaterActAssets?.shiqiThird
-        const character = story.code === 's1-p3-shiqi'
-          ? customLaterActAssets?.shiqiCharacter
-          : customLaterActAssets?.alangCharacter
-        return (
-          <View className='flash-page flash-dialogue flash-dialogue--story'>
-            <V2LaterActExperience
-              encounterId={progressEncounterId}
-              unitId={story.code}
-              nodeId={v2View.nodeId}
-              availableChoiceIds={v2View.choices.map(({ id }) => id)}
-              background={background ?? ''}
-              character={character ?? theme.imageSrc}
-              disabled={answerMutation.isPending || advanceMutation.isPending}
-              onChoice={(choiceId) => { void answer(v2View.nodeId, choiceId) }}
-              onContinue={() => { void advance() }}
-              onComplete={completeV2LaterAct}
-            />
-            {answerMutation.isPending || advanceMutation.isPending ? (
-              <View className='flash-dialogue__story-error flash-dialogue__story-error--status' role='status'>
-                <Text>故事正在接上…</Text>
-              </View>
-            ) : actionError ? (
-              <View className='flash-dialogue__story-error' role='alert'><Text>{actionError}</Text></View>
-            ) : null}
-          </View>
-        )
-      }
       return (
         <View className='flash-page flash-dialogue flash-dialogue--story'>
           <FlashStoryV2Stage
@@ -479,11 +431,14 @@ export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_P
             secondScene: atuanSecondActScene,
             thirdScene: atuanThirdActScene,
           }}
+          alangLaterActScenes={customLaterActAssets ? { second: customLaterActAssets.alangSecond, third: customLaterActAssets.alangThird } : undefined}
+          alangLaterActCharacter={customLaterActAssets?.alangCharacter}
           momoLaterActScenes={customLaterActAssets ? { second: customLaterActAssets.momoSecond, third: customLaterActAssets.momoThird } : undefined}
           momoLaterActCharacter={customLaterActAssets?.momoCharacter}
           liziLaterActScenes={customLaterActAssets ? { second: customLaterActAssets.liziSecond, third: customLaterActAssets.liziThird } : undefined}
           liziLaterActCharacter={customLaterActAssets?.liziCharacter}
           shiqiSecondActScene={customLaterActAssets?.shiqiSecond}
+          shiqiThirdActScene={customLaterActAssets?.shiqiThird}
           shiqiLaterActCharacter={customLaterActAssets?.shiqiCharacter}
           onSubmit={submitStoryChoice}
           onContinue={() => {

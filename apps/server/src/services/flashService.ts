@@ -86,8 +86,7 @@ import {
 } from "../repositories/flashStoryRepo";
 import { getFeatureFlag } from "../lib/featureFlags";
 import { isFlashV2PilotUnitId, nextFlashV2HookHint } from "@joyjoin/shared/alang/flashStorySeason";
-import { isFlashFirstActExperienceUnitId } from "@joyjoin/shared/alang/flashFirstActExperience";
-import { resolveFlashFirstActRuntimeContent } from "../lib/flashFirstActRuntime";
+import { isFlashLocalTemplateExperienceUnitId, resolveFlashFirstActRuntimeContent } from "../lib/flashFirstActRuntime";
 import {
   answerStoryChoice as answerV2StoryChoice,
   advanceStoryNode as advanceV2StoryNode,
@@ -219,7 +218,7 @@ async function buildFlashStoryV2View(
   storyState: NonNullable<Awaited<ReturnType<typeof getFlashStoryEncounterState>>>,
   replay?: { enabled: boolean; state?: FlashStoryReplayStateDto },
 ): Promise<FlashStoryV2ViewDto | null> {
-  if (isFlashFirstActExperienceUnitId(storyState.episode.code)) return null;
+  if (isFlashLocalTemplateExperienceUnitId(storyState.episode.code)) return null;
   const content = storyState.episode.content as { v?: number; start?: string; nodes?: Record<string, unknown> } | null;
   if (content?.v !== 2) return null;
   if (!isFlashV2PilotUnitId(storyState.episode.code)) return null;
