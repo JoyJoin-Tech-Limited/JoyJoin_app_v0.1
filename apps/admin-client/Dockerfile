@@ -6,22 +6,22 @@ ENV VITE_API_URL=$VITE_API_URL
 
 WORKDIR /app
 
-# Copy root package files for workspaces
-COPY package*.json tsconfig.base.json ./
+# Copy root package files for workspaces (tsconfig.base.json is copied after
+# npm ci below so its layer cache stays stable against config churn)
+COPY package*.json ./
 COPY packages/shared/package.json ./packages/shared/
 
 # Copy app package file
 COPY apps/admin-client/package.json ./apps/admin-client/
 
-# Copy .github and scripts for postinstall step (setup:agent-skills needs .github/skills/ and scripts/)
-COPY .github ./.github
-COPY scripts ./scripts
+# Install all dependencies. The root postinstall (setup:agent-skills AI tooling
+# mirror) skips gracefully when scripts/.github are absent, so those dirs are
+# deliberately NOT copied here. This keeps the npm ci layer's cache stable
+# against frequent .github/docs churn instead of forcing a full ~1.3 GiB
+# reinstall on every build.
+RUN npm ci --no-audit --no-fund
 
-# Install all dependencies
-RUN npm ci
-
-# Clean up build-stage artifacts not needed at runtime
-RUN rm -rf .github scripts
+COPY tsconfig.base.json ./
 # Copy shared package source
 COPY packages/shared ./packages/shared
 

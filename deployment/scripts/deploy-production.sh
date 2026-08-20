@@ -140,7 +140,7 @@ cd ~/JoyJoin
 # Ensure host dependencies are fresh for CLI tools.
 # Skip Playwright browser downloads on prod host to avoid lock/contention failures.
 echo "📦 Installing host dependencies (skip Playwright browser download)..."
-PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci
+PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-audit --no-fund
 
 # --- 1.5) Sync GitHub Actions secrets + variables → deployment/.env.production ---
 echo "🔐 Syncing GitHub secrets/variables into deployment/.env.production..."
@@ -446,11 +446,46 @@ sudo systemctl reload nginx
 echo "🔎 Active Nginx joyjoin.conf markers..."
 sudo awk 'NR<=120{print}' /etc/nginx/conf.d/joyjoin.conf | sed -n '/X-JoyJoin-Edge/p;/X-JoyJoin-Proxy/p;/upstream joyjoin_api/,/}/p'
 
-# --- 4) Restart containers ---
+# --- 4) Restart containers (database remains untouched) ---
 echo "🐳 Restarting application containers (database remains untouched)..."
 cd ~/JoyJoin/deployment
 disk_guard
-retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --no-deps joyjoin-api joyjoin-admin
+
+# 2026-08-20: registry-image delivery — production API/Admin images are built
+# and pushed to GHCR on the GitHub runner (deploy-production.yml build-images),
+# pulled here, and retagged to the compose refs. The CVM never compiles.
+# Falls back to the legacy on-box `--build` when the workflow did not supply
+# registry refs/token (e.g. GHCR_TOKEN unavailable for the prod environment).
+if [[ "${PROD_IMAGES_READY:-false}" == "true" \
+      && -n "${PROD_API_IMAGE:-}" && -n "${PROD_ADMIN_IMAGE:-}" && -n "${GHCR_TOKEN:-}" ]]; then
+  echo "📦 Registry delivery: pulling production images from GHCR..."
+  printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-x-access-token}" --password-stdin
+
+  # Resolve the exact compose image refs (implicit <project>-<service> tags)
+  # instead of hardcoding them, so a compose rename cannot silently diverge.
+  mapfile -t COMPOSE_IMAGES < <(docker compose -f docker-compose.nginx.yml config --images)
+  PROD_API_REF="$(printf '%s\n' "${COMPOSE_IMAGES[@]}" | rg 'joyjoin-api$' | head -1)"
+  PROD_ADMIN_REF="$(printf '%s\n' "${COMPOSE_IMAGES[@]}" | rg 'joyjoin-admin$' | head -1)"
+  if [[ -z "${PROD_API_REF:-}" || -z "${PROD_ADMIN_REF:-}" ]]; then
+    echo "❌ Could not resolve compose image refs for registry delivery."
+    exit 1
+  fi
+  echo "   API image   → $PROD_API_REF ($PROD_API_IMAGE)"
+  echo "   Admin image → $PROD_ADMIN_REF ($PROD_ADMIN_IMAGE)"
+
+  retry_command 5 15 timeout --signal=TERM --kill-after=30s 12m docker pull "$PROD_API_IMAGE"
+  retry_command 5 15 timeout --signal=TERM --kill-after=30s 12m docker pull "$PROD_ADMIN_IMAGE"
+  if [[ "$PROD_API_IMAGE" != "$PROD_API_REF" ]]; then
+    docker image tag "$PROD_API_IMAGE" "$PROD_API_REF"
+  fi
+  if [[ "$PROD_ADMIN_IMAGE" != "$PROD_ADMIN_REF" ]]; then
+    docker image tag "$PROD_ADMIN_IMAGE" "$PROD_ADMIN_REF"
+  fi
+  retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --no-deps joyjoin-api joyjoin-admin
+else
+  echo "🏗️ Legacy delivery: building production images on-box..."
+  retry_command 3 15 docker compose -f docker-compose.nginx.yml up -d --build --no-deps joyjoin-api joyjoin-admin
+fi
 
 echo "🐳 Starting granite-embedding (built locally from deploy/granite-embedding, non-blocking)..."
 if docker compose -f docker-compose.nginx.yml up -d --build --no-deps granite-embedding; then

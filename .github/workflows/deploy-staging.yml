@@ -3,6 +3,17 @@ name: Deploy Staging
 on:
   push:
     branches: [main]
+    # Skip the full quality-gates + image-build + CVM deploy entirely for
+    # non-shipping commits (docs, markdown, archived/agent-only config). This
+    # is the single biggest runner-time win: docs-only pushes previously
+    # burned ~11 runner jobs + 2 image builds + a full CVM switch for nothing.
+    paths-ignore:
+      - 'docs/**'
+      - 'archived/**'
+      - '**/*.md'
+      - 'README*'
+      - 'LICENSE*'
+      - '.opencode/**'
   workflow_dispatch:
 
 # Keep the in-flight staging release, but let GitHub collapse multiple waiting
@@ -28,6 +39,17 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+
+      # Pushes queue on the joyjoin-staging concurrency group, so by the time a
+      # queued run starts, main may have already moved past it. Reject stale
+      # candidates BEFORE consuming ~7 minutes of Docker build time — the old
+      # pipeline only checked freshness in the deploy job, after images were
+      # built and pushed.
+      - name: Reject stale staging candidate before build
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          node scripts/verify-deployment-freshness.mjs "$GITHUB_SHA" "$(git rev-parse origin/main)"
 
       # BuildKit runs on the GitHub runner, never on the shared production CVM.
       # The CVM pulls completed images from a registry and switches containers.

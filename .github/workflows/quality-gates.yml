@@ -25,7 +25,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
 
       - name: Verify env, secret, legacy, and import-boundary guardrails
         run: node scripts/check/check-guardrails.mjs
@@ -60,7 +60,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
 
       - name: Type check
         run: npm run typecheck -w @joyjoin/shared
@@ -80,7 +80,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
 
       - name: Type check
         run: npm run typecheck -w @joyjoin/admin-client
@@ -100,7 +100,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
 
       - name: Type check
         run: npm run typecheck -w @joyjoin/server
@@ -118,7 +118,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
       - name: Type check
         run: npm run typecheck --workspace=mini-program
 
@@ -140,7 +140,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
 
       - name: Run tests
         run: npm run test -w @joyjoin/server
@@ -158,7 +158,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
       - name: Run tests
         run: npm run test -w @joyjoin/shared
 
@@ -175,7 +175,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
       - name: Run tests
         run: npm run test -w @joyjoin/admin-client
 
@@ -222,7 +222,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
 
       - name: Run Harness 5-Pillar Gate
         run: npm run harness:gate
@@ -242,7 +242,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
 
       - name: Run Simulation
         run: npx tsx apps/server/src/tests/runSimulation.ts 100

@@ -51,12 +51,53 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # workflow_run fires after EVERY Deploy Staging completion, including
+  # server-only commits. The push event path-filter already skipped those, so
+  # gate the workflow_run rebuild/upload on the commit's actual changed files.
+  # Fail-safe: if the commit API call fails, treat the commit as changed so the
+  # dev-version upload is never silently skipped.
+  check-mini-program-changes:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - name: Check whether this commit touched mini-program paths
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          COMMIT_JSON=$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA" \
+            --jq '{ files: [.files[].filename], truncated: (.truncated == true) }') || {
+            echo "::warning::Failed to fetch commit files for $HEAD_SHA; treating as changed (fail-safe)"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+          CHANGED_FILES=$(printf '%s' "$COMMIT_JSON" | jq -r '.files[]')
+          TRUNCATED=$(printf '%s' "$COMMIT_JSON" | jq -r '.truncated')
+          if [ "$TRUNCATED" = "true" ]; then
+            echo "::warning::Commit file list was truncated by the API; treating as changed (fail-safe)"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(apps/mini-program/|packages/|package\.json$|package-lock\.json$|\.github/workflows/taro-weapp-build\.yml$)'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Commit touches mini-program paths; proceeding with rebuild/upload."
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Commit does not touch mini-program paths; skipping redundant rebuild/upload."
+          fi
+
   build-weapp:
+    needs: check-mini-program-changes
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_branch == 'main')
+       github.event.workflow_run.head_branch == 'main' &&
+       needs.check-mini-program-changes.outputs.changed == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -97,7 +138,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.push-build-check.outputs.push_build_exists != 'true'
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
 
       - name: Type check
         if: steps.push-build-check.outputs.push_build_exists != 'true'
@@ -202,9 +243,10 @@ jobs:
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_branch == 'main') ||
+       github.event.workflow_run.head_branch == 'main' &&
+       needs.check-mini-program-changes.outputs.changed == 'true') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.should_upload == 'true')
-    needs: build-weapp
+    needs: [check-mini-program-changes, build-weapp]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:

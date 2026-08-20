@@ -12,15 +12,13 @@ COPY apps/server/package.json ./apps/server/
 RUN npm config set maxsockets 5
 RUN npm config set prefer-offline true
 
-# Copy .github and scripts for postinstall step (setup:agent-skills needs .github/skills/ and scripts/)
-COPY .github ./.github
-COPY scripts ./scripts
+# Install all dependencies. The root postinstall (setup:agent-skills AI tooling
+# mirror) skips gracefully when scripts/.github are absent, so those dirs are
+# deliberately NOT copied here. This keeps the npm ci layer's cache stable
+# against frequent .github/docs churn instead of forcing a full ~1.3 GiB
+# reinstall on every build.
+RUN npm ci --no-audit --no-fund
 
-# Install all dependencies
-RUN npm ci
-
-# Clean up build-stage artifacts not needed at runtime
-RUN rm -rf .github scripts
 # Copy shared package source
 COPY packages/shared ./packages/shared
 

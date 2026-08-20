@@ -95,7 +95,7 @@ jobs:
 
       - name: Validate CDN-only profile pixel assets
         run: |
-          npm ci
+          npm ci --no-audit --no-fund --prefer-offline
           node apps/mini-program/scripts/check-profile-pixel-assets.mjs
 
       - name: Compile mini-program without publishing it

@@ -9,14 +9,119 @@ concurrency:
   group: joyjoin-prod-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  # build-images pushes the production API/Admin images to GHCR from the runner.
+  # The CVM only pulls completed images, mirroring the staging delivery model.
+  packages: write
+
 jobs:
+  # When production releases the same commit that already passed the full
+  # quality-gates suite on main (typical for a promote-release flow), skip the
+  # redundant 11-job gate rerun and deploy straight to a slim prod gate.
+  # Deployment (environment: production) still gates the release itself.
+  check-prior-gates:
+    name: Check Prior Gates on Main
+    runs-on: ubuntu-latest
+    outputs:
+      already_passed: ${{ steps.check.outputs.already_passed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for a successful Deploy Staging run on main for this SHA
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          SUCCESS_COUNT=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&event=push&status=success&per_page=100" \
+            --jq '[.workflow_runs[] | select(.name == "Deploy Staging")] | length')
+          if [ "$SUCCESS_COUNT" -ge 1 ]; then
+            echo "already_passed=true" >> "$GITHUB_OUTPUT"
+            echo "This SHA already passed gates via a successful Deploy Staging run on main; skipping the 11-job gate suite."
+          else
+            echo "already_passed=false" >> "$GITHUB_OUTPUT"
+            echo "No prior Deploy Staging success for this SHA; running the full gate suite."
+          fi
+
   quality-gates:
+    needs: check-prior-gates
+    if: needs.check-prior-gates.outputs.already_passed != 'true'
     uses: ./.github/workflows/quality-gates.yml
     secrets: inherit
 
+  # Build production images on the GitHub runner and push to GHCR (same model
+  # as staging). The CVM never compiles. Falls back to the legacy on-box build
+  # when GHCR_TOKEN is unavailable for the production environment.
+  build-images:
+    name: Build Production Images
+    needs: [check-prior-gates]
+    if: needs.check-prior-gates.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    outputs:
+      api_image: ${{ steps.refs.outputs.api_image }}
+      admin_image: ${{ steps.refs.outputs.admin_image }}
+      images_ready: ${{ steps.refs.outputs.images_ready }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute image refs and registry readiness
+        id: refs
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GHCR_TOKEN:-}" ]; then
+            echo "::warning::GHCR_TOKEN is unavailable for this environment; falling back to the legacy on-box build."
+            echo "images_ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "images_ready=true" >> "$GITHUB_OUTPUT"
+          echo "api_image=ghcr.io/joyjoin-tech-limited/joyjoin-api:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "admin_image=ghcr.io/joyjoin-tech-limited/joyjoin-admin:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        if: steps.refs.outputs.images_ready == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push production API image
+        if: steps.refs.outputs.images_ready == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          push: true
+          tags: ghcr.io/joyjoin-tech-limited/joyjoin-api:${{ github.sha }}
+          cache-from: type=gha,scope=joyjoin-prod-api
+          cache-to: type=gha,mode=max,scope=joyjoin-prod-api
+
+      - name: Build and push production Admin image
+        if: steps.refs.outputs.images_ready == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/admin-client/Dockerfile
+          push: true
+          tags: ghcr.io/joyjoin-tech-limited/joyjoin-admin:${{ github.sha }}
+          cache-from: type=gha,scope=joyjoin-prod-admin
+          cache-to: type=gha,mode=max,scope=joyjoin-prod-admin
+
   deploy-production:
     name: Production Deployment
-    needs: [quality-gates]
+    needs: [check-prior-gates, quality-gates, build-images]
+    if: >-
+      always() &&
+      needs.check-prior-gates.result == 'success' &&
+      (needs.quality-gates.result == 'success' || needs.quality-gates.result == 'skipped') &&
+      needs.build-images.result == 'success'
     concurrency:
       group: joyjoin-cvm-remote
       queue: max
@@ -128,6 +233,12 @@ jobs:
 
       - name: SSH Remote Production Deployment
         env:
+          # ── Registry-image delivery (built on the runner, pulled on CVM) ─
+          # Empty strings when images_ready=false => legacy on-box build.
+          PROD_API_IMAGE: ${{ needs.build-images.outputs.api_image }}
+          PROD_ADMIN_IMAGE: ${{ needs.build-images.outputs.admin_image }}
+          PROD_IMAGES_READY: ${{ needs.build-images.outputs.images_ready }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           # ── Required secrets (production API startup) ─────────────────────
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
@@ -211,7 +322,7 @@ jobs:
           fingerprint: ${{ steps.cvm-host-key.outputs.fingerprint }}
           timeout: 120s
           command_timeout: 60m
-          envs: DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,GITHUB_TOKEN
+          envs: PROD_API_IMAGE,PROD_ADMIN_IMAGE,PROD_IMAGES_READY,GHCR_TOKEN,DATABASE_URL,SESSION_SECRET,WECHAT_APPID,WECHAT_SECRET,DEEPSEEK_API_KEY,JWT_SECRET,ADMIN_CREATE_SECRET_KEY,MINIMAX_API_KEY,WECHAT_PAY_APP_ID,WECHAT_PAY_MCH_ID,WECHAT_PAY_SERIAL_NO,WECHAT_PAY_PRIVATE_KEY_B64,WECHAT_PAY_APIV3_KEY,WECHAT_PAY_PLATFORM_CERT_B64,NODE_ENV,PORT,APP_URL,COOKIE_DOMAIN,CORS_ORIGINS,ALLOWED_ORIGINS,PAYMENTS_ENABLED,MINIMAX_BASE_URL,MINIMAX_MODEL,MINIMAX_TIMEOUT_MS,CREATIVE_AI_PROVIDER,CREATIVE_AI_TAGS_PROVIDER,CREATIVE_AI_THEME_PROVIDER,CREATIVE_AI_TITLE_PROVIDER,AI_TIMEOUT_MS,TENCENT_MAP_KEY,TENCENT_MAP_JS_KEY,SOCIAL_AI_PROVIDER,SOCIAL_AUCTION_LLM_ENABLED,SOCIAL_MICRO_CHALLENGE_LLM_ENABLED,SOCIAL_MINISCRIPT_LLM_ENABLED,SOCIAL_WARMUP_LLM_ENABLED,SOCIAL_LIE_DETECTIVE_LLM_ENABLED,SOCIAL_PERSONALITY_DICE_LLM_ENABLED,SOCIAL_GROUP_MIRROR_LLM_ENABLED,SOCIAL_UNDERCOVER_WORD_LLM_ENABLED,SOCIAL_QUIP_BATTLE_LLM_ENABLED,SOCIAL_RECAP_LLM_ENABLED,SOCIAL_ICEBREAKER_GLOW_TIER_VARIANT,RUN_PLAN_TEMPLATES_ENABLED,SOCIAL_ICEBREAKER_ENABLE_AUCTION,SOCIAL_ICEBREAKER_ENABLE_PERSONALITY_DICE,PERSONALITY_DICE_CHOOSE_MODE_ENABLED,SOCIAL_ICEBREAKER_ENABLE_GROUP_MIRROR,SOCIAL_ICEBREAKER_ENABLE_UNDERCOVER_WORD,SOCIAL_ICEBREAKER_ENABLE_QUIP_BATTLE,SOCIAL_ICEBREAKER_ENABLE_SPEED_FRIENDING,SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT,SOCIAL_ICEBREAKER_ENABLE_MOMENT_CARD_SERVER_RENDER,MASCOT_DISPLAY_NAME,MASCOT_BACKSTORY_ENABLED,MASCOT_ORIGIN_LORE_ENABLED,DEBUG_AUTH,ENABLE_MATCHER_V2,ENABLE_SEMANTIC_SIMILARITY,EMBEDDING_BASE_URL,EMBEDDING_MODEL,ENABLE_ADAPTIVE_WEIGHTS,LOG_LEVEL,SOCIAL_DEFAULT_REASONING_EFFORT,DEEPSEEK_PRO_DAILY_BUDGET_USD,ENABLE_PRO_MATCH_EXPLANATIONS,XIAOYUE_MAX_TURNS,WECHAT_PAY_NOTIFY_URL,GITHUB_TOKEN
           script: |
             set -euo pipefail
             cd ~/JoyJoin

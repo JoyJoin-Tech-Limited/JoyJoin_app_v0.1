@@ -23,7 +23,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
 
       - name: Activity Flow — Admin Pool Creation
         run: npx vitest run apps/server/src/__tests__/adminEventPoolCreation.test.ts --reporter=verbose 2>&1 || true

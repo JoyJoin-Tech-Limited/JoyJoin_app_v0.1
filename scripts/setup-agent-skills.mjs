@@ -70,8 +70,13 @@ function copySkill(skillName) {
 
 function main() {
   if (!fs.existsSync(githubSkillsDir)) {
-    console.error(`[setup-agent-skills] Canonical skill directory not found: ${githubSkillsDir}`);
-    process.exit(1);
+    // Tolerant of container/CI builds: the Docker build (apps/server and
+    // apps/admin-client) does not COPY .github/ or scripts/ so the npm ci
+    // layer cache stays stable — in that environment the agent-skills mirror
+    // is irrelevant. Local installs always have .github/skills present.
+    console.warn(`[setup-agent-skills] Canonical skill directory not found: ${githubSkillsDir}`);
+    console.warn('[setup-agent-skills] Skipping mirror (not a local dev workspace).');
+    process.exit(0);
   }
   if (!fs.existsSync(agentsSkillsDir)) {
     fs.mkdirSync(agentsSkillsDir, { recursive: true });
