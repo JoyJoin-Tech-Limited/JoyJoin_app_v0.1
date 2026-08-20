@@ -44,7 +44,6 @@ export function AtuanLaterActScene({ unitId, background, character, speech, prog
   const [focusedHighlightId, setFocusedHighlightId] = useState<string | null>(null)
   const definition = getAtuanLaterActDefinition(unitId)
   const highlights = definition.highlights as readonly { id: string; label: string }[]
-  const exploring = Boolean(progress?.arrivalReplyId && progress.highlightOrder.length < highlights.length)
   const hotspotTargets = highlights.map((highlight, index) => ({
     id: highlight.id,
     label: highlight.label,
@@ -55,7 +54,7 @@ export function AtuanLaterActScene({ unitId, background, character, speech, prog
     <View className={`atuan-later-scene atuan-later-scene--${unitId === 's1-p2-atuan' ? 'second' : 'third'}${backgroundFailed ? ' atuan-later-scene--fallback' : ''}`} data-testid='atuan-later-scene'>
       {!backgroundFailed ? <Image className='atuan-later-scene__background' src={background} mode='aspectFill' onError={() => setBackgroundFailed(true)} data-testid='atuan-later-background' aria-hidden='true' /> : null}
       <View className='atuan-later-scene__grade' aria-hidden='true' />
-      <Image className={`atuan-later-scene__character${exploring ? ' atuan-later-scene__character--quiet' : ''}`} src={character} mode='aspectFit' aria-hidden='true' />
+      <Image className='atuan-later-scene__character' src={character} mode='aspectFit' aria-hidden='true' />
       {progress && onInspect ? (
         <FirstActHighlightOverlay
           npcSlug='atuan'

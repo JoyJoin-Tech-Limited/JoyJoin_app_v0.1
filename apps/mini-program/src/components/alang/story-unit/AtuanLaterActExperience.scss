@@ -31,7 +31,7 @@
 }
 
 .atuan-later-scene__grade {
-  background: linear-gradient(180deg, rgba($color-text-primary-warm, 0.04) 0%, rgba($color-text-primary-warm, 0.02) 44%, rgba($color-text-primary, 0.8) 100%);
+  background: linear-gradient(180deg, rgba($color-text-primary-warm, 0.03) 0%, transparent 44%, rgba($color-text-primary, 0.36) 100%);
   pointer-events: none;
 }
 
@@ -45,11 +45,6 @@
   pointer-events: none;
   animation: atuan-later-character-enter 420ms cubic-bezier(0.22, 1, 0.36, 1);
   transition: opacity 180ms ease, transform 180ms ease;
-}
-
-.atuan-later-scene__character--quiet {
-  opacity: 0.76;
-  transform: translateX(4%);
 }
 
 .atuan-later-scene__speech {

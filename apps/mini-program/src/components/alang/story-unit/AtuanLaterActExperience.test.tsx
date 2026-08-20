@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -12,6 +14,14 @@ vi.mock('@tarojs/components', () => ({
 }))
 
 describe('AtuanLaterActExperience', () => {
+  it('keeps later-act Atuan crisp during highlight exploration like the first act', () => {
+    const styles = readFileSync(resolve(process.cwd(), 'src/components/alang/story-unit/AtuanLaterActExperience.scss'), 'utf8')
+
+    expect(styles).not.toContain('atuan-later-scene__character--quiet')
+    expect(styles).not.toMatch(/\.atuan-later-scene__character[^{]*\{[^}]*opacity:\s*0\.[0-8]/s)
+    expect(styles).toContain('rgba($color-text-primary, 0.36)')
+  })
+
   it('keeps the scene usable when WeChat cannot decode the bundled background', () => {
     render(
       <AtuanLaterActScene

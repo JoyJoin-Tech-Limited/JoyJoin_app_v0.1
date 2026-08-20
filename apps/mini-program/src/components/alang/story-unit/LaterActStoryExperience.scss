@@ -35,7 +35,7 @@
 .later-act-scene__wash {
   z-index: 1;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(18, 22, 28, 0.04) 0%, rgba(18, 22, 28, 0.08) 54%, rgba(18, 22, 28, 0.7) 100%);
+  background: linear-gradient(180deg, rgba(18, 22, 28, 0.03) 0%, rgba(18, 22, 28, 0.05) 54%, rgba(18, 22, 28, 0.34) 100%);
 }
 
 .later-act-scene__character {
@@ -75,19 +75,6 @@
 .alang-later-act--second .later-act-scene__character {
   right: 4%;
   width: 39%;
-}
-
-.later-act-experience--explore .later-act-scene__character,
-.later-act-experience--object .later-act-scene__character {
-  opacity: 0.76;
-  transform: translateX(2%);
-}
-
-.later-act-experience--explore.momo-later-act .later-act-scene__character,
-.later-act-experience--object.momo-later-act .later-act-scene__character,
-.later-act-experience--explore.lizi-later-act .later-act-scene__character,
-.later-act-experience--object.lizi-later-act .later-act-scene__character {
-  transform: translateX(-4%);
 }
 
 .later-act-scene__hotspots {

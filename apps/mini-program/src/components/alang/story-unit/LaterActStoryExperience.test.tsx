@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -17,6 +19,15 @@ vi.mock('@tarojs/components', () => ({
 }))
 
 describe('LaterActStoryExperience', () => {
+  it('keeps custom later-act NPCs visually present during highlight exploration', () => {
+    const styles = readFileSync(resolve(process.cwd(), 'src/components/alang/story-unit/LaterActStoryExperience.scss'), 'utf8')
+
+    expect(styles).not.toMatch(/later-act-experience--explore\s+\.later-act-scene__character/)
+    expect(styles).not.toMatch(/later-act-experience--object\s+\.later-act-scene__character/)
+    expect(styles).not.toMatch(/\.later-act-scene__character[^{]*\{[^}]*opacity:\s*0\.[0-8]/s)
+    expect(styles).toContain('rgba(18, 22, 28, 0.34)')
+  })
+
   it('keeps every rewritten act on the same complete six-beat contract', () => {
     expect(Object.keys(CUSTOM_LATER_ACT_CONFIGS)).toEqual(expect.arrayContaining([
       's1-p2-alang',
