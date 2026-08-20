@@ -2822,7 +2822,6 @@ describe.sequential('social icebreaker routes', () => {
 
         expect(response.status).toBe(200);
         expect(body.state.runPlan.segments.map((segment: any) => segment.phase)).toEqual([
-          'warmup',
           'auction',
           'recap',
         ]);
@@ -2907,8 +2906,8 @@ describe.sequential('social icebreaker routes', () => {
         const body = await response.json() as any;
 
         expect(response.status).toBe(200);
+        expect(body.state.currentPhase).toBe('personality_dice');
         expect(body.state.runPlan.segments.map((segment: any) => segment.phase)).toEqual([
-          'warmup',
           'personality_dice',
           'micro_challenge',
           'lie_detective',
@@ -3421,7 +3420,6 @@ describe.sequential('social icebreaker routes', () => {
 
           expect(response.status).toBe(200);
           expect(body.state.runPlan.segments.map((segment: any) => segment.phase)).toEqual([
-            'warmup',
             'auction',
             'recap',
           ]);

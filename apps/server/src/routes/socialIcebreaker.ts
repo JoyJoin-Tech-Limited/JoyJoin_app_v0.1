@@ -232,6 +232,9 @@ function scheduleStartBackgroundGeneration(params: {
       });
     }
 
+    const includesWarmup = runPlan?.segments.some((segment) => segment.phase === 'warmup') ?? true;
+    if (!includesWarmup) return;
+
     const warmupBudgetMs = process.env.NODE_ENV === 'test' ? 50 : 3000;
     let warmupBudgetTimer: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -600,6 +603,7 @@ router.post('/start', async (req: any, res) => {
       }
       runPlan = buildCustomRunPlan(customValidation.phases);
       newState.runPlan = runPlan;
+      newState.currentPhase = customValidation.phases[0];
     } else {
       // Backward compatibility for older clients that still use the
       // between-round custom phase picker.

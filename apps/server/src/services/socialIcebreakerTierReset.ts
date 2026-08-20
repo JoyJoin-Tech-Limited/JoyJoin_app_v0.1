@@ -106,6 +106,9 @@ export async function resetSocialIcebreakerTier(
     state.eventTier = 'custom';
     state.vibe = resolvedVibe ?? oldVibe ?? 'balanced';
     state.runPlan = customRunPlan;
+    if (customRunPlan?.segments[0]) {
+      state.currentPhase = customRunPlan.segments[0].phase;
+    }
     state.autoAdvanceEnabled = false;
   } else {
     state.eventTier = newTier;

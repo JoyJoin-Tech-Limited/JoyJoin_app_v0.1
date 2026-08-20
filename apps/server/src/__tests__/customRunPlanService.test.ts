@@ -4,11 +4,10 @@ import { getNextEligiblePhase } from '../socialIcebreakerPhaseConfig';
 import type { SocialSessionState } from '@shared/socialIcebreaker';
 
 describe('custom run plan service', () => {
-  it('keeps the host-selected game order between warmup and recap', () => {
+  it('keeps only the host-selected games before recap', () => {
     const plan = buildCustomRunPlan(['auction', 'lie_detective', 'micro_challenge']);
 
     expect(plan.segments.map((segment) => segment.phase)).toEqual([
-      'warmup',
       'auction',
       'lie_detective',
       'micro_challenge',
@@ -18,6 +17,12 @@ describe('custom run plan service', () => {
     expect(plan.totalMinutes).toBe(
       plan.segments.reduce((total, segment) => total + segment.allocatedMinutes, 0),
     );
+  });
+
+  it('does not add topic cards or micro challenges to a mini-script-only plan', () => {
+    const plan = buildCustomRunPlan(['mini_script']);
+
+    expect(plan.segments.map((segment) => segment.phase)).toEqual(['mini_script', 'recap']);
   });
 
   it('rejects empty, duplicate, and non-playable phase selections', () => {
@@ -47,7 +52,6 @@ describe('custom run plan service', () => {
       runPlan: buildCustomRunPlan(['auction', 'lie_detective']),
     } as SocialSessionState;
 
-    expect(getNextEligiblePhase('warmup', state)).toBe('auction');
     expect(getNextEligiblePhase('auction', state)).toBe('lie_detective');
     expect(getNextEligiblePhase('lie_detective', state)).toBe('recap');
   });

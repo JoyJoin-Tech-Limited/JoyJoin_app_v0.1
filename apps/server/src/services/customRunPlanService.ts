@@ -56,7 +56,7 @@ function toSegment(phase: SocialIcebreakerPhase): PhaseSegment {
 }
 
 export function buildCustomRunPlan(phases: CustomGamePhase[]): IcebreakerRunPlan {
-  const orderedPhases: SocialIcebreakerPhase[] = ['warmup', ...phases, 'recap'];
+  const orderedPhases: SocialIcebreakerPhase[] = [...phases, 'recap'];
   return createRunPlan(
     orderedPhases.map(toSegment),
     'custom-selection-v1',
