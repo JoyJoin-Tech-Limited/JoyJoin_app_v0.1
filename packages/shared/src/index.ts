@@ -64,6 +64,7 @@ export * from './alang/parallelUniverse';
 export * from './miniscriptCatalog';
 export * from './miniscriptStoryFramework';
 export * from './miniscriptGameModes';
+export * from './miniscriptCuratedStories';
 export * from './aiModels';
 export * from './socialIcebreakerTierManifest';
 export * from './socialIcebreakerRunPlans';

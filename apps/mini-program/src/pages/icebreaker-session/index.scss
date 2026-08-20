@@ -21,6 +21,7 @@
 @use './phases/WarmupPhaseView';
 @use './components/IcebreakerTierSelector';
 @use './components/IcebreakerTierSheet';
+@use './components/PhaseAigcRow';
 @use './components/PhaseHeroCard';
 @use './components/WarmupActionBar';
 @use './components/WarmupCardSlot';
@@ -666,12 +667,19 @@ $__gold-accent:  $color-landed-gold;
 
   &__hero-label {
     @include type-body-emphasis;
+    display: block;
     color: $color-text-primary;
   }
 
+  // One line with ellipsis — inline <Text> flow used to wrap 也可现场创作
+  // mid-word (创/作 orphan) inside the pill.
   &__hero-hint {
-    font-size: $font-size-xs;
+    display: block;
+    overflow: hidden;
     color: $color-text-secondary;
+    font-size: $font-size-xs;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__back-btn {
@@ -1024,21 +1032,27 @@ $__gold-accent:  $color-landed-gold;
     margin: 16rpx 0;
   }
 
+  // Brand chip system (2026-08-19 picker audit): catalog per-genre gradients
+  // are no longer applied as chip fills — 惊悚悬疑's dark indigo gradient with
+  // dark text at 0.55 opacity was unreadable, and four loud gradients broke
+  // the single-anchor-color rule. Unselected = light lavender + brand border,
+  // selected = solid $color-primary + white.
   &__genre {
     min-height: 88rpx;
     padding: 0 24rpx;
-    border: 4rpx solid transparent;
+    border: 2rpx solid rgba($color-primary, 0.35);
     border-radius: 999rpx;
     display: flex;
     align-items: center;
+    background: rgba($color-primary, 0.06);
     color: $color-text-primary;
     font-size: $font-size-sm;
-    opacity: 0.55;
-    transition: transform 150ms ease, opacity 150ms ease, border-color 150ms ease;
+    transition: transform 150ms ease, background 150ms ease, border-color 150ms ease, color 150ms ease;
 
     &--selected {
+      background: $color-primary;
       border-color: $color-primary;
-      opacity: 1;
+      color: $color-text-white;
     }
 
     &:active {
@@ -1062,14 +1076,80 @@ $__gold-accent:  $color-landed-gold;
     color: $color-primary;
     font-weight: $font-weight-medium;
   }
+
+  // Inert while a generation runs — dimmed and taps no-op, so the progress
+  // card stays the single primary path.
+  &__create-form {
+    display: block;
+
+    &--disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+  }
+
+  // Same 88rpx slot as the CTA it replaces — no layout jump between states.
+  &__create-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+  }
+
+  // Demoted generate action once the library has scripts to pick from.
+  &__create-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
+    color: $color-primary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+
+    &:active {
+      opacity: 0.7;
+    }
+  }
 }
 
 .ms-library-card {
+  position: relative;
   padding: 24rpx;
   border: 2rpx solid rgba($color-primary, 0.14);
   border-radius: 24rpx;
   background: $color-surface;
   box-shadow: 0 12rpx 32rpx rgba($color-primary, 0.08);
+
+  // Chosen card: highlighted border + checkmark badge.
+  &--selected {
+    border-color: $color-primary;
+    box-shadow: 0 12rpx 32rpx rgba($color-primary, 0.18);
+  }
+
+  &__check {
+    position: absolute;
+    top: 16rpx;
+    right: 16rpx;
+    width: 36rpx;
+    height: 36rpx;
+    border-radius: 50%;
+    background: $color-primary;
+
+    // CSS-drawn tick (no inline emoji, per mini-program guardrails).
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 16rpx;
+      height: 8rpx;
+      border-bottom: 4rpx solid $color-text-white;
+      border-left: 4rpx solid $color-text-white;
+      transform: translate(-50%, -62%) rotate(-45deg);
+    }
+  }
 
   &__copy {
     min-width: 0;
@@ -1104,6 +1184,59 @@ $__gold-accent:  $color-landed-gold;
   &__choose {
     width: 100%;
     margin-top: 24rpx;
+  }
+}
+
+// ─── Library skeleton placeholders ─────────────────────────────────────────────
+
+.ms-library-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+
+  &__card {
+    padding: 24rpx;
+    border: 2rpx solid rgba($color-primary, 0.1);
+    border-radius: 24rpx;
+    background: $color-surface;
+  }
+
+  &__line {
+    border-radius: 8rpx;
+    background: rgba($color-text-primary, 0.08);
+    animation: ms-skeleton-pulse 1.4s ease-in-out infinite;
+
+    &--title {
+      width: 55%;
+      height: 36rpx;
+      margin-bottom: 16rpx;
+    }
+
+    &--body {
+      width: 100%;
+      height: 28rpx;
+      margin-bottom: 12rpx;
+    }
+
+    &--body-short {
+      width: 70%;
+      height: 28rpx;
+    }
+  }
+}
+
+@keyframes ms-skeleton-pulse {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ms-library-skeleton__line {
+    animation: none;
   }
 }
 

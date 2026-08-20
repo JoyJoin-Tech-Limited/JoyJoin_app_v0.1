@@ -1,5 +1,5 @@
 import type { AtmosphereMood, SocialIcebreakerPhase, SocialSessionState } from '@shared/socialIcebreaker'
-import type { MiniScriptGenerationStatus, MiniScriptGenre, MiniScriptLibraryItem, MiniScriptStyle } from '@shared/miniscriptStoryFramework'
+import type { MiniScriptGenerationStatus, MiniScriptGenre, MiniScriptLibraryItem, MiniScriptStyle, MiniScriptVoteInput } from '@shared/miniscriptStoryFramework'
 import Button from '../../components/ui/Button'
 import CustomModeSection from './components/CustomModeSection'
 import WaitingPhase from './components/WaitingPhase'
@@ -95,8 +95,8 @@ export interface SessionPhaseViewsProps {
   onCloseAuctionLot: () => void
   onAssignRoles: () => void
   onRevealAct: (act: number) => void
-  onMiniScriptVote: (vote: { who: string; what: string; why: string }) => void
-  onRevealSolution: () => void
+  onMiniScriptVote: (vote: MiniScriptVoteInput) => void
+  onRevealSolution: (onError?: (error: unknown) => void) => void
   onMiniScriptReady: (ready: boolean) => void
   onGenerateDiceChallenges: () => void
   onCompleteDiceChallenge: () => void

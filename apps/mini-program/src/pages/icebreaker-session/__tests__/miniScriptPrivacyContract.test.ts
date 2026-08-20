@@ -9,12 +9,19 @@ const source = readFileSync(
 
 describe('MiniScript PM privacy and reveal contract', () => {
   it('does not show the generated premise to players before role assignment', () => {
-    expect(source).toContain("prompt={isHost ? framework.premise : '剧本已生成，等待主持人分配角色。'}")
+    // Player pre-assignment copy is the wait line; the premise renders only in
+    // the host-gated preview content (and, post-assignment, behind the
+    // collapsed 故事背景 disclosure).
+    expect(source).toContain("'剧本已生成，等待主持人分配角色。'")
+    expect(source).toContain("subPhase === 'preview' && isHost")
+    expect(source).not.toContain('prompt={isHost ? framework.premise')
   })
 
-  it('gives the host an explicit pre-assignment story preview', () => {
-    expect(source).toContain('主持人预览')
-    expect(source).toContain('framework.characters.map')
+  it('gives the host a structured pre-assignment story preview', () => {
+    // Wave-2 restructure: headline title + meta + role chips + flow timeline,
+    // with the full beats behind a collapsed disclosure.
+    expect(source).toContain('查看完整剧本')
+    expect(source).toContain('characters.map')
     expect(source).toContain('framework.act_flow.map')
   })
 
@@ -25,9 +32,19 @@ describe('MiniScript PM privacy and reveal contract', () => {
     expect(source).toContain('背后原因')
   })
 
-  it('keeps reveal disabled until every assigned player has voted', () => {
-    expect(source).toContain('const allAssignedPlayersVoted')
-    expect(source).toContain('disabled={isRevealingSolution || !allAssignedPlayersVoted}')
-    expect(source).toContain("allAssignedPlayersVoted ? '揭晓真相' : '等待全员投票'")
+  it('mirrors the server vote-progress authority instead of a client all-voted gate', () => {
+    // Wave-1 contract: canReveal (quorum OR vote open ≥ 90s) comes from the
+    // server-recomputed miniScriptVoteProgress; the old client-side
+    // all-assigned-voted gate is gone, and a 400 WAITING_FOR_VOTES surfaces
+    // the remaining count rather than dead-ending.
+    expect(source).toContain('voteProgress.canReveal')
+    expect(source).not.toContain('allAssignedPlayersVoted')
+    expect(source).toContain('WAITING_FOR_VOTES')
+  })
+
+  it('casts structured suspect-slot votes, not three required free-text inputs', () => {
+    expect(source).toContain('suspectRoleSlot')
+    expect(source).toContain('点一个你最怀疑的角色。')
+    expect(source).not.toContain('miniscript-hero__vote-field')
   })
 })

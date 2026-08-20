@@ -11,7 +11,7 @@ import type { MiniScriptGameModeConfig } from '@shared/miniscriptGameModes';
 import type { MiniScriptStyle, MiniScriptGenre } from '@shared/miniscriptStoryFramework';
 import { XIAOYUE_CRAFT_LITE } from '../prompts/craft';
 
-export const MINISCRIPT_GENERATION_PROMPT_VERSION = 'miniscript-generate-v3.1';
+export const MINISCRIPT_GENERATION_PROMPT_VERSION = 'miniscript-generate-v3.2';
 
 // ─── Base System Prompt (all modes share) ─────────────────────────────────────
 
@@ -39,6 +39,8 @@ const BASE_SYSTEM =
   'You are JoyJoin MiniScript story framework writer. Reply with one JSON object only (no markdown). ' +
   'Rules: light social mystery, low conflict, no graphic violence, no death, no hate, no real-person names. ' +
   'All narrative strings in Chinese. ' +
+  'User-facing strings (premise, title, roleLabel, clue text, voteOptions) must NEVER contain English words, ' +
+  'snake_case machine keys, or enum tokens such as western_court / light_reasoning / absurd_comedy — Chinese only. ' +
   'The mystery must be solvable by players combining clues — this is a game, not just a story.\n\n' +
   NARRATIVE_GOLDEN_RULES + '\n\n' +
   XIAOYUE_CRAFT_LITE;
@@ -111,6 +113,7 @@ JSON shape:
     "difficulty": "${config.difficulty}"
   },
   "premise": "场景设定（1-2句）",
+  "title": "剧本标题（≤12个汉字，有画面感，如「凡尔赛的胸针」）",
   "characters": [
     {
       "slotIndex": 0..${playerCount - 1},
@@ -141,9 +144,14 @@ JSON shape:
     }
   ],
   "solution": {
-    "who": "谁做的/是谁",
+    "who": "谁做的/是谁（与某个 character.roleLabel 完全一致）",
     "what": "做了什么/真相是什么",
-    "why": "动机/原因"
+    "why": "动机/原因",
+    "whoSlot": "1-based index of that character in the characters array (1..N)"
+  },
+  "voteOptions": {
+    "what": ["3-4个投票选项，每个≤12字，如「借走忘了还」「只是误会一场」"],
+    "why": ["3-4个动机选项，每个≤12字，如「善意」「胆怯」「好面子」"]
   },
   "playerKnowledge": [
     {
@@ -172,10 +180,14 @@ Strict rules:
 - Output exactly ${playerCount} characters and exactly ${playerCount} playerKnowledge entries
 - clueIds must be unique (c1, c2, ...)
 - implies[] references must be valid clueIds
+- title is required: ≤12 Chinese characters, evocative, no English
+- clue text must NOT carry self-numbering prefixes like 「线索 1：」— the client adds ordinals itself
+- voteOptions.what / voteOptions.why: 3-4 short Chinese chip labels each (≤12 chars per label), consistent with the solution
+- solution.whoSlot must be the 1-based index of solution.who inside the characters array; if omitted it will be inferred, but always include it
 - Every act EXCEPT the last one must have a cliffhanger (≤80 chars, one hooking sentence). Last act has no cliffhanger — ending does its job.
 - Each act must show at least one character acting on their sinHook (展示不是讲述)
 - Each act must contain at least one moment of conflict or a plot turn (not just info exchange)
-- All strings in Chinese
+- All strings in Chinese — never emit English enum tokens (style/genre machine keys) in any user-facing string
 - No markdown fences, no commentary before or after JSON`;
 }
 
@@ -208,6 +220,15 @@ export function buildMiniScriptGenerationPrompt(
     republican_era: '民国',
   };
 
+  // Feed the model Chinese genre labels, not machine keys — whatever the
+  // prompt shows in English risks being echoed back into user-facing strings.
+  const genreLabels: Record<MiniScriptGenre, string> = {
+    light_reasoning: '轻推理',
+    thriller_mystery: '惊悚悬疑',
+    romance: '浪漫爱情',
+    absurd_comedy: '荒诞喜剧',
+  };
+
   const liteModifier = params.lite
     ? '\n【精简模式】\n- 总共只生成2幕（act_flow长度为2）\n- 每幕只揭示1条关键线索\n- 角色秘密要简单直接，不要多层嵌套\n- 总游戏时长控制在25分钟以内\n- 投票只进行一轮，简单多数胜出\n'
     : '';
@@ -223,7 +244,7 @@ export function buildMiniScriptGenerationPrompt(
   const userMessage =
     `为一场${styleLabels[params.style]}风格的迷你剧本杀生成故事框架。\n\n` +
     `玩家数量：${params.playerCount}人\n` +
-    `题材：${params.genres.join('、')}\n` +
+    `题材：${params.genres.map((genre) => genreLabels[genre]).join('、')}\n` +
     `${liteModifier}\n` +
     `${genreInstructions}\n\n` +
     `${buildJsonShapeInstructions(params.playerCount, params.config)}` +

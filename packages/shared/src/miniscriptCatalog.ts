@@ -198,6 +198,36 @@ export function getGenreGradient(genre: MiniscriptGenreCard): string {
   return `linear-gradient(${genre.gradientAngle}deg, ${genre.gradientFrom}, ${genre.gradientTo})`;
 }
 
+// ─── Canonical Chinese Labels + Enum-Token Sanitizer ─────────────────────────
+// Server + client must never show raw snake_case machine keys to users
+// (WeChat review posture). These helpers are the single label source.
+
+export function getMiniScriptGenreLabel(key: MiniScriptGenre): string {
+  return getGenreCard(key)?.label ?? key;
+}
+
+export function getMiniScriptStyleLabel(key: MiniScriptStyle): string {
+  return getStyleCard(key)?.label ?? key;
+}
+
+const ENUM_KEY_LABELS: ReadonlyArray<readonly [string, string]> = [
+  ...MINISCRIPT_CATALOG.styles.map((s) => [s.key, s.label] as const),
+  ...MINISCRIPT_CATALOG.genres.map((g) => [g.key, g.label] as const),
+];
+
+/**
+ * Defensive belt-and-braces: replace any raw style/genre machine key found in
+ * a user-facing string with its Chinese label. Idempotent (labels contain no
+ * machine keys), so it is safe to apply at multiple layers.
+ */
+export function sanitizeMiniScriptUserText(text: string): string {
+  let out = text;
+  for (const [key, label] of ENUM_KEY_LABELS) {
+    if (out.includes(key)) out = out.split(key).join(label);
+  }
+  return out;
+}
+
 // Surprise Me — special slot filler
 export const SURPRISE_ME_CARD = {
   key: '__surprise_me__',

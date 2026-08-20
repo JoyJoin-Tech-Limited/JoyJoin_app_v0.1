@@ -352,15 +352,15 @@ describe('mini-script host library', () => {
     });
   });
 
-  it('does not reuse a completed candidate when the host requests another style', async () => {
+  it('derives clause titles for untitled catalog entries and prefers framework.title for candidates', async () => {
     testSessions.clear();
     await withServer(async (baseUrl) => {
       const loginRes = await fetch(`${baseUrl}/__test__/login/host-user`, { method: 'POST' });
       const cookie = cookieHeader(loginRes);
-      const socialSessionId = 'social-candidate-replace';
+      const socialSessionId = 'social-library-titles';
       testSessions.set(socialSessionId, {
         socialSessionId,
-        icebreakerSessionId: 'ice-candidate-replace',
+        icebreakerSessionId: 'ice-library-titles',
         currentPhase: 'mini_script',
         hostUserId: 'host-user',
         hostDisplayName: 'Host',
@@ -370,14 +370,37 @@ describe('mini-script host library', () => {
         completedPhases: [],
         enabledPhases: ['mini_script', 'recap'],
       });
-      const generate = (style: 'modern_urban' | 'medieval') => fetch(`${baseUrl}/api/miniscript/generate`, {
+
+      // Untitled catalog entry → first-clause derivation, no mid-sentence cut.
+      const listRes = await fetch(
+        `${baseUrl}/api/miniscript/library?socialSessionId=${socialSessionId}&style=modern_urban`,
+        { headers: { cookie } },
+      );
+      expect(listRes.status).toBe(200);
+      const listBody = await listRes.json() as { scripts: Array<{ id: string; title: string }> };
+      const catalogScript = listBody.scripts.find((s) => s.id === 'modern-urban-light-reasoning-001');
+      expect(catalogScript?.title).toBe('周五晚的写字楼茶水间');
+
+      // Generated candidate carrying a framework.title → used verbatim.
+      const genRes = await fetch(`${baseUrl}/api/miniscript/generate`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', cookie },
-        body: JSON.stringify({ socialSessionId, playerCount: 4, style, genres: ['light_reasoning'] }),
+        body: JSON.stringify({
+          socialSessionId,
+          playerCount: 4,
+          style: 'western_court',
+          genres: ['light_reasoning'],
+        }),
       });
-      expect((await generate('modern_urban')).status).toBe(200);
-      expect((await generate('medieval')).status).toBe(200);
-      expect(testSessions.get(socialSessionId)?.miniScriptCandidateFramework?.style).toBe('medieval');
+      expect(genRes.status).toBe(200);
+      expect(testSessions.get(socialSessionId)?.miniScriptCandidateFramework?.title).toBe('凡尔赛的胸针');
+
+      const listRes2 = await fetch(
+        `${baseUrl}/api/miniscript/library?socialSessionId=${socialSessionId}&style=western_court`,
+        { headers: { cookie } },
+      );
+      const listBody2 = await listRes2.json() as { scripts: Array<{ id: string; title: string }> };
+      expect(listBody2.scripts[0]).toMatchObject({ id: 'current-generation', title: '凡尔赛的胸针' });
     });
   });
 });

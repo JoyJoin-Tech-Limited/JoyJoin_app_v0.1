@@ -1,0 +1,9 @@
+@use '../../../styles/variables' as *;
+
+.phase-aigc-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  margin-top: $spacing-sm;
+}

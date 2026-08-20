@@ -8,6 +8,8 @@ import {
 import {
   miniScriptGenerateRequestSchema,
   miniScriptVoteSchema,
+  computeMiniScriptVoteProgress,
+  deriveMiniScriptTitleFromPremise,
   type MiniScriptGenerationStage,
   type MiniScriptGenerationStatus,
   type MiniScriptStoryFramework,
@@ -15,6 +17,7 @@ import {
   type MiniScriptStyle,
   type MiniScriptLibraryItem,
 } from '@shared/miniscriptStoryFramework';
+import { sanitizeMiniScriptUserText } from '@shared/miniscriptCatalog';
 import {
   getSessionWithExpiry,
   updateSession,
@@ -28,7 +31,7 @@ import { requireAuthenticatedUserId } from '../../lib/requestAuth';
 import { adaptCatalogEntry, generateMiniScriptFrameworkWithMeta } from '../../lib/miniscriptAgent';
 import { getCatalogEntries, getCatalogEntryById } from '../../lib/miniscriptCatalog';
 import { MINISCRIPT_GENERATION_PROMPT_VERSION } from '../../ai/miniscriptPrompts';
-import { buildCachedAIMeta } from '@shared/types/aiMeta';
+import { buildCachedAIMeta, buildAIGCMeta } from '@shared/types/aiMeta';
 import { ensureSessionEnabledPhases, cleanupPhaseStateForNextPhase } from '../../socialIcebreakerPhaseConfig';
 import { logger } from '../../lib/logger';
 import { aiEndpointLimiter } from '../../rateLimiter';
@@ -39,7 +42,7 @@ const router = Router();
 
 type MiniScriptGenerationResult = {
   framework: MiniScriptStoryFrameworkPublic;
-  aiResponseMeta: Awaited<ReturnType<typeof generateMiniScriptFrameworkWithMeta>>['aiResponseMeta'];
+  meta: Awaited<ReturnType<typeof generateMiniScriptFrameworkWithMeta>>['aiResponseMeta'] & { aigc: { aiGenerated: boolean; labelType?: 'ai-generated' | 'ai-assisted' } };
 };
 
 // Collapse same-session double taps into one model call. The entry is removed
@@ -85,6 +88,7 @@ function extractSecrets(framework: MiniScriptStoryFramework) {
     redHerrings: framework.redHerrings ?? [],
     deductionChain: framework.deductionChain ?? [],
     allClues: framework.clues,
+    resolutionSummary: framework.ending.resolutionSummary,
   };
 }
 
@@ -97,7 +101,10 @@ function stripFrameworkSecrets(
     style: framework.style,
     genres: framework.genres,
     gameModeConfig: framework.gameModeConfig,
-    premise: framework.premise,
+    title: framework.title
+      ? sanitizeMiniScriptUserText(framework.title)
+      : undefined,
+    premise: sanitizeMiniScriptUserText(framework.premise),
     characters: framework.characters.map((c) => {
       const { secret: _secret, ...pub } = c;
       return pub;
@@ -109,12 +116,21 @@ function stripFrameworkSecrets(
       // until the host explicitly reveals the truth.
       resolutionSummary: '真相将在最终揭晓时公开。',
     },
+    voteOptions: framework.voteOptions,
   };
 }
 
-function catalogTitle(premise: string): string {
-  const firstSentence = premise.split(/[。！？]/)[0]?.trim();
-  return firstSentence ? firstSentence.slice(0, 22) : '今晚的神秘故事';
+/**
+ * Library display title: prefer the framework's own title; otherwise derive
+ * from the premise's first clause (never a bare mid-sentence cut).
+ */
+function catalogTitle(framework: { title?: string; premise: string }): string {
+  const explicit = framework.title?.trim();
+  if (explicit) return explicit;
+  return deriveMiniScriptTitleFromPremise(
+    sanitizeMiniScriptUserText(framework.premise),
+    14,
+  );
 }
 
 function assertHostMiniScriptSession(
@@ -150,8 +166,8 @@ router.get('/library', async (req: any, res) => {
       source: 'catalog',
       style: entry.style,
       genres: [...entry.genres],
-      title: catalogTitle(entry.framework.premise),
-      premise: entry.framework.premise,
+      title: catalogTitle(entry.framework),
+      premise: sanitizeMiniScriptUserText(entry.framework.premise),
       playerCount: state.playerCount,
     }));
   if (state.miniScriptCandidateFramework?.style === style) {
@@ -160,8 +176,8 @@ router.get('/library', async (req: any, res) => {
       source: 'session',
       style,
       genres: [...state.miniScriptCandidateFramework.genres],
-      title: catalogTitle(state.miniScriptCandidateFramework.premise),
-      premise: state.miniScriptCandidateFramework.premise,
+      title: catalogTitle(state.miniScriptCandidateFramework),
+      premise: sanitizeMiniScriptUserText(state.miniScriptCandidateFramework.premise),
       playerCount: state.miniScriptCandidateFramework.characters.length,
       generatedAt: state.miniScriptCandidateGeneratedAt,
     });
@@ -190,9 +206,11 @@ router.post('/select', async (req: any, res) => {
     state.miniScriptFramework = state.miniScriptCandidateFramework;
     state.miniScriptFrameworkGeneratedAt = state.miniScriptCandidateGeneratedAt ?? Date.now();
     state.miniScriptFrameworkGeneratedByUserId = userId;
+    state.miniScriptFrameworkMeta = state.miniScriptCandidateFrameworkMeta;
     state.miniScriptCandidateFramework = undefined;
     state.miniScriptCandidateGeneratedAt = undefined;
     state.miniScriptCandidateGeneratedByUserId = undefined;
+    state.miniScriptCandidateFrameworkMeta = undefined;
     await updateSession(socialSessionId, state);
     return res.json(state.miniScriptFramework);
   }
@@ -208,9 +226,17 @@ router.post('/select', async (req: any, res) => {
   state.miniScriptFramework = stripFrameworkSecrets(framework);
   state.miniScriptFrameworkGeneratedAt = Date.now();
   state.miniScriptFrameworkGeneratedByUserId = userId;
+  state.miniScriptFrameworkMeta = {
+    generatedAt: new Date().toISOString(),
+    fromCache: false,
+    provider: null,
+    fallbackUsed: false,
+    aigc: { aiGenerated: false },
+  };
   state.miniScriptCandidateFramework = undefined;
   state.miniScriptCandidateGeneratedAt = undefined;
   state.miniScriptCandidateGeneratedByUserId = undefined;
+  state.miniScriptCandidateFrameworkMeta = undefined;
   await updateSession(socialSessionId, state);
   logger.info('[miniscript] catalog script selected', { socialSessionId, scriptId, userId });
   return res.json(state.miniScriptFramework);
@@ -321,7 +347,7 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
       : new Date().toISOString();
     return res.json({
       ...session.miniScriptCandidateFramework,
-      meta: buildCachedAIMeta(generatedAt, null, MINISCRIPT_GENERATION_PROMPT_VERSION),
+      meta: session.miniScriptCandidateFrameworkMeta ?? buildCachedAIMeta(generatedAt, null, MINISCRIPT_GENERATION_PROMPT_VERSION),
     });
   }
 
@@ -355,15 +381,20 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
         await setMiniScriptSecrets(socialSessionId, secrets);
 
         const publicFramework = stripFrameworkSecrets(framework);
+        const candidateMeta = {
+          ...aiResponseMeta,
+          aigc: buildAIGCMeta({ fallbackUsed: aiResponseMeta.fallbackUsed, labelType: 'ai-generated' }),
+        };
         session.miniScriptCandidateFramework = publicFramework;
         session.miniScriptCandidateGeneratedAt = Date.now();
         session.miniScriptCandidateGeneratedByUserId = userId;
+        session.miniScriptCandidateFrameworkMeta = candidateMeta;
         await updateSession(socialSessionId, session);
 
         setGenerationStatus(socialSessionId, 'complete', 100);
         expireGenerationStatus(socialSessionId);
 
-        return { framework: publicFramework, aiResponseMeta };
+        return { framework: publicFramework, meta: candidateMeta };
       })();
       generationInFlight.set(socialSessionId, generation);
       void generation.finally(() => {
@@ -373,9 +404,9 @@ router.post('/generate', aiEndpointLimiter, async (req: any, res) => {
       }).catch(() => undefined);
     }
 
-    const { framework, aiResponseMeta } = await generation;
+    const { framework, meta } = await generation;
     logger.info('[miniscript] generate completed', { socialSessionId, userId, style });
-    return res.json({ ...framework, meta: aiResponseMeta });
+    return res.json({ ...framework, meta });
   } catch (error) {
     setGenerationStatus(socialSessionId, 'failed', 100);
     expireGenerationStatus(socialSessionId);
@@ -429,12 +460,15 @@ router.post('/assign-roles', async (req: any, res) => {
 
   // Idempotent: if roles already assigned, return current state
   if (state.miniScriptRoleAssignments && Object.keys(state.miniScriptRoleAssignments).length > 0) {
-    return res.json({
-      roleAssignments: state.miniScriptRoleAssignments,
+    const idempotentBase = {
       playerRuntimeViews: ownRuntimeView(state.miniScriptPlayerRuntimeViews, userId),
       readyMap: state.miniScriptPlayerReady ?? {},
       currentAct: state.miniScriptCurrentAct ?? 0,
-    });
+    };
+    if (userId === state.hostUserId) {
+      return res.json({ roleAssignments: state.miniScriptRoleAssignments, ...idempotentBase });
+    }
+    return res.json({ ok: true, myRoleSlot: state.miniScriptRoleAssignments[userId], ...idempotentBase });
   }
 
   // Fetch secrets to build runtime views
@@ -578,6 +612,13 @@ router.post('/reveal-act', async (req: any, res) => {
 
   state.miniScriptCurrentAct = targetAct;
 
+  // The vote phase opens once the final act is on the table. The timestamp
+  // drives the 90s quorum escape hatch in reveal-solution.
+  const totalActs = state.miniScriptFramework.act_flow.length;
+  if (targetAct >= totalActs && state.miniScriptVoteOpenedAt === undefined) {
+    state.miniScriptVoteOpenedAt = Date.now();
+  }
+
   await updateSession(socialSessionId, state);
 
   logger.info('[miniscript] act revealed', {
@@ -642,10 +683,35 @@ router.post('/vote', async (req: any, res) => {
     return res.status(400).json({ error: 'NO_ROLE_ASSIGNED' });
   }
 
+  // Resolve the structured suspect slot. New clients send suspectRoleSlot
+  // (1-based role index); legacy clients send free-text `who`, which we
+  // best-effort map via exact roleLabel match. At least one must be present.
+  const characters = state.miniScriptFramework?.characters ?? [];
+  let suspectRoleSlot: number | undefined;
+  if (typeof vote.suspectRoleSlot === 'number') {
+    if (vote.suspectRoleSlot < 1 || vote.suspectRoleSlot > characters.length) {
+      return res.status(400).json({
+        error: 'INVALID_SUSPECT_SLOT',
+        message: `suspectRoleSlot 必须在 1 到 ${characters.length} 之间`,
+        roleCount: characters.length,
+      });
+    }
+    suspectRoleSlot = vote.suspectRoleSlot;
+  } else if (vote.who) {
+    const legacyIdx = characters.findIndex((c) => c.roleLabel === vote.who);
+    suspectRoleSlot = legacyIdx >= 0 ? legacyIdx + 1 : undefined;
+  } else {
+    return res.status(400).json({
+      error: 'INVALID_BODY',
+      message: 'vote 需要 suspectRoleSlot（角色序号）',
+    });
+  }
+
   const votes = state.miniScriptVotes ?? [];
   const existingIdx = votes.findIndex((v) => v.userId === userId);
   const voteEntry = {
     userId,
+    suspectRoleSlot,
     who: vote.who,
     what: vote.what,
     why: vote.why,
@@ -661,7 +727,13 @@ router.post('/vote', async (req: any, res) => {
   state.miniScriptVotes = votes;
   await updateSession(socialSessionId, state);
 
-  return res.json({ ok: true, vote: voteEntry });
+  const voteProgress = computeMiniScriptVoteProgress({
+    votes,
+    totalAssigned: Object.keys(state.miniScriptRoleAssignments).length,
+    voteOpenedAt: state.miniScriptVoteOpenedAt,
+  });
+
+  return res.json({ ok: true, vote: voteEntry, voteProgress });
 });
 
 // ─── POST /reveal-solution ───────────────────────────────────────────────────
@@ -710,14 +782,17 @@ router.post('/reveal-solution', async (req: any, res) => {
       return res.status(400).json({ error: 'NOT_ALL_ACTS_REVEALED' });
     }
 
-    const voters = new Set((state.miniScriptVotes ?? []).map((vote) => vote.userId));
-    const missingVoters = Object.keys(assignments).filter(
-      (assignedUserId) => !voters.has(assignedUserId),
-    );
-    if (missingVoters.length > 0) {
+    const totalAssigned = Object.keys(assignments).length;
+    const voteProgress = computeMiniScriptVoteProgress({
+      votes: state.miniScriptVotes ?? [],
+      totalAssigned,
+      voteOpenedAt: state.miniScriptVoteOpenedAt,
+    });
+    if (!voteProgress.canReveal) {
       return res.status(400).json({
         error: 'WAITING_FOR_VOTES',
-        remaining: missingVoters.length,
+        remaining: Math.max(0, voteProgress.quorum - voteProgress.votedCount),
+        voteProgress,
       });
     }
   }
@@ -731,6 +806,7 @@ router.post('/reveal-solution', async (req: any, res) => {
   if (!state.miniScriptSolutionRevealed) {
     state.miniScriptSolutionRevealed = true;
     state.miniScriptRevealedSolution = secrets.solution;
+    state.miniScriptRevealedResolutionSummary = secrets.resolutionSummary;
     await updateSession(socialSessionId, state);
 
     logger.info('[miniscript] solution revealed', {
@@ -743,6 +819,11 @@ router.post('/reveal-solution', async (req: any, res) => {
   return res.json({
     solution: secrets.solution,
     revealed: true,
+    voteProgress: computeMiniScriptVoteProgress({
+      votes: state.miniScriptVotes ?? [],
+      totalAssigned: Object.keys(state.miniScriptRoleAssignments ?? {}).length,
+      voteOpenedAt: state.miniScriptVoteOpenedAt,
+    }),
   });
 });
 

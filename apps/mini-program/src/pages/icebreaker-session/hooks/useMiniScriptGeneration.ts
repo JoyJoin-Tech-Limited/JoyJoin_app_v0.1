@@ -79,6 +79,7 @@ export function useMiniScriptGeneration({
 
   const loadLibrary = useCallback(async (style: MiniScriptStyle) => {
     if (!socialSessionId) return
+    const epoch = generationEpochRef.current
     selectedStyleRef.current = style
     setIsLibraryLoading(true)
     setLibraryError(null)
@@ -88,8 +89,22 @@ export function useMiniScriptGeneration({
         timeout: 5000,
       })
       if (selectedStyleRef.current !== style) return
+      if (generationEpochRef.current !== epoch) return
       setLibraryScripts(result.scripts)
-      setGenerationStatus(result.generationStatus)
+      // The library response carries the same server generation snapshot as
+      // the generation-status poll, so it gets the same triple guard (epoch
+      // above; terminal latch + monotonic progress here). Without it, a stale
+      // non-terminal snapshot (e.g. 'persisting' at progress ≥92, fetched via
+      // the modal's library poll after completion) resurrected the generation
+      // card — the ghost re-entrant render + double toast from the
+      // 2026-08-19 picker audit.
+      setGenerationStatus((current) => {
+        const next = result.generationStatus
+        if (!next) return current
+        if (current?.stage === 'failed' || current?.stage === 'complete') return current
+        if (current && next.progress < current.progress) return current
+        return next
+      })
     } catch (error) {
       if (selectedStyleRef.current === style) {
         setLibraryError(getErrorText(error, '剧本列表暂时没加载出来'))
@@ -200,7 +215,9 @@ export function useMiniScriptGeneration({
         // a toast firing on top of an unrelated page is noise, not feedback.
         // The AiGenerationShell's success state is the foreground signal; the
         // 3s poll delivers the framework either way.
-        if (isPageVisibleRef.current) {
+        // Epoch guard: a superseded submit (reset / newer submit bumped the
+        // epoch while this POST was in flight) must never toast.
+        if (isPageVisibleRef.current && generationEpochRef.current === epoch) {
           void Taro.showToast({ title: '剧本已生成', icon: 'success', duration: TOAST_DEFAULT_MS })
         }
         return true

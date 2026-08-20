@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+vi.setConfig({ testTimeout: 30_000 });
+
 const hoisted = vi.hoisted(() => ({
   traceMock: vi.fn(),
   metricsMock: vi.fn(),
@@ -443,5 +445,78 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     expect(framework.solution).toBeDefined();
     expect(framework.playerKnowledge).toHaveLength(4);
     expect(framework.gameModeConfig).toBeDefined();
+  });
+
+  it('keeps a valid LLM title and sanitizes enum keys echoed into user-facing strings', async () => {
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
+    process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED = 'false';
+
+    const dirtyPayload = {
+      ...validV2Payload,
+      title: '茶水间悬案',
+      premise: '茶水间的燕麦奶不见了，基调是absurd_comedy，众人在modern_urban里寻找答案。',
+      characters: validV2Payload.characters.map((c, i) => ({
+        ...c,
+        roleLabel: i === 0 ? 'light_reasoning爱好者' : c.roleLabel,
+      })),
+    };
+
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(dirtyPayload) } }],
+    });
+    (getClientForFunction as any).mockReturnValue({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
+    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
+    const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
+      playerCount: 4,
+      style: 'modern_urban',
+      genres: ['absurd_comedy'],
+    });
+
+    expect(meta.llmAccepted).toBe(true);
+    expect(meta.catalogUsed).toBe(false);
+    expect(framework.title).toBe('茶水间悬案');
+    expect(framework.premise).not.toContain('absurd_comedy');
+    expect(framework.premise).not.toContain('modern_urban');
+    expect(framework.premise).toContain('荒诞喜剧');
+    expect(framework.premise).toContain('现代都市');
+    expect(framework.characters[0]?.roleLabel).toBe('轻推理爱好者');
+  });
+
+  it('derives a title when the LLM title is missing or over 12 chars', async () => {
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
+    process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED = 'false';
+
+    const longTitlePayload = {
+      ...validV2Payload,
+      title: '这个剧本标题写得实在是太长了一共二十个字整',
+    };
+
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(longTitlePayload) } }],
+    });
+    (getClientForFunction as any).mockReturnValue({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
+    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
+    const { framework } = await generateMiniScriptFrameworkWithMeta({
+      playerCount: 4,
+      style: 'modern_urban',
+      genres: ['absurd_comedy'],
+    });
+
+    // Over-long title → derived from the premise's first clause with ellipsis.
+    expect(framework.title).toBeTruthy();
+    expect(framework.title!.length).toBeLessThanOrEqual(13); // 12 + ellipsis
+    expect(framework.title!.endsWith('…')).toBe(true);
   });
 });

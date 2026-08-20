@@ -463,6 +463,9 @@ export interface MiniScriptSecrets {
   redHerrings: MiniScriptRedHerring[];
   deductionChain: MiniScriptDeductionChain[];
   allClues: MiniScriptClue[];
+  /** The narrative resolution summary is stored server-only until the host
+   *  reveals the solution, then copied back into the public framework's ending. */
+  resolutionSummary?: string;
 }
 
 export async function setMiniScriptSecrets(

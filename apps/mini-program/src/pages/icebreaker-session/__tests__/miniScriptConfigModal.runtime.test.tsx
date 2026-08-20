@@ -1,6 +1,5 @@
 import { fireEvent, render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { MINI_SCRIPT_GENRES } from '@shared/miniscriptStoryFramework'
 import { MINISCRIPT_CATALOG } from '@shared/miniscriptCatalog'
 import { MiniScriptConfigModal, type MiniScriptConfigModalProps } from '../overlays/MiniScriptConfigModal'
 
@@ -47,7 +46,8 @@ vi.mock('../../../components/ui/Button', () => ({
 }))
 
 const FIRST_STYLE = MINISCRIPT_CATALOG.styles[0]!
-const FIRST_GENRE = MINISCRIPT_CATALOG.genres[0]!
+const FIRST_GENRE = MINISCRIPT_CATALOG.genres[0]! // 轻推理 — the single default genre
+const SECOND_GENRE = MINISCRIPT_CATALOG.genres[1]!
 
 function buildProps(overrides: Partial<MiniScriptConfigModalProps> = {}) {
   return {
@@ -99,6 +99,7 @@ describe('MiniScriptConfigModal runtime behavior', () => {
 
     fireEvent.click(getByRole('button', { name: `${FIRST_STYLE.label}，查看已有剧本` }))
 
+    // New default: exactly one genre (轻推理 = FIRST_GENRE) is preselected.
     fireEvent.click(getByRole('button', { name: `${FIRST_GENRE.label}，已选择` }))
     expect(
       getByRole('button', { name: `${FIRST_GENRE.label}，未选择` }),
@@ -110,11 +111,12 @@ describe('MiniScriptConfigModal runtime behavior', () => {
       getByRole('button', { name: `${FIRST_GENRE.label}，未选择` }),
     ).toBeTruthy()
 
+    fireEvent.click(getByRole('button', { name: `${SECOND_GENRE.label}，未选择` }))
     fireEvent.click(getByRole('button', { name: '生成新剧本' }))
     expect(props.onSubmit).toHaveBeenCalledTimes(1)
     expect(props.onSubmit).toHaveBeenCalledWith({
       style: FIRST_STYLE.key,
-      genres: MINI_SCRIPT_GENRES.filter((genre) => genre !== FIRST_GENRE.key),
+      genres: [SECOND_GENRE.key],
       lite: false,
       selectedLabel: FIRST_STYLE.label,
     })

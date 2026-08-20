@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import type { AIResponseMeta } from './types/aiMeta';
 import type { ArchetypeHSL } from './archetypeColors';
-import type { MiniScriptSolution, MiniScriptStoryFramework, MiniScriptStoryFrameworkPublic, MiniScriptVoteInput } from './miniscriptStoryFramework';
+import type { MiniScriptSolution, MiniScriptStoryFramework, MiniScriptStoryFrameworkPublic, MiniScriptVoteInput, MiniScriptVoteProgress } from './miniscriptStoryFramework';
 export type { MiniScriptStoryFrameworkPublic } from './miniscriptStoryFramework';
 import type { IcebreakerRunPlan } from './phaseModule';
 import type { TierMachineId } from './socialIcebreakerTierManifest.js';
@@ -457,9 +457,13 @@ export interface MiniScriptPlayerRuntimeView {
 
 export interface MiniScriptVote {
   userId: string;
-  who: string;
-  what: string;
-  why: string;
+  /** 1-based index into the framework's characters — the structured tally key. */
+  suspectRoleSlot?: number;
+  /** Legacy free-text fields (pre-structured-vote clients). Accepted for one
+   * release; ignored by the tally unless mappable to a role slot. */
+  who?: string;
+  what?: string;
+  why?: string;
   votedAt: number;
 }
 
@@ -678,10 +682,12 @@ export interface SocialSessionState {
   miniScriptFramework?: MiniScriptStoryFrameworkPublic;
   miniScriptFrameworkGeneratedAt?: number;
   miniScriptFrameworkGeneratedByUserId?: string;
+  miniScriptFrameworkMeta?: AIResponseMeta;
   /** Host-preview candidate; not active for gameplay until POST /api/miniscript/select. */
   miniScriptCandidateFramework?: MiniScriptStoryFrameworkPublic;
   miniScriptCandidateGeneratedAt?: number;
   miniScriptCandidateGeneratedByUserId?: string;
+  miniScriptCandidateFrameworkMeta?: AIResponseMeta;
   // MiniScript gameplay state
   miniScriptRoleAssignments?: Record<string, number>; // userId -> slotIndex
   miniScriptPlayerRuntimeViews?: Record<string, MiniScriptPlayerRuntimeView>;
@@ -689,9 +695,17 @@ export interface SocialSessionState {
   miniScriptRevealedClueIds?: string[];
   miniScriptRevealedClues?: Array<{ clueId: string; text: string }>;
   miniScriptVotes?: MiniScriptVote[];
+  /** Epoch ms when the vote phase opened (final act revealed). Drives the 90s
+   * quorum escape hatch. */
+  miniScriptVoteOpenedAt?: number;
+  /** Derived in `sanitizeStateForClient` on every poll — never persisted. */
+  miniScriptVoteProgress?: MiniScriptVoteProgress;
   miniScriptSolutionRevealed?: boolean;
   /** Public only after the host reveals the solution. Absent before reveal. */
   miniScriptRevealedSolution?: MiniScriptSolution;
+  /** Real resolutionSummary restored after reveal (the persisted framework keeps
+   * a placeholder until then). Derived from secrets at reveal time. */
+  miniScriptRevealedResolutionSummary?: string;
   miniScriptPlayerReady?: Record<string, boolean>; // userId -> ready status
   miniScriptDeductionHints?: Array<{ stepNumber: number; conclusion: string }>;
   // Bonus gate — post-core-phase mini_script offer

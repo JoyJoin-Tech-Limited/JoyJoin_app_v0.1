@@ -47,8 +47,10 @@ describe('MiniScriptConfigModal interaction and layout contract', () => {
     expect(source).toContain('src={poster}')
   })
 
-  it('starts with every PM-approved genre selected', () => {
-    expect(source).toContain('const DEFAULT_INITIAL_GENRES: MiniScriptGenre[] = [...MINI_SCRIPT_GENRES]')
+  it('starts with exactly one sensible genre selected (轻推理)', () => {
+    // 2026-08-19 picker audit: defaulting to all four genres made the
+    // generated premise cram every genre in — default to 轻推理 only.
+    expect(source).toContain("const DEFAULT_INITIAL_GENRES: MiniScriptGenre[] = ['light_reasoning']")
     expect(source).toContain('initialGenres = DEFAULT_INITIAL_GENRES')
   })
 

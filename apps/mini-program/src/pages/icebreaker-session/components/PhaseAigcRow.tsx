@@ -15,15 +15,7 @@ export function PhaseAigcRow({ meta, reason }: { meta?: AIResponseMeta; reason: 
   if (!enabled) return null
   if (!meta?.aigc?.aiGenerated) return null
   return (
-    <View
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8rpx',
-        marginTop: '16rpx',
-      }}
-    >
+    <View className='phase-aigc-row'>
       <AIGCLabel meta={meta.aigc} />
       <AIContentReportButton options={{ reason }} label='反馈这段内容' />
     </View>

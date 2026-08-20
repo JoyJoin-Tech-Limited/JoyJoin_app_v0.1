@@ -595,20 +595,33 @@ describe('five-client Mini Script journey', () => {
         expect((await post('host-user', 'reveal-act', { targetAct })).status).toBe(200);
       }
 
-      for (const [index, userId] of userIds.slice(0, 4).entries()) {
+      // Structured vote contract: 5 assigned players → quorum = max(2, ceil(10/3)) = 4.
+      for (const [index, userId] of userIds.slice(0, 3).entries()) {
         expect((await post(userId, 'vote', {
-          vote: { who: `角色${index}`, what: `行为${index}`, why: `理由${index}` },
+          vote: { suspectRoleSlot: (index % 5) + 1, what: `行为${index}`, why: `理由${index}` },
         })).status).toBe(200);
       }
-      expect((await post('host-user', 'reveal-solution', {})).status).toBe(400);
+      // 3 of 5 voted, below quorum 4, vote freshly opened → reveal blocked.
+      const blockedReveal = await post('host-user', 'reveal-solution', {});
+      expect(blockedReveal.status).toBe(400);
+      const blockedBody = await blockedReveal.json() as {
+        error: string;
+        remaining: number;
+        voteProgress: { votedCount: number; quorum: number; canReveal: boolean };
+      };
+      expect(blockedBody.error).toBe('WAITING_FOR_VOTES');
+      expect(blockedBody.remaining).toBe(1);
+      expect(blockedBody.voteProgress).toMatchObject({ votedCount: 3, quorum: 4, canReveal: false });
 
+      // Re-vote overwrites (one ballot per player) — still 3 votes.
       expect((await post('p1', 'vote', {
-        vote: { who: '改票角色', what: '改票行为', why: '改票理由' },
+        vote: { suspectRoleSlot: 2, what: '改票行为', why: '改票理由' },
       })).status).toBe(200);
-      expect(testSessions.get(state.socialSessionId)!.miniScriptVotes).toHaveLength(4);
+      expect(testSessions.get(state.socialSessionId)!.miniScriptVotes).toHaveLength(3);
 
-      expect((await post('p4', 'vote', {
-        vote: { who: '角色4', what: '行为4', why: '理由4' },
+      // The 4th distinct ballot reaches quorum — p4 never needs to vote.
+      expect((await post('p3', 'vote', {
+        vote: { suspectRoleSlot: 4, what: '行为4', why: '理由4' },
       })).status).toBe(200);
       const revealResponse = await post('host-user', 'reveal-solution', {});
       expect(revealResponse.status).toBe(200);

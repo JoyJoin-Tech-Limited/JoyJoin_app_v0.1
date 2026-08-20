@@ -5,6 +5,7 @@ import type {
   SocialSessionParticipantSummary,
 } from '@shared/socialIcebreaker';
 import { migrateLegacySocialIcebreakerPhases, getNextEligiblePhase } from '@shared/socialIcebreaker';
+import { computeMiniScriptVoteProgress } from '@shared/miniscriptStoryFramework';
 import {
   getSessionWithExpiry,
   listParticipants,
@@ -85,16 +86,35 @@ export function sanitizeStateForClient(
       });
     }
 
+    // Once the solution is revealed, restore the full resolution summary.
+    // It is stripped from the framework during generation to avoid spoilers.
+    if (
+      sanitized.miniScriptSolutionRevealed === true &&
+      sanitized.miniScriptRevealedResolutionSummary
+    ) {
+      const ending = (framework.ending as Record<string, unknown> | undefined) || {};
+      framework.ending = {
+        ...ending,
+        resolutionSummary: sanitized.miniScriptRevealedResolutionSummary,
+      };
+    }
+
     if (requestingUserId && sanitized.hostUserId !== requestingUserId) {
-      // Players receive only story material that has been reached in the
-      // server-owned progression. Future acts and the cast preview stay host-only.
-      framework.characters = [];
-      framework.act_flow = Array.isArray(framework.act_flow)
-        ? framework.act_flow.slice(0, sanitized.miniScriptCurrentAct ?? 0)
-        : [];
-      if (!sanitized.miniScriptRoleAssignments) {
+      const assignments = sanitized.miniScriptRoleAssignments ?? {};
+      const rolesAssigned = Object.keys(assignments).length > 0;
+      if (!rolesAssigned) {
+        // Before roles are assigned, players see only the premise placeholder
+        // and the acts that have already been reached. The cast preview and
+        // future acts stay host-only.
+        framework.characters = [];
+        framework.act_flow = Array.isArray(framework.act_flow)
+          ? framework.act_flow.slice(0, sanitized.miniScriptCurrentAct ?? 0)
+          : [];
         framework.premise = '剧本已生成，等待主持人分配角色。';
       }
+      // Once roles are assigned, all players need the full public cast list
+      // (secrets already stripped above) and the full act flow for the stepper
+      // and vote-suspect chips.
     }
     sanitized.miniScriptFramework = framework as SocialSessionState['miniScriptFramework'];
   }
@@ -104,6 +124,30 @@ export function sanitizeStateForClient(
     sanitized.miniScriptPlayerRuntimeViews = ownView
       ? { [requestingUserId]: ownView }
       : {};
+  }
+
+  // Mini-script structured vote progress — derived fresh on every poll so the
+  // 90s quorum escape hatch evaluates against the current time. Individual
+  // ballots were already visible on state before this change, so the aggregate
+  // tally stays visible too (no new information exposure).
+  if (sanitized.miniScriptRoleAssignments) {
+    sanitized.miniScriptVoteProgress = computeMiniScriptVoteProgress({
+      votes: sanitized.miniScriptVotes ?? [],
+      totalAssigned: Object.keys(sanitized.miniScriptRoleAssignments).length,
+      voteOpenedAt: sanitized.miniScriptVoteOpenedAt,
+    });
+  }
+
+  // Role-to-user mapping is secret in a social-deduction game. Non-hosts see
+  // only their own slot; the host keeps the full map to manage the table.
+  if (
+    requestingUserId &&
+    sanitized.hostUserId !== requestingUserId &&
+    sanitized.miniScriptRoleAssignments
+  ) {
+    const ownSlot = sanitized.miniScriptRoleAssignments[requestingUserId];
+    sanitized.miniScriptRoleAssignments =
+      ownSlot !== undefined ? { [requestingUserId]: ownSlot } : {};
   }
 
   // Preserve only the requesting player's own choice plus aggregate counts.

@@ -374,10 +374,13 @@ export function useSocialActions(args: UseSocialActionsArgs) {
     })
   }, [performSocialAction, socialSessionId])
 
-  const handleRevealSolution = useCallback(() => {
+  const handleRevealSolution = useCallback((onError?: (error: unknown) => void) => {
+    // Optional caller-owned error handling (e.g. the mini-script hero view
+    // toasts the remaining-vote count on a 400 WAITING_FOR_VOTES instead of
+    // the generic action-failed toast).
     void performSocialAction('miniscript-reveal-solution', '/api/miniscript/reveal-solution', {
       socialSessionId,
-    })
+    }, onError ? { suppressErrorToast: true, onError } : undefined)
   }, [performSocialAction, socialSessionId])
 
   const handleMiniScriptReady = useCallback((ready: boolean) => {

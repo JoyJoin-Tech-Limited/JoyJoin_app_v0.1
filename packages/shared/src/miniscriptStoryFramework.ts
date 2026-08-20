@@ -89,6 +89,9 @@ const miniScriptSolutionSchema = z.object({
   who: z.string().min(1).max(120),
   what: z.string().min(1).max(200),
   why: z.string().min(1).max(300),
+  /** 1-based index into the framework's characters — stable even when extra
+   *  players cause duplicated roles with a 「·新客」 suffix. */
+  whoSlot: z.number().int().min(1).max(6).optional(),
 });
 
 export type MiniScriptSolution = z.infer<typeof miniScriptSolutionSchema>;
@@ -139,6 +142,22 @@ const miniScriptActSchema = z.object({
   cliffhanger: z.string().min(1).max(80).optional(),
 });
 
+/**
+ * Short Chinese chip labels for the consensus vote (what happened / why).
+ * Optional on the framework; an invalid LLM-supplied value is dropped
+ * (`catch(undefined)`) instead of rejecting the whole framework parse.
+ */
+const miniScriptVoteOptionsSchema = z.object({
+  what: z.array(z.string().trim().min(1).max(12)).min(3).max(4),
+  why: z.array(z.string().trim().min(1).max(12)).min(3).max(4),
+});
+
+export type MiniScriptVoteOptions = z.infer<typeof miniScriptVoteOptionsSchema>;
+
+/** Display-title convention: ≤12 Chinese chars. Schema bound is looser (24)
+ * so an over-long LLM title can be derived-from-premise instead of failing parse. */
+export const MINISCRIPT_TITLE_MAX_CHARS = 12;
+
 // ─── v2 Story Framework ───────────────────────────────────────────────────────
 
 export const miniScriptStoryFrameworkSchema = z.object({
@@ -154,6 +173,9 @@ export const miniScriptStoryFrameworkSchema = z.object({
     targetPlayMinutes: z.number(),
     difficulty: z.enum(['easy', 'medium', 'hard']),
   }).optional(),
+  /** Short evocative Chinese title (≤12 chars by convention). Optional so v2
+   * data written before titles existed still parses; server derives one when absent. */
+  title: z.string().trim().min(1).max(24).optional().catch(undefined),
   premise: z.string().min(1).max(2000),
   characters: z.array(miniScriptCharacterSchema).min(4).max(6),
   act_flow: z.array(miniScriptActSchema).min(2).max(4),
@@ -167,6 +189,8 @@ export const miniScriptStoryFrameworkSchema = z.object({
   playerKnowledge: z.array(miniScriptPlayerKnowledgeSchema).min(4).max(6),
   redHerrings: z.array(miniScriptRedHerringSchema).optional(),
   deductionChain: z.array(miniScriptDeductionChainSchema).optional(),
+  /** Chip labels for the structured vote; safe to show all players pre-vote. */
+  voteOptions: miniScriptVoteOptionsSchema.optional().catch(undefined),
 });
 
 export type MiniScriptStoryFramework = z.infer<typeof miniScriptStoryFrameworkSchema>;
@@ -181,13 +205,106 @@ export type MiniScriptStoryFrameworkPublic = Omit<
 
 // ─── Vote Schema ──────────────────────────────────────────────────────────────
 
+/**
+ * Structured vote: `suspectRoleSlot` (1-based index into the framework's
+ * characters) is the tally key. Legacy free-text `who` is still accepted for
+ * one release so stale clients do not 400 — the server best-effort maps it to
+ * a role slot via exact roleLabel match and otherwise counts the ballot toward
+ * participation only. `what`/`why` remain optional free-text color.
+ */
 export const miniScriptVoteSchema = z.object({
-  who: z.string().min(1).max(120),
-  what: z.string().min(1).max(200),
-  why: z.string().min(1).max(300),
+  // Range is validated server-side against the framework's role count so all
+  // bad slots surface one domain error (INVALID_SUSPECT_SLOT), not a split
+  // between transport and domain validation.
+  suspectRoleSlot: z.number().int().optional(),
+  who: z.string().min(1).max(120).optional(),
+  what: z.string().min(1).max(200).optional(),
+  why: z.string().min(1).max(300).optional(),
 });
 
 export type MiniScriptVoteInput = z.infer<typeof miniScriptVoteSchema>;
+
+// ─── Title Helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Derive a display title from a premise: first clause (split on Chinese
+ * punctuation), capped at `maxChars` with an ellipsis when truncated — never a
+ * bare mid-sentence cut.
+ */
+export function deriveMiniScriptTitleFromPremise(
+  premise: string,
+  maxChars = MINISCRIPT_TITLE_MAX_CHARS,
+): string {
+  const firstClause = premise
+    .split(/[，。！？；]/)
+    .map((clause) => clause.trim())
+    .find((clause) => clause.length > 0);
+  if (!firstClause) return '今晚的神秘故事';
+  return firstClause.length > maxChars ? `${firstClause.slice(0, maxChars)}…` : firstClause;
+}
+
+/**
+ * Resolve the framework title: keep an explicit title when it respects the
+ * ≤12-char convention; otherwise derive one from the premise.
+ */
+export function resolveMiniScriptTitle(title: string | undefined, premise: string): string {
+  const explicit = title?.trim();
+  if (explicit && explicit.length <= MINISCRIPT_TITLE_MAX_CHARS) return explicit;
+  return deriveMiniScriptTitleFromPremise(premise, MINISCRIPT_TITLE_MAX_CHARS);
+}
+
+// ─── Vote Progress (structured vote + quorum reveal) ─────────────────────────
+
+/** Escape hatch: the host may reveal once the vote has been open this long. */
+export const MINISCRIPT_VOTE_MIN_OPEN_MS = 90_000;
+
+export type MiniScriptVoteProgress = {
+  votedCount: number;
+  totalAssigned: number;
+  quorum: number;
+  canReveal: boolean;
+  /** Epoch ms when the vote phase opened (final act revealed). */
+  voteOpenedAt?: number;
+  /** Ballots per 1-based role slot; sorted by count desc, then slot asc. */
+  tally: Array<{ roleSlot: number; count: number }>;
+};
+
+/** quorum = max(2, ceil(totalAssigned * 2/3)); 0 when nobody is assigned. */
+export function computeMiniScriptQuorum(totalAssigned: number): number {
+  if (totalAssigned <= 0) return 0;
+  return Math.max(2, Math.ceil((totalAssigned * 2) / 3));
+}
+
+export function computeMiniScriptVoteProgress(params: {
+  votes: Array<{ userId: string; suspectRoleSlot?: number }>;
+  totalAssigned: number;
+  voteOpenedAt?: number;
+  now?: number;
+}): MiniScriptVoteProgress {
+  const now = params.now ?? Date.now();
+  const votedCount = new Set(params.votes.map((vote) => vote.userId)).size;
+  const quorum = computeMiniScriptQuorum(params.totalAssigned);
+  const tallyMap = new Map<number, number>();
+  for (const vote of params.votes) {
+    if (typeof vote.suspectRoleSlot === 'number') {
+      tallyMap.set(vote.suspectRoleSlot, (tallyMap.get(vote.suspectRoleSlot) ?? 0) + 1);
+    }
+  }
+  const tally = Array.from(tallyMap.entries())
+    .map(([roleSlot, count]) => ({ roleSlot, count }))
+    .sort((a, b) => b.count - a.count || a.roleSlot - b.roleSlot);
+  const quorumMet = params.totalAssigned > 0 && votedCount >= quorum;
+  const openLongEnough =
+    params.voteOpenedAt !== undefined && now - params.voteOpenedAt >= MINISCRIPT_VOTE_MIN_OPEN_MS;
+  return {
+    votedCount,
+    totalAssigned: params.totalAssigned,
+    quorum,
+    canReveal: quorumMet || openLongEnough,
+    voteOpenedAt: params.voteOpenedAt,
+    tally,
+  };
+}
 
 // ─── v1 Legacy Schema (for migration) ─────────────────────────────────────────
 

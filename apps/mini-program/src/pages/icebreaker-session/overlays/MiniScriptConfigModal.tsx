@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Image, RootPortal, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { MINI_SCRIPT_GENRES, type MiniScriptGenerationStatus, type MiniScriptGenre, type MiniScriptLibraryItem, type MiniScriptStyle } from '@shared/miniscriptStoryFramework'
-import { MINISCRIPT_CATALOG, SURPRISE_ME_CARD, getGenreGradient, getStyleGradient, type MiniscriptStyleCard } from '@shared/miniscriptCatalog'
+import { type MiniScriptGenerationStatus, type MiniScriptGenre, type MiniScriptLibraryItem, type MiniScriptStyle } from '@shared/miniscriptStoryFramework'
+import { MINISCRIPT_CATALOG, SURPRISE_ME_CARD, getStyleGradient, type MiniscriptStyleCard } from '@shared/miniscriptCatalog'
 import { haptics } from '../../../lib/utils/haptics'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import Button from '../../../components/ui/Button'
@@ -31,14 +31,17 @@ export type MiniScriptConfigModalProps = {
 
 type PickerStage = 'style' | 'library'
 
-// Hoisted so the default keeps a stable identity across renders
-const DEFAULT_INITIAL_GENRES: MiniScriptGenre[] = [...MINI_SCRIPT_GENRES]
+// Hoisted so the default keeps a stable identity across renders.
+// Default to a single sensible genre (轻推理) — selecting all four made the
+// generated premise cram every genre in (2026-08-19 picker audit).
+const DEFAULT_INITIAL_GENRES: MiniScriptGenre[] = ['light_reasoning']
 
 export function MiniScriptConfigModal({ open, onClose, initialGenres = DEFAULT_INITIAL_GENRES, isSubmitting, generationStatus, scripts, isLibraryLoading, libraryError, onLoadLibrary, onSelectScript, onSubmit }: MiniScriptConfigModalProps) {
   const [stage, setStage] = useState<PickerStage>('style')
   const [selectedStyle, setSelectedStyle] = useState<MiniScriptStyle | null>(null)
   const [selectedGenres, setSelectedGenres] = useState<MiniScriptGenre[]>(initialGenres)
   const [liteMode, setLiteMode] = useState(false)
+  const [selectedScriptId, setSelectedScriptId] = useState<string | null>(null)
   const [loadedThumbs, setLoadedThumbs] = useState<Set<string>>(new Set())
   const styleCards = useMemo(() => [...MINISCRIPT_CATALOG.styles, SURPRISE_ME_CARD as unknown as MiniscriptStyleCard], [])
   const selectedStyleCard = selectedStyle ? MINISCRIPT_CATALOG.styles.find((item) => item.key === selectedStyle) : null
@@ -58,6 +61,7 @@ export function MiniScriptConfigModal({ open, onClose, initialGenres = DEFAULT_I
     setSelectedStyle(null)
     setSelectedGenres([...initialGenres])
     setLiteMode(false)
+    setSelectedScriptId(null)
   }, [open, initialGenres])
 
   useEffect(() => {
@@ -91,9 +95,17 @@ export function MiniScriptConfigModal({ open, onClose, initialGenres = DEFAULT_I
     if (!selectedStyle || selectedGenres.length === 0) return
     void onSubmit({ style: selectedStyle, genres: selectedGenres, lite: liteMode, selectedLabel: selectedStyleCard?.label })
   }
+  const handleSelectScript = async (scriptId: string) => {
+    setSelectedScriptId(scriptId)
+    if (await onSelectScript(scriptId)) onClose()
+    else setSelectedScriptId(null)
+  }
 
   if (!open) return null
   const showGeneration = isSubmitting || !!generationStatus && generationStatus.stage !== 'complete'
+  // Once the library has anything to pick (including a just-generated script),
+  // picking becomes the primary path and 现场创作 demotes to a quiet link.
+  const hasScripts = scripts.length > 0
 
   return (
     <RootPortal>
@@ -130,21 +142,47 @@ export function MiniScriptConfigModal({ open, onClose, initialGenres = DEFAULT_I
             ) : (
               <View className='ms-stage ms-stage--library'>
                 <View className='ms-library__section-head'><Text className='ms-library__section-title'>已有剧本</Text><Text className='ms-library__section-hint'>选中后立即进入角色分配</Text></View>
-                {isLibraryLoading && scripts.length === 0 && !generationStatus ? <View className='ms-library__state'><Text>正在翻找剧本库…</Text></View> : libraryError && scripts.length === 0 ? (
+                {isLibraryLoading && scripts.length === 0 && !generationStatus ? (
+                  <View className='ms-library-skeleton'>
+                    <View className='ms-library-skeleton__card'>
+                      <View className='ms-library-skeleton__line ms-library-skeleton__line--title' />
+                      <View className='ms-library-skeleton__line ms-library-skeleton__line--body' />
+                      <View className='ms-library-skeleton__line ms-library-skeleton__line--body-short' />
+                    </View>
+                    <View className='ms-library-skeleton__card'>
+                      <View className='ms-library-skeleton__line ms-library-skeleton__line--title' />
+                      <View className='ms-library-skeleton__line ms-library-skeleton__line--body' />
+                      <View className='ms-library-skeleton__line ms-library-skeleton__line--body-short' />
+                    </View>
+                  </View>
+                ) : libraryError && scripts.length === 0 ? (
                   <View className='ms-library__state ms-library__state--error'><Text>{libraryError}</Text>{selectedStyle ? <Button variant='secondary' onClick={() => void onLoadLibrary(selectedStyle)}>重新加载</Button> : null}</View>
                 ) : scripts.length ? <View className='ms-library__list'>{scripts.map((script) => (
-                  <View key={script.id} className='ms-library-card'>
+                  <View key={script.id} className={`ms-library-card${selectedScriptId === script.id ? ' ms-library-card--selected' : ''}`}>
+                    {selectedScriptId === script.id ? <View className='ms-library-card__check' /> : null}
                     <View className='ms-library-card__copy'><View className='ms-library-card__meta'><Text>{script.source === 'session' ? '刚刚生成' : '精选现成'}</Text><Text>{script.playerCount}人可玩</Text></View><Text className='ms-library-card__title'>{script.title}</Text><Text className='ms-library-card__premise'>{script.premise}</Text></View>
-                    <Button variant='primary' className='ms-library-card__choose' loading={isSubmitting} disabled={isSubmitting} onClick={async () => { if (await onSelectScript(script.id)) onClose() }}>选这个</Button>
+                    <Button variant='primary' className='ms-library-card__choose' loading={isSubmitting && selectedScriptId === script.id} disabled={isSubmitting} onClick={() => void handleSelectScript(script.id)}>选这个</Button>
                   </View>
                 ))}</View> : <View className='ms-library__state'><Text className='ms-library__empty-title'>这个类型还没有现成剧本</Text><Text className='ms-library__empty-copy'>可以让悦仔现在创作，进度会留在这里</Text></View>}
 
-                {showGeneration ? <View className='ms-library__generation'><Text className='ms-library__section-title'>正在创作</Text><AiGenerationShell visible mode='inline' phase={generationStatus?.stage === 'failed' ? 'error' : 'generating'} title='悦仔正在写新剧本' subtitle={`${selectedStyleCard?.label ?? '所选类型'} · 完成后可在上方选择`} steps={GENERATION_STEPS} progress={generationStatus?.progress ?? 5} progressLabel='剧本生成进度' estimatedTotalMs={generationStatus?.estimatedTotalMs ?? 32_000} onRetry={handleGenerate} reduceMotion={reduceMotion} mascotExpression='coachGuide' /></View> : null}
+                {/* Single persistent instance: the hook's terminal latch keeps
+                    showGeneration monotonic within a run, so this card never
+                    remounts from a stale poll (ghost card fix, T1). */}
+                {showGeneration ? <View key='generation' className='ms-library__generation'><Text className='ms-library__section-title'>正在创作</Text><AiGenerationShell visible mode='inline' phase={generationStatus?.stage === 'failed' ? 'error' : 'generating'} title='悦仔正在写新剧本' subtitle={`${selectedStyleCard?.label ?? '所选类型'} · 完成后可在上方选择`} steps={GENERATION_STEPS} progress={generationStatus?.progress ?? 5} progressLabel='剧本生成进度' estimatedTotalMs={generationStatus?.estimatedTotalMs ?? 32_000} onRetry={handleGenerate} reduceMotion={reduceMotion} mascotExpression='coachGuide' /></View> : null}
 
                 <View className='ms-library__create'><Text className='ms-library__section-title'>现场创作一份</Text>
-                  <View className='ms-library__genre-row'>{MINISCRIPT_CATALOG.genres.map((genre) => <View key={genre.key} className={`ms-library__genre${genreSet.has(genre.key as MiniScriptGenre) ? ' ms-library__genre--selected' : ''}`} style={{ background: getGenreGradient(genre) }} role='button' aria-label={`${genre.label}${genreSet.has(genre.key as MiniScriptGenre) ? '，已选择' : '，未选择'}`} aria-pressed={genreSet.has(genre.key as MiniScriptGenre)} onClick={() => toggleGenre(genre.key as MiniScriptGenre)}><Text>{genre.label}</Text></View>)}</View>
-                  <View className='ms-library__mode-row' role='button' aria-label={liteMode ? '当前精简版，切换标准版' : '当前标准版，切换精简版'} aria-pressed={liteMode} onClick={() => { haptics('light'); setLiteMode((value) => !value) }}><Text>{liteMode ? '精简版 · 约25分钟' : '标准版 · 剧情更完整'}</Text><Text className='ms-library__mode-action'>{liteMode ? '切换标准版' : '切换精简版'}</Text></View>
-                  <Button variant='primary' className='ms-modal__cta' loading={isSubmitting} disabled={isSubmitting || selectedGenres.length === 0} onClick={handleGenerate}>{isSubmitting ? '正在创作' : '生成新剧本'}</Button>
+                  {/* While a generation is in progress the form is inert
+                      (dimmed, taps no-op) so the progress card is the only
+                      primary path. */}
+                  <View className={`ms-library__create-form${showGeneration ? ' ms-library__create-form--disabled' : ''}`} aria-disabled={showGeneration}>
+                    <View className='ms-library__genre-row'>{MINISCRIPT_CATALOG.genres.map((genre) => <View key={genre.key} className={`ms-library__genre${genreSet.has(genre.key as MiniScriptGenre) ? ' ms-library__genre--selected' : ''}`} role='button' aria-label={`${genre.label}${genreSet.has(genre.key as MiniScriptGenre) ? '，已选择' : '，未选择'}`} aria-pressed={genreSet.has(genre.key as MiniScriptGenre)} onClick={() => toggleGenre(genre.key as MiniScriptGenre)}><Text>{genre.label}</Text></View>)}</View>
+                    <View className='ms-library__mode-row' role='button' aria-label={liteMode ? '当前精简版，切换标准版' : '当前标准版，切换精简版'} aria-pressed={liteMode} onClick={() => { haptics('light'); setLiteMode((value) => !value) }}><Text>{liteMode ? '精简版 · 约25分钟' : '标准版 · 剧情更完整'}</Text><Text className='ms-library__mode-action'>{liteMode ? '切换标准版' : '切换精简版'}</Text></View>
+                  </View>
+                  {showGeneration ? <Text className='ms-library__create-hint'>悦仔写完这份就能挑啦</Text> : hasScripts ? (
+                    <View className='ms-library__create-link' role='button' aria-label='没有喜欢的？让悦仔现场写一份' onClick={handleGenerate}><Text>没有喜欢的？让悦仔现场写一份 →</Text></View>
+                  ) : (
+                    <Button variant='primary' className='ms-modal__cta' loading={isSubmitting} disabled={isSubmitting || selectedGenres.length === 0} onClick={handleGenerate}>{isSubmitting ? '正在创作' : '生成新剧本'}</Button>
+                  )}
                 </View>
               </View>
             )}

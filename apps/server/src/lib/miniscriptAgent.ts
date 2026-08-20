@@ -14,8 +14,19 @@ import type {
 import {
   miniScriptStoryFrameworkSchema,
   parseMiniScriptStoryFramework,
+  deriveMiniScriptTitleFromPremise,
+  resolveMiniScriptTitle,
+  MINISCRIPT_TITLE_MAX_CHARS,
 } from '@shared/miniscriptStoryFramework';
 import { getGameModeConfig } from '@shared/miniscriptGameModes';
+import {
+  getMiniScriptGenreLabel,
+  sanitizeMiniScriptUserText,
+} from '@shared/miniscriptCatalog';
+import {
+  findCuratedMiniScriptStory,
+  MINISCRIPT_CURATED_STORIES,
+} from '@shared/miniscriptCuratedStories';
 import {
   buildFallbackAIMeta,
   buildLiveAIMeta,
@@ -68,23 +79,122 @@ function isValidationEnabled(): boolean {
 
 // ─── Catalog Fallback ─────────────────────────────────────────────────────────
 
+/**
+ * The v2 stub is a dev convenience, not a playable script (nameless roles,
+ * duplicated secrets, placeholder clues). It may only serve outside
+ * production, or when ops explicitly opts in via MINISCRIPT_ENABLE_STUB_FALLBACK.
+ */
+export function isMiniscriptStubFallbackEnabled(): boolean {
+  if (process.env.MINISCRIPT_ENABLE_STUB_FALLBACK === 'true') return true;
+  return process.env.NODE_ENV !== 'production';
+}
+
+/**
+ * Normalize everything the client will render: resolve a ≤12-char title
+ * (deriving from the premise when absent/over-long) and scrub any echoed
+ * style/genre machine keys from user-facing strings (belt-and-braces — the
+ * prompt also forbids them). Idempotent.
+ */
+function resolveWhoSlot(framework: MiniScriptStoryFramework): number | undefined {
+  const { solution } = framework;
+  if (!solution) return undefined;
+  if (solution.whoSlot != null) {
+    const n = framework.characters.length;
+    if (solution.whoSlot >= 1 && solution.whoSlot <= n) return solution.whoSlot;
+  }
+  // Fallback: match solution.who against the base roleLabel (strip "·新客" suffix
+  // that adaptCatalogEntry adds for duplicated roles).
+  const baseWho = solution.who.replace(/·新客$/, '').trim();
+  const idx = framework.characters.findIndex(
+    (c) => c.roleLabel.replace(/·新客$/, '').trim() === baseWho,
+  );
+  return idx >= 0 ? idx + 1 : undefined;
+}
+
+function finalizeFrameworkUserSurfaces(
+  framework: MiniScriptStoryFramework,
+): MiniScriptStoryFramework {
+  const resolvedWhoSlot = resolveWhoSlot(framework);
+  return {
+    ...framework,
+    title: sanitizeMiniScriptUserText(
+      resolveMiniScriptTitle(framework.title, framework.premise),
+    ),
+    premise: sanitizeMiniScriptUserText(framework.premise),
+    characters: framework.characters.map((character) => ({
+      ...character,
+      roleLabel: sanitizeMiniScriptUserText(character.roleLabel),
+    })),
+    clues: framework.clues.map((clue) => ({
+      ...clue,
+      text: sanitizeMiniScriptUserText(clue.text),
+    })),
+    ending: {
+      ...framework.ending,
+      resolutionSummary: sanitizeMiniScriptUserText(
+        framework.ending.resolutionSummary,
+      ),
+      confessionMechanic: sanitizeMiniScriptUserText(
+        framework.ending.confessionMechanic ?? '',
+      ),
+    },
+    solution: {
+      ...framework.solution,
+      who: sanitizeMiniScriptUserText(framework.solution.who),
+      what: sanitizeMiniScriptUserText(framework.solution.what),
+      why: sanitizeMiniScriptUserText(framework.solution.why),
+      ...(resolvedWhoSlot != null ? { whoSlot: resolvedWhoSlot } : {}),
+    },
+  };
+}
+
 function getCatalogFallback(params: {
   style: MiniScriptStyle;
   genres: MiniScriptGenre[];
   playerCount: number;
 }): MiniScriptStoryFramework {
+  const warnFallback = (source: string) =>
+    logger.warn('[MiniScriptAgent] fallback path taken', {
+      source,
+      style: params.style,
+      genres: params.genres,
+      playerCount: params.playerCount,
+    });
+
   const exact = findCatalogEntry(params.style, params.genres);
   if (exact) {
-    return adaptCatalogEntry(exact.framework, params);
+    warnFallback('catalog_exact');
+    return finalizeFrameworkUserSurfaces(adaptCatalogEntry(exact.framework, params));
   }
 
   const random = getRandomCatalogEntry(params.style, params.genres);
   if (random) {
-    return adaptCatalogEntry(random.framework, params);
+    warnFallback('catalog_random');
+    return finalizeFrameworkUserSurfaces(adaptCatalogEntry(random.framework, params));
   }
 
-  // Ultimate fallback: generic v2 stub
-  return generateV2Stub(params);
+  // Production-grade fallback: complete playable frameworks from the shared
+  // curated registry (covers styles the server catalog lacks, e.g. western_court).
+  const curated = findCuratedMiniScriptStory(params.style, params.genres);
+  if (curated) {
+    warnFallback('curated_shared');
+    return finalizeFrameworkUserSurfaces(adaptCatalogEntry(curated, params));
+  }
+
+  // Dev-only last resort: the intentionally thin v2 stub. Never served in
+  // production unless MINISCRIPT_ENABLE_STUB_FALLBACK explicitly opts in.
+  if (isMiniscriptStubFallbackEnabled()) {
+    warnFallback('v2_stub_dev_only');
+    return finalizeFrameworkUserSurfaces(generateV2Stub(params));
+  }
+
+  // Unreachable while the curated registry is non-empty. Defensive: in
+  // production never ship the stub — adapt the first curated story off-style.
+  logger.error('[MiniScriptAgent] curated registry exhausted; adapting first curated story', {
+    style: params.style,
+    genres: params.genres,
+  });
+  return finalizeFrameworkUserSurfaces(adaptCatalogEntry(MINISCRIPT_CURATED_STORIES[0]!, params));
 }
 
 /**
@@ -122,6 +232,9 @@ export function adaptCatalogEntry(
 
   return {
     ...framework,
+    // Older curated entries carry no title; derive one so the client never
+    // falls back to a mid-sentence premise cut.
+    title: framework.title ?? deriveMiniScriptTitleFromPremise(framework.premise, MINISCRIPT_TITLE_MAX_CHARS),
     style: params.style,
     genres: params.genres,
     gameModeConfig: {
@@ -140,7 +253,9 @@ export function adaptCatalogEntry(
 
 // ─── Deterministic V2 Stub ────────────────────────────────────────────────────
 
-function generateV2Stub(params: {
+/** Dev-only thin stub. Exported so tests can exercise it directly — production
+ * sessions must receive a complete curated framework instead. */
+export function generateV2Stub(params: {
   playerCount: number;
   style: MiniScriptStyle;
   genres: MiniScriptGenre[];
@@ -156,6 +271,16 @@ function generateV2Stub(params: {
     future_tech: '轨道站上，一份实验记录被覆盖，谁在隐瞒什么？',
     modern_urban: '写字楼茶水间里，一份合同草稿被撕去关键页，气氛微妙。',
     republican_era: '小城戏院后台，一封戏票与半张照片，让旧识重逢。',
+  };
+
+  const styleTitle: Record<MiniScriptStyle, string> = {
+    western_court: '失踪的胸针',
+    medieval: '消失的粮仓钥匙',
+    ancient_chinese: '灯会的无名信',
+    xianxia: '空匣之谜',
+    future_tech: '被覆盖的记录',
+    modern_urban: '茶水间悬案',
+    republican_era: '戏院后台的信',
   };
 
   const sins = ['怠惰', '虚荣', '嘴硬', '心软', '逞强', '逃避'];
@@ -190,7 +315,8 @@ function generateV2Stub(params: {
 
   const clues = Array.from({ length: Math.min(n, config.clueCountRange[1]) }, (_, i) => ({
     clueId: `c${i + 1}`,
-    text: `线索 ${i + 1}：某个细节暗示了真相的一角……`,
+    // No self-numbering prefix — the client owns the 「线索 N」 ordinal.
+    text: `某个细节暗示了真相的一角……`,
     revealedInAct: Math.min(3, i + 1),
     implies: i < 2 ? [`c${i + 2}`] : undefined,
   }));
@@ -206,6 +332,7 @@ function generateV2Stub(params: {
     schemaVersion: 2,
     style: params.style,
     genres: params.genres,
+    title: styleTitle[params.style],
     gameModeConfig: {
       clueCountRange: config.clueCountRange,
       hasRedHerrings: config.hasRedHerrings,
@@ -215,7 +342,7 @@ function generateV2Stub(params: {
       targetPlayMinutes: config.targetPlayMinutes,
       difficulty: config.difficulty,
     },
-    premise: `${stylePremise[params.style]}（基调：${params.genres.join('、')}；低冲突、无暴力描写。）`,
+    premise: `${stylePremise[params.style]}（基调：${params.genres.map((genre) => getMiniScriptGenreLabel(genre)).join('、')}；低冲突、无暴力描写。）`,
     characters,
     act_flow,
     ending: {
@@ -227,8 +354,13 @@ function generateV2Stub(params: {
       who: characters[0]?.roleLabel ?? '未知角色',
       what: '一场误会',
       why: '因为大家都太在乎别人的看法',
+      whoSlot: 1,
     },
     playerKnowledge,
+    voteOptions: {
+      what: ['顺手而为', '借走忘了还', '只是误会一场'],
+      why: ['善意', '胆怯', '好面子'],
+    },
   };
 
   return miniScriptStoryFrameworkSchema.parse(raw);
@@ -566,8 +698,8 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   }
 
   // Apply host authority (ensure style/genres match request)
-  const withAuthority = applyHostAuthority(pass1.framework, params);
-  if (!withAuthority) {
+  const withAuthorityRaw = applyHostAuthority(pass1.framework, params);
+  if (!withAuthorityRaw) {
     clearTimeout(timer);
     params.onProgress?.('fallback', 86);
     const framework = getCatalogFallback(params);
@@ -589,6 +721,10 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
       aiResponseMeta: buildFallbackAIMeta('host_authority_mismatch', promptVersion, aiCorrelationId),
     };
   }
+
+  // Normalize user-facing surfaces (title resolution + enum-token scrub) so an
+  // LLM that echoes machine keys or overshoots the title still ships clean copy.
+  const withAuthority = finalizeFrameworkUserSurfaces(withAuthorityRaw);
 
   // ── Pass 2: Validate (optional, gated by env) ──────────────────────────────
   if (isValidationEnabled()) {
