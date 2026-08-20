@@ -147,10 +147,33 @@
   }
 }
 
+// Continuity bridge (2026-08-18): enter with the shared onboarding page
+// transition and leave via a short opacity fade the parent triggers — the
+// shell already shares the page gradient background, so the crossfade reads
+// as one continuous surface between the loading state and the page content.
+.onboarding-loading-shell--continuity {
+  @include onboarding-page-enter-transition;
+}
+
+.onboarding-loading-shell--continuity-exiting {
+  // Drop the enter fill so the exit opacity can actually fade.
+  animation: none !important;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .onboarding-loading-shell__dot,
   .onboarding-loading-shell__line {
     animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .onboarding-loading-shell--continuity,
+  .onboarding-loading-shell--continuity-exiting {
+    animation: none !important;
+    transition: none;
     opacity: 1;
     transform: none;
   }

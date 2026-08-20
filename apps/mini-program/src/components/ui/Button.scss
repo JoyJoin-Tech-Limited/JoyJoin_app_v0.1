@@ -57,6 +57,20 @@
     opacity: 0.45;
   }
 
+  // Solid variants: opacity alone washed $color-primary out to lavender with
+  // white text, failing contrast on the most important CTA. A disabled solid
+  // button swaps to a neutral surface with a readable gray label instead.
+  // Loading keeps the brand skin — the dot spinner needs the contrast.
+  &--primary {
+    &[disabled]:not(.joy-button--loading),
+    &.joy-button--disabled {
+      background: $color-border;
+      box-shadow: none;
+      color: $color-text-secondary;
+      opacity: 1;
+    }
+  }
+
   &--sm {
     min-height: max($button-height-sm, $cta-min-tap);
     height: $button-height-sm;

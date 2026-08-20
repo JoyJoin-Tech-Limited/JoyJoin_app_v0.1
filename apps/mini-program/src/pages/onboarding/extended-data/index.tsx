@@ -31,12 +31,15 @@ import { TOAST_DEFAULT_MS } from '../../../lib/utils/uiConstants'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
 import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
+import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
+import { looksLikeOfflineError, OFFLINE_PREFLIGHT_COPY } from '../../../lib/utils/offlineDetection'
+import { prefetchCeremonyAssets, prefetchInterestIllustrations } from '../../../lib/utils/onboardingPrefetch'
 import { logError, logInfo, logWarn } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
-import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
+import OnboardingLoadingShell, { SHELL_EXIT_HOLD_MS } from '../../../components/loading/OnboardingLoadingShell'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import BoxJourneySpine from '../../../components/onboarding/BoxJourneySpine'
 import { getXiaoyueAsset } from '../personality-test/visuals'
@@ -149,12 +152,17 @@ function InterestTierIndicator({ level }: { level: InterestSelectionLevel }) {
 }
 
 export default function ExtendedDataPage() {
+  const { shouldReduceMotion } = useMiniRevealMotion()
   const [levelsById, setLevelsById] = useState<Record<string, InterestSelectionLevel>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [error, setError] = useState('')
+  // Loading-shell continuity bridge (see essential-data for the twin).
+  const [shellFading, setShellFading] = useState(false)
+  const [shellDismissed, setShellDismissed] = useState(false)
+  const shellRenderedRef = useRef(false)
 
-  useResetOnShow(setIsPageExiting, setIsSubmitting)
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setShellFading)
   const [tapHint, setTapHint] = useState<{ topicId: string; level: InterestSelectionLevel; message: string } | null>(null)
   // Set on the first real tap anywhere — permanently ends the ghost-tap demo
   // for this session (the user has started interacting, demo has done its job).
@@ -174,12 +182,46 @@ export default function ExtendedDataPage() {
   const { isLoading } = useAuthGuard({
     suspendOnboardingRedirect: isSubmitting || isPageExiting,
   })
+
+  // Loading-shell continuity bridge: hold the shell for a short exit fade
+  // once auth resolves. Reduced motion swaps instantly; a shell that never
+  // rendered (fast cached auth) is dismissed without any hold. The fading
+  // guard is a ref — see the same effect in essential-data for why the
+  // state flag must NOT be a dependency (stuck-shell bug).
+  const shellFadingRef = useRef(false)
+
+  useEffect(() => {
+    if (isLoading) {
+      shellRenderedRef.current = true
+      return
+    }
+    if (shellDismissed || !shellRenderedRef.current) return
+    if (shouldReduceMotion) {
+      setShellDismissed(true)
+      return
+    }
+    if (shellFadingRef.current) return
+    shellFadingRef.current = true
+    setShellFading(true)
+    const t = setTimeout(() => setShellDismissed(true), SHELL_EXIT_HOLD_MS)
+    return () => clearTimeout(t)
+  }, [isLoading, shellDismissed, shouldReduceMotion])
   const { user } = useAuth()
   const userArchetype = (user?.archetype as ArchetypeId | undefined) ?? (user?.primaryArchetype as ArchetypeId | undefined)
   const archetypeName = userArchetype ? ARCHETYPE_BY_ID[userArchetype]?.nameCn : undefined
   const archetypeAccent = userArchetype ? getContrastSafeArchetypeColor(userArchetype) : undefined
 
   usePreloadCategoryIcons(!isLoading)
+
+  // Idle-prefetch the first interest illustration of each category after the
+  // first contentful render — deferred so it never competes with first paint.
+  useEffect(() => {
+    if (isLoading) return
+    const t = setTimeout(() => {
+      void prefetchInterestIllustrations()
+    }, 1000)
+    return () => clearTimeout(t)
+  }, [isLoading])
   // Pre-warm the coach bubble's pointing sprite so it decodes before the
   // bubble animates in (replaces the old 0×0 hidden <Image> preload hack).
   useEffect(() => {
@@ -388,7 +430,7 @@ export default function ExtendedDataPage() {
       const network = await Taro.getNetworkType()
       if (network.networkType === 'none') {
         Taro.showToast({
-          title: '网络好像断了，连上后再试试',
+          title: OFFLINE_PREFLIGHT_COPY,
           icon: 'none',
           duration: TOAST_DEFAULT_MS,
         })
@@ -411,6 +453,10 @@ export default function ExtendedDataPage() {
 
       await submitInterests(apiRequest, { interests: selectionDrafts })
 
+      // Fire-and-forget: warm the profile-review ceremony's blind-box art
+      // during the post-submit gap. Never awaited, never blocks navigation.
+      void prefetchCeremonyAssets()
+
       await saveCheckpoint('extended-data')
       await invalidateAuth()
       const userState = await getUserState()
@@ -431,8 +477,17 @@ export default function ExtendedDataPage() {
       })
     } catch (err) {
       setIsPageExiting(false)
-      const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
+      // Offline branch: inline banner with unified copy (no 暂存 promise —
+      // selection drafts here are session-local, so only re-submit is promised).
       // Inline banner only — no toast duplicating the same failure message.
+      if (looksLikeOfflineError(err)) {
+        const offlineMessage = '网络好像断开了，连上网络后重新提交就好。'
+        setError(offlineMessage)
+        analytics.errorOccurred('submit_offline', offlineMessage)
+        logError('[ExtendedData] Submit failed offline', { message: offlineMessage })
+        return
+      }
+      const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
       setError(message)
       analytics.errorOccurred('submit_failed', message)
       logError('[ExtendedData] Submit failed', { message })
@@ -452,12 +507,14 @@ export default function ExtendedDataPage() {
     topPriorityCount,
   ])
 
-  if (isLoading) {
+  if (isLoading || (shellRenderedRef.current && !shellDismissed)) {
     return (
       <OnboardingLoadingShell
         stepLabel='装盒中 · 第 2 格'
         title={`${DEFAULT_MASCOT_DISPLAY_NAME}在点亮你的兴趣热度`}
         subtitle='把这一步准备好后，资料预览就会更有你的味道。'
+        continuity
+        exiting={shellFading}
       />
     )
   }

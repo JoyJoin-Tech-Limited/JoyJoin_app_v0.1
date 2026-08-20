@@ -38,7 +38,7 @@ import { logError, logInfo } from '../../../lib/utils/logger'
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
-import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
+import OnboardingLoadingShell, { SHELL_EXIT_HOLD_MS } from '../../../components/loading/OnboardingLoadingShell'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import AIGCLabel from '../../../components/ai-content/AIGCLabel'
 import AIContentReportButton from '../../../components/ai-content/AIContentReportButton'
@@ -127,6 +127,11 @@ export default function ProfileReviewPage() {
   const [isInviteCardVisible, setIsInviteCardVisible] = useState(false)
   const [introNextStep, setIntroNextStep] = useState<string | undefined>()
   const [showCeremony, setShowCeremony] = useState(false)
+  // Loading-shell continuity bridge (same pattern as essential/extended-data):
+  // hold the shell through a short exit fade once auth resolves.
+  const [shellFading, setShellFading] = useState(false)
+  const [shellDismissed, setShellDismissed] = useState(false)
+  const shellRenderedRef = useRef(false)
   const hasTrackedInviteImpressionRef = useRef(false)
   const hasStagedDiscoverPrefetchRef = useRef(false)
   const isScrolledRef = useRef(false)
@@ -139,7 +144,7 @@ export default function ProfileReviewPage() {
     }
   }, [shouldReduceMotion])
 
-  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsInviteCardVisible, setShowCeremony)
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsInviteCardVisible, setShowCeremony, setShellFading)
 
   // Reset invite-card impression tracking when the user returns via swipe-back
   // so analytics accurately reflect each visit.
@@ -153,6 +158,31 @@ export default function ProfileReviewPage() {
     // redirect suspended so it cannot yank the user away before routing.
     suspendOnboardingRedirect: isSubmitting || isPageExiting || showCeremony,
   })
+
+  // Loading-shell continuity bridge: hold the shell for a short exit fade
+  // once auth resolves so the shell → analyzing-animation swap never flashes
+  // a bare background. Reduced motion swaps instantly; a shell that never
+  // rendered (fast cached auth) is dismissed without any hold. The fading
+  // guard is a ref — see the same effect in essential-data for why the
+  // state flag must NOT be a dependency (stuck-shell bug).
+  const shellFadingRef = useRef(false)
+
+  useEffect(() => {
+    if (isLoading) {
+      shellRenderedRef.current = true
+      return
+    }
+    if (shellDismissed || !shellRenderedRef.current) return
+    if (shouldReduceMotion) {
+      setShellDismissed(true)
+      return
+    }
+    if (shellFadingRef.current) return
+    shellFadingRef.current = true
+    setShellFading(true)
+    const t = setTimeout(() => setShellDismissed(true), SHELL_EXIT_HOLD_MS)
+    return () => clearTimeout(t)
+  }, [isLoading, shellDismissed, shouldReduceMotion])
   const invalidateAuth = useInvalidateAuth()
   const analytics = useOnboardingAnalytics('profile-review', { enabled: !isLoading })
 
@@ -556,12 +586,14 @@ export default function ProfileReviewPage() {
     )
   }
 
-  if (isLoading) {
+  if (isLoading || (shellRenderedRef.current && !shellDismissed)) {
     return (
       <OnboardingLoadingShell
         stepLabel='最后一步 · 入场卡预览'
         title={`${getMascotDisplayName(user)}在翻开你的入场卡`}
         subtitle='最后这一页准备好后，你就可以去发现第一场适合你的局。'
+        continuity
+        exiting={shellFading}
       />
     )
   }

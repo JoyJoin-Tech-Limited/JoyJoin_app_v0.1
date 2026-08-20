@@ -45,6 +45,24 @@
     flex-direction: column;
     gap: $spacing-md;
     animation: step-fade-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    /* Direction-aware wizard exit (140ms, matched to STEP_EXIT_MS in
+       index.tsx): the outgoing card slides up on forward, down on back;
+       the incoming card keeps the step-fade-in entry above. The zeroed
+       animation-delay overrides the --stage--2 stagger so the exit never
+       waits on the entry choreography. */
+    &--exit-forward,
+    &--exit-back {
+      animation-delay: 0s;
+    }
+
+    &--exit-forward {
+      animation: step-exit-forward 0.14s cubic-bezier(0.4, 0, 1, 1) both;
+    }
+
+    &--exit-back {
+      animation: step-exit-back 0.14s cubic-bezier(0.4, 0, 1, 1) both;
+    }
   }
 
   &__field {
@@ -151,6 +169,7 @@
 
     &:active {
       border-color: rgba($color-primary, 0.4);
+      background: rgba($color-primary, 0.06);
     }
 
     /* CTA-style purple picker trigger */
@@ -162,6 +181,9 @@
       &:active {
         transform: scale(0.98);
         opacity: 0.92;
+        /* Override the base :active tint so the press never flashes the
+           solid purple CTA into a light fill. */
+        background: $color-primary;
       }
     }
 
@@ -313,7 +335,7 @@
 
     &--compact {
       flex: 0 0 auto;
-      min-height: 72rpx;
+      min-height: 88rpx;
       padding: $spacing-xs $spacing-sm;
     }
   }
@@ -437,6 +459,30 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes step-exit-forward {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-12rpx);
+  }
+}
+
+@keyframes step-exit-back {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(12rpx);
   }
 }
 

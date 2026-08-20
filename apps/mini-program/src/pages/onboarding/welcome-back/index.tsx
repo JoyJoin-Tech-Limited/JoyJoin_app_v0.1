@@ -13,6 +13,7 @@ import { restartOnboarding } from '../../../lib/api/api'
 import { seedMiniProgramAuthSession } from '../../../lib/api/authSession'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
+import { getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import { logError, logInfo } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
@@ -26,6 +27,19 @@ const STEP_NAME_MAP: Record<string, string> = {
   'essential-data': '入场名片',
   'extended-data': '兴趣标签选择',
   'profile-review': '入场卡预览',
+}
+
+/**
+ * Server-driven progress: nextStep names the step the user is about to do,
+ * so completed count = its zero-based position in the flow. Unknown values
+ * hide the row entirely (never a fabricated number).
+ */
+const NEXT_STEP_PROGRESS: Record<string, number> = {
+  'onboarding': 0,
+  'personality-test': 1,
+  'essential-data': 2,
+  'extended-data': 3,
+  'profile-review': 4,
 }
 
 export default function WelcomeBackPage() {
@@ -54,6 +68,9 @@ export default function WelcomeBackPage() {
   const stepName = (auth.nextStep && STEP_NAME_MAP[auth.nextStep]) ?? '入场名片'
   const restartsRemaining = auth.user?.restartsRemaining ?? 0
   const displayName = auth.user?.displayName?.trim() ?? ''
+  const progressCompleted = auth.nextStep ? NEXT_STEP_PROGRESS[auth.nextStep] : undefined
+  const userArchetype = (auth.user?.primaryArchetype as string | undefined) || (auth.user?.archetype as string | undefined) || ''
+  const admissionAccent = userArchetype ? getContrastSafeArchetypeColor(userArchetype) : ''
 
   const handleContinue = async () => {
     if (isNavigating || isRestarting) return
@@ -132,6 +149,7 @@ export default function WelcomeBackPage() {
           <BrandLogo size='md' />
           <View className='welcome-back__skeleton-line welcome-back__skeleton-line--title' />
           <View className='welcome-back__skeleton-line welcome-back__skeleton-line--subtitle' />
+          <View className='welcome-back__skeleton-line welcome-back__skeleton-line--card' />
         </View>
       </View>
     )
@@ -176,6 +194,43 @@ export default function WelcomeBackPage() {
         <View className='welcome-back__step-card'>
           <Text className='welcome-back__step-label'>上次进度</Text>
           <Text className='welcome-back__step-name'>{stepName}</Text>
+
+          {/* Mini progress: server-driven, hidden for unknown nextStep values */}
+          {progressCompleted !== undefined && (
+            <View className='welcome-back__progress'>
+              {[0, 1, 2, 3].map((index) => (
+                <View
+                  key={index}
+                  className={[
+                    'welcome-back__progress-seg',
+                    index < progressCompleted ? 'welcome-back__progress-seg--filled' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                />
+              ))}
+              <Text className='welcome-back__progress-label'>
+                {progressCompleted >= 4 ? '最后一步' : `已完成 ${progressCompleted}/4`}
+              </Text>
+            </View>
+          )}
+
+          {/* Admission-card thumbnail: displayName + archetype accent */}
+          <View className='welcome-back__admission'>
+            <View
+              className='welcome-back__admission-bar'
+              style={admissionAccent ? { background: admissionAccent } : undefined}
+            />
+            <View className='welcome-back__admission-body'>
+              <Text className='welcome-back__admission-label'>入场卡</Text>
+              <Text
+                className='welcome-back__admission-name'
+                style={admissionAccent ? { color: admissionAccent } : undefined}
+              >
+                {displayName || '待填'}
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
 

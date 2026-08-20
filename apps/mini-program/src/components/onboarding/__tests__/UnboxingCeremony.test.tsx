@@ -78,19 +78,76 @@ describe('UnboxingCeremony gift row (拆盒即得礼)', () => {
     expect(screen.getByText('小悦 · 入场卡已生效')).toBeInTheDocument()
   })
 
-  it('still completes on tap when no coupon is present', () => {
-    const onComplete = vi.fn()
-    render(
-      <UnboxingCeremony
-        visible
-        displayName='小悦'
-        giftDiscountValue={null}
-        onComplete={onComplete}
-      />,
-    )
+  it('ignores taps inside the 2400ms guard window, completes after it', () => {
+    vi.useFakeTimers()
+    try {
+      const onComplete = vi.fn()
+      render(
+        <UnboxingCeremony
+          visible
+          displayName='小悦'
+          giftDiscountValue={null}
+          onComplete={onComplete}
+        />,
+      )
 
-    fireEvent.click(screen.getByRole('button', { name: '开盒完成，轻触继续' }))
-    expect(onComplete).toHaveBeenCalledTimes(1)
+      const button = screen.getByRole('button', { name: '开盒完成，轻触继续' })
+
+      // Inside the guard: no advance, no completion.
+      fireEvent.click(button)
+      expect(onComplete).not.toHaveBeenCalled()
+
+      // Past the guard: tap advances immediately.
+      vi.advanceTimersByTime(2500)
+      fireEvent.click(button)
+      expect(onComplete).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('still completes on tap when no coupon is present', () => {
+    vi.useFakeTimers()
+    try {
+      const onComplete = vi.fn()
+      render(
+        <UnboxingCeremony
+          visible
+          displayName='小悦'
+          giftDiscountValue={null}
+          onComplete={onComplete}
+        />,
+      )
+
+      vi.advanceTimersByTime(2500)
+      fireEvent.click(screen.getByRole('button', { name: '开盒完成，轻触继续' }))
+      expect(onComplete).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('auto-advances at 3200ms when the user never taps', () => {
+    vi.useFakeTimers()
+    try {
+      const onComplete = vi.fn()
+      const onAdvance = vi.fn()
+      render(
+        <UnboxingCeremony
+          visible
+          displayName='小悦'
+          giftDiscountValue={null}
+          onComplete={onComplete}
+          onAdvance={onAdvance}
+        />,
+      )
+
+      vi.advanceTimersByTime(3200)
+      expect(onComplete).toHaveBeenCalledTimes(1)
+      expect(onAdvance).toHaveBeenCalledWith('auto')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('renders nothing at all when not visible', () => {

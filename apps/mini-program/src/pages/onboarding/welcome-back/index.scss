@@ -104,6 +104,74 @@
     color: $color-primary;
   }
 
+  // Mini progress row (2026-08-18): server-driven completed count, four
+  // segments + a factual label. Hidden entirely for unknown nextStep.
+  &__progress {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-top: $spacing-sm;
+  }
+
+  &__progress-seg {
+    width: 40rpx;
+    height: 8rpx;
+    border-radius: 999rpx;
+    background: $color-divider;
+
+    &--filled {
+      background: $color-primary;
+    }
+  }
+
+  &__progress-label {
+    margin-left: $spacing-xs;
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+  }
+
+  // Admission-card thumbnail: the user's displayName tinted with their
+  // archetype accent (brand purple before an archetype exists).
+  &__admission {
+    display: flex;
+    align-items: stretch;
+    gap: $spacing-md;
+    width: 100%;
+    margin-top: $spacing-md;
+    padding: $spacing-sm $spacing-md;
+    border-radius: 16rpx;
+    background: rgba($color-surface, 0.72);
+  }
+
+  &__admission-bar {
+    width: 8rpx;
+    border-radius: 999rpx;
+    background: $color-primary;
+  }
+
+  &__admission-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2rpx;
+    min-width: 0;
+  }
+
+  &__admission-label {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+  }
+
+  &__admission-name {
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    max-width: 320rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   @keyframes step-card-shimmer {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(200%); }
@@ -134,9 +202,11 @@
     }
 
     // No restart quota left — visually greyed to match the disabled state.
+    // Opacity floor 0.7 keeps the label legible on the warm background
+    // (0.46 was caught as invisible text by the 2026-08-19 visual pass).
     &--exhausted {
-      opacity: 0.46;
-      color: $color-text-muted;
+      opacity: 0.7;
+      color: $color-text-secondary;
     }
   }
 
@@ -167,6 +237,12 @@
 
     &--subtitle {
       width: 320rpx;
+    }
+
+    &--card {
+      width: 340rpx;
+      height: 96rpx;
+      margin-top: $spacing-sm;
     }
   }
 

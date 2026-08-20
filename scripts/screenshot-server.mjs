@@ -798,9 +798,119 @@ async function captureProfileReviewCeremony() {
       await page.waitForTimeout(600)
       await page.click('.profile-review__submit')
       // 500ms celebration beat + ceremony choreography (~1.5s) → settled
-      // overlay; still ahead of the 2.4s auto-advance.
+      // overlay; still ahead of the 3.2s auto-advance (2026-08-18 retune).
       await page.waitForSelector('.unboxing-ceremony__card', { timeout: 10000 })
       await page.waitForTimeout(1600)
+      return screenshotViewport(page)
+    }
+  )
+}
+
+// ─── Onboarding 丝滑度 wave visual checks (2026-08-18) ───────────
+// The essential-data wizard gates on server-driven nextStep, so the captures
+// intercept /api/auth/user and pin nextStep='essential-data' (guard match).
+// Motion is intentionally ENABLED (no ?motion=reduce) so the direction-aware
+// step exit animation is exercised, not skipped.
+
+async function interceptAuthNextStep(page, nextStep) {
+  // Static fulfill: fetch the mock user once and pin nextStep. (Do not call
+  // the route fetch method and then fulfill with both a response object and a
+  // json body — mixing them does not reliably override the body.)
+  let base
+  try {
+    const res = await fetch(`${H5_BASE_URL}/api/auth/user`)
+    if (!res.ok) {
+      throw new Error(`auth/user returned ${res.status}`)
+    }
+    base = await res.json()
+  } catch (err) {
+    console.error('[screenshot-server] failed to fetch auth/user mock base', err)
+    throw err
+  }
+  await page.route('**/api/auth/user', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ...base, nextStep }),
+    })
+  )
+}
+
+async function captureEssentialData({ captureExitFrame = false } = {}) {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(`${H5_BASE_URL}/#/pages/onboarding/essential-data/index`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      await interceptAuthNextStep(page, 'essential-data')
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      // The mock user's displayName prefills the name field, so the CTA is
+      // already enabled — no typing needed (Taro H5 renders taro-input-core,
+      // which Playwright's fill cannot target).
+      await page.waitForSelector('.essential-data__card', { timeout: 15000 })
+      await page.waitForSelector('.essential-data__submit:not([disabled])', { timeout: 10000 })
+      await page.waitForTimeout(500)
+      if (!captureExitFrame) {
+        return screenshotViewport(page)
+      }
+
+      await page.click('.essential-data__submit')
+      // The outgoing card must carry the forward-exit class while the 140ms
+      // exit plays — proves the direction-aware animation is live in the
+      // compiled CSS, not just present in source.
+      await page.waitForFunction(
+        () => document.querySelector('.essential-data__card--exit-forward') !== null,
+        undefined,
+        { timeout: 500 },
+      )
+      await page.waitForTimeout(60)
+      return screenshotViewport(page)
+    }
+  )
+}
+
+async function captureEssentialDataStep2() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(`${H5_BASE_URL}/#/pages/onboarding/essential-data/index`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      await interceptAuthNextStep(page, 'essential-data')
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await page.waitForSelector('.essential-data__submit:not([disabled])', { timeout: 15000 })
+      await page.click('.essential-data__submit')
+      // 140ms exit + 300ms entry settle → intent grid fully in.
+      await page.waitForSelector('.essential-data__intent-grid', { timeout: 5000 })
+      await page.waitForTimeout(500)
+      return screenshotViewport(page)
+    }
+  )
+}
+
+async function captureWelcomeBack() {
+  return withBrowserPage(
+    { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+    async (page) => {
+      await page.goto(`${H5_BASE_URL}/#/pages/onboarding/welcome-back/index`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000,
+      })
+      // extended-data → 已完成 3/4 progress row + admission thumbnail render.
+      await interceptAuthNextStep(page, 'extended-data')
+      await clearAndSeedStorage(page)
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+
+      await page.waitForSelector('.welcome-back__step-card', { timeout: 15000 })
+      // Staggered entrances settle before capture.
+      await page.waitForTimeout(900)
       return screenshotViewport(page)
     }
   )
@@ -870,6 +980,10 @@ register('gathering-room-compact', () => captureGatheringRoom({
   viewport: { width: 360, height: 640 },
 }))
 register('profile-review-ceremony', captureProfileReviewCeremony)
+register('onboarding-essential-step1', () => captureEssentialData())
+register('onboarding-essential-exit', () => captureEssentialData({ captureExitFrame: true }))
+register('onboarding-essential-step2', captureEssentialDataStep2)
+register('onboarding-welcome-back', captureWelcomeBack)
 register('matching-status-puzzle-prelude', captureMatchingStatusPuzzlePrelude)
 register('profile-v17', captureProfileV17)
 register('discover-alang-v17', captureDiscoverAlangV17)

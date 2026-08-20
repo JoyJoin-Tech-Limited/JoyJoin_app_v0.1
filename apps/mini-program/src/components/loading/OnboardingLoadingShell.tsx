@@ -13,6 +13,13 @@ import './OnboardingLoadingShell.scss'
  *  least this long so the user sees the full animation before route transition. */
 export const CELEBRATE_MIN_DISPLAY_MS = 1500
 
+/**
+ * Continuity bridge: how long parents hold the shell's mount after auth
+ * resolves so the shell → content swap crossfades instead of flashing.
+ * Pages using `continuity` should import this instead of defining their own.
+ */
+export const SHELL_EXIT_HOLD_MS = 180
+
 interface OnboardingLoadingShellProps {
   stepLabel: string
   title: string
@@ -36,6 +43,17 @@ interface OnboardingLoadingShellProps {
   /** Fires after the celebrate animation's minimum display duration.
    *  Use this to gate navigation that would cut the celebration short. */
   onCelebrateReady?: () => void
+  /**
+   * Opt-in continuity bridge (2026-08-18): the shell fades in on mount with
+   * the shared onboarding page-enter transition instead of popping in, and
+   * fades out when the parent flips `exiting` before unmounting it — so a
+   * shell → page-content swap never flashes a bare background between the
+   * two onboarding pages. Default false — the 7+ existing call sites render
+   * pixel-identical without these props.
+   */
+  continuity?: boolean
+  /** True while the parent holds the shell through its exit fade. */
+  exiting?: boolean
 }
 
 const CELEBRATE_TITLE = '全部收到啦 — 让我开始翻你的命格'
@@ -50,6 +68,8 @@ export default function OnboardingLoadingShell({
   celebrate = false,
   sparkleCount = 6,
   onCelebrateReady,
+  continuity = false,
+  exiting = false,
 }: OnboardingLoadingShellProps) {
   const [imgSrc, setImgSrc] = useState(getXiaoyueExpressionAsset(xiaoyueExpression))
   const [settled, setSettled] = useState(false)
@@ -75,7 +95,16 @@ export default function OnboardingLoadingShell({
   const resolvedSubtitle = celebrate ? CELEBRATE_SUBTITLE : subtitle
 
   return (
-    <View className={`onboarding-loading-shell ${settled ? 'onboarding-loading-shell--settled' : ''}`}>
+    <View
+      className={[
+        'onboarding-loading-shell',
+        settled ? 'onboarding-loading-shell--settled' : '',
+        continuity ? 'onboarding-loading-shell--continuity' : '',
+        continuity && exiting ? 'onboarding-loading-shell--continuity-exiting' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <View className='onboarding-loading-shell__content'>
         <Text className='onboarding-loading-shell__eyebrow'>{stepLabel}</Text>
         <Text className='onboarding-loading-shell__title'>{resolvedTitle}</Text>

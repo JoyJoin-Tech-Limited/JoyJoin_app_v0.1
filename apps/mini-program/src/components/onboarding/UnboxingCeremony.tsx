@@ -18,14 +18,29 @@ import './UnboxingCeremony.scss'
  * lid and the user's compact entry card rises out — the physical-world
  * counterpart of the archetype-card reveal.
  *
- * Timing: auto-advances after AUTO_ADVANCE_MS or immediately on tap
- * (user-paced). The parent owns what happens next (routing).
+ * Timing: auto-advances after AUTO_ADVANCE_MS, or on tap once TAP_GUARD_MS
+ * has elapsed (taps inside the guard window are ignored so an accidental
+ * touch can't skip the reveal; the 轻触继续 hint fades in at the guard
+ * boundary). The parent owns what happens next (routing).
  *
  * Subpackage WXSS trap (AGENTS §15): consuming pages MUST also @use
  * UnboxingCeremony.scss in their own page SCSS.
  */
 
-const AUTO_ADVANCE_MS = 4000
+const AUTO_ADVANCE_MS = 3200
+
+/**
+ * Taps inside this window are ignored — the lid lift and card rise are still
+ * settling and an accidental tap must not skip the reveal. The 轻触继续 hint
+ * fades in exactly at this moment so the affordance never lies about the
+ * guard window.
+ *
+ * Analytics note (2026-08-18): onAdvance('auto'|'tap') distribution will
+ * shift vs the pre-retune baseline (4000ms, no guard). Dashboards comparing
+ * ceremony completion modes across releases must use a 2026-08-18 boundary.
+ * Rollback of the pacing = revert this constant + TAP_GUARD_MS only.
+ */
+const TAP_GUARD_MS = 2400
 
 /**
  * Local copy of WelcomeGiftCard's discount formatter. Deliberately NOT
@@ -78,6 +93,10 @@ export default function UnboxingCeremony({
   const { isDegradation } = useDeviceTier()
   const completedRef = useRef(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // When the ceremony became visible — the tap-guard measures from here.
+  const visibleAtRef = useRef(0)
+  const [hintVisible, setHintVisible] = useState(false)
   // Hold the callback in a ref: parents pass inline arrows (new identity per
   // render), and re-subscribing the auto-advance timer on every parent
   // render would push the 4s advance out indefinitely and re-arm the
@@ -97,14 +116,25 @@ export default function UnboxingCeremony({
   useEffect(() => {
     if (!visible) return undefined
     completedRef.current = false
+    visibleAtRef.current = Date.now()
+    // RM shows the hint statically; motion mode reveals it at the guard
+    // boundary so the affordance never promises an earlier tap.
+    setHintVisible(reduceMotion)
     timerRef.current = setTimeout(() => finish('auto'), AUTO_ADVANCE_MS)
+    if (!reduceMotion) {
+      hintTimerRef.current = setTimeout(() => setHintVisible(true), TAP_GUARD_MS)
+    }
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current)
         timerRef.current = null
       }
+      if (hintTimerRef.current) {
+        clearTimeout(hintTimerRef.current)
+        hintTimerRef.current = null
+      }
     }
-  }, [visible, finish])
+  }, [visible, finish, reduceMotion])
 
   if (!visible) return null
 
@@ -122,6 +152,7 @@ export default function UnboxingCeremony({
     <View
       className={rootClass}
       onClick={() => {
+        if (Date.now() - visibleAtRef.current < TAP_GUARD_MS) return
         haptics('light')
         finish('tap')
       }}
@@ -184,7 +215,7 @@ export default function UnboxingCeremony({
         ) : null}
       </View>
 
-      <Text className='unboxing-ceremony__hint'>轻触继续，去看为你准备的局</Text>
+      <Text className={hintVisible ? 'unboxing-ceremony__hint unboxing-ceremony__hint--visible' : 'unboxing-ceremony__hint'}>轻触继续，去看为你准备的局</Text>
     </View>
   )
 }

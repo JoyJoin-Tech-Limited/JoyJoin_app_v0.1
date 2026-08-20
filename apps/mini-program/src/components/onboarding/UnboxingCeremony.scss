@@ -168,8 +168,14 @@
   margin-top: 48rpx;
   font-size: 24rpx;
   color: rgba($color-text-primary-warm, 0.5);
-  animation: reveal-rise-in 320ms ease-out 1500ms both;
+  // Revealed by the component exactly at TAP_GUARD_MS (2400ms) so the tap
+  // affordance never appears before taps actually work.
   opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.unboxing-ceremony__hint--visible {
+  opacity: 1;
 }
 
 @keyframes unboxing-lid-lift {

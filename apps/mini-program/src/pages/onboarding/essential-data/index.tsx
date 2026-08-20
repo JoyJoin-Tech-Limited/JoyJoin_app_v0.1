@@ -1,5 +1,5 @@
 import { View, Text, Input, Picker, ScrollView } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CURRENT_CITY_OPTIONS,
@@ -29,6 +29,7 @@ import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { logError, logInfo } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
+import { looksLikeOfflineError, OFFLINE_PREFLIGHT_COPY } from '../../../lib/utils/offlineDetection'
 import { evaluateProfessionInputQuality, isMeaningfulProfessionInput } from '../../../lib/onboarding/professionInputQuality'
 import { sanitizeIndustrySource } from '../../../lib/onboarding/professionSubmissionGuard'
 import Button from '../../../components/ui/Button'
@@ -36,7 +37,7 @@ import Card from '../../../components/ui/Card'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import IntentCard from '../../../components/intent/IntentCard'
 import type { IntentCardOption } from '../../../components/intent/IntentCard'
-import OnboardingLoadingShell from '../../../components/loading/OnboardingLoadingShell'
+import OnboardingLoadingShell, { SHELL_EXIT_HOLD_MS } from '../../../components/loading/OnboardingLoadingShell'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import FormStepper from '../../../components/ui/FormStepper'
 import BoxJourneySpine from '../../../components/onboarding/BoxJourneySpine'
@@ -63,7 +64,19 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
+function waitFor(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 const MAX_INTENTS = 3
+// Wizard step exit animation duration (kept in sync with the step-exit
+// keyframes in index.scss). The outgoing card plays this, then the incoming
+// card mounts with the existing step-fade-in entry.
+const STEP_EXIT_MS = 140
+// Branded completion beat: how long the CTA holds its 已保存 state (with the
+// coach bubble speaking the submit-success voice line) before navigating —
+// mirrors profile-review's isCelebrating precedent.
+const CELEBRATE_HOLD_MS = 700
 const currentYear = new Date().getFullYear()
 const BIRTH_YEAR_RANGE = Array.from(
   { length: currentYear - 1970 - 17 },
@@ -236,8 +249,29 @@ export default function EssentialDataPage() {
   const [contentViolations, setContentViolations] = useState<Record<string, string>>({})
   const [showProfessionOverlay, setShowProfessionOverlay] = useState(false)
   const [professionClassification, setProfessionClassification] = useState<ProfessionClassificationData | null>(null)
+  // Direction-aware step swap: the outgoing card plays a 140ms exit (forward
+  // slides up, back slides down) before the new card mounts.
+  const [isStepExiting, setIsStepExiting] = useState(false)
+  const [stepDirection, setStepDirection] = useState<'forward' | 'back'>('forward')
+  const stepExitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Loading-shell continuity bridge: hold the shell through a short exit
+  // fade once auth resolves so the swap to content never flashes bare bg.
+  const [shellFading, setShellFading] = useState(false)
+  const [shellDismissed, setShellDismissed] = useState(false)
+  const shellRenderedRef = useRef(false)
+  // Branded submit celebration: the CTA holds 已保存 while the coach bubble
+  // speaks the submit-success line, then navigation proceeds.
+  const [isCelebrating, setIsCelebrating] = useState(false)
+  // Back-reaction throttle: one coach line per step per page-visit.
+  const backReactionSeenRef = useRef<Set<string>>(new Set())
 
-  useResetOnShow(setIsPageExiting, setIsSubmitting)
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsStepExiting, setShellFading, setIsCelebrating)
+
+  // A re-showed page (swipe-back) starts a fresh visit for back-reaction
+  // throttling, so the coach may notice a back again on re-entry.
+  useDidShow(() => {
+    backReactionSeenRef.current.clear()
+  })
 
   const [mascotReaction, setMascotReaction] = useState('')
   const mascotTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -370,8 +404,37 @@ export default function EssentialDataPage() {
       if (mascotTimeoutRef.current) {
         clearTimeout(mascotTimeoutRef.current)
       }
+      if (stepExitTimerRef.current) {
+        clearTimeout(stepExitTimerRef.current)
+      }
     }
   }, [])
+
+  // Loading-shell continuity bridge: hold the shell for a short exit fade
+  // once auth resolves. Reduced motion swaps instantly; a shell that never
+  // rendered (fast cached auth) is dismissed without any hold.
+  // NOTE: the fading guard lives in a ref — putting `shellFading` state in
+  // this effect's deps would re-run the effect on the setState and cancel
+  // the very timer it just created (stuck-shell bug, caught 2026-08-19 by
+  // the H5 screenshot probe).
+  const shellFadingRef = useRef(false)
+
+  useEffect(() => {
+    if (isLoading) {
+      shellRenderedRef.current = true
+      return
+    }
+    if (shellDismissed || !shellRenderedRef.current) return
+    if (shouldReduceMotion) {
+      setShellDismissed(true)
+      return
+    }
+    if (shellFadingRef.current) return
+    shellFadingRef.current = true
+    setShellFading(true)
+    const t = setTimeout(() => setShellDismissed(true), SHELL_EXIT_HOLD_MS)
+    return () => clearTimeout(t)
+  }, [isLoading, shellDismissed, shouldReduceMotion])
 
   const isStepValid = useMemo(() => {
     switch (currentStep) {
@@ -390,25 +453,80 @@ export default function EssentialDataPage() {
     }
   }, [currentStep, displayName, gender, birthYear, lifeStage, currentCity, intent.length])
 
+  // Direction-aware wizard step swap: the outgoing card plays a 140ms exit
+  // (forward slides up, back slides down), then the new card mounts with the
+  // existing step-fade-in entry. Reduced motion swaps instantly.
+  const advanceStep = useCallback((direction: 'forward' | 'back') => {
+    if (shouldReduceMotion) {
+      setCurrentStep((s) => (direction === 'forward' ? s + 1 : s - 1))
+      return
+    }
+    if (stepExitTimerRef.current) {
+      clearTimeout(stepExitTimerRef.current)
+    }
+    setStepDirection(direction)
+    setIsStepExiting(true)
+    stepExitTimerRef.current = setTimeout(() => {
+      setCurrentStep((s) => (direction === 'forward' ? s + 1 : s - 1))
+      setIsStepExiting(false)
+      stepExitTimerRef.current = null
+    }, STEP_EXIT_MS)
+  }, [shouldReduceMotion])
+
   const handleNext = useCallback(() => {
-    if (!isStepValid) return
+    if (!isStepValid || isStepExiting) return
     if (currentStep < TOTAL_STEPS - 1) {
       analytics.stepCompleted({ stepId: stepConfig.id, stepIndex: currentStep, stepNumber: currentStep + 1 })
       haptics('medium')
-      setCurrentStep((s) => s + 1)
       setMascotReaction('')
+      advanceStep('forward')
     }
-  }, [currentStep, analytics, stepConfig.id, isStepValid])
+  }, [currentStep, analytics, stepConfig.id, isStepValid, isStepExiting, advanceStep])
+
+  // Multi-step jump (content-violation recovery): reuses the same 140ms
+  // direction-aware exit as advanceStep so error recovery never reads as an
+  // abrupt teleport. Direction derives from the target's position.
+  const jumpToStep = useCallback((target: number) => {
+    if (target === currentStep) return
+    if (shouldReduceMotion || target < 0 || target >= TOTAL_STEPS) {
+      setCurrentStep(target)
+      return
+    }
+    const direction: 'forward' | 'back' = target > currentStep ? 'forward' : 'back'
+    if (stepExitTimerRef.current) {
+      clearTimeout(stepExitTimerRef.current)
+    }
+    setStepDirection(direction)
+    setIsStepExiting(true)
+    stepExitTimerRef.current = setTimeout(() => {
+      setCurrentStep(target)
+      setIsStepExiting(false)
+      stepExitTimerRef.current = null
+    }, STEP_EXIT_MS)
+  }, [currentStep, shouldReduceMotion])
 
   const handleBack = useCallback(() => {
-    if (currentStep > 0) {
+    if (currentStep > 0 && !isStepExiting) {
       haptics('light')
-      setCurrentStep((s) => s - 1)
+      // Coach back-reaction: Xiaoyue notices the change of mind once per
+      // step per page-visit. Never overrides an active mascot reaction or
+      // a visible content-violation error on the target step.
+      const hadActiveReaction = mascotReaction !== ''
+      const targetStepId = STEP_CONFIG[currentStep - 1]?.id
+      const targetStepHasViolation =
+        targetStepId != null &&
+        Object.keys(contentViolations).some((field) => FIELD_TO_STEP_ID[field] === targetStepId)
       setMascotReaction('')
+      advanceStep('back')
+      if (!hadActiveReaction && targetStepId != null && !targetStepHasViolation && !backReactionSeenRef.current.has(targetStepId)) {
+        backReactionSeenRef.current.add(targetStepId)
+        triggerMascotReaction(getOnboardingVoiceLine('essential-back', userArchetype))
+      }
     }
-  }, [currentStep])
+  }, [currentStep, isStepExiting, advanceStep, mascotReaction, contentViolations, triggerMascotReaction, userArchetype])
 
   const handleForceSkip = useCallback(async () => {
+    haptics('light')
     try {
       const { confirm } = await Taro.showModal({
         title: '跳过当前步骤',
@@ -440,8 +558,26 @@ export default function EssentialDataPage() {
 
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return
-    setIsSubmitting(true)
     setError('')
+
+    // Pre-flight connectivity check (mirrors extended-data): fail fast with
+    // unified offline copy before any network attempt.
+    try {
+      const network = await Taro.getNetworkType()
+      if (network.networkType === 'none') {
+        Taro.showToast({
+          title: OFFLINE_PREFLIGHT_COPY,
+          icon: 'none',
+          duration: TOAST_DEFAULT_MS,
+        })
+        analytics.errorOccurred('submit_offline', 'network unavailable')
+        return
+      }
+    } catch {
+      // Best-effort: continue if network detection fails
+    }
+
+    setIsSubmitting(true)
 
     try {
       const professionForSubmit = professionText.trim()
@@ -485,7 +621,14 @@ export default function EssentialDataPage() {
       // Submit succeeded — the onward navigation must not count as abandonment.
       markWizardCompleted()
 
-      Taro.showToast({ title: '入场名片已保存', icon: 'success', duration: TOAST_DEFAULT_MS })
+      // Branded completion beat (2026-08-18): the system success toast is
+      // replaced by the coach bubble speaking the archetype-voice
+      // submit-success line + a short CTA hold, mirroring profile-review's
+      // isCelebrating precedent. System toasts survive only for errors.
+      setIsCelebrating(true)
+      haptics('success')
+      triggerMascotReaction(getOnboardingVoiceLine('essential-submit-success', userArchetype))
+      await waitFor(CELEBRATE_HOLD_MS)
       await navigateToMiniProgramNextStep(userState.nextStep, {
         mode: 'replace',
         transition: { beforeNavigate: () => setIsPageExiting(true) },
@@ -500,11 +643,12 @@ export default function EssentialDataPage() {
 
         if (field) {
           setContentViolations((prev) => ({ ...prev, [field]: fieldMessage }))
-          // Navigate to the step containing this field if needed
+          // Navigate to the step containing this field if needed — direction-
+          // aware exit keeps the recovery visually continuous.
           const targetStepId = FIELD_TO_STEP_ID[field]
           const targetStep = targetStepId ? STEP_CONFIG.findIndex((s) => s.id === targetStepId) : -1
           if (targetStep >= 0 && currentStep !== targetStep) {
-            setCurrentStep(targetStep)
+            jumpToStep(targetStep)
           }
           setError('')
         } else {
@@ -516,6 +660,16 @@ export default function EssentialDataPage() {
         return
       }
 
+      // Offline branch: drafts genuinely persist in the local progress cache
+      // (removed only on success), so the copy can promise safe re-submit.
+      if (looksLikeOfflineError(err)) {
+        const offlineMessage = '网络好像断开了，这一页填好的内容已经暂存在本地，连上网络后重新提交就好。'
+        setError(offlineMessage)
+        analytics.errorOccurred('submit_offline', offlineMessage)
+        logError('[EssentialData] Submit failed offline', { message: offlineMessage })
+        return
+      }
+
       const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
       setError(message)
       analytics.errorOccurred('submit_failed', message)
@@ -523,7 +677,7 @@ export default function EssentialDataPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, markWizardCompleted, professionText, professionClassification, relationshipStatus, saveCheckpoint, lifeStage, currentStep])
+  }, [analytics, birthYear, currentCity, displayName, educationLevel, gender, hometownRegionCity, intent, invalidateAuth, isSubmitting, markWizardCompleted, professionText, professionClassification, relationshipStatus, saveCheckpoint, lifeStage, currentStep, triggerMascotReaction, userArchetype, jumpToStep])
 
   const handleProfessionSubmit = useCallback((value: string, classification?: ProfessionClassificationData) => {
     const quality = evaluateProfessionInputQuality(value)
@@ -620,17 +774,24 @@ export default function EssentialDataPage() {
     )
   }, [intentOptions, intent, toggleIntent])
 
-  if (isLoading) {
+  if (isLoading || (shellRenderedRef.current && !shellDismissed)) {
     return (
       <OnboardingLoadingShell
         stepLabel='装盒中 · 第 1 格'
         title={`${getMascotDisplayName(user)}在整理你的入场名片`}
         subtitle='把这一步铺好后，后面的兴趣热度和资料预览都会顺滑接上。'
+        continuity
+        exiting={shellFading}
       />
     )
   }
 
   const pageClass = ['essential-data', isPageExiting ? 'essential-data--exiting' : ''].filter(Boolean).join(' ')
+  const stepExitClass = isStepExiting
+    ? stepDirection === 'forward'
+      ? ' essential-data__card--exit-forward'
+      : ' essential-data__card--exit-back'
+    : ''
 
   return (
     <View className={pageClass}>
@@ -672,7 +833,7 @@ export default function EssentialDataPage() {
 
           {/* Step 1: Display name */}
           {currentStep === 0 && (
-            <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
+            <Card className={`essential-data__card essential-data__stage essential-data__stage--2${stepExitClass}`}>
               <View className='essential-data__field' id='field-displayName'>
                 <Text className='essential-data__label'>
                   昵称<Text className='essential-data__required'>*</Text>
@@ -688,6 +849,11 @@ export default function EssentialDataPage() {
                     setNamePrefilledFromWeChat(false)
                     setDisplayName(e.detail.value)
                     setContentViolations((prev) => ({ ...prev, displayName: '' }))
+                  }}
+                  onConfirm={() => {
+                    // Keyboard 完成 key rides the same direction-aware advance
+                    // path as the CTA (guard, haptics, analytics included).
+                    handleNext()
                   }}
                   maxlength={20}
                 />
@@ -711,7 +877,7 @@ export default function EssentialDataPage() {
 
           {/* Step 1: Intent */}
           {currentStep === 1 && (
-            <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
+            <Card className={`essential-data__card essential-data__stage essential-data__stage--2${stepExitClass}`}>
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>这次更想收获什么</Text>
                 {intentGrid}
@@ -722,7 +888,7 @@ export default function EssentialDataPage() {
 
           {/* Step 2: About you — gender + birth year + life stage */}
           {currentStep === 2 && (
-            <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
+            <Card className={`essential-data__card essential-data__stage essential-data__stage--2${stepExitClass}`}>
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>
                   性别<Text className='essential-data__required'>*</Text>
@@ -734,7 +900,10 @@ export default function EssentialDataPage() {
                       <View
                         key={option}
                         className={['essential-data__choice-chip', selected ? 'essential-data__choice-chip--selected' : ''].filter(Boolean).join(' ')}
-                        onClick={() => setGender(option)}
+                        onClick={() => {
+                          haptics('light')
+                          setGender(option)
+                        }}
                       >
                         <Text className='essential-data__choice-chip-text'>{option}</Text>
                       </View>
@@ -767,6 +936,7 @@ export default function EssentialDataPage() {
                     className={['essential-data__picker', birthYear > 0 ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}
                     style={birthYear > 0 && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${hexToRgba(accentColor, 0.12)}` } : undefined}
                     aria-label={birthYear > 0 ? `出生年份：${birthYear} 年` : '请选择出生年份'}
+                    onClick={() => haptics('light')}
                   >
                     <Text className={['essential-data__picker-text', birthYear > 0 ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
                       {birthYear > 0 ? `${birthYear} 年` : '请选择出生年份'}
@@ -792,6 +962,7 @@ export default function EssentialDataPage() {
                         key={option}
                         className={['essential-data__choice-chip', selected ? 'essential-data__choice-chip--selected' : ''].filter(Boolean).join(' ')}
                         onClick={() => {
+                          haptics('light')
                           setLifeStage(option)
                           const reactions: Record<string, string> = {
                             '学生党': '校园生活多精彩，来认识新朋友吧~',
@@ -815,7 +986,7 @@ export default function EssentialDataPage() {
 
           {/* Step 3: Education + Occupation + Relationship */}
           {currentStep === 3 && (
-            <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
+            <Card className={`essential-data__card essential-data__stage essential-data__stage--2${stepExitClass}`}>
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>学历</Text>
                 <View className='essential-data__choice-row essential-data__choice-row--wrap'>
@@ -825,7 +996,10 @@ export default function EssentialDataPage() {
                       <View
                         key={option}
                         className={['essential-data__choice-chip', 'essential-data__choice-chip--compact', selected ? 'essential-data__choice-chip--selected' : ''].filter(Boolean).join(' ')}
-                        onClick={() => setEducationLevel(selected ? '' : option)}
+                        onClick={() => {
+                          haptics('light')
+                          setEducationLevel(selected ? '' : option)
+                        }}
                       >
                         <Text className='essential-data__choice-chip-text'>{option}</Text>
                       </View>
@@ -842,7 +1016,10 @@ export default function EssentialDataPage() {
                     professionText !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta',
                   ].filter(Boolean).join(' ')}
                   style={professionText !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${hexToRgba(accentColor, 0.12)}` } : undefined}
-                  onClick={() => setShowProfessionOverlay(true)}
+                  onClick={() => {
+                    haptics('light')
+                    setShowProfessionOverlay(true)
+                  }}
                   aria-label={professionText !== '' ? `职业：${professionText}` : '选填（点击告诉悦仔你的职业）'}
                 >
                   <Text
@@ -892,6 +1069,7 @@ export default function EssentialDataPage() {
                     className={['essential-data__picker', relationshipStatus !== '' ? 'essential-data__picker--cta-selected' : 'essential-data__picker--cta'].filter(Boolean).join(' ')}
                     style={relationshipStatus !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${hexToRgba(accentColor, 0.12)}` } : undefined}
                     aria-label={relationshipStatus !== '' ? `关系状态：${relationshipStatus}` : '请选择关系状态'}
+                    onClick={() => haptics('light')}
                   >
                     <Text className={['essential-data__picker-text', relationshipStatus !== '' ? 'essential-data__picker-text--cta-selected' : 'essential-data__picker-text--cta'].filter(Boolean).join(' ')}>
                       {relationshipStatus || '选填（点击选择）'}
@@ -909,7 +1087,7 @@ export default function EssentialDataPage() {
 
           {/* Step 4: Location */}
           {currentStep === 4 && (
-            <Card className='essential-data__card essential-data__stage essential-data__stage--2'>
+            <Card className={`essential-data__card essential-data__stage essential-data__stage--2${stepExitClass}`}>
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>
                   现居城市<Text className='essential-data__required'>*</Text>
@@ -931,6 +1109,7 @@ export default function EssentialDataPage() {
                     className='essential-data__picker'
                     style={currentCity !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${hexToRgba(accentColor, 0.12)}` } : undefined}
                     aria-label={currentCity !== '' ? `现居城市：${currentCity}` : '请选择现居城市'}
+                    onClick={() => haptics('light')}
                   >
                     <Text className={['essential-data__picker-text', currentCity !== '' ? 'essential-data__picker-text--filled' : ''].filter(Boolean).join(' ')}>
                       {currentCity || '请选择'}
@@ -988,10 +1167,10 @@ export default function EssentialDataPage() {
             variant='brand'
             className='essential-data__submit'
             onClick={handleSubmit}
-            disabled={!isStepValid || isSubmitting}
-            loading={isSubmitting}
+            disabled={!isStepValid || isSubmitting || isCelebrating}
+            loading={isSubmitting && !isCelebrating}
           >
-            {isSubmitting ? '提交中…' : '继续完善兴趣'}
+            {isCelebrating ? '已保存' : isSubmitting ? '提交中…' : '继续完善兴趣'}
           </Button>
         )}
       </View>
