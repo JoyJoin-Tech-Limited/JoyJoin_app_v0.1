@@ -125,7 +125,7 @@ export default function AdminFlashPage() {
           </div>
           <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">街头盲盒运营</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            管理 NPC、街头盲盒地点、当日排班与第一季故事。故事内容完成审核并发布后，才会进入正式流程。
+            以「第一季故事」为内容主线，配合当日排班、NPC 与安全地点完成运营。故事季发布和当日排班是两道独立门槛：前者决定内容是否可进入正式流程，后者决定今天是否真正上线。
           </p>
         </div>
         <Button
@@ -246,18 +246,22 @@ export default function AdminFlashPage() {
 
       <FlashManualHoldPanel canWrite={canWrite} npcs={npcs} locations={locations} />
 
-      <Tabs defaultValue="schedules" className="space-y-4">
+      <Tabs defaultValue="story" className="space-y-4">
         <div className="pb-1">
           <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-7">
-            <TabsTrigger value="schedules" data-testid="tab-flash-schedules">今日 / 次日排班</TabsTrigger>
-            <TabsTrigger value="npcs" data-testid="tab-flash-npcs">NPC</TabsTrigger>
-            <TabsTrigger value="encounter-locations" data-testid="tab-flash-locations">街头盲盒地点</TabsTrigger>
-            <TabsTrigger value="story" data-testid="tab-flash-story">第一季故事</TabsTrigger>
-            <TabsTrigger value="equipment-rewards" data-testid="tab-flash-equipment-rewards">装备 / 奖励</TabsTrigger>
-            <TabsTrigger value="consistency" data-testid="tab-flash-consistency">一致性检查</TabsTrigger>
-            <TabsTrigger value="analytics" data-testid="tab-flash-analytics">数据分析</TabsTrigger>
+            <TabsTrigger value="story" data-testid="tab-flash-story">第一季工作台</TabsTrigger>
+            <TabsTrigger value="schedules" data-testid="tab-flash-schedules">当日运营</TabsTrigger>
+            <TabsTrigger value="npcs" data-testid="tab-flash-npcs">NPC 配置</TabsTrigger>
+            <TabsTrigger value="encounter-locations" data-testid="tab-flash-locations">安全地点</TabsTrigger>
+            <TabsTrigger value="equipment-rewards" data-testid="tab-flash-equipment-rewards">装备与奖励</TabsTrigger>
+            <TabsTrigger value="consistency" data-testid="tab-flash-consistency">上线检查</TabsTrigger>
+            <TabsTrigger value="analytics" data-testid="tab-flash-analytics">运营数据</TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="story" className="mt-0">
+          <FlashStoryPanel canWrite={canWrite} />
+        </TabsContent>
 
         <TabsContent value="schedules" className="mt-0">
           <FlashScheduleTab
@@ -271,9 +275,6 @@ export default function AdminFlashPage() {
         <TabsContent value="npcs" className="mt-0"><FlashNpcPanel canWrite={canWrite} canSeed={canWrite} /></TabsContent>
         <TabsContent value="encounter-locations" className="mt-0">
           <FlashLocationsPanel canWrite={canWrite} kind="encounter" npcs={npcs} />
-        </TabsContent>
-        <TabsContent value="story" className="mt-0">
-          <FlashStoryPanel canWrite={canWrite} />
         </TabsContent>
         <TabsContent value="equipment-rewards" className="mt-0">
           <FlashEquipmentRewardsPanel canWrite={canWrite} />

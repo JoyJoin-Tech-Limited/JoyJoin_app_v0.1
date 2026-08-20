@@ -42,6 +42,22 @@ type StoryAdminResponse = {
   fragments: Array<{ id: string; episodeId: string; category: "object" | "past" | "relationship" | "key"; title: string; fact: string; assetUrl: string | null }>;
 };
 
+function isStoryContentV2(content: unknown): content is { v: 2; start?: string; nodes?: Record<string, unknown> } {
+  return typeof content === "object" && content !== null && (content as { v?: unknown }).v === 2;
+}
+
+function hasStoryContentV1(content: unknown): content is StoryEpisode["content"] {
+  if (!content || typeof content !== "object") return false;
+  const candidate = content as Partial<StoryEpisode["content"]>;
+  return typeof candidate.opening === "string"
+    && typeof candidate.action === "string"
+    && typeof candidate.discovery === "string"
+    && typeof candidate.closing === "string"
+    && Array.isArray(candidate.question?.options)
+    && typeof candidate.responseByOption === "object"
+    && candidate.responseByOption !== null;
+}
+
 export function FlashStoryPanel({ canWrite }: { canWrite: boolean }) {
   const { toast } = useToast();
   const query = useQuery<StoryAdminResponse>({ queryKey: ["/api/admin/alang/story"] });
@@ -130,6 +146,26 @@ export function FlashStoryPanel({ canWrite }: { canWrite: boolean }) {
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Film className="h-4 w-4" />{selected.npcName} · {editing.title}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
+              {isStoryContentV2(editing.content) ? (
+                <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/[0.03] p-5" data-testid="flash-story-v2-summary">
+                  <div>
+                    <Badge variant="outline">v2 节点式故事</Badge>
+                    <h3 className="mt-3 text-base font-semibold">此单元使用新版叙事引擎</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      v2 内容由状态节点、分支选择和回响组成，不能套用旧版的“开场 / 单题 / 选项”编辑表单。该保护避免错误读取旧字段导致页面白屏。
+                    </p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border bg-background p-3"><p className="text-xs text-muted-foreground">起始节点</p><p className="mt-1 font-medium">{editing.content.start ?? "未配置"}</p></div>
+                    <div className="rounded-lg border bg-background p-3"><p className="text-xs text-muted-foreground">叙事节点</p><p className="mt-1 font-medium">{Object.keys(editing.content.nodes ?? {}).length} 个</p></div>
+                  </div>
+                  <p className="text-xs leading-5 text-muted-foreground">内容文本由受控的 v2 内容资产与部署流程维护；这里仍可审核该单元，动画和碎片配置将保留为独立运营项。</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" disabled={!canWrite || editing.reviewStatus === "reviewed" || reviewMutation.isPending} onClick={() => reviewMutation.mutate(editing)} data-testid="button-review-flash-story-v2"><CheckCircle2 className="mr-2 h-4 w-4" />审核通过</Button>
+                  </div>
+                </div>
+              ) : hasStoryContentV1(editing.content) ? (
+                <>
               <div className="grid gap-4 md:grid-cols-2"><div><Label>标题</Label><Input disabled={!canWrite} value={editing.title} onChange={(event) => setDraft({ ...editing, title: event.target.value })} /></div><div><Label>角色动作动画</Label><Select disabled={!canWrite} value={editing.motion.ambient} onValueChange={(ambient: "none" | "breathe" | "drift") => setDraft({ ...editing, motion: { ...editing.motion, ambient } })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">关闭</SelectItem><SelectItem value="breathe">轻微呼吸</SelectItem><SelectItem value="drift">轻微漂移</SelectItem></SelectContent></Select></div></div>
               {(["opening", "action", "discovery", "closing"] as const).map((field) => <div key={field}><Label>{{ opening: "开场", action: "正在做什么", discovery: "本次发现", closing: "结尾推进" }[field]}</Label><Textarea disabled={!canWrite} rows={3} value={editing.content[field]} onChange={(event) => setDraft({ ...editing, content: { ...editing.content, [field]: event.target.value } })} /></div>)}
               <div><Label>互动问题</Label><Input disabled={!canWrite} value={editing.content.question.prompt} onChange={(event) => setDraft({ ...editing, content: { ...editing.content, question: { ...editing.content.question, prompt: event.target.value } } })} /></div>
@@ -157,6 +193,12 @@ export function FlashStoryPanel({ canWrite }: { canWrite: boolean }) {
               <div className="rounded-lg bg-muted/50 p-3 text-sm"><div className="flex items-center gap-2 font-medium"><Eye className="h-4 w-4" />动画规则</div><p className="mt-1 text-muted-foreground">呼吸与漂移只使用位移和透明度。未上传正式眨眼帧时不会合成假眼皮；用户开启“减少动态效果”后全部静止。</p></div>
               <div className="rounded-xl border bg-background p-4" data-testid="flash-story-preview"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-primary">小程序内容预览</span><Badge variant="outline">第 {editing.phase} 幕</Badge></div><p className="mt-3 text-lg font-semibold">{editing.title}</p><p className="mt-2 text-sm text-muted-foreground">{editing.content.opening}</p><p className="mt-3 text-sm">{editing.content.discovery}</p><div className="mt-3 space-y-2">{editing.content.question.options.map((option) => <div key={option.id} className="rounded-lg bg-muted px-3 py-2 text-sm">{option.label}</div>)}</div>{selectedFragment ? <div className="mt-4 rounded-lg bg-primary/5 p-3"><p className="text-xs font-semibold text-primary">新故事碎片</p><p className="mt-1 font-medium">{selectedFragment.title}</p><p className="mt-1 text-sm text-muted-foreground">{selectedFragment.fact}</p></div> : null}</div>
               <div className="flex flex-wrap gap-2"><Button disabled={!canWrite || (!draft && !fragmentDraft) || saveMutation.isPending} onClick={() => saveMutation.mutate({ episode: editing, fragment: selectedFragment })}><Save className="mr-2 h-4 w-4" />保存并重新送审</Button><Button variant="outline" disabled={!canWrite || Boolean(draft || fragmentDraft) || editing.reviewStatus === "reviewed" || reviewMutation.isPending} onClick={() => reviewMutation.mutate(editing)}><CheckCircle2 className="mr-2 h-4 w-4" />审核通过</Button></div>
+                </>
+              ) : (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  该单元的内容结构无法识别，已停止渲染旧版编辑表单以保护页面。请检查该单元的内容版本和迁移状态。
+                </div>
+              )}
             </CardContent>
           </Card>
         ) : null}
