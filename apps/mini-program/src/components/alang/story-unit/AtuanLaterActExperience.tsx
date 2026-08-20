@@ -102,7 +102,6 @@ export function AtuanLaterActPrelude({ unitId, background, character, disabled =
   return (
     <View className='atuan-later-experience' data-testid='atuan-later-prelude' data-unit-id={unitId}>
       <AtuanLaterActScene unitId={unitId} background={background} character={character} speech={definition.opening} />
-      <View className='atuan-later-experience__chapter'><Text>{unitId === 's1-p2-atuan' ? '第二幕 · 没写完的座位图' : '第三幕 · 回来的第六张卡'}</Text></View>
       <View className='atuan-later-experience__panel atuan-later-experience__panel--prelude' aria-label='选择你的现场动作'>
         <View className='atuan-later-experience__section'>
           <Text className='atuan-later-experience__eyebrow'>阿团的故事还在继续</Text>
@@ -200,9 +199,6 @@ export function AtuanLaterActExperience({ unitId, background, character, progres
   return (
     <View className={`atuan-later-experience${progress.gameStarted ? ' atuan-later-experience--game' : ''}`} data-testid='atuan-later-experience' data-unit-id={unitId}>
       <AtuanLaterActScene unitId={unitId} background={background} character={character} speech={latestSpeech(progress)} progress={progress} disabled={disabled} onInspect={progress.arrivalReplyId ? inspect : undefined} />
-      <View className='atuan-later-experience__chapter'>
-        <Text>{unitId === 's1-p2-atuan' ? '第二幕 · 没写完的座位图' : '第三幕 · 回来的第六张卡'}</Text>
-      </View>
       <View className='atuan-later-experience__panel'>
         <ScrollView className='atuan-later-experience__scroll' scrollY>
           {!progress.arrivalReplyId ? (
@@ -215,13 +211,7 @@ export function AtuanLaterActExperience({ unitId, background, character, progres
                 ))}
               </View>
             </View>
-          ) : !highlightsComplete ? (
-            <View className='atuan-later-experience__section'>
-              <Text className='atuan-later-experience__eyebrow'>场景里还有细节</Text>
-              <Text className='atuan-later-experience__prompt'>点亮三处旧物，再替阿团理清这次邀请。</Text>
-              <Text className='atuan-later-experience__progress'>{progress.highlightOrder.length}/3 已查看</Text>
-            </View>
-          ) : !progress.followupId ? (
+          ) : !highlightsComplete ? null : !progress.followupId ? (
             <View className='atuan-later-experience__section'>
               <Text className='atuan-later-experience__prompt'>你想怎么回应阿团？</Text>
               <View className='atuan-later-experience__choices'>

@@ -530,7 +530,7 @@ describe('formal Flash dialogue', () => {
     expect(document.querySelector('[data-testid="flash-story-v2-stage"]')).toBeNull()
     expect(screen.getByTestId('later-act-background')).toHaveAttribute('src', expect.stringContaining('flash-alang-second-act-return-shelter-v2'))
     expect(screen.getByTestId('later-act-character')).toHaveAttribute('src', 'alang-official.png')
-    expect(screen.getByText('第二幕 · 断在半程的路线')).toBeInTheDocument()
+    expect(document.querySelector('.later-act-experience__chapter')).toBeNull()
     const approach = screen.getByRole('button', { name: '先看本子被雨打湿的地方' })
     act(() => {
       approach.click()
@@ -575,7 +575,7 @@ describe('formal Flash dialogue', () => {
     expect(document.querySelector('[data-testid="flash-story-v2-stage"]')).toBeNull()
     expect(screen.getByTestId('later-act-background')).toHaveAttribute('src', 'shiqi-third.jpg')
     expect(screen.getByTestId('later-act-character')).toHaveAttribute('src', 'shiqi-official.png')
-    expect(screen.getByText('第三幕 · 删除并不是抹掉城市')).toBeInTheDocument()
+    expect(document.querySelector('.later-act-experience__chapter')).toBeNull()
     const approach = screen.getByRole('button', { name: '先确认其余四张卡还能留下什么' })
     act(() => {
       approach.click()

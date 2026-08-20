@@ -204,19 +204,6 @@
   line-height: 1.55;
 }
 
-.later-act-experience__chapter {
-  position: absolute;
-  z-index: 7;
-  top: 3%;
-  right: 4%;
-  padding: 10rpx 18rpx;
-  border: 2rpx solid rgba(255, 255, 255, 0.45);
-  border-radius: 999rpx;
-  color: $color-text-white;
-  background: rgba(27, 28, 37, 0.64);
-  font-size: 24rpx;
-}
-
 .later-act-experience__panel {
   position: absolute;
   z-index: 8;
@@ -330,13 +317,6 @@
   background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
   font-size: 28rpx;
   font-weight: 700;
-}
-
-.later-act-experience__primary-action--compact {
-  min-height: 80rpx;
-  margin-top: 16rpx;
-  border-radius: 24rpx;
-  font-size: 26rpx;
 }
 
 .later-act-clue {

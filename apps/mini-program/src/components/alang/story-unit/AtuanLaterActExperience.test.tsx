@@ -31,9 +31,10 @@ describe('AtuanLaterActExperience', () => {
 
   it('opens a later act with the same two-choice scene beat as the first act', () => {
     const onBegin = vi.fn()
-    render(<AtuanLaterActPrelude unitId='s1-p2-atuan' background='pavilion.webp' character='atuan.webp' disabled={false} onBegin={onBegin} />)
+    const { container } = render(<AtuanLaterActPrelude unitId='s1-p2-atuan' background='pavilion.webp' character='atuan.webp' disabled={false} onBegin={onBegin} />)
 
     expect(screen.getByTestId('atuan-later-prelude')).toBeInTheDocument()
+    expect(container.querySelector('.atuan-later-experience__chapter')).toBeNull()
     expect(screen.getByText('阿团把一张反复折过的座位图铺在桌上。两把椅子被他挪过很多次，每一次都像差一点才敢停下。')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '先看看他改过的地方' }))
     expect(onBegin).toHaveBeenCalledWith(0, '先看看他改过的地方')
@@ -45,12 +46,14 @@ describe('AtuanLaterActExperience', () => {
       const [progress, setProgress] = useState(() => createAtuanLaterActProgress('s1-p2-atuan', 'read_plan_first'))
       return <AtuanLaterActExperience unitId='s1-p2-atuan' background='pavilion.webp' character='atuan.webp' progress={progress} disabled={false} onProgress={(next: AtuanLaterActProgress) => { if (next.unitId === 's1-p2-atuan') setProgress(next) }} onComplete={onComplete} />
     }
-    render(<Harness />)
+    const { container } = render(<Harness />)
 
     expect(screen.getByTestId('atuan-later-background')).toHaveAttribute('src', 'pavilion.webp')
     expect(screen.getByText('你接着说')).toBeInTheDocument()
+    expect(container.querySelector('.atuan-later-experience__chapter')).toBeNull()
     expect(screen.queryByRole('button', { name: '查看反复折过的座位图' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '这些折痕，是你一次次改出来的吗？' }))
+    expect(container.querySelector('.atuan-later-experience__progress')).toBeNull()
     for (const name of ['查看反复折过的座位图', '查看椅脚旁的浅痕', '查看没有名字的席位卡']) {
       fireEvent.click(screen.getByRole('button', { name }))
     }

@@ -131,19 +131,6 @@
   box-shadow: 0 0 0 10rpx rgba($color-bg-tint-cream, 0.4), 0 8rpx 24rpx rgba($color-text-primary, 0.34);
 }
 
-.atuan-later-experience__chapter {
-  position: absolute;
-  top: calc(env(safe-area-inset-top) + 32rpx);
-  left: 32rpx;
-  z-index: 5;
-  padding: 8rpx 16rpx;
-  border-radius: 999rpx;
-  background: rgba($color-text-primary, 0.76);
-  color: $color-bg-tint-cream;
-  font-size: $font-size-xs;
-  letter-spacing: 0.06em;
-}
-
 .atuan-later-experience__panel {
   position: absolute;
   left: 24rpx;
@@ -175,7 +162,6 @@
 .atuan-later-experience__game-progress-dot--active { background: $color-primary; transform: scaleX(1.08); }
 .atuan-later-experience--game { background: $color-bg-warm-to; color: $color-text-primary-warm; }
 .atuan-later-experience--game .atuan-later-scene { opacity: 0; transform: scale(1.025); pointer-events: none; }
-.atuan-later-experience--game .atuan-later-experience__chapter { top: calc(env(safe-area-inset-top) + 40rpx); left: 32rpx; z-index: 8; padding: 0; background: transparent; color: $color-primary-dark; }
 .atuan-later-experience--game .atuan-later-experience__panel { inset: 0; max-height: none; border: 0; border-radius: 0; background: $color-bg-warm-to; box-shadow: none; animation: atuan-later-game-enter 300ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .atuan-later-experience--game .atuan-later-experience__scroll { height: 100%; max-height: none; }
 .atuan-later-experience--game .atuan-later-experience__section { box-sizing: border-box; padding: calc(env(safe-area-inset-top) + 112rpx) 32rpx calc(env(safe-area-inset-bottom) + 176rpx); }

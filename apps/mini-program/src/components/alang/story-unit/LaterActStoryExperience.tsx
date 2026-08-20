@@ -359,8 +359,6 @@ export function LaterActStoryExperience({
         </View>
       </View>
 
-      <View className='later-act-experience__chapter'><Text>{config.chapter}</Text></View>
-
       {activeHighlight ? (
         <View className='later-act-clue' data-testid='later-act-highlight-clue'>
           <Text className='later-act-clue__eyebrow'>现场线索</Text>
@@ -437,28 +435,6 @@ export function LaterActStoryExperience({
                   </View>
                 ))}
               </View>
-            </View>
-          ) : null}
-
-          {stage === 'explore' ? (
-            <View className='later-act-experience__section later-act-experience__section--compact'>
-              <Text className='later-act-experience__eyebrow'>先看现场</Text>
-              <Text className='later-act-experience__prompt'>{highlightsComplete ? `${config.objectTarget.label}已经可以打开。` : '把三处留下变化的地方看完整。'}</Text>
-              <Text className='later-act-experience__progress'>已看见 {progress.seenHighlightIds.length}/{config.highlights.length}</Text>
-              {highlightsComplete ? (
-                <View
-                  className='later-act-experience__primary-action later-act-experience__primary-action--compact'
-                  hoverClass={disabled ? '' : 'later-act-experience__primary-action--pressed'}
-                  role='button'
-                  aria-label={`靠近${config.objectTarget.label}`}
-                  aria-disabled={disabled}
-                  onClick={() => {
-                    if (disabled) return
-                    haptics('medium')
-                    setObjectRevealOpen(true)
-                  }}
-                ><Text>靠近{config.objectTarget.label}</Text></View>
-              ) : null}
             </View>
           ) : null}
 

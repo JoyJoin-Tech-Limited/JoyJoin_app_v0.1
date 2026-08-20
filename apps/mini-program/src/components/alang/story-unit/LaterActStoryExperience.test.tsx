@@ -158,6 +158,33 @@ describe('LaterActStoryExperience', () => {
     expect(screen.getByTestId('later-act-object-panel')).toBeInTheDocument()
   })
 
+  it('keeps scene exploration free of chapter tags and instruction panels like Atuan first act', () => {
+    const config = getCustomLaterActConfig('s1-p2-lizi')
+    const { container } = render(
+      <LaterActStoryExperience
+        config={config}
+        stage='explore'
+        background='lizi-second.jpg'
+        character='lizi.png'
+        progress={{
+          ...createLaterActProgress(config.unitId),
+          stage: 'explore',
+          approachId: config.approaches[0].id,
+        }}
+        onProgress={vi.fn()}
+        onApproach={vi.fn()}
+        onExplorationComplete={vi.fn()}
+        onFollowup={vi.fn()}
+        onGameComplete={vi.fn()}
+        onComplete={vi.fn()}
+      />,
+    )
+
+    expect(container.querySelector('.later-act-experience__chapter')).toBeNull()
+    expect(container.querySelector('.later-act-experience__section--compact')).toBeNull()
+    expect(container.querySelectorAll('.later-act-scene__hotspot')).toHaveLength(config.highlights.length)
+  })
+
   it('shows the full image and makes a wrong game answer retryable without advancing', () => {
     const config = getCustomLaterActConfig('s1-p3-momo')
     const onGameComplete = vi.fn()
