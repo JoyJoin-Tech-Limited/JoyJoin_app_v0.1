@@ -25,6 +25,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@shared': path.resolve(__dirname, '../../packages/shared/src'),
+      '@joyjoin/shared': path.resolve(__dirname, '../../packages/shared/src'),
       '@tarojs/taro': path.resolve(__dirname, './__mocks__/taro.ts'),
     },
   },

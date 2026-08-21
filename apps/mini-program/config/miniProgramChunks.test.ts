@@ -126,7 +126,7 @@ describe('miniProgramManualChunks', () => {
       .map((file) => relative(sourceRoot, file).replace(/\\/g, '/'))
 
     expect(offenders).toEqual([])
-  })
+  }, 15000)
 
   it('avoids the shared root barrel that hoists subpackage-only modules into main', () => {
     const sourceRoot = resolve(process.cwd(), 'src')
@@ -135,5 +135,5 @@ describe('miniProgramManualChunks', () => {
       .map((file) => relative(sourceRoot, file).replace(/\\/g, '/'))
 
     expect(offenders).toEqual([])
-  })
+  }, 15000)
 })

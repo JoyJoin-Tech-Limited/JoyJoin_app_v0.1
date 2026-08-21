@@ -16,6 +16,7 @@ export interface FirstActHighlightOverlayProps {
   activeId: string | null
   disabled?: boolean
   locked?: boolean
+  actionLabelPrefix?: string
   onSelect: (id: string) => void
 }
 
@@ -28,6 +29,7 @@ export function FirstActHighlightOverlay({
   activeId,
   disabled = false,
   locked = false,
+  actionLabelPrefix = '观察',
   onSelect,
 }: FirstActHighlightOverlayProps) {
   const completed = new Set(completedIds)
@@ -49,7 +51,7 @@ export function FirstActHighlightOverlay({
             className={`first-act-highlight ${target.placementClassName}${seen ? ' first-act-highlight--seen' : ''}${active ? ' first-act-highlight--active' : ''}`}
             hoverClass={unavailable ? '' : 'first-act-highlight--pressed'}
             role='button'
-            aria-label={`观察${target.label}`}
+            aria-label={`${actionLabelPrefix}${target.label}`}
             aria-pressed={active}
             aria-disabled={unavailable}
             data-testid={`${testIdPrefix}-hotspot`}

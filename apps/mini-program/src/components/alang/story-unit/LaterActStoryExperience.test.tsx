@@ -181,7 +181,7 @@ describe('LaterActStoryExperience', () => {
     }
     render(<Harness />)
 
-    fireEvent.click(screen.getByRole('button', { name: `观察${config.objectTarget.label}` }))
+    fireEvent.click(screen.getByRole('button', { name: `打开${config.objectTarget.label}` }))
     expect(screen.getByTestId('later-act-object-reveal')).toBeInTheDocument()
     expect(screen.queryByTestId('later-act-object-panel')).not.toBeInTheDocument()
 

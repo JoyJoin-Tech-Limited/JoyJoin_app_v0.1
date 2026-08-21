@@ -68,7 +68,7 @@ describe('AtuanLaterActExperience', () => {
     expect(container.querySelector('.atuan-later-experience__progress')).toBeNull()
     expect(container.querySelectorAll('.first-act-highlight')).toHaveLength(3)
     expect(container.querySelector('.atuan-later-scene__hotspot-ring')).toBeNull()
-    for (const name of ['观察反复折过的座位图', '观察椅脚旁的浅痕', '观察没有名字的席位卡']) {
+    for (const name of ['查看反复折过的座位图', '查看椅脚旁的浅痕', '查看没有名字的席位卡']) {
       fireEvent.click(screen.getByRole('button', { name }))
     }
     expect(screen.getByText('你想怎么回应阿团？')).toBeInTheDocument()

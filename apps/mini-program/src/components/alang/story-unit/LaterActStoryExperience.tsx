@@ -344,6 +344,7 @@ export function LaterActStoryExperience({
               completedIds={progress.seenHighlightIds}
               activeId={activeHighlightId}
               disabled={disabled}
+              actionLabelPrefix='查看'
               onSelect={(highlightId) => {
                 haptics('light')
                 setActiveHighlightId(highlightId)
@@ -358,6 +359,7 @@ export function LaterActStoryExperience({
                 completedIds={[]}
                 activeId={null}
                 disabled={disabled}
+                actionLabelPrefix='打开'
                 onSelect={() => {
                   haptics('medium')
                   setObjectRevealOpen(true)

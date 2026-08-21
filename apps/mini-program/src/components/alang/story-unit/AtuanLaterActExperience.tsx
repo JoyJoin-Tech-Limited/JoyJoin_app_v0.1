@@ -64,6 +64,7 @@ export function AtuanLaterActScene({ unitId, background, character, speech, prog
           completedIds={progress.highlightOrder}
           activeId={focusedHighlightId}
           disabled={disabled}
+          actionLabelPrefix='查看'
           onSelect={(highlightId) => {
             setFocusedHighlightId(highlightId)
             onInspect(highlightId)
