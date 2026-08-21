@@ -30,6 +30,24 @@ describe('LaterActStoryExperience', () => {
     expect(styles).toMatch(/\.momo-later-act \.later-act-scene__speech,[\s\S]*?\.lizi-later-act \.later-act-scene__speech\s*\{[^}]*right:\s*4%;[^}]*left:\s*auto;/s)
   })
 
+  it('anchors refreshed Alang and Lizi later-act highlights to their visible clue objects', () => {
+    const styles = readFileSync(resolve(process.cwd(), 'src/components/alang/story-unit/LaterActStoryExperience.scss'), 'utf8')
+
+    for (const placement of [
+      '.alang-p2__hotspot--notebook { left: 78%; top: 81%; }',
+      '.alang-p2__hotspot--ticket { left: 70%; top: 78%; }',
+      '.alang-p2__hotspot--footprints { left: 39%; top: 70%; }',
+      '.alang-p3__hotspot--rings { left: 64%; top: 61%; }',
+      '.alang-p3__hotspot--envelope { left: 52%; top: 82%; }',
+      '.lizi-p2__hotspot--overlays { left: 72%; top: 26%; }',
+      '.lizi-p2__hotspot--lanyard { left: 83%; top: 48%; }',
+      '.lizi-p3__hotspot--bottle { left: 62%; top: 70%; }',
+      '.lizi-p3__hotspot--outing-book { left: 82%; top: 48%; }',
+    ]) {
+      expect(styles).toContain(placement)
+    }
+  })
+
   it('keeps every rewritten act on the same complete six-beat contract', () => {
     expect(Object.keys(CUSTOM_LATER_ACT_CONFIGS)).toEqual(expect.arrayContaining([
       's1-p2-alang',
