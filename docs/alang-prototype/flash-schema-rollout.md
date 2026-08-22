@@ -99,5 +99,10 @@
    （5 试点单元 v3，7 个 pending 单元保持 v1）；`flashStoryV2Enabled=true` 落库
    （feature_flags 为真源）；只读引擎走查脚本 `apps/server/src/scripts/qa-flash-v2-staging.ts`
    （SSH 隧道 + DATABASE_URL 指向 joyjoin_staging，从 apps/server 目录跑
-   `node --import tsx/esm src/scripts/qa-flash-v2-staging.ts`）全分支通过、failures 为空。
-3. 生产应用同一 SQL 仍须先过试点验收（体验版设备验证完成）后再走，CI/CD 不自动执行 DDL。
+   `node --import tsx/esm src/scripts/qa-flash-v2-staging.ts`，当前 `EXPECTED_CONTENT_VERSION=4`）全分支通过、failures 为空。
+3. 2026-08-20 二轮定点终稿（语感终审 7 处）产出 `20260820010000_polish_flash_story_v2_pilot_copy.sql`：
+   幂等（限定 code + content_version 递增），试点单元升级到 content_version 4——删 p2/p3-alang
+   开场流程旁白（认领轮到/最后处理旧物）、消 p1-shiqi 空/空白 三现、化 p3-alang/p3-shiqi
+   被-字 被动句为主动句；本地与 staging 均已应用，`qa-flash-v2-staging.ts` v4 复走通过
+   （5/5 matchesPilotFile、failures 为空）。
+4. 生产应用同一 SQL 仍须先过试点验收（体验版设备验证完成）后再走，CI/CD 不自动执行 DDL。
