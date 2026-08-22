@@ -19,7 +19,7 @@ import {
 const PILOT_CODES = ["s1-p1-alang", "s1-p2-alang", "s1-p3-alang", "s1-p1-shiqi", "s1-p3-shiqi"];
 const PENDING_SEASON1_CODES = ["s1-p1-lizi", "s1-p2-lizi", "s1-p3-lizi", "s1-p1-momo", "s1-p2-momo", "s1-p3-momo", "s1-p2-shiqi"];
 const SEASON_CODE = "unnamed-objects-s1";
-const EXPECTED_CONTENT_VERSION = 3;
+const EXPECTED_CONTENT_VERSION = 4;
 const DEPTH_LIMIT = 60;
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
