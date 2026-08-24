@@ -197,11 +197,14 @@ $ms-deep: $phase-accent-miniscript-deep;
     align-items: center;
     gap: $spacing-xs;
     padding: $spacing-lg $spacing-md;
-    min-width: 480rpx;
+    width: 100%;
+    height: 520rpx;
+    box-sizing: border-box;
     border-radius: $radius-md;
   }
 
   &__role-front {
+    justify-content: center;
     background: rgba($ms-accent, 0.1);
     border: 2rpx solid rgba($ms-accent, 0.3);
   }
@@ -219,6 +222,7 @@ $ms-deep: $phase-accent-miniscript-deep;
   &__role-back {
     background: rgba($ms-deep, 0.08);
     border: 2rpx solid rgba($ms-deep, 0.4);
+    overflow: hidden;
   }
 
   &__role-back-title {
@@ -228,23 +232,40 @@ $ms-deep: $phase-accent-miniscript-deep;
   }
 
   &__role-back-label {
+    display: block;
     @include type-caption;
     color: $ms-deep;
     font-weight: $font-weight-semibold;
-    margin-top: $spacing-xs;
+    margin-top: $spacing-sm;
   }
 
   &__role-back-line {
+    display: block;
     @include type-body;
     color: $color-text-primary;
     text-align: center;
-    word-break: keep-all;
-    overflow-wrap: break-word;
+    line-height: 1.65;
+    word-break: normal;
+    overflow-wrap: normal;
+    white-space: normal;
+    margin-bottom: $spacing-sm;
 
     &--secret {
       color: $ms-deep;
       font-weight: $font-weight-semibold;
     }
+  }
+
+  &__role-back-scroll {
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+  }
+
+  &__role-back-scroll-hint {
+    @include type-micro;
+    flex: none;
+    color: $color-text-muted;
   }
 
   // ── Shared section / disclosure chrome ──

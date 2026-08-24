@@ -107,6 +107,25 @@ export function seedSingleTestBotsPersonalityDiceReady(state: SocialSessionState
   state.diceRevealReadyBy = [...revealReady];
 }
 
+/**
+ * Assigned mini-script bots are attendees, not pending human devices. Mark
+ * them ready as soon as roles exist, independently of the optional bot-vote
+ * simulation harness. Idempotent and safe for non-single-test sessions.
+ */
+export function seedSingleTestBotsMiniScriptReady(state: SocialSessionState): void {
+  const assignments = state.miniScriptRoleAssignments ?? {};
+  const bots = getBots(state);
+  if (bots.length === 0 || Object.keys(assignments).length === 0) return;
+
+  const ready = { ...(state.miniScriptPlayerReady ?? {}) };
+  for (const bot of bots) {
+    if (assignments[bot.userId] !== undefined) {
+      ready[bot.userId] = true;
+    }
+  }
+  state.miniScriptPlayerReady = ready;
+}
+
 /** Deterministic seeded PRNG. Returns floats in [0, 1). */
 function createSeededRandom(seed: string): () => number {
   let hash = 2166136261;

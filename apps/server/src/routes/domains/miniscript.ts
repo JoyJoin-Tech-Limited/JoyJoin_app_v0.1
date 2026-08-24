@@ -36,7 +36,10 @@ import { ensureSessionEnabledPhases, cleanupPhaseStateForNextPhase } from '../..
 import { logger } from '../../lib/logger';
 import { aiEndpointLimiter } from '../../rateLimiter';
 import { buildClientState, isHostAuthorized, transitionPhase } from '../socialIcebreakerHelpers';
-import { runBotSimulationSafely } from '../../services/socialIcebreakerBotService';
+import {
+  runBotSimulationSafely,
+  seedSingleTestBotsMiniScriptReady,
+} from '../../services/socialIcebreakerBotService';
 
 const router = Router();
 
@@ -516,6 +519,7 @@ router.post('/assign-roles', async (req: any, res) => {
   state.miniScriptSolutionRevealed = false;
   state.miniScriptRevealedSolution = undefined;
   state.miniScriptPlayerReady = { [userId]: true };
+  seedSingleTestBotsMiniScriptReady(state);
 
   await updateSession(socialSessionId, state);
 

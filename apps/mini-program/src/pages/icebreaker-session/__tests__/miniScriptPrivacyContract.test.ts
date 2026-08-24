@@ -6,6 +6,10 @@ const source = readFileSync(
   resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptHeroView.tsx'),
   'utf8',
 )
+const styles = readFileSync(
+  resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptHeroView.scss'),
+  'utf8',
+)
 
 describe('MiniScript PM privacy and reveal contract', () => {
   it('does not show the generated premise to players before role assignment', () => {
@@ -46,5 +50,13 @@ describe('MiniScript PM privacy and reveal contract', () => {
     expect(source).toContain('suspectRoleSlot')
     expect(source).toContain('点一个你最怀疑的角色。')
     expect(source).not.toContain('miniscript-hero__vote-field')
+  })
+
+  it('keeps long role-card content inside a vertically scrollable back face', () => {
+    expect(source).toMatch(/<ScrollView[\s\S]*?className='miniscript-hero__role-back-scroll'[\s\S]*?scrollY/)
+    expect(source).toContain('向上滑动查看更多')
+    expect(styles).toMatch(/&__role-front,\s*&__role-back\s*{[^}]*height:\s*520rpx;/s)
+    expect(styles).toMatch(/&__role-back-scroll\s*{[^}]*min-height:\s*0;[^}]*flex:\s*1;/s)
+    expect(styles).toMatch(/&__role-back-line\s*{[^}]*word-break:\s*normal;[^}]*overflow-wrap:\s*normal;/s)
   })
 })

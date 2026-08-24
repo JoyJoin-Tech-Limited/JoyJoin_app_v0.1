@@ -1,4 +1,4 @@
-import { View, Text, Input, Image } from '@tarojs/components'
+import { View, Text, Input, Image, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { type SocialSessionState } from '@shared/socialIcebreaker'
 import {
@@ -608,13 +608,19 @@ export function MiniScriptHeroView({
     [],
   )
 
+  const roleNeedsScroll = Boolean(
+    myRole && [myRole.sinHook, myRole.alibi, myRole.secretAgenda].join('').length > 64,
+  )
+
   const roleContent = useMemo(
     () => (
       <>
         <View className='miniscript-hero__role-flip'>
           <CardFlip
             flipped={roleFlipped}
-            onFlip={() => setRoleFlipped((f) => !f)}
+            onFlip={() => {
+              if (!roleFlipped) setRoleFlipped(true)
+            }}
             front={
               <View className='miniscript-hero__role-front'>
                 <JoyJoinIcon emoji='🎭' size={64} />
@@ -627,15 +633,26 @@ export function MiniScriptHeroView({
                 {myRole ? (
                   <>
                     <Text className='miniscript-hero__role-back-title'>{myRole.roleLabel}</Text>
-                    <Text className='miniscript-hero__role-back-line'>{myRole.sinHook}</Text>
-                    <Text className='miniscript-hero__role-back-line'>表面：{myRole.alibi}</Text>
-                    {myRole.secretAgenda ? (
-                      <>
-                        <Text className='miniscript-hero__role-back-label'>你的秘密 · 先别告诉别人</Text>
-                        <Text className='miniscript-hero__role-back-line miniscript-hero__role-back-line--secret'>
-                          {myRole.secretAgenda}
-                        </Text>
-                      </>
+                    <ScrollView
+                      className='miniscript-hero__role-back-scroll'
+                      scrollY
+                      enhanced
+                      showScrollbar={false}
+                      aria-label='角色详情，可上下滑动'
+                    >
+                      <Text className='miniscript-hero__role-back-line'>{myRole.sinHook}</Text>
+                      <Text className='miniscript-hero__role-back-line'>表面：{myRole.alibi}</Text>
+                      {myRole.secretAgenda ? (
+                        <>
+                          <Text className='miniscript-hero__role-back-label'>你的秘密 · 先别告诉别人</Text>
+                          <Text className='miniscript-hero__role-back-line miniscript-hero__role-back-line--secret'>
+                            {myRole.secretAgenda}
+                          </Text>
+                        </>
+                      ) : null}
+                    </ScrollView>
+                    {roleNeedsScroll ? (
+                      <Text className='miniscript-hero__role-back-scroll-hint'>向上滑动查看更多</Text>
                     ) : null}
                   </>
                 ) : (
@@ -660,7 +677,7 @@ export function MiniScriptHeroView({
         </View>
       </>
     ),
-    [roleFlipped, myRole, premiseText, showPremise],
+    [roleFlipped, myRole, premiseText, roleNeedsScroll, showPremise],
   )
 
   const newClues = useMemo(

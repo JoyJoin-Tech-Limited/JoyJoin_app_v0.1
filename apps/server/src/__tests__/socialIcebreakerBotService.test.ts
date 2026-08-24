@@ -5,6 +5,7 @@ import {
   simulateBotsForSession,
   createSeededRandom,
   getBots,
+  seedSingleTestBotsMiniScriptReady,
   seedSingleTestBotsPersonalityDiceReady,
 } from '../services/socialIcebreakerBotService';
 import { isSingleTestMode } from '../lib/isSingleTestMode';
@@ -196,6 +197,33 @@ describe('socialIcebreakerBotService', () => {
     expect(Object.keys(state.diceSelectedOption ?? {})).toEqual(expect.arrayContaining(clientBotIds));
     expect(state.diceCompletedBy).toEqual(expect.arrayContaining(clientBotIds));
     expect(state.diceRevealReadyBy).toEqual(expect.arrayContaining(clientBotIds));
+  });
+
+  it('defaults assigned mini-script bots to ready without enabling bot simulation', () => {
+    const state = makeState({
+      currentPhase: 'mini_script',
+      singleTest: makeSingleTestState(false),
+      miniScriptRoleAssignments: {
+        'host-user': 0,
+        'bot-user-1': 1,
+        'bot-user-2': 2,
+        'bot-user-3': 3,
+        'bot-user-4': 4,
+        'bot-user-5': 5,
+      },
+      miniScriptPlayerReady: { 'host-user': true },
+    });
+
+    seedSingleTestBotsMiniScriptReady(state);
+
+    expect(state.miniScriptPlayerReady).toEqual({
+      'host-user': true,
+      'bot-user-1': true,
+      'bot-user-2': true,
+      'bot-user-3': true,
+      'bot-user-4': true,
+      'bot-user-5': true,
+    });
   });
 
   describe('createSeededRandom', () => {
