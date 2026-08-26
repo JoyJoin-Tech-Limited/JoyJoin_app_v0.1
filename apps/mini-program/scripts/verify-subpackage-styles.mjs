@@ -108,19 +108,6 @@ const REQUIREMENTS = [
     selectors: ['.identity-stage{position:relative;width:100%;height:100%;min-height:inherit'],
   },
   {
-    // Zero-CSS regression (2026-08-03): the JoyJoinIntroFlow overlay
-    // (FlowShell / ExperienceEntryFlow / ExperienceDetail) was only styled in
-    // the H5 preview harness — no real page @use'd flow-animation/index.scss,
-    // so the entire intro flow rendered with default WeChat chrome on device.
-    page: 'pages/onboarding/profile-review/index.wxss',
-    selectors: [
-      '.flow-shell{',
-      'flow-shell__skip{',
-      'experience-banner__title{',
-      '.experience-detail{',
-    ],
-  },
-  {
     // Pool-registration mascot section (2026-08-05): the dedicated 悦仔 row
     // for Steps 1–2 lives in the pool-registration subpackage page — its SCSS
     // is @use'd by the page SCSS and must reach the page WXSS, or the mascot
@@ -241,6 +228,72 @@ const REQUIREMENTS = [
       'warmup-welcome__',
       'icebreaker__recap-hero{',
       'icebreaker__recap-connect-btn{',
+    ],
+  },
+  {
+    // PR-7 celebrate bridge (2026-08-26): the results page mounts
+    // XiaoyueSpriteAnimator + CelebrationSparkle for the completing→slot
+    // handoff (?celebrate=1). If the component rules chunk into
+    // onboarding/sub-common.wxss (which no page loads), the bridge renders
+    // unstyled on device — same style-splitting trap as the incidents above.
+    page: 'pages/onboarding/personality-test/results/index.wxss',
+    selectors: [
+      'personality-results__celebrate-bridge{',
+      'personality-results__celebrate-bridge-mascot{',
+    ],
+  },
+  {
+    // PR-8 inline error mascot (2026-08-26): the component deliberately has no
+    // TSX-side SCSS import; its rules are @use'd by each onboarding page SCSS.
+    // If a future consumer forgets the @use, that page's WXSS will lack the
+    // component root class and this guard fails before it reaches device.
+    page: 'pages/onboarding/personality-test/index.wxss',
+    selectors: ['xiaoyue-inline-error{'],
+  },
+  {
+    page: 'pages/onboarding/personality-test/results/index.wxss',
+    selectors: ['xiaoyue-inline-error{'],
+  },
+  {
+    page: 'pages/onboarding/essential-data/index.wxss',
+    selectors: ['xiaoyue-inline-error{'],
+  },
+  {
+    page: 'pages/onboarding/extended-data/index.wxss',
+    selectors: ['xiaoyue-inline-error{'],
+  },
+  {
+    page: 'pages/onboarding/profile-review/index.wxss',
+    selectors: ['xiaoyue-inline-error{'],
+  },
+  {
+    page: 'pages/onboarding/welcome-back/index.wxss',
+    selectors: ['xiaoyue-inline-error{'],
+  },
+  {
+    // 叙事动作层（sprint_20260821_3kmkkw, AC-04/MNT-03）：interaction 节点动作
+    // 舞台的样式随 pages/alang/flash.scss 编译；flash.scss 被 alang 与
+    // alang-story 两个子包共享，按既有机制进入 root common.wxss（app.wxss 链
+    // @import "common.wxss"，全页面可达）。手势区无样式会在真机上退化成不可
+    // 操作的裸文本（同 my-image/squad-unboxing 样式分裂事故）。
+    page: 'common.wxss',
+    selectors: [
+      'flash-interaction__goal{',
+      'flash-interaction__track{',
+      'flash-interaction__waypoint{',
+      'flash-interaction__region{',
+      'flash-interaction__confirm{',
+      'flash-interaction__hint{',
+    ],
+  },
+  {
+    // 谜案档案台 MVP（AC-05/MNT-03）：档案台页面专属样式必须进入其页面 WXSS。
+    page: 'pages/alang/archive/index.wxss',
+    selectors: [
+      'flash-archive__imprint{',
+      'flash-archive__fragment-grid{',
+      'flash-archive-ceremony__paper{',
+      'flash-archive__state-shell{',
     ],
   },
 ]

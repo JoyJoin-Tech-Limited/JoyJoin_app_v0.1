@@ -1,5 +1,14 @@
 @use '../../../../styles/variables' as *;
 @use '../../../../styles/mixins' as *;
+// Subpackage WXSS guard (AGENTS §15): the PR-7 celebrate bridge mounts
+// XiaoyueSpriteAnimator + CelebrationSparkle on this page — @use their SCSS
+// here so the rules compile into this page's WXSS instead of stranding in
+// the onboarding sub-common chunk no page loads.
+@use '../../../../components/mascot/XiaoyueSpriteAnimator.scss' as *;
+@use '../../../../components/mascot/CelebrationSparkle.scss' as *;
+// PR-8: XiaoyueInlineError renders on this page (FinalStage login-failure
+// row) — co-compile its rules into this page's WXSS.
+@use '../../../../components/mascot/XiaoyueInlineError.scss' as *;
 
 // ─── Local semantic colors (extracted from hard-coded values) ────
 $color-holo-gold: #bf953f;
@@ -50,6 +59,34 @@ $color-skill-cool: #7c3aed;
   min-height: 100dvh;
   position: relative;
   overflow: hidden;
+
+  // PR-7 celebrate bridge: continues the completing shell's celebration
+  // visual over the pre-slot window (?celebrate=1 handoff). Same page
+  // gradient so the handoff reads as one continuous beat; pointer-events
+  // none — it is a visual bridge, never a gate.
+  &__celebrate-bridge {
+    @include page-gradient-bg;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 240ms ease-out;
+
+    &--exiting {
+      opacity: 0;
+    }
+  }
+
+  &__celebrate-bridge-mascot {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
   &__poster-canvas {
     // Off-screen but full internal bitmap size.

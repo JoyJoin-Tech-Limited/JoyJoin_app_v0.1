@@ -33,7 +33,8 @@ describe('Flash home query privacy', () => {
 
     expect(mocks.useQuery).toHaveBeenCalledWith(expect.objectContaining({
       queryKey: FLASH_HOME_QUERY_KEY,
-      staleTime: 0,
+      staleTime: 30_000,
+      retry: 1,
       enabled: true,
     }))
     mocks.useQuery.mock.calls[0][0].queryFn()

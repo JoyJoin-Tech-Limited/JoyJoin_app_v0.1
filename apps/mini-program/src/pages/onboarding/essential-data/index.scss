@@ -3,6 +3,9 @@
 // Subpackage WXSS guard (AGENTS §15): component SCSS must be @use'd in the
 // consuming page's SCSS or Taro's chunk graph can drop it.
 @use '../../../components/onboarding/BoxJourneySpine.scss' as *;
+// PR-8: XiaoyueInlineError renders in this page's tray — co-compile its
+// rules into this page's WXSS.
+@use '../../../components/mascot/XiaoyueInlineError.scss' as *;
 
 .essential-data {
   display: flex;
@@ -254,6 +257,12 @@
     &--prefill {
       color: $color-text-secondary;
       margin-bottom: 4rpx; // optical pairing with the base hint below
+    }
+
+    // PR-8: field-level inline validation hint (replaces bare toasts).
+    &--warning {
+      color: $color-warning;
+      font-weight: $font-weight-medium;
     }
   }
 

@@ -1,11 +1,12 @@
 import { Canvas, Image, Text, View } from '@tarojs/components'
-import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
+import Taro, { useRouter, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
 import { ARCHETYPE_BY_ID, getArchetypeIndex } from '@shared/personality/archetypeNames'
 import { getArchetypeSkills } from '@shared/personality/archetypeSkills'
 import { useAuth } from '../../../../hooks/useAuth'
+import { useUnload } from '../../../../hooks/useUnload'
 import { useSpriteReadiness } from '../../../../hooks/useSpriteReadiness'
 import { useOnboardingAnalytics } from '../../../../hooks/onboarding/useOnboardingAnalytics'
 import { resolveExperimentMarker } from '../../../../lib/experiments'
@@ -47,6 +48,8 @@ import {
 } from './resultHelpers'
 import LoadingStage from './LoadingStage'
 import LoginHandoffOverlay from './LoginHandoffOverlay'
+import XiaoyueSpriteAnimator from '../../../../components/mascot/XiaoyueSpriteAnimator'
+import CelebrationSparkle from '../../../../components/mascot/CelebrationSparkle'
 import EmptyStage from './EmptyStage'
 import ErrorStage from './ErrorStage'
 import SlotStage from './SlotStage'
@@ -96,6 +99,15 @@ function buildAuthUserResultState(user: any): ResolvedResultState | null {
 export default function PersonalityTestResultsPage() {
   const auth = useAuth()
   const deviceTier = useDeviceTier()
+  const router = useRouter()
+
+  // PR-7 celebrate bridge: when the completing shell hands off with
+  // `?celebrate=1`, keep the same celebration visual mounted until the slot
+  // anticipation starts (flowStage leaves 'loading'), folding the two dead
+  // windows into one continuous beat. The slot machine itself is untouched.
+  const [celebrateBridge, setCelebrateBridge] = useState<'off' | 'on' | 'exiting'>(
+    router.params?.celebrate === '1' ? 'on' : 'off',
+  )
 
   const personalityShareEnabled = auth.user?.features?.personalityShareEnabled ?? true
   const personalitySlotAnimationEnabled = auth.user?.features?.personalitySlotAnimationEnabled ?? true
@@ -233,6 +245,27 @@ export default function PersonalityTestResultsPage() {
     authUserArchetype: auth.user?.archetype ?? auth.user?.primaryArchetype ?? null,
     clearSharePosterRef,
   })
+
+  // Celebrate bridge exit: fade once the slot anticipation takes over, with
+  // a hard ceiling so a slow sprite decode never strands the overlay.
+  useEffect(() => {
+    if (celebrateBridge !== 'on') return undefined
+    let offTimer: ReturnType<typeof setTimeout> | null = null
+    const beginExit = () => {
+      setCelebrateBridge((current) => (current === 'on' ? 'exiting' : current))
+      offTimer = setTimeout(() => setCelebrateBridge('off'), 260)
+    }
+    let ceilingTimer: ReturnType<typeof setTimeout> | null = null
+    if (flowStage !== 'loading') {
+      beginExit()
+    } else {
+      ceilingTimer = setTimeout(beginExit, 2500)
+    }
+    return () => {
+      if (offTimer) clearTimeout(offTimer)
+      if (ceilingTimer) clearTimeout(ceilingTimer)
+    }
+  }, [celebrateBridge, flowStage])
 
   const secondaryArchetypeId = resultState?.result.secondaryArchetype ?? sessionSnapshot?.result?.secondaryArchetype
   const secondaryDisplayName = secondaryArchetypeId
@@ -417,8 +450,9 @@ export default function PersonalityTestResultsPage() {
 
   /**
    * Slice 0 (2026-07-19): per-stage dwell instrumentation. Fires on every stage
-   * transition with the previous stage's dwell time; the final stage's dwell is
-   * reported by the next page's funnel data instead (this page unloads on exit).
+   * transition with the previous stage's dwell time. PR-2 (2026-08-24): the
+   * final stage's dwell is flushed on page unload below — previously it was
+   * lost because no further transition fires before exit.
    */
   const stageEnteredAtRef = useRef(Date.now())
   // Initialize from the same expression as flowStage so the replay fast-path
@@ -434,6 +468,23 @@ export default function PersonalityTestResultsPage() {
     stageEnteredAtRef.current = now
     prevStageRef.current = flowStage
   }, [analytics, flowStage])
+
+  // Flush the final stage's dwell on page unload (swipe-back / forward nav).
+  // Dedupe is inherent: the transition effect above resets stageEnteredAtRef
+  // whenever the stage changes, so this only ever reports the current stage.
+  const flushFinalStageDwellRef = useRef(false)
+  useEffect(() => {
+    flushFinalStageDwellRef.current = false
+  }, [flowStage])
+  useUnload(() => {
+    if (flushFinalStageDwellRef.current) return
+    flushFinalStageDwellRef.current = true
+    analytics.interaction('result_stage_dwell', {
+      stage: prevStageRef.current,
+      dwellMs: Date.now() - stageEnteredAtRef.current,
+      exit: 'unload',
+    })
+  })
 
   /**
    * Escape hatch for the intro<->results redirect loop.
@@ -565,6 +616,17 @@ export default function PersonalityTestResultsPage() {
   return (
     <View className={`personality-results personality-results--${flowStage}${deviceTier.isDegradation ? ' personality-results--low-end' : ''}${systemReducedMotion ? ' personality-results--reduce-motion' : ''}`}>
       {content}
+      {celebrateBridge !== 'off' && (
+        <View
+          className={`personality-results__celebrate-bridge${celebrateBridge === 'exiting' ? ' personality-results__celebrate-bridge--exiting' : ''}`}
+          aria-hidden='true'
+        >
+          <View className='personality-results__celebrate-bridge-mascot'>
+            <XiaoyueSpriteAnimator state='celebrate' size='240rpx' showGlow />
+            {!systemReducedMotion && <CelebrationSparkle count={6} />}
+          </View>
+        </View>
+      )}
       {/* R2-7 login handoff: branded transition overlay for the
            anonymous→login handshake. Stays mounted through the navigation
            call so the route change has no dead frame. */}

@@ -1,9 +1,10 @@
 import { View, Text, Image } from '@tarojs/components'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import type { XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { localAsset } from '../../lib/utils/cdnAssets'
+import { useChoreographedWait, CHOREOGRAPHED_SKIP_DELAY_MS } from '../../hooks/useChoreographedWait'
 import Card from '../ui/Card'
 import XiaoyueSpriteAnimator from '../mascot/XiaoyueSpriteAnimator'
 import CelebrationSparkle from '../mascot/CelebrationSparkle'
@@ -43,6 +44,11 @@ interface OnboardingLoadingShellProps {
   /** Fires after the celebrate animation's minimum display duration.
    *  Use this to gate navigation that would cut the celebration short. */
   onCelebrateReady?: () => void
+  /** PR-7: override for the celebrate beat length (default
+   *  CELEBRATE_MIN_DISPLAY_MS). The personality-test completing shell uses a
+   *  shorter beat because the results page continues the same celebration
+   *  visual into the slot anticipation (celebrate bridge). */
+  celebrateMinDisplay?: number
   /**
    * Opt-in continuity bridge (2026-08-18): the shell fades in on mount with
    * the shared onboarding page-enter transition instead of popping in, and
@@ -68,12 +74,12 @@ export default function OnboardingLoadingShell({
   celebrate = false,
   sparkleCount = 6,
   onCelebrateReady,
+  celebrateMinDisplay = CELEBRATE_MIN_DISPLAY_MS,
   continuity = false,
   exiting = false,
 }: OnboardingLoadingShellProps) {
   const [imgSrc, setImgSrc] = useState(getXiaoyueExpressionAsset(xiaoyueExpression))
   const [settled, setSettled] = useState(false)
-  const celebrateReadyFiredRef = useRef(false)
 
   // A4: settle animations after 6s. Skipped for `celebrate` to preserve the celebrate sprite + sparkle.
   useEffect(() => {
@@ -82,14 +88,15 @@ export default function OnboardingLoadingShell({
     return () => clearTimeout(t)
   }, [celebrate])
 
-  // Fire onCelebrateReady after the celebrate animation's minimum display duration.
-  // This gates navigation so the user sees the full celebration before route transition.
-  useEffect(() => {
-    if (!celebrate || !onCelebrateReady || celebrateReadyFiredRef.current) return
-    celebrateReadyFiredRef.current = true
-    const t = setTimeout(onCelebrateReady, CELEBRATE_MIN_DISPLAY_MS)
-    return () => clearTimeout(t)
-  }, [celebrate, onCelebrateReady])
+  // PR-7: celebrate beat runs through the shared choreographed-wait contract —
+  // auto-fires onCelebrateReady at celebrateMinDisplay, and the shell becomes
+  // tappable after the skip delay so users can move on sooner.
+  const { canSkip: celebrateCanSkip, skip: skipCelebrate } = useChoreographedWait({
+    active: celebrate && Boolean(onCelebrateReady),
+    minDuration: celebrateMinDisplay,
+    skipDelay: CHOREOGRAPHED_SKIP_DELAY_MS,
+    onComplete: onCelebrateReady,
+  })
 
   const resolvedTitle = celebrate ? CELEBRATE_TITLE : title
   const resolvedSubtitle = celebrate ? CELEBRATE_SUBTITLE : subtitle
@@ -104,6 +111,9 @@ export default function OnboardingLoadingShell({
       ]
         .filter(Boolean)
         .join(' ')}
+      onClick={() => {
+        if (celebrate && celebrateCanSkip) skipCelebrate()
+      }}
     >
       <View className='onboarding-loading-shell__content'>
         <Text className='onboarding-loading-shell__eyebrow'>{stepLabel}</Text>
@@ -115,6 +125,9 @@ export default function OnboardingLoadingShell({
             <View className='onboarding-loading-shell__mascot onboarding-loading-shell__mascot--celebrate'>
               <XiaoyueSpriteAnimator state='celebrate' size='240rpx' showGlow />
               <CelebrationSparkle count={sparkleCount} />
+              {celebrateCanSkip && (
+                <Text className='onboarding-loading-shell__skip-hint'>点击跳过</Text>
+              )}
             </View>
           ) : (
             <>

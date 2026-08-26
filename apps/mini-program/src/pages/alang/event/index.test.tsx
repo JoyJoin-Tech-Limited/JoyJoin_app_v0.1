@@ -84,7 +84,7 @@ describe('formal Street Blind Box home', () => {
     render(<FlashHomePage />)
 
     fireEvent.click(await screen.findByRole('button', { name: '进入没有名字的旧物' }))
-    expect(await screen.findByText('阿浪')).toBeInTheDocument()
+    expect(await screen.findByText('我有点好奇那边是什么样。')).toBeInTheDocument()
     expect(mocks.setStorage).toHaveBeenCalledWith('jj_flash_intro_ack', 'flash-intro-reviewed-story-v2')
     await waitFor(() => expect(mocks.useFlashHome).toHaveBeenLastCalledWith(true))
     expect((Taro as unknown as { getLocation?: unknown }).getLocation).toBeUndefined()
@@ -94,9 +94,44 @@ describe('formal Street Blind Box home', () => {
     mocks.getStorage.mockReturnValue('flash-intro-reviewed-story-v2')
     render(<FlashHomePage />)
 
-    expect(await screen.findByText('阿浪')).toBeInTheDocument()
+    expect(await screen.findByText('我有点好奇那边是什么样。')).toBeInTheDocument()
     expect(screen.queryByText('这一季，只让旧物慢慢开口')).not.toBeInTheDocument()
     expect(screen.queryByText('专属剧情已开启')).not.toBeInTheDocument()
+  })
+
+  it('renders the 15-slot collection strip grouped by NPC with filled and glowing empty slots', async () => {
+    mocks.getStorage.mockReturnValue('flash-intro-reviewed-story-v2')
+    render(<FlashHomePage />)
+
+    const strip = await screen.findByTestId('flash-story-collection')
+    expect(strip).toBeInTheDocument()
+    expect(screen.getByText('1/15')).toBeInTheDocument()
+    expect(screen.getByText('栗子')).toBeInTheDocument()
+    expect(screen.getByText('阿团')).toBeInTheDocument()
+
+    const filled = strip.querySelectorAll('.flash-story-collection__slot--filled')
+    const empty = strip.querySelectorAll('.flash-story-collection__slot--empty')
+    expect(filled).toHaveLength(1)
+    expect(empty).toHaveLength(14)
+    expect(filled[0].className).toContain('flash-story-collection__slot--object')
+  })
+
+  it('opens the archive when the collection strip is tapped', async () => {
+    mocks.getStorage.mockReturnValue('flash-intro-reviewed-story-v2')
+    render(<FlashHomePage />)
+
+    fireEvent.click(await screen.findByTestId('flash-story-collection'))
+    expect(mocks.navigateTo).toHaveBeenCalledWith({ url: expect.stringContaining('/pages/alang/archive/index') })
+  })
+
+  it('shows every slot as a glowing empty goal when no fragment is collected yet', async () => {
+    mocks.getStorage.mockReturnValue('flash-intro-reviewed-story-v2')
+    mocks.useFlashStoryFragments.mockReturnValue({ data: [] })
+    render(<FlashHomePage />)
+
+    const strip = await screen.findByTestId('flash-story-collection')
+    expect(strip.querySelectorAll('.flash-story-collection__slot--empty')).toHaveLength(15)
+    expect(screen.getByText('0/15')).toBeInTheDocument()
   })
 
   it('does not bounce back into a settled dialogue from stale home data while refetching', async () => {
@@ -111,7 +146,7 @@ describe('formal Street Blind Box home', () => {
 
     render(<FlashHomePage />)
 
-    await screen.findByText('阿浪')
+    await screen.findByText('我有点好奇那边是什么样。')
     expect(mocks.canonicalRedirect).not.toHaveBeenCalled()
   })
 
@@ -134,7 +169,7 @@ describe('formal Street Blind Box home', () => {
   it('does not re-show the introduction after backgrounding in the same visit', async () => {
     render(<FlashHomePage />)
     fireEvent.click(await screen.findByRole('button', { name: '进入没有名字的旧物' }))
-    expect(await screen.findByText('阿浪')).toBeInTheDocument()
+    expect(await screen.findByText('我有点好奇那边是什么样。')).toBeInTheDocument()
 
     act(() => {
       mocks.didHide?.()
@@ -149,7 +184,7 @@ describe('formal Street Blind Box home', () => {
     render(<FlashHomePage />)
 
     fireEvent.click(await screen.findByRole('button', { name: '进入没有名字的旧物' }))
-    expect(await screen.findByText('阿浪')).toBeInTheDocument()
+    expect(await screen.findByText('我有点好奇那边是什么样。')).toBeInTheDocument()
     expect(mocks.setStorage).toHaveBeenCalled()
   })
 

@@ -12,7 +12,9 @@
   flex: 1;
   min-height: 0;
   gap: 24rpx;
-  padding: 0 0 calc(24rpx + env(safe-area-inset-bottom));
+  // Safe-area inset lives ONLY on WarmupActionBar — padding it here too
+  // doubled the bottom dead space on notched devices.
+  padding: 0 0 24rpx;
   position: relative;
 }
 
@@ -38,7 +40,7 @@
   background: rgba($color-text-primary, 0.04);
 
   &-text {
-    font-size: 20rpx;
+    font-size: $font-size-2xs;
     line-height: 1;
     color: $color-text-muted;
   }
@@ -48,5 +50,14 @@
   .warmup-card-slot-outer {
     transition: none;
     transform: none;
+  }
+}
+
+// Short-viewport floor drop: the 480rpx card minimum + presence strip +
+// action bar + gaps exceed a ≤700px viewport, so the bottom content clipped.
+// Matches the same floor drop inside WarmupCardSlot.scss.
+@media (max-height: 700px) {
+  .warmup-card-slot-outer {
+    min-height: 360rpx;
   }
 }

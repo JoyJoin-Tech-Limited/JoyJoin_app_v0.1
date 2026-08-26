@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { FlashFeedbackPrompt } from "../schema/flash.js";
+import type { FlashFeedbackPrompt, FlashStoryV2Interaction } from "../schema/flash.js";
+import type { FlashStoryInteractionKind } from "./flashStorySeason.js";
 import { atuanFirstActSubmissionSchema } from "./atuanFirstAct.js";
 import { atuanLaterActSubmissionSchema } from "./atuanLaterActs.js";
 
@@ -194,12 +195,39 @@ export type FlashStoryV2ViewDto = {
   echo: number;
   echoTier: "彻" | "深" | "轻";
   nodeId: string;
-  type: "prose" | "choice" | "callback" | "closure" | "ending";
+  type: "prose" | "choice" | "callback" | "closure" | "ending" | "interaction";
   segments: Array<{ speaker?: string; text: string }>;
   choices: Array<{ id: string; text: string }>;
   next: string | null;
   unlockFragment: string | null;
+  /** 叙事动作层（sprint_20260821_3kmkkw）：仅在 type === "interaction" 时携带动作配置。 */
+  interaction: FlashStoryV2Interaction | null;
   replayState?: FlashStoryReplayStateDto;
+};
+
+/**
+ * 谜案档案台 MVP（AC-05）：印记是服务端从已结算 V2 动作结果派生的视图，
+ * 本 sprint 不新增表。settledAt 为碎片结算事务的 completedAt（ISO 字符串）。
+ * DTO 永不包含坐标、距离、未来排班、路线或私人回复文本（SEC-02）。
+ */
+export type FlashStoryImprintDto = {
+  unitId: string;
+  template: FlashStoryInteractionKind;
+  resultId: string;
+  settledAt: string;
+};
+
+export type FlashStoryArchiveDto = {
+  season: { id: string; code: string; title: string } | null;
+  fragments: Array<FlashStoryFragmentDto & {
+    unlockedAt: string;
+    episodeTitle: string;
+    npcName: string;
+  }>;
+  imprints: FlashStoryImprintDto[];
+  /** 下一条未解线索提示（复用 FLASH_V2_HOOK_HINTS 追更钩子）。 */
+  hookHint: string | null;
+  completedUnitIds: string[];
 };
 
 export type FlashTaskDestinationDto = {
@@ -274,6 +302,8 @@ export type FlashLocateResponse = {
   signal: "searching" | "arrived";
   arrived: boolean;
   encounterId: string | null;
+  /** 该用户与该 NPC 的相遇序号（含本次，纯计数、无日期）——仅到达时出现。 */
+  encounterOrdinal?: number;
   canonicalScreen: "map" | "dialogue" | "delivery" | "completed" | "unavailable";
 };
 

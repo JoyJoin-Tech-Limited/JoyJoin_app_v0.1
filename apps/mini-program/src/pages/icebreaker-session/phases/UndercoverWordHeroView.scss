@@ -75,6 +75,10 @@ $uw-deep: $phase-accent-undercover-deep;
   &__word-back-word {
     @include type-headline;
     color: $color-text-primary;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
   }
 
   &__word-back-pill {
@@ -139,11 +143,17 @@ $uw-deep: $phase-accent-undercover-deep;
   &__vote-name {
     @include type-body;
     color: $color-text-primary;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__vote-count {
     @include type-label;
     color: $uw-deep;
+    flex-shrink: 0;
   }
 
   &__numeral {
@@ -206,6 +216,10 @@ $uw-deep: $phase-accent-undercover-deep;
     @include type-caption;
     color: $color-text-secondary;
     line-height: 1.4;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
   }
 
   &__target-check {
@@ -219,9 +233,10 @@ $uw-deep: $phase-accent-undercover-deep;
     flex-shrink: 0;
   }
 
-  &__target-check-text {
-    @include type-label;
-    color: $color-surface;
+  &__target-check-icon {
+    width: 24rpx;
+    height: 24rpx;
+    display: flex;
   }
 
   &__desc-list {

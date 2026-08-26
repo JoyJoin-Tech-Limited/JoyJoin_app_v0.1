@@ -6,6 +6,17 @@ import Button from '../../../components/ui/Button'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { apiRequest } from '../../../lib/api/api'
 import { logError } from '../../../lib/utils/logger'
+import { haptics } from '../../../lib/utils/haptics'
+
+// Shared row layout for the single action row (exactly one renders per role
+// state — see the mutually exclusive conditionals in the JSX below).
+const actionRowStyle = {
+  display: 'flex',
+  flexDirection: 'row',
+  gap: '24rpx',
+  width: '100%',
+  marginTop: '16rpx',
+} as const
 
 interface BonusGateOverlayProps {
   socialSessionId: string
@@ -29,6 +40,7 @@ export default function BonusGateOverlay({
   const wantCount = sentimentSummary.wantCount
 
   const handleHostRespond = async (accept: boolean) => {
+    haptics('light')
     setLoading(true)
     try {
       await apiRequest({
@@ -46,6 +58,7 @@ export default function BonusGateOverlay({
   }
 
   const handleSentiment = async (sentiment: 'want' | 'pass') => {
+    haptics('light')
     setLoading(true)
     try {
       await apiRequest({
@@ -64,6 +77,7 @@ export default function BonusGateOverlay({
 
   return (
     <View
+      catchMove
       style={{
         position: 'fixed',
         top: 0,
@@ -77,6 +91,7 @@ export default function BonusGateOverlay({
         justifyContent: 'center',
         zIndex: 1000,
         padding: '40rpx',
+        paddingBottom: 'calc(40rpx + env(safe-area-inset-bottom))',
       }}
     >
       <View
@@ -119,19 +134,14 @@ export default function BonusGateOverlay({
           </Text>
         )}
 
+        {/* Exactly ONE action row per role state: a host who hasn't voted
+            records sentiment first; once voted, the host decides (跳过/接受);
+            non-hosts only ever record sentiment. */}
         {isHost && !hasVoted && (
-          <View
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              gap: '24rpx',
-              width: '100%',
-              marginTop: '16rpx',
-            }}
-          >
+          <View style={actionRowStyle}>
             <Button
               variant='secondary'
-              className='flex-1'
+              className='bonus-gate-overlay__btn'
               onClick={() => handleSentiment('pass')}
               disabled={loading}
               loading={loading}
@@ -140,7 +150,7 @@ export default function BonusGateOverlay({
             </Button>
             <Button
               variant='primary'
-              className='flex-1'
+              className='bonus-gate-overlay__btn'
               onClick={() => handleSentiment('want')}
               disabled={loading}
               loading={loading}
@@ -150,19 +160,11 @@ export default function BonusGateOverlay({
           </View>
         )}
 
-        {isHost ? (
-          <View
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              gap: '24rpx',
-              width: '100%',
-              marginTop: '16rpx',
-            }}
-          >
+        {isHost && hasVoted && (
+          <View style={actionRowStyle}>
             <Button
               variant='secondary'
-              className='flex-1'
+              className='bonus-gate-overlay__btn'
               onClick={() => handleHostRespond(false)}
               disabled={loading}
               loading={loading}
@@ -171,7 +173,7 @@ export default function BonusGateOverlay({
             </Button>
             <Button
               variant='primary'
-              className='flex-1'
+              className='bonus-gate-overlay__btn'
               onClick={() => handleHostRespond(true)}
               disabled={loading}
               loading={loading}
@@ -179,19 +181,13 @@ export default function BonusGateOverlay({
               接受
             </Button>
           </View>
-        ) : (
-          <View
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              gap: '24rpx',
-              width: '100%',
-              marginTop: '16rpx',
-            }}
-          >
+        )}
+
+        {!isHost && (
+          <View style={actionRowStyle}>
             <Button
               variant='secondary'
-              className='flex-1'
+              className='bonus-gate-overlay__btn'
               onClick={() => handleSentiment('pass')}
               disabled={loading || hasVoted}
               loading={loading}
@@ -200,7 +196,7 @@ export default function BonusGateOverlay({
             </Button>
             <Button
               variant='primary'
-              className='flex-1'
+              className='bonus-gate-overlay__btn'
               onClick={() => handleSentiment('want')}
               disabled={loading || hasVoted}
               loading={loading}

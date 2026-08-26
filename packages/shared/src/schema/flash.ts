@@ -23,6 +23,7 @@ import type {
   FlashStoryMode,
   FlashUniverseVector,
 } from "../alang/parallelUniverse.js";
+import type { FlashStoryInteractionKind } from "../alang/flashStorySeason.js";
 
 export type FlashDialogueQuestion = {
   id: string;
@@ -112,14 +113,46 @@ export type FlashStoryV2Variant = {
   next?: string | null;
 };
 
+/**
+ * 叙事动作层（sprint_20260821_3kmkkw）：interaction 节点单个有效结果。
+ * 即时回响由 `next` 指向的专属 callback 节点承载（对齐 choice→callback 惯例与
+ * E109 校验），持久 effect 在碎片结算事务前落进 run state。
+ */
+export type FlashStoryV2InteractionResult = {
+  id: string;
+  next: string;
+  effect?: FlashStoryV2Effect;
+};
+
+/**
+ * interaction 节点的动作配置。模板白名单即 `flashStorySeason.ts` 的五种
+ * FlashStoryInteractionKind；文案基线为 FLASH_STORY_SEASON_UNITS 对应单元的
+ * goal/success/firstMistake，内容侧不另起文案。
+ */
+export type FlashStoryV2Interaction = {
+  template: FlashStoryInteractionKind;
+  /** 可见目标：舞台上展示的操作说明 */
+  goal: string;
+  /** 轻提示，最多 2 条 */
+  hints?: string[];
+  /** 有效结果 1–3 个 */
+  results: FlashStoryV2InteractionResult[];
+  /** flag-off 降级时应用的安全默认结果（其 effect 与降级文案一致） */
+  defaultResultId: string;
+  /** flag-off 降级路径：审核过的非动作叙事节点 */
+  fallbackNext: string;
+};
+
 export type FlashStoryV2Node = {
   id: string;
-  type: "prose" | "choice" | "callback" | "closure" | "ending";
+  type: "prose" | "choice" | "callback" | "closure" | "ending" | "interaction";
   segments?: FlashStoryV2Segment[];
   choices?: FlashStoryV2Choice[];
   next?: string | null;
   variants?: FlashStoryV2Variant[];
   unlockFragment?: string;
+  /** type === "interaction" 时必填，其余类型不得携带（质量门 E123 强制） */
+  interaction?: FlashStoryV2Interaction;
 };
 
 export type FlashStoryContentV2 = {

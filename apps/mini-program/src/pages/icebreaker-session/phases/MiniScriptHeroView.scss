@@ -37,8 +37,9 @@ $ms-deep: $phase-accent-miniscript-deep;
 
   &__stepper {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
-    gap: $spacing-sm;
+    gap: $spacing-xs $spacing-sm;
     margin: $spacing-sm 0;
   }
 

@@ -30,6 +30,7 @@ import {
   getFlashEncounter,
   getFlashHome,
   getFlashPreferenceSettings,
+  getFlashStoryArchive,
   getFlashStoryFragments,
   locateFlashAppearance,
   patchFlashPreferenceSettings,
@@ -37,6 +38,7 @@ import {
   rerollFlashEncounterOffer,
   respondToFlashOffer,
   retryFlashTask,
+  submitFlashStoryInteraction,
 } from "../../services/flashService";
 import { startFlashBackgroundJobs } from "../../services/flashScheduleService";
 import { reverseGeocodeCoordinate } from "./geo";
@@ -53,6 +55,11 @@ const deliveryRequestSchema = z.object({
     promptId: z.string().min(1),
     optionId: z.string().min(1),
   }).strict()).max(2).optional(),
+}).strict();
+/** 叙事动作层结果提交（AC-02）：只接受节点与结果枚举 id，不接收手势轨迹或文本。 */
+const flashStoryInteractionRequestSchema = z.object({
+  nodeId: z.string().trim().min(1).max(80),
+  resultId: z.string().trim().min(1).max(80),
 }).strict();
 
 const SHENZHEN_DISTRICTS = new Set([
@@ -88,6 +95,7 @@ async function requireFlashReady(_req: Request, res: Response, next: NextFunctio
     await assertFlashRuntimeReady();
     return next();
   } catch (error) {
+    logger.warn("[Flash] route failure", { request_id: _req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
     return sendFlashError(res, error);
   }
 }
@@ -100,6 +108,7 @@ async function requireFlashEnabled(_req: Request, res: Response, next: NextFunct
   try {
     return (await getFeatureFlag("alangEnabled", false)) ? next() : sendFlashDisabled(res);
   } catch (error) {
+    logger.warn("[Flash] route failure", { request_id: _req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
     return sendFlashError(res, error);
   }
 }
@@ -205,7 +214,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     try {
       return res.json(await getFlashHome({ userId: authenticatedUserId }));
     } catch (error) {
-      logSafeRouteFailure(req, null, error);
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -230,8 +239,8 @@ export function registerAlangFlashRoutes(app: Express): void {
         ...coordinate.data,
       }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       // Never log the request body or raw coordinate.
-      logSafeRouteFailure(req, appearanceId.data, error);
       return sendFlashError(res, error);
     }
   });
@@ -247,8 +256,10 @@ export function registerAlangFlashRoutes(app: Express): void {
         userId: authenticatedUserId,
         allowSameEncounterDeliveryForTesting: await isAnyLocationArrivalTestEnabled(),
         allowStoryReplay: isStoryReplayRequest(req),
+        requestId: req.requestId,
       }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -259,6 +270,20 @@ export function registerAlangFlashRoutes(app: Express): void {
     try {
       return res.json(await getFlashStoryFragments(authenticatedUserId));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
+      return sendFlashError(res, error);
+    }
+  });
+
+  // 谜案档案台 MVP（AC-05）：已解锁碎片 + 派生印记 + 未解线索。DTO 由服务端
+  // 批量装配，不含坐标/距离/排班/路线/私人回复（SEC-02）。
+  app.get("/api/alang/flash/story/archive", ...guards, async (req, res) => {
+    const authenticatedUserId = userId(req, res);
+    if (!authenticatedUserId) return;
+    try {
+      return res.json(await getFlashStoryArchive(authenticatedUserId));
+    } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -278,6 +303,7 @@ export function registerAlangFlashRoutes(app: Express): void {
         allowStoryReplay: isStoryReplayRequest(req),
       }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       sendFlashError(res, error);
     }
   });
@@ -297,6 +323,31 @@ export function registerAlangFlashRoutes(app: Express): void {
         allowStoryReplay: isStoryReplayRequest(req),
       }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
+      return sendFlashError(res, error);
+    }
+  });
+
+  // 叙事动作层：interaction 节点结果提交（AC-02）。开关关闭时服务端透明降级
+  // 为审核过的默认结果（AC-07），无效节点/结果返回稳定 4xx 且不推进状态。
+  app.post("/api/alang/flash/encounters/:id/story-interaction", ...guards, async (req, res) => {
+    const authenticatedUserId = userId(req, res);
+    if (!authenticatedUserId) return;
+    const encounterId = idParamSchema.safeParse(req.params.id);
+    const body = flashStoryInteractionRequestSchema.safeParse(req.body);
+    if (!encounterId.success) return res.status(404).json({ code: "FLASH_ENCOUNTER_NOT_FOUND", error: "没有找到这次相遇" });
+    if (!body.success) {
+      return res.status(400).json({ code: "FLASH_V2_UNKNOWN_RESULT", error: "这个操作结果已经失效，请刷新后再试" });
+    }
+    try {
+      return res.json(await submitFlashStoryInteraction({
+        encounterId: encounterId.data,
+        userId: authenticatedUserId,
+        ...body.data,
+        requestId: req.requestId,
+      }));
+    } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -309,6 +360,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     try {
       return res.json(await rerollFlashEncounterOffer({ encounterId: encounterId.data, userId: authenticatedUserId }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -328,6 +380,7 @@ export function registerAlangFlashRoutes(app: Express): void {
         accepted: body.data.accepted,
       }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -349,6 +402,7 @@ export function registerAlangFlashRoutes(app: Express): void {
         allowSameEncounterDeliveryForTesting: await isAnyLocationArrivalTestEnabled(),
       }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -361,6 +415,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     try {
       return res.json(await getFlashAssignment({ assignmentId: assignmentId.data, userId: authenticatedUserId }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -385,8 +440,8 @@ export function registerAlangFlashRoutes(app: Express): void {
         ...coordinate.data,
       }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       // Never log the request body or raw coordinate.
-      logSafeRouteFailure(req, assignmentId.data, error);
       return sendFlashError(res, error);
     }
   });
@@ -406,6 +461,7 @@ export function registerAlangFlashRoutes(app: Express): void {
         ...body.data,
       }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -418,6 +474,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     try {
       return res.json(await abandonFlashTask({ assignmentId: assignmentId.data, userId: authenticatedUserId }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -443,6 +500,7 @@ export function registerAlangFlashRoutes(app: Express): void {
         userId: authenticatedUserId,
       }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -453,6 +511,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     try {
       return res.json(await getFlashPreferenceSettings(authenticatedUserId));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -465,6 +524,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     try {
       return res.json(await patchFlashPreferenceSettings({ userId: authenticatedUserId, update: body.data }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });
@@ -477,6 +537,7 @@ export function registerAlangFlashRoutes(app: Express): void {
     try {
       return res.json(await removeFlashPreferenceTag({ userId: authenticatedUserId, tagId: tagId.data }));
     } catch (error) {
+      logger.warn("[Flash] route failure", { request_id: req.requestId, code: error instanceof FlashServiceError ? error.code : "FLASH_INTERNAL_ERROR" });
       return sendFlashError(res, error);
     }
   });

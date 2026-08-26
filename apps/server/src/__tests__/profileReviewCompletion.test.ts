@@ -17,11 +17,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Mocks (hoisted by vitest) ──────────────────────────────────────────────
 
-const mockUpdate = vi.fn();
-const mockQuery = vi.fn();
-
-vi.mock("../db", () => ({
-  db: {
+vi.mock("../db", () => {
+  const db = {
     update: vi.fn(() => ({
       set: vi.fn(() => ({
         where: vi.fn(() => ({
@@ -34,8 +31,10 @@ vi.mock("../db", () => ({
         findFirst: vi.fn(() => Promise.resolve(null)),
       },
     },
-  },
-}));
+    transaction: vi.fn((cb: (tx: any) => Promise<any>) => cb(db)),
+  };
+  return { db };
+});
 
 const mockValidateContentSafeAsync = vi.fn();
 const mockContentViolationResponse = vi.fn();
@@ -72,7 +71,11 @@ vi.mock("../lib/computeOnboardingNextStep", () => ({
 
 // ── Imports after mocks ────────────────────────────────────────────────────
 
+import { db } from "../db";
+
 const { registerOnboardingRoutes } = await import("../routes/domains/onboarding");
+
+const mockFindFirstUser = db.query.users.findFirst as unknown as ReturnType<typeof vi.fn>;
 
 // ── Test helpers ───────────────────────────────────────────────────────────
 
@@ -232,6 +235,43 @@ describe("POST /api/profile-review/complete bio handling", () => {
       const body = (await res.json()) as { code: string };
       expect(body.code).toBe("CONTENT_VIOLATION");
       expect(mockRecordViolation).toHaveBeenCalledWith("user-123", "harassment", "warning");
+    });
+  });
+
+  it("includes the computed nextStep in the response when the user row is available", async () => {
+    mockFindFirstUser.mockResolvedValueOnce({ id: "user-123", hasSeenProfileReview: true });
+
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
+      const cookie = cookieHeader(loginRes);
+
+      const res = await fetch(`${baseUrl}/api/profile-review/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", cookie },
+        body: JSON.stringify({}),
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { success: boolean; hasSeenProfileReview: boolean; nextStep: string };
+      // computeOnboardingNextStep is mocked above to return "discover".
+      expect(body).toMatchObject({ success: true, hasSeenProfileReview: true, nextStep: "discover" });
+    });
+  });
+
+  it("returns nextStep: null when the post-write user row cannot be read", async () => {
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
+      const cookie = cookieHeader(loginRes);
+
+      const res = await fetch(`${baseUrl}/api/profile-review/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", cookie },
+        body: JSON.stringify({}),
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { nextStep: string | null };
+      expect(body.nextStep).toBeNull();
     });
   });
 });

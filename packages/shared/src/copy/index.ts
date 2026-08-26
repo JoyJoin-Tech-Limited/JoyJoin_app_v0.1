@@ -26,7 +26,12 @@ export type { ToneMode, Surface, ToneModeConfig } from './toneMap.js';
 
 // 🔴🟡 Error Baselines
 export type { ErrorCode } from './errorBaselines.js';
-export { getErrorMessage, getErrorForSurface, validateAllErrorTones } from './errorBaselines.js';
+export {
+  getErrorMessage,
+  getErrorForSurface,
+  validateAllErrorTones,
+  ONBOARDING_ERROR_STAGE_COPY,
+} from './errorBaselines.js';
 
 // 🟡 Empty States
 export type { EmptySurface } from './emptyStates.js';
@@ -63,12 +68,7 @@ export type { OrangeWordEntry, RuleException } from './exceptions.js';
 
 // 🎬 Flow Animation (双世界入口 + 生命周期) — owner-approved 2026-07-29
 export {
-  FLOW1_HOME_COPY,
-  ARCHETYPE_SUBLINES,
-  getArchetypeSubline,
-  getFlow1H1Line2,
   FLOW1_ENTRY_COPY,
-  EXPERIENCE_DETAIL_COPY,
   FLOW2_FALLBACKS,
   FLOW2_NODE_COPY,
   getFlow2HeroStatus,
@@ -78,8 +78,6 @@ export {
   getIdentityChipLabel,
 } from './flowAnimationCopy.js';
 export type {
-  FlowStepCopy,
-  ExperienceDetailCopy,
   FlowLifecycleFacts,
   Flow2NodeCopy,
 } from './flowAnimationCopy.js';

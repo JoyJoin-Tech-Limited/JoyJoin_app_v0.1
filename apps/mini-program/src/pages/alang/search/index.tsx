@@ -8,6 +8,8 @@ import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
 import { getFlashApiErrorCode, getFlashLocationPermission, getOneShotFlashLocation } from '../../../lib/alang/flashApi'
 import { decodeFlashRouteParam, redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useLocateFlashAppearance } from '../../../lib/alang/useFlash'
+import { trackFlashSearchStarted } from '../../../lib/analytics/flashSearchAnalytics'
+import { EMPTY_ALANG_DISTANCE_SMOOTHING_STATE, smoothAlangDistance } from '../../../lib/alang/distanceSmoothing'
 import type { FlashLocationSnapshot, FlashLocateView } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
@@ -17,6 +19,16 @@ import '../flash.scss'
 type LocateState = 'consent' | 'idle' | 'locating' | 'tracking' | 'inside' | 'denied' | 'ended' | 'rate_limited' | 'error'
 
 const MAP_FRAME_INTERVAL_MS = 2_000
+
+// 相遇庆祝节奏：找到的瞬间先亮起 bloom，再进入对话。文案与过渡共用同一拍。
+const FLASH_ENCOUNTER_CELEBRATION_MS = 900
+
+// 相遇时刻文案变体（R2）：按服务端相遇序号播种，与日期/星期无关。
+const FLASH_ENCOUNTER_MOMENT_COPY = [
+  { title: '遇见了', copy: '过去吧，这次见面会留在回声里。' },
+  { title: '又碰上了', copy: '上一次还留在回声里。' },
+  { title: '老位置，又见面了', copy: '回声越来越满了。' },
+] as const
 
 const MAP_STATUS: Record<LocateState, { label: string; assistiveLabel: string }> = {
   consent: { label: '待确认', assistiveLabel: '等待确认前台定位用途' },
@@ -44,6 +56,9 @@ export default function FlashMapPage() {
   const locateMutation = useLocateFlashAppearance()
   const [state, setState] = useState<LocateState>('consent')
   const [mapFrame, setMapFrame] = useState<FlashLocateView | null>(null)
+  const [displayDistance, setDisplayDistance] = useState<number | null>(null)
+  const [encountering, setEncountering] = useState(false)
+  const [encounterOrdinal, setEncounterOrdinal] = useState(1)
   const [currentLocation, setCurrentLocation] = useState<FlashLocationSnapshot | null>(null)
   const [walkingRoute, setWalkingRoute] = useState<WalkingRouteSuccessResponse | null>(null)
   const [routeUnavailable, setRouteUnavailable] = useState(false)
@@ -53,6 +68,7 @@ export default function FlashMapPage() {
   const lastFrameAtRef = useRef(0)
   const lastRouteAtRef = useRef(0)
   const locationHandlerRef = useRef<LocationChangeHandler | null>(null)
+  const smoothingRef = useRef(EMPTY_ALANG_DISTANCE_SMOOTHING_STATE)
 
   const isPossiblyLate = useMemo(() => {
     if (availabilityMode === 'manual_hold' || !endsAt) return false
@@ -99,6 +115,9 @@ export default function FlashMapPage() {
       if (!trackingRef.current) return
       setCurrentLocation(location)
       setMapFrame(response)
+      const smoothed = smoothAlangDistance(smoothingRef.current, response.distanceMeters, response.withinRange)
+      smoothingRef.current = smoothed
+      if (smoothed.displayMeters !== null) setDisplayDistance(Math.round(smoothed.displayMeters))
       if (response.canonicalScreen === 'unavailable') {
         stopMapGuidance(false)
         setState('ended')
@@ -107,13 +126,18 @@ export default function FlashMapPage() {
       if (response.withinRange) {
         stopMapGuidance(false)
         setState('inside')
+        setEncountering(true)
+        setEncounterOrdinal(typeof response.encounterOrdinal === 'number' && response.encounterOrdinal > 0 ? response.encounterOrdinal : 1)
         haptics('success')
+        await new Promise((resolve) => { setTimeout(resolve, FLASH_ENCOUNTER_CELEBRATION_MS) })
         const redirected = await redirectToFlashCanonical(response, MINI_PROGRAM_ROUTES.alangSearch)
         if (!redirected && response.encounterId) {
           await Taro.redirectTo({
             url: `${MINI_PROGRAM_ROUTES.alangLaterDialogue}?encounterId=${encodeURIComponent(response.encounterId)}`,
           })
+          return
         }
+        setEncountering(false)
         return
       }
       if (lastRouteAtRef.current === 0 || now - lastRouteAtRef.current >= 30_000) {
@@ -147,6 +171,10 @@ export default function FlashMapPage() {
     setMapFrame(null)
     setWalkingRoute(null)
     setRouteUnavailable(false)
+    setDisplayDistance(null)
+    setEncountering(false)
+    setEncounterOrdinal(1)
+    smoothingRef.current = EMPTY_ALANG_DISTANCE_SMOOTHING_STATE
     lastFrameAtRef.current = 0
     lastRouteAtRef.current = 0
 
@@ -164,6 +192,7 @@ export default function FlashMapPage() {
       trackingRef.current = true
       locationHandlerRef.current = locationHandler
       Taro.onLocationChange(locationHandler)
+      trackFlashSearchStarted(appearanceId)
       setState('tracking')
       const initialLocation = await getOneShotFlashLocation()
       await submitMapFrame(initialLocation)
@@ -223,6 +252,10 @@ export default function FlashMapPage() {
   useDidHide(() => stopMapGuidance())
   useEffect(() => () => stopMapGuidance(false), [stopMapGuidance])
 
+  const encounterMomentCopy = FLASH_ENCOUNTER_MOMENT_COPY[
+    Math.min(Math.max(encounterOrdinal, 1), FLASH_ENCOUNTER_MOMENT_COPY.length) - 1
+  ]
+
   if (!enabled) return <FlashFeatureClosed />
 
   if (!appearanceId) {
@@ -268,16 +301,18 @@ export default function FlashMapPage() {
 
           <View className='flash-radar__map-shell' data-testid='flash-navigation-map' aria-label={mapStatus.assistiveLabel}>
             {mapFrame && currentLocation ? (
-              <Map
-                className='flash-radar__map'
-                latitude={(currentLocation.latitude + mapFrame.destination.latitude) / 2}
-                longitude={(currentLocation.longitude + mapFrame.destination.longitude) / 2}
-                scale={16}
-                showLocation
-                markers={mapMarkers}
-                polyline={mapPolyline}
-                onError={() => setRouteUnavailable(true)}
-              />
+              <View className='flash-radar__map-fade'>
+                <Map
+                  className='flash-radar__map'
+                  latitude={(currentLocation.latitude + mapFrame.destination.latitude) / 2}
+                  longitude={(currentLocation.longitude + mapFrame.destination.longitude) / 2}
+                  scale={16}
+                  showLocation
+                  markers={mapMarkers}
+                  polyline={mapPolyline}
+                  onError={() => setRouteUnavailable(true)}
+                />
+              </View>
             ) : (
               <View className='flash-radar__map-loading'>
                 <Text className='flash-radar__map-loading-title'>正在打开地图…</Text>
@@ -288,7 +323,7 @@ export default function FlashMapPage() {
 
           {mapFrame ? (
             <View className='flash-radar__live-readout' role='status'>
-              <Text className='flash-radar__distance'>{mapFrame.distanceMeters} 米</Text>
+              <Text className='flash-radar__distance'>{displayDistance ?? mapFrame.distanceMeters} 米</Text>
               <Text className='flash-radar__direction-copy'>沿地图路线前往{npcName}本次固定出现点</Text>
               {walkingRoute ? (
                 <Text className='flash-radar__route-meta'>步行约 {Math.max(1, Math.ceil(walkingRoute.durationSeconds / 60))} 分钟 · {walkingRoute.distanceMeters} 米</Text>
@@ -313,6 +348,7 @@ export default function FlashMapPage() {
             <View className='flash-radar__result' role='status'>
               <Text className='flash-radar__result-title'>刚好散场了</Text>
               <Text className='flash-radar__result-copy'>角色到点就会离开，不接受预约，也不会为这次寻找延长时间。</Text>
+              <Text className='flash-radar__result-echo'>下次见面，也许是另一条街。</Text>
               <FlashButton variant='secondary' onClick={() => { void Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.alangEvent }) }}>看看还有谁在线</FlashButton>
             </View>
           ) : null}
@@ -351,6 +387,18 @@ export default function FlashMapPage() {
           </View>
         </View>
       </ScrollView>
+
+      {encountering ? (
+        <View className='flash-radar__encounter' role='status' aria-live='polite' data-testid='flash-radar-encounter'>
+          <View className='flash-radar__encounter-bloom' aria-hidden='true' />
+          <View className='flash-radar__encounter-portrait'>
+            <FlashNpcPortrait npc={{ slug: npcSlug, name: npcName }} size='large' />
+          </View>
+          <Text className='flash-radar__encounter-title'>{encounterMomentCopy.title}</Text>
+          <Text className='flash-radar__encounter-name'>{npcName}</Text>
+          <Text className='flash-radar__encounter-copy'>{encounterMomentCopy.copy}</Text>
+        </View>
+      ) : null}
     </View>
   )
 }

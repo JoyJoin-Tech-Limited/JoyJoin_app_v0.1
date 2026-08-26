@@ -105,6 +105,10 @@ $ld-tint: $phase-accent-lie-tint;
     color: $color-text-primary;
     word-break: keep-all;
     overflow-wrap: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
   }
 
   &__statement-votes {
@@ -179,9 +183,12 @@ $ld-tint: $phase-accent-lie-tint;
     border-radius: $radius-pill;
     color: $color-text-secondary;
     @include type-caption;
+    transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 
-    &:active {
+    &:active,
+    &--pressed {
       background: rgba($ld-accent, 0.08);
+      transform: scale(0.98);
     }
 
     &--selected {

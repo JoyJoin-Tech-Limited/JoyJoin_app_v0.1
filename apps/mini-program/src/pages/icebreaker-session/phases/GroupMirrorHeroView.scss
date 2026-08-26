@@ -85,19 +85,9 @@ $gm-deep: $phase-accent-mirror-deep;
     color: $gm-deep;
   }
 
-  &__card-id,
-  &__card-votes,
-  &__answer-id {
+  &__card-votes {
     @include type-caption;
     color: $color-text-secondary;
-  }
-
-  &__card-id,
-  &__answer-id {
-    word-break: break-all;
-  }
-
-  &__card-votes {
     flex: none;
   }
 
@@ -122,6 +112,9 @@ $gm-deep: $phase-accent-mirror-deep;
     flex: none;
     max-width: 180rpx;
     color: $color-text-secondary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__answer-target {
@@ -153,6 +146,10 @@ $gm-deep: $phase-accent-mirror-deep;
     color: $color-text-primary;
     word-break: keep-all;
     overflow-wrap: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
   }
 
   &__question-options {

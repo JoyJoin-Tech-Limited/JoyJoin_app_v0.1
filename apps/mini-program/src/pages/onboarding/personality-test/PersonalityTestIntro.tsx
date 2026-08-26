@@ -1,5 +1,6 @@
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Button from '../../../components/ui/Button'
+import XiaoyueInlineError from '../../../components/mascot/XiaoyueInlineError'
 import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import {
   getIntroStaticAsset,
@@ -160,7 +161,7 @@ export default function PersonalityTestIntro({
       </ScrollView>
 
       <View className='personality-test__intro-footer'>
-        {error ? <Text className='personality-test__error personality-test__error--footer'>{error}</Text> : null}
+        {error ? <XiaoyueInlineError className='personality-test__error--footer' message={error} /> : null}
         <Button
           variant='brand'
           className='personality-test__start-btn'

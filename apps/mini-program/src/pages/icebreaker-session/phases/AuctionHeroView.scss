@@ -99,6 +99,13 @@ $au-deep: $phase-accent-auction-deep;
     text-align: center;
   }
 
+  &__lot-back-teaser {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
   &__lot-back-header {
     display: flex;
     align-items: center;
@@ -111,6 +118,10 @@ $au-deep: $phase-accent-auction-deep;
     text-align: center;
     word-break: keep-all;
     overflow-wrap: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
   }
 
   &__high-bidder {
@@ -133,6 +144,10 @@ $au-deep: $phase-accent-auction-deep;
   &__high-bidder-value {
     @include type-body-emphasis;
     color: $au-deep;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__history {
@@ -160,11 +175,17 @@ $au-deep: $phase-accent-auction-deep;
   &__history-name {
     @include type-body;
     color: $color-text-primary;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__history-amount {
     @include type-label;
     color: $au-deep;
+    flex-shrink: 0;
   }
 
   &__numeral {

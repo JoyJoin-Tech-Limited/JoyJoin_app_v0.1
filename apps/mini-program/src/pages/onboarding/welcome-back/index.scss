@@ -1,5 +1,9 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
+// PR-8 subpackage WXSS guard: XiaoyueInlineError renders on this page
+// (continue/restart failure row) — co-compile its rules into this page's
+// WXSS instead of stranding in the onboarding sub-common chunk.
+@use '../../../components/mascot/XiaoyueInlineError.scss' as *;
 
 .welcome-back {
   display: flex;
@@ -185,6 +189,11 @@
     @include safe-area-inline($container-padding);
     @include safe-area-bottom-padding(padding-bottom, $spacing-md);
     @include staggered-enter(2, 80ms, 70ms);
+  }
+
+  // PR-8: inline failure row above the CTAs (replaces bare error toasts).
+  &__action-error {
+    margin-bottom: -$spacing-xs;
   }
 
   &__cta {

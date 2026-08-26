@@ -84,7 +84,7 @@ export function CustomModeSection({
         hoverClass={pendingAction ? 'none' : 'custom-mode-section__btn--pressed'}
         onClick={() => !pendingAction && onEndSession?.()}
       >
-        <Text className='custom-mode-section__btn-emoji'>✓</Text>
+        <JoyJoinIcon className='custom-mode-section__btn-emoji' emoji='✓' tier='status' size={24} />
         <Text className='custom-mode-section__btn-label'>结束派对</Text>
       </View>
     </View>

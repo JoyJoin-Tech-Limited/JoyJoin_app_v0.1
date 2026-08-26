@@ -6,6 +6,7 @@ import type {
   FlashStoryRunState,
   FlashStoryV2Choice,
   FlashStoryV2Effect,
+  FlashStoryV2Interaction,
   FlashStoryV2Node,
   FlashStoryV2Variant,
 } from "@shared/schema";
@@ -92,6 +93,8 @@ export type FlashStoryNodeView = {
   choices: FlashStoryV2Node["choices"];
   next: string | null;
   unlockFragment: string | null;
+  /** 动作配置仅在 type === "interaction" 时出现（E123 质量门保证）。 */
+  interaction: FlashStoryV2Interaction | null;
 };
 
 export function getStoryNodeView(
@@ -101,6 +104,7 @@ export function getStoryNodeView(
   const currentId = state.currentNode ?? content.start;
   const node = content.nodes[currentId];
   if (!node) return null;
+  const interaction = node.type === "interaction" ? node.interaction ?? null : null;
   const variant = resolveVariant(node, state);
   if (variant) {
     return {
@@ -110,6 +114,7 @@ export function getStoryNodeView(
       choices: variant.choices ?? [],
       next: variant.next !== undefined ? variant.next : node.next ?? null,
       unlockFragment: node.unlockFragment ?? null,
+      interaction,
     };
   }
   return {
@@ -119,6 +124,7 @@ export function getStoryNodeView(
     choices: node.choices ?? [],
     next: node.next ?? null,
     unlockFragment: node.unlockFragment ?? null,
+    interaction,
   };
 }
 
@@ -176,6 +182,90 @@ export function enterStoryEpisode(content: FlashStoryContentV2, state: FlashStor
   return next;
 }
 
+export type FlashStoryInteractionResult = {
+  state: FlashStoryRunState;
+  view: FlashStoryNodeView;
+  finished: boolean;
+};
+
+function finishInteractionTransition(
+  content: FlashStoryContentV2,
+  state: FlashStoryRunState,
+  nodeId: string,
+  resultId: string,
+  nextNodeId: string,
+): FlashStoryInteractionResult {
+  const targetNode = content.nodes[nextNodeId];
+  if (!targetNode) {
+    throw new Error(`FLASH_V2_BROKEN_NEXT: ${nodeId} -> ${nextNodeId}`);
+  }
+  const nextState: FlashStoryRunState = {
+    ...state,
+    currentNode: nextNodeId,
+    nodePath: [...state.nodePath, nodeId, nextNodeId],
+    lastChoiceId: resultId,
+  };
+  const view = getStoryNodeView(content, nextState);
+  if (!view) {
+    throw new Error(`FLASH_V2_VIEW_FAILED: ${nextNodeId}`);
+  }
+  return {
+    state: nextState,
+    view,
+    finished: view.type === "ending" || (view.type === "closure" && !view.next),
+  };
+}
+
+function requireInteractionNode(
+  content: FlashStoryContentV2,
+  nodeId: string,
+): FlashStoryV2Interaction {
+  const node = content.nodes[nodeId];
+  if (!node || node.type !== "interaction" || !node.interaction) {
+    throw new Error(`FLASH_V2_NOT_AN_INTERACTION_NODE: ${nodeId}`);
+  }
+  return node.interaction;
+}
+
+/**
+ * 叙事动作层：提交 interaction 节点的有效结果。应用该结果的 effect 并推进到
+ * 其专属回响节点（result.next），与 answerStoryChoice 的状态语义一致。
+ */
+export function submitStoryInteractionResult(input: {
+  content: FlashStoryContentV2;
+  state: FlashStoryRunState;
+  nodeId: string;
+  resultId: string;
+}): FlashStoryInteractionResult {
+  const { content, state } = input;
+  const interaction = requireInteractionNode(content, input.nodeId);
+  const result = interaction.results.find((candidate) => candidate.id === input.resultId);
+  if (!result) {
+    throw new Error(`FLASH_V2_UNKNOWN_RESULT: ${input.nodeId}/${input.resultId}`);
+  }
+  const nextState = applyEffect(state, result.effect);
+  return finishInteractionTransition(content, nextState, input.nodeId, result.id, result.next);
+}
+
+/**
+ * flag-off 降级（AC-07）：应用审核过的 defaultResultId 结果的 effect，
+ * 推进到审核过的非动作叙事节点 fallbackNext。不读取任何客户端手势状态。
+ */
+export function resolveInteractionFallback(input: {
+  content: FlashStoryContentV2;
+  state: FlashStoryRunState;
+  nodeId: string;
+}): FlashStoryInteractionResult {
+  const { content, state } = input;
+  const interaction = requireInteractionNode(content, input.nodeId);
+  const result = interaction.results.find((candidate) => candidate.id === interaction.defaultResultId);
+  if (!result) {
+    throw new Error(`FLASH_V2_UNKNOWN_RESULT: ${input.nodeId}/${interaction.defaultResultId}`);
+  }
+  const nextState = applyEffect(state, result.effect);
+  return finishInteractionTransition(content, nextState, input.nodeId, result.id, interaction.fallbackNext);
+}
+
 export type FlashStoryAdvanceResult = {
   state: FlashStoryRunState;
   view: FlashStoryNodeView;
@@ -193,6 +283,9 @@ export function advanceStoryNode(input: {
   }
   if (view.type === "choice") {
     throw new Error(`FLASH_V2_CHOICE_EXPECTED: ${state.currentNode}`);
+  }
+  if (view.type === "interaction") {
+    throw new Error(`FLASH_V2_INTERACTION_EXPECTED: ${state.currentNode}`);
   }
   if (!view.next) {
     return {

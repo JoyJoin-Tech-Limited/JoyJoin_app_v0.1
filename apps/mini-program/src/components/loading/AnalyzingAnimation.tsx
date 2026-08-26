@@ -1,7 +1,8 @@
 import { View, Text } from '@tarojs/components'
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ANALYZING_MIN_DURATION_MS, ANALYZING_SKIP_DELAY_MS } from '../../lib/utils/uiConstants'
+import { useChoreographedWait } from '../../hooks/useChoreographedWait'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
 import './AnalyzingAnimation.scss'
 
@@ -40,21 +41,14 @@ export default function AnalyzingAnimation({
   onComplete,
   shouldReduceMotion = false,
 }: AnalyzingAnimationProps) {
-  const [canSkip, setCanSkip] = useState(false)
-  const [isComplete, setIsComplete] = useState(false)
-
-  useEffect(() => {
-    const skipTimer = setTimeout(() => setCanSkip(true), ANALYZING_SKIP_DELAY_MS)
-    const completeTimer = setTimeout(() => {
-      setIsComplete(true)
-      onComplete?.()
-    }, minDuration)
-
-    return () => {
-      clearTimeout(skipTimer)
-      clearTimeout(completeTimer)
-    }
-  }, [minDuration, onComplete])
+  // PR-7: shared choreographed-wait contract (min display + tap-through).
+  // Also fixes the legacy double-fire: onComplete used to fire again when
+  // the min-duration timer landed after a manual skip.
+  const { canSkip, skip, isSkippable } = useChoreographedWait({
+    minDuration,
+    skipDelay: ANALYZING_SKIP_DELAY_MS,
+    onComplete,
+  })
 
   const rings = [1, 2, 3, 4, 5]
 
@@ -80,9 +74,8 @@ export default function AnalyzingAnimation({
     <View
       className='analyzing-animation'
       onClick={() => {
-        if (canSkip && !isComplete) {
-          setIsComplete(true)
-          onComplete?.()
+        if (isSkippable()) {
+          skip()
         }
       }}
     >

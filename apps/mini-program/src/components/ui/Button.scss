@@ -12,6 +12,7 @@
   font-weight: $font-weight-semibold;
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
   transition: transform 0.12s ease, opacity 0.12s ease;
 
   &::after {

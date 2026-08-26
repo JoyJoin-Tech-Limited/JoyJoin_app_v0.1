@@ -1,5 +1,5 @@
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
 import { shouldShowAlangDebugTools, shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
@@ -7,6 +7,7 @@ import { getFlashApiErrorCode } from '../../../lib/alang/flashApi'
 import { hasAcknowledgedFlashIntro, markFlashIntroAcknowledged } from '../../../lib/alang/flashExperienceStorage'
 import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useFlashHome, useFlashStoryFragments } from '../../../lib/alang/useFlash'
+import { resolveFlashNpcTheme } from '../../../lib/alang/flashNpcAssets'
 import type { FlashNpcSummary } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
@@ -26,6 +27,10 @@ const FLASH_AMBIENT_BACKGROUND = flashAmbientBackground
 const FLASH_EMPTY_ONLINE = flashEmptyOnline
 
 type GateState = 'checking' | 'intro' | 'ready'
+
+/** 收藏条 NPC 顺序：与故事季五角色固定周出顺序一致（纯展示，不含排班信息）。 */
+const FLASH_COLLECTION_NPC_ORDER = ['alang', 'lizi', 'momo', 'shiqi', 'atuan'] as const
+const FLASH_COLLECTION_SLOTS_PER_NPC = 3
 
 function FlashIntro({ onContinue }: { onContinue: () => void }) {
   return (
@@ -88,6 +93,23 @@ export default function FlashHomePage() {
   const { data, isLoading, isFetching, isError, error, refetch } = useFlashHome(enabled && gate === 'ready' && pageVisible)
   const fragmentsQuery = useFlashStoryFragments(enabled && gate === 'ready' && pageVisible)
 
+  // 15 格收藏条：按 NPC 分组的碎片计数（DTO 无 unitId，按解锁顺序填充格子）。
+  const collection = useMemo(() => {
+    const fragments = fragmentsQuery.data ?? []
+    return {
+      collected: fragments.length,
+      groups: FLASH_COLLECTION_NPC_ORDER.map((slug) => {
+        const npcName = resolveFlashNpcTheme(slug).name
+        const npcFragments = fragments.filter((fragment) => fragment.npcName === npcName)
+        return {
+          slug,
+          npcName,
+          slots: Array.from({ length: FLASH_COLLECTION_SLOTS_PER_NPC }, (_, index) => npcFragments[index] ?? null),
+        }
+      }),
+    }
+  }, [fragmentsQuery.data])
+
   const continueReviewedStory = () => {
     markFlashIntroAcknowledged()
     setGate('ready')
@@ -109,9 +131,12 @@ export default function FlashHomePage() {
 
   useEffect(() => {
     if (!pageVisible || gate !== 'ready') return undefined
-    const timer = setInterval(() => { void refetch() }, 60_000)
+    const timer = setInterval(() => {
+      // 跳过仍在进行中的轮询，避免 60s 滴答与慢请求重叠。
+      if (!isFetching) void refetch()
+    }, 60_000)
     return () => clearInterval(timer)
-  }, [gate, pageVisible, refetch])
+  }, [gate, isFetching, pageVisible, refetch])
 
   useEffect(() => {
     // A completed encounter invalidates the home query. Wait for its fresh
@@ -228,7 +253,45 @@ export default function FlashHomePage() {
           <View className='flash-page__section'>
             <View className='flash-page__section-head'>
               <Text className='flash-page__section-title'>我的故事碎片</Text>
-              <Text className='flash-page__section-meta'>{fragmentsQuery.data?.length ?? 0}/15</Text>
+              <View
+                className='flash-page__section-link'
+                hoverClass='flash-page__section-link--pressed'
+                role='button'
+                aria-label='打开谜案档案台'
+                onClick={() => {
+                  haptics('light')
+                  void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangArchive })
+                }}
+              >
+                <Text className='flash-page__section-link-text'>档案台</Text>
+              </View>
+            </View>
+            <View
+              className='flash-story-collection'
+              hoverClass='flash-story-collection--pressed'
+              role='button'
+              aria-label={`故事碎片收集 ${collection.collected}/15，打开谜案档案台`}
+              data-testid='flash-story-collection'
+              onClick={() => {
+                haptics('light')
+                void Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangArchive })
+              }}
+            >
+              {collection.groups.map((group) => (
+                <View key={group.slug} className='flash-story-collection__group'>
+                  <Text className='flash-story-collection__npc'>{group.npcName}</Text>
+                  <View className='flash-story-collection__slots'>
+                    {group.slots.map((fragment, index) => (
+                      <View
+                        key={index}
+                        className={`flash-story-collection__slot${fragment ? ` flash-story-collection__slot--filled flash-story-collection__slot--${fragment.category}` : ' flash-story-collection__slot--empty'}`}
+                        aria-hidden='true'
+                      />
+                    ))}
+                  </View>
+                </View>
+              ))}
+              <Text className='flash-story-collection__count'>{collection.collected}/15</Text>
             </View>
             {fragmentsQuery.data?.length ? (
               <View className='flash-story-fragment-list'>

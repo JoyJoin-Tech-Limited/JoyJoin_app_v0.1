@@ -34,7 +34,7 @@
     width: 48rpx;
     height: 6rpx;
     background: $color-divider;
-    border-radius: 100rpx;
+    border-radius: $radius-full;
     margin-bottom: $spacing-sm;
   }
 
@@ -111,6 +111,25 @@
     overflow: hidden;
     will-change: transform;
 
+    // Legibility scrim: the full-bleed card-bg art can drift under the text
+    // column (which sits on the RIGHT — padding-left: 42%), so ramp a soft
+    // surface wash in behind it. Paints above card-bg (same z, later in tree
+    // order), below card-body/card-check (z-index: 1).
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      border-radius: inherit;
+      background: linear-gradient(
+        90deg,
+        rgba($color-surface, 0) 32%,
+        rgba($color-surface, 0.78) 56%,
+        rgba($color-surface, 0.94) 80%
+      );
+      pointer-events: none;
+    }
+
     &--active {
       border-color: $color-primary;
       box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.12);
@@ -123,6 +142,11 @@
 
     &--custom {
       padding-left: $spacing-md;
+
+      // Custom card text spans the full width — even wash instead of a ramp.
+      &::after {
+        background: rgba($color-surface, 0.82);
+      }
     }
   }
 
@@ -172,7 +196,7 @@
     color: $color-text-white;
     background: $color-secondary;
     padding: 4rpx 12rpx;
-    border-radius: 100rpx;
+    border-radius: $radius-full;
     line-height: 1;
 
     &--custom {
@@ -196,7 +220,7 @@
     color: $color-text-muted;
     background: rgba($color-text-primary, 0.04);
     padding: 4rpx 12rpx;
-    border-radius: 100rpx;
+    border-radius: $radius-full;
     line-height: 1;
     font-family: $font-mono, monospace;
   }

@@ -297,6 +297,39 @@ describe("PATCH /api/profile bio validation", () => {
     });
   });
 
+  it("includes the computed nextStep in the response", async () => {
+    // Post-write user row: personality test done, essential data complete,
+    // interests carousel not yet done → nextStep must be 'extended-data'.
+    mockUpdateUser.mockResolvedValue({
+      id: "user-123",
+      hasCompletedPersonalityTest: true,
+      hasCompletedRegistration: true,
+      displayName: "Joy",
+      gender: "female",
+      currentCity: "深圳",
+      hasCompletedInterestsCarousel: false,
+      hasSeenProfileReview: false,
+      onboardingCheckpoint: null,
+    });
+
+    await withServer(async (baseUrl) => {
+      const loginRes = await fetch(`${baseUrl}/__test__/login`, { method: "POST" });
+      const cookie = cookieHeader(loginRes);
+
+      const res = await fetch(`${baseUrl}/api/profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", cookie },
+        body: JSON.stringify({ displayName: "Joy" }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(mockUpdateUser).toHaveBeenCalledWith("user-123", { hasCompletedRegistration: true });
+      const body = (await res.json()) as { displayName: string; nextStep: string };
+      expect(body.displayName).toBe("Joy");
+      expect(body.nextStep).toBe("extended-data");
+    });
+  });
+
   it("logs validation failures", async () => {
     const longBio = "a".repeat(101);
 

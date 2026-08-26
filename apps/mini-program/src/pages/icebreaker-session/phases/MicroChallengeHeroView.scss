@@ -26,6 +26,12 @@
     color: $phase-accent-micro-deep;
   }
 
+  &__complete-icon {
+    width: 20rpx;
+    height: 20rpx;
+    display: flex;
+  }
+
   &__burst {
     position: absolute;
     inset: 0;

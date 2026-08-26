@@ -100,16 +100,13 @@ The AI evolution system tracks 38 triggers with Bayesian threshold tuning:
 - Thresholds auto-adjust every 20 activations using beta-distribution mean
 - `getTopPerformingTriggers(limit)` / `getUnderperformingTriggers(threshold)` for diagnostics
 
-## Registration funnel analytics (legacy boundary)
+## Onboarding funnel analytics (live)
 
-`registrationFunnelAnalytics.ts` reads historical `registration_sessions` telemetry **for admin reporting only**. Do not reuse these identifiers in active onboarding code.
+`registrationFunnelAnalytics.ts` and the legacy `registration_sessions` telemetry were removed; never reintroduce those identifiers in active onboarding code. The live funnel is the V4 onboarding event stream:
 
-Funnel stages:
-1. **started** — user record created
-2. **l1_complete** — displayName, gender, currentCity filled
-3. **l2_engaged** — interests carousel completed
-4. **l3_inferred** — personality test completed
-5. **completed** — all essential data present
+- Ingestion: `POST /api/analytics/onboarding` in `apps/server/src/routes/domains/onboarding.ts` (fail-open, allow-listed event types)
+- Aggregation: `apps/server/src/repositories/onboardingFunnelRepo.ts` (`getOnboardingFunnelStats` — per-step enter/complete/abandon + p50/p90 durations, stitch rate, experiment buckets, emotion metrics; rolling `days` window or explicit `from`/`to`)
+- Admin surface: `GET /api/admin/analytics/onboarding-funnel` (`apps/server/src/routes/domains/adminOnboardingFunnel.ts`) → `OnboardingFunnelDashboard.tsx` on `/admin/insights`
 
 ## Matching benchmarks
 
@@ -122,9 +119,10 @@ Funnel stages:
 
 - `apps/server/src/routes/domains/analytics.ts`
 - `apps/server/src/routes/domains/onboarding.ts`
+- `apps/server/src/routes/domains/adminOnboardingFunnel.ts`
+- `apps/server/src/repositories/onboardingFunnelRepo.ts`
 - `apps/server/src/kpiService.ts`
 - `apps/server/src/triggerPerformanceService.ts`
-- `apps/server/src/analytics/registrationFunnelAnalytics.ts`
 - `apps/server/src/middleware/metrics.ts`
 - `apps/server/src/matchingMetrics.ts`
 - `apps/server/src/benchmarks/matchingStressSimulation.ts`

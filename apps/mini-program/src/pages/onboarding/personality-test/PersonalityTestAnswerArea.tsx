@@ -80,7 +80,10 @@ function EmojiTapOption({
     <Button
       className={`answer-area__emoji-option${isSelected ? ' answer-area__emoji-option--selected' : ''}${isCommitted ? ' answer-area__emoji-option--committed' : ''}`}
       style={{ animationDelay: `${index * 0.05}s` }}
-      onClick={onClick}
+      onClick={() => {
+        haptics('light')
+        onClick()
+      }}
       disabled={isSubmitting}
       hoverClass='answer-area__emoji-option--active'
     >

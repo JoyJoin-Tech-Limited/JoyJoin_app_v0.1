@@ -87,9 +87,9 @@ export function SpeedFriendingHeroView({
 
   const isBye = currentPairs.length > 0 && !myPair
   const partnerName = myPair
-    ? myPair.userIdA === currentUserId
+    ? (myPair.userIdA === currentUserId
       ? myPair.displayNameB
-      : myPair.displayNameA
+      : myPair.displayNameA) ?? '新伙伴'
     : undefined
 
   const participantMap = useMemo(() => {

@@ -72,10 +72,12 @@
   }
 
   &__name {
-    font-size: 22rpx;
+    font-size: $font-size-xs;
     line-height: 1.2;
     color: $color-text-secondary;
-    max-width: 96rpx;
+    // Matches __item width (64rpx) — a wider 96rpx cap let the name overflow
+    // its tile and collide with the neighboring avatar.
+    max-width: 64rpx;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -85,20 +87,25 @@
     flex-shrink: 0;
     min-width: 128rpx;
     text-align: right;
+    // Anchors __fade (absolute child) to the count's actual left edge.
+    position: relative;
   }
 
   &__count-text {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     line-height: 1;
     color: $color-text-muted;
     font-family: $font-mono;
     font-variant-numeric: tabular-nums;
   }
 
+  // Hangs off the count's real left edge — long counts like "12/12 已准备"
+  // exceed the 128rpx min-width, and a fixed `right: 128rpx` fade ended up
+  // stranded over the scroll seam's wrong spot.
   &__fade {
     position: absolute;
     top: 0;
-    right: 128rpx; // aligns with the reserved count width
+    left: -16rpx;
     width: 16rpx;
     height: 100%;
     background: linear-gradient(90deg, rgba($color-bg, 0) 0%, $color-bg 100%);

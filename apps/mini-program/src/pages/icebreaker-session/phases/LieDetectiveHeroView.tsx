@@ -158,90 +158,91 @@ export function LieDetectiveHeroView({
           doneCount={players.length}
           totalCount={playerCount}
           actions={
-            <>
-              {!submitted ? (
-                <View className='lie-detective-hero__custom-form'>
-                  <Text className='lie-detective-hero__custom-guide'>
-                    写下两句真话和一句谎言，再点选哪句是谎言。只有揭晓时才会公开答案。
-                  </Text>
-                  {customStatements.map((statement, index) => {
-                    const trimmed = statement.trim()
-                    const assistTag = assistTags[index]?.trim() ?? ''
-                    const assistTagInvalid =
-                      assistTag.length > 20 || (assistTag.length > 0 && checkProfanity(assistTag))
-                    const invalid =
-                      trimmed.length > 0 &&
-                      (trimmed.length < 2 || checkProfanity(trimmed))
-                    const isLie = customLieIndex === index + 1
-                    return (
-                      <View className='lie-detective-hero__custom-field' key={index}>
-                        <View className='lie-detective-hero__custom-field-head'>
-                          <Text className='lie-detective-hero__custom-label'>第 {index + 1} 句</Text>
-                          <View
-                            className={`lie-detective-hero__lie-picker${isLie ? ' lie-detective-hero__lie-picker--selected' : ''}`}
-                            onClick={() => setCustomLieIndex(index + 1)}
-                            role='button'
-                            aria-label={`设为第 ${index + 1} 句谎言`}
-                          >
-                            <Text>{isLie ? '✓ 这是谎言' : '设为谎言'}</Text>
-                          </View>
-                        </View>
-                        <Textarea
-                          className={`lie-detective-hero__custom-input${invalid ? ' lie-detective-hero__custom-input--error' : ''}`}
-                          placeholder='输入一句话，或者试试标签生成'
-                          value={statement}
-                          onInput={(event) => updateCustomStatement(index, event.detail.value)}
-                          maxlength={80}
-                          autoHeight
-                          disabled={isGeneratingStatements || generatingRow === index}
-                        />
-                        <View className='lie-detective-hero__assist-row'>
-                          <Input
-                            className='lie-detective-hero__assist-input'
-                            placeholder='用标签生成一句话，多点几次会有不同的思路'
-                            value={assistTags[index]}
-                            onInput={(event) => updateAssistTag(index, event.detail.value)}
-                            maxlength={20}
-                            disabled={generatingRow === index}
-                          />
-                          <View
-                            className={`lie-detective-hero__assist-button${!assistTag || assistTagInvalid || isGeneratingFromTag ? ' lie-detective-hero__assist-button--disabled' : ''}`}
-                            role='button'
-                            aria-label={`根据第 ${index + 1} 个标签生成句子`}
-                            onClick={() => void handleAssistGenerate(index)}
-                          >
-                            <Text>{generatingRow === index ? '生成中…' : '标签生成'}</Text>
-                          </View>
-                        </View>
-                        {assistTagInvalid ? (
-                          <Text className='lie-detective-hero__tag-error'>请换一个 20 字以内的友好标签</Text>
-                        ) : null}
-                        <Text className='lie-detective-hero__tag-counter'>{trimmed.length}/80</Text>
-                      </View>
-                    )
-                  })}
-                  {hasDuplicateCustomStatements ? (
-                    <Text className='lie-detective-hero__tag-error'>三句话不能重复</Text>
-                  ) : null}
-                  {customStatementsValid && customLieIndex === null ? (
-                    <Text className='lie-detective-hero__tag-error'>请选择其中一句作为谎言</Text>
-                  ) : null}
-                  <Button
-                    variant='primary'
-                    onClick={handleCustomSubmit}
-                    disabled={!canSubmitCustomSet}
-                    loading={isGeneratingStatements}
-                  >
-                    {isGeneratingStatements ? '正在提交…' : '提交我的三句话'}
-                  </Button>
-                </View>
-              ) : null}
-              {submitted && isGeneratingStatements ? (
-                <Text className='phase-hero-card__ghost-link'>悦仔生成中…</Text>
-              ) : null}
-            </>
+            !submitted ? (
+              <Button
+                variant='primary'
+                onClick={handleCustomSubmit}
+                disabled={!canSubmitCustomSet}
+                loading={isGeneratingStatements}
+              >
+                {isGeneratingStatements ? '正在提交…' : '提交我的三句话'}
+              </Button>
+            ) : isGeneratingStatements ? (
+              <Text className='phase-hero-card__ghost-link'>悦仔生成中…</Text>
+            ) : undefined
           }
-        />
+        >
+          {!submitted ? (
+            <View className='lie-detective-hero__custom-form'>
+              <Text className='lie-detective-hero__custom-guide'>
+                写下两句真话和一句谎言，再点选哪句是谎言。只有揭晓时才会公开答案。
+              </Text>
+              {customStatements.map((statement, index) => {
+                const trimmed = statement.trim()
+                const assistTag = assistTags[index]?.trim() ?? ''
+                const assistTagInvalid =
+                  assistTag.length > 20 || (assistTag.length > 0 && checkProfanity(assistTag))
+                const invalid =
+                  trimmed.length > 0 &&
+                  (trimmed.length < 2 || checkProfanity(trimmed))
+                const isLie = customLieIndex === index + 1
+                return (
+                  <View className='lie-detective-hero__custom-field' key={index}>
+                    <View className='lie-detective-hero__custom-field-head'>
+                      <Text className='lie-detective-hero__custom-label'>第 {index + 1} 句</Text>
+                      <View
+                        className={`lie-detective-hero__lie-picker${isLie ? ' lie-detective-hero__lie-picker--selected' : ''}`}
+                        hoverClass='lie-detective-hero__lie-picker--pressed'
+                        onClick={() => setCustomLieIndex(index + 1)}
+                        role='button'
+                        aria-label={`设为第 ${index + 1} 句谎言`}
+                      >
+                        <Text>{isLie ? '这是谎言' : '设为谎言'}</Text>
+                      </View>
+                    </View>
+                    <Textarea
+                      className={`lie-detective-hero__custom-input${invalid ? ' lie-detective-hero__custom-input--error' : ''}`}
+                      placeholder='输入一句话，或者试试标签生成'
+                      value={statement}
+                      onInput={(event) => updateCustomStatement(index, event.detail.value)}
+                      maxlength={80}
+                      autoHeight
+                      disabled={isGeneratingStatements || generatingRow === index}
+                    />
+                    <View className='lie-detective-hero__assist-row'>
+                      <Input
+                        className='lie-detective-hero__assist-input'
+                        placeholder='用标签生成一句话，多点几次会有不同的思路'
+                        value={assistTags[index]}
+                        onInput={(event) => updateAssistTag(index, event.detail.value)}
+                        maxlength={20}
+                        disabled={generatingRow === index}
+                      />
+                      <View
+                        className={`lie-detective-hero__assist-button${!assistTag || assistTagInvalid || isGeneratingFromTag ? ' lie-detective-hero__assist-button--disabled' : ''}`}
+                        role='button'
+                        aria-label={`根据第 ${index + 1} 个标签生成句子`}
+                        onClick={() => void handleAssistGenerate(index)}
+                      >
+                        <Text>{generatingRow === index ? '生成中…' : '标签生成'}</Text>
+                      </View>
+                    </View>
+                    {assistTagInvalid ? (
+                      <Text className='lie-detective-hero__tag-error'>请换一个 20 字以内的友好标签</Text>
+                    ) : null}
+                    <Text className='lie-detective-hero__tag-counter'>{trimmed.length}/80</Text>
+                  </View>
+                )
+              })}
+              {hasDuplicateCustomStatements ? (
+                <Text className='lie-detective-hero__tag-error'>三句话不能重复</Text>
+              ) : null}
+              {customStatementsValid && customLieIndex === null ? (
+                <Text className='lie-detective-hero__tag-error'>请选择其中一句作为谎言</Text>
+              ) : null}
+            </View>
+          ) : null}
+        </PhaseHeroCard>
       </View>
     )
   }

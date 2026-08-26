@@ -12,6 +12,7 @@ import {
   flashUserStoryEpisodes,
   flashUserStoryFragments,
   flashUserStoryProgress,
+  type FlashStoryContentV2,
 } from "@shared/schema";
 import { FLASH_STORY_PERSONALIZATION_CONSENT_VERSION } from "@shared/alang/flashTypes";
 import {
@@ -23,6 +24,7 @@ import {
   type FlashStoryMode,
   classifyFlashChoiceIntent,
 } from "@joyjoin/shared/alang/parallelUniverse";
+import { logger } from "../lib/logger";
 
 import { db } from "../db";
 import {
@@ -35,8 +37,11 @@ import {
   answerStoryChoice as answerV2StoryChoice,
   enterStoryEpisode as enterV2StoryEpisode,
   getStoryNodeView as getV2StoryNodeView,
+  resolveInteractionFallback as resolveV2InteractionFallback,
   resolveV2Ending,
   scopeV2TraversalToEpisode,
+  submitStoryInteractionResult as submitV2StoryInteractionResult,
+  type FlashStoryRunState,
 } from "../services/flashStoryEngine";
 
 type DbExecutor = typeof db | any;
@@ -268,6 +273,186 @@ export async function advanceFlashV2Run(input: {
     await tx.update(flashEncounters).set({ status: "completed", completedAt: input.now, updatedAt: input.now })
       .where(and(eq(flashEncounters.id, input.encounterId), eq(flashEncounters.userId, input.userId)));
     return { state: "finished" as const, finished: true, lastChoiceId: result.state.lastChoiceId };
+  });
+}
+
+/**
+ * 印记派生标记（AC-05）：动作结果在结算事务前落进 run 的 v2State.variables，
+ * 档案台据此把已结算动作结果派生为 per-unit 印记视图；本 sprint 不新增表。
+ * 值为结果在 interaction.results 中的 1-based 索引（0/缺失 = 无印记）。
+ */
+export function flashImprintMarkerKey(unitId: string): string {
+  return `imprint:${unitId}`;
+}
+
+type FlashV2InteractionContext = {
+  episode: typeof flashStoryEpisodes.$inferSelect;
+  content: FlashStoryContentV2;
+  run: typeof flashStoryUniverseRuns.$inferSelect;
+  entered: FlashStoryRunState;
+};
+
+async function loadFlashV2InteractionContext(
+  tx: DbExecutor,
+  input: { userId: string; encounterId: string; episodeId: string },
+): Promise<FlashV2InteractionContext | null> {
+  const [episode] = await tx.select().from(flashStoryEpisodes)
+    .where(eq(flashStoryEpisodes.id, input.episodeId)).limit(1);
+  if (!episode) return null;
+  const content = episode.content as { v?: number; start?: string; nodes?: Record<string, unknown> };
+  if (content.v !== 2) return null;
+  const [encounter] = await tx.select({ id: flashEncounters.id }).from(flashEncounters).where(and(
+    eq(flashEncounters.id, input.encounterId),
+    eq(flashEncounters.userId, input.userId),
+    eq(flashEncounters.storyEpisodeId, input.episodeId),
+  )).limit(1);
+  if (!encounter) return null;
+  const [progress] = await tx.select().from(flashUserStoryProgress).where(and(
+    eq(flashUserStoryProgress.userId, input.userId),
+    eq(flashUserStoryProgress.seasonId, episode.seasonId),
+  )).limit(1);
+  if (!progress || progress.status !== "active") return null;
+  const [run] = progress.universeRunId
+    ? await tx.select().from(flashStoryUniverseRuns).where(eq(flashStoryUniverseRuns.id, progress.universeRunId)).limit(1)
+    : [];
+  if (!run) return null;
+  const entered = enterV2StoryEpisode(content as any, scopedV2RunState(run, input.episodeId));
+  return { episode, content: content as FlashStoryContentV2, run, entered };
+}
+
+async function persistFlashV2InteractionTransition(
+  tx: DbExecutor,
+  input: { userId: string; encounterId: string; episodeId: string; now: Date },
+  context: FlashV2InteractionContext,
+  result: ReturnType<typeof submitV2StoryInteractionResult>,
+  interactionNodeId: string,
+  settledResultId: string,
+) {
+  const interaction = context.content.nodes[interactionNodeId]?.interaction;
+  const resultIndex = interaction?.results.findIndex((candidate) => candidate.id === settledResultId) ?? -1;
+  await tx.update(flashStoryUniverseRuns).set({
+    currentNode: result.state.currentNode,
+    nodePath: result.state.nodePath,
+    flags: result.state.flags,
+    v2State: {
+      episodeId: input.episodeId,
+      echo: result.state.echo,
+      variables: resultIndex >= 0
+        ? { ...result.state.variables, [flashImprintMarkerKey(context.episode.code)]: resultIndex + 1 }
+        : result.state.variables,
+      lastChoiceId: result.state.lastChoiceId,
+    },
+    stateVersion: context.run.stateVersion + 1,
+    updatedAt: input.now,
+  }).where(and(
+    eq(flashStoryUniverseRuns.id, context.run.id),
+    eq(flashStoryUniverseRuns.stateVersion, context.run.stateVersion),
+  ));
+  if (!result.finished) {
+    return { state: "advanced" as const, finished: false, resultId: settledResultId, lastChoiceId: result.state.lastChoiceId };
+  }
+  await tx.update(flashEncounters).set({ status: "completed", completedAt: input.now, updatedAt: input.now })
+    .where(and(eq(flashEncounters.id, input.encounterId), eq(flashEncounters.userId, input.userId)));
+  return { state: "finished" as const, finished: true, resultId: settledResultId, lastChoiceId: result.state.lastChoiceId };
+}
+
+/**
+ * 叙事动作层结果提交（AC-02/REL-01）：与 advanceFlashV2Run 共用同一把
+ * advisory 锁和 stateVersion 乐观更新，重复/并发提交只会有效推进一次。
+ * actionsEnabled=false 时走审核过的 defaultResultId 降级路径（AC-07），
+ * 客户端提交的 resultId 被忽略，不读取任何未提交手势状态。
+ */
+export async function submitFlashV2InteractionResult(input: {
+  userId: string;
+  encounterId: string;
+  episodeId: string;
+  nodeId: string;
+  resultId: string;
+  actionsEnabled: boolean;
+  now: Date;
+}) {
+  return db.transaction(async (tx: DbExecutor) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${input.encounterId}:flash-story-v2`}))`);
+    const context = await loadFlashV2InteractionContext(tx, input);
+    if (!context) return { state: "conflict" as const, finished: false };
+    const view = getV2StoryNodeView(context.content, context.entered);
+    if (!view || view.nodeId !== input.nodeId) return { state: "conflict" as const, finished: false };
+    if (view.type !== "interaction" || !view.interaction) {
+      return { state: "not_interaction" as const, finished: false };
+    }
+    if (!input.actionsEnabled) {
+      let fallback: ReturnType<typeof resolveV2InteractionFallback>;
+      try {
+        fallback = resolveV2InteractionFallback({ content: context.content, state: context.entered, nodeId: input.nodeId });
+      } catch (error) {
+        logger.warn("[flashStoryRepo] interaction fallback resolution failed", {
+          encounterId: input.encounterId,
+          episodeId: input.episodeId,
+          nodeId: input.nodeId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return { state: "conflict" as const, finished: false };
+      }
+      return persistFlashV2InteractionTransition(tx, input, context, fallback, input.nodeId, view.interaction.defaultResultId);
+    }
+    let result: ReturnType<typeof submitV2StoryInteractionResult>;
+    try {
+      result = submitV2StoryInteractionResult({
+        content: context.content,
+        state: context.entered,
+        nodeId: input.nodeId,
+        resultId: input.resultId,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.startsWith("FLASH_V2_UNKNOWN_RESULT")) {
+        return { state: "unknown_result" as const, finished: false };
+      }
+      logger.warn("[flashStoryRepo] interaction result evaluation failed", {
+        encounterId: input.encounterId,
+        episodeId: input.episodeId,
+        nodeId: input.nodeId,
+        resultId: input.resultId,
+        error: message,
+      });
+      return { state: "not_interaction" as const, finished: false };
+    }
+    return persistFlashV2InteractionTransition(tx, input, context, result, input.nodeId, input.resultId);
+  });
+}
+
+/**
+ * flag-off 透明降级（REL-02/AC-07）：当当前 V2 节点是 interaction 且动作层
+ * 开关关闭时，在读取路径上应用 defaultResultId 效果并推进到 fallbackNext。
+ * 幂等：当前节点已不是 interaction 时返回 noop，不重复应用效果。
+ */
+export async function applyFlashV2InteractionFallback(input: {
+  userId: string;
+  encounterId: string;
+  episodeId: string;
+  now: Date;
+}) {
+  return db.transaction(async (tx: DbExecutor) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${input.encounterId}:flash-story-v2`}))`);
+    const context = await loadFlashV2InteractionContext(tx, input);
+    if (!context) return { state: "conflict" as const, finished: false };
+    const view = getV2StoryNodeView(context.content, context.entered);
+    if (!view || view.type !== "interaction" || !view.interaction) {
+      return { state: "noop" as const, finished: false };
+    }
+    let result: ReturnType<typeof resolveV2InteractionFallback>;
+    try {
+      result = resolveV2InteractionFallback({ content: context.content, state: context.entered, nodeId: view.nodeId });
+    } catch (error) {
+      logger.warn("[flashStoryRepo] apply interaction fallback resolution failed", {
+        encounterId: input.encounterId,
+        episodeId: input.episodeId,
+        nodeId: view.nodeId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { state: "conflict" as const, finished: false };
+    }
+    return persistFlashV2InteractionTransition(tx, input, context, result, view.nodeId, view.interaction.defaultResultId);
   });
 }
 
@@ -892,4 +1077,38 @@ export async function listCompletedFlashStoryEpisodeCodes(userId: string, season
       eq(flashStoryEpisodes.seasonId, seasonId),
     ));
   return rows.map((row: { code: string }) => row.code);
+}
+
+/**
+ * 谜案档案台（AC-05/SCA-02）：单条 join 批量读取本季已完成幕的 code/content/
+ * settledAt，印记派生只在内存中进行，不对每幕发出额外查询。
+ */
+export async function listCompletedFlashStoryEpisodeDetails(userId: string, seasonId: string, executor: DbExecutor = db) {
+  return executor.select({
+    code: flashStoryEpisodes.code,
+    content: flashStoryEpisodes.content,
+    settledAt: flashUserStoryEpisodes.completedAt,
+  }).from(flashUserStoryEpisodes)
+    .innerJoin(flashStoryEpisodes, eq(flashUserStoryEpisodes.episodeId, flashStoryEpisodes.id))
+    .where(and(
+      eq(flashUserStoryEpisodes.userId, userId),
+      eq(flashStoryEpisodes.seasonId, seasonId),
+    ))
+    .orderBy(asc(flashUserStoryEpisodes.completedAt));
+}
+
+/**
+ * 档案台印记派生读取本季 progress 绑定的 universe run（而非 active run）：
+ * 季完成后 run.status 变为 completed，印记视图仍须可读。
+ */
+export async function getFlashSeasonUniverseRun(userId: string, seasonId: string, executor: DbExecutor = db) {
+  const [row] = await executor.select({ run: flashStoryUniverseRuns })
+    .from(flashUserStoryProgress)
+    .innerJoin(flashStoryUniverseRuns, eq(flashUserStoryProgress.universeRunId, flashStoryUniverseRuns.id))
+    .where(and(
+      eq(flashUserStoryProgress.userId, userId),
+      eq(flashUserStoryProgress.seasonId, seasonId),
+    ))
+    .limit(1);
+  return row?.run ?? null;
 }

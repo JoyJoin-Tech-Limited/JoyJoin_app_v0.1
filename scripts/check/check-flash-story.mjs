@@ -46,6 +46,10 @@ function scanUnit(unit) {
     }
     if (node.next) walk(node.next);
     for (const choice of node.choices ?? []) walk(choice.next);
+    if (node.interaction) {
+      if (node.interaction.fallbackNext) walk(node.interaction.fallbackNext);
+      for (const result of node.interaction.results ?? []) walk(result.next);
+    }
   };
   walk(start);
 
@@ -56,8 +60,47 @@ function scanUnit(unit) {
     const defaultVariant = hasVariants && variants.some((v) => v.when === "default");
     if (hasVariants && !defaultVariant) issues.push(["E104", WARN, `${unit.code}/${id}: variants without default fallback`]);
     const isTerminal = node.type === "ending" || node.type === "closure";
-    const hasNext = Boolean(node.next) || variants.some((v) => v.next) || (node.choices ?? []).length > 0;
+    const hasInteractionExits = node.type === "interaction" && Boolean(node.interaction);
+    const hasNext = Boolean(node.next) || variants.some((v) => v.next) || (node.choices ?? []).length > 0 || hasInteractionExits;
     if (!isTerminal && !hasNext) issues.push(["E104", FATAL, `${unit.code}/${id}: dead-end node`]);
+    if (node.type === "interaction") {
+      const config = node.interaction;
+      const KINDS = ["spacing", "pairing", "path", "overlay", "privacy"];
+      if (!config || typeof config !== "object") {
+        issues.push(["E123", FATAL, `${unit.code}/${id}: interaction node missing config`]);
+      } else {
+        if (!KINDS.includes(config.template)) {
+          issues.push(["E123", FATAL, `${unit.code}/${id}: unknown interaction template: ${config.template}`]);
+        }
+        if (!config.goal || !String(config.goal).trim()) {
+          issues.push(["E123", FATAL, `${unit.code}/${id}: interaction goal is empty`]);
+        }
+        if ((config.hints ?? []).length > 2) {
+          issues.push(["E124", FATAL, `${unit.code}/${id}: more than 2 hints (${(config.hints ?? []).length})`]);
+        }
+        const results = Array.isArray(config.results) ? config.results : [];
+        if (results.length < 1 || results.length > 3) {
+          issues.push(["E125", FATAL, `${unit.code}/${id}: results count ${results.length} outside 1-3`]);
+        }
+        if (!results.some((result) => result.id === config.defaultResultId)) {
+          issues.push(["E126", FATAL, `${unit.code}/${id}: defaultResultId not in results: ${config.defaultResultId}`]);
+        }
+        if (!nodeIds.has(config.fallbackNext)) {
+          issues.push(["E127", FATAL, `${unit.code}/${id}: fallbackNext missing node: ${config.fallbackNext}`]);
+        }
+        for (const result of results) {
+          const target = nodes[result.next];
+          if (!target) {
+            issues.push(["E127", FATAL, `${unit.code}/${id}: result ${result.id} missing node: ${result.next}`]);
+          } else if (target.type !== "callback" || !(target.segments ?? []).length) {
+            issues.push(["E128", FATAL, `${unit.code}/${id}: result ${result.id} without dedicated callback echo (${result.next})`]);
+          }
+        }
+      }
+    }
+    if (node.type !== "interaction" && node.interaction) {
+      issues.push(["E123", FATAL, `${unit.code}/${id}: interaction config on non-interaction node`]);
+    }
     if (node.type === "choice") {
       const choices = node.choices ?? [];
       if (choices.length === 0 && !hasVariants) issues.push(["E109", FATAL, `${unit.code}/${id}: choice node without options`]);
@@ -78,6 +121,7 @@ function scanUnit(unit) {
       ...(node.segments ?? []).map((s) => s.text),
       ...(node.choices ?? []).map((c) => c.text),
       ...(variants.flatMap((v) => [...(v.segments ?? []).map((s) => s.text), ...(v.choices ?? []).map((c) => c.text)])),
+      ...(node.interaction ? [node.interaction.goal ?? "", ...(node.interaction.hints ?? [])] : []),
     ].join(" ");
     for (const word of metaWords) {
       if (texts.includes(word)) issues.push(["E107", FATAL, `${unit.code}/${id}: meta word "${word}"`]);

@@ -72,7 +72,7 @@ export function MiniScriptConfigModal({ open, onClose, initialGenres = DEFAULT_I
     if (!open || !selectedStyle) return
     const activeStages: MiniScriptGenerationStatus['stage'][] = ['queued', 'generating', 'validating', 'fallback', 'persisting']
     if (!generationStatus || !activeStages.includes(generationStatus.stage)) return
-    const timer = setInterval(() => void onLoadLibrary(selectedStyle), 800)
+    const timer = setInterval(() => void onLoadLibrary(selectedStyle), 1500)
     return () => clearInterval(timer)
   }, [generationStatus, onLoadLibrary, open, selectedStyle])
 
@@ -109,7 +109,7 @@ export function MiniScriptConfigModal({ open, onClose, initialGenres = DEFAULT_I
 
   return (
     <RootPortal>
-      <View className='ms-modal'>
+      <View className='ms-modal' catchMove>
         <View className='ms-modal__sheet'>
           <View className='ms-modal__header'>
             <View className='ms-modal__header-main'>
@@ -175,7 +175,7 @@ export function MiniScriptConfigModal({ open, onClose, initialGenres = DEFAULT_I
                       (dimmed, taps no-op) so the progress card is the only
                       primary path. */}
                   <View className={`ms-library__create-form${showGeneration ? ' ms-library__create-form--disabled' : ''}`} aria-disabled={showGeneration}>
-                    <View className='ms-library__genre-row'>{MINISCRIPT_CATALOG.genres.map((genre) => <View key={genre.key} className={`ms-library__genre${genreSet.has(genre.key as MiniScriptGenre) ? ' ms-library__genre--selected' : ''}`} role='button' aria-label={`${genre.label}${genreSet.has(genre.key as MiniScriptGenre) ? '，已选择' : '，未选择'}`} aria-pressed={genreSet.has(genre.key as MiniScriptGenre)} onClick={() => toggleGenre(genre.key as MiniScriptGenre)}><Text>{genre.label}</Text></View>)}</View>
+                    <View className='ms-library__genre-row'>{MINISCRIPT_CATALOG.genres.map((genre) => <View key={genre.key} className={`ms-library__genre${genreSet.has(genre.key as MiniScriptGenre) ? ' ms-library__genre--selected' : ''}`} hoverClass='ms-library__genre--pressed' role='button' aria-label={`${genre.label}${genreSet.has(genre.key as MiniScriptGenre) ? '，已选择' : '，未选择'}`} aria-pressed={genreSet.has(genre.key as MiniScriptGenre)} onClick={() => toggleGenre(genre.key as MiniScriptGenre)}><Text>{genre.label}</Text></View>)}</View>
                     <View className='ms-library__mode-row' role='button' aria-label={liteMode ? '当前精简版，切换标准版' : '当前标准版，切换精简版'} aria-pressed={liteMode} onClick={() => { haptics('light'); setLiteMode((value) => !value) }}><Text>{liteMode ? '精简版 · 约25分钟' : '标准版 · 剧情更完整'}</Text><Text className='ms-library__mode-action'>{liteMode ? '切换标准版' : '切换精简版'}</Text></View>
                   </View>
                   {showGeneration ? <Text className='ms-library__create-hint'>悦仔写完这份就能挑啦</Text> : hasScripts ? (

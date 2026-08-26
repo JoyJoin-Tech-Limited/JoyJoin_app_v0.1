@@ -35,6 +35,7 @@
 | 11 | 互动节奏 | 连续 segments 超过 5 句无互动 → 报告 | 警告 |
 | 12 | 钩子登记 | 单元 closure 最后句存在钩子（与单元设计文档登记表核对） | 警告 |
 | 13 | 状态引用完整 | condition/variants/flags/valDelta 引用的变量在季内被设置过 | 致命 |
+| 13b | interaction 门禁 | 模板白名单/hints≤2/results 1–3/defaultResultId/引用完整/专属 callback 回响（E123–E128） | 致命 |
 | 14–22 | 语感卡门禁 | 见 E114–E122：强化词/副词喊情绪/元叙事开场/叙述者提问/升华收束/等长节奏/句式重复/声音套话/否定铺垫 | 致命+警告 |
 
 ## 错误码格式
@@ -62,7 +63,17 @@ FLASH_STORY_E119 节奏：同节点 3+ 段等长（警告级）
 FLASH_STORY_E120 句式重复：同一"名/代词+动词"开头 x3（警告级）
 FLASH_STORY_E121 声音描写套话（"声音不大，却…"）（致命）
 FLASH_STORY_E122 否定铺垫句式（"不是X，而是Y"）出现在叙述层（致命）
+FLASH_STORY_E123 interaction 配置缺失/模板不在白名单/goal 为空/挂在非 interaction 节点（致命）
+FLASH_STORY_E124 interaction hints 超过 2 条（致命）
+FLASH_STORY_E125 interaction results 数量不在 1–3（致命）
+FLASH_STORY_E126 defaultResultId 不在 results 中（致命）
+FLASH_STORY_E127 fallbackNext / results[].next 引用节点不存在（致命）
+FLASH_STORY_E128 result 缺少专属 callback 回响节点（致命）
 ```
+
+> E123–E128 为叙事动作层门禁（2026-08-25，sprint_20260821_3kmkkw）：模板白名单即
+> `flashStorySeason.ts` 五种 FlashStoryInteractionKind（spacing/pairing/path/overlay/privacy）；
+> 每个 result 的即时回响由其 `next` 指向的专属 callback 节点承载（对齐 E109 语义）。
 
 > E114–E122 为语感卡门禁（2026-08-19，依据 `voice-card.md`）：
 > 叙述层 = 段落去掉“…”引号内台词后的文本，台词按 `style-fingerprints.md` 豁免。

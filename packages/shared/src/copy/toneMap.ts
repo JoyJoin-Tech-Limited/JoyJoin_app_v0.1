@@ -48,6 +48,7 @@ export type Surface =
   | 'nav-tab'
   | 'toast-error'
   | 'full-page-error'
+  | 'inline-error'
   | 'empty-state'
   | 'loading-whisper'
   | 'yuezai-dialogue'
@@ -71,6 +72,9 @@ export const SURFACE_TONE_MAP: Record<Surface, ToneMode> = {
   'nav-tab': 'system-ui',
   'toast-error': 'system-ui',
   'full-page-error': 'yuezai-voice',
+  // Compact inline error rows (mascot icon + bubble) speak the 悦仔 voice,
+  // same as full-page errors — only the surface is smaller.
+  'inline-error': 'yuezai-voice',
   'empty-state': 'yuezai-voice',
   'loading-whisper': 'yuezai-voice',
   'yuezai-dialogue': 'yuezai-voice',

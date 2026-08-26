@@ -14,7 +14,7 @@ import {
   type InterestDefinition,
   type MacroCategory,
 } from '@shared/interests'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { getErrorForSurface } from '@shared/copy/errorBaselines'
 import { getOnboardingVoiceLine, type OnboardingVoiceStepId } from '@shared/copy/onboardingVoice'
 import { getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import { ARCHETYPE_BY_ID, type ArchetypeId } from '@shared/personality/archetypeNames'
@@ -27,12 +27,11 @@ import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingA
 import { useStepAbandonGuard } from '../../../hooks/onboarding/useStepAbandonGuard'
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
 import { usePreloadCategoryIcons } from '../../../hooks/usePreloadCategoryIcons'
-import { TOAST_DEFAULT_MS } from '../../../lib/utils/uiConstants'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
 import { ONBOARDING_MASCOT_SIZE } from '../../../lib/onboarding/onboardingRoutes'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
-import { looksLikeOfflineError, OFFLINE_PREFLIGHT_COPY } from '../../../lib/utils/offlineDetection'
+import { looksLikeOfflineError } from '../../../lib/utils/offlineDetection'
 import { prefetchCeremonyAssets, prefetchInterestIllustrations } from '../../../lib/utils/onboardingPrefetch'
 import { logError, logInfo, logWarn } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
@@ -41,6 +40,7 @@ import Card from '../../../components/ui/Card'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import OnboardingLoadingShell, { SHELL_EXIT_HOLD_MS } from '../../../components/loading/OnboardingLoadingShell'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
+import XiaoyueInlineError from '../../../components/mascot/XiaoyueInlineError'
 import BoxJourneySpine from '../../../components/onboarding/BoxJourneySpine'
 import { getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
@@ -60,9 +60,12 @@ const TAP_HINT_DURATION_MS = 1800
 
 // Milestone toast icons (passed to JoyJoinIcon) — module scope so they are
 // not re-created on every render.
+// Milestone toast icons — passed to JoyJoinIcon. These map to proprietary
+// JoyJoin icon assets via the shared emoji-to-icon registry; the raw emoji
+// values are only used as lookup keys / fallback text, never as primary copy.
 const UNLOCKED_EMOJI = '🎉'
-const FIRST_PRIORITY_EMOJI = '⭐'
-const ALL_CATEGORIES_EMOJI = '🌈'
+const FIRST_PRIORITY_EMOJI = '🌟'
+const ALL_CATEGORIES_EMOJI = '✨'
 
 const CATEGORY_ORDER: MacroCategory[] = ['food', 'play', 'sports', 'culture', 'life', 'growth']
 
@@ -429,11 +432,8 @@ export default function ExtendedDataPage() {
     try {
       const network = await Taro.getNetworkType()
       if (network.networkType === 'none') {
-        Taro.showToast({
-          title: OFFLINE_PREFLIGHT_COPY,
-          icon: 'none',
-          duration: TOAST_DEFAULT_MS,
-        })
+        // PR-8: inline 悦仔 error row above the CTA, not a bare toast.
+        setError(getErrorForSurface('offline-preflight', 'inline-error'))
         analytics.errorOccurred('submit_offline', 'network unavailable')
         return
       }
@@ -451,27 +451,32 @@ export default function ExtendedDataPage() {
         totalHeat: selectionPreview.totalHeat,
       })
 
-      await submitInterests(apiRequest, { interests: selectionDrafts })
+      const submitResponse = await submitInterests(apiRequest, { interests: selectionDrafts })
 
       // Fire-and-forget: warm the profile-review ceremony's blind-box art
       // during the post-submit gap. Never awaited, never blocks navigation.
       void prefetchCeremonyAssets()
 
-      await saveCheckpoint('extended-data')
-      await invalidateAuth()
-      const userState = await getUserState()
+      // Checkpoint + auth refresh are fire-and-forget: the submit response
+      // already carries the server-computed nextStep, and the background
+      // invalidateAuth() keeps the Infinity-stale auth cache fresh.
+      void saveCheckpoint('extended-data')
+      void invalidateAuth()
+      // Old-server fallback: only refetch auth state when the submit response
+      // predates the nextStep field.
+      const nextStep = submitResponse.nextStep ?? (await getUserState()).nextStep
 
       analytics.stepCompleted({
         selectedInterestCount: selectedCount,
         totalHeat: selectionPreview.totalHeat,
-        nextStep: userState.nextStep ?? 'profile-review',
+        nextStep: nextStep ?? 'profile-review',
       })
       // Submit succeeded — the onward navigation must not count as abandonment.
       markInterestsCompleted()
 
       // NOTE: prefers-reduced-motion is respected by the CSS animations in this screen.
       // The route transition below is handled by onboardingNavigation and is not user-motion.
-      await navigateToMiniProgramNextStep(userState.nextStep, {
+      await navigateToMiniProgramNextStep(nextStep, {
         mode: 'replace',
         transition: { beforeNavigate: () => setIsPageExiting(true) },
       })
@@ -481,13 +486,13 @@ export default function ExtendedDataPage() {
       // selection drafts here are session-local, so only re-submit is promised).
       // Inline banner only — no toast duplicating the same failure message.
       if (looksLikeOfflineError(err)) {
-        const offlineMessage = '网络好像断开了，连上网络后重新提交就好。'
+        const offlineMessage = getErrorForSurface('offline-preflight', 'inline-error')
         setError(offlineMessage)
         analytics.errorOccurred('submit_offline', offlineMessage)
         logError('[ExtendedData] Submit failed offline', { message: offlineMessage })
         return
       }
-      const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
+      const message = err instanceof Error ? err.message : getErrorForSurface('submit-failed', 'inline-error')
       setError(message)
       analytics.errorOccurred('submit_failed', message)
       logError('[ExtendedData] Submit failed', { message })
@@ -755,9 +760,7 @@ export default function ExtendedDataPage() {
         </View>
 
         {error ? (
-          <View className='extended-data__error' aria-live='assertive' role='alert'>
-            {error}
-          </View>
+          <XiaoyueInlineError className='extended-data__error' message={error} />
         ) : null}
 
         <Button

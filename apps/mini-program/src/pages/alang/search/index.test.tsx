@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FlashMapPage from './index'
 
@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   stopLocationUpdate: vi.fn(),
   onLocationChange: vi.fn(),
   offLocationChange: vi.fn(),
+  trackFlashSearchStarted: vi.fn(),
   locationChange: { current: null as null | ((value: any) => void) },
   didHide: { current: null as null | (() => void) },
 }))
@@ -64,6 +65,9 @@ vi.mock('../../../lib/alang/flashApi', () => ({
 vi.mock('../../../lib/alang/flashNavigation', async (importOriginal) => ({
   ...await importOriginal<typeof import('../../../lib/alang/flashNavigation')>(),
   redirectToFlashCanonical: mocks.canonicalRedirect,
+}))
+vi.mock('../../../lib/analytics/flashSearchAnalytics', () => ({
+  trackFlashSearchStarted: mocks.trackFlashSearchStarted,
 }))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
 
@@ -142,6 +146,21 @@ describe('formal Flash map navigation', () => {
     expect(await screen.findByText('83 米')).toBeInTheDocument()
   })
 
+  it('fires the search funnel head event once tracking actually starts', async () => {
+    render(<FlashMapPage />)
+    await startNavigation()
+
+    await waitFor(() => expect(mocks.trackFlashSearchStarted).toHaveBeenCalledTimes(1))
+    expect(mocks.trackFlashSearchStarted).toHaveBeenCalledWith('appearance-1')
+  })
+
+  it('does not fire the search funnel event when the user declines', async () => {
+    render(<FlashMapPage />)
+
+    fireEvent.click(await screen.findByRole('button', { name: '暂不开启' }))
+    expect(mocks.trackFlashSearchStarted).not.toHaveBeenCalled()
+  })
+
   it('shows the fixed NPC marker and walking route from the current location', async () => {
     render(<FlashMapPage />)
     await startNavigation()
@@ -199,7 +218,7 @@ describe('formal Flash map navigation', () => {
   it('stops location when the page enters the background', async () => {
     render(<FlashMapPage />)
     await startNavigation()
-    mocks.didHide.current?.()
+    act(() => { mocks.didHide.current?.() })
     expect(mocks.stopLocationUpdate).toHaveBeenCalled()
     expect(mocks.offLocationChange).toHaveBeenCalled()
   })
@@ -264,8 +283,51 @@ describe('formal Flash map navigation', () => {
     await startNavigation()
     emitLocation()
 
-    await waitFor(() => expect(mocks.canonicalRedirect).toHaveBeenCalled(), { timeout: 1200 })
+    // 相遇庆祝拍：先亮起「遇见了」仪式感界面，随后才进入对话。
+    expect(await screen.findByText('遇见了')).toBeInTheDocument()
+    await waitFor(() => expect(mocks.canonicalRedirect).toHaveBeenCalled(), { timeout: 2500 })
     expect(mocks.stopLocationUpdate).toHaveBeenCalled()
+  })
+
+  it('seeds the encounter celebration copy from the server encounter ordinal', async () => {
+    mocks.mutateAsync.mockResolvedValue({
+      canonicalScreen: 'dialogue',
+      withinRange: true,
+      destination: { latitude: 22.541, longitude: 114.052, coordinateSystem: 'gcj02' },
+      distanceMeters: 7,
+      targetBearingDegrees: 15,
+      proximityBand: 'arrived',
+      encounterId: 'encounter-2',
+      encounterOrdinal: 2,
+    })
+    mocks.canonicalRedirect.mockResolvedValue(true)
+    render(<FlashMapPage />)
+    await startNavigation()
+    emitLocation()
+
+    expect(await screen.findByText('又碰上了')).toBeInTheDocument()
+    expect(screen.getByText('上一次还留在回声里。')).toBeInTheDocument()
+    await waitFor(() => expect(mocks.canonicalRedirect).toHaveBeenCalled(), { timeout: 2500 })
+  })
+
+  it('clamps the celebration copy to the third variant for later encounters', async () => {
+    mocks.mutateAsync.mockResolvedValue({
+      canonicalScreen: 'dialogue',
+      withinRange: true,
+      destination: { latitude: 22.541, longitude: 114.052, coordinateSystem: 'gcj02' },
+      distanceMeters: 7,
+      targetBearingDegrees: 15,
+      proximityBand: 'arrived',
+      encounterId: 'encounter-5',
+      encounterOrdinal: 5,
+    })
+    mocks.canonicalRedirect.mockResolvedValue(true)
+    render(<FlashMapPage />)
+    await startNavigation()
+    emitLocation()
+
+    expect(await screen.findByText('老位置，又见面了')).toBeInTheDocument()
+    await waitFor(() => expect(mocks.canonicalRedirect).toHaveBeenCalled(), { timeout: 2500 })
   })
 
   it('stops and explains when the appearance ends during tracking', async () => {
@@ -274,7 +336,39 @@ describe('formal Flash map navigation', () => {
     await startNavigation()
     emitLocation()
     expect(await screen.findByText('刚好散场了')).toBeInTheDocument()
+    expect(await screen.findByText('下次见面，也许是另一条街。')).toBeInTheDocument()
     expect(mocks.stopLocationUpdate).toHaveBeenCalled()
+  })
+
+  it('eases the distance readout toward new frames instead of jumping', async () => {
+    mocks.mutateAsync
+      .mockResolvedValueOnce({
+        canonicalScreen: 'map',
+        withinRange: false,
+        destination: { latitude: 22.541, longitude: 114.052, coordinateSystem: 'gcj02' },
+        distanceMeters: 83,
+        targetBearingDegrees: 90,
+        proximityBand: 'near',
+      })
+      .mockResolvedValueOnce({
+        canonicalScreen: 'map',
+        withinRange: false,
+        destination: { latitude: 22.541, longitude: 114.052, coordinateSystem: 'gcj02' },
+        distanceMeters: 60,
+        targetBearingDegrees: 90,
+        proximityBand: 'near',
+      })
+    render(<FlashMapPage />)
+    await startNavigation()
+    expect(await screen.findByText('83 米')).toBeInTheDocument()
+
+    // 位置帧 2s 节流：第二帧要等节流窗口过去才会发出。
+    await new Promise((resolve) => { setTimeout(resolve, 2_100) })
+    emitLocation()
+
+    // EMA 0.35：83 → 60 的新帧不直接落 60，而是缓动到约 75 米。
+    expect(await screen.findByText('75 米')).toBeInTheDocument()
+    expect(screen.queryByText('60 米')).not.toBeInTheDocument()
   })
 
   it('still requires explicit GPS consent when the legacy Alang flag is disabled', async () => {

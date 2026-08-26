@@ -3,6 +3,8 @@ import type {
   FlashPreferenceUpdateRequest,
   FlashStoryReplayStateDto,
 } from '@shared/alang/flashTypes'
+import type { FlashStoryInteractionKind } from '@shared/alang/flashStorySeason'
+import type { FlashStoryV2Interaction } from '@shared/schema/flash'
 
 /**
  * Frontend-only view models. Network payloads are owned by
@@ -115,6 +117,7 @@ export interface FlashLocateView {
   proximityBand: 'far' | 'approaching' | 'near' | 'arrived'
   radiusMeters?: number
   encounterId?: string
+  encounterOrdinal?: number
   appearanceId?: string
   assignmentId?: string
   npc?: FlashNpcReference
@@ -209,11 +212,17 @@ export interface FlashEncounterView {
       echo: number
       echoTier: '彻' | '深' | '轻'
       nodeId: string
-      type: 'prose' | 'choice' | 'callback' | 'closure' | 'ending'
+      type: 'prose' | 'choice' | 'callback' | 'closure' | 'ending' | 'interaction'
       segments: Array<{ speaker?: string; text: string }>
       choices: Array<{ id: string; text: string }>
       next: string | null
       unlockFragment: string | null
+      /**
+       * 叙事动作层（sprint_20260821_3kmkkw）：仅在 type === 'interaction' 时携带。
+       * 可选以兼容旧客户端快照；动作开关关闭时服务端透明降级，客户端不会看到
+       * interaction 节点（AC-07）。
+       */
+      interaction?: FlashStoryV2Interaction | null
       replayState?: FlashStoryReplayStateDto
     } | null
   } | null
@@ -230,6 +239,25 @@ export interface FlashStoryFragmentView {
   encounterId: string
   episodeTitle: string
   npcName: string
+}
+
+/**
+ * 谜案档案台 MVP（AC-05）视图模型。印记是服务端从已结算动作结果派生的视图，
+ * 不携带坐标/距离/排班/路线/私人回复（SEC-02）；客户端只渲染 DTO 字段。
+ */
+export interface FlashStoryImprintView {
+  unitId: string
+  template: FlashStoryInteractionKind
+  resultId: string
+  settledAt: string
+}
+
+export interface FlashStoryArchiveView {
+  season: { id: string; code: string; title: string } | null
+  fragments: Array<Omit<FlashStoryFragmentView, 'encounterId'>>
+  imprints: FlashStoryImprintView[]
+  hookHint: string | null
+  completedUnitIds: string[]
 }
 
 export interface FlashAssignmentView extends FlashTaskSummary {

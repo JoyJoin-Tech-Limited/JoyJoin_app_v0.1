@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { View, Text } from '@tarojs/components'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
+import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Button from '../../../components/ui/Button'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { TapRhythm } from '../../../components/gesture'
@@ -139,7 +140,8 @@ export function MicroChallengeHeroView({
               />
             ) : (
               <View className='phase-hero-card__complete-badge micro-challenge-hero__complete'>
-                <Text className='micro-challenge-hero__complete-text'>已完成 ✓</Text>
+                <Text className='micro-challenge-hero__complete-text'>已完成</Text>
+                <JoyJoinIcon className='micro-challenge-hero__complete-icon' emoji='✓' tier='status' size={20} />
               </View>
             )}
             {isHost && onAdvance ? (

@@ -1,4 +1,4 @@
-import { View, Text, Image } from '@tarojs/components'
+import { View, Text, Image, ScrollView } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { AIResponseMeta, AIGCMeta } from '@shared/types/aiMeta'
@@ -146,6 +146,7 @@ function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
         <View
           className='icebreaker__moment-panel-backdrop'
           onClick={() => setShowPanel(false)}
+          catchMove
         >
           <View
             className='icebreaker__moment-panel'
@@ -154,25 +155,29 @@ function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
             aria-modal='true'
             aria-label={panel.headline}
           >
-            <Text className='icebreaker__moment-panel-title'>{panel.headline}</Text>
-            <Text className='icebreaker__moment-panel-overview'>{panel.overview}</Text>
-            <View className='icebreaker__moment-panel-list'>
-              {panel.highlights.map((highlight, index) => (
-                <View className='icebreaker__moment-panel-item' key={`${highlight.aspect}-${index}`}>
-                  <Text className='icebreaker__moment-panel-item-title'>{highlight.title}</Text>
-                  {highlight.personDisplayName ? (
-                    <Text className='icebreaker__moment-panel-person'>{highlight.personDisplayName}</Text>
-                  ) : null}
-                  <Text className='icebreaker__moment-panel-evidence'>依据：{highlight.evidence}</Text>
-                  <Text className='icebreaker__moment-panel-narrative'>{highlight.narrative}</Text>
+            <ScrollView className='icebreaker__moment-panel-scroll' scrollY>
+              <View className='icebreaker__moment-panel-content'>
+                <Text className='icebreaker__moment-panel-title'>{panel.headline}</Text>
+                <Text className='icebreaker__moment-panel-overview'>{panel.overview}</Text>
+                <View className='icebreaker__moment-panel-list'>
+                  {panel.highlights.map((highlight, index) => (
+                    <View className='icebreaker__moment-panel-item' key={`${highlight.aspect}-${index}`}>
+                      <Text className='icebreaker__moment-panel-item-title'>{highlight.title}</Text>
+                      {highlight.personDisplayName ? (
+                        <Text className='icebreaker__moment-panel-person'>{highlight.personDisplayName}</Text>
+                      ) : null}
+                      <Text className='icebreaker__moment-panel-evidence'>依据：{highlight.evidence}</Text>
+                      <Text className='icebreaker__moment-panel-narrative'>{highlight.narrative}</Text>
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
-            <Text className='icebreaker__moment-panel-closing'>{panel.closingLine}</Text>
-            {aigcEnabled ? (
-              <PhaseAigcRow meta={panelMeta ?? undefined} reason='AI 根据本局互动生成高光总结' />
-            ) : null}
-            <Button variant='primary' onClick={() => setShowPanel(false)}>看完了</Button>
+                <Text className='icebreaker__moment-panel-closing'>{panel.closingLine}</Text>
+                {aigcEnabled ? (
+                  <PhaseAigcRow meta={panelMeta ?? undefined} reason='AI 根据本局互动生成高光总结' />
+                ) : null}
+                <Button variant='primary' onClick={() => setShowPanel(false)}>看完了</Button>
+              </View>
+            </ScrollView>
           </View>
         </View>
       ) : null}

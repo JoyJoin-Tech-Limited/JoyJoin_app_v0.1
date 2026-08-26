@@ -1,0 +1,1383 @@
+diff --git a/apps/mini-program/src/components/reveal/CardFlip.scss b/apps/mini-program/src/components/reveal/CardFlip.scss
+index 027fba23a..b95ac4a48 100644
+--- a/apps/mini-program/src/components/reveal/CardFlip.scss
++++ b/apps/mini-program/src/components/reveal/CardFlip.scss
+@@ -9,6 +9,9 @@
+   &__wrapper {
+     position: relative;
+     width: 100%;
++    // Grid stack: both faces occupy the same cell so the wrapper sizes to
++    // the TALLER face (front-only sizing clipped taller back-face content).
++    display: grid;
+     transform-style: preserve-3d;
+     transition: transform cubic-bezier(0.22, 1, 0.36, 1);
+     will-change: transform;
+@@ -19,6 +22,9 @@
+   }
+ 
+   &__face {
++    // Same grid cell for both faces; default stretch makes the shorter
++    // face fill the taller one's height (replaces back-face height: 100%).
++    grid-area: 1 / 1;
+     position: relative;
+     width: 100%;
+     backface-visibility: hidden;
+@@ -26,25 +32,23 @@
+     overflow: hidden;
+ 
+     &--back {
+-      position: absolute;
+-      top: 0;
+-      left: 0;
+-      height: 100%;
+       transform: rotateY(180deg);
+     }
+   }
+ 
+   // Reduced motion — instant opacity swap
+-  &--reduced {
++  // Faces render without a wrapper here; stack them the same way so the
++  // container still sizes to the taller face. Compound selector keeps the
++  // grid display above consumer overrides like WarmupCardSlot's
++  // `.warmup-card-slot .reveal-card-flip { display: flex }`.
++  &.reveal-card-flip--reduced {
++    display: grid;
++
+     .reveal-card-flip__face {
+       transition: opacity 0ms;
+     }
+ 
+     .reveal-card-flip__face--back {
+-      position: absolute;
+-      top: 0;
+-      left: 0;
+-      height: 100%;
+       transform: none;
+     }
+   }
+diff --git a/apps/mini-program/src/components/ui/Button.scss b/apps/mini-program/src/components/ui/Button.scss
+index 12ff5e341..4bfda50df 100644
+--- a/apps/mini-program/src/components/ui/Button.scss
++++ b/apps/mini-program/src/components/ui/Button.scss
+@@ -12,6 +12,7 @@
+   font-weight: $font-weight-semibold;
+   white-space: nowrap;
+   overflow: hidden;
++  text-overflow: ellipsis;
+   transition: transform 0.12s ease, opacity 0.12s ease;
+ 
+   &::after {
+diff --git a/apps/mini-program/src/pages/icebreaker-session/index.scss b/apps/mini-program/src/pages/icebreaker-session/index.scss
+index 8f69b210e..6629ccee8 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/index.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/index.scss
+@@ -65,6 +65,8 @@ $__gold-accent:  $color-landed-gold;
+   // native scroll-view element itself.
+   &__inner {
+     padding: $container-padding;
++    // Terminal recap CTA can sit against the home indicator — pad for it.
++    padding-bottom: calc(#{$container-padding} + env(safe-area-inset-bottom));
+   }
+ 
+   // Error surfaces are plain Views (no scroll-view), so they carry their own.
+@@ -76,60 +78,6 @@ $__gold-accent:  $color-landed-gold;
+     position: relative;
+   }
+ 
+-  &__stall-nudge {
+-    display: flex;
+-    flex-direction: column;
+-    align-items: center;
+-    gap: $spacing-sm;
+-    margin: $spacing-sm auto;
+-    padding: $spacing-md;
+-    max-width: 640rpx;
+-    border-radius: $card-radius-lg;
+-    // Banner treatment (design audit): quiet accent tint, no card-weight
+-    // shadow/border — it must not fight the foil hero card for attention.
+-    background: rgba($color-primary, 0.08);
+-  }
+-
+-  &__stall-nudge-text {
+-    @include type-subheading;
+-    color: $color-text-primary;
+-    text-align: center;
+-  }
+-
+-  &__stall-nudge-actions {
+-    display: flex;
+-    gap: $spacing-sm;
+-    width: 100%;
+-    min-width: 0;
+-  }
+-
+-  &__stall-nudge-btn {
+-    flex: 1 1 0;
+-    min-width: 0;
+-    padding-right: $spacing-sm;
+-    padding-left: $spacing-sm;
+-    white-space: nowrap;
+-  }
+-
+-  &__stall-nudge-btn-label {
+-    display: block;
+-    flex-shrink: 0;
+-    white-space: nowrap;
+-    word-break: keep-all;
+-  }
+-
+-  &__host-advance {
+-    display: flex;
+-    flex-direction: column;
+-    align-items: center;
+-    gap: $spacing-xs;
+-    margin-top: $spacing-md;
+-  }
+-
+-  &__host-advance-btn {
+-    min-width: 320rpx;
+-  }
+-
+   // ── PR1 壳层: one-time host ⋯ coachmark ─────────────────────────────
+   // Dark bubble for ≥4.5:1 contrast on the light page; floats below the
+   // band's right edge with an arrow pointing up at the outlined ⋯ trigger.
+@@ -142,9 +90,9 @@ $__gold-accent:  $color-landed-gold;
+     max-width: 440rpx;
+     padding: $spacing-sm $spacing-md;
+     background: $color-text-primary;
+-    border-radius: 16rpx;
++    border-radius: $radius-md;
+     box-shadow: 0 8rpx 24rpx rgba($color-text-primary, 0.16);
+-    animation: icebreaker-coachmark-in 150ms ease both;
++    animation: icebreaker-coachmark-in 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+ 
+   &__coachmark-text {
+@@ -166,11 +114,12 @@ $__gold-accent:  $color-landed-gold;
+   // Error modifier — centre the error block vertically
+   &--error {
+     @include flex-center;
++    min-height: 100vh;
+     min-height: 100dvh;
+   }
+ 
+   &__phase-shell {
+-    animation: icebreaker-phase-in 0.18s cubic-bezier(0.2, 0, 0.2, 1) both;
++    animation: icebreaker-phase-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+     transition: opacity 0.12s ease, transform 0.12s ease;
+   }
+ 
+@@ -196,7 +145,7 @@ $__gold-accent:  $color-landed-gold;
+     background: rgba($color-surface, 0.92);
+     box-shadow: 0 14rpx 34rpx rgba($color-primary, 0.12);
+     backdrop-filter: blur(14rpx);
+-    animation: icebreaker-flow-sync-in 0.16s ease both;
++    animation: icebreaker-flow-sync-in 0.16s cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+ 
+   &__flow-sync-dot {
+@@ -208,9 +157,9 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__flow-sync-text {
+-    font-size: 24rpx;
+-    font-weight: 600;
+-    line-height: 1.2;
++    @include type-label;
++    font-weight: $font-weight-semibold;
++    line-height: 1.2; // compact single-line pill readout
+     color: $color-text-primary;
+   }
+ 
+@@ -228,7 +177,7 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__error-text {
+-    font-size: $font-size-base;
++    @include type-body;
+     color: $color-text-secondary;
+     text-align: center;
+   }
+@@ -240,7 +189,8 @@ $__gold-accent:  $color-landed-gold;
+   // ── Phase Transition Toast (restored 2026-07-17; purged by mistake in PR3) ──
+   &__phase-toast {
+     position: fixed;
+-    top: calc(200rpx + env(safe-area-inset-top));
++    // Clears the sticky __flow-sync pill slot (top 112rpx + ~80rpx pill).
++    top: calc(240rpx + env(safe-area-inset-top));
+     left: 50%;
+     transform: translateX(-50%);
+     box-sizing: border-box;
+@@ -251,8 +201,8 @@ $__gold-accent:  $color-landed-gold;
+     gap: $spacing-sm;
+     padding: $spacing-sm $spacing-lg;
+     background: $color-surface;
+-    border-radius: 100rpx;
+-    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
++    border-radius: $radius-full;
++    box-shadow: $shadow-md;
+     z-index: 100;
+     animation: fade-slide-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+@@ -299,26 +249,24 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__waiting-title {
+-    font-size: $font-size-lg;
++    @include type-subheading;
+     font-weight: $font-weight-bold;
+     color: $color-text-primary;
+   }
+ 
+   &__waiting-count {
+-    font-size: $font-size-base;
++    @include type-body;
+     color: $color-text-secondary;
+   }
+ 
+-  &__waiting-host-row {
+-    display: flex;
+-    align-items: center;
+-    gap: $spacing-xs;
+-    margin-top: $spacing-xs;
+-  }
+-
+   &__waiting-host {
+-    font-size: $font-size-sm;
++    display: block;
++    max-width: 100%;
++    overflow: hidden;
++    @include type-label;
+     color: $color-text-muted;
++    white-space: nowrap;
++    text-overflow: ellipsis;
+   }
+ 
+   &__waiting-tier {
+@@ -340,9 +288,9 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   // Zero-scroll flex layout for warmup (contract AC11).
+-  // When scrollY is disabled, the ScrollView acts as a flex column and the
+-  // phase shell fills the remaining viewport so the action bar sits at the
+-  // bottom of the SE 667pt viewport.
++  // scrollY stays enabled (2026-08-24) as a short-viewport escape hatch; the
++  // flex column still stretches the phase shell so the action bar sits at the
++  // bottom of the SE 667pt viewport and nothing scrolls when content fits.
+   &--warmup {
+     display: flex;
+     flex-direction: column;
+@@ -374,9 +322,8 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__tool-strip-title {
+-    font-size: $font-size-sm;
++    @include type-label;
+     font-weight: $font-weight-semibold;
+-    color: $color-text-secondary;
+     margin-bottom: $spacing-sm;
+   }
+ 
+@@ -404,7 +351,7 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__tool-card-badge-text {
+-    font-size: $font-size-xs;
++    @include type-caption;
+     font-weight: $font-weight-bold;
+     color: $color-primary;
+   }
+@@ -418,15 +365,13 @@ $__gold-accent:  $color-landed-gold;
+ 
+   &__tool-card-title {
+     display: block;
+-    font-size: $font-size-base;
++    @include type-body;
+     font-weight: $font-weight-bold;
+-    color: $color-text-primary;
+   }
+ 
+   &__tool-card-sub {
+     display: block;
+-    font-size: $font-size-xs;
+-    color: $color-text-secondary;
++    @include type-caption;
+     margin-top: 6rpx;
+   }
+ 
+@@ -435,118 +380,6 @@ $__gold-accent:  $color-landed-gold;
+ // Design spec: 2×4 style grid → translateX slide → 2×2 genre grid
+ // Zero-scroll viewport. Single-transform-per-element animations only.
+ 
+-.ms-generation {
+-  position: fixed;
+-  inset: 0;
+-  z-index: 240;
+-  display: flex;
+-  align-items: center;
+-  justify-content: center;
+-  box-sizing: border-box;
+-  padding: $spacing-xl $spacing-lg;
+-  background: rgba($color-bg-warm-to, 0.96);
+-
+-  &__card {
+-    width: 100%;
+-    max-width: 640rpx;
+-    box-sizing: border-box;
+-    padding: 48rpx 40rpx;
+-    border: 2rpx solid rgba($color-primary, 0.14);
+-    border-radius: 32rpx;
+-    background: $color-surface;
+-    text-align: center;
+-    animation: ms-generation-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+-  }
+-
+-  &__mascot {
+-    display: block;
+-    width: 144rpx;
+-    height: 144rpx;
+-    margin: 0 auto $spacing-sm;
+-  }
+-
+-  &__eyebrow {
+-    display: block;
+-    font-size: $font-size-xs;
+-    font-weight: $font-weight-bold;
+-    color: $color-primary;
+-    letter-spacing: 4rpx;
+-  }
+-
+-  &__title {
+-    @include font-cn-display;
+-    display: block;
+-    margin-top: $spacing-xs;
+-    font-size: $font-size-xl;
+-    font-weight: $font-weight-bold;
+-    color: $color-text-primary;
+-  }
+-
+-  &__stage {
+-    display: block;
+-    min-height: 44rpx;
+-    margin-top: $spacing-sm;
+-    font-size: $font-size-sm;
+-    color: $color-text-secondary;
+-  }
+-
+-  &__track {
+-    position: relative;
+-    width: 100%;
+-    height: 20rpx;
+-    margin-top: $spacing-lg;
+-    overflow: hidden;
+-    border-radius: 999rpx;
+-    background: rgba($color-primary, 0.12);
+-  }
+-
+-  &__fill {
+-    width: 100%;
+-    height: 100%;
+-    border-radius: inherit;
+-    background: $color-primary;
+-    transform-origin: left center;
+-    transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+-  }
+-
+-  &__metrics {
+-    display: flex;
+-    align-items: baseline;
+-    justify-content: space-between;
+-    gap: $spacing-sm;
+-    margin-top: $spacing-sm;
+-  }
+-
+-  &__percent {
+-    font-size: $font-size-lg;
+-    font-weight: $font-weight-bold;
+-    color: $color-primary;
+-  }
+-
+-  &__time {
+-    font-size: $font-size-xs;
+-    color: $color-text-secondary;
+-  }
+-
+-  &__hint {
+-    display: block;
+-    margin-top: $spacing-lg;
+-    font-size: $font-size-xs;
+-    color: $color-text-muted;
+-  }
+-}
+-
+-@keyframes ms-generation-enter {
+-  from {
+-    opacity: 0;
+-    transform: translateY(16rpx);
+-  }
+-  to {
+-    opacity: 1;
+-    transform: translateY(0);
+-  }
+-}
+-
+ .ms-modal {
+   position: fixed;
+   inset: 0;
+@@ -556,10 +389,6 @@ $__gold-accent:  $color-landed-gold;
+   justify-content: center;
+   background: $color-surface;
+ 
+-  &__backdrop {
+-    display: none;
+-  }
+-
+   &__sheet {
+     position: relative;
+     z-index: 1;
+@@ -577,10 +406,6 @@ $__gold-accent:  $color-landed-gold;
+     overflow: hidden;
+   }
+ 
+-  &__handle {
+-    display: none;
+-  }
+-
+   &__header {
+     flex-shrink: 0;
+     margin-bottom: $spacing-sm;
+@@ -634,8 +459,7 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__subtitle {
+-    font-size: $font-size-sm;
+-    color: $color-text-secondary;
++    @include type-label;
+     margin-top: 4rpx;
+   }
+ 
+@@ -676,8 +500,7 @@ $__gold-accent:  $color-landed-gold;
+   &__hero-hint {
+     display: block;
+     overflow: hidden;
+-    color: $color-text-secondary;
+-    font-size: $font-size-xs;
++    @include type-caption;
+     text-overflow: ellipsis;
+     white-space: nowrap;
+   }
+@@ -687,9 +510,8 @@ $__gold-accent:  $color-landed-gold;
+     align-items: center;
+     justify-content: center;
+     min-height: 88rpx;
+-    font-size: $font-size-sm;
++    @include type-label;
+     color: $color-primary;
+-    font-weight: $font-weight-medium;
+     padding: 8rpx 16rpx;
+   }
+ 
+@@ -709,14 +531,6 @@ $__gold-accent:  $color-landed-gold;
+   &__cta {
+     width: 100%;
+   }
+-
+-  &__footer-hint {
+-    display: block;
+-    text-align: center;
+-    font-size: $font-size-sm;
+-    color: $color-text-muted;
+-    padding: 24rpx 0;
+-  }
+ }
+ 
+ // ─── Stage Containers ─────────────────────────────────────────────────────────
+@@ -744,28 +558,20 @@ $__gold-accent:  $color-landed-gold;
+       aspect-ratio: 3 / 4;
+     }
+   }
+-
+-  &--genre {
+-    // 2×2 grid: 4 genres
+-    .ms-genre-card {
+-      width: calc(50% - 8rpx);
+-      aspect-ratio: 1 / 1;
+-    }
+-  }
+ }
+ 
+ // ─── Style Cards ──────────────────────────────────────────────────────────────
+ 
+ .ms-card {
+   position: relative;
+-  border-radius: 24rpx;
++  border-radius: $card-radius-sm;
+   overflow: hidden;
+   cursor: pointer;
+   // Initial state for entrance animation
+   opacity: 0;
+   transform: scale(0.92);
+   transition:
+-    transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
++    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+     opacity 200ms ease;
+ 
+   // Staggered entrance — BEM modifiers for index 0..7
+@@ -837,7 +643,7 @@ $__gold-accent:  $color-landed-gold;
+     position: absolute;
+     bottom: 56rpx;
+     left: 16rpx;
+-    font-size: $font-size-xs;
++    @include type-caption;
+     color: rgba(255, 255, 255, 0.75);
+     z-index: 1;
+   }
+@@ -873,96 +679,6 @@ $__gold-accent:  $color-landed-gold;
+   }
+ }
+ 
+-// ─── Genre Cards ──────────────────────────────────────────────────────────────
+-
+-.ms-genre-header {
+-  margin-bottom: $spacing-sm;
+-
+-  &__title {
+-    @include type-body-emphasis;
+-    color: $color-text-primary;
+-  }
+-
+-  &__hint {
+-    font-size: $font-size-xs;
+-    color: $color-text-secondary;
+-    margin-top: 4rpx;
+-  }
+-}
+-
+-.ms-genre-card {
+-  position: relative;
+-  border-radius: 24rpx;
+-  overflow: hidden;
+-  cursor: pointer;
+-  transition:
+-    transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+-    opacity 200ms ease;
+-
+-  &:active,
+-  &--pressed {
+-    transform: scale(0.96);
+-    transition-duration: 100ms;
+-  }
+-
+-  &--selected {
+-    .ms-genre-card__glow {
+-      opacity: 1;
+-      transform: scale(1);
+-    }
+-  }
+-
+-  &__bg {
+-    position: absolute;
+-    inset: 0;
+-    pointer-events: none;
+-  }
+-
+-  &__overlay {
+-    position: absolute;
+-    inset: 0;
+-    background: linear-gradient(to top, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 50%);
+-    pointer-events: none;
+-  }
+-
+-  &__label {
+-    position: absolute;
+-    bottom: 20rpx;
+-    left: 20rpx;
+-    right: 20rpx;
+-    @include font-cn-display;
+-    font-size: $font-size-md;
+-    font-weight: $font-weight-bold;
+-    color: $color-text-white;
+-    line-height: 1.2;
+-    z-index: 1;
+-  }
+-
+-  &__glow {
+-    position: absolute;
+-    inset: -4rpx;
+-    border-radius: 28rpx;
+-    border: 4rpx solid;
+-    opacity: 0;
+-    transform: scale(0.96);
+-    pointer-events: none;
+-    transition:
+-      opacity 200ms ease-out,
+-      transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+-  }
+-
+-  &__hit-target {
+-    position: absolute;
+-    inset: 0;
+-    z-index: 3;
+-    background: transparent;
+-
+-    &--pressed {
+-      background: rgba($color-surface, 0.08);
+-    }
+-  }
+-}
+-
+ // ─── Host Script Library ─────────────────────────────────────────────────────
+ 
+ .ms-library {
+@@ -987,8 +703,7 @@ $__gold-accent:  $color-landed-gold;
+ 
+   &__section-hint,
+   &__empty-copy {
+-    font-size: $font-size-xs;
+-    color: $color-text-secondary;
++    @include type-caption;
+   }
+ 
+   &__list {
+@@ -1000,7 +715,7 @@ $__gold-accent:  $color-landed-gold;
+   &__state {
+     min-height: 192rpx;
+     padding: 32rpx;
+-    border-radius: 24rpx;
++    border-radius: $card-radius-sm;
+     background: rgba($color-primary, 0.05);
+     display: flex;
+     flex-direction: column;
+@@ -1066,7 +781,7 @@ $__gold-accent:  $color-landed-gold;
+     gap: 16rpx;
+     margin-bottom: 16rpx;
+     padding: 0 24rpx;
+-    border-radius: 20rpx;
++    border-radius: $radius-md;
+     background: rgba($color-primary, 0.06);
+     color: $color-text-primary;
+     font-size: $font-size-sm;
+@@ -1118,7 +833,7 @@ $__gold-accent:  $color-landed-gold;
+   position: relative;
+   padding: 24rpx;
+   border: 2rpx solid rgba($color-primary, 0.14);
+-  border-radius: 24rpx;
++  border-radius: $card-radius-sm;
+   background: $color-surface;
+   box-shadow: 0 12rpx 32rpx rgba($color-primary, 0.08);
+ 
+@@ -1158,16 +873,20 @@ $__gold-accent:  $color-landed-gold;
+   &__meta {
+     gap: 12rpx;
+     margin-bottom: 8rpx;
+-    font-size: $font-size-xs;
++    @include type-caption;
+     color: $color-primary;
+   }
+ 
+   &__title {
+     @include font-cn-display;
+-    display: block;
++    // LLM-generated titles are unbounded — clamp to 2 lines (premise: 3).
++    display: -webkit-box;
++    overflow: hidden;
+     color: $color-text-primary;
+     font-size: $font-size-md;
+     font-weight: $font-weight-bold;
++    -webkit-box-orient: vertical;
++    -webkit-line-clamp: 2;
+   }
+ 
+   &__premise {
+@@ -1197,7 +916,7 @@ $__gold-accent:  $color-landed-gold;
+   &__card {
+     padding: 24rpx;
+     border: 2rpx solid rgba($color-primary, 0.1);
+-    border-radius: 24rpx;
++    border-radius: $card-radius-sm;
+     background: $color-surface;
+   }
+ 
+@@ -1271,9 +990,7 @@ $__gold-accent:  $color-landed-gold;
+ // ─── Reduced Motion ───────────────────────────────────────────────────────────
+ 
+ @media (prefers-reduced-motion: reduce) {
+-  .ms-generation__card,
+   .ms-card,
+-  .ms-genre-card,
+   .ms-library__genre,
+   .ms-stage {
+     transition: none !important;
+@@ -1282,9 +999,7 @@ $__gold-accent:  $color-landed-gold;
+     transform: none !important;
+   }
+ 
+-  .ms-card__glow,
+-  .ms-genre-card__glow,
+-  .ms-generation__fill {
++  .ms-card__glow {
+     transition: none !important;
+   }
+ }
+@@ -1343,7 +1058,18 @@ $__gold-accent:  $color-landed-gold;
+ // ─── Xiaoyue Session Pack ────────────────────────────────────────────────────
+ 
+ .icebreaker__generate-pack-btn {
+-  margin: 24rpx 32rpx 0;
++  // __inner already pads horizontally — only the top gap belongs here.
++  margin: 24rpx 0 0;
++}
++
++// ─── Bonus Gate Overlay ────────────────────────────────────────────────────
++// Layout/visuals are inline in overlays/BonusGateOverlay.tsx; this class gives
++// the action-row buttons their flex: 1 (the old 'flex-1' class had zero
++// stylesheet definitions). Lives here because the page is in a subpackage and
++// a colocated overlay SCSS would ride the style-splitting trap.
++
++.bonus-gate-overlay__btn {
++  flex: 1;
+ }
+ 
+ // ─── Phase Intro Overlay ──────────────────────────────────────────
+@@ -1367,12 +1093,11 @@ $__gold-accent:  $color-landed-gold;
+     flex-direction: column;
+     align-items: center;
+     gap: 24rpx;
+-    animation: phase-intro-scale-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
++    animation: phase-intro-scale-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+ 
+   &__label {
+-    font-size: $font-size-xl;
+-    font-weight: 700;
++    @include type-heading;
+     color: $color-bg-tint-cream;
+     text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.3);
+     letter-spacing: 4rpx;
+@@ -1435,7 +1160,7 @@ $__gold-accent:  $color-landed-gold;
+     width: 600rpx;
+     height: 600rpx;
+     z-index: 1;
+-    animation: celebration-scale-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
++    animation: celebration-scale-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+ 
+   &__card {
+@@ -1444,15 +1169,14 @@ $__gold-accent:  $color-landed-gold;
+     width: 460rpx;
+     padding: 32rpx;
+     background: rgba(0, 0, 0, 0.55);
+-    border-radius: 24rpx;
++    border-radius: $card-radius-sm;
+     border: 1rpx solid rgba(255, 255, 255, 0.15);
+     text-align: center;
+-    animation: celebration-fade-slide-up 0.5s 0.15s ease both;
++    animation: celebration-fade-slide-up 0.5s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+ 
+   &__title {
+-    font-size: $font-size-2xl;
+-    font-weight: 700;
++    @include type-title;
+     color: $color-bg-tint-cream;
+     text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.4);
+     margin-bottom: 16rpx;
+@@ -1518,7 +1242,7 @@ $__gold-accent:  $color-landed-gold;
+ 
+   &__title {
+     display: block;
+-    font-size: $font-size-lg;
++    @include type-subheading;
+     font-weight: $font-weight-bold;
+     color: $color-text-primary;
+   }
+@@ -1526,10 +1250,7 @@ $__gold-accent:  $color-landed-gold;
+   &__subtitle {
+     display: block;
+     margin-top: $spacing-xs;
+-    font-size: $font-size-sm;
+-    font-weight: $font-weight-medium;
+-    color: $color-text-secondary;
+-    line-height: 1.5;
++    @include type-label;
+   }
+ 
+   &__host-badge {
+@@ -1538,44 +1259,43 @@ $__gold-accent:  $color-landed-gold;
+     border-radius: 999rpx;
+     color: $color-text-white;
+     background: $color-primary;
+-    font-size: $font-size-xs;
++    @include type-caption;
+     font-weight: $font-weight-bold;
+     line-height: 1.2;
+   }
+ 
+   &__role-card {
+     padding: $spacing-lg;
+-    border-radius: 20rpx;
++    border-radius: $card-radius-sm;
+     background: $color-bg-clean;
+     border: 2rpx solid rgba($color-primary, 0.22);
+-    box-shadow: 0 12rpx 30rpx rgba(31, 41, 55, 0.08);
++    box-shadow: $shadow-md;
+   }
+ 
+   &__role-kicker {
+     display: block;
+-    font-size: $font-size-sm;
+-    color: $color-text-secondary;
++    @include type-label;
+     font-weight: $font-weight-semibold;
+   }
+ 
+   &__role-name {
+-    display: block;
++    display: -webkit-box;
+     margin-top: $spacing-xs;
+-    font-size: $font-size-xl;
+-    color: $color-text-primary;
+-    font-weight: $font-weight-bold;
++    overflow: hidden;
++    @include type-heading;
++    -webkit-box-orient: vertical;
++    -webkit-line-clamp: 2;
+   }
+ 
+   &__role-copy {
+     display: block;
+     margin-top: $spacing-sm;
+-    font-size: $font-size-sm;
+-    color: $color-text-secondary;
++    @include type-label;
+     line-height: 1.55;
+   }
+ 
+   &__waiting {
+-    font-size: $font-size-base;
++    @include type-body;
+     color: $color-text-secondary;
+     text-align: center;
+     padding: $spacing-xl 0;
+@@ -1587,10 +1307,10 @@ $__gold-accent:  $color-landed-gold;
+     gap: $spacing-sm;
+     width: 100%;
+     padding: $spacing-md $spacing-lg;
+-    border-radius: 16rpx;
++    border-radius: $radius-md;
+     background: $color-bg-clean;
+     border: 2rpx solid rgba($color-primary, 0.28);
+-    box-shadow: 0 8rpx 24rpx rgba(31, 41, 55, 0.06);
++    box-shadow: $shadow-sm;
+     transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+     min-height: 88rpx;
+     box-sizing: border-box;
+@@ -1628,15 +1348,14 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__btn-emoji {
+-    font-size: 40rpx;
++    font-size: $font-size-xl;
+     line-height: 1;
+     flex-shrink: 0;
+   }
+ 
+   &__btn-label {
+-    font-size: $font-size-base;
++    @include type-body;
+     font-weight: $font-weight-bold;
+-    color: $color-text-primary;
+     flex: 1;
+   }
+ 
+@@ -1653,10 +1372,12 @@ $__gold-accent:  $color-landed-gold;
+   &__btn-hint {
+     flex-shrink: 0;
+     max-width: 220rpx;
+-    font-size: $font-size-xs;
+-    color: $color-text-secondary;
++    overflow: hidden;
++    @include type-caption;
+     font-weight: $font-weight-semibold;
+     text-align: right;
++    white-space: nowrap;
++    text-overflow: ellipsis;
+   }
+ }
+ 
+diff --git a/apps/mini-program/src/pages/icebreaker-session/index.tsx b/apps/mini-program/src/pages/icebreaker-session/index.tsx
+index 5740c2405..113273ec6 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/index.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/index.tsx
+@@ -999,7 +999,12 @@ export default function IcebreakerSessionPage() {
+   return (
+     <ScrollView
+       className={`icebreaker${phase === 'warmup' ? ' icebreaker--warmup' : ''}${moodField ? ` icebreaker--mood-field icebreaker--field-${moodField.state}` : ''}`}
+-      scrollY={phase !== 'warmup'}
++      // Warmup previously locked scrollY off (zero-scroll contract AC11), but
++      // its stacked fixed minimums can exceed short viewports (568–667pt
++      // class), clipping the CTA with no recovery. scrollY is now always on:
++      // the warmup flex layout still fills the viewport on normal devices so
++      // nothing scrolls in practice, and short devices get an escape hatch.
++      scrollY
+       enhanced
+       showScrollbar={false}
+       enableFlex={phase === 'warmup'}
+@@ -1030,8 +1035,10 @@ export default function IcebreakerSessionPage() {
+         {phaseHeader}
+ 
+         {/* PR1 壳层: one-time host ⋯ coachmark — floats below the band's right
+-            edge, points up at the trigger, never covers the CTA area. */}
+-        {coachmarkShown && (
++            edge, points up at the trigger, never covers the CTA area.
++            Suppressed while the adaptive suggestion card is open: both anchor
++            to top:100% of this header band at $z-modal and would stack. */}
++        {coachmarkShown && !suggestionOverlayOpen && (
+           <View
+             className='icebreaker__coachmark'
+             onClick={handleDismissCoachmark}
+diff --git a/apps/mini-program/src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx b/apps/mini-program/src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx
+index 6a41e29e5..1cda8eab3 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx
+@@ -7,6 +7,16 @@ import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
+ import { apiRequest } from '../../../lib/api/api'
+ import { logError } from '../../../lib/utils/logger'
+ 
++// Shared row layout for the single action row (exactly one renders per role
++// state — see the mutually exclusive conditionals in the JSX below).
++const actionRowStyle = {
++  display: 'flex',
++  flexDirection: 'row',
++  gap: '24rpx',
++  width: '100%',
++  marginTop: '16rpx',
++} as const
++
+ interface BonusGateOverlayProps {
+   socialSessionId: string
+   isHost: boolean
+@@ -64,6 +74,7 @@ export default function BonusGateOverlay({
+ 
+   return (
+     <View
++      catchMove
+       style={{
+         position: 'fixed',
+         top: 0,
+@@ -77,6 +88,7 @@ export default function BonusGateOverlay({
+         justifyContent: 'center',
+         zIndex: 1000,
+         padding: '40rpx',
++        paddingBottom: 'calc(40rpx + env(safe-area-inset-bottom))',
+       }}
+     >
+       <View
+@@ -119,19 +131,14 @@ export default function BonusGateOverlay({
+           </Text>
+         )}
+ 
++        {/* Exactly ONE action row per role state: a host who hasn't voted
++            records sentiment first; once voted, the host decides (跳过/接受);
++            non-hosts only ever record sentiment. */}
+         {isHost && !hasVoted && (
+-          <View
+-            style={{
+-              display: 'flex',
+-              flexDirection: 'row',
+-              gap: '24rpx',
+-              width: '100%',
+-              marginTop: '16rpx',
+-            }}
+-          >
++          <View style={actionRowStyle}>
+             <Button
+               variant='secondary'
+-              className='flex-1'
++              className='bonus-gate-overlay__btn'
+               onClick={() => handleSentiment('pass')}
+               disabled={loading}
+               loading={loading}
+@@ -140,7 +147,7 @@ export default function BonusGateOverlay({
+             </Button>
+             <Button
+               variant='primary'
+-              className='flex-1'
++              className='bonus-gate-overlay__btn'
+               onClick={() => handleSentiment('want')}
+               disabled={loading}
+               loading={loading}
+@@ -150,19 +157,11 @@ export default function BonusGateOverlay({
+           </View>
+         )}
+ 
+-        {isHost ? (
+-          <View
+-            style={{
+-              display: 'flex',
+-              flexDirection: 'row',
+-              gap: '24rpx',
+-              width: '100%',
+-              marginTop: '16rpx',
+-            }}
+-          >
++        {isHost && hasVoted && (
++          <View style={actionRowStyle}>
+             <Button
+               variant='secondary'
+-              className='flex-1'
++              className='bonus-gate-overlay__btn'
+               onClick={() => handleHostRespond(false)}
+               disabled={loading}
+               loading={loading}
+@@ -171,7 +170,7 @@ export default function BonusGateOverlay({
+             </Button>
+             <Button
+               variant='primary'
+-              className='flex-1'
++              className='bonus-gate-overlay__btn'
+               onClick={() => handleHostRespond(true)}
+               disabled={loading}
+               loading={loading}
+@@ -179,19 +178,13 @@ export default function BonusGateOverlay({
+               接受
+             </Button>
+           </View>
+-        ) : (
+-          <View
+-            style={{
+-              display: 'flex',
+-              flexDirection: 'row',
+-              gap: '24rpx',
+-              width: '100%',
+-              marginTop: '16rpx',
+-            }}
+-          >
++        )}
++
++        {!isHost && (
++          <View style={actionRowStyle}>
+             <Button
+               variant='secondary'
+-              className='flex-1'
++              className='bonus-gate-overlay__btn'
+               onClick={() => handleSentiment('pass')}
+               disabled={loading || hasVoted}
+               loading={loading}
+@@ -200,7 +193,7 @@ export default function BonusGateOverlay({
+             </Button>
+             <Button
+               variant='primary'
+-              className='flex-1'
++              className='bonus-gate-overlay__btn'
+               onClick={() => handleSentiment('want')}
+               disabled={loading || hasVoted}
+               loading={loading}
+diff --git a/apps/mini-program/src/pages/icebreaker-session/overlays/MiniScriptConfigModal.tsx b/apps/mini-program/src/pages/icebreaker-session/overlays/MiniScriptConfigModal.tsx
+index 0de9a54e9..6e76614e4 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/overlays/MiniScriptConfigModal.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/overlays/MiniScriptConfigModal.tsx
+@@ -109,7 +109,7 @@ export function MiniScriptConfigModal({ open, onClose, initialGenres = DEFAULT_I
+ 
+   return (
+     <RootPortal>
+-      <View className='ms-modal'>
++      <View className='ms-modal' catchMove>
+         <View className='ms-modal__sheet'>
+           <View className='ms-modal__header'>
+             <View className='ms-modal__header-main'>
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/LieDetectiveHeroView.tsx b/apps/mini-program/src/pages/icebreaker-session/phases/LieDetectiveHeroView.tsx
+index a6ab2e335..96a5b1097 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/LieDetectiveHeroView.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/LieDetectiveHeroView.tsx
+@@ -158,90 +158,90 @@ export function LieDetectiveHeroView({
+           doneCount={players.length}
+           totalCount={playerCount}
+           actions={
+-            <>
+-              {!submitted ? (
+-                <View className='lie-detective-hero__custom-form'>
+-                  <Text className='lie-detective-hero__custom-guide'>
+-                    写下两句真话和一句谎言，再点选哪句是谎言。只有揭晓时才会公开答案。
+-                  </Text>
+-                  {customStatements.map((statement, index) => {
+-                    const trimmed = statement.trim()
+-                    const assistTag = assistTags[index]?.trim() ?? ''
+-                    const assistTagInvalid =
+-                      assistTag.length > 20 || (assistTag.length > 0 && checkProfanity(assistTag))
+-                    const invalid =
+-                      trimmed.length > 0 &&
+-                      (trimmed.length < 2 || checkProfanity(trimmed))
+-                    const isLie = customLieIndex === index + 1
+-                    return (
+-                      <View className='lie-detective-hero__custom-field' key={index}>
+-                        <View className='lie-detective-hero__custom-field-head'>
+-                          <Text className='lie-detective-hero__custom-label'>第 {index + 1} 句</Text>
+-                          <View
+-                            className={`lie-detective-hero__lie-picker${isLie ? ' lie-detective-hero__lie-picker--selected' : ''}`}
+-                            onClick={() => setCustomLieIndex(index + 1)}
+-                            role='button'
+-                            aria-label={`设为第 ${index + 1} 句谎言`}
+-                          >
+-                            <Text>{isLie ? '✓ 这是谎言' : '设为谎言'}</Text>
+-                          </View>
+-                        </View>
+-                        <Textarea
+-                          className={`lie-detective-hero__custom-input${invalid ? ' lie-detective-hero__custom-input--error' : ''}`}
+-                          placeholder='输入一句话，或者试试标签生成'
+-                          value={statement}
+-                          onInput={(event) => updateCustomStatement(index, event.detail.value)}
+-                          maxlength={80}
+-                          autoHeight
+-                          disabled={isGeneratingStatements || generatingRow === index}
+-                        />
+-                        <View className='lie-detective-hero__assist-row'>
+-                          <Input
+-                            className='lie-detective-hero__assist-input'
+-                            placeholder='用标签生成一句话，多点几次会有不同的思路'
+-                            value={assistTags[index]}
+-                            onInput={(event) => updateAssistTag(index, event.detail.value)}
+-                            maxlength={20}
+-                            disabled={generatingRow === index}
+-                          />
+-                          <View
+-                            className={`lie-detective-hero__assist-button${!assistTag || assistTagInvalid || isGeneratingFromTag ? ' lie-detective-hero__assist-button--disabled' : ''}`}
+-                            role='button'
+-                            aria-label={`根据第 ${index + 1} 个标签生成句子`}
+-                            onClick={() => void handleAssistGenerate(index)}
+-                          >
+-                            <Text>{generatingRow === index ? '生成中…' : '标签生成'}</Text>
+-                          </View>
+-                        </View>
+-                        {assistTagInvalid ? (
+-                          <Text className='lie-detective-hero__tag-error'>请换一个 20 字以内的友好标签</Text>
+-                        ) : null}
+-                        <Text className='lie-detective-hero__tag-counter'>{trimmed.length}/80</Text>
++            !submitted ? (
++              <Button
++                variant='primary'
++                onClick={handleCustomSubmit}
++                disabled={!canSubmitCustomSet}
++                loading={isGeneratingStatements}
++              >
++                {isGeneratingStatements ? '正在提交…' : '提交我的三句话'}
++              </Button>
++            ) : isGeneratingStatements ? (
++              <Text className='phase-hero-card__ghost-link'>悦仔生成中…</Text>
++            ) : undefined
++          }
++        >
++          {!submitted ? (
++            <View className='lie-detective-hero__custom-form'>
++              <Text className='lie-detective-hero__custom-guide'>
++                写下两句真话和一句谎言，再点选哪句是谎言。只有揭晓时才会公开答案。
++              </Text>
++              {customStatements.map((statement, index) => {
++                const trimmed = statement.trim()
++                const assistTag = assistTags[index]?.trim() ?? ''
++                const assistTagInvalid =
++                  assistTag.length > 20 || (assistTag.length > 0 && checkProfanity(assistTag))
++                const invalid =
++                  trimmed.length > 0 &&
++                  (trimmed.length < 2 || checkProfanity(trimmed))
++                const isLie = customLieIndex === index + 1
++                return (
++                  <View className='lie-detective-hero__custom-field' key={index}>
++                    <View className='lie-detective-hero__custom-field-head'>
++                      <Text className='lie-detective-hero__custom-label'>第 {index + 1} 句</Text>
++                      <View
++                        className={`lie-detective-hero__lie-picker${isLie ? ' lie-detective-hero__lie-picker--selected' : ''}`}
++                        onClick={() => setCustomLieIndex(index + 1)}
++                        role='button'
++                        aria-label={`设为第 ${index + 1} 句谎言`}
++                      >
++                        <Text>{isLie ? '✓ 这是谎言' : '设为谎言'}</Text>
+                       </View>
+-                    )
+-                  })}
+-                  {hasDuplicateCustomStatements ? (
+-                    <Text className='lie-detective-hero__tag-error'>三句话不能重复</Text>
+-                  ) : null}
+-                  {customStatementsValid && customLieIndex === null ? (
+-                    <Text className='lie-detective-hero__tag-error'>请选择其中一句作为谎言</Text>
+-                  ) : null}
+-                  <Button
+-                    variant='primary'
+-                    onClick={handleCustomSubmit}
+-                    disabled={!canSubmitCustomSet}
+-                    loading={isGeneratingStatements}
+-                  >
+-                    {isGeneratingStatements ? '正在提交…' : '提交我的三句话'}
+-                  </Button>
+-                </View>
++                    </View>
++                    <Textarea
++                      className={`lie-detective-hero__custom-input${invalid ? ' lie-detective-hero__custom-input--error' : ''}`}
++                      placeholder='输入一句话，或者试试标签生成'
++                      value={statement}
++                      onInput={(event) => updateCustomStatement(index, event.detail.value)}
++                      maxlength={80}
++                      autoHeight
++                      disabled={isGeneratingStatements || generatingRow === index}
++                    />
++                    <View className='lie-detective-hero__assist-row'>
++                      <Input
++                        className='lie-detective-hero__assist-input'
++                        placeholder='用标签生成一句话，多点几次会有不同的思路'
++                        value={assistTags[index]}
++                        onInput={(event) => updateAssistTag(index, event.detail.value)}
++                        maxlength={20}
++                        disabled={generatingRow === index}
++                      />
++                      <View
++                        className={`lie-detective-hero__assist-button${!assistTag || assistTagInvalid || isGeneratingFromTag ? ' lie-detective-hero__assist-button--disabled' : ''}`}
++                        role='button'
++                        aria-label={`根据第 ${index + 1} 个标签生成句子`}
++                        onClick={() => void handleAssistGenerate(index)}
++                      >
++                        <Text>{generatingRow === index ? '生成中…' : '标签生成'}</Text>
++                      </View>
++                    </View>
++                    {assistTagInvalid ? (
++                      <Text className='lie-detective-hero__tag-error'>请换一个 20 字以内的友好标签</Text>
++                    ) : null}
++                    <Text className='lie-detective-hero__tag-counter'>{trimmed.length}/80</Text>
++                  </View>
++                )
++              })}
++              {hasDuplicateCustomStatements ? (
++                <Text className='lie-detective-hero__tag-error'>三句话不能重复</Text>
+               ) : null}
+-              {submitted && isGeneratingStatements ? (
+-                <Text className='phase-hero-card__ghost-link'>悦仔生成中…</Text>
++              {customStatementsValid && customLieIndex === null ? (
++                <Text className='lie-detective-hero__tag-error'>请选择其中一句作为谎言</Text>
+               ) : null}
+-            </>
+-          }
+-        />
++            </View>
++          ) : null}
++        </PhaseHeroCard>
+       </View>
+     )
+   }
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.scss b/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.scss
+index d99994657..693aef70c 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.scss
+@@ -88,11 +88,21 @@ $pd-deep: $phase-accent-dice-deep;
+     @include type-body;
+     color: $color-text-secondary;
+     text-align: center;
++    // Defense-in-depth: clamp extremely long AI challenge text on the card face.
++    overflow: hidden;
++    text-overflow: ellipsis;
++    display: -webkit-box;
++    -webkit-line-clamp: 4;
++    -webkit-box-orient: vertical;
+   }
+ 
+   &__challenge-pass {
+     @include type-caption;
+     color: $pd-deep;
++    white-space: nowrap;
++    overflow: hidden;
++    text-overflow: ellipsis;
++    max-width: 100%;
+   }
+ 
+   &__helper {
+@@ -135,6 +145,8 @@ $pd-deep: $phase-accent-dice-deep;
+ 
+   &__countdown-number {
+     @include type-hero;
++    font-family: $font-mono; // tabular hero numerals for the 3-2-1 readout
++    font-variant-numeric: tabular-nums;
+     color: $pd-deep;
+   }
+ 
+@@ -143,10 +155,6 @@ $pd-deep: $phase-accent-dice-deep;
+     color: $color-text-secondary;
+   }
+ 
+-  &__reveal-scroll {
+-    max-height: 62vh;
+-  }
+-
+   &__reveal-list {
+     display: flex;
+     flex-direction: column;
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.tsx b/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.tsx
+index 4cf7e0731..388f95710 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.tsx
+@@ -1,4 +1,4 @@
+-import { ScrollView, View, Text } from '@tarojs/components'
++import { View, Text } from '@tarojs/components'
+ import { useCallback, useEffect, useRef, useState } from 'react'
+ import type { PersonalityDiceChallenge, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker'
+ import type { AIResponseMeta } from '@shared/types/aiMeta'
+@@ -321,8 +321,7 @@ export function PersonalityDiceHeroView({
+           doneCount={participants.length}
+           totalCount={participants.length}
+         >
+-          <ScrollView scrollY className='personality-dice-hero__reveal-scroll'>
+-            <View className='personality-dice-hero__reveal-list'>
++          <View className='personality-dice-hero__reveal-list'>
+             {orderedGroups.map((group) => {
+               const option = group.options[selectedOption[group.userId]]
+               if (!option) return null
+@@ -347,7 +346,6 @@ export function PersonalityDiceHeroView({
+               )
+             })}
+             </View>
+-          </ScrollView>
+         </PhaseHeroCard>
+         <View className='personality-dice-hero__fixed-action'>
+           {allRevealReady ? (
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/QuipBattleHeroView.scss b/apps/mini-program/src/pages/icebreaker-session/phases/QuipBattleHeroView.scss
+index 206d6447f..bf4064cfb 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/QuipBattleHeroView.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/QuipBattleHeroView.scss
+@@ -82,7 +82,9 @@ $qb-deep: $phase-accent-quip-deep;
+     display: flex;
+     flex-direction: column;
+     align-items: center;
++    justify-content: center;
+     gap: $spacing-xs;
++    min-height: 320rpx;
+     padding: $spacing-lg $spacing-md;
+     border-radius: $radius-md;
+     background: $color-surface;
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.scss b/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.scss
+index cd89c5872..2e11bfe9f 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.scss
+@@ -99,8 +99,8 @@ $sf-deep: $phase-accent-speed-deep;
+ 
+   &__pair-tile-badge {
+     position: absolute;
+-    top: -10rpx;
+-    right: -10rpx;
++    top: 8rpx;
++    right: 8rpx;
+     padding: 2rpx 12rpx;
+     border-radius: $radius-pill;
+     background: $sf-deep;
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.tsx b/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.tsx
+index 15feb030b..89d8baa22 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.tsx
+@@ -87,9 +87,9 @@ export function SpeedFriendingHeroView({
+ 
+   const isBye = currentPairs.length > 0 && !myPair
+   const partnerName = myPair
+-    ? myPair.userIdA === currentUserId
++    ? (myPair.userIdA === currentUserId
+       ? myPair.displayNameB
+-      : myPair.displayNameA
++      : myPair.displayNameA) ?? '新伙伴'
+     : undefined
+ 
+   const participantMap = useMemo(() => {

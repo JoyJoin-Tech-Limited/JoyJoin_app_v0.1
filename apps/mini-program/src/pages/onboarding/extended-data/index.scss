@@ -3,6 +3,9 @@
 // Subpackage WXSS guard (AGENTS §15): component SCSS must be @use'd in the
 // consuming page's SCSS or Taro's chunk graph can drop it.
 @use '../../../components/onboarding/BoxJourneySpine.scss' as *;
+// PR-8: XiaoyueInlineError renders above this page's CTA — co-compile its
+// rules into this page's WXSS.
+@use '../../../components/mascot/XiaoyueInlineError.scss' as *;
 
 .extended-data {
   --jj-heat-l1: #A78BFA;

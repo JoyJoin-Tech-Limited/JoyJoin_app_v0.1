@@ -1,6 +1,7 @@
 import Taro from '@tarojs/taro'
 import { useCallback, useState } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
+import { getErrorForSurface } from '@shared/copy/errorBaselines'
 import type { useAuth } from '../../../../../hooks/useAuth'
 import type { useOnboardingAnalytics } from '../../../../../hooks/onboarding/useOnboardingAnalytics'
 import { authenticateMiniProgramUserWithTest, getUserState, type ApiError } from '../../../../../lib/api/api'
@@ -118,12 +119,12 @@ export function useResultsLoginHandoff({
       const typedError = error as ApiError | undefined
       const message =
         typedError?.statusCode === 401
-          ? '微信授权已失效，请重新尝试'
+          ? getErrorForSurface('session-expired', 'inline-error')
           : typedError?.statusCode === 500
-            ? '服务器有点忙，稍后再试'
+            ? getErrorForSurface('server', 'inline-error')
             : error instanceof Error && error.message
               ? error.message
-              : '登录没成功，检查下网络再试试'
+              : getErrorForSurface('login-failed', 'inline-error')
       analytics.errorOccurred('login_handoff_failed', message)
       logError('[PersonalityResults] Login failed', { message })
       // R2-7: return to the pre-handshake state with a friendly inline retry

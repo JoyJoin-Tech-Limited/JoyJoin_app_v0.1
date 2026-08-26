@@ -167,6 +167,12 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  v1 content keeps the flat-content path unchanged. Disable via env
    *  FLASH_STORY_V2_ENABLED=false for instant rollback. */
   flashStoryV2Enabled: "FLASH_STORY_V2_ENABLED",
+  /** 叙事动作层（sprint_20260821_3kmkkw, AC-07）：interaction 节点结果提交开关。
+   *  默认 false（ship dark）；staging 验收后由 super_admin 开启。关闭时服务端
+   *  对 interaction 节点透明应用审核过的 defaultResultId 效果并推进到
+   *  fallbackNext，不丢失或重复故事进度。
+   *  Env fallback: FLASH_STORY_ACTIONS_ENABLED (default: false). */
+  flashStoryActionsEnabled: "FLASH_STORY_ACTIONS_ENABLED",
   /** Optional reviewed-plan AI enrichment for Flash NPC responses. The model
    * never owns settlement, progress, fragments, endings, or traversal. */
   flashStoryAiResponsesEnabled: "FLASH_STORY_AI_RESPONSES_ENABLED",
@@ -209,11 +215,6 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  depth background. Env fallback: PROFILE_IDENTITY_STAGE_ENABLED
    *  (default: true). */
   profileIdentityStageEnabled: "PROFILE_IDENTITY_STAGE_ENABLED",
-  /** Per-flow kill gate for the Flow 1 dual-world intro overlay
-   *  (joyjoin-intro, shown once at profile-review completion). When false,
-   *  the overlay is suppressed entirely and users route straight to nextStep.
-   *  Env fallback: FLOW_INTRO_ENABLED (default: true). */
-  flowIntroEnabled: "FLOW_INTRO_ENABLED",
   /** Per-flow kill gate for the Flow 2 blind-box lifecycle overlay
    *  (blind-box-lifecycle, shown once after first pool registration). When
    *  false, registration success skips the overlay and shows the standard
@@ -281,6 +282,8 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   flashTaskRetryTestEnabled: false,
   flashAnyLocationArrivalTestEnabled: false,
   flashStoryV2Enabled: true,
+  /** 叙事动作层 ship dark — 见 FLAG_ENV_MAP 注释与契约 AC-07。 */
+  flashStoryActionsEnabled: false,
   flashStoryAiResponsesEnabled: false,
   /** Tier-1 semantic moderation (WeChat msgSecCheck) is ON by default. The
    *  check is budget-bounded (see CONTENT_MODERATION_TIER1_BUDGET_MS) and

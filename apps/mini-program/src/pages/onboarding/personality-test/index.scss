@@ -3,6 +3,9 @@
 // Subpackage WXSS guard (AGENTS §15): component SCSS must be @use'd in the
 // consuming page's SCSS or Taro's chunk graph can drop it.
 @use './PersonalityTestAnswerArea.scss' as *;
+// PR-8: XiaoyueInlineError renders on this page (question row + intro
+// footer) — co-compile its rules into this page's WXSS.
+@use '../../../components/mascot/XiaoyueInlineError.scss' as *;
 
 @keyframes mascot-breathe {
   0%, 100% {
@@ -425,6 +428,17 @@
     &--footer {
       margin: 0 0 $spacing-sm;
     }
+  }
+
+  // PR-8: the testing-phase failure row hosts the inline 悦仔 error bubble
+  // plus the retry button — lay them out as a centered column with rhythm.
+  &__error-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+    padding: 0 $container-padding;
   }
 
   // ───────────────────────────────────────────

@@ -1,3 +1,5 @@
+import type { AnonymousAssessmentResult } from '../../../lib/auth/anonymousOnboarding'
+
 export type Phase = 'intro' | 'testing' | 'completing'
 
 export type AssessmentQuestionType = 'choice' | 'slider' | 'emoji_tap'
@@ -38,4 +40,15 @@ export interface AssessmentMatch {
   archetype: string
   score: number
   confidence: number
+}
+
+export interface AssessmentStartResponse {
+  sessionId: string
+  phase: string
+  nextQuestion: AssessmentQuestion | null
+  progress: AssessmentProgress
+  currentMatches: AssessmentMatch[]
+  isComplete: boolean
+  /** Server-computed final result (present when isComplete === true). */
+  result?: AnonymousAssessmentResult
 }

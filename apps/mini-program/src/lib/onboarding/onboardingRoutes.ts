@@ -53,6 +53,7 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   alangCompanion: 'pages/alang/companion/index',
   alangResult: 'pages/alang/result/index',
   alangStoryDetail: 'pages/alang/story-detail/index',
+  alangArchive: 'pages/alang/archive/index',
   alangPreferences: 'pages/alang/preferences/index',
   alangDebug: 'pages/alang/debug/index',
 } as const
@@ -104,6 +105,7 @@ export const MINI_PROGRAM_ROUTES = {
   alangCompanion: `/${MINI_PROGRAM_PAGE_PATHS.alangCompanion}`,
   alangResult: `/${MINI_PROGRAM_PAGE_PATHS.alangResult}`,
   alangStoryDetail: `/${MINI_PROGRAM_PAGE_PATHS.alangStoryDetail}`,
+  alangArchive: `/${MINI_PROGRAM_PAGE_PATHS.alangArchive}`,
   alangPreferences: `/${MINI_PROGRAM_PAGE_PATHS.alangPreferences}`,
   alangDebug: `/${MINI_PROGRAM_PAGE_PATHS.alangDebug}`,
   index: `/${MINI_PROGRAM_PAGE_PATHS.index}`,
@@ -199,6 +201,7 @@ export const MINI_PROGRAM_ALANG_SUBPACKAGE_PAGES = [
   'companion/index',
   'result/index',
   'story-detail/index',
+  'archive/index',
   'preferences/index',
   'debug/index',
 ] as const

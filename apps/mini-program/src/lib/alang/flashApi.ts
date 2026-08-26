@@ -26,6 +26,7 @@ import {
   type FlashLocateResponse as SharedFlashLocateResponse,
   type FlashPreferenceDto,
   type FlashPreferenceUpdateRequest,
+  type FlashStoryArchiveDto,
   type FlashStoryReplayStateDto,
   type FlashTaskDto,
 } from '@shared/alang/flashTypes'
@@ -35,6 +36,7 @@ import type {
   FlashAssignmentView,
   FlashCanonicalSnapshot,
   FlashEncounterView,
+  FlashStoryArchiveView,
   FlashStoryFragmentView,
   FlashHomeView,
   FlashLocationSnapshot,
@@ -302,6 +304,57 @@ export async function advanceFlashStoryNode(input: {
     path: `/api/alang/flash/encounters/${input.encounterId}/story-advance${input.replay ? '?replay=1' : ''}`,
     method: 'POST',
     data: input.replayState ? { replayState: input.replayState } : {},
+  }))
+}
+
+/**
+ * 叙事动作层结果提交（AC-02 客户端侧）。请求体严格为 { nodeId, resultId }：
+ * 不上传触摸轨迹、原始坐标或自由文本（AC-03）；未提交的手势进度只存在本地。
+ * 开关关闭时服务端透明降级为审核过的默认结果（AC-07），客户端无需感知开关。
+ */
+export async function submitFlashStoryInteraction(input: {
+  encounterId: string
+  nodeId: string
+  resultId: string
+}): Promise<FlashEncounterView> {
+  return adaptFlashEncounterDto(await apiRequest<SharedFlashEncounterResponse>({
+    path: `/api/alang/flash/encounters/${input.encounterId}/story-interaction`,
+    method: 'POST',
+    data: { nodeId: input.nodeId, resultId: input.resultId },
+  }))
+}
+
+export function adaptFlashStoryArchiveDto(response: FlashStoryArchiveDto): FlashStoryArchiveView {
+  return {
+    season: response.season
+      ? { id: response.season.id, code: response.season.code, title: response.season.title }
+      : null,
+    fragments: (response.fragments ?? []).map((fragment) => ({
+      id: fragment.id,
+      code: fragment.code,
+      category: fragment.category,
+      title: fragment.title,
+      fact: fragment.fact,
+      assetUrl: fragment.assetUrl ?? null,
+      unlockedAt: fragment.unlockedAt,
+      episodeTitle: fragment.episodeTitle,
+      npcName: fragment.npcName,
+    })),
+    imprints: (response.imprints ?? []).map((imprint) => ({
+      unitId: imprint.unitId,
+      template: imprint.template,
+      resultId: imprint.resultId,
+      settledAt: imprint.settledAt,
+    })),
+    hookHint: response.hookHint ?? null,
+    completedUnitIds: [...(response.completedUnitIds ?? [])],
+  }
+}
+
+export async function fetchFlashStoryArchive(): Promise<FlashStoryArchiveView> {
+  return adaptFlashStoryArchiveDto(await apiRequest<FlashStoryArchiveDto>({
+    path: '/api/alang/flash/story/archive',
+    method: 'GET',
   }))
 }
 

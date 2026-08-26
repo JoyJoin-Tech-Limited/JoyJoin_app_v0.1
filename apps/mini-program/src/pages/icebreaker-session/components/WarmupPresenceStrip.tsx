@@ -72,11 +72,13 @@ export function WarmupPresenceStrip({
         </View>
       </ScrollView>
       <View className='warmup-presence__count'>
+        {/* Fade anchors to the count's ACTUAL left edge (SCSS: left: -16rpx)
+            so it tracks the seam even when the count text exceeds min-width. */}
+        <View className='warmup-presence__fade' aria-hidden='true' />
         <Text className='warmup-presence__count-text'>
           {readyCount}/{totalCount} 已准备
         </Text>
       </View>
-      <View className='warmup-presence__fade' aria-hidden='true' />
     </View>
   )
 }

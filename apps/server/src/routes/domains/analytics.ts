@@ -200,6 +200,11 @@ const DISCOVER_EVENT_TYPES = [
   "duo_status_update",
   "duo_banner_impression",
   "duo_success_view",
+  // Street blind box search funnel head (2026-08-26): fired once per search
+  // attempt start (foreground tracking acquired) so the 寻路启动→到达 rate
+  // has a server-side denominator. Metadata carries appearanceId only — no
+  // coordinates, no user text, no device identifiers.
+  "flash_search_started",
 ] as const;
 
 type DiscoverEventType = (typeof DISCOVER_EVENT_TYPES)[number];

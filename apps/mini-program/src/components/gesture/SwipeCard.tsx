@@ -1,6 +1,7 @@
 import { type ReactNode, useRef, useState, useCallback, useEffect } from 'react'
-import { View, Text } from '@tarojs/components'
+import { View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import JoyJoinIcon from '../ui/JoyJoinIcon'
 // No SCSS side-effect import: Taro's per-subpackage chunking would strand it
 // in a page-invisible sub-common.wxss. Consuming pages must @use
 // '../../components/gesture/SwipeCard.scss' in their page SCSS.
@@ -181,13 +182,13 @@ export default function SwipeCard({
             className='gesture-swipe-card__hint gesture-swipe-card__hint--left'
             style={{ opacity: Math.abs(deltaX) > 20 && deltaX < 0 ? Math.min(Math.abs(deltaX) / 120, 0.8) : 0 }}
           >
-            <View className='gesture-swipe-card__hint-icon'>✕</View>
+            <JoyJoinIcon className='gesture-swipe-card__hint-icon' emoji='✕' tier='status' size={40} />
           </View>
           <View
             className='gesture-swipe-card__hint gesture-swipe-card__hint--right'
             style={{ opacity: Math.abs(deltaX) > 20 && deltaX > 0 ? Math.min(Math.abs(deltaX) / 120, 0.8) : 0 }}
           >
-            <Text className='gesture-swipe-card__hint-icon'>✓</Text>
+            <JoyJoinIcon className='gesture-swipe-card__hint-icon' emoji='✓' tier='status' size={40} />
           </View>
         </>
       )}

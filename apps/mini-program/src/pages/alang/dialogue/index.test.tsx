@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   useEncounter: vi.fn(),
   answer: vi.fn(),
   advance: vi.fn(),
+  interaction: vi.fn(),
+  track: vi.fn(),
   deliver: vi.fn(),
   reroll: vi.fn(),
   offer: vi.fn(),
@@ -48,9 +50,13 @@ vi.mock('../../../lib/alang/useFlash', () => ({
    useFlashEncounter: mocks.useEncounter,
    useAnswerFlashEncounter: () => ({ mutateAsync: mocks.answer, isPending: false }),
    useAdvanceFlashStoryNode: () => ({ mutateAsync: mocks.advance, isPending: false }),
+   useSubmitFlashStoryInteraction: () => ({ mutateAsync: mocks.interaction, isPending: false }),
    useDeliverFlashTask: () => ({ mutateAsync: mocks.deliver, isPending: false }),
    useRerollFlashEncounter: () => ({ mutateAsync: mocks.reroll, isPending: false }),
    useRespondToFlashTaskOffer: () => ({ mutateAsync: mocks.offer, isPending: false }),
+}))
+vi.mock('../../../lib/analytics/flashStoryAnalytics', () => ({
+  flashStoryAnalytics: { track: mocks.track },
 }))
 vi.mock('../../../lib/alang/flashNavigation', () => ({ redirectToFlashCanonical: mocks.canonicalRedirect }))
 vi.mock('../../../lib/utils/haptics', () => ({ haptics: vi.fn() }))
@@ -135,7 +141,7 @@ describe('formal Flash dialogue', () => {
   it('uses structured natural choices and never presents free text for matching', async () => {
     render(<FlashDialoguePage />)
     expect(screen.getByText('如果现在能随便逛逛，你更想去哪种地方？')).toBeInTheDocument()
-    expect(screen.getByText('慢慢选，没有标准答案 ( ´ ▽ ` )')).toBeInTheDocument()
+    expect(screen.getByText('慢慢选，没有标准答案')).toBeInTheDocument()
     expect(document.querySelector('textarea')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '安静一点的' }))
@@ -731,5 +737,152 @@ describe('formal Flash dialogue', () => {
       questionId: 's1-p1-lizi-response-v1',
       optionId: 's1-p1-lizi-cooperate-a',
     }))
+  })
+})
+
+const interactionEncounter = {
+  ...questionEncounter,
+  npc: { id: 'npc-alang', slug: 'alang', name: '阿浪', animal: '灰狼' },
+  currentQuestion: null,
+  storyEpisode: {
+    id: 'episode-alang-1',
+    code: 's1-p1-alang',
+    seasonTitle: '没有名字的旧物',
+    phase: 1,
+    title: '一张画了两把椅子的图',
+    objectCode: 'seat-plan',
+    opening: '',
+    action: '',
+    discovery: '',
+    response: null,
+    closing: null,
+    motion: { ambient: 'none' as const },
+    fragment: null,
+    progress: { completedInPhase: 0, totalInPhase: 5, completedTotal: 0, total: 15 },
+    storyV2: {
+      echo: 5,
+      echoTier: '轻' as const,
+      nodeId: 'n2_action',
+      type: 'interaction' as const,
+      segments: [{ text: '阿浪把一张折得很薄的图摊在膝盖上。' }],
+      choices: [],
+      next: null,
+      unlockFragment: null,
+      interaction: {
+        template: 'spacing' as const,
+        goal: '移动两把椅子，留出图上刚好的并肩距离。',
+        hints: ['不用挤在一起。'],
+        results: [
+          { id: 'aligned', next: 'n3_callback_a' },
+          { id: 'crowded', next: 'n3_callback_b' },
+        ],
+        defaultResultId: 'aligned',
+        fallbackNext: 'n4_fallback',
+      },
+    },
+  },
+}
+
+const interactionCallbackEncounter = {
+  ...interactionEncounter,
+  storyEpisode: {
+    ...interactionEncounter.storyEpisode,
+    storyV2: {
+      echo: 20,
+      echoTier: '深' as const,
+      nodeId: 'n3_callback_a',
+      type: 'callback' as const,
+      segments: [{ text: '座位之间的空隙和折痕对上了。' }],
+      choices: [],
+      next: 'n5_close',
+      unlockFragment: null,
+      interaction: null,
+    },
+  },
+}
+
+describe('formal Flash dialogue — 叙事动作层 interaction 节点', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.routerParams = { encounterId: 'encounter-1' }
+    mocks.didShow = null
+    mocks.didHide = null
+    mocks.didUnload = null
+    mocks.getStorageSync.mockReturnValue(undefined)
+    mocks.useAuth.mockReturnValue({ user: { features: { alangEnabled: true } } })
+    mocks.useEncounter.mockReturnValue({ data: interactionEncounter, isLoading: false, isError: false, refetch: mocks.refetch })
+    mocks.interaction.mockResolvedValue(interactionCallbackEncounter)
+    mocks.canonicalRedirect.mockResolvedValue(false)
+  })
+
+  it('renders the interaction stage from the server-owned current node and submits only { nodeId, resultId }', async () => {
+    render(<FlashDialoguePage />)
+
+    const stage = screen.getByTestId('flash-interaction-stage')
+    expect(stage).toHaveTextContent('移动两把椅子，留出图上刚好的并肩距离。')
+    expect(mocks.track).toHaveBeenCalledWith('s1-p1-alang', 'action_shown', { template: 'spacing' })
+
+    fireEvent.click(screen.getByTestId('flash-interaction-zone-1'))
+    fireEvent.click(screen.getByRole('button', { name: '就这样收好' }))
+
+    await waitFor(() => expect(mocks.interaction).toHaveBeenCalledWith({
+      encounterId: 'encounter-1',
+      nodeId: 'n2_action',
+      resultId: 'aligned',
+    }))
+    // 提交体不携带触摸轨迹/坐标/自由文本。
+    expect(mocks.interaction.mock.calls[0][0]).not.toHaveProperty('trace')
+    expect(mocks.interaction.mock.calls[0][0]).not.toHaveProperty('coordinates')
+    await waitFor(() => expect(mocks.track).toHaveBeenCalledWith('s1-p1-alang', 'imprint_revealed', { resultId: 'aligned' }))
+  })
+
+  it('renders the returned 即时回响 view when the settled response arrives', async () => {
+    const view = render(<FlashDialoguePage />)
+    fireEvent.click(screen.getByTestId('flash-interaction-zone-1'))
+    fireEvent.click(screen.getByRole('button', { name: '就这样收好' }))
+    await waitFor(() => expect(mocks.interaction).toHaveBeenCalledTimes(1))
+
+    // 与真实链路一致：mutation 成功 → setQueryData → encounter 查询返回回响节点。
+    mocks.useEncounter.mockReturnValue({ data: interactionCallbackEncounter, isLoading: false, isError: false, refetch: mocks.refetch })
+    view.rerender(<FlashDialoguePage />)
+
+    expect(screen.getByText('座位之间的空隙和折痕对上了。')).toBeInTheDocument()
+    expect(screen.queryByTestId('flash-interaction-stage')).not.toBeInTheDocument()
+  })
+
+  it('re-entering mid-action restores the same interaction node with reset local gesture progress (AC-03)', () => {
+    const first = render(<FlashDialoguePage />)
+    fireEvent.click(screen.getByTestId('flash-interaction-zone-1'))
+    expect(screen.getByRole('button', { name: '就这样收好' })).toBeInTheDocument()
+    first.unmount()
+
+    // 未提交的手势进度只存在本地；重新进入由服务端 encounter 状态恢复到同一节点。
+    render(<FlashDialoguePage />)
+    expect(screen.getByTestId('flash-interaction-stage')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '就这样收好' })).not.toBeInTheDocument()
+    expect(mocks.interaction).not.toHaveBeenCalled()
+  })
+
+  it('shows a refresh surface and refetches when the submitted result is stale', async () => {
+    mocks.interaction.mockRejectedValueOnce(Object.assign(new Error('FLASH_V2_UNKNOWN_RESULT'), {
+      statusCode: 400,
+      data: { code: 'FLASH_V2_UNKNOWN_RESULT' },
+    }))
+    render(<FlashDialoguePage />)
+    fireEvent.click(screen.getByTestId('flash-interaction-zone-1'))
+    fireEvent.click(screen.getByRole('button', { name: '就这样收好' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('故事状态刚刚变化，正在重新接上。')
+    await waitFor(() => expect(mocks.refetch).toHaveBeenCalled())
+  })
+
+  it('falls back to the reading stage in replay mode (debug-only surface never submits actions)', () => {
+    mocks.routerParams = { encounterId: 'encounter-1', replay: '1', replaySession: 'session-action' }
+    render(<FlashDialoguePage />)
+
+    expect(screen.queryByTestId('flash-interaction-stage')).not.toBeInTheDocument()
+    expect(screen.getByTestId('flash-story-v2-stage')).toBeInTheDocument()
+    expect(screen.getByText('阿浪把一张折得很薄的图摊在膝盖上。')).toBeInTheDocument()
   })
 })

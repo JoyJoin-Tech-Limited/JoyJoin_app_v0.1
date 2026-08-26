@@ -1,43 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { ARCHETYPE_CANONICAL_ORDER } from '@shared/personality/archetypeNames'
 import {
-  ARCHETYPE_SUBLINES,
-  EXPERIENCE_DETAIL_COPY,
   FLOW1_ENTRY_COPY,
   FLOW2_FALLBACKS,
   FLOW2_NODE_COPY,
   FLOW_SHELL_COPY,
-  getArchetypeSubline,
-  getFlow1H1Line2,
   getFlow2HeroMeta,
   getFlow2HeroStatus,
   getIdentityChipLabel,
   resolveFlow2NodeDescription,
 } from '@shared/copy/flowAnimationCopy'
-import { DEFAULT_EVENT_GROUP_SIZE } from '@shared/constants'
 import { buildLifecycleSteps } from './flowAnimation.config'
 
 describe('flow-animation copy binding', () => {
-  it('binds the 4–6 numeral to the platform group-size defaults (never hardcoded)', () => {
-    expect(DEFAULT_EVENT_GROUP_SIZE).toEqual({ min: 4, max: 6 })
-    expect(getFlow1H1Line2()).toBe('4–6人的同城小局')
-    // The en-dash (U+2013) must sit between the numerals so the unit never breaks.
-    expect(getFlow1H1Line2()).toContain('4–6')
-  })
-
-  it('covers all 12 canonical archetypes with sub-lines plus a fallback', () => {
-    for (const id of ARCHETYPE_CANONICAL_ORDER) {
-      expect(ARCHETYPE_SUBLINES[id], `missing sub-line for ${id}`).toBeTruthy()
-      expect(ARCHETYPE_SUBLINES[id].length).toBeLessThanOrEqual(20)
-    }
-    expect(getArchetypeSubline('corgi')).toBe(ARCHETYPE_SUBLINES.corgi)
-    expect(getArchetypeSubline('not-an-archetype')).not.toBe(ARCHETYPE_SUBLINES.corgi)
-    expect(getArchetypeSubline(null)).toBeTruthy()
-    expect(getArchetypeSubline(undefined)).toBeTruthy()
-  })
-
   it('keeps the street banner invitation-framed (no availability promises)', () => {
-    const streetLine = '一条线索引路，把城市走成故事'
+    const streetLine = FLOW1_ENTRY_COPY.street.bannerLine
+    expect(streetLine).toBe('一条线索引路，把城市走成故事')
     expect(streetLine).not.toContain('此刻')
     expect(streetLine).not.toContain('今天')
     expect(streetLine).not.toContain('马上')
@@ -87,19 +64,16 @@ describe('flow-animation copy binding', () => {
     expect(revealNode?.description).not.toMatch(/\{/)
   })
 
-  it('locks the 2026-08-03 revamp copy (eyebrows, chrome keys, de-echoed detail lines)', () => {
+  it('locks the play-mode entry copy consumed by the Discover arrival coachmark', () => {
     // Eyebrows disambiguate the two 盲盒 modes.
     expect(FLOW1_ENTRY_COPY.event.eyebrow).toBe('和新朋友同桌')
+    expect(FLOW1_ENTRY_COPY.event.title).toBe('盲盒活动')
+    expect(FLOW1_ENTRY_COPY.event.bannerLine).toBe('挑一场活动，凑成一桌，线下见')
     expect(FLOW1_ENTRY_COPY.street.eyebrow).toBe('一个人也能玩')
-    // Shell chrome keys consumed by FlowShell / ExperienceEntryFlow / ExperienceDetail.
-    expect(FLOW_SHELL_COPY.ctaExplore).toBe('去看看有什么局')
-    expect(FLOW_SHELL_COPY.bannerEnter).toBe('进入看看')
-    expect(FLOW_SHELL_COPY.detailBack).toBe('两种玩法')
+    expect(FLOW1_ENTRY_COPY.street.title).toBe('街头盲盒')
+    // Shell chrome keys consumed by FlowShell (Flow 2).
     expect(FLOW_SHELL_COPY.skip).toBe('跳过')
-    // Detail copy de-echoed (no 认真凑×2, no 发现×2).
-    expect(EXPERIENCE_DETAIL_COPY.event.sceneTitle).toBe('报名之后，悦仔就开始为你留座了')
-    expect(EXPERIENCE_DETAIL_COPY.street.steps[1].description).toBe('照着提示就能开始，随时出发')
-    expect(EXPERIENCE_DETAIL_COPY.street.steps[3].title).toBe('留下这一程')
+    expect(FLOW_SHELL_COPY.ctaViewActivity).toBe('查看我的活动')
   })
 
   it('resolves identity chip labels within the glyph budget', () => {

@@ -4,9 +4,9 @@
 // consuming page's SCSS or Taro's chunk graph can drop it.
 @use '../../../components/onboarding/BoxJourneySpine.scss' as *;
 @use '../../../components/onboarding/UnboxingCeremony.scss' as *;
-// JoyJoinIntroFlow (FlowShell / ExperienceEntryFlow / ExperienceDetail) overlay
-// styles — without this the whole intro flow renders unstyled on device.
-@use '../../../components/flow-animation/index.scss' as *;
+// PR-8: XiaoyueInlineError renders in this page's error surface — co-compile
+// its rules into this page's WXSS.
+@use '../../../components/mascot/XiaoyueInlineError.scss' as *;
 
 .profile-review {
   display: flex;
@@ -745,18 +745,13 @@
     color: $color-primary;
   }
 
+  // PR-8: the error surface hosts the inline 悦仔 row (its own retry pill
+  // carries the tap action); the wrapper only provides spacing.
   &__error {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     margin-top: $spacing-md;
-    padding: $spacing-sm $spacing-md;
-    min-height: 88rpx;
-    cursor: pointer;
-
-    &--hover {
-      opacity: 0.75;
-    }
   }
 
   &__error-text {

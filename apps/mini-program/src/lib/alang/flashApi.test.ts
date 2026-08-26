@@ -5,10 +5,13 @@ import {
   adaptFlashLocateDto,
   adaptFlashAssignmentDto,
   adaptFlashEncounterDto,
+  adaptFlashStoryArchiveDto,
   fetchFlashHome,
+  fetchFlashStoryArchive,
   getFlashApiErrorCode,
   respondToFlashTaskOffer,
   submitFlashFeedback,
+  submitFlashStoryInteraction,
   updateFlashPreferences,
 } from './flashApi'
 
@@ -203,5 +206,61 @@ describe('formal Flash shared-contract adapter', () => {
   it('recovers stable API error codes', () => {
     expect(getFlashApiErrorCode({ data: { code: 'FLASH_APPEARANCE_ENDED' } })).toBe('FLASH_APPEARANCE_ENDED')
     expect(getFlashApiErrorCode(new Error('Request failed: FLASH_TASK_EXPIRED'))).toBe('FLASH_TASK_EXPIRED')
+  })
+
+  it('submits an interaction result with exactly { nodeId, resultId } — no traces, coordinates or free text (AC-03)', async () => {
+    mocks.apiRequest.mockResolvedValueOnce({
+      id: 'encounter-1',
+      npc: { id: 'npc-1', slug: 'alang', name: '阿浪', species: '灰狼', personalitySummary: '', themeColor: '#000', avatarUrl: null },
+      expiresAt: '2026-08-25T12:00:00.000Z',
+      status: 'accepted',
+      pendingDelivery: null,
+      question: null,
+      questionPosition: null,
+      offer: null,
+      storyEpisode: null,
+      canonicalScreen: 'dialogue',
+    })
+
+    await submitFlashStoryInteraction({ encounterId: 'encounter-1', nodeId: 'n2_action', resultId: 'aligned' })
+
+    expect(mocks.apiRequest).toHaveBeenCalledWith({
+      path: '/api/alang/flash/encounters/encounter-1/story-interaction',
+      method: 'POST',
+      data: { nodeId: 'n2_action', resultId: 'aligned' },
+    })
+  })
+
+  it('adapts the archive DTO without inventing fields beyond the sanitized contract (SEC-02)', async () => {
+    const dto = {
+      season: { id: 'season-1', code: 's1', title: '没有名字的旧物' },
+      fragments: [{
+        id: 'frag-1', code: 's1-p1-alang-fragment', category: 'object' as const,
+        title: '迟到的出发', fact: '这本册子不是没被想起。', assetUrl: null,
+        unlockedAt: '2026-08-20T10:00:00.000Z', episodeTitle: '一张画了两把椅子的图', npcName: '阿浪',
+      }],
+      imprints: [{ unitId: 's1-p1-alang', template: 'spacing' as const, resultId: 'aligned', settledAt: '2026-08-20T10:00:00.000Z' }],
+      hookHint: '阿浪听到过金属碰过木板的声音。',
+      completedUnitIds: ['s1-p1-alang'],
+    }
+
+    const view = adaptFlashStoryArchiveDto(dto)
+    expect(view.season?.code).toBe('s1')
+    expect(view.fragments[0]).toEqual({
+      id: 'frag-1', code: 's1-p1-alang-fragment', category: 'object',
+      title: '迟到的出发', fact: '这本册子不是没被想起。', assetUrl: null,
+      unlockedAt: '2026-08-20T10:00:00.000Z', episodeTitle: '一张画了两把椅子的图', npcName: '阿浪',
+    })
+    expect(view.imprints[0]).toEqual({ unitId: 's1-p1-alang', template: 'spacing', resultId: 'aligned', settledAt: '2026-08-20T10:00:00.000Z' })
+    expect(view.hookHint).toContain('金属')
+    expect(view.completedUnitIds).toEqual(['s1-p1-alang'])
+    expect(view.fragments[0]).not.toHaveProperty('encounterId')
+
+    mocks.apiRequest.mockResolvedValueOnce(dto)
+    await fetchFlashStoryArchive()
+    expect(mocks.apiRequest).toHaveBeenCalledWith({
+      path: '/api/alang/flash/story/archive',
+      method: 'GET',
+    })
   })
 })

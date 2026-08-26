@@ -81,13 +81,13 @@
 
 ### Hard cap on the gate (do not remove)
 
-- `INDEX_GATE_TIMEOUT_MS = 4_000` (4 seconds)
+- `INDEX_GATE_TIMEOUT_MS = 2_500` (2.5 seconds)
 - Below `useAuth`'s `AUTH_REQUEST_TIMEOUT_MS` (8s) so the gate releases before the query itself
 - On timeout, render an inline `<View className='index-gate__timeout'>` with:
   - **重试** (primary, calls `queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY })`)
   - **跳过** (secondary, calls `queryClient.cancelQueries(...)` to force-resolve with cached state)
 - Both CTAs emit `haptics('light')` and `logInfo('[IndexGate] ...')`
-- Worst case: user sees the CTA within 4s and can manually recover
+- Worst case: user sees the CTA within 2.5s and can manually recover
 
 ### Why this is in `pages/index/index.tsx`, not `AuthProvider`
 
@@ -98,7 +98,7 @@ A global overlay from `AuthProvider` would interfere with all pages (including t
 `AuthProvider.AuthRefreshBridge` logs revalidation start, success, and failure with `durationMs`. Each also fires an analytics event to `POST /api/analytics/auth` via `authAnalytics.track(...)` for structured querying — logs remain as fallback.
 
 The index gate (`src/hooks/useAuthGate.ts`, consumed by `pages/index/index.tsx`) also logs and tracks:
-- `authAnalytics.track('gate_timeout')` when the 4s ceiling trips
+- `authAnalytics.track('gate_timeout')` when the 2.5s ceiling trips
 - `authAnalytics.track('gate_retry')` on retry CTA
 - `authAnalytics.track('gate_dismiss')` on dismiss CTA
 
@@ -123,7 +123,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 - **Fixed-position stages must be verified in every state.** A fixed stage sized with both `top` and `bottom` offsets becomes `height = 100vh - top - bottom`, which is often smaller than the visual it contains (gift box, card deck). Size fixed stages with `top: 0` + explicit `height`, and match the scroll container's `padding-top` to that height for every `flowState`. DevTools preview is mandatory.
 - **Shimmer animations should use GPU-safe `opacity` pulse** instead of `background-position` on linear gradients. The `background-position` approach triggers paint on every frame, while opacity pulse only composites. Pattern: `animation: shimmer-pulse 1.5s ease-in-out infinite` with keyframes `0%/100% { opacity: 0.25; } 50% { opacity: 0.65; }`. See `apps/mini-program/src/pages/onboarding/profile-review/index.scss` for a canonical example replacing a `background-position` shimmer with `opacity` pulse (2026-06-10). **The `FootprintOracleCard` matched-state shimmer was migrated to opacity-only in 2026-06-30.**
 - **Hero-card flex-wrap layout for text overflow prevention**: When a card has avatar + text side-by-side + tags below, use `flex-wrap: wrap` on the row container. Put copy in a `flex: 1` element (left), avatar in a fixed-width element (right), and tags in a `width: 100%` element below. All text-bearing children must have `overflow: hidden; text-overflow: ellipsis` (single-line) or `word-break: break-word; overflow-wrap: break-word` (multi-line). See `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` hero-card section (2026-06-11).
-- **`AnalyzingAnimation` must be the sole owner of reveal timing**: Do not set reveal-ready state (`isRevealReady`) in a separate `useEffect` with a hardcoded timeout — this creates a race where the animation is still running but the content is already shown. `AnalyzingAnimation` exposes `minDuration` (1200ms) and `onComplete` callback; set `isRevealReady = true` only inside `onComplete`. User skip is handled by AnalyzingAnimation's internal skip button (enabled after 600ms). See `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` (2026-06-11).
+- **`AnalyzingAnimation` must be the sole owner of reveal timing**: Do not set reveal-ready state (`isRevealReady`) in a separate `useEffect` with a hardcoded timeout — this creates a race where the animation is still running but the content is already shown. `AnalyzingAnimation` exposes `minDuration` (default `ANALYZING_MIN_DURATION_MS = 1200`ms in `src/lib/utils/uiConstants.ts`; the profile-review page overrides it to 600ms) and `onComplete` callback; set `isRevealReady = true` only inside `onComplete`. User skip is handled by AnalyzingAnimation's internal skip button (enabled after 600ms). See `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` (2026-06-11).
 - **`useResetOnShow` must include animation-related state for swipe-back safety**: When using a reveal animation (`AnalyzingAnimation.onComplete` sets `isRevealReady`), add `setIsRevealReady` as an argument to `useResetOnShow(setIsSubmitting, setIsPageExiting, setIsCelebrating, setIsRevealReady)`. Without this, a user who swipes back and re-enters will see the content already revealed (no animation replay). See `apps/mini-program/src/hooks/useResetOnShow.ts` and `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` (2026-06-11).
 - **CSS custom properties for dynamic values are unreliable in WeChat runtime** — prefer inline `style` transforms or pre-computed SCSS classes for per-frame updates (e.g. slider badge position). Static theming tokens on the native custom tab bar are the exception because they live in the native `cover-view` layer.
 - **Tab bar setSelected no-op guard (2026-07-24):** `setSelected` skips `setData` when the tab is already selected and visible, preventing redundant renders.

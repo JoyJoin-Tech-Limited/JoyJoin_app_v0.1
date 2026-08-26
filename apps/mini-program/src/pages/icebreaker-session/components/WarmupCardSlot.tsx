@@ -118,7 +118,12 @@ function MoodOptionGrid({
           role='button'
           aria-label={option.label}
         >
-          <Image className='warmup-card-slot__mood-option-emoji' src={option.asset} mode='aspectFit' />
+          <JoyJoinIcon
+            className='warmup-card-slot__mood-option-emoji'
+            emoji={TOPIC_MOOD_EMOJI[option.mood]}
+            tier='mood'
+            size={56}
+          />
           <Text className='warmup-card-slot__mood-option-label'>{option.label}</Text>
           {option.isActive && (
             <View className='warmup-card-slot__mood-option-check'>
@@ -543,6 +548,7 @@ export function WarmupCardSlot({
               }`}
             >
               <JoyJoinIcon
+                className='warmup-card-slot__mood-icon'
                 emoji={TOPIC_MOOD_EMOJI[currentTopic.mood] ?? currentTopic.emoji ?? ''}
                 tier='mood'
                 size={48}

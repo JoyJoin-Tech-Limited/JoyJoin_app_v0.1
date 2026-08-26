@@ -291,7 +291,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 | Events / footprint / pool-registration | `docs/agent-context/mini-program-events.md` |
 | Profession input overlay | `docs/agent-context/profession-overlay.md` |
 | Cross-cutting mini-program patterns | `docs/agent-context/mini-program-patterns.md` |
-| Flow-animation overlays (intro + blind-box lifecycle) | `docs/agent-context/flow-animation.md` (Flow 1 intro revamp 2026-08-03) |
+| Flow-animation overlays (blind-box lifecycle; Flow 1 removed 2026-08-26) | `docs/agent-context/flow-animation.md` |
 
 **Onboarding is server-driven:** `GET /api/auth/user` returns `nextStep`. Client never computes its own position.
 
@@ -361,7 +361,7 @@ npm run admin:create -- <user> <pass> "$ADMIN_CREATE_SECRET_KEY" super_admin "Lo
 - No inline emoji in `apps/mini-program/` TS/TSX (use `JoyJoinIcon` or CSS/text; server/admin files are exempt — the scanner reads full staged-file content, not the diff)
 - **BEM class coverage (2026-07-27):** every static `__`-containing class referenced in mini-program TS/TSX must be defined in some stylesheet under `src` (`scripts/check/check-class-coverage.mjs`, which compiles every non-partial SCSS so nesting/mixins/interpolation are fully expanded). Regression guard for the 2026-07-26 SquadTableCard zero-CSS incident and the `match-compass` mixin-namespace mismatch it caught. Legacy orphans live in `scripts/check/class-coverage-baseline.json` as a ratchet — the gate fails only on NEW orphans; after fixing baseline entries regenerate with `node scripts/check/check-class-coverage.mjs --write-baseline`. Any new component MUST ship its CSS in the same PR.
 - **Subpackage style-splitting regression gate (2026-08-03, hardened 2026-08-17):** Taro/Vite can chunk a component's WXSS into a subpackage page that never loads it, blanking the UI on device (2026-07-21 my-image stage, 2026-08-03 flow-animation intro, 2026-08-17 icebreaker-session phase views). `apps/mini-program/scripts/verify-subpackage-styles.mjs` runs after `npm run build:weapp` and fails if required selectors are missing from the owning page WXSS. **Fix pattern:** `@use` the component SCSS inside the consuming page SCSS and remove the matching `import './X.scss'` side effect from the component TSX — see `pages/icebreaker-session/index.scss` and the full incident runbook at `docs/runbooks/mini-program-asset-delivery.md` §1.3 / §4.6. **2026-08-17 hardening:** the per-subpackage `manualChunks` rule (`apps/mini-program/config/miniProgramChunks.ts`) routes modules shared inside one subpackage to `<subpackage>/sub-common`, and any SCSS riding those modules lands in `sub-common.wxss`, which no page ever loads. The gate now also fails on any non-empty `sub-common.wxss`. Verify locally with `npm run build:weapp -w mini-program && npm run verify:subpackage-styles -w mini-program`.
-- **Rendered-Truth Visual Gate occlusion guard (2026-08-03):** `scripts/visual-correctness-scan.mjs` now treats text-on-text overlap as benign when a higher-z opaque overlay (fixed/absolute + explicit z-index + ≥95% opaque background) fully covers the lower layer. This removes false blocking violations for legitimate overlay pages such as `ExperienceDetail` over `FlowShell` while still catching real collisions.
+- **Rendered-Truth Visual Gate occlusion guard (2026-08-03):** `scripts/visual-correctness-scan.mjs` now treats text-on-text overlap as benign when a higher-z opaque overlay (fixed/absolute + explicit z-index + ≥95% opaque background) fully covers the lower layer. This removes false blocking violations for legitimate overlay pages (originally observed on the since-removed Flow 1 `ExperienceDetail` over `FlowShell`) while still catching real collisions.
 
 **Never commit:** `.env`, secrets, or generated build artifacts.
 
@@ -440,3 +440,13 @@ grep -n "<key line>" <file>  # confirm the new content exists
 - The NPC catalog is extensible: there is no five-NPC cap and no closed species allow-list.
 - The five built-in NPCs remain required seed content with their fixed weekdays. Additional NPCs are created inactive by operator/super_admin, receive operator-configured species, persona copy, structured dialogue, eligible weekdays, approved location links, and reviewed task links, and may be activated only after those runtime prerequisites are ready.
 - Readiness validates every active NPC rather than requiring exactly five active NPCs.
+
+## Flash R2 polish notes (2026-08-26)
+
+- Home page `pages/alang/event` now shows a 15-slot story-fragment collection strip (5 NPCs × 3 slots), reusing `useFlashStoryFragments`; no new API.
+- Celebration overlay copy on `pages/alang/search` varies by `encounterOrdinal`, a read-only count derived from `flash_npc_relationships.encounterCount` (falls back to 1, does not block arrival).
+- New client analytics event `flash_search_started` is sent through the existing `/api/analytics/discover` whitelist; metadata only carries `appearanceId`.
+- R2 touches: distance smoothing (`smoothAlangDistance`), map crossfade, archive ceremony skip (`pages/alang/archive`), "已收下" stamp on dialogue fragment cards, ended-state echo line.
+- Structural regression test `flashTaskPersonalityAllocation.test.ts` locks the 30-task allocation (5 NPCs × 6 tasks).
+- No new feature flags, no runtime LLM, no emoji in primary copy, and no `min()`/`max()`/`clamp()` in WeChat WXSS (use rpx + media queries).
+- Canonical plan: `docs/deliberations/2026-08-26-flash-polish-strategy.md`; runtime context: `docs/agent-context/alang-flash.md`.

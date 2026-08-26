@@ -231,7 +231,6 @@ export function GroupMirrorHeroView({
                       <Text className='group-mirror-hero__card-winner'>
                         {r.topTargetDisplayName}
                       </Text>
-                      <Text className='group-mirror-hero__card-id'>ID: {r.topTargetUserId}</Text>
                     </View>
                     <Text className='group-mirror-hero__card-votes'>
                       {r.voteCount} / {r.totalVotes} 票
@@ -249,9 +248,6 @@ export function GroupMirrorHeroView({
                           </Text>
                           <View className='group-mirror-hero__answer-target'>
                             <Text>{row.targetDisplayName}</Text>
-                            <Text className='group-mirror-hero__answer-id'>
-                              ID: {row.targetUserId}
-                            </Text>
                           </View>
                         </View>
                       ))}

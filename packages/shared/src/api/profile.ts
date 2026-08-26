@@ -1,4 +1,5 @@
 import type { ApiTransport } from './core.js'
+import type { OnboardingNextStep } from '../onboarding.js'
 import {
   getInterestById,
   MACRO_CATEGORY_LABELS,
@@ -31,9 +32,9 @@ export interface EssentialDataPayload {
 export function submitEssentialData(
   api: ApiTransport,
   data: EssentialDataPayload
-): Promise<{ success: boolean }> {
+): Promise<{ success: boolean; nextStep?: OnboardingNextStep }> {
   const { birthYear, birthdate, ...rest } = data
-  return api<{ success: boolean }>({
+  return api<{ success: boolean; nextStep?: OnboardingNextStep }>({
     path: '/api/profile',
     method: 'PATCH',
     data: {
@@ -224,8 +225,8 @@ function normalizeInterestsPayloadInput(data: InterestsPayloadInput): InterestsP
 export function submitInterests(
   api: ApiTransport,
   data: InterestsPayloadInput
-): Promise<{ success: boolean }> {
-  return api<{ success: boolean }>({
+): Promise<{ success: boolean; nextStep?: OnboardingNextStep | null }> {
+  return api<{ success: boolean; nextStep?: OnboardingNextStep | null }>({
     path: '/api/user/interests',
     method: 'POST',
     data: normalizeInterestsPayloadInput(data),
@@ -235,8 +236,8 @@ export function submitInterests(
 export function completeProfileReview(
   api: ApiTransport,
   bio?: string,
-): Promise<{ success: boolean }> {
-  return api<{ success: boolean }>({
+): Promise<{ success: boolean; nextStep?: OnboardingNextStep | null }> {
+  return api<{ success: boolean; nextStep?: OnboardingNextStep | null }>({
     path: '/api/profile-review/complete',
     method: 'POST',
     data: bio !== undefined ? { bio } : undefined,

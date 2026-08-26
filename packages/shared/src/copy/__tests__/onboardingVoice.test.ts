@@ -9,7 +9,7 @@ import { ARCHETYPE_CANONICAL_ORDER } from '../../personality/archetypeNames';
 const ALL_ARCHETYPE_IDS = [...ARCHETYPE_CANONICAL_ORDER];
 
 describe('onboarding archetype voice matrix', () => {
-  it('covers all 12 archetypes × 13 steps in Tier A', () => {
+  it('covers all 12 archetypes × 14 steps in Tier A', () => {
     expect(ALL_ARCHETYPE_IDS).toHaveLength(12);
     for (const archetype of ALL_ARCHETYPE_IDS) {
       const voiceMap = ONBOARDING_VOICE_TABLES.tierA[archetype];
@@ -52,5 +52,17 @@ describe('onboarding archetype voice matrix', () => {
         expect(ONBOARDING_VOICE_TABLES.tierA[archetype][stepId]).not.toMatch(emojiPattern);
       }
     }
+  });
+
+  it('discover-arrival Tier A lines are non-empty, distinct, and differ from Tier B', () => {
+    const tierB = ONBOARDING_VOICE_TABLES.tierB['discover-arrival'];
+    const lines = ALL_ARCHETYPE_IDS.map(
+      (archetype) => ONBOARDING_VOICE_TABLES.tierA[archetype]?.['discover-arrival'],
+    );
+    for (const line of lines) {
+      expect(line).toBeTruthy();
+      expect(line).not.toBe(tierB);
+    }
+    expect(new Set(lines).size).toBe(ALL_ARCHETYPE_IDS.length);
   });
 });

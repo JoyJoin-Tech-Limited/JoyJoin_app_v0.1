@@ -11,6 +11,16 @@ export const FLASH_STORY_ANALYTICS_EVENTS = [
   'story_complete',
   'next_npc_click',
   'exit_before_complete',
+  // 叙事动作层（sprint_20260821_3kmkkw, AC-08）：扩展既有枚举，不建并行事件族。
+  // 复用映射：object_interaction_start=action_started, object_complete=action_completed,
+  // exit_before_complete=action_exited。
+  'action_shown',
+  'first_mistake',
+  'hint_shown',
+  'result_chosen',
+  'imprint_revealed',
+  'archive_opened',
+  'phase_synthesis_completed',
 ] as const
 
 export type FlashStoryUnitId = typeof FLASH_STORY_UNIT_IDS[number]

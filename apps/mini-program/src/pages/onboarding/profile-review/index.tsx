@@ -15,8 +15,9 @@ import { GENERIC_PROFILE_TAGLINE_FALLBACK } from '@shared/ai/onboarding'
 import { getIntentEmoji, getIntentLabel } from '@shared/constants'
 import { MACRO_CATEGORY_LABELS, type MacroCategory } from '@shared/interests'
 import { getIndustryDisplayLabel, getOccupationDisplayLabel } from '@shared/occupations'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { getErrorForSurface } from '@shared/copy/errorBaselines'
 import { getOnboardingVoiceLine } from '@shared/copy/onboardingVoice'
+import type { OnboardingNextStep } from '@shared/onboarding'
 import { STALE_TIME_PROFILE_TAGLINE_MS } from '../../../lib/utils/uiConstants'
 import AnalyzingAnimation from '../../../components/loading/AnalyzingAnimation'
 import InterestChipCloud from '../../../components/profile/InterestChipCloud'
@@ -27,7 +28,6 @@ import { useAuthGuard } from '../../../hooks/useAuthGuard'
 import { useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, fetchDiscoverShell, getUserState } from '../../../lib/api/api'
 import { getPrefetchEngine, injectDiscoverShellIntoCache } from '../../../lib/prefetchEngine'
-import { preloadFlowBannerBackgrounds } from '../../../lib/utils/routePreloadAssets'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
 import { useStepAbandonGuard } from '../../../hooks/onboarding/useStepAbandonGuard'
 import { navigateToMiniProgramNextStep } from '../../../lib/onboarding/onboardingNavigation'
@@ -36,6 +36,7 @@ import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { logError, logInfo } from '../../../lib/utils/logger'
 import Button from '../../../components/ui/Button'
+import XiaoyueInlineError from '../../../components/mascot/XiaoyueInlineError'
 import Card from '../../../components/ui/Card'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import OnboardingLoadingShell, { SHELL_EXIT_HOLD_MS } from '../../../components/loading/OnboardingLoadingShell'
@@ -46,8 +47,6 @@ import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
 import ProfileReviewInviteCard from '../../../components/onboarding/ProfileReviewInviteCard'
 import BoxJourneySpine from '../../../components/onboarding/BoxJourneySpine'
 import UnboxingCeremony from '../../../components/onboarding/UnboxingCeremony'
-import JoyJoinIntroFlow from '../../../components/flow-animation/JoyJoinIntroFlow'
-import { shouldShowFlow } from '../../../components/flow-animation/FlowStorage'
 import { getArchetypeVisual, getXiaoyueAsset } from '../personality-test/visuals'
 import './index.scss'
 
@@ -125,7 +124,6 @@ export default function ProfileReviewPage() {
   const [welcomeCoupon, setWelcomeCoupon] = useState<WelcomeCouponResponse | null>(null)
   const [isCouponLoading, setIsCouponLoading] = useState(false)
   const [isInviteCardVisible, setIsInviteCardVisible] = useState(false)
-  const [introNextStep, setIntroNextStep] = useState<string | undefined>()
   const [showCeremony, setShowCeremony] = useState(false)
   // Loading-shell continuity bridge (same pattern as essential/extended-data):
   // hold the shell through a short exit fade once auth resolves.
@@ -135,6 +133,9 @@ export default function ProfileReviewPage() {
   const hasTrackedInviteImpressionRef = useRef(false)
   const hasStagedDiscoverPrefetchRef = useRef(false)
   const isScrolledRef = useRef(false)
+  // Server-computed nextStep captured from the completeProfileReview response,
+  // so post-ceremony routing needs no /api/auth/user round-trip.
+  const completedNextStepRef = useRef<OnboardingNextStep | null>(null)
   const aigcLabelsEnabled = useAIGCLabelsEnabled()
 
   // prefers-reduced-motion gating: skip the ceremonial reveal animation when motion is reduced.
@@ -197,14 +198,6 @@ export default function ProfileReviewPage() {
     if (isLoading) return
     analytics.stepAbandoned('exit', { stepId: 'review', stepIndex: 0 })
   })
-
-  // Preload Flow 1 per-archetype banner backgrounds during the analyzing window
-  // so the entrance peak never races the network.
-  useEffect(() => {
-    if (!isRevealReady && user?.primaryArchetype) {
-      preloadFlowBannerBackgrounds(user.primaryArchetype as string)
-    }
-  }, [isRevealReady, user?.primaryArchetype])
 
   // Claim (or re-fetch) the lifetime welcome coupon once the reveal animation
   // finishes. The coupon content rides inside the UnboxingCeremony's rising
@@ -270,8 +263,8 @@ export default function ProfileReviewPage() {
   // Predictive Discover shell prefetch: the invite card is the strongest signal
   // that the user will enter Discover next. Warm the composite shell so the tab
   // renders from cache instead of cold-fetching on navigation.
-  useEffect(() => {
-    if (!isInviteCardVisible || hasStagedDiscoverPrefetchRef.current) return
+  const stageDiscoverPrefetch = useCallback(() => {
+    if (hasStagedDiscoverPrefetchRef.current) return
     hasStagedDiscoverPrefetchRef.current = true
 
     void getPrefetchEngine(queryClient).run('profile-review-discover', async () => {
@@ -281,7 +274,21 @@ export default function ProfileReviewPage() {
         poolCount: shell.pools.items.length,
       })
     })
-  }, [isInviteCardVisible, queryClient, analytics])
+  }, [queryClient, analytics])
+
+  useEffect(() => {
+    if (!isInviteCardVisible) return
+    stageDiscoverPrefetch()
+  }, [isInviteCardVisible, stageDiscoverPrefetch])
+
+  // Ceremony-time fallback (PR-3): reduced-motion speed-runners can complete
+  // the page before the invite card appears. The forced-dwell UnboxingCeremony
+  // overlay (~3.2s) gives the shell request time to land.
+  // hasStagedDiscoverPrefetchRef dedupes across triggers.
+  useEffect(() => {
+    if (!showCeremony) return
+    stageDiscoverPrefetch()
+  }, [showCeremony, stageDiscoverPrefetch])
 
   const shouldLoadInterests = !isLoading && Boolean(user?.hasCompletedInterestsCarousel)
   const { data: profileTagline, isLoading: isTaglineLoading, isError: isTaglineError } = useQuery({
@@ -429,41 +436,47 @@ export default function ProfileReviewPage() {
     // Keep the auth-guard redirect suspended through routing: between the
     // ceremony's dismissal and beforeNavigate, invalidateAuth() flips
     // nextStep to 'discover', which would otherwise let useAuthGuard fire
-    // its own switchTab and tear down the intro flow / double-navigate.
+    // its own switchTab and double-navigate.
     setIsPageExiting(true)
 
     try {
-      await withTimeout(invalidateAuth(), QUERY_TIMEOUT_MS)
-      const userState = await withTimeout(getUserState(), QUERY_TIMEOUT_MS)
+      // Auth refresh runs in the background — the ceremony dwell covers it.
+      void invalidateAuth()
+      // The complete response's nextStep (stashed by handleComplete) is
+      // authoritative; only old servers without the field need a refetch.
+      const nextStep =
+        completedNextStepRef.current
+        ?? (await withTimeout(getUserState(), QUERY_TIMEOUT_MS)).nextStep
 
       analytics.stepCompleted({
-        nextStep: userState.nextStep ?? 'discover',
+        nextStep: nextStep ?? 'discover',
         hasArchetype: archetype !== '',
         hasInterests: Boolean(interestsData?.totalSelections),
       })
 
       logInfo('[ProfileReview] Onboarding complete, routing from refreshed nextStep', {
-        nextStep: userState.nextStep,
+        nextStep,
       })
 
-      if (
-        userState.nextStep === 'discover'
-        && shouldShowFlow('joyjoin-intro', user?.id)
-        && user?.features?.flowIntroEnabled !== false
-      ) {
-        setIsCelebrating(false)
-        setIntroNextStep(userState.nextStep)
-        return
+      // PR-5: signal Discover to show the one-time play-mode coachmark (the
+      // intro flow's explainer content, folded into a first-visit card).
+      // Storage must never block routing.
+      if (nextStep === 'discover' && user?.id) {
+        try {
+          Taro.setStorageSync(`joyjoin_discover_arrival_pending:${user.id}`, true)
+        } catch {
+          // Non-fatal: the coachmark is a nice-to-have, never a gate.
+        }
       }
 
-      await navigateToMiniProgramNextStep(userState.nextStep, {
+      await navigateToMiniProgramNextStep(nextStep, {
         mode: 'replace',
         transition: { beforeNavigate: () => setIsPageExiting(true) },
       })
     } catch (err) {
       setIsPageExiting(false)
       setIsCelebrating(false)
-      const message = err instanceof Error ? err.message : getErrorMessage('operation-failed')
+      const message = err instanceof Error ? err.message : getErrorForSurface('operation-failed', 'inline-error')
       setError(message)
       analytics.errorOccurred('complete_failed', message)
       logError('[ProfileReview] Post-ceremony routing failed', { message })
@@ -482,7 +495,8 @@ export default function ProfileReviewPage() {
       logInfo('[ProfileReview] Completing profile review')
       // Bio is no longer collected here (2026-08-18 simplification) — the
       // server treats it as optional; the profile tab nudges for it later.
-      await completeProfileReview(apiRequest)
+      const completeRes = await completeProfileReview(apiRequest)
+      completedNextStepRef.current = completeRes?.nextStep ?? null
 
       // Confirmation succeeded — the ceremony overlay and onward routing are
       // post-completion states, never abandonment.
@@ -491,42 +505,23 @@ export default function ProfileReviewPage() {
       setIsCelebrating(true)
       haptics('success')
 
-      // Single-ceremony rule: when the first-run intro flow is pending, it IS
-      // the completion moment — skip the UnboxingCeremony overlay so the user
-      // never sits through two ceremonies back to back.
-      const introWillShow =
-        shouldShowFlow('joyjoin-intro', user?.id)
-        && user?.features?.flowIntroEnabled !== false
-      if (introWillShow) {
-        await handleCeremonyComplete()
-        return
-      }
-
       // Phase 3 completion ceremony (Bet 2, the "second box opening"):
       // the sealed box opens and the entry card rises; routing continues in
       // handleCeremonyComplete on tap or after the overlay's auto-advance.
+      // PR-5: everyone sees the UnboxingCeremony — the 双仪式 either/or is
+      // gone, so the single-ceremony rule holds by construction.
       setShowCeremony(true)
     } catch (err) {
       setIsPageExiting(false)
       setIsCelebrating(false)
-      const message = err instanceof Error ? err.message : getErrorMessage('operation-failed')
+      const message = err instanceof Error ? err.message : getErrorForSurface('operation-failed', 'inline-error')
       setError(message)
       analytics.errorOccurred('complete_failed', message)
       logError('[ProfileReview] Complete failed', { message })
     } finally {
       setIsSubmitting(false)
     }
-  }, [analytics, isSubmitting, handleCeremonyComplete, markReviewCompleted, user?.id, user?.features?.flowIntroEnabled])
-
-  const handleIntroComplete = useCallback(async () => {
-    await invalidateAuth()
-    const userState = await getUserState()
-    await navigateToMiniProgramNextStep(userState.nextStep, {
-      mode: 'replace',
-      transition: { beforeNavigate: () => setIsPageExiting(true) },
-    })
-    setIntroNextStep(undefined)
-  }, [invalidateAuth])
+  }, [analytics, isSubmitting, markReviewCompleted])
 
   const getStageClassName = useCallback(
     (step: number) =>
@@ -574,17 +569,6 @@ export default function ProfileReviewPage() {
   const stampText = visual?.rarityPercentage
     ? `稀有度 前${visual.rarityPercentage}%`
     : 'JOYJOIN ORIGINAL'
-
-  if (introNextStep) {
-    return (
-      <JoyJoinIntroFlow
-        userId={user?.id}
-        archetypeId={archetype}
-        alangEnabled={user?.features?.alangEnabled ?? false}
-        onComplete={handleIntroComplete}
-      />
-    )
-  }
 
   if (isLoading || (shellRenderedRef.current && !shellDismissed)) {
     return (
@@ -947,18 +931,14 @@ export default function ProfileReviewPage() {
           </Card>
 
           {error ? (
-            <View
-              className='profile-review__error'
-              role='alert'
-              aria-live='polite'
-              onClick={() => {
-                haptics('light')
-                handleComplete()
-              }}
-              hoverClass='profile-review__error--hover'
-            >
-              <Text className='profile-review__error-text'>{error}</Text>
-              <Text className='profile-review__error-retry'>点击重试</Text>
+            <View className='profile-review__error'>
+              <XiaoyueInlineError
+                message={error}
+                retryLabel='点击重试'
+                onRetry={() => {
+                  handleComplete()
+                }}
+              />
             </View>
           ) : null}
 

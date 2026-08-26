@@ -11,6 +11,7 @@ import type {
 } from '@shared/miniscriptStoryFramework'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { apiRequest } from '../../lib/api/api'
+import { getApiErrorStatusCode } from '../../lib/api/authSession'
 import { POLL_SOCIAL_SESSION_MS, TOAST_MEDIUM_MS } from '../../lib/utils/uiConstants'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useAuth } from '../../hooks/useAuth'
@@ -807,7 +808,7 @@ export default function IcebreakerSessionPage() {
   const sessionExpired =
     !!session &&
     !!socialSessionQuery.error &&
-    (socialSessionQuery.error as { statusCode?: number }).statusCode === 410
+    getApiErrorStatusCode(socialSessionQuery.error) === 410
 
   if (sessionExpired) {
     return (
@@ -999,7 +1000,12 @@ export default function IcebreakerSessionPage() {
   return (
     <ScrollView
       className={`icebreaker${phase === 'warmup' ? ' icebreaker--warmup' : ''}${moodField ? ` icebreaker--mood-field icebreaker--field-${moodField.state}` : ''}`}
-      scrollY={phase !== 'warmup'}
+      // Warmup previously locked scrollY off (zero-scroll contract AC11), but
+      // its stacked fixed minimums can exceed short viewports (568–667pt
+      // class), clipping the CTA with no recovery. scrollY is now always on:
+      // the warmup flex layout still fills the viewport on normal devices so
+      // nothing scrolls in practice, and short devices get an escape hatch.
+      scrollY
       enhanced
       showScrollbar={false}
       enableFlex={phase === 'warmup'}
@@ -1030,8 +1036,10 @@ export default function IcebreakerSessionPage() {
         {phaseHeader}
 
         {/* PR1 壳层: one-time host ⋯ coachmark — floats below the band's right
-            edge, points up at the trigger, never covers the CTA area. */}
-        {coachmarkShown && (
+            edge, points up at the trigger, never covers the CTA area.
+            Suppressed while the adaptive suggestion card is open: both anchor
+            to top:100% of this header band at $z-modal and would stack. */}
+        {coachmarkShown && !suggestionOverlayOpen && (
           <View
             className='icebreaker__coachmark'
             onClick={handleDismissCoachmark}

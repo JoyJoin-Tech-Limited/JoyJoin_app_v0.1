@@ -6,34 +6,25 @@ const profileReviewSource = readFileSync(
   resolve(process.cwd(), 'src/pages/onboarding/profile-review/index.tsx'),
   'utf8',
 )
-const introFlowSource = readFileSync(
-  resolve(process.cwd(), 'src/components/flow-animation/JoyJoinPlayModeFlow.tsx'),
-  'utf8',
-)
 const poolRegistrationScss = readFileSync(
   resolve(process.cwd(), 'src/pages/pool-registration/index.scss'),
   'utf8',
 )
-describe('onboarding intro cross-page handoff', () => {
-  it('keeps the intro handoff reachable from the completion ceremony', () => {
-    const ceremonyComplete = profileReviewSource.indexOf('const handleCeremonyComplete')
-    const introSetIndex = profileReviewSource.indexOf('setIntroNextStep(userState.nextStep)')
-    const navigateIndex = profileReviewSource.indexOf('await navigateToMiniProgramNextStep(userState.nextStep')
-
-    expect(ceremonyComplete).toBeGreaterThan(-1)
-    expect(introSetIndex).toBeGreaterThan(ceremonyComplete)
-    // The intro handoff must short-circuit BEFORE the ceremony's direct
-    // navigation so the intro flow renders instead of the redirect.
-    expect(navigateIndex).toBeGreaterThan(introSetIndex)
+describe('onboarding completion single-ceremony rule (PR-5)', () => {
+  it('routes every completion through the UnboxingCeremony — no intro branch', () => {
+    // The 双仪式 either/or is gone: handleComplete must always mount the
+    // ceremony and handleCeremonyComplete must navigate directly.
+    expect(profileReviewSource).not.toContain('JoyJoinIntroFlow')
+    expect(profileReviewSource).not.toContain('setIntroNextStep')
+    expect(profileReviewSource).not.toContain('handleIntroComplete')
+    expect(profileReviewSource).not.toContain('shouldShowFlow')
+    expect(profileReviewSource).toContain('setShowCeremony(true)')
   })
 
-  it('bundles the shared flow visuals into every independently mounted page', () => {
+  it('bundles the shared flow visuals into the Flow 2 host page', () => {
     // Subpackage WXSS guard (AGENTS §15): the pool-registration page SCSS must
-    // @use the shared flow SCSS so the rules compile into the page WXSS itself.
+    // @use the shared flow SCSS so the BlindBoxLifecycleFlow rules compile
+    // into the page WXSS itself.
     expect(poolRegistrationScss).toContain("@use '../../components/flow-animation/index.scss'")
-    // The onboarding profile-review flow renders through JoyJoinPlayModeFlow,
-    // which must keep its own stylesheet import so the overlay is not chunked
-    // into an unreachable file.
-    expect(introFlowSource).toContain("import './index.scss'")
   })
 })

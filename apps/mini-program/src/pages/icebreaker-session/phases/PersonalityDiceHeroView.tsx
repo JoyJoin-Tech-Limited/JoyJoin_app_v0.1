@@ -1,4 +1,4 @@
-import { ScrollView, View, Text } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PersonalityDiceChallenge, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker'
 import type { AIResponseMeta } from '@shared/types/aiMeta'
@@ -257,6 +257,7 @@ export function PersonalityDiceHeroView({
             <View
               key={idx}
               className={`personality-dice-hero__choose-card${isSelected ? ' personality-dice-hero__choose-card--selected personality-dice-hero__choose-card--settle' : ''}${isDimmed ? ' personality-dice-hero__choose-card--dimmed' : ''}${isLoading ? ' personality-dice-hero__choose-card--loading' : ''}`}
+              hoverClass='personality-dice-hero__choose-card--pressed'
               onClick={() => {
                 if (canChoosePersonalityDiceOption(readOnly, isChoosing, mySelectedIdx, idx)) {
                   handleChooseWithSettle(idx)
@@ -269,7 +270,7 @@ export function PersonalityDiceHeroView({
                   level={(option.difficulty === 'easy' ? 1 : option.difficulty === 'medium' ? 2 : 3) as 1 | 2 | 3}
                   compact
                 />
-                {isSelected && <Text className='personality-dice-hero__choose-card-check'>✓</Text>}
+                {isSelected && <JoyJoinIcon className='personality-dice-hero__choose-card-check' emoji='✓' tier='status' size={20} />}
               </View>
               <View className='personality-dice-hero__choose-card-emoji'>
                 <JoyJoinIcon emoji={option.challengeEmoji} size={40} />
@@ -321,8 +322,7 @@ export function PersonalityDiceHeroView({
           doneCount={participants.length}
           totalCount={participants.length}
         >
-          <ScrollView scrollY className='personality-dice-hero__reveal-scroll'>
-            <View className='personality-dice-hero__reveal-list'>
+          <View className='personality-dice-hero__reveal-list'>
             {orderedGroups.map((group) => {
               const option = group.options[selectedOption[group.userId]]
               if (!option) return null
@@ -347,7 +347,6 @@ export function PersonalityDiceHeroView({
               )
             })}
             </View>
-          </ScrollView>
         </PhaseHeroCard>
         <View className='personality-dice-hero__fixed-action'>
           {allRevealReady ? (

@@ -140,7 +140,6 @@ const [
     flashTaskRetryTestEnabledFlag,
     squadUnboxingPocketDeckEnabled,
     profileIdentityStageEnabled,
-    flowIntroEnabled,
     flowLifecycleEnabled,
     poolTeaserEnabled,
     personalitySlotProfileFast,
@@ -182,7 +181,6 @@ const [
     getFeatureFlag('flashTaskRetryTestEnabled', false),
     getFeatureFlag('squadUnboxingPocketDeckEnabled', true),
     getFeatureFlag('profileIdentityStageEnabled', true),
-    getFeatureFlag('flowIntroEnabled', true),
     getFeatureFlag('flowLifecycleEnabled', true),
     getFeatureFlag('poolTeaserEnabled', false),
     // Default ON since the 2026-08-17 tempo retune (fast is the product
@@ -274,7 +272,6 @@ const [
         (process.env.APP_MODE ?? 'production') !== 'production' && flashTaskRetryTestEnabledFlag,
       squadUnboxingPocketDeckEnabled,
       profileIdentityStageEnabled,
-      flowIntroEnabled,
       flowLifecycleEnabled,
       poolTeaserEnabled,
       duoRegistrationEnabled,

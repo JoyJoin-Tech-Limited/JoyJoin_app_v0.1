@@ -13,6 +13,7 @@ import {
   getStoryNodeView,
   resolveV2EchoTier,
   resolveV2Ending,
+  submitStoryInteractionResult,
   type FlashStoryRunState,
 } from "../services/flashStoryEngine";
 
@@ -57,7 +58,31 @@ function checkStructure(content: V2Content, failures: string[], code: string): v
   if ("question" in content) failures.push(`${tag}: v2 content must not carry v1 'question' field`);
   for (const [nodeId, node] of Object.entries(content.nodes)) {
     if (node.id !== nodeId) failures.push(`${tag}: node key ${nodeId} id mismatch ${node.id}`);
-    if (node.type !== "choice") {
+    if (node.type === "interaction") {
+      const interaction = node.interaction;
+      if (!interaction) {
+        failures.push(`${tag}: ${nodeId} interaction node missing config`);
+      } else {
+        if (!Array.isArray(interaction.results) || interaction.results.length < 1 || interaction.results.length > 3) {
+          failures.push(`${tag}: ${nodeId} interaction results must be 1-3`);
+        }
+        if (Array.isArray(interaction.hints) && interaction.hints.length > 2) {
+          failures.push(`${tag}: ${nodeId} interaction hints exceed 2`);
+        }
+        const resultIds = new Set((interaction.results ?? []).map((result) => result.id));
+        if (!resultIds.has(interaction.defaultResultId)) {
+          failures.push(`${tag}: ${nodeId} defaultResultId ${interaction.defaultResultId} not in results`);
+        }
+        if (!content.nodes[interaction.fallbackNext]) {
+          failures.push(`${tag}: ${nodeId} fallbackNext -> missing ${interaction.fallbackNext}`);
+        }
+        for (const result of interaction.results ?? []) {
+          if (!content.nodes[result.next]) failures.push(`${tag}: ${nodeId} ${result.id} next -> missing ${result.next}`);
+          const delta = result.effect?.echo ?? 0;
+          if (delta < 0 || delta > FLASH_V2_ECHO_MAX) failures.push(`${tag}: ${nodeId} ${result.id} echo delta out of bounds ${delta}`);
+        }
+      }
+    } else if (node.type !== "choice") {
       if (!Array.isArray(node.segments) || node.segments.length === 0) {
         failures.push(`${tag}: ${nodeId} (${node.type}) has no segments`);
       }
@@ -129,6 +154,38 @@ function walkUnit(content: V2Content, failures: string[], code: string): { branc
         }
         if (result.finished) {
           assertTerminal(content, result.state, result.view, failures, code, choice.id);
+          terminals += 1;
+        } else {
+          walk(result.state, depth + 1);
+        }
+      }
+      return;
+    }
+    if (view.type === "interaction") {
+      let advanceThrew = false;
+      try {
+        advanceStoryNode({ content, state: run });
+      } catch (error) {
+        advanceThrew = error instanceof Error && error.message.startsWith("FLASH_V2_INTERACTION_EXPECTED");
+        logger.info("qa-flash-v2-staging expected throw observed", {
+          code,
+          nodeId: run.currentNode,
+          threwExpected: advanceThrew,
+        });
+      }
+      if (!advanceThrew) failures.push(`${code}/walk: advance on interaction node did not raise FLASH_V2_INTERACTION_EXPECTED`);
+      for (const interactionResult of view.interaction?.results ?? []) {
+        branches += 1;
+        const expectedFlags = interactionResult.effect?.flagsSet ?? [];
+        const result = submitStoryInteractionResult({ content, state: run, nodeId: run.currentNode!, resultId: interactionResult.id });
+        for (const flag of expectedFlags) {
+          if (!result.state.flags.includes(flag)) failures.push(`${code}/walk: ${interactionResult.id} did not set flag ${flag}`);
+        }
+        if (result.state.echo < 0 || result.state.echo > FLASH_V2_ECHO_MAX) {
+          failures.push(`${code}/walk: ${interactionResult.id} echo out of bounds ${result.state.echo}`);
+        }
+        if (result.finished) {
+          assertTerminal(content, result.state, result.view, failures, code, interactionResult.id);
           terminals += 1;
         } else {
           walk(result.state, depth + 1);

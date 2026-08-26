@@ -1,7 +1,8 @@
 import { View, Text, Image } from '@tarojs/components'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
+import { useChoreographedWait } from '../../hooks/useChoreographedWait'
 import { haptics } from '../../lib/utils/haptics'
 import {
   BLIND_BOX_BODY_ASSET,
@@ -91,13 +92,7 @@ export default function UnboxingCeremony({
 }: UnboxingCeremonyProps) {
   const [reduceMotion] = useState(() => getSystemReducedMotion())
   const { isDegradation } = useDeviceTier()
-  const completedRef = useRef(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // When the ceremony became visible — the tap-guard measures from here.
-  const visibleAtRef = useRef(0)
-  const [hintVisible, setHintVisible] = useState(false)
-  // Hold the callback in a ref: parents pass inline arrows (new identity per
+  // Hold the callbacks in refs: parents pass inline arrows (new identity per
   // render), and re-subscribing the auto-advance timer on every parent
   // render would push the 4s advance out indefinitely and re-arm the
   // one-shot guard.
@@ -106,35 +101,20 @@ export default function UnboxingCeremony({
   const onAdvanceRef = useRef(onAdvance)
   onAdvanceRef.current = onAdvance
 
-  const finish = useCallback((mode: 'auto' | 'tap') => {
-    if (completedRef.current) return
-    completedRef.current = true
-    onAdvanceRef.current?.(mode)
-    onCompleteRef.current()
-  }, [])
-
-  useEffect(() => {
-    if (!visible) return undefined
-    completedRef.current = false
-    visibleAtRef.current = Date.now()
-    // RM shows the hint statically; motion mode reveals it at the guard
-    // boundary so the affordance never promises an earlier tap.
-    setHintVisible(reduceMotion)
-    timerRef.current = setTimeout(() => finish('auto'), AUTO_ADVANCE_MS)
-    if (!reduceMotion) {
-      hintTimerRef.current = setTimeout(() => setHintVisible(true), TAP_GUARD_MS)
-    }
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current)
-        timerRef.current = null
-      }
-      if (hintTimerRef.current) {
-        clearTimeout(hintTimerRef.current)
-        hintTimerRef.current = null
-      }
-    }
-  }, [visible, finish, reduceMotion])
+  // PR-7: timing unified through the shared choreographed-wait contract —
+  // auto-advance at AUTO_ADVANCE_MS, tap-through gated to TAP_GUARD_MS,
+  // completion fires exactly once. Semantics unchanged; the hint reveal
+  // keeps its reduce-motion static-display exception.
+  const { canSkip, skip, isSkippable } = useChoreographedWait({
+    active: visible,
+    minDuration: AUTO_ADVANCE_MS,
+    skipDelay: TAP_GUARD_MS,
+    onFinish: (mode) => onAdvanceRef.current?.(mode),
+    onComplete: () => onCompleteRef.current(),
+  })
+  // RM shows the hint statically; motion mode reveals it at the guard
+  // boundary so the affordance never promises an earlier tap.
+  const hintVisible = reduceMotion || canSkip
 
   if (!visible) return null
 
@@ -152,9 +132,9 @@ export default function UnboxingCeremony({
     <View
       className={rootClass}
       onClick={() => {
-        if (Date.now() - visibleAtRef.current < TAP_GUARD_MS) return
+        if (!isSkippable()) return
         haptics('light')
-        finish('tap')
+        skip()
       }}
       role='button'
       aria-label='开盒完成，轻触继续'

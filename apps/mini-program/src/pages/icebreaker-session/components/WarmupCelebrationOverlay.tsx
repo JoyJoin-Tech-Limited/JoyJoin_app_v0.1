@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { View, Text, Image } from '@tarojs/components'
+import { View, Text, Image, RootPortal } from '@tarojs/components'
 import ParticleBurst from '../../../components/reveal/ParticleBurst'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
+import { haptics } from '../../../lib/utils/haptics'
 // Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
 // import would be chunked into the page-invisible sub-common.wxss.
 
@@ -41,26 +42,36 @@ export function WarmupCelebrationOverlay({
   if (!visible) return null
 
   return (
-    <View
-      className={`warmup-celebration ${isExiting ? 'warmup-celebration--out' : ''}`}
-      catchMove
-      aria-live='polite'
-      role='status'
-    >
-      <View className='warmup-celebration__burst'>
-        <ParticleBurst trigger={visible} type='confetti' count={50} reducedMotion={reducedMotion} />
-      </View>
+    // RootPortal: the phase shell keeps a transform (entrance scale), which
+    // makes position:fixed descendants clip to the shell box on device
+    // (MiniScriptConfigModal precedent). catchMove stays on the overlay root.
+    <RootPortal>
+      <View
+        className={`warmup-celebration ${isExiting ? 'warmup-celebration--out' : ''}`}
+        catchMove
+        aria-live='polite'
+        role='status'
+        onClick={() => {
+          haptics('light')
+          onDismiss?.()
+        }}
+      >
+        <View className='warmup-celebration__burst'>
+          <ParticleBurst trigger={visible} type='confetti' count={50} reducedMotion={reducedMotion} />
+        </View>
 
-      <View className='warmup-celebration__card'>
-        <Image
-          className='warmup-celebration__avatar'
-          src={getXiaoyueExpressionAsset('matchSuccess')}
-          mode='aspectFit'
-        />
-        <View className='warmup-celebration__bubble'>
-          <Text className='warmup-celebration__text'>{line}</Text>
+        <View className='warmup-celebration__card'>
+          <Image
+            className='warmup-celebration__avatar'
+            src={getXiaoyueExpressionAsset('matchSuccess')}
+            mode='aspectFit'
+          />
+          <View className='warmup-celebration__bubble'>
+            <Text className='warmup-celebration__text'>{line}</Text>
+          </View>
+          <Text className='warmup-celebration__tap-hint'>轻触继续</Text>
         </View>
       </View>
-    </View>
+    </RootPortal>
   )
 }

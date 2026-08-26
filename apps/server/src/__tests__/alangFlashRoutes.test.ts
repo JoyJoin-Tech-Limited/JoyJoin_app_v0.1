@@ -286,9 +286,21 @@ describe("formal Flash routes", () => {
     expect(JSON.stringify(mocks.loggerWarn.mock.calls)).not.toContain(String(validCoordinate.longitude));
   });
 
-  it("returns the fixed approved destination while the selected appearance is live", async () => {
+  it("surfaces the encounterOrdinal in the locate response for repeat encounters", async () => {
+    mocks.locate.mockResolvedValue({
+      appearanceId,
+      destination: { latitude: 22.5432, longitude: 114.0578, coordinateSystem: "gcj02" },
+      distanceMeters: 7,
+      targetBearingDegrees: 15,
+      proximityBand: "arrived",
+      signal: "arrived",
+      arrived: true,
+      encounterId: "encounter-repeat-1",
+      encounterOrdinal: 3,
+      canonicalScreen: "dialogue",
+    });
     await withServer(async (baseUrl) => {
-      const cookie = await login(baseUrl, "map-navigation-user");
+      const cookie = await login(baseUrl, "ordinal-user");
       const response = await fetch(`${baseUrl}/api/alang/flash/appearances/${appearanceId}/locate`, {
         method: "POST",
         headers: { Cookie: cookie, "Content-Type": "application/json" },
@@ -297,9 +309,9 @@ describe("formal Flash routes", () => {
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toMatchObject({
         appearanceId,
-        destination: { latitude: 22.5432, longitude: 114.0578, coordinateSystem: "gcj02" },
-        distanceMeters: 83,
-        canonicalScreen: "map",
+        signal: "arrived",
+        encounterOrdinal: 3,
+        canonicalScreen: "dialogue",
       });
     });
   });

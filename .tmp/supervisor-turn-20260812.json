@@ -1,0 +1,22 @@
+{
+  "type": "supervisor_turn_report",
+  "agentName": "Supervisor",
+  "turnStatus": "done",
+  "summary": "Two on-device hang bugs root-caused and fixed. (1) Gathering room froze on the loading screen after squad-unboxing confirm-attendance: rules-of-hooks violation in apps/mini-program/src/pages/gathering-room/index.tsx — four early returns preceded three hooks (useMemo/useState/useEffect), so the loading→success transition crashed React and the LoadingScreen stayed frozen. Fixed by hoisting all hooks above the early returns (pure reorder; committed via concurrent session commit 1120965d4). (2) Miniscript (剧本杀) generation hung forever: LLM passes in apps/server/src/lib/miniscriptAgent.ts had only AbortController (no deterministic bound), so a stalled DeepSeek socket kept status 'generating' and the generationInFlight dedupe entry forever, bricking retries; the client poll in useMiniScriptGeneration.ts could also overwrite a local failed stage with stale server 'generating'. Fixed by wrapping pass 1 and pass 2 in the shared raceWithTimeout idiom (28s pipeline bound, SOCIAL_MINISCRIPT_PIPELINE_TIMEOUT_MS override; timeout settles to catalog fallback + status complete with AITrace errorCode pipeline_timeout) and making the client poll terminal-state-aware. Verification: 51/51 server tests pass (miniscript 32 + gatheringRoom 19, incl. new never-resolving-LLM regression tests at both agent and route level); server + mini-program typechecks clean; ESLint control check confirmed HEAD file failed react-hooks/rules-of-hooks and fixed file passes. On-device re-test pending next 开发版 upload. Commit c78da6084 (DeepSeek max reasoning type) investigated and exonerated — type-only change, not on the miniscript path.",
+  "filesChanged": [
+    "apps/mini-program/src/pages/gathering-room/index.tsx",
+    "apps/server/src/lib/miniscriptAgent.ts",
+    "apps/mini-program/src/pages/icebreaker-session/hooks/useMiniScriptGeneration.ts",
+    "apps/server/src/__tests__/miniscriptAgent.test.ts",
+    "apps/server/src/__tests__/miniscriptGenerateAndPoll.test.ts"
+  ],
+  "blockers": [],
+  "done": true,
+  "sourceSummaryIds": [],
+  "utilization": [
+    { "task": "gathering-room hang root cause", "agents": ["debug (explore)"], "skills": ["process-systematic-debugging", "gathering-room context doc"] },
+    { "task": "miniscript generation hang root cause", "agents": ["debug + AI Engineer (explore)"], "skills": ["process-systematic-debugging", "llm-runtime-safety-and-integration", "miniscript-story-framework"] },
+    { "task": "gathering-room hooks fix", "agents": ["Taro Mini-Program Frontend Engineer (coder)"], "skills": ["mini-program-frontend-excellence"] },
+    { "task": "miniscript timeout + client poll fix", "agents": ["Backend Engineer + AI Engineer (coder)"], "skills": ["llm-runtime-safety-and-integration", "reliability-and-state-integrity", "process-test-first"] }
+  ]
+}

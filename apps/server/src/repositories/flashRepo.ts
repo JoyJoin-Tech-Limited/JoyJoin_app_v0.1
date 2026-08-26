@@ -1070,6 +1070,22 @@ export async function getOrCreateFlashEncounter(input: {
   });
 }
 
+/** 相遇时刻变体的序号源：该用户与该 NPC 已确认的相遇次数（纯计数，无日期）。 */
+export async function getFlashNpcEncounterCount(
+  input: { userId: string; npcId: string },
+  executor: DbExecutor = db,
+): Promise<number> {
+  const [row] = await executor
+    .select({ encounterCount: flashNpcRelationships.encounterCount })
+    .from(flashNpcRelationships)
+    .where(and(
+      eq(flashNpcRelationships.userId, input.userId),
+      eq(flashNpcRelationships.npcId, input.npcId),
+    ))
+    .limit(1);
+  return row ? Number(row.encounterCount) : 0;
+}
+
 export async function expireFlashEncounterIfNeeded(encounterId: string, userId: string, now: Date) {
   const [expired] = await db.update(flashEncounters).set({
     status: "expired",

@@ -75,6 +75,11 @@
   font-weight: $font-weight-semibold;
   line-height: 1.35;
   color: rgba($color-text-primary, 0.88);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .phase-hero-card__l2-prompt {
@@ -83,6 +88,11 @@
   line-height: 1.55;
   color: rgba($color-text-primary, 0.72);
   white-space: pre-line;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
 }
 
 // ─── L3 · Context (hold-to-peek) ────────────────────────────────────────────
@@ -383,6 +393,13 @@
 }
 
 .icebreaker__waiting-l3 {
+  // Host names are unbounded — one line, ellipsis (mirrors the
+  // icebreaker__waiting-host clamp pattern in index.scss).
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: $font-size-xs;
   font-weight: $font-weight-normal;
   letter-spacing: 3rpx;

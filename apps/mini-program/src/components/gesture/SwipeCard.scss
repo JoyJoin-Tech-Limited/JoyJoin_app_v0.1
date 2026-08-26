@@ -40,7 +40,8 @@
   }
 
   &__hint-icon {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
+    width: 40rpx;
+    height: 40rpx;
+    display: flex;
   }
 }

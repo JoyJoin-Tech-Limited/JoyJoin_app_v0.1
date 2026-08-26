@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Taro, { useRouter } from '@tarojs/taro'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { getErrorForSurface, ONBOARDING_ERROR_STAGE_COPY } from '@shared/copy/errorBaselines'
 import {
   initializeEngineState,
   processAnswer,
@@ -49,6 +49,8 @@ import PersonalityTestCompletingError from './PersonalityTestCompletingError'
 import {
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
 } from './visuals'
+import { useSpeculativeStart } from './useSpeculativeStart'
+import { computeAutoAdvanceDelayMs } from './autoAdvance'
 import { preloadRouteAssets } from '../../../lib/utils/routePreloadAssets'
 import './index.scss'
 import type {
@@ -57,6 +59,7 @@ import type {
   AssessmentOption,
   AssessmentProgress,
   AssessmentMatch,
+  AssessmentStartResponse,
 } from './types'
 
 export type { AssessmentQuestion, AssessmentOption, AssessmentProgress, AssessmentMatch } from './types'
@@ -80,17 +83,6 @@ function buildAnonymousEngineState(
   return engineState
 }
 
-interface AssessmentStartResponse {
-  sessionId: string
-  phase: string
-  nextQuestion: AssessmentQuestion | null
-  progress: AssessmentProgress
-  currentMatches: AssessmentMatch[]
-  isComplete: boolean
-  /** Server-computed final result (present when isComplete === true). */
-  result?: AnonymousAssessmentResult
-}
-
 interface AssessmentAnswerResponse {
   isComplete: boolean
   nextQuestion?: AssessmentQuestion | null
@@ -103,7 +95,14 @@ interface AssessmentAnswerResponse {
 
 // Minimum time Xiaoyue's post-answer commentary stays visible before the
 // next question appears. Prevents the feedback from flashing by too fast.
-const COMMENTARY_MIN_DISPLAY_MS = 1400
+const COMMENTARY_MIN_DISPLAY_MS = 900
+
+// PR-7 overlap: the completing celebration shell hands off to the results
+// page after this beat instead of the full CELEBRATE_MIN_DISPLAY_MS — the
+// result data is already local (pendingCompletionRef + anonymous snapshot)
+// and the results page continues the same celebration visual into the slot
+// anticipation via the `?celebrate=1` bridge, so no drama is lost.
+const COMPLETING_CELEBRATE_MIN_MS = 600
 
 // Minimum answered questions before a mid-test Xiaoyue prefetch fires. The
 // server re-derives the profile from the session, so this only controls how
@@ -133,6 +132,10 @@ export default function PersonalityTestPage() {
   const [error, setError] = useState('')
   const [postAnswerCommentary, setPostAnswerCommentary] = useState<string | null>(null)
   const commentaryReceivedAtRef = useRef<number>(0)
+  // Per-question analytics (PR-2): questionShownAtRef measures answer dwell;
+  // lastTrackedQuestionRef dedupes the per-mount stepEnter ('q<N>' sub-step).
+  const questionShownAtRef = useRef<number>(0)
+  const lastTrackedQuestionRef = useRef<string | null>(null)
   // True once the user drags the slider on the current question — gates 下一题
   // so an untouched slider can't silently submit the default 50.
   const [hasSliderInteracted, setHasSliderInteracted] = useState(false)
@@ -187,6 +190,15 @@ export default function PersonalityTestPage() {
   const echoExitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const echoExitFiredRef = useRef(false)
   const echoTrackedRef = useRef(false)
+
+  // PR-4 single-tap submit + guarded auto-advance: while the commentary
+  // guard window runs, the next question sits in pendingQuestionUpdateRef and
+  // isAdvancePending keeps 下一题 live for immediate manual advance.
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const commentaryTypingDoneAtRef = useRef<number>(0)
+  const advanceAsapRef = useRef(false)
+  const [isAdvancePending, setIsAdvancePending] = useState(false)
+  const [typingDoneTick, setTypingDoneTick] = useState(0)
 
   // Guard against stale async closures hijacking navigation after session change
   const activeSessionRef = useRef<string>('')
@@ -244,6 +256,22 @@ export default function PersonalityTestPage() {
     return Boolean(snapshot?.sessionId && !isAnonymousAssessmentSessionCompleted(snapshot))
   }, [isAuthenticated])
 
+  // Speculative /start prefire (PR-3): the intro phase is a forced-dwell
+  // surface, so the session-establishing round trip starts before the 开始测试
+  // tap. Skipped when a resumable anonymous session exists (resume returns
+  // instantly) or a session is already in flight/established.
+  const { speculativeStartRef, fireSpeculativeStart } = useSpeculativeStart()
+  const phaseRef = useRef(phase)
+  phaseRef.current = phase
+  const canUseSpeculativeResult = useCallback(
+    () => phaseRef.current === 'intro' && activeSessionRef.current === '',
+    [],
+  )
+  useEffect(() => {
+    if (phase !== 'intro' || auth.isLoading || hasStoredIncompleteSession || sessionId) return
+    fireSpeculativeStart(canUseSpeculativeResult)
+  }, [phase, auth.isLoading, hasStoredIncompleteSession, sessionId, fireSpeculativeStart, canUseSpeculativeResult])
+
   const analytics = useOnboardingAnalytics('personality-test', {
     enabled:
       !auth.isLoading && (!auth.isAuthenticated || auth.nextStep === 'personality-test'),
@@ -265,6 +293,22 @@ export default function PersonalityTestPage() {
       answeredCount: progress?.answered ?? 0,
     })
   })
+
+  // PR-2: per-question funnel events. Each live question mount fires a
+  // sub-step stepEnter ('q<N>', stepIndex = answered count) so the funnel can
+  // resolve per-question drop-off + dwell. History back-review mounts are
+  // excluded (currentHistoryIndex >= 0) — they are not fresh progress.
+  useEffect(() => {
+    if (phase !== 'testing' || !question || currentHistoryIndex >= 0) return
+    questionShownAtRef.current = Date.now()
+    if (lastTrackedQuestionRef.current === question.id) return
+    lastTrackedQuestionRef.current = question.id
+    analytics.stepEnter({
+      stepId: `q${progress?.answered ?? 0}`,
+      stepIndex: progress?.answered ?? 0,
+      questionType: question.questionType,
+    })
+  }, [analytics, currentHistoryIndex, phase, progress?.answered, question])
 
   const estimatedTotal = progress
     ? progress.answered + Math.max(progress.estimatedRemaining, 1)
@@ -296,7 +340,7 @@ export default function PersonalityTestPage() {
     await runMiniProgramRouteTransition({
       beforeNavigate: () => setIsPageExiting(true),
     })
-    await Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults })
+    await Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.personalityTestResults}?celebrate=1` })
   }, [currentMatches])
 
   const handleCelebrateReady = useCallback(async () => {
@@ -319,7 +363,7 @@ export default function PersonalityTestPage() {
       completionNavigationRef.current = false
       pendingCompletionRef.current = pending
       setIsPageExiting(false)
-      setError('结果页打开失败，请点一下重试')
+      setError(ONBOARDING_ERROR_STAGE_COPY.completingError.handoffFailedBody)
       logError('[PersonalityTest] Celebrate handoff failed', {
         message: err instanceof Error ? err.message : String(err),
       })
@@ -393,11 +437,34 @@ export default function PersonalityTestPage() {
         shouldResumeAnonymous,
       })
 
-      const result = await apiRequest<AssessmentStartResponse>({
-        path: '/api/assessment/v4/start',
-        method: 'POST',
-        data: shouldResumeAnonymous ? { sessionId: snapshot?.sessionId } : {},
-      })
+      // PR-3 speculative prefire: adopt the session established during the
+      // intro dwell when ready; if it is still in flight, await its promise
+      // (the button spinner already covers the wait); if it failed or never
+      // fired, fall back to today's POST. Any prefired sessionId rides in the
+      // fallback body so the server reuses that session via its
+      // resume-by-sessionId path instead of double-creating a guest session.
+      // The adopted payload flows through the exact same state setup and
+      // isValidFinalResult guard below as a fresh /start response.
+      const speculative = speculativeStartRef.current
+      let result: AssessmentStartResponse | null = null
+      if (!shouldResumeAnonymous && speculative.status === 'ready' && speculative.payload) {
+        result = speculative.payload
+      } else if (!shouldResumeAnonymous && speculative.status === 'pending' && speculative.promise) {
+        result = await speculative.promise.catch(() => null)
+      }
+      const prefiredSessionId = speculative.sessionId ?? speculative.payload?.sessionId
+      speculativeStartRef.current = { status: 'idle' }
+      if (!result) {
+        result = await apiRequest<AssessmentStartResponse>({
+          path: '/api/assessment/v4/start',
+          method: 'POST',
+          data: shouldResumeAnonymous
+            ? { sessionId: snapshot?.sessionId }
+            : prefiredSessionId
+              ? { sessionId: prefiredSessionId }
+              : {},
+        })
+      }
 
       activeSessionRef.current = result.sessionId
       setSessionId(result.sessionId)
@@ -435,7 +502,7 @@ export default function PersonalityTestPage() {
 
         if (!isValidFinalResult(result.result)) {
           setIsPageExiting(false)
-          setError('结果同步出了点小问题，请重试一次')
+          setError(ONBOARDING_ERROR_STAGE_COPY.completingError.syncFailedBody)
           analytics.errorOccurred('invalid_final_result', 'primaryArchetype missing or invalid')
           logError('[PersonalityTest] Invalid finalResult from server on start', {
             sessionId: result.sessionId,
@@ -470,11 +537,20 @@ export default function PersonalityTestPage() {
         return
       }
 
+      // Defensive: a fresh (re)start must not inherit a held next-question
+      // payload from a previous run of this page instance.
+      pendingQuestionUpdateRef.current = null
+      setIsAdvancePending(false)
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current)
+        autoAdvanceTimerRef.current = null
+      }
+      advanceAsapRef.current = false
       setPhase('testing')
     } catch (err) {
       setIsPageExiting(false)
       const rawMessage = err instanceof Error ? err.message : String(err)
-      const message = getErrorMessage('load-failed')
+      const message = getErrorForSurface('load-failed', 'inline-error')
       setError(message)
       analytics.errorOccurred('start_failed', rawMessage)
       logError('[PersonalityTest] Failed to start', { rawMessage, userMessage: message })
@@ -488,8 +564,276 @@ export default function PersonalityTestPage() {
     markTestCompleted,
   ])
 
+  const cancelAutoAdvance = useCallback(() => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current)
+      autoAdvanceTimerRef.current = null
+    }
+    advanceAsapRef.current = false
+  }, [])
+
+  // Applies the held next-question payload (PR-4). `reason` feeds the
+  // commentary read-through guardrail metrics: dwell below the estimated
+  // read time means the advance cut the commentary short.
+  const applyPendingQuestionUpdate = useCallback((reason: 'auto' | 'manual') => {
+    const pending = pendingQuestionUpdateRef.current
+    if (!pending) return
+    cancelAutoAdvance()
+    if (postAnswerCommentary && commentaryReceivedAtRef.current > 0) {
+      const estimatedReadMs = 120 + postAnswerCommentary.length * 40
+      const commentaryDwellMs = Math.max(0, Date.now() - commentaryReceivedAtRef.current)
+      analytics.interaction(
+        commentaryDwellMs >= estimatedReadMs ? 'commentary_read_complete' : 'commentary_cut_short',
+        {
+          questionIndex: progress?.answered ?? 0,
+          dwellMs: commentaryDwellMs,
+          estimatedReadMs,
+        },
+      )
+      if (reason === 'auto') {
+        analytics.interaction('auto_advance_fired', {
+          questionIndex: progress?.answered ?? 0,
+        })
+      }
+    }
+    setPostAnswerCommentary(null)
+    setQuestion(pending.question)
+    setProgress(pending.progress)
+    setCurrentMatches(pending.matches)
+    setCurrentSelection(null)
+    setSliderValue(50)
+    setHasSliderInteracted(false)
+    pendingQuestionUpdateRef.current = null
+    setIsAdvancePending(false)
+  }, [analytics, cancelAutoAdvance, postAnswerCommentary, progress])
+
+  const submitAnswer = useCallback(async (option: AssessmentOption) => {
+    if (!sessionId || !question || isSubmitting) return
+
+    // PR-2: answer-submit telemetry — per-question dwell. Commentary
+    // read-through (commentary_read_complete / commentary_cut_short) is
+    // measured at advance time (applyPendingQuestionUpdate), not submit
+    // time: with PR-4 tap-submit the tap IS the submit, so dwell at submit
+    // would always read ~0.
+    const questionIndex = progress?.answered ?? 0
+    analytics.interaction('question_answered', {
+      questionIndex,
+      questionId: question.id,
+      dwellMs: Math.max(0, Date.now() - questionShownAtRef.current),
+    })
+
+    const thisSessionId = sessionId
+    activeSessionRef.current = thisSessionId
+
+    setIsSubmitting(true)
+    setError('')
+    try {
+      const commentaryStartTime = commentaryReceivedAtRef.current || Date.now()
+
+      const apiPromise = apiRequest<AssessmentAnswerResponse>({
+        path: `/api/assessment/v4/${encodeURIComponent(thisSessionId)}/answer`,
+        method: currentHistoryIndex >= 0 ? 'PUT' : 'POST',
+        data: {
+          questionId: question.id,
+          selectedOption: option.value,
+        },
+        // PR-3: 8s ceiling (results-fetch precedent) so weak networks surface
+        // the manual retry row in ~half the default 15s. Timeout rejections
+        // are transport errors and flow into the same catch/retry path below.
+        timeout: 8000,
+      })
+
+      // Ensure commentary is visible for at least COMMENTARY_MIN_DISPLAY_MS.
+      // The window is measured from when the instant per-option commentary
+      // appeared (option tap), so a user who already read it advances with no
+      // added wait — only the *remaining* time is enforced. Runs in parallel
+      // with the request so it never adds latency on slow networks. A user
+      // who tapped 下一题 / the bubble mid-flight (advanceAsap) skips the
+      // remaining floor — explicit user control beats the auto guard.
+      if (postAnswerCommentary && !advanceAsapRef.current) {
+        const minDisplayRemaining = Math.max(
+          0,
+          COMMENTARY_MIN_DISPLAY_MS - (Date.now() - commentaryStartTime),
+        )
+        if (minDisplayRemaining > 0) {
+          await new Promise((resolve) => setTimeout(resolve, minDisplayRemaining))
+        }
+      }
+
+      const result = await apiPromise
+
+      if (activeSessionRef.current !== thisSessionId) return
+
+      if (!isAuthenticated) {
+        upsertAnonymousAssessmentAnswer({
+          questionId: question.id,
+          selectedOption: option.value,
+          traitScores: option.traitScores,
+          answeredAt: new Date().toISOString(),
+        })
+      }
+
+      if (!result.commentary && postAnswerCommentary) {
+        // Keep the per-option commentary that was set by handleAnswer
+      } else if (result.commentary) {
+        setPostAnswerCommentary(result.commentary)
+        commentaryReceivedAtRef.current = Date.now()
+        // Commentary arrived late (with the response): it gets the full
+        // minimum display window from now so the feedback doesn't flash by.
+        if (!postAnswerCommentary && !advanceAsapRef.current) {
+          await new Promise((resolve) => setTimeout(resolve, COMMENTARY_MIN_DISPLAY_MS))
+        }
+      }
+
+      if (result.isComplete || !result.nextQuestion) {
+        const completedAnswerCount = result.progress?.answered ?? ((progress?.answered ?? 0) + 1)
+        logInfo('[PersonalityTest] Assessment complete', {
+          isAuthenticated,
+          sessionId: thisSessionId,
+        })
+
+        if (result.result && result.result.primaryArchetype) {
+          triggerXiaoyueAnalysisPrefetch(
+            result.result,
+            result.currentMatches ?? currentMatches,
+          )
+        }
+
+        if (!isValidFinalResult(result.result)) {
+          setIsPageExiting(false)
+          setError(ONBOARDING_ERROR_STAGE_COPY.completingError.syncFailedBody)
+          analytics.errorOccurred('invalid_final_result', 'primaryArchetype missing or invalid')
+          logError('[PersonalityTest] Invalid finalResult from server', {
+            sessionId: thisSessionId,
+            result: result.result,
+          })
+          return
+        }
+
+        // Final question: there is no next-question advance, so commentary
+        // read-through is measured here against the completing transition.
+        const finalCommentary = result.commentary ?? postAnswerCommentary
+        if (finalCommentary && commentaryReceivedAtRef.current > 0) {
+          const estimatedReadMs = 120 + finalCommentary.length * 40
+          const commentaryDwellMs = Math.max(0, Date.now() - commentaryReceivedAtRef.current)
+          analytics.interaction(
+            commentaryDwellMs >= estimatedReadMs ? 'commentary_read_complete' : 'commentary_cut_short',
+            {
+              questionIndex,
+              dwellMs: commentaryDwellMs,
+              estimatedReadMs,
+            },
+          )
+        }
+
+        analytics.stepCompleted({
+          isAuthenticated,
+          answerCount: completedAnswerCount,
+          destination: MINI_PROGRAM_ROUTES.personalityTestResults,
+        })
+
+        pendingCompletionRef.current = {
+          sessionId: thisSessionId,
+          topArchetypes: result.currentMatches ?? currentMatches,
+          finalResult: result.result,
+        }
+        markTestCompleted()
+        setPhase('completing')
+        return
+      }
+
+      // Push to question history
+      if (currentHistoryIndex >= 0) {
+        const safe = questionHistoryRef.current.slice(0, currentHistoryIndex)
+        questionHistoryRef.current = [
+          ...safe,
+          { question, answer: option.value },
+        ]
+      } else {
+        questionHistoryRef.current = [
+          ...questionHistoryRef.current,
+          { question, answer: option.value },
+        ]
+      }
+      setCurrentHistoryIndex(-1)
+
+      if (activeSessionRef.current !== thisSessionId) return
+      lastAttemptedOptionRef.current = null
+
+      pendingQuestionUpdateRef.current = {
+        question: result.nextQuestion ?? null,
+        progress: result.progress ?? null,
+        matches: result.currentMatches ?? [],
+      }
+      setIsAdvancePending(true)
+
+      // User already asked to advance while the response was in flight.
+      if (advanceAsapRef.current) {
+        applyPendingQuestionUpdate('manual')
+        return
+      }
+
+      // Mid-test speculative prefetch: start the Xiaoyue LLM generation early
+      // so the result page lands on a cached analysis. The server re-derives
+      // the profile from the session, so no client-side score accumulation is
+      // needed and authenticated + anonymous flows behave identically.
+      const answeredCount = result.progress?.answered ?? 0
+      const topMatch = result.currentMatches?.[0]
+      if (
+        answeredCount >= MID_TEST_PREFETCH_MIN_ANSWERS &&
+        (topMatch?.confidence ?? 0) >= 0.7 &&
+        (topMatch?.archetype !== lastMidTestPrefetchArchetypeRef.current ||
+          Date.now() - lastMidTestPrefetchAtRef.current >= MID_TEST_PREFETCH_THROTTLE_MS)
+      ) {
+        lastMidTestPrefetchAtRef.current = Date.now()
+        lastMidTestPrefetchArchetypeRef.current = topMatch?.archetype ?? null
+        void apiRequest<{ prefetched: boolean; reason?: string }>({
+          path: '/api/xiaoyue/prefetch',
+          method: 'POST',
+          data: { sessionId: thisSessionId },
+        })
+          .then((res) => {
+            logInfo('[PersonalityTest] Mid-test Xiaoyue prefetch', {
+              answeredCount,
+              archetype: topMatch?.archetype,
+              prefetched: res.prefetched,
+              reason: res.reason,
+            })
+          })
+          .catch((err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err)
+            logWarn('[PersonalityTest] Mid-test Xiaoyue prefetch failed', { message })
+          })
+      }
+    } catch (err) {
+      setIsPageExiting(false)
+      const rawMessage = err instanceof Error ? err.message : String(err)
+      const message = getErrorForSurface('submit-failed', 'inline-error')
+      setError(message)
+      analytics.errorOccurred('answer_failed', rawMessage)
+      logError('[PersonalityTest] Failed to submit answer', { rawMessage, userMessage: message })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [
+    analytics,
+    applyPendingQuestionUpdate,
+    currentHistoryIndex,
+    currentMatches,
+    isAuthenticated,
+    isSubmitting,
+    markTestCompleted,
+    postAnswerCommentary,
+    progress,
+    question,
+    sessionId,
+  ])
+
   const handleAnswer = useCallback((option: AssessmentOption) => {
     if (!sessionId || !question || isSubmitting) return
+    // PR-4: the answer is locked in once the tap-submit lands — re-tapping
+    // another option during the commentary guard would double-submit.
+    if (pendingQuestionUpdateRef.current) return
 
     setPostAnswerCommentary(null)
 
@@ -502,7 +846,14 @@ export default function PersonalityTestPage() {
     if (immediateCommentary) {
       commentaryReceivedAtRef.current = commentaryStartTime
     }
-  }, [sessionId, question, isSubmitting])
+    commentaryTypingDoneAtRef.current = 0
+
+    // PR-4 单题单点: tapping an option on the live choice question submits
+    // immediately; history review and slider questions stay fully manual.
+    if (currentHistoryIndex < 0 && question.questionType !== 'slider') {
+      void submitAnswer(option)
+    }
+  }, [sessionId, question, isSubmitting, currentHistoryIndex, submitAnswer])
 
   const handleSliderSubmit = useCallback(() => {
     if (!question) return
@@ -545,26 +896,77 @@ export default function PersonalityTestPage() {
       echoExitTimerRef.current = setTimeout(() => {
         setIsEchoExiting(false)
         echoExitTimerRef.current = null
-        // Apply the pending question update atomically after echo exits
-        const pending = pendingQuestionUpdateRef.current
-        if (pending) {
-          setPostAnswerCommentary(null)
-          setQuestion(pending.question)
-          setProgress(pending.progress)
-          setCurrentMatches(pending.matches)
-          setSliderValue(50)
-          setHasSliderInteracted(false)
-          pendingQuestionUpdateRef.current = null
-        }
+        // PR-4: when commentary is on screen for a live question, the guarded
+        // auto-advance owns the pending update — the (invisible) echo exit
+        // must not consume it before the guard window ends.
+        if (postAnswerCommentary && currentHistoryIndex < 0) return
+        applyPendingQuestionUpdate('manual')
       }, 220)
     }
-  }, [shouldShowEcho, isEchoExiting])
+  }, [shouldShowEcho, isEchoExiting, applyPendingQuestionUpdate, postAnswerCommentary, currentHistoryIndex])
 
-  // Cleanup echo exit timer on unmount
+  // PR-4 guarded auto-advance: fires once the submission has landed AND the
+  // commentary typewriter has finished, at
+  // max(commentaryShownAt + COMMENTARY_MIN_DISPLAY_MS, typingDoneAt + 400ms).
+  // Never interrupts typing; 下一题 / bubble tap can always advance sooner.
+  useEffect(() => {
+    if (isSubmitting || !isAdvancePending || !postAnswerCommentary) return
+    if (currentHistoryIndex >= 0) return
+    const commentaryShownAt = commentaryReceivedAtRef.current
+    const typingDoneAt = commentaryTypingDoneAtRef.current
+    if (!commentaryShownAt || !typingDoneAt) return
+    const wait = computeAutoAdvanceDelayMs({
+      commentaryShownAt,
+      typingDoneAt,
+      minDisplayMs: COMMENTARY_MIN_DISPLAY_MS,
+      now: Date.now(),
+    })
+    autoAdvanceTimerRef.current = setTimeout(() => {
+      autoAdvanceTimerRef.current = null
+      applyPendingQuestionUpdate('auto')
+    }, wait)
+    return () => {
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current)
+        autoAdvanceTimerRef.current = null
+      }
+    }
+  }, [
+    isSubmitting,
+    isAdvancePending,
+    postAnswerCommentary,
+    currentHistoryIndex,
+    typingDoneTick,
+    applyPendingQuestionUpdate,
+  ])
+
+  const handleCommentaryTypingComplete = useCallback(() => {
+    commentaryTypingDoneAtRef.current = Date.now()
+    setTypingDoneTick((tick) => tick + 1)
+  }, [])
+
+  // Tapping the speech bubble is the user's "I've read it" signal: advance
+  // immediately when the next question is already held, or mark advance-ASAP
+  // so a slow in-flight submit skips the remaining commentary floor.
+  const handleCommentaryBubbleTap = useCallback(() => {
+    if (currentHistoryIndex >= 0) return
+    if (pendingQuestionUpdateRef.current) {
+      applyPendingQuestionUpdate('manual')
+      return
+    }
+    if (isSubmitting) {
+      advanceAsapRef.current = true
+    }
+  }, [applyPendingQuestionUpdate, currentHistoryIndex, isSubmitting])
+
+  // Cleanup echo exit + auto-advance timers on unmount
   useEffect(() => {
     return () => {
       if (echoExitTimerRef.current) {
         clearTimeout(echoExitTimerRef.current)
+      }
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current)
       }
     }
   }, [])
@@ -583,7 +985,24 @@ export default function PersonalityTestPage() {
   }, [shouldShowEcho, analytics, postAnswerCommentary])
 
   const handleNext = useCallback(async () => {
-    if (!sessionId || !question || isSubmitting) return
+    if (!sessionId || !question) return
+
+    if (currentHistoryIndex < 0) {
+      // PR-4: a held next question (tap-submit already landed) advances
+      // immediately — explicit user control beats the auto-advance timer.
+      if (pendingQuestionUpdateRef.current) {
+        applyPendingQuestionUpdate('manual')
+        return
+      }
+      // Tap-submit still in flight: skip the remaining commentary floor
+      // once the response lands.
+      if (isSubmitting) {
+        advanceAsapRef.current = true
+        return
+      }
+    } else if (isSubmitting) {
+      return
+    }
 
     // Determine if we need API call or just history navigation
     // currentHistoryIndex >= 0 means we're viewing a previous answer
@@ -630,188 +1049,36 @@ export default function PersonalityTestPage() {
     )
     if (!option) return
 
-    const thisSessionId = sessionId
-    activeSessionRef.current = thisSessionId
-
-    setIsSubmitting(true)
-    setError('')
-    try {
-      const commentaryStartTime = commentaryReceivedAtRef.current || Date.now()
-
-      const apiPromise = apiRequest<AssessmentAnswerResponse>({
-        path: `/api/assessment/v4/${encodeURIComponent(thisSessionId)}/answer`,
-        method: currentHistoryIndex >= 0 ? 'PUT' : 'POST',
-        data: {
-          questionId: question.id,
-          selectedOption: option.value,
-        },
-      })
-
-      // Ensure commentary is visible for at least COMMENTARY_MIN_DISPLAY_MS.
-      // The window is measured from when the instant per-option commentary
-      // appeared (option tap), so a user who already read it advances with no
-      // added wait — only the *remaining* time is enforced. Runs in parallel
-      // with the request so it never adds latency on slow networks.
-      if (postAnswerCommentary) {
-        const minDisplayRemaining = Math.max(
-          0,
-          COMMENTARY_MIN_DISPLAY_MS - (Date.now() - commentaryStartTime),
-        )
-        if (minDisplayRemaining > 0) {
-          await new Promise((resolve) => setTimeout(resolve, minDisplayRemaining))
-        }
-      }
-
-      const result = await apiPromise
-
-      if (activeSessionRef.current !== thisSessionId) return
-
-      if (!isAuthenticated) {
-        upsertAnonymousAssessmentAnswer({
-          questionId: question.id,
-          selectedOption: option.value,
-          traitScores: option.traitScores,
-          answeredAt: new Date().toISOString(),
-        })
-      }
-
-      if (!result.commentary && postAnswerCommentary) {
-        // Keep the per-option commentary that was set by handleAnswer
-      } else if (result.commentary) {
-        setPostAnswerCommentary(result.commentary)
-        commentaryReceivedAtRef.current = Date.now()
-        // Commentary arrived late (with the response): it gets the full
-        // minimum display window from now so the feedback doesn't flash by.
-        if (!postAnswerCommentary) {
-          await new Promise((resolve) => setTimeout(resolve, COMMENTARY_MIN_DISPLAY_MS))
-        }
-      }
-
-      if (result.isComplete || !result.nextQuestion) {
-        const completedAnswerCount = result.progress?.answered ?? ((progress?.answered ?? 0) + 1)
-        logInfo('[PersonalityTest] Assessment complete', {
-          isAuthenticated,
-          sessionId: thisSessionId,
-        })
-
-        if (result.result && result.result.primaryArchetype) {
-          triggerXiaoyueAnalysisPrefetch(
-            result.result,
-            result.currentMatches ?? currentMatches,
-          )
-        }
-
-        if (!isValidFinalResult(result.result)) {
-          setIsPageExiting(false)
-          setError('结果同步出了点小问题，请重试一次')
-          analytics.errorOccurred('invalid_final_result', 'primaryArchetype missing or invalid')
-          logError('[PersonalityTest] Invalid finalResult from server', {
-            sessionId: thisSessionId,
-            result: result.result,
-          })
-          return
-        }
-
-        analytics.stepCompleted({
-          isAuthenticated,
-          answerCount: completedAnswerCount,
-          destination: MINI_PROGRAM_ROUTES.personalityTestResults,
-        })
-
-        pendingCompletionRef.current = {
-          sessionId: thisSessionId,
-          topArchetypes: result.currentMatches ?? currentMatches,
-          finalResult: result.result,
-        }
-        markTestCompleted()
-        setPhase('completing')
-        return
-      }
-
-      // Push to question history
-      if (currentHistoryIndex >= 0) {
-        const safe = questionHistoryRef.current.slice(0, currentHistoryIndex)
-        questionHistoryRef.current = [
-          ...safe,
-          { question, answer: option.value },
-        ]
-      } else {
-        questionHistoryRef.current = [
-          ...questionHistoryRef.current,
-          { question, answer: option.value },
-        ]
-      }
-      setCurrentHistoryIndex(-1)
-      setCurrentSelection(null)
-
-      if (activeSessionRef.current !== thisSessionId) return
-      lastAttemptedOptionRef.current = null
-
-      pendingQuestionUpdateRef.current = {
-        question: result.nextQuestion ?? null,
-        progress: result.progress ?? null,
-        matches: result.currentMatches ?? [],
-      }
-
-      // Mid-test speculative prefetch: start the Xiaoyue LLM generation early
-      // so the result page lands on a cached analysis. The server re-derives
-      // the profile from the session, so no client-side score accumulation is
-      // needed and authenticated + anonymous flows behave identically.
-      const answeredCount = result.progress?.answered ?? 0
-      const topMatch = result.currentMatches?.[0]
-      if (
-        answeredCount >= MID_TEST_PREFETCH_MIN_ANSWERS &&
-        (topMatch?.confidence ?? 0) >= 0.7 &&
-        (topMatch?.archetype !== lastMidTestPrefetchArchetypeRef.current ||
-          Date.now() - lastMidTestPrefetchAtRef.current >= MID_TEST_PREFETCH_THROTTLE_MS)
-      ) {
-        lastMidTestPrefetchAtRef.current = Date.now()
-        lastMidTestPrefetchArchetypeRef.current = topMatch?.archetype ?? null
-        void apiRequest<{ prefetched: boolean; reason?: string }>({
-          path: '/api/xiaoyue/prefetch',
-          method: 'POST',
-          data: { sessionId: thisSessionId },
-        })
-          .then((res) => {
-            logInfo('[PersonalityTest] Mid-test Xiaoyue prefetch', {
-              answeredCount,
-              archetype: topMatch?.archetype,
-              prefetched: res.prefetched,
-              reason: res.reason,
-            })
-          })
-          .catch((err: unknown) => {
-            const message = err instanceof Error ? err.message : String(err)
-            logWarn('[PersonalityTest] Mid-test Xiaoyue prefetch failed', { message })
-          })
-      }
-    } catch (err) {
-      setIsPageExiting(false)
-      const rawMessage = err instanceof Error ? err.message : String(err)
-      const message = getErrorMessage('submit-failed')
-      setError(message)
-      analytics.errorOccurred('answer_failed', rawMessage)
-      logError('[PersonalityTest] Failed to submit answer', { rawMessage, userMessage: message })
-    } finally {
-      setIsSubmitting(false)
-    }
+    await submitAnswer(option)
   }, [
-    analytics,
+    applyPendingQuestionUpdate,
     currentHistoryIndex,
-    currentMatches,
     currentSelection,
-    isAuthenticated,
     isSubmitting,
-    markTestCompleted,
-    postAnswerCommentary,
-    progress,
     question,
     sessionId,
+    sliderValue,
+    submitAnswer,
   ])
 
   const handlePrevious = useCallback(() => {
     if (questionHistoryRef.current.length === 0) return
     haptics('light')
+
+    // PR-4: if the tap-submit answer already landed and the next question is
+    // held for the commentary guard, land it first so 上一题 reviews the
+    // answer the user just gave (now the last history entry). The snapshot
+    // must come from the pending payload — local question state is stale
+    // inside this closure until the apply re-renders.
+    if (pendingQuestionUpdateRef.current) {
+      const pending = pendingQuestionUpdateRef.current
+      liveQuestionSnapshotRef.current = {
+        question: pending.question,
+        progress: pending.progress,
+        matches: pending.matches,
+      }
+      applyPendingQuestionUpdate('manual')
+    }
 
     if (currentHistoryIndex === -1 && !liveQuestionSnapshotRef.current) {
       liveQuestionSnapshotRef.current = {
@@ -835,7 +1102,7 @@ export default function PersonalityTestPage() {
     setSliderValue(50)
     setHasSliderInteracted(false)
     setPostAnswerCommentary(null)
-  }, [currentHistoryIndex, question, progress, currentMatches])
+  }, [applyPendingQuestionUpdate, currentHistoryIndex, question, progress, currentMatches])
 
   const handleRetry = useCallback(() => {
     setError('')
@@ -844,6 +1111,9 @@ export default function PersonalityTestPage() {
 
   const handleSkip = useCallback(async () => {
     if (!sessionId || !question || isSkipping || skipsRemaining <= 0) return
+    // PR-4: the answer already landed and the next question is mid-guard —
+    // 换一题 here would skip a question the user has never seen.
+    if (pendingQuestionUpdateRef.current) return
     haptics('light')
     analytics.interaction('personality_test_change_question_used', {
       questionIndex: progress?.answered ?? 0,
@@ -863,6 +1133,9 @@ export default function PersonalityTestPage() {
         path: `/api/assessment/v4/${encodeURIComponent(sessionId)}/skip`,
         method: 'POST',
         data: { questionId: question.id },
+        // PR-3: same 8s ceiling as the answer POST — keeps the skip spinner
+        // from hanging the full 15s default on weak networks.
+        timeout: 8000,
       })
       setSkipsRemaining(result.remainingSkips)
       if (result.newQuestion) {
@@ -885,7 +1158,7 @@ export default function PersonalityTestPage() {
         }
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : '换题失败，请重试'
+      const message = err instanceof Error && err.message ? err.message : getErrorForSurface('switch-failed', 'inline-error')
       setError(message)
       analytics.errorOccurred('skip_failed', message)
     } finally {
@@ -947,6 +1220,7 @@ export default function PersonalityTestPage() {
         hint='我会把轮廓、关键词和后面的分享卡一起整理好。'
         xiaoyueExpression={PERSONALITY_TEST_XIAOYUE_EXPRESSION.completing}
         celebrate
+        celebrateMinDisplay={COMPLETING_CELEBRATE_MIN_MS}
         sparkleCount={6}
         onCelebrateReady={handleCelebrateReady}
       />
@@ -973,18 +1247,21 @@ export default function PersonalityTestPage() {
           isSubmitting={isSubmitting}
           isSkipping={isSkipping}
           skipsRemaining={skipsRemaining}
+          isAdvancePending={isAdvancePending}
           error={error}
           postAnswerCommentary={postAnswerCommentary}
           shouldShowEcho={shouldShowEcho}
           isEchoExiting={isEchoExiting}
           echoEnabled={echoEnabled}
           currentSelection={currentSelection}
-          canGoNext={currentSelection !== null || (question?.questionType === 'slider' && hasSliderInteracted)}
+          canGoNext={currentSelection !== null || isAdvancePending || (question?.questionType === 'slider' && hasSliderInteracted)}
           canGoPrevious={currentHistoryIndex === -1 ? questionHistoryRef.current.length > 0 : currentHistoryIndex > 0}
           lastAttemptedOptionRef={lastAttemptedOptionRef}
           onAnswer={handleAnswer}
           onSliderChange={handleSliderChange}
           onSliderSubmit={handleSliderSubmit}
+          onCommentaryComplete={handleCommentaryTypingComplete}
+          onCommentaryBubbleTap={handleCommentaryBubbleTap}
           onSliderAdvanceBlocked={() => {
             // P1 polish validation: user tried to advance a slider question
             // without touching the slider (gate blocked the tap).

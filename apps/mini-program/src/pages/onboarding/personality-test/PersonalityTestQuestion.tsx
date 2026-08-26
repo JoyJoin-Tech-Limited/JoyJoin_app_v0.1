@@ -7,6 +7,7 @@ import MascotQuestionHeader from './MascotQuestionHeader'
 import PersonalityTestAnswerArea from './PersonalityTestAnswerArea'
 import QuestionTransition from './QuestionTransition'
 import { HalfwayMilestone } from './HalfwayMilestone'
+import XiaoyueInlineError from '../../../components/mascot/XiaoyueInlineError'
 import { getXiaoyueExpressionAsset, PERSONALITY_TEST_QUESTION_EXPRESSION } from './visuals'
 import type {
   Phase,
@@ -44,6 +45,9 @@ interface PersonalityTestQuestionProps {
   isSubmitting: boolean
   isSkipping: boolean
   skipsRemaining: number
+  /** PR-4: tap-submit landed and the next question is held behind the
+   *  commentary guard — 下一题 stays live and reads 「下一题 →」. */
+  isAdvancePending: boolean
   error: string
   postAnswerCommentary: string | null
   shouldShowEcho: boolean
@@ -56,6 +60,10 @@ interface PersonalityTestQuestionProps {
   onAnswer: (option: AssessmentOption) => void
   onSliderChange: (value: number) => void
   onSliderSubmit: () => void
+  /** PR-4: commentary typewriter finished — starts the auto-advance guard. */
+  onCommentaryComplete?: () => void
+  /** PR-4: tapping the bubble = "I've read it" — advance now / ASAP. */
+  onCommentaryBubbleTap?: () => void
   onNext: () => void
   /**
    * Analytics-only: fires when the user taps 下一题 while the slider gate is
@@ -83,6 +91,7 @@ export default function PersonalityTestQuestion({
   isSubmitting,
   isSkipping,
   skipsRemaining,
+  isAdvancePending,
   error,
   postAnswerCommentary,
   shouldShowEcho,
@@ -95,6 +104,8 @@ export default function PersonalityTestQuestion({
   onAnswer,
   onSliderChange,
   onSliderSubmit,
+  onCommentaryComplete,
+  onCommentaryBubbleTap,
   onNext,
   onSliderAdvanceBlocked,
   onPrevious,
@@ -125,7 +136,11 @@ export default function PersonalityTestQuestion({
   // here again duplicated the text and stacked extra latency on every question.
   const speechText = postAnswerCommentary ?? ''
 
+  // PR-4: 上一题 stays locked while a submit is in flight (history walk mid-
+  // request would strand the response); 下一题 stays live when there's a
+  // selection/advance to work with — mid-flight taps mark advance-ASAP.
   const isNavLocked = isSubmitting || isSkipping
+  const isNextLocked = isSkipping || (isSubmitting && !canGoNext)
 
   // Forces a remount (and typing restart) whenever the commentary changes.
   const speechKey = `commentary-${progress?.answered ?? 0}`
@@ -187,7 +202,7 @@ export default function PersonalityTestQuestion({
                   />
                 </View>
                 {speechText ? (
-                  <View className='personality-test__speech-bubble'>
+                  <View className='personality-test__speech-bubble' onClick={onCommentaryBubbleTap}>
                     <TypewriterText
                       key={speechKey}
                       className='personality-test__speech-bubble-text'
@@ -196,6 +211,7 @@ export default function PersonalityTestQuestion({
                       delay={120}
                       showCursor
                       numberOfLines={3}
+                      onComplete={onCommentaryComplete}
                     />
                   </View>
                 ) : null}
@@ -284,7 +300,7 @@ export default function PersonalityTestQuestion({
         <View
           className='personality-test__nav-next-wrap'
           onClick={() => {
-            if (isNavLocked || canGoNext) return
+            if (isNextLocked || canGoNext) return
             if (questionType === 'slider' && !sliderTouched) {
               onSliderAdvanceBlocked?.()
             }
@@ -295,17 +311,17 @@ export default function PersonalityTestQuestion({
             className={[
               'personality-test__nav-btn',
               'personality-test__nav-btn--next',
-              !canGoNext || isNavLocked ? 'personality-test__nav-btn--disabled' : '',
+              !canGoNext || isNextLocked ? 'personality-test__nav-btn--disabled' : '',
             ].filter(Boolean).join(' ')}
             onClick={() => {
-              if (isNavLocked || !canGoNext) return
+              if (isNextLocked || !canGoNext) return
               onNext()
             }}
-            disabled={isNavLocked || !canGoNext}
+            disabled={isNextLocked || !canGoNext}
             loading={isSubmitting}
             hoverClass='personality-test__nav-btn--active'
           >
-            {isSubmitting ? '提交中…' : '下一题'}
+            {isSubmitting ? '提交中…' : isAdvancePending ? '下一题 →' : '下一题'}
           </Button>
         </View>
       </View>
@@ -347,7 +363,7 @@ export default function PersonalityTestQuestion({
 
       {error ? (
         <View className='personality-test__error-row'>
-          <Text className='personality-test__error'>{error}</Text>
+          <XiaoyueInlineError message={error} />
           {lastAttemptedOptionRef.current ? (
             <Button
               variant='secondary'

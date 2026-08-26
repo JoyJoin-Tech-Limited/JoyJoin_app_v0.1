@@ -12,6 +12,8 @@ import {
   type FlashPreferenceDto,
   type FlashPreferenceUpdateRequest,
   type FlashReadinessResponse,
+  type FlashStoryArchiveDto,
+  type FlashStoryImprintDto,
   type FlashStoryReplayStateDto,
   type FlashStoryV2ViewDto,
   type FlashTaskDto,
@@ -52,6 +54,7 @@ import {
   getFlashUserInterestSignal,
   getFlashUserPersonalitySignal,
   getLiveFlashAppearance,
+  getFlashNpcEncounterCount,
   getOrCreateFlashEncounter,
   getPendingFlashDelivery,
   getRecentDeliveredFlashCategories,
@@ -74,13 +77,19 @@ import {
   getFlashStoryEncounterState,
   getFlashStoryReadiness,
   getFlashStoryEndingRecap,
+  getPublishedFlashStorySeason,
+  getFlashSeasonUniverseRun,
   getReadyFlashStoryChoiceIntent,
   listFlashUserStoryFragments,
   finalizeFlashStoryChoiceIntent,
   prepareFlashStoryChoiceIntent,
   advanceFlashV2Run,
   advanceFlashV2Node,
+  applyFlashV2InteractionFallback,
+  flashImprintMarkerKey,
   listCompletedFlashStoryEpisodeCodes,
+  listCompletedFlashStoryEpisodeDetails,
+  submitFlashV2InteractionResult,
   updateFlashStoryCompletionNarrative,
   FlashStorySettlementInvariantError,
 } from "../repositories/flashStoryRepo";
@@ -248,8 +257,77 @@ async function buildFlashStoryV2View(
     choices: view.choices ?? [],
     next: view.next,
     unlockFragment: view.unlockFragment,
+    interaction: view.interaction ?? null,
     replayState: replay?.enabled ? flashReplayStateDto(storyState.episode.id, entered) : undefined,
   };
+}
+
+/**
+ * flag-off 透明降级（AC-07/REL-02）：动作层开关关闭时，若当前 V2 节点是
+ * interaction，读取路径直接应用审核过的 defaultResultId 效果并推进到
+ * fallbackNext，用户不丢失进度、也看不到未开启的动作节点。返回 true 表示
+ * 状态已变化，调用方需要重新读取 storyState。重玩（replay）路径永不写入。
+ */
+async function applyFlashStoryActionFallbackIfNeeded(input: {
+  encounterId: string;
+  userId: string;
+  npcName: string;
+  storyState: NonNullable<Awaited<ReturnType<typeof getFlashStoryEncounterState>>>;
+  now: Date;
+  requestId?: string;
+}): Promise<boolean> {
+  const { storyState } = input;
+  if (isFlashLocalTemplateExperienceUnitId(storyState.episode.code)) return false;
+  const content = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
+  if (content?.v !== 2 || !isFlashV2PilotUnitId(storyState.episode.code)) return false;
+  if (!await getFeatureFlag("flashStoryV2Enabled", false)) return false;
+  if (await getFeatureFlag("flashStoryActionsEnabled", false)) return false;
+  const run = storyState.universeRun;
+  const entered = enterV2StoryEpisode(content, scopeV2TraversalToEpisode({
+    episodeId: run?.v2State?.episodeId ?? null,
+    echo: run?.v2State?.echo ?? 0,
+    flags: run?.flags ?? [],
+    variables: run?.v2State?.variables ?? {},
+    currentNode: run?.currentNode ?? null,
+    nodePath: run?.nodePath ?? [],
+    lastChoiceId: run?.v2State?.lastChoiceId ?? null,
+  }, storyState.episode.id));
+  const view = getV2StoryNodeView(content, entered);
+  if (view?.type !== "interaction") return false;
+  logger.info("[FlashStory] action layer disabled; applying reviewed interaction fallback", {
+    request_id: input.requestId,
+    episodeCode: storyState.episode.code,
+    nodeId: view.nodeId,
+  });
+  const fallback = await applyFlashV2InteractionFallback({
+    encounterId: input.encounterId,
+    userId: input.userId,
+    episodeId: storyState.episode.id,
+    now: input.now,
+  });
+  if (fallback.state === "finished") {
+    const settlement = await settleFlashStoryEpisode({
+      encounterId: input.encounterId,
+      userId: input.userId,
+      episodeId: storyState.episode.id,
+      optionId: fallback.resultId,
+      configuredEffects: [],
+      responseSnapshot: resolveV2ClosureResponse(content),
+      renderKind: "template",
+      promptVersion: null,
+      now: input.now,
+    });
+    await enrichSettledFlashStoryResponse({
+      settlement,
+      userId: input.userId,
+      episodeId: storyState.episode.id,
+      npcName: input.npcName,
+      baseResponse: resolveV2ClosureResponse(content),
+      content,
+      now: input.now,
+    });
+  }
+  return fallback.state === "applied" || fallback.state === "finished";
 }
 
 export class FlashServiceError extends Error {
@@ -575,6 +653,16 @@ export async function locateFlashAppearance(input: {
     mode: "standard",
     consentVersion: null,
   });
+  // 相遇时刻变体序号（R2）：纯计数、不含日期/排班；计数失败不阻断到达。
+  let encounterOrdinal = 1;
+  try {
+    encounterOrdinal = Math.max(1, await getFlashNpcEncounterCount({
+      userId: input.userId,
+      npcId: appearance.npcId,
+    }));
+  } catch {
+    encounterOrdinal = 1;
+  }
   return {
     appearanceId: input.appearanceId,
     destination: {
@@ -586,6 +674,7 @@ export async function locateFlashAppearance(input: {
     signal: "arrived",
     arrived: true,
     encounterId: encounter.id,
+    encounterOrdinal,
     canonicalScreen: storyAssignment?.alreadyCompleted ? "completed" : "dialogue",
   };
 }
@@ -770,6 +859,7 @@ export async function getFlashEncounter(input: {
   replayResponseSnapshot?: string;
   replayState?: FlashStoryReplayStateDto;
   replayFinished?: boolean;
+  requestId?: string;
 }): Promise<FlashEncounterResponse> {
   const now = input.now ?? new Date();
   await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
@@ -797,6 +887,19 @@ export async function getFlashEncounter(input: {
         promptVersion: null,
         now,
       });
+      storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
+    }
+  }
+  if (storyState && !storyState.completion && !input.allowStoryReplay) {
+    const degraded = await applyFlashStoryActionFallbackIfNeeded({
+      encounterId: input.encounterId,
+      userId: input.userId,
+      npcName: encounter.npcName,
+      storyState,
+      now,
+      requestId: input.requestId,
+    });
+    if (degraded) {
       storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
     }
   }
@@ -1417,6 +1520,96 @@ export async function advanceFlashV2Story(input: {
   });
 }
 
+/**
+ * 叙事动作层结果提交（AC-02）：与 answer 路径同一套 auth/ownership/expiry 检查；
+ * repo 事务内的 advisory 锁 + stateVersion 乐观更新保证重复/并发提交只推进
+ * 一次（REL-01）。开关关闭时降级为审核过的默认结果，不读客户端手势状态。
+ */
+export async function submitFlashStoryInteraction(input: {
+  encounterId: string;
+  userId: string;
+  nodeId: string;
+  resultId: string;
+  now?: Date;
+  requestId?: string;
+}): Promise<FlashEncounterResponse> {
+  const now = input.now ?? new Date();
+  const encounter = await getFlashEncounterOwned(input.encounterId, input.userId);
+  if (!encounter) throw new FlashServiceError("FLASH_ENCOUNTER_NOT_FOUND", 404, "没有找到这次相遇");
+  if (encounter.expiresAt <= now) {
+    await expireFlashEncounterIfNeeded(input.encounterId, input.userId, now);
+    throw new FlashServiceError("FLASH_ENCOUNTER_EXPIRED", 410, "这次对话已经结束了");
+  }
+  const storyState = await getFlashStoryEncounterState(input.encounterId, input.userId);
+  if (!storyState || storyState.completion) {
+    throw new FlashServiceError("FLASH_STORY_NOT_AVAILABLE", 409, "这次旧相遇已经结束，请从当前在线角色重新开始");
+  }
+  const content = resolveFlashFirstActRuntimeContent(storyState.episode.code, storyState.episode.content);
+  const v2Enabled = await getFeatureFlag("flashStoryV2Enabled", false);
+  if (!v2Enabled || content?.v !== 2 || !isFlashV2PilotUnitId(storyState.episode.code)) {
+    throw new FlashServiceError("FLASH_V2_NOT_AVAILABLE", 409, "当前故事不需要继续推进");
+  }
+  const actionsEnabled = await getFeatureFlag("flashStoryActionsEnabled", false);
+  if (!actionsEnabled) {
+    logger.info("[FlashStory] action submission degraded to reviewed fallback (flag off)", {
+      request_id: input.requestId,
+      episodeCode: storyState.episode.code,
+      nodeId: input.nodeId,
+    });
+  }
+  const submission = await submitFlashV2InteractionResult({
+    encounterId: input.encounterId,
+    userId: input.userId,
+    episodeId: storyState.episode.id,
+    nodeId: input.nodeId,
+    resultId: input.resultId,
+    actionsEnabled,
+    now,
+  });
+  if (submission.state === "conflict") {
+    logger.warn("[FlashStory] action submission state conflict", {
+      request_id: input.requestId,
+      episodeCode: storyState.episode.code,
+      nodeId: input.nodeId,
+    });
+    throw new FlashServiceError("FLASH_V2_STATE_CONFLICT", 409, "当前故事状态已变化，请刷新");
+  }
+  if (submission.state === "not_interaction") {
+    throw new FlashServiceError("FLASH_V2_NOT_AN_INTERACTION_NODE", 400, "当前节点不需要提交操作结果");
+  }
+  if (submission.state === "unknown_result") {
+    throw new FlashServiceError("FLASH_V2_UNKNOWN_RESULT", 400, "这个操作结果已经失效，请刷新后再试");
+  }
+  if (submission.finished) {
+    const settlement = await settleFlashStoryEpisode({
+      encounterId: input.encounterId,
+      userId: input.userId,
+      episodeId: storyState.episode.id,
+      optionId: submission.resultId,
+      configuredEffects: [],
+      responseSnapshot: resolveV2ClosureResponse(content),
+      renderKind: "template",
+      promptVersion: null,
+      now,
+    });
+    await enrichSettledFlashStoryResponse({
+      settlement,
+      userId: input.userId,
+      episodeId: storyState.episode.id,
+      npcName: encounter.npcName,
+      baseResponse: resolveV2ClosureResponse(content),
+      content,
+      now,
+    });
+  }
+  return getFlashEncounter({
+    encounterId: input.encounterId,
+    userId: input.userId,
+    now,
+    preferCurrentCompletedEpisode: submission.finished,
+  });
+}
+
 export async function rerollFlashEncounterOffer(input: {
   encounterId: string;
   userId: string;
@@ -1450,6 +1643,61 @@ export async function getFlashStoryFragments(userId: string) {
       ...fragment,
       unlockedAt: fragment.unlockedAt.toISOString(),
     })),
+  };
+}
+
+/**
+ * 谜案档案台 MVP（AC-05）：已解锁碎片 + 从已结算动作结果派生的 per-unit 印记
+ * + 下一条未解线索。批量读取（碎片 / 已完成幕 / 当前 run 各一次，SCA-02），
+ * DTO 不含坐标、距离、排班、路线或私人回复（SEC-02）。
+ */
+export async function getFlashStoryArchive(userId: string): Promise<FlashStoryArchiveDto> {
+  const season = await getPublishedFlashStorySeason();
+  if (!season) {
+    return { season: null, fragments: [], imprints: [], hookHint: null, completedUnitIds: [] };
+  }
+  const [fragments, completedEpisodes, run] = await Promise.all([
+    listFlashUserStoryFragments(userId),
+    listCompletedFlashStoryEpisodeDetails(userId, season.id),
+    getFlashSeasonUniverseRun(userId, season.id),
+  ]);
+  const completedUnitIds = completedEpisodes.map((row: { code: string }) => row.code);
+  const variables = run?.v2State?.variables ?? {};
+  const imprints: FlashStoryImprintDto[] = [];
+  for (const row of completedEpisodes) {
+    const marker = variables[flashImprintMarkerKey(row.code)];
+    if (typeof marker !== "number" || marker < 1) continue;
+    const content = resolveFlashFirstActRuntimeContent(row.code, row.content) as {
+      v?: number;
+      nodes?: Record<string, { type?: string; interaction?: { template: FlashStoryImprintDto["template"]; results: Array<{ id: string }> } }>;
+    } | null;
+    if (content?.v !== 2 || !content.nodes) continue;
+    const interactionNode = Object.values(content.nodes).find((node) => node?.type === "interaction" && node.interaction);
+    const result = interactionNode?.interaction?.results[marker - 1];
+    if (!interactionNode?.interaction || !result) continue;
+    imprints.push({
+      unitId: row.code,
+      template: interactionNode.interaction.template,
+      resultId: result.id,
+      settledAt: row.settledAt.toISOString(),
+    });
+  }
+  return {
+    season: { id: season.id, code: season.code, title: season.title },
+    fragments: fragments.map((fragment: any) => ({
+      id: fragment.id,
+      code: fragment.code,
+      category: fragment.category,
+      title: fragment.title,
+      fact: fragment.fact,
+      assetUrl: fragment.assetUrl ?? null,
+      unlockedAt: fragment.unlockedAt.toISOString(),
+      episodeTitle: fragment.episodeTitle,
+      npcName: fragment.npcName,
+    })),
+    imprints,
+    hookHint: nextFlashV2HookHint(new Set(completedUnitIds)),
+    completedUnitIds,
   };
 }
 

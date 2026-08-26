@@ -25,10 +25,11 @@
       background: rgba($color-success, 0.08) !important;
       color: $color-success !important;
       border: 2rpx solid rgba($color-success, 0.72) !important;
+      // Static glow ring — the old pulsing box-shadow loop repainted every
+      // frame (motion rule: transform/opacity only); restraint keeps the
+      // ready state signaled by tint + border alone.
       box-shadow: 0 0 0 6rpx rgba($color-success, 0.12);
-      animation:
-        warmup-action-enter 200ms cubic-bezier(0.22, 1, 0.36, 1) both,
-        warmup-ready-margin 1.8s ease-in-out 200ms infinite;
+      animation: warmup-action-enter 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
 
       &:active {
         transform: scale(0.98);
@@ -78,7 +79,7 @@
   }
 
   &__cancel-text {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     color: $color-text-muted;
     text-decoration: underline;
     text-underline-offset: 4rpx;
@@ -99,13 +100,13 @@
   }
 
   &__text-btn-label {
-    font-size: 28rpx;
+    font-size: $font-size-base;
     font-weight: $font-weight-semibold;
     color: $color-primary;
   }
 
   &__helper {
-    font-size: 22rpx;
+    font-size: $font-size-xs;
     color: $color-text-muted;
     text-align: center;
     line-height: 1.4;
@@ -119,16 +120,6 @@
     to {
       opacity: 1;
       transform: translateY(0);
-    }
-  }
-
-  @keyframes warmup-ready-margin {
-    0%,
-    100% {
-      box-shadow: 0 0 0 4rpx rgba($color-success, 0.1);
-    }
-    50% {
-      box-shadow: 0 0 0 10rpx rgba($color-success, 0.22);
     }
   }
 }

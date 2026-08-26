@@ -17,6 +17,7 @@ import { readAnonymousAssessmentSession, isAnonymousAssessmentSessionCompleted }
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 import { landingAnalytics } from "../../lib/analytics/landingAnalytics"
 import { getSystemReducedMotion } from "../../lib/utils/accessibility"
+import { getErrorForSurface } from "@shared/copy/errorBaselines"
 import { logWarn } from "../../lib/utils/logger"
 import { computeBurstOffsets, type BurstOffset, type BurstRect } from "./mechanismBurst"
 import "./index.scss"
@@ -709,7 +710,7 @@ export default function MiniProgramLandingPage({
         <View className='landing-page__auth-timeout' role='alert' aria-live='polite'>
           <View className='landing-page__auth-timeout-status'>
             <View className='landing-page__auth-timeout-spinner' aria-hidden='true' />
-            <Text className='landing-page__auth-timeout-text'>网络已断开，请检查连接后重试</Text>
+            <Text className='landing-page__auth-timeout-text'>{getErrorForSurface('offline-preflight', 'inline-error')}</Text>
           </View>
           <View className='landing-page__auth-timeout-actions'>
             <View
@@ -731,7 +732,7 @@ export default function MiniProgramLandingPage({
         <View className='landing-page__auth-timeout' role='alert' aria-live='polite'>
           <View className='landing-page__auth-timeout-status'>
             <View className='landing-page__auth-timeout-spinner' aria-hidden='true' />
-            <Text className='landing-page__auth-timeout-text'>网络请求超时，请稍后再试</Text>
+            <Text className='landing-page__auth-timeout-text'>{getErrorForSurface('auth-timeout', 'inline-error')}</Text>
           </View>
           <View className='landing-page__auth-timeout-actions'>
             <View

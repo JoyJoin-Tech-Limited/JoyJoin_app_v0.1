@@ -22,7 +22,7 @@
     flex: 1;
     min-width: 0;
     font-family: $font-cn-display;
-    font-size: 32rpx; // Alimama display scale for the welcome moment
+    font-size: $font-size-md; // Alimama display scale for the welcome moment
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     line-height: 1.5;
@@ -42,7 +42,7 @@
   }
 
   &__caption {
-    font-size: 22rpx;
+    font-size: $font-size-xs;
     line-height: 1.45;
     color: $color-text-muted;
     padding-left: 56rpx; // aligns under the welcome text (40rpx avatar + 16rpx gap)

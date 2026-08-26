@@ -340,14 +340,14 @@ export function UndercoverWordHeroView({
                       <View className='undercover-hero__target-info'>
                         <Text className='undercover-hero__target-name'>{p.displayName}</Text>
                         {descs.length > 0 && (
-                          <Text className='undercover-hero__target-descs' numberOfLines={2}>
+                          <Text className='undercover-hero__target-descs'>
                             {descs.join(' · ')}
                           </Text>
                         )}
                       </View>
                       {isSelected && (
                         <View className='undercover-hero__target-check'>
-                          <Text className='undercover-hero__target-check-text'>✓</Text>
+                          <JoyJoinIcon className='undercover-hero__target-check-icon' emoji='✓' tier='status' size={24} />
                         </View>
                       )}
                     </View>

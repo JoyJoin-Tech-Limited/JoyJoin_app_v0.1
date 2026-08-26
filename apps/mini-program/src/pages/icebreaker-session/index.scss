@@ -65,6 +65,8 @@ $__gold-accent:  $color-landed-gold;
   // native scroll-view element itself.
   &__inner {
     padding: $container-padding;
+    // Terminal recap CTA can sit against the home indicator — pad for it.
+    padding-bottom: calc(#{$container-padding} + env(safe-area-inset-bottom));
   }
 
   // Error surfaces are plain Views (no scroll-view), so they carry their own.
@@ -74,60 +76,6 @@ $__gold-accent:  $color-landed-gold;
 
   &__header-wrap {
     position: relative;
-  }
-
-  &__stall-nudge {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $spacing-sm;
-    margin: $spacing-sm auto;
-    padding: $spacing-md;
-    max-width: 640rpx;
-    border-radius: $card-radius-lg;
-    // Banner treatment (design audit): quiet accent tint, no card-weight
-    // shadow/border — it must not fight the foil hero card for attention.
-    background: rgba($color-primary, 0.08);
-  }
-
-  &__stall-nudge-text {
-    @include type-subheading;
-    color: $color-text-primary;
-    text-align: center;
-  }
-
-  &__stall-nudge-actions {
-    display: flex;
-    gap: $spacing-sm;
-    width: 100%;
-    min-width: 0;
-  }
-
-  &__stall-nudge-btn {
-    flex: 1 1 0;
-    min-width: 0;
-    padding-right: $spacing-sm;
-    padding-left: $spacing-sm;
-    white-space: nowrap;
-  }
-
-  &__stall-nudge-btn-label {
-    display: block;
-    flex-shrink: 0;
-    white-space: nowrap;
-    word-break: keep-all;
-  }
-
-  &__host-advance {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $spacing-xs;
-    margin-top: $spacing-md;
-  }
-
-  &__host-advance-btn {
-    min-width: 320rpx;
   }
 
   // ── PR1 壳层: one-time host ⋯ coachmark ─────────────────────────────
@@ -142,9 +90,9 @@ $__gold-accent:  $color-landed-gold;
     max-width: 440rpx;
     padding: $spacing-sm $spacing-md;
     background: $color-text-primary;
-    border-radius: 16rpx;
+    border-radius: $radius-md;
     box-shadow: 0 8rpx 24rpx rgba($color-text-primary, 0.16);
-    animation: icebreaker-coachmark-in 150ms ease both;
+    animation: icebreaker-coachmark-in 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__coachmark-text {
@@ -166,11 +114,12 @@ $__gold-accent:  $color-landed-gold;
   // Error modifier — centre the error block vertically
   &--error {
     @include flex-center;
+    min-height: 100vh;
     min-height: 100dvh;
   }
 
   &__phase-shell {
-    animation: icebreaker-phase-in 0.18s cubic-bezier(0.2, 0, 0.2, 1) both;
+    animation: icebreaker-phase-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
     transition: opacity 0.12s ease, transform 0.12s ease;
   }
 
@@ -193,10 +142,9 @@ $__gold-accent:  $color-landed-gold;
     padding: 12rpx 22rpx;
     border: 1rpx solid rgba($color-primary, 0.18);
     border-radius: 999rpx;
-    background: rgba($color-surface, 0.92);
+    background: rgba($color-surface, 0.96);
     box-shadow: 0 14rpx 34rpx rgba($color-primary, 0.12);
-    backdrop-filter: blur(14rpx);
-    animation: icebreaker-flow-sync-in 0.16s ease both;
+    animation: icebreaker-flow-sync-in 0.16s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__flow-sync-dot {
@@ -208,9 +156,9 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__flow-sync-text {
-    font-size: 24rpx;
-    font-weight: 600;
-    line-height: 1.2;
+    @include type-label;
+    font-weight: $font-weight-semibold;
+    line-height: 1.2; // compact single-line pill readout
     color: $color-text-primary;
   }
 
@@ -228,7 +176,7 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__error-text {
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-text-secondary;
     text-align: center;
   }
@@ -240,7 +188,8 @@ $__gold-accent:  $color-landed-gold;
   // ── Phase Transition Toast (restored 2026-07-17; purged by mistake in PR3) ──
   &__phase-toast {
     position: fixed;
-    top: calc(200rpx + env(safe-area-inset-top));
+    // Clears the sticky __flow-sync pill slot (top 112rpx + ~80rpx pill).
+    top: calc(240rpx + env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
     box-sizing: border-box;
@@ -251,8 +200,8 @@ $__gold-accent:  $color-landed-gold;
     gap: $spacing-sm;
     padding: $spacing-sm $spacing-lg;
     background: $color-surface;
-    border-radius: 100rpx;
-    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+    border-radius: $radius-full;
+    box-shadow: $shadow-md;
     z-index: 100;
     animation: fade-slide-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
@@ -299,26 +248,24 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__waiting-title {
-    font-size: $font-size-lg;
+    @include type-subheading;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
   }
 
   &__waiting-count {
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-text-secondary;
   }
 
-  &__waiting-host-row {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-    margin-top: $spacing-xs;
-  }
-
   &__waiting-host {
-    font-size: $font-size-sm;
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    @include type-label;
     color: $color-text-muted;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   &__waiting-tier {
@@ -340,9 +287,9 @@ $__gold-accent:  $color-landed-gold;
   }
 
   // Zero-scroll flex layout for warmup (contract AC11).
-  // When scrollY is disabled, the ScrollView acts as a flex column and the
-  // phase shell fills the remaining viewport so the action bar sits at the
-  // bottom of the SE 667pt viewport.
+  // scrollY stays enabled (2026-08-24) as a short-viewport escape hatch; the
+  // flex column still stretches the phase shell so the action bar sits at the
+  // bottom of the SE 667pt viewport and nothing scrolls when content fits.
   &--warmup {
     display: flex;
     flex-direction: column;
@@ -374,9 +321,8 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__tool-strip-title {
-    font-size: $font-size-sm;
+    @include type-label;
     font-weight: $font-weight-semibold;
-    color: $color-text-secondary;
     margin-bottom: $spacing-sm;
   }
 
@@ -404,7 +350,7 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__tool-card-badge-text {
-    font-size: $font-size-xs;
+    @include type-caption;
     font-weight: $font-weight-bold;
     color: $color-primary;
   }
@@ -418,15 +364,13 @@ $__gold-accent:  $color-landed-gold;
 
   &__tool-card-title {
     display: block;
-    font-size: $font-size-base;
+    @include type-body;
     font-weight: $font-weight-bold;
-    color: $color-text-primary;
   }
 
   &__tool-card-sub {
     display: block;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
+    @include type-caption;
     margin-top: 6rpx;
   }
 
@@ -434,118 +378,6 @@ $__gold-accent:  $color-landed-gold;
 // ─── 迷你剧本杀配置弹层（沉浸式两阶段卡片选择器）──────────────────────
 // Design spec: 2×4 style grid → translateX slide → 2×2 genre grid
 // Zero-scroll viewport. Single-transform-per-element animations only.
-
-.ms-generation {
-  position: fixed;
-  inset: 0;
-  z-index: 240;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  padding: $spacing-xl $spacing-lg;
-  background: rgba($color-bg-warm-to, 0.96);
-
-  &__card {
-    width: 100%;
-    max-width: 640rpx;
-    box-sizing: border-box;
-    padding: 48rpx 40rpx;
-    border: 2rpx solid rgba($color-primary, 0.14);
-    border-radius: 32rpx;
-    background: $color-surface;
-    text-align: center;
-    animation: ms-generation-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  &__mascot {
-    display: block;
-    width: 144rpx;
-    height: 144rpx;
-    margin: 0 auto $spacing-sm;
-  }
-
-  &__eyebrow {
-    display: block;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    color: $color-primary;
-    letter-spacing: 4rpx;
-  }
-
-  &__title {
-    @include font-cn-display;
-    display: block;
-    margin-top: $spacing-xs;
-    font-size: $font-size-xl;
-    font-weight: $font-weight-bold;
-    color: $color-text-primary;
-  }
-
-  &__stage {
-    display: block;
-    min-height: 44rpx;
-    margin-top: $spacing-sm;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-  }
-
-  &__track {
-    position: relative;
-    width: 100%;
-    height: 20rpx;
-    margin-top: $spacing-lg;
-    overflow: hidden;
-    border-radius: 999rpx;
-    background: rgba($color-primary, 0.12);
-  }
-
-  &__fill {
-    width: 100%;
-    height: 100%;
-    border-radius: inherit;
-    background: $color-primary;
-    transform-origin: left center;
-    transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  &__metrics {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: $spacing-sm;
-    margin-top: $spacing-sm;
-  }
-
-  &__percent {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-bold;
-    color: $color-primary;
-  }
-
-  &__time {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-  }
-
-  &__hint {
-    display: block;
-    margin-top: $spacing-lg;
-    font-size: $font-size-xs;
-    color: $color-text-muted;
-  }
-}
-
-@keyframes ms-generation-enter {
-  from {
-    opacity: 0;
-    transform: translateY(16rpx);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 .ms-modal {
   position: fixed;
@@ -555,10 +387,6 @@ $__gold-accent:  $color-landed-gold;
   align-items: stretch;
   justify-content: center;
   background: $color-surface;
-
-  &__backdrop {
-    display: none;
-  }
 
   &__sheet {
     position: relative;
@@ -575,10 +403,6 @@ $__gold-accent:  $color-landed-gold;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-  }
-
-  &__handle {
-    display: none;
   }
 
   &__header {
@@ -634,8 +458,7 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__subtitle {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
+    @include type-label;
     margin-top: 4rpx;
   }
 
@@ -676,8 +499,7 @@ $__gold-accent:  $color-landed-gold;
   &__hero-hint {
     display: block;
     overflow: hidden;
-    color: $color-text-secondary;
-    font-size: $font-size-xs;
+    @include type-caption;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -687,9 +509,8 @@ $__gold-accent:  $color-landed-gold;
     align-items: center;
     justify-content: center;
     min-height: 88rpx;
-    font-size: $font-size-sm;
+    @include type-label;
     color: $color-primary;
-    font-weight: $font-weight-medium;
     padding: 8rpx 16rpx;
   }
 
@@ -708,14 +529,6 @@ $__gold-accent:  $color-landed-gold;
 
   &__cta {
     width: 100%;
-  }
-
-  &__footer-hint {
-    display: block;
-    text-align: center;
-    font-size: $font-size-sm;
-    color: $color-text-muted;
-    padding: 24rpx 0;
   }
 }
 
@@ -744,28 +557,20 @@ $__gold-accent:  $color-landed-gold;
       aspect-ratio: 3 / 4;
     }
   }
-
-  &--genre {
-    // 2×2 grid: 4 genres
-    .ms-genre-card {
-      width: calc(50% - 8rpx);
-      aspect-ratio: 1 / 1;
-    }
-  }
 }
 
 // ─── Style Cards ──────────────────────────────────────────────────────────────
 
 .ms-card {
   position: relative;
-  border-radius: 24rpx;
+  border-radius: $card-radius-sm;
   overflow: hidden;
   cursor: pointer;
   // Initial state for entrance animation
   opacity: 0;
   transform: scale(0.92);
   transition:
-    transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
     opacity 200ms ease;
 
   // Staggered entrance — BEM modifiers for index 0..7
@@ -837,7 +642,7 @@ $__gold-accent:  $color-landed-gold;
     position: absolute;
     bottom: 56rpx;
     left: 16rpx;
-    font-size: $font-size-xs;
+    @include type-caption;
     color: rgba(255, 255, 255, 0.75);
     z-index: 1;
   }
@@ -873,96 +678,6 @@ $__gold-accent:  $color-landed-gold;
   }
 }
 
-// ─── Genre Cards ──────────────────────────────────────────────────────────────
-
-.ms-genre-header {
-  margin-bottom: $spacing-sm;
-
-  &__title {
-    @include type-body-emphasis;
-    color: $color-text-primary;
-  }
-
-  &__hint {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
-    margin-top: 4rpx;
-  }
-}
-
-.ms-genre-card {
-  position: relative;
-  border-radius: 24rpx;
-  overflow: hidden;
-  cursor: pointer;
-  transition:
-    transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    opacity 200ms ease;
-
-  &:active,
-  &--pressed {
-    transform: scale(0.96);
-    transition-duration: 100ms;
-  }
-
-  &--selected {
-    .ms-genre-card__glow {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  &__bg {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
-
-  &__overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 50%);
-    pointer-events: none;
-  }
-
-  &__label {
-    position: absolute;
-    bottom: 20rpx;
-    left: 20rpx;
-    right: 20rpx;
-    @include font-cn-display;
-    font-size: $font-size-md;
-    font-weight: $font-weight-bold;
-    color: $color-text-white;
-    line-height: 1.2;
-    z-index: 1;
-  }
-
-  &__glow {
-    position: absolute;
-    inset: -4rpx;
-    border-radius: 28rpx;
-    border: 4rpx solid;
-    opacity: 0;
-    transform: scale(0.96);
-    pointer-events: none;
-    transition:
-      opacity 200ms ease-out,
-      transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  &__hit-target {
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    background: transparent;
-
-    &--pressed {
-      background: rgba($color-surface, 0.08);
-    }
-  }
-}
-
 // ─── Host Script Library ─────────────────────────────────────────────────────
 
 .ms-library {
@@ -987,8 +702,7 @@ $__gold-accent:  $color-landed-gold;
 
   &__section-hint,
   &__empty-copy {
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
+    @include type-caption;
   }
 
   &__list {
@@ -1000,7 +714,7 @@ $__gold-accent:  $color-landed-gold;
   &__state {
     min-height: 192rpx;
     padding: 32rpx;
-    border-radius: 24rpx;
+    border-radius: $card-radius-sm;
     background: rgba($color-primary, 0.05);
     display: flex;
     flex-direction: column;
@@ -1055,7 +769,8 @@ $__gold-accent:  $color-landed-gold;
       color: $color-text-white;
     }
 
-    &:active {
+    &:active,
+    &--pressed {
       transform: scale(0.96);
     }
   }
@@ -1066,7 +781,7 @@ $__gold-accent:  $color-landed-gold;
     gap: 16rpx;
     margin-bottom: 16rpx;
     padding: 0 24rpx;
-    border-radius: 20rpx;
+    border-radius: $radius-md;
     background: rgba($color-primary, 0.06);
     color: $color-text-primary;
     font-size: $font-size-sm;
@@ -1118,7 +833,7 @@ $__gold-accent:  $color-landed-gold;
   position: relative;
   padding: 24rpx;
   border: 2rpx solid rgba($color-primary, 0.14);
-  border-radius: 24rpx;
+  border-radius: $card-radius-sm;
   background: $color-surface;
   box-shadow: 0 12rpx 32rpx rgba($color-primary, 0.08);
 
@@ -1158,16 +873,20 @@ $__gold-accent:  $color-landed-gold;
   &__meta {
     gap: 12rpx;
     margin-bottom: 8rpx;
-    font-size: $font-size-xs;
+    @include type-caption;
     color: $color-primary;
   }
 
   &__title {
     @include font-cn-display;
-    display: block;
+    // LLM-generated titles are unbounded — clamp to 2 lines (premise: 3).
+    display: -webkit-box;
+    overflow: hidden;
     color: $color-text-primary;
     font-size: $font-size-md;
     font-weight: $font-weight-bold;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   &__premise {
@@ -1197,7 +916,7 @@ $__gold-accent:  $color-landed-gold;
   &__card {
     padding: 24rpx;
     border: 2rpx solid rgba($color-primary, 0.1);
-    border-radius: 24rpx;
+    border-radius: $card-radius-sm;
     background: $color-surface;
   }
 
@@ -1271,9 +990,7 @@ $__gold-accent:  $color-landed-gold;
 // ─── Reduced Motion ───────────────────────────────────────────────────────────
 
 @media (prefers-reduced-motion: reduce) {
-  .ms-generation__card,
   .ms-card,
-  .ms-genre-card,
   .ms-library__genre,
   .ms-stage {
     transition: none !important;
@@ -1282,9 +999,7 @@ $__gold-accent:  $color-landed-gold;
     transform: none !important;
   }
 
-  .ms-card__glow,
-  .ms-genre-card__glow,
-  .ms-generation__fill {
+  .ms-card__glow {
     transition: none !important;
   }
 }
@@ -1343,7 +1058,18 @@ $__gold-accent:  $color-landed-gold;
 // ─── Xiaoyue Session Pack ────────────────────────────────────────────────────
 
 .icebreaker__generate-pack-btn {
-  margin: 24rpx 32rpx 0;
+  // __inner already pads horizontally — only the top gap belongs here.
+  margin: 24rpx 0 0;
+}
+
+// ─── Bonus Gate Overlay ────────────────────────────────────────────────────
+// Layout/visuals are inline in overlays/BonusGateOverlay.tsx; this class gives
+// the action-row buttons their flex: 1 (the old 'flex-1' class had zero
+// stylesheet definitions). Lives here because the page is in a subpackage and
+// a colocated overlay SCSS would ride the style-splitting trap.
+
+.bonus-gate-overlay__btn {
+  flex: 1;
 }
 
 // ─── Phase Intro Overlay ──────────────────────────────────────────
@@ -1367,12 +1093,11 @@ $__gold-accent:  $color-landed-gold;
     flex-direction: column;
     align-items: center;
     gap: 24rpx;
-    animation: phase-intro-scale-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation: phase-intro-scale-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__label {
-    font-size: $font-size-xl;
-    font-weight: 700;
+    @include type-heading;
     color: $color-bg-tint-cream;
     text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.3);
     letter-spacing: 4rpx;
@@ -1435,7 +1160,7 @@ $__gold-accent:  $color-landed-gold;
     width: 600rpx;
     height: 600rpx;
     z-index: 1;
-    animation: celebration-scale-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation: celebration-scale-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__card {
@@ -1444,15 +1169,14 @@ $__gold-accent:  $color-landed-gold;
     width: 460rpx;
     padding: 32rpx;
     background: rgba(0, 0, 0, 0.55);
-    border-radius: 24rpx;
+    border-radius: $card-radius-sm;
     border: 1rpx solid rgba(255, 255, 255, 0.15);
     text-align: center;
-    animation: celebration-fade-slide-up 0.5s 0.15s ease both;
+    animation: celebration-fade-slide-up 0.5s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__title {
-    font-size: $font-size-2xl;
-    font-weight: 700;
+    @include type-title;
     color: $color-bg-tint-cream;
     text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.4);
     margin-bottom: 16rpx;
@@ -1518,7 +1242,7 @@ $__gold-accent:  $color-landed-gold;
 
   &__title {
     display: block;
-    font-size: $font-size-lg;
+    @include type-subheading;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
   }
@@ -1526,10 +1250,7 @@ $__gold-accent:  $color-landed-gold;
   &__subtitle {
     display: block;
     margin-top: $spacing-xs;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    color: $color-text-secondary;
-    line-height: 1.5;
+    @include type-label;
   }
 
   &__host-badge {
@@ -1538,44 +1259,43 @@ $__gold-accent:  $color-landed-gold;
     border-radius: 999rpx;
     color: $color-text-white;
     background: $color-primary;
-    font-size: $font-size-xs;
+    @include type-caption;
     font-weight: $font-weight-bold;
     line-height: 1.2;
   }
 
   &__role-card {
     padding: $spacing-lg;
-    border-radius: 20rpx;
+    border-radius: $card-radius-sm;
     background: $color-bg-clean;
     border: 2rpx solid rgba($color-primary, 0.22);
-    box-shadow: 0 12rpx 30rpx rgba(31, 41, 55, 0.08);
+    box-shadow: $shadow-md;
   }
 
   &__role-kicker {
     display: block;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
+    @include type-label;
     font-weight: $font-weight-semibold;
   }
 
   &__role-name {
-    display: block;
+    display: -webkit-box;
     margin-top: $spacing-xs;
-    font-size: $font-size-xl;
-    color: $color-text-primary;
-    font-weight: $font-weight-bold;
+    overflow: hidden;
+    @include type-heading;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   &__role-copy {
     display: block;
     margin-top: $spacing-sm;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
+    @include type-label;
     line-height: 1.55;
   }
 
   &__waiting {
-    font-size: $font-size-base;
+    @include type-body;
     color: $color-text-secondary;
     text-align: center;
     padding: $spacing-xl 0;
@@ -1587,10 +1307,10 @@ $__gold-accent:  $color-landed-gold;
     gap: $spacing-sm;
     width: 100%;
     padding: $spacing-md $spacing-lg;
-    border-radius: 16rpx;
+    border-radius: $radius-md;
     background: $color-bg-clean;
     border: 2rpx solid rgba($color-primary, 0.28);
-    box-shadow: 0 8rpx 24rpx rgba(31, 41, 55, 0.06);
+    box-shadow: $shadow-sm;
     transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
     min-height: 88rpx;
     box-sizing: border-box;
@@ -1628,15 +1348,15 @@ $__gold-accent:  $color-landed-gold;
   }
 
   &__btn-emoji {
-    font-size: 40rpx;
-    line-height: 1;
+    width: 40rpx;
+    height: 40rpx;
+    display: flex;
     flex-shrink: 0;
   }
 
   &__btn-label {
-    font-size: $font-size-base;
+    @include type-body;
     font-weight: $font-weight-bold;
-    color: $color-text-primary;
     flex: 1;
   }
 
@@ -1653,10 +1373,12 @@ $__gold-accent:  $color-landed-gold;
   &__btn-hint {
     flex-shrink: 0;
     max-width: 220rpx;
-    font-size: $font-size-xs;
-    color: $color-text-secondary;
+    overflow: hidden;
+    @include type-caption;
     font-weight: $font-weight-semibold;
     text-align: right;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }
 

@@ -9,6 +9,9 @@
   &__wrapper {
     position: relative;
     width: 100%;
+    // Grid stack: both faces occupy the same cell so the wrapper sizes to
+    // the TALLER face (front-only sizing clipped taller back-face content).
+    display: grid;
     transform-style: preserve-3d;
     transition: transform cubic-bezier(0.22, 1, 0.36, 1);
     will-change: transform;
@@ -19,6 +22,9 @@
   }
 
   &__face {
+    // Same grid cell for both faces; default stretch makes the shorter
+    // face fill the taller one's height (replaces back-face height: 100%).
+    grid-area: 1 / 1;
     position: relative;
     width: 100%;
     backface-visibility: hidden;
@@ -26,26 +32,32 @@
     overflow: hidden;
 
     &--back {
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 100%;
       transform: rotateY(180deg);
     }
   }
 
   // Reduced motion — instant opacity swap
-  &--reduced {
+  // Faces render without a wrapper here; stack them the same way so the
+  // container still sizes to the taller face. Compound selector keeps the
+  // grid display above consumer overrides like WarmupCardSlot's
+  // `.warmup-card-slot .reveal-card-flip { display: flex }`.
+  &.reveal-card-flip--reduced {
+    display: grid;
+
     .reveal-card-flip__face {
       transition: opacity 0ms;
     }
 
     .reveal-card-flip__face--back {
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 100%;
       transform: none;
     }
+  }
+}
+
+// OS-level reduced-motion defense: disable the wrapper transform transition
+// even if the JS-driven --reduced modifier is not applied.
+@media (prefers-reduced-motion: reduce) {
+  .reveal-card-flip__wrapper {
+    transition: none;
   }
 }

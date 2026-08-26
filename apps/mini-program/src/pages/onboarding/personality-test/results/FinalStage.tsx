@@ -13,6 +13,7 @@ import type { AnonymousAssessmentTopMatch } from '../../../../lib/auth/anonymous
 import { haptics } from '../../../../lib/utils/haptics'
 import { cdnAsset } from '../../../../lib/utils/cdnAssets'
 import XiaoyueChatBubble from '../../../../components/mascot/XiaoyueChatBubble'
+import XiaoyueInlineError from '../../../../components/mascot/XiaoyueInlineError'
 import { PERSONALITY_TEST_XIAOYUE_EXPRESSION } from '../../../../lib/mascot/xiaoyueExpressions'
 import AIGCLabel from '../../../../components/ai-content/AIGCLabel'
 import AIContentReportButton from '../../../../components/ai-content/AIContentReportButton'
@@ -715,8 +716,8 @@ export default function FinalStage({
           {/* R2-7: inline login retry surface — mirrors the poster-error
               pattern; the primary CTA below is the retry action. */}
           {loginError ? (
-            <View className='personality-results__login-error' role='alert'>
-              <Text className='personality-results__login-error-text'>{loginError}</Text>
+            <View className='personality-results__login-error'>
+              <XiaoyueInlineError message={loginError} />
               <Text className='personality-results__login-error-hint'>结果还在这里，点下方按钮再试一次</Text>
             </View>
           ) : null}

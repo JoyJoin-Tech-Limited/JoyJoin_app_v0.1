@@ -1,0 +1,94 @@
+@use '../../styles/variables' as *;
+
+// XiaoyueInlineError — compact inline failure row (PR-8).
+// 悦仔 icon + speech bubble + optional retry pill. 8rpx spacing rhythm;
+// motion is transform/opacity only and reduced-motion safe.
+//
+// NOTE: this file is @use'd by each consuming page SCSS (subpackage WXSS
+// guard). Do not re-add a TSX side-effect import.
+
+.xiaoyue-inline-error {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  width: 100%;
+  box-sizing: border-box;
+  animation: xiaoyue-inline-error-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  &__icon {
+    width: 48rpx;
+    height: 48rpx;
+    flex-shrink: 0;
+  }
+
+  &__bubble {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    background: $color-surface;
+    border: 1rpx solid rgba($color-primary, 0.14);
+    border-radius: $bubble-radius;
+    padding: $spacing-sm $spacing-md;
+    box-shadow: 0 4rpx 16rpx rgba($color-text-primary, 0.05);
+  }
+
+  // Speech-bubble tail pointing back at the 悦仔 icon.
+  &__bubble::before {
+    content: '';
+    position: absolute;
+    left: -7rpx;
+    top: 50%;
+    width: 14rpx;
+    height: 14rpx;
+    background: $color-surface;
+    border-left: 1rpx solid rgba($color-primary, 0.14);
+    border-bottom: 1rpx solid rgba($color-primary, 0.14);
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  &__text {
+    font-size: 26rpx;
+    line-height: 1.5;
+    color: $color-text-primary-warm;
+    word-break: break-word;
+  }
+
+  &__retry {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 56rpx;
+    padding: 0 $spacing-md;
+    border-radius: $radius-pill;
+    background: rgba($color-primary, 0.08);
+    transition: background 0.12s ease;
+  }
+
+  &__retry--hover {
+    background: rgba($color-primary, 0.16);
+  }
+
+  &__retry-text {
+    font-size: 24rpx;
+    font-weight: 600;
+    color: $color-primary;
+  }
+}
+
+@keyframes xiaoyue-inline-error-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xiaoyue-inline-error {
+    animation: none;
+  }
+}

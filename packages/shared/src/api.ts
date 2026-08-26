@@ -48,6 +48,11 @@ export {
   type OnboardingFunnelStepStats,
   type OnboardingFunnelStitchStats,
   type OnboardingFunnelExperimentBucket,
+  type OnboardingCeremonyAdvanceStats,
+  type OnboardingSlotSkipStats,
+  type OnboardingResultStageDwellStats,
+  type OnboardingCommentaryReadStats,
+  type OnboardingEmotionMetrics,
   type AdminOnboardingFunnelResponse,
 } from './api/onboardingFunnel.js'
 export {

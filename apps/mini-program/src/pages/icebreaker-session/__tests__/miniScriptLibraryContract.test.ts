@@ -18,7 +18,7 @@ describe('MiniScript host library contract', () => {
     expect(modalSource).toContain('已有剧本')
     expect(modalSource).toContain('正在创作')
     expect(modalSource).toContain("['queued', 'generating', 'validating', 'fallback', 'persisting']")
-    expect(modalSource).toContain('setInterval(() => void onLoadLibrary(selectedStyle), 800)')
+    expect(modalSource).toContain('setInterval(() => void onLoadLibrary(selectedStyle), 1500)')
   })
 
   it('loads and selects scripts through the canonical top-level routes', () => {

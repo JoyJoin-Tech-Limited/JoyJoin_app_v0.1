@@ -18,44 +18,13 @@
  * teaser nodes); dropped the vague process word 「一步步」 from the hero status
  * (「正在一步步成形」→「正在成形」) and the Flow 2 shell title (「正在一步步发生」→
  * 「正在成形」) — same principle as the teaser voice-line revision.
+ *
+ * 2026-08-26 (PR-5 双仪式合并): the Flow 1 intro overlay is retired. The
+ * entry explainer survives only as FLOW1_ENTRY_COPY, condensed into the
+ * one-time Discover arrival coachmark.
  */
 
-import { DEFAULT_EVENT_GROUP_SIZE } from '../constants.js';
-
-// ─── Flow 1 · Home ───
-
-/** H1 line 2 renders the group-size numeral from config, never hardcoded. */
-export function getFlow1H1Line2(): string {
-  return `${DEFAULT_EVENT_GROUP_SIZE.min}–${DEFAULT_EVENT_GROUP_SIZE.max}人的同城小局`;
-}
-
-export const FLOW1_HOME_COPY = {
-  h1Line1: '为你攒一场',
-  /** Shown when the user has no resolved archetype. */
-  fallbackSubline: '一边是一桌合拍的人，一边是城市递来的线索',
-} as const;
-
-/** 12 per-archetype sub-lines, keyed by canonical archetype id (personality/archetypeNames.ts). */
-export const ARCHETYPE_SUBLINES: Record<string, string> = {
-  corgi: '你一进场，局和街都先热起来',
-  rooster: '有你在，局和城都慢慢暖起来',
-  hamster_praise: '你看得见人的好，局和城都更亲',
-  fox: '新玩法问你准没错，局和街都有惊喜',
-  dolphin_calm: '你读得懂气场，局和街都跟着舒服',
-  spider: '你顺手搭的桥，把人和这座城连起来',
-  koala: '你真的在听，这桌和这座城都敢说真心话',
-  octopus: '你的脑洞一开，局和街都有新玩法',
-  owl: '你问的那个为什么，局和街都会聊深',
-  elephant: '有你在先稳三分，这桌和出门都踏实',
-  turtle: '你慢热看得准，局和街都等你开口',
-  cat: '你不抢话，小局和街角反而更有味',
-};
-
-export function getArchetypeSubline(archetypeId?: string | null): string {
-  return (archetypeId && ARCHETYPE_SUBLINES[archetypeId]) || FLOW1_HOME_COPY.fallbackSubline;
-}
-
-// ─── Flow 1 · Banners ───
+// ─── Play-mode entries (Discover arrival coachmark) ───
 // Eyebrows disambiguate the two 盲盒 modes at a glance (2026-08-03 revamp).
 
 export const FLOW1_ENTRY_COPY = {
@@ -72,45 +41,6 @@ export const FLOW1_ENTRY_COPY = {
     bannerLine: '一条线索引路，把城市走成故事',
   },
 } as const;
-
-// ─── Flow 1 · Detail pages ───
-
-export interface FlowStepCopy {
-  title: string;
-  description: string;
-}
-
-export interface ExperienceDetailCopy {
-  heroSubtitle: string;
-  sceneTitle: string;
-  closing: string;
-  steps: readonly FlowStepCopy[];
-}
-
-export const EXPERIENCE_DETAIL_COPY: Record<'event' | 'street', ExperienceDetailCopy> = {
-  event: {
-    heroSubtitle: '不是随机拼桌，是认真凑一桌合拍的人',
-    sceneTitle: '报名之后，悦仔就开始为你留座了',
-    closing: '先有一件共同想做的事，认识彼此就自然多了',
-    steps: [
-      { title: '挑一场想参加的', description: '先从你真正感兴趣的活动开始' },
-      { title: '说说你的偏好', description: '时间、兴趣和相处节奏，悦仔都会记在心里' },
-      { title: '凑成一桌', description: '悦仔把更合拍的人，安排到同一桌' },
-      { title: '到现场一起体验', description: '不用硬找话题，先一起把活动玩起来' },
-    ],
-  },
-  street: {
-    heroSubtitle: '城市把线索藏好了，等你哪天想出门',
-    sceneTitle: '这座城市的故事，从一条线索开始',
-    closing: '不用约齐人，一个人也能把城市走成故事',
-    steps: [
-      { title: '挑一条顺眼的线索', description: '每条线索背后，都是一封城市的邀请' },
-      { title: '接到一件小任务', description: '照着提示就能开始，随时出发' },
-      { title: '边走边发现', description: '路程不必很远，也能重新看看熟悉的街道' },
-      { title: '留下这一程', description: '完成之后，把这段经历收进你的城市故事' },
-    ],
-  },
-};
 
 // ─── Flow 2 · Lifecycle (data-bound to the just-registered pool) ───
 
@@ -181,13 +111,9 @@ export function resolveFlow2NodeDescription(template: string, facts?: FlowLifecy
 // ─── Shell / chrome ───
 
 export const FLOW_SHELL_COPY = {
-  flow1Title: '先看看怎么玩',
   flow2Title: '这次出发，正在成形',
   identityChipFallback: '你的地图',
   skip: '跳过',
-  bannerEnter: '进入看看',
-  detailBack: '两种玩法',
-  ctaExplore: '去看看有什么局',
   ctaViewActivity: '查看我的活动',
 } as const;
 

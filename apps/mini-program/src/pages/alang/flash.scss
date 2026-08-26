@@ -88,7 +88,7 @@ page {
   }
 
   &__section {
-    margin-top: 36rpx;
+    margin-top: 32rpx;
   }
 
   &__preferences-row {
@@ -187,8 +187,8 @@ page {
   &__notice {
     display: flex;
     align-items: flex-start;
-    gap: 14rpx;
-    margin-top: 28rpx;
+    gap: 16rpx;
+    margin-top: 24rpx;
     padding: 22rpx 24rpx;
     border-radius: $card-radius-sm;
     background: rgba($color-surface, 0.7);
@@ -441,7 +441,7 @@ page {
 .flash-task-list {
   display: flex;
   flex-direction: column;
-  gap: 18rpx;
+  gap: 16rpx;
 }
 
 .flash-online-card {
@@ -512,6 +512,7 @@ page {
 .flash-intro {
   position: relative;
   width: 100%;
+  min-height: 100vh;
   min-height: 100dvh;
   overflow: auto;
   background:
@@ -744,6 +745,7 @@ page {
   &__meta { margin-top: 8rpx; color: $color-text-secondary-on-light; font-size: $font-size-sm; }
   &__address { max-width: 600rpx; margin-top: 14rpx; padding: 12rpx 24rpx; border-radius: $radius-pill; background: rgba($color-primary, 0.08); color: $color-primary-dark; font-size: $font-size-sm; line-height: 1.5; text-align: center; }
   &__map-shell { position: relative; width: 100%; height: 600rpx; margin-top: 32rpx; overflow: hidden; border: 6rpx solid rgba($color-surface, 0.88); border-radius: $card-radius-lg; background: rgba($color-surface, 0.72); box-shadow: 0 18rpx 48rpx rgba(74, 52, 105, 0.2); box-sizing: border-box; }
+  &__map-fade { width: 100%; height: 100%; animation: flash-radar-map-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both; }
   &__map { width: 100%; height: 100%; }
   &__map-loading { display: flex; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; padding: 48rpx; box-sizing: border-box; text-align: center; }
   &__map-loading-title { color: $color-text-primary-warm; font-family: $font-cn-display; font-size: $font-size-lg; font-weight: $font-weight-black; }
@@ -815,8 +817,56 @@ page {
   &__result--error { background: rgba($color-error, 0.06); }
   &__result-title { display: block; font-size: $font-size-md; font-weight: $font-weight-bold; }
   &__result-copy { display: block; margin: 8rpx 0 18rpx; color: $color-text-secondary-on-light; }
-  &__actions { width: 100%; margin-top: 34rpx; }
+  &__result-echo { display: block; margin: 0 0 18rpx; padding-top: 16rpx; border-top: 2rpx solid rgba($color-primary, 0.1); color: $color-primary-dark; font-size: $font-size-sm; line-height: $line-height-relaxed; animation: flash-radar-echo-in 720ms cubic-bezier(0.22, 1, 0.36, 1) 320ms both; }
+  &__actions { width: 100%; margin-top: 32rpx; }
   &__actions .flash-button + .flash-button { margin-top: 12rpx; }
+  &__encounter {
+    position: fixed;
+    z-index: 40;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48rpx 40rpx;
+    background: radial-gradient(circle at 50% 42%, rgba(66, 50, 96, 0.97), rgba(40, 30, 58, 0.98));
+    text-align: center;
+    box-sizing: border-box;
+  }
+  &__encounter-bloom {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 440rpx;
+    height: 440rpx;
+    transform: translate(-50%, -50%);
+    border-radius: $radius-circle;
+    background: radial-gradient(circle, rgba($color-primary, 0.34) 0%, rgba($color-primary, 0.12) 40%, transparent 68%);
+    animation: flash-radar-encounter-bloom 1.1s ease-out infinite;
+  }
+  &__encounter-portrait { position: relative; z-index: 1; transform-origin: 50% 100%; animation: flash-radar-encounter-rise 720ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  &__encounter-title { position: relative; z-index: 1; margin-top: 32rpx; color: $color-text-white; font-family: $font-cn-display; font-size: 40rpx; font-weight: $font-weight-black; letter-spacing: 8rpx; animation: flash-radar-encounter-copy-in 640ms cubic-bezier(0.22, 1, 0.36, 1) 240ms both; }
+  &__encounter-name { position: relative; z-index: 1; margin-top: 12rpx; color: rgba($color-surface, 0.86); font-size: $font-size-md; font-weight: $font-weight-bold; animation: flash-radar-encounter-copy-in 640ms cubic-bezier(0.22, 1, 0.36, 1) 360ms both; }
+  &__encounter-copy { position: relative; z-index: 1; margin-top: 20rpx; max-width: 540rpx; color: rgba($color-surface, 0.66); font-size: $font-size-sm; line-height: $line-height-relaxed; animation: flash-radar-encounter-copy-in 640ms cubic-bezier(0.22, 1, 0.36, 1) 480ms both; }
+
+  @media (min-width: 390px) {
+    &__encounter-bloom {
+      width: 520rpx;
+      height: 520rpx;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &__encounter-bloom,
+    &__encounter-portrait,
+    &__encounter-title,
+    &__encounter-name,
+    &__encounter-copy {
+      animation: none;
+    }
+  }
 }
 
 .flash-dialogue {
@@ -2840,7 +2890,7 @@ page {
 .flash-dialogue__story-panel--result .flash-dialogue__story-panel-content {
   min-height: 0;
   gap: 16rpx;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .flash-dialogue__story-result-exit {
@@ -3161,10 +3211,37 @@ page {
 }
 
 .flash-dialogue__fragment {
+  position: relative;
+  overflow: hidden;
   padding: 24rpx;
   border-radius: 22rpx;
   background: linear-gradient(145deg, $color-bg-tint-purple, $color-bg-tint-cream);
   animation: flash-story-fragment-in 420ms ease-out both;
+}
+
+.flash-dialogue__fragment-stamp {
+  position: absolute;
+  top: 18rpx;
+  right: 18rpx;
+  display: flex;
+  width: 104rpx;
+  height: 104rpx;
+  align-items: center;
+  justify-content: center;
+  border: 4rpx solid rgba($color-primary, 0.4);
+  border-radius: $radius-circle;
+  color: rgba($color-primary, 0.58);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  letter-spacing: 2rpx;
+  pointer-events: none;
+  animation: flash-dialogue-stamp-in 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes flash-dialogue-stamp-in {
+  0% { opacity: 0; transform: rotate(-24deg) scale(1.7); }
+  62% { opacity: 0.95; transform: rotate(-8deg) scale(0.94); }
+  100% { opacity: 0.68; transform: rotate(-10deg) scale(1); }
 }
 
 .flash-dialogue__fragment-label {
@@ -3192,6 +3269,82 @@ page {
 .flash-story-fragment-card__meta {
   color: $color-text-tertiary-on-light;
   font-size: $font-size-xs;
+}
+
+.flash-story-collection {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-top: 20rpx;
+  padding: 20rpx 20rpx 16rpx;
+  border: 2rpx solid $flow-border-subtle;
+  border-radius: 22rpx;
+  background: rgba($color-surface, 0.9);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), background 120ms ease;
+
+  &--pressed {
+    transform: scale(0.99);
+    background: rgba($color-primary, 0.05);
+  }
+
+  &__group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  &__npc {
+    color: $color-text-tertiary-on-light;
+    font-size: $font-size-2xs;
+    line-height: 1.3;
+  }
+
+  &__slots {
+    display: flex;
+    gap: 8rpx;
+  }
+
+  &__slot {
+    width: 34rpx;
+    height: 34rpx;
+    border: 2rpx solid transparent;
+    border-radius: 10rpx;
+    box-sizing: border-box;
+
+    &--empty {
+      border-color: rgba($color-primary, 0.3);
+      border-style: dashed;
+      background: rgba($color-primary, 0.06);
+      animation: flash-collection-slot-glow 2.4s ease-in-out infinite;
+    }
+
+    &--object { background: rgba($color-primary, 0.7); }
+    &--past { background: rgba(168, 197, 221, 0.85); }
+    &--relationship { background: rgba(255, 155, 133, 0.8); }
+    &--key { background: rgba($flash-radar-found, 0.8); }
+  }
+
+  &__count {
+    align-self: center;
+    color: $color-primary-dark;
+    font-family: $font-cn-display;
+    font-size: $font-size-md;
+    font-weight: $font-weight-black;
+  }
+}
+
+@keyframes flash-collection-slot-glow {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-story-collection__slot--empty {
+    animation: none;
+    opacity: 0.6;
+  }
 }
 
 .flash-story-fragment-card__title {
@@ -3400,6 +3553,31 @@ page {
   100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
+@keyframes flash-radar-map-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes flash-radar-encounter-bloom {
+  0% { opacity: 0.5; transform: scale(0.82); }
+  100% { opacity: 0; transform: scale(1.12); }
+}
+
+@keyframes flash-radar-encounter-rise {
+  from { opacity: 0; transform: translateY(28rpx) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes flash-radar-encounter-copy-in {
+  from { opacity: 0; transform: translateY(16rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes flash-radar-echo-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @keyframes flash-offer-paper-content {
   from {
     opacity: 0;
@@ -3444,9 +3622,19 @@ page {
   .flash-dialogue__story-panel,
   .flash-dialogue__story-choice,
   .flash-dialogue__fragment-sealed-mark,
-  .flash-dialogue__fragment {
+  .flash-dialogue__fragment,
+  .flash-radar__map-fade,
+  .flash-radar__result-echo,
+  .flash-radar__encounter-bloom,
+  .flash-radar__encounter-portrait,
+  .flash-radar__encounter-title,
+  .flash-radar__encounter-name,
+  .flash-radar__encounter-copy,
+  .flash-dialogue__fragment-stamp {
     animation: none !important;
   }
+  .flash-radar__encounter-bloom { opacity: 0.3; transform: scale(1); }
+  .flash-dialogue__fragment-stamp { opacity: 0.68; transform: rotate(-10deg); }
   .flash-button,
   .flash-dialogue__reroll,
   .flash-page__preferences-entry { transition: none; }
@@ -3511,6 +3699,7 @@ page {
 .flash-dialogue__story-panel--v2 {
   gap: 12rpx;
   max-height: calc(100vh - 300rpx);
+  max-height: calc(100dvh - 300rpx);
 }
 
 .flash-story-v2__scroll {
@@ -3635,4 +3824,398 @@ page {
   font-size: $font-size-2xs;
   line-height: 1.6;
   text-align: center;
+}
+
+// 档案台入口链接（AC-05）：事件页「我的故事碎片」区头的克制入口。
+.flash-page__section-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 88rpx;
+  margin-left: auto;
+  padding: 12rpx 24rpx;
+  border-radius: $radius-pill;
+  background: rgba($color-primary, 0.08);
+  transition: background 0.12s ease;
+
+  &--pressed {
+    background: rgba($color-primary, 0.16);
+  }
+}
+
+.flash-page__section-link-text {
+  color: $color-primary;
+  font-size: $font-size-2xs;
+  line-height: 1.5;
+}
+
+// 叙事动作层（sprint_20260821_3kmkkw, AC-04）：interaction 节点动作舞台。
+// 纸物件叙事风格——大点击区域、轻点为主短拖为辅，无硬失败。
+.flash-interaction {
+  margin-top: 16rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+
+  &__goal {
+    color: $color-surface;
+    font-size: $font-size-base;
+    font-weight: 600;
+    line-height: 1.6;
+  }
+
+  &__gesture {
+    padding: 24rpx 8rpx;
+
+    &--spacing,
+    &--path,
+    &--overlay,
+    &--privacy,
+    &--pairing {
+      min-height: 200rpx;
+    }
+
+    &--reduced {
+      .flash-interaction__chair,
+      .flash-interaction__layer {
+        transition: none;
+      }
+    }
+  }
+
+  // spacing 摆放留距
+  &__track {
+    position: relative;
+    height: 160rpx;
+    border-radius: $radius-md;
+    background: rgba($color-surface, 0.08);
+    border: 2rpx dashed rgba($color-surface, 0.24);
+  }
+
+  &__zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 96rpx;
+    margin-left: -48rpx;
+    border-radius: $radius-md;
+
+    &--active {
+      background: rgba($color-primary, 0.14);
+    }
+  }
+
+  &__chair {
+    position: absolute;
+    top: 32rpx;
+    width: 96rpx;
+    height: 96rpx;
+    margin-left: -48rpx;
+    border-radius: $radius-md;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    // 位置变化由 JS 在 drag 时通过 transform 驱动；zone 切换直接落位，
+    // 避免 left 过渡触发布局重排（performance-audit 2026-08-26）。
+    transition: none;
+
+    &--fixed {
+      left: 12rpx;
+      background: rgba($color-surface, 0.28);
+    }
+
+    &--movable {
+      background: rgba($color-primary, 0.85);
+    }
+  }
+
+  &__chair-mark {
+    color: $color-surface;
+    font-size: $font-size-sm;
+    font-weight: 600;
+  }
+
+  // path 路径
+  &__path {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32rpx 0;
+  }
+
+  &__waypoint-wrap {
+    display: flex;
+    align-items: center;
+  }
+
+  &__path-line {
+    width: 64rpx;
+    height: 4rpx;
+    background: rgba($color-surface, 0.2);
+
+    &--reached {
+      background: rgba($color-primary, 0.8);
+    }
+  }
+
+  &__waypoint {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: $radius-circle;
+    background: rgba($color-surface, 0.14);
+    border: 2rpx solid rgba($color-surface, 0.28);
+
+    &--next {
+      border-color: rgba($color-primary, 0.9);
+      background: rgba($color-primary, 0.18);
+    }
+
+    &--reached {
+      background: rgba($color-primary, 0.85);
+      border-color: rgba($color-primary, 0.85);
+    }
+  }
+
+  // overlay 叠合
+  &__layers {
+    position: relative;
+    height: 200rpx;
+    border-radius: $radius-md;
+    background: rgba($color-surface, 0.08);
+    overflow: hidden;
+  }
+
+  &__layer {
+    position: absolute;
+    top: 40rpx;
+    width: 120rpx;
+    height: 120rpx;
+    margin-left: -60rpx;
+    border-radius: $radius-md;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    // 同 chair：避免 left 过渡引发布局重排。
+    transition: none;
+
+    &--under {
+      left: 50%;
+      background: rgba($color-surface, 0.2);
+      border: 2rpx dashed rgba($color-surface, 0.36);
+    }
+
+    &--over {
+      background: rgba($color-primary, 0.72);
+    }
+  }
+
+  &__layer-mark {
+    color: $color-surface;
+    font-size: $font-size-xs;
+  }
+
+  &__marks {
+    display: flex;
+    justify-content: center;
+    gap: 32rpx;
+    padding-top: 16rpx;
+  }
+
+  &__align-mark {
+    width: 72rpx;
+    height: 40rpx;
+    border-radius: $radius-md;
+    background: rgba($color-surface, 0.14);
+
+    &--active {
+      background: rgba($color-primary, 0.55);
+    }
+  }
+
+  // privacy 遮盖取舍
+  &__privacy-board {
+    display: flex;
+    gap: 20rpx;
+    justify-content: center;
+    padding: 24rpx 12rpx;
+    border-radius: $radius-md;
+    background: rgba($color-surface, 0.06);
+  }
+
+  &__region {
+    position: relative;
+    width: 168rpx;
+    height: 200rpx;
+    border-radius: $radius-md;
+    background: rgba($color-surface, 0.16);
+    border: 2rpx solid rgba($color-surface, 0.24);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+
+    &--masked {
+      .flash-interaction__region-cover {
+        opacity: 1;
+      }
+    }
+  }
+
+  &__region-label {
+    color: rgba($color-surface, 0.72);
+    font-size: $font-size-2xs;
+  }
+
+  &__region-cover {
+    position: absolute;
+    inset: 0;
+    background: rgba($color-text-primary, 0.82);
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+
+  // pairing 配对（试点外，数据驱动预留）
+  &__pairing {
+    display: flex;
+    gap: 32rpx;
+    justify-content: center;
+  }
+
+  &__pairing-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20rpx;
+  }
+
+  &__pair-item {
+    width: 200rpx;
+    height: 88rpx;
+    border-radius: $radius-md;
+    background: rgba($color-surface, 0.16);
+    border: 2rpx solid rgba($color-surface, 0.24);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &--selected {
+      border-color: rgba($color-primary, 0.9);
+      background: rgba($color-primary, 0.2);
+    }
+
+    &--paired {
+      opacity: 0.55;
+    }
+  }
+
+  &__pair-label {
+    color: rgba($color-surface, 0.85);
+    font-size: $font-size-2xs;
+  }
+
+  &__pair-slot {
+    width: 200rpx;
+    height: 88rpx;
+    border-radius: $radius-md;
+    border: 2rpx dashed rgba($color-surface, 0.3);
+
+    &--filled {
+      border-style: solid;
+      border-color: rgba($color-primary, 0.7);
+      background: rgba($color-primary, 0.16);
+    }
+  }
+
+  // 引导 / 提示 / 确认
+  &__guidance {
+    padding: 12rpx 20rpx;
+    border-radius: $radius-md;
+    background: rgba($color-primary, 0.12);
+  }
+
+  &__guidance-text {
+    color: rgba($color-surface, 0.86);
+    font-size: $font-size-xs;
+    line-height: 1.6;
+  }
+
+  &__hints {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+  }
+
+  &__hint {
+    color: rgba($color-surface, 0.72);
+    font-size: $font-size-2xs;
+    line-height: 1.6;
+    padding-left: 16rpx;
+    border-left: 4rpx solid rgba($color-primary, 0.5);
+  }
+
+  &__hint-toggle {
+    align-self: flex-start;
+    padding: 8rpx 20rpx;
+    border-radius: $radius-pill;
+    background: rgba($color-surface, 0.1);
+    transition: background 0.12s ease;
+
+    &--pressed {
+      background: rgba($color-surface, 0.18);
+    }
+  }
+
+  &__hint-toggle-text {
+    color: rgba($color-surface, 0.78);
+    font-size: $font-size-2xs;
+  }
+
+  &__error {
+    padding: 16rpx 20rpx;
+    border-radius: $radius-md;
+    background: rgba($color-primary, 0.12);
+    color: $color-surface;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  &__confirm {
+    padding-top: 12rpx;
+    border-top: 2rpx solid rgba($color-surface, 0.16);
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
+    align-items: stretch;
+  }
+
+  &__confirm-hint {
+    color: rgba($color-surface, 0.6);
+    font-size: $font-size-2xs;
+    line-height: 1.6;
+    text-align: center;
+    padding: 12rpx 0;
+  }
+
+  &__reset {
+    align-self: center;
+    padding: 8rpx 24rpx;
+    border-radius: $radius-pill;
+    transition: background 0.12s ease;
+
+    &--pressed {
+      background: rgba($color-surface, 0.12);
+    }
+  }
+
+  &__reset-text {
+    color: rgba($color-surface, 0.6);
+    font-size: $font-size-2xs;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-interaction__chair,
+  .flash-interaction__layer,
+  .flash-interaction__region-cover {
+    transition: none;
+  }
 }

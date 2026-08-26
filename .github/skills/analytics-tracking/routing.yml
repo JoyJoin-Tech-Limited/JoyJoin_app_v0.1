@@ -39,7 +39,7 @@ strong_triggers:
   - recordTriggerActivation
   - getTriggerThreshold
   - matchingStressSimulation
-  - registrationFunnelAnalytics
+  - getOnboardingFunnelStats
   - /api/analytics/participation_experiment
   - /api/analytics/personality_result
   - /api/analytics/onboarding
@@ -47,9 +47,10 @@ strong_triggers:
 owned_files:
   - apps/server/src/routes/domains/analytics.ts
   - apps/server/src/routes/domains/onboarding.ts
+  - apps/server/src/routes/domains/adminOnboardingFunnel.ts
+  - apps/server/src/repositories/onboardingFunnelRepo.ts
   - apps/server/src/kpiService.ts
   - apps/server/src/triggerPerformanceService.ts
-  - apps/server/src/analytics/registrationFunnelAnalytics.ts
   - apps/server/src/matchingMetrics.ts
   - apps/server/src/benchmarks/matchingStressSimulation.ts
   - apps/server/src/benchmarks/matchingStressSimulation.cli.ts

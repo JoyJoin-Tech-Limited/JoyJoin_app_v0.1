@@ -14,11 +14,12 @@ import { seedMiniProgramAuthSession } from '../../../lib/api/authSession'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { CEREMONY_HEROES } from '../../../lib/ceremonyHeroes'
 import { getContrastSafeArchetypeColor } from '@shared/archetypeColors'
+import { getErrorForSurface } from '@shared/copy/errorBaselines'
 import { logError, logInfo } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
-import { TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
 import Button from '../../../components/ui/Button'
 import BrandLogo from '../../../components/ui/BrandLogo'
+import XiaoyueInlineError from '../../../components/mascot/XiaoyueInlineError'
 import './index.scss'
 
 const STEP_NAME_MAP: Record<string, string> = {
@@ -47,6 +48,8 @@ export default function WelcomeBackPage() {
   const queryClient = useQueryClient()
   const [isRestarting, setIsRestarting] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
+  /** PR-8: inline failure row (replaces bare error toasts). */
+  const [actionError, setActionError] = useState('')
   const [mascotSrc, setMascotSrc] = useState(getXiaoyueExpressionAsset('coachGuide'))
 
   // Swipe-back safety: reset transient flags when page is re-shown
@@ -75,6 +78,7 @@ export default function WelcomeBackPage() {
   const handleContinue = async () => {
     if (isNavigating || isRestarting) return
     haptics('light')
+    setActionError('')
     setIsNavigating(true)
     markWelcomeBackScreenSeen()
     onboardingAnalytics.interaction('welcome-back', 'continue_clicked')
@@ -82,8 +86,10 @@ export default function WelcomeBackPage() {
     try {
       await navigateToMiniProgramNextStep(auth.nextStep, { mode: 'replace' })
     } catch (error) {
-      const message = error instanceof Error ? error.message : '页面跳转失败，请重试'
-      Taro.showToast({ title: message, icon: 'none', duration: 3000 })
+      logError('[WelcomeBack] Continue navigation failed', {
+        message: error instanceof Error ? error.message : String(error),
+      })
+      setActionError(getErrorForSurface('navigate-failed', 'inline-error'))
       setIsNavigating(false)
     }
   }
@@ -112,6 +118,7 @@ export default function WelcomeBackPage() {
 
   const executeRestart = async () => {
     if (isRestarting) return
+    setActionError('')
     setIsRestarting(true)
 
     try {
@@ -131,13 +138,9 @@ export default function WelcomeBackPage() {
 
       await navigateToMiniProgramNextStep(updatedUser.nextStep, { mode: 'root' })
     } catch (error) {
-      const message = error instanceof Error ? error.message : '重新开始失败，请检查网络后重试'
+      const message = error instanceof Error ? error.message : String(error)
       logError('[WelcomeBack] Restart failed', { message })
-      Taro.showToast({
-        title: message,
-        icon: 'none',
-        duration: TOAST_FATAL_MS,
-      })
+      setActionError(getErrorForSurface('restart-failed', 'inline-error'))
       setIsRestarting(false)
     }
   }
@@ -236,6 +239,9 @@ export default function WelcomeBackPage() {
 
       {/* CTAs */}
       <View className='welcome-back__actions'>
+        {actionError ? (
+          <XiaoyueInlineError className='welcome-back__action-error' message={actionError} />
+        ) : null}
         <Button
           variant='brand'
           className='welcome-back__cta welcome-back__cta--primary'

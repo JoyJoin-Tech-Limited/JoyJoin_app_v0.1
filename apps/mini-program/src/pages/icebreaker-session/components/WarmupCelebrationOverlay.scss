@@ -7,8 +7,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
-  animation: warmup-celebration-in 350ms ease both;
+  pointer-events: auto;
+  animation: warmup-celebration-in 350ms cubic-bezier(0.22, 1, 0.36, 1) both;
 
   &--out {
     animation: warmup-celebration-out 350ms ease forwards;
@@ -27,6 +27,8 @@
     z-index: 2;
     display: flex;
     align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
     gap: 16rpx;
     max-width: 560rpx;
     padding: 0 48rpx;
@@ -40,17 +42,37 @@
 
   &__bubble {
     background: $color-surface;
-    border-radius: 24rpx;
+    border-radius: $card-radius-sm;
     padding: 24rpx;
-    box-shadow: 0 8rpx 32rpx rgba($color-text-primary, 0.12);
+    box-shadow: $shadow-lg;
   }
 
   &__text {
     font-family: $font-cn-display;
-    font-size: 28rpx;
+    font-size: $font-size-base;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     line-height: 1.5;
+    // Celebration lines are curated but unbounded — clamp to 2 lines so a
+    // long line can't stretch the bubble past the card's max-width.
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  &__tap-hint {
+    width: 100%;
+    margin-top: 4rpx;
+    font-size: $font-size-2xs;
+    color: rgba($color-surface, 0.72);
+    line-height: 1.5;
+    text-align: center;
+    // The hint is a quiet, non-essential cue — hide it under reduced motion
+    // since the user may have explicitly asked for less celebratory noise.
+    @media (prefers-reduced-motion: reduce) {
+      display: none;
+    }
   }
 
   @keyframes warmup-celebration-in {

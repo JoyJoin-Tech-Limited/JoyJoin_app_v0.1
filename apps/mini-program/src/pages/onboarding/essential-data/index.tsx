@@ -13,9 +13,8 @@ import {
 } from '@shared/constants'
 import { getOccupationGuidance } from '@shared/occupations'
 import { submitEssentialData, type AuthUserResponse } from '@shared/api'
-import { getErrorMessage } from '@shared/copy/errorBaselines'
+import { getErrorForSurface } from '@shared/copy/errorBaselines'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
-import { TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../../lib/utils/uiConstants'
 import { useInvalidateAuth } from '../../../hooks/useAuth'
 import { apiRequest, getUserState } from '../../../lib/api/api'
 import { useOnboardingAnalytics } from '../../../hooks/onboarding/useOnboardingAnalytics'
@@ -29,7 +28,7 @@ import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
 import { logError, logInfo } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
-import { looksLikeOfflineError, OFFLINE_PREFLIGHT_COPY } from '../../../lib/utils/offlineDetection'
+import { looksLikeOfflineError } from '../../../lib/utils/offlineDetection'
 import { evaluateProfessionInputQuality, isMeaningfulProfessionInput } from '../../../lib/onboarding/professionInputQuality'
 import { sanitizeIndustrySource } from '../../../lib/onboarding/professionSubmissionGuard'
 import Button from '../../../components/ui/Button'
@@ -44,6 +43,7 @@ import BoxJourneySpine from '../../../components/onboarding/BoxJourneySpine'
 import { getOnboardingVoiceLine, type OnboardingVoiceStepId } from '@shared/copy/onboardingVoice'
 import { ESSENTIAL_DATA_STEP_IDS, type EssentialDataStepId } from './stepIds'
 import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
+import XiaoyueInlineError from '../../../components/mascot/XiaoyueInlineError'
 import ProfessionChatOverlay from '../../../components/ProfessionChatOverlay'
 import ContentBlockedError from '../../../components/ContentBlockedError'
 import type { ProfessionClassificationData } from '../../../components/ProfessionChatOverlay'
@@ -248,6 +248,12 @@ export default function EssentialDataPage() {
   const [error, setError] = useState('')
   const [contentViolations, setContentViolations] = useState<Record<string, string>>({})
   const [showProfessionOverlay, setShowProfessionOverlay] = useState(false)
+  // PR-8: field-level inline validation hints (replace bare toasts) — the
+  // profession hint persists until the field is re-opened or accepted; the
+  // intent-limit hint auto-clears after a short beat.
+  const [professionHint, setProfessionHint] = useState('')
+  const [intentLimitHintVisible, setIntentLimitHintVisible] = useState(false)
+  const intentLimitHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [professionClassification, setProfessionClassification] = useState<ProfessionClassificationData | null>(null)
   // Direction-aware step swap: the outgoing card plays a 140ms exit (forward
   // slides up, back slides down) before the new card mounts.
@@ -549,8 +555,9 @@ export default function EssentialDataPage() {
       const nextStep = response.nextStep ?? 'discover'
       await navigateToMiniProgramNextStep(nextStep, { mode: 'replace' })
     } catch (err) {
-      const message = err instanceof Error ? err.message : '跳过失败，请重试'
-      Taro.showToast({ title: message, icon: 'none', duration: TOAST_FATAL_MS })
+      const message = err instanceof Error ? err.message : getErrorForSurface('skip-failed', 'inline-error')
+      logError('[EssentialData] Force-skip failed', { message })
+      setError(message)
     } finally {
       setIsSubmitting(false)
     }
@@ -561,15 +568,12 @@ export default function EssentialDataPage() {
     setError('')
 
     // Pre-flight connectivity check (mirrors extended-data): fail fast with
-    // unified offline copy before any network attempt.
+    // unified offline copy before any network attempt. PR-8: surfaced as the
+    // inline 悦仔 error row in the tray, not a bare toast.
     try {
       const network = await Taro.getNetworkType()
       if (network.networkType === 'none') {
-        Taro.showToast({
-          title: OFFLINE_PREFLIGHT_COPY,
-          icon: 'none',
-          duration: TOAST_DEFAULT_MS,
-        })
+        setError(getErrorForSurface('offline-preflight', 'inline-error'))
         analytics.errorOccurred('submit_offline', 'network unavailable')
         return
       }
@@ -608,15 +612,21 @@ export default function EssentialDataPage() {
       }
 
       logInfo('[EssentialData] Submitting', { fields: Object.keys(payload).length })
-      await submitEssentialData(apiRequest, payload)
-      await saveCheckpoint('essential-data')
-      await invalidateAuth()
+      const submitResponse = await submitEssentialData(apiRequest, payload)
+      // Checkpoint + auth refresh are fire-and-forget: the submit response
+      // already carries the server-computed nextStep, and the background
+      // invalidateAuth() keeps the Infinity-stale auth cache fresh for the
+      // rest of the app.
+      void saveCheckpoint('essential-data')
+      void invalidateAuth()
       Taro.removeStorageSync(ESSENTIAL_DATA_CACHE_KEY)
-      const userState = await getUserState()
+      // Old-server fallback: only refetch auth state when the submit response
+      // predates the nextStep field.
+      const nextStep = submitResponse.nextStep ?? (await getUserState()).nextStep
 
       analytics.stepCompleted({
         fieldsCompleted: Object.keys(payload).length,
-        nextStep: userState.nextStep ?? 'extended-data',
+        nextStep: nextStep ?? 'extended-data',
       })
       // Submit succeeded — the onward navigation must not count as abandonment.
       markWizardCompleted()
@@ -629,7 +639,7 @@ export default function EssentialDataPage() {
       haptics('success')
       triggerMascotReaction(getOnboardingVoiceLine('essential-submit-success', userArchetype))
       await waitFor(CELEBRATE_HOLD_MS)
-      await navigateToMiniProgramNextStep(userState.nextStep, {
+      await navigateToMiniProgramNextStep(nextStep, {
         mode: 'replace',
         transition: { beforeNavigate: () => setIsPageExiting(true) },
       })
@@ -639,7 +649,7 @@ export default function EssentialDataPage() {
       if (errorData?.code === 'CONTENT_VIOLATION') {
         const violation = errorData?.violation as Record<string, unknown> | undefined
         const field = (violation?.field as string) || ''
-        const fieldMessage = (violation?.message as string) || (err instanceof Error ? err.message : getErrorMessage('submit-failed'))
+        const fieldMessage = (violation?.message as string) || (err instanceof Error ? err.message : getErrorForSurface('submit-failed', 'inline-error'))
 
         if (field) {
           setContentViolations((prev) => ({ ...prev, [field]: fieldMessage }))
@@ -663,14 +673,14 @@ export default function EssentialDataPage() {
       // Offline branch: drafts genuinely persist in the local progress cache
       // (removed only on success), so the copy can promise safe re-submit.
       if (looksLikeOfflineError(err)) {
-        const offlineMessage = '网络好像断开了，这一页填好的内容已经暂存在本地，连上网络后重新提交就好。'
+        const offlineMessage = getErrorForSurface('offline-draft-safe', 'inline-error')
         setError(offlineMessage)
         analytics.errorOccurred('submit_offline', offlineMessage)
         logError('[EssentialData] Submit failed offline', { message: offlineMessage })
         return
       }
 
-      const message = err instanceof Error ? err.message : getErrorMessage('submit-failed')
+      const message = err instanceof Error ? err.message : getErrorForSurface('submit-failed', 'inline-error')
       setError(message)
       analytics.errorOccurred('submit_failed', message)
       logError('[EssentialData] Submit failed', { message })
@@ -682,11 +692,20 @@ export default function EssentialDataPage() {
   const handleProfessionSubmit = useCallback((value: string, classification?: ProfessionClassificationData) => {
     const quality = evaluateProfessionInputQuality(value)
     if (!quality.valid) {
-      Taro.showToast({ title: '职业身份可以跳过，或写具体一点', icon: 'none', duration: TOAST_DEFAULT_MS })
+      // PR-8: field-level inline hint instead of a bare toast. The overlay
+      // closes so the hint is visible at the profession field; the user can
+      // re-open the overlay from there (or leave the optional field empty).
+      setProfessionHint('职业身份可以跳过，或写具体一点')
       setProfessionText('')
       setProfessionClassification(null)
+      setIsProfessionOverlayClosing(true)
+      setTimeout(() => {
+        setShowProfessionOverlay(false)
+        setIsProfessionOverlayClosing(false)
+      }, shouldReduceMotion ? 0 : 350)
       return
     }
+    setProfessionHint('')
     setProfessionText(quality.normalized)
     if (classification) {
       setProfessionClassification(classification)
@@ -728,7 +747,16 @@ export default function EssentialDataPage() {
         if (next === null) {
           haptics('warning')
           analytics.validationFailed('intent', 'max-selection-reached')
-          Taro.showToast({ title: `最多选择 ${MAX_INTENTS} 个期待`, icon: 'none', duration: TOAST_DEFAULT_MS })
+          // PR-8: field-level inline hint under the intent grid (auto-clears)
+          // instead of a bare toast.
+          setIntentLimitHintVisible(true)
+          if (intentLimitHintTimerRef.current) {
+            clearTimeout(intentLimitHintTimerRef.current)
+          }
+          intentLimitHintTimerRef.current = setTimeout(() => {
+            intentLimitHintTimerRef.current = null
+            setIntentLimitHintVisible(false)
+          }, 2400)
           return current
         }
 
@@ -881,6 +909,13 @@ export default function EssentialDataPage() {
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>这次更想收获什么</Text>
                 {intentGrid}
+                {intentLimitHintVisible ? (
+                  <View role='alert' aria-live='polite'>
+                    <Text className='essential-data__hint essential-data__hint--warning'>
+                      最多选择 {MAX_INTENTS} 个期待，先取消一个再选
+                    </Text>
+                  </View>
+                ) : null}
                 <Text className='essential-data__hint'>最多可选 {MAX_INTENTS} 个，多选会影响后续活动推荐。</Text>
               </View>
             </Card>
@@ -1018,6 +1053,7 @@ export default function EssentialDataPage() {
                   style={professionText !== '' && accentColor ? { borderColor: accentColor, boxShadow: `0 2rpx 8rpx ${hexToRgba(accentColor, 0.12)}` } : undefined}
                   onClick={() => {
                     haptics('light')
+                    setProfessionHint('')
                     setShowProfessionOverlay(true)
                   }}
                   aria-label={professionText !== '' ? `职业：${professionText}` : '选填（点击告诉悦仔你的职业）'}
@@ -1036,9 +1072,15 @@ export default function EssentialDataPage() {
                     </View>
                   )}
                 </View>
-                <Text className='essential-data__hint'>
-                  {professionText !== '' ? '已记录，我会用它来帮你排得更对味~' : occupationGuidance.matchPreview}
-                </Text>
+                {professionHint !== '' ? (
+                  <View role='alert' aria-live='polite'>
+                    <Text className='essential-data__hint essential-data__hint--warning'>{professionHint}</Text>
+                  </View>
+                ) : (
+                  <Text className='essential-data__hint'>
+                    {professionText !== '' ? '已记录，我会用它来帮你排得更对味~' : occupationGuidance.matchPreview}
+                  </Text>
+                )}
               </View>
 
               <View className='essential-data__field'>
@@ -1142,7 +1184,7 @@ export default function EssentialDataPage() {
 
       {/* Fixed bottom CTA tray */}
       <View className='essential-data__tray'>
-        {error ? <Text className='essential-data__error'>{error}</Text> : null}
+        {error ? <XiaoyueInlineError className='essential-data__error' message={error} /> : null}
         {user?.features?.onboardingForceSkip && (
           <Button
             variant='secondary'

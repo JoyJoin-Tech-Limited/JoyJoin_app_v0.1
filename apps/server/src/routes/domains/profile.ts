@@ -13,6 +13,7 @@ import { updateProfileSchema, updatePersonalitySchema, updateFullProfileSchema }
 import { logger } from "../../lib/logger";
 import { validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
 import { recordViolation } from "../../abuseDetection";
+import { computeOnboardingNextStep } from "../../lib/computeOnboardingNextStep";
 
 const interestSelectionSchema = z.object({
   topicId: z.string(),
@@ -262,6 +263,12 @@ export function registerProfileRoutes(app: Express): void {
 
       queueSemanticProfileRecompute(userId, 'interests_update');
 
+      // Include the server-computed onboarding nextStep so onboarding clients
+      // can navigate without a follow-up /api/auth/user round-trip.
+      const updatedUser = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+      });
+
       res.json({
         success: true,
         message: "兴趣已保存",
@@ -270,6 +277,7 @@ export function registerProfileRoutes(app: Express): void {
           userId: result.userId,
           totalHeat: result.totalHeat,
         },
+        nextStep: updatedUser ? computeOnboardingNextStep(updatedUser) : null,
       });
     } catch (error) {
       logger.error("Error saving user interests:", { error: error instanceof Error ? error.message : String(error) });
@@ -573,10 +581,15 @@ export function registerProfileRoutes(app: Express): void {
       if (user && (req.body.displayName || req.body.gender || req.body.currentCity)) {
         const updatedUser = await storage.updateUser(user.id, { hasCompletedRegistration: true });
         queueSemanticProfileRecompute(userId, 'full_profile_update');
-        res.json(updatedUser);
+        // Additive nextStep so onboarding clients skip a follow-up /api/auth/user fetch.
+        res.json(updatedUser
+          ? { ...updatedUser, nextStep: computeOnboardingNextStep(updatedUser) }
+          : updatedUser);
       } else {
         queueSemanticProfileRecompute(userId, 'full_profile_update');
-        res.json(user);
+        res.json(user
+          ? { ...user, nextStep: computeOnboardingNextStep(user) }
+          : user);
       }
     } catch (error) {
       logger.error("Error updating full profile:", { error: error instanceof Error ? error.message : String(error) });

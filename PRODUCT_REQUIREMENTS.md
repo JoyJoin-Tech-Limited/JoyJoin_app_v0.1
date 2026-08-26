@@ -148,14 +148,9 @@ See §1.10 Connection Feedback Flow for full documentation.
 - **Visual status:** 阿浪专属人物、区域横幅、找到后场景和结果场景正式图仍为 `awaiting-approved-art`；当前 bundled 图均明确标注“场景示意”，不得宣称正式阿浪美术已完成。Profile 使用经产品授权自主设计的 12 个 512×768 透明 V4 动物像素角色并从 CDN 加载，基础角色已包含初始服装，图片失败时回退到 character-only 角色。未获批的装备 raster 不产生任何可见伪层；穿搭状态仍由服务端保存，正式分层装备美术继续等待审批。
 - **Canonical implementation docs:** `docs/alang-prototype/repository-audit.md`、`implementation-map.md`、`assets-required.md`。
 
-**51. Flow 1 Intro Overlay Revamp — "JoyJoin Play Mode"** *(2026-08-03)*
-- **Scope:** Mini-program onboarding final step (`apps/mini-program/src/pages/onboarding/profile-review/index.tsx`), shown once per user after the `UnboxingCeremony` completes.
-- **Component stack:** `FlowShell` (with `entranceMode='cut'`) → `ExperienceEntryFlow` → `ExperienceDetail`. The shell skips the packed-box entrance beat because the ceremony already delivered the box metaphor.
-- **Content:** Explains event vs street play modes with archetype-personalized copy from `packages/shared/src/copy/flowAnimationCopy.ts` (`getArchetypeSubline(archetypeId)`). World banner art uses bundled Lovart assets with CDN fallback; detail page gains a bottom forward CTA that completes the flow and routes to Discover.
-- **Gating:** DB-backed feature flag `flowIntroEnabled` (env `FLOW_INTRO_ENABLED`, default `true`) from `GET /api/auth/user` `features`; seen-state key `joyjoin_flow_seen:v2:joyjoin-intro:<userId>` persisted via `FlowStorage.ts`. When disabled or already seen, the user proceeds straight to Discover.
-- **Reduced motion:** `prefers-reduced-motion` collapses all entrance choreography to near-instant fades and disables continuous ambient loops; haptics and the forward CTA remain usable.
-- **Analytics:** client events `flow_view`, `flow_skip`, `flow_cta_tap`, `flow_banner_tap`, `flow_detail_open`, `flow_detail_back`, `flow_node_tap`, `flow_tap_ahead`, `flow_complete`; dedicated detail-CTA event `flow_detail_cta_tap` is emitted instead of `flow_cta_tap` to keep the shell CTA metric clean. Server whitelist in `apps/server/src/routes/domains/analytics.ts`.
-- **Kill switch / rollback:** disable `flowIntroEnabled` if completion telemetry regresses or app-kill rate exceeds ~3%.
+**51. Flow 1 Intro Overlay — "JoyJoin Play Mode"** *(2026-08-03; REMOVED 2026-08-26, onboarding PR-5 双仪式合并)*
+- **Status:** Removed. The once-per-user `joyjoin-intro` overlay was dropped from the profile-review completion chain — everyone now sees only the UnboxingCeremony, and the play-mode explainer folds into a one-time Discover arrival coachmark (merged with the `discover-arrival` archetype voice hook, PR-9). Overlay components (`JoyJoinIntroFlow`/`JoyJoinPlayModeFlow`/`ExperienceEntryFlow`/`ExperienceDetail`), the `flowIntroEnabled` flag, and Flow-1-only copy were deleted end-to-end; `FlowShell`/`FlowStorage`/`useFlowProgress`/shared flow SCSS remain for Flow 2 (`blind-box-lifecycle`).
+- **Historical (pre-removal):** `FlowShell` (with `entranceMode='cut'`) → `ExperienceEntryFlow` → `ExperienceDetail`; archetype-personalized copy from `packages/shared/src/copy/flowAnimationCopy.ts`; gated by `flowIntroEnabled` with seen-state key `joyjoin_flow_seen:v2:joyjoin-intro:<userId>`; analytics `flow_view`/`flow_skip`/`flow_cta_tap`/`flow_detail_cta_tap` (server whitelist in `apps/server/src/routes/domains/analytics.ts` — Flow 2 still uses the shared flow events).
 - **Canonical docs:** `docs/agent-context/flow-animation.md`, `docs/agent-context/onboarding.md`.
 
 **50. Operator Review Gate for Matching** *(2026-07-09)*

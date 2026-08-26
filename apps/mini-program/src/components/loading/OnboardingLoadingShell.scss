@@ -107,6 +107,18 @@
     line-height: 1.55;
   }
 
+  // PR-7: celebrate-mode tap-through affordance (appears at the skip delay).
+  &__skip-hint {
+    position: absolute;
+    bottom: -$spacing-lg;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    animation: onboarding-loading-hint-in 0.3s ease forwards;
+  }
+
   &__skeleton {
     display: flex;
     flex-direction: column;
@@ -170,12 +182,26 @@
     transform: none;
   }
 
+  .onboarding-loading-shell__skip-hint {
+    animation: none !important;
+  }
+
   .onboarding-loading-shell--continuity,
   .onboarding-loading-shell--continuity-exiting {
     animation: none !important;
     transition: none;
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes onboarding-loading-hint-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }
 

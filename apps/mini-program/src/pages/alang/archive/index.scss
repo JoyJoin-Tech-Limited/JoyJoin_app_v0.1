@@ -1,0 +1,229 @@
+@import '../../../styles/variables';
+
+// 谜案档案台 MVP（AC-05）。复用 flash.scss 的 section/fragment/empty-card
+// 体系；此文件只承载档案台专属布局与归档仪式动画。
+.flash-archive {
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  background: $color-bg;
+  display: flex;
+  flex-direction: column;
+
+  &__scroll {
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__content {
+    padding: 32rpx 24rpx calc(env(safe-area-inset-bottom) + 48rpx);
+    display: flex;
+    flex-direction: column;
+    gap: 40rpx;
+  }
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+  }
+
+  &__eyebrow {
+    font-size: $font-size-2xs;
+    letter-spacing: 4rpx;
+    color: $color-text-secondary;
+  }
+
+  &__title {
+    font-size: $font-size-xl;
+    font-weight: 700;
+    line-height: 1.4;
+    color: $color-text-primary;
+  }
+
+  &__lead {
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-secondary;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 16rpx;
+  }
+
+  &__imprint-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16rpx;
+  }
+
+  &__imprint {
+    background: $color-surface;
+    border-radius: $card-radius-sm;
+    padding: 24rpx 28rpx;
+    display: flex;
+    flex-direction: column;
+    gap: 6rpx;
+    box-shadow: 0 4rpx 16rpx rgba($color-text-primary, 0.04);
+  }
+
+  &__imprint-meta {
+    font-size: $font-size-2xs;
+    line-height: 1.5;
+    color: $color-text-secondary;
+  }
+
+  &__imprint-title {
+    font-size: $font-size-base;
+    font-weight: 600;
+    line-height: 1.5;
+    color: $color-text-primary;
+  }
+
+  &__imprint-date {
+    font-size: $font-size-2xs;
+    line-height: 1.5;
+    color: $color-text-secondary;
+  }
+
+  &__fragment-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16rpx;
+  }
+
+  &__footer {
+    padding-top: 8rpx;
+  }
+
+  &__state-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $color-bg;
+    padding: 48rpx 32rpx;
+    box-sizing: border-box;
+  }
+}
+
+// 归档仪式（AC-05/AC-10）：20–30 秒平静动画，零失败路径；减少动态效果时
+// 退化为静态层叠（见 --reduced 修饰）。
+.flash-archive-ceremony {
+  background: $color-surface;
+  border-radius: $card-radius;
+  padding: 32rpx 28rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  box-shadow: 0 8rpx 24rpx rgba($color-primary, 0.08);
+
+  &__title {
+    font-size: $font-size-md;
+    font-weight: 700;
+    line-height: 1.4;
+    color: $color-text-primary;
+  }
+
+  &__copy {
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    color: $color-text-secondary;
+  }
+
+  &__running {
+    position: relative;
+    display: flex;
+    min-height: 520rpx;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 24rpx;
+    padding: 48rpx 0;
+    box-sizing: border-box;
+  }
+
+  &__paper {
+    position: absolute;
+    top: 48rpx;
+    width: 120rpx;
+    height: 160rpx;
+    border-radius: $radius-md;
+    background: rgba($color-primary, 0.08);
+    border: 2rpx solid rgba($color-primary, 0.16);
+    animation: flash-archive-settle 6s ease-in-out infinite;
+  }
+
+  &__paper--one {
+    transform: rotate(-6deg) translateX(-48rpx);
+  }
+
+  &__paper--two {
+    animation-delay: 2s;
+    transform: translateY(-8rpx);
+  }
+
+  &__paper--three {
+    animation-delay: 4s;
+    transform: rotate(6deg) translateX(48rpx);
+  }
+
+  &__running-copy {
+    position: relative;
+    margin-top: 0;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  &__skip {
+    position: relative;
+    display: flex;
+    min-height: 88rpx;
+    margin-top: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 16rpx 30rpx;
+    border: 2rpx solid rgba($color-primary, 0.22);
+    border-radius: $radius-pill;
+    background: $color-surface;
+    box-sizing: border-box;
+    transition: transform 180ms ease-out, background 120ms ease;
+  }
+
+  &__skip--pressed {
+    transform: scale(0.98);
+    background: rgba($color-primary, 0.06);
+  }
+
+  &__skip-text {
+    color: $color-primary-dark;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    line-height: 1.4;
+  }
+
+  &__running--reduced .flash-archive-ceremony__paper {
+    animation: none;
+  }
+
+  &--done {
+    box-shadow: none;
+    border: 2rpx solid rgba($color-primary, 0.2);
+  }
+}
+
+@keyframes flash-archive-settle {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-archive-ceremony__paper {
+    animation: none;
+  }
+}

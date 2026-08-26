@@ -10,6 +10,7 @@ import {
   fetchFlashEncounterReplay,
   fetchFlashHome,
   fetchFlashPreferences,
+  fetchFlashStoryArchive,
   fetchFlashStoryFragments,
   getFlashApiErrorCode,
   locateFlashAppearance,
@@ -17,6 +18,7 @@ import {
   retryFlashAssignment,
   respondToFlashTaskOffer,
   submitFlashFeedback,
+  submitFlashStoryInteraction,
   updateFlashPreferences,
 } from './flashApi'
 import type { FlashLocationSnapshot } from './flashTypes'
@@ -27,6 +29,17 @@ export const flashEncounterQueryKey = (id: string, replay = false) => [...FLASH_
 export const flashAssignmentQueryKey = (id: string) => [...FLASH_QUERY_ROOT, 'assignment', id] as const
 export const FLASH_PREFERENCES_QUERY_KEY = [...FLASH_QUERY_ROOT, 'preferences'] as const
 export const FLASH_STORY_FRAGMENTS_QUERY_KEY = [...FLASH_QUERY_ROOT, 'story-fragments'] as const
+export const FLASH_STORY_ARCHIVE_QUERY_KEY = [...FLASH_QUERY_ROOT, 'story-archive'] as const
+
+export function useFlashStoryArchive(enabled = true) {
+  return useQuery({
+    queryKey: FLASH_STORY_ARCHIVE_QUERY_KEY,
+    queryFn: fetchFlashStoryArchive,
+    enabled,
+    staleTime: 30_000,
+    retry: 1,
+  })
+}
 
 export function useFlashStoryFragments(enabled = true) {
   return useQuery({
@@ -45,7 +58,8 @@ export function useFlashHome(enabled = true) {
     queryKey: FLASH_HOME_QUERY_KEY,
     queryFn: fetchFlashHome,
     enabled,
-    staleTime: 0,
+    // 60s 轮询已足够敏感；staleTime 30s 避免页面切换/轮询重叠时重复请求。
+    staleTime: 30_000,
     retry: 1,
   })
 }
@@ -117,6 +131,22 @@ export function useAdvanceFlashStoryNode() {
     mutationFn: advanceFlashStoryNode,
     onSuccess: (response, input) => {
       queryClient.setQueryData(flashEncounterQueryKey(input.encounterId, input.replay), response)
+      markStale()
+    },
+  })
+}
+
+/**
+ * 叙事动作层结果提交（AC-02/AC-03）：与 answer/advance 共用 encounter 缓存语义，
+ * 成功响应（含动作结果的即时回响节点）直接写回当前 encounter 查询。
+ */
+export function useSubmitFlashStoryInteraction() {
+  const queryClient = useQueryClient()
+  const markStale = useMarkFlashStateStale()
+  return useMutation({
+    mutationFn: submitFlashStoryInteraction,
+    onSuccess: (response, input) => {
+      queryClient.setQueryData(flashEncounterQueryKey(input.encounterId), response)
       markStale()
     },
   })

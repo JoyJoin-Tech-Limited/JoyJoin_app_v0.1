@@ -1,6 +1,9 @@
 import { View, Text, Image } from '@tarojs/components'
+import { ONBOARDING_ERROR_STAGE_COPY } from '@shared/copy/errorBaselines'
 import Button from '../../../components/ui/Button'
 import { getXiaoyueExpressionAsset, PERSONALITY_TEST_XIAOYUE_EXPRESSION } from './visuals'
+
+const COPY = ONBOARDING_ERROR_STAGE_COPY.completingError
 
 interface PersonalityTestCompletingErrorProps {
   error: string
@@ -22,11 +25,11 @@ export default function PersonalityTestCompletingError({
               mode='aspectFit'
               style={{ width: '160rpx', height: '160rpx', marginBottom: '24rpx' }}
             />
-            <Text className='personality-test__intro-title'>同步遇到小状况</Text>
+            <Text className='personality-test__intro-title'>{COPY.title}</Text>
             <Text className='personality-test__intro-subtitle'>
               {typeof error === 'string' && error.includes('服务器')
-                ? '服务器开小差了，稍后再试'
-                : error || '悦仔马上帮你重试~'}
+                ? COPY.serverBusyBody
+                : error || COPY.fallbackBody}
             </Text>
           </View>
         </View>
@@ -36,7 +39,7 @@ export default function PersonalityTestCompletingError({
             className='personality-test__start-btn'
             onClick={onRetry}
           >
-            重新打开结果
+            {COPY.retryLabel}
           </Button>
         </View>
       </View>

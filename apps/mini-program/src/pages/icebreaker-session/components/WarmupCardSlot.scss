@@ -1,6 +1,9 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
 
+// Warm rose for soft retry moments — softer than pure $color-error.
+$color-warm-rose: #B83A5E;
+
 .warmup-card-slot {
   width: 100%;
   flex: 1;
@@ -102,7 +105,7 @@
     bottom: 0;
     left: 0;
     border-radius: $card-radius;
-    box-shadow: 0 0 32rpx rgba(139, 92, 246, 0.35);
+    box-shadow: 0 0 32rpx rgba($color-primary, 0.35);
     opacity: 1;
     pointer-events: none;
     z-index: 3;
@@ -139,7 +142,7 @@
   }
 
   &__ember-chip-text {
-    font-size: 22rpx;
+    font-size: $font-size-xs;
     line-height: 1.4;
     color: $color-text-secondary;
     font-family: $font-mono;
@@ -283,7 +286,7 @@
   }
 
   &__corner {
-    font-size: 20rpx;
+    font-size: $font-size-2xs;
     line-height: 1;
     color: $color-text-muted;
     white-space: nowrap;
@@ -303,17 +306,23 @@
 
   &__mood-wrap {
     @include flex-center;
+    width: 48rpx;
     height: 48rpx;
     // B3 rhythm: top-row → 32rpx → mood icon (16rpx content gap + 16rpx here).
     margin-top: 16rpx;
-    transition: opacity 200ms ease, height 200ms ease;
+    overflow: hidden;
+    transition: opacity 200ms ease, transform 200ms ease;
 
     &--hidden {
       opacity: 0;
-      height: 0;
+      transform: scale(0);
       margin-top: 0;
-      overflow: hidden;
     }
+  }
+
+  &__mood-icon {
+    width: 48rpx;
+    height: 48rpx;
   }
 
   &__question {
@@ -326,7 +335,10 @@
     text-align: center;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
+    // 3-line clamp (was 4): the card is pinned to a 480rpx floor inside a
+    // zero-scroll warmup column, and 4 lines + whisper + expander + AIGC
+    // footer overflowed it — the bottom content clipped on device.
+    -webkit-line-clamp: 3;
     overflow: hidden;
     // Documented exception to the repo-wide keep-all 孤字 rule: at 38rpx in
     // the narrow card, an unspaced ~14-glyph question becomes ONE unbreakable
@@ -339,7 +351,9 @@
     margin-top: 0;
 
     &--expanded {
-      -webkit-line-clamp: 3;
+      // Expanded deep-chat prompt tiers stack below — shrink the question to
+      // 2 lines so the tiers don't push the AIGC footer out of the card.
+      -webkit-line-clamp: 2;
     }
 
     // C4 — quiet topic change: 360ms opacity crossfade on the same card,
@@ -379,15 +393,15 @@
   }
 
   &__permission-prefix {
-    font-size: 20rpx;
+    font-size: $font-size-2xs;
     font-weight: $font-weight-semibold;
-    color: #7c3aed; // warmup accentDeep
+    color: $phase-accent-warmup-deep;
     margin-right: 8rpx;
   }
 
   &__permission-text {
-    font-size: 24rpx;
-    color: rgba(55, 65, 81, 0.62);
+    font-size: $font-size-sm;
+    color: rgba($color-text-primary, 0.62);
     letter-spacing: 0.5rpx;
     line-height: 1.65;
   }
@@ -410,7 +424,7 @@
   }
 
   &__expander-text {
-    font-size: 28rpx;
+    font-size: $font-size-base;
     font-weight: $font-weight-semibold;
     color: $color-primary;
     line-height: 1;
@@ -437,7 +451,7 @@
     gap: 4rpx;
     padding: 8rpx 12rpx;
     background: rgba($color-primary, 0.04);
-    border-radius: 12rpx;
+    border-radius: $radius-md;
     border: 2rpx solid rgba($color-primary, 0.1);
     opacity: 0;
     transform: translateY(8rpx);
@@ -451,17 +465,23 @@
   }
 
   &__prompt-label {
-    font-size: 20rpx;
+    font-size: $font-size-2xs;
     font-weight: $font-weight-bold;
     color: $color-primary;
     line-height: 1.4;
   }
 
   &__prompt-text {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     color: $color-text-primary;
     line-height: 1.4;
     text-align: left;
+    // 2-line clamp per tier: 3 expanded tiers at unbounded length pushed the
+    // AIGC footer past the card's floor and clipped on device.
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
   }
 
   @keyframes warmup-prompt-expand {
@@ -486,7 +506,7 @@
 
     &-text,
     &-sep {
-      font-size: 20rpx;
+      font-size: $font-size-2xs;
       line-height: 1.4;
       color: $color-text-secondary;
     }
@@ -503,7 +523,7 @@
       }
 
       .aigc-report-button__text {
-        font-size: 20rpx;
+        font-size: $font-size-2xs;
         line-height: 1.4;
         color: $color-text-secondary;
         text-decoration: underline;
@@ -515,7 +535,7 @@
   // State A: mood grid
   &__empty-title {
     font-family: $font-cn-display;
-    font-size: 32rpx;
+    font-size: $font-size-md;
     font-weight: $font-weight-bold;
     color: $color-text-primary;
     text-align: center;
@@ -637,7 +657,7 @@
   }
 
   &__generating-text {
-    font-size: 28rpx;
+    font-size: $font-size-base;
     color: $color-text-secondary;
   }
 
@@ -646,7 +666,7 @@
     @include type-body;
     // Warm rose (approved palette) — a generation hiccup is a soft retry
     // moment, not an alarm; pure $color-error red reads punitive on cream.
-    color: #B83A5E;
+    color: $color-warm-rose;
     text-align: center;
     margin-bottom: 16rpx;
   }
@@ -660,6 +680,26 @@
 
   &__retry-btn {
     min-width: 240rpx;
+  }
+}
+
+// Short-viewport floor drop: the 480rpx card minimum + presence strip +
+// action bar + gaps exceed a ≤700px viewport, so the bottom content clipped
+// inside the zero-scroll warmup column. Lower the floor to 360rpx.
+@media (max-height: 700px) {
+  .warmup-card-slot {
+    min-height: 360rpx;
+
+    .reveal-card-flip__wrapper,
+    .reveal-card-flip__face {
+      min-height: 360rpx;
+    }
+
+    &__flat-card,
+    &__foil-shell,
+    &__foil-zone {
+      min-height: 360rpx;
+    }
   }
 }
 

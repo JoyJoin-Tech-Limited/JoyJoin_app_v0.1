@@ -13,6 +13,8 @@ import {
   getClusterById,
   type District,
 } from '@shared/districts'
+import { FLOW1_ENTRY_COPY } from '@shared/copy/flowAnimationCopy'
+import { getOnboardingVoiceLine } from '@shared/copy/onboardingVoice'
 import { useAuth } from '../../hooks/useAuth'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
@@ -21,6 +23,7 @@ import { loadDiscoverPools } from '../../lib/api/discoverPools'
 import { evictPersistedQuery } from '../../lib/api/persistentCache'
 import { injectDiscoverShellIntoCache, POOLS_QUERY_KEY } from '../../lib/prefetchEngine'
 import { MINI_PROGRAM_ROUTES } from '../../lib/onboarding/onboardingRoutes'
+import { onboardingAnalytics } from '../../lib/onboarding/onboardingAnalytics'
 import { discoverAnalytics } from '../../lib/analytics/discoverAnalytics'
 import { getDevMockPools } from '../../lib/dev/devPoolMocks'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
@@ -103,6 +106,16 @@ function clearLocation() {
   Taro.removeStorageSync(LOCATION_STORAGE_KEY)
 }
 
+// PR-9 arrival return-hook: local YYYY-MM-DD stamp so the header tagline can
+// yield to the hook card for the whole first-visit day, not just the 6s the
+// card is visible.
+function arrivalTodayKey(): string {
+  const d = new Date()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mm}-${dd}`
+}
+
 // ─── Skeleton placeholder (initial loading) ───────────────────────
 function PoolCardSkeleton() {
   return (
@@ -138,6 +151,7 @@ function AuthenticatedDiscover({
   const queryClient = useQueryClient()
   const displayName = (user as any)?.displayName || (user as any)?.nickname || '悦聚用户'
   const userArchetype = (user as any)?.primaryArchetype || (user as any)?.archetype || null
+  const userId = (user as any)?.id as string | undefined
   const cornerStatEnabled = (user as any)?.features?.oracleCardCornerStatEnabled !== false
   const xiaoyueAsset = useMemo(() => getXiaoyueExpressionAsset('homeWelcome'), [])
   const localFallback = useMemo(() => localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp'), [])
@@ -146,6 +160,19 @@ function AuthenticatedDiscover({
   const [avatarError, setAvatarError] = useState(false)
   const [tabEntranceClass] = useState(() => (consumeTabEntrance() ? 'tab-page-enter' : ''))
   const lastGoodPoolsRef = useRef<EventPoolSummary[]>([])
+  // PR-5 first-visit play-mode coachmark: the retired intro flow's explainer
+  // content, folded into a one-time card. Signal written by profile-review's
+  // handleCeremonyComplete; same storage-keyed self-dismissing pattern as the
+  // gathering-room first-visit hint.
+  const [showArrivalCoachmark, setShowArrivalCoachmark] = useState(false)
+  const arrivalCoachmarkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // PR-9: true for the rest of the arrival day once the pending signal was
+  // consumed (or the seen-date stamp matches today) — the header tagline
+  // yields to the hook card's promise for the whole day.
+  const [arrivalHookDay, setArrivalHookDay] = useState(false)
+  // Set when the pending signal was present, regardless of effect/didShow
+  // ordering — read by the step_started funnel event.
+  const arrivalFromOnboardingRef = useRef(false)
 
   // ── Geo detection state ──
   // ── Data fetching ──
@@ -157,6 +184,8 @@ function AuthenticatedDiscover({
   } = useQuery({
     queryKey: ['mini-program', 'event-pools'],
     staleTime: 20 * 1000,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
     queryFn: async (): Promise<EventPoolSummary[]> => {
       try {
         const loadedPools = await loadDiscoverPools({
@@ -224,6 +253,27 @@ function AuthenticatedDiscover({
     if (!shouldRefreshOnShow('discover')) return
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'event-pools'] })
     void queryClient.invalidateQueries({ queryKey: ['mini-program', 'my-pool-registrations'] })
+  })
+
+  // PR-2: 'discover' onboarding-step funnel event. Fires step_started once on
+  // the first show after mount only — tab re-entries must not spam the funnel
+  // (separate ref from the refresh-skip guard above, which skips first show).
+  // PR-9: carries `fromOnboarding: true` when the arrival return-hook signal
+  // was pending — the ref covers the case where the coachmark effect already
+  // consumed the storage key before this handler ran (order is not guaranteed).
+  const discoverStepTrackedRef = useRef(false)
+  useDidShow(() => {
+    if (discoverStepTrackedRef.current) return
+    discoverStepTrackedRef.current = true
+    let fromOnboarding = arrivalFromOnboardingRef.current
+    if (!fromOnboarding && userId) {
+      try {
+        fromOnboarding = !!Taro.getStorageSync(`joyjoin_discover_arrival_pending:${userId}`)
+      } catch {
+        fromOnboarding = false
+      }
+    }
+    onboardingAnalytics.stepStarted('discover', fromOnboarding ? { fromOnboarding: true } : undefined)
   })
 
   // ── Geo detection effect ──
@@ -298,17 +348,26 @@ function AuthenticatedDiscover({
 
   // ── Header copy (computed after data fetch) ──
   const timeGreeting = useMemo(() => getTimeGreeting(displayName), [displayName])
+  // PR-9: 悦仔's archetype-voiced return hook for the first-visit coachmark
+  // (Tier A); Tier B is the generic echo used by the header subtitle.
+  const arrivalHookLine = useMemo(
+    () => getOnboardingVoiceLine('discover-arrival', userArchetype),
+    [userArchetype],
+  )
   const dynamicSubtitle = useMemo(
-    () =>
-      isLoadingRegistrations
-        ? '发现适合你的聚会…'
-        : getDiscoverSubtitle({
-            displayName,
-            archetype: userArchetype,
-            registrationCount: registrations.length,
-            openPoolCount: pools.filter((p) => p.status !== 'closed').length,
-          }),
-    [displayName, userArchetype, registrations.length, pools, isLoadingRegistrations],
+    () => {
+      if (isLoadingRegistrations) return '发现适合你的聚会…'
+      // Arrival day: the random tagline yields to the hook card's promise —
+      // the header echoes the generic (Tier B) line instead of competing.
+      if (arrivalHookDay) return getOnboardingVoiceLine('discover-arrival', null)
+      return getDiscoverSubtitle({
+        displayName,
+        archetype: userArchetype,
+        registrationCount: registrations.length,
+        openPoolCount: pools.filter((p) => p.status !== 'closed').length,
+      })
+    },
+    [displayName, userArchetype, registrations.length, pools, isLoadingRegistrations, arrivalHookDay],
   )
   // ── Handlers ──
   const openPools = useMemo(
@@ -316,11 +375,65 @@ function AuthenticatedDiscover({
     [pools],
   )
 
-  const userId = (user as any)?.id
   const bannerVariant = useMemo(
     () => resolveVariant(userId, !!userArchetype),
     [userId, userArchetype],
   )
+
+  // PR-9 funnel-tail close/tap-through events. `auto` fires from the 6s timer
+  // (no haptics); `button` is the explicit 知道了 close; `tap_through` is a
+  // tap on the card body/anchor — the user followed the pointer toward the
+  // 街头盲盒 entry below.
+  const handleArrivalCoachmarkClosed = useCallback((reason: 'button' | 'tap_through' | 'auto') => {
+    if (reason !== 'auto') haptics('light')
+    if (arrivalCoachmarkTimerRef.current) {
+      clearTimeout(arrivalCoachmarkTimerRef.current)
+      arrivalCoachmarkTimerRef.current = null
+    }
+    setShowArrivalCoachmark(false)
+    onboardingAnalytics.interaction(
+      'discover',
+      reason === 'tap_through' ? 'arrival_hook_tap_through' : 'arrival_hook_close',
+      { fromOnboarding: true, dismissReason: reason },
+    )
+  }, [])
+
+  // Show the arrival coachmark once: consume the pending flag, write the seen
+  // key, and self-dismiss after 6s (or on tap). Storage failures must never
+  // affect the feed. PR-9 also stamps the seen date so the header tagline
+  // yields to the hook line for the whole arrival day, and reports the
+  // hook-card impression into the onboarding funnel tail.
+  useEffect(() => {
+    if (!userId) return
+    try {
+      const seenDate = Taro.getStorageSync(`joyjoin_discover_arrival_seen_date:${userId}`)
+      if (seenDate === arrivalTodayKey()) setArrivalHookDay(true)
+      if (!Taro.getStorageSync(`joyjoin_discover_arrival_pending:${userId}`)) return
+      Taro.removeStorageSync(`joyjoin_discover_arrival_pending:${userId}`)
+      Taro.setStorageSync(`joyjoin_discover_arrival_seen:${userId}`, true)
+      Taro.setStorageSync(`joyjoin_discover_arrival_seen_date:${userId}`, arrivalTodayKey())
+    } catch {
+      return
+    }
+    arrivalFromOnboardingRef.current = true
+    setArrivalHookDay(true)
+    setShowArrivalCoachmark(true)
+    onboardingAnalytics.interaction('discover', 'arrival_hook_impression', {
+      fromOnboarding: true,
+      archetype: userArchetype ?? 'unknown',
+    })
+    arrivalCoachmarkTimerRef.current = setTimeout(() => {
+      arrivalCoachmarkTimerRef.current = null
+      handleArrivalCoachmarkClosed('auto')
+    }, 6000)
+    return () => {
+      if (arrivalCoachmarkTimerRef.current) {
+        clearTimeout(arrivalCoachmarkTimerRef.current)
+        arrivalCoachmarkTimerRef.current = null
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   const handlePoolTap = useCallback((pool: EventPoolSummary) => {
     haptics('light')
@@ -443,6 +556,55 @@ function AuthenticatedDiscover({
           <Text className='discover-auth__subtitle'>{dynamicSubtitle}</Text>
         </View>
       </View>
+
+      {/* PR-5 + PR-9 first-visit arrival card (one-time; tap or 6s to dismiss).
+          Top half: 悦仔's archetype-voiced return hook echoing the results-page
+          promise. Bottom half: the two play-mode explainer lines. The bottom
+          anchor arrow points at the 街头盲盒 card below. */}
+      {showArrivalCoachmark ? (
+        <View
+          className='discover-auth__arrival-coachmark'
+          onClick={() => handleArrivalCoachmarkClosed('tap_through')}
+          hoverClass='discover-auth__arrival-coachmark--pressed'
+          role='button'
+          aria-label={`${arrivalHookLine}。玩法提示：${FLOW1_ENTRY_COPY.event.title}是同桌小局，${FLOW1_ENTRY_COPY.street.title}一个人也能玩。轻触收起`}
+        >
+          <View className='discover-auth__arrival-mascot' aria-hidden='true'>
+            <Image
+              className='discover-auth__arrival-mascot-img'
+              src={avatarError ? localFallback : xiaoyueAsset}
+              mode='aspectFit'
+              onError={() => setAvatarError(true)}
+            />
+          </View>
+          <View className='discover-auth__arrival-body'>
+            <Text className='discover-auth__arrival-kicker'>先看看怎么玩</Text>
+            <Text className='discover-auth__arrival-title'>{arrivalHookLine}</Text>
+            <View className='discover-auth__arrival-row'>
+              <Text className='discover-auth__arrival-eyebrow'>{FLOW1_ENTRY_COPY.event.eyebrow}</Text>
+              <Text className='discover-auth__arrival-line'>
+                {FLOW1_ENTRY_COPY.event.title} · {FLOW1_ENTRY_COPY.event.bannerLine}
+              </Text>
+            </View>
+            <View className='discover-auth__arrival-row'>
+              <Text className='discover-auth__arrival-eyebrow'>{FLOW1_ENTRY_COPY.street.eyebrow}</Text>
+              <Text className='discover-auth__arrival-line'>
+                {FLOW1_ENTRY_COPY.street.title} · {FLOW1_ENTRY_COPY.street.bannerLine}
+              </Text>
+            </View>
+          </View>
+          <Text
+            className='discover-auth__arrival-dismiss'
+            onClick={(e) => {
+              e.stopPropagation()
+              handleArrivalCoachmarkClosed('button')
+            }}
+          >
+            知道了
+          </Text>
+          <View className='discover-auth__arrival-anchor' aria-hidden='true' />
+        </View>
+      ) : null}
 
       {/* Explore header */}
       <View className='discover-auth__explore-header'>

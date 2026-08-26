@@ -1,4 +1,5 @@
 import type { Express, Request } from "express";
+import { z } from "zod";
 import { aiEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
 import { validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
@@ -7,8 +8,11 @@ import { db } from "../../db";
 import { eq } from "drizzle-orm";
 import { onboardingAnalytics, userInterests, users } from "@shared/schema";
 import { normalizeOptionalDuration } from "./helpers";
+
+type DbExecutor = typeof db | any;
 import { notifyOnboardingComplete } from "../../lib/wecomNotifications/onboarding";
 import { computeOnboardingNextStep } from "../../lib/computeOnboardingNextStep";
+import type { OnboardingNextStep } from "@shared/onboarding";
 
 async function requireAuth(req: Request, res: any, next: any) {
   const session = req.session as any;
@@ -38,6 +42,14 @@ const ONBOARDING_ANALYTICS_EVENT_TYPES = [
   "slider_advance_blocked",
   "picker_default_adopted",
   "ceremony_advance",
+  // PR-2 interaction actions (land as event_type='interaction' rows; listed
+  // here so legacy/direct senders using them as eventType stay accepted too)
+  "question_answered",
+  "commentary_read_complete",
+  "commentary_cut_short",
+  "slot_animation_start",
+  "skip_animation",
+  "result_stage_dwell",
 ] as const;
 
 const ALLOWED_ONBOARDING_EVENT_TYPES = new Set<string>(ONBOARDING_ANALYTICS_EVENT_TYPES);
@@ -94,38 +106,69 @@ function parseOnboardingTimestamp(timestamp: unknown): Date {
   return new Date();
 }
 
+const profileReviewCompleteBodySchema = z.object({
+  bio: z.string().optional(),
+});
+
+const onboardingCheckpointBodySchema = z.object({
+  step: z.enum([
+    "onboarding",
+    "personality-test",
+    "essential-data",
+    "extended-data",
+    "profile-review",
+    "guide",
+  ]),
+  timestamp: z.union([z.number(), z.string()]).optional(),
+});
+
+const onboardingAnalyticsBodySchema = z.object({
+  step: z.string().max(MAX_ONBOARDING_STEP_LENGTH).optional(),
+  stepId: z.string().max(MAX_ONBOARDING_STEP_LENGTH).optional(),
+  stepIndex: z.number().int().min(0).optional(),
+  eventType: z.string(),
+  metadata: z.record(z.unknown()).optional(),
+  timestamp: z.union([z.number(), z.string()]).optional(),
+  sessionDuration: z.number().min(0).optional(),
+  stepDuration: z.number().min(0).optional(),
+  duration: z.number().min(0).optional(),
+  sessionId: z.string().max(MAX_ONBOARDING_SESSION_ID_LENGTH).optional(),
+  experiment: z.object({
+    flagKey: z.string(),
+    bucket: z.string(),
+  }).optional(),
+  userAgent: z.string().optional(),
+  screenSize: z.string().optional(),
+});
 
 export function registerOnboardingRoutes(app: Express): void {
-  // Mark guide as seen (B2: Guide persistence server-side)
+  // Mark guide as seen (B2: Guide persistence server-side).
+  // GUIDE STEP REMOVED 2026-05-07: this route remains as a backward-compat no-op
+  // so older clients never break; no DB column is touched.
   app.post('/api/guide/mark-seen', requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      await db.update(users).set({ hasSeenGuide: true }).where(eq(users.id, userId));
-
+      logger.info("[Onboarding] Guide mark-seen stub called", { userId });
       res.json({ success: true });
     } catch (error) {
-      console.error("Error marking guide as seen:", error);
+      logger.error("Error marking guide as seen", { error: String(error) });
       res.status(500).json({ message: "Failed to mark guide as seen" });
     }
   });
 
-  // Alias endpoint for guide completion (matches problem statement requirement)
+  // Alias endpoint for guide completion (matches problem statement requirement).
+  // Same no-op stub as mark-seen.
   app.post('/api/guide/complete', requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      await db.update(users).set({
-        hasSeenGuide: true,
-        onboardingCheckpoint: 'guide',
-        onboardingCheckpointTimestamp: new Date(),
-      }).where(eq(users.id, userId));
-
+      logger.info("[Onboarding] Guide complete stub called", { userId });
       res.json({ success: true, hasSeenGuide: true });
     } catch (error) {
-      console.error("Error completing guide:", error);
+      logger.error("Error completing guide", { error: String(error) });
       res.status(500).json({ message: "Failed to complete guide" });
     }
   });
@@ -135,8 +178,11 @@ export function registerOnboardingRoutes(app: Express): void {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      const bioRaw = typeof req.body?.bio === 'string' ? req.body.bio : '';
-      const bio = bioRaw.trim();
+      const parse = profileReviewCompleteBodySchema.safeParse(req.body ?? {});
+      if (!parse.success) {
+        return res.status(400).json({ message: "请求格式不正确", field: "body" });
+      }
+      const bio = parse.data.bio?.trim() ?? '';
 
       if (bio.length > 100) {
         return res.status(400).json({ message: "一句话介绍不能超过 100 个字符", field: "bio" });
@@ -159,16 +205,18 @@ export function registerOnboardingRoutes(app: Express): void {
         updateValues.bio = bio;
       }
 
-      await db.update(users).set(updateValues).where(eq(users.id, userId));
+      const user = await db.transaction(async (tx: DbExecutor) => {
+        await tx.update(users).set(updateValues).where(eq(users.id, userId));
+        return tx.query.users.findFirst({
+          where: eq(users.id, userId),
+        });
+      });
 
       logger.info("[Onboarding] Profile review completed", { userId, bioLength: bio.length, bioUpdated: bio.length > 0 });
 
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, userId),
-      });
-
+      let nextStep: OnboardingNextStep | null = null;
       if (user) {
-        const nextStep = computeOnboardingNextStep(user);
+        nextStep = computeOnboardingNextStep(user);
         if (nextStep === 'discover') {
           const signupTime = user.createdAt || new Date();
           const onboardingDurationMin = Math.round(
@@ -183,9 +231,9 @@ export function registerOnboardingRoutes(app: Express): void {
         }
       }
 
-      res.json({ success: true, hasSeenProfileReview: true });
+      res.json({ success: true, hasSeenProfileReview: true, nextStep });
     } catch (error) {
-      console.error("Error completing profile review:", error);
+      logger.error("Error completing profile review", { error: String(error), userId: req.session.userId });
       res.status(500).json({ message: "Failed to complete profile review" });
     }
   });
@@ -196,17 +244,12 @@ export function registerOnboardingRoutes(app: Express): void {
       const userId = req.session.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      const { step, timestamp } = req.body;
-      if (!step) {
-        return res.status(400).json({ message: "Step is required" });
+      const parse = onboardingCheckpointBodySchema.safeParse(req.body ?? {});
+      if (!parse.success) {
+        return res.status(400).json({ message: "Invalid checkpoint payload", errors: parse.error.format() });
       }
 
-      // Validate step value
-      const validSteps = ['onboarding', 'personality-test', 'essential-data', 'extended-data', 'profile-review', 'guide'];
-      if (!validSteps.includes(step)) {
-        return res.status(400).json({ message: "Invalid step value" });
-      }
-
+      const { step, timestamp } = parse.data;
       const checkpointTimestamp = timestamp ? new Date(timestamp) : new Date();
 
       await db.update(users).set({
@@ -216,7 +259,7 @@ export function registerOnboardingRoutes(app: Express): void {
 
       res.json({ success: true, checkpoint: step });
     } catch (error) {
-      console.error("Error saving checkpoint:", error);
+      logger.error("Error saving checkpoint", { error: String(error), userId: req.session.userId });
       res.status(500).json({ message: "Failed to save checkpoint" });
     }
   });
@@ -244,7 +287,7 @@ export function registerOnboardingRoutes(app: Express): void {
 
       res.json(tagline);
     } catch (error) {
-      console.error('[profileTagline] route error:', error);
+      logger.error('[profileTagline] route error', { error: String(error), userId: req.session.userId });
       res.status(500).json({ message: 'Failed to generate profile tagline' });
     }
   });
@@ -252,6 +295,11 @@ export function registerOnboardingRoutes(app: Express): void {
   // Phase 2: Onboarding Analytics endpoint
   app.post('/api/analytics/onboarding', async (req: Request, res) => {
     try {
+      const parse = onboardingAnalyticsBodySchema.safeParse(req.body ?? {});
+      if (!parse.success) {
+        return res.status(200).json({ success: false, error: 'invalid payload' });
+      }
+
       const {
         step,
         stepId,
@@ -266,12 +314,12 @@ export function registerOnboardingRoutes(app: Express): void {
         experiment,
         userAgent,
         screenSize,
-      } = req.body ?? {};
+      } = parse.data;
 
       // Allow-listed event types only; anything else is silently ignored so
       // analytics ingestion never 4xx's the client. Legacy V1-V3 names are
       // kept alongside the V4 per-substep + polish events.
-      if (typeof eventType !== 'string' || !ALLOWED_ONBOARDING_EVENT_TYPES.has(eventType)) {
+      if (!ALLOWED_ONBOARDING_EVENT_TYPES.has(eventType)) {
         return res.status(200).json({ success: false, error: 'invalid eventType' });
       }
 

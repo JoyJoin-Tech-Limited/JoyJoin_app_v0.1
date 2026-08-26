@@ -88,11 +88,21 @@ $pd-deep: $phase-accent-dice-deep;
     @include type-body;
     color: $color-text-secondary;
     text-align: center;
+    // Defense-in-depth: clamp extremely long AI challenge text on the card face.
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
   }
 
   &__challenge-pass {
     @include type-caption;
     color: $pd-deep;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   &__helper {
@@ -135,16 +145,14 @@ $pd-deep: $phase-accent-dice-deep;
 
   &__countdown-number {
     @include type-hero;
+    font-family: $font-mono; // tabular hero numerals for the 3-2-1 readout
+    font-variant-numeric: tabular-nums;
     color: $pd-deep;
   }
 
   &__countdown-label {
     @include type-subheading;
     color: $color-text-secondary;
-  }
-
-  &__reveal-scroll {
-    max-height: 62vh;
   }
 
   &__reveal-list {
@@ -187,7 +195,7 @@ $pd-deep: $phase-accent-dice-deep;
     border-radius: $radius-md;
     background: $color-surface;
     border: 2rpx solid rgba($pd-accent, 0.2);
-    transition: border-color 0.15s ease, opacity 0.15s ease;
+    transition: border-color 0.15s ease, opacity 0.15s ease, transform 0.12s ease;
 
     &--selected {
       border-color: rgba($pd-deep, 0.75);
@@ -205,6 +213,11 @@ $pd-deep: $phase-accent-dice-deep;
     &--loading {
       pointer-events: none;
     }
+
+    &--pressed {
+      transform: scale(0.98);
+      border-color: rgba($pd-deep, 0.55);
+    }
   }
 
   &__choose-card-top {
@@ -214,8 +227,9 @@ $pd-deep: $phase-accent-dice-deep;
   }
 
   &__choose-card-check {
-    @include type-label;
-    font-weight: $font-weight-bold;
+    width: 20rpx;
+    height: 20rpx;
+    display: flex;
     color: $pd-deep;
   }
 

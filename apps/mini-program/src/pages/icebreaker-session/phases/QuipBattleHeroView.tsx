@@ -222,6 +222,7 @@ export function QuipBattleHeroView({
   }
 
   const handleSwipeRight = useCallback(() => {
+    if (voting) return
     const current = swipeStack[stackIndex]
     if (!current) return
     haptics('light')
@@ -236,11 +237,12 @@ export function QuipBattleHeroView({
     burstTimeoutRef.current = setTimeout(() => setBurstTrigger(false), 300)
 
     setStackIndex((i) => Math.min(i + 1, swipeStack.length))
-  }, [stackIndex, swipeStack])
+  }, [stackIndex, swipeStack, voting])
 
   const handleSwipeLeft = useCallback(() => {
+    if (voting) return
     setStackIndex((i) => Math.min(i + 1, swipeStack.length))
-  }, [swipeStack.length])
+  }, [swipeStack.length, voting])
 
   const handleReaction = useCallback((index: number) => {
     setSelectedReaction(index)

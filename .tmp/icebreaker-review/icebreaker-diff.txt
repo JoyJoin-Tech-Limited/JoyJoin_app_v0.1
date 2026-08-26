@@ -1,0 +1,2441 @@
+diff --git a/apps/mini-program/src/components/reveal/CardFlip.scss b/apps/mini-program/src/components/reveal/CardFlip.scss
+index 027fba23a..b95ac4a48 100644
+--- a/apps/mini-program/src/components/reveal/CardFlip.scss
++++ b/apps/mini-program/src/components/reveal/CardFlip.scss
+@@ -9,6 +9,9 @@
+   &__wrapper {
+     position: relative;
+     width: 100%;
++    // Grid stack: both faces occupy the same cell so the wrapper sizes to
++    // the TALLER face (front-only sizing clipped taller back-face content).
++    display: grid;
+     transform-style: preserve-3d;
+     transition: transform cubic-bezier(0.22, 1, 0.36, 1);
+     will-change: transform;
+@@ -19,6 +22,9 @@
+   }
+ 
+   &__face {
++    // Same grid cell for both faces; default stretch makes the shorter
++    // face fill the taller one's height (replaces back-face height: 100%).
++    grid-area: 1 / 1;
+     position: relative;
+     width: 100%;
+     backface-visibility: hidden;
+@@ -26,25 +32,23 @@
+     overflow: hidden;
+ 
+     &--back {
+-      position: absolute;
+-      top: 0;
+-      left: 0;
+-      height: 100%;
+       transform: rotateY(180deg);
+     }
+   }
+ 
+   // Reduced motion — instant opacity swap
+-  &--reduced {
++  // Faces render without a wrapper here; stack them the same way so the
++  // container still sizes to the taller face. Compound selector keeps the
++  // grid display above consumer overrides like WarmupCardSlot's
++  // `.warmup-card-slot .reveal-card-flip { display: flex }`.
++  &.reveal-card-flip--reduced {
++    display: grid;
++
+     .reveal-card-flip__face {
+       transition: opacity 0ms;
+     }
+ 
+     .reveal-card-flip__face--back {
+-      position: absolute;
+-      top: 0;
+-      left: 0;
+-      height: 100%;
+       transform: none;
+     }
+   }
+diff --git a/apps/mini-program/src/components/ui/Button.scss b/apps/mini-program/src/components/ui/Button.scss
+index 12ff5e341..4bfda50df 100644
+--- a/apps/mini-program/src/components/ui/Button.scss
++++ b/apps/mini-program/src/components/ui/Button.scss
+@@ -12,6 +12,7 @@
+   font-weight: $font-weight-semibold;
+   white-space: nowrap;
+   overflow: hidden;
++  text-overflow: ellipsis;
+   transition: transform 0.12s ease, opacity 0.12s ease;
+ 
+   &::after {
+diff --git a/apps/mini-program/src/pages/icebreaker-session/components/IcebreakerTierSheet.scss b/apps/mini-program/src/pages/icebreaker-session/components/IcebreakerTierSheet.scss
+index 6c5c9a822..a8db22400 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/components/IcebreakerTierSheet.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/components/IcebreakerTierSheet.scss
+@@ -34,7 +34,7 @@
+     width: 48rpx;
+     height: 6rpx;
+     background: $color-divider;
+-    border-radius: 100rpx;
++    border-radius: $radius-full;
+     margin-bottom: $spacing-sm;
+   }
+ 
+@@ -111,6 +111,25 @@
+     overflow: hidden;
+     will-change: transform;
+ 
++    // Legibility scrim: the full-bleed card-bg art can drift under the text
++    // column (which sits on the RIGHT — padding-left: 42%), so ramp a soft
++    // surface wash in behind it. Paints above card-bg (same z, later in tree
++    // order), below card-body/card-check (z-index: 1).
++    &::after {
++      content: '';
++      position: absolute;
++      inset: 0;
++      z-index: 0;
++      border-radius: inherit;
++      background: linear-gradient(
++        90deg,
++        rgba($color-surface, 0) 32%,
++        rgba($color-surface, 0.78) 56%,
++        rgba($color-surface, 0.94) 80%
++      );
++      pointer-events: none;
++    }
++
+     &--active {
+       border-color: $color-primary;
+       box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.12);
+@@ -123,6 +142,11 @@
+ 
+     &--custom {
+       padding-left: $spacing-md;
++
++      // Custom card text spans the full width — even wash instead of a ramp.
++      &::after {
++        background: rgba($color-surface, 0.82);
++      }
+     }
+   }
+ 
+@@ -172,7 +196,7 @@
+     color: $color-text-white;
+     background: $color-secondary;
+     padding: 4rpx 12rpx;
+-    border-radius: 100rpx;
++    border-radius: $radius-full;
+     line-height: 1;
+ 
+     &--custom {
+@@ -196,7 +220,7 @@
+     color: $color-text-muted;
+     background: rgba($color-text-primary, 0.04);
+     padding: 4rpx 12rpx;
+-    border-radius: 100rpx;
++    border-radius: $radius-full;
+     line-height: 1;
+     font-family: $font-mono, monospace;
+   }
+diff --git a/apps/mini-program/src/pages/icebreaker-session/components/WarmupActionBar.scss b/apps/mini-program/src/pages/icebreaker-session/components/WarmupActionBar.scss
+index 7babdcf83..67fb8fd48 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/components/WarmupActionBar.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/components/WarmupActionBar.scss
+@@ -25,10 +25,11 @@
+       background: rgba($color-success, 0.08) !important;
+       color: $color-success !important;
+       border: 2rpx solid rgba($color-success, 0.72) !important;
++      // Static glow ring — the old pulsing box-shadow loop repainted every
++      // frame (motion rule: transform/opacity only); restraint keeps the
++      // ready state signaled by tint + border alone.
+       box-shadow: 0 0 0 6rpx rgba($color-success, 0.12);
+-      animation:
+-        warmup-action-enter 200ms cubic-bezier(0.22, 1, 0.36, 1) both,
+-        warmup-ready-margin 1.8s ease-in-out 200ms infinite;
++      animation: warmup-action-enter 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+ 
+       &:active {
+         transform: scale(0.98);
+@@ -78,7 +79,7 @@
+   }
+ 
+   &__cancel-text {
+-    font-size: 24rpx;
++    font-size: $font-size-sm;
+     color: $color-text-muted;
+     text-decoration: underline;
+     text-underline-offset: 4rpx;
+@@ -99,13 +100,13 @@
+   }
+ 
+   &__text-btn-label {
+-    font-size: 28rpx;
++    font-size: $font-size-base;
+     font-weight: $font-weight-semibold;
+     color: $color-primary;
+   }
+ 
+   &__helper {
+-    font-size: 22rpx;
++    font-size: $font-size-xs;
+     color: $color-text-muted;
+     text-align: center;
+     line-height: 1.4;
+@@ -121,16 +122,6 @@
+       transform: translateY(0);
+     }
+   }
+-
+-  @keyframes warmup-ready-margin {
+-    0%,
+-    100% {
+-      box-shadow: 0 0 0 4rpx rgba($color-success, 0.1);
+-    }
+-    50% {
+-      box-shadow: 0 0 0 10rpx rgba($color-success, 0.22);
+-    }
+-  }
+ }
+ 
+ @media (prefers-reduced-motion: reduce) {
+diff --git a/apps/mini-program/src/pages/icebreaker-session/components/WarmupCardSlot.scss b/apps/mini-program/src/pages/icebreaker-session/components/WarmupCardSlot.scss
+index f6bd8adf2..6d8a4bddc 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/components/WarmupCardSlot.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/components/WarmupCardSlot.scss
+@@ -102,7 +102,7 @@
+     bottom: 0;
+     left: 0;
+     border-radius: $card-radius;
+-    box-shadow: 0 0 32rpx rgba(139, 92, 246, 0.35);
++    box-shadow: 0 0 32rpx rgba($color-primary, 0.35);
+     opacity: 1;
+     pointer-events: none;
+     z-index: 3;
+@@ -139,7 +139,7 @@
+   }
+ 
+   &__ember-chip-text {
+-    font-size: 22rpx;
++    font-size: $font-size-xs;
+     line-height: 1.4;
+     color: $color-text-secondary;
+     font-family: $font-mono;
+@@ -283,7 +283,7 @@
+   }
+ 
+   &__corner {
+-    font-size: 20rpx;
++    font-size: $font-size-2xs;
+     line-height: 1;
+     color: $color-text-muted;
+     white-space: nowrap;
+@@ -326,7 +326,10 @@
+     text-align: center;
+     display: -webkit-box;
+     -webkit-box-orient: vertical;
+-    -webkit-line-clamp: 4;
++    // 3-line clamp (was 4): the card is pinned to a 480rpx floor inside a
++    // zero-scroll warmup column, and 4 lines + whisper + expander + AIGC
++    // footer overflowed it — the bottom content clipped on device.
++    -webkit-line-clamp: 3;
+     overflow: hidden;
+     // Documented exception to the repo-wide keep-all 孤字 rule: at 38rpx in
+     // the narrow card, an unspaced ~14-glyph question becomes ONE unbreakable
+@@ -339,7 +342,9 @@
+     margin-top: 0;
+ 
+     &--expanded {
+-      -webkit-line-clamp: 3;
++      // Expanded deep-chat prompt tiers stack below — shrink the question to
++      // 2 lines so the tiers don't push the AIGC footer out of the card.
++      -webkit-line-clamp: 2;
+     }
+ 
+     // C4 — quiet topic change: 360ms opacity crossfade on the same card,
+@@ -379,15 +384,15 @@
+   }
+ 
+   &__permission-prefix {
+-    font-size: 20rpx;
++    font-size: $font-size-2xs;
+     font-weight: $font-weight-semibold;
+-    color: #7c3aed; // warmup accentDeep
++    color: $phase-accent-warmup-deep;
+     margin-right: 8rpx;
+   }
+ 
+   &__permission-text {
+-    font-size: 24rpx;
+-    color: rgba(55, 65, 81, 0.62);
++    font-size: $font-size-sm;
++    color: rgba($color-text-primary, 0.62);
+     letter-spacing: 0.5rpx;
+     line-height: 1.65;
+   }
+@@ -410,7 +415,7 @@
+   }
+ 
+   &__expander-text {
+-    font-size: 28rpx;
++    font-size: $font-size-base;
+     font-weight: $font-weight-semibold;
+     color: $color-primary;
+     line-height: 1;
+@@ -437,7 +442,7 @@
+     gap: 4rpx;
+     padding: 8rpx 12rpx;
+     background: rgba($color-primary, 0.04);
+-    border-radius: 12rpx;
++    border-radius: $radius-md;
+     border: 2rpx solid rgba($color-primary, 0.1);
+     opacity: 0;
+     transform: translateY(8rpx);
+@@ -451,17 +456,23 @@
+   }
+ 
+   &__prompt-label {
+-    font-size: 20rpx;
++    font-size: $font-size-2xs;
+     font-weight: $font-weight-bold;
+     color: $color-primary;
+     line-height: 1.4;
+   }
+ 
+   &__prompt-text {
+-    font-size: 24rpx;
++    font-size: $font-size-sm;
+     color: $color-text-primary;
+     line-height: 1.4;
+     text-align: left;
++    // 2-line clamp per tier: 3 expanded tiers at unbounded length pushed the
++    // AIGC footer past the card's floor and clipped on device.
++    display: -webkit-box;
++    -webkit-box-orient: vertical;
++    -webkit-line-clamp: 2;
++    overflow: hidden;
+   }
+ 
+   @keyframes warmup-prompt-expand {
+@@ -486,7 +497,7 @@
+ 
+     &-text,
+     &-sep {
+-      font-size: 20rpx;
++      font-size: $font-size-2xs;
+       line-height: 1.4;
+       color: $color-text-secondary;
+     }
+@@ -503,7 +514,7 @@
+       }
+ 
+       .aigc-report-button__text {
+-        font-size: 20rpx;
++        font-size: $font-size-2xs;
+         line-height: 1.4;
+         color: $color-text-secondary;
+         text-decoration: underline;
+@@ -515,7 +526,7 @@
+   // State A: mood grid
+   &__empty-title {
+     font-family: $font-cn-display;
+-    font-size: 32rpx;
++    font-size: $font-size-md;
+     font-weight: $font-weight-bold;
+     color: $color-text-primary;
+     text-align: center;
+@@ -637,7 +648,7 @@
+   }
+ 
+   &__generating-text {
+-    font-size: 28rpx;
++    font-size: $font-size-base;
+     color: $color-text-secondary;
+   }
+ 
+@@ -663,6 +674,26 @@
+   }
+ }
+ 
++// Short-viewport floor drop: the 480rpx card minimum + presence strip +
++// action bar + gaps exceed a ≤700px viewport, so the bottom content clipped
++// inside the zero-scroll warmup column. Lower the floor to 360rpx.
++@media (max-height: 700px) {
++  .warmup-card-slot {
++    min-height: 360rpx;
++
++    .reveal-card-flip__wrapper,
++    .reveal-card-flip__face {
++      min-height: 360rpx;
++    }
++
++    &__flat-card,
++    &__foil-shell,
++    &__foil-zone {
++      min-height: 360rpx;
++    }
++  }
++}
++
+ @media (prefers-reduced-motion: reduce) {
+   .warmup-card-slot {
+     &__dot,
+diff --git a/apps/mini-program/src/pages/icebreaker-session/components/WarmupCelebrationOverlay.scss b/apps/mini-program/src/pages/icebreaker-session/components/WarmupCelebrationOverlay.scss
+index 7199da1aa..8f19486ea 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/components/WarmupCelebrationOverlay.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/components/WarmupCelebrationOverlay.scss
+@@ -8,7 +8,7 @@
+   align-items: center;
+   justify-content: center;
+   pointer-events: none;
+-  animation: warmup-celebration-in 350ms ease both;
++  animation: warmup-celebration-in 350ms cubic-bezier(0.22, 1, 0.36, 1) both;
+ 
+   &--out {
+     animation: warmup-celebration-out 350ms ease forwards;
+@@ -40,17 +40,23 @@
+ 
+   &__bubble {
+     background: $color-surface;
+-    border-radius: 24rpx;
++    border-radius: $card-radius-sm;
+     padding: 24rpx;
+-    box-shadow: 0 8rpx 32rpx rgba($color-text-primary, 0.12);
++    box-shadow: $shadow-lg;
+   }
+ 
+   &__text {
+     font-family: $font-cn-display;
+-    font-size: 28rpx;
++    font-size: $font-size-base;
+     font-weight: $font-weight-bold;
+     color: $color-text-primary;
+     line-height: 1.5;
++    // Celebration lines are curated but unbounded — clamp to 2 lines so a
++    // long line can't stretch the bubble past the card's max-width.
++    display: -webkit-box;
++    -webkit-box-orient: vertical;
++    -webkit-line-clamp: 2;
++    overflow: hidden;
+   }
+ 
+   @keyframes warmup-celebration-in {
+diff --git a/apps/mini-program/src/pages/icebreaker-session/components/WarmupCelebrationOverlay.tsx b/apps/mini-program/src/pages/icebreaker-session/components/WarmupCelebrationOverlay.tsx
+index 217b33627..9cd76cdbf 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/components/WarmupCelebrationOverlay.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/components/WarmupCelebrationOverlay.tsx
+@@ -1,5 +1,5 @@
+ import { useEffect, useState } from 'react'
+-import { View, Text, Image } from '@tarojs/components'
++import { View, Text, Image, RootPortal } from '@tarojs/components'
+ import ParticleBurst from '../../../components/reveal/ParticleBurst'
+ import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
+ // Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
+@@ -41,26 +41,31 @@ export function WarmupCelebrationOverlay({
+   if (!visible) return null
+ 
+   return (
+-    <View
+-      className={`warmup-celebration ${isExiting ? 'warmup-celebration--out' : ''}`}
+-      catchMove
+-      aria-live='polite'
+-      role='status'
+-    >
+-      <View className='warmup-celebration__burst'>
+-        <ParticleBurst trigger={visible} type='confetti' count={50} reducedMotion={reducedMotion} />
+-      </View>
++    // RootPortal: the phase shell keeps a transform (entrance scale), which
++    // makes position:fixed descendants clip to the shell box on device
++    // (MiniScriptConfigModal precedent). catchMove stays on the overlay root.
++    <RootPortal>
++      <View
++        className={`warmup-celebration ${isExiting ? 'warmup-celebration--out' : ''}`}
++        catchMove
++        aria-live='polite'
++        role='status'
++      >
++        <View className='warmup-celebration__burst'>
++          <ParticleBurst trigger={visible} type='confetti' count={50} reducedMotion={reducedMotion} />
++        </View>
+ 
+-      <View className='warmup-celebration__card'>
+-        <Image
+-          className='warmup-celebration__avatar'
+-          src={getXiaoyueExpressionAsset('matchSuccess')}
+-          mode='aspectFit'
+-        />
+-        <View className='warmup-celebration__bubble'>
+-          <Text className='warmup-celebration__text'>{line}</Text>
++        <View className='warmup-celebration__card'>
++          <Image
++            className='warmup-celebration__avatar'
++            src={getXiaoyueExpressionAsset('matchSuccess')}
++            mode='aspectFit'
++          />
++          <View className='warmup-celebration__bubble'>
++            <Text className='warmup-celebration__text'>{line}</Text>
++          </View>
+         </View>
+       </View>
+-    </View>
++    </RootPortal>
+   )
+ }
+diff --git a/apps/mini-program/src/pages/icebreaker-session/components/WarmupEmberRim.scss b/apps/mini-program/src/pages/icebreaker-session/components/WarmupEmberRim.scss
+index b632fb084..ced1aba38 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/components/WarmupEmberRim.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/components/WarmupEmberRim.scss
+@@ -41,7 +41,7 @@
+     width: 16rpx;
+     height: 16rpx;
+     border-radius: $radius-circle;
+-    background: rgba(55, 65, 81, 0.12); // E2 — unlit ember
++    background: rgba($color-text-primary, 0.12); // E2 — unlit ember
+     opacity: 0.5;
+   }
+ 
+@@ -75,7 +75,7 @@
+   // S2 — friend ignition: spring pop 0.4 → 1.18 → 1 + glow bloom 0 → 0.9 → 0.75.
+   &__seat--igniting &__dot,
+   &__seat--self-ignite &__dot {
+-    animation: warmup-ember-ignite 300ms cubic-bezier(0.34, 1.3, 0.64, 1) both;
++    animation: warmup-ember-ignite 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+ 
+   &__seat--igniting &__glow,
+@@ -100,7 +100,7 @@
+     bottom: -4rpx;
+     left: -4rpx;
+     border-radius: $radius-circle;
+-    background: radial-gradient(circle, rgba(212, 168, 67, 0.9) 0%, rgba(212, 168, 67, 0) 70%);
++    background: radial-gradient(circle, rgba($color-archetype-fire, 0.9) 0%, rgba($color-archetype-fire, 0) 70%);
+     animation: warmup-ember-self-flash 300ms ease-out both;
+     pointer-events: none;
+   }
+diff --git a/apps/mini-program/src/pages/icebreaker-session/components/WarmupPresenceStrip.scss b/apps/mini-program/src/pages/icebreaker-session/components/WarmupPresenceStrip.scss
+index c6667b004..140889c03 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/components/WarmupPresenceStrip.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/components/WarmupPresenceStrip.scss
+@@ -72,10 +72,12 @@
+   }
+ 
+   &__name {
+-    font-size: 22rpx;
++    font-size: $font-size-xs;
+     line-height: 1.2;
+     color: $color-text-secondary;
+-    max-width: 96rpx;
++    // Matches __item width (64rpx) — a wider 96rpx cap let the name overflow
++    // its tile and collide with the neighboring avatar.
++    max-width: 64rpx;
+     white-space: nowrap;
+     overflow: hidden;
+     text-overflow: ellipsis;
+@@ -85,20 +87,25 @@
+     flex-shrink: 0;
+     min-width: 128rpx;
+     text-align: right;
++    // Anchors __fade (absolute child) to the count's actual left edge.
++    position: relative;
+   }
+ 
+   &__count-text {
+-    font-size: 24rpx;
++    font-size: $font-size-sm;
+     line-height: 1;
+     color: $color-text-muted;
+     font-family: $font-mono;
+     font-variant-numeric: tabular-nums;
+   }
+ 
++  // Hangs off the count's real left edge — long counts like "12/12 已准备"
++  // exceed the 128rpx min-width, and a fixed `right: 128rpx` fade ended up
++  // stranded over the scroll seam's wrong spot.
+   &__fade {
+     position: absolute;
+     top: 0;
+-    right: 128rpx; // aligns with the reserved count width
++    left: -16rpx;
+     width: 16rpx;
+     height: 100%;
+     background: linear-gradient(90deg, rgba($color-bg, 0) 0%, $color-bg 100%);
+diff --git a/apps/mini-program/src/pages/icebreaker-session/components/WarmupPresenceStrip.tsx b/apps/mini-program/src/pages/icebreaker-session/components/WarmupPresenceStrip.tsx
+index 8ed304859..e9b3b1cfb 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/components/WarmupPresenceStrip.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/components/WarmupPresenceStrip.tsx
+@@ -72,11 +72,13 @@ export function WarmupPresenceStrip({
+         </View>
+       </ScrollView>
+       <View className='warmup-presence__count'>
++        {/* Fade anchors to the count's ACTUAL left edge (SCSS: left: -16rpx)
++            so it tracks the seam even when the count text exceeds min-width. */}
++        <View className='warmup-presence__fade' aria-hidden='true' />
+         <Text className='warmup-presence__count-text'>
+           {readyCount}/{totalCount} 已准备
+         </Text>
+       </View>
+-      <View className='warmup-presence__fade' aria-hidden='true' />
+     </View>
+   )
+ }
+diff --git a/apps/mini-program/src/pages/icebreaker-session/components/WarmupWelcomeBand.scss b/apps/mini-program/src/pages/icebreaker-session/components/WarmupWelcomeBand.scss
+index 54402e48a..4f7bf067e 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/components/WarmupWelcomeBand.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/components/WarmupWelcomeBand.scss
+@@ -22,7 +22,7 @@
+     flex: 1;
+     min-width: 0;
+     font-family: $font-cn-display;
+-    font-size: 32rpx; // Alimama display scale for the welcome moment
++    font-size: $font-size-md; // Alimama display scale for the welcome moment
+     font-weight: $font-weight-bold;
+     color: $color-text-primary;
+     line-height: 1.5;
+@@ -42,7 +42,7 @@
+   }
+ 
+   &__caption {
+-    font-size: 22rpx;
++    font-size: $font-size-xs;
+     line-height: 1.45;
+     color: $color-text-muted;
+     padding-left: 56rpx; // aligns under the welcome text (40rpx avatar + 16rpx gap)
+diff --git a/apps/mini-program/src/pages/icebreaker-session/index.scss b/apps/mini-program/src/pages/icebreaker-session/index.scss
+index 8f69b210e..6629ccee8 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/index.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/index.scss
+@@ -65,6 +65,8 @@ $__gold-accent:  $color-landed-gold;
+   // native scroll-view element itself.
+   &__inner {
+     padding: $container-padding;
++    // Terminal recap CTA can sit against the home indicator — pad for it.
++    padding-bottom: calc(#{$container-padding} + env(safe-area-inset-bottom));
+   }
+ 
+   // Error surfaces are plain Views (no scroll-view), so they carry their own.
+@@ -76,60 +78,6 @@ $__gold-accent:  $color-landed-gold;
+     position: relative;
+   }
+ 
+-  &__stall-nudge {
+-    display: flex;
+-    flex-direction: column;
+-    align-items: center;
+-    gap: $spacing-sm;
+-    margin: $spacing-sm auto;
+-    padding: $spacing-md;
+-    max-width: 640rpx;
+-    border-radius: $card-radius-lg;
+-    // Banner treatment (design audit): quiet accent tint, no card-weight
+-    // shadow/border — it must not fight the foil hero card for attention.
+-    background: rgba($color-primary, 0.08);
+-  }
+-
+-  &__stall-nudge-text {
+-    @include type-subheading;
+-    color: $color-text-primary;
+-    text-align: center;
+-  }
+-
+-  &__stall-nudge-actions {
+-    display: flex;
+-    gap: $spacing-sm;
+-    width: 100%;
+-    min-width: 0;
+-  }
+-
+-  &__stall-nudge-btn {
+-    flex: 1 1 0;
+-    min-width: 0;
+-    padding-right: $spacing-sm;
+-    padding-left: $spacing-sm;
+-    white-space: nowrap;
+-  }
+-
+-  &__stall-nudge-btn-label {
+-    display: block;
+-    flex-shrink: 0;
+-    white-space: nowrap;
+-    word-break: keep-all;
+-  }
+-
+-  &__host-advance {
+-    display: flex;
+-    flex-direction: column;
+-    align-items: center;
+-    gap: $spacing-xs;
+-    margin-top: $spacing-md;
+-  }
+-
+-  &__host-advance-btn {
+-    min-width: 320rpx;
+-  }
+-
+   // ── PR1 壳层: one-time host ⋯ coachmark ─────────────────────────────
+   // Dark bubble for ≥4.5:1 contrast on the light page; floats below the
+   // band's right edge with an arrow pointing up at the outlined ⋯ trigger.
+@@ -142,9 +90,9 @@ $__gold-accent:  $color-landed-gold;
+     max-width: 440rpx;
+     padding: $spacing-sm $spacing-md;
+     background: $color-text-primary;
+-    border-radius: 16rpx;
++    border-radius: $radius-md;
+     box-shadow: 0 8rpx 24rpx rgba($color-text-primary, 0.16);
+-    animation: icebreaker-coachmark-in 150ms ease both;
++    animation: icebreaker-coachmark-in 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+ 
+   &__coachmark-text {
+@@ -166,11 +114,12 @@ $__gold-accent:  $color-landed-gold;
+   // Error modifier — centre the error block vertically
+   &--error {
+     @include flex-center;
++    min-height: 100vh;
+     min-height: 100dvh;
+   }
+ 
+   &__phase-shell {
+-    animation: icebreaker-phase-in 0.18s cubic-bezier(0.2, 0, 0.2, 1) both;
++    animation: icebreaker-phase-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+     transition: opacity 0.12s ease, transform 0.12s ease;
+   }
+ 
+@@ -196,7 +145,7 @@ $__gold-accent:  $color-landed-gold;
+     background: rgba($color-surface, 0.92);
+     box-shadow: 0 14rpx 34rpx rgba($color-primary, 0.12);
+     backdrop-filter: blur(14rpx);
+-    animation: icebreaker-flow-sync-in 0.16s ease both;
++    animation: icebreaker-flow-sync-in 0.16s cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+ 
+   &__flow-sync-dot {
+@@ -208,9 +157,9 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__flow-sync-text {
+-    font-size: 24rpx;
+-    font-weight: 600;
+-    line-height: 1.2;
++    @include type-label;
++    font-weight: $font-weight-semibold;
++    line-height: 1.2; // compact single-line pill readout
+     color: $color-text-primary;
+   }
+ 
+@@ -228,7 +177,7 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__error-text {
+-    font-size: $font-size-base;
++    @include type-body;
+     color: $color-text-secondary;
+     text-align: center;
+   }
+@@ -240,7 +189,8 @@ $__gold-accent:  $color-landed-gold;
+   // ── Phase Transition Toast (restored 2026-07-17; purged by mistake in PR3) ──
+   &__phase-toast {
+     position: fixed;
+-    top: calc(200rpx + env(safe-area-inset-top));
++    // Clears the sticky __flow-sync pill slot (top 112rpx + ~80rpx pill).
++    top: calc(240rpx + env(safe-area-inset-top));
+     left: 50%;
+     transform: translateX(-50%);
+     box-sizing: border-box;
+@@ -251,8 +201,8 @@ $__gold-accent:  $color-landed-gold;
+     gap: $spacing-sm;
+     padding: $spacing-sm $spacing-lg;
+     background: $color-surface;
+-    border-radius: 100rpx;
+-    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
++    border-radius: $radius-full;
++    box-shadow: $shadow-md;
+     z-index: 100;
+     animation: fade-slide-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+@@ -299,26 +249,24 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__waiting-title {
+-    font-size: $font-size-lg;
++    @include type-subheading;
+     font-weight: $font-weight-bold;
+     color: $color-text-primary;
+   }
+ 
+   &__waiting-count {
+-    font-size: $font-size-base;
++    @include type-body;
+     color: $color-text-secondary;
+   }
+ 
+-  &__waiting-host-row {
+-    display: flex;
+-    align-items: center;
+-    gap: $spacing-xs;
+-    margin-top: $spacing-xs;
+-  }
+-
+   &__waiting-host {
+-    font-size: $font-size-sm;
++    display: block;
++    max-width: 100%;
++    overflow: hidden;
++    @include type-label;
+     color: $color-text-muted;
++    white-space: nowrap;
++    text-overflow: ellipsis;
+   }
+ 
+   &__waiting-tier {
+@@ -340,9 +288,9 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   // Zero-scroll flex layout for warmup (contract AC11).
+-  // When scrollY is disabled, the ScrollView acts as a flex column and the
+-  // phase shell fills the remaining viewport so the action bar sits at the
+-  // bottom of the SE 667pt viewport.
++  // scrollY stays enabled (2026-08-24) as a short-viewport escape hatch; the
++  // flex column still stretches the phase shell so the action bar sits at the
++  // bottom of the SE 667pt viewport and nothing scrolls when content fits.
+   &--warmup {
+     display: flex;
+     flex-direction: column;
+@@ -374,9 +322,8 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__tool-strip-title {
+-    font-size: $font-size-sm;
++    @include type-label;
+     font-weight: $font-weight-semibold;
+-    color: $color-text-secondary;
+     margin-bottom: $spacing-sm;
+   }
+ 
+@@ -404,7 +351,7 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__tool-card-badge-text {
+-    font-size: $font-size-xs;
++    @include type-caption;
+     font-weight: $font-weight-bold;
+     color: $color-primary;
+   }
+@@ -418,15 +365,13 @@ $__gold-accent:  $color-landed-gold;
+ 
+   &__tool-card-title {
+     display: block;
+-    font-size: $font-size-base;
++    @include type-body;
+     font-weight: $font-weight-bold;
+-    color: $color-text-primary;
+   }
+ 
+   &__tool-card-sub {
+     display: block;
+-    font-size: $font-size-xs;
+-    color: $color-text-secondary;
++    @include type-caption;
+     margin-top: 6rpx;
+   }
+ 
+@@ -435,118 +380,6 @@ $__gold-accent:  $color-landed-gold;
+ // Design spec: 2×4 style grid → translateX slide → 2×2 genre grid
+ // Zero-scroll viewport. Single-transform-per-element animations only.
+ 
+-.ms-generation {
+-  position: fixed;
+-  inset: 0;
+-  z-index: 240;
+-  display: flex;
+-  align-items: center;
+-  justify-content: center;
+-  box-sizing: border-box;
+-  padding: $spacing-xl $spacing-lg;
+-  background: rgba($color-bg-warm-to, 0.96);
+-
+-  &__card {
+-    width: 100%;
+-    max-width: 640rpx;
+-    box-sizing: border-box;
+-    padding: 48rpx 40rpx;
+-    border: 2rpx solid rgba($color-primary, 0.14);
+-    border-radius: 32rpx;
+-    background: $color-surface;
+-    text-align: center;
+-    animation: ms-generation-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+-  }
+-
+-  &__mascot {
+-    display: block;
+-    width: 144rpx;
+-    height: 144rpx;
+-    margin: 0 auto $spacing-sm;
+-  }
+-
+-  &__eyebrow {
+-    display: block;
+-    font-size: $font-size-xs;
+-    font-weight: $font-weight-bold;
+-    color: $color-primary;
+-    letter-spacing: 4rpx;
+-  }
+-
+-  &__title {
+-    @include font-cn-display;
+-    display: block;
+-    margin-top: $spacing-xs;
+-    font-size: $font-size-xl;
+-    font-weight: $font-weight-bold;
+-    color: $color-text-primary;
+-  }
+-
+-  &__stage {
+-    display: block;
+-    min-height: 44rpx;
+-    margin-top: $spacing-sm;
+-    font-size: $font-size-sm;
+-    color: $color-text-secondary;
+-  }
+-
+-  &__track {
+-    position: relative;
+-    width: 100%;
+-    height: 20rpx;
+-    margin-top: $spacing-lg;
+-    overflow: hidden;
+-    border-radius: 999rpx;
+-    background: rgba($color-primary, 0.12);
+-  }
+-
+-  &__fill {
+-    width: 100%;
+-    height: 100%;
+-    border-radius: inherit;
+-    background: $color-primary;
+-    transform-origin: left center;
+-    transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+-  }
+-
+-  &__metrics {
+-    display: flex;
+-    align-items: baseline;
+-    justify-content: space-between;
+-    gap: $spacing-sm;
+-    margin-top: $spacing-sm;
+-  }
+-
+-  &__percent {
+-    font-size: $font-size-lg;
+-    font-weight: $font-weight-bold;
+-    color: $color-primary;
+-  }
+-
+-  &__time {
+-    font-size: $font-size-xs;
+-    color: $color-text-secondary;
+-  }
+-
+-  &__hint {
+-    display: block;
+-    margin-top: $spacing-lg;
+-    font-size: $font-size-xs;
+-    color: $color-text-muted;
+-  }
+-}
+-
+-@keyframes ms-generation-enter {
+-  from {
+-    opacity: 0;
+-    transform: translateY(16rpx);
+-  }
+-  to {
+-    opacity: 1;
+-    transform: translateY(0);
+-  }
+-}
+-
+ .ms-modal {
+   position: fixed;
+   inset: 0;
+@@ -556,10 +389,6 @@ $__gold-accent:  $color-landed-gold;
+   justify-content: center;
+   background: $color-surface;
+ 
+-  &__backdrop {
+-    display: none;
+-  }
+-
+   &__sheet {
+     position: relative;
+     z-index: 1;
+@@ -577,10 +406,6 @@ $__gold-accent:  $color-landed-gold;
+     overflow: hidden;
+   }
+ 
+-  &__handle {
+-    display: none;
+-  }
+-
+   &__header {
+     flex-shrink: 0;
+     margin-bottom: $spacing-sm;
+@@ -634,8 +459,7 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__subtitle {
+-    font-size: $font-size-sm;
+-    color: $color-text-secondary;
++    @include type-label;
+     margin-top: 4rpx;
+   }
+ 
+@@ -676,8 +500,7 @@ $__gold-accent:  $color-landed-gold;
+   &__hero-hint {
+     display: block;
+     overflow: hidden;
+-    color: $color-text-secondary;
+-    font-size: $font-size-xs;
++    @include type-caption;
+     text-overflow: ellipsis;
+     white-space: nowrap;
+   }
+@@ -687,9 +510,8 @@ $__gold-accent:  $color-landed-gold;
+     align-items: center;
+     justify-content: center;
+     min-height: 88rpx;
+-    font-size: $font-size-sm;
++    @include type-label;
+     color: $color-primary;
+-    font-weight: $font-weight-medium;
+     padding: 8rpx 16rpx;
+   }
+ 
+@@ -709,14 +531,6 @@ $__gold-accent:  $color-landed-gold;
+   &__cta {
+     width: 100%;
+   }
+-
+-  &__footer-hint {
+-    display: block;
+-    text-align: center;
+-    font-size: $font-size-sm;
+-    color: $color-text-muted;
+-    padding: 24rpx 0;
+-  }
+ }
+ 
+ // ─── Stage Containers ─────────────────────────────────────────────────────────
+@@ -744,28 +558,20 @@ $__gold-accent:  $color-landed-gold;
+       aspect-ratio: 3 / 4;
+     }
+   }
+-
+-  &--genre {
+-    // 2×2 grid: 4 genres
+-    .ms-genre-card {
+-      width: calc(50% - 8rpx);
+-      aspect-ratio: 1 / 1;
+-    }
+-  }
+ }
+ 
+ // ─── Style Cards ──────────────────────────────────────────────────────────────
+ 
+ .ms-card {
+   position: relative;
+-  border-radius: 24rpx;
++  border-radius: $card-radius-sm;
+   overflow: hidden;
+   cursor: pointer;
+   // Initial state for entrance animation
+   opacity: 0;
+   transform: scale(0.92);
+   transition:
+-    transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
++    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+     opacity 200ms ease;
+ 
+   // Staggered entrance — BEM modifiers for index 0..7
+@@ -837,7 +643,7 @@ $__gold-accent:  $color-landed-gold;
+     position: absolute;
+     bottom: 56rpx;
+     left: 16rpx;
+-    font-size: $font-size-xs;
++    @include type-caption;
+     color: rgba(255, 255, 255, 0.75);
+     z-index: 1;
+   }
+@@ -873,96 +679,6 @@ $__gold-accent:  $color-landed-gold;
+   }
+ }
+ 
+-// ─── Genre Cards ──────────────────────────────────────────────────────────────
+-
+-.ms-genre-header {
+-  margin-bottom: $spacing-sm;
+-
+-  &__title {
+-    @include type-body-emphasis;
+-    color: $color-text-primary;
+-  }
+-
+-  &__hint {
+-    font-size: $font-size-xs;
+-    color: $color-text-secondary;
+-    margin-top: 4rpx;
+-  }
+-}
+-
+-.ms-genre-card {
+-  position: relative;
+-  border-radius: 24rpx;
+-  overflow: hidden;
+-  cursor: pointer;
+-  transition:
+-    transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
+-    opacity 200ms ease;
+-
+-  &:active,
+-  &--pressed {
+-    transform: scale(0.96);
+-    transition-duration: 100ms;
+-  }
+-
+-  &--selected {
+-    .ms-genre-card__glow {
+-      opacity: 1;
+-      transform: scale(1);
+-    }
+-  }
+-
+-  &__bg {
+-    position: absolute;
+-    inset: 0;
+-    pointer-events: none;
+-  }
+-
+-  &__overlay {
+-    position: absolute;
+-    inset: 0;
+-    background: linear-gradient(to top, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 50%);
+-    pointer-events: none;
+-  }
+-
+-  &__label {
+-    position: absolute;
+-    bottom: 20rpx;
+-    left: 20rpx;
+-    right: 20rpx;
+-    @include font-cn-display;
+-    font-size: $font-size-md;
+-    font-weight: $font-weight-bold;
+-    color: $color-text-white;
+-    line-height: 1.2;
+-    z-index: 1;
+-  }
+-
+-  &__glow {
+-    position: absolute;
+-    inset: -4rpx;
+-    border-radius: 28rpx;
+-    border: 4rpx solid;
+-    opacity: 0;
+-    transform: scale(0.96);
+-    pointer-events: none;
+-    transition:
+-      opacity 200ms ease-out,
+-      transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+-  }
+-
+-  &__hit-target {
+-    position: absolute;
+-    inset: 0;
+-    z-index: 3;
+-    background: transparent;
+-
+-    &--pressed {
+-      background: rgba($color-surface, 0.08);
+-    }
+-  }
+-}
+-
+ // ─── Host Script Library ─────────────────────────────────────────────────────
+ 
+ .ms-library {
+@@ -987,8 +703,7 @@ $__gold-accent:  $color-landed-gold;
+ 
+   &__section-hint,
+   &__empty-copy {
+-    font-size: $font-size-xs;
+-    color: $color-text-secondary;
++    @include type-caption;
+   }
+ 
+   &__list {
+@@ -1000,7 +715,7 @@ $__gold-accent:  $color-landed-gold;
+   &__state {
+     min-height: 192rpx;
+     padding: 32rpx;
+-    border-radius: 24rpx;
++    border-radius: $card-radius-sm;
+     background: rgba($color-primary, 0.05);
+     display: flex;
+     flex-direction: column;
+@@ -1066,7 +781,7 @@ $__gold-accent:  $color-landed-gold;
+     gap: 16rpx;
+     margin-bottom: 16rpx;
+     padding: 0 24rpx;
+-    border-radius: 20rpx;
++    border-radius: $radius-md;
+     background: rgba($color-primary, 0.06);
+     color: $color-text-primary;
+     font-size: $font-size-sm;
+@@ -1118,7 +833,7 @@ $__gold-accent:  $color-landed-gold;
+   position: relative;
+   padding: 24rpx;
+   border: 2rpx solid rgba($color-primary, 0.14);
+-  border-radius: 24rpx;
++  border-radius: $card-radius-sm;
+   background: $color-surface;
+   box-shadow: 0 12rpx 32rpx rgba($color-primary, 0.08);
+ 
+@@ -1158,16 +873,20 @@ $__gold-accent:  $color-landed-gold;
+   &__meta {
+     gap: 12rpx;
+     margin-bottom: 8rpx;
+-    font-size: $font-size-xs;
++    @include type-caption;
+     color: $color-primary;
+   }
+ 
+   &__title {
+     @include font-cn-display;
+-    display: block;
++    // LLM-generated titles are unbounded — clamp to 2 lines (premise: 3).
++    display: -webkit-box;
++    overflow: hidden;
+     color: $color-text-primary;
+     font-size: $font-size-md;
+     font-weight: $font-weight-bold;
++    -webkit-box-orient: vertical;
++    -webkit-line-clamp: 2;
+   }
+ 
+   &__premise {
+@@ -1197,7 +916,7 @@ $__gold-accent:  $color-landed-gold;
+   &__card {
+     padding: 24rpx;
+     border: 2rpx solid rgba($color-primary, 0.1);
+-    border-radius: 24rpx;
++    border-radius: $card-radius-sm;
+     background: $color-surface;
+   }
+ 
+@@ -1271,9 +990,7 @@ $__gold-accent:  $color-landed-gold;
+ // ─── Reduced Motion ───────────────────────────────────────────────────────────
+ 
+ @media (prefers-reduced-motion: reduce) {
+-  .ms-generation__card,
+   .ms-card,
+-  .ms-genre-card,
+   .ms-library__genre,
+   .ms-stage {
+     transition: none !important;
+@@ -1282,9 +999,7 @@ $__gold-accent:  $color-landed-gold;
+     transform: none !important;
+   }
+ 
+-  .ms-card__glow,
+-  .ms-genre-card__glow,
+-  .ms-generation__fill {
++  .ms-card__glow {
+     transition: none !important;
+   }
+ }
+@@ -1343,7 +1058,18 @@ $__gold-accent:  $color-landed-gold;
+ // ─── Xiaoyue Session Pack ────────────────────────────────────────────────────
+ 
+ .icebreaker__generate-pack-btn {
+-  margin: 24rpx 32rpx 0;
++  // __inner already pads horizontally — only the top gap belongs here.
++  margin: 24rpx 0 0;
++}
++
++// ─── Bonus Gate Overlay ────────────────────────────────────────────────────
++// Layout/visuals are inline in overlays/BonusGateOverlay.tsx; this class gives
++// the action-row buttons their flex: 1 (the old 'flex-1' class had zero
++// stylesheet definitions). Lives here because the page is in a subpackage and
++// a colocated overlay SCSS would ride the style-splitting trap.
++
++.bonus-gate-overlay__btn {
++  flex: 1;
+ }
+ 
+ // ─── Phase Intro Overlay ──────────────────────────────────────────
+@@ -1367,12 +1093,11 @@ $__gold-accent:  $color-landed-gold;
+     flex-direction: column;
+     align-items: center;
+     gap: 24rpx;
+-    animation: phase-intro-scale-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
++    animation: phase-intro-scale-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+ 
+   &__label {
+-    font-size: $font-size-xl;
+-    font-weight: 700;
++    @include type-heading;
+     color: $color-bg-tint-cream;
+     text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.3);
+     letter-spacing: 4rpx;
+@@ -1435,7 +1160,7 @@ $__gold-accent:  $color-landed-gold;
+     width: 600rpx;
+     height: 600rpx;
+     z-index: 1;
+-    animation: celebration-scale-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
++    animation: celebration-scale-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+ 
+   &__card {
+@@ -1444,15 +1169,14 @@ $__gold-accent:  $color-landed-gold;
+     width: 460rpx;
+     padding: 32rpx;
+     background: rgba(0, 0, 0, 0.55);
+-    border-radius: 24rpx;
++    border-radius: $card-radius-sm;
+     border: 1rpx solid rgba(255, 255, 255, 0.15);
+     text-align: center;
+-    animation: celebration-fade-slide-up 0.5s 0.15s ease both;
++    animation: celebration-fade-slide-up 0.5s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+   }
+ 
+   &__title {
+-    font-size: $font-size-2xl;
+-    font-weight: 700;
++    @include type-title;
+     color: $color-bg-tint-cream;
+     text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.4);
+     margin-bottom: 16rpx;
+@@ -1518,7 +1242,7 @@ $__gold-accent:  $color-landed-gold;
+ 
+   &__title {
+     display: block;
+-    font-size: $font-size-lg;
++    @include type-subheading;
+     font-weight: $font-weight-bold;
+     color: $color-text-primary;
+   }
+@@ -1526,10 +1250,7 @@ $__gold-accent:  $color-landed-gold;
+   &__subtitle {
+     display: block;
+     margin-top: $spacing-xs;
+-    font-size: $font-size-sm;
+-    font-weight: $font-weight-medium;
+-    color: $color-text-secondary;
+-    line-height: 1.5;
++    @include type-label;
+   }
+ 
+   &__host-badge {
+@@ -1538,44 +1259,43 @@ $__gold-accent:  $color-landed-gold;
+     border-radius: 999rpx;
+     color: $color-text-white;
+     background: $color-primary;
+-    font-size: $font-size-xs;
++    @include type-caption;
+     font-weight: $font-weight-bold;
+     line-height: 1.2;
+   }
+ 
+   &__role-card {
+     padding: $spacing-lg;
+-    border-radius: 20rpx;
++    border-radius: $card-radius-sm;
+     background: $color-bg-clean;
+     border: 2rpx solid rgba($color-primary, 0.22);
+-    box-shadow: 0 12rpx 30rpx rgba(31, 41, 55, 0.08);
++    box-shadow: $shadow-md;
+   }
+ 
+   &__role-kicker {
+     display: block;
+-    font-size: $font-size-sm;
+-    color: $color-text-secondary;
++    @include type-label;
+     font-weight: $font-weight-semibold;
+   }
+ 
+   &__role-name {
+-    display: block;
++    display: -webkit-box;
+     margin-top: $spacing-xs;
+-    font-size: $font-size-xl;
+-    color: $color-text-primary;
+-    font-weight: $font-weight-bold;
++    overflow: hidden;
++    @include type-heading;
++    -webkit-box-orient: vertical;
++    -webkit-line-clamp: 2;
+   }
+ 
+   &__role-copy {
+     display: block;
+     margin-top: $spacing-sm;
+-    font-size: $font-size-sm;
+-    color: $color-text-secondary;
++    @include type-label;
+     line-height: 1.55;
+   }
+ 
+   &__waiting {
+-    font-size: $font-size-base;
++    @include type-body;
+     color: $color-text-secondary;
+     text-align: center;
+     padding: $spacing-xl 0;
+@@ -1587,10 +1307,10 @@ $__gold-accent:  $color-landed-gold;
+     gap: $spacing-sm;
+     width: 100%;
+     padding: $spacing-md $spacing-lg;
+-    border-radius: 16rpx;
++    border-radius: $radius-md;
+     background: $color-bg-clean;
+     border: 2rpx solid rgba($color-primary, 0.28);
+-    box-shadow: 0 8rpx 24rpx rgba(31, 41, 55, 0.06);
++    box-shadow: $shadow-sm;
+     transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+     min-height: 88rpx;
+     box-sizing: border-box;
+@@ -1628,15 +1348,14 @@ $__gold-accent:  $color-landed-gold;
+   }
+ 
+   &__btn-emoji {
+-    font-size: 40rpx;
++    font-size: $font-size-xl;
+     line-height: 1;
+     flex-shrink: 0;
+   }
+ 
+   &__btn-label {
+-    font-size: $font-size-base;
++    @include type-body;
+     font-weight: $font-weight-bold;
+-    color: $color-text-primary;
+     flex: 1;
+   }
+ 
+@@ -1653,10 +1372,12 @@ $__gold-accent:  $color-landed-gold;
+   &__btn-hint {
+     flex-shrink: 0;
+     max-width: 220rpx;
+-    font-size: $font-size-xs;
+-    color: $color-text-secondary;
++    overflow: hidden;
++    @include type-caption;
+     font-weight: $font-weight-semibold;
+     text-align: right;
++    white-space: nowrap;
++    text-overflow: ellipsis;
+   }
+ }
+ 
+diff --git a/apps/mini-program/src/pages/icebreaker-session/index.tsx b/apps/mini-program/src/pages/icebreaker-session/index.tsx
+index 5740c2405..113273ec6 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/index.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/index.tsx
+@@ -999,7 +999,12 @@ export default function IcebreakerSessionPage() {
+   return (
+     <ScrollView
+       className={`icebreaker${phase === 'warmup' ? ' icebreaker--warmup' : ''}${moodField ? ` icebreaker--mood-field icebreaker--field-${moodField.state}` : ''}`}
+-      scrollY={phase !== 'warmup'}
++      // Warmup previously locked scrollY off (zero-scroll contract AC11), but
++      // its stacked fixed minimums can exceed short viewports (568–667pt
++      // class), clipping the CTA with no recovery. scrollY is now always on:
++      // the warmup flex layout still fills the viewport on normal devices so
++      // nothing scrolls in practice, and short devices get an escape hatch.
++      scrollY
+       enhanced
+       showScrollbar={false}
+       enableFlex={phase === 'warmup'}
+@@ -1030,8 +1035,10 @@ export default function IcebreakerSessionPage() {
+         {phaseHeader}
+ 
+         {/* PR1 壳层: one-time host ⋯ coachmark — floats below the band's right
+-            edge, points up at the trigger, never covers the CTA area. */}
+-        {coachmarkShown && (
++            edge, points up at the trigger, never covers the CTA area.
++            Suppressed while the adaptive suggestion card is open: both anchor
++            to top:100% of this header band at $z-modal and would stack. */}
++        {coachmarkShown && !suggestionOverlayOpen && (
+           <View
+             className='icebreaker__coachmark'
+             onClick={handleDismissCoachmark}
+diff --git a/apps/mini-program/src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx b/apps/mini-program/src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx
+index 6a41e29e5..1cda8eab3 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/overlays/BonusGateOverlay.tsx
+@@ -7,6 +7,16 @@ import { getMascotDisplayName } from '../../../lib/mascot/mascotDisplay'
+ import { apiRequest } from '../../../lib/api/api'
+ import { logError } from '../../../lib/utils/logger'
+ 
++// Shared row layout for the single action row (exactly one renders per role
++// state — see the mutually exclusive conditionals in the JSX below).
++const actionRowStyle = {
++  display: 'flex',
++  flexDirection: 'row',
++  gap: '24rpx',
++  width: '100%',
++  marginTop: '16rpx',
++} as const
++
+ interface BonusGateOverlayProps {
+   socialSessionId: string
+   isHost: boolean
+@@ -64,6 +74,7 @@ export default function BonusGateOverlay({
+ 
+   return (
+     <View
++      catchMove
+       style={{
+         position: 'fixed',
+         top: 0,
+@@ -77,6 +88,7 @@ export default function BonusGateOverlay({
+         justifyContent: 'center',
+         zIndex: 1000,
+         padding: '40rpx',
++        paddingBottom: 'calc(40rpx + env(safe-area-inset-bottom))',
+       }}
+     >
+       <View
+@@ -119,19 +131,14 @@ export default function BonusGateOverlay({
+           </Text>
+         )}
+ 
++        {/* Exactly ONE action row per role state: a host who hasn't voted
++            records sentiment first; once voted, the host decides (跳过/接受);
++            non-hosts only ever record sentiment. */}
+         {isHost && !hasVoted && (
+-          <View
+-            style={{
+-              display: 'flex',
+-              flexDirection: 'row',
+-              gap: '24rpx',
+-              width: '100%',
+-              marginTop: '16rpx',
+-            }}
+-          >
++          <View style={actionRowStyle}>
+             <Button
+               variant='secondary'
+-              className='flex-1'
++              className='bonus-gate-overlay__btn'
+               onClick={() => handleSentiment('pass')}
+               disabled={loading}
+               loading={loading}
+@@ -140,7 +147,7 @@ export default function BonusGateOverlay({
+             </Button>
+             <Button
+               variant='primary'
+-              className='flex-1'
++              className='bonus-gate-overlay__btn'
+               onClick={() => handleSentiment('want')}
+               disabled={loading}
+               loading={loading}
+@@ -150,19 +157,11 @@ export default function BonusGateOverlay({
+           </View>
+         )}
+ 
+-        {isHost ? (
+-          <View
+-            style={{
+-              display: 'flex',
+-              flexDirection: 'row',
+-              gap: '24rpx',
+-              width: '100%',
+-              marginTop: '16rpx',
+-            }}
+-          >
++        {isHost && hasVoted && (
++          <View style={actionRowStyle}>
+             <Button
+               variant='secondary'
+-              className='flex-1'
++              className='bonus-gate-overlay__btn'
+               onClick={() => handleHostRespond(false)}
+               disabled={loading}
+               loading={loading}
+@@ -171,7 +170,7 @@ export default function BonusGateOverlay({
+             </Button>
+             <Button
+               variant='primary'
+-              className='flex-1'
++              className='bonus-gate-overlay__btn'
+               onClick={() => handleHostRespond(true)}
+               disabled={loading}
+               loading={loading}
+@@ -179,19 +178,13 @@ export default function BonusGateOverlay({
+               接受
+             </Button>
+           </View>
+-        ) : (
+-          <View
+-            style={{
+-              display: 'flex',
+-              flexDirection: 'row',
+-              gap: '24rpx',
+-              width: '100%',
+-              marginTop: '16rpx',
+-            }}
+-          >
++        )}
++
++        {!isHost && (
++          <View style={actionRowStyle}>
+             <Button
+               variant='secondary'
+-              className='flex-1'
++              className='bonus-gate-overlay__btn'
+               onClick={() => handleSentiment('pass')}
+               disabled={loading || hasVoted}
+               loading={loading}
+@@ -200,7 +193,7 @@ export default function BonusGateOverlay({
+             </Button>
+             <Button
+               variant='primary'
+-              className='flex-1'
++              className='bonus-gate-overlay__btn'
+               onClick={() => handleSentiment('want')}
+               disabled={loading || hasVoted}
+               loading={loading}
+diff --git a/apps/mini-program/src/pages/icebreaker-session/overlays/MiniScriptConfigModal.tsx b/apps/mini-program/src/pages/icebreaker-session/overlays/MiniScriptConfigModal.tsx
+index 0de9a54e9..6e76614e4 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/overlays/MiniScriptConfigModal.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/overlays/MiniScriptConfigModal.tsx
+@@ -109,7 +109,7 @@ export function MiniScriptConfigModal({ open, onClose, initialGenres = DEFAULT_I
+ 
+   return (
+     <RootPortal>
+-      <View className='ms-modal'>
++      <View className='ms-modal' catchMove>
+         <View className='ms-modal__sheet'>
+           <View className='ms-modal__header'>
+             <View className='ms-modal__header-main'>
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/AuctionHeroView.scss b/apps/mini-program/src/pages/icebreaker-session/phases/AuctionHeroView.scss
+index c9ca0359e..3602bf713 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/AuctionHeroView.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/AuctionHeroView.scss
+@@ -99,6 +99,13 @@ $au-deep: $phase-accent-auction-deep;
+     text-align: center;
+   }
+ 
++  &__lot-back-teaser {
++    display: -webkit-box;
++    -webkit-box-orient: vertical;
++    -webkit-line-clamp: 2;
++    overflow: hidden;
++  }
++
+   &__lot-back-header {
+     display: flex;
+     align-items: center;
+@@ -111,6 +118,10 @@ $au-deep: $phase-accent-auction-deep;
+     text-align: center;
+     word-break: keep-all;
+     overflow-wrap: break-word;
++    display: -webkit-box;
++    -webkit-box-orient: vertical;
++    -webkit-line-clamp: 2;
++    overflow: hidden;
+   }
+ 
+   &__high-bidder {
+@@ -133,6 +144,10 @@ $au-deep: $phase-accent-auction-deep;
+   &__high-bidder-value {
+     @include type-body-emphasis;
+     color: $au-deep;
++    max-width: 100%;
++    overflow: hidden;
++    text-overflow: ellipsis;
++    white-space: nowrap;
+   }
+ 
+   &__history {
+@@ -160,11 +175,17 @@ $au-deep: $phase-accent-auction-deep;
+   &__history-name {
+     @include type-body;
+     color: $color-text-primary;
++    flex: 1;
++    min-width: 0;
++    overflow: hidden;
++    text-overflow: ellipsis;
++    white-space: nowrap;
+   }
+ 
+   &__history-amount {
+     @include type-label;
+     color: $au-deep;
++    flex-shrink: 0;
+   }
+ 
+   &__numeral {
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/GroupMirrorHeroView.scss b/apps/mini-program/src/pages/icebreaker-session/phases/GroupMirrorHeroView.scss
+index f904453df..e3ab59c6a 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/GroupMirrorHeroView.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/GroupMirrorHeroView.scss
+@@ -85,19 +85,9 @@ $gm-deep: $phase-accent-mirror-deep;
+     color: $gm-deep;
+   }
+ 
+-  &__card-id,
+-  &__card-votes,
+-  &__answer-id {
++  &__card-votes {
+     @include type-caption;
+     color: $color-text-secondary;
+-  }
+-
+-  &__card-id,
+-  &__answer-id {
+-    word-break: break-all;
+-  }
+-
+-  &__card-votes {
+     flex: none;
+   }
+ 
+@@ -122,6 +112,9 @@ $gm-deep: $phase-accent-mirror-deep;
+     flex: none;
+     max-width: 180rpx;
+     color: $color-text-secondary;
++    white-space: nowrap;
++    overflow: hidden;
++    text-overflow: ellipsis;
+   }
+ 
+   &__answer-target {
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/GroupMirrorHeroView.tsx b/apps/mini-program/src/pages/icebreaker-session/phases/GroupMirrorHeroView.tsx
+index 6399807e9..e87005fc8 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/GroupMirrorHeroView.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/GroupMirrorHeroView.tsx
+@@ -231,7 +231,6 @@ export function GroupMirrorHeroView({
+                       <Text className='group-mirror-hero__card-winner'>
+                         {r.topTargetDisplayName}
+                       </Text>
+-                      <Text className='group-mirror-hero__card-id'>ID: {r.topTargetUserId}</Text>
+                     </View>
+                     <Text className='group-mirror-hero__card-votes'>
+                       {r.voteCount} / {r.totalVotes} 票
+@@ -249,9 +248,6 @@ export function GroupMirrorHeroView({
+                           </Text>
+                           <View className='group-mirror-hero__answer-target'>
+                             <Text>{row.targetDisplayName}</Text>
+-                            <Text className='group-mirror-hero__answer-id'>
+-                              ID: {row.targetUserId}
+-                            </Text>
+                           </View>
+                         </View>
+                       ))}
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/LieDetectiveHeroView.tsx b/apps/mini-program/src/pages/icebreaker-session/phases/LieDetectiveHeroView.tsx
+index a6ab2e335..96a5b1097 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/LieDetectiveHeroView.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/LieDetectiveHeroView.tsx
+@@ -158,90 +158,90 @@ export function LieDetectiveHeroView({
+           doneCount={players.length}
+           totalCount={playerCount}
+           actions={
+-            <>
+-              {!submitted ? (
+-                <View className='lie-detective-hero__custom-form'>
+-                  <Text className='lie-detective-hero__custom-guide'>
+-                    写下两句真话和一句谎言，再点选哪句是谎言。只有揭晓时才会公开答案。
+-                  </Text>
+-                  {customStatements.map((statement, index) => {
+-                    const trimmed = statement.trim()
+-                    const assistTag = assistTags[index]?.trim() ?? ''
+-                    const assistTagInvalid =
+-                      assistTag.length > 20 || (assistTag.length > 0 && checkProfanity(assistTag))
+-                    const invalid =
+-                      trimmed.length > 0 &&
+-                      (trimmed.length < 2 || checkProfanity(trimmed))
+-                    const isLie = customLieIndex === index + 1
+-                    return (
+-                      <View className='lie-detective-hero__custom-field' key={index}>
+-                        <View className='lie-detective-hero__custom-field-head'>
+-                          <Text className='lie-detective-hero__custom-label'>第 {index + 1} 句</Text>
+-                          <View
+-                            className={`lie-detective-hero__lie-picker${isLie ? ' lie-detective-hero__lie-picker--selected' : ''}`}
+-                            onClick={() => setCustomLieIndex(index + 1)}
+-                            role='button'
+-                            aria-label={`设为第 ${index + 1} 句谎言`}
+-                          >
+-                            <Text>{isLie ? '✓ 这是谎言' : '设为谎言'}</Text>
+-                          </View>
+-                        </View>
+-                        <Textarea
+-                          className={`lie-detective-hero__custom-input${invalid ? ' lie-detective-hero__custom-input--error' : ''}`}
+-                          placeholder='输入一句话，或者试试标签生成'
+-                          value={statement}
+-                          onInput={(event) => updateCustomStatement(index, event.detail.value)}
+-                          maxlength={80}
+-                          autoHeight
+-                          disabled={isGeneratingStatements || generatingRow === index}
+-                        />
+-                        <View className='lie-detective-hero__assist-row'>
+-                          <Input
+-                            className='lie-detective-hero__assist-input'
+-                            placeholder='用标签生成一句话，多点几次会有不同的思路'
+-                            value={assistTags[index]}
+-                            onInput={(event) => updateAssistTag(index, event.detail.value)}
+-                            maxlength={20}
+-                            disabled={generatingRow === index}
+-                          />
+-                          <View
+-                            className={`lie-detective-hero__assist-button${!assistTag || assistTagInvalid || isGeneratingFromTag ? ' lie-detective-hero__assist-button--disabled' : ''}`}
+-                            role='button'
+-                            aria-label={`根据第 ${index + 1} 个标签生成句子`}
+-                            onClick={() => void handleAssistGenerate(index)}
+-                          >
+-                            <Text>{generatingRow === index ? '生成中…' : '标签生成'}</Text>
+-                          </View>
+-                        </View>
+-                        {assistTagInvalid ? (
+-                          <Text className='lie-detective-hero__tag-error'>请换一个 20 字以内的友好标签</Text>
+-                        ) : null}
+-                        <Text className='lie-detective-hero__tag-counter'>{trimmed.length}/80</Text>
++            !submitted ? (
++              <Button
++                variant='primary'
++                onClick={handleCustomSubmit}
++                disabled={!canSubmitCustomSet}
++                loading={isGeneratingStatements}
++              >
++                {isGeneratingStatements ? '正在提交…' : '提交我的三句话'}
++              </Button>
++            ) : isGeneratingStatements ? (
++              <Text className='phase-hero-card__ghost-link'>悦仔生成中…</Text>
++            ) : undefined
++          }
++        >
++          {!submitted ? (
++            <View className='lie-detective-hero__custom-form'>
++              <Text className='lie-detective-hero__custom-guide'>
++                写下两句真话和一句谎言，再点选哪句是谎言。只有揭晓时才会公开答案。
++              </Text>
++              {customStatements.map((statement, index) => {
++                const trimmed = statement.trim()
++                const assistTag = assistTags[index]?.trim() ?? ''
++                const assistTagInvalid =
++                  assistTag.length > 20 || (assistTag.length > 0 && checkProfanity(assistTag))
++                const invalid =
++                  trimmed.length > 0 &&
++                  (trimmed.length < 2 || checkProfanity(trimmed))
++                const isLie = customLieIndex === index + 1
++                return (
++                  <View className='lie-detective-hero__custom-field' key={index}>
++                    <View className='lie-detective-hero__custom-field-head'>
++                      <Text className='lie-detective-hero__custom-label'>第 {index + 1} 句</Text>
++                      <View
++                        className={`lie-detective-hero__lie-picker${isLie ? ' lie-detective-hero__lie-picker--selected' : ''}`}
++                        onClick={() => setCustomLieIndex(index + 1)}
++                        role='button'
++                        aria-label={`设为第 ${index + 1} 句谎言`}
++                      >
++                        <Text>{isLie ? '✓ 这是谎言' : '设为谎言'}</Text>
+                       </View>
+-                    )
+-                  })}
+-                  {hasDuplicateCustomStatements ? (
+-                    <Text className='lie-detective-hero__tag-error'>三句话不能重复</Text>
+-                  ) : null}
+-                  {customStatementsValid && customLieIndex === null ? (
+-                    <Text className='lie-detective-hero__tag-error'>请选择其中一句作为谎言</Text>
+-                  ) : null}
+-                  <Button
+-                    variant='primary'
+-                    onClick={handleCustomSubmit}
+-                    disabled={!canSubmitCustomSet}
+-                    loading={isGeneratingStatements}
+-                  >
+-                    {isGeneratingStatements ? '正在提交…' : '提交我的三句话'}
+-                  </Button>
+-                </View>
++                    </View>
++                    <Textarea
++                      className={`lie-detective-hero__custom-input${invalid ? ' lie-detective-hero__custom-input--error' : ''}`}
++                      placeholder='输入一句话，或者试试标签生成'
++                      value={statement}
++                      onInput={(event) => updateCustomStatement(index, event.detail.value)}
++                      maxlength={80}
++                      autoHeight
++                      disabled={isGeneratingStatements || generatingRow === index}
++                    />
++                    <View className='lie-detective-hero__assist-row'>
++                      <Input
++                        className='lie-detective-hero__assist-input'
++                        placeholder='用标签生成一句话，多点几次会有不同的思路'
++                        value={assistTags[index]}
++                        onInput={(event) => updateAssistTag(index, event.detail.value)}
++                        maxlength={20}
++                        disabled={generatingRow === index}
++                      />
++                      <View
++                        className={`lie-detective-hero__assist-button${!assistTag || assistTagInvalid || isGeneratingFromTag ? ' lie-detective-hero__assist-button--disabled' : ''}`}
++                        role='button'
++                        aria-label={`根据第 ${index + 1} 个标签生成句子`}
++                        onClick={() => void handleAssistGenerate(index)}
++                      >
++                        <Text>{generatingRow === index ? '生成中…' : '标签生成'}</Text>
++                      </View>
++                    </View>
++                    {assistTagInvalid ? (
++                      <Text className='lie-detective-hero__tag-error'>请换一个 20 字以内的友好标签</Text>
++                    ) : null}
++                    <Text className='lie-detective-hero__tag-counter'>{trimmed.length}/80</Text>
++                  </View>
++                )
++              })}
++              {hasDuplicateCustomStatements ? (
++                <Text className='lie-detective-hero__tag-error'>三句话不能重复</Text>
+               ) : null}
+-              {submitted && isGeneratingStatements ? (
+-                <Text className='phase-hero-card__ghost-link'>悦仔生成中…</Text>
++              {customStatementsValid && customLieIndex === null ? (
++                <Text className='lie-detective-hero__tag-error'>请选择其中一句作为谎言</Text>
+               ) : null}
+-            </>
+-          }
+-        />
++            </View>
++          ) : null}
++        </PhaseHeroCard>
+       </View>
+     )
+   }
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/MiniScriptHeroView.scss b/apps/mini-program/src/pages/icebreaker-session/phases/MiniScriptHeroView.scss
+index fb9775350..ae0237f05 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/MiniScriptHeroView.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/MiniScriptHeroView.scss
+@@ -37,8 +37,9 @@ $ms-deep: $phase-accent-miniscript-deep;
+ 
+   &__stepper {
+     display: flex;
++    flex-wrap: wrap;
+     justify-content: center;
+-    gap: $spacing-sm;
++    gap: $spacing-xs $spacing-sm;
+     margin: $spacing-sm 0;
+   }
+ 
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.scss b/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.scss
+index d99994657..693aef70c 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.scss
+@@ -88,11 +88,21 @@ $pd-deep: $phase-accent-dice-deep;
+     @include type-body;
+     color: $color-text-secondary;
+     text-align: center;
++    // Defense-in-depth: clamp extremely long AI challenge text on the card face.
++    overflow: hidden;
++    text-overflow: ellipsis;
++    display: -webkit-box;
++    -webkit-line-clamp: 4;
++    -webkit-box-orient: vertical;
+   }
+ 
+   &__challenge-pass {
+     @include type-caption;
+     color: $pd-deep;
++    white-space: nowrap;
++    overflow: hidden;
++    text-overflow: ellipsis;
++    max-width: 100%;
+   }
+ 
+   &__helper {
+@@ -135,6 +145,8 @@ $pd-deep: $phase-accent-dice-deep;
+ 
+   &__countdown-number {
+     @include type-hero;
++    font-family: $font-mono; // tabular hero numerals for the 3-2-1 readout
++    font-variant-numeric: tabular-nums;
+     color: $pd-deep;
+   }
+ 
+@@ -143,10 +155,6 @@ $pd-deep: $phase-accent-dice-deep;
+     color: $color-text-secondary;
+   }
+ 
+-  &__reveal-scroll {
+-    max-height: 62vh;
+-  }
+-
+   &__reveal-list {
+     display: flex;
+     flex-direction: column;
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.tsx b/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.tsx
+index 4cf7e0731..388f95710 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/PersonalityDiceHeroView.tsx
+@@ -1,4 +1,4 @@
+-import { ScrollView, View, Text } from '@tarojs/components'
++import { View, Text } from '@tarojs/components'
+ import { useCallback, useEffect, useRef, useState } from 'react'
+ import type { PersonalityDiceChallenge, PersonalityDiceChallengeGroup } from '@shared/socialIcebreaker'
+ import type { AIResponseMeta } from '@shared/types/aiMeta'
+@@ -321,8 +321,7 @@ export function PersonalityDiceHeroView({
+           doneCount={participants.length}
+           totalCount={participants.length}
+         >
+-          <ScrollView scrollY className='personality-dice-hero__reveal-scroll'>
+-            <View className='personality-dice-hero__reveal-list'>
++          <View className='personality-dice-hero__reveal-list'>
+             {orderedGroups.map((group) => {
+               const option = group.options[selectedOption[group.userId]]
+               if (!option) return null
+@@ -347,7 +346,6 @@ export function PersonalityDiceHeroView({
+               )
+             })}
+             </View>
+-          </ScrollView>
+         </PhaseHeroCard>
+         <View className='personality-dice-hero__fixed-action'>
+           {allRevealReady ? (
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/QuipBattleHeroView.scss b/apps/mini-program/src/pages/icebreaker-session/phases/QuipBattleHeroView.scss
+index 206d6447f..bf4064cfb 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/QuipBattleHeroView.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/QuipBattleHeroView.scss
+@@ -82,7 +82,9 @@ $qb-deep: $phase-accent-quip-deep;
+     display: flex;
+     flex-direction: column;
+     align-items: center;
++    justify-content: center;
+     gap: $spacing-xs;
++    min-height: 320rpx;
+     padding: $spacing-lg $spacing-md;
+     border-radius: $radius-md;
+     background: $color-surface;
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/RecapPhaseView.scss b/apps/mini-program/src/pages/icebreaker-session/phases/RecapPhaseView.scss
+index 98ea0f939..5514c1e09 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/RecapPhaseView.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/RecapPhaseView.scss
+@@ -153,6 +153,10 @@
+   color: $color-text-muted;
+   text-align: center;
+   max-width: 260rpx;
++  display: -webkit-box;
++  -webkit-box-orient: vertical;
++  -webkit-line-clamp: 2;
++  overflow: hidden;
+ }
+ 
+ // ── Details sections ─────────────────────────────────────────────
+@@ -224,6 +228,10 @@
+   @include type-caption;
+   color: $color-primary;
+   font-weight: $font-weight-medium;
++  display: -webkit-box;
++  -webkit-box-orient: vertical;
++  -webkit-line-clamp: 2;
++  overflow: hidden;
+ }
+ 
+ // ── Stats row (lie detective etc) ────────────────────────────────
+@@ -281,6 +289,10 @@
+   font-weight: $font-weight-medium;
+   max-width: 60%;
+   text-align: right;
++  display: -webkit-box;
++  -webkit-box-orient: vertical;
++  -webkit-line-clamp: 2;
++  overflow: hidden;
+ }
+ 
+ // ── Fun moments ──────────────────────────────────────────────────
+@@ -425,14 +437,26 @@
+   width: 100%;
+   max-height: calc(100% - 64rpx - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+   flex-direction: column;
+-  gap: $spacing-md;
+-  overflow-y: auto;
+   padding: $spacing-lg;
+   border-radius: $card-radius-lg;
+   background: $color-surface;
+   box-shadow: $shadow-lg;
+ }
+ 
++// ScrollView child of a flex parent needs flex:1 + min-height:0 to scroll
++// (LocationFilterDrawer pattern); the inner content View carries the gaps
++// because scroll-view children are laid out by the inner scroll container.
++.icebreaker__moment-panel-scroll {
++  flex: 1;
++  min-height: 0;
++}
++
++.icebreaker__moment-panel-content {
++  display: flex;
++  flex-direction: column;
++  gap: $spacing-md;
++}
++
+ .icebreaker__moment-panel-title {
+   @include type-heading;
+   color: $color-primary-dark;
+@@ -506,7 +530,7 @@
+   opacity: 0;
+   transform: scale(1.4) rotate(-8deg);
+   transform-origin: center center;
+-  animation: recap-stamp-press 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s forwards;
++  animation: recap-stamp-press 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+ }
+ 
+ .icebreaker__recap-stamp-caption {
+@@ -515,7 +539,7 @@
+   font-weight: $font-weight-bold;
+   margin-top: $spacing-xs;
+   opacity: 0;
+-  animation: recap-stamp-caption-in 0.4s ease-out 0.45s forwards;
++  animation: recap-stamp-caption-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.45s forwards;
+ }
+ 
+ // ── C6 — "See you next time" ceremony end overlay (Batch C) ──────
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/RecapPhaseView.tsx b/apps/mini-program/src/pages/icebreaker-session/phases/RecapPhaseView.tsx
+index 7f5bc4f65..e22f7045c 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/RecapPhaseView.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/RecapPhaseView.tsx
+@@ -1,4 +1,4 @@
+-import { View, Text, Image } from '@tarojs/components'
++import { View, Text, Image, ScrollView } from '@tarojs/components'
+ import Taro from '@tarojs/taro'
+ import { useState, useEffect, useCallback, useRef } from 'react'
+ import type { AIResponseMeta, AIGCMeta } from '@shared/types/aiMeta'
+@@ -146,6 +146,7 @@ function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
+         <View
+           className='icebreaker__moment-panel-backdrop'
+           onClick={() => setShowPanel(false)}
++          catchMove
+         >
+           <View
+             className='icebreaker__moment-panel'
+@@ -154,25 +155,29 @@ function MomentCardCTA({ socialSessionId }: { socialSessionId: string }) {
+             aria-modal='true'
+             aria-label={panel.headline}
+           >
+-            <Text className='icebreaker__moment-panel-title'>{panel.headline}</Text>
+-            <Text className='icebreaker__moment-panel-overview'>{panel.overview}</Text>
+-            <View className='icebreaker__moment-panel-list'>
+-              {panel.highlights.map((highlight, index) => (
+-                <View className='icebreaker__moment-panel-item' key={`${highlight.aspect}-${index}`}>
+-                  <Text className='icebreaker__moment-panel-item-title'>{highlight.title}</Text>
+-                  {highlight.personDisplayName ? (
+-                    <Text className='icebreaker__moment-panel-person'>{highlight.personDisplayName}</Text>
+-                  ) : null}
+-                  <Text className='icebreaker__moment-panel-evidence'>依据：{highlight.evidence}</Text>
+-                  <Text className='icebreaker__moment-panel-narrative'>{highlight.narrative}</Text>
++            <ScrollView className='icebreaker__moment-panel-scroll' scrollY>
++              <View className='icebreaker__moment-panel-content'>
++                <Text className='icebreaker__moment-panel-title'>{panel.headline}</Text>
++                <Text className='icebreaker__moment-panel-overview'>{panel.overview}</Text>
++                <View className='icebreaker__moment-panel-list'>
++                  {panel.highlights.map((highlight, index) => (
++                    <View className='icebreaker__moment-panel-item' key={`${highlight.aspect}-${index}`}>
++                      <Text className='icebreaker__moment-panel-item-title'>{highlight.title}</Text>
++                      {highlight.personDisplayName ? (
++                        <Text className='icebreaker__moment-panel-person'>{highlight.personDisplayName}</Text>
++                      ) : null}
++                      <Text className='icebreaker__moment-panel-evidence'>依据：{highlight.evidence}</Text>
++                      <Text className='icebreaker__moment-panel-narrative'>{highlight.narrative}</Text>
++                    </View>
++                  ))}
+                 </View>
+-              ))}
+-            </View>
+-            <Text className='icebreaker__moment-panel-closing'>{panel.closingLine}</Text>
+-            {aigcEnabled ? (
+-              <PhaseAigcRow meta={panelMeta ?? undefined} reason='AI 根据本局互动生成高光总结' />
+-            ) : null}
+-            <Button variant='primary' onClick={() => setShowPanel(false)}>看完了</Button>
++                <Text className='icebreaker__moment-panel-closing'>{panel.closingLine}</Text>
++                {aigcEnabled ? (
++                  <PhaseAigcRow meta={panelMeta ?? undefined} reason='AI 根据本局互动生成高光总结' />
++                ) : null}
++                <Button variant='primary' onClick={() => setShowPanel(false)}>看完了</Button>
++              </View>
++            </ScrollView>
+           </View>
+         </View>
+       ) : null}
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.scss b/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.scss
+index cd89c5872..2e11bfe9f 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.scss
+@@ -99,8 +99,8 @@ $sf-deep: $phase-accent-speed-deep;
+ 
+   &__pair-tile-badge {
+     position: absolute;
+-    top: -10rpx;
+-    right: -10rpx;
++    top: 8rpx;
++    right: 8rpx;
+     padding: 2rpx 12rpx;
+     border-radius: $radius-pill;
+     background: $sf-deep;
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.tsx b/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.tsx
+index 15feb030b..89d8baa22 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/SpeedFriendingHeroView.tsx
+@@ -87,9 +87,9 @@ export function SpeedFriendingHeroView({
+ 
+   const isBye = currentPairs.length > 0 && !myPair
+   const partnerName = myPair
+-    ? myPair.userIdA === currentUserId
++    ? (myPair.userIdA === currentUserId
+       ? myPair.displayNameB
+-      : myPair.displayNameA
++      : myPair.displayNameA) ?? '新伙伴'
+     : undefined
+ 
+   const participantMap = useMemo(() => {
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/UndercoverWordHeroView.scss b/apps/mini-program/src/pages/icebreaker-session/phases/UndercoverWordHeroView.scss
+index 3a68fc1de..2ed2296eb 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/UndercoverWordHeroView.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/UndercoverWordHeroView.scss
+@@ -75,6 +75,10 @@ $uw-deep: $phase-accent-undercover-deep;
+   &__word-back-word {
+     @include type-headline;
+     color: $color-text-primary;
++    display: -webkit-box;
++    -webkit-box-orient: vertical;
++    -webkit-line-clamp: 2;
++    overflow: hidden;
+   }
+ 
+   &__word-back-pill {
+@@ -139,11 +143,17 @@ $uw-deep: $phase-accent-undercover-deep;
+   &__vote-name {
+     @include type-body;
+     color: $color-text-primary;
++    flex: 1;
++    min-width: 0;
++    overflow: hidden;
++    text-overflow: ellipsis;
++    white-space: nowrap;
+   }
+ 
+   &__vote-count {
+     @include type-label;
+     color: $uw-deep;
++    flex-shrink: 0;
+   }
+ 
+   &__numeral {
+@@ -206,6 +216,10 @@ $uw-deep: $phase-accent-undercover-deep;
+     @include type-caption;
+     color: $color-text-secondary;
+     line-height: 1.4;
++    display: -webkit-box;
++    -webkit-box-orient: vertical;
++    -webkit-line-clamp: 2;
++    overflow: hidden;
+   }
+ 
+   &__target-check {
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/UndercoverWordHeroView.tsx b/apps/mini-program/src/pages/icebreaker-session/phases/UndercoverWordHeroView.tsx
+index caef8b54b..703b4c492 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/UndercoverWordHeroView.tsx
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/UndercoverWordHeroView.tsx
+@@ -340,7 +340,7 @@ export function UndercoverWordHeroView({
+                       <View className='undercover-hero__target-info'>
+                         <Text className='undercover-hero__target-name'>{p.displayName}</Text>
+                         {descs.length > 0 && (
+-                          <Text className='undercover-hero__target-descs' numberOfLines={2}>
++                          <Text className='undercover-hero__target-descs'>
+                             {descs.join(' · ')}
+                           </Text>
+                         )}
+diff --git a/apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.scss b/apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.scss
+index 075056ba8..944fadc14 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/phases/WarmupPhaseView.scss
+@@ -12,7 +12,9 @@
+   flex: 1;
+   min-height: 0;
+   gap: 24rpx;
+-  padding: 0 0 calc(24rpx + env(safe-area-inset-bottom));
++  // Safe-area inset lives ONLY on WarmupActionBar — padding it here too
++  // doubled the bottom dead space on notched devices.
++  padding: 0 0 24rpx;
+   position: relative;
+ }
+ 
+@@ -38,7 +40,7 @@
+   background: rgba($color-text-primary, 0.04);
+ 
+   &-text {
+-    font-size: 20rpx;
++    font-size: $font-size-2xs;
+     line-height: 1;
+     color: $color-text-muted;
+   }
+@@ -50,3 +52,12 @@
+     transform: none;
+   }
+ }
++
++// Short-viewport floor drop: the 480rpx card minimum + presence strip +
++// action bar + gaps exceed a ≤700px viewport, so the bottom content clipped.
++// Matches the same floor drop inside WarmupCardSlot.scss.
++@media (max-height: 700px) {
++  .warmup-card-slot-outer {
++    min-height: 360rpx;
++  }
++}
+diff --git a/apps/mini-program/src/pages/icebreaker-session/styles/_glance-stack.scss b/apps/mini-program/src/pages/icebreaker-session/styles/_glance-stack.scss
+index efe892024..e2cf1b42e 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/styles/_glance-stack.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/styles/_glance-stack.scss
+@@ -75,6 +75,11 @@
+   font-weight: $font-weight-semibold;
+   line-height: 1.35;
+   color: rgba($color-text-primary, 0.88);
++  overflow: hidden;
++  text-overflow: ellipsis;
++  display: -webkit-box;
++  -webkit-line-clamp: 2;
++  -webkit-box-orient: vertical;
+ }
+ 
+ .phase-hero-card__l2-prompt {
+@@ -83,6 +88,11 @@
+   line-height: 1.55;
+   color: rgba($color-text-primary, 0.72);
+   white-space: pre-line;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  display: -webkit-box;
++  -webkit-line-clamp: 4;
++  -webkit-box-orient: vertical;
+ }
+ 
+ // ─── L3 · Context (hold-to-peek) ────────────────────────────────────────────
+@@ -383,6 +393,13 @@
+ }
+ 
+ .icebreaker__waiting-l3 {
++  // Host names are unbounded — one line, ellipsis (mirrors the
++  // icebreaker__waiting-host clamp pattern in index.scss).
++  display: block;
++  max-width: 100%;
++  overflow: hidden;
++  white-space: nowrap;
++  text-overflow: ellipsis;
+   font-size: $font-size-xs;
+   font-weight: $font-weight-normal;
+   letter-spacing: 3rpx;
+diff --git a/apps/mini-program/src/pages/icebreaker-session/tier-selector/index.scss b/apps/mini-program/src/pages/icebreaker-session/tier-selector/index.scss
+index ddc80cc1c..1a5818f6d 100644
+--- a/apps/mini-program/src/pages/icebreaker-session/tier-selector/index.scss
++++ b/apps/mini-program/src/pages/icebreaker-session/tier-selector/index.scss
+@@ -196,7 +196,7 @@
+     color: $color-text-white;
+     background: $color-secondary;
+     padding: 4rpx 12rpx; /* hairline vertical padding */
+-    border-radius: 100rpx;
++    border-radius: $radius-full;
+     line-height: 1;
+     align-self: flex-start;
+     margin-top: 4rpx; /* hairline: single pixel equivalent at 2× */
+@@ -206,7 +206,7 @@
+     @include flex-center;
+     position: relative;
+     min-height: 96rpx;
+-    border-radius: 12rpx;
++    border-radius: $radius-md;
+     border: 2rpx solid $color-divider;
+     background: rgba($color-primary, 0.02);
+     transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+@@ -309,6 +309,24 @@
+     // to the card's border-radius and avoids 1px edge bleed.
+     will-change: transform;
+ 
++    // Legibility scrim behind the RIGHT-side text column (padding-left: 42%)
++    // so the full-bleed custom-bg art never fights the copy. Sits above the
++    // bg image (same z, later in tree order), below body/check (z-index: 1).
++    &::after {
++      content: '';
++      position: absolute;
++      inset: 0;
++      z-index: 0;
++      border-radius: inherit;
++      background: linear-gradient(
++        90deg,
++        rgba($color-surface, 0) 32%,
++        rgba($color-surface, 0.78) 56%,
++        rgba($color-surface, 0.94) 80%
++      );
++      pointer-events: none;
++    }
++
+     &--active {
+       border-color: $color-primary;
+       box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.12);
+@@ -356,9 +374,11 @@
+     font-size: $font-size-2xs;
+     font-weight: $font-weight-bold;
+     color: $color-text-white;
+-    background: $brand-gradient;
++    // Solid primary — matches tier-sheet__card-badge--custom; a one-off
++    // brand-gradient badge broke the single-anchor-color rule.
++    background: $color-primary;
+     padding: 4rpx 12rpx;
+-    border-radius: 100rpx;
++    border-radius: $radius-full;
+     line-height: 1;
+   }
+ 
+@@ -386,6 +406,7 @@
+ 
+   &__custom-card-sparkle {
+     position: absolute;
++    z-index: 1; // above the legibility scrim so the sparkle dots stay crisp
+     width: 12rpx;
+     height: 12rpx;
+     background: $color-warning;
+@@ -435,6 +456,23 @@
+     // to the card's border-radius and avoids 1px edge bleed.
+     will-change: transform;
+ 
++    // Same right-side legibility scrim as __custom-card (text column sits
++    // right of the 42% padding) so preset art never fights the copy.
++    &::after {
++      content: '';
++      position: absolute;
++      inset: 0;
++      z-index: 0;
++      border-radius: inherit;
++      background: linear-gradient(
++        90deg,
++        rgba($color-surface, 0) 32%,
++        rgba($color-surface, 0.78) 56%,
++        rgba($color-surface, 0.94) 80%
++      );
++      pointer-events: none;
++    }
++
+     &:nth-child(1) { animation: tier-row-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both; }
+     &:nth-child(2) { animation: tier-row-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both; }
+     &:nth-child(3) { animation: tier-row-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both; }
+@@ -488,7 +526,7 @@
+     color: $color-text-white;
+     background: $color-secondary;
+     padding: 4rpx 12rpx;
+-    border-radius: 100rpx;
++    border-radius: $radius-full;
+     line-height: 1;
+   }
+ 
+@@ -508,7 +546,7 @@
+     color: $color-text-muted;
+     background: rgba($color-text-primary, 0.04);
+     padding: 4rpx 12rpx;
+-    border-radius: 100rpx;
++    border-radius: $radius-full;
+     line-height: 1;
+   }
+ 

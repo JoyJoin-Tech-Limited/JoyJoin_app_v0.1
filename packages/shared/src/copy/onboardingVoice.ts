@@ -9,10 +9,13 @@
  * - TIER_B_LINES: step-level fallback lines. Any missing Tier A key falls
  *   back here, so the matrix can layer in batches and a renamed/removed
  *   step degrades silently instead of crashing.
- * - TIER_A_LINES: the full 12-archetype × 13-step voice matrix (founder
+ * - TIER_A_LINES: the full 12-archetype × 14-step voice matrix (founder
  *   decision: Tier A over Tier B template). R3-9 (2026-08-18) added the six
  *   extended-category-* keys so the interest taxonomy's per-category hint
- *   lines also speak in the user's archetype voice.
+ *   lines also speak in the user's archetype voice. PR-9 (2026-08-26) added
+ *   `discover-arrival`: the return-hook line 悦仔 speaks on the first-visit
+ *   Discover coachmark, echoing the FinalStage promise "悦仔会在发现页为你
+ *   留意同频的人".
  *
  * Voice rules: Xiaoyue register (warm, playful, non-clinical), zero emoji,
  * never evaluative/mock an archetype, one sentence per line. Every line
@@ -34,7 +37,8 @@ export type OnboardingVoiceStepId =
   | 'extended-category-culture'
   | 'extended-category-life'
   | 'extended-category-growth'
-  | 'profile-review';
+  | 'profile-review'
+  | 'discover-arrival';
 
 export const ONBOARDING_VOICE_STEP_IDS: readonly OnboardingVoiceStepId[] = [
   'essential-displayName',
@@ -52,6 +56,7 @@ export const ONBOARDING_VOICE_STEP_IDS: readonly OnboardingVoiceStepId[] = [
   'extended-category-life',
   'extended-category-growth',
   'profile-review',
+  'discover-arrival',
 ];
 
 const TIER_B_LINES: Record<OnboardingVoiceStepId, string> = {
@@ -70,6 +75,8 @@ const TIER_B_LINES: Record<OnboardingVoiceStepId, string> = {
   'extended-category-life': '摄影穿搭CityWalk，把喜欢的生活方式标出来。',
   'extended-category-growth': '阅读搞事业语言搭子，挑一个你想一起进步的方向。',
   'profile-review': '先确认这张卡，悦仔再帮你筛合适的局。',
+  // PR-9: echoes the FinalStage promise "悦仔会在发现页为你留意同频的人".
+  'discover-arrival': '悦仔已经在发现页为你留意同频的人了，常回来看看',
 };
 
 type ArchetypeVoiceMap = Record<string, Record<OnboardingVoiceStepId, string>>;
@@ -91,6 +98,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-life': '把日子过得有声有色是你的强项，柯基——挑一个想晒给同桌的！',
     'extended-category-growth': '连成长你都能聊成热场，柯基——选一个想拉着大家一起进步的方向！',
     'profile-review': '这张入场卡很有你的味道了——确认一下，就可以去点燃第一桌啦。',
+    'discover-arrival': '柯基，发现页已经帮你留意同频的局了——回去把第一场热闹占上',
   },
   rooster: {
     'essential-displayName': '给你起个名字吧，小太阳——稳定输出的人，名字也要让人记得住。',
@@ -108,6 +116,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-life': '把日常过出温度是你的本事，小太阳——挑一个你想分享的节奏。',
     'extended-category-growth': '稳步成长的人最有光，小太阳——选一个你愿意长期投入的方向。',
     'profile-review': '这张卡已经很稳了——确认之后，就去你的第一局发光吧。',
+    'discover-arrival': '小太阳，发现页有节奏合拍的局在等你——按你的步调回来看看就好',
   },
   hamster_praise: {
     'essential-displayName': '起个名字吧，仓鼠——你这么会发现别人的好，名字也要甜甜的。',
@@ -125,6 +134,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-life': '你总能发现日常里的闪光点——挑一个你想夸给同桌听的生活方式。',
     'extended-category-growth': '一起成长的人值得互相打气——选一个你想为同好鼓掌的方向。',
     'profile-review': '这张卡写满了你的真诚——确认一下，去遇见值得夸的人吧。',
+    'discover-arrival': '仓鼠，悦仔在发现页替你留意值得夸的同频伙伴——记得回来发现他们的好',
   },
   fox: {
     'essential-displayName': '起个名字吧，狐狸——一开口就能把天聊出火花的那种。',
@@ -142,6 +152,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-life': '会生活的人处处有梗——挑一个你最有心得的玩法。',
     'extended-category-growth': '成长也能很有趣——选一个你觉得最有料的方向。',
     'profile-review': '这张卡有点东西——确认一下，去挖你的第一场宝藏局。',
+    'discover-arrival': '狐狸，发现页藏着和你对味的新局——回来寻宝，第一桌已经露头了',
   },
   dolphin_calm: {
     'essential-displayName': '起个名字吧，海豚——气场对了，名字自然就顺了。',
@@ -159,6 +170,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-life': '生活方式合拍最难得——挑一个你过起来最顺的。',
     'extended-category-growth': '成长的频率不必赶——选一个让你心里踏实的方向。',
     'profile-review': '这张卡的气场很对——确认一下，顺流而下，去你的第一局。',
+    'discover-arrival': '海豚，发现页会帮你留意气场相合的局——觉得舒服了，就回来看看',
   },
   spider: {
     'essential-displayName': '起个名字吧，织网师——你的名字，会是你网里的第一个结点。',
@@ -176,6 +188,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-life': '生活里的同好最耐看——挑一个你想慢慢织进网里的。',
     'extended-category-growth': '一起进步的关系最牢固——选一个你想搭线的方向。',
     'profile-review': '这张卡已经连上线了——确认一下，去织你的第一张网吧。',
+    'discover-arrival': '织网师，发现页已经搭好第一条线——回来把同频的人织进你的网里',
   },
   koala: {
     'essential-displayName': '起个名字吧，考拉——让人一听就觉得安心的那种就很好。',
@@ -193,6 +206,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-life': '温柔的日子值得分享——挑一个你想和同桌一起过的。',
     'extended-category-growth': '成长不用着急——选一个让你觉得安心的方向。',
     'profile-review': '这张卡暖暖的——确认一下，去一个让你舒服的地方吧。',
+    'discover-arrival': '考拉，发现页给你留了安心的局——不着急，想来了就回来坐坐',
   },
   octopus: {
     'essential-displayName': '起个名字吧，章鱼——越出乎意料，越适合你。',
@@ -210,6 +224,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-life': '生活方式的排列组合你最会玩——挑一个你想试试的新花样。',
     'extended-category-growth': '跨界成长最有戏——选一个你想打开的新地图。',
     'profile-review': '这张卡很有戏——确认一下，去制造第一场惊喜吧。',
+    'discover-arrival': '章鱼，发现页有意想不到的局在冒泡——回来拆开第一个惊喜',
   },
   owl: {
     'essential-displayName': '起个名字吧，猫头鹰——不用说太多，名字先让人记住。',
@@ -227,6 +242,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-life': '生活美学是门学问——挑一个你想研究透的。',
     'extended-category-growth': '真正的好奇心值得熬夜——选一个你想深入的方向。',
     'profile-review': '这张卡很有记忆点——确认一下，去观察你的第一局吧。',
+    'discover-arrival': '猫头鹰，发现页替你盯着值得深聊的局——看准了，就回来入座',
   },
   elephant: {
     'essential-displayName': '起个名字吧，大象——稳稳的，让人一听就想同桌。',
@@ -244,6 +260,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-life': '踏实过日子也是一种本事——挑一个你过得最有心得的。',
     'extended-category-growth': '稳扎稳打地变好——选一个你愿意长期投入的方向。',
     'profile-review': '这张卡很可靠——确认一下，稳稳地走进你的第一局。',
+    'discover-arrival': '大象，发现页已经为你排好踏实的局——稳稳地回来坐一桌',
   },
   turtle: {
     'essential-displayName': '起个名字吧，龟龟——不用急，想好了再定也可以。',
@@ -261,6 +278,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-life': '日子慢慢过才有味道——挑一个你愿意花时间的方式。',
     'extended-category-growth': '成长这件事急不来——选一个你想慢慢走的方向。',
     'profile-review': '这张卡很踏实——确认一下，准备好了就去你的第一局。',
+    'discover-arrival': '龟龟，发现页帮你慢慢留意合适的局——按你的速度回来看看就好',
   },
   cat: {
     'essential-displayName': '起个名字吧，猫猫——低调一点也没关系，懂的人自然会记住。',
@@ -278,6 +296,7 @@ const TIER_A_LINES: ArchetypeVoiceMap = {
     'extended-category-life': '把日子过成自己喜欢的样子——挑一个你私藏的生活方式。',
     'extended-category-growth': '悄悄变厉害是你的风格——选一个你想默默深耕的方向。',
     'profile-review': '这张卡很懂你——确认一下，优雅地溜进你的第一局。',
+    'discover-arrival': '猫猫，发现页有对味的局在安静等你——想露面的时候回来就好',
   },
 };
 

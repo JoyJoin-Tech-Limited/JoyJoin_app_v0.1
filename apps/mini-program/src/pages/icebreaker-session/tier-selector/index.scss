@@ -196,7 +196,7 @@
     color: $color-text-white;
     background: $color-secondary;
     padding: 4rpx 12rpx; /* hairline vertical padding */
-    border-radius: 100rpx;
+    border-radius: $radius-full;
     line-height: 1;
     align-self: flex-start;
     margin-top: 4rpx; /* hairline: single pixel equivalent at 2× */
@@ -206,7 +206,7 @@
     @include flex-center;
     position: relative;
     min-height: 96rpx;
-    border-radius: 12rpx;
+    border-radius: $radius-md;
     border: 2rpx solid $color-divider;
     background: rgba($color-primary, 0.02);
     transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -309,6 +309,24 @@
     // to the card's border-radius and avoids 1px edge bleed.
     will-change: transform;
 
+    // Legibility scrim behind the RIGHT-side text column (padding-left: 42%)
+    // so the full-bleed custom-bg art never fights the copy. Sits above the
+    // bg image (same z, later in tree order), below body/check (z-index: 1).
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      border-radius: inherit;
+      background: linear-gradient(
+        90deg,
+        rgba($color-surface, 0) 32%,
+        rgba($color-surface, 0.78) 56%,
+        rgba($color-surface, 0.94) 80%
+      );
+      pointer-events: none;
+    }
+
     &--active {
       border-color: $color-primary;
       box-shadow: 0 4rpx 24rpx rgba($color-primary, 0.12);
@@ -356,9 +374,11 @@
     font-size: $font-size-2xs;
     font-weight: $font-weight-bold;
     color: $color-text-white;
-    background: $brand-gradient;
+    // Solid primary — matches tier-sheet__card-badge--custom; a one-off
+    // brand-gradient badge broke the single-anchor-color rule.
+    background: $color-primary;
     padding: 4rpx 12rpx;
-    border-radius: 100rpx;
+    border-radius: $radius-full;
     line-height: 1;
   }
 
@@ -386,6 +406,7 @@
 
   &__custom-card-sparkle {
     position: absolute;
+    z-index: 1; // above the legibility scrim so the sparkle dots stay crisp
     width: 12rpx;
     height: 12rpx;
     background: $color-warning;
@@ -434,6 +455,23 @@
     // Force a compositing layer so WeChat reliably clips the absolute image
     // to the card's border-radius and avoids 1px edge bleed.
     will-change: transform;
+
+    // Same right-side legibility scrim as __custom-card (text column sits
+    // right of the 42% padding) so preset art never fights the copy.
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      border-radius: inherit;
+      background: linear-gradient(
+        90deg,
+        rgba($color-surface, 0) 32%,
+        rgba($color-surface, 0.78) 56%,
+        rgba($color-surface, 0.94) 80%
+      );
+      pointer-events: none;
+    }
 
     &:nth-child(1) { animation: tier-row-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both; }
     &:nth-child(2) { animation: tier-row-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both; }
@@ -488,7 +526,7 @@
     color: $color-text-white;
     background: $color-secondary;
     padding: 4rpx 12rpx;
-    border-radius: 100rpx;
+    border-radius: $radius-full;
     line-height: 1;
   }
 
@@ -508,7 +546,7 @@
     color: $color-text-muted;
     background: rgba($color-text-primary, 0.04);
     padding: 4rpx 12rpx;
-    border-radius: 100rpx;
+    border-radius: $radius-full;
     line-height: 1;
   }
 

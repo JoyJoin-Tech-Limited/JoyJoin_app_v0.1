@@ -1,12 +1,13 @@
 import Taro, { useDidHide, useDidShow, useUnload } from '@tarojs/taro'
 import { useEffect, useRef, useState } from 'react'
 import { ScrollView, Text, View } from '@tarojs/components'
-import { getFlashStoryUnitDefinition, isFlashV2PilotUnitId } from '@shared/alang/flashStorySeason'
+import { getFlashStoryUnitDefinition, isFlashStoryUnitId, isFlashV2PilotUnitId } from '@shared/alang/flashStorySeason'
 import type { AtuanFirstActSubmission } from '@shared/alang/atuanFirstAct'
 import type { AtuanLaterActSubmission } from '@shared/alang/atuanLaterActs'
 import type { FlashStoryReplayStateDto } from '@shared/alang/flashTypes'
 import { FlashStoryUnit } from '../../../components/alang/story-unit/FlashStoryUnit'
 import { FlashStoryV2Stage } from '../../../components/alang/FlashStoryV2Stage'
+import { FlashStoryInteractionStage } from '../../../components/alang/interaction/FlashStoryInteractionStage'
 import { isFlatLaterActUnitId } from '../../../components/alang/story-unit/LaterActStoryConfigs'
 import { FlashButton, FlashFeatureClosed, FlashNpcDialogueScene, FlashPageState, FlashTaskCategoryBadge } from '../../../components/alang/FlashUi'
 import { shouldShowStreetBlindBoxEntry } from '../../../lib/alang/alangAccess'
@@ -21,7 +22,9 @@ import {
   useFlashEncounter,
   useRerollFlashEncounter,
   useRespondToFlashTaskOffer,
+  useSubmitFlashStoryInteraction,
 } from '../../../lib/alang/useFlash'
+import { flashStoryAnalytics } from '../../../lib/analytics/flashStoryAnalytics'
 import type { FlashCanonicalSnapshot } from '../../../lib/alang/flashTypes'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
@@ -46,6 +49,11 @@ function dialogueActionError(error: unknown, fallback: string): string {
       return '这个回答已经变化了，重新读取后再选一次。'
     case 'FLASH_INVALID_TASK_STATE':
       return '状态刚刚发生了变化，任务和对话进度都没有丢。'
+    case 'FLASH_V2_STATE_CONFLICT':
+    case 'FLASH_V2_UNKNOWN_RESULT':
+    case 'FLASH_V2_NOT_AN_INTERACTION_NODE':
+    case 'FLASH_V2_NOT_AVAILABLE':
+      return '故事状态刚刚变化，正在重新接上。'
     case 'FLASH_STORY_GENERATION_PENDING':
       return '这条时间线还在收拢，稍后点同一个选择就会继续，不会重复结算。'
     default:
@@ -132,6 +140,7 @@ export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_P
   const { data, isLoading, isFetching, isError, error, refetch } = useFlashEncounter(encounterId, enabled && !!encounterId, replay)
   const answerMutation = useAnswerFlashEncounter()
   const advanceMutation = useAdvanceFlashStoryNode()
+  const interactionMutation = useSubmitFlashStoryInteraction()
   const rerollMutation = useRerollFlashEncounter()
   const offerMutation = useRespondToFlashTaskOffer()
   const deliverMutation = useDeliverFlashTask()
@@ -142,10 +151,13 @@ export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_P
   const pageVisibleRef = useRef(true)
   const answerInFlightRef = useRef(false)
   const advanceInFlightRef = useRef(false)
+  const interactionInFlightRef = useRef(false)
+  const imprintRevealedRef = useRef<string | null>(null)
   const storySubmitInFlightRef = useRef(false)
 
   useDidShow(() => {
     pageVisibleRef.current = true
+    interactionInFlightRef.current = false
     setPageVisible(true)
   })
 
@@ -185,6 +197,8 @@ export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_P
     setActionError('')
     answerInFlightRef.current = false
     advanceInFlightRef.current = false
+    interactionInFlightRef.current = false
+    imprintRevealedRef.current = null
     storySubmitInFlightRef.current = false
   }, [data?.storyEpisode?.id])
 
@@ -251,6 +265,42 @@ export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_P
       return null
     } finally {
       advanceInFlightRef.current = false
+    }
+  }
+
+  /**
+   * 叙事动作层结果提交（AC-02 客户端侧/AC-03）：提交体严格为 { nodeId, resultId }，
+   * 不上传手势轨迹。成功后渲染服务端返回的即时回响节点，并按节点记一次
+   * imprint_revealed（共同经历印记的即时揭示）。
+   */
+  const submitInteraction = async (nodeId: string, resultId: string) => {
+    if (!enabled || interactionInFlightRef.current) return
+    interactionInFlightRef.current = true
+    setActionError('')
+    try {
+      const response = await interactionMutation.mutateAsync({ encounterId, nodeId, resultId })
+      haptics('success')
+      const unitId = data?.storyEpisode?.code
+      if (unitId && isFlashStoryUnitId(unitId) && imprintRevealedRef.current !== nodeId) {
+        imprintRevealedRef.current = nodeId
+        flashStoryAnalytics.track(unitId, 'imprint_revealed', { resultId })
+      }
+      await applyResponse(response)
+    } catch (caughtError) {
+      if (getFlashApiErrorCode(caughtError) === 'FLASH_ENCOUNTER_EXPIRED') {
+        await refetch()
+        return
+      }
+      const status = getApiErrorStatusCode(caughtError)
+      setActionError(dialogueActionError(
+        caughtError,
+        status !== undefined && status >= 500
+          ? '刚才没有收好，再点一次下方按钮就能继续。'
+          : '故事状态刚刚变化，正在重新接上。',
+      ))
+      if (status === 400 || status === 409 || getFlashApiErrorCode(caughtError)?.startsWith('FLASH_V2')) await refetch()
+    } finally {
+      interactionInFlightRef.current = false
     }
   }
 
@@ -386,6 +436,28 @@ export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_P
     }
     const v2View = !isCustomLaterAct && isFlashV2PilotUnitId(story.code) ? story.storyV2 : null
     if (v2View) {
+      // 叙事动作层（AC-04）：interaction 节点渲染动作舞台。重玩（debug）模式下
+      // 服务端不接受动作提交，退回既有的阅读式舞台（advance 链）。
+      const interactionView = !replay && v2View.type === 'interaction' && v2View.interaction ? v2View : null
+      if (interactionView?.interaction) {
+        return (
+          <View className='flash-page flash-dialogue flash-dialogue--story'>
+            <FlashStoryInteractionStage
+              key={interactionView.nodeId}
+              npc={data.npc}
+              unitId={story.code}
+              nodeId={interactionView.nodeId}
+              interaction={interactionView.interaction}
+              segments={interactionView.segments}
+              seasonTitle={story.seasonTitle}
+              phase={story.phase}
+              busy={interactionMutation.isPending}
+              error={actionError}
+              onSubmit={(resultId) => { void submitInteraction(interactionView.nodeId, resultId) }}
+            />
+          </View>
+        )
+      }
       return (
         <View className='flash-page flash-dialogue flash-dialogue--story'>
           <FlashStoryV2Stage
@@ -531,6 +603,9 @@ export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_P
                 <>
                   {story.fragment ? (
                     <View className={`flash-dialogue__fragment flash-dialogue__fragment--${story.fragment.category}`}>
+                      <View className='flash-dialogue__fragment-stamp' aria-hidden='true'>
+                        <Text>已收下</Text>
+                      </View>
                       <Text className='flash-dialogue__fragment-label'>新故事碎片</Text>
                       <Text className='flash-dialogue__fragment-title'>{story.fragment.title}</Text>
                       <Text className='flash-dialogue__fragment-fact'>{story.fragment.fact}</Text>
@@ -641,7 +716,7 @@ export function FlashDialoguePage({ customLaterActAssets, canonicalPath = MINI_P
                   </View>
                 ))}
               </View>
-              <Text className='flash-dialogue__hint'>慢慢选，没有标准答案 ( ´ ▽ ` )</Text>
+              <Text className='flash-dialogue__hint'>慢慢选，没有标准答案</Text>
             </View>
           ) : offer ? (
             <View className='flash-dialogue__offer flash-dialogue__offer--embedded'>
