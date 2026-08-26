@@ -117,3 +117,7 @@
 - 内容修订管线：`flash-story-writing` skill → `check-flash-story.mjs` → 人工审核 → 入库
 - 上瘾机制（B1-B3）实现：backend-engineer（图鉴端点）+ taro-engineer（图鉴/回声 UI）
 - 走查（C1/C2）：需 staging 环境 + DevTools/真机，交接给运营/QA
+
+## 8. R2 打磨交叉引用（2026-08-26）
+
+街头盲盒 R2 纯体验打磨与 v2 故事引擎本身解耦，不新增故事单元、不改动叙事节点契约、不改变 E1/E2 交付节奏。范围与实现记录见 `docs/deliberations/2026-08-26-flash-polish-strategy.md`；运行时上下文见 `docs/agent-context/alang-flash.md`。R2 中唯一触及 v2 引擎周边的是：`flash_search_started` 埋点沿用了 analytics 现有发现事件白名单；`flashTaskPersonalityAllocation.test.ts` 仅锁定 30 任务性格分配表，不改任务内容。

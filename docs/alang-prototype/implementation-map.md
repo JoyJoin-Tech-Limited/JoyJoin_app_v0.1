@@ -285,4 +285,15 @@ npm run test -w mini-program -- --run src/pages/alang src/lib/alang src/componen
 | `V17-STATE-01` | 页面断点由服务端 `stage/currentNodeId` 恢复 | Alang 各阶段页、`useAlangMission.ts` | mini-program Alang tests | PASS |
 | `V17-ARCHIVE-01` | 先展示结果，再由用户主动收录 | `result/index.tsx`、`POST .../complete` | result/server tests | PASS |
 | `V17-PERF-01` | 阿浪子包保持轻量，不拖累主包 | `pages/alang` subpackage | 微信生产编译 + package-size | **ALANG PASS / MAIN BLOCK**：Alang 172.9KiB；主包 raw/zip 3.22MB，超过 2.00MB；总包 5.38MB，未在本轮处理范围外主包问题 |
-| `V17-QA-01` | 真机定位/地图/弱网与五页截图验收 | `profile-v17`、`discover-alang-v17`、`alang-search-v17`、`personal-story-v17`、`my-image-v17` | 390×844 CSS viewport、2× 输出 780×1688；H5 不能替代真机 | **RE-CAPTURED / F4 BLOCKED**：最新复截图五页均为 F3；我的形象 clipping-aware 扫描为 0 个阻断项，此前 2 处 overlap 为滚动裁切误报。正式装备美术、微信真机、设备矩阵与真实 provider 尚未验收 |
+| `V17-QA-01` | 真机定位/地图/弱网与五页截图验收 | `profile-v17`、`discover-alang-v17`、`alang-search-v17`、`personal-story-v17`、`my-image-v17` | 390×844 CSS viewport、2× 输出 780×1688；H5 不能替代真机 | **RE-CAPTURED / F4 BLOCKED**：最新复截图五页均为 F3；我的形象 clipping-aware 视觉扫描为 0 个阻断项，此前 2 处 overlap 为滚动裁切误报。正式装备美术、微信真机、设备矩阵与真实 provider 尚未验收 |
+
+## 13. R2 打磨补充（2026-08-26）
+
+街头盲盒 R2 为纯体验打磨，不修改状态机与隐私边界，范围见 `docs/deliberations/2026-08-26-flash-polish-strategy.md`。关键接入点：
+- 首页 `pages/alang/event` 新增 15 格碎片收藏条，数据复用 `useFlashStoryFragments`，零新 API。
+- 归档仪式页 `pages/alang/archive` 抽出唯一 `finishCeremony` 收尾路径，跳过按钮 8s 后出现（reduced-motion 4s）。
+- 搜索页 `pages/alang/search` 接入 `smoothAlangDistance`、地图 crossfade、到达庆祝 overlay（`encounterOrdinal` 文案变体）、ended 散场拍点。
+- 对话页 `pages/alang/dialogue` fragment 卡片落袋「已收下」圆章动画。
+- 新增 `flash_search_started` 埋点与 `flashTaskPersonalityAllocation` 结构回归测试。
+
+首页/归档/搜索/对话/结果文件均在 `pages/alang` 子包；`alangAssets.ts` 中的占位图仍为 `awaiting-approved-art`。本地场景图 `flash-atuan-*`、`flash-city-ambient-bg.png` 使阿浪子包当前约 1.64 MiB；建议后续正式美术批次走 CDN 以释放子包体积。 | `profile-v17`、`discover-alang-v17`、`alang-search-v17`、`personal-story-v17`、`my-image-v17` | 390×844 CSS viewport、2× 输出 780×1688；H5 不能替代真机 | **RE-CAPTURED / F4 BLOCKED**：最新复截图五页均为 F3；我的形象 clipping-aware 扫描为 0 个阻断项，此前 2 处 overlap 为滚动裁切误报。正式装备美术、微信真机、设备矩阵与真实 provider 尚未验收 |
