@@ -1,5 +1,9 @@
 @use '../../styles/variables' as *;
 @use '../../styles/mixins' as *;
+// C4 guidance queue (2026-08-27): the shared coachmark SCSS is @use'd here so
+// its rules compile into this page's own WXSS — the component deliberately
+// does not side-effect import its SCSS (subpackage style-splitting rule).
+@use '../../components/guidance/GuidanceTipCard.scss' as *;
 
 // ─── Loading state ───────────────────────────────────────────────
 .discover-loading {

@@ -258,7 +258,14 @@ export const users = pgTable("users", {
   // ============ WeChat Contact ID (微信号) ============
   wechatContactId: varchar("wechat_contact_id"),        // user's WeChat ID (微信号)
   wechatContactIdSetAt: timestamp("wechat_contact_id_set_at"), // when first set, used to show prompt only once
-  
+
+  // ============ Guidance Queue Seen-State (C4 onboarding guidance, 2026-08-27) ============
+  // { [tipId]: isoDate } — server-persisted set of guidance tips the user has
+  // already seen. NULL = empty map (handled in code, no backfill). Writes are
+  // a single atomic first-write-wins jsonb merge (see repositories/guidanceRepo.ts);
+  // the earliest timestamp always survives.
+  seenGuidance: jsonb("seen_guidance").$type<Record<string, string>>(),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

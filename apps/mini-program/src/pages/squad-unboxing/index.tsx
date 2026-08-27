@@ -1,9 +1,10 @@
 import { View, Text, ScrollView, Image, Canvas } from '@tarojs/components'
-import Taro, { useRouter, useDidShow, useShareAppMessage } from '@tarojs/taro'
+import Taro, { useRouter, useDidShow, useShareAppMessage, useUnload } from '@tarojs/taro'
 import { useEffect, useCallback, useMemo, useRef, useState } from 'react'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { normalizeMatchingCopy } from '@shared/features/matching-status'
 import { cdnAsset } from '../../lib/utils/cdnAssets'
+import { CEREMONY_IDS, enterCeremony, exitCeremony } from '../../lib/guidance/ceremonyState'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { usePageTTI } from '../../hooks/usePageTTI'
 import { useJoyJoinNavigation } from '../../hooks/navigation/useJoyJoinNavigation'
@@ -124,6 +125,16 @@ export default function SquadUnboxingPage() {
   const { isDegradation } = useDeviceTier()
   // B5: TTI instrumentation — ready once the auth gate and group fetch settle.
   usePageTTI({ pageName: 'squad-unboxing', ready: !authLoading && !isLoading })
+
+  // C4 guidance-queue ceremony suppression (2026-08-27): squad unboxing is a
+  // ceremony surface — the queue must not fire while it is on screen.
+  // exitCeremony binds to page onUnload as well as effect cleanup so an
+  // abnormal teardown cannot leak ceremony state (idempotent — safe to both).
+  useEffect(() => {
+    enterCeremony(CEREMONY_IDS.squadUnboxing)
+    return () => exitCeremony(CEREMONY_IDS.squadUnboxing)
+  }, [])
+  useUnload(() => exitCeremony(CEREMONY_IDS.squadUnboxing))
   const { user: currentUser } = useAuthGuard()
   const dragRevealEnabled = currentUser?.features?.squadUnboxingDragRevealEnabled ?? true
   const composedHeroEnabled = currentUser?.features?.socialSquadComposedHeroEnabled ?? false

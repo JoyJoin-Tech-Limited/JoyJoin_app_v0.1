@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import Taro, { useDidShow, useRouter } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter, useUnload } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getErrorMessage } from '@shared/copy/errorBaselines'
 import type { SocialSessionState } from '@shared/socialIcebreaker'
@@ -49,6 +49,7 @@ import { useKeepScreenOn } from './hooks/useKeepScreenOn'
 import { MOOD_FIELD_BLOOM_MS, deriveMoodField } from './viewModels/ambientFieldModel'
 import { GroupBeatTracker, parseSocialGroupBeat } from './viewModels/groupBeatModel'
 import { SessionPhaseViews, type SessionPhaseViewsProps } from './SessionPhaseViews'
+import { CEREMONY_IDS, enterCeremony, exitCeremony } from '../../lib/guidance/ceremonyState'
 import {
   buildSocialPath,
   deriveParticipants,
@@ -122,6 +123,16 @@ export default function IcebreakerSessionPage() {
   const syncLostRef = useRef(false)
 
   useResetOnShow(setCoachmarkShown, setSuggestionOverlayOpen)
+
+  // C4 guidance-queue ceremony suppression (2026-08-27): a live icebreaker
+  // session is a ceremony surface — the queue must not fire while it is on
+  // screen. exitCeremony binds to page onUnload as well as effect cleanup so
+  // an abnormal teardown cannot leak ceremony state (idempotent — safe to both).
+  useEffect(() => {
+    enterCeremony(CEREMONY_IDS.icebreakerSession)
+    return () => exitCeremony(CEREMONY_IDS.icebreakerSession)
+  }, [])
+  useUnload(() => exitCeremony(CEREMONY_IDS.icebreakerSession))
 
   // Preload CDN-only assets in parallel with session bootstrap.
   // Phase emblems, reactions, reveals, and achievements are CDN tiers.

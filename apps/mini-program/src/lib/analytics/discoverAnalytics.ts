@@ -81,6 +81,12 @@ export type DiscoverAnalyticsEventType =
   | 'duo_status_update'
   | 'duo_banner_impression'
   | 'duo_success_view'
+  // D7 onboarding-guidance funnel (2026-08-27, ships WITH W1 — whitelist
+  // unconditional server-side so the 2-week baseline clock starts at deploy).
+  // guidance_shown metadata: { tipId }; guidance_dismissed metadata:
+  // { tipId, reason: 'button'|'tap_through'|'auto', persistError?: true }.
+  | 'guidance_shown'
+  | 'guidance_dismissed'
 
 export interface DiscoverAnalyticsEvent {
   eventType: DiscoverAnalyticsEventType

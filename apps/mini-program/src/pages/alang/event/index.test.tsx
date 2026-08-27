@@ -29,6 +29,7 @@ vi.mock('@tarojs/taro', () => ({
   },
   useDidShow: vi.fn((callback: () => void) => { mocks.didShow = callback }),
   useDidHide: vi.fn((callback: () => void) => { mocks.didHide = callback }),
+  useUnload: vi.fn(),
 }))
 vi.mock('@tarojs/components', () => ({
   View: ({ children, hoverClass: _hoverClass, ...props }: any) => <div {...props}>{children}</div>,

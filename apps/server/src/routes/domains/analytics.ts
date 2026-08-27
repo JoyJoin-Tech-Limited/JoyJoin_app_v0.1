@@ -205,6 +205,21 @@ const DISCOVER_EVENT_TYPES = [
   // has a server-side denominator. Metadata carries appearanceId only — no
   // coordinates, no user text, no device identifiers.
   "flash_search_started",
+  // D7 onboarding-guidance funnel whitelist (2026-08-27, ships WITH W1,
+  // unconditional — not flag-gated — so the 2-week baseline clock starts at
+  // W1 deploy). Same minimal-metadata fail-open pattern as
+  // flash_search_started: enum-only events, metadata sanitized/capped, no
+  // user text, no device identifiers. guidance_dismissed metadata carries
+  // `reason: button|tap_through|auto` (+ error metadata when a dismiss
+  // persist fails); guidance_shown metadata carries the tipId.
+  "onboarding_intro_viewed",
+  "personality_test_started",
+  "personality_test_completed",
+  "discover_first_arrival",
+  "registration_started",
+  "registration_paid",
+  "guidance_shown",
+  "guidance_dismissed",
 ] as const;
 
 type DiscoverEventType = (typeof DISCOVER_EVENT_TYPES)[number];

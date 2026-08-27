@@ -45,6 +45,7 @@ export const getCurrentInstance = vi.fn(() => ({ page: undefined }))
 export const useRouter = vi.fn().mockReturnValue({ params: {}, path: '' })
 export const useDidShow = vi.fn()
 export const useDidHide = vi.fn()
+export const useUnload = vi.fn()
 export const useReady = vi.fn()
 export const usePullDownRefresh = vi.fn()
 export const useReachBottom = vi.fn()
@@ -82,6 +83,7 @@ const taro = {
   useRouter,
   useDidShow,
   useDidHide,
+  useUnload,
   useReady,
   usePullDownRefresh,
   useReachBottom,

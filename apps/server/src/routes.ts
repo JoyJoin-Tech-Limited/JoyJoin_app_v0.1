@@ -22,6 +22,7 @@ import { registerDevToolRoutes } from "./routes/domains/devTools";
 import { registerEventGroupOutcomeRoutes } from "./routes/domains/eventGroupOutcomes";
 import { registerEventPoolRoutes } from "./routes/domains/eventPools";
 import { registerGeoRoutes } from "./routes/domains/geo";
+import { registerGuidanceRoutes } from "./routes/domains/guidance";
 import { registerIcebreakerContentRoutes } from "./routes/domains/icebreakerContent";
 import { registerIcebreakerRoutes } from "./routes/domains/icebreaker";
 import { registerMatchExplanationRoutes } from "./routes/domains/matchExplanations";
@@ -168,6 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerVenueRoutes(app);
   registerOccupationSearchRoutes(app);
   registerGeoRoutes(app);
+  registerGuidanceRoutes(app);
   registerAttendanceRoutes(app);
   registerIcebreakerRoutes(app);
   registerIcebreakerContentRoutes(app);

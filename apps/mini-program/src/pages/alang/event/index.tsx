@@ -1,4 +1,4 @@
-import Taro, { useDidHide, useDidShow } from '@tarojs/taro'
+import Taro, { useDidHide, useDidShow, useUnload } from '@tarojs/taro'
 import { useEffect, useMemo, useState } from 'react'
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import { useAuth } from '../../../hooks/useAuth'
@@ -9,6 +9,7 @@ import { redirectToFlashCanonical } from '../../../lib/alang/flashNavigation'
 import { useFlashHome, useFlashStoryFragments } from '../../../lib/alang/useFlash'
 import { resolveFlashNpcTheme } from '../../../lib/alang/flashNpcAssets'
 import type { FlashNpcSummary } from '../../../lib/alang/flashTypes'
+import { CEREMONY_IDS, enterCeremony, exitCeremony } from '../../../lib/guidance/ceremonyState'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import { haptics } from '../../../lib/utils/haptics'
 import standardPaperWorld from '../assets/onboarding/parallel-standard-paper-world-v1.jpg'
@@ -128,6 +129,16 @@ export default function FlashHomePage() {
   useDidHide(() => {
     setPageVisible(false)
   })
+
+  // C4 guidance-queue ceremony suppression (2026-08-27): Flash flows are a
+  // ceremony surface — the queue must not fire while one is on screen.
+  // exitCeremony binds to page onUnload as well as effect cleanup so an
+  // abnormal teardown cannot leak ceremony state (idempotent — safe to both).
+  useEffect(() => {
+    enterCeremony(CEREMONY_IDS.flash)
+    return () => exitCeremony(CEREMONY_IDS.flash)
+  }, [])
+  useUnload(() => exitCeremony(CEREMONY_IDS.flash))
 
   useEffect(() => {
     if (!pageVisible || gate !== 'ready') return undefined

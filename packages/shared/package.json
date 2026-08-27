@@ -67,7 +67,8 @@
     "./copy/mascotVoice": "./src/copy/mascotVoice.ts",
     "./copy/toneMap": "./src/copy/toneMap.ts",
     "./copy/exceptions": "./src/copy/exceptions.ts",
-    "./copy/poolTeaserCopy": "./src/copy/poolTeaserCopy.ts"
+    "./copy/poolTeaserCopy": "./src/copy/poolTeaserCopy.ts",
+    "./copy/guidanceCopy": "./src/copy/guidanceCopy.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",

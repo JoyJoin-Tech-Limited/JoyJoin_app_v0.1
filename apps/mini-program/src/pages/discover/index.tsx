@@ -15,7 +15,9 @@ import {
 } from '@shared/districts'
 import { FLOW1_ENTRY_COPY } from '@shared/copy/flowAnimationCopy'
 import { getOnboardingVoiceLine } from '@shared/copy/onboardingVoice'
+import { getGuidanceTipCopy } from '@shared/copy/guidanceCopy'
 import { useAuth } from '../../hooks/useAuth'
+import { useGuidanceQueue } from '../../hooks/useGuidanceQueue'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
 import { useMarkNotificationsAsRead } from '../../hooks/useNotificationCounts'
 import { apiRequest, fetchDiscoverShell } from '../../lib/api/api'
@@ -50,6 +52,7 @@ import CityUnlockFeedCard from '../../components/discover/CityUnlockFeedCard'
 import CityPickerSheet from '../../components/discover/CityPickerSheet'
 import SingleTestBanner from '../../components/dev/SingleTestBanner'
 import AlangDiscoverCard from '../../components/alang/AlangDiscoverCard'
+import GuidanceTipCard from '../../components/guidance/GuidanceTipCard'
 import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
 
@@ -173,6 +176,32 @@ function AuthenticatedDiscover({
   // Set when the pending signal was present, regardless of effect/didShow
   // ordering — read by the step_started funnel event.
   const arrivalFromOnboardingRef = useRef(false)
+
+  // ── C4 guidance queue (2026-08-27, flag-gated) ──
+  // guidanceQueueEnabled ON → the queue owns the arrival coachmark slot (E1
+  // absorption); OFF → the legacy storage-keyed path below runs byte-for-byte.
+  const guidanceQueueEnabled = (user as any)?.features?.guidanceQueueEnabled === true
+  const {
+    activeTip: guidanceTip,
+    exiting: guidanceTipExiting,
+    dismiss: dismissGuidanceTip,
+  } = useGuidanceQueue({ surface: 'discover', user })
+  const guidanceTipCopy = useMemo(() => getGuidanceTipCopy('discover_arrival'), [])
+  const arrivalTipShowing = guidanceQueueEnabled && guidanceTip?.id === 'discover_arrival'
+  // E1 day-scoped tagline yield, reproduced under the flag-on path: the
+  // server-persisted seen timestamp doubles as the "arrival day" stamp (the
+  // legacy `_seen_date` key is backfilled into it by arrivalMigration).
+  const arrivalSeenToday = useMemo(() => {
+    if (!guidanceQueueEnabled) return false
+    const seenAt = (user as any)?.seenGuidance?.discover_arrival
+    if (typeof seenAt !== 'string' || !seenAt) return false
+    const seenDate = new Date(seenAt)
+    if (Number.isNaN(seenDate.getTime())) return false
+    const mm = String(seenDate.getMonth() + 1).padStart(2, '0')
+    const dd = String(seenDate.getDate()).padStart(2, '0')
+    return `${seenDate.getFullYear()}-${mm}-${dd}` === arrivalTodayKey()
+  }, [guidanceQueueEnabled, user])
+  const arrivalHookDayEffective = arrivalHookDay || arrivalTipShowing || arrivalSeenToday
 
   // ── Geo detection state ──
   // ── Data fetching ──
@@ -359,7 +388,7 @@ function AuthenticatedDiscover({
       if (isLoadingRegistrations) return '发现适合你的聚会…'
       // Arrival day: the random tagline yields to the hook card's promise —
       // the header echoes the generic (Tier B) line instead of competing.
-      if (arrivalHookDay) return getOnboardingVoiceLine('discover-arrival', null)
+      if (arrivalHookDayEffective) return getOnboardingVoiceLine('discover-arrival', null)
       return getDiscoverSubtitle({
         displayName,
         archetype: userArchetype,
@@ -367,7 +396,7 @@ function AuthenticatedDiscover({
         openPoolCount: pools.filter((p) => p.status !== 'closed').length,
       })
     },
-    [displayName, userArchetype, registrations.length, pools, isLoadingRegistrations, arrivalHookDay],
+    [displayName, userArchetype, registrations.length, pools, isLoadingRegistrations, arrivalHookDayEffective],
   )
   // ── Handlers ──
   const openPools = useMemo(
@@ -398,6 +427,25 @@ function AuthenticatedDiscover({
     )
   }, [])
 
+  // E1 flag-on side effects: when the queue fires the absorbed arrival tip,
+  // keep the legacy same-day behavior — day stamp, tagline yield, and the
+  // onboarding funnel-tail impression event.
+  useEffect(() => {
+    if (!arrivalTipShowing || !userId) return
+    arrivalFromOnboardingRef.current = true
+    setArrivalHookDay(true)
+    try {
+      Taro.setStorageSync(`joyjoin_discover_arrival_seen_date:${userId}`, arrivalTodayKey())
+    } catch {
+      // Non-fatal: the yield is a nice-to-have, never a gate.
+    }
+    onboardingAnalytics.interaction('discover', 'arrival_hook_impression', {
+      fromOnboarding: true,
+      archetype: userArchetype ?? 'unknown',
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrivalTipShowing, userId])
+
   // Show the arrival coachmark once: consume the pending flag, write the seen
   // key, and self-dismiss after 6s (or on tap). Storage failures must never
   // affect the feed. PR-9 also stamps the seen date so the header tagline
@@ -405,6 +453,17 @@ function AuthenticatedDiscover({
   // hook-card impression into the onboarding funnel tail.
   useEffect(() => {
     if (!userId) return
+    if (guidanceQueueEnabled) {
+      // C4 flag-on (E1): the queue owns the arrival coachmark; keep only the
+      // day-scoped tagline-yield read. Everything below is queue-absorbed.
+      try {
+        const seenDate = Taro.getStorageSync(`joyjoin_discover_arrival_seen_date:${userId}`)
+        if (seenDate === arrivalTodayKey()) setArrivalHookDay(true)
+      } catch {
+        // Storage failures must never affect the feed.
+      }
+      return
+    }
     try {
       const seenDate = Taro.getStorageSync(`joyjoin_discover_arrival_seen_date:${userId}`)
       if (seenDate === arrivalTodayKey()) setArrivalHookDay(true)
@@ -433,7 +492,7 @@ function AuthenticatedDiscover({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId])
+  }, [userId, guidanceQueueEnabled])
 
   const handlePoolTap = useCallback((pool: EventPoolSummary) => {
     haptics('light')
@@ -560,8 +619,10 @@ function AuthenticatedDiscover({
       {/* PR-5 + PR-9 first-visit arrival card (one-time; tap or 6s to dismiss).
           Top half: 悦仔's archetype-voiced return hook echoing the results-page
           promise. Bottom half: the two play-mode explainer lines. The bottom
-          anchor arrow points at the 街头盲盒 card below. */}
-      {showArrivalCoachmark ? (
+          anchor arrow points at the 街头盲盒 card below.
+          C4 (2026-08-27): legacy path renders ONLY with the queue flag OFF;
+          with guidanceQueueEnabled ON the queue tip below owns this slot. */}
+      {!guidanceQueueEnabled && showArrivalCoachmark ? (
         <View
           className='discover-auth__arrival-coachmark'
           onClick={() => handleArrivalCoachmarkClosed('tap_through')}
@@ -604,6 +665,29 @@ function AuthenticatedDiscover({
           </Text>
           <View className='discover-auth__arrival-anchor' aria-hidden='true' />
         </View>
+      ) : null}
+
+      {/* C4 queue-fired arrival tip (flag ON path): same copy/visual as the
+          legacy coachmark above, arbitrated/persisted by useGuidanceQueue. */}
+      {arrivalTipShowing ? (
+        <GuidanceTipCard
+          kicker={guidanceTipCopy.kicker}
+          title={arrivalHookLine}
+          rows={guidanceTipCopy.rows}
+          dismissLabel={guidanceTipCopy.dismissLabel}
+          mascotSrc={avatarError ? localFallback : xiaoyueAsset}
+          onMascotError={() => setAvatarError(true)}
+          exiting={guidanceTipExiting}
+          ariaLabel={`${arrivalHookLine}。玩法提示：${FLOW1_ENTRY_COPY.event.title}是同桌小局，${FLOW1_ENTRY_COPY.street.title}一个人也能玩。${guidanceTipCopy.dismissHint}`}
+          onDismiss={(reason) => {
+            onboardingAnalytics.interaction(
+              'discover',
+              reason === 'tap_through' ? 'arrival_hook_tap_through' : 'arrival_hook_close',
+              { fromOnboarding: true, dismissReason: reason },
+            )
+            dismissGuidanceTip(reason)
+          }}
+        />
       ) : null}
 
       {/* Explore header */}

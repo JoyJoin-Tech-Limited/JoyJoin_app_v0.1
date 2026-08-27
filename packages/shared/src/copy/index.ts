@@ -81,3 +81,14 @@ export type {
   FlowLifecycleFacts,
   Flow2NodeCopy,
 } from './flowAnimationCopy.js';
+
+// 🧭 Guidance queue tips (C4 onboarding guidance iteration, 2026-08-27)
+export {
+  GUIDANCE_TIP_COPY,
+  getGuidanceTipCopy,
+} from './guidanceCopy.js';
+export type {
+  GuidanceTipCopyKey,
+  GuidanceTipCopy,
+  GuidanceTipRowCopy,
+} from './guidanceCopy.js';

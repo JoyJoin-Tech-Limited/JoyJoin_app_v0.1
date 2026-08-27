@@ -146,6 +146,11 @@ const [
     personalitySlotProfileDramatic,
     shareAnimatedClipEnabled,
     duoRegistrationEnabled,
+    guidanceQueueEnabled,
+    discoverSpotlightEnabled,
+    landingStepLoopEnabled,
+    testIntroWhyLineEnabled,
+    testGatherGlowEnabled,
     entitlementMode,
   ] = await Promise.all([
     getFeatureFlag('restartOnboarding', false),
@@ -189,6 +194,12 @@ const [
     getFeatureFlag('personalitySlotProfileDramatic', false),
     getFeatureFlag('shareAnimatedClipEnabled', false),
     getFeatureFlag('duoRegistrationEnabled', true),
+    // Onboarding guidance iteration (2026-08-27) — all 5 registered dark in W1.
+    getFeatureFlag('guidanceQueueEnabled', false),
+    getFeatureFlag('discoverSpotlightEnabled', false),
+    getFeatureFlag('landingStepLoopEnabled', false),
+    getFeatureFlag('testIntroWhyLineEnabled', false),
+    getFeatureFlag('testGatherGlowEnabled', false),
     // Server-resolved entitlement signal (pool-registration gate semantics via
     // lib/entitlement.ts), joined into the flag batch so the cold-start auth
     // hot path resolves it in parallel (N-7 pre-ship finding). Fail-open: a
@@ -221,6 +232,10 @@ const [
     profileExtendedComplete,
     activeAssessmentSessionId,
     paymentsEnabled: paymentsEnabledFlag,
+    // Guidance queue seen-state rides the auth hydration additively (zero new
+    // round-trips). Normalized: always a parsed object, {} when the DB column
+    // is NULL. Overrides the raw spread value above.
+    seenGuidance: user.seenGuidance ?? {},
     mascotDisplayName: mascotConfig.displayName,
     mascotBackstory: mascotConfig.backstory,
     tierDisplayFlags,
@@ -275,6 +290,13 @@ const [
       flowLifecycleEnabled,
       poolTeaserEnabled,
       duoRegistrationEnabled,
+      /** Onboarding guidance iteration (2026-08-27) — all 5 ship dark in W1;
+       *  W2–W4 consume them. Never flipped on as part of W1. */
+      guidanceQueueEnabled,
+      discoverSpotlightEnabled,
+      landingStepLoopEnabled,
+      testIntroWhyLineEnabled,
+      testGatherGlowEnabled,
     },
   };
 

@@ -66,6 +66,10 @@ export interface AuthUserResponse extends SanitizedAuthUser {
   restartsRemaining?: number
   /** Referral code stored in session during login; used to pre-fill pool registration. */
   pendingReferralCode?: string
+  /** Guidance queue seen-state (`{ [tipId]: isoDate }`). Always an object on
+   *  the wire — `{}` when the DB column is NULL. First-write-wins: timestamps
+   *  are the earliest recorded sighting of each tip. */
+  seenGuidance: Record<string, string>
   /** Feature flags exposed to the client. */
   features?: {
     restartOnboarding?: boolean
@@ -175,6 +179,21 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     poolTeaserEnabled?: boolean
     /** 双人成行 (duo registration) kill-switch. Default: true. */
     duoRegistrationEnabled?: boolean
+    /** C4 GuidanceQueue orchestrator: server-persisted seen-state, ≤1 tip per
+     *  session arbitration, coachmark absorption. Default: false (dark). */
+    guidanceQueueEnabled?: boolean
+    /** C5 discover registration spotlight (beacon + price caption). Registered
+     *  dark in W1, consumed in W3. Default: false. */
+    discoverSpotlightEnabled?: boolean
+    /** A1 landing 3-beat step micro-loop. Registered dark in W1, consumed in
+     *  W2a. Default: false. */
+    landingStepLoopEnabled?: boolean
+    /** A2 test-intro WHY line via shared copy. Registered dark in W1, consumed
+     *  in W2b. Default: false. */
+    testIntroWhyLineEnabled?: boolean
+    /** B3 in-test gather-glow on answer submit. Registered dark in W1,
+     *  consumed in W4. Default: false. */
+    testGatherGlowEnabled?: boolean
   }
 }
 

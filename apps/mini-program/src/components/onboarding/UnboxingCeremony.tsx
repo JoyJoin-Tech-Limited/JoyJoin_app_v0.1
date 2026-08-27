@@ -1,9 +1,11 @@
 import { View, Text, Image } from '@tarojs/components'
-import { useRef, useState } from 'react'
+import { useUnload } from '@tarojs/taro'
+import { useEffect, useRef, useState } from 'react'
 import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { useChoreographedWait } from '../../hooks/useChoreographedWait'
 import { haptics } from '../../lib/utils/haptics'
+import { CEREMONY_IDS, enterCeremony, exitCeremony } from '../../lib/guidance/ceremonyState'
 import {
   BLIND_BOX_BODY_ASSET,
   BLIND_BOX_INTERIOR_ASSET,
@@ -115,6 +117,17 @@ export default function UnboxingCeremony({
   // RM shows the hint statically; motion mode reveals it at the guard
   // boundary so the affordance never promises an earlier tap.
   const hintVisible = reduceMotion || canSkip
+
+  // C4 guidance-queue ceremony suppression (2026-08-27): no tip may fire
+  // while this payoff ceremony is visible. exitCeremony is ALSO bound to the
+  // hosting page's onUnload so an abnormal teardown can never leak ceremony
+  // state and suppress the queue app-wide (idempotent — double-exit is safe).
+  useEffect(() => {
+    if (!visible) return undefined
+    enterCeremony(CEREMONY_IDS.unboxing)
+    return () => exitCeremony(CEREMONY_IDS.unboxing)
+  }, [visible])
+  useUnload(() => exitCeremony(CEREMONY_IDS.unboxing))
 
   if (!visible) return null
 
