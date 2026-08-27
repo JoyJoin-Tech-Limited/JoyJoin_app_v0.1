@@ -28,6 +28,9 @@ export interface GatheringRoomMember {
   ageLabel?: string | null
   /** Present only when industryVisible is true. */
   industryNicheLabel?: string | null
+  /** Profile avatar URL, same exposure as pool-group-detail member list. */
+  avatarUrl?: string | null
+  gender?: string | null
   /** Current equipped outfit from the profile equipment system. */
   outfit?: EquipmentOutfitView | null
   /** Resolved equipped item details for the slots in `outfit`. */
