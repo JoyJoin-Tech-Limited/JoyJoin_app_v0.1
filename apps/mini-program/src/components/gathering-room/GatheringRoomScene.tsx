@@ -3,6 +3,7 @@ import { Fragment, memo, useEffect, useMemo, useRef, useState, type CSSPropertie
 import type { RoomPokeEmoji } from '@shared/wsEvents'
 import type { EquipmentItemView, EquipmentOutfitView } from '@joyjoin/shared/schema'
 import { localAsset } from '../../lib/utils/cdnAssets'
+import { logWarn } from '../../lib/utils/logger'
 import PixelAvatarComposite from '../profile/PixelAvatarComposite'
 import './GatheringRoomScene.scss'
 
@@ -34,32 +35,46 @@ import './GatheringRoomScene.scss'
  */
 
 /** Single composite background image path (CDN-first, local fallback). */
-const ROOM_COMPOSITE_PATH = '/assets/gathering-room/room-composite-v1.webp'
+const ROOM_COMPOSITE_PATH = '/assets/gathering-room/room-composite-v2.webp'
 
-/** Seat anchors in % of the scene viewport (x from left, y from top).
- *  Measured against room-composite-v1.webp's six zabuton cushions (feet land
+/** Seat anchors in scene-% (x right, y down), origin = scene top-left.
+ *  Measured against room-composite-v2.webp's six zabuton cushions (feet land
  *  on the cushion, so the avatar reads as seated at the table):
  *  back (50,35.5) / top-left (34.6,44) / top-right (65.4,44) /
- *  mid-left (32.7,58) / mid-right (67.3,58) / front (50,68.5). */
+ *  mid-left (32.7,58) / mid-right (67.3,58) / front (50,68.5).
+ *  Two extra standing spots along the side walls handle 7–8 member groups
+ *  (feet on the floor line, clear of the console and the plant). */
 const SEAT_ANCHORS = [
   { x: 50, y: 36 }, // 0 back
   { x: 35, y: 45 }, // 1 mid-left
   { x: 65, y: 45 }, // 2 mid-right
-  { x: 33, y: 59 }, // 3 front-left
-  { x: 50, y: 69.5 }, // 4 front
+  { x: 33, y: 58 }, // 3 front-left
+  { x: 50, y: 68.5 }, // 4 front
   { x: 67, y: 59 }, // 5 front-right
 ] as const
 
-/** Which seat indices are used for a given member count (4–6). Front seats are
+const EXTRA_SEAT_ANCHORS = [
+  { x: 72, y: 51 }, // 6 standing, right wall between door and console
+  { x: 24, y: 51 }, // 7 standing, left wall below the window
+] as const
+
+const ALL_SEAT_ANCHORS = [...SEAT_ANCHORS, ...EXTRA_SEAT_ANCHORS] as const
+const MAX_SEAT_COUNT = ALL_SEAT_ANCHORS.length
+
+/** Which seat indices are used for a given member count (3–8). Front seats are
  *  filled last so the viewer keeps a clear window onto the table. */
 const SEAT_INDEX_BY_COUNT: Record<number, readonly number[]> = {
+  3: [1, 2, 4],
   4: [1, 2, 3, 5],
   5: [0, 1, 2, 3, 5],
   6: [0, 1, 2, 3, 4, 5],
+  7: [0, 1, 2, 3, 4, 5, 6],
+  8: [0, 1, 2, 3, 4, 5, 6, 7],
 }
 
 /** Seated-pose offset per seat (confirmed members shift closer to the table).
- *  Hand-authored transform offsets — transform-only, no layout measurement. */
+ *  Hand-authored transform offsets — transform-only, no layout measurement.
+ *  Extra standing seats (6,7) have no offset; they remain standing. */
 const SEATED_OFFSETS: Record<number, { dx: number; dy: number }> = {
   0: { dx: 0, dy: 18 },
   1: { dx: 16, dy: 8 },
@@ -75,14 +90,16 @@ const SCENE_WIDTH_RPX = 750
 const SCENE_HEIGHT_RPX = 960
 
 /** Door zone (%) — a live arrival materializes here for one beat, then the
- *  wrapper transition walks the avatar to its seat. Fanned per seat index so
- *  back-to-back arrivals don't spawn on top of each other. */
-const DOOR_QUEUE_BASE = { x: 71, y: 30 } as const
+ *  wrapper transition walks the avatar to its seat. Anchored on the actual
+ *  doorway floor (door threshold is x 55–70%, y≈45% in the composite art);
+ *  fanned per seat index so back-to-back arrivals don't spawn on top of
+ *  each other. */
+const DOOR_QUEUE_BASE = { x: 56, y: 42 } as const
 
 function doorQueuePoint(seatIndex: number): { x: number; y: number } {
   const col = seatIndex % 2
   const row = Math.floor(seatIndex / 2)
-  return { x: DOOR_QUEUE_BASE.x + col * 8, y: DOOR_QUEUE_BASE.y + row * 8 }
+  return { x: DOOR_QUEUE_BASE.x + col * 7, y: DOOR_QUEUE_BASE.y + row * 5 }
 }
 
 export type GatheringRoomPresence = 'absent' | 'present' | 'confirmed'
@@ -149,9 +166,10 @@ const CELEBRATION_SPARKLES = [
   { left: '76%', top: '44%', delayMs: 250 },
 ] as const
 
-function seatIndexFor(memberIndex: number, count: number): number {
-  const map = SEAT_INDEX_BY_COUNT[Math.min(Math.max(count, 4), 6)] ?? SEAT_INDEX_BY_COUNT[6]
-  return map[memberIndex] ?? memberIndex
+export function seatIndexFor(memberIndex: number, count: number): number {
+  const normalizedCount = Math.min(Math.max(count, 3), MAX_SEAT_COUNT)
+  const map = SEAT_INDEX_BY_COUNT[normalizedCount] ?? SEAT_INDEX_BY_COUNT[6]
+  return map[memberIndex] ?? map[map.length - 1] ?? 0
 }
 
 interface GatheringRoomSeatProps {
@@ -177,7 +195,7 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
   reducedMotion,
   onAvatarTap,
 }: GatheringRoomSeatProps) {
-  const anchor = SEAT_ANCHORS[seatIndex]
+  const anchor = ALL_SEAT_ANCHORS[seatIndex]
   const seatedOffset = SEATED_OFFSETS[seatIndex]
 
   // Confirmation beat: hop once when this member's attendance flips to
@@ -304,6 +322,50 @@ const GatheringRoomSeat = memo(function GatheringRoomSeat({
   )
 })
 
+interface GatheringRoomNamePlateProps {
+  profile: GatheringRoomMemberProfile
+  seatIndex: number
+  isOwn: boolean
+  presence: GatheringRoomPresence
+  reducedMotion: boolean
+}
+
+const GatheringRoomNamePlate = memo(function GatheringRoomNamePlate({
+  profile,
+  seatIndex,
+  isOwn,
+  presence,
+}: GatheringRoomNamePlateProps) {
+  const anchor = ALL_SEAT_ANCHORS[seatIndex]
+  const name = profile.displayName || '队友'
+
+  return (
+    <View
+      className={[
+        'gathering-room-scene__name-card',
+        presence !== 'absent' ? 'gathering-room-scene__name-card--seated' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      style={{
+        left: `${anchor.x}%`,
+        top: `${anchor.y}%`,
+        animationDelay: `${150 + seatIndex * 70}ms`,
+      }}
+    >
+      {presence === 'absent' ? (
+        <View className='gathering-room-scene__name-card-dot' aria-hidden='true' />
+      ) : null}
+      <Text className='gathering-room-scene__name-card-text'>{name}</Text>
+      {isOwn ? (
+        <View className='gathering-room-scene__me-chip'>
+          <Text className='gathering-room-scene__me-chip-text'>我</Text>
+        </View>
+      ) : null}
+    </View>
+  )
+})
+
 export function GatheringRoomScene({
   memberProfiles,
   presenceByUserId,
@@ -364,6 +426,17 @@ export function GatheringRoomScene({
     return () => clearTimeout(id)
   }, [celebrationText, celebrationShown])
 
+  // Defensive: groups larger than the art's seat map render, but warn so we
+  // know the layout is degrading rather than silently dropping members.
+  useEffect(() => {
+    if (memberProfiles.length > MAX_SEAT_COUNT) {
+      logWarn('[GatheringRoomScene] Member count exceeds available seat anchors', {
+        count: memberProfiles.length,
+        max: MAX_SEAT_COUNT,
+      })
+    }
+  }, [memberProfiles.length])
+
   return (
     <View className={sceneClass} data-testid='gathering-room-scene'>
       <Image
@@ -387,36 +460,29 @@ export function GatheringRoomScene({
         ? memberProfiles.map((profile, index) => {
             const seatIndex = seatIndexFor(index, memberProfiles.length)
             const isOwn = profile.userId === ownUserIdResolved
-            const anchor = SEAT_ANCHORS[seatIndex]
             const presence = presenceByUserId.get(profile.userId) ?? 'absent'
             return (
               <Fragment key={profile.userId}>
-                <GatheringRoomSeat
+                {presence === 'absent' ? null : (
+                  <GatheringRoomSeat
+                    profile={profile}
+                    presence={presence}
+                    seatIndex={seatIndex}
+                    isOwn={isOwn}
+                    isEntering={enteringUserIds.has(profile.userId)}
+                    playOwnDoorEntry={isOwn && playOwnDoorEntry}
+                    pokeBadge={isOwn ? pokeBadge ?? null : null}
+                    reducedMotion={reducedMotion}
+                    onAvatarTap={onAvatarTap}
+                  />
+                )}
+                <GatheringRoomNamePlate
                   profile={profile}
-                  presence={presence}
                   seatIndex={seatIndex}
                   isOwn={isOwn}
-                  isEntering={enteringUserIds.has(profile.userId)}
-                  playOwnDoorEntry={isOwn && playOwnDoorEntry}
-                  pokeBadge={isOwn ? pokeBadge ?? null : null}
+                  presence={presence}
                   reducedMotion={reducedMotion}
-                  onAvatarTap={onAvatarTap}
                 />
-                {presence === 'absent' ? (
-                  <View
-                    className='gathering-room-scene__name-card'
-                    style={{
-                      left: `${anchor.x}%`,
-                      top: `${anchor.y}%`,
-                      animationDelay: `${150 + seatIndex * 70}ms`,
-                    }}
-                  >
-                    <View className='gathering-room-scene__name-card-dot' aria-hidden='true' />
-                    <Text className='gathering-room-scene__name-card-text'>
-                      {profile.displayName || '队友'}
-                    </Text>
-                  </View>
-                ) : null}
               </Fragment>
             )
           })

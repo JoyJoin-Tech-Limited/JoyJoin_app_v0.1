@@ -164,6 +164,8 @@ const MEMBER_ROWS = [
     industryNicheLabel: "互联网产品",
     ageVisible: "show_exact_age",
     industryVisible: "hide_all",
+    wechatAvatarUrl: "https://cdn.example.com/1.webp",
+    gender: "male",
   },
   {
     userId: "user-2",
@@ -174,6 +176,8 @@ const MEMBER_ROWS = [
     industryNicheLabel: "纪录片摄影",
     ageVisible: "hide_all",
     industryVisible: "show",
+    wechatAvatarUrl: null,
+    gender: "female",
   },
 ];
 
@@ -254,6 +258,8 @@ describe("GET /api/pool-groups/:groupId/room-state", () => {
         ageVisible: true,
         industryVisible: false,
         industryNicheLabel: null,
+        avatarUrl: "https://cdn.example.com/1.webp",
+        gender: "male",
       });
       expect(body.members[0].ageLabel).toMatch(/^\d+岁$/);
 
@@ -265,6 +271,8 @@ describe("GET /api/pool-groups/:groupId/room-state", () => {
         ageLabel: null,
         industryVisible: true,
         industryNicheLabel: "纪录片摄影",
+        avatarUrl: null,
+        gender: "female",
       });
       expect(mockGetAttendanceStatuses).toHaveBeenCalledWith("bbe-1", ["user-1", "user-2"]);
     });

@@ -131,11 +131,14 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
 
   &__confirmed-badge {
     position: absolute;
-    top: -12rpx;
-    right: -28rpx;
+    // Above the head, not over the face — tall-eared archetypes (corgi,
+    // fox) lost their ears to the old -12rpx placement.
+    top: -36rpx;
+    right: -24rpx;
     padding: 4rpx 14rpx;
     border-radius: $radius-pill;
     background: $color-success;
+    border: 2rpx solid $color-surface;
     box-shadow: 0 4rpx 10rpx rgba($color-success, 0.3);
     // Pop lands just as the 480ms seated shift settles — one choreographed beat.
     animation: gathering-room-badge-pop 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -171,9 +174,10 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
 
   // Held-place card for absent members — stays at the seat anchor while the
   // dimmed avatar waits at the door. Positioned standalone (left/top inline).
+  // z-index 4: plates always read above the neighbouring seat's avatar.
   &__name-card {
     position: absolute;
-    z-index: 3;
+    z-index: 4;
     transform: translate(-50%, 20rpx);
     display: flex;
     align-items: center;
@@ -201,6 +205,34 @@ $room-lamp-glow: rgba($color-glow-gold-hot, 0.32);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  &__name-card--seated {
+    // Present members have an avatar at the anchor — the plate hangs below
+    // the feet instead of overlapping the legs (confirmed members shift down
+    // a further ≤18rpx via the seated pose, hence 48rpx, not 20rpx).
+    transform: translate(-50%, 48rpx);
+    background: rgba($color-surface, 0.92);
+    border-color: rgba($room-wall-line, 0.6);
+  }
+
+  &__me-chip {
+    flex: 0 0 auto;
+    min-width: 36rpx;
+    height: 36rpx;
+    padding: 0 $spacing-xs;
+    box-sizing: border-box;
+    border-radius: 999rpx;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__me-chip-text {
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-bold;
+    color: $color-text-white;
   }
 
   // ── First-arriver banner ───────────────────────────────────────────────

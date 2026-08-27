@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Text, View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
-import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { ROOM_POKE_EMOJIS, type RoomPokeEmoji } from '@shared/wsEvents'
-import type { EquipmentOutfitView } from '@joyjoin/shared/schema'
+import type { PoolGroupMemberSummary } from '@shared/api'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import StatusCard from '../../components/ui/StatusCard'
 import Button from '../../components/ui/Button'
 import XiaoyueEmptyState from '../../components/mascot/XiaoyueEmptyState'
-import PixelAvatarComposite from '../../components/profile/PixelAvatarComposite'
+import SegmentedCountdownClock from '../../components/ui/SegmentedCountdownClock'
+import TablemateDetailSheet from '../../components/TablemateDetailSheet'
 import GatheringRoomScene from '../../components/gathering-room/GatheringRoomScene'
+import { haptics } from '../../lib/utils/haptics'
 import { navigateBackOrEventsTab } from '../../lib/navigation/matchingNavigation'
 import { formatMeetDayLabel, useGatheringRoomController } from './useGatheringRoomController'
 import './index.scss'
@@ -19,14 +20,6 @@ const POKE_CHOICE_LABELS: Record<RoomPokeEmoji, string> = {
   wave: '挥手',
   'hi-five': '击掌',
   drink: '干杯',
-}
-
-const EMPTY_OUTFIT: EquipmentOutfitView = {
-  topItemId: null,
-  bottomItemId: null,
-  shoesItemId: null,
-  accessoryItemId: null,
-  version: 1,
 }
 
 /** Restart the count-roll animation without remounting the Text (keyed
@@ -60,48 +53,52 @@ export default function GatheringRoomPage() {
     ownConfirmed,
     isSubmitting,
     confirmPending,
+    blindBoxEventId,
+    currentUserId,
   } = controller
-  const selectedMemberItems = useMemo(
-    () => new Map((controller.selectedMember?.equippedItems ?? []).map((item) => [item.id, item])),
-    [controller.selectedMember?.equippedItems],
-  )
   const presentRollClass = useCountRollClass(presentCount)
   const confirmedRollClass = useCountRollClass(roomState?.confirmedCount ?? 0)
 
   // Live event countdown gives users a natural reason to check back. Warms up
   // on event day (「今天见」+ coral accent). Paused while the page is hidden
-  // (WeChat keeps stacked pages alive).
-  const [countdown, setCountdown] = useState<{ text: string; today: boolean } | null>(null)
+  // (WeChat keeps stacked pages alive). Past the event time we switch to the
+  // soft terminal state so late confirms remain possible.
+  const [countdown, setCountdown] = useState<{ today: boolean; started: boolean } | null>(null)
+  const [clockNow, setClockNow] = useState<number | undefined>(undefined)
   useEffect(() => {
     const eventDateTime = controller.roomState?.eventDateTime
     if (!eventDateTime) {
       setCountdown(null)
+      setClockNow(undefined)
       return
     }
     if (!controller.pageVisible) return
     const update = () => {
       const diff = new Date(eventDateTime).getTime() - Date.now()
+      setClockNow(Date.now())
       if (diff <= 0) {
-        setCountdown({ text: '活动即将开始', today: true })
+        setCountdown({ today: true, started: true })
         return
       }
-      const minutes = Math.floor(diff / 60_000)
-      const hours = Math.floor(minutes / 60)
-      const days = Math.floor(hours / 24)
-      if (days > 0) {
-        setCountdown({ text: `还有 ${days} 天`, today: false })
-      } else if (hours > 0) {
-        setCountdown({ text: `今天见 · 还有 ${hours} 小时`, today: true })
-      } else if (minutes >= 1) {
-        setCountdown({ text: `今天见 · 还有 ${minutes} 分钟`, today: true })
-      } else {
-        setCountdown({ text: '还有不到 1 分钟', today: true })
-      }
+      const days = Math.floor(diff / 86_400_000)
+      setCountdown({ today: days === 0, started: false })
     }
     update()
     const id = setInterval(update, 60_000)
     return () => clearInterval(id)
   }, [controller.roomState?.eventDateTime, controller.pageVisible])
+
+  // Scene-wrap mount fade: kills the hard white flash between the loading
+  // screen and the rendered room. Static when reduced motion is enabled.
+  const [sceneMounted, setSceneMounted] = useState(false)
+  useEffect(() => {
+    if (controller.reducedMotion) {
+      setSceneMounted(true)
+      return
+    }
+    const id = setTimeout(() => setSceneMounted(true), 50)
+    return () => clearTimeout(id)
+  }, [controller.reducedMotion])
 
   // First-visit hint: teaches the door-queue / held-seat metaphor once, then
   // never again (session-less storage flag).
@@ -163,27 +160,44 @@ export default function GatheringRoomPage() {
 
   return (
     <View className='gathering-room'>
-      <View className='gathering-room__header'>
-        <View className='gathering-room__header-subtitle'>
-          {/* Sibling Texts, not nested — Taro flattens nested Text children
-              and the counts would merge into one garbled number. No keyed
-              remounts either: animation-name parity restarts the roll. */}
-          {countdown ? (
-            <Text className={countdown.today ? 'gathering-room__header-today' : undefined}>
-              {countdown.text} ·{'\u00A0'}
+      <View className='gathering-room__pill'>
+        {countdown?.started ? (
+          <Text className='gathering-room__pill-started'>现场见 · 活动进行中</Text>
+        ) : (
+          <>
+            {countdown?.today ? (
+              <Text className='gathering-room__pill-today'>今天见 ·{'\u00A0'}</Text>
+            ) : null}
+            <SegmentedCountdownClock
+              target={roomState?.eventDateTime ?? null}
+              enabled={!!countdown && !countdown.started}
+              clockId='gathering-room-clock'
+              externalNow={clockNow}
+              showMinutes={false}
+              showSeconds={false}
+              showProgress={false}
+            />
+            <Text className='gathering-room__pill-divider'>·</Text>
+            <Text>已到{'\u00A0'}</Text>
+            <Text className={`gathering-room__header-count ${presentRollClass}`}>{presentCount}</Text>
+            <Text>/{total}</Text>
+            <Text className='gathering-room__pill-divider'>·</Text>
+            <Text>已确认{'\u00A0'}</Text>
+            <Text className={`gathering-room__header-count ${confirmedRollClass}`}>
+              {roomState?.confirmedCount ?? 0}
             </Text>
-          ) : null}
-          <Text>已到{'\u00A0'}</Text>
-          <Text className={`gathering-room__header-count ${presentRollClass}`}>{presentCount}</Text>
-          <Text>/{total} 人 · 已确认{'\u00A0'}</Text>
-          <Text className={`gathering-room__header-count ${confirmedRollClass}`}>
-            {roomState?.confirmedCount ?? 0}
-          </Text>
-          <Text>/{total}</Text>
-        </View>
+            <Text>/{total}</Text>
+          </>
+        )}
       </View>
 
-      <View className='gathering-room__scene-wrap'>
+      <View
+        className='gathering-room__scene-wrap'
+        style={{
+          opacity: sceneMounted ? 1 : 0,
+          transition: controller.reducedMotion ? undefined : 'opacity 240ms ease-out',
+        }}
+      >
         {memberProfiles.length === 0 ? (
           <View className='gathering-room__scene-empty' role='status'>
             <XiaoyueEmptyState
@@ -224,76 +238,50 @@ export default function GatheringRoomPage() {
         >
           {ownConfirmed ? `座位已锁定 · ${formatMeetDayLabel(roomState?.eventDateTime)}` : isSubmitting || confirmPending ? '确认中…' : '确认出席 · 锁定座位'}
         </Button>
+        {blindBoxEventId ? (
+          <Text
+            className='gathering-room__detail-link'
+            onClick={() => {
+              haptics('light')
+              Taro.navigateTo({
+                url: `/pages/event-detail/index?id=${encodeURIComponent(blindBoxEventId)}`,
+              })
+            }}
+          >
+            看看活动详情
+          </Text>
+        ) : null}
       </View>
 
       {selectedMember ? (
-        <View className='gathering-room__sheet-mask' onClick={controller.closeSheet}>
-          <View
-            className='gathering-room__sheet'
-            onClick={(event) => event.stopPropagation()}
-          >
-            <View className='gathering-room__sheet-grabber' aria-hidden='true' />
-            <View className='gathering-room__sheet-header'>
-              <PixelAvatarComposite
-                archetypeId={selectedMember.archetype ?? 'corgi'}
-                outfit={selectedMember.outfit ?? EMPTY_OUTFIT}
-                itemsById={selectedMemberItems}
-                variant='full'
-                className='gathering-room__sheet-avatar'
-              />
-              <View className='gathering-room__sheet-identity'>
-                <Text className='gathering-room__sheet-name'>
-                  {selectedMember.displayName || '队友'}
-                </Text>
-                {selectedMember.archetype ? (
-                  <Text className='gathering-room__sheet-archetype'>
-                    {ARCHETYPE_BY_ID[selectedMember.archetype]?.nameCn || selectedMember.archetype}
-                  </Text>
-                ) : null}
-                {selectedMember.ageVisible && selectedMember.ageLabel ? (
-                  <Text className='gathering-room__sheet-meta'>{selectedMember.ageLabel}</Text>
-                ) : null}
-                {selectedMember.industryVisible && selectedMember.industryNicheLabel ? (
-                  <Text className='gathering-room__sheet-meta'>{selectedMember.industryNicheLabel}</Text>
-                ) : null}
-              </View>
-            </View>
-
-            {(selectedMember.topInterests ?? []).length > 0 ? (
-              <View className='gathering-room__sheet-tags'>
-                {(selectedMember.topInterests ?? []).slice(0, 3).map((interest) => (
-                  <Text key={interest} className='gathering-room__sheet-tag'>
-                    {interest}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-
-            {selectedMember.userId !== controller.currentUserId && presentUserIds.has(selectedMember.userId) ? (
-              <View className='gathering-room__sheet-poke'>
-                <Text className='gathering-room__sheet-poke-title'>打个招呼</Text>
-                <View className='gathering-room__sheet-poke-row'>
+        <TablemateDetailSheet
+          visible={!!selectedMember}
+          member={selectedMember as PoolGroupMemberSummary}
+          isCurrentUser={selectedMember.userId === currentUserId}
+          reduceMotion={controller.reducedMotion}
+          onClose={controller.closeSheet}
+          actionSlot={
+            selectedMember.userId !== currentUserId && presentUserIds.has(selectedMember.userId) ? (
+              <View className='gathering-room__poke'>
+                <Text className='gathering-room__poke-title'>打个招呼</Text>
+                <View className='gathering-room__poke-row'>
                   {ROOM_POKE_EMOJIS.map((emoji) => (
                     <View
                       key={emoji}
-                      className='gathering-room__sheet-poke-btn'
-                      hoverClass='gathering-room__sheet-poke-btn--pressed'
+                      className='gathering-room__poke-btn'
+                      hoverClass='gathering-room__poke-btn--pressed'
                       onClick={() => controller.handlePoke(selectedMember.userId, emoji)}
                     >
-                      <Text className='gathering-room__sheet-poke-btn-text'>
+                      <Text className='gathering-room__poke-btn-text'>
                         {POKE_CHOICE_LABELS[emoji]}
                       </Text>
                     </View>
                   ))}
                 </View>
               </View>
-            ) : null}
-
-            <Button variant='secondary' onClick={controller.closeSheet}>
-              先这样
-            </Button>
-          </View>
-        </View>
+            ) : undefined
+          }
+        />
       ) : null}
     </View>
   )

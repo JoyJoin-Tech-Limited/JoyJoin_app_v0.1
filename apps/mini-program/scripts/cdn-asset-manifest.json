@@ -2061,6 +2061,10 @@
     {
       "localPath": "assets/gathering-room/room-composite-v1.webp",
       "cdnPath": "assets/gathering-room/room-composite-v1.webp"
+    },
+    {
+      "localPath": "assets/gathering-room/room-composite-v2.webp",
+      "cdnPath": "assets/gathering-room/room-composite-v2.webp"
     }
   ],
   "pendingAssets": [

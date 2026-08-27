@@ -9,28 +9,69 @@
 // both must be @use'd here for the same subpackage style-splitting reason.
 @use '../../components/mascot/XiaoyueEmptyState';
 @use '../../components/mascot/ArchetypeHead';
+// TablemateDetailSheet and SegmentedCountdownClock are rendered by this page;
+// their styles are owned by consuming pages via @use (subpackage style-splitting rule).
+@use '../../components/TablemateDetailSheet';
+@use '../../components/ui/SegmentedCountdownClock';
 
 .gathering-room {
   @include no-scroll-page-shell;
   @include viewport-min-height;
   background: $color-bg-warm-to;
 
-  &__header {
-    flex-shrink: 0;
+  &__pill {
+    position: absolute;
+    top: calc(env(safe-area-inset-top) + 24rpx);
+    left: 50%;
+    z-index: 10;
+    transform: translateX(-50%);
     display: flex;
-    flex-direction: column;
     align-items: center;
     gap: $spacing-xs;
-    padding: $spacing-md $container-padding $spacing-sm;
-  }
-
-  &__header-subtitle {
-    display: flex;
-    flex-direction: row;
-    align-items: baseline;
-    justify-content: center;
+    max-width: calc(100vw - 48rpx);
+    padding: $spacing-xs $spacing-md;
+    border-radius: 999rpx;
+    background: rgba($color-surface, 0.88);
+    border: 2rpx solid rgba($color-border, 0.5);
+    box-shadow: 0 8rpx 24rpx rgba($color-text-primary, 0.08);
+    backdrop-filter: blur(4rpx);
     font-size: $font-size-sm;
     color: $color-text-secondary;
+    white-space: nowrap;
+
+    // Pill children must never shrink-wrap per character — one row or bust.
+    > * {
+      flex-shrink: 0;
+    }
+
+    // The shared clock leaf ships card-rail layout (column, right-aligned,
+    // max-width 48%) — inside the pill it becomes an inline readout.
+    .segmented-countdown-clock {
+      flex-direction: row;
+      align-items: center;
+      max-width: none;
+      gap: 4rpx;
+    }
+
+    .segmented-countdown-clock__digits {
+      align-items: baseline;
+      justify-content: flex-start;
+    }
+  }
+
+  &__pill-today {
+    color: $flow-accent-human;
+    font-weight: 600;
+  }
+
+  &__pill-started {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  &__pill-divider {
+    margin: 0 4rpx;
+    color: $color-text-tertiary;
   }
 
   &__scene-wrap {
@@ -72,17 +113,13 @@
     text-align: center;
   }
 
-  // Event-day countdown reads warmer (「今天见 · 还有 N 小时」+ coral accent).
-  &__header-today {
-    color: $flow-accent-human;
-    font-weight: 600;
-  }
-
   // Attendance/confirmed digits roll up briefly when the counts change. Two
   // identical keyframes — swapping animation-name restarts the animation
   // without remounting the Text (keyed remounts leak stale nodes on H5).
   &__header-count {
     display: inline-block;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
     animation: gathering-room-count-roll-a 240ms ease-out both;
 
     &--roll-0 {
@@ -106,6 +143,18 @@
     width: 100%;
   }
 
+  &__detail-link {
+    display: block;
+    margin-top: $spacing-sm;
+    text-align: center;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+
+    &:active {
+      color: $color-primary;
+    }
+  }
+
   // Full-viewport status surfaces (flag-off / error) — centering safety.
   &__status {
     @include viewport-min-height;
@@ -117,102 +166,24 @@
     background: $color-bg-clean;
   }
 
-  // ── Tablemate card bottom sheet ────────────────────────────────────────
-  &__sheet-mask {
-    position: fixed;
-    inset: 0;
-    z-index: 60;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    background: rgba($color-text-primary, 0.42);
-  }
-
-  &__sheet {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-md;
-    padding: $spacing-lg $container-padding calc(#{$spacing-xl} + env(safe-area-inset-bottom));
-    background: $color-surface;
-    border-radius: 32rpx 32rpx 0 0;
-    animation: gathering-room-sheet-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  // Grabber handle — reads as pull-to-dismiss without a word of instruction.
-  &__sheet-grabber {
-    align-self: center;
-    width: 72rpx;
-    height: 8rpx;
-    border-radius: $radius-pill;
-    background: rgba($color-text-primary, 0.14);
-  }
-
-  &__sheet-header {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-  }
-
-  &__sheet-avatar {
-    flex-shrink: 0;
-    width: 128rpx;
-    height: 192rpx;
-  }
-
-  &__sheet-identity {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-2xs;
-    min-width: 0;
-  }
-
-  &__sheet-name {
-    font-size: $font-size-lg;
-    font-weight: 600;
-    color: $color-text-primary;
-  }
-
-  &__sheet-archetype {
-    font-size: $font-size-sm;
-    color: $color-primary;
-  }
-
-  &__sheet-meta {
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
-  }
-
-  &__sheet-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-xs;
-  }
-
-  &__sheet-tag {
-    padding: 6rpx 20rpx;
-    border-radius: $radius-pill;
-    background: $color-primary-light;
-    font-size: $font-size-xs;
-    color: $color-primary-dark;
-  }
-
-  &__sheet-poke {
+  // ── Poke action slot (inside TablemateDetailSheet) ──────────────────────
+  &__poke {
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
   }
 
-  &__sheet-poke-title {
+  &__poke-title {
     font-size: $font-size-sm;
     color: $color-text-secondary;
   }
 
-  &__sheet-poke-row {
+  &__poke-row {
     display: flex;
     gap: $spacing-sm;
   }
 
-  &__sheet-poke-btn {
+  &__poke-btn {
     flex: 1;
     display: flex;
     align-items: center;
@@ -226,15 +197,10 @@
     }
   }
 
-  &__sheet-poke-btn-text {
+  &__poke-btn-text {
     font-size: $font-size-base;
     color: $color-primary-dark;
   }
-}
-
-@keyframes gathering-room-sheet-in {
-  0% { transform: translateY(100%); opacity: 0.6; }
-  100% { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes gathering-room-count-roll-a {

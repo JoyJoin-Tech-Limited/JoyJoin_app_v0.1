@@ -1,6 +1,6 @@
 import { Image, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { resolveArchetype } from '@shared/personality/archetypeNames'
 import { getArchetypeHSL, formatHSLAsRGBA, getContrastSafeArchetypeColor } from '@shared/archetypeColors'
 import type { PoolGroupMemberSummary } from '@shared/api'
@@ -28,6 +28,9 @@ export interface TablemateDetailSheetProps {
   isCurrentUser?: boolean
   reduceMotion?: boolean
   onClose: () => void
+  /** Optional action slot rendered between the interest-tags section and
+   *  the primary CTA (e.g., gathering-room poke buttons). */
+  actionSlot?: ReactNode
 }
 
 const MAX_CONNECTION_POINTS = 3
@@ -49,6 +52,7 @@ function TablemateDetailSheet({
   isCurrentUser = false,
   reduceMotion = false,
   onClose,
+  actionSlot,
 }: TablemateDetailSheetProps) {
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [imageError, setImageError] = useState(false)
@@ -296,6 +300,10 @@ function TablemateDetailSheet({
                 悦仔还没读到你们的交集，这正是现场聊天的理由。
               </Text>
             </View>
+          ) : null}
+
+          {actionSlot ? (
+            <View className='tablemate-sheet__action-slot'>{actionSlot}</View>
           ) : null}
 
           <View className='tablemate-sheet__cta'>

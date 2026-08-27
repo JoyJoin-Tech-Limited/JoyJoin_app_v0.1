@@ -425,6 +425,7 @@ export function useGatheringRoomController({ groupId }: UseGatheringRoomControll
     isLoading,
     error,
     roomState,
+    blindBoxEventId: roomState?.blindBoxEventId ?? null,
     memberProfiles,
     presenceByUserId,
     currentUserId,

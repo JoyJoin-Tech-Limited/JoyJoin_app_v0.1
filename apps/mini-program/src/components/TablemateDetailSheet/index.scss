@@ -291,6 +291,10 @@
   &__cta {
     margin-top: $spacing-lg;
   }
+
+  &__action-slot {
+    margin-top: $spacing-md;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
