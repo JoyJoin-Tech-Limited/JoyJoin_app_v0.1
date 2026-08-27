@@ -46,8 +46,13 @@ export async function notifyAutoRefundSummary(
   poolId: string,
   summary: AutoRefundSummary,
 ): Promise<void> {
+  const reasonLabels: Record<string, string> = {
+    pool_cancelled: "活动取消",
+    unmatched: "场次未成行（未匹配）",
+    collapsed: "同桌人数不足，场次顺延",
+  };
   const lines: string[] = [
-    `**原因：** ${summary.reason === "pool_cancelled" ? "活动取消" : "场次未成行（未匹配）"}`,
+    `**原因：** ${reasonLabels[summary.reason] ?? summary.reason}`,
     `**已退报名费：** ${summary.refundedPayments} 笔`,
     `**已退活动次数：** ${summary.refundedCredits} 笔`,
     `**跳过：** ${summary.skippedRefunds} 笔`,
@@ -74,6 +79,37 @@ export async function notifyAutoRefundSummary(
   } else {
     await notifyOpsMarkdown("💸 自动退款完成", lines);
   }
+}
+
+export interface PostRevealCancelPayload {
+  poolId: string;
+  poolTitle: string;
+  /** Post-decrement member count of the affected group (null when the
+   *  cancelled registration had no assigned group). */
+  remainingCount: number | null;
+  /** True when the cancel dropped the group below the minimum size and the
+   *  stayer collapse-refund path was triggered. */
+  collapsed: boolean;
+}
+
+/**
+ * Phase 0 安心补位 (2026-08-27, sprint post-reveal-phase0 AC-8): ops alert for
+ * a post-reveal cancel (揭示后取消（不退款）). Follows the notifyVenueUnassigned
+ * pattern — invoked by the cancel flow AFTER the transaction commits; callers
+ * wrap in try/catch so alert failure never affects the cancel.
+ */
+export async function notifyPostRevealCancel(payload: PostRevealCancelPayload): Promise<void> {
+  const lines: string[] = [
+    `**活动池：** ${payload.poolTitle || payload.poolId}`,
+    `**poolId：** ${payload.poolId}`,
+    `**剩余人数：** ${payload.remainingCount === null ? "未知（未排桌报名）" : `${payload.remainingCount} 人`}`,
+    `**桌状态：** ${payload.collapsed ? "⚠️ 人数不足，已顺延并自动退款" : "正常（≥4 人）"}`,
+    "**退款：** 无（揭示后取消不退款）",
+    "",
+    `[查看活动详情 →](${buildAdminUrl(`/admin/pools/${payload.poolId}`)})`,
+  ];
+
+  await notifyOpsMarkdown("🪑 揭示后成员取消（不退款）", lines);
 }
 
 export interface LowRegistrationPayload {

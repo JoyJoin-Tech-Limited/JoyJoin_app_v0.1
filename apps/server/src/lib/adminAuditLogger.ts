@@ -52,6 +52,10 @@ export const ADMIN_AUDIT_ACTIONS = [
   'ATTENDANCE_OVERRIDE',
   // Financial
   'PAYMENT_REFUND_INITIATED',
+  // Post-reveal cancel forfeiture (Phase 0 安心补位, 2026-08-27) — user
+  // self-service cancel after seat reveal; fee forfeited, no refund issued.
+  // Context carries reason 「揭示后取消（不退款）」.
+  'POST_REVEAL_CANCEL_NO_REFUND',
   // Venue management
   'VENUE_CREATED',
   'VENUE_UPDATED',

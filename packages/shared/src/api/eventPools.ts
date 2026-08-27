@@ -137,6 +137,16 @@ export interface PoolRegistrationSummary {
   finalDateTime?: string | null
   invitationRole?: PoolInvitationRole | null
   relatedUserName?: string | null
+  /**
+   * Server-computed cancel policy (post-reveal Phase 0, sprint contract AC-9).
+   * Derived from the two refund flags × this registration's matchStatus — the
+   * client never reads feature flags directly. Server encoding (WS-B): the
+   * field is present ONLY when either Phase 0 flag is on and the pool is not
+   * a test pool; flags-off responses omit it so legacy clients are
+   * unaffected. Absent on legacy servers: clients MUST treat absence as
+   * 'refundable' (legacy pre-reveal cancel UX).
+   */
+  cancelPolicy?: 'refundable' | 'non_refundable' | null
 }
 
 export interface PoolGroupMemberSummary {

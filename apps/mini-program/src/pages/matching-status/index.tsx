@@ -53,6 +53,9 @@ export default function MatchingStatusPage() {
     groupAnalysis,
     hasRevealed,
     historicalMatches,
+    isCollapsedRegistration,
+    vacatedSeatCount,
+    groupDisplayCount,
     handleBrowsePools: _handleBrowsePools,
     handleCancel: _handleCancel,
     handleContinueFromMembers,
@@ -305,7 +308,7 @@ export default function MatchingStatusPage() {
           <ArchetypeHead archetype={viewerArchetype} size={44} className='matching-status__header-icon' variant='head' />
         ) : null}
         <Text className='matching-status__status-title'>
-          {getStatusLabel(matchStatus)}
+          {isCollapsedRegistration ? '这次没能成行' : getStatusLabel(matchStatus)}
         </Text>
         {matchStatus === 'pending' ? (
           <View className='matching-status__dots'>
@@ -315,13 +318,33 @@ export default function MatchingStatusPage() {
           </View>
         ) : null}
         <Text className='matching-status__status-hint'>
-          {matchStatus === 'pending'
-            ? `${countdown.label}，等待更多人加入…`
-            : venueUnlocked
-              ? '桌友和活动信息都已逐步解锁，继续查看今晚的安排。'
-              : '桌友已经锁定，活动详情会在下一页继续逐步揭晓。'}
+          {isCollapsedRegistration
+            ? '报名费已原路退回，去发现页看看下一场吧。'
+            : matchStatus === 'pending'
+              ? `${countdown.label}，等待更多人加入…`
+              : venueUnlocked
+                ? '桌友和活动信息都已逐步解锁，继续查看今晚的安排。'
+                : '桌友已经锁定，活动详情会在下一页继续逐步揭晓。'}
         </Text>
       </View>
+
+      {isCollapsedRegistration ? (
+        <Card className='matching-status__notice-card matching-status__notice-card--collapse'>
+          <Text className='matching-status__notice-title'>这次没能成行</Text>
+          <Text className='matching-status__notice-text'>
+            报名费已退回。已为你优先保留下一场的排桌资格
+          </Text>
+          <View className='matching-status__notice-actions'>
+            <Button
+              variant='secondary'
+              className='matching-status__notice-btn'
+              onClick={handleBrowsePools}
+            >
+              去看看别的活动
+            </Button>
+          </View>
+        </Card>
+      ) : null}
 
         {isFullPoolBannerVisible ? (
           <Card className='matching-status__full-pool-banner'>
@@ -407,12 +430,21 @@ export default function MatchingStatusPage() {
         </Card>
       ) : null}
 
+      {matchStatus === 'matched' && vacatedSeatCount > 0 ? (
+        <Card className='matching-status__notice-card'>
+          <Text className='matching-status__notice-text'>
+            {`有位伙伴临时有事来不了，今晚是温馨的 ${groupDisplayCount} 人局`}
+          </Text>
+        </Card>
+      ) : null}
+
       <MatchingStatusDetailSections
         showMatchedDetails={matchStatus === 'matched'}
         showChemistryCard={Boolean(
           matchStatus === 'matched' && (viewerSpotlight || groupAnalysis?.overallChemistry || leadIceBreaker || unifiedReveal),
         )}
         effectiveGroupDetails={effectiveGroupDetails}
+        vacatedSeatCount={vacatedSeatCount}
         viewerPairSummaryByMemberId={viewerPairSummaryByMemberId}
         viewerSpotlight={viewerSpotlight}
         chemistryTokens={chemistryTokens}
@@ -452,6 +484,20 @@ export default function MatchingStatusPage() {
               mode='aspectFit'
               src={getXiaoyueExpressionAsset('optOutReassure')}
             />
+            <Button
+              variant='secondary'
+              className='matching-status__cancel-btn'
+              onClick={handleCancel}
+              disabled={isCancelling}
+              loading={isCancelling}
+            >
+              {isCancelling ? '取消中…' : '取消报名'}
+            </Button>
+          </View>
+        ) : null}
+
+        {matchStatus === 'matched' ? (
+          <View className='matching-status__cancel-row matching-status__cancel-row--matched'>
             <Button
               variant='secondary'
               className='matching-status__cancel-btn'

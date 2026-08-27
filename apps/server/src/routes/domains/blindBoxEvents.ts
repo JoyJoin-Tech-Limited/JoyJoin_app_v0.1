@@ -12,6 +12,7 @@ import { logger } from "../../lib/logger";
 import { validateContentSafeAsync, contentViolationResponse } from "../../lib/contentSafety";
 import { recordViolation } from "../../abuseDetection";
 import { resolveEffectivePreferenceDNA } from "../../lib/matchCompass";
+import { cancelPoolRegistrationWithPolicy } from "../../lib/poolRegistrationCancel";
 
 const patchPreferencesSchema = z.object({
   budget: z.array(z.string()).optional(),
@@ -129,60 +130,61 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         logger.warn("[BlindBoxCancel] legacy cancelBlindBoxEvent failed or not applicable:", { error: legacyErr instanceof Error ? legacyErr.message : String(legacyErr) });
       }
 
-      // 2) 新逻辑优先：把 eventId 当作报名记录 id（event_pool_registrations.id）来删除
+      // 2) 新逻辑优先：把 eventId 当作报名记录 id（event_pool_registrations.id）来取消
       // 这样 Activities 页如果传 registrationId 也可以正常取消
-      let deletedRegistrations = await db
-        .delete(eventPoolRegistrations)
+      // Phase 0 安心补位 (2026-08-27, sprint post-reveal-phase0 AC-12): parity
+      // with DELETE /api/pool-registrations/:id via the same orchestrator —
+      // identical flag gating, refund branch, group hygiene, test-pool skip.
+      const registrationsById = await db
+        .select({ id: eventPoolRegistrations.id })
+        .from(eventPoolRegistrations)
         .where(
           and(
             eq(eventPoolRegistrations.id, eventId),
             eq(eventPoolRegistrations.userId, userId)
           )
         )
-        .returning();
+        .limit(1);
 
-      if (deletedRegistrations.length > 0) {
+      if (registrationsById.length > 0) {
+        const result = await cancelPoolRegistrationWithPolicy({
+          registrationId: eventId,
+          userId,
+          logPrefix: "[BlindBoxCancel]",
+        });
+
+        if (!result.ok) {
+          return res.status(result.status).json({
+            message: result.message,
+            ...(result.code ? { code: result.code } : {}),
+          });
+        }
+
         logger.info("[BlindBoxCancel] cancelled by registrationId:", {
           userId,
           registrationId: eventId,
-          count: deletedRegistrations.length,
+          branch: result.branch,
         });
-        logger.info("[BlindBoxCancel] response (by registrationId):", {
-          userId,
-          cancelledIds: (deletedRegistrations as any[]).map((r: any) => r.id),
-        });
-
-        // 对每个被删除的报名，把对应池子的 totalRegistrations - 1
-        for (const reg of deletedRegistrations) {
-          if (reg.poolId) {
-            await db
-              .update(eventPools)
-              .set({
-                totalRegistrations: sql`${eventPools.totalRegistrations} - 1`,
-                updatedAt: new Date(),
-              })
-              .where(eq(eventPools.id, reg.poolId));
-          }
-        }
 
         return res.json({
           ok: true,
-          cancelledRegistrationIds: deletedRegistrations.map((r: any) => r.id),
+          cancelledRegistrationIds: [result.registrationId],
+          policy: result.branch,
         });
       }
 
       // 3) 兼容旧调用方式：把 eventId 当作 poolId，用于删除当前用户在该池子的报名记录
-      deletedRegistrations = await db
-        .delete(eventPoolRegistrations)
+      const poolRegistrations = await db
+        .select({ id: eventPoolRegistrations.id })
+        .from(eventPoolRegistrations)
         .where(
           and(
             eq(eventPoolRegistrations.poolId, eventId),
             eq(eventPoolRegistrations.userId, userId)
           )
-        )
-        .returning();
+        );
 
-      if (deletedRegistrations.length === 0) {
+      if (poolRegistrations.length === 0) {
         logger.warn("[BlindBoxCancel] no registration found to cancel:", {
           userId,
           eventId,
@@ -192,32 +194,32 @@ export function registerBlindBoxEventRoutes(app: Express): void {
         });
       }
 
+      const cancelledRegistrationIds: string[] = [];
+      for (const reg of poolRegistrations) {
+        const result = await cancelPoolRegistrationWithPolicy({
+          registrationId: reg.id,
+          userId,
+          logPrefix: "[BlindBoxCancel]",
+        });
+
+        if (!result.ok) {
+          return res.status(result.status).json({
+            message: result.message,
+            ...(result.code ? { code: result.code } : {}),
+          });
+        }
+        cancelledRegistrationIds.push(result.registrationId);
+      }
+
       logger.info("[BlindBoxCancel] cancelled by poolId:", {
         userId,
         poolId: eventId,
-        count: deletedRegistrations.length,
+        count: cancelledRegistrationIds.length,
       });
-      logger.info("[BlindBoxCancel] response (by poolId):", {
-        userId,
-        cancelledIds: (deletedRegistrations as any[]).map((r: any) => r.id),
-      });
-
-      // 同样更新对应池子的 totalRegistrations
-      for (const reg of deletedRegistrations) {
-        if (reg.poolId) {
-          await db
-            .update(eventPools)
-            .set({
-              totalRegistrations: sql`${eventPools.totalRegistrations} - 1`,
-              updatedAt: new Date(),
-            })
-            .where(eq(eventPools.id, reg.poolId));
-        }
-      }
 
       return res.json({
         ok: true,
-        cancelledRegistrationIds: (deletedRegistrations as any[]).map((r: any) => r.id),
+        cancelledRegistrationIds,
       });
     } catch (error) {
       logger.error("[BlindBoxCancel] Error canceling blind box event / pool registration:", { error: error instanceof Error ? error.message : String(error) });

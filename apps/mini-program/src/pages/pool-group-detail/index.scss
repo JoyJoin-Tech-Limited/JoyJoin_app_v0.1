@@ -7,6 +7,10 @@
 // Aliased: two `@use`d files both named index.scss would otherwise collide
 // on the default "index" namespace and fail the sass build.
 @use '../../components/TablemateDetailSheet/index.scss' as detail-sheet;
+// VacatedSeatCard (排桌中… placeholder, post-reveal Phase 0) — the component
+// deliberately has no TSX-side SCSS import; its rules are co-compiled here so
+// they reach this subpackage page WXSS (same style-splitting trap).
+@use '../../components/TablemateCard/vacated-seat';
 
 .pool-group-detail {
   min-height: 100vh;
@@ -143,6 +147,35 @@
   &__card {
     margin-bottom: $spacing-md;
     padding: $spacing-lg;
+  }
+
+  // In-page notice cards (post-reveal Phase 0 安心补位): seat-vacated /
+  // shrink / collapse surfaces reusing the matching-status notice pattern.
+  &__notice-card {
+    margin-bottom: $spacing-md;
+    padding: $spacing-md $spacing-lg;
+    background: rgba($color-surface, 0.9);
+    border: 1rpx solid rgba($color-primary, 0.12);
+  }
+
+  &__notice-card--collapse {
+    border: 1rpx solid rgba($color-secondary, 0.28);
+  }
+
+  &__notice-title {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    line-height: 1.4;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__notice-text {
+    display: block;
+    font-size: $font-size-sm;
+    line-height: 1.7;
+    color: $color-text-secondary;
   }
 
   &__card-title {

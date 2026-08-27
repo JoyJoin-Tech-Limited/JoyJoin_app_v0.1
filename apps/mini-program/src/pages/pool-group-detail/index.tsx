@@ -3,10 +3,12 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import {
+  getMyPoolRegistrations,
   getPoolGroupAnalysis,
   getPoolGroupDetails,
   type PoolGroupDetailsResponse,
   type PoolGroupMemberSummary,
+  type PoolRegistrationSummary,
 } from '@shared/api'
 import type { PairExplanation } from '@shared/types/groupAnalysis'
 import { resolveArchetype } from '@shared/personality/archetypeNames'
@@ -19,6 +21,7 @@ import Card from '../../components/ui/Card'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import MissingArchetypePlaceholder from '../../components/mascot/MissingArchetypePlaceholder'
 import TablemateCard from '../../components/TablemateCard'
+import VacatedSeatCard from '../../components/TablemateCard/VacatedSeatCard'
 import TablemateDetailSheet from '../../components/TablemateDetailSheet'
 import Button from '../../components/ui/Button'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
@@ -31,6 +34,12 @@ import AIGCLabel from '../../components/ai-content/AIGCLabel'
 import AIContentReportButton from '../../components/ai-content/AIContentReportButton'
 import { useAIGCLabelsEnabled } from '../../hooks/useAIGCLabelsEnabled'
 import { openGatheringRoom } from '../../lib/navigation/matchingNavigation'
+import { REGISTRATIONS_QUERY_KEY } from '../../lib/prefetchEngine'
+import {
+  readGroupSeatBaseline,
+  resolveGroupSeatVacancy,
+  writeGroupSeatBaseline,
+} from '../../lib/matching/groupSeatVacancy'
 import { STALE_TIME_GROUP_ANALYSIS_MS, TOAST_SHORT_MS, TOAST_MEDIUM_MS, MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/utils/uiConstants'
 import { formatDateTime } from '../../lib/matching/groupDisplay'
 import {
@@ -148,6 +157,64 @@ export default function PoolGroupDetailPage() {
     [members, sheetMemberId],
   )
 
+  // ── Post-reveal Phase 0 安心补位: vacated-seat + collapse signals ──────
+  // Registrations ride the SHARED REGISTRATIONS_QUERY_KEY cache (30s
+  // staleTime, owned by prefetchEngine) — no new polling; this page simply
+  // reads the same server state matching-status already fetches.
+  const { data: allRegistrations } = useQuery<PoolRegistrationSummary[]>({
+    queryKey: [...REGISTRATIONS_QUERY_KEY],
+    queryFn: () => getMyPoolRegistrations(apiRequest),
+    enabled: !!groupId && !authLoading,
+    staleTime: 30_000,
+  })
+
+  // Collapse: the viewer's registration for THIS group was flipped to
+  // unmatched after the group dropped below 4 (post-reveal cancel).
+  const isCollapsedGroup = useMemo(
+    () =>
+      Boolean(
+        allRegistrations?.some(
+          (registration) =>
+            registration.assignedGroupId === groupId && registration.matchStatus === 'unmatched',
+        ),
+      ),
+    [allRegistrations, groupId],
+  )
+
+  // Vacated seats: remembered per-group seat baseline (storage) vs. the
+  // server-advertised memberCount. Active groups only — collapsed/completed/
+  // cancelled groups render no placeholders.
+  const groupStatus = poolGroup?.group.status ?? null
+  const isGroupActive =
+    Boolean(poolGroup) && !isCollapsedGroup && groupStatus !== 'completed' && groupStatus !== 'cancelled'
+  const advertisedCount =
+    poolGroup?.group.memberCount && poolGroup.group.memberCount > 0
+      ? poolGroup.group.memberCount
+      : members.length
+  const [seatBaseline, setSeatBaseline] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!isGroupActive || !groupId || advertisedCount <= 0) return
+    const remembered = readGroupSeatBaseline(groupId)
+    const next = Math.max(remembered ?? 0, advertisedCount)
+    setSeatBaseline(next)
+    if (next !== remembered) {
+      writeGroupSeatBaseline(groupId, next)
+    }
+  }, [isGroupActive, groupId, advertisedCount])
+
+  const groupSeatVacancy = useMemo(
+    () =>
+      resolveGroupSeatVacancy({
+        baseline: seatBaseline,
+        advertisedCount,
+        membersLength: members.length,
+        isMatched: isGroupActive,
+      }),
+    [seatBaseline, advertisedCount, members.length, isGroupActive],
+  )
+  const vacatedSeatCount = groupSeatVacancy.vacatedSeatCount
+
   // Measure the deck's real overflow once members render — the hint chip and
   // progress dots should only exist when there is somewhere to scroll to.
   useEffect(() => {
@@ -167,7 +234,7 @@ export default function PoolGroupDetailPage() {
     })
   }, [members.length])
 
-  const deckMayOverflow = deckOverflows ?? members.length > 2
+  const deckMayOverflow = deckOverflows ?? members.length + vacatedSeatCount > 2
   const clampedActiveDeckIndex = Math.min(activeDeckIndex, Math.max(0, members.length - 1))
 
   useEffect(() => {
@@ -409,6 +476,23 @@ export default function PoolGroupDetailPage() {
         </Card>
       ) : null}
 
+      {isCollapsedGroup ? (
+        <Card className='pool-group-detail__notice-card pool-group-detail__notice-card--collapse'>
+          <Text className='pool-group-detail__notice-title'>这次没能成行</Text>
+          <Text className='pool-group-detail__notice-text'>
+            报名费已退回。已为你优先保留下一场的排桌资格
+          </Text>
+        </Card>
+      ) : null}
+
+      {!isCollapsedGroup && vacatedSeatCount > 0 ? (
+        <Card className='pool-group-detail__notice-card'>
+          <Text className='pool-group-detail__notice-text'>
+            {`有位伙伴临时有事来不了，今晚是温馨的 ${groupSeatVacancy.displayCount} 人局`}
+          </Text>
+        </Card>
+      ) : null}
+
       <View className='pool-group-detail__deck-strip'>
         <Text className='pool-group-detail__deck-title'>先翻牌，再见面</Text>
         <ScrollView
@@ -431,6 +515,12 @@ export default function PoolGroupDetailPage() {
                 entranceDelayMs={shouldReduceMotion ? 0 : index * 120}
                 reduceMotion={shouldReduceMotion}
                 onTap={() => setSheetMemberId(member.userId)}
+              />
+            ))}
+            {Array.from({ length: vacatedSeatCount }).map((_, seatIndex) => (
+              <VacatedSeatCard
+                key={`vacated-seat-${seatIndex}`}
+                reduceMotion={shouldReduceMotion}
               />
             ))}
           </View>

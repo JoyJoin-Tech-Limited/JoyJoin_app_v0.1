@@ -20,9 +20,9 @@ export interface TermsSectionZh {
 }
 
 /** ISO-like date for internal reference; shown in UI as LEGAL_LAST_UPDATED_LABEL_ZH */
-export const LEGAL_DOCUMENT_VERSION = "2026-08-18";
+export const LEGAL_DOCUMENT_VERSION = "2026-08-27";
 
-export const LEGAL_LAST_UPDATED_LABEL_ZH = "2026年8月18日";
+export const LEGAL_LAST_UPDATED_LABEL_ZH = "2026年8月27日";
 
 export const JOYJOIN_COPYRIGHT_YEAR = "2026";
 
@@ -65,8 +65,8 @@ export const JOYJOIN_TERMS_SECTIONS_ZH: TermsSectionZh[] = [
     heading: "五、活动参与规则",
     paragraphs: [
       "报名时须如实填写个人信息。虚假信息将影响排桌质量，情节严重者将限制未来报名资格。",
-      "取消与退款：\n— 配池阶段取消（排桌尚未完成）：全额退款，活动次数自动返还，权益用户不受影响。\n— 排桌完成后取消：于活动开始24小时前取消，平台退还50%费用或保留本次参与机会；不足24小时取消，不予退款且正常扣除活动次数（如有）。\n— 平台因故取消活动：全额退款或恢复活动次数，不受上述时间限制。\n— 以上规则适用于单场局票购买、连局包及权益方案用户。",
-      "无故缺席：未在活动开始至少24小时前通过平台取消且未出席，记为缺席。缺席将降低个人排桌优先级评分：累计2次暂停报名资格30天，累计3次及以上长期降低排桌权重。缺席记录每6个月自动清零。「提前取消」指在活动开始至少24小时前通过平台完成取消操作。",
+      "取消与退款：\n— 排桌完成前取消（报名状态尚未变为已排桌）：全额退款，活动次数自动返还，权益用户不受影响。\n— 排桌完成后取消或未出席活动：不予退款，活动次数（如有）正常扣除。\n— 平台取消活动、场次未成行，或因成员退出导致整局顺延：全额退款或恢复活动次数，不受上述限制。\n— 「提前取消」指在排桌完成前通过平台完成取消操作。\n— 以上退款规则自2026年8月27日起生效；生效后按本规则执行的不予退款取消不作追溯退款。\n— 以上规则适用于单场局票购买、连局包及权益方案用户。",
+      "请珍惜同桌伙伴的时间，如无法出席请尽早取消。",
     ],
   },
   {

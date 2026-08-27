@@ -1,0 +1,73 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+// VacatedSeatCard (post-reveal Phase 0 安心补位) — neutral 「排桌中…」
+// placeholder for a vacated seat in the 桌友 card row/deck. Shares the
+// TablemateCard footprint (245rpx × 356rpx) so the carousel layout stays
+// stable when a member exits, and reuses the waiting-seat visual language
+// (unfilled seat core: surface fill + inset primary ring) from
+// pages/matching-status/styles/_waiting-card.scss. No identity content.
+//
+// Consumed by matching-status and pool-group-detail (both subpackages) —
+// each page SCSS `@use`s this file so the rules compile into the page WXSS.
+
+.vacated-seat-card {
+  flex: 0 0 auto;
+  width: 245rpx;
+  height: 356rpx;
+  border-radius: $card-radius;
+  border: 2rpx dashed rgba($color-primary, 0.24);
+  background: rgba($color-surface, 0.72);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  animation: vacated-seat-fade-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  &--reduce-motion {
+    animation: none;
+  }
+
+  &__core {
+    width: 84rpx;
+    height: 84rpx;
+    border-radius: 50%;
+    background: rgba($color-surface, 0.82);
+    box-shadow: inset 0 0 0 2rpx rgba($color-primary, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__mark {
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    color: rgba($color-primary, 0.5);
+  }
+
+  &__label {
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    color: $color-text-secondary;
+    letter-spacing: 1rpx;
+  }
+}
+
+@keyframes vacated-seat-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vacated-seat-card {
+    animation: none;
+  }
+}

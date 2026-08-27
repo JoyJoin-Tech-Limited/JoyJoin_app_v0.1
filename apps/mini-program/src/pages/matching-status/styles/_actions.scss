@@ -26,6 +26,12 @@
     width: 100%;
   }
 
+  // Matched-state (排桌完成) cancel affordance: no mascot fanfare above the
+  // destructive action — tight, subdued row (post-reveal Phase 0, AC-10).
+  &__cancel-row--matched {
+    gap: 0;
+  }
+
   &__cancel-mascot {
     width: 120rpx;
     height: 120rpx;

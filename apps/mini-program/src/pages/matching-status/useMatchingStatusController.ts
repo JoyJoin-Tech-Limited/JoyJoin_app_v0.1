@@ -44,6 +44,7 @@ import {
   type UnifiedRevealTokens,
 } from '@shared/features/matching-status'
 import { apiRequest } from '../../lib/api/api'
+import { bustRegistrationCaches } from '../../lib/api/registrationCacheBust'
 import { interactionLatency } from '../../lib/analytics/interactionLatency'
 import { useOptimisticMutation } from '../../hooks/useOptimisticMutation'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
@@ -70,6 +71,11 @@ import {
   COLOR_DANGER,
 } from '../../lib/utils/uiConstants'
 import { generateChemistryPayoff } from '../../lib/matching/chemistryPayoff'
+import {
+  readGroupSeatBaseline,
+  resolveGroupSeatVacancy,
+  writeGroupSeatBaseline,
+} from '../../lib/matching/groupSeatVacancy'
 
 const REGISTRATION_REFETCH_INTERVAL_MS = 30_000
 const POOL_GROUP_FILL_REFETCH_INTERVAL_MS = 20_000
@@ -474,6 +480,47 @@ export function useMatchingStatusController({
 
   const leadIceBreaker = groupAnalysis?.iceBreakers?.[0] ?? null
 
+  // ── Post-reveal Phase 0 安心补位: vacated-seat + collapse signals ──────
+  // Collapse: the viewer WAS assigned a group, then got flipped to unmatched
+  // (group dropped below 4 after a post-reveal cancel). Legacy Trigger B
+  // unmatched registrations never had an assignedGroupId — that's the
+  // discriminator, no flag reads on the client.
+  const isCollapsedRegistration =
+    matchStatus === 'unmatched' && Boolean(registration?.assignedGroupId)
+
+  // Vacated seats: remembered per-group seat baseline (storage) vs. the
+  // server-advertised memberCount. Baseline only tracks the monotonic max —
+  // Phase 0 has no backfill, so a vacated seat stays vacated.
+  const vacancyGroupId = effectiveGroupDetails?.group.id ?? ''
+  const vacancyMembersLength = effectiveGroupDetails?.members.length ?? 0
+  const vacancyAdvertisedCount =
+    effectiveGroupDetails?.group.memberCount && effectiveGroupDetails.group.memberCount > 0
+      ? effectiveGroupDetails.group.memberCount
+      : vacancyMembersLength
+  const isGroupMatched = matchStatus === 'matched' && Boolean(vacancyGroupId)
+  const [seatBaseline, setSeatBaseline] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!isGroupMatched || vacancyAdvertisedCount <= 0) return
+    const remembered = readGroupSeatBaseline(vacancyGroupId)
+    const next = Math.max(remembered ?? 0, vacancyAdvertisedCount)
+    setSeatBaseline(next)
+    if (next !== remembered) {
+      writeGroupSeatBaseline(vacancyGroupId, next)
+    }
+  }, [isGroupMatched, vacancyGroupId, vacancyAdvertisedCount])
+
+  const groupSeatVacancy = useMemo(
+    () =>
+      resolveGroupSeatVacancy({
+        baseline: seatBaseline,
+        advertisedCount: vacancyAdvertisedCount,
+        membersLength: vacancyMembersLength,
+        isMatched: isGroupMatched,
+      }),
+    [seatBaseline, vacancyAdvertisedCount, vacancyMembersLength, isGroupMatched],
+  )
+
   const handleRefreshWaitingState = useCallback(() => {
     setRefreshCountdown(DEFAULT_REFRESH_INTERVAL_SECONDS)
 
@@ -557,10 +604,20 @@ export function useMatchingStatusController({
     if (!registrationId || isCancelling) return
 
     try {
+      // Post-reveal Phase 0 (contract AC-10 / M3): dialog copy is driven by
+      // the server-computed per-registration cancelPolicy. Absent on legacy
+      // servers → refundable variant (legacy pre-reveal cancel behavior).
+      const isNonRefundable = registration?.cancelPolicy === 'non_refundable'
       const { confirm } = await Taro.showModal({
         title: '取消报名',
-        content: '确定要取消报名吗？取消后可以重新报名。',
-        confirmText: '确定取消',
+        content: isNonRefundable
+          ? '现在取消将不退还报名费。这桌的伙伴们会收到通知哦。'
+          : '取消后报名费将全额退回',
+        confirmText: '确认取消',
+        // 「再想想」 is the safe default exit; the destructive confirm carries
+        // the danger color (squad-unboxing handleSkip pattern). WeChat
+        // showModal exposes no focus API — the cancel button is the
+        // left-hand safe action by platform convention.
         cancelText: '再想想',
         confirmColor: DANGER_COLOR,
       })
@@ -570,13 +627,21 @@ export function useMatchingStatusController({
       logInfo('[MatchingStatus] Cancelling registration', { registrationId })
       await cancelPoolRegistration(apiRequest, registrationId)
 
-      Taro.showToast({ title: '已取消报名', icon: 'success', duration: TOAST_DEFAULT_MS })
+      // M3 success toast. icon 'none' — the 11-char copy would truncate under
+      // WeChat's 7-char limit for icon'd toasts.
+      Taro.showToast({ title: '已取消，期待下次见到你', icon: 'none', duration: TOAST_DEFAULT_MS })
 
       if (cancelNavigationTimerRef.current) {
         clearTimeout(cancelNavigationTimerRef.current)
       }
 
       cancelNavigationTimerRef.current = setTimeout(() => {
+        // Shared REGISTRATIONS_QUERY_KEY carries 30s staleTime — bust so the
+        // cancellation is visible immediately on every surface. Deferred to
+        // the navigation tick: busting while this page is still mounted would
+        // refetch the list, drop this registration, and flash the not-found
+        // state ahead of the redirect.
+        void bustRegistrationCaches(queryClient, { poolId: registration?.poolId })
         navigateBackOrEventsTab()
       }, CANCEL_NAVIGATION_DELAY_MS)
     } catch (error) {
@@ -586,7 +651,7 @@ export function useMatchingStatusController({
     } finally {
       setIsCancelling(false)
     }
-  }, [isCancelling, registrationId])
+  }, [isCancelling, queryClient, registration?.cancelPolicy, registration?.poolId, registrationId])
 
   const handleOpenMatchedJourney = useCallback(() => {
     const poolId = registration?.poolId
@@ -1008,6 +1073,9 @@ export function useMatchingStatusController({
     unifiedReveal,
     leadIceBreaker,
     groupAnalysis,
+    isCollapsedRegistration,
+    vacatedSeatCount: groupSeatVacancy.vacatedSeatCount,
+    groupDisplayCount: groupSeatVacancy.displayCount,
     hasRevealed,
     liveRevealError,
     liveStage,

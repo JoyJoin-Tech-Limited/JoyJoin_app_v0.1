@@ -441,6 +441,21 @@
     border: 1rpx solid rgba($color-primary, 0.12);
   }
 
+  // Collapse variant (post-reveal Phase 0, M2): warm coral edge so the
+  // 没能成行 card reads as a terminal state, not an inline error.
+  &__notice-card--collapse {
+    border: 1rpx solid rgba($color-secondary, 0.28);
+  }
+
+  &__notice-title {
+    display: block;
+    font-size: $font-size-base;
+    font-weight: $font-weight-bold;
+    line-height: 1.4;
+    color: $color-text-primary;
+    margin-bottom: $spacing-xs;
+  }
+
   &__notice-text {
     display: block;
     font-size: $font-size-sm;

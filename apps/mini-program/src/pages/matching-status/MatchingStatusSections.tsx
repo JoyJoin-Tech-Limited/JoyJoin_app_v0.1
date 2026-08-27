@@ -15,6 +15,7 @@ import {
 } from '@shared/features/matching-status'
 import ArchetypeHead from '../../components/mascot/ArchetypeHead'
 import TablemateCard from '../../components/TablemateCard'
+import VacatedSeatCard from '../../components/TablemateCard/VacatedSeatCard'
 import TablemateDetailSheet from '../../components/TablemateDetailSheet'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -163,6 +164,9 @@ interface MatchingStatusDetailSectionsProps {
   showMatchedDetails: boolean
   showChemistryCard: boolean
   effectiveGroupDetails: PoolGroupDetailsResponse | null
+  /** Post-reveal Phase 0: neutral 「排桌中…」 placeholders for vacated seats
+   *  (rendered at list level — TablemateCard has no seat concept). */
+  vacatedSeatCount?: number
   viewerPairSummaryByMemberId: Map<string, PairExplanation>
   viewerSpotlight: ViewerPairSpotlight | null
   chemistryTokens: ChemistryTokens
@@ -185,6 +189,7 @@ export function MatchingStatusDetailSections({
   showMatchedDetails,
   showChemistryCard,
   effectiveGroupDetails,
+  vacatedSeatCount = 0,
   viewerPairSummaryByMemberId,
   viewerSpotlight,
   chemistryTokens,
@@ -226,6 +231,12 @@ export function MatchingStatusDetailSections({
                   entranceDelayMs={(shouldReduceMotion || hasRevealed) ? 0 : index * 120}
                   reduceMotion={shouldReduceMotion || hasRevealed}
                   onTap={() => openPoolGroupDetail(effectiveGroupDetails.group.id)}
+                />
+              ))}
+              {Array.from({ length: vacatedSeatCount }).map((_, seatIndex) => (
+                <VacatedSeatCard
+                  key={`vacated-seat-${seatIndex}`}
+                  reduceMotion={shouldReduceMotion || hasRevealed}
                 />
               ))}
             </View>

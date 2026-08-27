@@ -237,6 +237,21 @@ export const FLAG_ENV_MAP: Record<string, string> = {
    *  Read fail-closed: callers must use getFeatureFlag(key, true). Env
    *  fallback: CONTENT_MODERATION_SEVERE_FAIL_CLOSED_ENABLED (default: true). */
   contentModerationSevereFailClosedEnabled: "CONTENT_MODERATION_SEVERE_FAIL_CLOSED_ENABLED",
+  /** Phase 0 安心补位 (2026-08-27, sprint post-reveal-phase0 M1): pre-reveal
+   *  cancel (registration matchStatus != 'matched') issues a real full refund —
+   *  money via the claimPaymentForRefund atomic claim, credits via
+   *  transactional reversal before delete. When false, pre-reveal cancel keeps
+   *  exact legacy behavior (delete row, no refund). Independent from
+   *  noRefundAfterReveal (either can roll back alone).
+   *  Env fallback: PRE_REVEAL_REFUND_ENABLED (default: false). */
+  preRevealRefundEnabled: "PRE_REVEAL_REFUND_ENABLED",
+  /** Phase 0 安心补位 (2026-08-27, sprint post-reveal-phase0 M1): post-reveal
+   *  cancel (registration matchStatus = 'matched') forfeits the fee and runs
+   *  honest-group hygiene — memberCount decrement, event_attendance cancelled,
+   *  remaining-member notifications, collapse (<4) → stayer refunds, WeCom +
+   *  audit. When false, post-reveal cancel keeps exact legacy behavior.
+   *  Env fallback: NO_REFUND_AFTER_REVEAL_ENABLED (default: false). */
+  noRefundAfterReveal: "NO_REFUND_AFTER_REVEAL_ENABLED",
   /** C4 GuidanceQueue orchestrator (onboarding guidance iteration, 2026-08-27):
    *  server-persisted seen-state, ≤1 tip per session arbitration, and the
    *  discover arrival-coachmark absorption. Ships dark — flag-on happens only
@@ -329,6 +344,11 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
    *  warning-tier Tier-0 violations are let through (logged, not escalated);
    *  the severe tier remains unconditionally blocking. */
   contentModerationSevereFailClosedEnabled: true,
+  /** Phase 0 安心补位 — both ship dark (default off = exact legacy cancel
+   *  behavior); explicit false so the admin toggle UI and listFeatureFlags()
+   *  show a stable default. Flags are independent (M1). */
+  preRevealRefundEnabled: false,
+  noRefundAfterReveal: false,
   /** Onboarding guidance iteration (2026-08-27) — all 5 ship dark in W1;
    *  explicit false so the admin toggle UI and listFeatureFlags() show a
    *  stable default. Flag-on only after the D7 2-week baseline. */

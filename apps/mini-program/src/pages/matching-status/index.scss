@@ -4,6 +4,10 @@
 // Taro can otherwise chunk the shared component's styles into a package this
 // page never loads (blank-card trap; see scripts/verify-subpackage-styles.mjs).
 @use '../../components/TablemateCard/index.scss';
+// VacatedSeatCard (排桌中… placeholder, post-reveal Phase 0) — the component
+// deliberately has no TSX-side SCSS import; its rules are co-compiled here so
+// they reach this subpackage page WXSS (same style-splitting trap).
+@use '../../components/TablemateCard/vacated-seat';
 // TablemateDetailSheet (成员详情浮层) — opened from the reveal overlay and the
 // squad card; co-compiled for the same chunking reason. Aliased: two `@use`d
 // files both named index.scss would collide on the default "index" namespace.

@@ -76,6 +76,11 @@ const REQUIREMENTS = [
       // the page SCSS and must reach this subpackage page WXSS.
       'vacated-seat-card__core{',
       'vacated-seat-card__label{',
+      // 排桌中… vacated-seat placeholder (post-reveal Phase 0, 2026-08-27):
+      // VacatedSeatCard has no TSX-side SCSS import; its rules are @use'd by
+      // the page SCSS and must reach this subpackage page WXSS.
+      'vacated-seat-card__core{',
+      'vacated-seat-card__label{',
     ],
   },
   {
@@ -93,6 +98,10 @@ const REQUIREMENTS = [
       'pill--common',
       'pill--rare',
       'pill--epic',
+      // 排桌中… vacated-seat placeholder (post-reveal Phase 0, 2026-08-27) —
+      // same @use-in-page discipline as matching-status above.
+      'vacated-seat-card__core{',
+      'vacated-seat-card__label{',
       // 排桌中… vacated-seat placeholder (post-reveal Phase 0, 2026-08-27) —
       // same @use-in-page discipline as matching-status above.
       'vacated-seat-card__core{',

@@ -46,6 +46,7 @@ import { aiEndpointLimiter } from "../../rateLimiter";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { getAuthenticatedUserId } from "../../lib/requestAuth";
 import { paymentService } from "../../paymentService";
+import { cancelPoolRegistrationWithPolicy, computeRegistrationCancelPolicy } from "../../lib/poolRegistrationCancel";
 import { resolveCouponValidation } from "../domains/payments";
 import { getTestPriceCents } from "../../lib/paymentTestPrice";
 import type { GroupAnalysisResponse } from "@shared/types/groupAnalysis";
@@ -1180,6 +1181,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
           poolDateTime: eventPools.dateTime,
           poolStatus: eventPools.status,
           poolOperatorReviewStatus: eventPools.operatorReviewStatus,
+          poolIsTestPool: eventPools.isTestPool,
           theme: eventPoolGroups.theme,
           subtitle: eventPoolGroups.subtitle,
           vibe: eventPoolGroups.vibe,
@@ -1197,6 +1199,14 @@ export function registerUserEventPoolRoutes(app: Express): void {
         .orderBy(desc(eventPoolRegistrations.registeredAt));
 
       logger.info("[MyPoolRegistrations] base registrations count:", { count: registrations.length });
+
+      // Phase 0 安心补位 (AC-9): server-computed cancelPolicy per registration.
+      // The client never reads feature flags directly; the field is omitted
+      // entirely when both flags are off (legacy-safe encoding).
+      const [preRevealRefundEnabled, noRefundAfterReveal] = await Promise.all([
+        getFeatureFlag("preRevealRefundEnabled"),
+        getFeatureFlag("noRefundAfterReveal"),
+      ]);
 
       const registrationIds = (registrations as any[]).map((registration: any) => registration.id);
       const registrationPoolIds = Array.from(
@@ -1321,6 +1331,7 @@ export function registerUserEventPoolRoutes(app: Express): void {
       );
 
       const enrichedRegistrations = (registrations as any[]).map((reg: any) => {
+        const { poolIsTestPool, ...regFields } = reg;
         const inviteUse = inviteUseByRegistrationId.get(reg.id);
         let invitationRole: "inviter" | "invitee" | null = null;
         let relatedUserName: string | null = null;
@@ -1339,11 +1350,19 @@ export function registerUserEventPoolRoutes(app: Express): void {
           }
         }
 
+        const cancelPolicy = computeRegistrationCancelPolicy({
+          matchStatus: reg.matchStatus,
+          isTestPool: poolIsTestPool,
+          preRevealRefundEnabled,
+          noRefundAfterReveal,
+        });
+
         return {
-          ...reg,
+          ...regFields,
           highlights: Array.isArray(reg.highlights) ? reg.highlights : [],
           invitationRole,
           relatedUserName,
+          ...(cancelPolicy ? { cancelPolicy } : {}),
         };
       });
 
@@ -1382,56 +1401,38 @@ export function registerUserEventPoolRoutes(app: Express): void {
           registrationId: id,
         });
 
-        // 0) 清理该报名记录上的双人成行 / 邀请使用记录，避免 FK 约束导致删除失败
-        await db
-          .delete(invitationUses)
-          .where(eq(invitationUses.poolRegistrationId, id));
-
-        // 1) 删除当前用户在这个报名记录上的 row
-        let deletedRegistrations = await db
-          .delete(eventPoolRegistrations)
-          .where(
-            and(
-              eq(eventPoolRegistrations.id, id),
-              eq(eventPoolRegistrations.userId, userId),
-            )
-          )
-          .returning();
-
-        if (deletedRegistrations.length === 0) {
-          logger.warn('[MyPoolRegistrationsCancel] no registration found to delete', {
-            userId,
-            registrationId: id,
-          });
-          return res.status(404).json({
-            message: '没有找到可以取消的报名记录，可能已经取消过了',
-          });
-        }
-
-        logger.info('[MyPoolRegistrationsCancel] deleted registrations:', {
-          count: deletedRegistrations.length,
-          ids: deletedRegistrations.map((r: any) => r.id),
-          poolIds: deletedRegistrations.map((r: any) => r.poolId),
+        // Phase 0 安心补位 (2026-08-27, sprint post-reveal-phase0): the shared
+        // orchestrator selects legacy / pre-reveal-refund / post-reveal-no-refund
+        // by the two feature flags × the registration's matchStatus. Flags off
+        // = byte-identical legacy behavior. Parity with the blind-box cancel
+        // path is via the same helper (contract AC-12).
+        const result = await cancelPoolRegistrationWithPolicy({
+          registrationId: id,
+          userId,
+          logPrefix: '[MyPoolRegistrationsCancel]',
         });
 
-        // 2) 把受影响池子的 totalRegistrations - 1（按 id+userId 删除至多命中一行，
-        // 直接单次 UPDATE，不在循环里发库调用）
-        const affectedPoolId = deletedRegistrations[0]?.poolId;
-        if (affectedPoolId) {
-          await db
-            .update(eventPools)
-            .set({
-              totalRegistrations: sql`${eventPools.totalRegistrations} - 1`,
-              updatedAt: new Date(),
-            })
-            .where(eq(eventPools.id, affectedPoolId));
+        if (!result.ok) {
+          return res.status(result.status).json({
+            message: result.message,
+            ...(result.code ? { code: result.code } : {}),
+          });
         }
 
-        logger.info('[MyPoolRegistrationsCancel] updated pools after deletion');
+        logger.info('[MyPoolRegistrationsCancel] cancel complete', {
+          userId,
+          registrationId: id,
+          branch: result.branch,
+          refundedMoney: result.refundedMoney,
+          reversedCredit: result.reversedCredit,
+          remainingCount: result.remainingCount,
+          collapsed: result.collapsed,
+        });
 
         return res.json({
           ok: true,
-          cancelledRegistrationIds: (deletedRegistrations as any[]).map((r: any) => r.id),
+          cancelledRegistrationIds: [result.registrationId],
+          policy: result.branch,
         });
       } catch (error) {
         logger.error('[MyPoolRegistrationsCancel] error while cancelling registration', { error: String(error) });
@@ -1644,6 +1645,8 @@ export function registerUserEventPoolRoutes(app: Express): void {
             industryNicheLabel: users.industryNicheLabel,
             ageVisible: users.ageVisibility,
             industryVisible: users.workVisibility,
+            wechatAvatarUrl: users.wechatAvatarUrl,
+            gender: users.gender,
           })
           .from(eventPoolRegistrations)
           .innerJoin(users, eq(eventPoolRegistrations.userId, users.id))
@@ -1687,6 +1690,8 @@ export function registerUserEventPoolRoutes(app: Express): void {
             industryVisible,
             ageLabel: ageVisible ? formatAge(member.birthdate, member.ageVisible ?? 'hide_all') : null,
             industryNicheLabel: industryVisible ? member.industryNicheLabel : null,
+            avatarUrl: member.wechatAvatarUrl,
+            gender: member.gender,
             outfit: equipment?.outfit ?? null,
             equippedItems: equipment?.equippedItems ?? [],
           };

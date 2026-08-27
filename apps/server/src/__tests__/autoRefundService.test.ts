@@ -132,6 +132,7 @@ import { notifyAutoRefundSummary } from "../lib/wecomNotifications/poolLifecycle
 import {
   refundPoolCancellation,
   refundUnmatchedRegistrations,
+  refundCollapsedGroupRegistrations,
 } from "../services/autoRefundService";
 
 const moneyPayment = (id: string, userId: string, wechatOrderId = `wx_${id}`): AnyRow => ({
@@ -338,5 +339,78 @@ describe("refundUnmatchedRegistrations (Trigger B)", () => {
     const notif = vi.mocked(notificationsRepo.createNotification).mock.calls[0][0];
     expect(notif.type).toBe("unmatched_refund");
     expect(notif.title).toBe("场次未成行，报名费已退回");
+  });
+});
+
+describe("refundCollapsedGroupRegistrations (post-reveal collapse, Phase 0 Amendment 3)", () => {
+  it("refunds only unmatched stayers with the DISTINCT collapse copy (M2), never matched users", async () => {
+    state.payments = [moneyPayment("p1", "u1"), moneyPayment("p2", "u2")];
+    state.redemptions = [redemption("r1", "u3", "reg-3"), redemption("r2", "u4", "reg-4")];
+    // u1 + reg-3 are stayers flipped to unmatched by the cancel transaction;
+    // u2 + reg-4 belong to another still-matched group and must be skipped.
+    state.registrations = [
+      { id: "reg-1", userId: "u1", pool_id: "pool-1", match_status: "unmatched" },
+      { id: "reg-2", userId: "u2", pool_id: "pool-1", match_status: "matched" },
+      { id: "reg-3", userId: "u3", pool_id: "pool-1", match_status: "unmatched" },
+      { id: "reg-4", userId: "u4", pool_id: "pool-1", match_status: "matched" },
+    ];
+
+    const summary = await refundCollapsedGroupRegistrations("pool-1", "测试饭局");
+
+    expect(paymentService.createRefund).toHaveBeenCalledTimes(1);
+    expect(paymentService.createRefund).toHaveBeenCalledWith(
+      "p1",
+      "同桌人数不足，本次未能成行，自动退款",
+      "auto-refund",
+    );
+    expect(eventCreditsRepo.reverseRedemptionForRegistration).toHaveBeenCalledTimes(1);
+    expect(eventCreditsRepo.reverseRedemptionForRegistration).toHaveBeenCalledWith(
+      expect.anything(),
+      { registrationId: "reg-3" },
+    );
+    expect(summary.refundedPayments).toBe(1);
+    expect(summary.refundedCredits).toBe(1);
+    expect(summary.skippedRefunds).toBe(2);
+    expect(summary.reason).toBe("collapsed");
+  });
+
+  it("uses the collapse notification type + copy incl. 「已为你优先保留下一场的排桌资格」", async () => {
+    state.payments = [moneyPayment("p1", "u1")];
+    state.registrations = [
+      { id: "reg-1", userId: "u1", pool_id: "pool-1", match_status: "unmatched" },
+    ];
+
+    await refundCollapsedGroupRegistrations("pool-1", "测试饭局");
+
+    const notif = vi.mocked(notificationsRepo.createNotification).mock.calls[0][0];
+    expect(notif.type).toBe("collapsed_refund");
+    expect(notif.title).toBe("这次没能成行，报名费已退回");
+    expect(notif.message).toContain("已为你优先保留下一场的排桌资格");
+    // M2: collapse copy must NOT be the 场次未成行 verbatim wording.
+    expect(notif.title).not.toBe("场次未成行，报名费已退回");
+  });
+
+  it("uses the credit-variant collapse copy for credit reversals", async () => {
+    state.redemptions = [redemption("r1", "u3", "reg-3")];
+    state.registrations = [
+      { id: "reg-3", userId: "u3", pool_id: "pool-1", match_status: "unmatched" },
+    ];
+
+    await refundCollapsedGroupRegistrations("pool-1", "测试饭局");
+
+    const notif = vi.mocked(notificationsRepo.createNotification).mock.calls[0][0];
+    expect(notif.title).toBe("这次没能成行，次数已退回");
+    expect(notif.message).toContain("已为你优先保留下一场的排桌资格");
+  });
+
+  it("sends a WeCom summary when collapse refunds were issued", async () => {
+    state.payments = [moneyPayment("p1", "u1")];
+    state.registrations = [
+      { id: "reg-1", userId: "u1", pool_id: "pool-1", match_status: "unmatched" },
+    ];
+
+    await refundCollapsedGroupRegistrations("pool-1", "测试饭局");
+
+    expect(notifyAutoRefundSummary).toHaveBeenCalledTimes(1);
   });
 });

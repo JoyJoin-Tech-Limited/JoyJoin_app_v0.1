@@ -53,6 +53,25 @@ const REFUND_CONTEXTS = {
     notificationMessageMoney: "本场未能成行，报名费已原路退回，预计 1-3 个工作日到账。",
     notificationMessageCredit: "本场未能成行，消耗的活动次数已退回你的次数包。",
   },
+  /** Phase 0 安心补位 (2026-08-27, sprint post-reveal-phase0 M2/Amendment 3):
+   *  post-reveal cancel dropped a matched group below the minimum size — the
+   *  whole session is postponed and stayers are refunded with DISTINCT
+   *  collapse copy (not 场次未成行 verbatim), including the copy-only
+   *  「已为你优先保留下一场的排桌资格」 line (no actual priority logic this
+   *  phase). Reuses Trigger B's unmatched filter: the cancel transaction
+   *  flips stayers to 'unmatched', so only they are refunded — never the
+   *  exiter (their registration row is already deleted). */
+  collapsed: {
+    reasonMoney: "同桌人数不足，本次未能成行，自动退款",
+    reasonCredit: "同桌人数不足，本次未能成行，自动退回次数",
+    notificationType: "collapsed_refund",
+    notificationTitleMoney: "这次没能成行，报名费已退回",
+    notificationTitleCredit: "这次没能成行，次数已退回",
+    notificationMessageMoney:
+      "有伙伴临时退出，人数不足。报名费已原路退回，预计 1-3 个工作日到账。已为你优先保留下一场的排桌资格。",
+    notificationMessageCredit:
+      "有伙伴临时退出，人数不足。消耗的活动次数已退回你的次数包。已为你优先保留下一场的排桌资格。",
+  },
 } as const satisfies Record<string, RefundContext>;
 
 async function isAutoRefundEnabled(): Promise<boolean> {
@@ -126,7 +145,7 @@ async function notifyUser(
 async function refundPoolPaidRegistrations(
   poolId: string,
   poolTitle: string,
-  context: "pool_cancelled" | "unmatched",
+  context: "pool_cancelled" | "unmatched" | "collapsed",
 ): Promise<AutoRefundSummary> {
   const summary: AutoRefundSummary = {
     poolId,
@@ -171,10 +190,11 @@ async function refundPoolPaidRegistrations(
     .from(eventCreditRedemptions)
     .where(eq(eventCreditRedemptions.poolId, poolId));
 
-  // Batch the unmatched filter once (trigger B only).
+  // Batch the unmatched filter once (trigger B + collapsed — both refund only
+  // registrations whose matchStatus is 'unmatched').
   let unmatchedUserIds: Set<string> | null = null;
   let unmatchedRegistrationIds: Set<string> | null = null;
-  if (context === "unmatched") {
+  if (context === "unmatched" || context === "collapsed") {
     const unmatchedRegs = await db
       .select({ userId: eventPoolRegistrations.userId, id: eventPoolRegistrations.id })
       .from(eventPoolRegistrations)
@@ -269,6 +289,24 @@ export async function refundUnmatchedRegistrations(
   poolTitle: string,
 ): Promise<AutoRefundSummary> {
   const summary = await refundPoolPaidRegistrations(poolId, poolTitle, "unmatched");
+  await sendSummary(poolId, summary);
+  return summary;
+}
+
+/**
+ * Post-reveal group collapse (Phase 0 安心补位, 2026-08-27 — Amendment 3):
+ * a matched group dropped below the minimum size after a member cancel. The
+ * cancel transaction already flipped the remaining (stayer) registrations to
+ * 'unmatched', so this thin wrapper reuses Trigger B's unmatched-filter
+ * mechanics — stayers are refunded, the exiter is never refunded (their
+ * registration row is already deleted). Carries the DISTINCT collapse copy
+ * via REFUND_CONTEXTS.collapsed (M2), not 场次未成行 verbatim.
+ */
+export async function refundCollapsedGroupRegistrations(
+  poolId: string,
+  poolTitle: string,
+): Promise<AutoRefundSummary> {
+  const summary = await refundPoolPaidRegistrations(poolId, poolTitle, "collapsed");
   await sendSummary(poolId, summary);
   return summary;
 }
