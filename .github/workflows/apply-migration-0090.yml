@@ -1,0 +1,19 @@
+name: Apply Migration 0090 (seen_guidance)
+on:
+  workflow_dispatch:
+
+jobs:
+  apply-migration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply seen_guidance migration to staging DB
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker exec -i postgres-staging psql -U joyjoin -d joyjoin_staging -c 'ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "seen_guidance" jsonb;'
+            echo "Migration applied. Verifying..."
+            docker exec postgres-staging psql -U joyjoin -d joyjoin_staging -c '\d users' | grep seen_guidance
