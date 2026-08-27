@@ -31,6 +31,9 @@ describe("discover analytics allowlist contract", () => {
     expect(typeMatch).not.toBeNull();
 
     const clientEventTypes = (typeMatch?.[1] ?? "")
+      // Strip single-line comments before splitting to avoid parsing
+      // comment content (e.g. // reason: 'button'|'tap_through') as types.
+      .replace(/\/\/[^\n]*/g, "")
       .split("|")
       .map((line) => line.trim().replace(/^'/, "").replace(/'$/, ""))
       .filter((type) => type.length > 0 && !type.includes("\n"));
