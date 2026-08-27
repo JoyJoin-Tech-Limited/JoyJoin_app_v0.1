@@ -8,6 +8,7 @@ import {
   getJoinedEventDisplayDateTime,
   isJoinedEventTerminal,
 } from '../../lib/utils/eventDisplay'
+import SegmentedCountdownClock from '../ui/SegmentedCountdownClock'
 import EventSummaryCard from './EventSummaryCard'
 import './FootprintOracleCard.scss'
 
@@ -72,7 +73,7 @@ export default React.memo(function FootprintOracleCard({
     return (
       <>
         {hasCountdown && (
-          <EventSummaryCard.CountdownClock
+          <SegmentedCountdownClock
             target={displayDateTime ?? null}
             enabled={hasCountdown}
             clockId={`footprint-rail-clock-${event.id}`}

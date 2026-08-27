@@ -1,13 +1,12 @@
-import React, { useMemo, useRef, useEffect } from 'react'
+import React, { useMemo, useRef } from 'react'
 import { View, Text, Image } from '@tarojs/components'
 import {
   ARCHETYPE_FAMILY_COLORS,
   ARCHETYPE_FAMILY_GRADIENTS,
 } from '@shared/archetypeColors'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
-import { computeCountdownResult } from '../../hooks/useEventCountdown'
-import { useCountdownTickValue } from '../../hooks/useCountdownTick'
 import { usePageVisibility } from '../../hooks/usePageVisibility'
+import SegmentedCountdownClock from '../ui/SegmentedCountdownClock'
 import { getOracleCardCornerAsset } from '../discover/oracleCardAssets'
 import {
   formatEventDateTime,
@@ -20,7 +19,6 @@ import './FootprintOracleCard.scss'
 // ─── Constants ─────────────────────────────────────────────────
 
 const FALLBACK_FAMILY_COLOR = ARCHETYPE_FAMILY_COLORS.calm
-const CLOCK_TOTAL_BLOCKS = 12
 
 // Status → accent family mapping for Oracle Card shell consistency.
 const STATUS_FAMILY_MAP: Record<string, 'fire' | 'calm' | 'warm' | 'cool'> = {
@@ -64,186 +62,6 @@ const STATUS_WAITING_COPY: Record<string, string> = {
 
 // Venue is only disclosed once the group has been assigned a venue.
 const VENUE_VISIBLE_STATUSES = new Set(['confirmed', 'venue_unlocked'])
-
-// ─── Helpers ───────────────────────────────────────────────────
-
-function pad2(value: number): string {
-  return value.toString().padStart(2, '0')
-}
-
-function formatClockPair(value: number): string {
-  return pad2(Math.max(0, value))
-}
-
-// ─── Segmented Clock Component ─────────────────────────────────
-// Self-contained countdown leaf. The list path derives its readout from the
-// page-level shared ticker (CountdownTickProvider) so N cards share ONE
-// interval instead of owning N timers. Outside a provider it renders a
-// static readout computed at render time (no ticking) — same behavior as the
-// reduced-motion/low-end static readout path.
-
-interface EventCountdownClockProps {
-  target: string | null
-  enabled: boolean
-  /** When omitted the clock falls back to the primary brand color via CSS. */
-  accentColor?: string
-  clockId: string
-  /** Compact vertical layout for the right info rail. */
-  compact?: boolean
-}
-
-const EventCountdownClock = React.memo(function EventCountdownClock({
-  target,
-  enabled,
-  accentColor,
-  clockId,
-  compact = false,
-}: EventCountdownClockProps) {
-  const tickValue = useCountdownTickValue()
-  const { isDegradation } = useDeviceTier()
-  const { isPageVisible } = usePageVisibility()
-  // Memoized: getSystemInfoSync is synchronous + deprecated; the clock
-  // re-renders every second per card — an unmemoized read taxes the JS thread.
-  const reduceMotion = useMemo(() => getSystemReducedMotion(), [])
-
-  // Live gating: motion enabled, primary-tier device, page visible, valid target.
-  const live = Boolean(target) && enabled && !isDegradation && !reduceMotion && isPageVisible
-
-  // While not live (hidden, reduced-motion, low-end, no provider) the readout
-  // FREEZES at the last live value — identical to the pre-P2 hook, where the
-  // per-card interval simply stopped and left a static "paused" readout.
-  const frozenNowRef = useRef<number>(Date.now())
-  const tickNow = tickValue?.now
-  if (live && tickNow != null) {
-    frozenNowRef.current = tickNow
-  }
-  const now = live && tickNow != null ? tickNow : frozenNowRef.current
-
-  const { display, segments, isUrgent, hasStarted, isLive } = useMemo(
-    () => computeCountdownResult(target, enabled, now, 60, live),
-    [target, enabled, now, live],
-  )
-
-  // Track previous segment values to pulse only the digit group that changed.
-  const prevSegmentsRef = useRef(segments)
-  const [pulseSegment, setPulseSegment] = React.useState<'days' | 'hours' | 'minutes' | 'seconds' | null>(null)
-  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    if (!segments || !prevSegmentsRef.current) {
-      prevSegmentsRef.current = segments
-      return
-    }
-
-    const prev = prevSegmentsRef.current
-    let changed: typeof pulseSegment = null
-    if (segments.seconds !== prev.seconds) changed = 'seconds'
-    else if (segments.minutes !== prev.minutes) changed = 'minutes'
-    else if (segments.hours !== prev.hours) changed = 'hours'
-    else if (segments.days !== prev.days) changed = 'days'
-
-    if (changed) {
-      setPulseSegment(changed)
-      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current)
-      pulseTimerRef.current = setTimeout(() => setPulseSegment(null), 160)
-    }
-    prevSegmentsRef.current = segments
-
-    return () => {
-      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current)
-    }
-  }, [segments])
-
-  if (!display) {
-    return null
-  }
-
-  const clockStyle = accentColor
-    ? ({ '--clock-accent': accentColor } as React.CSSProperties)
-    : undefined
-
-  if (hasStarted) {
-    return (
-      <View
-        id={clockId}
-        className='footprint-oracle-card__clock footprint-oracle-card__clock--started'
-        style={clockStyle}
-        aria-label={display}
-      >
-        <View className='footprint-oracle-card__clock-started-dot' />
-        <Text className='footprint-oracle-card__clock-started-label'>{display}</Text>
-      </View>
-    )
-  }
-
-  if (!segments) {
-    return null
-  }
-
-  const { days, hours, minutes, seconds, progress } = segments
-  const filledBlocks = Math.max(
-    0,
-    Math.min(CLOCK_TOTAL_BLOCKS, Math.round(progress * CLOCK_TOTAL_BLOCKS)),
-  )
-
-  return (
-    <View
-      id={clockId}
-      className={[
-        'footprint-oracle-card__clock',
-        compact ? 'footprint-oracle-card__clock--compact' : '',
-      ].filter(Boolean).join(' ')}
-      style={clockStyle}
-      aria-label={`倒计时 ${display}`}
-      aria-live={isLive ? 'polite' : undefined}
-      aria-atomic='true'
-    >
-      <View className='footprint-oracle-card__clock-digits'>
-        {days > 0 && (
-          <>
-            <View className='footprint-oracle-card__clock-cell'>
-              <Text className={['footprint-oracle-card__clock-value', pulseSegment === 'days' ? 'footprint-oracle-card__clock-value--pulse' : ''].filter(Boolean).join(' ')}>{formatClockPair(days)}</Text>
-              <Text className='footprint-oracle-card__clock-unit'>天</Text>
-            </View>
-            <Text className='footprint-oracle-card__clock-separator'>:</Text>
-          </>
-        )}
-        <View className='footprint-oracle-card__clock-cell'>
-          <Text className={['footprint-oracle-card__clock-value', pulseSegment === 'hours' ? 'footprint-oracle-card__clock-value--pulse' : ''].filter(Boolean).join(' ')}>{formatClockPair(hours)}</Text>
-          <Text className='footprint-oracle-card__clock-unit'>时</Text>
-        </View>
-        <Text className='footprint-oracle-card__clock-separator'>:</Text>
-        <View className='footprint-oracle-card__clock-cell'>
-          <Text className={['footprint-oracle-card__clock-value', pulseSegment === 'minutes' ? 'footprint-oracle-card__clock-value--pulse' : ''].filter(Boolean).join(' ')}>{formatClockPair(minutes)}</Text>
-          <Text className='footprint-oracle-card__clock-unit'>分</Text>
-        </View>
-        <Text className='footprint-oracle-card__clock-separator'>:</Text>
-        <View className='footprint-oracle-card__clock-cell'>
-          <Text className={['footprint-oracle-card__clock-value', pulseSegment === 'seconds' ? 'footprint-oracle-card__clock-value--pulse' : ''].filter(Boolean).join(' ')}>{formatClockPair(seconds)}</Text>
-          <Text className='footprint-oracle-card__clock-unit'>秒</Text>
-        </View>
-      </View>
-
-      <View className='footprint-oracle-card__clock-progress' aria-hidden='true'>
-        {Array.from({ length: CLOCK_TOTAL_BLOCKS }, (_, i) => {
-          const filled = i < filledBlocks
-          return (
-            <View
-              key={i}
-              className={[
-                'footprint-oracle-card__clock-progress-block',
-                filled ? 'footprint-oracle-card__clock-progress-block--filled' : '',
-                filled && isUrgent && isLive
-                  ? 'footprint-oracle-card__clock-progress-block--urgent'
-                  : '',
-              ].filter(Boolean).join(' ')}
-            />
-          )
-        })}
-      </View>
-    </View>
-  )
-})
 
 // ─── Presentational Event Summary Card ─────────────────────────
 // Shared visual base for FootprintOracleCard and any read-only
@@ -432,7 +250,7 @@ function EventSummaryCard({
                 </Text>
               </View>
               {!railMode && (
-                <EventCountdownClock
+                <SegmentedCountdownClock
                   target={dateTime ?? null}
                   enabled={clockEnabled}
                   accentColor={familyColor}
@@ -476,12 +294,8 @@ function EventSummaryCard({
   )
 }
 
-// Expose the countdown clock as a static sub-component so the right-rail
-// layout in FootprintOracleCard can reuse it without duplicating logic.
-type EventSummaryCardComponent = React.NamedExoticComponent<EventSummaryCardProps> & {
-  CountdownClock: typeof EventCountdownClock
-}
+type EventSummaryCardComponent = React.NamedExoticComponent<EventSummaryCardProps>
+
 const MemoEventSummaryCard = React.memo(EventSummaryCard) as unknown as EventSummaryCardComponent
-MemoEventSummaryCard.CountdownClock = EventCountdownClock
 
 export default MemoEventSummaryCard

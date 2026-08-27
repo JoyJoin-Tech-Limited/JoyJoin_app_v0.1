@@ -1,0 +1,186 @@
+@use '../../styles/variables' as *;
+
+// SegmentedCountdownClock — reusable nothing-design-inspired countdown leaf.
+// Extracted from FootprintOracleCard so the gathering room and future surfaces
+// can share the same readout without duplicating the component.
+
+.segmented-countdown-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: $spacing-xs;
+  max-width: 48%;
+
+  &--started {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-xs;
+    min-height: 56rpx;
+    padding: 0 $spacing-md;
+    border-radius: 999rpx;
+    background: rgba($color-text-primary, 0.06);
+  }
+
+  // Compact vertical clock used in right info rail layouts.
+  &--compact {
+    align-items: center;
+    gap: 8rpx;
+    width: 100%;
+    max-width: none;
+
+    .segmented-countdown-clock__digits {
+      justify-content: center;
+      gap: 2rpx;
+    }
+
+    .segmented-countdown-clock__cell {
+      min-width: 34rpx;
+    }
+
+    .segmented-countdown-clock__value {
+      font-size: 32rpx;
+      letter-spacing: 0;
+    }
+
+    .segmented-countdown-clock__unit {
+      font-size: 18rpx;
+      margin-top: 2rpx;
+    }
+
+    .segmented-countdown-clock__separator {
+      font-size: 24rpx;
+      padding: 0;
+      transform: translateY(-4rpx);
+    }
+
+    .segmented-countdown-clock__progress {
+      justify-content: center;
+      gap: 4rpx;
+    }
+
+    .segmented-countdown-clock__progress-block {
+      width: $spacing-xs;
+      height: 4rpx;
+    }
+  }
+
+  &__started-dot {
+    width: $spacing-xs;
+    height: $spacing-xs;
+    border-radius: 50%;
+    background: var(--clock-accent, $color-primary);
+    animation: segmented-countdown-clock-started-pulse 1.8s ease-in-out infinite;
+  }
+
+  &__started-label {
+    font-family: $font-mono;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: var(--clock-accent, $color-text-secondary);
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+
+  &__digits {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 4rpx;
+  }
+
+  &__cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 40rpx;
+  }
+
+  &__value {
+    font-family: $font-mono;
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    font-variant-numeric: tabular-nums;
+    color: $color-text-primary;
+    line-height: 1;
+    letter-spacing: 0.02em;
+
+    // Subtle pop on the changing digit segment.
+    &--pulse {
+      animation: segmented-countdown-clock-digit-pop 150ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+  }
+
+  &__unit {
+    font-family: $font-ui;
+    font-size: $font-size-2xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+    line-height: 1.2;
+    margin-top: 4rpx;
+  }
+
+  &__separator {
+    font-family: $font-mono;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
+    color: $color-text-tertiary;
+    line-height: 1;
+    padding: 0 2rpx;
+    transform: translateY(-2rpx);
+  }
+
+  &__progress {
+    display: flex;
+    gap: 4rpx;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  &__progress-block {
+    width: 12rpx;
+    height: 5rpx;
+    border-radius: 1rpx;
+    background: rgba($color-text-primary, 0.1);
+    transition: background 0.25s ease;
+
+    &--filled {
+      background: var(--clock-accent, $color-primary);
+    }
+
+    &--urgent {
+      animation: segmented-countdown-clock-block-pulse 1.2s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes segmented-countdown-clock-started-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.25); }
+}
+
+@keyframes segmented-countdown-clock-block-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@keyframes segmented-countdown-clock-digit-pop {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.78; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segmented-countdown-clock {
+    &__started-dot,
+    &__progress-block--urgent,
+    &__value--pulse {
+      animation: none !important;
+    }
+
+    &__progress-block {
+      transition: none !important;
+    }
+  }
+}

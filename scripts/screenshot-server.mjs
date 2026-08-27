@@ -940,15 +940,33 @@ async function captureGatheringRoom(viewport = V17_VIEWPORT) {
       undefined,
       { timeout: 10000 }
     )
-    // WS presence applied: countdown + full attendance in the header strip.
+    // WS presence applied: the floating pill carries the shared countdown
+    // clock + full attendance (header strip was removed in the 2026-08-27
+    // polish — its absence is part of the gate).
     // Whitespace-tolerant: the count Texts use a non-breaking space.
     await page.waitForFunction(() => {
-      const text = document.querySelector('.gathering-room__header-subtitle')?.textContent ?? ''
-      return text.includes('还有') && /已到\s*5\/6/.test(text) && /已确认\s*2\/6/.test(text)
+      const pill = document.querySelector('.gathering-room__pill')
+      if (!pill) return false
+      if (document.querySelector('.gathering-room__header') || document.querySelector('.gathering-room__header-subtitle')) return false
+      if (!pill.querySelector('.segmented-countdown-clock__digits')) return false
+      const text = pill.textContent ?? ''
+      return /已到\s*5\/6/.test(text) && /已确认\s*2\/6/.test(text)
     }, undefined, { timeout: 15000 })
-    // Absent-member path rendered: a name card holds the owl's seat.
+    // Universal name plates: all six members render a plate; the five present
+    // members get the seated variant and the absent owl keeps the held-place
+    // plate only. The own member's plate carries the 我 chip.
     await page.waitForFunction(
-      () => document.querySelectorAll('.gathering-room-scene__name-card').length >= 1,
+      () => document.querySelectorAll('.gathering-room-scene__name-card').length === 6,
+      undefined,
+      { timeout: 10000 }
+    )
+    await page.waitForFunction(
+      () => document.querySelectorAll('.gathering-room-scene__name-card--seated').length === 5,
+      undefined,
+      { timeout: 10000 }
+    )
+    await page.waitForFunction(
+      () => document.querySelectorAll('.gathering-room-scene__me-chip').length === 1,
       undefined,
       { timeout: 10000 }
     )
