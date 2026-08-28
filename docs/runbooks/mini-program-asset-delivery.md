@@ -16,7 +16,7 @@ This runbook is the durable record of back-to-back incidents that shipped mini-p
 **Root cause chain:**
 
 1. `room-composite-v1.webp` was copied into `dist/assets/gathering-room/` by the Taro static-copy config.
-2. `project.config.json` `packOptions.include` is an **upload allow-list**. Because `assets/gathering-room/.*\.webp$` was not in the include list, `miniprogram-ci` silently dropped the file from the uploaded WeChat package.
+2. `project.config.json` `packOptions.include` is an **upload allow-list**. Because `assets/gathering-room/.*\.webp$` was not in the include list, `miniprogram-ci` silently dropped the file from the uploaded WeChat package. (Note: the active art is now `room-composite-v2.webp` — repaired 2026-08-27 for window panel mis-registration; v1 retained for rollback. Both patterns are covered by the include regexp.)
 3. The scene component loaded the art via `cdnAsset()` (CDN-first with local fallback). A transient CDN error put the path into the session-level `failedCdnPaths` negative cache, so the renderer tried the bundled fallback — which did not exist on device.
 4. The component's "absent members wait at the door" polish then stacked 5 placeholder avatars at the door coordinate because there was no visible room art to anchor them.
 

@@ -1,7 +1,7 @@
 # 集结房间（Gathering Room）产品需求文档
 
 > 日期：2026-08-07
-> 状态：Phase A · 产品方向已定稿（founder + 顾问），本文档为可实现 PRD；场景美术见 `docs/design/lovart-brief-gathering-room.md`；形象直接复用现有 V2 纸娃娃与装备体系，不再新建 SD 像素形象。2026-08-10：房间场景合成图（`room-composite-v1.webp`）已落地，`ROOM_ART_READY` 切换为 `true`，CSS 占位房间退化为降级兜底。
+> 状态：Phase A · 产品方向已定稿（founder + 顾问），本文档为可实现 PRD；场景美术见 `docs/design/lovart-brief-gathering-room.md`；形象直接复用现有 V2 纸娃娃与装备体系，不再新建 SD 像素形象。2026-08-10：房间场景合成图（`room-composite-v2.webp`，2026-08-27 窗框修复；v1 保留作回滚）已落地，`ROOM_ART_READY` 切换为 `true`，CSS 占位房间退化为降级兜底。
 > 范围：微信小程序（唯一在发用户端）。MVP 明确不做的事项见 §7，不做扩张
 
 ## 1. 定位
@@ -113,7 +113,7 @@ MVP 只有两种交互，都做透：
 ## 11. 发布形态与技术边界
 
 - **页面位置与开关：** 房间页面独立成包，落在 `pages/gathering-room` 子包，整体挂在新特性开关 `gatheringRoomEnabled`（**默认 false**）后面。开关关闭时，入口不出现、页面不可达、相关查询不发起（对齐 Profile V1.7「关闭即不发请求」的降级纪律）。开关按 `feature-flags-launch-config` 规范走 DB 旗标 + env 兜底，经 `/api/auth/user` 下发客户端。
-- **场景美术（`ROOM_ART_READY`）：** Lovart 像素场景已交付为单张合成 WebP（`room-composite-v1.webp`，750×960 px，82 KB），运行时以 `ROOM_ART_READY = true` 渲染。组件仍保留 CSS 占位房间作为降级路径（CDN/本地图片均失败时），两版共用同一套座位锚点坐标，角色层代码无需改动。
+- **场景美术（`ROOM_ART_READY`）：** Lovart 像素场景已交付为单张合成 WebP（`room-composite-v2.webp`，750×960 px，82 KB；2026-08-27 窗框错位修复后重新合成，v1 保留作回滚），运行时以 `ROOM_ART_READY = true` 渲染。组件仍保留 CSS 占位房间作为降级路径（CDN/本地图片均失败时），两版共用同一套座位锚点坐标，角色层代码无需改动。
 - **运行时约束：** 整数倍缩放、风格防火墙、分层合成以 `docs/design/sd-pixel-avatar-style-guide.md` T6/T7 与场景 brief 为准；子包 WXSS 拆分遵守既有 `verify:subpackage-styles` 纪律（页面 SCSS `@use` 组件 SCSS）。
 
 ## 12. 依赖与边界

@@ -80,8 +80,8 @@ Style: soft premium doujin pixel art, matching the reference character sprite's 
 
 ## Export Requirements
 
-- **Source file naming:** `room-composite-v1.png`
-- **Runtime asset:** `room-composite-v1.webp`（750×960 px，≤100 KB，registered in `cdn-asset-manifest.json` and bundled locally under `src/assets/gathering-room/`）
+- **Source file naming:** `room-composite-v1.png` (original), repair output is `room-composite-v2.webp`
+- **Runtime asset:** `room-composite-v2.webp`（750×960 px，≤100 KB；2026-08-27 窗框错位修复，registered in `cdn-asset-manifest.json` and bundled locally under `src/assets/gathering-room/`；v1 保留作回滚）
 - **Save location:** `assets-source/gathering-room/`
 - **交付说明（随资产附 README 或在交付消息中写明）：** 桌面矩形坐标（像素）、6 个座位锚点坐标、灯中心点坐标（供代码对齐角色站位）
 - **运行时接入：** 集结房间实现期注册 CDN manifest + 单张背景图；本 brief 已随 2026-08-10 实现落地，后续皮肤/动画变体另行立项
