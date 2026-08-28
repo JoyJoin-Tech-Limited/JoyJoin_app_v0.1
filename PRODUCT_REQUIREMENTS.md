@@ -1224,6 +1224,8 @@ Note: The gentle banner (CityUnlockBanner) was removed in 2026-06-10. GPS auto-f
 
 > ⚠️ 已修正的历史漂移：旧版本节写"月度 ¥98 无限次""季度 15% 折扣""单次票 ¥148"——代码实际为场次包（6/18/3/6 场）、无 15% 折扣逻辑、单场 ¥88。客户端场次按 planType key 派生（`blind-box-payment/index.tsx`），价格取 DB；客户端兜底价（¥128/¥268）与服务端兜底（¥98/¥294）不一致属遗留，已通过种子脚本 `apps/server/migrations/seed_pricing_plans_20260805.sql`（补齐 5 行 DB 定价，含「悦聚」家族展示名）与兜底代码对齐（`paymentPageModel.ts` ¥128/¥268→¥98/¥294，删除虚构划线价）双重消除——本地、staging、生产（2026-08-05）均已应用并验证，`/api/pricing` 线上返回新名。
 
+> **用户取消与退款政策（2026-08-27 安心补位 Phase 0，条款 v2026-08-27 对齐）：** 排桌完成前取消 = 全额退款（钱款原子退款 + 次数返还）；排桌完成后取消或未出席 = 不予退款；平台取消、场次未成行、或因成员退出导致整局顺延 = 全额退款或恢复次数。政策由双 flag 灰度（`preRevealRefundEnabled` / `noRefundAfterReveal`，默认均关 = 旧行为）；上线顺序：先开揭示前退款，法务签署条款后再开揭示后不退款。不做任何形式爽约处罚（权重/暂停报名永久否决）。候补回补机制见 `docs/design/post-reveal-seat-backfill-spec-20260827.md`（Phase 1，未建）。
+
 #### Payment Integration - WeChat Pay (v3 Signed API)
 
 **Service Files:**

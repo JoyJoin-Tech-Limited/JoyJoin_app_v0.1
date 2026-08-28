@@ -106,7 +106,7 @@ export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   category: varchar("category").notNull(), // discover, activities, chat
-  type: varchar("type").notNull(), // new_activity, matching_progress, match_success, activity_reminder, feedback_reminder, new_message, admin_announcement
+  type: varchar("type").notNull(), // new_activity, matching_progress, match_success, activity_reminder, feedback_reminder, new_message, admin_announcement, seat_vacated_group_notice, collapsed_refund, unmatched_refund, pool_cancelled_refund
   title: varchar("title").notNull(),
   message: text("message"),
   relatedResourceId: varchar("related_resource_id"), // event ID, chat ID, etc.

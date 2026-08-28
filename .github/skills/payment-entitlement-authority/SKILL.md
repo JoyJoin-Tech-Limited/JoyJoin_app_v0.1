@@ -32,6 +32,7 @@ Use this skill when you are:
 | WeChat service | `apps/server/src/paymentService.ts` | Creation, status queries, webhook verification, refund initiation |
 | Fulfillment | `apps/server/src/repositories/paymentFulfillmentRepo.ts` | Transaction-wrapped confirmation, refund application, subscription activation |
 | Event credits | `apps/server/src/repositories/eventCreditsRepo.ts` | Grant, consume, summarize, reverse credits |
+| Registration-cancel refunds | `apps/server/src/lib/poolRegistrationCancel.ts` (2026-08-27) | User-initiated cancel orchestration: pre-reveal full refund (money via `claimPaymentForRefund` atomic claim, credits reversed in-tx before delete; refund failure aborts without delete), post-reveal forfeiture, group-collapse stayer refunds via `autoRefundService` `REFUND_CONTEXTS.collapsed`. Both halves flag-gated (`preRevealRefundEnabled` / `noRefundAfterReveal`) |
 | Entitlement reads | `apps/server/src/routes.ts` | Server-owned gating; checks subscription first, then event-pack credits |
 | Shared contracts | `packages/shared/src/api.ts` | Pure DTOs, plan normalization, verification decision helpers |
 | Schema | `packages/shared/src/schema.ts` | Persistence contract for payments and credit tables |
