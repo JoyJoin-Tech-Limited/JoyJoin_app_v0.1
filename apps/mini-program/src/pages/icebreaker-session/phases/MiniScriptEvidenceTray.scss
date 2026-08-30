@@ -1,0 +1,201 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// MiniScriptEvidenceTray (V2 P2, 2026-08-28) — act sub-phase evidence area.
+// Card chrome reuses the mini-script accent family; CTAs stay solid
+// $color-primary via the shared Button. 8rpx rhythm throughout.
+.miniscript-evidence {
+  &__budget {
+    display: block;
+    font-size: 22rpx;
+    color: $color-text-tertiary-on-light;
+    margin: $spacing-xs 0 $spacing-sm;
+  }
+
+  &__empty {
+    display: block;
+    font-size: 26rpx;
+    line-height: 1.6;
+    color: $color-text-secondary-on-light;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+
+  &__card {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm;
+    border-radius: $card-radius-sm;
+    background: $phase-accent-miniscript-tint;
+    transition: background 0.12s ease;
+
+    &:active {
+      background: rgba($phase-accent-miniscript, 0.18);
+    }
+
+    &--closed {
+      &:active {
+        background: $phase-accent-miniscript-tint;
+      }
+    }
+  }
+
+  &__card-icon {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: $radius-md;
+    background: rgba($color-surface, 0.9);
+    @include flex-center;
+    flex-shrink: 0;
+  }
+
+  &__card-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-2xs;
+  }
+
+  &__card-name {
+    font-size: 28rpx;
+    font-weight: 600;
+    color: $color-text-primary;
+  }
+
+  &__card-desc {
+    font-size: 24rpx;
+    line-height: 1.5;
+    color: $color-text-secondary-on-light;
+  }
+
+  &__chip--taken {
+    opacity: 0.4;
+  }
+
+  &__reactions {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-top: $spacing-sm;
+  }
+
+  &__reaction {
+    padding: $spacing-sm;
+    border-radius: $card-radius-sm;
+    background: rgba($color-surface, 0.85);
+    border-left: 6rpx solid $phase-accent-miniscript;
+  }
+
+  &__reaction-target {
+    display: block;
+    font-size: 22rpx;
+    color: $color-text-tertiary-on-light;
+    margin-bottom: $spacing-2xs;
+  }
+
+  &__reaction-text {
+    display: block;
+    font-size: 26rpx;
+    line-height: 1.6;
+    color: $color-text-primary;
+  }
+
+  // ── Server-gated pending line (V2 P3): shown while another member's
+  // presentation sits inside the server reveal gate — prevents "is it
+  // stuck" reads. Opacity-pulse only (GPU-safe), flattened for
+  // reduced-motion below.
+  &__pending {
+    display: block;
+    font-size: 22rpx;
+    line-height: 1.5;
+    color: $color-text-tertiary-on-light;
+    margin-top: $spacing-sm;
+    animation: ms-evidence-pending-pulse 1.8s ease-in-out infinite;
+  }
+
+  // ── Target picker (bottom sheet over the hero card) ──
+  &__picker-mask {
+    position: fixed;
+    inset: 0;
+    z-index: $z-modal;
+    background: rgba($color-text-primary, 0.4);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  &__picker {
+    background: $color-surface;
+    border-radius: $card-radius-lg $card-radius-lg 0 0;
+    padding: $spacing-md $spacing-lg calc(#{$spacing-lg} + env(safe-area-inset-bottom));
+    animation: fade-slide-up 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__picker-title {
+    display: block;
+    font-size: 30rpx;
+    font-weight: 600;
+    color: $color-text-primary;
+    margin-bottom: $spacing-sm;
+  }
+
+  // ── Presenter-immediate reaction reveal ──
+  &__reveal-mask {
+    position: fixed;
+    inset: 0;
+    z-index: $z-modal;
+    background: rgba($color-text-primary, 0.4);
+    @include flex-center;
+    padding: $spacing-lg;
+  }
+
+  &__reveal {
+    width: 100%;
+    background: $color-surface;
+    border-radius: $card-radius;
+    padding: $spacing-lg;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    animation: ms-content-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__reveal-target {
+    font-size: 22rpx;
+    color: $color-text-tertiary-on-light;
+  }
+
+  &__reveal-text {
+    font-size: 32rpx;
+    line-height: 1.6;
+    font-weight: 600;
+    color: $color-text-primary;
+  }
+
+  &__reveal-guide {
+    font-size: 26rpx;
+    line-height: 1.5;
+    color: $phase-accent-miniscript-deep;
+  }
+}
+
+@keyframes ms-evidence-pending-pulse {
+  0%, 100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .miniscript-evidence__pending {
+    animation: none;
+  }
+}

@@ -220,6 +220,14 @@ const DISCOVER_EVENT_TYPES = [
   "registration_paid",
   "guidance_shown",
   "guidance_dismissed",
+  // MiniScript V2 P2 gameplay funnel (2026-08-28, contract AC-11): same
+  // minimal-metadata fail-open pattern as flash_search_started. Spoiler
+  // hygiene: metadata carries act numbers / item counts only — never reaction
+  // text, motive correctness, or suspect choices.
+  "miniscript_evidence_presented",
+  "miniscript_vote_round1_submitted",
+  "miniscript_vote_round2_submitted",
+  "miniscript_clue_drawer_opened",
 ] as const;
 
 type DiscoverEventType = (typeof DISCOVER_EVENT_TYPES)[number];

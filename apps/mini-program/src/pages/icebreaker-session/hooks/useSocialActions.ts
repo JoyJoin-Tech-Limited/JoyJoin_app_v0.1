@@ -15,6 +15,7 @@ import { logError, logInfo, logWarn } from '../../../lib/utils/logger'
 import { socialHaptics } from '../../../lib/utils/haptics'
 import { VIBE_TO_API, type VibeId } from '../../../lib/vibeMapping'
 import { socialIcebreakerAnalytics } from '../../../lib/analytics/socialIcebreakerAnalytics'
+import { trackMiniScriptGameplay } from '../../../lib/analytics/miniscriptGameplayAnalytics'
 import { buildSocialPath, getErrorText } from '../icebreakerSessionModel'
 import type { SessionParticipant } from '../phaseUtils'
 import { syncSocialActionResponse } from '../socialActionSync'
@@ -371,6 +372,131 @@ export function useSocialActions(args: UseSocialActionsArgs) {
     void performSocialAction('miniscript-vote', '/api/miniscript/vote', {
       socialSessionId,
       vote,
+    }).then((result) => {
+      // AC-11: per-round submit events; metadata-free (SEC-03 spoiler hygiene).
+      if (result) {
+        trackMiniScriptGameplay(vote.voteRound === 2 ? 'miniscript_vote_round2_submitted' : 'miniscript_vote_round1_submitted')
+      }
+    })
+  }, [performSocialAction, socialSessionId])
+
+  // ── V2 P2: evidence presentation + two-round vote (contract AC-08/10) ──
+  const handlePresentEvidence = useCallback(
+    async (evidenceId: string, targetRoleSlot: number): Promise<string | null> => {
+      const result = await performSocialAction<{ reactionText?: string }>(
+        'miniscript-present-evidence',
+        '/api/miniscript/present-evidence',
+        {
+          socialSessionId,
+          evidenceId,
+          targetRoleSlot,
+        },
+        {
+          suppressErrorToast: true,
+          onError: (error) => {
+            const message = error instanceof Error ? error.message : ''
+            const statusCode = (error as { statusCode?: number } | null)?.statusCode
+            const toast = message.includes('PRESENT_BUDGET_EXCEEDED')
+              ? '每人每幕最多出示 2 次'
+              : message.includes('WRONG_SUB_PHASE')
+                ? '投票已开始，不能再出示证物'
+                : message.includes('EVIDENCE_NOT_REVEALED')
+                  ? '这个证物还没公开'
+                  : message.includes('WRONG_PHASE')
+                    ? '现在还不能出示证物'
+                    : message.includes('SESSION_EXPIRED') || statusCode === 410
+                      ? '会话已过期，请重新进入'
+                      : message.includes('FEATURE_DISABLED')
+                        ? '本场不支持出示证物'
+                        : '操作没成功，再试试'
+            void Taro.showToast({ title: toast, icon: 'none', duration: TOAST_MEDIUM_MS })
+          },
+        },
+      )
+      if (result?.reactionText) {
+        trackMiniScriptGameplay('miniscript_evidence_presented', {
+          actNo: session?.miniScriptCurrentAct ?? 0,
+        })
+        return result.reactionText
+      }
+      return null
+    },
+    [performSocialAction, socialSessionId, session?.miniScriptCurrentAct],
+  )
+
+  // ── V2 P3: presenter early release + host-paced ceremony beats (Q14) ──
+  const handleConfirmRead = useCallback(
+    (evidenceId: string, targetRoleSlot: number) => {
+      void performSocialAction(
+        'miniscript-confirm-read',
+        '/api/miniscript/confirm-read',
+        {
+          socialSessionId,
+          evidenceId,
+          targetRoleSlot,
+        },
+        {
+          suppressErrorToast: true,
+          onError: (error) => {
+            const message = error instanceof Error ? error.message : ''
+            const statusCode = (error as { statusCode?: number } | null)?.statusCode
+            const toast = message.includes('PRESENTER_ONLY')
+              ? '只有出示者能确认读完'
+              : message.includes('PRESENTED_ENTRY_NOT_FOUND')
+                ? '这条出示记录不存在'
+                : message.includes('WRONG_PHASE')
+                  ? '现在不能确认读完'
+                  : message.includes('FEATURE_DISABLED')
+                    ? '本场不支持出示证物'
+                    : message.includes('SESSION_EXPIRED') || statusCode === 410
+                      ? '会话已过期，请重新进入'
+                      : '操作没成功，再试试'
+            void Taro.showToast({ title: toast, icon: 'none', duration: TOAST_MEDIUM_MS })
+          },
+        },
+      )
+    },
+    [performSocialAction, socialSessionId],
+  )
+
+  const handleAdvanceCeremony = useCallback(() => {
+    void performSocialAction(
+      'miniscript-advance-ceremony',
+      '/api/miniscript/advance-ceremony',
+      {
+        socialSessionId,
+      },
+      {
+        suppressErrorToast: true,
+        onError: (error) => {
+          const message = error instanceof Error ? error.message : ''
+          const toast = message.includes('SOLUTION_NOT_REVEALED')
+            ? '真相还没揭晓，稍等一下'
+            : message.includes('FEATURE_DISABLED')
+              ? '本场不支持分段揭晓'
+              : '操作没成功，再试试'
+          void Taro.showToast({ title: toast, icon: 'none', duration: TOAST_MEDIUM_MS })
+        },
+      },
+    )
+  }, [performSocialAction, socialSessionId])
+
+  const handleOpenMotiveVote = useCallback(() => {
+    void performSocialAction('miniscript-open-motive-vote', '/api/miniscript/open-motive-vote', {
+      socialSessionId,
+    }, {
+      suppressErrorToast: true,
+      onError: (error) => {
+        const message = error instanceof Error ? error.message : ''
+        const toast = message.includes('NO_MOTIVE_OPTIONS')
+          ? '这一场没有动机投票环节'
+          : message.includes('WRONG_VOTE_ROUND')
+            ? '先完成嫌疑人投票'
+            : message.includes('SESSION_EXPIRED')
+              ? '会话已过期，请重新进入'
+              : '操作没成功，再试试'
+        void Taro.showToast({ title: toast, icon: 'none', duration: TOAST_MEDIUM_MS })
+      },
     })
   }, [performSocialAction, socialSessionId])
 
@@ -844,6 +970,10 @@ export function useSocialActions(args: UseSocialActionsArgs) {
     handleAssignRoles,
     handleRevealAct,
     handleVote,
+    handlePresentEvidence,
+    handleConfirmRead,
+    handleAdvanceCeremony,
+    handleOpenMotiveVote,
     handleRevealSolution,
     handleMiniScriptReady,
     handleAdvancePhase,

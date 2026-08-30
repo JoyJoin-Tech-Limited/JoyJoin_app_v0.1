@@ -1,22 +1,78 @@
 import { View, Text, Input, Image, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import { type SocialSessionState } from '@shared/socialIcebreaker'
+import {
+  type MiniScriptPlayerResult,
+  type MiniScriptPresentedEvidence,
+  type MiniScriptVote,
+  type SocialSessionState,
+} from '@shared/socialIcebreaker'
 import {
   computeMiniScriptVoteProgress,
   resolveMiniScriptTitle,
   type MiniScriptVoteInput,
 } from '@shared/miniscriptStoryFramework'
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Button from '../../../components/ui/Button'
 import { haptics } from '../../../lib/utils/haptics'
 import { localAsset } from '../../../lib/utils/cdnAssets'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
+import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { CardFlip, ParticleBurst } from '../../../components/reveal'
 import { PhaseHeroCard } from '../components/PhaseHeroCard'
 import { PhaseAigcRow } from '../components/PhaseAigcRow'
 import { TOAST_DEFAULT_MS } from '../../../lib/utils/uiConstants'
+import type { SessionParticipant } from '../phaseUtils'
+import {
+  MINISCRIPT_EVIDENCE_HINT_STORAGE_KEY,
+  MINISCRIPT_MOTIVE_HINT_STORAGE_KEY,
+} from '../sessionShellLogic'
+import { MiniScriptEvidenceTray } from './MiniScriptEvidenceTray'
+import { MiniScriptClueDrawer } from './MiniScriptClueDrawer'
+import {
+  frameworkHasAnyEvidence,
+  resolveHasMotiveRound,
+  roundOneVotes,
+  roundTwoVotes,
+} from './miniScriptV2Model'
+import {
+  TRUTH_CEREMONY_CONTINUE_HINT,
+  TRUTH_CEREMONY_HOST_NEXT_CTA,
+  TRUTH_CEREMONY_STAGE_HAPTIC,
+  TRUTH_CEREMONY_STAGE_TITLE,
+  TRUTH_CEREMONY_WAITING_HOST_HINT,
+  planTruthCeremony,
+} from './miniScriptTruthCeremonyModel'
+import { useTruthCeremonyStage } from './useTruthCeremonyStage'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
+
+// Module-level empty fallbacks — a `?? []` inline allocates a fresh array on
+// every render, which busts every downstream useMemo keyed on the value
+// (perf-audit memo hygiene). Typed once, frozen by usage.
+const EMPTY_VOTES: MiniScriptVote[] = []
+const EMPTY_PRESENTED_EVIDENCE: MiniScriptPresentedEvidence[] = []
+const EMPTY_PLAYER_RESULTS: MiniScriptPlayerResult[] = []
+const EMPTY_REVEALED_CLUES: Array<{ clueId: string; text: string; revealedInAct?: number }> = []
+const EMPTY_DEDUCTION_HINTS: Array<{ stepNumber: number; conclusion: string }> = []
+const EMPTY_MOTIVE_OPTIONS: string[] = []
+
+/** Best-effort storage read for one-time hints (mirrors the coachmark
+ *  precedent in the session page — persistence failure still shows the hint). */
+function readHintSeen(key: string): boolean {
+  try {
+    return Taro.getStorageSync(key) === '1'
+  } catch {
+    return false
+  }
+}
+
+function persistHintSeen(key: string): void {
+  try {
+    Taro.setStorageSync(key, '1')
+  } catch {
+    // Storage full / unavailable — hint may re-show next session; acceptable.
+  }
+}
 
 // ── Display-text hygiene ────────────────────────────────────────────────────
 // Legacy LLM content embedded snake_case machine tokens (genre keys like
@@ -72,20 +128,50 @@ function ProgressStepper({ labels, currentStep }: { labels: string[]; currentSte
   )
 }
 
+/** V2 P3: shared 本桌名侦探 honor-card markup — ceremony stage D and the
+ *  steady-state truth view render the same cards (the staggered pop-in lives
+ *  in CSS; the reduced-motion media query flattens it). `privateLine` is the
+ *  viewer's own result — it stays on their device only. */
+function HonorCardList({ honorNames, privateLine }: { honorNames: string[]; privateLine: string | null }) {
+  return (
+    <View className='miniscript-hero__honor-cards'>
+      {honorNames.length > 0 ? (
+        honorNames.map((name, index) => (
+          <View key={`${name}-${index}`} className='miniscript-hero__honor-card'>
+            <JoyJoinIcon emoji='🔍' size={32} />
+            <Text className='miniscript-hero__honor-name'>{name}</Text>
+          </View>
+        ))
+      ) : (
+        <Text className='miniscript-hero__honor-empty'>今晚的真相藏得真好，没有人两步全中</Text>
+      )}
+      {privateLine ? <Text className='miniscript-hero__honor-private'>{privateLine}</Text> : null}
+    </View>
+  )
+}
+
 export function MiniScriptHeroView({
   session,
   currentUserId,
   isHost,
   playerCount,
+  participants = [],
   onAssignRoles,
   onRevealAct,
   onVote,
+  onPresentEvidence,
+  onConfirmRead,
+  onAdvanceCeremony,
+  onOpenMotiveVote,
   onRevealSolution,
   onAdvance,
   onReady,
   isAssigningRoles,
   isRevealingAct,
   isVoting,
+  isPresentingEvidence = false,
+  isAdvancingCeremony = false,
+  isOpeningMotiveVote = false,
   isRevealingSolution,
   isAdvancing,
   isSettingReady,
@@ -94,9 +180,18 @@ export function MiniScriptHeroView({
   currentUserId: string
   isHost: boolean
   playerCount: number
+  participants?: SessionParticipant[]
   onAssignRoles: () => void
   onRevealAct: (targetAct: number) => void
   onVote: (vote: MiniScriptVoteInput) => void
+  /** V2 P2: present evidence to a role; resolves the reaction text on success. */
+  onPresentEvidence?: (evidenceId: string, targetRoleSlot: number) => Promise<string | null>
+  /** V2 P3: presenter's 已读完 early release (POST confirm-read, idempotent). */
+  onConfirmRead?: (evidenceId: string, targetRoleSlot: number) => void
+  /** V2 P3 (host): advance the truth-ceremony beat (culprit → honor). */
+  onAdvanceCeremony?: () => void
+  /** V2 P2 (host): open round 2 (motive vote). */
+  onOpenMotiveVote?: () => void
   /** Fires the reveal-solution action; optional onError receives the raw action
    *  error (the hook suppresses its default toast when a handler is given). */
   onRevealSolution: (onError?: (error: unknown) => void) => void
@@ -105,6 +200,9 @@ export function MiniScriptHeroView({
   isAssigningRoles: boolean
   isRevealingAct: boolean
   isVoting: boolean
+  isPresentingEvidence?: boolean
+  isAdvancingCeremony?: boolean
+  isOpeningMotiveVote?: boolean
   isRevealingSolution: boolean
   isAdvancing: boolean
   isSettingReady?: boolean
@@ -115,14 +213,25 @@ export function MiniScriptHeroView({
   const totalActs = framework?.act_flow.length ?? 0
   const solutionRevealed = session.miniScriptSolutionRevealed ?? false
   const revealedSolution = session.miniScriptRevealedSolution
-  const myVote = session.miniScriptVotes?.find((v) => v.userId === currentUserId)
-  const allVotes = session.miniScriptVotes ?? []
+  // ── V2 P2: flag snapshot + two-round vote derivation (contract AC-05/10/13) ──
+  const v2Enabled = session.miniScriptV2Enabled === true
+  const motiveOptions = framework?.motiveOptions
+  const hasMotiveRound = resolveHasMotiveRound(v2Enabled, motiveOptions)
+  const voteRound: 1 | 2 = hasMotiveRound && session.miniScriptVoteRound === 2 ? 2 : 1
+  // Per-round ballot filters — semantics mirror sanitizeStateForClient exactly
+  // (round-less ballots are legacy round 1). `myVote` stays the round-1 ballot
+  // so the existing suspect form is untouched; round 2 gets its own.
+  const allVotes = session.miniScriptVotes ?? EMPTY_VOTES
+  const suspectVotes = useMemo(() => roundOneVotes(allVotes), [allVotes])
+  const motiveVotes = useMemo(() => roundTwoVotes(allVotes), [allVotes])
+  const myVote = suspectVotes.find((v) => v.userId === currentUserId)
+  const myMotiveVote = motiveVotes.find((v) => v.userId === currentUserId)
   const assignedPlayerIds = Object.keys(session.miniScriptRoleAssignments ?? {})
   const readyMap = session.miniScriptPlayerReady ?? {}
   const isReady = readyMap[currentUserId] ?? false
   const readyCount = Object.values(readyMap).filter(Boolean).length
-  const deductionHints = session.miniScriptDeductionHints ?? []
-  const revealedClues = session.miniScriptRevealedClues ?? []
+  const deductionHints = session.miniScriptDeductionHints ?? EMPTY_DEDUCTION_HINTS
+  const revealedClues = session.miniScriptRevealedClues ?? EMPTY_REVEALED_CLUES
   const allActsRevealed = totalActs > 0 && currentAct >= totalActs
   const currentActData = framework && currentAct > 0 ? framework.act_flow[currentAct - 1] : undefined
   const characters = useMemo(
@@ -139,13 +248,24 @@ export function MiniScriptHeroView({
 
   // Vote progress is recomputed server-side on every poll (Wave-1). The shared
   // pure function is the exact fallback for older snapshots so quorum /
-  // canReveal never fork between client and server.
+  // canReveal never fork between client and server. V2 P2 (AC-13 client half):
+  // each round's fallback filters ballots by round, mirroring the server.
   const voteProgress = session.miniScriptVoteProgress ?? computeMiniScriptVoteProgress({
-    votes: allVotes,
+    votes: suspectVotes,
     totalAssigned: assignedPlayerIds.length,
     voteOpenedAt: session.miniScriptVoteOpenedAt,
   })
-  const votesRemaining = Math.max(0, voteProgress.quorum - voteProgress.votedCount)
+  const motiveVoteProgress = session.miniScriptMotiveVoteProgress ?? computeMiniScriptVoteProgress({
+    votes: motiveVotes,
+    totalAssigned: assignedPlayerIds.length,
+    voteOpenedAt: session.miniScriptMotiveVoteOpenedAt,
+  })
+  const activeVoteProgress = voteRound === 2 ? motiveVoteProgress : voteProgress
+  // Round-1 reveal authority stays on voteProgress.canReveal (the exact
+  // server-recomputed quorum/90s signal the privacy contract locks); round 2
+  // mirrors it through the independent motive progress.
+  const activeCanReveal = voteRound === 2 ? motiveVoteProgress.canReveal : voteProgress.canReveal
+  const votesRemaining = Math.max(0, activeVoteProgress.quorum - activeVoteProgress.votedCount)
 
   // ── Local UI state ──
   const [roleFlipped, setRoleFlipped] = useState(false)
@@ -185,6 +305,21 @@ export function MiniScriptHeroView({
   const [voteReason, setVoteReason] = useState(myVote?.why ?? myVote?.what ?? '')
   const wasVotingRef = useRef(isVoting)
   const submitSigRef = useRef<string | null>(null)
+
+  // Round-2 (motive) vote form — only live when hasMotiveRound && voteRound
+  // === 2; mirrors the round-1 form's confirm-then-collapse lifecycle.
+  const [motiveEditing, setMotiveEditing] = useState(true)
+  const [motiveChoice, setMotiveChoice] = useState<number | null>(null)
+  const motiveSigRef = useRef<string | null>(null)
+  const wasVotingRef2 = useRef(isVoting)
+
+  // One-time Xiaoyue hints (contract AC-10): evidence presenting + round 2.
+  const [evidenceHintSeen, setEvidenceHintSeen] = useState(() =>
+    readHintSeen(MINISCRIPT_EVIDENCE_HINT_STORAGE_KEY),
+  )
+  const [motiveHintSeen, setMotiveHintSeen] = useState(() =>
+    readHintSeen(MINISCRIPT_MOTIVE_HINT_STORAGE_KEY),
+  )
 
   // 新线索 diff: the badge set is the delta between the previous and current
   // revealed-clue id lists. It persists for the whole act (no 3s timer) and is
@@ -255,6 +390,29 @@ export function MiniScriptHeroView({
     }
   }, [myVote, voteEditing])
 
+  // Entering round 2 (host opened the motive vote) reseeds the motive form
+  // from the polled ballot — a rejoin mid-round-2 lands on the same state.
+  const prevVoteRoundRef = useRef(voteRound)
+  useEffect(() => {
+    if (voteRound !== prevVoteRoundRef.current) {
+      prevVoteRoundRef.current = voteRound
+      setMotiveChoice(myMotiveVote?.motiveChoice ?? null)
+      setMotiveEditing(!myMotiveVote)
+    }
+  }, [voteRound, myMotiveVote])
+
+  // Collapse the motive form only once the poll confirms the ballot we
+  // actually submitted (same contract as the round-1 form).
+  useEffect(() => {
+    if (wasVotingRef2.current && !isVoting && myMotiveVote && motiveSigRef.current) {
+      if (String(myMotiveVote.motiveChoice ?? -1) === motiveSigRef.current) {
+        setMotiveEditing(false)
+        motiveSigRef.current = null
+      }
+    }
+    wasVotingRef2.current = isVoting
+  }, [isVoting, myMotiveVote])
+
   // ── Sub-phase model ──
   const subPhase: MiniScriptSubPhase = !framework
     ? 'empty'
@@ -295,7 +453,7 @@ export function MiniScriptHeroView({
       case 'act':
         return ACT_INSTRUCTIONS[currentAct] ?? FALLBACK_ACT_INSTRUCTION
       case 'vote':
-        return '点一个你最怀疑的角色。'
+        return voteRound === 2 ? '再选一个你觉得最像的动机。' : '点一个你最怀疑的角色。'
       case 'truth':
         return isHost ? '真相大白——请每位玩家认领自己的小秘密。' : '真相大白——轮到你了，就认领自己的小秘密。'
       default:
@@ -351,7 +509,7 @@ export function MiniScriptHeroView({
   // quorum; a real refusal (400 WAITING_FOR_VOTES) toasts the remaining count
   // instead of dead-ending.
   const handleRevealSolutionTap = () => {
-    if (voteProgress.canReveal) {
+    if (activeCanReveal) {
       handleRevealSolutionConfirm()
       return
     }
@@ -370,7 +528,7 @@ export function MiniScriptHeroView({
     })
   }
 
-  const handleSubmitVote = () => {
+  const handleSubmitVote = useCallback(() => {
     if (suspectSlot === null) return
     haptics('success')
     const vote: MiniScriptVoteInput = { suspectRoleSlot: suspectSlot }
@@ -382,7 +540,14 @@ export function MiniScriptHeroView({
     }
     submitSigRef.current = JSON.stringify([vote.suspectRoleSlot ?? null, vote.what ?? '', vote.why ?? ''])
     onVote(vote)
-  }
+  }, [suspectSlot, voteOptions, voteWhat, voteWhy, voteReason, onVote])
+
+  const handleSubmitMotiveVote = useCallback(() => {
+    if (motiveChoice === null) return
+    haptics('success')
+    motiveSigRef.current = String(motiveChoice)
+    onVote({ voteRound: 2, motiveChoice })
+  }, [motiveChoice, onVote])
 
   // ── Hero card props per sub-phase ──
   const heroTitle = subPhase === 'empty'
@@ -410,7 +575,7 @@ export function MiniScriptHeroView({
     : subPhase === 'role'
       ? (isHost ? `${readyCount}/${playerCount} 人已准备` : '看完角色卡后点准备')
       : subPhase === 'vote'
-        ? `${voteProgress.votedCount}/${voteProgress.totalAssigned} 已投票`
+        ? `${activeVoteProgress.votedCount}/${activeVoteProgress.totalAssigned} 已投票`
         : subPhase === 'truth'
           ? '游戏结束'
           : undefined
@@ -418,14 +583,14 @@ export function MiniScriptHeroView({
   const heroDoneCount = subPhase === 'role'
     ? readyCount
     : subPhase === 'vote'
-      ? voteProgress.votedCount
+      ? activeVoteProgress.votedCount
       : subPhase === 'truth'
         ? playerCount
         : undefined
   const heroTotalCount = subPhase === 'role'
     ? playerCount
     : subPhase === 'vote'
-      ? voteProgress.totalAssigned
+      ? activeVoteProgress.totalAssigned
       : subPhase === 'truth'
         ? playerCount
         : undefined
@@ -512,15 +677,28 @@ export function MiniScriptHeroView({
       case 'vote':
         return isHost ? (
           <>
+            {voteRound === 1 && hasMotiveRound && onOpenMotiveVote ? (
+              <Button
+                variant='primary'
+                onClick={() => {
+                  haptics('medium')
+                  onOpenMotiveVote()
+                }}
+                disabled={isOpeningMotiveVote}
+                loading={isOpeningMotiveVote}
+              >
+                {isOpeningMotiveVote ? '开启中…' : '进入动机投票'}
+              </Button>
+            ) : null}
             <Button
-              variant='primary'
+              variant={voteRound === 1 && hasMotiveRound ? 'secondary' : 'primary'}
               onClick={handleRevealSolutionTap}
               disabled={isRevealingSolution}
               loading={isRevealingSolution}
             >
               {isRevealingSolution ? '揭晓中…' : '揭晓真相'}
             </Button>
-            {!voteProgress.canReveal ? (
+            {!activeCanReveal ? (
               <Text className='miniscript-hero__cta-caption'>还差 {votesRemaining} 票 · 90 秒后可强制揭晓</Text>
             ) : null}
           </>
@@ -685,9 +863,36 @@ export function MiniScriptHeroView({
     [revealedClues, newClueIds],
   )
 
+  // V2 P2 surfaces: evidence tray (AC-08) + clue drawer (AC-09) hide entirely
+  // when the flag snapshot is off or the framework has no evidence — the exact
+  // legacy UI remains for old scripts.
+  const showEvidenceTray =
+    v2Enabled && framework !== undefined && frameworkHasAnyEvidence(framework) && onPresentEvidence !== undefined
+  const showClueDrawer = v2Enabled && framework !== undefined
+  const showEvidenceHint = showEvidenceTray && !evidenceHintSeen
+
+  const dismissEvidenceHint = () => {
+    haptics('light')
+    setEvidenceHintSeen(true)
+    persistHintSeen(MINISCRIPT_EVIDENCE_HINT_STORAGE_KEY)
+  }
+  const dismissMotiveHint = () => {
+    haptics('light')
+    setMotiveHintSeen(true)
+    persistHintSeen(MINISCRIPT_MOTIVE_HINT_STORAGE_KEY)
+  }
+
   const actContent = useMemo(
     () => (
       <>
+        {showClueDrawer && framework ? (
+          <MiniScriptClueDrawer
+            framework={framework}
+            revealedClues={revealedClues}
+            currentAct={currentAct}
+          />
+        ) : null}
+
         {newClues.length > 0 ? (
           <View className='miniscript-hero__section miniscript-hero__section--new-clues'>
             <Text className='miniscript-hero__section-title'>本幕新线索</Text>
@@ -698,6 +903,39 @@ export function MiniScriptHeroView({
               </View>
             ))}
           </View>
+        ) : null}
+
+        {showEvidenceHint ? (
+          <View className='miniscript-hero__hint' role='note'>
+            <Image
+              className='miniscript-hero__hint-mascot'
+              src={localAsset('/assets/mascot/xiaoyue-coach.webp')}
+              mode='aspectFit'
+            />
+            <Text className='miniscript-hero__hint-text'>把证物出示给想试探的人，听听 TA 怎么说</Text>
+            <View
+              className='miniscript-hero__hint-dismiss'
+              role='button'
+              aria-label='知道了'
+              onClick={dismissEvidenceHint}
+            >
+              <Text className='miniscript-hero__hint-dismiss-text'>知道了</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {showEvidenceTray && framework ? (
+          <MiniScriptEvidenceTray
+            framework={framework}
+            currentAct={currentAct}
+            characters={characters}
+            presentedEvidence={session.miniScriptPresentedEvidence ?? EMPTY_PRESENTED_EVIDENCE}
+            currentUserId={currentUserId}
+            isPresenting={isPresentingEvidence}
+            presentingClosed={session.miniScriptVoteOpenedAt !== undefined}
+            onPresent={onPresentEvidence!}
+            onConfirmRead={onConfirmRead}
+          />
         ) : null}
 
         {revealedClues.length > 0 ? (
@@ -798,6 +1036,18 @@ export function MiniScriptHeroView({
       showAllClues,
       showBeats,
       showDeductionHints,
+      showEvidenceTray,
+      showEvidenceHint,
+      showClueDrawer,
+      framework,
+      currentAct,
+      characters,
+      session.miniScriptPresentedEvidence,
+      session.miniScriptVoteOpenedAt,
+      currentUserId,
+      isPresentingEvidence,
+      onPresentEvidence,
+      onConfirmRead,
     ],
   )
 
@@ -814,6 +1064,10 @@ export function MiniScriptHeroView({
     () => Math.max(0, voteProgress.totalAssigned - voteProgress.votedCount),
     [voteProgress.totalAssigned, voteProgress.votedCount],
   )
+  // V2 P3: once round 1 can close (server canReveal authority) and a motive
+  // round exists, the player ballot no longer says 还在等 N 位 — the next
+  // step is the HOST opening round 2, so say that explicitly.
+  const waitingForMotiveOpen = !isHost && hasMotiveRound && voteRound === 1 && voteProgress.canReveal
 
   const voteContent = useMemo(
     () => (
@@ -821,7 +1075,8 @@ export function MiniScriptHeroView({
         {myVote && !voteEditing ? (
           <View className='miniscript-hero__vote-status'>
             <Text className='miniscript-hero__vote-status-text'>
-              已投给 {myVotedLabel || '一位角色'}{waitingOnCount > 0 ? ` · 还在等 ${waitingOnCount} 位` : ''}
+              已投给 {myVotedLabel || '一位角色'}
+              {waitingForMotiveOpen ? ' · 等待主持人开启动机投票' : waitingOnCount > 0 ? ` · 还在等 ${waitingOnCount} 位` : ''}
             </Text>
             <View
               className='miniscript-hero__vote-change'
@@ -888,7 +1143,7 @@ export function MiniScriptHeroView({
                   </View>
                 </View>
                 <View className='miniscript-hero__section'>
-                  <Text className='miniscript-hero__section-title'>为什么？</Text>
+                  <Text className='miniscript-hero__section-title'>随口聊聊你的推理</Text>
                   <View className='miniscript-hero__vote-chips'>
                     {voteOptions.why.map((option) => {
                       const selected = voteWhy === option
@@ -952,6 +1207,7 @@ export function MiniScriptHeroView({
       voteEditing,
       myVotedLabel,
       waitingOnCount,
+      waitingForMotiveOpen,
       characters,
       suspectSlot,
       voteOptions,
@@ -964,6 +1220,105 @@ export function MiniScriptHeroView({
     ],
   )
 
+  // ── Round 2 (motive) ballot — only rendered when voteRound === 2, which
+  // itself requires hasMotiveRound (flag snapshot on + motiveOptions[]). ──
+  const myMotiveLabel = myMotiveVote && typeof myMotiveVote.motiveChoice === 'number'
+    ? motiveOptions?.[myMotiveVote.motiveChoice] ?? ''
+    : ''
+  const motiveWaitingCount = Math.max(0, motiveVoteProgress.totalAssigned - motiveVoteProgress.votedCount)
+  const showMotiveHint = voteRound === 2 && !motiveHintSeen
+
+  const motiveVoteContent = useMemo(
+    () => (
+      <>
+        {showMotiveHint ? (
+          <View className='miniscript-hero__hint' role='note'>
+            <Image
+              className='miniscript-hero__hint-mascot'
+              src={localAsset('/assets/mascot/xiaoyue-coach.webp')}
+              mode='aspectFit'
+            />
+            <Text className='miniscript-hero__hint-text'>还没完——再猜猜 TA 为什么这么做</Text>
+            <View
+              className='miniscript-hero__hint-dismiss'
+              role='button'
+              aria-label='知道了'
+              onClick={dismissMotiveHint}
+            >
+              <Text className='miniscript-hero__hint-dismiss-text'>知道了</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {myMotiveVote && !motiveEditing ? (
+          <View className='miniscript-hero__vote-status'>
+            <Text className='miniscript-hero__vote-status-text'>
+              动机已投给「{myMotiveLabel || '一个选项'}」{motiveWaitingCount > 0 ? ` · 还在等 ${motiveWaitingCount} 位` : ''}
+            </Text>
+            <View
+              className='miniscript-hero__vote-change'
+              role='button'
+              aria-label='改票'
+              onClick={() => {
+                haptics('light')
+                setMotiveEditing(true)
+              }}
+            >
+              <Text>改票</Text>
+            </View>
+          </View>
+        ) : (
+          <>
+            <View className='miniscript-hero__section'>
+              <Text className='miniscript-hero__section-title'>TA 为什么这么做？</Text>
+              <View className='miniscript-hero__vote-chips'>
+                {(motiveOptions ?? EMPTY_MOTIVE_OPTIONS).map((option, index) => {
+                  const selected = motiveChoice === index
+                  return (
+                    <View
+                      key={option}
+                      className={`miniscript-hero__vote-chip${selected ? ' miniscript-hero__vote-chip--selected' : ''}`}
+                      role='button'
+                      aria-label={`${option}${selected ? '，已选择' : '，未选择'}`}
+                      aria-pressed={selected}
+                      onClick={() => {
+                        haptics('light')
+                        setMotiveChoice(index)
+                      }}
+                    >
+                      <Text>{option}</Text>
+                    </View>
+                  )
+                })}
+              </View>
+            </View>
+
+            <Button
+              variant='primary'
+              onClick={handleSubmitMotiveVote}
+              disabled={isVoting || motiveChoice === null}
+              loading={isVoting}
+            >
+              {isVoting ? '提交中…' : '提交动机'}
+            </Button>
+          </>
+        )}
+      </>
+    ),
+    [
+      showMotiveHint,
+      myMotiveVote,
+      motiveEditing,
+      myMotiveLabel,
+      motiveWaitingCount,
+      motiveOptions,
+      motiveChoice,
+      isVoting,
+      handleSubmitMotiveVote,
+    ],
+  )
+
+
   const culpritCharacter = useMemo(() => {
     if (!revealedSolution) return undefined
     if (typeof revealedSolution.whoSlot === 'number') {
@@ -974,6 +1329,26 @@ export function MiniScriptHeroView({
   const guessedCount = culpritCharacter
     ? voteProgress.tally.find((t) => t.roleSlot === culpritCharacter.slotIndex + 1)?.count ?? 0
     : undefined
+
+  // V2 P2 two-step results (contract AC-10): the public honor list shows ONLY
+  // dual-correct players (两步全对); wrong players see gentle private
+  // feedback on their own device only — nobody is named publicly for a miss.
+  const playerResults = session.miniScriptRevealedPlayerResults ?? EMPTY_PLAYER_RESULTS
+  const showTwoStepResults = hasMotiveRound && playerResults.some((r) => r.round2Correct !== undefined)
+  const honorNames = showTwoStepResults
+    ? playerResults
+        .filter((r) => r.round1Correct === true && r.round2Correct === true)
+        .map((r) => participants.find((p) => p.userId === r.userId)?.displayName ?? '一位玩家')
+    : []
+  const myResult = playerResults.find((r) => r.userId === currentUserId)
+  const myDualCorrect = myResult?.round1Correct === true && myResult?.round2Correct === true
+  // V2 P3: the viewer's own two-step outcome, shared by the ceremony honor
+  // stage and the steady-state truth view — gentle, private, never public.
+  const honorPrivateLine = myDualCorrect
+    ? '你两步全对，名侦探就是你'
+    : myResult && revealedSolution
+      ? `差一点点——当事人其实是 ${culpritCharacter?.roleLabel ?? revealedSolution.who}，真动机是「${revealedSolution.why}」`
+      : null
   // Slot-based tally (Wave-1) with a legacy free-text fallback for sessions
   // whose votes predate suspectRoleSlot.
   const tallyRows = useMemo(
@@ -986,7 +1361,7 @@ export function MiniScriptHeroView({
           }))
         : (() => {
             const counts = new Map<string, number>()
-            allVotes.forEach((v) => {
+            suspectVotes.forEach((v) => {
               const key = v.who ?? '未指明'
               counts.set(key, (counts.get(key) ?? 0) + 1)
             })
@@ -994,8 +1369,47 @@ export function MiniScriptHeroView({
               .map(([label, count]) => ({ key: label, label, count }))
               .sort((a, b) => b.count - a.count)
           })(),
-    [voteProgress.tally, characters, allVotes],
+    [voteProgress.tally, characters, suspectVotes],
   )
+
+  // ── V2 P3: staged truth-reveal ceremony ──
+  // planTruthCeremony is pure; the hook is the SOLE owner of stage timing
+  // (AnalyzingAnimation precedent) and owns rejoin/swipe-back completion.
+  // Deps stay scalar so a re-polled but unchanged plan keeps its identity —
+  // a new plan object every 3s poll would starve the stage auto-advance.
+  const { shouldReduceMotion } = useMiniRevealMotion()
+  const hasMotiveText = Boolean(revealedSolution?.why)
+  const hasTallyRows = tallyRows.length > 0
+  const ceremonyPlan = useMemo(
+    () =>
+      planTruthCeremony({
+        solutionRevealed,
+        v2Enabled,
+        showTwoStepResults,
+        hasMotiveText,
+        hasTallyRows,
+        reduceMotion: shouldReduceMotion,
+      }),
+    [solutionRevealed, v2Enabled, showTwoStepResults, hasMotiveText, hasTallyRows, shouldReduceMotion],
+  )
+  // V2 P3 Q14: host-paced beats — culprit content waits for server beat ≥ 1,
+  // honor for beat ≥ 2 (advanced by the host's 下一段 CTA via
+  // POST /api/miniscript/advance-ceremony; arrives on the regular poll).
+  const ceremonyBeat = session.miniScriptCeremonyBeat ?? 0
+  const ceremony = useTruthCeremonyStage(ceremonyPlan, solutionRevealed, ceremonyBeat)
+  const showCeremony = ceremonyPlan.mode === 'staged' && !ceremony.isComplete && revealedSolution !== undefined
+
+  // Stage-entry haptics ride the stage machine (heavy on the culprit land,
+  // success on the honor reveal); the map keeps silent stages silent. Gated
+  // on stageRevealed so a host-paced beat fires when the server's beat
+  // actually lands — not when the stage machine parks on the hold.
+  const ceremonyStage = ceremony.stage
+  const ceremonyStageRevealed = ceremony.stageRevealed
+  useEffect(() => {
+    if (!ceremonyStage || !ceremonyStageRevealed) return
+    const haptic = TRUTH_CEREMONY_STAGE_HAPTIC[ceremonyStage]
+    if (haptic) haptics(haptic)
+  }, [ceremonyStage, ceremonyStageRevealed])
 
   const truthContent = useMemo(
     () =>
@@ -1012,6 +1426,12 @@ export function MiniScriptHeroView({
                 <Text className='miniscript-hero__beat'>{revealedSolution.why}</Text>
                 {guessedCount !== undefined ? (
                   <Text className='miniscript-hero__truth-guessed'>{guessedCount} 人猜中了！</Text>
+                ) : null}
+                {showTwoStepResults ? (
+                  <View className='miniscript-hero__honor'>
+                    <Text className='miniscript-hero__honor-title'>本桌名侦探</Text>
+                    <HonorCardList honorNames={honorNames} privateLine={honorPrivateLine} />
+                  </View>
                 ) : null}
               </>
             ) : (
@@ -1087,6 +1507,9 @@ export function MiniScriptHeroView({
       revealedSolution,
       culpritCharacter,
       guessedCount,
+      showTwoStepResults,
+      honorNames,
+      honorPrivateLine,
       characters,
       myRole,
       confessFlipped,
@@ -1095,6 +1518,118 @@ export function MiniScriptHeroView({
       scriptTitle,
     ],
   )
+
+  // ── V2 P3: ceremony stage content — one focused beat per stage, keyed so
+  // each stage swap re-runs its entrance animation. Tapping anywhere advances
+  // (user skip); the hook owns the auto-advance timers. Host-paced beats
+  // (culprit / honor) park on a hold view until the server's
+  // miniScriptCeremonyBeat advances — the host gets a 下一段 CTA, everyone
+  // else a waiting hint, and tap-through is disabled while held. Once the
+  // ceremony completes, the steady-state truthContent above renders in full.
+  const ceremonyContent = useMemo(() => {
+    const stage = ceremony.stage
+    if (!stage || !revealedSolution) return null
+    const revealed = ceremony.stageRevealed
+    return (
+      <View
+        className='miniscript-hero__ceremony'
+        role='button'
+        aria-label={revealed ? TRUTH_CEREMONY_CONTINUE_HINT : TRUTH_CEREMONY_WAITING_HOST_HINT}
+        onClick={() => {
+          if (!revealed) return
+          haptics('light')
+          ceremony.advance()
+        }}
+      >
+        <View className='miniscript-hero__ceremony-dots' aria-hidden='true'>
+          {ceremonyPlan.stages.map((dotStage, dotIndex) => (
+            <View
+              key={dotStage}
+              className={`miniscript-hero__ceremony-dot${dotIndex === ceremony.stageIndex ? ' miniscript-hero__ceremony-dot--active' : ''}${dotIndex < ceremony.stageIndex ? ' miniscript-hero__ceremony-dot--past' : ''}`}
+            />
+          ))}
+        </View>
+        <View key={stage} className='miniscript-hero__ceremony-stage'>
+          <Text className='miniscript-hero__ceremony-title'>{TRUTH_CEREMONY_STAGE_TITLE[stage]}</Text>
+          {!revealed ? (
+            <View className='miniscript-hero__ceremony-hold'>
+              {isHost && onAdvanceCeremony ? (
+                <View
+                  className='miniscript-hero__ceremony-next'
+                  role='button'
+                  aria-label={TRUTH_CEREMONY_HOST_NEXT_CTA}
+                  aria-disabled={isAdvancingCeremony}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (isAdvancingCeremony) return
+                    haptics('medium')
+                    onAdvanceCeremony()
+                  }}
+                >
+                  <Text className='miniscript-hero__ceremony-next-text'>
+                    {isAdvancingCeremony ? '揭晓中…' : TRUTH_CEREMONY_HOST_NEXT_CTA}
+                  </Text>
+                </View>
+              ) : (
+                <View role='status' aria-live='polite'>
+                  <Text className='miniscript-hero__ceremony-waiting'>{TRUTH_CEREMONY_WAITING_HOST_HINT}</Text>
+                </View>
+              )}
+            </View>
+          ) : null}
+          {revealed && stage === 'tally' ? (
+            <View className='miniscript-hero__ceremony-panel'>
+              {tallyRows.map((row) => (
+                <View key={row.key} className='miniscript-hero__vote-row'>
+                  <Text className='miniscript-hero__beat'>{row.label}</Text>
+                  <Text className='miniscript-hero__vote-count'>{row.count} 票</Text>
+                </View>
+              ))}
+              <Text className='miniscript-hero__vote-total'>共 {voteProgress.votedCount} 人参与投票</Text>
+            </View>
+          ) : null}
+          {revealed && stage === 'culprit' ? (
+            <View className='miniscript-hero__culprit-card'>
+              <Text className='miniscript-hero__culprit-label'>真相人物</Text>
+              <Text className='miniscript-hero__culprit-name'>{culpritCharacter?.roleLabel ?? revealedSolution.who}</Text>
+              <Text className='miniscript-hero__culprit-what'>{revealedSolution.what}</Text>
+              {guessedCount !== undefined ? (
+                <Text className='miniscript-hero__truth-guessed'>{guessedCount} 人猜中了！</Text>
+              ) : null}
+            </View>
+          ) : null}
+          {revealed && stage === 'motive' ? (
+            <View className='miniscript-hero__motive-card'>
+              <Text className='miniscript-hero__motive-label'>真动机</Text>
+              <Text className='miniscript-hero__motive-text'>{revealedSolution.why}</Text>
+            </View>
+          ) : null}
+          {revealed && stage === 'honor' ? (
+            <HonorCardList honorNames={honorNames} privateLine={honorPrivateLine} />
+          ) : null}
+        </View>
+        {revealed ? (
+          <Text className='miniscript-hero__ceremony-hint'>{TRUTH_CEREMONY_CONTINUE_HINT}</Text>
+        ) : null}
+      </View>
+    )
+  }, [
+    ceremony.stage,
+    ceremony.stageIndex,
+    ceremony.stageRevealed,
+    ceremony.advance,
+    ceremonyPlan.stages,
+    revealedSolution,
+    isHost,
+    onAdvanceCeremony,
+    isAdvancingCeremony,
+    tallyRows,
+    voteProgress.votedCount,
+    culpritCharacter,
+    guessedCount,
+    honorNames,
+    honorPrivateLine,
+  ])
 
   // ── Stable shell: ONE outer card across all sub-phases (H). Only the keyed
   // inner content swaps — the card (and its entrance animation) mounts once,
@@ -1121,7 +1656,7 @@ export function MiniScriptHeroView({
       >
         <View key={`${subPhase}:${currentAct}`} className='miniscript-hero__content'>
           {subPhase !== 'empty' ? <Text className='miniscript-hero__identity'>{identityLine}</Text> : null}
-          {instruction ? (
+          {!showCeremony && instruction ? (
             <View className='miniscript-hero__instruction'>
               {subPhase === 'act' ? (
                 <Text className='miniscript-hero__instruction-label'>本幕任务</Text>
@@ -1134,8 +1669,15 @@ export function MiniScriptHeroView({
           {subPhase === 'preview' && !isHost ? waitingContent : null}
           {subPhase === 'role' ? roleContent : null}
           {subPhase === 'act' ? actContent : null}
-          {subPhase === 'vote' ? voteContent : null}
-          {subPhase === 'truth' ? truthContent : null}
+          {subPhase === 'vote' ? (voteRound === 2 ? motiveVoteContent : voteContent) : null}
+          {subPhase === 'vote' && showClueDrawer && framework ? (
+            <MiniScriptClueDrawer
+              framework={framework}
+              revealedClues={revealedClues}
+              currentAct={currentAct}
+            />
+          ) : null}
+          {subPhase === 'truth' ? (showCeremony ? ceremonyContent : truthContent) : null}
 
           {subPhase === 'act' || subPhase === 'vote' || subPhase === 'truth' ? (
             <PhaseAigcRow meta={session.miniScriptFrameworkMeta} reason='AI 生成剧本内容' />

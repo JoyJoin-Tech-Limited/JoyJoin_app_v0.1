@@ -48,6 +48,7 @@ vi.mock('../lib/aiTraceLogger', () => ({
 
 vi.mock('../middleware/metrics', () => ({
   recordAIProviderRecoveryMetric: (opts: unknown) => hoisted.metricsMock(opts),
+  recordMiniscriptRuntimeCriticMetric: vi.fn(),
 }));
 
 const ALL_MACHINE_KEYS: readonly string[] = [...MINI_SCRIPT_STYLES, ...MINI_SCRIPT_GENRES];

@@ -464,7 +464,52 @@ export interface MiniScriptVote {
   who?: string;
   what?: string;
   why?: string;
+  /** V2 P2: 1 = suspect round (default when absent, backward compatible),
+   *  2 = motive round. */
+  voteRound?: 1 | 2;
+  /** V2 P2: 0-based index into the framework's public motiveOptions; only
+   *  present on round-2 ballots. */
+  motiveChoice?: number;
   votedAt: number;
+}
+
+/** V2 P2: an evidence presentation. The reaction text becomes public once
+ *  presented (the presenter reads it aloud), so it rides session state for
+ *  rejoin and delayed rendering on other members' devices. Unpresented
+ *  reactions stay server-only in the secrets store.
+ *
+ *  V2 P3 visibility contract (server-owned, sanitizeStateForClient):
+ *  `reactionText` is ALWAYS persisted on state, but client payloads omit the
+ *  field for a non-presenter until (server now − presentedAt ≥ 8s) OR
+ *  `readConfirmedAt` is set; the presenter always receives their own entries
+ *  immediately. Clients must treat `reactionText == null` as "not yet
+ *  revealed" — never compare presentedAt against a device clock (2026-08-13
+ *  clock-skew canon). */
+export interface MiniScriptPresentedEvidence {
+  evidenceId: string;
+  /** 1-based role slot the evidence was presented to. */
+  targetRoleSlot: number;
+  presentedBy: string;
+  /** Act number in which the presentation happened (budget is per act). */
+  actNo: number;
+  presentedAt: number;
+  reactionText?: string;
+  /** Epoch ms set by POST /api/miniscript/confirm-read (presenter finished
+   *  reading aloud). Releases the reaction to every member immediately. */
+  readConfirmedAt?: number;
+}
+
+/** V2 P3: host-paced truth-ceremony beats (Q14). 0 = not started / free
+ *  stages, 1 = culprit (当事人) revealed, 2 = 本桌名侦探 honor revealed. */
+export const MINISCRIPT_CEREMONY_MAX_BEAT = 2;
+
+/** V2 P2: per-player two-step reveal outcome, computed at reveal-solution.
+ *  `round2Correct` is absent when the framework has no motive round or the
+ *  host revealed without opening round 2. */
+export interface MiniScriptPlayerResult {
+  userId: string;
+  round1Correct?: boolean;
+  round2Correct?: boolean;
 }
 
 /** Eligibility metadata for a selectable phase in custom mode. */
@@ -693,7 +738,9 @@ export interface SocialSessionState {
   miniScriptPlayerRuntimeViews?: Record<string, MiniScriptPlayerRuntimeView>;
   miniScriptCurrentAct?: number; // 0 = not started, 1 = act 1, etc.
   miniScriptRevealedClueIds?: string[];
-  miniScriptRevealedClues?: Array<{ clueId: string; text: string }>;
+  /** `revealedInAct` is additive (V2 P2, clue drawer grouping, contract AC-09);
+   *  entries written before P2 carry only clueId/text. */
+  miniScriptRevealedClues?: Array<{ clueId: string; text: string; revealedInAct?: number }>;
   miniScriptVotes?: MiniScriptVote[];
   /** Epoch ms when the vote phase opened (final act revealed). Drives the 90s
    * quorum escape hatch. */
@@ -708,6 +755,31 @@ export interface SocialSessionState {
   miniScriptRevealedResolutionSummary?: string;
   miniScriptPlayerReady?: Record<string, boolean>; // userId -> ready status
   miniScriptDeductionHints?: Array<{ stepNumber: number; conclusion: string }>;
+  // ── V2 P2: evidence presentation + two-round (suspect → motive) voting ──
+  /** Feature-flag snapshot taken once at mini_script phase entry
+   *  (miniscriptEvidenceVoteV2Enabled). Mid-session flag flips never affect a
+   *  live session; undefined on legacy sessions = treated as off. */
+  miniScriptV2Enabled?: boolean;
+  /** Current vote round: 1 = suspect (default), 2 = motive. Set to 2 by
+   *  POST /api/miniscript/open-motive-vote. */
+  miniScriptVoteRound?: 1 | 2;
+  /** Epoch ms when round 2 (motive vote) opened. Drives the independent 90s
+   *  quorum escape hatch for the motive round. */
+  miniScriptMotiveVoteOpenedAt?: number;
+  /** Derived in `sanitizeStateForClient` on every poll — never persisted.
+   *  Round-2-filtered progress (round 1 keeps using miniScriptVoteProgress). */
+  miniScriptMotiveVoteProgress?: MiniScriptVoteProgress;
+  /** Presented evidence entries (reaction text included — public after
+   *  presentation). Unpresented reactions never appear here. */
+  miniScriptPresentedEvidence?: MiniScriptPresentedEvidence[];
+  /** Per-player two-step results, persisted at reveal time so rejoining
+   *  clients see the same outcome as the reveal-solution response. */
+  miniScriptRevealedPlayerResults?: MiniScriptPlayerResult[];
+  /** V2 P3 (Q14): host-paced truth-ceremony beat. 0 = not started (tally /
+   *  motive stages are free), 1 = culprit revealed, 2 = honor revealed.
+   *  Advanced by POST /api/miniscript/advance-ceremony (host only), only
+   *  valid after miniScriptSolutionRevealed. */
+  miniScriptCeremonyBeat?: number;
   // Bonus gate — post-core-phase mini_script offer
   bonusGateOffered?: boolean;
   bonusGateAccepted?: boolean;

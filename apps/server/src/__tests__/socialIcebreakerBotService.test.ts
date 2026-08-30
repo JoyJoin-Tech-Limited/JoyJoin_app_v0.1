@@ -91,6 +91,7 @@ vi.mock('../lib/socialIcebreakerStore', () => ({
       { index: 3, text: 'truth three', isLie: false },
     ];
   }),
+  getMiniScriptSecrets: vi.fn(async () => null),
 }));
 
 describe('socialIcebreakerBotService', () => {

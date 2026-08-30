@@ -18,7 +18,7 @@ describe('MiniScript selected label prompt context', () => {
       selectedLabel: '现代都市',
     })
 
-    expect(MINISCRIPT_GENERATION_PROMPT_VERSION).toBe('miniscript-generate-v3.2')
+    expect(MINISCRIPT_GENERATION_PROMPT_VERSION).toBe('miniscript-generate-v3.3')
     expect(labeled.system).toBe(base.system)
     expect(labeled.user.replace('\n【主持人已选标签】现代都市\n', '')).toBe(base.user)
     expect(labeled.user).toContain('【主持人已选标签】现代都市')

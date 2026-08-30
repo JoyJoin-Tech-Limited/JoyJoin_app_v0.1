@@ -89,4 +89,55 @@ describe('MiniScript client-server path contract', () => {
     expect(bonusGateSource).toContain("path: '/api/miniscript/bonus/sentiment'")
     expect(bonusGateSource).not.toContain('social-icebreaker/${socialSessionId}/bonus')
   })
+
+  // ── V2 P2 additions (2026-08-28, contract: additive only — existing
+  // assertions above are never modified) ────────────────────────────────────
+
+  it('posts V2 P2 actions to /api/miniscript/* with socialSessionId in the body', () => {
+    // present-evidence: { socialSessionId, evidenceId, targetRoleSlot }
+    expect(actionsSource).toMatch(
+      /performSocialAction<\{ reactionText\?: string \}>\(\s*'miniscript-present-evidence',\s*'\/api\/miniscript\/present-evidence',\s*\{\s*socialSessionId,\s*evidenceId,\s*targetRoleSlot,/,
+    )
+    // open-motive-vote (host): { socialSessionId }
+    expect(actionsSource).toMatch(
+      /performSocialAction\('miniscript-open-motive-vote', '\/api\/miniscript\/open-motive-vote', \{\s*socialSessionId,/,
+    )
+  })
+
+  it('never sends V2 P2 actions through the session-scoped social-icebreaker path', () => {
+    expect(actionsSource).not.toContain("'/miniscript/present-evidence'")
+    expect(actionsSource).not.toContain("'/miniscript/open-motive-vote'")
+  })
+
+  it('round-2 ballots ride the existing /api/miniscript/vote route with voteRound + motiveChoice', () => {
+    // The hero view submits motive ballots through the SAME onVote action
+    // (single vote route); the round discriminator travels inside the vote
+    // object, never in the URL.
+    const heroSource = readFileSync(
+      resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptHeroView.tsx'),
+      'utf8',
+    )
+    expect(heroSource).toContain('onVote({ voteRound: 2, motiveChoice })')
+    expect(actionsSource).not.toContain("'/api/miniscript/vote-motive'")
+    expect(actionsSource).not.toContain("'/api/miniscript/vote/round2'")
+  })
+
+  // ── V2 P3 additions (contract: additive only — existing assertions above
+  // are never modified) ─────────────────────────────────────────────────────
+
+  it('posts V2 P3 actions to /api/miniscript/* with socialSessionId in the body', () => {
+    // confirm-read (presenter early release): { socialSessionId, evidenceId, targetRoleSlot }
+    expect(actionsSource).toMatch(
+      /performSocialAction\(\s*'miniscript-confirm-read',\s*'\/api\/miniscript\/confirm-read',\s*\{\s*socialSessionId,\s*evidenceId,\s*targetRoleSlot,/,
+    )
+    // advance-ceremony (host-paced beats): { socialSessionId }
+    expect(actionsSource).toMatch(
+      /performSocialAction\(\s*'miniscript-advance-ceremony',\s*'\/api\/miniscript\/advance-ceremony',\s*\{\s*socialSessionId,/,
+    )
+  })
+
+  it('never sends V2 P3 actions through the session-scoped social-icebreaker path', () => {
+    expect(actionsSource).not.toContain("'/miniscript/confirm-read'")
+    expect(actionsSource).not.toContain("'/miniscript/advance-ceremony'")
+  })
 })

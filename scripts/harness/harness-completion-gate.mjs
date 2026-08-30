@@ -278,8 +278,9 @@ function checkSecurity(changedFiles, fileContents) {
     // Skip MCP config files and env templates (they use ${VAR} syntax intentionally)
     if (/\.mcp\.json$|\.env\./.test(file)) continue;
 
-    // Skip test files (they contain intentional fixture patterns)
-    if (/\.test\.|\.spec\.|__tests__/.test(file)) continue;
+    // Skip test files and fixtures (they contain intentional fixture patterns,
+    // e.g. synthetic story "secret" character fields in .fixture.json content)
+    if (/\.test\.|\.spec\.|__tests__|\.fixture\.|\/fixtures?\//.test(file)) continue;
 
     // Secrets in code — skip template syntax like "${ENV_VAR}" and "<%= var %>"
     const secretPatterns = [

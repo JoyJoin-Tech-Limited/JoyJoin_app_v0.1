@@ -23,6 +23,7 @@ import { curateMedals } from '../lib/medalCuration';
 import { generateRecapSummary, buildLieDetectiveV2RecapData, generateMicroChallenges } from '../socialIcebreakerAIService';
 import { cleanupPhaseStateForNextPhase } from '../socialIcebreakerPhaseConfig';
 import { seedSingleTestBotsWarmupReady } from '../services/socialIcebreakerBotService';
+import { getFeatureFlag } from '../lib/featureFlags';
 
 function isEnabled(value: string | undefined, defaultValue: boolean): boolean {
   if (value === undefined) return defaultValue;
@@ -34,6 +35,11 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   medium: '中等',
   hard: '困难',
 };
+
+/** V2 P3: server-side delay before a presented evidence reaction becomes
+ *  visible to non-presenters (mirrors the former client-side 8s constant,
+ *  now enforced here so device clock skew cannot leak or withhold it). */
+export const MINISCRIPT_REACTION_REVEAL_DELAY_MS = 8_000;
 
 export function isUniqueConstraintError(error: unknown): boolean {
   return (
@@ -86,6 +92,22 @@ export function sanitizeStateForClient(
       });
     }
 
+    // Defense in depth: evidenceReactions is server-only (present-evidence
+    // lookup table). stripFrameworkSecrets already removes it, but state may
+    // hold a framework assembled elsewhere — never let reactions leak.
+    if (Array.isArray(framework.act_flow)) {
+      framework.act_flow = framework.act_flow.map((act: Record<string, unknown>) => {
+        if (!Array.isArray(act?.evidence)) return act;
+        return {
+          ...act,
+          evidence: act.evidence.map((item: Record<string, unknown>) => {
+            const { evidenceReactions: _reactions, ...pub } = item;
+            return pub;
+          }),
+        };
+      });
+    }
+
     // Once the solution is revealed, restore the full resolution summary.
     // It is stripped from the framework during generation to avoid spoilers.
     if (
@@ -126,16 +148,45 @@ export function sanitizeStateForClient(
       : {};
   }
 
+  // V2 P3: server-owned reaction reveal gating (replaces the broken client
+  // clock compare — never trust a device clock, 2026-08-13 canon). The
+  // presenter always sees their own entries immediately; every other member
+  // receives reactionText only once the entry is server-side ≥8s old OR the
+  // presenter confirmed the read-aloud (readConfirmedAt). The field is
+  // OMITTED while gated — clients treat `reactionText == null` as unrevealed.
+  if (sanitized.miniScriptPresentedEvidence) {
+    const now = Date.now();
+    sanitized.miniScriptPresentedEvidence = sanitized.miniScriptPresentedEvidence.map((entry) => {
+      if (requestingUserId && entry.presentedBy === requestingUserId) return entry;
+      if (entry.readConfirmedAt !== undefined) return entry;
+      if (now - entry.presentedAt >= MINISCRIPT_REACTION_REVEAL_DELAY_MS) return entry;
+      const { reactionText: _gated, ...gatedEntry } = entry;
+      return gatedEntry;
+    });
+  }
+
   // Mini-script structured vote progress — derived fresh on every poll so the
   // 90s quorum escape hatch evaluates against the current time. Individual
   // ballots were already visible on state before this change, so the aggregate
   // tally stays visible too (no new information exposure).
   if (sanitized.miniScriptRoleAssignments) {
+    const totalAssigned = Object.keys(sanitized.miniScriptRoleAssignments).length;
+    // V2 P2: progress is per round. Entries without voteRound are legacy
+    // round-1 ballots, so the filter is backward compatible.
     sanitized.miniScriptVoteProgress = computeMiniScriptVoteProgress({
-      votes: sanitized.miniScriptVotes ?? [],
-      totalAssigned: Object.keys(sanitized.miniScriptRoleAssignments).length,
+      votes: (sanitized.miniScriptVotes ?? []).filter((v) => (v.voteRound ?? 1) === 1),
+      totalAssigned,
       voteOpenedAt: sanitized.miniScriptVoteOpenedAt,
     });
+    // Round-2 (motive) progress lives in its own field, computed from
+    // round-2-filtered ballots against the independent openedAt.
+    if (sanitized.miniScriptMotiveVoteOpenedAt !== undefined) {
+      sanitized.miniScriptMotiveVoteProgress = computeMiniScriptVoteProgress({
+        votes: (sanitized.miniScriptVotes ?? []).filter((v) => v.voteRound === 2),
+        totalAssigned,
+        voteOpenedAt: sanitized.miniScriptMotiveVoteOpenedAt,
+      });
+    }
   }
 
   // Role-to-user mapping is secret in a social-deduction game. Non-hosts see
@@ -330,10 +381,28 @@ export function buildPersonalityDiceRecapLines(state: SocialSessionState): strin
   });
 }
 
-export function buildMiniScriptRecapLine(state: SocialSessionState): string | undefined {
+export function buildMiniScriptRecapLine(
+  state: SocialSessionState,
+  roster: SocialSessionParticipantSummary[] = [],
+): string | undefined {
   const premise = state.miniScriptFramework?.premise?.trim();
   if (!premise) return undefined;
-  return premise.length > 220 ? `${premise.slice(0, 219)}…` : premise;
+  const premiseLine = premise.length > 220 ? `${premise.slice(0, 219)}…` : premise;
+
+  // V2 P3 (Q15): 本桌名侦探 honor — session recap line only, no profile
+  // persistence. Players correct on BOTH steps (suspect + motive) are named
+  // with a low-pressure Xiaoyue line; zero dual-correct keeps the gentle
+  // base tone (no shaming). Copy rules: no emoji, no 真凶 (use 当事人
+  // framing elsewhere), no 匹配/社交/AI vocabulary.
+  const dualCorrect = (state.miniScriptRevealedPlayerResults ?? []).filter(
+    (result) => result.round1Correct === true && result.round2Correct === true,
+  );
+  if (dualCorrect.length === 0) return premiseLine;
+  const names = dualCorrect.map((result) => {
+    const name = recapDisplayNameByUserId(roster, state, result.userId);
+    return name.length > 12 ? `${name.slice(0, 11)}…` : name;
+  });
+  return `${premiseLine}\n本桌名侦探：${names.join('、')}——两轮全对，悦仔为你鼓掌。`;
 }
 
 export function buildAuctionRecapLines(state: SocialSessionState): string[] {
@@ -458,7 +527,7 @@ export async function ensureRecapSnapshot(
     const sessionLieMap = await loadSessionLieTruths(socialSessionId);
     const lieHighlights = buildLieDetectiveRecapHighlights(state, roster, sessionLieMap);
     const personalityDiceRecapLines = buildPersonalityDiceRecapLines(state);
-    const miniScriptRecapLine = buildMiniScriptRecapLine(state);
+    const miniScriptRecapLine = buildMiniScriptRecapLine(state, roster);
     const auctionRecapLines = buildAuctionRecapLines(state);
 
     const summaryResult = await generateRecapSummary({
@@ -758,6 +827,19 @@ export async function transitionPhase(opts: TransitionPhaseOptions): Promise<Tra
   state.pulseChecks = [];
   clearAdvanceScheduling(state);
   state.lastAdvanceTrigger = trigger;
+
+  // V2 P2: resolve the evidence/motive flag ONCE at mini_script phase entry
+  // and snapshot it into session state. Every route and client reads the
+  // snapshot — a mid-session admin flip never affects a live session
+  // (contract AC-06). The undefined guard keeps the first snapshot on any
+  // later re-entry.
+  if (targetPhase === 'mini_script' && state.miniScriptV2Enabled === undefined) {
+    state.miniScriptV2Enabled = await getFeatureFlag('miniscriptEvidenceVoteV2Enabled');
+    logger.info('[SocialIcebreaker] miniscript v2 flag snapshot', {
+      socialSessionId,
+      miniScriptV2Enabled: state.miniScriptV2Enabled,
+    });
+  }
 
   if (targetPhase === 'warmup') {
     state.warmupReadyUserIds = [];

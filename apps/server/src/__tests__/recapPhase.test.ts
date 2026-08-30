@@ -96,10 +96,22 @@ function buildPersonalityDiceRecapLines(state: SocialSessionState): string[] {
   });
 }
 
-function buildMiniScriptRecapLine(state: SocialSessionState): string | undefined {
+function buildMiniScriptRecapLine(
+  state: SocialSessionState,
+  roster: SocialSessionParticipantSummary[] = [],
+): string | undefined {
   const premise = state.miniScriptFramework?.premise?.trim();
   if (!premise) return undefined;
-  return premise.length > 220 ? `${premise.slice(0, 219)}…` : premise;
+  const premiseLine = premise.length > 220 ? `${premise.slice(0, 219)}…` : premise;
+  const dualCorrect = (state.miniScriptRevealedPlayerResults ?? []).filter(
+    (result) => result.round1Correct === true && result.round2Correct === true,
+  );
+  if (dualCorrect.length === 0) return premiseLine;
+  const names = dualCorrect.map((result) => {
+    const name = recapDisplayNameByUserId(roster, state, result.userId);
+    return name.length > 12 ? `${name.slice(0, 11)}…` : name;
+  });
+  return `${premiseLine}\n本桌名侦探：${names.join('、')}——两轮全对，悦仔为你鼓掌。`;
 }
 
 function buildAuctionRecapLines(state: SocialSessionState): string[] {
@@ -389,6 +401,51 @@ describe('buildMiniScriptRecapLine', () => {
       miniScriptFramework: { premise: '   ' } as any,
     });
     expect(buildMiniScriptRecapLine(state)).toBeUndefined();
+  });
+
+  // V2 P3 (Q15): 本桌名侦探 honor line
+  it('appends the 本桌名侦探 honor line with display names for dual-correct players', () => {
+    const state = makeMinimalState({
+      miniScriptFramework: { premise: '茶水间的燕麦奶不见了。' } as any,
+      miniScriptRevealedPlayerResults: [
+        { userId: 'u1', round1Correct: true, round2Correct: true },
+        { userId: 'u2', round1Correct: true, round2Correct: false },
+        { userId: 'u3', round1Correct: true, round2Correct: true },
+      ],
+    });
+    const line = buildMiniScriptRecapLine(state, [ALICE, BOB, CHARLIE]);
+    expect(line).toBe('茶水间的燕麦奶不见了。\n本桌名侦探：Alice、Charlie——两轮全对，悦仔为你鼓掌。');
+  });
+
+  it('keeps the gentle base tone when nobody is dual-correct (no shaming)', () => {
+    const state = makeMinimalState({
+      miniScriptFramework: { premise: '茶水间的燕麦奶不见了。' } as any,
+      miniScriptRevealedPlayerResults: [
+        { userId: 'u1', round1Correct: true, round2Correct: false },
+        { userId: 'u2', round1Correct: false, round2Correct: true },
+      ],
+    });
+    expect(buildMiniScriptRecapLine(state, [ALICE, BOB])).toBe('茶水间的燕麦奶不见了。');
+  });
+
+  it('keeps the base tone when round 2 never ran (round2Correct absent)', () => {
+    const state = makeMinimalState({
+      miniScriptFramework: { premise: '茶水间的燕麦奶不见了。' } as any,
+      miniScriptRevealedPlayerResults: [{ userId: 'u1', round1Correct: true }],
+    });
+    expect(buildMiniScriptRecapLine(state, [ALICE])).toBe('茶水间的燕麦奶不见了。');
+  });
+
+  it('honor line copy carries no emoji and no forbidden vocabulary', () => {
+    const state = makeMinimalState({
+      miniScriptFramework: { premise: '茶水间的燕麦奶不见了。' } as any,
+      miniScriptRevealedPlayerResults: [{ userId: 'u1', round1Correct: true, round2Correct: true }],
+    });
+    const line = buildMiniScriptRecapLine(state, [ALICE])!;
+    expect(line).not.toMatch(/真凶/);
+    expect(line).not.toMatch(/匹配|社交|AI/);
+    // No emoji (misc symbols, dingbats, emoticons, supplementary planes).
+    expect(line).not.toMatch(/[☀-➿\u{1F000}-\u{1FAFF}]/u);
   });
 });
 

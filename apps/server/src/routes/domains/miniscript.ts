@@ -2,14 +2,19 @@ import { Router } from 'express';
 import { z } from 'zod';
 import {
   migrateLegacySocialIcebreakerPhases,
+  MINISCRIPT_CEREMONY_MAX_BEAT,
   type SocialSessionState,
   type MiniScriptPlayerRuntimeView,
+  type MiniScriptPresentedEvidence,
+  type MiniScriptPlayerResult,
+  type MiniScriptVote,
 } from '@shared/socialIcebreaker';
 import {
   miniScriptGenerateRequestSchema,
   miniScriptVoteSchema,
   computeMiniScriptVoteProgress,
   deriveMiniScriptTitleFromPremise,
+  resolveCorrectMotiveIndex,
   type MiniScriptGenerationStage,
   type MiniScriptGenerationStatus,
   type MiniScriptStoryFramework,
@@ -84,19 +89,38 @@ function hydrateMiniScriptState(state: SocialSessionState): SocialSessionState {
 }
 
 /** Extract server-only secrets from a full v2 framework. */
-function extractSecrets(framework: MiniScriptStoryFramework) {
+export function extractSecrets(framework: MiniScriptStoryFramework) {
+  const evidenceReactions: Record<string, Record<string, string>> = {};
+  for (const act of framework.act_flow) {
+    for (const item of act.evidence ?? []) {
+      if (item.evidenceReactions) {
+        evidenceReactions[item.id] = { ...item.evidenceReactions };
+      }
+    }
+  }
   return {
+    // The correct motive stays server-only inside solution.why; the public
+    // motiveOptions list never carries a correctness marker.
     solution: framework.solution,
     playerKnowledge: framework.playerKnowledge,
     redHerrings: framework.redHerrings ?? [],
     deductionChain: framework.deductionChain ?? [],
     allClues: framework.clues,
     resolutionSummary: framework.ending.resolutionSummary,
+    evidenceReactions,
+    // V2 P2: resolve the correct motive once at generate/select time.
+    // null = no resolvable motive round → the framework degrades to the
+    // single-step vote (contract AC-04).
+    correctMotiveIndex: resolveCorrectMotiveIndex({
+      motiveOptions: framework.motiveOptions,
+      solutionWhy: framework.solution.why,
+      solutionMotiveIndex: framework.solution.motiveIndex,
+    }),
   };
 }
 
 /** Strip secrets from a full framework, producing a public-safe version. */
-function stripFrameworkSecrets(
+export function stripFrameworkSecrets(
   framework: MiniScriptStoryFramework,
 ): MiniScriptStoryFrameworkPublic {
   return {
@@ -112,7 +136,15 @@ function stripFrameworkSecrets(
       const { secret: _secret, ...pub } = c;
       return pub;
     }),
-    act_flow: framework.act_flow,
+    act_flow: framework.act_flow.map((act) => ({
+      ...act,
+      // evidenceReactions is server-only (lookup table for present-evidence);
+      // it must never ride the public act_flow payload.
+      evidence: act.evidence?.map((item) => {
+        const { evidenceReactions: _reactions, ...pub } = item;
+        return pub;
+      }),
+    })),
     ending: {
       ...framework.ending,
       // The structured solution and the narrative resolution stay server-only
@@ -120,6 +152,7 @@ function stripFrameworkSecrets(
       resolutionSummary: '真相将在最终揭晓时公开。',
     },
     voteOptions: framework.voteOptions,
+    motiveOptions: framework.motiveOptions,
   };
 }
 
@@ -605,7 +638,9 @@ router.post('/reveal-act', async (req: any, res) => {
   ];
   state.miniScriptRevealedClues = [
     ...(state.miniScriptRevealedClues ?? []),
-    ...newlyRevealedClues.map((c) => ({ clueId: c.clueId, text: c.text })),
+    // revealedInAct rides along so the client clue drawer can group by act
+    // (contract AC-09); additive — pre-P2 entries simply lack the field.
+    ...newlyRevealedClues.map((c) => ({ clueId: c.clueId, text: c.text, revealedInAct: c.revealedInAct })),
   ];
   // Compute deduction hints: chain steps where all fromClues are now revealed
   const revealedClueIdSet = new Set(state.miniScriptRevealedClueIds ?? []);
@@ -638,6 +673,418 @@ router.post('/reveal-act', async (req: any, res) => {
     currentAct: targetAct,
     revealedClueIds: state.miniScriptRevealedClueIds,
     deductionHints,
+  });
+});
+
+// ─── POST /vote ──────────────────────────────────────────────────────────────
+
+// ─── V2 P2 shared helpers ────────────────────────────────────────────────────
+
+/** Round-1 (suspect) ballots — entries without voteRound are legacy round-1. */
+function roundOneVotes(votes: MiniScriptVote[] | undefined): MiniScriptVote[] {
+  return (votes ?? []).filter((v) => (v.voteRound ?? 1) === 1);
+}
+
+/** Round-2 (motive) ballots. */
+function roundTwoVotes(votes: MiniScriptVote[] | undefined): MiniScriptVote[] {
+  return (votes ?? []).filter((v) => v.voteRound === 2);
+}
+
+/** True when the motive round has been opened for this session. */
+function isMotiveRoundOpen(state: SocialSessionState): boolean {
+  return (
+    (state.miniScriptVoteRound ?? 1) === 2 &&
+    state.miniScriptMotiveVoteOpenedAt !== undefined
+  );
+}
+
+/**
+ * V2 P2: per-player two-step reveal results (contract AC-05).
+ * - `round1Correct`: suspect ballot slot === culprit slot (solution.whoSlot,
+ *   falling back to an exact roleLabel match). Absent when the culprit cannot
+ *   be resolved to a slot.
+ * - `round2Correct`: motiveChoice === correctMotiveIndex. Absent when the
+ *   framework has no resolvable motive round OR the host revealed without
+ *   ever opening round 2 (round-1-only semantics).
+ */
+function buildMiniScriptPlayerResults(
+  state: SocialSessionState,
+  secrets: {
+    solution: { who: string; why: string; whoSlot?: number; motiveIndex?: number };
+    correctMotiveIndex?: number | null;
+  },
+): MiniScriptPlayerResult[] {
+  const framework = state.miniScriptFramework;
+  const characters = framework?.characters ?? [];
+  let culpritSlot = secrets.solution.whoSlot;
+  if (culpritSlot === undefined && secrets.solution.who) {
+    const idx = characters.findIndex((c) => c.roleLabel === secrets.solution.who);
+    if (idx >= 0) culpritSlot = idx + 1;
+  }
+  const motiveOptions = framework?.motiveOptions ?? [];
+  const correctMotiveIndex =
+    secrets.correctMotiveIndex ??
+    resolveCorrectMotiveIndex({
+      motiveOptions,
+      solutionWhy: secrets.solution.why,
+      solutionMotiveIndex: secrets.solution.motiveIndex,
+    });
+  const round2Applicable =
+    motiveOptions.length > 0 && correctMotiveIndex !== null && isMotiveRoundOpen(state);
+
+  const assignments = state.miniScriptRoleAssignments ?? {};
+  const votes = state.miniScriptVotes ?? [];
+  return Object.keys(assignments).map((userId) => {
+    const result: MiniScriptPlayerResult = { userId };
+    if (culpritSlot !== undefined) {
+      const r1 = votes.find((v) => v.userId === userId && (v.voteRound ?? 1) === 1);
+      result.round1Correct = r1?.suspectRoleSlot === culpritSlot;
+    }
+    if (round2Applicable) {
+      const r2 = votes.find((v) => v.userId === userId && v.voteRound === 2);
+      result.round2Correct = r2?.motiveChoice === correctMotiveIndex;
+    }
+    return result;
+  });
+}
+
+// ─── POST /present-evidence (V2 P2) ──────────────────────────────────────────
+
+/** Per-player per-act presentation budget (contract AC-02c / PRD Q11). */
+const PRESENT_EVIDENCE_BUDGET_PER_ACT = 2;
+
+const presentEvidenceBodySchema = z.object({
+  socialSessionId: z.string().min(1),
+  evidenceId: z.string().min(1).max(32),
+  /** 1-based role slot, consistent with suspectRoleSlot and the
+   *  evidenceReactions lookup keys. */
+  targetRoleSlot: z.number().int().min(1).max(6),
+});
+
+router.post('/present-evidence', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = presentEvidenceBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    logger.warn('[miniscript] present-evidence rejected', { code: 'INVALID_BODY', userId });
+    return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  }
+
+  const { socialSessionId, evidenceId, targetRoleSlot } = parsed.data;
+  const logReject = (code: string, extra?: Record<string, unknown>) =>
+    logger.warn('[miniscript] present-evidence rejected', { socialSessionId, userId, evidenceId, code, ...extra });
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+
+  if (!state) {
+    if (expired) {
+      logReject('SESSION_EXPIRED');
+      return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    }
+    logReject('SESSION_NOT_FOUND');
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  if (state.currentPhase !== 'mini_script') {
+    logReject('WRONG_PHASE', { currentPhase: state.currentPhase });
+    return res.status(400).json({ error: 'WRONG_PHASE' });
+  }
+
+  // Flag snapshot taken at phase entry; legacy sessions (undefined) are off
+  // and the route fails closed (contract AC-06).
+  if (state.miniScriptV2Enabled !== true) {
+    logReject('FEATURE_DISABLED');
+    return res.status(403).json({ error: 'FEATURE_DISABLED' });
+  }
+
+  // Presenting is only legal during the act sub-stage. Once the vote opens
+  // (final act revealed), the table is voting — no late reactions (AC-02b).
+  if (state.miniScriptVoteOpenedAt !== undefined) {
+    logReject('WRONG_SUB_PHASE');
+    return res.status(400).json({ error: 'WRONG_SUB_PHASE' });
+  }
+
+  if (!state.miniScriptRoleAssignments || state.miniScriptRoleAssignments[userId] === undefined) {
+    logReject('NO_ROLE_ASSIGNED');
+    return res.status(400).json({ error: 'NO_ROLE_ASSIGNED' });
+  }
+
+  const framework = state.miniScriptFramework;
+  if (!framework) {
+    logReject('FRAMEWORK_NOT_GENERATED');
+    return res.status(400).json({ error: 'FRAMEWORK_NOT_GENERATED' });
+  }
+
+  const characters = framework.characters ?? [];
+  if (targetRoleSlot < 1 || targetRoleSlot > characters.length) {
+    logReject('INVALID_TARGET_SLOT');
+    return res.status(400).json({ error: 'INVALID_TARGET_SLOT' });
+  }
+
+  // Locate the evidence and its owning act. Ids are enumerable, so evidence
+  // from a future act must be rejected explicitly (AC-02g, no spoilers).
+  let owningActNo: number | undefined;
+  for (const act of framework.act_flow ?? []) {
+    if ((act.evidence ?? []).some((item) => item.id === evidenceId)) {
+      owningActNo = act.actNumber;
+      break;
+    }
+  }
+  if (owningActNo === undefined) {
+    logReject('INVALID_EVIDENCE');
+    return res.status(400).json({ error: 'INVALID_EVIDENCE' });
+  }
+  const currentAct = state.miniScriptCurrentAct ?? 0;
+  if (owningActNo > currentAct) {
+    logReject('EVIDENCE_NOT_REVEALED', { owningActNo, currentAct });
+    return res.status(400).json({ error: 'EVIDENCE_NOT_REVEALED' });
+  }
+
+  // Idempotent (AC-02d): a repeated (evidenceId, targetRoleSlot) presentation
+  // returns the existing entry and does not count against the budget again.
+  const presented = state.miniScriptPresentedEvidence ?? [];
+  const existing = presented.find(
+    (entry) => entry.evidenceId === evidenceId && entry.targetRoleSlot === targetRoleSlot,
+  );
+  if (existing) {
+    return res.json({ ok: true, presented: existing, reactionText: existing.reactionText, duplicate: true });
+  }
+
+  // Budget: ≤2 presentations per player per act (AC-02c).
+  const myActPresents = presented.filter(
+    (entry) => entry.presentedBy === userId && entry.actNo === currentAct,
+  ).length;
+  if (myActPresents >= PRESENT_EVIDENCE_BUDGET_PER_ACT) {
+    logReject('PRESENT_BUDGET_EXCEEDED', { currentAct });
+    return res.status(400).json({ error: 'PRESENT_BUDGET_EXCEEDED' });
+  }
+
+  const secrets = await getMiniScriptSecrets(socialSessionId);
+  if (!secrets) {
+    logger.error('[miniscript] secrets missing for present-evidence', { socialSessionId });
+    return res.status(500).json({ error: 'SECRETS_NOT_FOUND' });
+  }
+  const reactionText = secrets.evidenceReactions?.[evidenceId]?.[String(targetRoleSlot)];
+  if (!reactionText) {
+    logReject('REACTION_NOT_FOUND');
+    return res.status(404).json({ error: 'REACTION_NOT_FOUND' });
+  }
+
+  const entry: MiniScriptPresentedEvidence = {
+    evidenceId,
+    targetRoleSlot,
+    presentedBy: userId,
+    actNo: currentAct,
+    presentedAt: Date.now(),
+    reactionText,
+  };
+  state.miniScriptPresentedEvidence = [...presented, entry];
+  await updateSession(socialSessionId, state);
+
+  logger.info('[miniscript] evidence presented', {
+    socialSessionId,
+    userId,
+    evidenceId,
+    targetRoleSlot,
+    actNo: currentAct,
+  });
+
+  return res.json({ ok: true, presented: entry, reactionText });
+});
+
+// ─── POST /confirm-read (V2 P3) ──────────────────────────────────────────────
+// Presenter-only release valve for the server-side reaction gate: once the
+// presenter has read the reaction aloud, every member's next poll carries
+// reactionText immediately (bypassing the 8s server-side delay). Idempotent.
+
+const confirmReadBodySchema = z.object({
+  socialSessionId: z.string().min(1),
+  evidenceId: z.string().min(1).max(32),
+  targetRoleSlot: z.number().int().min(1).max(6),
+});
+
+router.post('/confirm-read', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = confirmReadBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    logger.warn('[miniscript] confirm-read rejected', { code: 'INVALID_BODY', userId });
+    return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  }
+
+  const { socialSessionId, evidenceId, targetRoleSlot } = parsed.data;
+  const logReject = (code: string, extra?: Record<string, unknown>) =>
+    logger.warn('[miniscript] confirm-read rejected', { socialSessionId, userId, evidenceId, code, ...extra });
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+
+  if (!state) {
+    if (expired) {
+      logReject('SESSION_EXPIRED');
+      return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    }
+    logReject('SESSION_NOT_FOUND');
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  if (state.currentPhase !== 'mini_script') {
+    logReject('WRONG_PHASE', { currentPhase: state.currentPhase });
+    return res.status(400).json({ error: 'WRONG_PHASE' });
+  }
+
+  // Flag snapshot taken at phase entry; fail closed like present-evidence.
+  if (state.miniScriptV2Enabled !== true) {
+    logReject('FEATURE_DISABLED');
+    return res.status(403).json({ error: 'FEATURE_DISABLED' });
+  }
+
+  const presented = state.miniScriptPresentedEvidence ?? [];
+  const entryIdx = presented.findIndex(
+    (entry) => entry.evidenceId === evidenceId && entry.targetRoleSlot === targetRoleSlot,
+  );
+  if (entryIdx < 0) {
+    logReject('PRESENTED_ENTRY_NOT_FOUND');
+    return res.status(404).json({ error: 'PRESENTED_ENTRY_NOT_FOUND' });
+  }
+
+  const entry = presented[entryIdx];
+  if (entry.presentedBy !== userId) {
+    logReject('PRESENTER_ONLY');
+    return res.status(403).json({ error: 'PRESENTER_ONLY' });
+  }
+
+  // Idempotent: a repeat confirm returns the existing timestamp.
+  if (entry.readConfirmedAt !== undefined) {
+    return res.json({ ok: true, readConfirmedAt: entry.readConfirmedAt, alreadyConfirmed: true });
+  }
+
+  const readConfirmedAt = Date.now();
+  const updated = [...presented];
+  updated[entryIdx] = { ...entry, readConfirmedAt };
+  state.miniScriptPresentedEvidence = updated;
+  await updateSession(socialSessionId, state);
+
+  // No spoilers in logs: evidenceId/slot only, never the reaction text.
+  logger.info('[miniscript] evidence read confirmed', {
+    socialSessionId,
+    userId,
+    evidenceId,
+    targetRoleSlot,
+  });
+
+  return res.json({ ok: true, readConfirmedAt });
+});
+
+// ─── POST /open-motive-vote (V2 P2) ──────────────────────────────────────────
+
+const openMotiveVoteBodySchema = z.object({
+  socialSessionId: z.string().min(1),
+});
+
+router.post('/open-motive-vote', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = openMotiveVoteBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    logger.warn('[miniscript] open-motive-vote rejected', { code: 'INVALID_BODY', userId });
+    return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  }
+
+  const { socialSessionId } = parsed.data;
+  const logReject = (code: string, extra?: Record<string, unknown>) =>
+    logger.warn('[miniscript] open-motive-vote rejected', { socialSessionId, userId, code, ...extra });
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+
+  if (!state) {
+    if (expired) {
+      logReject('SESSION_EXPIRED');
+      return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    }
+    logReject('SESSION_NOT_FOUND');
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  const guard = assertHostMiniScriptSession(state, userId);
+  if (guard) {
+    logReject(guard.error);
+    return res.status(guard.status).json({ error: guard.error });
+  }
+
+  if (state.miniScriptV2Enabled !== true) {
+    logReject('FEATURE_DISABLED');
+    return res.status(403).json({ error: 'FEATURE_DISABLED' });
+  }
+
+  if (state.miniScriptSolutionRevealed) {
+    logReject('SOLUTION_ALREADY_REVEALED');
+    return res.status(409).json({ error: 'SOLUTION_ALREADY_REVEALED' });
+  }
+
+  const motiveProgressOf = (s: SocialSessionState) =>
+    computeMiniScriptVoteProgress({
+      votes: roundTwoVotes(s.miniScriptVotes),
+      totalAssigned: Object.keys(s.miniScriptRoleAssignments ?? {}).length,
+      voteOpenedAt: s.miniScriptMotiveVoteOpenedAt,
+    });
+
+  // Idempotent: already in round 2 → return current state (matches the
+  // reveal-act / reveal-solution idempotency convention, contract AC-03).
+  if (isMotiveRoundOpen(state)) {
+    return res.json({
+      ok: true,
+      voteRound: 2,
+      motiveVoteOpenedAt: state.miniScriptMotiveVoteOpenedAt,
+      motiveOptions: state.miniScriptFramework?.motiveOptions ?? [],
+      motiveVoteProgress: motiveProgressOf(state),
+    });
+  }
+
+  // Round 1 must be open before round 2 can start (it opens with the final act).
+  if (state.miniScriptVoteOpenedAt === undefined) {
+    logReject('WRONG_VOTE_ROUND');
+    return res.status(400).json({ error: 'WRONG_VOTE_ROUND' });
+  }
+
+  const motiveOptions = state.miniScriptFramework?.motiveOptions;
+  const secrets = await getMiniScriptSecrets(socialSessionId);
+  if (!secrets) {
+    logger.error('[miniscript] secrets missing for open-motive-vote', { socialSessionId });
+    return res.status(500).json({ error: 'SECRETS_NOT_FOUND' });
+  }
+  const correctMotiveIndex =
+    secrets.correctMotiveIndex ??
+    resolveCorrectMotiveIndex({
+      motiveOptions,
+      solutionWhy: secrets.solution?.why,
+      solutionMotiveIndex: secrets.solution?.motiveIndex,
+    });
+  if (!motiveOptions || motiveOptions.length === 0 || correctMotiveIndex === null) {
+    logReject('NO_MOTIVE_OPTIONS');
+    return res.status(400).json({ error: 'NO_MOTIVE_OPTIONS' });
+  }
+
+  state.miniScriptVoteRound = 2;
+  state.miniScriptMotiveVoteOpenedAt = Date.now();
+
+  // Bots cast their motive ballots immediately so a single-test chain can
+  // terminate without human input (contract AC-07).
+  await runBotSimulationSafely(socialSessionId, state, 'mini-script-open-motive-vote');
+
+  await updateSession(socialSessionId, state);
+
+  logger.info('[miniscript] motive vote opened', {
+    socialSessionId,
+    userId,
+    action: 'open-motive-vote',
+  });
+
+  return res.json({
+    ok: true,
+    voteRound: 2,
+    motiveVoteOpenedAt: state.miniScriptMotiveVoteOpenedAt,
+    motiveOptions,
+    motiveVoteProgress: motiveProgressOf(state),
   });
 });
 
@@ -687,6 +1134,55 @@ router.post('/vote', async (req: any, res) => {
     return res.status(400).json({ error: 'NO_ROLE_ASSIGNED' });
   }
 
+  // Flag snapshot off → silently degrade: voteRound=2 / motiveChoice are
+  // ignored and the ballot is treated as round 1 (contract AC-06).
+  const v2Enabled = state.miniScriptV2Enabled === true;
+  const requestedRound: 1 | 2 = v2Enabled && vote.voteRound === 2 ? 2 : 1;
+
+  // ── Round 2 (motive) ballot ──
+  if (requestedRound === 2) {
+    if (!isMotiveRoundOpen(state)) {
+      logger.warn('[miniscript] vote rejected', { socialSessionId, userId, code: 'WRONG_VOTE_ROUND' });
+      return res.status(400).json({ error: 'WRONG_VOTE_ROUND' });
+    }
+    const motiveOptions = state.miniScriptFramework?.motiveOptions ?? [];
+    if (
+      typeof vote.motiveChoice !== 'number' ||
+      vote.motiveChoice < 0 ||
+      vote.motiveChoice >= motiveOptions.length
+    ) {
+      logger.warn('[miniscript] vote rejected', { socialSessionId, userId, code: 'INVALID_MOTIVE_CHOICE' });
+      return res.status(400).json({
+        error: 'INVALID_MOTIVE_CHOICE',
+        message: `motiveChoice 必须在 0 到 ${Math.max(0, motiveOptions.length - 1)} 之间`,
+      });
+    }
+    const votes = [...(state.miniScriptVotes ?? [])];
+    const existingIdx = votes.findIndex((v) => v.userId === userId && v.voteRound === 2);
+    const voteEntry: MiniScriptVote = {
+      userId,
+      voteRound: 2,
+      motiveChoice: vote.motiveChoice,
+      votedAt: Date.now(),
+    };
+    if (existingIdx >= 0) {
+      votes[existingIdx] = voteEntry;
+    } else {
+      votes.push(voteEntry);
+    }
+    state.miniScriptVotes = votes;
+    await updateSession(socialSessionId, state);
+
+    const motiveVoteProgress = computeMiniScriptVoteProgress({
+      votes: roundTwoVotes(votes),
+      totalAssigned: Object.keys(state.miniScriptRoleAssignments).length,
+      voteOpenedAt: state.miniScriptMotiveVoteOpenedAt,
+    });
+    return res.json({ ok: true, vote: voteEntry, voteProgress: motiveVoteProgress });
+  }
+
+  // ── Round 1 (suspect) ballot — behavior unchanged from the single-step vote ──
+
   // Resolve the structured suspect slot. New clients send suspectRoleSlot
   // (1-based role index); legacy clients send free-text `who`, which we
   // best-effort map via exact roleLabel match. At least one must be present.
@@ -711,10 +1207,11 @@ router.post('/vote', async (req: any, res) => {
     });
   }
 
-  const votes = state.miniScriptVotes ?? [];
-  const existingIdx = votes.findIndex((v) => v.userId === userId);
-  const voteEntry = {
+  const votes = [...(state.miniScriptVotes ?? [])];
+  const existingIdx = votes.findIndex((v) => v.userId === userId && (v.voteRound ?? 1) === 1);
+  const voteEntry: MiniScriptVote = {
     userId,
+    voteRound: 1,
     suspectRoleSlot,
     who: vote.who,
     what: vote.what,
@@ -732,7 +1229,7 @@ router.post('/vote', async (req: any, res) => {
   await updateSession(socialSessionId, state);
 
   const voteProgress = computeMiniScriptVoteProgress({
-    votes,
+    votes: roundOneVotes(votes),
     totalAssigned: Object.keys(state.miniScriptRoleAssignments).length,
     voteOpenedAt: state.miniScriptVoteOpenedAt,
   });
@@ -788,7 +1285,7 @@ router.post('/reveal-solution', async (req: any, res) => {
 
     const totalAssigned = Object.keys(assignments).length;
     const voteProgress = computeMiniScriptVoteProgress({
-      votes: state.miniScriptVotes ?? [],
+      votes: roundOneVotes(state.miniScriptVotes),
       totalAssigned,
       voteOpenedAt: state.miniScriptVoteOpenedAt,
     });
@@ -798,6 +1295,23 @@ router.post('/reveal-solution', async (req: any, res) => {
         remaining: Math.max(0, voteProgress.quorum - voteProgress.votedCount),
         voteProgress,
       });
+    }
+
+    // V2 P2: when the motive round was opened, the reveal is gated on its own
+    // quorum / 90s escape hatch (REL-03, based on miniScriptMotiveVoteOpenedAt).
+    if (isMotiveRoundOpen(state)) {
+      const motiveProgress = computeMiniScriptVoteProgress({
+        votes: roundTwoVotes(state.miniScriptVotes),
+        totalAssigned,
+        voteOpenedAt: state.miniScriptMotiveVoteOpenedAt,
+      });
+      if (!motiveProgress.canReveal) {
+        return res.status(400).json({
+          error: 'WAITING_FOR_MOTIVE_VOTES',
+          remaining: Math.max(0, motiveProgress.quorum - motiveProgress.votedCount),
+          voteProgress: motiveProgress,
+        });
+      }
     }
   }
 
@@ -811,6 +1325,13 @@ router.post('/reveal-solution', async (req: any, res) => {
     state.miniScriptSolutionRevealed = true;
     state.miniScriptRevealedSolution = secrets.solution;
     state.miniScriptRevealedResolutionSummary = secrets.resolutionSummary;
+    // V2 P2: per-player two-step results, persisted so rejoining clients see
+    // the same outcome as this response (REL-02).
+    state.miniScriptRevealedPlayerResults = buildMiniScriptPlayerResults(state, secrets);
+    // V2 P3: in single-test bot sessions the host-side ceremony beats are
+    // walked by the bot simulation so the automated chain can terminate
+    // without a human tapping through (contract AC-05/bot chain).
+    await runBotSimulationSafely(socialSessionId, state, 'mini-script-reveal-solution');
     await updateSession(socialSessionId, state);
 
     logger.info('[miniscript] solution revealed', {
@@ -820,15 +1341,111 @@ router.post('/reveal-solution', async (req: any, res) => {
     });
   }
 
+  const totalAssigned = Object.keys(state.miniScriptRoleAssignments ?? {}).length;
+  const round2Applicable =
+    state.miniScriptRevealedPlayerResults?.some((r) => r.round2Correct !== undefined) === true;
+  const correctMotiveIndex =
+    secrets.correctMotiveIndex ??
+    resolveCorrectMotiveIndex({
+      motiveOptions: state.miniScriptFramework?.motiveOptions,
+      solutionWhy: secrets.solution?.why,
+      solutionMotiveIndex: secrets.solution?.motiveIndex,
+    });
+
   return res.json({
     solution: secrets.solution,
     revealed: true,
     voteProgress: computeMiniScriptVoteProgress({
-      votes: state.miniScriptVotes ?? [],
-      totalAssigned: Object.keys(state.miniScriptRoleAssignments ?? {}).length,
+      votes: roundOneVotes(state.miniScriptVotes),
+      totalAssigned,
       voteOpenedAt: state.miniScriptVoteOpenedAt,
     }),
+    // Round-2 fields are only present when the motive round actually applied
+    // (framework has motiveOptions AND round 2 was opened). Otherwise the
+    // response keeps the legacy round-1-only shape (contract AC-05).
+    ...(round2Applicable
+      ? {
+          motiveVoteProgress: computeMiniScriptVoteProgress({
+            votes: roundTwoVotes(state.miniScriptVotes),
+            totalAssigned,
+            voteOpenedAt: state.miniScriptMotiveVoteOpenedAt,
+          }),
+          correctMotive:
+            correctMotiveIndex !== null
+              ? state.miniScriptFramework?.motiveOptions?.[correctMotiveIndex] ?? secrets.solution.why
+              : secrets.solution.why,
+        }
+      : {}),
+    playerResults: state.miniScriptRevealedPlayerResults,
   });
+});
+
+// ─── POST /advance-ceremony (V2 P3, Q14) ─────────────────────────────────────
+// Host-paced truth-ceremony beats: 0 = not started (tally/motive stages are
+// free), 1 = culprit (当事人) revealed, 2 = 本桌名侦探 honor revealed. The
+// client renders culprit/honor content only when the persisted beat covers
+// it, so all devices stay in lockstep with the host's pacing.
+
+const advanceCeremonyBodySchema = z.object({
+  socialSessionId: z.string().min(1),
+});
+
+router.post('/advance-ceremony', async (req: any, res) => {
+  const userId = requireAuthenticatedUserId(req, res);
+  if (!userId) return;
+
+  const parsed = advanceCeremonyBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    logger.warn('[miniscript] advance-ceremony rejected', { code: 'INVALID_BODY', userId });
+    return res.status(400).json({ error: 'INVALID_BODY', details: parsed.error.flatten() });
+  }
+
+  const { socialSessionId } = parsed.data;
+  const logReject = (code: string, extra?: Record<string, unknown>) =>
+    logger.warn('[miniscript] advance-ceremony rejected', { socialSessionId, userId, code, ...extra });
+  const { state, expired } = await getSessionWithExpiry(socialSessionId);
+
+  if (!state) {
+    if (expired) {
+      logReject('SESSION_EXPIRED');
+      return res.status(410).json({ error: 'SESSION_EXPIRED', expired: true });
+    }
+    logReject('SESSION_NOT_FOUND');
+    return res.status(404).json({ error: 'Social session not found' });
+  }
+
+  const guard = assertHostMiniScriptSession(state, userId);
+  if (guard) {
+    logReject(guard.error);
+    return res.status(guard.status).json({ error: guard.error });
+  }
+
+  if (state.miniScriptV2Enabled !== true) {
+    logReject('FEATURE_DISABLED');
+    return res.status(403).json({ error: 'FEATURE_DISABLED' });
+  }
+
+  if (state.miniScriptSolutionRevealed !== true) {
+    logReject('SOLUTION_NOT_REVEALED');
+    return res.status(400).json({ error: 'SOLUTION_NOT_REVEALED' });
+  }
+
+  const currentBeat = state.miniScriptCeremonyBeat ?? 0;
+  // Idempotent-ish: advancing past the max returns the current beat unchanged.
+  if (currentBeat >= MINISCRIPT_CEREMONY_MAX_BEAT) {
+    return res.json({ ok: true, ceremonyBeat: currentBeat, advanced: false });
+  }
+
+  state.miniScriptCeremonyBeat = currentBeat + 1;
+  await updateSession(socialSessionId, state);
+
+  logger.info('[miniscript] ceremony beat advanced', {
+    socialSessionId,
+    userId,
+    ceremonyBeat: state.miniScriptCeremonyBeat,
+  });
+
+  return res.json({ ok: true, ceremonyBeat: state.miniScriptCeremonyBeat, advanced: true });
 });
 
 // ─── POST /ready ─────────────────────────────────────────────────────────────

@@ -80,6 +80,8 @@ const aiProductCallCounters = new Map<string, CounterEntry>();
 const aiProductLatencyHistograms = new Map<string, HistogramEntry>();
 /** Narrow counter: MiniMax (or primary) failed; secondary provider output was accepted. */
 const aiProviderRecoveryCounters = new Map<string, CounterEntry>();
+/** MiniScript runtime critic verdicts (pass / blocked / timeout / error). */
+const miniscriptRuntimeCriticCounters = new Map<string, CounterEntry>();
 /** Pool card AI copy cache consumption: hit / miss on GET /api/event-pools */
 const poolCardCopyCacheCounters = new Map<string, CounterEntry>();
 /** Pool card backfill worker latency (catch-up cron) */
@@ -391,6 +393,19 @@ export function recordAIProviderRecoveryMetric(params: { domain: string; feature
 }
 
 /**
+ * Record one MiniScript runtime critic verdict
+ * (`joyjoin_miniscript_runtime_critic_total{verdict}`).
+ * Verdicts: pass (clean or fail-open), blocked (violation → catalog fallback),
+ * timeout (budget exhausted / LLM timeout, treated as pass), error (critic
+ * exception, treated as pass). Label cardinality is fixed at 4.
+ */
+export function recordMiniscriptRuntimeCriticMetric(
+  verdict: 'pass' | 'blocked' | 'timeout' | 'error',
+): void {
+  incCounter(miniscriptRuntimeCriticCounters, { verdict });
+}
+
+/**
  * Record a pool card AI copy cache lookup result on the list route.
  * `result`: 'hit' when a live, non-expired headline was found; 'miss' otherwise.
  */
@@ -466,6 +481,11 @@ export async function getMetricsText(): Promise<string> {
       aiProviderRecoveryCounters,
     ),
     renderCounter(
+      'joyjoin_miniscript_runtime_critic_total',
+      'MiniScript runtime critic verdicts (pass, blocked, timeout, error).',
+      miniscriptRuntimeCriticCounters,
+    ),
+    renderCounter(
       'joyjoin_pool_card_copy_cache_total',
       'Pool card AI copy cache lookups on list route (hit = live copy served, miss = no live copy).',
       poolCardCopyCacheCounters,
@@ -514,6 +534,7 @@ export function _resetMetricsForTest(): void {
   aiProductCallCounters.clear();
   aiProductLatencyHistograms.clear();
   aiProviderRecoveryCounters.clear();
+  miniscriptRuntimeCriticCounters.clear();
   poolCardCopyCacheCounters.clear();
   poolCardCopyBackfillLatencyHistograms.clear();
 }

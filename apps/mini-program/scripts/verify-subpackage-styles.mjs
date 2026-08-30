@@ -240,6 +240,17 @@ const REQUIREMENTS = [
       'warmup-welcome__',
       'icebreaker__recap-hero{',
       'icebreaker__recap-connect-btn{',
+      // MiniScript V2 P2 (2026-08-28, contract AC-08/09): the evidence tray
+      // and clue drawer SCSS are @use'd by the page SCSS and must reach this
+      // page WXSS — same subpackage style-splitting trap guard as the
+      // families above.
+      'miniscript-evidence__card{',
+      'miniscript-evidence__picker{',
+      'miniscript-evidence__reveal{',
+      'miniscript-clues__bar{',
+      'miniscript-clues__surface{',
+      'miniscript-hero__hint{',
+      'miniscript-hero__honor{',
     ],
   },
   {

@@ -96,6 +96,14 @@ export interface SessionPhaseViewsProps {
   onAssignRoles: () => void
   onRevealAct: (act: number) => void
   onMiniScriptVote: (vote: MiniScriptVoteInput) => void
+  /** V2 P2: present evidence to a role; resolves the reaction text on success. */
+  onMiniScriptPresentEvidence: (evidenceId: string, targetRoleSlot: number) => Promise<string | null>
+  /** V2 P3: presenter's 已读完 early release (confirm-read, idempotent). */
+  onMiniScriptConfirmRead: (evidenceId: string, targetRoleSlot: number) => void
+  /** V2 P3 (host): advance the truth-ceremony beat (culprit → honor). */
+  onMiniScriptAdvanceCeremony: () => void
+  /** V2 P2 (host): open round 2 (motive vote). */
+  onMiniScriptOpenMotiveVote: () => void
   onRevealSolution: (onError?: (error: unknown) => void) => void
   onMiniScriptReady: (ready: boolean) => void
   onGenerateDiceChallenges: () => void
@@ -167,6 +175,10 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
     onAssignRoles,
     onRevealAct,
     onMiniScriptVote,
+    onMiniScriptPresentEvidence,
+    onMiniScriptConfirmRead,
+    onMiniScriptAdvanceCeremony,
+    onMiniScriptOpenMotiveVote,
     onRevealSolution,
     onMiniScriptReady,
     onGenerateDiceChallenges,
@@ -330,15 +342,23 @@ export function SessionPhaseViews(props: SessionPhaseViewsProps) {
             currentUserId={currentUserId}
             isHost={isHost}
             playerCount={playerCount}
+            participants={participants}
             onAssignRoles={onAssignRoles}
             onRevealAct={onRevealAct}
             onVote={onMiniScriptVote}
+            onPresentEvidence={onMiniScriptPresentEvidence}
+            onConfirmRead={onMiniScriptConfirmRead}
+            onAdvanceCeremony={onMiniScriptAdvanceCeremony}
+            onOpenMotiveVote={onMiniScriptOpenMotiveVote}
             onRevealSolution={onRevealSolution}
             onAdvance={onAdvance}
             onReady={onMiniScriptReady}
             isAssigningRoles={pendingAction === 'miniscript-assign-roles'}
             isRevealingAct={pendingAction === 'miniscript-reveal-act'}
             isVoting={pendingAction === 'miniscript-vote'}
+            isPresentingEvidence={pendingAction === 'miniscript-present-evidence'}
+            isAdvancingCeremony={pendingAction === 'miniscript-advance-ceremony'}
+            isOpeningMotiveVote={pendingAction === 'miniscript-open-motive-vote'}
             isRevealingSolution={pendingAction === 'miniscript-reveal-solution'}
             isAdvancing={pendingAction === 'advance'}
             isSettingReady={pendingAction === 'miniscript-ready'}

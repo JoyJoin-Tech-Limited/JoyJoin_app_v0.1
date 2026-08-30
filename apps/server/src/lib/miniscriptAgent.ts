@@ -43,6 +43,7 @@ import { isLLMTimeoutError, raceWithTimeout } from '../socialIcebreakerAICore';
 import { createAiCorrelationId, logAITrace } from './aiTraceLogger';
 import { recordAIProviderRecoveryMetric } from '../middleware/metrics';
 import { validateMiniScriptFramework } from './miniscriptValidator';
+import { runMiniScriptRuntimeCritic } from './miniscriptCritic';
 import { findCatalogEntry, getRandomCatalogEntry } from './miniscriptCatalog';
 import { logger } from "./logger";
 import { buildArchetypeContext } from './contextInjector';
@@ -481,7 +482,7 @@ async function fetchFrameworkOnce(
         { role: 'user', content: user },
       ],
       temperature: 0.8,
-      max_tokens: 2500,
+      max_tokens: 3500,
     };
 
     if (useJsonObject) {
@@ -725,6 +726,38 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
   // Normalize user-facing surfaces (title resolution + enum-token scrub) so an
   // LLM that echoes machine keys or overshoots the title still ships clean copy.
   const withAuthority = finalizeFrameworkUserSurfaces(withAuthorityRaw);
+
+  // ── Runtime critic (post-generation, pre-persist; flag-gated no-op by default)
+  // Runs before pass 2 so a blocked story never burns validation budget. The
+  // critic never throws: timeout/budget-exhaustion fail open, a detected
+  // violation fails closed to the catalog fallback.
+  const critic = await runMiniScriptRuntimeCritic({
+    framework: withAuthority,
+    remainingBudgetMs: timeoutMs - (Date.now() - tAll),
+  });
+  if (critic.verdict === 'blocked') {
+    clearTimeout(timer);
+    params.onProgress?.('fallback', 86);
+    const framework = getCatalogFallback(params);
+    emitTrace({
+      provider: pass1.provider!,
+      model: pass1.model,
+      success: false,
+      fallbackUsed: true,
+      errorCode: 'runtime_critic_blocked',
+    });
+    return {
+      framework,
+      meta: {
+        promptVersion,
+        fallbackUsed: true,
+        llmAccepted: true,
+        providerRecoveryUsed: pass1.deepSeekRecoveryUsed,
+        catalogUsed: true,
+      },
+      aiResponseMeta: buildFallbackAIMeta('runtime_critic_blocked', promptVersion, aiCorrelationId),
+    };
+  }
 
   // ── Pass 2: Validate (optional, gated by env) ──────────────────────────────
   if (isValidationEnabled()) {

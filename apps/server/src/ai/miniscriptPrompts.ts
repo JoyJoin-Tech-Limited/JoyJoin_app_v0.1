@@ -11,7 +11,7 @@ import type { MiniScriptGameModeConfig } from '@shared/miniscriptGameModes';
 import type { MiniScriptStyle, MiniScriptGenre } from '@shared/miniscriptStoryFramework';
 import { XIAOYUE_CRAFT_LITE } from '../prompts/craft';
 
-export const MINISCRIPT_GENERATION_PROMPT_VERSION = 'miniscript-generate-v3.2';
+export const MINISCRIPT_GENERATION_PROMPT_VERSION = 'miniscript-generate-v3.3';
 
 // ─── Base System Prompt (all modes share) ─────────────────────────────────────
 
@@ -128,7 +128,19 @@ JSON shape:
       "actNumber": 1..4,
       "title": "幕标题",
       "beats": ["流程节拍1", "流程节拍2"],
-      "cliffhanger": "悬念钩子（最后一幕不需要，其他幕必须）——一句让玩家迫不及待想进下一幕的短句"
+      "cliffhanger": "悬念钩子（最后一幕不需要，其他幕必须）——一句让玩家迫不及待想进下一幕的短句",
+      "evidence": [
+        {
+          "id": "e1",
+          "name": "证物名（≤8字，具体物件）",
+          "description": "证物描述（≤60字，可当众朗读）",
+          "iconKey": "物件图标名（如 信封/钥匙/手帕）",
+          "evidenceReactions": {
+            "1": "1号角色被出示该证物时的反应（30-60字）",
+            "2": "2号角色的反应（30-60字）"
+          }
+        }
+      ]
     }
   ],
   "ending": {
@@ -153,6 +165,7 @@ JSON shape:
     "what": ["3-4个投票选项，每个≤12字，如「借走忘了还」「只是误会一场」"],
     "why": ["3-4个动机选项，每个≤12字，如「善意」「胆怯」「好面子」"]
   },
+  "motiveOptions": ["3-4个动机候选句（每个≤20字），其中一个与 solution.why 语义一致，其余为合理干扰项；不要标注哪个正确"],
   "playerKnowledge": [
     {
       "slotIndex": 0..${playerCount - 1},
@@ -183,8 +196,11 @@ Strict rules:
 - title is required: ≤12 Chinese characters, evocative, no English
 - clue text must NOT carry self-numbering prefixes like 「线索 1：」— the client adds ordinals itself
 - voteOptions.what / voteOptions.why: 3-4 short Chinese chip labels each (≤12 chars per label), consistent with the solution
-- solution.whoSlot must be the 1-based index of solution.who inside the characters array; if omitted it will be inferred, but always include it
-- Every act EXCEPT the last one must have a cliffhanger (≤80 chars, one hooking sentence). Last act has no cliffhanger — ending does its job.
+ - solution.whoSlot must be the 1-based index of solution.who inside the characters array; if omitted it will be inferred, but always include it
+ - evidence: 每幕 0-2 件证物；evidenceReactions 必须覆盖每个角色（键为 1..N 的角色序号字符串）；每条反应目标 30-60 字、硬上限 120 字
+ - 反应文本是被出示时的当场反应：不得确认或排除当事人、不得直接或间接泄露 solution（who/what/why）
+ - motiveOptions: 3-4 个动机候选（每个≤20字）；干扰项必须合理但不得蕴含真动机；选项内不得出现「正确」「答案」等标记
+ - Every act EXCEPT the last one must have a cliffhanger (≤80 chars, one hooking sentence). Last act has no cliffhanger — ending does its job.
 - Each act must show at least one character acting on their sinHook (展示不是讲述)
 - Each act must contain at least one moment of conflict or a plot turn (not just info exchange)
 - All strings in Chinese — never emit English enum tokens (style/genre machine keys) in any user-facing string

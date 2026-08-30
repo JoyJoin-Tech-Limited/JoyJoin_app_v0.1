@@ -16,6 +16,12 @@ import { TIER_PRESETS } from './tierPresets'
 /** Storage key for the one-time host ⋯ coachmark (persisted via Taro.setStorageSync). */
 export const HOST_MENU_COACHMARK_STORAGE_KEY = 'jj_ib_host_menu_coachmark_seen_v1'
 
+/** Storage keys for the one-time MiniScript V2 P2 Xiaoyue hints (contract
+ *  AC-10): evidence presenting (first act with evidence) and the round-2
+ *  motive vote (first time it opens). */
+export const MINISCRIPT_EVIDENCE_HINT_STORAGE_KEY = 'jj_ms_evidence_hint_seen_v1'
+export const MINISCRIPT_MOTIVE_HINT_STORAGE_KEY = 'jj_ms_motive_hint_seen_v1'
+
 export type HostMenuItemId = 'change-tier' | 'suggestion' | 'early-end'
 
 export interface HostMenuItem {

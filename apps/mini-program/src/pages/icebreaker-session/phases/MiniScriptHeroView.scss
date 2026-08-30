@@ -655,11 +655,317 @@ $ms-deep: $phase-accent-miniscript-deep;
   }
 
   &__vote-change {
-    min-height: 64rpx;
+    min-height: 88rpx;
     min-width: 88rpx;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  // ── V2 P2: one-time Xiaoyue hint bubble (evidence / round 2) ──
+  &__hint {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    margin-bottom: $spacing-sm;
+    border-radius: $card-radius-sm;
+    background: $phase-accent-miniscript-tint;
+  }
+
+  &__hint-mascot {
+    width: 56rpx;
+    height: 56rpx;
+    flex-shrink: 0;
+  }
+
+  &__hint-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 24rpx;
+    line-height: 1.5;
+    color: $color-text-secondary-on-light;
+  }
+
+  &__hint-dismiss {
+    flex-shrink: 0;
+    min-height: 88rpx;
+    min-width: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-pill;
+    transition: background 0.12s ease;
+
+    &:active {
+      background: rgba($phase-accent-miniscript, 0.16);
+    }
+  }
+
+  &__hint-dismiss-text {
+    font-size: 24rpx;
+    font-weight: 600;
+    color: $phase-accent-miniscript-deep;
+  }
+
+  // ── V2 P2: two-step honor list (dual-correct only) + private feedback ──
+  &__honor {
+    margin-top: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $card-radius-sm;
+    background: $phase-accent-miniscript-tint;
+  }
+
+  &__honor-title {
+    display: block;
+    font-size: 24rpx;
+    font-weight: 600;
+    color: $phase-accent-miniscript-deep;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__honor-name {
+    display: block;
+    font-size: 28rpx;
+    font-weight: 600;
+    line-height: 1.6;
+    color: $color-text-primary;
+  }
+
+  &__honor-empty {
+    display: block;
+    font-size: 24rpx;
+    line-height: 1.6;
+    color: $color-text-secondary-on-light;
+  }
+
+  &__honor-private {
+    display: block;
+    font-size: 24rpx;
+    line-height: 1.6;
+    color: $color-text-secondary-on-light;
+    margin-top: $spacing-xs;
+  }
+
+  // ── V2 P3: staged truth-reveal ceremony ──
+  &__ceremony {
+    padding: $spacing-md $spacing-xs $spacing-xs;
+    text-align: center;
+  }
+
+  &__ceremony-dots {
+    display: flex;
+    justify-content: center;
+    gap: 16rpx;
+    margin-bottom: $spacing-md;
+  }
+
+  &__ceremony-dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: $radius-circle;
+    background: rgba($color-text-primary, 0.12);
+    transition: background 0.3s ease;
+
+    &--active {
+      background: $ms-accent;
+    }
+
+    &--past {
+      background: rgba($ms-accent, 0.45);
+    }
+  }
+
+  // Keyed per stage — each stage swap replays this entrance.
+  &__ceremony-stage {
+    animation: ms-ceremony-stage-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  &__ceremony-title {
+    @include type-subheading;
+    display: block;
+    color: $ms-deep;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__ceremony-panel {
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    background: rgba($ms-accent, 0.06);
+    text-align: left;
+  }
+
+  &__ceremony-hint {
+    @include type-micro;
+    display: block;
+    color: $color-text-muted;
+    margin-top: $spacing-md;
+    // Gentle breathing so first-time tables notice the tap-through
+    // affordance (opacity-only, GPU-safe; flattened under reduced-motion).
+    animation: ms-ceremony-hint-breathe 2.2s ease-in-out infinite;
+  }
+
+  // ── Host-paced hold (V2 P3 Q14): culprit / honor park here until the
+  // server beat advances. Host gets a solid-brand 下一段 CTA; everyone else
+  // gets a quiet waiting line.
+  &__ceremony-hold {
+    padding: $spacing-md 0 $spacing-xs;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__ceremony-next {
+    min-height: 88rpx;
+    min-width: 240rpx;
+    padding: 0 $spacing-lg;
+    border-radius: $radius-pill;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s ease;
+
+    &:active {
+      transform: scale(0.96);
+    }
+  }
+
+  &__ceremony-next-text {
+    font-size: 28rpx;
+    font-weight: $font-weight-semibold;
+    color: $color-surface;
+  }
+
+  &__ceremony-waiting {
+    @include type-caption;
+    color: $color-text-muted;
+    animation: ms-ceremony-hint-breathe 2.2s ease-in-out infinite;
+  }
+
+  // 当事人落锤 — the ceremony climax: land animation + the role-flip glow
+  // pulse behind a translucent card (the glow needs the translucency to
+  // show through, same pattern as &__role-back).
+  &__culprit-card {
+    position: relative;
+    padding: $spacing-lg $spacing-md;
+    border-radius: $radius-md;
+    background: rgba($ms-deep, 0.08);
+    border: 2rpx solid rgba($ms-deep, 0.4);
+    animation: ms-culprit-land 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 420rpx;
+      height: 420rpx;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba($ms-accent, 0.22) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+      animation: ms-role-glow 2.4s ease-in-out infinite;
+    }
+  }
+
+  &__culprit-label {
+    @include type-caption;
+    display: block;
+    color: $ms-deep;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__culprit-name {
+    @include type-heading;
+    display: block;
+    color: $ms-deep;
+    margin-bottom: $spacing-sm;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.35;
+  }
+
+  &__culprit-what {
+    @include type-body;
+    display: block;
+    color: $color-text-primary;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  &__motive-card {
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    background: rgba($ms-deep, 0.08);
+    border: 1rpx solid rgba($ms-deep, 0.3);
+    text-align: left;
+  }
+
+  &__motive-label {
+    @include type-caption;
+    display: block;
+    color: $ms-deep;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__motive-text {
+    @include type-body-emphasis;
+    display: block;
+    color: $color-text-primary;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  // 本桌名侦探 honor cards — staggered pop-in + a quiet brand glow behind
+  // the translucent cards (invisible under tinted ancestors, which is fine:
+  // the cards themselves carry the design there).
+  &__honor-cards {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    text-align: left;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 360rpx;
+      height: 360rpx;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba($color-primary, 0.16) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+      animation: ms-honor-glow 2.8s ease-in-out infinite;
+    }
+  }
+
+  &__honor-card {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-md;
+    background: rgba($color-primary, 0.06);
+    border: 1rpx solid rgba($color-primary, 0.25);
+    animation: ms-honor-pop 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    &:nth-child(1) { animation-delay: 0ms; }
+    &:nth-child(2) { animation-delay: 90ms; }
+    &:nth-child(3) { animation-delay: 180ms; }
+    &:nth-child(4) { animation-delay: 270ms; }
+    &:nth-child(5) { animation-delay: 360ms; }
+    &:nth-child(6) { animation-delay: 450ms; }
   }
 }
 
@@ -705,12 +1011,75 @@ $ms-deep: $phase-accent-miniscript-deep;
   }
 }
 
+// ── V2 P3 ceremony keyframes (transform + opacity only, GPU-safe) ──
+@keyframes ms-ceremony-stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ms-culprit-land {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes ms-honor-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12rpx) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ms-honor-glow {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes ms-ceremony-hint-breathe {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .miniscript-hero__content,
   .miniscript-hero__waiting-mascot,
   .miniscript-hero__role-flip::before,
   .miniscript-hero__section--new-clues .miniscript-hero__clue-focus,
-  .miniscript-hero__section--truth > * {
+  .miniscript-hero__section--truth > *,
+  .miniscript-hero__ceremony-stage,
+  .miniscript-hero__ceremony-hint,
+  .miniscript-hero__ceremony-waiting,
+  .miniscript-hero__culprit-card,
+  .miniscript-hero__culprit-card::before,
+  .miniscript-hero__honor-card,
+  .miniscript-hero__honor-cards::before {
     animation: none !important;
   }
 

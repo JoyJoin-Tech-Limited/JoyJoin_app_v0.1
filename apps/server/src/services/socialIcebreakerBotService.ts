@@ -9,7 +9,7 @@ import type {
   GroupMirrorAnswer,
   MiniScriptVote,
 } from '@shared/socialIcebreaker';
-import { AUCTION_STARTING_COINS } from '@shared/socialIcebreaker';
+import { AUCTION_STARTING_COINS, MINISCRIPT_CEREMONY_MAX_BEAT } from '@shared/socialIcebreaker';
 import { isSingleTestMode } from '../lib/isSingleTestMode';
 import { isSocialIcebreakerTestMode } from '../lib/isSocialIcebreakerTestMode';
 import { logger } from '../lib/logger';
@@ -17,6 +17,7 @@ import {
   listParticipants,
   setLieTruths,
   getLieTruths,
+  getMiniScriptSecrets,
 } from '../lib/socialIcebreakerStore';
 import {
   generateLieDetectiveStatements,
@@ -293,6 +294,7 @@ export async function simulateBotsForSession(
       break;
     case 'mini_script':
       simulateMiniScriptBots(state, bots, rng);
+      await simulateMiniScriptBotEvidencePresentation(socialSessionId, state, bots);
       break;
     default:
       break;
@@ -695,19 +697,41 @@ function simulateMiniScriptBots(
 ): void {
   const readyMap = { ...(state.miniScriptPlayerReady ?? {}) };
   const votes = [...(state.miniScriptVotes ?? [])];
-  const votedUserIds = new Set(votes.map((v) => v.userId));
   const roleAssignments = state.miniScriptRoleAssignments ?? {};
+  // Fall back to playerCount when no framework is loaded so the seeded
+  // suspect slot is always in a plausible range.
+  const characterCount = state.miniScriptFramework?.characters?.length ?? state.playerCount ?? 0;
+  const motiveOptions = state.miniScriptFramework?.motiveOptions ?? [];
+  const round2Open =
+    (state.miniScriptVoteRound ?? 1) === 2 &&
+    state.miniScriptMotiveVoteOpenedAt !== undefined;
 
   for (const bot of bots) {
     if (roleAssignments[bot.userId] === undefined) continue;
     readyMap[bot.userId] = true;
 
-    if (!votedUserIds.has(bot.userId)) {
+    // Round 1 (suspect): structured ballot, suspectRoleSlot via seeded rng
+    // (contract AC-07 — bots walk the same structured path as humans).
+    const hasRound1 = votes.some((v) => v.userId === bot.userId && (v.voteRound ?? 1) === 1);
+    if (!hasRound1 && characterCount > 0) {
       const vote: MiniScriptVote = {
         userId: bot.userId,
-        who: pick(rng, ['凶手', '路人', '那个最可疑的人']),
-        what: pick(rng, ['拿走了钥匙', '撒了谎', '出现在不该出现的地方']),
-        why: pick(rng, ['因为时间线对不上', '因为动机最明显', '因为话里前后矛盾']),
+        voteRound: 1,
+        suspectRoleSlot: 1 + Math.floor(rng() * characterCount),
+        votedAt: Date.now(),
+      };
+      votes.push(vote);
+    }
+
+    // Round 2 (motive): cast once the host has opened it. open-motive-vote
+    // hooks runBotSimulationSafely so a single-test round1→round2→reveal
+    // chain terminates without human input.
+    const hasRound2 = votes.some((v) => v.userId === bot.userId && v.voteRound === 2);
+    if (round2Open && !hasRound2 && motiveOptions.length > 0) {
+      const vote: MiniScriptVote = {
+        userId: bot.userId,
+        voteRound: 2,
+        motiveChoice: Math.floor(rng() * motiveOptions.length),
         votedAt: Date.now(),
       };
       votes.push(vote);
@@ -715,6 +739,85 @@ function simulateMiniScriptBots(
   }
   state.miniScriptPlayerReady = readyMap;
   state.miniScriptVotes = votes;
+
+  // V2 P3 (Q14): the truth ceremony's culprit/honor beats are host-paced via
+  // miniScriptCeremonyBeat. In single-test bot sessions the table must never
+  // stall waiting for a human host to tap through the ceremony — once the
+  // solution is revealed, each simulation run walks one beat forward (the
+  // reveal-solution hook fires the first, the phase /advance hook fires the
+  // rest), so the automated round1→round2→reveal→ceremony chain terminates.
+  if (state.miniScriptSolutionRevealed === true && state.miniScriptV2Enabled === true) {
+    const beat = state.miniScriptCeremonyBeat ?? 0;
+    if (beat < MINISCRIPT_CEREMONY_MAX_BEAT) {
+      state.miniScriptCeremonyBeat = beat + 1;
+    }
+  }
+}
+
+/**
+ * V2 P2 (optional, contract AC-07): bots present current-act evidence while
+ * the session is still in the act sub-stage. Each assigned bot presents at
+ * most one new (evidenceId, targetRoleSlot) combo per run, within the same
+ * per-act budget humans have. Reaction text comes from the secrets store —
+ * exactly like the human present-evidence route. Idempotent: a second run
+ * finds every combo already presented and changes nothing.
+ */
+async function simulateMiniScriptBotEvidencePresentation(
+  socialSessionId: string,
+  state: SocialSessionState,
+  bots: BotInfo[],
+): Promise<void> {
+  if (state.miniScriptV2Enabled !== true) return;
+  if (state.miniScriptVoteOpenedAt !== undefined) return; // vote sub-stage: no presenting
+  const currentAct = state.miniScriptCurrentAct ?? 0;
+  if (currentAct < 1) return;
+
+  const framework = state.miniScriptFramework;
+  const roleAssignments = state.miniScriptRoleAssignments ?? {};
+  const characters = framework?.characters ?? [];
+  if (!framework || characters.length === 0 || Object.keys(roleAssignments).length === 0) return;
+
+  const actEvidence = (framework.act_flow ?? [])
+    .filter((act) => act.actNumber <= currentAct)
+    .flatMap((act) => act.evidence ?? []);
+  if (actEvidence.length === 0) return;
+
+  const secrets = await getMiniScriptSecrets(socialSessionId);
+  const reactions = secrets?.evidenceReactions ?? {};
+
+  const presented = [...(state.miniScriptPresentedEvidence ?? [])];
+  const characterCount = characters.length;
+
+  for (const bot of bots) {
+    const botSlot = roleAssignments[bot.userId];
+    if (botSlot === undefined) continue;
+    const myActPresents = presented.filter(
+      (entry) => entry.presentedBy === bot.userId && entry.actNo === currentAct,
+    ).length;
+    if (myActPresents >= 2) continue; // same budget as humans
+
+    // Deterministic target: the next role slot after the bot's own.
+    const targetRoleSlot = (botSlot % characterCount) + 1;
+    const candidate = actEvidence.find(
+      (item) =>
+        reactions[item.id]?.[String(targetRoleSlot)] &&
+        !presented.some(
+          (entry) => entry.evidenceId === item.id && entry.targetRoleSlot === targetRoleSlot,
+        ),
+    );
+    if (!candidate) continue;
+
+    presented.push({
+      evidenceId: candidate.id,
+      targetRoleSlot,
+      presentedBy: bot.userId,
+      actNo: currentAct,
+      presentedAt: Date.now(),
+      reactionText: reactions[candidate.id][String(targetRoleSlot)],
+    });
+  }
+
+  state.miniScriptPresentedEvidence = presented;
 }
 
 /** Re-export for consumers that need to test the PRNG in isolation. */

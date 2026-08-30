@@ -92,6 +92,11 @@ const miniScriptSolutionSchema = z.object({
   /** 1-based index into the framework's characters — stable even when extra
    *  players cause duplicated roles with a 「·新客」 suffix. */
   whoSlot: z.number().int().min(1).max(6).optional(),
+  /** V2 P2 (additive): 0-based index into `motiveOptions` marking the true
+   *  motive. Server-only — the solution never rides client payloads until
+   *  reveal. When absent, the server falls back to exact-matching
+   *  `solution.why` against `motiveOptions` (see resolveCorrectMotiveIndex). */
+  motiveIndex: z.number().int().min(0).max(3).optional().catch(undefined),
 });
 
 export type MiniScriptSolution = z.infer<typeof miniScriptSolutionSchema>;
@@ -134,13 +139,45 @@ export type MiniScriptCharacter = z.infer<typeof miniScriptCharacterSchema>;
 
 export type MiniScriptCharacterPublic = Omit<MiniScriptCharacter, 'secret'>;
 
+/**
+ * Evidence item surfaced with an act (V2 P1 additive). `evidenceReactions`
+ * is SERVER-ONLY — per-role reaction text (roleSlot → text) revealed when the
+ * evidence is presented to that role; stripped at every client boundary.
+ * Target reaction length 30–60 chars (prompt + offline critic); 120 hard cap.
+ */
+const miniScriptEvidenceReactionTextSchema = z.string().min(1).max(120);
+
+export const miniScriptEvidenceSchema = z.object({
+  id: z.string().min(1).max(32),
+  name: z.string().min(1).max(24),
+  description: z.string().min(1).max(200),
+  iconKey: z.string().min(1).max(32),
+  evidenceReactions: z
+    .record(z.string().regex(/^[1-6]$/), miniScriptEvidenceReactionTextSchema)
+    .optional()
+    .catch(undefined),
+});
+
+export type MiniScriptEvidence = z.infer<typeof miniScriptEvidenceSchema>;
+
+export type MiniScriptEvidencePublic = Omit<MiniScriptEvidence, 'evidenceReactions'>;
+
 const miniScriptActSchema = z.object({
   actNumber: z.number().int().min(1).max(5),
   title: z.string().min(1).max(120),
   beats: z.array(z.string().min(1).max(400)).min(1).max(12),
   /** Suspense hook that ends this act — players must want to continue. ≤80 chars. */
   cliffhanger: z.string().min(1).max(80).optional(),
+  /** ≤2 evidence items per act. Optional so pre-V2-P1 frameworks still parse;
+   *  an invalid LLM-supplied value is dropped instead of failing the parse. */
+  evidence: z.array(miniScriptEvidenceSchema).max(2).optional().catch(undefined),
 });
+
+export type MiniScriptAct = z.infer<typeof miniScriptActSchema>;
+
+export type MiniScriptActPublic = Omit<MiniScriptAct, 'evidence'> & {
+  evidence?: MiniScriptEvidencePublic[];
+};
 
 /**
  * Short Chinese chip labels for the consensus vote (what happened / why).
@@ -191,6 +228,15 @@ export const miniScriptStoryFrameworkSchema = z.object({
   deductionChain: z.array(miniScriptDeductionChainSchema).optional(),
   /** Chip labels for the structured vote; safe to show all players pre-vote. */
   voteOptions: miniScriptVoteOptionsSchema.optional().catch(undefined),
+  /** Public motive candidates for the two-step reveal (3–4 strings). The
+   *  correct motive stays server-only inside `solution.why`; options carry no
+   *  correctness marker. Optional so pre-V2-P1 frameworks still parse. */
+  motiveOptions: z
+    .array(z.string().trim().min(1).max(40))
+    .min(3)
+    .max(4)
+    .optional()
+    .catch(undefined),
 });
 
 export type MiniScriptStoryFramework = z.infer<typeof miniScriptStoryFrameworkSchema>;
@@ -198,9 +244,10 @@ export type MiniScriptStoryFramework = z.infer<typeof miniScriptStoryFrameworkSc
 /** Public-safe framework stripped of all server-only secrets. */
 export type MiniScriptStoryFrameworkPublic = Omit<
   MiniScriptStoryFramework,
-  'clues' | 'solution' | 'playerKnowledge' | 'redHerrings' | 'deductionChain' | 'characters'
+  'clues' | 'solution' | 'playerKnowledge' | 'redHerrings' | 'deductionChain' | 'characters' | 'act_flow'
 > & {
   characters: MiniScriptCharacterPublic[];
+  act_flow: MiniScriptActPublic[];
 };
 
 // ─── Vote Schema ──────────────────────────────────────────────────────────────
@@ -220,6 +267,13 @@ export const miniScriptVoteSchema = z.object({
   who: z.string().min(1).max(120).optional(),
   what: z.string().min(1).max(200).optional(),
   why: z.string().min(1).max(300).optional(),
+  /** V2 P2 (additive): which vote round this ballot belongs to. Defaults to
+   *  round 1 (suspect). Round 2 (motive) requires the host to have opened it
+   *  via POST /api/miniscript/open-motive-vote. */
+  voteRound: z.union([z.literal(1), z.literal(2)]).optional(),
+  /** V2 P2: 0-based index into the framework's public `motiveOptions`. Only
+   *  meaningful for round-2 ballots; range-checked server-side. */
+  motiveChoice: z.number().int().min(0).max(3).optional(),
 });
 
 export type MiniScriptVoteInput = z.infer<typeof miniScriptVoteSchema>;
@@ -254,6 +308,38 @@ export function resolveMiniScriptTitle(title: string | undefined, premise: strin
 }
 
 // ─── Vote Progress (structured vote + quorum reveal) ─────────────────────────
+
+/**
+ * V2 P2: resolve the server-only correct motive index for a framework.
+ * Resolution chain (sprint contract AC-04):
+ *   1. `solution.motiveIndex` when the schema carries a valid index;
+ *   2. exact match of `solution.why` against `motiveOptions`;
+ *   3. resolution failure → null, and the framework is treated as having no
+ *      round 2 (degrades to the single-step vote).
+ * The result is a 0-based index into `motiveOptions` — the same indexing the
+ * client uses for `motiveChoice`.
+ */
+export function resolveCorrectMotiveIndex(params: {
+  motiveOptions?: string[];
+  solutionWhy?: string;
+  solutionMotiveIndex?: number;
+}): number | null {
+  const { motiveOptions, solutionWhy, solutionMotiveIndex } = params;
+  if (!motiveOptions || motiveOptions.length === 0) return null;
+  if (
+    typeof solutionMotiveIndex === 'number' &&
+    Number.isInteger(solutionMotiveIndex) &&
+    solutionMotiveIndex >= 0 &&
+    solutionMotiveIndex < motiveOptions.length
+  ) {
+    return solutionMotiveIndex;
+  }
+  if (solutionWhy) {
+    const exactIdx = motiveOptions.findIndex((option) => option === solutionWhy);
+    if (exactIdx >= 0) return exactIdx;
+  }
+  return null;
+}
 
 /** Escape hatch: the host may reveal once the vote has been open this long. */
 export const MINISCRIPT_VOTE_MIN_OPEN_MS = 90_000;

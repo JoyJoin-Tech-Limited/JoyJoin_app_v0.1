@@ -46,6 +46,7 @@ vi.mock('../lib/aiTraceLogger', () => ({
 
 vi.mock('../middleware/metrics', () => ({
   recordAIProviderRecoveryMetric: (opts: unknown) => hoisted.metricsMock(opts),
+  recordMiniscriptRuntimeCriticMetric: vi.fn(),
 }));
 
 const validV2Payload = {

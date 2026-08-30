@@ -1,0 +1,159 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// MiniScriptClueDrawer (V2 P2, 2026-08-28) — persistent 「线索 N 条」 entry
+// bar + bottom sheet grouped by act. Sheet chrome follows the
+// TablemateDetailSheet info-overlay family (fixed mask + bottom surface +
+// fade-slide-up entry).
+.miniscript-clues {
+  position: fixed;
+  inset: 0;
+  z-index: $z-modal;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+
+  &__bar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-height: 88rpx;
+    margin-top: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
+    border-radius: $radius-pill;
+    background: $phase-accent-miniscript-tint;
+    transition: background 0.12s ease;
+
+    &:active {
+      background: rgba($phase-accent-miniscript, 0.18);
+    }
+  }
+
+  &__bar-text {
+    flex: 1;
+    font-size: 26rpx;
+    font-weight: 600;
+    color: $phase-accent-miniscript-deep;
+  }
+
+  &__bar-arrow {
+    font-size: 32rpx;
+    color: $phase-accent-miniscript-deep;
+  }
+
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba($color-text-primary, 0.4);
+  }
+
+  &__surface {
+    position: relative;
+    z-index: 1;
+    background: $color-surface;
+    border-radius: $card-radius-lg $card-radius-lg 0 0;
+    max-height: calc(100vh - 200rpx);
+    max-height: calc(100dvh - 200rpx);
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: fade-slide-up 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  &__handle {
+    width: 40rpx;
+    height: 4rpx;
+    border-radius: 2rpx;
+    background: rgba($color-text-primary, 0.2);
+    margin: $spacing-sm auto $spacing-xs;
+    flex-shrink: 0;
+  }
+
+  &__title {
+    display: block;
+    font-size: 30rpx;
+    font-weight: 600;
+    color: $color-text-primary;
+    padding: 0 $spacing-lg $spacing-sm;
+    flex-shrink: 0;
+  }
+
+  &__scroll {
+    flex: 1;
+    min-height: 0;
+    padding: 0 $spacing-lg;
+  }
+
+  &__act {
+    margin-bottom: $spacing-md;
+  }
+
+  &__act-title {
+    display: block;
+    font-size: 24rpx;
+    font-weight: 600;
+    color: $phase-accent-miniscript-deep;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__item {
+    padding: $spacing-sm;
+    border-radius: $card-radius-sm;
+    background: rgba($color-text-primary, 0.04);
+    margin-bottom: $spacing-xs;
+  }
+
+  &__item--evidence {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    background: $phase-accent-miniscript-tint;
+  }
+
+  &__item-icon {
+    width: 48rpx;
+    height: 48rpx;
+    border-radius: $radius-md;
+    background: rgba($color-surface, 0.9);
+    @include flex-center;
+    flex-shrink: 0;
+  }
+
+  &__item-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__item-name {
+    display: block;
+    font-size: 26rpx;
+    font-weight: 600;
+    color: $color-text-primary;
+  }
+
+  &__item-text {
+    display: block;
+    font-size: 24rpx;
+    line-height: 1.6;
+    color: $color-text-secondary-on-light;
+  }
+
+  &__close {
+    flex-shrink: 0;
+    margin: $spacing-xs $spacing-lg 0;
+    padding: $spacing-sm;
+    border-radius: $radius-pill;
+    background: rgba($color-text-primary, 0.05);
+    transition: background 0.12s ease;
+    @include flex-center;
+
+    &:active {
+      background: rgba($color-text-primary, 0.08);
+    }
+  }
+
+  &__close-text {
+    font-size: 26rpx;
+    color: $color-text-secondary-on-light;
+  }
+}

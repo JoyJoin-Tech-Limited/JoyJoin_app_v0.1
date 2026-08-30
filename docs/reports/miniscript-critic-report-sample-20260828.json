@@ -1,0 +1,72 @@
+{
+  "generatedAt": "2026-08-28T09:50:15.758Z",
+  "mode": {
+    "llm": false,
+    "dryRun": true
+  },
+  "stories": [
+    {
+      "id": "story-0",
+      "title": "凡尔赛的胸针",
+      "pass": false,
+      "rounds": 0,
+      "violations": [
+        {
+          "code": "E202",
+          "level": "fatal",
+          "message": "凡尔赛的胸针: motiveOptions missing or outside 3-4 items"
+        },
+        {
+          "code": "E203",
+          "level": "fatal",
+          "message": "凡尔赛的胸针: act 1 has no evidence[]"
+        },
+        {
+          "code": "E203",
+          "level": "fatal",
+          "message": "凡尔赛的胸针: act 2 has no evidence[]"
+        },
+        {
+          "code": "E203",
+          "level": "fatal",
+          "message": "凡尔赛的胸针: act 3 has no evidence[]"
+        }
+      ]
+    },
+    {
+      "id": "story-1",
+      "title": "失踪的桂花糕",
+      "pass": false,
+      "rounds": 0,
+      "violations": [
+        {
+          "code": "E202",
+          "level": "fatal",
+          "message": "失踪的桂花糕: motiveOptions missing or outside 3-4 items"
+        },
+        {
+          "code": "E203",
+          "level": "fatal",
+          "message": "失踪的桂花糕: act 1 has no evidence[]"
+        },
+        {
+          "code": "E203",
+          "level": "fatal",
+          "message": "失踪的桂花糕: act 2 has no evidence[]"
+        },
+        {
+          "code": "E203",
+          "level": "fatal",
+          "message": "失踪的桂花糕: act 3 has no evidence[]"
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "stories": 2,
+    "passed": 0,
+    "failed": 2,
+    "fatals": 8,
+    "warnings": 0
+  }
+}

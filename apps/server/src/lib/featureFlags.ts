@@ -272,6 +272,14 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   /** B3 in-test gather-glow on answer submit. Skeleton registration in W1;
    *  consumed in W4. Env fallback: TEST_GATHER_GLOW_ENABLED (default: false). */
   testGatherGlowEnabled: "TEST_GATHER_GLOW_ENABLED",
+  /** MiniScript V2 P2 gameplay layer (2026-08-28, sprint miniscript-v2-p2):
+   *  evidence presentation (present-evidence) + two-round suspect→motive
+   *  voting (open-motive-vote). Resolved once at mini_script phase entry and
+   *  snapshotted into session state (miniScriptV2Enabled) — mid-session flips
+   *  never affect a live session. Flag-off degrades to the single-step vote
+   *  with no evidence surface. Env fallback:
+   *  MINISCRIPT_EVIDENCE_VOTE_V2_ENABLED (default: false). */
+  miniscriptEvidenceVoteV2Enabled: "MINISCRIPT_EVIDENCE_VOTE_V2_ENABLED",
 };
 
 /**
@@ -342,6 +350,9 @@ export const DEFAULT_FLAG_VALUES: Record<string, boolean> = {
   landingStepLoopEnabled: false,
   testIntroWhyLineEnabled: false,
   testGatherGlowEnabled: false,
+  /** MiniScript V2 P2 ships dark; explicit false so the admin toggle UI and
+   *  listFeatureFlags() show a stable default. */
+  miniscriptEvidenceVoteV2Enabled: false,
 };
 
 const cache = new Map<string, { value: boolean; ts: number }>();

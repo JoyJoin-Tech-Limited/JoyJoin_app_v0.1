@@ -466,6 +466,14 @@ export interface MiniScriptSecrets {
   /** The narrative resolution summary is stored server-only until the host
    *  reveals the solution, then copied back into the public framework's ending. */
   resolutionSummary?: string;
+  /** evidenceId → (roleSlot → reactionText). Server-only lookup table for the
+   *  present-evidence flow; never shipped inside client framework payloads. */
+  evidenceReactions?: Record<string, Record<string, string>>;
+  /** V2 P2: 0-based index into the public motiveOptions marking the true
+   *  motive. Resolved at story generate/select time via
+   *  resolveCorrectMotiveIndex; null/absent = framework has no motive round
+   *  (degrades to the single-step vote). Server-only. */
+  correctMotiveIndex?: number | null;
 }
 
 export async function setMiniScriptSecrets(
