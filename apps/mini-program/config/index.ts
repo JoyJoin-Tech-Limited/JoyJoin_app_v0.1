@@ -119,6 +119,16 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
     },
     copy: {
       patterns: [
+        // Landing hero composite — bundled in main package so the hero is
+        // guaranteed to render regardless of CDN availability on-device
+        // (WeChat can silently hang a CDN <Image> with no onLoad/onError,
+        // leaving the landing blank; see LandingPage hero timeout).
+        // LQIP 800B + main hero ~115KB; sprites stay CDN (decorative).
+        // Directory-level copy (matches the tab-icons pattern form).
+        {
+          from: 'src/assets/lovart/landing',
+          to: 'dist/assets/lovart/landing',
+        },
         // Tab bar icons — stay in main package (~60KB)
         {
           from: 'src/assets/tab-icons',

@@ -136,6 +136,10 @@
       },
       {
         "type": "regexp",
+        "value": "assets/lovart/landing/hero-box-xiaoyue-dusk.*\\.webp$"
+      },
+      {
+        "type": "regexp",
         "value": "assets/gathering-room/.*\\.webp$"
       },
       {

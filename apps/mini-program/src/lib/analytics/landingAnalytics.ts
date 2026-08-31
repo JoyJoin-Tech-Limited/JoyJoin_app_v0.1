@@ -18,7 +18,7 @@ export interface TrackCtaTapProps {
   heroReady: boolean
 }
 
-export type LandingHeroAssetResult = 'success' | 'error' | 'fallback'
+export type LandingHeroAssetResult = 'success' | 'error' | 'fallback' | 'timeout'
 export type LandingHeroAssetSrcType = 'local' | 'cdn'
 
 export interface TrackHeroAssetProps {

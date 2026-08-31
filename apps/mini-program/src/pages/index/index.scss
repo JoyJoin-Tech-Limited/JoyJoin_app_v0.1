@@ -736,10 +736,10 @@
 .bottom-zone {
   width: 100%;
   padding: 24rpx 32rpx 40rpx;
-  // Reserve the legal row's 1.5x visual drop while keeping the CTA stack's
-  // flow height unchanged. This lets the retired test-login slot move both
-  // large actions down without allowing the agreement row to hit the safe area.
-  padding-bottom: calc(148rpx + env(safe-area-inset-bottom));
+  // Legal row now sits in normal flow directly under the CTA stack; the
+  // previous 148rpx reserve (plus the -108rpx/top:108rpx overlay hack) was
+  // a leftover from the retired test-login slot and produced a big gap.
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -861,9 +861,7 @@
   min-height: 72rpx;
   padding: 0;
   margin-top: 8rpx;
-  margin-bottom: -108rpx;
   position: relative;
-  top: 108rpx;
 
   &.shake {
     animation: shake 0.4s ease;

@@ -102,7 +102,7 @@ const sourceOnlyAlangUiAssets = new Set([
 
 await removeMatching(
   'lovart',
-  (name) => name !== 'puzzle' && name !== 'squad' && !bundledAlangAssets.has(name),
+  (name) => name !== 'puzzle' && name !== 'squad' && name !== 'landing' && !bundledAlangAssets.has(name),
 )
 await Promise.all([
   removePath('lovart/puzzle'),
@@ -112,6 +112,10 @@ await Promise.all([
   // Keep only the bundled composed-hero fallback; the CDN-primary hero and the
   // card-back pattern stay CDN-only.
   removeMatching('lovart/squad', (name) => name !== 'squad-host-xiaoyue-fallback.webp'),
+  // Landing hero: keep ONLY the locally-bundled composite + LQIP (guaranteed
+  // on-device render); the decorative sprites stay CDN-first (failure is
+  // benign — they're removed from the stage on error).
+  removeMatching('lovart/landing', (name) => name.startsWith('sprite-')),
   removeMatching('icons/archetype', (name) => name.includes('grid')),
   removeMatching('icons/archetype', (name) => /^archetype-.*-head(@2x)?\.png$/.test(name)),
   removeMatching('icons/archetype-glyphs', (name) => name.includes('grid')),

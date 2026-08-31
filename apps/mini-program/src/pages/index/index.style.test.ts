@@ -35,15 +35,22 @@ describe('mini-program landing page styles', () => {
     expect(landingPageStyleSource).toContain('legal-hint-out')
   })
 
-  it('keeps test login retired and lowers the agreement row by 1.5x its height', () => {
+  it('keeps test login retired and the agreement row in normal flow under the CTA stack', () => {
     expect(landingPageSource).not.toContain('测试账号登录')
     expect(landingPageSource).not.toContain('TestLoginSheet')
     expect(landingPageStyleSource).not.toContain('landing-page__test-login')
-    expect(landingPageStyleSource).toMatch(
-      /\.landing-page__legal-row\s*\{[\s\S]*?min-height:\s*72rpx;[\s\S]*?margin-bottom:\s*-108rpx;[\s\S]*?top:\s*108rpx;/,
+    // The old -108rpx/top:108rpx overlay hack (leftover from the retired
+    // test-login slot) produced a large gap between the CTAs and the
+    // agreement row on standard-height devices; the row now sits in normal
+    // flow with its plain 8rpx top margin.
+    expect(landingPageStyleSource).not.toMatch(
+      /\.landing-page__legal-row\s*\{[\s\S]*?margin-bottom:\s*-108rpx;/,
+    )
+    expect(landingPageStyleSource).not.toMatch(
+      /\.landing-page__legal-row\s*\{[\s\S]*?top:\s*108rpx;/,
     )
     expect(landingPageStyleSource).toContain(
-      'padding-bottom: calc(148rpx + env(safe-area-inset-bottom));',
+      'padding-bottom: calc(40rpx + env(safe-area-inset-bottom));',
     )
   })
 })

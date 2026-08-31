@@ -1,7 +1,7 @@
 import { View, Text, Image, Navigator } from "@tarojs/components"
 import Taro, { useRouter, useDidHide } from "@tarojs/taro"
 import { useState, useEffect, useRef, useMemo } from "react"
-import { CDN_BASE_URL, cdnAsset, localAsset } from "../../lib/utils/cdnAssets"
+import { cdnAsset, localAsset } from "../../lib/utils/cdnAssets"
 import { loadBrandDisplayFont } from "../../lib/utils/brandFont"
 import Button from "../../components/ui/Button"
 import BrandLogo from "../../components/ui/BrandLogo"
@@ -29,8 +29,12 @@ import "./index.scss"
  * the entrance can stagger them. All CDN-delivered; the bundled welcome
  * mascot is the resilience fallback when the CDN hero cannot load.
  */
-const HERO_SRC = cdnAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk.webp')
-const HERO_LQIP_SRC = cdnAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk-lqip.webp')
+// Hero composite + LQIP are BUNDLED locally (main package, ~115KB total) —
+// guaranteed to render on-device regardless of CDN reachability. WeChat can
+// silently hang a CDN <Image> (no onLoad/onError), which blanked the hero
+// on some devices; the sprites below remain CDN (decorative, failure-safe).
+const HERO_SRC = localAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk.webp')
+const HERO_LQIP_SRC = localAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk-lqip.webp')
 const HERO_FALLBACK_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')
 
 const HERO_SPRITES = [
@@ -56,7 +60,16 @@ type LandingCtaType = 'new' | 'continue' | 'discover'
 const MECHANISM_HEADS = ['corgi', 'fox', 'rooster', 'koala', 'cat', 'dolphin_calm'] as const
 const MAP_PIN_SPRITE_SRC = HERO_SPRITES.find((s) => s.key === 'map-pin')!.src
 
-const HERO_SRC_TYPE: 'local' | 'cdn' = CDN_BASE_URL ? 'cdn' : 'local'
+/** Hero composite + LQIP are bundled locally (see HERO_SRC above); analytics
+ *  srcType records that for the landing_hero_asset metric. */
+const HERO_SRC_TYPE: 'local' | 'cdn' = 'local'
+
+/** Max wait for the CDN hero asset to fire onLoad/onError before forcing the
+ *  bundled mascot fallback. WeChat devices can silently hang a pending
+ *  <Image> with no callback; 6s bounds the blank-frame window on slow nets
+ *  while staying well under the auth-gate timeout (8s) so a slow hero never
+ *  delays the user's first interaction. */
+const HERO_LOAD_TIMEOUT_MS = 6_000
 
 /** Same window-height probe pattern as ResponsiveSpacer (not exported there). */
 function readWindowHeightPx(): number {
@@ -138,6 +151,7 @@ export default function MiniProgramLandingPage({
   const mountedAtRef = useRef(Date.now())
   const networkTypeRef = useRef('unknown')
   const dwellFiredRef = useRef(false)
+  const heroStateRef = useRef<HeroState>('loading')
 
   useEffect(() => {
     loadBrandDisplayFont()
@@ -316,6 +330,7 @@ export default function MiniProgramLandingPage({
 
   const handleHeroLoad = () => {
     if (heroState !== 'loading') return
+    heroStateRef.current = 'ready'
     setHeroState('ready')
     landingAnalytics.trackHeroAsset({
       asset: 'hero-box-xiaoyue-dusk',
@@ -328,6 +343,7 @@ export default function MiniProgramLandingPage({
 
   const handleHeroError = () => {
     if (heroState !== 'loading') return
+    heroStateRef.current = 'fallback'
     setHeroState('fallback')
     landingAnalytics.trackHeroAsset({
       asset: 'hero-box-xiaoyue-dusk',
@@ -341,6 +357,35 @@ export default function MiniProgramLandingPage({
       networkType: networkTypeRef.current,
     })
   }
+
+  // Hard timeout guard: if the CDN hero neither fires onLoad nor onError
+  // (WeChat devices can hang a pending <Image> silently — no callback at all),
+  // force the locally-bundled mascot fallback so the landing never sits on an
+  // invisible heroState='loading' frame. Modeled on the auth-gate / AI-pipeline
+  // timeout pattern. The 'ready' path is unaffected (fast path wins by clearing
+  // this timer), and tracks as a distinct timeout outcome.
+  useEffect(() => {
+    if (heroState !== 'loading') return
+    if (!isMounted) return
+    const timer = setTimeout(() => {
+      if (heroStateRef.current !== 'loading') return
+      heroStateRef.current = 'fallback'
+      setHeroState('fallback')
+      setBurstSettled(true)
+      landingAnalytics.trackHeroAsset({
+        asset: 'hero-box-xiaoyue-dusk',
+        result: 'timeout',
+        srcType: HERO_SRC_TYPE,
+        durationMs: Date.now() - mountedAtRef.current,
+        networkType: networkTypeRef.current,
+      })
+      logWarn('[LandingPage] hero asset timed out with no load event; using bundled mascot fallback', {
+        src: HERO_SRC,
+        timeoutMs: HERO_LOAD_TIMEOUT_MS,
+      })
+    }, HERO_LOAD_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [heroState, isMounted])
 
   const handleFallbackLoad = () => {
     landingAnalytics.trackHeroAsset({
