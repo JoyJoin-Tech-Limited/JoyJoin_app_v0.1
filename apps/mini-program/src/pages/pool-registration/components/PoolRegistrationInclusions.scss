@@ -1,0 +1,122 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// 费用包含 value strip (2026-08-31) — one fixed-height, non-scrollable row of
+// four tiles. Height budget ≈170rpx: 8 (pad) + 56 (badge) + 8 + 31 (title,
+// $font-size-xs × 1.4) + 4 (optical) + 56 (2-line subtitle, $font-size-2xs × 1.4 × 2)
+// + 8 (pad). @use'd by the page SCSS so the rules compile into the
+// pool-registration subpackage page WXSS.
+.pool-reg-inclusions {
+  display: flex;
+  flex-direction: row;
+  gap: $spacing-xs;
+  width: 100%;
+  margin-bottom: $spacing-md;
+  box-sizing: border-box;
+
+  &--hidden {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+
+  &--enter {
+    opacity: 0;
+    transform: translateY(16rpx);
+    animation: pool-reg-inclusions-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  // Static render: reduced-motion OS setting or degradation-tier device.
+  &--static {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  &__tile {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: $spacing-xs;
+    border-radius: $card-radius;
+    background: $color-surface;
+    box-shadow: $shadow-sm;
+    box-sizing: border-box;
+  }
+
+  &__icon-badge {
+    @include flex-center;
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    background: rgba($color-primary, 0.08);
+    flex-shrink: 0;
+  }
+
+  &__icon-glyph {
+    display: block;
+  }
+
+  // Lovart art upgrade path (icon.kind === 'image'): square asset, badge-sized.
+  // 44rpx (~79% of the 56rpx badge) — at 36rpx the dice pips / storefront
+  // awning merged at ~18px display size (2026-08-31 design audit).
+  &__icon-image {
+    width: 44rpx;
+    height: 44rpx;
+  }
+
+  &__title {
+    display: block;
+    margin-top: $spacing-xs;
+    // Caption tier — smallest emphasized label in the type scale.
+    font-size: $font-size-xs;
+    // 1.4 minimum for CJK display text (was 1.3 — too tight, 2026-08-31).
+    line-height: 1.4;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__subtitle {
+    display: -webkit-box;
+    // 4rpx optical gap — half-step below the 8rpx grid so the muted line sits
+    // closer to its title than to the neighbouring tile.
+    margin-top: 4rpx;
+    // Micro tier — tiniest readable meta text in the type scale.
+    font-size: $font-size-2xs;
+    line-height: 1.4;
+    color: $color-text-tertiary-on-light;
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    // Reserve both lines ($font-size-2xs × 1.4 × 2 ≈ 56rpx) so single-line
+    // subtitles keep the row heights equal.
+    min-height: 56rpx;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &--enter {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@keyframes pool-reg-inclusions-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

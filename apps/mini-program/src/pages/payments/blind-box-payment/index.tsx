@@ -15,7 +15,9 @@ import JoyButton from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import FirstTimeCouponBanner from '../../../components/FirstTimeCouponBanner'
 import { apiRequest } from '../../../lib/api/api'
+import { eventsAnalytics } from '../../../lib/analytics/eventsAnalytics'
 import { useAuthGuard } from '../../../hooks/useAuthGuard'
+import { haptics } from '../../../lib/utils/haptics'
 import { logError, logWarn } from '../../../lib/utils/logger'
 import { MINI_PROGRAM_ROUTES } from '../../../lib/onboarding/onboardingRoutes'
 import {
@@ -1203,7 +1205,33 @@ export default function BlindBoxPaymentPage() {
         </View>
       ) : null}
 
-      {pageError ? <Text className='payment-page__error'>{pageError}</Text> : null}
+      {pageError ? (
+        <View className='payment-page__error-block'>
+          <Text className='payment-page__error'>{pageError}</Text>
+          {/* Native WeChat customer-service session (open-type="contact") —
+              payment failure is the moment users most need support; route
+              them straight to an agent with the plan context attached. */}
+          <JoyButton
+            variant='secondary'
+            size='sm'
+            className='payment-page__support-btn'
+            openType='contact'
+            sessionFrom={`blind-box-payment:${selectedPlan}`}
+            showMessageCard
+            sendMessageTitle='悦聚支付问题'
+            sendMessagePath='/pages/payments/blind-box-payment/index'
+            onClick={() => {
+              haptics('light')
+              eventsAnalytics.track('support_contact_tap', {
+                location: 'blind-box-payment',
+                plan: selectedPlan,
+              })
+            }}
+          >
+            联系客服
+          </JoyButton>
+        </View>
+      ) : null}
 
       <View className='payment-page__footer'>
         {amountSummary.rows.map((row) => (

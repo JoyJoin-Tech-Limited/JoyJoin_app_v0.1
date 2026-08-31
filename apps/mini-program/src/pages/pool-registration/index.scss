@@ -30,6 +30,10 @@
 // to avoid duplicate CSS in the main-package common chunk.
 @use './components/PoolRegistrationHero.scss' as *;
 @use './components/PoolRegistrationHeroPersonaSection.scss' as *;
+// 费用包含 strip (2026-08-31): PoolRegistrationInclusions SCSS is @use'd into
+// the page SCSS so its rules compile into the pool-registration subpackage
+// page WXSS (subpackage style-splitting gate — no TSX-side import).
+@use './components/PoolRegistrationInclusions.scss' as *;
 
 .pool-reg {
   @include page-gradient-bg;

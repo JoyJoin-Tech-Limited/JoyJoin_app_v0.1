@@ -12,6 +12,7 @@ export type DiscoverAnalyticsEventType =
   | 'registration_abandoned'
   | 'registration_intent_toggled'
   | 'registration_step_reaction_shown'
+  | 'registration_inclusions_viewed'
   | 'registration_submit_error'
   | 'registration_terminal_state_view'
   | 'registration_terminal_cta_tap'

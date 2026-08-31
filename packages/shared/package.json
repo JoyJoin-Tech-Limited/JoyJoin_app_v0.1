@@ -68,6 +68,7 @@
     "./copy/toneMap": "./src/copy/toneMap.ts",
     "./copy/exceptions": "./src/copy/exceptions.ts",
     "./copy/poolTeaserCopy": "./src/copy/poolTeaserCopy.ts",
+    "./copy/poolRegistrationInclusionsCopy": "./src/copy/poolRegistrationInclusionsCopy.ts",
     "./copy/guidanceCopy": "./src/copy/guidanceCopy.ts"
   },
   "dependencies": {

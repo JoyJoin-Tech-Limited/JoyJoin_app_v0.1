@@ -82,13 +82,12 @@ export type {
   Flow2NodeCopy,
 } from './flowAnimationCopy.js';
 
-// 🧭 Guidance queue tips (C4 onboarding guidance iteration, 2026-08-27)
+// 🧾 Pool registration value strip (费用包含) — PM + commercialization approved 2026-08-31
 export {
-  GUIDANCE_TIP_COPY,
-  getGuidanceTipCopy,
-} from './guidanceCopy.js';
+  POOL_INCLUSION_TILES,
+} from './poolRegistrationInclusionsCopy.js';
 export type {
-  GuidanceTipCopyKey,
-  GuidanceTipCopy,
-  GuidanceTipRowCopy,
-} from './guidanceCopy.js';
+  PoolInclusionTileId,
+  PoolInclusionIcon,
+  PoolInclusionTileCopy,
+} from './poolRegistrationInclusionsCopy.js';

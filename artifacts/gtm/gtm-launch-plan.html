@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>悦聚城市盲盒 · Go-To-Market 发布计划</title>
+<style>
+/* ============================================================
+   Design Tokens
+   ============================================================ */
+:root{
+  --bg:#F5F6FB;
+  --bg-2:#EEF1FA;
+  --card:#FFFFFF;
+  --ink:#0E1729;
+  --ink-2:#3D4A61;
+  --muted:#6B7892;
+  --faint:#94A0B8;
+  --line:#E5E9F2;
+  --line-2:#D7DDEC;
+
+  --indigo:#4F46E5;
+  --indigo-d:#3B31C9;
+  --indigo-l:#EEF0FE;
+  --indigo-ll:#F6F7FF;
+
+  --orange:#FF6B35;
+  --orange-d:#E85A22;
+  --orange-l:#FFF0E8;
+
+  --teal:#0EA5A4;
+  --amber:#F5A524;
+  --rose:#F0537B;
+  --green:#16A34A;
+
+  --r-lg:22px;
+  --r-md:16px;
+  --r-sm:10px;
+
+  --sh-1:0 1px 2px rgba(15,23,42,.04), 0 2px 8px rgba(15,23,42,.05);
+  --sh-2:0 2px 6px rgba(15,23,42,.05), 0 12px 32px rgba(15,23,42,.07);
+  --sh-3:0 8px 24px rgba(79,70,229,.16);
+
+  --maxw:1180px;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro SC","PingFang SC","HarmonyOS Sans SC","Noto Sans SC","Microsoft YaHei",Inter,"Helvetica Neue",Arial,sans-serif;
+  --mono:"SF Mono",ui-monospace,"JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);
+  font-size:15px;line-height:1.65;letter-spacing:.01em;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+
+/* ============================================================
+   Sticky nav
+   ============================================================ */
+.topbar{
+  position:sticky;top:0;z-index:60;
+  background:rgba(245,246,251,.82);
+  backdrop-filter:saturate(180%) blur(14px);
+  -webkit-backdrop-filter:saturate(180%) blur(14px);
+  border-bottom:1px solid transparent;
+  transition:border-color .25s, box-shadow .25s;
+}
+.topbar.stuck{border-bottom-color:var(--line);box-shadow:0 4px 20px rgba(15,23,42,.05)}
+.topbar .wrap{display:flex;align-items:center;gap:18px;height:58px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:750;font-size:14.5px;letter-spacing:.02em;white-space:nowrap}
+.brand .dot{
+  width:22px;height:22px;border-radius:7px;flex:0 0 auto;
+  background:linear-gradient(135deg,var(--indigo),#7C6BFF 55%,var(--orange));
+  box-shadow:0 2px 8px rgba(79,70,229,.35);
+}
+.navlinks{display:flex;gap:2px;margin-left:auto;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+.navlinks::-webkit-scrollbar{display:none}
+.navlinks a{
+  font-size:12.5px;color:var(--muted);padding:6px 11px;border-radius:99px;
+  white-space:nowrap;transition:.18s;font-weight:550;
+}
+.navlinks a:hover{color:var(--ink);background:var(--bg-2)}
+.navlinks a.on{color:#fff;background:var(--indigo);box-shadow:var(--sh-3)}
+@media(max-width:860px){.navlinks{display:none}}
+
+/* ============================================================
+   Section scaffolding
+   ============================================================ */
+section{padding:74px 0 10px}
+.sec-head{margin-bottom:26px}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:11.5px;font-weight:750;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--indigo);background:var(--indigo-l);
+  padding:5px 11px;border-radius:99px;margin-bottom:13px;
+}
+.eyebrow.o{color:var(--orange-d);background:var(--orange-l)}
+h2{font-size:clamp(25px,3.6vw,34px);line-height:1.24;margin:0 0 9px;letter-spacing:-.02em;font-weight:800}
+.sub{color:var(--muted);font-size:14.5px;max-width:760px;margin:0}
+
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--sh-1);
+}
+.pad{padding:26px}
+.grid{display:grid;gap:18px}
+
+/* ============================================================
+   HERO — sticky-note wall
+   ============================================================ */
+.hero{
+  position:relative;padding:44px 0 0;margin-top:-1px;overflow:hidden;
+  background:
+    radial-gradient(1100px 460px at 12% -8%, #E4E8FF 0%, rgba(228,232,255,0) 62%),
+    radial-gradient(760px 420px at 92% 4%, #FFE9DC 0%, rgba(255,233,220,0) 60%),
+    linear-gradient(180deg,#F7F8FD 0%, var(--bg) 72%);
+}
+.hero::before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:
+    linear-gradient(rgba(79,70,229,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,70,229,.045) 1px, transparent 1px);
+  background-size:30px 30px;
+  mask-image:linear-gradient(180deg,#000 0%,transparent 78%);
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,transparent 78%);
+}
+
+.wall{
+  position:relative;z-index:2;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:20px 18px;
+  padding:8px 0 0;
+}
+.note{
+  position:relative;border-radius:4px;padding:16px 15px 15px;
+  min-height:118px;box-shadow:var(--sh-2);
+  display:flex;flex-direction:column;
+  transition:transform .3s cubic-bezier(.2,.9,.3,1.1), box-shadow .3s;
+}
+.note:hover{transform:translateY(-4px) rotate(0deg) scale(1.015);box-shadow:0 10px 30px rgba(15,23,42,.13);z-index:5}
+.note .tape{
+  position:absolute;top:-9px;left:50%;transform:translateX(-50%) rotate(-2deg);
+  width:56px;height:19px;border-radius:2px;
+  background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(226,232,245,.5));
+  border:1px solid rgba(255,255,255,.9);
+  box-shadow:0 1px 3px rgba(15,23,42,.07);
+}
+.note .n{
+  width:21px;height:21px;border-radius:6px;display:grid;place-items:center;
+  font-size:11px;font-weight:800;color:#fff;margin-bottom:9px;
+  box-shadow:0 2px 6px rgba(15,23,42,.16);
+}
+.note h4{margin:0 0 5px;font-size:14.5px;font-weight:750;letter-spacing:-.01em;line-height:1.35}
+.note p{margin:0;font-size:12px;line-height:1.55;color:var(--ink-2);opacity:.85}
+
+.n1{background:linear-gradient(160deg,#FFFFFF,#F2F4FF);transform:rotate(-1.6deg)}
+.n2{background:linear-gradient(160deg,#FFF6EF,#FFE9DA);transform:rotate(1.3deg)}
+.n3{background:linear-gradient(160deg,#FFFFFF,#EDF0FE);transform:rotate(-.9deg)}
+.n4{background:linear-gradient(160deg,#FFFBEB,#FEF0CE);transform:rotate(1.8deg)}
+.n5{background:linear-gradient(160deg,#FFFFFF,#F1F3FD);transform:rotate(-2deg)}
+.n6{background:linear-gradient(160deg,#FFFAF3,#FFEBDD);transform:rotate(1.1deg)}
+.n7{background:linear-gradient(160deg,#FFFFFF,#EEF0FD);transform:rotate(-1.2deg)}
+.n8{background:linear-gradient(160deg,#FFF7F1,#FFE7D8);transform:rotate(1.6deg)}
+.n1 .n,.n3 .n,.n5 .n,.n7 .n{background:linear-gradient(135deg,var(--indigo),#7C6BFF)}
+.n2 .n,.n4 .n,.n6 .n,.n8 .n{background:linear-gradient(135deg,var(--orange),#FF9147)}
+
+.hero-title{
+  position:relative;z-index:10;margin-top:-58px;
+  background:rgba(255,255,255,.9);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid rgba(255,255,255,.95);
+  border-radius:26px;box-shadow:0 20px 60px rgba(30,41,59,.14);
+  padding:32px 34px;max-width:840px;margin-left:auto;margin-right:auto;
+  text-align:center;
+}
+.launch-chip{
+  display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:750;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--orange-d);
+  background:var(--orange-l);padding:6px 13px;border-radius:99px;margin-bottom:15px;
+}
+.launch-chip i{width:6px;height:6px;border-radius:99px;background:var(--orange);
+  box-shadow:0 0 0 3px rgba(255,107,53,.22);animation:pulse 2s infinite;font-style:normal}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.hero-title h1{
+  margin:0 0 12px;font-size:clamp(29px,5.4vw,50px);line-height:1.1;
+  font-weight:850;letter-spacing:-.035em;
+}
+.hero-title h1 .g{
+  background:linear-gradient(100deg,var(--indigo) 0%,#7C6BFF 42%,var(--orange) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hero-kicker{font-size:15px;color:var(--ink-2);margin:0 auto 18px;max-width:640px;line-height:1.7}
+.pos{
+  margin:20px auto 0;padding:18px 20px;text-align:left;
+  background:linear-gradient(135deg,var(--indigo-ll),#FFF9F5);
+  border:1px solid var(--line);border-left:4px solid var(--indigo);
+  border-radius:14px;font-size:14px;line-height:1.78;color:var(--ink-2);
+}
+.pos b{color:var(--ink);font-weight:750}
+.pos .tag{
+  display:block;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--indigo);margin-bottom:8px;
+}
+
+.hero-stats{
+  position:relative;z-index:5;
+  display:grid;grid-template-columns:repeat(5,1fr);gap:0;
+  margin:32px auto 0;max-width:940px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--sh-2);overflow:hidden;
+}
+.hstat{padding:18px 14px;text-align:center;border-right:1px solid var(--line)}
+.hstat:last-child{border-right:0}
+.hstat .v{font-size:23px;font-weight:830;letter-spacing:-.03em;line-height:1.15;font-variant-numeric:tabular-nums}
+.hstat .k{font-size:11.5px;color:var(--muted);margin-top:4px;font-weight:550}
+.hstat .v.i{color:var(--indigo)}
+.hstat .v.o{color:var(--orange-d)}
+
+@media(max-width:900px){
+  .wall{grid-template-columns:repeat(2,1fr);gap:16px 14px}
+  .note{min-height:104px;padding:14px 13px}
+  .note h4{font-size:13.5px}
+  .note p{font-size:11.5px}
+  .hero-title{margin-top:-34px;padding:26px 20px;border-radius:22px}
+  .hero-stats{grid-template-columns:repeat(2,1fr)}
+  .hstat{border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .hstat:nth-child(2n){border-right:0}
+  .hstat:nth-last-child(-n+1){border-bottom:0}
+  .hstat:last-child{grid-column:span 2;border-bottom:0;border-right:0}
+}
+@media(max-width:520px){
+  .note .tape{width:44px;height:16px}
+}
+
+/* ============================================================
+   Market sizing
+   ============================================================ */
+.market{grid-template-columns:1.05fr 1fr}
+.tamsom{display:grid;gap:12px}
+.ts{
+  display:flex;align-items:center;gap:14px;padding:15px 16px;border-radius:var(--r-md);
+  border:1px solid var(--line);background:var(--card);position:relative;overflow:hidden;
+}
+.ts::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,var(--indigo))}
+.ts .lbl{
+  font-size:10.5px;font-weight:800;letter-spacing:.12em;color:#fff;
+  background:var(--c,var(--indigo));padding:4px 8px;border-radius:6px;flex:0 0 auto;
+}
+.ts .num{font-size:22px;font-weight:830;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.1}
+.ts .desc{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.5}
+.ts .calc{font-size:10.5px;color:var(--faint);font-family:var(--mono);margin-top:5px;letter-spacing:-.02em}
+
+.compete{width:100%;border-collapse:collapse;font-size:12.5px}
+.compete th{
+  text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);font-weight:750;padding:0 10px 9px;border-bottom:1px solid var(--line-2);
+}
+.compete td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.compete tr:last-child td{border-bottom:0}
+.compete .who{font-weight:700;white-space:nowrap}
+.compete .gap{color:var(--ink-2);line-height:1.5}
+.pill{
+  display:inline-block;font-size:10.5px;font-weight:750;padding:3px 9px;border-radius:99px;white-space:nowrap;
+}
+.pill.ind{background:var(--indigo-l);color:var(--indigo-d)}
+.pill.org{background:var(--orange-l);color:var(--orange-d)}
+.pill.gry{background:var(--bg-2);color:var(--muted)}
+.pill.grn{background:#E7F7EE;color:#137A3C}
+.pill.ros{background:#FDEDF2;color:#C33A5C}
+.pill.amb{background:#FEF5E4;color:#9A6408}
+
+.compgrid{
+  position:relative;height:300px;margin-top:6px;
+  border:1px solid var(--line);border-radius:var(--r-md);
+  background:
+    linear-gradient(90deg, rgba(79,70,229,.05) 1px, transparent 1px) 50% / 100% 100%,
+    linear-gradient(180deg, rgba(79,70,229,.05) 1px, transparent 1px) 50% / 100% 100%,
+    var(--indigo-ll);
+  overflow:hidden;
+}
+.compgrid .axis-x,.compgrid .axis-y{
+  position:absolute;font-size:10.5px;color:var(--faint);font-weight:600;letter-spacing:.04em;
+}
+.axis-x{left:0;right:0;text-align:center}
+.axis-x.a{top:9px}.axis-x.b{bottom:9px}
+.axis-y{top:50%;transform:translateY(-50%) rotate(-90deg);transform-origin:center}
+.axis-y.l{left:8px}.axis-y.r{right:8px}
+.cpt{
+  position:absolute;transform:translate(-50%,-50%);text-align:center;
+  background:#fff;border:1px solid var(--line-2);border-radius:11px;padding:7px 11px;
+  box-shadow:var(--sh-1);font-size:11.5px;font-weight:700;line-height:1.35;white-space:nowrap;
+}
+.cpt span{display:block;font-size:9.5px;font-weight:600;color:var(--muted);margin-top:2px}
+.cpt.us{
+  background:linear-gradient(135deg,var(--indigo),#7C6BFF);color:#fff;border-color:transparent;
+  box-shadow:var(--sh-3);padding:10px 15px;font-size:13px;
+}
+.cpt.us span{color:rgba(255,255,255,.82)}
+
+@media(max-width:900px){.market{grid-template-columns:1fr}}
+
+/* ============================================================
+   Personas
+   ============================================================ */
+.personas{grid-template-columns:repeat(4,1fr)}
+.pc{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--sh-1);overflow:hidden;display:flex;flex-direction:column;
+  transition:transform .25s, box-shadow .25s;
+}
+.pc:hover{transform:translateY(-3px);box-shadow:var(--sh-2)}
+.pc-top{padding:20px 20px 16px;background:var(--tint,var(--indigo-ll));border-bottom:1px solid var(--line)}
+.pc-av{
+  width:46px;height:46px;border-radius:14px;display:grid;place-items:center;
+  font-size:18px;font-weight:830;color:#fff;margin-bottom:12px;
+  background:var(--acc,var(--indigo));box-shadow:0 4px 12px rgba(15,23,42,.16);
+}
+.pc-name{font-size:16px;font-weight:800;letter-spacing:-.02em;line-height:1.3}
+.pc-meta{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:550}
+.pc-body{padding:16px 20px 20px;flex:1;display:flex;flex-direction:column}
+.kv{display:flex;gap:8px;margin-bottom:11px;font-size:12.5px;line-height:1.55}
+.kv .k{
+  flex:0 0 46px;font-size:10px;font-weight:800;color:var(--muted);
+  letter-spacing:.06em;padding-top:3px;
+}
+.kv .v{color:var(--ink-2)}
+.kv .v b{color:var(--ink);font-weight:700}
+.pc-foot{
+  margin-top:auto;padding-top:13px;border-top:1px dashed var(--line-2);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.pc-foot .pl{font-size:11px;color:var(--muted);font-weight:600}
+.tagrow{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.mtag{font-size:10.5px;font-weight:650;padding:3px 8px;border-radius:6px;background:var(--bg-2);color:var(--ink-2)}
+
+@media(max-width:1000px){.personas{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.personas{grid-template-columns:1fr}}
+
+/* ============================================================
+   Value props
+   ============================================================ */
+.vps{grid-template-columns:repeat(2,1fr)}
+.vp{
+  position:relative;padding:24px;border-radius:var(--r-lg);background:var(--card);
+  border:1px solid var(--line);box-shadow:var(--sh-1);overflow:hidden;
+}
+.vp::after{
+  content:"";position:absolute;right:-40px;top:-40px;width:130px;height:130px;border-radius:99px;
+  background:var(--tint2,#F1F3FE);opacity:.7;
+}
+.vp .ic{
+  width:42px;height:42px;border-radius:13px;display:grid;place-items:center;margin-bottom:15px;
+  background:var(--tint,#EEF0FE);color:var(--acc,var(--indigo));position:relative;z-index:2;
+}
+.vp .ic svg{width:22px;height:22px}
+.vp h3{position:relative;z-index:2;margin:0 0 9px;font-size:18px;font-weight:800;letter-spacing:-.02em}
+.vp p{position:relative;z-index:2;margin:0;font-size:13.5px;color:var(--ink-2);line-height:1.72}
+.vp .metric{
+  position:relative;z-index:2;margin-top:14px;padding-top:13px;border-top:1px solid var(--line);
+  display:flex;align-items:baseline;gap:7px;
+}
+.vp .metric .n{font-size:20px;font-weight:830;letter-spacing:-.03em;color:var(--acc,var(--indigo))}
+.vp .metric .t{font-size:11.5px;color:var(--muted)}
+
+.ba{
+  margin-top:18px;display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;
+  padding:22px;border-radius:var(--r-lg);
+  background:linear-gradient(110deg,var(--indigo-ll),#FFF8F3);
+  border:1px solid var(--line);
+}
+.ba .col h5{margin:0 0 10px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800}
+.ba .col.b h5{color:var(--muted)}
+.ba .col.a h5{color:var(--indigo)}
+.ba ul{margin:0;padding:0;list-style:none}
+.ba li{font-size:13px;color:var(--ink-2);padding:5px 0 5px 20px;position:relative;line-height:1.55}
+.ba .col.b li::before{content:"✕";position:absolute;left:0;color:var(--faint);font-size:11px;top:6px}
+.ba .col.a li::before{content:"✓";position:absolute;left:0;color:var(--indigo);font-weight:800;font-size:12px;top:5px}
+.ba .arrow{
+  width:38px;height:38px;border-radius:99px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--indigo),var(--orange));color:#fff;font-size:16px;
+  box-shadow:var(--sh-3);flex:0 0 auto;
+}
+@media(max-width:900px){.vps{grid-template-columns:1fr}}
+@media(max-width:640px){
+  .ba{grid-template-columns:1fr;gap:10px}
+  .ba .arrow{transform:rotate(90deg);margin:0 auto}
+}
+
+/* ============================================================
+   Pricing
+   ============================================================ */
+.plans{grid-template-columns:repeat(5,1fr)}
+.plan{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:20px 18px;box-shadow:var(--sh-1);position:relative;display:flex;flex-direction:column;
+  transition:transform .25s, box-shadow .25s;
+}
+.plan:hover{transform:translateY(-3px);box-shadow:var(--sh-2)}
+.plan.feat{
+  border-color:var(--indigo);box-shadow:0 0 0 3px rgba(79,70,229,.09), var(--sh-2);
+  background:linear-gradient(180deg,#FCFCFF,#fff);
+}
+.ribbon{
+  position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(135deg,var(--orange),#FF9147);color:#fff;
+  font-size:10px;font-weight:800;letter-spacing:.08em;padding:3px 11px;border-radius:99px;
+  box-shadow:0 3px 10px rgba(255,107,53,.35);white-space:nowrap;
+}
+.plan .pn{font-size:14.5px;font-weight:800;letter-spacing:-.01em}
+.plan .pe{font-size:10px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;font-weight:650}
+.plan .pr{margin:14px 0 4px;display:flex;align-items:baseline;gap:3px}
+.plan .pr .cur{font-size:15px;font-weight:700;color:var(--ink-2)}
+.plan .pr .amt{font-size:32px;font-weight:850;letter-spacing:-.04em;font-variant-numeric:tabular-nums;line-height:1}
+.plan .pr .per{font-size:11.5px;color:var(--muted);font-weight:600}
+.plan .unit{
+  font-size:11px;color:var(--indigo-d);background:var(--indigo-l);
+  padding:3px 8px;border-radius:6px;display:inline-block;font-weight:700;margin-bottom:11px;
+}
+.plan .pd{font-size:12px;color:var(--ink-2);line-height:1.6;min-height:38px}
+.plan ul{margin:14px 0 0;padding:0;list-style:none;border-top:1px solid var(--line);padding-top:13px}
+.plan li{font-size:11.5px;color:var(--ink-2);padding:3.5px 0 3.5px 16px;position:relative;line-height:1.5}
+.plan li::before{
+  content:"";position:absolute;left:0;top:10px;width:6px;height:6px;border-radius:99px;
+  background:var(--indigo);opacity:.55;
+}
+.plan .mix{
+  margin-top:auto;padding-top:13px;font-size:10.5px;color:var(--muted);
+  border-top:1px dashed var(--line-2);display:flex;justify-content:space-between;
+}
+.plan .mix b{color:var(--ink);font-weight:750}
+.b2b{
+  margin-top:18px;padding:20px 22px;border-radius:var(--r-lg);
+  background:linear-gradient(110deg,#FFF6F0,#FFFDFC);border:1px solid #FFDCC8;
+  display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+}
+.b2b .l{flex:1;min-width:240px}
+.b2b h4{margin:0 0 6px;font-size:15.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+.b2b p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.65}
+.b2b .r{display:flex;gap:22px;flex-wrap:wrap}
+.b2b .r div{text-align:right}
+.b2b .r .n{font-size:20px;font-weight:830;letter-spacing:-.03em;color:var(--orange-d)}
+.b2b .r .k{font-size:10.5px;color:var(--muted);font-weight:600}
+
+@media(max-width:1000px){.plans{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.plans{grid-template-columns:1fr}}
+
+/* ============================================================
+   Budget matrix
+   ============================================================ */
+.mtx-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px}
+table.mtx{width:100%;min-width:760px;border-collapse:separate;border-spacing:0;font-size:13px}
+table.mtx th,table.mtx td{padding:0}
+table.mtx thead th{
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  font-weight:800;padding:0 12px 10px;text-align:right;white-space:nowrap;
+}
+table.mtx thead th:first-child{text-align:left}
+table.mtx tbody th{
+  text-align:left;font-size:13px;font-weight:750;padding:11px 12px;white-space:nowrap;
+  border-top:1px solid var(--line);
+}
+table.mtx tbody th .ci{
+  display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:8px;vertical-align:1px;
+}
+table.mtx tbody th small{display:block;font-weight:550;font-size:10.5px;color:var(--faint);margin-top:1px;padding-left:16px}
+table.mtx td.cell{
+  text-align:right;padding:11px 12px;border-top:1px solid var(--line);
+  font-variant-numeric:tabular-nums;font-weight:700;position:relative;
+}
+table.mtx td.heat{color:var(--ink)}
+table.mtx td.total{
+  font-weight:830;background:var(--indigo-ll);
+}
+table.mtx td.gtotal{font-weight:850;background:var(--indigo-l);color:var(--indigo-d)}
+table.mtx tfoot td{
+  padding:13px 12px;text-align:right;font-weight:830;border-top:2px solid var(--indigo);
+  font-variant-numeric:tabular-nums;
+}
+table.mtx tfoot th{text-align:left;font-size:12px;font-weight:800;border-top:2px solid var(--indigo);padding:13px 12px}
+table.mtx tfoot .note{font-weight:600;color:var(--muted);font-size:11px;text-align:left}
+.kpi-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:20px;
+  border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--card);
+}
+.kpi-strip div{padding:15px 16px;border-right:1px solid var(--line);text-align:center}
+.kpi-strip div:last-child{border-right:0}
+.kpi-strip .n{font-size:19px;font-weight:830;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.kpi-strip .k{font-size:10.5px;color:var(--muted);margin-top:3px;font-weight:600}
+.kpi-strip .h{font-size:10px;color:var(--faint);margin-top:3px;font-family:var(--mono)}
+@media(max-width:700px){.kpi-strip{grid-template-columns:repeat(2,1fr)}
+  .kpi-strip div{border-bottom:1px solid var(--line)}
+  .kpi-strip div:nth-child(2n){border-right:0}
+  .kpi-strip div:nth-last-child(-n+2){border-bottom:0}}
+
+.chan-notes{grid-template-columns:repeat(4,1fr);margin-top:18px}
+.cn{border:1px solid var(--line);border-radius:var(--r-md);padding:16px;background:var(--card)}
+.cn h5{margin:0 0 4px;font-size:13px;font-weight:800;display:flex;align-items:center;gap:7px}
+.cn h5 i{width:8px;height:8px;border-radius:3px;display:block;font-style:normal}
+.cn .amt{font-size:11px;color:var(--muted);font-weight:650;margin-bottom:10px}
+.cn ul{margin:0;padding:0;list-style:none}
+.cn li{font-size:11.5px;color:var(--ink-2);line-height:1.6;padding:3px 0 3px 13px;position:relative}
+.cn li::before{content:"→";position:absolute;left:0;color:var(--faint);font-size:10px}
+@media(max-width:900px){.chan-notes{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.chan-notes{grid-template-columns:1fr}}
+
+/* ============================================================
+   Swimlane timeline
+   ============================================================ */
+.tl-head{
+  display:grid;grid-template-columns:132px repeat(3,1fr);gap:0;
+  border-bottom:1px solid var(--line-2);position:sticky;top:58px;z-index:20;background:var(--bg);
+}
+.tl-head .corner{}
+.tl-head .ph{
+  padding:13px 16px;border-left:1px solid var(--line);
+}
+.tl-head .ph .pn{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tl-head .ph .pt{font-size:15px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
+.tl-head .ph .pw{font-size:10.5px;color:var(--faint);font-family:var(--mono);margin-top:1px}
+.tl-head .ph.p1 .pt{color:var(--indigo)}
+.tl-head .ph.p2 .pt{color:var(--orange-d)}
+.tl-head .ph.p3 .pt{color:var(--teal)}
+
+.lane{display:grid;grid-template-columns:132px repeat(3,1fr);border-bottom:1px solid var(--line)}
+.lane:last-child{border-bottom:0}
+.lane-name{
+  padding:14px 12px;display:flex;flex-direction:column;justify-content:center;
+}
+.lane-name .ln{font-size:12.5px;font-weight:750;letter-spacing:-.01em}
+.lane-name .lo{font-size:10px;color:var(--faint);margin-top:2px;font-weight:600}
+.lane-cell{
+  border-left:1px solid var(--line);padding:12px;display:flex;flex-wrap:wrap;gap:7px;align-content:flex-start;
+  background:rgba(255,255,255,.5);
+}
+.lane.ph1 .lane-cell:nth-child(2){background:rgba(79,70,229,.035)}
+.lane.ph2 .lane-cell:nth-child(3){background:rgba(255,107,53,.04)}
+.lane.ph3 .lane-cell:nth-child(4){background:rgba(14,165,164,.04)}
+.chip{
+  font-size:11px;font-weight:650;padding:5px 9px;border-radius:8px;
+  background:#fff;border:1px solid var(--line-2);color:var(--ink-2);line-height:1.45;
+  box-shadow:0 1px 2px rgba(15,23,42,.04);
+}
+.chip.k{background:linear-gradient(135deg,var(--indigo),#7C6BFF);color:#fff;border-color:transparent;font-weight:750;
+  box-shadow:0 2px 8px rgba(79,70,229,.28)}
+.chip.o{background:linear-gradient(135deg,var(--orange),#FF9147);color:#fff;border-color:transparent;font-weight:750;
+  box-shadow:0 2px 8px rgba(255,107,53,.28)}
+.tl-foot{display:grid;grid-template-columns:132px repeat(3,1fr);margin-top:0}
+.tl-foot .g{font-size:10.5px;color:var(--faint);font-weight:600;padding:9px 12px;border-left:1px solid var(--line)}
+.tl-foot .g b{color:var(--ink-2);font-weight:750}
+.tl-wrap{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--card);box-shadow:var(--sh-1)}
+
+@media(max-width:860px){
+  .tl-head{display:none}
+  .lane{grid-template-columns:1fr;border-bottom:1px solid var(--line-2)}
+  .lane-name{
+    flex-direction:row;align-items:center;gap:8px;padding:11px 14px;
+    background:var(--bg-2);border-bottom:1px solid var(--line);
+  }
+  .lane-name .lo{margin-top:0}
+  .lane-cell{border-left:0;border-bottom:1px dashed var(--line);padding:11px 14px;position:relative}
+  .lane-cell:last-child{border-bottom:0}
+  .lane-cell::before{
+    content:attr(data-ph);display:block;font-size:9.5px;font-weight:800;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--faint);margin-bottom:7px;
+  }
+  .tl-foot{display:none}
+}
+
+/* ============================================================
+   Metrics
+   ============================================================ */
+.ns{
+  display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-bottom:18px;
+}
+.ns-card{
+  border-radius:var(--r-lg);padding:28px;color:#fff;position:relative;overflow:hidden;
+  background:linear-gradient(130deg,#3B31C9 0%,#4F46E5 45%,#7C6BFF 100%);
+  box-shadow:0 14px 40px rgba(59,49,201,.28);
+}
+.ns-card::before{
+  content:"";position:absolute;right:-70px;bottom:-90px;width:250px;height:250px;border-radius:99px;
+  background:radial-gradient(circle,rgba(255,107,53,.42),transparent 68%);
+}
+.ns-card .lbl{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;opacity:.8}
+.ns-card h3{margin:9px 0 4px;font-size:25px;font-weight:850;letter-spacing:-.03em;position:relative}
+.ns-card .big{
+  font-size:56px;font-weight:860;letter-spacing:-.05em;line-height:1;margin:14px 0 6px;
+  font-variant-numeric:tabular-nums;position:relative;
+}
+.ns-card .big small{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-left:6px;opacity:.85}
+.ns-card .why{font-size:12.5px;line-height:1.7;opacity:.9;position:relative;max-width:430px}
+.ns-card .deco{
+  position:absolute;right:26px;top:26px;font-size:10px;font-weight:800;letter-spacing:.1em;
+  background:rgba(255,255,255,.16);padding:5px 11px;border-radius:99px;
+}
+.ns-formula{
+  position:relative;z-index:2;margin-top:18px;padding:14px 16px;border-radius:13px;
+  background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);
+  font-family:var(--mono);font-size:11.5px;line-height:1.85;letter-spacing:-.02em;
+}
+.ns-formula .r{display:flex;justify-content:space-between;gap:12px}
+.ns-formula .r.ans{border-top:1px solid rgba(255,255,255,.28);margin-top:6px;padding-top:6px;font-weight:800}
+
+.funnel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:24px;box-shadow:var(--sh-1)}
+.funnel h4{margin:0 0 4px;font-size:15px;font-weight:800}
+.funnel .fh{font-size:11px;color:var(--faint);margin-bottom:18px}
+.fstep{margin-bottom:13px}
+.fstep .fl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:5px}
+.fstep .fl .n1{font-size:12.5px;font-weight:700}
+.fstep .fl .n2{font-size:13.5px;font-weight:830;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.fstep .fl .n3{font-size:11px;color:var(--teal);font-weight:750;font-variant-numeric:tabular-nums}
+.fbar{height:22px;border-radius:7px;background:var(--bg-2);overflow:hidden;position:relative}
+.fbar i{
+  display:block;height:100%;border-radius:7px;
+  background:linear-gradient(90deg,var(--indigo),#7C6BFF);
+}
+.fbar.o i{background:linear-gradient(90deg,var(--orange),#FF9147)}
+.fbar span{
+  position:absolute;left:11px;top:0;line-height:22px;font-size:10.5px;color:#fff;font-weight:700;
+  text-shadow:0 1px 2px rgba(0,0,0,.2);
+}
+@media(max-width:900px){.ns{grid-template-columns:1fr}}
+
+.mgrid{grid-template-columns:repeat(3,1fr)}
+.mcard{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);box-shadow:var(--sh-1);overflow:hidden}
+.mcard .mh{
+  padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;
+}
+.mcard .mh .t{font-size:13px;font-weight:800}
+.mcard .mh .c{font-size:10px;font-weight:750;letter-spacing:.08em;padding:3px 9px;border-radius:99px}
+.mrows{padding:6px 0}
+.mrow{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--line)}
+.mrow:last-child{border-bottom:0}
+.mrow .mi{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:800;flex:0 0 auto}
+.mrow .mb{flex:1;min-width:0}
+.mrow .mb .mn{font-size:12.5px;font-weight:650;line-height:1.4}
+.mrow .mb .md{font-size:10.5px;color:var(--faint);margin-top:1px}
+.mrow .mv{text-align:right;flex:0 0 auto}
+.mrow .mv .v{font-size:15px;font-weight:830;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.1}
+.mrow .mv .d{font-size:10px;color:var(--faint);margin-top:1px;white-space:nowrap}
+@media(max-width:900px){.mgrid{grid-template-columns:1fr}}
+
+.ramp{margin-top:18px;padding:22px;border-radius:var(--r-lg);background:var(--card);border:1px solid var(--line);box-shadow:var(--sh-1)}
+.ramp h4{margin:0 0 3px;font-size:15px;font-weight:800}
+.ramp .fh{font-size:11px;color:var(--faint);margin-bottom:18px}
+.bars{display:flex;align-items:flex-end;gap:8px;height:150px;padding-top:6px}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px}
+.bar .bv{font-size:10.5px;font-weight:800;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.bar .bb{
+  width:100%;border-radius:7px 7px 3px 3px;min-height:4px;
+  background:linear-gradient(180deg,#8B84FF,var(--indigo));
+  transition:height .9s cubic-bezier(.2,.9,.3,1);
+}
+.bar.hl .bb{background:linear-gradient(180deg,#FF9147,var(--orange))}
+.bar .bl{font-size:9.5px;color:var(--faint);font-weight:700;white-space:nowrap}
+.bar .bl.hl{color:var(--orange-d)}
+@media(max-width:640px){
+  .bars{gap:3px;height:120px}
+  .bar .bv{font-size:9px}
+  .bar .bl{font-size:8px}
+}
+
+/* ============================================================
+   Risks
+   ============================================================ */
+.risk{
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
+  margin-bottom:11px;overflow:hidden;box-shadow:var(--sh-1);
+}
+.risk summary{
+  list-style:none;cursor:pointer;padding:15px 18px;display:flex;align-items:center;gap:13px;
+  transition:background .18s;
+}
+.risk summary::-webkit-details-marker{display:none}
+.risk summary:hover{background:var(--indigo-ll)}
+.risk .rk{
+  width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto;
+  font-size:11px;font-weight:850;color:#fff;
+}
+.risk .rt{flex:1;min-width:0;font-size:13.5px;font-weight:700;letter-spacing:-.01em}
+.risk .rl{font-size:10px;font-weight:800;padding:3px 9px;border-radius:99px;letter-spacing:.05em;flex:0 0 auto}
+.risk .rw{font-size:11px;color:var(--faint);font-weight:650;flex:0 0 auto;font-family:var(--mono)}
+.risk .car{font-size:11px;color:var(--muted);transform:rotate(0deg);transition:transform .25s;flex:0 0 auto}
+.risk[open] .car{transform:rotate(180deg)}
+.risk .rb{padding:0 18px 17px 57px;border-top:1px solid var(--line);padding-top:15px}
+.risk .rb dl{margin:0;display:grid;grid-template-columns:70px 1fr;gap:9px 14px}
+.risk .rb dt{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding-top:3px}
+.risk .rb dd{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.65}
+.risk .rb dd b{color:var(--ink);font-weight:700}
+.risk .rb dd code{
+  font-family:var(--mono);font-size:11.5px;background:var(--bg-2);padding:1.5px 6px;border-radius:5px;color:var(--indigo-d);
+}
+@media(max-width:640px){
+  .risk .rb{padding-left:18px}
+  .risk .rw{display:none}
+  .risk .rb dl{grid-template-columns:1fr;gap:3px 0}
+  .risk .rb dd{margin-bottom:7px}
+}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+footer{margin-top:70px;padding:34px 0 46px;border-top:1px solid var(--line);background:var(--bg-2)}
+.fnote{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.fnote .l{font-size:11.5px;color:var(--muted);line-height:1.7;max-width:620px}
+.fnote .l b{color:var(--ink-2);font-weight:700}
+.fnote .r{font-size:11px;color:var(--faint);font-family:var(--mono);text-align:right;white-space:nowrap}
+@media(max-width:640px){.fnote .r{text-align:left}}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(16px);transition:opacity .6s ease, transform .6s cubic-bezier(.2,.9,.3,1)}
+.rv.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}}
+
+/* print */
+@media print{
+  .topbar{display:none}
+  body{background:#fff}
+  .rv{opacity:1;transform:none}
+  section{padding:20px 0;break-inside:avoid}
+  .card,.pc,.plan,.mcard,.risk{box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== NAV ===================== -->
+<div class="topbar" id="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="dot"></span>悦聚 · 城市盲盒 GTM</div>
+    <nav class="navlinks" id="navlinks">
+      <a href="#market">市场与定位</a>
+      <a href="#persona">客户画像</a>
+      <a href="#value">价值主张</a>
+      <a href="#pricing">定价</a>
+      <a href="#channels">渠道预算</a>
+      <a href="#timeline">发布节奏</a>
+      <a href="#metrics">指标</a>
+      <a href="#risk">风险</a>
+    </nav>
+  </div>
+</div>
+
+<!-- ===================== HERO ===================== -->
+<header class="hero">
+  <div class="wrap">
+
+    <!-- Sticky-note wall: the product flow -->
+    <div class="wall" aria-label="悦聚城市盲盒产品流程便签墙">
+      <div class="note n1"><span class="tape"></span>
+        <span class="n">1</span>
+        <h4>选城市 · 选时段</h4>
+        <p>只选「周五晚 / 周六下午」这类时间块，不挑店、不挑人。</p>
+      </div>
+      <div class="note n2"><span class="tape"></span>
+        <span class="n">2</span>
+        <h4>人格建档</h4>
+        <p>12 型人格画像 + ACOEXP 六维特质，8–16 题完成冷启动。</p>
+      </div>
+      <div class="note n3"><span class="tape"></span>
+        <span class="n">3</span>
+        <h4>盲盒匹配</h4>
+        <p>算法按人格互补、距离、历史反馈组队，6 人一局。</p>
+      </div>
+      <div class="note n4"><span class="tape"></span>
+        <span class="n">4</span>
+        <h4>开盒揭晓</h4>
+        <p>出发前 6 小时解锁：氛围标签 + 集合点，不剧透具体店。</p>
+      </div>
+      <div class="note n5"><span class="tape"></span>
+        <span class="n">5</span>
+        <h4>到场成局</h4>
+        <p>主持人在场，验店场馆承接，标准化流程 90 分钟。</p>
+      </div>
+      <div class="note n6"><span class="tape"></span>
+        <span class="n">6</span>
+        <h4>破冰游戏</h4>
+        <p>Social Icebreaker 结构化流程，8 分钟进入有效对话。</p>
+      </div>
+      <div class="note n7"><span class="tape"></span>
+        <span class="n">7</span>
+        <h4>连接沉淀</h4>
+        <p>局后一键留连接，兴趣标签回流进下一次匹配。</p>
+      </div>
+      <div class="note n8"><span class="tape"></span>
+        <span class="n">8</span>
+        <h4>复购回流</h4>
+        <p>「还想见到这些人」一键同场再约，体验变社交资产。</p>
+      </div>
+    </div>
+
+    <!-- Title pressed over the wall -->
+    <div class="hero-title">
+      <span class="launch-chip"><i></i>Launch Plan · 20 周三阶段发布</span>
+      <h1>悦聚城市盲盒<br /><span class="g">Go-To-Market 发布计划</span></h1>
+      <p class="hero-kicker">一个「把去哪玩、和谁玩交给算法」的城市线下体验平台。这份计划回答六件事：打谁、凭什么赢、怎么定价、钱怎么花、节奏怎么排、怎么算成功。</p>
+
+      <div class="pos">
+        <span class="tag">Positioning Statement</span>
+        对于 <b>22–35 岁、刚到一座城市或想跳出固定圈子的城市青年</b>，悦聚城市盲盒是一个<b>把「去哪玩、和谁玩」交给算法的线下体验平台</b>；不同于小红书只种草不履约、也不同于社交 App 只认识不交付，我们用<b>一个盲盒 + 一套标准化破冰 SOP</b>，把「一个人的周五晚上」变成一场必定发生的高质量相遇。
+      </div>
+    </div>
+
+    <div class="hero-stats">
+      <div class="hstat"><div class="v i">¥60万</div><div class="k">GA+90 目标 MRR</div></div>
+      <div class="hstat"><div class="v o">2,400</div><div class="k">周成局席位（北极星）</div></div>
+      <div class="hstat"><div class="v">¥120万</div><div class="k">首期 GTM 预算</div></div>
+      <div class="hstat"><div class="v">¥20</div><div class="k">注册 CAC</div></div>
+      <div class="hstat"><div class="v">3.7×</div><div class="k">LTV / CAC</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- ===================== MARKET ===================== -->
+<section id="market">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">01 · Market &amp; Positioning</span>
+      <h2>目标市场与定位</h2>
+      <p class="sub">三层市场规模自上而下收敛；首发只打 3 座城市的核心人群，用供给密度换履约质量，而不是用城市数量换 GMV。</p>
+    </div>
+
+    <div class="grid market rv">
+      <div class="tamsom">
+        <div class="ts" style="--c:#4F46E5">
+          <span class="lbl">TAM</span>
+          <div>
+            <div class="num">¥1,548 亿</div>
+            <div class="desc">一线 + 新一线 19 城，22–35 岁常住人口的年度线下社交娱乐支出池</div>
+            <div class="calc">8,600 万人 × ¥1,800 / 年</div>
+          </div>
+        </div>
+        <div class="ts" style="--c:#7C6BFF">
+          <span class="lbl">SAM</span>
+          <div>
+            <div class="num">¥115 亿</div>
+            <div class="desc">首发 3 城（深圳 · 上海 · 成都）核心人群：月可支配 ≥¥8,000、有线下社交意愿</div>
+            <div class="calc">640 万人 × ¥1,800 / 年</div>
+          </div>
+        </div>
+        <div class="ts" style="--c:#FF6B35">
+          <span class="lbl">SOM</span>
+          <div>
+            <div class="num">¥950 万</div>
+            <div class="desc">Y1 可获取营收（供给与节奏约束下的上限）；人数渗透 0.31%，金额渗透 0.08%</div>
+            <div class="calc">年末在册付费 2.0 万 × ARPPU ¥100 × 加权在册月数</div>
+          </div>
+        </div>
+        <div class="ts" style="--c:#0EA5A4">
+          <span class="lbl">WHY NOW</span>
+          <div>
+            <div class="num" style="font-size:16px;line-height:1.45">三个窗口同时打开</div>
+            <div class="desc">①线下体验消费回补、客单下移到 ¥80–150 区间；②「搭子文化」把陌生人社交去污名化；③本地生活商家空置时段需要增量客流，场馆侧 BD 阻力最小。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card pad">
+        <h4 style="margin:0 0 4px;font-size:15px;font-weight:800">竞品格局：没人同时解决「匹配」和「履约」</h4>
+        <p style="margin:0 0 14px;font-size:11.5px;color:var(--faint)">Y 轴 = 体验标准化程度 · X 轴 = 线下履约深度</p>
+        <div class="compgrid">
+          <span class="axis-x a">↑ 标准化程度高</span>
+          <span class="axis-x b">↓ 标准化程度低</span>
+          <span class="axis-y l">← 弱履约</span>
+          <span class="axis-y r">强履约 →</span>
+          <div class="cpt" style="left:22%;top:26%">小红书 / 抖音<span>种草强 · 不履约</span></div>
+          <div class="cpt" style="left:20%;top:70%">Soul / 积目<span>能认识 · 不交付</span></div>
+          <div class="cpt" style="left:72%;top:76%">剧本杀 / 同城活动<span>有场地 · 质量方差大</span></div>
+          <div class="cpt" style="left:66%;top:34%">美团 / 点评「玩乐」<span>货架逻辑 · 无匹配</span></div>
+          <div class="cpt us" style="left:80%;top:16%">悦聚城市盲盒<span>盲盒匹配 + SOP 履约</span></div>
+        </div>
+        <table class="compete" style="margin-top:16px">
+          <thead><tr><th>对手</th><th>它解决什么</th><th>它解决不了什么（我们的切入口）</th></tr></thead>
+          <tbody>
+            <tr><td class="who">内容平台</td><td><span class="pill amb">种草</span></td><td class="gap">只给灵感，不管谁来、去了怎样；决策成本仍留给个人</td></tr>
+            <tr><td class="who">社交 App</td><td><span class="pill ind">匹配</span></td><td class="gap">关系停在聊天框，线下见面率低、无体验质量兜底</td></tr>
+            <tr><td class="who">同城活动</td><td><span class="pill org">履约</span></td><td class="gap">非标准化、单人参与门槛高、散场即断联</td></tr>
+            <tr><td class="who">本地生活货架</td><td><span class="pill gry">交易</span></td><td class="gap">按店售卖，不组人；一个人买不了「一场局」</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== PERSONAS ===================== -->
+<section id="persona">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow o">02 · Customer Personas</span>
+      <h2>目标客户画像</h2>
+      <p class="sub">三类需求侧人群 + 一类供给侧放大器。首期 80% 内容与预算投向前两类，B 端负责拉高客单与平抑周中低谷。</p>
+    </div>
+
+    <div class="grid personas rv">
+      <div class="pc" style="--tint:#F4F5FF;--acc:#4F46E5">
+        <div class="pc-top">
+          <div class="pc-av">周</div>
+          <div class="pc-name">「城漂破圈者」小周</div>
+          <div class="pc-meta">26 岁 · 互联网运营 · 来深圳 2 年</div>
+        </div>
+        <div class="pc-body">
+          <div class="kv"><span class="k">处境</span><span class="v">社交圈＝前同事 + 室友，<b>周末 70% 时间在家</b></span></div>
+          <div class="kv"><span class="k">痛点</span><span class="v">不知道去哪、怕尴尬、<b>一个人不敢去</b></span></div>
+          <div class="kv"><span class="k">场景</span><span class="v">周五 19:00 后 / 周六下午</span></div>
+          <div class="kv"><span class="k">顾虑</span><span class="v">怕冷场、怕被推销、怕安全</span></div>
+          <div class="tagrow"><span class="mtag">价格敏感</span><span class="mtag">复购主力</span></div>
+          <div class="pc-foot"><span class="pl">主推</span><span class="pill ind">三连局包 ¥211</span></div>
+        </div>
+      </div>
+
+      <div class="pc" style="--tint:#FFF4EC;--acc:#FF6B35">
+        <div class="pc-top">
+          <div class="pc-av">L&amp;M</div>
+          <div class="pc-name">「约会双人组」Leo &amp; Mia</div>
+          <div class="pc-meta">29 / 27 岁 · 情侣 · 在一起 3 年</div>
+        </div>
+        <div class="pc-body">
+          <div class="kv"><span class="k">处境</span><span class="v">周末只剩<b>「吃饭 + 看电影」循环</b></span></div>
+          <div class="kv"><span class="k">痛点</span><span class="v">约会内容枯竭，想有<b>可晒的新鲜感</b></span></div>
+          <div class="kv"><span class="k">场景</span><span class="v">周六晚 / 纪念日 / 朋友聚会</span></div>
+          <div class="kv"><span class="k">顾虑</span><span class="v">体验掉档、和陌生人相处压力</span></div>
+          <div class="tagrow"><span class="mtag">高客单</span><span class="mtag">自带 UGC</span></div>
+          <div class="pc-foot"><span class="pl">主推</span><span class="pill org">六连局包 ¥370</span></div>
+        </div>
+      </div>
+
+      <div class="pc" style="--tint:#EDFBF9;--acc:#0EA5A4">
+        <div class="pc-top">
+          <div class="pc-av">A</div>
+          <div class="pc-name">「组织者」HR Ada</div>
+          <div class="pc-meta">33 岁 · 科技公司 HRBP · 500 人团队</div>
+        </div>
+        <div class="pc-body">
+          <div class="kv"><span class="k">处境</span><span class="v">季度团建 + 新人破冰，<b>预算人均 ¥200 内</b></span></div>
+          <div class="kv"><span class="k">痛点</span><span class="v">形式老套、参与率 &lt;60%、自己要熬夜策划</span></div>
+          <div class="kv"><span class="k">场景</span><span class="v">周中 18:30 后 / 季度团建日</span></div>
+          <div class="kv"><span class="k">顾虑</span><span class="v">效果不可衡量、安全责任</span></div>
+          <div class="tagrow"><span class="mtag">B 端预算</span><span class="mtag">填周中低谷</span></div>
+          <div class="pc-foot"><span class="pl">主推</span><span class="pill grn">团建包场 ¥3,060 起</span></div>
+        </div>
+      </div>
+
+      <div class="pc" style="--tint:#FDF0F5;--acc:#F0537B">
+        <div class="pc-top">
+          <div class="pc-av">V</div>
+          <div class="pc-name">「内容型 KOC」Vivi</div>
+          <div class="pc-meta">24 岁 · 小红书 3 万粉 · 探店主</div>
+        </div>
+        <div class="pc-body">
+          <div class="kv"><span class="k">处境</span><span class="v">持续需要<b>新鲜、可拍、有故事</b>的素材</span></div>
+          <div class="kv"><span class="k">痛点</span><span class="v">选题枯竭、探店同质化严重</span></div>
+          <div class="kv"><span class="k">场景</span><span class="v">任意时段，优先新店首场</span></div>
+          <div class="kv"><span class="k">动机</span><span class="v">免费席位 + 联名分成 + 独家首发</span></div>
+          <div class="tagrow"><span class="mtag">放大器</span><span class="mtag">非付费</span></div>
+          <div class="pc-foot"><span class="pl">机制</span><span class="pill ros">体验官计划</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== VALUE ===================== -->
+<section id="value">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">03 · Value Proposition</span>
+      <h2>核心价值主张</h2>
+      <p class="sub">四条主张分别对应漏斗上的四个环节：解决「不敢开始」「不敢一个人去」「怕踩雷」「散场即断联」。每条都挂一个可验证的指标，不做无法证伪的口号。</p>
+    </div>
+
+    <div class="grid vps rv">
+      <div class="vp" style="--tint:#EEF0FE;--tint2:#E9ECFE;--acc:#4F46E5">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+        <h3>决策成本归零</h3>
+        <p>盲盒机制把「选哪家、和谁去、怎么开场」三个决策一次性外包。用户只做一件事：选一个时间块。人格与距离算法负责把 6 个人凑成一场大概率合得来的局。</p>
+        <div class="metric"><span class="n">≤90 秒</span><span class="t">从打开小程序到下单完成</span></div>
+      </div>
+
+      <div class="vp" style="--tint:#FFF0E8;--tint2:#FFE7D9;--acc:#FF6B35">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <h3>一个人也敢去</h3>
+        <p>Social Icebreaker 结构化破冰流程 + 主持人在场兜底，让陌生人之间的沉默成本由流程承担，而不是由用户承担。单人报名是默认选项，不是例外。</p>
+        <div class="metric"><span class="n">≥60%</span><span class="t">单人报名占比（无同行者）</span></div>
+      </div>
+
+      <div class="vp" style="--tint:#EEF0FE;--tint2:#E9ECFE;--acc:#4F46E5">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+        <h3>体验有下限，惊喜有上限</h3>
+        <p>合作场馆 100% 实地验店、标准化 90 分钟 SOP、评分末位淘汰——保证 60 分下限；盲盒在「手作 · 小酒馆 · 城市漫步 · 轻运动」四类里抽，保证惊喜不被摊薄。</p>
+        <div class="metric"><span class="n">≥4.6 / 5</span><span class="t">场均评分（低于 4.4 自动下架）</span></div>
+      </div>
+
+      <div class="vp" style="--tint:#FFF0E8;--tint2:#FFE7D9;--acc:#FF6B35">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+        <h3>关系不随散场结束</h3>
+        <p>局后一键留连接、兴趣标签回流进下一次匹配、「还想见到这些人」触发同场再约——把一次性体验沉淀成可复利的城市社交资产，这是复购率的结构性来源。</p>
+        <div class="metric"><span class="n">35%</span><span class="t">首单后 30 天内复购率</span></div>
+      </div>
+    </div>
+
+    <div class="ba rv">
+      <div class="col b">
+        <h5>Before · 现在的周五晚上</h5>
+        <ul>
+          <li>刷 40 分钟小红书，收藏 12 家，一家没去</li>
+          <li>想约人，翻遍通讯录发现大家都有安排</li>
+          <li>一个人去怕尴尬，两个人去又约不到</li>
+          <li>去了踩雷，回来连个吐槽的人都没有</li>
+          <li>下次还是从「今晚干嘛」重新开始</li>
+        </ul>
+      </div>
+      <div class="arrow">→</div>
+      <div class="col a">
+        <h5>After · 用了城市盲盒</h5>
+        <ul>
+          <li>选时间块 → 90 秒下单，剩下的交给我们</li>
+          <li>6 个人按人格与距离组队，到场即同频</li>
+          <li>单人报名是默认选项，主持人在场兜底</li>
+          <li>验店场馆 + SOP，60 分下限，惊喜有上限</li>
+          <li>局后留连接，下一次从「老朋友」开始</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== PRICING ===================== -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow o">04 · Pricing &amp; Packaging</span>
+      <h2>定价与套餐</h2>
+      <p class="sub">五个档位覆盖「试一次 → 常客 → 订阅」的升级路径。月卡是钩子（¥16.3/场 vs 单场 ¥88），季卡是利润款，连局包负责把首单客单抬上去。所有价格与线上 <code style="font-family:var(--mono);font-size:12px">pricing_settings</code> 一致。</p>
+    </div>
+
+    <div class="grid plans rv">
+      <div class="plan">
+        <div class="pn">单场局票</div><div class="pe">Single Pass</div>
+        <div class="pr"><span class="cur">¥</span><span class="amt">88</span><span class="per">/ 场</span></div>
+        <span class="unit">¥88 / 场</span>
+        <div class="pd">一场局的入场券。用来压低首单门槛，不承担留存职责。</div>
+        <ul><li>1 场局名额</li><li>人格匹配 + 破冰流程</li><li>局后留连接</li><li>有效期 30 天</li></ul>
+        <div class="mix"><span>用户占比</span><b>25%</b></div>
+      </div>
+
+      <div class="plan">
+        <div class="pn">三连局包</div><div class="pe">Triple Pack</div>
+        <div class="pr"><span class="cur">¥</span><span class="amt">211</span><span class="per">/ 3 场</span></div>
+        <span class="unit">¥70.3 / 场</span>
+        <div class="pd">先认识三桌新朋友。首单转化主力，把 LTV 从 1 场拉到 3 场。</div>
+        <ul><li>3 场局名额</li><li>优先时段选择权</li><li>可转赠 1 次</li><li>有效期 90 天</li></ul>
+        <div class="mix"><span>用户占比</span><b>15%</b></div>
+      </div>
+
+      <div class="plan">
+        <div class="pn">六连局包</div><div class="pe">Six Pack</div>
+        <div class="pr"><span class="cur">¥</span><span class="amt">370</span><span class="per">/ 6 场</span></div>
+        <span class="unit">¥61.7 / 场</span>
+        <div class="pd">慢慢玩成常客。情侣 / 双人组首选，客单最高的一次性付款档。</div>
+        <ul><li>6 场局名额</li><li>可带 1 位同伴同行</li><li>热门时段优先锁位</li><li>有效期 90 天</li></ul>
+        <div class="mix"><span>用户占比</span><b>10%</b></div>
+      </div>
+
+      <div class="plan feat">
+        <div class="ribbon">主推 · 留存引擎</div>
+        <div class="pn">悦聚月卡</div><div class="pe">YueJu Monthly</div>
+        <div class="pr"><span class="cur">¥</span><span class="amt">98</span><span class="per">/ 月</span></div>
+        <span class="unit">¥16.3 / 场 · 每月 6 场</span>
+        <div class="pd">每月 6 场局，说走就走。用极致性价比把「偶尔玩」变成「每周有安排」。</div>
+        <ul><li>每月 6 场局</li><li>优先匹配同卡用户</li><li>免费改期 2 次 / 月</li><li>专属客服通道</li></ul>
+        <div class="mix"><span>用户占比</span><b>35%</b></div>
+      </div>
+
+      <div class="plan">
+        <div class="pn">悦聚季卡</div><div class="pe">YueJu Quarterly</div>
+        <div class="pr"><span class="cur">¥</span><span class="amt">294</span><span class="per">/ 季</span></div>
+        <span class="unit">¥16.3 / 场 · 一季 18 场</span>
+        <div class="pd">一季 18 场，场场有人陪。现金流与留存的双优档，主推给资深用户。</div>
+        <ul><li>一季 18 场局</li><li>新店首场优先体验</li><li>免费改期不限次</li><li>生日月赠 1 场</li></ul>
+        <div class="mix"><span>用户占比</span><b>15%</b></div>
+      </div>
+    </div>
+
+    <div class="b2b rv">
+      <div class="l">
+        <h4><span class="pill org">B 端</span>企业团建包场 · 平抑周中低谷</h4>
+        <p>周一至周四 18:30 后是 C 端需求洼地，但正好是企业团建与新人破冰的黄金时段。包场按团队规模拆分档位，由销售团队直签，不占用 C 端盲盒席位。</p>
+      </div>
+      <div class="r">
+        <div><div class="n">¥3,060</div><div class="k">单场起售价（20 人）</div></div>
+        <div><div class="n">12 场</div><div class="k">GA+90 月均场次</div></div>
+        <div><div class="n">¥3.7万</div><div class="k">月收入贡献</div></div>
+      </div>
+    </div>
+
+    <div class="card pad rv" style="margin-top:18px">
+      <h4 style="margin:0 0 4px;font-size:15px;font-weight:800">套餐结构 → MRR 勾稽（GA+90 稳态月度口径）</h4>
+      <p style="margin:0 0 16px;font-size:11.5px;color:var(--faint)">月活跃付费用户 6,000 人，结构占比 × 单价 → 收入；人均月场次 → 席次。两条路径必须同时收敛到 ¥60 万 MRR 与 2,400 席/周。</p>
+      <div class="mtx-scroll">
+        <table class="mtx" style="min-width:820px">
+          <thead>
+            <tr>
+              <th>套餐</th><th>售价</th><th>用户占比</th><th>人数</th>
+              <th>月化单价</th><th>人均月场次</th><th>月席次</th><th>月收入</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th><span class="ci" style="background:#94A0B8"></span>单场局票</th><td class="cell">¥88</td><td class="cell">25%</td><td class="cell">1,500</td><td class="cell">¥88.0</td><td class="cell">1.0</td><td class="cell">1,500</td><td class="cell total">¥132,000</td></tr>
+            <tr><th><span class="ci" style="background:#A5A0FF"></span>三连局包</th><td class="cell">¥211</td><td class="cell">15%</td><td class="cell">900</td><td class="cell">¥70.3</td><td class="cell">0.8</td><td class="cell">720</td><td class="cell total">¥63,300</td></tr>
+            <tr><th><span class="ci" style="background:#7C6BFF"></span>六连局包</th><td class="cell">¥370</td><td class="cell">10%</td><td class="cell">600</td><td class="cell">¥123.3</td><td class="cell">1.8</td><td class="cell">1,080</td><td class="cell total">¥74,000</td></tr>
+            <tr><th><span class="ci" style="background:#4F46E5"></span>悦聚月卡</th><td class="cell">¥98</td><td class="cell">35%</td><td class="cell">2,100</td><td class="cell">¥98.0</td><td class="cell">2.2</td><td class="cell">4,620</td><td class="cell total">¥205,800</td></tr>
+            <tr><th><span class="ci" style="background:#FF9147"></span>悦聚季卡</th><td class="cell">¥294</td><td class="cell">15%</td><td class="cell">900</td><td class="cell">¥98.0</td><td class="cell">2.75</td><td class="cell">2,475</td><td class="cell total">¥88,200</td></tr>
+            <tr><th><span class="ci" style="background:#0EA5A4"></span>B 端团建包场</th><td class="cell">¥3,060</td><td class="cell">—</td><td class="cell">12 场</td><td class="cell">—</td><td class="cell">—</td><td class="cell">不计入 C 端</td><td class="cell total">¥36,720</td></tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>合计 / 加权</th>
+              <td colspan="3" class="note">C 端单席收入 ¥54.2 · ARPPU ¥100 / 月</td>
+              <td class="note"></td>
+              <td class="note">加权 1.73 场</td>
+              <td class="note">10,395 席</td>
+              <td style="color:var(--indigo-d)">¥600,020</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="ns-formula" style="background:var(--indigo-ll);border-color:var(--line);color:var(--ink-2);margin-top:16px">
+        <div class="r"><span>C 端月收入</span><b>¥132,000 + ¥63,300 + ¥74,000 + ¥205,800 + ¥88,200 = ¥563,300</b></div>
+        <div class="r"><span>B 端月收入</span><b>12 场 × ¥3,060 = ¥36,720</b></div>
+        <div class="r"><span>月席次</span><b>1,500 + 720 + 1,080 + 4,620 + 2,475 = 10,395 席</b></div>
+        <div class="r ans" style="border-top-color:var(--line);color:var(--indigo-d)"><span>MRR = 563,300 + 36,720 ≈ ¥60 万　|　周成局席位 = 10,395 ÷ 4.33 ≈ 2,400 席</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CHANNELS ===================== -->
+<section id="channels">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">05 · Channel Budget Matrix</span>
+      <h2>渠道预算矩阵</h2>
+      <p class="sub">首期 20 周总预算 <b style="color:var(--ink);font-weight:750">¥120 万</b>。行 = 四条渠道 + 品牌事件，列 = 三个阶段；行合计与列合计双向收敛到 ¥120 万，每个格子都要对得上它买来的注册数。</p>
+    </div>
+
+    <div class="card pad rv">
+      <div class="mtx-scroll">
+        <table class="mtx" id="budgetTable">
+          <thead>
+            <tr>
+              <th>渠道</th>
+              <th>预热 W-8~W-5</th>
+              <th>公测 W-4~W-1</th>
+              <th>GA W1~W12</th>
+              <th>合计</th>
+              <th>占比</th>
+              <th>带来注册</th>
+              <th>CAC</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th><span class="ci" style="background:#4F46E5"></span>内容 Content<small>小红书 / 抖音 / 播客 / 开盒纪实</small></th>
+              <td class="cell heat" data-v="120000">¥12.0万</td>
+              <td class="cell heat" data-v="150000">¥15.0万</td>
+              <td class="cell heat" data-v="210000">¥21.0万</td>
+              <td class="cell total">¥48.0万</td>
+              <td class="cell">40.0%</td>
+              <td class="cell">22,000</td>
+              <td class="cell">¥21.8</td>
+            </tr>
+            <tr>
+              <th><span class="ci" style="background:#0EA5A4"></span>社群 Community<small>KOC / 校园 / 兴趣社群 / 转介绍</small></th>
+              <td class="cell heat" data-v="60000">¥6.0万</td>
+              <td class="cell heat" data-v="55000">¥5.5万</td>
+              <td class="cell heat" data-v="65000">¥6.5万</td>
+              <td class="cell total">¥18.0万</td>
+              <td class="cell">15.0%</td>
+              <td class="cell">14,000</td>
+              <td class="cell">¥12.9</td>
+            </tr>
+            <tr>
+              <th><span class="ci" style="background:#FF6B35"></span>销售 Sales<small>企业团建 BD / 直签 / 地推</small></th>
+              <td class="cell heat" data-v="15000">¥1.5万</td>
+              <td class="cell heat" data-v="45000">¥4.5万</td>
+              <td class="cell heat" data-v="120000">¥12.0万</td>
+              <td class="cell total">¥18.0万</td>
+              <td class="cell">15.0%</td>
+              <td class="cell">8,000</td>
+              <td class="cell">¥22.5</td>
+            </tr>
+            <tr>
+              <th><span class="ci" style="background:#7C6BFF"></span>合作 Partnership<small>商圈 / 场馆联名 / 品牌异业</small></th>
+              <td class="cell heat" data-v="75000">¥7.5万</td>
+              <td class="cell heat" data-v="80000">¥8.0万</td>
+              <td class="cell heat" data-v="115000">¥11.5万</td>
+              <td class="cell total">¥27.0万</td>
+              <td class="cell">22.5%</td>
+              <td class="cell">11,000</td>
+              <td class="cell">¥24.5</td>
+            </tr>
+            <tr>
+              <th><span class="ci" style="background:#F5A524"></span>品牌与发布事件<small>发布会 / PR / 城市快闪</small></th>
+              <td class="cell heat" data-v="30000">¥3.0万</td>
+              <td class="cell heat" data-v="30000">¥3.0万</td>
+              <td class="cell heat" data-v="30000">¥3.0万</td>
+              <td class="cell total">¥9.0万</td>
+              <td class="cell">7.5%</td>
+              <td class="cell">5,000</td>
+              <td class="cell">¥18.0</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>阶段合计</th>
+              <td>¥30.0万</td>
+              <td>¥36.0万</td>
+              <td>¥54.0万</td>
+              <td style="color:var(--indigo-d)">¥120.0万</td>
+              <td class="note">100%</td>
+              <td class="note">60,000</td>
+              <td class="note">¥20.0</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="kpi-strip">
+        <div><div class="n" style="color:var(--indigo)">¥20.0</div><div class="k">注册 CAC（综合）</div><div class="h">120万 ÷ 6万</div></div>
+        <div><div class="n" style="color:var(--orange-d)">¥100</div><div class="k">付费 CAC</div><div class="h">120万 ÷ 1.2万</div></div>
+        <div><div class="n">¥372</div><div class="k">LTV（毛利口径）</div><div class="h">¥62 × 6 个月</div></div>
+        <div><div class="n" style="color:var(--green)">3.7×</div><div class="k">LTV / CAC</div><div class="h">回本周期 1.6 个月</div></div>
+      </div>
+
+      <div class="grid chan-notes">
+        <div class="cn">
+          <h5><i style="background:#4F46E5"></i>内容 · ¥48 万</h5>
+          <div class="amt">40% · 拉新主引擎</div>
+          <ul>
+            <li>开盒纪实短视频：真实用户第一视角，不拍广告</li>
+            <li>「一个人的周五」情绪向内容，主攻小红书</li>
+            <li>城市播客访谈 3 期，讲供给故事</li>
+            <li>KOC 体验官 200 人，每月产 400 条 UGC</li>
+          </ul>
+        </div>
+        <div class="cn">
+          <h5><i style="background:#0EA5A4"></i>社群 · ¥18 万</h5>
+          <div class="amt">15% · 最便宜的一档 CAC ¥12.9</div>
+          <ul>
+            <li>转介绍双赠：邀请 1 人各得 1 场局</li>
+            <li>城市微信群 30 个，局后自动沉淀</li>
+            <li>高校 / 大厂内网兴趣社群渗透</li>
+            <li>局后 24h 召回，复购券 + 同场再约</li>
+          </ul>
+        </div>
+        <div class="cn">
+          <h5><i style="background:#FF6B35"></i>销售 · ¥18 万</h5>
+          <div class="amt">15% · 客单最高，填周中低谷</div>
+          <ul>
+            <li>HR / 行政渠道直签，季度团建框架协议</li>
+            <li>目标：GA+90 签约 60 家企业</li>
+            <li>新人破冰场景切入，复购按季度</li>
+            <li>产业园 / 联合办公地推</li>
+          </ul>
+        </div>
+        <div class="cn">
+          <h5><i style="background:#7C6BFF"></i>合作 · ¥27 万</h5>
+          <div class="amt">22.5% · 兼获客与供给</div>
+          <ul>
+            <li>商圈联名：周末客流置换</li>
+            <li>场馆联名：独家时段 + 首场体验官场</li>
+            <li>饮品 / 运动品牌异业，分摊获客成本</li>
+            <li>银行 / 运营商权益位，零现金换曝光</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== TIMELINE ===================== -->
+<section id="timeline">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow o">06 · Launch Timeline</span>
+      <h2>预热 → 公测 → GA 三阶段泳道</h2>
+      <p class="sub">20 周。预热负责蓄水与供给签约，公测只在深圳跑通单城模型，GA 才放大到 3 城。每一条泳道在每一阶段都有明确交付物，不是「持续进行」。</p>
+    </div>
+
+    <div class="tl-wrap rv">
+      <div class="tl-head">
+        <div class="corner"></div>
+        <div class="ph p1"><div class="pn">Phase 01</div><div class="pt">预热 Tease</div><div class="pw">W-8 → W-5 · 4 周 · ¥30 万</div></div>
+        <div class="ph p2"><div class="pn">Phase 02</div><div class="pt">公测 Closed Beta</div><div class="pw">W-4 → W-1 · 4 周 · ¥36 万</div></div>
+        <div class="ph p3"><div class="pn">Phase 03</div><div class="pt">正式发布 GA</div><div class="pw">W1 → W12 · 12 周 · ¥54 万</div></div>
+      </div>
+
+      <div class="lane ph1 ph2 ph3">
+        <div class="lane-name"><div class="ln">产品 &amp; 供给</div><div class="lo">Owner: COO</div></div>
+        <div class="lane-cell" data-ph="Phase 01 · 预热">
+          <span class="chip">场馆 BD 签约 120 家</span>
+          <span class="chip">实地验店 + 分级 A/B/C</span>
+          <span class="chip">破冰 SOP v1 定稿</span>
+          <span class="chip">匹配算法灰度校准</span>
+        </div>
+        <div class="lane-cell" data-ph="Phase 02 · 公测">
+          <span class="chip k">深圳开城 · 2,000 邀请制名额</span>
+          <span class="chip">每天 3 个固定时段聚单</span>
+          <span class="chip">保底成局：体验官兜底</span>
+          <span class="chip">评分 &lt;4.4 场馆下架</span>
+        </div>
+        <div class="lane-cell" data-ph="Phase 03 · GA">
+          <span class="chip o">上海 / 成都开城</span>
+          <span class="chip">周场次爬到 480 场</span>
+          <span class="chip">盲盒品类扩到 4 类</span>
+          <span class="chip">上座率守住 83%</span>
+        </div>
+      </div>
+
+      <div class="lane ph1 ph2 ph3">
+        <div class="lane-name"><div class="ln">内容 Content</div><div class="lo">Owner: CMO</div></div>
+        <div class="lane-cell" data-ph="Phase 01 · 预热">
+          <span class="chip">落地页 + 等待名单</span>
+          <span class="chip">「一个人的周五」情绪片</span>
+          <span class="chip">KOC 招募 200 人</span>
+        </div>
+        <div class="lane-cell" data-ph="Phase 02 · 公测">
+          <span class="chip k">开盒纪实连载（周更 3 条）</span>
+          <span class="chip">真实用户第一视角长视频</span>
+          <span class="chip">播客 3 期上线</span>
+        </div>
+        <div class="lane-cell" data-ph="Phase 03 · GA">
+          <span class="chip o">三城城市大片</span>
+          <span class="chip">UGC 每月 400 条</span>
+          <span class="chip">达人专场 12 场</span>
+          <span class="chip">效果投放放量</span>
+        </div>
+      </div>
+
+      <div class="lane ph1 ph2 ph3">
+        <div class="lane-name"><div class="ln">社群 Community</div><div class="lo">Owner: 增长</div></div>
+        <div class="lane-cell" data-ph="Phase 01 · 预热">
+          <span class="chip">城市群 30 个建起来</span>
+          <span class="chip">转介绍双赠机制上线</span>
+        </div>
+        <div class="lane-cell" data-ph="Phase 02 · 公测">
+          <span class="chip">局后 24h 召回流程</span>
+          <span class="chip">公测用户私域运营</span>
+          <span class="chip">NPS 首轮回收</span>
+        </div>
+        <div class="lane-cell" data-ph="Phase 03 · GA">
+          <span class="chip o">同场再约功能上线</span>
+          <span class="chip">校园 / 大厂社群渗透</span>
+          <span class="chip">KOC 分层运营</span>
+        </div>
+      </div>
+
+      <div class="lane ph1 ph2 ph3">
+        <div class="lane-name"><div class="ln">销售 Sales</div><div class="lo">Owner: BD Lead</div></div>
+        <div class="lane-cell" data-ph="Phase 01 · 预热">
+          <span class="chip">团建产品包装 + 报价单</span>
+          <span class="chip">种子客户 10 家 POC</span>
+        </div>
+        <div class="lane-cell" data-ph="Phase 02 · 公测">
+          <span class="chip">POC 转付费 5 家</span>
+          <span class="chip">HR 渠道合作 3 家</span>
+        </div>
+        <div class="lane-cell" data-ph="Phase 03 · GA">
+          <span class="chip o">签约企业 60 家</span>
+          <span class="chip">月均 12 场包场</span>
+          <span class="chip">季度框架协议</span>
+        </div>
+      </div>
+
+      <div class="lane ph1 ph2 ph3">
+        <div class="lane-name"><div class="ln">合作 Partnership</div><div class="lo">Owner: BD Lead</div></div>
+        <div class="lane-cell" data-ph="Phase 01 · 预热">
+          <span class="chip">商圈 / 品牌意向清单</span>
+          <span class="chip">场馆独家条款谈判</span>
+        </div>
+        <div class="lane-cell" data-ph="Phase 02 · 公测">
+          <span class="chip">3 个联名活动落地</span>
+          <span class="chip">零现金资源位置换</span>
+        </div>
+        <div class="lane-cell" data-ph="Phase 03 · GA">
+          <span class="chip o">银行 / 运营商权益位</span>
+          <span class="chip">品牌异业分摊 CAC</span>
+          <span class="chip">三城商圈复制</span>
+        </div>
+      </div>
+
+      <div class="lane ph1 ph2 ph3">
+        <div class="lane-name"><div class="ln">数据 &amp; 风控</div><div class="lo">Owner: 产品 / 法务</div></div>
+        <div class="lane-cell" data-ph="Phase 01 · 预热">
+          <span class="chip">指标体系埋点完成</span>
+          <span class="chip">实名 + 人脸核验</span>
+          <span class="chip">保险与黑名单就绪</span>
+        </div>
+        <div class="lane-cell" data-ph="Phase 02 · 公测">
+          <span class="chip k">Gate：成局率 ≥85% 才开 GA</span>
+          <span class="chip">一键求助上线</span>
+          <span class="chip">周度指标复盘会</span>
+        </div>
+        <div class="lane-cell" data-ph="Phase 03 · GA">
+          <span class="chip">周北极星看板</span>
+          <span class="chip">安全事件 P1 演练</span>
+          <span class="chip">合规审计</span>
+        </div>
+      </div>
+
+      <div class="tl-foot">
+        <div class="g">阶段 Gate</div>
+        <div class="g"><b>出口：</b>等待名单 ≥2 万 · 场馆 120 家 · 内容曝光 300 万</div>
+        <div class="g"><b>出口：</b>成局率 ≥85% · 场均评分 ≥4.6 · 复购率 ≥25%</div>
+        <div class="g"><b>出口：</b>周成局席位 ≥2,400 · MRR ≥¥60 万 · 付费 CAC ≤¥110</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== METRICS ===================== -->
+<section id="metrics">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow">07 · North Star &amp; Success Metrics</span>
+      <h2>北极星与成功指标</h2>
+      <p class="sub">北极星选「周成局席位」而不是注册数或 GMV——它同时被获客、留存、供给三方拉动，任何一环掉链子都会立刻反映在上面，也没法靠补贴刷出来。</p>
+    </div>
+
+    <div class="ns rv">
+      <div class="ns-card">
+        <span class="deco">NORTH STAR</span>
+        <div class="lbl">North Star Metric</div>
+        <h3>周成局席位 WCS</h3>
+        <div class="big">2,400<small>席 / 周</small></div>
+        <p class="why">每周真正到场、完成一场局的付费席位数。它是平台交付价值的物理单位：既不能靠广告买出来，也不能靠补贴刷出来——没有人到场，数字就是零。</p>
+        <div class="ns-formula">
+          <div class="r"><span>供给端口径</span><b>480 场/周 × 6 席 × 83.3% 上座 = 2,400</b></div>
+          <div class="r"><span>需求端口径</span><b>6,000 月活跃付费 × 1.73 场/月 ÷ 4.33 = 2,400</b></div>
+          <div class="r"><span>供需平衡校验</span><b>10,395 席/月 ÷ 4.33 周 = 2,400 席/周 ✓</b></div>
+          <div class="r ans"><span>两端独立计算，收敛到同一个数 —— 这才是合格的北极星</span></div>
+        </div>
+      </div>
+
+      <div class="funnel">
+        <h4>获客漏斗：从曝光到订阅（GA+90 累计）</h4>
+        <div class="fh">条形宽度按平方根缩放，便于阅读；数字为真实目标值</div>
+
+        <div class="fstep">
+          <div class="fl"><span class="n1">全渠道曝光</span><span class="n2">12,000,000</span><span class="n3">—</span></div>
+          <div class="fbar"><i style="width:100%"></i><span>Impressions</span></div>
+        </div>
+        <div class="fstep">
+          <div class="fl"><span class="n1">落地页访问</span><span class="n2">240,000</span><span class="n3">CTR 2.0%</span></div>
+          <div class="fbar"><i style="width:62%"></i><span>Visits</span></div>
+        </div>
+        <div class="fstep">
+          <div class="fl"><span class="n1">注册留资</span><span class="n2">60,000</span><span class="n3">访问→注册 25%</span></div>
+          <div class="fbar"><i style="width:48%"></i><span>Signups</span></div>
+        </div>
+        <div class="fstep">
+          <div class="fl"><span class="n1">激活（人格建档 + 首次预约）</span><span class="n2">40,000</span><span class="n3">激活率 67%</span></div>
+          <div class="fbar o"><i style="width:40%"></i><span>Activated</span></div>
+        </div>
+        <div class="fstep">
+          <div class="fl"><span class="n1">首单付费</span><span class="n2">12,000</span><span class="n3">激活→首单 30%</span></div>
+          <div class="fbar o"><i style="width:32%"></i><span>First Payment</span></div>
+        </div>
+        <div class="fstep">
+          <div class="fl"><span class="n1">30 天内复购</span><span class="n2">4,200</span><span class="n3">复购率 35%</span></div>
+          <div class="fbar o"><i style="width:25%"></i><span>Repeat</span></div>
+        </div>
+        <div class="fstep">
+          <div class="fl"><span class="n1">月活跃付费用户</span><span class="n2">6,000</span><span class="n3">占累计付费 50%</span></div>
+          <div class="fbar"><i style="width:20%"></i><span>MAP → MRR ¥60 万</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid mgrid rv">
+      <div class="mcard">
+        <div class="mh"><span class="t">驱动指标 · 获客与激活</span><span class="c pill ind">DRIVER</span></div>
+        <div class="mrows">
+          <div class="mrow"><span class="mi" style="background:var(--indigo-l);color:var(--indigo-d)">01</span><div class="mb"><div class="mn">新增注册</div><div class="md">20 周累计</div></div><div class="mv"><div class="v">60,000</div><div class="d">CAC ¥20</div></div></div>
+          <div class="mrow"><span class="mi" style="background:var(--indigo-l);color:var(--indigo-d)">02</span><div class="mb"><div class="mn">激活率</div><div class="md">注册 → 人格建档 + 首约</div></div><div class="mv"><div class="v">67%</div><div class="d">40,000 人</div></div></div>
+          <div class="mrow"><span class="mi" style="background:var(--indigo-l);color:var(--indigo-d)">03</span><div class="mb"><div class="mn">激活 → 首单转化</div><div class="md">首次付费</div></div><div class="mv"><div class="v">30%</div><div class="d">12,000 人</div></div></div>
+          <div class="mrow"><span class="mi" style="background:var(--indigo-l);color:var(--indigo-d)">04</span><div class="mb"><div class="mn">30 天复购率</div><div class="md">留存第一指标</div></div><div class="mv"><div class="v">35%</div><div class="d">4,200 人</div></div></div>
+        </div>
+      </div>
+
+      <div class="mcard">
+        <div class="mh"><span class="t">驱动指标 · 变现与供给</span><span class="c pill org">DRIVER</span></div>
+        <div class="mrows">
+          <div class="mrow"><span class="mi" style="background:var(--orange-l);color:var(--orange-d)">05</span><div class="mb"><div class="mn">MRR</div><div class="md">C 端 ¥56.3万 + B 端 ¥3.7万</div></div><div class="mv"><div class="v">¥60万</div><div class="d">ARR ¥720万</div></div></div>
+          <div class="mrow"><span class="mi" style="background:var(--orange-l);color:var(--orange-d)">06</span><div class="mb"><div class="mn">ARPPU</div><div class="md">月活跃付费用户人均</div></div><div class="mv"><div class="v">¥100</div><div class="d">/ 月</div></div></div>
+          <div class="mrow"><span class="mi" style="background:var(--orange-l);color:var(--orange-d)">07</span><div class="mb"><div class="mn">订阅渗透率</div><div class="md">月卡 + 季卡占付费用户</div></div><div class="mv"><div class="v">50%</div><div class="d">3,000 人</div></div></div>
+          <div class="mrow"><span class="mi" style="background:var(--orange-l);color:var(--orange-d)">08</span><div class="mb"><div class="mn">活跃场馆 / 周场次</div><div class="md">供给能力</div></div><div class="mv"><div class="v">120 / 480</div><div class="d">4 场/馆/周</div></div></div>
+        </div>
+      </div>
+
+      <div class="mcard">
+        <div class="mh"><span class="t">健康指标 · 不可妥协</span><span class="c pill grn">GUARDRAIL</span></div>
+        <div class="mrows">
+          <div class="mrow"><span class="mi" style="background:#E7F7EE;color:#137A3C">A</span><div class="mb"><div class="mn">场均评分</div><div class="md">&lt;4.4 自动下架场馆</div></div><div class="mv"><div class="v">≥4.6</div><div class="d">/ 5.0</div></div></div>
+          <div class="mrow"><span class="mi" style="background:#E7F7EE;color:#137A3C">B</span><div class="mb"><div class="mn">成局率</div><div class="md">成局 / 开售场次</div></div><div class="mv"><div class="v">≥92%</div><div class="d">空局 ≤8%</div></div></div>
+          <div class="mrow"><span class="mi" style="background:#E7F7EE;color:#137A3C">C</span><div class="mb"><div class="mn">到场率</div><div class="md">no-show 控制</div></div><div class="mv"><div class="v">≥85%</div><div class="d">缺席 ≤15%</div></div></div>
+          <div class="mrow"><span class="mi" style="background:#E7F7EE;color:#137A3C">D</span><div class="mb"><div class="mn">毛利率 / 退款率</div><div class="md">单位经济健康线</div></div><div class="mv"><div class="v">62% / ≤5%</div><div class="d">月度</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ramp rv">
+      <h4>MRR 爬坡：从公测到 Y1 末</h4>
+      <div class="fh">GA 后前 4 个月靠冷启动势能（月复合 ≈50%），GA+90 后回落到常态化 ≈20%；Y1 累计营收 ≈¥950 万</div>
+      <div class="bars" id="bars"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== RISK ===================== -->
+<section id="risk">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="eyebrow o">08 · Risks &amp; Mitigations</span>
+      <h2>风险与应对</h2>
+      <p class="sub">六项风险按「发生概率 × 对北极星的伤害」排序。每条都写清触发线——没触发线就没有预案，只有焦虑。</p>
+    </div>
+
+    <div class="rv">
+      <details class="risk" open>
+        <summary>
+          <span class="rk" style="background:linear-gradient(135deg,#F0537B,#FF7A99)">P0</span>
+          <span class="rt">供给不足 / 场馆质量方差大，导致成局率低</span>
+          <span class="rl" style="background:#FDEDF2;color:#C33A5C">高概率 · 高伤害</span>
+          <span class="rw">触发：空局率 &gt;12% 或 场均评分 &lt;4.4</span>
+          <span class="car">▾</span>
+        </summary>
+        <div class="rb"><dl>
+          <dt>为什么危险</dt><dd>盲盒一旦开不出局，用户第二次就不会再来。供给是北极星的<b>分母</b>，也是最容易在放量期崩掉的一环。</dd>
+          <dt>预防</dt><dd>场馆分 A/B/C 三级，A 级锁量预付；候补场馆池保持 <b>1.5×</b> 冗余；每周按评分末位淘汰 5%。</dd>
+          <dt>应对</dt><dd>成局门槛降到 <b>4 人</b>，不足则自动并局 / 改期并补偿 1 场；连续 2 周空局率 &gt;12% 的城市<b>暂停新增供给投放</b>，先修密度。</dd>
+          <dt>Owner</dt><dd><code>COO</code> · 周度供给健康看板，红线自动告警</dd>
+        </dl></div>
+      </details>
+
+      <details class="risk">
+        <summary>
+          <span class="rk" style="background:linear-gradient(135deg,#F0537B,#FF7A99)">P0</span>
+          <span class="rt">冷启动流动性不足：开盒发现人少，第一批人就流失了</span>
+          <span class="rl" style="background:#FDEDF2;color:#C33A5C">高概率 · 高伤害</span>
+          <span class="rw">触发：公测首周成局率 &lt;85%</span>
+          <span class="car">▾</span>
+        </summary>
+        <div class="rb"><dl>
+          <dt>为什么危险</dt><dd>双边市场的经典死局：没人来是因为没人来。首批 2,000 人的体验直接决定口碑曲线形状。</dd>
+          <dt>预防</dt><dd>公测期只开放 <b>3 个固定时段</b>（周五 19:30 / 周六 15:00 / 周六 19:30）聚单，不做长尾时段；每场配 2 名内部体验官兜底。</dd>
+          <dt>应对</dt><dd>推出<b>「保底成局」承诺</b>：未成局全额退 + 补偿 1 场；把等待名单按小区/商圈聚簇，先做高密度区域再扩散。</dd>
+          <dt>Owner</dt><dd><code>GM</code> · 公测期每日成局率站会</dd>
+        </dl></div>
+      </details>
+
+      <details class="risk">
+        <summary>
+          <span class="rk" style="background:linear-gradient(135deg,#F0537B,#FF7A99)">P0</span>
+          <span class="rt">线下陌生人社交的安全与合规事件</span>
+          <span class="rl" style="background:#FDEDF2;color:#C33A5C">低概率 · 致命</span>
+          <span class="rw">触发：任一 P1 安全事件</span>
+          <span class="car">▾</span>
+        </summary>
+        <div class="rb"><dl>
+          <dt>为什么危险</dt><dd>一次舆情就能让整个品类停摆。这不是运营风险，是<b>生存风险</b>。</dd>
+          <dt>预防</dt><dd>实名 + 人脸核验入场；局前须知强制确认；一键求助 + 紧急联系人；全程可追溯留痕；意外险全覆盖；未成年人硬拦截。</dd>
+          <dt>应对</dt><dd>P1 事件 <b>30 分钟内</b>响应、2 小时内对外沟通；黑名单即时生效并同步行业；启动监管报备流程，宁可停售不停摆。</dd>
+          <dt>Owner</dt><dd><code>法务 + 风控</code> · 季度安全演练，CEO 直通</dd>
+        </dl></div>
+      </details>
+
+      <details class="risk">
+        <summary>
+          <span class="rk" style="background:linear-gradient(135deg,#F5A524,#FFC45E)">P1</span>
+          <span class="rt">盲盒预期落差：开盒失望 → 差评与退款潮</span>
+          <span class="rl" style="background:#FEF5E4;color:#9A6408">中概率 · 中伤害</span>
+          <span class="rw">触发：退款率 &gt;8% 或 NPS &lt;30</span>
+          <span class="car">▾</span>
+        </summary>
+        <div class="rb"><dl>
+          <dt>为什么危险</dt><dd>盲盒卖的是「惊喜」，兑现不了就是欺骗。期待管理失败会直接砸穿复购率。</dd>
+          <dt>预防</dt><dd>开盒前 6 小时只给 <b>3 个氛围标签</b>（如「微醺 · 手作 · 6 人小局」），不剧透具体店；建档阶段收集<b>排除项</b>（忌口 / 不喝酒 / 不接受宠物）。</dd>
+          <dt>应对</dt><dd>不满意 <b>48 小时内</b>可领改期券；连续 2 次低分体验的用户进入人工关怀名单，由运营手动安排下一场。</dd>
+          <dt>Owner</dt><dd><code>产品</code> · 期待管理纳入 PRD 验收项</dd>
+        </dl></div>
+      </details>
+
+      <details class="risk">
+        <summary>
+          <span class="rk" style="background:linear-gradient(135deg,#F5A524,#FFC45E)">P1</span>
+          <span class="rt">单城模型跑不通：CAC 失控或毛利率下滑</span>
+          <span class="rl" style="background:#FEF5E4;color:#9A6408">中概率 · 高伤害</span>
+          <span class="rw">触发：付费 CAC &gt;¥160 或 毛利率 &lt;55%</span>
+          <span class="car">▾</span>
+        </summary>
+        <div class="rb"><dl>
+          <dt>为什么危险</dt><dd>补贴出来的增长会掩盖模型问题，等到第三城开完才发现，沉没成本已经很大。</dd>
+          <dt>预防</dt><dd>单城模型独立核算，深圳跑通前<b>不批第二城预算</b>；每周出城市级 P&amp;L，不看大盘看单城。</dd>
+          <dt>应对</dt><dd>预算向 CAC 最低的社群（¥12.9）与转介绍倾斜；月卡 <b>¥98 → ¥118 做 A/B 提价测试</b>；砍掉 CAC &gt;¥160 的投放渠道。</dd>
+          <dt>Owner</dt><dd><code>CMO + 财务</code> · 月度单位经济评审</dd>
+        </dl></div>
+      </details>
+
+      <details class="risk">
+        <summary>
+          <span class="rk" style="background:linear-gradient(135deg,#94A0B8,#B8C2D4)">P2</span>
+          <span class="rt">大厂 / 本地生活平台快速复制跟进</span>
+          <span class="rl" style="background:var(--bg-2);color:var(--muted)">中概率 · 中伤害</span>
+          <span class="rw">触发：同类产品进入首发城市</span>
+          <span class="car">▾</span>
+        </summary>
+        <div class="rb"><dl>
+          <dt>为什么危险</dt><dd>盲盒机制本身没有专利壁垒，流量与资本都可以被碾压。</dd>
+          <dt>预防</dt><dd>抢先签 <b>12 个月场馆独家 / 优先时段协议</b>，把供给侧先占住；加快城市复制节奏，用供给密度换时间窗。</dd>
+          <dt>应对</dt><dd>把<b>「人格画像 × 成局后反馈」的数据闭环</b>做成匹配质量护城河——这是大厂短期不愿投入、也做不细的部分；同时把品牌做成品类代名词。</dd>
+          <dt>Owner</dt><dd><code>CEO</code> · 季度竞品情报复盘</dd>
+        </dl></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<footer>
+  <div class="wrap fnote">
+    <div class="l">
+      <b>数字勾稽说明：</b>全篇所有指标由两条互相独立的路径推导并交叉校验——需求端（曝光 1,200 万 → 注册 6 万 → 激活 4 万 → 首单 1.2 万 → 月活跃付费 6,000 → MRR ¥60 万）与供给端（120 馆 × 4 场 × 6 席 × 83.3% → 2,400 席/周 → 10,395 席/月 → ¥54.2/席 → MRR ¥60 万）。两端收敛于同一组结果，任一假设变动时请同步更新两条链路。<br />
+      <b>价格口径：</b>与线上 <code style="font-family:var(--mono)">pricing_settings</code> 一致（单场局票 ¥88 / 三连局包 ¥211 / 六连局包 ¥370 / 悦聚月卡 ¥98 / 悦聚季卡 ¥294）。CAC、LTV、毛利率为 GA+90 目标值，非历史实际值。
+    </div>
+    <div class="r">
+      悦聚 · 城市盲盒 GTM v1.0<br />
+      20 周三阶段发布计划 · 2026
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // ---- sticky nav shadow ----
+  var bar = document.getElementById('topbar');
+  function onScroll(){ bar.classList.toggle('stuck', window.scrollY > 8); }
+  window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+  // ---- scroll spy ----
+  var links = Array.prototype.slice.call(document.querySelectorAll('#navlinks a'));
+  var secs = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  function spy(){
+    var y = window.scrollY + 140, idx = -1;
+    secs.forEach(function(s,i){ if(s && s.offsetTop <= y) idx = i; });
+    links.forEach(function(a,i){ a.classList.toggle('on', i === idx); });
+  }
+  window.addEventListener('scroll', spy, {passive:true}); spy();
+
+  // ---- reveal ----
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, {threshold:.08, rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.rv').forEach(function(el){ io.observe(el); });
+
+  // ---- budget heatmap ----
+  var cells = Array.prototype.slice.call(document.querySelectorAll('#budgetTable td.heat'));
+  var vals = cells.map(function(c){ return parseFloat(c.getAttribute('data-v')); });
+  var max = Math.max.apply(null, vals), min = Math.min.apply(null, vals);
+  cells.forEach(function(c){
+    var v = parseFloat(c.getAttribute('data-v'));
+    var t = (v - min) / (max - min || 1);
+    var a = 0.05 + t * 0.30;
+    var hue = 248 - t * 40; // indigo -> violet-ish for high
+    c.style.background = 'hsla(' + hue + ', 82%, 60%, ' + a.toFixed(3) + ')';
+    c.style.borderRadius = '8px';
+  });
+
+  // ---- MRR ramp bars ----
+  var data = [
+    {m:'M1', v:5},   {m:'M2', v:12},  {m:'M3', v:20},  {m:'M4', v:30},
+    {m:'M5', v:45},  {m:'M6', v:60, hl:true}, {m:'M7', v:74}, {m:'M8', v:91},
+    {m:'M9', v:112}, {m:'M10', v:137},{m:'M11', v:168},{m:'M12', v:200, hl:true}
+  ];
+  var box = document.getElementById('bars');
+  if(box){
+    var maxV = 200;
+    data.forEach(function(d){
+      var w = document.createElement('div');
+      w.className = 'bar' + (d.hl ? ' hl' : '');
+      w.innerHTML = '<span class="bv">' + d.v + '</span>' +
+                    '<div class="bb" style="height:0"></div>' +
+                    '<span class="bl' + (d.hl ? ' hl' : '') + '">' + d.m + '</span>';
+      box.appendChild(w);
+      var bb = w.querySelector('.bb');
+      requestAnimationFrame(function(){
+        setTimeout(function(){ bb.style.height = (d.v / maxV * 100) + '%'; }, 60);
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

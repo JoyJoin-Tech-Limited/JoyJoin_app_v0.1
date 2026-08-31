@@ -157,6 +157,12 @@ const REQUIREMENTS = [
       // WXSS — same subpackage style-splitting trap.
       'registration-ceremony__seal{',
       'registration-ceremony__ticket-wrap{',
+      // 费用包含 strip (2026-08-31): PoolRegistrationInclusions SCSS is @use'd
+      // by the page SCSS and must reach the page WXSS — same subpackage
+      // style-splitting trap guard as the families above.
+      'pool-reg-inclusions{',
+      'pool-reg-inclusions__tile{',
+      'pool-reg-inclusions__icon-badge{',
     ],
   },
   {

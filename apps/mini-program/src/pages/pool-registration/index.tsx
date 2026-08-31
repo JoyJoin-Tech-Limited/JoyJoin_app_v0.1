@@ -8,6 +8,7 @@ import { ALL_INTENT_VALUES, INTENT_FLEXIBLE_OPTION, toggleIntentValue } from '@s
 
 import { useStaggerMount } from '../../hooks/useStaggerMount'
 import { useResetOnShow } from '../../hooks/useResetOnShow'
+import { useWindowHeightPx } from '../../hooks/useWindowHeightPx'
 import { useMiniRevealMotion } from '../../hooks/useMiniRevealMotion'
 import { useAuthGuard } from '../../hooks/useAuthGuard'
 import { useCustomTabBarSync } from '../../hooks/navigation/useCustomTabBarSync'
@@ -79,6 +80,9 @@ import PoolRegistrationStepper from './components/PoolRegistrationStepper'
 import RegistrationConfirmModal from './components/RegistrationConfirmModal'
 import { getIntentFeedback } from './components/intentFeedback'
 import PoolRegistrationHeroPersonaSection from './components/PoolRegistrationHeroPersonaSection'
+import PoolRegistrationInclusions, {
+  POOL_INCLUSIONS_COLLAPSE_BELOW_PX,
+} from './components/PoolRegistrationInclusions'
 import PoolRegistrationVibePeek from './components/PoolRegistrationVibePeek'
 import XiaoyueCoachCard from './components/XiaoyueCoachCard'
 import XiaoyueLetterCard from './components/XiaoyueLetterCard'
@@ -139,6 +143,13 @@ export default function PoolRegistrationPage() {
   useResetOnShow(setReacting, setShowConfirmModal)
 
   const staggerMounted = useStaggerMount()
+
+  // 费用包含 strip: hidden on short viewports (collapseBelow convention) so it
+  // never competes with the persistent footer CTA. The same gate guards the
+  // impression event below so `registration_inclusions_viewed` only fires when
+  // the strip is actually on screen.
+  const windowHeightPx = useWindowHeightPx()
+  const showInclusions = windowHeightPx >= POOL_INCLUSIONS_COLLAPSE_BELOW_PX
 
   // Gate transient reactions so they only celebrate the first selection per step visit.
   const budgetReactionShownRef = useRef(false)
@@ -381,6 +392,19 @@ export default function PoolRegistrationPage() {
     discoverAnalytics.track('pool_teaser_impression', poolId, { variant: 'in-letter' })
     logInfo('[PoolTeaser] shown', { poolId })
   }, [authLoading, pool, poolError, alreadyRegistered, poolTeaserEnabled, step, briefLoading, briefData, poolId])
+
+  // 费用包含 strip impression — once per page view, only when the strip is
+  // actually rendered (step 0 hero zone + viewport above the collapse gate).
+  const hasTrackedInclusionsViewedRef = useRef(false)
+  useEffect(() => {
+    if (authLoading) return
+    if (!pool || poolError || alreadyRegistered) return
+    if (step !== STEP_BRIEF) return
+    if (!showInclusions) return
+    if (hasTrackedInclusionsViewedRef.current) return
+    hasTrackedInclusionsViewedRef.current = true
+    discoverAnalytics.track('registration_inclusions_viewed', poolId)
+  }, [authLoading, pool, poolError, alreadyRegistered, step, showInclusions, poolId])
 
   useEffect(() => {
     appliedReturnContextRef.current = 0
@@ -993,6 +1017,15 @@ export default function PoolRegistrationPage() {
             }
             visible={staggerMounted}
           />
+          {/* 费用包含 value strip (2026-08-31): sibling section directly under
+              the hero (the price pill lives in the hero meta band), NOT inside
+              PoolRegistrationHero — the hero frame is an image card with a
+              scrim, and a sibling row keeps its height fixed (~160rpx) without
+              disturbing the hero's widthFix aspect. Hidden on short viewports
+              so the footer CTA stays above the fold. */}
+          {showInclusions ? (
+            <PoolRegistrationInclusions visible={staggerMounted} reduceMotion={reduceMotion} />
+          ) : null}
           <XiaoyueLetterCard
             insight={brief.insight}
             matchingPromise={brief.matchingPromise}

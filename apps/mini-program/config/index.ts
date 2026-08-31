@@ -157,6 +157,11 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/icons/chemistry-badges',
           to: 'dist/assets/icons/chemistry-badges',
         },
+        // Included-strip icons — 费用包含 tiles on pool-registration (~45KB total).
+        {
+          from: 'src/assets/icons/included-strip',
+          to: 'dist/assets/icons/included-strip',
+        },
         // Status icons — misc UI states (~8KB total).
         {
           from: 'src/assets/icons/status-icons',

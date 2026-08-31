@@ -126,6 +126,10 @@ const DISCOVER_EVENT_TYPES = [
   "registration_abandoned",
   "registration_intent_toggled",
   "registration_step_reaction_shown",
+  // 费用包含 strip impression (2026-08-31): fired once per pool-registration
+  // page view when the inclusion tiles actually render (viewport above the
+  // collapse gate). Metadata: none beyond the shared envelope; poolId only.
+  "registration_inclusions_viewed",
   "registration_terminal_state_view",
   "registration_terminal_cta_tap",
   "registration_terminal_notify_tap",

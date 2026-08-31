@@ -148,6 +148,10 @@
       },
       {
         "type": "regexp",
+        "value": "assets/icons/included-strip/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
         "value": "assets/tab-icons/.*\\.png$"
       },
       {
