@@ -57,7 +57,7 @@ jobs:
   # Fail-safe: if the commit API call fails, treat the commit as changed so the
   # dev-version upload is never silently skipped.
   check-mini-program-changes:
-    if: github.event_name == 'workflow_run'
+    if: github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.check.outputs.changed }}
@@ -66,9 +66,15 @@ jobs:
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           set -euo pipefail
+          # Manual dispatch is an explicit intent to upload — never skip it.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch; proceeding with rebuild/upload."
+            exit 0
+          fi
           COMMIT_JSON=$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA" \
             --jq '{ files: [.files[].filename], truncated: (.truncated == true) }') || {
             echo "::warning::Failed to fetch commit files for $HEAD_SHA; treating as changed (fail-safe)"
@@ -97,6 +103,8 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main' &&
+       needs.check-mini-program-changes.outputs.changed == 'true') ||
+      (github.event_name == 'workflow_dispatch' &&
        needs.check-mini-program-changes.outputs.changed == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 20
