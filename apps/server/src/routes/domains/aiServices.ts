@@ -65,8 +65,8 @@ export function registerAIServiceRoutes(app: Express): void {
 
   /** Fallback copy used when no profile data is available. */
   const VIBE_BRIEF_FALLBACK = {
-    insight: '悦仔已经初步读懂你的社交画像',
-    matchingPromise: '我们会以此为基础，为你匹配更对 vibe 的小组',
+    insight: '悦仔已经初步读懂你的活动画像',
+    matchingPromise: '我们会以此为基础，为你安排更对 vibe 的小组',
   } as const;
 
   // Archetype-keyed insight copy (12 archetypes)
@@ -150,7 +150,7 @@ export function registerAIServiceRoutes(app: Express): void {
     if (archetypeName && ARCHETYPE_INSIGHTS[archetypeName]) {
       insight = ARCHETYPE_INSIGHTS[archetypeName];
     } else if (industry) {
-      insight = `我们已读懂你在${industry}领域的社交画像`;
+      insight = `我们已读懂你在${industry}领域的活动画像`;
     } else {
       insight = VIBE_BRIEF_FALLBACK.insight;
     }

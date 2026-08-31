@@ -10,7 +10,7 @@ import './JoyJoinLoadingScreen.scss'
 interface JoyJoinLoadingScreenProps {
   /** Primary status message (e.g. "悦仔正在赶来…") */
   title?: string
-  /** Secondary hint (e.g. "正在为你匹配最合适的活动") */
+  /** Secondary hint (e.g. "正在为你安排最合适的活动") */
   subtitle?: string
   /** Xiaoyue expression for the loading state */
   xiaoyueExpression?: 'loadingSystem' | 'loadingReveal' | 'homeWelcome'

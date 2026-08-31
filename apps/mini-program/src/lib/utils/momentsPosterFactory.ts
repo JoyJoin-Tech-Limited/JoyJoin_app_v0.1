@@ -710,7 +710,7 @@ export async function generateGroupRevealPoster(
 
   // Match score badge (if available)
   if (typeof input.matchScore === 'number') {
-    drawBadge(ctx, `匹配度 ${input.matchScore}分`, W - M - 28 - 140, M + 28, 140, 40, 20, PALETTE.badgePurpleFill, PALETTE.badgePurpleText)
+    drawBadge(ctx, `合拍度 ${input.matchScore}分`, W - M - 28 - 140, M + 28, 140, 40, 20, PALETTE.badgePurpleFill, PALETTE.badgePurpleText)
   }
 
   // Title

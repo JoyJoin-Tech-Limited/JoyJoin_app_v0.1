@@ -73,8 +73,8 @@ export async function executePostMatchCommitSideEffects(
             userId,
             category: "activities",
             type: "match_success",
-            title: "匹配成功！",
-            message: `你在「${notificationData.poolTitle}」的桌友匹配已完成，去看看你的新伙伴吧`,
+            title: "排桌完成！",
+            message: `你在「${notificationData.poolTitle}」的排桌已完成，去看看你的同桌伙伴吧`,
             relatedResourceId: notificationData.groupId,
           })
         )

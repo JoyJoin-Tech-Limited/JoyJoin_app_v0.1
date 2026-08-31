@@ -402,7 +402,7 @@ export default function MatchingStatusPage() {
           district={currentRegistration.poolDistrict ?? undefined}
           venueName={effectiveGroupDetails?.group.venueName || currentRegistration.venueName || undefined}
           status={currentRegistration.matchStatus ?? undefined}
-          footerHint={currentRegistration.matchScore != null ? `匹配分 ${currentRegistration.matchScore}` : undefined}
+          footerHint={currentRegistration.matchScore != null ? `合拍分 ${currentRegistration.matchScore}` : undefined}
           reduceMotion={shouldReduceMotion}
           animationDelay={shouldReduceMotion ? undefined : '120ms'}
         />

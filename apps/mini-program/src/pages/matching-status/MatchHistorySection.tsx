@@ -38,12 +38,12 @@ export default function MatchHistorySection({
     <View className='matching-status__history-section'>
       <View className='matching-status__history-header'>
         <ArchetypeHead archetype={viewerArchetype ?? 'corgi'} size={28} className='matching-status__history-header-icon' variant='head' />
-        <Text className='matching-status__history-title'>过往匹配</Text>
+        <Text className='matching-status__history-title'>过往排桌</Text>
         <Text className='matching-status__history-count'>共 {matches.length} 次</Text>
       </View>
 
       {matches.map((match) => {
-        const statusLabel = match.matchStatus === 'completed' ? '已完成' : '已匹配'
+        const statusLabel = match.matchStatus === 'completed' ? '已完成' : '已排桌'
         const dateLabel = match.finalDateTime ?? match.poolDateTime ?? ''
 
         return (
@@ -78,7 +78,7 @@ export default function MatchHistorySection({
             {match.matchScore ? (
               <View className='matching-status__history-card-score'>
                 <Text className='matching-status__history-score-value'>{match.matchScore}</Text>
-                <Text className='matching-status__history-score-label'>匹配分</Text>
+                <Text className='matching-status__history-score-label'>合拍分</Text>
               </View>
             ) : null}
             <View className='matching-status__history-card-arrow'>

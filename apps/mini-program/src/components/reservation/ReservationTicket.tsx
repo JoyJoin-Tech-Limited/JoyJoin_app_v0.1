@@ -8,7 +8,7 @@ import JoyJoinIcon from '../ui/JoyJoinIcon'
 // scripts/verify-subpackage-styles.mjs and the TablemateCard precedent.
 
 /** One 订座 ticket meta cell (地点 / 时间). `hint` renders only when the value
- *  is still 待定 (e.g. 「匹配成功后 24 小时内公布」). */
+ *  is still 待定 (e.g. 「排桌完成后 24 小时内公布」). */
 export interface ReservationTicketMetaCell {
   key: string
   label: string
