@@ -93,9 +93,20 @@ See §1.10 Connection Feedback Flow for full documentation.
 
 ---
 
-## 🆕 Recent Updates (Last updated: 2026-08-10)
+## 🆕 Recent Updates (Last updated: 2026-08-28)
 
-### 2026 Milestones (June–July 2026)
+### 2026 Milestones (June–August 2026)
+
+**57. MiniScript V2 — Evidence Presentation + Two-Round Motive Vote** 🎭 *(2026-08-28)*
+- **Feature flag:** `miniscriptEvidenceVoteV2Enabled` (DB-backed, default `false`). Snapshot-gated at mini_script phase entry — mid-session flips never affect a live session.
+- **Schema additions:** additive optional `act_flow[].evidence[]` (≤2 per act: id/name/description/iconKey + server-only `evidenceReactions` map roleSlot→text, 30–60 char target) and framework-level `motiveOptions[]` (3–4 strings; correct motive in server-only `solution.why`). No schemaVersion bump (stays 2).
+- **New routes:** `POST /api/miniscript/present-evidence` (any member, act sub-stage, ≤2/player/act, duplicate idempotent), `POST /api/miniscript/confirm-read` (presenter-only, releases reaction to group immediately), `POST /api/miniscript/open-motive-vote` (host-only, opens round 2), `POST /api/miniscript/advance-ceremony` (host-paced beats: culprit→honor→advance).
+- **Server-gated reaction visibility:** `reactionText` omitted from `sanitizeStateForClient` until ≥8s (`MINISCRIPT_REACTION_REVEAL_DELAY_MS`) or `readConfirmedAt`; presenter always sees own. Replaces broken client clock compare.
+- **Two-round vote:** round 1 = culprit guess, round 2 = motive guess (sequential); `/vote` carries `voteRound` + `motiveChoice`; `reveal-solution` returns per-player `{ round1Correct, round2Correct? }`. Wrong answers shown only to wrong player privately.
+- **Ceremony:** staged truth reveal (culprit card → honor card), host-paced via `miniScriptCeremonyBeat` state. Honor line in session recap for dual-correct players only (no profile persistence).
+- **Client surfaces:** `MiniScriptEvidenceTray` (evidence area with server-gated reveal), `MiniScriptClueDrawer` (clue bottom drawer), `MiniScriptHeroView` (ceremony wiring). Drag-to-dismiss via shared `usePullToDismiss` hook.
+- **Offline QC:** `npm run validate:miniscript-story` (exit 0/1, `--llm` for critic-revise ≤2 rounds). Catalog regen required for evidence/motiveOptions in stories.
+- **Design spec:** `docs/design/miniscript-evidence-motive-v2-spec-20260828.md`. Implementation: sprints `miniscript-v2-p1` (data layer), `miniscript-v2-p2` (gameplay), `miniscript-v2-p3` (audit fixes + ceremony polish).
 
 **56. Gathering Room (集结房间) — Pre-event Online Anteroom** 🏠 *(2026-08-10)*
 - **Purpose:** 把匹配成功到活动开始之间的沉默等待变成「期待等待」——同局 4–6 人提前几天「走进」同一间暖木小店，看到彼此的 V2 像素形象（带装备）陆续落座。

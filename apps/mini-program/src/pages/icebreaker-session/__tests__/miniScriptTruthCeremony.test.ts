@@ -170,8 +170,15 @@ describe('host-paced ceremony beats (locked Q14)', () => {
     expect(heroSource).toContain('miniscript-hero__ceremony-hold')
     expect(heroSource).toContain('miniscript-hero__ceremony-next')
     expect(heroSource).toContain('miniscript-hero__ceremony-waiting')
-    // Tap-through is disabled while a beat is held.
-    expect(heroSource).toContain('if (!revealed) return')
+    // N8 (a11y): held beats carry no button role on the container — tap is a
+    // no-op there, so role/tap advance only exist once the beat is revealed.
+    expect(heroSource).toContain("role={revealed ? 'button' : undefined}")
+    // The hold block (host CTA) is a SIBLING of the tap-to-continue stage,
+    // never nested inside the button region (button-in-button fix).
+    const stageIndex = heroSource.indexOf("className='miniscript-hero__ceremony-stage'")
+    const holdIndex = heroSource.indexOf("className='miniscript-hero__ceremony-hold'")
+    expect(stageIndex).toBeGreaterThan(-1)
+    expect(holdIndex).toBeGreaterThan(stageIndex)
     // Stage haptics wait for the server beat to land.
     expect(heroSource).toContain('if (!ceremonyStage || !ceremonyStageRevealed) return')
   })

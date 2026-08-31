@@ -1,5 +1,5 @@
 import { View, Text } from '@tarojs/components'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { MiniScriptPresentedEvidence } from '@shared/socialIcebreaker'
 import type {
   MiniScriptCharacterPublic,
@@ -10,6 +10,7 @@ import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Button from '../../../components/ui/Button'
 import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
+import { usePullToDismiss } from '../../../hooks/usePullToDismiss'
 import {
   buildPresentedComboSet,
   countMyPresentsInAct,
@@ -20,6 +21,10 @@ import {
   resolveRevealedEvidence,
 } from './miniScriptV2Model'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
+
+/** Per-act present budget (mirrors the server's PRESENT_BUDGET_EXCEEDED copy
+ *  「每人每幕最多出示 2 次」 — keep in sync). */
+const ACT_PRESENT_BUDGET = 2
 
 /**
  * MiniScriptEvidenceTray (V2 P2, contract AC-08) — act sub-phase evidence
@@ -70,6 +75,9 @@ export function MiniScriptEvidenceTray({
     () => countMyPresentsInAct(presentedEvidence, currentUserId, currentAct),
     [presentedEvidence, currentUserId, currentAct],
   )
+  // N4: at full budget the cards become review-only — a tap would otherwise
+  // open the picker into a guaranteed PRESENT_BUDGET_EXCEEDED failure.
+  const budgetExhausted = !presentingClosed && myActPresentCount >= ACT_PRESENT_BUDGET
 
   // ── Present flow state ──
   const [pendingEvidence, setPendingEvidence] = useState<MiniScriptEvidencePublic | null>(null)
@@ -79,6 +87,11 @@ export function MiniScriptEvidenceTray({
     targetRoleSlot: number
     reactionText: string
   } | null>(null)
+
+  // Swipe-down-to-dismiss on the picker's non-scroll chrome (drag handle +
+  // title) — the shared info-overlay-family gesture (N1).
+  const closePicker = useCallback(() => setPendingEvidence(null), [])
+  const pullToDismiss = usePullToDismiss(closePicker)
 
   // Swipe-back safety: the picker/reaction card must not survive the WeChat
   // page-stack hide/show cycle (REL-04).
@@ -130,7 +143,11 @@ export function MiniScriptEvidenceTray({
       <View className='miniscript-hero__section'>
         <Text className='miniscript-hero__section-title'>本幕证物</Text>
         <Text className='miniscript-evidence__budget'>
-          {presentingClosed ? '投票已开始，证物仅供回顾' : `你本幕已出示 ${Math.min(myActPresentCount, 2)}/2 次`}
+          {presentingClosed
+            ? '投票已开始，证物仅供回顾'
+            : budgetExhausted
+              ? '本幕出示次数已用完'
+              : `你本幕已出示 ${myActPresentCount}/${ACT_PRESENT_BUDGET} 次`}
         </Text>
 
         {revealedItems.length === 0 ? (
@@ -140,11 +157,15 @@ export function MiniScriptEvidenceTray({
             {revealedItems.map(({ evidence }) => (
               <View
                 key={evidence.id}
-                className={`miniscript-evidence__card${presentingClosed ? ' miniscript-evidence__card--closed' : ''}`}
-                role={presentingClosed ? undefined : 'button'}
-                aria-label={presentingClosed ? `证物：${evidence.name}` : `出示证物：${evidence.name}`}
+                className={`miniscript-evidence__card${presentingClosed ? ' miniscript-evidence__card--closed' : ''}${budgetExhausted ? ' miniscript-evidence__card--exhausted' : ''}`}
+                role={presentingClosed || budgetExhausted ? undefined : 'button'}
+                aria-label={
+                  presentingClosed || budgetExhausted
+                    ? `证物：${evidence.name}${budgetExhausted ? '，本幕出示次数已用完' : ''}`
+                    : `出示证物：${evidence.name}`
+                }
                 onClick={() => {
-                  if (presentingClosed) return
+                  if (presentingClosed || budgetExhausted) return
                   haptics('light')
                   setPendingEvidence(evidence)
                   setTargetSlot(null)
@@ -188,14 +209,26 @@ export function MiniScriptEvidenceTray({
       </View>
 
       {pendingEvidence ? (
-        <View className='miniscript-evidence__picker-mask' catchMove onClick={() => setPendingEvidence(null)}>
+        <View className='miniscript-evidence__picker-mask' catchMove onClick={closePicker}>
           <View
             className='miniscript-evidence__picker'
             onClick={(e) => {
               e.stopPropagation()
             }}
           >
-            <Text className='miniscript-evidence__picker-title'>把「{pendingEvidence.name}」出示给谁？</Text>
+            <View
+              className='miniscript-evidence__picker-handle'
+              aria-hidden='true'
+              onTouchStart={pullToDismiss.onTouchStart}
+              onTouchEnd={pullToDismiss.onTouchEnd}
+            />
+            <View
+              className='miniscript-evidence__picker-title-row'
+              onTouchStart={pullToDismiss.onTouchStart}
+              onTouchEnd={pullToDismiss.onTouchEnd}
+            >
+              <Text className='miniscript-evidence__picker-title'>把「{pendingEvidence.name}」出示给谁？</Text>
+            </View>
             <View className='miniscript-hero__vote-chips'>
               {characters.map((role) => {
                 const slot = role.slotIndex + 1

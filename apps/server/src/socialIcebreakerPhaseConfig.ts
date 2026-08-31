@@ -204,6 +204,20 @@ export function cleanupPhaseStateForNextPhase(
       state.miniScriptRevealedSolution = undefined;
       state.miniScriptPlayerReady = undefined;
       state.miniScriptDeductionHints = undefined;
+      // V2 sub-phase machine (C1): scrub on re-entry so a stale vote round,
+      // presented evidence, or ceremony beat can never leak into a fresh run.
+      // miniScriptVoteOpenedAt gates present-evidence (WRONG_SUB_PHASE) — a
+      // leftover value would wrongly block presenting in the new run.
+      state.miniScriptVoteOpenedAt = undefined;
+      state.miniScriptRevealedResolutionSummary = undefined;
+      state.miniScriptVoteRound = undefined;
+      state.miniScriptMotiveVoteOpenedAt = undefined;
+      state.miniScriptPresentedEvidence = undefined;
+      state.miniScriptRevealedPlayerResults = undefined;
+      state.miniScriptCeremonyBeat = undefined;
+      // KEEP miniScriptV2Enabled: it is the flag snapshot taken at first phase
+      // entry (transitionPhase only sets it when undefined), intentionally
+      // immutable for the session lifetime.
       return;
     case 'auction':
       state.auctionLots = undefined;

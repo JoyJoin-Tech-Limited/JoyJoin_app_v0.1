@@ -1335,11 +1335,25 @@ export function MiniScriptHeroView({
   // feedback on their own device only — nobody is named publicly for a miss.
   const playerResults = session.miniScriptRevealedPlayerResults ?? EMPTY_PLAYER_RESULTS
   const showTwoStepResults = hasMotiveRound && playerResults.some((r) => r.round2Correct !== undefined)
-  const honorNames = showTwoStepResults
-    ? playerResults
-        .filter((r) => r.round1Correct === true && r.round2Correct === true)
-        .map((r) => participants.find((p) => p.userId === r.userId)?.displayName ?? '一位玩家')
-    : []
+  // honorNames feeds two large content memos (truthContent / ceremonyContent);
+  // the raw playerResults/participants arrays are fresh objects on every 3s
+  // poll, so key the memo on a scalar content signature instead — an
+  // unchanged re-poll keeps the array identity and the memos hold.
+  const honorSignature = showTwoStepResults
+    ? `${playerResults.map((r) => `${r.userId}:${r.round1Correct}:${r.round2Correct}`).join('|')}#${participants.map((p) => `${p.userId}:${p.displayName ?? ''}`).join('|')}`
+    : ''
+  const honorNames = useMemo(
+    () =>
+      showTwoStepResults
+        ? playerResults
+            .filter((r) => r.round1Correct === true && r.round2Correct === true)
+            .map((r) => participants.find((p) => p.userId === r.userId)?.displayName ?? '一位玩家')
+        : [],
+    // honorSignature captures the exact playerResults + participants content
+    // this derivation reads; the raw arrays would bust the memo every poll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [showTwoStepResults, honorSignature],
+  )
   const myResult = playerResults.find((r) => r.userId === currentUserId)
   const myDualCorrect = myResult?.round1Correct === true && myResult?.round2Correct === true
   // V2 P3: the viewer's own two-step outcome, shared by the ceremony honor
@@ -1533,13 +1547,16 @@ export function MiniScriptHeroView({
     return (
       <View
         className='miniscript-hero__ceremony'
-        role='button'
-        aria-label={revealed ? TRUTH_CEREMONY_CONTINUE_HINT : TRUTH_CEREMONY_WAITING_HOST_HINT}
-        onClick={() => {
-          if (!revealed) return
-          haptics('light')
-          ceremony.advance()
-        }}
+        role={revealed ? 'button' : undefined}
+        aria-label={revealed ? TRUTH_CEREMONY_CONTINUE_HINT : undefined}
+        onClick={
+          revealed
+            ? () => {
+                haptics('light')
+                ceremony.advance()
+              }
+            : undefined
+        }
       >
         <View className='miniscript-hero__ceremony-dots' aria-hidden='true'>
           {ceremonyPlan.stages.map((dotStage, dotIndex) => (
@@ -1551,32 +1568,6 @@ export function MiniScriptHeroView({
         </View>
         <View key={stage} className='miniscript-hero__ceremony-stage'>
           <Text className='miniscript-hero__ceremony-title'>{TRUTH_CEREMONY_STAGE_TITLE[stage]}</Text>
-          {!revealed ? (
-            <View className='miniscript-hero__ceremony-hold'>
-              {isHost && onAdvanceCeremony ? (
-                <View
-                  className='miniscript-hero__ceremony-next'
-                  role='button'
-                  aria-label={TRUTH_CEREMONY_HOST_NEXT_CTA}
-                  aria-disabled={isAdvancingCeremony}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (isAdvancingCeremony) return
-                    haptics('medium')
-                    onAdvanceCeremony()
-                  }}
-                >
-                  <Text className='miniscript-hero__ceremony-next-text'>
-                    {isAdvancingCeremony ? '揭晓中…' : TRUTH_CEREMONY_HOST_NEXT_CTA}
-                  </Text>
-                </View>
-              ) : (
-                <View role='status' aria-live='polite'>
-                  <Text className='miniscript-hero__ceremony-waiting'>{TRUTH_CEREMONY_WAITING_HOST_HINT}</Text>
-                </View>
-              )}
-            </View>
-          ) : null}
           {revealed && stage === 'tally' ? (
             <View className='miniscript-hero__ceremony-panel'>
               {tallyRows.map((row) => (
@@ -1608,6 +1599,34 @@ export function MiniScriptHeroView({
             <HonorCardList honorNames={honorNames} privateLine={honorPrivateLine} />
           ) : null}
         </View>
+        {/* N8: the hold block is a SIBLING of the tap-to-continue stage, not
+            nested inside it — on held beats the container carries no button
+            role, so the host 下一段 CTA is the only button on the beat. */}
+        {!revealed ? (
+          <View className='miniscript-hero__ceremony-hold'>
+            {isHost && onAdvanceCeremony ? (
+              <View
+                className='miniscript-hero__ceremony-next'
+                role='button'
+                aria-label={TRUTH_CEREMONY_HOST_NEXT_CTA}
+                aria-disabled={isAdvancingCeremony}
+                onClick={() => {
+                  if (isAdvancingCeremony) return
+                  haptics('medium')
+                  onAdvanceCeremony()
+                }}
+              >
+                <Text className='miniscript-hero__ceremony-next-text'>
+                  {isAdvancingCeremony ? '揭晓中…' : TRUTH_CEREMONY_HOST_NEXT_CTA}
+                </Text>
+              </View>
+            ) : (
+              <View role='status' aria-live='polite'>
+                <Text className='miniscript-hero__ceremony-waiting'>{TRUTH_CEREMONY_WAITING_HOST_HINT}</Text>
+              </View>
+            )}
+          </View>
+        ) : null}
         {revealed ? (
           <Text className='miniscript-hero__ceremony-hint'>{TRUTH_CEREMONY_CONTINUE_HINT}</Text>
         ) : null}
@@ -1669,7 +1688,10 @@ export function MiniScriptHeroView({
           {subPhase === 'preview' && !isHost ? waitingContent : null}
           {subPhase === 'role' ? roleContent : null}
           {subPhase === 'act' ? actContent : null}
-          {subPhase === 'vote' ? (voteRound === 2 ? motiveVoteContent : voteContent) : null}
+          {/* N5: the clue bar sits at the SAME relative position in both
+              act and vote views — top of the sub-phase content, directly
+              below the primary instruction (act view mounts it as the first
+              actContent child). */}
           {subPhase === 'vote' && showClueDrawer && framework ? (
             <MiniScriptClueDrawer
               framework={framework}
@@ -1677,6 +1699,7 @@ export function MiniScriptHeroView({
               currentAct={currentAct}
             />
           ) : null}
+          {subPhase === 'vote' ? (voteRound === 2 ? motiveVoteContent : voteContent) : null}
           {subPhase === 'truth' ? (showCeremony ? ceremonyContent : truthContent) : null}
 
           {subPhase === 'act' || subPhase === 'vote' || subPhase === 'truth' ? (

@@ -31,13 +31,13 @@
 
   &__bar-text {
     flex: 1;
-    font-size: 26rpx;
+    font-size: $font-size-sm + 2rpx; // 26rpx — off-scale by design (between label/body); visual unchanged
     font-weight: 600;
     color: $phase-accent-miniscript-deep;
   }
 
   &__bar-arrow {
-    font-size: 32rpx;
+    font-size: $font-size-md;
     color: $phase-accent-miniscript-deep;
   }
 
@@ -69,13 +69,16 @@
     flex-shrink: 0;
   }
 
+  &__title-row {
+    flex-shrink: 0;
+  }
+
   &__title {
     display: block;
-    font-size: 30rpx;
+    font-size: $font-size-base + 2rpx; // 30rpx — off-scale by design (between body/md); visual unchanged
     font-weight: 600;
     color: $color-text-primary;
     padding: 0 $spacing-lg $spacing-sm;
-    flex-shrink: 0;
   }
 
   &__scroll {
@@ -90,7 +93,7 @@
 
   &__act-title {
     display: block;
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     font-weight: 600;
     color: $phase-accent-miniscript-deep;
     margin-bottom: $spacing-xs;
@@ -126,20 +129,21 @@
 
   &__item-name {
     display: block;
-    font-size: 26rpx;
+    font-size: $font-size-sm + 2rpx; // 26rpx — off-scale by design; visual unchanged
     font-weight: 600;
     color: $color-text-primary;
   }
 
   &__item-text {
     display: block;
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     line-height: 1.6;
     color: $color-text-secondary-on-light;
   }
 
   &__close {
     flex-shrink: 0;
+    min-height: 88rpx;
     margin: $spacing-xs $spacing-lg 0;
     padding: $spacing-sm;
     border-radius: $radius-pill;
@@ -153,7 +157,7 @@
   }
 
   &__close-text {
-    font-size: 26rpx;
+    font-size: $font-size-sm + 2rpx; // 26rpx — off-scale by design; visual unchanged
     color: $color-text-secondary-on-light;
   }
 }

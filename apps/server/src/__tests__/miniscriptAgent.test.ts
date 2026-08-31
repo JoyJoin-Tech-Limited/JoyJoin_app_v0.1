@@ -489,6 +489,81 @@ describe('generateMiniScriptFramework orchestrator (v2)', () => {
     expect(framework.characters[0]?.roleLabel).toBe('轻推理爱好者');
   });
 
+  it('C3: sanitizes enum keys echoed into act_flow, evidence, reactions, and motiveOptions', async () => {
+    process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
+    process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED = 'false';
+
+    const dirtyPayload = {
+      ...validV2Payload,
+      act_flow: [
+        {
+          actNumber: 1,
+          title: 'modern_urban开场',
+          beats: ['absurd_comedy落座', '表态'],
+          cliffhanger: 'light_reasoning悬念',
+          evidence: [
+            {
+              id: 'e1',
+              name: 'western_court证物',
+              description: 'medieval风格的描述。',
+              iconKey: 'future_tech_icon',
+              evidenceReactions: { '1': 'republican_era式反应' },
+            },
+          ],
+        },
+        { actNumber: 2, title: '交汇', beats: ['交换线索'] },
+      ],
+      motiveOptions: ['xianxia动机', '太害羞', '拿错了盒子'],
+    };
+
+    const { getClientForFunction } = await import('../ai/socialModelRouter');
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(dirtyPayload) } }],
+    });
+    (getClientForFunction as any).mockReturnValue({
+      client: { chat: { completions: { create: mockCreate } } },
+      model: 'deepseek-v4-flash',
+      provider: 'deepseek',
+    });
+
+    const { generateMiniScriptFrameworkWithMeta } = await import('../lib/miniscriptAgent');
+    const { framework, meta } = await generateMiniScriptFrameworkWithMeta({
+      playerCount: 4,
+      style: 'modern_urban',
+      genres: ['absurd_comedy'],
+    });
+
+    expect(meta.llmAccepted).toBe(true);
+    // Only user-facing copy is scrubbed — framework.style/genres legitimately
+    // keep their machine keys, so assert against the copy surfaces only.
+    const copySurfaces = JSON.stringify({
+      act_flow: framework.act_flow,
+      motiveOptions: framework.motiveOptions,
+    });
+    for (const token of [
+      'modern_urban',
+      'absurd_comedy',
+      'light_reasoning',
+      'western_court',
+      'medieval',
+      'future_tech',
+      'republican_era',
+      'xianxia',
+    ]) {
+      expect(copySurfaces).not.toContain(token);
+    }
+
+    const act1 = framework.act_flow[0]!;
+    expect(act1.title).toContain('现代都市');
+    expect(act1.beats[0]).toContain('荒诞喜剧');
+    expect(act1.cliffhanger).toContain('轻推理');
+    const evidence = act1.evidence![0]!;
+    expect(evidence.name).toContain('西欧宫廷');
+    expect(evidence.description).toContain('中世纪');
+    expect(evidence.evidenceReactions?.['1']).toContain('民国');
+    expect(framework.motiveOptions![0]).toContain('仙侠');
+  });
+
   it('derives a title when the LLM title is missing or over 12 chars', async () => {
     process.env.SOCIAL_MINISCRIPT_LLM_ENABLED = 'true';
     process.env.SOCIAL_MINISCRIPT_VALIDATION_ENABLED = 'false';

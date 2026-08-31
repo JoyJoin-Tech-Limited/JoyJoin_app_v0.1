@@ -1,9 +1,10 @@
 import { ScrollView, Text, View } from '@tarojs/components'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { MiniScriptStoryFrameworkPublic } from '@shared/miniscriptStoryFramework'
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import { haptics } from '../../../lib/utils/haptics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
+import { usePullToDismiss } from '../../../hooks/usePullToDismiss'
 import { trackMiniScriptGameplay } from '../../../lib/analytics/miniscriptGameplayAnalytics'
 import {
   buildClueDrawerGroups,
@@ -47,6 +48,15 @@ export function MiniScriptClueDrawer({
   )
   const itemCount = useMemo(() => countClueDrawerItems(groups), [groups])
 
+  // Swipe-down-to-dismiss on the non-scroll chrome (handle + title) — the
+  // shared info-overlay-family gesture (TablemateDetailSheet precedent).
+  // Hooks stay above the itemCount early-return (rules-of-hooks).
+  const closeDrawer = useCallback(() => {
+    haptics('light')
+    setOpen(false)
+  }, [])
+  const pullToDismiss = usePullToDismiss(closeDrawer)
+
   if (itemCount === 0) return null
 
   const handleOpen = () => {
@@ -69,7 +79,7 @@ export function MiniScriptClueDrawer({
       </View>
 
       {open ? (
-        <View className='miniscript-clues' catchMove onClick={() => setOpen(false)}>
+        <View className='miniscript-clues' catchMove onClick={closeDrawer}>
           <View className='miniscript-clues__backdrop' />
           <View
             className='miniscript-clues__surface'
@@ -77,8 +87,19 @@ export function MiniScriptClueDrawer({
               e.stopPropagation()
             }}
           >
-            <View className='miniscript-clues__handle' aria-hidden='true' />
-            <Text className='miniscript-clues__title'>目前已知的线索</Text>
+            <View
+              className='miniscript-clues__handle'
+              aria-hidden='true'
+              onTouchStart={pullToDismiss.onTouchStart}
+              onTouchEnd={pullToDismiss.onTouchEnd}
+            />
+            <View
+              className='miniscript-clues__title-row'
+              onTouchStart={pullToDismiss.onTouchStart}
+              onTouchEnd={pullToDismiss.onTouchEnd}
+            >
+              <Text className='miniscript-clues__title'>目前已知的线索</Text>
+            </View>
             <ScrollView className='miniscript-clues__scroll' scrollY enhanced showScrollbar={false}>
               {groups.map((group) => (
                 <View key={group.actNumber} className='miniscript-clues__act'>
@@ -106,10 +127,7 @@ export function MiniScriptClueDrawer({
               className='miniscript-clues__close'
               role='button'
               aria-label='关闭线索'
-              onClick={() => {
-                haptics('light')
-                setOpen(false)
-              }}
+              onClick={closeDrawer}
             >
               <Text className='miniscript-clues__close-text'>收起</Text>
             </View>

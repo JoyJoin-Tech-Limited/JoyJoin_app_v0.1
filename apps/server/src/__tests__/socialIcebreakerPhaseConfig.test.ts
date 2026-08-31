@@ -218,6 +218,64 @@ describe('social icebreaker phase configuration', () => {
     expect(state.auctionAllLotsClosed).toBeUndefined();
   });
 
+  it('C1: re-entering mini_script produces a clean V2 sub-phase machine (snapshot preserved)', () => {
+    const state: SocialSessionState = {
+      socialSessionId: 'social_v2_reentry',
+      icebreakerSessionId: 'test',
+      currentPhase: 'mini_script',
+      hostUserId: 'host-1',
+      hostDisplayName: 'Host',
+      playerCount: 4,
+      phaseStartedAt: 1,
+      sessionStartedAt: 1,
+      completedPhases: ['mini_script'],
+      enabledPhases: DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES,
+      // Flag snapshot from the first run — must SURVIVE cleanup.
+      miniScriptV2Enabled: true,
+      // Full V2 end-state from the previous run.
+      miniScriptCurrentAct: 3,
+      miniScriptVoteOpenedAt: 100,
+      miniScriptRevealedResolutionSummary: '真相大白。',
+      miniScriptVoteRound: 2,
+      miniScriptMotiveVoteOpenedAt: 200,
+      miniScriptPresentedEvidence: [
+        {
+          evidenceId: 'e1',
+          targetRoleSlot: 2,
+          presentedBy: 'host-1',
+          actNo: 1,
+          presentedAt: 1,
+          reactionText: '反应文本',
+        },
+      ],
+      miniScriptRevealedPlayerResults: [{ userId: 'host-1', round1Correct: true, round2Correct: false }],
+      miniScriptCeremonyBeat: 2,
+      miniScriptSolutionRevealed: true,
+      miniScriptVotes: [{ userId: 'host-1', voteRound: 2, motiveChoice: 0, votedAt: 1 }],
+    };
+
+    cleanupPhaseStateForNextPhase(state, 'mini_script');
+
+    // Sub-phase machine is clean: presenting is allowed again (the
+    // WRONG_SUB_PHASE guard keys on miniScriptVoteOpenedAt)…
+    expect(state.miniScriptVoteOpenedAt).toBeUndefined();
+    // …no stale vote round or motive round survives…
+    expect(state.miniScriptVoteRound).toBeUndefined();
+    expect(state.miniScriptMotiveVoteOpenedAt).toBeUndefined();
+    // …presented evidence / revealed artifacts are gone…
+    expect(state.miniScriptPresentedEvidence).toBeUndefined();
+    expect(state.miniScriptRevealedResolutionSummary).toBeUndefined();
+    expect(state.miniScriptRevealedPlayerResults).toBeUndefined();
+    // …the ceremony beat is reset…
+    expect(state.miniScriptCeremonyBeat).toBeUndefined();
+    expect(state.miniScriptSolutionRevealed).toBeUndefined();
+    expect(state.miniScriptCurrentAct).toBeUndefined();
+    expect(state.miniScriptVotes).toBeUndefined();
+    // …and the flag snapshot taken at first phase entry is preserved
+    // (transitionPhase only sets it when undefined).
+    expect(state.miniScriptV2Enabled).toBe(true);
+  });
+
   it('custom mode routes warmup and real phases back to phase_selection', () => {
     const state: SocialSessionState = {
       socialSessionId: 'social_test',

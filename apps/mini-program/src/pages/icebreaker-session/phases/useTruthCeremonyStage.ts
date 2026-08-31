@@ -91,6 +91,11 @@ export function useTruthCeremonyStage(
   // Swipe-back safety: a re-shown page with the solution already revealed
   // jumps to the first still-held stage (or complete) — no ceremony replay
   // after a hide/show cycle.
+  //
+  // Note (perf-audit NIT): these refs are written during render, a
+  // legacy-React-mode pattern. Taro's mini-program React runtime runs legacy
+  // mode (no concurrent features), so the write is idempotent and safe; the
+  // useDidShow callback below only ever needs the latest polled values.
   const solutionRevealedRef = useRef(solutionRevealed)
   solutionRevealedRef.current = solutionRevealed
   const serverBeatRef = useRef(serverBeat)

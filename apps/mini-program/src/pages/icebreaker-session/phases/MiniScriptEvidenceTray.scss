@@ -7,14 +7,14 @@
 .miniscript-evidence {
   &__budget {
     display: block;
-    font-size: 22rpx;
+    font-size: $font-size-xs;
     color: $color-text-tertiary-on-light;
     margin: $spacing-xs 0 $spacing-sm;
   }
 
   &__empty {
     display: block;
-    font-size: 26rpx;
+    font-size: $font-size-sm + 2rpx; // 26rpx — off-scale by design; visual unchanged
     line-height: 1.6;
     color: $color-text-secondary-on-light;
   }
@@ -43,6 +43,15 @@
         background: $phase-accent-miniscript-tint;
       }
     }
+
+    // N4: full per-act budget — visibly disabled, no press feedback, no picker.
+    &--exhausted {
+      opacity: 0.45;
+
+      &:active {
+        background: $phase-accent-miniscript-tint;
+      }
+    }
   }
 
   &__card-icon {
@@ -63,14 +72,14 @@
   }
 
   &__card-name {
-    font-size: 28rpx;
+    font-size: $font-size-base;
     font-weight: 600;
     color: $color-text-primary;
   }
 
   &__card-desc {
-    font-size: 24rpx;
-    line-height: 1.5;
+    font-size: $font-size-sm;
+    line-height: 1.6;
     color: $color-text-secondary-on-light;
   }
 
@@ -94,14 +103,14 @@
 
   &__reaction-target {
     display: block;
-    font-size: 22rpx;
+    font-size: $font-size-xs;
     color: $color-text-tertiary-on-light;
     margin-bottom: $spacing-2xs;
   }
 
   &__reaction-text {
     display: block;
-    font-size: 26rpx;
+    font-size: $font-size-sm + 2rpx; // 26rpx — off-scale by design; visual unchanged
     line-height: 1.6;
     color: $color-text-primary;
   }
@@ -112,7 +121,7 @@
   // reduced-motion below.
   &__pending {
     display: block;
-    font-size: 22rpx;
+    font-size: $font-size-xs;
     line-height: 1.5;
     color: $color-text-tertiary-on-light;
     margin-top: $spacing-sm;
@@ -133,13 +142,27 @@
   &__picker {
     background: $color-surface;
     border-radius: $card-radius-lg $card-radius-lg 0 0;
-    padding: $spacing-md $spacing-lg calc(#{$spacing-lg} + env(safe-area-inset-bottom));
+    padding: $spacing-sm $spacing-lg calc(#{$spacing-lg} + env(safe-area-inset-bottom));
     animation: fade-slide-up 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  // N1: drag handle (visual affordance for the swipe-down dismiss gesture) —
+  // same chrome as MiniScriptClueDrawer / TablemateDetailSheet handles.
+  &__picker-handle {
+    width: 40rpx;
+    height: 4rpx;
+    border-radius: 2rpx;
+    background: rgba($color-text-primary, 0.2);
+    margin: 0 auto $spacing-xs;
+  }
+
+  &__picker-title-row {
+    flex-shrink: 0;
   }
 
   &__picker-title {
     display: block;
-    font-size: 30rpx;
+    font-size: $font-size-base + 2rpx; // 30rpx — off-scale by design; visual unchanged
     font-weight: 600;
     color: $color-text-primary;
     margin-bottom: $spacing-sm;
@@ -167,19 +190,19 @@
   }
 
   &__reveal-target {
-    font-size: 22rpx;
+    font-size: $font-size-xs;
     color: $color-text-tertiary-on-light;
   }
 
   &__reveal-text {
-    font-size: 32rpx;
+    font-size: $font-size-md;
     line-height: 1.6;
     font-weight: 600;
     color: $color-text-primary;
   }
 
   &__reveal-guide {
-    font-size: 26rpx;
+    font-size: $font-size-sm + 2rpx; // 26rpx — off-scale by design; visual unchanged
     line-height: 1.5;
     color: $phase-accent-miniscript-deep;
   }

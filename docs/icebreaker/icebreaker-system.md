@@ -120,7 +120,7 @@ const DEFAULT_SOCIAL_ICEBREAKER_ENABLED_PHASES = [...MVP_PHASES, 'personality_di
 | `group_mirror` | 🪞 | 群像镜像 | 14–15 min | 2 | Peer reflection voting; players nominate who best fits each question |
 | `quip_battle` | ⚔️ | 机智对决 | 10–15 min | 2 | Witty prompt responses; SwipeCard voting, best-of reel |
 | `speed_friending` | 🔄 | 速聊 | 14–18 min | 2 | Round-robin timed 1-on-1 rotations. Glow+blaze only. |
-| `mini_script` | 🎭 | 迷你剧本杀 | 45 min | 4 | **Full Social Icebreaker phase.** Host-picked style/genre, multi-act collaborative mystery with role assignments, clue reveals, and group voting. Feature-flagged (`SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`). Not a side game — executes within the phase-ordered session flow. |
+| `mini_script` | 🎭 | 迷你剧本杀 | 45 min | 4 | **Full Social Icebreaker phase.** Host-picked style/genre, multi-act collaborative mystery with role assignments, clue reveals, and group voting. V2 (flag `miniscriptEvidenceVoteV2Enabled`): evidence presentation per act (≤2/player/act), server-gated reaction reveal (8s or confirm-read), two-round vote (culprit + motive), host-paced staged truth ceremony. Feature-flagged (`SOCIAL_ICEBREAKER_ENABLE_MINI_SCRIPT`). Not a side game — executes within the phase-ordered session flow. |
 | `recap` | ✨ | 回顾 | 5–6 min | 1 | AI-generated session summary with V2 stats (lieDetective aiWinRate, personalityDice highlights, undercoverWord result, etc.). IdentityReveal hero headline, CardFlip share card, staggered medal grid, ParticleBurst celebration. |
 
 > **Phase durations are vibe-aware.** When `RUN_PLAN_TEMPLATES_ENABLED=true`, the template compiler (`resolveTemplateSlots` in `packages/shared/src/runPlanCompiler.ts`) allocates `allocatedMinutes` per segment from 9 default templates (3 vibes × 3 tiers). When `false`, legacy hardcoded plans apply uniform durations regardless of vibe.
@@ -403,7 +403,11 @@ Sessions expire after 6 hours and expired rows are swept periodically. Missing v
 | `POST` | `/api/miniscript/generate` | host | Generate the story framework (style/genres/lite); idempotent; 32s hard bound with client 35s timeout |
 | `POST` | `/api/miniscript/assign-roles` | host | Round-robin role assignment by join order (idempotent) |
 | `POST` | `/api/miniscript/reveal-act` | host | Reveal next act + its clues + deduction hints (sequential) |
-| `POST` | `/api/miniscript/vote` | any | Submit/replace a consensus vote (content-filtered) |
+| `POST` | `/api/miniscript/vote` | any | Submit/replace a consensus vote (content-filtered); carries `voteRound: 1|2` + `motiveChoice` for round 2 (V2 flag-gated) |
+| `POST` | `/api/miniscript/present-evidence` | any | Present an evidence card during act sub-stage (V2: ≤2/player/act, duplicate idempotent, future-act blocked) |
+| `POST` | `/api/miniscript/confirm-read` | presenter | Presenter confirms they've read the reaction — releases it to group immediately (V2: idempotent, presenter-only) |
+| `POST` | `/api/miniscript/open-motive-vote` | host | Open round-2 motive vote (V2: host-only, requires motiveOptions + resolvable correct motive) |
+| `POST` | `/api/miniscript/advance-ceremony` | host | Advance staged truth ceremony beat: culprit → honor → next (V2: host-paced, idempotent at max) |
 | `POST` | `/api/miniscript/reveal-solution` | host | Reveal the truth once all acts revealed + all assigned players voted |
 | `POST` | `/api/miniscript/ready` | any | Toggle own role-card readiness |
 | `POST` | `/api/social-icebreaker/:socialSessionId/early-end` | host | Jump to recap early without counting the current phase as completed; routes through `transitionPhase()` |

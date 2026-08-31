@@ -40,7 +40,7 @@ import { buildCachedAIMeta, buildAIGCMeta } from '@shared/types/aiMeta';
 import { ensureSessionEnabledPhases, cleanupPhaseStateForNextPhase } from '../../socialIcebreakerPhaseConfig';
 import { logger } from '../../lib/logger';
 import { aiEndpointLimiter } from '../../rateLimiter';
-import { buildClientState, isHostAuthorized, transitionPhase } from '../socialIcebreakerHelpers';
+import { buildClientState, isHostAuthorized, transitionPhase, MINISCRIPT_REACTION_REVEAL_DELAY_MS } from '../socialIcebreakerHelpers';
 import {
   runBotSimulationSafely,
   seedSingleTestBotsMiniScriptReady,
@@ -847,7 +847,21 @@ router.post('/present-evidence', async (req: any, res) => {
     (entry) => entry.evidenceId === evidenceId && entry.targetRoleSlot === targetRoleSlot,
   );
   if (existing) {
-    return res.json({ ok: true, presented: existing, reactionText: existing.reactionText, duplicate: true });
+    // Gate parity with sanitizeStateForClient (B1): the duplicate branch must
+    // not bypass the server-side reveal window — otherwise any member could
+    // re-POST a presented combo and read the reaction immediately. The
+    // presenter always sees their own reaction; everyone else waits for
+    // readConfirmedAt or the 8s server-side delay. While gated, reactionText
+    // is OMITTED (top level AND inside the entry), never nulled.
+    const reactionVisible =
+      existing.presentedBy === userId ||
+      existing.readConfirmedAt !== undefined ||
+      Date.now() - existing.presentedAt >= MINISCRIPT_REACTION_REVEAL_DELAY_MS;
+    if (reactionVisible) {
+      return res.json({ ok: true, presented: existing, reactionText: existing.reactionText, duplicate: true });
+    }
+    const { reactionText: _gated, ...gatedEntry } = existing;
+    return res.json({ ok: true, presented: gatedEntry, duplicate: true });
   }
 
   // Budget: ≤2 presentations per player per act (AC-02c).
@@ -1132,6 +1146,14 @@ router.post('/vote', async (req: any, res) => {
 
   if (!state.miniScriptRoleAssignments || state.miniScriptRoleAssignments[userId] === undefined) {
     return res.status(400).json({ error: 'NO_ROLE_ASSIGNED' });
+  }
+
+  // N5: once the solution is revealed the table is in the ceremony — late
+  // ballots would corrupt the frozen vote record and player results. Fail
+  // closed for both rounds.
+  if (state.miniScriptSolutionRevealed) {
+    logger.warn('[miniscript] vote rejected', { socialSessionId, userId, code: 'SOLUTION_REVEALED' });
+    return res.status(400).json({ error: 'SOLUTION_REVEALED' });
   }
 
   // Flag snapshot off → silently degrade: voteRound=2 / motiveChoice are

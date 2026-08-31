@@ -85,6 +85,28 @@ describe('MiniScript V2 P2 · evidence area (AC-08)', () => {
     expect(heroSource).toContain('presentingClosed={session.miniScriptVoteOpenedAt !== undefined}')
     expect(traySource).toContain('投票已开始，证物仅供回顾')
   })
+
+  it('greys out the cards at full per-act budget instead of opening a doomed picker (N4)', () => {
+    expect(traySource).toContain('本幕出示次数已用完')
+    expect(traySource).toContain('budgetExhausted')
+    expect(traySource).toContain('miniscript-evidence__card--exhausted')
+    expect(traySource).toContain('if (presentingClosed || budgetExhausted) return')
+    const trayStyles = readFileSync(
+      resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptEvidenceTray.scss'),
+      'utf8',
+    )
+    expect(trayStyles).toMatch(/&--exhausted\s*{[^}]*opacity:\s*0\.45/s)
+  })
+
+  it('ships swipe-down-to-dismiss on the picker sheet via the shared pull gesture (N1)', () => {
+    expect(traySource).toContain('usePullToDismiss')
+    expect(traySource).toContain('miniscript-evidence__picker-handle')
+    const trayStyles = readFileSync(
+      resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptEvidenceTray.scss'),
+      'utf8',
+    )
+    expect(trayStyles).toContain('&__picker-handle')
+  })
 })
 
 describe('MiniScript V2 P2 · clue drawer (AC-09)', () => {
@@ -102,6 +124,26 @@ describe('MiniScript V2 P2 · clue drawer (AC-09)', () => {
     expect(drawerIndex).toBeGreaterThan(-1)
     expect(newCluesIndex).toBeGreaterThan(-1)
     expect(drawerIndex).toBeLessThan(newCluesIndex)
+  })
+
+  it('sits the vote-view entry bar at the same top position as the act view (N5)', () => {
+    // Vote view: the bar renders directly below the primary instruction,
+    // BEFORE the ballot content (previously it trailed at the bottom).
+    const voteDrawerIndex = heroSource.indexOf("{subPhase === 'vote' && showClueDrawer && framework")
+    const ballotIndex = heroSource.indexOf("subPhase === 'vote' ? (voteRound === 2 ? motiveVoteContent : voteContent)")
+    expect(voteDrawerIndex).toBeGreaterThan(-1)
+    expect(ballotIndex).toBeGreaterThan(-1)
+    expect(voteDrawerIndex).toBeLessThan(ballotIndex)
+  })
+
+  it('ships swipe-down-to-dismiss on the drawer chrome via the shared pull gesture (N1)', () => {
+    expect(drawerSource).toContain('usePullToDismiss')
+    expect(drawerSource).toContain("onTouchStart={pullToDismiss.onTouchStart}")
+    expect(drawerSource).toContain("onTouchEnd={pullToDismiss.onTouchEnd}")
+    // The gesture lives on the handle + title chrome, never the ScrollView.
+    const scrollIndex = drawerSource.indexOf("className='miniscript-clues__scroll'")
+    const scrollTag = drawerSource.slice(scrollIndex, drawerSource.indexOf('>', scrollIndex))
+    expect(scrollTag).not.toContain('onTouchStart')
   })
 
   it('derives groups from existing payloads only (state clues + framework evidence)', () => {
@@ -164,7 +206,7 @@ describe('MiniScript V2 P3 · copy + waiting states (audit fixes)', () => {
     expect(heroSource).toContain('hasMotiveRound && voteRound === 1 && voteProgress.canReveal')
   })
 
-  it('keeps interactive hit areas at ≥88rpx (vote-change / hint-dismiss / clue bar)', () => {
+  it('keeps interactive hit areas at ≥88rpx (vote-change / hint-dismiss / clue bar / 收起 / back link)', () => {
     const heroStyles = readFileSync(
       resolve(process.cwd(), 'src/pages/icebreaker-session/phases/MiniScriptHeroView.scss'),
       'utf8',
@@ -176,6 +218,9 @@ describe('MiniScript V2 P3 · copy + waiting states (audit fixes)', () => {
     expect(heroStyles).toMatch(/&__vote-change\s*{[^}]*min-height:\s*88rpx;/s)
     expect(heroStyles).toMatch(/&__hint-dismiss\s*{[^}]*min-height:\s*88rpx;/s)
     expect(drawerStyles).toMatch(/&__bar\s*{[^}]*min-height:\s*88rpx;/s)
+    // N2: the drawer 收起 button and the 返回第N幕 link meet the 88rpx floor.
+    expect(drawerStyles).toMatch(/&__close\s*{[^}]*min-height:\s*88rpx;/s)
+    expect(heroStyles).toMatch(/&__link\s*{[^}]*min-height:\s*88rpx;/s)
   })
 
   it('hoists empty-array fallbacks to module constants (memo hygiene)', () => {

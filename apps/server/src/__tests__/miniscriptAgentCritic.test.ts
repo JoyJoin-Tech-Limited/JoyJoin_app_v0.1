@@ -124,7 +124,9 @@ describe('generateMiniScriptFrameworkWithMeta + runtime critic', () => {
     });
 
     expect(hoisted.criticMock).toHaveBeenCalledTimes(1);
-    expect(meta.llmAccepted).toBe(true);
+    // C4: the critic REJECTED the LLM story — llmAccepted must be false so
+    // the acceptance metric is not corrupted by blocked generations.
+    expect(meta.llmAccepted).toBe(false);
     expect(meta.fallbackUsed).toBe(true);
     expect(meta.catalogUsed).toBe(true);
     expect(framework.schemaVersion).toBe(2);

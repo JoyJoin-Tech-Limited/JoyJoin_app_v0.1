@@ -160,6 +160,18 @@ export async function createSession(state: SocialSessionState): Promise<void> {
 }
 
 /** Persist an updated session state.  Only the mutable fields are updated. */
+// NOTE (C2, 2026-08-31): this is read-modify-write on the whole state_json
+// blob with no version/etag check — two concurrent mutations on the same
+// session can lost-update each other's fields. Callers mitigate by merging
+// only owned fields after a fresh read (see POST /topics). MiniScript V2 added
+// three more mutation routes (present-evidence, confirm-read, advance-ceremony)
+// on this primitive; the blast radius stays acceptable at 4–6 players because
+// every mutation is guarded by an idempotency window or a self-healing gate:
+// duplicate presents collapse to the existing entry, confirm-read rewrites the
+// same timestamp, ceremony beats clamp at MINISCRIPT_CEREMONY_MAX_BEAT, and a
+// lost ballot is re-cast on the client's next tap. If sessions ever grow
+// beyond a single table or mutations become non-idempotent, add optimistic
+// concurrency (state_version column) before extending this surface further.
 export async function updateSession(
   socialSessionId: string,
   state: SocialSessionState,

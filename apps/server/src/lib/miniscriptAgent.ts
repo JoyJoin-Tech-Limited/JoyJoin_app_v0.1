@@ -130,6 +130,41 @@ function finalizeFrameworkUserSurfaces(
       ...clue,
       text: sanitizeMiniScriptUserText(clue.text),
     })),
+    // C3: every user-facing string on the act flow + motive options gets the
+    // same machine-key scrub — an LLM that echoes style/genre tokens into
+    // evidence copy, reaction text, or act beats must not ship them to
+    // players (WeChat review posture: no raw enum keys in visible copy).
+    act_flow: framework.act_flow.map((act) => ({
+      ...act,
+      title: sanitizeMiniScriptUserText(act.title),
+      beats: act.beats.map((beat) => sanitizeMiniScriptUserText(beat)),
+      ...(act.cliffhanger !== undefined
+        ? { cliffhanger: sanitizeMiniScriptUserText(act.cliffhanger) }
+        : {}),
+      ...(act.evidence !== undefined
+        ? {
+            evidence: act.evidence.map((item) => ({
+              ...item,
+              name: sanitizeMiniScriptUserText(item.name),
+              description: sanitizeMiniScriptUserText(item.description),
+              iconKey: sanitizeMiniScriptUserText(item.iconKey),
+              ...(item.evidenceReactions !== undefined
+                ? {
+                    evidenceReactions: Object.fromEntries(
+                      Object.entries(item.evidenceReactions).map(([slot, text]) => [
+                        slot,
+                        sanitizeMiniScriptUserText(text),
+                      ]),
+                    ),
+                  }
+                : {}),
+            })),
+          }
+        : {}),
+    })),
+    ...(framework.motiveOptions !== undefined
+      ? { motiveOptions: framework.motiveOptions.map((m) => sanitizeMiniScriptUserText(m)) }
+      : {}),
     ending: {
       ...framework.ending,
       resolutionSummary: sanitizeMiniScriptUserText(
@@ -751,7 +786,9 @@ export async function generateMiniScriptFrameworkWithMeta(params: {
       meta: {
         promptVersion,
         fallbackUsed: true,
-        llmAccepted: true,
+        // C4: the LLM story was REJECTED by the runtime critic — reporting
+        // llmAccepted: true would corrupt the acceptance metric.
+        llmAccepted: false,
         providerRecoveryUsed: pass1.deepSeekRecoveryUsed,
         catalogUsed: true,
       },

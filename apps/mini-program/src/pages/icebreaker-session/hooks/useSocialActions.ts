@@ -440,17 +440,15 @@ export function useSocialActions(args: UseSocialActionsArgs) {
           onError: (error) => {
             const message = error instanceof Error ? error.message : ''
             const statusCode = (error as { statusCode?: number } | null)?.statusCode
-            const toast = message.includes('PRESENTER_ONLY')
-              ? '只有出示者能确认读完'
-              : message.includes('PRESENTED_ENTRY_NOT_FOUND')
-                ? '这条出示记录不存在'
-                : message.includes('WRONG_PHASE')
-                  ? '现在不能确认读完'
-                  : message.includes('FEATURE_DISABLED')
-                    ? '本场不支持出示证物'
-                    : message.includes('SESSION_EXPIRED') || statusCode === 410
-                      ? '会话已过期，请重新进入'
-                      : '操作没成功，再试试'
+            // N6: the reaction reveal card has already closed by the time a
+            // failure lands, so a bare "retry" toast would point at nothing
+            // the user can act on. confirm-read is only an EARLY release —
+            // the server's 8s gate still publishes the reaction to everyone —
+            // so the honest toast names the consequence instead. Only a dead
+            // session breaks that auto-release promise.
+            const toast = message.includes('SESSION_EXPIRED') || statusCode === 410
+              ? '会话已过期，请重新进入'
+              : '释放失败，稍后会自动对大家可见'
             void Taro.showToast({ title: toast, icon: 'none', duration: TOAST_MEDIUM_MS })
           },
         },

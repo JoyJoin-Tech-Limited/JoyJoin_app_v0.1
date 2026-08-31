@@ -563,7 +563,10 @@ $ms-deep: $phase-accent-miniscript-deep;
 
   &__link {
     @include type-caption;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88rpx;
     color: $color-text-secondary;
     text-align: center;
     padding: $spacing-sm;
@@ -682,8 +685,8 @@ $ms-deep: $phase-accent-miniscript-deep;
   &__hint-text {
     flex: 1;
     min-width: 0;
-    font-size: 24rpx;
-    line-height: 1.5;
+    font-size: $font-size-sm;
+    line-height: 1.6;
     color: $color-text-secondary-on-light;
   }
 
@@ -703,7 +706,7 @@ $ms-deep: $phase-accent-miniscript-deep;
   }
 
   &__hint-dismiss-text {
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     font-weight: 600;
     color: $phase-accent-miniscript-deep;
   }
@@ -718,7 +721,7 @@ $ms-deep: $phase-accent-miniscript-deep;
 
   &__honor-title {
     display: block;
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     font-weight: 600;
     color: $phase-accent-miniscript-deep;
     margin-bottom: $spacing-xs;
@@ -726,7 +729,7 @@ $ms-deep: $phase-accent-miniscript-deep;
 
   &__honor-name {
     display: block;
-    font-size: 28rpx;
+    font-size: $font-size-base;
     font-weight: 600;
     line-height: 1.6;
     color: $color-text-primary;
@@ -734,14 +737,14 @@ $ms-deep: $phase-accent-miniscript-deep;
 
   &__honor-empty {
     display: block;
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     line-height: 1.6;
     color: $color-text-secondary-on-light;
   }
 
   &__honor-private {
     display: block;
-    font-size: 24rpx;
+    font-size: $font-size-sm;
     line-height: 1.6;
     color: $color-text-secondary-on-light;
     margin-top: $spacing-xs;
@@ -833,7 +836,7 @@ $ms-deep: $phase-accent-miniscript-deep;
   }
 
   &__ceremony-next-text {
-    font-size: 28rpx;
+    font-size: $font-size-base;
     font-weight: $font-weight-semibold;
     color: $color-surface;
   }
@@ -1038,12 +1041,20 @@ $ms-deep: $phase-accent-miniscript-deep;
   }
 }
 
+// Honor-card entrance: pop-in with a subtle scale-settle (0.94 → 1.02 → 1)
+// so the 名侦探 reveal lands with the same physicality as the culprit card's
+// ms-culprit-land overshoot — the ceremony's emotional peak shares one motion
+// language. transform/opacity only; flattened by the reduced-motion query.
 @keyframes ms-honor-pop {
-  from {
+  0% {
     opacity: 0;
     transform: translateY(12rpx) scale(0.94);
   }
-  to {
+  70% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+  }
+  100% {
     opacity: 1;
     transform: translateY(0) scale(1);
   }

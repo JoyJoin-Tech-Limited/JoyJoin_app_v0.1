@@ -60,7 +60,7 @@ vi.mock('../lib/socialIcebreakerStore', () => ({
 
 const { default: miniscriptRouter } = await import('../routes/domains/miniscript');
 const { extractSecrets } = await import('../routes/domains/miniscript');
-const { sanitizeStateForClient, transitionPhase } = await import('../routes/socialIcebreakerHelpers');
+const { sanitizeStateForClient, transitionPhase, MINISCRIPT_REACTION_REVEAL_DELAY_MS } = await import('../routes/socialIcebreakerHelpers');
 
 function createApp() {
   const app = express();
@@ -336,15 +336,75 @@ describe('POST /api/miniscript/present-evidence', () => {
       expect(first.status).toBe(200);
       const dupe = await ctx.post('p2', 'present-evidence', { evidenceId: 'e1', targetRoleSlot: 1 });
       expect(dupe.status).toBe(200);
-      const dupeBody = (await dupe.json()) as { duplicate?: boolean; reactionText: string };
+      const dupeBody = (await dupe.json()) as {
+        duplicate?: boolean;
+        reactionText?: string;
+        presented: { reactionText?: string };
+      };
       expect(dupeBody.duplicate).toBe(true);
-      expect(dupeBody.reactionText).toBe('啊？我、我没注意到这个……');
+      // B1: within the 8s reveal window a NON-presenter duplicate must not
+      // leak the reaction — neither top-level nor inside the entry.
+      expect(dupeBody.reactionText).toBeUndefined();
+      expect(dupeBody.presented.reactionText).toBeUndefined();
 
       const stored = testSessions.get(ctx.sessionId)!;
       expect(stored.miniScriptPresentedEvidence).toHaveLength(1);
 
       // The duplicate did not count: p2 still has both budget slots for a new combo.
       expect((await ctx.post('p2', 'present-evidence', { evidenceId: 'e1', targetRoleSlot: 2 })).status).toBe(200);
+    });
+  });
+
+  it('AC-02d/B1: the presenter duplicate always returns the reaction immediately', async () => {
+    await withServer(async (baseUrl) => {
+      const ctx = await boot(baseUrl, 'pe-dupe-presenter', makeSession('pe-dupe-presenter'));
+      await reachActSubStage(ctx);
+
+      expect((await ctx.post('p1', 'present-evidence', { evidenceId: 'e1', targetRoleSlot: 1 })).status).toBe(200);
+      const dupe = await ctx.post('p1', 'present-evidence', { evidenceId: 'e1', targetRoleSlot: 1 });
+      expect(dupe.status).toBe(200);
+      const body = (await dupe.json()) as { duplicate?: boolean; reactionText?: string };
+      expect(body.duplicate).toBe(true);
+      expect(body.reactionText).toBe('啊？我、我没注意到这个……');
+    });
+  });
+
+  it('AC-02d/B1: a non-presenter duplicate releases the reaction once the 8s window has passed', async () => {
+    await withServer(async (baseUrl) => {
+      const ctx = await boot(baseUrl, 'pe-dupe-window', makeSession('pe-dupe-window'));
+      await reachActSubStage(ctx);
+
+      expect((await ctx.post('p1', 'present-evidence', { evidenceId: 'e1', targetRoleSlot: 1 })).status).toBe(200);
+
+      // Inside the window: gated.
+      const gated = await ctx.post('p2', 'present-evidence', { evidenceId: 'e1', targetRoleSlot: 1 });
+      expect(((await gated.json()) as { reactionText?: string }).reactionText).toBeUndefined();
+
+      // Backdate the entry past the server-side reveal delay.
+      const stored = testSessions.get(ctx.sessionId)!;
+      stored.miniScriptPresentedEvidence = stored.miniScriptPresentedEvidence!.map((entry) => ({
+        ...entry,
+        presentedAt: entry.presentedAt - MINISCRIPT_REACTION_REVEAL_DELAY_MS - 1,
+      }));
+      const released = await ctx.post('p2', 'present-evidence', { evidenceId: 'e1', targetRoleSlot: 1 });
+      const releasedBody = (await released.json()) as { duplicate?: boolean; reactionText?: string };
+      expect(releasedBody.duplicate).toBe(true);
+      expect(releasedBody.reactionText).toBe('啊？我、我没注意到这个……');
+    });
+  });
+
+  it('AC-02d/B1: readConfirmedAt releases the reaction to a non-presenter duplicate immediately', async () => {
+    await withServer(async (baseUrl) => {
+      const ctx = await boot(baseUrl, 'pe-dupe-confirmed', makeSession('pe-dupe-confirmed'));
+      await reachActSubStage(ctx);
+
+      expect((await ctx.post('p1', 'present-evidence', { evidenceId: 'e1', targetRoleSlot: 1 })).status).toBe(200);
+      expect((await ctx.post('p1', 'confirm-read', { evidenceId: 'e1', targetRoleSlot: 1 })).status).toBe(200);
+
+      const dupe = await ctx.post('p2', 'present-evidence', { evidenceId: 'e1', targetRoleSlot: 1 });
+      const body = (await dupe.json()) as { duplicate?: boolean; reactionText?: string };
+      expect(body.duplicate).toBe(true);
+      expect(body.reactionText).toBe('啊？我、我没注意到这个……');
     });
   });
 
@@ -692,6 +752,35 @@ describe('POST /api/miniscript/vote round routing (AC-04/AC-06)', () => {
       expect(stored.miniScriptVotes).toHaveLength(1);
       expect(stored.miniScriptVotes![0]).toMatchObject({ userId: 'p1', voteRound: 1, suspectRoleSlot: 4 });
       expect(stored.miniScriptVoteRound ?? 1).toBe(1);
+    });
+  });
+
+  it('N5: rejects ballots after the solution is revealed (SOLUTION_REVEALED, both rounds)', async () => {
+    await withServer(async (baseUrl) => {
+      const ctx = await boot(baseUrl, 'vote-after-reveal', makeSession('vote-after-reveal'));
+      await reachVoteSubStage(ctx);
+      expect((await ctx.post('host-user', 'open-motive-vote', {})).status).toBe(200);
+      expect((await ctx.post('p1', 'vote', { vote: { suspectRoleSlot: 4 } })).status).toBe(200);
+
+      // Reveal the solution (host). Ballots are frozen from here on.
+      testSessions.get(ctx.sessionId)!.miniScriptSolutionRevealed = true;
+
+      const r1 = await ctx.post('p2', 'vote', { vote: { suspectRoleSlot: 1 } });
+      expect(r1.status).toBe(400);
+      expect(((await r1.json()) as { error: string }).error).toBe('SOLUTION_REVEALED');
+
+      const r2 = await ctx.post('p2', 'vote', { vote: { voteRound: 2, motiveChoice: 0 } });
+      expect(r2.status).toBe(400);
+      expect(((await r2.json()) as { error: string }).error).toBe('SOLUTION_REVEALED');
+
+      // The frozen vote record is untouched (only p1's round-1 ballot).
+      const stored = testSessions.get(ctx.sessionId)!;
+      expect(stored.miniScriptVotes).toHaveLength(1);
+      expect(stored.miniScriptVotes![0]).toMatchObject({ userId: 'p1', voteRound: 1 });
+      expect(logger.warn).toHaveBeenCalledWith(
+        '[miniscript] vote rejected',
+        expect.objectContaining({ code: 'SOLUTION_REVEALED' }),
+      );
     });
   });
 });
