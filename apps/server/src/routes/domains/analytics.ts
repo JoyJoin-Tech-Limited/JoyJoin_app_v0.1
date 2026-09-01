@@ -315,6 +315,7 @@ const LANDING_EVENT_TYPES = [
   "landing_hero_asset",
   "landing_dwell",
   "landing_mechanism_replay",
+  "landing_logged_out_login_tap",
 ] as const;
 
 type LandingEventType = (typeof LANDING_EVENT_TYPES)[number];

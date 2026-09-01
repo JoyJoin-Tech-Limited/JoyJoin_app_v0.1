@@ -3,7 +3,6 @@ import { MINI_PROGRAM_PAGE_PATHS } from '../onboarding/onboardingRoutes'
 export const MINI_PROGRAM_PUBLIC_AUTH_ROUTES = new Set<string>([
   MINI_PROGRAM_PAGE_PATHS.discover,
   MINI_PROGRAM_PAGE_PATHS.index,
-  MINI_PROGRAM_PAGE_PATHS.login,
   MINI_PROGRAM_PAGE_PATHS.personalityTest,
   MINI_PROGRAM_PAGE_PATHS.personalityTestResults,
 

@@ -644,7 +644,7 @@ JoyJoin is a **盲盒式城市体验平台** — 兴趣活动驱动的轻社交.
 
 ### 1. User Onboarding & Registration
 
-**Canonical (Mini-Program):** `apps/mini-program/src/pages/onboarding/personality-test/index.tsx` (primary), `apps/mini-program/src/pages/login/index.tsx`
+**Canonical (Mini-Program):** `apps/mini-program/src/pages/onboarding/personality-test/index.tsx` (primary), `apps/mini-program/src/pages/index/LandingPage.tsx` (`loggedOut` re-auth state — `pages/login/index` retired 2026-09-01)
 
 **Web Reference:** `apps/user-client/src/features/onboarding/active/pages/PersonalityTestPage.tsx`, `apps/user-client/src/pages/LoginPage.tsx`
 

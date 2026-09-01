@@ -50,7 +50,8 @@ export function useAuthGuard(options?: {
       // Cold-start invite fix (spec §G.2): reLaunch drops the current page's
       // query string, so capture the invite context into storage first (it is
       // replayed after login/onboarding via navigateToMiniProgramNextStep) and
-      // forward invitationCode to the login page for referral attribution.
+      // forward invitationCode to the landing's loggedOut state for referral
+      // attribution.
       const currentPages = Taro.getCurrentPages()
       const currentOptions = (currentPages[currentPages.length - 1] as { options?: Record<string, string> } | undefined)?.options ?? {}
       capturePendingDuoContext({
@@ -59,9 +60,9 @@ export function useAuthGuard(options?: {
         duo: currentOptions.duo === '1',
       })
       const loginQuery = currentOptions.invitationCode
-        ? `?invitationCode=${encodeURIComponent(currentOptions.invitationCode)}`
+        ? `&invitationCode=${encodeURIComponent(currentOptions.invitationCode)}`
         : ''
-      Taro.reLaunch({ url: `${MINI_PROGRAM_ROUTES.login}${loginQuery}` })
+      Taro.reLaunch({ url: `${MINI_PROGRAM_ROUTES.index}?auth=expired${loginQuery}` })
       return
     }
 

@@ -74,7 +74,7 @@ The results page (`pages/onboarding/personality-test/results/`) renders a multi-
 - **Retry UX:** The error state shows a tooltip "网络波动时可能需要多试一次" under the retry button to reduce user uncertainty.
 - **Completing-phase error recovery (2026-06-13):** If the final submission API fails while in `completing` phase, the page returns the user to the testing phase (last answer pre-filled) rather than the intro, and surfaces a Xiaoyue `actionFailure` visual with warm copy and a retry CTA. Raw API errors are mapped through `getErrorMessage` baselines before display.
 
-**Returning users only (no in-flight test import):** Mini Program [`pages/login/index`](../apps/mini-program/src/pages/login/index.tsx) uses [`useWeChatLogin`](../apps/mini-program/src/hooks/auth/useWeChatLogin.ts) → [`authenticateMiniProgramUser()`](../apps/mini-program/src/lib/api/api.ts) → `POST /api/auth/wechat/login` (not `login-with-test`). Coordination detail: [`docs/reference/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md).
+**Returning users only (no in-flight test import):** Mini Program landing `loggedOut` state ([`pages/index/LandingPage.tsx`](../apps/mini-program/src/pages/index/LandingPage.tsx), `?auth=logout|expired`; `pages/login/index` retired 2026-09-01) uses [`useWeChatLogin`](../apps/mini-program/src/hooks/auth/useWeChatLogin.ts) → [`authenticateMiniProgramUser()`](../apps/mini-program/src/lib/api/api.ts) → `POST /api/auth/wechat/login` (not `login-with-test`). Coordination detail: [`docs/reference/PLATFORM_COORDINATION.md`](./PLATFORM_COORDINATION.md).
 
 **Supported Question Types:**
 

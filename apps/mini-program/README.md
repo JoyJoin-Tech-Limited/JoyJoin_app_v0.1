@@ -27,7 +27,7 @@ This workspace contains JoyJoin's Taro + React WeChat Mini Program client.
 - `src/lib/onboarding/onboardingRoutes.ts` — **register new pages here** (main package list, subpackages under `pages/onboarding`, `pages/pool-registration`, etc., preload rules)
 - `src/lib/api/api.ts` — mini-program auth/API bootstrap surface (`authenticateMiniProgramUser`, `authenticateMiniProgramUserWithTest`, `getUserState`)
 - `src/pages/onboarding/personality-test/` — V4 personality test, results, and post-result auth gate (split into focused sub-components: `index.tsx` orchestrator, `PersonalityTestIntro`, `PersonalityTestQuestion`, `PersonalityTestPreloadLayer`, `PersonalityTestCompletingError`, and shared `types.ts`)
-- `src/pages/login/index.tsx` + `src/hooks/auth/useWeChatLogin.ts` — returning-user WeChat login
+- `src/pages/index/LandingPage.tsx` + `src/hooks/auth/useWeChatLogin.ts` — landing front door with 4 CTA states: `new` / `continue` / `discover` / `loggedOut` (`?auth=logout|expired`, the retired `pages/login/index` replacement — welcome-back copy, single WeChat login CTA)
 - `src/pages/blind-box-payment/`, `src/pages/payment-verification/` — JSAPI payment + post-pay polling
 - `src/pages/event-ticket-payment/` — paid event-ticket registration with ceremony success/verifying states; event-type tail illustration v2 full-bleed footer vignette with 4 s load-timeout fallback to barcode; zero-discount coupon skip when test price is ¥0.01
 - `src/pages/gathering-room/` — pre-event online anteroom for matched groups; renders V2 `PixelAvatarComposite` avatars with equipped outfits over the delivered `room-composite-v1.webp` scene, ephemeral WS presence, and attendance confirmation. Gated by `gatheringRoomEnabled`.

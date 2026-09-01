@@ -1414,3 +1414,38 @@
     transition: opacity 0.05s ease-in !important;
   }
 }
+
+/* ── Logged-out re-entry (?auth=logout|expired): the world stays (dusk
+   gradient, hero, halo), the script becomes welcome-back. The mechanism
+   never bursts — seats fade in at their places (the table is already set),
+   dice/cards stay consumed, the CTA sheen (an acquisition nudge) is off. */
+.landing-page--logged-out {
+  .hero-stage__sprite--dice,
+  .hero-stage__sprite--cards {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+
+  .mechanism-strip__seat {
+    animation: mechanism-seat-fade 300ms ease-out 500ms both !important;
+    transition: none !important;
+  }
+
+  .mechanism-strip__seat:nth-child(2) { animation-delay: 560ms !important; }
+  .mechanism-strip__seat:nth-child(3) { animation-delay: 620ms !important; }
+  .mechanism-strip__seat:nth-child(4) { animation-delay: 680ms !important; }
+  .mechanism-strip__seat:nth-child(5) { animation-delay: 740ms !important; }
+  .mechanism-strip__seat:nth-child(6) { animation-delay: 800ms !important; }
+
+  .mechanism-strip__connector {
+    animation: connector-draw 220ms ease-out 900ms both !important;
+  }
+
+  .mechanism-strip__pin {
+    animation: pin-pop 300ms ease-out 1000ms both !important;
+  }
+
+  .landing-page__cta--primary::after {
+    display: none !important;
+  }
+}

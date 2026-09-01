@@ -8,9 +8,8 @@ import {
 
 describe('mini-program auth session route rules', () => {
   // Guards against regression: discover and pre-auth onboarding routes must stay public on 401.
-  it('keeps discover, login, legal, and guest onboarding routes public', () => {
+  it('keeps discover, landing, legal, and guest onboarding routes public', () => {
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.discover)).toBe(true)
-    expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.login)).toBe(true)
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.index)).toBe(true)
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.personalityTest)).toBe(true)
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.personalityTestResults)).toBe(true)
@@ -18,7 +17,7 @@ describe('mini-program auth session route rules', () => {
     expect(isPublicMiniProgramAuthRoute(MINI_PROGRAM_PAGE_PATHS.terms)).toBe(true)
 
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.discover)).toBe(false)
-    expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.login)).toBe(false)
+    expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.index)).toBe(false)
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.personalityTest)).toBe(false)
     expect(shouldRedirectToLoginOnUnauthorized(MINI_PROGRAM_PAGE_PATHS.personalityTestResults)).toBe(false)
 

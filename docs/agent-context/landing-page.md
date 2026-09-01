@@ -2,6 +2,8 @@
 
 > Extracted from AGENTS.md §6 (2026-07-31). Load when working on `pages/index/index`, landing hero assets, or cold-start auth routing.
 
+**LoggedOut re-auth state (2026-09-01):** the standalone `pages/login/index` was retired; the landing page is now the single front door with 4 CTA states (`new` / `continue` / `discover` / `loggedOut`). `?auth=logout|expired` (set by settings logout, `authSession.ts` 401 hard-clear, `useAuthGuard`, and the onboarding hub) switches the landing to welcome-back copy (「这座城市还亮着，你的位置还留着」), a single 微信一键登录 primary CTA (`wechat` Button variant, no secondary), and a statically-settled mechanism strip (no 盒子吐卡 burst — the mechanism explains the product to new users only; `mechanismAnimated` is false and `landing-page--logged-out` SCSS fades seats in place). The index redirect effect skips the guest-restore bounce when the param is present so a stale anonymous session never hijacks the state. Analytics: `landing_logged_out_login_tap` (server allow-listed). The guest-state secondary `已有账号？立即登录` stays — cold starts without the param still need a login door.
+
 **Landing page cold-start behavior (2026-06-08):**
 - `AutoLoginBridge` (in `app.ts`) attempts silent WeChat auto-login for returning users on every cold start. Previously orphaned — now wired into the app component tree. Retryable errors (transport, 500) reset the attempt guard so the next mount/foreground can retry.
 - The landing page (`pages/index/index`) runs a **unified redirect effect** after auth resolves: authenticated users → `nextStep`; guests with an incomplete anonymous assessment session → `reLaunch` back to `/pages/onboarding/personality-test/index`. This prevents users from being stranded on the landing page after backgrounding WeChat.

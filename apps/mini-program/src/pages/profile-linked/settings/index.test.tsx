@@ -223,6 +223,6 @@ describe('ProfileSettingsPage', () => {
 
     logout.resolve({ message: 'ok' })
     await waitFor(() => expect(mocks.clearAuthSession).toHaveBeenCalledWith({ mode: 'hard' }))
-    expect(mocks.reLaunch).toHaveBeenCalledWith({ url: MINI_PROGRAM_ROUTES.login })
+    expect(mocks.reLaunch).toHaveBeenCalledWith({ url: `${MINI_PROGRAM_ROUTES.index}?auth=logout` })
   })
 })

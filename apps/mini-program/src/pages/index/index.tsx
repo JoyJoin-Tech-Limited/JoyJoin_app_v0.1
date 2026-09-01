@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import Taro from '@tarojs/taro'
+import Taro, { useRouter } from '@tarojs/taro'
 import BoxLogoEntryScreen from '../../components/loading/BoxLogoEntryScreen'
 import { useAuth } from '../../hooks/useAuth'
 import { useAuthGate } from '../../hooks/useAuthGate'
@@ -51,6 +51,11 @@ const LAUNCH_NETWORK_CHECK_TIMEOUT_MS = 2_000
 
 export default function Index() {
   const auth = useAuth()
+  const router = useRouter()
+  // ?auth=logout|expired: a just-logged-out user must stay on the landing's
+  // loggedOut state — never be bounced into the personality test by the
+  // guest-restore path below (a stale anonymous session snapshot may exist).
+  const isLoggedOutEntry = router.params.auth === 'logout' || router.params.auth === 'expired'
   const hasRedirectedRef = useRef(false)
   const [entryDone, setEntryDone] = useState(false)
   const [launchOffline, setLaunchOffline] = useState<boolean | null>(null)
@@ -99,8 +104,8 @@ export default function Index() {
 
     // Guest restore: only if unauthenticated and has an incomplete session.
     // Skip when offline — redirecting would dump the user into a personality
-    // test that can't load any questions.
-    if (launchOffline === true) {
+    // test that can't load any questions. Also skipped for loggedOut entries.
+    if (launchOffline === true || isLoggedOutEntry) {
       return
     }
 
@@ -125,7 +130,7 @@ export default function Index() {
         error: err instanceof Error ? err.message : String(err),
       })
     })
-  }, [auth.isAuthenticated, auth.isLoading, auth.user, launchOffline])
+  }, [auth.isAuthenticated, auth.isLoading, auth.user, launchOffline, isLoggedOutEntry])
 
   /** Perform authenticated redirect with all guards applied. Extracted so
       the network check above can share it between success and fail-open paths. */

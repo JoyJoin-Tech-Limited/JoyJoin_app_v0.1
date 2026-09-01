@@ -12,7 +12,7 @@
 |---------|-------------------|
 | Personality test (V4 UI) | `apps/mini-program/src/pages/onboarding/personality-test/` — `index` (test), `results`; onboarding subpackage registration in `lib/onboarding/onboardingRoutes.ts` |
 | Anonymous assessment keys | `apps/mini-program/src/lib/auth/anonymousOnboarding.ts` (uses `joyjoin_v4_presignup_answers` local-storage semantics) |
-| WeChat login — **returning** users | `apps/mini-program/src/pages/login/index.tsx`, `apps/mini-program/src/hooks/auth/useWeChatLogin.ts` → `authenticateMiniProgramUser()` → `POST /api/auth/wechat/login` (`Taro.login` → code2Session) |
+| WeChat login — **returning** users | `apps/mini-program/src/pages/index/LandingPage.tsx` (`loggedOut` state, `?auth=logout\|expired`; `pages/login/index` retired 2026-09-01), `apps/mini-program/src/hooks/auth/useWeChatLogin.ts` → `authenticateMiniProgramUser()` → `POST /api/auth/wechat/login` (`Taro.login` → code2Session) |
 | WeChat login — **with test import** | `authenticateMiniProgramUserWithTest()` in `apps/mini-program/src/lib/api/api.ts` → `POST /api/auth/wechat/login-with-test` (inline from personality-test results page) |
 | Welcome coupon award | `apps/mini-program/src/pages/onboarding/profile-review/index.tsx` → `claimWelcomeCoupon()` in `packages/shared/src/api/user.ts` → `GET /api/user/welcome-coupon` (awards or re-fetches the lifetime welcome coupon on first profile-review view) |
 | Blind-box payment (JSAPI) | `apps/mini-program/src/pages/blind-box-payment/index.tsx` → `createMiniProgramPaymentIntent()` in `packages/shared/src/api.ts` → `POST /api/payments/miniprogram/create` → `Taro.requestPayment` (skipped for mock orders when `MOCK_PAYMENTS=true`) |

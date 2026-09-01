@@ -47,7 +47,10 @@ const HERO_SPRITES = [
 
 type HeroSpriteKey = (typeof HERO_SPRITES)[number]['key']
 type HeroState = 'loading' | 'ready' | 'fallback'
-type LandingCtaType = 'new' | 'continue' | 'discover'
+type LandingCtaType = 'new' | 'continue' | 'discover' | 'loggedOut'
+/** ?auth=logout|expired marks the landing as the post-logout re-auth door
+ *  (the standalone pages/login/index was retired 2026-09-01). */
+type LoggedOutMode = 'logout' | 'expired'
 
 /**
  * E3 盒子吐卡 (mechanism-first landing, 2026-07-31): six canonical archetype
@@ -116,6 +119,13 @@ export default function MiniProgramLandingPage({
 }: MiniProgramLandingPageProps) {
   const router = useRouter()
   const invitationCode = router.params.invitationCode ?? ''
+  // Post-logout re-auth entry (?auth=logout|expired): welcome-back copy,
+  // single login CTA, mechanism rendered settled (no burst — the mechanism
+  // explains the product to NEW users; returning users already know it).
+  const loggedOutMode: LoggedOutMode | null =
+    router.params.auth === 'logout' || router.params.auth === 'expired'
+      ? router.params.auth
+      : null
   // Dev/screenshot review: ?freeze=burst pins the heads at the box mouth
   // (mid-burst state) so H5 capture can review the choreography frozen.
   const freezeBurst = router.params.freeze === 'burst'
@@ -192,7 +202,7 @@ export default function MiniProgramLandingPage({
   // never measure (their CSS renders the settled composition statically).
   // boundingClientRect returns post-transform coordinates, so the --short
   // 0.85 stage scale is handled for free.
-  const mechanismAnimated = !reduceMotion && !isDegradation
+  const mechanismAnimated = !reduceMotion && !isDegradation && !loggedOutMode
 
   const measureMechanismBurst = async (mode: 'settle' | 'freeze') => {
     const seq = ++burstSeqRef.current
@@ -280,8 +290,15 @@ export default function MiniProgramLandingPage({
   // Guests only enter continue mode when they have an incomplete anonymous
   // session or an unfinished onboarding nextStep before discover.
   const isContinueMode = hasIncompleteSession || !!userNextStep
-  const ctaType: LandingCtaType = !isContinueMode ? 'new' : userNextStep === 'discover' ? 'discover' : 'continue'
+  const ctaType: LandingCtaType = loggedOutMode
+    ? 'loggedOut'
+    : !isContinueMode
+      ? 'new'
+      : userNextStep === 'discover'
+        ? 'discover'
+        : 'continue'
   const ctaLabel = useMemo(() => {
+    if (ctaType === 'loggedOut') return '微信一键登录'
     if (ctaType === 'new') return '拆开我的盲盒'
     if (ctaType === 'discover') return '进入发现页'
     return '继续开盒'
@@ -294,6 +311,7 @@ export default function MiniProgramLandingPage({
     isShortScreen ? "landing-page--short" : "",
     isDegradation ? "landing-page--low-end" : "",
     reduceMotion ? "landing-page--rm" : "",
+    loggedOutMode ? "landing-page--logged-out" : "",
     isMounted ? "landing-page--entered" : "",
   ]
     .filter(Boolean)
@@ -613,19 +631,36 @@ export default function MiniProgramLandingPage({
             />
           )}
         </View>
-        <Text className='mechanism-caption' aria-hidden='true'>
-          ① 答小题 · ② 攒一桌 · ③ 见真人
-        </Text>
+        {!loggedOutMode && (
+          <Text className='mechanism-caption' aria-hidden='true'>
+            ① 答小题 · ② 攒一桌 · ③ 见真人
+          </Text>
+        )}
 
         {/* Copy: mystery headline + one-line mechanism. The subtitle's three
-            beats carry the E2 gold-underline cascade (drawn in sequence). */}
+            beats carry the E2 gold-underline cascade (drawn in sequence).
+            loggedOut: welcome-back script — the city remembers you; no
+            re-selling, no mechanism explainer. */}
         <View className='hero-text'>
-          <Text className='headline'>这座城市，为你<Text className='headline--accent'>藏了一局</Text></Text>
-          <Text className='subtitle'>
-            <Text className='subtitle__beat subtitle__beat--1'>答几道小题，</Text>
-            <Text className='subtitle__beat subtitle__beat--2'>悦仔替你攒一桌聊得来的人，</Text>
-            <Text className='subtitle__beat subtitle__beat--3'>线下见</Text>
-          </Text>
+          {loggedOutMode ? (
+            <>
+              <Text className='headline'>这座城市还亮着，<Text className='headline--accent'>你的位置还留着</Text></Text>
+              <Text className='subtitle'>
+                {loggedOutMode === 'expired'
+                  ? '登录状态已过期，一键登录即可继续'
+                  : '微信一键登录，回到你的小局'}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text className='headline'>这座城市，为你<Text className='headline--accent'>藏了一局</Text></Text>
+              <Text className='subtitle'>
+                <Text className='subtitle__beat subtitle__beat--1'>答几道小题，</Text>
+                <Text className='subtitle__beat subtitle__beat--2'>悦仔替你攒一桌聊得来的人，</Text>
+                <Text className='subtitle__beat subtitle__beat--3'>线下见</Text>
+              </Text>
+            </>
+          )}
         </View>
 
         {/* Dynamic spacer: disappears on short phones so the fixed CTA stays reachable */}
@@ -647,10 +682,10 @@ export default function MiniProgramLandingPage({
         )}
 
         <Button
-          variant='brand'
+          variant={ctaType === 'loggedOut' ? 'wechat' : 'brand'}
           className={"landing-page__cta landing-page__cta--primary" + ctaDisabledClass}
           hoverClass={ctaHoverClass}
-          loading={isPageExiting}
+          loading={ctaType === 'loggedOut' ? isLoggingIn : isPageExiting}
           disabled={isAuthLoading || isOffline}
           onClick={() => {
             landingAnalytics.trackCtaTap({
@@ -661,12 +696,20 @@ export default function MiniProgramLandingPage({
               dwellMs: Date.now() - mountedAtRef.current,
               heroReady: heroState !== 'loading',
             })
-            fireDwell('cta_tap')
+            fireDwell(ctaType === 'loggedOut' ? 'login_tap' : 'cta_tap')
             if (!hasAcceptedLegal) {
               triggerLegalShake()
               return
             }
             hapticLight()
+            if (ctaType === 'loggedOut') {
+              landingAnalytics.trackLoggedOutLoginTap({
+                authEntry: loggedOutMode ?? 'logout',
+                dwellMs: Date.now() - mountedAtRef.current,
+              })
+              void handleWeChatLogin()
+              return
+            }
             if (isContinueMode && userNextStep) {
               // Returning from onboarding: resume where they left off.
               // Authenticated users use their server nextStep (including discover).
@@ -687,29 +730,32 @@ export default function MiniProgramLandingPage({
           {ctaLabel}
         </Button>
 
-        {/* Inline login for returning users */}
-        <View className='landing-page__login-row'>
-          <Button
-            variant='brand'
-            className='landing-page__login-btn'
-            disabled={isAuthLoading || isLoggingIn || isPageExiting || isOffline}
-            loading={isLoggingIn}
-            onClick={() => {
-              hapticLight()
-              onboardingAnalytics.interaction('login', 'landing_login_clicked')
-              fireDwell('login_tap')
-              void handleWeChatLogin()
-            }}
-          >
-            已有账号？立即登录
-          </Button>
-        </View>
+        {/* Inline login for returning users — hidden in loggedOut mode,
+            where the primary CTA IS the login (one door). */}
+        {!loggedOutMode && (
+          <View className='landing-page__login-row'>
+            <Button
+              variant='brand'
+              className='landing-page__login-btn'
+              disabled={isAuthLoading || isLoggingIn || isPageExiting || isOffline}
+              loading={isLoggingIn}
+              onClick={() => {
+                hapticLight()
+                onboardingAnalytics.interaction('login', 'landing_login_clicked')
+                fireDwell('login_tap')
+                void handleWeChatLogin()
+              }}
+            >
+              已有账号？立即登录
+            </Button>
+          </View>
+        )}
 
         <View className={`landing-page__legal-row ${shakeLegal ? 'shake' : ''}`}>
           {showLegalHint && (
             <View key={legalHintSeq} className='landing-page__legal-hint' aria-hidden='true'>
               <Text className='landing-page__legal-hint-text'>
-                {ctaType === 'new' ? '先勾选协议，再拆盲盒' : '先勾选协议，再继续'}
+                {ctaType === 'new' ? '先勾选协议，再拆盲盒' : ctaType === 'loggedOut' ? '先勾选协议，再登录' : '先勾选协议，再继续'}
               </Text>
             </View>
           )}

@@ -68,7 +68,7 @@ This guide maps areas of the JoyJoin codebase to the documentation files and age
 
 **Source paths:**
 - `apps/mini-program/src/pages/onboarding/personality-test/`
-- `apps/mini-program/src/pages/login/`
+- `apps/mini-program/src/pages/index/LandingPage.tsx` (`loggedOut` re-auth state — `pages/login/` retired 2026-09-01)
 - `apps/mini-program/src/hooks/auth/useWeChatLogin.ts`
 - `apps/mini-program/src/lib/auth/anonymousOnboarding.ts`
 - `apps/mini-program/src/pages/blind-box-payment/`

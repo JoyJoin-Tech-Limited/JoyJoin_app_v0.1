@@ -170,13 +170,9 @@ describe('mini-program onboarding routes', () => {
     ])
   })
 
-  it('preloads the onboarding subpackage from the landing and login entry pages', () => {
+  it('preloads the onboarding subpackage from the landing entry page', () => {
     expect(MINI_PROGRAM_PRELOAD_RULES).toEqual({
       'pages/index/index': {
-        network: 'all',
-        packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
-      },
-      'pages/login/index': {
         network: 'all',
         packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
       },

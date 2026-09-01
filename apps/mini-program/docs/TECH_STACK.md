@@ -312,7 +312,6 @@ Bar styling: `color: #9CA3AF`, `selectedColor: #8B5CF6`, `backgroundColor: #ffff
 | Entry Page | Preloaded Package | Network |
 |------------|-------------------|---------|
 | `pages/index/index` | `pages/onboarding` | `all` |
-| `pages/login/index` | `pages/onboarding` | `all` |
 
 ---
 

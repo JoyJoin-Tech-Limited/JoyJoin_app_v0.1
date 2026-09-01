@@ -138,14 +138,14 @@ bar itself; do not use `wx.navigateTo` for tab pages.
 From the AppService console, navigate to a known non-tab page:
 
 ```javascript
-wx.reLaunch({ url: '/pages/login/index' })
+wx.reLaunch({ url: '/pages/index/index?auth=logout' })
 // or
 wx.reLaunch({ url: '/pages/index/index' })
 ```
 
 | Page | Expected behavior |
 | --- | --- |
-| `pages/login/index` | `.joy-custom-tab-bar` element not found, or `hidden=""` + `display: none` |
+| `pages/index/index?auth=logout` (loggedOut re-auth) | `.joy-custom-tab-bar` element not found, or `hidden=""` + `display: none` |
 | `pages/index/index` (landing) | `.joy-custom-tab-bar` element not found, or `hidden=""` + `display: none` |
 
 If the tab bar is still visible on a non-tab page, the allow-list lookup or the
@@ -201,7 +201,7 @@ The smoke passes only when **all** of the following are true:
 4. DevTools computed `display` is `block` and `hidden` is absent on all five tab
    pages.
 5. DevTools shows the tab bar hidden or not attached on at least one non-tab
-   page (e.g., `pages/login/index`).
+   page (e.g., `pages/index/index?auth=logout`).
 6. Tab taps and center-button taps animate and switch correctly.
 7. Collapse / expand and screen-reader announcements update `data.announcement`.
 8. No console errors from the tab bar component (`check_health` or DevTools
@@ -230,8 +230,8 @@ Common environmental false positives:
 - **DevTools cache:** after rebuilding, close and reopen the project before
   inspecting the tab bar.
 - **Auth guard redirect:** if the simulator is unauthenticated, tapping a tab
-  may land on `pages/login/index`. That is expected auth behavior, not a tab-bar
-  bug.
+  may land on `pages/index/index?auth=expired` (the landing loggedOut state).
+  That is expected auth behavior, not a tab-bar bug.
 - **Stale `dist/`:** always run `npm run build:weapp -w mini-program` before the
   smoke.
 

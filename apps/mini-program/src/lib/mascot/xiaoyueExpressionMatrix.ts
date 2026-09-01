@@ -33,10 +33,10 @@ export const XIAOYUE_EXPRESSION_MATRIX: XiaoyueExpressionMatrixRow[] = [
   },
   {
     flow: '账号',
-    surface: 'pages/login/index',
-    primaryTier: 'loading',
-    secondaryTag: 'neutral.calm',
-    expressionId: 'neutralInformation',
+    surface: 'pages/index/index?auth=logout|expired 落地页（登出态）',
+    primaryTier: 'homeWelcome',
+    secondaryTag: 'welcome.return',
+    expressionId: 'homeWelcome',
   },
   {
     flow: 'Onboarding',

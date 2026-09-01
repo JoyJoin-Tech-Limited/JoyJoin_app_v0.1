@@ -119,11 +119,13 @@ function queueLoginRedirect(): void {
   queueMicrotask(() => {
     loginRedirectQueued = false
 
-    if (getCurrentMiniProgramRoute() === MINI_PROGRAM_PAGE_PATHS.login) {
+    // The landing page (index) is a public route and hosts the loggedOut
+    // re-auth state — no reLaunch needed when already there.
+    if (getCurrentMiniProgramRoute() === MINI_PROGRAM_PAGE_PATHS.index) {
       return
     }
 
-    Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
+    Taro.reLaunch({ url: `${MINI_PROGRAM_ROUTES.index}?auth=expired` })
   })
 }
 

@@ -199,7 +199,7 @@ Use this procedure after any tab-bar or routing change:
 
    ```typescript
    // AppService console
-   wx.reLaunch({ url: "/pages/login/index" })
+   wx.reLaunch({ url: "/pages/index/index?auth=logout" })
    ```
 
    | Check | Pass criteria on a non-tab page |
@@ -216,7 +216,7 @@ Use this procedure after any tab-bar or routing change:
    | 连接 | `pages/connections/index` | `block` | absent ✅ |
    | 我的 | `pages/profile/index` | `block` | absent ✅ |
    | 中心入口 | `pages/center-hub/index` | `block` | absent ✅ |
-   | Login | `pages/login/index` | n/a | hidden / not attached ✅ |
+   | Login (loggedOut) | `pages/index/index?auth=logout` | n/a | hidden / not attached ✅ |
 
 For the complete runbook, see [`docs/runbooks/mini-program-tab-bar-smoke.md`](../../../docs/runbooks/mini-program-tab-bar-smoke.md).
 

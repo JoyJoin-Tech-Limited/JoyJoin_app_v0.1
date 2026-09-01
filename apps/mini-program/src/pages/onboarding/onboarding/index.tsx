@@ -19,7 +19,7 @@ export default function OnboardingEntryPage() {
     if (isLoading) return
 
     if (!isAuthenticated) {
-      Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
+      Taro.reLaunch({ url: `${MINI_PROGRAM_ROUTES.index}?auth=expired` })
       return
     }
 

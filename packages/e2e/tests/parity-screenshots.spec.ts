@@ -74,7 +74,7 @@ test.describe('Screenshot parity checklist (manual mini-program comparison)', ()
       '',
       '1. **Landing / Login**',
       `   - Web baseline: ${SCREENSHOT_PATHS.landing}`,
-      '   - Mini-program page: pages/login/index',
+      '   - Mini-program page: pages/index/index?auth=logout (landing loggedOut state)',
       '   - Check: brand logo, CTA button placement, copy text',
       '',
       '2. **Onboarding Setup**',

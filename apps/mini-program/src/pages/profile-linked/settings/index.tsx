@@ -178,11 +178,11 @@ export default function ProfileSettingsPage() {
         })
 
         clearMiniProgramAuthSession({ mode: 'hard' })
-        await Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
+        await Taro.reLaunch({ url: `${MINI_PROGRAM_ROUTES.index}?auth=logout` })
       } catch (error) {
         if (isUnauthorizedApiError(error)) {
           clearMiniProgramAuthSession({ mode: 'hard' })
-          await Taro.reLaunch({ url: MINI_PROGRAM_ROUTES.login })
+          await Taro.reLaunch({ url: `${MINI_PROGRAM_ROUTES.index}?auth=logout` })
           return
         }
 

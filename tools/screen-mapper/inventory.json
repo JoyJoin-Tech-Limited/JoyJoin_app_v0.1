@@ -35,13 +35,13 @@
         },
         {
           "id": "mp-login",
-          "name": "Login",
-          "route": "/pages/login/index",
-          "file": "pages/login/index.tsx",
-          "description": "WeChat Mini Program login entry point",
+          "name": "Login (landing loggedOut state)",
+          "route": "/pages/index/index?auth=logout",
+          "file": "pages/index/LandingPage.tsx",
+          "description": "WeChat Mini Program re-auth entry — landing page loggedOut CTA state (retired pages/login/index 2026-09-01)",
           "feature_domain": "auth",
-          "subfeatures": ["WeChat一键登录", "Xiaoyue mascot with orbs", "Legal consent", "Dev 666666 code"],
-          "api_endpoints": ["POST /api/auth/wechat/*", "POST /api/auth/phone/*"],
+          "subfeatures": ["WeChat一键登录", "Welcome-back copy", "Settled mechanism strip", "Legal consent"],
+          "api_endpoints": ["POST /api/auth/wechat/*"],
           "test_status": "unknown"
         },
         {

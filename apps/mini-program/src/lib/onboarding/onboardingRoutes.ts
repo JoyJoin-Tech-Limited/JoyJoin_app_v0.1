@@ -20,7 +20,6 @@ export const MINI_PROGRAM_PAGE_PATHS = {
   events: 'pages/events/index',
   connections: 'pages/connections/index',
   profile: 'pages/profile/index',
-  login: 'pages/login/index',
   index: 'pages/index/index',
   terms: 'pages/profile-linked/terms/index',
   eventDetail: 'pages/event-detail/index',
@@ -75,7 +74,6 @@ export const MINI_PROGRAM_ROUTES = {
   events: `/${MINI_PROGRAM_PAGE_PATHS.events}`,
   connections: `/${MINI_PROGRAM_PAGE_PATHS.connections}`,
   profile: `/${MINI_PROGRAM_PAGE_PATHS.profile}`,
-  login: `/${MINI_PROGRAM_PAGE_PATHS.login}`,
   eventDetail: `/${MINI_PROGRAM_PAGE_PATHS.eventDetail}`,
   eventCoordination: `/${MINI_PROGRAM_PAGE_PATHS.eventCoordination}`,
   matchingStatus: `/${MINI_PROGRAM_PAGE_PATHS.matchingStatus}`,
@@ -156,7 +154,6 @@ export const MINI_PROGRAM_MAIN_PACKAGE_PAGES = [
   MINI_PROGRAM_PAGE_PATHS.events,
   MINI_PROGRAM_PAGE_PATHS.connections,
   MINI_PROGRAM_PAGE_PATHS.profile,
-  MINI_PROGRAM_PAGE_PATHS.login,
   MINI_PROGRAM_PAGE_PATHS.eventDetail,
 ] as const
 export const MINI_PROGRAM_PROFILE_LINKED_PACKAGE_PAGE_PATHS = [
@@ -339,10 +336,6 @@ export const MINI_PROGRAM_SUBPACKAGES = [
 
 export const MINI_PROGRAM_PRELOAD_RULES = {
   [MINI_PROGRAM_PAGE_PATHS.index]: {
-    network: 'all',
-    packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
-  },
-  [MINI_PROGRAM_PAGE_PATHS.login]: {
     network: 'all',
     packages: [MINI_PROGRAM_ONBOARDING_SUBPACKAGE_ROOT],
   },
