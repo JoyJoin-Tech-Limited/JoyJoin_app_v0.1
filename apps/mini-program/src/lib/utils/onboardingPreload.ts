@@ -11,6 +11,7 @@ import { logInfo } from './logger'
 import { preloadImagesWithDiagnostics } from './imagePreload'
 import { cacheAssets, clearAssetCacheOnVersionChange } from './persistentAssetCache'
 import { ONBOARDING_CRITICAL_CDN_ASSETS } from './routePreloadAssets'
+import { getDeviceInfoCompat } from '../../lib/utils/systemInfo'
 
 /**
  * Staggered onboarding asset preloader.
@@ -137,8 +138,7 @@ async function shouldSkipPreload(): Promise<{ skip: boolean; reason?: string }> 
 
 function shouldSkipHeavyTier(): { skip: boolean; reason?: string } {
   try {
-    const info = Taro.getSystemInfoSync()
-    const benchmark = (info as any).benchmarkLevel
+    const benchmark = getDeviceInfoCompat().benchmarkLevel
     if (typeof benchmark === 'number' && benchmark > 0 && benchmark <= 15) {
       return { skip: true, reason: `low-end:benchmark-${benchmark}` }
     }

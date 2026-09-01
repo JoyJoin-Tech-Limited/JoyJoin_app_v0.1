@@ -3,6 +3,7 @@ import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { haptics } from '../lib/utils/haptics'
 import './ContentBlockedError.scss'
+import { getSystemReducedMotionCompat } from '../lib/utils/systemInfo'
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -64,8 +65,7 @@ export default function ContentBlockedError({
   const reduceMotionRef = useRef(false)
   useEffect(() => {
     try {
-      const sysInfo = Taro.getSystemInfoSync() as unknown as Record<string, unknown>
-      reduceMotionRef.current = sysInfo.reduceMotion === true
+      reduceMotionRef.current = getSystemReducedMotionCompat()
     } catch {
       // Best-effort — default to animation enabled
     }

@@ -5,6 +5,7 @@ import { getXiaoyueExpressionAsset, XIAOYUE_EXPRESSION_TO_SPRITE_STATE, type Xia
 import { MASCOT_SIZE } from '../../lib/mascot/mascotSizes'
 import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from './XiaoyueSpriteAnimator'
 import './XiaoyueChatBubble.scss'
+import { getSystemReducedMotionCompat } from '../../lib/utils/systemInfo'
 
 export type XiaoyuePose = 'thinking' | 'casual' | 'pointing'
 
@@ -80,7 +81,7 @@ export default function XiaoyueChatBubble({
 
   const prefersReducedMotion = useMemo(() => {
     try {
-      return (Taro.getSystemInfoSync() as any).reduceMotion ?? false
+      return getSystemReducedMotionCompat()
     } catch {
       return false
     }

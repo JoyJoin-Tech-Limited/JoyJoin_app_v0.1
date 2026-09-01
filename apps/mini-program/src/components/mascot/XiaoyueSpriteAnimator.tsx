@@ -7,6 +7,7 @@ import { logWarn } from '../../lib/utils/logger'
 import { useDeviceTier } from '../../hooks/useDeviceTier'
 import { usePageVisibility } from '../../hooks/usePageVisibility'
 import './XiaoyueSpriteAnimator.scss'
+import { getSystemReducedMotionCompat } from '../../lib/utils/systemInfo'
 
 const BASE_PATH = cdnAsset('/assets/mascot')
 
@@ -209,8 +210,7 @@ export default function XiaoyueSpriteAnimator({
   // Detect reduced-motion synchronously to avoid initial motion flash.
   const [reducedMotion] = useState(() => {
     try {
-      const info = Taro.getSystemInfoSync()
-      return (info as any).reduceMotion === true
+      return getSystemReducedMotionCompat()
     } catch {
       return false
     }

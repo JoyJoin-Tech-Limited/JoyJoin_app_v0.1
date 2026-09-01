@@ -8,6 +8,7 @@ import {
   strokeRoundedRect,
   clipRoundedRect,
 } from './canvasHelpers'
+import { getWindowInfoCompat } from '../../lib/utils/systemInfo'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -159,7 +160,7 @@ function exportCanvas(
   // Cap DPR at 2 universally for memory safety — matching portrait poster.
   // 750×750 at DPR 3 ≈ 20MB backing store; DPR 2 ≈ 9MB.
   // Social media compresses anyway, so DPR 3 is negligible visual improvement.
-  const sys = Taro.getSystemInfoSync()
+  const sys = getWindowInfoCompat()
   const dpr = sys.pixelRatio || 2
   const mult = Math.min(Math.max(dpr, 1), 2)
 

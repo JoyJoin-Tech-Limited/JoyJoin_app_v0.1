@@ -1,6 +1,7 @@
 import Taro, { useDidShow, useDidHide } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDeviceTier } from './useDeviceTier'
+import { getSystemReducedMotionCompat } from '../lib/utils/systemInfo'
 
 export interface UseEventCountdownOptions {
   /** Target ISO datetime string. When undefined/null/invalid, the hook returns hidden state. */
@@ -133,7 +134,7 @@ function formatLedCountdown(diffMs: number): string {
 
 function prefersReducedMotion(): boolean {
   try {
-    return Boolean((Taro.getSystemInfoSync() as unknown as { reduceMotion?: boolean }).reduceMotion)
+    return getSystemReducedMotionCompat()
   } catch {
     return false
   }
@@ -219,7 +220,9 @@ export function useEventCountdown(options: UseEventCountdownOptions): UseEventCo
     }
 
     try {
-      const observer = Taro.createIntersectionObserver(page as any, { thresholds: [0] })
+      // nativeMode: WeChat recommends it ("using slowest path" warning) —
+      // faster native implementation, same semantics (base library 2.11+).
+      const observer = Taro.createIntersectionObserver(page as any, { thresholds: [0], nativeMode: true } as Taro.createIntersectionObserver.Option)
       observer.relativeToViewport({ top: 0, bottom: 0 })
       observer.observe(`#${options.elementId}`, (res) => {
         const ratio = res?.intersectionRatio ?? 0

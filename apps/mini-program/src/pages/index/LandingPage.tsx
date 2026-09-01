@@ -17,8 +17,9 @@ import { readAnonymousAssessmentSession, isAnonymousAssessmentSessionCompleted }
 import { onboardingAnalytics } from "../../lib/onboarding/onboardingAnalytics"
 import { landingAnalytics } from "../../lib/analytics/landingAnalytics"
 import { getSystemReducedMotion } from "../../lib/utils/accessibility"
+import { getWindowInfoCompat } from "../../lib/utils/systemInfo"
 import { getErrorForSurface } from "@shared/copy/errorBaselines"
-import { logWarn } from "../../lib/utils/logger"
+import { logInfo, logWarn } from "../../lib/utils/logger"
 import { computeBurstOffsets, type BurstOffset, type BurstRect } from "./mechanismBurst"
 import "./index.scss"
 
@@ -32,8 +33,12 @@ import "./index.scss"
 // Hero composite + LQIP are BUNDLED locally (main package, ~115KB total) —
 // guaranteed to render on-device regardless of CDN reachability. WeChat can
 // silently hang a CDN <Image> (no onLoad/onError), which blanked the hero
-// on some devices; the sprites below remain CDN (decorative, failure-safe).
-const HERO_SRC = localAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk.webp')
+// on some devices. 3-tier chain (2026-09-01): local package copy first; if
+// that errors (e.g. asset dropped from an uploaded package), fall back to
+// the CDN copy; if that errors or the 6s guard fires, the bundled mascot.
+// The floating sprites remain CDN-only (decorative, failure-safe).
+const HERO_LOCAL_SRC = localAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk.webp')
+const HERO_CDN_SRC = cdnAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk.webp')
 const HERO_LQIP_SRC = localAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk-lqip.webp')
 const HERO_FALLBACK_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')
 
@@ -52,6 +57,28 @@ type LandingCtaType = 'new' | 'continue' | 'discover' | 'loggedOut'
  *  (the standalone pages/login/index was retired 2026-09-01). */
 type LoggedOutMode = 'logout' | 'expired'
 
+/** Persisted legal acceptance — returning users who already agreed to the
+ *  用户协议/隐私政策 must not be forced to re-check the box on every login
+ *  (2026-09-01). Versioned key: bump when the terms materially change and
+ *  re-consent is required. */
+const LEGAL_ACCEPTED_STORAGE_KEY = 'joyjoin_legal_accepted_v1'
+
+function readLegalAccepted(): boolean {
+  try {
+    return Taro.getStorageSync(LEGAL_ACCEPTED_STORAGE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function persistLegalAccepted(): void {
+  try {
+    Taro.setStorageSync(LEGAL_ACCEPTED_STORAGE_KEY, '1')
+  } catch {
+    /* non-critical — the box simply starts unchecked next visit */
+  }
+}
+
 /**
  * E3 盒子吐卡 (mechanism-first landing, 2026-07-31): six canonical archetype
  * grid heads burst out of the box mouth and land as a "table row" strip,
@@ -63,9 +90,9 @@ type LoggedOutMode = 'logout' | 'expired'
 const MECHANISM_HEADS = ['corgi', 'fox', 'rooster', 'koala', 'cat', 'dolphin_calm'] as const
 const MAP_PIN_SPRITE_SRC = HERO_SPRITES.find((s) => s.key === 'map-pin')!.src
 
-/** Hero composite + LQIP are bundled locally (see HERO_SRC above); analytics
- *  srcType records that for the landing_hero_asset metric. */
-const HERO_SRC_TYPE: 'local' | 'cdn' = 'local'
+/** Hero composite + LQIP are bundled locally (see HERO_LOCAL_SRC above);
+ *  analytics srcType records which tier actually rendered. */
+type HeroSrcStage = 'local' | 'cdn'
 
 /** Max wait for the CDN hero asset to fire onLoad/onError before forcing the
  *  bundled mascot fallback. WeChat devices can silently hang a pending
@@ -76,19 +103,7 @@ const HERO_LOAD_TIMEOUT_MS = 6_000
 
 /** Same window-height probe pattern as ResponsiveSpacer (not exported there). */
 function readWindowHeightPx(): number {
-  try {
-    const wi = Taro.getWindowInfo?.()
-    if (wi && typeof wi.windowHeight === 'number') return wi.windowHeight
-  } catch {
-    /* ignore */
-  }
-  try {
-    const s = Taro.getSystemInfoSync()
-    if (typeof s.windowHeight === 'number') return s.windowHeight
-  } catch {
-    /* ignore */
-  }
-  return 9999
+  return getWindowInfoCompat().windowHeight ?? 9999
 }
 
 function toDwellBucket(dwellMs: number): '<3s' | '3-8s' | '8-15s' | '15-30s' | '>=30s' {
@@ -129,12 +144,18 @@ export default function MiniProgramLandingPage({
   // Dev/screenshot review: ?freeze=burst pins the heads at the box mouth
   // (mid-burst state) so H5 capture can review the choreography frozen.
   const freezeBurst = router.params.freeze === 'burst'
-  const [hasAcceptedLegal, setHasAcceptedLegal] = useState(false)
+  // Legal consent starts checked for anyone who has accepted before
+  // (persisted) and for every post-logout re-auth entry — a returning user
+  // re-logging in has already consented; only brand-new guests must tick.
+  const [hasAcceptedLegal, setHasAcceptedLegal] = useState(
+    () => loggedOutMode != null || readLegalAccepted(),
+  )
   const [isPageExiting, setIsPageExiting] = useState(false)
   const [shakeLegal, setShakeLegal] = useState(false)
   const [showLegalHint, setShowLegalHint] = useState(false)
   const [legalHintSeq, setLegalHintSeq] = useState(0)
   const [heroState, setHeroState] = useState<HeroState>('loading')
+  const [heroSrcStage, setHeroSrcStage] = useState<HeroSrcStage>('local')
   const [lqipGone, setLqipGone] = useState(false)
   const [failedSprites, setFailedSprites] = useState<ReadonlySet<HeroSpriteKey>>(new Set())
   const [hasIncompleteSession, setHasIncompleteSession] = useState(false)
@@ -347,6 +368,62 @@ export default function MiniProgramLandingPage({
   useDidHide(() => fireDwell('app_hide'))
   useEffect(() => () => fireDwell('page_leave'), []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── On-device root-cause probe (hero saga, 2026-09-01) ──────────────────
+  // The hero has "failed" across several fixes because each fix guessed a
+  // different failure mode. These two probes make ONE vConsole screenshot
+  // decisive:
+  //   1. getImageInfo on the bundled asset — success proves the file is in
+  //      the uploaded package AND decodable on this device; fail errMsg
+  //      distinguishes "not found" (packaging) from decode failure.
+  //   2. computedStyle on the rendered <Image> 1.5s after 'ready' — if the
+  //      file decodes but the stage is blank, opacity/clipPath here shows
+  //      whether the entrance animation (hero-peek clip-path) froze the
+  //      composite, vs a decoder that reported success but rendered nothing.
+  useEffect(() => {
+    if (!isMounted) return
+    try {
+      Taro.getImageInfo({
+        src: HERO_LOCAL_SRC,
+        success: (res) => {
+          logInfo('[LandingPage] hero-probe: bundled asset decodes on device', {
+            width: res.width,
+            height: res.height,
+            orientation: res.orientation,
+          })
+        },
+        fail: (err) => {
+          logWarn('[LandingPage] hero-probe: bundled asset unavailable/undecodable', {
+            src: HERO_LOCAL_SRC,
+            errMsg: err?.errMsg ?? 'unknown',
+          })
+        },
+      })
+    } catch {
+      /* probe unsupported — diagnostics must never break the page */
+    }
+  }, [isMounted])
+
+  useEffect(() => {
+    if (heroState !== 'ready') return
+    const timer = setTimeout(() => {
+      try {
+        Taro.createSelectorQuery()
+          .select('.hero-stage__hero-img')
+          .fields({ computedStyle: ['opacity', 'clipPath', 'visibility'] }, (res) => {
+            logInfo('[LandingPage] hero-probe: computed style 1.5s after ready', {
+              opacity: (res as { opacity?: string } | null)?.opacity,
+              clipPath: (res as { clipPath?: string } | null)?.clipPath,
+              visibility: (res as { visibility?: string } | null)?.visibility,
+            })
+          })
+          .exec()
+      } catch {
+        /* probe unsupported */
+      }
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [heroState])
+
   // Unmount the LQIP right after its fade-out completes (no DOM residue).
   useEffect(() => {
     if (heroState !== 'ready') return
@@ -358,10 +435,11 @@ export default function MiniProgramLandingPage({
     if (heroState !== 'loading') return
     heroStateRef.current = 'ready'
     setHeroState('ready')
+    logInfo('[LandingPage] hero <Image> onLoad fired', { srcType: heroSrcStage })
     landingAnalytics.trackHeroAsset({
       asset: 'hero-box-xiaoyue-dusk',
       result: 'success',
-      srcType: HERO_SRC_TYPE,
+      srcType: heroSrcStage,
       durationMs: Date.now() - mountedAtRef.current,
       networkType: networkTypeRef.current,
     })
@@ -369,17 +447,35 @@ export default function MiniProgramLandingPage({
 
   const handleHeroError = () => {
     if (heroState !== 'loading') return
+    // Tier 1 (bundled local) failed — e.g. the asset was dropped from the
+    // uploaded package by the unused-file filter. Try the CDN copy before
+    // giving up to the mascot fallback.
+    if (heroSrcStage === 'local') {
+      setHeroSrcStage('cdn')
+      landingAnalytics.trackHeroAsset({
+        asset: 'hero-box-xiaoyue-dusk',
+        result: 'error',
+        srcType: 'local',
+        durationMs: Date.now() - mountedAtRef.current,
+        networkType: networkTypeRef.current,
+      })
+      logWarn('[LandingPage] bundled hero failed, retrying via CDN', {
+        src: HERO_LOCAL_SRC,
+        networkType: networkTypeRef.current,
+      })
+      return
+    }
     heroStateRef.current = 'fallback'
     setHeroState('fallback')
     landingAnalytics.trackHeroAsset({
       asset: 'hero-box-xiaoyue-dusk',
       result: 'error',
-      srcType: HERO_SRC_TYPE,
+      srcType: 'cdn',
       durationMs: Date.now() - mountedAtRef.current,
       networkType: networkTypeRef.current,
     })
-    logWarn('[LandingPage] hero image failed, using bundled mascot fallback', {
-      src: HERO_SRC,
+    logWarn('[LandingPage] hero image failed on both tiers, using bundled mascot fallback', {
+      src: HERO_CDN_SRC,
       networkType: networkTypeRef.current,
     })
   }
@@ -401,17 +497,17 @@ export default function MiniProgramLandingPage({
       landingAnalytics.trackHeroAsset({
         asset: 'hero-box-xiaoyue-dusk',
         result: 'timeout',
-        srcType: HERO_SRC_TYPE,
+        srcType: heroSrcStage,
         durationMs: Date.now() - mountedAtRef.current,
         networkType: networkTypeRef.current,
       })
       logWarn('[LandingPage] hero asset timed out with no load event; using bundled mascot fallback', {
-        src: HERO_SRC,
+        src: heroSrcStage === 'local' ? HERO_LOCAL_SRC : HERO_CDN_SRC,
         timeoutMs: HERO_LOAD_TIMEOUT_MS,
       })
     }, HERO_LOAD_TIMEOUT_MS)
     return () => clearTimeout(timer)
-  }, [heroState, isMounted])
+  }, [heroState, isMounted, heroSrcStage])
 
   const handleFallbackLoad = () => {
     landingAnalytics.trackHeroAsset({
@@ -435,7 +531,7 @@ export default function MiniProgramLandingPage({
     landingAnalytics.trackHeroAsset({
       asset: `sprite-${key}`,
       result: 'error',
-      srcType: HERO_SRC_TYPE,
+      srcType: 'cdn',
       durationMs: Date.now() - mountedAtRef.current,
       networkType: networkTypeRef.current,
     })
@@ -565,7 +661,7 @@ export default function MiniProgramLandingPage({
                 {heroState !== 'fallback' ? (
                   <Image
                     className={`hero-stage__hero-img${heroState === 'ready' ? ' hero-stage__hero-img--in' : ''}`}
-                    src={HERO_SRC}
+                    src={heroSrcStage === 'local' ? HERO_LOCAL_SRC : HERO_CDN_SRC}
                     mode='aspectFit'
                     lazyLoad={false}
                     ariaLabel='半开的紫色盲盒透出金光，悦仔从盒后好奇地探出头'
@@ -778,7 +874,10 @@ export default function MiniProgramLandingPage({
             aria-label='同意用户协议和隐私政策'
             onClick={() => {
               hapticLight()
-              setHasAcceptedLegal((current) => !current)
+              setHasAcceptedLegal((current) => {
+                if (!current) persistLegalAccepted()
+                return !current
+              })
               if (legalHintTimerRef.current) {
                 clearTimeout(legalHintTimerRef.current)
                 legalHintTimerRef.current = null

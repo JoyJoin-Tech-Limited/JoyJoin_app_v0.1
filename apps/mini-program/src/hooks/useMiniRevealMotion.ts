@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 import { useMemo } from 'react'
+import { getSystemReducedMotionCompat } from '../lib/utils/systemInfo'
 
 type MotionMode = 'full' | 'reduce'
 type MotionSource = 'query' | 'storage' | 'benchmark' | 'system' | 'default'
@@ -41,10 +42,8 @@ function readStoredMotionMode(): MotionMode | null {
 
 function shouldUseReducedMotionFallback(): boolean {
   try {
-    const systemInfo = Taro.getSystemInfoSync()
-
     // OS-level reduced-motion preference (iOS / Android accessibility)
-    return (systemInfo as unknown as Record<string, unknown>).reduceMotion === true
+    return getSystemReducedMotionCompat()
   } catch {
     return false
   }

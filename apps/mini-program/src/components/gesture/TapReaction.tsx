@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { getSystemReducedMotionCompat } from '../../lib/utils/systemInfo'
 import JoyJoinIcon from '../ui/JoyJoinIcon'
 // No SCSS side-effect import: Taro's per-subpackage chunking would strand it
 // in a page-invisible sub-common.wxss. Consuming pages must @use
@@ -8,8 +9,7 @@ import JoyJoinIcon from '../ui/JoyJoinIcon'
 
 function prefersReducedMotion(): boolean {
   try {
-    const info = Taro.getSystemInfoSync()
-    if ((info as any).reduceMotion) return true
+    if (getSystemReducedMotionCompat()) return true
   } catch {
     // ignore
   }

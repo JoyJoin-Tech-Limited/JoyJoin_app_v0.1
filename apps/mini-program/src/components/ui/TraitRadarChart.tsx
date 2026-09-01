@@ -1,6 +1,7 @@
 import { Canvas, View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect, useRef, useState } from 'react'
+import { getWindowInfoCompat } from '../../lib/utils/systemInfo'
 
 interface TraitRadarChartProps {
   /** Six trait values (0–100) in order: 亲和力, 开放性, 责任心, 稳定感, 外向度, 快乐值 */
@@ -61,7 +62,7 @@ export default function TraitRadarChart({
 
   const drawChart = () => {
     try {
-      const sysInfo = Taro.getSystemInfoSync()
+      const sysInfo = getWindowInfoCompat()
       const dpr = sysInfo.pixelRatio || 2
       const winWidth = sysInfo.windowWidth || 375
 

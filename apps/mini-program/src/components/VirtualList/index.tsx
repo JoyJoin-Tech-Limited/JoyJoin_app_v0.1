@@ -14,6 +14,7 @@ import {
   MINI_PROGRAM_LONG_LIST_ROW_THRESHOLD,
 } from '../../lib/utils/longListThreshold'
 import { logInfo, logWarn } from '../../lib/utils/logger'
+import { getAppBaseInfoCompat } from '../../lib/utils/systemInfo'
 
 // ─── Constants ────────────────────────────────────────────────────
 
@@ -67,8 +68,7 @@ function throttle<T extends (...args: any[]) => void>(
 
 function isOldWeChat(): boolean {
   try {
-    const info = Taro.getSystemInfoSync()
-    const version = (info as any).version || ''
+    const version = getAppBaseInfoCompat().version || ''
     if (!version) return false
     const parts = version.split('.').map(Number)
     const major = parts[0] || 0
@@ -288,7 +288,9 @@ function VirtualListInner<T>({
     try {
       const observer = Taro.createIntersectionObserver(
         // @ts-expect-error Taro types expect PageInstance but we pass component
-        Taro.getCurrentInstance().page
+        Taro.getCurrentInstance().page,
+        // nativeMode: WeChat-recommended faster path ("slowest path" warning)
+        { nativeMode: true } as Taro.createIntersectionObserver.Option
       )
       observer.relativeToViewport({ top: -headerHeight, bottom: 0 })
 

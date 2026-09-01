@@ -4,6 +4,7 @@ import { useMemo, type ReactNode } from 'react'
 import CloseIcon from '../ui/CloseIcon'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import './PickerShell.scss'
+import { getWindowInfoCompat } from '../../lib/utils/systemInfo'
 
 export interface PickerShellProps {
   visible: boolean
@@ -39,7 +40,7 @@ export default function PickerShell({
 }: PickerShellProps) {
   const shellHeightRpx = useMemo(() => {
     try {
-      const { windowHeight, screenWidth } = Taro.getSystemInfoSync()
+      const { windowHeight, screenWidth } = getWindowInfoCompat()
       if (!windowHeight || !screenWidth) {
         return DEFAULT_SHELL_HEIGHT_RPX
       }

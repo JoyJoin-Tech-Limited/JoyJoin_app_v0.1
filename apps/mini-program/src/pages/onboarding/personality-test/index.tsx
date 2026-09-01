@@ -61,6 +61,7 @@ import type {
   AssessmentMatch,
   AssessmentStartResponse,
 } from './types'
+import { getSystemReducedMotionCompat } from '../../../lib/utils/systemInfo'
 
 export type { AssessmentQuestion, AssessmentOption, AssessmentProgress, AssessmentMatch } from './types'
 
@@ -156,8 +157,7 @@ export default function PersonalityTestPage() {
   // Detect reduced-motion preference once for the intro mascot
   useEffect(() => {
     try {
-      const info = Taro.getSystemInfoSync()
-      setIntroReducedMotion((info as any).reduceMotion === true)
+      setIntroReducedMotion(getSystemReducedMotionCompat())
     } catch {
       setIntroReducedMotion(false)
     }

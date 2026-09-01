@@ -30,6 +30,7 @@ import type { AIResponseMeta } from '@shared/types/aiMeta'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
 import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { haptics } from '../../../lib/utils/haptics'
+import { getWindowInfoCompat } from '../../../lib/utils/systemInfo'
 // Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
 // import would be chunked into the page-invisible sub-common.wxss.
 
@@ -275,8 +276,7 @@ export function WarmupCardSlot({
     const gen = ++rimMeasureGenRef.current
     const timer = setTimeout(() => {
       try {
-        const info = Taro.getSystemInfoSync()
-        const thresholdPx = (EMBER_RIM_MIN_SLOT_RPX * (info.windowWidth ?? 375)) / 750
+        const thresholdPx = (EMBER_RIM_MIN_SLOT_RPX * (getWindowInfoCompat().windowWidth ?? 375)) / 750
         Taro.createSelectorQuery()
           .select('.warmup-card-slot__foil-shell')
           .boundingClientRect()

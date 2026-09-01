@@ -61,6 +61,7 @@ import { useResultsRevealSequence } from './hooks/useResultsRevealSequence'
 import { useResultsXiaoyueAnalysis } from './hooks/useResultsXiaoyueAnalysis'
 import { useResultsLoginHandoff } from './hooks/useResultsLoginHandoff'
 import './index.scss'
+import { getSystemReducedMotionCompat } from '../../../../lib/utils/systemInfo'
 
 // helper function for the personality test results page
 function buildAuthUserResultState(user: any): ResolvedResultState | null {
@@ -149,7 +150,7 @@ export default function PersonalityTestResultsPage() {
   const [systemReducedMotion] = useState(() => {
     try {
       // reduceMotion is absent from Taro's typed SystemInfo but present at runtime (sibling: personality-test/index.tsx:153)
-      return (Taro.getSystemInfoSync() as { reduceMotion?: boolean }).reduceMotion === true
+      return getSystemReducedMotionCompat()
     } catch {
       return false
     }

@@ -9,6 +9,7 @@ import { haptics } from '../../../lib/utils/haptics'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { resolvePersonalityEmoji, resolvePersonalityIcon } from './emojiAssets'
 import { resolveFragmentLabel, getNearestSliderOption } from './personalityTestLogic'
+import { getSystemReducedMotionCompat } from '../../../lib/utils/systemInfo'
 // Styles are @use'd by the page SCSS (index.scss) — a component-level SCSS
 // import would be chunked into the page-invisible sub-common.wxss.
 
@@ -235,8 +236,7 @@ export default memo(function PersonalityTestAnswerArea({
   // Accessibility: suppress continuous spatial motion when reduced motion is requested.
   const reducedMotion = useMemo(() => {
     try {
-      const info = Taro.getSystemInfoSync()
-      return (info as any).reduceMotion === true
+      return getSystemReducedMotionCompat()
     } catch {
       return false
     }

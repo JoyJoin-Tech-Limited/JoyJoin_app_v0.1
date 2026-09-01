@@ -55,6 +55,7 @@ import AlangDiscoverCard from '../../components/alang/AlangDiscoverCard'
 import GuidanceTipCard from '../../components/guidance/GuidanceTipCard'
 import MiniProgramLandingPage from '../index/LandingPage'
 import './index.scss'
+import { getSystemInfoCompat } from '../../lib/utils/systemInfo'
 
 // ─── Constants ────────────────────────────────────────────────────
 const ALL_CLUSTER_ID = '__all__'
@@ -853,7 +854,7 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     try {
-      const info = Taro.getSystemInfoSync() as any
+      const info = getSystemInfoCompat()
       windowWidthRef.current = info.windowWidth || 375
       motionGateRef.current = {
         reduceMotion: !!info.reduceMotion,

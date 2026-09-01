@@ -9,6 +9,7 @@ import { ParticleBurst } from '../../../components/reveal'
 import { haptics } from '../../../lib/utils/haptics'
 // Styles are @use'd by the page SCSS (index.scss) — see sub-common.wxss note there.
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
+import { getSystemReducedMotionCompat } from '../../../lib/utils/systemInfo'
 
 interface SpeedFriendingHeroViewProps {
   pairs: SpeedFriendingPair[]
@@ -56,7 +57,7 @@ export function SpeedFriendingHeroView({
 
   const reducedMotion = useMemo(() => {
     try {
-      return !!(Taro.getSystemInfoSync() as any).reduceMotion
+      return getSystemReducedMotionCompat()
     } catch {
       return false
     }

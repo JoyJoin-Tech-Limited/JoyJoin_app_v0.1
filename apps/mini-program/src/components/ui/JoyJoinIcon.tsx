@@ -10,6 +10,7 @@ import {
 } from '@joyjoin/shared/iconSystem'
 import { cdnAsset, localAsset } from '../../lib/utils/cdnAssets'
 import { logError, logWarn } from '../../lib/utils/logger'
+import { getSystemReducedMotionCompat } from '../../lib/utils/systemInfo'
 
 interface JoyJoinIconProps {
   emoji: string
@@ -40,8 +41,7 @@ interface JoyJoinIconProps {
  */
 function getReducedMotion(): boolean {
   try {
-    const info = Taro.getSystemInfoSync()
-    return (info as any).reduceMotion ?? false
+    return getSystemReducedMotionCompat()
   } catch {
     return false
   }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { BRAND_COLORS } from "../../styles/colors"
 import { useStaggerMount } from "../../hooks/useStaggerMount"
 import "./BondingCloud.scss"
+import { getDeviceInfoCompat } from '../../lib/utils/systemInfo'
 
 /* ─── Helpers ──────────────────────────────────────────────────────── */
 function hexAlpha(hex: string, alphaPercent: number): string {
@@ -70,8 +71,7 @@ export default function BondingCloud({ compact = false }: { compact?: boolean })
     }
 
     try {
-      const info = Taro.getSystemInfoSync()
-      const level = (info.benchmarkLevel ?? -1) as number
+      const level = (getDeviceInfoCompat().benchmarkLevel ?? -1) as number
       // benchmarkLevel: -1 unknown, 1 low, 50 high
       setIsLowEnd(level >= 0 && level < 20)
     } catch {

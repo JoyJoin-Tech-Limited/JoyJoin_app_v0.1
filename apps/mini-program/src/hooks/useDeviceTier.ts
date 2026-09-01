@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 import { useMemo } from 'react'
+import { getDeviceInfoCompat } from '../lib/utils/systemInfo'
 
 export type DeviceTier = 'primary' | 'degradation'
 
@@ -94,7 +95,7 @@ export function resolveDeviceTier(info: SystemInfoLike): DeviceTierResult {
 export function useDeviceTier(): DeviceTierResult {
   return useMemo(() => {
     try {
-      return resolveDeviceTier(Taro.getSystemInfoSync())
+      return resolveDeviceTier(getDeviceInfoCompat())
     } catch {
       // Fallback: assume degradation on error to be safe
       return {

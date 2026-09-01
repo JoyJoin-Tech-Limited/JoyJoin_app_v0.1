@@ -14,6 +14,7 @@ import {
   drawTextBlock,
   exportCanvasWithRetry,
 } from '../../../../lib/utils/canvasHelpers'
+import { getWindowInfoCompat } from '../../../../lib/utils/systemInfo'
 
 // ── Canvas dimensions ─────────────────────────────────────────────
 const POSTER_WIDTH = 1080
@@ -789,7 +790,7 @@ export async function generatePersonalitySharePoster(input: PersonalitySharePost
 
   drawFooterBand(ctx, input.shareLine)
 
-  const systemInfo = Taro.getSystemInfoSync()
+  const systemInfo = getWindowInfoCompat()
   const dpr = Math.min(Math.max(systemInfo.pixelRatio || 2, 1), 2)
   const DRAW_TIMEOUT_MS = 15_000
 

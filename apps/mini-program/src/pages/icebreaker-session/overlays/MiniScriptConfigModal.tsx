@@ -7,6 +7,7 @@ import { haptics } from '../../../lib/utils/haptics'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 import Button from '../../../components/ui/Button'
 import AiGenerationShell from '../../../components/ui/AiGenerationShell'
+import { getSystemReducedMotionCompat } from '../../../lib/utils/systemInfo'
 
 const GENERATION_STEPS = [
   { label: '构思故事背景', description: '根据风格与题材搭建世界观' },
@@ -47,7 +48,7 @@ export function MiniScriptConfigModal({ open, onClose, initialGenres = DEFAULT_I
   const selectedStyleCard = selectedStyle ? MINISCRIPT_CATALOG.styles.find((item) => item.key === selectedStyle) : null
   const genreSet = useMemo(() => new Set(selectedGenres), [selectedGenres])
   const reduceMotion = useMemo(() => {
-    try { return !!(Taro.getSystemInfoSync() as { reduceMotion?: boolean }).reduceMotion } catch { return false }
+    try { return getSystemReducedMotionCompat() } catch { return false }
   }, [])
 
   // Reset selection only when the modal transitions to open — re-renders while

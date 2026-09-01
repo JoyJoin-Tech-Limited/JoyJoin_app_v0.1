@@ -358,22 +358,23 @@ $fan-rotations: (
     height: calc(100vh);
     height: 100dvh;
     box-sizing: border-box;
-    padding-inline: $container-padding;
-    padding-bottom: 0;
-    @include safe-area-inline($container-padding);
+    // No padding here — WeChat drops padding on the native <scroll-view>
+    // element in webview rendering mode. Horizontal/safe-area padding lives
+    // on &__scroll-inner (canonical inner-wrapper pattern).
   }
 
   &__scroll--revealed {
     // Reserve the complete fixed dock: 96rpx CTA + vertical padding + the
     // return-thread line. Keeping this in sync with the dock prevents the
     // event brief from sliding underneath its description on short screens.
-    @include fixed-footer-reserve(184rpx, $spacing-sm);
+    // Applied to &__scroll-inner below (padding on <scroll-view> is dropped).
     overflow: hidden;
   }
 
   &__scroll--revealed &__scroll-inner {
     height: 100%;
     min-height: 0;
+    @include fixed-footer-reserve(184rpx, $spacing-sm);
   }
 
   &__scroll-inner {
@@ -382,6 +383,9 @@ $fan-rotations: (
     min-height: 100vh;
     min-height: 100dvh;
     box-sizing: border-box;
+    padding-inline: $container-padding;
+    padding-bottom: 0;
+    @include safe-area-inline($container-padding);
   }
 
   &__scroll-content {

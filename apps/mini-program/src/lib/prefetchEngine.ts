@@ -3,6 +3,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import type { DiscoverShellResponse, PoolRegistrationSummary, ProfileShellResponse, EventsShellResponse, ConnectionsShellResponse } from '@shared/api'
 import { logInfo } from './utils/logger'
 import { AUTH_QUERY_KEY } from './api/authSession'
+import { getDeviceInfoCompat } from '../lib/utils/systemInfo'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Predictive Shell — client-side prefetch engine
@@ -220,7 +221,7 @@ async function checkPrefetchGate(queryClient: QueryClient): Promise<PrefetchGate
 
   // Device tier gate (AC-07)
   try {
-    const info = Taro.getSystemInfoSync()
+    const info = getDeviceInfoCompat()
     if (typeof info.benchmarkLevel === 'number' && info.benchmarkLevel < MIN_BENCHMARK_LEVEL) {
       return { shouldRun: false, reason: `benchmark-${info.benchmarkLevel}` }
     }

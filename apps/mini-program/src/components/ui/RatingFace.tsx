@@ -10,6 +10,7 @@ import { cdnAsset } from '../../lib/utils/cdnAssets'
 import { BRAND_COLORS } from '../../styles/colors'
 
 import './RatingFace.scss'
+import { getSystemReducedMotionCompat } from '../../lib/utils/systemInfo'
 
 function hexWithAlpha(hex: string, alphaHex: string): string {
   return hex.startsWith('#') ? hex + alphaHex : hex
@@ -30,8 +31,7 @@ interface RatingFaceProps {
 
 function getReducedMotion(): boolean {
   try {
-    const info = Taro.getSystemInfoSync()
-    return (info as any).reduceMotion ?? false
+    return getSystemReducedMotionCompat()
   } catch {
     return false
   }

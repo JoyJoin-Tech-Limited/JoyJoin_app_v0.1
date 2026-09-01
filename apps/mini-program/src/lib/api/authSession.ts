@@ -16,6 +16,19 @@ export const AUTH_QUERY_KEY = ['mini-program', 'auth-user'] as const
 
 const HYDRATE_AUTH_STORAGE_KEY = 'mj_auth_cache'
 
+/**
+ * Session epoch — bumped every time auth storage is cleared (logout, 401).
+ * getAuthUser captures the epoch when its request starts and skips
+ * persistAuthToStorage when it changed mid-flight, so a pre-logout in-flight
+ * /api/auth/user resolving after logout cannot resurrect the cached user
+ * (the "needs two logouts" race, 2026-09-01).
+ */
+let authSessionEpoch = 0
+
+export function getAuthSessionEpoch(): number {
+  return authSessionEpoch
+}
+
 export function persistAuthToStorage(user: unknown): void {
   try {
     Taro.setStorageSync(HYDRATE_AUTH_STORAGE_KEY, JSON.stringify(user))
@@ -25,6 +38,7 @@ export function persistAuthToStorage(user: unknown): void {
 }
 
 export function clearAuthStorage(): void {
+  authSessionEpoch += 1
   try {
     Taro.removeStorageSync(HYDRATE_AUTH_STORAGE_KEY)
   } catch {
@@ -100,6 +114,11 @@ export function clearMiniProgramAuthSession(options?: {
   clearAuthStorage()
   writeAuthSession(null, options?.queryClient, options?.mode ?? 'soft')
   if ((options?.mode ?? 'soft') === 'hard') {
+    // Hard reset (logout / redirect-on-401) must also drop the session token.
+    // The explicit settings-page logout previously skipped this, so a token
+    // survived logout and any late /api/auth/user revalidation could
+    // re-authenticate the user — the "needs two logouts" bug (2026-09-01).
+    clearSessionToken()
     clearPersistentCache()
   }
 }

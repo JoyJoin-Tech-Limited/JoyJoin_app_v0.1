@@ -20,6 +20,7 @@ import {
   isUsableStoredProfessionClassification,
 } from '../lib/onboarding/professionSubmissionGuard'
 import './ProfessionChatOverlay.scss'
+import { getSystemReducedMotionCompat } from '../lib/utils/systemInfo'
 
 export interface ProfessionClassificationData {
   occupationId: string
@@ -354,8 +355,7 @@ export default function ProfessionChatOverlay({
       if (mq != null) return !!mq
     } catch { /* ignore */ }
     try {
-      const info = Taro.getSystemInfoSync()
-      return !!(info as any).reduceMotion
+      return getSystemReducedMotionCompat()
     } catch {
       return false
     }

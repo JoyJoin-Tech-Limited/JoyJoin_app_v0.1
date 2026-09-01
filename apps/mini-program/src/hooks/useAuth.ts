@@ -6,6 +6,7 @@ import {
   AUTH_QUERY_KEY,
   bootstrapMiniProgramAuthSession,
   clearAuthStorage,
+  getAuthSessionEpoch,
   getStoredAuthUser,
   isTransportApiError,
   isUnauthorizedApiError,
@@ -60,6 +61,10 @@ export interface UseAuthResult {
 const AUTH_REQUEST_TIMEOUT_MS = 5000
 
 async function getAuthUser(): Promise<AuthUser | null> {
+  // Capture the session epoch before the request: if a logout/401 clears
+  // auth storage while this request is in flight, the epoch bumps and the
+  // late success below must NOT repopulate storage (double-logout race).
+  const requestEpoch = getAuthSessionEpoch()
   try {
     const authPromise = apiRequest<AuthUser>({ path: '/api/auth/user', handleUnauthorized: false })
     authPromise.catch((err) => {
@@ -82,6 +87,10 @@ async function getAuthUser(): Promise<AuthUser | null> {
     const result = await Promise.race([authPromise, timeoutPromise])
 
     if (result) {
+      if (getAuthSessionEpoch() !== requestEpoch) {
+        logWarn('[useAuth] Auth session cleared mid-request; discarding stale success')
+        return null
+      }
       persistAuthToStorage(result)
     }
 

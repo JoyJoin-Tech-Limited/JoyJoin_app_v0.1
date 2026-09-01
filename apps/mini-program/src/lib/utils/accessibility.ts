@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import { getSystemReducedMotionCompat } from '../../lib/utils/systemInfo'
 
 /**
  * Reads the OS-level reduced-motion preference from WeChat system info.
@@ -6,7 +7,7 @@ import Taro from '@tarojs/taro'
  */
 export function getSystemReducedMotion(): boolean {
   try {
-    return Boolean((Taro.getSystemInfoSync() as unknown as { reduceMotion?: boolean }).reduceMotion)
+    return getSystemReducedMotionCompat()
   } catch {
     return false
   }

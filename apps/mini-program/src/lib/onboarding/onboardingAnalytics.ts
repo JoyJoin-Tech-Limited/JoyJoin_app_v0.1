@@ -2,6 +2,7 @@ import Taro from '@tarojs/taro'
 import { apiRequest } from '../api/api'
 import type { ExperimentMarker } from '../experiments'
 import { logWarn } from '../utils/logger'
+import { getSystemInfoCompat } from '../../lib/utils/systemInfo'
 
 export type MiniProgramOnboardingAnalyticsStep =
   | 'login'
@@ -134,7 +135,7 @@ function getCurrentRoute(): string {
 
 function getSystemInfoSnapshot(): MiniProgramOnboardingSystemInfo {
   try {
-    const systemInfo = Taro.getSystemInfoSync()
+    const systemInfo = getSystemInfoCompat()
     return {
       brand: normalizeString(systemInfo.brand),
       model: normalizeString(systemInfo.model),

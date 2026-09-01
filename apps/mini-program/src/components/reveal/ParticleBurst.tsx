@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { View, Canvas } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { getSystemReducedMotionCompat, getWindowInfoCompat } from '../../lib/utils/systemInfo'
 import './ParticleBurst.scss'
 
 function prefersReducedMotion(): boolean {
   try {
-    const info = Taro.getSystemInfoSync()
-    if ((info as any).reduceMotion) return true
+    if (getSystemReducedMotionCompat()) return true
   } catch {
     // ignore
   }
@@ -235,7 +235,7 @@ export default function ParticleBurst({
     const fallback = () => {
       let px = 300
       try {
-        px = Math.round((Taro.getSystemInfoSync().windowWidth * 300) / 750)
+        px = Math.round((getWindowInfoCompat().windowWidth * 300) / 750)
       } catch {
         // keep default
       }

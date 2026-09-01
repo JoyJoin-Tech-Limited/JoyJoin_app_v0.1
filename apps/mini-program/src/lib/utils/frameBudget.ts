@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import { getSystemInfoCompat } from '../../lib/utils/systemInfo'
 
 export type DegradationTier = 'full' | 'reduced' | 'minimal' | 'emergency'
 
@@ -103,8 +104,7 @@ export function measureFrameBudget(durationMs = 1000): Promise<FrameBudgetResult
  */
 export function getRamBasedTier(): DegradationTier {
   try {
-    const info = Taro.getSystemInfoSync()
-    const ram = (info as { deviceMemory?: number }).deviceMemory || 4
+    const ram = getSystemInfoCompat().deviceMemory || 4
     if (ram >= 4) return 'full'
     if (ram >= 3) return 'reduced'
     if (ram >= 2) return 'minimal'

@@ -81,8 +81,12 @@ export default function Index() {
       return
     }
 
-    // Authenticated path takes priority over guest restore.
-    if (auth.isAuthenticated && auth.user) {
+    // Authenticated path takes priority over guest restore — but NEVER on a
+    // loggedOut entry (?auth=logout|expired). A stale in-flight revalidation
+    // resolving after logout must not bounce the user straight back into the
+    // app (the "needs two logouts" bug, 2026-09-01). The loggedOut landing's
+    // login CTA navigates itself after a successful re-login.
+    if (auth.isAuthenticated && auth.user && !isLoggedOutEntry) {
       // Network gate: if completely offline, stay on landing page so the
       // offline banner renders instead of a dead loading screen after
       // redirect. This prevents cached users from being silently dumped

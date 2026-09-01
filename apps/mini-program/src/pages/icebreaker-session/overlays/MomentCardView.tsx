@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro';
 import { View, Canvas, Text, Image } from '@tarojs/components';
 import { getArchetypeHSL } from '@shared/archetypeColors';
 import { logError } from '../../../lib/utils/logger';
+import { getSystemReducedMotionCompat } from '../../../lib/utils/systemInfo'
 
 // Moment card color constants (avoiding hardcoded hex in inline styles / canvas)
 const CARD_BG_DARK = '#1e1e2f';
@@ -450,11 +451,7 @@ async function canvasToTempFilePathWithRetry(
 
 function prefersReducedMotion(): boolean {
   try {
-    const info = Taro.getSystemInfoSync();
-    // WeChat mini-program does not expose reduced-motion directly;
-    // treat dark-theme older devices as a weak heuristic, otherwise
-    // rely on the short 100 ms fallback in the UI.
-    if ((info as any).reduceMotion) return true;
+    if (getSystemReducedMotionCompat()) return true;
   } catch {
     // ignore
   }

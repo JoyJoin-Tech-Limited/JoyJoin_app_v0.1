@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro'
 import ParticleBurst from '../../../../components/reveal/ParticleBurst'
 import { getXiaoyueExpressionAsset } from '../../../../lib/mascot/xiaoyueExpressions'
 import type { ArchetypeTheme } from '../lib/paymentRitualState'
+import { getDeviceInfoCompat } from '../../../../lib/utils/systemInfo'
 
 interface Props {
   visible: boolean
@@ -26,7 +27,7 @@ export default function RitualCelebrationOverlay({
   // Gate particle count on device tier (low-end = fewer particles or skip)
   const particleCount = useMemo(() => {
     try {
-      const benchmark = Taro.getSystemInfoSync().benchmarkLevel ?? 20
+      const benchmark = getDeviceInfoCompat().benchmarkLevel ?? 20
       return benchmark <= 15 ? 10 : benchmark <= 25 ? 25 : 40
     } catch {
       return 25

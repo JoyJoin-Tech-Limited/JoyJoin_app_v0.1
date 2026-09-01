@@ -12,6 +12,7 @@ import {
 } from '../../lib/utils/discoverNarrativeCopy'
 
 import './ParticipantPresenceStrip.scss'
+import { getSystemReducedMotionCompat } from '../../lib/utils/systemInfo'
 
 // ─── Constants ─────────────────────────────────────────────────
 
@@ -80,7 +81,7 @@ export default React.memo(function ParticipantPresenceStrip({
   // Read reduced-motion once on mount — not during render.
   const reduceMotion = React.useMemo(() => {
     try {
-      return !!(Taro.getSystemInfoSync() as { reduceMotion?: boolean }).reduceMotion
+      return getSystemReducedMotionCompat()
     } catch {
       return false
     }

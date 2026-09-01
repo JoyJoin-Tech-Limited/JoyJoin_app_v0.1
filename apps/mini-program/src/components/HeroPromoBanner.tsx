@@ -169,7 +169,9 @@ export default function HeroPromoBanner({
       }
       observer = Taro.createIntersectionObserver(page, {
         thresholds: [0, 0.01],
-      })
+        // nativeMode: WeChat-recommended faster path ("slowest path" warning)
+        nativeMode: true,
+      } as Taro.createIntersectionObserver.Option)
     } catch {
       setIsInView(true)
       return

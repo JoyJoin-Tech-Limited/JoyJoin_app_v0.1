@@ -1,6 +1,7 @@
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useState } from 'react'
 import { subscribeWindowResize } from '../lib/utils/windowResizeHub'
+import { getWindowInfoCompat } from '../lib/utils/systemInfo'
 
 function readWindowHeightPx(): number {
   try {
@@ -12,9 +13,9 @@ function readWindowHeightPx(): number {
     /* ignore */
   }
   try {
-    const s = Taro.getSystemInfoSync()
-    if (typeof s.windowHeight === 'number') {
-      return s.windowHeight
+    const h = getWindowInfoCompat().windowHeight
+    if (typeof h === 'number') {
+      return h
     }
   } catch {
     /* ignore */

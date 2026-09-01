@@ -111,7 +111,18 @@ Component({
         }
       }
 
-      var info = wx.getSystemInfoSync ? wx.getSystemInfoSync() : {}
+      // wx.getSystemInfoSync is deprecated; getDeviceInfo carries both
+      // platform and benchmarkLevel. Fall back for ancient base libraries.
+      var info = {}
+      try {
+        if (wx.getDeviceInfo) {
+          info = wx.getDeviceInfo()
+        } else if (wx.getSystemInfoSync) {
+          info = wx.getSystemInfoSync()
+        }
+      } catch (e) {
+        info = {}
+      }
       this._platform = info.platform || 'other'
       // benchmarkLevel: 1–50. <= 15 is low-end (budget Android / old iOS).
       // iOS devices without benchmarkLevel are treated as low-end because

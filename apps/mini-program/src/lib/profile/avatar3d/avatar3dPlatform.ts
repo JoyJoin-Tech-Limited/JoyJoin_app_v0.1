@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import { getWindowInfoCompat } from '../../../lib/utils/systemInfo'
 
 /**
  * Platform adapter for WebGL inside the WeChat mini-program runtime (with an H5
@@ -182,7 +183,7 @@ export function resolveAnimationFrame(canvasNode: any): AvatarAnimationFrame {
 /** Device pixel ratio, capped for memory safety. */
 export function resolvePixelRatio(cap: number = AVATAR_3D_MAX_DPR): number {
   try {
-    const info = Taro.getSystemInfoSync()
+    const info = getWindowInfoCompat()
     const ratio = typeof info?.pixelRatio === 'number' && info.pixelRatio > 0 ? info.pixelRatio : 1
     return Math.min(ratio, cap)
   } catch {

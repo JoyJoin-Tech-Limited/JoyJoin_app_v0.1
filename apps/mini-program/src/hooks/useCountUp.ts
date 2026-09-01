@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 import { useEffect, useRef, useState } from 'react'
+import { getSystemReducedMotionCompat } from '../lib/utils/systemInfo'
 
 export interface UseCountUpOptions {
   /** Animation duration in milliseconds. Default: 900. */
@@ -14,7 +15,7 @@ export interface UseCountUpOptions {
 
 let systemReducedMotion = false
 try {
-  systemReducedMotion = (Taro.getSystemInfoSync() as any).reduceMotion === true
+  systemReducedMotion = getSystemReducedMotionCompat()
 } catch {
   systemReducedMotion = false
 }
