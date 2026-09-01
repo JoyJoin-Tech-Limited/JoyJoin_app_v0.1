@@ -52,7 +52,7 @@ export default function EventDetailPage() {
 
   if (error || !event) {
     return (
-      <View className={pageClass}>
+      <View className={`${pageClass} event-detail--static`}>
         <View className='event-detail__error'>
           <Image
             className='event-detail__error-hero'
@@ -85,6 +85,7 @@ export default function EventDetailPage() {
 
   return (
     <ScrollView className={pageClass} scrollY enhanced showScrollbar={false}>
+      <View className='event-detail__scroll-inner'>
       <View className='event-detail__hero event-detail__hero--animated'>
         <View className='event-detail__hero-content'>
           <Text className='event-detail__title'>{event.title ?? '悦聚活动'}</Text>
@@ -192,6 +193,7 @@ export default function EventDetailPage() {
       </View>
 
       <View className='event-detail__spacer' />
+      </View>
     </ScrollView>
   )
 }

@@ -148,7 +148,7 @@ export default function MatchingStatusPage() {
       )
     case 'error':
       return (
-        <View className={rootClassName}>
+        <View className={`${rootClassName} matching-status--static`}>
           <View className={`matching-status__error ${enableAnimations ? 'matching-status__special-state--enter' : ''}`}>
             <StatusCard
               tone='error'
@@ -173,7 +173,7 @@ export default function MatchingStatusPage() {
       )
     case 'not-found':
       return (
-        <View className={rootClassName}>
+        <View className={`${rootClassName} matching-status--static`}>
           <View className={`matching-status__error ${enableAnimations ? 'matching-status__special-state--enter' : ''}`}>
             <StatusCard
               tone='info'
@@ -190,7 +190,7 @@ export default function MatchingStatusPage() {
       )
     case 'cancelled':
       return (
-        <View className={rootClassName}>
+        <View className={`${rootClassName} matching-status--static`}>
         <Card className={`matching-status__special-card ${enableAnimations ? 'matching-status__special-state--enter' : ''}`}>
           <ArchetypeHead archetype={viewerArchetype} size={88} className='matching-status__special-icon' variant='head' />
             <Text className='matching-status__special-title'>这场活动已取消</Text>
@@ -217,6 +217,7 @@ export default function MatchingStatusPage() {
 
       return (
         <ScrollView className={rootClassName} scrollY enhanced showScrollbar={false}>
+          <View className='matching-status__scroll-inner'>
           <MatchingHero
             heroSrc={MATCHING_NO_MATCH_HERO_SRC}
             className='matching-status__hero--no-match'
@@ -276,6 +277,7 @@ export default function MatchingStatusPage() {
           ) : null}
 
           <View className='matching-status__spacer' />
+          </View>
         </ScrollView>
       )
     }
@@ -294,6 +296,7 @@ export default function MatchingStatusPage() {
 
   return (
     <ScrollView className={rootClassName} scrollY enhanced showScrollbar={false}>
+      <View className='matching-status__scroll-inner'>
       {matchStatus === 'pending' ? (
         <MatchingHero
           heroSrc={MATCHING_WAITING_HERO_SRC}
@@ -554,6 +557,7 @@ export default function MatchingStatusPage() {
           />
         </CustomWrapper>
       )}
+      </View>
     </ScrollView>
   )
 }

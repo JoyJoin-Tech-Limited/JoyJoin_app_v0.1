@@ -3,17 +3,25 @@
 
 .terms-page {
   @include page-gradient-bg;
-  padding: $container-padding;
-  @include safe-area-bottom-padding(padding-bottom, 80rpx);
+
+  // Padding lives on the inner wrapper — WeChat ignores padding on the
+  // native scroll-view element itself.
+  &__scroll-inner {
+    padding: $container-padding;
+    @include safe-area-bottom-padding(padding-bottom, 80rpx);
+  }
 
   &__banner {
     @include card;
+    display: flex;
+    flex-direction: column;
     padding: $spacing-lg;
     margin-bottom: $spacing-md;
   }
 
   &__banner-tag {
     display: inline-flex;
+    align-self: flex-start;
     margin-bottom: $spacing-sm;
     padding: $spacing-xs $spacing-sm;
     border-radius: 999rpx;

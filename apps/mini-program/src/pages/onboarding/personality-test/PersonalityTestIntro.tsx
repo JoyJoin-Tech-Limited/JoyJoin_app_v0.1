@@ -93,10 +93,11 @@ export default function PersonalityTestIntro({
             <Text className='personality-test__intro-subtitle'>
               找到你的氛围命格，让后面的遇见都更对味。
             </Text>
-            {/* 装盒承接句（盲盒城市故事线，2026-07-26）：landing 的「拆开我的盲盒」
-                落地到这里，把"答题"重新叙事为拆盒的第一拍——先装盒，再拆盒。 */}
+            {/* 承接句（2026-09-01 重叙事）：landing CTA「测测我的聚会气场」与上方
+                标题逐字接力（气场 → 读懂气场），本句把答题往后接到攒一桌的结果
+                （盲盒意象由 landing hero/headline 与 squad-unboxing 承接）。 */}
             <Text className='personality-test__intro-bridge'>
-              先装盒，再拆盒：几道小题，把你的样子装进去。
+              这几道小题，就是攒一桌的第一拍。
             </Text>
           </View>
 

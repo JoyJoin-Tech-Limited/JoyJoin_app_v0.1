@@ -39,6 +39,10 @@ Does this surface look unmistakably JoyJoin, or could it be any generic mini-pro
 | **States** | Missing hover / active / pressed / disabled / loading / empty / error | Design the full state matrix (see Dimension 2) |
 | **Motion** | Bounce or elastic easing | Use exponential ease-out curves; no bounce |
 | **Motion** | Motion for decoration, not state communication | Every animation should explain a state change |
+| **Motion** | Stagger-animate everything on load | Stagger only the hero group; static content appears instantly |
+| **Motion** | `transition: all` as a default | Name the exact properties (transform, opacity, colors) |
+| **Imagery** | Glow effects used as affordances (glowing buttons/cards to look "premium") | Affordance comes from shape, contrast, and placement — not glow |
+| **Content** | Generic CTA copy ("Learn more", "Click here", "了解更多", "点击这里") | CTAs name the outcome: "查看我的桌友", "订座周六场" |
 
 **The AI Slop Test:** If someone could look at this interface and say "AI made that" without hesitation, it has failed. The fix is distinctiveness — a visitor should ask "how was this made?", not "which AI made this?"
 

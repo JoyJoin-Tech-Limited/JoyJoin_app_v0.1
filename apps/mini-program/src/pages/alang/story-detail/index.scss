@@ -5,7 +5,13 @@
   min-height: 100dvh;
   box-sizing: border-box;
   background: $color-bg;
-  padding: 32rpx 24rpx calc(env(safe-area-inset-bottom) + 40rpx);
+
+  // Padding lives on the inner wrapper — WeChat ignores padding on the
+  // native scroll-view element itself.
+  &__scroll-inner {
+    box-sizing: border-box;
+    padding: 32rpx 24rpx calc(env(safe-area-inset-bottom) + 40rpx);
+  }
 
   &__header {
     margin-bottom: 32rpx;

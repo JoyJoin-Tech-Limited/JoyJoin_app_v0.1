@@ -1,5 +1,6 @@
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useEffect, useState } from 'react'
+import { subscribeWindowResize } from '../lib/utils/windowResizeHub'
 
 function readWindowHeightPx(): number {
   try {
@@ -39,17 +40,7 @@ export function useWindowHeightPx(): number {
 
   useDidShow(refresh)
 
-  useEffect(() => {
-    if (typeof Taro.onWindowResize === 'function') {
-      Taro.onWindowResize(refresh)
-      return () => {
-        if (typeof Taro.offWindowResize === 'function') {
-          Taro.offWindowResize(refresh)
-        }
-      }
-    }
-    return undefined
-  }, [refresh])
+  useEffect(() => subscribeWindowResize(refresh), [refresh])
 
   return heightPx
 }

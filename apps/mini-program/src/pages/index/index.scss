@@ -237,7 +237,7 @@
 /* ── Copy ──────────────────────────────────────────────────────────── */
 /* E3 盒子吐卡 (2026-07-31): zero-size runtime anchor at the box mouth.
    The burst measures this via createSelectorQuery instead of hardcoding
-   coordinates, so the --short 0.85 stage scale resolves for free. */
+   coordinates, so the --mid / --short stage scales resolve for free. */
 .hero-stage__box-mouth-anchor {
   position: absolute;
   left: 50%;
@@ -264,15 +264,34 @@
 .mechanism-strip__seats {
   display: flex;
   align-items: center;
-  gap: 4rpx;
+  gap: 12rpx;
+  position: relative;
+}
+
+/* Grounding ellipse under the whole row — opacity-only entrance with the
+   settle (no layout-triggering properties). Sits below the seats via the
+   seats' z-index: 1. */
+.mechanism-strip__seats::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -12rpx;
+  width: 560rpx;
+  height: 20rpx;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba($color-text-primary-warm, 0.14) 0%, rgba($color-text-primary-warm, 0) 70%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .mechanism-strip__seat {
-  width: 96rpx;
-  height: 96rpx;
+  width: 88rpx;
+  height: 88rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 1;
   opacity: 0; // revealed by the burst settle (or statically in RM/low-end)
   // The transition lives on the BASE rule so the tap-replay fly-back
   // (removing --settled) animates back to the box mouth instead of
@@ -281,14 +300,32 @@
   transition:
     transform 460ms cubic-bezier(0.34, 1.4, 0.64, 1),
     opacity 240ms ease-out;
+
+  /* Luminous disc behind the head: soft white/cream glow + faint warm-gold
+     echo of the box's light path, a hairline brand ring, and a soft drop
+     shadow for lift. Pure backdrop — inherits the seat's opacity, so the
+     burst settle reveals disc + head together. */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-sizing: border-box;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, rgba($color-landed-gold, 0.10) 58%, rgba(255, 255, 255, 0) 75%);
+    border: 1rpx solid rgba($color-primary, 0.14);
+    box-shadow: 0 8rpx 18rpx rgba($color-primary, 0.10);
+  }
 }
 
 // ArchetypeHead sizes itself via inline rpx (dropped by the H5 preview);
 // the !important SCSS class wins over the inline style in every runtime,
 // and the inner image is pinned to the circle for the same reason.
 .mechanism-strip__head {
-  width: 88rpx !important;
-  height: 88rpx !important;
+  width: 80rpx !important;
+  height: 80rpx !important;
 
   .archetype-head__image {
     width: 100% !important;
@@ -313,7 +350,8 @@
 .mechanism-strip__connector {
   width: 64rpx;
   height: 0;
-  border-top: 2rpx dotted rgba($color-text-primary-warm, 0.4);
+  // Gold-tinted dotted connector — echoes the subtitle underline cascade.
+  border-top: 2rpx dotted rgba($color-landed-gold, 0.55);
   margin: 0 12rpx;
   flex-shrink: 0;
   opacity: 0;
@@ -343,6 +381,11 @@
 
 .landing-page--entered .mechanism-strip__connector {
   animation: connector-draw 220ms ease-out 1180ms both;
+}
+
+/* Grounding ellipse fades in right as the seats land (opacity only). */
+.landing-page--entered .mechanism-strip__seats::after {
+  animation: landing-rm-fade 400ms cubic-bezier(0.22, 1, 0.36, 1) 1300ms both;
 }
 
 .landing-page--entered .mechanism-strip__pin {
@@ -376,7 +419,7 @@
 
 /* Converge flights: dice + cards are "the quiz going into the box".
    Endpoints are the sprite-centre → box-mouth deltas on the 750rpx stage
-   (the --short 0.85 wrapper scale shrinks the flight proportionally). */
+   (the --mid / --short wrapper scales shrink the flight proportionally). */
 @keyframes cards-converge {
   from { opacity: 1; transform: translate(0, 0) scale(1) rotate(-10deg); }
   to { opacity: 0; transform: translate(219rpx, 196rpx) scale(0.35) rotate(-10deg); }
@@ -1166,42 +1209,139 @@
   color: $color-text-white;
 }
 
-/* ── Short-screen compaction (< 640px window height) ───────────────── */
-.landing-page--short {
+/* ── Mid-screen compaction (700–880px window height) ───────────────── */
+// Covers iPhone 12/13/14, 11 Pro, 12 mini, XR/11, Pro Max. WeChat's
+// windowHeight EXCLUDES the default nav bar (this page has no
+// navigationStyle:'custom'), so the usable budget is ~1448–1475rpx, NOT
+// the ~1560–1623rpx full-screen figure. This tier totals ~1444rpx.
+.landing-page--mid {
   .brand-mark {
     padding-top: 16rpx;
   }
 
+  // Slightly smaller mark buys headroom for the hero copy below.
+  .landing-page__brand-logo {
+    width: 136rpx !important;
+    height: 136rpx !important;
+  }
+
   .hero-zone {
-    height: 576rpx;
+    height: 552rpx;
     margin-top: 8rpx;
   }
 
-  // E3 compact variant (mandatory — the full strip pushes the page 4rpx
-  // over the 1280rpx budget at the 640px breakpoint).
+  // One wrapper scale shrinks halo/hero/sprites/particles together — no
+  // per-element geometry recalculation. Sized so the scaled artwork
+  // (688rpx × 0.82 ≈ 564rpx) bleeds ≤ 24rpx above the zone, matching the
+  // bleed tolerance of the previous --short composition.
+  .hero-stage__scale {
+    transform: scale(0.82);
+    transform-origin: center bottom;
+  }
+
   .mechanism-strip {
-    height: 88rpx;
+    height: 96rpx;
   }
 
   .mechanism-strip__seat {
-    width: 64rpx;
-    height: 64rpx;
+    width: 80rpx;
+    height: 80rpx;
   }
 
   .mechanism-strip__head {
-    width: 56rpx !important;
-    height: 56rpx !important;
+    width: 72rpx !important;
+    height: 72rpx !important;
+  }
+
+  .mechanism-strip__seats::after {
+    width: 480rpx;
   }
 
   .mechanism-strip__connector {
+    width: 56rpx;
+    margin: 0 10rpx;
+  }
+
+  .mechanism-strip__pin {
     width: 48rpx;
+    height: 48rpx;
+  }
+
+  .mechanism-caption {
+    font-size: 21rpx;
+    margin-top: 0;
+  }
+
+  .hero-text {
+    margin-top: 12rpx;
+  }
+
+  .headline {
+    font-size: $font-size-2xl;
+  }
+}
+
+/* ── Short-screen compaction (< 700px window height) ───────────────── */
+// iPhone 8/SE band: window 603px (667pt minus the 64pt nav) × 2.0 rpx/px
+// ≈ 1206rpx usable. Totals ~1168rpx (one-line subtitle) / ~1210rpx
+// worst case: brand 124 + hero 464 + strip 80 + caption 28 +
+// hero-text 128–170 + spacer 0 + bottom-zone ~344 (no home-indicator
+// inset on these devices).
+.landing-page--short {
+  .brand-mark {
+    padding-top: 12rpx;
+  }
+
+  .landing-page__brand-logo {
+    width: 112rpx !important;
+    height: 112rpx !important;
+  }
+
+  .hero-zone {
+    height: 456rpx;
+    margin-top: 8rpx;
+  }
+
+  // Scaled artwork 688rpx × 0.68 ≈ 468rpx — bleeds ≤ 24rpx above the
+  // 456rpx zone (same tolerance as the previous composition).
+  .hero-stage__scale {
+    transform: scale(0.68);
+    transform-origin: center bottom;
+  }
+
+  // E3 compact variant (mandatory — the full strip alone would push the
+  // page ~90rpx over the ~1206rpx budget at the 700px breakpoint).
+  .mechanism-strip {
+    height: 80rpx;
+  }
+
+  .mechanism-strip__seats {
+    gap: 8rpx;
+  }
+
+  .mechanism-strip__seat {
+    width: 56rpx;
+    height: 56rpx;
+  }
+
+  .mechanism-strip__head {
+    width: 48rpx !important;
+    height: 48rpx !important;
+  }
+
+  .mechanism-strip__seats::after {
+    width: 340rpx;
+  }
+
+  .mechanism-strip__connector {
+    width: 44rpx;
     margin: 0 8rpx;
     border-top-width: 1rpx;
   }
 
   .mechanism-strip__pin {
-    width: 44rpx;
-    height: 44rpx;
+    width: 40rpx;
+    height: 40rpx;
   }
 
   .mechanism-caption {
@@ -1210,18 +1350,7 @@
   }
 
   .hero-text {
-    margin-top: 12rpx;
-  }
-
-  // One wrapper scale shrinks halo/hero/sprites/particles together — no
-  // per-element geometry recalculation.
-  .hero-stage__scale {
-    transform: scale(0.85);
-    transform-origin: center bottom;
-  }
-
-  .hero-text {
-    margin-top: 16rpx;
+    margin-top: 8rpx;
   }
 
   .headline {
@@ -1258,6 +1387,10 @@
   .mechanism-strip__seat:nth-child(4) { animation-delay: 680ms !important; }
   .mechanism-strip__seat:nth-child(5) { animation-delay: 740ms !important; }
   .mechanism-strip__seat:nth-child(6) { animation-delay: 800ms !important; }
+
+  .mechanism-strip__seats::after {
+    animation: landing-rm-fade 300ms ease-out 860ms both !important;
+  }
 
   .mechanism-strip__connector {
     animation: connector-draw 220ms ease-out 900ms both !important;
@@ -1343,6 +1476,11 @@
     opacity: 1 !important;
     animation: none !important;
     transition: none !important;
+  }
+
+  .mechanism-strip__seats::after {
+    animation: none !important;
+    opacity: 1 !important;
   }
 
   .mechanism-strip__connector {
@@ -1436,6 +1574,10 @@
   .mechanism-strip__seat:nth-child(4) { animation-delay: 680ms !important; }
   .mechanism-strip__seat:nth-child(5) { animation-delay: 740ms !important; }
   .mechanism-strip__seat:nth-child(6) { animation-delay: 800ms !important; }
+
+  .mechanism-strip__seats::after {
+    animation: landing-rm-fade 300ms ease-out 860ms both !important;
+  }
 
   .mechanism-strip__connector {
     animation: connector-draw 220ms ease-out 900ms both !important;

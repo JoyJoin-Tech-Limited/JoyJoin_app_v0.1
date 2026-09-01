@@ -22,7 +22,7 @@ description: >
 | Tier | Scope | Checklist | DevTools |
 |---|---|---|---|
 | **Routine** | Typos, copy, color tweaks, padding nudges, icon swaps | Quick check (5 items) | Recommended |
-| **Full** | New screens, components, layout changes, visual redesign | Full checklist (17 items) | **Mandatory** |
+| **Full** | New screens, components, layout changes, visual redesign | Full checklist (19 items) | **Mandatory** |
 
 When in doubt, treat as Full. A padding change that affects visual hierarchy = Full.
 ## Routine dev quick check (60 seconds)
@@ -67,11 +67,12 @@ Top rules. Deep reference: [`references/taro-ui-framework.md`](references/taro-u
 - **Spec asks for something off-brand** — name the exact conflict (colour, font, motion, mascot use, density) and flag before implementation.
 - **CSS-in-JS proposed** — default to existing repo Taro styling patterns unless the architecture explicitly shifts.
 - **Chinese text breaks awkwardly** — never use `overflow-wrap: anywhere` on CJK display text (produces 孤字). Default `overflow-wrap: normal` is correct.
+- **Pill/tag floats high or low next to a title** — R2 baseline trap: an `inline-flex` sibling aligns on its own text baseline, and WeChat `<Text>` is inline. Wrap the pair in `display: flex; align-items: center`, or stack via `flex-direction: column`. See `references/taro-ui-framework.md` §WXSS layout semantics (L1–L5).
 - **Entrance animations feel generic** — use `cubic-bezier(0.22, 1, 0.36, 1)`. Reserve `ease-out`/`ease-in-out` for loops only.
 - **Component looks styled in H5 / DevTools but unstyled on device** — Taro may have chunked its SCSS into the subpackage's `sub-common.wxss`, which WeChat never loads. Fix: `@use` the component SCSS in the consuming page SCSS and remove the matching `import './X.scss'` from the component TSX; then run `npm run verify:subpackage-styles -w mini-program` (see `docs/runbooks/mini-program-asset-delivery.md` §4.6).
 ## Grill-me stress-test
 After completing Full-tier changes, run [`references/grill-me-checklist.md`](references/grill-me-checklist.md) — a one-question-per-turn interview that stress-tests pixel precision, Taro discipline, state completeness, cross-device behavior, and brand feel.
-## Full review checklist (17 items)
+## Full review checklist (19 items)
 
 For Full-tier changes. Routine changes use the quick check above.
 
@@ -90,12 +91,14 @@ For Full-tier changes. Routine changes use the quick check above.
 - [ ] Motion restrained, `transform`/`opacity`-based, safe for mini-program
 - [ ] Entrance animations use `cubic-bezier(0.22, 1, 0.36, 1)`; loops use `ease-out`/`ease-in-out`
 - [ ] No `overflow-wrap: anywhere` on CJK display text; default breaking preserved
+- [ ] **Layout semantics:** vertical stacking via `display: block` or flex-column parent — WeChat `<Text>` is inline; no reliance on inline-level sibling flow (L1/L3)
+- [ ] **Mixed-size same-line pairs** (pill+title, icon+label) use flex row + `align-items: center` — never baseline alignment (L2)
 - [ ] Screen is unmistakably JoyJoin, not generic — don't sign off on "functional but cheap"
 - [ ] For subpackage pages: `npm run build:weapp -w mini-program && npm run verify:subpackage-styles -w mini-program` passes with no non-empty `sub-common.wxss`
 - [ ] 情绪价值 scored via `docs/reference/emotional-value-rubric.md` for user-facing screens (0–24). A technically perfect screen with 0 情绪价值 is a failure.
 ## Related skills
 
-- [`ui-layout-audit`](./ui-layout-audit/SKILL.md) — pixel-level layout, spacing, typography audit
+- [`ui-layout-audit`](./ui-layout-audit/SKILL.md) — pixel-level layout, spacing, typography audit; [`references/render-integrity-checklist.md`](./ui-layout-audit/references/render-integrity-checklist.md) — R1–R8 render-layer defect taxonomy
 - [`frontend-design-audit`](./frontend-design-audit/SKILL.md) — 5-dimension design quality audit (0–20)
 - [`completeness-audit`](../completeness-audit/SKILL.md) — 11-dimension 完成度 audit with ROI recommendations; run after Full-tier changes
 - [`joyjoin-brand-guidelines`](./joyjoin-brand-guidelines/SKILL.md) — brand colour, typography, mascot usage

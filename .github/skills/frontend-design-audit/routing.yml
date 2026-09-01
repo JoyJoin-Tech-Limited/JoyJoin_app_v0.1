@@ -15,7 +15,7 @@ use_when:
 do_not_use_when:
   - task is purely backend with no UI surface
   - task is writing new product requirements
-  - task is generating designs (use stitch-design-workflow or lovart-design-workflow)
+  - task is generating designs (use lovart-design-workflow)
 
 strong_triggers:
   - audit this screen

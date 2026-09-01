@@ -51,13 +51,6 @@
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "${PWD}"],
       "env": {}
     },
-    "stitch": {
-      "command": "npx",
-      "args": ["-y", "@_davideast/stitch-mcp", "proxy"],
-      "env": {
-        "STITCH_API_KEY": "${STITCH_API_KEY}"
-      }
-    },
     "figma": {
       "command": "npx",
       "args": ["-y", "@figma/mcp"],

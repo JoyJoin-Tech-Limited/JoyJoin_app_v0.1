@@ -128,7 +128,7 @@
       ]
     },
     "Visual Designer": {
-      "description": "UI visual audit for UI-affecting changes only. Runs the Rendered-Truth Visual Gate (render + npm run audit:visual + vision review). Filled by a VISION-CAPABLE reviewer (OpenCode: multimodal-looker), NOT the Lovart/Stitch brief-generator agent. Rendered correctness defects (VD-05/06/07) are BLOCKING; craft (spacing, AI slop, tokens) stays concern to prevent nit-chasing.",
+      "description": "UI visual audit for UI-affecting changes only. Runs the Rendered-Truth Visual Gate (render + npm run audit:visual + vision review). Filled by a VISION-CAPABLE reviewer (OpenCode: multimodal-looker), NOT the Lovart brief-generator agent. Rendered correctness defects (VD-05/06/07) are BLOCKING; craft (spacing, AI slop, tokens) stays concern to prevent nit-chasing.",
       "items": [
         {
           "id": "VD-01",

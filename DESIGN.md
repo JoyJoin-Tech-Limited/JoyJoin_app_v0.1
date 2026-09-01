@@ -1,6 +1,6 @@
 # JoyJoin Design System
 
-> **Purpose:** Canonical design system reference for human designers, AI design tools (Stitch, Lovart), and frontend engineers. Keep this file in sync with `joyjoin-brand-guidelines` and `design-system-governance` skills.
+> **Purpose:** Canonical design system reference for human designers, AI design tools (Lovart), and frontend engineers. Keep this file in sync with `joyjoin-brand-guidelines` and `design-system-governance` skills.
 > **Last updated:** 2026-06-05
 
 ---
@@ -194,12 +194,11 @@ These animals map to the personality system's 12 archetypes.
 
 | Tool | Purpose | Output |
 |------|---------|--------|
-| **Stitch** | Rapid UI screen exploration, layout prototyping | HTML/CSS + Figma export |
 | **Lovart** | Brand illustrations, mascot artwork, marketing graphics | PNG/SVG/MP4 assets |
 | **Figma** | Production design handoff, pixel specs, component libraries | Specs for engineering |
 | **Engineering** | Production implementation | React / Taro code |
 
-**Workflow:** Stitch exploration → Figma refinement → Engineering implementation.
+**Workflow:** Lovart asset production / Figma screen design → Engineering implementation.
 
 ---
 

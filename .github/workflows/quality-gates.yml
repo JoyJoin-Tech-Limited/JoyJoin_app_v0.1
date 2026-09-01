@@ -17,6 +17,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -26,6 +28,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund --prefer-offline
+
+      - name: Design anti-slop scan (changed lines only)
+        run: node scripts/devtools/design-audit.mjs --scope changed --fail-on error
+        env:
+          DESIGN_AUDIT_BASE: ${{ github.event.pull_request.base.ref && format('origin/{0}', github.event.pull_request.base.ref) || '' }}
 
       - name: Verify env, secret, legacy, and import-boundary guardrails
         run: node scripts/check/check-guardrails.mjs

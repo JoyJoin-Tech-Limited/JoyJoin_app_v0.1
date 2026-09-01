@@ -4,7 +4,17 @@
 .event-detail {
   min-height: 100dvh;
   background: $color-bg-gradient;
-  padding: $container-padding;
+
+  // Padding lives on inner wrappers — WeChat ignores padding on the native
+  // scroll-view element itself. The static error shell uses the --static
+  // modifier; the scrolling branch wraps children in __scroll-inner.
+  &--static {
+    padding: $container-padding;
+  }
+
+  &__scroll-inner {
+    padding: $container-padding;
+  }
 
   &--exiting {
     opacity: 0;

@@ -139,6 +139,11 @@ export default function MiniProgramLandingPage({
   const [failedSprites, setFailedSprites] = useState<ReadonlySet<HeroSpriteKey>>(new Set())
   const [hasIncompleteSession, setHasIncompleteSession] = useState(false)
   const [isShortScreen, setIsShortScreen] = useState(false)
+  // Mid tier (2026-09-01): the 700–880px window band (iPhone 12/13/14,
+  // 11 Pro, 12 mini ≈ 1560–1623rpx usable) previously fell into the
+  // default 1733rpx composition and hard-clipped the hero copy behind the
+  // CTA. Short tier now starts at 700px (was 640) to catch iPhone 8/SE.
+  const [isMidScreen, setIsMidScreen] = useState(false)
   const [reduceMotion] = useState(() => getSystemReducedMotion())
   const isMounted = useStaggerMount()
   const { isDegradation } = useDeviceTier()
@@ -167,7 +172,9 @@ export default function MiniProgramLandingPage({
     loadBrandDisplayFont()
     const snapshot = readAnonymousAssessmentSession()
     setHasIncompleteSession(!!snapshot && !isAnonymousAssessmentSessionCompleted(snapshot))
-    setIsShortScreen(readWindowHeightPx() < 640)
+    const windowHeightPx = readWindowHeightPx()
+    setIsShortScreen(windowHeightPx < 700)
+    setIsMidScreen(windowHeightPx >= 700 && windowHeightPx < 880)
     void Taro.getNetworkType()
       .then((res) => {
         networkTypeRef.current = res.networkType
@@ -200,8 +207,8 @@ export default function MiniProgramLandingPage({
   // settles, then hand the flight to a CSS transition (inline "from"
   // transform → identity). Runs on the --entered clock; RM/low-end tiers
   // never measure (their CSS renders the settled composition statically).
-  // boundingClientRect returns post-transform coordinates, so the --short
-  // 0.85 stage scale is handled for free.
+  // boundingClientRect returns post-transform coordinates, so the --mid /
+  // --short stage scales are handled for free.
   const mechanismAnimated = !reduceMotion && !isDegradation && !loggedOutMode
 
   const measureMechanismBurst = async (mode: 'settle' | 'freeze') => {
@@ -299,9 +306,9 @@ export default function MiniProgramLandingPage({
         : 'continue'
   const ctaLabel = useMemo(() => {
     if (ctaType === 'loggedOut') return '微信一键登录'
-    if (ctaType === 'new') return '拆开我的盲盒'
+    if (ctaType === 'new') return '测测我的聚会气场'
     if (ctaType === 'discover') return '进入发现页'
-    return '继续开盒'
+    return '接着测'
   }, [ctaType])
   const ctaDisabledClass = hasAcceptedLegal ? "" : " landing-page__cta--disabled"
   const ctaHoverClass = hasAcceptedLegal ? "landing-page__cta-hover" : ""
@@ -309,6 +316,7 @@ export default function MiniProgramLandingPage({
     "landing-page",
     isPageExiting ? "landing-page--exiting" : "",
     isShortScreen ? "landing-page--short" : "",
+    isMidScreen ? "landing-page--mid" : "",
     isDegradation ? "landing-page--low-end" : "",
     reduceMotion ? "landing-page--rm" : "",
     loggedOutMode ? "landing-page--logged-out" : "",
@@ -612,7 +620,7 @@ export default function MiniProgramLandingPage({
                       rpx, which the H5 preview drops (BrandLogo pattern). */}
                   <ArchetypeHead
                     archetype={key}
-                    size={isShortScreen ? 56 : 88}
+                    size={isShortScreen ? 48 : isMidScreen ? 72 : 80}
                     variant='grid'
                     fallback='none'
                     className='mechanism-strip__head'
@@ -663,8 +671,9 @@ export default function MiniProgramLandingPage({
           )}
         </View>
 
-        {/* Dynamic spacer: disappears on short phones so the fixed CTA stays reachable */}
-        <ResponsiveSpacer heightRpx={64} collapseBelow={640} />
+        {/* Dynamic spacer: collapses on short phones (<700px → null) so the
+            fixed CTA stays reachable; mid tier keeps a slimmer 24rpx gap. */}
+        <ResponsiveSpacer heightRpx={isMidScreen ? 24 : 64} collapseBelow={700} />
       </View>
 
       {/* CTA */}
@@ -755,7 +764,7 @@ export default function MiniProgramLandingPage({
           {showLegalHint && (
             <View key={legalHintSeq} className='landing-page__legal-hint' aria-hidden='true'>
               <Text className='landing-page__legal-hint-text'>
-                {ctaType === 'new' ? '先勾选协议，再拆盲盒' : ctaType === 'loggedOut' ? '先勾选协议，再登录' : '先勾选协议，再继续'}
+                {ctaType === 'new' ? '先勾选协议，再开始测' : ctaType === 'loggedOut' ? '先勾选协议，再登录' : '先勾选协议，再继续'}
               </Text>
             </View>
           )}

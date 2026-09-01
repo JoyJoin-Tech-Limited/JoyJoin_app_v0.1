@@ -3,7 +3,12 @@
 .alang-debug {
   min-height: 100dvh;
   background: $color-bg;
-  padding: 32rpx 24rpx;
+
+  // Padding lives on the inner wrapper — WeChat ignores padding on the
+  // native scroll-view element itself.
+  &__scroll-inner {
+    padding: 32rpx 24rpx;
+  }
 
   &__header {
     margin-bottom: 32rpx;

@@ -28,6 +28,16 @@ Taro’s component philosophy aligns with how we ship mini-program UI:
 - **Conditional styles** — Use Taro-style conditional compilation in styles or **multi-suffix files** (e.g. `*.weapp.scss`, `*.h5.scss`, `*.rn.scss`) when a platform truly needs different rules.
 - **Overriding components** — Prefer class names and documented style props over ad hoc global overrides.
 
+### WXSS layout semantics (inline vs block) — non-negotiable
+
+Write-time rules that prevent the render-layer defect class in [`../../ui-layout-audit/references/render-integrity-checklist.md`](../../ui-layout-audit/references/render-integrity-checklist.md). Origin: the 2026-09-01 terms-page pill incident.
+
+- **L1 — `<Text>` is inline in WeChat.** Vertical stacking requires `display: block` on the Text or `flex-direction: column` on the parent. Default banners/cards to a **flex-column parent** — it makes every child's margins live and predictable.
+- **L2 — Mixed sizes/fonts on one line ⇒ flex row + `align-items: center`.** Baseline alignment of inline-level siblings is forbidden for mixed font sizes (≥8rpx difference) or mixed font families. Pill + title, icon + label: always flex-center.
+- **L3 — `inline-flex` / `inline-block` only inside a text flow.** Tags/pills that are structural siblings of block content belong in the flex-column parent, not as inline-level boxes.
+- **L4 — A margin on an inline-level element sharing a line is dead code.** Dead declarations signal intent/reality drift — treat as a bug, not cleanup.
+- **L5 — Fix alignment at the semantics layer.** No unexplained negative-margin optical nudges; any unavoidable nudge gets an inline comment.
+
 ---
 
 ## 3. Components and ecosystem

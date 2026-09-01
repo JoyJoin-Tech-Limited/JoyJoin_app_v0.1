@@ -2,21 +2,19 @@
 
 ## Design Tooling
 
-JoyJoin's design-to-code pipeline uses three upstream tools:
+JoyJoin's design-to-code pipeline uses two upstream tools:
 
 | Tool | Role | Output |
 |------|------|--------|
-| **Stitch** | Rapid UI screen exploration, layout prototyping, clickable multi-screen flows | HTML/CSS + Figma export |
 | **Lovart** | Brand illustrations, mascot artwork (插画风), marketing graphics, icon sets | PNG / SVG / MP4 assets |
 | **Figma** | Production design handoff, pixel specs, responsive breakpoints, component states | Engineering specs |
 
-**Workflow:** Stitch exploration → Figma refinement → Engineering implementation (React / Taro).
+**Workflow:** Lovart asset production / Figma screen design → Engineering implementation (React / Taro).
 
 **Rules:**
-- Stitch output is **exploratory reference only** — never production code
 - Lovart output is **asset-only** — never UI layout or component logic
 - Figma is the **production handoff surface** — engineering builds from Figma specs
-- All three tools are governed by this brand skill and `design-system-governance`
+- Both tools are governed by this brand skill and `design-system-governance`
 
 ## Motion Guidance
 

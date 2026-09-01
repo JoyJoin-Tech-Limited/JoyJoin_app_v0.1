@@ -73,6 +73,7 @@ export default function AlangStoryDetailPage() {
 
   return (
     <ScrollView className='alang-story-detail' scrollY>
+      <View className='alang-story-detail__scroll-inner'>
       <View className='alang-story-detail__header'>
         <Text className='alang-story-detail__title'>{archive.title}</Text>
         <Text className='alang-story-detail__meta'>
@@ -134,6 +135,7 @@ export default function AlangStoryDetailPage() {
       <View className='alang-story-detail__section'>
         <Text className='alang-story-detail__section-title'>总结</Text>
         <Text className='alang-story-detail__summary'>{archive.summaryLine}</Text>
+      </View>
       </View>
     </ScrollView>
   )

@@ -32,7 +32,6 @@ Primary purpose is to **configure, orchestrate, or document AI-powered runtime f
 | `miniscript-story-framework` | Generates mini-script stories via AI (`social-miniscript-v1`) |
 | `personality-dice-icebreaker` | Generates personality dice challenges via AI (`social-personality-dice-v1`) |
 | `semantic-matching-embeddings` | Generates neural embeddings via DeepSeek for matching similarity |
-| `stitch-design-workflow` | Generates UI mockups and screen explorations via Stitch AI |
 
 **Key distinction:** These skills are invoked *because* the product flow needs AI-generated content. They are not generic developer guidance — they are the bridge between the product feature and the AI service.
 

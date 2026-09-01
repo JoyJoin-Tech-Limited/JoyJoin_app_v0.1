@@ -44,6 +44,7 @@ Use these defaults for consistency across all JoyJoin screens. Deviations are al
 - `gap: $spacing-md` (24rpx) — default for `page-shell-padding` flex columns
 - `gap: $spacing-lg` (40rpx) — only when the page has <4 sections and needs breathing room
 - Never mix `gap` and `ResponsiveSpacer` redundantly — pick one per section pair
+- **Multiplier rule:** if related elements are `g` apart, the gap to the next group is ≥ `2g`. Uniform gaps flatten hierarchy
 
 ## Grill-me stress-test
 
@@ -59,17 +60,18 @@ After scoring a screen, run [`references/grill-me-checklist.md`](references/gril
 
 1. **Layer inventory**: List every visual layer from top to bottom (confirm against the screenshot)
 2. **Spacing map**: Measure vertical gaps between layers **from the render**. Flag gaps <16rpx (too tight) or >80rpx without structural purpose (too loose). Compare against **Standard spacing values** above.
-3. **Typography hierarchy**: Verify heading/body/meta have at least 8rpx size difference and distinct weight/color
+3. **Typography hierarchy**: Verify heading/body/meta have at least 8rpx size difference and distinct weight/color. Values must outweigh their labels ("591" beats "Sales"), never the reverse
 4. **Emoji scan**: Primary questions, headings, and CTA labels must be emoji-free. Emojis allowed only in: mascot speech, decorative badges, result celebration states
 5. **Alignment check**: Left edges of text blocks must share a 4rpx grid (verify on the render; the scanner flags right-edge bleed)
 6. **Safe area & compression**: On 375×667 (iPhone SE), no interactive element should be <88rpx tall or <200rpx from bottom without scroll. Full-screen states respect the zero-scroll viewport policy (`viewport-zero-scroll`): `100dvh` shell with `vh` fallback, no page-level scroll
-7. **Reading experience** (the treat test): Chinese body text line-height ≥1.6, display text ≥1.4. No paragraph >10 lines without visual relief. Text should invite the eye, not exhaust it
-8. **Visual coherence (孤字 guard)**: No headline or button text should produce a lone word/character on its own row. Use `word-break: keep-all` for short display text; ensure container width ≥ font-size × 8. English words in Chinese copy must never break mid-word
-9. **Emotional craft**: Every element should feel intentional, not assembled. Flag placeholder-like spacing, default-looking borders, or "that'll do" visual decisions. Cross-reference with `docs/reference/emotional-value-rubric.md`: does this layout feel generous (归属感) or cramped (transactional)?
+7. **Render integrity (R1–R8)**: Run the defect taxonomy in [`references/render-integrity-checklist.md`](references/render-integrity-checklist.md) against the render — line-map every visual row vs JSX intent; flag inline/block stacking violations (R1), baseline traps on mixed-size same-line pairs (R2), and dead declarations (R8). R1/R2 are blocking
+8. **Reading experience** (the treat test): Chinese body text line-height ≥1.6, display text ≥1.4. No paragraph >10 lines without visual relief. Text should invite the eye, not exhaust it
+9. **Visual coherence (孤字 guard)**: No headline or button text should produce a lone word/character on its own row. Use `word-break: keep-all` for short display text; ensure container width ≥ font-size × 8. English words in Chinese copy must never break mid-word
+10. **Emotional craft**: Every element should feel intentional, not assembled. Flag placeholder-like spacing, default-looking borders, or "that'll do" visual decisions. Cross-reference with `docs/reference/emotional-value-rubric.md`: does this layout feel generous (归属感) or cramped (transactional)?
 
 ## Detailed reading & coherence rules
 
-The full numeric rules for reading experience (line-height, measure) and visual coherence (孤字 guard, English-in-CJK wrapping) live in [`references/reading-and-coherence.md`](references/reading-and-coherence.md). Audit-workflow steps 7–8 above summarize them.
+The full numeric rules for reading experience (line-height, measure) and visual coherence (孤字 guard, English-in-CJK wrapping) live in [`references/reading-and-coherence.md`](references/reading-and-coherence.md). Audit-workflow steps 8–9 above summarize them.
 
 ## Quick examples
 
@@ -86,6 +88,8 @@ The full numeric rules for reading experience (line-height, measure) and visual 
 ## Review checklist
 
 - [ ] **Step 0 done:** screen rendered, `npm run audit:visual` scan read, screenshot vision-reviewed
+- [ ] **Render-integrity pass (R1–R8) done:** line-map matches JSX intent; no R1/R2 blocking defects; dead declarations investigated for intent drift
+- [ ] Same-line mixed font sizes/fonts use flex + `align-items: center` — never baseline alignment
 - [ ] Spacing/alignment findings measured **from the render** (rpx), not estimated from code
 - [ ] Every finding classified correctness (blocking) or craft (advisory); Class A defects block the screen
 - [ ] Every layer has a documented vertical gap to its neighbor

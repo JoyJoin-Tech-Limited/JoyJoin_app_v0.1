@@ -332,6 +332,7 @@ export default function PoolGroupDetailPage() {
       enhanced
       showScrollbar={false}
     >
+      <View className='pool-group-detail__scroll-inner'>
       <View className='pool-group-detail__header'>
         {group.groupNumber ? (
           <View className='pool-group-detail__group-badge'>
@@ -729,6 +730,7 @@ export default function PoolGroupDetailPage() {
         reduceMotion={shouldReduceMotion}
         onClose={() => setSheetMemberId(null)}
       />
+      </View>
     </ScrollView>
   )
 }

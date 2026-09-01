@@ -15,10 +15,15 @@
 .pool-group-detail {
   min-height: 100vh;
   min-height: 100dvh;
-  @include page-shell-padding($spacing-lg, $container-padding, $spacing-xl);
   background:
     radial-gradient(circle at top, rgba($color-primary, 0.18), transparent 38%),
     linear-gradient(180deg, $color-bg 0%, $color-bg-tint-pink 54%, $color-bg-tint-cream 100%);
+
+  // Padding lives on the inner wrapper — WeChat ignores padding on the
+  // native scroll-view element itself.
+  &__scroll-inner {
+    @include page-shell-padding($spacing-lg, $container-padding, $spacing-xl);
+  }
 
   &__header {
     text-align: center;

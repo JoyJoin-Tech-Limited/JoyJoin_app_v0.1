@@ -121,6 +121,7 @@ export default function AlangDebugPage() {
 
   return (
     <ScrollView className='alang-debug' scrollY>
+      <View className='alang-debug__scroll-inner'>
       <View className='alang-debug__header'>
         <Text className='alang-debug__title'>阿浪 Debug 面板</Text>
         <Text className='alang-debug__slug'>Mission: {slug}</Text>
@@ -245,6 +246,7 @@ export default function AlangDebugPage() {
         {log.map((line, idx) => (
           <Text key={idx} className='alang-debug__log-line'>{line}</Text>
         ))}
+      </View>
       </View>
     </ScrollView>
   )

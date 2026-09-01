@@ -3,7 +3,17 @@
 
 @mixin matching-status-base {
   @include page-gradient-bg;
-  padding: $container-padding;
+
+  // Padding lives on inner wrappers — WeChat ignores padding on the native
+  // scroll-view element itself. Static (non-scrolling) state shells use the
+  // --static modifier; scrolling branches wrap children in __scroll-inner.
+  &--static {
+    padding: $container-padding;
+  }
+
+  &__scroll-inner {
+    padding: $container-padding;
+  }
 
   &--reduce-motion {
     .matching-status__dot,

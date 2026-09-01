@@ -965,6 +965,7 @@ export default function BlindBoxPaymentPage() {
   if (paymentsDisabled) {
     return (
       <ScrollView className='payment-page' scrollY enhanced showScrollbar={false}>
+        <View className='payment-page__scroll-inner'>
         <View className='payment-page__header'>
           <JoyButton
             variant='secondary'
@@ -1026,12 +1027,14 @@ export default function BlindBoxPaymentPage() {
             </JoyButton>
           ) : null}
         </View>
+        </View>
       </ScrollView>
     )
   }
 
   return (
     <ScrollView className='payment-page' scrollY enhanced showScrollbar={false}>
+      <View className='payment-page__scroll-inner'>
       <View className='payment-page__header'>
         <JoyButton
           variant='secondary'
@@ -1255,6 +1258,7 @@ export default function BlindBoxPaymentPage() {
           {payButtonLabel}
         </JoyButton>
         <Text className='payment-page__hint'>{payHint}</Text>
+      </View>
       </View>
     </ScrollView>
   )

@@ -923,13 +923,18 @@
 
 .payment-page {
   min-height: 100dvh;
-  @include page-shell-padding(40rpx, 32rpx, 48rpx);
   position: relative;
   overflow: hidden;
   background: $color-bg-tint-warm;
-  display: flex;
-  flex-direction: column;
-  gap: 24rpx;
+
+  // Padding + content flow live on the inner wrapper — WeChat ignores
+  // padding on the native scroll-view element itself.
+  &__scroll-inner {
+    @include page-shell-padding(40rpx, 32rpx, 48rpx);
+    display: flex;
+    flex-direction: column;
+    gap: 24rpx;
+  }
 
   &__backdrop {
     position: absolute;

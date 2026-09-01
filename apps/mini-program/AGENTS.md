@@ -109,6 +109,7 @@ Events land in `discover_analytics_events` with `poolId = null`. Client module: 
 ## 3. Common Taro / WeChat pitfalls (with file:line)
 
 - **`<ScrollView>` inside a flex parent** will not scroll unless the parent has `min-height: 0` or explicit height. `LocationFilterDrawer` is the canonical fix.
+- **WeChat ignores `padding` on the native `<ScrollView>` element in webview rendering mode** (vConsole warning: "the padding property is not yet supported in webview rendering mode"). DevTools/H5 render it, device silently drops it. Padding must live on an inner wrapper `View` (pattern: `&__scroll-inner`; static non-scrolling state shells use a `--static` modifier). Canonical examples: `pages/icebreaker-session`, `pages/matching-status`, `pages/event-detail`.
 - **`Taro.pageScrollTo` does NOT work inside `<ScrollView>`** — use `scrollIntoView` prop with the target element's `id` (no `#` prefix).
 - **WeChat keeps pages in the navigation stack alive** (hidden, not unmounted). Transient flags like `isExiting`/`isSubmitting` survive swipe-back. Always reset in `useDidShow` via `useResetOnShow` from `src/hooks/useResetOnShow.ts`.
 - **Canvas `drawImage` requires a network-resolvable URL** — local bundled paths (e.g., `/pages/onboarding/assets/...`) work for `<Image>` but NOT for canvas. Pass `visual.asset` (CDN URL) to canvas.

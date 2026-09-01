@@ -20,7 +20,7 @@ description: >
 - Converting product requirements into a standardized visual design brief
 - Requesting brand-aligned icons, posters, or social media assets
 - Handing off design artifacts from Lovart to frontend engineers
-- Choosing between Lovart (illustration) vs Stitch (UI exploration) vs Figma (production specs)
+- Choosing between Lovart (illustration) vs Figma (production specs)
 
 ## When NOT to use
 
@@ -30,11 +30,10 @@ description: >
 - Animation / motion → `wow-elements`
 - API / server logic → `server-domain-architecture`
 
-### Stitch vs Lovart
+### Lovart vs Figma
 
 | Need | Tool |
 |------|------|
-| UI screen exploration, rapid prototyping | **Stitch** (`stitch-design-workflow`) |
 | Brand illustrations, mascot artwork, marketing graphics | **Lovart** (this skill) |
 | Production pixel specs, component libraries | **Figma** |
 

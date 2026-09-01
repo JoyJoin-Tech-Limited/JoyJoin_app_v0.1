@@ -46,6 +46,19 @@ Ask when text width is constrained:
 **Q9:** Are there any English words inside Chinese copy that could break mid-word?
 - Recommended: English words wrapped in `nowrap` or using `word-break: keep-all`.
 
+## Render Integrity
+
+Ask when any screen ships layout (see [`render-integrity-checklist.md`](render-integrity-checklist.md)):
+
+**Q12:** Line-map this screen for me — which elements occupy each visual line? Does that match the JSX sibling intent?
+- Recommended: Every line's occupants match intent. Any `<Text>` without `display: block` stacked under an inline-level sibling is an R1 blocking defect.
+
+**Q13:** Point to every same-line pair with different font sizes or fonts. How are they aligned — flex-center or baseline?
+- Recommended: All mixed-size/mixed-font pairs use `display: flex; align-items: center`. Baseline alignment for mixed sizes is an R2 blocking defect.
+
+**Q14:** Any dead declarations — `margin-bottom` on an inline-level element, `vertical-align` on a block, `align-items` on a non-flex parent?
+- Recommended: Zero dead declarations. Each one is an intent/reality drift bug (R8) — investigate, don't just delete.
+
 ## Emotional Craft
 
 Ask when the layout feels "off":

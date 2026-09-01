@@ -29,7 +29,7 @@ description: >
 ## Do not use when
 
 - Task is purely backend with no UI surface
-- Generating designs from scratch (use `stitch-design-workflow` or `lovart-design-workflow`)
+- Generating designs from scratch (use `lovart-design-workflow`)
 
 ## Grill-me stress-test
 
@@ -82,7 +82,7 @@ See [`references/audit-framework.md`](./references/audit-framework.md) for full 
 
 - **"I can't tell if this is on-brand"** → Compare against `joyjoin-brand-guidelines` and the Anti-Slop Checklist in `references/audit-framework.md`.
 - **"The screen scores well but still feels off"** → Check copy warmth, mascot presence, and emotional resonance — these are subjective but critical.
-- **"Stitch-generated screen looks different from implementation"** → Stitch is exploratory; implementation must follow `design-system-governance` and `mini-program-frontend-excellence`.
+- **"Lovart-generated illustration looks off-brand in implementation"** → Lovart output is exploratory; implementation must follow `design-system-governance` and `mini-program-frontend-excellence`.
 
 ## Review checklist
 

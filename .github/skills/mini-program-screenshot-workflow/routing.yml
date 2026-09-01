@@ -17,7 +17,7 @@ use_when:
 
 do_not_use_when:
   - task is editing mini-program code (use mini-program-frontend-excellence)
-  - task is generating designs from scratch (use stitch-design-workflow)
+  - task is generating designs from scratch (use lovart-design-workflow)
   - only structural / DOM verification is needed (use wechat-devtools MCP directly)
 
 strong_triggers:

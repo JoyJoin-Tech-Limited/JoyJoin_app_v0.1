@@ -29,6 +29,7 @@ export default function TermsPage() {
       showScrollbar={false}
       scrollWithAnimation
     >
+      <View className='terms-page__scroll-inner'>
       <View className='terms-page__banner'>
         <View className='terms-page__banner-tag'>法律说明</View>
         <Text className='terms-page__banner-title'>{entryMeta.title}</Text>
@@ -56,6 +57,7 @@ export default function TermsPage() {
           使用悦聚服务即代表您已阅读、理解并同意本页所示相关法律说明。
         </Text>
         <Text className='terms-page__footer-text'>© {JOYJOIN_COPYRIGHT_YEAR} JoyJoin. 保留所有权利。</Text>
+      </View>
       </View>
     </ScrollView>
   )

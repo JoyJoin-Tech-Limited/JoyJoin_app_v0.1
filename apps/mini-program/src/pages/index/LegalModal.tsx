@@ -30,6 +30,7 @@ export default function LegalModal({ visible, section, onAgree }: LegalModalProp
         </View>
 
         <ScrollView className='legal-modal__body' scrollY enhanced showScrollbar={false}>
+          <View className='legal-modal__body-inner'>
           {sections.map((sec) => (
             <View key={sec.id} className='legal-modal__section'>
               <Text className='legal-modal__section-heading'>{sec.heading}</Text>
@@ -38,6 +39,7 @@ export default function LegalModal({ visible, section, onAgree }: LegalModalProp
               ))}
             </View>
           ))}
+          </View>
         </ScrollView>
 
         <View className='legal-modal__footer'>
