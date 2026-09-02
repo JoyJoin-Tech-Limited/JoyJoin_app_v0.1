@@ -67,14 +67,18 @@ async function optimizeIntroAnimation() {
 
   const inputStat = fs.statSync(input)
 
-  // Resize 480×480 master → 360×360 display size, target ~150KB max.
-  // ImageMagick handles animated WebP; target-size keeps output under budget.
+  // Keep the 480×480 master resolution — the intro slot renders at 260rpx,
+  // which is ~405 physical px on DPR-3 devices, so downscaling to 360px plus
+  // a hard 150KB target-size produced visible blur on device. Quality-based
+  // encoding keeps edges sharp; CDN delivery makes the larger size acceptable.
   await execFileAsync('magick', [
     input,
     '-resize',
-    '360x360',
+    '480x480',
+    '-quality',
+    '72',
     '-define',
-    'webp:target-size=150kb',
+    'webp:method=6',
     output,
   ])
 
