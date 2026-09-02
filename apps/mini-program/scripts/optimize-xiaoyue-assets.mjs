@@ -67,16 +67,17 @@ async function optimizeIntroAnimation() {
 
   const inputStat = fs.statSync(input)
 
-  // Keep the 480×480 master resolution — the intro slot renders at 260rpx,
-  // which is ~405 physical px on DPR-3 devices, so downscaling to 360px plus
-  // a hard 150KB target-size produced visible blur on device. Quality-based
-  // encoding keeps edges sharp; CDN delivery makes the larger size acceptable.
+  // Rendered slot is 260rpx ≈ 405 physical px on DPR-3 devices (circular crop).
+  // 420px keeps 1:1 sharpness at DPR-3 while q45 lands at ~395 KiB, under the
+  // 400 KiB budget enforced by check-xiaoyue-asset-size.mjs. (480px q72 was
+  // 671 KiB and broke that gate; 480px q40 was still 430 KiB.)
+  // CDN delivery + app-launch preload keep the fetch cost acceptable.
   await execFileAsync('magick', [
     input,
     '-resize',
-    '480x480',
+    '420x420',
     '-quality',
-    '72',
+    '45',
     '-define',
     'webp:method=6',
     output,

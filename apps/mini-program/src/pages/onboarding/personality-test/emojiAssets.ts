@@ -18,6 +18,10 @@ export const PERSONALITY_ICON_ASSETS: Record<string, string> = {
   'leave': cdnAsset('/assets/lovart/personality-emojis/lovart-icon-personality-leave-quietly-20260507-v1.png'),
   'dove': cdnAsset('/assets/lovart/personality-emojis/lovart-icon-personality-peacemaker-20260507-v1.png'),
   'direct': cdnAsset('/assets/lovart/personality-emojis/lovart-icon-personality-direct-speak-20260507-v1.png'),
+  // Slider endpoint anchors (WS-3, 2026-09-02): semantic aliases for the
+  // existing Lovart assets already mapped above by legacy emoji keys.
+  'soloRest': cdnAsset('/assets/lovart/personality-emojis/lovart-icon-personality-solo-rest-20260507-v1.png'),
+  'partyReady': cdnAsset('/assets/lovart/personality-emojis/lovart-icon-personality-party-ready-20260507-v1.png'),
 }
 
 export function resolvePersonalityEmoji(emoji: string): string | undefined {

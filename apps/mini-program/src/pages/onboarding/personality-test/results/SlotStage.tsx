@@ -9,6 +9,18 @@ import {
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
 } from '../visuals'
 import { ARCHETYPE_SEQUENCE, type SlotPhase } from './resultHelpers'
+import {
+  applySlotTrackStep,
+  isSlotTrackAdvancingPhase,
+  SLOT_TRACK_EXTENDED_COUNT,
+  slotTrackDiff,
+} from './slotTrack'
+import {
+  buildSlotCardCurvature,
+  SLOT_CURVATURE_ENABLE_3D,
+  SLOT_CURVATURE_WINDOW,
+  slotCurvatureEnabledForTier,
+} from './slotCurvature'
 import ArchetypeSpritesheet from './ArchetypeSpritesheet'
 import ArchetypeRevealStrip from './ArchetypeRevealStrip'
 import ParticleBurst from '../../../../components/reveal/ParticleBurst'
@@ -22,9 +34,7 @@ const STEP = CARD_HEIGHT + GAP // 200 rpx
 const VIEWPORT_CARDS = 3
 const VIEWPORT_HEIGHT = VIEWPORT_CARDS * STEP // 600 rpx
 const CENTER_OFFSET = (VIEWPORT_HEIGHT - CARD_HEIGHT) / 2 // 208 rpx
-const EXTENDED_COUNT = 24 // 2 cycles — enough for ~20 steps without snap
-const SNAP_THRESHOLD = EXTENDED_COUNT - 8 // 16
-const SNAP_BACK = ARCHETYPE_SEQUENCE.length // 12
+const EXTENDED_COUNT = SLOT_TRACK_EXTENDED_COUNT // 2 cycles — enough for ~20 steps without snap
 
 interface SlotStageProps {
   reelIndex: number
@@ -37,6 +47,10 @@ interface SlotStageProps {
   /** Phase 3 (2026-08-01): rare-variant easter egg — highly typical match
    *  (典型 + high confidence) upgrades the land moment to the 闪光 treatment. */
   isRareVariant?: boolean
+  /** OS reduced-motion flag from the page root — gates the white flash
+   *  (ride-along a11y fix, WS-5) and the drum curvature (tier matrix:
+   *  reduce-motion = all off). */
+  systemReducedMotion?: boolean
 }
 
 /* ── memoised card row (prevents 47 re-renders every tick) ─────────── */
@@ -47,6 +61,10 @@ interface SlotCardProps {
   slotPhase: SlotPhase
   /** Gates the animated reveal strip on the landed card (full/reduced only). */
   celebrationTier: DegradationTier
+  /** WS-5: drum curvature master gate (tier allows AND no OS reduced-motion). */
+  curvatureEnabled: boolean
+  /** WS-5: 300ms ease-to-flat window after a mid-spin tier downgrade. */
+  curvatureExiting: boolean
 }
 
 const SlotCard = memo(function SlotCard({
@@ -55,6 +73,8 @@ const SlotCard = memo(function SlotCard({
   displayIndex,
   slotPhase,
   celebrationTier,
+  curvatureEnabled,
+  curvatureExiting,
 }: SlotCardProps) {
   const isActive = index === displayIndex
   const itemVisual = useMemo(() => getArchetypeVisual(archetype), [archetype])
@@ -69,6 +89,17 @@ const SlotCard = memo(function SlotCard({
   const useRevealStrip = isActive && isLanded
     && (celebrationTier === 'full' || celebrationTier === 'reduced')
 
+  /* WS-5 (2026-09-02): per-card drum curvature. Null when the card is the
+     active one, outside the ±3 window, in anticipation, or the tier gate is
+     off — in all those cases the class styles own transform/opacity. */
+  const curvature = curvatureEnabled
+    ? buildSlotCardCurvature(index, displayIndex, celebrationTier, slotPhase)
+    : null
+
+  /* WS-5: the land flip replaces slot-land-pop on the active card when the
+     drum is active — single overshoot settle, rotateX(-18°)→rotateX(4°)→0. */
+  const showLandFlip = curvatureEnabled && isActive && isLanded
+
   const activeStyle =
     isActive && (isLanded || isSlowing || isNearMiss)
       ? {
@@ -78,11 +109,19 @@ const SlotCard = memo(function SlotCard({
         }
       : undefined
 
+  /* Merge curvature into the card root's existing style object (composes
+     with activeStyle's background/border/shadow). Inline curvature is the
+     ONLY transform source on curved cards — the class-level scale/opacity
+     values are overridden intentionally. */
+  const cardStyle = curvature
+    ? { ...activeStyle, transform: curvature.transform, opacity: curvature.opacity }
+    : activeStyle
+
   return (
     <View
       key={`${archetype}-${index}`}
-      className={`personality-results__slot-card personality-results__slot-card--${slotPhase}${isActive ? ' personality-results__slot-card--active' : ''}`}
-      style={activeStyle}
+      className={`personality-results__slot-card personality-results__slot-card--${slotPhase}${isActive ? ' personality-results__slot-card--active' : ''}${curvature ? ' personality-results__slot-card--curved' : ''}${!curvature && curvatureExiting ? ' personality-results__slot-card--curved-exit' : ''}${showLandFlip ? ' personality-results__slot-card--land-flip' : ''}`}
+      style={cardStyle}
     >
       {!isActive ? (
         /* Queued cards carry their archetype's hue at low opacity so the
@@ -119,9 +158,20 @@ const SlotCard = memo(function SlotCard({
   const wasActive = prev.index === prev.displayIndex
   const isActive = next.index === next.displayIndex
   if (wasActive !== isActive) return false
+  /* WS-5: drum curvature needs cards near the centre to re-render per tick
+     (their rotateX/scale/opacity change with displayIndex). Only cards
+     within ±SLOT_CURVATURE_WINDOW ever carry curvature, so at most 7 of 24
+     cards re-render per tick — and only while the tier gate is on. */
+  if (next.curvatureEnabled) {
+    const wasNear = Math.abs(prev.index - prev.displayIndex) <= SLOT_CURVATURE_WINDOW
+    const isNear = Math.abs(next.index - next.displayIndex) <= SLOT_CURVATURE_WINDOW
+    if ((wasNear || isNear) && prev.displayIndex !== next.displayIndex) return false
+  }
   if (prev.archetype !== next.archetype) return false
   if (prev.slotPhase !== next.slotPhase) return false
   if (prev.celebrationTier !== next.celebrationTier) return false
+  if (prev.curvatureEnabled !== next.curvatureEnabled) return false
+  if (prev.curvatureExiting !== next.curvatureExiting) return false
   return true
 })
 
@@ -134,6 +184,7 @@ export default function SlotStage({
   phaseText,
   celebrationTier = 'full',
   isRareVariant = false,
+  systemReducedMotion = false,
 }: SlotStageProps) {
   /* internal unbounded track position */
   const [displayIndex, setDisplayIndex] = useState(reelIndex)
@@ -153,28 +204,19 @@ export default function SlotStage({
 
   /* advance displayIndex as reelIndex changes */
   useEffect(() => {
-    const moving =
-      slotPhase === 'spinning' ||
-      slotPhase === 'holding' ||
-      slotPhase === 'slowing' ||
-      slotPhase === 'nearMiss'
-    if (!moving) return
+    if (!isSlotTrackAdvancingPhase(slotPhase)) return
 
     const prev = prevReelRef.current
-    let diff = reelIndex - prev
-    /* handle modulo wrap-around */
-    if (diff < -6) diff += 12
-    if (diff > 6) diff -= 12
+    const diff = slotTrackDiff(prev, reelIndex)
 
     if (diff !== 0) {
       setDisplayIndex((current) => {
-        const next = current + diff
-        if (next >= SNAP_THRESHOLD) {
-          /* snap back by one full cycle — invisible because cards repeat */
+        const step = applySlotTrackStep(current, diff)
+        /* transition kill on wrap — the cards repeat, so the jump is invisible */
+        if (step.snapped) {
           setSnapTick((t) => t + 1)
-          return next - SNAP_BACK
         }
-        return next
+        return step.next
       })
       prevReelRef.current = reelIndex
     }
@@ -210,17 +252,64 @@ export default function SlotStage({
 
   const isLanded = slotPhase === 'landed'
   const isAnticipation = slotPhase === 'anticipation'
-  const showFlash = isLanded && (celebrationTier === 'full' || celebrationTier === 'reduced')
-  const showBurst = isLanded && celebrationTier === 'full'
 
   /* Phase 2a (2026-08-01): CSS-only anticipation micro-motion + light-chase.
      Tier-gated to reduced-or-better (transforms/opacity only, compositor-safe);
      minimal/emergency and OS reduced-motion suppress via the class guards below. */
   const tierAllowsChoreography = celebrationTier === 'full' || celebrationTier === 'reduced'
+
+  /* WS-5 ride-along a11y fix (2026-09-02): the white flash previously fired
+     even under OS reduced-motion — the JS-driven page class masked it, but
+     the media query did not. Gate it here; rings/border remain. */
+  const showFlash = isLanded && tierAllowsChoreography && !systemReducedMotion
+  const showBurst = isLanded && celebrationTier === 'full'
+
   const showAnticipationMotion = isAnticipation && tierAllowsChoreography
   const showLightChase =
     (slotPhase === 'spinning' || slotPhase === 'holding' || slotPhase === 'slowing') &&
     tierAllowsChoreography
+
+  /* WS-5 (2026-09-02): fake-3D drum master gate — tier matrix:
+     full = curvature + flip + parallax; reduced = curvature + flip, half
+     parallax; minimal/emergency = flat; reduce-motion/low-end = all off
+     (low-end resolves to minimal/emergency via getDegradationTier). */
+  const curvatureEnabled = slotCurvatureEnabledForTier(celebrationTier) && !systemReducedMotion
+
+  /* Mid-spin tier downgrade: ease curved cards back to flat over 300ms,
+     then let the normal phase styles (spin pulse etc.) resume. */
+  const [curvatureExiting, setCurvatureExiting] = useState(false)
+  const hadCurvatureRef = useRef(false)
+  useEffect(() => {
+    if (curvatureEnabled) {
+      hadCurvatureRef.current = true
+      setCurvatureExiting(false)
+      return
+    }
+    if (hadCurvatureRef.current) {
+      hadCurvatureRef.current = false
+      setCurvatureExiting(true)
+      const t = setTimeout(() => setCurvatureExiting(false), 320)
+      return () => clearTimeout(t)
+    }
+  }, [curvatureEnabled])
+
+  /* WS-5: parallax drift — the frame moves against the reel for depth.
+     CSS-only (2s ease-in-out infinite alternate), half amplitude on the
+     reduced tier; no JS sync. */
+  const isReeling =
+    slotPhase === 'spinning' || slotPhase === 'holding' || slotPhase === 'slowing'
+  const parallaxClass = isReeling && curvatureEnabled
+    ? celebrationTier === 'full'
+      ? ' personality-results__slot-frame--parallax'
+      : ' personality-results__slot-frame--parallax-half'
+    : ''
+
+  /* WS-5: viewport perspective + track preserve-3d ride the SAME config
+     constant as the rotateX emission — flipping SLOT_CURVATURE_ENABLE_3D
+     ships the 2.5D fallback (scale+opacity only) with zero SCSS edits. */
+  const viewport3dClass = SLOT_CURVATURE_ENABLE_3D && curvatureEnabled
+    ? ' personality-results__slot-viewport--3d'
+    : ''
 
   const slotAriaLabel = isAnticipation
     ? '命格卡面即将开始转动'
@@ -242,7 +331,7 @@ export default function SlotStage({
 
       {/* ── slot machine frame ── */}
       <View
-        className={`personality-results__slot-frame${isAnticipation ? ' personality-results__slot-frame--anticipation' : ''}${isLanded ? ' personality-results__slot-frame--landed' : ''}${isLanded && isRareVariant ? ' personality-results__slot-frame--rare' : ''}`}
+        className={`personality-results__slot-frame${isAnticipation ? ' personality-results__slot-frame--anticipation' : ''}${isLanded ? ' personality-results__slot-frame--landed' : ''}${isLanded && isRareVariant ? ' personality-results__slot-frame--rare' : ''}${parallaxClass}`}
       >
         <View className='personality-results__slot-rail' />
         <View className='personality-results__slot-highlight' />
@@ -274,7 +363,7 @@ export default function SlotStage({
         {/* scrolling viewport (shudder lives here — the track's inline translateY
             must stay the single transform authority on the track itself) */}
         <View
-          className={`personality-results__slot-viewport${showAnticipationMotion ? ' personality-results__slot-viewport--shudder' : ''}`}
+          className={`personality-results__slot-viewport${showAnticipationMotion ? ' personality-results__slot-viewport--shudder' : ''}${viewport3dClass}`}
         >
           <View
             className={`personality-results__slot-track personality-results__slot-track--${slotPhase}${snapTick > 0 ? ' personality-results__slot-track--snap' : ''}`}
@@ -288,6 +377,8 @@ export default function SlotStage({
                 displayIndex={displayIndex}
                 slotPhase={slotPhase}
                 celebrationTier={celebrationTier}
+                curvatureEnabled={curvatureEnabled}
+                curvatureExiting={curvatureExiting}
               />
             ))}
           </View>

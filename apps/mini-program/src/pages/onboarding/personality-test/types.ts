@@ -21,6 +21,8 @@ export interface AssessmentSliderConfig {
 
 export interface AssessmentQuestion {
   id: string
+  /** Server-sent question-bank category (drives idle whisper pools). */
+  category?: string
   scenarioText: string
   questionText: string
   options: AssessmentOption[]

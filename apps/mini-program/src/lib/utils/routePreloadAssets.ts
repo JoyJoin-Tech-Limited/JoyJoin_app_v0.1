@@ -126,6 +126,10 @@ const PERSONALITY_TEST_PRELOADS = [
   cdnAsset('/assets/personality/xiaoyue/xiaoyue-intro-animated.webp'),
   cdnAsset('/assets/personality/xiaoyue/xiaoyue-intro-static.webp'),
   cdnAsset('/assets/mascot/xiaoyue-welcome.webp'),
+  // Slider endpoint anchor icons (WS-3, 2026-09-02) — warm the CDN pair so
+  // the slider question renders its anchors on first paint.
+  cdnAsset('/assets/lovart/personality-emojis/lovart-icon-personality-solo-rest-20260507-v1.png'),
+  cdnAsset('/assets/lovart/personality-emojis/lovart-icon-personality-party-ready-20260507-v1.png'),
 ]
 
 const SQUAD_UNBOXING_PRELOADS = [

@@ -347,16 +347,61 @@
     gap: $spacing-sm;
   }
 
+  // WS-3 (2026-09-02): anchor columns — 48rpx endpoint icon above the label,
+  // lean-reactive via opacity/colour (scale is JS-gated off for
+  // reduced-motion and the degradation tier).
   &__slider-anchor {
     flex: 1 1 0;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8rpx;
+    opacity: 0.8;
+    transition: opacity 0.2s ease-out;
+
+    &--right {
+      align-items: flex-end;
+      text-align: right;
+    }
+
+    &--leaning {
+      opacity: 1;
+    }
+
+    &--dimmed {
+      opacity: 0.45;
+    }
+  }
+
+  // Fixed slot so an icon error hides the image without any layout shift.
+  &__slider-anchor-icon-shell {
+    width: 48rpx;
+    height: 48rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__slider-anchor-icon {
+    width: 48rpx;
+    height: 48rpx;
+    transform: scale(1);
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+
+    &--leaning-scale {
+      transform: scale(1.15);
+    }
+  }
+
+  &__slider-anchor-label {
     font-size: $font-size-sm;
     color: $color-text-secondary;
     line-height: 1.5;
-    text-align: left;
 
-    &--right {
-      text-align: right;
+    .answer-area__slider-anchor--leaning & {
+      color: $color-primary;
+      font-weight: $font-weight-semibold;
     }
   }
 
@@ -380,6 +425,8 @@
   .answer-area__slider-live-badge-inner,
   .answer-area__slider-live-badge-label,
   .answer-area__slider-live-badge-value,
+  .answer-area__slider-anchor,
+  .answer-area__slider-anchor-icon,
   .answer-area__slider-hint {
     transition: none !important;
     transform: none !important;

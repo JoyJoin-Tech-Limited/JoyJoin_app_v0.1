@@ -1,11 +1,5 @@
 @use '../../../../styles/variables' as *;
 @use '../../../../styles/mixins' as *;
-// Subpackage WXSS guard (AGENTS §15): the PR-7 celebrate bridge mounts
-// XiaoyueSpriteAnimator + CelebrationSparkle on this page — @use their SCSS
-// here so the rules compile into this page's WXSS instead of stranding in
-// the onboarding sub-common chunk no page loads.
-@use '../../../../components/mascot/XiaoyueSpriteAnimator.scss' as *;
-@use '../../../../components/mascot/CelebrationSparkle.scss' as *;
 // PR-8: XiaoyueInlineError renders on this page (FinalStage login-failure
 // row) — co-compile its rules into this page's WXSS.
 @use '../../../../components/mascot/XiaoyueInlineError.scss' as *;
@@ -40,6 +34,18 @@ $color-skill-cool: #7c3aed;
   }
 }
 
+@keyframes personality-results-shell-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes personality-results-bridge-settle {
   0% {
     opacity: 0;
@@ -60,32 +66,25 @@ $color-skill-cool: #7c3aed;
   position: relative;
   overflow: hidden;
 
-  // PR-7 celebrate bridge: continues the completing shell's celebration
-  // visual over the pre-slot window (?celebrate=1 handoff). Same page
-  // gradient so the handoff reads as one continuous beat; pointer-events
-  // none — it is a visual bridge, never a gate.
-  &__celebrate-bridge {
-    @include page-gradient-bg;
-    position: fixed;
-    inset: 0;
-    z-index: 40;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    opacity: 1;
-    transition: opacity 240ms ease-out;
-
-    &--exiting {
-      opacity: 0;
-    }
+  // Keyed stage crossfade (2026-09-02): every flowStage transition remounts
+  // the stage under this wrapper for a 200ms enter, so LoadingStage → slot
+  // reads as one composed beat without the deleted PR-7 celebrate bridge.
+  // height: 100% keeps FinalStage's `&__scroll { height: 100% }` chain alive.
+  &__stage-fade {
+    height: 100%;
+    animation: personality-results-stage-fade-in 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  &__celebrate-bridge-mascot {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  @keyframes personality-results-stage-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(8rpx);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   &__poster-canvas {
@@ -185,6 +184,7 @@ $color-skill-cool: #7c3aed;
     align-items: center;
     justify-content: center;
     text-align: center;
+    animation: personality-results-shell-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__immersive-eyebrow {
@@ -265,6 +265,35 @@ $color-skill-cool: #7c3aed;
     &--rare {
       box-shadow: 0 22rpx 80rpx rgba($color-slot-gold, 0.32),
         0 0 0 3rpx rgba($color-slot-gold, 0.55);
+    }
+
+    /* WS-5 (2026-09-02): parallax drift — the frame moves against the reel
+       for depth. CSS-only (no JS sync), tier-gated in SlotStage: full gets
+       ±8rpx, reduced gets half amplitude. slot-highlight composes its
+       centering translateY(-50%) into the keyframes (chained transforms,
+       no calc). Suppressed under reduce-motion / low-end below. */
+    &--parallax {
+      .personality-results__slot-rail {
+        animation: slot-frame-parallax 2s ease-in-out infinite alternate;
+        will-change: transform;
+      }
+
+      .personality-results__slot-highlight {
+        animation: slot-frame-parallax-highlight 2s ease-in-out infinite alternate;
+        will-change: transform;
+      }
+    }
+
+    &--parallax-half {
+      .personality-results__slot-rail {
+        animation: slot-frame-parallax-half 2s ease-in-out infinite alternate;
+        will-change: transform;
+      }
+
+      .personality-results__slot-highlight {
+        animation: slot-frame-parallax-highlight-half 2s ease-in-out infinite alternate;
+        will-change: transform;
+      }
     }
   }
 
@@ -347,6 +376,18 @@ $color-skill-cool: #7c3aed;
     &--shudder {
       animation: slot-viewport-shudder 0.32s ease-in-out infinite;
       will-change: transform;
+    }
+
+    /* WS-5 (2026-09-02): fake-3D drum perspective. SlotStage applies this
+       modifier only when SLOT_CURVATURE_ENABLE_3D is on AND the tier gate
+       allows curvature — flipping that one constant ships the 2.5D fallback
+       (scale+opacity only) without touching this stylesheet. */
+    &--3d {
+      perspective: 900px;
+
+      .personality-results__slot-track {
+        transform-style: preserve-3d;
+      }
     }
   }
 
@@ -491,6 +532,54 @@ $color-skill-cool: #7c3aed;
       .personality-results__slot-name {
         animation: slot-name-landed-reveal 0.35s ease-out 0.15s forwards;
       }
+    }
+
+    /* WS-5 (2026-09-02): drum curvature mode. The inline rotateX/scale/
+       opacity come from buildSlotCardCurvature; these classes only supply
+       lockstep interpolation — the SAME duration/easing as the track's
+       per-phase transition above, so cards and reel settle as one body.
+       Pulse animations are dropped on curved cards: a keyframe would
+       override the inline curvature every frame. */
+    &--curved {
+      animation: none;
+      will-change: transform, opacity;
+    }
+
+    &--curved#{&}--spinning {
+      transition: transform 0.12s linear, opacity 0.12s linear, background 0.25s ease;
+    }
+
+    &--curved#{&}--holding {
+      transition: transform 0.18s ease-out, opacity 0.18s ease-out, background 0.25s ease;
+    }
+
+    &--curved#{&}--slowing {
+      transition: transform 0.25s ease-out, opacity 0.25s ease-out, background 0.25s ease;
+    }
+
+    &--curved#{&}--nearMiss {
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1), background 0.25s ease;
+    }
+
+    &--curved#{&}--landed {
+      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1), background 0.25s ease;
+    }
+
+    /* WS-5: mid-spin tier downgrade — curvature just turned off, so ease
+       the previously-curved cards back to the flat class values over
+       300ms; the modifier is removed after the window and the normal
+       phase styles (spin pulse etc.) resume. */
+    &--curved-exit {
+      animation: none;
+      transition: transform 0.3s ease, opacity 0.3s ease, background 0.25s ease;
+    }
+
+    /* WS-5: land flip — active card single-overshoot settle. Replaces
+       slot-land-pop when the drum is active (triple-class specificity
+       beats the --landed--active rule above). The rare-variant
+       sparkle/flash stack is untouched. */
+    &--landed#{&}--active#{&}--land-flip {
+      animation: slot-card-land-flip 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     }
   }
 
@@ -671,7 +760,7 @@ $color-skill-cool: #7c3aed;
     z-index: 2;
     width: 300rpx;
     height: 300rpx;
-    transition: opacity 0.32s ease, transform 0.32s ease;
+    transition: opacity 0.32s ease, transform 0.32s ease, filter 0.4s ease;
 
     &--silhouette {
       opacity: 0.18;
@@ -2399,6 +2488,30 @@ $color-skill-cool: #7c3aed;
   50% { opacity: 0.55; }
 }
 
+/* WS-4 (2026-09-02): spritesheet decode shimmer — GPU-safe opacity pulse
+   ONLY (background-position animation is a banned paint-every-frame
+   pattern). Rendered inside ArchetypeSpritesheet's circular container while
+   the sheet decodes; suppressed under reduce-motion / low-end below. */
+@keyframes archetype-spritesheet-shimmer-pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.65; }
+}
+
+.archetype-spritesheet__shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.55) 48%, rgba(255, 255, 255, 0) 78%);
+  pointer-events: none;
+  animation: archetype-spritesheet-shimmer-pulse 1.5s ease-in-out infinite;
+}
+
+.personality-results--reduce-motion .archetype-spritesheet__shimmer,
+.personality-results--low-end .archetype-spritesheet__shimmer {
+  animation: none !important;
+  opacity: 0.35;
+}
+
 @keyframes slot-spin-pulse {
   0%, 100% { opacity: 0.5; transform: scale(0.93); }
   50% { opacity: 0.75; transform: scale(0.97); }
@@ -2454,6 +2567,38 @@ $color-skill-cool: #7c3aed;
   0% { opacity: 0; transform: scale(0.3); }
   35% { opacity: 1; transform: scale(1.25); }
   100% { opacity: 0; transform: scale(1.6); }
+}
+
+/* WS-5 (2026-09-02): land flip — active card single-overshoot settle
+   (rotateX(-18°) → rotateX(4°) at 60% → identity). Transform + opacity
+   only. In 2.5D fallback mode the rotateX reads as a gentle vertical
+   squash — the scale overshoot still lands the beat. */
+@keyframes slot-card-land-flip {
+  0% { opacity: 0.85; transform: rotateX(-18deg) scale(1.08); }
+  60% { opacity: 1; transform: rotateX(4deg) scale(1.05); }
+  100% { opacity: 1; transform: rotateX(0deg) scale(1); }
+}
+
+/* WS-5: parallax drift keyframes. slot-highlight chains its centering
+   translateY(-50%) into the drift (no calc — WXSS-safe). */
+@keyframes slot-frame-parallax {
+  from { transform: translateY(-8rpx); }
+  to { transform: translateY(8rpx); }
+}
+
+@keyframes slot-frame-parallax-half {
+  from { transform: translateY(-4rpx); }
+  to { transform: translateY(4rpx); }
+}
+
+@keyframes slot-frame-parallax-highlight {
+  from { transform: translateY(-50%) translateY(-8rpx); }
+  to { transform: translateY(-50%) translateY(8rpx); }
+}
+
+@keyframes slot-frame-parallax-highlight-half {
+  from { transform: translateY(-50%) translateY(-4rpx); }
+  to { transform: translateY(-50%) translateY(4rpx); }
 }
 
 /* ── hero skeleton (matches actual hero card layout) ───────────────── */
@@ -2805,9 +2950,24 @@ $color-skill-cool: #7c3aed;
     display: none;
   }
 
+  /* WS-5: drum parallax + land flip suppressed under OS reduced-motion */
+  .personality-results__slot-frame--parallax .personality-results__slot-rail,
+  .personality-results__slot-frame--parallax .personality-results__slot-highlight,
+  .personality-results__slot-frame--parallax-half .personality-results__slot-rail,
+  .personality-results__slot-frame--parallax-half .personality-results__slot-highlight,
+  .personality-results__slot-card--land-flip {
+    animation: none !important;
+  }
+
   .personality-results__slot-image,
   .personality-results__slot-name {
     animation: none !important;
+  }
+
+  /* WS-4: shimmer pulse suppressed under OS reduced-motion */
+  .archetype-spritesheet__shimmer {
+    animation: none !important;
+    opacity: 0.35;
   }
 
   .personality-results__skeleton-avatar,
@@ -2849,6 +3009,10 @@ $color-skill-cool: #7c3aed;
   .personality-results__reveal-image {
     transition: none !important;
   }
+
+  .personality-results__immersive-shell {
+    animation: none !important;
+  }
 }
 
 /* JS-driven reduce-motion fallback — see FinalStage container class */
@@ -2874,6 +3038,14 @@ $color-skill-cool: #7c3aed;
   .personality-results__reveal-image {
     transition: none !important;
   }
+
+  .personality-results__immersive-shell {
+    animation: none !important;
+  }
+
+  .personality-results__stage-fade {
+    animation: none !important;
+  }
 }
 
 /* Low-end device: suppress continuous shimmer and filter transitions to save compositor budget */
@@ -2893,6 +3065,16 @@ $color-skill-cool: #7c3aed;
 
   .personality-results__slot-chase {
     display: none;
+  }
+
+  /* WS-5: low-end drops the drum parallax + land flip (JS tier gate already
+     keeps them off; this is stylesheet defense-in-depth). */
+  .personality-results__slot-frame--parallax .personality-results__slot-rail,
+  .personality-results__slot-frame--parallax .personality-results__slot-highlight,
+  .personality-results__slot-frame--parallax-half .personality-results__slot-rail,
+  .personality-results__slot-frame--parallax-half .personality-results__slot-highlight,
+  .personality-results__slot-card--land-flip {
+    animation: none !important;
   }
 
   .personality-results__reveal-image {
@@ -2953,6 +3135,10 @@ $color-skill-cool: #7c3aed;
     opacity: 0 !important;
   }
 
+  .personality-results__immersive-shell {
+    animation: none !important;
+  }
+
   .personality-results__slot-viewport--shudder,
   .personality-results__slot-chase-orbit {
     animation: none !important;
@@ -2964,6 +3150,16 @@ $color-skill-cool: #7c3aed;
 
   .personality-results__slot-sparkle {
     display: none;
+  }
+
+  /* WS-5: drum parallax + land flip suppressed under JS reduce-motion
+     (the JS gate already withholds these classes; defense-in-depth). */
+  .personality-results__slot-frame--parallax .personality-results__slot-rail,
+  .personality-results__slot-frame--parallax .personality-results__slot-highlight,
+  .personality-results__slot-frame--parallax-half .personality-results__slot-rail,
+  .personality-results__slot-frame--parallax-half .personality-results__slot-highlight,
+  .personality-results__slot-card--land-flip {
+    animation: none !important;
   }
 
   .personality-results__hero-name-char {

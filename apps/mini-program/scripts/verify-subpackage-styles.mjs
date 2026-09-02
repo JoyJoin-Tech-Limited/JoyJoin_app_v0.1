@@ -260,18 +260,6 @@ const REQUIREMENTS = [
     ],
   },
   {
-    // PR-7 celebrate bridge (2026-08-26): the results page mounts
-    // XiaoyueSpriteAnimator + CelebrationSparkle for the completing→slot
-    // handoff (?celebrate=1). If the component rules chunk into
-    // onboarding/sub-common.wxss (which no page loads), the bridge renders
-    // unstyled on device — same style-splitting trap as the incidents above.
-    page: 'pages/onboarding/personality-test/results/index.wxss',
-    selectors: [
-      'personality-results__celebrate-bridge{',
-      'personality-results__celebrate-bridge-mascot{',
-    ],
-  },
-  {
     // PR-8 inline error mascot (2026-08-26): the component deliberately has no
     // TSX-side SCSS import; its rules are @use'd by each onboarding page SCSS.
     // If a future consumer forgets the @use, that page's WXSS will lack the
@@ -281,7 +269,16 @@ const REQUIREMENTS = [
   },
   {
     page: 'pages/onboarding/personality-test/results/index.wxss',
-    selectors: ['xiaoyue-inline-error{'],
+    selectors: [
+      'xiaoyue-inline-error{',
+      // Keyed stage crossfade (2026-09-02, replaces the PR-7 celebrate
+      // bridge): the wrapper rule must reach this subpackage page WXSS.
+      'personality-results__stage-fade{',
+      // WS-4 slot sprite blank-window fix (2026-09-02): ArchetypeSpritesheet
+      // carries no SCSS import of its own; the shimmer overlay styles live in
+      // the page SCSS and must reach this subpackage page WXSS.
+      'archetype-spritesheet__shimmer{',
+    ],
   },
   {
     page: 'pages/onboarding/essential-data/index.wxss',
