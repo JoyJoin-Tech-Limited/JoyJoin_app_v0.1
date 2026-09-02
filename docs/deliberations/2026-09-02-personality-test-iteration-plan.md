@@ -45,45 +45,48 @@ Full design specs (per-workstream choreography, implementation maps with file:li
 
 ---
 
-## Appendix A — PR-0 baseline queries (run on production, trailing 14 days)
+## Appendix A — PR-0 baseline (PULLED 2026-09-02, production, 30-day window)
 
-Storage: `onboarding_analytics` (step, event_type, metadata jsonb, timestamp). Events fire from `useOnboardingAnalytics('personality-test' | 'personality-test-results')`.
+**Caveat: pre-launch tester traffic only (n≈3 sessions) — directional, not statistical. Re-run post-launch for real baselines.**
+
+| # | Baseline value | Note |
+|---|---------------|------|
+| M1 | commentary read-complete rate = **1.00** (12/12, zero cut_short) | tiny sample; target becomes "hold ≥0.85" rather than +10% |
+| M2 | loading-stage dwell <300ms share = **1.00** (3/3) | confirms the pre-WS-2 flicker window; post-release target −50% |
+| M3 | completion rate = **33%** (1/3 step_enter → step_completed) | tester sessions only |
+| M4 | share-poster events = **0** | no baseline exists; first real numbers come post-launch |
+
+Storage: `onboarding_analytics`; granular events fire as `event_type='interaction'` with the name in `metadata->>'action'` (NOT in `event_type`). Corrected queries:
 
 ```sql
--- M1: commentary read-complete rate (baseline before WS-1)
-SELECT
-  count(*) FILTER (WHERE event_type = 'commentary_read_complete')::float
-    / NULLIF(count(*) FILTER (WHERE event_type IN ('commentary_read_complete','commentary_cut_short')), 0) AS read_complete_rate
-FROM onboarding_analytics
-WHERE step = 'personality-test'
-  AND timestamp > now() - interval '14 days';
+-- M1: commentary read-complete rate
+SELECT metadata->>'action', count(*) FROM onboarding_analytics
+WHERE step='personality-test' AND event_type='interaction'
+  AND metadata->>'action' IN ('commentary_read_complete','commentary_cut_short')
+  AND timestamp > now() - interval '14 days' GROUP BY 1;
 
--- M2: anticipation<300ms dwell bucket share (baseline before WS-2/WS-4)
-SELECT
-  count(*) FILTER (WHERE (metadata->>'dwellMs')::int < 300)::float
-    / NULLIF(count(*), 0) AS short_anticipation_share
+-- M2: anticipation<300ms dwell bucket share
+SELECT metadata->>'stage', count(*),
+  round(count(*) FILTER (WHERE (metadata->>'dwellMs')::int < 300)::numeric/NULLIF(count(*),0), 3)
 FROM onboarding_analytics
-WHERE step = 'personality-test-results'
-  AND event_type = 'result_stage_dwell'
-  AND metadata->>'stage' = 'loading'   -- stage recorded is the PREVIOUS stage; slot-antication proxy
-  AND timestamp > now() - interval '14 days';
+WHERE step='personality-test-results' AND event_type='interaction'
+  AND metadata->>'action'='result_stage_dwell'
+  AND timestamp > now() - interval '14 days' GROUP BY 1;
 
--- M3: completion rate (answered-last ÷ started)
-SELECT
-  count(DISTINCT session_id) FILTER (WHERE event_type = 'step_completed')::float
-    / NULLIF(count(DISTINCT session_id) FILTER (WHERE event_type = 'step_started'), 0) AS completion_rate
+-- M3: completion rate (step_completed ÷ step_enter, distinct sessions)
+SELECT count(DISTINCT session_id) FILTER (WHERE event_type='step_completed'),
+       count(DISTINCT session_id) FILTER (WHERE event_type='step_enter')
 FROM onboarding_analytics
-WHERE step = 'personality-test'
-  AND timestamp > now() - interval '14 days';
+WHERE step='personality-test' AND timestamp > now() - interval '14 days';
 
--- M4: share-poster generation rate from results
-SELECT count(*), count(DISTINCT session_id)
-FROM onboarding_analytics
-WHERE step = 'personality-test-results'
-  AND event_type ILIKE '%share%poster%'
-  AND timestamp > now() - interval '14 days';
+-- M4: share-poster generation
+SELECT metadata->>'action', count(*) FROM onboarding_analytics
+WHERE step='personality-test-results' AND event_type='interaction'
+  AND metadata->>'action' ILIKE '%poster%'
+  AND timestamp > now() - interval '14 days' GROUP BY 1;
 ```
-Verify exact event_type strings against `useOnboardingAnalytics.interaction` call sites before running (ILIKE fallback acceptable for M4).
+
+Prod access pattern: `ssh -i <OpenCode.pem> root@1.12.243.104 "docker exec postgres psql -U joyjoin -d joyjoin -At -c \"...\""` (read-only).
 
 ## Appendix B — Device-lab checklist (WS-5 hard gate, pre-release)
 
