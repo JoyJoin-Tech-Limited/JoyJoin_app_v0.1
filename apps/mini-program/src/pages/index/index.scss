@@ -702,21 +702,29 @@
   animation: arc-dot-in 300ms ease-out 600ms both;
 }
 
-// 4e. Contact shadows fade in with their sprites.
+// 4e. Contact shadows fade in with their sprites, then idle-float at half amplitude.
 .landing-page--entered .hero-stage__shadow--cards {
-  animation: shadow-in 300ms ease-out 480ms both;
+  animation:
+    shadow-in 300ms ease-out 480ms both,
+    shadow-float-cards 3.2s ease-in-out 1.5s -0.6s infinite;
 }
 
 .landing-page--entered .hero-stage__shadow--map-pin {
-  animation: shadow-in 300ms ease-out 550ms both;
+  animation:
+    shadow-in 300ms ease-out 550ms both,
+    shadow-float-pin 4.3s ease-in-out 1.5s -1.4s infinite;
 }
 
 .landing-page--entered .hero-stage__shadow--dice {
-  animation: shadow-in 300ms ease-out 620ms both;
+  animation:
+    shadow-in 300ms ease-out 620ms both,
+    shadow-float-dice 3.7s ease-in-out 1.5s -0.2s infinite;
 }
 
 .landing-page--entered .hero-stage__shadow--glass {
-  animation: shadow-in 300ms ease-out 690ms both;
+  animation:
+    shadow-in 300ms ease-out 690ms both,
+    shadow-float-glass 4.8s ease-in-out 1.5s -2.1s infinite;
 }
 
 /* ── Idle loops (start after entrance, negative delays pre-desync) ── */
@@ -1031,10 +1039,25 @@
   to { opacity: 0.55; }
 }
 
-// Contact shadow entrance (fade in)
-@keyframes shadow-in {
-  from { opacity: 0; }
-  to { opacity: 0.6; }
+// Contact shadows float with half-amplitude so they lag the body.
+@keyframes shadow-float-cards {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5rpx); }
+}
+
+@keyframes shadow-float-pin {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4rpx); }
+}
+
+@keyframes shadow-float-dice {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6rpx); }
+}
+
+@keyframes shadow-float-glass {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4.5rpx); }
 }
 
 /* ── Idle float loops (desynchronized periods, negative delays) ────── */

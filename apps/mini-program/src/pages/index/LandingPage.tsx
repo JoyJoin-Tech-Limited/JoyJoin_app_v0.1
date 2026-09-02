@@ -706,7 +706,7 @@ export default function MiniProgramLandingPage({
                     }}
                   />
                 )}
-               </View>
+              </View>
 
               {/* z7: Satellite archetype heads (P2 gathering ring) */}
               {SATELLITE_HEADS.map((head) => (
