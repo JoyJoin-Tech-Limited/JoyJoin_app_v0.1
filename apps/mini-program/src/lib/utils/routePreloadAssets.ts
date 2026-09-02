@@ -41,6 +41,16 @@ export const ONBOARDING_CRITICAL_CDN_ASSETS: string[] = [
   '/assets/mascot/xiaoyue-welcome.webp',
 ]
 
+/** Landing hero composite — bundled locally but WeChat still needs to decode
+ *  it on first render. Preloading at app launch forces decode + cache so the
+ *  landing page paints the full image immediately (no LQIP frames, no decode
+ *  flash). The LQIP is intentionally NOT preloaded — it only exists as a
+ *  blur-up placeholder while the full hero decodes, and preloading the full
+ *  hero makes the LQIP unnecessary on warm starts. */
+export const LANDING_HERO_PRELOAD_ASSETS: string[] = [
+  '/assets/lovart/landing/hero-box-xiaoyue-dusk.webp',
+]
+
 /** Archetype full-body images — now bundled locally, no CDN preload needed. */
 export const ARCHETYPE_GLYPH_CDN_ASSETS: string[] = [
   // Bundled locally via copy config (config/index.ts)

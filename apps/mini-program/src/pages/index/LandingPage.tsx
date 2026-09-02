@@ -156,6 +156,7 @@ export default function MiniProgramLandingPage({
   const [heroState, setHeroState] = useState<HeroState>('loading')
   const [heroSrcStage, setHeroSrcStage] = useState<HeroSrcStage>('local')
   const [lqipGone, setLqipGone] = useState(false)
+  const [heroWarm, setHeroWarm] = useState(false)
   const [failedSprites, setFailedSprites] = useState<ReadonlySet<HeroSpriteKey>>(new Set())
   const [hasIncompleteSession, setHasIncompleteSession] = useState(false)
   const [isShortScreen, setIsShortScreen] = useState(false)
@@ -202,6 +203,19 @@ export default function MiniProgramLandingPage({
       .catch(() => {
         /* keep 'unknown' */
       })
+
+    // Check if the hero was preloaded at app launch (warm start). If so,
+    // skip the LQIP placeholder entirely — the full image paints immediately
+    // from WeChat's image cache with zero decode flash (2026-09-02).
+    try {
+      Taro.getImageInfo({
+        src: HERO_LOCAL_SRC,
+        success: () => setHeroWarm(true),
+        fail: () => { /* not preloaded — LQIP will show as usual */ },
+      })
+    } catch {
+      /* getImageInfo unavailable — LQIP will show as usual */
+    }
   }, [])
 
   // Reset navigation loading state when the user swipes back or foregrounds
@@ -644,8 +658,10 @@ export default function MiniProgramLandingPage({
               {renderSprite('buildings')}
 
               {/* Blur-up placeholder: same geometry as the hero, fades out on
-                  load and unmounts right after the fade (no DOM residue). */}
-              {heroState !== 'fallback' && !lqipGone && (
+                  load and unmounts right after the fade (no DOM residue).
+                  Skipped entirely when the hero was preloaded at app launch —
+                  the full image paints from cache with zero decode flash. */}
+              {heroState !== 'fallback' && !lqipGone && !heroWarm && (
                 <View
                   className={`hero-stage__lqip${heroState === 'ready' ? ' hero-stage__lqip--out' : ''}`}
                   aria-hidden='true'
