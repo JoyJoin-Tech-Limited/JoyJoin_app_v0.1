@@ -356,6 +356,7 @@ export default function PersonalityTestPage() {
 
   const handleIdleWhisperTap = useCallback(() => {
     if (!question) return
+    haptics('light')
     analytics.interaction('idle_whisper_tap', {
       questionId: question.id,
       questionIndex: progress?.answered ?? 0,

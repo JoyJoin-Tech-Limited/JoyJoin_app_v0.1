@@ -131,6 +131,7 @@ export default function AdminFeatureFlagsPage() {
     flashShenzhenLocationGateEnabled: "闪现深圳定位限制",
     personalitySlotProfileFast: "命格揭晓：快节奏动画",
     personalitySlotProfileDramatic: "命格揭晓：戏剧化动画",
+    personalitySlotCurvatureEnabled: "命格揭晓：3D 鼓面曲率",
     shareAnimatedClipEnabled: "命格揭晓：动态分享短片",
   };
 
@@ -145,6 +146,7 @@ export default function AdminFeatureFlagsPage() {
     flashShenzhenLocationGateEnabled: "开启时仅允许深圳 GPS；关闭后非生产环境可在深圳外测试。生产环境始终锁定。",
     personalitySlotProfileFast: "揭晓动画使用快节奏时序（快速转动、快速揭晓）。与戏剧化冲突时戏剧化优先。",
     personalitySlotProfileDramatic: "揭晓动画使用戏剧化时序（更长悬停、更慢收尾、更强仪式感）。优先级高于快节奏。",
+    personalitySlotCurvatureEnabled: "开启后，命格揭晓转盘使用伪 3D 鼓面曲率（rotateX + perspective）。关闭时远程回退为 2.5D 平面效果（仅缩放+透明度衰减），无需发版。编译期常量仍是总开关（两者同时开启才生效 3D）。",
     shareAnimatedClipEnabled: "开启后，结果页可生成 2 秒动态分享短片（服务端 canvas + ffmpeg 合成，静音 MP4）。关闭时分享物料保持静态海报。",
   };
 

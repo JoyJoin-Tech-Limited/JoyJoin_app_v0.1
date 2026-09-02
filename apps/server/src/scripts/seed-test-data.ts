@@ -111,6 +111,7 @@ const TEST_ADMIN = {
 const BETA_FEATURE_FLAGS: Array<{ key: string; value: string; label: string }> = [
   { key: "personalityShareEnabled", value: "true", label: "Personality share poster" },
   { key: "personalitySlotAnimationEnabled", value: "true", label: "Personality slot animation" },
+  { key: "personalitySlotCurvatureEnabled", value: "true", label: "Personality slot drum curvature" },
   { key: "matchingLiveReveal", value: "true", label: "Matching live reveal" },
   { key: "promoBannerEnabled", value: "true", label: "Hero promo banner" },
   { key: "smartProfession", value: "true", label: "Smart profession AI classification" },

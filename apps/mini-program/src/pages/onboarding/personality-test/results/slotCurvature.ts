@@ -31,6 +31,19 @@ export const SLOT_CURVATURE_OPACITY_PER_STEP = 0.28
  */
 export const SLOT_CURVATURE_ENABLE_3D = true
 
+/**
+ * Remote kill switch combiner (2026-09-02, `personalitySlotCurvatureEnabled`
+ * DB-backed feature flag): 3D curvature requires BOTH the compile-time
+ * master switch above AND the server-driven flag. When the flag is off, the
+ * drum flattens to the 2.5D fallback (scale + opacity falloff only) —
+ * byte-identical to the SLOT_CURVATURE_ENABLE_3D=false path, no release
+ * needed. SlotStage resolves this once and passes the result into
+ * buildSlotCardCurvature + the viewport `--3d` class gate.
+ */
+export function resolveSlotCurvature3D(remoteCurvatureEnabled: boolean): boolean {
+  return SLOT_CURVATURE_ENABLE_3D && remoteCurvatureEnabled
+}
+
 /** Tier gate: curvature + land flip run on full/reduced only. */
 export function slotCurvatureEnabledForTier(tier: DegradationTier): boolean {
   return tier === 'full' || tier === 'reduced'
