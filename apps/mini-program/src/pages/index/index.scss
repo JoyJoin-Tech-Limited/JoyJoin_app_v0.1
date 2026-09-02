@@ -149,11 +149,13 @@
   }
 
   &--map-pin {
-    // Upper-right, clear of the corgi head zone.
-    left: 536rpx;
-    top: 48rpx;
-    width: 96rpx;
-    height: 96rpx;
+    // Upper-right, clear of the corgi head zone. Moved up+right so it
+    // floats above the ear with visible air, not touching it (refined
+    // 2026-09-02 — was overlapping the ear at top 48rpx).
+    left: 560rpx;
+    top: 24rpx;
+    width: 88rpx;
+    height: 88rpx;
     transform: rotate(-4deg);
   }
 }
