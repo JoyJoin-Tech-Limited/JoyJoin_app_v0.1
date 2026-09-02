@@ -88,6 +88,18 @@ function persistLegalAccepted(): void {
  * package weight; the strip pin reuses the already-fetched CDN sprite.
  */
 const MECHANISM_HEADS = ['corgi', 'fox', 'rooster', 'koala', 'cat', 'dolphin_calm'] as const
+
+/** P2 组局 gathering ring (2026-09-01): four satellite archetype heads float
+ *  around the hero stage, translating the reference poster's "people gathered
+ *  around a table" energy into the existing archetype system. Reuses the
+ *  preloaded mechanism-strip grid heads — zero new package bytes. */
+const SATELLITE_HEADS = [
+  { key: 'a', archetype: 'fox' },
+  { key: 'b', archetype: 'rooster' },
+  { key: 'c', archetype: 'koala' },
+  { key: 'd', archetype: 'cat' },
+] as const
+
 const MAP_PIN_SPRITE_SRC = HERO_SPRITES.find((s) => s.key === 'map-pin')!.src
 
 /** Hero composite + LQIP are bundled locally (see HERO_LOCAL_SRC above);
@@ -622,12 +634,18 @@ export default function MiniProgramLandingPage({
         <View className='hero-zone'>
           <View className='hero-stage' onClick={handleMechanismReplay}>
             <View className='hero-stage__scale'>
+              {/* z0: Dusk horizon wash (P2 warm palette band) */}
+              <View className='hero-stage__dusk-wash' aria-hidden='true' />
+
               {/* Zero-size anchor at the box mouth — the E3 burst measures
                   this at runtime instead of hardcoding rpx coordinates. */}
               <View id='box-mouth-anchor' className='hero-stage__box-mouth-anchor' aria-hidden='true' />
               <View className='hero-stage__halo' aria-hidden='true'>
                 <View className='hero-stage__halo-core' />
               </View>
+
+              {/* z2: Warm glow bridge (P2 — hero to mechanism strip) */}
+              <View className='hero-stage__glow-bridge' aria-hidden='true' />
 
               <View className='hero-stage__particles' aria-hidden='true'>
                 <View className='hero-stage__particle hero-stage__particle--1' />
@@ -637,6 +655,13 @@ export default function MiniProgramLandingPage({
 
               {/* City skyline sits behind the hero composite */}
               {renderSprite('buildings')}
+
+              {/* z3: Dotted arcs (P2 — connective glow, no SVG) */}
+              <View className='hero-stage__arc-dots' aria-hidden='true'>
+                {Array.from({ length: 10 }, (_, i) => (
+                  <View key={i} className={`hero-stage__arc-dot hero-stage__arc-dot--${i}`} />
+                ))}
+              </View>
 
               {/* Blur-up placeholder: same geometry as the hero, fades out on
                   load and unmounts right after the fade (no DOM residue). */}
@@ -681,13 +706,38 @@ export default function MiniProgramLandingPage({
                     }}
                   />
                 )}
-              </View>
+               </View>
+
+              {/* z7: Satellite archetype heads (P2 gathering ring) */}
+              {SATELLITE_HEADS.map((head) => (
+                <View key={head.key} className={`hero-stage__satellite hero-stage__satellite--${head.key}`} aria-hidden='true'>
+                  <ArchetypeHead
+                    archetype={head.archetype}
+                    size={80}
+                    variant='grid'
+                    fallback='none'
+                    className='hero-stage__satellite-head'
+                  />
+                </View>
+              ))}
 
               {/* Floating elements: dinner/game line + city-exploration line */}
               {renderSprite('cards')}
               {renderSprite('map-pin')}
               {renderSprite('dice')}
               {renderSprite('glass')}
+
+              {/* z8: Contact shadows for front sprites (P1 depth) */}
+              <View className='hero-stage__shadow hero-stage__shadow--cards' aria-hidden='true' />
+              <View className='hero-stage__shadow hero-stage__shadow--map-pin' aria-hidden='true' />
+              <View className='hero-stage__shadow hero-stage__shadow--dice' aria-hidden='true' />
+              <View className='hero-stage__shadow hero-stage__shadow--glass' aria-hidden='true' />
+
+              {/* z9: Sparkle dots (P1 atmosphere, zero bytes) */}
+              <View className='hero-stage__sparkle hero-stage__sparkle--1' aria-hidden='true' />
+              <View className='hero-stage__sparkle hero-stage__sparkle--2' aria-hidden='true' />
+              <View className='hero-stage__sparkle hero-stage__sparkle--3' aria-hidden='true' />
+              <View className='hero-stage__sparkle hero-stage__sparkle--4' aria-hidden='true' />
             </View>
           </View>
         </View>

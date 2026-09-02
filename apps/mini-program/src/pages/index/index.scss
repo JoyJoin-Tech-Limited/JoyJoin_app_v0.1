@@ -120,62 +120,166 @@
   &--3 { left: 440rpx; top: 400rpx; width: 8rpx; height: 8rpx; }
 }
 
-/* Floating element sprites (transparent WebP, CDN) */
+/* Floating element sprites (transparent WebP, CDN) — dispersed orbital ring
+   (wow-up 2026-09-01): wider ring, sprites clear the hero silhouette by ≥16rpx,
+   front sprites at scale 1.06 for visual "on top" depth. */
 .hero-stage__sprite {
   position: absolute;
   opacity: 0; // revealed by --entered stagger
   pointer-events: none;
   image-rendering: -webkit-optimize-contrast;
-  z-index: 6;
+  z-index: 8;
 
   &--buildings {
-    // Portrait towers tucked behind Xiaoyue's head (z3) in the top-center
-    // void between the cards and the map-pin — fills the empty sky so the
-    // sprite weight balances left/right instead of stacking on the left.
-    // Right edge (x≈392) slides behind the head (which starts at x≈341 on
-    // stage); tops at 56rpx clear the ear tips (y≈158).
-    left: 232rpx;
-    top: 56rpx;
+    // Shifted left to anchor the dusk skyline behind the hero.
+    left: 160rpx;
+    top: 40rpx;
     width: 160rpx;
     height: 260rpx;
     z-index: 3; // behind the hero composite
   }
 
   &--cards {
-    left: 80rpx;
-    top: 128rpx;
-    width: 152rpx;
-    height: 152rpx;
-    transform: rotate(-10deg);
+    // Far upper-left, clears box mass (x 56–152).
+    left: 56rpx;
+    top: 112rpx;
+    width: 96rpx;
+    height: 96rpx;
+    transform: rotate(-10deg) scale(1.06);
   }
 
   &--map-pin {
-    // Between the ears: bottom edge must clear the head top (~158rpx on stage).
-    left: 424rpx;
-    top: 64rpx;
+    // Upper-right, clears corgi head zone (right edge 454rpx).
+    left: 536rpx;
+    top: 48rpx;
     width: 96rpx;
     height: 96rpx;
-    transform: rotate(-4deg);
+    transform: rotate(-4deg) scale(1.06);
   }
 
   &--dice {
-    // In front of the box's right shoulder — clear of the head (which ends at
-    // ~344rpx on stage); a sprite over the ear reads as "stuck to the ear".
-    left: 560rpx;
-    top: 344rpx;
-    width: 128rpx;
-    height: 128rpx;
-    transform: rotate(12deg);
+    // Right lower, clears box right edge (x 608–712).
+    left: 608rpx;
+    top: 352rpx;
+    width: 104rpx;
+    height: 104rpx;
+    transform: rotate(12deg) scale(1.06);
   }
 
   &--glass {
-    // Left arc, below the cards, above the buildings.
-    left: 96rpx;
-    top: 280rpx;
-    width: 112rpx;
-    height: 112rpx;
-    transform: rotate(8deg);
+    // Left mid, fully outside silhouette (x 40–128).
+    left: 40rpx;
+    top: 336rpx;
+    width: 88rpx;
+    height: 88rpx;
+    transform: rotate(8deg) scale(1.06);
   }
+}
+
+/* z0: Dusk horizon wash (P2 warm palette band behind everything) */
+.hero-stage__dusk-wash {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(180deg, rgba(64, 40, 120, 0) 0%, rgba(64, 40, 120, 0) 52%, rgba(255, 158, 92, 0.22) 74%, rgba(255, 120, 80, 0.30) 100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* z2: Warm glow bridge (P2 — radial gradient from hero to mechanism strip) */
+.hero-stage__glow-bridge {
+  position: absolute;
+  left: 96rpx;
+  top: 560rpx;
+  width: 560rpx;
+  height: 320rpx;
+  background: radial-gradient(ellipse at 50% 32%, rgba(255, 190, 120, 0.55) 0%, rgba(200, 140, 255, 0.28) 48%, rgba(139, 92, 246, 0.10) 66%, transparent 78%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* z3: Dotted arcs (P2 — 10 CSS dots, staggered opacity pulse, no SVG) */
+.hero-stage__arc-dots {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.hero-stage__arc-dot {
+  position: absolute;
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.9);
+  box-shadow: 0 0 12rpx rgba(139, 92, 246, 0.5);
+  opacity: 0;
+
+  // Left arc (5 dots, top→bottom)
+  &--0 { left: 320rpx; top: 696rpx; }
+  &--1 { left: 280rpx; top: 728rpx; }
+  &--2 { left: 248rpx; top: 768rpx; }
+  &--3 { left: 232rpx; top: 808rpx; }
+  &--4 { left: 232rpx; top: 848rpx; }
+  // Right arc (5 dots, top→bottom)
+  &--5 { left: 430rpx; top: 696rpx; }
+  &--6 { left: 470rpx; top: 728rpx; }
+  &--7 { left: 502rpx; top: 768rpx; }
+  &--8 { left: 518rpx; top: 808rpx; }
+  &--9 { left: 518rpx; top: 848rpx; }
+}
+
+/* z7: Satellite archetype heads (P2 gathering ring — reuse preloaded assets) */
+.hero-stage__satellite {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 7;
+
+  &--a { left: 264rpx; top: 24rpx; }
+  &--b { left: 424rpx; top: 16rpx; }
+  &--c { left: 88rpx; top: 528rpx; }
+  &--d { left: 576rpx; top: 536rpx; }
+}
+
+.hero-stage__satellite-head {
+  width: 80rpx !important;
+  height: 80rpx !important;
+  border-radius: 50%;
+  box-shadow: 0 8rpx 24rpx rgba(139, 92, 246, 0.35);
+}
+
+/* z8: Contact shadows for front sprites (P1 depth — radial-gradient ellipse) */
+.hero-stage__shadow {
+  position: absolute;
+  width: 64rpx;
+  height: 16rpx;
+  background: radial-gradient(ellipse, rgba(60, 30, 110, 0.30), transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 7; // just below the sprites they shadow
+
+  &--cards { left: 72rpx; top: 200rpx; }
+  &--map-pin { left: 552rpx; top: 136rpx; }
+  &--dice { left: 624rpx; top: 448rpx; }
+  &--glass { left: 56rpx; top: 416rpx; }
+}
+
+/* z9: Sparkle dots (P1 atmosphere — zero bytes, CSS-drawn) */
+.hero-stage__sparkle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 220, 160, 0.9);
+  box-shadow: 0 0 8rpx rgba(255, 220, 160, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9;
+
+  &--1 { left: 184rpx; top: 200rpx; width: 12rpx; height: 12rpx; }
+  &--2 { left: 488rpx; top: 152rpx; width: 8rpx; height: 8rpx; }
+  &--3 { left: 656rpx; top: 240rpx; width: 16rpx; height: 16rpx; }
+  &--4 { left: 112rpx; top: 232rpx; width: 8rpx; height: 8rpx; }
 }
 
 /* LQIP blur-up placeholder — same geometry as the hero */
@@ -417,19 +521,6 @@
   75% { transform: rotate(2.5deg); }
 }
 
-/* Converge flights: dice + cards are "the quiz going into the box".
-   Endpoints are the sprite-centre → box-mouth deltas on the 750rpx stage
-   (the --mid / --short wrapper scales shrink the flight proportionally). */
-@keyframes cards-converge {
-  from { opacity: 1; transform: translate(0, 0) scale(1) rotate(-10deg); }
-  to { opacity: 0; transform: translate(219rpx, 196rpx) scale(0.35) rotate(-10deg); }
-}
-
-@keyframes dice-converge {
-  from { opacity: 1; transform: translate(0, 0) scale(1) rotate(12deg); }
-  to { opacity: 0; transform: translate(-249rpx, -8rpx) scale(0.35) rotate(12deg); }
-}
-
 @keyframes underline-draw {
   from { opacity: 0; transform: scaleX(0) rotate(-1deg); }
   to { opacity: 0.55; transform: scaleX(1) rotate(-1deg); }
@@ -519,15 +610,14 @@
   animation: underline-draw 240ms ease-out 1180ms both;
 }
 
-/* ── Entrance choreography (0–1410ms) ──────────────────────────────── */
-// 1. Box lands (drop + settle bounce), then peek reveals Xiaoyue's head.
-//    (The --rm block below neutralises both animations via !important —
-//    :not() pseudo-classes are banned here by the landing style test.)
+/* ── Entrance choreography (0–1100ms, wow-up 2026-09-01) ──────────── */
+// 1. Box lands (drop + settle bounce). hero-peek clip-path removed (P0):
+//    clip-path inset() repaints the 688rpx layer every frame on WeChat iOS,
+//    causing visible frame drops. The entrance is now transform+opacity only.
 .landing-page--entered .hero-stage__hero-img--in {
   animation:
-    hero-land 480ms cubic-bezier(0.22, 1, 0.36, 1) both,
-    hero-peek 300ms ease-out 860ms both,
-    box-shake 220ms ease-in-out 780ms both;
+    hero-land 460ms cubic-bezier(0.22, 1, 0.36, 1) both,
+    box-shake 200ms ease-in-out 420ms both;
 }
 
 // 2. Halo blooms at 300ms, then breathes with the box (idle, same phase).
@@ -542,32 +632,194 @@
   animation: hero-breathe 4s ease-in-out 1.4s infinite;
 }
 
-// 4. Floating sprites stagger in (100ms apart, slight overshoot). Under E3,
-//    dice + cards are "the quiz": they pop in, then converge into the box
-//    mouth (consumed by the box before it deals the table).
+// 4. Floating sprites stagger in (70ms apart, scale 0.6→1.06 overshoot).
+//    Converge animations removed (wow-up 2026-09-01): sprites now stay in
+//    their orbital positions instead of flying into the box mouth.
+.landing-page--entered .hero-stage__sprite--cards {
+  animation: sprite-in-cards 300ms cubic-bezier(0.22, 1, 0.36, 1) 480ms both;
+}
+
+.landing-page--entered .hero-stage__sprite--map-pin {
+  animation: sprite-in-pin 300ms cubic-bezier(0.22, 1, 0.36, 1) 550ms both;
+}
+
+.landing-page--entered .hero-stage__sprite--dice {
+  animation: sprite-in-dice 300ms cubic-bezier(0.22, 1, 0.36, 1) 620ms both;
+}
+
+.landing-page--entered .hero-stage__sprite--glass {
+  animation: sprite-in-glass 300ms cubic-bezier(0.22, 1, 0.36, 1) 690ms both;
+}
+
+.landing-page--entered .hero-stage__sprite--buildings {
+  animation: sprite-in-buildings 380ms ease-out 0ms both;
+}
+
+// 4b. Satellite archetype heads stagger in (70ms apart, translateY rise).
+.landing-page--entered .hero-stage__satellite--a {
+  animation: satellite-in 300ms cubic-bezier(0.22, 1, 0.36, 1) 560ms both;
+}
+
+.landing-page--entered .hero-stage__satellite--b {
+  animation: satellite-in 300ms cubic-bezier(0.22, 1, 0.36, 1) 630ms both;
+}
+
+.landing-page--entered .hero-stage__satellite--c {
+  animation: satellite-in 300ms cubic-bezier(0.22, 1, 0.36, 1) 700ms both;
+}
+
+.landing-page--entered .hero-stage__satellite--d {
+  animation: satellite-in 300ms cubic-bezier(0.22, 1, 0.36, 1) 770ms both;
+}
+
+// 4c. Sparkle dots twinkle on (60ms stagger).
+.landing-page--entered .hero-stage__sparkle--1 {
+  animation: sparkle-in 200ms ease-out 900ms both;
+}
+
+.landing-page--entered .hero-stage__sparkle--2 {
+  animation: sparkle-in 200ms ease-out 960ms both;
+}
+
+.landing-page--entered .hero-stage__sparkle--3 {
+  animation: sparkle-in 200ms ease-out 1020ms both;
+}
+
+.landing-page--entered .hero-stage__sparkle--4 {
+  animation: sparkle-in 200ms ease-out 1080ms both;
+}
+
+// 4d. Dusk wash fades in, glow bridge blooms, arc dots pulse on.
+.landing-page--entered .hero-stage__dusk-wash {
+  animation: dusk-wash-in 400ms ease-out 0ms both;
+}
+
+.landing-page--entered .hero-stage__glow-bridge {
+  animation: glow-bridge-in 380ms ease-out 300ms both;
+}
+
+.landing-page--entered .hero-stage__arc-dot {
+  animation: arc-dot-in 300ms ease-out 600ms both;
+}
+
+// 4e. Contact shadows fade in with their sprites.
+.landing-page--entered .hero-stage__shadow--cards {
+  animation: shadow-in 300ms ease-out 480ms both;
+}
+
+.landing-page--entered .hero-stage__shadow--map-pin {
+  animation: shadow-in 300ms ease-out 550ms both;
+}
+
+.landing-page--entered .hero-stage__shadow--dice {
+  animation: shadow-in 300ms ease-out 620ms both;
+}
+
+.landing-page--entered .hero-stage__shadow--glass {
+  animation: shadow-in 300ms ease-out 690ms both;
+}
+
+/* ── Idle loops (start after entrance, negative delays pre-desync) ── */
+// Front sprites float independently.
 .landing-page--entered .hero-stage__sprite--cards {
   animation:
-    sprite-in-cards 260ms ease-out 420ms both,
-    cards-converge 320ms ease-in 760ms both;
+    sprite-in-cards 300ms cubic-bezier(0.22, 1, 0.36, 1) 480ms both,
+    float-cards 3.2s ease-in-out 1.5s -0.6s infinite;
+}
+
+.landing-page--entered .hero-stage__sprite--map-pin {
+  animation:
+    sprite-in-pin 300ms cubic-bezier(0.22, 1, 0.36, 1) 550ms both,
+    float-pin 4.3s ease-in-out 1.5s -1.4s infinite;
 }
 
 .landing-page--entered .hero-stage__sprite--dice {
   animation:
-    sprite-in-dice 260ms ease-out 500ms both,
-    dice-converge 320ms ease-in 840ms both;
-}
-
-.landing-page--entered .hero-stage__sprite--map-pin {
-  animation: sprite-in-pin 420ms cubic-bezier(0.34, 1.3, 0.64, 1) 700ms both;
+    sprite-in-dice 300ms cubic-bezier(0.22, 1, 0.36, 1) 620ms both,
+    float-dice 3.7s ease-in-out 1.5s -0.2s infinite;
 }
 
 .landing-page--entered .hero-stage__sprite--glass {
-  animation: sprite-in-glass 420ms cubic-bezier(0.34, 1.3, 0.64, 1) 800ms both;
+  animation:
+    sprite-in-glass 300ms cubic-bezier(0.22, 1, 0.36, 1) 690ms both,
+    float-glass 4.8s ease-in-out 1.5s -2.1s infinite;
 }
 
-.landing-page--entered .hero-stage__sprite--buildings {
-  animation: sprite-in-buildings 420ms ease-out 900ms both;
+// Satellite heads float with gentle scale.
+.landing-page--entered .hero-stage__satellite--a {
+  animation:
+    satellite-in 300ms cubic-bezier(0.22, 1, 0.36, 1) 560ms both,
+    float-satellite-a 3.6s ease-in-out 1.5s -0.9s infinite;
 }
+
+.landing-page--entered .hero-stage__satellite--b {
+  animation:
+    satellite-in 300ms cubic-bezier(0.22, 1, 0.36, 1) 630ms both,
+    float-satellite-b 4.4s ease-in-out 1.5s -1.8s infinite;
+}
+
+.landing-page--entered .hero-stage__satellite--c {
+  animation:
+    satellite-in 300ms cubic-bezier(0.22, 1, 0.36, 1) 700ms both,
+    float-satellite-c 5.0s ease-in-out 1.5s -0.3s infinite;
+}
+
+.landing-page--entered .hero-stage__satellite--d {
+  animation:
+    satellite-in 300ms cubic-bezier(0.22, 1, 0.36, 1) 770ms both,
+    float-satellite-d 4.0s ease-in-out 1.5s -1.1s infinite;
+}
+
+// Glow bridge pulses warmly.
+.landing-page--entered .hero-stage__glow-bridge {
+  animation:
+    glow-bridge-in 380ms ease-out 300ms both,
+    pulse-glow-bridge 5.2s ease-in-out 1.5s -0.8s infinite;
+}
+
+// Dusk wash breathes gently.
+.landing-page--entered .hero-stage__dusk-wash {
+  animation:
+    dusk-wash-in 400ms ease-out 0ms both,
+    breathe-dusk-wash 6.0s ease-in-out 1.5s 0s infinite;
+}
+
+// Sparkles twinkle (staggered periods).
+.landing-page--entered .hero-stage__sparkle--1 {
+  animation:
+    sparkle-in 200ms ease-out 900ms both,
+    twinkle-sparkle 2.4s ease-in-out 1.5s -0.4s infinite;
+}
+
+.landing-page--entered .hero-stage__sparkle--2 {
+  animation:
+    sparkle-in 200ms ease-out 960ms both,
+    twinkle-sparkle 3.1s ease-in-out 1.5s -0.8s infinite;
+}
+
+.landing-page--entered .hero-stage__sparkle--3 {
+  animation:
+    sparkle-in 200ms ease-out 1020ms both,
+    twinkle-sparkle 3.8s ease-in-out 1.5s -1.2s infinite;
+}
+
+.landing-page--entered .hero-stage__sparkle--4 {
+  animation:
+    sparkle-in 200ms ease-out 1080ms both,
+    twinkle-sparkle 2.9s ease-in-out 1.5s -0.6s infinite;
+}
+
+// Arc dots pulse with traveling stagger (each dot delayed by index).
+.landing-page--entered .hero-stage__arc-dot--0 { animation: arc-dot-in 300ms ease-out 600ms both, pulse-arc-dot 5.2s ease-in-out 1.5s 0s infinite; }
+.landing-page--entered .hero-stage__arc-dot--1 { animation: arc-dot-in 300ms ease-out 600ms both, pulse-arc-dot 5.2s ease-in-out 1.5s -0.18s infinite; }
+.landing-page--entered .hero-stage__arc-dot--2 { animation: arc-dot-in 300ms ease-out 600ms both, pulse-arc-dot 5.2s ease-in-out 1.5s -0.36s infinite; }
+.landing-page--entered .hero-stage__arc-dot--3 { animation: arc-dot-in 300ms ease-out 600ms both, pulse-arc-dot 5.2s ease-in-out 1.5s -0.54s infinite; }
+.landing-page--entered .hero-stage__arc-dot--4 { animation: arc-dot-in 300ms ease-out 600ms both, pulse-arc-dot 5.2s ease-in-out 1.5s -0.72s infinite; }
+.landing-page--entered .hero-stage__arc-dot--5 { animation: arc-dot-in 300ms ease-out 600ms both, pulse-arc-dot 5.2s ease-in-out 1.5s -0.9s infinite; }
+.landing-page--entered .hero-stage__arc-dot--6 { animation: arc-dot-in 300ms ease-out 600ms both, pulse-arc-dot 5.2s ease-in-out 1.5s -1.08s infinite; }
+.landing-page--entered .hero-stage__arc-dot--7 { animation: arc-dot-in 300ms ease-out 600ms both, pulse-arc-dot 5.2s ease-in-out 1.5s -1.26s infinite; }
+.landing-page--entered .hero-stage__arc-dot--8 { animation: arc-dot-in 300ms ease-out 600ms both, pulse-arc-dot 5.2s ease-in-out 1.5s -1.44s infinite; }
+.landing-page--entered .hero-stage__arc-dot--9 { animation: arc-dot-in 300ms ease-out 600ms both, pulse-arc-dot 5.2s ease-in-out 1.5s -1.62s infinite; }
 
 // 5. Particles rise (idle loop, self-staggered by delay).
 .landing-page--entered .hero-stage__particle--1 {
@@ -617,21 +869,11 @@
   }
 }
 
-// CALIBRATION CONFIRMED (2026-07-26, measured on the shipped master): opaque-
-// coverage profile shows the dog's head spans y≈23–50% and the box body becomes
-// dominant at y≈53% (glow seam ≈48–55%). inset(52%) starts the reveal edge just
-// above the rim, so Xiaoyue's head "peeks" out as the edge sweeps up to 0.
-// Graceful degradation: engines that cannot interpolate clip-path jump straight
-// to the final frame (fully revealed) — never stuck half-clipped.
-@keyframes hero-peek {
-  from {
-    clip-path: inset(52% 0 0 0);
-  }
-
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
+// hero-peek clip-path keyframes REMOVED (wow-up 2026-09-01, P0):
+// clip-path inset() repaints the 688rpx layer every frame on WeChat iOS,
+// causing visible frame drops. Replaced by transform+opacity-only entrance.
+// Two-layer occlusion (box + corgi cutout) will restore the peek when CDN
+// split assets land — the occlusion is z-order based, zero repaint cost.
 
 @keyframes halo-bloom {
   from {
@@ -741,6 +983,120 @@
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/* ── Wow-up keyframes (2026-09-01) ────────────────────────────────── */
+
+// Satellite archetype heads entrance (translateY rise + fade)
+@keyframes satellite-in {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Sparkle dots entrance (fade + scale pop)
+@keyframes sparkle-in {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+
+  to {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+}
+
+// Dusk horizon wash entrance (fade in)
+@keyframes dusk-wash-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+// Warm glow bridge entrance (fade in)
+@keyframes glow-bridge-in {
+  from { opacity: 0; }
+  to { opacity: 0.65; }
+}
+
+// Arc dot entrance (fade in)
+@keyframes arc-dot-in {
+  from { opacity: 0; }
+  to { opacity: 0.55; }
+}
+
+// Contact shadow entrance (fade in)
+@keyframes shadow-in {
+  from { opacity: 0; }
+  to { opacity: 0.6; }
+}
+
+/* ── Idle float loops (desynchronized periods, negative delays) ────── */
+
+@keyframes float-cards {
+  0%, 100% { transform: rotate(-10deg) scale(1.06) translateY(0); }
+  50% { transform: rotate(-10deg) scale(1.06) translateY(-10rpx); }
+}
+
+@keyframes float-pin {
+  0%, 100% { transform: rotate(-4deg) scale(1.06) translateY(0); }
+  50% { transform: rotate(-4deg) scale(1.06) translateY(-8rpx); }
+}
+
+@keyframes float-dice {
+  0%, 100% { transform: rotate(12deg) scale(1.06) translateY(0); }
+  50% { transform: rotate(15deg) scale(1.06) translateY(-12rpx); }
+}
+
+@keyframes float-glass {
+  0%, 100% { transform: rotate(8deg) scale(1.06) translateY(0); }
+  50% { transform: rotate(8deg) scale(1.06) translateY(-9rpx); }
+}
+
+@keyframes float-satellite-a {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8rpx) scale(1.03); }
+}
+
+@keyframes float-satellite-b {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8rpx) scale(1.03); }
+}
+
+@keyframes float-satellite-c {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-10rpx) scale(1.03); }
+}
+
+@keyframes float-satellite-d {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-10rpx) scale(1.03); }
+}
+
+@keyframes pulse-glow-bridge {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.80; }
+}
+
+@keyframes pulse-arc-dot {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.70; }
+}
+
+@keyframes breathe-dusk-wash {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 1; }
+}
+
+@keyframes twinkle-sparkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
 @keyframes rise-in {
@@ -1279,6 +1635,11 @@
   .headline {
     font-size: $font-size-2xl;
   }
+
+  // Wow-up adaptations: hide sparkle s4, reduce composition density.
+  .hero-stage__sparkle--4 {
+    display: none !important;
+  }
 }
 
 /* ── Short-screen compaction (< 700px window height) ───────────────── */
@@ -1356,6 +1717,26 @@
   .headline {
     font-size: $font-size-2xl;
   }
+
+  // Wow-up adaptations: hide head D, sparkles s3+s4, buildings.
+  .hero-stage__satellite--d {
+    display: none !important;
+  }
+
+  .hero-stage__sparkle--3,
+  .hero-stage__sparkle--4 {
+    display: none !important;
+  }
+
+  .hero-stage__sprite--buildings {
+    display: none !important;
+  }
+
+  // Arc dots: drop the bottom pair on each side (4 per side).
+  .hero-stage__arc-dot--4,
+  .hero-stage__arc-dot--9 {
+    display: none !important;
+  }
 }
 
 /* ── Low-end devices: keep the one-shot entrance, kill infinite idles ─ */
@@ -1369,14 +1750,8 @@
     display: none !important;
   }
 
-  // E3: no converge flight, no shake — dice/cards are consumed instantly;
-  // heads fade in place at their seats (60ms opacity-only stagger), and the
-  // connector/pin/caption land right after without the burst.
-  .hero-stage__sprite--dice,
-  .hero-stage__sprite--cards {
-    animation: none !important;
-    opacity: 0 !important;
-  }
+  // Wow-up: dice/cards stay visible as orbital sprites (no converge).
+  // Low-end kills idle loops but keeps the static composed scene.
 
   .mechanism-strip__seat {
     animation: mechanism-seat-fade 300ms ease-out 500ms both !important;
@@ -1413,12 +1788,48 @@
     animation: halo-bloom 380ms ease-out 300ms both !important;
   }
 
-  // clip-path animates on the main thread (repaint, not compositor) in
-  // WKWebView — low-end devices skip the peek sweep and jump straight to the
-  // revealed frame (perf WARN-3).
+  // clip-path peek removed entirely (wow-up 2026-09-01) — no special-casing
+  // needed for low-end. The entrance is transform+opacity only on all tiers.
   .hero-stage__hero-img--in {
-    animation: hero-land 480ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
-    clip-path: none !important;
+    animation: hero-land 460ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
+  }
+
+  // Wow-up: kill idle loops on new elements, keep one-shot entrances.
+  .hero-stage__satellite,
+  .hero-stage__sparkle,
+  .hero-stage__shadow,
+  .hero-stage__glow-bridge,
+  .hero-stage__dusk-wash {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .hero-stage__glow-bridge {
+    opacity: 0.65 !important;
+  }
+
+  .hero-stage__dusk-wash {
+    opacity: 1 !important;
+  }
+
+  .hero-stage__shadow {
+    opacity: 0.6 !important;
+  }
+
+  .hero-stage__sparkle {
+    opacity: 0.8 !important;
+  }
+
+  .hero-stage__arc-dots {
+    display: none !important;
+  }
+
+  .hero-stage__sprite--cards,
+  .hero-stage__sprite--map-pin,
+  .hero-stage__sprite--dice,
+  .hero-stage__sprite--glass {
+    animation: none !important;
+    opacity: 1 !important;
   }
 
   .landing-page__cta--primary::after {
@@ -1454,7 +1865,6 @@
 
   .hero-stage__hero-img {
     animation: none !important;
-    clip-path: none !important;
     transition: opacity 150ms ease-out;
   }
 
@@ -1463,12 +1873,39 @@
     opacity: 1 !important;
   }
 
-  // E3: dice/cards are consumed by the box in the settled composition —
-  // keep them hidden (must follow the generic sprite rule to win).
-  .hero-stage__sprite--dice,
-  .hero-stage__sprite--cards {
-    opacity: 0 !important;
+  // Wow-up new elements: static composed scene (2026-09-01).
+  .hero-stage__satellite {
+    animation: none !important;
+    opacity: 1 !important;
   }
+
+  .hero-stage__sparkle {
+    animation: none !important;
+    opacity: 0.8 !important;
+  }
+
+  .hero-stage__shadow {
+    animation: none !important;
+    opacity: 0.6 !important;
+  }
+
+  .hero-stage__glow-bridge {
+    animation: none !important;
+    opacity: 0.65 !important;
+  }
+
+  .hero-stage__dusk-wash {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .hero-stage__arc-dot {
+    animation: none !important;
+    opacity: 0.55 !important;
+  }
+
+  // Wow-up: dice/cards stay visible as orbital sprites (no converge).
+  // The old E3 hiding rule is removed — sprites are decorative, not consumed.
 
   // E3/E2 static settled composition: strip, connector, pin, caption,
   // and the persistent gold underlines render without any animation.
@@ -1554,15 +1991,11 @@
 }
 
 /* ── Logged-out re-entry (?auth=logout|expired): the world stays (dusk
-   gradient, hero, halo), the script becomes welcome-back. The mechanism
-   never bursts — seats fade in at their places (the table is already set),
-   dice/cards stay consumed, the CTA sheen (an acquisition nudge) is off. */
+   gradient, hero, halo, satellites, glow), the script becomes welcome-back.
+   The mechanism never bursts — seats fade in at their places (the table is
+   already set), the CTA sheen (an acquisition nudge) is off. */
 .landing-page--logged-out {
-  .hero-stage__sprite--dice,
-  .hero-stage__sprite--cards {
-    animation: none !important;
-    opacity: 0 !important;
-  }
+  // Wow-up: sprites stay visible as orbital decoration (no converge to hide).
 
   .mechanism-strip__seat {
     animation: mechanism-seat-fade 300ms ease-out 500ms both !important;
