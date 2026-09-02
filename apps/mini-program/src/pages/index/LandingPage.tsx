@@ -46,8 +46,6 @@ const HERO_SPRITES = [
   { key: 'buildings', src: cdnAsset('/assets/lovart/landing/sprite-buildings.webp') },
   { key: 'cards', src: cdnAsset('/assets/lovart/landing/sprite-cards.webp') },
   { key: 'map-pin', src: cdnAsset('/assets/lovart/landing/sprite-map-pin.webp') },
-  { key: 'dice', src: cdnAsset('/assets/lovart/landing/sprite-dice.webp') },
-  { key: 'glass', src: cdnAsset('/assets/lovart/landing/sprite-glass.webp') },
 ] as const
 
 type HeroSpriteKey = (typeof HERO_SPRITES)[number]['key']
@@ -88,17 +86,6 @@ function persistLegalAccepted(): void {
  * package weight; the strip pin reuses the already-fetched CDN sprite.
  */
 const MECHANISM_HEADS = ['corgi', 'fox', 'rooster', 'koala', 'cat', 'dolphin_calm'] as const
-
-/** P2 组局 gathering ring (2026-09-01): four satellite archetype heads float
- *  around the hero stage, translating the reference poster's "people gathered
- *  around a table" energy into the existing archetype system. Reuses the
- *  preloaded mechanism-strip grid heads — zero new package bytes. */
-const SATELLITE_HEADS = [
-  { key: 'a', archetype: 'fox' },
-  { key: 'b', archetype: 'rooster' },
-  { key: 'c', archetype: 'koala' },
-  { key: 'd', archetype: 'cat' },
-] as const
 
 const MAP_PIN_SPRITE_SRC = HERO_SPRITES.find((s) => s.key === 'map-pin')!.src
 
@@ -656,13 +643,6 @@ export default function MiniProgramLandingPage({
               {/* City skyline sits behind the hero composite */}
               {renderSprite('buildings')}
 
-              {/* z3: Dotted arcs (P2 — connective glow, no SVG) */}
-              <View className='hero-stage__arc-dots' aria-hidden='true'>
-                {Array.from({ length: 10 }, (_, i) => (
-                  <View key={i} className={`hero-stage__arc-dot hero-stage__arc-dot--${i}`} />
-                ))}
-              </View>
-
               {/* Blur-up placeholder: same geometry as the hero, fades out on
                   load and unmounts right after the fade (no DOM residue). */}
               {heroState !== 'fallback' && !lqipGone && (
@@ -708,36 +688,11 @@ export default function MiniProgramLandingPage({
                 )}
               </View>
 
-              {/* z7: Satellite archetype heads (P2 gathering ring) */}
-              {SATELLITE_HEADS.map((head) => (
-                <View key={head.key} className={`hero-stage__satellite hero-stage__satellite--${head.key}`} aria-hidden='true'>
-                  <ArchetypeHead
-                    archetype={head.archetype}
-                    size={80}
-                    variant='grid'
-                    fallback='none'
-                    className='hero-stage__satellite-head'
-                  />
-                </View>
-              ))}
-
-              {/* Floating elements: dinner/game line + city-exploration line */}
+              {/* Floating elements: city skyline + activity hints (refined 2026-09-02).
+                  3 key sprites only — buildings (backdrop), map-pin (destination),
+                  cards (quiz). Dice and glass removed for cleaner composition. */}
               {renderSprite('cards')}
               {renderSprite('map-pin')}
-              {renderSprite('dice')}
-              {renderSprite('glass')}
-
-              {/* z8: Contact shadows for front sprites (P1 depth) */}
-              <View className='hero-stage__shadow hero-stage__shadow--cards' aria-hidden='true' />
-              <View className='hero-stage__shadow hero-stage__shadow--map-pin' aria-hidden='true' />
-              <View className='hero-stage__shadow hero-stage__shadow--dice' aria-hidden='true' />
-              <View className='hero-stage__shadow hero-stage__shadow--glass' aria-hidden='true' />
-
-              {/* z9: Sparkle dots (P1 atmosphere, zero bytes) */}
-              <View className='hero-stage__sparkle hero-stage__sparkle--1' aria-hidden='true' />
-              <View className='hero-stage__sparkle hero-stage__sparkle--2' aria-hidden='true' />
-              <View className='hero-stage__sparkle hero-stage__sparkle--3' aria-hidden='true' />
-              <View className='hero-stage__sparkle hero-stage__sparkle--4' aria-hidden='true' />
             </View>
           </View>
         </View>
