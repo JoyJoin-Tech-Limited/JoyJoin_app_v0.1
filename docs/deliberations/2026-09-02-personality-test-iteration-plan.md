@@ -42,3 +42,59 @@
 `npm run typecheck -w mini-program` · `npm run guardrails` · `npm run build:weapp -w mini-program && npm run verify:subpackage-styles -w mini-program` · `check-class-coverage` · `design:audit:changed` · device walkthrough (8q + 16q paths, 3G throttle, reduced-motion, low-end tier).
 
 Full design specs (per-workstream choreography, implementation maps with file:line, effort S/M/L, model routing) live in this session's planner output; PM PRD sections (user stories, AC-ids, phasing rationale) likewise. This doc records the locked outcomes.
+
+---
+
+## Appendix A — PR-0 baseline queries (run on production, trailing 14 days)
+
+Storage: `onboarding_analytics` (step, event_type, metadata jsonb, timestamp). Events fire from `useOnboardingAnalytics('personality-test' | 'personality-test-results')`.
+
+```sql
+-- M1: commentary read-complete rate (baseline before WS-1)
+SELECT
+  count(*) FILTER (WHERE event_type = 'commentary_read_complete')::float
+    / NULLIF(count(*) FILTER (WHERE event_type IN ('commentary_read_complete','commentary_cut_short')), 0) AS read_complete_rate
+FROM onboarding_analytics
+WHERE step = 'personality-test'
+  AND timestamp > now() - interval '14 days';
+
+-- M2: anticipation<300ms dwell bucket share (baseline before WS-2/WS-4)
+SELECT
+  count(*) FILTER (WHERE (metadata->>'dwellMs')::int < 300)::float
+    / NULLIF(count(*), 0) AS short_anticipation_share
+FROM onboarding_analytics
+WHERE step = 'personality-test-results'
+  AND event_type = 'result_stage_dwell'
+  AND metadata->>'stage' = 'loading'   -- stage recorded is the PREVIOUS stage; slot-antication proxy
+  AND timestamp > now() - interval '14 days';
+
+-- M3: completion rate (answered-last ÷ started)
+SELECT
+  count(DISTINCT session_id) FILTER (WHERE event_type = 'step_completed')::float
+    / NULLIF(count(DISTINCT session_id) FILTER (WHERE event_type = 'step_started'), 0) AS completion_rate
+FROM onboarding_analytics
+WHERE step = 'personality-test'
+  AND timestamp > now() - interval '14 days';
+
+-- M4: share-poster generation rate from results
+SELECT count(*), count(DISTINCT session_id)
+FROM onboarding_analytics
+WHERE step = 'personality-test-results'
+  AND event_type ILIKE '%share%poster%'
+  AND timestamp > now() - interval '14 days';
+```
+Verify exact event_type strings against `useOnboardingAnalytics.interaction` call sites before running (ILIKE fallback acceptable for M4).
+
+## Appendix B — Device-lab checklist (WS-5 hard gate, pre-release)
+
+1. Mid-tier Android (Xiaomi 13/Redmi K60 class): spin with curvature on — `preserve-3d` must not flatten; FPS ≥55 during spin (WeChat DevTools Performance). If flattened or janky → `SLOT_CURVATURE_ENABLE_3D = false` (slotCurvature.ts:37), ship 2.5D.
+2. iPhone baseline: same spin/land walkthrough; land flip single-overshoot, no flicker with the flash/particle stack.
+3. Tier matrix: force `celebrationTier` full/reduced/minimal — curvature+flip+parallax / curvature+flip+half-parallax / flat.
+4. OS reduced-motion ON: reel pixel-identical to pre-iteration, no white flash (ride-along fix), no shimmer pulse.
+5. 8-question and 16-question adaptive paths end-to-end; 3G throttle: anticipation → holding → resolve with no dead window.
+6. Swipe-back into results page: clean replay, no stranded transient state.
+
+## Appendix C — Post-merge ops
+
+- Trigger **"Upload CDN Assets"** workflow from `main` — re-encoded `xiaoyue-intro-animated.webp` is CDN-only at runtime; devices fetch the stale 671KiB copy until upload.
+- Mini-program 开发版 upload follows the normal staging-first CI path.
