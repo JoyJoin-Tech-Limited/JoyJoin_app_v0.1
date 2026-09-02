@@ -1,5 +1,5 @@
 import { Canvas, Image, Text, View } from '@tarojs/components'
-import Taro, { useRouter, useShareAppMessage, useShareTimeline } from '@tarojs/taro'
+import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { archetypeRegistry } from '@shared/personality/archetypeRegistry'
@@ -48,8 +48,6 @@ import {
 } from './resultHelpers'
 import LoadingStage from './LoadingStage'
 import LoginHandoffOverlay from './LoginHandoffOverlay'
-import XiaoyueSpriteAnimator from '../../../../components/mascot/XiaoyueSpriteAnimator'
-import CelebrationSparkle from '../../../../components/mascot/CelebrationSparkle'
 import EmptyStage from './EmptyStage'
 import ErrorStage from './ErrorStage'
 import SlotStage from './SlotStage'
@@ -100,15 +98,6 @@ function buildAuthUserResultState(user: any): ResolvedResultState | null {
 export default function PersonalityTestResultsPage() {
   const auth = useAuth()
   const deviceTier = useDeviceTier()
-  const router = useRouter()
-
-  // PR-7 celebrate bridge: when the completing shell hands off with
-  // `?celebrate=1`, keep the same celebration visual mounted until the slot
-  // anticipation starts (flowStage leaves 'loading'), folding the two dead
-  // windows into one continuous beat. The slot machine itself is untouched.
-  const [celebrateBridge, setCelebrateBridge] = useState<'off' | 'on' | 'exiting'>(
-    router.params?.celebrate === '1' ? 'on' : 'off',
-  )
 
   const personalityShareEnabled = auth.user?.features?.personalityShareEnabled ?? true
   const personalitySlotAnimationEnabled = auth.user?.features?.personalitySlotAnimationEnabled ?? true
@@ -246,27 +235,6 @@ export default function PersonalityTestResultsPage() {
     authUserArchetype: auth.user?.archetype ?? auth.user?.primaryArchetype ?? null,
     clearSharePosterRef,
   })
-
-  // Celebrate bridge exit: fade once the slot anticipation takes over, with
-  // a hard ceiling so a slow sprite decode never strands the overlay.
-  useEffect(() => {
-    if (celebrateBridge !== 'on') return undefined
-    let offTimer: ReturnType<typeof setTimeout> | null = null
-    const beginExit = () => {
-      setCelebrateBridge((current) => (current === 'on' ? 'exiting' : current))
-      offTimer = setTimeout(() => setCelebrateBridge('off'), 260)
-    }
-    let ceilingTimer: ReturnType<typeof setTimeout> | null = null
-    if (flowStage !== 'loading') {
-      beginExit()
-    } else {
-      ceilingTimer = setTimeout(beginExit, 2500)
-    }
-    return () => {
-      if (offTimer) clearTimeout(offTimer)
-      if (ceilingTimer) clearTimeout(ceilingTimer)
-    }
-  }, [celebrateBridge, flowStage])
 
   const secondaryArchetypeId = resultState?.result.secondaryArchetype ?? sessionSnapshot?.result?.secondaryArchetype
   const secondaryDisplayName = secondaryArchetypeId
@@ -544,6 +512,7 @@ export default function PersonalityTestResultsPage() {
             phaseText={phaseText}
             celebrationTier={celebrationTier}
             isRareVariant={isRareVariant}
+            systemReducedMotion={systemReducedMotion}
           />
         )
       case 'reveal':
@@ -553,7 +522,6 @@ export default function PersonalityTestResultsPage() {
             displayAsset={displayAsset}
             visual={visual}
             revealPhase={revealPhase}
-            phaseText={phaseText}
           />
         )
       case 'bridge':
@@ -616,18 +584,12 @@ export default function PersonalityTestResultsPage() {
 
   return (
     <View className={`personality-results personality-results--${flowStage}${deviceTier.isDegradation ? ' personality-results--low-end' : ''}${systemReducedMotion ? ' personality-results--reduce-motion' : ''}`}>
-      {content}
-      {celebrateBridge !== 'off' && (
-        <View
-          className={`personality-results__celebrate-bridge${celebrateBridge === 'exiting' ? ' personality-results__celebrate-bridge--exiting' : ''}`}
-          aria-hidden='true'
-        >
-          <View className='personality-results__celebrate-bridge-mascot'>
-            <XiaoyueSpriteAnimator state='celebrate' size='240rpx' showGlow />
-            {!systemReducedMotion && <CelebrationSparkle count={6} />}
-          </View>
-        </View>
-      )}
+      {/* Keyed stage crossfade: each flowStage remounts its stage under a
+          200ms opacity+translateY enter so the LoadingStage → slot handoff
+          reads as one composed beat (replaces the PR-7 celebrate bridge). */}
+      <View key={flowStage} className='personality-results__stage-fade'>
+        {content}
+      </View>
       {/* R2-7 login handoff: branded transition overlay for the
            anonymous→login handshake. Stays mounted through the navigation
            call so the route change has no dead frame. */}

@@ -47,11 +47,14 @@ import { getNearestSliderOption } from './PersonalityTestAnswerArea'
 import PersonalityTestPreloadLayer from './PersonalityTestPreloadLayer'
 import PersonalityTestCompletingError from './PersonalityTestCompletingError'
 import {
+  getArchetypeSpritesheetLocalPath,
   PERSONALITY_TEST_XIAOYUE_EXPRESSION,
 } from './visuals'
 import { useSpeculativeStart } from './useSpeculativeStart'
 import { computeAutoAdvanceDelayMs } from './autoAdvance'
+import { resolveIdleWhisper } from './idleWhispers'
 import { preloadRouteAssets } from '../../../lib/utils/routePreloadAssets'
+import { preloadImagesWithDiagnostics } from '../../../lib/utils/imagePreload'
 import './index.scss'
 import type {
   Phase,
@@ -98,12 +101,12 @@ interface AssessmentAnswerResponse {
 // next question appears. Prevents the feedback from flashing by too fast.
 const COMMENTARY_MIN_DISPLAY_MS = 900
 
-// PR-7 overlap: the completing celebration shell hands off to the results
-// page after this beat instead of the full CELEBRATE_MIN_DISPLAY_MS — the
-// result data is already local (pendingCompletionRef + anonymous snapshot)
-// and the results page continues the same celebration visual into the slot
-// anticipation via the `?celebrate=1` bridge, so no drama is lost.
-const COMPLETING_CELEBRATE_MIN_MS = 600
+// Completing celebration hold (2026-09-02): the completing shell is now
+// self-sufficient — the results page no longer continues the beat via a
+// `?celebrate=1` bridge (removed; a 200ms keyed crossfade covers the
+// LoadingStage → slot handoff instead), so the shell holds long enough to
+// read as a complete celebration on its own.
+const COMPLETING_CELEBRATE_MIN_MS = 1100
 
 // Minimum answered questions before a mid-test Xiaoyue prefetch fires. The
 // server re-derives the profile from the session, so this only controls how
@@ -152,6 +155,18 @@ export default function PersonalityTestPage() {
   // landing-page preloads, but critical for direct entry (share links, deeplinks).
   useEffect(() => {
     preloadRouteAssets('pages/onboarding/personality-test/index')
+    // WS-4 (2026-09-02): prime the NATIVE image cache for the slot spritesheet
+    // while the user is still answering questions — the results page's slot
+    // reel starts immediately on mount, and useSpriteReadiness cannot gate
+    // decode on real devices (no DOM Image in WeChat JSCore). This mirrors
+    // the results page's dual-cache strategy: getImageInfo warms the native
+    // cache here, PersonalityTestPreloadLayer's hidden <Image> warms the
+    // webview cache, and the results page keeps its own primer as
+    // direct-entry insurance.
+    void preloadImagesWithDiagnostics(
+      [getArchetypeSpritesheetLocalPath()],
+      'personality-test:spritesheet',
+    )
   }, [])
 
   // Detect reduced-motion preference once for the intro mascot
@@ -317,6 +332,36 @@ export default function PersonalityTestPage() {
     ? Math.round((progress.answered / Math.max(estimatedTotal, 1)) * 100)
     : 0
 
+  // WS-1 idle whisper (2026-09-02): per-question mascot line shown on
+  // question entry, replaced by the per-option commentary after an answer.
+  // Pure derivation — never written into postAnswerCommentary, so the
+  // commentary bookkeeping (commentaryReceivedAtRef /
+  // commentaryTypingDoneAtRef) and the echo-overlay guard stay untouched.
+  // Suppressed entirely in back-review.
+  const idleWhisperText = useMemo(() => {
+    if (!question || currentHistoryIndex >= 0) return null
+    return resolveIdleWhisper(question)
+  }, [question, currentHistoryIndex])
+
+  const lastWhisperShownRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!idleWhisperText || !question) return
+    if (lastWhisperShownRef.current === question.id) return
+    lastWhisperShownRef.current = question.id
+    analytics.interaction('idle_whisper_shown', {
+      questionId: question.id,
+      questionIndex: progress?.answered ?? 0,
+    })
+  }, [analytics, idleWhisperText, question, progress?.answered])
+
+  const handleIdleWhisperTap = useCallback(() => {
+    if (!question) return
+    analytics.interaction('idle_whisper_tap', {
+      questionId: question.id,
+      questionIndex: progress?.answered ?? 0,
+    })
+  }, [analytics, question, progress?.answered])
+
   const { isDegradation } = useDeviceTier()
 
   const completeAnonymousAssessment = useCallback(async (
@@ -340,7 +385,7 @@ export default function PersonalityTestPage() {
     await runMiniProgramRouteTransition({
       beforeNavigate: () => setIsPageExiting(true),
     })
-    await Taro.redirectTo({ url: `${MINI_PROGRAM_ROUTES.personalityTestResults}?celebrate=1` })
+    await Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults })
   }, [currentMatches])
 
   const handleCelebrateReady = useCallback(async () => {
@@ -1250,6 +1295,7 @@ export default function PersonalityTestPage() {
           isAdvancePending={isAdvancePending}
           error={error}
           postAnswerCommentary={postAnswerCommentary}
+          idleWhisperText={idleWhisperText}
           shouldShowEcho={shouldShowEcho}
           isEchoExiting={isEchoExiting}
           echoEnabled={echoEnabled}
@@ -1262,6 +1308,7 @@ export default function PersonalityTestPage() {
           onSliderSubmit={handleSliderSubmit}
           onCommentaryComplete={handleCommentaryTypingComplete}
           onCommentaryBubbleTap={handleCommentaryBubbleTap}
+          onIdleWhisperTap={handleIdleWhisperTap}
           onSliderAdvanceBlocked={() => {
             // P1 polish validation: user tried to advance a slider question
             // without touching the slider (gate blocked the tap).

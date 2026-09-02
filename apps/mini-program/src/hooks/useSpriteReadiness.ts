@@ -19,12 +19,21 @@ interface SpriteReadiness {
  * If the image is already cached, onLoad fires almost immediately.
  * If not cached, we wait up to FALLBACK_TIMEOUT_MS then proceed anyway.
  *
- * FALLBACK: In WeChat Mini Program runtime, `new Image()` may not exist
- * (ReferenceError). When `typeof Image === 'undefined'`, we immediately
- * return `isReady: true` so the slot animation is never gated indefinitely.
+ * EXPECTED PATH ON REAL DEVICES (2026-09-02 clarification): the WeChat Mini
+ * Program runtime (JavaScriptCore) has no DOM `Image` constructor, so the
+ * `typeof Image === 'undefined'` early-return below is the NORMAL path on
+ * device — this hook resolves `isReady: true` instantly and never gates the
+ * slot animation. The DOM probe only ever runs on H5 / devtools. Real
+ * decode-warmup on device is handled elsewhere: the question page primes
+ * both cache layers during the quiz (PersonalityTestPreloadLayer hidden
+ * <Image> for the webview cache + getImageInfo for the native cache), and
+ * ArchetypeSpritesheet covers any residual decode window with its shimmer
+ * placeholder. Do not "fix" the device no-op — it is by design, and the
+ * FALLBACK_TIMEOUT_MS constant intentionally stays as-is for the H5 path.
  *
  * This prevents the slot-machine animation from starting while the
- * spritesheet is still decoding, without ever blocking the UI indefinitely.
+ * spritesheet is still decoding (H5/devtools only), without ever blocking
+ * the UI indefinitely.
  */
 export function useSpriteReadiness(src: string): SpriteReadiness {
   const [isReady, setIsReady] = useState(false)

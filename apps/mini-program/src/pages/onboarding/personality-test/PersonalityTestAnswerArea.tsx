@@ -228,6 +228,10 @@ export default memo(function PersonalityTestAnswerArea({
   const [fragmentLabel, setFragmentLabel] = useState<string>('')
   const [fragmentVisible, setFragmentVisible] = useState(false)
   const [showSliderHint, setShowSliderHint] = useState(() => !sliderHintDismissedThisSession)
+  // WS-3 slider endpoint icons: per-icon error state — on CDN failure the
+  // icon hides but its shell keeps the 48rpx layout slot (no shift).
+  const [leftAnchorIconError, setLeftAnchorIconError] = useState(false)
+  const [rightAnchorIconError, setRightAnchorIconError] = useState(false)
   const selectedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fragmentTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSliderValueRef = useRef(sliderValue)
@@ -369,10 +373,49 @@ export default memo(function PersonalityTestAnswerArea({
           </View>
         </View>
 
-        {/* Anchor labels — text only, no emojis */}
+        {/* Anchor columns: endpoint icon + label, lean-reactive (WS-3,
+            2026-09-02). Keys are hardcoded — one slider question exists, so
+            no shared-type change. Scale is gated off under reduced-motion /
+            degradation tier (colour + opacity still respond). */}
         <View className='answer-area__slider-labels'>
-          <Text className='answer-area__slider-anchor'>{sliderConfig.leftLabel}</Text>
-          <Text className='answer-area__slider-anchor answer-area__slider-anchor--right'>{sliderConfig.rightLabel}</Text>
+          {([
+            {
+              side: 'left' as const,
+              label: sliderConfig.leftLabel,
+              iconUrl: resolvePersonalityIcon('soloRest'),
+              hasError: leftAnchorIconError,
+              onIconError: () => setLeftAnchorIconError(true),
+            },
+            {
+              side: 'right' as const,
+              label: sliderConfig.rightLabel,
+              iconUrl: resolvePersonalityIcon('partyReady'),
+              hasError: rightAnchorIconError,
+              onIconError: () => setRightAnchorIconError(true),
+            },
+          ]).map((anchor) => (
+            <View
+              key={anchor.side}
+              className={[
+                'answer-area__slider-anchor',
+                `answer-area__slider-anchor--${anchor.side}`,
+                lean === anchor.side ? 'answer-area__slider-anchor--leaning' : '',
+                lean !== 'center' && lean !== anchor.side ? 'answer-area__slider-anchor--dimmed' : '',
+              ].filter(Boolean).join(' ')}
+            >
+              <View className='answer-area__slider-anchor-icon-shell' aria-hidden='true'>
+                {anchor.iconUrl && !anchor.hasError ? (
+                  <Image
+                    className={`answer-area__slider-anchor-icon${lean === anchor.side && !reducedMotion && !isDegradation ? ' answer-area__slider-anchor-icon--leaning-scale' : ''}`}
+                    src={anchor.iconUrl}
+                    mode='aspectFit'
+                    onError={anchor.onIconError}
+                  />
+                ) : null}
+              </View>
+              <Text className='answer-area__slider-anchor-label'>{anchor.label}</Text>
+            </View>
+          ))}
         </View>
 
         <Slider

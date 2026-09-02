@@ -52,17 +52,28 @@ function ArchetypeSpritesheet({
   fallbackColor,
 }: ArchetypeSpritesheetProps) {
   const region = spritesheetManifest.mapping[archetype as ArchetypeName]
-  const [imgError, setImgError] = useState(false)
+  /** True once the local sheet failed and the CDN fallback is being used. */
+  const [useCdn, setUseCdn] = useState(false)
+  /** Terminal failure — local AND CDN sheets both failed. */
+  const [imgFailed, setImgFailed] = useState(false)
   const [imgLoaded, setImgLoaded] = useState(false)
   const softColor = fallbackColor ?? getArchetypeVisual(archetype).accentSoft
 
   const handleImageError = useCallback(() => {
-    // Keep the complete placeholder visible while the CDN fallback starts.
-    // Otherwise WeChat can briefly expose a partially decoded spritesheet in
-    // the circular crop, which looks like a half-rendered archetype icon.
+    // Keep the complete placeholder (soft circle + shimmer) visible while the
+    // CDN fallback starts. Otherwise WeChat can briefly expose a partially
+    // decoded spritesheet in the circular crop, which looks like a
+    // half-rendered archetype icon.
     setImgLoaded(false)
-    setImgError(true)
-  }, [])
+    if (useCdn) {
+      // CDN fallback also failed — terminal: drop the shimmer so the soft
+      // accent circle reads as the settled placeholder instead of pulsing
+      // forever.
+      setImgFailed(true)
+    } else {
+      setUseCdn(true)
+    }
+  }, [useCdn])
 
   if (!region) {
     return (
@@ -79,7 +90,7 @@ function ArchetypeSpritesheet({
   }
 
   const { x, y, width } = region
-  const src = imgError ? CDN_SHEET : LOCAL_SHEET
+  const src = useCdn ? CDN_SHEET : LOCAL_SHEET
 
   /**
    * Scale the full spritesheet so that each archetype cell exactly fills
@@ -108,6 +119,18 @@ function ArchetypeSpritesheet({
         flexShrink: 0,
       }}
     >
+      {/* WS-4 (2026-09-02): designed interim state while the sheet decodes.
+          useSpriteReadiness is a no-op on real devices (no DOM Image in
+          WeChat JSCore), so the reel always starts before decode — this
+          GPU-safe opacity-pulse shimmer (never background-position) covers
+          the blank window. It keeps running during the CDN-fallback retry
+          (imgLoaded stays false) and only unmounts on successful decode or
+          terminal failure. Styles live in results/index.scss — this
+          component is results-page-only, and the page SCSS is the subpackage
+          WXSS authority. */}
+      {!imgLoaded && !imgFailed ? (
+        <View className='archetype-spritesheet__shimmer' aria-hidden='true' />
+      ) : null}
       <Image
         src={src}
         mode='aspectFill'

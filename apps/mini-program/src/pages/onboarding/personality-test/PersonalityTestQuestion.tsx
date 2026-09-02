@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Button from '../../../components/ui/Button'
 import SegmentedProgress from '../../../components/ui/SegmentedProgress'
@@ -30,6 +30,24 @@ export function getQuestionMascotPose(_questionId: string): typeof PERSONALITY_T
   return PERSONALITY_TEST_QUESTION_EXPRESSION.choice
 }
 
+export type SpeechBubbleMode = 'idle' | 'commentary' | 'none'
+
+/**
+ * WS-1 (2026-09-02): the speech bubble has two mutually exclusive modes.
+ * `commentary` (per-option reaction) always wins; `idle` (per-question
+ * whisper) fills the bubble on question entry before any answer. The two
+ * never share state — whisper taps only fast-forward typing and never feed
+ * the commentary completion/auto-advance bookkeeping.
+ */
+export function resolveSpeechBubble(
+  postAnswerCommentary: string | null,
+  idleWhisperText: string | null,
+): { mode: SpeechBubbleMode; text: string } {
+  if (postAnswerCommentary) return { mode: 'commentary', text: postAnswerCommentary }
+  if (idleWhisperText) return { mode: 'idle', text: idleWhisperText }
+  return { mode: 'none', text: '' }
+}
+
 interface PersonalityTestQuestionProps {
   isPageExiting: boolean
   isDegradation: boolean
@@ -50,6 +68,8 @@ interface PersonalityTestQuestionProps {
   isAdvancePending: boolean
   error: string
   postAnswerCommentary: string | null
+  /** WS-1: per-question idle whisper (null in back-review / when absent). */
+  idleWhisperText: string | null
   shouldShowEcho: boolean
   isEchoExiting: boolean
   echoEnabled: boolean
@@ -64,6 +84,8 @@ interface PersonalityTestQuestionProps {
   onCommentaryComplete?: () => void
   /** PR-4: tapping the bubble = "I've read it" — advance now / ASAP. */
   onCommentaryBubbleTap?: () => void
+  /** WS-1: idle whisper bubble tapped (analytics; typing fast-forwards locally). */
+  onIdleWhisperTap?: () => void
   onNext: () => void
   /**
    * Analytics-only: fires when the user taps 下一题 while the slider gate is
@@ -94,6 +116,7 @@ export default function PersonalityTestQuestion({
   isAdvancePending,
   error,
   postAnswerCommentary,
+  idleWhisperText,
   shouldShowEcho,
   isEchoExiting,
   echoEnabled,
@@ -106,6 +129,7 @@ export default function PersonalityTestQuestion({
   onSliderSubmit,
   onCommentaryComplete,
   onCommentaryBubbleTap,
+  onIdleWhisperTap,
   onNext,
   onSliderAdvanceBlocked,
   onPrevious,
@@ -130,11 +154,19 @@ export default function PersonalityTestQuestion({
     .filter(Boolean)
     .join(' ')
 
-  // Xiaoyue speech bubble carries ONLY the per-option reaction commentary
-  // (set instantly from pre-attached option data, or late from the server).
-  // The question itself already renders in the banner above — typewriting it
-  // here again duplicated the text and stacked extra latency on every question.
-  const speechText = postAnswerCommentary ?? ''
+  // Mode-aware speech bubble: `commentary` is the per-option reaction (set
+  // instantly from pre-attached option data, or late from the server);
+  // `idle` is the per-question whisper shown on question entry. The question
+  // itself already renders in the banner above — typewriting it here again
+  // duplicated the text and stacked extra latency on every question.
+  const speech = useMemo(
+    () => resolveSpeechBubble(postAnswerCommentary, idleWhisperText),
+    [postAnswerCommentary, idleWhisperText],
+  )
+  // Idle-mode tap = fast-forward the typing only (never advances, never
+  // touches commentary bookkeeping). Keyed by question id so a new
+  // question's whisper always starts typing fresh.
+  const [idleFastForwardId, setIdleFastForwardId] = useState<string | null>(null)
 
   // PR-4: 上一题 stays locked while a submit is in flight (history walk mid-
   // request would strand the response); 下一题 stays live when there's a
@@ -144,6 +176,9 @@ export default function PersonalityTestQuestion({
 
   // Forces a remount (and typing restart) whenever the commentary changes.
   const speechKey = `commentary-${progress?.answered ?? 0}`
+  // Whisper typewriter waits for the banner to read first (360ms); low-end
+  // tier drops to the commentary delay so the bubble never lags the answers.
+  const speechDelay = speech.mode === 'idle' && !isDegradation ? 360 : 120
 
   return (
     <View className={pageClassName}>
@@ -201,17 +236,28 @@ export default function PersonalityTestQuestion({
                     aria-hidden='true'
                   />
                 </View>
-                {speechText ? (
-                  <View className='personality-test__speech-bubble' onClick={onCommentaryBubbleTap}>
+                {speech.text ? (
+                  <View
+                    className='personality-test__speech-bubble'
+                    onClick={
+                      speech.mode === 'commentary'
+                        ? onCommentaryBubbleTap
+                        : () => {
+                            setIdleFastForwardId(currentQuestion.id)
+                            onIdleWhisperTap?.()
+                          }
+                    }
+                  >
                     <TypewriterText
-                      key={speechKey}
+                      key={speech.mode === 'idle' ? `whisper-${currentQuestion.id}` : speechKey}
                       className='personality-test__speech-bubble-text'
-                      text={speechText}
+                      text={speech.text}
                       speed={40}
-                      delay={120}
+                      delay={speechDelay}
+                      enabled={!(speech.mode === 'idle' && idleFastForwardId === currentQuestion.id)}
                       showCursor
                       numberOfLines={3}
-                      onComplete={onCommentaryComplete}
+                      onComplete={speech.mode === 'commentary' ? onCommentaryComplete : undefined}
                     />
                   </View>
                 ) : null}
