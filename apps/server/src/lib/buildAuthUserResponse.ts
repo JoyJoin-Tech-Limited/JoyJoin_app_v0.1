@@ -115,6 +115,7 @@ const [
     runPlanTemplatesEnabled,
     promoBannerEnabled,
     personalitySlotAnimationEnabled,
+    personalitySlotCurvatureEnabled,
     personalityShareEnabled,
     paymentsEnabledFlag,
     personalityTestEchoEnabled,
@@ -161,6 +162,9 @@ const [
     getFeatureFlag('runPlanTemplatesEnabled', true),
     getFeatureFlag('promoBannerEnabled', true),
     getFeatureFlag('personalitySlotAnimationEnabled', true),
+    // WS-5 follow-up (2026-09-02): remote kill switch for the fake-3D slot
+    // drum curvature; flag-off flattens to the 2.5D fallback without a release.
+    getFeatureFlag('personalitySlotCurvatureEnabled', true),
     getFeatureFlag('personalityShareEnabled', true),
     getFeatureFlag('paymentsEnabled', false),
     getFeatureFlag('personalityTestEchoEnabled', true),
@@ -250,6 +254,9 @@ const [
       runPlanTemplatesEnabled,
       promoBannerEnabled,
       personalitySlotAnimationEnabled,
+      /** WS-5 follow-up (2026-09-02): remote kill switch for the fake-3D
+       *  slot drum curvature (2.5D fallback when false). */
+      personalitySlotCurvatureEnabled,
       /** K3 Phase 1+ timing-profile selection (dramatic wins over fast). */
       personalitySlotProfileFast,
       personalitySlotProfileDramatic,

@@ -28,6 +28,13 @@ export const FLAG_ENV_MAP: Record<string, string> = {
   runPlanTemplatesEnabled: "RUN_PLAN_TEMPLATES_ENABLED",
   personalityShareEnabled: "PERSONALITY_SHARE_ENABLED",
   personalitySlotAnimationEnabled: "PERSONALITY_SLOT_ANIMATION_ENABLED",
+  /** WS-5 follow-up (2026-09-02): remote kill switch for the slot drum's
+   *  fake-3D curvature (rotateX + perspective). When false, the mini-program
+   *  flattens the drum to the 2.5D fallback (scale + opacity falloff only) —
+   *  identical to the SLOT_CURVATURE_ENABLE_3D=false compile-time path,
+   *  which remains the master build switch (flag AND constant both required
+   *  for 3D). Default: true. */
+  personalitySlotCurvatureEnabled: "PERSONALITY_SLOT_CURVATURE_ENABLED",
   /** K3 Phase 1+ (2026-08-01): remote-selectable slot timing profile.
    *  personalitySlotProfileDramatic wins over personalitySlotProfileFast;
    *  both false = baseline. Since the 2026-08-17 tempo retune the env

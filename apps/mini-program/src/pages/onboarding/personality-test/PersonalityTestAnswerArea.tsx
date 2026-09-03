@@ -142,7 +142,7 @@ function lerpHex(a: string, b: string, t: number): string {
 /**
  * Build a dynamic gradient + transform for the slider live badge so it
  * travels smoothly with the thumb and shifts temperature from cool purple
- * (left) through soft lavender (center) to warm pink (right).
+ * (left) through soft lavender (center) to brand warm coral (right).
  *
  * When `reducedMotion` is true, positional transform and scale pulse are
  * suppressed so the badge only updates its background colour. This keeps
@@ -153,8 +153,10 @@ const SLIDER_GRADIENT_STOPS = {
   leftTo: '#6366F1',
   centerFrom: '#A78BFA',
   centerTo: '#C4B5FD',
-  rightFrom: '#FF6B9D',
-  rightTo: '#F472B6',
+  // Brand coral family (#FF9B85 anchor) — the previous pink stops
+  // (#FF6B9D/#F472B6) sat off the JoyJoin palette.
+  rightFrom: '#FF8A6B',
+  rightTo: '#FF9B85',
 } as const
 
 function buildSliderBadgeStyle(
@@ -432,7 +434,7 @@ export default memo(function PersonalityTestAnswerArea({
           onChanging={handleSliderChanging}
           onChange={handleSliderCommit}
           disabled={isSubmitting}
-          aria-label='程度选择滑块，从左到右表示程度从低到高'
+          aria-label={`程度选择滑块，最左边是${sliderConfig.leftLabel}，最右边是${sliderConfig.rightLabel}，从左到右表示程度从低到高`}
         />
 
         {!hideSliderSubmit && (

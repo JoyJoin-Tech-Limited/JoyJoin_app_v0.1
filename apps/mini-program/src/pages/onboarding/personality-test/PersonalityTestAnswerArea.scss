@@ -84,7 +84,7 @@
     width: 100%;
     min-width: 0;
     min-height: 88rpx;
-    padding: 18rpx 32rpx;
+    padding: 16rpx 32rpx;
     border: 2rpx solid transparent;
     border-radius: $radius-pill;
     font-size: 32rpx;
@@ -152,7 +152,7 @@
     width: calc((100% - #{$spacing-md}) / 2);
     min-height: 144rpx;
     height: auto;
-    padding: 18rpx;
+    padding: 16rpx;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -370,7 +370,9 @@
     }
 
     &--dimmed {
-      opacity: 0.45;
+      /* C3: 0.45 sat below the contrast floor for the dimmed endpoint —
+         0.6 keeps the de-emphasis while the label stays legible. */
+      opacity: 0.6;
     }
   }
 
@@ -387,7 +389,9 @@
     width: 48rpx;
     height: 48rpx;
     transform: scale(1);
-    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+    /* C4: opacity animates on the parent anchor, not the icon — the dead
+       opacity entry here only cost a compositor watch. */
+    transition: transform 0.2s ease-out;
 
     &--leaning-scale {
       transform: scale(1.15);

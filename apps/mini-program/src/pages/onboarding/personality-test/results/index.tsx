@@ -101,6 +101,9 @@ export default function PersonalityTestResultsPage() {
 
   const personalityShareEnabled = auth.user?.features?.personalityShareEnabled ?? true
   const personalitySlotAnimationEnabled = auth.user?.features?.personalitySlotAnimationEnabled ?? true
+  // WS-5 follow-up (2026-09-02): remote kill switch for the fake-3D slot drum
+  // curvature — flag OFF flattens to the 2.5D fallback without a release.
+  const personalitySlotCurvatureEnabled = auth.user?.features?.personalitySlotCurvatureEnabled ?? true
   // K3 tempo retune (2026-08-17 polish pass): fast is the product default,
   // but it stays remotely switchable — personalitySlotProfileFast defaults to
   // true server-side, so ops can roll back to the legacy baseline by setting
@@ -513,6 +516,7 @@ export default function PersonalityTestResultsPage() {
             celebrationTier={celebrationTier}
             isRareVariant={isRareVariant}
             systemReducedMotion={systemReducedMotion}
+            slotCurvatureRemoteEnabled={personalitySlotCurvatureEnabled}
           />
         )
       case 'reveal':

@@ -5,18 +5,36 @@ import { ResponsiveSpacer } from '../../../components/ui/ResponsiveSpacer'
 import {
   getIntroStaticAsset,
   getIntroStaticFallbackAsset,
+  ASSET_BASE_WEBP_LOCAL,
 } from './visuals'
+
+// Lead with fox/owl — corgi double-casts as the hero mascot 200rpx above,
+// which blurred "mascot vs archetype" for first-time users (2026-09-02 audit).
+const TEASE_ARCHETYPE_IDS = [
+  'fox',
+  'owl',
+  'hamster_praise',
+  'rooster',
+  'dolphin_calm',
+  'spider',
+  'corgi',
+  'koala',
+  'octopus',
+  'elephant',
+  'turtle',
+  'cat',
+] as const
 
 const INTRO_TRUST_POINTS = [
   {
     prefix: '1.',
     title: '约 3-5 分钟完成',
-    description: '轻量做完，不会把你困在一串冗长题目里。',
+    description: '轻量作答，凭直觉选，不知不觉就答完。',
   },
   {
     prefix: '2.',
     title: '题目会跟着你变',
-    description: '越答越准，帮你找到最像自己的氛围命格。',
+    description: '越答越准，结果越看越像你。',
   },
   {
     prefix: '3.',
@@ -63,7 +81,7 @@ export default function PersonalityTestIntro({
 
   const introCoachLine = hasStoredIncompleteSession
     ? '进度还在，继续答几分钟就能完成。'
-    : '没有标准答案，凭直觉选就好。我会帮你整理出最真实的氛围命格。'
+    : '没有标准答案，凭直觉选就好。我会帮你整理出最真实的那一面。'
   const introPrimaryLabel = isSubmitting
     ? '准备中…'
     : error
@@ -86,7 +104,7 @@ export default function PersonalityTestIntro({
           <View className='personality-test__stage personality-test__stage--1'>
             <Text className='personality-test__eyebrow'>
               <Text className='personality-test__eyebrow-en'>JoyJoin</Text>
-              <Text> · 氛围原型</Text>
+              <Text> · 氛围测试</Text>
             </Text>
             <Text className='personality-test__intro-title'>3 分钟，读懂你的</Text>
             <Text className='personality-test__intro-title personality-test__intro-title--accent'>聚会气场</Text>
@@ -123,7 +141,6 @@ export default function PersonalityTestIntro({
             </View>
 
             <View className='personality-test__intro-bubble'>
-              <Text className='personality-test__intro-bubble-title'>这一步会带给你什么</Text>
               <Text className='personality-test__intro-bubble-text'>{introCoachLine}</Text>
             </View>
           </View>
@@ -154,6 +171,18 @@ export default function PersonalityTestIntro({
             <Text className='personality-test__intro-tease-subtitle'>
               不是贴标签，而是帮你找到最对味的人。
             </Text>
+            <View className='personality-test__intro-tease-icons' aria-hidden='true'>
+              {TEASE_ARCHETYPE_IDS.map((id) => (
+                <View key={id} className='personality-test__intro-tease-icon'>
+                  <Image
+                    src={`${ASSET_BASE_WEBP_LOCAL}/archetype-${id}.webp`}
+                    mode='aspectFit'
+                    className='personality-test__intro-tease-icon-img'
+                    lazyLoad={false}
+                  />
+                </View>
+              ))}
+            </View>
             <Text className='personality-test__intro-tease-line'>
               12 种氛围命格，答完就知道你是哪一种。
             </Text>

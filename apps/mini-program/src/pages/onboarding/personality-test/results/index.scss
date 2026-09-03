@@ -187,6 +187,16 @@ $color-skill-cool: #7c3aed;
     animation: personality-results-shell-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  /* C1 (2026-09-02): single-owner entrance. Every immersive-shell consumer
+     (Bridge / Reveal / Slot stages) renders inside the keyed __stage-fade
+     wrapper, which already runs a 200ms enter per flowStage. The nested
+     320ms shell-enter stacked on top produced a double enter, so the inner
+     animation is suppressed here (descendant specificity beats the shell
+     rule above; reduced-motion tiers keep their own !important kills). */
+  &__stage-fade &__immersive-shell {
+    animation: none;
+  }
+
   &__immersive-eyebrow {
     display: inline-flex;
     align-items: center;
@@ -2323,6 +2333,12 @@ $color-skill-cool: #7c3aed;
       opacity: 1;
       transform: none;
     }
+
+    /* C5: stage-fade enter suppressed for parity with the --reduce-motion
+       JS-class path below. */
+    &__stage-fade {
+      animation: none !important;
+    }
   }
 
   // JS-driven reduced-motion fallback for webviews that don't honour the media query
@@ -2572,11 +2588,14 @@ $color-skill-cool: #7c3aed;
 /* WS-5 (2026-09-02): land flip — active card single-overshoot settle
    (rotateX(-18°) → rotateX(4°) at 60% → identity). Transform + opacity
    only. In 2.5D fallback mode the rotateX reads as a gentle vertical
-   squash — the scale overshoot still lands the beat. */
+   squash — the scale overshoot still lands the beat.
+   C2: end-state rests at scale(1.04) to match the --landed--active rest
+   state (and the slot-land-pop keyframe end), so the card doesn't snap
+   smaller when the forwards fill hands off to the class rule. */
 @keyframes slot-card-land-flip {
   0% { opacity: 0.85; transform: rotateX(-18deg) scale(1.08); }
-  60% { opacity: 1; transform: rotateX(4deg) scale(1.05); }
-  100% { opacity: 1; transform: rotateX(0deg) scale(1); }
+  60% { opacity: 1; transform: rotateX(4deg) scale(1.06); }
+  100% { opacity: 1; transform: rotateX(0deg) scale(1.04); }
 }
 
 /* WS-5: parallax drift keyframes. slot-highlight chains its centering
@@ -3011,6 +3030,12 @@ $color-skill-cool: #7c3aed;
   }
 
   .personality-results__immersive-shell {
+    animation: none !important;
+  }
+
+  /* C5: stage-fade enter suppressed for parity with the --reduce-motion
+     JS-class path (mirrors the nested media block above). */
+  .personality-results__stage-fade {
     animation: none !important;
   }
 }

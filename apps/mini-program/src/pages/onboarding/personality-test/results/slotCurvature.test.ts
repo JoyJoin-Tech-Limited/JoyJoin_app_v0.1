@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildSlotCardCurvature,
+  resolveSlotCurvature3D,
   SLOT_CURVATURE_CLAMP,
   SLOT_CURVATURE_ENABLE_3D,
   SLOT_CURVATURE_OPACITY_PER_STEP,
@@ -93,5 +94,30 @@ describe('buildSlotCardCurvature', () => {
     const implicit = buildSlotCardCurvature(6, 5, 'full', 'spinning')!
     const explicit = buildSlotCardCurvature(6, 5, 'full', 'spinning', SLOT_CURVATURE_ENABLE_3D)!
     expect(implicit).toEqual(explicit)
+  })
+})
+
+describe('resolveSlotCurvature3D (remote kill switch combiner)', () => {
+  it('requires BOTH the compile-time constant AND the remote flag for 3D', () => {
+    expect(resolveSlotCurvature3D(true)).toBe(SLOT_CURVATURE_ENABLE_3D)
+    expect(resolveSlotCurvature3D(false)).toBe(false)
+  })
+
+  it('flag OFF produces the byte-identical 2.5D fallback as SLOT_CURVATURE_ENABLE_3D=false', () => {
+    const viaFlag = buildSlotCardCurvature(6, 5, 'full', 'spinning', resolveSlotCurvature3D(false))!
+    const viaConstant = buildSlotCardCurvature(6, 5, 'full', 'spinning', false)!
+    expect(viaFlag).toEqual(viaConstant)
+    expect(viaFlag.transform).not.toContain('rotateX')
+    expect(viaFlag.transform).toMatch(/^scale\([\d.]+\)$/)
+  })
+
+  it('flag ON (default) preserves the full 3D drum when the constant allows it', () => {
+    const resolved = resolveSlotCurvature3D(true)
+    const viaFlag = buildSlotCardCurvature(6, 5, 'full', 'spinning', resolved)!
+    const implicitDefault = buildSlotCardCurvature(6, 5, 'full', 'spinning')!
+    expect(viaFlag).toEqual(implicitDefault)
+    if (SLOT_CURVATURE_ENABLE_3D) {
+      expect(viaFlag.transform).toContain('rotateX')
+    }
   })
 })

@@ -57,6 +57,7 @@ const MOCK_USER = {
     runPlanTemplatesEnabled: true,
     personalityShareEnabled: true,
     personalitySlotAnimationEnabled: true,
+    personalitySlotCurvatureEnabled: true,
     promoBannerEnabled: true,
     personalityTestEchoEnabled: true,
     paymentsEnabled: true,

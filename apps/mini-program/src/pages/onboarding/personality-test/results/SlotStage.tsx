@@ -17,7 +17,7 @@ import {
 } from './slotTrack'
 import {
   buildSlotCardCurvature,
-  SLOT_CURVATURE_ENABLE_3D,
+  resolveSlotCurvature3D,
   SLOT_CURVATURE_WINDOW,
   slotCurvatureEnabledForTier,
 } from './slotCurvature'
@@ -36,6 +36,10 @@ const VIEWPORT_HEIGHT = VIEWPORT_CARDS * STEP // 600 rpx
 const CENTER_OFFSET = (VIEWPORT_HEIGHT - CARD_HEIGHT) / 2 // 208 rpx
 const EXTENDED_COUNT = SLOT_TRACK_EXTENDED_COUNT // 2 cycles — enough for ~20 steps without snap
 
+/** Celebration gold for the landed progress fill — token promotion candidate
+ *  (not yet promoted to _variables.scss; matches the burst-ring gold family). */
+const LANDED_PROGRESS_GOLD = '#facc15'
+
 interface SlotStageProps {
   reelIndex: number
   slotPhase: SlotPhase
@@ -51,6 +55,11 @@ interface SlotStageProps {
    *  (ride-along a11y fix, WS-5) and the drum curvature (tier matrix:
    *  reduce-motion = all off). */
   systemReducedMotion?: boolean
+  /** Server-driven `personalitySlotCurvatureEnabled` feature flag
+   *  (2026-09-02): remote kill switch for the fake-3D drum. Combined with
+   *  the compile-time SLOT_CURVATURE_ENABLE_3D via resolveSlotCurvature3D —
+   *  flag OFF flattens to the 2.5D fallback without a release. */
+  slotCurvatureRemoteEnabled?: boolean
 }
 
 /* ── memoised card row (prevents 47 re-renders every tick) ─────────── */
@@ -65,6 +74,9 @@ interface SlotCardProps {
   curvatureEnabled: boolean
   /** WS-5: 300ms ease-to-flat window after a mid-spin tier downgrade. */
   curvatureExiting: boolean
+  /** WS-5 follow-up (2026-09-02): resolved 3D gate (compile-time constant AND
+   *  remote flag). False = 2.5D fallback (scale + opacity only, no rotateX). */
+  curvature3D: boolean
 }
 
 const SlotCard = memo(function SlotCard({
@@ -75,6 +87,7 @@ const SlotCard = memo(function SlotCard({
   celebrationTier,
   curvatureEnabled,
   curvatureExiting,
+  curvature3D,
 }: SlotCardProps) {
   const isActive = index === displayIndex
   const itemVisual = useMemo(() => getArchetypeVisual(archetype), [archetype])
@@ -93,7 +106,7 @@ const SlotCard = memo(function SlotCard({
      active one, outside the ±3 window, in anticipation, or the tier gate is
      off — in all those cases the class styles own transform/opacity. */
   const curvature = curvatureEnabled
-    ? buildSlotCardCurvature(index, displayIndex, celebrationTier, slotPhase)
+    ? buildSlotCardCurvature(index, displayIndex, celebrationTier, slotPhase, curvature3D)
     : null
 
   /* WS-5: the land flip replaces slot-land-pop on the active card when the
@@ -172,6 +185,7 @@ const SlotCard = memo(function SlotCard({
   if (prev.celebrationTier !== next.celebrationTier) return false
   if (prev.curvatureEnabled !== next.curvatureEnabled) return false
   if (prev.curvatureExiting !== next.curvatureExiting) return false
+  if (prev.curvature3D !== next.curvature3D) return false
   return true
 })
 
@@ -185,6 +199,7 @@ export default function SlotStage({
   celebrationTier = 'full',
   isRareVariant = false,
   systemReducedMotion = false,
+  slotCurvatureRemoteEnabled = true,
 }: SlotStageProps) {
   /* internal unbounded track position */
   const [displayIndex, setDisplayIndex] = useState(reelIndex)
@@ -275,6 +290,11 @@ export default function SlotStage({
      (low-end resolves to minimal/emergency via getDegradationTier). */
   const curvatureEnabled = slotCurvatureEnabledForTier(celebrationTier) && !systemReducedMotion
 
+  /* WS-5 follow-up (2026-09-02): resolved 3D gate — compile-time master
+     switch AND the remote `personalitySlotCurvatureEnabled` flag. Flag OFF
+     flattens the drum to 2.5D (scale + opacity only) without a release. */
+  const curvature3D = resolveSlotCurvature3D(slotCurvatureRemoteEnabled)
+
   /* Mid-spin tier downgrade: ease curved cards back to flat over 300ms,
      then let the normal phase styles (spin pulse etc.) resume. */
   const [curvatureExiting, setCurvatureExiting] = useState(false)
@@ -304,10 +324,11 @@ export default function SlotStage({
       : ' personality-results__slot-frame--parallax-half'
     : ''
 
-  /* WS-5: viewport perspective + track preserve-3d ride the SAME config
-     constant as the rotateX emission — flipping SLOT_CURVATURE_ENABLE_3D
-     ships the 2.5D fallback (scale+opacity only) with zero SCSS edits. */
-  const viewport3dClass = SLOT_CURVATURE_ENABLE_3D && curvatureEnabled
+  /* WS-5: viewport perspective + track preserve-3d ride the SAME resolved
+     3D gate as the rotateX emission — flipping SLOT_CURVATURE_ENABLE_3D
+     (build) or the remote curvature flag (ops) ships the 2.5D fallback
+     (scale+opacity only) with zero SCSS edits. */
+  const viewport3dClass = curvature3D && curvatureEnabled
     ? ' personality-results__slot-viewport--3d'
     : ''
 
@@ -379,6 +400,7 @@ export default function SlotStage({
                 celebrationTier={celebrationTier}
                 curvatureEnabled={curvatureEnabled}
                 curvatureExiting={curvatureExiting}
+                curvature3D={curvature3D}
               />
             ))}
           </View>
@@ -413,12 +435,12 @@ export default function SlotStage({
           style={{
             transform: `scaleX(${progressScale})`,
             transformOrigin: 'left center',
-            background: isLanded ? '#facc15' : slotFocusVisual.accent,
+            background: isLanded ? LANDED_PROGRESS_GOLD : slotFocusVisual.accent,
           }}
         />
       </View>
       <Text className='personality-results__progress-copy'>
-        {phaseText || '正在准备最终揭晓...'}
+        {phaseText || '正在准备最终揭晓…'}
       </Text>
 
       {/* ── network holding card ── */}

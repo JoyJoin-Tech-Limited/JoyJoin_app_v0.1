@@ -85,6 +85,12 @@ export interface AuthUserResponse extends SanitizedAuthUser {
     personalityShareEnabled?: boolean
     /** When false, skips the slot machine reveal animation and shows static result. */
     personalitySlotAnimationEnabled?: boolean
+    /** WS-5 follow-up (2026-09-02): when false, flattens the slot drum's
+     *  fake-3D curvature to the 2.5D fallback (scale + opacity only, no
+     *  rotateX/perspective) — remote kill switch, no release needed. The
+     *  compile-time SLOT_CURVATURE_ENABLE_3D remains the master build switch
+     *  (flag AND constant both required for 3D). Default: true. */
+    personalitySlotCurvatureEnabled?: boolean
     /** K3 Phase 1+ (2026-08-01): remote-selectable slot timing profile.
      *  personalitySlotProfileDramatic wins over personalitySlotProfileFast;
      *  both false/absent = baseline. */

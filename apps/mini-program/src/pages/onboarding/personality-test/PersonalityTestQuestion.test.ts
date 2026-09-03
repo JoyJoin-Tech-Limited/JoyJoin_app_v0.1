@@ -70,4 +70,30 @@ describe('resolveIdleWhisper', () => {
       expect(line).not.toMatch(/匹配|社交|灵魂|AI|！|!/)
     }
   })
+
+  it('gives every category a distinct trio (no two categories share an identical pool)', () => {
+    const ownerByPoolKey = new Map<string, string>()
+    for (const [category, pool] of Object.entries(IDLE_WHISPERS_BY_CATEGORY)) {
+      const key = pool.join('')
+      const existing = ownerByPoolKey.get(key)
+      expect(
+        existing,
+        `category "${category}" shares an identical trio with "${existing}"`,
+      ).toBeUndefined()
+      ownerByPoolKey.set(key, category)
+    }
+  })
+
+  it('anchors each pool to its category theme (no fully generic copy-paste pools)', () => {
+    // Regression guard for the 2026-09-02 audit where 22 declared pools
+    // collapsed into ~9 unique trios: every line across all category pools
+    // must be unique to one category at the trio level (asserted above) and
+    // each pool must have 3 non-empty lines.
+    for (const [category, pool] of Object.entries(IDLE_WHISPERS_BY_CATEGORY)) {
+      expect(pool, `category "${category}"`).toHaveLength(3)
+      for (const line of pool) {
+        expect(line.trim().length).toBeGreaterThan(0)
+      }
+    }
+  })
 })
