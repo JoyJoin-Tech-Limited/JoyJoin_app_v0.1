@@ -7,6 +7,7 @@ import { MINI_PROGRAM_PAGE_PATHS, MINI_PROGRAM_ROUTES } from '../onboarding/onbo
 import { queryClient } from './queryClient'
 import { clearPersistentCache } from './persistentCache'
 import { MINI_PROGRAM_USER_SCOPED_QUERY_KEY_PREFIXES } from '../auth/authSessionQueryKeys'
+import { clearAllUserScopedStorage } from '../auth/userScopedStorage'
 import {
   normalizeMiniProgramRoute,
   shouldRedirectToLoginOnUnauthorized,
@@ -114,12 +115,13 @@ export function clearMiniProgramAuthSession(options?: {
   clearAuthStorage()
   writeAuthSession(null, options?.queryClient, options?.mode ?? 'soft')
   if ((options?.mode ?? 'soft') === 'hard') {
-    // Hard reset (logout / redirect-on-401) must also drop the session token.
-    // The explicit settings-page logout previously skipped this, so a token
-    // survived logout and any late /api/auth/user revalidation could
-    // re-authenticate the user — the "needs two logouts" bug (2026-09-01).
+    // Hard reset (logout / redirect-on-401) must also drop the session token
+    // and ALL user-scoped local storage. The system-wide cleanup lives in
+    // userScopedStorage.ts — every user-specific key is registered there
+    // with a clear USER-SCOPED vs DEVICE-LEVEL boundary (2026-09-03).
     clearSessionToken()
     clearPersistentCache()
+    clearAllUserScopedStorage()
   }
 }
 

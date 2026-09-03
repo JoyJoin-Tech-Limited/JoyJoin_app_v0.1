@@ -351,13 +351,14 @@
   height: 0;
   // Glowing gold connector — a visible light path from the table to the
   // destination pin, echoing the box's glow (narrative refinement 2026-09-03).
+  // No CSS filter property — WeChat handles it unreliably. The glow comes
+  // from the brighter border color alone (kept simple for runtime safety).
   border-top: 3rpx dotted rgba($color-landed-gold, 0.75);
   margin: 0 12rpx;
   flex-shrink: 0;
   opacity: 0;
   transform: scaleX(0);
   transform-origin: left center;
-  filter: drop-shadow(0 0 6rpx rgba($color-landed-gold, 0.3));
 }
 
 .mechanism-strip__pin {
