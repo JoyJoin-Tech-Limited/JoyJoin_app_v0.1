@@ -139,6 +139,10 @@
         "value": "assets/lovart/landing/hero-box-xiaoyue-dusk.*\\.webp$"
       },
       {
+        "type": "file",
+        "value": "assets/lovart/landing/landing-backdrop-city-dusk-lqip.webp"
+      },
+      {
         "type": "regexp",
         "value": "assets/gathering-room/.*\\.webp$"
       },

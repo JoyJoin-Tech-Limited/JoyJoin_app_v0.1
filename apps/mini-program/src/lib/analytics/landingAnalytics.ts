@@ -17,6 +17,10 @@ export interface TrackCtaTapProps {
   blockedByLegal: boolean
   dwellMs: number
   heroReady: boolean
+  /** Landing redesign A/B (2026-09-03): 'a' = backdrop only, 'b' = backdrop
+   *  + bubble constellation. Server metadata is free-form (sanitized, not
+   *  allow-listed) — no allow-list change needed for this key. */
+  landingVariant: string
 }
 
 export type LandingHeroAssetResult = 'success' | 'error' | 'fallback' | 'timeout'
@@ -38,6 +42,8 @@ export interface TrackDwellProps {
   dwellBucket: LandingDwellBucket
   exitAction: LandingExitAction
   ctaTypeShown: string
+  /** Landing redesign A/B variant (see TrackCtaTapProps.landingVariant). */
+  landingVariant: string
 }
 
 export interface LandingAnalyticsEvent {
@@ -55,6 +61,7 @@ class LandingAnalytics {
       blocked_by_legal: props.blockedByLegal,
       dwell_ms: props.dwellMs,
       hero_ready: props.heroReady,
+      landing_variant: props.landingVariant,
     })
   }
 
@@ -74,6 +81,7 @@ class LandingAnalytics {
       dwell_bucket: props.dwellBucket,
       exit_action: props.exitAction,
       cta_type_shown: props.ctaTypeShown,
+      landing_variant: props.landingVariant,
     })
   }
 

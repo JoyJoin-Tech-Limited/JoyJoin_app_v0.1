@@ -41,8 +41,22 @@ const HERO_LOCAL_SRC = localAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk.
 const HERO_CDN_SRC = cdnAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk.webp')
 const HERO_FALLBACK_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')
 
+// Phase 1 dusk city backdrop (2026-09-03 redesign): CDN-only master
+// (deliberately NOT bundled — clean:cdn-assets strips it from dist and no
+// packOptions.include pattern matches it) + a bundled 400B LQIP so the sky
+// never pops while the master loads. The master is FLATTENED (no alpha;
+// edges are light gray), so top/bottom feathering is client-side: two
+// gradient overlay Views dissolve the edges into the L0 page gradient.
+const BACKDROP_CDN_SRC = cdnAsset('/assets/lovart/landing/landing-backdrop-city-dusk.webp')
+const BACKDROP_LQIP_SRC = localAsset('/assets/lovart/landing/landing-backdrop-city-dusk-lqip.webp')
+/** Same guard as the hero: WeChat can hang a CDN <Image> with no callback;
+ *  on error/timeout the backdrop layer is removed silently — the L0 CSS
+ *  gradient alone is the degraded design. */
+const BACKDROP_LOAD_TIMEOUT_MS = 6_000
+
+// 2026-09-03: sprite-buildings retired — the dusk city backdrop supersedes
+// it (the CDN manifest entry stays; the file remains on CDN).
 const HERO_SPRITES = [
-  { key: 'buildings', src: cdnAsset('/assets/lovart/landing/sprite-buildings.webp') },
   { key: 'cards', src: cdnAsset('/assets/lovart/landing/sprite-cards.webp') },
   { key: 'map-pin', src: cdnAsset('/assets/lovart/landing/sprite-map-pin.webp') },
   { key: 'dice', src: cdnAsset('/assets/lovart/landing/sprite-dice.webp') },
@@ -51,6 +65,7 @@ const HERO_SPRITES = [
 
 type HeroSpriteKey = (typeof HERO_SPRITES)[number]['key']
 type HeroState = 'loading' | 'ready' | 'fallback'
+type BackdropState = 'loading' | 'ready' | 'failed'
 type LandingCtaType = 'new' | 'continue' | 'discover' | 'loggedOut'
 /** ?auth=logout|expired marks the landing as the post-logout re-auth door
  *  (the standalone pages/login/index was retired 2026-09-01). */
@@ -89,6 +104,47 @@ function persistLegalAccepted(): void {
 const MECHANISM_HEADS = ['corgi', 'fox', 'rooster', 'koala', 'cat', 'dolphin_calm'] as const
 
 const MAP_PIN_SPRITE_SRC = HERO_SPRITES.find((s) => s.key === 'map-pin')!.src
+
+/**
+ * Phase 2 archetype bubble constellation (variant B, 2026-09-03 redesign).
+ * Five FIXED sky positions inside the hero stage (deterministic — never
+ * randomized — for screenshot-review stability, same principle as
+ * MECHANISM_HEADS). Contents are canon grid-variant heads ONLY (the
+ * pixel-avatar mix was deferred pending screenshots); the grid heads are
+ * already bundled for pool-registration seats, so the bubbles add zero
+ * package weight. The set complements MECHANISM_HEADS (different species)
+ * so sky + strip together show 11 of the 12 archetypes.
+ * size = ArchetypeHead rpx size inside the luminous disc (disc is +16rpx).
+ */
+const BUBBLE_HEADS = [
+  { key: 'owl', size: 80 },            // B1: left 200 top 24,  disc 96
+  { key: 'elephant', size: 96 },       // B2: left 360 top 64,  disc 112
+  { key: 'octopus', size: 72 },        // B3: left 480 top 144, disc 88
+  { key: 'turtle', size: 80 },         // B4: left 640 top 128, disc 96
+  { key: 'hamster_praise', size: 72 }, // B5: left 280 top 152, disc 88
+] as const
+
+/** Landing redesign A/B (2026-09-03): variant A = dusk backdrop only;
+ *  variant B = backdrop + bubble constellation. Client-side 50/50
+ *  assignment, persisted so the same user keeps their variant across
+ *  sessions. LANDING_VARIANT_MODE is the rollout switch: flip to 'a' or
+ *  'b' to force a single variant for everyone. */
+type LandingVariant = 'a' | 'b'
+const LANDING_VARIANT_STORAGE_KEY = 'joyjoin_landing_variant_v1'
+const LANDING_VARIANT_MODE: 'ab' | LandingVariant = 'ab'
+
+function resolveLandingVariant(): LandingVariant {
+  if (LANDING_VARIANT_MODE !== 'ab') return LANDING_VARIANT_MODE
+  try {
+    const stored = Taro.getStorageSync(LANDING_VARIANT_STORAGE_KEY)
+    if (stored === 'a' || stored === 'b') return stored
+    const assigned: LandingVariant = Math.random() < 0.5 ? 'a' : 'b'
+    Taro.setStorageSync(LANDING_VARIANT_STORAGE_KEY, assigned)
+    return assigned
+  } catch {
+    return 'a'
+  }
+}
 
 /** Hero composite + LQIP are bundled locally (see HERO_LOCAL_SRC above);
  *  analytics srcType records which tier actually rendered. */
@@ -156,6 +212,13 @@ export default function MiniProgramLandingPage({
   const [legalHintSeq, setLegalHintSeq] = useState(0)
   const [heroState, setHeroState] = useState<HeroState>('loading')
   const [heroSrcStage, setHeroSrcStage] = useState<HeroSrcStage>('local')
+  // Phase 1 backdrop: independent of the hero chain. 'failed' removes the
+  // whole layer (LQIP included) so the L0 gradient alone is what renders —
+  // backdrop failure must be invisible-degraded, never broken.
+  const [backdropState, setBackdropState] = useState<BackdropState>('loading')
+  // A/B variant: resolved once per install (persisted), stable for the
+  // session. Variant A = backdrop only; B = backdrop + bubble field.
+  const [landingVariant] = useState<LandingVariant>(() => resolveLandingVariant())
   const [failedSprites, setFailedSprites] = useState<ReadonlySet<HeroSpriteKey>>(new Set())
   const [hasIncompleteSession, setHasIncompleteSession] = useState(false)
   const [isShortScreen, setIsShortScreen] = useState(false)
@@ -187,6 +250,7 @@ export default function MiniProgramLandingPage({
   const networkTypeRef = useRef('unknown')
   const dwellFiredRef = useRef(false)
   const heroStateRef = useRef<HeroState>('loading')
+  const backdropStateRef = useRef<BackdropState>('loading')
 
   useEffect(() => {
     loadBrandDisplayFont()
@@ -289,12 +353,16 @@ export default function MiniProgramLandingPage({
 
   useEffect(() => {
     if (!isMounted || heroState !== 'ready' || !mechanismAnimated) return
+    // Variant B: hold the burst until the bubble field settles (pops done
+    // ~700ms, paths drawn ~950ms) so the two choreographies never fight —
+    // the field settles BEFORE the burst, extending the entrance to ~1.6s.
+    const measureDelayMs = landingVariant === 'b' ? 880 : 520
     const timer = setTimeout(() => {
       void measureMechanismBurst(freezeBurst ? 'freeze' : 'settle')
-    }, 520)
+    }, measureDelayMs)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMounted, heroState, mechanismAnimated, freezeBurst])
+  }, [isMounted, heroState, mechanismAnimated, freezeBurst, landingVariant])
 
   // Hero fallback swaps the box for the bundled mascot — the "out of the
   // box" metaphor no longer reads, so settle the strip immediately (heads
@@ -340,6 +408,7 @@ export default function MiniProgramLandingPage({
     isDegradation ? "landing-page--low-end" : "",
     reduceMotion ? "landing-page--rm" : "",
     loggedOutMode ? "landing-page--logged-out" : "",
+    landingVariant === 'b' ? "landing-page--variant-b" : "",
     isMounted ? "landing-page--entered" : "",
   ]
     .filter(Boolean)
@@ -356,6 +425,7 @@ export default function MiniProgramLandingPage({
       dwellMs,
       dwellBucket: toDwellBucket(dwellMs),
       exitAction,
+      landingVariant,
       // Read via ref: the unmount cleanup closes over the first render's
       // fireDwell, and ctaType can flip from 'new' to 'continue' once the
       // anonymous-session snapshot resolves.
@@ -511,6 +581,59 @@ export default function MiniProgramLandingPage({
     })
   }
 
+  const handleBackdropLoad = () => {
+    if (backdropStateRef.current !== 'loading') return
+    backdropStateRef.current = 'ready'
+    setBackdropState('ready')
+    landingAnalytics.trackHeroAsset({
+      asset: 'backdrop-city-dusk',
+      result: 'success',
+      srcType: 'cdn',
+      durationMs: Date.now() - mountedAtRef.current,
+      networkType: networkTypeRef.current,
+    })
+  }
+
+  const handleBackdropError = () => {
+    if (backdropStateRef.current !== 'loading') return
+    backdropStateRef.current = 'failed'
+    setBackdropState('failed')
+    landingAnalytics.trackHeroAsset({
+      asset: 'backdrop-city-dusk',
+      result: 'error',
+      srcType: 'cdn',
+      durationMs: Date.now() - mountedAtRef.current,
+      networkType: networkTypeRef.current,
+    })
+    logWarn('[LandingPage] dusk city backdrop failed; continuing on the CSS gradient', {
+      src: BACKDROP_CDN_SRC,
+      networkType: networkTypeRef.current,
+    })
+  }
+
+  // Backdrop no-callback guard (sprite/hero precedent): WeChat can hang a
+  // pending CDN <Image> with neither onLoad nor onError. 6s bounds the
+  // LQIP-only window; afterwards the layer is removed silently.
+  useEffect(() => {
+    if (backdropState !== 'loading' || !isMounted) return
+    const timer = setTimeout(() => {
+      if (backdropStateRef.current !== 'loading') return
+      backdropStateRef.current = 'failed'
+      setBackdropState('failed')
+      landingAnalytics.trackHeroAsset({
+        asset: 'backdrop-city-dusk',
+        result: 'timeout',
+        srcType: 'cdn',
+        durationMs: Date.now() - mountedAtRef.current,
+        networkType: networkTypeRef.current,
+      })
+      logWarn('[LandingPage] dusk city backdrop timed out with no load event; continuing on the CSS gradient', {
+        timeoutMs: BACKDROP_LOAD_TIMEOUT_MS,
+      })
+    }, BACKDROP_LOAD_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [backdropState, isMounted])
+
   const handleSpriteError = (key: HeroSpriteKey) => {
     setFailedSprites((current) => {
       if (current.has(key)) return current
@@ -613,6 +736,34 @@ export default function MiniProgramLandingPage({
             Tapping the stage replays the E3 burst (user-triggered delight). */}
         <View className='hero-zone'>
           <View className='hero-stage' onClick={handleMechanismReplay}>
+            {/* L1 dusk city backdrop (Phase 1, 2026-09-03): fills the hero
+                zone directly (NOT inside __scale) so its painted left/right
+                edges always land at the screen edges — scaling it with the
+                --mid/--short stage would float hard vertical seams in the
+                page gradient. CDN master over a bundled LQIP; flattened
+                (no alpha), so two overlay Views feather top/bottom into the
+                L0 CSS gradient, which remains the silent-degraded design
+                when the layer is removed on error/timeout. */}
+            {backdropState !== 'failed' && (
+              <View className='hero-stage__backdrop' aria-hidden='true'>
+                <Image
+                  className='hero-stage__backdrop-lqip'
+                  src={BACKDROP_LQIP_SRC}
+                  mode='aspectFill'
+                  lazyLoad={false}
+                />
+                <Image
+                  className={`hero-stage__backdrop-img${backdropState === 'ready' ? ' hero-stage__backdrop-img--in' : ''}`}
+                  src={BACKDROP_CDN_SRC}
+                  mode='aspectFill'
+                  lazyLoad={false}
+                  onLoad={handleBackdropLoad}
+                  onError={handleBackdropError}
+                />
+                <View className='hero-stage__backdrop-fade hero-stage__backdrop-fade--top' />
+                <View className='hero-stage__backdrop-fade hero-stage__backdrop-fade--bottom' />
+              </View>
+            )}
             <View className='hero-stage__scale'>
               {/* z0: Dusk horizon wash (P2 warm palette band) */}
               <View className='hero-stage__dusk-wash' aria-hidden='true' />
@@ -633,8 +784,56 @@ export default function MiniProgramLandingPage({
                 <View className='hero-stage__particle hero-stage__particle--3' />
               </View>
 
-              {/* City skyline sits behind the hero composite */}
-              {renderSprite('buildings')}
+              {/* Phase 2 bubble constellation (variant B only): five canon
+                  grid heads in luminous discs at fixed sky positions, each
+                  tethered to the box mouth by a dotted gold path + one
+                  bubble-to-bubble link (B2–B5, the closest pair). Ambient
+                  (≤70% opacity), decorative, inside __scale so the
+                  --mid/--short stage scale keeps them aligned with the box
+                  mouth for free. */}
+              {landingVariant === 'b' && (
+                <View className='bubble-field' aria-hidden='true'>
+                  <View className='bubble-field__paths'>
+                    <View className='bubble-field__path bubble-field__path--1'>
+                      <View className='bubble-field__path-line' />
+                    </View>
+                    <View className='bubble-field__path bubble-field__path--2'>
+                      <View className='bubble-field__path-line' />
+                      {/* Golden mote: one traveler max, rides the elephant
+                          spoke down to the box every 12s (default tier). */}
+                      <View className='bubble-field__mote' />
+                    </View>
+                    <View className='bubble-field__path bubble-field__path--3'>
+                      <View className='bubble-field__path-line' />
+                    </View>
+                    <View className='bubble-field__path bubble-field__path--4'>
+                      <View className='bubble-field__path-line' />
+                    </View>
+                    <View className='bubble-field__path bubble-field__path--5'>
+                      <View className='bubble-field__path-line' />
+                    </View>
+                    <View className='bubble-field__path bubble-field__path--6'>
+                      <View className='bubble-field__path-line' />
+                    </View>
+                  </View>
+                  {BUBBLE_HEADS.map((bubble, index) => (
+                    <View
+                      key={bubble.key}
+                      className={`bubble-field__bubble bubble-field__bubble--${index + 1}`}
+                    >
+                      {/* className sizing (SCSS) wins over ArchetypeHead's
+                          inline rpx, which the H5 preview drops. */}
+                      <ArchetypeHead
+                        archetype={bubble.key}
+                        size={bubble.size}
+                        variant='grid'
+                        fallback='none'
+                        className='bubble-field__head'
+                      />
+                    </View>
+                  ))}
+                </View>
+              )}
 
               <View className='hero-stage__breath'>
                 {heroState !== 'fallback' ? (
@@ -662,8 +861,9 @@ export default function MiniProgramLandingPage({
                 )}
               </View>
 
-              {/* Floating elements: city skyline + activity hints (refined 2026-09-02).
-                  5 sprites — buildings (backdrop), cards (quiz), map-pin (destination),
+              {/* Floating elements: activity hints (refined 2026-09-02;
+                  buildings retired 2026-09-03 — superseded by the dusk city
+                  backdrop). 4 sprites — cards (quiz), map-pin (destination),
                   dice (games), glass (social). All layered ON TOP of the hero. */}
               {renderSprite('cards')}
               {renderSprite('map-pin')}
@@ -781,6 +981,7 @@ export default function MiniProgramLandingPage({
               blockedByLegal: !hasAcceptedLegal,
               dwellMs: Date.now() - mountedAtRef.current,
               heroReady: heroState !== 'loading',
+              landingVariant,
             })
             fireDwell(ctaType === 'loggedOut' ? 'login_tap' : 'cta_tap')
             if (!hasAcceptedLegal) {

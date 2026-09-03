@@ -121,25 +121,17 @@
 }
 
 /* Floating element sprites (transparent WebP, CDN) — refined set
-   (2026-09-02): 5 elements layered ON TOP of the hero composite.
-   Buildings (backdrop depth), cards (quiz), map-pin (destination),
-   dice (games), glass (social). Front sprites at z8 so they render
-   above the hero image, not hidden behind it. */
+   (2026-09-02): 4 elements layered ON TOP of the hero composite.
+   Cards (quiz), map-pin (destination), dice (games), glass (social).
+   (sprite-buildings retired 2026-09-03 — superseded by the dusk city
+   backdrop.) Front sprites at z8 so they render above the hero image,
+   not hidden behind it. */
 .hero-stage__sprite {
   position: absolute;
   opacity: 0; // revealed by --entered stagger
   pointer-events: none;
   image-rendering: -webkit-optimize-contrast;
   z-index: 8;
-
-  &--buildings {
-    // Anchors the dusk skyline behind the hero, left-of-center.
-    left: 160rpx;
-    top: 40rpx;
-    width: 160rpx;
-    height: 260rpx;
-    z-index: 3; // behind the hero composite
-  }
 
   &--cards {
     // Upper-left, clear of the hero silhouette.
@@ -186,6 +178,60 @@
   background: linear-gradient(180deg, rgba(64, 40, 120, 0) 0%, rgba(64, 40, 120, 0) 52%, rgba(255, 158, 92, 0.16) 74%, rgba(255, 120, 80, 0.22) 100%);
   opacity: 0;
   pointer-events: none;
+}
+
+/* L1: Dusk city backdrop (Phase 1, 2026-09-03). Fills the hero ZONE (a
+   direct child of .hero-stage, NOT __scale) so its painted left/right
+   edges always land at the screen edges — scaling it with the
+   --mid/--short stage would float hard vertical seams in the page
+   gradient. The WebP is flattened (no alpha; edges are light gray), so
+   feathering is client-side: two overlay Views dissolve the top edge into
+   the page's cream sky and the bottom edge into the mist stop. Sits below
+   the dusk-wash/halo (DOM order, z-index 0); on error/timeout the whole
+   layer is removed — the L0 CSS gradient alone is the degraded design. */
+.hero-stage__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hero-stage__backdrop-lqip,
+.hero-stage__backdrop-img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-stage__backdrop-img {
+  opacity: 0;
+  transition: opacity 420ms ease-out;
+
+  &--in {
+    opacity: 1;
+  }
+}
+
+.hero-stage__backdrop-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+
+  &--top {
+    top: 0;
+    height: 112rpx;
+    background: linear-gradient(180deg, $color-dusk-cream 0%, rgba($color-dusk-cream, 0) 100%);
+  }
+
+  &--bottom {
+    bottom: 0;
+    height: 144rpx;
+    background: linear-gradient(180deg, rgba($color-dusk-mist, 0) 0%, $color-dusk-mist 100%);
+  }
 }
 
 /* z2: Warm glow bridge (very subtle — connects hero to mechanism strip) */
@@ -243,6 +289,135 @@
   top: 400rpx;
   width: 2rpx;
   height: 2rpx;
+  pointer-events: none;
+}
+
+/* ── Phase 2: Archetype bubble constellation (variant B, 2026-09-03) ──
+   Five FIXED sky positions (deterministic, screenshot-review stable)
+   carrying canon grid heads that are already bundled — zero new package
+   weight. The luminous-disc recipe reuses the mechanism seat treatment
+   with the white core raised to 0.65 so bubbles read against the busy
+   skyline. Ambient context: capped at 70% opacity so the field never
+   competes with the box (focal hierarchy). Decorative only — the whole
+   field is aria-hidden + pointer-events none. Lives inside __scale so
+   the --mid/--short stage scale keeps everything aligned with the box
+   mouth for free. */
+.bubble-field {
+  position: absolute;
+  inset: 0;
+  z-index: 6; // above the hero composite (z5), below the front sprites (z8)
+  pointer-events: none;
+}
+
+.bubble-field__bubble {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0; // revealed by bubble-pop (or statically in RM/low-end/logged-out)
+
+  // Luminous disc: mechanism-strip__seat::before recipe, white core 0.5→0.65.
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-sizing: border-box;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.65) 0%, rgba($color-landed-gold, 0.10) 58%, rgba(255, 255, 255, 0) 75%);
+    border: 1rpx solid rgba($color-primary, 0.14);
+    box-shadow: 0 8rpx 18rpx rgba($color-primary, 0.10);
+  }
+
+  &--1 { left: 200rpx; top: 24rpx; width: 96rpx; height: 96rpx; }
+  &--2 { left: 360rpx; top: 64rpx; width: 112rpx; height: 112rpx; }
+  &--3 { left: 480rpx; top: 144rpx; width: 88rpx; height: 88rpx; }
+  &--4 { left: 640rpx; top: 128rpx; width: 96rpx; height: 96rpx; }
+  &--5 { left: 280rpx; top: 152rpx; width: 88rpx; height: 88rpx; }
+}
+
+// ArchetypeHead sizes itself via inline rpx (dropped by the H5 preview);
+// the !important SCSS classes win in every runtime, and the inner image is
+// pinned to the circle for the same reason (mechanism-strip__head pattern).
+.bubble-field__head {
+  .archetype-head__image {
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
+
+.bubble-field__bubble--1 .bubble-field__head,
+.bubble-field__bubble--4 .bubble-field__head {
+  width: 80rpx !important;
+  height: 80rpx !important;
+}
+
+.bubble-field__bubble--2 .bubble-field__head {
+  width: 96rpx !important;
+  height: 96rpx !important;
+}
+
+.bubble-field__bubble--3 .bubble-field__head,
+.bubble-field__bubble--5 .bubble-field__head {
+  width: 72rpx !important;
+  height: 72rpx !important;
+}
+
+/* Hub-and-spoke connection paths: one dotted gold segment per bubble
+   converging on the box mouth (375, 400) + ONE bubble-to-bubble link
+   (--6, B2–B5 — the closest pair). Diagonals are rotated wrapper Views
+   with PRE-COMPUTED angles (no SVG, no background-image data-URIs, no
+   dynamic CSS custom properties); the inner line reuses the
+   mechanism-strip connector vocabulary and the shared connector-draw
+   keyframe (scaleX 0→1 from the bubble end toward the mouth). */
+.bubble-field__paths {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bubble-field__path {
+  position: absolute;
+  height: 0;
+  transform-origin: left center;
+
+  // B1 (248, 72) → mouth: 352rpx @ 69deg
+  &--1 { left: 248rpx; top: 72rpx; width: 352rpx; transform: rotate(69deg); }
+  // B2 (416, 120) → mouth: 284rpx @ 98deg
+  &--2 { left: 416rpx; top: 120rpx; width: 284rpx; transform: rotate(98deg); }
+  // B3 (524, 188) → mouth: 260rpx @ 125deg
+  &--3 { left: 524rpx; top: 188rpx; width: 260rpx; transform: rotate(125deg); }
+  // B4 (688, 176) → mouth: 384rpx @ 144deg
+  &--4 { left: 688rpx; top: 176rpx; width: 384rpx; transform: rotate(144deg); }
+  // B5 (324, 196) → mouth: 212rpx @ 76deg
+  &--5 { left: 324rpx; top: 196rpx; width: 212rpx; transform: rotate(76deg); }
+  // Link B2 (416, 120) → B5 (324, 196): 120rpx @ 140deg
+  &--6 { left: 416rpx; top: 120rpx; width: 120rpx; transform: rotate(140deg); }
+}
+
+.bubble-field__path-line {
+  width: 100%;
+  height: 0;
+  border-top: 3rpx dotted rgba($color-landed-gold, 0.6);
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* Golden mote: ONE traveler max, rides the B2 spoke down to the box every
+   12s (opacity keyframes, transform-only). Lives inside the rotated path
+   wrapper so translateX follows the spoke direction. */
+.bubble-field__mote {
+  position: absolute;
+  left: 0;
+  top: -4rpx;
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 999rpx;
+  background: rgba($color-glow-gold-hot, 0.95);
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -531,7 +706,7 @@
 }
 
 // 4. Floating sprites stagger in (70ms apart).
-//    5 sprites — cards, map-pin, dice, glass, buildings.
+//    4 sprites — cards, map-pin, dice, glass (buildings retired 2026-09-03).
 .landing-page--entered .hero-stage__sprite--cards {
   animation: sprite-in-cards 300ms cubic-bezier(0.22, 1, 0.36, 1) 480ms both;
 }
@@ -548,8 +723,92 @@
   animation: sprite-in-glass 300ms cubic-bezier(0.22, 1, 0.36, 1) 690ms both;
 }
 
-.landing-page--entered .hero-stage__sprite--buildings {
-  animation: sprite-in-buildings 380ms ease-out 0ms both;
+// 4c. Bubble constellation (variant B): pops in FIRST (90ms stagger from
+//     100ms), then the paths draw toward the box mouth (180ms each, 50ms
+//     stagger from 520ms; the B2–B5 link draws last). The field is fully
+//     settled by ~950ms — BEFORE the E3 burst (measure delayed to 880ms in
+//     LandingPage.tsx), extending the entrance to ~1.6s. Entrance easing
+//     cubic-bezier(0.22, 1, 0.36, 1); idle drift is combined here with
+//     negative delays (HeroPromoBanner sparkle pattern; default tier only
+//     — --low-end / --rm / --logged-out override with a static field).
+//     Drift effective starts (0.8–2.0s) all land AFTER the last pop
+//     (740ms) so the loop never overrides the pop-in transform.
+.landing-page--entered .bubble-field__bubble--1 {
+  animation:
+    bubble-pop 280ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both,
+    bubble-drift 5.6s ease-in-out 2.0s -1.2s infinite;
+}
+
+.landing-page--entered .bubble-field__bubble--2 {
+  animation:
+    bubble-pop 280ms cubic-bezier(0.22, 1, 0.36, 1) 190ms both,
+    bubble-drift 6.4s ease-in-out 2.0s -0.6s infinite;
+}
+
+.landing-page--entered .bubble-field__bubble--3 {
+  animation:
+    bubble-pop 280ms cubic-bezier(0.22, 1, 0.36, 1) 280ms both,
+    bubble-drift 5.2s ease-in-out 2.0s 0s infinite;
+}
+
+.landing-page--entered .bubble-field__bubble--4 {
+  animation:
+    bubble-pop 280ms cubic-bezier(0.22, 1, 0.36, 1) 370ms both,
+    bubble-drift 6.8s ease-in-out 2.0s -0.9s infinite;
+}
+
+.landing-page--entered .bubble-field__bubble--5 {
+  animation:
+    bubble-pop 280ms cubic-bezier(0.22, 1, 0.36, 1) 460ms both,
+    bubble-drift 6.0s ease-in-out 2.0s -0.3s infinite;
+}
+
+.landing-page--entered .bubble-field__path--1 .bubble-field__path-line {
+  animation: connector-draw 180ms ease-out 520ms both;
+}
+
+.landing-page--entered .bubble-field__path--2 .bubble-field__path-line {
+  animation: connector-draw 180ms ease-out 570ms both;
+}
+
+.landing-page--entered .bubble-field__path--3 .bubble-field__path-line {
+  animation: connector-draw 180ms ease-out 620ms both;
+}
+
+.landing-page--entered .bubble-field__path--4 .bubble-field__path-line {
+  animation: connector-draw 180ms ease-out 670ms both;
+}
+
+.landing-page--entered .bubble-field__path--5 .bubble-field__path-line {
+  animation: connector-draw 180ms ease-out 720ms both;
+}
+
+.landing-page--entered .bubble-field__path--6 .bubble-field__path-line {
+  animation: connector-draw 180ms ease-out 770ms both;
+}
+
+.landing-page--entered .bubble-field__mote {
+  animation: mote-travel 12s ease-in-out 3.2s infinite;
+}
+
+/* Variant B strip timing: the bubble field settles (~950ms) before the E3
+   burst (seats land ~1.6s), so the strip's connector/pin/caption/grounding
+   shift later to stay after the seat settle. Variant A keeps the base
+   1180–1300ms timings above. */
+.landing-page--variant-b.landing-page--entered .mechanism-strip__connector {
+  animation-delay: 1560ms;
+}
+
+.landing-page--variant-b.landing-page--entered .mechanism-strip__pin {
+  animation-delay: 1620ms;
+}
+
+.landing-page--variant-b.landing-page--entered .mechanism-strip__seats::after {
+  animation-delay: 1660ms;
+}
+
+.landing-page--variant-b.landing-page--entered .mechanism-caption {
+  animation-delay: 1660ms;
 }
 
 // 4b. Dusk wash fades in, glow bridge blooms.
@@ -750,15 +1009,46 @@
   }
 }
 
-@keyframes sprite-in-buildings {
+/* Bubble constellation keyframes (2026-09-03). Pop settles at 0.7 opacity
+   (ambient cap — the field must never compete with the box). Drift is a
+   gentle ±8rpx translateY loop; periods/desync live on the entrance rules. */
+@keyframes bubble-pop {
   from {
     opacity: 0;
-    transform: translateY(16rpx) scale(0.85);
+    transform: translateY(24rpx) scale(0.8);
   }
 
   to {
-    opacity: 1;
+    opacity: 0.7;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bubble-drift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8rpx); }
+}
+
+// One golden mote travels the B2 spoke (284rpx) to the box every 12s —
+// ~1.3s of travel inside a 12s period, opacity-keyframed, 1 traveler max.
+@keyframes mote-travel {
+  0% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+
+  5% {
+    opacity: 0.9;
+  }
+
+  11% {
+    opacity: 0;
+    transform: translateX(284rpx);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(284rpx);
   }
 }
 
@@ -1496,6 +1786,26 @@
     opacity: 1 !important;
   }
 
+  // Phase 2 bubble field: full static composition — pops, path draws,
+  // drift, and the mote are all killed; the settled state reads complete
+  // with zero motion.
+  .bubble-field__bubble {
+    animation: none !important;
+    opacity: 0.7 !important;
+    transform: none !important;
+  }
+
+  .bubble-field__path-line {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .bubble-field__mote {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+
   .landing-page__cta--primary::after {
     display: none !important;
   }
@@ -1561,6 +1871,29 @@
   .hero-stage__dusk-wash {
     animation: none !important;
     opacity: 1 !important;
+  }
+
+  // Phase 1 backdrop: instant swap, no 420ms fade, under reduced motion.
+  .hero-stage__backdrop-img {
+    transition: none !important;
+  }
+
+  // Phase 2 bubble field: static settled composition (same as low-end).
+  .bubble-field__bubble {
+    animation: none !important;
+    opacity: 0.7 !important;
+    transform: none !important;
+  }
+
+  .bubble-field__path-line {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .bubble-field__mote {
+    animation: none !important;
+    opacity: 0 !important;
   }
 
   // Refined: sprites are decorative, not consumed (2026-09-02).
@@ -1676,6 +2009,25 @@
 
   .mechanism-strip__pin {
     animation: pin-pop 300ms ease-out 1000ms both !important;
+  }
+
+  // Phase 2 bubble field: renders SETTLED for returning users (no draw-in,
+  // no drift) — mirrors the statically-settled mechanism strip.
+  .bubble-field__bubble {
+    animation: none !important;
+    opacity: 0.7 !important;
+    transform: none !important;
+  }
+
+  .bubble-field__path-line {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .bubble-field__mote {
+    animation: none !important;
+    opacity: 0 !important;
   }
 
   .landing-page__cta--primary::after {

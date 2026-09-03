@@ -34,6 +34,10 @@ const CRITICAL_ASSETS = [
   'assets/lovart/landing/hero-box-xiaoyue-dusk.webp',
   'assets/lovart/landing/hero-box-xiaoyue-dusk-lqip.webp',
   'assets/xiaoyue-expressions/xiaoyue-home-welcome.webp',
+  // Landing dusk city backdrop LQIP (2026-09-03) — the bundled placeholder
+  // under the CDN-only backdrop master (the master itself must NOT be in
+  // the package; clean-cdn-assets strips it).
+  'assets/lovart/landing/landing-backdrop-city-dusk-lqip.webp',
   // Landing mechanism strip heads (bundled, rendered on the same stage)
   'assets/icons/archetype-grid/archetype-corgi-grid.webp',
   'assets/icons/archetype-grid/archetype-fox-grid.webp',
@@ -41,6 +45,13 @@ const CRITICAL_ASSETS = [
   'assets/icons/archetype-grid/archetype-koala-grid.webp',
   'assets/icons/archetype-grid/archetype-cat-grid.webp',
   'assets/icons/archetype-grid/archetype-dolphin_calm-grid.webp',
+  // Landing bubble constellation heads (variant B, 2026-09-03) — bundled
+  // grid heads reused on the landing stage.
+  'assets/icons/archetype-grid/archetype-owl-grid.webp',
+  'assets/icons/archetype-grid/archetype-elephant-grid.webp',
+  'assets/icons/archetype-grid/archetype-octopus-grid.webp',
+  'assets/icons/archetype-grid/archetype-turtle-grid.webp',
+  'assets/icons/archetype-grid/archetype-hamster_praise-grid.webp',
   // Gathering-room scene (2026-08-17 incident)
   'assets/gathering-room/room-composite-v2.webp',
   // Tab bar (upload rejects missing iconPath with 800059)

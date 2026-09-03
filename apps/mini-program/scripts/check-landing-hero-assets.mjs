@@ -35,6 +35,11 @@ const ASSET_DIR = dirArgIdx > -1 ? process.argv[dirArgIdx + 1] : DEFAULT_DIR
 const ASSETS = [
   { base: 'hero-box-xiaoyue-dusk', width: 1440, height: 1440, maxKB: 240, master: true },
   { base: 'hero-box-xiaoyue-dusk-lqip', width: 48, height: 48, maxKB: 6, lqip: true },
+  // Phase 1 dusk city backdrop (2026-09-03): FLATTENED (no alpha — the
+  // feathering is client-side overlay Views), so the alpha-channel and
+  // edge-decay checks are skipped; geometry/weight/palette budgets hold.
+  { base: 'landing-backdrop-city-dusk', width: 752, height: 912, maxKB: 200, flattened: true },
+  { base: 'landing-backdrop-city-dusk-lqip', width: 48, height: 58, maxKB: 6, lqip: true, flattened: true },
   { base: 'sprite-dice', width: 512, height: 512, maxKB: 30 },
   { base: 'sprite-cards', width: 512, height: 512, maxKB: 30 },
   { base: 'sprite-glass', width: 512, height: 512, maxKB: 30 },
@@ -133,8 +138,13 @@ async function checkAsset(spec) {
   const hOk = Math.abs((meta.height ?? 0) - spec.height) <= spec.height * SIZE_TOLERANCE
   pass(wOk && hOk, `canvas ${spec.width}×${spec.height}`, `got ${meta.width}×${meta.height}`)
 
-  // 2. Alpha channel present
-  pass(meta.hasAlpha === true, 'has alpha channel (transparent bg)')
+  // 2. Alpha channel present (flattened assets skip — feathering is
+  //    client-side, e.g. the dusk city backdrop)
+  if (spec.flattened) {
+    console.log('   ℹ️  alpha check skipped (flattened asset — client-side feathering)')
+  } else {
+    pass(meta.hasAlpha === true, 'has alpha channel (transparent bg)')
+  }
 
   // 3. Weight budget (webp outputs; png masters get a pass with note)
   const kb = fs.statSync(file).size / 1024
@@ -147,7 +157,7 @@ async function checkAsset(spec) {
   const { data, width, height } = await analyzePixels(file)
 
   // 4. Edge decay: outer 8px ring must be alpha≈0 (glow/art may not touch edges)
-  if (!spec.lqip) {
+  if (!spec.lqip && !spec.flattened) {
     const band = Math.max(2, Math.round((EDGE_BAND_PX / Math.max(meta.width, 1)) * width))
     const top = meanAlphaInRegion(data, width, 0, 0, width, band)
     const bottom = meanAlphaInRegion(data, width, 0, height - band, width, height)

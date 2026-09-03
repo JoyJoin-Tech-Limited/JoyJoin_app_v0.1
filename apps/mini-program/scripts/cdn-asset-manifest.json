@@ -1535,6 +1535,14 @@
       "cdnPath": "assets/lovart/landing/hero-box-xiaoyue-dusk-lqip.webp"
     },
     {
+      "localPath": "assets/lovart/landing/landing-backdrop-city-dusk.webp",
+      "cdnPath": "assets/lovart/landing/landing-backdrop-city-dusk.webp"
+    },
+    {
+      "localPath": "assets/lovart/landing/landing-backdrop-city-dusk-lqip.webp",
+      "cdnPath": "assets/lovart/landing/landing-backdrop-city-dusk-lqip.webp"
+    },
+    {
       "localPath": "assets/lovart/landing/sprite-buildings.webp",
       "cdnPath": "assets/lovart/landing/sprite-buildings.webp"
     },
