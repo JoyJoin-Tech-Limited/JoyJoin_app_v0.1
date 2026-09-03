@@ -349,18 +349,20 @@
 .mechanism-strip__connector {
   width: 64rpx;
   height: 0;
-  // Gold-tinted dotted connector — echoes the subtitle underline cascade.
-  border-top: 2rpx dotted rgba($color-landed-gold, 0.55);
+  // Glowing gold connector — a visible light path from the table to the
+  // destination pin, echoing the box's glow (narrative refinement 2026-09-03).
+  border-top: 3rpx dotted rgba($color-landed-gold, 0.75);
   margin: 0 12rpx;
   flex-shrink: 0;
   opacity: 0;
   transform: scaleX(0);
   transform-origin: left center;
+  filter: drop-shadow(0 0 6rpx rgba($color-landed-gold, 0.3));
 }
 
 .mechanism-strip__pin {
-  width: 56rpx;
-  height: 56rpx;
+  width: 64rpx;
+  height: 64rpx;
   flex-shrink: 0;
   opacity: 0;
   transform: scale(0.5);
