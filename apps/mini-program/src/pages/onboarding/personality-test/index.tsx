@@ -55,7 +55,6 @@ import { useSpeculativeStart } from './useSpeculativeStart'
 import { computeAutoAdvanceDelayMs } from './autoAdvance'
 import { resolveIdleWhisper } from './idleWhispers'
 import { preloadRouteAssets } from '../../../lib/utils/routePreloadAssets'
-import { preloadImagesWithDiagnostics } from '../../../lib/utils/imagePreload'
 import './index.scss'
 import type {
   Phase,
@@ -156,18 +155,10 @@ export default function PersonalityTestPage() {
   // landing-page preloads, but critical for direct entry (share links, deeplinks).
   useEffect(() => {
     preloadRouteAssets('pages/onboarding/personality-test/index')
-    // WS-4 (2026-09-02): prime the NATIVE image cache for the slot spritesheet
-    // while the user is still answering questions — the results page's slot
-    // reel starts immediately on mount, and useSpriteReadiness cannot gate
-    // decode on real devices (no DOM Image in WeChat JSCore). This mirrors
-    // the results page's dual-cache strategy: getImageInfo warms the native
-    // cache here, PersonalityTestPreloadLayer's hidden <Image> warms the
-    // webview cache, and the results page keeps its own primer as
-    // direct-entry insurance.
-    void preloadImagesWithDiagnostics(
-      [getArchetypeSpritesheetLocalPath()],
-      'personality-test:spritesheet',
-    )
+    // The hidden <Image> in PersonalityTestPreloadLayer warms the webview
+    // cache for the slot spritesheet. No getImageInfo call needed — it cannot
+    // resolve bundled subpackage paths in the WeChat runtime and produces
+    // "image not found" errors in vConsole (2026-09-03).
   }, [])
 
   // Detect reduced-motion preference once for the intro mascot

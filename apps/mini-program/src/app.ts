@@ -171,6 +171,23 @@ function App({ children }: PropsWithChildren<any>) {
       // Storage failures are non-critical
     }
 
+    // If a session token exists, the user was previously authenticated.
+    // Their test progress is tracked server-side — the anonymous assessment
+    // session is stale and must not be used to skip to results. Clear it
+    // synchronously at launch so no page can read it before the 401 cleanup
+    // fires (the deleted-account race, 2026-09-03).
+    try {
+      const token = Taro.getStorageSync('mj_session_token')
+      if (token) {
+        Taro.removeStorageSync('joyjoin_v4_assessment_session')
+        Taro.removeStorageSync('joyjoin_v4_presignup_answers')
+        Taro.removeStorageSync('joyjoin_v4_presignup_skipped')
+        logInfo('[App] Cleared stale anonymous assessment session (session token present)')
+      }
+    } catch {
+      // Storage failures are non-critical
+    }
+
     // Load brand font immediately — no delay. The guard in brandFont.ts
     // prevents double-load when individual screens also trigger it.
     // WeChat caches loaded fonts, so repeat opens are instant.
