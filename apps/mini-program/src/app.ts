@@ -21,9 +21,6 @@ import { loadBrandFonts } from './lib/utils/brandFont'
 import { useProfessionRetry } from './hooks/useProfessionRetry'
 import { preloadCdnAssets, ARCHETYPE_GLYPH_ASSETS } from './hooks/usePreloadCdnIcons'
 import { preloadOnboardingAssets } from './lib/utils/onboardingPreload'
-import { preloadImage } from './lib/utils/imagePreload'
-import { LANDING_HERO_PRELOAD_ASSETS } from './lib/utils/routePreloadAssets'
-import { localAsset } from './lib/utils/cdnAssets'
 
 function AutoLoginBridge() {
   const { isAuthenticated, isLoading } = useAuth()
@@ -182,14 +179,6 @@ function App({ children }: PropsWithChildren<any>) {
     // Preload CDN-only archetype glyphs in the background so they are
     // warm when the user reaches profile / matching / results screens.
     void preloadCdnAssets(ARCHETYPE_GLYPH_ASSETS)
-
-    // Preload the landing hero composite at launch so WeChat decodes + caches
-    // it before the landing page mounts. Without this, the first paint shows
-    // the LQIP placeholder while the bundled hero decodes (~100-200ms), which
-    // reads as "loading frames" on cold start (2026-09-02).
-    void Promise.all(
-      LANDING_HERO_PRELOAD_ASSETS.map((path) => preloadImage(localAsset(path))),
-    )
 
     // Preload the full onboarding asset bundle in staggered tiers so every
     // raster the user may encounter (intro animation, test expressions,

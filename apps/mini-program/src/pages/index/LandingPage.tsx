@@ -39,13 +39,14 @@ import "./index.scss"
 // The floating sprites remain CDN-only (decorative, failure-safe).
 const HERO_LOCAL_SRC = localAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk.webp')
 const HERO_CDN_SRC = cdnAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk.webp')
-const HERO_LQIP_SRC = localAsset('/assets/lovart/landing/hero-box-xiaoyue-dusk-lqip.webp')
 const HERO_FALLBACK_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp')
 
 const HERO_SPRITES = [
   { key: 'buildings', src: cdnAsset('/assets/lovart/landing/sprite-buildings.webp') },
   { key: 'cards', src: cdnAsset('/assets/lovart/landing/sprite-cards.webp') },
   { key: 'map-pin', src: cdnAsset('/assets/lovart/landing/sprite-map-pin.webp') },
+  { key: 'dice', src: cdnAsset('/assets/lovart/landing/sprite-dice.webp') },
+  { key: 'glass', src: cdnAsset('/assets/lovart/landing/sprite-glass.webp') },
 ] as const
 
 type HeroSpriteKey = (typeof HERO_SPRITES)[number]['key']
@@ -155,8 +156,6 @@ export default function MiniProgramLandingPage({
   const [legalHintSeq, setLegalHintSeq] = useState(0)
   const [heroState, setHeroState] = useState<HeroState>('loading')
   const [heroSrcStage, setHeroSrcStage] = useState<HeroSrcStage>('local')
-  const [lqipGone, setLqipGone] = useState(false)
-  const [heroWarm, setHeroWarm] = useState(false)
   const [failedSprites, setFailedSprites] = useState<ReadonlySet<HeroSpriteKey>>(new Set())
   const [hasIncompleteSession, setHasIncompleteSession] = useState(false)
   const [isShortScreen, setIsShortScreen] = useState(false)
@@ -203,19 +202,6 @@ export default function MiniProgramLandingPage({
       .catch(() => {
         /* keep 'unknown' */
       })
-
-    // Check if the hero was preloaded at app launch (warm start). If so,
-    // skip the LQIP placeholder entirely — the full image paints immediately
-    // from WeChat's image cache with zero decode flash (2026-09-02).
-    try {
-      Taro.getImageInfo({
-        src: HERO_LOCAL_SRC,
-        success: () => setHeroWarm(true),
-        fail: () => { /* not preloaded — LQIP will show as usual */ },
-      })
-    } catch {
-      /* getImageInfo unavailable — LQIP will show as usual */
-    }
   }, [])
 
   // Reset navigation loading state when the user swipes back or foregrounds
@@ -437,13 +423,6 @@ export default function MiniProgramLandingPage({
     return () => clearTimeout(timer)
   }, [heroState])
 
-  // Unmount the LQIP right after its fade-out completes (no DOM residue).
-  useEffect(() => {
-    if (heroState !== 'ready') return
-    const timer = setTimeout(() => setLqipGone(true), 250)
-    return () => clearTimeout(timer)
-  }, [heroState])
-
   const handleHeroLoad = () => {
     if (heroState !== 'loading') return
     heroStateRef.current = 'ready'
@@ -657,27 +636,6 @@ export default function MiniProgramLandingPage({
               {/* City skyline sits behind the hero composite */}
               {renderSprite('buildings')}
 
-              {/* Blur-up placeholder: same geometry as the hero, fades out on
-                  load and unmounts right after the fade (no DOM residue).
-                  Skipped entirely when the hero was preloaded at app launch —
-                  the full image paints from cache with zero decode flash. */}
-              {heroState !== 'fallback' && !lqipGone && !heroWarm && (
-                <View
-                  className={`hero-stage__lqip${heroState === 'ready' ? ' hero-stage__lqip--out' : ''}`}
-                  aria-hidden='true'
-                >
-                  <Image
-                    className='hero-stage__lqip-img'
-                    src={HERO_LQIP_SRC}
-                    mode='aspectFit'
-                    lazyLoad={false}
-                    onError={() => {
-                      /* the dusk gradient skeleton underneath is enough */
-                    }}
-                  />
-                </View>
-              )}
-
               <View className='hero-stage__breath'>
                 {heroState !== 'fallback' ? (
                   <Image
@@ -705,10 +663,12 @@ export default function MiniProgramLandingPage({
               </View>
 
               {/* Floating elements: city skyline + activity hints (refined 2026-09-02).
-                  3 key sprites only — buildings (backdrop), map-pin (destination),
-                  cards (quiz). Dice and glass removed for cleaner composition. */}
+                  5 sprites — buildings (backdrop), cards (quiz), map-pin (destination),
+                  dice (games), glass (social). All layered ON TOP of the hero. */}
               {renderSprite('cards')}
               {renderSprite('map-pin')}
+              {renderSprite('dice')}
+              {renderSprite('glass')}
             </View>
           </View>
         </View>
