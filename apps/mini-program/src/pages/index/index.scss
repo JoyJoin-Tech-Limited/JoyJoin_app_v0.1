@@ -38,6 +38,10 @@
   align-items: center;
   justify-content: flex-start;
   width: 100%;
+  // Above the page-level backdrop (z-index 0) — a positioned z-0 layer
+  // would otherwise paint OVER this non-positioned flex child.
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Brand Watermark ───────────────────────────────────────────────── */
@@ -170,35 +174,54 @@
   }
 }
 
-/* z0: Dusk horizon wash (subtle warm palette band behind everything) */
+/* z0: Warm horizon glow behind the box (reshaped 2026-09-03). Was a
+   full-stage linear orange band INSIDE __scale: on the --mid (×0.82) and
+   --short (×0.68) tiers the stage scale pulled the band's hard rectangular
+   bounds inside the screen, floating a visible warm-orange SQUARE over the
+   dusk backdrop (invisible against the old flat gradient, glaring against
+   the busy artwork). Now a radial glow that decays to alpha 0 at 48%:
+   every rect edge sits at ≥53% on the gradient ray (side midpoints 53%,
+   top midpoint 85%), so no rectangular bound can ever read at any scale —
+   and the -80rpx horizontal / -40rpx bottom bleed pushes the geometry
+   edges off-screen entirely (clipped by .content-zone overflow). */
 .hero-stage__dusk-wash {
   position: absolute;
-  inset: 0;
+  left: -80rpx;
+  right: -80rpx;
+  top: 280rpx;
+  bottom: -40rpx;
   z-index: 0;
-  background: linear-gradient(180deg, rgba(64, 40, 120, 0) 0%, rgba(64, 40, 120, 0) 52%, rgba(255, 158, 92, 0.16) 74%, rgba(255, 120, 80, 0.22) 100%);
+  background: radial-gradient(ellipse at 50% 80%, rgba(255, 158, 92, 0.18) 0%, rgba(255, 120, 80, 0.08) 30%, rgba(255, 120, 80, 0) 48%);
   opacity: 0;
   pointer-events: none;
 }
 
-/* L1: Dusk city backdrop (Phase 1, 2026-09-03). Fills the hero ZONE (a
-   direct child of .hero-stage, NOT __scale) so its painted left/right
-   edges always land at the screen edges — scaling it with the
-   --mid/--short stage would float hard vertical seams in the page
-   gradient. The WebP is flattened (no alpha; edges are light gray), so
-   feathering is client-side: two overlay Views dissolve the top edge into
-   the page's cream sky and the bottom edge into the mist stop. Sits below
-   the dusk-wash/halo (DOM order, z-index 0); on error/timeout the whole
-   layer is removed — the L0 CSS gradient alone is the degraded design. */
-.hero-stage__backdrop {
+/* L0.5: Dusk city backdrop (page-level, 2026-09-03 rework). Moved OUT of
+   .hero-stage to the page root so the skyline bleeds full-width and merges
+   into the L0 gradient — previously it stopped at the hero-zone bounds and
+   read as a rectangular image pasted behind the hero. Anchored to the page
+   TOP; the height covers the upper ~60-63% of the screen (per-tier heights
+   in the --mid/--short blocks). The WebP is flattened (no alpha; edges are
+   light gray), so feathering is client-side: FOUR overlay Views dissolve
+   every edge — top into the cream sky, left/right (narrow) into a
+   blush-mist compromise tone, bottom (longest/deepest) into the
+   mist-lavender seam so no horizon line can read anywhere. z-index 0: above
+   the L0 body gradient, below .content-zone/.bottom-zone (z-index 1). On
+   error/timeout the whole layer is removed — the L0 CSS gradient alone is
+   the degraded design. */
+.landing-page__backdrop {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1096rpx; // ~63% of the default ~1733rpx composition
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
 }
 
-.hero-stage__backdrop-lqip,
-.hero-stage__backdrop-img {
+.landing-page__backdrop-lqip,
+.landing-page__backdrop-img {
   position: absolute;
   left: 0;
   top: 0;
@@ -206,7 +229,7 @@
   height: 100%;
 }
 
-.hero-stage__backdrop-img {
+.landing-page__backdrop-img {
   opacity: 0;
   transition: opacity 420ms ease-out;
 
@@ -215,22 +238,55 @@
   }
 }
 
-.hero-stage__backdrop-fade {
+/* Edge feathers. DOM order matters: the side fades paint FIRST, then the
+   top/bottom fades cover the corners — so each fade only needs to match the
+   page gradient in its own mid-zone, never at a corner.
+   - Side fades: rgba(240, 231, 246) is the blush→mist compromise — within
+     ~13 RGB units of the page gradient across the whole exposed band
+     (the cream zone above 160rpx is covered by the top fade).
+   - Bottom fade: ends fully opaque at the seam colour rgb(221, 206, 244) —
+     the page gradient's mist→lavender blend at ~60-63% page height
+     ($color-dusk-mist → $color-dusk-lavender at t≈0.25), so the layer's
+     bottom edge is colour-matched to the gradient directly beneath it on
+     all tiers. */
+.landing-page__backdrop-fade {
   position: absolute;
-  left: 0;
-  right: 0;
   pointer-events: none;
 
-  &--top {
+  &--left {
+    left: 0;
     top: 0;
-    height: 112rpx;
+    bottom: 0;
+    width: 48rpx;
+    background: linear-gradient(90deg, rgba(240, 231, 246, 1) 0%, rgba(240, 231, 246, 0) 100%);
+  }
+
+  &--right {
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 48rpx;
+    background: linear-gradient(270deg, rgba(240, 231, 246, 1) 0%, rgba(240, 231, 246, 0) 100%);
+  }
+
+  &--top {
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 160rpx;
     background: linear-gradient(180deg, $color-dusk-cream 0%, rgba($color-dusk-cream, 0) 100%);
   }
 
   &--bottom {
+    left: 0;
+    right: 0;
     bottom: 0;
-    height: 144rpx;
-    background: linear-gradient(180deg, rgba($color-dusk-mist, 0) 0%, $color-dusk-mist 100%);
+    height: 44%; // scales with the per-tier layer height
+    background: linear-gradient(180deg,
+      rgba($color-dusk-mist, 0) 0%,
+      rgba($color-dusk-mist, 0.45) 38%,
+      rgba(224, 210, 245, 0.85) 72%,
+      rgba(221, 206, 244, 1) 100%);
   }
 }
 
@@ -1144,6 +1200,9 @@
   flex-shrink: 0;
   box-sizing: border-box;
   opacity: 0; // revealed by --entered stagger
+  // Above the page-level backdrop (z-index 0), same as .content-zone.
+  position: relative;
+  z-index: 1;
 }
 
 .landing-page__cta {
@@ -1570,6 +1629,12 @@
 // navigationStyle:'custom'), so the usable budget is ~1448–1475rpx, NOT
 // the ~1560–1623rpx full-screen figure. This tier totals ~1444rpx.
 .landing-page--mid {
+  // Page-level backdrop covers the upper ~61% of the ~1450rpx composition;
+  // the bottom fade completes just under the mechanism caption (~834rpx).
+  .landing-page__backdrop {
+    height: 888rpx;
+  }
+
   .brand-mark {
     padding-top: 16rpx;
   }
@@ -1643,6 +1708,12 @@
 // hero-text 128–170 + spacer 0 + bottom-zone ~344 (no home-indicator
 // inset on these devices).
 .landing-page--short {
+  // Page-level backdrop covers the upper ~61% of the ~1206rpx composition;
+  // the bottom fade completes just under the mechanism caption (~694rpx).
+  .landing-page__backdrop {
+    height: 736rpx;
+  }
+
   .brand-mark {
     padding-top: 12rpx;
   }
@@ -1874,7 +1945,7 @@
   }
 
   // Phase 1 backdrop: instant swap, no 420ms fade, under reduced motion.
-  .hero-stage__backdrop-img {
+  .landing-page__backdrop-img {
     transition: none !important;
   }
 

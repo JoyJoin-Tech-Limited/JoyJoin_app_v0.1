@@ -45,8 +45,10 @@ const HERO_FALLBACK_SRC = localAsset('/assets/xiaoyue-expressions/xiaoyue-home-w
 // (deliberately NOT bundled — clean:cdn-assets strips it from dist and no
 // packOptions.include pattern matches it) + a bundled 400B LQIP so the sky
 // never pops while the master loads. The master is FLATTENED (no alpha;
-// edges are light gray), so top/bottom feathering is client-side: two
-// gradient overlay Views dissolve the edges into the L0 page gradient.
+// edges are light gray), so edge feathering is client-side: four gradient
+// overlay Views dissolve all edges into the L0 page gradient. The layer
+// lives at PAGE level (not inside the hero stage) so it bleeds full-width
+// and merges into the page's dusk gradient with no rectangular bounds.
 const BACKDROP_CDN_SRC = cdnAsset('/assets/lovart/landing/landing-backdrop-city-dusk.webp')
 const BACKDROP_LQIP_SRC = localAsset('/assets/lovart/landing/landing-backdrop-city-dusk-lqip.webp')
 /** Same guard as the hero: WeChat can hang a CDN <Image> with no callback;
@@ -724,6 +726,41 @@ export default function MiniProgramLandingPage({
         <Image src={HERO_FALLBACK_SRC} />
       </View>
 
+      {/* L0.5 dusk city backdrop (page-level, 2026-09-03 rework): moved OUT
+          of .hero-stage so the skyline bleeds full-width across the whole
+          page and dissolves into the L0 gradient — no rectangular bounds
+          anywhere. Anchored to the page TOP, covering the upper ~60-63% of
+          the screen (per-tier heights in SCSS). CDN master over a bundled
+          LQIP; the master is FLATTENED (no alpha; edges are light gray), so
+          four overlay Views feather every edge into the page gradient — top
+          into cream, left/right (narrow) into a blush-mist compromise tone,
+          bottom (longest/deepest) into the mist-lavender seam. z-index 0:
+          above the L0 body gradient, below all content. On error/timeout
+          the whole layer is removed silently — the L0 CSS gradient alone is
+          the degraded design. Decorative only: aria-hidden, no events. */}
+      {backdropState !== 'failed' && (
+        <View className='landing-page__backdrop' aria-hidden='true'>
+          <Image
+            className='landing-page__backdrop-lqip'
+            src={BACKDROP_LQIP_SRC}
+            mode='aspectFill'
+            lazyLoad={false}
+          />
+          <Image
+            className={`landing-page__backdrop-img${backdropState === 'ready' ? ' landing-page__backdrop-img--in' : ''}`}
+            src={BACKDROP_CDN_SRC}
+            mode='aspectFill'
+            lazyLoad={false}
+            onLoad={handleBackdropLoad}
+            onError={handleBackdropError}
+          />
+          <View className='landing-page__backdrop-fade landing-page__backdrop-fade--left' />
+          <View className='landing-page__backdrop-fade landing-page__backdrop-fade--right' />
+          <View className='landing-page__backdrop-fade landing-page__backdrop-fade--top' />
+          <View className='landing-page__backdrop-fade landing-page__backdrop-fade--bottom' />
+        </View>
+      )}
+
       <View className='content-zone'>
         {/* Brand watermark — className sizing (SCSS) instead of the component's
             inline-rpx preset because the H5 preview drops inline rpx and
@@ -736,34 +773,6 @@ export default function MiniProgramLandingPage({
             Tapping the stage replays the E3 burst (user-triggered delight). */}
         <View className='hero-zone'>
           <View className='hero-stage' onClick={handleMechanismReplay}>
-            {/* L1 dusk city backdrop (Phase 1, 2026-09-03): fills the hero
-                zone directly (NOT inside __scale) so its painted left/right
-                edges always land at the screen edges — scaling it with the
-                --mid/--short stage would float hard vertical seams in the
-                page gradient. CDN master over a bundled LQIP; flattened
-                (no alpha), so two overlay Views feather top/bottom into the
-                L0 CSS gradient, which remains the silent-degraded design
-                when the layer is removed on error/timeout. */}
-            {backdropState !== 'failed' && (
-              <View className='hero-stage__backdrop' aria-hidden='true'>
-                <Image
-                  className='hero-stage__backdrop-lqip'
-                  src={BACKDROP_LQIP_SRC}
-                  mode='aspectFill'
-                  lazyLoad={false}
-                />
-                <Image
-                  className={`hero-stage__backdrop-img${backdropState === 'ready' ? ' hero-stage__backdrop-img--in' : ''}`}
-                  src={BACKDROP_CDN_SRC}
-                  mode='aspectFill'
-                  lazyLoad={false}
-                  onLoad={handleBackdropLoad}
-                  onError={handleBackdropError}
-                />
-                <View className='hero-stage__backdrop-fade hero-stage__backdrop-fade--top' />
-                <View className='hero-stage__backdrop-fade hero-stage__backdrop-fade--bottom' />
-              </View>
-            )}
             <View className='hero-stage__scale'>
               {/* z0: Dusk horizon wash (P2 warm palette band) */}
               <View className='hero-stage__dusk-wash' aria-hidden='true' />
