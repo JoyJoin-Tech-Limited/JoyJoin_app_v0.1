@@ -19,7 +19,6 @@ import { useStepAbandonGuard } from '../../../hooks/onboarding/useStepAbandonGua
 import { useOnboardingCheckpoint } from '../../../hooks/onboarding/useOnboardingCheckpoint'
 import {
   clearAnonymousAssessmentStorage,
-  hasAnonymousAssessmentResult,
   isAnonymousAssessmentSessionCompleted,
   readAnonymousAssessmentSession,
   readAnonymousAssessmentAnswers,
@@ -461,14 +460,6 @@ export default function PersonalityTestPage() {
       return
     }
 
-    if (!auth.isAuthenticated && phase === 'intro') {
-      const snapshot = readAnonymousAssessmentSession()
-      if (isAnonymousAssessmentSessionCompleted(snapshot) || hasAnonymousAssessmentResult(snapshot)) {
-        Taro.redirectTo({ url: MINI_PROGRAM_ROUTES.personalityTestResults }).catch(() => {
-          setPhase('intro')
-        })
-      }
-    }
   }, [auth.isAuthenticated, auth.isLoading, auth.nextStep, auth.user?.archetype, auth.user?.primaryArchetype, isPageExiting, isSubmitting, isProfileSocialTypeEntry, isRestartEntry,phase])
 
   const handleStart = useCallback(async () => {
