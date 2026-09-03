@@ -88,6 +88,11 @@ export type DiscoverAnalyticsEventType =
   // { tipId, reason: 'button'|'tap_through'|'auto', persistError?: true }.
   | 'guidance_shown'
   | 'guidance_dismissed'
+  // Personality-test intro funnel (2026-09-02): measures the icon-strip
+  // change vs the pre-strip baseline. Both fire from the personality-test
+  // page intro phase; metadata: { entryMode: 'fresh'|'resume' }.
+  | 'onboarding_intro_viewed'
+  | 'personality_test_started'
 
 export interface DiscoverAnalyticsEvent {
   eventType: DiscoverAnalyticsEventType

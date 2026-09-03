@@ -47,6 +47,17 @@
   }
 }
 
+@keyframes tease-icon-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .personality-test {
   @include page-gradient-bg;
   @include onboarding-page-exit-transition;
@@ -186,24 +197,19 @@
 
   &__intro-bubble {
     margin-top: $spacing-sm;
-    padding: 16rpx;
+    padding: 20rpx 24rpx;
     border-radius: $card-radius;
     border: 2rpx solid rgba($color-border, 0.92);
     background: rgba($color-surface, 0.9);
   }
 
-  &__intro-bubble-title {
-    display: block;
-    font-size: $font-size-sm;
-    font-weight: $font-weight-semibold;
-    color: $color-primary-dark;
-  }
-
+  // Coach line stands alone (2026-09-02 PM review): the redundant bubble
+  // header was cut; this is the page's strongest anxiety-reducer, so it
+  // gets body-size prominence instead of caption size.
   &__intro-bubble-text {
     display: block;
-    margin-top: 8rpx;
-    font-size: $font-size-sm;
-    color: $color-text-secondary;
+    font-size: $font-size-md;
+    color: $color-text-primary;
     line-height: $line-height-relaxed;
   }
 
@@ -262,6 +268,21 @@
     &__intro-hero-visual,
     &__start-btn {
       animation: none;
+    }
+  }
+
+  // Short-viewport compression (2026-09-02 PM R1): the archetype icon row
+  // re-added ~88rpx to a page designed to fit one viewport. On ≤700px-tall
+  // phones (iPhone SE class), shrink the hero so the tease card + its
+  // conversion punchline stay above the fixed CTA without scrolling.
+  @media (max-height: 700px) {
+    &__intro-hero-visual {
+      min-height: 200rpx;
+    }
+
+    &__intro-mascot {
+      width: 200rpx;
+      height: 200rpx;
     }
   }
 
@@ -372,6 +393,53 @@
     color: $color-primary;
     line-height: 1.6;
     max-width: 100%;
+  }
+
+  // 12-archetype icon stack (2026-09-02): makes 「氛围命格」 concrete — the
+  // tease card previously had copy only and tested as too abstract. Icons
+  // reuse the bundled subpackage archetype WebPs (zero new package bytes).
+  &__intro-tease-icons {
+    display: flex;
+    align-items: center;
+    margin-top: $spacing-md;
+    padding-left: 8rpx;
+  }
+
+  &__intro-tease-icon {
+    // 60rpx keeps the 12-icon row inside the card: 12×60 − 11×14 + 8 =
+    // 574rpx vs 618rpx available (750 − 80 page − 48 card padding − 4
+    // card borders). 64rpx overflowed the border by 4rpx (2026-09-02 audit).
+    width: 60rpx;
+    height: 60rpx;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba($color-primary, 0.05);
+    border: 2rpx solid $color-surface;
+    box-shadow: 0 4rpx 12rpx rgba($color-text-primary, 0.08);
+    animation: tease-icon-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+
+    & + & {
+      margin-left: -14rpx;
+    }
+
+    @for $i from 1 through 12 {
+      &:nth-child(#{$i}) {
+        z-index: $i;
+        animation-delay: #{0.1 + $i * 0.03}s;
+      }
+    }
+  }
+
+  &__intro-tease-icon-img {
+    width: 100%;
+    height: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__intro-tease-icon {
+      animation: none;
+    }
   }
 
   &__intro-footer {

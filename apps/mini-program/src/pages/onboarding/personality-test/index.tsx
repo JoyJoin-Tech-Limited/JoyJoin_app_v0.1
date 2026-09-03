@@ -38,6 +38,7 @@ import {
 } from '../../../lib/onboarding/onboardingNavigation'
 import { logInfo, logWarn, logError } from '../../../lib/utils/logger'
 import { haptics } from '../../../lib/utils/haptics'
+import { discoverAnalytics } from '../../../lib/analytics/discoverAnalytics'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
 import { triggerXiaoyueAnalysisPrefetch } from './triggerXiaoyueAnalysisPrefetch'
@@ -296,6 +297,19 @@ export default function PersonalityTestPage() {
     },
   })
 
+  // Intro funnel head (2026-09-02): onboarding_intro_viewed fires once per
+  // intro entry so the 12-icon-strip change is measurable against the
+  // pre-strip baseline; personality_test_started fires on the CTA tap
+  // (handleStart). Fail-open fire-and-forget via discoverAnalytics.
+  const introViewTrackedRef = useRef(false)
+  useEffect(() => {
+    if (phase !== 'intro' || auth.isLoading || introViewTrackedRef.current) return
+    introViewTrackedRef.current = true
+    discoverAnalytics.track('onboarding_intro_viewed', undefined, {
+      entryMode: hasStoredIncompleteSession ? 'resume' : 'fresh',
+    })
+  }, [phase, auth.isLoading, hasStoredIncompleteSession])
+
   // R1-3 funnel: mid-test exit (swipe-back / forward nav / app background /
   // unload) fires step_abandoned once per visit; completion marks the guard
   // so the results-page navigation never false-positives.
@@ -468,6 +482,9 @@ export default function PersonalityTestPage() {
 
   const handleStart = useCallback(async () => {
     haptics('medium')
+    discoverAnalytics.track('personality_test_started', undefined, {
+      entryMode: hasStoredIncompleteSession ? 'resume' : 'fresh',
+    })
     setError('')
     setIsSubmitting(true)
     try {
@@ -606,6 +623,7 @@ export default function PersonalityTestPage() {
   }, [
     analytics,
     currentMatches,
+    hasStoredIncompleteSession,
     isAuthenticated,
     markTestCompleted,
   ])
