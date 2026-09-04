@@ -176,7 +176,7 @@ export function AdminUserDetailSheet({
                           {fmtDate(userDetail.user.createdAt)}
                         </p>
                       </div>
-                      {userDetail.user.archetype && (
+                      {(userDetail.user.primaryArchetype || userDetail.user.archetype) && (
                         <div>
                           <p className="text-xs text-muted-foreground">社交原型</p>
                           {(() => {
@@ -187,7 +187,7 @@ export function AdminUserDetailSheet({
                                 color: style.color,
                                 borderColor: style.borderColor,
                               } : undefined}>
-                                {userDetail.user.archetype}
+                                {userDetail.user.primaryArchetype || userDetail.user.archetype}
                               </Badge>
                             );
                           })()}
@@ -266,7 +266,7 @@ export function AdminUserDetailSheet({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {userDetail.user.archetype ? (
+                    {(userDetail.user.primaryArchetype || userDetail.user.archetype) ? (
                       <div className="flex items-center gap-2">
                         {(() => {
                           const style = getArchetypeBadgeStyle(userDetail.user.primaryArchetype || userDetail.user.archetype);
@@ -276,7 +276,7 @@ export function AdminUserDetailSheet({
                               color: style.color,
                               borderColor: style.borderColor,
                             } : undefined}>
-                              {userDetail.user.archetype}
+                              {userDetail.user.primaryArchetype || userDetail.user.archetype}
                             </Badge>
                           );
                         })()}
