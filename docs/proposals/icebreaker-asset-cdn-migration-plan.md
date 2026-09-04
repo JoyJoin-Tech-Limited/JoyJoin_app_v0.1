@@ -145,7 +145,7 @@ Currently 3 expressions are bundled (`loading-system`, `coach-guide`, `home-welc
 
 - For CDN-only assets, ensure a non-asset fallback: solid color background, placeholder icon, or cached previous load.
 - `JoyJoinIcon` already has a 4-tier fallback chain ending in native emoji for icon tiers.
-- `XiaoyueSpriteAnimator` already falls back to bundled core states for mascot sprites.
+- (Superseded 2026-09-03: `XiaoyueSpriteAnimator` and all mascot sprite sheets were deleted.) Historical: `XiaoyueSpriteAnimator` already falls back to bundled core states for mascot sprites.
 - Add a runtime metric / analytics event for CDN asset load failures so we can detect regressions.
 
 ### 4.5 Success metrics

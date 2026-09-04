@@ -19,7 +19,7 @@
 
 ## Assets
 
-- WebP everywhere, CDN-primary with local fallback (`lib/utils/cdnAssets.ts`); 6 core Xiaoyue states bundled (~16-65KB each), 14 CDN-first (`XiaoyueSpriteAnimator.tsx:111-119`). Fonts: 66KB subset bundled + 621KB full from CDN (500ms defer), Quicksand bundled; loaded at launch (`app.ts:177`).
+- WebP everywhere, CDN-primary with local fallback (`lib/utils/cdnAssets.ts`); mascot sprite sheets are gone (2026-09-03) — static expression WebP only, `xiaoyue-home-welcome`/`xiaoyue-loading-system` bundled as fallbacks. Fonts: 66KB subset bundled + 621KB full from CDN (500ms defer), Quicksand bundled; loaded at launch (`app.ts:177`).
 - Avatar compositing is layered `<Image>` stacking (`profile/PixelAvatarComposite.tsx:187,206`), not canvas — WeChat caches decoded images per URL.
 - **Preload discipline is strong:** app-critical (animated WebP intro is iOS-can't-bundle, `lib/utils/routePreloadAssets.ts:31-40`), route-level per tab, predictive cross-tab, staggered tiers 0/400/1200ms (`onboardingPreload.ts`), gated by network (2g skip) and device (`benchmarkLevel < 20` skip, `lib/prefetchEngine.ts:46-47,211-229`). Persistent file cache in `wx.env.USER_DATA_PATH` with versioned djb2 keys (`lib/utils/persistentAssetCache.ts:25-60`) — repeat visitors fetch zero network.
 - Risk: **cold-start fan-out** — launch fires font load + CDN preloads + onboarding tiers + AuthProvider bootstrap + AutoLoginBridge simultaneously (~10+ parallel ops; `app.ts:153-188`). Serialize tier 1 to 2-3 at a time (`preloadImages` already has a concurrency param, `lib/utils/imagePreload.ts:80-108`).
