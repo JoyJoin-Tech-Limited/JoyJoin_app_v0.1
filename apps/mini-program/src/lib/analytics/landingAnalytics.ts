@@ -5,7 +5,6 @@ export type LandingEventType =
   | 'landing_cta_tap'
   | 'landing_hero_asset'
   | 'landing_dwell'
-  | 'landing_mechanism_replay'
   | 'landing_logged_out_login_tap'
 
 export type LandingCtaType = 'new' | 'continue' | 'discover' | 'loggedOut'
@@ -82,12 +81,6 @@ class LandingAnalytics {
       exit_action: props.exitAction,
       cta_type_shown: props.ctaTypeShown,
       landing_variant: props.landingVariant,
-    })
-  }
-
-  trackMechanismReplay(props: { dwellMs: number }): void {
-    this.track('landing_mechanism_replay', {
-      dwell_ms: props.dwellMs,
     })
   }
 

@@ -20,7 +20,6 @@ import { getSystemReducedMotion } from "../../lib/utils/accessibility"
 import { getWindowInfoCompat } from "../../lib/utils/systemInfo"
 import { getErrorForSurface } from "@shared/copy/errorBaselines"
 import { logInfo, logWarn } from "../../lib/utils/logger"
-import { computeBurstOffsets, type BurstOffset, type BurstRect } from "./mechanismBurst"
 import "./index.scss"
 
 /**
@@ -96,33 +95,21 @@ function persistLegalAccepted(): void {
 }
 
 /**
- * E3 盒子吐卡 (mechanism-first landing, 2026-07-31): six canonical archetype
- * grid heads burst out of the box mouth and land as a "table row" strip,
- * enacting 答题 → 攒一桌 → 线下见 instead of telling it. The set is fixed
- * (not rotated) so screenshot review + the asset-check gate stay stable.
- * Grid heads are bundled locally (pool-registration seats) — zero new
- * package weight; the strip pin reuses the already-fetched CDN sprite.
- */
-const MECHANISM_HEADS = ['corgi', 'fox', 'rooster', 'koala', 'cat', 'dolphin_calm'] as const
-
-const MAP_PIN_SPRITE_SRC = HERO_SPRITES.find((s) => s.key === 'map-pin')!.src
-
-/**
  * Phase 2 archetype bubble constellation (variant B, 2026-09-03 redesign).
  * Five FIXED sky positions inside the hero stage (deterministic — never
- * randomized — for screenshot-review stability, same principle as
- * MECHANISM_HEADS). Contents are canon grid-variant heads ONLY (the
- * pixel-avatar mix was deferred pending screenshots); the grid heads are
- * already bundled for pool-registration seats, so the bubbles add zero
- * package weight. The set complements MECHANISM_HEADS (different species)
- * so sky + strip together show 11 of the 12 archetypes.
+ * randomized — for screenshot-review stability). Contents are canon
+ * grid-variant heads ONLY (the pixel-avatar mix was deferred pending
+ * screenshots); the grid heads are already bundled for pool-registration
+ * seats, so the bubbles add zero package weight. The set complements the
+ * archetypes already present in the hero artwork (the E3 mechanism strip
+ * below the hero was removed 2026-09-03 — it duplicated this constellation).
  * size = ArchetypeHead rpx size inside the luminous disc (disc is +16rpx).
  */
 const BUBBLE_HEADS = [
   { key: 'owl', size: 80 },            // B1: left 200 top 24,  disc 96
   { key: 'elephant', size: 96 },       // B2: left 360 top 64,  disc 112
   { key: 'octopus', size: 72 },        // B3: left 480 top 144, disc 88
-  { key: 'turtle', size: 80 },         // B4: left 640 top 128, disc 96
+  { key: 'turtle', size: 80 },         // B4: left 624 top 128, disc 96
   { key: 'hamster_praise', size: 72 }, // B5: left 280 top 152, disc 88
 ] as const
 
@@ -193,15 +180,12 @@ export default function MiniProgramLandingPage({
   const router = useRouter()
   const invitationCode = router.params.invitationCode ?? ''
   // Post-logout re-auth entry (?auth=logout|expired): welcome-back copy,
-  // single login CTA, mechanism rendered settled (no burst — the mechanism
-  // explains the product to NEW users; returning users already know it).
+  // single login CTA, and a settled scene (returning users already know
+  // the product — no acquisition choreography).
   const loggedOutMode: LoggedOutMode | null =
     router.params.auth === 'logout' || router.params.auth === 'expired'
       ? router.params.auth
       : null
-  // Dev/screenshot review: ?freeze=burst pins the heads at the box mouth
-  // (mid-burst state) so H5 capture can review the choreography frozen.
-  const freezeBurst = router.params.freeze === 'burst'
   // Legal consent starts checked for anyone who has accepted before
   // (persisted) and for every post-logout re-auth entry — a returning user
   // re-logging in has already consented; only brand-new guests must tick.
@@ -232,14 +216,6 @@ export default function MiniProgramLandingPage({
   const [reduceMotion] = useState(() => getSystemReducedMotion())
   const isMounted = useStaggerMount()
   const { isDegradation } = useDeviceTier()
-  // E3 burst: per-seat "from" offsets (box mouth → seat) measured at runtime.
-  // null = not measured / measurement failed (heads then fade in place via
-  // the --settled class). burstSettled flips the seats from the inline
-  // from-transform to identity through the CSS transition.
-  const [burstFrom, setBurstFrom] = useState<ReadonlyArray<BurstOffset> | null>(null)
-  const [burstSettled, setBurstSettled] = useState(false)
-  const burstSeqRef = useRef(0)
-  const burstTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([])
 
   const { handleWeChatLogin, isLoggingIn } = useWeChatLogin({
     referralCode: invitationCode || undefined,
@@ -285,94 +261,8 @@ export default function MiniProgramLandingPage({
       if (navSafetyTimeoutRef.current) {
         clearTimeout(navSafetyTimeoutRef.current)
       }
-      burstTimersRef.current.forEach((timer) => clearTimeout(timer))
     }
   }, [])
-
-  // E3 盒子吐卡: measure the box-mouth anchor + seat rects once the entrance
-  // settles, then hand the flight to a CSS transition (inline "from"
-  // transform → identity). Runs on the --entered clock; RM/low-end tiers
-  // never measure (their CSS renders the settled composition statically).
-  // boundingClientRect returns post-transform coordinates, so the --mid /
-  // --short stage scales are handled for free.
-  const mechanismAnimated = !reduceMotion && !isDegradation && !loggedOutMode
-
-  const measureMechanismBurst = async (mode: 'settle' | 'freeze') => {
-    const seq = ++burstSeqRef.current
-    try {
-      const [mouth, seats] = await new Promise<[
-        BurstRect | null,
-        BurstRect[] | null,
-      ]>((resolve) => {
-        Taro.createSelectorQuery()
-          .select('#box-mouth-anchor')
-          .boundingClientRect()
-          .selectAll('.mechanism-strip__seat')
-          .boundingClientRect()
-          .exec((res) => {
-            resolve([
-              (res?.[0] as BurstRect) ?? null,
-              (res?.[1] as BurstRect[]) ?? null,
-            ])
-          })
-      })
-      if (!mouth || !seats || seats.length === 0) {
-        throw new Error('mechanism rects unavailable')
-      }
-      const from = computeBurstOffsets(mouth, seats)
-      if (seq !== burstSeqRef.current) return
-      setBurstFrom(from)
-      setBurstSettled(false)
-      if (mode === 'settle') {
-        const timer = setTimeout(() => {
-          if (seq === burstSeqRef.current) setBurstSettled(true)
-        }, 80)
-        burstTimersRef.current.push(timer)
-      }
-    } catch (err) {
-      if (seq !== burstSeqRef.current) return
-      logWarn('[LandingPage] mechanism measure failed; fading heads in place', {
-        error: err instanceof Error ? err.message : String(err),
-      })
-      setBurstFrom(null)
-      setBurstSettled(true)
-    }
-  }
-
-  // Tap-the-box replay: heads fly back into the mouth (transition reverses
-  // to the cached from-offsets) and burst again. User-triggered, so it is
-  // free under the passive-time budget.
-  const handleMechanismReplay = () => {
-    if (!mechanismAnimated || freezeBurst || !burstSettled || !burstFrom) return
-    hapticLight()
-    landingAnalytics.trackMechanismReplay({
-      dwellMs: Date.now() - mountedAtRef.current,
-    })
-    setBurstSettled(false)
-    const timer = setTimeout(() => setBurstSettled(true), 620)
-    burstTimersRef.current.push(timer)
-  }
-
-  useEffect(() => {
-    if (!isMounted || heroState !== 'ready' || !mechanismAnimated) return
-    // Variant B: hold the burst until the bubble field settles (pops done
-    // ~700ms, paths drawn ~950ms) so the two choreographies never fight —
-    // the field settles BEFORE the burst, extending the entrance to ~1.6s.
-    const measureDelayMs = landingVariant === 'b' ? 880 : 520
-    const timer = setTimeout(() => {
-      void measureMechanismBurst(freezeBurst ? 'freeze' : 'settle')
-    }, measureDelayMs)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMounted, heroState, mechanismAnimated, freezeBurst, landingVariant])
-
-  // Hero fallback swaps the box for the bundled mascot — the "out of the
-  // box" metaphor no longer reads, so settle the strip immediately (heads
-  // fade in place) instead of leaving it hidden forever. Skipped under
-  // freeze=burst so the review frame stays frozen.
-  useEffect(() => {
-    if (heroState === 'fallback' && !freezeBurst) setBurstSettled(true)
-  }, [heroState, freezeBurst])
 
   const hapticLight = () => {
     try {
@@ -410,7 +300,6 @@ export default function MiniProgramLandingPage({
     isDegradation ? "landing-page--low-end" : "",
     reduceMotion ? "landing-page--rm" : "",
     loggedOutMode ? "landing-page--logged-out" : "",
-    landingVariant === 'b' ? "landing-page--variant-b" : "",
     isMounted ? "landing-page--entered" : "",
   ]
     .filter(Boolean)
@@ -557,7 +446,6 @@ export default function MiniProgramLandingPage({
       if (heroStateRef.current !== 'loading') return
       heroStateRef.current = 'fallback'
       setHeroState('fallback')
-      setBurstSettled(true)
       landingAnalytics.trackHeroAsset({
         asset: 'hero-box-xiaoyue-dusk',
         result: 'timeout',
@@ -769,22 +657,18 @@ export default function MiniProgramLandingPage({
           <BrandLogo size='md' className='landing-page__brand-logo' />
         </View>
 
-        {/* Hero stage: glowing blind box + peeking Xiaoyue + floating elements.
-            Tapping the stage replays the E3 burst (user-triggered delight). */}
+        {/* Hero stage: glowing blind box + peeking Xiaoyue + floating elements. */}
         <View className='hero-zone'>
-          <View className='hero-stage' onClick={handleMechanismReplay}>
+          <View className='hero-stage'>
             <View className='hero-stage__scale'>
               {/* z0: Dusk horizon wash (P2 warm palette band) */}
               <View className='hero-stage__dusk-wash' aria-hidden='true' />
 
-              {/* Zero-size anchor at the box mouth — the E3 burst measures
-                  this at runtime instead of hardcoding rpx coordinates. */}
-              <View id='box-mouth-anchor' className='hero-stage__box-mouth-anchor' aria-hidden='true' />
               <View className='hero-stage__halo' aria-hidden='true'>
                 <View className='hero-stage__halo-core' />
               </View>
 
-              {/* z2: Warm glow bridge (P2 — hero to mechanism strip) */}
+              {/* z2: Warm glow bridge (P2 — hero down to the copy zone) */}
               <View className='hero-stage__glow-bridge' aria-hidden='true' />
 
               <View className='hero-stage__particles' aria-hidden='true'>
@@ -882,55 +766,6 @@ export default function MiniProgramLandingPage({
           </View>
         </View>
 
-        {/* E3 mechanism strip: the box "deals" a table — six archetype seats
-            burst from the box mouth into a row, then a connector draws to the
-            destination pin. Settled state is a legible static composition. */}
-        <View
-          className={`mechanism-strip${burstSettled ? ' mechanism-strip--settled' : ''}`}
-          aria-hidden='true'
-        >
-          <View className='mechanism-strip__seats'>
-            {MECHANISM_HEADS.map((key, index) => {
-              const from = !burstSettled && burstFrom ? burstFrom[index] : undefined
-              const seatStyle: Record<string, string> = {}
-              if (from) {
-                seatStyle.transform = `translate(${from.dx}px, ${from.dy}px) scale(0.3)`
-                // freeze=burst is a review frame: keep the frozen heads
-                // visible at the mouth (otherwise the capture shows an
-                // empty strip).
-                seatStyle.opacity = freezeBurst ? '1' : '0'
-              }
-              return (
-                <View key={key} className='mechanism-strip__seat' style={seatStyle}>
-                  {/* className sizing (SCSS) wins over ArchetypeHead's inline
-                      rpx, which the H5 preview drops (BrandLogo pattern). */}
-                  <ArchetypeHead
-                    archetype={key}
-                    size={isShortScreen ? 48 : isMidScreen ? 72 : 80}
-                    variant='grid'
-                    fallback='none'
-                    className='mechanism-strip__head'
-                  />
-                </View>
-              )
-            })}
-          </View>
-          <View className='mechanism-strip__connector' />
-          {!failedSprites.has('map-pin') && (
-            <Image
-              className='mechanism-strip__pin'
-              src={MAP_PIN_SPRITE_SRC}
-              mode='aspectFit'
-              lazyLoad={false}
-            />
-          )}
-        </View>
-        {!loggedOutMode && (
-          <Text className='mechanism-caption' aria-hidden='true'>
-            ① 答小题 · ② 攒一桌 · ③ 见真人
-          </Text>
-        )}
-
         {/* Copy: mystery headline + one-line mechanism. The subtitle's three
             beats carry the E2 gold-underline cascade (drawn in sequence).
             loggedOut: welcome-back script — the city remembers you; no
@@ -958,8 +793,10 @@ export default function MiniProgramLandingPage({
         </View>
 
         {/* Dynamic spacer: collapses on short phones (<700px → null) so the
-            fixed CTA stays reachable; mid tier keeps a slimmer 24rpx gap. */}
-        <ResponsiveSpacer heightRpx={isMidScreen ? 24 : 64} collapseBelow={700} />
+            fixed CTA stays reachable; mid tier keeps a slimmer gap. The
+            freed strip/caption space (2026-09-03) is redistributed here so
+            the copy never floats in a void above the CTA. */}
+        <ResponsiveSpacer heightRpx={isMidScreen ? 48 : 96} collapseBelow={700} />
       </View>
 
       {/* CTA */}

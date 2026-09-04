@@ -46,7 +46,7 @@
 
 /* ── Brand Watermark ───────────────────────────────────────────────── */
 .brand-mark {
-  padding-top: 24rpx;
+  padding-top: 32rpx;
   opacity: 0; // revealed by --entered fade
   flex-shrink: 0;
 }
@@ -61,7 +61,7 @@
 /* ── Hero Stage ────────────────────────────────────────────────────── */
 .hero-zone {
   width: 100%;
-  height: 704rpx;
+  height: 744rpx;
   margin-top: 16rpx;
   position: relative;
   flex-shrink: 0;
@@ -79,6 +79,11 @@
   position: relative;
   width: 100%;
   height: 100%;
+  // Default tier grows the stage 5% (anchored bottom) to absorb the space
+  // freed by the removed mechanism strip (2026-09-03); --mid/--short
+  // override with their own compaction scales below.
+  transform: scale(1.05);
+  transform-origin: center bottom;
 }
 
 /* Golden halo — two stacked radial-gradient layers (no filter/blur, which
@@ -290,7 +295,7 @@
   }
 }
 
-/* z2: Warm glow bridge (very subtle — connects hero to mechanism strip) */
+/* z2: Warm glow bridge (very subtle — connects hero down to the copy zone) */
 .hero-stage__glow-bridge {
   position: absolute;
   left: 96rpx;
@@ -335,25 +340,12 @@
   image-rendering: -webkit-optimize-contrast;
 }
 
-/* ── Copy ──────────────────────────────────────────────────────────── */
-/* E3 盒子吐卡 (2026-07-31): zero-size runtime anchor at the box mouth.
-   The burst measures this via createSelectorQuery instead of hardcoding
-   coordinates, so the --mid / --short stage scales resolve for free. */
-.hero-stage__box-mouth-anchor {
-  position: absolute;
-  left: 50%;
-  top: 400rpx;
-  width: 2rpx;
-  height: 2rpx;
-  pointer-events: none;
-}
-
 /* ── Phase 2: Archetype bubble constellation (variant B, 2026-09-03) ──
    Five FIXED sky positions (deterministic, screenshot-review stable)
    carrying canon grid heads that are already bundled — zero new package
-   weight. The luminous-disc recipe reuses the mechanism seat treatment
-   with the white core raised to 0.65 so bubbles read against the busy
-   skyline. Ambient context: capped at 70% opacity so the field never
+   weight. The luminous-disc recipe (soft white/cream core raised to 0.65,
+   hairline brand ring, soft drop shadow) keeps the bubbles reading against
+   the busy skyline. Ambient context: capped at 70% opacity so the field never
    competes with the box (focal hierarchy). Decorative only — the whole
    field is aria-hidden + pointer-events none. Lives inside __scale so
    the --mid/--short stage scale keeps everything aligned with the box
@@ -372,7 +364,8 @@
   justify-content: center;
   opacity: 0; // revealed by bubble-pop (or statically in RM/low-end/logged-out)
 
-  // Luminous disc: mechanism-strip__seat::before recipe, white core 0.5→0.65.
+  // Luminous disc: soft white/cream glow + faint warm-gold echo of the
+  // box's light path, a hairline brand ring, and a soft drop shadow.
   &::before {
     content: '';
     position: absolute;
@@ -390,13 +383,15 @@
   &--1 { left: 200rpx; top: 24rpx; width: 96rpx; height: 96rpx; }
   &--2 { left: 360rpx; top: 64rpx; width: 112rpx; height: 112rpx; }
   &--3 { left: 480rpx; top: 144rpx; width: 88rpx; height: 88rpx; }
-  &--4 { left: 640rpx; top: 128rpx; width: 96rpx; height: 96rpx; }
+  // B4 nudged 640 → 624 (2026-09-03) so the default-tier 1.05 stage scale
+  // keeps the disc's hairline ring inside the 750rpx canvas.
+  &--4 { left: 624rpx; top: 128rpx; width: 96rpx; height: 96rpx; }
   &--5 { left: 280rpx; top: 152rpx; width: 88rpx; height: 88rpx; }
 }
 
 // ArchetypeHead sizes itself via inline rpx (dropped by the H5 preview);
 // the !important SCSS classes win in every runtime, and the inner image is
-// pinned to the circle for the same reason (mechanism-strip__head pattern).
+// pinned to the circle for the same reason.
 .bubble-field__head {
   .archetype-head__image {
     width: 100% !important;
@@ -425,9 +420,9 @@
    converging on the box mouth (375, 400) + ONE bubble-to-bubble link
    (--6, B2–B5 — the closest pair). Diagonals are rotated wrapper Views
    with PRE-COMPUTED angles (no SVG, no background-image data-URIs, no
-   dynamic CSS custom properties); the inner line reuses the
-   mechanism-strip connector vocabulary and the shared connector-draw
-   keyframe (scaleX 0→1 from the bubble end toward the mouth). */
+   dynamic CSS custom properties); the inner line is a dotted gold stroke
+   revealed by the shared connector-draw keyframe (scaleX 0→1 from the
+   bubble end toward the mouth). */
 .bubble-field__paths {
   position: absolute;
   inset: 0;
@@ -445,8 +440,8 @@
   &--2 { left: 416rpx; top: 120rpx; width: 284rpx; transform: rotate(98deg); }
   // B3 (524, 188) → mouth: 260rpx @ 125deg
   &--3 { left: 524rpx; top: 188rpx; width: 260rpx; transform: rotate(125deg); }
-  // B4 (688, 176) → mouth: 384rpx @ 144deg
-  &--4 { left: 688rpx; top: 176rpx; width: 384rpx; transform: rotate(144deg); }
+  // B4 (672, 176) → mouth: 372rpx @ 144deg
+  &--4 { left: 672rpx; top: 176rpx; width: 372rpx; transform: rotate(144deg); }
   // B5 (324, 196) → mouth: 212rpx @ 76deg
   &--5 { left: 324rpx; top: 196rpx; width: 212rpx; transform: rotate(76deg); }
   // Link B2 (416, 120) → B5 (324, 196): 120rpx @ 140deg
@@ -477,171 +472,9 @@
   pointer-events: none;
 }
 
-/* Mechanism strip: six archetype seats the box "deals" out, a dotted
-   connector, and the destination pin. Sits between hero-zone and hero-text
-   so the burst flight is a clean ~300rpx drop in front of the box. */
-.mechanism-strip {
-  width: 100%;
-  height: 120rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  position: relative;
-  pointer-events: none;
-}
-
-.mechanism-strip__seats {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  position: relative;
-}
-
-/* Grounding ellipse under the whole row — opacity-only entrance with the
-   settle (no layout-triggering properties). Sits below the seats via the
-   seats' z-index: 1. */
-.mechanism-strip__seats::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -12rpx;
-  width: 560rpx;
-  height: 20rpx;
-  transform: translateX(-50%);
-  background: radial-gradient(ellipse at center, rgba($color-text-primary-warm, 0.14) 0%, rgba($color-text-primary-warm, 0) 70%);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.mechanism-strip__seat {
-  width: 88rpx;
-  height: 88rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 1;
-  opacity: 0; // revealed by the burst settle (or statically in RM/low-end)
-  // The transition lives on the BASE rule so the tap-replay fly-back
-  // (removing --settled) animates back to the box mouth instead of
-  // teleporting. The initial from-application is invisible either way
-  // (seats are opacity 0 until settled).
-  transition:
-    transform 460ms cubic-bezier(0.34, 1.4, 0.64, 1),
-    opacity 240ms ease-out;
-
-  /* Luminous disc behind the head: soft white/cream glow + faint warm-gold
-     echo of the box's light path, a hairline brand ring, and a soft drop
-     shadow for lift. Pure backdrop — inherits the seat's opacity, so the
-     burst settle reveals disc + head together. */
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    box-sizing: border-box;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, rgba($color-landed-gold, 0.10) 58%, rgba(255, 255, 255, 0) 75%);
-    border: 1rpx solid rgba($color-primary, 0.14);
-    box-shadow: 0 8rpx 18rpx rgba($color-primary, 0.10);
-  }
-}
-
-// ArchetypeHead sizes itself via inline rpx (dropped by the H5 preview);
-// the !important SCSS class wins over the inline style in every runtime,
-// and the inner image is pinned to the circle for the same reason.
-.mechanism-strip__head {
-  width: 80rpx !important;
-  height: 80rpx !important;
-
-  .archetype-head__image {
-    width: 100% !important;
-    height: 100% !important;
-  }
-}
-
-/* Settle: inline from-transform (box mouth) → identity, staggered 40ms
-   (delays apply only while settled; the fly-back is unstaggered). */
-.mechanism-strip--settled .mechanism-strip__seat {
-  opacity: 1;
-  animation: seat-bob 4s ease-in-out 2s infinite;
-}
-
-.mechanism-strip--settled .mechanism-strip__seat:nth-child(1) { transition-delay: 0ms; animation-delay: 2s; }
-.mechanism-strip--settled .mechanism-strip__seat:nth-child(2) { transition-delay: 40ms; animation-delay: 2.3s; }
-.mechanism-strip--settled .mechanism-strip__seat:nth-child(3) { transition-delay: 80ms; animation-delay: 2.6s; }
-.mechanism-strip--settled .mechanism-strip__seat:nth-child(4) { transition-delay: 120ms; animation-delay: 2.9s; }
-.mechanism-strip--settled .mechanism-strip__seat:nth-child(5) { transition-delay: 160ms; animation-delay: 3.2s; }
-.mechanism-strip--settled .mechanism-strip__seat:nth-child(6) { transition-delay: 200ms; animation-delay: 3.5s; }
-
-.mechanism-strip__connector {
-  width: 64rpx;
-  height: 0;
-  // Glowing gold connector — a visible light path from the table to the
-  // destination pin, echoing the box's glow (narrative refinement 2026-09-03).
-  // No CSS filter property — WeChat handles it unreliably. The glow comes
-  // from the brighter border color alone (kept simple for runtime safety).
-  border-top: 3rpx dotted rgba($color-landed-gold, 0.75);
-  margin: 0 12rpx;
-  flex-shrink: 0;
-  opacity: 0;
-  transform: scaleX(0);
-  transform-origin: left center;
-}
-
-.mechanism-strip__pin {
-  width: 64rpx;
-  height: 64rpx;
-  flex-shrink: 0;
-  opacity: 0;
-  transform: scale(0.5);
-  image-rendering: -webkit-optimize-contrast;
-}
-
-.mechanism-caption {
-  font-size: 22rpx;
-  color: rgba($color-text-primary-warm, 0.65);
-  line-height: 1.4;
-  margin-top: 2rpx;
-  text-align: center;
-  white-space: nowrap;
-  flex-shrink: 0;
-  opacity: 0; // revealed by --entered caption fade
-}
-
-.landing-page--entered .mechanism-strip__connector {
-  animation: connector-draw 220ms ease-out 1180ms both;
-}
-
-/* Grounding ellipse fades in right as the seats land (opacity only). */
-.landing-page--entered .mechanism-strip__seats::after {
-  animation: landing-rm-fade 400ms cubic-bezier(0.22, 1, 0.36, 1) 1300ms both;
-}
-
-.landing-page--entered .mechanism-strip__pin {
-  animation: pin-pop 300ms cubic-bezier(0.34, 1.3, 0.64, 1) 1240ms both;
-}
-
-.landing-page--entered .mechanism-caption {
-  animation: landing-rm-fade 320ms ease-out 1280ms both;
-}
-
 @keyframes connector-draw {
   from { opacity: 0; transform: scaleX(0); }
   to { opacity: 1; transform: scaleX(1); }
-}
-
-@keyframes pin-pop {
-  from { opacity: 0; transform: scale(0.5); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes seat-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4rpx); }
 }
 
 @keyframes box-shake {
@@ -655,18 +488,13 @@
   to { opacity: 0.55; transform: scaleX(1) rotate(-1deg); }
 }
 
-@keyframes mechanism-seat-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
 /* ── Copy ──────────────────────────────────────────────────────────── */
 .hero-text {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-top: 24rpx;
+  margin-top: 32rpx;
   padding: 0 $container-padding;
   flex-shrink: 0;
 }
@@ -782,41 +610,45 @@
 // 4c. Bubble constellation (variant B): pops in FIRST (90ms stagger from
 //     100ms), then the paths draw toward the box mouth (180ms each, 50ms
 //     stagger from 520ms; the B2–B5 link draws last). The field is fully
-//     settled by ~950ms — BEFORE the E3 burst (measure delayed to 880ms in
-//     LandingPage.tsx), extending the entrance to ~1.6s. Entrance easing
+//     settled by ~950ms. Entrance easing
 //     cubic-bezier(0.22, 1, 0.36, 1); idle drift is combined here with
-//     negative delays (HeroPromoBanner sparkle pattern; default tier only
+//     phase-staggered positive delays (default tier only
 //     — --low-end / --rm / --logged-out override with a static field).
 //     Drift effective starts (0.8–2.0s) all land AFTER the last pop
 //     (740ms) so the loop never overrides the pop-in transform.
+//     NOTE (2026-09-03 fix): an animation shorthand may carry only TWO
+//     <time> values — the previous `2.0s -1.2s` three-time form was
+//     invalid CSS, so spec-compliant engines dropped the WHOLE animation
+//     and the bubbles stayed at opacity 0 forever. Delays below are the
+//     intended effective starts (2.0s + the old negative offset).
 .landing-page--entered .bubble-field__bubble--1 {
   animation:
     bubble-pop 280ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both,
-    bubble-drift 5.6s ease-in-out 2.0s -1.2s infinite;
+    bubble-drift 5.6s ease-in-out 0.8s infinite;
 }
 
 .landing-page--entered .bubble-field__bubble--2 {
   animation:
     bubble-pop 280ms cubic-bezier(0.22, 1, 0.36, 1) 190ms both,
-    bubble-drift 6.4s ease-in-out 2.0s -0.6s infinite;
+    bubble-drift 6.4s ease-in-out 1.4s infinite;
 }
 
 .landing-page--entered .bubble-field__bubble--3 {
   animation:
     bubble-pop 280ms cubic-bezier(0.22, 1, 0.36, 1) 280ms both,
-    bubble-drift 5.2s ease-in-out 2.0s 0s infinite;
+    bubble-drift 5.2s ease-in-out 2.0s infinite;
 }
 
 .landing-page--entered .bubble-field__bubble--4 {
   animation:
     bubble-pop 280ms cubic-bezier(0.22, 1, 0.36, 1) 370ms both,
-    bubble-drift 6.8s ease-in-out 2.0s -0.9s infinite;
+    bubble-drift 6.8s ease-in-out 1.1s infinite;
 }
 
 .landing-page--entered .bubble-field__bubble--5 {
   animation:
     bubble-pop 280ms cubic-bezier(0.22, 1, 0.36, 1) 460ms both,
-    bubble-drift 6.0s ease-in-out 2.0s -0.3s infinite;
+    bubble-drift 6.0s ease-in-out 1.7s infinite;
 }
 
 .landing-page--entered .bubble-field__path--1 .bubble-field__path-line {
@@ -847,26 +679,6 @@
   animation: mote-travel 12s ease-in-out 3.2s infinite;
 }
 
-/* Variant B strip timing: the bubble field settles (~950ms) before the E3
-   burst (seats land ~1.6s), so the strip's connector/pin/caption/grounding
-   shift later to stay after the seat settle. Variant A keeps the base
-   1180–1300ms timings above. */
-.landing-page--variant-b.landing-page--entered .mechanism-strip__connector {
-  animation-delay: 1560ms;
-}
-
-.landing-page--variant-b.landing-page--entered .mechanism-strip__pin {
-  animation-delay: 1620ms;
-}
-
-.landing-page--variant-b.landing-page--entered .mechanism-strip__seats::after {
-  animation-delay: 1660ms;
-}
-
-.landing-page--variant-b.landing-page--entered .mechanism-caption {
-  animation-delay: 1660ms;
-}
-
 // 4b. Dusk wash fades in, glow bridge blooms.
 .landing-page--entered .hero-stage__dusk-wash {
   animation: dusk-wash-in 400ms ease-out 0ms both;
@@ -877,40 +689,43 @@
 }
 
 /* ── Idle loops (subtle, desynchronized) ─────────────────────────── */
+// Delays are the intended effective starts (2026-09-03 fix): the previous
+// `1.5s -0.6s`-style three-time shorthands are invalid CSS — engines dropped
+// the whole animation declaration, silently killing every idle float below.
 .landing-page--entered .hero-stage__sprite--cards {
   animation:
     sprite-in-cards 300ms cubic-bezier(0.22, 1, 0.36, 1) 480ms both,
-    float-cards 3.2s ease-in-out 1.5s -0.6s infinite;
+    float-cards 3.2s ease-in-out 0.9s infinite;
 }
 
 .landing-page--entered .hero-stage__sprite--map-pin {
   animation:
     sprite-in-pin 300ms cubic-bezier(0.22, 1, 0.36, 1) 550ms both,
-    float-pin 4.3s ease-in-out 1.5s -1.4s infinite;
+    float-pin 4.3s ease-in-out 0.1s infinite;
 }
 
 .landing-page--entered .hero-stage__sprite--dice {
   animation:
     sprite-in-dice 300ms cubic-bezier(0.22, 1, 0.36, 1) 620ms both,
-    float-dice 3.7s ease-in-out 1.5s -0.2s infinite;
+    float-dice 3.7s ease-in-out 1.3s infinite;
 }
 
 .landing-page--entered .hero-stage__sprite--glass {
   animation:
     sprite-in-glass 300ms cubic-bezier(0.22, 1, 0.36, 1) 690ms both,
-    float-glass 4.8s ease-in-out 1.5s -2.1s infinite;
+    float-glass 4.8s ease-in-out 4.2s infinite;
 }
 
 .landing-page--entered .hero-stage__glow-bridge {
   animation:
     glow-bridge-in 380ms ease-out 300ms both,
-    pulse-glow-bridge 5.2s ease-in-out 1.5s -0.8s infinite;
+    pulse-glow-bridge 5.2s ease-in-out 0.7s infinite;
 }
 
 .landing-page--entered .hero-stage__dusk-wash {
   animation:
     dusk-wash-in 400ms ease-out 0ms both,
-    breathe-dusk-wash 6.0s ease-in-out 1.5s 0s infinite;
+    breathe-dusk-wash 6.0s ease-in-out 1.5s infinite;
 }
 
 // 5. Particles rise (idle loop, self-staggered by delay).
@@ -1450,8 +1265,6 @@
 // animation:none drops the entrance fill state so the fade-out can take over.
 .landing-page--exiting .brand-mark,
 .landing-page--exiting .hero-zone,
-.landing-page--exiting .mechanism-strip,
-.landing-page--exiting .mechanism-caption,
 .landing-page--exiting .hero-text,
 .landing-page--exiting .bottom-zone {
   animation: none;
@@ -1627,16 +1440,16 @@
 // Covers iPhone 12/13/14, 11 Pro, 12 mini, XR/11, Pro Max. WeChat's
 // windowHeight EXCLUDES the default nav bar (this page has no
 // navigationStyle:'custom'), so the usable budget is ~1448–1475rpx, NOT
-// the ~1560–1623rpx full-screen figure. This tier totals ~1444rpx.
+// the ~1560–1623rpx full-screen figure. This tier totals ~1435rpx.
 .landing-page--mid {
   // Page-level backdrop covers the upper ~61% of the ~1450rpx composition;
-  // the bottom fade completes just under the mechanism caption (~834rpx).
+  // the bottom fade completes just under the hero copy (~856rpx).
   .landing-page__backdrop {
     height: 888rpx;
   }
 
   .brand-mark {
-    padding-top: 16rpx;
+    padding-top: 24rpx;
   }
 
   // Slightly smaller mark buys headroom for the hero copy below.
@@ -1646,54 +1459,22 @@
   }
 
   .hero-zone {
-    height: 552rpx;
+    height: 600rpx;
     margin-top: 8rpx;
   }
 
   // One wrapper scale shrinks halo/hero/sprites/particles together — no
   // per-element geometry recalculation. Sized so the scaled artwork
-  // (688rpx × 0.82 ≈ 564rpx) bleeds ≤ 24rpx above the zone, matching the
-  // bleed tolerance of the previous --short composition.
+  // (688rpx × 0.9 ≈ 619rpx) bleeds ≤ 24rpx above the zone, matching the
+  // bleed tolerance of the previous --short composition. Raised 0.82 → 0.9
+  // (2026-09-03) to absorb the space freed by the removed mechanism strip.
   .hero-stage__scale {
-    transform: scale(0.82);
+    transform: scale(0.9);
     transform-origin: center bottom;
   }
 
-  .mechanism-strip {
-    height: 96rpx;
-  }
-
-  .mechanism-strip__seat {
-    width: 80rpx;
-    height: 80rpx;
-  }
-
-  .mechanism-strip__head {
-    width: 72rpx !important;
-    height: 72rpx !important;
-  }
-
-  .mechanism-strip__seats::after {
-    width: 480rpx;
-  }
-
-  .mechanism-strip__connector {
-    width: 56rpx;
-    margin: 0 10rpx;
-  }
-
-  .mechanism-strip__pin {
-    width: 48rpx;
-    height: 48rpx;
-  }
-
-  .mechanism-caption {
-    font-size: 21rpx;
-    margin-top: 0;
-  }
-
   .hero-text {
-    margin-top: 12rpx;
+    margin-top: 24rpx;
   }
 
   .headline {
@@ -1703,19 +1484,18 @@
 
 /* ── Short-screen compaction (< 700px window height) ───────────────── */
 // iPhone 8/SE band: window 603px (667pt minus the 64pt nav) × 2.0 rpx/px
-// ≈ 1206rpx usable. Totals ~1168rpx (one-line subtitle) / ~1210rpx
-// worst case: brand 124 + hero 464 + strip 80 + caption 28 +
-// hero-text 128–170 + spacer 0 + bottom-zone ~344 (no home-indicator
-// inset on these devices).
+// ≈ 1206rpx usable. Totals ~1128rpx (one-line subtitle) / ~1170rpx
+// worst case: brand 128 + hero 512 + hero-text 144–186 + spacer 0 +
+// bottom-zone ~344 (no home-indicator inset on these devices).
 .landing-page--short {
   // Page-level backdrop covers the upper ~61% of the ~1206rpx composition;
-  // the bottom fade completes just under the mechanism caption (~694rpx).
+  // the bottom fade completes just under the hero copy (~720rpx).
   .landing-page__backdrop {
     height: 736rpx;
   }
 
   .brand-mark {
-    padding-top: 12rpx;
+    padding-top: 16rpx;
   }
 
   .landing-page__brand-logo {
@@ -1724,59 +1504,21 @@
   }
 
   .hero-zone {
-    height: 456rpx;
+    height: 504rpx;
     margin-top: 8rpx;
   }
 
-  // Scaled artwork 688rpx × 0.68 ≈ 468rpx — bleeds ≤ 24rpx above the
-  // 456rpx zone (same tolerance as the previous composition).
+  // Scaled artwork 688rpx × 0.76 ≈ 523rpx — bleeds ≤ 24rpx above the
+  // 504rpx zone (same tolerance as the previous composition). Raised
+  // 0.68 → 0.76 (2026-09-03) to absorb the space freed by the removed
+  // mechanism strip.
   .hero-stage__scale {
-    transform: scale(0.68);
+    transform: scale(0.76);
     transform-origin: center bottom;
   }
 
-  // E3 compact variant (mandatory — the full strip alone would push the
-  // page ~90rpx over the ~1206rpx budget at the 700px breakpoint).
-  .mechanism-strip {
-    height: 80rpx;
-  }
-
-  .mechanism-strip__seats {
-    gap: 8rpx;
-  }
-
-  .mechanism-strip__seat {
-    width: 56rpx;
-    height: 56rpx;
-  }
-
-  .mechanism-strip__head {
-    width: 48rpx !important;
-    height: 48rpx !important;
-  }
-
-  .mechanism-strip__seats::after {
-    width: 340rpx;
-  }
-
-  .mechanism-strip__connector {
-    width: 44rpx;
-    margin: 0 8rpx;
-    border-top-width: 1rpx;
-  }
-
-  .mechanism-strip__pin {
-    width: 40rpx;
-    height: 40rpx;
-  }
-
-  .mechanism-caption {
-    font-size: 20rpx;
-    margin-top: 0;
-  }
-
   .hero-text {
-    margin-top: 8rpx;
+    margin-top: 16rpx;
   }
 
   .headline {
@@ -1796,32 +1538,6 @@
   }
 
   // Refined: sprites are decorative, not consumed (2026-09-02).
-
-  .mechanism-strip__seat {
-    animation: mechanism-seat-fade 300ms ease-out 500ms both !important;
-  }
-
-  .mechanism-strip__seat:nth-child(2) { animation-delay: 560ms !important; }
-  .mechanism-strip__seat:nth-child(3) { animation-delay: 620ms !important; }
-  .mechanism-strip__seat:nth-child(4) { animation-delay: 680ms !important; }
-  .mechanism-strip__seat:nth-child(5) { animation-delay: 740ms !important; }
-  .mechanism-strip__seat:nth-child(6) { animation-delay: 800ms !important; }
-
-  .mechanism-strip__seats::after {
-    animation: landing-rm-fade 300ms ease-out 860ms both !important;
-  }
-
-  .mechanism-strip__connector {
-    animation: connector-draw 220ms ease-out 900ms both !important;
-  }
-
-  .mechanism-strip__pin {
-    animation: pin-pop 300ms ease-out 1000ms both !important;
-  }
-
-  .mechanism-caption {
-    animation: landing-rm-fade 320ms ease-out 1060ms both !important;
-  }
 
   .subtitle__beat::after {
     animation: underline-draw 240ms ease-out 1000ms both !important;
@@ -1918,22 +1634,6 @@
     opacity: 1 !important;
   }
 
-  // Wow-up new elements: static composed scene (2026-09-01).
-  .hero-stage__satellite {
-    animation: none !important;
-    opacity: 1 !important;
-  }
-
-  .hero-stage__sparkle {
-    animation: none !important;
-    opacity: 0.8 !important;
-  }
-
-  .hero-stage__shadow {
-    animation: none !important;
-    opacity: 0.6 !important;
-  }
-
   .hero-stage__glow-bridge {
     animation: none !important;
     opacity: 0.45 !important;
@@ -1969,36 +1669,8 @@
 
   // Refined: sprites are decorative, not consumed (2026-09-02).
 
-  // E3/E2 static settled composition: strip, connector, pin, caption,
-  // and the persistent gold underlines render without any animation.
-  .mechanism-strip__seat {
-    opacity: 1 !important;
-    animation: none !important;
-    transition: none !important;
-  }
-
-  .mechanism-strip__seats::after {
-    animation: none !important;
-    opacity: 1 !important;
-  }
-
-  .mechanism-strip__connector {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .mechanism-strip__pin {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .mechanism-caption {
-    animation: none !important;
-    opacity: 1 !important;
-  }
-
+  // E2 static settled composition: the persistent gold underlines render
+  // without any animation.
   .subtitle__beat::after {
     animation: none !important;
     opacity: 0.55 !important;
@@ -2042,8 +1714,6 @@
   /* Exit transitions should be instant when reduced motion is preferred */
   &.landing-page--exiting .brand-mark,
   &.landing-page--exiting .hero-zone,
-  &.landing-page--exiting .mechanism-strip,
-  &.landing-page--exiting .mechanism-caption,
   &.landing-page--exiting .hero-text,
   &.landing-page--exiting .bottom-zone {
     opacity: 0 !important;
@@ -2053,37 +1723,14 @@
 }
 
 /* ── Logged-out re-entry (?auth=logout|expired): the world stays (dusk
-   gradient, hero, halo), the script becomes welcome-back. The mechanism
-   never bursts — seats fade in at their places (the table is already set),
-   the CTA sheen (an acquisition nudge) is off. */
+   gradient, hero, halo), the script becomes welcome-back. No mechanism
+   re-selling — the bubble field renders settled — and the CTA sheen (an
+   acquisition nudge) is off. */
 .landing-page--logged-out {
   // Refined: sprites stay visible as decoration (2026-09-02).
 
-  .mechanism-strip__seat {
-    animation: mechanism-seat-fade 300ms ease-out 500ms both !important;
-    transition: none !important;
-  }
-
-  .mechanism-strip__seat:nth-child(2) { animation-delay: 560ms !important; }
-  .mechanism-strip__seat:nth-child(3) { animation-delay: 620ms !important; }
-  .mechanism-strip__seat:nth-child(4) { animation-delay: 680ms !important; }
-  .mechanism-strip__seat:nth-child(5) { animation-delay: 740ms !important; }
-  .mechanism-strip__seat:nth-child(6) { animation-delay: 800ms !important; }
-
-  .mechanism-strip__seats::after {
-    animation: landing-rm-fade 300ms ease-out 860ms both !important;
-  }
-
-  .mechanism-strip__connector {
-    animation: connector-draw 220ms ease-out 900ms both !important;
-  }
-
-  .mechanism-strip__pin {
-    animation: pin-pop 300ms ease-out 1000ms both !important;
-  }
-
   // Phase 2 bubble field: renders SETTLED for returning users (no draw-in,
-  // no drift) — mirrors the statically-settled mechanism strip.
+  // no drift) — the sky is already alive; nothing needs to burst.
   .bubble-field__bubble {
     animation: none !important;
     opacity: 0.7 !important;
