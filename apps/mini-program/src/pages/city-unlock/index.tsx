@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '../../lib/api/api'
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
-import XiaoyueSpriteAnimator from '../../components/mascot/XiaoyueSpriteAnimator'
+import { localAsset } from '../../lib/utils/cdnAssets'
 import LoadingScreen from '../../components/loading/LoadingScreen'
 import JoyJoinIcon from '../../components/ui/JoyJoinIcon'
 import './index.scss'
@@ -34,6 +34,7 @@ interface CityProgressApiResponse {
 
 export default function CityUnlockPage() {
   const [shareAnimation, setShareAnimation] = useState(false)
+  const [stateMascotFailed, setStateMascotFailed] = useState(false)
 
   const {
     data: myInterests,
@@ -101,7 +102,13 @@ export default function CityUnlockPage() {
     return (
       <View className='city-unlock-page'>
         <View className='city-unlock-page__empty'>
-          <XiaoyueSpriteAnimator state='error' size='200rpx' />
+          <Image
+            className='city-unlock-page__mascot'
+            src={stateMascotFailed ? localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp') : getXiaoyueExpressionAsset('actionFailure')}
+            mode='aspectFit'
+            style={{ width: '200rpx', height: '200rpx' }}
+            onError={() => setStateMascotFailed(true)}
+          />
           <Text className='city-unlock-page__empty-title'>网络开小差了</Text>
           <Text className='city-unlock-page__empty-subtitle'>点击重试，我们在等你</Text>
           <View className='city-unlock-page__empty-cta' onClick={() => refetch()}>
@@ -124,7 +131,13 @@ export default function CityUnlockPage() {
     return (
       <View className='city-unlock-page'>
         <View className='city-unlock-page__empty'>
-          <XiaoyueSpriteAnimator state='coach' size='200rpx' />
+          <Image
+            className='city-unlock-page__mascot'
+            src={stateMascotFailed ? localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp') : getXiaoyueExpressionAsset('coachGuide')}
+            mode='aspectFit'
+            style={{ width: '200rpx', height: '200rpx' }}
+            onError={() => setStateMascotFailed(true)}
+          />
           <Text className='city-unlock-page__empty-title'>还没有选择城市</Text>
           <Text className='city-unlock-page__empty-subtitle'>去发现页选择你想解锁的城市吧</Text>
           <View className='city-unlock-page__empty-cta' onClick={handleBrowseShenzhen}>

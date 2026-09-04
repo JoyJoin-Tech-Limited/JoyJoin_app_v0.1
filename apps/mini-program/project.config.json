@@ -64,10 +64,6 @@
     "include": [
       {
         "type": "regexp",
-        "value": "assets/mascot/.*\\.(webp|json)$"
-      },
-      {
-        "type": "regexp",
         "value": "assets/fonts/.*\\.(woff2|woff|ttf|otf)$"
       },
       {

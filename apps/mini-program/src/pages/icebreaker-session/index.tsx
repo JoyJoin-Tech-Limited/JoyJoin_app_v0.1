@@ -24,7 +24,6 @@ import { useSessionAudio } from '../../hooks/useSessionAudio'
 import { socialIcebreakerAnalytics } from '../../lib/analytics/socialIcebreakerAnalytics'
 import {
   usePreloadCdnIcons,
-  SPRITE_SHEET_ASSETS,
   ICEBREAKER_PHASE_EMBLEM_ASSETS,
 } from '../../hooks/usePreloadCdnIcons'
 import { getMascotDisplayName } from '../../lib/mascot/mascotDisplay'
@@ -74,7 +73,7 @@ import './index.scss'
 
 // F1: hoisted — a stable reference keeps usePreloadCdnIcons' effect from
 // re-firing 31 parallel getImageInfo bridge calls on every render.
-const ICEBREAKER_PRELOAD_ASSETS = [...SPRITE_SHEET_ASSETS, ...ICEBREAKER_PHASE_EMBLEM_ASSETS]
+const ICEBREAKER_PRELOAD_ASSETS = [...ICEBREAKER_PHASE_EMBLEM_ASSETS]
 
 export default function IcebreakerSessionPage() {
   const router = useRouter()

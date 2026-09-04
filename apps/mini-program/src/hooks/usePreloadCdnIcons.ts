@@ -47,30 +47,6 @@ export const ARCHETYPE_GLYPH_ASSETS: string[] = [
   // Bundled locally via copy config (config/index.ts)
 ]
 
-/** Xiaoyue sprite sheet CDN paths (used in icebreaker sessions). */
-export const SPRITE_SHEET_ASSETS = [
-  '/assets/mascot/xiaoyue-celebrate.webp',
-  '/assets/mascot/xiaoyue-coach.webp',
-  '/assets/mascot/xiaoyue-curious.webp',
-  '/assets/mascot/xiaoyue-empty.webp',
-  '/assets/mascot/xiaoyue-error.webp',
-  '/assets/mascot/xiaoyue-idle.webp',
-  '/assets/mascot/xiaoyue-intro.webp',
-  '/assets/mascot/xiaoyue-listening.webp',
-  '/assets/mascot/xiaoyue-loading.webp',
-  '/assets/mascot/xiaoyue-neutral.webp',
-  '/assets/mascot/xiaoyue-nod.webp',
-  '/assets/mascot/xiaoyue-reassure.webp',
-  '/assets/mascot/xiaoyue-reveal.webp',
-  '/assets/mascot/xiaoyue-success.webp',
-  '/assets/mascot/xiaoyue-surprised.webp',
-  '/assets/mascot/xiaoyue-thanks.webp',
-  '/assets/mascot/xiaoyue-thinking.webp',
-  '/assets/mascot/xiaoyue-trust.webp',
-  '/assets/mascot/xiaoyue-waiting.webp',
-  '/assets/mascot/xiaoyue-welcome.webp',
-]
-
 /** Common icebreaker reaction icon CDN paths.
  *  These are CDN tiers (see CDN_ICON_TIERS); preloading warms the CDN cache. */
 export const ICEBREAKER_REACTION_ASSETS = [

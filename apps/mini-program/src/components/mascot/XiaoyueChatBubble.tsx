@@ -1,9 +1,8 @@
 import { View, Text, Image } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useMemo } from 'react'
-import { getXiaoyueExpressionAsset, XIAOYUE_EXPRESSION_TO_SPRITE_STATE, type XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
+import { getXiaoyueExpressionAsset, type XiaoyueExpressionId } from '../../lib/mascot/xiaoyueExpressions'
 import { MASCOT_SIZE } from '../../lib/mascot/mascotSizes'
-import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from './XiaoyueSpriteAnimator'
 import './XiaoyueChatBubble.scss'
 import { getSystemReducedMotionCompat } from '../../lib/utils/systemInfo'
 
@@ -33,10 +32,6 @@ export interface XiaoyueChatBubbleProps {
   /** Stagger delay per sentence (ms) */
   staggerDelay?: number
   className?: string
-  /** Whether to use sprite animation instead of static image */
-  animate?: boolean
-  /** Direct sprite state override (takes precedence over expressionId mapping) */
-  spriteState?: XiaoyueSpriteState
   /** Show speech tail pointing to the mascot avatar */
   tail?: boolean
   /** Hide the mascot avatar and render only the bubble.
@@ -44,7 +39,7 @@ export interface XiaoyueChatBubbleProps {
    *  avoiding duplicate mascot crowding. */
   hideAvatar?: boolean
   /** Override avatar size (e.g. '200rpx'). When set, controls both the avatar wrap container
-   *  and the internal sprite animator size. Falls back to 96rpx (horizontal) / 120rpx (vertical/wide). */
+   *  and the avatar image size. Falls back to 96rpx (horizontal) / 120rpx (vertical/wide). */
   avatarSize?: string
 }
 
@@ -68,8 +63,6 @@ export default function XiaoyueChatBubble({
   isLoading = false,
   staggerDelay = 80,
   className = '',
-  animate = false,
-  spriteState,
   tail = false,
   hideAvatar = false,
   avatarSize,
@@ -115,23 +108,14 @@ export default function XiaoyueChatBubble({
           className={`xiaoyue-chat-bubble__avatar-wrap ${showGlow ? 'xiaoyue-chat-bubble__avatar-wrap--glow' : ''} ${isLoading ? 'xiaoyue-chat-bubble__avatar-wrap--loading' : ''}`}
           style={avatarSize ? { width: avatarSize, height: avatarSize } : undefined}
         >
-          {animate ? (
-            <XiaoyueSpriteAnimator
-              state={spriteState ?? XIAOYUE_EXPRESSION_TO_SPRITE_STATE[resolvedExpressionId] ?? 'neutral'}
-              size={resolvedAvatarSize}
-              showGlow={false}
-              isLoading={isLoading}
-            />
-          ) : (
-            <Image
-              className='xiaoyue-chat-bubble__avatar'
-              mode='aspectFit'
-              src={getXiaoyueExpressionAsset(resolvedExpressionId)}
-              onError={() => {
-                // Graceful degradation: avatar hides, bubble remains
-              }}
-            />
-          )}
+          <Image
+            className='xiaoyue-chat-bubble__avatar'
+            mode='aspectFit'
+            src={getXiaoyueExpressionAsset(resolvedExpressionId)}
+            onError={() => {
+              // Graceful degradation: avatar hides, bubble remains
+            }}
+          />
         </View>
       )}
 

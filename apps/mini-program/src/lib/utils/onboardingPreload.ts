@@ -1,7 +1,6 @@
 import Taro from '@tarojs/taro'
 import { INTENT_FLEXIBLE_OPTION, INTENT_OPTIONS } from '@shared/constants'
 import { getIconMapping, getLocalIconAssetPath, CDN_ICON_TIERS } from '@joyjoin/shared/iconSystem'
-import spritesheetManifest from '../../assets/mascot/xiaoyue-spritesheet-manifest.json'
 import { PERSONALITY_EMOJI_ASSETS } from './personalityEmojiAssets'
 import { CEREMONY_HEROES } from '../ceremonyHeroes'
 import { MILESTONE_BADGES } from '../milestoneBadges'
@@ -11,7 +10,6 @@ import { logInfo } from './logger'
 import { preloadImagesWithDiagnostics } from './imagePreload'
 import { cacheAssets, clearAssetCacheOnVersionChange } from './persistentAssetCache'
 import { ONBOARDING_CRITICAL_CDN_ASSETS } from './routePreloadAssets'
-import { getDeviceInfoCompat } from '../../lib/utils/systemInfo'
 
 /**
  * Staggered onboarding asset preloader.
@@ -24,10 +22,10 @@ import { getDeviceInfoCompat } from '../../lib/utils/systemInfo'
  *   - Tier 1 (immediate): intro animation + welcome mascot
  *   - Tier 2 (~400ms): test expressions, personality emoji icons, intent icons,
  *     milestone badge, welcome-back ceremony hero
- *   - Tier 3 (~1200ms): only a curated set of mascot sprite sheets on capable
- *     devices + good networks. Archetype full-body images and the archetype
- *     spritesheet are intentionally omitted here — they are preloaded by the
- *     onboarding subpackage pages when the user actually enters them.
+ *   Archetype full-body images and the archetype spritesheet are intentionally
+ *   omitted here — they are preloaded by the onboarding subpackage pages when
+ *   the user actually enters them. (The mascot sprite tier was removed with
+ *   the sprite animator, 2026-09-03.)
  */
 
 /** Tier 1 — must be warm before personality-test intro renders. */
@@ -57,27 +55,6 @@ function getTestPhaseAssets(): string[] {
     MILESTONE_BADGES.quizHalfway,
     CEREMONY_HEROES.welcomeBack,
   ].filter(Boolean)
-}
-
-/** Tier 3 — small curated sprite set; skipped on low-end or weak networks. */
-function getHeavyAssets(): string[] {
-  // Core sprite states most likely to appear during the first session.
-  // We deliberately do NOT preload the full 20-sheet manifest here.
-  const coreStates: Array<keyof typeof spritesheetManifest.states> = [
-    'welcome',
-    'idle',
-    'coach',
-    'loading',
-    'listening',
-    'thinking',
-  ]
-
-  const spriteSheets = coreStates
-    .map((state) => spritesheetManifest.states[state]?.sheet)
-    .filter(Boolean)
-    .map((sheet) => localAsset(`/assets/mascot/${sheet}`))
-
-  return spriteSheets
 }
 
 /** Build local URLs for every bundled intent icon. */
@@ -136,18 +113,6 @@ async function shouldSkipPreload(): Promise<{ skip: boolean; reason?: string }> 
   return { skip: false }
 }
 
-function shouldSkipHeavyTier(): { skip: boolean; reason?: string } {
-  try {
-    const benchmark = getDeviceInfoCompat().benchmarkLevel
-    if (typeof benchmark === 'number' && benchmark > 0 && benchmark <= 15) {
-      return { skip: true, reason: `low-end:benchmark-${benchmark}` }
-    }
-  } catch {
-    // Proceed optimistically if system info is unavailable.
-  }
-  return { skip: false }
-}
-
 /**
  * Preload onboarding assets in staggered tiers.
  *
@@ -170,21 +135,16 @@ export async function preloadOnboardingAssets(): Promise<void> {
 
   const critical = getCriticalAssets()
   const testPhase = getTestPhaseAssets()
-  const heavyCheck = shouldSkipHeavyTier()
-  const heavy = heavyCheck.skip ? [] : getHeavyAssets()
 
   // Only CDN URLs can be primed with getImageInfo; bundled local assets
-  // (intent icons, mascot sprites) fail with "image not found" and should rely
+  // (intent icons) fail with "image not found" and should rely
   // on normal <Image> loading.
   const criticalCdn = critical.filter(isCdnUrl)
   const testPhaseCdn = testPhase.filter(isCdnUrl)
-  const heavyCdn = heavy.filter(isCdnUrl)
 
   logInfo('[preloadOnboardingAssets] Starting staggered preload', {
     critical: criticalCdn.length,
     testPhase: testPhaseCdn.length,
-    heavy: heavyCdn.length,
-    skipHeavyReason: heavyCheck.reason,
   })
 
   // Tier 1: immediate — small, high-impact intro assets.
@@ -192,11 +152,6 @@ export async function preloadOnboardingAssets(): Promise<void> {
 
   // Tier 2: defer slightly so the critical bundle goes first.
   schedulePreload(testPhaseCdn, 'onboarding:test-phase', 400)
-
-  // Tier 3: heavy sprite sheets — lowest priority, concurrency-limited.
-  if (heavyCdn.length > 0) {
-    schedulePreload(heavyCdn, 'onboarding:heavy', 1200, 2)
-  }
 
   // Tier 4: persist critical + test phase assets to local storage for zero-network
   // return visits. Runs after warm-preloads have started, deferred so it never

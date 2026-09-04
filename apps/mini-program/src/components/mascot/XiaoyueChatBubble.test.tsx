@@ -11,7 +11,6 @@ vi.mock('@tarojs/components', () => ({
 
 vi.mock('../../lib/mascot/xiaoyueExpressions', () => ({
   getXiaoyueExpressionAsset: (id: string) => `/assets/xiaoyue-expressions/${id}.webp`,
-  XIAOYUE_EXPRESSION_TO_SPRITE_STATE: {},
 }))
 
 vi.mock('@tarojs/taro', () => ({

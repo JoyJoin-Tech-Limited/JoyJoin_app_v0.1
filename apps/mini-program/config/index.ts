@@ -342,38 +342,6 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/assets/lovart/squad/squad-host-xiaoyue-fallback.webp',
           to: 'dist/assets/lovart/squad/squad-host-xiaoyue-fallback.webp',
         },
-        // Xiaoyue mascot sprite sheets — bundled locally as CDN fallback.
-        // Only the core states that appear during the first session are kept
-        // in the main package; the rest are CDN-only to stay under the 2 MB
-        // WeChat limit. XiaoyueSpriteAnimator always tries CDN first.
-        {
-          from: 'src/assets/mascot/xiaoyue-welcome.webp',
-          to: 'dist/assets/mascot/xiaoyue-welcome.webp',
-        },
-        {
-          from: 'src/assets/mascot/xiaoyue-idle.webp',
-          to: 'dist/assets/mascot/xiaoyue-idle.webp',
-        },
-        {
-          from: 'src/assets/mascot/xiaoyue-coach.webp',
-          to: 'dist/assets/mascot/xiaoyue-coach.webp',
-        },
-        {
-          from: 'src/assets/mascot/xiaoyue-loading.webp',
-          to: 'dist/assets/mascot/xiaoyue-loading.webp',
-        },
-        {
-          from: 'src/assets/mascot/xiaoyue-listening.webp',
-          to: 'dist/assets/mascot/xiaoyue-listening.webp',
-        },
-        {
-          from: 'src/assets/mascot/xiaoyue-thinking.webp',
-          to: 'dist/assets/mascot/xiaoyue-thinking.webp',
-        },
-        {
-          from: 'src/assets/mascot/xiaoyue-spritesheet-manifest.json',
-          to: 'dist/assets/mascot/xiaoyue-spritesheet-manifest.json',
-        },
         // Gathering-room composite art fallback — bundled locally (~84KB) so
         // the room scene never renders a bare background when the CDN copy
         // 404s (e.g. before the CDN upload pipeline ships it).

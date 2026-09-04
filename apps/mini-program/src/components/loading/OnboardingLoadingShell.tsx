@@ -6,7 +6,6 @@ import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { localAsset } from '../../lib/utils/cdnAssets'
 import { useChoreographedWait, CHOREOGRAPHED_SKIP_DELAY_MS } from '../../hooks/useChoreographedWait'
 import Card from '../ui/Card'
-import XiaoyueSpriteAnimator from '../mascot/XiaoyueSpriteAnimator'
 import CelebrationSparkle from '../mascot/CelebrationSparkle'
 import './OnboardingLoadingShell.scss'
 
@@ -29,7 +28,7 @@ interface OnboardingLoadingShellProps {
   /** Defaults to system-loading / thinking pose (`loadingSystem`). */
   xiaoyueExpression?: XiaoyueExpressionId
   /** Opt-in celebration beat. When true:
-   *  - mascot renders as XiaoyueSpriteAnimator in `celebrate` state (overrides `xiaoyueExpression`)
+   *  - mascot renders as a static success portrait (overrides `xiaoyueExpression`)
    *  - title is overridden to the completion copy
    *  - subtitle is overridden to the completion copy
    *  - the orbit dots and skeleton lines are hidden
@@ -79,6 +78,7 @@ export default function OnboardingLoadingShell({
   exiting = false,
 }: OnboardingLoadingShellProps) {
   const [imgSrc, setImgSrc] = useState(getXiaoyueExpressionAsset(xiaoyueExpression))
+  const [celebrateImgSrc, setCelebrateImgSrc] = useState(getXiaoyueExpressionAsset('matchSuccess'))
   const [settled, setSettled] = useState(false)
 
   // A4: settle animations after 6s. Skipped for `celebrate` to preserve the celebrate sprite + sparkle.
@@ -123,7 +123,12 @@ export default function OnboardingLoadingShell({
         <Card className='onboarding-loading-shell__card'>
           {celebrate ? (
             <View className='onboarding-loading-shell__mascot onboarding-loading-shell__mascot--celebrate'>
-              <XiaoyueSpriteAnimator state='celebrate' size='240rpx' showGlow />
+              <Image
+                className='onboarding-loading-shell__mascot-img'
+                mode='aspectFit'
+                src={celebrateImgSrc}
+                onError={() => setCelebrateImgSrc(localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp'))}
+              />
               <CelebrationSparkle count={sparkleCount} />
               {celebrateCanSkip && (
                 <Text className='onboarding-loading-shell__skip-hint'>点击跳过</Text>

@@ -90,7 +90,7 @@ src/
 │   ├── ui/              # BrandLogo, Button, Card, StatusCard, JoyJoinIcon, Chip, SegmentedProgress, TraitRadarChart, etc.
 │   ├── profile/         # Profile-specific components (ProfileArchetypeHero, InterestChipCloud, ProfessionDisplayField)
 │   ├── landing/         # Landing-page-specific components (BondingCloud)
-│   ├── mascot/          # XiaoyueSpriteAnimator, XiaoyueChatBubble, XiaoyueEmptyState, etc.
+│   ├── mascot/          # XiaoyueChatBubble, XiaoyueEmptyState, etc.
 │   ├── discover/        # Discover feed components (OracleCard, CompatibilityIndicator, ParticipantPresenceStrip). Empty-state presence strip uses a breathing accent ring + invitation pill (首座留给你).
 │   ├── events/          # Events / footprint components (FootprintOracleCard, EventSummaryCard, EventCountdownClock)
 │   └── ContentBlockedError.tsx  # Inline field error for sensitive-word violations; field-aware hints, tap-to-dismiss, haptics, aria-live, reduced-motion. Used in edit-profile and onboarding essential-data forms.
@@ -156,7 +156,7 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 4. Add new CDN assets to `src/assets/` **and** `scripts/cdn-asset-manifest.json` so the CDN uploader discovers them.
 5. Run `npm run check:package-size` after build, then confirm the result with WeChat DevTools or `miniprogram-ci`. The current script needs a system `zip` executable for compressed measurement; without it, it falls back to raw bytes. See `docs/package-size/main-package-audit.md` for the audited boundary and remediation plan.
 6. Run `npm run verify:subpackage-styles` after `npm run build:weapp` to catch Taro/Vite WXSS chunking regressions. The script fails if required selectors are missing from the owning page WXSS **or** if any `sub-common.wxss` is non-empty. Fix: `@use` the component SCSS in the consuming page SCSS **and** remove the matching `import './X.scss'` side effect from the component TSX. See `docs/runbooks/mini-program-asset-delivery.md` §4.6.
-7. **Mascot bundle policy:** only 6 core Xiaoyue sprite states (`welcome`, `idle`, `coach`, `loading`, `listening`, `thinking`) are bundled locally; the remaining 14 states are CDN-primary with local fallback via `XiaoyueSpriteAnimator.onError`.
+7. **Mascot policy (2026-09-03):** the sprite-sheet animator and all mascot sprite sheets were deleted; every mascot surface renders a static expression WebP via `getXiaoyueExpressionAsset()` (CDN-primary, bundled `xiaoyue-home-welcome`/`xiaoyue-loading-system` local fallbacks).
 8. **Bundled icon density policy:** `status-icons`, `info-labels` (semantic), and `ui` tiers ship at `@1x`/`@2x` only; `@3x` variants are stripped by `clean:cdn-assets` to save package size. Source `@3x` files remain for CDN fallback.
 
 | Script | Purpose |
@@ -164,7 +164,6 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 | `npm run validate:assets` | Build-time validator: every asset reference must resolve to `src/assets/` or `cdn-asset-manifest.json` |
 | `npm run optimize:xiaoyue` | Generate Xiaoyue expression WebPs and intro animated/static fallbacks into `src/assets/personality/xiaoyue/` |
 | `npm run check:xiaoyue-assets` | Validate Xiaoyue asset sizes and dimensions |
-| `npm run generate:xiaoyue-spritesheet` | Generate Xiaoyue sprite animation sheets into `src/assets/mascot/` |
 | `npm run extract:xiaoyue-frames` | Extract raw frames from Xiaoyue source strips |
 | `npm run contact-sheet:xiaoyue` | Generate contact-sheet preview of Xiaoyue frames |
 | `npm run repair:xiaoyue` | Queue Xiaoyue asset repair jobs |
@@ -225,9 +224,7 @@ No nginx changes are required — Tencent CDN will pull from `/var/www/cdn/` via
 - `src/assets/personality/xiaoyue/xiaoyue-loading-system.webp` (~49KB)
 - `src/assets/personality/xiaoyue/xiaoyue-home-welcome.webp` (~39KB)
 
-*Mascot sprite sheets (6 core states bundled; 14 CDN-only):*
-- Bundled: `welcome`, `idle`, `coach`, `loading`, `listening`, `thinking` (~235KB total).
-- CDN-primary: all other Xiaoyue sprite states. `XiaoyueSpriteAnimator` falls back to the bundled local copy on `onError`.
+*Mascot expressions:* CDN-primary static WebP via `getXiaoyueExpressionAsset()`; bundled `xiaoyue-home-welcome` / `xiaoyue-loading-system` are the local fallbacks. The sprite-sheet pipeline was deleted 2026-09-03.
 
 *Interest taxonomy v2.0 illustrations (CDN-only):*
 - 48 active interests across 6 macro categories (`food`, `play`, `sports`, `culture`, `life`, `growth`).
@@ -287,7 +284,7 @@ The mini-program replaces raw Unicode emoji with brand-aligned proprietary icons
 **Preloader hooks for bundled icon tiers:**
 - `usePreloadCategoryIcons` — warms the five bundled category icons before the interest-heat picker renders.
 - `usePreloadIntentIcons` — warms the bundled intent icons before the intent grid renders; skips on 2G/offline and runs once per session.
-- `preloadOnboardingAssets` (`src/lib/utils/onboardingPreload.ts`) — app-launch staggered preloader for onboarding-critical raster assets. Tier 1 (immediate) warms intro/welcome art; Tier 2 (~400ms) warms test expressions, personality emoji icons, intent icons, milestone badge, and welcome-back hero; Tier 3 (~1200ms) warms a curated core of mascot sprite sheets on capable devices. Skips entirely on 2G/offline and defers Tier 3 on low-end devices (`benchmarkLevel <= 15`).
+- `preloadOnboardingAssets` (`src/lib/utils/onboardingPreload.ts`) — app-launch staggered preloader for onboarding-critical raster assets. Tier 1 (immediate) warms intro/welcome art; Tier 2 (~400ms) warms test expressions, personality emoji icons, intent icons, milestone badge, and welcome-back hero. The former Tier 3 mascot-sprite tier was removed 2026-09-03. Skips entirely on 2G/offline.
 
 **Archetype asset registry:**
 - `src/lib/utils/archetypeAssets.ts` is the canonical source for full-size archetype WebP/PNG URLs, the bundled slot-machine spritesheet path, and bulk-preload helpers (`getAllArchetypeAssetUrls`, `getArchetypeSpritesheetLocalPath`). The personality-test subpackage re-exports these from `pages/onboarding/personality-test/visuals.ts` for historical consumers.

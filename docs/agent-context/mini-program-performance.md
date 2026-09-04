@@ -14,7 +14,7 @@
 - **Compositor-only discipline holds:** every sampled infinite keyframe animates transform/opacity only (e.g. `FootprintOracleCard.scss:491-523`, `profile/index.scss:638-647,679-686,874-882`; "stays on the compositor" comment `HeroPromoBanner.scss:311`). The `background-position` shimmer anti-pattern was purged (2026-06-10).
 - **Always-on infinite CSS on visible tab surfaces (145 `infinite` usages total):** HeroPromoBanner 7 concurrent animations — sparkles 4.2s + CTA breathe 2.4s + shimmer 1.8s (`HeroPromoBanner.scss:127,234,335`); profile avatar breath 5.6s + platform pulse 5.6s + XP sheen 8s (`profile/index.scss:624,668,871`); FootprintOracleCard shimmer 2.6s + pulses 2s/1.8s/1.2s (`FootprintOracleCard.scss:87,211,290,369`). Keep GPU compositor busy the whole time tabs are visible — heat source; worst offenders (CTA breathe, XP sheen) could be once-per-enter.
 - **Countdown ticker is the highest-frequency render loop:** 1s tick (`hooks/useEventCountdown.ts:242-244`) but thoroughly gated (viewport IO, app hide, reduced-motion, degradation tier, terminal status, stops after event start :170-174). N visible cards = N re-renders/sec; consider shared parent ticker.
-- **`XiaoyueSpriteAnimator` gap:** `setInterval` frame-stepping (`components/mascot/XiaoyueSpriteAnimator.tsx:154-167`) gated by app visibility + reduced-motion + degradation tier (:235-262, :303) but NOT page visibility — a looping sprite on a page hidden in the stack keeps stepping while app is foreground. Current usages are transient (`autoPlay={false}` on pool-registration cards), but add `useDidShow/useDidHide` inside the animator before any always-on loop ships.
+- **(Resolved 2026-09-03)** `XiaoyueSpriteAnimator` and its `setInterval` frame-stepping were deleted — all mascots render static expression WebP.
 - Event-triggered systems self-terminate: `ParticleBurst` (rAF canvas, module-scope reduced-motion check :16, static-emoji fallback :377-385, `fill` prop for full-bleed wrappers, CSS-size cap at 420px to avoid high-DPR memory kills), `FirstTimeCouponBanner` (:46-50), `useCountUp` (900ms once), `useStaggerMount`, `useFlowTimeline/useFlowProgress`. **`PixelAvatar3D` (WebGL, `profile/PixelAvatar3D.tsx`) renders on demand only** (gestures/reset, :226-232) + decaying inertia rAF; visibility-gated (:390-406); NO device-tier gate (any device with canvas support boots WebGL; fallback exists for non-spider archetypes :491-514).
 
 ## Assets
@@ -53,7 +53,6 @@
 
 1. **Pause polls when pages leave the stack / app backgrounds** — matching-status (5 polls + duplicate), icebreaker (3s), notification counts (app-lifetime). Battery + data win; also correct the false "React Query pauses on unfocus" assumption in comments/AGENTS.md.
 2. **Virtualize Events / Connections / Center-hub lists** using the existing `VirtualList`, threshold-gated like Discover.
-3. **Add `useDidShow/useDidHide` gating inside `XiaoyueSpriteAnimator`** so hidden stack pages stop frame-stepping.
 4. **Trim always-on infinite animations on tab chrome** (HeroPromoBanner sparkles/breathe, profile breath/XP-sheen) to once-per-enter or visibility-gated.
 5. **Extend `usePageTTI` + add `performance.mark` to the 5 hot pages**; add a poll-lifecycle detector to `perf-audit-collect.mjs` and run `--all` in CI with a ratchet.
 

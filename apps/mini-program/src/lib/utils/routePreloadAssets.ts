@@ -38,7 +38,7 @@ import { logInfo } from './logger'
 export const ONBOARDING_CRITICAL_CDN_ASSETS: string[] = [
   '/assets/personality/xiaoyue/xiaoyue-intro-animated.webp',
   '/assets/personality/xiaoyue/xiaoyue-intro-static.webp',
-  '/assets/mascot/xiaoyue-welcome.webp',
+  '/assets/personality/xiaoyue/xiaoyue-home-welcome.webp',
 ]
 
 /** Archetype full-body images — now bundled locally, no CDN preload needed. */
@@ -115,7 +115,7 @@ const PERSONALITY_TEST_PRELOADS = [
   // here for route-level redundancy + future additions)
   cdnAsset('/assets/personality/xiaoyue/xiaoyue-intro-animated.webp'),
   cdnAsset('/assets/personality/xiaoyue/xiaoyue-intro-static.webp'),
-  cdnAsset('/assets/mascot/xiaoyue-welcome.webp'),
+  cdnAsset('/assets/personality/xiaoyue/xiaoyue-home-welcome.webp'),
   // Slider endpoint anchor icons (WS-3, 2026-09-02) — warm the CDN pair so
   // the slider question renders its anchors on first paint.
   cdnAsset('/assets/lovart/personality-emojis/lovart-icon-personality-solo-rest-20260507-v1.png'),

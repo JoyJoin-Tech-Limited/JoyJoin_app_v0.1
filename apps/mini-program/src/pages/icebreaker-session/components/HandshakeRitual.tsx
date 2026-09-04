@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Image, Text, View } from '@tarojs/components'
 import Button from '../../../components/ui/Button'
 import { localAsset } from '../../../lib/utils/cdnAssets'
+import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import {
   GLANCE_L1_WORD_WAITING,
   RITUAL_BEATS,
@@ -41,6 +42,7 @@ export function HandshakeRitual({ isHost, vibe, tier, onStart }: HandshakeRitual
   const [hostPickedToast, setHostPickedToast] = useState(false)
   const [deferred, setDeferred] = useState(false)
   const [beatIndex, setBeatIndex] = useState<number | null>(null)
+  const [cameoFailed, setCameoFailed] = useState(false)
   const beatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const kind: HandshakeRitualKind = resolveHandshakeRitualKind({
@@ -98,9 +100,10 @@ export function HandshakeRitual({ isHost, vibe, tier, onStart }: HandshakeRitual
     <View className='handshake-ritual'>
       <Image
         className='handshake-ritual__cameo'
-        src={localAsset('/assets/mascot/xiaoyue-waiting.webp')}
+        src={cameoFailed ? localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp') : getXiaoyueExpressionAsset('matchWaiting')}
         mode='aspectFit'
         lazyLoad
+        onError={() => setCameoFailed(true)}
       />
       <Text className='handshake-ritual__word'>{GLANCE_L1_WORD_WAITING}</Text>
       {!isHost || deferred ? (

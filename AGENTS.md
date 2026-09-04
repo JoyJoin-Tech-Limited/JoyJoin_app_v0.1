@@ -82,7 +82,7 @@ Always base implementation on the **current active codebase**, not legacy flows 
 - `LEGACY_TIER_MAP` retained in `socialIcebreakerTierManifest.ts` for backward-compat tier mapping in social icebreaker `/start` route (`apps/server/src/routes/socialIcebreaker.ts`); `resolveLegacyTier()` removed (2026-05-07)
 - `/api/registration/chat/start`, `/api/registration/chat/message`, `/api/registration/chat/message/stream` handlers removed from `routes.ts` (2026-05-07)
 - `/api/guide/mark-seen`, `/api/guide/complete` routes remain as backward-compat stubs in `routes/domains/onboarding.ts` but the `guide` step is no longer part of the active onboarding flow (2026-05-07)
-- **PNG spritesheets in `src/assets/mascot/` are orphaned** — `XiaoyueSpriteAnimator` loads `.webp` via `cdnAsset()` with a **local bundled `.webp` fallback** in `/assets/mascot/`. Only `.webp` + manifest should be in `src/assets/mascot/`; source PNGs go in `assets-source/mascot/xiaoyue-strips/` (2026-05-19, fallback added 2026-06-13).
+- **`XiaoyueSpriteAnimator` and the mascot sprite-sheet pipeline are deleted (2026-09-03)** — sprite frame-stepping performed poorly on-device. All mascot surfaces render static expression WebP (`getXiaoyueExpressionAsset`, CDN-primary with bundled `xiaoyue-home-welcome`/`xiaoyue-loading-system` local fallbacks). `src/assets/mascot/`, the spritesheet manifest, the `generate:xiaoyue-spritesheet` script, and all sprite preloads were removed. Source PNG strips remain in `assets-source/mascot/xiaoyue-strips/` (archival only). Do not reintroduce sprite-sheet mascot animation.
 
 **Canonical references:** `DEVELOPER_QUICK_REFERENCE.md` and `PRODUCT_REQUIREMENTS.md`
 

@@ -15,7 +15,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import Button from '../../../components/ui/Button'
 import { haptics } from '../../../lib/utils/haptics'
-import { localAsset } from '../../../lib/utils/cdnAssets'
+import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import { useResetOnShow } from '../../../hooks/useResetOnShow'
 import { useMiniRevealMotion } from '../../../hooks/useMiniRevealMotion'
 import { CardFlip, ParticleBurst } from '../../../components/reveal'
@@ -777,7 +777,7 @@ export function MiniScriptHeroView({
       <View className='miniscript-hero__waiting'>
         <Image
           className='miniscript-hero__waiting-mascot'
-          src={localAsset('/assets/mascot/xiaoyue-waiting.webp')}
+          src={getXiaoyueExpressionAsset('matchWaiting')}
           mode='aspectFit'
         />
         <Text className='miniscript-hero__waiting-text'>剧本已就位，等主持人发牌就能开场</Text>
@@ -909,7 +909,7 @@ export function MiniScriptHeroView({
           <View className='miniscript-hero__hint' role='note'>
             <Image
               className='miniscript-hero__hint-mascot'
-              src={localAsset('/assets/mascot/xiaoyue-coach.webp')}
+              src={getXiaoyueExpressionAsset('coachGuide')}
               mode='aspectFit'
             />
             <Text className='miniscript-hero__hint-text'>把证物出示给想试探的人，听听 TA 怎么说</Text>
@@ -1235,7 +1235,7 @@ export function MiniScriptHeroView({
           <View className='miniscript-hero__hint' role='note'>
             <Image
               className='miniscript-hero__hint-mascot'
-              src={localAsset('/assets/mascot/xiaoyue-coach.webp')}
+              src={getXiaoyueExpressionAsset('coachGuide')}
               mode='aspectFit'
             />
             <Text className='miniscript-hero__hint-text'>还没完——再猜猜 TA 为什么这么做</Text>

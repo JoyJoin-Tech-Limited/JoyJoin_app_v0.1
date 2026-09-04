@@ -39,7 +39,6 @@ import { TOAST_LONG_MS, TOAST_DEFAULT_MS, TOAST_FATAL_MS } from '../../lib/utils
 import { getXiaoyueExpressionAsset } from '../../lib/mascot/xiaoyueExpressions'
 import { requestPoolMatchSubscribeMessage } from '../../lib/wechat/wechatSubscribeMessage'
 import BlindBoxFlow from '../../components/flow-animation/BlindBoxFlow'
-import type { XiaoyueSpriteState } from '../../components/mascot/XiaoyueSpriteAnimator'
 import { shouldShowFlow } from '../../components/flow-animation/FlowStorage'
 import { formatEventDateTime } from '../../lib/utils/eventDisplay'
 
@@ -74,7 +73,7 @@ import ChoiceCard from './components/ChoiceCard'
 import PoolRegistrationErrorCard from './components/PoolRegistrationErrorCard'
 import PoolRegistrationFooterBar from './components/PoolRegistrationFooterBar'
 import PoolRegistrationIntentGrid from './components/PoolRegistrationIntentGrid'
-import PoolRegistrationMascotSection from './components/PoolRegistrationMascotSection'
+import PoolRegistrationMascotSection, { type PoolRegistrationMascotState } from './components/PoolRegistrationMascotSection'
 import PoolRegistrationResumeCard from './components/PoolRegistrationResumeCard'
 import PoolRegistrationStepper from './components/PoolRegistrationStepper'
 import RegistrationConfirmModal from './components/RegistrationConfirmModal'
@@ -536,7 +535,7 @@ export default function PoolRegistrationPage() {
   const canSubmit = hasBudgetSelection && hasIntentSelection
 
   // Mascot section drives: per-step base sprite state + reaction bubble line.
-  const mascotBaseState = useMemo<XiaoyueSpriteState>(() => {
+  const mascotBaseState = useMemo<PoolRegistrationMascotState>(() => {
     if (step === STEP_BUDGET) return 'coach'
     if (step === STEP_INTENT) return 'curious'
     return 'listening'

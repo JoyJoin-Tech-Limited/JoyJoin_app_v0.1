@@ -1,19 +1,20 @@
 import { Image, Text, View } from '@tarojs/components'
 import { useEffect, useRef, useState } from 'react'
-import XiaoyueSpriteAnimator, { type XiaoyueSpriteState } from '../../../components/mascot/XiaoyueSpriteAnimator'
 import { useDeviceTier } from '../../../hooks/useDeviceTier'
-import { MASCOT_SIZE } from '../../../lib/mascot/mascotSizes'
 import { cdnAsset } from '../../../lib/utils/cdnAssets'
 
+/** Per-step mascot portrait state (coach / curious / listening). */
+export type PoolRegistrationMascotState = 'coach' | 'curious' | 'listening'
+
 /**
- * Reduced-motion portrait fallback per step base state (CDN-primary; the
- * section hides the mascot wrap entirely if the portrait cannot load).
+ * Static mascot portrait per step base state (CDN-primary; the section hides
+ * the mascot wrap entirely if the portrait cannot load).
  *
  * Lovart Xiaoyue portrait set v1 (2026-08-05): coach / curious / listening.
  * Masters live in `assets-source/lovart/xiaoyue-portraits/`; shipped WebP in
  * `src/assets/personality/xiaoyue/`.
  */
-const PORTRAIT_URL_BY_SPRITE_STATE: Partial<Record<XiaoyueSpriteState, string>> = {
+const PORTRAIT_URL_BY_STATE: Record<PoolRegistrationMascotState, string> = {
   coach: cdnAsset('/assets/personality/xiaoyue/lovart-mascot-xiaoyue-coach-20260805-v1.webp'),
   curious: cdnAsset('/assets/personality/xiaoyue/lovart-mascot-xiaoyue-curious-20260805-v1.webp'),
   listening: cdnAsset('/assets/personality/xiaoyue/lovart-mascot-xiaoyue-listening-20260805-v1.webp'),
@@ -26,8 +27,8 @@ const ENTRY_MS = 300
 export interface PoolRegistrationMascotSectionProps {
   /** Active step (1 = budget, 2 = intent + collapsed details section) */
   step: number
-  /** Per-step base sprite state (coach / curious / listening) */
-  spriteState: XiaoyueSpriteState
+  /** Per-step base portrait state (coach / curious / listening) */
+  spriteState: PoolRegistrationMascotState
   /** Bubble text — intro line or (while reacting) the reaction line */
   bubbleContent: string
   /** True while the one-shot nod reaction is playing */
@@ -40,19 +41,23 @@ export interface PoolRegistrationMascotSectionProps {
 
 /**
  * PoolRegistrationMascotSection — the single 悦仔 mascot row shown directly
- * above Steps 1–2 content: mascot-left (160rpx animated sprite) + speech
+ * above Steps 1–2 content: mascot-left (160rpx static portrait) + speech
  * bubble-right (max 520rpx, radius 24rpx, left tail).
  *
- * The section owns its sprite-state machine:
+ * The section owns its state machine:
  * - Step enter (forward nav): one-shot mascot pop + bubble rise; back nav
  *   restores the previous step's base state with no entry replay.
- * - Selection reaction: parent sets `reacting` → one-shot `nod` (manifest
- *   duration ~900ms) + bubble swap (old out 120ms, new in 160ms); the nod's
- *   onComplete clears the reaction.
+ * - Selection reaction: parent sets `reacting` → bubble swap (old out 120ms,
+ *   new in 160ms); after a short hold the reaction clears and the parent
+ *   restores the intro line.
  * - Idle: breathing only (translateY 0 → -4rpx, 2.4s alternate), transform /
  *   opacity only.
- * - Reduced / degraded motion: static portrait expressions (180rpx), no
- *   breathing, no entry or swap animation — content swaps still happen.
+ * - Reduced / degraded motion: no breathing, no entry or swap animation —
+ *   content swaps still happen.
+ *
+ * The mascot itself is always a static portrait image — sprite-sheet
+ * animation was removed (2026-09-03) because frame-stepping the sprite cost
+ * too much on-device.
  */
 export default function PoolRegistrationMascotSection({
   step,
@@ -118,26 +123,25 @@ export default function PoolRegistrationMascotSection({
     }
   }, [bubbleContent, motionDisabled])
 
-  // Reduced / degraded motion: no nod animation — hold the reaction bubble
-  // briefly so it stays readable, then signal completion so the parent can
-  // restore the intro line. Mirrors XiaoyueSpriteAnimator's own motion gate.
+  // Static mascot: the selection reaction is bubble-only — hold the reaction
+  // line briefly so it stays readable, then signal completion so the parent
+  // can restore the intro line.
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
-    if (!reacting || !motionDisabled) return
+    if (!reacting) return
     if (holdTimerRef.current) clearTimeout(holdTimerRef.current)
     holdTimerRef.current = setTimeout(() => onNodCompleteRef.current?.(), NOD_HOLD_MS)
     return () => {
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current)
     }
-  }, [reacting, motionDisabled])
+  }, [reacting])
 
   const [portraitFailed, setPortraitFailed] = useState(false)
   useEffect(() => {
     setPortraitFailed(false)
   }, [spriteState])
 
-  const effectiveSpriteState: XiaoyueSpriteState = reacting && !motionDisabled ? 'nod' : spriteState
-  const portraitUrl = PORTRAIT_URL_BY_SPRITE_STATE[spriteState] ?? PORTRAIT_URL_BY_SPRITE_STATE.coach ?? ''
+  const portraitUrl = PORTRAIT_URL_BY_STATE[spriteState] ?? PORTRAIT_URL_BY_STATE.coach
 
   const rootClass = [
     'pool-reg-mascot',
@@ -154,21 +158,12 @@ export default function PoolRegistrationMascotSection({
   return (
     <View className={rootClass}>
       <View className={['pool-reg-mascot__mascot-wrap', portraitFailed ? 'pool-reg-mascot__mascot-wrap--collapsed' : ''].filter(Boolean).join(' ')} aria-hidden='true'>
-        {motionDisabled ? (
-          portraitFailed ? null : (
-            <Image
-              className='pool-reg-mascot__portrait'
-              mode='aspectFit'
-              src={portraitUrl}
-              onError={() => setPortraitFailed(true)}
-            />
-          )
-        ) : (
-          <XiaoyueSpriteAnimator
-            state={effectiveSpriteState}
-            size={MASCOT_SIZE.md}
-            autoPlay={visible}
-            onComplete={() => onNodCompleteRef.current?.()}
+        {portraitFailed ? null : (
+          <Image
+            className='pool-reg-mascot__portrait'
+            mode='aspectFit'
+            src={portraitUrl}
+            onError={() => setPortraitFailed(true)}
           />
         )}
       </View>

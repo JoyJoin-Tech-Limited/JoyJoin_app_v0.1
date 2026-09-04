@@ -1,5 +1,7 @@
 import { View, Text, Image } from '@tarojs/components'
+import { useState } from 'react'
 import { localAsset } from '../../../lib/utils/cdnAssets'
+import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
 import type { TierMachineId } from '@shared/socialIcebreakerTierManifest'
 import type { VibeId } from '../../../lib/vibeMapping'
 import Card from '../../../components/ui/Card'
@@ -32,6 +34,7 @@ export default function WaitingPhase({
   onAdvance,
   glanceMode = false,
 }: WaitingPhaseProps) {
+  const [cameoFailed, setCameoFailed] = useState(false)
   // S3 glance treatment (spec §1.1 row 1): one L1 word + the waiting cameo.
   // The tier selector (host tool) and start CTA (ACT) stay pinned (§4.2).
   if (glanceMode) {
@@ -39,10 +42,11 @@ export default function WaitingPhase({
       <View className='icebreaker__waiting'>
         <View className='icebreaker__waiting-l1'>
           <Image
-            src={localAsset('/assets/mascot/xiaoyue-waiting.webp')}
+            src={cameoFailed ? localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp') : getXiaoyueExpressionAsset('matchWaiting')}
             mode='aspectFit'
             lazyLoad
             className='icebreaker__waiting-cameo'
+            onError={() => setCameoFailed(true)}
           />
           <Text className='icebreaker__waiting-l1-word'>{GLANCE_L1_WORD_WAITING}</Text>
           <Text className='icebreaker__waiting-l3'>

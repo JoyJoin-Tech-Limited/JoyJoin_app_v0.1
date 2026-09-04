@@ -1,9 +1,10 @@
-import { View, Text } from '@tarojs/components'
-import { useMemo } from 'react'
+import { View, Text, Image } from '@tarojs/components'
+import { useMemo, useState } from 'react'
 import { getArchetypeTokens } from '@shared/archetypeColorTokens'
 import { ARCHETYPE_BY_ID } from '@shared/personality/archetypeNames'
 import { DEFAULT_MASCOT_DISPLAY_NAME } from '@shared/mascotConfig'
-import XiaoyueSpriteAnimator from '../../../components/mascot/XiaoyueSpriteAnimator'
+import { getXiaoyueExpressionAsset } from '../../../lib/mascot/xiaoyueExpressions'
+import { localAsset } from '../../../lib/utils/cdnAssets'
 import MatchPromiseChip from './MatchPromiseChip'
 import PoolTeaserStrip from './PoolTeaserStrip'
 import { stripEmojis } from '../../../lib/utils/emojiGuard'
@@ -40,6 +41,7 @@ export default function XiaoyueLetterCard({
     () => (userArchetype ? getArchetypeTokens(userArchetype) : null),
     [userArchetype],
   )
+  const [mascotFailed, setMascotFailed] = useState(false)
   const archetypeName = useMemo(
     () => (userArchetype ? ARCHETYPE_BY_ID[userArchetype]?.nameCn : null),
     [userArchetype],
@@ -97,11 +99,11 @@ export default function XiaoyueLetterCard({
       <View className='xiaoyue-letter-card__paper'>
         <View className='xiaoyue-letter-card__header'>
           <View className='xiaoyue-letter-card__mascot-wrap'>
-            <XiaoyueSpriteAnimator
-              state='welcome'
-              size='120rpx'
-              autoPlay={false}
-              staticFrame={0}
+            <Image
+              className='xiaoyue-letter-card__mascot'
+              mode='aspectFit'
+              src={mascotFailed ? localAsset('/assets/xiaoyue-expressions/xiaoyue-home-welcome.webp') : getXiaoyueExpressionAsset('homeWelcome')}
+              onError={() => setMascotFailed(true)}
             />
           </View>
 

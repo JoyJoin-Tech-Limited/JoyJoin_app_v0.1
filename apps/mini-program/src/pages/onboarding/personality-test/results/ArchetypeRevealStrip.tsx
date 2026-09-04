@@ -50,8 +50,8 @@ interface ArchetypeRevealStripProps {
 /**
  * Phase 2b (2026-08-01): per-archetype animated reveal strip (K3-generated
  * 6–9 frame celebration loop) shown at slot land time instead of the static
- * WebP. Consumed through the proven JS-driven frame-stepping pattern
- * (XiaoyueSpriteAnimator) — CSS @keyframes stepping is unreliable in WeChat.
+ * WebP. Consumed through a JS-driven frame-stepping pattern — CSS @keyframes
+ * stepping is unreliable in WeChat.
  *
  * FALLBACK CHAIN (mirrors existing rules):
  *   1. CDN strip sheet (lazy, only the landed archetype's strip fetched)
