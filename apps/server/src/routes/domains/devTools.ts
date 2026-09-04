@@ -1,4 +1,5 @@
 import { logger } from "../../lib/logger";
+import { SESSION_COOKIE_NAME } from "../../lib/sessionCookieName";
 import type { Express, Request } from "express";
 import { isDevAuthToolsEnabled } from "../../auth/policy";
 import { storage } from "../../storage";
@@ -22,7 +23,7 @@ function getCookieDiagnostics(cookieHeader: string | string[] | undefined) {
   return {
     hasCookieHeader: cookieEntries.length > 0,
     cookieCount: cookieEntries.length,
-    hasConnectSidCookie: cookieEntries.some((entry) => entry.startsWith("connect.sid=")),
+    hasConnectSidCookie: cookieEntries.some((entry) => entry.startsWith(`${SESSION_COOKIE_NAME}=`)),
   };
 }
 

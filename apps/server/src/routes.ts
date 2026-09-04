@@ -59,6 +59,7 @@ import { registerPersonalStoryRoutes } from "./routes/domains/personalStory";
 import { registerShareClipRoutes } from "./routes/domains/shareClip";
 import { registerHealthRoutes } from "./healthRoutes";
 import { logger } from "./lib/logger";
+import { SESSION_COOKIE_NAME } from "./lib/sessionCookieName";
 import { isTestMode } from "./auth/getAuthStrategy";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -107,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // express-session requires the cookie value to be signed (s:<sid>.<hmac>).
       // Unsigned cookies are ignored when a secret is configured.
       const signed = 's:' + signCookie(token, process.env.SESSION_SECRET!);
-      req.headers.cookie = `connect.sid=${signed}`;
+      req.headers.cookie = `${SESSION_COOKIE_NAME}=${signed}`;
       logger.info('[X-Session-Token] Restored session from header', {
         sessionId: token.substring(0, 12) + '...',
       });
@@ -133,6 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.use(session({
     secret: process.env.SESSION_SECRET!,
+    name: SESSION_COOKIE_NAME,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,

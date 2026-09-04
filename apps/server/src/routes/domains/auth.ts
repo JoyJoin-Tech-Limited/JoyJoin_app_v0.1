@@ -4,6 +4,7 @@ import { setupWechatAuth } from "../../wechatAuth";
 import { storage } from "../../storage";
 import { authEndpointLimiter } from "../../rateLimiter";
 import { logger } from "../../lib/logger";
+import { SESSION_COOKIE_NAME } from "../../lib/sessionCookieName";
 import { captureLocationSnapshot } from "../../lib/captureLocationSnapshot";
 import { sanitizeAuthUser } from "../../auth/sanitizeAuthUser";
 import { isTestMode } from "../../auth/policy";
@@ -565,7 +566,7 @@ export function registerAuthRoutes(app: Express): void {
           logger.error("Error destroying session", { error: String(err) });
           return res.status(500).json({ message: "Failed to logout" });
         }
-        res.clearCookie('connect.sid');
+        res.clearCookie(SESSION_COOKIE_NAME);
         res.json({ message: "Logged out successfully" });
       });
     } catch (error) {

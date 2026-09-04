@@ -2,6 +2,7 @@ import type { Express, Request, RequestHandler } from "express";
 import bcrypt from "bcrypt";
 import { isProductionEnvironment } from "./auth/policy";
 import { storage } from "./storage";
+import { SESSION_COOKIE_NAME } from "./lib/sessionCookieName";
 import { logAdminAudit } from "./lib/adminAuditLogger";
 
 const VALID_ADMIN_ROLES = ["super_admin", "operator", "viewer"] as const;
@@ -284,7 +285,7 @@ export function registerAdminAuthRoutes(app: Express) {
         return res.status(500).json({ message: "退出登录失败" });
       }
 
-      res.clearCookie("connect.sid");
+      res.clearCookie(SESSION_COOKIE_NAME);
       return res.status(204).send();
     });
   });

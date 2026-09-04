@@ -7,6 +7,7 @@ import { ROOM_POKE_EMOJIS } from '@shared/wsEvents';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
 import { logger } from './lib/logger';
+import { SESSION_COOKIE_NAME } from './lib/sessionCookieName';
 
 interface AuthenticatedWebSocket extends WebSocket {
   userId?: string;
@@ -69,7 +70,7 @@ class WebSocketService {
       if (cookieHeader) {
         try {
           const cookies = parseCookie(cookieHeader);
-          const signedSid = cookies['connect.sid'];
+          const signedSid = cookies[SESSION_COOKIE_NAME];
           if (signedSid) {
             const secret = process.env.SESSION_SECRET || '';
             const sid = unsign(signedSid, secret);
