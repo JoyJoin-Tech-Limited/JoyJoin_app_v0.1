@@ -1,4 +1,5 @@
 import type { SocialIcebreakerPhase } from '@shared/socialIcebreaker'
+import { hexToRgba } from '../../../lib/utils/color'
 
 /**
  * PhaseHeroCard accent registry (PR2/PR3 revamp).
@@ -22,13 +23,6 @@ export interface PhaseAccent {
   tint: string
   /** Header-rail display name (canonical from phaseRegistry). */
   label: string
-}
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
 export const PHASE_ACCENTS: Partial<Record<SocialIcebreakerPhase, PhaseAccent>> = {

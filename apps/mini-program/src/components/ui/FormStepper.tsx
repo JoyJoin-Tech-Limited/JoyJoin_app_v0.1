@@ -1,4 +1,5 @@
 import { View, Text } from '@tarojs/components'
+import { hexToRgba } from '../../lib/utils/color'
 import Button from './Button'
 import './FormStepper.scss'
 
@@ -71,7 +72,14 @@ export default function FormStepper({
                 ].filter(Boolean).join(' ')}
                 style={
                   i <= currentStep && accentColor
-                    ? { background: accentColor }
+                    ? {
+                        background: accentColor,
+                        // Keep the active glow in the archetype tint too —
+                        // the SCSS glow is brand-purple and clashes otherwise.
+                        ...(i === currentStep
+                          ? { boxShadow: `0 2rpx 8rpx ${hexToRgba(accentColor, 0.25)}` }
+                          : null),
+                      }
                     : undefined
                 }
               />
