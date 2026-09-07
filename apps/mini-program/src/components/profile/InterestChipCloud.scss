@@ -1,11 +1,11 @@
 @use '../../styles/variables' as *;
 
-// Local intensity palette for the interest "heat" visualization. These three
-// levels are intentionally derived from brand tokens so the cloud stays in the
-// JoyJoin purple-pink family rather than introducing one-off hexes.
-$heat-low:    $color-primary;
-$heat-medium: $color-primary-dark;
-$heat-high:   $color-secondary;
+// Heat palette must stay in sync with the extended-data selector
+// (--jj-heat-l1..l3 in pages/onboarding/extended-data/index.scss and the
+// HEAT_COLORS map in its index.tsx): L1 感兴趣, L2 很热衷, L3 必聊项.
+$heat-l1: #A78BFA;
+$heat-l2: #8B5CF6;
+$heat-l3: #F97316;
 
 .interest-chip-cloud {
   &__chips {
@@ -38,22 +38,21 @@ $heat-high:   $color-secondary;
     }
 
     &--level-1 {
-      color: $heat-medium;
-      background: rgba($heat-low, 0.10);
-      border-color: rgba($heat-low, 0.18);
-      opacity: 0.92;
+      color: $heat-l1;
+      background: rgba($heat-l1, 0.12);
+      border-color: rgba($heat-l1, 0.28);
     }
 
     &--level-2 {
-      color: $heat-medium;
-      background: rgba($heat-low, 0.14);
-      border-color: rgba($heat-low, 0.30);
+      color: $heat-l2;
+      background: rgba($heat-l2, 0.14);
+      border-color: rgba($heat-l2, 0.35);
     }
 
     &--level-3 {
-      color: $heat-high;
-      background: rgba($heat-high, 0.18);
-      border-color: rgba($heat-high, 0.40);
+      color: $heat-l3;
+      background: rgba($heat-l3, 0.16);
+      border-color: rgba($heat-l3, 0.42);
       font-weight: $font-weight-medium;
     }
 

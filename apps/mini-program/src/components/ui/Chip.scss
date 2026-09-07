@@ -1,5 +1,12 @@
 @use '../../styles/variables' as *;
 
+// Heat palette (chip--heat) must stay in sync with the extended-data selector
+// (--jj-heat-l1..l3 / HEAT_COLORS) and components/profile/InterestChipCloud.scss:
+// L1 感兴趣, L2 很热衷, L3 必聊项.
+$chip-heat-l1: #A78BFA;
+$chip-heat-l2: #8B5CF6;
+$chip-heat-l3: #F97316;
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -69,6 +76,34 @@
       border-color: rgba($color-primary, 0.65);
       box-shadow: 0 4rpx 14rpx rgba($color-primary, 0.20);
       transform: translateY(-2rpx);
+    }
+
+    // Heat mode: level carries interest-heat semantics, rendered in the
+    // canonical heat palette. Higher specificity than the generic level
+    // rules above so it always wins when both classes are present.
+    &.chip--heat {
+      &.chip--level-1 {
+        color: $chip-heat-l1;
+        background: rgba($chip-heat-l1, 0.12);
+        border-color: rgba($chip-heat-l1, 0.28);
+        box-shadow: 0 2rpx 8rpx rgba($chip-heat-l1, 0.10);
+      }
+
+      &.chip--level-2 {
+        color: $chip-heat-l2;
+        background: rgba($chip-heat-l2, 0.14);
+        border-color: rgba($chip-heat-l2, 0.35);
+        box-shadow: 0 3rpx 10rpx rgba($chip-heat-l2, 0.14);
+        transform: translateY(-1rpx);
+      }
+
+      &.chip--level-3 {
+        color: $chip-heat-l3;
+        background: rgba($chip-heat-l3, 0.16);
+        border-color: rgba($chip-heat-l3, 0.42);
+        box-shadow: 0 4rpx 14rpx rgba($chip-heat-l3, 0.20);
+        transform: translateY(-2rpx);
+      }
     }
   }
 

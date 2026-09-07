@@ -6,6 +6,14 @@ export interface ChipProps {
   meta?: string
   selected?: boolean
   level?: 1 | 2 | 3
+  /**
+   * Heat mode — reinterpret `level` as interest heat (L1 感兴趣 / L2 很热衷 /
+   * L3 必聊项) and render the canonical heat palette (extended-data
+   * --jj-heat-l1..l3) instead of the generic purple intensity escalation.
+   * Use for interest-heat selectors only; difficulty/other level semantics
+   * (e.g. PersonalityDice) keep the default styling.
+   */
+  heat?: boolean
   compact?: boolean
   disabled?: boolean
   className?: string
@@ -23,6 +31,7 @@ export default function Chip({
   meta,
   selected = false,
   level,
+  heat = false,
   compact = false,
   disabled = false,
   className = '',
@@ -32,6 +41,7 @@ export default function Chip({
     'chip',
     selected ? 'chip--selected' : '',
     level ? `chip--level-${level}` : '',
+    heat ? 'chip--heat' : '',
     compact ? 'chip--compact' : '',
     disabled ? 'chip--disabled' : '',
     className,

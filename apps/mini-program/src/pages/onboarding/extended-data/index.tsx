@@ -52,7 +52,7 @@ const MIN_INTERESTS = 3
 // Per-tap coachmark copy keyed by the level the tap just reached.
 // Copy budget: ≤10 chars so the anchored bubble stays clear of card edges.
 const TAP_HINT_COPY: Record<InterestSelectionLevel, string> = {
-  1: '再点一次增强热度',
+  1: '再点一次升为很热衷',
   2: '再点一次设为必聊项',
   3: '再点取消必聊项',
 }
@@ -81,11 +81,20 @@ const CATEGORY_VOICE_STEP_IDS: Record<MacroCategory, OnboardingVoiceStepId> = {
 }
 
 // WeChat resolves inline var() unreliably, so inline styles carry the resolved
-// hex values. Must stay in sync with --jj-heat-l1..l3 in index.scss.
+// hex values. Must stay in sync with --jj-heat-l1..l3 in index.scss and
+// $heat-l1..l3 in components/profile/InterestChipCloud.scss.
 const HEAT_COLORS = {
   1: '#A78BFA',
   2: '#8B5CF6',
   3: '#F97316',
+} as const
+
+// Legend-dot numeral colors: white fails contrast on the light L1 fill, so L1
+// uses a deep violet; L2/L3 stay white on their saturated fills.
+const HEAT_NUM_COLORS = {
+  1: '#6D28D9',
+  2: '#FFFFFF',
+  3: '#FFFFFF',
 } as const
 
 const CATEGORY_META: Record<MacroCategory, { dotColor: string; description: string }> = {
@@ -101,14 +110,15 @@ const INTEREST_LEVEL_META: Array<{
   level: InterestSelectionLevel
   label: string
   shortLabel: string
+  legendLabel: string
   description: string
   color: string
   bgColor: string
   borderColor: string
 }> = [
-  { level: 1, label: '感兴趣', shortLabel: '感兴趣', description: '加入你的兴趣画像', color: HEAT_COLORS[1], bgColor: 'rgba(167,139,250,0.12)', borderColor: 'rgba(167,139,250,0.28)' },
-  { level: 2, label: '很热衷', shortLabel: '很热衷', description: '更容易聊到停不下来', color: HEAT_COLORS[2], bgColor: 'rgba(139,92,246,0.14)', borderColor: 'rgba(139,92,246,0.35)' },
-  { level: 3, label: '必聊项', shortLabel: '必聊项', description: '优先排到同好，预览重点展示', color: HEAT_COLORS[3], bgColor: 'rgba(249,115,22,0.16)', borderColor: 'rgba(249,115,22,0.42)' },
+  { level: 1, label: '感兴趣', shortLabel: '感兴趣', legendLabel: '点1次 · 感兴趣', description: '加入你的兴趣画像', color: HEAT_COLORS[1], bgColor: 'rgba(167,139,250,0.12)', borderColor: 'rgba(167,139,250,0.28)' },
+  { level: 2, label: '很热衷', shortLabel: '很热衷', legendLabel: '点2次 · 很热衷', description: '更容易聊到停不下来', color: HEAT_COLORS[2], bgColor: 'rgba(139,92,246,0.14)', borderColor: 'rgba(139,92,246,0.35)' },
+  { level: 3, label: '必聊项', shortLabel: '必聊项', legendLabel: '点3次 · 必聊项', description: '优先排同好，预览重点展示', color: HEAT_COLORS[3], bgColor: 'rgba(249,115,22,0.16)', borderColor: 'rgba(249,115,22,0.42)' },
 ]
 
 const activeInterests = INTEREST_TAXONOMY.filter((item) => item.active)
@@ -544,7 +554,7 @@ export default function ExtendedDataPage() {
         />
         <Text className='extended-data__title'>把兴趣热度标出来</Text>
         <Text className='extended-data__subtitle'>
-          轻点加入 → 再点升温 → 三档成为必聊项
+          点一次感兴趣 · 点两次很热衷 · 点三次必聊
         </Text>
       </View>
 
@@ -568,9 +578,16 @@ export default function ExtendedDataPage() {
                 backgroundColor: item.color,
                 borderColor: item.borderColor,
               }}
-            />
+            >
+              <Text
+                className='extended-data__heat-guide-dot-num'
+                style={{ color: HEAT_NUM_COLORS[item.level] }}
+              >
+                {item.level}
+              </Text>
+            </View>
             <View className='extended-data__heat-guide-text'>
-              <Text className='extended-data__heat-guide-label'>{item.label}</Text>
+              <Text className='extended-data__heat-guide-label'>{item.legendLabel}</Text>
               <Text className='extended-data__heat-guide-desc'>{item.description}</Text>
             </View>
             {index < INTEREST_LEVEL_META.length - 1 && (
@@ -696,7 +713,7 @@ export default function ExtendedDataPage() {
                             {level ? <InterestTierIndicator level={level} /> : null}
                           </View>
                           <Text className='extended-data__interest-meta'>
-                            {levelMeta?.shortLabel || '轻点选择'}
+                            {levelMeta?.shortLabel || '点1次加入，连点升温'}
                           </Text>
                         </View>
                       )
