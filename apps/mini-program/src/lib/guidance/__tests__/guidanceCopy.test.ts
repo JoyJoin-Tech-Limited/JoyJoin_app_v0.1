@@ -25,8 +25,8 @@ function collectCopyStrings(): Array<{ label: string; value: string }> {
     out.push({ label: `${key}.dismissLabel`, value: copy.dismissLabel })
     out.push({ label: `${key}.dismissHint`, value: copy.dismissHint })
     copy.rows.forEach((row, index) => {
-      out.push({ label: `${key}.rows[${index}].eyebrow`, value: row.eyebrow })
-      out.push({ label: `${key}.rows[${index}].line`, value: row.line })
+      out.push({ label: `${key}.rows[${index}].title`, value: row.title })
+      out.push({ label: `${key}.rows[${index}].caption`, value: row.caption })
     })
   }
   return out
@@ -78,10 +78,12 @@ describe('E1 — absorbed arrival coachmark copy preservation', () => {
     expect(copy.dismissHint).toBe('轻触收起')
   })
 
-  it('keeps both play-mode explainer rows', () => {
+  it('keeps both play-mode tappable rows', () => {
     const copy = getGuidanceTipCopy('discover_arrival')
     expect(copy.rows).toHaveLength(2)
-    expect(copy.rows[0].line).toContain('盲盒活动')
-    expect(copy.rows[1].line).toContain('街头盲盒')
+    expect(copy.rows[0].key).toBe('event')
+    expect(copy.rows[0].title).toContain('盲盒活动')
+    expect(copy.rows[1].key).toBe('street')
+    expect(copy.rows[1].title).toContain('街头盲盒')
   })
 })

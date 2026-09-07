@@ -170,6 +170,11 @@ function AuthenticatedDiscover({
   // gathering-room first-visit hint.
   const [showArrivalCoachmark, setShowArrivalCoachmark] = useState(false)
   const arrivalCoachmarkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // 200ms exit-animation state for the legacy (flag-off) path — the queue
+  // path owns its own exiting flag via useGuidanceQueue. The card unmounts
+  // after the fade completes (GuidanceTipCard spec, all dismiss reasons).
+  const [arrivalExiting, setArrivalExiting] = useState(false)
+  const arrivalExitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // PR-9: true for the rest of the arrival day once the pending signal was
   // consumed (or the seen-date stamp matches today) — the header tagline
   // yields to the hook card's promise for the whole day.
@@ -411,22 +416,96 @@ function AuthenticatedDiscover({
   )
 
   // PR-9 funnel-tail close/tap-through events. `auto` fires from the 6s timer
-  // (no haptics); `button` is the explicit 知道了 close; `tap_through` is a
-  // tap on the card body/anchor — the user followed the pointer toward the
-  // 街头盲盒 entry below.
+  // (no haptics); `button` is the ✕ close; `tap_through` is a play-mode row
+  // tap — the user followed one of the two wayfinding entries. Haptics are
+  // owned by GuidanceTipCard (rows + ✕). The card plays the locked 200ms
+  // fade + translateY(8rpx) exit before unmounting.
   const handleArrivalCoachmarkClosed = useCallback((reason: 'button' | 'tap_through' | 'auto') => {
-    if (reason !== 'auto') haptics('light')
+    if (arrivalExitTimerRef.current) return
     if (arrivalCoachmarkTimerRef.current) {
       clearTimeout(arrivalCoachmarkTimerRef.current)
       arrivalCoachmarkTimerRef.current = null
     }
-    setShowArrivalCoachmark(false)
+    setArrivalExiting(true)
     onboardingAnalytics.interaction(
       'discover',
       reason === 'tap_through' ? 'arrival_hook_tap_through' : 'arrival_hook_close',
       { fromOnboarding: true, dismissReason: reason },
     )
+    arrivalExitTimerRef.current = setTimeout(() => {
+      arrivalExitTimerRef.current = null
+      setArrivalExiting(false)
+      setShowArrivalCoachmark(false)
+    }, 200)
   }, [])
+
+  // Unmount-time safety for the legacy exit timer (the dwell timer cleanup
+  // lives in the arrival effect below).
+  useEffect(() => () => {
+    if (arrivalExitTimerRef.current) {
+      clearTimeout(arrivalExitTimerRef.current)
+      arrivalExitTimerRef.current = null
+    }
+  }, [])
+
+  // 2026-09-07 redesign: the two play-mode rows are the routing entry —
+  // 盲盒活动 scrolls the pool section into view; 街头盲盒 opens the Flash
+  // subpackage (mirrors AlangDiscoverCard). Discover uses page-level scroll
+  // (usePageScroll drives the tab-bar collapse), so Taro.pageScrollTo with
+  // a selector works; a selector-query fallback covers runtimes where the
+  // selector form is unsupported.
+  const scrollPoolsIntoView = useCallback(() => {
+    const fallback = () => {
+      try {
+        const query = Taro.createSelectorQuery()
+        query.select('.discover-auth__section').boundingClientRect()
+        query.selectViewport().scrollOffset()
+        query.exec((res) => {
+          const rect = res?.[0] as { top?: number } | null | undefined
+          const viewport = res?.[1] as { scrollTop?: number } | null | undefined
+          if (!rect || typeof rect.top !== 'number') return
+          const current = typeof viewport?.scrollTop === 'number' ? viewport.scrollTop : 0
+          Taro.pageScrollTo({
+            scrollTop: Math.max(0, current + rect.top - 12),
+            duration: 250,
+          }).catch(() => undefined)
+        })
+      } catch {
+        // Scroll assist is best-effort; the feed is already visible below.
+      }
+    }
+    Taro.pageScrollTo({ selector: '.discover-auth__section', offsetTop: -12, duration: 250 }).catch(fallback)
+  }, [])
+
+  const runArrivalRowAction = useCallback((key: 'event' | 'street') => {
+    if (key === 'street') {
+      Taro.navigateTo({ url: MINI_PROGRAM_ROUTES.alangEvent }).catch((error) => {
+        logWarn('[Discover] arrival row: failed to open 街头盲盒', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+      })
+      return
+    }
+    scrollPoolsIntoView()
+  }, [scrollPoolsIntoView])
+
+  // Row tap, legacy flag-off path: dismiss as a guided tap-through (keeps
+  // the arrival_hook_tap_through analytics semantics), then route.
+  const handleLegacyArrivalRowTap = useCallback((key: 'event' | 'street') => {
+    handleArrivalCoachmarkClosed('tap_through')
+    runArrivalRowAction(key)
+  }, [handleArrivalCoachmarkClosed, runArrivalRowAction])
+
+  // Row tap, queue flag-on path: identical analytics semantics, dismissal
+  // persisted + exit animation owned by the queue hook.
+  const handleQueueArrivalRowTap = useCallback((key: 'event' | 'street') => {
+    onboardingAnalytics.interaction('discover', 'arrival_hook_tap_through', {
+      fromOnboarding: true,
+      dismissReason: 'tap_through',
+    })
+    dismissGuidanceTip('tap_through')
+    runArrivalRowAction(key)
+  }, [dismissGuidanceTip, runArrivalRowAction])
 
   // E1 flag-on side effects: when the queue fires the absorbed arrival tip,
   // keep the legacy same-day behavior — day stamp, tagline yield, and the
@@ -617,65 +696,35 @@ function AuthenticatedDiscover({
         </View>
       </View>
 
-      {/* PR-5 + PR-9 first-visit arrival card (one-time; tap or 6s to dismiss).
-          Top half: 悦仔's archetype-voiced return hook echoing the results-page
-          promise. Bottom half: the two play-mode explainer lines. The bottom
-          anchor arrow points at the 街头盲盒 card below.
+      {/* PR-5 + PR-9 first-visit arrival card (one-time; ✕ / row tap / 6s
+          dwell to dismiss). 2026-09-07 redesign: vertical welcome card —
+          header row (mascot + kicker + ✕) → archetype-voiced hook title →
+          two tappable play-mode rows (event scrolls to the feed, street
+          opens 街头盲盒). Both flag paths render the SAME GuidanceTipCard;
+          only the dismiss/persist owner differs.
           C4 (2026-08-27): legacy path renders ONLY with the queue flag OFF;
           with guidanceQueueEnabled ON the queue tip below owns this slot. */}
       {!guidanceQueueEnabled && showArrivalCoachmark ? (
-        <View
-          className='discover-auth__arrival-coachmark'
-          onClick={() => handleArrivalCoachmarkClosed('tap_through')}
-          hoverClass='discover-auth__arrival-coachmark--pressed'
-          role='button'
-          aria-label={`${arrivalHookLine}。玩法提示：${FLOW1_ENTRY_COPY.event.title}是同桌小局，${FLOW1_ENTRY_COPY.street.title}一个人也能玩。轻触收起`}
-        >
-          <View className='discover-auth__arrival-mascot' aria-hidden='true'>
-            <Image
-              className='discover-auth__arrival-mascot-img'
-              src={avatarError ? localFallback : xiaoyueAsset}
-              mode='aspectFit'
-              onError={() => setAvatarError(true)}
-            />
-          </View>
-          <View className='discover-auth__arrival-body'>
-            <Text className='discover-auth__arrival-kicker'>先看看怎么玩</Text>
-            <Text className='discover-auth__arrival-title'>{arrivalHookLine}</Text>
-            <View className='discover-auth__arrival-row'>
-              <Text className='discover-auth__arrival-eyebrow'>{FLOW1_ENTRY_COPY.event.eyebrow}</Text>
-              <Text className='discover-auth__arrival-line'>
-                {FLOW1_ENTRY_COPY.event.title} · {FLOW1_ENTRY_COPY.event.bannerLine}
-              </Text>
-            </View>
-            <View className='discover-auth__arrival-row'>
-              <Text className='discover-auth__arrival-eyebrow'>{FLOW1_ENTRY_COPY.street.eyebrow}</Text>
-              <Text className='discover-auth__arrival-line'>
-                {FLOW1_ENTRY_COPY.street.title} · {FLOW1_ENTRY_COPY.street.bannerLine}
-              </Text>
-            </View>
-          </View>
-          <Text
-            className='discover-auth__arrival-dismiss'
-            onClick={(e) => {
-              e.stopPropagation()
-              handleArrivalCoachmarkClosed('button')
-            }}
-          >
-            知道了
-          </Text>
-          <View className='discover-auth__arrival-anchor' aria-hidden='true' />
-        </View>
+        <GuidanceTipCard
+          kicker={guidanceTipCopy.kicker}
+          title={arrivalHookLine}
+          rows={guidanceTipCopy.rows}
+          mascotSrc={avatarError ? localFallback : xiaoyueAsset}
+          onMascotError={() => setAvatarError(true)}
+          exiting={arrivalExiting}
+          ariaLabel={`${arrivalHookLine}。玩法提示：${FLOW1_ENTRY_COPY.event.title}是同桌小局，${FLOW1_ENTRY_COPY.street.title}一个人也能玩。${guidanceTipCopy.dismissHint}`}
+          onDismiss={(reason) => handleArrivalCoachmarkClosed(reason)}
+          onRowTap={handleLegacyArrivalRowTap}
+        />
       ) : null}
 
-      {/* C4 queue-fired arrival tip (flag ON path): same copy/visual as the
-          legacy coachmark above, arbitrated/persisted by useGuidanceQueue. */}
+      {/* C4 queue-fired arrival tip (flag ON path): same card + copy as the
+          legacy path above, arbitrated/persisted by useGuidanceQueue. */}
       {arrivalTipShowing ? (
         <GuidanceTipCard
           kicker={guidanceTipCopy.kicker}
           title={arrivalHookLine}
           rows={guidanceTipCopy.rows}
-          dismissLabel={guidanceTipCopy.dismissLabel}
           mascotSrc={avatarError ? localFallback : xiaoyueAsset}
           onMascotError={() => setAvatarError(true)}
           exiting={guidanceTipExiting}
@@ -688,6 +737,7 @@ function AuthenticatedDiscover({
             )
             dismissGuidanceTip(reason)
           }}
+          onRowTap={handleQueueArrivalRowTap}
         />
       ) : null}
 

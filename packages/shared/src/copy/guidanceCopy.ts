@@ -20,11 +20,16 @@ import type { ToneMode } from './toneMap.js';
 
 export type GuidanceTipCopyKey = 'discover_arrival';
 
+/** Stable row identity — drives row-tap routing (event feed vs 街头盲盒). */
+export type GuidanceTipRowKey = 'event' | 'street';
+
 export interface GuidanceTipRowCopy {
-  /** Pill label disambiguating the play mode (e.g. 和新朋友同桌). */
-  eyebrow: string;
-  /** One-line mechanics explainer (e.g. 盲盒活动 · 挑一场活动，凑成一桌，线下见). */
-  line: string;
+  key: GuidanceTipRowKey;
+  /** Row headline: play-mode name merged with the old eyebrow qualifier
+   *  (e.g. 盲盒活动 · 和新朋友同桌). */
+  title: string;
+  /** One-line mechanics explainer (e.g. 挑一场活动，凑成一桌，线下见). */
+  caption: string;
 }
 
 export interface GuidanceTipCopy {
@@ -32,9 +37,10 @@ export interface GuidanceTipCopy {
   toneMode: ToneMode;
   /** Small-caps style header above the voiced title. */
   kicker: string;
-  /** Explicit close button label. */
+  /** Explicit close button label (retained for copy-lock; the redesigned
+   *  card chrome uses an icon-only ✕ with aria-label). */
   dismissLabel: string;
-  /** Explainer rows beneath the title. */
+  /** Tappable play-mode rows beneath the title. */
   rows: readonly GuidanceTipRowCopy[];
   /** Tap-to-dismiss affordance hint used in the aria label. */
   dismissHint: string;
@@ -48,12 +54,14 @@ export const GUIDANCE_TIP_COPY: Record<GuidanceTipCopyKey, GuidanceTipCopy> = {
     dismissLabel: '知道了',
     rows: [
       {
-        eyebrow: FLOW1_ENTRY_COPY.event.eyebrow,
-        line: `${FLOW1_ENTRY_COPY.event.title} · ${FLOW1_ENTRY_COPY.event.bannerLine}`,
+        key: 'event',
+        title: `${FLOW1_ENTRY_COPY.event.title} · ${FLOW1_ENTRY_COPY.event.eyebrow}`,
+        caption: FLOW1_ENTRY_COPY.event.bannerLine,
       },
       {
-        eyebrow: FLOW1_ENTRY_COPY.street.eyebrow,
-        line: `${FLOW1_ENTRY_COPY.street.title} · ${FLOW1_ENTRY_COPY.street.bannerLine}`,
+        key: 'street',
+        title: `${FLOW1_ENTRY_COPY.street.title} · ${FLOW1_ENTRY_COPY.street.eyebrow}`,
+        caption: FLOW1_ENTRY_COPY.street.bannerLine,
       },
     ],
     dismissHint: '轻触收起',
