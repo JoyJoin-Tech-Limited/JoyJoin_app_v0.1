@@ -61,6 +61,7 @@ export default function BoxJourneySpine({ step, accentColor, className = '' }: B
             transform: `scaleY(${(step / 3).toFixed(3)})`,
           }}
         />
+        <View className='box-journey-spine__box-tape' />
         <View className='box-journey-spine__box-lid' />
         {step === 3 ? <View className='box-journey-spine__glow-dot' /> : null}
       </View>

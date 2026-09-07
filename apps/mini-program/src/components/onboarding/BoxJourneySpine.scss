@@ -10,6 +10,7 @@
   align-items: center;
   gap: 12rpx;
   height: 64rpx;
+  padding-top: 16rpx;
   opacity: 0.75;
   box-sizing: border-box;
 }
@@ -23,6 +24,11 @@
   border-radius: 10rpx;
   box-sizing: border-box;
   background: $color-surface;
+  box-shadow: 0 4rpx 10rpx rgba($color-text-primary-warm, 0.08);
+
+  .box-journey-spine--step-3 & {
+    border-color: rgba($color-landed-gold, 0.55);
+  }
 }
 
 .box-journey-spine__box-fill {
@@ -33,8 +39,39 @@
   bottom: 4rpx;
   border-radius: 6rpx;
   opacity: 0.8;
+  overflow: hidden;
   transform-origin: bottom center;
   animation: box-journey-fill-in 300ms ease-out both;
+
+  // Light-catching sheen on the fill surface so the liquid reads as volume,
+  // not a flat color block. Scales with the fill (transform) — acceptable.
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 40%;
+    border-radius: 6rpx 6rpx 0 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0));
+  }
+}
+
+// Sealing tape down the box front — the 「装盒」 cue. Neutral while packing;
+// turns landed-gold when the box seals at step 3 (pairs with the glow dot).
+.box-journey-spine__box-tape {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 6rpx;
+  margin-left: -3rpx;
+  border-radius: 3rpx;
+  background: rgba($color-text-primary-warm, 0.14);
+
+  .box-journey-spine--step-3 & {
+    background: rgba($color-landed-gold, 0.5);
+  }
 }
 
 // Keyframes own only `from`; the inline style owns the target scaleY, so
@@ -55,9 +92,17 @@
   background: $color-surface;
   border: 2rpx solid rgba($color-text-primary-warm, 0.3);
   box-sizing: border-box;
-  transform: rotate(-8deg) translateY(-2rpx);
+  box-shadow: 0 2rpx 4rpx rgba($color-text-primary-warm, 0.12);
+  // Lid visibly settles toward closed as the box fills: most ajar at step 1,
+  // nearly shut at step 2, sealed flat at step 3 (transition above animates
+  // within a page; across pages the mount just renders the new angle).
+  transform: rotate(-12deg) translateY(-2rpx);
   transform-origin: left center;
   transition: transform 240ms ease-out;
+
+  .box-journey-spine--step-2 & {
+    transform: rotate(-6deg) translateY(-1rpx);
+  }
 
   .box-journey-spine--step-3 & {
     transform: rotate(0deg) translateY(0);
@@ -81,10 +126,12 @@
   font-size: 24rpx;
   color: rgba($color-text-primary-warm, 0.72);
   line-height: 1;
+  letter-spacing: 1rpx;
   white-space: nowrap;
 }
 
 .box-journey-spine__fraction {
+  margin-left: 2rpx;
   font-family: $font-cn-display;
   color: rgba($color-text-primary-warm, 0.85);
 }
