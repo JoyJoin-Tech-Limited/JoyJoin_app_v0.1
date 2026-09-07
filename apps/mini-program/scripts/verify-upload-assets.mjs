@@ -54,6 +54,25 @@ const CRITICAL_ASSETS = [
   'assets/icons/archetype-grid/archetype-hamster_praise-grid.webp',
   // Gathering-room scene (2026-08-17 incident)
   'assets/gathering-room/room-composite-v2.webp',
+  // Personality-test intro tease icons + slot spritesheet (2026-09-07 incident:
+  // the 12-icon tease row rendered as empty circles on device)
+  'pages/onboarding/assets/archetypes/archetype-spritesheet.webp',
+  'pages/onboarding/assets/archetypes/archetype-corgi.webp',
+  'pages/onboarding/assets/archetypes/archetype-rooster.webp',
+  'pages/onboarding/assets/archetypes/archetype-hamster_praise.webp',
+  'pages/onboarding/assets/archetypes/archetype-fox.webp',
+  'pages/onboarding/assets/archetypes/archetype-dolphin_calm.webp',
+  'pages/onboarding/assets/archetypes/archetype-spider.webp',
+  'pages/onboarding/assets/archetypes/archetype-koala.webp',
+  'pages/onboarding/assets/archetypes/archetype-octopus.webp',
+  'pages/onboarding/assets/archetypes/archetype-owl.webp',
+  'pages/onboarding/assets/archetypes/archetype-elephant.webp',
+  'pages/onboarding/assets/archetypes/archetype-turtle.webp',
+  'pages/onboarding/assets/archetypes/archetype-cat.webp',
+  // Profile-review first-run surfaces (2026-09-07): useCdnFirstSrc local
+  // fallbacks for the welcome gift card + invite-teaser banner.
+  'assets/lovart/gift-card/coupon.webp',
+  'assets/lovart/profile-review/invite-teaser.webp',
   // Tab bar (upload rejects missing iconPath with 800059)
   'assets/joyjoin-logo-tab.png',
 ]

@@ -240,6 +240,17 @@ export default defineConfig<'vite'>(async (merge: MergeConfig) => {
           from: 'src/pages/pool-registration/assets',
           to: 'dist/pages/pool-registration/assets',
         },
+        // Profile-review first-run surfaces: the useCdnFirstSrc local fallback
+        // must actually exist on device, or a CDN hiccup 404s into a blank
+        // gift card / invite banner for brand-new users. ~40KB total.
+        {
+          from: 'src/assets/lovart/gift-card',
+          to: 'dist/assets/lovart/gift-card',
+        },
+        {
+          from: 'src/assets/lovart/profile-review',
+          to: 'dist/assets/lovart/profile-review',
+        },
         // The three Alang prototype placeholders are byte-identical. Bundle one
         // shared fallback in the main package because Discover/Profile can render
         // it before the Alang subpackage is loaded.

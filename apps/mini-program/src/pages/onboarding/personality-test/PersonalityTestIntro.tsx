@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Button from '../../../components/ui/Button'
 import XiaoyueInlineError from '../../../components/mascot/XiaoyueInlineError'
@@ -6,6 +7,7 @@ import {
   getIntroStaticAsset,
   getIntroStaticFallbackAsset,
   ASSET_BASE_WEBP_LOCAL,
+  ARCHETYPE_ASSET_MAP,
 } from './visuals'
 
 // Lead with fox/owl — corgi double-casts as the hero mascot 200rpx above,
@@ -82,6 +84,9 @@ export default function PersonalityTestIntro({
   const introCoachLine = hasStoredIncompleteSession
     ? '进度还在，继续答几分钟就能完成。'
     : '没有标准答案，凭直觉选就好。我会帮你整理出最真实的那一面。'
+  // Bundled tease icons that failed on device swap to their CDN twin
+  // (2026-09-07: packOptions upload filtering left empty circles).
+  const [cdnFallbackIds, setCdnFallbackIds] = useState<ReadonlySet<string>>(new Set())
   const introPrimaryLabel = isSubmitting
     ? '准备中…'
     : error
@@ -175,10 +180,19 @@ export default function PersonalityTestIntro({
               {TEASE_ARCHETYPE_IDS.map((id) => (
                 <View key={id} className='personality-test__intro-tease-icon'>
                   <Image
-                    src={`${ASSET_BASE_WEBP_LOCAL}/archetype-${id}.webp`}
+                    src={
+                      cdnFallbackIds.has(id)
+                        ? ARCHETYPE_ASSET_MAP[id]?.webp
+                        : `${ASSET_BASE_WEBP_LOCAL}/archetype-${id}.webp`
+                    }
                     mode='aspectFit'
                     className='personality-test__intro-tease-icon-img'
                     lazyLoad={false}
+                    onError={() =>
+                      setCdnFallbackIds((prev) =>
+                        prev.has(id) ? prev : new Set(prev).add(id),
+                      )
+                    }
                   />
                 </View>
               ))}

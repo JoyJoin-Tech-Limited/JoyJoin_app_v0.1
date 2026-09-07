@@ -102,7 +102,15 @@ const sourceOnlyAlangUiAssets = new Set([
 
 await removeMatching(
   'lovart',
-  (name) => name !== 'puzzle' && name !== 'squad' && name !== 'landing' && !bundledAlangAssets.has(name),
+  // gift-card + profile-review are the bundled useCdnFirstSrc fallbacks for
+  // the profile-review first-run surfaces (2026-09-07) — keep them.
+  (name) =>
+    name !== 'puzzle' &&
+    name !== 'squad' &&
+    name !== 'landing' &&
+    name !== 'gift-card' &&
+    name !== 'profile-review' &&
+    !bundledAlangAssets.has(name),
 )
 await Promise.all([
   removePath('lovart/puzzle'),

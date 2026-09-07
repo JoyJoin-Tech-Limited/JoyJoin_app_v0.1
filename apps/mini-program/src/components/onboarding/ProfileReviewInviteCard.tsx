@@ -38,6 +38,11 @@ function getLocalArchetypeIcon(id: string): string {
   return `${ASSET_BASE_WEBP_LOCAL}/archetype-${id}.webp`
 }
 
+/** CDN fallback when the bundled copy fails (e.g. a stale upload package). */
+function getCdnArchetypeIcon(id: string): string {
+  return ARCHETYPE_ASSET_MAP[id]?.webp ?? ''
+}
+
 /**
  * Profile-review summary card: full-bleed Lovart banner with a playful
  * "kindred radar" — the user's archetype sits at the center while four other
@@ -55,6 +60,23 @@ export default function ProfileReviewInviteCard({
 }: ProfileReviewInviteCardProps): JSX.Element {
   const [isImageLoaded, setIsImageLoaded] = useState(false)
   const [imageErrorCount, setImageErrorCount] = useState(0)
+  // Archetype icons whose bundled local copy failed — swapped to CDN src so a
+  // stale upload package degrades to network images instead of blank circles.
+  const [cdnFallbackIconIds, setCdnFallbackIconIds] = useState<ReadonlySet<string>>(new Set())
+
+  const handleIconError = useCallback((id: string) => {
+    setCdnFallbackIconIds((prev) => {
+      if (prev.has(id)) return prev
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+  }, [])
+
+  const iconSrcFor = useCallback(
+    (id: string) => (cdnFallbackIconIds.has(id) ? getCdnArchetypeIcon(id) : getLocalArchetypeIcon(id)),
+    [cdnFallbackIconIds],
+  )
 
   const visual = useMemo(() => getArchetypeVisual(archetypeId || null), [archetypeId])
   const hasKnownArchetype = Boolean(archetypeId) && ARCHETYPE_IDS.includes(archetypeId)
@@ -170,9 +192,10 @@ export default function ProfileReviewInviteCard({
             >
               <Image
                 className='profile-review-invite-card__radar-satellite-icon'
-                src={getLocalArchetypeIcon(satellite.id)}
+                src={iconSrcFor(satellite.id)}
                 mode='aspectFit'
                 lazyLoad={false}
+                onError={() => handleIconError(satellite.id)}
               />
             </View>
           </View>
@@ -186,9 +209,10 @@ export default function ProfileReviewInviteCard({
             >
               <Image
                 className='profile-review-invite-card__radar-center-icon'
-                src={getLocalArchetypeIcon(archetypeId)}
+                src={iconSrcFor(archetypeId)}
                 mode='aspectFit'
                 lazyLoad={false}
+                onError={() => handleIconError(archetypeId)}
               />
             </View>
             <Text

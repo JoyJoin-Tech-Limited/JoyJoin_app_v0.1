@@ -161,6 +161,18 @@
       {
         "type": "regexp",
         "value": "pages/pool-registration/assets/ceremony/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "pages/onboarding/assets/archetypes/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/lovart/gift-card/.*\\.webp$"
+      },
+      {
+        "type": "regexp",
+        "value": "assets/lovart/profile-review/.*\\.webp$"
       }
     ]
   },
