@@ -17,6 +17,7 @@
 
   &__spine {
     padding: 0 $container-padding;
+    margin-bottom: $spacing-xs;
     @include safe-area-inline($container-padding);
   }
 

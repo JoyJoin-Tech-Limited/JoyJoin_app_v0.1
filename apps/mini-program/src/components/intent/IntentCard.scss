@@ -26,23 +26,12 @@
     border-color: rgba($color-primary, 0.30);
   }
 
-  &--disabled {
-    background: $color-bg;
-    border-color: $color-border;
-    opacity: 0.55;
-
-    &:active,
-    &--hover {
-      transform: none;
-    }
-  }
-
   &--hover,
-  &:active:not(&--disabled) {
+  &:active {
     transform: scale(0.97);
   }
 
-  &:active:not(&--disabled) {
+  &:active {
     box-shadow: 0 0 0 4rpx rgba($color-primary, 0.22);
   }
 
@@ -55,7 +44,7 @@
     transition: none;
 
     &--hover,
-    &:active:not(&--disabled) {
+    &:active {
       transform: none;
     }
   }

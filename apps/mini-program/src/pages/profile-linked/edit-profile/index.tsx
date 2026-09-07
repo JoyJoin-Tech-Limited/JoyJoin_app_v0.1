@@ -59,7 +59,6 @@ const BIRTH_YEAR_RANGE = Array.from(
   (_, i) => String(CURRENT_YEAR - 18 - i),
 )
 
-const MAX_INTENTS = 3
 const INTEREST_LEVEL_META: Array<{
   level: InterestSelectionLevel
   label: string
@@ -307,19 +306,24 @@ export default function EditProfilePage() {
   }, [interestLevels, selectedInterests])
 
   const toggleIntent = useCallback((value: string) => {
+    let collapsedToFlexible = false
     let didChange = false
     setIntent((current) => {
-      const next = toggleIntentValue(current, value, { maxExplicit: MAX_INTENTS })
-      if (next === null) {
-        haptics('warning')
-        Taro.showToast({ title: `最多选择 ${MAX_INTENTS} 个期待`, icon: 'none', duration: 2000 })
+      // No selection cap: every explicit intent stays selectable; picking all
+      // six auto-collapses to 随缘 (toggleIntentValue contract).
+      const next = toggleIntentValue(current, value)
+      if (!next) {
         return current
       }
-      haptics('light')
+      collapsedToFlexible =
+        value !== INTENT_FLEXIBLE_OPTION.value &&
+        next.length === 1 &&
+        next[0] === INTENT_FLEXIBLE_OPTION.value
       didChange = true
       return next
     })
     if (didChange) {
+      haptics(collapsedToFlexible ? 'medium' : 'light')
       setChangedFields((prev) => ({ ...prev, intent: true }))
     }
   }, [])
@@ -855,18 +859,15 @@ export default function EditProfilePage() {
             <View className='edit-profile__field'>
               <Text className='edit-profile__label'>
                 活动期待
-                <Text className='edit-profile__intent-count'>（{intent.length} 已选，最多 {MAX_INTENTS}）</Text>
+                <Text className='edit-profile__intent-count'>（已选 {intent.length}）</Text>
               </Text>
               <View className='edit-profile__intent-grid'>
                 {(() => {
                   const isFlexibleActive = intent.includes(INTENT_FLEXIBLE_OPTION.value)
-                  const explicitCount = intent.filter((item) => item !== INTENT_FLEXIBLE_OPTION.value).length
-                  const isCapReached = explicitCount >= MAX_INTENTS
                   return intentOptions.map((option: typeof intentOptions[number]) => {
                     const isSelected = intent.includes(option.value)
                     const isFlexibleOption = option.value === INTENT_FLEXIBLE_OPTION.value
                     const isDimmed = isFlexibleActive && !isFlexibleOption && !isSelected
-                    const isDisabled = isCapReached && !isSelected && !isFlexibleOption
                     return (
                       <View
                         key={option.value}
@@ -874,14 +875,12 @@ export default function EditProfilePage() {
                           'edit-profile__intent-card',
                           isSelected ? 'edit-profile__intent-card--selected' : '',
                           isDimmed ? 'edit-profile__intent-card--dimmed' : '',
-                          isDisabled ? 'edit-profile__intent-card--disabled' : '',
                         ].filter(Boolean).join(' ')}
-                        hoverClass={isDisabled ? '' : 'edit-profile__intent-card--hover'}
-                        onClick={() => !isDisabled && toggleIntent(option.value)}
+                        hoverClass='edit-profile__intent-card--hover'
+                        onClick={() => toggleIntent(option.value)}
                         role='button'
                         aria-pressed={isSelected}
-                        aria-disabled={isDisabled}
-                        aria-label={`${option.label}${option.subtitle ? `：${option.subtitle}` : ''}${isDisabled ? '（已达上限）' : ''}`}
+                        aria-label={`${option.label}${option.subtitle ? `：${option.subtitle}` : ''}`}
                       >
                         {option.emoji != null ? (
                           <JoyJoinIcon emoji={option.emoji} tier='intent' size={54} className='edit-profile__intent-icon' />
@@ -934,6 +933,7 @@ export default function EditProfilePage() {
                           meta={isSelected ? meta?.shortLabel : undefined}
                           selected={isSelected}
                           level={level}
+                          heat
                           disabled={isLoadingInterests}
                           onClick={() => toggleInterest(interest.id)}
                         />

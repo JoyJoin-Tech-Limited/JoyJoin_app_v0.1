@@ -16,7 +16,6 @@ interface IntentCardProps {
   option: IntentCardOption
   selected?: boolean
   dimmed?: boolean
-  disabled?: boolean
   onClick?: () => void
   iconSize?: number
   className?: string
@@ -34,17 +33,16 @@ export default function IntentCard({
   option,
   selected = false,
   dimmed = false,
-  disabled = false,
   onClick,
   iconSize = 144,
   className = '',
   testId,
 }: IntentCardProps) {
   const handleTap = useCallback(() => {
-    if (disabled || !onClick) return
+    if (!onClick) return
     haptics('light')
     onClick()
-  }, [disabled, onClick])
+  }, [onClick])
 
   return (
     <View
@@ -52,17 +50,15 @@ export default function IntentCard({
         'intent-card',
         selected ? 'intent-card--selected' : '',
         dimmed ? 'intent-card--dimmed' : '',
-        disabled ? 'intent-card--disabled' : '',
         className,
       ]
         .filter(Boolean)
         .join(' ')}
-      hoverClass={disabled ? '' : 'intent-card--hover'}
+      hoverClass='intent-card--hover'
       onClick={handleTap}
       role='button'
       aria-pressed={selected}
-      aria-disabled={disabled}
-      aria-label={`${option.label}${option.subtitle ? `：${option.subtitle}` : ''}${disabled ? '（已达上限）' : ''}`}
+      aria-label={`${option.label}${option.subtitle ? `：${option.subtitle}` : ''}`}
       data-testid={testId}
     >
       {option.emoji != null ? (

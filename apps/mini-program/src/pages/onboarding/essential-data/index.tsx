@@ -48,27 +48,13 @@ import ProfessionChatOverlay from '../../../components/ProfessionChatOverlay'
 import ContentBlockedError from '../../../components/ContentBlockedError'
 import type { ProfessionClassificationData } from '../../../components/ProfessionChatOverlay'
 import { getArchetypeVisual } from '../personality-test/visuals'
+import { hexToRgba } from '../../../lib/utils/color'
 import './index.scss'
-
-// Convert a 6-digit hex accent color to rgba for inline shadows.
-// Avoids 8-digit hex alpha, which older WeChat base libraries may not parse.
-function hexToRgba(hex: string, alpha: number): string {
-  const clean = hex.replace('#', '')
-  const full = clean.length === 3
-    ? clean.split('').map((c) => c + c).join('')
-    : clean
-  const bigint = parseInt(full, 16)
-  const r = (bigint >> 16) & 255
-  const g = (bigint >> 8) & 255
-  const b = bigint & 255
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
-}
 
 function waitFor(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-const MAX_INTENTS = 3
 // Wizard step exit animation duration (kept in sync with the step-exit
 // keyframes in index.scss). The outgoing card plays this, then the incoming
 // card mounts with the existing step-fade-in entry.
@@ -249,11 +235,8 @@ export default function EssentialDataPage() {
   const [contentViolations, setContentViolations] = useState<Record<string, string>>({})
   const [showProfessionOverlay, setShowProfessionOverlay] = useState(false)
   // PR-8: field-level inline validation hints (replace bare toasts) — the
-  // profession hint persists until the field is re-opened or accepted; the
-  // intent-limit hint auto-clears after a short beat.
+  // profession hint persists until the field is re-opened or accepted.
   const [professionHint, setProfessionHint] = useState('')
-  const [intentLimitHintVisible, setIntentLimitHintVisible] = useState(false)
-  const intentLimitHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [professionClassification, setProfessionClassification] = useState<ProfessionClassificationData | null>(null)
   // Direction-aware step swap: the outgoing card plays a 140ms exit (forward
   // slides up, back slides down) before the new card mounts.
@@ -743,47 +726,46 @@ export default function EssentialDataPage() {
   const toggleIntent = useCallback(
     (value: string) => {
       setIntent((current) => {
-        const next = toggleIntentValue(current, value, { maxExplicit: MAX_INTENTS })
-        if (next === null) {
-          haptics('warning')
-          analytics.validationFailed('intent', 'max-selection-reached')
-          // PR-8: field-level inline hint under the intent grid (auto-clears)
-          // instead of a bare toast.
-          setIntentLimitHintVisible(true)
-          if (intentLimitHintTimerRef.current) {
-            clearTimeout(intentLimitHintTimerRef.current)
-          }
-          intentLimitHintTimerRef.current = setTimeout(() => {
-            intentLimitHintTimerRef.current = null
-            setIntentLimitHintVisible(false)
-          }, 2400)
+        // No selection cap: every explicit intent stays selectable; picking
+        // all six auto-collapses to 随缘 (toggleIntentValue contract).
+        const next = toggleIntentValue(current, value)
+        if (!next) {
           return current
         }
 
-        haptics('light')
-        if (next.length < current.length) {
+        const collapsedToFlexible =
+          value !== INTENT_FLEXIBLE_OPTION.value &&
+          next.length === 1 &&
+          next[0] === INTENT_FLEXIBLE_OPTION.value
+
+        if (collapsedToFlexible) {
+          haptics('medium')
+          triggerMascotReaction('都想要？那这一局就交给悦仔安排！')
+        } else if (value === INTENT_FLEXIBLE_OPTION.value && next.length === 1) {
+          haptics('light')
+          triggerMascotReaction(INTENT_REACTIONS.flexible)
+        } else if (next.length < current.length) {
+          haptics('light')
           triggerMascotReaction('好，再调整一下。')
         } else {
+          haptics('light')
           triggerMascotReaction(INTENT_REACTIONS[value] ?? '收到！')
         }
         return next
       })
     },
-    [analytics, INTENT_REACTIONS, triggerMascotReaction],
+    [INTENT_REACTIONS, triggerMascotReaction],
   )
 
   // Memoize intent grid to prevent re-render on unrelated state changes
   const intentGrid = useMemo(() => {
     const isFlexibleActive = intent.includes(INTENT_FLEXIBLE_OPTION.value)
-    const explicitCount = intent.filter((item) => item !== INTENT_FLEXIBLE_OPTION.value).length
-    const isCapReached = explicitCount >= MAX_INTENTS
     return (
       <View className='essential-data__intent-grid'>
         {intentOptions.map((option: IntentCardOption) => {
           const isExplicitlySelected = intent.includes(option.value)
           const isFlexibleOption = option.value === INTENT_FLEXIBLE_OPTION.value
           const isDimmed = isFlexibleActive && !isFlexibleOption && !isExplicitlySelected
-          const isDisabled = isCapReached && !isExplicitlySelected && !isFlexibleOption
 
           return (
             <IntentCard
@@ -791,7 +773,6 @@ export default function EssentialDataPage() {
               option={option}
               selected={isExplicitlySelected}
               dimmed={isDimmed}
-              disabled={isDisabled}
               onClick={() => toggleIntent(option.value)}
               iconSize={144}
               testId={`essential-intent-${option.value}`}
@@ -909,14 +890,7 @@ export default function EssentialDataPage() {
               <View className='essential-data__field'>
                 <Text className='essential-data__label'>这次更想收获什么</Text>
                 {intentGrid}
-                {intentLimitHintVisible ? (
-                  <View role='alert' aria-live='polite'>
-                    <Text className='essential-data__hint essential-data__hint--warning'>
-                      最多选择 {MAX_INTENTS} 个期待，先取消一个再选
-                    </Text>
-                  </View>
-                ) : null}
-                <Text className='essential-data__hint'>最多可选 {MAX_INTENTS} 个，多选会影响后续活动推荐。</Text>
+                <Text className='essential-data__hint'>可以多选，全选了就交给悦仔安排。</Text>
               </View>
             </Card>
           )}
