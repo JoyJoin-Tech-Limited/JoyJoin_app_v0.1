@@ -44,6 +44,7 @@ import XiaoyueChatBubble from '../../../components/mascot/XiaoyueChatBubble'
 import AIGCLabel from '../../../components/ai-content/AIGCLabel'
 import AIContentReportButton from '../../../components/ai-content/AIContentReportButton'
 import { useAIGCLabelsEnabled } from '../../../hooks/useAIGCLabelsEnabled'
+import WelcomeGiftCard from '../../../components/onboarding/WelcomeGiftCard'
 import ProfileReviewInviteCard from '../../../components/onboarding/ProfileReviewInviteCard'
 import BoxJourneySpine from '../../../components/onboarding/BoxJourneySpine'
 import UnboxingCeremony from '../../../components/onboarding/UnboxingCeremony'
@@ -123,6 +124,9 @@ export default function ProfileReviewPage() {
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false)
   const [welcomeCoupon, setWelcomeCoupon] = useState<WelcomeCouponResponse | null>(null)
   const [isCouponLoading, setIsCouponLoading] = useState(false)
+  const [isCouponCardVisible, setIsCouponCardVisible] = useState(false)
+  const [couponError, setCouponError] = useState(false)
+  const [couponAttempt, setCouponAttempt] = useState(0)
   const [isInviteCardVisible, setIsInviteCardVisible] = useState(false)
   const [showCeremony, setShowCeremony] = useState(false)
   // Loading-shell continuity bridge (same pattern as essential/extended-data):
@@ -145,7 +149,7 @@ export default function ProfileReviewPage() {
     }
   }, [shouldReduceMotion])
 
-  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsInviteCardVisible, setShowCeremony, setShellFading)
+  useResetOnShow(setIsPageExiting, setIsSubmitting, setIsCelebrating, setIsRevealReady, setIsCouponCardVisible, setIsInviteCardVisible, setShowCeremony, setShellFading)
 
   // Reset invite-card impression tracking when the user returns via swipe-back
   // so analytics accurately reflect each visit.
@@ -200,14 +204,17 @@ export default function ProfileReviewPage() {
   })
 
   // Claim (or re-fetch) the lifetime welcome coupon once the reveal animation
-  // finishes. The coupon content rides inside the UnboxingCeremony's rising
-  // entry card (拆盒即得礼); a failed claim degrades to a ceremony card
-  // without the gift row — the ceremony never blocks on this request.
+  // finishes. The coupon renders on-page as the WelcomeGiftCard (restored
+  // 2026-09-07) and its discount also rides inside the UnboxingCeremony's
+  // rising entry card (拆盒即得礼); a failed claim degrades to a retry card
+  // on-page and a ceremony card without the gift row — neither blocks on
+  // this request.
   useEffect(() => {
     if (!isRevealReady || !user || isCouponLoading || welcomeCoupon) return
 
     let cancelled = false
     setIsCouponLoading(true)
+    setCouponError(false)
 
     withTimeout(claimWelcomeCoupon(apiRequest), QUERY_TIMEOUT_MS)
       .then((coupon) => {
@@ -221,6 +228,7 @@ export default function ProfileReviewPage() {
       })
       .catch((err) => {
         if (cancelled) return
+        setCouponError(true)
         analytics.errorOccurred('welcome_gift_card_claim_failed', err instanceof Error ? err.message : String(err))
         logError('[ProfileReview] Failed to claim welcome coupon', {
           message: err instanceof Error ? err.message : String(err),
@@ -235,7 +243,36 @@ export default function ProfileReviewPage() {
     }
     // isCouponLoading is intentionally not a dependency: the claim fires once
     // per reveal, and a failure must not retrigger the effect into a loop.
-  }, [isRevealReady, user, analytics, welcomeCoupon])
+    // couponAttempt is the manual-retry escape hatch from the error card.
+  }, [isRevealReady, user, analytics, welcomeCoupon, couponAttempt])
+
+  // Reveal the on-page gift card after the coupon is committed to state.
+  // Keeping this timer separate prevents the fetch effect's welcomeCoupon
+  // dependency cleanup from cancelling it and leaving a full-height but
+  // transparent gift card in the layout.
+  useEffect(() => {
+    if (!welcomeCoupon || shouldReduceMotion) return
+    const timer = setTimeout(() => setIsCouponCardVisible(true), 200)
+    return () => clearTimeout(timer)
+  }, [welcomeCoupon, shouldReduceMotion])
+
+  // Replay the gift-card entrance animation when the user swipes back to this page.
+  useDidShow(() => {
+    if (!welcomeCoupon) return
+    if (shouldReduceMotion) {
+      setIsCouponCardVisible(true)
+      return
+    }
+    const timer = setTimeout(() => setIsCouponCardVisible(true), 100)
+    return () => clearTimeout(timer)
+  })
+
+  // Reduced-motion users should see the card immediately without waiting for animation.
+  useEffect(() => {
+    if (shouldReduceMotion && welcomeCoupon) {
+      setIsCouponCardVisible(true)
+    }
+  }, [shouldReduceMotion, welcomeCoupon])
 
   // Reveal the Xiaoyue invitation teaser once the entry card (and its summary
   // card) has landed — anchored to the reveal, not to the coupon request.
@@ -397,6 +434,25 @@ export default function ProfileReviewPage() {
     () => topInterestItems.map((item) => item.id),
     [topInterestItems],
   )
+
+  const interestLevels = useMemo(() => {
+    const map: Record<string, 1 | 2 | 3> = {}
+    if (Array.isArray(interestsData?.selections)) {
+      for (const item of interestsData.selections) {
+        if (item?.label) {
+          map[item.label] = item.level
+        }
+      }
+    }
+    if (Array.isArray(interestsData?.topPriorities)) {
+      for (const item of interestsData.topPriorities) {
+        if (item?.label && map[item.label] === undefined) {
+          map[item.label] = 3
+        }
+      }
+    }
+    return Object.keys(map).length > 0 ? map : undefined
+  }, [interestsData?.selections, interestsData?.topPriorities])
 
   const dominantCategories = useMemo(() => {
     if (!interestsData?.categoryHeat) {
@@ -875,6 +931,7 @@ export default function ProfileReviewPage() {
                         <InterestChipCloud
                           labels={topInterestLabels}
                           interestIds={topInterestIds}
+                          levels={interestLevels}
                           accent
                           className='profile-review__chip-group'
                         />
@@ -939,6 +996,43 @@ export default function ProfileReviewPage() {
                   handleComplete()
                 }}
               />
+            </View>
+          ) : null}
+
+          {welcomeCoupon ? (
+            <WelcomeGiftCard
+              discountValue={welcomeCoupon.discountValue}
+              visible={isCouponCardVisible}
+              reduceMotion={shouldReduceMotion}
+              onTap={() => {
+                analytics.interaction('welcome_gift_card_tap', {
+                  code: welcomeCoupon.code,
+                  discountValue: welcomeCoupon.discountValue,
+                  isNewlyAwarded: welcomeCoupon.isNewlyAwarded,
+                })
+              }}
+              className='profile-review__gift-card'
+            />
+          ) : isCouponLoading ? (
+            <WelcomeGiftCard isLoading className='profile-review__gift-card' />
+          ) : couponError ? (
+            <View
+              className='profile-review__coupon-error'
+              onClick={() => {
+                haptics('light')
+                analytics.interaction('welcome_gift_card_retry_tap')
+                setCouponError(false)
+                setCouponAttempt((prev) => prev + 1)
+              }}
+              hoverClass='profile-review__coupon-error--pressed'
+              role='button'
+              aria-label='见面礼领取失败，点击重试'
+            >
+              <JoyJoinIcon emoji='🎁' tier='ui' size={40} className='profile-review__coupon-error-icon' />
+              <View className='profile-review__coupon-error-copy'>
+                <Text className='profile-review__coupon-error-title'>见面礼领取遇到小状况</Text>
+                <Text className='profile-review__coupon-error-subtitle'>点我重新收下悦仔的见面礼</Text>
+              </View>
             </View>
           ) : null}
 
