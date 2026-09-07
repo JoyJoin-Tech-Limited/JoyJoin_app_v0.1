@@ -1,48 +1,55 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
 
-// Halfway milestone — compact horizontal whisper.
-// Self-contained styles: all class names are namespaced under
-// `halfway-milestone__*` and do not collide with the personality-test page
-// styles.
+// Halfway milestone — deliberate interstitial celebration beat.
+// Design principle: never half-occlude key content. The moment the quiz
+// crosses 50%, a warm veil covers the quiz surface and the celebration card
+// pops in center-stage for a short beat, then dissolves. Tap anywhere to
+// dismiss early. All class names are namespaced under `halfway-milestone__*`.
 
 .halfway-milestone {
-  &__card {
-    // Absolute overlay anchored just under the progress-meta-row (the parent
-    // row carries `position: relative`) — an in-flow card inserted ~120rpx at
-    // 50% progress and removed it 4.3s later, double-shifting the quiz surface.
-    position: absolute;
-    top: 100%;
+  &__overlay {
+    position: fixed;
+    top: 0;
     left: 0;
     right: 0;
-    z-index: 20;
+    bottom: 0;
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    @include safe-area-inline($container-padding);
+    background: rgba($color-surface, 0.88);
+    animation: halfway-veil-enter 0.28s ease-out both;
+  }
+
+  &__overlay--exiting {
+    animation: halfway-veil-exit 0.28s ease-in both;
+  }
+
+  &__card {
     flex: 0 0 auto;
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 8rpx;
-    padding: 8rpx $container-padding;
-    margin: 8rpx 0 0;
-    border-radius: 16rpx;
+    gap: 16rpx;
+    width: 100%;
+    max-width: 640rpx;
+    padding: 32rpx 32rpx;
+    border-radius: 24rpx;
     background: $card-gradient-warm;
-    border: 2rpx solid rgba($color-primary, 0.06);
-    box-shadow: 0 8rpx 24rpx rgba($color-text-primary, 0.08);
+    border: 2rpx solid rgba($color-primary, 0.08);
+    box-shadow: 0 16rpx 48rpx rgba($color-text-primary, 0.12);
     overflow: hidden;
-    @include safe-area-inline($container-padding);
-    animation: halfway-card-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  // Transient beat: fade-out before unmount (driven by HALFWAY_DISPLAY_MS /
-  // HALFWAY_EXIT_MS in the component).
-  &__card--exiting {
-    animation: halfway-card-exit 0.3s ease-out both;
+    animation: halfway-card-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   &__badge {
     position: relative;
     flex-shrink: 0;
-    width: 80rpx;
-    height: 80rpx;
+    width: 96rpx;
+    height: 96rpx;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -69,21 +76,21 @@
   }
 
   &__badge-img {
-    width: 80rpx;
-    height: 80rpx;
+    width: 96rpx;
+    height: 96rpx;
     display: block;
     filter: drop-shadow(0 4rpx 12rpx rgba($color-primary, 0.18));
   }
 
   &__badge-fallback {
     @include flex-center;
-    width: 80rpx;
-    height: 80rpx;
+    width: 96rpx;
+    height: 96rpx;
     border-radius: 50%;
     background: rgba($color-primary, 0.08);
 
     &-icon {
-      font-size: 40rpx;
+      font-size: 44rpx;
       line-height: 1;
     }
   }
@@ -128,21 +135,35 @@
     color: $color-text-secondary;
     line-height: 1.4;
   }
+
+  &__dismiss-hint {
+    margin-top: 32rpx;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-muted;
+    line-height: 1.4;
+    animation: halfway-text-enter 0.4s ease-out 0.6s both;
+  }
 }
 
 // Reduced motion: freeze at the final state instead of disabling —
 // preserves the celebratory feel for users who opt out of motion.
 @media (prefers-reduced-motion: reduce) {
   .halfway-milestone {
+    &__overlay {
+      animation: none;
+      opacity: 1;
+    }
+
+    &__overlay--exiting {
+      animation: none;
+      opacity: 0;
+    }
+
     &__card {
       animation: none;
       opacity: 1;
       transform: none;
-    }
-
-    &__card--exiting {
-      animation: none;
-      opacity: 0;
     }
 
     &__badge {
@@ -157,7 +178,8 @@
       }
     }
 
-    &__text {
+    &__text,
+    &__dismiss-hint {
       animation: none;
       opacity: 1;
       transform: none;
@@ -165,14 +187,32 @@
   }
 }
 
-@keyframes halfway-card-enter {
+@keyframes halfway-veil-enter {
   from {
     opacity: 0;
-    transform: translateY(-8rpx);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+  }
+}
+
+@keyframes halfway-veil-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes halfway-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -214,16 +254,5 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes halfway-card-exit {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-8rpx);
   }
 }

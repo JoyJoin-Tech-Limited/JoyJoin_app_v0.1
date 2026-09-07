@@ -54,11 +54,30 @@ describe('HalfwayMilestone', () => {
         onMilestoneReached={onReached}
       />,
     )
-    expect(container.querySelector('.halfway-milestone__card')).toBeTruthy()
+    expect(container.querySelector('.halfway-milestone__overlay')).toBeTruthy()
     expect(onReached).toHaveBeenCalledTimes(1)
 
-    act(() => { vi.advanceTimersByTime(4300) })
-    expect(container.querySelector('.halfway-milestone__card')).toBeNull()
+    act(() => { vi.advanceTimersByTime(2900) })
+    expect(container.querySelector('.halfway-milestone__overlay')).toBeNull()
+
+    vi.useRealTimers()
+  })
+
+  it('dismisses early on tap', () => {
+    vi.useFakeTimers()
+    const { container } = render(
+      <HalfwayMilestone progressPercent={50} phase='testing' answered={4} estimatedTotal={8} />,
+    )
+    const overlay = container.querySelector('.halfway-milestone__overlay')
+    expect(overlay).toBeTruthy()
+
+    act(() => {
+      overlay?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(container.querySelector('.halfway-milestone__overlay--exiting')).toBeTruthy()
+
+    act(() => { vi.advanceTimersByTime(300) })
+    expect(container.querySelector('.halfway-milestone__overlay')).toBeNull()
 
     vi.useRealTimers()
   })

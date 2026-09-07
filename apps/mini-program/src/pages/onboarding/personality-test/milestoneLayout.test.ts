@@ -12,6 +12,14 @@ const milestoneStyles = readFileSync(
 )
 
 describe('personality test milestone layout', () => {
+  it('renders as a fixed full-veil overlay that never half-occludes the quiz surface', () => {
+    const overlayBlock = milestoneStyles.match(/&__overlay\s*\{([\s\S]*?)\n\s*\}/)?.[1] ?? ''
+
+    expect(overlayBlock).toContain('position: fixed;')
+    expect(overlayBlock).toContain('justify-content: center;')
+    expect(overlayBlock).toContain('align-items: center;')
+  })
+
   it('keeps the halfway hint readable without flex compression', () => {
     const cardBlock = milestoneStyles.match(/&__card\s*\{([\s\S]*?)\n\s*\}/)?.[1] ?? ''
     const textBlock = milestoneStyles.match(/&__text\s*\{([\s\S]*?)\n\s*\}/)?.[1] ?? ''

@@ -6,10 +6,10 @@ import JoyJoinIcon from '../../../components/ui/JoyJoinIcon'
 import type { Phase } from './types'
 import './HalfwayMilestone.scss'
 
-// How long the halfway card stays visible before it fades out and unmounts.
-const HALFWAY_DISPLAY_MS = 4000
-// Fade-out duration — keep in sync with `halfway-card-exit` in the SCSS.
-const HALFWAY_EXIT_MS = 300
+// How long the milestone overlay stays visible before it fades out and unmounts.
+const HALFWAY_DISPLAY_MS = 2600
+// Fade-out duration — keep in sync with `halfway-veil-exit` in the SCSS.
+const HALFWAY_EXIT_MS = 280
 
 interface HalfwayMilestoneProps {
   progressPercent: number
@@ -47,8 +47,8 @@ export function HalfwayMilestone({
     }
   }, [progressPercent, phase, answered, estimatedTotal])
 
-  // Transient beat: the card cheers once, then fades out and unmounts instead
-  // of lingering (with a breathing badge) for the whole second half.
+  // Transient beat: the overlay cheers once, then fades out and unmounts.
+  // Tapping anywhere dismisses early — the scheduled timers are idempotent.
   useEffect(() => {
     if (!shown) return
     const dismissTimer = setTimeout(() => setIsDismissing(true), HALFWAY_DISPLAY_MS)
@@ -59,44 +59,56 @@ export function HalfwayMilestone({
     }
   }, [shown])
 
+  const dismissEarly = () => {
+    if (isDismissing) return
+    setIsDismissing(true)
+    setTimeout(() => setDismissed(true), HALFWAY_EXIT_MS)
+  }
+
   if (!shown || dismissed || phase !== 'testing') {
     return null
   }
 
   return (
     <View
-      className={`halfway-milestone__card${isDismissing ? ' halfway-milestone__card--exiting' : ''}`}
-      role='region'
-      aria-label='测验已完成一半，继续加油'
+      className={`halfway-milestone__overlay${isDismissing ? ' halfway-milestone__overlay--exiting' : ''}`}
+      role='button'
+      aria-label='测验已完成一半，轻触继续作答'
+      onClick={dismissEarly}
     >
-      <View className='halfway-milestone__badge'>
-        {badgeError ? (
-          <View className='halfway-milestone__badge-fallback' aria-hidden='true'>
-            <JoyJoinIcon emoji='🎯' size={48} className='halfway-milestone__badge-fallback-icon' />
+      <View className='halfway-milestone__card' role='region' aria-label='半程已过，继续加油'>
+        <View className='halfway-milestone__badge'>
+          {badgeError ? (
+            <View className='halfway-milestone__badge-fallback' aria-hidden='true'>
+              <JoyJoinIcon emoji='🎯' size={48} className='halfway-milestone__badge-fallback-icon' />
+            </View>
+          ) : (
+            <Image
+              className='halfway-milestone__badge-img'
+              mode='aspectFit'
+              src={MILESTONE_BADGES.quizHalfway}
+              lazyLoad={false}
+              onError={() => {
+                setBadgeError(true)
+                logError('[HalfwayMilestone] Badge asset failed to load', {
+                  src: MILESTONE_BADGES.quizHalfway,
+                })
+              }}
+            />
+          )}
+        </View>
+        <View className='halfway-milestone__text'>
+          <Text className='halfway-milestone__text-eyebrow'>半程已过</Text>
+          <Text className='halfway-milestone__text-main'>越来越了解你的性格了</Text>
+          <View className='halfway-milestone__text-sub'>
+            <Text className='halfway-milestone__text-sub-label'>悦仔为你加油</Text>
+            <JoyJoinIcon emoji='✨' tier='mood' size={28} />
           </View>
-        ) : (
-          <Image
-            className='halfway-milestone__badge-img'
-            mode='aspectFit'
-            src={MILESTONE_BADGES.quizHalfway}
-            lazyLoad={false}
-            onError={() => {
-              setBadgeError(true)
-              logError('[HalfwayMilestone] Badge asset failed to load', {
-                src: MILESTONE_BADGES.quizHalfway,
-              })
-            }}
-          />
-        )}
-      </View>
-      <View className='halfway-milestone__text'>
-        <Text className='halfway-milestone__text-eyebrow'>半程已过</Text>
-        <Text className='halfway-milestone__text-main'>越来越了解你的性格了</Text>
-        <View className='halfway-milestone__text-sub'>
-          <Text className='halfway-milestone__text-sub-label'>悦仔为你加油</Text>
-          <JoyJoinIcon emoji='✨' tier='mood' size={28} />
         </View>
       </View>
+      <Text className='halfway-milestone__dismiss-hint' aria-hidden='true'>
+        轻触任意处继续
+      </Text>
     </View>
   )
 }

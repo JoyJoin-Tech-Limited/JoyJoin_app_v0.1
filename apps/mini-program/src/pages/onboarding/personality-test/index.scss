@@ -76,8 +76,7 @@
   }
 
   &__intro-shell {
-    @include page-shell-padding($spacing-lg, $container-padding, $spacing-2xl, true);
-    @include fixed-footer-reserve(220rpx, $spacing-lg);
+    @include page-shell-padding($spacing-lg, $container-padding, 0rpx, true);
     position: relative;
     height: 100%;
     box-sizing: border-box;
@@ -88,6 +87,10 @@
     flex-direction: column;
     gap: $spacing-md;
     min-height: 0;
+    // WeChat drops padding on the native ScrollView element in webview
+    // rendering mode, so the fixed-footer reserve must live on this inner
+    // wrapper — otherwise the tease card tail scrolls under the footer.
+    @include fixed-footer-reserve(220rpx, $spacing-lg);
   }
 
   &__stage {
@@ -546,7 +549,6 @@
   }
 
   &__progress-meta-row {
-    position: relative; // anchor for the absolutely-positioned halfway milestone overlay
     display: flex;
     align-items: center;
     justify-content: space-between;

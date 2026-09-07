@@ -198,8 +198,9 @@ export default function PersonalityTestQuestion({
         </View>
 
         {/* D3 — Quiz halfway cheer badge (Batch D) — appears at >=50% progress.
-            Absolutely positioned under this row (see HalfwayMilestone.scss) so
-            the transient card never shifts the quiz layout. */}
+            Renders as a fixed interstitial overlay (see HalfwayMilestone.scss):
+            a deliberate full-veil celebration beat that never half-occludes
+            the question surface. Tap anywhere to dismiss early. */}
         <HalfwayMilestone
           progressPercent={progressPercent}
           phase={phase}

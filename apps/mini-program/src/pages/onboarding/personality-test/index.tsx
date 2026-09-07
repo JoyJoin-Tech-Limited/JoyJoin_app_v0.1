@@ -1323,7 +1323,7 @@ export default function PersonalityTestPage() {
           onSkip={handleSkip}
           onRetry={handleRetry}
           onMilestoneReached={({ answered, estimatedTotal: total }) => {
-            haptics('medium')
+            haptics('success')
             logInfo('[PersonalityTest] halfway milestone reached', {
               answered,
               estimatedTotal: total,

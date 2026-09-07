@@ -10,6 +10,10 @@
   border-radius: $button-radius;
   font-size: $font-size-base;
   font-weight: $font-weight-semibold;
+  // CTA labels are single-line by design. Any consumer rendering long or
+  // multi-line content inside this button MUST override `white-space` to
+  // `normal` on itself/its text child — it inherits and silently clips
+  // (see PersonalityTestAnswerArea.scss, 2026-09 personality-test fix).
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -78,6 +78,8 @@
 
   &__option {
     @include card-premium;
+    // joy-button base sets white-space: nowrap — long option copy must wrap.
+    white-space: normal;
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -134,6 +136,7 @@
     font-size: 32rpx;
     color: $color-text-primary;
     line-height: 1.5;
+    white-space: normal;
     word-break: keep-all;
     overflow-wrap: break-word;
   }
@@ -148,6 +151,8 @@
   &__emoji-option {
     @include card-premium;
     box-sizing: border-box;
+    // joy-button base sets white-space: nowrap — labels must wrap in the 2-col grid.
+    white-space: normal;
     min-width: 0;
     width: calc((100% - #{$spacing-md}) / 2);
     min-height: 144rpx;
@@ -223,6 +228,7 @@
     color: $color-text-primary;
     text-align: center;
     line-height: 1.5;
+    white-space: normal;
     overflow-wrap: break-word;
     word-break: keep-all;
   }
