@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { getSystemReducedMotion } from '../../lib/utils/accessibility'
 import { haptics } from '../../lib/utils/haptics'
 import { localAsset } from '../../lib/utils/cdnAssets'
+import type { GuidanceTipRowKey } from '@shared/copy/guidanceCopy'
 
 /**
  * GuidanceTipCard — shared coachmark visual for the C4 guidance queue
@@ -20,10 +21,11 @@ import { localAsset } from '../../lib/utils/cdnAssets'
  * emoji fallback. Zero new bundled assets.
  *
  * Motion spec (locked): slide-up 16rpx enter, 300ms
- * cubic-bezier(0.22,1,0.36,1); mode-row micro-stagger (row 2 +60ms,
- * transform/opacity only); 6s dwell owned by the queue hook; 200ms fade +
- * translateY(8rpx) exit via the `--exiting` modifier. Reduced-motion tier
- * renders the static card with the same dwell (`--rm` + media query).
+ * cubic-bezier(0.22,1,0.36,1) + inner cascade (title +60ms, rows
+ * +120/+180ms, transform/opacity only); 6s dwell owned by the queue
+ * hook; 200ms fade + translateY(8rpx) exit via the `--exiting` modifier.
+ * Reduced-motion tier renders the static card with the same dwell
+ * (`--rm` + media query).
  *
  * Subpackage WXSS rule: this component deliberately does NOT side-effect
  * import its SCSS — every consuming page SCSS must `@use`
@@ -31,7 +33,8 @@ import { localAsset } from '../../lib/utils/cdnAssets'
  * page's own WXSS (see AGENTS §15 / verify-subpackage-styles gate).
  */
 
-export type GuidanceTipCardRowKey = 'event' | 'street'
+/** Single source of truth lives in shared copy (`GuidanceTipRowKey`). */
+export type GuidanceTipCardRowKey = GuidanceTipRowKey
 
 export interface GuidanceTipCardRow {
   key: GuidanceTipCardRowKey
@@ -86,6 +89,9 @@ export default function GuidanceTipCard({
   onRowTap,
 }: GuidanceTipCardProps) {
   const [reduceMotion] = useState(() => getSystemReducedMotion())
+  // Row-icon resilience: a glyph that fails to decode demotes that row to
+  // the 8rpx brand dot instead of rendering a broken image.
+  const [failedRowIcons, setFailedRowIcons] = useState<readonly string[]>([])
   const rootClass = [
     'guidance-tip-card',
     exiting ? 'guidance-tip-card--exiting' : '',
@@ -124,7 +130,9 @@ export default function GuidanceTipCard({
       <Text className='guidance-tip-card__title'>{title}</Text>
       <View className='guidance-tip-card__rows'>
         {rows.map((row, index) => {
-          const iconSrc = resolveRowIcon(row)
+          const iconSrc = failedRowIcons.includes(row.key)
+            ? null
+            : resolveRowIcon(row)
           const staggerClass =
             index === 1
               ? ' guidance-tip-card__row--stagger-2'
@@ -156,6 +164,11 @@ export default function GuidanceTipCard({
                     src={iconSrc}
                     mode='aspectFit'
                     lazyLoad={false}
+                    onError={() =>
+                      setFailedRowIcons((prev) =>
+                        prev.includes(row.key) ? prev : [...prev, row.key]
+                      )
+                    }
                   />
                 ) : (
                   <View className='guidance-tip-card__row-dot' />

@@ -257,3 +257,26 @@ describe('B2/E1 — flag-mutually-exclusive coachmark paths', () => {
     expect(tipCardTsxSource).not.toMatch(/require\(['"][^'"]*GuidanceTipCard\.scss['"]\)/)
   })
 })
+
+describe('2026-09-07 redesign — interaction guards and resilience', () => {
+  it('close and row taps are inert while exiting (no duplicate analytics/navigation)', () => {
+    const guards = tipCardTsxSource.match(/if \(exiting\) return/g) ?? []
+    expect(guards.length).toBe(2)
+  })
+
+  it('the card body is inert — no root onClick, role=note', () => {
+    expect(tipCardTsxSource).toContain("role='note'")
+    expect(tipCardTsxSource).not.toMatch(/className=\{rootClass\}[^>]*onClick/)
+  })
+
+  it('row icons degrade to the brand dot on decode failure', () => {
+    expect(tipCardTsxSource).toContain('failedRowIcons')
+    expect(tipCardTsxSource).toContain('onError')
+    expect(tipCardTsxSource).toContain("guidance-tip-card__row-dot")
+  })
+
+  it('row keys derive from the shared copy contract (no duplicated union)', () => {
+    expect(tipCardTsxSource).toContain("import type { GuidanceTipRowKey } from '@shared/copy/guidanceCopy'")
+    expect(tipCardTsxSource).not.toContain("export type GuidanceTipCardRowKey = 'event' | 'street'")
+  })
+})
