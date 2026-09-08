@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import UnboxingCeremony from '../UnboxingCeremony'
 
 vi.mock('../../../lib/utils/accessibility', () => ({
@@ -20,9 +20,9 @@ vi.mock('../../../lib/mascot/blindBoxAssets', () => ({
 }))
 
 vi.mock('@tarojs/components', () => ({
-  View: (props: Record<string, unknown>) => <div {...props} />,
+  View: ({ ariaLabel: _ariaLabel, ...props }: Record<string, unknown>) => <div {...props} />,
   Text: (props: Record<string, unknown>) => <span {...props} />,
-  Image: (props: Record<string, unknown>) => <img {...props} alt='' />,
+  Image: ({ lazyLoad: _lazyLoad, ariaLabel: _ariaLabel, ...props }: Record<string, unknown>) => <img {...props} alt='' />,
 }))
 
 describe('UnboxingCeremony gift row (拆盒即得礼)', () => {
@@ -98,7 +98,9 @@ describe('UnboxingCeremony gift row (拆盒即得礼)', () => {
       expect(onComplete).not.toHaveBeenCalled()
 
       // Past the guard: tap advances immediately.
-      vi.advanceTimersByTime(2500)
+      act(() => {
+        vi.advanceTimersByTime(2500)
+      })
       fireEvent.click(button)
       expect(onComplete).toHaveBeenCalledTimes(1)
     } finally {
@@ -119,7 +121,9 @@ describe('UnboxingCeremony gift row (拆盒即得礼)', () => {
         />,
       )
 
-      vi.advanceTimersByTime(2500)
+      act(() => {
+        vi.advanceTimersByTime(2500)
+      })
       fireEvent.click(screen.getByRole('button', { name: '开盒完成，轻触继续' }))
       expect(onComplete).toHaveBeenCalledTimes(1)
     } finally {
@@ -142,7 +146,9 @@ describe('UnboxingCeremony gift row (拆盒即得礼)', () => {
         />,
       )
 
-      vi.advanceTimersByTime(3200)
+      act(() => {
+        vi.advanceTimersByTime(3200)
+      })
       expect(onComplete).toHaveBeenCalledTimes(1)
       expect(onAdvance).toHaveBeenCalledWith('auto')
     } finally {

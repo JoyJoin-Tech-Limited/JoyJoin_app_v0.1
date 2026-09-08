@@ -37,7 +37,7 @@ vi.mock('../../../pages/onboarding/personality-test/visuals', () => ({
 vi.mock('@tarojs/components', () => ({
   View: (props: Record<string, unknown>) => <div {...props} />,
   Text: (props: Record<string, unknown>) => <span {...props} />,
-  Image: (props: Record<string, unknown>) => <img {...props} alt='' />,
+  Image: ({ lazyLoad: _lazyLoad, ...props }: Record<string, unknown>) => <img {...props} alt='' />,
 }))
 
 describe('ProfileReviewInviteCard (radar summary)', () => {

@@ -1,6 +1,6 @@
 
 import { View, Text, ScrollView, Image } from '@tarojs/components'
-import Taro, { useDidShow, useRouter } from '@tarojs/taro'
+import Taro, { useDidShow, useDidHide, useRouter } from '@tarojs/taro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -260,15 +260,23 @@ export default function ProfileReviewPage() {
     return () => clearTimeout(timer)
   }, [welcomeCoupon, shouldReduceMotion])
 
-  // Replay the gift-card entrance animation when the user swipes back to this page.
+  // Replay the gift-card entrance animation when the user swipes back to this
+  // page. useDidShow's return value is discarded by Taro, so the timer lives
+  // in a ref and is cleared from useDidHide instead.
+  const giftReplayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useDidShow(() => {
     if (!welcomeCoupon) return
     if (shouldReduceMotion) {
       setIsCouponCardVisible(true)
       return
     }
-    const timer = setTimeout(() => setIsCouponCardVisible(true), 100)
-    return () => clearTimeout(timer)
+    giftReplayTimerRef.current = setTimeout(() => setIsCouponCardVisible(true), 100)
+  })
+  useDidHide(() => {
+    if (giftReplayTimerRef.current) {
+      clearTimeout(giftReplayTimerRef.current)
+      giftReplayTimerRef.current = null
+    }
   })
 
   // Reduced-motion users should see the card immediately without waiting for animation.
@@ -1032,7 +1040,10 @@ export default function ProfileReviewPage() {
               role='button'
               aria-label='见面礼领取失败，点击重试'
             >
-              <JoyJoinIcon emoji='🎁' tier='ui' size={40} className='profile-review__coupon-error-icon' />
+              {/* status-warning (bundled local tier) renders offline; the
+                  'ui' tier gift glyph is CDN-first and would degrade to a raw
+                  emoji on the error card when the CDN is unreachable. */}
+              <JoyJoinIcon emoji='⚠️' tier='status' size={40} className='profile-review__coupon-error-icon' />
               <View className='profile-review__coupon-error-copy'>
                 <Text className='profile-review__coupon-error-title'>见面礼领取遇到小状况</Text>
                 <Text className='profile-review__coupon-error-subtitle'>点我重新收下悦仔的见面礼</Text>
