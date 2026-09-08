@@ -404,7 +404,13 @@ export function registerAdminUserRoutes(app: Express): void {
       const todayEnd = new Date();
       todayEnd.setHours(23, 59, 59, 999);
 
-      // Today's events
+      // Today's events. blindBoxEventId is resolved via the pool-group
+      // back-link (event_pool_groups.event_id → events.id,
+      // event_pool_groups.blind_box_event_id → blind_box_events.id) — the
+      // reverse of the resolveCanonicalEventId blind-box branch — so ops
+      // can hand the id straight to the blind-box attendance endpoints
+      // (/api/admin/events/:eventId/attendance-summary reads
+      // blind_box_events.matched_attendees, not events.id).
       const todayEventsResult = await db.execute(sql`
         SELECT
           e.id,
@@ -413,10 +419,12 @@ export function registerAdminUserRoutes(app: Express): void {
           e.location,
           e.status,
           e.max_attendees as "maxAttendees",
+          MAX(pg.blind_box_event_id) as "blindBoxEventId",
           COUNT(CASE WHEN ea.status != 'cancelled' THEN 1 END) as "registeredCount",
           COUNT(CASE WHEN ea.status = 'attended' THEN 1 END) as "checkedInCount"
         FROM events e
         LEFT JOIN event_attendance ea ON e.id = ea.event_id
+        LEFT JOIN event_pool_groups pg ON pg.event_id = e.id
         WHERE e.date_time >= ${todayStart} AND e.date_time <= ${todayEnd}
         GROUP BY e.id, e.title, e.date_time, e.location, e.status, e.max_attendees
         ORDER BY e.date_time ASC
@@ -424,6 +432,7 @@ export function registerAdminUserRoutes(app: Express): void {
 
       const todayEvents = (todayEventsResult.rows as any[]).map((row) => ({
         id: row.id,
+        blindBoxEventId: row.blindBoxEventId ?? null,
         title: row.title,
         dateTime: row.dateTime,
         location: row.location,
@@ -791,6 +800,7 @@ export function registerAdminUserRoutes(app: Express): void {
           s.host_user_id as "hostUserId",
           s.started_at as "startedAt",
           s.created_at as "createdAt",
+          s.event_id as "eventId",
           e.title as "eventTitle",
           u.first_name as "hostFirstName",
           u.last_name as "hostLastName"
@@ -810,6 +820,7 @@ export function registerAdminUserRoutes(app: Express): void {
 
         return {
           id: row.id,
+          eventId: row.eventId ?? null,
           currentPhase: row.currentPhase || "waiting",
           phaseStartedAt: row.phaseStartedAt,
           phaseDurationMinutes,

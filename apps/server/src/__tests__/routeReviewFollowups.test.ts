@@ -90,14 +90,18 @@ describe('route review follow-ups', () => {
       expect(userPaymentPageSource).toContain('supportsEventPacks = false');
     }
 
-    expect(adminPaymentPageSource).toContain('/api/coupons/validate');
-    expect(adminPaymentPageSource).toContain('/api/payments/create');
-    expect(adminPaymentPageSource).not.toContain('/api/blind-box-events');
-    expect(adminPaymentPageSource).not.toContain('/api/event-packs/purchase');
-    expect(adminPaymentPageSource).toContain('appendBrowserPaymentReturnUrl');
-    expect(adminPaymentPageSource).toContain('joyjoin.browser.pending_order');
-    expect(adminPaymentPageSource).toContain('supportsCoupons = true');
-    expect(adminPaymentPageSource).toContain('supportsEventPacks = false');
+    // Admin-client browser payment pages purged 2026-09-07 (dead archived user-client
+    // copies); mini-program is the canonical payment surface — skip when missing.
+    if (adminPaymentPageSource) {
+      expect(adminPaymentPageSource).toContain('/api/coupons/validate');
+      expect(adminPaymentPageSource).toContain('/api/payments/create');
+      expect(adminPaymentPageSource).not.toContain('/api/blind-box-events');
+      expect(adminPaymentPageSource).not.toContain('/api/event-packs/purchase');
+      expect(adminPaymentPageSource).toContain('appendBrowserPaymentReturnUrl');
+      expect(adminPaymentPageSource).toContain('joyjoin.browser.pending_order');
+      expect(adminPaymentPageSource).toContain('supportsCoupons = true');
+      expect(adminPaymentPageSource).toContain('supportsEventPacks = false');
+    }
 
     if (userAppSource) {
       expect(userAppSource).toContain('<Route path="/blindbox/confirmation" component={BlindBoxConfirmationPage} />');
@@ -129,8 +133,11 @@ describe('route review follow-ups', () => {
       expect(userConfirmationPageSource).toContain('支付状态同步稍慢，正在重新确认...');
       expect(userConfirmationPageSource).toContain('暂时无法确认支付结果，你可以稍后回来继续确认订单状态。');
     }
-    expect(adminConfirmationPageSource).toContain('支付状态同步稍慢，正在重新确认...');
-    expect(adminConfirmationPageSource).toContain('暂时无法确认支付结果，你可以稍后回来继续确认订单状态。');
+    // Admin-client copy purged 2026-09-07 — skip when missing.
+    if (adminConfirmationPageSource) {
+      expect(adminConfirmationPageSource).toContain('支付状态同步稍慢，正在重新确认...');
+      expect(adminConfirmationPageSource).toContain('暂时无法确认支付结果，你可以稍后回来继续确认订单状态。');
+    }
   });
 
   it('publishes pricing display aliases and explicit browser payment redirect metadata', () => {
@@ -155,5 +162,34 @@ describe('route review follow-ups', () => {
     expect(socialSource).toContain('profileImageUrl: firstNonEmptyString(user.profileImageUrl, user.wechatAvatarUrl) ?? null');
     expect(socialSource).toContain("logger.warn('Blocked event chat write because the feature is under compliance freeze'");
     expect(socialSource).toContain('featureUnavailable: true');
+  });
+
+  it('uses a NULL-safe concurrent-update guard on AI-content report review', () => {
+    const reportsSource = readRepoFile('apps/server/src/routes/domains/reports.ts');
+
+    // Legacy rows can carry SQL NULL status; eq(status, 'pending') never
+    // matches NULL → permanent 409. IS NOT DISTINCT FROM is NULL-safe.
+    expect(reportsSource).toContain('is not distinct from');
+    expect(reportsSource).not.toContain('eq(reports.status, report.status ?? "pending")');
+  });
+
+  it('audit-logs admin attendance overrides and keeps repositories console-free', () => {
+    const attendanceSource = readRepoFile('apps/server/src/routes/domains/attendance.ts');
+    const attendanceRepoSource = readRepoFile('apps/server/src/repositories/attendanceRepo.ts');
+    const auditLoggerSource = readRepoFile('apps/server/src/lib/adminAuditLogger.ts');
+
+    expect(attendanceSource).toContain("'EVENT_ATTENDANCE_OVERRIDDEN'");
+    expect(attendanceSource).toContain('logAdminAudit');
+    expect(attendanceRepoSource).not.toContain('console.log');
+    expect(auditLoggerSource).toContain("'EVENT_ATTENDANCE_OVERRIDDEN'");
+    expect(auditLoggerSource).toContain("'BLIND_BOX_CHASE_ATTENDEES'");
+  });
+
+  it('resolves blindBoxEventId on the ops dashboard and eventId on icebreaker sessions', () => {
+    const adminUsersSource = readRepoFile('apps/server/src/routes/domains/adminUsers.ts');
+
+    expect(adminUsersSource).toContain('LEFT JOIN event_pool_groups pg ON pg.event_id = e.id');
+    expect(adminUsersSource).toContain('blindBoxEventId: row.blindBoxEventId ?? null');
+    expect(adminUsersSource).toContain('s.event_id as "eventId"');
   });
 });

@@ -1,4 +1,5 @@
 import { logger } from "../../lib/logger";
+import { z } from "zod";
 import { SESSION_COOKIE_NAME } from "../../lib/sessionCookieName";
 import type { Express, Request } from "express";
 import { isDevAuthToolsEnabled } from "../../auth/policy";
@@ -12,6 +13,7 @@ import { blindBoxEvents } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { logAdminAudit } from "../../lib/adminAuditLogger";
 import { getActingAdminId } from "../../lib/getActingAdminId";
+import { notificationsRepo } from "../../repositories/notificationsRepo";
 
 function getCookieDiagnostics(cookieHeader: string | string[] | undefined) {
   const normalizedHeader = Array.isArray(cookieHeader) ? cookieHeader.join(";") : cookieHeader ?? "";
@@ -481,11 +483,101 @@ export function registerDevToolRoutes(app: Express): void {
   });
 
   // Admin: send reminders to pending attendees
+  // TODO: move this route to routes/domains/attendance.ts with the rest of
+  // the blind-box attendance surface; left here for now to avoid disturbing
+  // the admin client's existing call path.
   app.post('/api/admin/blind-box-events/:eventId/chase-attendees', requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
-      // In a real implementation this would send push notifications.
-      // For now we acknowledge the action and return success.
-      res.json({ success: true, message: "Reminders sent to pending attendees" });
+      const parsed = z.object({ eventId: z.string().min(1) }).safeParse(req.params);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid event id" });
+      }
+      const { eventId } = parsed.data;
+
+      const [event] = await db
+        .select()
+        .from(blindBoxEvents)
+        .where(eq(blindBoxEvents.id, eventId))
+        .limit(1);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Attendance truth mirrors attendanceRepo.getEventAttendanceSummary:
+      // the member list lives on blind_box_events.matched_attendees and the
+      // per-member status on event_attendance.attendance_status keyed by
+      // blind_box_event_id (missing row = 'pending').
+      const matchedAttendees: Array<{ userId?: string }> = Array.isArray(event.matchedAttendees)
+        ? (event.matchedAttendees as Array<{ userId?: string }>)
+        : [];
+      const attendeeUserIds = matchedAttendees
+        .map((a) => a.userId)
+        .filter((id): id is string => Boolean(id));
+
+      const statusRows = attendeeUserIds.length
+        ? await db
+            .select({
+              userId: schema.eventAttendance.userId,
+              status: schema.eventAttendance.attendanceStatus,
+            })
+            .from(schema.eventAttendance)
+            .where(
+              and(
+                eq(schema.eventAttendance.blindBoxEventId, eventId),
+                inArray(schema.eventAttendance.userId, attendeeUserIds),
+              ),
+            )
+        : [];
+      const confirmedUserIds = new Set(
+        statusRows
+          .filter((row: { userId: string; status: string | null }) => row.status === "confirmed")
+          .map((row: { userId: string }) => row.userId),
+      );
+
+      const pendingUserIds = attendeeUserIds.filter((id) => !confirmedUserIds.has(id));
+
+      let notified = 0;
+      for (const userId of pendingUserIds) {
+        try {
+          await notificationsRepo.createNotification({
+            userId,
+            category: "activities",
+            type: "event_attendance_reminder",
+            title: "你的饭局今晚开始，记得确认出席哦",
+            message: `「${event.title ?? "今晚的饭局"}」快要开始啦，记得在小程序里确认出席，桌友们都在等你。`,
+            relatedResourceId: eventId,
+          });
+          notified += 1;
+        } catch (notifyError) {
+          logger.error("[ChaseAttendees] failed to notify attendee", {
+            eventId,
+            userId,
+            error: String(notifyError),
+          });
+        }
+      }
+
+      logAdminAudit({
+        action: 'BLIND_BOX_CHASE_ATTENDEES',
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: 'blind_box_event',
+        targetEntityId: eventId,
+        context: {
+          notified,
+          pendingCount: pendingUserIds.length,
+          attendeeCount: attendeeUserIds.length,
+        },
+      });
+
+      logger.info("[ChaseAttendees] reminders fanned out", {
+        eventId,
+        notified,
+        pendingCount: pendingUserIds.length,
+        attendeeCount: attendeeUserIds.length,
+      });
+
+      res.json({ ok: true, notified });
     } catch (error) {
       logger.error("Error chasing attendees", { error: String(error) });
       res.status(500).json({ message: "Failed to send reminders" });

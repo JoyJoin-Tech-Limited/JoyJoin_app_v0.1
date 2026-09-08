@@ -18,6 +18,7 @@ import {
   InvalidTransitionError as InvalidPoolTransitionError,
 } from "../../lib/stateTransitions";
 import { matchEventPool, saveMatchResults } from "../../poolMatchingService";
+import { addMemberToPoolGroup } from "../../lib/poolGroupAdmin";
 import { broadcastAdminAction } from "../../eventBroadcast";
 import { notifyPoolCancelled } from "../../lib/wecomNotifications";
 import { shellCache } from "../../lib/shellCache";
@@ -55,6 +56,17 @@ const GENDER_BALANCE_FIELDS = [
   "minFemaleCount",
   "minMaleCount",
 ] as const;
+
+// The live admin-client button sends { registrationId }; the documented
+// contract also accepts { userId }. At least one is required.
+const addMemberBodySchema = z
+  .object({
+    userId: z.string().min(1).optional(),
+    registrationId: z.string().min(1).optional(),
+  })
+  .refine((v) => Boolean(v.userId) || Boolean(v.registrationId), {
+    message: "Provide userId or registrationId",
+  });
 
 async function findExistingUserId(candidateId: string | null | undefined): Promise<string | null> {
   if (!candidateId) return null;
@@ -536,6 +548,53 @@ export function registerAdminEventPoolRoutes(app: Express): void {
     } catch (error) {
       logger.error("Error fetching groups", { error: String(error) });
       res.status(500).json({ message: "Failed to fetch groups" });
+    }
+  });
+
+  // Event Pools - Manually add a registered user to an existing group
+  // (admin seat assignment; no matching logic — see lib/poolGroupAdmin.ts).
+  // Body accepts { registrationId } (current admin-client button) or { userId }.
+  app.post("/api/admin/event-pools/:id/groups/:groupId/add-member", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      const parsed = addMemberBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid add-member payload",
+          errors: parsed.error.issues,
+        });
+      }
+
+      const result = await addMemberToPoolGroup({
+        poolId: req.params.id,
+        groupId: req.params.groupId,
+        userId: parsed.data.userId,
+        registrationId: parsed.data.registrationId,
+      });
+
+      if (!result.ok) {
+        return res.status(result.status).json({ message: result.message });
+      }
+
+      if (result.memberAdded) {
+        logAdminAudit({
+          action: "POOL_GROUP_MEMBER_ADDED",
+          adminId: getActingAdminId(req),
+          adminRole: (req as any).adminRole,
+          targetEntityType: "event_pool_group",
+          targetEntityId: result.groupId,
+          context: {
+            poolId: result.poolId,
+            registrationId: result.registrationId,
+            userId: result.userId,
+            memberCount: result.memberCount,
+          },
+        });
+      }
+
+      return res.json(result);
+    } catch (error) {
+      logger.error("[AdminEventPools] add-member failed", { error: String(error) });
+      return res.status(500).json({ message: "Failed to add member to group" });
     }
   });
 

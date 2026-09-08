@@ -8,6 +8,10 @@ export interface PricingRepository {
   updatePricingSetting(id: string, updates: Partial<PricingSetting>): Promise<PricingSetting>;
   getActivePricingSettings(): Promise<PricingSetting[]>;
   getActiveBanners(city?: string, placement?: string): Promise<PromotionBanner[]>;
+  listAllBanners(): Promise<PromotionBanner[]>;
+  createBanner(data: Partial<PromotionBanner> & { imageUrl: string }): Promise<PromotionBanner>;
+  updateBanner(id: string, updates: Partial<PromotionBanner>): Promise<PromotionBanner | undefined>;
+  deleteBanner(id: string): Promise<PromotionBanner | undefined>;
   getPublicStats(): Promise<{
     totalUsers: number;
     totalEvents: number;
@@ -83,6 +87,38 @@ export const pricingRepo: PricingRepository = {
       if (banner.effectiveUntil && new Date(banner.effectiveUntil) < now) return false;
       return true;
     });
+  },
+
+  async listAllBanners(): Promise<PromotionBanner[]> {
+    return await db
+      .select()
+      .from(promotionBanners)
+      .orderBy(promotionBanners.sortOrder, desc(promotionBanners.createdAt));
+  },
+
+  async createBanner(data: Partial<PromotionBanner> & { imageUrl: string }): Promise<PromotionBanner> {
+    const [banner] = await db
+      .insert(promotionBanners)
+      .values(data)
+      .returning();
+    return banner;
+  },
+
+  async updateBanner(id: string, updates: Partial<PromotionBanner>): Promise<PromotionBanner | undefined> {
+    const [banner] = await db
+      .update(promotionBanners)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(promotionBanners.id, id))
+      .returning();
+    return banner;
+  },
+
+  async deleteBanner(id: string): Promise<PromotionBanner | undefined> {
+    const [banner] = await db
+      .delete(promotionBanners)
+      .where(eq(promotionBanners.id, id))
+      .returning();
+    return banner;
   },
 
   async getPublicStats(): Promise<{

@@ -1,9 +1,12 @@
 import type { Express } from "express";
+import { z } from "zod";
 import { db } from "../../db";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { blindBoxEvents, eventPools, eventPoolRegistrations } from "@shared/schema";
 import { requireAdmin, requireOperatorOrAbove } from "../../adminAuth";
 import { logger } from "../../lib/logger";
+import { logAdminAudit } from "../../lib/adminAuditLogger";
+import { getActingAdminId } from "../../lib/getActingAdminId";
 import { storage } from "../../storage";
 import { broadcastAttendanceStatusUpdated } from "../../eventBroadcast";
 
@@ -52,15 +55,39 @@ export function registerAttendanceRoutes(app: Express): void {
   app.patch('/api/admin/events/:eventId/attendees/:userId/attendance-status', requireAdmin, requireOperatorOrAbove, async (req: any, res) => {
     try {
       const adminId = req.session.userId;
-      const { eventId, userId } = req.params;
-      const { status } = req.body;
-
-      const validStatuses = ['pending', 'confirmed', 'late', 'absent'];
-      if (!validStatuses.includes(status)) {
+      const parsed = z
+        .object({
+          eventId: z.string().min(1),
+          userId: z.string().min(1),
+          status: z.enum(['pending', 'confirmed', 'late', 'absent']),
+        })
+        .safeParse({ ...req.params, status: req.body?.status });
+      if (!parsed.success) {
         return res.status(400).json({ message: "Invalid status value" });
+      }
+      const { eventId, userId, status } = parsed.data;
+
+      // Best-effort old-status capture for the audit record (the override
+      // itself is an upsert, so a missing row means old = 'pending').
+      let previousStatus: string | null = null;
+      try {
+        previousStatus = (await storage.getAttendanceStatus(eventId, userId))?.status ?? null;
+      } catch {
+        previousStatus = null;
       }
 
       await storage.adminOverrideAttendanceStatus(eventId, userId, status, adminId);
+
+      logAdminAudit({
+        action: 'EVENT_ATTENDANCE_OVERRIDDEN',
+        adminId: getActingAdminId(req),
+        adminRole: req.adminRole,
+        targetEntityType: 'event_attendance',
+        targetEntityId: `${eventId}:${userId}`,
+        before: { status: previousStatus },
+        after: { status },
+        context: { eventId, userId },
+      });
 
       // Broadcast the override
       const user = await storage.getUser(userId);

@@ -2,6 +2,7 @@ import { eventAttendance, users, events } from "@shared/schema";
 import { db } from "../db";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { logAdminAudit } from "../lib/adminAuditLogger";
+import { logger } from "../lib/logger";
 
 export interface AttendanceRepository {
   getAttendanceStatus(eventId: string, userId: string): Promise<{ status: string; estimatedLateMinutes?: number | null; absentReason?: string | null } | null>;
@@ -100,7 +101,7 @@ export const attendanceRepo: AttendanceRepository = {
         absent_reason = NULL,
         attendance_status_updated_at = EXCLUDED.attendance_status_updated_at
     `);
-    console.log(`[AdminOverride] Admin ${adminId} overrode attendance status for user ${userId} in event ${eventId} to ${status}`);
+    logger.info("[AdminOverride] attendance status overridden", { adminId, userId, eventId, status });
 
     logAdminAudit({
       action: 'ATTENDANCE_OVERRIDE',

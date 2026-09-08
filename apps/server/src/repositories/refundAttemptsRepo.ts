@@ -85,16 +85,20 @@ export const refundAttemptsRepo = {
     return Number(result[0]?.count || 0);
   },
 
-  async getAllWithPaymentDetails(filters?: { since?: Date; until?: Date }): Promise<any[]> {
+  async getAllWithPaymentDetails(filters?: { since?: Date; until?: Date; status?: string; limit?: number }): Promise<any[]> {
     const sinceCondition = filters?.since
       ? sql`AND ra.initiated_at >= ${filters.since.toISOString()}`
       : sql``;
     const untilCondition = filters?.until
       ? sql`AND ra.initiated_at <= ${filters.until.toISOString()}`
       : sql``;
+    const statusCondition = filters?.status
+      ? sql`AND ra.status = ${filters.status}`
+      : sql``;
+    const limitClause = filters?.limit ? sql`LIMIT ${filters.limit}` : sql``;
     const whereClause =
-      filters?.since || filters?.until
-        ? sql`WHERE 1=1 ${sinceCondition} ${untilCondition}`
+      filters?.since || filters?.until || filters?.status
+        ? sql`WHERE 1=1 ${sinceCondition} ${untilCondition} ${statusCondition}`
         : sql``;
     const result = await db.execute(sql`
       SELECT
@@ -110,6 +114,7 @@ export const refundAttemptsRepo = {
       LEFT JOIN users u ON p.user_id = u.id
       ${whereClause}
       ORDER BY ra.initiated_at DESC
+      ${limitClause}
     `);
     return result.rows;
   },

@@ -9,6 +9,8 @@ import { createRateLimiter } from "../../rateLimiter";
 import { validateContentSafeAsync } from "../../lib/contentSafety";
 import { recordViolation } from "../../abuseDetection";
 import { logger } from "../../lib/logger";
+import { logAdminAudit } from "../../lib/adminAuditLogger";
+import { getActingAdminId } from "../../lib/getActingAdminId";
 import {
   AI_CONTENT_REPORT_CATEGORY,
   createReportRequestSchema,
@@ -19,9 +21,15 @@ import {
  * Reports domain router.
  *
  * Exposes:
- *   POST /api/reports                    — authenticated users submit reports
- *   GET  /api/admin/reports/ai-content   — operator/super_admin list AI-content reports
+ *   POST  /api/reports                      — authenticated users submit reports
+ *   GET   /api/admin/reports/ai-content     — operator/super_admin list AI-content reports
+ *   PATCH /api/admin/reports/ai-content/:id — operator/super_admin resolve/dismiss
  */
+
+const reviewAiContentReportSchema = z.object({
+  action: z.enum(["resolved", "dismissed"]),
+  note: z.string().trim().max(2000).optional(),
+});
 
 const reportSubmissionLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000, // 5 minutes
@@ -145,6 +153,86 @@ export function registerReportRoutes(app: Express): void {
       }
       logger.error("[AdminReports] ai-content list failed", { error: String(error) });
       return res.status(500).json({ message: "Failed to load AI-content reports" });
+    }
+  });
+
+  app.patch("/api/admin/reports/ai-content/:id", requireAdmin, requireOperatorOrAbove, async (req, res) => {
+    try {
+      const parsed = reviewAiContentReportSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid review payload",
+          errors: parsed.error.issues,
+        });
+      }
+      const { action, note } = parsed.data;
+
+      const [report] = await db
+        .select()
+        .from(reports)
+        .where(and(eq(reports.id, req.params.id), eq(reports.category, AI_CONTENT_REPORT_CATEGORY)))
+        .limit(1);
+
+      if (!report) {
+        return res.status(404).json({ message: "AI-content report not found" });
+      }
+
+      // Idempotent: already in the requested terminal state.
+      if (report.status === action) {
+        return res.json({ ...report, alreadyReviewed: true });
+      }
+
+      // reviewedBy FK → users.id. RBAC admin sessions carry adminAccountId
+      // (not a users.id), so only persist a reviewer when the acting session
+      // is a legacy user-backed admin; the RBAC identity is always captured
+      // in the audit record below.
+      const sessionUserId = (req.session as any)?.userId ?? null;
+
+      const [updated] = await db
+        .update(reports)
+        .set({
+          status: action,
+          reviewedBy: sessionUserId,
+          reviewedAt: new Date(),
+          resolution: note ?? null,
+        })
+        .where(
+          and(
+            eq(reports.id, report.id),
+            // NULL-safe concurrent-update guard: legacy rows can carry a
+            // SQL NULL status, which `eq(status, 'pending')` never matches
+            // (NULL = 'pending' is UNKNOWN) → permanent 409. IS NOT DISTINCT
+            // FROM treats NULL = NULL as equal.
+            sql`${reports.status} is not distinct from ${report.status ?? "pending"}`,
+          ),
+        )
+        .returning();
+
+      if (!updated) {
+        return res.status(409).json({ message: "Report was updated concurrently — refresh and retry" });
+      }
+
+      logAdminAudit({
+        action: "AI_CONTENT_REPORT_REVIEWED",
+        adminId: getActingAdminId(req),
+        adminRole: (req as any).adminRole,
+        targetEntityType: "report",
+        targetEntityId: report.id,
+        before: { status: report.status },
+        after: { status: action },
+        context: { category: AI_CONTENT_REPORT_CATEGORY, note: note ?? null },
+      });
+
+      logger.info("[AdminReports] ai-content report reviewed", {
+        reportId: report.id,
+        action,
+        adminId: getActingAdminId(req),
+      });
+
+      return res.json(updated);
+    } catch (error) {
+      logger.error("[AdminReports] ai-content review failed", { error: String(error) });
+      return res.status(500).json({ message: "Failed to review AI-content report" });
     }
   });
 }

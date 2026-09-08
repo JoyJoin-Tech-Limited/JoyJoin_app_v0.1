@@ -50,6 +50,12 @@ export const ADMIN_AUDIT_ACTIONS = [
   'ADMIN_POINTS_ADJUSTED',
   // Attendance
   'ATTENDANCE_OVERRIDE',
+  // Admin override of a member's event_attendance status (attendance.ts).
+  'EVENT_ATTENDANCE_OVERRIDDEN',
+  // Admin fan-out of attendance-confirmation reminders to a blind-box
+  // event's not-yet-confirmed attendees (devTools.ts; TODO move to
+  // attendance.ts).
+  'BLIND_BOX_CHASE_ATTENDEES',
   // Financial
   'PAYMENT_REFUND_INITIATED',
   // Post-reveal cancel forfeiture (Phase 0 安心补位, 2026-08-27) — user
@@ -70,6 +76,17 @@ export const ADMIN_AUDIT_ACTIONS = [
   'EVENT_POOL_UPDATED',
   'EVENT_POOL_MATCHED',
   'EVENT_POOL_STATUS_CHANGED',
+  // Admin-initiated pool registration cancel (shared orchestrator parity
+  // with user self-cancel; context carries the admin-provided reason).
+  'POOL_REGISTRATION_CANCELLED_BY_ADMIN',
+  // Manual seat assignment into an existing matched pool group.
+  'POOL_GROUP_MEMBER_ADDED',
+  // AI-content report review (reports table, category='ai_content').
+  'AI_CONTENT_REPORT_REVIEWED',
+  // Promotion banner management
+  'BANNER_CREATED',
+  'BANNER_UPDATED',
+  'BANNER_DELETED',
   'MATCHING_REVIEW_APPROVED',
   'MATCHING_REVIEW_REJECTED',
   // Flash NPC operations

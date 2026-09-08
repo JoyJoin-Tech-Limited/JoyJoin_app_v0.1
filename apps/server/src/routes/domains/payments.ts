@@ -1027,10 +1027,34 @@ export function registerPaymentRoutes(app: Express): void {
     }
   });
 
+  const REFUND_ATTEMPT_STATUSES = ["pending", "success", "failed"] as const;
+  const REFUND_ATTEMPTS_DEFAULT_LIMIT = 200;
+  const REFUND_ATTEMPTS_MAX_LIMIT = 500;
+
   app.get("/api/admin/refund-attempts", requireAdmin, requireOperatorOrAbove, async (req, res) => {
     const reqLogger = logger.child({ request_id: req.requestId });
     try {
-      const attempts = await refundAttemptsRepo.getAllWithPaymentDetails();
+      // Optional filters keep the dashboard from fetching the whole table.
+      const statusRaw = req.query.status;
+      let status: string | undefined;
+      if (statusRaw !== undefined) {
+        if (typeof statusRaw !== "string" || !(REFUND_ATTEMPT_STATUSES as readonly string[]).includes(statusRaw)) {
+          return res.status(400).json({ message: "Invalid status filter" });
+        }
+        status = statusRaw;
+      }
+
+      const limitRaw = req.query.limit;
+      let limit = REFUND_ATTEMPTS_DEFAULT_LIMIT;
+      if (limitRaw !== undefined) {
+        const parsedLimit = Number(limitRaw);
+        if (!Number.isInteger(parsedLimit) || parsedLimit < 1 || parsedLimit > REFUND_ATTEMPTS_MAX_LIMIT) {
+          return res.status(400).json({ message: `Invalid limit (1-${REFUND_ATTEMPTS_MAX_LIMIT})` });
+        }
+        limit = parsedLimit;
+      }
+
+      const attempts = await refundAttemptsRepo.getAllWithPaymentDetails({ status, limit });
       res.json(attempts);
     } catch (error) {
       reqLogger.error("Failed to fetch refund attempts", {
